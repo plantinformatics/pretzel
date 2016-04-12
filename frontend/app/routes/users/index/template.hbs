@@ -1,0 +1,85 @@
+<div class="ui container segment">
+  <div class="ui vertical stripe segment">
+
+<h1>Users list</h1>
+
+
+<p>
+  {{link-to "New User" "users.new" class="ui button primary"}}
+</p>
+
+{{#if model.length}}
+  <table class="ui table">
+    <thead>
+      <tr>
+        <th>
+          Firstname
+        </th>
+        <th>
+          Lastname
+        </th>
+        <th>
+          Email
+        </th>
+        <th>
+          Apikey
+        </th>
+        <th>
+          Age
+        </th>
+        <th>
+          Subscribed
+        </th>
+        <th>
+          Verified
+        </th>
+        <th colspan="3">
+          Actions
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each model as |user|}}
+        <tr>
+          <td>
+            {{user.firstName}}
+          </td>
+          <td>
+            {{user.lastName}}
+          </td>
+          <td>
+            {{user.email}}
+          </td>
+          <td>
+            {{user.apiKey}}
+          </td>
+          <td>
+            {{user.age}}
+          </td>
+          <td>
+            {{user.subscribed}}
+          </td>
+          <td>
+            {{user.verified}}
+          </td>
+          <td>
+            {{link-to "Edit" "users.edit" user}}
+          </td>
+          <td>
+            {{link-to "Show" "users.show" user}}
+          </td>
+          <td>
+            <a href="#" {{action "remove" user}}>Remove</a>
+          </td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+{{else}}
+  <p id="blankslate">
+    No Users found
+  </p>
+{{/if}}
+
+</div>
+</div>
