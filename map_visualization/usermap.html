@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+ <!--   <link rel="icon" href="../../favicon.ico"> -->
+
+    <title>Dav127 Map Viewer</title>
+    <script src="js/d3.min.js" charset="utf-8"></script>
+    <script src="js/d3.cmap.js" charset="utf-8"></script>
+    <script src="js/divgrid.js" charset="utf-8"></script>
+    <script src="multi_selection.js" charset="utf-8"></script>
+  <link rel="stylesheet"  href="d3.parcoords.css">
+  <!-- Font Awesome CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">>
+    <!-- Bootstrap core CSS -->
+    <link href="../../dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="sticky-footer-navbar.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <script src="../../assets/js/ie-emulation-modes-warning.js"></script>
+  
+  <!-- Try the google fonts -->
+    <link href='https://fonts.googleapis.com/css?family=Roboto+Slab' rel='stylesheet' type='text/css'>
+    <link href="custom.css" rel="stylesheet">
+  <style>
+      .graph-svg-component {
+        background-color: Blue;
+       }  
+    /* data table styles */
+    #grid { padding-top: 50px;
+        padding-right: 100px;
+        padding-bottom: 50px;
+        padding-left: 100px; position:relative;}
+    .row, .header { clear: left; font-size: 12px; line-height: 18px; height: 18px;}
+    .row:nth-child(odd) { background: rgba(0,0,0,0.05); }
+    .header { font-weight: bold; }
+    .cell { float: left; overflow: hidden; white-space: nowrap; width: 180px; height: 18px;}
+    .col-0 { width: 100x; }
+
+    .axis path,
+    .axis line{
+      fill: none;
+      stroke: black;
+      shape-rendering: crispEdges;
+    }
+
+    .axis text {
+      font-family: sans-serif;
+      font-size: 11px;
+    }
+
+    .brush .extent {
+      fill-opacity: .125;
+      shape-rendering: crispEdges;
+    }
+
+
+  </style>
+  </head>
+
+  <body>
+
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-default navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Dav127</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="index.html">Home</a></li>
+            <li class="dropdown">
+             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Viewers <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="map.html">Map Viewer</a></li>
+                <li><a href="usermap.html">Upload Your Map</a></li>
+              </ul>
+             </li> 
+            <li><a href="marker.html">Marker</a></li>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Resources <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="Download.html">Download</a></li>
+                <li><a href="Links.html">Links</a></li>
+                <li><a href="Ref.html">References</a></li>
+                <li role="separator" class="divider"></li>
+                <li class="dropdown-header">External Links</li>
+                <li><a href="http://www.ncbi.nlm.nih.gov/">NCBI</a></li>
+                <li><a href="http://wheat.pw.usda.gov/GG3/" target="_blank">GrainGenes</a></li>
+              </ul>
+            </li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <!-- Begin page content -->
+    <div class="container">
+      <div class="page-header">
+        <h1>Custom Map Viewer</h1>
+      </div>
+
+  <div class="tab-pane" id="Upload">
+   <table>
+   <tr><td><input type="file" id="files" name="files[]" multiple /></td>
+    <td><input type='button' id='uploadMap' value='Upload' class="btn btn-primary" onclick="upload()"></input></td>
+    </tr>
+   </table>
+   <div id="list">
+        <br /> <div class='container'><div class='jumbotron'>
+         <p>Please select maps that you want to compare with: </p> 
+         <div id='dropdown' class='dropdown'>
+           <table><tr><td>Select popultions: </td><td>Selection chromosomes: </td></tr><tr><td><select id='mapset' name='mapset'><option value='Burke_x_Frontiera'>Burke_x_Frontiera</option><option value='Chara_x_Glenlea'>Chara_x_Glenlea</option><option value='Hlb_x_Crk'>Hlb_x_Crk</option><option value='SunxAUS'>Sun_x_AUS</option></select></td><td>&nbsp;
+           <select name='maps' id='maps'> 
+           <!-- js populates -->
+           </select></td>
+           <td><input type='button' id='drawMap' value='Add' onclick='drawMap()'  class='btn btn-primary'></input></td>
+           <td>&nbsp;<input type='button' id='resetMap' value='Reset' onclick='resetMap()'  class='btn btn-danger'></input></td>
+           </tr></table>
+           &nbsp;
+           <table>
+             <tr><td></td>
+             </tr> 
+           </table>
+         </div><br /><br /><br />
+         <div id='example' class='container'></div>&nbsp;
+         <div id="zoomIn" class="container"></div>
+         <div id="showHideMarkers" class="container" style="display:none"><input type="checkbox" id="showH">&nbsp; Show Markers</input></div>
+         <div id="searchMarkers" class="container"></div>
+
+
+         <div id='grid'></div></div></div>
+         
+    </div>
+
+  </div>
+  </div>
+</br>
+<!--<div id="example" class="parcoords" style="height:600px;"></div>-->
+
+<!-- </section> -->
+</div>
+
+    <footer class="footer">
+      <div class="container">
+        <p class="text-muted">Copyright</p>
+      </div>
+    </footer>
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+    <script src="../../dist/js/bootstrap.min.js"></script>
+     <script src="js/userMapViewer.js"></script>
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script>
+  </body>
+</html>
