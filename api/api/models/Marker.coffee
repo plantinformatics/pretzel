@@ -74,3 +74,5 @@ module.exports =
 		markermaplocations:
 			collection: 'markermaplocation'
 			via: 'marker'
+
+		lds:

@@ -27,6 +27,7 @@ module.exports.models = {
   * See http://sailsjs.org/#/documentation/concepts/ORM/model-settings.html  *
   *                                                                          *
   ***************************************************************************/
+  //use 'alter' when adding new tables or the db strctures are changed.
   migrate: 'safe', //for NoSQL this should be 'safe' and for postgres or MySQL 'alter'
 
   associations: {
