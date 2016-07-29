@@ -76,3 +76,5 @@ module.exports =
 			via: 'marker'
 
 		lds:
+			collection: 'ld'
+			via: 'marker'

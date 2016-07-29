@@ -36,6 +36,7 @@ module.exports =
 			type: 'float'
 			required: true
 
+		marker:
 			model: 'marker'
 
 		markerB:
