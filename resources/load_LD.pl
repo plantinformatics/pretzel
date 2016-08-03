@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# Created by Sean Li @ 30/10/2015
+# Created by Sean Li @ 30/06/2016
 # Updated by
 
 use strict;
@@ -7,64 +7,52 @@ use warnings;
 use DBI;
 
 #Provide a folder where contains all the sample files.
-my $data_dir = $ARGV[0] || die "Please provide the directory that stores all the sample LD .txt files, e.g. Ta-Chr1A_r2v_Filtered.txt \n";
-opendir(my $dir_hd, $data_dir) || die "Can't open the directory $data_dir. Please have a check. \n";
-my @files = grep {/Filtered/} readdir($dir_hd);
-closedir($dir_hd);
+my $ld_file = $ARGV[0] || die "Please provide the file that stores the sample LD information, e.g. chr1_r2v_f.txt \n";
 
 #Start from Database connection.
 #my $host = 'bio-01-cdc.it.csiro.au';
 my $host = 'mysql-test3.it.csiro.au';
-my $database = 'dav127_test';
-my $user = 'dav127_user';
-my $pwd = 'xl8qbYZS=qexcpquGpl\$';
+my $database = 'test';
+my $user = 'dav127_admin';
+my $pwd = 'D@V127_@dm1n';
 
 my $dbh = DBI->connect("DBI:mysql:database=$database;host=$host",$user,$pwd,{'RaiseError' => 1});
 
 
 # The marklocation id will be added later 
-my $query = "INSERT INTO ld (marker1, marker2, marker1name,marker2name, r2, r2v, maf1, maf2) VALUES (?,?,?,?,?,?,?,?)";
+my $query = "INSERT INTO ld (marker, markerB, r2, r2v, MAF1, MAF2) VALUES (?,?,?,?,?,?)";
 my $statement = $dbh->prepare($query);
-foreach my $file (@files){
-  print "Processing $file ...\n";
-  my @f_nas = split(/\_/,$file);
-  my $source;
-  if($f_nas[2] eq 'x') {
-    $source = $f_nas[1]."_x_".$f_nas[3];
-  } else {
-    $source = $f_nas[1];
-  }
-  open(FHD, $data_dir."\/".$file) || die "Can't open the file $file. Please have a check. \n";
-  my @lines = <FHD>; 
-  close(FHD);
+open(FHD, $ld_file) || die "Can't open the file $ld_file. Please have a check. \n";
+my @lines = <FHD>; 
+close(FHD);
   
-  my @ids = ();
-  foreach my $line (@lines){
-    my @attributes = split(/\s+/,$line);
-    if($attributes[0] =~ /\d/){
-       #Fetch Marker ID given the marker name
-       my $s_sth = $dbh->prepare('SELECT id FROM marker WHERE idx = ?');
-       $s_sth->execute($attributes[0]);
-       my @data = $s_sth->fetchrow_array();
-       my $m_id = $data[0];
-       my $locus = $attributes[2];
-       my $ele=3;
-       my $size = scalar @attributes;
-       while($ele<= $size-3){
-         my $s_name = $ids[$ele];
-         $s_name = substr $s_name,0,-8;
-         #Fetch Sample ID given the sample name
-         my $s_sth = $dbh->prepare('SELECT id FROM sample WHERE name = ?');
-         $s_sth->execute($s_name);
-         my @data = $s_sth->fetchrow_array();
-         my $s_id = $data[0];
-
-         $statement->execute($attributes[$ele],$attributes[$ele+1],$attributes[$ele+2],$locus,$s_id,$m_id);
-         $ele += 3;
-       }
-    } else {
-       @ids = split(/\s+/,$line);
-    }
+my @ids = ();
+foreach my $line (@lines){
+  chomp $line;
+  my @attributes = split(/\s+/,$line);
+  #loc1 	 loc2 	 r2 	 r2v 	 MAF.loc1 	 MAF.loc2
+  #BobWhite_c10251_382_1 	 BobWhite_c1027_1127_1 	 0.0790454280849104 	 0.0349694102435433 	 0.365384615384615 	 0.313609467455621
+  unless($attributes[0] eq 'loc1'){
+     #Fetch Marker ID given the marker name
+     substr($attributes[0], -2) = '';
+     my $s_sth = $dbh->prepare('SELECT id FROM marker WHERE commonName = ?');
+     $s_sth->execute($attributes[0]);
+     my @data = $s_sth->fetchrow_array();
+     my $marker = $data[0];
+     #markerB, loc2;
+     substr($attributes[1], -2) = '';
+     $s_sth = $dbh->prepare('SELECT id FROM marker WHERE commonName = ?');
+     $s_sth->execute($attributes[1]);
+     @data = $s_sth->fetchrow_array();
+     my $markerB = $data[0];
+     if($marker && $markerB){
+        #print "markerA: $marker\tmarkerB: $markerB\n";
+        $statement->execute($marker, $markerB, $attributes[2],$attributes[3],$attributes[4],$attributes[5]);
+     } else {
+       print $line."\n";
+     }
+  } else {
+     @ids = split(/\s+/,$line);
   }
 }
 $statement->finish();
