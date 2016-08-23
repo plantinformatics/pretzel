@@ -78,3 +78,7 @@ module.exports =
 		lds:
 			collection: 'ld'
 			via: 'marker'
+
+		physicalmaps:
+			collection: 'physicalmap'
+			via: 'marker'
