@@ -27,6 +27,7 @@ var div = d3.select("body").append("div")
 var zoom = d3.behavior.zoom()
     .scaleExtent([1, 10])
     .on("zoom", zoomed);
+var brushed = 0; //0 brush has been disabled. 1 brush has been enabled.
 var mapStart;
 var mapStop;
 var defaultStart;
@@ -234,7 +235,7 @@ window.onload = function() {
 
 //getJson fetches map information as json associated with a particular mapset from sails
 //Called in draw map feature
-function getJson(mapSets,maps, clicks){
+function getJson(mapSets,maps,clicks){
 
   var mapObj = [];
   for(i=0; i<clicks; i++) {
@@ -429,8 +430,8 @@ function highlightPath(dataJson, targetMarkers){
                     .datum(lineData)
                     .attr("class","line") //use line instead of axis here to make the remove function work
                     .style("stroke", "red")
-                    .style("stroke-width", 10)
-                    .style("stroke-opacity", 0.5)
+                    .style("stroke-width", 3)
+                    .style("stroke-opacity", 0.2)
                     .style("fill", "none");
           lineGraph.on("mouseover",handleHighlightMouseOver)
                    .on("mouseout",handleHighlightMouseOut);    
@@ -464,8 +465,8 @@ function highlightPath(dataJson, targetMarkers){
                     .datum(lineData)
                     .attr("class","line")
                     .style("stroke", "red")
-                    .style("stroke-width", 10)
-                    .style("stroke-opacity", 0.5)
+                    .style("stroke-width", 3)
+                    .style("stroke-opacity", 0.2)
                     .style("fill", "none");
           lineGraph.on("mouseover",handleHighlightMouseOver)
                    .on("mouseout",handleHighlightMouseOut);    
@@ -493,7 +494,7 @@ function highlightPath(dataJson, targetMarkers){
                     .datum(lineData)
                     .attr("class","line")
                     .style("stroke", "red")
-                    .style("stroke-width", 10)
+                    .style("stroke-width", 3)
                     .style("stroke-opacity", 0.2)
                     .style("fill", "none");
           lineGraph.on("mouseover",handleHighlightMouseOver)
@@ -749,7 +750,13 @@ function drawMap(){
                 //"mouseover": function(d) { parcoords.highlight([d]) },
                 //"mouseout": parcoords.unhighlight
             });
-         }
+
+             //Test where to disable the drag (pan) behavior from zoom. 
+             //Worked well. The idea is when we want to enable brush, the zoom function should be disabled
+             //zoom.on("zoom",null);
+             //zoom.on("zoom",zoomed);
+             
+          }
         } else if(old_map == x && old_mapset == y){
           clicks -= 1;
           alert("You cannot add the same map again.");
@@ -775,6 +782,7 @@ function resetMap(){
   yScaleM = undefined;
   svg.selectAll("*").remove();
   d3.select("svg").remove();
+  //zoom.on("zoom",zoomed);
  //d3.select("#grid").remove();
  document.getElementById('grid').innerHTML = "";
  document.getElementById('searchMarkers').innerHTML = "";
@@ -1041,6 +1049,48 @@ function searchForMarkers(){
     alert("Please add comparative map.");
   }
 }
+
+//enableBrush is a trigger function by clicking the brush button.
+//enable or disable the brush function.
+function enableBrush(){
+  var brushValue = document.getElementById('brush').value;
+  if(brushValue == 'Enable Brush'){
+    alert("Brush function has been enabled. The drag&zoom function will be disabled.");
+    document.getElementById('brush').value = "Disable Brush";
+    document.getElementById('brush').style.backgroundColor="gray";
+    document.getElementById('brush').style.borderColor="gray";
+    //var brush = d3.svg.brush()
+    //.on("brush",brushed);
+    //Worked well. The idea is when we want to enable brush, the zoom function should be disabled
+    if(document.getElementById('drawMap').value == 'Add'){
+      resetZoom();
+    } 
+    zoom.on("zoom",null);
+    //Brush Enabled.
+    brushed = 1;
+    
+  } else {
+    alert("Brush function has been disabled. The drag&zoom funciton will be enabled.");
+    document.getElementById('brush').value = "Enable Brush";
+    document.getElementById('brush').style.backgroundColor="green";
+    document.getElementById('brush').style.borderColor="green";
+    //var brush = d3.svg.brush()
+    //.on("brush",brushed);
+    //Worked well. The idea is when we want to enable brush, the zoom function should be disabled
+    zoom.on("zoom",zoomed);
+    brushed = 0;
+  }
+}
+
+
+//brushMap is designed to facilitate the search marker process. 
+//User can brush a particular region from the target (middle) map
+// A list of markers will be chosen and it associated information will be displayed in a table.
+function brushMap(){
+  
+}
+
+
 
 //handleMouseover is a d3 event that displays map id and marker id when mouse over to a line/path
 function handleHighlightMouseOver(d,i) {  // Add interactivity

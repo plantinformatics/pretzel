@@ -165,6 +165,13 @@
   left: 0;
 }
 
+/* Brush css style */
+.brush .extent {
+  stroke: #fff;
+  fill-opacity: .125;
+  shape-rendering: crispEdges;
+}
+
 </style>
 <div class="container">
 <div id="dropdown" class="dropdown">
@@ -189,6 +196,7 @@
 </td>
 <td>
 &nbsp; <input type='button' id='reset' value='Reset' class='btn btn-danger' onclick='resetMap()'></input>
+&nbsp; <input type='button' id='brush' value='Enable Brush' class='btn btn-success' onclick='enableBrush()'></input>
 </td>
 </tr>
 </table>
