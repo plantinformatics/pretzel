@@ -2,8 +2,7 @@
 
 module.exports = function(environment) {
   var ENV = {
-    modulePrefix: 'frontend',
-    podModulePrefix: 'frontend/routes',
+    modulePrefix: 'ember-test',
     environment: environment,
     baseURL: '/',
     locationType: 'auto',
@@ -18,12 +17,13 @@ module.exports = function(environment) {
       // Here you can pass flags/options to your application instance
       // when it is created
     }
+    ,
+    'ember-cli-mirage': {
+      enabled: false
+    }
   };
 
   if (environment === 'development') {
-    ENV.apiURL = "http://localhost:1776";
-    ENV['ember-devtools'] = { global: true };
-    ENV['ember-cli-mirage'] = { enabled: true };
     // ENV.APP.LOG_RESOLVER = true;
     // ENV.APP.LOG_ACTIVE_GENERATION = true;
     // ENV.APP.LOG_TRANSITIONS = true;
@@ -32,18 +32,19 @@ module.exports = function(environment) {
   }
 
   if (environment === 'test') {
-    ENV.apiURL = "http://localhost:1776";
-    ENV['ember-cli-mirage'] = { enabled: true };
+    // Testem prefers this...
     ENV.baseURL = '/';
     ENV.locationType = 'none';
+
+    // keep test console output quieter
     ENV.APP.LOG_ACTIVE_GENERATION = false;
     ENV.APP.LOG_VIEW_LOOKUPS = false;
+
     ENV.APP.rootElement = '#ember-testing';
   }
 
   if (environment === 'production') {
-    // ENV.apiURL = "http://localhost:1776";
-    // ENV['ember-cli-mirage'] = { enabled: false };
+
   }
 
   return ENV;

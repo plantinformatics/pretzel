@@ -1,0 +1,25 @@
+Map: {{model.name}}
+
+<ul>
+{{#each model.markers as |marker|}}
+<li>{{marker.name}}, {{marker.cM}}</li>
+{{/each}}
+</ul>
+
+<div class="btn-group">
+  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+    Add map
+    <span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu" role="menu">
+  {{#each mapviewController.availableMaps as |mymap|}}
+  <li>
+    {{#link-to "mapview.maps" model.id mymap.id}}
+      {{mymap.name}}
+    {{/link-to}}
+  </li>
+  {{/each}}
+  </ul>
+</div>
+
+{{outlet}}
