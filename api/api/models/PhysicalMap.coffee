@@ -50,7 +50,7 @@ module.exports =
 		#---
 		#Tgt_SNP_pos_in_NRGv0.3_scaffold
 		#---
-		targetPosition
+		targetPosition:
 			type: 'integer'
 			required: true
 
@@ -58,7 +58,7 @@ module.exports =
 		# ---
 		# SNPprobe_start_in_CS_NRGv0.3_scaffold
 		# ---
-		probeStart
+		probeStart:
 			type: 'integer'
 			required: true
 
@@ -66,7 +66,7 @@ module.exports =
 		# ---
 		# SNPprobe_stop_in_CS_NRGv0.3_scaffold
 		# ---
-		probeStop
+		probeStop:
 			type: 'integer'
 			required: true
 
@@ -74,7 +74,7 @@ module.exports =
 		# ---
 		# CS_NRGv0.3_scaffold_start_position_in_v0.4pseudomcl
 		# ---
-		scaffoldStartChr
+		scaffoldStartChr:
 			type: 'integer'
 			required: true
 
@@ -82,7 +82,7 @@ module.exports =
 		# ---
 		# CS_NRGv0.3_scaffold_stop_position_in_v0.4pseudomcl
 		# ---
-		scaffoldStopChr
+		scaffoldStopChr:
 			type: 'integer'
 			required: true
 
