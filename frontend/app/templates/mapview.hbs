@@ -1,0 +1,58 @@
+<div class="btn-group">
+  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+    Select map
+    <span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu" role="menu">
+  {{#each availableMaps as |mymap|}}
+  <li>
+    {{#link-to "mapview" (query-params mapsToView=mymap.id)}}
+      {{mymap.name}}
+    {{/link-to}}
+  </li>
+  {{/each}}
+  </ul>
+</div>
+
+Selected: {{#each model as |map|}}
+{{map.name}}
+{{/each}}
+
+Available: {{#each availableMaps as |availMap|}}
+{{availMap.id}}
+{{/each}}
+
+<div class="btn-group">
+  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+    Add map
+    <span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu" role="menu">
+  {{#each availableMaps as |mymap|}}
+  <li>
+    {{#link-to "mapview" (query-params mapsToView=mymap.mapLink)}}
+      {{mymap.name}}
+    {{/link-to}}
+  </li>
+  {{/each}}
+  </ul>
+</div>
+
+<br/>
+
+Maps to align:
+
+<ul>
+{{#each model as |m|}}
+<li>{{m.name}}</li>
+  <ul>
+  {{#each m.markers as |marker|}}
+  <li>{{marker.name}}: {{marker.cM}}</li>
+  {{/each}}
+  </ul>
+{{/each}}
+</ul>
+
+{{draw-map}}
+
+{{outlet}}

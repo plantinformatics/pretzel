@@ -17,7 +17,7 @@ module.exports.models = {
   * connections (see `config/connections.js`)                                *
   *                                                                          *
   ***************************************************************************/
-  connection: 'testMysqlServer',
+  connection: 'localMysqlServer',
 
   /***************************************************************************
   *                                                                          *
@@ -28,7 +28,7 @@ module.exports.models = {
   *                                                                          *
   ***************************************************************************/
   //use 'alter' when adding new tables or the db strctures are changed.
-  migrate: 'safe', //for NoSQL this should be 'safe' and for postgres or MySQL 'alter'
+  migrate: 'drop', //for NoSQL this should be 'safe' and for postgres or MySQL 'alter'
 
   associations: {
       list: "link",
