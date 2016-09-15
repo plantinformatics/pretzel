@@ -3,11 +3,16 @@ import Ember from 'ember';
 export default Ember.Route.extend({
   queryParams: {
     mapsToView: {
+      // We want changes in the URL mapsToView query parameter to trigger
+      // a model refresh.
       refreshModel: true
     }
   },
 
   serializeQueryParam: function(value, urlKey, defaultValueType) {
+    // This serializes what gets passed to the link-to query parameter.
+    // Without it, an array simply gets JSON.stringified, for example:
+    // [1,2] becomes "[1,2]" and treated as a string.
     if (defaultValueType === 'array') {
       return value;
     }
@@ -26,7 +31,7 @@ export default Ember.Route.extend({
     console.log("params to mapview route:");
     console.log(params);
     // Get all available maps.
-    var maps = this.get('store').findAll('map');
+    var maps = this.get('store').findAll('mapset');
     this.controllerFor("mapview").set("availableMaps", maps);
     maps.then(function(maplist){
       maplist.forEach(function(map) {
@@ -44,7 +49,7 @@ export default Ember.Route.extend({
     for (var i=0; i < params.mapsToView.length; i++) {
       console.log("in mapview route loop:");
       console.log(params.mapsToView[i]);
-      retMaps.push(this.get('store').findRecord('map', params.mapsToView[i]));
+      retMaps.push(this.get('store').findRecord('mapset', params.mapsToView[i]));
     }
     return retMaps;
   }
