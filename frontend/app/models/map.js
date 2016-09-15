@@ -5,16 +5,15 @@ export default DS.Model.extend({
   name: DS.attr('string'),
   markers: DS.attr('marker'),
   extraMaps: [],
+  linkTo: Ember.computed('name', function() {
+    return [this.get("id")];
+  }),
   mapLink: Ember.computed('extraMaps', function() {
-    console.log("in map model:");
-    console.log(this.get('extraMaps'));
     var retlist = this.get("extraMaps");
     if (retlist == null) {
-      return this.get("id");
+      return [this.get("id")];
     }
     else {
-      console.log("in map model retlist");
-      console.log(retlist);
       retlist.push(this.get("id"));
       return retlist;
     }

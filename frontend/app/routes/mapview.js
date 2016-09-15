@@ -6,6 +6,22 @@ export default Ember.Route.extend({
       refreshModel: true
     }
   },
+
+  serializeQueryParam: function(value, urlKey, defaultValueType) {
+    if (defaultValueType === 'array') {
+      return value;
+    }
+    return '' + value;
+  }, 
+
+  deserializeQueryParam: function(value, urlKey, defaultValueType) {
+    console.log("deserializeQueryParam, params:");
+    console.log(value);
+    console.log(urlKey);
+    console.log(defaultValueType);
+    return value;
+  },
+
   model(params) {
     console.log("params to mapview route:");
     console.log(params);
@@ -14,24 +30,19 @@ export default Ember.Route.extend({
     this.controllerFor("mapview").set("availableMaps", maps);
     maps.then(function(maplist){
       maplist.forEach(function(map) {
-        console.log("in mapview route");
-        console.log(params.mapsToView);
         var exMaps = [];
         if (params.mapsToView) {
           for (var i=0; i < params.mapsToView.length; i++) {
             exMaps.push(params.mapsToView[i]);
           }
         }
-        console.log("setting " + map.id + " to");
-        console.log(exMaps);
         map.set('extraMaps', exMaps);
       });
     });
     
-    console.log("mapview params:");
     var retMaps = [];
     for (var i=0; i < params.mapsToView.length; i++) {
-      console.log("a param");
+      console.log("in mapview route loop:");
       console.log(params.mapsToView[i]);
       retMaps.push(this.get('store').findRecord('map', params.mapsToView[i]));
     }

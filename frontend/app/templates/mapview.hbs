@@ -6,7 +6,7 @@
   <ul class="dropdown-menu" role="menu">
   {{#each availableMaps as |mymap|}}
   <li>
-    {{#link-to "mapview" (query-params mapsToView=mymap.id)}}
+    {{#link-to "mapview" (query-params mapsToView=mymap.linkTo)}}
       {{mymap.name}}
     {{/link-to}}
   </li>
