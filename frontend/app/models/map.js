@@ -5,6 +5,7 @@ export default DS.Model.extend({
   start: DS.attr(),
   stop: DS.attr(),
   maporder: DS.attr('number'),
-  mapset: DS.belongsTo('mapset')
+  mapset: DS.belongsTo('mapset'),
+  markermaplocations: DS.hasMany('markermaplocation')
 
 });
