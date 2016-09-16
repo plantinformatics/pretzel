@@ -58,6 +58,10 @@ module.exports =
 		mapset:
 			model: 'mapset'
 
+		markermaplocations:
+			collection: 'markermaplocation'
+			via: 'map'
+
 		# Is public map or not, or going to be published
 #		isPub:
 #			type: 'boolean'
