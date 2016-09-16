@@ -14,26 +14,18 @@
   </ul>
 </div>
 
-Selected: {{#each model as |map|}}
-{{map.name}}
-{{/each}}
-
-Available: {{#each availableMaps as |availMap|}}
-{{availMap.id}}
-{{/each}}
-
-
+<br/>
 <br/>
 
 Maps to align:
 
 <ul>
-{{#each model as |m|}}
-<li>{{m.name}}</li>
+{{#each model as |mapset|}}
+<li>{{mapset.name}}, {{mapset.class}}, {{mapset.isPub}}</li>
   <ul>
-  {{#each m.markers as |marker|}}
-  <li>{{marker.name}}: {{marker.cM}}</li>
-  {{/each}}
+    {{#each mapset.maps as |m|}}
+      <li>{{m.name}}</li>
+    {{/each}}
   </ul>
 {{/each}}
 </ul>
