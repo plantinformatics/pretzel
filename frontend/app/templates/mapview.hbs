@@ -25,6 +25,11 @@ Maps to align:
   <ul>
     {{#each mapset.maps as |m|}}
       <li>{{m.name}}</li>
+      <ul>
+        {{#each m.markermaplocations as |marker|}}
+          <li>{{marker.location}}</li>
+        {{/each}}
+      </ul>
     {{/each}}
   </ul>
 {{/each}}
