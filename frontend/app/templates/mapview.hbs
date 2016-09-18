@@ -22,19 +22,19 @@ Maps to align:
 <ul>
 {{#each model as |mapset|}}
 <li>{{mapset.name}}, {{mapset.class}}, {{mapset.isPub}}</li>
-  <ul>
+  <!--<ul>
     {{#each mapset.maps as |m|}}
       <li>{{m.name}}</li>
       <ul>
         {{#each m.markermaplocations as |marker|}}
-          <li>{{marker.location}}</li>
+          <li>{{marker.location}}, {{marker.marker.commonName}}</li>
         {{/each}}
       </ul>
     {{/each}}
-  </ul>
+  </ul>-->
 {{/each}}
 </ul>
 
-{{draw-map}}
+{{draw-map mydata=model}}
 
 {{outlet}}

@@ -4,6 +4,7 @@ export default Ember.Controller.extend({
   queryParams: ['mapsToView'],
   mapsToView: [],
   availableMaps: [],
+  monkey: ['hello monkey'],
 
   selectedMaps: Ember.computed('mapsToView', function() {
     return this.get('mapsToView');

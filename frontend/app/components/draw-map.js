@@ -9,5 +9,16 @@ export default Ember.Component.extend({
                 .attr('cx', 250)
                 .attr('cy', 250)
                 .attr('r', 100);
+
+  },
+
+  didRender() {
+    console.log("didRender");
+    var mydata = this.get('mydata');
+    mydata.then(function(maplist) {
+      maplist.forEach(function(m) {
+        console.log(m.get('name'));
+      });
+    });
   }
 });
