@@ -11,6 +11,7 @@ export default Ember.Controller.extend({
   }),
 
   hasData: Ember.computed('mapData', function() {
+    // Some testing code.
     console.log("in hasData: mapData =" + this.mapData);
     for (var i=0; i<this.mapData.length; i++) {
       var retMapPromise = this.mapData[i].get('maps');
