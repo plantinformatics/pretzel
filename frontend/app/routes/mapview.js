@@ -46,11 +46,13 @@ export default Ember.Route.extend({
     });
     
     var retMaps = [];
-    for (var i=0; i < params.mapsToView.length; i++) {
-      console.log("in mapview route loop:");
-      console.log(params.mapsToView[i]);
-      retMaps.push(this.get('store').findRecord('mapset', params.mapsToView[i]));
+    for (var i=0; i<params.mapsToView.length; i++) {
+      var mymapset = this.get('store').findRecord('mapset', params.mapsToView[i]);
+        mymapset.then(function(map) {
+        retMaps.pushObject(map);
+      });
     }
+    this.controllerFor("mapview").set("mapData", retMaps);
     return retMaps;
   }
 });

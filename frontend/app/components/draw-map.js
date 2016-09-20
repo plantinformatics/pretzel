@@ -1,7 +1,17 @@
 import Ember from 'ember';
 
 export default Ember.Component.extend({
+
+  draw: function(myData) {
+    // Draw functionality goes here.
+    //
+    console.log("data to draw:");
+    console.log(myData);
+  },
+
   didInsertElement() {
+    // Only called after DOM element inserted for first time.
+    //
     let svgContainer = d3.select('#holder').append('svg')
                         .attr('width',700)
                         .attr('height',700);
@@ -13,12 +23,10 @@ export default Ember.Component.extend({
   },
 
   didRender() {
-    console.log("didRender");
-    var mydata = this.get('mydata');
-    mydata.then(function(maplist) {
-      maplist.forEach(function(m) {
-        console.log(m.get('name'));
-      });
-    });
+    // Called on re-render (eg: add another map) so should call
+    // draw each time.
+    //
+    var data = this.get('data');
+    this.draw(data);
   }
 });

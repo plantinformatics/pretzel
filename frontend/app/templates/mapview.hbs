@@ -25,16 +25,13 @@ Maps to align:
   <!--<ul>
     {{#each mapset.maps as |m|}}
       <li>{{m.name}}</li>
-      <ul>
-        {{#each m.markermaplocations as |marker|}}
-          <li>{{marker.location}}, {{marker.marker.commonName}}</li>
-        {{/each}}
-      </ul>
     {{/each}}
   </ul>-->
 {{/each}}
 </ul>
 
-{{draw-map mydata=model}}
+{{#if hasData}}
+  {{draw-map data=mapData}}
+{{/if}}
 
 {{outlet}}
