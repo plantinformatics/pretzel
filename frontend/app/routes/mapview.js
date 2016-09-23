@@ -68,6 +68,9 @@ export default Ember.Route.extend({
         preparedData[param] = {};
         results[param].forEach(function(m) {
           preparedData[param][m.get('name')] = [];
+          m.get('markermaplocations').forEach(function(marker) {
+            preparedData[param][m.get('name')].pushObject({"marker": marker.get('id'), "location": marker.get('location') });
+          });
         });
       });
       that.controllerFor("mapview").set("mapData", params.mapsToView);
