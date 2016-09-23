@@ -6,27 +6,13 @@ export default Ember.Controller.extend({
   availableMaps: [],
   mapData: [],
 
-  selectedMaps: Ember.computed('mapsToView', function() {
-    return this.get('mapsToView');
-  }),
+  selectedMaps: [],
+  //selectedMaps: Ember.computed('mapsToView', function() {
+  //  console.log("in selectedMaps");
+  //  return this.get('mapsToView');
+  //}),
 
   hasData: Ember.computed('mapData', function() {
-    // Some testing code.
-    console.log("in hasData: mapData =" + this.mapData);
-    for (var i=0; i<this.mapData.length; i++) {
-      var retMapPromise = this.mapData[i].get('maps');
-      retMapPromise.then(function(resolvedMap) {
-        resolvedMap.forEach(function(map) {
-          var mapName = map.get('name');
-          var markerPromise = map.get('markermaplocations');
-          markerPromise.then(function(resolvedMarkers) {
-            resolvedMarkers.forEach(function(marker) {
-              console.log(marker.get('location'));
-            });
-          });
-        });
-      });
-    }
     return this.mapData.length > 0;
   }),
 

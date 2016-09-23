@@ -28,8 +28,7 @@ export default Ember.Route.extend({
   },
 
   model(params) {
-    console.log("params to mapview route:");
-    console.log(params);
+
     // Get all available maps.
     var maps = this.get('store').findAll('mapset');
     this.controllerFor("mapview").set("availableMaps", maps);
@@ -45,14 +44,34 @@ export default Ember.Route.extend({
       });
     });
     
-    var retMaps = [];
-    for (var i=0; i<params.mapsToView.length; i++) {
-      var mymapset = this.get('store').findRecord('mapset', params.mapsToView[i]);
-        mymapset.then(function(map) {
-        retMaps.pushObject(map);
+    let promises = {};
+    let that = this;
+
+    params.mapsToView.forEach(function(param) {
+
+      promises[param] = that.get('store').findRecord('mapset', param).then(function(mapset) {
+          console.log(mapset.get('name'));
+          return mapset.get('maps');
+        }).then(function(maps) {
+          let markermaplocations = maps.getEach('markermaplocations');
+          return Ember.RSVP.all(markermaplocations).then(function() {
+            return maps;
+          });
+        });
+
+    });
+
+    let preparedData = {};
+
+    return Ember.RSVP.hash(promises).then(function(results) {
+      params.mapsToView.forEach(function(param) {
+        preparedData[param] = {};
+        results[param].forEach(function(m) {
+          preparedData[param][m.get('name')] = [];
+        });
       });
-    }
-    this.controllerFor("mapview").set("mapData", retMaps);
-    return retMaps;
+      that.controllerFor("mapview").set("mapData", params.mapsToView);
+      return preparedData;
+    });
   }
 });
