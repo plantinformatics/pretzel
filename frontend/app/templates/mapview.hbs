@@ -1,6 +1,6 @@
 <div class="btn-group">
   <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-    Add map
+    Choose mapset
     <span class="caret"></span>
   </button>
   <ul class="dropdown-menu" role="menu">
@@ -32,9 +32,11 @@ Maps to align:
       </ul>
     {{/each}}
   </ul>-->
+  <!-- call draw-map component here. the mapset or other objects can be passed into the component. -->
+  {{draw-map selectedMapset=mapset}} 
 {{/each}}
 </ul>
-
-{{draw-map mydata=model}}
+<!--{{draw-map selectedMapset=mapset}}-->
+<!--{{draw-map mapset=model map=mapset.maps}}-->
 
 {{outlet}}
