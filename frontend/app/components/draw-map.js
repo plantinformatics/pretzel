@@ -2,9 +2,11 @@ import Ember from 'ember';
 
 export default Ember.Component.extend({
 
-  draw: function(myData) {
+  draw: function(myData, myMaps) {
     // Draw functionality goes here.
     //
+    console.log("maps to draw:");
+    console.log(myMaps);
     console.log("data to draw:");
     console.log(myData);
   },
@@ -27,7 +29,8 @@ export default Ember.Component.extend({
     // Called on re-render (eg: add another map) so should call
     // draw each time.
     //
-    var data = this.get('data');
-    this.draw(data);
+    let data = this.get('data');
+    let maps = this.get('maps');
+    this.draw(data, maps);
   }
 });

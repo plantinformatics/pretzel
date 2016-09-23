@@ -20,18 +20,13 @@
 Maps to align:
 
 <ul>
-{{#each model as |mapset|}}
-<li>{{mapset.name}}, {{mapset.class}}, {{mapset.isPub}}</li>
-  <!--<ul>
-    {{#each mapset.maps as |m|}}
-      <li>{{m.name}}</li>
-    {{/each}}
-  </ul>-->
+{{#each mapData as |mapid|}}
+  <li>{{mapid}}</li>
 {{/each}}
 </ul>
 
 {{#if hasData}}
-{{draw-map data=model}}
+  {{draw-map data=model maps=mapData}}
 {{/if}}
 
 
