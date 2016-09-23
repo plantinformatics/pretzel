@@ -37,7 +37,9 @@ export default Ember.Route.extend({
         var exMaps = [];
         if (params.mapsToView) {
           for (var i=0; i < params.mapsToView.length; i++) {
-            exMaps.push(params.mapsToView[i]);
+            if (map.get('id') != params.mapsToView[i]) {
+              exMaps.push(params.mapsToView[i]);
+            }
           }
         }
         map.set('extraMaps', exMaps);
