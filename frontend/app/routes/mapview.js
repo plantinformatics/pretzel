@@ -36,6 +36,9 @@ export default Ember.Route.extend({
             if (map.get('id') != params.mapsToView[i]) {
               exMaps.push(params.mapsToView[i]);
             }
+            else {
+              map.set('isSelected', true);
+            }
           }
         }
         map.set('extraMaps', exMaps);
