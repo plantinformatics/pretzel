@@ -53,9 +53,19 @@ export default Ember.Route.extend({
           console.log(mapset.get('name'));
           return mapset.get('maps');
         }).then(function(maps) {
-          let markermaplocations = maps.getEach('markermaplocations');
-          return Ember.RSVP.all(markermaplocations).then(function() {
-            return maps;
+          // We can filter after maps promise has been resolved.
+          let filteredMaps = maps.filterBy('name', '1A'); // 1A for now
+          let markermaplocations = filteredMaps.getEach('markermaplocations');
+          return Ember.RSVP.all(markermaplocations).then(function(mmlocs) {
+            let markerArray = [];
+            mmlocs.forEach(function(mmloc) {
+              mmloc.forEach(function(marka) {
+                markerArray.pushObject(marka.get('marker'));
+              });
+            });
+            return Ember.RSVP.all(markerArray).then(function() {
+              return filteredMaps;
+            });
           });
         });
 
@@ -68,8 +78,9 @@ export default Ember.Route.extend({
         preparedData[param] = {};
         results[param].forEach(function(m) {
           preparedData[param][m.get('name')] = [];
-          m.get('markermaplocations').forEach(function(marker) {
-            preparedData[param][m.get('name')].pushObject({"marker": marker.get('id'), "location": marker.get('location') });
+          m.get('markermaplocations').forEach(function(marka) {
+            let mymarker = marka.get('marker');
+            preparedData[param][m.get('name')].pushObject({"marker": mymarker.get('name'), "location": marka.get('location') });
           });
         });
       });
