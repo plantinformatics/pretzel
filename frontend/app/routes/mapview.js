@@ -20,10 +20,6 @@ export default Ember.Route.extend({
   }, 
 
   deserializeQueryParam: function(value, urlKey, defaultValueType) {
-    console.log("deserializeQueryParam, params:");
-    console.log(value);
-    console.log(urlKey);
-    console.log(defaultValueType);
     return value;
   },
 
@@ -52,7 +48,6 @@ export default Ember.Route.extend({
     params.mapsToView.forEach(function(param) {
 
       promises[param] = that.get('store').findRecord('mapset', param).then(function(mapset) {
-          console.log(mapset.get('name'));
           return mapset.get('maps');
         }).then(function(maps) {
           // We can filter after maps promise has been resolved.

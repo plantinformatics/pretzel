@@ -12,7 +12,6 @@ export default Ember.Component.extend({
   },
 
   didInsertElement() {
-    console.log("draw map");
     // Only called after DOM element inserted for first time.
     //
     let svgContainer = d3.select('#holder').append('svg')
