@@ -68,6 +68,7 @@ config/local.js
 
 node_modules
 bower_components
+!node_modules/sails-generate-ember-blueprints/templates/advanced/api/blueprints/populate.js
 
 
 

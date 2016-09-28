@@ -20,16 +20,11 @@ export default Ember.Route.extend({
   }, 
 
   deserializeQueryParam: function(value, urlKey, defaultValueType) {
-    console.log("deserializeQueryParam, params:");
-    console.log(value);
-    console.log(urlKey);
-    console.log(defaultValueType);
     return value;
   },
 
   model(params) {
-    console.log("params to mapview route:");
-    console.log(params);
+
     // Get all available maps.
     var maps = this.get('store').findAll('mapset');
     this.controllerFor("mapview").set("availableMaps", maps);
@@ -38,19 +33,59 @@ export default Ember.Route.extend({
         var exMaps = [];
         if (params.mapsToView) {
           for (var i=0; i < params.mapsToView.length; i++) {
-            exMaps.push(params.mapsToView[i]);
+            if (map.get('id') != params.mapsToView[i]) {
+              exMaps.push(params.mapsToView[i]);
+            }
+            else {
+              map.set('isSelected', true);
+            }
           }
         }
         map.set('extraMaps', exMaps);
       });
     });
     
-    var retMaps = [];
-    for (var i=0; i < params.mapsToView.length; i++) {
-      console.log("in mapview route loop:");
-      console.log(params.mapsToView[i]);
-      retMaps.push(this.get('store').findRecord('mapset', params.mapsToView[i]));
-    }
-    return retMaps;
+    let promises = {};
+    let that = this;
+
+    params.mapsToView.forEach(function(param) {
+
+      promises[param] = that.get('store').findRecord('mapset', param).then(function(mapset) {
+          return mapset.get('maps');
+        }).then(function(maps) {
+          // We can filter after maps promise has been resolved.
+          let filteredMaps = maps.filterBy('name', '1A'); // 1A for now
+          let markermaplocations = filteredMaps.getEach('markermaplocations');
+          return Ember.RSVP.all(markermaplocations).then(function(mmlocs) {
+            let markerArray = [];
+            mmlocs.forEach(function(mmloc) {
+              mmloc.forEach(function(marka) {
+                markerArray.pushObject(marka.get('marker'));
+              });
+            });
+            return Ember.RSVP.all(markerArray).then(function() {
+              return filteredMaps;
+            });
+          });
+        });
+
+    });
+
+    let preparedData = {};
+
+    return Ember.RSVP.hash(promises).then(function(results) {
+      params.mapsToView.forEach(function(param) {
+        preparedData[param] = {};
+        results[param].forEach(function(m) {
+          preparedData[param][m.get('name')] = [];
+          m.get('markermaplocations').forEach(function(marka) {
+            let mymarker = marka.get('marker');
+            preparedData[param][m.get('name')].pushObject({"marker": mymarker.get('name'), "location": marka.get('location') });
+          });
+        });
+      });
+      that.controllerFor("mapview").set("mapData", params.mapsToView);
+      return preparedData;
+    });
   }
 });

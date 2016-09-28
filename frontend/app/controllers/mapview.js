@@ -4,15 +4,16 @@ export default Ember.Controller.extend({
   queryParams: ['mapsToView'],
   mapsToView: [],
   availableMaps: [],
-  monkey: ['hello monkey'],
+  mapData: [],
 
-  selectedMaps: Ember.computed('mapsToView', function() {
-    return this.get('mapsToView');
+  selectedMaps: [],
+  //selectedMaps: Ember.computed('mapsToView', function() {
+  //  console.log("in selectedMaps");
+  //  return this.get('mapsToView');
+  //}),
+
+  hasData: Ember.computed('mapData', function() {
+    return this.mapData.length > 0;
   }),
 
-  init() {
-    console.log("mapsToView =");
-    console.log(this.get('mapsToView'));
-    console.log("mapview controller init");
-  }
 });
