@@ -28,8 +28,8 @@
 Maps to align:
 
 <ul>
-{{#each mapData as |mapid|}}
-  <li>{{mapid}}</li>
+{{#each selectedMaps as |map|}}
+  <li>{{map.id}} {{#link-to "mapview" (query-params mapsToView=map.mapDeleteLink)}}Delete{{/link-to}}</li>
 {{/each}}
 </ul>
 

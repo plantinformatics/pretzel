@@ -17,6 +17,12 @@ export default DS.Model.extend({
     return [this.get("id")];
   }),
 
+  mapDeleteLink: Ember.computed('extraMaps', function() {
+    let exMaps = this.get("extraMaps");
+    let that = this;
+    return exMaps.filter(function(mapid) { return mapid != that.get("id"); });
+  }),
+
   mapLink: Ember.computed('extraMaps', function() {
     var retlist = this.get("extraMaps");
     if (retlist == null) {
