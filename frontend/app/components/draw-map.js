@@ -9,18 +9,21 @@ export default Ember.Component.extend({
     console.log(myMaps);
     console.log("data to draw:");
     console.log(myData);
+
+    let svgContainer = d3.select("svg");
+    svgContainer.selectAll('circle').remove();
+    svgContainer.selectAll('circle')
+                .data(myMaps)
+                .enter()
+                .append('circle')
+                .attr('cx', 100)
+                .attr('cy', function(d) { return 100+parseInt(d)*50;})
+                .attr('r', function(d) { return parseInt(d)*10; });
   },
 
   didInsertElement() {
     // Only called after DOM element inserted for first time.
     //
-    let svgContainer = d3.select('#holder').append('svg')
-                        .attr('width',700)
-                        .attr('height',700);
-    svgContainer.append('circle')
-                .attr('cx', 250)
-                .attr('cy', 250)
-                .attr('r', 100);
 
   },
 
