@@ -29,7 +29,7 @@ export default Ember.Component.extend({
     // draw each time.
     //
     let data = this.get('data');
-    let maps = this.get('maps');
+    let maps = d3.keys(data);
     this.draw(data, maps);
   }
 });
