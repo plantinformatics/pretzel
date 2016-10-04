@@ -4,6 +4,7 @@ export default Ember.Component.extend({
 
   draw: function(myData, myMaps) {
     // Draw functionality goes here.
+<<<<<<< HEAD
 
    //convert myData into format like: {map:1,marker:1,location:1}
     let d3Data = [];

@@ -31,6 +31,7 @@ export default Ember.Route.extend({
     maps.then(function(maplist){
       maplist.forEach(function(map) {
         var exMaps = [];
+        map.set('isSelected', false); // In case it has been de-selected.
         if (params.mapsToView) {
           for (var i=0; i < params.mapsToView.length; i++) {
             if (map.get('id') != params.mapsToView[i]) {
@@ -46,11 +47,13 @@ export default Ember.Route.extend({
     });
     
     let promises = {};
+    let selMaps = [];
     let that = this;
 
     params.mapsToView.forEach(function(param) {
 
       promises[param] = that.get('store').findRecord('mapset', param).then(function(mapset) {
+          selMaps.pushObject(mapset);
           return mapset.get('maps');
         }).then(function(maps) {
           // We can filter after maps promise has been resolved.
@@ -86,6 +89,7 @@ export default Ember.Route.extend({
         });
       });
       that.controllerFor("mapview").set("mapData", params.mapsToView);
+      that.controllerFor("mapview").set("selectedMaps", selMaps);
       return preparedData;
     });
   }
