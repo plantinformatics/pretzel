@@ -4,7 +4,6 @@ export default Ember.Component.extend({
 
   draw: function(myData, myMaps) {
     // Draw functionality goes here.
-<<<<<<< HEAD
 
    //convert myData into format like: {map:1,marker:1,location:1}
     let d3Data = [];
@@ -418,7 +417,7 @@ export default Ember.Component.extend({
     // draw each time.
     //
     let data = this.get('data');
-    let maps = this.get('maps');
+    let maps = d3.keys(data);
     console.log("BBBB");
     this.draw(data, maps);
   }
