@@ -2,6 +2,11 @@ svg {
   font-size: 14px;
 }
 
+.active {
+  stroke: #000;
+  stroke-width: 2px;
+}
+
 .map.selected g.axis text {
   font-weight: bold;
 }
