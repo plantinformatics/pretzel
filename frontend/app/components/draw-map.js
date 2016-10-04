@@ -12,8 +12,8 @@ export default Ember.Component.extend({
     let mapIDs = [];
 
     let m = [100, 160, 80, 320],
-    w = 1480 - m[1] - m[3],
-    h = 850 - m[0] - m[2];
+    w = 1200 - m[1] - m[3],
+    h = 700 - m[0] - m[2];
 
     let y = {},
         z = {}, // will contain map/marker information
@@ -68,8 +68,8 @@ export default Ember.Component.extend({
     d3.select("svg").remove();
 
     let svgContainer = d3.select('#holder').append('svg')
-                           .attr('width',1480)
-                           .attr('height',850)
+                           .attr('width',1200)
+                           .attr('height',700)
                            .append("svg:g")
                            .attr("transform", "translate(100,100)");
       //User shortcut from the keybroad to manipulate the maps
@@ -210,12 +210,19 @@ export default Ember.Component.extend({
     }
 
     function drag(d) {
-      x[mapIDs.indexOf(d)] = d3.event.x;
       console.log("Drag");
+      console.log(mapIDs.indexOf(d));
       console.log("5555 " +  x[mapIDs.indexOf(d)] + " " + d3.event.x);
       //console.log("Drag here " + x[mapIDs.indexOf(d)]);
       //mapIDs.sort(function(a, b) { return x(a) - x(b); });
-      g.attr("transform", function(d) { console.log("AAAAAAAAA " + x[mapIDs.indexOf(d)] + " " + d + " " + x(d) ); return "translate(" + x(d) + ")"; });
+      g.attr("transform", function(e) {
+        console.log("AAAAAAAAA " + x(e) + " " + e + " " + x(e) );
+        if (d == e) {
+          return "translate(" + d3.event.x + ")";
+        } else {
+          return "translate(" + x(e) + ")";
+        }
+      });
       console.log("CCCC");
       d3.selectAll(".foreground g").selectAll("path").remove();
       d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
