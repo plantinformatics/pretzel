@@ -185,17 +185,17 @@ export default Ember.Component.extend({
         for (var k=0; k<mapIDs.length-1; k++) {
             //console.log(k + " " + mapIDs.length);
             if (d in z[mapIDs[k]] && d in z[mapIDs[k+1]]) { // if markers is in both maps
-                r.push(line([[x(mapIDs[k]), y[mapIDs[k]](z[mapIDs[k]][d])],
-                             [x(mapIDs[k+1]), y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]));
+                r.push(line([[o[mapIDs[k]], y[mapIDs[k]](z[mapIDs[k]][d])],
+                             [o[mapIDs[k+1]], y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]));
             }
             else if (showAll) {
                 if (d in z[mapIDs[k]]) { 
-                    r.push(line([[x(mapIDs[k])-5, y[mapIDs[k]](z[mapIDs[k]][d])],
-                                [x(mapIDs[k])+5, y[mapIDs[k]](z[mapIDs[k]][d])]]));
+                    r.push(line([[o[mapIDs[k]]-5, y[mapIDs[k]](z[mapIDs[k]][d])],
+                                [o[mapIDs[k]]+5, y[mapIDs[k]](z[mapIDs[k]][d])]]));
                 }
                 if (d in z[mapIDs[k+1]]) {
-                    r.push(line([[x(mapIDs[k+1])-5, y[mapIDs[k+1]](z[mapIDs[k+1]][d])],
-                                [x(mapIDs[k+1])+5, y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]));
+                    r.push(line([[o[mapIDs[k+1]]-5, y[mapIDs[k+1]](z[mapIDs[k+1]][d])],
+                                [o[mapIDs[k+1]]+5, y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]));
                 }
             }
         }
@@ -227,26 +227,19 @@ export default Ember.Component.extend({
       o[d] = d3.event.x;
       mapIDs.sort(function(a, b) { return o[a] - o[b]; });
       console.log(mapIDs + " " + o[d]);
-      //d3.select(this).attr("transform", function(){ return "translate(" + d3.event.x + ")"; });//.attr("cy", d.y = d3.event.y);
-      //g.attr("transform", function() { return "translate(" + d3.event.x + ")"; });
       d3.select(this).attr("transform", function() {return "translate(" + d3.event.x + ")";});
       d3.selectAll(".foreground g").selectAll("path").remove();
-      //d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
-      //d3.selectAll(".foreground g").selectAll("path").attr("d", function(d) { return d; })
+      d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
+      d3.selectAll(".foreground g").selectAll("path").attr("d", function(d) { return d; })
       //d3.event.subject.fx = d3.event.x;
     }
 
     function dragended(d) {
+      o[d] = x(d);
       x.domain(mapIDs).range([0, w]);
-
-      //console.log(d3.event.x + " " + x(d) + " " + o[d]);
-      //console.log(mapIDs);
-      //x = d3.scalePoint().domain(mapIDs).range([0, w]);
       d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
       var t = d3.transition().duration(500);
-      //console.log(x(d));
       t.selectAll(".map").attr("transform", function(d) { return "translate(" + x(d) + ")"; });
-      //t.selectAll(".map").attr("transform", function(d) { return "translate(" + d3.event.x + ")"; });
       t.selectAll(".foreground path").attr("d", function(d) { return d; })
       d3.select(this).classed("active", false);
       d3.event.subject.fx = null;
