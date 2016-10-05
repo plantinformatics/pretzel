@@ -11,6 +11,7 @@ export default Ember.Component.extend({
     //mapIDs will be used to store map IDs
     let mapIDs = [];
 
+    //margins, width and height (defined but not be used)
     let m = [100, 160, 80, 320],
     w = 1200 - m[1] - m[3],
     h = 700 - m[0] - m[2];
@@ -44,8 +45,15 @@ export default Ember.Component.extend({
       z[mapID] = {}; 
     });
     //d3 v4 scalePoint replace the rangePoint
+    //let x = d3.scaleOrdinal().domain(mapIDs).range([0, w]);
     let x = d3.scalePoint().domain(mapIDs).range([0, w]);
-    console.log(x(mapIDs[1]));
+    let o = {};
+    mapIDs.forEach(function(d){
+      o[d] = x(d);
+    })
+    console.log(o);
+    let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
+    
     d3Data.forEach(function(d) {
       z[d.map][d.marker] = +d.location;
       //console.log(d.map + " " + d.marker + " " + d.location);
@@ -72,7 +80,8 @@ export default Ember.Component.extend({
                            .attr('height',700)
                            .append("svg:g")
                            .attr("transform", "translate(100,100)");
-      //User shortcut from the keybroad to manipulate the maps
+
+    //User shortcut from the keybroad to manipulate the maps
     d3.select("#holder").on("keydown", function()
       {
         if ((String.fromCharCode(d3.event.keyCode)) == "D") {
@@ -93,8 +102,9 @@ export default Ember.Component.extend({
         }
 
     });
-      //Add foreground lines.
-    foreground = svgContainer.append("svg:g") // foreground has as elements "paths" that correspond to markers
+
+    //Add foreground lines.
+    foreground = svgContainer.append("g") // foreground has as elements "paths" that correspond to markers
                 .attr("class", "foreground")
                 .selectAll("g")
                 .data(d3Markers) // insert map data into path elements (each line of the "map" is a path)
@@ -120,9 +130,9 @@ export default Ember.Component.extend({
         .attr("transform", function(d) { return "translate(" + x(d) + ")"; })
         .call(d3.drag()
           .subject(function(d) { return {x: x(d)}; }) //origin replaced by subject
-          .on("start", dragstart) //start instead of dragstart in v4. 
-          .on("drag", drag)
-          .on("end", dragend));//function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
+          .on("start", dragstarted) //start instead of dragstart in v4. 
+          .on("drag", dragged)
+          .on("end", dragended));//function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
           //.on("click", function(d) { if (d3.event.defaultPrevented) return; click(d); });
         /*.on("click", function(d) {
                 if (d3.event.shiftKey) {
@@ -175,21 +185,24 @@ export default Ember.Component.extend({
         for (var k=0; k<mapIDs.length-1; k++) {
             //console.log(k + " " + mapIDs.length);
             if (d in z[mapIDs[k]] && d in z[mapIDs[k+1]]) { // if markers is in both maps
-                r.push(line([[x(mapIDs[k]), y[mapIDs[k]](z[mapIDs[k]][d])],
-                             [x(mapIDs[k+1]), y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]));
+                r.push(line([[o[mapIDs[k]], y[mapIDs[k]](z[mapIDs[k]][d])],
+                             [o[mapIDs[k+1]], y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]));
             }
             else if (showAll) {
                 if (d in z[mapIDs[k]]) { 
-                    r.push(line([[x(mapIDs[k])-5, y[mapIDs[k]](z[mapIDs[k]][d])],
-                                [x(mapIDs[k])+5, y[mapIDs[k]](z[mapIDs[k]][d])]]));
+                    r.push(line([[o[mapIDs[k]]-5, y[mapIDs[k]](z[mapIDs[k]][d])],
+                                [o[mapIDs[k]]+5, y[mapIDs[k]](z[mapIDs[k]][d])]]));
                 }
                 if (d in z[mapIDs[k+1]]) {
-                    r.push(line([[x(mapIDs[k+1])-5, y[mapIDs[k+1]](z[mapIDs[k+1]][d])],
-                                [x(mapIDs[k+1])+5, y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]));
+                    r.push(line([[o[mapIDs[k+1]]-5, y[mapIDs[k+1]](z[mapIDs[k+1]][d])],
+                                [o[mapIDs[k+1]]+5, y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]));
                 }
             }
         }
         return r;
+    }
+    function update(d){
+
     }
     /*function brush() {
       console.log("brush event");
@@ -205,38 +218,35 @@ export default Ember.Component.extend({
       });
     }*/
 
-    function dragstart(d) {
+    function dragstarted(d) {
       d3.select(this).raise().classed("active", true);
+      d3.event.subject.fx = d3.event.subject.x;
     }
 
-    function drag(d) {
-      console.log("Drag");
-      console.log(mapIDs.indexOf(d));
-      console.log("5555 " +  x[mapIDs.indexOf(d)] + " " + d3.event.x);
-      //console.log("Drag here " + x[mapIDs.indexOf(d)]);
-      //mapIDs.sort(function(a, b) { return x(a) - x(b); });
-      g.attr("transform", function(e) {
-        console.log("AAAAAAAAA " + x(e) + " " + e + " " + x(e) );
-        if (d == e) {
-          return "translate(" + d3.event.x + ")";
-        } else {
-          return "translate(" + x(e) + ")";
-        }
-      });
-      console.log("CCCC");
+    function dragged(d) {
+      o[d] = d3.event.x;
+      mapIDs.sort(function(a, b) { return o[a] - o[b]; });
+      console.log(mapIDs + " " + o[d]);
+      d3.select(this).attr("transform", function() {return "translate(" + d3.event.x + ")";});
       d3.selectAll(".foreground g").selectAll("path").remove();
       d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
-      foreground.selectAll("path").attr("d", function(d) { return d; })
+      d3.selectAll(".foreground g").selectAll("path").attr("d", function(d) { return d; })
+      //d3.event.subject.fx = d3.event.x;
     }
 
-    function dragend(d) {
-      console.log("End here?");
+    function dragended(d) {
+      // Order of mapIDs may have changed so need to redefine x and o.
+      x = d3.scalePoint().domain(mapIDs).range([0, w]);
+      mapIDs.forEach(function(d){
+        o[d] = x(d);
+      });
       x.domain(mapIDs).range([0, w]);
       d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
       var t = d3.transition().duration(500);
       t.selectAll(".map").attr("transform", function(d) { return "translate(" + x(d) + ")"; });
       t.selectAll(".foreground path").attr("d", function(d) { return d; })
       d3.select(this).classed("active", false);
+      d3.event.subject.fx = null;
     }
 
   function click(d) {
