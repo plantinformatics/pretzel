@@ -235,7 +235,11 @@ export default Ember.Component.extend({
     }
 
     function dragended(d) {
-      o[d] = x(d);
+      // Order of mapIDs may have changed so need to redefine x and o.
+      x = d3.scalePoint().domain(mapIDs).range([0, w]);
+      mapIDs.forEach(function(d){
+        o[d] = x(d);
+      });
       x.domain(mapIDs).range([0, w]);
       d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
       var t = d3.transition().duration(500);
