@@ -50,10 +50,10 @@ module.exports.connections = {
 
   testMysqlServer: {
     adapter: 'sails-mysql',
-    host: 'localhost',
-    user: 'dav127_admin',
-    password: 'D@V127_@dm1n',
-    database: 'dav127_test'
+    host: '',
+    user: '',
+    password: '',
+    database: ''
   },
 
   /***************************************************************************
