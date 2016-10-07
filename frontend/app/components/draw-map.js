@@ -226,9 +226,12 @@ export default Ember.Component.extend({
 
     function dragged(d) {
       o[d] = d3.event.x;
+      // Now impose boundaries on the x-range you can drag.
+      // These values should really be based on variables defined previously.
+      if (o[d] < -50) { o[d] = -50; } else if (o[d] > 770) { o[d] = 770 }
       mapIDs.sort(function(a, b) { return o[a] - o[b]; });
-      //console.log(mapIDs + " " + o[d]);
-      d3.select(this).attr("transform", function() {return "translate(" + d3.event.x + ")";});
+      console.log(mapIDs + " " + o[d]);
+      d3.select(this).attr("transform", function() {return "translate(" + o[d] + ")";});
       d3.selectAll(".foreground g").selectAll("path").remove();
       d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
       d3.selectAll(".foreground g").selectAll("path").attr("d", function(d) { return d; })
