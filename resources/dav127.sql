@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS `genocomplete` (
 CREATE TABLE IF NOT EXISTS `map` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
+  `consensus` varchar(255) DEFAULT NULL,
   `start` float DEFAULT NULL,
   `stop` float DEFAULT NULL,
   `maporder` int(11) DEFAULT NULL,

@@ -51,8 +51,8 @@ export default Ember.Component.extend({
     mapIDs.forEach(function(d){
       o[d] = x(d);
     })
-    console.log(o);
-    let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
+    //console.log(o);
+    //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
     
     d3Data.forEach(function(d) {
       z[d.map][d.marker] = +d.location;
@@ -62,15 +62,17 @@ export default Ember.Component.extend({
     
     //creates a new Array instance from an array-like or iterable object.
     d3Markers = Array.from(d3Markers);
+    //console.log(axis.scale(y[mapIDs))
     
     mapIDs.forEach(function(d) {
                   y[d] = d3.scaleLinear()
                           .domain([0,d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } )])
                           .range([0, h]); // set scales for each map
+                  //console.log(y[d]);
                   y[d].flipped = false;
-                //  y[d].brush = d3.brush()
-                //                .y(y[d]) //not work in d3 v4. will find a solution
-                //                .on("brush", brush);
+                  y[d].brush = d3.brushY()
+                                 .extent([[-8,0],[8,h]])
+                                 .on("brush", brushed);
               });
 
     d3.select("svg").remove();
@@ -159,19 +161,18 @@ export default Ember.Component.extend({
       .style("font-size",12)
       .text(String);
 
-
+      
     // Add a brush for each axis.
-   // g.append("svg:g")
-   //     .attr("class", "brush")
-   //     .each(function(d) { d3.select(this).call(y[d].brush); })
-   //     .selectAll("rect")
-   //     .attr("x", -8)
-    //    .attr("width", 16);
+    g.append("g")
+      .attr("class", "brush")
+      .each(function(d) { d3.select(this).call(y[d].brush); });
 
-    
-    function deleteMap(){
-      console.log("Delete");
-    }
+
+    //Probably leave the delete function to Ember
+    //function deleteMap(){
+    //  console.log("Delete");
+    //}
+
     function zoomMap(){
       console.log("Zoom");
     }
@@ -204,29 +205,29 @@ export default Ember.Component.extend({
     function update(d){
 
     }
-    /*function brush() {
-      console.log("brush event");
-      brushActives = mapIDs.filter(function(p) { return !y[p].brush.empty(); }), // maps with an active brush
-      brushExtents = brushActives.map(function(p) { return y[p].brush.extent(); }); // extents of active brushes
-      if (brushExtents.length > 0) {
-        console.log(brushExtents[0][0], brushExtents[0][1]);
-      }
+
+    function brushed() {
+      var selectedMap = d3.event.selection;
+      //var targetedMap = d3.event.sourceEvent;
+      //console.log(selectedMap + " " + targetedMap);
+      //brushExtents = brushActives.map(function(p) { return selectedMap; }); // extents of active brushes
+      console.log(brushExtents);
       d3.selectAll(".foreground g").classed("fade", function(d) {
-        return !brushActives.every(function(p, i) {
+        return mapIDs.every(function(p, i) {
           return brushExtents[i][0] <= z[p][d] && z[p][d] <= brushExtents[i][1]}
         )
       });
-    }*/
+    }
 
     function dragstarted(d) {
-      d3.select(this).raise().classed("active", true);
+      d3.select(this).classed("active", true);
       d3.event.subject.fx = d3.event.subject.x;
     }
 
     function dragged(d) {
       o[d] = d3.event.x;
       mapIDs.sort(function(a, b) { return o[a] - o[b]; });
-      console.log(mapIDs + " " + o[d]);
+      //console.log(mapIDs + " " + o[d]);
       d3.select(this).attr("transform", function() {return "translate(" + d3.event.x + ")";});
       d3.selectAll(".foreground g").selectAll("path").remove();
       d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
@@ -279,86 +280,6 @@ export default Ember.Component.extend({
   }
 
 /*
-    d3Markers = Array.from(markers);
-    d3Maps.forEach(function(d) {
-      y[d] = d3.scaleLinear()
-          .domain([0,d3.max(Object.keys(z[d]), function(x) { return z[d][x]; } )])
-          .range([0, h]); // set scales for each map
-
-      y[d].flipped = false;
-
-      y[d].brush = d3.brush()
-        //.y(y[d]) //not work in d3 v4. will find a solution
-        .on("brush", brush);
-    });
-
-    //Add foreground lines.
-    foreground = d3.select('svg').append("svg:g") // foreground has as elements "paths" that correspond to markers
-            .attr("class", "foreground")
-            .selectAll("g")
-            .data(markers) // insert map data into path elements (each line of the "map" is a path)
-            .enter().append("g")
-            .attr("class", function(d) { return d; })
-
-    markers.map(function(m) { 
-      d3.selectAll("."+m)
-      .selectAll("path")
-      .data(path(m))
-      .enter()
-      .append("path")
-      .attr("d", function(d) { return d; })});
-
-      // Add a group element for each map.
-      var g = svg.selectAll(".map")
-          .data(maps)
-          .enter().append("svg:g")
-          .attr("class", "map")
-          .attr("id", function(d) { return d; })
-          .attr("transform", function(d) { return "translate(" + x(d) + ")"; })
-          .call(d3.drag()
-            //.origin(function(d) { return {x: x(d)}; })
-            //.on("dragstart", dragstart) //not dragstart in v4. 
-            .on("drag", drag)
-            .on("end", function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
-            //.on("click", function(d) { if (d3.event.defaultPrevented) return; click(d); });
-          .on("click", function(d) {
-                  if (d3.event.shiftKey) {
-                      click(d);
-                  }
-                  else {
-                      if (!d3.selectAll(".map.selected").empty()) {
-                          d3.selectAll(".map").classed("selected", false);
-                      }
-                      else {
-                          d3.select("#"+d).classed("selected", function() {
-                                  return !d3.select("#"+d).classed("selected"); }) 
-                      }
-                  }
-              });
-           // Add an axis and title.
-      g.append("svg:g")
-          .attr("class", "axis")
-          .each(function(d) { d3.select(this).call(axis.scale(y[d])); })
-          .append("svg:text")
-          .attr("text-anchor", "middle")
-          .attr("y", -12)
-          .text(String);
-
-      g.selectAll(".axis")
-          .append("svg:text")
-          .attr("text-anchor", "middle")
-          .attr("y", h+25)
-          .text("7A");
-
-      // Add a brush for each axis.
-      g.append("svg:g")
-          .attr("class", "brush")
-          .each(function(d) { d3.select(this).call(y[d].brush); })
-          .selectAll("rect")
-          .attr("x", -8)
-          .attr("width", 16);
-
-
        let zoomedMarkers = [];
 
     //let grid = d3.divgrid();
@@ -435,7 +356,7 @@ export default Ember.Component.extend({
     //
     let data = this.get('data');
     let maps = d3.keys(data);
-    console.log("BBBB");
+    //console.log("BBBB");
     this.draw(data, maps);
   }
 });

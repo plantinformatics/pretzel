@@ -3,8 +3,8 @@ svg {
 }
 
 .active {
-  stroke: #000;
-  stroke-width: 2px;
+  stroke: #f93;
+  /*stroke-width: 2px;*/
 }
 
 .map.selected g.axis text {

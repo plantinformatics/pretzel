@@ -29,6 +29,11 @@ module.exports =
 			required: true
 			index: true
 
+		consensus: 
+			type: 'string'
+			required: true
+			index: true
+
 		# Which party/group produces this map, or publicly downloaded
 #		source: 
 #			type: 'string'
