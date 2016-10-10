@@ -22,10 +22,26 @@
   </ul>
 </div>
 
+<div class="btn-group">
+  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+    Select chromosome
+    <span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu" role="menu">
+  {{#each availableChrs as |mychr|}}
+  <li>
+    {{#link-to "mapview" (query-params chr=mychr)}}
+      {{mychr}}
+    {{/link-to}}
+  </li>
+  {{/each}}
+  </ul>
+</div>
+
 <br/>
 <br/>
 
-Maps to align:
+Maps to align ({{chr}}):
 
 <ul>
 {{#each selectedMaps as |map|}}

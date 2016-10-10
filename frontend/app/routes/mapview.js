@@ -6,6 +6,9 @@ export default Ember.Route.extend({
       // We want changes in the URL mapsToView query parameter to trigger
       // a model refresh.
       refreshModel: true
+    },
+    chr: {
+      refreshModel: true
     }
   },
 
@@ -57,7 +60,8 @@ export default Ember.Route.extend({
           return mapset.get('maps');
         }).then(function(maps) {
           // We can filter after maps promise has been resolved.
-          let filteredMaps = maps.filterBy('name', '1A'); // 1A for now
+          let filteredMaps = maps.filterBy('consensus', params.chr);
+          console.log(filteredMaps);
           let markermaplocations = filteredMaps.getEach('markermaplocations');
           return Ember.RSVP.all(markermaplocations).then(function(mmlocs) {
             let markerArray = [];

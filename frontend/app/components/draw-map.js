@@ -31,18 +31,20 @@ export default Ember.Component.extend({
     //myMaps mapset ID
     myMaps.forEach(function(i){
       //map ID
-      var mapID = Object.keys(myData[i]);
+      let mIDs = Object.keys(myData[i]);
       //List of objects 
       //e.g.
       //location:36.2288
       //map:"1-1A"
       //marker:"IWB6476"
-      var dataToArray = myData[i][mapID].toArray();
-      //console.log(dataToArray.length);
-      //Push the values from the array to d3Data.
-      d3Data.push.apply(d3Data, dataToArray);
-      mapIDs.push.apply(mapIDs,mapID);
-      z[mapID] = {}; 
+      console.log(mIDs);
+      mIDs.forEach(function(mapID) {
+        var dataToArray = myData[i][mapID].toArray();
+        //Push the values from the array to d3Data.
+        d3Data.push.apply(d3Data, dataToArray);
+        mapIDs.push(mapID);
+        z[mapID] = {};
+      });
     });
     //d3 v4 scalePoint replace the rangePoint
     //let x = d3.scaleOrdinal().domain(mapIDs).range([0, w]);
@@ -51,7 +53,7 @@ export default Ember.Component.extend({
     mapIDs.forEach(function(d){
       o[d] = x(d);
     })
-    //console.log(o);
+    console.log(z);
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
     
     d3Data.forEach(function(d) {
@@ -360,6 +362,7 @@ export default Ember.Component.extend({
     let data = this.get('data');
     let maps = d3.keys(data);
     //console.log("BBBB");
+    console.log(data);
     this.draw(data, maps);
   }
 });
