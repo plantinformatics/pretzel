@@ -23,8 +23,10 @@ svg {
 }
 
 .foreground .fade path {
+  fill: none;
   stroke: #000;
-  stroke-opacity: .05;
+  stroke-width: 2px;
+  stroke-opacity: .5;
 }
 
 .brush .extent {

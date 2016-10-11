@@ -37,7 +37,7 @@ export default Ember.Component.extend({
       //location:36.2288
       //map:"1-1A"
       //marker:"IWB6476"
-      console.log(mIDs);
+      //console.log(mIDs);
       mIDs.forEach(function(mapID) {
         var dataToArray = myData[i][mapID].toArray();
         //Push the values from the array to d3Data.
@@ -53,7 +53,7 @@ export default Ember.Component.extend({
     mapIDs.forEach(function(d){
       o[d] = x(d);
     })
-    console.log(z);
+    //console.log(z);
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
     
     d3Data.forEach(function(d) {
@@ -70,15 +70,14 @@ export default Ember.Component.extend({
                   y[d] = d3.scaleLinear()
                           .domain([0,d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } )])
                           .range([0, h]); // set scales for each map
-                  //console.log(y[d]);
                   y[d].flipped = false;
                   y[d].brush = d3.brushY()
                                  .extent([[-8,0],[8,h]])
                                  .on("brush", brushed);
+                                 //.on("end",brushended);
               });
 
     d3.select("svg").remove();
-
     let svgContainer = d3.select('#holder').append('svg')
                            .attr('width',1200)
                            .attr('height',700)
@@ -207,19 +206,37 @@ export default Ember.Component.extend({
     function update(d){
 
     }
-
+    let selectedMaps = {};
+    let brushedRegions = {};
     function brushed() {
-      var selectedMap = d3.event.selection;
-      //var targetedMap = d3.event.sourceEvent;
-      //console.log(selectedMap + " " + targetedMap);
-      //brushExtents = brushActives.map(function(p) { return selectedMap; }); // extents of active brushes
-      console.log(brushExtents);
+      if (!d3.event.sourceEvent) return; // Only transition after input.
+      if (!d3.event.selection) {
+          d3.selectAll(".foreground g").classed("fade",false);
+          return; // Ignore empty selections.
+      }
+      var name = d3.select(this).data();
+
+      //there is no empty function in v4. 
+      //define two hashes to store the brush information from selected maps.
+      selectedMaps[name[0]] = name[0]; 
+      brushedRegions[name[0]] = d3.event.selection;
+
+      brushExtents = Object.keys(selectedMaps).map(function(p) { return brushedRegions[p]; }); // extents of active brushes
       d3.selectAll(".foreground g").classed("fade", function(d) {
-        return mapIDs.every(function(p, i) {
-          return brushExtents[i][0] <= z[p][d] && z[p][d] <= brushExtents[i][1]}
-        )
+        return !Object.keys(selectedMaps).every(function(p, i) {
+            //use the invert function to transfer the brush regions into proper domain values.
+            return y[p].invert(brushExtents[i][0]) <= z[p][d] && z[p][d] <= y[p].invert(brushExtents[i][1]);
+        });
       });
+      //d3.select(".brush").call(brush.move, null);
     }
+
+   // function brushended() {
+   //   var s = d3.event.selection;
+   //   if(!s){
+   //     d3.selectAll(".foreground g").classed("fade", false);
+    //  }
+   // }
 
     function dragstarted(d) {
       d3.select(this).classed("active", true);
@@ -362,7 +379,7 @@ export default Ember.Component.extend({
     let data = this.get('data');
     let maps = d3.keys(data);
     //console.log("BBBB");
-    console.log(data);
+    //console.log(data);
     this.draw(data, maps);
   }
 });

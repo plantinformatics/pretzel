@@ -61,7 +61,7 @@ export default Ember.Route.extend({
         }).then(function(maps) {
           // We can filter after maps promise has been resolved.
           let filteredMaps = maps.filterBy('consensus', params.chr);
-          console.log(filteredMaps);
+          //console.log(filteredMaps);
           let markermaplocations = filteredMaps.getEach('markermaplocations');
           return Ember.RSVP.all(markermaplocations).then(function(mmlocs) {
             let markerArray = [];
