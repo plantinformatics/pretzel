@@ -211,7 +211,7 @@ export default Ember.Component.extend({
     function brushed() {
       if (!d3.event.sourceEvent) return; // Only transition after input.
       if (!d3.event.selection) {
-          d3.selectAll(".foreground g").classed("fade",false);
+        //  d3.selectAll(".foreground g").classed("fade",false);
           return; // Ignore empty selections.
       }
       var name = d3.select(this).data();
