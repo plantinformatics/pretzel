@@ -287,7 +287,6 @@ export default Ember.Component.extend({
 /*
        let zoomedMarkers = [];
 
-    //let grid = d3.divgrid();
     //console.log(myMaps.start + " " + myMaps.end);
     //d3.select('#grid')
       //.datum(d3Data)
@@ -307,52 +306,6 @@ export default Ember.Component.extend({
   },
 
   didInsertElement() {
-    /*
-      let svgContainer = d3.select('#holder').append('svg')
-                           .attr('width',1480)
-                           .attr('height',850)
-                           .append("svg:g")
-                           .attr("transform", "translate(320,100)");
-      //User shortcut from the keybroad to manipulate the maps
-      d3.select("#holder").on("keydown", function()
-      {
-        if ((String.fromCharCode(d3.event.keyCode)) == "D") {
-          deleteMap();
-        }
-        else if ((String.fromCharCode(d3.event.keyCode)) == "Z") {
-          zoomMap();
-        }
-        else if ((String.fromCharCode(d3.event.keyCode)) == "R") {
-          refreshMap();
-        }
-        else if ((String.fromCharCode(d3.event.keyCode)) == "A") {
-          showAll = !showAll;
-          refreshMap();
-        }
-        else if ((String.fromCharCode(d3.event.keyCode)) == " ") {
-          console.log("space");
-        }
-
-      });
-*/
-
-                           //console.log("AAAAA " + Ember.inspect(svgContainer));
-    // Only called after DOM element inserted for first time.
-    //
-    //let d3Data = this.get('data');
-    //let maps = this.get('maps');
-    //let grid = d3.divgrid();
-    //let svgContainer = d3.select('#holder').append('svg')
-    //                    .attr('width',700)
-    //                    .attr('height',700);
-    //svgContainer.append('circle')
-    //            .attr('cx', 250)
-    //            .attr('cy', 250)
-    //            .attr('r', 100);
-    //console.log("AAAAA " + d3Data[0]);// + " " + maps);
-    //d3.select('#grid')
-    //.datum(d3Data)
-    //.call(grid);
   },
 
   didRender() {
@@ -361,7 +314,6 @@ export default Ember.Component.extend({
     //
     let data = this.get('data');
     let maps = d3.keys(data);
-    //console.log("BBBB");
     console.log(data);
     this.draw(data, maps);
   }
