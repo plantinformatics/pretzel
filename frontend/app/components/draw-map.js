@@ -116,7 +116,9 @@ export default Ember.Component.extend({
                 .append("g")
                 .attr("class", function(d) { return d; });
     
+    
     d3Markers.forEach(function(m) { 
+                  //console.log(path(m) + " " + m);
                   d3.selectAll("."+m)
                     .selectAll("path")
                     .data(path(m))
@@ -124,7 +126,11 @@ export default Ember.Component.extend({
                     .append("path")
                     .attr("d", function(d) { return d; })
                 });
-
+                  //.on("mouseover",handleMouseOver)
+                  //.on("mouseout",handleMouseOut);
+    d3.selectAll("path")
+      .on("mouseover",handleMouseOver)
+      .on("mouseout",handleMouseOut);
     // Add a group element for each map.
     var g = svgContainer.selectAll(".map")
         .data(mapIDs)
@@ -174,6 +180,38 @@ export default Ember.Component.extend({
     //function deleteMap(){
     //  console.log("Delete");
     //}
+
+    function handleMouseOver(d){
+      var t = d3.transition()
+                .duration(800)
+                .ease(d3.easeElastic);
+
+      d3.select(this).transition(t)
+        .style("stroke", "#7F7")
+        .style("stroke-width", "6px")
+        .style("stroke-opacity", 1)
+        .style("fill", "none");    
+  // Specify where to put label of text
+      //svgContainer.append("text").attr({
+          //id: d,  // Create an id for text so we can select it later for removing on mouseout
+          //x: function() { return d[0].x; },
+          //y: function() { return d[0].y; }
+      //})
+      //.text(function() {
+      //  return d;  // Value of the text
+      //});
+    }
+
+    function handleMouseOut(d){
+      var t = d3.transition()
+                .duration(1000)
+                .ease(d3.easeElastic);
+      d3.select(this).transition(t)
+        .style("stroke", "#808")
+        .style("stroke-width", "2px")
+        .style("stroke-opacity", .3)
+        .style("fill", "none");  
+    }
 
     function zoomMap(){
       console.log("Zoom");
@@ -238,12 +276,6 @@ export default Ember.Component.extend({
       //d3.select(".brush").call(brush.move, null);
     }
 
-   // function brushended() {
-   //   var s = d3.event.selection;
-   //   if(!s){
-   //     d3.selectAll(".foreground g").classed("fade", false);
-    //  }
-   // }
 
     function dragstarted(d) {
       d3.select(this).classed("active", true);
@@ -256,7 +288,7 @@ export default Ember.Component.extend({
       // These values should really be based on variables defined previously.
       if (o[d] < -50) { o[d] = -50; } else if (o[d] > 770) { o[d] = 770 }
       mapIDs.sort(function(a, b) { return o[a] - o[b]; });
-      console.log(mapIDs + " " + o[d]);
+      //console.log(mapIDs + " " + o[d]);
       d3.select(this).attr("transform", function() {return "translate(" + o[d] + ")";});
       d3.selectAll(".foreground g").selectAll("path").remove();
       d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
