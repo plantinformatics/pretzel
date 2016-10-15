@@ -7,7 +7,7 @@ export default DS.Model.extend({
   location: DS.attr('number'),
   leftpos: DS.attr('string'),
   rightpos: DS.attr('string'),
-  marker: DS.belongsTo('marker'),
+  marker: DS.attr('string'),
   map: DS.belongsTo('map')
 
 });

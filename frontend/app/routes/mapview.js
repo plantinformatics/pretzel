@@ -64,15 +64,15 @@ export default Ember.Route.extend({
           console.log(filteredMaps);
           let markermaplocations = filteredMaps.getEach('markermaplocations');
           return Ember.RSVP.all(markermaplocations).then(function(mmlocs) {
-            let markerArray = [];
+            /*let markerArray = [];
             mmlocs.forEach(function(mmloc) {
               mmloc.forEach(function(marka) {
                 markerArray.pushObject(marka.get('marker'));
               });
             });
-            return Ember.RSVP.all(markerArray).then(function() {
-              return filteredMaps;
-            });
+            return Ember.RSVP.all(markerArray).then(function() {*/
+            return filteredMaps;
+            //});
           });
         });
 
@@ -87,8 +87,8 @@ export default Ember.Route.extend({
           let mymap = m.get('id')+ "-"+ m.get('name');
           preparedData[param][mymap] = [];
           m.get('markermaplocations').forEach(function(marka) {
-            let mymarker = marka.get('marker');
-            preparedData[param][mymap].pushObject({"map": mymap, "marker": mymarker.get('name'), "location": marka.get('location') });
+            //let mymarker = marka.get('marker');
+            preparedData[param][mymap].pushObject({"map": mymap, "marker": "m"+marka.get('marker'), "location": marka.get('location') });
           });
         });
       });

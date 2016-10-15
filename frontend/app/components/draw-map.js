@@ -53,7 +53,6 @@ export default Ember.Component.extend({
     mapIDs.forEach(function(d){
       o[d] = x(d);
     })
-    console.log(z);
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
     
     d3Data.forEach(function(d) {
@@ -61,6 +60,7 @@ export default Ember.Component.extend({
       //console.log(d.map + " " + d.marker + " " + d.location);
       d3Markers.add(d.marker);
     });
+    console.log(z);
     
     //creates a new Array instance from an array-like or iterable object.
     d3Markers = Array.from(d3Markers);
