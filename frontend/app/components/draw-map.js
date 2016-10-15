@@ -37,7 +37,7 @@ export default Ember.Component.extend({
       //location:36.2288
       //map:"1-1A"
       //marker:"IWB6476"
-      console.log(mIDs);
+      //console.log(mIDs);
       mIDs.forEach(function(mapID) {
         var dataToArray = myData[i][mapID].toArray();
         //Push the values from the array to d3Data.
@@ -70,15 +70,15 @@ export default Ember.Component.extend({
                   y[d] = d3.scaleLinear()
                           .domain([0,d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } )])
                           .range([0, h]); // set scales for each map
-                  //console.log(y[d]);
                   y[d].flipped = false;
                   y[d].brush = d3.brushY()
                                  .extent([[-8,0],[8,h]])
                                  .on("brush", brushed);
+                                 //.on;
+                                 //.on("end",brushended);
               });
 
     d3.select("svg").remove();
-
     let svgContainer = d3.select('#holder').append('svg')
                            .attr('width',1200)
                            .attr('height',700)
@@ -116,7 +116,9 @@ export default Ember.Component.extend({
                 .append("g")
                 .attr("class", function(d) { return d; });
     
+    
     d3Markers.forEach(function(m) { 
+                  //console.log(path(m) + " " + m);
                   d3.selectAll("."+m)
                     .selectAll("path")
                     .data(path(m))
@@ -124,7 +126,11 @@ export default Ember.Component.extend({
                     .append("path")
                     .attr("d", function(d) { return d; })
                 });
-
+                  //.on("mouseover",handleMouseOver)
+                  //.on("mouseout",handleMouseOut);
+    d3.selectAll("path")
+      .on("mouseover",handleMouseOver)
+      .on("mouseout",handleMouseOut);
     // Add a group element for each map.
     var g = svgContainer.selectAll(".map")
         .data(mapIDs)
@@ -175,6 +181,38 @@ export default Ember.Component.extend({
     //  console.log("Delete");
     //}
 
+    function handleMouseOver(d){
+      var t = d3.transition()
+                .duration(800)
+                .ease(d3.easeElastic);
+
+      d3.select(this).transition(t)
+        .style("stroke", "#7F7")
+        .style("stroke-width", "6px")
+        .style("stroke-opacity", 1)
+        .style("fill", "none");    
+  // Specify where to put label of text
+      //svgContainer.append("text").attr({
+          //id: d,  // Create an id for text so we can select it later for removing on mouseout
+          //x: function() { return d[0].x; },
+          //y: function() { return d[0].y; }
+      //})
+      //.text(function() {
+      //  return d;  // Value of the text
+      //});
+    }
+
+    function handleMouseOut(d){
+      var t = d3.transition()
+                .duration(1000)
+                .ease(d3.easeElastic);
+      d3.select(this).transition(t)
+        .style("stroke", "#808")
+        .style("stroke-width", "2px")
+        .style("stroke-opacity", .3)
+        .style("fill", "none");  
+    }
+
     function zoomMap(){
       console.log("Zoom");
     }
@@ -208,18 +246,36 @@ export default Ember.Component.extend({
 
     }
 
+    let selectedMaps = {};
+    let brushedRegions = {};
+
     function brushed() {
-      var selectedMap = d3.event.selection;
-      //var targetedMap = d3.event.sourceEvent;
-      //console.log(selectedMap + " " + targetedMap);
-      //brushExtents = brushActives.map(function(p) { return selectedMap; }); // extents of active brushes
-      console.log(brushExtents);
+      
+      if (!d3.event.sourceEvent) return; // Only transition after input.
+      if (!d3.event.selection) return;
+
+      var name = d3.select(this).data();
+
+      //there is no empty function in v4. 
+      //define two hashes to store the brush information from selected maps.
+      selectedMaps[name[0]] = name[0]; 
+      brushedRegions[name[0]] = d3.event.selection;
+
+      brushExtents = Object.keys(selectedMaps).map(function(p) { return brushedRegions[p]; }); // extents of active brushes
       d3.selectAll(".foreground g").classed("fade", function(d) {
-        return mapIDs.every(function(p, i) {
-          return brushExtents[i][0] <= z[p][d] && z[p][d] <= brushExtents[i][1]}
-        )
+
+        //d3.event.selection [min,min] or [max,max] should consider as non selection. maybe alternatively use brush.clear or (brush.move, null) given a mouse event
+        return !Object.keys(selectedMaps).every(function(p, i) {
+            if(brushExtents[i][0] == brushExtents[i][1]){               
+              return true;
+            }
+            //use the invert function to transfer the brush regions into proper domain values.
+            return y[p].invert(brushExtents[i][0]) <= z[p][d] && z[p][d] <= y[p].invert(brushExtents[i][1]);
+        });
       });
+      //d3.select(".brush").call(brush.move, null);
     }
+
 
     function dragstarted(d) {
       d3.select(this).classed("active", true);
@@ -232,7 +288,7 @@ export default Ember.Component.extend({
       // These values should really be based on variables defined previously.
       if (o[d] < -50) { o[d] = -50; } else if (o[d] > 770) { o[d] = 770 }
       mapIDs.sort(function(a, b) { return o[a] - o[b]; });
-      console.log(mapIDs + " " + o[d]);
+      //console.log(mapIDs + " " + o[d]);
       d3.select(this).attr("transform", function() {return "translate(" + o[d] + ")";});
       d3.selectAll(".foreground g").selectAll("path").remove();
       d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
@@ -287,7 +343,6 @@ export default Ember.Component.extend({
 /*
        let zoomedMarkers = [];
 
-    //let grid = d3.divgrid();
     //console.log(myMaps.start + " " + myMaps.end);
     //d3.select('#grid')
       //.datum(d3Data)
@@ -307,52 +362,6 @@ export default Ember.Component.extend({
   },
 
   didInsertElement() {
-    /*
-      let svgContainer = d3.select('#holder').append('svg')
-                           .attr('width',1480)
-                           .attr('height',850)
-                           .append("svg:g")
-                           .attr("transform", "translate(320,100)");
-      //User shortcut from the keybroad to manipulate the maps
-      d3.select("#holder").on("keydown", function()
-      {
-        if ((String.fromCharCode(d3.event.keyCode)) == "D") {
-          deleteMap();
-        }
-        else if ((String.fromCharCode(d3.event.keyCode)) == "Z") {
-          zoomMap();
-        }
-        else if ((String.fromCharCode(d3.event.keyCode)) == "R") {
-          refreshMap();
-        }
-        else if ((String.fromCharCode(d3.event.keyCode)) == "A") {
-          showAll = !showAll;
-          refreshMap();
-        }
-        else if ((String.fromCharCode(d3.event.keyCode)) == " ") {
-          console.log("space");
-        }
-
-      });
-*/
-
-                           //console.log("AAAAA " + Ember.inspect(svgContainer));
-    // Only called after DOM element inserted for first time.
-    //
-    //let d3Data = this.get('data');
-    //let maps = this.get('maps');
-    //let grid = d3.divgrid();
-    //let svgContainer = d3.select('#holder').append('svg')
-    //                    .attr('width',700)
-    //                    .attr('height',700);
-    //svgContainer.append('circle')
-    //            .attr('cx', 250)
-    //            .attr('cy', 250)
-    //            .attr('r', 100);
-    //console.log("AAAAA " + d3Data[0]);// + " " + maps);
-    //d3.select('#grid')
-    //.datum(d3Data)
-    //.call(grid);
   },
 
   didRender() {
@@ -361,8 +370,6 @@ export default Ember.Component.extend({
     //
     let data = this.get('data');
     let maps = d3.keys(data);
-    //console.log("BBBB");
-    console.log(data);
     this.draw(data, maps);
   }
 });
