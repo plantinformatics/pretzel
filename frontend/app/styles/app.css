@@ -22,18 +22,18 @@ svg {
   stroke: #808;
 }
 
-.foreground .fade path {
+.foreground .faded path {
   fill: none;
   stroke: #000;
   stroke-width: 2px;
-  stroke-opacity: .5;
+  stroke-opacity: .125;
 }
 
-.brush .extent {
+/*.brush .extent {
   fill-opacity: .3;
   stroke: #fff;
   shape-rendering: crispEdges;
-}
+}*/
 
 .axis line, .axis path {
   fill: none;
@@ -102,7 +102,7 @@ svg {
 }
 /* Brush css style */
 .brush .extent {
-  stroke: #fff;
+  stroke: #000;
   fill-opacity: .125;
   shape-rendering: crispEdges;
 }

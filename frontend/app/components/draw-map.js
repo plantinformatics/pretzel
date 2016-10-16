@@ -257,7 +257,7 @@ export default Ember.Component.extend({
         brushedRegions[name[0]] = d3.event.selection;
 
         brushExtents = Object.keys(selectedMaps).map(function(p) { return brushedRegions[p]; }); // extents of active brushes
-        d3.selectAll(".foreground g").classed("fade", function(d) {
+        d3.selectAll(".foreground g").classed("faded", function(d) {
 
           //d3.event.selection [min,min] or [max,max] should consider as non selection. maybe alternatively use brush.clear or (brush.move, null) given a mouse event
           return !Object.keys(selectedMaps).every(function(p, i) {
@@ -270,7 +270,7 @@ export default Ember.Component.extend({
         });
       }
       else {
-        d3.selectAll(".foreground g").classed("fade", false);
+        d3.selectAll(".foreground g").classed("faded", false);
         selectedMaps = {};
         brushedRegions = {};
       }
