@@ -73,9 +73,8 @@ export default Ember.Component.extend({
                   y[d].flipped = false;
                   y[d].brush = d3.brushY()
                                  .extent([[-8,0],[8,h]])
-                                 .on("brush", brushed);
-                                 //.on;
-                                 //.on("end",brushended);
+                                 .on("brush", brushed)
+                                 .on("end", brushended);
               });
 
     d3.select("svg").remove();
@@ -249,31 +248,46 @@ export default Ember.Component.extend({
     let selectedMaps = {};
     let brushedRegions = {};
 
+    function brushHelper(that) {
+      let name = d3.select(that).data();
+
+      console.log("selection " + d3.event.selection);
+
+      if (d3.event.selection != null) {
+        //there is no empty function in v4. 
+        //define two hashes to store the brush information from selected maps.
+        selectedMaps[name[0]] = name[0]; 
+        brushedRegions[name[0]] = d3.event.selection;
+
+        brushExtents = Object.keys(selectedMaps).map(function(p) { return brushedRegions[p]; }); // extents of active brushes
+        d3.selectAll(".foreground g").classed("fade", function(d) {
+
+          //d3.event.selection [min,min] or [max,max] should consider as non selection. maybe alternatively use brush.clear or (brush.move, null) given a mouse event
+          return !Object.keys(selectedMaps).every(function(p, i) {
+              if(brushExtents[i][0] == brushExtents[i][1]){               
+                return true;
+              }
+              //use the invert function to transfer the brush regions into proper domain values.
+              return y[p].invert(brushExtents[i][0]) <= z[p][d] && z[p][d] <= y[p].invert(brushExtents[i][1]);
+          });
+        });
+      }
+      else {
+        d3.selectAll(".foreground g").classed("fade", false);
+      }
+
+    }
+
     function brushed() {
-      
+      console.log("brush event");
       if (!d3.event.sourceEvent) return; // Only transition after input.
       if (!d3.event.selection) return;
+      brushHelper(this);
+    }
 
-      var name = d3.select(this).data();
-
-      //there is no empty function in v4. 
-      //define two hashes to store the brush information from selected maps.
-      selectedMaps[name[0]] = name[0]; 
-      brushedRegions[name[0]] = d3.event.selection;
-
-      brushExtents = Object.keys(selectedMaps).map(function(p) { return brushedRegions[p]; }); // extents of active brushes
-      d3.selectAll(".foreground g").classed("fade", function(d) {
-
-        //d3.event.selection [min,min] or [max,max] should consider as non selection. maybe alternatively use brush.clear or (brush.move, null) given a mouse event
-        return !Object.keys(selectedMaps).every(function(p, i) {
-            if(brushExtents[i][0] == brushExtents[i][1]){               
-              return true;
-            }
-            //use the invert function to transfer the brush regions into proper domain values.
-            return y[p].invert(brushExtents[i][0]) <= z[p][d] && z[p][d] <= y[p].invert(brushExtents[i][1]);
-        });
-      });
-      //d3.select(".brush").call(brush.move, null);
+    function brushended() {
+      console.log("brush event ended");
+      brushHelper(this);
     }
 
 
@@ -311,7 +325,7 @@ export default Ember.Component.extend({
       d3.event.subject.fx = null;
     }
 
-  function click(d) {
+  /*function click(d) {
      if (y[d].flipped) {
          y[d] = d3.scale.linear()
               .domain([0,d3.max(Object.keys(z[d]), function(x) { return z[d][x]; } )])
@@ -338,7 +352,7 @@ export default Ember.Component.extend({
       d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
       var t = d3.transition().duration(500);
       t.selectAll(".foreground path").attr("d", function(d) { return d; });
-  }
+  }/*
 
 /*
        let zoomedMarkers = [];
