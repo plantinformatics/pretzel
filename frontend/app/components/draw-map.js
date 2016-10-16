@@ -183,7 +183,7 @@ export default Ember.Component.extend({
                 .ease(d3.easeElastic);
 
       d3.select(this).transition(t)
-        .style("stroke", "#7F7")
+        .style("stroke", "#880044")
         .style("stroke-width", "6px")
         .style("stroke-opacity", 1)
         .style("fill", "none");    
@@ -306,7 +306,9 @@ export default Ember.Component.extend({
       d3.selectAll(".foreground g").selectAll("path").remove();
       d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
       d3.selectAll(".foreground g").selectAll("path").attr("d", function(d) { return d; })
-      //d3.event.subject.fx = d3.event.x;
+      d3.selectAll("path")
+        .on("mouseover",handleMouseOver)
+        .on("mouseout",handleMouseOut);
     }
 
     function dragended(d) {
@@ -321,6 +323,9 @@ export default Ember.Component.extend({
       t.selectAll(".map").attr("transform", function(d) { return "translate(" + x(d) + ")"; });
       t.selectAll(".foreground path").attr("d", function(d) { return d; })
       d3.select(this).classed("active", false);
+      d3.selectAll("path")
+        .on("mouseover",handleMouseOver)
+        .on("mouseout",handleMouseOut);
       d3.event.subject.fx = null;
     }
 
