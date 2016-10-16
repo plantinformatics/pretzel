@@ -67,43 +67,41 @@ export default Ember.Component.extend({
     //console.log(axis.scale(y[mapIDs))
     
     mapIDs.forEach(function(d) {
-                  y[d] = d3.scaleLinear()
-                          .domain([0,d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } )])
-                          .range([0, h]); // set scales for each map
-                  y[d].flipped = false;
-                  y[d].brush = d3.brushY()
-                                 .extent([[-8,0],[8,h]])
-                                 .on("brush", brushed)
-                                 .on("end", brushended);
-              });
+      y[d] = d3.scaleLinear()
+               .domain([0,d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } )])
+               .range([0, h]); // set scales for each map
+      y[d].flipped = false;
+      y[d].brush = d3.brushY()
+                     .extent([[-8,0],[8,h]])
+                     .on("brush", brushed)
+                     .on("end", brushended);
+    });
 
     d3.select("svg").remove();
     let svgContainer = d3.select('#holder').append('svg')
-                           .attr('width',1200)
-                           .attr('height',700)
-                           .append("svg:g")
-                           .attr("transform", "translate(100,100)");
+                         .attr('width',1200)
+                         .attr('height',700)
+                         .append("svg:g")
+                         .attr("transform", "translate(100,100)");
 
     //User shortcut from the keybroad to manipulate the maps
-    d3.select("#holder").on("keydown", function()
-      {
-        if ((String.fromCharCode(d3.event.keyCode)) == "D") {
-          deleteMap();
-        }
-        else if ((String.fromCharCode(d3.event.keyCode)) == "Z") {
-          zoomMap();
-        }
-        else if ((String.fromCharCode(d3.event.keyCode)) == "R") {
-          refreshMap();
-        }
-        else if ((String.fromCharCode(d3.event.keyCode)) == "A") {
-          showAll = !showAll;
-          refreshMap();
-        }
-        else if ((String.fromCharCode(d3.event.keyCode)) == " ") {
-          console.log("space");
-        }
-
+    d3.select("#holder").on("keydown", function() {
+      if ((String.fromCharCode(d3.event.keyCode)) == "D") {
+        deleteMap();
+      }
+      else if ((String.fromCharCode(d3.event.keyCode)) == "Z") {
+        zoomMap();
+      }
+      else if ((String.fromCharCode(d3.event.keyCode)) == "R") {
+        refreshMap();
+      }
+      else if ((String.fromCharCode(d3.event.keyCode)) == "A") {
+        showAll = !showAll;
+        refreshMap();
+      }
+      else if ((String.fromCharCode(d3.event.keyCode)) == " ") {
+        console.log("space");
+      }
     });
 
     //Add foreground lines.
@@ -117,19 +115,18 @@ export default Ember.Component.extend({
     
     
     d3Markers.forEach(function(m) { 
-                  //console.log(path(m) + " " + m);
-                  d3.selectAll("."+m)
-                    .selectAll("path")
-                    .data(path(m))
-                    .enter()
-                    .append("path")
-                    .attr("d", function(d) { return d; })
-                });
-                  //.on("mouseover",handleMouseOver)
-                  //.on("mouseout",handleMouseOut);
+      d3.selectAll("."+m)
+        .selectAll("path")
+        .data(path(m))
+        .enter()
+        .append("path")
+        .attr("d", function(d) { return d; })
+    });
+
     d3.selectAll("path")
       .on("mouseover",handleMouseOver)
       .on("mouseout",handleMouseOut);
+
     // Add a group element for each map.
     var g = svgContainer.selectAll(".map")
         .data(mapIDs)
@@ -274,6 +271,8 @@ export default Ember.Component.extend({
       }
       else {
         d3.selectAll(".foreground g").classed("fade", false);
+        selectedMaps = {};
+        brushedRegions = {};
       }
 
     }
