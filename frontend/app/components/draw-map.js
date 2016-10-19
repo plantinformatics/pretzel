@@ -120,12 +120,8 @@ export default Ember.Component.extend({
         .data(path(m))
         .enter()
         .append("path")
-        .attr("d", function(d) { return d; })
+        .attr("d", function(d) { return d; });
     });
-
-    d3.selectAll("path")
-      .on("mouseover",handleMouseOver)
-      .on("mouseout",handleMouseOut);
 
     // Add a group element for each map.
     var g = svgContainer.selectAll(".map")
@@ -177,37 +173,35 @@ export default Ember.Component.extend({
     //  console.log("Delete");
     //}
 
+//d3.selectAll(".foreground g").selectAll("path")
+    d3.selectAll("path")
+      .on("mouseover",handleMouseOver)
+      .on("mouseout",handleMouseOut);
+
     function handleMouseOver(d){
+       var t = d3.transition()
+                 .duration(800)
+                 .ease(d3.easeElastic);
+    
+      d3.select(this).transition(t)
+          .style("stroke", "#880044")
+          .style("stroke-width", "6px")
+          .style("stroke-opacity", 1)
+          .style("fill", "none");    
+    }
+    function handleMouseOut(d){
       var t = d3.transition()
                 .duration(800)
                 .ease(d3.easeElastic);
-
+      var myPath = d3.select(this)._groups[0][0];
+      //Simple solution is to set all styles to null, which will fix the confusion display with brush. Note: tried css class, maybe my way is not right, but it didn't work.
       d3.select(this).transition(t)
-        .style("stroke", "#880044")
-        .style("stroke-width", "6px")
-        .style("stroke-opacity", 1)
-        .style("fill", "none");    
-  // Specify where to put label of text
-      //svgContainer.append("text").attr({
-          //id: d,  // Create an id for text so we can select it later for removing on mouseout
-          //x: function() { return d[0].x; },
-          //y: function() { return d[0].y; }
-      //})
-      //.text(function() {
-      //  return d;  // Value of the text
-      //});
+           .style("stroke", null)
+           .style("stroke-width", null)
+           .style("stroke-opacity",null)
+           .style("fill", null);
     }
 
-    function handleMouseOut(d){
-      var t = d3.transition()
-                .duration(1000)
-                .ease(d3.easeElastic);
-      d3.select(this).transition(t)
-        .style("stroke", "#808")
-        .style("stroke-width", "2px")
-        .style("stroke-opacity", .3)
-        .style("fill", "none");  
-    }
 
     function zoomMap(){
       console.log("Zoom");
@@ -260,6 +254,7 @@ export default Ember.Component.extend({
         d3.selectAll(".foreground g").classed("faded", function(d) {
 
           //d3.event.selection [min,min] or [max,max] should consider as non selection. maybe alternatively use brush.clear or (brush.move, null) given a mouse event
+          
           return !Object.keys(selectedMaps).every(function(p, i) {
               if(brushExtents[i][0] == brushExtents[i][1]){               
                 return true;
@@ -267,9 +262,9 @@ export default Ember.Component.extend({
               //use the invert function to transfer the brush regions into proper domain values.
               return y[p].invert(brushExtents[i][0]) <= z[p][d] && z[p][d] <= y[p].invert(brushExtents[i][1]);
           });
+        
         });
-      }
-      else {
+      } else {
         d3.selectAll(".foreground g").classed("faded", false);
         selectedMaps = {};
         brushedRegions = {};
