@@ -17,6 +17,7 @@ export default Ember.Component.extend({
     h = 700 - m[0] - m[2];
 
     let y = {},
+        copyY = {},
         z = {}, // will contain map/marker information
         d3Markers = new Set(),
         showAll = false;
@@ -50,6 +51,13 @@ export default Ember.Component.extend({
     //let x = d3.scaleOrdinal().domain(mapIDs).range([0, w]);
     let x = d3.scalePoint().domain(mapIDs).range([0, w]);
     let o = {};
+
+    let selectedMaps = {};
+    let brushedRegions = {};
+    let zoomSwitch,resetSwitch;
+    let zoomed = false;
+    let reset = false;
+
     mapIDs.forEach(function(d){
       o[d] = x(d);
     })
@@ -60,7 +68,6 @@ export default Ember.Component.extend({
       //console.log(d.map + " " + d.marker + " " + d.location);
       d3Markers.add(d.marker);
     });
-    console.log(z);
     
     //creates a new Array instance from an array-like or iterable object.
     d3Markers = Array.from(d3Markers);
@@ -70,10 +77,16 @@ export default Ember.Component.extend({
       y[d] = d3.scaleLinear()
                .domain([0,d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } )])
                .range([0, h]); // set scales for each map
+      
+      copyY[d] = d3.scaleLinear()
+                .domain([0,d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } )])
+                .range([0, h]); 
+
+      //console.log("OOO " + y[d].domain);
       y[d].flipped = false;
       y[d].brush = d3.brushY()
                      .extent([[-8,0],[8,h]])
-                     .on("brush", brushed)
+                     //.on("brush", brushed)
                      .on("end", brushended);
     });
 
@@ -135,25 +148,11 @@ export default Ember.Component.extend({
           .on("start", dragstarted) //start instead of dragstart in v4. 
           .on("drag", dragged)
           .on("end", dragended));//function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
-          //.on("click", function(d) { if (d3.event.defaultPrevented) return; click(d); });
-        /*.on("click", function(d) {
-                if (d3.event.shiftKey) {
-                    click(d);
-                }
-                else {
-                    if (!d3.selectAll(".map.selected").empty()) {
-                        d3.selectAll(".map").classed("selected", false);
-                    }
-                    else {
-                        d3.select("#"+d).classed("selected", function() {
-                                return !d3.select("#"+d).classed("selected"); }) 
-                    }
-                }
-            });*/
-    // Add an axis and title.
+
+    // Add an axis and title
     g.append("g")
-      .attr("class", "axis")
-      .each(function(d) { d3.select(this).call(axis.scale(y[d])); });
+     .attr("class", "axis")
+      .each(function(d) { d3.select(this).attr("id","m"+d).call(axis.scale(y[d])); });  
 
     g.append("text")
       .attr("text-anchor", "middle")
@@ -182,13 +181,13 @@ export default Ember.Component.extend({
        var t = d3.transition()
                  .duration(800)
                  .ease(d3.easeElastic);
-    
       d3.select(this).transition(t)
           .style("stroke", "#880044")
           .style("stroke-width", "6px")
           .style("stroke-opacity", 1)
           .style("fill", "none");    
     }
+
     function handleMouseOut(d){
       var t = d3.transition()
                 .duration(800)
@@ -212,9 +211,8 @@ export default Ember.Component.extend({
     // Returns an array of paths (links between maps) for a given marker.
     function path(d) { // d is a marker
         var r = [];
-        //console.log("Path function");
+
         for (var k=0; k<mapIDs.length-1; k++) {
-            //console.log(k + " " + mapIDs.length);
             if (d in z[mapIDs[k]] && d in z[mapIDs[k+1]]) { // if markers is in both maps
                 r.push(line([[o[mapIDs[k]], y[mapIDs[k]](z[mapIDs[k]][d])],
                              [o[mapIDs[k+1]], y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]));
@@ -232,55 +230,141 @@ export default Ember.Component.extend({
         }
         return r;
     }
+
+     // Returns an array of paths (links between maps) for a given marker when zoom in starts.
+    function zoomPath(d) { // d is a marker
+        var r = [];
+        for (var k=0; k<mapIDs.length-1; k++) {
+           //y[p].domain
+           //z[mapIDs[k]][d] marker location
+           //y[mapIDs[k]](z[mapIDs[k]][d]) relative marker location in the map
+            if (d in z[mapIDs[k]] && d in z[mapIDs[k+1]]) { // if markers is in both maps
+              //Remove those paths that either side locates out of the svg
+                  if(y[mapIDs[k]](z[mapIDs[k]][d]) <=h && y[mapIDs[k+1]](z[mapIDs[k+1]][d]) <=h 
+                      && y[mapIDs[k]](z[mapIDs[k]][d]) >=0 && y[mapIDs[k+1]](z[mapIDs[k+1]][d])>=0){
+                    r.push(line([[o[mapIDs[k]], y[mapIDs[k]](z[mapIDs[k]][d])],
+                             [o[mapIDs[k+1]], y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]));
+                  } 
+              
+            } 
+        }
+        return r;
+    }
+
     function update(d){
 
     }
 
-    let selectedMaps = {};
-    let brushedRegions = {};
-
     function brushHelper(that) {
+      //Map name, e.g. 32-1B
       let name = d3.select(that).data();
-
-      console.log("selection " + d3.event.selection);
-
       if (d3.event.selection != null) {
         //there is no empty function in v4. 
         //define two hashes to store the brush information from selected maps.
         selectedMaps[name[0]] = name[0]; 
         brushedRegions[name[0]] = d3.event.selection;
-
         brushExtents = Object.keys(selectedMaps).map(function(p) { return brushedRegions[p]; }); // extents of active brushes
-        d3.selectAll(".foreground g").classed("faded", function(d) {
-
+        d3.selectAll(".foreground g").classed("faded", function(d){
           //d3.event.selection [min,min] or [max,max] should consider as non selection. maybe alternatively use brush.clear or (brush.move, null) given a mouse event
-          
           return !Object.keys(selectedMaps).every(function(p, i) {
               if(brushExtents[i][0] == brushExtents[i][1]){               
                 return true;
               }
               //use the invert function to transfer the brush regions into proper domain values.
+              //brushExtents[i][0] start position of the brushed region
+              //brushExtents[i][i] end position of the brushed region
+              //console.log(y[p].invert(brushExtents[i][0]) + " " + z[p][d]);
               return y[p].invert(brushExtents[i][0]) <= z[p][d] && z[p][d] <= y[p].invert(brushExtents[i][1]);
           });
         
         });
+        svgContainer.selectAll(".btn").remove();
+        zoomSwitch = svgContainer.append('g')
+                                 .attr('class', 'btn')
+                                 .attr('transform', 'translate(' + [x(name)+16,d3.event.selection[0]] +')');
+        zoomSwitch.append('rect')
+                  .attr('width', 60).attr('height', 30)
+                  .attr('rx', 3).attr('ry', 3)
+                  .attr('fill', '#eee').attr('stroke', '#ddd');
+        zoomSwitch.append('text')
+                      .attr('x', 30).attr('y', 20).attr('text-anchor', 'middle')
+                      .text('Zoom');
+        
+        zoomSwitch.on('click', function () {
+           zoom(that,brushExtents);
+           zoomed = true;
+
+           //reset function
+           svgContainer.selectAll(".btn").remove();
+           resetSwitch = svgContainer.append('g')
+                                    .attr('class', 'btn')
+                                    .attr('transform', 'translate(' + [x(name)+8, 0] +')');
+           resetSwitch.append('rect')
+                  .attr('width', 60).attr('height', 30)
+                  .attr('rx', 3).attr('ry', 3)
+                  .attr('fill', '#eee').attr('stroke', '#ddd');
+           resetSwitch.append('text')
+                      .attr('x', 30).attr('y', 20).attr('text-anchor', 'middle')
+                      .text('Reset');
+
+           resetSwitch.on('click',function(){
+             let t = svgContainer.transition().duration(750);
+             
+             mapIDs.forEach(function(d) {
+               let idName = "m"+d;
+               let yAxis = d3.axisLeft(y[d]).ticks(10);
+               svgContainer.select("#"+idName).transition(t).call(yAxis);
+               y[d].domain([0,d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } )]);
+             });
+             d3.selectAll(".foreground g").selectAll("path").remove();
+             d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
+             t.selectAll(".foreground path").attr("d", function(d) {return d; });
+             d3.selectAll("path")
+              .on("mouseover",handleMouseOver)
+              .on("mouseout",handleMouseOut);
+           });
+        });
+        
       } else {
         d3.selectAll(".foreground g").classed("faded", false);
         selectedMaps = {};
         brushedRegions = {};
       }
+     
+    }
 
+    function zoom(that, brushExtents) {
+      let mapName = d3.select(that).data();
+      let t = svgContainer.transition().duration(750);
+      Object.keys(selectedMaps).map(function(p, i) {
+        if(p == mapName){
+          y[p].domain([y[p].invert(brushExtents[i][0]), y[p].invert(brushExtents[i][1])]);
+          let yAxis = d3.axisLeft(y[p]).ticks(10);
+          let idName = "m"+p;
+          svgContainer.selectAll(".btn").remove();
+          svgContainer.select("#"+idName).transition(t).call(yAxis);
+          d3.selectAll(".foreground g").selectAll("path").remove();
+          d3.selectAll(".foreground g").selectAll("path").data(zoomPath).enter().append("path");
+          t.selectAll(".foreground path").attr("d", function(d) {return d; });
+          d3.selectAll("path")
+            .on("mouseover",handleMouseOver)
+            .on("mouseout",handleMouseOut);
+            //y[p].brush.move(null);
+          d3.select(that).call(y[p].brush.move,null);
+        }
+      });
+      
     }
 
     function brushed() {
-      console.log("brush event");
+      //console.log("brush event");
       if (!d3.event.sourceEvent) return; // Only transition after input.
       if (!d3.event.selection) return;
       brushHelper(this);
     }
 
     function brushended() {
-      console.log("brush event ended");
+      //console.log("brush event ended");
       brushHelper(this);
     }
 
@@ -299,7 +383,11 @@ export default Ember.Component.extend({
       //console.log(mapIDs + " " + o[d]);
       d3.select(this).attr("transform", function() {return "translate(" + o[d] + ")";});
       d3.selectAll(".foreground g").selectAll("path").remove();
-      d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
+      if(zoomed){
+        d3.selectAll(".foreground g").selectAll("path").data(zoomPath).enter().append("path");
+      } else {
+        d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
+      }
       d3.selectAll(".foreground g").selectAll("path").attr("d", function(d) { return d; })
       d3.selectAll("path")
         .on("mouseover",handleMouseOver)
@@ -309,11 +397,17 @@ export default Ember.Component.extend({
     function dragended(d) {
       // Order of mapIDs may have changed so need to redefine x and o.
       x = d3.scalePoint().domain(mapIDs).range([0, w]);
+      
       mapIDs.forEach(function(d){
         o[d] = x(d);
       });
       x.domain(mapIDs).range([0, w]);
-      d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
+      if(zoomed){
+        d3.selectAll(".foreground g").selectAll("path").data(zoomPath).enter().append("path");  
+      } else {
+        d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
+      }
+      
       var t = d3.transition().duration(500);
       t.selectAll(".map").attr("transform", function(d) { return "translate(" + x(d) + ")"; });
       t.selectAll(".foreground path").attr("d", function(d) { return d; })
@@ -323,6 +417,7 @@ export default Ember.Component.extend({
         .on("mouseout",handleMouseOut);
       d3.event.subject.fx = null;
     }
+    
 
   /*function click(d) {
      if (y[d].flipped) {
