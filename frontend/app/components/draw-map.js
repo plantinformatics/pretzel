@@ -52,8 +52,6 @@ export default Ember.Component.extend({
     let x = d3.scalePoint().domain(mapIDs).range([0, w]);
     let o = {};
 
-    let selectedMaps = {};
-    let brushedRegions = {};
     let zoomSwitch,resetSwitch;
     let zoomed = false;
     let reset = false;
@@ -251,22 +249,31 @@ export default Ember.Component.extend({
         return r;
     }
 
-    function update(d){
-
-    }
+    let selectedMaps = [];
+    let brushedRegions = {};
 
     function brushHelper(that) {
       //Map name, e.g. 32-1B
       let name = d3.select(that).data();
-      if (d3.event.selection != null) {
+
+      if (d3.event.selection == null) {
+        selectedMaps.removeObject(name[0]);
+      }
+      else {
+        selectedMaps.addObject(name[0]); 
+      }
+
+      if (selectedMaps.length > 0) {
         //there is no empty function in v4. 
         //define two hashes to store the brush information from selected maps.
-        selectedMaps[name[0]] = name[0]; 
         brushedRegions[name[0]] = d3.event.selection;
-        brushExtents = Object.keys(selectedMaps).map(function(p) { return brushedRegions[p]; }); // extents of active brushes
+
+        brushExtents = selectedMaps.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
+
         d3.selectAll(".foreground g").classed("faded", function(d){
-          //d3.event.selection [min,min] or [max,max] should consider as non selection. maybe alternatively use brush.clear or (brush.move, null) given a mouse event
-          return !Object.keys(selectedMaps).every(function(p, i) {
+         //d3.event.selection [min,min] or [max,max] should consider as non selection. maybe alternatively use brush.clear or (brush.move, null) given a mouse event
+          
+          return !selectedMaps.every(function(p, i) {
               if(brushExtents[i][0] == brushExtents[i][1]){               
                 return true;
               }
@@ -327,7 +334,6 @@ export default Ember.Component.extend({
         
       } else {
         d3.selectAll(".foreground g").classed("faded", false);
-        selectedMaps = {};
         brushedRegions = {};
       }
      
@@ -336,7 +342,7 @@ export default Ember.Component.extend({
     function zoom(that, brushExtents) {
       let mapName = d3.select(that).data();
       let t = svgContainer.transition().duration(750);
-      Object.keys(selectedMaps).map(function(p, i) {
+      selectedMaps.map(function(p, i) {
         if(p == mapName){
           y[p].domain([y[p].invert(brushExtents[i][0]), y[p].invert(brushExtents[i][1])]);
           let yAxis = d3.axisLeft(y[p]).ticks(10);
