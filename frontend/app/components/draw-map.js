@@ -286,9 +286,10 @@ export default Ember.Component.extend({
         
         });
         svgContainer.selectAll(".btn").remove();
-        zoomSwitch = svgContainer.append('g')
+        zoomSwitch = d3.selectAll("#" + name[0])
+                                 .append('g')
                                  .attr('class', 'btn')
-                                 .attr('transform', 'translate(' + [x(name)+16,d3.event.selection[0]] +')');
+                                 .attr('transform', 'translate(10)');
         zoomSwitch.append('rect')
                   .attr('width', 60).attr('height', 30)
                   .attr('rx', 3).attr('ry', 3)
@@ -303,9 +304,10 @@ export default Ember.Component.extend({
 
            //reset function
            svgContainer.selectAll(".btn").remove();
-           resetSwitch = svgContainer.append('g')
+           resetSwitch = d3.selectAll("#" + name[0])
+                                    .append('g')
                                     .attr('class', 'btn')
-                                    .attr('transform', 'translate(' + [x(name)+8, 0] +')');
+                                    .attr('transform', 'translate(10)');
            resetSwitch.append('rect')
                   .attr('width', 60).attr('height', 30)
                   .attr('rx', 3).attr('ry', 3)
