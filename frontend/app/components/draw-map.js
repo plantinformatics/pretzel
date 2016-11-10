@@ -60,7 +60,7 @@ export default Ember.Component.extend({
       o[d] = x(d);
     })
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
-    
+
     d3Data.forEach(function(d) {
       z[d.map][d.marker] = +d.location;
       //console.log(d.map + " " + d.marker + " " + d.location);
