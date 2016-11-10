@@ -320,10 +320,10 @@ export default Ember.Component.extend({
              let t = svgContainer.transition().duration(750);
              
              mapIDs.forEach(function(d) {
-               let idName = "m"+d;
+               let idName = "m"+d; // axis ids have "m" suffix
+               y[d].domain([0,d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } )]);
                let yAxis = d3.axisLeft(y[d]).ticks(10);
                svgContainer.select("#"+idName).transition(t).call(yAxis);
-               y[d].domain([0,d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } )]);
              });
              d3.selectAll(".foreground g").selectAll("path").remove();
              d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
@@ -331,6 +331,7 @@ export default Ember.Component.extend({
              d3.selectAll("path")
               .on("mouseover",handleMouseOver)
               .on("mouseout",handleMouseOut);
+             d3.selectAll("#" + name[0]).selectAll(".btn").remove();
            });
         });
         
