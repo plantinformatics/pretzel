@@ -251,10 +251,12 @@ export default Ember.Component.extend({
 
     let selectedMaps = [];
     let brushedRegions = {};
-
+    let selectedMarkers = [];
+    
     function brushHelper(that) {
       //Map name, e.g. 32-1B
       let name = d3.select(that).data();
+      
 
       if (d3.event.selection == null) {
         selectedMaps.removeObject(name[0]);
@@ -263,28 +265,45 @@ export default Ember.Component.extend({
         selectedMaps.addObject(name[0]); 
       }
 
+      
+      
       if (selectedMaps.length > 0) {
+        let myMaps = {mapName: "", values:[]};
         //there is no empty function in v4. 
         //define two hashes to store the brush information from selected maps.
         brushedRegions[name[0]] = d3.event.selection;
+        //console.log(selectedMaps);
+        selectedMaps.forEach(function(d){
+          myMaps.mapName=d.slice(3); 
+          console.log({mapName:myMaps.mapName});
+          selectedMarkers.push(myMaps);
+        });
 
         brushExtents = selectedMaps.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
 
+        console.log({selectedMarkers:selectedMarkers});
         d3.selectAll(".foreground g").classed("faded", function(d){
          //d3.event.selection [min,min] or [max,max] should consider as non selection. maybe alternatively use brush.clear or (brush.move, null) given a mouse event
           
           return !selectedMaps.every(function(p, i) {
+              //console.log(p+" "+i+" "+selectedMarkers[i].mapName);
               if(brushExtents[i][0] == brushExtents[i][1]){               
                 return true;
               }
               //use the invert function to transfer the brush regions into proper domain values.
               //brushExtents[i][0] start position of the brushed region
-              //brushExtents[i][i] end position of the brushed region
+              //brushExtents[i][1] end position of the brushed region
               //console.log(y[p].invert(brushExtents[i][0]) + " " + z[p][d]);
+              if(y[p].invert(brushExtents[i][0]) <= z[p][d] && z[p][d] <= y[p].invert(brushExtents[i][1])){
+                selectedMarkers[i].values.push({marker:d,mLocation:z[p][d]});
+                //console.log("Crazy: " + selectedMarkers[i].mapName);
+                //console.log(z[p][d]+" "+p+" "+d+" "+i);  
+              }
               return y[p].invert(brushExtents[i][0]) <= z[p][d] && z[p][d] <= y[p].invert(brushExtents[i][1]);
           });
         
         });
+        
         svgContainer.selectAll(".btn").remove();
         zoomSwitch = d3.selectAll("#" + name[0])
                                  .append('g')
@@ -339,6 +358,20 @@ export default Ember.Component.extend({
         d3.selectAll(".foreground g").classed("faded", false);
         brushedRegions = {};
       }
+
+      //Display Grid
+      let gridData = [];
+      selectedMarkers.forEach(function(d){
+       // console.log("mapName "+d.mapName);
+        d.values.forEach(function(p){
+          gridData.push({Map:d.mapName, Marker:p.marker, Location:p.mLocation});
+        });
+      });
+
+      let grid = d3.divgrid();
+      d3.select('#grid')
+        .datum(gridData)
+        .call(grid);
      
     }
 

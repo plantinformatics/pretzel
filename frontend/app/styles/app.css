@@ -18,14 +18,14 @@ svg {
 .foreground path {
   fill: none;
   stroke-opacity: .5;
-  stroke-width: 0.2px;
+  stroke-width: 0.75px;
   stroke: #808;
 }
 
 .foreground .faded path {
   fill: none;
   stroke: #000;
-  stroke-width: 0.2px;
+  stroke-width: 0.75px;
   stroke-opacity: .125;
 }
 
