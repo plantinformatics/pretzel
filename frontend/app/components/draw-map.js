@@ -252,11 +252,19 @@ export default Ember.Component.extend({
     let selectedMaps = [];
     let brushedRegions = {};
     let selectedMarkers = [];
+    let grid = d3.divgrid();
+
+    function resetGrid(markers) {
+      d3.select('#grid')
+        .datum(markers)
+        .call(grid);
+    }
     
     function brushHelper(that) {
       //Map name, e.g. 32-1B
       let name = d3.select(that).data();
-      
+
+      console.log("brushHelper", name);
 
       if (d3.event.selection == null) {
         selectedMaps.removeObject(name[0]);
@@ -264,8 +272,6 @@ export default Ember.Component.extend({
       else {
         selectedMaps.addObject(name[0]); 
       }
-
-      
       
       if (selectedMaps.length > 0) {
         let myMaps = {mapName: "", values:[]};
@@ -283,7 +289,8 @@ export default Ember.Component.extend({
 
         console.log({selectedMarkers:selectedMarkers});
         d3.selectAll(".foreground g").classed("faded", function(d){
-         //d3.event.selection [min,min] or [max,max] should consider as non selection. maybe alternatively use brush.clear or (brush.move, null) given a mouse event
+         //d3.event.selection [min,min] or [max,max] should consider as non selection.
+         //maybe alternatively use brush.clear or (brush.move, null) given a mouse event
           
           return !selectedMaps.every(function(p, i) {
               //console.log(p+" "+i+" "+selectedMarkers[i].mapName);
@@ -295,6 +302,8 @@ export default Ember.Component.extend({
               //brushExtents[i][1] end position of the brushed region
               //console.log(y[p].invert(brushExtents[i][0]) + " " + z[p][d]);
               if(y[p].invert(brushExtents[i][0]) <= z[p][d] && z[p][d] <= y[p].invert(brushExtents[i][1])){
+                // CALLBACKS SHOULD NOT HAVE UNEXPECTED SIDE-EFFECTS:
+                // need to re-factor selectedMarkers logic
                 selectedMarkers[i].values.push({marker:d,mLocation:z[p][d]});
                 //console.log("Crazy: " + selectedMarkers[i].mapName);
                 //console.log(z[p][d]+" "+p+" "+d+" "+i);  
@@ -323,6 +332,7 @@ export default Ember.Component.extend({
 
            //reset function
            svgContainer.selectAll(".btn").remove();
+           console.log("reset, "+name[0]);
            resetSwitch = d3.selectAll("#" + name[0])
                                     .append('g')
                                     .attr('class', 'btn')
@@ -351,15 +361,20 @@ export default Ember.Component.extend({
               .on("mouseover",handleMouseOver)
               .on("mouseout",handleMouseOut);
              d3.selectAll("#" + name[0]).selectAll(".btn").remove();
+             selectedMarkers = [];
+             resetGrid([]);
+             zoomed = false;
            });
         });
         
       } else {
+        // No axis selected so reset fading of paths.
         d3.selectAll(".foreground g").classed("faded", false);
         brushedRegions = {};
       }
 
       //Display Grid
+      console.log("display grid");
       let gridData = [];
       selectedMarkers.forEach(function(d){
        // console.log("mapName "+d.mapName);
@@ -368,10 +383,7 @@ export default Ember.Component.extend({
         });
       });
 
-      let grid = d3.divgrid();
-      d3.select('#grid')
-        .datum(gridData)
-        .call(grid);
+      resetGrid(gridData);
      
     }
 
