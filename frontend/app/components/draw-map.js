@@ -264,8 +264,6 @@ export default Ember.Component.extend({
       //Map name, e.g. 32-1B
       let name = d3.select(that).data();
 
-      console.log("brushHelper", name);
-
       if (d3.event.selection == null) {
         selectedMaps.removeObject(name[0]);
       }
@@ -274,20 +272,14 @@ export default Ember.Component.extend({
       }
       
       if (selectedMaps.length > 0) {
-        let myMaps = {mapName: "", values:[]};
         //there is no empty function in v4. 
         //define two hashes to store the brush information from selected maps.
         brushedRegions[name[0]] = d3.event.selection;
-        //console.log(selectedMaps);
         selectedMaps.forEach(function(d){
-          myMaps.mapName=d.slice(3); 
-          console.log({mapName:myMaps.mapName});
-          selectedMarkers.push(myMaps);
+          selectedMarkers[d.slice(3)]={mapName:d.slice(3),values:[]};
         });
 
         brushExtents = selectedMaps.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
-
-        console.log({selectedMarkers:selectedMarkers});
         d3.selectAll(".foreground g").classed("faded", function(d){
          //d3.event.selection [min,min] or [max,max] should consider as non selection.
          //maybe alternatively use brush.clear or (brush.move, null) given a mouse event
@@ -304,7 +296,7 @@ export default Ember.Component.extend({
               if(y[p].invert(brushExtents[i][0]) <= z[p][d] && z[p][d] <= y[p].invert(brushExtents[i][1])){
                 // CALLBACKS SHOULD NOT HAVE UNEXPECTED SIDE-EFFECTS:
                 // need to re-factor selectedMarkers logic
-                selectedMarkers[i].values.push({marker:d,mLocation:z[p][d]});
+                selectedMarkers[p.slice(3)].values.push({marker:d,mLocation:z[p][d]});
                 //console.log("Crazy: " + selectedMarkers[i].mapName);
                 //console.log(z[p][d]+" "+p+" "+d+" "+i);  
               }
@@ -376,13 +368,11 @@ export default Ember.Component.extend({
       //Display Grid
       console.log("display grid");
       let gridData = [];
-      selectedMarkers.forEach(function(d){
-       // console.log("mapName "+d.mapName);
-        d.values.forEach(function(p){
-          gridData.push({Map:d.mapName, Marker:p.marker, Location:p.mLocation});
+      selectedMaps.forEach(function(d){
+        selectedMarkers[d.slice(3)].values.forEach(function(p){
+           gridData.push({Map:d.slice(3), Marker:p.marker, Location:p.mLocation});
         });
       });
-
       resetGrid(gridData);
      
     }
