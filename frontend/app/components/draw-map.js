@@ -56,6 +56,11 @@ export default Ember.Component.extend({
     let zoomed = false;
     let reset = false;
 
+    let selectedMaps = [];
+    let selectedMarkers = {};
+    let brushedRegions = {};
+    let grid = d3.divgrid();
+
     mapIDs.forEach(function(d){
       o[d] = x(d);
     })
@@ -89,6 +94,7 @@ export default Ember.Component.extend({
     });
 
     d3.select("svg").remove();
+    //d3.select("div.d3-tip").remove();
     let svgContainer = d3.select('#holder').append('svg')
                          .attr('width',1200)
                          .attr('height',700)
@@ -164,7 +170,13 @@ export default Ember.Component.extend({
       .attr("class", "brush")
       .each(function(d) { d3.select(this).call(y[d].brush); });
 
+    //Setup the tool tip.
+    let toolTip = d3.tip()
+                  .attr("class", "d3-tip")
+                  .offset([-8, 0])
+                  .html(function(d){ console.log(d); return d});//function(d) { return d; });
 
+    svgContainer.call(toolTip);
     //Probably leave the delete function to Ember
     //function deleteMap(){
     //  console.log("Delete");
@@ -183,7 +195,8 @@ export default Ember.Component.extend({
           .style("stroke", "#880044")
           .style("stroke-width", "6px")
           .style("stroke-opacity", 1)
-          .style("fill", "none");    
+          .style("fill", "none");  
+      toolTip.show;
     }
 
     function handleMouseOut(d){
@@ -197,6 +210,7 @@ export default Ember.Component.extend({
            .style("stroke-width", null)
            .style("stroke-opacity",null)
            .style("fill", null);
+      toolTip.hide;
     }
 
 
@@ -248,11 +262,6 @@ export default Ember.Component.extend({
         }
         return r;
     }
-
-    let selectedMaps = [];
-    let selectedMarkers = {};
-    let brushedRegions = {};
-    let grid = d3.divgrid();
 
     function resetGrid(markers) {
       d3.select('#grid')
