@@ -264,8 +264,6 @@ export default Ember.Component.extend({
       //Map name, e.g. 32-1B
       let name = d3.select(that).data();
 
-      console.log("brushHelper", name);
-
       if (d3.event.selection == null) {
         selectedMaps.removeObject(name[0]);
       }
@@ -375,7 +373,6 @@ export default Ember.Component.extend({
           gridData.push({Map:d, Marker:p, Location:z[d][p]});
         });
       });
-
       resetGrid(gridData);
      
     }
