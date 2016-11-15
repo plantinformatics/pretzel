@@ -298,16 +298,16 @@ export default Ember.Component.extend({
         d3.selectAll(".foreground g").classed("faded", function(d){
          //d3.event.selection [min,min] or [max,max] should consider as non selection.
          //maybe alternatively use brush.clear or (brush.move, null) given a mouse event
-         return !d3.keys(selectedMarkers).every(function(p) {
-           return selectedMarkers[p].contains(d);
-         });
+          return !d3.keys(selectedMarkers).every(function(p) {
+             return selectedMarkers[p].contains(d);
+          });
         
         });
         
         svgContainer.selectAll(".btn").remove();
 
-        zoomSwitch = d3.selectAll("#" + name[0]);
-        zoomSwitch.append('g')
+        zoomSwitch = svgContainer.selectAll("#" + name[0])
+                  .append('g')
                   .attr('class', 'btn')
                   .attr('transform', 'translate(10)');
         zoomSwitch.append('rect')
@@ -325,7 +325,7 @@ export default Ember.Component.extend({
            //reset function
            svgContainer.selectAll(".btn").remove();
            console.log("reset, "+name[0]);
-           resetSwitch = d3.selectAll("#" + name[0])
+           resetSwitch = svgContainer.selectAll("#" + name[0])
                                     .append('g')
                                     .attr('class', 'btn')
                                     .attr('transform', 'translate(10)');
