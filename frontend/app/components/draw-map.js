@@ -250,8 +250,8 @@ export default Ember.Component.extend({
     }
 
     let selectedMaps = [];
+    let selectedMarkers = {};
     let brushedRegions = {};
-    let selectedMarkers = [];
     let grid = d3.divgrid();
 
     function resetGrid(markers) {
@@ -272,59 +272,53 @@ export default Ember.Component.extend({
       else {
         selectedMaps.addObject(name[0]); 
       }
+
+      // selectedMaps is an array containing the IDs of the maps that
+      // have been selected.
       
       if (selectedMaps.length > 0) {
-        let myMaps = {mapName: "", values:[]};
-        //there is no empty function in v4. 
-        //define two hashes to store the brush information from selected maps.
+        // Maps have been selected - now work out selected markers.
+        
         brushedRegions[name[0]] = d3.event.selection;
-        //console.log(selectedMaps);
-        selectedMaps.forEach(function(d){
-          myMaps.mapName=d.slice(3); 
-          console.log({mapName:myMaps.mapName});
-          selectedMarkers.push(myMaps);
-        });
-
         brushExtents = selectedMaps.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
 
-        console.log({selectedMarkers:selectedMarkers});
+        selectedMarkers = {};
+
+        selectedMaps.forEach(function(p, i) {
+          selectedMarkers[p] = [];
+          console.log(p, i);
+          console.log(brushExtents[i].map(function(e) { return y[p].invert(e); }));
+          d3.keys(z[p]).forEach(function(m) {
+            if ((z[p][m] >= y[p].invert(brushExtents[i][0])) &&
+                (z[p][m] <= y[p].invert(brushExtents[i][1]))) {
+              selectedMarkers[p].push(m);
+            }
+          });
+
+        });
+
         d3.selectAll(".foreground g").classed("faded", function(d){
          //d3.event.selection [min,min] or [max,max] should consider as non selection.
          //maybe alternatively use brush.clear or (brush.move, null) given a mouse event
-          
-          return !selectedMaps.every(function(p, i) {
-              //console.log(p+" "+i+" "+selectedMarkers[i].mapName);
-              if(brushExtents[i][0] == brushExtents[i][1]){               
-                return true;
-              }
-              //use the invert function to transfer the brush regions into proper domain values.
-              //brushExtents[i][0] start position of the brushed region
-              //brushExtents[i][1] end position of the brushed region
-              //console.log(y[p].invert(brushExtents[i][0]) + " " + z[p][d]);
-              if(y[p].invert(brushExtents[i][0]) <= z[p][d] && z[p][d] <= y[p].invert(brushExtents[i][1])){
-                // CALLBACKS SHOULD NOT HAVE UNEXPECTED SIDE-EFFECTS:
-                // need to re-factor selectedMarkers logic
-                selectedMarkers[i].values.push({marker:d,mLocation:z[p][d]});
-                //console.log("Crazy: " + selectedMarkers[i].mapName);
-                //console.log(z[p][d]+" "+p+" "+d+" "+i);  
-              }
-              return y[p].invert(brushExtents[i][0]) <= z[p][d] && z[p][d] <= y[p].invert(brushExtents[i][1]);
-          });
+         return !d3.keys(selectedMarkers).every(function(p) {
+           return selectedMarkers[p].contains(d);
+         });
         
         });
         
         svgContainer.selectAll(".btn").remove();
-        zoomSwitch = d3.selectAll("#" + name[0])
-                                 .append('g')
-                                 .attr('class', 'btn')
-                                 .attr('transform', 'translate(10)');
+
+        zoomSwitch = d3.selectAll("#" + name[0]);
+        zoomSwitch.append('g')
+                  .attr('class', 'btn')
+                  .attr('transform', 'translate(10)');
         zoomSwitch.append('rect')
                   .attr('width', 60).attr('height', 30)
                   .attr('rx', 3).attr('ry', 3)
                   .attr('fill', '#eee').attr('stroke', '#ddd');
         zoomSwitch.append('text')
-                      .attr('x', 30).attr('y', 20).attr('text-anchor', 'middle')
-                      .text('Zoom');
+                  .attr('x', 30).attr('y', 20).attr('text-anchor', 'middle')
+                  .text('Zoom');
         
         zoomSwitch.on('click', function () {
            zoom(that,brushExtents);
@@ -376,10 +370,9 @@ export default Ember.Component.extend({
       //Display Grid
       console.log("display grid");
       let gridData = [];
-      selectedMarkers.forEach(function(d){
-       // console.log("mapName "+d.mapName);
-        d.values.forEach(function(p){
-          gridData.push({Map:d.mapName, Marker:p.marker, Location:p.mLocation});
+      d3.keys(selectedMarkers).forEach(function(d){
+        selectedMarkers[d].forEach(function(p) {
+          gridData.push({Map:d, Marker:p, Location:z[d][p]});
         });
       });
 
