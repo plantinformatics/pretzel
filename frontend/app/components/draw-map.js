@@ -40,7 +40,7 @@ export default Ember.Component.extend({
       //marker:"IWB6476"
       //console.log(mIDs);
       mIDs.forEach(function(mapID) {
-        var dataToArray = myData[i][mapID].toArray();
+        let dataToArray = myData[i][mapID].toArray();
         //Push the values from the array to d3Data.
         d3Data.push.apply(d3Data, dataToArray);
         mapIDs.push(mapID);
@@ -55,6 +55,8 @@ export default Ember.Component.extend({
     let zoomSwitch,resetSwitch;
     let zoomed = false;
     let reset = false;
+
+    let pathMarkers = {}; //For tool tip
 
     let selectedMaps = [];
     let selectedMarkers = {};
@@ -141,7 +143,7 @@ export default Ember.Component.extend({
     });
 
     // Add a group element for each map.
-    var g = svgContainer.selectAll(".map")
+    let g = svgContainer.selectAll(".map")
         .data(mapIDs)
         .enter().append("g")
         .attr("class", "map")
@@ -171,12 +173,10 @@ export default Ember.Component.extend({
       .each(function(d) { d3.select(this).call(y[d].brush); });
 
     //Setup the tool tip.
-    let toolTip = d3.tip()
-                  .attr("class", "d3-tip")
-                  .offset([-8, 0])
-                  .html(function(d){ console.log(d); return d});//function(d) { return d; });
-
-    svgContainer.call(toolTip);
+    let toolTip = d3.select("body").append("div")
+                    .attr("class", "toolTip")
+                    .attr("id","toolTip")
+                    .style("opacity", 0);
     //Probably leave the delete function to Ember
     //function deleteMap(){
     //  console.log("Delete");
@@ -188,30 +188,39 @@ export default Ember.Component.extend({
       .on("mouseout",handleMouseOut);
 
     function handleMouseOver(d){
-       var t = d3.transition()
+      //console.log(pathMarkers[d]);
+       let t = d3.transition()
                  .duration(800)
                  .ease(d3.easeElastic);
+       let listMarkers  = "";
        d3.select(this).transition(t)
           .style("stroke", "#880044")
           .style("stroke-width", "6px")
           .style("stroke-opacity", 1)
-          .style("fill", "none");
-       console.log(toolTip.show);  
-       toolTip.show;
+          .style("fill", "none");       
+       toolTip.style("height","auto")
+         .style("width","auto")
+         .style("opacity", .9)
+         .style("display","inline");  
+       Object.keys(pathMarkers[d]).map(function(m){
+         listMarkers = listMarkers + m + "<br />";
+       });
+       toolTip.html(listMarkers)     
+         .style("left", (d3.event.pageX) + "px")             
+         .style("top", (d3.event.pageY - 28) + "px");
     }
 
     function handleMouseOut(d){
-      var t = d3.transition()
+      let t = d3.transition()
                 .duration(800)
                 .ease(d3.easeElastic);
-      var myPath = d3.select(this)._groups[0][0];
       //Simple solution is to set all styles to null, which will fix the confusion display with brush. Note: tried css class, maybe my way is not right, but it didn't work.
       d3.select(this).transition(t)
            .style("stroke", null)
            .style("stroke-width", null)
            .style("stroke-opacity",null)
            .style("fill", null);
-      toolTip.hide;
+      toolTip.style("display","none");
     }
 
 
@@ -223,12 +232,21 @@ export default Ember.Component.extend({
     }
     // Returns an array of paths (links between maps) for a given marker.
     function path(d) { // d is a marker
-        var r = [];
+        let r = [];
 
-        for (var k=0; k<mapIDs.length-1; k++) {
+        for (let k=0; k<mapIDs.length-1; k++) {
             if (d in z[mapIDs[k]] && d in z[mapIDs[k+1]]) { // if markers is in both maps
-                r.push(line([[o[mapIDs[k]], y[mapIDs[k]](z[mapIDs[k]][d])],
-                             [o[mapIDs[k+1]], y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]));
+                 //Multiple markers can be in the same path
+                let sLine = line([[o[mapIDs[k]], y[mapIDs[k]](z[mapIDs[k]][d])],
+                             [o[mapIDs[k+1]], y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]);
+                //pathMarkers[sLine][d] = 1;
+                if(pathMarkers[sLine] != null){
+                   pathMarkers[sLine][d] = 1;
+                } else {
+                   pathMarkers[sLine]= {};
+                   pathMarkers[sLine][d] = 1;
+                }
+                r.push(sLine);
             }
             else if (showAll) {
                 if (d in z[mapIDs[k]]) { 
@@ -246,8 +264,8 @@ export default Ember.Component.extend({
 
      // Returns an array of paths (links between maps) for a given marker when zoom in starts.
     function zoomPath(d) { // d is a marker
-        var r = [];
-        for (var k=0; k<mapIDs.length-1; k++) {
+        let r = [];
+        for (let k=0; k<mapIDs.length-1; k++) {
            //y[p].domain
            //z[mapIDs[k]][d] marker location
            //y[mapIDs[k]](z[mapIDs[k]][d]) relative marker location in the map
@@ -255,7 +273,15 @@ export default Ember.Component.extend({
               //Remove those paths that either side locates out of the svg
                   if(y[mapIDs[k]](z[mapIDs[k]][d]) <=h && y[mapIDs[k+1]](z[mapIDs[k+1]][d]) <=h 
                       && y[mapIDs[k]](z[mapIDs[k]][d]) >=0 && y[mapIDs[k+1]](z[mapIDs[k+1]][d])>=0){
-                    r.push(line([[o[mapIDs[k]], y[mapIDs[k]](z[mapIDs[k]][d])],
+                        let sLine = line([[o[mapIDs[k]], y[mapIDs[k]](z[mapIDs[k]][d])],
+                             [o[mapIDs[k+1]], y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]);
+                        if(pathMarkers[sLine] != null){
+                          pathMarkers[sLine][d] = 1;
+                        } else {
+                          pathMarkers[sLine]= {};
+                          pathMarkers[sLine][d] = 1;
+                        }
+                        r.push(line([[o[mapIDs[k]], y[mapIDs[k]](z[mapIDs[k]][d])],
                              [o[mapIDs[k+1]], y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]));
                   } 
               
@@ -294,8 +320,6 @@ export default Ember.Component.extend({
 
         selectedMaps.forEach(function(p, i) {
           selectedMarkers[p] = [];
-          console.log(p, i);
-          console.log(brushExtents[i].map(function(e) { return y[p].invert(e); }));
           d3.keys(z[p]).forEach(function(m) {
             if ((z[p][m] >= y[p].invert(brushExtents[i][0])) &&
                 (z[p][m] <= y[p].invert(brushExtents[i][1]))) {
@@ -334,7 +358,6 @@ export default Ember.Component.extend({
 
            //reset function
            svgContainer.selectAll(".btn").remove();
-           console.log("reset, "+name[0]);
            resetSwitch = svgContainer.selectAll("#" + name[0])
                                     .append('g')
                                     .attr('class', 'btn')
@@ -376,7 +399,6 @@ export default Ember.Component.extend({
       }
 
       //Display Grid
-      console.log("display grid");
       let gridData = [];
       d3.keys(selectedMarkers).forEach(function(d){
         selectedMarkers[d].forEach(function(p) {
@@ -384,7 +406,6 @@ export default Ember.Component.extend({
         });
       });
       resetGrid(gridData);
-     
     }
 
     function zoom(that, brushExtents) {
@@ -462,7 +483,7 @@ export default Ember.Component.extend({
         d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
       }
       
-      var t = d3.transition().duration(500);
+      let t = d3.transition().duration(500);
       t.selectAll(".map").attr("transform", function(d) { return "translate(" + x(d) + ")"; });
       t.selectAll(".foreground path").attr("d", function(d) { return d; })
       d3.select(this).classed("active", false);
@@ -500,9 +521,7 @@ export default Ember.Component.extend({
       d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
       var t = d3.transition().duration(500);
       t.selectAll(".foreground path").attr("d", function(d) { return d; });
-  }/*
-
-/*
+  }
        let zoomedMarkers = [];
 
     //console.log(myMaps.start + " " + myMaps.end);
@@ -514,13 +533,7 @@ export default Ember.Component.extend({
     d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
     foreground.selectAll("path").attr("d", function(d) { return d; })
   }
-
- 
-
- 
-  
 */
-
   },
 
   didInsertElement() {
