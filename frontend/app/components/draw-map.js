@@ -94,7 +94,7 @@ export default Ember.Component.extend({
     });
 
     d3.select("svg").remove();
-    //d3.select("div.d3-tip").remove();
+    d3.select("div.d3-tip").remove();
     let svgContainer = d3.select('#holder').append('svg')
                          .attr('width',1200)
                          .attr('height',700)
@@ -191,12 +191,13 @@ export default Ember.Component.extend({
        var t = d3.transition()
                  .duration(800)
                  .ease(d3.easeElastic);
-      d3.select(this).transition(t)
+       d3.select(this).transition(t)
           .style("stroke", "#880044")
           .style("stroke-width", "6px")
           .style("stroke-opacity", 1)
-          .style("fill", "none");  
-      toolTip.show;
+          .style("fill", "none");
+       console.log(toolTip.show);  
+       toolTip.show;
     }
 
     function handleMouseOut(d){
