@@ -2,6 +2,12 @@ import Ember from 'ember';
 
 export default Ember.Component.extend({
 
+  actions: {
+    updatedSelectedMarkers: function(markers) {
+      this.sendAction('updateSelectedMarkers', markers);
+    }
+  }
+
   draw: function(myData, myMaps) {
     // Draw functionality goes here.
 
@@ -326,6 +332,7 @@ export default Ember.Component.extend({
               selectedMarkers[p].push(m);
             }
           });
+          updatedSelectedMarkers(selectedMarkers[p]);
 
         });
 

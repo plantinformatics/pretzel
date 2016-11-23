@@ -50,8 +50,10 @@ Maps to align ({{chr}}):
 </ul>
 
 {{#if hasData}}
-  {{draw-map data=model}}
+  {{draw-map updatedSelectedMarkers='updateSelectedMarkers' data=model}}
 {{/if}}
+
+Selected markers: {{selectedMarkers}}
 
 
 {{outlet}}
