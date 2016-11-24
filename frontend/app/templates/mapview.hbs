@@ -53,7 +53,11 @@ Maps to align ({{chr}}):
   {{draw-map updatedSelectedMarkers='updateSelectedMarkers' data=model}}
 {{/if}}
 
-Selected markers: {{selectedMarkers}}
-
+Selected markers:
+<ul>
+{{#each selectedMarkers as |marker|}}
+<li>{{marker}}</li>
+{{/each}}
+</ul>
 
 {{outlet}}
