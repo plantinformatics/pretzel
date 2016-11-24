@@ -20,6 +20,14 @@ export default Ember.Controller.extend({
   selectedMaps: [],
   selectedMarkers: [],
 
+  markersSelected: Ember.computed('selectedMarkers', function() {
+    return this.selectedMarkers.length > 0;
+  }),
+
+  numMarkers: Ember.computed('selectedMarkers', function() {
+    return this.selectedMarkers.length;
+  }),
+
   hasData: Ember.computed('selectedMaps', function() {
     return this.selectedMaps.length > 0;
   }),
