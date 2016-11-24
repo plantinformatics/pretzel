@@ -4,12 +4,14 @@ export default Ember.Component.extend({
 
   actions: {
     updatedSelectedMarkers: function(markers) {
-      this.sendAction('updateSelectedMarkers', markers);
+      console.log("updatedSelectedMarkers in draw-map component");
+      this.sendAction('updatedSelectedMarkers', markers);
     }
-  }
+  },
 
   draw: function(myData, myMaps) {
     // Draw functionality goes here.
+    let me = this;
 
    //convert myData into format like: {map:1,marker:1,location:1}
     let d3Data = [];
@@ -332,7 +334,7 @@ export default Ember.Component.extend({
               selectedMarkers[p].push(m);
             }
           });
-          updatedSelectedMarkers(selectedMarkers[p]);
+          me.send('updatedSelectedMarkers', selectedMarkers[p]);
 
         });
 

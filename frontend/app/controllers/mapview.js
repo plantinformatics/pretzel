@@ -4,9 +4,10 @@ export default Ember.Controller.extend({
 
   actions: {
     updateSelectedMarkers: function(markers) {
-      this.set(selectedMarkers, markers);
+      console.log("updateSelectedMarkers in mapview controller");
+      this.set('selectedMarkers', markers);
     }
-  }
+  },
 
   queryParams: ['mapsToView', 'chr'],
   mapsToView: [],
