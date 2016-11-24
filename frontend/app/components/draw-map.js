@@ -69,7 +69,6 @@ export default Ember.Component.extend({
     let selectedMaps = [];
     let selectedMarkers = {};
     let brushedRegions = {};
-    let grid = d3.divgrid();
 
     mapIDs.forEach(function(d){
       o[d] = x(d);
@@ -298,12 +297,6 @@ export default Ember.Component.extend({
         return r;
     }
 
-    function resetGrid(markers) {
-      d3.select('#grid')
-        .datum(markers)
-        .call(grid);
-    }
-    
     function brushHelper(that) {
       //Map name, e.g. 32-1B
       let name = d3.select(that).data();
@@ -407,14 +400,6 @@ export default Ember.Component.extend({
         brushedRegions = {};
       }
 
-      //Display Grid
-      let gridData = [];
-      d3.keys(selectedMarkers).forEach(function(d){
-        selectedMarkers[d].forEach(function(p) {
-          gridData.push({Map:d, Marker:p, Location:z[d][p]});
-        });
-      });
-      resetGrid(gridData);
     }
 
     function zoom(that, brushExtents) {

@@ -54,10 +54,6 @@ Maps to align ({{chr}}):
 {{/if}}
 
 Selected markers:
-<ul>
-{{#each selectedMarkers as |marker|}}
-<li>{{marker}}</li>
-{{/each}}
-</ul>
+{{selected-markers data=selectedMarkers}}
 
 {{outlet}}
