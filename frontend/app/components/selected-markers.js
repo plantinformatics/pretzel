@@ -11,6 +11,9 @@ export default Ember.Component.extend({
   didRender() {
     let data = this.get('data');
     let grid = d3.divgrid();
+    d3.select('#grid')
+      .datum(data)
+      .call(grid);
     console.log(data);
   }
     

@@ -4,8 +4,19 @@ export default Ember.Component.extend({
 
   actions: {
     updatedSelectedMarkers: function(markers) {
+      console.log(markers);
+      let markersAsArray = d3.keys(markers)
+        .map(function (key) {
+          return markers[key].map(function(marker) {
+            return {Map:key,Marker:marker};
+          });
+        })
+        .reduce(function(a, b) { 
+          return a.concat(b);
+        }, []);
+      console.log(markersAsArray);
       console.log("updatedSelectedMarkers in draw-map component");
-      this.sendAction('updatedSelectedMarkers', markers);
+      this.sendAction('updatedSelectedMarkers', markersAsArray);
     }
   },
 
@@ -327,9 +338,9 @@ export default Ember.Component.extend({
               selectedMarkers[p].push(m);
             }
           });
-          me.send('updatedSelectedMarkers', selectedMarkers[p]);
 
         });
+        me.send('updatedSelectedMarkers', selectedMarkers);
 
         d3.selectAll(".foreground g").classed("faded", function(d){
          //d3.event.selection [min,min] or [max,max] should consider as non selection.
@@ -388,8 +399,8 @@ export default Ember.Component.extend({
               .on("mouseover",handleMouseOver)
               .on("mouseout",handleMouseOut);
              d3.selectAll("#" + name[0]).selectAll(".btn").remove();
-             selectedMarkers = [];
-             resetGrid([]);
+             selectedMarkers = {};
+             me.send('updatedSelectedMarkers', selectedMarkers);
              zoomed = false;
            });
         });
@@ -397,6 +408,8 @@ export default Ember.Component.extend({
       } else {
         // No axis selected so reset fading of paths.
         d3.selectAll(".foreground g").classed("faded", false);
+        selectedMarkers = {};
+        me.send('updatedSelectedMarkers', selectedMarkers);
         brushedRegions = {};
       }
 
