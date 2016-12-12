@@ -407,6 +407,7 @@ export default Ember.Component.extend({
         
       } else {
         // No axis selected so reset fading of paths.
+        svgContainer.selectAll(".btn").remove();
         d3.selectAll(".foreground g").classed("faded", false);
         selectedMarkers = {};
         me.send('updatedSelectedMarkers', selectedMarkers);
