@@ -51,7 +51,6 @@ export default Ember.Route.extend({
                 if (chr.name == params.chr) {
                   retHash[mapName][mapName+"_"+chr.name] = [];
                   chr.markers.forEach(function(marker) {
-                    console.log(marker);
                     retHash[mapName][mapName+"_"+chr.name].pushObject({"map": mapName+"_"+chr.name, "marker": marker.name, "location": marker.position});
                   });
                 }
@@ -63,7 +62,6 @@ export default Ember.Route.extend({
       });
       that.controllerFor("mapview").set("selectedMaps", selMaps);
     });
-    console.log('yahoo');
     return retHash;
   }
 });
