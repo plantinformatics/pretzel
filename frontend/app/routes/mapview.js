@@ -29,10 +29,11 @@ export default Ember.Route.extend({
   model(params) {
 
     // Get all available maps.
-    var maps = this.get('store').findAll('mapset');
-    this.controllerFor("mapview").set("availableMaps", maps);
-    maps.then(function(maplist){
-      maplist.forEach(function(map) {
+    let availMaps = [];
+    let that = this;
+    var maps = that.get('store').findAll('geneticmap').then(function(genmaps) {
+      that.controllerFor("mapview").set("availableMaps", genmaps);
+      genmaps.forEach(function(map) {
         var exMaps = [];
         map.set('isSelected', false); // In case it has been de-selected.
         if (params.mapsToView) {
@@ -48,53 +49,6 @@ export default Ember.Route.extend({
         map.set('extraMaps', exMaps);
       });
     });
-    
-    let promises = {};
-    let selMaps = [];
-    let that = this;
 
-    params.mapsToView.forEach(function(param) {
-
-      promises[param] = that.get('store').findRecord('mapset', param).then(function(mapset) {
-          selMaps.pushObject(mapset);
-          return mapset.get('maps');
-        }).then(function(maps) {
-          // We can filter after maps promise has been resolved.
-          let filteredMaps = maps.filterBy('consensus', params.chr);
-          //console.log(filteredMaps);
-          let markermaplocations = filteredMaps.getEach('markermaplocations');
-          return Ember.RSVP.all(markermaplocations).then(function(mmlocs) {
-            /*let markerArray = [];
-            mmlocs.forEach(function(mmloc) {
-              mmloc.forEach(function(marka) {
-                markerArray.pushObject(marka.get('marker'));
-              });
-            });
-            return Ember.RSVP.all(markerArray).then(function() {*/
-            return filteredMaps;
-            //});
-          });
-        });
-
-    });
-
-    let preparedData = {};
-
-    return Ember.RSVP.hash(promises).then(function(results) {
-      params.mapsToView.forEach(function(param) {
-        preparedData[param] = {};
-        results[param].forEach(function(m) {
-          let mymap = "ID_" + m.get('id') + "-" + m.get('name');
-          preparedData[param][mymap] = [];
-          m.get('markermaplocations').forEach(function(marka) {
-            //let mymarker = marka.get('marker');
-            preparedData[param][mymap].pushObject({"map": mymap, "marker": "m"+marka.get('marker'), "location": marka.get('location') });
-          });
-        });
-      });
-      that.controllerFor("mapview").set("mapData", params.mapsToView);
-      that.controllerFor("mapview").set("selectedMaps", selMaps);
-      return preparedData;
-    });
   }
 });
