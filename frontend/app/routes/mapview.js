@@ -29,8 +29,9 @@ export default Ember.Route.extend({
   model(params) {
 
     // Get all available maps.
-    let availMaps = [];
+    let selMaps = [];
     let that = this;
+    let retHash = {};
     var maps = that.get('store').findAll('geneticmap').then(function(genmaps) {
       that.controllerFor("mapview").set("availableMaps", genmaps);
       genmaps.forEach(function(map) {
@@ -43,12 +44,20 @@ export default Ember.Route.extend({
             }
             else {
               map.set('isSelected', true);
+              selMaps.push(map);
+              let mapName = map.get('name');
+              retHash[mapName] = {};
+              retHash[mapName][mapName+"_map"] = [];
+              map.get('markers').forEach(function(marker) {
+                retHash[mapName][mapName+"_map"].pushObject({"map": mapName+"_map", "marker": marker.name, "location": marker.position});
+              });
             }
           }
         }
         map.set('extraMaps', exMaps);
       });
+      that.controllerFor("mapview").set("selectedMaps", selMaps);
     });
-
+    return retHash;
   }
 });

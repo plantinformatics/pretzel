@@ -552,7 +552,13 @@ export default Ember.Component.extend({
     // draw each time.
     //
     let data = this.get('data');
+    console.log(data);
     let maps = d3.keys(data);
+    console.log(maps);
+    maps.forEach(function(map) {
+      console.log(map);
+      console.log(data[map]);
+    });
     this.draw(data, maps);
   }
 });
