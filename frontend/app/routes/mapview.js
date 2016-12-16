@@ -32,6 +32,7 @@ export default Ember.Route.extend({
     let selMaps = [];
     let that = this;
     let retHash = {};
+    let seenChrs = new Set();
     var maps = that.get('store').findAll('geneticmap').then(function(genmaps) {
       that.controllerFor("mapview").set("availableMaps", genmaps);
       genmaps.forEach(function(map) {
@@ -48,6 +49,7 @@ export default Ember.Route.extend({
               let mapName = map.get('name');
               retHash[mapName] = {};
               map.get('chromosomes').forEach(function(chr) {
+                seenChrs.add(chr.name);
                 if (chr.name == params.chr) {
                   retHash[mapName][mapName+"_"+chr.name] = [];
                   chr.markers.forEach(function(marker) {
@@ -60,6 +62,7 @@ export default Ember.Route.extend({
         }
         map.set('extraMaps', exMaps);
       });
+      that.controllerFor("mapview").set("availableChrs", Array.from(seenChrs).sort());
       that.controllerFor("mapview").set("selectedMaps", selMaps);
     });
     return retHash;
