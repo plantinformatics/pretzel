@@ -47,9 +47,14 @@ export default Ember.Route.extend({
               selMaps.push(map);
               let mapName = map.get('name');
               retHash[mapName] = {};
-              retHash[mapName][mapName+"_map"] = [];
-              map.get('markers').forEach(function(marker) {
-                retHash[mapName][mapName+"_map"].pushObject({"map": mapName+"_map", "marker": marker.name, "location": marker.position});
+              map.get('chromosomes').forEach(function(chr) {
+                if (chr.name == params.chr) {
+                  retHash[mapName][mapName+"_"+chr.name] = [];
+                  chr.markers.forEach(function(marker) {
+                    console.log(marker);
+                    retHash[mapName][mapName+"_"+chr.name].pushObject({"map": mapName+"_"+chr.name, "marker": marker.name, "location": marker.position});
+                  });
+                }
               });
             }
           }
@@ -58,6 +63,7 @@ export default Ember.Route.extend({
       });
       that.controllerFor("mapview").set("selectedMaps", selMaps);
     });
+    console.log('yahoo');
     return retHash;
   }
 });
