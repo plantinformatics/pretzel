@@ -28,7 +28,8 @@
     "sails-mandrill": "^0.10.2",
     "sails-migrations": "^2.0.8",
     "sails-mongo": "^0.12.2",
-    "sails-mysql": "^0.12.1"
+    "sails-mysql": "^0.12.1",
+    "skipper": "^0.7.3"
   },
   "scripts": {
     "debug": "node debug app.js",
