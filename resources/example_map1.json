@@ -1,0 +1,22 @@
+{ "geneticmap":
+  {
+    "name": "MyMap1",
+    "chromosomes":
+    [
+      {
+      "name": "MrChr",
+      "markers":
+        [
+          {
+          "name": "markerA",
+          "position": 1
+          },
+          {
+          "name": "markerB",
+          "position": 1.5
+          }
+        ]
+      }
+    ]
+  }
+}
