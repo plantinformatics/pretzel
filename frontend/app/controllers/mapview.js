@@ -30,9 +30,6 @@ export default Ember.Controller.extend({
   }),
 
   hasChrs: Ember.computed('availableChrs', function() {
-    if (this.availableChrs.length > 0) {
-      this.set('chr', this.availableChrs[0]);
-    }
     return this.availableChrs.length > 0;
   }),
 
