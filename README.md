@@ -26,14 +26,17 @@ Ubuntu:
 sudo apt-get install npm
 ```
 
-### Sails and Ember
+### Sails, Ember and Bower
 
-Sails.js and Ember.js are Node.js frameworks and can be installed using npm:
+Sails.js, Ember.js and Bower are Node.js packages and can be installed using npm:
 
 ```
 npm install sails
-npm install ember
+npm install ember-cli
+npm install bower
 ```
+
+It is preferable to install globally using the ```-g``` option as root.
 
 ## Cloning repository and set-up
 
