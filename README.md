@@ -16,24 +16,28 @@ Install MongoDB using your distribution's package manager; for example, in Ubunt
 sudo apt-get install mongodb
 ```
 
-### NPM
+### Node.js and NPM
 
 NPM is the package manager for Node.js and allows easy installation of the tools required by this
-project. You can install NPM using your native distribution package manager; for example, in
+project. You can install Node.js and NPM using your native distribution package manager; for example, in
 Ubuntu:
 
 ```
-sudo apt-get install npm
+sudo apt-get install nodejs npm
 ```
 
-### Sails and Ember
+### Sails, Ember and Bower
 
-Sails.js and Ember.js are Node.js frameworks and can be installed using npm:
+Sails.js, Ember.js and Bower are Node.js packages and can be installed globally as root using ```npm```:
 
 ```
-npm install sails
-npm install ember
+sudo npm install -g sails
+sudo npm install -g ember-cli
+sudo npm install -g bower
 ```
+
+Note that if you do not have root access, these packages will be installed locally by the ```npm
+install``` command detailed below.
 
 ## Cloning repository and set-up
 
@@ -59,6 +63,11 @@ cd ../frontend
 npm install
 bower install
 ```
+
+Note that ```npm install`` in ```server/``` and ```frontend/``` will install the Sails.js and
+Ember.js dependencies, including Sails.js and Ember.js, into those directories. If you did not
+install Sails.js and Ember.js globally previously, you will need to run the local binaries. For
+example, ```ember``` is in ```frontend/node_modules/ember-cli/bin/```.
 
 ### Set-up configs
 
