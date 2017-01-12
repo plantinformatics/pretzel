@@ -22,7 +22,7 @@ Install MongoDB
 Click the Download button in the top right corner of the Mongodb home page: https://www.mongodb.com, 
 it will take you to the download page, and select the version that is compatible with your Windows, and follow the install instruction to finish the installation. 
 
-If you do not know which version of Windows you are running, please go to your Powershell or command Prompt (cmd) and run following commands:
+If you do not know which version of Windows you are running, please go to your powershell or command prompt (cmd) and run following commands:
 ```
 wmic os get caption
 wmic os get osarchitecture
@@ -30,26 +30,35 @@ wmic os get osarchitecture
 
 The 32-bit can be downloaded via: https://www.mongodb.org/dl/win32/i386
 
+Setup MongdoDB
 
-
-### NPM
-
-NPM is the package manager for Node.js and allows easy installation of the tools required by this
-project. You can install NPM using your native distribution package manager; for example, in
-Ubuntu:
-
+Create the default database folder using command prompt:
 ```
-sudo apt-get install npm
+md C:\data\db
 ```
 
-### Sails and Ember
+Run MongoDB via command prompt:
+```
+C:\Program Files\MongoDB\Server\3.4\bin\mongod.exe
+```
 
-Sails.js and Ember.js are Node.js frameworks and can be installed using npm:
+### Nodejs
+
+Install the nodejs via the official download page: https://nodejs.org/en/download, choose the right platform and download either LTS or Current version of nodejs.  
+The downloaded package should also include npm as well.
+
+### Sails, Ember and Bower
+
+Sails.js, Ember.js and Bower are Node.js packages and can be installed globally as administrator using ```npm``` via cmd (Run as administrator):
 
 ```
-npm install sails
-npm install ember
+npm install -g sails
+npm install -g ember-cli
+npm install -g bower
 ```
+
+Note that if you do not have administrator access, these packages will be installed locally by the ```npm
+install``` command detailed below.
 
 ## Cloning repository and set-up
 
@@ -76,12 +85,17 @@ npm install
 bower install
 ```
 
+Note that ```npm install`` in ```server/``` and ```frontend/``` will install the Sails.js and
+Ember.js dependencies, including Sails.js and Ember.js, into those directories. If you did not
+install Sails.js and Ember.js globally previously, you will need to run the local binaries. For
+example, ```ember``` is in ```frontend/node_modules/ember-cli/bin/```.
+
 ### Set-up configs
 
 Copy the example `connections.js` file from `server/config/`:
 
 ```
-cp server/config/connections.js.example server/config/connections.js
+copy server/config/connections.js.example server/config/connections.js
 ```
 
 And ensure that a MongoDB entry exists, reflecting your local settings:
@@ -103,7 +117,7 @@ connection: 'mongodb'
 ```
 Copy the example `application.js` file from `frontend/app/adapters/`:
 ```
-cp frontend/app/adapters/application.js.example frontend/app/adapters/application.js
+copy frontend/app/adapters/application.js.example frontend/app/adapters/application.js
 ```
 Ember needs to be pointed to the URL and namespace of the API in . By default, it is assumed that you
 are running Sails and Ember on the same machine (`localhost`), but change this to reflect your
@@ -237,3 +251,4 @@ The `-H` parameters set the headers as expected by Sails and are required. The A
 inserted JSON if successful.
 
 You should now be able to load `localhost:4200` in a browser and select the two maps for alignment.
+
