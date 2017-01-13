@@ -26,12 +26,11 @@ Ubuntu:
 sudo apt-get install nodejs npm
 ```
 
-### Sails, Ember and Bower
+### Ember and Bower
 
-Sails.js, Ember.js and Bower are Node.js packages and can be installed globally as root using ```npm```:
+Ember.js and Bower are Node.js packages and can be installed globally as root using ```npm```:
 
 ```
-sudo npm install -g sails
 sudo npm install -g ember-cli
 sudo npm install -g bower
 ```
@@ -47,59 +46,32 @@ Clone the Github repository:
 git clone https://github.com/Seanli52/Dav127.git
 ```
 
-### Install Sails and Ember dependencies
+### Install Ember dependencies
 
 To install the various plug-ins and add-ons required by the project, use NPM and Bower (for the
 Ember-specific dependencies):
 
 ```
-# cd into Sails directory
-cd server
-# Install Sails dependencies
-npm install
 # cd into Ember directory
-cd ../frontend
+cd frontend
 # Install Ember dependencies
 npm install
 bower install
+# cd into Express app directory
+cd ../myapp
+# Install dependencies
+npm install
 ```
 
-Note that ```npm install`` in ```server/``` and ```frontend/``` will install the Sails.js and
-Ember.js dependencies, including Sails.js and Ember.js, into those directories. If you did not
-install Sails.js and Ember.js globally previously, you will need to run the local binaries. For
+Note that ```npm install`` in ```myapp/``` and ```frontend/``` will install the Express.js and
+Ember.js dependencies, including Express.js and Ember.js themselves, into those directories. If you did not
+install Express.js and Ember.js globally previously, you will need to run the local binaries. For
 example, ```ember``` is in ```frontend/node_modules/ember-cli/bin/```.
 
 ### Set-up configs
 
-Copy the example `connections.js` file from `server/config/`:
-
-```
-cp server/config/connections.js.example server/config/connections.js
-```
-
-And ensure that a MongoDB entry exists, reflecting your local settings:
-
-```javascript
-  mongodb: {
-    adapter: 'sails-mongo',
-    host: 'localhost',
-    port: 27017,
-    // user: '',
-    // password: '',
-    // database: 'your_mongo_db_name_here'
-  },
-```
-The `connection` setting in `server/config/models.js` should be set to this entry:
-
-```javascript
-connection: 'mongodb'
-```
-Copy the example `application.js` file from `frontend/app/adapters/`:
-```
-cp frontend/app/adapters/application.js.example frontend/app/adapters/application.js
-```
 Ember needs to be pointed to the URL and namespace of the API in . By default, it is assumed that you
-are running Sails and Ember on the same machine (`localhost`), but change this to reflect your
+are running Express and Ember on the same machine (`localhost`), but change this to reflect your
 set-up:
 
 ```javascript
@@ -107,8 +79,7 @@ set-up:
 import DS from 'ember-data';
 
 export default DS.RESTAdapter.extend({
-  host: 'http://localhost:1776',
-  namespace: 'api/v1'
+  host: 'http://localhost:3000',
 });
 ```
 ## Running
@@ -118,8 +89,8 @@ export default DS.RESTAdapter.extend({
 You should now be able to start Sails:
 
 ```
-cd server
-sails lift
+cd myapp
+node app.js
 ```
 
 And Ember:
@@ -131,14 +102,11 @@ ember serve
 
 ### Checking things are running
 
-If Sails has started correctly, you should see the following if you navigate to `http://localhost:1776/api/v1/geneticmaps` in a browser:
+If the Express API has started correctly, you should see the following if you navigate to `http://localhost:3000/geneticmaps` in a browser:
 
 ```
 {
   "geneticmaps": [],
-  "meta": {
-    "total": 0
-  }
 }
 ```
 This tells us the API is working (though currently no data has been loaded).
