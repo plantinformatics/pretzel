@@ -26,18 +26,6 @@ Ubuntu:
 sudo apt-get install nodejs npm
 ```
 
-### Ember and Bower
-
-Ember.js and Bower are Node.js packages and can be installed globally as root using ```npm```:
-
-```
-sudo npm install -g ember-cli
-sudo npm install -g bower
-```
-
-Note that if you do not have root access, these packages will be installed locally by the ```npm
-install``` command detailed below.
-
 ## Cloning repository and set-up
 
 Clone the Github repository:
@@ -64,8 +52,7 @@ npm install
 ```
 
 Note that ```npm install`` in ```myapp/``` and ```frontend/``` will install the Express.js and
-Ember.js dependencies, including Express.js and Ember.js themselves, into those directories. If you did not
-install Express.js and Ember.js globally previously, you will need to run the local binaries. For
+Ember.js dependencies, including Express.js and Ember.js themselves, into those directories. For
 example, ```ember``` is in ```frontend/node_modules/ember-cli/bin/```.
 
 ### Set-up configs
@@ -84,9 +71,9 @@ export default DS.RESTAdapter.extend({
 ```
 ## Running
 
-### Starting Sails and Ember
+### Starting Express and Ember
 
-You should now be able to start Sails:
+You should now be able to start the Express API server:
 
 ```
 cd myapp
@@ -187,14 +174,14 @@ These maps can be uploaded using CURL:
 curl -X POST \
      -H "Accept: application/json" -H "Content-type: application/json" \
      -d @example_map1.json \
-     localhost:1776/api/v1/geneticmaps
+     localhost:3000/geneticmaps
 
 curl -X POST \
      -H "Accept: application/json" -H "Content-type: application/json" \
      -d @example_map2.json \
-     localhost:1776/api/v1/geneticmaps
+     localhost:3000/geneticmaps
 ```
-The `-H` parameters set the headers as expected by Sails and are required. The API will return the
+The `-H` parameters set the headers as expected by Express and are required. The API will return the
 inserted JSON if successful.
 
 You should now be able to load `localhost:4200` in a browser and select the two maps for alignment.
