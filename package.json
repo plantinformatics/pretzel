@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "dependencies": {
-    "ember-cli": "~2.4.1",
+    "ember-cli": "~2.4.1"
   },
   "keywords": [
     "ember",
