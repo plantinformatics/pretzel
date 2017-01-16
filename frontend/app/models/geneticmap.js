@@ -1,8 +1,12 @@
+import Ember from 'ember';
 import DS from 'ember-data';
+import {
+  fragmentArray,
+} from 'model-fragments/attributes';
 
 export default DS.Model.extend({
   name: DS.attr('string'),
-  chromosomes: DS.attr(),
+  chromosomes: fragmentArray('chromosome'),
 
   extraMaps: [],
   isSelected: false,
