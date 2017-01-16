@@ -51,9 +51,9 @@ cd ../myapp
 npm install
 ```
 
-Note that ```npm install`` in ```myapp/``` and ```frontend/``` will install the Express.js and
+Note that `npm install` in `myapp/` and `frontend/` will install the Express.js and
 Ember.js dependencies, including Express.js and Ember.js themselves, into those directories. For
-example, ```ember``` is in ```frontend/node_modules/ember-cli/bin/```.
+example, `ember` is in `frontend/node_modules/ember-cli/bin/`.
 
 ### Set-up configs
 
