@@ -46,12 +46,12 @@ cd frontend
 npm install
 bower install
 # cd into Express app directory
-cd ../myapp
+cd ../backend
 # Install dependencies
 npm install
 ```
 
-Note that `npm install` in `myapp/` and `frontend/` will install the Express.js and
+Note that `npm install` in `backend/` and `frontend/` will install the Express.js and
 Ember.js dependencies, including Express.js and Ember.js themselves, into those directories. For
 example, `ember` is in `frontend/node_modules/ember-cli/bin/`.
 
@@ -66,7 +66,7 @@ set-up:
 import DS from 'ember-data';
 
 export default DS.RESTAdapter.extend({
-  host: 'http://localhost:3000',
+  host: 'http://localhost:1776',
 });
 ```
 ## Running
@@ -76,7 +76,7 @@ export default DS.RESTAdapter.extend({
 You should now be able to start the Express API server:
 
 ```
-cd myapp
+cd backend
 node app.js
 ```
 
