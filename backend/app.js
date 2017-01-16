@@ -6,7 +6,7 @@ var db = require('mongoose').createConnection('mongodb://localhost/test');
 var em = require('ember-mongoose');
 var app = express();
 
-app.use(bodyParser.json());
+app.use(bodyParser.json({limit: '10mb'}));
 
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
