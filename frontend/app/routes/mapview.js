@@ -34,6 +34,7 @@ export default Ember.Route.extend({
     let retHash = {};
     let seenChrs = new Set();
     var maps = that.get('store').findAll('geneticmap').then(function(genmaps) {
+      console.log(genmaps);
       that.controllerFor("mapview").set("availableMaps", genmaps);
       genmaps.forEach(function(map) {
         var exMaps = [];
