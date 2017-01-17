@@ -4,7 +4,6 @@ export default Ember.Component.extend({
 
   actions: {
     updatedSelectedMarkers: function(markers) {
-      console.log(markers);
       let markersAsArray = d3.keys(markers)
         .map(function (key) {
           return markers[key].map(function(marker) {

@@ -8,9 +8,6 @@ src="https://cloud.githubusercontent.com/assets/20571319/19416034/f1ee92b8-93d0-
 
 ### Database
 
-The API server, Sails.js, supports many databases but we recommend MongoDB. Currently MySQL and
-MongoDB are supported but we are in the process of moving completely to MongoDB.
-
 Install MongoDB using your distribution's package manager; for example, in Ubuntu:
 ```
 sudo apt-get install mongodb
