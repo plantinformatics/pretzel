@@ -7,7 +7,7 @@
 *.log
 
 # dependencies
-/node_modules
+/server/node_modules
 
 # misc
 /.sass-cache
