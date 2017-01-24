@@ -4,7 +4,6 @@ export default Ember.Component.extend({
 
   actions: {
     updatedSelectedMarkers: function(markers) {
-      console.log(markers);
       let markersAsArray = d3.keys(markers)
         .map(function (key) {
           return markers[key].map(function(marker) {
@@ -30,6 +29,7 @@ export default Ember.Component.extend({
     //mapIDs will be used to store map IDs
     let mapIDs = [];
 
+
     //margins, width and height (defined but not be used)
     let m = [100, 160, 80, 320],
     w = 1200 - m[1] - m[3],
@@ -49,6 +49,14 @@ export default Ember.Component.extend({
 
     //Convert the data into proper format
     //myMaps mapset ID
+    // let deletedMap = true;
+    // myMaps.forEach(function(i){
+    //     //console.log("Maps: ", Object.keys(myData[i])[0]);
+    //     if(name[0] == Object.keys(myData[i])[0]){
+    //        deletedMap = false;
+    //     }
+    // });
+
     myMaps.forEach(function(i){
       //map ID
       let mIDs = Object.keys(myData[i]);
@@ -57,7 +65,6 @@ export default Ember.Component.extend({
       //location:36.2288
       //map:"1-1A"
       //marker:"IWB6476"
-      //console.log(mIDs);
       mIDs.forEach(function(mapID) {
         let dataToArray = myData[i][mapID].toArray();
         //Push the values from the array to d3Data.
@@ -80,6 +87,9 @@ export default Ember.Component.extend({
     let selectedMaps = [];
     let selectedMarkers = {};
     let brushedRegions = {};
+
+    //Reset the selected Marker region, everytime a map gets deleted
+    me.send('updatedSelectedMarkers', selectedMarkers);
 
     mapIDs.forEach(function(d){
       o[d] = x(d);
@@ -311,6 +321,8 @@ export default Ember.Component.extend({
     function brushHelper(that) {
       //Map name, e.g. 32-1B
       let name = d3.select(that).data();
+      //console.log("Brushed: ", name[0]);
+      
 
       if (d3.event.selection == null) {
         selectedMaps.removeObject(name[0]);
@@ -324,7 +336,7 @@ export default Ember.Component.extend({
       
       if (selectedMaps.length > 0) {
         // Maps have been selected - now work out selected markers.
-        
+        console.log("Selected Maps: ",selectedMaps);
         brushedRegions[name[0]] = d3.event.selection;
         brushExtents = selectedMaps.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
 
