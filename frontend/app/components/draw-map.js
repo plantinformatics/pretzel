@@ -7,7 +7,9 @@ export default Ember.Component.extend({
       let markersAsArray = d3.keys(markers)
         .map(function (key) {
           return markers[key].map(function(marker) {
-            return {Map:key,Marker:marker};
+            //marker contains marker name and position, separated by " ".
+            var info = marker.split(" ");
+            return {Map:key,Marker:info[0],Position:info[1]};
           });
         })
         .reduce(function(a, b) { 
@@ -49,14 +51,6 @@ export default Ember.Component.extend({
 
     //Convert the data into proper format
     //myMaps mapset ID
-    // let deletedMap = true;
-    // myMaps.forEach(function(i){
-    //     //console.log("Maps: ", Object.keys(myData[i])[0]);
-    //     if(name[0] == Object.keys(myData[i])[0]){
-    //        deletedMap = false;
-    //     }
-    // });
-
     myMaps.forEach(function(i){
       //map ID
       let mIDs = Object.keys(myData[i]);
@@ -336,7 +330,6 @@ export default Ember.Component.extend({
       
       if (selectedMaps.length > 0) {
         // Maps have been selected - now work out selected markers.
-        console.log("Selected Maps: ",selectedMaps);
         brushedRegions[name[0]] = d3.event.selection;
         brushExtents = selectedMaps.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
 
@@ -347,7 +340,8 @@ export default Ember.Component.extend({
           d3.keys(z[p]).forEach(function(m) {
             if ((z[p][m] >= y[p].invert(brushExtents[i][0])) &&
                 (z[p][m] <= y[p].invert(brushExtents[i][1]))) {
-              selectedMarkers[p].push(m);
+              //selectedMarkers[p].push(m);    
+              selectedMarkers[p].push(m + " " + z[p][m]);
             }
           });
 
@@ -358,11 +352,20 @@ export default Ember.Component.extend({
          //d3.event.selection [min,min] or [max,max] should consider as non selection.
          //maybe alternatively use brush.clear or (brush.move, null) given a mouse event
           return !d3.keys(selectedMarkers).every(function(p) {
-             return selectedMarkers[p].contains(d);
+            //Maybe there is a better way to do the checking. 
+            //d is the marker name, where selectedMarkers[p][ma] contains marker name and postion, separated by " "
+            for (var ma=0; ma<selectedMarkers[p].length; ma++){
+              if (selectedMarkers[p][ma].includes(d+" ")){
+                 return true;
+              }
+            }
+            return false;
+            //return selectedMarkers[p].contains(d);
+
           });
         
         });
-        
+
         svgContainer.selectAll(".btn").remove();
 
         zoomSwitch = svgContainer.selectAll("#" + name[0])
