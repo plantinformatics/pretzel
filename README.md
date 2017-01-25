@@ -171,12 +171,12 @@ These maps can be uploaded using CURL:
 curl -X POST \
      -H "Accept: application/json" -H "Content-type: application/json" \
      -d @example_map1.json \
-     localhost:3000/geneticmaps
+     localhost:1776/geneticmaps
 
 curl -X POST \
      -H "Accept: application/json" -H "Content-type: application/json" \
      -d @example_map2.json \
-     localhost:3000/geneticmaps
+     localhost:1776/geneticmaps
 ```
 The `-H` parameters set the headers as expected by Express and are required. The API will return the
 inserted JSON if successful.
