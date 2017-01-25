@@ -86,7 +86,7 @@ ember serve
 
 ### Checking things are running
 
-If the Express API has started correctly, you should see the following if you navigate to `http://localhost:3000/geneticmaps` in a browser:
+If the Express API has started correctly, you should see the following if you navigate to `http://localhost:1776/geneticmaps` in a browser:
 
 ```
 {
