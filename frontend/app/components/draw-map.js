@@ -315,8 +315,9 @@ export default Ember.Component.extend({
     function brushHelper(that) {
       //Map name, e.g. 32-1B
       let name = d3.select(that).data();
-      //console.log("Brushed: ", name[0]);
-      
+
+      //Remove old circles.
+      svgContainer.selectAll("circle").remove();
 
       if (d3.event.selection == null) {
         selectedMaps.removeObject(name[0]);
@@ -334,17 +335,31 @@ export default Ember.Component.extend({
         brushExtents = selectedMaps.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
 
         selectedMarkers = {};
-
+        //console.log(y[mapIDs[k]](z[mapIDs[k]][d]))
         selectedMaps.forEach(function(p, i) {
           selectedMarkers[p] = [];
+          //o[p] 
           d3.keys(z[p]).forEach(function(m) {
+            //console.log(o[p], " " ,z[p][m]," ",y[p](z[p][m]) );
             if ((z[p][m] >= y[p].invert(brushExtents[i][0])) &&
                 (z[p][m] <= y[p].invert(brushExtents[i][1]))) {
               //selectedMarkers[p].push(m);    
               selectedMarkers[p].push(m + " " + z[p][m]);
+              //Highlight the markers in the brushed regions
+              //o[p], the map location, z[p][m], actuall marker position in the map, 
+              //y[p](z[p][m]) is the relative marker position in the svg
+              let dot = svgContainer.append("circle")
+                                    .attr("class", m)
+                                    .attr("cx",o[p])
+                                    .attr("cy",y[p](z[p][m]))
+                                    .attr("r",2)
+                                    .style("fill", "red");
+
+        
+            } else {
+              svgContainer.selectAll("circle." + m).remove();
             }
           });
-
         });
         me.send('updatedSelectedMarkers', selectedMarkers);
 
@@ -361,7 +376,6 @@ export default Ember.Component.extend({
             }
             return false;
             //return selectedMarkers[p].contains(d);
-
           });
         
         });
@@ -386,6 +400,8 @@ export default Ember.Component.extend({
 
            //reset function
            svgContainer.selectAll(".btn").remove();
+           //Remove all the existing circles
+           svgContainer.selectAll("circle").remove();
            resetSwitch = svgContainer.selectAll("#" + name[0])
                                     .append('g')
                                     .attr('class', 'btn')
@@ -421,8 +437,9 @@ export default Ember.Component.extend({
         });
         
       } else {
-        // No axis selected so reset fading of paths.
+        // No axis selected so reset fading of paths or circles.
         svgContainer.selectAll(".btn").remove();
+        svgContainer.selectAll("circle").remove();
         d3.selectAll(".foreground g").classed("faded", false);
         selectedMarkers = {};
         me.send('updatedSelectedMarkers', selectedMarkers);
