@@ -113,7 +113,6 @@ export default Ember.Component.extend({
       y[d].flipped = false;
       y[d].brush = d3.brushY()
                      .extent([[-8,0],[8,h]])
-                     //.on("brush", brushed)
                      .on("end", brushended);
     });
 
@@ -330,17 +329,15 @@ export default Ember.Component.extend({
       // have been selected.
       
       if (selectedMaps.length > 0) {
+        console.log("Selected: ", " ", selectedMaps.length);
         // Maps have been selected - now work out selected markers.
         brushedRegions[name[0]] = d3.event.selection;
         brushExtents = selectedMaps.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
 
         selectedMarkers = {};
-        //console.log(y[mapIDs[k]](z[mapIDs[k]][d]))
         selectedMaps.forEach(function(p, i) {
           selectedMarkers[p] = [];
-          //o[p] 
           d3.keys(z[p]).forEach(function(m) {
-            //console.log(o[p], " " ,z[p][m]," ",y[p](z[p][m]) );
             if ((z[p][m] >= y[p].invert(brushExtents[i][0])) &&
                 (z[p][m] <= y[p].invert(brushExtents[i][1]))) {
               //selectedMarkers[p].push(m);    
@@ -464,18 +461,10 @@ export default Ember.Component.extend({
           d3.selectAll("path")
             .on("mouseover",handleMouseOver)
             .on("mouseout",handleMouseOut);
-            //y[p].brush.move(null);
+          //that refers to the brush g element
           d3.select(that).call(y[p].brush.move,null);
         }
       });
-      
-    }
-
-    function brushed() {
-      //console.log("brush event");
-      if (!d3.event.sourceEvent) return; // Only transition after input.
-      if (!d3.event.selection) return;
-      brushHelper(this);
     }
 
     function brushended() {
@@ -507,6 +496,11 @@ export default Ember.Component.extend({
       d3.selectAll("path")
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
+      //Do we need to keep the brushed region when we drag the map? probably not.
+      //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
+      d3.select(this).select(".brush").call(y[d].brush.move,null);
+      //Remove all highlighted Markers.
+      svgContainer.selectAll("circle").remove();
     }
 
     function dragended(d) {
