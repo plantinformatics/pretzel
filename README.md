@@ -8,9 +8,6 @@ src="https://cloud.githubusercontent.com/assets/20571319/19416034/f1ee92b8-93d0-
 
 ### Database
 
-The API server, Sails.js, supports many databases but we recommend MongoDB. Currently MySQL and
-MongoDB are supported but we are in the process of moving completely to MongoDB.
-
 Install MongoDB using your distribution's package manager; for example, in Ubuntu:
 ```
 sudo apt-get install mongodb
@@ -46,12 +43,12 @@ cd frontend
 npm install
 bower install
 # cd into Express app directory
-cd ../myapp
+cd ../backend
 # Install dependencies
 npm install
 ```
 
-Note that `npm install` in `myapp/` and `frontend/` will install the Express.js and
+Note that `npm install` in `backend/` and `frontend/` will install the Express.js and
 Ember.js dependencies, including Express.js and Ember.js themselves, into those directories. For
 example, `ember` is in `frontend/node_modules/ember-cli/bin/`.
 
@@ -66,7 +63,7 @@ set-up:
 import DS from 'ember-data';
 
 export default DS.RESTAdapter.extend({
-  host: 'http://localhost:3000',
+  host: 'http://localhost:1776',
 });
 ```
 ## Running
@@ -76,7 +73,7 @@ export default DS.RESTAdapter.extend({
 You should now be able to start the Express API server:
 
 ```
-cd myapp
+cd backend
 node app.js
 ```
 
@@ -89,7 +86,7 @@ ember serve
 
 ### Checking things are running
 
-If the Express API has started correctly, you should see the following if you navigate to `http://localhost:3000/geneticmaps` in a browser:
+If the Express API has started correctly, you should see the following if you navigate to `http://localhost:1776/geneticmaps` in a browser:
 
 ```
 {
@@ -174,12 +171,12 @@ These maps can be uploaded using CURL:
 curl -X POST \
      -H "Accept: application/json" -H "Content-type: application/json" \
      -d @example_map1.json \
-     localhost:3000/geneticmaps
+     localhost:1776/geneticmaps
 
 curl -X POST \
      -H "Accept: application/json" -H "Content-type: application/json" \
      -d @example_map2.json \
-     localhost:3000/geneticmaps
+     localhost:1776/geneticmaps
 ```
 The `-H` parameters set the headers as expected by Express and are required. The API will return the
 inserted JSON if successful.
