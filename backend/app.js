@@ -43,7 +43,7 @@ app.get('/geneticmaps', function(req,res) {
       res.send(err);
     }
     else {
-      res.send(docs);
+      res.send({'geneticmaps': docs});
     }
   });
 });
@@ -51,7 +51,7 @@ app.get('/geneticmaps', function(req,res) {
 app.get('/geneticmaps/:id', function(req,res) {
   // Get geneticmap by id.
   geneticmapModel.findById(req.params.id, function(err, map) {
-    res.send(map);
+    res.send({'geneticmaps': map});
   });
 });
 
