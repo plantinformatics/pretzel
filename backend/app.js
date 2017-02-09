@@ -2,8 +2,6 @@ var join = require('path').join;
 var express = require('express');
 var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
-var db = require('mongoose').createConnection('mongodb://localhost/test');
-var em = require('ember-mongoose');
 var app = express();
 
 app.use(bodyParser.json({limit: '10mb'}));
@@ -14,17 +12,38 @@ app.use(function(req, res, next) {
   next();
 });
 
-// build api
+var geneticmapSchema = new mongoose.Schema({
+  name: String,
+  chromosomes: [
+    {
+      _id: false,
+      name: String,
+      markers: [
+        {
+          _id: false,
+          name: String,
+          position: Number
+        }
+      ]
+    }
+  ]
+});
 
-em()
-  .models(db, join(__dirname, 'server/models'))
-  .fields(join(__dirname, 'server/api_fields'))
-  .hooks(join(__dirname, 'server/api_hooks'))
-  .discover(app);
+var geneticmapModel = mongoose.model('geneticmap', geneticmapSchema);
 
-app.get('/', function (req, res) {
-  res.send('Hello World!')
-})
+mongoose.connect('mongodb://localhost/test');
+
+app.get('/geneticmaps', function(req,res) {
+  console.log('Accessed /geneticmaps!');
+  geneticmapModel.find({},function(err,docs) {
+    if(err) {
+      res.send(err);
+    }
+    else {
+      res.send(docs);
+    }
+  });
+});
 
 
 app.listen(1776, function () {
