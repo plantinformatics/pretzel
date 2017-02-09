@@ -35,7 +35,10 @@ mongoose.connect('mongodb://localhost/test');
 
 app.get('/geneticmaps', function(req,res) {
   console.log('Accessed /geneticmaps!');
-  geneticmapModel.find({},function(err,docs) {
+  geneticmapModel.find({}).
+  select({ name: 1 }).
+  exec(
+    function(err,docs) {
     if(err) {
       res.send(err);
     }
