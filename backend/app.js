@@ -12,6 +12,8 @@ app.use(function(req, res, next) {
   next();
 });
 
+app.set('json spaces', 2);
+
 var geneticmapSchema = new mongoose.Schema({
   name: String,
   chromosomes: [
