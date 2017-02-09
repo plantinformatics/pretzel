@@ -7,7 +7,9 @@ export default Ember.Component.extend({
       let markersAsArray = d3.keys(markers)
         .map(function (key) {
           return markers[key].map(function(marker) {
-            return {Map:key,Marker:marker};
+            //marker contains marker name and position, separated by " ".
+            var info = marker.split(" ");
+            return {Map:key,Marker:info[0],Position:info[1]};
           });
         })
         .reduce(function(a, b) { 
@@ -28,6 +30,7 @@ export default Ember.Component.extend({
     //myMaps should contain map IDs instead of mapset IDs.
     //mapIDs will be used to store map IDs
     let mapIDs = [];
+
 
     //margins, width and height (defined but not be used)
     let m = [100, 160, 80, 320],
@@ -56,7 +59,6 @@ export default Ember.Component.extend({
       //location:36.2288
       //map:"1-1A"
       //marker:"IWB6476"
-      //console.log(mIDs);
       mIDs.forEach(function(mapID) {
         let dataToArray = myData[i][mapID].toArray();
         //Push the values from the array to d3Data.
@@ -79,6 +81,9 @@ export default Ember.Component.extend({
     let selectedMaps = [];
     let selectedMarkers = {};
     let brushedRegions = {};
+
+    //Reset the selected Marker region, everytime a map gets deleted
+    me.send('updatedSelectedMarkers', selectedMarkers);
 
     mapIDs.forEach(function(d){
       o[d] = x(d);
@@ -108,7 +113,6 @@ export default Ember.Component.extend({
       y[d].flipped = false;
       y[d].brush = d3.brushY()
                      .extent([[-8,0],[8,h]])
-                     //.on("brush", brushed)
                      .on("end", brushended);
     });
 
@@ -311,6 +315,9 @@ export default Ember.Component.extend({
       //Map name, e.g. 32-1B
       let name = d3.select(that).data();
 
+      //Remove old circles.
+      svgContainer.selectAll("circle").remove();
+
       if (d3.event.selection == null) {
         selectedMaps.removeObject(name[0]);
       }
@@ -322,22 +329,34 @@ export default Ember.Component.extend({
       // have been selected.
       
       if (selectedMaps.length > 0) {
+        console.log("Selected: ", " ", selectedMaps.length);
         // Maps have been selected - now work out selected markers.
-        
         brushedRegions[name[0]] = d3.event.selection;
         brushExtents = selectedMaps.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
 
         selectedMarkers = {};
-
         selectedMaps.forEach(function(p, i) {
           selectedMarkers[p] = [];
           d3.keys(z[p]).forEach(function(m) {
             if ((z[p][m] >= y[p].invert(brushExtents[i][0])) &&
                 (z[p][m] <= y[p].invert(brushExtents[i][1]))) {
-              selectedMarkers[p].push(m);
+              //selectedMarkers[p].push(m);    
+              selectedMarkers[p].push(m + " " + z[p][m]);
+              //Highlight the markers in the brushed regions
+              //o[p], the map location, z[p][m], actuall marker position in the map, 
+              //y[p](z[p][m]) is the relative marker position in the svg
+              let dot = svgContainer.append("circle")
+                                    .attr("class", m)
+                                    .attr("cx",o[p])
+                                    .attr("cy",y[p](z[p][m]))
+                                    .attr("r",2)
+                                    .style("fill", "red");
+
+        
+            } else {
+              svgContainer.selectAll("circle." + m).remove();
             }
           });
-
         });
         me.send('updatedSelectedMarkers', selectedMarkers);
 
@@ -349,7 +368,7 @@ export default Ember.Component.extend({
           });
         
         });
-        
+
         svgContainer.selectAll(".btn").remove();
 
         zoomSwitch = svgContainer.selectAll("#" + name[0])
@@ -370,6 +389,8 @@ export default Ember.Component.extend({
 
            //reset function
            svgContainer.selectAll(".btn").remove();
+           //Remove all the existing circles
+           svgContainer.selectAll("circle").remove();
            resetSwitch = svgContainer.selectAll("#" + name[0])
                                     .append('g')
                                     .attr('class', 'btn')
@@ -405,8 +426,9 @@ export default Ember.Component.extend({
         });
         
       } else {
-        // No axis selected so reset fading of paths.
+        // No axis selected so reset fading of paths or circles.
         svgContainer.selectAll(".btn").remove();
+        svgContainer.selectAll("circle").remove();
         d3.selectAll(".foreground g").classed("faded", false);
         selectedMarkers = {};
         me.send('updatedSelectedMarkers', selectedMarkers);
@@ -431,18 +453,10 @@ export default Ember.Component.extend({
           d3.selectAll("path")
             .on("mouseover",handleMouseOver)
             .on("mouseout",handleMouseOut);
-            //y[p].brush.move(null);
+          //that refers to the brush g element
           d3.select(that).call(y[p].brush.move,null);
         }
       });
-      
-    }
-
-    function brushed() {
-      //console.log("brush event");
-      if (!d3.event.sourceEvent) return; // Only transition after input.
-      if (!d3.event.selection) return;
-      brushHelper(this);
     }
 
     function brushended() {
@@ -474,6 +488,11 @@ export default Ember.Component.extend({
       d3.selectAll("path")
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
+      //Do we need to keep the brushed region when we drag the map? probably not.
+      //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
+      d3.select(this).select(".brush").call(y[d].brush.move,null);
+      //Remove all highlighted Markers.
+      svgContainer.selectAll("circle").remove();
     }
 
     function dragended(d) {

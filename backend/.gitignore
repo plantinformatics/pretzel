@@ -1,0 +1,17 @@
+# See http://help.github.com/ignore-files/ for more about ignoring files.
+
+# compiled output
+/dist
+/tmp
+/log
+*.log
+
+# dependencies
+/server/node_modules
+
+# misc
+/.sass-cache
+/connect.lock
+/coverage/*
+/builds
+/logs
