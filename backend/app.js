@@ -34,9 +34,9 @@ var geneticmapModel = mongoose.model('geneticmap', geneticmapSchema);
 mongoose.connect('mongodb://localhost/test');
 
 app.get('/geneticmaps', function(req,res) {
-  console.log('Accessed /geneticmaps!');
+  // Get all geneticmaps.
   geneticmapModel.find({}).
-  select({ name: 1 }).
+  select({ name: 1 }). // Only keep name.
   exec(
     function(err,docs) {
     if(err) {
@@ -45,6 +45,13 @@ app.get('/geneticmaps', function(req,res) {
     else {
       res.send(docs);
     }
+  });
+});
+
+app.get('/geneticmaps/:id', function(req,res) {
+  // Get geneticmap by id.
+  geneticmapModel.findById(req.params.id, function(err, map) {
+    res.send(map);
   });
 });
 
