@@ -2,10 +2,17 @@ import Ember from 'ember';
 import Model from 'ember-data/model';
 import attr from 'ember-data/attr';
 import { fragmentArray } from 'model-fragments/attributes';
+import { PartialModel, partial } from 'ember-data-partial-model/utils/model';
+// const { attr } = DS;
 
-export default Model.extend({
+export default PartialModel.extend({
   name: attr('string'),
-  chromosomes: fragmentArray('chromosome'),
+
+  extended: partial('geneticmap', 'extended', {
+    chromosomes: attr()
+  }),
+
+    chromosomes: fragmentArray('chromosome'),
 
   extraMaps: [],
   isSelected: false,
