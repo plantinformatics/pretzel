@@ -165,9 +165,18 @@ Two simple example genetic maps are in `resources/`:
 ```
 Note that they both contain a chromosome called `MyChr` and two markers, `markerA` and `markerB`.
 
-These maps can be inserted into the MongoDB database:
+These maps can be uploaded using `curl`:
 
 ```
+curl -X POST \
+     -H "Accept: application/json" -H "Content-type: application/json" \
+     -d @example_map1.json \
+     localhost:1776/api/v1/geneticmaps
+
+curl -X POST \
+     -H "Accept: application/json" -H "Content-type: application/json" \
+     -d @example_map2.json \
+     localhost:1776/api/v1/geneticmaps
 
 ```
 
