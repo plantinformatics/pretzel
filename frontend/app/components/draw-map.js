@@ -130,7 +130,7 @@ export default Ember.Component.extend({
         deleteMap();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == "Z") {
-        zoomMap();
+
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == "R") {
         refreshMap();
@@ -168,7 +168,7 @@ export default Ember.Component.extend({
         .data(mapIDs)
         .enter().append("g")
         .attr("class", "map")
-        .attr("id", function(d) { return d; })
+        .attr("id", function(d) { return eltId(d); })
         .attr("transform", function(d) { return "translate(" + x(d) + ")"; })
         .call(d3.drag()
           .subject(function(d) { return {x: x(d)}; }) //origin replaced by subject
@@ -311,6 +311,16 @@ export default Ember.Component.extend({
         return r;
     }
 
+      /* Used for group element, class "map"; required because id may start with
+       * numeric mongodb id (of geneticmap) and element id cannot start with
+       * numeric.
+       * Not required for axis element ids because they have "m" suffix.
+       */
+      function eltId(name)
+      {
+	  return "id" + name;
+      }
+
     function brushHelper(that) {
       //Map name, e.g. 32-1B
       let name = d3.select(that).data();
@@ -371,7 +381,7 @@ export default Ember.Component.extend({
 
         svgContainer.selectAll(".btn").remove();
 
-        zoomSwitch = svgContainer.selectAll("#" + name[0])
+          zoomSwitch = svgContainer.selectAll("#" + eltId(name[0]))
                   .append('g')
                   .attr('class', 'btn')
                   .attr('transform', 'translate(10)');
@@ -391,7 +401,7 @@ export default Ember.Component.extend({
            svgContainer.selectAll(".btn").remove();
            //Remove all the existing circles
            svgContainer.selectAll("circle").remove();
-           resetSwitch = svgContainer.selectAll("#" + name[0])
+            resetSwitch = svgContainer.selectAll("#" + eltId(name[0]))
                                     .append('g')
                                     .attr('class', 'btn')
                                     .attr('transform', 'translate(10)');
@@ -418,7 +428,7 @@ export default Ember.Component.extend({
              d3.selectAll("path")
               .on("mouseover",handleMouseOver)
               .on("mouseout",handleMouseOut);
-             d3.selectAll("#" + name[0]).selectAll(".btn").remove();
+               d3.selectAll("#" + eltId(name[0])).selectAll(".btn").remove();
              selectedMarkers = {};
              me.send('updatedSelectedMarkers', selectedMarkers);
              zoomed = false;
