@@ -46,31 +46,46 @@ export default Ember.Route.extend({
             else {
               map.set('isSelected', true);
               selMaps.push(map);
-              let mapName = map.get('name');
-              retHash[mapName] = {};
-              map.get('chromosomes').forEach(function(chr) {
-                let chrName = chr.get('name');
-                seenChrs.add(chrName);
-                if (chrName == params.chr) {
-                  retHash[mapName][mapName+"_"+chrName] = [];
-                  chr.get('markers').forEach(function(marker) {
-                    retHash[mapName][mapName+"_"+chrName].pushObject(
-                      {"map": mapName+"_"+chrName,
-                       "marker": marker.get('name'),
-                       "location": marker.get('position')
-                      }
-                    );
-                  });
-                }
-              });
+              that.controllerFor("mapview").set("selectedMaps", selMaps);
             }
           }
         }
         map.set('extraMaps', exMaps);
       });
-      that.controllerFor("mapview").set("availableChrs", Array.from(seenChrs).sort());
-      that.controllerFor("mapview").set("selectedMaps", selMaps);
     });
-    return retHash;
+
+    let promises = {};
+
+    params.mapsToView.forEach(function(param) {
+      promises[param] = that.get('store').findRecord('geneticmap', param).then(function(map) {
+        return map.get('extended');
+      });
+    });
+    
+    return Ember.RSVP.hash(promises).then(function(extendedMaps) {
+      params.mapsToView.forEach(function(param) {
+        let mapName = param;
+        retHash[mapName] = {};
+        extendedMaps[param].get('chromosomes').forEach(function(chr) {
+          let chrName = chr.name;
+          console.log(chrName);
+          seenChrs.add(chrName);
+          that.controllerFor("mapview").set("availableChrs", Array.from(seenChrs).sort());
+          console.log(seenChrs);
+          if (chrName == params.chr) {
+            retHash[mapName][mapName+"_"+chrName] = [];
+            chr.markers.forEach(function(marker) {
+              retHash[mapName][mapName+"_"+chrName].pushObject(
+                {"map": mapName+"_"+chrName,
+                 "marker": marker.name,
+                 "location": marker.position
+                }
+              );
+            });
+          }
+        });
+      });
+      return retHash;
+    });
   }
 });

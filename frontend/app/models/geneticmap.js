@@ -12,8 +12,6 @@ export default PartialModel.extend({
     chromosomes: attr()
   }),
 
-    chromosomes: fragmentArray('chromosome'),
-
   extraMaps: [],
   isSelected: false,
 
