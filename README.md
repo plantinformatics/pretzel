@@ -54,15 +54,20 @@ example, `ember` is in `frontend/node_modules/ember-cli/bin/`.
 
 ### Set-up configs
 
-Ember needs to be pointed to the URL and namespace of the API in . By default, it is assumed that you
-are running Express and Ember on the same machine (`localhost`), but change this to reflect your
-set-up:
+Ember needs to be pointed to URL of the API in `frontend/app/adapters/application.js`. Copy default settings from `frontend/app/adapters/application.js.example`:
+
+```
+cp frontend/app/adapters/application.js.example frontend/app/adapters/application.js
+```
+By default, it is assumed that you are running Express and Ember on the same machine (`localhost`), but change this to reflect your set-up:
 
 ```javascript
 # frontend/app/adapters/application.js
-import DS from 'ember-data';
 
-export default DS.RESTAdapter.extend({
+import DS from 'ember-data';
+import PartialModelAdapter from 'ember-data-partial-model/mixins/adapter';
+
+export default DS.RESTAdapter.extend(PartialModelAdapter, {
   host: 'http://localhost:1776',
 });
 ```
