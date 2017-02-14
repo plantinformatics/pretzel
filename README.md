@@ -165,20 +165,10 @@ Two simple example genetic maps are in `resources/`:
 ```
 Note that they both contain a chromosome called `MyChr` and two markers, `markerA` and `markerB`.
 
-These maps can be uploaded using CURL:
+These maps can be inserted into the MongoDB database:
 
 ```
-curl -X POST \
-     -H "Accept: application/json" -H "Content-type: application/json" \
-     -d @example_map1.json \
-     localhost:1776/geneticmaps
 
-curl -X POST \
-     -H "Accept: application/json" -H "Content-type: application/json" \
-     -d @example_map2.json \
-     localhost:1776/geneticmaps
 ```
-The `-H` parameters set the headers as expected by Express and are required. The API will return the
-inserted JSON if successful.
 
 You should now be able to load `localhost:4200` in a browser and select the two maps for alignment.

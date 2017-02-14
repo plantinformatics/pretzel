@@ -67,6 +67,24 @@ app.get('/geneticmaps/:id', function(req,res) {
   });
 });
 
+app.post('/geneticmaps', (req, res) => {
+  let name = req.body.geneticmap.name;
+  let chromosomes = req.body.geneticmap.chromosomes;
+  geneticmapModel.create({
+    name: name,
+    chromosomes: chromosomes
+  }, function (err, geneticmap) {
+    if (err) {
+      res.send("Error");
+    }
+    else {
+      console.log("Created new geneticmap");
+      res.format({
+        json: function() { res.json(geneticmap) }
+      });
+    }
+  });
+});
 
 app.listen(1776, function () {
   console.log('Example app listening on port 1776!')
