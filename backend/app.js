@@ -68,8 +68,8 @@ app.get('/geneticmaps/:id', function(req,res) {
 });
 
 app.post('/geneticmaps', (req, res) => {
-  let name = req.body.geneticmap.name;
-  let chromosomes = req.body.geneticmap.chromosomes;
+  var name = req.body.geneticmap.name;
+  var chromosomes = req.body.geneticmap.chromosomes;
   geneticmapModel.create({
     name: name,
     chromosomes: chromosomes
