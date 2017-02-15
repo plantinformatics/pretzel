@@ -77,8 +77,8 @@ export default Ember.Route.extend({
             chr.get('markers').forEach(function(marker) {
               retHash[mapName][mapName+"_"+chrName].pushObject(
                 {"map": mapName+"_"+chrName,
-                 "marker": marker.name,
-                 "location": marker.position
+                 "marker": marker.get('name'),
+                 "location": marker.get('position')
                 }
               );
             });
