@@ -1,4 +1,5 @@
 import Ember from 'ember';
+import DS from 'ember-data';
 import Model from 'ember-data/model';
 import attr from 'ember-data/attr';
 import { fragmentArray } from 'model-fragments/attributes';
@@ -9,7 +10,7 @@ export default PartialModel.extend({
   name: attr('string'),
 
   extended: partial('geneticmap', 'extended', {
-    chromosomes: attr()
+    chromosomes: DS.hasMany('chromosome', { async: false })
   }),
 
   extraMaps: [],
