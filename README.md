@@ -54,15 +54,20 @@ example, `ember` is in `frontend/node_modules/ember-cli/bin/`.
 
 ### Set-up configs
 
-Ember needs to be pointed to the URL and namespace of the API in . By default, it is assumed that you
-are running Express and Ember on the same machine (`localhost`), but change this to reflect your
-set-up:
+Ember needs to be pointed to URL of the API in `frontend/app/adapters/application.js`. Copy default settings from `frontend/app/adapters/application.js.example`:
+
+```
+cp frontend/app/adapters/application.js.example frontend/app/adapters/application.js
+```
+By default, it is assumed that you are running Express and Ember on the same machine (`localhost`), but change this to reflect your set-up:
 
 ```javascript
 # frontend/app/adapters/application.js
-import DS from 'ember-data';
 
-export default DS.RESTAdapter.extend({
+import DS from 'ember-data';
+import PartialModelAdapter from 'ember-data-partial-model/mixins/adapter';
+
+export default DS.RESTAdapter.extend(PartialModelAdapter, {
   host: 'http://localhost:1776',
 });
 ```
@@ -165,9 +170,18 @@ Two simple example genetic maps are in `resources/`:
 ```
 Note that they both contain a chromosome called `MyChr` and two markers, `markerA` and `markerB`.
 
-These maps can be inserted into the MongoDB database:
+These maps can be uploaded using `curl`:
 
 ```
+curl -X POST \
+     -H "Accept: application/json" -H "Content-type: application/json" \
+     -d @example_map1.json \
+     localhost:1776/api/v1/geneticmaps
+
+curl -X POST \
+     -H "Accept: application/json" -H "Content-type: application/json" \
+     -d @example_map2.json \
+     localhost:1776/api/v1/geneticmaps
 
 ```
 
