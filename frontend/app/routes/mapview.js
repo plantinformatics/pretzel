@@ -54,6 +54,9 @@ export default Ember.Route.extend({
             }
           }
         }
+        else {
+          that.controllerFor("mapview").set("availableChrs", []);
+        }
         map.set('extraMaps', exMaps);
       });
 	  // return Ember.RSVP.resolve({genmaps: genmaps, mapsToView: params.mapsToView, selMaps: selMaps});
