@@ -18,13 +18,55 @@ function load_test_data()
 
 }
 # Expected output :
-# { geneticmap: { name: 'MyMap1', chromosomes: [ [Object] ] } }
-# {"geneticmap":{"_id":"589b17fcff0f2b4ba113deea","name":"MyMap1","chromosomes":[{"name":"MyChr","markers":[{"name":"markerA","position":1},{"name":"markerB","position":1.5}]}]}}
-: <<'END'
-{ geneticmap: { name: 'MyMap1', chromosomes: [ [Object] ] } }
-{"geneticmap":{"_id":"589be243ff0f2b4ba113deee","name":"MyMap1","chromosomes":[{"name":"MyChr","markers":[{"name":"markerA","position":1},{"name":"markerB","position":1.5}]}]}}{ geneticmap: { name: 'MyMap2', chromosomes: [ [Object] ] } }
-{"geneticmap":{"_id":"589be243ff0f2b4ba113deef","name":"MyMap2","chromosomes":[{"name":"MyChr","markers":[{"name":"markerA","position":0},{"name":"markerB","position":1.3}]}]}}
-END
+: <<'Expected_output_delimiter'
+Created new geneticmap
+{
+  "name": "MyMap1",
+  "chromosomes": [
+    {
+      "name": "MyChr",
+      "markers": [
+        {
+          "name": "markerA",
+          "position": 1,
+          "id": "58a67811d4e31c6515525eca"
+        },
+        {
+          "name": "markerB",
+          "position": 1.5,
+          "id": "58a67811d4e31c6515525ec9"
+        }
+      ],
+      "id": "58a67811d4e31c6515525ec8"
+    }
+  ],
+  "id": "58a67811d4e31c6515525ec7"
+}Created new geneticmap
+{
+  "name": "MyMap2",
+  "chromosomes": [
+    {
+      "name": "MyChr",
+      "markers": [
+        {
+          "name": "markerA",
+          "position": 0,
+          "id": "58a67812d4e31c6515525ece"
+        },
+        {
+          "name": "markerB",
+          "position": 1.3,
+          "id": "58a67812d4e31c6515525ecd"
+        }
+      ],
+      "id": "58a67812d4e31c6515525ecc"
+    }
+  ],
+  "id": "58a67812d4e31c6515525ecb"
+}
+
+Expected_output_delimiter
+
 
 #-------------------------------------------------------------------------------
 
