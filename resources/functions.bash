@@ -1,21 +1,28 @@
 #!/bin/bash
 
 # Usage : source resources/functions.bash
-# cd markerMapViewer/Dav127 && load_test_data
 
+#-------------------------------------------------------------------------------
+
+# Usage e.g. : 
+# cd markerMapViewer/Dav127 && load_test_data
+# or
+# cd markerMapViewer/Dav127 && load_test_data_file resources/example_map?.json
+#
 # load minimal sample data into the db
+function load_test_data_file()
+{
+    for mapJsonFileName in $*
+    do
+    curl -X POST \
+	 -H "Accept: application/json" -H "Content-type: application/json" \
+	 -d @$mapJsonFileName \
+	 localhost:1776/geneticmaps
+    done
+}
 function load_test_data()
 {
-    curl -X POST \
-	 -H "Accept: application/json" -H "Content-type: application/json" \
-	 -d @resources/example_map1.json \
-	 localhost:1776/geneticmaps
-
-    curl -X POST \
-	 -H "Accept: application/json" -H "Content-type: application/json" \
-	 -d @resources/example_map2.json \
-	 localhost:1776/geneticmaps
-
+    load_test_data_file resources/example_map1.json resources/example_map2.json
 }
 # Expected output :
 : <<'Expected_output_delimiter'
