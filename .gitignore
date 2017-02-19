@@ -16,3 +16,9 @@
 /coverage/*
 /builds
 /logs
+
+# emacs backup and save files
+*~
+\#*\#
+# etags file
+TAGS
