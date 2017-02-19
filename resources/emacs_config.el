@@ -20,14 +20,26 @@
 ;; The .dir-locals.el is loaded and applied automatically, whereas the file
 ;; defining dir-locals-set-class-variables has to be loaded explicitly.
 ;;
+;; refn :
+;; www.gnu.org/software/emacs/manual/html_node/emacs/Directory-Variables.html
+;; www.emacswiki.org/emacs/Js2Mode
+;;
 ;; project-root-directory is the top-level directory of the git work-tree.
 ;;
 (dir-locals-set-class-variables
  'project-root-directory
  '(
    (js-mode
-    . ((tab-width . 2)
+    . ((c-basic-offset . 2)
+       (tab-width . 2)
        (js-indent-level . 2)
+       ))
+   (js2-mode
+    . ((c-basic-offset . 2)
+       (tab-width . 2)
+       (js-indent-level . 2)
+       (js2-basic-offset . 2)
+       (js2-pretty-multiline-declarations . nil)
        ))
    )
  )
