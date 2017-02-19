@@ -70,6 +70,7 @@ export default Ember.Component.extend({
     //d3 v4 scalePoint replace the rangePoint
     //let x = d3.scaleOrdinal().domain(mapIDs).range([0, w]);
     let x = d3.scalePoint().domain(mapIDs).range([0, w]);
+		/// x of each map. mapIDs.forEach() : o[d] = x(d);
     let o = {};
 
     let zoomSwitch,resetSwitch;
@@ -87,7 +88,7 @@ export default Ember.Component.extend({
 
     mapIDs.forEach(function(d){
       o[d] = x(d);
-    })
+    });
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
 
     d3Data.forEach(function(d) {
@@ -318,7 +319,7 @@ export default Ember.Component.extend({
        */
       function eltId(name)
       {
-	  return "id" + name;
+				return "id" + name;
       }
 
     function brushHelper(that) {
@@ -484,7 +485,7 @@ export default Ember.Component.extend({
       o[d] = d3.event.x;
       // Now impose boundaries on the x-range you can drag.
       // These values should really be based on variables defined previously.
-      if (o[d] < -50) { o[d] = -50; } else if (o[d] > 770) { o[d] = 770 }
+      if (o[d] < -50) { o[d] = -50; } else if (o[d] > 770) { o[d] = 770; }
       mapIDs.sort(function(a, b) { return o[a] - o[b]; });
       //console.log(mapIDs + " " + o[d]);
       d3.select(this).attr("transform", function() {return "translate(" + o[d] + ")";});
@@ -494,7 +495,7 @@ export default Ember.Component.extend({
       } else {
         d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
       }
-      d3.selectAll(".foreground g").selectAll("path").attr("d", function(d) { return d; })
+      d3.selectAll(".foreground g").selectAll("path").attr("d", function(d) { return d; });
       d3.selectAll("path")
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
@@ -521,7 +522,7 @@ export default Ember.Component.extend({
       
       let t = d3.transition().duration(500);
       t.selectAll(".map").attr("transform", function(d) { return "translate(" + x(d) + ")"; });
-      t.selectAll(".foreground path").attr("d", function(d) { return d; })
+      t.selectAll(".foreground path").attr("d", function(d) { return d; });
       d3.select(this).classed("active", false);
       d3.selectAll("path")
         .on("mouseover",handleMouseOver)
