@@ -1,5 +1,7 @@
 import Ember from 'ember';
 
+/*global d3 */
+
 export default Ember.Component.extend({
 
   actions: {
@@ -87,7 +89,7 @@ export default Ember.Component.extend({
 
     mapIDs.forEach(function(d){
       o[d] = x(d);
-    })
+    });
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
 
     d3Data.forEach(function(d) {
@@ -176,6 +178,32 @@ export default Ember.Component.extend({
           .on("drag", dragged)
           .on("end", dragended));//function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
 
+		// Add a target zone for axis stacking drag&drop
+		let stackDropTarget = 
+			g.append("g")
+			.attr("class", "stackDropTarget")
+			.append("rect")
+      .attr("x", -100)
+      .attr("y", -10)
+      .attr("width", 150)
+      .attr("height", 100)
+		;
+		stackDropTarget
+      .on("mouseover", dropTargetMouseOver)
+      .on("mouseout", dropTargetMouseOut);
+
+    function dropTargetMouseOver(d){
+			console.log("dropTargetMouseOver" + d);
+			console.log(d);
+			// d.classList.add("");
+		}
+    function dropTargetMouseOut(d){
+			console.log("dropTargetMouseOut" + d);
+			console.log(d);
+			// d.classList.remove("");
+		}
+
+
     // Add an axis and title
     g.append("g")
      .attr("class", "axis")
@@ -221,7 +249,7 @@ export default Ember.Component.extend({
           .style("fill", "none");       
        toolTip.style("height","auto")
          .style("width","auto")
-         .style("opacity", .9)
+         .style("opacity", 0.9)
          .style("display","inline");  
        Object.keys(pathMarkers[d]).map(function(m){
          listMarkers = listMarkers + m + "<br />";
@@ -492,7 +520,7 @@ export default Ember.Component.extend({
       o[d] = d3.event.x;
       // Now impose boundaries on the x-range you can drag.
       // These values should really be based on variables defined previously.
-      if (o[d] < -50) { o[d] = -50; } else if (o[d] > 770) { o[d] = 770 }
+      if (o[d] < -50) { o[d] = -50; } else if (o[d] > 770) { o[d] = 770; }
       mapIDs.sort(function(a, b) { return o[a] - o[b]; });
       //console.log(mapIDs + " " + o[d]);
       d3.select(this).attr("transform", function() {return "translate(" + o[d] + ")";});
@@ -502,7 +530,7 @@ export default Ember.Component.extend({
       } else {
         d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
       }
-      d3.selectAll(".foreground g").selectAll("path").attr("d", function(d) { return d; })
+      d3.selectAll(".foreground g").selectAll("path").attr("d", function(d) { return d; });
       d3.selectAll("path")
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
@@ -529,7 +557,7 @@ export default Ember.Component.extend({
       
       let t = d3.transition().duration(500);
       t.selectAll(".map").attr("transform", function(d) { return "translate(" + x(d) + ")"; });
-      t.selectAll(".foreground path").attr("d", function(d) { return d; })
+      t.selectAll(".foreground path").attr("d", function(d) { return d; });
       d3.select(this).classed("active", false);
       d3.selectAll("path")
         .on("mouseover",handleMouseOver)

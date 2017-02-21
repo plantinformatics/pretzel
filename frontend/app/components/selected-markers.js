@@ -1,5 +1,7 @@
 import Ember from 'ember';
 
+/* global d3 */
+
 export default Ember.Component.extend({
 
   resetGrid: function(markers) {

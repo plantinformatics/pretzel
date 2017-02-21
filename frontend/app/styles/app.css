@@ -82,3 +82,16 @@ div.toolTip{
   border: 0px;
   border-radius: 2px;
 }
+/******************************************************************************/
+.stackDropTarget {
+    cursor: move;
+    color: red;
+    border: 2px;
+    border-radius: 5px;
+
+    fill: blue;
+    stroke: red;
+    stroke-width:2px;
+    stroke-dasharray: 2,2;
+}
+/******************************************************************************/
