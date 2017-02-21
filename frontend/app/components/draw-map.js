@@ -423,8 +423,9 @@ export default Ember.Component.extend({
                let yAxis = d3.axisLeft(y[d]).ticks(10);
                svgContainer.select("#"+idName).transition(t).call(yAxis);
              });
-             d3.selectAll(".foreground g").selectAll("path").remove();
-             d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
+						 let foregroundGPath = d3.selectAll(".foreground g").selectAll("path");
+             foregroundGPath.remove();
+             foregroundGPath.data(path).enter().append("path");
              t.selectAll(".foreground path").attr("d", function(d) {return d; });
              d3.selectAll("path")
               .on("mouseover",handleMouseOver)
@@ -458,8 +459,9 @@ export default Ember.Component.extend({
           let idName = "m"+p;
           svgContainer.selectAll(".btn").remove();
           svgContainer.select("#"+idName).transition(t).call(yAxis);
-          d3.selectAll(".foreground g").selectAll("path").remove();
-          d3.selectAll(".foreground g").selectAll("path").data(zoomPath).enter().append("path");
+					let foregroundGPath = d3.selectAll(".foreground g").selectAll("path");
+          foregroundGPath.remove();
+          foregroundGPath.data(zoomPath).enter().append("path");
           t.selectAll(".foreground path").attr("d", function(d) {return d; });
           d3.selectAll("path")
             .on("mouseover",handleMouseOver)
@@ -489,13 +491,11 @@ export default Ember.Component.extend({
       mapIDs.sort(function(a, b) { return o[a] - o[b]; });
       //console.log(mapIDs + " " + o[d]);
       d3.select(this).attr("transform", function() {return "translate(" + o[d] + ")";});
-      d3.selectAll(".foreground g").selectAll("path").remove();
-      if(zoomed){
-        d3.selectAll(".foreground g").selectAll("path").data(zoomPath).enter().append("path");
-      } else {
-        d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
-      }
-      d3.selectAll(".foreground g").selectAll("path").attr("d", function(d) { return d; });
+			let foregroundGPath = d3.selectAll(".foreground g").selectAll("path");
+      foregroundGPath.remove();
+      let dataPath = zoomed ? zoomPath : path;
+      foregroundGPath.data(dataPath).enter().append("path");
+      foregroundGPath.attr("d", function(d) { return d; });
       d3.selectAll("path")
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
@@ -514,11 +514,9 @@ export default Ember.Component.extend({
         o[d] = x(d);
       });
       x.domain(mapIDs).range([0, w]);
-      if(zoomed){
-        d3.selectAll(".foreground g").selectAll("path").data(zoomPath).enter().append("path");  
-      } else {
-        d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
-      }
+			let foregroundGPath = d3.selectAll(".foreground g").selectAll("path");
+      let dataPath = zoomed ? zoomPath : path;
+        foregroundGPath.data(dataPath).enter().append("path");  
       
       let t = d3.transition().duration(500);
       t.selectAll(".map").attr("transform", function(d) { return "translate(" + x(d) + ")"; });
