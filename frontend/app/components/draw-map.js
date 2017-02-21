@@ -375,6 +375,7 @@ export default Ember.Component.extend({
          //d3.event.selection [min,min] or [max,max] should consider as non selection.
          //maybe alternatively use brush.clear or (brush.move, null) given a mouse event
           return !d3.keys(selectedMarkers).every(function(p) {
+             //d is the marker name, where each selectedMarkers[p][*] contains marker name and position, separated by " "
              return selectedMarkers[p].includes(d);
           });
         
