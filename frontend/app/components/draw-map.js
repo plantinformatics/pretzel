@@ -130,7 +130,7 @@ export default Ember.Component.extend({
         deleteMap();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == "Z") {
-
+        zoomMap();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == "R") {
         refreshMap();
