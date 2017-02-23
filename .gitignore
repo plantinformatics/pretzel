@@ -17,8 +17,7 @@
 /builds
 /logs
 
-# emacs backup and save files
+# emacs backup files
 *~
-\#*\#
 # etags file
 TAGS

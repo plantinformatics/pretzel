@@ -38,18 +38,18 @@ export default Ember.Component.extend({
     let m = [100, 160, 80, 100],	// margins : top right bottom left
     marginIndex = {top:0, right:1, bottom:2, left:3},	// indices into m[]; standard CSS sequence.
     dropTargetYMargin = 10,
-		/** fit within margin left.
-		 * when the map name contains the 24 hex char mongodb numeric id, m[marginIndex.left]==100 fits well.
-		 */
-		dropTargetX = m[marginIndex.left]-1,
-		/// Width and Height.  viewport dimensions - margins.
-    w = document.documentElement.clientWidth	- m[marginIndex.right] - m[marginIndex.left],
+    /** fit within margin left.
+     * when the map name contains the 24 hex char mongodb numeric id, m[marginIndex.left]==100 fits well.
+     */
+    dropTargetX = m[marginIndex.left]-1,
+    /// Width and Height.  viewport dimensions - margins.
+    w = document.documentElement.clientWidth  - m[marginIndex.right] - m[marginIndex.left],
     h = document.documentElement.clientHeight - m[marginIndex.top] - m[marginIndex.bottom],
-		wRange = w*0.6,
-		yRange = h - 2 * dropTargetYMargin,
-		/// left and right limits of dragging the axes / chromosomes / linkage-groups.
-		dragLimit = {min:-50, max:wRange+70};
-		console.log("w=", w, ", h=", h, ", wRange=", wRange, ", yRange=", yRange);
+    wRange = w*0.6,
+    yRange = h - 2 * dropTargetYMargin,
+    /// left and right limits of dragging the axes / chromosomes / linkage-groups.
+    dragLimit = {min:-50, max:wRange+70};
+    console.log("w=", w, ", h=", h, ", wRange=", wRange, ", yRange=", yRange);
 
     let y = {},
         copyY = {},
@@ -63,11 +63,11 @@ export default Ember.Component.extend({
         // brushActives = [],
         brushExtents = [];
 
-		/// @return true if a is in the closed interval range[]
-		function inRange(a, range)
-		{
-			return range[0] <= a && a <= range[1];
-		}
+    /// @return true if a is in the closed interval range[]
+    function inRange(a, range)
+    {
+      return range[0] <= a && a <= range[1];
+    }
 
     //Convert the data into proper format
     //myMaps mapset ID
@@ -138,7 +138,7 @@ export default Ember.Component.extend({
 
     d3.select("svg").remove();
     d3.select("div.d3-tip").remove();
-		let translateTransform = "translate(" + m[marginIndex.left] + "," + m[marginIndex.top] + ")";
+    let translateTransform = "translate(" + m[marginIndex.left] + "," + m[marginIndex.top] + ")";
     let svgContainer = d3.select('#holder').append('svg')
                          .attr('width',w)
                          .attr('height',h)
@@ -148,7 +148,7 @@ export default Ember.Component.extend({
     //User shortcut from the keybroad to manipulate the maps
     d3.select("#holder").on("keydown", function() {
       if ((String.fromCharCode(d3.event.keyCode)) == "D") {
-				console.log("Delete Map (not implemented)");
+        console.log("Delete Map (not implemented)");
         // deleteMap();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == "Z") {
@@ -198,30 +198,30 @@ export default Ember.Component.extend({
           .on("drag", dragged)
           .on("end", dragended));//function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
 
-		// Add a target zone for axis stacking drag&drop
-		let stackDropTarget = 
-			g.append("g")
-			.attr("class", "stackDropTarget")
-			.append("rect")
+    // Add a target zone for axis stacking drag&drop
+    let stackDropTarget = 
+      g.append("g")
+      .attr("class", "stackDropTarget")
+      .append("rect")
       .attr("x", -dropTargetX)
       .attr("y", -dropTargetYMargin)
       .attr("width", 2 * dropTargetX)
       .attr("height", 80)
-		;
-		stackDropTarget
+    ;
+    stackDropTarget
       .on("mouseover", dropTargetMouseOver)
       .on("mouseout", dropTargetMouseOut);
 
     function dropTargetMouseOver(d){
-			console.log("dropTargetMouseOver" + d);
-			console.log(d);
-			// d.classList.add("");
-		}
+      console.log("dropTargetMouseOver" + d);
+      console.log(d);
+      // d.classList.add("");
+    }
     function dropTargetMouseOut(d){
-			console.log("dropTargetMouseOut" + d);
-			console.log(d);
-			// d.classList.remove("");
-		}
+      console.log("dropTargetMouseOut" + d);
+      console.log(d);
+      // d.classList.remove("");
+    }
 
 
     // Add an axis and title
@@ -338,20 +338,20 @@ export default Ember.Component.extend({
            //y[p].domain
            //z[mapIDs[k]][d] marker location
 
-					/// Calculate relative marker location in the map
-					function markerY(k, d)
-					{
-						return y[mapIDs[k]](z[mapIDs[k]][d]);
-					}
+          /// Calculate relative marker location in the map
+          function markerY(k, d)
+          {
+            return y[mapIDs[k]](z[mapIDs[k]][d]);
+          }
             if (d in z[mapIDs[k]] && d in z[mapIDs[k+1]]) { // if markers is in both maps
-							/** relative marker location in the map of 2 markers, k and k+1 :
-							 * k  : markerYk[0]
-							 * k+1: markerYk[1]
-							 */
-							let markerYk = [markerY(k, d), markerY(k+1, d)];
+              /** relative marker location in the map of 2 markers, k and k+1 :
+               * k  : markerYk[0]
+               * k+1: markerYk[1]
+               */
+              let markerYk = [markerY(k, d), markerY(k+1, d)];
               // Filter out those paths that either side locates out of the svg
               if (inRange(markerYk[0], yRange) &&
-									inRange(markerYk[1], yRange)) {
+                  inRange(markerYk[1], yRange)) {
                         let sLine = line([[o[mapIDs[k]], markerYk[0]],
                              [o[mapIDs[k+1]], markerYk[1]]]);
                         if(pathMarkers[sLine] != null){
@@ -551,7 +551,7 @@ export default Ember.Component.extend({
       // Now impose boundaries on the x-range you can drag.
       // These values should really be based on variables defined previously.
       if (o[d] < dragLimit.min) { o[d] = dragLimit.min; }
-			else if (o[d] > dragLimit.max) { o[d] = dragLimit.max; }
+      else if (o[d] > dragLimit.max) { o[d] = dragLimit.max; }
       mapIDs.sort(function(a, b) { return o[a] - o[b]; });
       //console.log(mapIDs + " " + o[d]);
       d3.select(this).attr("transform", function() {return "translate(" + o[d] + ")";});
