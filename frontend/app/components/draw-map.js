@@ -35,21 +35,36 @@ export default Ember.Component.extend({
 
 
     //margins, width and height (defined but not be used)
-    let m = [100, 160, 80, 100],	// margins : top right bottom left
+    let m = [10+14+1, 10, 10, 10],	// margins : top right bottom left
     marginIndex = {top:0, right:1, bottom:2, left:3},	// indices into m[]; standard CSS sequence.
     dropTargetYMargin = 10,
-    /** fit within margin left.
-     * when the map name contains the 24 hex char mongodb numeric id, m[marginIndex.left]==100 fits well.
+    /** fit within margin left ?
+     * when the map name contains the 24 hex char mongodb numeric id,
      */
-    dropTargetX = m[marginIndex.left]-1,
+    dropTargetX = axisHeaderTextLen/2,
+    viewPort = {w: document.documentElement.clientWidth, h:document.documentElement.clientHeight},
     /// Width and Height.  viewport dimensions - margins.
-    w = document.documentElement.clientWidth  - m[marginIndex.right] - m[marginIndex.left],
-    h = document.documentElement.clientHeight - m[marginIndex.top] - m[marginIndex.bottom],
-    wRange = w*0.6,
-    yRange = h - 2 * dropTargetYMargin,
+    w = viewPort.w  - m[marginIndex.right] - m[marginIndex.left],
+    h = viewPort.h - m[marginIndex.top] - m[marginIndex.bottom],
+    /// approx height of map / chromosome selection buttons above graph
+    mapSelectionHeight = 140,
+    /// approx height of text name of map+chromosome displayed above axis.
+    mapNameHeight = 14,
+    /// approx height of text block below graph which says 'n selected markers'
+    selectedMarkersTextHeight = 14,
+    /// dimensions of the graph border
+    graphDim = {w: w*0.6, h: h - 2 * dropTargetYMargin - mapSelectionHeight - mapNameHeight - selectedMarkersTextHeight},
+    /// yRange is the axis length
+    yRange = graphDim.h - 40,
     /// left and right limits of dragging the axes / chromosomes / linkage-groups.
-    dragLimit = {min:-50, max:wRange+70};
-    console.log("w=", w, ", h=", h, ", wRange=", wRange, ", yRange=", yRange);
+    dragLimit = {min:-50, max:graphDim.w+70};
+    console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
+    /// pixels.  can calculate this from map name * font width
+    let axisHeaderTextLen = 203.5,
+    /// x range of the axis centres. left space at left and right for
+    /// axisHeaderTextLen which is centred on the axis.
+    /// index: 0:left, 1:right
+    axisXRange = [0 + axisHeaderTextLen/2, graphDim.w - axisHeaderTextLen/2];
 
     let y = {},
         copyY = {},
@@ -67,6 +82,16 @@ export default Ember.Component.extend({
     function inRange(a, range)
     {
       return range[0] <= a && a <= range[1];
+    }
+
+    /* Used for group element, class "map"; required because id may start with
+     * numeric mongodb id (of geneticmap) and element id cannot start with
+     * numeric.
+     * Not required for axis element ids because they have "m" suffix.
+     */
+    function eltId(name)
+    {
+      return "id" + name;
     }
 
     //Convert the data into proper format
@@ -89,7 +114,7 @@ export default Ember.Component.extend({
     });
     //d3 v4 scalePoint replace the rangePoint
     //let x = d3.scaleOrdinal().domain(mapIDs).range([0, w]);
-    let x = d3.scalePoint().domain(mapIDs).range([0, wRange]);
+    let x = d3.scalePoint().domain(mapIDs).range(axisXRange);
     let o = {};
 
     let zoomSwitch,resetSwitch;
@@ -140,8 +165,8 @@ export default Ember.Component.extend({
     d3.select("div.d3-tip").remove();
     let translateTransform = "translate(" + m[marginIndex.left] + "," + m[marginIndex.top] + ")";
     let svgContainer = d3.select('#holder').append('svg')
-                         .attr('width',w)
-                         .attr('height',h)
+                         .attr('width', graphDim.w)
+                         .attr('height', graphDim.h)
                          .append("svg:g")
                          .attr("transform", translateTransform);
 
@@ -331,18 +356,19 @@ export default Ember.Component.extend({
         return r;
     }
 
-     // Returns an array of paths (links between maps) for a given marker when zoom in starts.
+    /// Calculate relative marker location in the map
+    function markerY(k, d)
+    {
+      return y[mapIDs[k]](z[mapIDs[k]][d]);
+    }
+
+    // Returns an array of paths (links between maps) for a given marker when zoom in starts.
     function zoomPath(d) { // d is a marker
         let r = [];
         for (let k=0; k<mapIDs.length-1; k++) {
            //y[p].domain
            //z[mapIDs[k]][d] marker location
 
-          /// Calculate relative marker location in the map
-          function markerY(k, d)
-          {
-            return y[mapIDs[k]](z[mapIDs[k]][d]);
-          }
             if (d in z[mapIDs[k]] && d in z[mapIDs[k+1]]) { // if markers is in both maps
               /** relative marker location in the map of 2 markers, k and k+1 :
                * k  : markerYk[0]
@@ -368,16 +394,6 @@ export default Ember.Component.extend({
         }
         return r;
     }
-
-      /* Used for group element, class "map"; required because id may start with
-       * numeric mongodb id (of geneticmap) and element id cannot start with
-       * numeric.
-       * Not required for axis element ids because they have "m" suffix.
-       */
-      function eltId(name)
-      {
-        return "id" + name;
-      }
 
     function brushHelper(that) {
       //Map name, e.g. 32-1B
@@ -574,12 +590,12 @@ export default Ember.Component.extend({
 
     function dragended(/*d*/) {
       // Order of mapIDs may have changed so need to redefine x and o.
-      x = d3.scalePoint().domain(mapIDs).range([0, wRange]);
+      x = d3.scalePoint().domain(mapIDs).range(axisXRange);
       
       mapIDs.forEach(function(d){
         o[d] = x(d);
       });
-      x.domain(mapIDs).range([0, wRange]);
+      x.domain(mapIDs).range(axisXRange);
       if(zoomed){
         d3.selectAll(".foreground g").selectAll("path").data(zoomPath).enter().append("path");  
       } else {
