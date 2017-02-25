@@ -6,7 +6,10 @@
 
 ;; The path of this directory.
 ;; Used to calculate the git work-tree root dir.
-(setenv "MMV_r" (file-name-directory load-file-name))
+(setq mmv_Dav127
+      (replace-regexp-in-string "resources/$" ""  (file-name-directory load-file-name) )
+      )
+
 
 ;;------------------------------------------------------------------------------
 ;; This configuration is equivalent to ./.dir-locals.el
@@ -28,7 +31,14 @@
 ;;
 (dir-locals-set-class-variables
  'project-root-directory
- '(
+ `(
+   ;; ,(concat mmv_Dav127 "")
+   ("frontend/app"
+    . ((nil . (
+       ;; don't create lockfiles (.#*) in frontend/app/** because they are not
+       ;; ignored by broccoli (see broccoli-sane-watcher, github.com/ember-cli/ember-cli/issues/3908)
+       (create-lockfiles . nil)
+       ))))
    (js-mode
     . ((c-basic-offset . 2)
        (tab-width . 2)
@@ -52,11 +62,15 @@
 ;; To make this code flexible wrt directory path, the path of the git work-tree
 ;; is calculated and the settings are configured to apply for that tree.
 (dir-locals-set-directory-class
- (replace-regexp-in-string "resources/$" ""  (getenv "MMV_r") )
+ mmv_Dav127
  'project-root-directory)
 
 
 ;; Undo the effect of the above config additions.
+;; Use this before re-loading this file; 
+;; (dir-locals-directory-cache accumulates, but 
+;; dir-locals-class-alist does not, so doesn't need to be reset before reloading.
+;; compilation-error-regexp-alist-alist does not seem to accumulate.)
 (defun dir-locals-clear-alist-and-cache ()
   "Reset the variables dir-locals-class-alist and dir-locals-directory-cache to their initial values."
   (interactive nil)
@@ -68,3 +82,10 @@
 
 ;;------------------------------------------------------------------------------
 
+;; refn: https://www.emacswiki.org/emacs/CreatingYourOwnCompileErrorRegexp:
+;; "... Usually additions to compilation-error-regexp-alist (etc) can only be made after compilation-mode has loaded. "
+(require 'compile)
+(add-to-list 'compilation-error-regexp-alist `jslint)
+(add-to-list 'compilation-error-regexp-alist-alist '(jslint "^\\(.*?\\): line \\([0-9]+\\), col \\([0-9]+\\), " 1 2 3))
+
+;;------------------------------------------------------------------------------
