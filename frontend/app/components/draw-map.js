@@ -44,16 +44,22 @@ chromosome : >=1 linkageGroup-s layed out vertically:
   can adjust space assigned to each linkageGroup (thumb drag) 
 */
 
+    /// width in pixels of the axisHeaderText, which is
+    /// 30 chars when the map name contains the 24 hex char mongodb numeric id,
+    /// e.g. 58a29c715a9b3a3d3242fe70_MyChr
     let axisHeaderTextLen = 203.5;
     //margins, width and height (defined but not be used)
     let m = [10+14+1, 10, 10, 10],	// margins : top right bottom left
     marginIndex = {top:0, right:1, bottom:2, left:3},	// indices into m[]; standard CSS sequence.
-    dropTargetYMargin = 10,
-    /** fit within margin left ?
-     * when the map name contains the 24 hex char mongodb numeric id,
-     */
-    dropTargetX = axisHeaderTextLen/2,
     viewPort = {w: document.documentElement.clientWidth, h:document.documentElement.clientHeight},
+
+	  dropTargetWidth = Math.min(axisHeaderTextLen, viewPort.w/10),
+	  dropTarget = {
+	    /// small offset from axis end so it can be visually distinguished.
+	    YMargin : 10,
+	    X : dropTargetWidth/2,
+      Y : Math.min(80, viewPort.h/10)
+	  },
     /// Width and Height.  viewport dimensions - margins.
     w = viewPort.w  - m[marginIndex.right] - m[marginIndex.left],
     h = viewPort.h - m[marginIndex.top] - m[marginIndex.bottom],
@@ -64,7 +70,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /// approx height of text block below graph which says 'n selected markers'
     selectedMarkersTextHeight = 14,
     /// dimensions of the graph border
-    graphDim = {w: w*0.6, h: h - 2 * dropTargetYMargin - mapSelectionHeight - mapNameHeight - selectedMarkersTextHeight},
+    graphDim = {w: w*0.6, h: h - 2 * dropTarget.YMargin - mapSelectionHeight - mapNameHeight - selectedMarkersTextHeight},
     /// yRange is the axis length
     yRange = graphDim.h - 40,
     /// left and right limits of dragging the axes / chromosomes / linkage-groups.
@@ -241,10 +247,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       g.append("g")
       .attr("class", "stackDropTarget")
       .append("rect")
-      .attr("x", -dropTargetX)
-      .attr("y", -dropTargetYMargin)
-      .attr("width", 2 * dropTargetX)
-      .attr("height", 80)
+      .attr("x", -dropTarget.X)
+      .attr("y", -dropTarget.YMargin)
+      .attr("width", 2 * dropTarget.X)
+      .attr("height", dropTarget.Y)
     ;
     stackDropTarget
       .on("mouseover", dropTargetMouseOver)
