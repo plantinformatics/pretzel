@@ -33,7 +33,18 @@ export default Ember.Component.extend({
     //mapIDs will be used to store map IDs
     let mapIDs = [];
 
+/** Plan for layout of stacked axes.
 
+graph : {chromosome{linkageGroup{}+}*}
+
+graph : >=0  chromosome-s layed out horizontally
+
+chromosome : >=1 linkageGroup-s layed out vertically:
+  catenated, use all the space, split space equally by default,
+  can adjust space assigned to each linkageGroup (thumb drag) 
+*/
+
+    let axisHeaderTextLen = 203.5;
     //margins, width and height (defined but not be used)
     let m = [10+14+1, 10, 10, 10],	// margins : top right bottom left
     marginIndex = {top:0, right:1, bottom:2, left:3},	// indices into m[]; standard CSS sequence.
@@ -60,7 +71,7 @@ export default Ember.Component.extend({
     dragLimit = {min:-50, max:graphDim.w+70};
     console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
     /// pixels.  can calculate this from map name * font width
-    let axisHeaderTextLen = 203.5,
+    let
     /// x range of the axis centres. left space at left and right for
     /// axisHeaderTextLen which is centred on the axis.
     /// index: 0:left, 1:right
@@ -165,8 +176,10 @@ export default Ember.Component.extend({
     d3.select("div.d3-tip").remove();
     let translateTransform = "translate(" + m[marginIndex.left] + "," + m[marginIndex.top] + ")";
     let svgContainer = d3.select('#holder').append('svg')
+                         .attr("viewBox", "0 0 " + graphDim.w + " " + graphDim.h)
+                         .attr("preserveAspectRatio", "xMinYMin meet")
                          .attr('width', graphDim.w)
-                         .attr('height', graphDim.h)
+                         .attr('height', "auto" /*graphDim.h*/)
                          .append("svg:g")
                          .attr("transform", translateTransform);
 
