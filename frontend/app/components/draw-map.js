@@ -184,7 +184,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let svgContainer = d3.select('#holder').append('svg')
                          .attr("viewBox", "0 0 " + graphDim.w + " " + graphDim.h)
                          .attr("preserveAspectRatio", "xMinYMin meet")
-                         .attr('width', graphDim.w)
+                         .attr('width', "100%" /*graphDim.w*/)
                          .attr('height', "auto" /*graphDim.h*/)
                          .append("svg:g")
                          .attr("transform", translateTransform);
