@@ -106,8 +106,15 @@ div.toolTip{
     // border-radius: 5px;
 
     fill: rgba(80, 80, 255, 0.1);
-    stroke: rgb(255, 80, 80);
+    stroke: rgba(255, 80, 80, 0.4);
     // stroke-width:1px;
     stroke-dasharray: 3,8;
 }
+.stackDropTarget .dragHover {
+    fill: rgba(80, 80, 255, 0.2);
+    stroke: rgba(255, 80, 80, 0.6);
+    stroke-dasharray: 2,6;
+    cursor: no-drop;
+}
+
 /* -------------------------------------------------------------------------- */

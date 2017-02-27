@@ -61,6 +61,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
 	  /// small offset from axis end so it can be visually distinguished.
     dropTargetYMargin = 10,
+    dropTargetXMargin = 10,
 
     /// Width and Height.  viewport dimensions - margins.
     w = viewPort.w  - m[marginIndex.right] - m[marginIndex.left],
@@ -255,7 +256,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 	    posn = {
 	    X : size.w/2,
       Y : /*YMargin*/10 + size.h
-	    };
+	    },
+      edge = {
+        top : size.h,
+        bottom : yRange - size.h
+      };
       /// @parameter top  true or false to indicate zone is positioned at top or
       /// bottom of axis
       DropTarget.prototype.add = function (top)
@@ -266,7 +271,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           .attr("class", "stackDropTarget")
           .append("rect")
           .attr("x", -posn.X)
-          .attr("y", top ? -dropTargetYMargin : yRange - size.h)
+          .attr("y", top ? -dropTargetYMargin : edge.bottom)
           .attr("width", 2 * posn.X)
           .attr("height", posn.Y)
         ;
@@ -276,22 +281,46 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         .on("mouseout", dropTargetMouseOut);
       };
 
-      function dropTargetMouseOver(d){
-        console.log("dropTargetMouseOver" + d);
-        console.log(d);
-        // d.classList.add("");
+      /// @parameter left  true or false to indicate zone is positioned at left or
+      /// right of axis
+      DropTarget.prototype.addMiddle = function (left)
+      {
+        // Add a target zone for axis stacking drag&drop
+        let stackDropTarget = 
+          g.append("g")
+          .attr("class", "stackDropTarget")
+          .append("rect")
+          .attr("x", left ? -1 * (dropTargetXMargin + posn.X) : dropTargetXMargin )
+          .attr("y", top ? edge.top : edge.bottom)
+          .attr("width", posn.X /*- dropTargetXMargin*/)
+          .attr("height", yRange - 2 * size.h)
+        ;
+
+      stackDropTarget
+        .on("mouseover", dropTargetMouseOver)
+        .on("mouseout", dropTargetMouseOut);
+      };
+
+
+      function dropTargetMouseOver(data, index, group){
+        console.log("dropTargetMouseOver() ", this, data, index, group);
+        console.log(data);
+        this.classList.add("dragHover");
       }
       function dropTargetMouseOut(d){
         console.log("dropTargetMouseOut" + d);
         console.log(d);
-        // d.classList.remove("");
+        this.classList.remove("dragHover");
       }
 
     };
     let dropTarget = new DropTarget();
 
     [true, false].forEach(function (i) {
-       dropTarget.add(i); });
+       dropTarget.add(i);
+      dropTarget.addMiddle(i);
+    });
+
 
 
     // Add an axis and title
