@@ -90,11 +90,30 @@
 
 ;;------------------------------------------------------------------------------
 
-;; (add-to-list 'package-archives '("melpa" . "http://melpa.milkbox.net/packages/"))
-;; (require 'web-mode)
-;; or: http://melpa.org/packages/web-mode-20170225.1206.el
+;; Install web-mode, from melpa.
+;;
+;; Alternative : manual installation :
+;;  http://melpa.org/packages/web-mode-20170225.1206.el
 ;;  (load-file "~/Downloads/software/editors/emacs/packages/web-mode-20170225.1206.el")
-;; (add-to-list 'auto-mode-alist '("\\.hbs\\'" . web-mode))
+;;
+;; See : http://web-mode.org/,  https://github.com/fxbois/web-mode
+(defun  install-web-mode
+  "Install web-mode, from melpa."
+  (interactive nil)
+
+    (progn
+      (when (>= emacs-major-version 24)
+	(require 'package)
+	(add-to-list
+	 'package-archives
+	 '("melpa" . "http://melpa.org/packages/")	;; or melpa.milkbox.net
+	 t)
+	(package-initialize))
+      ;; then M-x list-packages, find web-mode and click the install link
+      )
+  )
+
+(setq web-mode-is-installed nil)
 
 (defun Dav127-web-mode-hook ()
   "Hooks for Web mode."
@@ -103,7 +122,12 @@
   (setq web-mode-css-indent-offset 2)
   (setq web-mode-code-indent-offset 2)
 )
-(add-hook 'web-mode-hook  'Dav127-web-mode-hook)
-
+(if web-mode-is-installed
+    (progn
+      (require 'web-mode)
+      (add-hook 'web-mode-hook  'Dav127-web-mode-hook)
+      (add-to-list 'auto-mode-alist '("\\.hbs\\'" . web-mode))
+      )
+  )
 
 ;;------------------------------------------------------------------------------
