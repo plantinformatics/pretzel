@@ -583,6 +583,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
 
     function dragstarted(/*d*/) {
+      svgContainer.classed("axisDrag", true);
       d3.select(this).classed("active", true);
       d3.event.subject.fx = d3.event.subject.x;
     }
@@ -631,6 +632,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       t.selectAll(".map").attr("transform", function(d) { return "translate(" + x(d) + ")"; });
       t.selectAll(".foreground path").attr("d", function(d) { return d; });
       d3.select(this).classed("active", false);
+      svgContainer.classed("axisDrag", false);
       d3.selectAll("path")
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);

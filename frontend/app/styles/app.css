@@ -95,13 +95,17 @@ div.toolTip{
 /* -------------------------------------------------------------------------- */
 /* target zone for axis stacking drag&drop
  */
+.axisDrag .stackDropTarget {
+    display : inherit;
+}
 .stackDropTarget {
+    display : none;
     cursor: copy;
     // color: red;
     // border: 2px;
     // border-radius: 5px;
 
-    fill: rgba(80, 80, 255, 0.2);
+    fill: rgba(80, 80, 255, 0.1);
     stroke: rgb(255, 80, 80);
     // stroke-width:1px;
     stroke-dasharray: 3,8;
