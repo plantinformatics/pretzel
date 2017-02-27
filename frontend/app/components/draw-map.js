@@ -59,13 +59,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     marginIndex = {top:0, right:1, bottom:2, left:3},	// indices into m[]; standard CSS sequence.
     viewPort = {w: document.documentElement.clientWidth, h:document.documentElement.clientHeight},
 
-	  dropTargetWidth = Math.min(axisHeaderTextLen, viewPort.w/10),
-	  dropTarget = {
-	    /// small offset from axis end so it can be visually distinguished.
-	    YMargin : 10,
-	    X : dropTargetWidth/2,
-      Y : Math.min(80, viewPort.h/10)
-	  },
+	  /// small offset from axis end so it can be visually distinguished.
+    dropTargetYMargin = 10,
+
     /// Width and Height.  viewport dimensions - margins.
     w = viewPort.w  - m[marginIndex.right] - m[marginIndex.left],
     h = viewPort.h - m[marginIndex.top] - m[marginIndex.bottom],
@@ -76,7 +72,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /// approx height of text block below graph which says 'n selected markers'
     selectedMarkersTextHeight = 14,
     /// dimensions of the graph border
-    graphDim = {w: w*0.6, h: h - 2 * dropTarget.YMargin - mapSelectionHeight - mapNameHeight - selectedMarkersTextHeight},
+    graphDim = {w: w*0.6, h: h - 2 * dropTargetYMargin - mapSelectionHeight - mapNameHeight - selectedMarkersTextHeight},
     /// yRange is the axis length
     yRange = graphDim.h - 40,
     /// left and right limits of dragging the axes / chromosomes / linkage-groups.
@@ -248,30 +244,54 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           .on("drag", dragged)
           .on("end", dragended));//function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
 
-    // Add a target zone for axis stacking drag&drop
-    let stackDropTarget = 
-      g.append("g")
-      .attr("class", "stackDropTarget")
-      .append("rect")
-      .attr("x", -dropTarget.X)
-      .attr("y", -dropTarget.YMargin)
-      .attr("width", 2 * dropTarget.X)
-      .attr("height", dropTarget.Y)
-    ;
-    stackDropTarget
-      .on("mouseover", dropTargetMouseOver)
-      .on("mouseout", dropTargetMouseOut);
+	  function DropTarget() {
+      let size = {
+      w : Math.min(axisHeaderTextLen, viewPort.w/10),
+      // height of dropTarget at the end of an axis
+      h : Math.min(80, viewPort.h/10),
+      // height of dropTarget covering the adjacent ends of two stacked axes
+      h2 : Math.min(80, viewPort.h/10) * 2 /* + axis gap */
+      },
+	    posn = {
+	    X : size.w/2,
+      Y : /*YMargin*/10 + size.h
+	    };
+      /// @parameter top  true or false to indicate zone is positioned at top or
+      /// bottom of axis
+      DropTarget.prototype.add = function (top)
+      {
+        // Add a target zone for axis stacking drag&drop
+        let stackDropTarget = 
+          g.append("g")
+          .attr("class", "stackDropTarget")
+          .append("rect")
+          .attr("x", -posn.X)
+          .attr("y", top ? -dropTargetYMargin : yRange - size.h)
+          .attr("width", 2 * posn.X)
+          .attr("height", posn.Y)
+        ;
 
-    function dropTargetMouseOver(d){
-      console.log("dropTargetMouseOver" + d);
-      console.log(d);
-      // d.classList.add("");
-    }
-    function dropTargetMouseOut(d){
-      console.log("dropTargetMouseOut" + d);
-      console.log(d);
-      // d.classList.remove("");
-    }
+      stackDropTarget
+        .on("mouseover", dropTargetMouseOver)
+        .on("mouseout", dropTargetMouseOut);
+      };
+
+      function dropTargetMouseOver(d){
+        console.log("dropTargetMouseOver" + d);
+        console.log(d);
+        // d.classList.add("");
+      }
+      function dropTargetMouseOut(d){
+        console.log("dropTargetMouseOut" + d);
+        console.log(d);
+        // d.classList.remove("");
+      }
+
+    };
+    let dropTarget = new DropTarget();
+
+    [true, false].forEach(function (i) {
+       dropTarget.add(i); });
 
 
     // Add an axis and title
@@ -697,7 +717,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
   resize() {
     // rerender each individual element with the new width+height of the parent node
     d3.select('svg')
-      .attr('width', newWidth);
+    // need to recalc viewPort{} and all the sizes, (from document.documentElement.clientWidth,Height)
+    // .attr('width', newWidth)
+    ;
     //etc... and many lines of code depending upon how complex my visualisation is
   }
 
