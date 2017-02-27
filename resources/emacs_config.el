@@ -89,3 +89,21 @@
 (add-to-list 'compilation-error-regexp-alist-alist '(jslint "^\\(.*?\\): line \\([0-9]+\\), col \\([0-9]+\\), " 1 2 3))
 
 ;;------------------------------------------------------------------------------
+
+;; (add-to-list 'package-archives '("melpa" . "http://melpa.milkbox.net/packages/"))
+;; (require 'web-mode)
+;; or: http://melpa.org/packages/web-mode-20170225.1206.el
+;;  (load-file "~/Downloads/software/editors/emacs/packages/web-mode-20170225.1206.el")
+;; (add-to-list 'auto-mode-alist '("\\.hbs\\'" . web-mode))
+
+(defun Dav127-web-mode-hook ()
+  "Hooks for Web mode."
+  ;; default is 4
+  (setq web-mode-markup-indent-offset 2)
+  (setq web-mode-css-indent-offset 2)
+  (setq web-mode-code-indent-offset 2)
+)
+(add-hook 'web-mode-hook  'Dav127-web-mode-hook)
+
+
+;;------------------------------------------------------------------------------
