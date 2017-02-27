@@ -7,7 +7,7 @@
 ;; The path of this directory.
 ;; Used to calculate the git work-tree root dir.
 (setq mmv_Dav127
-      (replace-regexp-in-string "resources/$" ""  (file-name-directory load-file-name) )
+      (replace-regexp-in-string "/resources/$" ""  (file-name-directory load-file-name) )
       )
 
 
@@ -32,7 +32,7 @@
 (dir-locals-set-class-variables
  'project-root-directory
  `(
-   ;; ,(concat mmv_Dav127 "")
+   ;; ,(concat mmv_Dav127 "/")
    ("frontend/app"
     . ((nil . (
        ;; don't create lockfiles (.#*) in frontend/app/** because they are not
