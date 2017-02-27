@@ -20,6 +20,12 @@ export default Ember.Component.extend({
       console.log(markersAsArray);
       console.log("updatedSelectedMarkers in draw-map component");
       this.sendAction('updatedSelectedMarkers', markersAsArray);
+    },
+
+    resizeView : function()
+    {
+      console.log("resizeView()");
+      // resize();
     }
   },
 
@@ -185,7 +191,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                          .attr("viewBox", "0 0 " + graphDim.w + " " + graphDim.h)
                          .attr("preserveAspectRatio", "xMinYMin meet")
                          .attr('width', "100%" /*graphDim.w*/)
-                         .attr('height', "auto" /*graphDim.h*/)
+                         .attr('height', graphDim.h /*"auto"*/)
                          .append("svg:g")
                          .attr("transform", translateTransform);
 
@@ -684,5 +690,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let data = this.get('data');
     let maps = d3.keys(data);
     this.draw(data, maps);
+  },
+
+  resize() {
+    // rerender each individual element with the new width+height of the parent node
+    d3.select('svg')
+      .attr('width', newWidth);
+    //etc... and many lines of code depending upon how complex my visualisation is
   }
+
 });
