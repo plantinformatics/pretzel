@@ -29,14 +29,25 @@ export default Ember.Component.extend({
     }
   },
 
+  /** Draw the maps and paths between them.
+   * @param myData array indexed by myMaps[*]; each value is a hash indexed by
+   * <mapName>_<chromosomeName>, whose values are an array of markers {location,
+   * map:<mapName>_<chromosomeName>, marker: markerName}
+   *
+   * @param myMaps array of map names
+   */
   draw: function(myData, myMaps) {
     // Draw functionality goes here.
     let me = this;
 
-   //convert myData into format like: {map:1,marker:1,location:1}
+    /** d3Data[] is a flattened form of myData[].  Each array elt
+     * is an instance of a marker in a map.
+     * convert myData into format like: {map:1,marker:1,location:1}
+     */
     let d3Data = [];
     //myMaps should contain map IDs instead of mapset IDs.
     //mapIDs will be used to store map IDs
+    /// mapIDs are <mapName>_<chromosomeName>
     let mapIDs = [];
 
 /** Plan for layout of stacked axes.
@@ -86,9 +97,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /// index: 0:left, 1:right
     axisXRange = [0 + axisHeaderTextLen/2, graphDim.w - axisHeaderTextLen/2];
 
+    /** y[mapID] is the scale for map
+     */
     let y = {},
+        /** copyY is not used. */
         copyY = {},
+        /** z[mapId] is a hash for map mapId mapping marker name to location.
+         * i.e. z[d.map][d.marker] is the location of d.marker in d.map.
+         */
         z = {}, // will contain map/marker information
+        /** All marker names.
+         * Initially a set (to determine unique names), then converted to an array.
+         */
         d3Markers = new Set(),
         showAll = false;
 
@@ -114,6 +134,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return "id" + name;
     }
 
+    // Unpack data from myData[] into d3Data[], mapIDs[] and z[].
     //Convert the data into proper format
     //myMaps mapset ID
     myMaps.forEach(function(i){
@@ -125,6 +146,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       //map:"1-1A"
       //marker:"IWB6476"
       mIDs.forEach(function(mapID) {
+        /// array of markers
         let dataToArray = myData[i][mapID].toArray();
         //Push the values from the array to d3Data.
         d3Data.push.apply(d3Data, dataToArray);
@@ -155,9 +177,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     });
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
 
+    // Compile positions of all markers, and a hash of marker names.
     d3Data.forEach(function(d) {
       z[d.map][d.marker] = +d.location;
       //console.log(d.map + " " + d.marker + " " + d.location);
+      // If d3Markers does not contain d.marker then add it.
       d3Markers.add(d.marker);
     });
     
@@ -166,12 +190,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     //console.log(axis.scale(y[mapIDs))
     
     mapIDs.forEach(function(d) {
+      /** Find the max of locations of all markers of map name d. */
+      let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } );
       y[d] = d3.scaleLinear()
-               .domain([0,d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } )])
+               .domain([0, yDomainMax])
                .range([0, yRange]); // set scales for each map
       
       copyY[d] = d3.scaleLinear()
-                .domain([0,d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } )])
+                .domain([0,yDomainMax])
                 .range([0, yRange]); 
 
       //console.log("OOO " + y[d].domain);
@@ -263,6 +289,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       };
       /// @parameter top  true or false to indicate zone is positioned at top or
       /// bottom of axis
+      /// uses g, a selection <g> of all maps
       DropTarget.prototype.add = function (top)
       {
         // Add a target zone for axis stacking drag&drop
@@ -398,15 +425,39 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function refreshMap(){
       console.log("Refresh");
     }
+    /** A line between a marker's location in adjacent maps.
+     * @param k1, k2 indices into mapIDs[]
+     * @param d marker name
+     */
+    function markerLine2(k1, k2, d)
+    {
+      let mk1 = mapIDs[k1],
+          mk2 = mapIDs[k2];
+      return line([[o[mk1], markerY(k1, d)],
+                   [o[mk2], markerY(k2, d)]]);
+    }
+    /** Similar to @see markerLine2().
+     * @param k index into mapIDs[]
+     * @param d marker name
+     * @param xOffset add&subtract to x value
+     */
+    function markerLine(k, d, xOffset)
+    {
+      let mk = mapIDs[k],
+      mkY = markerY(k, d);
+      return line([[o[mk]-xOffset, mkY],
+                   [o[mk]+xOffset, mkY]]);
+    }
     // Returns an array of paths (links between maps) for a given marker.
     function path(d) { // d is a marker
         let r = [];
 
         for (let k=0; k<mapIDs.length-1; k++) {
-            if (d in z[mapIDs[k]] && d in z[mapIDs[k+1]]) { // if markers is in both maps
+          let m_k  = mapIDs[k],
+              m_k1 = mapIDs[k+1];
+            if (d in z[m_k] && d in z[m_k1]) { // if markers is in both maps
                  //Multiple markers can be in the same path
-                let sLine = line([[o[mapIDs[k]], y[mapIDs[k]](z[mapIDs[k]][d])],
-                             [o[mapIDs[k+1]], y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]);
+              let sLine = markerLine2(k, k+1, d);
                 //pathMarkers[sLine][d] = 1;
                 if(pathMarkers[sLine] != null){
                    pathMarkers[sLine][d] = 1;
@@ -417,20 +468,21 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 r.push(sLine);
             }
             else if (showAll) {
-                if (d in z[mapIDs[k]]) { 
-                    r.push(line([[o[mapIDs[k]]-5, y[mapIDs[k]](z[mapIDs[k]][d])],
-                                [o[mapIDs[k]]+5, y[mapIDs[k]](z[mapIDs[k]][d])]]));
+                if (d in z[m_k]) { 
+                  r.push(markerLine(k, d, 5));
                 }
-                if (d in z[mapIDs[k+1]]) {
-                    r.push(line([[o[mapIDs[k+1]]-5, y[mapIDs[k+1]](z[mapIDs[k+1]][d])],
-                                [o[mapIDs[k+1]]+5, y[mapIDs[k+1]](z[mapIDs[k+1]][d])]]));
+                if (d in z[m_k1]) {
+                    r.push(markerLine(k+1, d, 5));
                 }
             }
         }
         return r;
     }
 
-    /// Calculate relative marker location in the map
+    /** Calculate relative marker location in the map
+     * @param k index into mapIDs[]
+     * @param d marker name
+     */
     function markerY(k, d)
     {
       return y[mapIDs[k]](z[mapIDs[k]][d]);
@@ -574,7 +626,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
              
              mapIDs.forEach(function(d) {
                let idName = "m"+d; // axis ids have "m" suffix
-               y[d].domain([0,d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } )]);
+               let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } );
+               y[d].domain([0, yDomainMax]);
                let yAxis = d3.axisLeft(y[d]).ticks(10);
                svgContainer.select("#"+idName).transition(t).call(yAxis);
              });
@@ -601,7 +654,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         brushedRegions = {};
       }
 
-    }
+    } // brushHelper
 
     function zoom(that, brushExtents) {
       let mapName = d3.select(that).data();
