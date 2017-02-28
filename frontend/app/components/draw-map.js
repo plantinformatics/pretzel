@@ -118,7 +118,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         // brushActives = [],
         brushExtents = [];
 
-    /// @return true if a is in the closed interval range[]
+    /**
+     * @return true if a is in the closed interval range[]
+     * @param a value
+     * @param range array of 2 values - limits of range.
+     */
     function inRange(a, range)
     {
       return range[0] <= a && a <= range[1];
@@ -502,8 +506,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                */
               let markerYk = [markerY(k, d), markerY(k+1, d)];
               // Filter out those paths that either side locates out of the svg
-              if (inRange(markerYk[0], yRange) &&
-                  inRange(markerYk[1], yRange)) {
+              if (inRange(markerYk[0], [0, yRange]) &&
+                  inRange(markerYk[1], [0, yRange])) {
                         let sLine = line([[o[mapIDs[k]], markerYk[0]],
                              [o[mapIDs[k+1]], markerYk[1]]]);
                         if(pathMarkers[sLine] != null){
