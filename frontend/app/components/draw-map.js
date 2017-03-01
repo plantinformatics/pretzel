@@ -17,8 +17,8 @@ export default Ember.Component.extend({
         .reduce(function(a, b) { 
           return a.concat(b);
         }, []);
-      console.log(markersAsArray);
-      console.log("updatedSelectedMarkers in draw-map component");
+      // console.log(markersAsArray);
+      // console.log("updatedSelectedMarkers in draw-map component");
       this.sendAction('updatedSelectedMarkers', markersAsArray);
     },
 
@@ -158,9 +158,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         z[mapID] = {};
       });
     });
+    /** x scale which maps from mapIDs[] to equi-spaced points in axisXRange
+     */
     //d3 v4 scalePoint replace the rangePoint
     //let x = d3.scaleOrdinal().domain(mapIDs).range([0, w]);
     let x = d3.scalePoint().domain(mapIDs).range(axisXRange);
+    /** scaled x value of each map, indexed by mapIDs */
     let o = {};
 
     let zoomSwitch,resetSwitch;
@@ -277,7 +280,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
 	  function DropTarget() {
       let size = {
-      w : Math.min(axisHeaderTextLen, viewPort.w/10),
+      w : Math.min(axisHeaderTextLen, viewPort.w/7),
       // height of dropTarget at the end of an axis
       h : Math.min(80, viewPort.h/10),
       // height of dropTarget covering the adjacent ends of two stacked axes
@@ -299,7 +302,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         // Add a target zone for axis stacking drag&drop
         let stackDropTarget = 
           g.append("g")
-          .attr("class", "stackDropTarget")
+          .attr("class", "stackDropTarget" + " end " + (top ? "top" : "bottom"))
           .append("rect")
           .attr("x", -posn.X)
           .attr("y", top ? -dropTargetYMargin : edge.bottom)
@@ -319,10 +322,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         // Add a target zone for axis stacking drag&drop
         let stackDropTarget = 
           g.append("g")
-          .attr("class", "stackDropTarget")
+          .attr("class", "stackDropTarget" + " middle " + (left ? "left" : "right"))
           .append("rect")
           .attr("x", left ? -1 * (dropTargetXMargin + posn.X) : dropTargetXMargin )
-          .attr("y", top ? edge.top : edge.bottom)
+          .attr("y", edge.top)
           .attr("width", posn.X /*- dropTargetXMargin*/)
           .attr("height", yRange - 2 * size.h)
         ;
@@ -443,7 +446,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** Similar to @see markerLine2().
      * @param k index into mapIDs[]
      * @param d marker name
-     * @param xOffset add&subtract to x value
+     * @param xOffset add&subtract to x value, measured in pixels
      */
     function markerLine(k, d, xOffset)
     {
@@ -688,16 +691,41 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
 
-    function dragstarted(/*d*/) {
+    function dragstarted(start_d /*, start_index, start_group*/) {
+      console.log("dragstarted", this, start_d/*, start_index, start_group*/);
+      let cl = {/*self: this,*/ d: start_d/*, index: start_index, group: start_group, mapIDs: mapIDs*/};
       svgContainer.classed("axisDrag", true);
       d3.select(this).classed("active", true);
       d3.event.subject.fx = d3.event.subject.x;
+      /* Assign class current to dropTarget-s depending on their relation to drag subject.
+       add class 'current' to indicate which zones to get .dragHover
+       axis being dragged does not get .current
+       middle targets on side towards dragged axis don't
+       axes i in 1..n,  dragged axis : dg
+       current if dg != i && (! middle || ((side == left) == (i < dg)))
+       * for (i < dg), use x(d) < startx
+       */
+      g.selectAll('g.map > g.stackDropTarget').classed
+      ("current",
+       function(d, index, group)
+       {
+         let xd = x(d),
+         /** d3.event has various x,y values, which are sufficient for this
+          * purpose, e.g. x, subject.x, sourceEvent.clientX, sourceEvent.x */
+         startX = d3.event.x,
+         middle = this.classList.contains("middle"),
+         left = this.classList.contains("left"),
+         isCurrent =
+           (d != cl.d) &&  (! middle || ((left) == (xd < startX)));
+         console.log("current classed", this, d3.event, d, index, group, cl, xd, startX, middle, left, isCurrent);
+         return isCurrent;
+       });
     }
 
     function dragged(d) {
       o[d] = d3.event.x;
       // Now impose boundaries on the x-range you can drag.
-      // These values should really be based on variables defined previously.
+      // The boundary values are in dragLimit, defined previously.
       if (o[d] < dragLimit.min) { o[d] = dragLimit.min; }
       else if (o[d] > dragLimit.max) { o[d] = dragLimit.max; }
       mapIDs.sort(function(a, b) { return o[a] - o[b]; });

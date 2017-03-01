@@ -95,26 +95,32 @@ div.toolTip{
 /* -------------------------------------------------------------------------- */
 /* target zone for axis stacking drag&drop
  */
-.axisDrag .stackDropTarget {
+/** When dragging, change cursor for all elts other than .current. */
+.axisDrag {
+    cursor: no-drop;
+}
+.axisDrag .stackDropTarget.current {
     display : inherit;
 }
 .stackDropTarget {
     display : none;
+    pointer-events: none;
     cursor: copy;
-    // color: red;
-    // border: 2px;
-    // border-radius: 5px;
 
+    /* These values are overridden when .current and .dragHover */
     fill: rgba(80, 80, 255, 0.1);
     stroke: rgba(255, 80, 80, 0.4);
     // stroke-width:1px;
     stroke-dasharray: 3,8;
 }
-.stackDropTarget .dragHover {
+.stackDropTarget.current {
+    pointer-events: inherit;
+    cursor: copy;
+}
+.stackDropTarget.current .dragHover {
     fill: rgba(80, 80, 255, 0.2);
     stroke: rgba(255, 80, 80, 0.6);
     stroke-dasharray: 2,6;
-    cursor: no-drop;
 }
 
 /* -------------------------------------------------------------------------- */
