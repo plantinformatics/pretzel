@@ -28,6 +28,7 @@ export default Ember.Component.extend({
       let stacksText = stacks.toString();
       // stacks.log();
       console.log("updatedStacks in draw-map component");
+      // no effect :
       this.sendAction('updatedSelectedMarkers', stacksText);  // tacks
     },
 
@@ -61,6 +62,9 @@ export default Ember.Component.extend({
      * which contains mapID & portion.
      */
     let stacks = [];
+    /** Reference to all (Stacked) maps by mapName.
+     */
+    let maps = {};
     //myMaps should contain map IDs instead of mapset IDs.
     //mapIDs will be used to store map IDs
     /// mapIDs are <mapName>_<chromosomeName>
@@ -116,8 +120,6 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** y[mapID] is the scale for map
      */
     let y = {},
-        /** copyY is not used. */
-        copyY = {},
         /** z[mapId] is a hash for map mapId mapping marker name to location.
          * i.e. z[d.map][d.marker] is the location of d.marker in d.map.
          */
@@ -154,7 +156,408 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return "id" + name;
     }
 
-    // Unpack data from myData[] into d3Data[], mapIDs[] and z[].
+    /*------------------------------------------------------------------------*/
+    function Stacked(mapName, portion) {
+      this.mapName = mapName;
+      /** Portion of the Stack height which this map axis occupies. */
+      this.portion = portion;
+      // The following are derived attributes.
+      /** .position is accumulated from .portion.
+       * .position is [start, end], relative to the same space as portion.
+       * i.e. .portion = (end - start) / (sum of .portion for all maps in the same Stack).
+       * Initially, each map is in a Stack by itself, .portion === 1, so
+       * .position is the whole axis [0, 1].
+       */
+      this.position = (portion === 1) ? [0, 1] : undefined;
+      /** Reference to parent stack.  Set in Stack.prototype.{add,insert}(). */
+      this.stack = undefined;
+      /* map objects persist through being dragged in and out of Stacks. */
+      maps[mapName] = this;
+    };
+    Stacked.prototype.mapName = undefined;
+    Stacked.prototype.portion = undefined;
+    function positionToString(p) { return (p === undefined) ? "" : "[" + p[0] + ", " + p[1] + "]"; }
+    Stacked.prototype.toString = function ()
+    {
+      let a =
+        [ "{mapName=", this.mapName, ", portion=" + this.portion,
+          positionToString(this.position) + this.stack.length, "}" ];
+      return a.join("");
+    };
+    Stacked.prototype.log = function ()
+    {
+      console.log
+      ("{mapName=", this.mapName, ", portion=", this.portion,
+       this.position, this.stack,  "}");
+    };
+    Stacked.mapName_match =
+      function (mapName)
+    { return function (s) { return s.mapName == mapName; };};
+    Stacked.prototype.yOffset = function ()
+    {
+      let yOffset = yRange * this.position[0];
+      if (Number.isNaN(yOffset))
+      {
+        console.log("Stacked#yOffset", yRange, this.position);
+        debugger;
+      }
+      return yOffset;
+    };
+    Stacked.prototype.yRange = function ()
+    {
+      return yRange * this.portion;
+    };
+    /** Constructor for Stack type.
+     * Construct a Stacked containing 1 map (mapName, portion),
+     * and push onto this Stack.
+     */
+    function Stack(stackable) {
+      /** The map object (Stacked) has a reference to its parent stack which is the inverse of this reference : 
+       * maps{mapName}->stack->maps[i] == maps{mapName} for some i.
+       */
+      this.maps = [];
+      Stack.prototype.add = Stack_add;
+      this.add(stackable);
+    };
+    /** undefined, or references to the map (Stack) which is currently dropped
+     * and the Stack which it is dropped into
+     * static
+     */
+    Stack.prototype.currentDrop = undefined;
+    /** @return true if this.maps[] is empty. */
+    Stack.prototype.empty = function ()
+    {
+      return this.maps.length == 0;
+    };
+    Stack.prototype.toString = function ()
+    {
+      let a =
+        [
+        "{maps=[",
+        this.maps.map(function(s){return s.toString();}),
+        "] length=" + this.maps.length + "}"
+        ];
+      return a.join("");
+    };
+    Stack.prototype.log = function ()
+    {
+      console.log("{maps=[");
+      this.maps.forEach(function(s){s.log();});
+      console.log("] length=", this.maps.length, "}");
+    };
+    /** Log all stacks. static. */
+    stacks.log = 
+    Stack.log = function()
+    {
+      console.log("{stacks=[");
+      stacks.forEach(function(s){s.log();});
+      console.log("] length=", stacks.length, "}");
+    };
+    /** Append the given stack to stacks[]. */
+    stacks.append = function(stack)
+    {
+      stacks.push(stack);
+    };
+    /** Insert the given stack into stacks[] at index i. */
+    stacks.insert = function(stack, i)
+    {
+      stacks = stacks.insertAt(i, stack);
+    };
+    Stack.prototype.add = function(stackable)
+    {
+      this.maps.push(stackable);
+      stackable.stack = this;
+      maps[stackable.mapName] = stackable;
+    };
+    Stack.prototype.addMap = function(mapName, portion)
+    {
+      let sd = new Stacked(mapName, portion);
+      this.add(sd);
+    };
+    /** Method of Stack.  @see Stack.prototype.add().
+     * Add the given map to this Stack.
+     * @param sd  (stackable) Stacked / map to add
+     */
+    function Stack_add (sd)
+    {
+      this.maps.push(sd);
+      sd.stack = this;
+    };
+    /** Insert stacked into maps[] at i, moving i..maps.length up
+     * @param i  same as param start of Array.splice()
+     * @see {@link https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Array/splice | MDN Array Splice}
+     */
+    Stack.prototype.insert = function (stacked, i)
+    {
+      let len = this.maps.length;
+      // this is supported via splice, and may be useful later, but initially it
+      // would indicate an error.
+      if ((i < 0) || (i > len))
+        console.log("insert", stacked, i, len);
+
+      this.maps = this.maps.insertAt(i, stacked);
+      /* this did not work (in Chrome) : .splice(i, 0, stacked);
+       * That is based on :
+       * https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Array/splice
+       * Similarly in 2 other instances in this file, .removeAt() is used instead of .splice().
+       */
+
+      stacked.stack = this;
+    };
+    /** Find mapName in this.maps[]. */
+    Stack.prototype.findIndex = function (mapName)
+    {
+      let mi = this.maps.findIndex(Stacked.mapName_match(mapName));
+      return mi;
+    };
+    /** Find mapName in this.maps[] and remove it.
+     * @return the map, or undefined if not found
+     */
+    Stack.prototype.remove = function (mapName)
+    {
+      let si = this.findIndex(mapName);
+      if (si < 0)
+      {
+        console.log("Stack#remove named map not in this stack", this, mapName);
+        return undefined;
+      }
+      else
+      {
+        let s = this.maps[si];
+        this.maps = this.maps.removeAt(si, 1);
+          // .splice(si, 1);
+        return s;
+      }
+    };
+    /** Remove this Stack from stacks[].
+     * @return false if not found, otherwise it is removed
+     */
+    Stack.prototype.delete = function ()
+    {
+      let si = stacks.indexOf(this);
+      let ok = false;
+      if (si < 0)
+        console.log("Stack#delete program error: not found", this, stacks);
+      else if (this !== stacks[si])
+        console.log("Stack#delete program error: found value doesn't match",
+                    this, stacks, si, stacks[si]);
+      else
+      {
+        stacks = stacks.removeAt(si, 1);
+          // .splice(si, 1);
+        ok = true;
+      }
+      return ok;
+    };
+    /**
+     * move map from one stack to another
+     * first stack is empty - delete it
+     * 2nd stack is new - create it (gui ? drag outside of top/bottom drop zones.)
+     * @param mapName name of map to move
+     * @param toStack stack to move map to
+     * @param insertIndex  index in toStack.maps[] to insert
+
+     * if toStack is undefined, create a new Stack to move the map into;
+
+     * the following is not done, instead dragged() assigns x location to new stack and sorts :
+     * it is placed at maps[0], so insertIndex is re-purposed to indicate the position
+     * in stacks[] to insert the new Stack.
+     * @return the map, or undefined if not found
+     */
+    Stack.prototype.move = function (mapName, toStack, insertIndex)
+    {
+      let s = this.remove(mapName);
+      // if mapName is not in this.maps[], do nothing
+      let ok = s !== undefined;
+      if (ok)
+      {
+        if (toStack === undefined)
+        {
+          toStack = new Stack(s);
+          stacks.append(toStack);
+        }
+        else
+          toStack.insert(s, insertIndex);
+        if (this.empty())
+          this.delete();
+        me.send('updatedStacks', stacks);
+      }
+      return ok;
+    };
+    /** @return true if this Stack contains mapName
+     */
+    Stack.prototype.contains = function (mapName)
+    {
+      return this === maps[mapName].stack;
+    };
+    /** Insert the named map into this.maps[] at insertIndex (before if top, after
+     * if ! top).
+     * Preserve the sum of this.maps[*].portion (which is designed to be 1).
+     * Give the new map a portion of 1/n, where n == this.maps.length after insertion.
+     *
+     * share yRange among maps in stack
+     * (retain ratio among existing maps in stack)
+     *
+     * @param mapName name of map to move
+     */
+    Stack.prototype.dropIn = function (mapName, insertIndex, top)
+    {
+      // can now use  maps[mapName].stack
+      let fromStack = Stack.mapStack(mapName);
+      if (this === fromStack)
+      {
+        console.log("program error: Stack dropIn() map ", mapName, " is already in this stack");
+        return;
+      }
+      Stack.prototype.currentDrop = {stack: this, 'mapName': mapName};
+      if (! top)
+        insertIndex++;
+      let ok =
+        fromStack.move(mapName, this, insertIndex);
+      if (ok)
+      {
+        /** the inserted map */
+        let inserted = this.maps[insertIndex];
+        inserted.stack = this;
+        // apart from the inserted map,
+        // reduce this.maps[*].portion by factor (n-1)/n
+        let n = this.maps.length,
+        factor = (n-1)/n;
+        inserted.portion = 1/n;
+        this.maps.forEach(
+          function (m, index) { if (index != insertIndex) m.portion *= factor; });
+        this.calculatePositions();
+      }
+    };
+    /** Drag the named map out of this Stack.
+     * Create a new Stack containing just the map.
+     *
+     * re-allocate portions among remaining maps in stack
+     * (retain ratio among existing maps in stack)
+     *
+     * @param mapName name of map to move
+     */
+    Stack.prototype.dropOut = function (mapName)
+    {
+      /** - TODO : param stackIndex from drag x */
+      let stackIndex = 1;
+      let ok =
+      this.move(mapName, undefined, stackIndex);
+      /* move() will create a new Stack for the map which was moved out, and
+       * add that to Stacks.  dragged() will assign it a location and sort.
+       */
+
+      if (ok)
+      {
+        let n = this.maps.length,
+        factor = (n+1)/n;
+        this.maps.forEach(
+          function (m, index) { m.portion *= factor; });
+        this.calculatePositions();
+      }
+    };
+    /** Calculate the positions of the maps in this stack
+     * Position is a proportion of yRange.
+     */
+    Stack.prototype.calculatePositions = function ()
+    {
+      let sumPortion = 0;
+      this.maps.forEach(
+        function (m, index)
+        {
+          m.position = [sumPortion,  sumPortion += m.portion];
+        });
+    };
+    /** find / lookup Stack of given map.
+     * static
+     */
+    Stack.mapStack = function (mapName)
+    {
+      // could use a cached structure such as mapStack[mapName].
+      // can now use : maps{mapName}->stack
+      let ms = stacks.filter(
+        function (s) {
+          let i = s.findIndex(mapName);
+          return i >= 0;
+        });
+      if (ms.length != 1)
+        console.log("mapStack()", mapName, ms, ms.length);
+      return ms[0];
+    };
+    /** find / lookup Stack of given map.
+     * static
+     * @return an array (because reduce() doesn't stop at 1)
+     * of {stackIndex: number, mapIndex: number}.
+     * It will only accumulate the first match (mapIndex) in each stack,
+     * but by design there should be just 1 match across all stacks.
+     */
+    Stack.mapStackIndex = function (mapName)
+    {
+      /** called by stacks.reduce() */
+      function findIndex_mapName
+      (accumulator, currentValue, currentIndex /*,array*/)
+      {
+        let i = currentValue.findIndex(mapName);
+        if (i >= 0)
+          accumulator.push({stackIndex: currentIndex, mapIndex: i});
+        return accumulator;
+      };
+      let ms = stacks.reduce(findIndex_mapName, []);
+      if (ms.length != 1)
+      {
+        console.log("mapStackIndex()", mapName, ms, ms.length);
+      }
+      return ms[0];
+    };
+    /** @return transform : translation, calculated from map position within stack.
+     */
+    Stacked.prototype.mapTransform = function ()
+    {
+      if (this.position === undefined || yRange === undefined)
+      {
+        console.log("mapTransform()", this.mapName, this, yRange);
+        debugger;
+      }
+      let yOffset = this.yOffset(),
+      yOffsetText = Number.isNaN(yOffset) ? "" : "," + this.yOffset();
+      let scale = this.portion,
+      scaleText = Number.isNaN(scale) ? "" : " scale(" + scale + ")";
+      let transform =
+        [
+          "translate(" + x(this.mapName), yOffsetText, ")",
+          scaleText
+        ].join("");
+      console.log("mapTransform", this, transform);
+      return transform;
+    };
+    /** Get stack of map, return transform. */
+    Stack.prototype.mapTransform = function (mapName)
+    {
+      let m = maps[mapName];
+      return m.mapTransform();
+    };
+    /** For each map in this Stack, redraw axis, brush, foreground paths.
+     * @param mapName is redrawn by dragged, so skip it.
+     */
+    Stack.prototype.redraw = function (mapName)
+    {
+      let t = d3.transition().duration(500);
+      // only 2 stacks are modified, but others will re-position.
+      if (false)
+      {
+      this.maps.forEach(
+        function (m, index)
+        {
+          // m.mapTransform()
+        });
+      }
+      t.selectAll(".map").attr("transform", Stack.prototype.mapTransform);
+    };
+
+    /*------------------------------------------------------------------------*/
+
+    // Unpack data from myData[] into d3Data[], mapIDs[];
+    // cache of locations z[] is cleared here, and accumulated in d3Data.forEach() below.
     //Convert the data into proper format
     //myMaps mapset ID
     myMaps.forEach(function(i){
@@ -178,7 +581,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     //d3 v4 scalePoint replace the rangePoint
     //let x = d3.scaleOrdinal().domain(mapIDs).range([0, w]);
-    let x = d3.scalePoint().domain(mapIDs).range(axisXRange);
+    function xScale() {
+      return d3.scalePoint().domain(mapIDs).range(axisXRange);
+    }
+    let x = xScale();
     /** scaled x value of each map, indexed by mapIDs */
     let o = {};
 
@@ -195,12 +601,19 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     //Reset the selected Marker region, everytime a map gets deleted
     me.send('updatedSelectedMarkers', selectedMarkers);
 
+    function collateO() {
+      mapIDs.forEach(function(d){
+        o[d] = x(d);
+      });
+    }
+    collateO();
     mapIDs.forEach(function(d){
-      o[d] = x(d);
       // initial stacking : 1 map per stack, but later when db contains Linkage
       // Groups, can automatically stack maps.
-      let stack = new Stack(d, 1);
-      stacks.push(stack);
+      let sd = new Stacked(d, 1),
+      stack = new Stack(sd);
+      stacks.append(stack);
+      stack.calculatePositions();
     });
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
 
@@ -219,18 +632,15 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     mapIDs.forEach(function(d) {
       /** Find the max of locations of all markers of map name d. */
       let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } );
+      let m = maps[d], myRange = m.yRange();
       y[d] = d3.scaleLinear()
                .domain([0, yDomainMax])
-               .range([0, yRange]); // set scales for each map
+               .range([0, myRange]); // set scales for each map
       
-      copyY[d] = d3.scaleLinear()
-                .domain([0,yDomainMax])
-                .range([0, yRange]); 
-
       //console.log("OOO " + y[d].domain);
       y[d].flipped = false;
       y[d].brush = d3.brushY()
-                     .extent([[-8,0],[8,yRange]])
+                     .extent([[-8,0],[8,myRange]])
                      .on("end", brushended);
     });
 
@@ -307,205 +717,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           .on("drag", dragged)
           .on("end", dragended));//function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
 
-    function Stacked(mapName, portion) {
-      this.mapName = mapName;
-      this.portion = portion;
-    };
-    Stacked.prototype.mapName = undefined;
-    Stacked.prototype.portion = undefined;
-    Stacked.prototype.toString = function ()
-    { return "{mapName=" + this.mapName + ", portion=" + this.portion + "}"; };
-    Stacked.prototype.log = function ()
-    { console.log("{mapName=", this.mapName, ", portion=", this.portion, "}"); };
-    Stacked.mapName_match =
-      function (mapName)
-    { return function (s) { return s.mapName == mapName; };};
-    /** Constructor for Stack type.
-     * Construct a Stacked containing 1 map (mapName, portion),
-     * and push onto this Stack.
-     */
-    function Stack(mapName, portion) {
-      this.maps = [];
-      Stack.prototype.add = Stack_add;
-      this.add(mapName, portion);
-    };
-    /** @return true if this.maps[] is empty. */
-    Stack.prototype.empty = function ()
-    {
-      return this.maps.length == 0;
-    };
-    Stack.prototype.toString = function ()
-    {
-      let a =
-        [
-        "{maps=[",
-        this.maps.map(function(s){return s.toString();}),
-        "] length=" + this.maps.length + "}"
-        ];
-      return a.join("");
-    };
-    Stack.prototype.log = function ()
-    {
-      console.log("{maps=[");
-      this.maps.forEach(function(s){s.log();});
-      console.log("] length=", this.maps.length, "}");
-    };
-    /** Log all stacks. static. */
-    stacks.log = 
-    Stack.log = function()
-    {
-      console.log("{stacks=[");
-      stacks.forEach(function(s){s.log();});
-      console.log("] length=", stacks.length, "}");
-    };
-    function Stack_add (mapName, portion)
-    {
-      let sd = new Stacked(mapName, portion);
-      this.maps.push(sd);
-    };
-    /** Insert stacked into maps[] at i, moving i..maps.length up
-     * @param insertAt  same as param start of Array.splice()
-     * @see {@link https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Array/splice | MDN Array Splice}
-     */
-    Stack.prototype.insert = function (stacked, i)
-    {
-      let len = this.maps.length;
-      // this is supported via splice, and may be useful later, but initially it
-      // would indicate an error.
-      if ((i < 0) || (i > len))
-        console.log("insert", stacked, i, len);
-
-      this.maps = this.maps.insertAt(i, stacked);
-      /* this did not work (in Chrome) : .splice(i, 0, stacked);
-       * That is based on :
-       * https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Array/splice
-       * Similarly in 2 other instances in this file, .removeAt() is used instead of .splice().
-       */
-    };
-    /** Find mapName in this.maps[]. */
-    Stack.prototype.findIndex = function (mapName)
-    {
-      let mi = this.maps.findIndex(Stacked.mapName_match(mapName));
-      return mi;
-    };
-    /** Find mapName in this.maps[] and remove it. */
-    Stack.prototype.remove = function (mapName)
-    {
-      let si = this.findIndex(mapName);
-      if (si < 0)
-        return undefined;
-      else
-      {
-        let s = this.maps[si];
-        this.maps = this.maps.removeAt(si, 1);
-          // .splice(si, 1);
-        return s;
-      }
-    };
-    /** Remove this Stack from stacks[]]. */
-    Stack.prototype.delete = function ()
-    {
-      let si = stacks.indexOf(this);
-      if (si < 0)
-        return undefined;
-      else
-      {
-        let s = stacks[si];
-        stacks = stacks.removeAt(si, 1);
-          // .splice(si, 1);
-        return s;
-      }
-    };
-    /**
-     * move map from one stack to another
-     * first stack is empty - delete it
-     * 2nd stack is new - create it (gui ? drag outside of top/bottom drop zones.)
-     * @param mapName name of map to move
-     * @param toStack stack to move map to
-     * @param insertAt  index in toStack.maps[] to insert
-     */
-    Stack.prototype.move = function (mapName, toStack, insertAt)
-    {
-      let s = this.remove(mapName);
-      toStack.insert(s, insertAt);
-      if (this.empty())
-        this.delete();
-      me.send('updatedStacks', stacks);
-    };
-    /** Insert the named map into this.maps[] at insertAt (before if top, after
-     * if ! top).
-     * Preserve the sum of this.maps[*].portion (which is designed to be 1).
-     * Give the new map a portion of 1/n, where n == this.maps.length after insertion.
-     *
-     * share yRange among maps in stack
-     * (retain ratio among existing maps in stack)
-     *
-     * @param mapName name of map to move
-     */
-    Stack.prototype.dropIn = function (mapName, insertAt, top)
-    {
-      let fromStack = Stack.mapStack(mapName);
-      if (! top)
-        insertAt++;
-      fromStack.move(mapName, this, insertAt);
-      /** the inserted map */
-      let inserted = this.maps[insertAt];
-      // apart from the inserted map,
-      // reduce this.maps[*].portion by factor (n-1)/n
-      let n = this.maps.length,
-      factor = (n-1)/n;
-      inserted.portion = 1/n;
-      this.maps.forEach(
-        function (m, index) { if (index != insertAt) m.portion *= factor; });
-    };
-    /** find / lookup Stack of given map.
-     * static
-     */
-    Stack.mapStack = function (mapName)
-    {
-      // could use a cached structure such as mapStack[mapName].
-      let ms = stacks.filter(
-        function (s) {
-          let i = s.findIndex(mapName);
-          return i >= 0;
-        });
-      if (ms.length != 1)
-        console.log("mapStack()", mapName, ms, ms.length);
-      return ms[0];
-    };
-    /** find / lookup Stack of given map.
-     * static
-     * @return an array (because reduce() doesn't stop at 1)
-     * of {stackIndex: number, mapIndex: number}.
-     * It will only accumulate the first match (mapIndex) in each stack,
-     * but by design there should be just 1 match across all stacks.
-     */
-    Stack.mapStackIndex = function (mapName)
-    {
-      /** called by stacks.reduce() */
-      function findIndex_mapName
-      (accumulator, currentValue, currentIndex /*,array*/)
-      {
-        let i = currentValue.findIndex(mapName);
-        if (i >= 0)
-          accumulator.push({stackIndex: currentIndex, mapIndex: i});
-        return accumulator;
-      };
-      let ms = stacks.reduce(findIndex_mapName, []);
-      if (ms.length != 1)
-      {
-        console.log("mapStackIndex()", mapName, ms, ms.length);
-      }
-      return ms[0];
-    };
-    /** Get stack of map, return transform.
-     */
-    Stack.prototype.mapTransform = function (mapName)
-    {
-      let s = Stack.mapStack(mapName);
-      return "translate(" + x(mapName) + "," + (s.portion * yRange) + ")";
-    };
-
+    /*------------------------------------------------------------------------*/
     /** the DropTarget which the cursor is in, recorded via mouseover/out events
      * on the DropTarget-s.  While dragging this is used to know the DropTarget
      * into which the cursor is dragged.
@@ -524,9 +736,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 	    X : size.w/2,
       Y : /*YMargin*/10 + size.h
 	    },
+      /** top and bottom edges relative to the map's transform. bottom depends
+       * on the map's portion
+       */
       edge = {
         top : size.h,
-        bottom : yRange - size.h
+        bottom : function (map) { return map.yRange() - size.h; }
+      };
+      DropTarget.prototype.map = function ()
+      {
+        let mapName = this.datum(),
+        map = maps[mapName];
       };
       /// @parameter top  true or false to indicate zone is positioned at top or
       /// bottom of axis
@@ -537,10 +757,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         let stackDropTarget = 
           g.append("g")
           .attr("class", "stackDropTarget" + " end " + (top ? "top" : "bottom"));
+        let
+          dropTargetY = function (datum, index, group) {
+            let mapName = datum,
+            map = maps[mapName],
+            yVal = top ? -dropTargetYMargin : edge.bottom(map);
+          return yVal;
+        };
         stackDropTarget
           .append("rect")
           .attr("x", -posn.X)
-          .attr("y", top ? -dropTargetYMargin : edge.bottom)
+          .attr("y", dropTargetY)
           .attr("width", 2 * posn.X)
           .attr("height", posn.Y)
         ;
@@ -558,12 +785,19 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         let stackDropTarget = 
           g.append("g")
           .attr("class", "stackDropTarget" + " middle " + (left ? "left" : "right"));
+        function dropTargetHeight(datum, index, group)
+        {
+          console.log("dropTargetHeight", datum, index, group);
+          let mapName = datum,
+          map = maps[mapName];
+          return map.yRange() - 2 * size.h;
+        }
         stackDropTarget
           .append("rect")
           .attr("x", left ? -1 * (dropTargetXMargin + posn.X) : dropTargetXMargin )
           .attr("y", edge.top)
           .attr("width", posn.X /*- dropTargetXMargin*/)
-          .attr("height", yRange - 2 * size.h)
+          .attr("height", dropTargetHeight)
         ;
 
       stackDropTarget
@@ -981,6 +1215,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
        });
     }
 
+    /** @param  d (datum) name of map being dragged.
+     */
     function dragged(d) {
       // if cursor is in top or bottom dropTarget-s, stack the map,
       // otherwise set map x to cursor x, and sort.
@@ -991,14 +1227,32 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         top = currentDropTarget.classList.contains("top"),
         zoneParent = Stack.mapStackIndex(targetMapName);
         let stack = stacks[zoneParent.stackIndex];
-        stack.dropIn(d, zoneParent.mapIndex, top);
-        Stack.log();
+        if (! stack.contains(d))
+        {
+          stack.dropIn(d, zoneParent.mapIndex, top);
+          Stack.log();
+          stack.redraw();
+        }
         // set x of dropped mapID
       }
       // For the case : drag ended in a middle zone (or outside any DropTarget zone)
       // else if d is in a >1 stack then remove it else move the stack
+      else
+      {
+        let currentDrop = Stack.prototype.currentDrop;
+        // console.log("dragged", currentDrop, d);
+        if (currentDrop)
+        {
+          currentDrop.stack.dropOut(d);
+          currentDrop.stack.redraw();
+          /* Following code will set o[d] and sort the Stack into location. */
+        }
+        /*
+        else
+          console.log("no currentDrop", d); */
+      }
 
-      // This code seems to apply regardless of dragTargetEnd.
+      if (! dropTargetEnd)
       {
         o[d] = d3.event.x;
         // Now impose boundaries on the x-range you can drag.
@@ -1028,12 +1282,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     function dragended(/*d*/) {
       // Order of mapIDs may have changed so need to redefine x and o.
-      x = d3.scalePoint().domain(mapIDs).range(axisXRange);
+      x = xScale();
+      // if caching, recalc : collateMapPositions();
       
       mapIDs.forEach(function(d){
         o[d] = x(d);
       });
-      x.domain(mapIDs).range(axisXRange);
+      // already done in xScale()
+      // x.domain(mapIDs).range(axisXRange);
       if(zoomed){
         d3.selectAll(".foreground g").selectAll("path").data(zoomPath).enter().append("path");  
       } else {
@@ -1041,7 +1297,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       }
       
       let t = d3.transition().duration(500);
-      t.selectAll(".map").attr("transform", function(d) { return "translate(" + x(d) + ")"; });
+      t.selectAll(".map").attr("transform", Stack.prototype.mapTransform);
       t.selectAll(".foreground path").attr("d", function(d) { return d; });
       d3.select(this).classed("active", false);
       svgContainer.classed("axisDrag", false);

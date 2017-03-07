@@ -16,7 +16,7 @@ export default Ember.Component.extend({
     d3.select('#grid')
       .datum(data)
       .call(grid);
-    console.log(data);
+    // console.log(data);
   }
     
 });

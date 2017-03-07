@@ -52,12 +52,16 @@ Maps to align ({{chr}}):
 </ul>
 
 {{#if hasData}}
-  {{draw-map updatedSelectedMarkers='updateSelectedMarkers' data=model}}
+  {{draw-map updatedSelectedMarkers='updateSelectedMarkers'
+    updatedStacks='updatedStacks' 
+    data=model}}
 
 
 {{numMarkers}} selected markers
 
 {{selected-markers data=selectedMarkers}}
+
+
 
 {{/if}}
 
