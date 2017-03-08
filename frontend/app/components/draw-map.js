@@ -27,7 +27,7 @@ export default Ember.Component.extend({
     updatedStacks: function(stacks) {
       let stacksText = stacks.toString();
       // stacks.log();
-      console.log("updatedStacks in draw-map component");
+      // console.log("updatedStacks in draw-map component");
       // no effect :
       this.sendAction('updatedSelectedMarkers', stacksText);  // tacks
     },
@@ -384,6 +384,42 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       }
       return ok;
     };
+    /** Shift named map to a different position within this Stack.
+     * Portions will be unchanged, positions will be re-calculated.
+     * Find mapName in this.maps[] and move it.
+
+     * @param mapName name of map to move
+     * @param insertIndex  index in toStack.maps[] to insert
+     * @return the map, or undefined if not found
+     */
+    Stack.prototype.shift = function (mapName, insertIndex)
+    {
+      let si = this.findIndex(mapName);
+      if (si < 0)
+      {
+        console.log("Stack#remove named map not in this stack", this, mapName);
+        return undefined;
+      }
+      else
+      {
+        let s = this.maps[si];
+        console.log("shift(), before removeAt()", this, mapName, insertIndex, this.maps.length, s);
+        this.log();
+        this.maps = this.maps.removeAt(si, 1);
+        let len = this.maps.length;
+        this.log();
+        if (insertIndex >= len)
+          console.log("shift()", this, mapName, insertIndex, " >= ", len, s);
+        let insertIndexPos = (insertIndex < 0) ? len + insertIndex : insertIndex;
+        // splice() supports insertIndex<0; if we support that, this condition need
+        if (si < insertIndexPos)
+          insertIndexPos--;
+        this.maps = this.maps.insertAt(insertIndexPos, s);
+        console.log("shift(), after insertAt()", insertIndexPos, this.maps.length);
+        this.log();
+        return s;
+      }
+    };
     /** @return true if this Stack contains mapName
      */
     Stack.prototype.contains = function (mapName)
@@ -407,12 +443,16 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       console.log("dropIn", this, mapName, insertIndex, top);
       // can now use  maps[mapName].stack
       let fromStack = Stack.mapStack(mapName);
+      /* It is valid to drop a map into the stack it is in, e.g. to re-order the maps.
+       * No change to portion, recalc position.
+       */
       if (this === fromStack)
       {
-        console.log("program error: Stack dropIn() map ", mapName, " is already in this stack");
+        console.log("Stack dropIn() map ", mapName, " is already in this stack");
+        this.shift(mapName, insertIndex);
         return;
       }
-      Stack.prototype.currentDrop = {stack: this, 'mapName': mapName};
+      Stack.prototype.currentDrop = {stack: this, 'mapName': mapName, dropInTime : Date.now()};
       if (! top)
         insertIndex++;
       let ok =
@@ -827,7 +867,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         storeDropTarget(data, this.classList);
       }
       function dropTargetMouseOut(d){
-        console.log("dropTargetMouseOut" + d);
+        console.log("dropTargetMouseOut", d);
         console.log(d);
         this.classList.remove("dragHover");
         currentDropTarget = undefined;
@@ -1220,7 +1260,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
          left = this.classList.contains("left"),
          isCurrent =
            (d != cl.d) &&  (! middle || ((left) == (xd < startX)));
-         console.log("current classed", this, d3.event, d, index, group, cl, xd, startX, middle, left, isCurrent);
+         // console.log("current classed", this, d3.event, d, index, group, cl, xd, startX, middle, left, isCurrent);
          return isCurrent;
        });
     }
@@ -1249,9 +1289,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // else if d is in a >1 stack then remove it else move the stack
       else
       {
-        let currentDrop = Stack.prototype.currentDrop;
+        const dropDelaySeconds = 3, milli = 1000;
+        let currentDrop = Stack.prototype.currentDrop,
+            now = Date.now();
         // console.log("dragged", currentDrop, d);
-        if (currentDrop)
+        if (currentDrop && (now - currentDrop.dropInTime > dropDelaySeconds * milli))
         {
           currentDrop.stack.dropOut(d);
           currentDrop.stack.redraw();
