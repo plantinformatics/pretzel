@@ -399,9 +399,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * (retain ratio among existing maps in stack)
      *
      * @param mapName name of map to move
+     * @param insertIndex position in stack to insert at.
+     * @param true for the DropTarget at the top of the axis, false for bottom.
      */
     Stack.prototype.dropIn = function (mapName, insertIndex, top)
     {
+      console.log("dropIn", this, mapName, insertIndex, top);
       // can now use  maps[mapName].stack
       let fromStack = Stack.mapStack(mapName);
       if (this === fromStack)
@@ -439,18 +442,25 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     Stack.prototype.dropOut = function (mapName)
     {
-      /** - TODO : param stackIndex from drag x */
-      let stackIndex = 1;
+      console.log("dropOut", this, mapName);
+      /* passing toStack===undefined to signify moving map out into a new Stack,
+       * and hence insertIndex is also undefined (not used since map is only map
+       * in newly-created Stack).
+      */
       let ok =
-      this.move(mapName, undefined, stackIndex);
+      this.move(mapName, undefined, undefined);
       /* move() will create a new Stack for the map which was moved out, and
        * add that to Stacks.  dragged() will assign it a location and sort.
        */
 
       if (ok)
       {
+        // mapName goes to full height. other maps in the stack take up the released height proportionately
+        let map = maps[mapName],
+        released = map.portion;
+        map.portion = 1;
         let n = this.maps.length,
-        factor = (n+1)/n;
+        factor = 1 + released/n;
         this.maps.forEach(
           function (m, index) { m.portion *= factor; });
         this.calculatePositions();
@@ -1245,6 +1255,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         {
           currentDrop.stack.dropOut(d);
           currentDrop.stack.redraw();
+          /* if d is not in currentDrop.stack, dropOut() will return false; in
+           * that case redraw() may have no effect;  it seems sensible to clear currentDrop anyway.
+           */
+          Stack.prototype.currentDrop = undefined;
           /* Following code will set o[d] and sort the Stack into location. */
         }
         /*
