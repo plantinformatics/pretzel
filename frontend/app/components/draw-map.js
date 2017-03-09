@@ -639,6 +639,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let m = maps[mapName];
       return m.mapTransform();
     };
+    /** Get stack of map, return transform. */
+    Stack.prototype.mapTransformO = function (mapName)
+    {
+      let m = maps[mapName];
+      return m.mapTransformO();
+    };
     /** For each map in this Stack, redraw axis, brush, foreground paths.
      * @param mapName is redrawn by dragged, so skip it.
      */
