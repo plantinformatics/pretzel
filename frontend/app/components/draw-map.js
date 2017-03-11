@@ -129,6 +129,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
          */
         d3Markers = new Set(),
         showAll = false;
+    /** Map from marker names to map names.
+     * Compiled by collateMarkerMap() from z[], which is compiled from d3Data.
+     */
+    let mm;
 
     let line = d3.line(),
         axis = d3.axisLeft(),
@@ -774,6 +778,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     //creates a new Array instance from an array-like or iterable object.
     d3Markers = Array.from(d3Markers);
     //console.log(axis.scale(y[mapIDs))
+    collateMarkerMap();
     
     mapIDs.forEach(function(d) {
       /** Find the max of locations of all markers of map name d. */
@@ -889,10 +894,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         top : size.h,
         bottom : function (map) { return map.yRange() - size.h; }
       };
-      DropTarget.prototype.map = function ()
+      /** @return map which this DropTarget is part of */
+      DropTarget.prototype.getMap = function ()
       {
+        /** The datum of the DropTarget is the mapName */
         let mapName = this.datum(),
         map = maps[mapName];
+        return map;
       };
       /// @parameter top  true or false to indicate zone is positioned at top or
       /// bottom of axis
@@ -1071,6 +1079,41 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function refreshMap(){
       console.log("Refresh");
     }
+    /**
+     * compile map of marker -> array of maps
+     *  array of { stack{maps...} ... }
+     * stacks change, but maps/chromosomes are changed only when page refresh
+     */
+    function collateMarkerMap()
+    {
+      console.log("collateMarkerMap()");
+      if (mm === undefined)
+        mm = {};
+      for (let map in z)
+      {
+        for (let marker in z[map])
+        {
+          console.log(map, marker);
+          if (mm[marker] === undefined)
+            mm[marker] = [];
+          mm[marker].push(map);
+        }
+      }
+    }
+    /** Return an array of maps contain Marker `marker` and are in stack `stackIndex`.
+     * @param marker  name of marker
+     * @param stackIndex  index into stacks[]
+     * @return array of maps
+     */
+    function markerStackMaps(marker, stackIndex)
+    {
+      let stack = stacks[stackIndex], ma=mm[marker];
+      console.log("markerStackMaps()", marker, stackIndex, ma);
+      let mmaps = ma.filter(function (mapID) {
+        let mInS = stack.contains(mapID); return mInS; });
+      console.log(mmaps);
+      return mmaps;
+    }
     /** A line between a marker's location in adjacent maps.
      * @param k1, k2 indices into mapIDs[]
      * @param d marker name
@@ -1081,6 +1124,16 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           mk2 = mapIDs[k2];
       return line([[o[mk1], markerY(k1, d)],
                    [o[mk2], markerY(k2, d)]]);
+    }
+    /** Stacks version of markerLine2().
+     * A line between a marker's location in maps in adjacent Stacks.
+     * @param mk1, mk2 map names, (exist in mapIDs[])
+     * @param d marker name
+     */
+    function markerLineS2(mk1, mk2, d)
+    {
+      return line([[o[mk1], markerY_(mk1, d)],
+                   [o[mk2], markerY_(mk2, d)]]);
     }
     /** Similar to @see markerLine2().
      * @param k index into mapIDs[]
@@ -1094,8 +1147,29 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return line([[o[mk]-xOffset, mkY],
                    [o[mk]+xOffset, mkY]]);
     }
-    // Returns an array of paths (links between maps) for a given marker.
+    /** This is the stacks equivalent of path() / zoompath().
+     * Returns an array of paths (links between maps) for a given marker.
+     */
     function path(d) { // d is a marker
+        let r = [];
+
+        for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
+          let mmaps0 = markerStackMaps(d, stackIndex),
+          mmaps1 = markerStackMaps(d, stackIndex+1);
+          for (let m0i=0; m0i < mmaps0.length; m0i++) {
+            let m0 = mmaps0[m0i];
+            for (let m1i=0; m1i < mmaps1.length; m1i++) {
+              let m1 = mmaps1[m1i];
+              let sLine = markerLineS2(m0, m1, d);
+              console.log("stacksPath()", d, m0i, m1i, m0, m1, sLine);
+              r.push(sLine);
+            }
+          }
+        }
+      return r;
+    }
+    // Returns an array of paths (links between maps) for a given marker.
+    function path_pre_Stacks(d) { // d is a marker
         let r = [];
 
         for (let k=0; k<mapIDs.length-1; k++) {
@@ -1126,13 +1200,22 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
     /** Calculate relative marker location in the map
+     * @param mapID name of map  (exists in mapIDs[])
+     * @param d marker name
+     */
+    function markerY_(mapID, d)
+    {
+      return y[mapID](z[mapID][d]);
+    }
+    /** Calculate relative marker location in the map
      * @param k index into mapIDs[]
      * @param d marker name
      */
     function markerY(k, d)
     {
-      return y[mapIDs[k]](z[mapIDs[k]][d]);
+      return markerY_(mapIDs[k], d);
     }
+
 
     // Returns an array of paths (links between maps) for a given marker when zoom in starts.
     function zoomPath(d) { // d is a marker
@@ -1405,7 +1488,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         if (! stack.contains(d))
         {
           stack.dropIn(d, zoneParent.mapIndex, top);
-          // number of stacks has decreased - not essensital to recalc the domain.
+          // number of stacks has decreased - not essential to recalc the domain.
           Stack.log();
           stack.redraw();
         }
