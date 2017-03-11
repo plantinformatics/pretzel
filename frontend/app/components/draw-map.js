@@ -1163,6 +1163,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               let sLine = markerLineS2(m0, m1, d);
               console.log("stacksPath()", d, m0i, m1i, m0, m1, sLine);
               r.push(sLine);
+              /* Prepare a tool-tip for the line. */
+              if (pathMarkers[sLine] === undefined)
+                pathMarkers[sLine] = {};
+              pathMarkers[sLine][d] = 1;
             }
           }
         }
