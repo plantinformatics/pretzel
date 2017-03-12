@@ -117,6 +117,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /// index: 0:left, 1:right
     axisXRange = [0 + axisHeaderTextLen/2, graphDim.w - axisHeaderTextLen/2];
 
+    /** Draw paths between markers on maps even if one end of the path is outside the svg.
+     * This was the behaviour of an earlier version of this Marker Map Viewer, and it
+     * seems useful, especially with a transition, to show the progressive exclusion of
+     * paths during zoom.n
+     */
+    let allowPathsOutsideZoom = false;
+
     /** y[mapID] is the scale for map
      */
     let y = {},
@@ -127,8 +134,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         /** All marker names.
          * Initially a set (to determine unique names), then converted to an array.
          */
-        d3Markers = new Set(),
-        showAll = false;
+        d3Markers = new Set();
+    let
+      /** Draw a horizontal notch at the marker location on the axis,
+       * when the marker is not in a map of an adjacent Stack.
+       * Makes the marker location visible, because otherwise there is no path to indicate it.
+       */
+      showAll = true;
     /** Map from marker names to map names.
      * Compiled by collateMarkerMap() from z[], which is compiled from d3Data.
      */
@@ -820,6 +832,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == "A") {
         showAll = !showAll;
+        console.log("showAll", showAll);
         refreshMap();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == " ") {
@@ -1132,8 +1145,22 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function markerLineS2(mk1, mk2, d)
     {
+      // o[p], the map location,
       return line([[o[mk1], markerY_(mk1, d)],
                    [o[mk2], markerY_(mk2, d)]]);
+    }
+    /** Similar to @see markerLine().
+     * Draw a horizontal notch at the marker location on the axis.
+     * Used when showAll and the marker is not in a map of an adjacent Stack.
+     * @param mk mapID
+     * @param d marker name
+     * @param xOffset add&subtract to x value, measured in pixels
+     */
+    function markerLineS(mk, d, xOffset)
+    {
+      let mkY = markerY_(mk, d);
+      return line([[o[mk]-xOffset, mkY],
+                   [o[mk]+xOffset, mkY]]);
     }
     /** Similar to @see markerLine2().
      * @param k index into mapIDs[]
@@ -1156,17 +1183,43 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
           let mmaps0 = markerStackMaps(d, stackIndex),
           mmaps1 = markerStackMaps(d, stackIndex+1);
+          // Cross-product of the two adjacent stacks; just the maps which contain the marker.
           for (let m0i=0; m0i < mmaps0.length; m0i++) {
             let m0 = mmaps0[m0i];
             for (let m1i=0; m1i < mmaps1.length; m1i++) {
               let m1 = mmaps1[m1i];
-              let sLine = markerLineS2(m0, m1, d);
-              console.log("stacksPath()", d, m0i, m1i, m0, m1, sLine);
-              r.push(sLine);
-              /* Prepare a tool-tip for the line. */
-              if (pathMarkers[sLine] === undefined)
-                pathMarkers[sLine] = {};
-              pathMarkers[sLine][d] = 1;
+              let range = [0, yRange];
+              /** Calculate relative location of marker d in the map mapID, and
+               * check if it is inRange 
+               */
+              function inRangeI(mapID)
+              {
+                return inRange(markerY_(mapID, d), range);
+              }
+
+              /** Filter out those paths that either side locates out of the svg. */
+              let lineIn = allowPathsOutsideZoom ||
+                (inRangeI(m0) && inRangeI(m1));
+              console.log("path()", stackIndex, m0, allowPathsOutsideZoom, inRangeI(m0), inRangeI(m1), lineIn);
+              if (lineIn)
+              {
+                let sLine = markerLineS2(m0, m1, d);
+                console.log("stacksPath()", d, m0i, m1i, m0, m1, sLine);
+                r.push(sLine);
+                /* Prepare a tool-tip for the line. */
+                if (pathMarkers[sLine] === undefined)
+                  pathMarkers[sLine] = {};
+                pathMarkers[sLine][d] = 1;
+              }
+              else if (showAll) {
+                if (d in z[m0]) { 
+                  r.push(markerLineS(m0, d, 5));
+                }
+                if (d in z[m1]) {
+                  r.push(markerLineS(m1, d, 5));
+                }
+              }
+
             }
           }
         }
@@ -1209,6 +1262,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function markerY_(mapID, d)
     {
+      // z[p][m], actual position of marker m in the map p, 
+      // y[p](z[p][m]) is the relative marker position in the svg
       return y[mapID](z[mapID][d]);
     }
     /** Calculate relative marker location in the map
@@ -1429,7 +1484,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           svgContainer.selectAll(".btn").remove();
           svgContainer.select("#"+idName).transition(t).call(yAxis);
           d3.selectAll(".foreground g").selectAll("path").remove();
-          d3.selectAll(".foreground g").selectAll("path").data(zoomPath).enter().append("path");
+          d3.selectAll(".foreground g").selectAll("path").data(/*zoom*/path).enter().append("path");
           t.selectAll(".foreground path").attr("d", function(d) {return d; });
           d3.selectAll(".foreground > g > path")
             .on("mouseover",handleMouseOver)
