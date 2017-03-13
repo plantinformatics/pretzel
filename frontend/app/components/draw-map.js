@@ -568,7 +568,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         released = map.portion;
         map.portion = 1;
         let n = this.maps.length,
-        factor = (1/(1-released))/n;
+        factor = 1 / (1-released);
         this.maps.forEach(
           function (m, index) { m.portion *= factor; });
         this.calculatePositions();
@@ -646,7 +646,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           "translate(" + xVal, yOffsetText, ")",
           scaleText
         ].join("");
-      console.log("mapTransform", this, transform);
+      // console.log("mapTransform", this, transform);
       return transform;
     };
     /** Get stack of map, return transform. */
@@ -735,7 +735,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           "translate(" + xVal, yOffsetText, ")",
           scaleText
         ].join("");
-      console.log("mapTransformO", this, transform);
+      // console.log("mapTransformO", this, transform);
       return transform;
     };
 
@@ -954,7 +954,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           .attr("class", "stackDropTarget" + " middle " + (left ? "left" : "right"));
         function dropTargetHeight(datum, index, group)
         {
-          console.log("dropTargetHeight", datum, index, group);
+          // console.log("dropTargetHeight", datum, index, group);
           let mapName = datum,
           map = maps[mapName];
           return map.yRange() - 2 * size.h;
@@ -1106,7 +1106,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       {
         for (let marker in z[map])
         {
-          console.log(map, marker);
+          // console.log(map, marker);
           if (mm[marker] === undefined)
             mm[marker] = [];
           mm[marker].push(map);
@@ -1121,10 +1121,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function markerStackMaps(marker, stackIndex)
     {
       let stack = stacks[stackIndex], ma=mm[marker];
-      console.log("markerStackMaps()", marker, stackIndex, ma);
+      // console.log("markerStackMaps()", marker, stackIndex, ma);
       let mmaps = ma.filter(function (mapID) {
         let mInS = stack.contains(mapID); return mInS; });
-      console.log(mmaps);
+      // console.log(mmaps);
       return mmaps;
     }
     /** A line between a marker's location in adjacent maps.
@@ -1200,11 +1200,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               /** Filter out those paths that either side locates out of the svg. */
               let lineIn = allowPathsOutsideZoom ||
                 (inRangeI(m0) && inRangeI(m1));
-              console.log("path()", stackIndex, m0, allowPathsOutsideZoom, inRangeI(m0), inRangeI(m1), lineIn);
+              // console.log("path()", stackIndex, m0, allowPathsOutsideZoom, inRangeI(m0), inRangeI(m1), lineIn);
               if (lineIn)
               {
                 let sLine = markerLineS2(m0, m1, d);
-                console.log("stacksPath()", d, m0i, m1i, m0, m1, sLine);
+                // console.log("stacksPath()", d, m0i, m1i, m0, m1, sLine);
                 r.push(sLine);
                 /* Prepare a tool-tip for the line. */
                 if (pathMarkers[sLine] === undefined)
@@ -1580,6 +1580,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           console.log("no currentDrop", d); */
       }
 
+      console.log("dragged", dropTargetEnd, Stack.prototype.currentDrop, d);
+
       if (! dropTargetEnd)
       {
         o[d] = d3.event.x;
@@ -1593,7 +1595,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       d3.select(this).attr("transform", Stack.prototype.mapTransformO);
       d3.selectAll(".foreground g").selectAll("path").remove();
       if(zoomed){
-        d3.selectAll(".foreground g").selectAll("path").data(zoomPath).enter().append("path");
+        d3.selectAll(".foreground g").selectAll("path").data(/*zoom*/path).enter().append("path");
       } else {
         d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
       }
@@ -1609,6 +1611,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
     function dragended(/*d*/) {
+      console.log("dragended");
       // Order of mapIDs may have changed so need to redefine x and o.
       xs = xScale();
       // if caching, recalc : collateMapPositions();
@@ -1617,7 +1620,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // already done in xScale()
       // x.domain(mapIDs).range(axisXRange);
       if(zoomed){
-        d3.selectAll(".foreground g").selectAll("path").data(zoomPath).enter().append("path");  
+        d3.selectAll(".foreground g").selectAll("path").data(/*zoom*/path).enter().append("path");  
       } else {
         d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
       }
