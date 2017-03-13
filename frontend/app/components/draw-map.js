@@ -252,6 +252,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     };
     /** undefined, or references to the map (Stack) which is currently dropped
      * and the Stack which it is dropped into
+     * properties :
+     * out : true for dropOut(), false for dropIn()
+     * stack: the Stack which mapName is dropped into / out of
+     * 'mapName': mapName,
+     * dropTime : Date.now() when dropOut() / dropIn() is done
+     *
      * static
      */
     Stack.prototype.currentDrop = undefined;
@@ -516,7 +522,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         this.shift(mapName, insertIndex);
         return;
       }
-      Stack.prototype.currentDrop = {stack: this, 'mapName': mapName, dropInTime : Date.now()};
+      Stack.prototype.currentDrop = {out : false, stack: this, 'mapName': mapName, dropTime : Date.now()};
       if (! top)
         insertIndex++;
       let okStacks =
@@ -549,6 +555,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     Stack.prototype.dropOut = function (mapName)
     {
       console.log("dropOut", this, mapName);
+      Stack.prototype.currentDrop = {out : true, stack: this, 'mapName': mapName, dropTime : Date.now()};
+
       /* passing toStack===undefined to signify moving map out into a new Stack,
        * and hence insertIndex is also undefined (not used since map is only map
        * in newly-created Stack).
@@ -1538,30 +1546,33 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // if cursor is in top or bottom dropTarget-s, stack the map,
       // otherwise set map x to cursor x, and sort.
       let dropTargetEnd = currentDropTarget && currentDropTarget.classList.contains("end");
-      if (dropTargetEnd)
+
+      const dropDelaySeconds = 3, milli = 1000;
+      let currentDrop = Stack.prototype.currentDrop,
+      now = Date.now();
+      // console.log("dragged", currentDrop, d);
+      let recentDrop = currentDrop && (now - currentDrop.dropTime < dropDelaySeconds * milli);
+
+      if (! recentDrop)
       {
-        let targetMapName = currentDropTarget.mapName,
-        top = currentDropTarget.classList.contains("top"),
-        zoneParent = Stack.mapStackIndex(targetMapName);
-        let stack = stacks[zoneParent.stackIndex];
-        if (! stack.contains(d))
+        if (dropTargetEnd)
         {
-          stack.dropIn(d, zoneParent.mapIndex, top);
-          // number of stacks has decreased - not essential to recalc the domain.
-          Stack.log();
-          stack.redraw();
+          let targetMapName = currentDropTarget.mapName,
+          top = currentDropTarget.classList.contains("top"),
+          zoneParent = Stack.mapStackIndex(targetMapName);
+          let stack = stacks[zoneParent.stackIndex];
+          if (! stack.contains(d))
+          {
+            stack.dropIn(d, zoneParent.mapIndex, top);
+            // number of stacks has decreased - not essential to recalc the domain.
+            Stack.log();
+            stack.redraw();
+          }
+          // set x of dropped mapID
         }
-        // set x of dropped mapID
-      }
-      // For the case : drag ended in a middle zone (or outside any DropTarget zone)
-      // else if d is in a >1 stack then remove it else move the stack
-      else
-      {
-        const dropDelaySeconds = 3, milli = 1000;
-        let currentDrop = Stack.prototype.currentDrop,
-            now = Date.now();
-        // console.log("dragged", currentDrop, d);
-        if (currentDrop && (now - currentDrop.dropInTime > dropDelaySeconds * milli))
+        // For the case : drag ended in a middle zone (or outside any DropTarget zone)
+        // else if d is in a >1 stack then remove it else move the stack
+        else if (currentDrop)
         {
           currentDrop.stack.dropOut(d);
           Stack.log();
@@ -1575,12 +1586,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           Stack.prototype.currentDrop = undefined;
           /* Following code will set o[d] and sort the Stack into location. */
         }
+      }
         /*
         else
           console.log("no currentDrop", d); */
-      }
 
-      console.log("dragged", dropTargetEnd, Stack.prototype.currentDrop, d);
+      console.log("dragged", dropTargetEnd, currentDropTarget, d);
 
       if (! dropTargetEnd)
       {
