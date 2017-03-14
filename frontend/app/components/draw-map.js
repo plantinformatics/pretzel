@@ -563,7 +563,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         this.maps.forEach(
           function (m, index) { m.portion *= factor; });
         this.calculatePositions();
-    }
+    };
     /** Drag the named map out of this Stack.
      * Create a new Stack containing just the map.
      *
@@ -664,7 +664,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       yOffsetText = Number.isNaN(yOffset) ? "" : "," + this.yOffset();
       let scale = this.portion,
       scaleText = Number.isNaN(scale) ? "" : " scale(" + scale + ")";
-      let xVal = checkIsNumber(x(this.mapName));
+      /** Will be undefined when map is dragged out to form a new Stack, which
+       * is not allocated an x position (via xScale()) until dragended().  */
+      let xVal = x(this.mapName);
+      if (xVal === undefined)
+        xVal = o[this.mapName];
+      checkIsNumber(xVal);
       let transform =
         [
           "translate(" + xVal, yOffsetText, ")",
@@ -1600,7 +1605,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           {
             currentDrop.stack.dropOut(d);
             Stack.log();
-            // currentDrop.stack.redraw();
+            currentDrop.stack.redraw();
             /* if d is not in currentDrop.stack, dropOut() will return false; in
              * that case redraw() may have no effect.
              */
