@@ -250,8 +250,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       Stack.prototype.add = Stack_add;
       this.add(stackable);
     };
-    /** undefined, or references to the map (Stack) which is currently dropped
-     * and the Stack which it is dropped into
+    /** undefined, or references to the map (Stacked) which is currently dropped
+     * and the Stack which it is dropped into (dropIn) or out of (dropOut).
      * properties :
      * out : true for dropOut(), false for dropIn()
      * stack: the Stack which mapName is dropped into / out of
@@ -530,7 +530,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       if (okStacks)
       {
         // if fromStack is not deleted, call fromStack.calculatePositions()
-        okStacks.forEach(function(s) { s.calculatePositions(); });
+        let map = maps[mapName],
+        released = map.portion;
+        console.log("dropIn", released, okStacks);
+        okStacks.forEach(function(s) { 
+          s.releasePortion(released);
+          s.calculatePositions(); });
         /** the inserted map */
         let inserted = this.maps[insertIndex];
         inserted.stack = this;
@@ -544,6 +549,21 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         this.calculatePositions();
       }
     };
+    /** Used when a map is dragged out of a Stack.
+     * re-allocate portions among remaining maps in stack
+     * (retain ratio among existing maps in stack)
+     * This is used from both dropIn() and dropOut(), for the Stack which the
+     * map is dragged out of.
+     * @param released  the portion of the map which is dragged out
+     */
+    Stack.prototype.releasePortion = function (released)
+    {
+        let
+          factor = 1 / (1-released);
+        this.maps.forEach(
+          function (m, index) { m.portion *= factor; });
+        this.calculatePositions();
+    }
     /** Drag the named map out of this Stack.
      * Create a new Stack containing just the map.
      *
@@ -575,11 +595,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         let map = maps[mapName],
         released = map.portion;
         map.portion = 1;
-        let n = this.maps.length,
-        factor = 1 / (1-released);
-        this.maps.forEach(
-          function (m, index) { m.portion *= factor; });
-        this.calculatePositions();
+        this.releasePortion(released);
       }
     };
     /** Calculate the positions of the maps in this stack
@@ -1548,11 +1564,16 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let dropTargetEnd = currentDropTarget && currentDropTarget.classList.contains("end");
 
       const dropDelaySeconds = 3, milli = 1000;
+      /** currentDrop references the mapName being dragged and the stack it is dropped into or out of. */
       let currentDrop = Stack.prototype.currentDrop,
       now = Date.now();
       // console.log("dragged", currentDrop, d);
       let recentDrop = currentDrop && (now - currentDrop.dropTime < dropDelaySeconds * milli);
 
+      if (recentDrop && dropTargetEnd)
+      {
+        console.log("dragged", currentDrop, currentDropTarget, now - currentDrop.dropTime);
+      }
       if (! recentDrop)
       {
         if (dropTargetEnd)
@@ -1572,19 +1593,19 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         }
         // For the case : drag ended in a middle zone (or outside any DropTarget zone)
         // else if d is in a >1 stack then remove it else move the stack
-        else if (currentDrop)
+        else if (currentDrop && !currentDrop.out)
         {
-          currentDrop.stack.dropOut(d);
-          Stack.log();
-          // number of stacks has increased - need to recalc the domain, so that
-          // x is defined for this map.
-          xs = xScale();
-          currentDrop.stack.redraw();
-          /* if d is not in currentDrop.stack, dropOut() will return false; in
-           * that case redraw() may have no effect;  it seems sensible to clear currentDrop anyway.
-           */
-          Stack.prototype.currentDrop = undefined;
-          /* Following code will set o[d] and sort the Stack into location. */
+          let map = maps[d], stack = map.stack;
+          if (stack.maps.length > 1)
+          {
+            currentDrop.stack.dropOut(d);
+            Stack.log();
+            // currentDrop.stack.redraw();
+            /* if d is not in currentDrop.stack, dropOut() will return false; in
+             * that case redraw() may have no effect.
+             */
+            /* Following code will set o[d] and sort the Stack into location. */
+          }
         }
       }
         /*
@@ -1600,7 +1621,6 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         // The boundary values are in dragLimit, defined previously.
         if (o[d] < dragLimit.min) { o[d] = dragLimit.min; }
         else if (o[d] > dragLimit.max) { o[d] = dragLimit.max; }
-        stacks.sortLocation();
       }
       //console.log(mapIDs + " " + o[d]);
       d3.select(this).attr("transform", Stack.prototype.mapTransformO);
@@ -1623,10 +1643,16 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     function dragended(/*d*/) {
       console.log("dragended");
+
+      // in the case of dropOut(),
+      // number of stacks has increased - need to recalc the domain, so that
+      // x is defined for this map.
+      //
       // Order of mapIDs may have changed so need to redefine x and o.
       xs = xScale();
       // if caching, recalc : collateMapPositions();
       
+      stacks.sortLocation();
       collateO();
       // already done in xScale()
       // x.domain(mapIDs).range(axisXRange);
