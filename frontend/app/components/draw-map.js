@@ -168,6 +168,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** Used for group element, class "map"; required because id may start with
      * numeric mongodb id (of geneticmap) and element id cannot start with
      * numeric.
+     * Also used for g.stack, which is given a numeric id (@see nextStackID).
      * Not required for axis element ids because they have "m" suffix.
      */
     function eltId(name)
@@ -268,6 +269,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     Stack.prototype.empty = function ()
     {
       return this.maps.length == 0;
+    };
+    /** @return array of mapIDs of this Stack */
+    Stack.prototype.mapIDs = function ()
+    {
+      let a =
+        this.maps.map(function(s){return s.mapName;});
+      return a;
     };
     Stack.prototype.toString = function ()
     {
@@ -698,10 +706,22 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     Stack.prototype.redraw = function ()
     {
       let t = d3.transition().duration(500);
+      /** to make this work, would have to reparent the maps - what's the benefit
       let ts = 
-        t.selectAll("g.stack#id" + this.stackID + "> .map");
+        t.selectAll("g.stack#" + eltId(this.stackID) + " > .map");
       console.log("redraw", this.stackID, ts._groups.length, ts);
-        ts.attr("transform", Stack.prototype.mapTransform);
+       */
+
+      this.maps.forEach(
+        function (m, index)
+        {
+          let ts = 
+            t.selectAll(".map#" + eltId(m.mapName));
+          (ts._groups.length === 1) || console.log("redraw", this, m, index, m.mapName);
+          // args passed to fn are data, index, group;  `this` is node (SVGGElement)
+          ts.attr("transform", Stack.prototype.mapTransform);
+        });
+
     };
 
     /*------------------------------------------------------------------------*/
@@ -891,13 +911,22 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         .data(stacks)
         .enter().append("g")
         .attr("class", "stack")
-        .attr("id", function (s) { if (s.stackID === undefined) debugger;
-            return "id" + s.stackID; });
+        .attr("id", stackEltId);
+
+    function stackEltId(s)
+    { if (s.stackID === undefined) debugger;
+      return eltId(s.stackID); }
+
+    /** For the given Stack, return its mapIDs  */
+    function stack_mapIDs(stack)
+    {
+      return stack.mapIDs();
+    }
 
     // Add a group element for each map.
     // Stacks are selection groups in the result of this .selectAll()
     let g = stackS.selectAll(".map")
-        .data(mapIDs)
+        .data(stack_mapIDs)
         .enter().append("g")
         .attr("class", "map")
         .attr("id", function(d) { return eltId(d); })
