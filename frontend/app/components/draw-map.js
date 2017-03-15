@@ -62,6 +62,8 @@ export default Ember.Component.extend({
      * which contains mapID & portion.
      */
     let stacks = [];
+    /** Give each Stack a unique id so that its <g> can be selected. */
+    let nextStackID = 0;
     /** Reference to all (Stacked) maps by mapName.
      */
     let maps = {};
@@ -243,6 +245,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * and push onto this Stack.
      */
     function Stack(stackable) {
+      this.stackID = nextStackID++;
       /** The map object (Stacked) has a reference to its parent stack which is the inverse of this reference : 
        * maps{mapName}->stack->maps[i] == maps{mapName} for some i.
        */
@@ -691,21 +694,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return m.mapTransformO();
     };
     /** For each map in this Stack, redraw axis, brush, foreground paths.
-     * @param mapName is redrawn by dragged, so skip it.
      */
-    Stack.prototype.redraw = function (mapName)
+    Stack.prototype.redraw = function ()
     {
       let t = d3.transition().duration(500);
-      // only 2 stacks are modified, but others will re-position.
-      if (false)
-      {
-      this.maps.forEach(
-        function (m, index)
-        {
-          // m.mapTransform()
-        });
-      }
-      t.selectAll(".map").attr("transform", Stack.prototype.mapTransform);
+      let ts = 
+        t.selectAll("g.stack#id" + this.stackID + "> .map");
+      console.log("redraw", this.stackID, ts._groups.length, ts);
+        ts.attr("transform", Stack.prototype.mapTransform);
     };
 
     /*------------------------------------------------------------------------*/
@@ -892,9 +888,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     // Stacks contain 1 or more maps.
     /** selection of stacks */
     let stackS = svgContainer.selectAll(".stack")
-        .data([stacks])
+        .data(stacks)
         .enter().append("g")
-        .attr("class", "stack");
+        .attr("class", "stack")
+        .attr("id", function (s) { if (s.stackID === undefined) debugger;
+            return "id" + s.stackID; });
 
     // Add a group element for each map.
     // Stacks are selection groups in the result of this .selectAll()
@@ -1531,6 +1529,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
 
     function dragstarted(start_d /*, start_index, start_group*/) {
+      Stack.prototype.currentDrop = undefined;
       console.log("dragstarted", this, start_d/*, start_index, start_group*/);
       let cl = {/*self: this,*/ d: start_d/*, index: start_index, group: start_group, mapIDs: mapIDs*/};
       svgContainer.classed("axisDrag", true);
@@ -1575,7 +1574,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // console.log("dragged", currentDrop, d);
       let recentDrop = currentDrop && (now - currentDrop.dropTime < dropDelaySeconds * milli);
 
-      if (recentDrop && dropTargetEnd)
+      if (false && recentDrop && dropTargetEnd)
       {
         console.log("dragged", currentDrop, currentDropTarget, now - currentDrop.dropTime);
       }
@@ -1598,14 +1597,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         }
         // For the case : drag ended in a middle zone (or outside any DropTarget zone)
         // else if d is in a >1 stack then remove it else move the stack
-        else if (currentDrop && !currentDrop.out)
+        else if (! currentDrop || !currentDrop.out)
         {
           let map = maps[d], stack = map.stack;
+          if (currentDrop && currentDrop.stack !== stack)
+          {
+            console.log("dragged", d, currentDrop.stack, stack);
+          }
           if (stack.maps.length > 1)
           {
-            currentDrop.stack.dropOut(d);
+            stack.dropOut(d);
             Stack.log();
-            currentDrop.stack.redraw();
+            stack.redraw();
             /* if d is not in currentDrop.stack, dropOut() will return false; in
              * that case redraw() may have no effect.
              */
@@ -1617,7 +1620,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         else
           console.log("no currentDrop", d); */
 
-      console.log("dragged", dropTargetEnd, currentDropTarget, d);
+      // console.log("dragged", dropTargetEnd, currentDropTarget, d);
 
       if (! dropTargetEnd)
       {
