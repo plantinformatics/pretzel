@@ -83,7 +83,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
   can adjust space assigned to each linkageGroup (thumb drag) 
 */
 
-    const dragTransitionTime = 1500;  // milliseconds
+    const dragTransitionTime = 1000;  // milliseconds
 
     /// width in pixels of the axisHeaderText, which is
     /// 30 chars when the map name contains the 24 hex char mongodb numeric id,
@@ -621,6 +621,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     };
     /** Calculate the positions of the maps in this stack
      * Position is a proportion of yRange.
+     *
+     * Call updateRange() to update y[mapName] for each map in the stack.
      */
     Stack.prototype.calculatePositions = function ()
     {
@@ -629,6 +631,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         function (m, index)
         {
           m.position = [sumPortion,  sumPortion += m.portion];
+          updateRange(m);
         });
     };
     /** find / lookup Stack of given map.
@@ -849,7 +852,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     d3Markers = Array.from(d3Markers);
     //console.log(axis.scale(y[mapIDs))
     collateMarkerMap();
-    
+
+    /** update y[m.mapName] for the given map.
+     * @param m map (i.e. maps[m.mapName] == m)
+     */
+    function updateRange(m)
+    {
+      // if called before y is set up, do nothing.
+      if (y && y[m.mapName])
+        y[m.mapName].range([0, m.yRange()]);
+    }
+
     mapIDs.forEach(function(d) {
       /** Find the max of locations of all markers of map name d. */
       let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } );
@@ -1678,22 +1691,30 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       }
       //console.log(mapIDs + " " + o[d]);
       d3.select(this).attr("transform", Stack.prototype.mapTransformO);
-      d3.selectAll(".foreground g").selectAll("path").remove();
-      if(zoomed){
-        d3.selectAll(".foreground g").selectAll("path").data(/*zoom*/path).enter().append("path");
-      } else {
-        d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
-      }
-      d3.selectAll(".foreground g").selectAll("path").attr("d", function(d) { return d; });
-      d3.selectAll(".foreground > g > path")
-        .on("mouseover",handleMouseOver)
-        .on("mouseout",handleMouseOut);
+      // zoomed effects transform via path() : mapTransform.
+      pathUpdate(undefined);
       //Do we need to keep the brushed region when we drag the map? probably not.
       //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
       d3.select(this).select(".brush").call(y[d].brush.move,null);
       //Remove all highlighted Markers.
       svgContainer.selectAll("circle").remove();
       dragging--;
+    }
+
+    /** Update the paths connecting markers present in adjacent stacks.
+     * @param t undefined, or a d3 transition in which to perform the update.
+     */
+    function pathUpdate(t)
+    {
+      let g = d3.selectAll(".foreground g"),
+      gd = g.selectAll("path").data(path);
+      gd.exit().remove();
+      gd.enter().append("path");
+      if (t === undefined) {t = d3; }
+      t.selectAll(".foreground path").attr("d", function(d) {return d; });
+      d3.selectAll(".foreground > g > path")
+        .on("mouseover",handleMouseOver)
+        .on("mouseout",handleMouseOut);
     }
 
     function dragended(/*d*/) {
