@@ -83,6 +83,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
   can adjust space assigned to each linkageGroup (thumb drag) 
 */
 
+    const dragTransitionTime = 1500;  // milliseconds
+
     /// width in pixels of the axisHeaderText, which is
     /// 30 chars when the map name contains the 24 hex char mongodb numeric id,
     /// e.g. 58a29c715a9b3a3d3242fe70_MyChr
@@ -154,6 +156,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         // brushActives = [],
         /** Extent of current brush (applied to y axis of a map). */
         brushExtents = [];
+    /** guard against repeated drag event before previous dragged() has returned. */
+    let dragging = 0;
 
     /**
      * @return true if a is in the closed interval range[]
@@ -546,7 +550,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         console.log("dropIn", released, okStacks);
         okStacks.forEach(function(s) { 
           s.releasePortion(released);
-          s.calculatePositions(); });
+          s.calculatePositions();
+          s.redraw(); });
         /** the inserted map */
         let inserted = this.maps[insertIndex];
         inserted.stack = this;
@@ -580,6 +585,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      *
      * re-allocate portions among remaining maps in stack
      * (retain ratio among existing maps in stack)
+     *
+     * .dropIn() and .dropOut() both affect 2 stacks : the map is dragged from
+     * one stack (the term 'source' stack is used in comments to refer this) to
+     * another (call this the 'destination' stack). .dropOut() may create a new
+     * stack for the destination.
      *
      * @param mapName name of map to move
      */
@@ -705,19 +715,22 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     Stack.prototype.redraw = function ()
     {
-      let t = d3.transition().duration(500);
+      let t = d3.transition().duration(dragTransitionTime);
       /** to make this work, would have to reparent the maps - what's the benefit
       let ts = 
         t.selectAll("g.stack#" + eltId(this.stackID) + " > .map");
-      console.log("redraw", this.stackID, ts._groups.length, ts);
        */
+      console.log("redraw() stackID:", this.stackID);
+      let this_Stack = this;  // only used in trace
 
       this.maps.forEach(
         function (m, index)
         {
           let ts = 
             t.selectAll(".map#" + eltId(m.mapName));
-          (ts._groups.length === 1) || console.log("redraw", this, m, index, m.mapName);
+          ((ts._groups.length === 1) && console.log(ts._groups[0], ts._groups[0][0])) 
+            || console.log("redraw", this_Stack, m, index, m.mapName);
+          console.log("redraw", m.mapName);
           // args passed to fn are data, index, group;  `this` is node (SVGGElement)
           ts.attr("transform", Stack.prototype.mapTransform);
         });
@@ -1035,13 +1048,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
       function dropTargetMouseOver(data, index, group){
         console.log("dropTargetMouseOver() ", this, data, index, group);
-        console.log(data);
         this.classList.add("dragHover");
         storeDropTarget(data, this.classList);
       }
       function dropTargetMouseOut(d){
         console.log("dropTargetMouseOut", d);
-        console.log(d);
         this.classList.remove("dragHover");
         currentDropTarget = undefined;
       }
@@ -1592,11 +1603,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** @param  d (datum) name of map being dragged.
      */
     function dragged(d) {
+      if (dragging++ > 0) { console.log("dragged drop"); return;}
       // if cursor is in top or bottom dropTarget-s, stack the map,
       // otherwise set map x to cursor x, and sort.
       let dropTargetEnd = currentDropTarget && currentDropTarget.classList.contains("end");
 
-      const dropDelaySeconds = 3, milli = 1000;
+      const dropDelaySeconds = 0.5, milli = 1000;
       /** currentDrop references the mapName being dragged and the stack it is dropped into or out of. */
       let currentDrop = Stack.prototype.currentDrop,
       now = Date.now();
@@ -1617,6 +1629,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           let stack = stacks[zoneParent.stackIndex];
           if (! stack.contains(d))
           {
+            /*  .dropIn() and .dropOut() don't redraw the stacks they affect, that is done here,
+             * with this exception : .dropIn() redraws the source stack of the map.
+             */
             stack.dropIn(d, zoneParent.mapIndex, top);
             // number of stacks has decreased - not essential to recalc the domain.
             Stack.log();
@@ -1638,6 +1653,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             stack.dropOut(d);
             Stack.log();
             stack.redraw();
+            /* if map is dropped out to a new stack, that is not redrawn until dragended().
+             */
             /* if d is not in currentDrop.stack, dropOut() will return false; in
              * that case redraw() may have no effect.
              */
@@ -1676,6 +1693,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       d3.select(this).select(".brush").call(y[d].brush.move,null);
       //Remove all highlighted Markers.
       svgContainer.selectAll("circle").remove();
+      dragging--;
     }
 
     function dragended(/*d*/) {
@@ -1699,7 +1717,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
       }
       
-      let t = d3.transition().duration(500);
+      let t = d3.transition().duration(dragTransitionTime);
       t.selectAll(".map").attr("transform", Stack.prototype.mapTransform);
       t.selectAll(".foreground path").attr("d", function(d) { return d; });
       d3.select(this).classed("active", false);
