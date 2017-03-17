@@ -274,6 +274,33 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       Stack.prototype.add = Stack_add;
       this.add(stackable);
     };
+    /**  Wrapper for new Stack() : implement a basic object re-use.
+     *
+     * The motive is that as a map is dragged through a series of stacks, it is
+     * removed from its source stack, inserted into a destination stack, then as
+     * cursor drag may continue, removed from that stack, and may finally be
+     * moved into a new (empty) stack (dropOut()).  The abandoned empty stacks
+     * are not deleted until dragended(), to avoid affecting the x positions of
+     * the non-dragged stacks.  These could be collected, but it is simple to
+     * re-use them if/when the map is dropped-out.  By this means, there is at
+     * most 1 abandoned stack to be deleted at the end of the drag; this is
+     * stacks.toDeleteAfterDrag.
+     */
+    function new_Stack(stackable) {
+      let s;
+      if (stacks.toDeleteAfterDrag !== undefined)
+      {
+        s = stacks.toDeleteAfterDrag;
+        stacks.toDeleteAfterDrag = undefined;
+        s.add(stackable);
+      }
+      else
+      {
+        s = new Stack(stackable);
+        stacks.append(s);
+      }
+      return s;
+    }
     /** undefined, or references to the map (Stacked) which is currently dropped
      * and the Stack which it is dropped into (dropIn) or out of (dropOut).
      * properties :
@@ -309,7 +336,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     };
     Stack.prototype.log = function ()
     {
-      console.log("{maps=[");
+      console.log("{stackID=", this.stackID, ", maps=[");
       this.maps.forEach(function(s){s.log();});
       console.log("] length=", this.maps.length, "}");
     };
@@ -481,8 +508,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       {
         if (toStack === undefined)
         {
-          toStack = new Stack(s);
-          stacks.append(toStack);
+          toStack = new_Stack(s);
           /* Need to call .calculatePositions() for this and toStack;
            * That responsibility is left with the caller, except that
            * caller doesn't have toStack, so .move() looks after it.
@@ -493,7 +519,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           toStack.insert(s, insertIndex);
         result = [];
         if (this.empty())
-          this.delete();
+        {
+          // this.delete();
+          /* Defer delete because when it is deleted :
+           * If source stack has only 1 map, then dropOut() deletes the stack
+           * and stacks to its right shift left in the array to fill the gap;
+           * That causes : destination stack moves to x of source stack when
+           * dragging to the right, iff the source stack has only 1 map.
+           * That behaviour should occur after dragended, not during.
+           */
+          stacks.toDeleteAfterDrag = this;
+        }
         else
           result.push(this);
         me.send('updatedStacks', stacks);
@@ -1752,6 +1788,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     function dragended(/*d*/) {
       console.log("dragended");
+
+      if (stacks.toDeleteAfterDrag !== undefined)
+      {
+        stacks.toDeleteAfterDrag.delete();
+        stacks.toDeleteAfterDrag = undefined;
+      }
 
       // in the case of dropOut(),
       // number of stacks has increased - need to recalc the domain, so that
