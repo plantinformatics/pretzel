@@ -801,7 +801,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     //d3 v4 scalePoint replace the rangePoint
     //let x = d3.scaleOrdinal().domain(mapIDs).range([0, w]);
     function xScale() {
-      let stackDomain = Array.from(stacks.stackIDs()); // was mapIDs
+      let stackDomain = Array.from(stacks.keys()); // was mapIDs
       console.log("xScale()", stackDomain);
       return d3.scalePoint().domain(stackDomain).range(axisXRange);
     }
@@ -868,8 +868,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       let i = Stack.prototype.stackIndex(mapID);
       if (i === -1) { console.log("x()", mapID, i); debugger; }
-      let stackID = stacks[i].stackID;
-      return xs(stackID);
+      return xs(i);
     }
     collateO();
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
