@@ -195,6 +195,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
     /*------------------------------------------------------------------------*/
+    /** @return x rounded to 2 decimal places
+     */
+    function round_2(num)
+    {
+      /* refn: answer/comments by ustasb, mrkschan, Alex_Nabu at
+       * http://stackoverflow.com/users/1575238/
+       * stackoverflow.com/questions/11832914/round-to-at-most-2-decimal-places
+       * http://stackoverflow.com/questions/588004/is-javascripts-floating-point-math-broken
+       */
+      return Math.round((num + 0.00001) * 100) / 100;
+    }
+    /*------------------------------------------------------------------------*/
     function Stacked(mapName, portion) {
       this.mapName = mapName;
       /** Portion of the Stack height which this map axis occupies. */
@@ -214,19 +226,23 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     };
     Stacked.prototype.mapName = undefined;
     Stacked.prototype.portion = undefined;
-    function positionToString(p) { return (p === undefined) ? "" : "[" + p[0] + ", " + p[1] + "]"; }
+    function positionToString(p)
+    {
+      return (p === undefined) ? ""
+        : "[" + round_2(p[0]) + ", " + round_2(p[1]) + "]";
+    }
     Stacked.prototype.toString = function ()
     {
       let a =
-        [ "{mapName=", this.mapName, ", portion=" + this.portion,
+        [ "{mapName=", this.mapName, ", portion=" + round_2(this.portion),
           positionToString(this.position) + this.stack.length, "}" ];
       return a.join("");
     };
     Stacked.prototype.log = function ()
     {
       console.log
-      ("{mapName=", this.mapName, ", portion=", this.portion,
-       this.position, this.stack,  "}");
+      ("{mapName=", this.mapName, ", portion=", round_2(this.portion),
+       positionToString(this.position), this.stack,  "}");
     };
     Stacked.mapName_match =
       function (mapName)
@@ -315,6 +331,15 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       stacks = stacks.insertAt(i, stack);
     };
+    /** stackID is used as the domain of the X axis. */
+    stacks.stackIDs = function()
+    {
+      let sis = stacks.map(
+        function (s) {
+          return s.stackID;
+        });
+      return sis;
+    };
     /** Sort the stacks by the x position of their maps. */
     stacks.sortLocation = function()
     {
@@ -334,6 +359,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     Stack.prototype.stackIndex = function (mapID)
     {
       let map = maps[mapID], s = map.stack, i = stacks.indexOf(s);
+      let j;
+      if ((i === -1) || (stacks[i] !== s) || (j=s.maps.indexOf(map), s.maps[j].mapName != mapID))
+      {
+        console.log("stackIndex", mapID, i, map, s, j, s.maps[j]);
+        debugger;
+      }
       return i;
     };
     Stack.prototype.add = function(stackable)
@@ -699,7 +730,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           "translate(" + xVal, yOffsetText, ")",
           scaleText
         ].join("");
-      // console.log("mapTransform", this, transform);
+      console.log("mapTransform", this, transform);
       return transform;
     };
     /** Get stack of map, return transform. */
@@ -718,6 +749,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     Stack.prototype.redraw = function ()
     {
+      const trace_stack_redraw = 0;
       let t = d3.transition().duration(dragTransitionTime);
       /** to make this work, would have to reparent the maps - what's the benefit
       let ts = 
@@ -731,9 +763,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         {
           let ts = 
             t.selectAll(".map#" + eltId(m.mapName));
-          ((ts._groups.length === 1) && console.log(ts._groups[0], ts._groups[0][0])) 
-            || console.log("redraw", this_Stack, m, index, m.mapName);
-          console.log("redraw", m.mapName);
+          if (trace_stack_redraw > 0)
+          ((ts._groups.length === 1) && console.log(ts._groups[0], ts._groups[0][0]))
+            || ((trace_stack_redraw > 1) && console.log("redraw", this_Stack, m, index, m.mapName));
+          // console.log("redraw", m.mapName);
           // args passed to fn are data, index, group;  `this` is node (SVGGElement)
           ts.attr("transform", Stack.prototype.mapTransform);
         });
@@ -768,7 +801,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     //d3 v4 scalePoint replace the rangePoint
     //let x = d3.scaleOrdinal().domain(mapIDs).range([0, w]);
     function xScale() {
-      let stackDomain = Array.from(stacks.keys()); // was mapIDs
+      let stackDomain = Array.from(stacks.stackIDs()); // was mapIDs
       console.log("xScale()", stackDomain);
       return d3.scalePoint().domain(stackDomain).range(axisXRange);
     }
@@ -835,7 +868,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       let i = Stack.prototype.stackIndex(mapID);
       if (i === -1) { console.log("x()", mapID, i); debugger; }
-      return xs(i);
+      let stackID = stacks[i].stackID;
+      return xs(stackID);
     }
     collateO();
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
