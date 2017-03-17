@@ -804,7 +804,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             || ((trace_stack_redraw > 1) && console.log("redraw", this_Stack, m, index, m.mapName));
           // console.log("redraw", m.mapName);
           // args passed to fn are data, index, group;  `this` is node (SVGGElement)
-          ts.attr("transform", Stack.prototype.mapTransform);
+          ts.attr("transform", Stack.prototype.mapTransformO);
         });
 
     };
@@ -1025,7 +1025,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         .enter().append("g")
         .attr("class", "map")
         .attr("id", function(d) { return eltId(d); })
-        .attr("transform", Stack.prototype.mapTransform)
+        .attr("transform", Stack.prototype.mapTransformO)
         .call(d3.drag()
           .subject(function(d) { return {x: x(d)}; }) //origin replaced by subject
           .on("start", dragstarted) //start instead of dragstart in v4. 
@@ -1814,7 +1814,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       }
       
       let t = d3.transition().duration(dragTransitionTime);
-      t.selectAll(".map").attr("transform", Stack.prototype.mapTransform);
+      t.selectAll(".map").attr("transform", Stack.prototype.mapTransformO);
       t.selectAll(".foreground path").attr("d", function(d) { return d; });
       d3.select(this).classed("active", false);
       svgContainer.classed("axisDrag", false);
