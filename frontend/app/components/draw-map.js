@@ -195,6 +195,21 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
     /*------------------------------------------------------------------------*/
+    /** Signal the start or end of a drag transition, i.e. a map is dragged from
+     * one Stack to another - dropIn() or dropOut().
+     * During this transition, 
+     * @param start signifies start (true) or end (false) of drag transition.
+     */
+    function dragTransition(start)
+    {
+      svgContainer.classed("dragTransition", start);
+    }
+    function dragTransitionEnd(data, index, group)
+    {
+      console.log("dragTransitionEnd", this, data, index, group);
+      dragTransition(false);
+    }
+    /*------------------------------------------------------------------------*/
     /** @return x rounded to 2 decimal places
      */
     function round_2(num)
@@ -207,6 +222,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return Math.round((num + 0.00001) * 100) / 100;
     }
     /*------------------------------------------------------------------------*/
+    const trace_stack = 1;
     function Stacked(mapName, portion) {
       this.mapName = mapName;
       /** Portion of the Stack height which this map axis occupies. */
@@ -344,6 +360,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     stacks.log = 
     Stack.log = function()
     {
+      if (trace_stack < 2) return;
       console.log("{stacks=[");
       stacks.forEach(function(s){s.log();});
       console.log("] length=", stacks.length, "}");
@@ -787,6 +804,15 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       const trace_stack_redraw = 0;
       let t = d3.transition().duration(dragTransitionTime);
+      /* Currently redraw() is used just after dropIn,Out(), and hence is
+       * particular to the drag transition, but the transition object t and
+       * dragTransition() could be factored out of redraw() and passed in as an
+       * arg.
+       */
+      /* tried "end", "start", "end.Dav127".  only "start" works.  refn:
+       * https://github.com/d3/d3-transition/blob/master/README.md#transition_on
+       */
+      t.on("end", dragTransitionEnd);
       /** to make this work, would have to reparent the maps - what's the benefit
       let ts = 
         t.selectAll("g.stack#" + eltId(this.stackID) + " > .map");
@@ -1711,6 +1737,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           let stack = stacks[zoneParent.stackIndex];
           if (! stack.contains(d))
           {
+            dragTransition(true);
             /*  .dropIn() and .dropOut() don't redraw the stacks they affect, that is done here,
              * with this exception : .dropIn() redraws the source stack of the map.
              */
@@ -1732,6 +1759,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           }
           if (stack.maps.length > 1)
           {
+            dragTransition(true);
             stack.dropOut(d);
             Stack.log();
             stack.redraw();
