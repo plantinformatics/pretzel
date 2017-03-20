@@ -1069,7 +1069,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
 	  function DropTarget() {
       let size = {
-      w : Math.min(axisHeaderTextLen, viewPort.w/7),
+      w : Math.min(axisHeaderTextLen, viewPort.w/15),
       // height of dropTarget at the end of an axis
       h : Math.min(80, viewPort.h/10),
       // height of dropTarget covering the adjacent ends of two stacked axes
