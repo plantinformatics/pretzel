@@ -111,6 +111,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     graphDim = {w: w*0.6, h: h - 2 * dropTargetYMargin - mapSelectionHeight - mapNameHeight - selectedMarkersTextHeight},
     /// yRange is the axis length
     yRange = graphDim.h - 40,
+    /** X Distance user is required to drag axis before it drops out of Stack.
+     * See also DropTarget.size.w */
+    xDropOutDistance = viewPort.w/15,
     /// left and right limits of dragging the axes / chromosomes / linkage-groups.
     dragLimit = {min:-50, max:graphDim.w+70};
     console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
@@ -617,8 +620,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * @param mapName name of map to move
      * @param insertIndex position in stack to insert at.
      * @param true for the DropTarget at the top of the axis, false for bottom.
+     * @param transition  make changes within this transition
      */
-    Stack.prototype.dropIn = function (mapName, insertIndex, top)
+    Stack.prototype.dropIn = function (mapName, insertIndex, top, transition)
     {
       console.log("dropIn", this, mapName, insertIndex, top);
       // can now use  maps[mapName].stack
@@ -646,7 +650,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         okStacks.forEach(function(s) { 
           s.releasePortion(released);
           s.calculatePositions();
-          s.redraw(); });
+          s.redraw(transition); });
         /** the inserted map */
         let inserted = this.maps[insertIndex];
         inserted.stack = this;
@@ -1078,6 +1082,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
 	  function DropTarget() {
       let size = {
+        /** Avoid overlap, assuming about 5-7 stacks. */
       w : Math.min(axisHeaderTextLen, viewPort.w/15),
       // height of dropTarget at the end of an axis
       h : Math.min(80, viewPort.h/10),
@@ -1724,6 +1729,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function dragged(d) {
       /** Transition created to manage any changes. */
       let t;
+      /** X distance from start of drag */
+      let xDistance;
       if (dragging++ > 0) { console.log("dragged drop"); return;}
       if (svgContainer.classed("dragTransition"))
       {
@@ -1740,6 +1747,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let currentDrop = Stack.prototype.currentDrop,
       now = Date.now();
       // console.log("dragged", currentDrop, d);
+      /** true iff currentDrop is recent */
       let recentDrop = currentDrop && (now - currentDrop.dropTime < dropDelaySeconds * milli);
 
       if (false && recentDrop && dropTargetEnd)
@@ -1760,7 +1768,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             /*  .dropIn() and .dropOut() don't redraw the stacks they affect, that is done here,
              * with this exception : .dropIn() redraws the source stack of the map.
              */
-            stack.dropIn(d, zoneParent.mapIndex, top);
+            stack.dropIn(d, zoneParent.mapIndex, top, t);
             // number of stacks has decreased - not essential to recalc the domain.
             Stack.log();
             stack.redraw(t);
@@ -1769,7 +1777,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         }
         // For the case : drag ended in a middle zone (or outside any DropTarget zone)
         // else if d is in a >1 stack then remove it else move the stack
-        else if (! currentDrop || !currentDrop.out)
+        else if ((! currentDrop || !currentDrop.out)
+          && ((xDistance = Math.abs(d3.event.x - d3.event.subject.fx)) > xDropOutDistance))
         {
           let map = maps[d], stack = map.stack;
           if (currentDrop && currentDrop.stack !== stack)
@@ -1818,8 +1827,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           /* if (t === undefined)
             t = dragTransitionNew(); */
           console.log("st0", st0._groups[0].length, st0._groups[0][0]);
-          let st = st0.transition(t);
-          st.duration(dragTransitionTime);
+          let st = st0.transition();  // t
+          // st.duration(dragTransitionTime);
           st.attr("transform", Stack.prototype.mapTransformO);
           // zoomed effects transform via path() : mapTransform.
           pathUpdate(st);
