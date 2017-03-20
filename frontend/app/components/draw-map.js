@@ -205,6 +205,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       dragTransition(true);
       let t = d3.transition().duration(dragTransitionTime);
+      t.ease(d3.easeCubic);
       return t;
     }
     /** Signal the start or end of a drag transition, i.e. a map is dragged from
@@ -827,7 +828,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       /* tried "end", "start", "end.Dav127".  only "start" works.  refn:
        * https://github.com/d3/d3-transition/blob/master/README.md#transition_on
        */
-      t.on("end", dragTransitionEnd);
+      t.on("end interrupt", dragTransitionEnd);
       /** to make this work, would have to reparent the maps - what's the benefit
       let ts = 
         t.selectAll("g.stack#" + eltId(this.stackID) + " > .map");
