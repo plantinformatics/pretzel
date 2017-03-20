@@ -1,5 +1,12 @@
 # Dav127
-A Sails/Ember/D3 framework to display and interactively navigate complex datasets
+An Express/Ember/D3 framework to display and interactively navigate complex datasets
+
+Developed by
+- AgriBio, Department of Economic Development, Jobs, Transport and Resources (DEDJTR), Victoria,
+  Australia
+- CSIRO, Canberra, Australia
+
+Funded by the Grains Research Development Corporation (GRDC).
 
 <img
 src="https://cloud.githubusercontent.com/assets/20571319/19416034/f1ee92b8-93d0-11e6-94a8-c18018ba40dc.png" align="center">
