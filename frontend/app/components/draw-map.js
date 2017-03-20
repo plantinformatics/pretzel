@@ -202,11 +202,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function dragTransition(start)
     {
+      if (start)
+        console.log("dragTransition(start)");
       svgContainer.classed("dragTransition", start);
     }
     function dragTransitionEnd(data, index, group)
     {
-      console.log("dragTransitionEnd", this, data, index, group);
+      console.log("dragTransitionEnd", /*this,*/ data, index, group);
       dragTransition(false);
     }
     /*------------------------------------------------------------------------*/
@@ -1712,6 +1714,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function dragged(d) {
       if (dragging++ > 0) { console.log("dragged drop"); return;}
+      if (svgContainer.classed("dragTransition"))
+      {
+        console.log("dragged() dragTransition");
+        dragging--;
+        return;
+      }
       // if cursor is in top or bottom dropTarget-s, stack the map,
       // otherwise set map x to cursor x, and sort.
       let dropTargetEnd = currentDropTarget && currentDropTarget.classList.contains("end");
@@ -1850,6 +1858,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
       d3.event.subject.fx = null;
+
+      if (svgContainer.classed("dragTransition"))
+      {
+        console.log("dragended() dragTransition, end");
+        dragTransition(false);
+      }
     }
     
 

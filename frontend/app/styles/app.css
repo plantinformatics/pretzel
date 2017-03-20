@@ -102,6 +102,9 @@ div.toolTip{
 .axisDrag .stackDropTarget.current {
     display : inherit;
 }
+.dragTransition .stackDropTarget {
+    pointer-events: none !important;
+}
 .stackDropTarget {
     display : none;
     pointer-events: none;
