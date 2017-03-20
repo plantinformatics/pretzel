@@ -195,6 +195,15 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
     /*------------------------------------------------------------------------*/
+    /** Set svgContainer.class .dragTransition to make drop zones insensitive during drag transition.
+     * @return new drag transition
+     */
+    function dragTransitionNew()
+    {
+      dragTransition(true);
+      let t = d3.transition().duration(dragTransitionTime);
+      return t;
+    }
     /** Signal the start or end of a drag transition, i.e. a map is dragged from
      * one Stack to another - dropIn() or dropOut().
      * During this transition, 
@@ -801,11 +810,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return m.mapTransformO();
     };
     /** For each map in this Stack, redraw axis, brush, foreground paths.
+     * @param t transition in which to make changes
      */
-    Stack.prototype.redraw = function ()
+    Stack.prototype.redraw = function (t)
     {
       const trace_stack_redraw = 0;
-      let t = d3.transition().duration(dragTransitionTime);
       /* Currently redraw() is used just after dropIn,Out(), and hence is
        * particular to the drag transition, but the transition object t and
        * dragTransition() could be factored out of redraw() and passed in as an
@@ -1713,6 +1722,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** @param  d (datum) name of map being dragged.
      */
     function dragged(d) {
+      /** Transition created to manage any changes. */
+      let t;
       if (dragging++ > 0) { console.log("dragged drop"); return;}
       if (svgContainer.classed("dragTransition"))
       {
@@ -1745,14 +1756,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           let stack = stacks[zoneParent.stackIndex];
           if (! stack.contains(d))
           {
-            dragTransition(true);
+            t = dragTransitionNew();
             /*  .dropIn() and .dropOut() don't redraw the stacks they affect, that is done here,
              * with this exception : .dropIn() redraws the source stack of the map.
              */
             stack.dropIn(d, zoneParent.mapIndex, top);
             // number of stacks has decreased - not essential to recalc the domain.
             Stack.log();
-            stack.redraw();
+            stack.redraw(t);
           }
           // set x of dropped mapID
         }
@@ -1767,10 +1778,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           }
           if (stack.maps.length > 1)
           {
-            dragTransition(true);
+            t = dragTransitionNew();
             stack.dropOut(d);
             Stack.log();
-            stack.redraw();
+            stack.redraw(t);
             /* if map is dropped out to a new stack, that is not redrawn until dragended().
              */
             /* if d is not in currentDrop.stack, dropOut() will return false; in
@@ -1795,14 +1806,30 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         else if (o[d] > dragLimit.max) { o[d] = dragLimit.max; }
       }
       //console.log(mapIDs + " " + o[d]);
-      d3.select(this).attr("transform", Stack.prototype.mapTransformO);
-      // zoomed effects transform via path() : mapTransform.
-      pathUpdate(undefined);
-      //Do we need to keep the brushed region when we drag the map? probably not.
-      //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
-      d3.select(this).select(".brush").call(y[d].brush.move,null);
-      //Remove all highlighted Markers.
-      svgContainer.selectAll("circle").remove();
+      if (this === undefined)
+      {
+        console.log("dragged this undefined", d);
+      }
+      else
+      {
+        let st0 = d3.select(this);
+        if (! st0.empty())
+        {
+          /* if (t === undefined)
+            t = dragTransitionNew(); */
+          console.log("st0", st0._groups[0].length, st0._groups[0][0]);
+          let st = st0.transition(t);
+          st.duration(dragTransitionTime);
+          st.attr("transform", Stack.prototype.mapTransformO);
+          // zoomed effects transform via path() : mapTransform.
+          pathUpdate(st);
+          //Do we need to keep the brushed region when we drag the map? probably not.
+          //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
+          st0.select(".brush").call(y[d].brush.move,null);
+          //Remove all highlighted Markers.
+          svgContainer.selectAll("circle").remove();
+        }
+      }
       dragging--;
     }
 
