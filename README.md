@@ -1,10 +1,10 @@
 # Dav127
-An Express/Ember/D3 framework to display and interactively navigate complex datasets
+An Express/Ember/D3 framework to display and interactively navigate complex datasets.
 
 Developed by
 - AgriBio, Department of Economic Development, Jobs, Transport and Resources (DEDJTR), Victoria,
-  Australia
-- CSIRO, Canberra, Australia
+  Australia;
+- CSIRO, Canberra, Australia.
 
 Funded by the Grains Research Development Corporation (GRDC).
 
