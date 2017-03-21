@@ -851,7 +851,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
            * dragged.  Instead the dragged object will closely track the cursor;
            * may later use a slight / short transition to smooth noise in
            * cursor.  */
-          let t_ = (Stack.prototype.currentDrag == m) ? d3 : t;
+          let t_ = (Stack.prototype.currentDrag == m.mapName) ? d3 : t;
+          // console.log("redraw", Stack.prototype.currentDrag, m.mapName, Stack.prototype.currentDrag == m.mapName);
           let ts = 
             t_.selectAll(".map#" + eltId(m.mapName));
           if (trace_stack_redraw > 0)
@@ -1200,7 +1201,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     [true, false].forEach(function (i) {
        dropTarget.add(i);
-      dropTarget.addMiddle(i);
+      // dropTarget.addMiddle(i);
     });
 
 
@@ -1747,85 +1748,83 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       /** X distance from start of drag */
       let xDistance;
       if (dragging++ > 0) { console.log("dragged drop"); return;}
-      if (svgContainer.classed("dragTransition"))
+      if (! svgContainer.classed("dragTransition"))
       {
-        console.log("dragged() dragTransition");
-        dragging--;
-        return;
-      }
-      // if cursor is in top or bottom dropTarget-s, stack the map,
-      // otherwise set map x to cursor x, and sort.
-      let dropTargetEnd = currentDropTarget && currentDropTarget.classList.contains("end");
+        // if cursor is in top or bottom dropTarget-s, stack the map,
+        // otherwise set map x to cursor x, and sort.
+        let dropTargetEnd = currentDropTarget && currentDropTarget.classList.contains("end");
 
-      const dropDelaySeconds = 0.5, milli = 1000;
-      /** currentDrop references the mapName being dragged and the stack it is dropped into or out of. */
-      let currentDrop = Stack.prototype.currentDrop,
-      /** Use the start of the drag, or the most  */
-      xDistanceRef = (currentDrop && currentDrop.x) ? currentDrop.x.stack : d3.event.subject.fx,
-      now = Date.now();
-      // console.log("dragged xDistanceRef", d3.event.x, currentDrop && currentDrop.x, xDistanceRef);
-      // console.log("dragged", currentDrop, d);
-      /** true iff currentDrop is recent */
-      let recentDrop = currentDrop && (now - currentDrop.dropTime < dropDelaySeconds * milli);
+        const dropDelaySeconds = 0.5, milli = 1000;
+        /** currentDrop references the mapName being dragged and the stack it is dropped into or out of. */
+        let currentDrop = Stack.prototype.currentDrop,
+        /** Use the start of the drag, or the most  */
+        xDistanceRef = (currentDrop && currentDrop.x) ? currentDrop.x.stack : d3.event.subject.fx,
+        now = Date.now();
+        // console.log("dragged xDistanceRef", d3.event.x, currentDrop && currentDrop.x, xDistanceRef);
+        // console.log("dragged", currentDrop, d);
+        /** true iff currentDrop is recent */
+        let recentDrop = currentDrop && (now - currentDrop.dropTime < dropDelaySeconds * milli);
 
-      if (false && recentDrop && dropTargetEnd)
-      {
-        console.log("dragged", currentDrop, currentDropTarget, now - currentDrop.dropTime);
-      }
-      if (! recentDrop)
-      {
-        if (dropTargetEnd)
+        if (false && recentDrop && dropTargetEnd)
         {
-          let targetMapName = currentDropTarget.mapName,
-          top = currentDropTarget.classList.contains("top"),
-          zoneParent = Stack.mapStackIndex(targetMapName);
-          let stack = stacks[zoneParent.stackIndex];
-          if (! stack.contains(d))
-          {
-            t = dragTransitionNew();
-            /*  .dropIn() and .dropOut() don't redraw the stacks they affect, that is done here,
-             * with this exception : .dropIn() redraws the source stack of the map.
-             */
-            stack.dropIn(d, zoneParent.mapIndex, top, t);
-            // number of stacks has decreased - not essential to recalc the domain.
-            Stack.log();
-            stack.redraw(t);
-          }
-          // set x of dropped mapID
+          console.log("dragged", currentDrop, currentDropTarget, now - currentDrop.dropTime);
         }
-        // For the case : drag ended in a middle zone (or outside any DropTarget zone)
-        // else if d is in a >1 stack then remove it else move the stack
-        else if ((! currentDrop || !currentDrop.out)
-          && ((xDistance = Math.abs(d3.event.x - xDistanceRef)) > xDropOutDistance))
+        if (! recentDrop)
         {
-          let map = maps[d], stack = map.stack;
-          if (currentDrop && currentDrop.stack !== stack)
+          if (dropTargetEnd)
           {
-            console.log("dragged", d, currentDrop.stack, stack);
+            let targetMapName = currentDropTarget.mapName,
+            top = currentDropTarget.classList.contains("top"),
+            zoneParent = Stack.mapStackIndex(targetMapName);
+            let stack = stacks[zoneParent.stackIndex];
+            if (! stack.contains(d))
+            {
+              t = dragTransitionNew();
+              /*  .dropIn() and .dropOut() don't redraw the stacks they affect, that is done here,
+               * with this exception : .dropIn() redraws the source stack of the map.
+               */
+              stack.dropIn(d, zoneParent.mapIndex, top, t);
+              // number of stacks has decreased - not essential to recalc the domain.
+              Stack.log();
+              stack.redraw(t);
+            }
+            // set x of dropped mapID
           }
-          if (stack.maps.length > 1)
+          // For the case : drag ended in a middle zone (or outside any DropTarget zone)
+          // else if d is in a >1 stack then remove it else move the stack
+          else if ((! currentDrop || !currentDrop.out)
+                   && ((xDistance = Math.abs(d3.event.x - xDistanceRef)) > xDropOutDistance))
           {
-            t = dragTransitionNew();
-            stack.dropOut(d);
-            Stack.log();
-            stack.redraw(t);
-            /* if map is dropped out to a new stack, that is not redrawn until dragended().
-             */
-            /* if d is not in currentDrop.stack, dropOut() will return false; in
-             * that case redraw() may have no effect.
-             */
-            /* Following code will set o[d] and sort the Stack into location. */
+            let map = maps[d], stack = map.stack;
+            if (currentDrop && currentDrop.stack !== stack)
+            {
+              console.log("dragged", d, currentDrop.stack, stack);
+            }
+            if (stack.maps.length > 1)
+            {
+              t = dragTransitionNew();
+              stack.dropOut(d);
+              Stack.log();
+              stack.redraw(t);
+              /* if map is dropped out to a new stack, that is not redrawn until dragended().
+               */
+              /* if d is not in currentDrop.stack, dropOut() will return false; in
+               * that case redraw() may have no effect.
+               */
+              /* Following code will set o[d] and sort the Stack into location. */
+            }
           }
         }
-      }
         /*
-        else
-          console.log("no currentDrop", d); */
+         else
+         console.log("no currentDrop", d); */
 
-      // console.log("dragged", dropTargetEnd, currentDropTarget, d);
+        // console.log("dragged", dropTargetEnd, currentDropTarget, d);
+      }
 
-      if (! dropTargetEnd)
+      // if (! dropTargetEnd)
       {
+        // console.log("dragged o[d]", o[d], d3.event.x);
         o[d] = d3.event.x;
         // Now impose boundaries on the x-range you can drag.
         // The boundary values are in dragLimit, defined previously.
@@ -1838,8 +1837,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         console.log("dragged this undefined", d);
       }
       else
-      {
-        let st0 = d3.select(this);
+        draggedAxisRedraw(this, d);
+
+      dragging--;
+    }
+
+    /** Redraw the map/axis which is being dragged.
+     * @param mapElt  node/DOM element corresponding of map. this of dragged()
+     * @param d mapName
+     */
+    function draggedAxisRedraw(mapElt, d)
+    {
+        let st0 = d3.select(mapElt);
         if (! st0.empty())
         {
           /* if (t === undefined)
@@ -1858,8 +1867,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           svgContainer.selectAll("circle").remove();
         }
       }
-      dragging--;
-    }
+
 
     /** Update the paths connecting markers present in adjacent stacks.
      * @param t undefined, or a d3 transition in which to perform the update.
@@ -1913,6 +1921,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
       d3.event.subject.fx = null;
+      Stack.prototype.currentDrag = undefined;
 
       if (svgContainer.classed("dragTransition"))
       {
