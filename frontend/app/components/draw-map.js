@@ -343,6 +343,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * static
      */
     Stack.prototype.currentDrop = undefined;
+    /** undefined, or name of the map which is currently being dragged. */
+    Stack.prototype.currentDrag = undefined;
     /** @return true if this.maps[] is empty. */
     Stack.prototype.empty = function ()
     {
@@ -845,8 +847,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       this.maps.forEach(
         function (m, index)
         {
+          /** Don't use a transition for the map/axis which is currently being
+           * dragged.  Instead the dragged object will closely track the cursor;
+           * may later use a slight / short transition to smooth noise in
+           * cursor.  */
+          let t_ = (Stack.prototype.currentDrag == m) ? d3 : t;
           let ts = 
-            t.selectAll(".map#" + eltId(m.mapName));
+            t_.selectAll(".map#" + eltId(m.mapName));
           if (trace_stack_redraw > 0)
           ((ts._groups.length === 1) && console.log(ts._groups[0], ts._groups[0][0]))
             || ((trace_stack_redraw > 1) && console.log("redraw", this_Stack, m, index, m.mapName));
@@ -1701,6 +1708,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     function dragstarted(start_d /*, start_index, start_group*/) {
       Stack.prototype.currentDrop = undefined;
+      Stack.prototype.currentDrag = start_d;
       console.log("dragstarted", this, start_d/*, start_index, start_group*/);
       let cl = {/*self: this,*/ d: start_d/*, index: start_index, group: start_group, mapIDs: mapIDs*/};
       svgContainer.classed("axisDrag", true);
@@ -1837,11 +1845,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           /* if (t === undefined)
             t = dragTransitionNew(); */
           // console.log("st0", st0._groups[0].length, st0._groups[0][0]);
-          let st = st0.transition();  // t
+          let st = st0; //.transition();  // t
+          // st.ease(d3.easeQuadOut);
           // st.duration(dragTransitionTime);
           st.attr("transform", Stack.prototype.mapTransformO);
           // zoomed effects transform via path() : mapTransform.
-          pathUpdate(st);
+          pathUpdate(undefined/*st*/);
           //Do we need to keep the brushed region when we drag the map? probably not.
           //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
           st0.select(".brush").call(y[d].brush.move,null);
