@@ -918,7 +918,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let xVal = checkIsNumber(o[this.mapName]);
       let transform =
         [
-          "translate(" + xVal, yOffsetText, ")",
+          " translate(" + xVal, yOffsetText, ")",
           scaleText
         ].join("");
       // console.log("mapTransformO", this, transform);
@@ -985,7 +985,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       // if called before y is set up, do nothing.
       if (y && y[m.mapName])
-        y[m.mapName].range([0, m.yRange()]);
+      {
+        let myRange = m.yRange();
+        // console.log("updateRange", m.mapName, myRange);
+        y[m.mapName].range([0, myRange]);
+      }
     }
 
     mapIDs.forEach(function(d) {
@@ -1385,6 +1389,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function path(d) { // d is a marker
         let r = [];
+      // TODO : discard markers of the paths which change
+      // pathMarkers = {};
 
         for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
           let mmaps0 = markerStackMaps(d, stackIndex),
@@ -1462,7 +1468,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         return r;
     }
 
-    /** Calculate relative marker location in the map
+    /** Calculate relative marker location in the map.
+     * Result Y is relative to the stack, not the map,
+     * because .foreground does not have the map transform (maps which are ends
+     * of path will have different Y translations).
+     *
      * @param mapID name of map  (exists in mapIDs[])
      * @param d marker name
      */
@@ -1470,7 +1480,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       // z[p][m], actual position of marker m in the map p, 
       // y[p](z[p][m]) is the relative marker position in the svg
-      return y[mapID](z[mapID][d]);
+      let mky = y[mapID](z[mapID][d]),
+      mapY = maps[mapID].yOffset();
+      let yDomain = y[mapID].domain();
+      // console.log("markerY_", mapID, d, z[mapID][d], mky, mapY, yDomain);
+      return mky + mapY;
     }
     /** Calculate relative marker location in the map
      * @param k index into mapIDs[]
