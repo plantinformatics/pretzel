@@ -637,7 +637,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         this.shift(mapName, insertIndex);
         return;
       }
-      Stack.prototype.currentDrop = {out : false, stack: this, 'mapName': mapName, dropTime : Date.now()};
+      /** Any map in the stack should have the same x position; use the first
+       * since it must have at least 1. */
+      let aMapName = this.maps[0].mapName,
+      /** Store both the cursor x and the stack x; the latter is used, and seems
+       * to give the right feel. */
+      dropX = {event: d3.event.x, stack: o[aMapName]};
+      Stack.prototype.currentDrop = {out : false, stack: this, 'mapName': mapName, dropTime : Date.now(), x : dropX};
       if (! top)
         insertIndex++;
       let okStacks =
@@ -1746,7 +1752,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       const dropDelaySeconds = 0.5, milli = 1000;
       /** currentDrop references the mapName being dragged and the stack it is dropped into or out of. */
       let currentDrop = Stack.prototype.currentDrop,
+      /** Use the start of the drag, or the most  */
+      xDistanceRef = (currentDrop && currentDrop.x) ? currentDrop.x.stack : d3.event.subject.fx,
       now = Date.now();
+      // console.log("dragged xDistanceRef", d3.event.x, currentDrop && currentDrop.x, xDistanceRef);
       // console.log("dragged", currentDrop, d);
       /** true iff currentDrop is recent */
       let recentDrop = currentDrop && (now - currentDrop.dropTime < dropDelaySeconds * milli);
@@ -1779,7 +1788,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         // For the case : drag ended in a middle zone (or outside any DropTarget zone)
         // else if d is in a >1 stack then remove it else move the stack
         else if ((! currentDrop || !currentDrop.out)
-          && ((xDistance = Math.abs(d3.event.x - d3.event.subject.fx)) > xDropOutDistance))
+          && ((xDistance = Math.abs(d3.event.x - xDistanceRef)) > xDropOutDistance))
         {
           let map = maps[d], stack = map.stack;
           if (currentDrop && currentDrop.stack !== stack)
@@ -1827,7 +1836,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         {
           /* if (t === undefined)
             t = dragTransitionNew(); */
-          console.log("st0", st0._groups[0].length, st0._groups[0][0]);
+          // console.log("st0", st0._groups[0].length, st0._groups[0][0]);
           let st = st0.transition();  // t
           // st.duration(dragTransitionTime);
           st.attr("transform", Stack.prototype.mapTransformO);
