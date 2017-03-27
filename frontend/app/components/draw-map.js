@@ -189,7 +189,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return "id" + name;
     }
     /** id of axis g element, based on mapName, with an "m" prefix. */
-    function axisEltid(name)
+    function axisEltId(name)
     {
       return "m" + name;
     }
@@ -876,10 +876,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           // args passed to fn are data, index, group;  `this` is node (SVGGElement)
           ts.attr("transform", Stack.prototype.mapTransformO);
 
-          let axisGS = svgContainer.selectAll("g.axis#" + axisEltid(m.mapName) + " > g.tick > text");
+          let axisTS = svgContainer.selectAll("g.map#" + eltId(m.mapName) + " > text");
+          axisTS.attr("transform", yAxisTextScale);
+          let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(m.mapName) + " > g.tick > text");
           axisGS.attr("transform", yAxisTicksScale);
-
-          let axisBS = svgContainer.selectAll("g.axis#" + axisEltid(m.mapName) + " > g.btn > text");
+          let axisBS = svgContainer.selectAll("g.axis#" + axisEltId(m.mapName) + " > g.btn > text");
           axisBS.attr("transform", yAxisBtnScale);
         });
 
@@ -1250,7 +1251,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * Used for :
      *  g.map > g.axis > g.tick > text
      *  g.map > g.axis > g.btn     (see following yAxisBtnScale() )
-     * g.axis has the mapName in its name (prefixed via axisEltid()) and in its .__data__.
+     *  g.map > g.axis > text
+     * g.axis has the mapName in its name (prefixed via axisEltId()) and in its .__data__.
+     * The map / axis title (g.axis > text) has mapName in its name, .__data__, and parent's name
+     * (i.e. g[i].__data__ === mapName)
      *
      * g.tick already has a transform, so place the scale transform on g.tick > text.
      * g.btn contains <rect> and <text>, both requiring this scale.
@@ -1300,7 +1304,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * the axis path.  More exactly, these are the paths to include and exclude,
      * respectively :
      *   svgContainer > g.foreground > g.<markerName> >  path
-     *   svgContainer > g.stack > g.map > g.axis#<axisEltid(mapName)> > path    (axisEltid() prepends "m"))
+     *   svgContainer > g.stack > g.map > g.axis#<axisEltId(mapName)> > path    (axisEltId() prepends "m"))
      * (mapName is e.g. 58b504ef5230723e534cd35c_MyChr).
      * This matters because axis path does not have data (observed issue : a
      * call to handleMouseOver() with d===null; reproduced by brushing a region
@@ -1778,7 +1782,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             .on("mouseout",handleMouseOut);
           //that refers to the brush g element
           d3.select(that).call(y[p].brush.move,null);
-          let axisGS = svgContainer.selectAll("g.axis#" + axisEltid(p) + " > g.tick > text");
+          let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(p) + " > g.tick > text");
           axisGS.attr("transform", yAxisTicksScale);
         }
       });
@@ -1956,7 +1960,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       }
 
     /** Called when mapID has been dragged from one stack to another.
-     * It is expected that the group element of the map, g.map#<eltID(mapID)>,
+     * It is expected that the group element of the map, g.map#<eltId(mapID)>,
      * needs to be moved from the source g.stack to destination.
      * @param mapID name/id of map
      * @param t drag transition
