@@ -661,6 +661,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         insertIndex++;
       let okStacks =
         fromStack.move(mapName, this, insertIndex);
+      // okStacks === undefined means mapName not found in fromStack
       if (okStacks)
       {
         // if fromStack is now empty, it will be deleted, and okStacks will be empty.
@@ -875,16 +876,20 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           // console.log("redraw", m.mapName);
           // args passed to fn are data, index, group;  `this` is node (SVGGElement)
           ts.attr("transform", Stack.prototype.mapTransformO);
+          mapRedrawText(m);
+        });
 
+    };
+
+    function mapRedrawText(m)
+    {
           let axisTS = svgContainer.selectAll("g.map#" + eltId(m.mapName) + " > text");
           axisTS.attr("transform", yAxisTextScale);
           let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(m.mapName) + " > g.tick > text");
           axisGS.attr("transform", yAxisTicksScale);
           let axisBS = svgContainer.selectAll("g.axis#" + axisEltId(m.mapName) + " > g.btn > text");
           axisBS.attr("transform", yAxisBtnScale);
-        });
-
-    };
+    }
 
     /*------------------------------------------------------------------------*/
 
@@ -1262,23 +1267,25 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function yAxisTextScale(d, i, g)
     {
-      let parent = this.parentElement,
-      mapName = parent.__data__,
+      let
+      mapName = this.__data__,
       map = maps[mapName],
       portion = map && map.portion || 1,
       scaleText = "scale(1, " + 1 / portion + ")";
-      console.log("yAxisTextScale", d, i, g, parent, mapName, map, portion, scaleText);
+      console.log("yAxisTextScale", d, i, g, this, mapName, map, portion, scaleText);
       return scaleText;
     }
     function yAxisTicksScale(d, i, g)
     {
       let parent = this.parentElement,
-      scaleText = yAxisTextScale.call(parent, arguments);
-      return 'translate(10) ' + scaleText;
+      gp = parent.parentElement,
+      // could update arguments[0] = gp.__data__, then yAxisTextScale() can use d
+      scaleText = yAxisTextScale.apply(gp, arguments);
+      return scaleText;
     }
     function yAxisBtnScale(d, i, g)
     {
-      return yAxisTextScale.call(this, arguments);
+      return 'translate(10) ' + yAxisTextScale.apply(this, arguments);
     }
 
     // Add a brush for each axis.
@@ -1896,12 +1903,15 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               stack.dropOut(d);
               Stack.log();
               mapChangeGroupElt(d, t);
+              /* if d is not in currentDrop.stack (=== stack), which would be a
+               * program error, dropOut() could return false; in that case stack
+               * redraw() may have no effect.
+               */
               stack.redraw(t);
-              /* if map is dropped out to a new stack, that is not redrawn until dragended().
+              /* if map is dropped out to a new stack, redraw now for
+               * continuity, instead of waiting until dragended().
                */
-              /* if d is not in currentDrop.stack, dropOut() will return false; in
-               * that case redraw() may have no effect.
-               */
+              mapRedrawText(maps[d]);
               /* Following code will set o[d] and sort the Stack into location. */
             }
           }
