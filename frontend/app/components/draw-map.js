@@ -123,6 +123,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /// axisHeaderTextLen which is centred on the axis.
     /// index: 0:left, 1:right
     axisXRange = [0 + axisHeaderTextLen/2, graphDim.w - axisHeaderTextLen/2];
+    let
+      /** number of ticks in y axis when map is not stacked.  reduce this
+       * proportionately when map is stacked. */
+      axisTicks = 10,
+    /** font-size of y axis ticks */
+    axisFontSize = 12;
 
     /** Draw paths between markers on maps even if one end of the path is outside the svg.
      * This was the behaviour of an earlier version of this Marker Map Viewer, and it
@@ -182,6 +188,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       return "id" + name;
     }
+    /** id of axis g element, based on mapName, with an "m" prefix. */
+    function axisEltid(name)
+    {
+      return "m" + name;
+    }
 
     /** Check if the given value is a number, i.e. !== undefined and ! isNaN().
      * @param l value to check
@@ -237,7 +248,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return Math.round((num + 0.00001) * 100) / 100;
     }
     /*------------------------------------------------------------------------*/
-    const trace_stack = 1;
+    const trace_stack = 2;
     function Stacked(mapName, portion) {
       this.mapName = mapName;
       /** Portion of the Stack height which this map axis occupies. */
@@ -515,18 +526,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return ok;
     };
     /**
-     * move map from one stack to another
-     * first stack is empty - delete it
-     * 2nd stack is new - create it (gui ? drag outside of top/bottom drop zones.)
+     * Move named map from one stack to another.
+     * `this` is the source stack.
+     * If first stack becomes empty - delete it.
+     * If 2nd stack (destination) is new - create it (gui ? drag outside of top/bottom drop zones.)
      * @param mapName name of map to move
-     * @param toStack stack to move map to
+     * @param toStack undefined, or Stack to move map to
      * @param insertIndex  index in toStack.maps[] to insert
-
+     *
      * if toStack is undefined, create a new Stack to move the map into;
-
-     * the following is not done, instead dragged() assigns x location to new stack and sorts :
-     * it is placed at maps[0], so insertIndex is re-purposed to indicate the position
-     * in stacks[] to insert the new Stack.
+     * The position in stacks[] to insert the new Stack is not given via params,
+     * instead dragged() assigns x location to new Stack and sorts the stacks in x order.
+     *
      * @return undefined if not found, or an array.
      * If `this` is empty after the move, it is deleted, otherwise the result
      * array contains `this`; this is so that the caller can call
@@ -652,6 +663,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         fromStack.move(mapName, this, insertIndex);
       if (okStacks)
       {
+        // if fromStack is now empty, it will be deleted, and okStacks will be empty.
         // if fromStack is not deleted, call fromStack.calculatePositions()
         let map = maps[mapName],
         released = map.portion;
@@ -660,6 +672,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           s.releasePortion(released);
           s.calculatePositions();
           s.redraw(transition); });
+
+        // For all maps in this (the destination stack), adjust portions, then calculatePositions().
         /** the inserted map */
         let inserted = this.maps[insertIndex];
         inserted.stack = this;
@@ -861,6 +875,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           // console.log("redraw", m.mapName);
           // args passed to fn are data, index, group;  `this` is node (SVGGElement)
           ts.attr("transform", Stack.prototype.mapTransformO);
+
+          let axisGS = svgContainer.selectAll("g.axis#" + axisEltid(m.mapName) + " > g.tick > text");
+          axisGS.attr("transform", yAxisTicksScale);
+
+          let axisBS = svgContainer.selectAll("g.axis#" + axisEltid(m.mapName) + " > g.btn > text");
+          axisBS.attr("transform", yAxisBtnScale);
         });
 
     };
@@ -913,15 +933,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       }
       let yOffset = this.yOffset(),
       yOffsetText = Number.isNaN(yOffset) ? "" : "," + this.yOffset();
+      /** x scale doesn't matter because x is 0; use 1 for clarity.
+       * no need for scale when this.portion === 1
+       */
       let scale = this.portion,
-      scaleText = Number.isNaN(scale) ? "" : " scale(" + scale + ")";
+      scaleText = Number.isNaN(scale) || (scale === 1) ? "" : " scale(1," + scale + ")";
       let xVal = checkIsNumber(o[this.mapName]);
       let transform =
         [
           " translate(" + xVal, yOffsetText, ")",
           scaleText
         ].join("");
-      // console.log("mapTransformO", this, transform);
+       console.log("mapTransformO", this, transform);
       return transform;
     };
 
@@ -987,7 +1010,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       if (y && y[m.mapName])
       {
         let myRange = m.yRange();
-        // console.log("updateRange", m.mapName, myRange);
+         console.log("updateRange", m.mapName, myRange);
         y[m.mapName].range([0, myRange]);
       }
     }
@@ -1084,7 +1107,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         .data(stack_mapIDs)
         .enter().append("g")
         .attr("class", "map")
-        .attr("id", function(d) { return eltId(d); })
+        .attr("id", eltId)
         .attr("transform", Stack.prototype.mapTransformO)
         .call(d3.drag()
           .subject(function(d) { return {x: x(d)}; }) //origin replaced by subject
@@ -1217,11 +1240,43 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     g.append("text")
       .attr("text-anchor", "middle")
-      .attr("y", -12)
-      .style("font-size",12)
+      .attr("y", -axisFontSize)
+      .style("font-size", axisFontSize)
       .text(String);
 
-      
+    /** For <text> within a g.map, counteract the effect of g.map scale() which
+     * is based on map.portion.
+     *
+     * Used for :
+     *  g.map > g.axis > g.tick > text
+     *  g.map > g.axis > g.btn     (see following yAxisBtnScale() )
+     * g.axis has the mapName in its name (prefixed via axisEltid()) and in its .__data__.
+     *
+     * g.tick already has a transform, so place the scale transform on g.tick > text.
+     * g.btn contains <rect> and <text>, both requiring this scale.
+     *
+     */
+    function yAxisTextScale(d, i, g)
+    {
+      let parent = this.parentElement,
+      mapName = parent.__data__,
+      map = maps[mapName],
+      portion = map && map.portion || 1,
+      scaleText = "scale(1, " + 1 / portion + ")";
+      console.log("yAxisTextScale", d, i, g, parent, mapName, map, portion, scaleText);
+      return scaleText;
+    }
+    function yAxisTicksScale(d, i, g)
+    {
+      let parent = this.parentElement,
+      scaleText = yAxisTextScale.call(parent, arguments);
+      return 'translate(10) ' + scaleText;
+    }
+    function yAxisBtnScale(d, i, g)
+    {
+      return yAxisTextScale.call(this, arguments);
+    }
+
     // Add a brush for each axis.
     g.append("g")
       .attr("class", "brush")
@@ -1245,7 +1300,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * the axis path.  More exactly, these are the paths to include and exclude,
      * respectively :
      *   svgContainer > g.foreground > g.<markerName> >  path
-     *   svgContainer > g.stack > g.map > g.axis#m<mapName> > path
+     *   svgContainer > g.stack > g.map > g.axis#<axisEltid(mapName)> > path    (axisEltid() prepends "m"))
      * (mapName is e.g. 58b504ef5230723e534cd35c_MyChr).
      * This matters because axis path does not have data (observed issue : a
      * call to handleMouseOver() with d===null; reproduced by brushing a region
@@ -1551,6 +1606,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function brushHelper(that) {
       //Map name, e.g. 32-1B
+      /** name[0] is mapID of the brushed axis. name.length should be 1. */
       let name = d3.select(that).data();
 
       //Remove old circles.
@@ -1574,6 +1630,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
         selectedMarkers = {};
         selectedMaps.forEach(function(p, i) {
+          /** d3 selection of one of the selected maps. */
+          let mappS = svgContainer.selectAll("#" + eltId(p));
           selectedMarkers[p] = [];
           d3.keys(z[p]).forEach(function(m) {
             if ((z[p][m] >= y[p].invert(brushExtents[i][0])) &&
@@ -1583,16 +1641,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               //Highlight the markers in the brushed regions
               //o[p], the map location, z[p][m], actuall marker position in the map, 
               //y[p](z[p][m]) is the relative marker position in the svg
-              let dot = svgContainer.append("circle")
+              let dot = mappS
+                .append("circle")
                                     .attr("class", m)
-                                    .attr("cx",o[p])
+                                    .attr("cx",0)   /* was o[p], but g.map translation does x offset of stack.  */
                                     .attr("cy",y[p](z[p][m]))
                                     .attr("r",2)
                                     .style("fill", "red");
 
         
             } else {
-              svgContainer.selectAll("circle." + m).remove();
+              mappS.selectAll("circle." + m).remove();
             }
           });
         });
@@ -1616,11 +1675,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         });
 
         svgContainer.selectAll(".btn").remove();
-
-          zoomSwitch = svgContainer.selectAll("#" + eltId(name[0]))
+        /** d3 selection of the brushed map. */
+        let mapS = svgContainer.selectAll("#" + eltId(name[0]));
+          zoomSwitch = mapS
                   .append('g')
                   .attr('class', 'btn')
-                  .attr('transform', 'translate(10)');
+                  .attr('transform', yAxisBtnScale);
         zoomSwitch.append('rect')
                   .attr('width', 60).attr('height', 30)
                   .attr('rx', 3).attr('ry', 3)
@@ -1637,10 +1697,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
            svgContainer.selectAll(".btn").remove();
            //Remove all the existing circles
            svgContainer.selectAll("circle").remove();
-            resetSwitch = svgContainer.selectAll("#" + eltId(name[0]))
+            resetSwitch = mapS
                                     .append('g')
                                     .attr('class', 'btn')
-                                    .attr('transform', 'translate(10)');
+                                    .attr('transform', yAxisBtnScale);
            resetSwitch.append('rect')
                   .attr('width', 60).attr('height', 30)
                   .attr('rx', 3).attr('ry', 3)
@@ -1653,19 +1713,22 @@ chromosome : >=1 linkageGroup-s layed out vertically:
              let t = svgContainer.transition().duration(750);
              
              mapIDs.forEach(function(d) {
-               let idName = "m"+d; // axis ids have "m" suffix
+               let idName = "m"+d; // axis ids have "m" prefix
                let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } );
                y[d].domain([0, yDomainMax]);
                let yAxis = d3.axisLeft(y[d]).ticks(10);
                svgContainer.select("#"+idName).transition(t).call(yAxis);
              });
+             let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
+             axisTickS.attr("transform", yAxisTicksScale);
+
              d3.selectAll(".foreground g").selectAll("path").remove();
              d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
              t.selectAll(".foreground path").attr("d", function(d) {return d; });
              d3.selectAll(".foreground > g > path")
               .on("mouseover",handleMouseOver)
               .on("mouseout",handleMouseOut);
-               d3.selectAll("#" + eltId(name[0])).selectAll(".btn").remove();
+             mapS.selectAll(".btn").remove();
              selectedMarkers = {};
              me.send('updatedSelectedMarkers', selectedMarkers);
              zoomed = false;
@@ -1684,7 +1747,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     } // brushHelper
 
-    /** Zoom the y axis if this map to the given brushExtents[].
+    /** Zoom the y axis of this map to the given brushExtents[].
      * Called via on(click) of brushHelper() Zoom button (zoomSwitch).
      * Traverse selected maps, matching only the mapName of the brushed map.
      * Set the y domain of the map, from the inverse mapping of the brush extent limits.
@@ -1698,8 +1761,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let t = svgContainer.transition().duration(750);
       selectedMaps.map(function(p, i) {
         if(p == mapName){
-          y[p].domain([y[p].invert(brushExtents[i][0]), y[p].invert(brushExtents[i][1])]);
-          let yAxis = d3.axisLeft(y[p]).ticks(10);
+          let yp = y[p],
+          brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
+          console.log("zoom", mapName, p, i, yp.domain(), yp.range(), brushExtents[i], brushedDomain);
+          y[p].domain(brushedDomain);
+          let map = maps[p];
+          let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * map.portion);
           let idName = "m"+p;
           svgContainer.selectAll(".btn").remove();
           svgContainer.select("#"+idName).transition(t).call(yAxis);
@@ -1711,6 +1778,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             .on("mouseout",handleMouseOut);
           //that refers to the brush g element
           d3.select(that).call(y[p].brush.move,null);
+          let axisGS = svgContainer.selectAll("g.axis#" + axisEltid(p) + " > g.tick > text");
+          axisGS.attr("transform", yAxisTicksScale);
         }
       });
     }
@@ -1790,14 +1859,16 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             let targetMapName = currentDropTarget.mapName,
             top = currentDropTarget.classList.contains("top"),
             zoneParent = Stack.mapStackIndex(targetMapName);
+            /** destination stack */
             let stack = stacks[zoneParent.stackIndex];
             if (! stack.contains(d))
             {
               t = dragTransitionNew();
-              /*  .dropIn() and .dropOut() don't redraw the stacks they affect, that is done here,
+              /*  .dropIn() and .dropOut() don't redraw the stacks they affect (source and destination), that is done here,
                * with this exception : .dropIn() redraws the source stack of the map.
                */
               stack.dropIn(d, zoneParent.mapIndex, top, t);
+              mapChangeGroupElt(d, t);
               // number of stacks has decreased - not essential to recalc the domain.
               Stack.log();
               stack.redraw(t);
@@ -1809,6 +1880,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           else if ((! currentDrop || !currentDrop.out)
                    && ((xDistance = Math.abs(d3.event.x - xDistanceRef)) > xDropOutDistance))
           {
+            /** dragged map, source stack */
             let map = maps[d], stack = map.stack;
             if (currentDrop && currentDrop.stack !== stack)
             {
@@ -1819,6 +1891,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               t = dragTransitionNew();
               stack.dropOut(d);
               Stack.log();
+              mapChangeGroupElt(d, t);
               stack.redraw(t);
               /* if map is dropped out to a new stack, that is not redrawn until dragended().
                */
@@ -1882,6 +1955,42 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         }
       }
 
+    /** Called when mapID has been dragged from one stack to another.
+     * It is expected that the group element of the map, g.map#<eltID(mapID)>,
+     * needs to be moved from the source g.stack to destination.
+     * @param mapID name/id of map
+     * @param t drag transition
+     */
+    function mapChangeGroupElt(mapID, t)
+    {
+      let ms_ = "g.map#" + eltId(mapID),
+      ms = t.selectAll(ms_),
+      gStack = ms._groups[0][0].parentNode,
+      p = t.select(function() { return gStack; });
+      console.log("mapChangeGroupElt", mapID, t, ms_, ms, p);
+      // compare with map->stack
+      let map = maps[mapID],
+      stackID = map.stack && map.stack.stackID,
+      /** destination Stack selection */
+      dStack_ = "g.stack#" + stackEltId(map.stack),
+      dStackS = t.selectAll(dStack_),
+      dStack = dStackS._groups[0][0], // equiv : .node()
+      differentStack = gStack !== dStack;
+      console.log(map, stackID, dStack_, dStackS, dStack, differentStack);
+
+      // not currently used - g.stack layer may be discarded.
+      if (false && differentStack)
+      {
+        var removedGmap = ms.remove(),
+        removedGmapNode = removedGmap.node();
+        console.log("removedGmap", removedGmap, removedGmapNode);
+        let dStackN = dStackS.node();
+        // tried .append, .appendChild(), not working yet.
+        dStackN && dStackN.append &&
+        //  dStackN.append(removedGmapNode);
+        dStackN.append(function() { return removedGmapNode;});
+      }
+    }
 
     /** Update the paths connecting markers present in adjacent stacks.
      * @param t undefined, or a d3 transition in which to perform the update.
@@ -1900,7 +2009,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
     function dragended(/*d*/) {
-      console.log("dragended");
+      console.log("dragended", stacks.toDeleteAfterDrag);
 
       if (stacks.toDeleteAfterDrag !== undefined)
       {
