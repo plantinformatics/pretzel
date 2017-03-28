@@ -754,7 +754,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         function (m, index)
         {
           m.position = [sumPortion,  sumPortion += m.portion];
-          updateRange(m);
+          // updateRange(m);
         });
     };
     /** find / lookup Stack of given map.
@@ -1773,10 +1773,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       selectedMaps.map(function(p, i) {
         if(p == mapName){
           let yp = y[p],
-          brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
-          console.log("zoom", mapName, p, i, yp.domain(), yp.range(), brushExtents[i], brushedDomain);
+          map = maps[p],
+          brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *map.portion*/); });
+          // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
+          console.log("zoom", mapName, p, i, yp.domain(), yp.range(), brushExtents[i], map.portion, brushedDomain);
           y[p].domain(brushedDomain);
-          let map = maps[p];
           let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * map.portion);
           let idName = "m"+p;
           svgContainer.selectAll(".btn").remove();
