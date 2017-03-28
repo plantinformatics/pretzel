@@ -1605,8 +1605,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * names + locations of markers which are within the brush extent of the map.
      * Add circle.mapID for those marker locations.
      * Remove circles of markers (on all maps) outside brushExtents[mapID].
-     * For elements in '.foreground d', set class .faded iff the marker (which
-     * is the datum of the element) is in the selectedMarkers[] of any map.
+     * For elements in '.foreground g', set class .faded iff the marker (which
+     * is the datum of the element) is not in the selectedMarkers[] of any map.
      *
      * Draw buttons to zoom to the brushExtents (zoomSwitch) or discard the brush : resetSwitch.
      * Called from brushended(), which is called on(end) of axis brush.
@@ -1679,7 +1679,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
          //maybe alternatively use brush.clear or (brush.move, null) given a mouse event
           // discuss : d3.keys(selectedMarkers). seems equivalent to selectedMaps.
           /// also this could be .some() instead of ! .every():
-          if (false) { return selectedMaps.some("..."); }
+          return ! selectedMaps.some(function(p) {
+            /** d is markerName, p is mapName. */
+            let smp = selectedMarkers[p];
+            // ma_ is e.g. "markerD 0.4".
+            return smp.some(function(ma_) { return ma_.includes(d+" "); });
+          });
+          // not used
           return !d3.keys(selectedMarkers).every(function(p) {
             /** return true if some of the selectedMarkers of mapID p contain marker d.  */
             let smp = selectedMarkers[p];
