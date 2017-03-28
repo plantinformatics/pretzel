@@ -1242,7 +1242,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     // Add an axis and title
     g.append("g")
      .attr("class", "axis")
-      .each(function(d) { d3.select(this).attr("id","m"+d).call(axis.scale(y[d])); });  
+      .each(function(d) { d3.select(this).attr("id",axisEltId(d)).call(axis.scale(y[d])); });  
 
     g.append("text")
       .attr("text-anchor", "middle")
@@ -1724,7 +1724,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
              let t = svgContainer.transition().duration(750);
              
              mapIDs.forEach(function(d) {
-               let idName = "m"+d; // axis ids have "m" prefix
+               let idName = axisEltId(d); // axis ids have "m" prefix
                let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } );
                y[d].domain([0, yDomainMax]);
                let yAxis = d3.axisLeft(y[d]).ticks(10);
@@ -1779,7 +1779,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           console.log("zoom", mapName, p, i, yp.domain(), yp.range(), brushExtents[i], map.portion, brushedDomain);
           y[p].domain(brushedDomain);
           let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * map.portion);
-          let idName = "m"+p;
+          let idName = axisEltId(p);
           svgContainer.selectAll(".btn").remove();
           svgContainer.select("#"+idName).transition(t).call(yAxis);
           d3.selectAll(".foreground g").selectAll("path").remove();
