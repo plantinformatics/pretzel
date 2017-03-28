@@ -1645,8 +1645,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           let mappS = svgContainer.selectAll("#" + eltId(p));
           selectedMarkers[p] = [];
           d3.keys(z[p]).forEach(function(m) {
-            if ((z[p][m] >= y[p].invert(brushExtents[i][0])) &&
-                (z[p][m] <= y[p].invert(brushExtents[i][1]))) {
+
+          let yp = y[p],
+          map = maps[p],
+          brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *map.portion */); });
+          console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], map.portion, brushedDomain);
+
+            if ((z[p][m] >= brushedDomain[0]) &&
+                (z[p][m] <= brushedDomain[1])) {
               //selectedMarkers[p].push(m);    
               selectedMarkers[p].push(m + " " + z[p][m]);
               //Highlight the markers in the brushed regions
@@ -1671,16 +1677,24 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         d3.selectAll(".foreground g").classed("faded", function(d){
          //d3.event.selection [min,min] or [max,max] should consider as non selection.
          //maybe alternatively use brush.clear or (brush.move, null) given a mouse event
+          // discuss : d3.keys(selectedMarkers). seems equivalent to selectedMaps.
+          /// also this could be .some() instead of ! .every():
+          if (false) { return selectedMaps.some("..."); }
           return !d3.keys(selectedMarkers).every(function(p) {
+            /** return true if some of the selectedMarkers of mapID p contain marker d.  */
+            let smp = selectedMarkers[p];
+            // following seems equivalent to :
+            if (false) { return smp.some(function(ma_) { return ma_.includes(d+" "); }); }
+
             //Maybe there is a better way to do the checking. 
-            //d is the marker name, where selectedMarkers[p][ma] contains marker name and postion, separated by " "
-            for (var ma=0; ma<selectedMarkers[p].length; ma++){
-              if (selectedMarkers[p][ma].includes(d+" ")){
+            //d is the marker name, where smp[ma] contains marker name and postion, separated by " "
+            for (var ma=0; ma<smp.length; ma++){
+              if (smp[ma].includes(d+" ")){
                  return true;
               }
             }
             return false;
-            //return selectedMarkers[p].contains(d);
+            //return smp.contains(d);
           });
         
         });
