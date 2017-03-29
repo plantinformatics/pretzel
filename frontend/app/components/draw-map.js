@@ -137,9 +137,24 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     let allowPathsOutsideZoom = false;
 
-    /** y[mapID] is the scale for map
+    /** Enable display of extra info in the path hover (@see hoverExtraText).
+     * Currently a debugging / devel feature, will probably re-purpose to display metadata.
      */
-    let y = {},
+    let showHoverExtraText = true;
+
+    let
+    /** y[mapID] is the scale for map mapID.
+     * y[mapID] has range [0, yRange], i.e. as if the map is not stacked.
+     * g.map has a transform to position the map within its stack, so this scale is used
+     * for objects within g.map, and notably its child g.axis, such as the brush.
+     * For objects in g.foreground, ys is the appropriate scale to use.
+     */
+    y = {},
+    /** ys[mapID] is is the same as y[mapID], with added translation and scale
+     * for the map's current stacking (map.position, map.yOffset(), map.portion).
+     * See also comments for y re. the difference in uses of y and ys.
+     */
+    ys = {},
         /** z[mapId] is a hash for map mapId mapping marker name to location.
          * i.e. z[d.map][d.marker] is the location of d.marker in d.map.
          */
@@ -167,6 +182,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         brushExtents = [];
     /** guard against repeated drag event before previous dragged() has returned. */
     let dragging = 0;
+    /** trace scale of each map just once after this is cleared.  */
+    let tracedMapScale = {};
+
 
     /**
      * @return true if a is in the closed interval range[]
@@ -248,7 +266,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return Math.round((num + 0.00001) * 100) / 100;
     }
     /*------------------------------------------------------------------------*/
-    const trace_stack = 2;
+    const trace_stack = 1;
     function Stacked(mapName, portion) {
       this.mapName = mapName;
       /** Portion of the Stack height which this map axis occupies. */
@@ -745,7 +763,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** Calculate the positions of the maps in this stack
      * Position is a proportion of yRange.
      *
-     * Call updateRange() to update y[mapName] for each map in the stack.
+     * Call updateRange() to update ys[mapName] for each map in the stack.
      */
     Stack.prototype.calculatePositions = function ()
     {
@@ -754,7 +772,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         function (m, index)
         {
           m.position = [sumPortion,  sumPortion += m.portion];
-          // updateRange(m);
+          updateRange(m);
         });
     };
     /** find / lookup Stack of given map.
@@ -950,7 +968,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           " translate(" + xVal, yOffsetText, ")",
           scaleText
         ].join("");
-       console.log("mapTransformO", this, transform);
+       // console.log("mapTransformO", this, transform);
       return transform;
     };
 
@@ -1007,17 +1025,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     //console.log(axis.scale(y[mapIDs))
     collateMarkerMap();
 
-    /** update y[m.mapName] for the given map.
+    /** update ys[m.mapName] for the given map,
+     * according the map's current .portion.
      * @param m map (i.e. maps[m.mapName] == m)
      */
     function updateRange(m)
     {
-      // if called before y is set up, do nothing.
-      if (y && y[m.mapName])
+      // if called before ys is set up, do nothing.
+      if (ys && ys[m.mapName])
       {
         let myRange = m.yRange();
-         console.log("updateRange", m.mapName, myRange);
-        y[m.mapName].range([0, myRange]);
+        // console.log("updateRange", m.mapName, myRange);
+        ys[m.mapName].range([0, myRange]);
       }
     }
 
@@ -1025,12 +1044,15 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       /** Find the max of locations of all markers of map name d. */
       let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } );
       let m = maps[d], myRange = m.yRange();
-      y[d] = d3.scaleLinear()
+      ys[d] = d3.scaleLinear()
                .domain([0, yDomainMax])
                .range([0, myRange]); // set scales for each map
       
       //console.log("OOO " + y[d].domain);
-      y[d].flipped = false;
+      ys[d].flipped = false;
+      // y and ys are the same until the map is stacked.
+      // The brush is on y.
+      y[d] = ys[d].copy();
       y[d].brush = d3.brushY()
                      .extent([[-8,0],[8,myRange]])
                      .on("end", brushended);
@@ -1272,7 +1294,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       map = maps[mapName],
       portion = map && map.portion || 1,
       scaleText = "scale(1, " + 1 / portion + ")";
-      console.log("yAxisTextScale", d, i, g, this, mapName, map, portion, scaleText);
+      // console.log("yAxisTextScale", d, i, g, this, mapName, map, portion, scaleText);
       return scaleText;
     }
     function yAxisTicksScale(d, i, g)
@@ -1341,7 +1363,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
          .style("opacity", 0.9)
          .style("display","inline");  
        Object.keys(pathMarkers[d]).map(function(m){
-         listMarkers = listMarkers + m + "<br />";
+         let hoverExtraText = pathMarkers[d][m];
+         if (hoverExtraText === 1) hoverExtraText = "";
+         listMarkers = listMarkers + m + hoverExtraText + "<br />";
        });
        toolTip.html(listMarkers)     
          .style("left", (d3.event.pageX) + "px")             
@@ -1482,12 +1506,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               if (lineIn)
               {
                 let sLine = markerLineS2(m0, m1, d);
-                // console.log("stacksPath()", d, m0i, m1i, m0, m1, sLine);
+                /** 1 signifies the normal behaviour - handleMouseOver() will show just the marker name.
+                 * Values other than 1 will be appended as text. */
+                let hoverExtraText = showHoverExtraText ?
+                  hoverExtraText = " " + z[m0][d] + "-" + z[m1][d] + " " + sLine
+                  : 1;
+                // console.log("stacksPath()", d, m0i, m1i, m0, m1, z[m0][d], z[m1][d], sLine, this);
                 r.push(sLine);
                 /* Prepare a tool-tip for the line. */
                 if (pathMarkers[sLine] === undefined)
                   pathMarkers[sLine] = {};
-                pathMarkers[sLine][d] = 1;
+                pathMarkers[sLine][d] = hoverExtraText; // 1;
               }
               else if (showAll) {
                 if (d in z[m0]) { 
@@ -1546,10 +1575,16 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       // z[p][m], actual position of marker m in the map p, 
       // y[p](z[p][m]) is the relative marker position in the svg
-      let mky = y[mapID](z[mapID][d]),
+      // ys is used - the y scale for the stacked position&portion of the map.
+      let ysm = ys[mapID],
+      mky = ysm(z[mapID][d]),
       mapY = maps[mapID].yOffset();
-      let yDomain = y[mapID].domain();
-      // console.log("markerY_", mapID, d, z[mapID][d], mky, mapY, yDomain);
+      let yDomain = ysm.domain();
+      if (! tracedMapScale[mapID])
+      {
+        tracedMapScale[mapID] = true;
+        // console.log("markerY_", mapID, d, z[mapID][d], mky, mapY, yDomain, ysm.range());
+      }
       return mky + mapY;
     }
     /** Calculate relative marker location in the map
@@ -1566,7 +1601,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function zoomPath(d) { // d is a marker
         let r = [];
         for (let k=0; k<mapIDs.length-1; k++) {
-           //y[p].domain
+           //ys[p].domain
            //z[mapIDs[k]][d] marker location
 
             if (d in z[mapIDs[k]] && d in z[mapIDs[k+1]]) { // if markers is in both maps
@@ -1747,18 +1782,24 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                let idName = axisEltId(d); // axis ids have "m" prefix
                let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a]; } );
                y[d].domain([0, yDomainMax]);
+               ys[d].domain([0, yDomainMax]);
                let yAxis = d3.axisLeft(y[d]).ticks(10);
                svgContainer.select("#"+idName).transition(t).call(yAxis);
              });
              let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
              axisTickS.attr("transform", yAxisTicksScale);
 
+             if (true)
+               pathUpdate(t);
+             else
+             {
              d3.selectAll(".foreground g").selectAll("path").remove();
              d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
              t.selectAll(".foreground path").attr("d", function(d) {return d; });
              d3.selectAll(".foreground > g > path")
               .on("mouseover",handleMouseOver)
               .on("mouseout",handleMouseOut);
+             }
              mapS.selectAll(".btn").remove();
              selectedMarkers = {};
              me.send('updatedSelectedMarkers', selectedMarkers);
@@ -1798,6 +1839,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
           console.log("zoom", mapName, p, i, yp.domain(), yp.range(), brushExtents[i], map.portion, brushedDomain);
           y[p].domain(brushedDomain);
+          ys[p].domain(brushedDomain);
           let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * map.portion);
           let idName = axisEltId(p);
           svgContainer.selectAll(".btn").remove();
@@ -1808,7 +1850,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           d3.selectAll(".foreground > g > path")
             .on("mouseover",handleMouseOver)
             .on("mouseout",handleMouseOut);
-          //that refers to the brush g element
+          // `that` refers to the brush g element
           d3.select(that).call(y[p].brush.move,null);
           let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(p) + " > g.tick > text");
           axisGS.attr("transform", yAxisTicksScale);
@@ -2002,7 +2044,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       ms = t.selectAll(ms_),
       gStack = ms._groups[0][0].parentNode,
       p = t.select(function() { return gStack; });
-      console.log("mapChangeGroupElt", mapID, t, ms_, ms, p);
+      // console.log("mapChangeGroupElt", mapID, t, ms_, ms, p);
       // compare with map->stack
       let map = maps[mapID],
       stackID = map.stack && map.stack.stackID,
@@ -2032,6 +2074,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function pathUpdate(t)
     {
+      console.log("pathUpdate");
+      tracedMapScale = {};  // re-enable trace
       let g = d3.selectAll(".foreground g"),
       gd = g.selectAll("path").data(path);
       gd.exit().remove();
