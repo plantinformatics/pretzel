@@ -13,6 +13,7 @@ export default PartialModel.extend({
     chromosomes: DS.hasMany('chromosome', { async: false })
   }),
 
+    // maps which are have a link.  Managed via mapDeleteLink(), mapLink().
   extraMaps: [],
   isSelected: false,
 

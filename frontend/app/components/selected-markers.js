@@ -1,5 +1,7 @@
 import Ember from 'ember';
 
+/* global d3 */
+
 export default Ember.Component.extend({
 
   resetGrid: function(markers) {
@@ -14,7 +16,7 @@ export default Ember.Component.extend({
     d3.select('#grid')
       .datum(data)
       .call(grid);
-    console.log(data);
+    // console.log(data);
   }
     
 });

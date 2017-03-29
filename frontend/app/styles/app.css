@@ -1,3 +1,13 @@
+/* -------------------------------------------------------------------------- */
+
+body.ember-application > div.ember-view > div.container
+{
+    padding-right: 5px;
+    padding-left: 5px;
+}
+
+/* -------------------------------------------------------------------------- */
+
 svg {
   font-size: 14px;
 }
@@ -82,3 +92,39 @@ div.toolTip{
   border: 0px;
   border-radius: 2px;
 }
+
+/* -------------------------------------------------------------------------- */
+/* target zone for axis stacking drag&drop
+ */
+/** When dragging, change cursor for all elts other than .current. */
+.axisDrag {
+    cursor: no-drop;
+}
+.axisDrag .stackDropTarget.current {
+    display : inherit;
+}
+.dragTransition .stackDropTarget {
+    pointer-events: none !important;
+}
+.stackDropTarget {
+    display : none;
+    pointer-events: none;
+    cursor: copy;
+
+    /* These values are overridden when .current and .dragHover */
+    fill: rgba(80, 80, 255, 0.1);
+    stroke: rgba(255, 80, 80, 0.4);
+    // stroke-width:1px;
+    stroke-dasharray: 3,8;
+}
+.stackDropTarget.current {
+    pointer-events: inherit;
+    cursor: copy;
+}
+.stackDropTarget.current .dragHover {
+    fill: rgba(80, 80, 255, 0.2);
+    stroke: rgba(255, 80, 80, 0.6);
+    stroke-dasharray: 2,6;
+}
+
+/* -------------------------------------------------------------------------- */
