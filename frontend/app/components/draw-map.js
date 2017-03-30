@@ -159,6 +159,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
          * i.e. z[d.map][d.marker] is the location of d.marker in d.map.
          */
         z = {}, // will contain map/marker information
+    za = {},
         /** All marker names.
          * Initially a set (to determine unique names), then converted to an array.
          */
@@ -173,6 +174,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * Compiled by collateMarkerMap() from z[], which is compiled from d3Data.
      */
     let mm;
+    /** Map from marker names to map names, via aliases of the marker.
+     * Compiled by collateMarkerMap() from z[], which is compiled from d3Data.
+     */
+    let mma;
+
 
     let line = d3.line(),
         axis = d3.axisLeft(),
@@ -1015,6 +1021,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     // Compile positions of all markers, and a hash of marker names.
     d3Data.forEach(function(d) {
       z[d.map][d.marker] = +d.location;
+      for (let a of d.aliases)
+      {
+        z[d.map][a] = +d.location;
+      }
+      za[d.map] || (za[d.map] = []);
+      za[d.map][d.marker] = d.aliases;
       //console.log(d.map + " " + d.marker + " " + d.location);
       // If d3Markers does not contain d.marker then add it.
       d3Markers.add(d.marker);
@@ -1396,12 +1408,15 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * compile map of marker -> array of maps
      *  array of { stack{maps...} ... }
      * stacks change, but maps/chromosomes are changed only when page refresh
+     *
+     * x @param include_aliases use marker aliases to match makers
      */
-    function collateMarkerMap()
+    function collateMarkerMap(/*include_aliases*/)
     {
       console.log("collateMarkerMap()");
       if (mm === undefined)
         mm = {};
+      mma || (mma = {});
       for (let map in z)
       {
         for (let marker in z[map])
@@ -1409,10 +1424,23 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           // console.log(map, marker);
           if (mm[marker] === undefined)
             mm[marker] = [];
+	        // if (! include_aliases)
           mm[marker].push(map);
+          let a = za[map][marker];
+          if (a)
+          for (let ai=0; ai < a.length; ai++)
+          {
+            let alias = a[ai];
+            mma[alias] || (mma[alias] = []);
+            mma[alias].push(map);
+	        }
         }
       }
     }
+
+
+
+
     /** Return an array of maps contain Marker `marker` and are in stack `stackIndex`.
      * @param marker  name of marker
      * @param stackIndex  index into stacks[]
@@ -1420,11 +1448,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function markerStackMaps(marker, stackIndex)
     {
-      let stack = stacks[stackIndex], ma=mm[marker];
+      let stack = stacks[stackIndex], ma=Array.prototype.concat(mm[marker]||[], mma[marker] || []);
       // console.log("markerStackMaps()", marker, stackIndex, ma);
       let mmaps = ma.filter(function (mapID) {
         let mInS = stack.contains(mapID); return mInS; });
-      // console.log(mmaps);
+       console.log(mmaps);
       return mmaps;
     }
     /** A line between a marker's location in adjacent maps.
@@ -1502,7 +1530,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               /** Filter out those paths that either side locates out of the svg. */
               let lineIn = allowPathsOutsideZoom ||
                 (inRangeI(m0) && inRangeI(m1));
-              // console.log("path()", stackIndex, m0, allowPathsOutsideZoom, inRangeI(m0), inRangeI(m1), lineIn);
+               console.log("path()", stackIndex, m0, allowPathsOutsideZoom, inRangeI(m0), inRangeI(m1), lineIn);
               if (lineIn)
               {
                 let sLine = markerLineS2(m0, m1, d);
@@ -1511,7 +1539,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 let hoverExtraText = showHoverExtraText ?
                   hoverExtraText = " " + z[m0][d] + "-" + z[m1][d] + " " + sLine
                   : 1;
-                // console.log("stacksPath()", d, m0i, m1i, m0, m1, z[m0][d], z[m1][d], sLine, this);
+                 console.log("stacksPath()", d, m0i, m1i, m0, m1, z[m0][d], z[m1][d], sLine, this);
                 r.push(sLine);
                 /* Prepare a tool-tip for the line. */
                 if (pathMarkers[sLine] === undefined)
