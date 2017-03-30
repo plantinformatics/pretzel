@@ -24,7 +24,8 @@ var geneticmapSchema = new mongoose.Schema({
         {
           //_id: false,
           name: String,
-          position: Number
+          position: Number,
+          aliases: {type: [String], default: []}
         }
       ]
     }

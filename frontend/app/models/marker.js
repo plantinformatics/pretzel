@@ -5,4 +5,5 @@ import attr from 'ember-data/attr';
 export default DS.Model.extend({
   name: attr('string'),
   position: attr('number'),
+  aliases: attr()
 });

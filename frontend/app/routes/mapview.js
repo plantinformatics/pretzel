@@ -81,7 +81,8 @@ export default Ember.Route.extend({
               retHash[mapName][mapName+"_"+chrName].pushObject(
                 {"map": mapName+"_"+chrName,
                  "marker": marker.get('name'),
-                 "location": marker.get('position')
+                 "location": marker.get('position'),
+                 "aliases": marker.get('aliases')
                 }
               );
             });
