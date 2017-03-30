@@ -1408,10 +1408,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * compile map of marker -> array of maps
      *  array of { stack{maps...} ... }
      * stacks change, but maps/chromosomes are changed only when page refresh
-     *
-     * x @param include_aliases use marker aliases to match makers
      */
-    function collateMarkerMap(/*include_aliases*/)
+    function collateMarkerMap()
     {
       console.log("collateMarkerMap()");
       if (mm === undefined)
@@ -1424,22 +1422,33 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           // console.log(map, marker);
           if (mm[marker] === undefined)
             mm[marker] = [];
-	        // if (! include_aliases)
           mm[marker].push(map);
+
+          /* use marker aliases to match makers */
           let a = za[map][marker];
           if (a)
           for (let ai=0; ai < a.length; ai++)
           {
             let alias = a[ai];
-            mma[alias] || (mma[alias] = []);
-            mma[alias].push(map);
+            if (alias < marker)
+            {
+              mma[alias] || (mma[alias] = []);
+              mma[alias].push(map);
+            }
 	        }
         }
       }
     }
 
 
-
+    /** given 2 arrays of marker names, concat them and remove duplicates */
+    function concatAndUnique(a, b)
+    {
+      let c = a || [];
+      if (b) c = c.concat(b);
+      let cu = [...new Set(c)];
+      return cu;
+    }
 
     /** Return an array of maps contain Marker `marker` and are in stack `stackIndex`.
      * @param marker  name of marker
@@ -1448,8 +1457,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function markerStackMaps(marker, stackIndex)
     {
-      let stack = stacks[stackIndex], ma=Array.prototype.concat(mm[marker]||[], mma[marker] || []);
-      // console.log("markerStackMaps()", marker, stackIndex, ma);
+      let stack = stacks[stackIndex], ma=concatAndUnique(mma[marker], mm[marker]);
+       console.log("markerStackMaps()", marker, stackIndex, ma);
       let mmaps = ma.filter(function (mapID) {
         let mInS = stack.contains(mapID); return mInS; });
        console.log(mmaps);
