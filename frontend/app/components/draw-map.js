@@ -159,6 +159,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
          * i.e. z[d.map][d.marker] is the location of d.marker in d.map.
          */
         z = {}, // will contain map/marker information
+    /** same indexing as z, but containing a list of aliases for the marker. */
     za = {},
         /** All marker names.
          * Initially a set (to determine unique names), then converted to an array.
@@ -312,7 +313,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     };
     Stacked.mapName_match =
       function (mapName)
-    { return function (s) { return s.mapName == mapName; };};
+    { return function (s) { return s.mapName === mapName; };};
     Stacked.prototype.yOffset = function ()
     {
       let yOffset = yRange * this.position[0];
@@ -383,7 +384,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** @return true if this.maps[] is empty. */
     Stack.prototype.empty = function ()
     {
-      return this.maps.length == 0;
+      return this.maps.length === 0;
     };
     /** @return array of mapIDs of this Stack */
     Stack.prototype.mapIDs = function ()
@@ -708,7 +709,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         factor = (n-1)/n;
         inserted.portion = 1/n;
         this.maps.forEach(
-          function (m, index) { if (index != insertIndex) m.portion *= factor; });
+          function (m, index) { if (index !== insertIndex) m.portion *= factor; });
         this.calculatePositions();
       }
     };
@@ -894,9 +895,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           // console.log("redraw", Stack.prototype.currentDrag, m.mapName, Stack.prototype.currentDrag == m.mapName);
           let ts = 
             t_.selectAll(".map#" + eltId(m.mapName));
-          if (trace_stack_redraw > 0)
-          ((ts._groups.length === 1) && console.log(ts._groups[0], ts._groups[0][0]))
-            || ((trace_stack_redraw > 1) && console.log("redraw", this_Stack, m, index, m.mapName));
+          (trace_stack_redraw > 0) &&
+            (((ts._groups.length === 1) && console.log(ts._groups[0], ts._groups[0][0]))
+             || ((trace_stack_redraw > 1) && console.log("redraw", this_Stack, m, index, m.mapName)));
           // console.log("redraw", m.mapName);
           // args passed to fn are data, index, group;  `this` is node (SVGGElement)
           ts.attr("transform", Stack.prototype.mapTransformO);
@@ -1021,6 +1022,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     // Compile positions of all markers, and a hash of marker names.
     d3Data.forEach(function(d) {
       z[d.map][d.marker] = +d.location;
+      if (true)
       for (let a of d.aliases)
       {
         z[d.map][a] = +d.location;
@@ -1200,7 +1202,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           g.append("g")
           .attr("class", "stackDropTarget" + " end " + (top ? "top" : "bottom"));
         let
-          dropTargetY = function (datum, index, group) {
+          dropTargetY = function (datum/*, index, group*/) {
             let mapName = datum,
             map = maps[mapName],
             yVal = top ? -dropTargetYMargin : edge.bottom(map);
@@ -1227,7 +1229,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         let stackDropTarget = 
           g.append("g")
           .attr("class", "stackDropTarget" + " middle " + (left ? "left" : "right"));
-        function dropTargetHeight(datum, index, group)
+        function dropTargetHeight(datum/*, index, group*/)
         {
           // console.log("dropTargetHeight", datum, index, group);
           let mapName = datum,
@@ -1263,7 +1265,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         currentDropTarget = undefined;
       }
 
-    };
+    }
     let dropTarget = new DropTarget();
 
     [true, false].forEach(function (i) {
@@ -1299,7 +1301,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * g.btn contains <rect> and <text>, both requiring this scale.
      *
      */
-    function yAxisTextScale(d, i, g)
+    function yAxisTextScale(/*d, i, g*/)
     {
       let
       mapName = this.__data__,
@@ -1309,7 +1311,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // console.log("yAxisTextScale", d, i, g, this, mapName, map, portion, scaleText);
       return scaleText;
     }
-    function yAxisTicksScale(d, i, g)
+    function yAxisTicksScale(/*d, i, g*/)
     {
       let parent = this.parentElement,
       gp = parent.parentElement,
@@ -1317,7 +1319,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       scaleText = yAxisTextScale.apply(gp, arguments);
       return scaleText;
     }
-    function yAxisBtnScale(d, i, g)
+    function yAxisBtnScale(/*d, i, g*/)
     {
       return 'translate(10) ' + yAxisTextScale.apply(this, arguments);
     }
@@ -1423,20 +1425,25 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           if (mm[marker] === undefined)
             mm[marker] = [];
           mm[marker].push(map);
-
-          /* use marker aliases to match makers */
-          let a = za[map][marker];
-          if (a)
-          for (let ai=0; ai < a.length; ai++)
-          {
-            let alias = a[ai];
-            if (alias < marker)
-            {
-              mma[alias] || (mma[alias] = []);
-              mma[alias].push(map);
-            }
-	        }
         }
+        /* use marker aliases to match makers */
+        Object.entries(za[map]).forEach
+        (
+          function ([marker, a])
+          {
+            console.log(marker, a);
+            for (let ai=0; ai < a.length; ai++)
+            {
+              let alias = a[ai];
+              // use an arbitrary order (marker name), to reduce duplicate paths
+              if (alias < marker)
+              {
+                mma[alias] || (mma[alias] = []);
+                mma[alias].push(map);
+              }
+            }
+          }
+        );
       }
     }
 
@@ -1534,7 +1541,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               function inRangeI(mapID)
               {
                 return inRange(markerY_(mapID, d), range);
-              }
+              };
 
               /** Filter out those paths that either side locates out of the svg. */
               let lineIn = allowPathsOutsideZoom ||
@@ -1546,7 +1553,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 /** 1 signifies the normal behaviour - handleMouseOver() will show just the marker name.
                  * Values other than 1 will be appended as text. */
                 let hoverExtraText = showHoverExtraText ?
-                  hoverExtraText = " " + z[m0][d] + "-" + z[m1][d] + " " + sLine
+                  " " + z[m0][d] + "-" + z[m1][d] + " " + sLine
                   : 1;
                  console.log("stacksPath()", d, m0i, m1i, m0, m1, z[m0][d], z[m1][d], sLine, this);
                 r.push(sLine);
@@ -1616,10 +1623,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let ysm = ys[mapID],
       mky = ysm(z[mapID][d]),
       mapY = maps[mapID].yOffset();
-      let yDomain = ysm.domain();
       if (! tracedMapScale[mapID])
       {
         tracedMapScale[mapID] = true;
+        // let yDomain = ysm.domain();
         // console.log("markerY_", mapID, d, z[mapID][d], mky, mapY, yDomain, ysm.range());
       }
       return mky + mapY;
@@ -1919,7 +1926,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
        */
       g.selectAll('g.map > g.stackDropTarget').classed
       ("current",
-       function(d, index, group)
+       function(d /*, index, group*/)
        {
          let xd = x(d),
          /** d3.event has various x,y values, which are sufficient for this
@@ -1928,7 +1935,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
          middle = this.classList.contains("middle"),
          left = this.classList.contains("left"),
          isCurrent =
-           (d != cl.d) &&  (! middle || ((left) == (xd < startX)));
+           (d != cl.d) &&  (! middle || ((left) === (xd < startX)));
          // console.log("current classed", this, d3.event, d, index, group, cl, xd, startX, middle, left, isCurrent);
          return isCurrent;
        });
@@ -2079,8 +2086,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       let ms_ = "g.map#" + eltId(mapID),
       ms = t.selectAll(ms_),
-      gStack = ms._groups[0][0].parentNode,
-      p = t.select(function() { return gStack; });
+      gStack = ms._groups[0][0].parentNode;
+      // let p = t.select(function() { return gStack; });
       // console.log("mapChangeGroupElt", mapID, t, ms_, ms, p);
       // compare with map->stack
       let map = maps[mapID],
@@ -2100,9 +2107,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         console.log("removedGmap", removedGmap, removedGmapNode);
         let dStackN = dStackS.node();
         // tried .append, .appendChild(), not working yet.
-        dStackN && dStackN.append &&
-        //  dStackN.append(removedGmapNode);
-        dStackN.append(function() { return removedGmapNode;});
+        if (dStackN && dStackN.append)
+          //  dStackN.append(removedGmapNode);
+          dStackN.append(function() { return removedGmapNode;});
       }
     }
 
