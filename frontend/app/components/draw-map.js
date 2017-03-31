@@ -911,10 +911,6 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     /*------------------------------------------------------------------------*/
 
-    //myMaps mapset ID
-    //
-    console.log("myData:");
-    console.log(myData);
     /** x scale which maps from mapIDs[] to equidistant points in axisXRange
      */
     //d3 v4 scalePoint replace the rangePoint
@@ -994,10 +990,6 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
     collateO();
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
-
-    console.log("z:");
-    console.log(z);
-    
     //console.log(axis.scale(y[mapIDs))
     collateMarkerMap();
 
