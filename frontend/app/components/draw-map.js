@@ -1465,10 +1465,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function markerStackMaps(marker, stackIndex)
     {
       let stack = stacks[stackIndex], ma=concatAndUnique(mma[marker], mm[marker]);
-       console.log("markerStackMaps()", marker, stackIndex, ma);
+      // console.log("markerStackMaps()", marker, stackIndex, ma);
       let mmaps = ma.filter(function (mapID) {
         let mInS = stack.contains(mapID); return mInS; });
-       console.log(mmaps);
+      // console.log(mmaps);
       return mmaps;
     }
     /** A line between a marker's location in adjacent maps.
