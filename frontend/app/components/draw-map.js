@@ -46,16 +46,11 @@ export default Ember.Component.extend({
    *
    * @param myMaps array of map names
    */
-  draw: function(myData, myMaps) {
+  draw: function(myData) {
 
     // Draw functionality goes here.
     let me = this;
 
-    /** d3Data[] is a flattened form of myData[].  Each array elt
-     * is an instance of a marker in a map.
-     * convert myData into format like: {map:1,marker:1,location:1}
-     */
-    let d3Data = [];
     /** Each stack contains 1 or more maps.
      * stacks are numbered from 0 at the left.
      * stack[i] is an array of Stack, which contains an array of Stacked,
@@ -67,10 +62,8 @@ export default Ember.Component.extend({
     /** Reference to all (Stacked) maps by mapName.
      */
     let maps = {};
-    //myMaps should contain map IDs instead of mapset IDs.
-    //mapIDs will be used to store map IDs
     /// mapIDs are <mapName>_<chromosomeName>
-    let mapIDs = [];
+    let mapIDs = d3.keys(myData);
 
 /** Plan for layout of stacked axes.
 
@@ -158,11 +151,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         /** z[mapId] is a hash for map mapId mapping marker name to location.
          * i.e. z[d.map][d.marker] is the location of d.marker in d.map.
          */
-        z = {}, // will contain map/marker information
+        z = myData,
         /** All marker names.
          * Initially a set (to determine unique names), then converted to an array.
          */
         d3Markers = new Set();
+    d3.keys(myData).forEach(function(map) {
+      d3.keys(myData[map]).forEach(function(marker) {
+        d3Markers.add(marker);
+      });
+    });
+    //creates a new Array instance from an array-like or iterable object.
+    d3Markers = Array.from(d3Markers);
     let
       /** Draw a horizontal notch at the marker location on the axis,
        * when the marker is not in a map of an adjacent Stack.
@@ -911,27 +911,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     /*------------------------------------------------------------------------*/
 
-    // Unpack data from myData[] into d3Data[], mapIDs[];
-    // cache of locations z[] is cleared here, and accumulated in d3Data.forEach() below.
-    //Convert the data into proper format
     //myMaps mapset ID
-    myMaps.forEach(function(i){
-      //map ID
-      let mIDs = Object.keys(myData[i]);
-      //List of objects 
-      //e.g.
-      //location:36.2288
-      //map:"1-1A"
-      //marker:"IWB6476"
-      mIDs.forEach(function(mapID) {
-        /// array of markers
-        let dataToArray = myData[i][mapID].toArray();
-        //Push the values from the array to d3Data.
-        d3Data.push.apply(d3Data, dataToArray);
-        mapIDs.push(mapID);
-        z[mapID] = {};
-      });
-    });
+    //
+    console.log("myData:");
+    console.log(myData);
     /** x scale which maps from mapIDs[] to equidistant points in axisXRange
      */
     //d3 v4 scalePoint replace the rangePoint
@@ -1012,16 +995,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     collateO();
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
 
-    // Compile positions of all markers, and a hash of marker names.
-    d3Data.forEach(function(d) {
-      z[d.map][d.marker] = +d.location;
-      //console.log(d.map + " " + d.marker + " " + d.location);
-      // If d3Markers does not contain d.marker then add it.
-      d3Markers.add(d.marker);
-    });
+    console.log("z:");
+    console.log(z);
     
-    //creates a new Array instance from an array-like or iterable object.
-    d3Markers = Array.from(d3Markers);
     //console.log(axis.scale(y[mapIDs))
     collateMarkerMap();
 
@@ -2183,8 +2159,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     // draw each time.
     //
     let data = this.get('data');
-    let maps = d3.keys(data);
-    this.draw(data, maps);
+    this.draw(data);
   },
 
   resize() {
