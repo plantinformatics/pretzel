@@ -68,7 +68,6 @@ export default Ember.Route.extend({
     return Ember.RSVP.hash(promises).then(function(extendedMaps) {
       params.mapsToView.forEach(function(param) {
         let mapName = param;
-        retHash[mapName] = {};
         extendedMaps[param].get('chromosomes').forEach(function(chr) {
           let chrName = chr.get('name');
           console.log(chrName);
@@ -76,15 +75,12 @@ export default Ember.Route.extend({
           that.controllerFor("mapview").set("availableChrs", Array.from(seenChrs).sort());
           console.log(seenChrs);
           if (chrName == params.chr) {
-            retHash[mapName][mapName+"_"+chrName] = [];
+            retHash[mapName+"_"+chrName] = {};
             chr.get('markers').forEach(function(marker) {
-              retHash[mapName][mapName+"_"+chrName].pushObject(
-                {"map": mapName+"_"+chrName,
-                 "marker": marker.get('name'),
-                 "location": marker.get('position'),
-                 "aliases": marker.get('aliases')
-                }
-              );
+              let markerName = marker.get('name');
+              let markerPosition = marker.get('position');
+              let markerAliases = marker.get('aliases');
+              retHash[mapName+"_"+chrName][markerName] = {location: markerPosition, aliases : markerAliases};
             });
           }
         });
