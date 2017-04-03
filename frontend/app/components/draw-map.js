@@ -161,6 +161,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         d3Markers.add(marker);
 
         let markerValue = myData[map][marker];
+        if (markerValue && markerValue.aliases)
         for (let a of markerValue.aliases)
         {
           z[map][a] = {location: markerValue.location};
@@ -1399,7 +1400,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           {
             /** m.aliases is undefined for z entries created via an alias. */
             let a = m.aliases;
-            console.log(marker, a);
+            // console.log(marker, a);
             if (a)
             for (let ai=0; ai < a.length; ai++)
             {
@@ -1515,7 +1516,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               /** Filter out those paths that either side locates out of the svg. */
               let lineIn = allowPathsOutsideZoom ||
                 (inRangeI(m0) && inRangeI(m1));
-               console.log("path()", stackIndex, m0, allowPathsOutsideZoom, inRangeI(m0), inRangeI(m1), lineIn);
+              // console.log("path()", stackIndex, m0, allowPathsOutsideZoom, inRangeI(m0), inRangeI(m1), lineIn);
               if (lineIn)
               {
                 let sLine = markerLineS2(m0, m1, d);
@@ -1524,7 +1525,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 let hoverExtraText = showHoverExtraText ?
                   " " + z[m0][d].location + "-" + z[m1][d].location + " " + sLine
                   : 1;
-                 console.log("stacksPath()", d, m0i, m1i, m0, m1, z[m0][d].location, z[m1][d].location, sLine, this);
+                // console.log("stacksPath()", d, m0i, m1i, m0, m1, z[m0][d].location, z[m1][d].location, sLine, this);
                 r.push(sLine);
                 /* Prepare a tool-tip for the line. */
                 if (pathMarkers[sLine] === undefined)
