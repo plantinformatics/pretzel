@@ -180,9 +180,6 @@ chromosome : >=1 linkageGroup-s layed out vertically:
        */
       showAll = true;
 
-    /** reverse mapping of z[mapID] */
-    let mapNames = new Map();
-
     /** Alias groups : ag[ag] : [ marker ]    marker references map and array of aliases */
     let ag = {};
 
@@ -1432,8 +1429,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       d3.keys(z).forEach(function(map) {
         let zm = z[map];
-        mapNames.set(zm, map);
-        console.log("collateData", map, zm);
+        // console.log("collateData", map, zm);
         if (mam[map] === undefined)
           mam[map] = {};
         if (magm[map] === undefined)
@@ -1703,20 +1699,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       /** 1 string per path segment */
       let
       mmNm = mmN[markerName];
-      if (mmNm === undefined)
-        console.log("path", markerName);
-      else
+      if (mmNm !== undefined)
+        /* console.log("path", markerName);
+      else */
       for (let i=0; i < mmNm.length; i++)
       {
         let [markerName, m0_, m1_, zm0, zm1] = mmNm[i];
-        // let m0 = mapNames.get(zm0), m1 = mapNames.get(zm1);
         let m0 = m0_.mapName, m1 = m1_.mapName;
         if ((zm0 !== zm1) && (m0 == m1))
           console.log("path", i, markerName, zm0, zm1, m0, m1);
         r[i] = pathmm(m0, m1, markerName);
       }
-      // let rj = (r.length > 0) ? r[0] : r.join('\n');
-      console.log("path", markerName, mmNm, r);
+      // console.log("path", markerName, mmNm, r);
       return r;
     }
 
@@ -1733,7 +1727,6 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       for (let i=0; i < agmma.length; i++)
       {
         let [markerName, m0, m1, zm0, zm1] = agmma[i];
-        // let m0 = mapNames.get(zm0), m1 = mapNames.get(zm1);
         p[i] = pathmm(m0.mapName, m1.mapName, markerName);
       }
       return p.join();
@@ -2314,21 +2307,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function pathUpdate(t)
     {
-      console.log("pathUpdate");
+      // console.log("pathUpdate");
       tracedMapScale = {};  // re-enable trace
       let g = d3.selectAll(".foreground g"),
       gd = g.selectAll("path").data(path);
       gd.exit().remove();
       gd.enter().append("path");
       if (t === undefined) {t = d3; }
-      try
-      {
-        t.selectAll(".foreground path").attr("d", function(d) {console.log("pathUpdate", d); return d; });
-      } catch (exc)
-      {
-        console.log("pathUpdate", exc);
-        debugger;
-      }
+      t.selectAll(".foreground path").attr("d", function(d) { return d; });
       d3.selectAll(".foreground > g > path")
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
