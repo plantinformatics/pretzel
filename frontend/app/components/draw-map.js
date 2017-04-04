@@ -7,10 +7,10 @@ import Ember from 'ember';
 export default Ember.Component.extend({
 
   actions: {
-    updatedSelectedMarkers: function(markers) {
-      let markersAsArray = d3.keys(markers)
+    updatedSelectedMarkers: function(selectedMarkers) {
+      let markersAsArray = d3.keys(selectedMarkers)
         .map(function (key) {
-          return markers[key].map(function(marker) {
+          return selectedMarkers[key].map(function(marker) {
             //marker contains marker name and position, separated by " ".
             var info = marker.split(" ");
             return {Map:key,Marker:info[0],Position:info[1]};
@@ -171,12 +171,21 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     });
     //creates a new Array instance from an array-like or iterable object.
     d3Markers = Array.from(d3Markers);
+    /** the name markers can replace d3Markers, in next commit. */
+    let markers = d3Markers;
     let
       /** Draw a horizontal notch at the marker location on the axis,
        * when the marker is not in a map of an adjacent Stack.
        * Makes the marker location visible, because otherwise there is no path to indicate it.
        */
       showAll = true;
+
+    /** reverse mapping of z[mapID] */
+    let mapNames = new Map();
+
+    /** Alias groups : ag[ag] : [ marker ]    marker references map and array of aliases */
+    let ag = {};
+
     /** Map from marker names to map names.
      * Compiled by collateMarkerMap() from z[], which is compiled from d3Data.
      */
@@ -186,6 +195,20 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     let mma;
 
+    // results of collateData()
+    let
+      /** map / alias : marker    mam[map][alias group] : marker */
+      mam = {},
+    /** map/marker : alias groups       mmag[map][marker] : [ag]  */
+    mmag = {},
+        /** marker alias groups maps */
+    magm = {};
+
+    // results of collateStacks()
+    let
+    /** marker : map - map    mmN[marker] : [[marker, marker]] */
+    mmN = {},
+    agmm = {};
 
     let line = d3.line(),
         axis = d3.axisLeft(),
@@ -978,6 +1001,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     //Reset the selected Marker region, everytime a map gets deleted
     me.send('updatedSelectedMarkers', selectedMarkers);
 
+    collateData();
+
+    /** For all maps, store the x value of its axis, according to the current scale. */
     function collateO() {
       mapIDs.forEach(function(d){
         o[d] = x(d);
@@ -990,6 +1016,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // Groups, can automatically stack maps.
       let sd = new Stacked(d, 1),
       stack = new Stack(sd);
+      sd.z = z[d];  // reference from Stacked map to z[mapID]
       stacks.append(stack);
       stack.calculatePositions();
     });
@@ -1005,6 +1032,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
     //console.log(axis.scale(y[mapIDs))
     collateMarkerMap();
+    collateStacks();
 
     /** update ys[m.mapName] for the given map,
      * according the map's current .portion.
@@ -1082,6 +1110,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 .attr("class", function(d) { return d; });
     
     
+    // can use foreground in pathUpdate()
+    if (true)
+      pathUpdate(undefined);
+    else
     d3Markers.forEach(function(m) { 
       d3.selectAll("."+m)
         .selectAll("path")
@@ -1373,6 +1405,127 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function refreshMap(){
       console.log("Refresh");
     }
+
+
+    /** Construct a unique name for a group of aliases - sort the aliases and catenate them.
+     */
+    function aliasesUniqueName(aliases)
+    {
+      let s = aliases.sort().join("_");
+      aliases.name = s;
+      return s;
+    }
+    /** After data is loaded, collate to enable faster lookup in collateStacks() and dragged().
+     * for each map
+     *   for each marker
+     *     store : ref to parent map       .map
+     *     store : marker -> array of maps (or set)  markers[marker] : set of maps
+     *     store       ag[ag] : [ marker ] marker references map and array of aliases
+     *     {unique name of alias group (sort) : array of : map / marker / array of aliases}
+     *     for each alias
+     *       store map / alias : marker    mam[map][alias group] : marker
+     *       store map/marker : alias groups  (or was that alias groups to marker)
+     *          mmag[map][marker] : [ag]
+     * 
+     */
+    function collateData()
+    {
+      d3.keys(z).forEach(function(map) {
+        let zm = z[map];
+        mapNames.set(zm, map);
+        console.log("collateData", map, zm);
+        if (mam[map] === undefined)
+          mam[map] = {};
+        if (magm[map] === undefined)
+          magm[map] = {};
+        if (mmag[map] === undefined)
+          mmag[map] = {};
+        let mamm = mam[map];
+        d3.keys(zm).forEach(function(marker) {
+          try
+          {
+          zm[marker].map = z[map]; // reference from marker to parent map
+          // console.log("collateData", map, zm, zm[marker]);
+          } catch (exc)
+          {
+            console.log("collateData", map, zm, zm[marker], exc);
+            debugger;
+          }
+          if (markers[marker] === undefined)
+            markers[marker] = new Set();
+          markers[marker].add(map);
+
+          let marker_ = zm[marker], mas = marker_.aliases;
+          marker_.name = marker;
+          if (mas && mas.length)
+          {
+            let agName = aliasesUniqueName(mas);
+            if (ag[agName] === undefined)
+              ag[agName] = [];
+            ag[agName].push(marker_);
+
+            for (let markerAlias of mas)
+            {
+              // done above, could be moved here, if still required :
+              // zm[a] = {location: marker_.location};
+
+              mamm[markerAlias] = marker_;
+            }
+
+            let mmagm = mmag[map];
+            if (mmagm[marker] == undefined)
+              mmagm[marker] = [];
+            mmagm[marker].push(agName);
+          }
+        });
+      });
+    }
+
+    /** At time of axis adjacency change, collate data for faster lookup in dragged().
+     *
+     *   for each pair of adjacent stacks
+     *     for each map in the 2 adjacent stacks (cross product stack1 x stack2)
+     *       for each marker in map
+     *         lookup that marker in the other map directly
+     *           store : marker : map - map    mmN[marker] : [[marker, marker]]
+     *         lookup that marker in the other map via inverted aliases
+     *           store : alias group : map/marker - map/marker   agmm[ag] : [marker, marker]  markers have refn to parent map
+     * 
+     */
+    function collateStacks()
+    {
+      mmN = {};
+      agmm = {};
+
+      for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
+        let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
+        mmaps0 = s0.maps,
+        mmaps1 = s1.maps;
+        // Cross-product of the two adjacent stacks
+        for (let m0i=0; m0i < mmaps0.length; m0i++) {
+          let m0 = mmaps0[m0i], zm0 = m0.z, m0Name = m0.mapName, mmag0 = mmag[m0Name];
+          for (let m1i=0; m1i < mmaps1.length; m1i++) {
+            let m1 = mmaps1[m1i], zm1 = m1.z;
+            d3.keys(zm0).forEach(function(marker0) {
+              let mmm = [marker0, m0, m1, zm0[marker0], zm1[marker0]];
+              if (zm1[marker0])
+              {
+                if (mmN[marker0] === undefined)
+                  mmN[marker0] = [];
+                mmN[marker0].push(mmm);
+              }
+              if (mmag0[marker0])
+              {
+                if (agmm[ag] === undefined)
+                  agmm[ag] = [];
+                agmm[ag].push(mmm);
+              }
+              });
+            }
+        }
+      }
+    }
+
     /**
      * compile map of marker -> array of maps
      *  array of { stack{maps...} ... }
@@ -1488,15 +1641,42 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return line([[o[mk]-xOffset, mkY],
                    [o[mk]+xOffset, mkY]]);
     }
-    /** This is the stacks equivalent of path() / zoompath().
-     * Returns an array of paths (links between maps) for a given marker.
+    /**
+     * change to use marker alias group as data of path;
+     *  for non-aliased markers, data remains as marker - unchanged
+     * 
+     * when stack adjacency changes (i.e. drop in/out, dragended) :
+     * 
+     * compile a list, indexed by marker names,
+     *   array of
+     *     map from / to (optional : stack index from / to)
+     * 
+     * compile a list, indexed by marker alias group names (catenation of aliased marker names),
+     *   marker name
+     *   array of
+     *     map from / to (optional : stack index from / to)
+     * 
+     * I think these will use 2 variants of markerStackMaps() : one using mm[] and the other mma[].
+     * Thinking about what the hover text should be for paths drawn due to an alias - the alias group (all names), or maybe the 2 actual markers.
+     * that is why I think I'll need 2 variants.
+     * 
+     * path()
+     *   based on the current path(), retain the part inside the 3rd nested for();
+     *   the remainder (outer part) is used to as the basis of the above 2 collations.
+     * 
+     * More detail in collateData() and collateStacks().
      */
-    function path(d) { // d is a marker
-        let r = [];
-      // TODO : discard markers of the paths which change
-      // pathMarkers = {};
 
-        for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
+    /** Replaced by collateStacks(). */
+    function collateMagm(d) // d is markerName
+    {
+      /* This method originated in path(markerName), i.e. it starts from a given markerName;
+       * in next version this can be re-written to walk through :
+       *  all adjacent pairs of stacks  :
+       *   all maps of those stacks :
+       *    all markers of those maps
+       */
+      for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
           let mmaps0 = markerStackMaps(d, stackIndex),
           mmaps1 = markerStackMaps(d, stackIndex+1);
           // Cross-product of the two adjacent stacks; just the maps which contain the marker.
@@ -1504,6 +1684,69 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             let m0 = mmaps0[m0i];
             for (let m1i=0; m1i < mmaps1.length; m1i++) {
               let m1 = mmaps1[m1i];
+              if (magm[d] === undefined)
+                magm[d] = [];
+              magm[d].push([stackIndex, m0, m1]);
+            }
+          }
+        }
+    }
+
+    /** This is the stacks equivalent of path() / zoompath().
+     * Returns an array of paths (links between maps) for a given marker.
+     */
+    function path(markerName) {
+        let r = [];
+      // TODO : discard markers of the paths which change
+      // pathMarkers = {};
+
+      /** 1 string per path segment */
+      let
+      mmNm = mmN[markerName];
+      if (mmNm === undefined)
+        console.log("path", markerName);
+      else
+      for (let i=0; i < mmNm.length; i++)
+      {
+        let [markerName, m0_, m1_, zm0, zm1] = mmNm[i];
+        // let m0 = mapNames.get(zm0), m1 = mapNames.get(zm1);
+        let m0 = m0_.mapName, m1 = m1_.mapName;
+        if ((zm0 !== zm1) && (m0 == m1))
+          console.log("path", i, markerName, zm0, zm1, m0, m1);
+        r[i] = pathmm(m0, m1, markerName);
+      }
+      // let rj = (r.length > 0) ? r[0] : r.join('\n');
+      console.log("path", markerName, mmNm, r);
+      return r;
+    }
+
+    /** TODO : for paths with alias group as data
+     * @param ag   alias group (name)?
+     */
+    function pathAg(ag) {
+      /** 1 string per path segment */
+      let p = [],
+      agmma = agmm[ag];
+      if (agmma === undefined)
+        console.log("pathAg", ag);
+      else
+      for (let i=0; i < agmma.length; i++)
+      {
+        let [markerName, m0, m1, zm0, zm1] = agmma[i];
+        // let m0 = mapNames.get(zm0), m1 = mapNames.get(zm1);
+        p[i] = pathmm(m0.mapName, m1.mapName, markerName);
+      }
+      return p.join();
+    }
+
+    /**
+     * @param  m0, m1  map names
+     * @param d marker name
+     */
+    function pathmm(m0, m1, d) {
+      // let [stackIndex, m0, m1] = magm[d];
+      let r;
+
               let range = [0, yRange];
               /** Calculate relative location of marker d in the map mapID, and
                * check if it is inRange 
@@ -1526,7 +1769,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                   " " + z[m0][d].location + "-" + z[m1][d].location + " " + sLine
                   : 1;
                 // console.log("stacksPath()", d, m0i, m1i, m0, m1, z[m0][d].location, z[m1][d].location, sLine, this);
-                r.push(sLine);
+                r = sLine;
                 /* Prepare a tool-tip for the line. */
                 if (pathMarkers[sLine] === undefined)
                   pathMarkers[sLine] = {};
@@ -1534,16 +1777,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               }
               else if (showAll) {
                 if (d in z[m0]) { 
-                  r.push(markerLineS(m0, d, 5));
+                  r = markerLineS(m0, d, 5);
                 }
                 if (d in z[m1]) {
-                  r.push(markerLineS(m1, d, 5));
+                  r = markerLineS(m1, d, 5);
                 }
               }
-
-            }
-          }
-        }
       return r;
     }
     // Returns an array of paths (links between maps) for a given marker.
@@ -1803,17 +2042,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
              let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
              axisTickS.attr("transform", yAxisTicksScale);
 
-             if (true)
-               pathUpdate(t);
-             else
-             {
-             d3.selectAll(".foreground g").selectAll("path").remove();
-             d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
-             t.selectAll(".foreground path").attr("d", function(d) {return d; });
-             d3.selectAll(".foreground > g > path")
-              .on("mouseover",handleMouseOver)
-              .on("mouseout",handleMouseOut);
-             }
+             pathUpdate(t);
              mapS.selectAll(".btn").remove();
              selectedMarkers = {};
              me.send('updatedSelectedMarkers', selectedMarkers);
@@ -1858,12 +2087,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           let idName = axisEltId(p);
           svgContainer.selectAll(".btn").remove();
           svgContainer.select("#"+idName).transition(t).call(yAxis);
-          d3.selectAll(".foreground g").selectAll("path").remove();
-          d3.selectAll(".foreground g").selectAll("path").data(/*zoom*/path).enter().append("path");
-          t.selectAll(".foreground path").attr("d", function(d) {return d; });
-          d3.selectAll(".foreground > g > path")
-            .on("mouseover",handleMouseOver)
-            .on("mouseout",handleMouseOut);
+          pathUpdate(t);
           // `that` refers to the brush g element
           d3.select(that).call(y[p].brush.move,null);
           let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(p) + " > g.tick > text");
@@ -1957,6 +2181,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                */
               stack.dropIn(d, zoneParent.mapIndex, top, t);
               mapChangeGroupElt(d, t);
+              collateStacks();
               // number of stacks has decreased - not essential to recalc the domain.
               Stack.log();
               stack.redraw(t);
@@ -1980,6 +2205,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               stack.dropOut(d);
               Stack.log();
               mapChangeGroupElt(d, t);
+              collateStacks();
               /* if d is not in currentDrop.stack (=== stack), which would be a
                * program error, dropOut() could return false; in that case stack
                * redraw() may have no effect.
@@ -2095,7 +2321,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       gd.exit().remove();
       gd.enter().append("path");
       if (t === undefined) {t = d3; }
-      t.selectAll(".foreground path").attr("d", function(d) {return d; });
+      try
+      {
+        t.selectAll(".foreground path").attr("d", function(d) {console.log("pathUpdate", d); return d; });
+      } catch (exc)
+      {
+        console.log("pathUpdate", exc);
+        debugger;
+      }
       d3.selectAll(".foreground > g > path")
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
@@ -2120,22 +2353,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       
       stacks.sortLocation();
       collateO();
+      collateStacks();
       // already done in xScale()
       // x.domain(mapIDs).range(axisXRange);
-      if(zoomed){
-        d3.selectAll(".foreground g").selectAll("path").data(/*zoom*/path).enter().append("path");  
-      } else {
-        d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
-      }
-      
       let t = d3.transition().duration(dragTransitionTime);
       t.selectAll(".map").attr("transform", Stack.prototype.mapTransformO);
-      t.selectAll(".foreground path").attr("d", function(d) { return d; });
+      pathUpdate(t);
       d3.select(this).classed("active", false);
       svgContainer.classed("axisDrag", false);
-      d3.selectAll(".foreground > g > path")
-        .on("mouseover",handleMouseOver)
-        .on("mouseout",handleMouseOut);
       d3.event.subject.fx = null;
       Stack.prototype.currentDrag = undefined;
 
