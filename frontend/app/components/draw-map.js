@@ -148,6 +148,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * See also comments for y re. the difference in uses of y and ys.
      */
     ys = {},
+    /** Count markers in maps, to set stronger paths than normal when working
+     * with small data sets during devel.  */
+    markerTotal = 0,
         /** z[mapId] is a hash for map mapId mapping marker name to location.
          * i.e. z[d.map][d.marker] is the location of d.marker in d.map.
          */
@@ -159,6 +162,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     d3.keys(myData).forEach(function(map) {
       d3.keys(myData[map]).forEach(function(marker) {
         d3Markers.add(marker);
+        markerTotal++;
 
         let markerValue = myData[map][marker];
         if (markerValue && markerValue.aliases)
@@ -1067,13 +1071,16 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     d3.select("svg").remove();
     d3.select("div.d3-tip").remove();
     let translateTransform = "translate(" + m[marginIndex.left] + "," + m[marginIndex.top] + ")";
-    let svgContainer = d3.select('#holder').append('svg')
+    let svgRoot = d3.select('#holder').append('svg')
                          .attr("viewBox", "0 0 " + graphDim.w + " " + graphDim.h)
                          .attr("preserveAspectRatio", "xMinYMin meet")
                          .attr('width', "100%" /*graphDim.w*/)
-                         .attr('height', graphDim.h /*"auto"*/)
+                         .attr('height', graphDim.h /*"auto"*/);
+    let svgContainer = svgRoot
                          .append("svg:g")
                          .attr("transform", translateTransform);
+
+    svgRoot.classed("devel", (markerTotal / mapIDs.length) < 20);
 
     //User shortcut from the keybroad to manipulate the maps
     d3.select("#holder").on("keydown", function() {

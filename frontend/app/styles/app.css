@@ -39,6 +39,11 @@ svg {
   stroke-opacity: .05;
 }
 
+.devel .foreground path {
+  stroke-opacity: 1;
+  stroke-width: 2px;
+}
+
 /*.brush .extent {
   fill-opacity: .3;
   stroke: #fff;
