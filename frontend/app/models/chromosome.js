@@ -1,9 +1,10 @@
 import DS from 'ember-data';
 import attr from 'ember-data/attr';
-//import Fragment from 'model-fragments/fragment';
-//import fragmentArray from 'model-fragments/attributes';
+import { PartialModel, partial } from 'ember-data-partial-model/utils/model';
 
-export default DS.Model.extend({
+export default PartialModel.extend({
   name: attr('string'),
-  markers: DS.hasMany('marker', { async: false })
+  extended: partial('chromosome', 'extended', {
+    markers: DS.hasMany('marker', { async: true })
+  })
 });

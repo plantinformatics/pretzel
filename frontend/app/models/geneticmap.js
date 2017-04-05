@@ -2,18 +2,13 @@ import Ember from 'ember';
 import DS from 'ember-data';
 import Model from 'ember-data/model';
 import attr from 'ember-data/attr';
-import { fragmentArray } from 'model-fragments/attributes';
-import { PartialModel, partial } from 'ember-data-partial-model/utils/model';
 // const { attr } = DS;
 
-export default PartialModel.extend({
+export default DS.Model.extend({
   name: attr('string'),
+  chromosomes: DS.hasMany('chromosome', { async: false }),
 
-  extended: partial('geneticmap', 'extended', {
-    chromosomes: DS.hasMany('chromosome', { async: false })
-  }),
-
-    // maps which are have a link.  Managed via mapDeleteLink(), mapLink().
+  // maps which are have a link.  Managed via mapDeleteLink(), mapLink().
   extraMaps: [],
   isSelected: false,
 
