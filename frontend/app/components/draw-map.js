@@ -105,8 +105,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /// yRange is the axis length
     yRange = graphDim.h - 40,
     /** X Distance user is required to drag axis before it drops out of Stack.
+     * Based on stacks.length, use mapIDs.length until the stacks are formed.
      * See also DropTarget.size.w */
-    xDropOutDistance = viewPort.w/15,
+    xDropOutDistance = viewPort.w/(mapIDs.length*6),
     /// left and right limits of dragging the axes / chromosomes / linkage-groups.
     dragLimit = {min:-50, max:graphDim.w+70};
     console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
@@ -122,6 +123,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       axisTicks = 10,
     /** font-size of y axis ticks */
     axisFontSize = 12;
+
+     function xDropOutDistance_update () {
+       xDropOutDistance = viewPort.w/(stacks.length*6);
+     }
 
     /** Draw paths between markers on maps even if one end of the path is outside the svg.
      * This was the behaviour of an earlier version of this Marker Map Viewer, and it
@@ -1032,8 +1037,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     collateO();
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
     //console.log(axis.scale(y[mapIDs))
-    collateMarkerMap();
     collateStacks();
+    xDropOutDistance_update();
+
 
     /** update ys[m.mapName] for the given map,
      * according the map's current .portion.
@@ -2356,6 +2362,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       svgContainer.classed("axisDrag", false);
       d3.event.subject.fx = null;
       Stack.prototype.currentDrag = undefined;
+      /** This could be updated during a drag, whenever dropIn/Out(), but it is
+       * not critical.  */
+      xDropOutDistance_update();
+
 
       if (svgContainer.classed("dragTransition"))
       {
