@@ -34,14 +34,20 @@ var geneticmapSchema = new mongoose.Schema({
   toJSON: {
     transform: function (doc, ret, options) {
       // remove the _id of every document before returning the result
+      console.log(ret);
       ret.id = ret._id;
       if (ret.chromosomes) {
         for (chr of ret.chromosomes) {
-          chr.id = chr._id;
-          delete chr._id;
-          for (marker of chr.markers) {
-            marker.id = marker._id;
-            delete marker._id;
+          console.log(chr);
+          if (chr._id) {
+            chr.id = chr._id;
+            delete chr._id;
+          }
+          if (chr.markers) {
+            for (marker of chr.markers) {
+              marker.id = marker._id;
+              delete marker._id;
+            }
           }
         }
       }
@@ -58,7 +64,8 @@ mongoose.connect('mongodb://localhost/test');
 app.get('/geneticmaps', function(req,res) {
   // Get all geneticmaps.
   geneticmapModel.find({}).
-  select({ name: 1 }). // Only keep name.
+  // Select map name, as well as chromosome names and ids.
+  select('name chromosomes.name chromosomes._id').
   exec(
     function(err,docs) {
     if(err) {
