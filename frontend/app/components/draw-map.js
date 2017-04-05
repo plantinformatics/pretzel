@@ -1056,6 +1056,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       }
     }
 
+
+    var path_color_scale = d3.scaleOrdinal().domain(markers).range(d3.schemeCategory10);
+
     mapIDs.forEach(function(d) {
       /** Find the max of locations of all markers of map name d. */
       let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a].location; } );
@@ -2331,6 +2334,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       d3.selectAll(".foreground > g > path")
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
+
+      gd.style('stroke', function(d) {
+        /** d is path SVG line text */
+        let markerName = this.parentElement.__data__;
+        return path_color_scale(markerName);
+      });
+
     }
 
     function dragended(/*d*/) {
