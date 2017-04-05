@@ -617,8 +617,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           /* Need to call .calculatePositions() for this and toStack;
            * That responsibility is left with the caller, except that
            * caller doesn't have toStack, so .move() looks after it.
-           */
+           * No : map.position and .portion are updated after .move()
+           * so caller has to call .calculatePositions().
           toStack.calculatePositions();
+           */
         }
         else
           toStack.insert(s, insertIndex);
@@ -800,6 +802,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         released = map.portion;
         map.portion = 1;
         this.releasePortion(released);
+        let toStack = map.stack;
+        toStack.calculatePositions();
       }
     };
     /** Calculate the positions of the maps in this stack
@@ -809,6 +813,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     Stack.prototype.calculatePositions = function ()
     {
+      console.log("calculatePositions", this.stackID, this.maps.length);
       let sumPortion = 0;
       this.maps.forEach(
         function (m, index)
@@ -1051,13 +1056,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       if (ys && ys[m.mapName])
       {
         let myRange = m.yRange();
-        // console.log("updateRange", m.mapName, myRange);
+         console.log("updateRange", m.mapName, m.position, m.portion, myRange);
         ys[m.mapName].range([0, myRange]);
       }
     }
 
 
-    var path_color_scale = d3.scaleOrdinal().domain(markers).range(d3.schemeCategory10);
+    var path_color_scale = d3.scaleOrdinal().domain(markers).range(d3.schemeCategory20b);
 
     mapIDs.forEach(function(d) {
       /** Find the max of locations of all markers of map name d. */
@@ -1844,8 +1849,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       if (! tracedMapScale[mapID])
       {
         tracedMapScale[mapID] = true;
-        // let yDomain = ysm.domain();
-        // console.log("markerY_", mapID, d, z[mapID][d].location, mky, mapY, yDomain, ysm.range());
+        /* let yDomain = ysm.domain();
+         console.log("markerY_", mapID, d, z[mapID][d].location, mky, mapY, yDomain, ysm.range()); */
       }
       return mky + mapY;
     }
