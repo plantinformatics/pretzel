@@ -47,7 +47,7 @@ export default Ember.Route.extend({
               }
               else {
                 chr.set('isSelected', true);
-                selMaps.push(map);
+                selMaps.push(chr);
                 that.controllerFor("mapview").set("selectedMaps", selMaps);
               }
             }

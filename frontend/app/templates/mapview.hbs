@@ -27,8 +27,8 @@
 Maps to align:
 
 <ul>
-{{#each selectedMaps as |map|}}
-  <li>{{map.name}} {{#link-to "mapview" (query-params mapsToView=map.mapDeleteLink)}}Delete{{/link-to}}</li>
+{{#each selectedMaps as |chr|}}
+  <li>{{chr.name}} {{#link-to "mapview" (query-params mapsToView=chr.chrDeleteLink)}}Delete{{/link-to}}</li>
 {{/each}}
 </ul>
 
