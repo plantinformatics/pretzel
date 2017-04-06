@@ -60,7 +60,7 @@ export default Ember.Route.extend({
     let promises = {};
 
     params.mapsToView.forEach(function(param) {
-      promises[param] = that.get('store').findRecord('chromosome', param);
+      promises[param] = that.get('store').findRecord('chromosome', param, { reload: true });
     });
 
     console.log("promises:");
