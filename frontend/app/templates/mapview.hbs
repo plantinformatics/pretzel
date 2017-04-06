@@ -5,45 +5,26 @@
   </button>
   <ul class="dropdown-menu" role="menu">
   {{#each availableMaps as |mymap|}}
-  {{#if mymap.isSelected}}
-  <li class="disabled">
-    {{#link-to "mapview" (query-params mapsToView=mymap.mapLink) disabled=true}}
-      {{mymap.name}}
-    {{/link-to}}
-  </li>
-  {{else}}
-  <li class="enabled">
-    {{#link-to "mapview" (query-params mapsToView=mymap.mapLink)}}
-      {{mymap.name}}
-    {{/link-to}}
-  </li>
-  {{/if}}
-  {{/each}}
-  </ul>
-</div>
-
-{{#if hasChrs}}
-<div class="btn-group">
-  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-    Select chromosome
-    <span class="caret"></span>
-  </button>
-  <ul class="dropdown-menu" role="menu">
-  {{#each availableChrs as |mychr|}}
-  <li>
-    {{#link-to "mapview" (query-params chr=mychr)}}
-      {{mychr}}
-    {{/link-to}}
+  <li class="dropdown-submenu">
+    {{mymap.name}}
+    {{#each mymap.chromosomes as |chr|}}
+    <ul class="dropdown-menu">
+      <li>
+        {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
+          {{chr.name}}
+        {{/link-to}}
+      </li>
+    </ul>
+    {{/each}}
   </li>
   {{/each}}
   </ul>
 </div>
-{{/if}}
 
 <br/>
 <br/>
 
-Maps to align ({{chr}}):
+Maps to align:
 
 <ul>
 {{#each selectedMaps as |map|}}

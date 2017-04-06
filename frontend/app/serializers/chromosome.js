@@ -5,9 +5,13 @@ import ApplicationSerializer from './application';
 const { EmbeddedRecordsMixin } = DS;
 const { Mixin } = Ember;
 
-export default ApplicationSerializer.extend({
+export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
+  normalize(model, hash, prop) {
+    var ret = this._super(...arguments);
+    return ret;
+  },
 
-  partialSerializersExtensions: {
+  /*partialSerializersExtensions: {
     extended: {
       attrs: {
         markers: { embedded: 'always' }
@@ -17,6 +21,10 @@ export default ApplicationSerializer.extend({
 
   partialSerializersMixins: {
     extended: [EmbeddedRecordsMixin]
+  }*/
+
+  attrs: {
+    markers: { embedded: 'always' }
   }
 
 });

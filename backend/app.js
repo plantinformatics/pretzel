@@ -14,43 +14,39 @@ app.use(function(req, res, next) {
 
 app.set('json spaces', 2);
 
-var geneticmapSchema = new mongoose.Schema({
+var chromosomeSchema = new mongoose.Schema({
   name: String,
-  chromosomes: [
+  markers: [
     {
-      //_id: false,
       name: String,
-      markers: [
-        {
-          //_id: false,
-          name: String,
-          position: Number
-        }
-      ]
+      position: Number
     }
   ]
 },
 {
   toJSON: {
     transform: function (doc, ret, options) {
-      // remove the _id of every document before returning the result
-      console.log(ret);
       ret.id = ret._id;
-      if (ret.chromosomes) {
-        for (chr of ret.chromosomes) {
-          console.log(chr);
-          if (chr._id) {
-            chr.id = chr._id;
-            delete chr._id;
-          }
-          if (chr.markers) {
-            for (marker of chr.markers) {
-              marker.id = marker._id;
-              delete marker._id;
-            }
-          }
+      if (ret.markers) {
+        for (marker of ret.markers) {
+          marker.id = marker._id;
+          delete marker._id;
         }
       }
+      delete ret._id;
+    }
+  }
+});
+
+var geneticmapSchema = new mongoose.Schema({
+  name: String,
+  chromosomes: [ chromosomeSchema ]
+},
+{
+  toJSON: {
+    transform: function (doc, ret, options) {
+      // remove the _id of every document before returning the result
+      ret.id = ret._id;
       delete ret._id;
       delete ret.__v;
     }
@@ -60,6 +56,21 @@ var geneticmapSchema = new mongoose.Schema({
 var geneticmapModel = mongoose.model('geneticmap', geneticmapSchema);
 
 mongoose.connect('mongodb://localhost/test');
+
+app.get('/chromosomes/:id', function(req,res) {
+  geneticmapModel.find({}).
+  select('chromosomes').
+  where('chromosomes._id').equals(req.params.id).
+  exec(
+    function(err, map) {
+      if (map[0]) {
+        res.send({'chromosome': map[0].chromosomes[0]});
+      }
+      else {
+        res.send({'chromosome': [] });
+      }
+  });
+});
 
 app.get('/geneticmaps', function(req,res) {
   // Get all geneticmaps.
@@ -81,6 +92,16 @@ app.get('/geneticmaps/:id', function(req,res) {
   // Get geneticmap by id.
   geneticmapModel.findById(req.params.id, function(err, map) {
     res.send({'geneticmap': map});
+  });
+});
+
+app.get('/geneticmaps/:id/chromosomes/:chrid', function(req,res) {
+  geneticmapModel.findById(req.params.id).
+  select('chromosomes').
+  where('chromosomes._id').equals(req.params.chrid).
+  exec(
+    function(err, map) {
+      res.send(map);
   });
 });
 
