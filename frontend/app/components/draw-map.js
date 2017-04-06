@@ -2194,7 +2194,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                * with this exception : .dropIn() redraws the source stack of the map.
                */
               stack.dropIn(d, zoneParent.mapIndex, top, t);
-              mapChangeGroupElt(d, t);
+              // mapChangeGroupElt(d, t);
               collateStacks();
               // number of stacks has decreased - not essential to recalc the domain.
               Stack.log();
@@ -2218,7 +2218,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               t = dragTransitionNew();
               stack.dropOut(d);
               Stack.log();
-              mapChangeGroupElt(d, t);
+              // mapChangeGroupElt(d, t);
               collateStacks();
               /* if d is not in currentDrop.stack (=== stack), which would be a
                * program error, dropOut() could return false; in that case stack
@@ -2255,7 +2255,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         console.log("dragged this undefined", d);
       }
       else
-        draggedAxisRedraw(this, d);
+      {
+        /* if (t === undefined)
+          t = dragTransitionNew(); */
+        draggedAxisRedraw(this, d, t);
+      }
 
       dragging--;
     }
@@ -2263,8 +2267,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** Redraw the map/axis which is being dragged.
      * @param mapElt  node/DOM element corresponding of map. this of dragged()
      * @param d mapName
+     * @param t transition in which to make changes
      */
-    function draggedAxisRedraw(mapElt, d)
+    function draggedAxisRedraw(mapElt, d, t)
     {
         let st0 = d3.select(mapElt);
         if (! st0.empty())
@@ -2277,7 +2282,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           // st.duration(dragTransitionTime);
           st.attr("transform", Stack.prototype.mapTransformO);
           // zoomed effects transform via path() : mapTransform.
-          pathUpdate(undefined/*st*/);
+          pathUpdate(t /*st*/);
           //Do we need to keep the brushed region when we drag the map? probably not.
           //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
           st0.select(".brush").call(y[d].brush.move,null);
@@ -2307,7 +2312,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       dStackS = t.selectAll(dStack_),
       dStack = dStackS._groups[0][0], // equiv : .node()
       differentStack = gStack !== dStack;
-      console.log(map, stackID, dStack_, dStackS, dStack, differentStack);
+      console.log("mapChangeGroupElt", map, stackID, dStack_, dStackS, dStack, differentStack);
 
       // not currently used - g.stack layer may be discarded.
       if (false && differentStack)
