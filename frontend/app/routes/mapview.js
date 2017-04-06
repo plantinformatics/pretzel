@@ -63,26 +63,16 @@ export default Ember.Route.extend({
       promises[param] = that.get('store').findRecord('chromosome', param, { reload: true });
     });
 
-    console.log("promises:");
-    console.log(promises);
-
     return Ember.RSVP.hash(promises).then(function(chrs) {
-      console.log("chrs:");
-      console.log(chrs);
       d3.keys(chrs).forEach(function(chr) {
         retHash[chr] = {};
         let m = chrs[chr].get('markers');
-        console.log("m");
-        console.log(m);
         m.forEach(function(marker) {
-          console.log('in loop');
           let markerName = marker.get('name');
           let markerPosition = marker.get('position');
           retHash[chr][markerName] = markerPosition;
         });
       });
-      console.log("retHash:");
-      console.log(retHash);
       return retHash;
     });
   }
