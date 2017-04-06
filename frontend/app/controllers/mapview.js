@@ -6,7 +6,12 @@ export default Ember.Controller.extend({
     updateSelectedMarkers: function(markers) {
       // console.log("updateSelectedMarkers in mapview controller");
       this.set('selectedMarkers', markers);
+    },
+    toggleShowUnique: function() {
+      console.log("controllers/mapview:toggleShowUnique()", this);
+      this.set('isShowUnique', ! this.get('isShowUnique'));
     }
+    , isShowUnique: false
   },
 
   queryParams: ['mapsToView', 'chr'],

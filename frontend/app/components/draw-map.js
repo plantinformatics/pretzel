@@ -37,6 +37,7 @@ export default Ember.Component.extend({
       console.log("resizeView()");
       // resize();
     }
+
   },
 
   /** Draw the maps and paths between them.
@@ -134,6 +135,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * paths during zoom.n
      */
     let allowPathsOutsideZoom = false;
+
+    /** When working with aliases: only show unique connections between markers of adjacent maps.
+     * Markers are unique within maps, so this is always the case when there are no aliases.
+     * Counting the connections (paths) between markers based on aliases + direct connections,
+     * if there is only 1 connection between a pair of markers, i.e. the mapping between the maps is 1:1,
+     * then show the connection.
+     */
+    let unique_1_1_mapping = true;
 
     /** Enable display of extra info in the path hover (@see hoverExtraText).
      * Currently a debugging / devel feature, will probably re-purpose to display metadata.
@@ -1501,7 +1510,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** At time of axis adjacency change, collate data for faster lookup in dragged().
      *
      *   for each pair of adjacent stacks
-     *     for each map in the 2 adjacent stacks (cross product stack1 x stack2)
+     *     for each pair of maps in the 2 adjacent stacks (cross product stack1 x stack2)
      *       for each marker in map
      *         lookup that marker in the other map directly
      *           store : marker : map - map    mmN[marker] : [[marker, marker]]
@@ -1723,6 +1732,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       if (mmNm !== undefined)
         /* console.log("path", markerName);
       else */
+      if (unique_1_1_mapping && (mmNm.length > 1))
+        console.log("path : multiple", markerName, mmNm.length, mmNm);
+      else
       for (let i=0; i < mmNm.length; i++)
       {
         let [markerName, m0_, m1_, zm0, zm1] = mmNm[i];
@@ -2119,6 +2131,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function dragstarted(start_d /*, start_index, start_group*/) {
       Stack.prototype.currentDrop = undefined;
       Stack.prototype.currentDrag = start_d;
+      unique_1_1_mapping = me.get('isShowUnique');
       console.log("dragstarted", this, start_d/*, start_index, start_group*/);
       let cl = {/*self: this,*/ d: start_d/*, index: start_index, group: start_group, mapIDs: mapIDs*/};
       svgContainer.classed("axisDrag", true);
@@ -2265,6 +2278,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
     /** Redraw the map/axis which is being dragged.
+     * Calls pathUpdate() which will mostly change the paths connected to the dragged axis;
+     * but when dropIn/dropOut(), paths to other axes can be changed when stacking / adjacencies change.
+     *
      * @param mapElt  node/DOM element corresponding of map. this of dragged()
      * @param d mapName
      * @param t transition in which to make changes

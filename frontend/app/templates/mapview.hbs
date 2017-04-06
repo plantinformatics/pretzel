@@ -50,9 +50,13 @@ Maps to align ({{chr}}):
   <li>{{map.name}} {{#link-to "mapview" (query-params mapsToView=map.mapDeleteLink)}}Delete{{/link-to}}</li>
 {{/each}}
 </ul>
+<div class="drawing-controls">
+      {{input type="checkbox" checked=isShowUnique class="toggle"}}
+      <label {{action "toggleShowUnique" on="doubleClick"}}>toggleShowUnique</label>
+</div>
 
 {{#if hasData}}
-  {{draw-map updatedSelectedMarkers='updateSelectedMarkers' data=model}}
+  {{draw-map updatedSelectedMarkers='updateSelectedMarkers' data=model isShowUnique=isShowUnique}}
 
 
 {{numMarkers}} selected markers
