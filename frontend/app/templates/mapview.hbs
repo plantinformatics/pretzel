@@ -3,10 +3,10 @@
     Add map
     <span class="caret"></span>
   </button>
-  <ul class="dropdown-menu" role="menu">
+  <ul class="dropdown-menu multi-level" role="menu">
   {{#each availableMaps as |mymap|}}
   <li class="dropdown-submenu">
-    {{mymap.name}}
+    <a tabindex="-1" href="#">{{mymap.name}}</a>
     {{#each mymap.chromosomes as |chr|}}
     <ul class="dropdown-menu">
       {{#if chr.isSelected}}
