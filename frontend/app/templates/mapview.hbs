@@ -9,11 +9,19 @@
     {{mymap.name}}
     {{#each mymap.chromosomes as |chr|}}
     <ul class="dropdown-menu">
-      <li>
+      {{#if chr.isSelected}}
+      <li class="disabled">
         {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
           {{chr.name}}
         {{/link-to}}
       </li>
+      {{else}}
+      <li class="enabled">
+        {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
+          {{chr.name}}
+        {{/link-to}}
+      </li>
+      {{/if}}
     </ul>
     {{/each}}
   </li>
