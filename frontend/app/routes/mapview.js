@@ -36,53 +36,42 @@ export default Ember.Route.extend({
     var maps = that.get('store').findAll('geneticmap').then(function(genmaps) {
       that.controllerFor("mapview").set("availableMaps", genmaps);
       genmaps.forEach(function(map) {
-        var exMaps = [];
-        map.set('isSelected', false); // In case it has been de-selected.
-        if (params.mapsToView) {
-          for (var i=0; i < params.mapsToView.length; i++) {
-            if (map.get('id') != params.mapsToView[i]) {
-              exMaps.push(params.mapsToView[i]);
-            }
-            else {
-              map.set('isSelected', true);
-              selMaps.push(map);
-              that.controllerFor("mapview").set("selectedMaps", selMaps);
+        let chrs = map.get('chromosomes');
+        chrs.forEach(function(chr) {
+          var exChrs = [];
+          chr.set('isSelected', false); // In case it has been de-selected.
+          if (params.mapsToView) {
+            for (var i=0; i < params.mapsToView.length; i++) {
+              if (chr.get('id') != params.mapsToView[i]) {
+                exChrs.push(params.mapsToView[i]);
+              }
+              else {
+                chr.set('isSelected', true);
+                selMaps.push(chr);
+                that.controllerFor("mapview").set("selectedMaps", selMaps);
+              }
             }
           }
-        }
-        else {
-          that.controllerFor("mapview").set("availableChrs", []);
-        }
-        map.set('extraMaps', exMaps);
+          chr.set('extraChrs', exChrs);
+        });
       });
     });
 
     let promises = {};
 
     params.mapsToView.forEach(function(param) {
-      promises[param] = that.get('store').findRecord('geneticmap', param).then(function(map) {
-        return map.get('extended');
-      });
+      promises[param] = that.get('store').findRecord('chromosome', param, { reload: true });
     });
-    
-    return Ember.RSVP.hash(promises).then(function(extendedMaps) {
-      params.mapsToView.forEach(function(param) {
-        let mapName = param;
-        extendedMaps[param].get('chromosomes').forEach(function(chr) {
-          let chrName = chr.get('name');
-          console.log(chrName);
-          seenChrs.add(chrName);
-          that.controllerFor("mapview").set("availableChrs", Array.from(seenChrs).sort());
-          console.log(seenChrs);
-          if (chrName == params.chr) {
-            retHash[mapName+"_"+chrName] = {};
-            chr.get('markers').forEach(function(marker) {
-              let markerName = marker.get('name');
-              let markerPosition = marker.get('position');
-              let markerAliases = marker.get('aliases');
-              retHash[mapName+"_"+chrName][markerName] = {location: markerPosition, aliases : markerAliases};
-            });
-          }
+
+    return Ember.RSVP.hash(promises).then(function(chrs) {
+      d3.keys(chrs).forEach(function(chr) {
+        retHash[chr] = {};
+        let m = chrs[chr].get('markers');
+        m.forEach(function(marker) {
+          let markerName = marker.get('name');
+          let markerPosition = marker.get('position');
+          let markerAliases = marker.get('aliases');
+          retHash[chr][markerName] = {location: markerPosition, aliases: markerAliases};
         });
       });
       return retHash;
