@@ -60,16 +60,20 @@ var geneticmapModel = mongoose.model('geneticmap', geneticmapSchema);
 mongoose.connect('mongodb://localhost/test');
 
 app.get('/chromosomes/:id', function(req,res) {
-  geneticmapModel.find({}).
-  select('chromosomes').
-  where('chromosomes._id').equals(req.params.id).
+  geneticmapModel.findOne({'chromosomes._id': req.params.id}).
   exec(
     function(err, map) {
+      let ret = [];
+      for (chr of map.chromosomes) {
+        if (chr._id == req.params.id) {
+          ret = chr
+        }
+      }
       if (map[0]) {
-        res.send({'chromosome': map[0].chromosomes[0]});
+        res.send({'chromosome': ret});
       }
       else {
-        res.send({'chromosome': [] });
+        res.send({'chromosome': ret });
       }
   });
 });
