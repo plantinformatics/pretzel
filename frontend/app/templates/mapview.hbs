@@ -42,10 +42,12 @@ Maps to align:
 <div class="drawing-controls">
       {{input type="checkbox" checked=isShowUnique class="toggle"}}
       <label {{action "toggleShowUnique" on="doubleClick"}}>toggleShowUnique</label>
+      {{input type="checkbox" checked=pathColourScale class="toggle"}}
+      <label {{action "togglePathColourScale" on="doubleClick"}}>togglePathColourScale</label>
 </div>
 
 {{#if hasData}}
-  {{draw-map updatedSelectedMarkers='updateSelectedMarkers' data=model isShowUnique=isShowUnique}}
+  {{draw-map updatedSelectedMarkers='updateSelectedMarkers' data=model isShowUnique=isShowUnique pathColourScale=pathColourScale}}
 
 
 {{numMarkers}} selected markers
