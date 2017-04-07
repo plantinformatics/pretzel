@@ -144,6 +144,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     let unique_1_1_mapping = true;
 
+    /** Apply colours to the paths according to their marker name (datum); repeating ordinal scale.  */
+    let use_path_colour_scale = true;
+
     /** Enable display of extra info in the path hover (@see hoverExtraText).
      * Currently a debugging / devel feature, will probably re-purpose to display metadata.
      */
@@ -1071,7 +1074,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
 
-    var path_color_scale = d3.scaleOrdinal().domain(markers).range(d3.schemeCategory20b);
+    var path_colour_scale = d3.scaleOrdinal().domain(markers).range(d3.schemeCategory20b);
 
     mapIDs.forEach(function(d) {
       /** Find the max of locations of all markers of map name d. */
@@ -2132,6 +2135,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       Stack.prototype.currentDrop = undefined;
       Stack.prototype.currentDrag = start_d;
       unique_1_1_mapping = me.get('isShowUnique');
+      use_path_colour_scale = me.get('pathColourScale');
       console.log("dragstarted", this, start_d/*, start_index, start_group*/);
       let cl = {/*self: this,*/ d: start_d/*, index: start_index, group: start_group, mapIDs: mapIDs*/};
       svgContainer.classed("axisDrag", true);
@@ -2361,10 +2365,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
 
+      if (use_path_colour_scale)
       gd.style('stroke', function(d) {
         /** d is path SVG line text */
         let markerName = this.parentElement.__data__;
-        return path_color_scale(markerName);
+        return path_colour_scale(markerName);
       });
 
     }

@@ -12,6 +12,11 @@ export default Ember.Controller.extend({
       this.set('isShowUnique', ! this.get('isShowUnique'));
     }
     , isShowUnique: false
+    , togglePathColourScale: function() {
+      console.log("controllers/mapview:togglePathColourScale()", this);
+      this.set('pathColourScale', ! this.get('pathColourScale'));
+    }
+    , pathColourScale: false
   },
 
   queryParams: ['mapsToView'],
