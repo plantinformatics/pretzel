@@ -1982,7 +1982,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           let yp = y[p],
           map = maps[p],
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *map.portion */); });
-          console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], map.portion, brushedDomain);
+          //console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], map.portion, brushedDomain);
 
             if ((z[p][m].location >= brushedDomain[0]) &&
                 (z[p][m].location <= brushedDomain[1])) {
