@@ -65,6 +65,8 @@ export default Ember.Component.extend({
     let maps = {};
     /// mapIDs are <mapName>_<chromosomeName>
     let mapIDs = d3.keys(myData);
+    /** mapName of each chromosome, indexed by chr name. */
+    let cmName = {};
 
 /** Plan for layout of stacked axes.
 
@@ -177,6 +179,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
          */
         d3Markers = new Set();
     d3.keys(myData).forEach(function(map) {
+      /** map is chr name */
+      let c = myData[map];
+      cmName[map] = {mapName : c.mapName, chrName : c.chrName};
+      delete c.mapName;
+      delete c.chrName;
+      console.log(map, cmName[map]);
       d3.keys(myData[map]).forEach(function(marker) {
         d3Markers.add(marker);
         markerTotal++;
@@ -1014,6 +1022,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let zoomSwitch,resetSwitch;
     let zoomed = false;
     // let reset = false;
+    // console.log("zoomSwitch", zoomSwitch);
 
     let pathMarkers = {}; //For tool tip
 
@@ -1309,11 +1318,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      .attr("class", "axis")
       .each(function(d) { d3.select(this).attr("id",axisEltId(d)).call(axis.scale(y[d])); });  
 
+    function axisTitle(chrID)
+    {
+      let cn=cmName[chrID];
+      console.log(".axis text", chrID, cn);
+      return cn.mapName + " " + cn.chrName;
+    }
+
     g.append("text")
       .attr("text-anchor", "middle")
       .attr("y", -axisFontSize)
       .style("font-size", axisFontSize)
-      .text(String);
+      .text(axisTitle /*String*/);
 
     /** For <text> within a g.map, counteract the effect of g.map scale() which
      * is based on map.portion.

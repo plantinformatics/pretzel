@@ -40,6 +40,8 @@ export default Ember.Route.extend({
         chrs.forEach(function(chr) {
           var exChrs = [];
           chr.set('isSelected', false); // In case it has been de-selected.
+          // console.log(chr, map);
+          chr.set('mapName', map.get('name'));  // reference to parent map
           if (params.mapsToView) {
             for (var i=0; i < params.mapsToView.length; i++) {
               if (chr.get('id') != params.mapsToView[i]) {
@@ -65,7 +67,8 @@ export default Ember.Route.extend({
 
     return Ember.RSVP.hash(promises).then(function(chrs) {
       d3.keys(chrs).forEach(function(chr) {
-        retHash[chr] = {};
+        let c = chrs[chr],
+        rc = retHash[chr] = {mapName : c.get('mapName'), chrName : c.get('name')};
         let m = chrs[chr].get('markers');
         m.forEach(function(marker) {
           let markerName = marker.get('name');
