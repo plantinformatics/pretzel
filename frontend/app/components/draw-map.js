@@ -184,7 +184,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       cmName[map] = {mapName : c.mapName, chrName : c.chrName};
       delete c.mapName;
       delete c.chrName;
-      console.log(map, cmName[map]);
+      // console.log(map, cmName[map]);
       d3.keys(myData[map]).forEach(function(marker) {
         d3Markers.add(marker);
         markerTotal++;
@@ -833,7 +833,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     Stack.prototype.calculatePositions = function ()
     {
-      console.log("calculatePositions", this.stackID, this.maps.length);
+      // console.log("calculatePositions", this.stackID, this.maps.length);
       let sumPortion = 0;
       this.maps.forEach(
         function (m, index)
@@ -1321,7 +1321,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function axisTitle(chrID)
     {
       let cn=cmName[chrID];
-      console.log(".axis text", chrID, cn);
+      // console.log(".axis text", chrID, cn);
       return cn.mapName + " " + cn.chrName;
     }
 
@@ -1752,7 +1752,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         /* console.log("path", markerName);
       else */
       if (unique_1_1_mapping && (mmNm.length > 1))
-        console.log("path : multiple", markerName, mmNm.length, mmNm);
+      { /* console.log("path : multiple", markerName, mmNm.length, mmNm); */ }
       else
       for (let i=0; i < mmNm.length; i++)
       {
