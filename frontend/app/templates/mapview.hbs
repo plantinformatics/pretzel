@@ -36,7 +36,7 @@ Maps to align:
 
 <ul>
 {{#each selectedMaps as |chr|}}
-  <li>{{chr.name}} {{#link-to "mapview" (query-params mapsToView=chr.chrDeleteLink)}}Delete{{/link-to}}</li>
+  <li>{{chr.map.name}} {{chr.name}} {{#link-to "mapview" (query-params mapsToView=chr.chrDeleteLink)}}Delete{{/link-to}}</li>
 {{/each}}
 </ul>
 <div class="drawing-controls">
