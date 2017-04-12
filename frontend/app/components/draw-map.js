@@ -40,12 +40,17 @@ export default Ember.Component.extend({
 
   },
 
-  /** Draw the maps and paths between them.
-   * @param myData array indexed by myMaps[*]; each value is a hash indexed by
+  /** Draw the APs (Axis Pieces) and the paths between them.
+   * APs are Axis Pieces; in this first stage they correspond to chromosomes,
+   * but the plan is for them to represent other data topics and types.
+   * Each Chromosome is a part of a genetic map in this application.
+   *
+   * @param myData array indexed by myAPs[*]; each value is a hash indexed by
    * <mapName>_<chromosomeName>, whose values are an array of markers {location,
    * map:<mapName>_<chromosomeName>, marker: markerName}
+   * mapName is referred to as apName (AP - Axis Piece) for generality.
    *
-   * @param myMaps array of map names
+   * @param myData hash indexed by AP names
    */
   draw: function(myData) {
 
@@ -55,17 +60,17 @@ export default Ember.Component.extend({
     /** Each stack contains 1 or more maps.
      * stacks are numbered from 0 at the left.
      * stack[i] is an array of Stack, which contains an array of Stacked,
-     * which contains mapID & portion.
+     * which contains apID & portion.
      */
     let stacks = [];
     /** Give each Stack a unique id so that its <g> can be selected. */
     let nextStackID = 0;
-    /** Reference to all (Stacked) maps by mapName.
+    /** Reference to all (Stacked) maps by apName.
      */
     let maps = {};
-    /// mapIDs are <mapName>_<chromosomeName>
-    let mapIDs = d3.keys(myData);
-    /** mapName of each chromosome, indexed by chr name. */
+    /// apIDs are <apName>_<chromosomeName>
+    let apIDs = d3.keys(myData);
+    /** mapName (apName) of each chromosome, indexed by chr name. */
     let cmName = {};
 
 /** Plan for layout of stacked axes.
@@ -98,19 +103,19 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     w = viewPort.w  - m[marginIndex.right] - m[marginIndex.left],
     h = viewPort.h - m[marginIndex.top] - m[marginIndex.bottom],
     /// approx height of map / chromosome selection buttons above graph
-    mapSelectionHeight = 140,
+    apSelectionHeight = 140,
     /// approx height of text name of map+chromosome displayed above axis.
-    mapNameHeight = 14,
+    apNameHeight = 14,
     /// approx height of text block below graph which says 'n selected markers'
     selectedMarkersTextHeight = 14,
     /// dimensions of the graph border
-    graphDim = {w: w*0.6, h: h - 2 * dropTargetYMargin - mapSelectionHeight - mapNameHeight - selectedMarkersTextHeight},
+    graphDim = {w: w*0.6, h: h - 2 * dropTargetYMargin - apSelectionHeight - apNameHeight - selectedMarkersTextHeight},
     /// yRange is the axis length
     yRange = graphDim.h - 40,
     /** X Distance user is required to drag axis before it drops out of Stack.
-     * Based on stacks.length, use mapIDs.length until the stacks are formed.
+     * Based on stacks.length, use apIDs.length until the stacks are formed.
      * See also DropTarget.size.w */
-    xDropOutDistance = viewPort.w/(mapIDs.length*6),
+    xDropOutDistance = viewPort.w/(apIDs.length*6),
     /// left and right limits of dragging the axes / chromosomes / linkage-groups.
     dragLimit = {min:-50, max:graphDim.w+70};
     console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
@@ -155,14 +160,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let showHoverExtraText = true;
 
     let
-    /** y[mapID] is the scale for map mapID.
-     * y[mapID] has range [0, yRange], i.e. as if the map is not stacked.
+    /** y[apID] is the scale for map apID.
+     * y[apID] has range [0, yRange], i.e. as if the map is not stacked.
      * g.map has a transform to position the map within its stack, so this scale is used
      * for objects within g.map, and notably its child g.axis, such as the brush.
      * For objects in g.foreground, ys is the appropriate scale to use.
      */
     y = {},
-    /** ys[mapID] is is the same as y[mapID], with added translation and scale
+    /** ys[apID] is is the same as y[apID], with added translation and scale
      * for the map's current stacking (map.position, map.yOffset(), map.portion).
      * See also comments for y re. the difference in uses of y and ys.
      */
@@ -181,7 +186,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     d3.keys(myData).forEach(function(map) {
       /** map is chr name */
       let c = myData[map];
-      cmName[map] = {mapName : c.mapName, chrName : c.chrName};
+      cmName[map] = {apName : c.mapName, chrName : c.chrName};
       delete c.mapName;
       delete c.chrName;
       // console.log(map, cmName[map]);
@@ -245,7 +250,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** guard against repeated drag event before previous dragged() has returned. */
     let dragging = 0;
     /** trace scale of each map just once after this is cleared.  */
-    let tracedMapScale = {};
+    let tracedApScale = {};
 
 
     /**
@@ -268,7 +273,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       return "id" + name;
     }
-    /** id of axis g element, based on mapName, with an "m" prefix. */
+    /** id of axis g element, based on apName, with an "m" prefix. */
     function axisEltId(name)
     {
       return "m" + name;
@@ -329,8 +334,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
     /*------------------------------------------------------------------------*/
     const trace_stack = 1;
-    function Stacked(mapName, portion) {
-      this.mapName = mapName;
+    function Stacked(apName, portion) {
+      this.apName = apName;
       /** Portion of the Stack height which this map axis occupies. */
       this.portion = portion;
       // The following are derived attributes.
@@ -344,9 +349,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       /** Reference to parent stack.  Set in Stack.prototype.{add,insert}(). */
       this.stack = undefined;
       /* map objects persist through being dragged in and out of Stacks. */
-      maps[mapName] = this;
+      maps[apName] = this;
     };
-    Stacked.prototype.mapName = undefined;
+    Stacked.prototype.apName = undefined;
     Stacked.prototype.portion = undefined;
     function positionToString(p)
     {
@@ -356,19 +361,19 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     Stacked.prototype.toString = function ()
     {
       let a =
-        [ "{mapName=", this.mapName, ", portion=" + round_2(this.portion),
+        [ "{apName=", this.apName, ", portion=" + round_2(this.portion),
           positionToString(this.position) + this.stack.length, "}" ];
       return a.join("");
     };
     Stacked.prototype.log = function ()
     {
       console.log
-      ("{mapName=", this.mapName, ", portion=", round_2(this.portion),
+      ("{apName=", this.apName, ", portion=", round_2(this.portion),
        positionToString(this.position), this.stack,  "}");
     };
-    Stacked.mapName_match =
-      function (mapName)
-    { return function (s) { return s.mapName === mapName; };};
+    Stacked.apName_match =
+      function (apName)
+    { return function (s) { return s.apName === apName; };};
     Stacked.prototype.yOffset = function ()
     {
       let yOffset = yRange * this.position[0];
@@ -384,13 +389,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return yRange * this.portion;
     };
     /** Constructor for Stack type.
-     * Construct a Stacked containing 1 map (mapName, portion),
+     * Construct a Stacked containing 1 map (apName, portion),
      * and push onto this Stack.
      */
     function Stack(stackable) {
       this.stackID = nextStackID++;
       /** The map object (Stacked) has a reference to its parent stack which is the inverse of this reference : 
-       * maps{mapName}->stack->maps[i] == maps{mapName} for some i.
+       * maps{apName}->stack->maps[i] == maps{apName} for some i.
        */
       this.maps = [];
       Stack.prototype.add = Stack_add;
@@ -427,8 +432,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * and the Stack which it is dropped into (dropIn) or out of (dropOut).
      * properties :
      * out : true for dropOut(), false for dropIn()
-     * stack: the Stack which mapName is dropped into / out of
-     * 'mapName': mapName,
+     * stack: the Stack which apName is dropped into / out of
+     * 'apName': apName,
      * dropTime : Date.now() when dropOut() / dropIn() is done
      *
      * static
@@ -441,11 +446,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       return this.maps.length === 0;
     };
-    /** @return array of mapIDs of this Stack */
-    Stack.prototype.mapIDs = function ()
+    /** @return array of apIDs of this Stack */
+    Stack.prototype.apIDs = function ()
     {
       let a =
-        this.maps.map(function(s){return s.mapName;});
+        this.maps.map(function(s){return s.apName;});
       return a;
     };
     Stack.prototype.toString = function ()
@@ -504,17 +509,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       checkIsNumber(l);
       return l;
     };
-    /** Find stack of mapID and return the index of that stack within stacks.
-     * @param mapID name of map to find
+    /** Find stack of apID and return the index of that stack within stacks.
+     * @param apID name of map to find
      * @return index of the parent stack of map
      */
-    Stack.prototype.stackIndex = function (mapID)
+    Stack.prototype.stackIndex = function (apID)
     {
-      let map = maps[mapID], s = map.stack, i = stacks.indexOf(s);
+      let map = maps[apID], s = map.stack, i = stacks.indexOf(s);
       let j;
-      if ((i === -1) || (stacks[i] !== s) || (j=s.maps.indexOf(map), s.maps[j].mapName != mapID))
+      if ((i === -1) || (stacks[i] !== s) || (j=s.maps.indexOf(map), s.maps[j].apName != apID))
       {
-        console.log("stackIndex", mapID, i, map, s, j, s.maps[j]);
+        console.log("stackIndex", apID, i, map, s, j, s.maps[j]);
         debugger;
       }
       return i;
@@ -523,11 +528,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       this.maps.push(stackable);
       stackable.stack = this;
-      maps[stackable.mapName] = stackable;
+      maps[stackable.apName] = stackable;
     };
-    Stack.prototype.addMap = function(mapName, portion)
+    Stack.prototype.addMap = function(apName, portion)
     {
-      let sd = new Stacked(mapName, portion);
+      let sd = new Stacked(apName, portion);
       this.add(sd);
     };
     /** Method of Stack.  @see Stack.prototype.add().
@@ -560,21 +565,21 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
       stacked.stack = this;
     };
-    /** Find mapName in this.maps[]. */
-    Stack.prototype.findIndex = function (mapName)
+    /** Find apName in this.maps[]. */
+    Stack.prototype.findIndex = function (apName)
     {
-      let mi = this.maps.findIndex(Stacked.mapName_match(mapName));
+      let mi = this.maps.findIndex(Stacked.apName_match(apName));
       return mi;
     };
-    /** Find mapName in this.maps[] and remove it.
+    /** Find apName in this.maps[] and remove it.
      * @return the map, or undefined if not found
      */
-    Stack.prototype.remove = function (mapName)
+    Stack.prototype.remove = function (apName)
     {
-      let si = this.findIndex(mapName);
+      let si = this.findIndex(apName);
       if (si < 0)
       {
-        console.log("Stack#remove named map not in this stack", this, mapName);
+        console.log("Stack#remove named map not in this stack", this, apName);
         return undefined;
       }
       else
@@ -610,7 +615,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * `this` is the source stack.
      * If first stack becomes empty - delete it.
      * If 2nd stack (destination) is new - create it (gui ? drag outside of top/bottom drop zones.)
-     * @param mapName name of map to move
+     * @param apName name of map to move
      * @param toStack undefined, or Stack to move map to
      * @param insertIndex  index in toStack.maps[] to insert
      *
@@ -623,11 +628,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * array contains `this`; this is so that the caller can call
      * .calculatePositions().
      */
-    Stack.prototype.move = function (mapName, toStack, insertIndex)
+    Stack.prototype.move = function (apName, toStack, insertIndex)
     {
       let result = undefined;
-      let s = this.remove(mapName);
-      // if mapName is not in this.maps[], do nothing
+      let s = this.remove(apName);
+      // if apName is not in this.maps[], do nothing
       let ok = s !== undefined;
       if (ok)
       {
@@ -665,30 +670,30 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     };
     /** Shift named map to a different position within this Stack.
      * Portions will be unchanged, positions will be re-calculated.
-     * Find mapName in this.maps[] and move it.
+     * Find apName in this.maps[] and move it.
 
-     * @param mapName name of map to move
+     * @param apName name of map to move
      * @param insertIndex  index in toStack.maps[] to insert
      * @return the map, or undefined if not found
      */
-    Stack.prototype.shift = function (mapName, insertIndex)
+    Stack.prototype.shift = function (apName, insertIndex)
     {
-      let si = this.findIndex(mapName);
+      let si = this.findIndex(apName);
       if (si < 0)
       {
-        console.log("Stack#remove named map not in this stack", this, mapName);
+        console.log("Stack#remove named map not in this stack", this, apName);
         return undefined;
       }
       else
       {
         let s = this.maps[si];
-        console.log("shift(), before removeAt()", this, mapName, insertIndex, this.maps.length, s);
+        console.log("shift(), before removeAt()", this, apName, insertIndex, this.maps.length, s);
         this.log();
         this.maps = this.maps.removeAt(si, 1);
         let len = this.maps.length;
         this.log();
         if (insertIndex >= len)
-          console.log("shift()", this, mapName, insertIndex, " >= ", len, s);
+          console.log("shift()", this, apName, insertIndex, " >= ", len, s);
         let insertIndexPos = (insertIndex < 0) ? len + insertIndex : insertIndex;
         // splice() supports insertIndex<0; if we support that, this condition need
         if (si < insertIndexPos)
@@ -699,11 +704,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         return s;
       }
     };
-    /** @return true if this Stack contains mapName
+    /** @return true if this Stack contains apName
      */
-    Stack.prototype.contains = function (mapName)
+    Stack.prototype.contains = function (apName)
     {
-      return this === maps[mapName].stack;
+      return this === maps[apName].stack;
     };
     /** Insert the named map into this.maps[] at insertIndex (before if top, after
      * if ! top).
@@ -713,42 +718,42 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * share yRange among maps in stack
      * (retain ratio among existing maps in stack)
      *
-     * @param mapName name of map to move
+     * @param apName name of map to move
      * @param insertIndex position in stack to insert at.
      * @param true for the DropTarget at the top of the axis, false for bottom.
      * @param transition  make changes within this transition
      */
-    Stack.prototype.dropIn = function (mapName, insertIndex, top, transition)
+    Stack.prototype.dropIn = function (apName, insertIndex, top, transition)
     {
-      console.log("dropIn", this, mapName, insertIndex, top);
-      // can now use  maps[mapName].stack
-      let fromStack = Stack.mapStack(mapName);
+      console.log("dropIn", this, apName, insertIndex, top);
+      // can now use  maps[apName].stack
+      let fromStack = Stack.apStack(apName);
       /* It is valid to drop a map into the stack it is in, e.g. to re-order the maps.
        * No change to portion, recalc position.
        */
       if (this === fromStack)
       {
-        console.log("Stack dropIn() map ", mapName, " is already in this stack");
-        this.shift(mapName, insertIndex);
+        console.log("Stack dropIn() map ", apName, " is already in this stack");
+        this.shift(apName, insertIndex);
         return;
       }
       /** Any map in the stack should have the same x position; use the first
        * since it must have at least 1. */
-      let aMapName = this.maps[0].mapName,
+      let aMapName = this.maps[0].apName,
       /** Store both the cursor x and the stack x; the latter is used, and seems
        * to give the right feel. */
       dropX = {event: d3.event.x, stack: o[aMapName]};
-      Stack.prototype.currentDrop = {out : false, stack: this, 'mapName': mapName, dropTime : Date.now(), x : dropX};
+      Stack.prototype.currentDrop = {out : false, stack: this, 'apName': apName, dropTime : Date.now(), x : dropX};
       if (! top)
         insertIndex++;
       let okStacks =
-        fromStack.move(mapName, this, insertIndex);
-      // okStacks === undefined means mapName not found in fromStack
+        fromStack.move(apName, this, insertIndex);
+      // okStacks === undefined means apName not found in fromStack
       if (okStacks)
       {
         // if fromStack is now empty, it will be deleted, and okStacks will be empty.
         // if fromStack is not deleted, call fromStack.calculatePositions()
-        let map = maps[mapName],
+        let map = maps[apName],
         released = map.portion;
         console.log("dropIn", released, okStacks);
         okStacks.forEach(function(s) { 
@@ -796,19 +801,19 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * another (call this the 'destination' stack). .dropOut() may create a new
      * stack for the destination.
      *
-     * @param mapName name of map to move
+     * @param apName name of map to move
      */
-    Stack.prototype.dropOut = function (mapName)
+    Stack.prototype.dropOut = function (apName)
     {
-      console.log("dropOut", this, mapName);
-      Stack.prototype.currentDrop = {out : true, stack: this, 'mapName': mapName, dropTime : Date.now()};
+      console.log("dropOut", this, apName);
+      Stack.prototype.currentDrop = {out : true, stack: this, 'apName': apName, dropTime : Date.now()};
 
       /* passing toStack===undefined to signify moving map out into a new Stack,
        * and hence insertIndex is also undefined (not used since map is only map
        * in newly-created Stack).
       */
       let okStacks =
-      this.move(mapName, undefined, undefined);
+      this.move(apName, undefined, undefined);
       /* move() will create a new Stack for the map which was moved out, and
        * add that to Stacks.  dragged() will assign it a location and sort.
        */
@@ -817,8 +822,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // That shouldn't happen because dropOut() would not be called if `this` contains only 1 map.
       if (okStacks && (okStacks[0] == this))
       {
-        // mapName goes to full height. other maps in the stack take up the released height proportionately
-        let map = maps[mapName],
+        // apName goes to full height. other maps in the stack take up the released height proportionately
+        let map = maps[apName],
         released = map.portion;
         map.portion = 1;
         this.releasePortion(released);
@@ -829,7 +834,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** Calculate the positions of the maps in this stack
      * Position is a proportion of yRange.
      *
-     * Call updateRange() to update ys[mapName] for each map in the stack.
+     * Call updateRange() to update ys[apName] for each map in the stack.
      */
     Stack.prototype.calculatePositions = function ()
     {
@@ -845,17 +850,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** find / lookup Stack of given map.
      * static
      */
-    Stack.mapStack = function (mapName)
+    Stack.apStack = function (apName)
     {
-      // could use a cached structure such as mapStack[mapName].
-      // can now use : maps{mapName}->stack
+      // could use a cached structure such as apStack[apName].
+      // can now use : maps{apName}->stack
       let ms = stacks.filter(
         function (s) {
-          let i = s.findIndex(mapName);
+          let i = s.findIndex(apName);
           return i >= 0;
         });
       if (ms.length != 1)
-        console.log("mapStack()", mapName, ms, ms.length);
+        console.log("apStack()", apName, ms, ms.length);
       return ms[0];
     };
     /** find / lookup Stack of given map.
@@ -865,31 +870,31 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * It will only accumulate the first match (mapIndex) in each stack,
      * but by design there should be just 1 match across all stacks.
      */
-    Stack.mapStackIndex = function (mapName)
+    Stack.apStackIndex = function (apName)
     {
       /** called by stacks.reduce() */
-      function findIndex_mapName
+      function findIndex_apName
       (accumulator, currentValue, currentIndex /*,array*/)
       {
-        let i = currentValue.findIndex(mapName);
+        let i = currentValue.findIndex(apName);
         if (i >= 0)
           accumulator.push({stackIndex: currentIndex, mapIndex: i});
         return accumulator;
       };
-      let ms = stacks.reduce(findIndex_mapName, []);
+      let ms = stacks.reduce(findIndex_apName, []);
       if (ms.length != 1)
       {
-        console.log("mapStackIndex()", mapName, ms, ms.length);
+        console.log("apStackIndex()", apName, ms, ms.length);
       }
       return ms[0];
     };
     /** @return transform : translation, calculated from map position within stack.
      */
-    Stacked.prototype.mapTransform = function ()
+    Stacked.prototype.apTransform = function ()
     {
       if (this.position === undefined || yRange === undefined)
       {
-        console.log("mapTransform()", this.mapName, this, yRange);
+        console.log("apTransform()", this.apName, this, yRange);
         debugger;
       }
       let yOffset = this.yOffset(),
@@ -898,29 +903,29 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       scaleText = Number.isNaN(scale) ? "" : " scale(" + scale + ")";
       /** Will be undefined when map is dragged out to form a new Stack, which
        * is not allocated an x position (via xScale()) until dragended().  */
-      let xVal = x(this.mapName);
+      let xVal = x(this.apName);
       if (xVal === undefined)
-        xVal = o[this.mapName];
+        xVal = o[this.apName];
       checkIsNumber(xVal);
       let transform =
         [
           "translate(" + xVal, yOffsetText, ")",
           scaleText
         ].join("");
-      console.log("mapTransform", this, transform);
+      console.log("apTransform", this, transform);
       return transform;
     };
     /** Get stack of map, return transform. */
-    Stack.prototype.mapTransform = function (mapName)
+    Stack.prototype.apTransform = function (apName)
     {
-      let m = maps[mapName];
-      return m.mapTransform();
+      let m = maps[apName];
+      return m.apTransform();
     };
     /** Get stack of map, return transform. */
-    Stack.prototype.mapTransformO = function (mapName)
+    Stack.prototype.apTransformO = function (apName)
     {
-      let m = maps[mapName];
-      return m.mapTransformO();
+      let m = maps[apName];
+      return m.apTransformO();
     };
     /** For each map in this Stack, redraw axis, brush, foreground paths.
      * @param t transition in which to make changes
@@ -951,54 +956,54 @@ chromosome : >=1 linkageGroup-s layed out vertically:
            * dragged.  Instead the dragged object will closely track the cursor;
            * may later use a slight / short transition to smooth noise in
            * cursor.  */
-          let t_ = (Stack.prototype.currentDrag == m.mapName) ? d3 : t;
-          // console.log("redraw", Stack.prototype.currentDrag, m.mapName, Stack.prototype.currentDrag == m.mapName);
+          let t_ = (Stack.prototype.currentDrag == m.apName) ? d3 : t;
+          // console.log("redraw", Stack.prototype.currentDrag, m.apName, Stack.prototype.currentDrag == m.apName);
           let ts = 
-            t_.selectAll(".map#" + eltId(m.mapName));
+            t_.selectAll(".map#" + eltId(m.apName));
           (trace_stack_redraw > 0) &&
             (((ts._groups.length === 1) && console.log(ts._groups[0], ts._groups[0][0]))
-             || ((trace_stack_redraw > 1) && console.log("redraw", this_Stack, m, index, m.mapName)));
-          // console.log("redraw", m.mapName);
+             || ((trace_stack_redraw > 1) && console.log("redraw", this_Stack, m, index, m.apName)));
+          // console.log("redraw", m.apName);
           // args passed to fn are data, index, group;  `this` is node (SVGGElement)
-          ts.attr("transform", Stack.prototype.mapTransformO);
-          mapRedrawText(m);
+          ts.attr("transform", Stack.prototype.apTransformO);
+          apRedrawText(m);
         });
 
     };
 
-    function mapRedrawText(m)
+    function apRedrawText(m)
     {
-          let axisTS = svgContainer.selectAll("g.map#" + eltId(m.mapName) + " > text");
+          let axisTS = svgContainer.selectAll("g.map#" + eltId(m.apName) + " > text");
           axisTS.attr("transform", yAxisTextScale);
-          let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(m.mapName) + " > g.tick > text");
+          let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(m.apName) + " > g.tick > text");
           axisGS.attr("transform", yAxisTicksScale);
-          let axisBS = svgContainer.selectAll("g.axis#" + axisEltId(m.mapName) + " > g.btn > text");
+          let axisBS = svgContainer.selectAll("g.axis#" + axisEltId(m.apName) + " > g.btn > text");
           axisBS.attr("transform", yAxisBtnScale);
     }
 
     /*------------------------------------------------------------------------*/
 
-    /** x scale which maps from mapIDs[] to equidistant points in axisXRange
+    /** x scale which maps from apIDs[] to equidistant points in axisXRange
      */
     //d3 v4 scalePoint replace the rangePoint
-    //let x = d3.scaleOrdinal().domain(mapIDs).range([0, w]);
+    //let x = d3.scaleOrdinal().domain(apIDs).range([0, w]);
     function xScale() {
-      let stackDomain = Array.from(stacks.keys()); // was mapIDs
+      let stackDomain = Array.from(stacks.keys()); // was apIDs
       console.log("xScale()", stackDomain);
       return d3.scalePoint().domain(stackDomain).range(axisXRange);
     }
-    /** scaled x value of each map, indexed by mapIDs */
+    /** scaled x value of each map, indexed by apIDs */
     let o = {};
-    Stacked.prototype.location = function() { return checkIsNumber(o[this.mapName]); };
-    /** Same as .mapTransform(), but use o[d] instead of x(d)
+    Stacked.prototype.location = function() { return checkIsNumber(o[this.apName]); };
+    /** Same as .apTransform(), but use o[d] instead of x(d)
      * If this works, then the 2 can be factored.
      * @return transform : translation, calculated from map position within stack.
      */
-    Stacked.prototype.mapTransformO = function ()
+    Stacked.prototype.apTransformO = function ()
     {
       if (this.position === undefined || yRange === undefined)
       {
-        console.log("mapTransformO()", this.mapName, this, yRange);
+        console.log("apTransformO()", this.apName, this, yRange);
         debugger;
       }
       let yOffset = this.yOffset(),
@@ -1008,13 +1013,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
        */
       let scale = this.portion,
       scaleText = Number.isNaN(scale) || (scale === 1) ? "" : " scale(1," + scale + ")";
-      let xVal = checkIsNumber(o[this.mapName]);
+      let xVal = checkIsNumber(o[this.apName]);
       let transform =
         [
           " translate(" + xVal, yOffsetText, ")",
           scaleText
         ].join("");
-       // console.log("mapTransformO", this, transform);
+       // console.log("apTransformO", this, transform);
       return transform;
     };
 
@@ -1026,7 +1031,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     let pathMarkers = {}; //For tool tip
 
-    let selectedMaps = [];
+    let selectedAps = [];
     let selectedMarkers = {};
     let brushedRegions = {};
 
@@ -1037,55 +1042,55 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     /** For all maps, store the x value of its axis, according to the current scale. */
     function collateO() {
-      mapIDs.forEach(function(d){
+      apIDs.forEach(function(d){
         o[d] = x(d);
         checkIsNumber(o[d]);
         if (o[d] === undefined) { debugger; console.log(x(d)); }
       });
     }
-    mapIDs.forEach(function(d){
+    apIDs.forEach(function(d){
       // initial stacking : 1 map per stack, but later when db contains Linkage
       // Groups, can automatically stack maps.
       let sd = new Stacked(d, 1),
       stack = new Stack(sd);
-      sd.z = z[d];  // reference from Stacked map to z[mapID]
+      sd.z = z[d];  // reference from Stacked map to z[apID]
       stacks.append(stack);
       stack.calculatePositions();
     });
     // xScale() uses stacks.keys().
     let xs = xScale();
-    function x(mapID)
+    function x(apID)
     {
-      let i = Stack.prototype.stackIndex(mapID);
-      if (i === -1) { console.log("x()", mapID, i); debugger; }
+      let i = Stack.prototype.stackIndex(apID);
+      if (i === -1) { console.log("x()", apID, i); debugger; }
       return xs(i);
     }
     collateO();
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
-    //console.log(axis.scale(y[mapIDs))
+    //console.log(axis.scale(y[apIDs))
     collateStacks();
     xDropOutDistance_update();
 
 
-    /** update ys[m.mapName] for the given map,
+    /** update ys[m.apName] for the given map,
      * according the map's current .portion.
-     * @param m map (i.e. maps[m.mapName] == m)
+     * @param m map (i.e. maps[m.apName] == m)
      */
     function updateRange(m)
     {
       // if called before ys is set up, do nothing.
-      if (ys && ys[m.mapName])
+      if (ys && ys[m.apName])
       {
         let myRange = m.yRange();
-         console.log("updateRange", m.mapName, m.position, m.portion, myRange);
-        ys[m.mapName].range([0, myRange]);
+         console.log("updateRange", m.apName, m.position, m.portion, myRange);
+        ys[m.apName].range([0, myRange]);
       }
     }
 
 
     var path_colour_scale = d3.scaleOrdinal().domain(markers).range(d3.schemeCategory20b);
 
-    mapIDs.forEach(function(d) {
+    apIDs.forEach(function(d) {
       /** Find the max of locations of all markers of map name d. */
       let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a].location; } );
       let m = maps[d], myRange = m.yRange();
@@ -1115,24 +1120,24 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                          .append("svg:g")
                          .attr("transform", translateTransform);
 
-    svgRoot.classed("devel", (markerTotal / mapIDs.length) < 20);
+    svgRoot.classed("devel", (markerTotal / apIDs.length) < 20);
 
     //User shortcut from the keybroad to manipulate the maps
     d3.select("#holder").on("keydown", function() {
       if ((String.fromCharCode(d3.event.keyCode)) == "D") {
         console.log("Delete Map (not implemented)");
-        // deleteMap();
+        // deleteAp();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == "Z") {
-        zoomMap();
+        zoomAp();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == "R") {
-        refreshMap();
+        refreshAp();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == "A") {
         showAll = !showAll;
         console.log("showAll", showAll);
-        refreshMap();
+        refreshAp();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == " ") {
         console.log("space");
@@ -1175,20 +1180,20 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     { if (s.stackID === undefined) debugger;
       return eltId(s.stackID); }
 
-    /** For the given Stack, return its mapIDs  */
-    function stack_mapIDs(stack)
+    /** For the given Stack, return its apIDs  */
+    function stack_apIDs(stack)
     {
-      return stack.mapIDs();
+      return stack.apIDs();
     }
 
     // Add a group element for each map.
     // Stacks are selection groups in the result of this .selectAll()
     let g = stackS.selectAll(".map")
-        .data(stack_mapIDs)
+        .data(stack_apIDs)
         .enter().append("g")
         .attr("class", "map")
         .attr("id", eltId)
-        .attr("transform", Stack.prototype.mapTransformO)
+        .attr("transform", Stack.prototype.apTransformO)
         .call(d3.drag()
           .subject(function(d) { return {x: x(d)}; }) //origin replaced by subject
           .on("start", dragstarted) //start instead of dragstart in v4. 
@@ -1225,9 +1230,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       /** @return map which this DropTarget is part of */
       DropTarget.prototype.getMap = function ()
       {
-        /** The datum of the DropTarget is the mapName */
-        let mapName = this.datum(),
-        map = maps[mapName];
+        /** The datum of the DropTarget is the apName */
+        let apName = this.datum(),
+        map = maps[apName];
         return map;
       };
       /// @parameter top  true or false to indicate zone is positioned at top or
@@ -1241,8 +1246,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           .attr("class", "stackDropTarget" + " end " + (top ? "top" : "bottom"));
         let
           dropTargetY = function (datum/*, index, group*/) {
-            let mapName = datum,
-            map = maps[mapName],
+            let apName = datum,
+            map = maps[apName],
             yVal = top ? -dropTargetYMargin : edge.bottom(map);
           return yVal;
         };
@@ -1270,8 +1275,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         function dropTargetHeight(datum/*, index, group*/)
         {
           // console.log("dropTargetHeight", datum, index, group);
-          let mapName = datum,
-          map = maps[mapName];
+          let apName = datum,
+          map = maps[apName];
           return map.yRange() - 2 * size.h;
         }
         stackDropTarget
@@ -1287,9 +1292,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         .on("mouseout", dropTargetMouseOut);
       };
 
-      function storeDropTarget(mapName, classList)
+      function storeDropTarget(apName, classList)
       {
-        currentDropTarget = {mapName: mapName, classList: classList};
+        currentDropTarget = {apName: apName, classList: classList};
       }
 
       function dropTargetMouseOver(data, index, group){
@@ -1322,7 +1327,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       let cn=cmName[chrID];
       // console.log(".axis text", chrID, cn);
-      return cn.mapName + " " + cn.chrName;
+      return cn.apName + " " + cn.chrName;
     }
 
     g.append("text")
@@ -1338,9 +1343,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      *  g.map > g.axis > g.tick > text
      *  g.map > g.axis > g.btn     (see following yAxisBtnScale() )
      *  g.map > g.axis > text
-     * g.axis has the mapName in its name (prefixed via axisEltId()) and in its .__data__.
-     * The map / axis title (g.axis > text) has mapName in its name, .__data__, and parent's name
-     * (i.e. g[i].__data__ === mapName)
+     * g.axis has the apName in its name (prefixed via axisEltId()) and in its .__data__.
+     * The map / axis title (g.axis > text) has apName in its name, .__data__, and parent's name
+     * (i.e. g[i].__data__ === apName)
      *
      * g.tick already has a transform, so place the scale transform on g.tick > text.
      * g.btn contains <rect> and <text>, both requiring this scale.
@@ -1349,11 +1354,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function yAxisTextScale(/*d, i, g*/)
     {
       let
-      mapName = this.__data__,
-      map = maps[mapName],
+      apName = this.__data__,
+      map = maps[apName],
       portion = map && map.portion || 1,
       scaleText = "scale(1, " + 1 / portion + ")";
-      // console.log("yAxisTextScale", d, i, g, this, mapName, map, portion, scaleText);
+      // console.log("yAxisTextScale", d, i, g, this, apName, map, portion, scaleText);
       return scaleText;
     }
     function yAxisTicksScale(/*d, i, g*/)
@@ -1380,7 +1385,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                     .attr("id","toolTip")
                     .style("opacity", 0);
     //Probably leave the delete function to Ember
-    //function deleteMap(){
+    //function deleteAp(){
     //  console.log("Delete");
     //}
 
@@ -1392,8 +1397,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * the axis path.  More exactly, these are the paths to include and exclude,
      * respectively :
      *   svgContainer > g.foreground > g.<markerName> >  path
-     *   svgContainer > g.stack > g.map > g.axis#<axisEltId(mapName)> > path    (axisEltId() prepends "m"))
-     * (mapName is e.g. 58b504ef5230723e534cd35c_MyChr).
+     *   svgContainer > g.stack > g.map > g.axis#<axisEltId(apName)> > path    (axisEltId() prepends "m"))
+     * (apName is e.g. 58b504ef5230723e534cd35c_MyChr).
      * This matters because axis path does not have data (observed issue : a
      * call to handleMouseOver() with d===null; reproduced by brushing a region
      * on an axis then moving cursor over that axis).
@@ -1445,10 +1450,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
 
-    function zoomMap(){
-      console.log("Zoom : zoomMap()");
+    function zoomAp(){
+      console.log("Zoom : zoomAp()");
     }
-    function refreshMap(){
+    function refreshAp(){
       console.log("Refresh");
     }
 
@@ -1548,7 +1553,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         mmaps1 = s1.maps;
         // Cross-product of the two adjacent stacks
         for (let m0i=0; m0i < mmaps0.length; m0i++) {
-          let m0 = mmaps0[m0i], zm0 = m0.z, m0Name = m0.mapName, mmag0 = mmag[m0Name];
+          let m0 = mmaps0[m0i], zm0 = m0.z, m0Name = m0.apName, mmag0 = mmag[m0Name];
           for (let m1i=0; m1i < mmaps1.length; m1i++) {
             let m1 = mmaps1[m1i], zm1 = m1.z;
             d3.keys(zm0).forEach(function(marker0) {
@@ -1634,25 +1639,25 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       let stack = stacks[stackIndex], ma=concatAndUnique(mma[marker], mm[marker]);
       // console.log("markerStackMaps()", marker, stackIndex, ma);
-      let mmaps = ma.filter(function (mapID) {
-        let mInS = stack.contains(mapID); return mInS; });
+      let mmaps = ma.filter(function (apID) {
+        let mInS = stack.contains(apID); return mInS; });
       // console.log(mmaps);
       return mmaps;
     }
     /** A line between a marker's location in adjacent maps.
-     * @param k1, k2 indices into mapIDs[]
+     * @param k1, k2 indices into apIDs[]
      * @param d marker name
      */
     function markerLine2(k1, k2, d)
     {
-      let mk1 = mapIDs[k1],
-          mk2 = mapIDs[k2];
+      let mk1 = apIDs[k1],
+          mk2 = apIDs[k2];
       return line([[o[mk1], markerY(k1, d)],
                    [o[mk2], markerY(k2, d)]]);
     }
     /** Stacks version of markerLine2().
      * A line between a marker's location in maps in adjacent Stacks.
-     * @param mk1, mk2 map names, (exist in mapIDs[])
+     * @param mk1, mk2 map names, (exist in apIDs[])
      * @param d marker name
      */
     function markerLineS2(mk1, mk2, d)
@@ -1664,7 +1669,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** Similar to @see markerLine().
      * Draw a horizontal notch at the marker location on the axis.
      * Used when showAll and the marker is not in a map of an adjacent Stack.
-     * @param mk mapID
+     * @param mk apID
      * @param d marker name
      * @param xOffset add&subtract to x value, measured in pixels
      */
@@ -1675,13 +1680,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                    [o[mk]+xOffset, mkY]]);
     }
     /** Similar to @see markerLine2().
-     * @param k index into mapIDs[]
+     * @param k index into apIDs[]
      * @param d marker name
      * @param xOffset add&subtract to x value, measured in pixels
      */
     function markerLine(k, d, xOffset)
     {
-      let mk = mapIDs[k],
+      let mk = apIDs[k],
       mkY = markerY(k, d);
       return line([[o[mk]-xOffset, mkY],
                    [o[mk]+xOffset, mkY]]);
@@ -1757,7 +1762,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       for (let i=0; i < mmNm.length; i++)
       {
         let [markerName, m0_, m1_, zm0, zm1] = mmNm[i];
-        let m0 = m0_.mapName, m1 = m1_.mapName;
+        let m0 = m0_.apName, m1 = m1_.apName;
         if ((zm0 !== zm1) && (m0 == m1))
           console.log("path", i, markerName, zm0, zm1, m0, m1);
         r[i] = pathmm(m0, m1, markerName);
@@ -1779,7 +1784,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       for (let i=0; i < agmma.length; i++)
       {
         let [markerName, m0, m1, zm0, zm1] = agmma[i];
-        p[i] = pathmm(m0.mapName, m1.mapName, markerName);
+        p[i] = pathmm(m0.apName, m1.apName, markerName);
       }
       return p.join();
     }
@@ -1793,12 +1798,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let r;
 
               let range = [0, yRange];
-              /** Calculate relative location of marker d in the map mapID, and
+              /** Calculate relative location of marker d in the map apID, and
                * check if it is inRange 
                */
-              function inRangeI(mapID)
+              function inRangeI(apID)
               {
-                return inRange(markerY_(mapID, d), range);
+                return inRange(markerY_(apID, d), range);
               };
 
               /** Filter out those paths that either side locates out of the svg. */
@@ -1834,9 +1839,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function path_pre_Stacks(d) { // d is a marker
         let r = [];
 
-        for (let k=0; k<mapIDs.length-1; k++) {
-          let m_k  = mapIDs[k],
-              m_k1 = mapIDs[k+1];
+        for (let k=0; k<apIDs.length-1; k++) {
+          let m_k  = apIDs[k],
+              m_k1 = apIDs[k+1];
             if (d in z[m_k] && d in z[m_k1]) { // if markers is in both maps
                  //Multiple markers can be in the same path
               let sLine = markerLine2(k, k+1, d);
@@ -1866,43 +1871,43 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * because .foreground does not have the map transform (maps which are ends
      * of path will have different Y translations).
      *
-     * @param mapID name of map  (exists in mapIDs[])
+     * @param apID name of map  (exists in apIDs[])
      * @param d marker name
      */
-    function markerY_(mapID, d)
+    function markerY_(apID, d)
     {
       // z[p][m].location, actual position of marker m in the map p, 
       // y[p](z[p][m].location) is the relative marker position in the svg
       // ys is used - the y scale for the stacked position&portion of the map.
-      let ysm = ys[mapID],
-      mky = ysm(z[mapID][d].location),
-      mapY = maps[mapID].yOffset();
-      if (! tracedMapScale[mapID])
+      let ysm = ys[apID],
+      mky = ysm(z[apID][d].location),
+      mapY = maps[apID].yOffset();
+      if (! tracedApScale[apID])
       {
-        tracedMapScale[mapID] = true;
+        tracedApScale[apID] = true;
         /* let yDomain = ysm.domain();
-         console.log("markerY_", mapID, d, z[mapID][d].location, mky, mapY, yDomain, ysm.range()); */
+         console.log("markerY_", apID, d, z[apID][d].location, mky, mapY, yDomain, ysm.range()); */
       }
       return mky + mapY;
     }
     /** Calculate relative marker location in the map
-     * @param k index into mapIDs[]
+     * @param k index into apIDs[]
      * @param d marker name
      */
     function markerY(k, d)
     {
-      return markerY_(mapIDs[k], d);
+      return markerY_(apIDs[k], d);
     }
 
 
     // Returns an array of paths (links between maps) for a given marker when zoom in starts.
     function zoomPath(d) { // d is a marker
         let r = [];
-        for (let k=0; k<mapIDs.length-1; k++) {
+        for (let k=0; k<apIDs.length-1; k++) {
            //ys[p].domain
-           //z[mapIDs[k]][d].location marker location
+           //z[apIDs[k]][d].location marker location
 
-            if (d in z[mapIDs[k]] && d in z[mapIDs[k+1]]) { // if markers is in both maps
+            if (d in z[apIDs[k]] && d in z[apIDs[k+1]]) { // if markers is in both maps
               /** relative marker location in the map of 2 markers, k and k+1 :
                * k  : markerYk[0]
                * k+1: markerYk[1]
@@ -1911,16 +1916,16 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               // Filter out those paths that either side locates out of the svg
               if (inRange(markerYk[0], [0, yRange]) &&
                   inRange(markerYk[1], [0, yRange])) {
-                        let sLine = line([[o[mapIDs[k]], markerYk[0]],
-                             [o[mapIDs[k+1]], markerYk[1]]]);
+                        let sLine = line([[o[apIDs[k]], markerYk[0]],
+                             [o[apIDs[k+1]], markerYk[1]]]);
                         if(pathMarkers[sLine] != null){
                           pathMarkers[sLine][d] = 1;
                         } else {
                           pathMarkers[sLine]= {};
                           pathMarkers[sLine][d] = 1;
                         }
-                        r.push(line([[o[mapIDs[k]], markerYk[0]],
-                             [o[mapIDs[k+1]], markerYk[1]]]));
+                        r.push(line([[o[apIDs[k]], markerYk[0]],
+                             [o[apIDs[k+1]], markerYk[1]]]));
                   } 
               
             } 
@@ -1929,15 +1934,15 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
     /** Used when the user completes a brush action on the map axis.
-     * The datum of g.brush is the ID/name of its map, call this mapID.
-     * If null selection then remove mapID from selectedMaps[], otherwise add it.
-     * Update selectedMarkers{}, brushedRegions{} : if selectedMaps[] is empty, clear them.
-     * Otherwise, set brushedRegions[mapID] to the current selection (i.e. of the brush).
-     * Set brushExtents[] to the brushedRegions[] of the maps in selectedMaps[].
-     * For each map in selectedMaps[], clear selectedMarkers{} then store in it the
+     * The datum of g.brush is the ID/name of its map, call this apID.
+     * If null selection then remove apID from selectedAps[], otherwise add it.
+     * Update selectedMarkers{}, brushedRegions{} : if selectedAps[] is empty, clear them.
+     * Otherwise, set brushedRegions[apID] to the current selection (i.e. of the brush).
+     * Set brushExtents[] to the brushedRegions[] of the maps in selectedAps[].
+     * For each map in selectedAps[], clear selectedMarkers{} then store in it the
      * names + locations of markers which are within the brush extent of the map.
-     * Add circle.mapID for those marker locations.
-     * Remove circles of markers (on all maps) outside brushExtents[mapID].
+     * Add circle.apID for those marker locations.
+     * Remove circles of markers (on all maps) outside brushExtents[apID].
      * For elements in '.foreground g', set class .faded iff the marker (which
      * is the datum of the element) is not in the selectedMarkers[] of any map.
      *
@@ -1950,31 +1955,31 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function brushHelper(that) {
       //Map name, e.g. 32-1B
-      /** name[0] is mapID of the brushed axis. name.length should be 1. */
+      /** name[0] is apID of the brushed axis. name.length should be 1. */
       let name = d3.select(that).data();
 
       //Remove old circles.
       svgContainer.selectAll("circle").remove();
 
       if (d3.event.selection == null) {
-        selectedMaps.removeObject(name[0]);
+        selectedAps.removeObject(name[0]);
       }
       else {
-        selectedMaps.addObject(name[0]); 
+        selectedAps.addObject(name[0]); 
       }
 
-      // selectedMaps is an array containing the IDs of the maps that
+      // selectedAps is an array containing the IDs of the maps that
       // have been selected.
       
-      if (selectedMaps.length > 0) {
-        console.log("Selected: ", " ", selectedMaps.length);
+      if (selectedAps.length > 0) {
+        console.log("Selected: ", " ", selectedAps.length);
         // Maps have been selected - now work out selected markers.
         brushedRegions[name[0]] = d3.event.selection;
-        brushExtents = selectedMaps.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
+        brushExtents = selectedAps.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
 
         selectedMarkers = {};
-        selectedMaps.forEach(function(p, i) {
-          /** d3 selection of one of the selected maps. */
+        selectedAps.forEach(function(p, i) {
+          /** d3 selection of one of the APs selected by user brush on axis. */
           let mappS = svgContainer.selectAll("#" + eltId(p));
           selectedMarkers[p] = [];
           d3.keys(z[p]).forEach(function(m) {
@@ -2010,17 +2015,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         d3.selectAll(".foreground g").classed("faded", function(d){
          //d3.event.selection [min,min] or [max,max] should consider as non selection.
          //maybe alternatively use brush.clear or (brush.move, null) given a mouse event
-          // discuss : d3.keys(selectedMarkers). seems equivalent to selectedMaps.
+          // discuss : d3.keys(selectedMarkers). seems equivalent to selectedAps.
           /// also this could be .some() instead of ! .every():
-          return ! selectedMaps.some(function(p) {
-            /** d is markerName, p is mapName. */
+          return ! selectedAps.some(function(p) {
+            /** d is markerName, p is apName. */
             let smp = selectedMarkers[p];
             // ma_ is e.g. "markerD 0.4".
             return smp.some(function(ma_) { return ma_.includes(d+" "); });
           });
           // not used
           return !d3.keys(selectedMarkers).every(function(p) {
-            /** return true if some of the selectedMarkers of mapID p contain marker d.  */
+            /** return true if some of the selectedMarkers of apID p contain marker d.  */
             let smp = selectedMarkers[p];
             // following seems equivalent to :
             if (false) { return smp.some(function(ma_) { return ma_.includes(d+" "); }); }
@@ -2076,7 +2081,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
            resetSwitch.on('click',function(){
              let t = svgContainer.transition().duration(750);
              
-             mapIDs.forEach(function(d) {
+             apIDs.forEach(function(d) {
                let idName = axisEltId(d); // axis ids have "m" prefix
                let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a].location; } );
                y[d].domain([0, yDomainMax]);
@@ -2109,7 +2114,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     /** Zoom the y axis of this map to the given brushExtents[].
      * Called via on(click) of brushHelper() Zoom button (zoomSwitch).
-     * Traverse selected maps, matching only the mapName of the brushed map.
+     * Traverse selected maps, matching only the apName of the brushed map.
      * Set the y domain of the map, from the inverse mapping of the brush extent limits.
      * Remove the zoom button, redraw the axis, ticks, zoomPath. Move the brush.
      * @param that  the brush g element.
@@ -2117,15 +2122,15 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * @param brushExtents  limits of the current brush, to which we are zooming
      */
     function zoom(that, brushExtents) {
-      let mapName = d3.select(that).data();
+      let apName = d3.select(that).data();
       let t = svgContainer.transition().duration(750);
-      selectedMaps.map(function(p, i) {
-        if(p == mapName){
+      selectedAps.map(function(p, i) {
+        if(p == apName){
           let yp = y[p],
           map = maps[p],
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *map.portion*/); });
           // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
-          console.log("zoom", mapName, p, i, yp.domain(), yp.range(), brushExtents[i], map.portion, brushedDomain);
+          console.log("zoom", apName, p, i, yp.domain(), yp.range(), brushExtents[i], map.portion, brushedDomain);
           y[p].domain(brushedDomain);
           ys[p].domain(brushedDomain);
           let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * map.portion);
@@ -2153,7 +2158,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       unique_1_1_mapping = me.get('isShowUnique');
       use_path_colour_scale = me.get('pathColourScale');
       console.log("dragstarted", this, start_d/*, start_index, start_group*/);
-      let cl = {/*self: this,*/ d: start_d/*, index: start_index, group: start_group, mapIDs: mapIDs*/};
+      let cl = {/*self: this,*/ d: start_d/*, index: start_index, group: start_group, apIDs: apIDs*/};
       svgContainer.classed("axisDrag", true);
       d3.select(this).classed("active", true);
       d3.event.subject.fx = d3.event.subject.x;
@@ -2197,7 +2202,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         let dropTargetEnd = currentDropTarget && currentDropTarget.classList.contains("end");
 
         const dropDelaySeconds = 0.5, milli = 1000;
-        /** currentDrop references the mapName being dragged and the stack it is dropped into or out of. */
+        /** currentDrop references the apName being dragged and the stack it is dropped into or out of. */
         let currentDrop = Stack.prototype.currentDrop,
         /** Use the start of the drag, or the most  */
         xDistanceRef = (currentDrop && currentDrop.x) ? currentDrop.x.stack : d3.event.subject.fx,
@@ -2215,9 +2220,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         {
           if (dropTargetEnd)
           {
-            let targetMapName = currentDropTarget.mapName,
+            let targetMapName = currentDropTarget.apName,
             top = currentDropTarget.classList.contains("top"),
-            zoneParent = Stack.mapStackIndex(targetMapName);
+            zoneParent = Stack.apStackIndex(targetMapName);
             /** destination stack */
             let stack = stacks[zoneParent.stackIndex];
             if (! stack.contains(d))
@@ -2227,13 +2232,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                * with this exception : .dropIn() redraws the source stack of the map.
                */
               stack.dropIn(d, zoneParent.mapIndex, top, t);
-              // mapChangeGroupElt(d, t);
+              // apChangeGroupElt(d, t);
               collateStacks();
               // number of stacks has decreased - not essential to recalc the domain.
               Stack.log();
               stack.redraw(t);
             }
-            // set x of dropped mapID
+            // set x of dropped apID
           }
           // For the case : drag ended in a middle zone (or outside any DropTarget zone)
           // else if d is in a >1 stack then remove it else move the stack
@@ -2251,7 +2256,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               t = dragTransitionNew();
               stack.dropOut(d);
               Stack.log();
-              // mapChangeGroupElt(d, t);
+              // apChangeGroupElt(d, t);
               collateStacks();
               /* if d is not in currentDrop.stack (=== stack), which would be a
                * program error, dropOut() could return false; in that case stack
@@ -2261,7 +2266,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               /* if map is dropped out to a new stack, redraw now for
                * continuity, instead of waiting until dragended().
                */
-              mapRedrawText(maps[d]);
+              apRedrawText(maps[d]);
               /* Following code will set o[d] and sort the Stack into location. */
             }
           }
@@ -2282,7 +2287,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         if (o[d] < dragLimit.min) { o[d] = dragLimit.min; }
         else if (o[d] > dragLimit.max) { o[d] = dragLimit.max; }
       }
-      //console.log(mapIDs + " " + o[d]);
+      //console.log(apIDs + " " + o[d]);
       if (this === undefined)
       {
         console.log("dragged this undefined", d);
@@ -2301,13 +2306,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * Calls pathUpdate() which will mostly change the paths connected to the dragged axis;
      * but when dropIn/dropOut(), paths to other axes can be changed when stacking / adjacencies change.
      *
-     * @param mapElt  node/DOM element corresponding of map. this of dragged()
-     * @param d mapName
+     * @param apElt  node/DOM element corresponding of map. this of dragged()
+     * @param d apName
      * @param t transition in which to make changes
      */
-    function draggedAxisRedraw(mapElt, d, t)
+    function draggedAxisRedraw(apElt, d, t)
     {
-        let st0 = d3.select(mapElt);
+        let st0 = d3.select(apElt);
         if (! st0.empty())
         {
           /* if (t === undefined)
@@ -2316,8 +2321,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           let st = st0; //.transition();  // t
           // st.ease(d3.easeQuadOut);
           // st.duration(dragTransitionTime);
-          st.attr("transform", Stack.prototype.mapTransformO);
-          // zoomed effects transform via path() : mapTransform.
+          st.attr("transform", Stack.prototype.apTransformO);
+          // zoomed effects transform via path() : apTransform.
           pathUpdate(t /*st*/);
           //Do we need to keep the brushed region when we drag the map? probably not.
           //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
@@ -2327,40 +2332,40 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         }
       }
 
-    /** Called when mapID has been dragged from one stack to another.
-     * It is expected that the group element of the map, g.map#<eltId(mapID)>,
+    /** Called when apID has been dragged from one stack to another.
+     * It is expected that the group element of the map, g.map#<eltId(apID)>,
      * needs to be moved from the source g.stack to destination.
-     * @param mapID name/id of map
+     * @param apID name/id of map
      * @param t drag transition
      */
-    function mapChangeGroupElt(mapID, t)
+    function apChangeGroupElt(apID, t)
     {
-      let ms_ = "g.map#" + eltId(mapID),
+      let ms_ = "g.map#" + eltId(apID),
       ms = t.selectAll(ms_),
       gStack = ms._groups[0][0].parentNode;
       // let p = t.select(function() { return gStack; });
-      // console.log("mapChangeGroupElt", mapID, t, ms_, ms, p);
+      // console.log("apChangeGroupElt", apID, t, ms_, ms, p);
       // compare with map->stack
-      let map = maps[mapID],
+      let map = maps[apID],
       stackID = map.stack && map.stack.stackID,
       /** destination Stack selection */
       dStack_ = "g.stack#" + stackEltId(map.stack),
       dStackS = t.selectAll(dStack_),
       dStack = dStackS._groups[0][0], // equiv : .node()
       differentStack = gStack !== dStack;
-      console.log("mapChangeGroupElt", map, stackID, dStack_, dStackS, dStack, differentStack);
+      console.log("apChangeGroupElt", map, stackID, dStack_, dStackS, dStack, differentStack);
 
       // not currently used - g.stack layer may be discarded.
       if (false && differentStack)
       {
-        var removedGmap = ms.remove(),
-        removedGmapNode = removedGmap.node();
-        console.log("removedGmap", removedGmap, removedGmapNode);
+        var removedGAp = ms.remove(),
+        removedGApNode = removedGAp.node();
+        console.log("removedGAp", removedGAp, removedGApNode);
         let dStackN = dStackS.node();
         // tried .append, .appendChild(), not working yet.
         if (dStackN && dStackN.append)
-          //  dStackN.append(removedGmapNode);
-          dStackN.append(function() { return removedGmapNode;});
+          //  dStackN.append(removedGApNode);
+          dStackN.append(function() { return removedGApNode;});
       }
     }
 
@@ -2370,7 +2375,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function pathUpdate(t)
     {
       // console.log("pathUpdate");
-      tracedMapScale = {};  // re-enable trace
+      tracedApScale = {};  // re-enable trace
       let g = d3.selectAll(".foreground g"),
       gd = g.selectAll("path").data(path);
       gd.exit().remove();
@@ -2403,17 +2408,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // number of stacks has increased - need to recalc the domain, so that
       // x is defined for this map.
       //
-      // Order of mapIDs may have changed so need to redefine x and o.
+      // Order of apIDs may have changed so need to redefine x and o.
       xs = xScale();
-      // if caching, recalc : collateMapPositions();
+      // if caching, recalc : collateApPositions();
       
       stacks.sortLocation();
       collateO();
       collateStacks();
       // already done in xScale()
-      // x.domain(mapIDs).range(axisXRange);
+      // x.domain(apIDs).range(axisXRange);
       let t = d3.transition().duration(dragTransitionTime);
-      t.selectAll(".map").attr("transform", Stack.prototype.mapTransformO);
+      t.selectAll(".map").attr("transform", Stack.prototype.apTransformO);
       pathUpdate(t);
       d3.select(this).classed("active", false);
       svgContainer.classed("axisDrag", false);
@@ -2462,7 +2467,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
   }
        let zoomedMarkers = [];
 
-    //console.log(myMaps.start + " " + myMaps.end);
+    //console.log(myAps.start + " " + myAps.end);
     //d3.select('#grid')
       //.datum(d3Data)
       //.call(grid);
