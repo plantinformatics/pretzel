@@ -86,6 +86,21 @@ svg {
 /* Button */
 .btn { cursor: pointer; }
 
+.btn > rect
+{
+  width: 60px;
+  height: 30px;
+  rx: 3px;
+  ry: 3px;
+  fill: #eee;
+  stroke: #ddd;
+}
+.btn > text
+{
+  text-anchor: middle;
+}
+
+
 /* Tool tip */
 div.toolTip{
   position:absolute;

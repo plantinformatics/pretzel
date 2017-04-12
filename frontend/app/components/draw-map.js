@@ -2045,34 +2045,23 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                   .append('g')
                   .attr('class', 'btn')
                   .attr('transform', yAxisBtnScale);
-        zoomSwitch.append('rect')
-                  .attr('width', 60).attr('height', 30)
-                  .attr('rx', 3).attr('ry', 3)
-                  .attr('fill', '#eee').attr('stroke', '#ddd');
+        zoomSwitch.append('rect');
+        let zoomResetSwitchText =
         zoomSwitch.append('text')
-                  .attr('x', 30).attr('y', 20).attr('text-anchor', 'middle')
-                  .text('Zoom');
+          .attr('x', 30).attr('y', 20)
+          .text('Zoom');
         
         zoomSwitch.on('click', function () {
            zoom(that,brushExtents);
            zoomed = true;
 
            //reset function
-           svgContainer.selectAll(".btn").remove();
            //Remove all the existing circles
            svgContainer.selectAll("circle").remove();
-            resetSwitch = mapS
-                                    .append('g')
-                                    .attr('class', 'btn')
-                                    .attr('transform', yAxisBtnScale);
-           resetSwitch.append('rect')
-                  .attr('width', 60).attr('height', 30)
-                  .attr('rx', 3).attr('ry', 3)
-                  .attr('fill', '#eee').attr('stroke', '#ddd');
-           resetSwitch.append('text')
-                      .attr('x', 30).attr('y', 20).attr('text-anchor', 'middle')
-                      .text('Reset');
+          zoomResetSwitchText
+            .text('Reset');
 
+          resetSwitch = zoomSwitch;
            resetSwitch.on('click',function(){
              let t = svgContainer.transition().duration(750);
              
@@ -2096,7 +2085,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         });
         
       } else {
+        // brushHelper() is called from brushended() after zoom, with selectedMaps.length===0
+        // At this time it doesn't make sense to remove the resetSwitch button
+
         // No axis selected so reset fading of paths or circles.
+        console.log("brushHelper", selectedMaps.length);
+        if (false)
         svgContainer.selectAll(".btn").remove();
         svgContainer.selectAll("circle").remove();
         d3.selectAll(".foreground g").classed("faded", false);
@@ -2130,7 +2124,6 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           ys[p].domain(brushedDomain);
           let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * map.portion);
           let idName = axisEltId(p);
-          svgContainer.selectAll(".btn").remove();
           svgContainer.select("#"+idName).transition(t).call(yAxis);
           pathUpdate(t);
           // `that` refers to the brush g element
@@ -2142,7 +2135,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
     function brushended() {
-      //console.log("brush event ended");
+      // console.log("brush event ended");
       brushHelper(this);
     }
 
