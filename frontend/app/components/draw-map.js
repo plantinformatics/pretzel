@@ -1650,34 +1650,34 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function markerLine2(k1, k2, d)
     {
-      let mk1 = apIDs[k1],
-          mk2 = apIDs[k2];
-      return line([[o[mk1], markerY(k1, d)],
-                   [o[mk2], markerY(k2, d)]]);
+      let ak1 = apIDs[k1],
+          ak2 = apIDs[k2];
+      return line([[o[ak1], markerY(k1, d)],
+                   [o[ak2], markerY(k2, d)]]);
     }
     /** Stacks version of markerLine2().
      * A line between a marker's location in maps in adjacent Stacks.
-     * @param mk1, mk2 map names, (exist in apIDs[])
+     * @param ak1, ak2 map names, (exist in apIDs[])
      * @param d marker name
      */
-    function markerLineS2(mk1, mk2, d)
+    function markerLineS2(ak1, ak2, d)
     {
       // o[p], the map location,
-      return line([[o[mk1], markerY_(mk1, d)],
-                   [o[mk2], markerY_(mk2, d)]]);
+      return line([[o[ak1], markerY_(ak1, d)],
+                   [o[ak2], markerY_(ak2, d)]]);
     }
     /** Similar to @see markerLine().
      * Draw a horizontal notch at the marker location on the axis.
      * Used when showAll and the marker is not in a map of an adjacent Stack.
-     * @param mk apID
+     * @param ak apID
      * @param d marker name
      * @param xOffset add&subtract to x value, measured in pixels
      */
-    function markerLineS(mk, d, xOffset)
+    function markerLineS(ak, d, xOffset)
     {
-      let mkY = markerY_(mk, d);
-      return line([[o[mk]-xOffset, mkY],
-                   [o[mk]+xOffset, mkY]]);
+      let akY = markerY_(ak, d);
+      return line([[o[ak]-xOffset, akY],
+                   [o[ak]+xOffset, akY]]);
     }
     /** Similar to @see markerLine2().
      * @param k index into apIDs[]
@@ -1686,10 +1686,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function markerLine(k, d, xOffset)
     {
-      let mk = apIDs[k],
-      mkY = markerY(k, d);
-      return line([[o[mk]-xOffset, mkY],
-                   [o[mk]+xOffset, mkY]]);
+      let ak = apIDs[k],
+      akY = markerY(k, d);
+      return line([[o[ak]-xOffset, akY],
+                   [o[ak]+xOffset, akY]]);
     }
     /**
      * change to use marker alias group as data of path;
@@ -1880,15 +1880,15 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // y[p](z[p][m].location) is the relative marker position in the svg
       // ys is used - the y scale for the stacked position&portion of the map.
       let ysm = ys[apID],
-      mky = ysm(z[apID][d].location),
-      mapY = maps[apID].yOffset();
+      aky = ysm(z[apID][d].location),
+      apY = maps[apID].yOffset();
       if (! tracedApScale[apID])
       {
         tracedApScale[apID] = true;
         /* let yDomain = ysm.domain();
-         console.log("markerY_", apID, d, z[apID][d].location, mky, mapY, yDomain, ysm.range()); */
+         console.log("markerY_", apID, d, z[apID][d].location, aky, apY, yDomain, ysm.range()); */
       }
-      return mky + mapY;
+      return aky + apY;
     }
     /** Calculate relative marker location in the map
      * @param k index into apIDs[]
@@ -1980,7 +1980,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         selectedMarkers = {};
         selectedAps.forEach(function(p, i) {
           /** d3 selection of one of the APs selected by user brush on axis. */
-          let mappS = svgContainer.selectAll("#" + eltId(p));
+          let apS = svgContainer.selectAll("#" + eltId(p));
           selectedMarkers[p] = [];
           d3.keys(z[p]).forEach(function(m) {
 
@@ -1996,7 +1996,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               //Highlight the markers in the brushed regions
               //o[p], the map location, z[p][m].location, actual marker position in the map, 
               //y[p](z[p][m].location) is the relative marker position in the svg
-              let dot = mappS
+              let dot = apS
                 .append("circle")
                                     .attr("class", m)
                                     .attr("cx",0)   /* was o[p], but g.map translation does x offset of stack.  */
@@ -2006,7 +2006,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
         
             } else {
-              mappS.selectAll("circle." + m).remove();
+              apS.selectAll("circle." + m).remove();
             }
           });
         });
@@ -2045,8 +2045,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
         svgContainer.selectAll(".btn").remove();
         /** d3 selection of the brushed map. */
-        let mapS = svgContainer.selectAll("#" + eltId(name[0]));
-          zoomSwitch = mapS
+        let apS = svgContainer.selectAll("#" + eltId(name[0]));
+          zoomSwitch = apS
                   .append('g')
                   .attr('class', 'btn')
                   .attr('transform', yAxisBtnScale);
@@ -2066,7 +2066,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
            svgContainer.selectAll(".btn").remove();
            //Remove all the existing circles
            svgContainer.selectAll("circle").remove();
-            resetSwitch = mapS
+            resetSwitch = apS
                                     .append('g')
                                     .attr('class', 'btn')
                                     .attr('transform', yAxisBtnScale);
@@ -2093,7 +2093,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
              axisTickS.attr("transform", yAxisTicksScale);
 
              pathUpdate(t);
-             mapS.selectAll(".btn").remove();
+             apS.selectAll(".btn").remove();
              selectedMarkers = {};
              me.send('updatedSelectedMarkers', selectedMarkers);
              zoomed = false;
