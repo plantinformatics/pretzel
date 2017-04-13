@@ -221,7 +221,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** Map from marker names to AP names.
      * Compiled by collateMarkerMap() from z[], which is compiled from d3Data.
      */
-    let mm;
+    let am;
     /** Map from marker names to AP names, via aliases of the marker.
      * Compiled by collateMarkerMap() from z[], which is compiled from d3Data.
      */
@@ -1553,7 +1553,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         mAPs1 = s1.aps;
         // Cross-product of the two adjacent stacks
         for (let a0i=0; a0i < mAPs0.length; a0i++) {
-          let a0 = mAPs0[a0i], za0 = a0.z, a0Name = a0.apName, mmag0 = amag[a0Name];
+          let a0 = mAPs0[a0i], za0 = a0.z, a0Name = a0.apName, amag0 = amag[a0Name];
           for (let a1i=0; a1i < mAPs1.length; a1i++) {
             let a1 = mAPs1[a1i], za1 = a1.z;
             d3.keys(za0).forEach(function(marker0) {
@@ -1564,7 +1564,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                   maN[marker0] = [];
                 maN[marker0].push(maa);
               }
-              if (mmag0[marker0])
+              if (amag0[marker0])
               {
                 if (agam[ag] === undefined)
                   agam[ag] = [];
@@ -1584,17 +1584,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function collateMarkerMap()
     {
       console.log("collateMarkerMap()");
-      if (mm === undefined)
-        mm = {};
+      if (am === undefined)
+        am = {};
       aa || (aa = {});
       for (let ap in z)
       {
         for (let marker in z[ap])
         {
           // console.log(ap, marker);
-          if (mm[marker] === undefined)
-            mm[marker] = [];
-          mm[marker].push(ap);
+          if (am[marker] === undefined)
+            am[marker] = [];
+          am[marker].push(ap);
         }
         /* use marker aliases to match makers */
         Object.entries(z[ap]).forEach
@@ -1638,9 +1638,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function markerStackAPs(marker, stackIndex)
     {
-      let stack = stacks[stackIndex], ma=concatAndUnique(aa[marker], mm[marker]);
-      // console.log("markerStackAPs()", marker, stackIndex, ma);
-      let mAPs = ma.filter(function (apID) {
+      /** smi are the APs selected by marker. */
+      let stack = stacks[stackIndex], smi=concatAndUnique(aa[marker], am[marker]);
+      // console.log("markerStackAPs()", marker, stackIndex, smi);
+      let mAPs = smi.filter(function (apID) {
         let mInS = stack.contains(apID); return mInS; });
       // console.log(mAPs);
       return mAPs;
@@ -1707,7 +1708,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      *   array of
      *     map from / to (optional : stack index from / to)
      * 
-     * I think these will use 2 variants of markerStackAPs() : one using mm[] and the other aa[].
+     * I think these will use 2 variants of markerStackAPs() : one using am[] and the other aa[].
      * Thinking about what the hover text should be for paths drawn due to an alias - the alias group (all names), or maybe the 2 actual markers.
      * that is why I think I'll need 2 variants.
      * 
@@ -1766,7 +1767,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         let a0 = a0_.apName, a1 = a1_.apName;
         if ((za0 !== za1) && (a0 == a1))
           console.log("path", i, markerName, za0, za1, a0, a1);
-        r[i] = pathmm(a0, a1, markerName);
+        r[i] = patham(a0, a1, markerName);
       }
       // console.log("path", markerName, mmNm, r);
       return r;
@@ -1778,14 +1779,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function pathAg(ag) {
       /** 1 string per path segment */
       let p = [],
-      agmma = agam[ag];
-      if (agmma === undefined)
+      agama = agam[ag];
+      if (agama === undefined)
         console.log("pathAg", ag);
       else
-      for (let i=0; i < agmma.length; i++)
+      for (let i=0; i < agama.length; i++)
       {
-        let [markerName, a0, a1, za0, za1] = agmma[i];
-        p[i] = pathmm(a0.apName, a1.apName, markerName);
+        let [markerName, a0, a1, za0, za1] = agama[i];
+        p[i] = patham(a0.apName, a1.apName, markerName);
       }
       return p.join();
     }
@@ -1794,7 +1795,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * @param  a0, a1  AP names
      * @param d marker name
      */
-    function pathmm(a0, a1, d) {
+    function patham(a0, a1, d) {
       // let [stackIndex, a0, a1] = maga[d];
       let r;
 
@@ -1880,14 +1881,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // z[p][m].location, actual position of marker m in the AP p, 
       // y[p](z[p][m].location) is the relative marker position in the svg
       // ys is used - the y scale for the stacked position&portion of the AP.
-      let ysm = ys[apID],
-      aky = ysm(z[apID][d].location),
+      let ysa = ys[apID],
+      aky = ysa(z[apID][d].location),
       apY = aps[apID].yOffset();
       if (! tracedApScale[apID])
       {
         tracedApScale[apID] = true;
-        /* let yDomain = ysm.domain();
-         console.log("markerY_", apID, d, z[apID][d].location, aky, apY, yDomain, ysm.range()); */
+        /* let yDomain = ysa.domain();
+         console.log("markerY_", apID, d, z[apID][d].location, aky, apY, yDomain, ysa.range()); */
       }
       return aky + apY;
     }
@@ -2021,20 +2022,20 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           return ! selectedAps.some(function(p) {
             /** d is markerName, p is apName. */
             let smp = selectedMarkers[p];
-            // ma_ is e.g. "markerD 0.4".
-            return smp.some(function(ma_) { return ma_.includes(d+" "); });
+            // maNamePos is e.g. "markerD 0.4".
+            return smp.some(function(maNamePos) { return maNamePos.includes(d+" "); });
           });
           // not used
           return !d3.keys(selectedMarkers).every(function(p) {
             /** return true if some of the selectedMarkers of apID p contain marker d.  */
             let smp = selectedMarkers[p];
             // following seems equivalent to :
-            if (false) { return smp.some(function(ma_) { return ma_.includes(d+" "); }); }
+            if (false) { return smp.some(function(maNamePos) { return maNamePos.includes(d+" "); }); }
 
             //Maybe there is a better way to do the checking. 
-            //d is the marker name, where smp[ma] contains marker name and postion, separated by " "
-            for (var ma=0; ma<smp.length; ma++){
-              if (smp[ma].includes(d+" ")){
+            //d is the marker name, where smp[smi] contains marker name and postion, separated by " "
+            for (var smi=0; smi<smp.length; smi++){
+              if (smp[smi].includes(d+" ")){
                  return true;
               }
             }
@@ -2341,11 +2342,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function apChangeGroupElt(apID, t)
     {
-      let ms_ = "g.ap#" + eltId(apID),
-      ms = t.selectAll(ms_),
-      gStack = ms._groups[0][0].parentNode;
+      let aS_ = "g.ap#" + eltId(apID),
+      aS = t.selectAll(aS_),
+      gStack = aS._groups[0][0].parentNode;
       // let p = t.select(function() { return gStack; });
-      // console.log("apChangeGroupElt", apID, t, ms_, ms, p);
+      // console.log("apChangeGroupElt", apID, t, aS_, aS, p);
       // compare with ap->stack
       let ap = aps[apID],
       stackID = ap.stack && ap.stack.stackID,
@@ -2359,7 +2360,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // not currently used - g.stack layer may be discarded.
       if (false && differentStack)
       {
-        var removedGAp = ms.remove(),
+        var removedGAp = aS.remove(),
         removedGApNode = removedGAp.node();
         console.log("removedGAp", removedGAp, removedGApNode);
         let dStackN = dStackS.node();
