@@ -225,22 +225,22 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** Map from marker names to AP names, via aliases of the marker.
      * Compiled by collateMarkerMap() from z[], which is compiled from d3Data.
      */
-    let mma;
+    let aa;
 
     // results of collateData()
     let
-      /** ap / alias : marker    mam[ap][alias group] : marker */
-      mam = {},
-    /** ap/marker : alias groups       mmag[ap][marker] : [ag]  */
-    mmag = {},
+      /** ap / alias : marker    aam[ap][alias group] : marker */
+      aam = {},
+    /** ap/marker : alias groups       amag[ap][marker] : [ag]  */
+    amag = {},
         /** marker alias groups APs */
-    magm = {};
+    maga = {};
 
     // results of collateStacks()
     let
-    /** marker : AP - AP    mmN[marker] : [[marker, marker]] */
-    mmN = {},
-    agmm = {};
+    /** marker : AP - AP    maN[marker] : [[marker, marker]] */
+    maN = {},
+    agam = {};
 
     let line = d3.line(),
         axis = d3.axisLeft(),
@@ -1474,38 +1474,38 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      *     store       ag[ag] : [ marker ] marker references AP and array of aliases
      *     {unique name of alias group (sort) : array of : AP / marker / array of aliases}
      *     for each alias
-     *       store AP / alias : marker    mam[AP][alias group] : marker
+     *       store AP / alias : marker    aam[AP][alias group] : marker
      *       store AP/marker : alias groups  (or was that alias groups to marker)
-     *          mmag[AP][marker] : [ag]
+     *          amag[AP][marker] : [ag]
      * 
      */
     function collateData()
     {
       d3.keys(z).forEach(function(ap) {
-        let zm = z[ap];
-        // console.log("collateData", ap, zm);
-        if (mam[ap] === undefined)
-          mam[ap] = {};
-        if (magm[ap] === undefined)
-          magm[ap] = {};
-        if (mmag[ap] === undefined)
-          mmag[ap] = {};
-        let mamm = mam[ap];
-        d3.keys(zm).forEach(function(marker) {
+        let za = z[ap];
+        // console.log("collateData", ap, za);
+        if (aam[ap] === undefined)
+          aam[ap] = {};
+        if (maga[ap] === undefined)
+          maga[ap] = {};
+        if (amag[ap] === undefined)
+          amag[ap] = {};
+        let aamm = aam[ap];
+        d3.keys(za).forEach(function(marker) {
           try
           {
-          zm[marker].ap = z[ap]; // reference from marker to parent AP
-          // console.log("collateData", ap, zm, zm[marker]);
+          za[marker].ap = z[ap]; // reference from marker to parent AP
+          // console.log("collateData", ap, za, za[marker]);
           } catch (exc)
           {
-            console.log("collateData", ap, zm, zm[marker], exc);
+            console.log("collateData", ap, za, za[marker], exc);
             debugger;
           }
           if (markers[marker] === undefined)
             markers[marker] = new Set();
           markers[marker].add(ap);
 
-          let marker_ = zm[marker], mas = marker_.aliases;
+          let marker_ = za[marker], mas = marker_.aliases;
           marker_.name = marker;
           if (mas && mas.length)
           {
@@ -1517,15 +1517,15 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             for (let markerAlias of mas)
             {
               // done above, could be moved here, if still required :
-              // zm[a] = {location: marker_.location};
+              // za[a] = {location: marker_.location};
 
-              mamm[markerAlias] = marker_;
+              aamm[markerAlias] = marker_;
             }
 
-            let mmagm = mmag[ap];
-            if (mmagm[marker] == undefined)
-              mmagm[marker] = [];
-            mmagm[marker].push(agName);
+            let amaga = amag[ap];
+            if (amaga[marker] == undefined)
+              amaga[marker] = [];
+            amaga[marker].push(agName);
           }
         });
       });
@@ -1537,15 +1537,15 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      *     for each pair of APs in the 2 adjacent stacks (cross product stack1 x stack2)
      *       for each marker in AP
      *         lookup that marker in the other AP directly
-     *           store : marker : AP - AP    mmN[marker] : [[marker, marker]]
+     *           store : marker : AP - AP    maN[marker] : [[marker, marker]]
      *         lookup that marker in the other AP via inverted aliases
-     *           store : alias group : AP/marker - AP/marker   agmm[ag] : [marker, marker]  markers have refn to parent AP
+     *           store : alias group : AP/marker - AP/marker   agam[ag] : [marker, marker]  markers have refn to parent AP
      * 
      */
     function collateStacks()
     {
-      mmN = {};
-      agmm = {};
+      maN = {};
+      agam = {};
 
       for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
@@ -1553,22 +1553,22 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         mAPs1 = s1.aps;
         // Cross-product of the two adjacent stacks
         for (let a0i=0; a0i < mAPs0.length; a0i++) {
-          let a0 = mAPs0[a0i], za0 = a0.z, a0Name = a0.apName, mmag0 = mmag[a0Name];
+          let a0 = mAPs0[a0i], za0 = a0.z, a0Name = a0.apName, mmag0 = amag[a0Name];
           for (let a1i=0; a1i < mAPs1.length; a1i++) {
             let a1 = mAPs1[a1i], za1 = a1.z;
             d3.keys(za0).forEach(function(marker0) {
-              let mmm = [marker0, a0, a1, za0[marker0], za1[marker0]];
+              let maa = [marker0, a0, a1, za0[marker0], za1[marker0]];
               if (za1[marker0])
               {
-                if (mmN[marker0] === undefined)
-                  mmN[marker0] = [];
-                mmN[marker0].push(mmm);
+                if (maN[marker0] === undefined)
+                  maN[marker0] = [];
+                maN[marker0].push(maa);
               }
               if (mmag0[marker0])
               {
-                if (agmm[ag] === undefined)
-                  agmm[ag] = [];
-                agmm[ag].push(mmm);
+                if (agam[ag] === undefined)
+                  agam[ag] = [];
+                agam[ag].push(maa);
               }
               });
             }
@@ -1586,7 +1586,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       console.log("collateMarkerMap()");
       if (mm === undefined)
         mm = {};
-      mma || (mma = {});
+      aa || (aa = {});
       for (let ap in z)
       {
         for (let marker in z[ap])
@@ -1612,8 +1612,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               // use an arbitrary order (marker name), to reduce duplicate paths
               if (alias < marker)
               {
-                mma[alias] || (mma[alias] = []);
-                mma[alias].push(ap);
+                aa[alias] || (aa[alias] = []);
+                aa[alias].push(ap);
               }
             }
           }
@@ -1638,7 +1638,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function markerStackAPs(marker, stackIndex)
     {
-      let stack = stacks[stackIndex], ma=concatAndUnique(mma[marker], mm[marker]);
+      let stack = stacks[stackIndex], ma=concatAndUnique(aa[marker], mm[marker]);
       // console.log("markerStackAPs()", marker, stackIndex, ma);
       let mAPs = ma.filter(function (apID) {
         let mInS = stack.contains(apID); return mInS; });
@@ -1707,7 +1707,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      *   array of
      *     map from / to (optional : stack index from / to)
      * 
-     * I think these will use 2 variants of markerStackAPs() : one using mm[] and the other mma[].
+     * I think these will use 2 variants of markerStackAPs() : one using mm[] and the other aa[].
      * Thinking about what the hover text should be for paths drawn due to an alias - the alias group (all names), or maybe the 2 actual markers.
      * that is why I think I'll need 2 variants.
      * 
@@ -1735,9 +1735,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             let a0 = mAPs0[a0i];
             for (let a1i=0; a1i < mAPs1.length; a1i++) {
               let a1 = mAPs1[a1i];
-              if (magm[d] === undefined)
-                magm[d] = [];
-              magm[d].push([stackIndex, a0, a1]);
+              if (maga[d] === undefined)
+                maga[d] = [];
+              maga[d].push([stackIndex, a0, a1]);
             }
           }
         }
@@ -1753,7 +1753,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
       /** 1 string per path segment */
       let
-      mmNm = mmN[markerName];
+      mmNm = maN[markerName];
       if (mmNm !== undefined)
         /* console.log("path", markerName);
       else */
@@ -1778,7 +1778,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function pathAg(ag) {
       /** 1 string per path segment */
       let p = [],
-      agmma = agmm[ag];
+      agmma = agam[ag];
       if (agmma === undefined)
         console.log("pathAg", ag);
       else
@@ -1795,7 +1795,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * @param d marker name
      */
     function pathmm(a0, a1, d) {
-      // let [stackIndex, a0, a1] = magm[d];
+      // let [stackIndex, a0, a1] = maga[d];
       let r;
 
               let range = [0, yRange];
