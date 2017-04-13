@@ -92,7 +92,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let axisHeaderTextLen = 203.5;
     //margins, width and height (defined but not be used)
     let margins = [10+14+1, 10, 10, 10],	// margins : top right bottom left
-    marginIndex = {top:0, right:1, bottom:2, left:3},	// indices into m[]; standard CSS sequence.
+    marginIndex = {top:0, right:1, bottom:2, left:3},	// indices into margins[]; standard CSS sequence.
     viewPort = {w: document.documentElement.clientWidth, h:document.documentElement.clientHeight},
 
 	  /// small offset from axis end so it can be visually distinguished.
@@ -268,16 +268,16 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * numeric mongodb id (of geneticmap) and element id cannot start with
      * numeric.
      * Also used for g.stack, which is given a numeric id (@see nextStackID).
-     * Not required for axis element ids because they have "m" suffix.
+     * Not used for axis element ids; they have an "m" prefix.
      */
     function eltId(name)
     {
       return "id" + name;
     }
-    /** id of axis g element, based on apName, with an "m" prefix. */
+    /** id of axis g element, based on apName, with an "a" prefix. */
     function axisEltId(name)
     {
-      return "m" + name;
+      return "a" + name;
     }
 
     /** Check if the given value is a number, i.e. !== undefined and ! isNaN().
@@ -772,7 +772,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         factor = (n-1)/n;
         inserted.portion = 1/n;
         this.aps.forEach(
-          function (m, index) { if (index !== insertIndex) m.portion *= factor; });
+          function (a, index) { if (index !== insertIndex) a.portion *= factor; });
         this.calculatePositions();
       }
     };
@@ -788,7 +788,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         let
           factor = 1 / (1-released);
         this.aps.forEach(
-          function (m, index) { m.portion *= factor; });
+          function (a, index) { a.portion *= factor; });
         this.calculatePositions();
     };
     /** Drag the named AP out of this Stack.
@@ -842,10 +842,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // console.log("calculatePositions", this.stackID, this.aps.length);
       let sumPortion = 0;
       this.aps.forEach(
-        function (m, index)
+        function (a, index)
         {
-          m.position = [sumPortion,  sumPortion += m.portion];
-          updateRange(m);
+          a.position = [sumPortion,  sumPortion += a.portion];
+          updateRange(a);
         });
     };
     /** find / lookup Stack of given AP.
@@ -855,14 +855,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       // could use a cached structure such as apStack[apName].
       // can now use : aps{apName}->stack
-      let ms = stacks.filter(
+      let as = stacks.filter(
         function (s) {
           let i = s.findIndex(apName);
           return i >= 0;
         });
-      if (ms.length != 1)
-        console.log("apStack()", apName, ms, ms.length);
-      return ms[0];
+      if (as.length != 1)
+        console.log("apStack()", apName, as, as.length);
+      return as[0];
     };
     /** find / lookup Stack of given AP.
      * static
@@ -882,12 +882,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           accumulator.push({stackIndex: currentIndex, apIndex: i});
         return accumulator;
       };
-      let ms = stacks.reduce(findIndex_apName, []);
-      if (ms.length != 1)
+      let as = stacks.reduce(findIndex_apName, []);
+      if (as.length != 1)
       {
-        console.log("apStackIndex()", apName, ms, ms.length);
+        console.log("apStackIndex()", apName, as, as.length);
       }
-      return ms[0];
+      return as[0];
     };
     /** @return transform : translation, calculated from AP position within stack.
      */
@@ -919,14 +919,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** Get stack of AP, return transform. */
     Stack.prototype.apTransform = function (apName)
     {
-      let m = aps[apName];
-      return m.apTransform();
+      let a = aps[apName];
+      return a.apTransform();
     };
     /** Get stack of AP, return transform. */
     Stack.prototype.apTransformO = function (apName)
     {
-      let m = aps[apName];
-      return m.apTransformO();
+      let a = aps[apName];
+      return a.apTransformO();
     };
     /** For each AP in this Stack, redraw axis, brush, foreground paths.
      * @param t transition in which to make changes
@@ -951,34 +951,34 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let this_Stack = this;  // only used in trace
 
       this.aps.forEach(
-        function (m, index)
+        function (a, index)
         {
           /** Don't use a transition for the AP/axis which is currently being
            * dragged.  Instead the dragged object will closely track the cursor;
            * may later use a slight / short transition to smooth noise in
            * cursor.  */
-          let t_ = (Stack.prototype.currentDrag == m.apName) ? d3 : t;
-          // console.log("redraw", Stack.prototype.currentDrag, m.apName, Stack.prototype.currentDrag == m.apName);
+          let t_ = (Stack.prototype.currentDrag == a.apName) ? d3 : t;
+          // console.log("redraw", Stack.prototype.currentDrag, a.apName, Stack.prototype.currentDrag == a.apName);
           let ts = 
-            t_.selectAll(".ap#" + eltId(m.apName));
+            t_.selectAll(".ap#" + eltId(a.apName));
           (trace_stack_redraw > 0) &&
             (((ts._groups.length === 1) && console.log(ts._groups[0], ts._groups[0][0]))
-             || ((trace_stack_redraw > 1) && console.log("redraw", this_Stack, m, index, m.apName)));
-          // console.log("redraw", m.apName);
+             || ((trace_stack_redraw > 1) && console.log("redraw", this_Stack, a, index, a.apName)));
+          // console.log("redraw", a.apName);
           // args passed to fn are data, index, group;  `this` is node (SVGGElement)
           ts.attr("transform", Stack.prototype.apTransformO);
-          apRedrawText(m);
+          apRedrawText(a);
         });
 
     };
 
-    function apRedrawText(m)
+    function apRedrawText(a)
     {
-          let axisTS = svgContainer.selectAll("g.ap#" + eltId(m.apName) + " > text");
+          let axisTS = svgContainer.selectAll("g.ap#" + eltId(a.apName) + " > text");
           axisTS.attr("transform", yAxisTextScale);
-          let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(m.apName) + " > g.tick > text");
+          let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(a.apName) + " > g.tick > text");
           axisGS.attr("transform", yAxisTicksScale);
-          let axisBS = svgContainer.selectAll("g.axis#" + axisEltId(m.apName) + " > g.btn > text");
+          let axisBS = svgContainer.selectAll("g.axis#" + axisEltId(a.apName) + " > g.btn > text");
           axisBS.attr("transform", yAxisBtnScale);
     }
 
@@ -1158,10 +1158,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     if (true)
       pathUpdate(undefined);
     else
-    d3Markers.forEach(function(m) { 
-      d3.selectAll("."+m)
+    d3Markers.forEach(function(a) { 
+      d3.selectAll("."+a)
         .selectAll("path")
-        .data(path(m))
+        .data(path(a))
         .enter()
         .append("path")
         .attr("d", function(d) { return d; });
@@ -1397,7 +1397,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * the axis path.  More exactly, these are the paths to include and exclude,
      * respectively :
      *   svgContainer > g.foreground > g.<markerName> >  path
-     *   svgContainer > g.stack > g.ap > g.axis#<axisEltId(apName)> > path    (axisEltId() prepends "m"))
+     *   svgContainer > g.stack > g.ap > g.axis#<axisEltId(apName)> > path    (axisEltId() prepends "a"))
      * (apName is e.g. 58b504ef5230723e534cd35c_MyChr).
      * This matters because axis path does not have data (observed issue : a
      * call to handleMouseOver() with d===null; reproduced by brushing a region
@@ -1426,10 +1426,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
          .style("width","auto")
          .style("opacity", 0.9)
          .style("display","inline");  
-       Object.keys(pathMarkers[d]).map(function(m){
-         let hoverExtraText = pathMarkers[d][m];
+       Object.keys(pathMarkers[d]).map(function(a){
+         let hoverExtraText = pathMarkers[d][a];
          if (hoverExtraText === 1) hoverExtraText = "";
-         listMarkers = listMarkers + m + hoverExtraText + "<br />";
+         listMarkers = listMarkers + a + hoverExtraText + "<br />";
        });
        toolTip.html(listMarkers)     
          .style("left", (d3.event.pageX) + "px")             
@@ -1599,6 +1599,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         /* use marker aliases to match makers */
         Object.entries(z[ap]).forEach
         (
+          /** marker is the marker name, m is the marker object in z[].  */
           function ([marker, m])
           {
             /** m.aliases is undefined for z entries created via an alias. */
@@ -2082,7 +2083,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
              let t = svgContainer.transition().duration(750);
              
              apIDs.forEach(function(d) {
-               let idName = axisEltId(d); // axis ids have "m" prefix
+               let idName = axisEltId(d); // axis ids have "a" prefix
                let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a].location; } );
                y[d].domain([0, yDomainMax]);
                ys[d].domain([0, yDomainMax]);
