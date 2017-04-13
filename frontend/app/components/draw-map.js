@@ -1799,42 +1799,62 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // let [stackIndex, a0, a1] = maga[d];
       let r;
 
-              let range = [0, yRange];
-              /** Calculate relative location of marker d in the AP apID, and
-               * check if it is inRange 
-               */
-              function inRangeI(apID)
-              {
-                return inRange(markerY_(apID, d), range);
-              };
+      let range = [0, yRange];
+      /** Calculate relative location of marker d in the AP apID, and
+       * check if it is inRange 
+       */
+      function inRangeI(apID)
+      {
+        return inRange(markerY_(apID, d), range);
+      };
 
-              /** Filter out those paths that either side locates out of the svg. */
-              let lineIn = allowPathsOutsideZoom ||
-                (inRangeI(a0) && inRangeI(a1));
-              // console.log("path()", stackIndex, a0, allowPathsOutsideZoom, inRangeI(a0), inRangeI(a1), lineIn);
-              if (lineIn)
-              {
-                let sLine = markerLineS2(a0, a1, d);
-                /** 1 signifies the normal behaviour - handleMouseOver() will show just the marker name.
-                 * Values other than 1 will be appended as text. */
-                let hoverExtraText = showHoverExtraText ?
-                  " " + z[a0][d].location + "-" + z[a1][d].location + " " + sLine
-                  : 1;
-                // console.log("stacksPath()", d, a0i, a1i, a0, a1, z[a0][d].location, z[a1][d].location, sLine, this);
-                r = sLine;
-                /* Prepare a tool-tip for the line. */
-                if (pathMarkers[sLine] === undefined)
-                  pathMarkers[sLine] = {};
-                pathMarkers[sLine][d] = hoverExtraText; // 1;
-              }
-              else if (showAll) {
-                if (d in z[a0]) { 
-                  r = markerLineS(a0, d, 5);
-                }
-                if (d in z[a1]) {
-                  r = markerLineS(a1, d, 5);
-                }
-              }
+      /** Prepare a tool-tip for the line.
+       * The line / path may be either connecting 2 axes, or a tick on one axis;
+       * in the latter case ma1 will be undefined.
+       * @param sLine svg path text
+       * @param d marker name
+       * @param ma0, ma1  marker objects.
+       */
+      function pathMarkerStore(sLine, d, ma0, ma1)
+      {
+        if (pathMarkers[sLine] === undefined)
+          pathMarkers[sLine] = {};
+
+        /** 1 signifies the normal behaviour - handleMouseOver() will show just the marker name.
+         * Values other than 1 will be appended as text. */
+        let hoverExtraText = showHoverExtraText ?
+          " " + ma0.location +
+          (ma1 ?  "-" + ma1.location : "")
+          + " " + sLine
+          : 1;
+
+        pathMarkers[sLine][d] = hoverExtraText; // 1;
+      }
+
+      /** Filter out those paths that either side locates out of the svg. */
+      let lineIn = allowPathsOutsideZoom ||
+        (inRangeI(a0) && inRangeI(a1));
+      // console.log("path()", stackIndex, a0, allowPathsOutsideZoom, inRangeI(a0), inRangeI(a1), lineIn);
+      if (lineIn)
+      {
+        let sLine = markerLineS2(a0, a1, d);
+        // console.log("stacksPath()", d, a0i, a1i, a0, a1, z[a0][d].location, z[a1][d].location, sLine, this);
+        r = sLine;
+        /* Prepare a tool-tip for the line. */
+        pathMarkerStore(sLine, d, z[a0][d], z[a1][d]);
+      }
+      else if (showAll) {
+        const markerTickLen = 10; // orig 5
+        function axisMarkerTick(ai) {
+          if (d in z[a0])
+          {
+            r = markerLineS(ai, d, markerTickLen);
+            pathMarkerStore(r, d, z[ai][d], undefined);
+          }
+        }
+        axisMarkerTick(a0);
+        axisMarkerTick(a1);
+      }
       return r;
     }
     // Returns an array of paths (links between APs) for a given marker.
