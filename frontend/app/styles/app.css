@@ -59,7 +59,18 @@ svg {
 .axis text {
   text-shadow: 0 1px 0 #fff;
   cursor: move;
+  text-anchor: middle;
 }
+.ap > text {
+  text-anchor: middle;
+}
+.ap.rightmost.not_top > text {
+  text-anchor: start;
+}
+.ap.leftmost.not_top > text {
+  text-anchor: end;
+}
+
 
 #grid { padding-top: 50px;
     padding-right: 100px;

@@ -439,9 +439,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      *
      * static
      */
-    Stack.prototype.currentDrop = undefined;
+    Stack.currentDrop = undefined;
     /** undefined, or name of the AP which is currently being dragged. */
-    Stack.prototype.currentDrag = undefined;
+    Stack.currentDrag = undefined;
     /** @return true if this.aps[] is empty. */
     Stack.prototype.empty = function ()
     {
@@ -518,6 +518,21 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       /** Could cache result in s; this function is often used; may not affect speed much. */
       let s = this, i = stacks.indexOf(s);
       return i;
+    };
+    /** Use the position of this stack within stacks[] to determine g.ap element classes.
+     *
+     * Use : the classes are used in css selectors to determine text-anchor.
+     * If the stack is at the left or right edge of the diagram, then the titles
+     * of APs in the stack will be displayed on the outside edge, so that paths
+     * between APs (in .foreground) won't obscure the title.
+     *
+     * @return "leftmost" or "rightmost" or "" (just one class)
+     */
+    Stack.prototype.sideClasses = function ()
+    {
+      let i = this.stackIndex(), n = stacks.length;
+      let classes = (i == 0) ? "leftmost" : ((i == n-1) ? "rightmost" : "");
+      return classes;
     };
     /** Find stack of apID and return the index of that stack within stacks.
      * static
@@ -765,7 +780,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       /** Store both the cursor x and the stack x; the latter is used, and seems
        * to give the right feel. */
       dropX = {event: d3.event.x, stack: o[anApName]};
-      Stack.prototype.currentDrop = {out : false, stack: this, 'apName': apName, dropTime : Date.now(), x : dropX};
+      Stack.currentDrop = {out : false, stack: this, 'apName': apName, dropTime : Date.now(), x : dropX};
       if (! top)
         insertIndex++;
       let okStacks =
@@ -828,7 +843,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     Stack.prototype.dropOut = function (apName)
     {
       console.log("dropOut", this, apName);
-      Stack.prototype.currentDrop = {out : true, stack: this, 'apName': apName, dropTime : Date.now()};
+      Stack.currentDrop = {out : true, stack: this, 'apName': apName, dropTime : Date.now()};
 
       /* passing toStack===undefined to signify moving AP out into a new Stack,
        * and hence insertIndex is also undefined (not used since extracted AP is only AP
@@ -987,8 +1002,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
            * dragged.  Instead the dragged object will closely track the cursor;
            * may later use a slight / short transition to smooth noise in
            * cursor.  */
-          let t_ = (Stack.prototype.currentDrag == a.apName) ? d3 : t;
-          // console.log("redraw", Stack.prototype.currentDrag, a.apName, Stack.prototype.currentDrag == a.apName);
+          let t_ = (Stack.currentDrag == a.apName) ? d3 : t;
+          // console.log("redraw", Stack.currentDrag, a.apName, Stack.currentDrag == a.apName);
           let ts = 
             t_.selectAll(".ap#" + eltId(a.apName));
           (trace_stack_redraw > 0) &&
@@ -1000,6 +1015,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           apRedrawText(a);
         });
 
+      this.redrawAdjacencies();
     };
 
     function apRedrawText(a)
@@ -1011,6 +1027,27 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           let axisBS = svgContainer.selectAll("g.axis#" + axisEltId(a.apName) + " > g.btn > text");
           axisBS.attr("transform", yAxisBtnScale);
     }
+
+    /** For each AP in this Stack, redraw axis title.
+     * The title position is affected by stack adjacencies.
+     * Dragging a stack can affect the rendering of stacks on either side of its start and end position.
+     */
+    Stack.prototype.redrawAdjacencies = function ()
+    {
+      let stackClass = this.sideClasses();
+
+      this.aps.forEach(
+        function (a, index)
+        {
+          /** transition does not (yet) support .classed() */
+          let as = d3.selectAll(".ap#" + eltId(a.apName));
+          as.classed("leftmost", stackClass == "leftmost");
+          as.classed("rightmost", stackClass == "rightmost");
+          as.classed("not_top", index > 0);
+        });
+    };
+
+
 
     /*------------------------------------------------------------------------*/
 
@@ -1361,7 +1398,6 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
     g.append("text")
-      .attr("text-anchor", "middle")
       .attr("y", -axisFontSize)
       .style("font-size", axisFontSize)
       .text(axisTitle /*String*/);
@@ -2198,8 +2234,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
 
     function dragstarted(start_d /*, start_index, start_group*/) {
-      Stack.prototype.currentDrop = undefined;
-      Stack.prototype.currentDrag = start_d;
+      Stack.currentDrop = undefined;
+      Stack.currentDrag = start_d;
       unique_1_1_mapping = me.get('isShowUnique');
       use_path_colour_scale = me.get('pathColourScale');
       console.log("dragstarted", this, start_d/*, start_index, start_group*/);
@@ -2248,7 +2284,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
         const dropDelaySeconds = 0.5, milli = 1000;
         /** currentDrop references the apName being dragged and the stack it is dropped into or out of. */
-        let currentDrop = Stack.prototype.currentDrop,
+        let currentDrop = Stack.currentDrop,
         /** Use the start of the drag, or the most  */
         xDistanceRef = (currentDrop && currentDrop.x) ? currentDrop.x.stack : d3.event.subject.fx,
         now = Date.now();
@@ -2465,10 +2501,15 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let t = d3.transition().duration(dragTransitionTime);
       t.selectAll(".ap").attr("transform", Stack.prototype.apTransformO);
       pathUpdate(t);
+      /* redrawAdjacencies() is called from .redraw(), and is mostly updated
+       * during dragged(), but the stacks on either side of the origin of the
+       * drag can be missed, so simply recalc all here.
+       */
+      stacks.forEach(function (s) { s.redrawAdjacencies(); });
       d3.select(this).classed("active", false);
       svgContainer.classed("axisDrag", false);
       d3.event.subject.fx = null;
-      Stack.prototype.currentDrag = undefined;
+      Stack.currentDrag = undefined;
       /** This could be updated during a drag, whenever dropIn/Out(), but it is
        * not critical.  */
       xDropOutDistance_update();
