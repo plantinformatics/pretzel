@@ -510,21 +510,43 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       checkIsNumber(l);
       return l;
     };
-    /** Find stack of apID and return the index of that stack within stacks.
-     * @param apID name of AP to find
-     * @return index of the parent stack of AP
+    /** Find this stack within stacks[] and return the index.
+     * @return -1 or index of the parent stack of AP
      */
-    Stack.prototype.stackIndex = function (apID)
+    Stack.prototype.stackIndex = function ()
     {
-      let ap = aps[apID], s = ap.stack, i = stacks.indexOf(s);
+      /** Could cache result in s; this function is often used; may not affect speed much. */
+      let s = this, i = stacks.indexOf(s);
+      return i;
+    };
+    /** Find stack of apID and return the index of that stack within stacks.
+     * static
+     * @param apID name of AP to find
+     * @return -1 or index of found stack
+     */
+    Stack.apStackIndex = function (apID)
+    {
+      let ap = aps[apID], s = ap.stack, i = s.stackIndex();
+      return i;
+    };
+    /** Find stack of apID and return the index of that stack within stacks.
+     * static
+     * @param apID name of AP to find
+     * @return undefined or
+     *  {stackIndex: number, apIndex: number}.
+     */
+    Stack.apStackIndex2 = function (apID)
+    {
+      let ap = aps[apID], s = ap.stack, i = s.stackIndex();
       let j;
       if ((i === -1) || (stacks[i] !== s) || (j=s.aps.indexOf(ap), s.aps[j].apName != apID))
       {
         console.log("stackIndex", apID, i, ap, s, j, s.aps[j]);
         debugger;
       }
-      return i;
+      return {stackIndex: i, apIndex: j};
     };
+
     Stack.prototype.add = function(stackable)
     {
       this.aps.push(stackable);
@@ -727,8 +749,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     Stack.prototype.dropIn = function (apName, insertIndex, top, transition)
     {
       console.log("dropIn", this, apName, insertIndex, top);
-      // can now use  aps[apName].stack
-      let fromStack = Stack.apStack(apName);
+      let fromStack = aps[apName].stack;
       /* It is valid to drop a AP into the stack it is in, e.g. to re-order the APs.
        * No change to portion, recalc position.
        */
@@ -849,6 +870,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         });
     };
     /** find / lookup Stack of given AP.
+     * This is now replaced by aps[apName]; could be used as a data structure
+     * validation check.
      * static
      */
     Stack.apStack = function (apName)
@@ -866,12 +889,19 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     };
     /** find / lookup Stack of given AP.
      * static
-     * @return an array (because reduce() doesn't stop at 1)
-     * of {stackIndex: number, apIndex: number}.
+     * @return undefined or
+     *  {stackIndex: number, apIndex: number}.
+     *
+     * See also above alternative apStackIndex().
+     * This version accumulates an array (because reduce() doesn't stop at 1).
      * It will only accumulate the first match (apIndex) in each stack,
      * but by design there should be just 1 match across all stacks.
+     * Only the first result in the array is returned, and a warning is given if
+     * there are !== 1 results
+     * Probably drop this version - not needed;  could be used as a data structure
+     * validation check, e.g. in testing.
      */
-    Stack.apStackIndex = function (apName)
+    Stack.apStackIndexAll = function (apName)
     {
       /** called by stacks.reduce() */
       function findIndex_apName
@@ -885,7 +915,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let as = stacks.reduce(findIndex_apName, []);
       if (as.length != 1)
       {
-        console.log("apStackIndex()", apName, as, as.length);
+        console.log("apStackIndexAll()", apName, as, as.length);
       }
       return as[0];
     };
@@ -1062,7 +1092,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let xs = xScale();
     function x(apID)
     {
-      let i = Stack.prototype.stackIndex(apID);
+      let i = Stack.apStackIndex(apID);
       if (i === -1) { console.log("x()", apID, i); debugger; }
       return xs(i);
     }
@@ -2112,11 +2142,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         });
         
       } else {
-        // brushHelper() is called from brushended() after zoom, with selectedMaps.length===0
+        // brushHelper() is called from brushended() after zoom, with selectedAps.length===0
         // At this time it doesn't make sense to remove the resetSwitch button
 
         // No axis selected so reset fading of paths or circles.
-        console.log("brushHelper", selectedMaps.length);
+        console.log("brushHelper", selectedAps.length);
         if (false)
         svgContainer.selectAll(".btn").remove();
         svgContainer.selectAll("circle").remove();
@@ -2237,7 +2267,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           {
             let targetApName = currentDropTarget.apName,
             top = currentDropTarget.classList.contains("top"),
-            zoneParent = Stack.apStackIndex(targetApName);
+            zoneParent = Stack.apStackIndex2(targetApName);
             /** destination stack */
             let stack = stacks[zoneParent.stackIndex];
             if (! stack.contains(d))
