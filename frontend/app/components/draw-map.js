@@ -1767,12 +1767,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * 
      * compile a list, indexed by marker names,
      *   array of
-     *     map from / to (optional : stack index from / to)
+     *     AP from / to (optional : stack index from / to)
      * 
      * compile a list, indexed by marker alias group names (catenation of aliased marker names),
      *   marker name
      *   array of
-     *     map from / to (optional : stack index from / to)
+     *     AP from / to (optional : stack index from / to)
      * 
      * I think these will use 2 variants of markerStackAPs() : one using am[] and the other aa[].
      * Thinking about what the hover text should be for paths drawn due to an alias - the alias group (all names), or maybe the 2 actual markers.

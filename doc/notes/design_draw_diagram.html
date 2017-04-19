@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <link rel="stylesheet" href="https://cdn.rawgit.com/knsv/mermaid/7.0.0/dist/mermaid.css">
+</head>
+
+  <body>
+
+    <script src="https://cdn.rawgit.com/knsv/mermaid/7.0.0/dist/mermaid.min.js"></script>
+
+    <script>
+mermaid.initialize({startOnLoad:true});
+    </script>
+
+<!-- h1,h2 generated from markdown :
+# Design
+## Draw-Map.js Data Structure Diagrams
+-->
+
+<h1>
+<a id="user-content-design" class="anchor" href="#design" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>
+Design
+</h1>
+<h2>
+<a id="user-content-draw-mapjs-data-structure-diagrams" class="anchor" href="#draw-mapjs-data-structure-diagrams" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>
+Draw-Map.js Data Structure Diagrams
+</h2>
+
+<style type="text/css">
+.mermaid.classDiagram
+{
+  fill-opacity: 0.5;
+  fill: white;
+}
+div > .mermaid
+{
+  float: left;
+}
+div > .mermaid,
+div > .mermaid > svg
+{
+  overflow : visible;
+}
+/* 2nd diagrams was getting an extra div, fixed now; this rule handles it if it occurs :
+* e.g. div#dmermaidChart1 > svg#mermaidChart1
+* those need 100%
+*/
+.mermaid.classDiagram > div,
+.mermaid.classDiagram > div > svg
+{
+	height: 100%;
+}
+.clearfix::after {
+    content: "";
+    clear: both;
+    display: table;
+}
+
+/*  Default colours of classdiagram are black fill, so only the rectangle shape is visible, nothing else.
+ * The following rules give distinct colours to each information type.
+ * These colours are place-holders, and can be replaced with systematically chosen, attractive colours.
+ */
+/* Setting to none was useful when developing the rules, can be discarded. */
+/* svg .classGroup .classText, */
+svg .classLabel > text,
+svg .classGroup > text,
+svg .classGroup .classText > tspan
+{
+  /* stroke: none; */
+}
+svg .classLabel > text
+{
+  stroke: midnightblue;
+}
+svg .classGroup > text
+{
+  stroke : darkred;
+}
+svg .classGroup .classText > tspan
+{
+  stroke: royalblue;
+}
+
+svg > path
+{
+  stroke : orange;
+}
+svg .classGroup > line
+{
+  stroke : red;
+}
+/* svg .classGroup > text */
+svg
+{
+ stroke : purple; 
+}
+svg .classGroup rect
+{
+ stroke : blue; 
+}
+</style>
+
+<!-- Note below about clearfix. -->
+<div  class="clearfix">
+
+
+<div class="mermaid classDiagram" style="height: 27em;" >
+classDiagram
+    gm .. map
+    map .. marker0
+    marker0 .. aliases
+    marker0 : string name
+    marker0 : number position
+    aliases : markerName
+</div>
+
+<div class="mermaid classDiagram" style="height: 27em;" >
+classDiagram
+    z .. map2 : [mapID]
+    map2 .. marker : [markerName]
+    marker : number position / location
+    marker : string array aliases
+    marker : .map
+</div>
+
+
+<div class="mermaid classDiagram" style="height: 27em;" >
+classDiagram
+    mam .. mamC0 : [mapID]
+    mamC0 .. marker1 : [agName]
+    marker1 : ref to marker
+</div>
+
+<div class="mermaid classDiagram" style="height: 27em;" >
+classDiagram
+    markers .. mapID : [markerName]
+    mapID : ref to map
+</div>
+
+<div class="mermaid classDiagram" style="height: 27em;" >
+classDiagram
+    ag .. markerArray : [agName]
+    markerArray : ref to marker
+</div>
+
+<div class="mermaid classDiagram" style="height: 27em;" >
+classDiagram
+    mmag .. mmagC0 : [mapID]
+    mmagC0 .. mmagC1 : [markerName]
+    mmagC1 .. mmagC2 : [agName]
+</div>
+
+<div class="mermaid classDiagram" style="height: 27em;" >
+classDiagram
+    mmN .. mmmArray : [markerName]
+    mmmArray .. mmm : [ ]
+    mmm : markerName
+    mmm : zm0
+    mmm : zm1
+</div>
+
+<div class="mermaid classDiagram" style="height: 27em;" >
+classDiagram
+    agmm .. agmmC0 : [agName]
+</div>
+
+
+</div>
+
+<hr>
+<!-- Use either this, or class="clearfix" on the previous div. -->
+<div style="clear:both">
+</div>
+
+
+
+</body>
+</html>
