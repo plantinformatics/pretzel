@@ -119,7 +119,7 @@ classDiagram
 
 <div class="mermaid classDiagram" style="height: 27em;" >
 classDiagram
-    z .. map2 : [mapID]
+    z .. map2 : [APid]
     map2 .. marker : [markerName]
     marker : number position / location
     marker : string array aliases
@@ -129,15 +129,15 @@ classDiagram
 
 <div class="mermaid classDiagram" style="height: 27em;" >
 classDiagram
-    mam .. mamC0 : [mapID]
-    mamC0 .. marker1 : [agName]
+    aam .. aamC0 : [APid]
+    aamC0 .. marker1 : [agName]
     marker1 : ref to marker
 </div>
 
 <div class="mermaid classDiagram" style="height: 27em;" >
 classDiagram
-    markers .. mapID : [markerName]
-    mapID : ref to map
+    markers .. APid : [markerName]
+    APid : ref to map
 </div>
 
 <div class="mermaid classDiagram" style="height: 27em;" >
@@ -148,23 +148,23 @@ classDiagram
 
 <div class="mermaid classDiagram" style="height: 27em;" >
 classDiagram
-    mmag .. mmagC0 : [mapID]
-    mmagC0 .. mmagC1 : [markerName]
-    mmagC1 .. mmagC2 : [agName]
+    amag .. amagC0 : [APid]
+    amagC0 .. amagC1 : [markerName]
+    amagC1 .. amagC2 : [agName]
 </div>
 
 <div class="mermaid classDiagram" style="height: 27em;" >
 classDiagram
-    mmN .. mmmArray : [markerName]
-    mmmArray .. mmm : [ ]
-    mmm : markerName
-    mmm : zm0
-    mmm : zm1
+    maN .. maaArray : [markerName]
+    maaArray .. maa : [ ]
+    maa : markerName
+    maa : za0
+    maa : za1
 </div>
 
 <div class="mermaid classDiagram" style="height: 27em;" >
 classDiagram
-    agmm .. agmmC0 : [agName]
+    agam .. agamC0 : [agName]
 </div>
 
 
