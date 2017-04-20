@@ -148,6 +148,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * Counting the connections (paths) between markers based on aliases + direct connections,
      * if there is only 1 connection between a pair of markers, i.e. the mapping between the APs is 1:1,
      * then show the connection.
+     *
+     * unique_1_1_mapping === 2 enables a basic form of uniqueness which is possibly not of interest
      */
     let unique_1_1_mapping = true;
 
@@ -194,11 +196,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         d3Markers.add(marker);
         markerTotal++;
 
-        let markerValue = myData[ap][marker];
-        if (markerValue && markerValue.aliases)
-        for (let a of markerValue.aliases)
+        if (! unique_1_1_mapping)
         {
-          z[ap][a] = {location: markerValue.location};
+          let markerValue = myData[ap][marker];
+          if (markerValue && markerValue.aliases)
+            for (let a of markerValue.aliases)
+          {
+              z[ap][a] = {location: markerValue.location};
+            }
         }
 
       });
@@ -229,10 +234,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     // results of collateData()
     let
-      /** ap / alias : marker    aam[ap][alias group] : marker */
+      /** ap / alias : marker    aam[ap][marker alias] : marker */
       aam = {},
     /** ap/marker : alias groups       amag[ap][marker] : [ag]  */
     amag = {},
+    // results of collateMagm() - not used
         /** marker alias groups APs */
     maga = {};
 
@@ -240,7 +246,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let
     /** marker : AP - AP    maN[marker] : [[marker, marker]] */
     maN = {},
-    agam = {};
+    agam = {},
+    /** path data in unique mode. [marker0, marker1, a0, a1] */
+    pu;
 
     let line = d3.line(),
         axis = d3.axisLeft(),
@@ -1212,10 +1220,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     });
 
     //Add foreground lines.
+    let pathData = unique_1_1_mapping ? pu : d3Markers;
     foreground = svgContainer.append("g") // foreground has as elements "paths" that correspond to markers
                 .attr("class", "foreground")
                 .selectAll("g")
-                .data(d3Markers) // insert AP data into path elements (each line of the "AP" is a path)
+                .data(pathData) // insert data into path elements (each line of the "map" is a path)
                 .enter()
                 .append("g")
                 .attr("class", function(d) { return d; });
@@ -1540,7 +1549,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      *     store       ag[ag] : [ marker ] marker references AP and array of aliases
      *     {unique name of alias group (sort) : array of : AP / marker / array of aliases}
      *     for each alias
-     *       store AP / alias : marker    aam[AP][alias group] : marker
+     *       store AP / alias : marker    aam[AP][marker alias] : marker
      *       store AP/marker : alias groups  (or was that alias groups to marker)
      *          amag[AP][marker] : [ag]
      * 
@@ -1585,7 +1594,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               // done above, could be moved here, if still required :
               // za[a] = {location: marker_.location};
 
-              aamm[markerAlias] = marker_;
+              aamm[markerAlias] = marker;
             }
 
             let amaga = amag[ap];
@@ -1597,21 +1606,44 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       });
     }
 
+    /**             is marker1 in ap0:marker0 alias group ?
+     */
+    function maInMaAG(ap0, m0, m1)
+    {
+      /** aamm inverts the aliases of m0; for each alias mA of m0, aamm[mA] === m0.
+       * so aamm[m1] is m0 if m1 is in the aliases of a0:m0
+       */
+      let aamm = aam[ap0.apName],
+      ma = aamm[m1],
+      isIn = ma == m0;
+      if (isIn)
+      console.log("maInMaAG()", ap0, m0, m1, isIn);
+      return isIn;
+    }
+
     /** At time of axis adjacency change, collate data for faster lookup in dragged().
      *
      *   for each pair of adjacent stacks
-     *     for each pair of APs in the 2 adjacent stacks (cross product stack1 x stack2)
+
      *       for each marker in AP
      *         lookup that marker in the other AP directly
      *           store : marker : AP - AP    maN[marker] : [[marker, marker]]
+     *         any connection from a0:marker0 to a1 via alias :
      *         lookup that marker in the other AP via inverted aliases
      *           store : alias group : AP/marker - AP/marker   agam[ag] : [marker, marker]  markers have refn to parent AP
-     * 
+     *         unique 1:1 connection between a0:marker0 and a1:marker1 :
+     *           for each marker, marker1, in AP1
+     *             consider direct and any alias of a0:marker0
+     *             is marker1 in marker0 alias group ?
+     *             is marker0 in marker1 alias group ?
+     *             (compile hash from each marker alias group)
+     *             for AP-AP data is list of ags
      */
     function collateStacks()
     {
       maN = {};
       agam = {};
+      pu = [];
 
       for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
@@ -1623,6 +1655,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           for (let a1i=0; a1i < mAPs1.length; a1i++) {
             let a1 = mAPs1[a1i], za1 = a1.z;
             d3.keys(za0).forEach(function(marker0) {
+              /** a0, a1 could be derived from za0[marker0].ap, za1[marker0].ap */
               let maa = [marker0, a0, a1, za0[marker0], za1[marker0]];
               if (za1[marker0])
               {
@@ -1630,12 +1663,37 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                   maN[marker0] = [];
                 maN[marker0].push(maa);
               }
+              // any connection from a0:marker0 to a1 via alias :
               if (amag0[marker0])
               {
                 if (agam[ag] === undefined)
                   agam[ag] = [];
                 agam[ag].push(maa);
               }
+              /* unique 1:1 connection between a0:marker0 and a1:marker1 :
+               *   for each marker, marker1, in AP1
+               *     consider direct and any alias of a0:marker0
+               *     is marker1 in a0:marker0 alias group ?
+               *     is marker0 in a1:marker1 alias group ?
+               *     (compile hash from each marker alias group)
+               *     for AP-AP data is list of ags
+               */
+              d3.keys(za1).forEach(function(marker1) {
+                let
+                  isAliased1 = maInMaAG(a0, marker0, marker1),
+                isAliased0 = maInMaAG(a1, marker1, marker0),
+                isDirect = marker0 == marker1,
+                nConnections = 0 + isAliased0 /*+ isAliased1*/ + (isDirect ? 1 : 0);
+                if (isAliased0 !== isAliased1)
+                {
+                  console.log("isAliased", isAliased0, isAliased1, isDirect);
+                }
+                if (nConnections === 1) // unique
+                {
+                  let mmaa = [marker0, marker1, a0, a1];
+                  pu.push(mmaa);
+                }
+              });
               });
             }
         }
@@ -1726,13 +1784,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** Stacks version of markerLine2().
      * A line between a marker's location in APs in adjacent Stacks.
      * @param ak1, ak2 AP names, (exist in apIDs[])
-     * @param d marker name
+     * @param d1, d2 marker names, i.e. ak1:d1, ak1:d1
+     * If d1 != d2, they are connected by an alias.
      */
-    function markerLineS2(ak1, ak2, d)
+    function markerLineS2(ak1, ak2, d1, d2)
     {
       // o[p], the map location,
-      return line([[o[ak1], markerY_(ak1, d)],
-                   [o[ak2], markerY_(ak2, d)]]);
+      return line([[o[ak1], markerY_(ak1, d1)],
+                   [o[ak2], markerY_(ak2, d2)]]);
     }
     /** Similar to @see markerLine().
      * Draw a horizontal notch at the marker location on the axis.
@@ -1824,7 +1883,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       if (mmNm !== undefined)
         /* console.log("path", markerName);
       else */
-      if (unique_1_1_mapping && (mmNm.length > 1))
+      if ((unique_1_1_mapping === 2) && (mmNm.length > 1))
       { /* console.log("path : multiple", markerName, mmNm.length, mmNm); */ }
       else
       for (let i=0; i < mmNm.length; i++)
@@ -1833,10 +1892,23 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         let a0 = a0_.apName, a1 = a1_.apName;
         if ((za0 !== za1) && (a0 == a1))
           console.log("path", i, markerName, za0, za1, a0, a1);
-        r[i] = patham(a0, a1, markerName);
+        r[i] = patham(a0, a1, markerName, undefined);
       }
       // console.log("path", markerName, mmNm, r);
       return r;
+    }
+
+    /** for unique paths between markers, which may be connected by alias.
+     * data is [marker0, marker1, a0, a1]
+     * Enabled by unique_1_1_mapping.
+     * @param mmaa  [marker0, marker1, a0, a1]
+     */
+    function pathU(mmaa) {
+      let [marker0, marker1, a0, a1] = mmaa;
+      let p = [];
+      p[0] = patham(a0.apName, a1.apName, marker0, marker1);
+      console.log("pathU", mmaa, p[0]);
+      return p;
     }
 
     /** TODO : for paths with alias group as data
@@ -1852,74 +1924,83 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       for (let i=0; i < agama.length; i++)
       {
         let [markerName, a0, a1, za0, za1] = agama[i];
-        p[i] = patham(a0.apName, a1.apName, markerName);
+        p[i] = patham(a0.apName, a1.apName, markerName, undefined);
       }
       return p.join();
     }
 
+    /** Calculate relative location of marker markerName in the AP apID, and
+     * check if it is inRange 
+     * @param apID  ID of Axis Piece
+     * @param markerName  marker within apID
+     * @param range e.g. [0, yRange]
+     */
+    function inRangeI(apID, markerName, range)
+    {
+      return inRange(markerY_(apID, markerName), range);
+    }
+
     /**
      * @param  a0, a1  AP names
-     * @param d marker name
+     * @param d0, d1 marker names, i.e. a0:d0, a1:d1.
+     * Iff d1!==undefined, they are connected by an alias.
      */
-    function patham(a0, a1, d) {
+    function patham(a0, a1, d0, d1) {
       // let [stackIndex, a0, a1] = maga[d];
       let r;
 
       let range = [0, yRange];
-      /** Calculate relative location of marker d in the AP apID, and
-       * check if it is inRange 
-       */
-      function inRangeI(apID)
-      {
-        return inRange(markerY_(apID, d), range);
-      };
 
       /** Prepare a tool-tip for the line.
        * The line / path may be either connecting 2 axes, or a tick on one axis;
        * in the latter case ma1 will be undefined.
        * @param sLine svg path text
-       * @param d marker name
+       * @param d0, d1 marker names, i.e. a0:m0, a1:m1.
+       * Iff d1!==undefined, they are connected by an alias.
        * @param ma0, ma1  marker objects.
        */
-      function pathMarkerStore(sLine, d, ma0, ma1)
+      function pathMarkerStore(sLine, d0, d1, ma0, ma1)
       {
         if (pathMarkers[sLine] === undefined)
           pathMarkers[sLine] = {};
 
+        /** Show the x,y coords of the endpoints of the path segment.  Useful during devel. */
+        const showHoverLineCoords = false;
         /** 1 signifies the normal behaviour - handleMouseOver() will show just the marker name.
          * Values other than 1 will be appended as text. */
         let hoverExtraText = showHoverExtraText ?
           " " + ma0.location +
           (ma1 ?  "-" + ma1.location : "")
-          + " " + sLine
+          + (showHoverLineCoords ? " " + sLine : "")
           : 1;
-
+        let d = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
         pathMarkers[sLine][d] = hoverExtraText; // 1;
       }
 
       /** Filter out those paths that either side locates out of the svg. */
       let lineIn = allowPathsOutsideZoom ||
-        (inRangeI(a0) && inRangeI(a1));
+        (inRangeI(a0, d0, range)
+         && ((d1===undefined) || inRangeI(a1, d1, range)));
       // console.log("path()", stackIndex, a0, allowPathsOutsideZoom, inRangeI(a0), inRangeI(a1), lineIn);
       if (lineIn)
       {
-        let sLine = markerLineS2(a0, a1, d);
-        // console.log("stacksPath()", d, a0i, a1i, a0, a1, z[a0][d].location, z[a1][d].location, sLine, this);
+        let sLine = markerLineS2(a0, a1, d0, d1);
+        // console.log("stacksPath()", d0, d1, a0i, a1i, a0, a1, z[a0][d0].location, z[a1][d1].location, sLine, this);
         r = sLine;
         /* Prepare a tool-tip for the line. */
-        pathMarkerStore(sLine, d, z[a0][d], z[a1][d]);
+        pathMarkerStore(sLine, d0, d1, z[a0][d0], z[a1][d1]);
       }
       else if (showAll) {
         const markerTickLen = 10; // orig 5
-        function axisMarkerTick(ai) {
+        function axisMarkerTick(ai, d) {
           if (d in z[a0])
           {
             r = markerLineS(ai, d, markerTickLen);
-            pathMarkerStore(r, d, z[ai][d], undefined);
+            pathMarkerStore(r, d, d, z[ai][d], undefined);
           }
         }
-        axisMarkerTick(a0);
-        axisMarkerTick(a1);
+        axisMarkerTick(a0, d0);
+        axisMarkerTick(a1, d1 || d0);
       }
       return r;
     }
@@ -2458,7 +2539,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // console.log("pathUpdate");
       tracedApScale = {};  // re-enable trace
       let g = d3.selectAll(".foreground g"),
-      gd = g.selectAll("path").data(path);
+      path_ = unique_1_1_mapping ? pathU : path,
+      gd = g.selectAll("path").data(path_);
       gd.exit().remove();
       gd.enter().append("path");
       if (t === undefined) {t = d3; }
