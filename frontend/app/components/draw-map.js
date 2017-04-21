@@ -188,7 +188,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     d3.keys(myData).forEach(function(ap) {
       /** ap is chr name */
       let c = myData[ap];
-      cmName[ap] = {apName : c.mapName, chrName : c.chrName};
+      cmName[ap] = {mapName : c.mapName, chrName : c.chrName};
       delete c.mapName;
       delete c.chrName;
       // console.log(ap, cmName[ap]);
@@ -345,6 +345,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     const trace_stack = 1;
     function Stacked(apName, portion) {
       this.apName = apName;
+      this.chrName = cmName[apName].mapName;  // useful in devel trace.
       /** Portion of the Stack height which this AP axis occupies. */
       this.portion = portion;
       // The following are derived attributes.
@@ -1220,14 +1221,19 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     });
 
     //Add foreground lines.
+    /** pathData is the data of .foreground > g, not .foreground > g > path */
     let pathData = unique_1_1_mapping ? pu : d3Markers;
+    let pathClass = unique_1_1_mapping ? 
+      function(d) { let d0=d[0], d1=d[1], c = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
+ return c; }
+    : function(d) { return d; };
     foreground = svgContainer.append("g") // foreground has as elements "paths" that correspond to markers
                 .attr("class", "foreground")
                 .selectAll("g")
                 .data(pathData) // insert data into path elements (each line of the "map" is a path)
                 .enter()
                 .append("g")
-                .attr("class", function(d) { return d; });
+                .attr("class", pathClass);
     
     
     // can use foreground in pathUpdate()
@@ -1403,7 +1409,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       let cn=cmName[chrID];
       // console.log(".axis text", chrID, cn);
-      return cn.apName + " " + cn.chrName;
+      return cn.mapName + " " + cn.chrName;
     }
 
     g.append("text")
@@ -1644,6 +1650,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       maN = {};
       agam = {};
       pu = [];
+      pathData = unique_1_1_mapping ? pu : d3Markers;
 
       for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
@@ -1698,6 +1705,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             }
         }
       }
+      if (pu)
+      console.log("collateStacks pu", pu.length);
     }
 
     /**
@@ -2317,7 +2326,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function dragstarted(start_d /*, start_index, start_group*/) {
       Stack.currentDrop = undefined;
       Stack.currentDrag = start_d;
-      unique_1_1_mapping = me.get('isShowUnique');
+      // unique_1_1_mapping = me.get('isShowUnique'); // disable until button click does not redraw all.
       use_path_colour_scale = me.get('pathColourScale');
       console.log("dragstarted", this, start_d/*, start_index, start_group*/);
       let cl = {/*self: this,*/ d: start_d/*, index: start_index, group: start_group, apIDs: apIDs*/};
@@ -2488,7 +2497,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           pathUpdate(t /*st*/);
           //Do we need to keep the brushed region when we drag the AP? probably not.
           //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
-          st0.select(".brush").call(y[d].brush.move,null);
+          // st0.select(".brush").call(y[d].brush.move,null);
           //Remove all highlighted Markers.
           svgContainer.selectAll("circle").remove();
         }
@@ -2531,6 +2540,28 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       }
     }
 
+    function fromSelectionArray(s, datum)
+    {
+      let a=[];
+      for (let i=0; i<s.length; i++)
+        a.push(datum ? s[i].__data__ : s[i]);
+      return a;
+    }
+    function logSelectionLevel(sl)
+    {
+      if (sl[0].length)
+      {
+        console.log(fromSelectionArray(sl, false));
+        console.log(fromSelectionArray(sl, true));
+      }
+    }
+    function logSelection(s)
+    {
+      console.log(s, s._groups[0].length, s._parents.length);
+      logSelectionLevel(s._groups);
+      logSelectionLevel(s._parents);
+    }
+
     /** Update the paths connecting markers present in adjacent stacks.
      * @param t undefined, or a d3 transition in which to perform the update.
      */
@@ -2538,7 +2569,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       // console.log("pathUpdate");
       tracedApScale = {};  // re-enable trace
-      let g = d3.selectAll(".foreground g"),
+      let g = d3.selectAll(".foreground g");
+      if (unique_1_1_mapping)
+        foreground/*g*/.data(pathData);
+      let
       path_ = unique_1_1_mapping ? pathU : path,
       gd = g.selectAll("path").data(path_);
       gd.exit().remove();
