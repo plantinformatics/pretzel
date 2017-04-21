@@ -1622,7 +1622,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let aamm = aam[ap0.apName],
       ma = aamm[m1],
       isIn = ma == m0;
-      if (isIn)
+      if (false && isIn)
       console.log("maInMaAG()", ap0, m0, m1, isIn);
       return isIn;
     }
@@ -1916,7 +1916,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let [marker0, marker1, a0, a1] = mmaa;
       let p = [];
       p[0] = patham(a0.apName, a1.apName, marker0, marker1);
-      console.log("pathU", mmaa, p[0]);
+      // console.log("pathU", mmaa, p[0]);
       return p;
     }
 
