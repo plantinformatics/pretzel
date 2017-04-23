@@ -9,7 +9,10 @@ module.exports = function(defaults) {
     //   [BABEL] Note: The code generator has deoptimised the styling of "ember-test/components/draw-map.js" as it exceeds the max of "100KB".
     // but draw-map.js is still minified.
     minifyJS: {
-      enabled: false
+      enabled: false,
+      options: {
+        exclude: ["**/draw-map.js"]
+      }
     },
     minifyCSS: {
       enabled: false
@@ -18,14 +21,16 @@ module.exports = function(defaults) {
       enabled: true
     }
   });
-  /*
   if (app.env === 'development') {
+    console.log("frontend/ember-cli-build.js : app.options.minifyJS", app.options.minifyJS,
+               "sourcemaps", app.options.sourcemaps);
+  /*
     app.options.minifyJS || (app.options.minifyJS = {options: {}});
     app.options.minifyJS.options.
       // exclude vendor minified files
       exclude = ["assets/ember-test.js"];
-  }
 */
+  }
 
   // Use `app.import` to add additional libraries to the generated
   // output files.
