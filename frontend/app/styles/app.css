@@ -113,6 +113,7 @@ svg {
 
 
 /* Tool tip */
+div.highlightMarker,
 div.toolTip{
   position:absolute;
   text-align: lift;
@@ -122,6 +123,14 @@ div.toolTip{
   color: #fff;
   border: 0px;
   border-radius: 2px;
+}
+
+div.highlightMarker
+{
+    height : "auto";
+    width: "auto";
+    opacity:  0.9;
+    display: "inline";
 }
 
 /* -------------------------------------------------------------------------- */

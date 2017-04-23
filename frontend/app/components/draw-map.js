@@ -68,6 +68,14 @@ export default Ember.Component.extend({
     /** Reference to all (Stacked) APs by apName.
      */
     let aps = {};
+
+    let highlightMarker = myData.highlightMarker;
+    if (highlightMarker)
+    {
+      console.log("highlightMarker", highlightMarker);
+      delete myData.highlightMarker;
+    }
+
     /// apIDs are <apName>_<chromosomeName>
     let apIDs = d3.keys(myData);
     /** mapName (apName) of each chromosome, indexed by chr name. */
@@ -286,6 +294,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function axisEltId(name)
     {
       return "a" + name;
+    }
+    /** id of highlightMarker div element, based on marker name, with an "h" prefix. */
+    function highlightId(name)
+    {
+      return "h" + name;
     }
 
     /** Check if the given value is a number, i.e. !== undefined and ! isNaN().
@@ -1459,6 +1472,20 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     g.append("g")
       .attr("class", "brush")
       .each(function(d) { d3.select(this).call(y[d].brush); });
+
+    //Setup the gene / marker highlight, enabled by url param highlightMarker.
+    let highlightMarkerS =
+      d3.select('#holder').selectAll(".highlightMarker")
+      .data([highlightMarker])
+      .enter().append("div")
+      .attr("class", "highlightMarker")
+      .attr("id", highlightId);
+
+    let hmPos = [20, 500];
+    highlightMarkerS.html(highlightMarker)
+      .style("left", "" + hmPos[0] + "px")             
+      .style("top", "" + hmPos[1] + "px");
+
 
     //Setup the tool tip.
     let toolTip = d3.select("body").append("div")
