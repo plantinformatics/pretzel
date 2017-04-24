@@ -35,7 +35,8 @@ export default Ember.Route.extend({
     let selMaps = [];
     let that = this;
     let retHash = {};
-    retHash.highlightMarker = params.highlightMarker;
+    if (params.highlightMarker)
+      retHash.highlightMarker = params.highlightMarker;
     let seenChrs = new Set();
     var maps = that.get('store').findAll('geneticmap').then(function(genmaps) {
       that.controllerFor("mapview").set("availableMaps", genmaps);
