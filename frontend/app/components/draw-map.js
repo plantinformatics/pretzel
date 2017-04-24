@@ -1,6 +1,16 @@
 import Ember from 'ember';
 
 /* jshint curly : false */
+
+/* these warnings are sometimes useful, but they are causing "Too many errors. (89% scanned)." */
+/* jshint -W087 */
+/* jshint -W032 */
+/* jshint -W116 */
+/* jshint -W098 */
+/* jshint -W014  */
+/* jshint -W030 */
+/* jshint -W083 */
+
 /*global d3 */
 
 
@@ -1998,6 +2008,19 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return inRange(markerY_(apID, markerName), range);
     }
 
+    /** @param m  marker reference i.e. z[apName][markerName]]
+     * @return text for display in path hover tooltip */
+    function markerAliasesText(mN, m)
+    {
+      let s = mN + ":" + m.aliases.length + ":",
+      mas = m.aliases;
+      for (let i=0; i<mas.length; i++)
+      {
+        s += mas[i] + ",";
+      }
+      console.log("markerAliasesText", mN, m, mas, s);
+      return s;
+    }
     /**
      * @param  a0, a1  AP names
      * @param d0, d1 marker names, i.e. a0:d0, a1:d1.
@@ -2024,6 +2047,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
         /** Show the x,y coords of the endpoints of the path segment.  Useful during devel. */
         const showHoverLineCoords = false;
+        const showHoverAliases = true;
         /** 1 signifies the normal behaviour - handleMouseOver() will show just the marker name.
          * Values other than 1 will be appended as text. */
         let hoverExtraText = showHoverExtraText ?
@@ -2031,6 +2055,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           (ma1 ?  "-" + ma1.location : "")
           + (showHoverLineCoords ? " " + sLine : "")
           : 1;
+        if (showHoverExtraText && showHoverAliases)
+        {
+          hoverExtraText += 
+            "<div>" + markerAliasesText(d0, ma0) + "</div>" +
+          "<div>" + markerAliasesText(d1, ma1) + "</div>";
+        }
         let d = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
         pathMarkers[sLine][d] = hoverExtraText; // 1;
       }
