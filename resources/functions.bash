@@ -206,3 +206,42 @@ function emberServerRestart()
 { emberServerStop; sleep 5; emberServerStart; }
 
 #-------------------------------------------------------------------------------
+
+tmpDist=/tmp/don/ag/mmv/dist.zip
+tmpDistDir=`echo $tmpDist | sed s,/dist.zip,,`
+
+# Make a distribution package, which can be served with a static http file server
+function distZip()
+{
+    [ -d $tmpDistDir ] || mkdir -p "$tmpDistDir" || return;
+
+    if [ ! -d frontend/dist ];  then echo "cd to Dav127" 1>&2; return 2; fi
+
+    (cd frontend/dist && swapApplicationHost production && zip -qr $tmpDist * && ls -gG $tmpDist)
+}
+
+# @param 1	devel or production
+function swapApplicationHost()
+{
+    (
+    cd ../app/adapters/
+    if [ ! -f application.js ];  then echo "frontend/app/adapters/application.js expected" 1>&2; return 2; fi
+
+    context=$1
+    case $context in
+	devel)
+	    [ -f application.devel.js ] && mv -i application.js application.production.js && mv -i application.devel.js application.js; 
+	    grep '^  *host' application.js | fgrep dirac
+	    return `expr 1 - $?`
+	    ;;
+	production)
+	    [ -f application.production.js ] && mv -i application.js application.devely.js && mv -i application.production.js application.js; 
+	    grep '^  *host' application.js | fgrep -v dirac
+	    return `expr 1 - $?`
+	    ;;
+	*)	echo Usage : $0 devel \| production
+	    ;;
+	esac    
+    )
+}
+#-------------------------------------------------------------------------------
