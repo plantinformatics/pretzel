@@ -8,12 +8,14 @@ module.exports = function(defaults) {
     // Attempt to suppress minifyJS during devel; this option suppresses this message :
     //   [BABEL] Note: The code generator has deoptimised the styling of "ember-test/components/draw-map.js" as it exceeds the max of "100KB".
     // but draw-map.js is still minified.
+    /*
     minifyJS: {
       enabled: false,
       options: {
-        exclude: ["**/draw-map.js"]
+        exclude: ["** /draw-map.js"]
       }
     },
+    */
     minifyCSS: {
       enabled: false
     },
