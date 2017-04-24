@@ -227,7 +227,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
        */
       showAll = true;
 
-    /** Alias groups : ag[ag] : [ marker ]    marker references AP and array of aliases */
+    /** Alias groups : ag[agName] : [ marker ]    marker references AP and array of aliases */
     let ag = {};
 
 
@@ -242,9 +242,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     // results of collateData()
     let
-      /** ap / alias : marker    aam[ap][marker alias] : marker */
+      /** ap / alias : marker    aam[ap][marker alias] : [marker] */
       aam = {},
-    /** ap/marker : alias groups       amag[ap][marker] : [ag]  */
+    /** ap/marker : alias groups       amag[ap][marker] : ag  */
     amag = {},
     // results of collateMagm() - not used
         /** marker alias groups APs */
@@ -356,9 +356,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
     /*------------------------------------------------------------------------*/
     const trace_stack = 1;
+    const trace_alias = false;
     function Stacked(apName, portion) {
       this.apName = apName;
-      this.chrName = cmName[apName].mapName;  // useful in devel trace.
+      this.mapName = cmName[apName].mapName;  // useful in devel trace.
       /** Portion of the Stack height which this AP axis occupies. */
       this.portion = portion;
       // The following are derived attributes.
@@ -1598,7 +1599,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           maga[ap] = {};
         if (amag[ap] === undefined)
           amag[ap] = {};
-        let aamm = aam[ap];
+        let aama = aam[ap];
         d3.keys(za).forEach(function(marker) {
           try
           {
@@ -1627,31 +1628,58 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               // done above, could be moved here, if still required :
               // za[a] = {location: marker_.location};
 
-              aamm[markerAlias] = marker;
+              if (aama[markerAlias] === undefined)
+                aama[markerAlias] = [];
+              aama[markerAlias].push(marker);
             }
 
             let amaga = amag[ap];
-            if (amaga[marker] == undefined)
-              amaga[marker] = [];
-            amaga[marker].push(agName);
+            if (amaga[marker])
+              // should be just 1
+              console.log("amaga[marker]", ap, marker, amaga[marker], agName);
+            else
+              amaga[marker] = agName;
           }
         });
       });
     }
 
     /**             is marker1 in ap0:marker0 alias group ?
+     * @return   the matching aliased marker if only 1
      */
-    function maInMaAG(ap0, m0, m1)
+    function maInMaAG(ap0, ap1, m1)
     {
-      /** aamm inverts the aliases of m0; for each alias mA of m0, aamm[mA] === m0.
-       * so aamm[m1] is m0 if m1 is in the aliases of a0:m0
+      /** Return the matching aliased marker if only 1; amC is the count of matches */
+      let am, amC=0;
+      /** aama inverts the aliases of m0; i.e. for each alias mA of m0, aama[mA] contains m0.
+       * so aama[m0] contains the markers which alias to m1
+       * If there are only 1 of those, return it.
+       * ?(m0 if m1 is in the aliases of a0:m0)
        */
-      let aamm = aam[ap0.apName],
-      ma = aamm[m1],
-      isIn = ma == m0;
-      if (false && isIn)
-      console.log("maInMaAG()", ap0, m0, m1, isIn);
-      return isIn;
+      let aama = aam[ap0.apName],
+      ma = aama[m1],
+      z0 = z[ap0.apName];
+      let ams = [];
+      if (ma)
+      for (let mai=0; mai<ma.length; mai++)
+      {
+        let mai_ = ma[mai];
+        if (z0[mai_])
+        {
+          am = mai_;
+          amC++;
+          if (trace_alias)
+            ams.push(am); // for devel trace.
+        }
+      }
+      if (trace_alias)
+      console.log("maInMaAG()", ap0.mapName, ap1.mapName, m1, am, amC, ams);
+      if (amC > 1)
+        am = undefined;
+      else
+        if (trace_alias)
+          console.log(aama, ma, z0);
+      return am;
     }
 
     /** At time of axis adjacency change, collate data for faster lookup in dragged().
@@ -1697,37 +1725,31 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                   maN[marker0] = [];
                 maN[marker0].push(maa);
               }
+              // not used yet; to be shared to pathAg().
               // any connection from a0:marker0 to a1 via alias :
-              if (amag0[marker0])
+              if (false && amag0[marker0])
               {
                 if (agam[ag] === undefined)
                   agam[ag] = [];
                 agam[ag].push(maa);
               }
-              /* unique 1:1 connection between a0:marker0 and a1:marker1 :
-               *   for each marker, marker1, in AP1
-               *     consider direct and any alias of a0:marker0
-               *     is marker1 in a0:marker0 alias group ?
-               *     is marker0 in a1:marker1 alias group ?
-               *     (compile hash from each marker alias group)
-               *     for AP-AP data is list of ags
+
+              /* If marker0 is in an alias of a1, 
+               * maInMaAG return the marker if just 1
+               * 
                */
-              d3.keys(za1).forEach(function(marker1) {
-                let
-                  isAliased1 = maInMaAG(a0, marker0, marker1),
-                isAliased0 = maInMaAG(a1, marker1, marker0),
-                isDirect = marker0 == marker1,
-                nConnections = 0 + isAliased0 /*+ isAliased1*/ + (isDirect ? 1 : 0);
-                if (isAliased0 !== isAliased1)
+
+              let
+                aliasedM = maInMaAG(a1, a0, marker0),
+              isDirect = z[a1.apName][marker0] !== undefined,
+              nConnections = 0 + (aliasedM !== undefined) + (isDirect ? 1 : 0);
+              if (nConnections === 1) // unique
                 {
-                  console.log("isAliased", isAliased0, isAliased1, isDirect);
-                }
-                if (nConnections === 1) // unique
-                {
-                  let mmaa = [marker0, marker1, a0, a1];
+                  let 
+                    marker1 = aliasedM || marker0,
+                  mmaa = [marker0, marker1, a0, a1];
                   pu.push(mmaa);
                 }
-              });
               });
             }
         }
@@ -1953,7 +1975,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function pathAg(ag) {
       /** 1 string per path segment */
       let p = [],
-      agama = agam[ag];
+      agama = agam[ag]; // to be passed from collateStacks().
       if (agama === undefined)
         console.log("pathAg", ag);
       else
