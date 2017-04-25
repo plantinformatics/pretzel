@@ -5,6 +5,9 @@ var EmberApp = require('ember-cli/lib/broccoli/ember-app');
 module.exports = function(defaults) {
   var app = new EmberApp(defaults, {
     // Add options here
+    babel: {
+      compact: false
+    },
     // Attempt to suppress minifyJS during devel; this option suppresses this message :
     //   [BABEL] Note: The code generator has deoptimised the styling of "ember-test/components/draw-map.js" as it exceeds the max of "100KB".
     // but draw-map.js is still minified.
