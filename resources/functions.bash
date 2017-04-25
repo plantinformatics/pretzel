@@ -209,6 +209,8 @@ function emberServerRestart()
 
 tmpDist=/tmp/don/ag/mmv/dist.zip
 tmpDistDir=`echo $tmpDist | sed s,/dist.zip,,`
+# Give .js files a suffix to exclude them from the build.
+unusedSuffix=not_in_build
 
 # Make a distribution package, which can be served with a static http file server
 function distZip()
@@ -218,6 +220,21 @@ function distZip()
     if [ ! -d frontend/dist ];  then echo "cd to Dav127" 1>&2; return 2; fi
 
     (cd frontend/dist && swapApplicationHost production && zip -qr $tmpDist * && ls -gG $tmpDist)
+}
+
+# wait for broccoli to build the dist.zip
+function waitBuildDistZip()
+{
+    waitBuildDistZipMsg=
+    while find frontend/app -name \*.js -newer frontend/dist/assets/ember-test.js -print | fgrep frontend/ && sleep 10
+    do
+	:
+	if [ -z "waitBuildDistZipMsg" ]
+	then
+	    waitBuildDistZipMsg=1
+	    echo waiting for dist/ to be built 1>&2
+	fi
+    done
 }
 
 # @param 1	devel or production
@@ -230,12 +247,13 @@ function swapApplicationHost()
     context=$1
     case $context in
 	devel)
-	    [ -f application.devel.js ] && mv -i application.js application.production.js && mv -i application.devel.js application.js; 
+	    # sleep 60 to wait for dist to build after swapping application.js
+	    [ -f application.devel.js.$unusedSuffix ] && mv -i application.js application.production.js.$unusedSuffix && mv -i application.devel.js.$unusedSuffix application.js && cd ../../.. && waitBuildDistZip; 
 	    grep '^  *host' application.js | fgrep dirac
 	    return `expr 1 - $?`
 	    ;;
 	production)
-	    [ -f application.production.js ] && mv -i application.js application.devely.js && mv -i application.production.js application.js; 
+	    [ -f application.production.js.$unusedSuffix ] && mv -i application.js application.devel.js.$unusedSuffix && mv -i application.production.js application.js && cd ../../.. && waitBuildDistZip; 
 	    grep '^  *host' application.js | fgrep -v dirac
 	    return `expr 1 - $?`
 	    ;;
