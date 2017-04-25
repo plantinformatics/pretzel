@@ -366,7 +366,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
     /*------------------------------------------------------------------------*/
     const trace_stack = 1;
-    const trace_alias = true;
+    const trace_alias = 1;
     function Stacked(apName, portion) {
       this.apName = apName;
       this.mapName = cmName[apName].mapName;  // useful in devel trace.
@@ -1628,7 +1628,16 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           marker_.name = marker;
           if (mas && mas.length)
           {
-            let agName = aliasesUniqueName(mas);
+            /** Include marker's own name in the name of the group of its
+             * aliases, because if aliases are symmetric, then e.g.
+             *  map/chr1 : M1 {m2,m3}
+             *  map/chr2 : m2 {M1,m3}, m3 {M1,m2}
+             * i.e. there is just one alias group : {M1,m2,m3}
+             * The physical data seems to contain symmetric alias groups of 5-20
+             * genes ("markers"); so recognising that there is just one alias
+             * group can significantly reduce processing and memory.
+             */
+            let agName = aliasesUniqueName(mas.concat([marker]));
             if (ag[agName] === undefined)
               ag[agName] = [];
             ag[agName].push(marker_);
@@ -1678,17 +1687,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         {
           am = mai_;
           amC++;
-          if (trace_alias)
+          if (trace_alias > 1)
             ams.push(am); // for devel trace.
         }
       }
-      if (trace_alias)
+      if (trace_alias > 1)
       console.log("maInMaAG()", ap0.mapName, ap1.mapName, m1, am, amC, ams);
       if (amC > 1)
         am = undefined;
-      else
-        if (trace_alias)
-          console.log(aama, ma, z0);
+      else if (trace_alias > 1)
+      {
+        console.log(aama, ma, z0);
+      }
       return am;
     }
 
@@ -1753,18 +1763,24 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 aliasedM0,
                 aliasedM1 = maInMaAG(a1, a0, marker0),
               isDirect = z[a1.apName][marker0] !== undefined;
+              let differentAlias;
               if (aliasedM1)
               {
                 /* alias group of marker0 may not be the same as the alias group
                  * which links aliasedM1 to a0, but hopefully if aliasedM0 is
                  * unique then it is marker0. */
                 aliasedM0 = maInMaAG(a0, a1, aliasedM1);
-                if (aliasedM0 != marker0)
-                  console.log("aliasedM0", aliasedM0, marker0, za0[marker0], za1[aliasedM1]);
+                /** aliasedM1 is the alias of marker0, so expect that the alias
+                 * of aliasedM1 is marker0.  But some data seems to have
+                 * asymmetric alias groups.  In that case, we classify the alias
+                 * as non-unique. */
+                differentAlias = aliasedM0 != marker0;
+                if (trace_alias && differentAlias)
+                  console.log("aliasedM1", aliasedM1, "aliasedM0", aliasedM0, marker0, za0[marker0], za1[aliasedM1], aam[a1.apName][marker0], aam[a0.apName][aliasedM1]);
               }
               let
               nConnections = 0 + (aliasedM1 !== undefined) + (isDirect ? 1 : 0);
-              if (nConnections === 1) // unique
+              if ((nConnections === 1) && (differentAlias !== true)) // unique
                 {
                   let 
                     /** i.e. isDirect ? marker0 : aliasedM1 */
