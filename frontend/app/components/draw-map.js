@@ -366,7 +366,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
     /*------------------------------------------------------------------------*/
     const trace_stack = 1;
-    const trace_alias = false;
+    const trace_alias = true;
     function Stacked(apName, portion) {
       this.apName = apName;
       this.mapName = cmName[apName].mapName;  // useful in devel trace.
@@ -1750,13 +1750,25 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                */
 
               let
-                aliasedM = maInMaAG(a1, a0, marker0),
-              isDirect = z[a1.apName][marker0] !== undefined,
-              nConnections = 0 + (aliasedM !== undefined) + (isDirect ? 1 : 0);
+                aliasedM0,
+                aliasedM1 = maInMaAG(a1, a0, marker0),
+              isDirect = z[a1.apName][marker0] !== undefined;
+              if (aliasedM1)
+              {
+                /* alias group of marker0 may not be the same as the alias group
+                 * which links aliasedM1 to a0, but hopefully if aliasedM0 is
+                 * unique then it is marker0. */
+                aliasedM0 = maInMaAG(a0, a1, aliasedM1);
+                if (aliasedM0 != marker0)
+                  console.log("aliasedM0", aliasedM0, marker0, za0[marker0], za1[aliasedM1]);
+              }
+              let
+              nConnections = 0 + (aliasedM1 !== undefined) + (isDirect ? 1 : 0);
               if (nConnections === 1) // unique
                 {
                   let 
-                    marker1 = aliasedM || marker0,
+                    /** i.e. isDirect ? marker0 : aliasedM1 */
+                    marker1 = aliasedM1 || marker0,
                   mmaa = [marker0, marker1, a0, a1];
                   pu.push(mmaa);
                 }
@@ -2018,7 +2030,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       {
         s += mas[i] + ",";
       }
-      console.log("markerAliasesText", mN, m, mas, s);
+      // console.log("markerAliasesText", mN, m, mas, s);
       return s;
     }
     /**
