@@ -253,7 +253,7 @@ function swapApplicationHost()
 	    return `expr 1 - $?`
 	    ;;
 	production)
-	    [ -f application.production.js.$unusedSuffix ] && mv -i application.js application.devel.js.$unusedSuffix && mv -i application.production.js application.js && cd ../../.. && waitBuildDistZip; 
+	    [ -f application.production.js.$unusedSuffix ] && mv -i application.js application.devel.js.$unusedSuffix && mv -i application.production.js.$unusedSuffix application.js && cd ../../.. && waitBuildDistZip; 
 	    grep '^  *host' application.js | fgrep -v dirac
 	    return `expr 1 - $?`
 	    ;;
