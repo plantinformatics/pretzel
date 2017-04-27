@@ -3,6 +3,7 @@ import Ember from 'ember';
 /* jshint curly : false */
 /*global d3 */
 
+let trace_updatedStacks = false;
 
 export default Ember.Component.extend({
 
@@ -388,6 +389,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return (p === undefined) ? ""
         : "[" + round_2(p[0]) + ", " + round_2(p[1]) + "]";
     }
+    /** this function and positionToString() thrash the heap, so perhaps change to return
+     * arrays of strings, just concat the arrays, and caller can join the strings. */
     Stacked.prototype.toString = function ()
     {
       let a =
@@ -694,6 +697,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         }
         else
           result.push(this);
+        if (trace_updatedStacks)
         me.send('updatedStacks', stacks);
       }
       return result;
