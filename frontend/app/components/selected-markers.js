@@ -10,13 +10,19 @@ export default Ember.Component.extend({
       .call(grid);
   },
 
+  didInsertElement() {
+    let data = this.get('data');
+    console.log(data);
+    let body = d3.select('body');
+    body.append('textarea').node().value = "";
+
+  },
+
   didRender() {
     let data = this.get('data');
-    let grid = d3.divgrid();
-    d3.select('#grid')
-      .datum(data)
-      .call(grid);
-    // console.log(data);
+    console.log(data);
+    d3.select('textarea').node().value = data.length;
+
   }
     
 });
