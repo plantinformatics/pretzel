@@ -61,15 +61,34 @@ svg {
   cursor: move;
 }
 
-#grid { padding-top: 50px;
+/* -------------------------------------------------------------------------- */
+#grid {
+    padding-top: 2em;
     padding-right: 100px;
     padding-bottom: 50px;
-    padding-left: 100px; position:relative;}
-.row, .header { clear: left; font-size: 12px; line-height: 18px; height: 18px;}
+    margin-left: 10em;
+    position:relative;}
+.row, .header {
+ /* clear: left; */
+ font-size: 12px; line-height: 18px; height: 18px;}
 .row:nth-child(odd) { background: rgba(0,0,0,0.05); }
 .header { font-weight: bold; }
 .cell { float: left; overflow: hidden; white-space: nowrap; width: 180px; height: 18px;}
 .col-0 { width: 100x; }
+
+#colouredMarkers textarea
+{
+    overflow : hidden;
+}
+div.colouredMarkers
+{
+  white-space: pre;
+  float: left;
+  padding-top: 3em;
+}
+
+/* -------------------------------------------------------------------------- */
+
 .axis path,
 .axis line{
   fill: none;

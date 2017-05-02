@@ -6,6 +6,33 @@ import Ember from 'ember';
 
 export default Ember.Component.extend({
 
+    /*------------------------------------------------------------------------*/
+
+    /** Used for receiving colouredMarkers from selected-markers.js */
+    feedService: Ember.inject.service('feed'),
+
+    listen: function() {
+	let f = this.get('feedService');
+	console.log("listen", f);
+	this.get('feedService').on('colouredMarkers', this, 'updateColouredMarkers');
+    }.on('init'),
+
+    // remove the binding created in listen() above, upon component destruction
+    cleanup: function() {
+	this.get('feedService').off('colouredMarkers', this, 'updateColouredMarkers');
+    }.on('willDestroyElement'),
+
+    /** undefined, or a function to call when colouredMarkers are received  */
+    colouredMarkersChanged : undefined,
+
+    updateColouredMarkers: function(markers) {
+       console.log("updateColouredMarkers in components/draw-map.js");
+	let colouredMarkersChanged = this.get('colouredMarkersChanged');
+	if (colouredMarkersChanged)
+	    colouredMarkersChanged(markers);
+    },
+    /*------------------------------------------------------------------------*/
+
   actions: {
     updatedSelectedMarkers: function(selectedMarkers) {
       let markersAsArray = d3.keys(selectedMarkers)
@@ -147,7 +174,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let unique_1_1_mapping = true;
 
     /** Apply colours to the paths according to their marker name (datum); repeating ordinal scale.  */
-    let use_path_colour_scale = true;
+    let use_path_colour_scale = 3;
+      let path_colour_scale_domain_set = false;
 
     /** Enable display of extra info in the path hover (@see hoverExtraText).
      * Currently a debugging / devel feature, will probably re-purpose to display metadata.
@@ -1083,7 +1111,31 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
 
-    var path_colour_scale = d3.scaleOrdinal().domain(markers).range(d3.schemeCategory20b);
+    var path_colour_scale;
+    if (use_path_colour_scale)
+    {
+      let path_colour_domain;
+      switch (use_path_colour_scale)
+      {
+      case 1 : path_colour_domain = markers; break;
+      case 2 : path_colour_domain = d3.keys(ag); break;
+      case 3 : path_colour_domain = ["unused"];
+          this.set('colouredMarkersChanged', function(colouredMarkers_) {
+          console.log(`colouredMarkers changed to: ${colouredMarkers_}`);
+	      let markerNames = colouredMarkers_.event.split('\n');
+	      path_colour_scale_domain_set = markerNames.length > 0;
+              path_colour_scale.domain(markerNames);
+          });
+        break;
+      }
+	path_colour_scale = d3.scaleOrdinal();
+	path_colour_scale_domain_set = use_path_colour_scale !== 3;
+	if (path_colour_scale_domain_set)
+	    path_colour_scale.domain(path_colour_domain);
+	else
+	    path_colour_scale.unknown('#808');
+	path_colour_scale.range(d3.schemeCategory20b);
+    }
 
     mapIDs.forEach(function(d) {
       /** Find the max of locations of all markers of map name d. */
@@ -2144,7 +2196,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       Stack.prototype.currentDrop = undefined;
       Stack.prototype.currentDrag = start_d;
       unique_1_1_mapping = me.get('isShowUnique');
-      use_path_colour_scale = me.get('pathColourScale');
+      // use_path_colour_scale = me.get('pathColourScale');
       console.log("dragstarted", this, start_d/*, start_index, start_group*/);
       let cl = {/*self: this,*/ d: start_d/*, index: start_index, group: start_group, mapIDs: mapIDs*/};
       svgContainer.classed("axisDrag", true);
@@ -2374,7 +2426,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
 
-      if (use_path_colour_scale)
+      if (use_path_colour_scale && path_colour_scale_domain_set)
       gd.style('stroke', function(d) {
         /** d is path SVG line text */
         let markerName = this.parentElement.__data__;
