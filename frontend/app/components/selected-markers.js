@@ -13,9 +13,7 @@ export default Ember.Component.extend({
     putContent : function (component, event) {
       console.log("putContent", component, event);
 	let markerNames = event.target.innerText;
-      // this.sendAction('updateColouredMarkers', markerNames);
-      this.get('feed').trigger('colouredMarkers', { name: 'click', event: markerNames });
-
+      this.get('feed').trigger('colouredMarkers', markerNames);
     }
   },
     
@@ -27,11 +25,6 @@ export default Ember.Component.extend({
   },
 
   didInsertElement() {
-    let data = this.get('data');
-    console.log(data);
-    let ta = d3.select('#colouredMarkers')
-      .append('textarea');
-    // expand to show all lines; can move this to css if this feature is retained.
   },
 
   didRender() {
@@ -41,13 +34,11 @@ export default Ember.Component.extend({
     d3.select('#grid')
       .datum(data)
       .call(grid);
-    console.log(data);
+    // console.log(data);
 
-    let ta = d3.select('#colouredMarkers > textarea');
-    if (ta.node().value == "")
+      // Copy the name column from the marker data to colouredMarkers, which is the value displayed in content-editable.
     {
       let markerNamesText = data.map(function (d, i, g) { return d.Marker;}).join("\n");
-      ta.node().value = markerNamesText; // data.length;
       this.set('colouredMarkers', markerNamesText);
     }
   }

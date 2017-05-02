@@ -47,12 +47,12 @@ Maps to align:
 </div>
 
 {{#if hasData}}
-  {{draw-map updatedSelectedMarkers='updateSelectedMarkers' data=model isShowUnique=isShowUnique pathColourScale=pathColourScale colouredMarkers='colouredMarkers' updateColouredMarkers_draw='updateColouredMarkers_draw'}}
+  {{draw-map updatedSelectedMarkers='updateSelectedMarkers' data=model isShowUnique=isShowUnique pathColourScale=pathColourScale}}
 
 
 {{numMarkers}} selected markers
 
-{{selected-markers data=selectedMarkers updateColouredMarkers='updateColouredMarkers'}}
+{{selected-markers data=selectedMarkers}}
 
 {{/if}}
 

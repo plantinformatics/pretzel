@@ -76,10 +76,6 @@ svg {
 .cell { float: left; overflow: hidden; white-space: nowrap; width: 180px; height: 18px;}
 .col-0 { width: 100x; }
 
-#colouredMarkers textarea
-{
-    overflow : hidden;
-}
 div.colouredMarkers
 {
   white-space: pre;

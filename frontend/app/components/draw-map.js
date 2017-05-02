@@ -1122,7 +1122,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       case 3 : path_colour_domain = ["unused"];
           this.set('colouredMarkersChanged', function(colouredMarkers_) {
           console.log(`colouredMarkers changed to: ${colouredMarkers_}`);
-	      let markerNames = colouredMarkers_.event.split('\n');
+	      let markerNames = colouredMarkers_.split('\n');
 	      path_colour_scale_domain_set = markerNames.length > 0;
               path_colour_scale.domain(markerNames);
           });

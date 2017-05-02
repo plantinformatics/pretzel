@@ -9,10 +9,6 @@ export default Ember.Controller.extend({
       // console.log("updateSelectedMarkers in mapview controller");
       this.set('selectedMarkers', markers);
     },
-    updateColouredMarkers: function(markers) {
-       console.log("updateColouredMarkers in mapview controller");
-	// this.controllerFor('draw-map').send('updateColouredMarkers_draw', markers);
-    },
     toggleShowUnique: function() {
       console.log("controllers/mapview:toggleShowUnique()", this);
       this.set('isShowUnique', ! this.get('isShowUnique'));
