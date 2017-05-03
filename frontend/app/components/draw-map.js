@@ -1132,7 +1132,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       case 2 : path_colour_domain = d3.keys(ag); break;
       case 3 : path_colour_domain = ["unused"];
           this.set('colouredMarkersChanged', function(colouredMarkers_) {
-          console.log(`colouredMarkers changed to: ${colouredMarkers_}`);
+            console.log('colouredMarkers changed, length : ', colouredMarkers_.length);
 	      let markerNames = colouredMarkers_
 		      .match(/\S+/g) || [];
 		      // .split('\n');
@@ -2117,7 +2117,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           .attr('x', 30).attr('y', 20)
           .text('Zoom');
         
+        zoomSwitch.on('mousedown', function () {
+          d3.event.stopPropagation();
+        });
         zoomSwitch.on('click', function () {
+          d3.event.stopPropagation();
            zoom(that,brushExtents);
            zoomed = true;
 
