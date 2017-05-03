@@ -153,6 +153,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       axisTicks = 10,
     /** font-size of y axis ticks */
     axisFontSize = 12;
+      /** default colour for paths; copied from app.css (.foreground path {
+       * stroke: #808;}) so it can be returned from d3 stroke function.  Also
+       * used currently to recognise markers which are in colouredMarkers via
+       * path_colour_scale(), which is a useful interim measure until scales are
+       * set up for stroke-width of colouredMarkers, or better a class.
+       */
+      let pathColourDefault = "#808";
 
      function xDropOutDistance_update () {
        xDropOutDistance = viewPort.w/(stacks.length*6);
@@ -1125,6 +1132,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 	      let markerNames = colouredMarkers_.split('\n');
 	      path_colour_scale_domain_set = markerNames.length > 0;
               path_colour_scale.domain(markerNames);
+	      pathColourUpdate(undefined);
           });
         break;
       }
@@ -1133,7 +1141,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 	if (path_colour_scale_domain_set)
 	    path_colour_scale.domain(path_colour_domain);
 	else
-	    path_colour_scale.unknown('#808');
+	    path_colour_scale.unknown(pathColourDefault);
 	path_colour_scale.range(d3.schemeCategory20b);
     }
 
@@ -2425,12 +2433,25 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       d3.selectAll(".foreground > g > path")
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
-
+	pathColourUpdate(gd);
+    }
+      function pathColourUpdate(gd)
+      {
+	  if (gd === undefined)
+	      gd = d3.selectAll(".foreground g").selectAll("path");
       if (use_path_colour_scale && path_colour_scale_domain_set)
       gd.style('stroke', function(d) {
         /** d is path SVG line text */
         let markerName = this.parentElement.__data__;
         return path_colour_scale(markerName);
+      });
+      gd.style('stroke-width', function(d) {
+        /** d is path SVG line text */
+          let markerName = this.parentElement.__data__;
+          let pathColour = path_colour_scale(markerName);
+	  // console.log(markerName, pathColour);
+	  let strokeWidth = pathColour === pathColourDefault ? "1px" : "3px" ;
+	  return strokeWidth;
       });
 
     }

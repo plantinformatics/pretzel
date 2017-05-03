@@ -34,13 +34,20 @@ export default Ember.Component.extend({
     d3.select('#grid')
       .datum(data)
       .call(grid);
-    // console.log(data);
+     // console.log(data.length);
 
-      // Copy the name column from the marker data to colouredMarkers, which is the value displayed in content-editable.
-    {
-      let markerNamesText = data.map(function (d, i, g) { return d.Marker;}).join("\n");
-      this.set('colouredMarkers', markerNamesText);
-    }
-  }
+  },
+
+    /** Copy the name column from the marker data to colouredMarkers, which is the value displayed in content-editable.
+     */
+    markerNames: function(a,b,c,d) {
+	console.log("markerNames", a, b, c, d);
+	let data = this.get('data');
+	console.log(data.length);
+	let markerNamesText = data.map(function (d, i, g) { return d.Marker;}).join("\n");
+	// this.set('colouredMarkers', markerNamesText);
+	return markerNamesText;
+    }.property('data.[]')
+
     
 });

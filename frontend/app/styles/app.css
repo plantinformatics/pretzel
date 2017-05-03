@@ -81,6 +81,8 @@ div.colouredMarkers
   white-space: pre;
   float: left;
   padding-top: 3em;
+  min-height: 10em;
+  min-width: 6em;
 }
 
 /* -------------------------------------------------------------------------- */
