@@ -40,10 +40,9 @@ export default Ember.Component.extend({
 
     /** Copy the name column from the marker data to colouredMarkers, which is the value displayed in content-editable.
      */
-    markerNames: function(a,b,c,d) {
-	console.log("markerNames", a, b, c, d);
+    markerNames: function(fnName,a,b,c,d) {
 	let data = this.get('data');
-	console.log(data.length);
+	console.log(fnName, data.length, b, c, d);
 	let markerNamesText = data.map(function (d, i, g) { return d.Marker;}).join("\n");
 	// this.set('colouredMarkers', markerNamesText);
 	return markerNamesText;

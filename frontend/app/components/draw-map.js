@@ -2440,18 +2440,19 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 	  if (gd === undefined)
 	      gd = d3.selectAll(".foreground g").selectAll("path");
       if (use_path_colour_scale && path_colour_scale_domain_set)
+	  if (false)
       gd.style('stroke', function(d) {
         /** d is path SVG line text */
         let markerName = this.parentElement.__data__;
         return path_colour_scale(markerName);
       });
-      gd.style('stroke-width', function(d) {
-        /** d is path SVG line text */
+	  gd.classed("reSelected", function(d, i, g) {
+          /** d is path SVG line text */
           let markerName = this.parentElement.__data__;
           let pathColour = path_colour_scale(markerName);
-	  // console.log(markerName, pathColour);
-	  let strokeWidth = pathColour === pathColourDefault ? "1px" : "3px" ;
-	  return strokeWidth;
+	   console.log(markerName, pathColour, d, i, g);
+	  let isReSelected = pathColour !== pathColourDefault;
+	  return isReSelected;
       });
 
     }

@@ -43,6 +43,12 @@ svg {
   stroke-opacity: 1;
   stroke-width: 2px;
 }
+.foreground path.reSelected
+{
+    stroke : red;
+    stroke-width : 4px;
+    stroke-opacity: 1;
+}
 
 /*.brush .extent {
   fill-opacity: .3;
