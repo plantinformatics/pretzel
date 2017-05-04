@@ -1162,7 +1162,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         break;
       }
 	path_colour_scale = d3.scaleOrdinal();
-	path_colour_scale_domain_set = use_path_colour_scale !== 3;
+	path_colour_scale_domain_set = (use_path_colour_scale !== 3) && (use_path_colour_scale !== 4);
 	if (path_colour_scale_domain_set)
 	    path_colour_scale.domain(path_colour_domain);
 	else
