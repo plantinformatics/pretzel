@@ -1167,7 +1167,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 	    path_colour_scale.domain(path_colour_domain);
 	else
 	    path_colour_scale.unknown(pathColourDefault);
-	path_colour_scale.range(d3.schemeCategory20b);
+	path_colour_scale.range(d3.schemeSet1);
     }
 
     mapIDs.forEach(function(d) {
