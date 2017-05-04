@@ -182,7 +182,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let unique_1_1_mapping = true;
 
     /** Apply colours to the paths according to their marker name (datum); repeating ordinal scale.  */
-    let use_path_colour_scale = 3;
+    let use_path_colour_scale = 4;
       let path_colour_scale_domain_set = false;
 
     /** Enable display of extra info in the path hover (@see hoverExtraText).
@@ -1123,6 +1123,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
 
     var path_colour_scale;
+    let markerScaffold = {}, scaffolds = new Set();
     if (use_path_colour_scale)
     {
       let path_colour_domain;
@@ -1130,14 +1131,32 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       {
       case 1 : path_colour_domain = markers; break;
       case 2 : path_colour_domain = d3.keys(ag); break;
+      case 4:
       case 3 : path_colour_domain = ["unused"];
           this.set('colouredMarkersChanged', function(colouredMarkers_) {
             console.log('colouredMarkers changed, length : ', colouredMarkers_.length);
+            /** depending on use_path_colour_scale === 3, 4 each line of markerNames is 
+             * 3: markerName 
+             * 4: scaffoldName\tmarkerName
+             */
 	      let markerNames = colouredMarkers_
-		      .match(/\S+/g) || [];
-		      // .split('\n');
+              // .split('\n');
+		      // .match(/\S+/g) || [];
+              .match(/[^\r\n]+/g);
 	      path_colour_scale_domain_set = markerNames.length > 0;
+            if (use_path_colour_scale === 3)
               path_colour_scale.domain(markerNames);
+            else  //  use_path_colour_scale === 4
+            {
+              for (let i=0; i<markerNames.length; i++)
+              {
+                let col=markerNames[i].split('\t'),
+                scaffoldName = col[0], markerName = col[1];
+                markerScaffold[markerName] = scaffoldName;
+                scaffolds.add(scaffoldName);
+              }
+              path_colour_scale.domain(scaffolds.keys());
+            }
 	      pathColourUpdate(undefined);
           });
         break;
@@ -2450,12 +2469,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 	  if (gd === undefined)
 	      gd = d3.selectAll(".foreground g").selectAll("path");
       if (use_path_colour_scale && path_colour_scale_domain_set)
-	  if (false)
+        if (use_path_colour_scale === 4)
       gd.style('stroke', function(d) {
         /** d is path SVG line text */
-        let markerName = this.parentElement.__data__;
-        return path_colour_scale(markerName);
+        let markerName = this.parentElement.__data__, colourOrdinal = markerName;
+        if (use_path_colour_scale === 4)
+          colourOrdinal = markerScaffold[markerName];
+        let colour = path_colour_scale(colourOrdinal);
+        console.log("stroke", markerName, colourOrdinal, colour);
+        return colour;
       });
+        if (use_path_colour_scale === 3)
 	  gd.classed("reSelected", function(d, i, g) {
           /** d is path SVG line text */
           let markerName = this.parentElement.__data__;
@@ -2463,7 +2487,16 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 	  // console.log(markerName, pathColour, d, i, g);
 	  let isReSelected = pathColour !== pathColourDefault;
 	  return isReSelected;
-      });
+    });
+        if (use_path_colour_scale === 4)
+        gd.attr("class", function(d) {
+          let markerName = this.parentElement.__data__;
+          let scaffold = markerScaffold[markerName], c = "strong";
+          if (scaffold)
+            c += " " + scaffold;
+          console.log("class", markerName, scaffold, c, d);
+          return c;
+ });
 
     }
 

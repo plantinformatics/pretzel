@@ -46,6 +46,9 @@ svg {
 .foreground path.reSelected
 {
     stroke : red;
+}
+.foreground path.strong
+{
     stroke-width : 4px;
     stroke-opacity: 1;
 }
