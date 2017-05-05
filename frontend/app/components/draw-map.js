@@ -2478,7 +2478,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         if (use_path_colour_scale === 4)
           colourOrdinal = markerScaffold[markerName];
         let colour = path_colour_scale(colourOrdinal);
-        console.log("stroke", markerName, colourOrdinal, colour);
+        /*
+        if (colour !== pathColourDefault)
+          console.log("stroke", markerName, colourOrdinal, colour); */
         return colour;
       });
         if (use_path_colour_scale === 3)
@@ -2493,10 +2495,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         if (use_path_colour_scale === 4)
         gd.attr("class", function(d) {
           let markerName = this.parentElement.__data__;
-          let scaffold = markerScaffold[markerName], c = "strong";
+          let scaffold = markerScaffold[markerName], c;
           if (scaffold)
-            c += " " + scaffold;
-          console.log("class", markerName, scaffold, c, d);
+          {
+            c = "strong" + " " + scaffold;
+            // console.log("class", markerName, scaffold, c, d);
+          }
           return c;
  });
 
