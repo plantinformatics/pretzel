@@ -9,13 +9,16 @@ export default Ember.Component.extend({
 
     /*------------------------------------------------------------------------*/
 
-    /** Used for receiving colouredMarkers from selected-markers.js */
+    /** Used for receiving colouredMarkers from selected-markers.js,
+     * and flipRegion, ...
+     */
     feedService: Ember.inject.service('feed'),
 
     listen: function() {
 	let f = this.get('feedService');
 	console.log("listen", f);
 	this.get('feedService').on('colouredMarkers', this, 'updateColouredMarkers');
+	this.get('feedService').on('flipRegion', this, 'flipRegion');
     }.on('init'),
 
     // remove the binding created in listen() above, upon component destruction
@@ -32,7 +35,16 @@ export default Ember.Component.extend({
 	if (colouredMarkersChanged)
 	    colouredMarkersChanged(markers);
     },
-    /*------------------------------------------------------------------------*/
+
+    draw_flipRegion : undefined,
+    flipRegion: function(markers) {
+      console.log("flipRegion in components/draw-map.js");
+	    let flipRegion = this.get('draw_flipRegion');
+	    if (flipRegion)
+	      flipRegion(markers);
+    },
+
+  /*------------------------------------------------------------------------*/
 
   actions: {
     updatedSelectedMarkers: function(selectedMarkers) {
@@ -2588,6 +2600,29 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     foreground.selectAll("path").attr("d", function(d) { return d; })
   }
 */
+
+    /** flip the value of markers between the endpoints
+     * @param markers is an array of marker names, created via (zoom) brush,
+     * and input via text box
+     */
+          this.set('draw_flipRegion', function(markers) {
+            let brushedMap = selectedMaps[0];
+            let zm = z[brushedMap];
+
+            /** probably the first and last markers have the minimum and maximum position values. */
+            let m0 = markers[0], m1 = markers[markers.length-1],
+            locationRange = [zm[m0].location, zm[m1].location],
+            /** delta of the locationRange interval */
+            rd = locationRange[1] - locationRange[0],
+            invert = function (l) { let i = rd === 0 ? i : locationRange[1] + (locationRange[0] - l);
+                                    console.log("invert", l, i); return i; };
+                   console.log("draw_flipRegion", markers, zm, m0, m1, locationRange, rd);
+        d3.keys(zm).forEach(function(marker) {
+          let marker_ = zm[marker], ml = marker_.location;
+          if (locationRange[0] <= ml && ml <= locationRange[1])
+          marker_.location = invert(ml);
+        });
+          });
   },
 
   didInsertElement() {
