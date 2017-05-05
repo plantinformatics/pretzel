@@ -1155,7 +1155,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 markerScaffold[markerName] = scaffoldName;
                 scaffolds.add(scaffoldName);
               }
-              path_colour_scale.domain(scaffolds.keys());
+              let domain = Array.from(scaffolds.keys());
+              console.log("domain", domain);
+              path_colour_scale.domain(domain);
             }
 	      pathColourUpdate(undefined);
           });
@@ -1167,7 +1169,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 	    path_colour_scale.domain(path_colour_domain);
 	else
 	    path_colour_scale.unknown(pathColourDefault);
-	path_colour_scale.range(d3.schemeSet1);
+	path_colour_scale.range(d3.schemeCategory10);
     }
 
     mapIDs.forEach(function(d) {
