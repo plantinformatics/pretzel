@@ -2076,12 +2076,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           /** d3 selection of one of the selected maps. */
           let mappS = svgContainer.selectAll("#" + eltId(p));
           selectedMarkers[p] = [];
-          d3.keys(z[p]).forEach(function(m) {
 
           let yp = y[p],
           map = maps[p],
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *map.portion */); });
           //console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], map.portion, brushedDomain);
+
+          d3.keys(z[p]).forEach(function(m) {
 
             if ((z[p][m].location >= brushedDomain[0]) &&
                 (z[p][m].location <= brushedDomain[1])) {
@@ -2609,19 +2610,38 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             let brushedMap = selectedMaps[0];
             let zm = z[brushedMap];
 
-            /** probably the first and last markers have the minimum and maximum position values. */
+            if (markers.length)
+            {
+            /** the first and last markers have the minimum and maximum position
+             * values, except where flipRegion has already been applied. */
+            let limits = [undefined, undefined];
+            limits = markers
+              .reduce(function(limits_, mi) {
+                // console.log("reduce", mi, limits_, zm[mi]);
+                let zmi = zm[mi], l = zmi.location;
+                if (limits_[0] === undefined || limits_[0] > l)
+                  limits_[0] = l;
+                if (limits_[1] === undefined || limits_[1] < l)
+                  limits_[1] = l;
+                // console.log(zmi, l, limits_);
+                return limits_;
+              }, limits);
+            // console.log("limits", limits);
+
             let m0 = markers[0], m1 = markers[markers.length-1],
-            locationRange = [zm[m0].location, zm[m1].location],
+            locationRange = limits,
             /** delta of the locationRange interval */
             rd = locationRange[1] - locationRange[0],
             invert = function (l) { let i = rd === 0 ? i : locationRange[1] + (locationRange[0] - l);
-                                    console.log("invert", l, i); return i; };
-                   console.log("draw_flipRegion", markers, zm, m0, m1, locationRange, rd);
+                                    // console.log("invert", l, i);
+                                    return i; };
+                   console.log("draw_flipRegion", /*markers, zm,*/ m0, m1, locationRange, rd);
         d3.keys(zm).forEach(function(marker) {
           let marker_ = zm[marker], ml = marker_.location;
           if (locationRange[0] <= ml && ml <= locationRange[1])
           marker_.location = invert(ml);
         });
+            }
           });
   },
 
