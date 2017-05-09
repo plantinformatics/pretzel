@@ -17,13 +17,15 @@ export default Ember.Component.extend({
     listen: function() {
 	let f = this.get('feedService');
 	console.log("listen", f);
-	this.get('feedService').on('colouredMarkers', this, 'updateColouredMarkers');
-	this.get('feedService').on('flipRegion', this, 'flipRegion');
+	f.on('colouredMarkers', this, 'updateColouredMarkers');
+	f.on('flipRegion', this, 'flipRegion');
     }.on('init'),
 
     // remove the binding created in listen() above, upon component destruction
     cleanup: function() {
-	this.get('feedService').off('colouredMarkers', this, 'updateColouredMarkers');
+	let f = this.get('feedService');
+	f.off('colouredMarkers', this, 'updateColouredMarkers');
+	f.off('flipRegion', this, 'flipRegion');
     }.on('willDestroyElement'),
 
     /** undefined, or a function to call when colouredMarkers are received  */
@@ -60,7 +62,8 @@ export default Ember.Component.extend({
           return a.concat(b);
         }, []);
       // console.log(markersAsArray);
-      // console.log("updatedSelectedMarkers in draw-map component");
+      console.log("updatedSelectedMarkers in draw-map component",
+                  selectedMarkers.length, markersAsArray.length);
       this.sendAction('updatedSelectedMarkers', markersAsArray);
     },
 
@@ -1162,7 +1165,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             {
               for (let i=0; i<markerNames.length; i++)
               {
-                let col=markerNames[i].split('\t'),
+                let col=markerNames[i].split(/[ \t]+/),
                 scaffoldName = col[0], markerName = col[1];
                 markerScaffold[markerName] = scaffoldName;
                 scaffolds.add(scaffoldName);

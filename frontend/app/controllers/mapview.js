@@ -6,7 +6,7 @@ export default Ember.Controller.extend({
 
   actions: {
     updateSelectedMarkers: function(markers) {
-      // console.log("updateSelectedMarkers in mapview controller");
+	// console.log("updateSelectedMarkers in mapview controller", markers.length);
       this.set('selectedMarkers', markers);
     },
     toggleShowUnique: function() {

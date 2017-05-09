@@ -14,7 +14,10 @@ export default Ember.Component.extend({
 	let
 	    textDiv = d3.select('.colouredMarkers.ember-content-editable'),
 	markerNames_ = textDiv.node().innerText,
-	markerNames = markerNames_.match(/\S+/g) || [];
+	markerNames = 
+	    (markerNames_.match(/\S+\r?\n|\S+\r?$/g) || [])
+	    .map(function(c) { return c.trim('\n'); } );
+	    // .match(/\S+/g) || [];
 	console.log("flipRegion", "selected-markers.js", markerNames_.length, markerNames.length);
       this.get('feed').trigger('flipRegion', markerNames);
     },
@@ -47,11 +50,20 @@ export default Ember.Component.extend({
 
   },
 
-    /** Copy the name column from the marker data to colouredMarkers, which is the value displayed in content-editable.
+    onSelectionChange: function () {
+	let data = this.get('data');
+	console.log("selected-markers.js", "onSelectionChange", data.length);
+	let markerNamesText = data.map(function (d, i, g) { return d.Marker;}).join("\n");
+	this.set('selection', markerNamesText);
+    }.observes('data'),
+
+
+    /** From the model data, extract the marker name column, and return these as a newline-concatenated string,
+     * for display in content-editable, passed as arg : {{content-editable  value=markerNames ... }}
      */
     markerNames: function(fnName) {
 	let data = this.get('data');
-	console.log(fnName, data.length);
+	console.log("selected-markers.js", fnName, data.length);
 	let markerNamesText = data.map(function (d, i, g) { return d.Marker;}).join("\n");
 	// this.set('colouredMarkers', markerNamesText);
 	return markerNamesText;
