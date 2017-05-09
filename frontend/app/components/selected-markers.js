@@ -22,6 +22,11 @@ export default Ember.Component.extend({
       this.get('feed').trigger('flipRegion', markerNames);
     },
 
+      clearScaffoldColours  : function () {
+      console.log("clearScaffoldColours", "selected-markers.js");
+      this.get('feed').trigger('clearScaffoldColours');
+      },
+
     putContent : function (component, event) {
       console.log("putContent", component, event);
 	let markerNames = event.target.innerText;

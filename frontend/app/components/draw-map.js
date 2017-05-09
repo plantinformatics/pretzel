@@ -18,6 +18,7 @@ export default Ember.Component.extend({
 	let f = this.get('feedService');
 	console.log("listen", f);
 	f.on('colouredMarkers', this, 'updateColouredMarkers');
+	f.on('clearScaffoldColours', this, 'clearScaffoldColours');
 	f.on('flipRegion', this, 'flipRegion');
     }.on('init'),
 
@@ -25,6 +26,7 @@ export default Ember.Component.extend({
     cleanup: function() {
 	let f = this.get('feedService');
 	f.off('colouredMarkers', this, 'updateColouredMarkers');
+	f.off('clearScaffoldColours', this, 'clearScaffoldColours');
 	f.off('flipRegion', this, 'flipRegion');
     }.on('willDestroyElement'),
 
@@ -2652,6 +2654,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               pathUpdate(undefined);
             }
           });
+
+          this.set('clearScaffoldColours', function() {
+            console.log("clearScaffoldColours");
+            markerScaffold = {}, scaffolds = new Set();
+            pathColourUpdate(undefined);
+          });
+
   },
 
   didInsertElement() {
