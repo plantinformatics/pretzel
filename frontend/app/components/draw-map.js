@@ -2621,11 +2621,16 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             limits = markers
               .reduce(function(limits_, mi) {
                 // console.log("reduce", mi, limits_, zm[mi]);
-                let zmi = zm[mi], l = zmi.location;
-                if (limits_[0] === undefined || limits_[0] > l)
-                  limits_[0] = l;
-                if (limits_[1] === undefined || limits_[1] < l)
-                  limits_[1] = l;
+                // marker aliases may be in the selection and yet not in the map
+                let zmi = zm[mi];
+                if (zmi)
+                {
+                  let l = zmi.location;
+                  if (limits_[0] === undefined || limits_[0] > l)
+                    limits_[0] = l;
+                  if (limits_[1] === undefined || limits_[1] < l)
+                    limits_[1] = l;
+                }
                 // console.log(zmi, l, limits_);
                 return limits_;
               }, limits);
@@ -2644,6 +2649,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           if (locationRange[0] <= ml && ml <= locationRange[1])
           marker_.location = invert(ml);
         });
+              pathUpdate(undefined);
             }
           });
   },
