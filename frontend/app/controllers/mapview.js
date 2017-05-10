@@ -29,6 +29,8 @@ export default Ember.Controller.extend({
   selectedMaps: [],
   selectedMarkers: [],
 
+  scaffolds: undefined,
+
   markersSelected: Ember.computed('selectedMarkers', function() {
     return this.selectedMarkers.length > 0;
   }),

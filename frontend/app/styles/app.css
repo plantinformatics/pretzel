@@ -47,6 +47,25 @@ svg {
 {
     stroke : red;
 }
+/* this rule targets the legend (html) and the path (svg); different css
+ * attributes apply to each; the purpose of combining the rule is to enable a user
+ * to easily navigate from the legend to the css rule. */
+div#scaffoldLegend > ul > li.scaffoldA,
+.foreground path.scaffoldA
+{
+    /* stroke : red; */
+    color : red;
+    stroke-dasharray : 1 2 3 4 5;
+}
+div#scaffoldLegend
+{
+  float: left;
+  margin-right: 1em;
+}
+div#scaffoldLegend > ul
+{
+  list-style-type: none;
+}
 .foreground path.strong
 {
     stroke-width : 2px;
@@ -72,7 +91,6 @@ svg {
 
 /* -------------------------------------------------------------------------- */
 #grid {
-    padding-top: 2em;
     padding-right: 100px;
     padding-bottom: 50px;
     margin-left: 10em;
@@ -89,7 +107,6 @@ div.colouredMarkers
 {
   white-space: pre;
   float: left;
-  padding-top: 3em;
   min-height: 10em;
   min-width: 6em;
 }

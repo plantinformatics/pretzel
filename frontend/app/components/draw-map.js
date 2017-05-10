@@ -1172,11 +1172,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 markerScaffold[markerName] = scaffoldName;
                 scaffolds.add(scaffoldName);
               }
+              me.set('scaffolds', scaffolds);
               let domain = Array.from(scaffolds.keys());
               console.log("domain", domain);
               path_colour_scale.domain(domain);
             }
 	      pathColourUpdate(undefined);
+            scaffoldLegendColourUpdate();
           });
         break;
       }
@@ -2522,6 +2524,36 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           return c;
  });
 
+    }
+    function scaffoldLegendColourUpdate()
+    {
+      console.log("scaffoldLegendColourUpdate", use_path_colour_scale);
+        if (use_path_colour_scale === 4)
+      {
+	        let da = Array.from(scaffolds),
+          ul = d3.select("div#scaffoldLegend > ul");
+          console.log(ul, scaffolds, da);
+          let li_ = ul.selectAll("li")
+            .data(da);
+          console.log(li_);
+          let la = li_.enter().append("li");
+          console.log(la);
+          let li = la.merge(li_);
+          function I(d){ return d };
+          li.html(I);
+          li.style("color", function(d) {
+            console.log("color", d);
+            let scaffoldName = d,
+         colourOrdinal = scaffoldName;
+        let colour = path_colour_scale(colourOrdinal);
+
+          if (colour != pathColourDefault)
+          {
+            console.log("color", scaffoldName, colour, d);
+          }
+          return colour;
+      });
+        }
     }
 
     function dragended(/*d*/) {
