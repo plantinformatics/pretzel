@@ -2513,7 +2513,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         if (use_path_colour_scale === 4)
           colourOrdinal = markerScaffold[markerName];
         let colour = path_colour_scale(colourOrdinal);
-        // if (true && (colour !== pathColourDefault))  // change false to enable trace
+        if (false && (colour !== pathColourDefault))  // change false to enable trace
           console.log("stroke", markerName, colourOrdinal, colour);
         return colour;
       });
