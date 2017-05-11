@@ -203,7 +203,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let path_colour_scale_domain_set = false;
 
     /** export scaffolds and scaffoldMarkers for use in selected-markers.hbs */
-    let showScaffoldMarkers = false;  // this.get('showScaffoldMarkers')
+    let showScaffoldMarkers = this.get('showScaffoldMarkers');
+    console.log("showScaffoldMarkers", showScaffoldMarkers);
 
     /** Enable display of extra info in the path hover (@see hoverExtraText).
      * Currently a debugging / devel feature, will probably re-purpose to display metadata.
@@ -1176,6 +1177,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 // for the tooltip, maybe not required.
                 scaffoldMarkers[scaffoldName] = markerName;
                 scaffolds.add(scaffoldName);
+              }
+              if (showScaffoldMarkers !== me.get('showScaffoldMarkers'))
+              {
+                showScaffoldMarkers = me.get('showScaffoldMarkers');
+                console.log("showScaffoldMarkers", showScaffoldMarkers);
               }
               if (showScaffoldMarkers)
               {
