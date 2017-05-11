@@ -91,9 +91,10 @@ div#scaffoldLegend > ul
 
 /* -------------------------------------------------------------------------- */
 #grid {
-    padding-right: 100px;
+    float: right;
+    /* padding-right: 100px; */
     padding-bottom: 50px;
-    margin-left: 10em;
+    /* margin-left: 10em;	*/
     position:relative;}
 .row, .header {
  /* clear: left; */

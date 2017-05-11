@@ -8,9 +8,11 @@
 
 <div class="pull-left">
   <ul>
-    {{#each scaffolds as |scaffold|}}
+    {{#each scaffolds as |scaffold index|}}
       <li class="{{scaffold}}">
-	{{scaffold}}
+	<div data-toggle="tooltip" title={{scaffold-markers scaffolds index scaffoldMarkers}}>
+	  {{scaffold}}
+	</div>
       </li>
     {{/each}}
   </ul>

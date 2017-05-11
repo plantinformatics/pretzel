@@ -1140,7 +1140,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
 
     var path_colour_scale;
-    let markerScaffold = {}, scaffolds = new Set();
+    let markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
     if (use_path_colour_scale)
     {
       let path_colour_domain;
@@ -1170,9 +1170,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 let col=markerNames[i].split(/[ \t]+/),
                 scaffoldName = col[0], markerName = col[1];
                 markerScaffold[markerName] = scaffoldName;
+                // for the tooltip, maybe not required.
+                scaffoldMarkers[scaffoldName] = markerName;
                 scaffolds.add(scaffoldName);
               }
               me.set('scaffolds', scaffolds);
+              me.set('scaffoldMarkers', scaffoldMarkers);
               let domain = Array.from(scaffolds.keys());
               console.log("domain", domain);
               path_colour_scale.domain(domain);
@@ -2488,6 +2491,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
       function pathColourUpdate(gd)
       {
+        console.log("pathColourUpdate", gd, use_path_colour_scale, path_colour_scale_domain_set, path_colour_scale.domain());
 	  if (gd === undefined)
 	      gd = d3.selectAll(".foreground g").selectAll("path");
       if (use_path_colour_scale && path_colour_scale_domain_set)
@@ -2498,9 +2502,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         if (use_path_colour_scale === 4)
           colourOrdinal = markerScaffold[markerName];
         let colour = path_colour_scale(colourOrdinal);
-        /*
-        if (colour !== pathColourDefault)
-          console.log("stroke", markerName, colourOrdinal, colour); */
+        // if (true && (colour !== pathColourDefault))  // change false to enable trace
+          console.log("stroke", markerName, colourOrdinal, colour);
         return colour;
       });
         if (use_path_colour_scale === 3)
@@ -2532,22 +2535,22 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       {
 	        let da = Array.from(scaffolds),
           ul = d3.select("div#scaffoldLegend > ul");
-          console.log(ul, scaffolds, da);
+          // console.log(ul, scaffolds, da);
           let li_ = ul.selectAll("li")
             .data(da);
-          console.log(li_);
+          // console.log(li_);
           let la = li_.enter().append("li");
-          console.log(la);
+          // console.log(la);
           let li = la.merge(li_);
           function I(d){ return d };
           li.html(I);
           li.style("color", function(d) {
-            console.log("color", d);
+            // console.log("color", d);
             let scaffoldName = d,
          colourOrdinal = scaffoldName;
         let colour = path_colour_scale(colourOrdinal);
 
-          if (colour != pathColourDefault)
+            if (false && (colour != pathColourDefault)) // change false to enable trace
           {
             console.log("color", scaffoldName, colour, d);
           }
@@ -2689,7 +2692,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
           this.set('clearScaffoldColours', function() {
             console.log("clearScaffoldColours");
-            markerScaffold = {}, scaffolds = new Set();
+            markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
             pathColourUpdate(undefined);
           });
 
