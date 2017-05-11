@@ -44,6 +44,8 @@ Maps to align:
       <label {{action "toggleShowUnique" on="doubleClick"}}>toggleShowUnique</label>
       {{input type="checkbox" checked=pathColourScale class="toggle"}}
       <label {{action "togglePathColourScale" on="doubleClick"}}>togglePathColourScale</label>
+      {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
+      <label>toggleShowScaffoldMarkers</label>
 </div>
 
 {{#if hasData}}
@@ -52,7 +54,7 @@ Maps to align:
 
   {{numMarkers}} selected markers
 
-  {{selected-markers data=selectedMarkers scaffolds=scaffolds scaffoldMarkers=scaffoldMarkers}}
+  {{selected-markers data=selectedMarkers scaffolds=scaffolds scaffoldMarkers=scaffoldMarkers showScaffoldMarkers=showScaffoldMarkers}}
 
 {{/if}}
 

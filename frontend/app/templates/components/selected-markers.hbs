@@ -8,13 +8,15 @@
 
 <div class="pull-left">
   <ul>
-    {{#each scaffolds as |scaffold index|}}
-      <li class="{{scaffold}}">
-	<div data-toggle="tooltip" title={{scaffold-markers scaffolds index scaffoldMarkers}}>
-	  {{scaffold}}
-	</div>
-      </li>
-    {{/each}}
+    {{#if showScaffoldMarkers}}
+      {{#each scaffolds as |scaffold index|}}
+	<li class="{{scaffold}}">
+	  <div data-toggle="tooltip" title={{scaffold-markers scaffolds index scaffoldMarkers}}>
+	    {{scaffold}}
+	  </div>
+	</li>
+      {{/each}}
+    {{/if}}
   </ul>
 </div>
 <div id='scaffoldLegend' class="pull-left">

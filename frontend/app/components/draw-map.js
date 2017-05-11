@@ -65,7 +65,7 @@ export default Ember.Component.extend({
         }, []);
       // console.log(markersAsArray);
       console.log("updatedSelectedMarkers in draw-map component",
-                  selectedMarkers.length, markersAsArray.length);
+                  selectedMarkers, markersAsArray.length);
       this.sendAction('updatedSelectedMarkers', markersAsArray);
     },
 
@@ -201,6 +201,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** Apply colours to the paths according to their marker name (datum); repeating ordinal scale.  */
     let use_path_colour_scale = 4;
       let path_colour_scale_domain_set = false;
+
+    /** export scaffolds and scaffoldMarkers for use in selected-markers.hbs */
+    let showScaffoldMarkers = false;  // this.get('showScaffoldMarkers')
 
     /** Enable display of extra info in the path hover (@see hoverExtraText).
      * Currently a debugging / devel feature, will probably re-purpose to display metadata.
@@ -1174,8 +1177,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 scaffoldMarkers[scaffoldName] = markerName;
                 scaffolds.add(scaffoldName);
               }
-              me.set('scaffolds', scaffolds);
-              me.set('scaffoldMarkers', scaffoldMarkers);
+              if (showScaffoldMarkers)
+              {
+                me.set('scaffolds', scaffolds);
+                me.set('scaffoldMarkers', scaffoldMarkers);
+              }
               let domain = Array.from(scaffolds.keys());
               console.log("domain", domain);
               path_colour_scale.domain(domain);
@@ -2479,7 +2485,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // console.log("pathUpdate");
       tracedMapScale = {};  // re-enable trace
       let g = d3.selectAll(".foreground g"),
-      gd = g.selectAll("path").data(path);
+       /** The data of g is marker name, data of path is SVG path string. */
+      keyFn =function(d) { let markerName = this.parentElement.__data__; 
+                           console.log("keyFn", d, this, markerName); 
+                           return markerName; },
+      gd = g.selectAll("path").data(path/*, keyFn*/);
       gd.exit().remove();
       gd.enter().append("path");
       if (t === undefined) {t = d3; }
@@ -2494,6 +2504,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         console.log("pathColourUpdate", gd, use_path_colour_scale, path_colour_scale_domain_set, path_colour_scale.domain());
 	  if (gd === undefined)
 	      gd = d3.selectAll(".foreground g").selectAll("path");
+
       if (use_path_colour_scale && path_colour_scale_domain_set)
         if (use_path_colour_scale === 4)
       gd.style('stroke', function(d) {
@@ -2506,6 +2517,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           console.log("stroke", markerName, colourOrdinal, colour);
         return colour;
       });
+
         if (use_path_colour_scale === 3)
 	  gd.classed("reSelected", function(d, i, g) {
           /** d is path SVG line text */
@@ -2515,6 +2527,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 	  let isReSelected = pathColour !== pathColourDefault;
 	  return isReSelected;
     });
+
         if (use_path_colour_scale === 4)
         gd.attr("class", function(d) {
           let markerName = this.parentElement.__data__;
@@ -2524,6 +2537,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             c = "strong" + " " + scaffold;
             // console.log("class", markerName, scaffold, c, d);
           }
+          else if (false)
+          {
+            console.log("class", this, markerName, markerScaffold, scaffold, c, d);
+          }
+
           return c;
  });
 
