@@ -1175,7 +1175,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 scaffoldName = col[0], markerName = col[1];
                 markerScaffold[markerName] = scaffoldName;
                 // for the tooltip, maybe not required.
-                scaffoldMarkers[scaffoldName] = markerName;
+                if (scaffoldMarkers[scaffoldName] === undefined)
+                  scaffoldMarkers[scaffoldName] = []
+                scaffoldMarkers[scaffoldName].push(markerName);
                 scaffolds.add(scaffoldName);
               }
               if (showScaffoldMarkers !== me.get('showScaffoldMarkers'))
