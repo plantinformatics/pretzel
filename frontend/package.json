@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "broccoli-asset-rev": "^2.4.5",
+    "d3-scale-chromatic": "^1.1.1",
     "ember-ajax": "^2.4.1",
     "ember-cli": "2.10.0",
     "ember-cli-app-version": "^2.0.0",
@@ -30,6 +31,8 @@
     "ember-cli-sri": "^2.1.0",
     "ember-cli-test-loader": "^1.1.0",
     "ember-cli-uglify": "^1.2.0",
+    "ember-component-inbound-actions": "1.2.1",
+    "ember-content-editable": "0.10.0",
     "ember-data": "2.10.0",
     "ember-data-model-fragments": "^2.3.3",
     "ember-data-partial-model": "^0.4.0",

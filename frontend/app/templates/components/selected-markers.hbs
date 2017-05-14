@@ -1,3 +1,36 @@
+<div class="pull-left" style=" margin: 1em inherit;" >
+  <button {{action "clearScaffoldColours"}}>Clear Scaffold Colours</button>
+  <button {{action "flipRegion"}}>Flip region</button>
+</div>
+
+<div class="clearfix" style="margin-bottom: 1em;" >
+</div>
+
+<div class="pull-left">
+  <ul>
+    {{#if showScaffoldMarkers}}
+      {{#each scaffolds as |scaffold index|}}
+	<li class="{{scaffold}}">
+	  <div data-toggle="tooltip" title={{scaffold-markers scaffolds index scaffoldMarkers}}>
+	    {{scaffold}}
+	  </div>
+	</li>
+      {{/each}}
+    {{/if}}
+  </ul>
+</div>
+<div id='scaffoldLegend' class="pull-left">
+  <ul>
+  </ul>
+</div>
+
+{{content-editable
+  value=selection
+  placeholder="Markers to be coloured"
+  escape-press="putContent"
+  class="colouredMarkers"
+  type="text"}}
+
 <div id='grid'></div>
 
 {{yield}}

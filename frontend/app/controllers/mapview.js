@@ -1,10 +1,12 @@
 import Ember from 'ember';
 
+console.log("controllers/mapview.js");
+
 export default Ember.Controller.extend({
 
   actions: {
     updateSelectedMarkers: function(markers) {
-      // console.log("updateSelectedMarkers in mapview controller");
+	// console.log("updateSelectedMarkers in mapview controller", markers.length);
       this.set('selectedMarkers', markers);
     },
     toggleShowUnique: function() {
@@ -16,7 +18,7 @@ export default Ember.Controller.extend({
       console.log("controllers/mapview:togglePathColourScale()", this);
       this.set('pathColourScale', ! this.get('pathColourScale'));
     }
-    , pathColourScale: false
+    , pathColourScale: true
   },
 
   queryParams: ['mapsToView'],
@@ -26,6 +28,10 @@ export default Ember.Controller.extend({
 
   selectedMaps: [],
   selectedMarkers: [],
+
+  scaffolds: undefined,
+  scaffoldMarkers: undefined,
+  showScaffoldMarkers : false,
 
   markersSelected: Ember.computed('selectedMarkers', function() {
     return this.selectedMarkers.length > 0;

@@ -98,8 +98,8 @@
 ;;
 ;; See : http://web-mode.org/,  https://github.com/fxbois/web-mode
 (defun  install-web-mode
-  "Install web-mode, from melpa."
   (interactive nil)
+  "Install web-mode, from melpa."
 
     (progn
       (when (>= emacs-major-version 24)

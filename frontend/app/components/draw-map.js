@@ -17,6 +17,53 @@ let trace_updatedStacks = false;
 
 export default Ember.Component.extend({
 
+    /*------------------------------------------------------------------------*/
+
+    /** Used for receiving colouredMarkers from selected-markers.js,
+     * and flipRegion, ...
+     */
+  feedService: (console.log("feedService"), Ember.inject.service('feed')),
+
+    listen: function() {
+	let f = this.get('feedService');
+	console.log("listen", f);
+      if (f === undefined)
+        debugger;
+      else {
+	f.on('colouredMarkers', this, 'updateColouredMarkers');
+	f.on('clearScaffoldColours', this, 'clearScaffoldColours');
+	f.on('flipRegion', this, 'flipRegion');
+      }
+    }.on('init'),
+
+    // remove the binding created in listen() above, upon component destruction
+    cleanup: function() {
+	let f = this.get('feedService');
+	f.off('colouredMarkers', this, 'updateColouredMarkers');
+	f.off('clearScaffoldColours', this, 'clearScaffoldColours');
+	f.off('flipRegion', this, 'flipRegion');
+    }.on('willDestroyElement'),
+
+    /** undefined, or a function to call when colouredMarkers are received  */
+    colouredMarkersChanged : undefined,
+
+    updateColouredMarkers: function(markers) {
+       console.log("updateColouredMarkers in components/draw-map.js");
+	let colouredMarkersChanged = this.get('colouredMarkersChanged');
+	if (colouredMarkersChanged)
+	    colouredMarkersChanged(markers);
+    },
+
+    draw_flipRegion : undefined,
+    flipRegion: function(markers) {
+      console.log("flipRegion in components/draw-map.js");
+	    let flipRegion = this.get('draw_flipRegion');
+	    if (flipRegion)
+	      flipRegion(markers);
+    },
+
+  /*------------------------------------------------------------------------*/
+
   actions: {
     updatedSelectedMarkers: function(selectedMarkers) {
       let markersAsArray = d3.keys(selectedMarkers)
@@ -31,7 +78,8 @@ export default Ember.Component.extend({
           return a.concat(b);
         }, []);
       // console.log(markersAsArray);
-      // console.log("updatedSelectedMarkers in draw-map component");
+      console.log("updatedSelectedMarkers in draw-map component",
+                  selectedMarkers, markersAsArray.length);
       this.sendAction('updatedSelectedMarkers', markersAsArray);
     },
 
@@ -150,6 +198,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       axisTicks = 10,
     /** font-size of y axis ticks */
     axisFontSize = 12;
+      /** default colour for paths; copied from app.css (.foreground path {
+       * stroke: #808;}) so it can be returned from d3 stroke function.  Also
+       * used currently to recognise markers which are in colouredMarkers via
+       * path_colour_scale(), which is a useful interim measure until scales are
+       * set up for stroke-width of colouredMarkers, or better a class.
+       */
+      let pathColourDefault = "#808";
 
      function xDropOutDistance_update () {
        xDropOutDistance = viewPort.w/(stacks.length*6);
@@ -173,7 +228,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let unique_1_1_mapping = true;
 
     /** Apply colours to the paths according to their marker name (datum); repeating ordinal scale.  */
-    let use_path_colour_scale = true;
+    let use_path_colour_scale = 4;
+      let path_colour_scale_domain_set = false;
+
+    /** export scaffolds and scaffoldMarkers for use in selected-markers.hbs */
+    let showScaffoldMarkers = this.get('showScaffoldMarkers');
+    console.log("showScaffoldMarkers", showScaffoldMarkers);
 
     /** Enable display of extra info in the path hover (@see hoverExtraText).
      * Currently a debugging / devel feature, will probably re-purpose to display metadata.
@@ -1192,7 +1252,70 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
 
-    var path_colour_scale = d3.scaleOrdinal().domain(markers).range(d3.schemeCategory20b);
+    var path_colour_scale;
+    let markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
+    if (use_path_colour_scale)
+    {
+      let path_colour_domain;
+      switch (use_path_colour_scale)
+      {
+      case 1 : path_colour_domain = markers; break;
+      case 2 : path_colour_domain = d3.keys(ag); break;
+      case 4:
+      case 3 : path_colour_domain = ["unused"];
+          this.set('colouredMarkersChanged', function(colouredMarkers_) {
+            console.log('colouredMarkers changed, length : ', colouredMarkers_.length);
+            /** depending on use_path_colour_scale === 3, 4 each line of markerNames is 
+             * 3: markerName 
+             * 4: scaffoldName\tmarkerName
+             */
+	      let markerNames = colouredMarkers_
+              // .split('\n');
+		      // .match(/\S+/g) || [];
+              .match(/[^\r\n]+/g);
+	      path_colour_scale_domain_set = markerNames.length > 0;
+            if (use_path_colour_scale === 3)
+              path_colour_scale.domain(markerNames);
+            else  //  use_path_colour_scale === 4
+            {
+              for (let i=0; i<markerNames.length; i++)
+              {
+                let col=markerNames[i].split(/[ \t]+/),
+                scaffoldName = col[0], markerName = col[1];
+                markerScaffold[markerName] = scaffoldName;
+                // for the tooltip, maybe not required.
+                if (scaffoldMarkers[scaffoldName] === undefined)
+                  scaffoldMarkers[scaffoldName] = [];
+                scaffoldMarkers[scaffoldName].push(markerName);
+                scaffolds.add(scaffoldName);
+              }
+              if (showScaffoldMarkers !== me.get('showScaffoldMarkers'))
+              {
+                showScaffoldMarkers = me.get('showScaffoldMarkers');
+                console.log("showScaffoldMarkers", showScaffoldMarkers);
+              }
+              if (showScaffoldMarkers)
+              {
+                me.set('scaffolds', scaffolds);
+                me.set('scaffoldMarkers', scaffoldMarkers);
+              }
+              let domain = Array.from(scaffolds.keys());
+              console.log("domain", domain);
+              path_colour_scale.domain(domain);
+            }
+	      pathColourUpdate(undefined);
+            scaffoldLegendColourUpdate();
+          });
+        break;
+      }
+	path_colour_scale = d3.scaleOrdinal();
+	path_colour_scale_domain_set = (use_path_colour_scale !== 3) && (use_path_colour_scale !== 4);
+	if (path_colour_scale_domain_set)
+	    path_colour_scale.domain(path_colour_domain);
+	else
+	    path_colour_scale.unknown(pathColourDefault);
+	path_colour_scale.range(d3.schemeCategory10);
+    }
 
     apIDs.forEach(function(d) {
       /** Find the max of locations of all markers of AP name d. */
@@ -1998,7 +2121,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return r;
     }
 
-    /** for unique paths between markers, which may be connected by alias.
+    /** for unique paths between markers, which may be connected by alias,
      * data is [marker0, marker1, a0, a1]
      * Enabled by unique_1_1_mapping.
      * @param mmaa  [marker0, marker1, a0, a1]
@@ -2271,12 +2394,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           /** d3 selection of one of the APs selected by user brush on axis. */
           let apS = svgContainer.selectAll("#" + eltId(p));
           selectedMarkers[p] = [];
-          d3.keys(z[p]).forEach(function(m) {
 
           let yp = y[p],
           ap = aps[p],
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *ap.portion */); });
           //console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], ap.portion, brushedDomain);
+
+          d3.keys(z[p]).forEach(function(m) {
 
             if ((z[p][m].location >= brushedDomain[0]) &&
                 (z[p][m].location <= brushedDomain[1])) {
@@ -2345,7 +2469,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           .attr('x', 30).attr('y', 20)
           .text('Zoom');
         
+        zoomSwitch.on('mousedown', function () {
+          d3.event.stopPropagation();
+        });
         zoomSwitch.on('click', function () {
+          d3.event.stopPropagation();
            zoom(that,brushExtents);
            zoomed = true;
 
@@ -2438,7 +2566,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       Stack.currentDrop = undefined;
       Stack.currentDrag = start_d;
       // unique_1_1_mapping = me.get('isShowUnique'); // disable until button click does not redraw all.
-      use_path_colour_scale = me.get('pathColourScale');
+      /** disable this as currently togglePathColourScale() sets pathColourScale as a boolean
+       * maybe have a pull-down selector because multi-value.
+       use_path_colour_scale = me.get('pathColourScale'); */
       console.log("dragstarted", this, start_d/*, start_index, start_group*/);
       let cl = {/*self: this,*/ d: start_d/*, index: start_index, group: start_group, apIDs: apIDs*/};
       svgContainer.classed("axisDrag", true);
@@ -2685,7 +2815,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         foreground/*g*/.data(pathData);
       let
       path_ = unique_1_1_mapping ? pathU : path,
-      gd = g.selectAll("path").data(path_);
+       /** The data of g is marker name, data of path is SVG path string. */
+      keyFn =function(d) { let markerName = markerNameOfPath(this); 
+                           console.log("keyFn", d, this, markerName); 
+                           return markerName; },
+      gd = g.selectAll("path").data(path_/*, keyFn*/);
       gd.exit().remove();
       gd.enter().append("path");
       if (t === undefined) {t = d3; }
@@ -2693,14 +2827,96 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       d3.selectAll(".foreground > g > path")
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
+	pathColourUpdate(gd);
+    }
+    /** Get the markerName of a path element from its parent element's data.
+     * In the case of using aliases, the parent g's data is [m, m, x, x].
+     */
+    function markerNameOfPath(path)
+    {
+      let da = path.parentElement.__data__,
+      markerName =
+        (da.length === 4)  // i.e. unique_1_1_mapping
+        ? da[0]  //  mmaa, i.e. [marker0, marker1, a0, a1]
+        : da;
+      return markerName;
+    }
+      function pathColourUpdate(gd)
+      {
+        console.log("pathColourUpdate", gd, use_path_colour_scale, path_colour_scale_domain_set, path_colour_scale.domain());
+	  if (gd === undefined)
+	      gd = d3.selectAll(".foreground g").selectAll("path");
 
-      if (use_path_colour_scale)
+      if (use_path_colour_scale && path_colour_scale_domain_set)
+        if (use_path_colour_scale === 4)
       gd.style('stroke', function(d) {
         /** d is path SVG line text */
-        let markerName = this.parentElement.__data__;
-        return path_colour_scale(markerName);
+        let markerName = markerNameOfPath(this), colourOrdinal = markerName;
+        if (use_path_colour_scale === 4)
+          colourOrdinal = markerScaffold[markerName];
+        let colour = path_colour_scale(colourOrdinal);
+        if (false && (colour !== pathColourDefault))  // change false to enable trace
+          console.log("stroke", markerName, colourOrdinal, colour);
+        return colour;
       });
 
+        if (use_path_colour_scale === 3)
+	  gd.classed("reSelected", function(d, i, g) {
+          /** d is path SVG line text */
+      let markerName = markerNameOfPath(this);
+          let pathColour = path_colour_scale(markerName);
+	  // console.log(markerName, pathColour, d, i, g);
+	  let isReSelected = pathColour !== pathColourDefault;
+	  return isReSelected;
+    });
+
+        if (use_path_colour_scale === 4)
+        gd.attr("class", function(d) {
+          let markerName = markerNameOfPath(this);
+          let scaffold = markerScaffold[markerName], c;
+          if (scaffold)
+          {
+            c = "strong" + " " + scaffold;
+            // console.log("class", markerName, scaffold, c, d);
+          }
+          else if (false)
+          {
+            console.log("class", this, markerName, markerScaffold, scaffold, c, d);
+          }
+
+          return c;
+ });
+
+    }
+    function scaffoldLegendColourUpdate()
+    {
+      console.log("scaffoldLegendColourUpdate", use_path_colour_scale);
+        if (use_path_colour_scale === 4)
+      {
+	        let da = Array.from(scaffolds),
+          ul = d3.select("div#scaffoldLegend > ul");
+          // console.log(ul, scaffolds, da);
+          let li_ = ul.selectAll("li")
+            .data(da);
+          // console.log(li_);
+          let la = li_.enter().append("li");
+          // console.log(la);
+          let li = la.merge(li_);
+          function I(d){ return d; };
+          li.html(I);
+          li.style("color", function(d) {
+            // console.log("color", d);
+            let scaffoldName = d,
+         colourOrdinal = scaffoldName;
+        let colour = path_colour_scale(colourOrdinal);
+
+            if (false && (colour != pathColourDefault)) // change false to enable trace
+          {
+            console.log("color", scaffoldName, colour, d);
+          }
+          return colour;
+      });
+        }
     }
 
     function dragended(/*d*/) {
@@ -2790,6 +3006,61 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     foreground.selectAll("path").attr("d", function(d) { return d; })
   }
 */
+
+    /** flip the value of markers between the endpoints
+     * @param markers is an array of marker names, created via (zoom) brush,
+     * and input via text box
+     */
+          this.set('draw_flipRegion', function(markers) {
+            let brushedMap = selectedAps[0];
+            let zm = z[brushedMap];
+
+            if (markers.length)
+            {
+            /** the first and last markers have the minimum and maximum position
+             * values, except where flipRegion has already been applied. */
+            let limits = [undefined, undefined];
+            limits = markers
+              .reduce(function(limits_, mi) {
+                // console.log("reduce", mi, limits_, zm[mi]);
+                // marker aliases may be in the selection and yet not in the map
+                let zmi = zm[mi];
+                if (zmi)
+                {
+                  let l = zmi.location;
+                  if (limits_[0] === undefined || limits_[0] > l)
+                    limits_[0] = l;
+                  if (limits_[1] === undefined || limits_[1] < l)
+                    limits_[1] = l;
+                }
+                // console.log(zmi, l, limits_);
+                return limits_;
+              }, limits);
+            // console.log("limits", limits);
+
+            let m0 = markers[0], m1 = markers[markers.length-1],
+            locationRange = limits,
+            /** delta of the locationRange interval */
+            rd = locationRange[1] - locationRange[0],
+            invert = function (l) { let i = rd === 0 ? l : locationRange[1] + (locationRange[0] - l);
+                                    // console.log("invert", l, i);
+                                    return i; };
+                   console.log("draw_flipRegion", /*markers, zm,*/ m0, m1, locationRange, rd);
+        d3.keys(zm).forEach(function(marker) {
+          let marker_ = zm[marker], ml = marker_.location;
+          if (locationRange[0] <= ml && ml <= locationRange[1])
+          marker_.location = invert(ml);
+        });
+              pathUpdate(undefined);
+            }
+          });
+
+          this.set('clearScaffoldColours', function() {
+            console.log("clearScaffoldColours");
+            markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
+            pathColourUpdate(undefined);
+          });
+
   },
 
   didInsertElement() {

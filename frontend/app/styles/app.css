@@ -43,6 +43,34 @@ svg {
   stroke-opacity: 1;
   stroke-width: 2px;
 }
+.foreground path.reSelected
+{
+    stroke : red;
+}
+/* this rule targets the legend (html) and the path (svg); different css
+ * attributes apply to each; the purpose of combining the rule is to enable a user
+ * to easily navigate from the legend to the css rule. */
+div#scaffoldLegend > ul > li.scaffoldA,
+.foreground path.scaffoldA
+{
+    /* stroke : red; */
+    color : red;
+    stroke-dasharray : 1 2 3 4 5;
+}
+div#scaffoldLegend
+{
+  float: left;
+  margin-right: 1em;
+}
+div#scaffoldLegend > ul
+{
+  list-style-type: none;
+}
+.foreground path.strong
+{
+    stroke-width : 2px;
+    stroke-opacity: 1;
+}
 
 /*.brush .extent {
   fill-opacity: .3;
@@ -71,16 +99,31 @@ svg {
   text-anchor: end;
 }
 
-
-#grid { padding-top: 50px;
-    padding-right: 100px;
+/* -------------------------------------------------------------------------- */
+#grid {
+    float: right;
+    /* padding-right: 100px; */
     padding-bottom: 50px;
-    padding-left: 100px; position:relative;}
-.row, .header { clear: left; font-size: 12px; line-height: 18px; height: 18px;}
+    /* margin-left: 10em;	*/
+    position:relative;}
+.row, .header {
+ /* clear: left; */
+ font-size: 12px; line-height: 18px; height: 18px;}
 .row:nth-child(odd) { background: rgba(0,0,0,0.05); }
 .header { font-weight: bold; }
 .cell { float: left; overflow: hidden; white-space: nowrap; width: 180px; height: 18px;}
 .col-0 { width: 100x; }
+
+div.colouredMarkers
+{
+  white-space: pre;
+  float: left;
+  min-height: 10em;
+  min-width: 6em;
+}
+
+/* -------------------------------------------------------------------------- */
+
 .axis path,
 .axis line{
   fill: none;
