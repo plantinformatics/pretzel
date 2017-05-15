@@ -225,6 +225,12 @@ function distZip()
 # wait for broccoli to build the dist.zip
 function waitBuildDistZip()
 {
+    # cd within () to avoid changing cwd of caller
+    (
+    if [ \! -d frontend/app -a -d ../../../frontend/app ]
+    then
+	cd ../../..
+    fi
     waitBuildDistZipMsg=
     while find frontend/app -name \*.js -newer frontend/dist/assets/ember-test.js -print | fgrep frontend/ && sleep 10
     do
@@ -235,6 +241,7 @@ function waitBuildDistZip()
 	    echo waiting for dist/ to be built 1>&2
 	fi
     done
+    )
 }
 
 # @param 1	devel or production
@@ -248,12 +255,12 @@ function swapApplicationHost()
     case $context in
 	devel)
 	    # sleep 60 to wait for dist to build after swapping application.js
-	    [ -f application.devel.js.$unusedSuffix ] && mv -i application.js application.production.js.$unusedSuffix && mv -i application.devel.js.$unusedSuffix application.js && cd ../../.. && waitBuildDistZip; 
+	    [ -f application.devel.js.$unusedSuffix ] && mv -i application.js application.production.js.$unusedSuffix && mv -i application.devel.js.$unusedSuffix application.js && waitBuildDistZip; 
 	    grep '^  *host' application.js | fgrep dirac
 	    return `expr 1 - $?`
 	    ;;
 	production)
-	    [ -f application.production.js.$unusedSuffix ] && mv -i application.js application.devel.js.$unusedSuffix && mv -i application.production.js.$unusedSuffix application.js && cd ../../.. && waitBuildDistZip; 
+	    [ -f application.production.js.$unusedSuffix ] && mv -i application.js application.devel.js.$unusedSuffix && mv -i application.production.js.$unusedSuffix application.js && waitBuildDistZip; 
 	    grep '^  *host' application.js | fgrep -v dirac
 	    return `expr 1 - $?`
 	    ;;

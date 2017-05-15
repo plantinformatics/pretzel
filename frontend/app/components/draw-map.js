@@ -13,7 +13,7 @@ import Ember from 'ember';
 
 /*global d3 */
 
-let trace_updatedStacks = false;
+let trace_updatedStacks = true;
 
 export default Ember.Component.extend({
 
@@ -88,7 +88,7 @@ export default Ember.Component.extend({
       // stacks.log();
       // console.log("updatedStacks in draw-map component");
       // no effect :
-      this.sendAction('updatedSelectedMarkers', stacksText);  // tacks
+      this.sendAction('updatedStacks', stacksText);
     },
 
     resizeView : function()
@@ -426,8 +426,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return Math.round((num + 0.00001) * 100) / 100;
     }
     /*------------------------------------------------------------------------*/
-    const trace_stack = 1;
-    const trace_alias = 1;
+    const trace_stack = 2;
+    const trace_alias = 2;
     function Stacked(apName, portion) {
       this.apName = apName;
       this.mapName = cmName[apName].mapName;  // useful in devel trace.
@@ -458,14 +458,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     Stacked.prototype.toString = function ()
     {
       let a =
-        [ "{apName=", this.apName, ", portion=" + round_2(this.portion),
+        [ "{apName=", this.apName, ":", this.apName, ", portion=" + round_2(this.portion),
           positionToString(this.position) + this.stack.length, "}" ];
       return a.join("");
     };
     Stacked.prototype.log = function ()
     {
       console.log
-      ("{apName=", this.apName, ", portion=", round_2(this.portion),
+      ("{apName=", this.apName, ":", this.mapName, ", portion=", round_2(this.portion),
        positionToString(this.position), this.stack,  "}");
     };
     Stacked.apName_match =
@@ -1380,6 +1380,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     : function(d) { return d; };
     foreground = svgContainer.append("g") // foreground has as elements "paths" that correspond to markers
                 .attr("class", "foreground")
+                // this is now duplicated in pathUpdate(), and can be factored out here
                 .selectAll("g")
                 .data(pathData) // insert data into path elements (each line of the "map" is a path)
                 .enter()
@@ -1904,6 +1905,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 differentAlias = aliasedM0 != marker0;
                 if (trace_alias && differentAlias)
                   console.log("aliasedM1", aliasedM1, "aliasedM0", aliasedM0, marker0, za0[marker0], za1[aliasedM1], aam[a1.apName][marker0], aam[a0.apName][aliasedM1]);
+
+                let d0 = marker0, d1 = aliasedM1,
+                traceTarget = marker0 == "markerK" && aliasedM1 == "markerK" &&
+                  a0.mapName == "MyMap5" && a1.mapName == "MyMap6";
+                if (traceTarget)
+                {
+                  debugger;
+                }
+
+                console.log("collateStacks()", d0, d1, a0.mapName, a1.mapName, a0, a1, za0[d0], za1[d1]);
+
               }
               let
               nConnections = 0 + (aliasedM1 !== undefined) + (isDirect ? 1 : 0);
@@ -1914,6 +1926,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                     marker1 = aliasedM1 || marker0,
                   mmaa = [marker0, marker1, a0, a1];
                   pu.push(mmaa);
+                  console.log(" pu", pu.length);
                 }
               });
             }
@@ -2130,7 +2143,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let [marker0, marker1, a0, a1] = mmaa;
       let p = [];
       p[0] = patham(a0.apName, a1.apName, marker0, marker1);
-      // console.log("pathU", mmaa, p[0]);
+      // console.log("pathU", mmaa, a0.mapName, a1.mapName, p[0]);
       return p;
     }
 
@@ -2228,7 +2241,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       if (lineIn)
       {
         let sLine = markerLineS2(a0, a1, d0, d1);
-        // console.log("stacksPath()", d0, d1, a0i, a1i, a0, a1, z[a0][d0].location, z[a1][d1].location, sLine, this);
+        let marker0 = d0, marker1 = d1, traceTarget = marker0 == "markerK" && marker1 == "markerK" &&
+          cmName[a0].mapName == "MyMap5" && cmName[a1].mapName == "MyMap6";
+        if (traceTarget)
+        {
+          console.log("patham()", d0, d1, cmName[a0].mapName, cmName[a1].mapName, a0, a1, z[a0][d0].location, z[a1][d1].location, sLine);
+        }
         r = sLine;
         /* Prepare a tool-tip for the line. */
         pathMarkerStore(sLine, d0, d1, z[a0][d0], z[a1][d1]);
@@ -2735,7 +2753,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           // st.duration(dragTransitionTime);
           st.attr("transform", Stack.prototype.apTransformO);
           // zoomed effects transform via path() : apTransform.
-          pathUpdate(t /*st*/);
+          // pathUpdate(t /*st*/);
           //Do we need to keep the brushed region when we drag the AP? probably not.
           //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
           // st0.select(".brush").call(y[d].brush.move,null);
@@ -2810,9 +2828,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       // console.log("pathUpdate");
       tracedApScale = {};  // re-enable trace
-      let g = d3.selectAll(".foreground g");
+      let g = d3.selectAll(".foreground > g");
       if (unique_1_1_mapping)
-        foreground/*g*/.data(pathData);
+      {
+        console.log("pathUpdate() pathData", pathData.length, pathData, g.size());
+        g.data(pathData);
+        console.log("exit", g.exit().size(), "enter", g.enter().size());
+        g.exit().remove();
+        let gn = g.enter().append("g");
+          gn
+          .merge(g)
+            .attr("class", pathClass);
+      }
       let
       path_ = unique_1_1_mapping ? pathU : path,
        /** The data of g is marker name, data of path is SVG path string. */
@@ -2820,8 +2847,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                            console.log("keyFn", d, this, markerName); 
                            return markerName; },
       gd = g.selectAll("path").data(path_/*, keyFn*/);
+      if (trace_stack > 1)
+      {
+        let ex = gd.exit();
+        if (ex.size())
+          console.log("gd.exit()", ex);
+        let en = gd.enter();
+        if (en.size())
+          console.log("gd.enter()", en);
+      }
       gd.exit().remove();
       gd.enter().append("path");
+      // .merge() ...
       if (t === undefined) {t = d3; }
       t.selectAll(".foreground path").attr("d", function(d) { return d; });
       d3.selectAll(".foreground > g > path")
@@ -2963,6 +3000,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         console.log("dragended() dragTransition, end");
         dragTransition(false);
       }
+      stacks.log();
     }
     
 
