@@ -426,8 +426,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return Math.round((num + 0.00001) * 100) / 100;
     }
     /*------------------------------------------------------------------------*/
-    const trace_stack = 2;
-    const trace_alias = 2;
+    const trace_stack = 1;
+    const trace_alias = 1;
     function Stacked(apName, portion) {
       this.apName = apName;
       this.mapName = cmName[apName].mapName;  // useful in devel trace.
@@ -1378,17 +1378,45 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       function(d) { let d0=d[0], d1=d[1], c = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
  return c; }
     : function(d) { return d; };
+    function markerNameOfData(da)
+    {
+        let markerName = (da.length === 4)  // i.e. unique_1_1_mapping
+        ? da[0]  //  mmaa, i.e. [marker0, marker1, a0, a1]
+        : da;
+      return markerName;
+    }
+    /** @see also pu_log()  */
+    function data_text(da)
+    {
+      return unique_1_1_mapping
+        ? [da[0], da[1], da[2].mapName, da[3].mapName]
+        : da;
+    }    
+    /** The data of (.foreground > g) is marker name. */
+    function gKeyFn(d, i, g)
+    {
+      let key =
+        unique_1_1_mapping   // i.e. (da.length === 4)
+        ? data_text(d).join("_")
+        : d;
+      // console.log("gKeyFn", data_text(d), this, key, i); 
+      if (false && key == "markerK_markerK_MyMap5_MyMap6")
+      {
+        console.log("this.parentNode", g, this.parentNode);
+      }
+      return key;
+    };
     foreground = svgContainer.append("g") // foreground has as elements "paths" that correspond to markers
-                .attr("class", "foreground")
+      .attr("class", "foreground");
+    if (false)
+    foreground
                 // this is now duplicated in pathUpdate(), and can be factored out here
                 .selectAll("g")
-                .data(pathData) // insert data into path elements (each line of the "map" is a path)
+                .data(pathData, gKeyFn) // insert data into path elements (each line of the "map" is a path)
                 .enter()
                 .append("g")
                 .attr("class", pathClass);
     
-    
-    // can use foreground in pathUpdate()
     if (true)
       pathUpdate(undefined);
     else
@@ -1926,14 +1954,24 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                     marker1 = aliasedM1 || marker0,
                   mmaa = [marker0, marker1, a0, a1];
                   pu.push(mmaa);
-                  console.log(" pu", pu.length);
+                  // console.log(" pu", pu.length);
                 }
               });
             }
         }
       }
       if (pu)
-      console.log("collateStacks pu", pu.length);
+        console.log("collateStacks pu", pu.length);
+      if (false)
+        pu_log(pu);
+    }
+    function pu_log(pu)
+    {
+      if (pu)
+        for (let pi=0; pi<pu.length; pi++)
+      {
+          let p = pu[pi]; console.log(p[0], p[1], p[2].mapName, p[3].mapName);
+        }
     }
 
     /**
@@ -2207,6 +2245,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
        * @param d0, d1 marker names, i.e. a0:m0, a1:m1.
        * Iff d1!==undefined, they are connected by an alias.
        * @param ma0, ma1  marker objects.
+       * ma1 will be undefined when called from axisMarkerTick()
        */
       function pathMarkerStore(sLine, d0, d1, ma0, ma1)
       {
@@ -2227,7 +2266,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         {
           hoverExtraText += 
             "<div>" + markerAliasesText(d0, ma0) + "</div>" +
-          "<div>" + markerAliasesText(d1, ma1) + "</div>";
+            (ma1 ? 
+             "<div>" + markerAliasesText(d1, ma1) + "</div>" : "");
         }
         let d = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
         pathMarkers[sLine][d] = hoverExtraText; // 1;
@@ -2828,17 +2868,29 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       // console.log("pathUpdate");
       tracedApScale = {};  // re-enable trace
-      let g = d3.selectAll(".foreground > g");
-      if (unique_1_1_mapping)
+      let g = foreground
+        // refn : http://stackoverflow.com/questions/19956602/a-d3-select-equivalent-to-jquery-children
+        //Convert selection to selection representing the children
+        .selectAll(function() { return this.childNodes; })
+      //Apply filter to children
+        .filter('g');
+      let gnm;
+      // if (unique_1_1_mapping)
       {
         console.log("pathUpdate() pathData", pathData.length, pathData, g.size());
-        g.data(pathData);
+        g = g.data(pathData, gKeyFn);
         console.log("exit", g.exit().size(), "enter", g.enter().size());
         g.exit().remove();
         let gn = g.enter().append("g");
+          gnm =
           gn
           .merge(g)
             .attr("class", pathClass);
+        if (false)
+        {
+          g = d3.selectAll(".foreground > g");
+          console.log("g.size()", g.size());
+        }
       }
       let
       path_ = unique_1_1_mapping ? pathU : path,
@@ -2846,7 +2898,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       keyFn =function(d) { let markerName = markerNameOfPath(this); 
                            console.log("keyFn", d, this, markerName); 
                            return markerName; },
-      gd = g.selectAll("path").data(path_/*, keyFn*/);
+      gd = d3.selectAll(".foreground > g > path").data(pathData); // path_/*, keyFn*/);
       if (trace_stack > 1)
       {
         let ex = gd.exit();
@@ -2857,21 +2909,24 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           console.log("gd.enter()", en);
       }
       gd.exit().remove();
-      gd.enter().append("path");
-      // .merge() ...
+      let gde = gd.enter().append("path");
+      let gda = gde.merge(gd);
+      console.log("gda", gd.size(), gde.size(), gda.size());
       if (t === undefined) {t = d3; }
-      t.selectAll(".foreground path").attr("d", function(d) { return d; });
+      t.selectAll(".foreground path").attr("d", path_);
       d3.selectAll(".foreground > g > path")
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
-	pathColourUpdate(gd);
+	pathColourUpdate(gda);
     }
     /** Get the markerName of a path element from its parent element's data.
      * In the case of using aliases, the parent g's data is [m, m, x, x].
      */
     function markerNameOfPath(path)
     {
-      let da = path.parentElement.__data__,
+      let pa = path.parentElement || path._parent /* EnterNode has _parent not parentElement */,
+      da = pa.__data__,
+      /** can use markerNameOfData() */
       markerName =
         (da.length === 4)  // i.e. unique_1_1_mapping
         ? da[0]  //  mmaa, i.e. [marker0, marker1, a0, a1]
