@@ -2480,17 +2480,26 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           /// also this could be .some() instead of ! .every():
           return ! selectedAps.some(function(p) {
             /** d is markerName, p is apName. */
-            let smp = selectedMarkers[p];
-	      let sel = unique_1_1_mapping ?
+              let smp = selectedMarkers[p], sel;
+	      /*
+	      sel = unique_1_1_mapping ?
 		  (smp[d[0]] || smp[d[1]])
-		  : smp[d];
+		  : smp[d];*/
             // maNamePos is e.g. "markerD 0.4".
-	      /* note : if unique_1_1_mapping then d+" " does toString on d (mmaa) : calls stacked.toString(), position.toString() for both stack
-            return smp.some(function(maNamePos) { return maNamePos.includes(d+" "); });
-	    */
+	      // note : if unique_1_1_mapping then d+" " does toString on d (mmaa) : calls stacked.toString(), position.toString() for both stack 
+            sel = smp.some(
+		function(maNamePos)
+		{
+		    let sel1 = unique_1_1_mapping
+			? (maNamePos.includes(d[0]) ||
+			   maNamePos.includes(d[1]))
+			: maNamePos.includes(d);
+		    return sel1;
+		}
+	    );
 	      if (sel)
 	      {
-		  console.log(this, d, p, smp[d[0]], smp[d[1]]);
+		  console.log(this, d, p, d[0], d[1]);
 	      }
 	      return sel;
           });
