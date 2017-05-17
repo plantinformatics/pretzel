@@ -2805,7 +2805,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           // st.duration(dragTransitionTime);
           st.attr("transform", Stack.prototype.apTransformO);
           // zoomed effects transform via path() : apTransform.
-          // pathUpdate(t /*st*/);
+           pathUpdate(t /*st*/);
           //Do we need to keep the brushed region when we drag the AP? probably not.
           //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
           // st0.select(".brush").call(y[d].brush.move,null);
