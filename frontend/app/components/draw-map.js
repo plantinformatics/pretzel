@@ -2438,6 +2438,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         brushExtents = selectedAps.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
 
         selectedMarkers = {};
+        let selectedMarkersSet = new Set();
         selectedAps.forEach(function(p, i) {
           /** d3 selection of one of the APs selected by user brush on axis. */
           let apS = svgContainer.selectAll("#" + eltId(p));
@@ -2453,6 +2454,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             if ((z[p][m].location >= brushedDomain[0]) &&
                 (z[p][m].location <= brushedDomain[1])) {
               //selectedMarkers[p].push(m);    
+              selectedMarkersSet.add(m);
               selectedMarkers[p].push(m + " " + z[p][m].location);
               //Highlight the markers in the brushed regions
               //o[p], the ap location, z[p][m].location, actual marker position in the AP, 
@@ -2473,7 +2475,19 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         });
         me.send('updatedSelectedMarkers', selectedMarkers);
 
-        d3.selectAll(".foreground g").classed("faded", function(d){
+		    function markerNotSelected2(d)
+        {
+          let sel =
+		        unique_1_1_mapping ?
+            ( selectedMarkersSet.has(d[0]) ||
+              selectedMarkersSet.has(d[1]) )
+            : selectedMarkersSet.has(d);
+          return ! sel;
+        }
+
+        d3.selectAll(".foreground g").classed("faded", markerNotSelected2);
+
+        function markerIsSelected1(d){
 	    /** @return true	iff markerName of maNamePos is in keys of selectedMarkers[].
 		@param maNamePos is the hover text : markerName space position. */
 		function markerIsSelected(maNamePos)
@@ -2526,7 +2540,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             //return smp.contains(d);
           });
         
-        });
+        };
 
         svgContainer.selectAll(".btn").remove();
         /** d3 selection of the brushed AP. */
