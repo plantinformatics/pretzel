@@ -2490,7 +2490,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             sel = smp.some(
 		function(maNamePos)
 		{
-		    let sel1 = unique_1_1_mapping
+		    let maName = maNamePos.split(" ")[0], sel1;
+		    sel1 = unique_1_1_mapping ? (maName == d[0] || maName == d[1]) : maName == d;
+		    if (false)
+		    sel1 = unique_1_1_mapping
 			? (maNamePos.includes(d[0]) ||
 			   maNamePos.includes(d[1]))
 			: maNamePos.includes(d);
