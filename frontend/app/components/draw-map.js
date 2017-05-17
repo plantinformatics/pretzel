@@ -2474,6 +2474,20 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         me.send('updatedSelectedMarkers', selectedMarkers);
 
         d3.selectAll(".foreground g").classed("faded", function(d){
+	    /** @return true	iff markerName of maNamePos is in keys of selectedMarkers[].
+		@param maNamePos is the hover text : markerName space position. */
+		function markerIsSelected(maNamePos)
+		{
+		    let maName = maNamePos.split(" ")[0], sel1;
+		    sel1 = unique_1_1_mapping ? (maName == d[0] || maName == d[1]) : maName == d;
+		    if (false)
+		    sel1 = unique_1_1_mapping
+			? (maNamePos.includes(d[0]) ||
+			   maNamePos.includes(d[1]))
+			: maNamePos.includes(d);
+		    return sel1;
+		};
+
          //d3.event.selection [min,min] or [max,max] should consider as non selection.
          //maybe alternatively use brush.clear or (brush.move, null) given a mouse event
           // discuss : d3.keys(selectedMarkers). seems equivalent to selectedAps.
@@ -2487,19 +2501,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 		  : smp[d];*/
             // maNamePos is e.g. "markerD 0.4".
 	      // note : if unique_1_1_mapping then d+" " does toString on d (mmaa) : calls stacked.toString(), position.toString() for both stack 
-            sel = smp.some(
-		function(maNamePos)
-		{
-		    let maName = maNamePos.split(" ")[0], sel1;
-		    sel1 = unique_1_1_mapping ? (maName == d[0] || maName == d[1]) : maName == d;
-		    if (false)
-		    sel1 = unique_1_1_mapping
-			? (maNamePos.includes(d[0]) ||
-			   maNamePos.includes(d[1]))
-			: maNamePos.includes(d);
-		    return sel1;
-		}
-	    );
+              sel = smp.some(markerIsSelected);
 	      if (sel)
 	      {
 		  console.log(this, d, p, d[0], d[1]);
