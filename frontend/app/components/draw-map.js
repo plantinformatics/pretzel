@@ -15,6 +15,16 @@ import Ember from 'ember';
 
 let trace_updatedStacks = true;
 
+let breakPointEnable = 1;
+function breakPoint()
+{
+  if (breakPointEnable > 0)
+  {
+    console.log("breakPoint", breakPointEnable);
+    --breakPointEnable;
+  }
+}
+
 export default Ember.Component.extend({
 
     /*------------------------------------------------------------------------*/
@@ -428,6 +438,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /*------------------------------------------------------------------------*/
     const trace_stack = 1;
     const trace_alias = 1;
+    const trace_path = 0;
+    const trace_path_colour = 0;
+    /*------------------------------------------------------------------------*/
+
     function Stacked(apName, portion) {
       this.apName = apName;
       this.mapName = cmName[apName].mapName;  // useful in devel trace.
@@ -566,6 +580,15 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       this.aps.forEach(function(s){s.log();});
       console.log("] length=", this.aps.length, "}");
     };
+    Stack.prototype.verify = function ()
+    {
+      if (this.aps.length == 0)
+      {
+        this.log();
+        /* breakPointEnable = 1;
+        breakPoint(); */
+      }
+    };
     /** Log all stacks. static. */
     stacks.log = 
     Stack.log = function()
@@ -574,6 +597,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       console.log("{stacks=[");
       stacks.forEach(function(s){s.log();});
       console.log("] length=", stacks.length, "}");
+    };
+    Stack.verify = function()
+    {
+      stacks.forEach(function(s){s.verify();});
     };
     /** Append the given stack to stacks[]. */
     stacks.append = function(stack)
@@ -1877,6 +1904,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
         mAPs0 = s0.aps,
         mAPs1 = s1.aps;
+        if (mAPs0.length === 0 || mAPs1.length === 0)
+        {
+          console.log("mAPs0,1.length", mAPs0.length, mAPs1.length);
+          // stacks.log();
+        }
         // Cross-product of the two adjacent stacks
         for (let a0i=0; a0i < mAPs0.length; a0i++) {
           let a0 = mAPs0[a0i], za0 = a0.z, a0Name = a0.apName, amag0 = amag[a0Name];
@@ -2731,6 +2763,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                * with this exception : .dropIn() redraws the source stack of the AP.
                */
               stack.dropIn(d, zoneParent.apIndex, top, t);
+              breakPointEnable = 1;
+              deleteAfterDrag();
               // apChangeGroupElt(d, t);
               collateStacks();
               // number of stacks has decreased - not essential to recalc the domain.
@@ -2900,9 +2934,15 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let g = foreground.selectAll("g");
       if (unique_1_1_mapping)
       {
+        if (trace_path)
         console.log("pathUpdate() pathData", pathData.length, g.size()); // , pathData
         g = g.data(pathData);
+        if (trace_path)
         console.log("exit", g.exit().size(), "enter", g.enter().size());
+        if (pathData.length === 0)
+        {
+          console.log("pathData.length === 0");
+        }
         g.exit().remove();
         let gn = g.enter().append("g");
           gn
@@ -2960,6 +3000,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
       function pathColourUpdate(gd)
       {
+        if (trace_path_colour)
         console.log("pathColourUpdate", gd, use_path_colour_scale, path_colour_scale_domain_set, path_colour_scale.domain());
 	  if (gd === undefined)
 	      gd = d3.selectAll(".foreground g").selectAll("path");
@@ -3036,15 +3077,19 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         }
     }
 
-    function dragended(/*d*/) {
-      console.log("dragended", stacks.toDeleteAfterDrag);
+    function deleteAfterDrag() {
+      if (trace_stack)
+      console.log("deleteAfterDrag", stacks.toDeleteAfterDrag);
 
       if (stacks.toDeleteAfterDrag !== undefined)
       {
         stacks.toDeleteAfterDrag.delete();
         stacks.toDeleteAfterDrag = undefined;
       }
-
+      Stack.verify();
+    }
+    function dragended(/*d*/) {
+      deleteAfterDrag();
       // in the case of dropOut(),
       // number of stacks has increased - need to recalc the domain, so that
       // x is defined for this AP.
