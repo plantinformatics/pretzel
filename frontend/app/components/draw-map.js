@@ -1396,7 +1396,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
     foreground = svgContainer.append("g") // foreground has as elements "paths" that correspond to markers
-                .attr("class", "foreground")
+                .attr("class", "foreground");
+    foreground
                 // this is now duplicated in pathUpdate(), and can be factored out here
                 .selectAll("g")
                 .data(pathData) // insert data into path elements (each line of the "map" is a path)
@@ -2896,7 +2897,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       // console.log("pathUpdate");
       tracedApScale = {};  // re-enable trace
-      let g = d3.selectAll(".foreground > g");
+      let g = foreground.selectAll("g");
       if (unique_1_1_mapping)
       {
         console.log("pathUpdate() pathData", pathData.length, g.size()); // , pathData
