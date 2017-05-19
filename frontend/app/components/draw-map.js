@@ -3013,6 +3013,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         if (use_path_colour_scale === 4)
           colourOrdinal = markerScaffold[markerName];
         let colour = path_colour_scale(colourOrdinal);
+        /* colour the path if either end has a class mapping defined.
+         * if d[0] does not then check d[1].
+         */
+        if ((use_path_colour_scale === 4) && (colour === pathColourDefault) && (d.length === 4) /* i.e. unique_1_1_mapping */)
+        {
+          // after confirming the functionality, the condition structure can be improved, and following repetition factorised.
+          markerName = d[1];
+          colourOrdinal = markerName;
+          colourOrdinal = markerScaffold[markerName];
+          colour = path_colour_scale(colourOrdinal);
+        }
         if (false && (colour !== pathColourDefault))  // change false to enable trace
           console.log("stroke", markerName, colourOrdinal, colour);
         return colour;
