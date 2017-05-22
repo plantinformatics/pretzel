@@ -3012,14 +3012,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         let markerName = markerNameOfPath(this), colourOrdinal = markerName;
         if (use_path_colour_scale === 4)
           colourOrdinal = markerScaffold[markerName];
+	  // path_colour_scale(undefined) maps to pathColourDefault
         let colour = path_colour_scale(colourOrdinal);
         /* colour the path if either end has a class mapping defined.
          * if d[0] does not then check d[1].
          */
-        if ((use_path_colour_scale === 4) && (colour === pathColourDefault) && (d.length === 4) /* i.e. unique_1_1_mapping */)
+	  let da = this.parentElement.__data__;
+        if ((use_path_colour_scale === 4) && (colour === pathColourDefault) && (da.length === 4) /* i.e. unique_1_1_mapping */
+	    && (markerName != da[1]))
         {
           // after confirming the functionality, the condition structure can be improved, and following repetition factorised.
-          markerName = d[1];
+          markerName = da[1];
           colourOrdinal = markerName;
           colourOrdinal = markerScaffold[markerName];
           colour = path_colour_scale(colourOrdinal);
