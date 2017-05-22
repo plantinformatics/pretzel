@@ -3046,6 +3046,16 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         gd.attr("class", function(d) {
           let markerName = markerNameOfPath(this);
           let scaffold = markerScaffold[markerName], c;
+          /* check if either end (marker name) of the path has a class mapping (e.g. scaffold name) defined.
+           * if da[0] does not then check da[1].
+           */
+	        let da = this.parentElement.__data__;
+          if ((scaffold === undefined) && (da.length === 4) /* i.e. unique_1_1_mapping */
+	            && (markerName != da[1]))
+          {
+            markerName = da[1];
+            scaffold = markerScaffold[markerName];
+          }
           if (scaffold)
           {
             c = "strong" + " " + scaffold;
