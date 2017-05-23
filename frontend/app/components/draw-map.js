@@ -3043,19 +3043,23 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         : da;
       return markerName;
     }
-    /** If markerName has an alias group with a marker with an assigned class (colour) then return it.
+    /** If markerName has an alias group with a marker with an assigned class (colour) then return the classes.
      * @return undefined otherwise
      */
     function colouredAg(apName, markerName)
     {
-      let colourOrdinal,
-      agName = amag[apName][markerName],  // marker.agName,
-      c;
-      if (agName && (c = agClasses[agName]))
+      let classSet,
+      agName = amag[apName][markerName];  // marker.agName,
+      if (agName)
       {
-        /** can use any element of set; later may cycle through them with slider. */
-        colourOrdinal = c.values().next().value;
+        classSet = agClasses[agName];
       }
+      return classSet;
+    }
+    function classFromSet(classSet)
+    {
+        /** can use any element of set; later may cycle through them with slider. */
+        let colourOrdinal = classSet.values().next().value;
       return colourOrdinal;
     }
       function pathColourUpdate(gd)
@@ -3093,7 +3097,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           {
             // collateStacks() / maInMaAG() could record in pu the alias group of the path.
             let [marker0, marker1, a0, a1] = da;
-            colourOrdinal = colouredAg(a0.apName, marker0) || colouredAg(a1.apName, marker1);
+            let classSet = colouredAg(a0.apName, marker0) || colouredAg(a1.apName, marker1);
+            if (classSet)
+              colourOrdinal = classFromSet(classSet);
             if (false && colourOrdinal)
             console.log(markerName, da, "colourOrdinal", colourOrdinal);
           }
@@ -3127,6 +3133,24 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           {
             markerName = da[1];
             scaffold = markerScaffold[markerName];
+            /* Like stroke function above, after direct lookup of path end
+             * markers in markerScaffold finds no class defined, lookup via
+             * aliases of end markers - transitive.
+             */
+            if (scaffold === undefined)
+            {
+              let [marker0, marker1, a0, a1] = da;
+              let classSet = colouredAg(a0.apName, marker0) || colouredAg(a1.apName, marker1);
+              if (classSet)
+              {
+                scaffold = "";
+                for (c of classSet)
+                {
+                  scaffold += " " + c;
+                }
+                console.log("class", da, classSet, scaffold);
+              }
+            }
           }
           if (scaffold)
           {
