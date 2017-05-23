@@ -3148,7 +3148,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 {
                   scaffold += " " + c;
                 }
-                console.log("class", da, classSet, scaffold);
+                // console.log("class", da, classSet, scaffold);
               }
             }
           }
