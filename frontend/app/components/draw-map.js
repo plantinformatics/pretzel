@@ -331,10 +331,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         /** marker alias groups APs */
     maga = {};
 
+    /** class names assigned by colouredMarkers to alias groups, indexed by alias group name.
+     * result of collateMarkerClasses().
+     */
+    let agClasses = {};
+
     // results of collateStacks()
     let
     /** marker : AP - AP    maN[marker] : [[marker, marker]] */
     maN = {},
+    /** Not used yet; for pathAg().
+     *  store : alias group : AP/marker - AP/marker   agam[ag] : [marker, marker]  markers have refn to parent AP
+     * i.e. [ag] -> [marker0, a0, a1, za0[marker0], za1[marker0]] */
     agam = {},
     /** path data in unique mode. [marker0, marker1, a0, a1] */
     pu;
@@ -1316,6 +1324,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 scaffoldMarkers[scaffoldName].push(markerName);
                 scaffolds.add(scaffoldName);
               }
+              collateMarkerClasses(markerScaffold);
               if (showScaffoldMarkers !== me.get('showScaffoldMarkers'))
               {
                 showScaffoldMarkers = me.get('showScaffoldMarkers');
@@ -1327,7 +1336,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 me.set('scaffoldMarkers', scaffoldMarkers);
               }
               let domain = Array.from(scaffolds.keys());
-              console.log("domain", domain);
+              console.log("domain.length", domain.length);
               path_colour_scale.domain(domain);
             }
 	      pathColourUpdate(undefined);
@@ -1835,6 +1844,42 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         });
       });
     }
+
+    /** Collate the classes of markers via alias groups.
+     * Inputs : amag, z, markerScaffold (from colouredMarkers)
+     * Outputs : agClasses
+     */
+    function collateMarkerClasses(markerScaffold)
+    {
+      d3.keys(amag).forEach(
+        function (apName)
+        {
+          let za = z[apName];
+          let amaga = amag[apName];
+          d3.keys(amaga).forEach(
+            function (markerName)
+            {
+              let agName = amaga[markerName],
+              agc = agClasses[agName];
+              if (agc === undefined)
+              {
+                agClasses[agName] = new Set();
+                agc = agClasses[agName];
+              }
+              let marker_ = za[markerName], mas = marker_.aliases;
+              // marker_.name === markerName;
+              for (let i=0; i<mas.length; i++)
+              {
+                let mi = mas[i], className = markerScaffold[mi];
+                if (className)
+                  agc.add(className);
+              }
+            });
+          
+        });
+
+    }
+
 
     /**             is marker1 in ap0:marker0 alias group ?
      * @return   the matching aliased marker if only 1
@@ -2998,6 +3043,21 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         : da;
       return markerName;
     }
+    /** If markerName has an alias group with a marker with an assigned class (colour) then return it.
+     * @return undefined otherwise
+     */
+    function colouredAg(apName, markerName)
+    {
+      let colourOrdinal,
+      agName = amag[apName][markerName],  // marker.agName,
+      c;
+      if (agName && (c = agClasses[agName]))
+      {
+        /** can use any element of set; later may cycle through them with slider. */
+        colourOrdinal = c.values().next().value;
+      }
+      return colourOrdinal;
+    }
       function pathColourUpdate(gd)
       {
         if (trace_path_colour)
@@ -3018,13 +3078,25 @@ chromosome : >=1 linkageGroup-s layed out vertically:
          * if d[0] does not then check d[1].
          */
 	  let da = this.parentElement.__data__;
-        if ((use_path_colour_scale === 4) && (colour === pathColourDefault) && (da.length === 4) /* i.e. unique_1_1_mapping */
+        if (use_path_colour_scale === 4)
+        {
+          if ( (colour === pathColourDefault) && (da.length === 4) /* i.e. unique_1_1_mapping */
 	    && (markerName != da[1]))
         {
           // after confirming the functionality, the condition structure can be improved, and following repetition factorised.
           markerName = da[1];
           colourOrdinal = markerName;
           colourOrdinal = markerScaffold[markerName];
+          colour = path_colour_scale(colourOrdinal);
+        }
+          if (colour === pathColourDefault)
+          {
+            // collateStacks() / maInMaAG() could record in pu the alias group of the path.
+            let [marker0, marker1, a0, a1] = da;
+            colourOrdinal = colouredAg(a0.apName, marker0) || colouredAg(a1.apName, marker1);
+            if (false && colourOrdinal)
+            console.log(markerName, da, "colourOrdinal", colourOrdinal);
+          }
           colour = path_colour_scale(colourOrdinal);
         }
         if (false && (colour !== pathColourDefault))  // change false to enable trace
@@ -3245,6 +3317,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           this.set('clearScaffoldColours', function() {
             console.log("clearScaffoldColours");
             markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
+            agClasses = {};
             pathColourUpdate(undefined);
           });
 
