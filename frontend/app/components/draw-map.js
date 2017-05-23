@@ -245,6 +245,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let showScaffoldMarkers = this.get('showScaffoldMarkers');
     console.log("showScaffoldMarkers", showScaffoldMarkers);
 
+    let showAsymmetricAliases = this.get('showAsymmetricAliases');
+    console.log("showAsymmetricAliases", showAsymmetricAliases);
+
     /** Enable display of extra info in the path hover (@see hoverExtraText).
      * Currently a debugging / devel feature, will probably re-purpose to display metadata.
      */
@@ -1987,7 +1990,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 aliasedM1 = maInMaAG(a1, a0, marker0),
               isDirect = z[a1.apName][marker0] !== undefined;
               let differentAlias;
-              if (aliasedM1)
+              if (aliasedM1 || showAsymmetricAliases)
               {
                 /* alias group of marker0 may not be the same as the alias group
                  * which links aliasedM1 to a0, but hopefully if aliasedM0 is
@@ -2015,7 +2018,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               }
               let
               nConnections = 0 + (aliasedM1 !== undefined) + (isDirect ? 1 : 0);
-              if ((nConnections === 1) && (differentAlias !== true)) // unique
+              if ((nConnections === 1) && (showAsymmetricAliases || (differentAlias !== true))) // unique
                 {
                   let 
                     /** i.e. isDirect ? marker0 : aliasedM1 */

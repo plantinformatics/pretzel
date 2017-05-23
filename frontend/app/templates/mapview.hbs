@@ -46,10 +46,12 @@ Maps to align:
       <label {{action "togglePathColourScale" on="doubleClick"}}>togglePathColourScale</label>
       {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
       <label>toggleShowScaffoldMarkers</label>
+      {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
+      <label>toggleShowAsymmetricAliases</label>
 </div>
 
 {{#if hasData}}
-  {{draw-map updatedSelectedMarkers='updateSelectedMarkers' data=model isShowUnique=isShowUnique pathColourScale=pathColourScale scaffolds=scaffolds scaffoldMarkers=scaffoldMarkers showScaffoldMarkers=showScaffoldMarkers}}
+  {{draw-map updatedSelectedMarkers='updateSelectedMarkers' data=model isShowUnique=isShowUnique pathColourScale=pathColourScale scaffolds=scaffolds scaffoldMarkers=scaffoldMarkers showScaffoldMarkers=showScaffoldMarkers showAsymmetricAliases=showAsymmetricAliases}}
 
 
   {{numMarkers}} selected markers
