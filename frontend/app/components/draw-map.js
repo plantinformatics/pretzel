@@ -309,7 +309,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      *   genetic map contains chromosomes with markers;
      *   physical map (pseudo-molecule) contains genes
      */
-    let markerAPs;
+    let markerAPs = {};
     let
       /** Draw a horizontal notch at the marker location on the axis,
        * when the marker is not in a AP of an adjacent Stack.
@@ -334,8 +334,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let
       /** ap / alias : marker    aam[ap][marker alias] : [marker] */
       aam = {},
-    /** ap/marker : alias groups       amag[ap][marker] : ag  */
-    amag = {},
+    /** ap/marker : alias groups       amag[ap][marker] : ag
+     * absorbed into z[ap][marker].agName
+    amag = {},  */
     // results of collateMagm() - not used
         /** marker alias groups APs */
     maga = {};
@@ -1786,7 +1787,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      *     for each alias
      *       store AP / alias : marker    aam[AP][marker alias] : marker
      *       store AP/marker : alias groups  (or was that alias groups to marker)
-     *          amag[AP][marker] : [ag]
+     *          z[AP][marker].agName (maybe later array [ag])
      * 
      */
     function collateData()
@@ -1798,8 +1799,6 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           aam[ap] = {};
         if (maga[ap] === undefined)
           maga[ap] = {};
-        if (amag[ap] === undefined)
-          amag[ap] = {};
         let aama = aam[ap];
         d3.keys(za).forEach(function(marker) {
           try
@@ -1843,39 +1842,38 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               aama[markerAlias].push(marker);
             }
 
-            let amaga = amag[ap];
-            if (amaga[marker])
+            if (marker_.agName)
               // should be just 1
-              console.log("amaga[marker]", ap, marker, amaga[marker], agName);
+              console.log("[marker] agName", ap, marker, marker_, agName);
             else
-              amaga[marker] = agName;
+              marker_.agName = agName;
           }
         });
       });
     }
 
     /** Collate the classes of markers via alias groups.
-     * Inputs : amag, z, markerScaffold (from colouredMarkers)
+     * Inputs : z (including .agName), markerScaffold (from colouredMarkers)
      * Outputs : agClasses
      */
     function collateMarkerClasses(markerScaffold)
     {
-      d3.keys(amag).forEach(
-        function (apName)
+      d3.keys(z).forEach(
+        function(apName)
         {
           let za = z[apName];
-          let amaga = amag[apName];
-          d3.keys(amaga).forEach(
-            function (markerName)
+          d3.keys(za).forEach(
+            function(markerName)
             {
-              let agName = amaga[markerName],
+              let  marker_ = za[markerName],
+              agName = marker_.agName,
               agc = agClasses[agName];
               if (agc === undefined)
               {
                 agClasses[agName] = new Set();
                 agc = agClasses[agName];
               }
-              let marker_ = za[markerName], mas = marker_.aliases;
+              let mas = marker_.aliases;
               // marker_.name === markerName;
               for (let i=0; i<mas.length; i++)
               {
@@ -1884,9 +1882,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                   agc.add(className);
               }
             });
-          
         });
-
     }
 
 
@@ -1965,7 +1961,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         }
         // Cross-product of the two adjacent stacks
         for (let a0i=0; a0i < mAPs0.length; a0i++) {
-          let a0 = mAPs0[a0i], za0 = a0.z, a0Name = a0.apName, amag0 = amag[a0Name];
+          let a0 = mAPs0[a0i], za0 = a0.z, a0Name = a0.apName;
           for (let a1i=0; a1i < mAPs1.length; a1i++) {
             let a1 = mAPs1[a1i], za1 = a1.z;
             d3.keys(za0).forEach(function(marker0) {
@@ -1979,7 +1975,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               }
               // not used yet; to be shared to pathAg().
               // any connection from a0:marker0 to a1 via alias :
-              if (false && amag0[marker0])
+              let ag = za0[marker0].agName;
+              if (false && ag)
               {
                 if (agam[ag] === undefined)
                   agam[ag] = [];
@@ -3058,7 +3055,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     function colouredAg(apName, markerName)
     {
       let classSet,
-      agName = amag[apName][markerName];  // marker.agName,
+      marker = z[apName][markerName],
+      agName = marker.agName;
       if (agName)
       {
         classSet = agClasses[agName];
