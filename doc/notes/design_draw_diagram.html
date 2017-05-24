@@ -130,13 +130,13 @@ classDiagram
 <div class="mermaid classDiagram" style="height: 27em;" >
 classDiagram
     aam .. aamC0 : [APid]
-    aamC0 .. marker1 : [agName]
+    aamC0 .. marker1 : [markerAlias]
     marker1 : ref to marker
 </div>
 
 <div class="mermaid classDiagram" style="height: 27em;" >
 classDiagram
-    markers .. APid : [markerName]
+    markerAPs .. APid : [markerName]
     APid : ref to map
 </div>
 
@@ -152,6 +152,8 @@ classDiagram
     amagC0 .. amagC1 : [markerName]
     amagC1 .. amagC2 : [agName]
 </div>
+<p>Currently storing agName in amagC1, instead of [agName]->amagC2 as shown in diagram.
+</p>
 
 <div class="mermaid classDiagram" style="height: 27em;" >
 classDiagram

@@ -274,7 +274,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
          */
         z = myData,
         /** All marker names.
-         * Initially a set (to determine unique names), then converted to an array.
+         * Initially a Set (to determine unique names), then converted to an array.
          */
         d3Markers = new Set();
     d3.keys(myData).forEach(function(ap) {
@@ -302,8 +302,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     });
     //creates a new Array instance from an array-like or iterable object.
     d3Markers = Array.from(d3Markers);
-    /** the name markers can replace d3Markers, in next commit. */
-    let markers = d3Markers;
+    /** Indexed by markerName, value is a Set of APs in which the marker is present.
+     * Currently markerName-s are unique, present in just one AP (Chromosome),
+     * but it seems likely that ambiguity will arise, e.g. 2 assemblies of the same Chromosome.
+     * Terminology :
+     *   genetic map contains chromosomes with markers;
+     *   physical map (pseudo-molecule) contains genes
+     */
+    let markerAPs;
     let
       /** Draw a horizontal notch at the marker location on the axis,
        * when the marker is not in a AP of an adjacent Stack.
@@ -1805,9 +1811,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             console.log("collateData", ap, za, za[marker], exc);
             debugger;
           }
-          if (markers[marker] === undefined)
-            markers[marker] = new Set();
-          markers[marker].add(ap);
+          if (markerAPs[marker] === undefined)
+            markerAPs[marker] = new Set();
+          markerAPs[marker].add(ap);
 
           let marker_ = za[marker], mas = marker_.aliases;
           marker_.name = marker;
@@ -1884,17 +1890,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
 
-    /**             is marker1 in ap0:marker0 alias group ?
-     * @return   the matching aliased marker if only 1
+    /**             is marker m1 in an alias group of a marker m0 in ap0  ?
+     * @return   the matching aliased marker m0 if only 1
      */
     function maInMaAG(ap0, ap1, m1)
     {
       /** Return the matching aliased marker if only 1; amC is the count of matches */
       let am, amC=0;
-      /** aama inverts the aliases of m0; i.e. for each alias mA of m0, aama[mA] contains m0.
-       * so aama[m0] contains the markers which alias to m1
+      /** aama inverts the aliases of m1; i.e. for each alias mA of m1, aama[mA] contains m1.
+       * so aama[m1] contains the markers which alias to m0
        * If there are only 1 of those, return it.
-       * ?(m0 if m1 is in the aliases of a0:m0)
+       * ?(m1 if m0 is in the aliases of a0:m1)
        */
       let aama = aam[ap0.apName],
       ma = aama[m1],
