@@ -233,9 +233,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * if there is only 1 connection between a pair of markers, i.e. the mapping between the APs is 1:1,
      * then show the connection.
      *
+     * Any truthy value of unique_1_1_mapping enables the above; special cases :
      * unique_1_1_mapping === 2 enables a basic form of uniqueness which is possibly not of interest
+     * unique_1_1_mapping === 3 enables collateStacksA (asymmetric aliases).
      */
-    let unique_1_1_mapping = true;
+    let unique_1_1_mapping = 3;
+    let collateStacks = unique_1_1_mapping === 3 ? collateStacksA : collateStacks1;
 
     /** Apply colours to the paths according to their marker name (datum); repeating ordinal scale.  */
     let use_path_colour_scale = 4;
@@ -288,9 +291,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         d3Markers.add(marker);
         markerTotal++;
 
+        /** This implementation of aliases was used initially.
+         * The marker is simply duplicated (same location, same AP) for each alias.
+         * This works, but loses the distinction between direct connections (same marker / gene)
+         * and indirect (via aliases).
+         */
         if (! unique_1_1_mapping)
         {
-          let markerValue = myData[ap][marker];
+          let markerValue = z[ap][marker];
           if (markerValue && markerValue.aliases)
             for (let a of markerValue.aliases)
           {
@@ -356,6 +364,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     agam = {},
     /** path data in unique mode. [marker0, marker1, a0, a1] */
     pu;
+    /** Paths - Unique, from Tree. */
+    let put;
+
+    /** results of collateStacksA() */
+    let aliased = {};
 
     let line = d3.line(),
         axis = d3.axisLeft(),
@@ -1419,7 +1432,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     //Add foreground lines.
     /** pathData is the data of .foreground > g, not .foreground > g > path */
-    let pathData = unique_1_1_mapping ? pu : d3Markers;
+    function pathDataSwitch() {
+      let p = unique_1_1_mapping === 3 ? put
+        : (unique_1_1_mapping ? pu : d3Markers);
+      return p; }
+    let pathData = pathDataSwitch();
     let pathClass = unique_1_1_mapping ? 
       function(d) { let d0=d[0], d1=d[1], c = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
  return c; }
@@ -1867,19 +1884,23 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             {
               let  marker_ = za[markerName],
               agName = marker_.agName,
-              agc = agClasses[agName];
-              if (agc === undefined)
+              mas = marker_.aliases;
+              if (mas.length > 0)
               {
-                agClasses[agName] = new Set();
-                agc = agClasses[agName];
-              }
-              let mas = marker_.aliases;
-              // marker_.name === markerName;
-              for (let i=0; i<mas.length; i++)
-              {
-                let mi = mas[i], className = markerScaffold[mi];
-                if (className)
-                  agc.add(className);
+                // mas.length > 0 implies .agName is defined
+                let agc = agClasses[agName];
+                if (agc === undefined)
+                {
+                  agClasses[agName] = new Set();
+                  agc = agClasses[agName];
+                }
+                // marker_.name === markerName;
+                for (let i=0; i<mas.length; i++)
+                {
+                  let mi = mas[i], className = markerScaffold[mi];
+                  if (className)
+                    agc.add(className);
+                }
               }
             });
         });
@@ -1943,12 +1964,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      *             (compile hash from each marker alias group)
      *             for AP-AP data is list of ags
      */
-    function collateStacks()
+    function collateStacks1()
     {
       maN = {};
       agam = {};
       pu = [];
-      pathData = unique_1_1_mapping ? pu : d3Markers;
+      /** used by pathUpdate() to access results of this function. */
+      pathData = pathDataSwitch();
 
       for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
@@ -2046,6 +2068,158 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       {
           let p = pu[pi]; console.log(p[0], p[1], p[2].mapName, p[3].mapName);
         }
+    }
+
+    let adjAPs;
+    /** Collate adjacent APs, based on current stack adjacencies.
+     */
+    function collateAdjacentAPs()
+    {
+      adjAPs = {};
+      for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
+        let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
+        mAPs0 = s0.aps,
+        mAPs1 = s1.aps;
+        // Cross-product of the APs in two adjacent stacks
+        for (let a0i=0; a0i < mAPs0.length; a0i++) {
+          let a0 = mAPs0[a0i], za0 = a0.z, a0Name = a0.apName;
+          for (let a1i=0; a1i < mAPs1.length; a1i++) {
+            let a1 = mAPs1[a1i], za1 = a1.z;
+            if (adjAPs[a0Name] === undefined)
+              adjAPs[a0Name] = [];
+            adjAPs[a0Name].push(a1.apName);
+          }
+        }
+      }
+      log_adjAPs();
+    }
+    function log_adjAPs()
+    {
+      console.log("adjAPs");
+      d3.keys(adjAPs).forEach(function(a0Name) {
+        let a0 = adjAPs[a0Name];
+        console.log(a0Name, a0.length);
+        for (let a1i=0; a1i < a0.length; a1i++) {
+          let a1Name = a0[a1i];
+          console.log(a1Name);
+        }
+      });
+    }
+
+    /* This has a similar role to collateStacks1(), but is more broad - it just
+     * looks at aliases and does not require symmetry; the filter can be customised to
+     * require uniqueness, so this method may be as efficient and more general.
+     *
+     * for asymmetric aliases :
+for each AP
+  adjAPs = array (Set?) of adjacent APs, minus those already in tree[ap0]
+  for each marker m0 in AP
+    lookup aliases (markers) from m0 (could be to m0, but seems equiv)
+      are those aliased markers in APs in adjAPs ?	(use mapping markerAPs[markerName] -> APs)
+        add to tree, associate duplicates together (coming back the other way)
+          by sorting ap0 & ap1 in lexicographic order.
+	  aliased[ap0][ap1][m0][m1]  : [m0, m1, ap0, ap1, direction, agName]
+     */
+    function collateStacksA()
+    {
+      collateAdjacentAPs();
+      d3.keys(z).forEach(
+        function(apName)
+        {
+          let za = z[apName];
+          let adjs = adjAPs[apName];
+          if (adjs)
+          {
+            adjs = adjs.filter(function(apName1) { let a = aliased[apName1];
+                                                   return ! a; } );
+            d3.keys(za).forEach(
+              function(markerName)
+              {
+                let  marker_ = za[markerName],
+                agName = marker_.agName;
+
+                let mas = marker_.aliases;
+                for (let i=0; i<mas.length; i++)
+                {
+                  let mi = mas[i],
+                  APs = markerAPs[mi];
+                  // is there an intersection of adjs with APs
+                  for (let id=0; id<adjs.length; id++)
+                  {
+                    let aj = adjs[id],
+                    markerA = z[aj][mi];
+                    if (APs.has(aj))
+                    {
+                      let // agName = markerA.agName,
+                        direction = apName < aj,
+                      apName_ = aps[apName],
+                      aj_ = aps[aj],
+                      am = [
+                        {m: markerName, ap: apName_},
+                        {m: mi, ap: aj_}
+                      ],
+                      am_= [am[1-direction], am[0+direction]],
+                      [m0, m1, ap0, ap1] = [am_[0].m, am_[1].m, am_[0].ap, am_[1].ap],
+                      mmaa = [m0, m1, ap0, ap1, direction, agName];
+                      console.log("mmaa", mmaa);
+                      // aliased[ap0][ap1][m0][m1] = mmaa;
+                      /* objPut() can initialise aliased, but that is done above,
+                       * needed by filter, so result is not used. */
+                      objPut(aliased, mmaa, ap0.apName, ap1.apName, m0, m1);
+                    }
+                  }
+                }
+
+              });
+          }
+        });
+      // uses (calculated in) collateAdjacentAPs() : adjAPs, collateStacksA() : aliased.
+      filterPaths();
+    }
+
+    function objPut(a, v, k1, k2, k3, k4)
+    {
+      if (a === undefined)
+        a = {};
+      let A, A_;
+      if ((A = a[k1]) === undefined)
+        A = a[k1] = {};
+      if ((A_ = A[k2]) === undefined)
+        A = A[k2] = {};
+      else
+        A = A_;
+      if ((A_ = A[k3]) === undefined)
+        A = A[k3] = {};
+      else
+        A = A_;
+      if ((A_ = A[k4]) === undefined)
+        A = A[k4] = [];
+      else
+        A = A_;
+      A.push(v);
+      return a;
+    }
+    function filterPaths()
+    {
+      put = [];
+      pathData = pathDataSwitch();  // get the new object reference.
+      function selectCurrentAdjPaths(a0Name)
+      {
+        adjAPs[a0Name].forEach(function (a1Name) { 
+          let b;
+          if ((b = aliased[a0Name]) && (b = b[a1Name]))
+          d3.keys(b).forEach(function (m0) {
+            let b0=b[m0];
+            d3.keys(b0).forEach(function (m1) {
+              let b01=b0[m1];
+              let mmaa = b01;
+              // filter here, e.g. uniqueness
+              put.push.apply(put, mmaa);
+            });
+          });
+        });
+      };
+      d3.keys(adjAPs).forEach(selectCurrentAdjPaths);
     }
 
     /**
@@ -2380,6 +2554,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return r;
     }
     // Returns an array of paths (links between APs) for a given marker.
+    // This predates the addition of stacks; probably no features here which are
+    // not in the later functions path(), pathU().
     function path_pre_Stacks(d) { // d is a marker
         let r = [];
 
@@ -2445,6 +2621,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
 
     // Returns an array of paths (links between APs) for a given marker when zoom in starts.
+    // This is the zoom() equivalent of path_pre_Stacks(); the features here are
+    // most likely present in the later path() function/s;  zoom() now uses pathUpdate().
     function zoomPath(d) { // d is a marker
         let r = [];
         for (let k=0; k<apIDs.length-1; k++) {
@@ -3151,9 +3329,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               if (classSet)
               {
                 scaffold = "";
-                for (c of classSet)
+                for (let cl of classSet)
                 {
-                  scaffold += " " + c;
+                  scaffold += " " + cl;
                 }
                 // console.log("class", da, classSet, scaffold);
               }
@@ -3170,9 +3348,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           }
 
           return c;
- });
-
+        });
     }
+
     function scaffoldLegendColourUpdate()
     {
       console.log("scaffoldLegendColourUpdate", use_path_colour_scale);
