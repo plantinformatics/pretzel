@@ -2091,7 +2091,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           }
         }
       }
-      log_adjAPs();
+      // log_adjAPs();
     }
     function log_adjAPs()
     {
@@ -2161,7 +2161,7 @@ for each AP
                       am_= [am[1-direction], am[0+direction]],
                       [m0, m1, ap0, ap1] = [am_[0].m, am_[1].m, am_[0].ap, am_[1].ap],
                       mmaa = [m0, m1, ap0, ap1, direction, agName];
-                      console.log("mmaa", mmaa);
+                      // console.log("mmaa", mmaa);
                       // aliased[ap0][ap1][m0][m1] = mmaa;
                       /* objPut() can initialise aliased, but that is done above,
                        * needed by filter, so result is not used. */
@@ -2214,6 +2214,7 @@ for each AP
               let b01=b0[m1];
               let mmaa = b01;
               // filter here, e.g. uniqueness
+              // console.log(put.length, mmaa.length, mmaa[0]);
               put.push.apply(put, mmaa);
             });
           });
