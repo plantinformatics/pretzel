@@ -25,6 +25,7 @@ function breakPoint()
   }
 }
 
+
 export default Ember.Component.extend({
 
     /*------------------------------------------------------------------------*/
@@ -239,6 +240,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     let unique_1_1_mapping = 3;
     let collateStacks = unique_1_1_mapping === 3 ? collateStacksA : collateStacks1;
+    /** look at aliases in adjacent APs both left and right (for unique_1_1_mapping = 3) */
+    let adjacent_both_dir = true;
 
     /** Apply colours to the paths according to their marker name (datum); repeating ordinal scale.  */
     let use_path_colour_scale = 4;
@@ -255,6 +258,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * Currently a debugging / devel feature, will probably re-purpose to display metadata.
      */
     let showHoverExtraText = true;
+
+    /** Used for d3 attributes whose value is the datum. */
+    function I(d){ return d; };
 
     let
     /** y[apID] is the scale for AP apID.
@@ -288,8 +294,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       delete c.chrName;
       // console.log(ap, cmName[ap]);
       d3.keys(myData[ap]).forEach(function(marker) {
-        d3Markers.add(marker);
-        markerTotal++;
+        let m = z[ap][marker];
+        if (m.location > 2000000)
+          delete z[ap][marker];
+        else
+        {
+          d3Markers.add(marker);
+          markerTotal++;
 
         /** This implementation of aliases was used initially.
          * The marker is simply duplicated (same location, same AP) for each alias.
@@ -304,6 +315,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           {
               z[ap][a] = {location: markerValue.location};
             }
+        }
         }
 
       });
@@ -369,6 +381,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     /** results of collateStacksA() */
     let aliased = {};
+    let aliasedDone = {};
 
     let line = d3.line(),
         axis = d3.axisLeft(),
@@ -469,7 +482,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /*------------------------------------------------------------------------*/
     const trace_stack = 1;
     const trace_alias = 1;
-    const trace_path = 0;
+    const trace_path = 1;
     const trace_path_colour = 0;
     /*------------------------------------------------------------------------*/
 
@@ -2037,7 +2050,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                   debugger;
                 }
 
-		  if (trace_alias > 1)
+                if (trace_alias > 1)
                 console.log("collateStacks()", d0, d1, a0.mapName, a1.mapName, a0, a1, za0[d0], za1[d1]);
 
               }
@@ -2083,28 +2096,82 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         // Cross-product of the APs in two adjacent stacks
         for (let a0i=0; a0i < mAPs0.length; a0i++) {
           let a0 = mAPs0[a0i], za0 = a0.z, a0Name = a0.apName;
+          if (a0Name === undefined)
+          {
+            console.log(mAPs0, mAPs1, a0i, a0);
+          }
           for (let a1i=0; a1i < mAPs1.length; a1i++) {
             let a1 = mAPs1[a1i], za1 = a1.z;
             if (adjAPs[a0Name] === undefined)
               adjAPs[a0Name] = [];
             adjAPs[a0Name].push(a1.apName);
+            if (adjacent_both_dir)
+            {
+              if (adjAPs[a1.apName] === undefined)
+                adjAPs[a1.apName] = [];
+              adjAPs[a1.apName].push(a0Name);
+            }
           }
         }
       }
-      // log_adjAPs();
+      log_adjAPs(adjAPs);
+    }
+    function APid2Name(APid)
+    {
+      if (APid === undefined || aps[APid] === undefined)
+      {
+        console.log(aps, APid);
+        debugger;
+      }
+      return aps[APid].mapName;
     }
     function log_adjAPs()
     {
       console.log("adjAPs");
       d3.keys(adjAPs).forEach(function(a0Name) {
         let a0 = adjAPs[a0Name];
-        console.log(a0Name, a0.length);
+          console.log(a0Name, APid2Name(a0Name), a0.length);
         for (let a1i=0; a1i < a0.length; a1i++) {
           let a1Name = a0[a1i];
-          console.log(a1Name);
+            console.log(a1Name, APid2Name(a1Name));
         }
       });
     }
+    function log_adjAPsa(adjs)
+    {
+      console.log("adjs", adjs.length);
+        for (let a1i=0, a0=adjs; a1i < a0.length; a1i++) {
+          let a1Name = a0[a1i];
+            console.log(a1Name, APid2Name(a1Name));
+        }
+    }
+
+    /** Check if aliases between apName and apName1 have been stored.  */
+    function getAliased(apName, apName1)
+    {
+      /* If there are aliases between apName, apName1 then
+       * aliased[apName][apName1] (with apNames in lexicographic
+       * order) will be defined, but because some adjacencies may not
+       * have aliases, aliasedDone is used.
+       */
+      let a0, a1;
+      if (apName < apName1 || ! adjacent_both_dir)
+      { a0 = apName; a1 = apName1; }
+      else
+      { a0 = apName1; a1 = apName; }
+      let a = aliasedDone[a0] && aliasedDone[a0][a1];
+      if (a)
+      {
+        console.log("getAliased filter", apName, APid2Name(apName), apName1, APid2Name(apName1), a);
+      }
+      else
+      {
+        if (aliasedDone[a0] === undefined)
+          aliasedDone[a0] = {};
+        aliasedDone[a0][a1] = true;
+      }
+      return a;
+  }
 
     /* This has a similar role to collateStacks1(), but is more broad - it just
      * looks at aliases and does not require symmetry; the filter can be customised to
@@ -2123,6 +2190,7 @@ for each AP
     function collateStacksA()
     {
       collateAdjacentAPs();
+      let adjCount = 0, adjCountNew = 0, pathCount = 0;
       d3.keys(z).forEach(
         function(apName)
         {
@@ -2130,8 +2198,14 @@ for each AP
           let adjs = adjAPs[apName];
           if (adjs)
           {
-            adjs = adjs.filter(function(apName1) { let a = aliased[apName1];
-                                                   return ! a; } );
+            adjs = adjs.filter(function(apName1) {
+              adjCount++;
+              let a = getAliased(apName, apName1);
+              if (!a) adjCountNew++;
+              return ! a; } );
+            console.log(apName, APid2Name(apName));
+            log_adjAPsa(adjs);
+            let trace_count = 1;
             d3.keys(za).forEach(
               function(markerName)
               {
@@ -2143,7 +2217,13 @@ for each AP
                 {
                   let mi = mas[i],
                   APs = markerAPs[mi];
-                  // is there an intersection of adjs with APs
+                  if (APs === undefined)
+                  {
+                    if (false && trace_count-- > 0)
+                      console.log("collateStacksA", "APs === undefined", apName, adjs, markerName, marker_, i, mi, markerAPs);
+                  }
+                  else
+                    // is there an intersection of adjs with APs
                   for (let id=0; id<adjs.length; id++)
                   {
                     let aj = adjs[id],
@@ -2161,11 +2241,13 @@ for each AP
                       am_= [am[1-direction], am[0+direction]],
                       [m0, m1, ap0, ap1] = [am_[0].m, am_[1].m, am_[0].ap, am_[1].ap],
                       mmaa = [m0, m1, ap0, ap1, direction, agName];
-                      // console.log("mmaa", mmaa);
+                      if (trace_count-- > 0)
+                        console.log("mmaa", mmaa, ap0.apName, ap1.apName, APid2Name(ap0.apName), APid2Name(ap1.apName));
                       // aliased[ap0][ap1][m0][m1] = mmaa;
                       /* objPut() can initialise aliased, but that is done above,
                        * needed by filter, so result is not used. */
                       objPut(aliased, mmaa, ap0.apName, ap1.apName, m0, m1);
+                      pathCount++;
                     }
                   }
                 }
@@ -2173,6 +2255,7 @@ for each AP
               });
           }
         });
+      console.log("adjCount", adjCount, adjCountNew, pathCount);
       // uses (calculated in) collateAdjacentAPs() : adjAPs, collateStacksA() : aliased.
       filterPaths();
     }
@@ -2221,6 +2304,7 @@ for each AP
         });
       };
       d3.keys(adjAPs).forEach(selectCurrentAdjPaths);
+      console.log("filterPaths", put.length);
     }
 
     /**
@@ -2430,7 +2514,7 @@ for each AP
       let [marker0, marker1, a0, a1] = mmaa;
       let p = [];
       p[0] = patham(a0.apName, a1.apName, marker0, marker1);
-      // console.log("pathU", mmaa, a0.mapName, a1.mapName, p[0]);
+       console.log("pathU", mmaa, a0.mapName, a1.mapName, p[0]);
       return p;
     }
 
@@ -3162,6 +3246,7 @@ for each AP
       // console.log("pathUpdate");
       tracedApScale = {};  // re-enable trace
       let g = foreground.selectAll("g");
+      let gn;
       if (unique_1_1_mapping)
       {
         if (trace_path)
@@ -3174,7 +3259,7 @@ for each AP
           console.log("pathData.length === 0");
         }
         g.exit().remove();
-        let gn = g.enter().append("g");
+        gn = g.enter().append("g");
           gn
           .merge(g)
             .attr("class", pathClass);
@@ -3195,24 +3280,39 @@ for each AP
        * Here the SVG line string is calculated by path_ from the parent g data,
        * and the attr d function is identity (I) to copy the path datum.
        */
-      gd = g.selectAll("path").data(path_/*, keyFn*/);
+      gd = gn/*g*/.selectAll("path").data(path_/*, keyFn*/);
+      let en = gd.enter();
       if (trace_stack > 1)
       {
         let ex = gd.exit();
         if (ex.size())
           console.log("gd.exit()", ex);
-        let en = gd.enter();
         if (en.size())
           console.log("gd.enter()", en);
       }
       gd.exit().remove();
-      gd.enter().append("path");
+      let pa =
+      gn.append("path");
+      if (pathData.length > 0 &&  g.size() === 0)
+      {
+        console.log("pathUpdate", pathData.length, g.size(), gd.enter().size(), t);
+      }
       // .merge() ...
       if (t === undefined) {t = d3; }
+      if (true)
+      {
+        pa.attr("d", I)
+        pa
+        .on("mouseover",handleMouseOver)
+        .on("mouseout",handleMouseOut);
+      }
+      else
+      {
       t.selectAll(".foreground path").attr("d", function(d) { return d; });
       d3.selectAll(".foreground > g > path")
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
+      }
 	pathColourUpdate(gd);
     }
     /** Get the markerName of a path element from its parent element's data.
@@ -3366,7 +3466,6 @@ for each AP
           let la = li_.enter().append("li");
           // console.log(la);
           let li = la.merge(li_);
-          function I(d){ return d; };
           li.html(I);
           li.style("color", function(d) {
             // console.log("color", d);
