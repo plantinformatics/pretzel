@@ -482,7 +482,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /*------------------------------------------------------------------------*/
     const trace_stack = 1;
     const trace_alias = 1;
-    const trace_path = 1;
+    const trace_path = 0;
     const trace_path_colour = 0;
     /*------------------------------------------------------------------------*/
 
@@ -2114,6 +2114,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           }
         }
       }
+      if (trace_stack > 1)
       log_adjAPs(adjAPs);
     }
     function APid2Name(APid)
@@ -3170,6 +3171,7 @@ for each AP
           // st.duration(dragTransitionTime);
           st.attr("transform", Stack.prototype.apTransformO);
           // zoomed effects transform via path() : apTransform.
+          if (trace_path === 0)
            pathUpdate(t /*st*/);
           //Do we need to keep the brushed region when we drag the AP? probably not.
           //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
@@ -3280,7 +3282,7 @@ for each AP
        * Here the SVG line string is calculated by path_ from the parent g data,
        * and the attr d function is identity (I) to copy the path datum.
        */
-      gd = gn/*g*/.selectAll("path").data(path_/*, keyFn*/);
+      gd = g/*gn*/.selectAll("path").data(path_/*, keyFn*/);
       let en = gd.enter();
       if (trace_stack > 1)
       {
@@ -3292,16 +3294,22 @@ for each AP
       }
       gd.exit().remove();
       let pa =
-      gn.append("path");
-      if (pathData.length > 0 &&  g.size() === 0)
+      en.append("path");
+      if (trace_path && pathData.length > 0 &&  g.size() === 0)
       {
         console.log("pathUpdate", pathData.length, g.size(), gd.enter().size(), t);
       }
+      let gp;
+      if (pathData.length != (gp = d3.selectAll(".foreground > g > path")).size())
+      {
+        console.log("gp.size()", gp.size());
+      }
+
       // .merge() ...
       if (t === undefined) {t = d3; }
       if (true)
       {
-        pa.attr("d", I)
+        pa.attr("d", I);
         pa
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
