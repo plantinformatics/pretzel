@@ -35,7 +35,7 @@ sudo apt-get install nodejs npm
 Clone the Github repository:
 
 ```
-git clone https://github.com/Seanli52/Dav127.git
+git clone https://github.com/gabrielkg/Dav127.git
 ```
 
 ### Install Ember dependencies
