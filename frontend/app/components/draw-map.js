@@ -242,6 +242,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let collateStacks = unique_1_1_mapping === 3 ? collateStacksA : collateStacks1;
     /** look at aliases in adjacent APs both left and right (for unique_1_1_mapping = 3) */
     let adjacent_both_dir = true;
+		/** A simple mechanism for selecting a small percentage of the
+		 * physical maps, which are inconveniently large for debugging.
+		 * This will be replaced by the ability to request subsections of
+		 * chromosomes in API requests.
+		 */
+		const filter_location = true;
 
     /** Apply colours to the paths according to their marker name (datum); repeating ordinal scale.  */
     let use_path_colour_scale = 4;
@@ -295,7 +301,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // console.log(ap, cmName[ap]);
       d3.keys(myData[ap]).forEach(function(marker) {
         let m = z[ap][marker];
-        if (m.location > 2000000)
+				// alternate filter, suited to physical maps : m.location > 2000000
+        if (filter_location && (markerTotal & 0xff))
           delete z[ap][marker];
         else
         {
@@ -2515,6 +2522,7 @@ for each AP
       let [marker0, marker1, a0, a1] = mmaa;
       let p = [];
       p[0] = patham(a0.apName, a1.apName, marker0, marker1);
+			if (trace_path > 1)
        console.log("pathU", mmaa, a0.mapName, a1.mapName, p[0]);
       return p;
     }
@@ -3249,8 +3257,8 @@ for each AP
       tracedApScale = {};  // re-enable trace
       let g = foreground.selectAll("g");
       let gn;
-      if (unique_1_1_mapping)
-      {
+      /* if (unique_1_1_mapping)
+      {*/
         if (trace_path)
         console.log("pathUpdate() pathData", pathData.length, g.size()); // , pathData
         g = g.data(pathData);
@@ -3262,10 +3270,12 @@ for each AP
         }
         g.exit().remove();
         gn = g.enter().append("g");
+      let pa =
+      gn/*en*/.append("path");
           gn
           .merge(g)
             .attr("class", pathClass);
-      }
+      //}
       let
       path_ = unique_1_1_mapping ? pathU : path,
        /** The data of g is marker name, data of path is SVG path string. */
@@ -3282,7 +3292,9 @@ for each AP
        * Here the SVG line string is calculated by path_ from the parent g data,
        * and the attr d function is identity (I) to copy the path datum.
        */
-      gd = g/*gn*/.selectAll("path").data(path_/*, keyFn*/);
+      gd = /*g.selectAll("path")*/gn.data(path_/*, keyFn*/);
+			if (false)
+			{
       let en = gd.enter();
       if (trace_stack > 1)
       {
@@ -3293,8 +3305,7 @@ for each AP
           console.log("gd.enter()", en);
       }
       gd.exit().remove();
-      let pa =
-      en.append("path");
+			}
       if (trace_path && pathData.length > 0 &&  g.size() === 0)
       {
         console.log("pathUpdate", pathData.length, g.size(), gd.enter().size(), t);
@@ -3302,14 +3313,14 @@ for each AP
       let gp;
       if (pathData.length != (gp = d3.selectAll(".foreground > g > path")).size())
       {
-        console.log("gp.size()", gp.size());
+        console.log("pathData.length", pathData.length, "!= gp.size()", gp.size());
       }
 
       // .merge() ...
       if (t === undefined) {t = d3; }
       if (true)
       {
-        pa.attr("d", I);
+        gd/*pa*/.attr("d", I);
         pa
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
