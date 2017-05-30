@@ -93,7 +93,8 @@ And Ember:
 
 ```
 cd frontend
-ember serve
+./node_modules/ember-cli/bin/ember s
+# or ember s if Ember installed globally
 ```
 
 ### Checking things are running
