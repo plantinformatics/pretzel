@@ -307,12 +307,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       d3.keys(myData[ap]).forEach(function(marker) {
         let m = z[ap][marker];
 				// alternate filter, suited to physical maps : m.location > 2000000
-        if (filter_location && (markerTotal & 0xff))
+        if ((markerTotal++ & 0x3) && filter_location)
           delete z[ap][marker];
         else
         {
           d3Markers.add(marker);
-          markerTotal++;
+          // markerTotal++;
 
         /** This implementation of aliases was used initially.
          * The marker is simply duplicated (same location, same AP) for each alias.
