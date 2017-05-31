@@ -247,7 +247,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 		 * This will be replaced by the ability to request subsections of
 		 * chromosomes in API requests.
 		 */
-		const filter_location = true;
+		const filter_location = false;
+    /** true means the <path> datum is the text of the SVG line, otherwise it is
+     * the "mmaa" data and the "d" attr is the text of the SVG line.
+     * @see markerNameOfPath().
+     */
+    const pathDataIsLine = false;
 
     /** Apply colours to the paths according to their marker name (datum); repeating ordinal scale.  */
     let use_path_colour_scale = 4;
@@ -1480,6 +1485,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     foreground = svgContainer.append("g") // foreground has as elements "paths" that correspond to markers
                 .attr("class", "foreground");
+    if (false)
     foreground
                 // this is now duplicated in pathUpdate(), and can be factored out here
                 .selectAll("g")
@@ -1760,7 +1766,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * @param this  path element
      */
     function handleMouseOver(d){
-      //console.log(pathMarkers[d]);
+      let sLine, pathMarkersHash;
+      if (pathDataIsLine)
+      {
+        pathMarkersHash = pathMarkers[d];
+      }
+      else
+      {
+        sLine = this.getAttribute("d");
+        pathMarkersHash = pathMarkers[sLine];
+      }
+      // console.log(d, markerNameOfData(d), sLine, pathMarkersHash);
        let t = d3.transition()
                  .duration(800)
                  .ease(d3.easeElastic);
@@ -1774,8 +1790,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
          .style("width","auto")
          .style("opacity", 0.9)
          .style("display","inline");  
-       Object.keys(pathMarkers[d]).map(function(a){
-         let hoverExtraText = pathMarkers[d][a];
+       Object.keys(pathMarkersHash).map(function(a){
+         let hoverExtraText = pathMarkersHash[a];
          if (hoverExtraText === 1) hoverExtraText = "";
          listMarkers = listMarkers + a + hoverExtraText + "<br />";
        });
@@ -2519,6 +2535,8 @@ for each AP
      * @param mmaa  [marker0, marker1, a0, a1]
      */
     function pathU(mmaa) {
+      if ((mmaa === undefined) || (mmaa.length === undefined))
+      { console.log("pathU", this, mmaa); debugger; }
       let [marker0, marker1, a0, a1] = mmaa;
       let p = [];
       p[0] = patham(a0.apName, a1.apName, marker0, marker1);
@@ -3269,11 +3287,16 @@ for each AP
           console.log("pathData.length === 0");
         }
         g.exit().remove();
+      if (trace_path)
+      {
+        let gg = foreground.selectAll("g");
+        console.log("gg", gg._groups[0], gg.size());
+      }
         gn = g.enter().append("g");
       let pa =
-      gn/*en*/.append("path");
-          gn
-          .merge(g)
+        gn.append("path");
+          pa
+          //.merge(gn)
             .attr("class", pathClass);
       //}
       let
@@ -3281,7 +3304,7 @@ for each AP
        /** The data of g is marker name, data of path is SVG path string. */
       keyFn =function(d) { let markerName = markerNameOfPath(this); 
                            console.log("keyFn", d, this, markerName); 
-                           return markerName; },
+                           return markerName; };
       /* The mmaa data of path's parent g is accessed from path attribute
        * functions (i.e. style(stroke), classed(reSelected), gKeyFn(), d, etc.);
        * alternately it could be stored in the path's datum and accessed
@@ -3292,9 +3315,9 @@ for each AP
        * Here the SVG line string is calculated by path_ from the parent g data,
        * and the attr d function is identity (I) to copy the path datum.
        */
-      gd = /*g.selectAll("path")*/gn.data(path_/*, keyFn*/);
 			if (false)
 			{
+      let gd = /*g.selectAll("path")*//*gn*/pa.data(path_/*, keyFn*/);
       let en = gd.enter();
       if (trace_stack > 1)
       {
@@ -3308,7 +3331,7 @@ for each AP
 			}
       if (trace_path && pathData.length > 0 &&  g.size() === 0)
       {
-        console.log("pathUpdate", pathData.length, g.size(), gd.enter().size(), t);
+        console.log("pathUpdate", pathData.length, g.size(), gn.enter().size(), t);
       }
       let gp;
       if (pathData.length != (gp = d3.selectAll(".foreground > g > path")).size())
@@ -3320,7 +3343,12 @@ for each AP
       if (t === undefined) {t = d3; }
       if (true)
       {
-        gd/*pa*/.attr("d", I);
+        /** attr d function has not changed, but the data has.
+         * even where the datum is the same, the axes may have moved.
+         * So update all paths.
+         */
+        let p1 = foreground.selectAll("path"); // pa
+        p1.attr("d", pathDataIsLine ? I : path_);
         pa
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
@@ -3332,19 +3360,25 @@ for each AP
         .on("mouseover",handleMouseOver)
         .on("mouseout",handleMouseOut);
       }
-	pathColourUpdate(gd);
+	pathColourUpdate(pa);
     }
-    /** Get the markerName of a path element from its parent element's data.
-     * In the case of using aliases, the parent g's data is [m, m, x, x].
+    /** Get the data corresponding to a path element, from its datum or its parent element's datum.
+     * In the case of using aliases, the parent g's data is [m, m, ap, ap, ...] "mmaa".
+     */
+    function dataOfPath(path)
+    {
+      let pa = pathDataIsLine
+        ? path.parentElement || path._parent /* EnterNode has _parent not parentElement */
+        : path,
+      da = pa.__data__;
+      return da;
+    }
+    /** Get the markerName of a path element, from its corresponding data accessed via dataOfPath().
      */
     function markerNameOfPath(path)
     {
-      let da = path.parentElement.__data__,
-      /** can use markerNameOfData() */
-      markerName =
-        (da.length === 4)  // i.e. unique_1_1_mapping
-        ? da[0]  //  mmaa, i.e. [marker0, marker1, a0, a1]
-        : da;
+      let da = dataOfPath(path),
+      markerName = markerNameOfData(da);
       return markerName;
     }
     /** If markerName has an alias group with a marker with an assigned class (colour) then return the classes.
