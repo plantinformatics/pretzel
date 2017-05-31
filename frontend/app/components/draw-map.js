@@ -1775,6 +1775,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       {
         sLine = this.getAttribute("d");
         pathMarkersHash = pathMarkers[sLine];
+        if ((pathMarkersHash === undefined) && ! pathDataIsLine)
+        {
+          let mmaa = dataOfPath(this),
+          [marker0, marker1, a0, a1] = mmaa;
+          pathMarkerStore(sLine, marker0, marker1, z[a0.apName][marker0], z[a1.apName][marker1]);
+          pathMarkersHash = pathMarkers[sLine];
+        }
       }
       // console.log(d, markerNameOfData(d), sLine, pathMarkersHash);
        let t = d3.transition()
@@ -2587,16 +2594,6 @@ for each AP
       // console.log("markerAliasesText", mN, m, mas, s);
       return s;
     }
-    /**
-     * @param  a0, a1  AP names
-     * @param d0, d1 marker names, i.e. a0:d0, a1:d1.
-     * Iff d1!==undefined, they are connected by an alias.
-     */
-    function patham(a0, a1, d0, d1) {
-      // let [stackIndex, a0, a1] = maga[d];
-      let r;
-
-      let range = [0, yRange];
 
       /** Prepare a tool-tip for the line.
        * The line / path may be either connecting 2 axes, or a tick on one axis;
@@ -2633,6 +2630,17 @@ for each AP
         pathMarkers[sLine][d] = hoverExtraText; // 1;
       }
 
+    /**
+     * @param  a0, a1  AP names
+     * @param d0, d1 marker names, i.e. a0:d0, a1:d1.
+     * Iff d1!==undefined, they are connected by an alias.
+     */
+    function patham(a0, a1, d0, d1) {
+      // let [stackIndex, a0, a1] = maga[d];
+      let r;
+
+      let range = [0, yRange];
+
       /** Filter out those paths that either side locates out of the svg. */
       let lineIn = allowPathsOutsideZoom ||
         (inRangeI(a0, d0, range)
@@ -2648,6 +2656,7 @@ for each AP
           console.log("patham()", d0, d1, cmName[a0].mapName, cmName[a1].mapName, a0, a1, z[a0][d0].location, z[a1][d1].location, sLine);
         }
         r = sLine;
+        if (pathDataIsLine)
         /* Prepare a tool-tip for the line. */
         pathMarkerStore(sLine, d0, d1, z[a0][d0], z[a1][d1]);
       }
