@@ -253,6 +253,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * @see markerNameOfPath().
      */
     const pathDataIsLine = false;
+    /** true means the path datum is not used - its corresponding data is held in its parent g
+     */
+    const pathDataInG = true;
 
     /** Apply colours to the paths according to their marker name (datum); repeating ordinal scale.  */
     let use_path_colour_scale = 4;
@@ -493,8 +496,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
     /*------------------------------------------------------------------------*/
     const trace_stack = 1;
-    const trace_alias = 1;
-    const trace_path = 0;
+    const trace_alias = 2;
+    const trace_path = 2;
     const trace_path_colour = 0;
     /*------------------------------------------------------------------------*/
 
@@ -1462,6 +1465,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         : (unique_1_1_mapping ? pu : d3Markers);
       return p; }
     let pathData = pathDataSwitch();
+    /** class of path or g, @see pathDataInG. currently just endpoint markers, could be agName.  */
     let pathClass = unique_1_1_mapping ? 
       function(d) { let d0=d[0], d1=d[1], c = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
  return c; }
@@ -2112,6 +2116,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           let p = pu[pi]; console.log(p[0], p[1], p[2].mapName, p[3].mapName);
         }
     }
+    function log_mmaa(mmaa)
+    {
+      let     [marker0, marker1, a0, a1, direction, agName] = mmaa,
+      m0 = z[a0.apName][marker0],
+      m1 = z[a1.apName][marker1];
+      console.log(marker0, marker1, a0.mapName, a0.apName, a1.mapName, a1.apName, m0.location, m1.location, direction, agName);
+  }
 
     let adjAPs;
     /** Collate adjacent APs, based on current stack adjacencies.
@@ -2274,6 +2285,7 @@ for each AP
                       mmaa = [m0, m1, ap0, ap1, direction, agName];
                       if (trace_count-- > 0)
                         console.log("mmaa", mmaa, ap0.apName, ap1.apName, APid2Name(ap0.apName), APid2Name(ap1.apName));
+                      // log_mmaa(mmaa);
                       // aliased[ap0][ap1][m0][m1] = mmaa;
                       /* objPut() can initialise aliased, but that is done above,
                        * needed by filter, so result is not used. */
@@ -2317,9 +2329,14 @@ for each AP
     {
       put = [];
       pathData = pathDataSwitch();  // get the new object reference.
+      let trace_path = 1;
       function selectCurrentAdjPaths(a0Name)
       {
+        if (trace_path > 1)
+          console.log("a0Name", a0Name, APid2Name(a0Name));
         adjAPs[a0Name].forEach(function (a1Name) { 
+        if (trace_path > 1)
+          console.log("a1Name", a1Name, APid2Name(a1Name));
           let b;
           if ((b = aliased[a0Name]) && (b = b[a1Name]))
           d3.keys(b).forEach(function (m0) {
@@ -2328,12 +2345,18 @@ for each AP
               let b01=b0[m1];
               let mmaa = b01;
               // filter here, e.g. uniqueness
-              // console.log(put.length, mmaa.length, mmaa[0]);
+              if (trace_path > 1)
+              {
+                console.log(put.length, m0, m1, mmaa.length);
+                log_mmaa(mmaa[0]);
+              }
               put.push.apply(put, mmaa);
             });
           });
         });
       };
+      if (trace_path > 1)
+        console.log("selectCurrentAdjPaths.length", selectCurrentAdjPaths.length);
       d3.keys(adjAPs).forEach(selectCurrentAdjPaths);
       console.log("filterPaths", put.length);
     }
@@ -2549,6 +2572,11 @@ for each AP
       p[0] = patham(a0.apName, a1.apName, marker0, marker1);
 			if (trace_path > 1)
        console.log("pathU", mmaa, a0.mapName, a1.mapName, p[0]);
+      return p;
+    }
+    function pathUg(d) {
+      let mmaa = dataOfPath(this),
+      p = pathU(mmaa);
       return p;
     }
 
@@ -3288,6 +3316,9 @@ for each AP
       {*/
         if (trace_path)
         console.log("pathUpdate() pathData", pathData.length, g.size()); // , pathData
+        if (trace_path > 1)
+          for (let pi=0; pi < pathData.length; pi++)
+            log_mmaa(pathData[pi]);
         g = g.data(pathData);
         if (trace_path)
         console.log("exit", g.exit().size(), "enter", g.enter().size());
@@ -3296,20 +3327,30 @@ for each AP
           console.log("pathData.length === 0");
         }
         g.exit().remove();
-      if (trace_path)
+        function log_foreground_g(selector)
       {
-        let gg = foreground.selectAll("g");
-        console.log("gg", gg._groups[0], gg.size());
+        let gg = foreground.selectAll(selector);
+          console.log("gg", selector, gg._groups[0], gg.size());
+        if (true)
+        {
+        let gg0 = gg._groups[0];
+        for (let gi=0; gi < gg0.length; gi++)
+          log_mmaa(gg0[gi].__data__);
+        }
       }
         gn = g.enter().append("g");
       let pa =
         gn.append("path");
-          pa
-          //.merge(gn)
+      if (! pathDataInG)
+        g.selectAll("path").data(pathData);
+      if (trace_path)
+        log_foreground_g("g > path");
+      (pathDataInG ? gn : pa)
+          //.merge()
             .attr("class", pathClass);
       //}
       let
-      path_ = unique_1_1_mapping ? pathU : path,
+      path_ = unique_1_1_mapping ? (pathDataInG ? pathUg : pathU) : path,
        /** The data of g is marker name, data of path is SVG path string. */
       keyFn =function(d) { let markerName = markerNameOfPath(this); 
                            console.log("keyFn", d, this, markerName); 
@@ -3376,7 +3417,7 @@ for each AP
      */
     function dataOfPath(path)
     {
-      let pa = pathDataIsLine
+      let pa = pathDataInG
         ? path.parentElement || path._parent /* EnterNode has _parent not parentElement */
         : path,
       da = pa.__data__;
@@ -3429,7 +3470,7 @@ for each AP
         /* colour the path if either end has a class mapping defined.
          * if d[0] does not then check d[1].
          */
-	  let da = this.parentElement.__data__;
+	  let da = dataOfPath(this);
         if (use_path_colour_scale === 4)
         {
           if ( (colour === pathColourDefault) && (da.length === 4) /* i.e. unique_1_1_mapping */
@@ -3475,7 +3516,7 @@ for each AP
           /* check if either end (marker name) of the path has a class mapping (e.g. scaffold name) defined.
            * if da[0] does not then check da[1].
            */
-	        let da = this.parentElement.__data__;
+	        let da = dataOfPath(this);
           if ((scaffold === undefined) && (da.length === 4) /* i.e. unique_1_1_mapping */
 	            && (markerName != da[1]))
           {
