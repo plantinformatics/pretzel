@@ -3240,7 +3240,7 @@ for each AP
           // st.duration(dragTransitionTime);
           st.attr("transform", Stack.prototype.apTransformO);
           // zoomed effects transform via path() : apTransform.
-          if (trace_path === 0)
+          if (trace_path < 2)
            pathUpdate(t /*st*/);
           //Do we need to keep the brushed region when we drag the AP? probably not.
           //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
