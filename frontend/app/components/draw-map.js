@@ -496,9 +496,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
     /*------------------------------------------------------------------------*/
     const trace_stack = 1;
-    const trace_alias = 2;
-    const trace_path = 2;
+    const trace_alias = 1;
+    const trace_path = 1;
     const trace_path_colour = 0;
+    /** enable trace of adjacency between axes, and stacks. */
+    const trace_adj = 0;
     /*------------------------------------------------------------------------*/
 
     function Stacked(apName, portion) {
@@ -2202,11 +2204,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       else
       { a0 = apName1; a1 = apName; }
       let a = aliasedDone[a0] && aliasedDone[a0][a1];
-      if (a)
+      if (trace_adj)
       {
         console.log("getAliased filter", apName, APid2Name(apName), apName1, APid2Name(apName1), a);
       }
-      else
+      if (! a)
       {
         if (aliasedDone[a0] === undefined)
           aliasedDone[a0] = {};
@@ -2245,8 +2247,11 @@ for each AP
               let a = getAliased(apName, apName1);
               if (!a) adjCountNew++;
               return ! a; } );
-            console.log(apName, APid2Name(apName));
-            log_adjAPsa(adjs);
+            if (trace_adj > 1)
+            {
+              console.log(apName, APid2Name(apName));
+              log_adjAPsa(adjs);
+            }
             let trace_count = 1;
             d3.keys(za).forEach(
               function(markerName)
@@ -2261,7 +2266,7 @@ for each AP
                   APs = markerAPs[mi];
                   if (APs === undefined)
                   {
-                    if (false && trace_count-- > 0)
+                    if (trace_adj && trace_count-- > 0)
                       console.log("collateStacksA", "APs === undefined", apName, adjs, markerName, marker_, i, mi, markerAPs);
                   }
                   else
@@ -2283,7 +2288,7 @@ for each AP
                       am_= [am[1-direction], am[0+direction]],
                       [m0, m1, ap0, ap1] = [am_[0].m, am_[1].m, am_[0].ap, am_[1].ap],
                       mmaa = [m0, m1, ap0, ap1, direction, agName];
-                      if (trace_count-- > 0)
+                      if (trace_adj && trace_count-- > 0)
                         console.log("mmaa", mmaa, ap0.apName, ap1.apName, APid2Name(ap0.apName), APid2Name(ap1.apName));
                       // log_mmaa(mmaa);
                       // aliased[ap0][ap1][m0][m1] = mmaa;
@@ -2298,6 +2303,7 @@ for each AP
               });
           }
         });
+      if (trace_adj)
       console.log("adjCount", adjCount, adjCountNew, pathCount);
       // uses (calculated in) collateAdjacentAPs() : adjAPs, collateStacksA() : aliased.
       filterPaths();
@@ -2329,9 +2335,9 @@ for each AP
     {
       put = [];
       pathData = pathDataSwitch();  // get the new object reference.
-      let trace_path = 1;
       function selectCurrentAdjPaths(a0Name)
       {
+        // this could be enabled by trace_adj also
         if (trace_path > 1)
           console.log("a0Name", a0Name, APid2Name(a0Name));
         adjAPs[a0Name].forEach(function (a1Name) { 
@@ -3343,7 +3349,7 @@ for each AP
         gn.append("path");
       if (! pathDataInG)
         g.selectAll("path").data(pathData);
-      if (trace_path)
+      if (trace_path > 1)
         log_foreground_g("g > path");
       (pathDataInG ? gn : pa)
           //.merge()
