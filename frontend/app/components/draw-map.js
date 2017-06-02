@@ -1763,9 +1763,23 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * call to handleMouseOver() with d===null; reproduced by brushing a region
      * on an axis then moving cursor over that axis).
      */
+      setupMouseHover(
     d3.selectAll(".foreground > g > path")
+      );
+
+      /** Setup the functions handleMouse{Over,Out}() on events mouse{over,out}
+       * on elements in the given selection.
+       * The selected path elements are assumed to have __data__ which is either
+       * sLine (svg line text) which identifies the hover text, or mmaa data
+       * which enables hover text to be calculated.
+       * @param pathSelection	<path> elements
+       */
+      function setupMouseHover(pathSelection)
+      {
+	  pathSelection
       .on("mouseover",handleMouseOver)
       .on("mouseout",handleMouseOut);
+      }
 
     /**
      * @param d   SVG path data string of path
@@ -3405,16 +3419,14 @@ for each AP
          */
         let p1 = foreground.selectAll("path"); // pa
         p1.attr("d", pathDataIsLine ? I : path_);
-        pa
-        .on("mouseover",handleMouseOver)
-        .on("mouseout",handleMouseOut);
+          setupMouseHover(pa);
       }
       else
       {
       t.selectAll(".foreground path").attr("d", function(d) { return d; });
+          setupMouseHover(
       d3.selectAll(".foreground > g > path")
-        .on("mouseover",handleMouseOver)
-        .on("mouseout",handleMouseOut);
+	  );
       }
 	pathColourUpdate(pa);
     }
