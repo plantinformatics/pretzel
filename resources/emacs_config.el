@@ -17,7 +17,7 @@
 ;; To use .dir-locals.el, mv it to the root of the git work-tree,
 ;; so it will apply to all .js files in all sub-dirs
 ;;
-;; To use this file : (load-file "$MMV1/resources/emacs_config.el")
+;; To use this file : (load-file "$MMV/resources/emacs_config.el")
 ;;
 ;; The main difference between these two alternatives approaches is  :
 ;; The .dir-locals.el is loaded and applied automatically, whereas the file

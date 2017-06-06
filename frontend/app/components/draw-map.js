@@ -239,7 +239,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * unique_1_1_mapping === 3 enables collateStacksA (asymmetric aliases).
      */
     let unique_1_1_mapping = 3;
-    let collateStacks = unique_1_1_mapping === 3 ? collateStacksA : collateStacks1;
+    // let collateStacks = unique_1_1_mapping === 3 ? collateStacksA : collateStacks1;
     /** look at aliases in adjacent APs both left and right (for unique_1_1_mapping = 3) */
     let adjacent_both_dir = true;
 		/** A simple mechanism for selecting a small percentage of the
@@ -252,7 +252,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * the "mmaa" data and the "d" attr is the text of the SVG line.
      * @see markerNameOfPath().
      */
-    const pathDataIsLine = false;
+    let pathDataIsLine;
     /** true means the path datum is not used - its corresponding data is held in its parent g
      */
     const pathDataInG = true;
@@ -381,7 +381,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     let agClasses = {};
 
-    // results of collateStacks()
+    // results of collateStacks1()
     let
     /** marker : AP - AP    maN[marker] : [[marker, marker]] */
     maN = {},
@@ -1276,6 +1276,49 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return transform;
     };
 
+    /*------------------------------------------------------------------------*/
+
+
+      /** Constructor for Flow type.
+       *  Wrap the connection of data to display via calculations (aliases etc).
+       * These functions operate on an array of Flow-s :  pathUpdate(), collateStacks().
+       *
+      * The data points in a genetic map are markers, in a physical map (chromosome) they are genes.
+      * Here, the term marker is used to mean markers or genes as appropriate.
+      * @param direct	true : match marker names; false : match marker aliases against marker names.
+      * @param unique	require aliases to be unique 1:1; i.e. endpoints (markers or genes) with only 1 mapping in the adjacent AP are shown
+       */
+    function Flow(name, direct, unique, collate) {
+      this.name = name;
+      this.direct = direct;
+      this.unique = unique;
+      this.collate = collate;
+    };
+    Flow.prototype.enabled = true;
+    // Flow.prototype.pathData = undefined;
+    let flows = {
+      // direct path() uses maN, collated by collateStacks1();
+      direct: new Flow("direct", true, false, collateStacks1/*undefined*/),
+      U_alias: new Flow("U_alias", false, false, collateStacks1),	// unique aliases
+      alias: new Flow("alias", false, true, collateStacksA)	// aliases, not filtered for uniqueness.
+    };
+    flows.U_alias.enabled = false;
+    flows.direct.pathData = d3Markers;
+    // if both direct and U_alias are enabled, only 1 should call collateStacks1().
+    if (flows.U_alias.enabled && flows.direct.enabled && (flows.U_alias.collate == flows.direct.collate))
+      flows.direct.collate = undefined;
+
+    function collateStacks()
+    {
+      d3.keys(flows).forEach(function(flowName) {
+        let flow = flows[flowName];
+        if (flow.enabled && flow.collate)
+          flow.collate();
+      });
+    }
+
+    /*------------------------------------------------------------------------*/
+
 
     let zoomSwitch,resetSwitch;
     let zoomed = false;
@@ -1392,7 +1435,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               console.log("domain.length", domain.length);
               path_colour_scale.domain(domain);
             }
-	      pathColourUpdate(undefined);
+	          pathColourUpdate(undefined, undefined);
             scaffoldLegendColourUpdate();
           });
         break;
@@ -1461,17 +1504,22 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     });
 
     //Add foreground lines.
-    /** pathData is the data of .foreground > g, not .foreground > g > path */
+    /** pathData is the data of .foreground > g > g, not .foreground > g > g > path */
     function pathDataSwitch() {
       let p = unique_1_1_mapping === 3 ? put
         : (unique_1_1_mapping ? pu : d3Markers);
       return p; }
     let pathData = pathDataSwitch();
+    d3.keys(flows).forEach(function(flowName) {
+      let flow = flows[flowName];
+      // if flow.collate then flow.pathData has been set above by collateStacks().
+      if (flow.enabled && ! flow.collate)
+        flow.pathData = flow.direct ? d3Markers : (flow.unique ? pu : put);
+    });
     /** class of path or g, @see pathDataInG. currently just endpoint markers, could be agName.  */
-    let pathClass = unique_1_1_mapping ? 
-      function(d) { let d0=d[0], d1=d[1], c = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
+    /** If Flow.direct then use I for pathClass, otherwise pathClassA()  */
+    function pathClassA(d) { let d0=d[0], d1=d[1], c = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
  return c; }
-    : function(d) { return d; };
     /**  If unique_1_1_mapping then path data is mmaa, i.e. [marker0, marker1, a0, a1]
      */
     function markerNameOfData(da)
@@ -1484,13 +1532,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** @see also pu_log()  */
     function data_text(da)
     {
-      return unique_1_1_mapping
+      return unique_1_1_mapping   // ! flow.direct
         ? [da[0], da[1], da[2].mapName, da[3].mapName]
         : da;
     }
 
     foreground = svgContainer.append("g") // foreground has as elements "paths" that correspond to markers
                 .attr("class", "foreground");
+    d3.keys(flows).forEach(function(flowName) {
+      let flow = flows[flowName];
+      flow.g = foreground.append("g")
+        .attr("class", flowName);
+    });
     if (false)
     foreground
                 // this is now duplicated in pathUpdate(), and can be factored out here
@@ -1750,13 +1803,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     //}
 
 
-//d3.selectAll(".foreground g").selectAll("path")
+//d3.selectAll(".foreground > g > g").selectAll("path")
     /* (Don, 2017Mar03) my reading of handleMouse{Over,Out}() is that they are
      * intended only for the paths connecting markers in adjacent APs, not
      * e.g. the path in the y axis. So I have narrowed the selector to exclude
      * the axis path.  More exactly, these are the paths to include and exclude,
      * respectively :
-     *   svgContainer > g.foreground > g.<markerName> >  path
+     *   svgContainer > g.foreground > g.flowName > g.<markerName> >  path
      *   svgContainer > g.stack > g.ap > g.axis#<axisEltId(apName)> > path    (axisEltId() prepends "a"))
      * (apName is e.g. 58b504ef5230723e534cd35c_MyChr).
      * This matters because axis path does not have data (observed issue : a
@@ -1764,7 +1817,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * on an axis then moving cursor over that axis).
      */
       setupMouseHover(
-    d3.selectAll(".foreground > g > path")
+    d3.selectAll(".foreground > g > g > path")
       );
 
       /** Setup the functions handleMouse{Over,Out}() on events mouse{over,out}
@@ -1787,6 +1840,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function handleMouseOver(d){
       let sLine, pathMarkersHash;
+      /** d is either sLine (pathDataIsLine===true) or array mmaa. */
+      let pathDataIsLine = typeof(d) === "string";
       if (pathDataIsLine)
       {
         pathMarkersHash = pathMarkers[d];
@@ -2026,14 +2081,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      *             is marker0 in marker1 alias group ?
      *             (compile hash from each marker alias group)
      *             for AP-AP data is list of ags
+
+     * Results are in pu, which is accessed via Flow.pathData
      */
     function collateStacks1()
     {
       maN = {};
       agam = {};
-      pu = [];
-      /** used by pathUpdate() to access results of this function. */
-      pathData = pathDataSwitch();
+      pu = flows.U_alias.pathData = [];
 
       for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
@@ -2120,7 +2175,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         }
       }
       if (pu)
-        console.log("collateStacks pu", pu.length);
+        console.log("collateStacks", " maN", d3.keys(maN).length, ", pu", pu.length);
       if (false)
         pu_log(pu);
     }
@@ -2134,10 +2189,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
     function log_mmaa(mmaa)
     {
+      if (mmaa !== undefined)
+      {
       let     [marker0, marker1, a0, a1, direction, agName] = mmaa,
       m0 = z[a0.apName][marker0],
       m1 = z[a1.apName][marker1];
-      console.log(marker0, marker1, a0.mapName, a0.apName, a1.mapName, a1.apName, m0.location, m1.location, direction, agName);
+        console.log(marker0, marker1, a0.mapName, a0.apName, a1.mapName, a1.apName, m0.location, m1.location, direction, agName);
+      }
   }
 
     let adjAPs;
@@ -2244,6 +2302,8 @@ for each AP
         add to tree, associate duplicates together (coming back the other way)
           by sorting ap0 & ap1 in lexicographic order.
 	  aliased[ap0][ap1][m0][m1]  : [m0, m1, ap0, ap1, direction, agName]
+
+     * call filterPaths() to collate paths of current adjacencies in put, accessed via Flow.pathData
      */
     function collateStacksA()
     {
@@ -2345,10 +2405,12 @@ for each AP
       A.push(v);
       return a;
     }
+      /**
+     * Results are in put, which is accessed via Flow.pathData
+     */
     function filterPaths()
     {
-      put = [];
-      pathData = pathDataSwitch();  // get the new object reference.
+      put = flows.alias.pathData = [];
       function selectCurrentAdjPaths(a0Name)
       {
         // this could be enabled by trace_adj also
@@ -2575,7 +2637,9 @@ for each AP
           console.log("path", i, markerName, za0, za1, a0, a1);
         r[i] = patham(a0, a1, markerName, undefined);
       }
-      // console.log("path", markerName, mmNm, r);
+       console.log("path", markerName, mmNm, r);
+      if (r.length == 0)
+        r.push("");
       return r;
     }
 
@@ -2696,17 +2760,19 @@ for each AP
       // console.log("path()", stackIndex, a0, allowPathsOutsideZoom, inRangeI(a0), inRangeI(a1), lineIn);
       if (lineIn)
       {
-        let sLine = markerLineS2(a0, a1, d0, d1);
+        /** if d1 is undefined, then its value is d0 : direct connection, not alias. */
+        let d1_ = d1 || d0;
+        let sLine = markerLineS2(a0, a1, d0, d1_);
         let marker0 = d0, marker1 = d1, traceTarget = marker0 == "markerK" && marker1 == "markerK" &&
           cmName[a0].mapName == "MyMap5" && cmName[a1].mapName == "MyMap6";
         if (traceTarget)
         {
-          console.log("patham()", d0, d1, cmName[a0].mapName, cmName[a1].mapName, a0, a1, z[a0][d0].location, z[a1][d1].location, sLine);
+          console.log("patham()", d0, d1, cmName[a0].mapName, cmName[a1].mapName, a0, a1, z[a0][d0].location, d1 && z[a1][d1].location, sLine);
         }
         r = sLine;
         if (pathDataIsLine)
         /* Prepare a tool-tip for the line. */
-        pathMarkerStore(sLine, d0, d1, z[a0][d0], z[a1][d1]);
+        pathMarkerStore(sLine, d0, d1, z[a0][d0], z[a1][d1_]);
       }
       else if (showAll) {
         const markerTickLen = 10; // orig 5
@@ -2834,7 +2900,7 @@ for each AP
      * names + locations of markers which are within the brush extent of the AP.
      * Add circle.apID for those marker locations.
      * Remove circles of markers (on all APs) outside brushExtents[apID].
-     * For elements in '.foreground g', set class .faded iff the marker (which
+     * For elements in '.foreground > g.flowName > g', set class .faded iff the marker (which
      * is the datum of the element) is not in the selectedMarkers[] of any AP.
      *
      * Draw buttons to zoom to the brushExtents (zoomSwitch) or discard the brush : resetSwitch.
@@ -2916,7 +2982,7 @@ for each AP
           return ! sel;
         }
 
-        d3.selectAll(".foreground g").classed("faded", markerNotSelected2);
+        d3.selectAll(".foreground > g > g").classed("faded", markerNotSelected2);
 
         function markerIsSelected1(d){
 	    /** @return true	iff markerName of maNamePos is in keys of selectedMarkers[].
@@ -3032,7 +3098,7 @@ for each AP
         if (false)
         svgContainer.selectAll(".btn").remove();
         svgContainer.selectAll("circle").remove();
-        d3.selectAll(".foreground g").classed("faded", false);
+        d3.selectAll(".foreground > g > g").classed("faded", false);
         selectedMarkers = {};
         me.send('updatedSelectedMarkers', selectedMarkers);
         brushedRegions = {};
@@ -3323,14 +3389,27 @@ for each AP
       logSelectionLevel(s._parents);
     }
 
+    function log_path_data(g)
+    {
+        let p3 = g.selectAll("g").selectAll("path");  // equiv : g.selectAll("g > path")
+        console.log(p3._groups.length && p3._groups[0][0].__data__);
+    }
+
     /** Update the paths connecting markers present in adjacent stacks.
      * @param t undefined, or a d3 transition in which to perform the update.
+     * @param flow  configures the data sources, processing, and output presentation
      */
-    function pathUpdate(t)
+    function pathUpdate_(t, flow)
     {
+      let pathData = flow.pathData,
+      unique_1_1_mapping = flow.direct ? false : (flow.unique ? true : 3),
+      // pathDataInG = true,
+      pathClass = flow.direct ? I : pathClassA;
+      // "exported" to patham().
+      pathDataIsLine = flow.direct;
       // console.log("pathUpdate");
       tracedApScale = {};  // re-enable trace
-      let g = foreground.selectAll("g");
+      let g = flow.g.selectAll("g");
       let gn;
       /* if (unique_1_1_mapping)
       {*/
@@ -3359,12 +3438,25 @@ for each AP
         }
       }
         gn = g.enter().append("g");
-      let pa =
+      let pa;
+			if (flow.direct)
+      {
+        console.log(flow.name, gn.size(), gn);
+        pa = gn.append("path");
+        log_path_data(flow.g);
+        let p2 = flow.g.selectAll("g").selectAll("path").data(path);
+        log_path_data(flow.g);
+        // pa = g.selectAll("path").data(path).enter().append("path");
+      }
+      else
+      {
+        pa =
         gn.append("path");
       if (! pathDataInG)
         g.selectAll("path").data(pathData);
+      }
       if (trace_path > 1)
-        log_foreground_g("g > path");
+        log_foreground_g("g > g > path");
       (pathDataInG ? gn : pa)
           //.merge()
             .attr("class", pathClass);
@@ -3385,9 +3477,9 @@ for each AP
        * Here the SVG line string is calculated by path_ from the parent g data,
        * and the attr d function is identity (I) to copy the path datum.
        */
-			if (false)
+      if (false)
 			{
-      let gd = /*g.selectAll("path")*//*gn*/pa.data(path_/*, keyFn*/);
+      let gd = /*g.selectAll("path")*/gn/*pa*/.data(path_/*, keyFn*/);
       let en = gd.enter();
       if (trace_stack > 1)
       {
@@ -3404,7 +3496,7 @@ for each AP
         console.log("pathUpdate", pathData.length, g.size(), gn.enter().size(), t);
       }
       let gp;
-      if (pathData.length != (gp = d3.selectAll(".foreground > g > path")).size())
+      if (pathData.length != (gp = d3.selectAll(".foreground > g." + flow.name + " > g > path")).size())
       {
         console.log("pathData.length", pathData.length, "!= gp.size()", gp.size());
       }
@@ -3417,18 +3509,28 @@ for each AP
          * even where the datum is the same, the axes may have moved.
          * So update all paths.
          */
-        let p1 = foreground.selectAll("path"); // pa
+        let p1 = flow.g.selectAll("g > path"); // pa
         p1.attr("d", pathDataIsLine ? I : path_);
+        log_path_data(flow.g);
           setupMouseHover(pa);
       }
       else
       {
-      t.selectAll(".foreground path").attr("d", function(d) { return d; });
+      t.selectAll(".foreground > g." + flow.name + "> g > path").attr("d", function(d) { return d; });
           setupMouseHover(
-      d3.selectAll(".foreground > g > path")
+      flow.g.selectAll("g > path")
 	  );
       }
-	pathColourUpdate(pa);
+	    pathColourUpdate(pa, flow);
+    }
+    /** call pathUpdate(t) for each of the enabled flows. */
+    function pathUpdate(t)
+    {
+      d3.keys(flows).forEach(function(flowName) {
+        let flow = flows[flowName];
+        if (flow.enabled)
+          pathUpdate_(t, flow);
+      });
     }
     /** Get the data corresponding to a path element, from its datum or its parent element's datum.
      * In the case of using aliases, the parent g's data is [m, m, ap, ap, ...] "mmaa".
@@ -3469,12 +3571,13 @@ for each AP
         let colourOrdinal = classSet.values().next().value;
       return colourOrdinal;
     }
-      function pathColourUpdate(gd)
+    function pathColourUpdate(gd, flow)
       {
         if (trace_path_colour)
-        console.log("pathColourUpdate", gd, use_path_colour_scale, path_colour_scale_domain_set, path_colour_scale.domain());
+          console.log("pathColourUpdate", gd, flow.name, flow, use_path_colour_scale, path_colour_scale_domain_set, path_colour_scale.domain());
+      let flowSelector = flow ? "." + flow.name : "";
 	  if (gd === undefined)
-	      gd = d3.selectAll(".foreground g").selectAll("path");
+	      gd = d3.selectAll(".foreground > g" + flowSelector + "> g").selectAll("path");
 
       if (use_path_colour_scale && path_colour_scale_domain_set)
         if (use_path_colour_scale === 4)
@@ -3679,7 +3782,7 @@ for each AP
       y[d].brush = d3.svg.brush()
           .y(y[d])
           .on("brush", brush);
-      d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
+      d3.selectAll(".foreground > g > g").selectAll("path").data(path).enter().append("path");
       var t = d3.transition().duration(500);
       t.selectAll(".foreground path").attr("d", function(d) { return d; });
   }
@@ -3690,8 +3793,8 @@ for each AP
       //.datum(d3Data)
       //.call(grid);
      function refresh() {
-    d3.selectAll(".foreground g").selectAll("path").remove();
-    d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
+    d3.selectAll(".foreground > g > g").selectAll("path").remove();
+    d3.selectAll(".foreground > g > g").selectAll("path").data(path).enter().append("path");
     foreground.selectAll("path").attr("d", function(d) { return d; })
   }
 */
@@ -3748,7 +3851,7 @@ for each AP
             console.log("clearScaffoldColours");
             markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
             agClasses = {};
-            pathColourUpdate(undefined);
+            pathColourUpdate(undefined, undefined);
           });
 
   },
