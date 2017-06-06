@@ -25,6 +25,16 @@ svg {
     cursor: move;
 }
 
+.foreground > g.alias > g > path {
+  stroke: #955;
+}
+.foreground > g.U_alias > g > path {
+  stroke: #545;
+}
+.foreground > g.direct > g > path {
+  stroke: #484;
+}
+
 .foreground path {
   fill: none;
   stroke-opacity: .125;
