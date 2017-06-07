@@ -507,7 +507,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /*------------------------------------------------------------------------*/
     const trace_stack = 1;
     const trace_alias = 1;
-    const trace_path = 1;
+    const trace_path = 0;
     const trace_path_colour = 0;
     /** enable trace of adjacency between axes, and stacks. */
     const trace_adj = 0;
@@ -2647,6 +2647,7 @@ for each AP
           console.log("path", i, markerName, za0, za1, a0, a1);
         r[i] = patham(a0, a1, markerName, undefined);
       }
+      if (trace_path > 3)
        console.log("path", markerName, mmNm, r);
       if (r.length == 0)
         r.push("");
@@ -3451,11 +3452,12 @@ for each AP
       let pa;
 			if (flow.direct)
       {
+        if (trace_path)
         console.log(flow.name, gn.size(), gn);
         pa = gn.append("path");
-        log_path_data(flow.g);
+        // log_path_data(flow.g);
         let p2 = flow.g.selectAll("g").selectAll("path").data(path);
-        log_path_data(flow.g);
+        // log_path_data(flow.g);
         // pa = g.selectAll("path").data(path).enter().append("path");
       }
       else
@@ -3521,6 +3523,7 @@ for each AP
          */
         let p1 = flow.g.selectAll("g > path"); // pa
         p1.attr("d", pathDataIsLine ? I : path_);
+        if (trace_path > 3)
         log_path_data(flow.g);
           setupMouseHover(pa);
       }
@@ -3613,7 +3616,8 @@ for each AP
           {
             colourOrdinal = /*markerScaffold[da[0]] ||*/ markerScaffold[da[1]];
           }
-          console.log("markerName", markerName, ", scaffold/class", colourOrdinal);
+          if (trace_path_colour > 2)
+           console.log("markerName", markerName, ", scaffold/class", colourOrdinal);
         }
       if (colourOrdinal)
         classes = colourOrdinal;
@@ -3720,6 +3724,7 @@ for each AP
           if (scaffold)
           {
             c = "strong" + " " + scaffold;
+            if (trace_path_colour > 2)
              console.log("class", scaffold, c, d);
           }
           else if (false)
