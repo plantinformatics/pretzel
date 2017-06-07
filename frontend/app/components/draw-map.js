@@ -3521,7 +3521,8 @@ for each AP
          * even where the datum is the same, the axes may have moved.
          * So update all paths.
          */
-        let p1 = flow.g.selectAll("g > path"); // pa
+        let t1=flow.g.transition(t),
+        p1 = t1.selectAll("g > path"); // pa
         p1.attr("d", pathDataIsLine ? I : path_);
         if (trace_path > 3)
         log_path_data(flow.g);
