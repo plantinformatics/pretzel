@@ -257,7 +257,17 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     const pathDataInG = true;
 
-    /** Apply colours to the paths according to their marker name (datum); repeating ordinal scale.  */
+    /** Apply colours to the paths according to their marker name (datum); repeating ordinal scale.
+     * meaning of values :
+     *  set path_colour_domain to
+     *   1 : markers
+     *   2 : d3.keys(ag)
+     *  colour according to input from colouredMarkers; just the listed markerNames is coloured :
+     *  each line of markerNames is         domain is
+     *   3: markerName                      markerName-s
+     *   4: scaffoldName\tmarkerName        scaffoldName-s
+     *      scaffoldName can be generalised as class name.
+     */
     let use_path_colour_scale = 4;
       let path_colour_scale_domain_set = false;
 
@@ -3571,6 +3581,58 @@ for each AP
         let colourOrdinal = classSet.values().next().value;
       return colourOrdinal;
     }
+    /** Access markerName/s from d or __data__ of parent g of path.
+     * Currently only used when (use_path_colour_scale === 4), but aims to be more general.
+     * Lookup markerScaffold to find class, or if (use_path_colour_scale === 4)
+     * also look up colouredAg().  @see use_path_colour_scale
+
+     * The scaffold of a marker was the first use; this has been generalised to a "class";
+     * i.e. marker names are mapped (via colouredMarkers) to class names.
+     * This function is used by stroke (todo) and class functions of path.
+     * (based on a blend & update of those 2, mostly a copy of stroke).
+     * @param pathElt <path> element which is to be coloured / classed
+     * @param d datum of pathElt
+     */
+    function pathClasses(pathElt, d)
+    {
+        let classes;
+        /** d is path SVG line text if pathDataIsLine */
+        let da = dataOfPath(pathElt);
+        /** similar to : (da.length === 4) or unique_1_1_mapping */
+        let dataIsMmaa = typeof(da) === "object";
+        let markerName = dataIsMmaa ? da[0] : da, // also @see markerNameOfPath(pathElt)
+        colourOrdinal = markerName;
+        if (use_path_colour_scale === 4)
+        {
+          colourOrdinal = markerScaffold[markerName];
+          /* colour the path if either end has a class mapping defined.
+           * if d[0] does not then check d[1].
+           */
+          if ((colourOrdinal === undefined) && dataIsMmaa
+              && (da[0] != da[1]))
+          {
+            colourOrdinal = /*markerScaffold[da[0]] ||*/ markerScaffold[da[1]];
+          }
+          console.log("markerName", markerName, ", scaffold/class", colourOrdinal);
+        }
+      if (colourOrdinal)
+        classes = colourOrdinal;
+      else if (dataIsMmaa)
+        {
+            /* Like stroke function above, after direct lookup of path end
+             * markers in markerScaffold finds no class defined, lookup via
+             * aliases of end markers - transitive.
+             */
+          /* if ! dataIsMmaa then have markerName but no APs; is result of a direct flow,
+           * so colouring by Ag may not be useful.
+           */
+            // collateStacks() / maInMaAG() could record in pu the alias group of the path.
+            let [marker0, marker1, a0, a1] = da;
+            let classSet = colouredAg(a0.apName, marker0) || colouredAg(a1.apName, marker1);
+          classes = classSet;
+        }
+        return classes;
+      }
     function pathColourUpdate(gd, flow)
       {
         if (trace_path_colour)
@@ -3582,29 +3644,31 @@ for each AP
       if (use_path_colour_scale && path_colour_scale_domain_set)
         if (use_path_colour_scale === 4)
       gd.style('stroke', function(d) {
-        /** d is path SVG line text */
-        let markerName = markerNameOfPath(this), colourOrdinal = markerName;
-        if (use_path_colour_scale === 4)
-          colourOrdinal = markerScaffold[markerName];
-	  // path_colour_scale(undefined) maps to pathColourDefault
-        let colour = path_colour_scale(colourOrdinal);
-        /* colour the path if either end has a class mapping defined.
-         * if d[0] does not then check d[1].
-         */
-	  let da = dataOfPath(this);
+        let colour;
+        /** d is path SVG line text if pathDataIsLine */
+        let da = dataOfPath(this);
+        /** similar to : (da.length === 4) or unique_1_1_mapping */
+        let dataIsMmaa = typeof(da) === "object";
+        let markerName = dataIsMmaa ? da[0] : da, // also @see markerNameOfPath(this)
+        colourOrdinal = markerName;
         if (use_path_colour_scale === 4)
         {
-          if ( (colour === pathColourDefault) && (da.length === 4) /* i.e. unique_1_1_mapping */
-	    && (markerName != da[1]))
-        {
-          // after confirming the functionality, the condition structure can be improved, and following repetition factorised.
-          markerName = da[1];
-          colourOrdinal = markerName;
           colourOrdinal = markerScaffold[markerName];
-          colour = path_colour_scale(colourOrdinal);
-        }
-          if (colour === pathColourDefault)
+          /* colour the path if either end has a class mapping defined.
+           * if d[0] does not then check d[1].
+           */
+          if ((colourOrdinal === undefined) && dataIsMmaa
+            && (da[0] != da[1]))
           {
+            colourOrdinal = markerScaffold[da[0]] || markerScaffold[da[1]];
+          }
+        }
+        // path_colour_scale(undefined) maps to pathColourDefault
+        if ((colourOrdinal === undefined) && dataIsMmaa)
+        {
+          /* if ! dataIsMmaa then have markerName but no APs; is result of a direct flow,
+           * so colouring by Ag may not be useful.
+           */
             // collateStacks() / maInMaAG() could record in pu the alias group of the path.
             let [marker0, marker1, a0, a1] = da;
             let classSet = colouredAg(a0.apName, marker0) || colouredAg(a1.apName, marker1);
@@ -3612,9 +3676,9 @@ for each AP
               colourOrdinal = classFromSet(classSet);
             if (false && colourOrdinal)
             console.log(markerName, da, "colourOrdinal", colourOrdinal);
-          }
-          colour = path_colour_scale(colourOrdinal);
         }
+        colour = path_colour_scale(colourOrdinal);
+
         if (false && (colour !== pathColourDefault))  // change false to enable trace
           console.log("stroke", markerName, colourOrdinal, colour);
         return colour;
@@ -3623,8 +3687,12 @@ for each AP
         if (use_path_colour_scale === 3)
 	  gd.classed("reSelected", function(d, i, g) {
           /** d is path SVG line text */
-      let markerName = markerNameOfPath(this);
+      let da = dataOfPath(this);
+      let dataIsMmaa = typeof(da) === "object";
+      let markerName = dataIsMmaa ? da[0] : da;
+
           let pathColour = path_colour_scale(markerName);
+
 	  // console.log(markerName, pathColour, d, i, g);
 	  let isReSelected = pathColour !== pathColourDefault;
 	  return isReSelected;
@@ -3632,27 +3700,15 @@ for each AP
 
         if (use_path_colour_scale === 4)
         gd.attr("class", function(d) {
-          let markerName = markerNameOfPath(this);
-          let scaffold = markerScaffold[markerName], c;
-          /* check if either end (marker name) of the path has a class mapping (e.g. scaffold name) defined.
-           * if da[0] does not then check da[1].
-           */
-	        let da = dataOfPath(this);
-          if ((scaffold === undefined) && (da.length === 4) /* i.e. unique_1_1_mapping */
-	            && (markerName != da[1]))
+          let scaffold, c,
+          classes = pathClasses(this, d);
+          if (typeof(classes) !== "object")
           {
-            markerName = da[1];
-            scaffold = markerScaffold[markerName];
-            /* Like stroke function above, after direct lookup of path end
-             * markers in markerScaffold finds no class defined, lookup via
-             * aliases of end markers - transitive.
-             */
-            if (scaffold === undefined)
-            {
-              let [marker0, marker1, a0, a1] = da;
-              let classSet = colouredAg(a0.apName, marker0) || colouredAg(a1.apName, marker1);
-              if (classSet)
+            scaffold = classes;
+          }
+          else  // classes is a Set
               {
+                let classSet = classes;
                 scaffold = "";
                 for (let cl of classSet)
                 {
@@ -3660,16 +3716,15 @@ for each AP
                 }
                 // console.log("class", da, classSet, scaffold);
               }
-            }
-          }
+
           if (scaffold)
           {
             c = "strong" + " " + scaffold;
-            // console.log("class", markerName, scaffold, c, d);
+             console.log("class", scaffold, c, d);
           }
           else if (false)
           {
-            console.log("class", this, markerName, markerScaffold, scaffold, c, d);
+            console.log("class", this, markerNameOfPath(this), markerScaffold, scaffold, c, d);
           }
 
           return c;
