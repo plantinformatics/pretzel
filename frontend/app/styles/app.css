@@ -25,13 +25,28 @@ svg {
     cursor: move;
 }
 
+/* ---------------------------------- */
+
+/* These selectors are for HTML and SVG respectively; they are bundled so that
+the user can easily edit them at the same time, keeping colours in sync.  */
+div.drawing-controls > div.flowButtons > .flowButton.alias,
 .foreground > g.alias > g > path {
+  /* HTML  */
+  border-color : #955;
+  background-color: #955;
+  /* SVG  */
   stroke: #955;
 }
+div.drawing-controls > div.flowButtons > .flowButton.U_alias,
 .foreground > g.U_alias > g > path {
+  border-color : #545;
+  background-color: #545;
   stroke: #545;
 }
+div.drawing-controls > div.flowButtons > .flowButton.direct,
 .foreground > g.direct > g > path {
+  border-color : #484;
+  background-color: #484;
   stroke: #484;
 }
 
@@ -271,3 +286,23 @@ div.highlightMarker
     -moz-border-radius: 6px 0 6px 6px;
     border-radius: 6px 0 6px 6px;
 }
+/* -------------------------------------------------------------------------- */
+/** style the flow control buttons in  div.drawing-controls */
+div.drawing-controls > div.flowButtons > .flowButton
+{
+    float: left;
+    width: 35px;
+    height: 35px;
+    margin: 0px 5px;
+
+    border-radius: 16px;
+    border-width: 10px;
+    /* border-style: dashed; */
+}
+div.drawing-controls > div.flowButtons > .flowButton.selected
+{
+    border-width: 8px;
+    /* border-style: solid; */
+    border-radius: 0px;
+}
+/* -------------------------------------------------------------------------- */

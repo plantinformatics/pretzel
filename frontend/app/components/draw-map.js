@@ -1303,6 +1303,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       this.direct = direct;
       this.unique = unique;
       this.collate = collate;
+      this.visible = this.enabled;
     };
     Flow.prototype.enabled = true;
     // Flow.prototype.pathData = undefined;
@@ -1312,7 +1313,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       U_alias: new Flow("U_alias", false, false, collateStacks1),	// unique aliases
       alias: new Flow("alias", false, true, collateStacksA)	// aliases, not filtered for uniqueness.
     };
-    flows.U_alias.enabled = false;
+    flows.U_alias.visible = flows.U_alias.enabled = false;
     flows.direct.pathData = d3Markers;
     // if both direct and U_alias are enabled, only 1 should call collateStacks1().
     if (flows.U_alias.enabled && flows.direct.enabled && (flows.U_alias.collate == flows.direct.collate))
@@ -3914,6 +3915,30 @@ for each AP
             agClasses = {};
             pathColourUpdate(undefined, undefined);
           });
+
+    function flows_showControls (parentSelector)
+    {
+      let parent = d3.select(parentSelector);
+      let flowNames = d3.keys(flows);
+      /** button to toggle flow visibilty. */
+      let b = parent.selectAll("div.flowButton")
+        .data(flowNames)
+        .enter().append("div");
+      b
+        .attr("class",  function (flowName) { return flowName;})
+        .classed("flowButton", true)
+        .classed("selected", function (flowName) { let flow = flows[flowName]; return flow.visible;})
+        .on('click', function (flowName) {
+          // toggle visibilty
+          let flow = flows[flowName];
+          console.log('flow click', flow);
+          flow.visible = ! flow.visible;
+          let b1=d3.select(this);
+          b1.classed("selected", flow.visible);
+          flow.g.classed("hidden", ! flow.visible);
+        });
+    };
+    flows_showControls("div.drawing-controls > div.flowButtons");
 
   },
 
