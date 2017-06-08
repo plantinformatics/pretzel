@@ -1313,7 +1313,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       U_alias: new Flow("U_alias", false, false, collateStacks1),	// unique aliases
       alias: new Flow("alias", false, true, collateStacksA)	// aliases, not filtered for uniqueness.
     };
-    flows.U_alias.visible = flows.U_alias.enabled = false;
+    // flows.U_alias.visible = flows.U_alias.enabled = false;
     flows.direct.pathData = d3Markers;
     // if both direct and U_alias are enabled, only 1 should call collateStacks1().
     if (flows.U_alias.enabled && flows.direct.enabled && (flows.U_alias.collate == flows.direct.collate))
