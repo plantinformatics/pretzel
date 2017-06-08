@@ -1,6 +1,5 @@
 import Ember from 'ember';
 import Base from 'ember-simple-auth/authenticators/base';
-// import request from 'ic-ajax';
 
 export default Base.extend({
 
@@ -50,7 +49,7 @@ export default Base.extend({
   },
 
   invalidate: function() {
-    console.log('Invalidate Session....');
+    // console.log('Invalidate Session....');
     return Ember.RSVP.resolve();
   }
 
