@@ -1,0 +1,43 @@
+<div class="navbar" role="navigation">
+  <div class="container-fluid">
+    <div class="navbar-brand">
+      {{#link-to 'index' tagName='a'}}
+        DAV127
+      {{/link-to}}
+    </div>
+    <div class="navbar">
+      <ul class="nav navbar-nav navbar-left">
+        <li>
+          {{#link-to 'about' classNames='' tagName='a'}}
+            About
+          {{/link-to}}
+        </li>
+        {{#if session.isAuthenticated}}
+          <li>
+            {{#link-to 'mapview' classNames='' tagName='a'}}
+              Map Viewer
+            {{/link-to}}
+          </li>
+        {{/if}}
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        {{#if session.isAuthenticated}}
+          <li>
+            <a {{action 'logout'}} class="">
+              Logout
+            </a>
+          </li>
+          {{#if sessionAccount.account}}
+            <p class="navbar-text pull-right">Signed in as {{sessionAccount.account.name}}</p>
+          {{/if}}
+        {{else}}
+          <li>
+            {{#link-to 'login' classNames='' tagName='a'}}
+              Login
+            {{/link-to}}
+          </li>
+        {{/if}}
+      </ul>
+    </div>
+  </div>
+</div>

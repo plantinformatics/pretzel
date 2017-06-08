@@ -1,0 +1,45 @@
+{{! login form; the fields must be named "identification" and "password"; the controller action is "authenticate" }}
+{{!--<a {{action 'authenticateWithFacebook'}} class="btn btn-default" style="cursor: pointer;">Login with Facebook</a>
+<hr/>
+<a {{action 'authenticateWithGoogleImplicitGrant'}} class="btn btn-default" style="cursor: pointer;">Login with Google (Implicit Grant)</a>
+<hr/>--}}
+{{!--<p>or login with OAuth 2.0 <em>Resource Owner Password Credentials</em>:</p>--}}
+<div class="columns">
+  <div class="column is-half is-offset-one-quarter">
+    <div class="box">
+      <h1 class="title">Login to DAV127</h1>
+      <form {{action 'authenticateWithBasic' on='submit'}}>
+        <div class="field">
+          <p class="control has-icons-left">
+            {{input value=identification placeholder='Email Address' class='input'}}
+            <span class="icon is-small is-left">
+              <i class="fa fa-envelope"></i>
+            </span>
+          </p>
+        </div>
+        <div class="field">
+          <p class="control has-icons-left">
+            {{input value=password placeholder='Password' class="input" type='password'}}
+            <span class="icon is-small is-left">
+              <i class="fa fa-lock"></i>
+            </span>
+          </p>
+        </div>
+        <div class="field has-addons has-addons-right">
+          <button type="submit" class="button is-success {{if isProcessing 'is-loading'}}">Login</button>
+        </div>
+      </form>
+    </div>
+
+    {{#if errorMessage}}
+      <article class="message is-danger">
+        <div class="message-body">
+          <strong>Login failed:</strong> {{errorMessage}}
+        </div>
+      </article>
+    {{/if}}
+  </div>
+
+
+</div>
+

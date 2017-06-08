@@ -7,12 +7,16 @@ const Router = Ember.Router.extend({
 });
 
 Router.map(function() {
+  this.route('login');
+  this.route('protected');
+  this.route('auth-error');
+  this.route('callback');
   this.route('about');
   this.route('mapview');
   this.route('geneticmaps', { path: '/geneticmaps' }, function() {
     this.route('geneticmap', { path: '/:geneticmap_id' });
   });
-
+  this.route('404', { path: '/*wildcard' });
 });
 
 export default Router;

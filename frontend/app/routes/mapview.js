@@ -1,6 +1,9 @@
 import Ember from 'ember';
+import AuthenticatedRouteMixin from 'ember-simple-auth/mixins/authenticated-route-mixin';
 
-export default Ember.Route.extend({
+const { Route } = Ember;
+
+export default Ember.Route.extend(AuthenticatedRouteMixin, {
   queryParams: {
     mapsToView: {
       // We want changes in the URL mapsToView query parameter to trigger
