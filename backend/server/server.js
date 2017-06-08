@@ -4,8 +4,13 @@ var loopback = require('loopback');
 var boot = require('loopback-boot');
 var morgan = require('morgan');
 var mongoose = require('mongoose');
+// TODO determine if body parsing is needed
+// when data structures are amalgamated
+var bodyParser = require('body-parser');
 
 var app = module.exports = loopback();
+
+app.use(bodyParser.json({limit: '200mb'}));
 
 app.start = function() {
   // start the web server
@@ -43,12 +48,16 @@ var chromosomeSchema = new mongoose.Schema({
 {
   toJSON: {
     transform: function (doc, ret, options) {
+      console.log('TRANSFORM')
+      console.log('doc', doc)
+      console.log('ret', ret)
+      console.log('options', options)
       ret.id = ret._id;
       if (ret.markers) {
-        for (marker of ret.markers) {
+        ret.markers.forEach( (marker) => {
           marker.id = marker._id;
           delete marker._id;
-        }
+        })
       }
       delete ret._id;
     }
@@ -86,11 +95,11 @@ app.get('/chromosomes/:id', function(req,res) {
   exec(
     function(err, map) {
       let ret = [];
-      for (chr of map.chromosomes) {
+      map.chromosomes.forEach((chr) => {
         if (chr._id == req.params.id) {
           ret = chr
         }
-      }
+      })
       if (map[0]) {
         res.send({'chromosome': ret});
       }
