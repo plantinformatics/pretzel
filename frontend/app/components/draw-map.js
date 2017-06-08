@@ -3936,7 +3936,12 @@ for each AP
           let b1=d3.select(this);
           b1.classed("selected", flow.visible);
           flow.g.classed("hidden", ! flow.visible);
-        });
+        })
+        .attr("title", I)
+        .each(function (flowName) {
+          $(this).tooltip();
+        })
+      ;
     };
     flows_showControls("div.drawing-controls > div.flowButtons");
 
