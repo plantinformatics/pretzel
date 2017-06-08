@@ -1,12 +1,18 @@
 <div class="navbar" role="navigation">
   <div class="container-fluid">
-    <div class="navbar-brand">
+    {{!--<div class="navbar-brand">
       {{#link-to 'index' tagName='a'}}
         DAV127
       {{/link-to}}
-    </div>
+    </div>--}}
     <div class="navbar">
       <ul class="nav navbar-nav navbar-left">
+        <li>
+          {{#link-to 'index' tagName='a'}}
+            DAV127
+          {{/link-to}}
+        </li>
+
         <li>
           {{#link-to 'about' classNames='' tagName='a'}}
             About

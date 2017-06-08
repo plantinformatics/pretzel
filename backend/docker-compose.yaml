@@ -1,0 +1,32 @@
+version: "2"
+# NOTE refer to the accompanying '.env' file in this folder to access
+# environment variables which are passed through to docker-compose.yaml
+# at run time
+services:
+  database: # mongo database
+    image: library/mongo # base image off dockerhub
+    ports:
+      # avoiding setting internal port for simplicity
+      - "${PORT_DB_EXT}:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS}
+  api: # node environment
+    build:
+      dockerfile: ./scripts/Dockerfile
+      args:
+        APP_DEPS: /app/package.json
+    image: dav_127_api # specifying name for built container
+    command: node /app/index.js
+    environment:
+      - APP_ENV=development
+      - WORKER_1=database:3000
+    ports:
+      # avoiding setting internal port for simplicity
+      - "${PORT_API_EXT}:3000"
+    volumes:
+      # volume is mounted for development
+      # will shift to embedded version for deployment
+      - .:/app
+    links:
+     - database
