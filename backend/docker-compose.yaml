@@ -9,18 +9,19 @@ services:
       # avoiding setting internal port for simplicity
       - "${PORT_DB_EXT}:27017"
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS}
+      - "MONGO_INITDB_ROOT_USERNAME=${DB_USER}"
+      - "MONGO_INITDB_ROOT_PASSWORD=${DB_PASS}"
   api: # node environment
     build:
+      context: .
       dockerfile: ./scripts/Dockerfile
-      args:
-        APP_DEPS: /app/package.json
     image: dav_127_api # specifying name for built container
-    command: node /app/index.js
+    command: node /app/server/server.js
     environment:
-      - APP_ENV=development
-      - WORKER_1=database:3000
+      - DB_HOST=database
+      - "DB_PORT=${PORT_DB_EXT}"
+      - "DB_USER=${DB_USER}"
+      - "DB_PASS=${DB_PASS}"
     ports:
       # avoiding setting internal port for simplicity
       - "${PORT_API_EXT}:3000"

@@ -1,5 +1,6 @@
 ﻿'use strict';
 
+var path = require('path');
 var loopback = require('loopback');
 var boot = require('loopback-boot');
 var morgan = require('morgan');
@@ -83,7 +84,9 @@ var geneticmapModel = mongoose.model('geneticmap', geneticmapSchema);
 
 // TODO formalise data structures under loopback to avoid duplicate
 // connection and some code below
-var dbSources = require('./datasources.json')
+var dbSources = require('./datasources.local.js')
+console.log(process.env)
+console.log('DBSOURCES', dbSources)
 var dbMongo = dbSources.mongoDs 
 
 var mongoString = `mongodb://${dbMongo.user}:${dbMongo.password}@${dbMongo.host}:${dbMongo.port}/${dbMongo.database}`
@@ -170,3 +173,7 @@ boot(app, __dirname, function(err) {
   if (require.main === module)
     app.start();
 });
+
+// default and wildcard handling for files
+app.use('/', loopback.static(path.resolve(__dirname, '../client')));
+app.use('*', loopback.static(path.resolve(__dirname, '../client')));

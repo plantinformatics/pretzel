@@ -1,16 +1,3 @@
 {
-  "db": {
-    "name": "db",
-    "connector": "memory"
-  },
-  "mongoDs": {
-    "host": "sc-15-cdc.it.csiro.au",
-    "port": 27017,
-    "url": "",
-    "database": "admin",
-    "password": "dav127",
-    "name": "mongoDs",
-    "user": "dav127",
-    "connector": "mongodb"
-  }
+
 }
