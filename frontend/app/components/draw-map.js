@@ -3937,10 +3937,12 @@ for each AP
           b1.classed("selected", flow.visible);
           flow.g.classed("hidden", ! flow.visible);
         })
+        /* To get the hover text, it is sufficient to add attr title.
+         * jQuery doc (https://jqueryui.com/tooltip/) indicates .tooltip() need
+         * only be called once per document, perhaps that is already done by
+         * d3 / jQuery / bootstrap.
+         */
         .attr("title", I)
-        .each(function (flowName) {
-          $(this).tooltip();
-        })
       ;
     };
     flows_showControls("div.drawing-controls > div.flowButtons");
