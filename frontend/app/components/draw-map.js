@@ -3988,6 +3988,7 @@ for each AP
           flow.visible = ! flow.visible;
           let b1=d3.select(this);
           b1.classed("selected", flow.visible);
+          updateSelections();
           flow.g.classed("hidden", ! flow.visible);
         })
         /* To get the hover text, it is sufficient to add attr title.
@@ -4005,7 +4006,35 @@ for each AP
     flows_showControls(flowButtonsSel);
     configurejQueryTooltip(flowButtonsSel);
 
+    /** After chromosome is added, draw() will update elements, so
+     * this function is used to update d3 selections :
+     * svgRoot, svgContainer, foreground, flows[*].g
+     */
+    function updateSelections() {
+      console.log(
+        "svgRoot (._groups[0][0])", svgRoot._groups[0][0],
+        ", svgContainer", svgContainer._groups[0][0],
+        ", foreground", foreground._groups[0][0]);
+      svgRoot = d3.select('#holder > svg');
+      svgContainer = svgRoot.select('g');
+      foreground = svgContainer.select('g.foreground');
+      console.log(
+        "svgRoot (._groups[0][0])", svgRoot._groups[0][0],
+        ", svgContainer", svgContainer._groups[0][0],
+        ", foreground", foreground._groups[0][0]);
+      d3.keys(flows).forEach(function (flowName) {
+        let flow = flows[flowName];
+        console.log(flowName, " flow.g", flow.g._groups[0][0]);
+        flow.g = foreground.select("g." + flow.name);
+        console.log(flowName, " flow.g", flow.g._groups[0][0]);
+      });
+
+    };
+
   },
+
+
+
 
   didInsertElement() {
   },
