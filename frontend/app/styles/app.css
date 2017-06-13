@@ -66,7 +66,8 @@ div.drawing-controls > div.flowButtons > .flowButton.direct,
     stroke-opacity	800ms ease-in-out,
     fill		800ms ease-in-out;
 
-    stroke : #880044;
+    /* element stroke is set by pathColourUpdate(); override that via !important.  */
+    stroke : #880044	!important;
     stroke-width : 6px;
     stroke-opacity : 1;
     fill : none;
