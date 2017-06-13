@@ -3720,7 +3720,10 @@ for each AP
             if (false && colourOrdinal)
             console.log(markerName, da, "colourOrdinal", colourOrdinal);
         }
-        colour = path_colour_scale(colourOrdinal);
+        if (colourOrdinal === undefined)
+          colour = undefined;
+        else
+          colour = path_colour_scale(colourOrdinal);
 
         if (false && (colour !== pathColourDefault))  // change false to enable trace
           console.log("stroke", markerName, colourOrdinal, colour);
