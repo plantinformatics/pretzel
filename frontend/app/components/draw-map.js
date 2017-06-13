@@ -25,6 +25,54 @@ function breakPoint()
   }
 }
 
+let flowButtonsSel = "div.drawing-controls > div.flowButtons";
+
+
+    function configurejQueryTooltip(node) {
+      d3.selectAll(node + " > div.flowButton")
+        .each(function (flowName) {
+          console.log("configurejQueryTooltip", flowName, this, this.outerHTML);
+          let node_ = this;
+          Ember.$(node_)
+          /*
+           .tooltip({
+            template: '<div class="tooltip" role="tooltip">'
+              + '<div class="tooltip-arrow"></div>'
+              + '<div class="tooltip-inner"></div>'
+              + '</div>',
+            title: "title" + flowName
+          })
+          */
+          /* Either 1. show when shift-click, or 2. when hover
+           * For 1, un-comment this on(click) and popover(show), and comment out trigger & sticky.
+            .on('click', function (event) {
+              console.log(event.originalEvent.type, event.originalEvent.which, event);
+              // right-click : event.originalEvent.which === 3
+              if (event.originalEvent.shiftKey)
+              Ember.$(event.target)
+           */
+                .popover({
+                  trigger : "hover",
+                  sticky: true,
+                  delay: {show: 200, hide: 700},
+                  placement : "auto bottom",
+                  // similar jQuery function .tooltip() takes parameter content in place of template.
+                  // This is using : bower_components/bootstrap/js/popover.js, via bower.json
+              template: '<div class="popover" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div>'
+                + '<button id="Export:' + flowName + '" href="#">Export</button>'
+                + '</div>'
+          /*
+            })
+                .popover("show")
+              ;
+           */
+            });
+        });
+    };
+
+
+
+
 
 export default Ember.Component.extend({
 
@@ -3928,7 +3976,12 @@ for each AP
         .attr("class",  function (flowName) { return flowName;})
         .classed("flowButton", true)
         .classed("selected", function (flowName) { let flow = flows[flowName]; return flow.visible;})
-        .on('click', function (flowName) {
+        .on('click', function (flowName /*, i, g*/) {
+          let event = d3.event;
+          console.log(flowName, event);
+          // sharing click with Export menu
+          if (event.shiftKey)
+            return;
           // toggle visibilty
           let flow = flows[flowName];
           console.log('flow click', flow);
@@ -3943,9 +3996,14 @@ for each AP
          * d3 / jQuery / bootstrap.
          */
         .attr("title", I)
+        .attr("data-id", function (flowName) {
+          return "Export:" + flowName;
+        })
       ;
+
     };
-    flows_showControls("div.drawing-controls > div.flowButtons");
+    flows_showControls(flowButtonsSel);
+    configurejQueryTooltip(flowButtonsSel);
 
   },
 
@@ -3970,3 +4028,4 @@ for each AP
   }
 
 });
+

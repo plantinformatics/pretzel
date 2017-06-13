@@ -306,3 +306,10 @@ div.drawing-controls > div.flowButtons > .flowButton.selected
     border-radius: 0px;
 }
 /* -------------------------------------------------------------------------- */
+/* style the flowButtons popover menu */
+div.drawing-controls > div.flowButtons > div.popover > button
+{
+    width: 100%;
+}
+
+/* -------------------------------------------------------------------------- */
