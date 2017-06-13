@@ -108,9 +108,16 @@ export default Ember.Component.extend({
 
     updateColouredMarkers: function(markers) {
        console.log("updateColouredMarkers in components/draw-map.js");
-	let colouredMarkersChanged = this.get('colouredMarkersChanged');
-	if (colouredMarkersChanged)
-	    colouredMarkersChanged(markers);
+      let self = this;
+      this.get('scroller').scrollVertical('#holder', {
+        duration : 1000,
+        // easing : 'linear', // default is swing
+        offset : -60
+      }).then(function () {
+	      let colouredMarkersChanged = self.get('colouredMarkersChanged');
+	      if (colouredMarkersChanged)
+	        colouredMarkersChanged(markers);
+      });
     },
 
     draw_flipRegion : undefined,
@@ -120,6 +127,10 @@ export default Ember.Component.extend({
 	    if (flipRegion)
 	      flipRegion(markers);
     },
+
+  /*------------------------------------------------------------------------*/
+  
+  scroller: Ember.inject.service(),
 
   /*------------------------------------------------------------------------*/
 
