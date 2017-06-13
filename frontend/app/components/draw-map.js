@@ -1918,15 +1918,10 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         }
       }
       // console.log(d, markerNameOfData(d), sLine, pathMarkersHash);
-       let t = d3.transition()
-                 .duration(800)
-                 .ease(d3.easeElastic);
        let listMarkers  = "";
-       d3.select(this).transition(t)
-          .style("stroke", "#880044")
-          .style("stroke-width", "6px")
-          .style("stroke-opacity", 1)
-          .style("fill", "none");       
+      // stroke attributes of this are changed via css rule for path.hovered
+      d3.select(this)
+        .classed("hovered", true);
        toolTip.style("height","auto")
          .style("width","auto")
          .style("opacity", 0.9)
@@ -1942,15 +1937,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
 
     function handleMouseOut(/*d*/){
-      let t = d3.transition()
-                .duration(800)
-                .ease(d3.easeElastic);
-      //Simple solution is to set all styles to null, which will fix the confusion display with brush. Note: tried css class, maybe my way is not right, but it didn't work.
-      d3.select(this).transition(t)
-           .style("stroke", null)
-           .style("stroke-width", null)
-           .style("stroke-opacity",null)
-           .style("fill", null);
+      // stroke attributes of this revert to default, as hover ends
+      d3.select(this)
+        .classed("hovered", false);
       toolTip.style("display","none");
     }
 
