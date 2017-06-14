@@ -1,5 +1,4 @@
 import Ember from 'ember';
-import config from '../config/environment';
 
 /* global d3 */
 
@@ -35,9 +34,6 @@ export default Ember.Component.extend({
     }
   },
     
-  buildDate: config.APP.buildDate,
-  version: config.APP.version,
-
   resetGrid: function(markers) {
     /** grid was undefined - is this function used ? */
     console.log("resetGrid");
@@ -80,5 +76,5 @@ export default Ember.Component.extend({
 	return markerNamesText;
     }.property('data.[]')
 
-    
+
 });
