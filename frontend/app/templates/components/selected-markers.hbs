@@ -3,6 +3,20 @@
   <button {{action "flipRegion"}}>Flip region</button>
 </div>
 
+<div id="choose_path_colour_scale" class="clearfix"  data-toggle="buttons-checkbox" >
+  Colour according to input from colouredMarkers;
+  (scaffoldName can be generalised as class name.)
+  <table>
+    <tr><th></th><th>#</th><th>each line of markerNames is</th><th>domain is</th></tr>
+    <tr>
+      <td><input type="radio" name="optradioPathColour" data-value="3"></td>
+      <td>3</td><td>markerName</td><td>markerName-s</td></tr>
+    <tr>
+      <td><input type="radio" name="optradioPathColour" data-value="4"></td>
+      <td>4</td><td>scaffoldName TAB markerName</td><td>scaffoldName-s</td></tr>
+  </table>
+</div>
+
 <div class="clearfix" style="margin-bottom: 1em;" >
 </div>
 

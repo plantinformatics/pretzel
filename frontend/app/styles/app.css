@@ -328,3 +328,10 @@ div.drawing-controls > div.flowButtons > div.popover > button
 }
 
 /* -------------------------------------------------------------------------- */
+
+#choose_path_colour_scale > table > tr > th,
+#choose_path_colour_scale > table > tr > td
+{
+  padding: 0 1em;
+}
+/* -------------------------------------------------------------------------- */

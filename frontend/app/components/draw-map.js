@@ -1466,6 +1466,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       case 3 : path_colour_domain = ["unused"];
           this.set('colouredMarkersChanged', function(colouredMarkers_) {
             console.log('colouredMarkers changed, length : ', colouredMarkers_.length);
+            let val;
+            if ((colouredMarkers_.length !== 0) &&
+              ((val = getUsePatchColour()) !== undefined))
+            {
+              use_path_colour_scale = val;
+
             /** depending on use_path_colour_scale === 3, 4 each line of markerNames is 
              * 3: markerName 
              * 4: scaffoldName\tmarkerName
@@ -1507,6 +1513,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             }
 	          pathColourUpdate(undefined, undefined);
             scaffoldLegendColourUpdate();
+            }
           });
         break;
       }
@@ -4033,6 +4040,24 @@ for each AP
       });
 
     };
+
+    function getUsePatchColour()
+    {
+      let inputParent = '#choose_path_colour_scale',
+      inputs = Ember.$(inputParent + ' input'), val;
+      for (let ii = 0;
+           (ii < inputs.length) && (val === undefined);
+           ii++)
+      {
+        if (inputs[ii].checked)
+        {
+          val = inputs[ii].getAttribute("data-value"); // .value;
+          val = parseInt(val);
+        }
+      }
+      console.log(inputParent + " value", val);
+      return val;
+    }
 
   },
 
