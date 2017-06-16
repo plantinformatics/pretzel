@@ -298,6 +298,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * unique_1_1_mapping === 3 enables collateStacksA (asymmetric aliases).
      */
     let unique_1_1_mapping = 3;
+    /** Include direct connections in U_alias, (affects collateStacks1():pu). */
+    let directWithAliases = false;
     // let collateStacks = unique_1_1_mapping === 3 ? collateStacksA : collateStacks1;
     /** look at aliases in adjacent APs both left and right (for unique_1_1_mapping = 3) */
     let adjacent_both_dir = true;
@@ -2197,7 +2199,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               let
                 aliasedM0,
                 aliasedM1 = maInMaAG(a1, a0, marker0),
-              isDirect = z[a1.apName][marker0] !== undefined;
+              isDirect = directWithAliases && z[a1.apName][marker0] !== undefined;
               let differentAlias;
               if (aliasedM1 || showAsymmetricAliases)
               {
@@ -2213,12 +2215,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 if (trace_alias > 1 && differentAlias)
                   console.log("aliasedM1", aliasedM1, "aliasedM0", aliasedM0, marker0, za0[marker0], za1[aliasedM1], aam[a1.apName][marker0], aam[a0.apName][aliasedM1]);
 
-                let d0 = marker0, d1 = aliasedM1,
-                traceTarget = marker0 == "markerK" && aliasedM1 == "markerK" &&
-                  a0.mapName == "MyMap5" && a1.mapName == "MyMap6";
-                if (traceTarget)
+                let d0 = marker0, d1 = aliasedM1;
+                if (false)
                 {
-                  debugger;
+                  let traceTarget = marker0 == "markerK" && aliasedM1 == "markerK" &&
+                    a0.mapName == "MyMap5" && a1.mapName == "MyMap6";
+                  if (traceTarget)
+                    debugger;
                 }
 
                 if (trace_alias > 1)
