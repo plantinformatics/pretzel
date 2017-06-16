@@ -2820,15 +2820,15 @@ for each AP
 
       let range = [0, yRange];
 
+      /** if d1 is undefined, then its value is d0 : direct connection, not alias. */
+      let d1_ = d1 || d0;
       /** Filter out those paths that either side locates out of the svg. */
       let lineIn = allowPathsOutsideZoom ||
         (inRangeI(a0, d0, range)
-         && ((d1===undefined) || inRangeI(a1, d1, range)));
+         && inRangeI(a1, d1_, range));
       // console.log("path()", stackIndex, a0, allowPathsOutsideZoom, inRangeI(a0), inRangeI(a1), lineIn);
       if (lineIn)
       {
-        /** if d1 is undefined, then its value is d0 : direct connection, not alias. */
-        let d1_ = d1 || d0;
         let sLine = markerLineS2(a0, a1, d0, d1_);
         let marker0 = d0, marker1 = d1, traceTarget = marker0 == "markerK" && marker1 == "markerK" &&
           cmName[a0].mapName == "MyMap5" && cmName[a1].mapName == "MyMap6";
@@ -2850,8 +2850,9 @@ for each AP
             pathMarkerStore(r, d, d, z[ai][d], undefined);
           }
         }
+        // could filter these according to inRangeI() as above
         axisMarkerTick(a0, d0);
-        axisMarkerTick(a1, d1 || d0);
+        axisMarkerTick(a1, d1_);
       }
       return r;
     }

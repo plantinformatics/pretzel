@@ -55,6 +55,11 @@
    )
  )
 
+(setq safe-local-variable-values
+      `((create-lockfiles . nil))
+)
+
+
 ;; Define the path project-root-directory.
 ;;
 ;; Testing suggests the directory path-name of dir-locals-set-directory-class
