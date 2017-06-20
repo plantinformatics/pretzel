@@ -19,7 +19,7 @@ services:
     command: node /app/server/server.js
     environment:
       - DB_HOST=database
-      - "DB_PORT=${PORT_DB_EXT}"
+      - "DB_PORT=27017"
       - "DB_USER=${DB_USER}"
       - "DB_PASS=${DB_PASS}"
     ports:
