@@ -1,4 +1,10 @@
 import Ember from 'ember';
+import compileSearch from 'npm:binary-search-bounds';
+console.log("compileSearch", compileSearch);
+import createIntervalTree from 'npm:interval-tree-1d';
+console.log("createIntervalTree", createIntervalTree);
+
+
 
 /* jshint curly : false */
 
@@ -209,6 +215,8 @@ export default Ember.Component.extend({
     let apIDs = d3.keys(myData);
     /** mapName (apName) of each chromosome, indexed by chr name. */
     let cmName = {};
+    /** AP id of each chromosome, indexed by AP name. */
+    let mapChr2AP = {};
 
 /** Plan for layout of stacked axes.
 
@@ -345,7 +353,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let showHoverExtraText = true;
 
     /** Used for d3 attributes whose value is the datum. */
-    function I(d){ return d; };
+    function I(d) { /* console.log(this, d); */ return d; };
 
     let
     /** y[apID] is the scale for AP apID.
@@ -375,6 +383,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       /** ap is chr name */
       let c = myData[ap];
       cmName[ap] = {mapName : c.mapName, chrName : c.chrName};
+      mapChr2AP[c.mapName + ":" + c.chrName] = ap;
       delete c.mapName;
       delete c.chrName;
       // console.log(ap, cmName[ap]);
@@ -526,6 +535,22 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       return l;
     }
 
+    function mapChrName2AP(mapChrName)
+    {
+      let apName = mapChr2AP[mapChrName];
+      return apName;
+    }
+    /** @return chromosome name of AP id. */
+    function apName2Chr(apName)
+    {
+      let c = cmName[apName];
+      return c.chrName;
+    }
+    function makeIntervalName(chrName, interval)
+    {
+      return chrName + "_" + interval[0] + "_" + interval[1];
+    }
+
     /*------------------------------------------------------------------------*/
     /** Set svgContainer.class .dragTransition to make drop zones insensitive during drag transition.
      * @return new drag transition
@@ -568,8 +593,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /*------------------------------------------------------------------------*/
     const trace_stack = 1;
     const trace_alias = 1;
-    const trace_path = 0;
-    const trace_path_colour = 0;
+    const trace_path = 2;
+    const trace_path_colour = 3;
     /** enable trace of adjacency between axes, and stacks. */
     const trace_adj = 0;
     /*------------------------------------------------------------------------*/
@@ -1457,6 +1482,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     var path_colour_scale;
     let markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
+    let intervals = {}, intervalNames = new Set(), intervalTree = {};
     if (use_path_colour_scale)
     {
       let path_colour_domain;
@@ -1485,7 +1511,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 	      path_colour_scale_domain_set = markerNames.length > 0;
             if (use_path_colour_scale === 3)
               path_colour_scale.domain(markerNames);
-            else  //  use_path_colour_scale === 4
+              else if (use_path_colour_scale === 4)
             {
               for (let i=0; i<markerNames.length; i++)
               {
@@ -1513,6 +1539,32 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               console.log("domain.length", domain.length);
               path_colour_scale.domain(domain);
             }
+              else if (use_path_colour_scale === 5)
+              {
+                for (let i=0; i<markerNames.length; i++)
+                {
+                  let col=markerNames[i].split(/[ \t]+/),
+                  mapChrName = col[0], interval = [col[1], col[2]];
+                  let apName = mapChrName2AP(mapChrName);
+                  if (intervals[apName] === undefined)
+                    intervals[apName] = [];
+                  intervals[apName].push(interval);
+                  let intervalName = makeIntervalName(mapChrName, [col[1], + col[2]]);
+                  intervalNames.add(intervalName);
+                }
+                d3.keys(intervals).forEach(function (apName) {
+                  //Build tree
+                  intervalTree[apName] = createIntervalTree(intervals[apName]);
+                });
+
+                // scaffolds and intervalNames operate in the same way - could be merged or factored.
+                let domain = Array.from(intervalNames.keys());
+                console.log("domain.length", domain.length);
+                path_colour_scale.domain(domain);
+              }
+              else if (trace_path_colour > 2)
+                console.log("use_path_colour_scale", use_path_colour_scale);
+
 	          pathColourUpdate(undefined, undefined);
             scaffoldLegendColourUpdate();
             }
@@ -2258,7 +2310,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
     function log_mmaa(mmaa)
     {
-      if (mmaa !== undefined)
+      if ((mmaa === undefined) || (typeof mmaa == "string") || (mmaa.length === undefined))
+        console.log(mmaa);
+      else
       {
       let     [marker0, marker1, a0, a1, direction, agName] = mmaa,
       m0 = z[a0.apName][marker0],
@@ -3442,20 +3496,20 @@ for each AP
     {
       let a=[];
       for (let i=0; i<s.length; i++)
-        a.push(datum ? s[i].__data__ : s[i]);
+        a.push(datum ? s[i] && s[i].__data__ : s[i]);
       return a;
     }
     function logSelectionLevel(sl)
     {
-      if (sl[0].length)
+      if (sl.length && sl[0].length)
       {
-        console.log(fromSelectionArray(sl, false));
-        console.log(fromSelectionArray(sl, true));
+        console.log(fromSelectionArray(sl[0], false));
+        console.log(fromSelectionArray(sl[0], true));
       }
     }
     function logSelection(s)
     {
-      console.log(s, s._groups[0].length, s._parents.length);
+      console.log(s, s._groups.length, s._parents.length);
       logSelectionLevel(s._groups);
       logSelectionLevel(s._parents);
     }
@@ -3514,11 +3568,12 @@ for each AP
       {
         if (trace_path)
         console.log(flow.name, gn.size(), gn);
-        pa = gn.append("path");
+        // pa = gn.append("path");
         // log_path_data(flow.g);
         let p2 = flow.g.selectAll("g").selectAll("path").data(path);
         // log_path_data(flow.g);
-        // pa = g.selectAll("path").data(path).enter().append("path");
+        // pa = g.selectAll("path").data(path)
+          pa = p2.enter().append("path");
       }
       else
       {
@@ -3645,6 +3700,33 @@ for each AP
         let colourOrdinal = classSet.values().next().value;
       return colourOrdinal;
     }
+    /** @param apName could be chrName : marker name is looked up via apName,
+     * but intervals might be defined in terms of chrName; which is currently
+     * the same thing, but potentially 1 chr could be presented by multiple axes.
+     * see apName2Chr();
+     * @return name of interval, as per makeIntervalName()
+     * Later maybe multiple results if intervals overlap.
+     */
+    function locationClasses(apName, markerName)
+    {
+      let classes,
+      m = z[apName][markerName],
+      location = m.location,
+      chrName = apName2Chr(apName),
+      mapChrName = APid2Name(apName) + ":" + chrName,
+      it = intervalTree[apName];
+
+      if (it)
+      //Find all intervals containing query point
+      it.queryPoint(location, function(interval) {
+        /* later return Set or array of classes.  */
+        classes = makeIntervalName(mapChrName, interval);
+        if (trace_path_colour > 2)
+          console.log("locationClasses", "apName", apName, "mapChrName", mapChrName, "markerName", markerName, ", scaffold/class", classes);
+      });
+      
+      return classes;  
+    }
     /** Access markerName/s from d or __data__ of parent g of path.
      * Currently only used when (use_path_colour_scale === 4), but aims to be more general.
      * Lookup markerScaffold to find class, or if (use_path_colour_scale === 4)
@@ -3665,8 +3747,12 @@ for each AP
         /** similar to : (da.length === 4) or unique_1_1_mapping */
         let dataIsMmaa = typeof(da) === "object";
         let markerName = dataIsMmaa ? da[0] : da, // also @see markerNameOfPath(pathElt)
+        colourOrdinal;
+      if (use_path_colour_scale <= 4)
+      {
         colourOrdinal = markerName;
-        if (use_path_colour_scale === 4)
+      }
+        else if (use_path_colour_scale === 4)
         {
           colourOrdinal = markerScaffold[markerName];
           /* colour the path if either end has a class mapping defined.
@@ -3680,7 +3766,29 @@ for each AP
           if (trace_path_colour > 2)
            console.log("markerName", markerName, ", scaffold/class", colourOrdinal);
         }
-      if (colourOrdinal)
+        else if (use_path_colour_scale === 5)
+        {
+          // currently, result of locationClasses() is a string identifying the interval,
+          // and matching the domain value.
+          if (dataIsMmaa)
+          {
+            classes = locationClasses(da[2].apName, markerName)
+              || locationClasses(da[3].apName, da[1]);
+          }
+          else
+          {
+            let APs = markerAPs[markerName], apName;
+            // choose the first chromosome;  may be unique.
+            // if not unique, could colour by the intervals on any of the APs,
+            // but want just the APs which are points on this path.
+            for (apName of APs) { break; }
+            classes = locationClasses(apName, markerName);
+          }
+        }
+      if (classes !== undefined)
+      {
+      }
+      else if (colourOrdinal)
         classes = colourOrdinal;
       else if (dataIsMmaa)
         {
@@ -3700,14 +3808,20 @@ for each AP
       }
     function pathColourUpdate(gd, flow)
       {
-        if (trace_path_colour)
-          console.log("pathColourUpdate", gd, flow.name, flow, use_path_colour_scale, path_colour_scale_domain_set, path_colour_scale.domain());
+      if (trace_path_colour)
+      {
+        console.log
+        ("pathColourUpdate", flow && flow.name, flow,
+         use_path_colour_scale, path_colour_scale_domain_set, path_colour_scale.domain());
+        if (gd && (trace_path_colour > 2))
+          logSelection(gd);
+      }
       let flowSelector = flow ? "." + flow.name : "";
 	  if (gd === undefined)
 	      gd = d3.selectAll(".foreground > g" + flowSelector + "> g").selectAll("path");
 
       if (use_path_colour_scale && path_colour_scale_domain_set)
-        if (use_path_colour_scale === 4)
+        if (use_path_colour_scale >= 4)
       gd.style('stroke', function(d) {
         let colour;
         /** d is path SVG line text if pathDataIsLine */
@@ -3727,6 +3841,13 @@ for each AP
           {
             colourOrdinal = markerScaffold[da[0]] || markerScaffold[da[1]];
           }
+        }
+        else if (use_path_colour_scale === 5)
+        {
+          let classSet = pathClasses(this, d);
+          colourOrdinal = (classSet === undefined) ||
+            (typeof classSet == "string")
+            ? classSet : classFromSet(classSet);
         }
         // path_colour_scale(undefined) maps to pathColourDefault
         if ((colourOrdinal === undefined) && dataIsMmaa)
@@ -3766,7 +3887,7 @@ for each AP
 	  return isReSelected;
     });
 
-        if (use_path_colour_scale === 4)
+        if (use_path_colour_scale >= 4)
         gd.attr("class", function(d) {
           let scaffold, c,
           classes = pathClasses(this, d);
@@ -3789,7 +3910,7 @@ for each AP
           {
             c = "strong" + " " + scaffold;
             if (trace_path_colour > 2)
-             console.log("class", scaffold, c, d);
+              console.log("class", scaffold, c, d, this);
           }
           else if (false)
           {
