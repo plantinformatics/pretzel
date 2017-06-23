@@ -593,8 +593,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /*------------------------------------------------------------------------*/
     const trace_stack = 1;
     const trace_alias = 1;
-    const trace_path = 2;
-    const trace_path_colour = 3;
+    const trace_path = 0;
+    const trace_path_colour = 0;
     /** enable trace of adjacency between axes, and stacks. */
     const trace_adj = 0;
     /*------------------------------------------------------------------------*/
