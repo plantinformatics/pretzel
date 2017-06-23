@@ -119,6 +119,7 @@ app.post('/geneticmaps', (req, res) => {
     chromosomes: chromosomes
   }, function (err, geneticmap) {
     if (err) {
+      console.log("/geneticmaps", name, err);
       res.send("Error");
     }
     else {
