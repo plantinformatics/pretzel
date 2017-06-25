@@ -329,6 +329,19 @@ div.drawing-controls > div.flowButtons > div.popover > button
 
 /* -------------------------------------------------------------------------- */
 
+/* @see setupToggleModePublish() */
+#checkbox-toggleModePublish
+{
+  margin-left: 1.5em;
+}
+
+svg > g.publishMode .btn
+{
+  display: none;
+}
+
+/* -------------------------------------------------------------------------- */
+
 #choose_path_colour_scale > table > tr > th,
 #choose_path_colour_scale > table > tr > td
 {

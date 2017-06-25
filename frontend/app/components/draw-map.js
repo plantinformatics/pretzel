@@ -4099,6 +4099,20 @@ for each AP
             pathColourUpdate(undefined, undefined);
           });
 
+    /** The Zoom & Reset buttons (g.btn) can be hidden by clicking the 'Publish
+     * Mode' checkbox.  This provides a clear view of the visualisation
+     * uncluttered by buttons and other GUI mechanisms
+     */
+    function setupToggleModePublish()
+    {
+	    let checkboxId="checkbox-toggleModePublish",
+      checkbox = Ember.$("#" + checkboxId);
+      checkbox.on('click', function (event) {
+        console.log(checkboxId, checkbox[0].checked, event.originalEvent, svgContainer._groups[0][0]);
+        svgContainer.classed("publishMode", checkbox[0].checked);
+      });
+    }
+
     function flows_showControls (parentSelector)
     {
       let parent = d3.select(parentSelector);
@@ -4140,6 +4154,7 @@ for each AP
     };
     flows_showControls(flowButtonsSel);
     configurejQueryTooltip(flowButtonsSel);
+    setupToggleModePublish();
 
     /** After chromosome is added, draw() will update elements, so
      * this function is used to update d3 selections :
