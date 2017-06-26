@@ -1,5 +1,5 @@
 # gather base linux node image for container
-FROM library/node:6.9.5
+FROM library/node:6-alpine
 
 # copying from local file system context into root of container
 COPY ./package.json .

@@ -45,6 +45,12 @@
   },
   "Client": {
     "dataSource": "mongoDs",
-    "public": true
+    "public": true,
+    "options": {
+      "emailVerificationRequired": true
+    }
+  },
+  "Email": {
+    "dataSource": "email"
   }
 }

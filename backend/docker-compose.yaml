@@ -22,6 +22,8 @@ services:
       - "DB_PORT=27017"
       - "DB_USER=${DB_USER}"
       - "DB_PASS=${DB_PASS}"
+      - "EMAIL_HOST=${EMAIL_HOST}"
+      - "EMAIL_PORT=${EMAIL_PORT}"
     ports:
       # avoiding setting internal port for simplicity
       - "${PORT_API_EXT}:3000"
