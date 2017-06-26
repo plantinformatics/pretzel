@@ -10,6 +10,7 @@ module.exports = function(Client) {
       to: userInstance.email,
       from: 'test@example.com',
       subject: 'Thanks for registering.',
+      host: process.env.API_HOST,
       // template: path.resolve(__dirname, '../../server/views/verify.ejs'),
       text: "<h1>Thanks.</h1>",
       redirect: '/verified',

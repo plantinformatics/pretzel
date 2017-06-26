@@ -41,6 +41,11 @@ boot(app, __dirname, function(err) {
     app.start();
 });
 
-// default and wildcard handling for files
+// default route handling to deliver client files
 app.use('/', loopback.static(path.resolve(__dirname, '../client')));
-app.use('*', loopback.static(path.resolve(__dirname, '../client')));
+// using a regex to avoid wildcard matching of api route,
+// but delivering files when hitting all other routes.
+// this was an issue when providing the confirm token on email
+// validation, as the confirm API request would deliver files
+// instead of hitting the API as desired.
+app.use(/^((?!api).)*$/, loopback.static(path.resolve(__dirname, '../client')));

@@ -7,7 +7,7 @@ services:
     image: library/mongo # base image off dockerhub
     ports:
       # avoiding setting internal port for simplicity
-      - "${PORT_DB_EXT}:27017"
+      - "${DB_PORT_EXT}:27017"
     environment:
       - "MONGO_INITDB_ROOT_USERNAME=${DB_USER}"
       - "MONGO_INITDB_ROOT_PASSWORD=${DB_PASS}"
@@ -18,6 +18,8 @@ services:
     image: dav_127_api # specifying name for built container
     command: node /app/server/server.js
     environment:
+      - "API_HOST=${API_HOST}"
+      - "API_PORT_EXT=${API_PORT_EXT}"
       - DB_HOST=database
       - "DB_PORT=27017"
       - "DB_USER=${DB_USER}"
@@ -25,8 +27,8 @@ services:
       - "EMAIL_HOST=${EMAIL_HOST}"
       - "EMAIL_PORT=${EMAIL_PORT}"
     ports:
-      # avoiding setting internal port for simplicity
-      - "${PORT_API_EXT}:3000"
+      # match ext / int ports for loopback
+      - "${API_PORT_EXT}:${API_PORT_EXT}"
     volumes:
       # volume is mounted for development
       # will shift to embedded version for deployment
