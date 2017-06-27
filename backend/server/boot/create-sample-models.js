@@ -9,7 +9,7 @@ module.exports = function(app) {
   var memoryDs = app.dataSources.db;
   // create all models
   async.parallel({
-    users: async.apply(createUsers),
+    // users: async.apply(createUsers),
     geneticmaps: async.apply(createGeneticmaps),
   }, function(err, results) {
     if (err) throw err;
@@ -18,22 +18,22 @@ module.exports = function(app) {
     });
   });
   // create users
-  function createUsers(cb) {
-    mongoDs.automigrate('Client', function(err) {
-      if (err) return cb(err);
-      var Client = app.models.Client;
-      Client.create([{
-        email: 'foo@bar.com',
-        password: 'foobar',
-      }, {
-        email: 'john@doe.com',
-        password: 'johndoe',
-      }, {
-        email: 'jane@doe.com',
-        password: 'janedoe',
-      }], cb);
-    });
-  }
+  // function createUsers(cb) {
+  //   mongoDs.automigrate('Client', function(err) {
+  //     if (err) return cb(err);
+  //     var Client = app.models.Client;
+  //     Client.create([{
+  //       email: 'foo@bar.com',
+  //       password: 'foobar',
+  //     }, {
+  //       email: 'john@doe.com',
+  //       password: 'johndoe',
+  //     }, {
+  //       email: 'jane@doe.com',
+  //       password: 'janedoe',
+  //     }], cb);
+  //   });
+  // }
   // create coffee shops
   function createGeneticmaps(cb) {
     mongoDs.automigrate('Geneticmap', function(err) {

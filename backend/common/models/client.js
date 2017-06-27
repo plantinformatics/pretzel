@@ -8,7 +8,7 @@ module.exports = function(Client) {
     var options = {
       type: 'email',
       to: userInstance.email,
-      from: 'test@example.com',
+      from: process.env.EMAIL_FROM,
       subject: 'Thanks for registering.',
       host: process.env.API_HOST,
       // template: path.resolve(__dirname, '../../server/views/verify.ejs'),

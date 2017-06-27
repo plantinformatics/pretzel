@@ -7,13 +7,22 @@ export default Component.extend({
   session: service('session'),
 
   errorExists(response) {
+    let mapper = {
+      "LOGIN_FAILED": "Bad username / password. Please try again.",
+      "LOGIN_FAILED_EMAIL_NOT_VERIFIED": "The email has not been verified. Please check your inbox."
+    }
+
     try {
-      if (response.errors && response.errors[0]) {
-        if (response.errors[0]) {
-          return response.errors[0]
+      if (response.error && response.error[0]) {
+        if (response.error[0]) {
+          return response.error[0]
         } else {
           return false
         }
+      } else if (response.error && response.error.code) {
+        let code = response.error.code
+        if (mapper[code]) return mapper[code]
+        else return code
       } else {
         return false
       }
@@ -54,12 +63,15 @@ export default Component.extend({
         this.setProperties({isProcessing: true})
 
         this.get('session').authenticate('authenticator:webgene-local', identification, password).catch((reason) => {
-          // console.log('back in auth', reason)
+          
           this.setProperties({isProcessing: false})
           reason = JSON.parse(reason)
 
-          if (this.errorExists(reason)) {
-            let errorString = "Bad email / password. Please try again."
+          console.log('back in auth', reason)
+
+          let errorString = this.errorExists(reason)
+
+          if (errorString) {
             this.set('errorMessage', errorString);
             this.setProperties({password: ''})
           }
