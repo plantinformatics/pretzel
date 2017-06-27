@@ -1675,28 +1675,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       flow.g = foreground.append("g")
         .attr("class", flowName);
     });
-    if (false)
-    foreground
-                // this is now duplicated in pathUpdate(), and can be factored out here
-                .selectAll("g")
-                .data(pathData) // insert data into path elements (each line of the "map" is a path)
-                .enter()
-                .append("g")
-                .attr("class", pathClass);
     
-    
-    // can use foreground in pathUpdate()
-    if (true)
-      pathUpdate(undefined);
-    else
-    d3Markers.forEach(function(a) { 
-      d3.selectAll("."+a)
-        .selectAll("path")
-        .data(path(a))
-        .enter()
-        .append("path")
-        .attr("d", function(d) { return d; });
-    });
+    pathUpdate(undefined);
 
     // Add a group element for each stack.
     // Stacks contain 1 or more APs.
@@ -2268,7 +2248,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                   console.log("aliasedM1", aliasedM1, "aliasedM0", aliasedM0, marker0, za0[marker0], za1[aliasedM1], aam[a1.apName][marker0], aam[a0.apName][aliasedM1]);
 
                 let d0 = marker0, d1 = aliasedM1;
-                if (false)
+                if (false)  // debugging support, could be removed.
                 {
                   let traceTarget = marker0 == "markerK" && aliasedM1 == "markerK" &&
                     a0.mapName == "MyMap5" && a1.mapName == "MyMap6";
@@ -3109,60 +3089,6 @@ for each AP
 
         d3.selectAll(".foreground > g > g").classed("faded", markerNotSelected2);
 
-        function markerIsSelected1(d){
-	    /** @return true	iff markerName of maNamePos is in keys of selectedMarkers[].
-		@param maNamePos is the hover text : markerName space position. */
-		function markerIsSelected(maNamePos)
-		{
-		    let maName = maNamePos.split(" ")[0], sel1;
-		    sel1 = unique_1_1_mapping ? (maName == d[0] || maName == d[1]) : maName == d;
-		    if (false)
-		    sel1 = unique_1_1_mapping
-			? (maNamePos.includes(d[0]) ||
-			   maNamePos.includes(d[1]))
-			: maNamePos.includes(d);
-		    return sel1;
-		};
-
-         //d3.event.selection [min,min] or [max,max] should consider as non selection.
-         //maybe alternatively use brush.clear or (brush.move, null) given a mouse event
-          // discuss : d3.keys(selectedMarkers). seems equivalent to selectedAps.
-          /// also this could be .some() instead of ! .every():
-          return ! selectedAps.some(function(p) {
-            /** d is markerName, p is apName. */
-              let smp = selectedMarkers[p], sel;
-	      /*
-	      sel = unique_1_1_mapping ?
-		  (smp[d[0]] || smp[d[1]])
-		  : smp[d];*/
-            // maNamePos is e.g. "markerD 0.4".
-	      // note : if unique_1_1_mapping then d+" " does toString on d (mmaa) : calls stacked.toString(), position.toString() for both stack 
-              sel = smp.some(markerIsSelected);
-	      if (sel)
-	      {
-		  console.log(this, d, p, d[0], d[1]);
-	      }
-	      return sel;
-          });
-          // not used
-          return !d3.keys(selectedMarkers).every(function(p) {
-            /** return true if some of the selectedMarkers of apID p contain marker d.  */
-            let smp = selectedMarkers[p];
-            // following seems equivalent to :
-            if (false) { return smp.some(function(maNamePos) { return maNamePos.includes(d+" "); }); }
-
-            //Maybe there is a better way to do the checking. 
-            //d is the marker name, where smp[smi] contains marker name and postion, separated by " "
-            for (var smi=0; smi<smp.length; smi++){
-              if (smp[smi].includes(d+" ")){
-                 return true;
-              }
-            }
-            return false;
-            //return smp.contains(d);
-          });
-        
-        };
 
         svgContainer.selectAll(".btn").remove();
         /** d3 selection of the brushed AP. */
@@ -3220,6 +3146,7 @@ for each AP
 
         // No axis selected so reset fading of paths or circles.
         console.log("brushHelper", selectedAps.length);
+        // some of this may be no longer required
         if (false)
         svgContainer.selectAll(".btn").remove();
         svgContainer.selectAll("circle").remove();
@@ -3563,6 +3490,7 @@ for each AP
         }
       }
         gn = g.enter().append("g");
+      // insert data into path elements (each line of the "map" is a path)
       let pa;
 			if (flow.direct)
       {
@@ -4002,47 +3930,6 @@ for each AP
       stacks.log();
     }
     
-
-  /*function click(d) {
-     if (y[d].flipped) {
-         y[d] = d3.scale.linear()
-              .domain([0,d3.max(Object.keys(z[d]), function(x) { return z[d][x].location; } )])
-              .range([0, yRange]); // set scales for each AP
-          y[d].flipped = false;
-          var t = d3.transition().duration(500);
-          t.selectAll("#"+d).select(".axis")
-            .attr("class", "axis")
-            .each(function(d) { d3.select(this).call(axis.scale(y[d])); })
-      }
-      else {
-          y[d] = d3.scale.linear()
-              .domain([0,d3.max(Object.keys(z[d]), function(x) { return z[d][x].location; } )])
-              .range([yRange, 0]); // set scales for each AP
-          y[d].flipped = true;
-          var t = d3.transition().duration(500);
-          t.selectAll("#"+d).select(".axis")
-            .attr("class", "axis")
-            .each(function(d) { d3.select(this).call(axis.scale(y[d])); })
-      }
-      y[d].brush = d3.svg.brush()
-          .y(y[d])
-          .on("brush", brush);
-      d3.selectAll(".foreground > g > g").selectAll("path").data(path).enter().append("path");
-      var t = d3.transition().duration(500);
-      t.selectAll(".foreground path").attr("d", function(d) { return d; });
-  }
-       let zoomedMarkers = [];
-
-    //console.log(myAps.start + " " + myAps.end);
-    //d3.select('#grid')
-      //.datum(d3Data)
-      //.call(grid);
-     function refresh() {
-    d3.selectAll(".foreground > g > g").selectAll("path").remove();
-    d3.selectAll(".foreground > g > g").selectAll("path").data(path).enter().append("path");
-    foreground.selectAll("path").attr("d", function(d) { return d; })
-  }
-*/
 
     /** flip the value of markers between the endpoints
      * @param markers is an array of marker names, created via (zoom) brush,
