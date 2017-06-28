@@ -1,9 +1,11 @@
 import Ember from 'ember';
+import config from '../../config/environment';
 
 const { inject: { service }, Component } = Ember;
 
 export default Component.extend({
   session: service('session'),
+  endpoint: `{config.ENV.APP.apiHost}/api/Clients/`,
 
   errorExists(response) {
     try {
@@ -27,9 +29,6 @@ export default Component.extend({
   actions: {
     signupWithBasic() {
 
-      let config = Ember.getOwner(this).resolveRegistration('config:environment')
-      let endpoint = config.APP.apiHost + '/api/Clients/'
-
       this.set('errorMessage', '');
 
       let { identification, password } = this.getProperties('identification', 'password');
@@ -43,7 +42,7 @@ export default Component.extend({
         var vm = this
 
         Ember.$.ajax({
-          url: endpoint,
+          url: this.endpoint,
           type: 'POST',
           crossDomain: true,
           data: JSON.stringify({

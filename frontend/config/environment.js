@@ -4,7 +4,7 @@ module.exports = function(environment) {
   var ENV = {
     modulePrefix: 'ember-test',
     environment: environment,
-    apiHost: 'http://localhost:3000',
+    // apiHost: 'http://localhost:5000',
     rootURL: '/',
     locationType: 'auto',
     EmberENV: {
@@ -21,6 +21,7 @@ module.exports = function(environment) {
     APP: {
       // Here you can pass flags/options to your application instance
       // when it is created
+      apiHost: 'http://localhost:5000',
     }
   };
 

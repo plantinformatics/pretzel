@@ -26,6 +26,7 @@ services:
       - "DB_PASS=${DB_PASS}"
       - "EMAIL_HOST=${EMAIL_HOST}"
       - "EMAIL_PORT=${EMAIL_PORT}"
+      - "EMAIL_FROM=${EMAIL_FROM}"
     ports:
       # match ext / int ports for loopback
       - "${API_PORT_EXT}:${API_PORT_EXT}"

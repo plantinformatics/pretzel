@@ -1,0 +1,40 @@
+<div class="columns">
+  <div class="column is-half is-offset-one-quarter">
+    <div class="box">
+      <h1 class="title">Sign Up to DAV127</h1>
+        {{#if isRegistered}}
+          Thank you for registering. You should receive a confirmation email shortly.
+        {{else}}
+          <form {{action 'signupWithBasic' on='submit'}}>
+            <div class="field">
+              <p class="control has-icons-left">
+                {{input value=identification placeholder='Email Address' class='input'}}
+                <span class="icon is-small is-left">
+                  <i class="fa fa-envelope"></i>
+                </span>
+              </p>
+            </div>
+            <div class="field">
+              <p class="control has-icons-left">
+                {{input value=password placeholder='Password' class="input" type='password'}}
+                <span class="icon is-small is-left">
+                  <i class="fa fa-lock"></i>
+                </span>
+              </p>
+            </div>
+            <div class="field has-addons has-addons-right">
+              <button type="submit" class="button is-success {{if isProcessing 'is-loading'}}">Signup</button>
+            </div>
+          </form>
+        {{/if}}
+    </div>
+
+    {{#if errorMessage}}
+      <article class="message is-danger">
+        <div class="message-body">
+          <strong>Sign up failed:</strong> {{errorMessage}}
+        </div>
+      </article>
+    {{/if}}
+  </div>
+</div>
