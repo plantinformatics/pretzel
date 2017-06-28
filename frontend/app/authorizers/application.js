@@ -9,7 +9,7 @@ export default BaseAuthorizer.extend({
   // serverTokenRevocationEndpoint: `${config.apiHost}/Users/logout`
 
   authorize(data, block) {
-    console.log('authorize', data, block)
+    // console.log('authorize', data, block)
 
     block('Authorization', data.token)
   }

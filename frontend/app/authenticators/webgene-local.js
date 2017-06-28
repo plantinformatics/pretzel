@@ -14,7 +14,7 @@ export default Base.extend({
 
   authenticate: function(identification, password) {
     let config = Ember.getOwner(this).resolveRegistration('config:environment')
-    let endpoint = config.APP.apiHost + '/api/Clients/login'
+    let endpoint = config.apiHost + '/api/Clients/login'
     return new Ember.RSVP.Promise((resolve, reject) => {
       Ember.$.ajax({
         url: endpoint,

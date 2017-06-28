@@ -14,11 +14,7 @@ export default Component.extend({
 
     try {
       if (response.error && response.error[0]) {
-        if (response.error[0]) {
-          return response.error[0]
-        } else {
-          return false
-        }
+        return response.error[0]
       } else if (response.error && response.error.code) {
         let code = response.error.code
         if (mapper[code]) return mapper[code]
@@ -30,7 +26,7 @@ export default Component.extend({
       console.error(error)
       // may need more sophisticated handling here depending upon
       // type of error
-      return false
+      return error
     }
   },
 

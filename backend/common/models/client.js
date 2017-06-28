@@ -29,8 +29,8 @@ module.exports = function(Client) {
   });
 
   Client.on('resetPasswordRequest', function (info) {
-    console.log(info.email); // the email of the requested user
-    console.log(info.accessToken.id); // the temp access token to allow password reset
+    // console.log(info.email); // the email of the requested user
+    // console.log(info.accessToken.id); // the temp access token to allow password reset
 
     // var url = 'http://' + config.host + ':' + config.port + '/reset-password';
     var url = 'http://' + process.env.API_HOST + ':' + process.env.API_PORT_EXT + '/reset';
