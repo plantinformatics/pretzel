@@ -11,6 +11,7 @@ Router.map(function() {
   this.route('login');
   this.route('signup');
   this.route('reset-request');
+  this.route('reset-password');
   this.route('verified');
   this.route('protected');
   this.route('auth-error');
