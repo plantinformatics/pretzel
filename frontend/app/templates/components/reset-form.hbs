@@ -8,13 +8,10 @@
     </div>
   {{else}}
     <form {{action 'resetWithBasic' on='submit'}}>
-      <div class="form-group">
-        {{input
-          type='text'
-          value=identification
-          placeholder='Email Address'
-          class='form-control'}}
-      </div>
+      {{auth-input
+        type='text'
+        value=identification
+        placeholder='Email Address'}}
       {{suggest-link
         suggest-text="Need an account?"
         link-name="signup"

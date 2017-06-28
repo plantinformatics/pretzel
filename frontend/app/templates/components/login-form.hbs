@@ -6,20 +6,14 @@
 {{!--<p>or login with OAuth 2.0 <em>Resource Owner Password Credentials</em>:</p>--}}
 {{#auth-form title="Log In" errorMessage=errorMessage}}
   <form {{action 'authenticateWithBasic' on='submit'}}>
-    <div class="form-group">
-      {{input
-        type='text'
-        value=identification
-        placeholder='Email Address'
-        class='form-control'}}
-    </div>
-    <div class="form-group">
-      {{input
-        type='password'
-        value=password
-        placeholder='Password'
-        class='form-control'}}
-    </div>
+    {{auth-input
+      type='text'
+      value=identification
+      placeholder='Email Address'}}
+    {{auth-input
+      type='password'
+      value=password
+      placeholder='Password'}}
     {{suggest-link
       suggest-text="Forgotten your password?"
       link-name="reset-request"

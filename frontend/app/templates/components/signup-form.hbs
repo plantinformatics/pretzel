@@ -8,20 +8,14 @@
     </div>
   {{else}}
     <form {{action 'signupWithBasic' on='submit'}}>
-      <div class="form-group">
-        {{input
-          type='text'
-          value=identification
-          placeholder='Email Address'
-          class='form-control'}}
-      </div>
-      <div class="form-group">
-        {{input
-          type='password'
-          value=password
-          placeholder='Password'
-          class='form-control'}}
-      </div>
+      {{auth-input
+        type='text'
+        value=identification
+        placeholder='Email Address'}}
+      {{auth-input
+        type='password'
+        value=password
+        placeholder='Password'}}
       {{suggest-link
         suggest-text="Already a member?"
         link-name="login"
