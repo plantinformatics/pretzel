@@ -2,12 +2,12 @@
 
 These 2 topics are interconnected by requirements and design considerations.
 
-overview of scope :
+### overview of scope :
 - backend processing as an alternative to front-end calculation of routes / paths between adjacent APs.
 - also how to update the APs without changing the route so the addition of an AP or the deletion of an AP
   will not cause a re-render, will only re-render the particular AP.
 
-Terms :
+### Terms :
 <dl>
   <dt>AP</dt>
   <dd>Axis Piece, i.e. a genetic map or a chromosome.</dd>
@@ -157,9 +157,7 @@ possibly a rectangle on the axis.
 The block could be represented by a parallelogram, which would be a change of implementation.
 but would offer a good hover ability, and colouration.
 
-<img
-src="img/Canvas_2017_06_28_17_26_01-syntenyBlock.png" align="center">
-
+<img src="img/Canvas_2017_06_28_17_26_01-syntenyBlock.png" align="center" width="300" class="float-left" >
 
 
 ### Selecting a pair of adjacent APs, or a synteny block
@@ -188,6 +186,9 @@ so it is better to select the syntenic block by the rectangle representation at 
 Display of the hover menu over one end of a syntenic block can
 highlight the other end of the syntenic block
 to indicate that both ends are affected by the hover menu actions.
+
+<img src="img/syntenyBlockSelection.png" align="center" width="300">
+
 
 Considered having a wedge shape at the edge of the axis
 representing the synteny block, which could be selected,
