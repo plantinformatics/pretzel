@@ -50,13 +50,16 @@
        (tab-width . 2)
        (js-indent-level . 2)
        (js2-basic-offset . 2)
+       (js2-bounce-indent-p . t)
        (js2-pretty-multiline-declarations . nil)
        ))
    )
  )
 
 (setq safe-local-variable-values
-      `((create-lockfiles . nil))
+      `((create-lockfiles . nil)
+	(js2-bounce-indent-p . t)  
+	)
 )
 
 
