@@ -33,6 +33,7 @@ export default Component.extend({
       let endpoint = config.apiHost + '/api/Clients/'
 
       this.set('errorMessage', '');
+      this.set('successMessage', '');
 
       let { identification, password } = this.getProperties('identification', 'password');
       if (!identification || !password) {
@@ -53,6 +54,17 @@ export default Component.extend({
           contentType: 'application/json'
         }).then(function(response){
           // console.log('RESPONSE', response)
+          let codes = {
+            "EMAIL_VERIFY": "Thank you for registering. You should receive a confirmation email shortly.",
+            "EMAIL_UNVERIFIED": "Thank you for registering. Please log in."
+          }
+
+          if (response.code) {
+            vm.set('successMessage', codes[response.code]);
+          } else {
+            vm.set('successMessage', 'Thank you for registering.');
+          }
+
           vm.setProperties({
             isProcessing: false,
             isRegistered: true

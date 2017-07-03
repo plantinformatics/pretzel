@@ -1,5 +1,21 @@
 ﻿'use strict';
 
+// due to loading sequence, EMAIL_ACTIVE is to be set
+// here, as model-config.local.js is loaded before
+// datasources.local.
+// TODO check if necessary once routes integrated
+if (process.env.EMAIL_HOST && 
+    process.env.EMAIL_PORT && 
+    process.env.EMAIL_FROM) {
+  // enable email if host and port provided
+  console.log('Starting process with email service')
+  process.env.EMAIL_ACTIVE = 'true'
+} else {
+  // no mail validation or password reset facilities
+  console.log('No email service specified for process')
+  process.env.EMAIL_ACTIVE = 'false'
+}
+
 var path = require('path');
 var loopback = require('loopback');
 var boot = require('loopback-boot');

@@ -14,7 +14,7 @@ module.exports = function(app) {
   }, function(err, results) {
     if (err) throw err;
     createChromosomes(results.geneticmaps, function(err) {
-      console.log('> models created sucessfully');
+      console.log('Created seed models');
     });
   });
   // create users

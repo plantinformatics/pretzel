@@ -1,5 +1,11 @@
-Thank you for confirming your email. You can now log in to access Dav127.
+{{#auth-form title="Verified" errorMessage=errorMessage}}
 
-{{#link-to 'login' classNames='btn btn-info' tagName='button'}}
-  Login
-{{/link-to}}
+  Thank you for confirming your email. You can now log in.
+  <br>
+
+  {{#link-to 'login' classNames='btn btn-info pull-right' tagName='button'}}
+    Log In
+  {{/link-to}}
+
+{{/auth-form}}
+

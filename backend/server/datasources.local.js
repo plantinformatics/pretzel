@@ -25,26 +25,37 @@ var config = {
     "name": "email",
     "transports": [
       {
-        "type": "smtp",
-        "host": process.env.EMAIL_HOST,
-        "port": process.env.EMAIL_PORT,
+        "type": "smtp"
       }
     ],
     "connector": "mail"
   }
 }
 
-// add the 'secure' bool if not on port 25
-if (parseInt(process.env.EMAIL_PORT) !== 25) {
-  config.email.transports[0].secure = true
+if (process.env.EMAIL_ACTIVE == 'true') {
+  console.log('Assigning email datasource properties')
+  // enable email if host and port provided
+  config.email.transports[0].host = process.env.EMAIL_HOST
+  config.email.transports[0].port = process.env.EMAIL_PORT
+
+  // add the 'secure' bool if not on port 25
+  if (parseInt(process.env.EMAIL_PORT) !== 25) {
+    config.email.transports[0].secure = true
+  }
+
+  // add authentication object if env vars present
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    config.email.transports[0].auth = {
+      "user": process.env.EMAIL_USER,
+      "pass": process.env.EMAIL_PASS
+    }
+  }
+} else {
+  // no mail validation or password reset facilities
+  console.log('No email datasource properties assigned')
 }
 
-// add authentication object if env vars present
-if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-  config.email.transports[0].auth = {
-    "user": process.env.EMAIL_USER,
-    "pass": process.env.EMAIL_PASS
-  }
-}
+// console.log('SET ENVIRONMENT VARIABLES', process.env)
+// console.log('CONFIG', config)
 
 module.exports = config

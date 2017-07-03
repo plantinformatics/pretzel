@@ -52,8 +52,8 @@ var geneticmapModel = mongoose.model('geneticmap', geneticmapSchema);
 // TODO formalise data structures under loopback to avoid duplicate
 // connection and some code below
 var dbSources = require('../datasources.local.js')
-console.log(process.env)
-console.log('DBSOURCES', dbSources)
+// console.log(process.env)
+// console.log('DBSOURCES', dbSources)
 var dbMongo = dbSources.mongoDs 
 
 var mongoString = `mongodb://${dbMongo.user}:${dbMongo.password}@${dbMongo.host}:${dbMongo.port}/${dbMongo.database}`
