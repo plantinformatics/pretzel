@@ -521,6 +521,14 @@ export default Ember.Component.extend({
     {
       return "h" + name;
     }
+    /** recognise any punctuation in m which is not allowed for HTML5 element class name,
+     * and replace with _
+     */
+    function eltClassName(m)
+    {
+      m = m.replace(".", "_");
+      return m;
+    }
 
     /** Check if the given value is a number, i.e. !== undefined and ! isNaN().
      * @param l value to check
@@ -3069,7 +3077,7 @@ export default Ember.Component.extend({
               //y[p](z[p][m].location) is the relative marker position in the svg
               let dot = apS
                 .append("circle")
-                .attr("class", m)
+                .attr("class", eltClassName(m))
                 .attr("cx",0)   /* was o[p], but g.ap translation does x offset of stack.  */
                 .attr("cy",y[p](z[p][m].location))
                 .attr("r",2)
@@ -3077,7 +3085,8 @@ export default Ember.Component.extend({
 
               
             } else {
-              apS.selectAll("circle." + m).remove();
+              let m_ = eltClassName(m);
+              apS.selectAll("circle." + m_).remove();
             }
           });
         });
