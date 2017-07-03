@@ -4,7 +4,8 @@ module.exports = function(environment) {
   var ENV = {
     modulePrefix: 'ember-test',
     environment: environment,
-    apiHost: 'http://localhost:5000',
+    apiHost: '',
+    // apiHost: 'http://localhost:5000',
     rootURL: '/',
     locationType: 'auto',
     EmberENV: {

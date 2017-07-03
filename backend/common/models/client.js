@@ -33,7 +33,7 @@ module.exports = function(Client) {
     // console.log(info.accessToken.id); // the temp access token to allow password reset
 
     // var url = 'http://' + config.host + ':' + config.port + '/reset-password';
-    var url = 'http://' + process.env.API_HOST + ':' + process.env.API_PORT_EXT + '/reset';
+    var url = 'http://' + process.env.API_HOST + ':' + process.env.API_PORT_EXT + '/reset-password';
     var html = 'Click <a href="' + url + '?access_token=' +
         info.accessToken.id + '">here</a> to reset your password';
 
