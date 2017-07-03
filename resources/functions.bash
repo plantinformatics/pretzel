@@ -179,6 +179,37 @@ function aliases_7()
 }
 
 
+#-------------------------------------------------------------------------------
+# Extract data and load from :
+# http://onlinelibrary.wiley.com/doi/10.1111/tpj.13436/full
+# DOI 4: https://doi.org/10.5447/IPK/2016/58 :
+#  2082883 Jun 30 14:57 Updated version (v2) of the Rye Genome Zipper.zip :
+# schmutzr@IPK-GATERSLEBEN.DE/Updated version (v2) of the Rye Genome Zipper/DATA:
+#  14391279 Aug  3  2016 RyeGenomeZipper_v2_chromosomes.tab
+#
+# Filter the data : markers which do not repeat appear in only 1 map, so to
+# get lines between maps, select markers which are repeated.
+#
+# Usage : DOWNLOADS=(path containing the .zip) MMV=.../Dav127  loadRepeats
+function loadRepeats()
+{
+    cd /tmp
+
+    unzip ${DOWNLOADS-~/Downloads}/'Updated version (v2) of the Rye Genome Zipper.zip' 'schmutzr@IPK-GATERSLEBEN.DE/Updated version (v2) of the Rye Genome Zipper/DATA/RyeGenomeZipper_v2_chromosomes.tab'
+    export RGZ_data=$PWD/'schmutzr@IPK-GATERSLEBEN.DE/Updated version (v2) of the Rye Genome Zipper/DATA'
+
+    export RGZ="$RGZ_data/RyeGenomeZipper_v2_chromosomes.tab"
+    tr '\t' '\n' < "$RGZ" | grep "^AK" | sort > R_AK
+    sort  R_AK | uniq -d > R_AK_repeats
+
+    mkdir out_r
+    cd out_r
+
+    fgrep -f ../R_AK_repeats  "$RGZ" | $MMV/resources/tools/tab2json.pl
+
+    mkdir log
+    for i in ?R ; do load_test_data_file $i > log/$i; done
+}
 
 #-------------------------------------------------------------------------------
 
