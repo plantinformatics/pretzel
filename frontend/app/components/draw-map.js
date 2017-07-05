@@ -3846,8 +3846,9 @@ export default Ember.Component.extend({
       if (use_path_colour_scale >= 4)
         gd.attr("class", function(d) {
           let scaffold, c,
-          classes = pathClasses(this, d);
-          if (typeof(classes) !== "object")
+          classes = pathClasses(this, d),
+							simpleClass;
+          if (simpleClass = (typeof(classes) !== "object"))
           {
             scaffold = classes;
           }
@@ -3864,7 +3865,7 @@ export default Ember.Component.extend({
 
           if (scaffold)
           {
-            c = "strong" + " " + scaffold;
+            c = (simpleClass ? "" : "strong" + " ") + scaffold;
             if (trace_path_colour > 2)
               console.log("class", scaffold, c, d, this);
           }
