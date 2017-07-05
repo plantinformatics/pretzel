@@ -19,10 +19,11 @@ var config = {
     ]
   },
   "User": {
-    "dataSource": "mongoDs"
+    "dataSource": "mongoDs",
+    "public": false
   },
   "AccessToken": {
-    "dataSource": "db",
+    "dataSource": "mongoDs",
     "public": false
   },
   "ACL": {
@@ -48,16 +49,16 @@ var config = {
     "dataSource": "mongoDs",
     "public": true
   },
+  "Marker": {
+    "dataSource": "mongoDs",
+    "public": true
+  },
   "Client": {
     "dataSource": "mongoDs",
     "public": true,
     "options": {
-      // "emailVerificationRequired": true
     }
   },
-  // "Email": {
-  //   "dataSource": "email"
-  // }
 }
 
 if (process.env.EMAIL_ACTIVE == 'true') {

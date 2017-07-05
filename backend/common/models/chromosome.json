@@ -17,6 +17,11 @@
       "type": "belongsTo",
       "model": "Geneticmap",
       "foreignKey": ""
+    },
+    "markers": {
+      "type": "hasMany",
+      "model": "Marker",
+      "foreignKey": ""
     }
   },
   "acls": [

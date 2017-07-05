@@ -5,8 +5,8 @@ module.exports = function(environment) {
     modulePrefix: 'ember-test',
     environment: environment,
     apiHost: '',
-    // apiHost: 'http://localhost:5000',
-    apiNamespace: '/api', // adding to the host for API calls
+    apiHost: 'http://localhost:5000',
+    apiNamespace: 'api', // adding to the host for API calls
     // baseURL: '/',
     rootURL: '/',
     locationType: 'auto',
