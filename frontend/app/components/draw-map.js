@@ -521,12 +521,25 @@ export default Ember.Component.extend({
     {
       return "h" + name;
     }
-    /** recognise any punctuation in m which is not allowed for HTML5 element class name,
+    /** recognise any punctuation in m which is not allowed for a selector matching an element class name,
      * and replace with _
+     * Specifically :
+     *   replace . with _,
+     *   prefix leading digit with _
+     *
+     * HTML5 class names allow these forms, so eltClassName() is only required
+     * where the class name will be the target of a selector.
+     * CSS selectors can use \ escaping e.g. to prefix '.', and that works for
+     * d3.select() and Ember.$() selectors (using \\);  for now at least
+     * the simpler solution of replacing '.' with '_' is used.
+     *
+     * A class with a numeric prefix is accepted by HTML5, but not for selectors (CSS, d3 or $),
+     * so eltClassName() is required at least for that.
      */
     function eltClassName(m)
     {
-      m = m.replace(".", "_");
+      m = m.replace(".", "_")
+        .replace(/^([\d])/, "_$1");
       return m;
     }
 
