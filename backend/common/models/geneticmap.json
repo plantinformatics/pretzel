@@ -1,5 +1,6 @@
 {
   "name": "Geneticmap",
+  "description": "High level data structure containing chromosomes",
   "base": "PersistedModel",
   "idInjection": true,
   "options": {
@@ -33,5 +34,11 @@
       "permission": "ALLOW"
     }
   ],
-  "methods": {}
+  "methods": {},
+  "scope": {
+    "include": {
+        "relation": "chromosomes",
+        "limit":1 
+      }
+  }
 }

@@ -4,6 +4,8 @@ import { PartialModel, partial } from 'ember-data-partial-model/utils/model';
 
 export default DS.Model.extend({
   name: attr('string'),
+  // id: attr('string'),
+  geneticmapId: attr('string'),
   //extended: partial('chromosome', 'extended', {
   markers: DS.hasMany('marker', { async: false }),
   //}),

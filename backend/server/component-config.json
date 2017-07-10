@@ -3,6 +3,6 @@
     "mountPath": "/explorer"
   },
   "loopback-component-jsonapi": {
-    "enable": true
+    "enable": false
   }
 }

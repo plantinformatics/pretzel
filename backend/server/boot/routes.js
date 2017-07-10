@@ -122,6 +122,7 @@ module.exports = function(app) {
     });
   });
 
+  // this function is to be replicated within loopback as a remoteMethod
   router.post('/geneticmaps', (req, res) => {
     var name = req.body.geneticmap.name;
     var chromosomes = req.body.geneticmap.chromosomes;

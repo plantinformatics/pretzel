@@ -15,7 +15,7 @@
       "required": true
     },
     "aliases": {
-      "type": "string",
+      "type": "array",
       "required": true
     }
   },

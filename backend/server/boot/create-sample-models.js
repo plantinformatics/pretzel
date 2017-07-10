@@ -34,7 +34,6 @@ module.exports = function(app) {
   //     }], cb);
   //   });
   // }
-  // create coffee shops
   function createGeneticmaps(cb) {
     mongoDs.automigrate('Geneticmap', function(err) {
       if (err) return cb(err);
@@ -52,7 +51,6 @@ module.exports = function(app) {
     });
     console.log('created geneticmap');
   }
-  // create reviews
   function createChromosomes(geneticmaps, cb) {
     mongoDs.automigrate('Chromosome', function(err) {
       if (err) return cb(err);
@@ -70,8 +68,8 @@ module.exports = function(app) {
         name: 'DDDDDDD',
         geneticmapId: geneticmaps[2].id,
       }, {
-          name: 'EEEEEEE',
-          geneticmapId: geneticmaps[2].id,
+        name: 'EEEEEEE',
+        geneticmapId: geneticmaps[2].id,
       }], cb);
     });
     console.log('created geneticmap');

@@ -13,7 +13,6 @@ Router.map(function() {
   this.route('reset-request');
   this.route('reset-password');
   this.route('verified');
-  this.route('protected');
   this.route('auth-error');
   // core app routes
   this.route('callback');
