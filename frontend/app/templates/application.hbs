@@ -3,4 +3,16 @@
   <div class="body">
     {{outlet}}
   </div>
+
+  {{scroll-to
+    href='#holder'
+    label='Top'
+    duration=1000
+    offset=-60
+  }}
+
+  <div class="right floated" style="margin-left:10em;" >
+    Version {{version}}, released on {{buildDate}}
+  </div>
+
 </div>

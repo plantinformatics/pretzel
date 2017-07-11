@@ -1,4 +1,10 @@
 import Ember from 'ember';
+import compileSearch from 'npm:binary-search-bounds';
+console.log("compileSearch", compileSearch);
+import createIntervalTree from 'npm:interval-tree-1d';
+console.log("createIntervalTree", createIntervalTree);
+
+
 
 /* jshint curly : false */
 
@@ -25,52 +31,112 @@ function breakPoint()
   }
 }
 
+let flowButtonsSel = "div.drawing-controls > div.flowButtons";
+
+
+function configurejQueryTooltip(node) {
+  d3.selectAll(node + " > div.flowButton")
+    .each(function (flowName) {
+      console.log("configurejQueryTooltip", flowName, this, this.outerHTML);
+      let node_ = this;
+      Ember.$(node_)
+      /*
+        .tooltip({
+          template: '<div class="tooltip" role="tooltip">'
+            + '<div class="tooltip-arrow"></div>'
+            + '<div class="tooltip-inner"></div>'
+            + '</div>',
+          title: "title" + flowName
+        })
+       */
+      /* Either 1. show when shift-click, or 2. when hover
+       * For 1, un-comment this on(click) and popover(show), and comment out trigger & sticky.
+        .on('click', function (event) {
+          console.log(event.originalEvent.type, event.originalEvent.which, event);
+          // right-click : event.originalEvent.which === 3
+          if (event.originalEvent.shiftKey)
+            Ember.$(event.target)
+       */
+        .popover({
+          trigger : "hover",
+          sticky: true,
+          delay: {show: 200, hide: 700},
+          placement : "auto bottom",
+          // similar jQuery function .tooltip() takes parameter content in place of template.
+          // This is using : bower_components/bootstrap/js/popover.js, via bower.json
+          template: '<div class="popover" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div>'
+            + '<button id="Export:' + flowName + '" href="#">Export</button>'
+            + '</div>'
+          /*
+           })
+           .popover("show")
+           ;
+           */
+        });
+    });
+};
+
+
+
+
+
 export default Ember.Component.extend({
 
-    /*------------------------------------------------------------------------*/
+  /*------------------------------------------------------------------------*/
 
-    /** Used for receiving colouredMarkers from selected-markers.js,
-     * and flipRegion, ...
-     */
+  /** Used for receiving colouredMarkers from selected-markers.js,
+   * and flipRegion, ...
+   */
   feedService: (console.log("feedService"), Ember.inject.service('feed')),
 
-    listen: function() {
-	let f = this.get('feedService');
-	console.log("listen", f);
-      if (f === undefined)
-        debugger;
-      else {
-	f.on('colouredMarkers', this, 'updateColouredMarkers');
-	f.on('clearScaffoldColours', this, 'clearScaffoldColours');
-	f.on('flipRegion', this, 'flipRegion');
-      }
-    }.on('init'),
+  listen: function() {
+    let f = this.get('feedService');
+    console.log("listen", f);
+    if (f === undefined)
+      debugger;
+    else {
+      f.on('colouredMarkers', this, 'updateColouredMarkers');
+      f.on('clearScaffoldColours', this, 'clearScaffoldColours');
+      f.on('flipRegion', this, 'flipRegion');
+    }
+  }.on('init'),
 
-    // remove the binding created in listen() above, upon component destruction
-    cleanup: function() {
-	let f = this.get('feedService');
-	f.off('colouredMarkers', this, 'updateColouredMarkers');
-	f.off('clearScaffoldColours', this, 'clearScaffoldColours');
-	f.off('flipRegion', this, 'flipRegion');
-    }.on('willDestroyElement'),
+  // remove the binding created in listen() above, upon component destruction
+  cleanup: function() {
+    let f = this.get('feedService');
+    f.off('colouredMarkers', this, 'updateColouredMarkers');
+    f.off('clearScaffoldColours', this, 'clearScaffoldColours');
+    f.off('flipRegion', this, 'flipRegion');
+  }.on('willDestroyElement'),
 
-    /** undefined, or a function to call when colouredMarkers are received  */
-    colouredMarkersChanged : undefined,
+  /** undefined, or a function to call when colouredMarkers are received  */
+  colouredMarkersChanged : undefined,
 
-    updateColouredMarkers: function(markers) {
-       console.log("updateColouredMarkers in components/draw-map.js");
-	let colouredMarkersChanged = this.get('colouredMarkersChanged');
-	if (colouredMarkersChanged)
-	    colouredMarkersChanged(markers);
-    },
+  updateColouredMarkers: function(markers) {
+    console.log("updateColouredMarkers in components/draw-map.js");
+    let self = this;
+    this.get('scroller').scrollVertical('#holder', {
+      duration : 1000,
+      // easing : 'linear', // default is swing
+      offset : -60
+    }).then(function () {
+      let colouredMarkersChanged = self.get('colouredMarkersChanged');
+      if (colouredMarkersChanged)
+        colouredMarkersChanged(markers);
+    });
+  },
 
-    draw_flipRegion : undefined,
-    flipRegion: function(markers) {
-      console.log("flipRegion in components/draw-map.js");
-	    let flipRegion = this.get('draw_flipRegion');
-	    if (flipRegion)
-	      flipRegion(markers);
-    },
+  draw_flipRegion : undefined,
+  flipRegion: function(markers) {
+    console.log("flipRegion in components/draw-map.js");
+    let flipRegion = this.get('draw_flipRegion');
+    if (flipRegion)
+      flipRegion(markers);
+  },
+
+  /*------------------------------------------------------------------------*/
+  
+  scroller: Ember.inject.service(),
 
   /*------------------------------------------------------------------------*/
 
@@ -149,17 +215,19 @@ export default Ember.Component.extend({
     let apIDs = d3.keys(myData);
     /** mapName (apName) of each chromosome, indexed by chr name. */
     let cmName = {};
+    /** AP id of each chromosome, indexed by AP name. */
+    let mapChr2AP = {};
 
-/** Plan for layout of stacked axes.
+    /** Plan for layout of stacked axes.
 
-graph : {chromosome{linkageGroup{}+}*}
+     graph : {chromosome{linkageGroup{}+}*}
 
-graph : >=0  chromosome-s layed out horizontally
+     graph : >=0  chromosome-s layed out horizontally
 
-chromosome : >=1 linkageGroup-s layed out vertically:
-  catenated, use all the space, split space equally by default,
-  can adjust space assigned to each linkageGroup (thumb drag) 
-*/
+     chromosome : >=1 linkageGroup-s layed out vertically:
+     catenated, use all the space, split space equally by default,
+     can adjust space assigned to each linkageGroup (thumb drag) 
+     */
 
     const dragTransitionTime = 1000;  // milliseconds
 
@@ -172,7 +240,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     marginIndex = {top:0, right:1, bottom:2, left:3},	// indices into margins[]; standard CSS sequence.
     viewPort = {w: document.documentElement.clientWidth, h:document.documentElement.clientHeight},
 
-	  /// small offset from axis end so it can be visually distinguished.
+    /// small offset from axis end so it can be visually distinguished.
     dropTargetYMargin = 10,
     dropTargetXMargin = 10,
 
@@ -198,27 +266,27 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
     /// pixels.  can calculate this from AP name * font width
     let
-    /// x range of the axis centres. left space at left and right for
-    /// axisHeaderTextLen which is centred on the axis.
-    /// index: 0:left, 1:right
-    axisXRange = [0 + axisHeaderTextLen/2, graphDim.w - axisHeaderTextLen/2];
+      /// x range of the axis centres. left space at left and right for
+      /// axisHeaderTextLen which is centred on the axis.
+      /// index: 0:left, 1:right
+      axisXRange = [0 + axisHeaderTextLen/2, graphDim.w - axisHeaderTextLen/2];
     let
       /** number of ticks in y axis when AP is not stacked.  reduce this
        * proportionately when AP is stacked. */
       axisTicks = 10,
     /** font-size of y axis ticks */
     axisFontSize = 12;
-      /** default colour for paths; copied from app.css (.foreground path {
-       * stroke: #808;}) so it can be returned from d3 stroke function.  Also
-       * used currently to recognise markers which are in colouredMarkers via
-       * path_colour_scale(), which is a useful interim measure until scales are
-       * set up for stroke-width of colouredMarkers, or better a class.
-       */
-      let pathColourDefault = "#808";
+    /** default colour for paths; copied from app.css (.foreground path {
+     * stroke: #808;}) so it can be returned from d3 stroke function.  Also
+     * used currently to recognise markers which are in colouredMarkers via
+     * path_colour_scale(), which is a useful interim measure until scales are
+     * set up for stroke-width of colouredMarkers, or better a class.
+     */
+    let pathColourDefault = "#808";
 
-     function xDropOutDistance_update () {
-       xDropOutDistance = viewPort.w/(stacks.length*6);
-     }
+    function xDropOutDistance_update () {
+      xDropOutDistance = viewPort.w/(stacks.length*6);
+    }
 
     /** Draw paths between markers on APs even if one end of the path is outside the svg.
      * This was the behaviour of an earlier version of this Marker Map Viewer, and it
@@ -233,31 +301,68 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * if there is only 1 connection between a pair of markers, i.e. the mapping between the APs is 1:1,
      * then show the connection.
      *
+     * Any truthy value of unique_1_1_mapping enables the above; special cases :
      * unique_1_1_mapping === 2 enables a basic form of uniqueness which is possibly not of interest
+     * unique_1_1_mapping === 3 enables collateStacksA (asymmetric aliases).
      */
-    let unique_1_1_mapping = true;
+    let unique_1_1_mapping = 3;
+    /** Include direct connections in U_alias, (affects collateStacks1():pu). */
+    let directWithAliases = false;
+    // let collateStacks = unique_1_1_mapping === 3 ? collateStacksA : collateStacks1;
+    /** look at aliases in adjacent APs both left and right (for unique_1_1_mapping = 3) */
+    let adjacent_both_dir = true;
+    /** A simple mechanism for selecting a small percentage of the
+     * physical maps, which are inconveniently large for debugging.
+     * This will be replaced by the ability to request subsections of
+     * chromosomes in API requests.
+     */
+    const filter_location = false;
+    /** true means the <path> datum is the text of the SVG line, otherwise it is
+     * the "mmaa" data and the "d" attr is the text of the SVG line.
+     * @see markerNameOfPath().
+     */
+    let pathDataIsLine;
+    /** true means the path datum is not used - its corresponding data is held in its parent g
+     */
+    const pathDataInG = true;
 
-    /** Apply colours to the paths according to their marker name (datum); repeating ordinal scale.  */
+    /** Apply colours to the paths according to their marker name (datum); repeating ordinal scale.
+     * meaning of values :
+     *  set path_colour_domain to
+     *   1 : markers
+     *   2 : d3.keys(ag)
+     *  colour according to input from colouredMarkers; just the listed markerNames is coloured :
+     *  each line of markerNames is         domain is
+     *   3: markerName                      markerName-s
+     *   4: scaffoldName\tmarkerName        scaffoldName-s
+     *      scaffoldName can be generalised as class name.
+     */
     let use_path_colour_scale = 4;
-      let path_colour_scale_domain_set = false;
+    let path_colour_scale_domain_set = false;
 
     /** export scaffolds and scaffoldMarkers for use in selected-markers.hbs */
     let showScaffoldMarkers = this.get('showScaffoldMarkers');
     console.log("showScaffoldMarkers", showScaffoldMarkers);
+
+    let showAsymmetricAliases = this.get('showAsymmetricAliases');
+    console.log("showAsymmetricAliases", showAsymmetricAliases);
 
     /** Enable display of extra info in the path hover (@see hoverExtraText).
      * Currently a debugging / devel feature, will probably re-purpose to display metadata.
      */
     let showHoverExtraText = true;
 
+    /** Used for d3 attributes whose value is the datum. */
+    function I(d) { /* console.log(this, d); */ return d; };
+
     let
-    /** y[apID] is the scale for AP apID.
-     * y[apID] has range [0, yRange], i.e. as if the AP is not stacked.
-     * g.AP has a transform to position the AP within its stack, so this scale is used
-     * for objects within g.AP, and notably its child g.axis, such as the brush.
-     * For objects in g.foreground, ys is the appropriate scale to use.
-     */
-    y = {},
+      /** y[apID] is the scale for AP apID.
+       * y[apID] has range [0, yRange], i.e. as if the AP is not stacked.
+       * g.AP has a transform to position the AP within its stack, so this scale is used
+       * for objects within g.AP, and notably its child g.axis, such as the brush.
+       * For objects in g.foreground, ys is the appropriate scale to use.
+       */
+      y = {},
     /** ys[apID] is is the same as y[apID], with added translation and scale
      * for the AP's current stacking (AP.position, AP.yOffset(), AP.portion).
      * See also comments for y re. the difference in uses of y and ys.
@@ -266,41 +371,60 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** Count markers in APs, to set stronger paths than normal when working
      * with small data sets during devel.  */
     markerTotal = 0,
-        /** z[APid] is a hash for AP APid mapping marker name to location.
-         * i.e. z[d.ap][d.marker] is the location of d.marker in d.ap.
-         */
-        z = myData,
-        /** All marker names.
-         * Initially a set (to determine unique names), then converted to an array.
-         */
-        d3Markers = new Set();
+    /** z[APid] is a hash for AP APid mapping marker name to location.
+     * i.e. z[d.ap][d.marker] is the location of d.marker in d.ap.
+     */
+    z = myData,
+    /** All marker names.
+     * Initially a Set (to determine unique names), then converted to an array.
+     */
+    d3Markers = new Set();
     d3.keys(myData).forEach(function(ap) {
       /** ap is chr name */
       let c = myData[ap];
       cmName[ap] = {mapName : c.mapName, chrName : c.chrName};
+      mapChr2AP[c.mapName + ":" + c.chrName] = ap;
       delete c.mapName;
       delete c.chrName;
       // console.log(ap, cmName[ap]);
       d3.keys(myData[ap]).forEach(function(marker) {
-        d3Markers.add(marker);
-        markerTotal++;
-
-        if (! unique_1_1_mapping)
+        let m = z[ap][marker];
+        // alternate filter, suited to physical maps : m.location > 2000000
+        if ((markerTotal++ & 0x3) && filter_location)
+          delete z[ap][marker];
+        else
         {
-          let markerValue = myData[ap][marker];
-          if (markerValue && markerValue.aliases)
-            for (let a of markerValue.aliases)
+          d3Markers.add(marker);
+          // markerTotal++;
+
+          /** This implementation of aliases was used initially.
+           * The marker is simply duplicated (same location, same AP) for each alias.
+           * This works, but loses the distinction between direct connections (same marker / gene)
+           * and indirect (via aliases).
+           */
+          if (! unique_1_1_mapping)
           {
-              z[ap][a] = {location: markerValue.location};
-            }
+            let markerValue = z[ap][marker];
+            if (markerValue && markerValue.aliases)
+              for (let a of markerValue.aliases)
+            {
+                z[ap][a] = {location: markerValue.location};
+              }
+          }
         }
 
       });
     });
     //creates a new Array instance from an array-like or iterable object.
     d3Markers = Array.from(d3Markers);
-    /** the name markers can replace d3Markers, in next commit. */
-    let markers = d3Markers;
+    /** Indexed by markerName, value is a Set of APs in which the marker is present.
+     * Currently markerName-s are unique, present in just one AP (Chromosome),
+     * but it seems likely that ambiguity will arise, e.g. 2 assemblies of the same Chromosome.
+     * Terminology :
+     *   genetic map contains chromosomes with markers;
+     *   physical map (pseudo-molecule) contains genes
+     */
+    let markerAPs = {};
     let
       /** Draw a horizontal notch at the marker location on the axis,
        * when the marker is not in a AP of an adjacent Stack.
@@ -325,26 +449,42 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let
       /** ap / alias : marker    aam[ap][marker alias] : [marker] */
       aam = {},
-    /** ap/marker : alias groups       amag[ap][marker] : ag  */
-    amag = {},
+    /** ap/marker : alias groups       amag[ap][marker] : ag
+     * absorbed into z[ap][marker].agName
+     amag = {},  */
     // results of collateMagm() - not used
-        /** marker alias groups APs */
+    /** marker alias groups APs */
     maga = {};
 
-    // results of collateStacks()
+    /** class names assigned by colouredMarkers to alias groups, indexed by alias group name.
+     * result of collateMarkerClasses().
+     */
+    let agClasses = {};
+
+    // results of collateStacks1()
     let
-    /** marker : AP - AP    maN[marker] : [[marker, marker]] */
-    maN = {},
+      /** marker : AP - AP    maN[marker] : [[marker, marker]] */
+      maN = {},
+    /** Not used yet; for pathAg().
+     *  store : alias group : AP/marker - AP/marker   agam[ag] : [marker, marker]  markers have refn to parent AP
+     * i.e. [ag] -> [marker0, a0, a1, za0[marker0], za1[marker0]] */
     agam = {},
     /** path data in unique mode. [marker0, marker1, a0, a1] */
     pu;
+    /** Paths - Unique, from Tree. */
+    let put;
 
-    let line = d3.line(),
-        axis = d3.axisLeft(),
-        foreground,
-        // brushActives = [],
-        /** Extent of current brush (applied to y axis of a AP). */
-        brushExtents = [];
+    /** results of collateStacksA() */
+    let aliased = {};
+    let aliasedDone = {};
+
+    let
+      line = d3.line(),
+      axis = d3.axisLeft(),
+      foreground,
+      // brushActives = [],
+      /** Extent of current brush (applied to y axis of a AP). */
+      brushExtents = [];
     /** guard against repeated drag event before previous dragged() has returned. */
     let dragging = 0;
     /** trace scale of each AP just once after this is cleared.  */
@@ -381,6 +521,27 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       return "h" + name;
     }
+    /** recognise any punctuation in m which is not allowed for a selector matching an element class name,
+     * and replace with _
+     * Specifically :
+     *   replace . with _,
+     *   prefix leading digit with _
+     *
+     * HTML5 class names allow these forms, so eltClassName() is only required
+     * where the class name will be the target of a selector.
+     * CSS selectors can use \ escaping e.g. to prefix '.', and that works for
+     * d3.select() and Ember.$() selectors (using \\);  for now at least
+     * the simpler solution of replacing '.' with '_' is used.
+     *
+     * A class with a numeric prefix is accepted by HTML5, but not for selectors (CSS, d3 or $),
+     * so eltClassName() is required at least for that.
+     */
+    function eltClassName(m)
+    {
+      m = m.replace(".", "_")
+        .replace(/^([\d])/, "_$1");
+      return m;
+    }
 
     /** Check if the given value is a number, i.e. !== undefined and ! isNaN().
      * @param l value to check
@@ -394,6 +555,22 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         debugger;
       }
       return l;
+    }
+
+    function mapChrName2AP(mapChrName)
+    {
+      let apName = mapChr2AP[mapChrName];
+      return apName;
+    }
+    /** @return chromosome name of AP id. */
+    function apName2Chr(apName)
+    {
+      let c = cmName[apName];
+      return c.chrName;
+    }
+    function makeIntervalName(chrName, interval)
+    {
+      return chrName + "_" + interval[0] + "_" + interval[1];
     }
 
     /*------------------------------------------------------------------------*/
@@ -440,6 +617,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     const trace_alias = 1;
     const trace_path = 0;
     const trace_path_colour = 0;
+    /** enable trace of adjacency between axes, and stacks. */
+    const trace_adj = 0;
     /*------------------------------------------------------------------------*/
 
     function Stacked(apName, portion) {
@@ -568,9 +747,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       let a =
         [
-        "{aps=[",
-        this.aps.map(function(s){return s.toString();}),
-        "] length=" + this.aps.length + "}"
+          "{aps=[",
+          this.aps.map(function(s){return s.toString();}),
+          "] length=" + this.aps.length + "}"
         ];
       return a.join("");
     };
@@ -586,18 +765,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       {
         this.log();
         /* breakPointEnable = 1;
-        breakPoint(); */
+         breakPoint(); */
       }
     };
     /** Log all stacks. static. */
     stacks.log = 
-    Stack.log = function()
-    {
-      if (trace_stack < 2) return;
-      console.log("{stacks=[");
-      stacks.forEach(function(s){s.log();});
-      console.log("] length=", stacks.length, "}");
-    };
+      Stack.log = function()
+      {
+        if (trace_stack < 2) return;
+        console.log("{stacks=[");
+        stacks.forEach(function(s){s.log();});
+        console.log("] length=", stacks.length, "}");
+      };
     Stack.verify = function()
     {
       stacks.forEach(function(s){s.verify();});
@@ -747,7 +926,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       {
         let s = this.aps[si];
         this.aps = this.aps.removeAt(si, 1);
-          // .splice(si, 1);
+        // .splice(si, 1);
         return s;
       }
     };
@@ -766,7 +945,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       else
       {
         stacks = stacks.removeAt(si, 1);
-          // .splice(si, 1);
+        // .splice(si, 1);
         ok = true;
       }
       return ok;
@@ -805,7 +984,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
            * caller doesn't have toStack, so .move() looks after it.
            * No : ap.position and .portion are updated after .move()
            * so caller has to call .calculatePositions().
-          toStack.calculatePositions();
+           toStack.calculatePositions();
            */
         }
         else
@@ -826,7 +1005,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         else
           result.push(this);
         if (trace_updatedStacks)
-        me.send('updatedStacks', stacks);
+          me.send('updatedStacks', stacks);
       }
       return result;
     };
@@ -945,11 +1124,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     Stack.prototype.releasePortion = function (released)
     {
-        let
-          factor = 1 / (1-released);
-        this.aps.forEach(
-          function (a, index) { a.portion *= factor; });
-        this.calculatePositions();
+      let
+        factor = 1 / (1-released);
+      this.aps.forEach(
+        function (a, index) { a.portion *= factor; });
+      this.calculatePositions();
     };
     /** Drag the named AP out of this Stack.
      * Create a new Stack containing just the AP.
@@ -972,9 +1151,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       /* passing toStack===undefined to signify moving AP out into a new Stack,
        * and hence insertIndex is also undefined (not used since extracted AP is only AP
        * in newly-created Stack).
-      */
+       */
       let okStacks =
-      this.move(apName, undefined, undefined);
+        this.move(apName, undefined, undefined);
       /* move() will create a new Stack for the AP which was moved out, and
        * add that to Stacks.  dragged() will assign it a location and sort.
        */
@@ -1113,8 +1292,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
        */
       t.on("end interrupt", dragTransitionEnd);
       /** to make this work, would have to reparent the APs - what's the benefit
-      let ts = 
-        t.selectAll("g.stack#" + eltId(this.stackID) + " > .ap");
+       * let ts = 
+       *   t.selectAll("g.stack#" + eltId(this.stackID) + " > .ap");
        */
       console.log("redraw() stackID:", this.stackID);
       let this_Stack = this;  // only used in trace
@@ -1144,12 +1323,12 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     function apRedrawText(a)
     {
-          let axisTS = svgContainer.selectAll("g.ap#" + eltId(a.apName) + " > text");
-          axisTS.attr("transform", yAxisTextScale);
-          let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(a.apName) + " > g.tick > text");
-          axisGS.attr("transform", yAxisTicksScale);
-          let axisBS = svgContainer.selectAll("g.axis#" + axisEltId(a.apName) + " > g.btn > text");
-          axisBS.attr("transform", yAxisBtnScale);
+      let axisTS = svgContainer.selectAll("g.ap#" + eltId(a.apName) + " > text");
+      axisTS.attr("transform", yAxisTextScale);
+      let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(a.apName) + " > g.tick > text");
+      axisGS.attr("transform", yAxisTicksScale);
+      let axisBS = svgContainer.selectAll("g.axis#" + axisEltId(a.apName) + " > g.btn > text");
+      axisBS.attr("transform", yAxisBtnScale);
     }
 
     /** For each AP in this Stack, redraw axis title.
@@ -1211,9 +1390,53 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           " translate(" + xVal, yOffsetText, ")",
           scaleText
         ].join("");
-       // console.log("apTransformO", this, transform);
+      // console.log("apTransformO", this, transform);
       return transform;
     };
+
+    /*------------------------------------------------------------------------*/
+
+
+    /** Constructor for Flow type.
+     *  Wrap the connection of data to display via calculations (aliases etc).
+     * These functions operate on an array of Flow-s :  pathUpdate(), collateStacks().
+     *
+     * The data points in a genetic map are markers, in a physical map (chromosome) they are genes.
+     * Here, the term marker is used to mean markers or genes as appropriate.
+     * @param direct	true : match marker names; false : match marker aliases against marker names.
+     * @param unique	require aliases to be unique 1:1; i.e. endpoints (markers or genes) with only 1 mapping in the adjacent AP are shown
+     */
+    function Flow(name, direct, unique, collate) {
+      this.name = name;
+      this.direct = direct;
+      this.unique = unique;
+      this.collate = collate;
+      this.visible = this.enabled;
+    };
+    Flow.prototype.enabled = true;
+    // Flow.prototype.pathData = undefined;
+    let flows = {
+      // direct path() uses maN, collated by collateStacks1();
+      direct: new Flow("direct", true, false, collateStacks1/*undefined*/),
+      U_alias: new Flow("U_alias", false, false, collateStacks1),	// unique aliases
+      alias: new Flow("alias", false, true, collateStacksA)	// aliases, not filtered for uniqueness.
+    };
+    // flows.U_alias.visible = flows.U_alias.enabled = false;
+    flows.direct.pathData = d3Markers;
+    // if both direct and U_alias are enabled, only 1 should call collateStacks1().
+    if (flows.U_alias.enabled && flows.direct.enabled && (flows.U_alias.collate == flows.direct.collate))
+      flows.direct.collate = undefined;
+
+    function collateStacks()
+    {
+      d3.keys(flows).forEach(function(flowName) {
+        let flow = flows[flowName];
+        if (flow.enabled && flow.collate)
+          flow.collate();
+      });
+    }
+
+    /*------------------------------------------------------------------------*/
 
 
     let zoomSwitch,resetSwitch;
@@ -1273,7 +1496,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       if (ys && ys[a.apName])
       {
         let myRange = a.yRange();
-         console.log("updateRange", a.apName, a.position, a.portion, myRange);
+        console.log("updateRange", a.apName, a.position, a.portion, myRange);
         ys[a.apName].range([0, myRange]);
       }
     }
@@ -1281,6 +1504,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     var path_colour_scale;
     let markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
+    let intervals = {}, intervalNames = new Set(), intervalTree = {};
     if (use_path_colour_scale)
     {
       let path_colour_domain;
@@ -1290,20 +1514,26 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       case 2 : path_colour_domain = d3.keys(ag); break;
       case 4:
       case 3 : path_colour_domain = ["unused"];
-          this.set('colouredMarkersChanged', function(colouredMarkers_) {
-            console.log('colouredMarkers changed, length : ', colouredMarkers_.length);
+        this.set('colouredMarkersChanged', function(colouredMarkers_) {
+          console.log('colouredMarkers changed, length : ', colouredMarkers_.length);
+          let val;
+          if ((colouredMarkers_.length !== 0) &&
+              ((val = getUsePatchColour()) !== undefined))
+          {
+            use_path_colour_scale = val;
+
             /** depending on use_path_colour_scale === 3, 4 each line of markerNames is 
              * 3: markerName 
              * 4: scaffoldName\tmarkerName
              */
-	      let markerNames = colouredMarkers_
-              // .split('\n');
-		      // .match(/\S+/g) || [];
+            let markerNames = colouredMarkers_
+            // .split('\n');
+            // .match(/\S+/g) || [];
               .match(/[^\r\n]+/g);
-	      path_colour_scale_domain_set = markerNames.length > 0;
+            path_colour_scale_domain_set = markerNames.length > 0;
             if (use_path_colour_scale === 3)
               path_colour_scale.domain(markerNames);
-            else  //  use_path_colour_scale === 4
+            else if (use_path_colour_scale === 4)
             {
               for (let i=0; i<markerNames.length; i++)
               {
@@ -1316,6 +1546,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 scaffoldMarkers[scaffoldName].push(markerName);
                 scaffolds.add(scaffoldName);
               }
+              collateMarkerClasses(markerScaffold);
               if (showScaffoldMarkers !== me.get('showScaffoldMarkers'))
               {
                 showScaffoldMarkers = me.get('showScaffoldMarkers');
@@ -1327,21 +1558,48 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 me.set('scaffoldMarkers', scaffoldMarkers);
               }
               let domain = Array.from(scaffolds.keys());
-              console.log("domain", domain);
+              console.log("domain.length", domain.length);
               path_colour_scale.domain(domain);
             }
-	      pathColourUpdate(undefined);
+            else if (use_path_colour_scale === 5)
+            {
+              for (let i=0; i<markerNames.length; i++)
+              {
+                let col=markerNames[i].split(/[ \t]+/),
+                mapChrName = col[0], interval = [col[1], col[2]];
+                let apName = mapChrName2AP(mapChrName);
+                if (intervals[apName] === undefined)
+                  intervals[apName] = [];
+                intervals[apName].push(interval);
+                let intervalName = makeIntervalName(mapChrName, [col[1], + col[2]]);
+                intervalNames.add(intervalName);
+              }
+              d3.keys(intervals).forEach(function (apName) {
+                //Build tree
+                intervalTree[apName] = createIntervalTree(intervals[apName]);
+              });
+
+              // scaffolds and intervalNames operate in the same way - could be merged or factored.
+              let domain = Array.from(intervalNames.keys());
+              console.log("domain.length", domain.length);
+              path_colour_scale.domain(domain);
+            }
+            else if (trace_path_colour > 2)
+              console.log("use_path_colour_scale", use_path_colour_scale);
+
+            pathColourUpdate(undefined, undefined);
             scaffoldLegendColourUpdate();
-          });
+          }
+        });
         break;
       }
-	path_colour_scale = d3.scaleOrdinal();
-	path_colour_scale_domain_set = (use_path_colour_scale !== 3) && (use_path_colour_scale !== 4);
-	if (path_colour_scale_domain_set)
-	    path_colour_scale.domain(path_colour_domain);
-	else
-	    path_colour_scale.unknown(pathColourDefault);
-	path_colour_scale.range(d3.schemeCategory10);
+      path_colour_scale = d3.scaleOrdinal();
+      path_colour_scale_domain_set = (use_path_colour_scale !== 3) && (use_path_colour_scale !== 4);
+      if (path_colour_scale_domain_set)
+        path_colour_scale.domain(path_colour_domain);
+      else
+        path_colour_scale.unknown(pathColourDefault);
+      path_colour_scale.range(d3.schemeCategory10);
     }
 
     apIDs.forEach(function(d) {
@@ -1349,8 +1607,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a].location; } );
       let a = aps[d], myRange = a.yRange();
       ys[d] = d3.scaleLinear()
-               .domain([0, yDomainMax])
-               .range([0, myRange]); // set scales for each AP
+        .domain([0, yDomainMax])
+        .range([0, myRange]); // set scales for each AP
       
       //console.log("OOO " + y[d].domain);
       ys[d].flipped = false;
@@ -1358,21 +1616,21 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // The brush is on y.
       y[d] = ys[d].copy();
       y[d].brush = d3.brushY()
-                     .extent([[-8,0],[8,myRange]])
-                     .on("end", brushended);
+        .extent([[-8,0],[8,myRange]])
+        .on("end", brushended);
     });
 
     d3.select("svg").remove();
     d3.select("div.d3-tip").remove();
     let translateTransform = "translate(" + margins[marginIndex.left] + "," + margins[marginIndex.top] + ")";
     let svgRoot = d3.select('#holder').append('svg')
-                         .attr("viewBox", "0 0 " + graphDim.w + " " + graphDim.h)
-                         .attr("preserveAspectRatio", "xMinYMin meet")
-                         .attr('width', "100%" /*graphDim.w*/)
-                         .attr('height', graphDim.h /*"auto"*/);
+      .attr("viewBox", "0 0 " + graphDim.w + " " + graphDim.h)
+      .attr("preserveAspectRatio", "xMinYMin meet")
+      .attr('width', "100%" /*graphDim.w*/)
+      .attr('height', graphDim.h /*"auto"*/);
     let svgContainer = svgRoot
-                         .append("svg:g")
-                         .attr("transform", translateTransform);
+      .append("svg:g")
+      .attr("transform", translateTransform);
 
     svgRoot.classed("devel", (markerTotal / apIDs.length) < 20);
 
@@ -1399,17 +1657,28 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     });
 
     //Add foreground lines.
-    /** pathData is the data of .foreground > g, not .foreground > g > path */
-    let pathData = unique_1_1_mapping ? pu : d3Markers;
-    let pathClass = unique_1_1_mapping ? 
-      function(d) { let d0=d[0], d1=d[1], c = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
- return c; }
-    : function(d) { return d; };
+    /** pathData is the data of .foreground > g > g, not .foreground > g > g > path */
+    function pathDataSwitch() {
+      let p = unique_1_1_mapping === 3 ? put
+        : (unique_1_1_mapping ? pu : d3Markers);
+      return p; }
+    let pathData = pathDataSwitch();
+    d3.keys(flows).forEach(function(flowName) {
+      let flow = flows[flowName];
+      // if flow.collate then flow.pathData has been set above by collateStacks().
+      if (flow.enabled && ! flow.collate)
+        flow.pathData = flow.direct ? d3Markers : (flow.unique ? pu : put);
+    });
+    /** class of path or g, @see pathDataInG. currently just endpoint markers, could be agName.  */
+    /** If Flow.direct then use I for pathClass, otherwise pathClassA()  */
+    function pathClassA(d)
+    { let d0=d[0], d1=d[1], c = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
+      return c; }
     /**  If unique_1_1_mapping then path data is mmaa, i.e. [marker0, marker1, a0, a1]
      */
     function markerNameOfData(da)
     {
-        let markerName = (da.length === 4)  // i.e. unique_1_1_mapping
+      let markerName = (da.length === 4)  // i.e. unique_1_1_mapping
         ? da[0]  //  mmaa, i.e. [marker0, marker1, a0, a1]
         : da;
       return markerName;
@@ -1417,43 +1686,29 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     /** @see also pu_log()  */
     function data_text(da)
     {
-      return unique_1_1_mapping
+      return unique_1_1_mapping   // ! flow.direct
         ? [da[0], da[1], da[2].mapName, da[3].mapName]
         : da;
     }
 
     foreground = svgContainer.append("g") // foreground has as elements "paths" that correspond to markers
-                .attr("class", "foreground");
-    foreground
-                // this is now duplicated in pathUpdate(), and can be factored out here
-                .selectAll("g")
-                .data(pathData) // insert data into path elements (each line of the "map" is a path)
-                .enter()
-                .append("g")
-                .attr("class", pathClass);
-    
-    
-    // can use foreground in pathUpdate()
-    if (true)
-      pathUpdate(undefined);
-    else
-    d3Markers.forEach(function(a) { 
-      d3.selectAll("."+a)
-        .selectAll("path")
-        .data(path(a))
-        .enter()
-        .append("path")
-        .attr("d", function(d) { return d; });
+      .attr("class", "foreground");
+    d3.keys(flows).forEach(function(flowName) {
+      let flow = flows[flowName];
+      flow.g = foreground.append("g")
+        .attr("class", flowName);
     });
+    
+    pathUpdate(undefined);
 
     // Add a group element for each stack.
     // Stacks contain 1 or more APs.
     /** selection of stacks */
     let stackS = svgContainer.selectAll(".stack")
-        .data(stacks)
-        .enter().append("g")
-        .attr("class", "stack")
-        .attr("id", stackEltId);
+      .data(stacks)
+      .enter().append("g")
+      .attr("class", "stack")
+      .attr("id", stackEltId);
 
     function stackEltId(s)
     { if (s.stackID === undefined) debugger;
@@ -1468,12 +1723,13 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     // Add a group element for each AP.
     // Stacks are selection groups in the result of this .selectAll()
     let g = stackS.selectAll(".ap")
-        .data(stack_apIDs)
-        .enter().append("g")
-        .attr("class", "ap")
-        .attr("id", eltId)
-        .attr("transform", Stack.prototype.apTransformO)
-        .call(d3.drag()
+      .data(stack_apIDs)
+      .enter().append("g")
+      .attr("class", "ap")
+      .attr("id", eltId)
+      .attr("transform", Stack.prototype.apTransformO)
+      .call(
+        d3.drag()
           .subject(function(d) { return {x: x(d)}; }) //origin replaced by subject
           .on("start", dragstarted) //start instead of dragstart in v4. 
           .on("drag", dragged)
@@ -1486,19 +1742,19 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     let currentDropTarget /*= undefined*/;
 
-	  function DropTarget() {
+    function DropTarget() {
       let size = {
         /** Avoid overlap, assuming about 5-7 stacks. */
-      w : Math.min(axisHeaderTextLen, viewPort.w/15),
-      // height of dropTarget at the end of an axis
-      h : Math.min(80, viewPort.h/10),
-      // height of dropTarget covering the adjacent ends of two stacked axes
-      h2 : Math.min(80, viewPort.h/10) * 2 /* + axis gap */
+        w : Math.min(axisHeaderTextLen, viewPort.w/15),
+        // height of dropTarget at the end of an axis
+        h : Math.min(80, viewPort.h/10),
+        // height of dropTarget covering the adjacent ends of two stacked axes
+        h2 : Math.min(80, viewPort.h/10) * 2 /* + axis gap */
       },
-	    posn = {
-	    X : size.w/2,
-      Y : /*YMargin*/10 + size.h
-	    },
+      posn = {
+        X : size.w/2,
+        Y : /*YMargin*/10 + size.h
+      },
       /** top and bottom edges relative to the AP's transform. bottom depends
        * on the AP's portion
        */
@@ -1528,8 +1784,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             let apName = datum,
             ap = aps[apName],
             yVal = top ? -dropTargetYMargin : edge.bottom(ap);
-          return yVal;
-        };
+            return yVal;
+          };
         stackDropTarget
           .append("rect")
           .attr("x", -posn.X)
@@ -1538,9 +1794,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           .attr("height", posn.Y)
         ;
 
-      stackDropTarget
-        .on("mouseover", dropTargetMouseOver)
-        .on("mouseout", dropTargetMouseOut);
+        stackDropTarget
+          .on("mouseover", dropTargetMouseOver)
+          .on("mouseout", dropTargetMouseOut);
       };
 
       /// @parameter left  true or false to indicate zone is positioned at left or
@@ -1566,9 +1822,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           .attr("height", dropTargetHeight)
         ;
 
-      stackDropTarget
-        .on("mouseover", dropTargetMouseOver)
-        .on("mouseout", dropTargetMouseOut);
+        stackDropTarget
+          .on("mouseover", dropTargetMouseOver)
+          .on("mouseout", dropTargetMouseOut);
       };
 
       function storeDropTarget(apName, classList)
@@ -1591,7 +1847,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     let dropTarget = new DropTarget();
 
     [true, false].forEach(function (i) {
-       dropTarget.add(i);
+      dropTarget.add(i);
       // dropTarget.addMiddle(i);
     });
 
@@ -1599,7 +1855,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     // Add an axis and title
     g.append("g")
-     .attr("class", "axis")
+      .attr("class", "axis")
       .each(function(d) { d3.select(this).attr("id",axisEltId(d)).call(axis.scale(y[d])); });  
 
     function axisTitle(chrID)
@@ -1673,71 +1929,93 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
     //Setup the tool tip.
     let toolTip = d3.select("body").append("div")
-                    .attr("class", "toolTip")
-                    .attr("id","toolTip")
-                    .style("opacity", 0);
+      .attr("class", "toolTip")
+      .attr("id","toolTip")
+      .style("opacity", 0);
     //Probably leave the delete function to Ember
     //function deleteAp(){
     //  console.log("Delete");
     //}
 
 
-//d3.selectAll(".foreground g").selectAll("path")
+    //d3.selectAll(".foreground > g > g").selectAll("path")
     /* (Don, 2017Mar03) my reading of handleMouse{Over,Out}() is that they are
      * intended only for the paths connecting markers in adjacent APs, not
      * e.g. the path in the y axis. So I have narrowed the selector to exclude
      * the axis path.  More exactly, these are the paths to include and exclude,
      * respectively :
-     *   svgContainer > g.foreground > g.<markerName> >  path
+     *   svgContainer > g.foreground > g.flowName > g.<markerName> >  path
      *   svgContainer > g.stack > g.ap > g.axis#<axisEltId(apName)> > path    (axisEltId() prepends "a"))
      * (apName is e.g. 58b504ef5230723e534cd35c_MyChr).
      * This matters because axis path does not have data (observed issue : a
      * call to handleMouseOver() with d===null; reproduced by brushing a region
      * on an axis then moving cursor over that axis).
      */
-    d3.selectAll(".foreground > g > path")
-      .on("mouseover",handleMouseOver)
-      .on("mouseout",handleMouseOut);
+    setupMouseHover(
+      d3.selectAll(".foreground > g > g > path")
+    );
+
+    /** Setup the functions handleMouse{Over,Out}() on events mouse{over,out}
+     * on elements in the given selection.
+     * The selected path elements are assumed to have __data__ which is either
+     * sLine (svg line text) which identifies the hover text, or mmaa data
+     * which enables hover text to be calculated.
+     * @param pathSelection	<path> elements
+     */
+    function setupMouseHover(pathSelection)
+    {
+      pathSelection
+        .on("mouseover",handleMouseOver)
+        .on("mouseout",handleMouseOut);
+    }
 
     /**
      * @param d   SVG path data string of path
      * @param this  path element
      */
     function handleMouseOver(d){
-      //console.log(pathMarkers[d]);
-       let t = d3.transition()
-                 .duration(800)
-                 .ease(d3.easeElastic);
-       let listMarkers  = "";
-       d3.select(this).transition(t)
-          .style("stroke", "#880044")
-          .style("stroke-width", "6px")
-          .style("stroke-opacity", 1)
-          .style("fill", "none");       
-       toolTip.style("height","auto")
-         .style("width","auto")
-         .style("opacity", 0.9)
-         .style("display","inline");  
-       Object.keys(pathMarkers[d]).map(function(a){
-         let hoverExtraText = pathMarkers[d][a];
-         if (hoverExtraText === 1) hoverExtraText = "";
-         listMarkers = listMarkers + a + hoverExtraText + "<br />";
-       });
-       toolTip.html(listMarkers)     
-         .style("left", (d3.event.pageX) + "px")             
-         .style("top", (d3.event.pageY - 28) + "px");
+      let sLine, pathMarkersHash;
+      /** d is either sLine (pathDataIsLine===true) or array mmaa. */
+      let pathDataIsLine = typeof(d) === "string";
+      if (pathDataIsLine)
+      {
+        pathMarkersHash = pathMarkers[d];
+      }
+      else
+      {
+        sLine = this.getAttribute("d");
+        pathMarkersHash = pathMarkers[sLine];
+        if ((pathMarkersHash === undefined) && ! pathDataIsLine)
+        {
+          let mmaa = dataOfPath(this),
+          [marker0, marker1, a0, a1] = mmaa;
+          pathMarkerStore(sLine, marker0, marker1, z[a0.apName][marker0], z[a1.apName][marker1]);
+          pathMarkersHash = pathMarkers[sLine];
+        }
+      }
+      // console.log(d, markerNameOfData(d), sLine, pathMarkersHash);
+      let listMarkers  = "";
+      // stroke attributes of this are changed via css rule for path.hovered
+      d3.select(this)
+        .classed("hovered", true);
+      toolTip.style("height","auto")
+        .style("width","auto")
+        .style("opacity", 0.9)
+        .style("display","inline");  
+      Object.keys(pathMarkersHash).map(function(a){
+        let hoverExtraText = pathMarkersHash[a];
+        if (hoverExtraText === 1) hoverExtraText = "";
+        listMarkers = listMarkers + a + hoverExtraText + "<br />";
+      });
+      toolTip.html(listMarkers)     
+        .style("left", (d3.event.pageX) + "px")             
+        .style("top", (d3.event.pageY - 28) + "px");
     }
 
     function handleMouseOut(/*d*/){
-      let t = d3.transition()
-                .duration(800)
-                .ease(d3.easeElastic);
-      //Simple solution is to set all styles to null, which will fix the confusion display with brush. Note: tried css class, maybe my way is not right, but it didn't work.
-      d3.select(this).transition(t)
-           .style("stroke", null)
-           .style("stroke-width", null)
-           .style("stroke-opacity",null)
-           .style("fill", null);
+      // stroke attributes of this revert to default, as hover ends
+      d3.select(this)
+        .classed("hovered", false);
       toolTip.style("display","none");
     }
 
@@ -1768,7 +2046,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      *     for each alias
      *       store AP / alias : marker    aam[AP][marker alias] : marker
      *       store AP/marker : alias groups  (or was that alias groups to marker)
-     *          amag[AP][marker] : [ag]
+     *          z[AP][marker].agName (maybe later array [ag])
      * 
      */
     function collateData()
@@ -1780,22 +2058,20 @@ chromosome : >=1 linkageGroup-s layed out vertically:
           aam[ap] = {};
         if (maga[ap] === undefined)
           maga[ap] = {};
-        if (amag[ap] === undefined)
-          amag[ap] = {};
         let aama = aam[ap];
         d3.keys(za).forEach(function(marker) {
           try
           {
-          za[marker].ap = z[ap]; // reference from marker to parent AP
-          // console.log("collateData", ap, za, za[marker]);
+            za[marker].ap = z[ap]; // reference from marker to parent AP
+            // console.log("collateData", ap, za, za[marker]);
           } catch (exc)
           {
             console.log("collateData", ap, za, za[marker], exc);
             debugger;
           }
-          if (markers[marker] === undefined)
-            markers[marker] = new Set();
-          markers[marker].add(ap);
+          if (markerAPs[marker] === undefined)
+            markerAPs[marker] = new Set();
+          markerAPs[marker].add(ap);
 
           let marker_ = za[marker], mas = marker_.aliases;
           marker_.name = marker;
@@ -1825,47 +2101,84 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               aama[markerAlias].push(marker);
             }
 
-            let amaga = amag[ap];
-            if (amaga[marker])
+            if (marker_.agName)
               // should be just 1
-              console.log("amaga[marker]", ap, marker, amaga[marker], agName);
+              console.log("[marker] agName", ap, marker, marker_, agName);
             else
-              amaga[marker] = agName;
+              marker_.agName = agName;
           }
         });
       });
     }
 
-    /**             is marker1 in ap0:marker0 alias group ?
-     * @return   the matching aliased marker if only 1
+    /** Collate the classes of markers via alias groups.
+     * Inputs : z (including .agName), markerScaffold (from colouredMarkers)
+     * Outputs : agClasses
+     */
+    function collateMarkerClasses(markerScaffold)
+    {
+      d3.keys(z).forEach(
+        function(apName)
+        {
+          let za = z[apName];
+          d3.keys(za).forEach(
+            function(markerName)
+            {
+              let  marker_ = za[markerName],
+              agName = marker_.agName,
+              mas = marker_.aliases;
+              if (mas.length > 0)
+              {
+                // mas.length > 0 implies .agName is defined
+                let agc = agClasses[agName];
+                if (agc === undefined)
+                {
+                  agClasses[agName] = new Set();
+                  agc = agClasses[agName];
+                }
+                // marker_.name === markerName;
+                for (let i=0; i<mas.length; i++)
+                {
+                  let mi = mas[i], className = markerScaffold[mi];
+                  if (className)
+                    agc.add(className);
+                }
+              }
+            });
+        });
+    }
+
+
+    /**             is marker m1 in an alias group of a marker m0 in ap0  ?
+     * @return   the matching aliased marker m0 if only 1
      */
     function maInMaAG(ap0, ap1, m1)
     {
       /** Return the matching aliased marker if only 1; amC is the count of matches */
       let am, amC=0;
-      /** aama inverts the aliases of m0; i.e. for each alias mA of m0, aama[mA] contains m0.
-       * so aama[m0] contains the markers which alias to m1
+      /** aama inverts the aliases of m1; i.e. for each alias mA of m1, aama[mA] contains m1.
+       * so aama[m1] contains the markers which alias to m0
        * If there are only 1 of those, return it.
-       * ?(m0 if m1 is in the aliases of a0:m0)
+       * ?(m1 if m0 is in the aliases of a0:m1)
        */
       let aama = aam[ap0.apName],
       ma = aama[m1],
       z0 = z[ap0.apName];
       let ams = [];
       if (ma)
-      for (let mai=0; mai<ma.length; mai++)
+        for (let mai=0; mai<ma.length; mai++)
       {
-        let mai_ = ma[mai];
-        if (z0[mai_])
-        {
-          am = mai_;
-          amC++;
-          if (trace_alias > 1)
-            ams.push(am); // for devel trace.
+          let mai_ = ma[mai];
+          if (z0[mai_])
+          {
+            am = mai_;
+            amC++;
+            if (trace_alias > 1)
+              ams.push(am); // for devel trace.
+          }
         }
-      }
       if (trace_alias > 1)
-      console.log("maInMaAG()", ap0.mapName, ap1.mapName, m1, am, amC, ams);
+        console.log("maInMaAG()", ap0.mapName, ap1.mapName, m1, am, amC, ams);
       if (amC > 1)
         am = undefined;
       else if (trace_alias > 1)
@@ -1892,13 +2205,14 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      *             is marker0 in marker1 alias group ?
      *             (compile hash from each marker alias group)
      *             for AP-AP data is list of ags
+
+     * Results are in pu, which is accessed via Flow.pathData
      */
-    function collateStacks()
+    function collateStacks1()
     {
       maN = {};
       agam = {};
-      pu = [];
-      pathData = unique_1_1_mapping ? pu : d3Markers;
+      pu = flows.U_alias.pathData = [];
 
       for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
@@ -1911,7 +2225,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         }
         // Cross-product of the two adjacent stacks
         for (let a0i=0; a0i < mAPs0.length; a0i++) {
-          let a0 = mAPs0[a0i], za0 = a0.z, a0Name = a0.apName, amag0 = amag[a0Name];
+          let a0 = mAPs0[a0i], za0 = a0.z, a0Name = a0.apName;
           for (let a1i=0; a1i < mAPs1.length; a1i++) {
             let a1 = mAPs1[a1i], za1 = a1.z;
             d3.keys(za0).forEach(function(marker0) {
@@ -1925,7 +2239,8 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               }
               // not used yet; to be shared to pathAg().
               // any connection from a0:marker0 to a1 via alias :
-              if (false && amag0[marker0])
+              let ag = za0[marker0].agName;
+              if (false && ag)
               {
                 if (agam[ag] === undefined)
                   agam[ag] = [];
@@ -1940,9 +2255,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               let
                 aliasedM0,
                 aliasedM1 = maInMaAG(a1, a0, marker0),
-              isDirect = z[a1.apName][marker0] !== undefined;
+                isDirect = directWithAliases && z[a1.apName][marker0] !== undefined;
               let differentAlias;
-              if (aliasedM1)
+              if (aliasedM1 || showAsymmetricAliases)
               {
                 /* alias group of marker0 may not be the same as the alias group
                  * which links aliasedM1 to a0, but hopefully if aliasedM0 is
@@ -1956,35 +2271,36 @@ chromosome : >=1 linkageGroup-s layed out vertically:
                 if (trace_alias > 1 && differentAlias)
                   console.log("aliasedM1", aliasedM1, "aliasedM0", aliasedM0, marker0, za0[marker0], za1[aliasedM1], aam[a1.apName][marker0], aam[a0.apName][aliasedM1]);
 
-                let d0 = marker0, d1 = aliasedM1,
-                traceTarget = marker0 == "markerK" && aliasedM1 == "markerK" &&
-                  a0.mapName == "MyMap5" && a1.mapName == "MyMap6";
-                if (traceTarget)
+                let d0 = marker0, d1 = aliasedM1;
+                if (false)  // debugging support, could be removed.
                 {
-                  debugger;
+                  let traceTarget = marker0 == "markerK" && aliasedM1 == "markerK" &&
+                    a0.mapName == "MyMap5" && a1.mapName == "MyMap6";
+                  if (traceTarget)
+                    debugger;
                 }
 
-		  if (trace_alias > 1)
-                console.log("collateStacks()", d0, d1, a0.mapName, a1.mapName, a0, a1, za0[d0], za1[d1]);
+                if (trace_alias > 1)
+                  console.log("collateStacks()", d0, d1, a0.mapName, a1.mapName, a0, a1, za0[d0], za1[d1]);
 
               }
               let
-              nConnections = 0 + (aliasedM1 !== undefined) + (isDirect ? 1 : 0);
-              if ((nConnections === 1) && (differentAlias !== true)) // unique
-                {
-                  let 
-                    /** i.e. isDirect ? marker0 : aliasedM1 */
-                    marker1 = aliasedM1 || marker0,
-                  mmaa = [marker0, marker1, a0, a1];
-                  pu.push(mmaa);
-                  // console.log(" pu", pu.length);
-                }
-              });
-            }
+                nConnections = 0 + (aliasedM1 !== undefined) + (isDirect ? 1 : 0);
+              if ((nConnections === 1) && (showAsymmetricAliases || (differentAlias !== true))) // unique
+              {
+                let 
+                  /** i.e. isDirect ? marker0 : aliasedM1 */
+                  marker1 = aliasedM1 || marker0,
+                mmaa = [marker0, marker1, a0, a1];
+                pu.push(mmaa);
+                // console.log(" pu", pu.length);
+              }
+            });
+          }
         }
       }
       if (pu)
-        console.log("collateStacks pu", pu.length);
+        console.log("collateStacks", " maN", d3.keys(maN).length, ", pu", pu.length);
       if (false)
         pu_log(pu);
     }
@@ -1995,6 +2311,263 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       {
           let p = pu[pi]; console.log(p[0], p[1], p[2].mapName, p[3].mapName);
         }
+    }
+    function log_mmaa(mmaa)
+    {
+      if ((mmaa === undefined) || (typeof mmaa == "string") || (mmaa.length === undefined))
+        console.log(mmaa);
+      else
+      {
+        let     [marker0, marker1, a0, a1, direction, agName] = mmaa,
+        m0 = z[a0.apName][marker0],
+        m1 = z[a1.apName][marker1];
+        console.log(marker0, marker1, a0.mapName, a0.apName, a1.mapName, a1.apName, m0.location, m1.location, direction, agName);
+      }
+    }
+
+    let adjAPs;
+    /** Collate adjacent APs, based on current stack adjacencies.
+     */
+    function collateAdjacentAPs()
+    {
+      adjAPs = {};
+      for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
+        let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
+        mAPs0 = s0.aps,
+        mAPs1 = s1.aps;
+        // Cross-product of the APs in two adjacent stacks
+        for (let a0i=0; a0i < mAPs0.length; a0i++) {
+          let a0 = mAPs0[a0i], za0 = a0.z, a0Name = a0.apName;
+          if (a0Name === undefined)
+          {
+            console.log(mAPs0, mAPs1, a0i, a0);
+          }
+          for (let a1i=0; a1i < mAPs1.length; a1i++) {
+            let a1 = mAPs1[a1i], za1 = a1.z;
+            if (adjAPs[a0Name] === undefined)
+              adjAPs[a0Name] = [];
+            adjAPs[a0Name].push(a1.apName);
+            if (adjacent_both_dir)
+            {
+              if (adjAPs[a1.apName] === undefined)
+                adjAPs[a1.apName] = [];
+              adjAPs[a1.apName].push(a0Name);
+            }
+          }
+        }
+      }
+      if (trace_stack > 1)
+        log_adjAPs(adjAPs);
+    }
+    function APid2Name(APid)
+    {
+      if (APid === undefined || aps[APid] === undefined)
+      {
+        console.log(aps, APid);
+        debugger;
+      }
+      return aps[APid].mapName;
+    }
+    function log_adjAPs()
+    {
+      console.log("adjAPs");
+      d3.keys(adjAPs).forEach(function(a0Name) {
+        let a0 = adjAPs[a0Name];
+        console.log(a0Name, APid2Name(a0Name), a0.length);
+        for (let a1i=0; a1i < a0.length; a1i++) {
+          let a1Name = a0[a1i];
+          console.log(a1Name, APid2Name(a1Name));
+        }
+      });
+    }
+    function log_adjAPsa(adjs)
+    {
+      console.log("adjs", adjs.length);
+      for (let a1i=0, a0=adjs; a1i < a0.length; a1i++) {
+        let a1Name = a0[a1i];
+        console.log(a1Name, APid2Name(a1Name));
+      }
+    }
+
+    /** Check if aliases between apName and apName1 have been stored.  */
+    function getAliased(apName, apName1)
+    {
+      /* If there are aliases between apName, apName1 then
+       * aliased[apName][apName1] (with apNames in lexicographic
+       * order) will be defined, but because some adjacencies may not
+       * have aliases, aliasedDone is used.
+       */
+      let a0, a1;
+      if (apName < apName1 || ! adjacent_both_dir)
+      { a0 = apName; a1 = apName1; }
+      else
+      { a0 = apName1; a1 = apName; }
+      let a = aliasedDone[a0] && aliasedDone[a0][a1];
+      if (trace_adj)
+      {
+        console.log("getAliased filter", apName, APid2Name(apName), apName1, APid2Name(apName1), a);
+      }
+      if (! a)
+      {
+        if (aliasedDone[a0] === undefined)
+          aliasedDone[a0] = {};
+        aliasedDone[a0][a1] = true;
+      }
+      return a;
+    }
+
+    /* This has a similar role to collateStacks1(), but is more broad - it just
+     * looks at aliases and does not require symmetry; the filter can be customised to
+     * require uniqueness, so this method may be as efficient and more general.
+     *
+     * for asymmetric aliases :
+     * for each AP
+     *   adjAPs = array (Set?) of adjacent APs, minus those already in tree[ap0]
+     *   for each marker m0 in AP
+     *     lookup aliases (markers) from m0 (could be to m0, but seems equiv)
+     *       are those aliased markers in APs in adjAPs ?	(use mapping markerAPs[markerName] -> APs)
+     *         add to tree, associate duplicates together (coming back the other way)
+     *           by sorting ap0 & ap1 in lexicographic order.
+     * 	         aliased[ap0][ap1][m0][m1]  : [m0, m1, ap0, ap1, direction, agName]
+     *
+     * call filterPaths() to collate paths of current adjacencies in put, accessed via Flow.pathData
+     */
+    function collateStacksA()
+    {
+      collateAdjacentAPs();
+      let adjCount = 0, adjCountNew = 0, pathCount = 0;
+      d3.keys(z).forEach(
+        function(apName)
+        {
+          let za = z[apName];
+          let adjs = adjAPs[apName];
+          if (adjs)
+          {
+            adjs = adjs.filter(function(apName1) {
+              adjCount++;
+              let a = getAliased(apName, apName1);
+              if (!a) adjCountNew++;
+              return ! a; } );
+            if (trace_adj > 1)
+            {
+              console.log(apName, APid2Name(apName));
+              log_adjAPsa(adjs);
+            }
+            let trace_count = 1;
+            d3.keys(za).forEach(
+              function(markerName)
+              {
+                let  marker_ = za[markerName],
+                agName = marker_.agName;
+
+                let mas = marker_.aliases;
+                for (let i=0; i<mas.length; i++)
+                {
+                  let mi = mas[i],
+                  APs = markerAPs[mi];
+                  if (APs === undefined)
+                  {
+                    if (trace_adj && trace_count-- > 0)
+                      console.log("collateStacksA", "APs === undefined", apName, adjs, markerName, marker_, i, mi, markerAPs);
+                  }
+                  else
+                    // is there an intersection of adjs with APs
+                    for (let id=0; id<adjs.length; id++)
+                  {
+                      let aj = adjs[id],
+                      markerA = z[aj][mi];
+                      if (APs.has(aj))
+                      {
+                        let // agName = markerA.agName,
+                          direction = apName < aj,
+                        apName_ = aps[apName],
+                        aj_ = aps[aj],
+                        am = [
+                          {m: markerName, ap: apName_},
+                          {m: mi, ap: aj_}
+                        ],
+                        am_= [am[1-direction], am[0+direction]],
+                        [m0, m1, ap0, ap1] = [am_[0].m, am_[1].m, am_[0].ap, am_[1].ap],
+                        mmaa = [m0, m1, ap0, ap1, direction, agName];
+                        if (trace_adj && trace_count-- > 0)
+                          console.log("mmaa", mmaa, ap0.apName, ap1.apName, APid2Name(ap0.apName), APid2Name(ap1.apName));
+                        // log_mmaa(mmaa);
+                        // aliased[ap0][ap1][m0][m1] = mmaa;
+                        /* objPut() can initialise aliased, but that is done above,
+                         * needed by filter, so result is not used. */
+                        objPut(aliased, mmaa, ap0.apName, ap1.apName, m0, m1);
+                        pathCount++;
+                      }
+                    }
+                }
+
+              });
+          }
+        });
+      if (trace_adj)
+        console.log("adjCount", adjCount, adjCountNew, pathCount);
+      // uses (calculated in) collateAdjacentAPs() : adjAPs, collateStacksA() : aliased.
+      filterPaths();
+    }
+
+    function objPut(a, v, k1, k2, k3, k4)
+    {
+      if (a === undefined)
+        a = {};
+      let A, A_;
+      if ((A = a[k1]) === undefined)
+        A = a[k1] = {};
+      if ((A_ = A[k2]) === undefined)
+        A = A[k2] = {};
+      else
+        A = A_;
+      if ((A_ = A[k3]) === undefined)
+        A = A[k3] = {};
+      else
+        A = A_;
+      if ((A_ = A[k4]) === undefined)
+        A = A[k4] = [];
+      else
+        A = A_;
+      A.push(v);
+      return a;
+    }
+    /**
+     * Results are in put, which is accessed via Flow.pathData
+     */
+    function filterPaths()
+    {
+      put = flows.alias.pathData = [];
+      function selectCurrentAdjPaths(a0Name)
+      {
+        // this could be enabled by trace_adj also
+        if (trace_path > 1)
+          console.log("a0Name", a0Name, APid2Name(a0Name));
+        adjAPs[a0Name].forEach(function (a1Name) { 
+          if (trace_path > 1)
+            console.log("a1Name", a1Name, APid2Name(a1Name));
+          let b;
+          if ((b = aliased[a0Name]) && (b = b[a1Name]))
+            d3.keys(b).forEach(function (m0) {
+              let b0=b[m0];
+              d3.keys(b0).forEach(function (m1) {
+                let b01=b0[m1];
+                let mmaa = b01;
+                // filter here, e.g. uniqueness
+                if (trace_path > 1)
+                {
+                  console.log(put.length, m0, m1, mmaa.length);
+                  log_mmaa(mmaa[0]);
+                }
+                put.push.apply(put, mmaa);
+              });
+            });
+        });
+      };
+      if (trace_path > 1)
+        console.log("selectCurrentAdjPaths.length", selectCurrentAdjPaths.length);
+      d3.keys(adjAPs).forEach(selectCurrentAdjPaths);
+      console.log("filterPaths", put.length);
     }
 
     /**
@@ -2027,16 +2600,16 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             let a = m.aliases;
             // console.log(marker, a);
             if (a)
-            for (let ai=0; ai < a.length; ai++)
+              for (let ai=0; ai < a.length; ai++)
             {
-              let alias = a[ai];
-              // use an arbitrary order (marker name), to reduce duplicate paths
-              if (alias < marker)
-              {
-                aa[alias] || (aa[alias] = []);
-                aa[alias].push(ap);
+                let alias = a[ai];
+                // use an arbitrary order (marker name), to reduce duplicate paths
+                if (alias < marker)
+                {
+                  aa[alias] || (aa[alias] = []);
+                  aa[alias].push(ap);
+                }
               }
-            }
           }
         );
       }
@@ -2073,8 +2646,9 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function markerLine2(k1, k2, d)
     {
-      let ak1 = apIDs[k1],
-          ak2 = apIDs[k2];
+      let
+        ak1 = apIDs[k1],
+        ak2 = apIDs[k2];
       return line([[o[ak1], markerY(k1, d)],
                    [o[ak2], markerY(k2, d)]]);
     }
@@ -2151,47 +2725,50 @@ chromosome : >=1 linkageGroup-s layed out vertically:
        *    all markers of those APs
        */
       for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
-          let mAPs0 = markerStackAPs(d, stackIndex),
-          mAPs1 = markerStackAPs(d, stackIndex+1);
-          // Cross-product of the two adjacent stacks; just the APs which contain the marker.
-          for (let a0i=0; a0i < mAPs0.length; a0i++) {
-            let a0 = mAPs0[a0i];
-            for (let a1i=0; a1i < mAPs1.length; a1i++) {
-              let a1 = mAPs1[a1i];
-              if (maga[d] === undefined)
-                maga[d] = [];
-              maga[d].push([stackIndex, a0, a1]);
-            }
+        let mAPs0 = markerStackAPs(d, stackIndex),
+        mAPs1 = markerStackAPs(d, stackIndex+1);
+        // Cross-product of the two adjacent stacks; just the APs which contain the marker.
+        for (let a0i=0; a0i < mAPs0.length; a0i++) {
+          let a0 = mAPs0[a0i];
+          for (let a1i=0; a1i < mAPs1.length; a1i++) {
+            let a1 = mAPs1[a1i];
+            if (maga[d] === undefined)
+              maga[d] = [];
+            maga[d].push([stackIndex, a0, a1]);
           }
         }
+      }
     }
 
     /** This is the stacks equivalent of path() / zoompath().
      * Returns an array of paths (links between APs) for a given marker.
      */
     function path(markerName) {
-        let r = [];
+      let r = [];
       // TODO : discard markers of the paths which change
       // pathMarkers = {};
 
       /** 1 string per path segment */
       let
-      mmNm = maN[markerName];
+        mmNm = maN[markerName];
       if (mmNm !== undefined)
         /* console.log("path", markerName);
-      else */
-      if ((unique_1_1_mapping === 2) && (mmNm.length > 1))
+         else */
+        if ((unique_1_1_mapping === 2) && (mmNm.length > 1))
       { /* console.log("path : multiple", markerName, mmNm.length, mmNm); */ }
       else
-      for (let i=0; i < mmNm.length; i++)
+        for (let i=0; i < mmNm.length; i++)
       {
-        let [markerName, a0_, a1_, za0, za1] = mmNm[i];
-        let a0 = a0_.apName, a1 = a1_.apName;
-        if ((za0 !== za1) && (a0 == a1))
-          console.log("path", i, markerName, za0, za1, a0, a1);
-        r[i] = patham(a0, a1, markerName, undefined);
-      }
-      // console.log("path", markerName, mmNm, r);
+          let [markerName, a0_, a1_, za0, za1] = mmNm[i];
+          let a0 = a0_.apName, a1 = a1_.apName;
+          if ((za0 !== za1) && (a0 == a1))
+            console.log("path", i, markerName, za0, za1, a0, a1);
+          r[i] = patham(a0, a1, markerName, undefined);
+        }
+      if (trace_path > 3)
+        console.log("path", markerName, mmNm, r);
+      if (r.length == 0)
+        r.push("");
       return r;
     }
 
@@ -2201,10 +2778,18 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * @param mmaa  [marker0, marker1, a0, a1]
      */
     function pathU(mmaa) {
+      if ((mmaa === undefined) || (mmaa.length === undefined))
+      { console.log("pathU", this, mmaa); debugger; }
       let [marker0, marker1, a0, a1] = mmaa;
       let p = [];
       p[0] = patham(a0.apName, a1.apName, marker0, marker1);
-      // console.log("pathU", mmaa, a0.mapName, a1.mapName, p[0]);
+      if (trace_path > 1)
+        console.log("pathU", mmaa, a0.mapName, a1.mapName, p[0]);
+      return p;
+    }
+    function pathUg(d) {
+      let mmaa = dataOfPath(this),
+      p = pathU(mmaa);
       return p;
     }
 
@@ -2218,11 +2803,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       if (agama === undefined)
         console.log("pathAg", ag);
       else
-      for (let i=0; i < agama.length; i++)
+        for (let i=0; i < agama.length; i++)
       {
-        let [markerName, a0, a1, za0, za1] = agama[i];
-        p[i] = patham(a0.apName, a1.apName, markerName, undefined);
-      }
+          let [markerName, a0, a1, za0, za1] = agama[i];
+          p[i] = patham(a0.apName, a1.apName, markerName, undefined);
+        }
       return p.join();
     }
 
@@ -2250,6 +2835,42 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       // console.log("markerAliasesText", mN, m, mas, s);
       return s;
     }
+
+    /** Prepare a tool-tip for the line.
+     * The line / path may be either connecting 2 axes, or a tick on one axis;
+     * in the latter case ma1 will be undefined.
+     * @param sLine svg path text
+     * @param d0, d1 marker names, i.e. a0:m0, a1:m1.
+     * Iff d1!==undefined, they are connected by an alias.
+     * @param ma0, ma1  marker objects.
+     * ma1 will be undefined when called from axisMarkerTick()
+     */
+    function pathMarkerStore(sLine, d0, d1, ma0, ma1)
+    {
+      if (pathMarkers[sLine] === undefined)
+        pathMarkers[sLine] = {};
+
+      /** Show the x,y coords of the endpoints of the path segment.  Useful during devel. */
+      const showHoverLineCoords = false;
+      const showHoverAliases = true;
+      /** 1 signifies the normal behaviour - handleMouseOver() will show just the marker name.
+       * Values other than 1 will be appended as text. */
+      let hoverExtraText = showHoverExtraText ?
+        " " + ma0.location +
+        (ma1 ?  "-" + ma1.location : "")
+        + (showHoverLineCoords ? " " + sLine : "")
+      : 1;
+      if (showHoverExtraText && showHoverAliases)
+      {
+        hoverExtraText += 
+          "<div>" + markerAliasesText(d0, ma0) + "</div>" +
+          (ma1 ? 
+           "<div>" + markerAliasesText(d1, ma1) + "</div>" : "");
+      }
+      let d = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
+      pathMarkers[sLine][d] = hoverExtraText; // 1;
+    }
+
     /**
      * @param  a0, a1  AP names
      * @param d0, d1 marker names, i.e. a0:d0, a1:d1.
@@ -2261,58 +2882,26 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
       let range = [0, yRange];
 
-      /** Prepare a tool-tip for the line.
-       * The line / path may be either connecting 2 axes, or a tick on one axis;
-       * in the latter case ma1 will be undefined.
-       * @param sLine svg path text
-       * @param d0, d1 marker names, i.e. a0:m0, a1:m1.
-       * Iff d1!==undefined, they are connected by an alias.
-       * @param ma0, ma1  marker objects.
-       * ma1 will be undefined when called from axisMarkerTick()
-       */
-      function pathMarkerStore(sLine, d0, d1, ma0, ma1)
-      {
-        if (pathMarkers[sLine] === undefined)
-          pathMarkers[sLine] = {};
-
-        /** Show the x,y coords of the endpoints of the path segment.  Useful during devel. */
-        const showHoverLineCoords = false;
-        const showHoverAliases = true;
-        /** 1 signifies the normal behaviour - handleMouseOver() will show just the marker name.
-         * Values other than 1 will be appended as text. */
-        let hoverExtraText = showHoverExtraText ?
-          " " + ma0.location +
-          (ma1 ?  "-" + ma1.location : "")
-          + (showHoverLineCoords ? " " + sLine : "")
-          : 1;
-        if (showHoverExtraText && showHoverAliases)
-        {
-          hoverExtraText += 
-            "<div>" + markerAliasesText(d0, ma0) + "</div>" +
-            (ma1 ? 
-             "<div>" + markerAliasesText(d1, ma1) + "</div>" : "");
-        }
-        let d = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
-        pathMarkers[sLine][d] = hoverExtraText; // 1;
-      }
-
+      /** if d1 is undefined, then its value is d0 : direct connection, not alias. */
+      let d1_ = d1 || d0;
       /** Filter out those paths that either side locates out of the svg. */
       let lineIn = allowPathsOutsideZoom ||
         (inRangeI(a0, d0, range)
-         && ((d1===undefined) || inRangeI(a1, d1, range)));
+         && inRangeI(a1, d1_, range));
       // console.log("path()", stackIndex, a0, allowPathsOutsideZoom, inRangeI(a0), inRangeI(a1), lineIn);
       if (lineIn)
       {
-        let sLine = markerLineS2(a0, a1, d0, d1);
+        let sLine = markerLineS2(a0, a1, d0, d1_);
         let marker0 = d0, marker1 = d1, traceTarget = marker0 == "markerK" && marker1 == "markerK" &&
           cmName[a0].mapName == "MyMap5" && cmName[a1].mapName == "MyMap6";
         if (traceTarget)
         {
-          console.log("patham()", d0, d1, cmName[a0].mapName, cmName[a1].mapName, a0, a1, z[a0][d0].location, z[a1][d1].location, sLine);
+          console.log("patham()", d0, d1, cmName[a0].mapName, cmName[a1].mapName, a0, a1, z[a0][d0].location, d1 && z[a1][d1].location, sLine);
         }
         r = sLine;
-        /* Prepare a tool-tip for the line. */
-        pathMarkerStore(sLine, d0, d1, z[a0][d0], z[a1][d1]);
+        if (pathDataIsLine)
+          /* Prepare a tool-tip for the line. */
+          pathMarkerStore(sLine, d0, d1, z[a0][d0], z[a1][d1_]);
       }
       else if (showAll) {
         const markerTickLen = 10; // orig 5
@@ -2323,40 +2912,43 @@ chromosome : >=1 linkageGroup-s layed out vertically:
             pathMarkerStore(r, d, d, z[ai][d], undefined);
           }
         }
+        // could filter these according to inRangeI() as above
         axisMarkerTick(a0, d0);
-        axisMarkerTick(a1, d1 || d0);
+        axisMarkerTick(a1, d1_);
       }
       return r;
     }
     // Returns an array of paths (links between APs) for a given marker.
+    // This predates the addition of stacks; probably no features here which are
+    // not in the later functions path(), pathU().
     function path_pre_Stacks(d) { // d is a marker
-        let r = [];
+      let r = [];
 
-        for (let k=0; k<apIDs.length-1; k++) {
-          let m_k  = apIDs[k],
-              m_k1 = apIDs[k+1];
-            if (d in z[m_k] && d in z[m_k1]) { // if markers is in both APs
-                 //Multiple markers can be in the same path
-              let sLine = markerLine2(k, k+1, d);
-                //pathMarkers[sLine][d] = 1;
-                if(pathMarkers[sLine] != null){
-                   pathMarkers[sLine][d] = 1;
-                } else {
-                   pathMarkers[sLine]= {};
-                   pathMarkers[sLine][d] = 1;
-                }
-                r.push(sLine);
-            }
-            else if (showAll) {
-                if (d in z[m_k]) { 
-                  r.push(markerLine(k, d, 5));
-                }
-                if (d in z[m_k1]) {
-                    r.push(markerLine(k+1, d, 5));
-                }
-            }
+      for (let k=0; k<apIDs.length-1; k++) {
+        let m_k  = apIDs[k],
+        m_k1 = apIDs[k+1];
+        if (d in z[m_k] && d in z[m_k1]) { // if markers is in both APs
+          //Multiple markers can be in the same path
+          let sLine = markerLine2(k, k+1, d);
+          //pathMarkers[sLine][d] = 1;
+          if(pathMarkers[sLine] != null){
+            pathMarkers[sLine][d] = 1;
+          } else {
+            pathMarkers[sLine]= {};
+            pathMarkers[sLine][d] = 1;
+          }
+          r.push(sLine);
         }
-        return r;
+        else if (showAll) {
+          if (d in z[m_k]) { 
+            r.push(markerLine(k, d, 5));
+          }
+          if (d in z[m_k1]) {
+            r.push(markerLine(k+1, d, 5));
+          }
+        }
+      }
+      return r;
     }
 
     /** Calculate relative marker location in the AP.
@@ -2394,36 +2986,40 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
 
     // Returns an array of paths (links between APs) for a given marker when zoom in starts.
+    // This is the zoom() equivalent of path_pre_Stacks(); the features here are
+    // most likely present in the later path() function/s;  zoom() now uses pathUpdate().
     function zoomPath(d) { // d is a marker
-        let r = [];
-        for (let k=0; k<apIDs.length-1; k++) {
-           //ys[p].domain
-           //z[apIDs[k]][d].location marker location
+      let r = [];
+      for (let k=0; k<apIDs.length-1; k++) {
+        //ys[p].domain
+        //z[apIDs[k]][d].location marker location
 
-            if (d in z[apIDs[k]] && d in z[apIDs[k+1]]) { // if markers is in both APs
-              /** relative marker location in the AP of 2 markers, k and k+1 :
-               * k  : markerYk[0]
-               * k+1: markerYk[1]
-               */
-              let markerYk = [markerY(k, d), markerY(k+1, d)];
-              // Filter out those paths that either side locates out of the svg
-              if (inRange(markerYk[0], [0, yRange]) &&
-                  inRange(markerYk[1], [0, yRange])) {
-                        let sLine = line([[o[apIDs[k]], markerYk[0]],
-                             [o[apIDs[k+1]], markerYk[1]]]);
-                        if(pathMarkers[sLine] != null){
-                          pathMarkers[sLine][d] = 1;
-                        } else {
-                          pathMarkers[sLine]= {};
-                          pathMarkers[sLine][d] = 1;
-                        }
-                        r.push(line([[o[apIDs[k]], markerYk[0]],
-                             [o[apIDs[k+1]], markerYk[1]]]));
-                  } 
-              
-            } 
-        }
-        return r;
+        if (d in z[apIDs[k]] && d in z[apIDs[k+1]]) { // if markers is in both APs
+          /** relative marker location in the AP of 2 markers, k and k+1 :
+           * k  : markerYk[0]
+           * k+1: markerYk[1]
+           */
+          let markerYk = [markerY(k, d), markerY(k+1, d)];
+          // Filter out those paths that either side locates out of the svg
+          if (inRange(markerYk[0], [0, yRange]) &&
+              inRange(markerYk[1], [0, yRange])) {
+            let sLine = line(
+              [[o[apIDs[k]], markerYk[0]],
+               [o[apIDs[k+1]], markerYk[1]]]);
+            if(pathMarkers[sLine] != null){
+              pathMarkers[sLine][d] = 1;
+            } else {
+              pathMarkers[sLine]= {};
+              pathMarkers[sLine][d] = 1;
+            }
+            r.push(line(
+              [[o[apIDs[k]], markerYk[0]],
+               [o[apIDs[k+1]], markerYk[1]]]));
+          } 
+          
+        } 
+      }
+      return r;
     }
 
     /** Used when the user completes a brush action on the AP axis.
@@ -2436,7 +3032,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      * names + locations of markers which are within the brush extent of the AP.
      * Add circle.apID for those marker locations.
      * Remove circles of markers (on all APs) outside brushExtents[apID].
-     * For elements in '.foreground g', set class .faded iff the marker (which
+     * For elements in '.foreground > g.flowName > g', set class .faded iff the marker (which
      * is the datum of the element) is not in the selectedMarkers[] of any AP.
      *
      * Draw buttons to zoom to the brushExtents (zoomSwitch) or discard the brush : resetSwitch.
@@ -2494,97 +3090,44 @@ chromosome : >=1 linkageGroup-s layed out vertically:
               //y[p](z[p][m].location) is the relative marker position in the svg
               let dot = apS
                 .append("circle")
-                                    .attr("class", m)
-                                    .attr("cx",0)   /* was o[p], but g.ap translation does x offset of stack.  */
-                                    .attr("cy",y[p](z[p][m].location))
-                                    .attr("r",2)
-                                    .style("fill", "red");
+                .attr("class", eltClassName(m))
+                .attr("cx",0)   /* was o[p], but g.ap translation does x offset of stack.  */
+                .attr("cy",y[p](z[p][m].location))
+                .attr("r",2)
+                .style("fill", "red");
 
-        
+              
             } else {
-              apS.selectAll("circle." + m).remove();
+              let m_ = eltClassName(m);
+              apS.selectAll("circle." + m_).remove();
             }
           });
         });
         me.send('updatedSelectedMarkers', selectedMarkers);
 
-		    function markerNotSelected2(d)
+        function markerNotSelected2(d)
         {
           let sel =
-		        unique_1_1_mapping ?
+            unique_1_1_mapping ?
             ( selectedMarkersSet.has(d[0]) ||
               selectedMarkersSet.has(d[1]) )
             : selectedMarkersSet.has(d);
           return ! sel;
         }
 
-        d3.selectAll(".foreground g").classed("faded", markerNotSelected2);
+        d3.selectAll(".foreground > g > g").classed("faded", markerNotSelected2);
 
-        function markerIsSelected1(d){
-	    /** @return true	iff markerName of maNamePos is in keys of selectedMarkers[].
-		@param maNamePos is the hover text : markerName space position. */
-		function markerIsSelected(maNamePos)
-		{
-		    let maName = maNamePos.split(" ")[0], sel1;
-		    sel1 = unique_1_1_mapping ? (maName == d[0] || maName == d[1]) : maName == d;
-		    if (false)
-		    sel1 = unique_1_1_mapping
-			? (maNamePos.includes(d[0]) ||
-			   maNamePos.includes(d[1]))
-			: maNamePos.includes(d);
-		    return sel1;
-		};
-
-         //d3.event.selection [min,min] or [max,max] should consider as non selection.
-         //maybe alternatively use brush.clear or (brush.move, null) given a mouse event
-          // discuss : d3.keys(selectedMarkers). seems equivalent to selectedAps.
-          /// also this could be .some() instead of ! .every():
-          return ! selectedAps.some(function(p) {
-            /** d is markerName, p is apName. */
-              let smp = selectedMarkers[p], sel;
-	      /*
-	      sel = unique_1_1_mapping ?
-		  (smp[d[0]] || smp[d[1]])
-		  : smp[d];*/
-            // maNamePos is e.g. "markerD 0.4".
-	      // note : if unique_1_1_mapping then d+" " does toString on d (mmaa) : calls stacked.toString(), position.toString() for both stack 
-              sel = smp.some(markerIsSelected);
-	      if (sel)
-	      {
-		  console.log(this, d, p, d[0], d[1]);
-	      }
-	      return sel;
-          });
-          // not used
-          return !d3.keys(selectedMarkers).every(function(p) {
-            /** return true if some of the selectedMarkers of apID p contain marker d.  */
-            let smp = selectedMarkers[p];
-            // following seems equivalent to :
-            if (false) { return smp.some(function(maNamePos) { return maNamePos.includes(d+" "); }); }
-
-            //Maybe there is a better way to do the checking. 
-            //d is the marker name, where smp[smi] contains marker name and postion, separated by " "
-            for (var smi=0; smi<smp.length; smi++){
-              if (smp[smi].includes(d+" ")){
-                 return true;
-              }
-            }
-            return false;
-            //return smp.contains(d);
-          });
-        
-        };
 
         svgContainer.selectAll(".btn").remove();
         /** d3 selection of the brushed AP. */
         let apS = svgContainer.selectAll("#" + eltId(name[0]));
-          zoomSwitch = apS
-                  .append('g')
-                  .attr('class', 'btn')
-                  .attr('transform', yAxisBtnScale);
+        zoomSwitch = apS
+          .append('g')
+          .attr('class', 'btn')
+          .attr('transform', yAxisBtnScale);
         zoomSwitch.append('rect');
         let zoomResetSwitchText =
-        zoomSwitch.append('text')
+          zoomSwitch.append('text')
           .attr('x', 30).attr('y', 20)
           .text('Zoom');
         
@@ -2593,36 +3136,36 @@ chromosome : >=1 linkageGroup-s layed out vertically:
         });
         zoomSwitch.on('click', function () {
           d3.event.stopPropagation();
-           zoom(that,brushExtents);
-           zoomed = true;
+          zoom(that,brushExtents);
+          zoomed = true;
 
-           //reset function
-           //Remove all the existing circles
-           svgContainer.selectAll("circle").remove();
+          //reset function
+          //Remove all the existing circles
+          svgContainer.selectAll("circle").remove();
           zoomResetSwitchText
             .text('Reset');
 
           resetSwitch = zoomSwitch;
-           resetSwitch.on('click',function(){
-             let t = svgContainer.transition().duration(750);
-             
-             apIDs.forEach(function(d) {
-               let idName = axisEltId(d); // axis ids have "a" prefix
-               let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a].location; } );
-               y[d].domain([0, yDomainMax]);
-               ys[d].domain([0, yDomainMax]);
-               let yAxis = d3.axisLeft(y[d]).ticks(10);
-               svgContainer.select("#"+idName).transition(t).call(yAxis);
-             });
-             let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
-             axisTickS.attr("transform", yAxisTicksScale);
+          resetSwitch.on('click',function(){
+            let t = svgContainer.transition().duration(750);
+            
+            apIDs.forEach(function(d) {
+              let idName = axisEltId(d); // axis ids have "a" prefix
+              let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a].location; } );
+              y[d].domain([0, yDomainMax]);
+              ys[d].domain([0, yDomainMax]);
+              let yAxis = d3.axisLeft(y[d]).ticks(10);
+              svgContainer.select("#"+idName).transition(t).call(yAxis);
+            });
+            let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
+            axisTickS.attr("transform", yAxisTicksScale);
 
-             pathUpdate(t);
-             apS.selectAll(".btn").remove();
-             selectedMarkers = {};
-             me.send('updatedSelectedMarkers', selectedMarkers);
-             zoomed = false;
-           });
+            pathUpdate(t);
+            apS.selectAll(".btn").remove();
+            selectedMarkers = {};
+            me.send('updatedSelectedMarkers', selectedMarkers);
+            zoomed = false;
+          });
         });
         
       } else {
@@ -2631,10 +3174,11 @@ chromosome : >=1 linkageGroup-s layed out vertically:
 
         // No axis selected so reset fading of paths or circles.
         console.log("brushHelper", selectedAps.length);
+        // some of this may be no longer required
         if (false)
-        svgContainer.selectAll(".btn").remove();
+          svgContainer.selectAll(".btn").remove();
         svgContainer.selectAll("circle").remove();
-        d3.selectAll(".foreground g").classed("faded", false);
+        d3.selectAll(".foreground > g > g").classed("faded", false);
         selectedMarkers = {};
         me.send('updatedSelectedMarkers', selectedMarkers);
         brushedRegions = {};
@@ -2828,7 +3372,7 @@ chromosome : >=1 linkageGroup-s layed out vertically:
       else
       {
         /* if (t === undefined)
-          t = dragTransitionNew(); */
+         t = dragTransitionNew(); */
         draggedAxisRedraw(this, d, t);
       }
 
@@ -2845,25 +3389,26 @@ chromosome : >=1 linkageGroup-s layed out vertically:
      */
     function draggedAxisRedraw(apElt, d, t)
     {
-        let st0 = d3.select(apElt);
-        if (! st0.empty())
-        {
-          /* if (t === undefined)
-            t = dragTransitionNew(); */
-          // console.log("st0", st0._groups[0].length, st0._groups[0][0]);
-          let st = st0; //.transition();  // t
-          // st.ease(d3.easeQuadOut);
-          // st.duration(dragTransitionTime);
-          st.attr("transform", Stack.prototype.apTransformO);
-          // zoomed effects transform via path() : apTransform.
-           pathUpdate(t /*st*/);
-          //Do we need to keep the brushed region when we drag the AP? probably not.
-          //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
-          // st0.select(".brush").call(y[d].brush.move,null);
-          //Remove all highlighted Markers.
-          svgContainer.selectAll("circle").remove();
-        }
+      let st0 = d3.select(apElt);
+      if (! st0.empty())
+      {
+        /* if (t === undefined)
+         t = dragTransitionNew(); */
+        // console.log("st0", st0._groups[0].length, st0._groups[0][0]);
+        let st = st0; //.transition();  // t
+        // st.ease(d3.easeQuadOut);
+        // st.duration(dragTransitionTime);
+        st.attr("transform", Stack.prototype.apTransformO);
+        // zoomed effects transform via path() : apTransform.
+        if (trace_path < 2)
+          pathUpdate(t /*st*/);
+        //Do we need to keep the brushed region when we drag the AP? probably not.
+        //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
+        // st0.select(".brush").call(y[d].brush.move,null);
+        //Remove all highlighted Markers.
+        svgContainer.selectAll("circle").remove();
       }
+    }
 
     /** Called when apID has been dragged from one stack to another.
      * It is expected that the group element of the AP, g.ap#<eltId(apID)>,
@@ -2906,55 +3451,105 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     {
       let a=[];
       for (let i=0; i<s.length; i++)
-        a.push(datum ? s[i].__data__ : s[i]);
+        a.push(datum ? s[i] && s[i].__data__ : s[i]);
       return a;
     }
     function logSelectionLevel(sl)
     {
-      if (sl[0].length)
+      if (sl.length && sl[0].length)
       {
-        console.log(fromSelectionArray(sl, false));
-        console.log(fromSelectionArray(sl, true));
+        console.log(fromSelectionArray(sl[0], false));
+        console.log(fromSelectionArray(sl[0], true));
       }
     }
     function logSelection(s)
     {
-      console.log(s, s._groups[0].length, s._parents.length);
+      console.log(s, s._groups.length, s._parents.length);
       logSelectionLevel(s._groups);
       logSelectionLevel(s._parents);
     }
 
+    function log_path_data(g)
+    {
+      let p3 = g.selectAll("g").selectAll("path");  // equiv : g.selectAll("g > path")
+      console.log(p3._groups.length && p3._groups[0][0].__data__);
+    }
+
     /** Update the paths connecting markers present in adjacent stacks.
      * @param t undefined, or a d3 transition in which to perform the update.
+     * @param flow  configures the data sources, processing, and output presentation
      */
-    function pathUpdate(t)
+    function pathUpdate_(t, flow)
     {
+      let pathData = flow.pathData,
+      unique_1_1_mapping = flow.direct ? false : (flow.unique ? true : 3),
+      // pathDataInG = true,
+      pathClass = flow.direct ? I : pathClassA;
+      // "exported" to patham().
+      pathDataIsLine = flow.direct;
       // console.log("pathUpdate");
       tracedApScale = {};  // re-enable trace
-      let g = foreground.selectAll("g");
-      if (unique_1_1_mapping)
+      let g = flow.g.selectAll("g");
+      let gn;
+      /* if (unique_1_1_mapping)
+       {*/
+      if (trace_path)
+        console.log("pathUpdate() pathData", pathData.length, g.size()); // , pathData
+      if (trace_path > 1)
+        for (let pi=0; pi < pathData.length; pi++)
+          log_mmaa(pathData[pi]);
+      g = g.data(pathData);
+      if (trace_path)
+        console.log("exit", g.exit().size(), "enter", g.enter().size());
+      if (pathData.length === 0)
+      {
+        console.log("pathData.length === 0");
+      }
+      g.exit().remove();
+      function log_foreground_g(selector)
+      {
+        let gg = foreground.selectAll(selector);
+        console.log("gg", selector, gg._groups[0], gg.size());
+        if (true)
+        {
+          let gg0 = gg._groups[0];
+          for (let gi=0; gi < gg0.length; gi++)
+            log_mmaa(gg0[gi].__data__);
+        }
+      }
+      gn = g.enter().append("g");
+      // insert data into path elements (each line of the "map" is a path)
+      let pa;
+      if (flow.direct)
       {
         if (trace_path)
-        console.log("pathUpdate() pathData", pathData.length, g.size()); // , pathData
-        g = g.data(pathData);
-        if (trace_path)
-        console.log("exit", g.exit().size(), "enter", g.enter().size());
-        if (pathData.length === 0)
-        {
-          console.log("pathData.length === 0");
-        }
-        g.exit().remove();
-        let gn = g.enter().append("g");
-          gn
-          .merge(g)
-            .attr("class", pathClass);
+          console.log(flow.name, gn.size(), gn);
+        // pa = gn.append("path");
+        // log_path_data(flow.g);
+        let p2 = flow.g.selectAll("g").selectAll("path").data(path);
+        // log_path_data(flow.g);
+        // pa = g.selectAll("path").data(path)
+        pa = p2.enter().append("path");
       }
+      else
+      {
+        pa =
+          gn.append("path");
+        if (! pathDataInG)
+          g.selectAll("path").data(pathData);
+      }
+      if (trace_path > 1)
+        log_foreground_g("g > g > path");
+      (pathDataInG ? gn : pa)
+      //.merge()
+        .attr("class", pathClass);
+      //}
       let
-      path_ = unique_1_1_mapping ? pathU : path,
-       /** The data of g is marker name, data of path is SVG path string. */
+        path_ = unique_1_1_mapping ? (pathDataInG ? pathUg : pathU) : path,
+      /** The data of g is marker name, data of path is SVG path string. */
       keyFn =function(d) { let markerName = markerNameOfPath(this); 
                            console.log("keyFn", d, this, markerName); 
-                           return markerName; },
+                           return markerName; };
       /* The mmaa data of path's parent g is accessed from path attribute
        * functions (i.e. style(stroke), classed(reSelected), gKeyFn(), d, etc.);
        * alternately it could be stored in the path's datum and accessed
@@ -2965,132 +3560,357 @@ chromosome : >=1 linkageGroup-s layed out vertically:
        * Here the SVG line string is calculated by path_ from the parent g data,
        * and the attr d function is identity (I) to copy the path datum.
        */
-      gd = g.selectAll("path").data(path_/*, keyFn*/);
-      if (trace_stack > 1)
+      if (false)
       {
-        let ex = gd.exit();
-        if (ex.size())
-          console.log("gd.exit()", ex);
+        let gd = /*g.selectAll("path")*/gn/*pa*/.data(path_/*, keyFn*/);
         let en = gd.enter();
-        if (en.size())
-          console.log("gd.enter()", en);
+        if (trace_stack > 1)
+        {
+          let ex = gd.exit();
+          if (ex.size())
+            console.log("gd.exit()", ex);
+          if (en.size())
+            console.log("gd.enter()", en);
+        }
+        gd.exit().remove();
       }
-      gd.exit().remove();
-      gd.enter().append("path");
+      if (trace_path && pathData.length > 0 &&  g.size() === 0)
+      {
+        console.log("pathUpdate", pathData.length, g.size(), gn.enter().size(), t);
+      }
+      let gp;
+      if (pathData.length != (gp = d3.selectAll(".foreground > g." + flow.name + " > g > path")).size())
+      {
+        console.log("pathData.length", pathData.length, "!= gp.size()", gp.size());
+      }
+
       // .merge() ...
       if (t === undefined) {t = d3; }
-      t.selectAll(".foreground path").attr("d", function(d) { return d; });
-      d3.selectAll(".foreground > g > path")
-        .on("mouseover",handleMouseOver)
-        .on("mouseout",handleMouseOut);
-	pathColourUpdate(gd);
+      if (true)
+      {
+        /** attr d function has not changed, but the data has.
+         * even where the datum is the same, the axes may have moved.
+         * So update all paths.
+         */
+        let t1=flow.g.transition(t),
+        p1 = t1.selectAll("g > path"); // pa
+        p1.attr("d", pathDataIsLine ? I : path_);
+        if (trace_path > 3)
+          log_path_data(flow.g);
+        setupMouseHover(pa);
+      }
+      else
+      {
+        t.selectAll(".foreground > g." + flow.name + "> g > path").attr("d", function(d) { return d; });
+        setupMouseHover(
+          flow.g.selectAll("g > path")
+        );
+      }
+      pathColourUpdate(pa, flow);
     }
-    /** Get the markerName of a path element from its parent element's data.
-     * In the case of using aliases, the parent g's data is [m, m, x, x].
+    /** call pathUpdate(t) for each of the enabled flows. */
+    function pathUpdate(t)
+    {
+      d3.keys(flows).forEach(function(flowName) {
+        let flow = flows[flowName];
+        if (flow.enabled)
+          pathUpdate_(t, flow);
+      });
+    }
+    /** Get the data corresponding to a path element, from its datum or its parent element's datum.
+     * In the case of using aliases, the parent g's data is [m, m, ap, ap, ...] "mmaa".
+     */
+    function dataOfPath(path)
+    {
+      let pa = pathDataInG
+        ? path.parentElement || path._parent /* EnterNode has _parent not parentElement */
+        : path,
+      da = pa.__data__;
+      return da;
+    }
+    /** Get the markerName of a path element, from its corresponding data accessed via dataOfPath().
      */
     function markerNameOfPath(path)
     {
-      let da = path.parentElement.__data__,
-      /** can use markerNameOfData() */
-      markerName =
-        (da.length === 4)  // i.e. unique_1_1_mapping
-        ? da[0]  //  mmaa, i.e. [marker0, marker1, a0, a1]
-        : da;
+      let da = dataOfPath(path),
+      markerName = markerNameOfData(da);
       return markerName;
     }
-      function pathColourUpdate(gd)
+    /** If markerName has an alias group with a marker with an assigned class (colour) then return the classes.
+     * @return undefined otherwise
+     */
+    function colouredAg(apName, markerName)
+    {
+      let classSet,
+      marker = z[apName][markerName],
+      agName = marker.agName;
+      if (agName)
       {
-        if (trace_path_colour)
-        console.log("pathColourUpdate", gd, use_path_colour_scale, path_colour_scale_domain_set, path_colour_scale.domain());
-	  if (gd === undefined)
-	      gd = d3.selectAll(".foreground g").selectAll("path");
+        classSet = agClasses[agName];
+      }
+      return classSet;
+    }
+    function classFromSet(classSet)
+    {
+      /** can use any element of set; later may cycle through them with slider. */
+      let colourOrdinal = classSet.values().next().value;
+      return colourOrdinal;
+    }
+    /** @param apName could be chrName : marker name is looked up via apName,
+     * but intervals might be defined in terms of chrName; which is currently
+     * the same thing, but potentially 1 chr could be presented by multiple axes.
+     * see apName2Chr();
+     * @return name of interval, as per makeIntervalName()
+     * Later maybe multiple results if intervals overlap.
+     */
+    function locationClasses(apName, markerName)
+    {
+      let classes,
+      m = z[apName][markerName],
+      location = m.location,
+      chrName = apName2Chr(apName),
+      mapChrName = APid2Name(apName) + ":" + chrName,
+      it = intervalTree[apName];
 
-      if (use_path_colour_scale && path_colour_scale_domain_set)
-        if (use_path_colour_scale === 4)
-      gd.style('stroke', function(d) {
-        /** d is path SVG line text */
-        let markerName = markerNameOfPath(this), colourOrdinal = markerName;
-        if (use_path_colour_scale === 4)
-          colourOrdinal = markerScaffold[markerName];
-        let colour = path_colour_scale(colourOrdinal);
+      if (it)
+        //Find all intervals containing query point
+        it.queryPoint(location, function(interval) {
+          /* later return Set or array of classes.  */
+          classes = makeIntervalName(mapChrName, interval);
+          if (trace_path_colour > 2)
+            console.log("locationClasses", "apName", apName, "mapChrName", mapChrName, "markerName", markerName, ", scaffold/class", classes);
+        });
+      
+      return classes;  
+    }
+    /** Access markerName/s from d or __data__ of parent g of path.
+     * Currently only used when (use_path_colour_scale === 4), but aims to be more general.
+     * Lookup markerScaffold to find class, or if (use_path_colour_scale === 4)
+     * also look up colouredAg().  @see use_path_colour_scale
+
+     * The scaffold of a marker was the first use; this has been generalised to a "class";
+     * i.e. marker names are mapped (via colouredMarkers) to class names.
+     * This function is used by stroke (todo) and class functions of path.
+     * (based on a blend & update of those 2, mostly a copy of stroke).
+     * @param pathElt <path> element which is to be coloured / classed
+     * @param d datum of pathElt
+     */
+    function pathClasses(pathElt, d)
+    {
+      let classes;
+      /** d is path SVG line text if pathDataIsLine */
+      let da = dataOfPath(pathElt);
+      /** similar to : (da.length === 4) or unique_1_1_mapping */
+      let dataIsMmaa = typeof(da) === "object";
+      let markerName = dataIsMmaa ? da[0] : da, // also @see markerNameOfPath(pathElt)
+      colourOrdinal;
+      if (use_path_colour_scale <= 4)
+      {
+        colourOrdinal = markerName;
+      }
+      else if (use_path_colour_scale === 4)
+      {
+        colourOrdinal = markerScaffold[markerName];
         /* colour the path if either end has a class mapping defined.
          * if d[0] does not then check d[1].
          */
-        if ((use_path_colour_scale === 4) && (colour === pathColourDefault) && (d.length === 4) /* i.e. unique_1_1_mapping */)
+        if ((colourOrdinal === undefined) && dataIsMmaa
+            && (da[0] != da[1]))
         {
-          // after confirming the functionality, the condition structure can be improved, and following repetition factorised.
-          markerName = d[1];
-          colourOrdinal = markerName;
-          colourOrdinal = markerScaffold[markerName];
-          colour = path_colour_scale(colourOrdinal);
+          colourOrdinal = /*markerScaffold[da[0]] ||*/ markerScaffold[da[1]];
         }
-        if (false && (colour !== pathColourDefault))  // change false to enable trace
-          console.log("stroke", markerName, colourOrdinal, colour);
-        return colour;
-      });
+        if (trace_path_colour > 2)
+          console.log("markerName", markerName, ", scaffold/class", colourOrdinal);
+      }
+      else if (use_path_colour_scale === 5)
+      {
+        // currently, result of locationClasses() is a string identifying the interval,
+        // and matching the domain value.
+        if (dataIsMmaa)
+        {
+          classes = locationClasses(da[2].apName, markerName)
+            || locationClasses(da[3].apName, da[1]);
+        }
+        else
+        {
+          let APs = markerAPs[markerName], apName;
+          // choose the first chromosome;  may be unique.
+          // if not unique, could colour by the intervals on any of the APs,
+          // but want just the APs which are points on this path.
+          for (apName of APs) { break; }
+          classes = locationClasses(apName, markerName);
+        }
+      }
+      if (classes !== undefined)
+      {
+      }
+      else if (colourOrdinal)
+        classes = colourOrdinal;
+      else if (dataIsMmaa)
+      {
+        /* Like stroke function above, after direct lookup of path end
+         * markers in markerScaffold finds no class defined, lookup via
+         * aliases of end markers - transitive.
+         */
+        /* if ! dataIsMmaa then have markerName but no APs; is result of a direct flow,
+         * so colouring by Ag may not be useful.
+         */
+        // collateStacks() / maInMaAG() could record in pu the alias group of the path.
+        let [marker0, marker1, a0, a1] = da;
+        let classSet = colouredAg(a0.apName, marker0) || colouredAg(a1.apName, marker1);
+        classes = classSet;
+      }
+      return classes;
+    }
+    function pathColourUpdate(gd, flow)
+    {
+      if (trace_path_colour)
+      {
+        console.log
+        ("pathColourUpdate", flow && flow.name, flow,
+         use_path_colour_scale, path_colour_scale_domain_set, path_colour_scale.domain());
+        if (gd && (trace_path_colour > 2))
+          logSelection(gd);
+      }
+      let flowSelector = flow ? "." + flow.name : "";
+      if (gd === undefined)
+        gd = d3.selectAll(".foreground > g" + flowSelector + "> g").selectAll("path");
 
-        if (use_path_colour_scale === 3)
-	  gd.classed("reSelected", function(d, i, g) {
+      if (use_path_colour_scale && path_colour_scale_domain_set)
+        if (use_path_colour_scale >= 4)
+          gd.style('stroke', function(d) {
+            let colour;
+            /** d is path SVG line text if pathDataIsLine */
+            let da = dataOfPath(this);
+            /** similar to : (da.length === 4) or unique_1_1_mapping */
+            let dataIsMmaa = typeof(da) === "object";
+            let markerName = dataIsMmaa ? da[0] : da, // also @see markerNameOfPath(this)
+            colourOrdinal = markerName;
+            if (use_path_colour_scale === 4)
+            {
+              colourOrdinal = markerScaffold[markerName];
+              /* colour the path if either end has a class mapping defined.
+               * if d[0] does not then check d[1].
+               */
+              if ((colourOrdinal === undefined) && dataIsMmaa
+                  && (da[0] != da[1]))
+              {
+                colourOrdinal = markerScaffold[da[0]] || markerScaffold[da[1]];
+              }
+            }
+            else if (use_path_colour_scale === 5)
+            {
+              let classSet = pathClasses(this, d);
+              colourOrdinal = (classSet === undefined) ||
+                (typeof classSet == "string")
+                ? classSet : classFromSet(classSet);
+            }
+            // path_colour_scale(undefined) maps to pathColourDefault
+            if ((colourOrdinal === undefined) && dataIsMmaa)
+            {
+              /* if ! dataIsMmaa then have markerName but no APs; is result of a direct flow,
+               * so colouring by Ag may not be useful.
+               */
+              // collateStacks() / maInMaAG() could record in pu the alias group of the path.
+              let [marker0, marker1, a0, a1] = da;
+              let classSet = colouredAg(a0.apName, marker0) || colouredAg(a1.apName, marker1);
+              if (classSet)
+                colourOrdinal = classFromSet(classSet);
+              if (false && colourOrdinal)
+                console.log(markerName, da, "colourOrdinal", colourOrdinal);
+            }
+            if (colourOrdinal === undefined)
+              colour = undefined;
+            else
+              colour = path_colour_scale(colourOrdinal);
+
+            if (false && (colour !== pathColourDefault))  // change false to enable trace
+              console.log("stroke", markerName, colourOrdinal, colour);
+            return colour;
+          });
+
+      if (use_path_colour_scale === 3)
+        gd.classed("reSelected", function(d, i, g) {
           /** d is path SVG line text */
-      let markerName = markerNameOfPath(this);
-          let pathColour = path_colour_scale(markerName);
-	  // console.log(markerName, pathColour, d, i, g);
-	  let isReSelected = pathColour !== pathColourDefault;
-	  return isReSelected;
-    });
+          let da = dataOfPath(this);
+          let dataIsMmaa = typeof(da) === "object";
+          let markerName = dataIsMmaa ? da[0] : da;
 
-        if (use_path_colour_scale === 4)
+          let pathColour = path_colour_scale(markerName);
+
+          // console.log(markerName, pathColour, d, i, g);
+          let isReSelected = pathColour !== pathColourDefault;
+          return isReSelected;
+        });
+
+      if (use_path_colour_scale >= 4)
         gd.attr("class", function(d) {
-          let markerName = markerNameOfPath(this);
-          let scaffold = markerScaffold[markerName], c;
+          let scaffold, c,
+          classes = pathClasses(this, d),
+							simpleClass;
+          if (simpleClass = (typeof(classes) !== "object"))
+          {
+            scaffold = classes;
+          }
+          else  // classes is a Set
+          {
+            let classSet = classes;
+            scaffold = "";
+            for (let cl of classSet)
+            {
+              scaffold += " " + cl;
+            }
+            // console.log("class", da, classSet, scaffold);
+          }
+
           if (scaffold)
           {
-            c = "strong" + " " + scaffold;
-            // console.log("class", markerName, scaffold, c, d);
+            c = (simpleClass ? "" : "strong" + " ") + scaffold;
+            if (trace_path_colour > 2)
+              console.log("class", scaffold, c, d, this);
           }
           else if (false)
           {
-            console.log("class", this, markerName, markerScaffold, scaffold, c, d);
+            console.log("class", this, markerNameOfPath(this), markerScaffold, scaffold, c, d);
           }
 
           return c;
- });
-
+        });
     }
+
     function scaffoldLegendColourUpdate()
     {
       console.log("scaffoldLegendColourUpdate", use_path_colour_scale);
-        if (use_path_colour_scale === 4)
+      if (use_path_colour_scale === 4)
       {
-	        let da = Array.from(scaffolds),
-          ul = d3.select("div#scaffoldLegend > ul");
-          // console.log(ul, scaffolds, da);
-          let li_ = ul.selectAll("li")
-            .data(da);
-          // console.log(li_);
-          let la = li_.enter().append("li");
-          // console.log(la);
-          let li = la.merge(li_);
-          function I(d){ return d; };
-          li.html(I);
-          li.style("color", function(d) {
-            // console.log("color", d);
-            let scaffoldName = d,
-         colourOrdinal = scaffoldName;
-        let colour = path_colour_scale(colourOrdinal);
+        let da = Array.from(scaffolds),
+        ul = d3.select("div#scaffoldLegend > ul");
+        // console.log(ul, scaffolds, da);
+        let li_ = ul.selectAll("li")
+          .data(da);
+        // console.log(li_);
+        let la = li_.enter().append("li");
+        // console.log(la);
+        let li = la.merge(li_);
+        li.html(I);
+        li.style("color", function(d) {
+          // console.log("color", d);
+          let scaffoldName = d,
+          colourOrdinal = scaffoldName;
+          let colour = path_colour_scale(colourOrdinal);
 
-            if (false && (colour != pathColourDefault)) // change false to enable trace
+          if (false && (colour != pathColourDefault)) // change false to enable trace
           {
             console.log("color", scaffoldName, colour, d);
           }
           return colour;
-      });
-        }
+        });
+      }
     }
 
     function deleteAfterDrag() {
       if (trace_stack)
-      console.log("deleteAfterDrag", stacks.toDeleteAfterDrag);
+        console.log("deleteAfterDrag", stacks.toDeleteAfterDrag);
 
       if (stacks.toDeleteAfterDrag !== undefined)
       {
@@ -3140,102 +3960,168 @@ chromosome : >=1 linkageGroup-s layed out vertically:
     }
     
 
-  /*function click(d) {
-     if (y[d].flipped) {
-         y[d] = d3.scale.linear()
-              .domain([0,d3.max(Object.keys(z[d]), function(x) { return z[d][x].location; } )])
-              .range([0, yRange]); // set scales for each AP
-          y[d].flipped = false;
-          var t = d3.transition().duration(500);
-          t.selectAll("#"+d).select(".axis")
-            .attr("class", "axis")
-            .each(function(d) { d3.select(this).call(axis.scale(y[d])); })
-      }
-      else {
-          y[d] = d3.scale.linear()
-              .domain([0,d3.max(Object.keys(z[d]), function(x) { return z[d][x].location; } )])
-              .range([yRange, 0]); // set scales for each AP
-          y[d].flipped = true;
-          var t = d3.transition().duration(500);
-          t.selectAll("#"+d).select(".axis")
-            .attr("class", "axis")
-            .each(function(d) { d3.select(this).call(axis.scale(y[d])); })
-      }
-      y[d].brush = d3.svg.brush()
-          .y(y[d])
-          .on("brush", brush);
-      d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
-      var t = d3.transition().duration(500);
-      t.selectAll(".foreground path").attr("d", function(d) { return d; });
-  }
-       let zoomedMarkers = [];
-
-    //console.log(myAps.start + " " + myAps.end);
-    //d3.select('#grid')
-      //.datum(d3Data)
-      //.call(grid);
-     function refresh() {
-    d3.selectAll(".foreground g").selectAll("path").remove();
-    d3.selectAll(".foreground g").selectAll("path").data(path).enter().append("path");
-    foreground.selectAll("path").attr("d", function(d) { return d; })
-  }
-*/
-
     /** flip the value of markers between the endpoints
      * @param markers is an array of marker names, created via (zoom) brush,
      * and input via text box
      */
-          this.set('draw_flipRegion', function(markers) {
-            let brushedMap = selectedAps[0];
-            let zm = z[brushedMap];
+    this.set('draw_flipRegion', function(markers) {
+      let brushedMap = selectedAps[0];
+      let zm = z[brushedMap];
 
-            if (markers.length)
+      if (markers.length)
+      {
+        /** the first and last markers have the minimum and maximum position
+         * values, except where flipRegion has already been applied. */
+        let limits = [undefined, undefined];
+        limits = markers
+          .reduce(function(limits_, mi) {
+            // console.log("reduce", mi, limits_, zm[mi]);
+            // marker aliases may be in the selection and yet not in the map
+            let zmi = zm[mi];
+            if (zmi)
             {
-            /** the first and last markers have the minimum and maximum position
-             * values, except where flipRegion has already been applied. */
-            let limits = [undefined, undefined];
-            limits = markers
-              .reduce(function(limits_, mi) {
-                // console.log("reduce", mi, limits_, zm[mi]);
-                // marker aliases may be in the selection and yet not in the map
-                let zmi = zm[mi];
-                if (zmi)
-                {
-                  let l = zmi.location;
-                  if (limits_[0] === undefined || limits_[0] > l)
-                    limits_[0] = l;
-                  if (limits_[1] === undefined || limits_[1] < l)
-                    limits_[1] = l;
-                }
-                // console.log(zmi, l, limits_);
-                return limits_;
-              }, limits);
-            // console.log("limits", limits);
+              let l = zmi.location;
+              if (limits_[0] === undefined || limits_[0] > l)
+                limits_[0] = l;
+              if (limits_[1] === undefined || limits_[1] < l)
+                limits_[1] = l;
+            }
+            // console.log(zmi, l, limits_);
+            return limits_;
+          }, limits);
+        // console.log("limits", limits);
 
-            let m0 = markers[0], m1 = markers[markers.length-1],
-            locationRange = limits,
-            /** delta of the locationRange interval */
-            rd = locationRange[1] - locationRange[0],
-            invert = function (l) { let i = rd === 0 ? l : locationRange[1] + (locationRange[0] - l);
-                                    // console.log("invert", l, i);
-                                    return i; };
-                   console.log("draw_flipRegion", /*markers, zm,*/ m0, m1, locationRange, rd);
+        let m0 = markers[0], m1 = markers[markers.length-1],
+        locationRange = limits,
+        /** delta of the locationRange interval */
+        rd = locationRange[1] - locationRange[0],
+        invert = function (l)
+        {
+          let i = rd === 0 ? l : locationRange[1] + (locationRange[0] - l);
+          // console.log("invert", l, i);
+          return i;
+        };
+        console.log("draw_flipRegion", /*markers, zm,*/ m0, m1, locationRange, rd);
         d3.keys(zm).forEach(function(marker) {
           let marker_ = zm[marker], ml = marker_.location;
           if (locationRange[0] <= ml && ml <= locationRange[1])
-          marker_.location = invert(ml);
+            marker_.location = invert(ml);
         });
-              pathUpdate(undefined);
-            }
-          });
+        pathUpdate(undefined);
+      }
+    });
 
-          this.set('clearScaffoldColours', function() {
-            console.log("clearScaffoldColours");
-            markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
-            pathColourUpdate(undefined);
-          });
+    this.set('clearScaffoldColours', function() {
+      console.log("clearScaffoldColours");
+      markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
+      agClasses = {};
+      pathColourUpdate(undefined, undefined);
+    });
+
+    /** The Zoom & Reset buttons (g.btn) can be hidden by clicking the 'Publish
+     * Mode' checkbox.  This provides a clear view of the visualisation
+     * uncluttered by buttons and other GUI mechanisms
+     */
+    function setupToggleModePublish()
+    {
+      let checkboxId="checkbox-toggleModePublish",
+      checkbox = Ember.$("#" + checkboxId);
+      checkbox.on('click', function (event) {
+        console.log(checkboxId, checkbox[0].checked, event.originalEvent, svgContainer._groups[0][0]);
+        svgContainer.classed("publishMode", checkbox[0].checked);
+      });
+    }
+
+    function flows_showControls (parentSelector)
+    {
+      let parent = d3.select(parentSelector);
+      let flowNames = d3.keys(flows);
+      /** button to toggle flow visibilty. */
+      let b = parent.selectAll("div.flowButton")
+        .data(flowNames)
+        .enter().append("div");
+      b
+        .attr("class",  function (flowName) { return flowName;})
+        .classed("flowButton", true)
+        .classed("selected", function (flowName) { let flow = flows[flowName]; return flow.visible;})
+        .on('click', function (flowName /*, i, g*/) {
+          let event = d3.event;
+          console.log(flowName, event);
+          // sharing click with Export menu
+          if (event.shiftKey)
+            return;
+          // toggle visibilty
+          let flow = flows[flowName];
+          console.log('flow click', flow);
+          flow.visible = ! flow.visible;
+          let b1=d3.select(this);
+          b1.classed("selected", flow.visible);
+          updateSelections();
+          flow.g.classed("hidden", ! flow.visible);
+        })
+      /* To get the hover text, it is sufficient to add attr title.
+       * jQuery doc (https://jqueryui.com/tooltip/) indicates .tooltip() need
+       * only be called once per document, perhaps that is already done by
+       * d3 / jQuery / bootstrap.
+       */
+        .attr("title", I)
+        .attr("data-id", function (flowName) {
+          return "Export:" + flowName;
+        })
+      ;
+
+    };
+    flows_showControls(flowButtonsSel);
+    configurejQueryTooltip(flowButtonsSel);
+    setupToggleModePublish();
+
+    /** After chromosome is added, draw() will update elements, so
+     * this function is used to update d3 selections :
+     * svgRoot, svgContainer, foreground, flows[*].g
+     */
+    function updateSelections() {
+      console.log(
+        "svgRoot (._groups[0][0])", svgRoot._groups[0][0],
+        ", svgContainer", svgContainer._groups[0][0],
+        ", foreground", foreground._groups[0][0]);
+      svgRoot = d3.select('#holder > svg');
+      svgContainer = svgRoot.select('g');
+      foreground = svgContainer.select('g.foreground');
+      console.log(
+        "svgRoot (._groups[0][0])", svgRoot._groups[0][0],
+        ", svgContainer", svgContainer._groups[0][0],
+        ", foreground", foreground._groups[0][0]);
+      d3.keys(flows).forEach(function (flowName) {
+        let flow = flows[flowName];
+        console.log(flowName, " flow.g", flow.g._groups[0][0]);
+        flow.g = foreground.select("g." + flow.name);
+        console.log(flowName, " flow.g", flow.g._groups[0][0]);
+      });
+
+    };
+
+    function getUsePatchColour()
+    {
+      let inputParent = '#choose_path_colour_scale',
+      inputs = Ember.$(inputParent + ' input'), val;
+      for (let ii = 0;
+           (ii < inputs.length) && (val === undefined);
+           ii++)
+      {
+        if (inputs[ii].checked)
+        {
+          val = inputs[ii].getAttribute("data-value"); // .value;
+          val = parseInt(val);
+        }
+      }
+      console.log(inputParent + " value", val);
+      return val;
+    }
 
   },
+
+
+
 
   didInsertElement() {
   },
@@ -3258,3 +4144,4 @@ chromosome : >=1 linkageGroup-s layed out vertically:
   }
 
 });
+

@@ -25,6 +25,31 @@ svg {
     cursor: move;
 }
 
+/* ---------------------------------- */
+
+/* These selectors are for HTML and SVG respectively; they are bundled so that
+the user can easily edit them at the same time, keeping colours in sync.  */
+div.drawing-controls > div.flowButtons > .flowButton.alias,
+.foreground > g.alias > g > path {
+  /* HTML  */
+  border-color : #955;
+  background-color: #955;
+  /* SVG  */
+  stroke: #955;
+}
+div.drawing-controls > div.flowButtons > .flowButton.U_alias,
+.foreground > g.U_alias > g > path {
+  border-color : #545;
+  background-color: #545;
+  stroke: #545;
+}
+div.drawing-controls > div.flowButtons > .flowButton.direct,
+.foreground > g.direct > g > path {
+  border-color : #484;
+  background-color: #484;
+  stroke: #484;
+}
+
 .foreground path {
   fill: none;
   stroke-opacity: .125;
@@ -32,6 +57,21 @@ svg {
   stroke: #808;
 }
 
+/* or :hover if transition is not required. */
+.devel .foreground path.hovered {
+    /* was d3:easeElastic */
+    transition:
+    stroke		800ms ease-in-out,
+    stroke-width	800ms ease-in-out,
+    stroke-opacity	800ms ease-in-out,
+    fill		800ms ease-in-out;
+
+    /* element stroke is set by pathColourUpdate(); override that via !important.  */
+    stroke : #880044	!important;
+    stroke-width : 6px;
+    stroke-opacity : 1;
+    fill : none;
+}
 .foreground .faded path {
   fill: none;
   stroke: #000;
@@ -261,3 +301,50 @@ div.highlightMarker
     -moz-border-radius: 6px 0 6px 6px;
     border-radius: 6px 0 6px 6px;
 }
+/* -------------------------------------------------------------------------- */
+/** style the flow control buttons in  div.drawing-controls */
+div.drawing-controls > div.flowButtons > .flowButton
+{
+    float: left;
+    width: 35px;
+    height: 35px;
+    margin: 0px 5px;
+
+    border-radius: 16px;
+    border-width: 10px;
+    /* border-style: dashed; */
+}
+div.drawing-controls > div.flowButtons > .flowButton.selected
+{
+    border-width: 8px;
+    /* border-style: solid; */
+    border-radius: 0px;
+}
+/* -------------------------------------------------------------------------- */
+/* style the flowButtons popover menu */
+div.drawing-controls > div.flowButtons > div.popover > button
+{
+    width: 100%;
+}
+
+/* -------------------------------------------------------------------------- */
+
+/* @see setupToggleModePublish() */
+#checkbox-toggleModePublish
+{
+  margin-left: 1.5em;
+}
+
+svg > g.publishMode .btn
+{
+  display: none;
+}
+
+/* -------------------------------------------------------------------------- */
+
+#choose_path_colour_scale > table > tr > th,
+#choose_path_colour_scale > table > tr > td
+{
+  padding: 0 1em;
+}
+/* -------------------------------------------------------------------------- */

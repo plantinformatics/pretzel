@@ -5,6 +5,20 @@ var EmberApp = require('ember-cli/lib/broccoli/ember-app');
 module.exports = function(defaults) {
   var app = new EmberApp(defaults, {
     // Add options here
+    browserify: {
+      transform: [
+        ['babelify', {
+          presets: ['es2015'],
+          global: true,
+          ignore: /\/node_modules\/(?!get-stream\/)/
+        }], 
+        ['babelify', {
+          presets: ['es2015'],
+          global: true,
+          ignore: /\/node_modules\/(?!got\/)/
+        }]
+      ]
+    },
     babel: {
       compact: false
     }

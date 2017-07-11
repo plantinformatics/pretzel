@@ -1,6 +1,30 @@
 <div class="pull-left" style=" margin: 1em inherit;" >
   <button {{action "clearScaffoldColours"}}>Clear Scaffold Colours</button>
   <button {{action "flipRegion"}}>Flip region</button>
+  <input type="checkbox" 
+	 id="checkbox-toggleModePublish" 
+	 name="toggleCheckbox" 
+  />
+  <label>Publish Mode</label>
+</div>
+
+<div class="clearfix"></div>
+<div id="choose_path_colour_scale" class="clearfix"  data-toggle="buttons-checkbox" >
+  Colour according to input from colouredMarkers;
+  (scaffoldName can be generalised as class name.)
+  <table>
+    <tr><th></th><th>#</th><th>each line of markerNames is</th><th>domain is</th></tr>
+    <tr>
+      <td><input type="radio" name="optradioPathColour" data-value="3"></td>
+      <td>3</td><td>markerName</td><td>markerName-s</td></tr>
+    <tr>
+      <td><input type="radio" name="optradioPathColour" data-value="4"></td>
+      <td>4</td><td>scaffoldName TAB markerName</td><td>scaffoldName-s</td></tr>
+    <tr>
+      <td><input type="radio" name="optradioPathColour" data-value="5"></td>
+      <td>5</td><td>chromosomeName location-start and -end</td><td>interval id : chrName_startLoc_endLoc</td>
+    </tr>
+  </table>
 </div>
 
 <div class="clearfix" style="margin-bottom: 1em;" >
@@ -35,5 +59,3 @@
 
 {{yield}}
 
-<hr>
-Version {{version}}, released on {{buildDate}}

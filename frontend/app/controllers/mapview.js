@@ -32,6 +32,7 @@ export default Ember.Controller.extend({
   scaffolds: undefined,
   scaffoldMarkers: undefined,
   showScaffoldMarkers : false,
+  showAsymmetricAliases : false,
 
   markersSelected: Ember.computed('selectedMarkers', function() {
     return this.selectedMarkers.length > 0;
