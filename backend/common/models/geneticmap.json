@@ -6,6 +6,12 @@
   "options": {
     "validateUpsert": true
   },
+  "scope": {
+    "include": {
+      "relation": "chromosomes",
+      "limit": 1
+    }
+  },
   "properties": {
     "name": {
       "type": "string",
@@ -28,17 +34,11 @@
       "permission": "DENY"
     },
     {
-      "accessType": "READ",
+      "accessType": "*",
       "principalType": "ROLE",
       "principalId": "$authenticated",
       "permission": "ALLOW"
     }
   ],
-  "methods": {},
-  "scope": {
-    "include": {
-        "relation": "chromosomes",
-        "limit":1 
-      }
-  }
+  "methods": {}
 }

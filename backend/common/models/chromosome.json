@@ -5,6 +5,11 @@
   "options": {
     "validateUpsert": true
   },
+  "scope": {
+    "include": {
+      "relation": "markers"
+    }
+  },
   "properties": {
     "name": {
       "type": "string",
@@ -38,10 +43,5 @@
       "permission": "ALLOW"
     }
   ],
-  "methods": {},
-  "scope": {
-    "include": {
-        "relation": "markers" 
-      }
-  }
+  "methods": {}
 }

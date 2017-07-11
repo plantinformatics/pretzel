@@ -8,15 +8,15 @@ module.exports = function(app) {
   // var mysqlDs = app.dataSources.mysqlDs;
   var memoryDs = app.dataSources.db;
   // create all models
-  async.parallel({
-    // users: async.apply(createUsers),
-    geneticmaps: async.apply(createGeneticmaps),
-  }, function(err, results) {
-    if (err) throw err;
-    createChromosomes(results.geneticmaps, function(err) {
-      console.log('Created seed models');
-    });
-  });
+  // async.parallel({
+  //   // users: async.apply(createUsers),
+  //   geneticmaps: async.apply(createGeneticmaps),
+  // }, function(err, results) {
+  //   if (err) throw err;
+  //   createChromosomes(results.geneticmaps, function(err) {
+  //     console.log('Created seed models');
+  //   });
+  // });
   // create users
   // function createUsers(cb) {
   //   mongoDs.automigrate('Client', function(err) {
@@ -72,6 +72,6 @@ module.exports = function(app) {
         geneticmapId: geneticmaps[2].id,
       }], cb);
     });
-    console.log('created geneticmap');
+    console.log('created chromosomes');
   }
 };
