@@ -1,77 +1,23 @@
 ﻿'use strict';
 
-var async = require('async');
+var load = require('../../common/utilities/load')
+var upload = require('../../common/utilities/upload')
 
 module.exports = function(app) {
-  // data sources
-  var mongoDs = app.dataSources.mongoDs; // 'name' of your mongo connector, you can find it in datasource.json
-  // var mysqlDs = app.dataSources.mysqlDs;
-  var memoryDs = app.dataSources.db;
-  // create all models
-  // async.parallel({
-  //   // users: async.apply(createUsers),
-  //   geneticmaps: async.apply(createGeneticmaps),
-  // }, function(err, results) {
-  //   if (err) throw err;
-  //   createChromosomes(results.geneticmaps, function(err) {
-  //     console.log('Created seed models');
-  //   });
-  // });
-  // create users
-  // function createUsers(cb) {
-  //   mongoDs.automigrate('Client', function(err) {
-  //     if (err) return cb(err);
-  //     var Client = app.models.Client;
-  //     Client.create([{
-  //       email: 'foo@bar.com',
-  //       password: 'foobar',
-  //     }, {
-  //       email: 'john@doe.com',
-  //       password: 'johndoe',
-  //     }, {
-  //       email: 'jane@doe.com',
-  //       password: 'janedoe',
-  //     }], cb);
-  //   });
-  // }
-  function createGeneticmaps(cb) {
-    mongoDs.automigrate('Geneticmap', function(err) {
-      if (err) return cb(err);
-      var Geneticmap = app.models.Geneticmap;
-      Geneticmap.create([{
-        name: 'genetic map a',
-        // prop: 'A',
-      }, {
-        name: 'genetic map b',
-        // prop: 'B',
-      }, {
-        name: 'genetic map c',
-        // prop: 'C',
-      }], cb);
-    });
-    console.log('created geneticmap');
-  }
-  function createChromosomes(geneticmaps, cb) {
-    mongoDs.automigrate('Chromosome', function(err) {
-      if (err) return cb(err);
-      var Chromosome = app.models.Chromosome;
-      Chromosome.create([{
-        name: 'AAAAAAA',
-        geneticmapId: geneticmaps[0].id,
-      }, {
-        name: 'BBBBBBB',
-        geneticmapId: geneticmaps[0].id,
-      }, {
-        name: 'CCCCCCC',
-        geneticmapId: geneticmaps[1].id,
-      }, {
-        name: 'DDDDDDD',
-        geneticmapId: geneticmaps[2].id,
-      }, {
-        name: 'EEEEEEE',
-        geneticmapId: geneticmaps[2].id,
-      }], cb);
-    });
-    console.log('created chromosomes');
-  }
+  // paths are based on cwd of process
+  // let files = ['../../resources/90k_consensus.json.gz']
+  let files = ['../../resources/90k_consensus.json.gz', '../../resources/NIAB_8wMAGIC.json.gz']
+
+  files.forEach(function(file) {
+    load.fileGzip(file)
+    .then(function(data) {
+      // completed additions to database
+      return upload.jsonCheckDuplicate(data, app.models)
+    })
+    .catch(function(err) {
+      console.log('ERROR', err)
+    })
+
+  })
+
 };

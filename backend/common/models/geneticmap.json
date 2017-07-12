@@ -6,12 +6,6 @@
   "options": {
     "validateUpsert": true
   },
-  "scope": {
-    "include": {
-      "relation": "chromosomes",
-      "limit": 1
-    }
-  },
   "properties": {
     "name": {
       "type": "string",
