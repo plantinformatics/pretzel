@@ -11,6 +11,10 @@ body.ember-application > div.ember-view > div.container
 svg {
   font-size: 14px;
 }
+svg.verticalTitle
+{
+  padding-top: 80px;
+}
 
 .active {
   stroke: #f93;
@@ -244,7 +248,7 @@ div.highlightMarker
     pointer-events: inherit;
     cursor: copy;
 }
-.stackDropTarget.current .dragHover {
+.stackDropTarget.current.dragHover {
     fill: rgba(80, 80, 255, 0.2);
     stroke: rgba(255, 80, 80, 0.6);
     stroke-dasharray: 2,6;

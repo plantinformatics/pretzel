@@ -175,6 +175,9 @@ export default Ember.Component.extend({
 
   },
 
+  /** object attributes */
+  oa : {},
+
   /** Draw the APs (Axis Pieces) and the paths between them.
    * APs are Axis Pieces; in this first stage they correspond to chromosomes,
    * but the plan is for them to represent other data topics and types.
@@ -192,17 +195,19 @@ export default Ember.Component.extend({
     // Draw functionality goes here.
     let me = this;
 
+    let oa = this.get('oa');
+
     /** Each stack contains 1 or more Axis Pieces (APs).
      * stacks are numbered from 0 at the left.
      * stack[i] is an array of Stack, which contains an array of Stacked,
      * which contains apID & portion.
      */
-    let stacks = [];
+    let stacks = oa.stacks || (oa.stacks = []);
     /** Give each Stack a unique id so that its <g> can be selected. */
-    let nextStackID = 0;
+    if (oa.nextStackID === undefined) { oa.nextStackID = 0; }
     /** Reference to all (Stacked) APs by apName.
      */
-    let aps = {};
+    let aps = oa.aps || (oa.aps = {});
 
     let highlightMarker = myData.highlightMarker;
     if (highlightMarker)
@@ -212,9 +217,9 @@ export default Ember.Component.extend({
     }
 
     /// apIDs are <apName>_<chromosomeName>
-    let apIDs = d3.keys(myData);
+    oa.apIDs = d3.keys(myData);
     /** mapName (apName) of each chromosome, indexed by chr name. */
-    let cmName = {};
+    let cmName = oa.cmName || (oa.cmName = {});
     /** AP id of each chromosome, indexed by AP name. */
     let mapChr2AP = {};
 
@@ -260,7 +265,7 @@ export default Ember.Component.extend({
     /** X Distance user is required to drag axis before it drops out of Stack.
      * Based on stacks.length, use apIDs.length until the stacks are formed.
      * See also DropTarget.size.w */
-    xDropOutDistance = viewPort.w/(apIDs.length*6),
+    xDropOutDistance = viewPort.w/(oa.apIDs.length*6),
     /// left and right limits of dragging the axes / chromosomes / linkage-groups.
     dragLimit = {min:-50, max:graphDim.w+70};
     console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
@@ -355,6 +360,8 @@ export default Ember.Component.extend({
     /** Used for d3 attributes whose value is the datum. */
     function I(d) { /* console.log(this, d); */ return d; };
 
+    let svgContainer;
+
     let
       /** y[apID] is the scale for AP apID.
        * y[apID] has range [0, yRange], i.e. as if the AP is not stacked.
@@ -362,31 +369,37 @@ export default Ember.Component.extend({
        * for objects within g.AP, and notably its child g.axis, such as the brush.
        * For objects in g.foreground, ys is the appropriate scale to use.
        */
-      y = {},
+      y = oa.y || (oa.y = {}),
     /** ys[apID] is is the same as y[apID], with added translation and scale
      * for the AP's current stacking (AP.position, AP.yOffset(), AP.portion).
      * See also comments for y re. the difference in uses of y and ys.
      */
-    ys = {},
+    ys = oa.ys || (oa.ys = {}),
+    /** scaled x value of each AP, indexed by apIDs */
+    o = oa.o || (oa.o = {}),
     /** Count markers in APs, to set stronger paths than normal when working
      * with small data sets during devel.  */
     markerTotal = 0,
     /** z[APid] is a hash for AP APid mapping marker name to location.
      * i.e. z[d.ap][d.marker] is the location of d.marker in d.ap.
      */
-    z = myData,
+    z = oa.z || (oa.z = myData);
     /** All marker names.
      * Initially a Set (to determine unique names), then converted to an array.
      */
-    d3Markers = new Set();
+    if (oa.d3MarkerSet === undefined)
+      oa.d3MarkerSet = new Set();
     d3.keys(myData).forEach(function(ap) {
       /** ap is chr name */
       let c = myData[ap];
+      if ((z[ap] === undefined) || (cmName[ap] === undefined))
+      {
+        z[ap] = c;
       cmName[ap] = {mapName : c.mapName, chrName : c.chrName};
       mapChr2AP[c.mapName + ":" + c.chrName] = ap;
       delete c.mapName;
       delete c.chrName;
-      // console.log(ap, cmName[ap]);
+       console.log(ap, cmName[ap]);
       d3.keys(myData[ap]).forEach(function(marker) {
         let m = z[ap][marker];
         // alternate filter, suited to physical maps : m.location > 2000000
@@ -394,7 +407,7 @@ export default Ember.Component.extend({
           delete z[ap][marker];
         else
         {
-          d3Markers.add(marker);
+          oa.d3MarkerSet.add(marker);
           // markerTotal++;
 
           /** This implementation of aliases was used initially.
@@ -414,9 +427,10 @@ export default Ember.Component.extend({
         }
 
       });
+      }
     });
     //creates a new Array instance from an array-like or iterable object.
-    d3Markers = Array.from(d3Markers);
+    let d3Markers = Array.from(oa.d3MarkerSet);
     /** Indexed by markerName, value is a Set of APs in which the marker is present.
      * Currently markerName-s are unique, present in just one AP (Chromosome),
      * but it seems likely that ambiguity will arise, e.g. 2 assemblies of the same Chromosome.
@@ -424,7 +438,7 @@ export default Ember.Component.extend({
      *   genetic map contains chromosomes with markers;
      *   physical map (pseudo-molecule) contains genes
      */
-    let markerAPs = {};
+    let markerAPs = oa.markerAPs || (oa.markerAPs = {});
     let
       /** Draw a horizontal notch at the marker location on the axis,
        * when the marker is not in a AP of an adjacent Stack.
@@ -433,7 +447,7 @@ export default Ember.Component.extend({
       showAll = true;
 
     /** Alias groups : ag[agName] : [ marker ]    marker references AP and array of aliases */
-    let ag = {};
+    let ag = oa.ag || (oa.ag = {});
 
 
     /** Map from marker names to AP names.
@@ -448,7 +462,7 @@ export default Ember.Component.extend({
     // results of collateData()
     let
       /** ap / alias : marker    aam[ap][marker alias] : [marker] */
-      aam = {},
+      aam = oa.aam || (oa.aam = {}),
     /** ap/marker : alias groups       amag[ap][marker] : ag
      * absorbed into z[ap][marker].agName
      amag = {},  */
@@ -464,7 +478,7 @@ export default Ember.Component.extend({
     // results of collateStacks1()
     let
       /** marker : AP - AP    maN[marker] : [[marker, marker]] */
-      maN = {},
+      maN = oa.maN || (oa.maN = {}),
     /** Not used yet; for pathAg().
      *  store : alias group : AP/marker - AP/marker   agam[ag] : [marker, marker]  markers have refn to parent AP
      * i.e. [ag] -> [marker0, a0, a1, za0[marker0], za1[marker0]] */
@@ -683,7 +697,7 @@ export default Ember.Component.extend({
      * and push onto this Stack.
      */
     function Stack(stackable) {
-      this.stackID = nextStackID++;
+      this.stackID = oa.nextStackID++;
       /** The AP object (Stacked) has a reference to its parent stack which is the inverse of this reference : 
        * aps{apName}.stack.aps[i] == aps{apName} for some i.
        */
@@ -854,14 +868,20 @@ export default Ember.Component.extend({
      */
     Stack.apStackIndex2 = function (apID)
     {
-      let ap = aps[apID], s = ap.stack, i = s.stackIndex();
-      let j;
-      if ((i === -1) || (stacks[i] !== s) || (j=s.aps.indexOf(ap), s.aps[j].apName != apID))
+      let ap = aps[apID];
+      if (ap === undefined)
+        return undefined;
+      else
       {
-        console.log("stackIndex", apID, i, ap, s, j, s.aps[j]);
-        debugger;
+        let s = ap.stack, i = s.stackIndex();
+        let j;
+        if ((i === -1) || (stacks[i] !== s) || (j=s.aps.indexOf(ap), s.aps[j].apName != apID))
+        {
+          console.log("stackIndex", apID, i, ap, s, j, s.aps[j]);
+          debugger;
+        }
+        return {stackIndex: i, apIndex: j};
       }
-      return {stackIndex: i, apIndex: j};
     };
 
     Stack.prototype.add = function(stackable)
@@ -1354,7 +1374,7 @@ export default Ember.Component.extend({
 
     /*------------------------------------------------------------------------*/
 
-    /** x scale which APs from apIDs[] to equidistant points in axisXRange
+    /** x scale which maps from apIDs[] to equidistant points in axisXRange
      */
     //d3 v4 scalePoint replace the rangePoint
     //let x = d3.scaleOrdinal().domain(apIDs).range([0, w]);
@@ -1363,8 +1383,7 @@ export default Ember.Component.extend({
       console.log("xScale()", stackDomain);
       return d3.scalePoint().domain(stackDomain).range(axisXRange);
     }
-    /** scaled x value of each AP, indexed by apIDs */
-    let o = {};
+
     Stacked.prototype.location = function() { return checkIsNumber(o[this.apName]); };
     /** Same as .apTransform(), but use o[d] instead of x(d)
      * If this works, then the 2 can be factored.
@@ -1384,7 +1403,7 @@ export default Ember.Component.extend({
        */
       let scale = this.portion,
       scaleText = Number.isNaN(scale) || (scale === 1) ? "" : " scale(1," + scale + ")";
-      let xVal = checkIsNumber(o[this.apName]);
+      let xVal = checkIsNumber(oa.o[this.apName]);
       let transform =
         [
           " translate(" + xVal, yOffsetText, ")",
@@ -1415,17 +1434,24 @@ export default Ember.Component.extend({
     };
     Flow.prototype.enabled = true;
     // Flow.prototype.pathData = undefined;
-    let flows = {
-      // direct path() uses maN, collated by collateStacks1();
-      direct: new Flow("direct", true, false, collateStacks1/*undefined*/),
-      U_alias: new Flow("U_alias", false, false, collateStacks1),	// unique aliases
-      alias: new Flow("alias", false, true, collateStacksA)	// aliases, not filtered for uniqueness.
-    };
-    // flows.U_alias.visible = flows.U_alias.enabled = false;
-    flows.direct.pathData = d3Markers;
-    // if both direct and U_alias are enabled, only 1 should call collateStacks1().
-    if (flows.U_alias.enabled && flows.direct.enabled && (flows.U_alias.collate == flows.direct.collate))
-      flows.direct.collate = undefined;
+    let flows;
+    if ((flows = oa.flows) === undefined) // aka newRender
+    {
+      oa.flows =
+        flows = 
+        {
+          // direct path() uses maN, collated by collateStacks1();
+          direct: new Flow("direct", true, false, collateStacks1/*undefined*/),
+          U_alias: new Flow("U_alias", false, false, collateStacks1),	// unique aliases
+          alias: new Flow("alias", false, true, collateStacksA)	// aliases, not filtered for uniqueness.
+        };
+      // flows.U_alias.visible = flows.U_alias.enabled = false;
+      // flows.U_alias.enabled = flows.alias.enabled = false;
+      flows.direct.pathData = d3Markers;
+      // if both direct and U_alias are enabled, only 1 should call collateStacks1().
+      if (flows.U_alias.enabled && flows.direct.enabled && (flows.U_alias.collate == flows.direct.collate))
+        flows.direct.collate = undefined;
+    }
 
     function collateStacks()
     {
@@ -1444,7 +1470,7 @@ export default Ember.Component.extend({
     // let reset = false;
     // console.log("zoomSwitch", zoomSwitch);
 
-    let pathMarkers = {}; //For tool tip
+    let pathMarkers = oa.pathMarkers || (oa.pathMarkers = {}); //For tool tip
 
     let selectedAps = [];
     let selectedMarkers = {};
@@ -1457,34 +1483,52 @@ export default Ember.Component.extend({
 
     /** For all APs, store the x value of its axis, according to the current scale. */
     function collateO() {
-      apIDs.forEach(function(d){
-        o[d] = x(d);
-        checkIsNumber(o[d]);
+      console.log("collateO", oa.apIDs.length, oa.apIDs);
+      oa.apIDs.forEach(function(d){
+         console.log(d, oa.o[d], x(d));
+        oa.o[d] = x(d);
+        checkIsNumber(oa.o[d]);
         if (o[d] === undefined) { debugger; console.log(x(d)); }
       });
     }
-    apIDs.forEach(function(d){
-      // initial stacking : 1 AP per stack, but later when db contains Linkage
-      // Groups, can automatically stack APs.
-      let sd = new Stacked(d, 1),
-      stack = new Stack(sd);
-      sd.z = z[d];  // reference from Stacked AP to z[apID]
-      stacks.append(stack);
-      stack.calculatePositions();
+    oa.apIDs.forEach(function(d){
+      let s = Stack.apStackIndex2(d);
+      // if APid d does not exist in stacks[], add a new stack for it.
+      if (s === undefined)
+      {
+        // initial stacking : 1 AP per stack, but later when db contains Linkage
+        // Groups, can automatically stack APs.
+        let sd = new Stacked(d, 1),
+        stack = new Stack(sd);
+        sd.z = z[d];  // reference from Stacked AP to z[apID]
+        stacks.append(stack);
+        stack.calculatePositions();
+      }
     });
     // xScale() uses stacks.keys().
-    let xs = xScale();
+    oa.xs = xScale();
     function x(apID)
     {
       let i = Stack.apStackIndex(apID);
+      if (oa.xs.domain().length === 2)
+      console.log("x()", apID, i, oa.xs(i), oa.xs.domain(), oa.xs.range());
       if (i === -1) { console.log("x()", apID, i); debugger; }
-      return xs(i);
+      return oa.xs(i);
     }
-    collateO();
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
     //console.log(axis.scale(y[apIDs))
-    collateStacks();
+
+    let t = stacksAdjust();
     xDropOutDistance_update();
+
+    // if this is used, then could factor it in to stacksAdjust().
+    // pathUpdate() uses flow.g, which is set after oa.foreground.
+    if (false && oa.foreground)
+    {
+      pathUpdate(t);
+      stacks.forEach(function (s) { s.redrawAdjacencies(); });
+    }
+
 
     /** update ys[a.apName] for the given AP,
      * according the AP's current .portion.
@@ -1602,7 +1646,7 @@ export default Ember.Component.extend({
       path_colour_scale.range(d3.schemeCategory10);
     }
 
-    apIDs.forEach(function(d) {
+    oa.apIDs.forEach(function(d) {
       /** Find the max of locations of all markers of AP name d. */
       let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a].location; } );
       let a = aps[d], myRange = a.yRange();
@@ -1620,19 +1664,32 @@ export default Ember.Component.extend({
         .on("end", brushended);
     });
 
+    let svgRoot;
+    let newRender = (svgRoot = oa.svgRoot) === undefined;
+    if (newRender)
+    {
     d3.select("svg").remove();
     d3.select("div.d3-tip").remove();
+    }
     let translateTransform = "translate(" + margins[marginIndex.left] + "," + margins[marginIndex.top] + ")";
-    let svgRoot = d3.select('#holder').append('svg')
+    if (newRender)
+    {
+      oa.svgRoot = 
+    svgRoot = d3.select('#holder').append('svg')
       .attr("viewBox", "0 0 " + graphDim.w + " " + graphDim.h)
       .attr("preserveAspectRatio", "xMinYMin meet")
       .attr('width', "100%" /*graphDim.w*/)
       .attr('height', graphDim.h /*"auto"*/);
-    let svgContainer = svgRoot
+      oa.svgContainer =
+    svgContainer = svgRoot
       .append("svg:g")
       .attr("transform", translateTransform);
+    }
+    else
+      svgContainer = oa.svgContainer;
 
-    svgRoot.classed("devel", (markerTotal / apIDs.length) < 20);
+
+    svgRoot.classed("devel", (markerTotal / oa.apIDs.length) < 20);
 
     //User shortcut from the keybroad to manipulate the APs
     d3.select("#holder").on("keydown", function() {
@@ -1691,6 +1748,10 @@ export default Ember.Component.extend({
         : da;
     }
 
+    // this condition is equivalent to newRender
+    if ((foreground = oa.foreground) === undefined)
+    {
+      oa.foreground =
     foreground = svgContainer.append("g") // foreground has as elements "paths" that correspond to markers
       .attr("class", "foreground");
     d3.keys(flows).forEach(function(flowName) {
@@ -1698,6 +1759,7 @@ export default Ember.Component.extend({
       flow.g = foreground.append("g")
         .attr("class", flowName);
     });
+    }
     
     pathUpdate(undefined);
 
@@ -1706,7 +1768,11 @@ export default Ember.Component.extend({
     /** selection of stacks */
     let stackS = svgContainer.selectAll(".stack")
       .data(stacks)
-      .enter().append("g")
+      .enter()
+      .append("g");
+    let st = newRender ? stackS :
+      stackS.transition().duration(dragTransitionTime);
+    let stackS_ = st
       .attr("class", "stack")
       .attr("id", stackEltId);
 
@@ -1720,20 +1786,29 @@ export default Ember.Component.extend({
       return stack.apIDs();
     }
 
+    if (stackS && trace_stack)
+      logSelection(stackS);
+
     // Add a group element for each AP.
     // Stacks are selection groups in the result of this .selectAll()
     let g = stackS.selectAll(".ap")
       .data(stack_apIDs)
-      .enter().append("g")
+      .enter().append("g");
+    let gt = newRender ? g :
+      g.transition().duration(dragTransitionTime);
+    gt
       .attr("class", "ap")
       .attr("id", eltId)
-      .attr("transform", Stack.prototype.apTransformO)
+      .attr("transform", Stack.prototype.apTransformO);
+    g
       .call(
         d3.drag()
           .subject(function(d) { return {x: x(d)}; }) //origin replaced by subject
           .on("start", dragstarted) //start instead of dragstart in v4. 
           .on("drag", dragged)
           .on("end", dragended));//function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
+    if (g && trace_stack)
+      logSelection(g);
 
     /*------------------------------------------------------------------------*/
     /** the DropTarget which the cursor is in, recorded via mouseover/out events
@@ -1865,10 +1940,23 @@ export default Ember.Component.extend({
       return cn.mapName + " " + cn.chrName;
     }
 
-    g.append("text")
+    let axisTitleS = g.append("text")
       .attr("y", -axisFontSize)
       .style("font-size", axisFontSize)
       .text(axisTitle /*String*/);
+    let axisSpacing = (axisXRange[1]-axisXRange[0])/stacks.length;
+    let verticalTitle;
+    if ((verticalTitle = axisSpacing < 90))
+    {
+      // first approx : 30 -> 30, 10 -> 90.  could use trig fns instead of linear.
+      let angle = (90-axisSpacing);
+      if (angle > 90) angle = 90;
+      // should apply this to all consistently, not just appended axis.
+      axisTitleS
+        .style("text-anchor", "start")
+        .attr("transform", "rotate(-"+angle+")");
+    }
+    svgRoot.classed("verticalTitle", verticalTitle);
 
     /** For <text> within a g.ap, counteract the effect of g.ap scale() which
      * is based on ap.portion.
@@ -2054,12 +2142,15 @@ export default Ember.Component.extend({
       d3.keys(z).forEach(function(ap) {
         let za = z[ap];
         // console.log("collateData", ap, za);
-        if (aam[ap] === undefined)
-          aam[ap] = {};
         if (maga[ap] === undefined)
           maga[ap] = {};
+        if (aam[ap] === undefined)
+        {
+          aam[ap] = {};
         let aama = aam[ap];
         d3.keys(za).forEach(function(marker) {
+          if ((marker != "mapName") && (marker != "chrName"))
+          {
           try
           {
             za[marker].ap = z[ap]; // reference from marker to parent AP
@@ -2107,7 +2198,9 @@ export default Ember.Component.extend({
             else
               marker_.agName = agName;
           }
+          }
         });
+        }
       });
     }
 
@@ -2210,7 +2303,7 @@ export default Ember.Component.extend({
      */
     function collateStacks1()
     {
-      maN = {};
+      oa.maN = maN = {};
       agam = {};
       pu = flows.U_alias.pathData = [];
 
@@ -2236,6 +2329,8 @@ export default Ember.Component.extend({
                 if (maN[marker0] === undefined)
                   maN[marker0] = [];
                 maN[marker0].push(maa);
+                if (trace_path > 3)
+                  console.log(marker0, maa);
               }
               // not used yet; to be shared to pathAg().
               // any connection from a0:marker0 to a1 via alias :
@@ -2301,7 +2396,7 @@ export default Ember.Component.extend({
       }
       if (pu)
         console.log("collateStacks", " maN", d3.keys(maN).length, ", pu", pu.length);
-      if (false)
+      if (trace_path > 3)
         pu_log(pu);
     }
     function pu_log(pu)
@@ -2356,7 +2451,7 @@ export default Ember.Component.extend({
           }
         }
       }
-      if (trace_stack > 1)
+      if (trace_adj > 1)
         log_adjAPs(adjAPs);
     }
     function APid2Name(APid)
@@ -2647,8 +2742,8 @@ export default Ember.Component.extend({
     function markerLine2(k1, k2, d)
     {
       let
-        ak1 = apIDs[k1],
-        ak2 = apIDs[k2];
+        ak1 = oa.apIDs[k1],
+        ak2 = oa.apIDs[k2];
       return line([[o[ak1], markerY(k1, d)],
                    [o[ak2], markerY(k2, d)]]);
     }
@@ -2684,7 +2779,7 @@ export default Ember.Component.extend({
      */
     function markerLine(k, d, xOffset)
     {
-      let ak = apIDs[k],
+      let ak = oa.apIDs[k],
       akY = markerY(k, d);
       return line([[o[ak]-xOffset, akY],
                    [o[ak]+xOffset, akY]]);
@@ -2750,7 +2845,7 @@ export default Ember.Component.extend({
 
       /** 1 string per path segment */
       let
-        mmNm = maN[markerName];
+        mmNm = oa.maN[markerName];
       if (mmNm !== undefined)
         /* console.log("path", markerName);
          else */
@@ -2924,9 +3019,9 @@ export default Ember.Component.extend({
     function path_pre_Stacks(d) { // d is a marker
       let r = [];
 
-      for (let k=0; k<apIDs.length-1; k++) {
-        let m_k  = apIDs[k],
-        m_k1 = apIDs[k+1];
+      for (let k=0; k<oa.apIDs.length-1; k++) {
+        let m_k  = oa.apIDs[k],
+        m_k1 = oa.apIDs[k+1];
         if (d in z[m_k] && d in z[m_k1]) { // if markers is in both APs
           //Multiple markers can be in the same path
           let sLine = markerLine2(k, k+1, d);
@@ -2981,7 +3076,7 @@ export default Ember.Component.extend({
      */
     function markerY(k, d)
     {
-      return markerY_(apIDs[k], d);
+      return markerY_(oa.apIDs[k], d);
     }
 
 
@@ -2990,11 +3085,11 @@ export default Ember.Component.extend({
     // most likely present in the later path() function/s;  zoom() now uses pathUpdate().
     function zoomPath(d) { // d is a marker
       let r = [];
-      for (let k=0; k<apIDs.length-1; k++) {
+      for (let k=0; k<oa.apIDs.length-1; k++) {
         //ys[p].domain
         //z[apIDs[k]][d].location marker location
 
-        if (d in z[apIDs[k]] && d in z[apIDs[k+1]]) { // if markers is in both APs
+        if (d in z[oa.apIDs[k]] && d in z[oa.apIDs[k+1]]) { // if markers is in both APs
           /** relative marker location in the AP of 2 markers, k and k+1 :
            * k  : markerYk[0]
            * k+1: markerYk[1]
@@ -3004,8 +3099,8 @@ export default Ember.Component.extend({
           if (inRange(markerYk[0], [0, yRange]) &&
               inRange(markerYk[1], [0, yRange])) {
             let sLine = line(
-              [[o[apIDs[k]], markerYk[0]],
-               [o[apIDs[k+1]], markerYk[1]]]);
+              [[o[oa.apIDs[k]], markerYk[0]],
+               [o[oa.apIDs[k+1]], markerYk[1]]]);
             if(pathMarkers[sLine] != null){
               pathMarkers[sLine][d] = 1;
             } else {
@@ -3013,8 +3108,8 @@ export default Ember.Component.extend({
               pathMarkers[sLine][d] = 1;
             }
             r.push(line(
-              [[o[apIDs[k]], markerYk[0]],
-               [o[apIDs[k+1]], markerYk[1]]]));
+              [[o[oa.apIDs[k]], markerYk[0]],
+               [o[oa.apIDs[k+1]], markerYk[1]]]));
           } 
           
         } 
@@ -3149,7 +3244,7 @@ export default Ember.Component.extend({
           resetSwitch.on('click',function(){
             let t = svgContainer.transition().duration(750);
             
-            apIDs.forEach(function(d) {
+            oa.apIDs.forEach(function(d) {
               let idName = axisEltId(d); // axis ids have "a" prefix
               let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a].location; } );
               y[d].domain([0, yDomainMax]);
@@ -3236,7 +3331,11 @@ export default Ember.Component.extend({
       let cl = {/*self: this,*/ d: start_d/*, index: start_index, group: start_group, apIDs: apIDs*/};
       svgContainer.classed("axisDrag", true);
       d3.select(this).classed("active", true);
+      console.log(d3.event.subject.fx, d3.event.subject.x);
       d3.event.subject.fx = d3.event.subject.x;
+      let apS = svgContainer.selectAll(".stack > .ap");
+      if (apS && trace_stack)
+        logSelection(apS);
       /* Assign class current to dropTarget-s depending on their relation to drag subject.
        add class 'current' to indicate which zones to get .dragHover
        axis being dragged does not get .current
@@ -3245,7 +3344,7 @@ export default Ember.Component.extend({
        current if dg != i && (! middle || ((side == left) == (i < dg)))
        * for (i < dg), use x(d) < startx
        */
-      g.selectAll('g.ap > g.stackDropTarget').classed
+      apS.selectAll('g.ap > g.stackDropTarget').classed
       ("current",
        function(d /*, index, group*/)
        {
@@ -3257,7 +3356,7 @@ export default Ember.Component.extend({
          left = this.classList.contains("left"),
          isCurrent =
            (d != cl.d) &&  (! middle || ((left) === (xd < startX)));
-         // console.log("current classed", this, d3.event, d, index, group, cl, xd, startX, middle, left, isCurrent);
+         // console.log("current classed", this, d3.event, d, /*index, group,*/ cl, xd, startX, middle, left, isCurrent);
          return isCurrent;
        });
     }
@@ -3279,7 +3378,7 @@ export default Ember.Component.extend({
         const dropDelaySeconds = 0.5, milli = 1000;
         /** currentDrop references the apName being dragged and the stack it is dropped into or out of. */
         let currentDrop = Stack.currentDrop,
-        /** Use the start of the drag, or the most  */
+        /** Use the start of the drag, or the most recent drop */
         xDistanceRef = (currentDrop && currentDrop.x) ? currentDrop.x.stack : d3.event.subject.fx,
         now = Date.now();
         // console.log("dragged xDistanceRef", d3.event.x, currentDrop && currentDrop.x, xDistanceRef);
@@ -3287,7 +3386,7 @@ export default Ember.Component.extend({
         /** true iff currentDrop is recent */
         let recentDrop = currentDrop && (now - currentDrop.dropTime < dropDelaySeconds * milli);
 
-        if (false && recentDrop && dropTargetEnd)
+        if (true && recentDrop && dropTargetEnd)
         {
           console.log("dragged", currentDrop, currentDropTarget, now - currentDrop.dropTime);
         }
@@ -3919,6 +4018,15 @@ export default Ember.Component.extend({
       }
       Stack.verify();
     }
+    /** recalculate stacks X position and show via transition */
+    function stacksAdjust()
+    {
+      collateO();
+      collateStacks();
+      let t = d3.transition().duration(dragTransitionTime);
+      t.selectAll(".ap").attr("transform", Stack.prototype.apTransformO);
+      return t;
+    }
     function dragended(/*d*/) {
       deleteAfterDrag();
       // in the case of dropOut(),
@@ -3926,16 +4034,13 @@ export default Ember.Component.extend({
       // x is defined for this AP.
       //
       // Order of apIDs may have changed so need to redefine x and o.
-      xs = xScale();
+      oa.xs = xScale();
       // if caching, recalc : collateApPositions();
       
       stacks.sortLocation();
-      collateO();
-      collateStacks();
+      let t = stacksAdjust();
       // already done in xScale()
       // x.domain(apIDs).range(axisXRange);
-      let t = d3.transition().duration(dragTransitionTime);
-      t.selectAll(".ap").attr("transform", Stack.prototype.apTransformO);
       pathUpdate(t);
       /* redrawAdjacencies() is called from .redraw(), and is mostly updated
        * during dragged(), but the stacks on either side of the origin of the
