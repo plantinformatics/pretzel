@@ -1,3 +1,46 @@
+# Introduction
+
+The data transferred from backend server to frontend application is normally in large blocks, mostly regular format.
+Using a JSON data format provides flexibility and extensibility - we can introduce arbitrary data elements within the structure which are understood by some part of the frontend, but the remainder of the modules can transport the data without concern for the format variation.
+
+## Target platforms
+
+The application is intended to function on a number of platforms, e.g.
+* personal use on a laptop, running db, backend and frontend, possibly offline
+* departmental use : a fast server running db and backend, with users running the frontend on destops and laptops
+* remote data sources : users may access db+backend via the web, with the frontend served either from a web-site
+or running as a locally installed web-app.
+
+## Scaleable Design
+
+To handle the large data sets while providing good performance for the user, efficient design choices are required in these areas :
+
+### API
+progressive enhancement, increasing detail with zoom level, filtering, pagination, 
+
+### data processing
+Given that the backend may have much more processing capability than the frontend, some calculations will be best done on the backend and the results sent to the frontend app.  Mongodb/Mongoose have advanced filterining capabilities, and these can be leveraged for enhanced performance.
+The time to transmit the result data may be similar to the frontend calculation time, depending on the how fine the filter is.
+
+These filters may be expressed as a generic qualifier added to the request URL, e.g. /percent=10,interlace/
+
+### DOM updates
+The DOM is able to display more information than a user can absorb;  the key is to design the data visualisation update to fit the users's visual bandwidth and the network bandwidth / CPU processing power.
+
+A useful analogy is the design of google maps update, which is crafted to provide just the data which will add to the current view.
+Similarly, the plan for our application :
+*  data applicable to the users's requested zoom level is requested, and displayed as it arrives.
+The data may be thinned (e.g. interlaced % of data), or a higher-level representation shown (synteny blocks instead of gene/marker paths).
+So the initial 100% view of a chromosome would only require a small fraction of the chromosome's data.
+*  render is async from user scroll & zoom, render trails behind user requests
+*  at any point user can save URL (shared, it will recreate the view)
+*  data is cached in frontend, so that scrolling / zooming back to previous view is quick
+
+* reduced data representation in transition :
+ e.g. when dragging an axis, there is limited benefit in displaying all the paths attached to the axis; options are to display higher-level info such as synteny blocks, or a percentage of the paths, or transition the paths back to their home axis until the drag is complete, then come out again, like a coral polyp.
+
+
+
 # Promises / Render and backend-frontend API
 
 These 2 topics are interconnected by requirements and design considerations.
