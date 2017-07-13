@@ -275,6 +275,40 @@ div.highlightMarker
 .dropdown-submenu:hover>.dropdown-menu {
     display: block;
 }
+ul.dropdown-menu[role=menu]
+{
+    padding-top: 0px;
+}
+div.btn-group > button.btn.btn-default:hover
+{
+    font-weight : bold;
+}
+div.btn-group.open > button.btn.btn-default,
+button.btn.btn-default.dropdown-toggle,
+li.dropdown-submenu,
+ul.dropdown-menu > li.enabled
+{
+    border-width : 2px;
+    background-color: rgba(51, 122, 183, 0.2); /* #337ab7 0.5 opacity*/
+}
+ul.dropdown-menu :hover,
+ul.dropdown-menu > li.enabled > a
+{
+    font-weight : bold;
+}
+ul.dropdown-menu
+{
+    background-color: #fff;
+}
+ul.dropdown-menu > li > a
+{
+    opacity : 1;
+}
+li.dropdown-submenu > ul.dropdown-menu {
+  padding-top: 0px;
+  padding-bottom: 0px;
+  margin-top: -2px;
+}
 
 .dropdown-submenu>a:after {
     display: block;
