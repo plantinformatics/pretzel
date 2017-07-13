@@ -25,9 +25,11 @@ END_textDescription
 
 use strict;
 
+my $translateDot = 0;
+
 sub usage()
 {
-    print "usage: tab2json.pl [-h|--help] [<join_filename>]\n";
+    print "usage: tab2json.pl [-h|--help] [-d] [<join_filename>]\n";
     exit;
 }
 
@@ -36,6 +38,12 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--help"))
     shift(@ARGV);
     print $textDescription;
     exit 0;
+}
+if ($ARGV[0] eq "-d")
+{
+    $translateDot = 1;
+    shift(@ARGV);
+    print "translating . to _\n";
 }
 # Expect 0 or 1 argument.
 ($#ARGV < 1) || usage();
@@ -69,10 +77,13 @@ else
     {
 	if (my ($marker, $contig) = m/(.+)\t(.+)/)
 	{
-	    # Many marker naming systems include '.', e.g. "Sc1Loc00281810.2",
-	    # which causes a problem for versions of draw-map.js earlier than commit [feature-aliases 5334ac5].
-	    # Replace '.' with _;  this edit can be removed once the above commit is merged to this branch.
-	    $marker =~ s/\./_/g;
+	    if ($translateDot)
+	    {
+		# Many marker naming systems include '.', e.g. "Sc1Loc00281810.2",
+		# which causes a problem for versions of draw-map.js earlier than commit [feature-aliases 5334ac5].
+		# Replace '.' with _;  this edit can be removed once the above commit is merged to this branch.
+		$marker =~ s/\./_/g;
+	    }
 	    $contigMarker{$contig} = $marker;
 	}
     }
