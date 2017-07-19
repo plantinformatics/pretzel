@@ -1,0 +1,65 @@
+
+Introduction :
+
+The application is accessed via a web browser, at this URL : http://localhost:4200/
+A Node server, running as 'ember server', provides the web application frontend pages.
+The frontend depends the backend server, also a Node server, running as 'node app.js',
+and the backend depends on the database, mongoDb.
+
+Starting :
+
+The application processes are started in this order; each process depends on the preceeding processes :
+ mongoDb
+ backend server
+ frontend server
+
+These 3 are started by startAll.bat, which is accessed from the Windows Start Menu, under the application name 'Pretzel'.
+Each process will run in a windows cmd window, which is a small text window (black with white text).
+After they are started, the URL http://localhost:4200/ will operate.
+
+startAll.bat uses these batch scripts to start the 3 processes :
+startDb.bat           startBackend.bat      startEmber.bat
+They can be accessed in the folder C:\data\admin
+and used to restart individual processes after shutting them down.
+
+Trouble-Shooting
+
+To check if the backend server is running, open this URL in the web browser : http://localhost:1776/geneticmaps
+This should return a list of the names of all the genetic maps which are in the database.
+Hence this also confirms that the database is running.
+
+To check if the database is running : from the Start Menu : dbStatus
+Expected output  :
+MongoDB shell version v3.4.6
+connecting to: mongodb://127.0.0.1:27017
+MongoDB server version: 3.4.6
+[ "geneticmaps" ]
+
+Waiting for  8 seconds, press a key to continue ...
+
+The window will close once the timeout is complete.
+
+
+Shutting Down
+
+The processes will shutdown OK when the computer is shut down.
+It is possible to shut them down by closing the cmd windows in which they are running - there is an X at the top right-hand corner of each window.
+These windows can be located from the ribbon listing current windows at the bottom of the screen.
+
+Because of the dependencies between these processes, if you shutdown and restart the database then the backend server may need to be restarted,
+and if you shutdown and restart the frontend server, a refresh (^R) may be required in the web browser tab.
+
+
+Loading additional data :
+
+With the windows explorer, navigate to this folder : C:\data\data\json\in
+There is a script in the start menu which opens this folder : openJsonIn.bat
+
+Place .json files in this folder, then run the script loadJsonFromDir.bat, in the start menu, which will read .json files from this folder,
+then move them into this adjacent folder : C:\data\data\json\done\
+
+This variation will load any .json files, then wait 30sec and repeat : loadJsonFromDirRepeat
+It can be shutdown using the X at the top right-hand of the windows batch script window.
+
+
+This guide, MSWindowsUserGuide.txt, is available in the start menu.
