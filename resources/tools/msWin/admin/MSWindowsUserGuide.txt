@@ -62,4 +62,30 @@ This variation will load any .json files, then wait 30sec and repeat : loadJsonF
 It can be shutdown using the X at the top right-hand of the windows batch script window.
 
 
+Application Start Menu
+
+For ease of use, it is desirable to access the above scripts from the Start Menu,
+as referenced in the above sections.
+Currently this application start menu is created manually, with plans to automate this;
+the suggested structure of the application start menu is :
+  MSWindowsUserGuide
+  startAll.bat
+  openJsonIn
+  loadJsonFromDir
+  loadJsonFromDirRepeat
+
+These additional shortcuts may be added in a sub-menu.  They are not required for basic operation of the application,
+but possibly useful for users who are familiar with the component interactions and, perhaps in concert with developers,
+access those sub-components individually :
+  dev
+  dev/MongoDB
+  dev/startDb.bat
+  dev/startBackend.bat
+  dev/startEmber
+  dev/start-ssh-pageant.cmd
+  dev/Git
+  dev/nodejs
+
+
+
 This guide, MSWindowsUserGuide.txt, is available in the start menu.
