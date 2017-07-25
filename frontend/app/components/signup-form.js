@@ -42,17 +42,23 @@ export default Component.extend({
       } else {
         this.setProperties({isProcessing: true})
         // assigning to vm to access in ajax handling scope
+        // TODO - remove custom ajax call from here
+        // and integrate with serializer and adapter
         var vm = this
         Ember.$.ajax({
           url: endpoint,
           type: 'POST',
           crossDomain: true,
-          data: JSON.stringify({
-            email: identification,
-            password: password
-          }),
+          data: JSON.stringify(
+            {
+              "email": identification,
+              "password": password
+            }
+          ),
+          accept: 'application/json',
           contentType: 'application/json'
-        }).then(function(response){
+        })
+        .then(function(response){
           // console.log('RESPONSE', response)
           let codes = {
             "EMAIL_VERIFY": "Thank you for registering. You should receive a confirmation email shortly.",

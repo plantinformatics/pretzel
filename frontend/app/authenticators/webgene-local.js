@@ -24,6 +24,7 @@ export default Base.extend({
             email:    identification,
             password: password
         }),
+        accept: 'application/json',
         contentType: 'application/json'
       }).then(function(response){
         // console.log(response)

@@ -13,7 +13,7 @@ Promise.promisifyAll(zlib);
  * @returns data
  */
 exports.file = (filePath) => {
-  console.log('reading file ${filePath}')
+  console.log(`reading file ${filePath}`)
   return fs.readFileAsync(filePath)
   .then(function(buf) {
     // console.log('file read')

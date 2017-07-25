@@ -9,7 +9,9 @@ var config = {
       "loopback/common/models",
       "loopback/server/models",
       "../common/models",
-      "./models"
+      "./models",
+      // for third-party auth handling
+      "./node_modules/loopback-component-passport/lib/models"
     ],
     "mixins": [
       "loopback/common/mixins",
@@ -18,6 +20,20 @@ var config = {
       "./mixins"
     ]
   },
+  // for third-party auth handling
+  // "user": {
+  //   "dataSource": "db",
+  //   "public": true
+  // },
+  "UserCredential": {
+    "dataSource": "db",
+    "public": false
+  },
+  "UserIdentity": {
+    "dataSource": "db",
+    "public": false
+  },
+  //
   "User": {
     "dataSource": "mongoDs",
     "public": false

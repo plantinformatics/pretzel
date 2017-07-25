@@ -41,7 +41,15 @@ export default Ember.Route.extend(AuthenticatedRouteMixin, {
     if (params.highlightMarker)
       retHash.highlightMarker = params.highlightMarker;
     let seenChrs = new Set();
-    var maps = that.get('store').findAll('geneticmap', {'include': 'chromosomes'}).then(function(genmaps) {
+    var maps = that.get('store').query(
+      'geneticmap',
+      {
+        filter: {
+          'include': 'chromosomes'
+        }
+      }
+    )
+    .then(function(genmaps) {
       that.controllerFor("mapview").set("availableMaps", genmaps);
       genmaps.forEach(function(map) {
         let chrs = map.get('chromosomes');
@@ -70,7 +78,17 @@ export default Ember.Route.extend(AuthenticatedRouteMixin, {
     let promises = {};
 
     params.mapsToView.forEach(function(param) {
-      promises[param] = that.get('store').findRecord('chromosome', param, { reload: true, include: 'markers' });
+      promises[param] = that.get('store').findRecord(
+        'chromosome',
+        param,
+        {
+          reload: true,
+          adapterOptions:{
+          filter: {
+            'include': 'markers'
+          }}
+        }
+      );
     });
 
     return Ember.RSVP.hash(promises).then(function(chrs) {

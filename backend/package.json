@@ -1,5 +1,5 @@
 {
-  "name": "lb-auth-basic",
+  "name": "dav127-backend",
   "version": "1.0.0",
   "main": "server/server.js",
   "engines": {
@@ -19,10 +19,11 @@
     "loopback": "^3.0.0",
     "loopback-boot": "^2.6.5",
     "loopback-component-explorer": "^4.0.0",
-    "loopback-component-jsonapi": "^2.2.1",
     "loopback-connector-mongodb": "^1.18.1",
+    "loopback-component-passport": "~3.4.0",
     "mongoose": "^4.10.4",
     "morgan": "^1.8.1",
+    "passport-ldapauth": "2.0.0",
     "serve-favicon": "^2.0.1",
     "strong-error-handler": "^2.0.0"
   },
@@ -36,5 +37,5 @@
     "url": ""
   },
   "license": "UNLICENSED",
-  "description": "lb-auth-basic"
+  "description": "auth and database services for the DAV127 project"
 }

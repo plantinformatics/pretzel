@@ -1,8 +1,5 @@
 {
   "loopback-component-explorer": {
     "mountPath": "/explorer"
-  },
-  "loopback-component-jsonapi": {
-    "enable": true
   }
 }
