@@ -104,6 +104,6 @@ export default Ember.Controller.extend({
           console.log(this);
       });
     }
-  }.observes('mapsToView')
+  }//.observes('mapsToView')
 
 });

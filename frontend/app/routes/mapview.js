@@ -5,7 +5,7 @@ export default Ember.Route.extend({
     mapsToView: {
       // We want changes in the URL mapsToView query parameter to trigger
       // a model refresh.
-      // refreshModel: true
+       refreshModel: true
     },
     chr: {
       refreshModel: true

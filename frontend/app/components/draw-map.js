@@ -3261,10 +3261,12 @@ export default Ember.Component.extend({
         function markerNotSelected2(d)
         {
           let sel =
-            unique_1_1_mapping ?
+            unique_1_1_mapping && (typeof d != 'string') ?
             ( selectedMarkersSet.has(d[0]) ||
               selectedMarkersSet.has(d[1]) )
             : selectedMarkersSet.has(d);
+          /* if (sel)
+            console.log("markerNotSelected2", unique_1_1_mapping, d, selectedMarkersSet); */
           return ! sel;
         }
 
