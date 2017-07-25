@@ -52,7 +52,16 @@ Maps to align:
 </div>
 
 {{#if hasData}}
-  {{draw-map updatedSelectedMarkers='updateSelectedMarkers' data=model isShowUnique=isShowUnique pathColourScale=pathColourScale scaffolds=scaffolds scaffoldMarkers=scaffoldMarkers showScaffoldMarkers=showScaffoldMarkers showAsymmetricAliases=showAsymmetricAliases}}
+  {{draw-map
+    updatedSelectedMarkers='updateSelectedMarkers'
+    data=model
+    dataReceived=dataReceived
+    isShowUnique=isShowUnique
+    pathColourScale=pathColourScale
+    scaffolds=scaffolds
+    scaffoldMarkers=scaffoldMarkers
+    showScaffoldMarkers=showScaffoldMarkers
+    showAsymmetricAliases=showAsymmetricAliases}}
 
 
   {{numMarkers}} selected markers

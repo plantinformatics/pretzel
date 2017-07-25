@@ -178,6 +178,31 @@ export default Ember.Component.extend({
   /** object attributes */
   oa : {},
 
+  dataObserver : Ember.observer('dataReceived.length', function(sender, key, value, rev) {
+    console.log("dataObserver", this, sender, key, value, rev);
+    let dataReceived = this.get('dataReceived');
+      if (dataReceived) {
+        let newData = dataReceived.popObject();  // get('firstObject');
+        console.log("handleDataReceived", dataReceived.length, dataReceived, newData);
+        if (newData)
+        {
+          /*
+          let ppc = newData[0], ma = newData[1];
+          console.log(newData[0]._internalModel, newData[1].record);
+          console.log
+          (ppc._internalModel.id,
+           ppc.get('map').get('name'),
+           ppc.get('name'));
+
+          ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
+          */
+
+          this.draw(newData, 'dataReceived');
+        }
+      }
+  }),
+
+
   /** Draw the APs (Axis Pieces) and the paths between them.
    * APs are Axis Pieces; in this first stage they correspond to chromosomes,
    * but the plan is for them to represent other data topics and types.
@@ -189,8 +214,9 @@ export default Ember.Component.extend({
    * mapName is referred to as apName (AP - Axis Piece) for generality.
    *
    * @param myData hash indexed by AP names
+   * @param source undefined or 'dataReceived', indicating an added map.
    */
-  draw: function(myData) {
+  draw: function(myData, source) {
 
     // Draw functionality goes here.
     let me = this;
@@ -216,6 +242,7 @@ export default Ember.Component.extend({
       delete myData.highlightMarker;
     }
 
+    if (source != 'dataReceived')
     /// apIDs are <apName>_<chromosomeName>
     oa.apIDs = d3.keys(myData);
     /** mapName (apName) of each chromosome, indexed by chr name. */
@@ -345,6 +372,12 @@ export default Ember.Component.extend({
     let use_path_colour_scale = 4;
     let path_colour_scale_domain_set = false;
 
+    /** queue of data received from 'Add Map' requests, accessed with push() and pop() */
+    /*
+    let dataReceived = this.get('dataReceived');
+    console.log("draw() : dataReceived", dataReceived);
+     */
+
     /** export scaffolds and scaffoldMarkers for use in selected-markers.hbs */
     let showScaffoldMarkers = this.get('showScaffoldMarkers');
     console.log("showScaffoldMarkers", showScaffoldMarkers);
@@ -389,18 +422,29 @@ export default Ember.Component.extend({
      */
     if (oa.d3MarkerSet === undefined)
       oa.d3MarkerSet = new Set();
-    d3.keys(myData).forEach(function(ap) {
-      /** ap is chr name */
-      let c = myData[ap];
+
+    d3.keys(myData).forEach(function (ap) {
+        /** ap is chr name */
+        let c = myData[ap];
+      receiveChr(ap, c, source);
+      });
+ 
+    function receiveChr(ap, c, source) {
       if ((z[ap] === undefined) || (cmName[ap] === undefined))
       {
         z[ap] = c;
       cmName[ap] = {mapName : c.mapName, chrName : c.chrName};
-      mapChr2AP[c.mapName + ":" + c.chrName] = ap;
+        let mapChrName = makeMapChrName(c.mapName, c.chrName);
+      mapChr2AP[mapChrName] = ap;
+        if (source == 'dataReceived')
+        {
+          if (apIDFind(ap) < 0)
+            oa.apIDs.push(ap);
+        }
       delete c.mapName;
       delete c.chrName;
        console.log(ap, cmName[ap]);
-      d3.keys(myData[ap]).forEach(function(marker) {
+      d3.keys(c).forEach(function(marker) {
         let m = z[ap][marker];
         // alternate filter, suited to physical maps : m.location > 2000000
         if ((markerTotal++ & 0x3) && filter_location)
@@ -428,7 +472,17 @@ export default Ember.Component.extend({
 
       });
       }
-    });
+    }
+    /** Check if ap exists in oa.apIDs[].
+     * @return index of ap in oa.apIDs[], -1 if not found
+     */
+    function apIDFind(ap) {
+      let k;
+      for (k=oa.apIDs.length-1; (k>=0) && (oa.apIDs[k] != ap); k--) { }
+      return k;
+    }
+
+
     //creates a new Array instance from an array-like or iterable object.
     let d3Markers = Array.from(oa.d3MarkerSet);
     /** Indexed by markerName, value is a Set of APs in which the marker is present.
@@ -581,6 +635,10 @@ export default Ember.Component.extend({
     {
       let c = cmName[apName];
       return c.chrName;
+    }
+    function makeMapChrName(mapName, chrName)
+    {
+      return mapName + ':' + chrName;
     }
     function makeIntervalName(chrName, interval)
     {
@@ -4134,6 +4192,11 @@ export default Ember.Component.extend({
       checkbox.on('click', function (event) {
         console.log(checkboxId, checkbox[0].checked, event.originalEvent, svgContainer._groups[0][0]);
         svgContainer.classed("publishMode", checkbox[0].checked);
+        let dataReceived = me.get('dataReceived');
+        console.log("toggleModePublish() : dataReceived", dataReceived);
+        let il = dataReceived.length-1, dr=dataReceived[il];
+        console.log(dataReceived.length, dr[0]._internalModel, dr[1].record);
+        dataReceived.push({ghi: 123});
       });
     }
 
