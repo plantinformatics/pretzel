@@ -58,8 +58,11 @@ div.drawing-controls > div.flowButtons > .flowButton.direct,
   fill: none;
   stroke: #808;
 }
+html {
+  --path-stroke-opacity : .125;
+}
 .manyPaths .foreground path {
-  stroke-opacity: .125;
+  stroke-opacity: var(--path-stroke-opacity); //.125;
   stroke-width: 0.75px;
 }
 
@@ -368,6 +371,13 @@ div.drawing-controls > div.flowButtons > div.popover > button
 }
 
 /* -------------------------------------------------------------------------- */
+
+input#range-pathOpacity
+{
+  width: 10em;
+  display: inline-block;
+  margin-left: 2em;
+}
 
 /* @see setupToggleModePublish() */
 #checkbox-toggleModePublish

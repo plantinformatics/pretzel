@@ -1749,6 +1749,11 @@ export default Ember.Component.extend({
 
     svgRoot.classed("devel", (markerTotal / oa.apIDs.length) < 20);
 
+    function setCssVariable(name, value)
+    {
+      svgRoot.style(name, value);
+    }
+
     /** total the # paths collated for the enabled flows.
      * Used to adjust the stroke-width and stroke-opacity.
      */
@@ -1769,6 +1774,8 @@ export default Ember.Component.extend({
         svgRoot.classed("manyPaths", nPaths > 200);
       }
     }
+    /** Same as countPaths(), but counting only the paths with data, which excludes
+     * those which are outside the zoom range.  */
     function countPathsWithData()
     {
       console.log("countPathsWithData", svgRoot);
@@ -4234,6 +4241,24 @@ export default Ember.Component.extend({
         dataReceived.push({ghi: 123});
       });
     }
+    /** The stroke -opacity and -width can be adjusted using these sliders.
+     * In the first instance this is for the .manyPaths rule, but
+     * it could be used to factor other rules (.faded, .strong), or they may have separate controls.
+     */
+    function setupPathOpacity()
+    {
+      let inputId="range-pathOpacity",
+      input = Ember.$("#" + inputId);
+      input.on('input', function (event) {
+        let value = input[0].value / 100;
+        console.log(inputId, value, event.originalEvent, svgRoot._groups[0][0]);
+        setCssVariable("--path-stroke-opacity", value);
+      });
+    }
+    function setupVariousControls()
+    {
+      setupPathOpacity();
+    }
 
     function flows_showControls (parentSelector)
     {
@@ -4277,6 +4302,7 @@ export default Ember.Component.extend({
     flows_showControls(flowButtonsSel);
     configurejQueryTooltip(flowButtonsSel);
     setupToggleModePublish();
+    setupVariousControls();
 
     /** After chromosome is added, draw() will update elements, so
      * this function is used to update d3 selections :
