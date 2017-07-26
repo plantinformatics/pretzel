@@ -56,9 +56,11 @@ div.drawing-controls > div.flowButtons > .flowButton.direct,
 
 .foreground path {
   fill: none;
+  stroke: #808;
+}
+.manyPaths .foreground path {
   stroke-opacity: .125;
   stroke-width: 0.75px;
-  stroke: #808;
 }
 
 /* or :hover if transition is not required. */

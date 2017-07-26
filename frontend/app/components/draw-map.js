@@ -1749,6 +1749,38 @@ export default Ember.Component.extend({
 
     svgRoot.classed("devel", (markerTotal / oa.apIDs.length) < 20);
 
+    /** total the # paths collated for the enabled flows.
+     * Used to adjust the stroke-width and stroke-opacity.
+     */
+    function countPaths()
+    {
+      console.log("countPaths", svgRoot);
+      if (svgRoot)
+      {
+        let nPaths = 0;
+        d3.keys(flows).forEach(function(flowName) {
+          let flow = flows[flowName];
+          if (flow.enabled && flow.collate)
+          {
+            nPaths += flow.pathData.length;
+            console.log("countPaths", flow.name, flow.pathData.length, nPaths);
+          }
+        });
+        svgRoot.classed("manyPaths", nPaths > 200);
+      }
+    }
+    function countPathsWithData()
+    {
+      console.log("countPathsWithData", svgRoot);
+      if (svgRoot)
+      {
+        let paths = Ember.$("path[d!=''][d]"),
+        nPaths = paths.length;
+        svgRoot.classed("manyPaths", nPaths > 200);
+        console.log(nPaths, svgRoot._groups[0][0].classList);
+      }
+    }
+
     //User shortcut from the keybroad to manipulate the APs
     d3.select("#holder").on("keydown", function() {
       if ((String.fromCharCode(d3.event.keyCode)) == "D") {
@@ -3775,6 +3807,7 @@ export default Ember.Component.extend({
         if (flow.enabled)
           pathUpdate_(t, flow);
       });
+      countPathsWithData();
     }
     /** Get the data corresponding to a path element, from its datum or its parent element's datum.
      * In the case of using aliases, the parent g's data is [m, m, ap, ap, ...] "mmaa".
