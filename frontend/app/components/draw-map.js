@@ -4245,19 +4245,27 @@ export default Ember.Component.extend({
      * In the first instance this is for the .manyPaths rule, but
      * it could be used to factor other rules (.faded, .strong), or they may have separate controls.
      */
+    function setupInputRange(inputId, varName, factor)
+    {
+      let input = Ember.$("#" + inputId);
+      input.on('input', function (event) {
+        let value = input[0].value / factor;
+        console.log(inputId, value, event.originalEvent, svgRoot._groups[0][0]);
+        setCssVariable(varName, value);
+      });
+    }
     function setupPathOpacity()
     {
-      let inputId="range-pathOpacity",
-      input = Ember.$("#" + inputId);
-      input.on('input', function (event) {
-        let value = input[0].value / 100;
-        console.log(inputId, value, event.originalEvent, svgRoot._groups[0][0]);
-        setCssVariable("--path-stroke-opacity", value);
-      });
+      setupInputRange("range-pathOpacity", "--path-stroke-opacity", 100);
+    }
+    function setupPathWidth()
+    {
+      setupInputRange("range-pathWidth", "--path-stroke-width", 100);
     }
     function setupVariousControls()
     {
       setupPathOpacity();
+      setupPathWidth();
     }
 
     function flows_showControls (parentSelector)
