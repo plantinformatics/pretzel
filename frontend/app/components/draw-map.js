@@ -2866,8 +2866,9 @@ export default Ember.Component.extend({
     function markerLineS(ak, d, xOffset)
     {
       let akY = markerY_(ak, d);
-      return line([[o[ak]-xOffset, akY],
-                   [o[ak]+xOffset, akY]]);
+      let shiftRight = 5;
+      return line([[o[ak]-xOffset + shiftRight, akY],
+                   [o[ak]+xOffset + shiftRight, akY]]);
     }
     /** Similar to @see markerLine2().
      * @param k index into apIDs[]
