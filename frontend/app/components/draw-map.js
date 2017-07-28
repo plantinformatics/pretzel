@@ -4233,13 +4233,19 @@ export default Ember.Component.extend({
       let checkboxId="checkbox-toggleModePublish",
       checkbox = Ember.$("#" + checkboxId);
       checkbox.on('click', function (event) {
-        console.log(checkboxId, checkbox[0].checked, event.originalEvent, svgContainer._groups[0][0]);
-        svgContainer.classed("publishMode", checkbox[0].checked);
+        let checked = checkbox[0].checked;
+        console.log(checkboxId, checked, event.originalEvent, svgContainer._groups[0][0]);
+        svgContainer.classed("publishMode", checked);
+        showAll = ! checked;
+
         let dataReceived = me.get('dataReceived');
         console.log("toggleModePublish() : dataReceived", dataReceived);
+        if (typeof dataReceived.length != "object")
+        {
         let il = dataReceived.length-1, dr=dataReceived[il];
         console.log(dataReceived.length, dr[0]._internalModel, dr[1].record);
         dataReceived.push({ghi: 123});
+        }
       });
     }
     /** The stroke -opacity and -width can be adjusted using these sliders.
