@@ -373,18 +373,31 @@ div.drawing-controls > div.flowButtons > div.popover > button
 
 /* -------------------------------------------------------------------------- */
 
+input#checkbox-toggleShowAll,
 input#range-pathOpacity,
 input#range-pathWidth
 {
+/*
   width: 10em;
   display: inline-block;
   margin-left: 1em;
+*/
 }
-
-/* @see setupToggleModePublish() */
+.input-range-group > div > input
+{
+  display : inline-block;
+  width : auto;
+  margin-left: 1em;
+  float: right;
+}
+.btn-group
+{
+  margin-right: 2.5em;
+}
+/* @see setupToggle(), setupToggleModePublish() */
+input#checkbox-toggleShowAll,
 #checkbox-toggleModePublish
 {
-  margin-left: 1.5em;
 }
 
 svg > g.publishMode .btn

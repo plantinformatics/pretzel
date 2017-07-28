@@ -4228,16 +4228,18 @@ export default Ember.Component.extend({
      * Mode' checkbox.  This provides a clear view of the visualisation
      * uncluttered by buttons and other GUI mechanisms
      */
-    function setupToggleModePublish()
+    function setupToggle(checkboxId, onToggle)
     {
-      let checkboxId="checkbox-toggleModePublish",
+      let 
       checkbox = Ember.$("#" + checkboxId);
       checkbox.on('click', function (event) {
         let checked = checkbox[0].checked;
-        console.log(checkboxId, checked, event.originalEvent, svgContainer._groups[0][0]);
-        svgContainer.classed("publishMode", checked);
-        showAll = ! checked;
-
+        console.log(checkboxId, checked, event.originalEvent);
+        onToggle(checked);
+      });
+    }
+    function dataReceivedCheck()
+    {
         let dataReceived = me.get('dataReceived');
         console.log("toggleModePublish() : dataReceived", dataReceived);
         if (typeof dataReceived.length != "object")
@@ -4246,7 +4248,27 @@ export default Ember.Component.extend({
         console.log(dataReceived.length, dr[0]._internalModel, dr[1].record);
         dataReceived.push({ghi: 123});
         }
-      });
+    }
+    function setupToggleModePublish()
+    {
+      setupToggle
+      ("checkbox-toggleModePublish",
+      function (checked) {
+        console.log(svgContainer._groups[0][0]);
+        svgContainer.classed("publishMode", checked);
+      }
+      );
+    }
+    function setupToggleShowAll()
+    {
+      /* initial value of showAll is true, so .hbs has : checked="checked" */
+      setupToggle
+      ("checkbox-toggleShowAll",
+      function (checked) {
+        showAll = checked;
+        pathUpdate(undefined);
+      }
+      );
     }
     /** The stroke -opacity and -width can be adjusted using these sliders.
      * In the first instance this is for the .manyPaths rule, but
@@ -4271,6 +4293,7 @@ export default Ember.Component.extend({
     }
     function setupVariousControls()
     {
+      setupToggleShowAll();
       setupPathOpacity();
       setupPathWidth();
     }

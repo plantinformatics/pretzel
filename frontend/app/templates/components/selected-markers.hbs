@@ -1,30 +1,46 @@
-<div class="pull-left" style=" margin: 1em inherit;" >
-  <button {{action "clearScaffoldColours"}}>Clear Scaffold Colours</button>
-  <button {{action "flipRegion"}}>Flip region</button>
-  <input type="checkbox" 
-	 id="checkbox-toggleModePublish" 
-	 name="toggleCheckbox" 
-  />
-  <label>Publish Mode</label>
-
-  <div>
-    <label>Path Opacity</label>
-    <input type="range" 
-	   id="range-pathOpacity" 
-	   name="pathOpacity" 
-	   min="0" max="100"
-	   value="12.5"
-    />
+<div class="pull-left" >
+  <div class="btn-group">
+    <button {{action "clearScaffoldColours"}} style="margin-right: 1em;">Clear Scaffold Colours</button>
+    <button {{action "flipRegion"}}>Flip region</button>
+  </div>
+  <div class="btn-group">
+    <div>
+      <input type="checkbox" 
+	     id="checkbox-toggleModePublish" 
+	     name="toggleCheckbox" 
+      />
+      <label>Publish Mode</label>
+    </div>
+    <div>
+      <input type="checkbox" 
+	     id="checkbox-toggleShowAll" 
+	     name="toggleShowAll" 
+	     checked="checked"
+      />
+      <label>Show All</label>
+    </div>
   </div>
 
-  <div>
-    <label>Path Width</label>
-    <input type="range" 
-	   id="range-pathWidth" 
-	   name="pathWidth" 
-	   min="0" max="300"
-	   value="75"
-    />
+  <div class="input-range-group btn-group">
+    <div>
+      <label>Path Opacity</label>
+      <input type="range" 
+	     id="range-pathOpacity" 
+	     name="pathOpacity" 
+	     min="0" max="100"
+	     value="12.5"
+      />
+    </div>
+
+    <div>
+      <label>Path Width</label>
+      <input type="range" 
+	     id="range-pathWidth" 
+	     name="pathWidth" 
+	     min="0" max="300"
+	     value="75"
+      />
+    </div>
   </div>
 
 </div>
