@@ -3315,11 +3315,12 @@ export default Ember.Component.extend({
 
         d3.selectAll(".foreground > g > g").classed("faded", markerNotSelected2);
 
-        /* This removes Zoom button of other axes; use d3 join instead. */
-        svgContainer.selectAll(".btn").remove();
         /** d3 selection of the brushed AP. */
         let apS = svgContainer.selectAll("#" + eltId(name[0]));
         zoomSwitch = apS
+          .selectAll('g.btn')
+          .data([1])
+          .enter()
           .append('g')
           .attr('class', 'btn')
           .attr('transform', yAxisBtnScale);
