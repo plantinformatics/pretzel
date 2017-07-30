@@ -372,6 +372,11 @@ div.drawing-controls > div.flowButtons > div.popover > button
 }
 
 /* -------------------------------------------------------------------------- */
+/* for selected-markers.hbs : clearScaffoldColours, flipRegion, (could exclude last child : resetZooms) */
+.btn-group.space-between > button {
+  margin-right: 1em;
+}
+/* -------------------------------------------------------------------------- */
 
 input#checkbox-toggleShowAll,
 input#range-pathOpacity,

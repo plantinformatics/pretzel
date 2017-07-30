@@ -98,6 +98,7 @@ export default Ember.Component.extend({
       f.on('colouredMarkers', this, 'updateColouredMarkers');
       f.on('clearScaffoldColours', this, 'clearScaffoldColours');
       f.on('flipRegion', this, 'flipRegion');
+      f.on('resetZooms', this, 'resetZooms');
     }
   }.on('init'),
 
@@ -107,6 +108,7 @@ export default Ember.Component.extend({
     f.off('colouredMarkers', this, 'updateColouredMarkers');
     f.off('clearScaffoldColours', this, 'clearScaffoldColours');
     f.off('flipRegion', this, 'flipRegion');
+    f.off('resetZooms', this, 'resetZooms');
   }.on('willDestroyElement'),
 
   /** undefined, or a function to call when colouredMarkers are received  */
@@ -3239,6 +3241,7 @@ export default Ember.Component.extend({
       // Chromosome name, e.g. 32-1B
       /** name[0] is apID of the brushed axis. name.length should be 1. */
       let name = d3.select(that).data();
+      let brushedApID = name[0];
 
       //Remove old circles.
       svgContainer.selectAll("circle").remove();
@@ -3312,7 +3315,7 @@ export default Ember.Component.extend({
 
         d3.selectAll(".foreground > g > g").classed("faded", markerNotSelected2);
 
-
+        /* This removes Zoom button of other axes; use d3 join instead. */
         svgContainer.selectAll(".btn").remove();
         /** d3 selection of the brushed AP. */
         let apS = svgContainer.selectAll("#" + eltId(name[0]));
@@ -3341,10 +3344,22 @@ export default Ember.Component.extend({
             .text('Reset');
 
           resetSwitch = zoomSwitch;
-          resetSwitch.on('click',function(){
+          resetSwitch.on('click',function(){resetZoom(brushedApID);
+          });
+          /* this need only be set once, can be set outside this callback.
+           * for that, resetZoom() can be moved out of brushHelper():zoomSwitch.on()
+           */
+          me.set('resetZooms', function(markers) {
+            resetZoom();
+          });
+          /** Reset 1 or all zooms.
+           * @param apID  AP id to reset; undefined means reset all zoomed axes.
+           */
+          function resetZoom(apID)
+          {
             let t = svgContainer.transition().duration(750);
-            
-            oa.apIDs.forEach(function(d) {
+            let apIDs = apID ? [apID] : oa.apIDs;
+            apIDs.forEach(function(d) {
               let idName = axisEltId(d); // axis ids have "a" prefix
               let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a].location; } );
               y[d].domain([0, yDomainMax]);
@@ -3356,11 +3371,15 @@ export default Ember.Component.extend({
             axisTickS.attr("transform", yAxisTicksScale);
 
             pathUpdate(t);
-            apS.selectAll(".btn").remove();
-            selectedMarkers = {};
-            me.send('updatedSelectedMarkers', selectedMarkers);
-            zoomed = false;
-          });
+            let resetScope = apID ? apS : svgContainer;
+              resetScope.selectAll(".btn").remove();
+            if (apID === undefined)
+            {
+              selectedMarkers = {};
+              me.send('updatedSelectedMarkers', selectedMarkers);
+            }
+            zoomed = false; // not used
+          }
         });
         
       } else {

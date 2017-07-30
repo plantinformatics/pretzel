@@ -27,6 +27,10 @@ export default Ember.Component.extend({
       this.get('feed').trigger('clearScaffoldColours');
       },
 
+    resetZooms : function () {
+      this.get('feed').trigger('resetZooms');
+    },
+
     putContent : function (component, event) {
       console.log("putContent", component, event);
 	let markerNames = event.target.innerText;
