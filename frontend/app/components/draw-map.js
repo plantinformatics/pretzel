@@ -4,6 +4,7 @@ console.log("compileSearch", compileSearch);
 import createIntervalTree from 'npm:interval-tree-1d';
 console.log("createIntervalTree", createIntervalTree);
 
+import { chrData } from '../utils/utility-chromosome';
 
 
 /* jshint curly : false */
@@ -37,7 +38,7 @@ let flowButtonsSel = "div.drawing-controls > div.flowButtons";
 function configurejQueryTooltip(node) {
   d3.selectAll(node + " > div.flowButton")
     .each(function (flowName) {
-      console.log("configurejQueryTooltip", flowName, this, this.outerHTML);
+      // console.log("configurejQueryTooltip", flowName, this, this.outerHTML);
       let node_ = this;
       Ember.$(node_)
       /*
@@ -81,6 +82,8 @@ function configurejQueryTooltip(node) {
 
 
 export default Ember.Component.extend({
+
+  store: Ember.inject.service('store'),
 
   /*------------------------------------------------------------------------*/
 
@@ -180,28 +183,88 @@ export default Ember.Component.extend({
   /** object attributes */
   oa : {},
 
-  dataObserver : Ember.observer('dataReceived.length', function(sender, key, value, rev) {
-    console.log("dataObserver", this, sender, key, value, rev);
-    let dataReceived = this.get('dataReceived');
-      if (dataReceived) {
-        let newData = dataReceived.popObject();  // get('firstObject');
-        console.log("handleDataReceived", dataReceived.length, dataReceived, newData);
-        if (newData)
+  dataObserver : Ember.observer('dataReceived.length', function(sender, key/*, value, rev*/) {
+    let me = this;
+    // avoid recursion caused by dataReceived.popObject() below
+    console.log("dataObserver", (this === sender), this, /*sender,*/ key /*, value, rev*/);
+    let dataReceived = this.get('dataReceived'), newData;
+    Ember.run.later(function () {
+      if (dataReceived && (newData = dataReceived.get('content')))
+        for (let ind=0; ind<newData.length; ind++)
+    {
+      let content = newData;
+      console.log("content", content.length, content);
+      if (content && content.length)
+          {
+        console.log( newData.length);
+        if (newData[0]) console.log(newData[0].length);
+
+        for (let ic=0; ic < content.length; ic++)
         {
-          /*
-          let ppc = newData[0], ma = newData[1];
-          console.log(newData[0]._internalModel, newData[1].record);
-          console.log
-          (ppc._internalModel.id,
-           ppc.get('map').get('name'),
-           ppc.get('name'));
+          console.log(ic, content[ic]);
+          Ember.run.later(function () { dataReceived.popObject(); });
 
-          ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
-          */
+          {
+            let mtv = content[ic],
+            m, im, newChr;
+            let oa = me.get('oa');
+            console.log("mtv", mtv.length, mtv, "aps", oa.aps.length, oa.aps);
+            for (im=0; im < mtv.length; im++)
+            {
+              if (oa.aps[m = mtv[im]])
+                console.log("mapsToView[", im, "] === ", m);
+              else
+              {
+                newChr = mtv[im];
+                console.log(newChr);
+                {
+                  let thisStore = me.get('store'), pc=thisStore.findRecord('chromosome', m);
+                  pc.then(function (ch){
+                    console.log(ch.get('name'));
+                    /*
+                     let ppc=thisStore.peekRecord('chromosome', m);
+                     console.log
+                     (ppc._internalModel.id,
+                     ppc.get('map').get('name'),
+                     ppc.get('name'));
 
-          this.draw(newData, 'dataReceived');
+                     let ma = ppc.get('markers');
+                     ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
+                     */
+                    let rc = chrData(ch),
+                    chr = ch.get('map').get('id'),
+                    /** Only 1 chr in hash, but use same structure as routes/mapview.js */
+                    retHash = {};
+                    retHash[chr] = rc;
+                    me.draw(retHash, 'dataReceived');
+                  });
+                }
+              }
+            }
+
+            /*
+             let ppc = newData[0], ma = newData[1];
+             console.log(newData[0]._internalModel, newData[1].record);
+             console.log
+             (ppc._internalModel.id,
+             ppc.get('map').get('name'),
+             ppc.get('name'));
+
+             ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
+             */
+
+          }
+
         }
       }
+
+    }
+    else
+    {
+      console.log("no dataReceived", dataReceived, newData);
+    }
+    }, 1000);
+
   }),
 
 
@@ -219,6 +282,7 @@ export default Ember.Component.extend({
    * @param source undefined or 'dataReceived', indicating an added map.
    */
   draw: function(myData, source) {
+    console.log("draw()", myData, myData.length, source);
 
     // Draw functionality goes here.
     let me = this;
@@ -319,7 +383,7 @@ export default Ember.Component.extend({
     let pathColourDefault = "#808";
 
     function xDropOutDistance_update () {
-      xDropOutDistance = viewPort.w/(stacks.length*6);
+      xDropOutDistance = viewPort.w/(oa.stacks.length*6);
     }
 
     /** Draw paths between markers on APs even if one end of the path is outside the svg.
@@ -432,6 +496,7 @@ export default Ember.Component.extend({
       });
  
     function receiveChr(ap, c, source) {
+      let z = oa.z, cmName = oa.cmName;
       if ((z[ap] === undefined) || (cmName[ap] === undefined))
       {
         z[ap] = c;
@@ -445,7 +510,7 @@ export default Ember.Component.extend({
         }
       delete c.mapName;
       delete c.chrName;
-       console.log(ap, cmName[ap]);
+      console.log("receiveChr", ap, cmName[ap]);
       d3.keys(c).forEach(function(marker) {
         let m = z[ap][marker];
         // alternate filter, suited to physical maps : m.location > 2000000
@@ -635,7 +700,7 @@ export default Ember.Component.extend({
     /** @return chromosome name of AP id. */
     function apName2Chr(apName)
     {
-      let c = cmName[apName];
+      let c = oa.cmName[apName];
       return c.chrName;
     }
     function makeMapChrName(mapName, chrName)
@@ -667,7 +732,7 @@ export default Ember.Component.extend({
     {
       if (start)
         console.log("dragTransition(start)");
-      svgContainer.classed("dragTransition", start);
+      oa.svgContainer.classed("dragTransition", start);
     }
     function dragTransitionEnd(data, index, group)
     {
@@ -687,9 +752,9 @@ export default Ember.Component.extend({
       return Math.round((num + 0.00001) * 100) / 100;
     }
     /*------------------------------------------------------------------------*/
-    const trace_stack = 1;
+    const trace_stack = 3;
     const trace_alias = 1;
-    const trace_path = 0;
+    const trace_path = 1;
     const trace_path_colour = 0;
     /** enable trace of adjacency between axes, and stacks. */
     const trace_adj = 0;
@@ -697,7 +762,7 @@ export default Ember.Component.extend({
 
     function Stacked(apName, portion) {
       this.apName = apName;
-      this.mapName = cmName[apName].mapName;  // useful in devel trace.
+      this.mapName = oa.cmName[apName].mapName;  // useful in devel trace.
       /** Portion of the Stack height which this AP axis occupies. */
       this.portion = portion;
       // The following are derived attributes.
@@ -711,7 +776,7 @@ export default Ember.Component.extend({
       /** Reference to parent stack.  Set in Stack.prototype.{add,insert}(). */
       this.stack = undefined;
       /* AP objects persist through being dragged in and out of Stacks. */
-      aps[apName] = this;
+      oa.aps[apName] = this;
     };
     Stacked.prototype.apName = undefined;
     Stacked.prototype.portion = undefined;
@@ -757,6 +822,7 @@ export default Ember.Component.extend({
      * and push onto this Stack.
      */
     function Stack(stackable) {
+      console.log("new Stack", oa, oa.nextStackID);
       this.stackID = oa.nextStackID++;
       /** The AP object (Stacked) has a reference to its parent stack which is the inverse of this reference : 
        * aps{apName}.stack.aps[i] == aps{apName} for some i.
@@ -778,7 +844,7 @@ export default Ember.Component.extend({
      * stacks.toDeleteAfterDrag.
      */
     function new_Stack(stackable) {
-      let s;
+      let stacks = oa.stacks, s;
       if (stacks.toDeleteAfterDrag !== undefined)
       {
         s = stacks.toDeleteAfterDrag;
@@ -846,6 +912,7 @@ export default Ember.Component.extend({
     stacks.log = 
       Stack.log = function()
       {
+        let stacks = oa.stacks;
         if (trace_stack < 2) return;
         console.log("{stacks=[");
         stacks.forEach(function(s){s.log();});
@@ -853,22 +920,23 @@ export default Ember.Component.extend({
       };
     Stack.verify = function()
     {
-      stacks.forEach(function(s){s.verify();});
+      oa.stacks.forEach(function(s){s.verify();});
     };
     /** Append the given stack to stacks[]. */
     stacks.append = function(stack)
     {
-      stacks.push(stack);
+      oa.stacks.push(stack);
     };
     /** Insert the given stack into stacks[] at index i. */
     stacks.insert = function(stack, i)
     {
+      let stacks = oa.stacks;
       stacks = stacks.insertAt(i, stack);
     };
     /** stackID is used as the domain of the X axis. */
     stacks.stackIDs = function()
     {
-      let sis = stacks.map(
+      let sis = oa.stacks.map(
         function (s) {
           return s.stackID;
         });
@@ -877,7 +945,7 @@ export default Ember.Component.extend({
     /** Sort the stacks by the x position of their APs. */
     stacks.sortLocation = function()
     {
-      stacks.sort(function(a, b) { return a.location() - b.location(); });
+      oa.stacks.sort(function(a, b) { return a.location() - b.location(); });
     };
     /** Return the x location of this stack.  Used for sorting after drag. */
     Stack.prototype.location = function()
@@ -892,7 +960,7 @@ export default Ember.Component.extend({
     Stack.prototype.stackIndex = function ()
     {
       /** Could cache result in s; this function is often used; may not affect speed much. */
-      let s = this, i = stacks.indexOf(s);
+      let s = this, i = oa.stacks.indexOf(s);
       return i;
     };
     /** Use the position of this stack within stacks[] to determine g.ap element classes.
@@ -906,7 +974,7 @@ export default Ember.Component.extend({
      */
     Stack.prototype.sideClasses = function ()
     {
-      let i = this.stackIndex(), n = stacks.length;
+      let i = this.stackIndex(), n = oa.stacks.length;
       let classes = (i == 0) ? "leftmost" : ((i == n-1) ? "rightmost" : "");
       return classes;
     };
@@ -917,7 +985,7 @@ export default Ember.Component.extend({
      */
     Stack.apStackIndex = function (apID)
     {
-      let ap = aps[apID], s = ap.stack, i = s.stackIndex();
+      let ap = oa.aps[apID], s = ap.stack, i = s.stackIndex();
       return i;
     };
     /** Find stack of apID and return the index of that stack within stacks.
@@ -928,7 +996,7 @@ export default Ember.Component.extend({
      */
     Stack.apStackIndex2 = function (apID)
     {
-      let ap = aps[apID];
+      let ap = oa.aps[apID];
       if (ap === undefined)
         return undefined;
       else
@@ -948,7 +1016,7 @@ export default Ember.Component.extend({
     {
       this.aps.push(stackable);
       stackable.stack = this;
-      aps[stackable.apName] = stackable;
+      oa.aps[stackable.apName] = stackable;
     };
     Stack.prototype.addAp = function(apName, portion)
     {
@@ -1015,6 +1083,7 @@ export default Ember.Component.extend({
      */
     Stack.prototype.delete = function ()
     {
+      let stacks = oa.stacks;
       let si = stacks.indexOf(this);
       let ok = false;
       if (si < 0)
@@ -1085,7 +1154,7 @@ export default Ember.Component.extend({
         else
           result.push(this);
         if (trace_updatedStacks)
-          me.send('updatedStacks', stacks);
+          me.send('updatedStacks', oa.stacks);
       }
       return result;
     };
@@ -1129,7 +1198,7 @@ export default Ember.Component.extend({
      */
     Stack.prototype.contains = function (apName)
     {
-      return this === aps[apName].stack;
+      return this === oa.aps[apName].stack;
     };
     /** Insert the named AP into this.aps[] at insertIndex (before if top, after
      * if ! top).
@@ -1146,6 +1215,7 @@ export default Ember.Component.extend({
      */
     Stack.prototype.dropIn = function (apName, insertIndex, top, transition)
     {
+      let aps = oa.aps;
       console.log("dropIn", this, apName, insertIndex, top);
       let fromStack = aps[apName].stack;
       /* It is valid to drop a AP into the stack it is in, e.g. to re-order the APs.
@@ -1162,7 +1232,7 @@ export default Ember.Component.extend({
       let anApName = this.aps[0].apName,
       /** Store both the cursor x and the stack x; the latter is used, and seems
        * to give the right feel. */
-      dropX = {event: d3.event.x, stack: o[anApName]};
+      dropX = {event: d3.event.x, stack: oa.o[anApName]};
       Stack.currentDrop = {out : false, stack: this, 'apName': apName, dropTime : Date.now(), x : dropX};
       if (! top)
         insertIndex++;
@@ -1243,7 +1313,7 @@ export default Ember.Component.extend({
       if (okStacks && (okStacks[0] == this))
       {
         // apName goes to full height. other APs in the stack take up the released height proportionately
-        let ap = aps[apName],
+        let ap = oa.aps[apName],
         released = ap.portion;
         ap.portion = 1;
         this.releasePortion(released);
@@ -1276,7 +1346,7 @@ export default Ember.Component.extend({
     {
       // could use a cached structure such as apStack[apName].
       // can now use : aps{apName}->stack
-      let as = stacks.filter(
+      let as = oa.stacks.filter(
         function (s) {
           let i = s.findIndex(apName);
           return i >= 0;
@@ -1310,7 +1380,7 @@ export default Ember.Component.extend({
           accumulator.push({stackIndex: currentIndex, apIndex: i});
         return accumulator;
       };
-      let as = stacks.reduce(findIndex_apName, []);
+      let as = oa.stacks.reduce(findIndex_apName, []);
       if (as.length != 1)
       {
         console.log("apStackIndexAll()", apName, as, as.length);
@@ -1334,7 +1404,7 @@ export default Ember.Component.extend({
        * is not allocated an x position (via xScale()) until dragended().  */
       let xVal = x(this.apName);
       if (xVal === undefined)
-        xVal = o[this.apName];
+        xVal = oa.o[this.apName];
       checkIsNumber(xVal);
       let transform =
         [
@@ -1347,13 +1417,13 @@ export default Ember.Component.extend({
     /** Get stack of AP, return transform. */
     Stack.prototype.apTransform = function (apName)
     {
-      let a = aps[apName];
+      let a = oa.aps[apName];
       return a.apTransform();
     };
     /** Get stack of AP, return transform. */
     Stack.prototype.apTransformO = function (apName)
     {
-      let a = aps[apName];
+      let a = oa.aps[apName];
       return a.apTransformO();
     };
     /** For each AP in this Stack, redraw axis, brush, foreground paths.
@@ -1439,12 +1509,12 @@ export default Ember.Component.extend({
     //d3 v4 scalePoint replace the rangePoint
     //let x = d3.scaleOrdinal().domain(apIDs).range([0, w]);
     function xScale() {
-      let stackDomain = Array.from(stacks.keys()); // was apIDs
+      let stackDomain = Array.from(oa.stacks.keys()); // was apIDs
       console.log("xScale()", stackDomain);
       return d3.scalePoint().domain(stackDomain).range(axisXRange);
     }
 
-    Stacked.prototype.location = function() { return checkIsNumber(o[this.apName]); };
+    Stacked.prototype.location = function() { return checkIsNumber(oa.o[this.apName]); };
     /** Same as .apTransform(), but use o[d] instead of x(d)
      * If this works, then the 2 can be factored.
      * @return transform : translation, calculated from AP position within stack.
@@ -1515,8 +1585,8 @@ export default Ember.Component.extend({
 
     function collateStacks()
     {
-      d3.keys(flows).forEach(function(flowName) {
-        let flow = flows[flowName];
+      d3.keys(oa.flows).forEach(function(flowName) {
+        let flow = oa.flows[flowName];
         if (flow.enabled && flow.collate)
           flow.collate();
       });
@@ -1545,8 +1615,9 @@ export default Ember.Component.extend({
     function collateO() {
       console.log("collateO", oa.apIDs.length, oa.apIDs);
       oa.apIDs.forEach(function(d){
-         console.log(d, oa.o[d], x(d));
-        oa.o[d] = x(d);
+        let o = oa.o;
+         console.log(d, o[d], x(d));
+        o[d] = x(d);
         checkIsNumber(oa.o[d]);
         if (o[d] === undefined) { debugger; console.log(x(d)); }
       });
@@ -1560,8 +1631,8 @@ export default Ember.Component.extend({
         // Groups, can automatically stack APs.
         let sd = new Stacked(d, 1),
         stack = new Stack(sd);
-        sd.z = z[d];  // reference from Stacked AP to z[apID]
-        stacks.append(stack);
+        sd.z = oa.z[d];  // reference from Stacked AP to z[apID]
+        oa.stacks.append(stack);
         stack.calculatePositions();
       }
     });
@@ -1586,7 +1657,7 @@ export default Ember.Component.extend({
     if (false && oa.foreground)
     {
       pathUpdate(t);
-      stacks.forEach(function (s) { s.redrawAdjacencies(); });
+      oa.stacks.forEach(function (s) { s.redrawAdjacencies(); });
     }
 
 
@@ -1596,6 +1667,7 @@ export default Ember.Component.extend({
      */
     function updateRange(a)
     {
+      let ys = oa.ys;
       // if called before ys is set up, do nothing.
       if (ys && ys[a.apName])
       {
@@ -1614,8 +1686,8 @@ export default Ember.Component.extend({
       let path_colour_domain;
       switch (use_path_colour_scale)
       {
-      case 1 : path_colour_domain = markers; break;
-      case 2 : path_colour_domain = d3.keys(ag); break;
+      case 1 : path_colour_domain = oa.markers; break;
+      case 2 : path_colour_domain = d3.keys(oa.ag); break;
       case 4:
       case 3 : path_colour_domain = ["unused"];
         this.set('colouredMarkersChanged', function(colouredMarkers_) {
@@ -1708,8 +1780,8 @@ export default Ember.Component.extend({
 
     oa.apIDs.forEach(function(d) {
       /** Find the max of locations of all markers of AP name d. */
-      let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a].location; } );
-      let a = aps[d], myRange = a.yRange();
+      let yDomainMax = d3.max(Object.keys(oa.z[d]), function(a) { return oa.z[d][a].location; } );
+      let a = oa.aps[d], myRange = a.yRange(), ys = oa.ys, y = oa.y;
       ys[d] = d3.scaleLinear()
         .domain([0, yDomainMax])
         .range([0, myRange]); // set scales for each AP
@@ -1753,7 +1825,7 @@ export default Ember.Component.extend({
 
     function setCssVariable(name, value)
     {
-      svgRoot.style(name, value);
+      oa.svgRoot.style(name, value);
     }
 
     /** total the # paths collated for the enabled flows.
@@ -1761,6 +1833,7 @@ export default Ember.Component.extend({
      */
     function countPaths()
     {
+      let svgRoot = oa.svgRoot;
       console.log("countPaths", svgRoot);
       if (svgRoot)
       {
@@ -1780,6 +1853,7 @@ export default Ember.Component.extend({
      * those which are outside the zoom range.  */
     function countPathsWithData()
     {
+      let svgRoot = oa.svgRoot;
       console.log("countPathsWithData", svgRoot);
       if (svgRoot)
       {
@@ -1855,12 +1929,13 @@ export default Ember.Component.extend({
       .attr("class", "foreground");
     d3.keys(flows).forEach(function(flowName) {
       let flow = flows[flowName];
-      flow.g = foreground.append("g")
+      flow.g = oa.foreground.append("g")
         .attr("class", flowName);
     });
     }
     
     pathUpdate(undefined);
+    stacks.log();
 
     // Add a group element for each stack.
     // Stacks contain 1 or more APs.
@@ -1877,6 +1952,7 @@ export default Ember.Component.extend({
 
     function stackEltId(s)
     { if (s.stackID === undefined) debugger;
+      console.log("stackEltId", s.stackID, s.aps[0].mapName, s);
       return eltId(s.stackID); }
 
     /** For the given Stack, return its apIDs  */
@@ -1941,7 +2017,7 @@ export default Ember.Component.extend({
       {
         /** The datum of the DropTarget is the apName */
         let apName = this.datum(),
-        ap = aps[apName];
+        ap = oa.aps[apName];
         return ap;
       };
       /// @parameter top  true or false to indicate zone is positioned at top or
@@ -1956,7 +2032,7 @@ export default Ember.Component.extend({
         let
           dropTargetY = function (datum/*, index, group*/) {
             let apName = datum,
-            ap = aps[apName],
+            ap = oa.aps[apName],
             yVal = top ? -dropTargetYMargin : edge.bottom(ap);
             return yVal;
           };
@@ -1985,7 +2061,7 @@ export default Ember.Component.extend({
         {
           // console.log("dropTargetHeight", datum, index, group);
           let apName = datum,
-          ap = aps[apName];
+          ap = oa.aps[apName];
           return ap.yRange() - 2 * size.h;
         }
         stackDropTarget
@@ -2034,7 +2110,7 @@ export default Ember.Component.extend({
 
     function axisTitle(chrID)
     {
-      let cn=cmName[chrID];
+      let cn=oa.cmName[chrID];
       // console.log(".axis text", chrID, cn);
       return cn.mapName + " " + cn.chrName;
     }
@@ -2076,7 +2152,7 @@ export default Ember.Component.extend({
     {
       let
       apName = this.__data__,
-      ap = aps[apName],
+      ap = oa.aps[apName],
       portion = ap && ap.portion || 1,
       scaleText = "scale(1, " + 1 / portion + ")";
       // console.log("yAxisTextScale", d, i, g, this, apName, ap, portion, scaleText);
@@ -2098,7 +2174,7 @@ export default Ember.Component.extend({
     // Add a brush for each axis.
     g.append("g")
       .attr("class", "brush")
-      .each(function(d) { d3.select(this).call(y[d].brush); });
+      .each(function(d) { d3.select(this).call(oa.y[d].brush); });
 
     //Setup the gene / marker highlight, enabled by url param highlightMarker.
     let highlightMarkerS =
@@ -2162,6 +2238,7 @@ export default Ember.Component.extend({
      */
     function handleMouseOver(d){
       let sLine, pathMarkersHash;
+      let pathMarkers = oa.pathMarkers;
       /** d is either sLine (pathDataIsLine===true) or array mmaa. */
       let pathDataIsLine = typeof(d) === "string";
       if (pathDataIsLine)
@@ -2176,6 +2253,7 @@ export default Ember.Component.extend({
         {
           let mmaa = dataOfPath(this),
           [marker0, marker1, a0, a1] = mmaa;
+          let z = oa.z;
           pathMarkerStore(sLine, marker0, marker1, z[a0.apName][marker0], z[a1.apName][marker1]);
           pathMarkersHash = pathMarkers[sLine];
         }
@@ -2238,11 +2316,12 @@ export default Ember.Component.extend({
      */
     function collateData()
     {
-      d3.keys(z).forEach(function(ap) {
-        let za = z[ap];
+      d3.keys(oa.z).forEach(function(ap) {
+        let za = oa.z[ap];
         // console.log("collateData", ap, za);
         if (maga[ap] === undefined)
           maga[ap] = {};
+        let aam = oa.aam;
         if (aam[ap] === undefined)
         {
           aam[ap] = {};
@@ -2259,6 +2338,7 @@ export default Ember.Component.extend({
             console.log("collateData", ap, za, za[marker], exc);
             debugger;
           }
+          let markerAPs = oa.markerAPs;
           if (markerAPs[marker] === undefined)
             markerAPs[marker] = new Set();
           markerAPs[marker].add(ap);
@@ -2277,6 +2357,7 @@ export default Ember.Component.extend({
              * group can significantly reduce processing and memory.
              */
             let agName = aliasesUniqueName(mas.concat([marker]));
+            let ag = oa.ag;
             if (ag[agName] === undefined)
               ag[agName] = [];
             ag[agName].push(marker_);
@@ -2309,10 +2390,10 @@ export default Ember.Component.extend({
      */
     function collateMarkerClasses(markerScaffold)
     {
-      d3.keys(z).forEach(
+      d3.keys(oa.z).forEach(
         function(apName)
         {
-          let za = z[apName];
+          let za = oa.z[apName];
           d3.keys(za).forEach(
             function(markerName)
             {
@@ -2353,9 +2434,9 @@ export default Ember.Component.extend({
        * If there are only 1 of those, return it.
        * ?(m1 if m0 is in the aliases of a0:m1)
        */
-      let aama = aam[ap0.apName],
+      let aama = oa.aam[ap0.apName],
       ma = aama[m1],
-      z0 = z[ap0.apName];
+      z0 = oa.z[ap0.apName];
       let ams = [];
       if (ma)
         for (let mai=0; mai<ma.length; mai++)
@@ -2405,6 +2486,7 @@ export default Ember.Component.extend({
       oa.maN = maN = {};
       agam = {};
       pu = flows.U_alias.pathData = [];
+      let stacks = oa.stacks;
 
       for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
@@ -2423,6 +2505,7 @@ export default Ember.Component.extend({
             d3.keys(za0).forEach(function(marker0) {
               /** a0, a1 could be derived from za0[marker0].ap, za1[marker0].ap */
               let maa = [marker0, a0, a1, za0[marker0], za1[marker0]];
+              let maN = oa.maN;
               if (za1[marker0])
               {
                 if (maN[marker0] === undefined)
@@ -2449,7 +2532,7 @@ export default Ember.Component.extend({
               let
                 aliasedM0,
                 aliasedM1 = maInMaAG(a1, a0, marker0),
-                isDirect = directWithAliases && z[a1.apName][marker0] !== undefined;
+                isDirect = directWithAliases && oa.z[a1.apName][marker0] !== undefined;
               let differentAlias;
               if (aliasedM1 || showAsymmetricAliases)
               {
@@ -2463,7 +2546,10 @@ export default Ember.Component.extend({
                  * as non-unique. */
                 differentAlias = aliasedM0 != marker0;
                 if (trace_alias > 1 && differentAlias)
+                {
+                  let aam = oa.aam;
                   console.log("aliasedM1", aliasedM1, "aliasedM0", aliasedM0, marker0, za0[marker0], za1[aliasedM1], aam[a1.apName][marker0], aam[a0.apName][aliasedM1]);
+                }
 
                 let d0 = marker0, d1 = aliasedM1;
                 if (false)  // debugging support, could be removed.
@@ -2494,7 +2580,7 @@ export default Ember.Component.extend({
         }
       }
       if (pu)
-        console.log("collateStacks", " maN", d3.keys(maN).length, ", pu", pu.length);
+        console.log("collateStacks", " maN", d3.keys(oa.maN).length, ", pu", pu.length);
       if (trace_path > 3)
         pu_log(pu);
     }
@@ -2513,6 +2599,7 @@ export default Ember.Component.extend({
       else
       {
         let     [marker0, marker1, a0, a1, direction, agName] = mmaa,
+        z = oa.z,
         m0 = z[a0.apName][marker0],
         m1 = z[a1.apName][marker1];
         console.log(marker0, marker1, a0.mapName, a0.apName, a1.mapName, a1.apName, m0.location, m1.location, direction, agName);
@@ -2525,6 +2612,7 @@ export default Ember.Component.extend({
     function collateAdjacentAPs()
     {
       adjAPs = {};
+      let stacks = oa.stacks;
       for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
         mAPs0 = s0.aps,
@@ -2555,6 +2643,7 @@ export default Ember.Component.extend({
     }
     function APid2Name(APid)
     {
+      let aps = oa.aps;
       if (APid === undefined || aps[APid] === undefined)
       {
         console.log(aps, APid);
@@ -2630,10 +2719,10 @@ export default Ember.Component.extend({
     {
       collateAdjacentAPs();
       let adjCount = 0, adjCountNew = 0, pathCount = 0;
-      d3.keys(z).forEach(
+      d3.keys(oa.z).forEach(
         function(apName)
         {
-          let za = z[apName];
+          let za = oa.z[apName];
           let adjs = adjAPs[apName];
           if (adjs)
           {
@@ -2658,6 +2747,7 @@ export default Ember.Component.extend({
                 for (let i=0; i<mas.length; i++)
                 {
                   let mi = mas[i],
+                  markerAPs = oa.markerAPs,
                   APs = markerAPs[mi];
                   if (APs === undefined)
                   {
@@ -2669,11 +2759,12 @@ export default Ember.Component.extend({
                     for (let id=0; id<adjs.length; id++)
                   {
                       let aj = adjs[id],
-                      markerA = z[aj][mi];
+                      markerA = oa.z[aj][mi];
                       if (APs.has(aj))
                       {
                         let // agName = markerA.agName,
                           direction = apName < aj,
+                        aps = oa.aps,
                         apName_ = aps[apName],
                         aj_ = aps[aj],
                         am = [
@@ -2775,6 +2866,7 @@ export default Ember.Component.extend({
       if (am === undefined)
         am = {};
       aa || (aa = {});
+      let z = oa.z;
       for (let ap in z)
       {
         for (let marker in z[ap])
@@ -2827,7 +2919,7 @@ export default Ember.Component.extend({
     function markerStackAPs(marker, stackIndex)
     {
       /** smi are the APs selected by marker. */
-      let stack = stacks[stackIndex], smi=concatAndUnique(aa[marker], am[marker]);
+      let stack = oa.stacks[stackIndex], smi=concatAndUnique(aa[marker], am[marker]);
       // console.log("markerStackAPs()", marker, stackIndex, smi);
       let mAPs = smi.filter(function (apID) {
         let mInS = stack.contains(apID); return mInS; });
@@ -2841,6 +2933,7 @@ export default Ember.Component.extend({
     function markerLine2(k1, k2, d)
     {
       let
+        o = oa.o,
         ak1 = oa.apIDs[k1],
         ak2 = oa.apIDs[k2];
       return line([[o[ak1], markerY(k1, d)],
@@ -2854,6 +2947,7 @@ export default Ember.Component.extend({
      */
     function markerLineS2(ak1, ak2, d1, d2)
     {
+      let o = oa.o;
       // o[p], the map location,
       return line([[o[ak1], markerY_(ak1, d1)],
                    [o[ak2], markerY_(ak2, d2)]]);
@@ -2869,6 +2963,7 @@ export default Ember.Component.extend({
     {
       let akY = markerY_(ak, d);
       let shiftRight = 5;
+      let o = oa.o;
       return line([[o[ak]-xOffset + shiftRight, akY],
                    [o[ak]+xOffset + shiftRight, akY]]);
     }
@@ -2881,6 +2976,7 @@ export default Ember.Component.extend({
     {
       let ak = oa.apIDs[k],
       akY = markerY(k, d);
+      let o = oa.o;
       return line([[o[ak]-xOffset, akY],
                    [o[ak]+xOffset, akY]]);
     }
@@ -2919,7 +3015,7 @@ export default Ember.Component.extend({
        *   all APs of those stacks :
        *    all markers of those APs
        */
-      for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
+      for (let stackIndex=0; stackIndex<oa.stacks.length-1; stackIndex++) {
         let mAPs0 = markerStackAPs(d, stackIndex),
         mAPs1 = markerStackAPs(d, stackIndex+1);
         // Cross-product of the two adjacent stacks; just the APs which contain the marker.
@@ -3042,6 +3138,7 @@ export default Ember.Component.extend({
      */
     function pathMarkerStore(sLine, d0, d1, ma0, ma1)
     {
+      let pathMarkers = oa.pathMarkers;
       if (pathMarkers[sLine] === undefined)
         pathMarkers[sLine] = {};
 
@@ -3087,6 +3184,7 @@ export default Ember.Component.extend({
       if (lineIn)
       {
         let sLine = markerLineS2(a0, a1, d0, d1_);
+        let cmName = oa.cmName;
         let marker0 = d0, marker1 = d1, traceTarget = marker0 == "markerK" && marker1 == "markerK" &&
           cmName[a0].mapName == "MyMap5" && cmName[a1].mapName == "MyMap6";
         if (traceTarget)
@@ -3094,6 +3192,7 @@ export default Ember.Component.extend({
           console.log("patham()", d0, d1, cmName[a0].mapName, cmName[a1].mapName, a0, a1, z[a0][d0].location, d1 && z[a1][d1].location, sLine);
         }
         r = sLine;
+        let z = oa.z;
         if (pathDataIsLine)
           /* Prepare a tool-tip for the line. */
           pathMarkerStore(sLine, d0, d1, z[a0][d0], z[a1][d1_]);
@@ -3101,6 +3200,7 @@ export default Ember.Component.extend({
       else if (showAll) {
         const markerTickLen = 10; // orig 5
         function axisMarkerTick(ai, d) {
+          let z = oa.z;
           if (d in z[a0])
           {
             r = markerLineS(ai, d, markerTickLen);
@@ -3118,6 +3218,7 @@ export default Ember.Component.extend({
     // not in the later functions path(), pathU().
     function path_pre_Stacks(d) { // d is a marker
       let r = [];
+      let z = oa.z, pathMarkers = oa.pathMarkers;
 
       for (let k=0; k<oa.apIDs.length-1; k++) {
         let m_k  = oa.apIDs[k],
@@ -3159,9 +3260,9 @@ export default Ember.Component.extend({
       // z[p][m].location, actual position of marker m in the AP p, 
       // y[p](z[p][m].location) is the relative marker position in the svg
       // ys is used - the y scale for the stacked position&portion of the AP.
-      let ysa = ys[apID],
-      aky = ysa(z[apID][d].location),
-      apY = aps[apID].yOffset();
+      let ysa = oa.ys[apID],
+      aky = ysa(oa.z[apID][d].location),
+      apY = oa.aps[apID].yOffset();
       if (! tracedApScale[apID])
       {
         tracedApScale[apID] = true;
@@ -3185,6 +3286,7 @@ export default Ember.Component.extend({
     // most likely present in the later path() function/s;  zoom() now uses pathUpdate().
     function zoomPath(d) { // d is a marker
       let r = [];
+      let z = oa.z, pathMarkers = oa.pathMarkers, o = oa.o;
       for (let k=0; k<oa.apIDs.length-1; k++) {
         //ys[p].domain
         //z[apIDs[k]][d].location marker location
@@ -3243,6 +3345,7 @@ export default Ember.Component.extend({
       let name = d3.select(that).data();
       let brushedApID = name[0];
 
+      let svgContainer = oa.svgContainer;
       //Remove old circles.
       svgContainer.selectAll("circle").remove();
 
@@ -3266,16 +3369,16 @@ export default Ember.Component.extend({
         let selectedMarkersSet = new Set();
         selectedAps.forEach(function(p, i) {
           /** d3 selection of one of the APs selected by user brush on axis. */
-          let apS = svgContainer.selectAll("#" + eltId(p));
+          let apS = oa.svgContainer.selectAll("#" + eltId(p));
           selectedMarkers[p] = [];
 
-          let yp = y[p],
-          ap = aps[p],
+          let yp = oa.y[p],
+          ap = oa.aps[p],
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *ap.portion */); });
           //console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], ap.portion, brushedDomain);
 
-          d3.keys(z[p]).forEach(function(m) {
-
+          d3.keys(oa.z[p]).forEach(function(m) {
+            let z = oa.z;
             if ((z[p][m].location >= brushedDomain[0]) &&
                 (z[p][m].location <= brushedDomain[1])) {
               //selectedMarkers[p].push(m);    
@@ -3288,7 +3391,7 @@ export default Ember.Component.extend({
                 .append("circle")
                 .attr("class", eltClassName(m))
                 .attr("cx",0)   /* was o[p], but g.ap translation does x offset of stack.  */
-                .attr("cy",y[p](z[p][m].location))
+                .attr("cy",oa.y[p](z[p][m].location))
                 .attr("r",2)
                 .style("fill", "red");
 
@@ -3340,7 +3443,7 @@ export default Ember.Component.extend({
 
           //reset function
           //Remove all the existing circles
-          svgContainer.selectAll("circle").remove();
+          oa.svgContainer.selectAll("circle").remove();
           zoomResetSwitchText
             .text('Reset');
 
@@ -3358,15 +3461,16 @@ export default Ember.Component.extend({
            */
           function resetZoom(apID)
           {
+            let svgContainer = oa.svgContainer;
             let t = svgContainer.transition().duration(750);
             let apIDs = apID ? [apID] : oa.apIDs;
             apIDs.forEach(function(d) {
               let idName = axisEltId(d); // axis ids have "a" prefix
-              let yDomainMax = d3.max(Object.keys(z[d]), function(a) { return z[d][a].location; } );
-              y[d].domain([0, yDomainMax]);
-              ys[d].domain([0, yDomainMax]);
-              let yAxis = d3.axisLeft(y[d]).ticks(10);
-              svgContainer.select("#"+idName).transition(t).call(yAxis);
+              let yDomainMax = d3.max(Object.keys(oa.z[d]), function(a) { return oa.z[d][a].location; } );
+              oa.y[d].domain([0, yDomainMax]);
+              oa.ys[d].domain([0, yDomainMax]);
+              let yAxis = d3.axisLeft(oa.y[d]).ticks(10);
+              oa.svgContainer.select("#"+idName).transition(t).call(yAxis);
             });
             let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
             axisTickS.attr("transform", yAxisTicksScale);
@@ -3412,16 +3516,17 @@ export default Ember.Component.extend({
      */
     function zoom(that, brushExtents) {
       let apName = d3.select(that).data();
-      let t = svgContainer.transition().duration(750);
+      let t = oa.svgContainer.transition().duration(750);
       selectedAps.map(function(p, i) {
         if(p == apName){
+          let y = oa.y, svgContainer = oa.svgContainer;
           let yp = y[p],
-          ap = aps[p],
+          ap = oa.aps[p],
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *ap.portion*/); });
           // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
           console.log("zoom", apName, p, i, yp.domain(), yp.range(), brushExtents[i], ap.portion, brushedDomain);
           y[p].domain(brushedDomain);
-          ys[p].domain(brushedDomain);
+          oa.ys[p].domain(brushedDomain);
           let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * ap.portion);
           let idName = axisEltId(p);
           svgContainer.select("#"+idName).transition(t).call(yAxis);
@@ -3449,6 +3554,7 @@ export default Ember.Component.extend({
        use_path_colour_scale = me.get('pathColourScale'); */
       console.log("dragstarted", this, start_d/*, start_index, start_group*/);
       let cl = {/*self: this,*/ d: start_d/*, index: start_index, group: start_group, apIDs: apIDs*/};
+      let svgContainer = oa.svgContainer;
       svgContainer.classed("axisDrag", true);
       d3.select(this).classed("active", true);
       console.log(d3.event.subject.fx, d3.event.subject.x);
@@ -3489,7 +3595,7 @@ export default Ember.Component.extend({
       /** X distance from start of drag */
       let xDistance;
       if (dragging++ > 0) { console.log("dragged drop"); return;}
-      if (! svgContainer.classed("dragTransition"))
+      if (! oa.svgContainer.classed("dragTransition"))
       {
         // if cursor is in top or bottom dropTarget-s, stack the AP,
         // otherwise set AP x to cursor x, and sort.
@@ -3518,7 +3624,7 @@ export default Ember.Component.extend({
             top = currentDropTarget.classList.contains("top"),
             zoneParent = Stack.apStackIndex2(targetApName);
             /** destination stack */
-            let stack = stacks[zoneParent.stackIndex];
+            let stack = oa.stacks[zoneParent.stackIndex];
             if (! stack.contains(d))
             {
               t = dragTransitionNew();
@@ -3542,7 +3648,7 @@ export default Ember.Component.extend({
                    && ((xDistance = Math.abs(d3.event.x - xDistanceRef)) > xDropOutDistance))
           {
             /** dragged AP, source stack */
-            let ap = aps[d], stack = ap.stack;
+            let ap = oa.aps[d], stack = ap.stack;
             if (currentDrop && currentDrop.stack !== stack)
             {
               console.log("dragged", d, currentDrop.stack, stack);
@@ -3576,6 +3682,7 @@ export default Ember.Component.extend({
 
       // if (! dropTargetEnd)
       {
+        let o = oa.o;
         // console.log("dragged o[d]", o[d], d3.event.x);
         o[d] = d3.event.x;
         // Now impose boundaries on the x-range you can drag.
@@ -3596,7 +3703,7 @@ export default Ember.Component.extend({
       }
 
       dragging--;
-    }
+    } // dragged()
 
     /** Redraw the AP/axis which is being dragged.
      * Calls pathUpdate() which will mostly change the paths connected to the dragged axis;
@@ -3625,7 +3732,7 @@ export default Ember.Component.extend({
         //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
         // st0.select(".brush").call(y[d].brush.move,null);
         //Remove all highlighted Markers.
-        svgContainer.selectAll("circle").remove();
+        oa.svgContainer.selectAll("circle").remove();
       }
     }
 
@@ -3643,7 +3750,7 @@ export default Ember.Component.extend({
       // let p = t.select(function() { return gStack; });
       // console.log("apChangeGroupElt", apID, t, aS_, aS, p);
       // compare with ap->stack
-      let ap = aps[apID],
+      let ap = oa.aps[apID],
       stackID = ap.stack && ap.stack.stackID,
       /** destination Stack selection */
       dStack_ = "g.stack#" + stackEltId(ap.stack),
@@ -3727,7 +3834,7 @@ export default Ember.Component.extend({
       g.exit().remove();
       function log_foreground_g(selector)
       {
-        let gg = foreground.selectAll(selector);
+        let gg = oa.foreground.selectAll(selector);
         console.log("gg", selector, gg._groups[0], gg.size());
         if (true)
         {
@@ -3862,7 +3969,7 @@ export default Ember.Component.extend({
     function colouredAg(apName, markerName)
     {
       let classSet,
-      marker = z[apName][markerName],
+      marker = oa.z[apName][markerName],
       agName = marker.agName;
       if (agName)
       {
@@ -3886,7 +3993,7 @@ export default Ember.Component.extend({
     function locationClasses(apName, markerName)
     {
       let classes,
-      m = z[apName][markerName],
+      m = oa.z[apName][markerName],
       location = m.location,
       chrName = apName2Chr(apName),
       mapChrName = APid2Name(apName) + ":" + chrName,
@@ -3953,7 +4060,7 @@ export default Ember.Component.extend({
         }
         else
         {
-          let APs = markerAPs[markerName], apName;
+          let APs = oa.markerAPs[markerName], apName;
           // choose the first chromosome;  may be unique.
           // if not unique, could colour by the intervals on any of the APs,
           // but want just the APs which are points on this path.
@@ -4129,6 +4236,7 @@ export default Ember.Component.extend({
     }
 
     function deleteAfterDrag() {
+      let stacks = oa.stacks;
       if (trace_stack)
         console.log("deleteAfterDrag", stacks.toDeleteAfterDrag);
 
@@ -4158,6 +4266,7 @@ export default Ember.Component.extend({
       oa.xs = xScale();
       // if caching, recalc : collateApPositions();
       
+      let stacks = oa.stacks;
       stacks.sortLocation();
       let t = stacksAdjust();
       // already done in xScale()
@@ -4169,6 +4278,7 @@ export default Ember.Component.extend({
        */
       stacks.forEach(function (s) { s.redrawAdjacencies(); });
       d3.select(this).classed("active", false);
+      let svgContainer = oa.svgContainer;
       svgContainer.classed("axisDrag", false);
       d3.event.subject.fx = null;
       Stack.currentDrag = undefined;
@@ -4192,7 +4302,7 @@ export default Ember.Component.extend({
      */
     this.set('draw_flipRegion', function(markers) {
       let brushedMap = selectedAps[0];
-      let zm = z[brushedMap];
+      let zm = oa.z[brushedMap];
 
       if (markers.length)
       {
@@ -4274,6 +4384,7 @@ export default Ember.Component.extend({
       setupToggle
       ("checkbox-toggleModePublish",
       function (checked) {
+        let svgContainer = oa.svgContainer;
         console.log(svgContainer._groups[0][0]);
         svgContainer.classed("publishMode", checked);
       }
@@ -4299,7 +4410,7 @@ export default Ember.Component.extend({
       let input = Ember.$("#" + inputId);
       input.on('input', function (event) {
         let value = input[0].value / factor;
-        console.log(inputId, value, event.originalEvent, svgRoot._groups[0][0]);
+        console.log(inputId, value, event.originalEvent, oa.svgRoot._groups[0][0]);
         setCssVariable(varName, value);
       });
     }
@@ -4367,6 +4478,8 @@ export default Ember.Component.extend({
      * svgRoot, svgContainer, foreground, flows[*].g
      */
     function updateSelections() {
+      let svgRoot = oa.svgRoot, svgContainer = oa.svgContainer,
+      foreground = oa.foreground;
       console.log(
         "svgRoot (._groups[0][0])", svgRoot._groups[0][0],
         ", svgContainer", svgContainer._groups[0][0],
@@ -4381,7 +4494,7 @@ export default Ember.Component.extend({
       d3.keys(flows).forEach(function (flowName) {
         let flow = flows[flowName];
         console.log(flowName, " flow.g", flow.g._groups[0][0]);
-        flow.g = foreground.select("g." + flow.name);
+        flow.g = oa.foreground.select("g." + flow.name);
         console.log(flowName, " flow.g", flow.g._groups[0][0]);
       });
 

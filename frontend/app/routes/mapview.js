@@ -3,9 +3,13 @@ import Ember from 'ember';
 export default Ember.Route.extend({
   queryParams: {
     mapsToView: {
-      // We want changes in the URL mapsToView query parameter to trigger
-      // a model refresh.
+      // The initial architecture (up until feature/render-promises) was for changes in the URL mapsToView query parameter to trigger
+      // a model refresh, using :
        refreshModel: true
+      //
+      // Instead : controller : mapsToViewChanged() .observes('mapsToView'),
+      // does store.findRecord(chromosome) and delivers the data or promise via
+      // dataReceived.
     },
     chr: {
       refreshModel: true

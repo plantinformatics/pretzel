@@ -1,25 +1,9 @@
 import Ember from 'ember';
 
+import { chrData } from '../utils/utility-chromosome';
+
 console.log("controllers/mapview.js");
 
-/** bundle chr data (incl markers) for draw-map:draw().
- * copy of Ember.RSVP.hash(promises).then(); factor these together.
- * @param c aka chrs[chr]
- */
-function chrData(c) {
-  let 
-  /* rc aka retHash[chr] */
-  rc  = {mapName : c.get('map').get('name'), chrName : c.get('name')};
-        let m = c.get('markers');
-        m.forEach(function(marker) {
-          let markerName = marker.get('name');
-          let markerPosition = marker.get('position');
-          let markerAliases = marker.get('aliases');
-          rc[markerName] = {location: markerPosition, aliases: markerAliases};
-        });
-  console.log("chrData", rc);
-  return rc;
-}
 
 export default Ember.Controller.extend({
 
@@ -71,11 +55,29 @@ export default Ember.Controller.extend({
     let mtv = this.get('mapsToView'), i=mtv.length;
     if (i)
     {
-      let m=mtv[i-1];
+      let m=mtv[i-1], im, exists;
       console.log("mapsToViewChanged", mtv.length, mtv, i, m, a, b, c);
       console.log(this.selectedMaps.length, this.selectedMaps);
       console.log(this.availableMaps.length, this.availableMaps);
-
+      console.log(a.mapsToView.length, a.mapsToView);
+      if (true)
+      {
+        let dataReceived = this.get('dataReceived');
+        if (dataReceived)
+          dataReceived.pushObject(mtv);
+        else
+          console.log(this);
+      }
+      else
+/*
+      for (im=0; (im < a.mapsToView.length) && !(exists = (a.mapsToView[im] === m)); im++)
+      {
+      }
+      if (exists)
+        console.log("mapsToView[", im, "] === ", m);
+      if ((a.mapsToView.length === 0) || ! exists)
+*/
+      {
       var that = this;  // let creates a closure, which loses this
 
       let pc=this.store.findRecord('chromosome', m);
@@ -103,6 +105,7 @@ export default Ember.Controller.extend({
         else
           console.log(this);
       });
+      }
     }
   }//.observes('mapsToView')
 
