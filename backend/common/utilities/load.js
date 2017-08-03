@@ -43,6 +43,18 @@ exports.gzip = (buf) => {
  * @param {string} filePath - path to load the file
  * @returns data
  */
+exports.fileJson = (filePath) => {
+  return exports.file(filePath)
+  .then(function(buf) {
+    return JSON.parse(buf.toString())
+  })
+}
+
+/**
+ * Unpack a geneticmap from gzip compression
+ * @param {string} filePath - path to load the file
+ * @returns data
+ */
 exports.fileGzip = (filePath) => {
   return exports.file(filePath)
   .then(function(data) {

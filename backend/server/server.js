@@ -119,3 +119,5 @@ app.use('/', loopback.static(path.resolve(__dirname, '../client')));
 // validation, as the confirm API request would deliver files
 // instead of hitting the API as desired.
 app.use(/^((?!api).)*$/, loopback.static(path.resolve(__dirname, '../client')));
+
+module.exports = app; // for testing

@@ -1,0 +1,65 @@
+{ "geneticmap":
+  {
+    "name": "MyMap5",
+    "chromosomes":
+    [
+      {
+      "name": "MyChr",
+      "markers":
+        [
+  
+          {
+          "name": "markerB",
+          "position": 0.1
+          },
+          {
+          "name": "markerC",
+          "position": 0.2
+          },
+          {
+          "name": "markerD",
+          "position": 0.3
+          },
+          {
+          "name": "markerE",
+          "position": 0.4
+          },
+          {
+          "name": "markerF",
+          "position": 0.5
+          },
+          {
+          "name": "markerA",
+          "position": 0.6
+          },
+          {
+          "name": "markerL",
+          "position": 0.7
+          },
+          {
+          "name": "markerG",
+          "position": 0.8
+          },
+          {
+          "name": "markerH",
+          "position": 0.9
+          },
+          {
+          "name": "markerI",
+          "position": 1.0
+          },
+          {
+          "name": "markerJ",
+          "position": 1.1
+          },
+          {
+          "name": "markerK",
+          "position": 1.2
+          }
+
+					
+        ]
+      }
+    ]
+  }
+}

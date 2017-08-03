@@ -5,6 +5,9 @@ version: "2"
 services:
   database: # mongo database
     image: library/mongo # base image off dockerhub
+    ports:
+      # avoiding setting internal port for simplicity
+      - "${DB_PORT_EXT}:27017"
     environment:
       - "MONGO_INITDB_ROOT_USERNAME=${DB_USER}"
       - "MONGO_INITDB_ROOT_PASSWORD=${DB_PASS}"

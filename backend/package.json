@@ -8,7 +8,7 @@
   "scripts": {
     "lint": "eslint .",
     "start": "node .",
-    "posttest": "npm run lint && nsp check"
+    "test": "mocha --reporter spec test"
   },
   "dependencies": {
     "async": "^2.4.0",
@@ -28,8 +28,10 @@
     "strong-error-handler": "^2.0.0"
   },
   "devDependencies": {
+    "chai": "^4.1.0",
     "eslint": "^3.17.1",
     "eslint-config-loopback": "^8.0.0",
+    "mocha": "^3.4.2",
     "nsp": "^2.1.0"
   },
   "repository": {
