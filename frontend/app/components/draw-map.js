@@ -3422,17 +3422,21 @@ export default Ember.Component.extend({
 
         /** d3 selection of the brushed AP. */
         let apS = svgContainer.selectAll("#" + eltId(name[0]));
-        zoomSwitch = apS
+        let zoomSwitchS = apS
           .selectAll('g.btn')
-          .data([1])
+          .data([1]);
+        let zoomSwitchE = zoomSwitchS
           .enter()
           .append('g')
           .attr('class', 'btn')
           .attr('transform', yAxisBtnScale);
-        zoomSwitch.append('rect');
+        zoomSwitchE.append('rect');
+        zoomSwitch = zoomSwitchS.merge(zoomSwitchE);
+        let zoomResetSwitchTextE =
+          zoomSwitchE.append('text')
+          .attr('x', 30).attr('y', 20);
         let zoomResetSwitchText =
-          zoomSwitch.append('text')
-          .attr('x', 30).attr('y', 20)
+        zoomSwitch.selectAll('text')
           .text('Zoom');
         
         zoomSwitch.on('mousedown', function () {
