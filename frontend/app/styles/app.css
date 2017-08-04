@@ -62,9 +62,13 @@ html {
   --path-stroke-opacity : .125;
   --path-stroke-width: 0.75px;
 }
-.manyPaths .foreground path {
+.foreground path {
   stroke-opacity: var(--path-stroke-opacity); //.125;
   stroke-width: var(--path-stroke-width); // 0.75px;
+}
+.manyPaths .foreground path {
+  stroke-opacity: calc(var(--path-stroke-opacity)*0.8); //.125;
+  stroke-width: calc(var(--path-stroke-width)*0.8); // 0.75px;
 }
 
 /* or :hover if transition is not required. */
@@ -85,8 +89,8 @@ html {
 .foreground .faded path {
   fill: none;
   stroke: #000;
-  stroke-width: 0.75px;
-  stroke-opacity: .05;
+  stroke-width: var(--path-stroke-width);
+  stroke-opacity: calc(var(--path-stroke-opacity)*0.5);
 }
 
 .devel .foreground path {
