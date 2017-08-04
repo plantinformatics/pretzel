@@ -2,13 +2,11 @@
 
 module.exports = function(environment) {
   var ENV = {
-    modulePrefix: 'ember-test',
+    modulePrefix: 'pretzel-frontend',
     environment: environment,
-    apiHost: '',
-    apiHost: 'http://localhost:5000',
+    apiHost: 'http://localhost:3000',
     apiNamespace: 'api', // adding to the host for API calls
-    // baseURL: '/',
-    rootURL: '/',
+    rootURL: '/', // used with Ember local routing
     locationType: 'auto',
     EmberENV: {
       FEATURES: {
@@ -24,8 +22,6 @@ module.exports = function(environment) {
     APP: {
       // Here you can pass flags/options to your application instance
       // when it is created
-      // apiHost: 'http://localhost:5000',
-      // apiHost: '',
     }
   };
 
@@ -49,7 +45,7 @@ module.exports = function(environment) {
   }
 
   if (environment === 'production') {
-
+    ENV.apiHost = '';
   }
 
   return ENV;

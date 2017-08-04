@@ -2,6 +2,7 @@
 
 var env = (process.env.NODE_ENV || 'development');
 var isDevEnv = env === 'development' || env === 'test';
+process.env.API_PORT_EXT = (process.env.API_PORT_EXT || 3000);
 
 // building up the config prior to exporting
 // allows for further properties to be added
