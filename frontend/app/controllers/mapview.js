@@ -1,7 +1,5 @@
 import Ember from 'ember';
 
-import { chrData } from '../utils/utility-chromosome';
-
 console.log("controllers/mapview.js");
 
 
@@ -67,44 +65,6 @@ export default Ember.Controller.extend({
           dataReceived.pushObject(mtv);
         else
           console.log(this);
-      }
-      else
-/*
-      for (im=0; (im < a.mapsToView.length) && !(exists = (a.mapsToView[im] === m)); im++)
-      {
-      }
-      if (exists)
-        console.log("mapsToView[", im, "] === ", m);
-      if ((a.mapsToView.length === 0) || ! exists)
-*/
-      {
-      var that = this;  // let creates a closure, which loses this
-
-      let pc=this.store.findRecord('chromosome', m);
-      let thisStore = this.store;
-      pc.then(function (ch){
-        console.log(ch.get('name'));
-        /*
-        let ppc=thisStore.peekRecord('chromosome', m);
-        console.log
-        (ppc._internalModel.id,
-         ppc.get('map').get('name'),
-         ppc.get('name'));
-
-        let ma = ppc.get('markers');
-        ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
-        */
-        let rc = chrData(ch),
-        chr = ch.get('map').get('id'),
-        /** Only 1 chr in hash, but use same structure as routes/mapview.js */
-        retHash = {};
-        retHash[chr] = rc;
-        let dataReceived = that.get('dataReceived');
-        if (dataReceived)
-          dataReceived.pushObject(retHash /*[ppc, ma]*/);
-        else
-          console.log(this);
-      });
       }
     }
   }//.observes('mapsToView')

@@ -218,10 +218,11 @@ export default Ember.Component.extend({
                 newChr = mtv[im];
                 console.log(newChr);
                 {
-                  let thisStore = me.get('store'), pc=thisStore.findRecord('chromosome', m);
+                  let thisStore = me.get('store'), pc=thisStore.findRecord('chromosome', m, { reload: true });
                   pc.then(function (ch){
                     console.log(ch.get('name'));
-                    /*
+                    if (true)
+                    {
                      let ppc=thisStore.peekRecord('chromosome', m);
                      console.log
                      (ppc._internalModel.id,
@@ -230,7 +231,8 @@ export default Ember.Component.extend({
 
                      let ma = ppc.get('markers');
                      ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
-                     */
+                      ch = ppc;
+                    }
                     let rc = chrData(ch),
                     chr = ch.get('map').get('id'),
                     /** Only 1 chr in hash, but use same structure as routes/mapview.js */
