@@ -82,18 +82,18 @@ boot(app, __dirname, function(err) {
 // var passportConfigurator = new PassportConfigurator(app);
 
 // Build the providers/passport config
-var config = {};
-try {
-	config = require('../providers.json');
-} catch (err) {
-  console.trace(err);
-  console.error('Please configure your passport strategy in `providers.json`.');
-  console.error('Copy `providers.example.json` to `providers.json` and replace the clientID/clientSecret values with your own.');
-	process.exit(1); // fatal
-}
+// var config = {};
+// try {
+// 	config = require('../providers.json');
+// } catch (err) {
+//   console.trace(err);
+//   console.error('Please configure your passport strategy in `providers.json`.');
+//   console.error('Copy `providers.example.json` to `providers.json` and replace the clientID/clientSecret values with your own.');
+// 	process.exit(1); // fatal
+// }
 
-// Initialize passport
-passportConfigurator.init();
+// // Initialize passport
+// passportConfigurator.init();
 
 // // Set up related models
 // passportConfigurator.setupModels({

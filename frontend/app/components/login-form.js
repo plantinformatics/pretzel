@@ -58,7 +58,7 @@ export default Component.extend({
 
         this.setProperties({isProcessing: true})
 
-        this.get('session').authenticate('authenticator:webgene-local', identification, password).catch((reason) => {
+        this.get('session').authenticate('authenticator:pretzel-local', identification, password).catch((reason) => {
           
           this.setProperties({isProcessing: false})
           reason = JSON.parse(reason)

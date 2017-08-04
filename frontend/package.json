@@ -1,7 +1,7 @@
 {
-  "name": "ember-test",
+  "name": "pretzel-frontend",
   "version": "0.0.0",
-  "description": "Small description for ember-test goes here",
+  "description": "Frontend code for Pretzel",
   "license": "MIT",
   "author": "",
   "directories": {

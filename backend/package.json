@@ -1,5 +1,5 @@
 {
-  "name": "dav127-backend",
+  "name": "pretzel-backend",
   "version": "1.0.0",
   "main": "server/server.js",
   "engines": {
@@ -39,5 +39,5 @@
     "url": ""
   },
   "license": "UNLICENSED",
-  "description": "auth and database services for the DAV127 project"
+  "description": "auth and database services for Pretzel"
 }
