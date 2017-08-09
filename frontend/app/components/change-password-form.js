@@ -7,8 +7,7 @@ export default Component.extend({
 
   errorExists(response) {
     let mapper = {
-      "EMAIL_NOT_FOUND": "The email was not found in our records.",
-      "RESET_FAILED_EMAIL_NOT_VERIFIED": "Your email has not been verified. Please check your inbox."
+      "INVALID_PASSWORD": "The old password is not valid. Please try again."
     }
 
     try {
@@ -30,17 +29,24 @@ export default Component.extend({
   },
 
   actions: {
-    resetWithBasic() {
-      console.log('password reset')
-
+    changeWithBasic() {
       let config = Ember.getOwner(this).resolveRegistration('config:environment')
-      let endpoint = config.apiHost + '/api/Clients/reset'
+      let endpoint = config.apiHost + '/api/Clients/change-password'
 
       this.set('errorMessage', '');
 
-      let { identification } = this.getProperties('identification');
-      if (!identification) {
-        let errorString = "Please enter an email."
+      let { oldPassword, newPassword } = this.getProperties('oldPassword', 'newPassword');
+
+      let userToken;
+      this.get('session').authorize('authorizer:application', (headerName, headerValue) => {
+          userToken = headerValue;
+      });
+      console.log('passwords', oldPassword, newPassword)
+      if (!oldPassword) {
+        let errorString = "Please enter the old password."
+        this.set('errorMessage', errorString);
+      } else if (!newPassword) {
+        let errorString = "Please enter a new password."
         this.set('errorMessage', errorString);
       } else {
 
@@ -53,36 +59,27 @@ export default Component.extend({
           type: 'POST',
           crossDomain: true,
           data: JSON.stringify({
-            email: identification
+            oldPassword: oldPassword,
+            newPassword: newPassword
           }),
+          headers: {
+            'Authorization': userToken
+          },
           contentType: 'application/json'
           // dataType: 'json'
         }).then(function(response){
-          
-          console.log('RESPONSE', response)
+          // console.log('RESPONSE', response)
           vm.setProperties({
             isProcessing: false,
             isRegistered: true
           })
-          // Ember.run(function(){
-          //   resolve({
-          //     token: response.id
-          //   });
-          // });
         }, function(xhr, status) {
           vm.setProperties({isProcessing: false})
           var response = xhr.responseText;
           response = JSON.parse(response)
-          console.log('STATUS', status)
-          console.log('RESET ERROR: ', response);
 
           let error = vm.errorExists(response)
-
-          if (response.error && response.error.code == "EMAIL_NOT_FOUND") {
-            vm.setProperties({
-              isRegistered: true
-            })
-          } else if (error) {
+          if (error) {
             vm.set('errorMessage', error);
           }
         });

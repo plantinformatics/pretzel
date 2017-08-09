@@ -74,7 +74,7 @@ module.exports = function(Client) {
 
   Client.disableRemoteMethodByName("deleteById");
 
-  // Client.disableRemoteMethodByName("confirm");
+  // Client.disableRemoteMethodByName("confirm"); // this method is required for user auth handling
   Client.disableRemoteMethodByName("count");
   Client.disableRemoteMethodByName("exists");
   // Client.disableRemoteMethodByName("resetPassword");

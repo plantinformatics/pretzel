@@ -62,6 +62,7 @@ export default Component.extend({
           // console.log('RESPONSE', response)
           let codes = {
             "EMAIL_VERIFY": "Thank you for registering. You should receive a confirmation email shortly.",
+            "EMAIL_APPROVE": "Thank you for registering. Your sign up request has been sent to an administrator for approval",
             "EMAIL_UNVERIFIED": "Thank you for registering. Please log in."
           }
 

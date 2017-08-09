@@ -1,15 +1,10 @@
 <div class="navbar" role="navigation">
   <div class="container-fluid">
-    {{!--<div class="navbar-brand">
-      {{#link-to 'index' tagName='a'}}
-        DAV127
-      {{/link-to}}
-    </div>--}}
     <div class="navbar">
       <ul class="nav navbar-nav navbar-left">
         <li>
           {{#link-to 'index' tagName='a'}}
-            DAV127
+            Pretzel
           {{/link-to}}
         </li>
 
@@ -24,9 +19,19 @@
               Map Viewer
             {{/link-to}}
           </li>
+          <li>
+            {{#link-to 'change-password' classNames='' tagName='a'}}
+              Change Password
+            {{/link-to}}
+          </li> 
         {{/if}}
       </ul>
       <ul class="nav navbar-nav navbar-right">
+        <li>
+          <a href='https://github.com/plantinformatics/pretzel/' target='_blank'>
+            View on GitHub
+          </a>
+        </li>
         {{#if session.isAuthenticated}}
           <li>
             <a {{action 'logout'}} class="">

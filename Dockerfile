@@ -8,7 +8,7 @@ RUN apk add --no-cache git
 COPY ./backend ./app
 
 RUN cd ./app && \
-    npm install
+    npm install --only=production
 
 # stage two - building the frontend app and adding to image
 COPY ./frontend ./frontend

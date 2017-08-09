@@ -8,12 +8,13 @@ const Router = Ember.Router.extend({
 
 Router.map(function() {
   // auth routes
+  this.route('auth-error');
+  this.route('change-password');
   this.route('login');
   this.route('signup');
   this.route('reset-request');
   this.route('reset-password');
   this.route('verified');
-  this.route('auth-error');
   // core app routes
   this.route('callback');
   this.route('about');

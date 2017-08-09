@@ -12,10 +12,17 @@
         type='text'
         value=identification
         placeholder='Email Address'}}
-      {{suggest-link
-        suggest-text="Need an account?"
-        link-name="signup"
-        link-pretty="Sign Up"}}
+      {{#if session.isAuthenticated}}
+        {{suggest-link
+          suggest-text="Remember Your Password?"
+          link-name="change-password"
+          link-pretty="Change"}}
+      {{else}}
+        {{suggest-link
+          suggest-text="Need an account?"
+          link-name="signup"
+          link-pretty="Sign Up"}}
+      {{/if}}
       {{submit-button loading=isProcessing}}
     </form>
   {{/if}}
