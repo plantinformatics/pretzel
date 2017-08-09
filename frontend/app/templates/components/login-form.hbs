@@ -5,7 +5,7 @@
 <hr/>--}}
 {{!--<p>or login with OAuth 2.0 <em>Resource Owner Password Credentials</em>:</p>--}}
 {{#auth-form title="Log In" errorMessage=errorMessage}}
-  <form {{action 'authenticateWithBasic' on='submit'}}>
+  <form {{action 'submitForm' on='submit'}}>
     {{auth-input
       type='text'
       value=identification

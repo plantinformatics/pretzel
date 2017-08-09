@@ -7,10 +7,10 @@
       </div>
     </div>
   {{else}}
-    <form {{action 'resetWithBasic' on='submit'}}>
+    <form {{action 'submitForm' on='submit'}}>
       {{auth-input
         type='text'
-        value=identification
+        value=email
         placeholder='Email Address'}}
       {{#if session.isAuthenticated}}
         {{suggest-link
