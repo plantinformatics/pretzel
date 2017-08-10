@@ -8,6 +8,8 @@ export default Component.extend({
   //
   // component properties
   //
+  authMethod: null, // specify method on auth service to invoke for form submit
+  // further work on this section may subclass the base form to an auth form
   requirements: {
     // parameters to provide for API submission body
     // key is form property, value is error if absent
