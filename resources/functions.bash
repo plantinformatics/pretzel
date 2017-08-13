@@ -3,6 +3,8 @@
 # Usage : source resources/functions.bash
 
 #-------------------------------------------------------------------------------
+GM_API_URL=localhost:1776
+#-------------------------------------------------------------------------------
 
 # Usage e.g. : 
 # cd markerMapViewer/Dav127 && load_test_data
@@ -17,7 +19,7 @@ function load_test_data_file()
     curl -X POST \
 	 -H "Accept: application/json" -H "Content-type: application/json" \
 	 -d @$mapJsonFileName \
-	 localhost:1776/geneticmaps
+	 $GM_API_URL/geneticmaps
     done
 }
 function load_test_data()

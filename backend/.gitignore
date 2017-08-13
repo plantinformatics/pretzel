@@ -1,17 +1,21 @@
-# See http://help.github.com/ignore-files/ for more about ignoring files.
-
-# compiled output
-/dist
-/tmp
-/log
+*.csv
+*.dat
+*.iml
 *.log
+*.out
+*.pid
+*.seed
+*.sublime-*
+*.swo
+*.swp
+*.tgz
+*.xml
+.vscode
+.DS_Store
+.idea
+.project
+.strong-pm
+coverage
+node_modules
+npm-debug.log
 
-# dependencies
-/server/node_modules
-
-# misc
-/.sass-cache
-/connect.lock
-/coverage/*
-/builds
-/logs

@@ -1,0 +1,26 @@
+{{#auth-form title="Sign Up" errorMessage=errorMessage}}
+  {{#if isRegistered}}
+    <div class="panel panel-success">
+      <div class="panel-heading">Success</div>
+      <div class="panel-body">
+        {{successMessage}}
+      </div>
+    </div>
+  {{else}}
+    <form {{action 'submitForm' on='submit'}}>
+      {{auth-input
+        type='text'
+        value=email
+        placeholder='Email Address'}}
+      {{auth-input
+        type='password'
+        value=password
+        placeholder='Password'}}
+      {{suggest-link
+        suggest-text="Already a member?"
+        link-name="login"
+        link-pretty="Log In"}}
+      {{submit-button loading=isProcessing}}
+    </form>
+  {{/if}}
+{{/auth-form}}

@@ -1,0 +1,27 @@
+{{! login form; the fields must be named "identification" and "password"; the controller action is "authenticate" }}
+{{!--<a {{action 'authenticateWithFacebook'}} class="btn btn-default" style="cursor: pointer;">Login with Facebook</a>
+<hr/>
+<a {{action 'authenticateWithGoogleImplicitGrant'}} class="btn btn-default" style="cursor: pointer;">Login with Google (Implicit Grant)</a>
+<hr/>--}}
+{{!--<p>or login with OAuth 2.0 <em>Resource Owner Password Credentials</em>:</p>--}}
+{{#auth-form title="Log In" errorMessage=errorMessage}}
+  <form {{action 'submitForm' on='submit'}}>
+    {{auth-input
+      type='text'
+      value=identification
+      placeholder='Email Address'}}
+    {{auth-input
+      type='password'
+      value=password
+      placeholder='Password'}}
+    {{suggest-link
+      suggest-text="Forgotten your password?"
+      link-name="reset-request"
+      link-pretty="Reset Password"}}
+    {{suggest-link
+      suggest-text="Need an account?"
+      link-name="signup"
+      link-pretty="Sign Up"}}   
+    {{submit-button loading=isProcessing}}
+  </form>
+{{/auth-form}}

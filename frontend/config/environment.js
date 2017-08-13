@@ -2,9 +2,12 @@
 
 module.exports = function(environment) {
   var ENV = {
-    modulePrefix: 'ember-test',
+    modulePrefix: 'pretzel-frontend',
     environment: environment,
-    rootURL: '/',
+    // apiHost: 'http://localhost:3000',
+    apiHost: 'http://sc-15-cdc.it.csiro.au:7000',
+    apiNamespace: 'api', // adding to the host for API calls
+    rootURL: '/', // used with Ember local routing
     locationType: 'auto',
     EmberENV: {
       FEATURES: {
@@ -15,6 +18,11 @@ module.exports = function(environment) {
         // Prevent Ember Data from overriding Date.parse.
         Date: false
       }
+    },
+    'ember-simple-auth': {
+        authenticationRoute: 'login',
+        routeAfterAuthentication: 'mapview',
+        routeIfAlreadyAuthenticated: 'mapview'
     },
 
     APP: {
@@ -43,7 +51,7 @@ module.exports = function(environment) {
   }
 
   if (environment === 'production') {
-
+    ENV.apiHost = '';
   }
 
   return ENV;

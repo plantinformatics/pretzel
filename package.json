@@ -1,5 +1,5 @@
 {
-  "name": "dav127",
+  "name": "pretzel",
   "private": true,
   "version": "1.0.0",
   "dependencies": {
@@ -8,7 +8,8 @@
   "keywords": [
     "ember",
     "mongoose",
-    "express"
+    "express",
+    "loopback"
   ],
   "author": "",
   "license": "MIT",
