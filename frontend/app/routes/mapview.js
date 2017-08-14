@@ -1,6 +1,8 @@
 import Ember from 'ember';
 
 export default Ember.Route.extend({
+  titleToken: 'MapView',
+
   queryParams: {
     mapsToView: {
       // The initial architecture (up until feature/render-promises) was for changes in the URL mapsToView query parameter to trigger
