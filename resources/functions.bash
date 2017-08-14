@@ -3,7 +3,15 @@
 # Usage : source resources/functions.bash
 
 #-------------------------------------------------------------------------------
-GM_API_URL=localhost:1776
+#
+API_PROTO=http
+API_HOST=localhost
+API_PORT=3000
+# Context path
+API_PATH_PREFIX=api
+API_PATH_GM=Geneticmaps
+# API_PATH_GM=geneticmaps
+# GM_API_URL=localhost:1776
 #-------------------------------------------------------------------------------
 
 # Usage e.g. : 
@@ -14,12 +22,18 @@ GM_API_URL=localhost:1776
 # load minimal sample data into the db
 function load_test_data_file()
 {
+    # allow caller to provide $GM_API_URL directly
+    unused=${GM_API_URL=$API_PROTO://$API_HOST:$API_PORT/$API_PATH_PREFIX}
+    if [ -n "$API_ACCESS_TOKEN" ]
+    then
+	URL_VARIABLES="?access_token=$API_ACCESS_TOKEN"
+    fi
     for mapJsonFileName in $*
     do
     curl -X POST \
 	 -H "Accept: application/json" -H "Content-type: application/json" \
 	 -d @$mapJsonFileName \
-	 $GM_API_URL/geneticmaps
+	 "$GM_API_URL/$API_PATH_GM/upload$URL_VARIABLES"
     done
 }
 function load_test_data()
