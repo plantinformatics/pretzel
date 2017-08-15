@@ -24,6 +24,8 @@ services:
       - "EMAIL_HOST=${EMAIL_HOST}"
       - "EMAIL_PORT=${EMAIL_PORT}"
       - "EMAIL_FROM=${EMAIL_FROM}"
+      - "EMAIL_VERIFY=${EMAIL_VERIFY}"
+      - "ADMIN_EMAIL=${ADMIN_EMAIL}"
     ports:
       # match ext / int ports for loopback
       - "${API_PORT_EXT}:${API_PORT_EXT}"

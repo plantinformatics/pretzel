@@ -77,7 +77,7 @@ var config = {
   },
 }
 
-if (process.env.EMAIL_ACTIVE == 'true') {
+if (process.env.EMAIL_VERIFY != 'NONE') {
   console.log('Assigning email model properties')
   // enable email facilities if header present
   config.Client.options = {

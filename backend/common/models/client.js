@@ -1,38 +1,70 @@
 'use strict';
 
+var path = require('path');
+
 module.exports = function(Client) {
   //send verification email after registration
   Client.afterRemote('create', function(context, userInstance, next) {
     console.log('> user.afterRemote triggered');
 
-    if (process.env.EMAIL_ACTIVE == 'true'){
+    if (process.env.EMAIL_VERIFY == 'NONE') {
+        console.log('created user, no verification email sent');
+        context.result.code = 'EMAIL_NO_VERIFY';
+        next();
+    } else if (process.env.EMAIL_ACTIVE == 'true') {
+      if (process.env.EMAIL_VERIFY == 'USER') {
+        var options = {
+          type: 'email',
+          to: userInstance.email,
+          from: process.env.EMAIL_FROM,
+          subject: 'Welcome to DAV127',
+          host: process.env.API_HOST,
+          // template: path.resolve(__dirname, '../../server/views/verify.ejs'),
+          text: "<h1>Thanks.</h1>",
+          redirect: '/verified',
+          user: Client
+        };
 
-      var options = {
-        type: 'email',
-        to: userInstance.email,
-        from: process.env.EMAIL_FROM,
-        subject: 'Welcome to DAV127',
-        host: process.env.API_HOST,
-        // template: path.resolve(__dirname, '../../server/views/verify.ejs'),
-        text: "<h1>Thanks.</h1>",
-        redirect: '/verified',
-        user: Client
-      };
+        userInstance.verify(options, null, function(err, response) {
+          if (err) return next(err);
 
-      userInstance.verify(options, null, function(err, response) {
-        if (err) return next(err);
+          console.log('> verification email sent:', response);
 
-        console.log('> verification email sent:', response);
+          // response object is the following structure:
+          // { email, id }
+          context.result.code = 'EMAIL_USER_VERIFY'
+          next()
+        });
+      } else if (process.env.ADMIN_EMAIL.length > 0) {
+        console.log(path.resolve(__dirname, '../../server/views/email_verify.ejs'));
+        var options = {
+          type: 'email',
+          to: process.env.ADMIN_EMAIL,
+          from: process.env.EMAIL_FROM,
+          subject: 'New user regisetered for Pretzel',
+          user_email: userInstance.email,
+          host: process.env.API_HOST,
+          template: path.resolve(__dirname, '../../server/views/email_verify.ejs'),
+          text: "<h1>Thanks.</h1>",
+          redirect: '/admin-verified',
+          user: Client
+        };
 
-        // response object is the following structure:
-        // { email, id }
-        context.result.code = 'EMAIL_VERIFY'
-        next()
-      });
+        userInstance.verify(options, null, function(err, response) {
+          if (err) return next(err);
+
+          console.log('> verification email sent:', response);
+
+          // response object is the following structure:
+          // { email, id }
+          context.result.code = 'EMAIL_ADMIN_VERIFY';
+          next();
+        });
+      } else {
+        next(new Error('Email could not be sent, missing configuration'));
+      }
     } else {
-      console.log('created user, no verification email sent')
-      context.result.code = 'EMAIL_UNVERIFIED'
-      next()
+      next(new Error('Email could not be sent, missing configuration'));
     }
   });
 

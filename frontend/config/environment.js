@@ -4,8 +4,8 @@ module.exports = function(environment) {
   var ENV = {
     modulePrefix: 'pretzel-frontend',
     environment: environment,
-    // apiHost: 'http://localhost:3000',
-    apiHost: 'http://sc-15-cdc.it.csiro.au:7000',
+    apiHost: 'http://localhost:5000',
+    // apiHost: 'http://sc-15-cdc.it.csiro.au:7000',
     apiNamespace: 'api', // adding to the host for API calls
     rootURL: '/', // used with Ember local routing
     locationType: 'auto',

@@ -7,7 +7,7 @@ export default BaseForm.extend({
   },
   errorMap: {
     "LOGIN_FAILED": "Bad username / password. Please try again.",
-    "LOGIN_FAILED_EMAIL_NOT_VERIFIED": "The email has not been verified. Please check your inbox."
+    "LOGIN_FAILED_EMAIL_NOT_VERIFIED": "The email has not been verified."
   },
   sendRequest(data) {
     this.setProperties({isProcessing: true})
