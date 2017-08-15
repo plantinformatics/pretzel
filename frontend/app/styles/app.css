@@ -175,6 +175,11 @@ div.colouredMarkers
   min-height: 10em;
   min-width: 6em;
 }
+/* text input box / table.   ember-content-editable */
+.colouredMarkers:hover:not(:focus) {
+  /* outline: -webkit-focus-ring-color auto 15px; */
+  border: pink 3px dashed;
+}
 
 /* -------------------------------------------------------------------------- */
 
