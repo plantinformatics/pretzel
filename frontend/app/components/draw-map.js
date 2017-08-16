@@ -1422,6 +1422,8 @@ export default Ember.Component.extend({
       alias: new Flow("alias", false, true, collateStacksA)	// aliases, not filtered for uniqueness.
     };
     // flows.U_alias.visible = flows.U_alias.enabled = false;
+    // flows.direct.visible = flows.direct.enabled = false;
+
     flows.direct.pathData = d3Markers;
     // if both direct and U_alias are enabled, only 1 should call collateStacks1().
     if (flows.U_alias.enabled && flows.direct.enabled && (flows.U_alias.collate == flows.direct.collate))
@@ -2398,10 +2400,10 @@ export default Ember.Component.extend({
        * have aliases, aliasedDone is used.
        */
       let a0, a1;
-      if (apName < apName1 || ! adjacent_both_dir)
-      { a0 = apName; a1 = apName1; }
-      else
+      if (! adjacent_both_dir && (apName > apName1))
       { a0 = apName1; a1 = apName; }
+      else
+      { a0 = apName; a1 = apName1; }
       let a = aliasedDone[a0] && aliasedDone[a0][a1];
       if (trace_adj)
       {
@@ -2441,13 +2443,16 @@ export default Ember.Component.extend({
         {
           let za = z[apName];
           let adjs = adjAPs[apName];
-          if (adjs)
-          {
-            adjs = adjs.filter(function(apName1) {
+          if (adjs && adjs.length
+	      &&
+              (adjs = adjs.filter(function(apName1) {
               adjCount++;
               let a = getAliased(apName, apName1);
               if (!a) adjCountNew++;
-              return ! a; } );
+		  return ! a; } ))
+	      &&
+	      adjs.length)
+          {
             if (trace_adj > 1)
             {
               console.log(apName, APid2Name(apName));
@@ -2465,6 +2470,7 @@ export default Ember.Component.extend({
                 {
                   let mi = mas[i],
                   APs = markerAPs[mi];
+		  // APs will be undefined if mi is not in a AP which is displayed.
                   if (APs === undefined)
                   {
                     if (trace_adj && trace_count-- > 0)
@@ -2790,6 +2796,8 @@ export default Ember.Component.extend({
     function pathUg(d) {
       let mmaa = dataOfPath(this),
       p = pathU(mmaa);
+      if (trace_path > 2)
+        console.log(this, d);
       return p;
     }
 
@@ -3494,7 +3502,7 @@ export default Ember.Component.extend({
       /* if (unique_1_1_mapping)
        {*/
       if (trace_path)
-        console.log("pathUpdate() pathData", pathData.length, g.size()); // , pathData
+        console.log("pathUpdate() pathData", flow.name, pathData.length, g.size()); // , pathData
       if (trace_path > 1)
         for (let pi=0; pi < pathData.length; pi++)
           log_mmaa(pathData[pi]);
