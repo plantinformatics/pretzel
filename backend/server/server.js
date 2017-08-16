@@ -1,5 +1,6 @@
 ﻿'use strict';
 
+// validating provided environment variables
 var environment = require('./environment');
 
 //
@@ -35,7 +36,9 @@ app.use('/express-status', function (req, res, next) {
     res.json({ running: true });
 });
 
-app.use(morgan('combined'))
+if (process.env.NODE_ENV != 'test') {
+  app.use(morgan('combined'))
+}
 
 //
 // - - - - - THIRD PARTY AUTH INIT - - - - - -

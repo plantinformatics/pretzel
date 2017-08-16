@@ -1,42 +1,26 @@
 'use strict';
 
-process.env.NODE_ENV = 'test';
-process.env.API_PORT_EXT = 5000;
-process.env.DB_HOST = "127.0.0.1";
-process.env.DB_PORT = "27017";
-process.env.DB_USER = "Dav127";
-process.env.DB_PASS = "Dav127";
+var environment = require('./helpers/environment');
+
+process.env.EMAIL_VERIFY = "NONE";
 
 var assert = require('chai').assert;
 var superagent = require('superagent');
 var app = require('../server/server');
 
-var endpoint = `http://localhost:${process.env.API_PORT_EXT}`
-var endpointAPI = `${endpoint}/api`
+var endpoint = require('./helpers/api').endpoint
+var database = require('./helpers/database')
 
-function destroyUserByEmail(email) {
-  // discover used by email, delete if present
-  var Client = app.models.Client;
-  return Client.findOne({where: {email: email}})
-  .then(function(data) {
-    if (data) {
-      return Client.destroyById(data.id)
-    } else {
-      return null
-    }
-  })
-}
-
-describe('Client model', function() {
+describe('auth-basic-no-verify', function() {
   var server;
 
-  var userEmail = 'user@email.com'
+  var userEmail = 'no-verify@email.com'
   var userPassword = 'abcd'
   var userId = null
   var userToken = null
 
   before(function(done) {
-    destroyUserByEmail(userEmail)
+    database.destroyUserByEmail(app.models, userEmail)
     .then(function(data) {
       server = app.listen(done);
     })
@@ -46,7 +30,7 @@ describe('Client model', function() {
   });
 
   after(function(done) {
-    destroyUserByEmail(userEmail)
+    database.destroyUserByEmail(app.models, userEmail)
     .then(function(data) {
       server.close(done);
     })
@@ -71,7 +55,7 @@ describe('Client model', function() {
 
   it('should create a new user', function(done) {
     superagent
-      .post(`${endpointAPI}/Clients/`)
+      .post(`${endpoint}/Clients/`)
       .send({ email: userEmail, password: userPassword })
       .set('Accept', 'application/json')
       .set('Content-Type', 'application/json')
@@ -91,7 +75,7 @@ describe('Client model', function() {
 
   it('should not create a duplicate user', function(done) {
     superagent
-      .post(`${endpointAPI}/Clients/`)
+      .post(`${endpoint}/Clients/`)
       .send({ email: userEmail, password: userPassword })
       .set('Accept', 'application/json')
       .set('Content-Type', 'application/json')
@@ -110,7 +94,7 @@ describe('Client model', function() {
 
   it('should log in with new user', function(done) {
     superagent
-      .post(`${endpointAPI}/Clients/login`)
+      .post(`${endpoint}/Clients/login`)
       .send({ email: userEmail, password: userPassword })
       .set('Accept', 'application/json')
       .set('Content-Type', 'application/json')
@@ -131,7 +115,7 @@ describe('Client model', function() {
 
   it('should not authorise login with bad email', function(done) {
     superagent
-      .post(`${endpointAPI}/Clients/login`)
+      .post(`${endpoint}/Clients/login`)
       .send({ email: `${userEmail}a`, password: userPassword })
       .set('Accept', 'application/json')
       .set('Content-Type', 'application/json')
@@ -152,7 +136,7 @@ describe('Client model', function() {
 
   it('should not authorise login with bad password', function(done) {
     superagent
-      .post(`${endpointAPI}/Clients/login`)
+      .post(`${endpoint}/Clients/login`)
       .send({ email: userEmail, password: `${userPassword}a` })
       .set('Accept', 'application/json')
       .set('Content-Type', 'application/json')
@@ -180,7 +164,7 @@ describe('Client model', function() {
   runs.forEach(function (run, idx) {
     it(`should access resource ${run.model} with token`, function(done) {
       superagent
-        .get(`${endpointAPI}/${run.model}/`)
+        .get(`${endpoint}/${run.model}/`)
         .set('Accept', 'application/json')
         .set('Content-Type', 'application/json')
         .set('Authorization', userToken)
@@ -198,7 +182,7 @@ describe('Client model', function() {
 
     it(`should block resource ${run.model} with bad token`, function(done) {
       superagent
-        .get(`${endpointAPI}/${run.model}/`)
+        .get(`${endpoint}/${run.model}/`)
         .set('Accept', 'application/json')
         .set('Content-Type', 'application/json')
         .set('Authorization', `${userToken}a`)

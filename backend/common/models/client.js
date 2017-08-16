@@ -6,18 +6,22 @@ module.exports = function(Client) {
   //send verification email after registration
   Client.afterRemote('create', function(context, userInstance, next) {
     console.log('> user.afterRemote triggered');
+    console.log(process.env.EMAIL_ADMIN)
+    console.log(process.env.EMAIL_VERIFY)
 
     if (process.env.EMAIL_VERIFY == 'NONE') {
-        console.log('created user, no verification email sent');
+        console.log('created user with no verification email');
         context.result.code = 'EMAIL_NO_VERIFY';
         next();
     } else if (process.env.EMAIL_ACTIVE == 'true') {
+      console.log('EMAIL IS ACTIVE')
       if (process.env.EMAIL_VERIFY == 'USER') {
+        console.log('EMAIL IS ADMIN')
         var options = {
           type: 'email',
           to: userInstance.email,
           from: process.env.EMAIL_FROM,
-          subject: 'Welcome to DAV127',
+          subject: 'Welcome to Pretzel',
           host: process.env.API_HOST,
           // template: path.resolve(__dirname, '../../server/views/verify.ejs'),
           text: "<h1>Thanks.</h1>",
@@ -28,25 +32,25 @@ module.exports = function(Client) {
         userInstance.verify(options, null, function(err, response) {
           if (err) return next(err);
 
-          console.log('> verification email sent:', response);
+          // console.log('> verification email sent:', response);
 
           // response object is the following structure:
           // { email, id }
           context.result.code = 'EMAIL_USER_VERIFY'
           next()
         });
-      } else if (process.env.ADMIN_EMAIL.length > 0) {
+      } else if (process.env.EMAIL_ADMIN && process.env.EMAIL_ADMIN.length > 0) {
         console.log(path.resolve(__dirname, '../../server/views/email_verify.ejs'));
         var options = {
           type: 'email',
-          to: process.env.ADMIN_EMAIL,
+          to: process.env.EMAIL_ADMIN,
           from: process.env.EMAIL_FROM,
-          subject: 'New user regisetered for Pretzel',
-          user_email: userInstance.email,
+          subject: 'New Pretzel User Registration',
+          user_email: userInstance.email, // for template
           host: process.env.API_HOST,
           template: path.resolve(__dirname, '../../server/views/email_verify.ejs'),
           text: "<h1>Thanks.</h1>",
-          redirect: '/admin-verified',
+          redirect: '/verified', // may be changed later for better handling
           user: Client
         };
 
