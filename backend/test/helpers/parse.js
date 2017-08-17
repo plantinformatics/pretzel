@@ -2,7 +2,7 @@
 
 exports.emailVerify = function(data) {
   // harvesting the verification URL from the email payload
-  console.log(data)
+  // console.log(data)
   let url = data.substring(data.indexOf('href=3D'), data.indexOf('">'))
   url = url.split('\r\n')
   url = url.map(function(line) {

@@ -5,18 +5,16 @@ var path = require('path');
 module.exports = function(Client) {
   //send verification email after registration
   Client.afterRemote('create', function(context, userInstance, next) {
-    console.log('> user.afterRemote triggered');
-    console.log(process.env.EMAIL_ADMIN)
-    console.log(process.env.EMAIL_VERIFY)
+    // console.log('> user.afterRemote triggered');
+    // console.log(process.env.EMAIL_ADMIN)
+    // console.log(process.env.EMAIL_VERIFY)
 
     if (process.env.EMAIL_VERIFY == 'NONE') {
-        console.log('created user with no verification email');
+        // console.log('created user with no verification email');
         context.result.code = 'EMAIL_NO_VERIFY';
         next();
     } else if (process.env.EMAIL_ACTIVE == 'true') {
-      console.log('EMAIL IS ACTIVE')
       if (process.env.EMAIL_VERIFY == 'USER') {
-        console.log('EMAIL IS ADMIN')
         var options = {
           type: 'email',
           to: userInstance.email,
@@ -36,11 +34,10 @@ module.exports = function(Client) {
 
           // response object is the following structure:
           // { email, id }
-          context.result.code = 'EMAIL_USER_VERIFY'
+          context.result.code = 'EMAIL_USER_VERIFY';
           next()
         });
       } else if (process.env.EMAIL_ADMIN && process.env.EMAIL_ADMIN.length > 0) {
-        console.log(path.resolve(__dirname, '../../server/views/email_verify.ejs'));
         var options = {
           type: 'email',
           to: process.env.EMAIL_ADMIN,
@@ -57,8 +54,7 @@ module.exports = function(Client) {
         userInstance.verify(options, null, function(err, response) {
           if (err) return next(err);
 
-          console.log('> verification email sent:', response);
-
+          // console.log('> verification email sent:', response);
           // response object is the following structure:
           // { email, id }
           context.result.code = 'EMAIL_ADMIN_VERIFY';

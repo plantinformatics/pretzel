@@ -1,38 +1,46 @@
 'use strict';
 
-var environment = require('./helpers/environment');
-
-process.env.EMAIL_HOST = "localhost";
-process.env.EMAIL_PORT = "25";
-process.env.EMAIL_FROM = "test@example.com";
-process.env.EMAIL_VERIFY = "USER";
-process.env.EMAIL_USER = "tester";
-process.env.EMAIL_PASS = "tester";
-// the temporary smtp server uses a self-signed cert
-// which by default is not trusted by loopback TLS library
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0
-
 var assert = require('chai').assert;
 var superagent = require('superagent');
-var app = require('../server/server');
-
-var endpoint = require('./helpers/api').endpoint
-var smtp = require('./helpers/smtp')
-var database = require('./helpers/database')
-var parse = require('./helpers/parse')
-
-smtp.listen(process.env.EMAIL_PORT)
 
 describe('auth-basic-user-verify', function() {
-  var server;
+  var app, server, endpoint, smtp, database, parse
 
-  var userEmail = 'user-verify@example.com'
-  var userPassword = 'abcd'
-  var userId = null
-  var userToken = null
-  var verifyUrl = null
+  var userEmail, userPassword, userId, userToken, verifyUrl
 
   before(function(done) {
+    var environment = require('./helpers/environment');
+    
+    process.env.EMAIL_HOST = "localhost";
+    process.env.EMAIL_PORT = "25";
+    process.env.EMAIL_FROM = "test@example.com";
+    process.env.EMAIL_VERIFY = "USER";
+    process.env.EMAIL_ADMIN = "";
+    process.env.EMAIL_USER = "tester";
+    process.env.EMAIL_PASS = "tester";
+    // the temporary smtp server uses a self-signed cert
+    // which by default is not trusted by loopback TLS library
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0
+
+    // scrubbing dependencies (if loaded)
+    Object.keys(require.cache).forEach(function(key) { delete require.cache[key] })
+    
+    app = require('../server/server');
+    endpoint = require('./helpers/api').endpoint
+    smtp = require('./helpers/smtp')
+    database = require('./helpers/database')
+    parse = require('./helpers/parse')
+
+    userEmail = 'user-verify@example.com'
+    userPassword = 'abcd'
+    userId = null
+    userToken = null
+    verifyUrl = null
+
+
+    
+    smtp.listen(process.env.EMAIL_PORT)
+
     database.destroyUserByEmail(app.models, userEmail)
     .then(function(data) {
       server = app.listen(done);
@@ -57,7 +65,7 @@ describe('auth-basic-user-verify', function() {
     })
   });
 
-  it('should create a new user and verification email', function(done) {
+  it('should create a new user and send user verification email', function(done) {
     smtp.on('data', function(data) {
       // determine that email receipient was the user
       let meta = parse.emailMeta(data)
@@ -67,6 +75,7 @@ describe('auth-basic-user-verify', function() {
       assert.isString(data, 'email payload');
       let url = parse.emailVerify(data)
       verifyUrl = url
+      smtp.removeAllListeners('data')
       done()
     })
     superagent

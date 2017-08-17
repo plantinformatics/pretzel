@@ -1,59 +1,14 @@
 'use strict';
 
-process.env.NODE_ENV = 'test';
-process.env.API_PORT_EXT = 5000;
-process.env.DB_HOST = "127.0.0.1";
-process.env.DB_PORT = "27017";
-process.env.DB_USER = "Dav127";
-process.env.DB_PASS = "Dav127";
-
 var assert = require('chai').assert;
 var superagent = require('superagent');
-var app = require('../server/server');
-
-var load = require('../common/utilities/load')
-var upload = require('../common/utilities/upload')
-
-var endpoint = `http://localhost:${process.env.API_PORT_EXT}`
-var endpointAPI = `${endpoint}/api`
-
-function destroyUserByEmail(email) {
-  // discover used by email, delete if present
-  var Client = app.models.Client;
-  return Client.findOne({where: {email: email}})
-  .then(function(data) {
-    if (data) {
-      return Client.destroyById(data.id)
-    } else {
-      return null
-    }
-  })
-}
-
-function destroyGeneticmapsAll() {
-  // empty persisted storage for geneticmaps
-  var Geneticmap = app.models.Geneticmap;
-  var Chromosome = app.models.Chromosome;
-  var Marker = app.models.Marker;
-  return Geneticmap.destroyAll()
-  .then(function(data) {
-    return Chromosome.destroyAll()
-  })
-  .then(function(data) {
-    return Marker.destroyAll()
-  })
-}
 
 describe('Client File Relation Access', function() {
-  var server;
+  var app, server, endpoint, smtp, database, parse
+  var userEmail, userPassword, userId, userToken, verifyUrl
+  var geneticmapId, chromosomeId, markerId
 
-  var userEmail = 'user@email.com'
-  var userPassword = 'abcd'
-  var userId = null
-  var userToken = null
-  var geneticmapId = null
-  var chromosomeId = null
-  var markerId = null
+  var load, upload
 
   var filesGzip = [
     // '../resources/90k_consensus.json.gz',
@@ -66,9 +21,36 @@ describe('Client File Relation Access', function() {
   ]
 
   before(function(done) {
-    destroyUserByEmail(userEmail)
+    var environment = require('./helpers/environment');
+    
+    process.env.EMAIL_HOST = "";
+    process.env.EMAIL_PORT = "";
+    process.env.EMAIL_FROM = "";
+    process.env.EMAIL_VERIFY = "NONE";
+    process.env.EMAIL_ADMIN = "";
+
+    // scrubbing dependencies (if loaded)
+    Object.keys(require.cache).forEach(function(key) { delete require.cache[key] })
+        
+    app = require('../server/server');
+    endpoint = require('./helpers/api').endpoint
+    database = require('./helpers/database')
+    parse = require('./helpers/parse')
+
+    load = require('../common/utilities/load')
+    upload = require('../common/utilities/upload')
+
+    userEmail = 'user@email.com'
+    userPassword = 'abcd'
+    userId = null
+    userToken = null
+    geneticmapId = null
+    chromosomeId = null
+    markerId = null
+
+    database.destroyUserByEmail(app.models, userEmail)
     .then(function(data) {
-      return destroyGeneticmapsAll()
+      return database.destroyGeneticmapsAll(app.models)
     })
     .then(function(data) {
       server = app.listen(done);
@@ -79,9 +61,9 @@ describe('Client File Relation Access', function() {
   });
 
   after(function(done) {
-    destroyUserByEmail(userEmail)
+    database.destroyUserByEmail(app.models, userEmail)
     .then(function(data) {
-      return destroyGeneticmapsAll()
+      return database.destroyGeneticmapsAll(app.models)
     })
     .then(function(data) {
       server.close(done);
@@ -93,7 +75,7 @@ describe('Client File Relation Access', function() {
 
   it('should create a new user', function(done) {
     superagent
-      .post(`${endpointAPI}/Clients/`)
+      .post(`${endpoint}/Clients/`)
       .send({ email: userEmail, password: userPassword })
       .set('Accept', 'application/json')
       .set('Content-Type', 'application/json')
@@ -105,7 +87,7 @@ describe('Client File Relation Access', function() {
         assert.exists(body.id);
         userId = body.id; // assign for use later
         assert.equal(body.email, userEmail);
-        assert.equal(body.code, 'EMAIL_UNVERIFIED');
+        assert.equal(body.code, 'EMAIL_NO_VERIFY');
         done();
       }
     );
@@ -113,7 +95,7 @@ describe('Client File Relation Access', function() {
 
   it('should log in with new user', function(done) {
     superagent
-      .post(`${endpointAPI}/Clients/login`)
+      .post(`${endpoint}/Clients/login`)
       .send({ email: userEmail, password: userPassword })
       .set('Accept', 'application/json')
       .set('Content-Type', 'application/json')
@@ -141,7 +123,7 @@ describe('Client File Relation Access', function() {
   runs.forEach(function (run, idx) {
     it(`should access empty resource ${run.model}`, function(done) {
       superagent
-        .get(`${endpointAPI}/${run.model}/`)
+        .get(`${endpoint}/${run.model}/`)
         .set('Accept', 'application/json')
         .set('Content-Type', 'application/json')
         .set('Authorization', userToken)
@@ -176,7 +158,7 @@ describe('Client File Relation Access', function() {
   runs.forEach(function (run, idx) {
     it(`should access populated resource ${run.model}`, function(done) {
       superagent
-        .get(`${endpointAPI}/${run.model}/`)
+        .get(`${endpoint}/${run.model}/`)
         .set('Accept', 'application/json')
         .set('Content-Type', 'application/json')
         .set('Authorization', userToken)
@@ -196,7 +178,7 @@ describe('Client File Relation Access', function() {
 
   it(`should access geneticmaps and chromosomes`, function(done) {
     superagent
-      .get(`${endpointAPI}/geneticmaps?filter[include]=chromosomes`)
+      .get(`${endpoint}/geneticmaps?filter[include]=chromosomes`)
       .set('Accept', 'application/json')
       .set('Content-Type', 'application/json')
       .set('Authorization', userToken)
@@ -226,7 +208,7 @@ describe('Client File Relation Access', function() {
 
   it(`should access chromosomes and markers`, function(done) {
     superagent
-      .get(`${endpointAPI}/chromosomes?filter[include]=markers`)
+      .get(`${endpoint}/chromosomes?filter[include]=markers`)
       .set('Accept', 'application/json')
       .set('Content-Type', 'application/json')
       .set('Authorization', userToken)
@@ -256,7 +238,7 @@ describe('Client File Relation Access', function() {
 
   it(`should access specific geneticmap with chromosomes`, function(done) {
     superagent
-      .get(`${endpointAPI}/geneticmaps/${geneticmapId}?filter[include]=chromosomes`)
+      .get(`${endpoint}/geneticmaps/${geneticmapId}?filter[include]=chromosomes`)
       .set('Accept', 'application/json')
       .set('Content-Type', 'application/json')
       .set('Authorization', userToken)
@@ -283,7 +265,7 @@ describe('Client File Relation Access', function() {
 
   it(`should access specific chromosome with markers`, function(done) {
     superagent
-      .get(`${endpointAPI}/chromosomes/${chromosomeId}?filter[include]=markers`)
+      .get(`${endpoint}/chromosomes/${chromosomeId}?filter[include]=markers`)
       .set('Accept', 'application/json')
       .set('Content-Type', 'application/json')
       .set('Authorization', userToken)

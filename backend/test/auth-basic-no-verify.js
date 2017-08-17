@@ -1,25 +1,40 @@
 'use strict';
 
-var environment = require('./helpers/environment');
-
-process.env.EMAIL_VERIFY = "NONE";
-
 var assert = require('chai').assert;
 var superagent = require('superagent');
-var app = require('../server/server');
-
-var endpoint = require('./helpers/api').endpoint
-var database = require('./helpers/database')
 
 describe('auth-basic-no-verify', function() {
-  var server;
+  var app, server, endpoint, smtp, database, parse
 
-  var userEmail = 'no-verify@email.com'
-  var userPassword = 'abcd'
-  var userId = null
-  var userToken = null
+  var userEmail, userPassword, userId, userToken, verifyUrl
 
   before(function(done) {
+    var environment = require('./helpers/environment');
+    process.env.EMAIL_VERIFY = "NONE";
+    process.env.EMAIL_HOST = "";
+    process.env.EMAIL_PORT = "";
+    process.env.EMAIL_FROM = "";
+    process.env.EMAIL_ADMIN = "";
+  
+    // scrubbing dependencies (if loaded)
+    // delete require.cache[require.resolve('../server/server')]
+    // delete require.cache[require.resolve('./helpers/smtp')]
+    // delete require.cache[require.resolve('./helpers/database')]
+    // delete require.cache[require.resolve('./helpers/parse')]
+
+    Object.keys(require.cache).forEach(function(key) { delete require.cache[key] })
+
+    // console.log(require.cache)
+
+    app = require('../server/server');
+    endpoint = require('./helpers/api').endpoint
+    database = require('./helpers/database')
+
+    userEmail = 'no-verify@email.com'
+    userPassword = 'abcd'
+    userId = null
+    userToken = null
+
     database.destroyUserByEmail(app.models, userEmail)
     .then(function(data) {
       server = app.listen(done);
@@ -39,20 +54,6 @@ describe('auth-basic-no-verify', function() {
     })
   });
 
-  it('should show server status', function(done) {
-    superagent
-      .get(`${endpoint}/status`)
-      .end(function(err, res) {
-        if (err) { return done(err); }
-        assert.equal(res.status, 200);
-        assert.exists(res.body);
-        assert.isNotNaN(res.body.started);
-        assert.exists(res.body.uptime);
-        done()
-      }
-    );
-  });
-
   it('should create a new user', function(done) {
     superagent
       .post(`${endpoint}/Clients/`)
@@ -63,11 +64,12 @@ describe('auth-basic-no-verify', function() {
         if (err) { return done(err); }
         assert.equal(res.status, 200);
         var body = res.body;
+        console.log('BODY', body)
         assert.exists(body);
         assert.exists(body.id);
         userId = body.id; // assign for use later
         assert.equal(body.email, userEmail);
-        assert.equal(body.code, 'EMAIL_UNVERIFIED');
+        assert.equal(body.code, 'EMAIL_NO_VERIFY');
         done();
       }
     );

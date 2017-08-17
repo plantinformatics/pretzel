@@ -8,7 +8,7 @@
   "scripts": {
     "lint": "eslint .",
     "start": "node .",
-    "test": "mocha --reporter spec test"
+    "test": "mocha --reporter spec --timeout 20000 test"
   },
   "dependencies": {
     "async": "^2.4.0",
