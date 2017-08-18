@@ -95,6 +95,12 @@ boot(app, __dirname, function(err) {
 // }
 
 //
+// - - - - - VIEW CONFIG - - - - - -
+//
+// the views are used to construct emails for auth services
+app.set('views', path.resolve(__dirname, 'views'));
+
+//
 // - - - - - FILE DELIVERY CONFIG - - - - - -
 //
 // default route handling to deliver client files

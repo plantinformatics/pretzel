@@ -22,7 +22,7 @@ RUN cd ./frontend && \
     bower install --allow-root && \
     npm run build && \
     mkdir -p ../app/client && \
-    cp -r ./dist ../app/client && \
+    cp -r ./dist/. ../app/client/ && \
     cd .. && \
     rm -rf ./frontend && \
     npm uninstall -g bower && \
