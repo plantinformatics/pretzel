@@ -183,7 +183,8 @@ export default Ember.Component.extend({
   /** object attributes */
   oa : {},
 
-  dataObserver : Ember.observer('dataReceived.length', function(sender, key/*, value, rev*/) {
+  dataObserver : Ember.on('init',
+   Ember.observer('dataReceived.length', function(sender, key/*, value, rev*/) {
     let me = this;
     // avoid recursion caused by dataReceived.popObject() below
     console.log("dataObserver", (this === sender), this, /*sender,*/ key /*, value, rev*/);
@@ -267,7 +268,7 @@ export default Ember.Component.extend({
     }
     }, 1000);
 
-  }),
+})),
 
 
   /** Draw the APs (Axis Pieces) and the paths between them.
