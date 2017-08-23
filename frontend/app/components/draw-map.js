@@ -1825,7 +1825,7 @@ export default Ember.Component.extend({
       svgContainer = oa.svgContainer;
 
 
-    svgRoot.classed("devel", (markerTotal / oa.apIDs.length) < 20);
+    // svgRoot.classed("devel", (markerTotal / oa.apIDs.length) < 20);
 
     function setCssVariable(name, value)
     {
