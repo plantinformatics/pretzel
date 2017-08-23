@@ -58,22 +58,21 @@ div.drawing-controls > div.flowButtons > .flowButton.direct,
   fill: none;
   stroke: #808;
 }
-html {
+:root {
   --path-stroke-opacity : .125;
   --path-stroke-width: 0.75px;
+  --manyPaths-stroke-opacity: calc(var(--path-stroke-opacity)*0.8); //.125;
+  --manyPaths-stroke-width: calc(var(--path-stroke-width)*0.8); // 0.75px;
 }
 .foreground path {
   stroke-opacity: var(--path-stroke-opacity); //.125;
   stroke-width: var(--path-stroke-width); // 0.75px;
 }
-:root
-{
-  --manyPaths-stroke-opacity: calc(var(--path-stroke-opacity)*0.8); //.125;
-  --manyPaths-stroke-width: calc(var(--path-stroke-width)*0.8); // 0.75px;
-}
 .manyPaths .foreground path {
+    /* Works for Chrome, haven't found a working configuration for Firefox.
   stroke-opacity: var(--manyPaths-stroke-opacity);
   stroke-width: var(--manyPaths-stroke-width);
+   */
 }
 
 /* or :hover if transition is not required. */
@@ -93,13 +92,13 @@ html {
 }
 :root
 {
-  --foreground-stroke-opacity: calc(var(--path-stroke-opacity)*0.5);
+  --faded-stroke-opacity: calc(var(--path-stroke-opacity)*0.7);
 }
 .foreground .faded path {
   fill: none;
   stroke: #000;
   stroke-width: var(--path-stroke-width);
-  stroke-opacity: var(--foreground-stroke-opacity);
+  stroke-opacity: var(--faded-stroke-opacity);
 }
 
 .devel .foreground path {
