@@ -58,17 +58,21 @@ div.drawing-controls > div.flowButtons > .flowButton.direct,
   fill: none;
   stroke: #808;
 }
-html {
+:root {
   --path-stroke-opacity : .125;
   --path-stroke-width: 0.75px;
+  --manyPaths-stroke-opacity: calc(var(--path-stroke-opacity)*0.8); //.125;
+  --manyPaths-stroke-width: calc(var(--path-stroke-width)*0.8); // 0.75px;
 }
 .foreground path {
   stroke-opacity: var(--path-stroke-opacity); //.125;
   stroke-width: var(--path-stroke-width); // 0.75px;
 }
 .manyPaths .foreground path {
-  stroke-opacity: calc(var(--path-stroke-opacity)*0.8); //.125;
-  stroke-width: calc(var(--path-stroke-width)*0.8); // 0.75px;
+    /* Works for Chrome, haven't found a working configuration for Firefox.
+  stroke-opacity: var(--manyPaths-stroke-opacity);
+  stroke-width: var(--manyPaths-stroke-width);
+   */
 }
 
 /* or :hover if transition is not required. */
@@ -86,11 +90,15 @@ html {
     stroke-opacity : 1;
     fill : none;
 }
+:root
+{
+  --faded-stroke-opacity: calc(var(--path-stroke-opacity)*0.7);
+}
 .foreground .faded path {
   fill: none;
   stroke: #000;
   stroke-width: var(--path-stroke-width);
-  stroke-opacity: calc(var(--path-stroke-opacity)*0.5);
+  stroke-opacity: var(--faded-stroke-opacity);
 }
 
 .devel .foreground path {
@@ -174,6 +182,11 @@ div.colouredMarkers
   float: left;
   min-height: 10em;
   min-width: 6em;
+}
+/* text input box / table.   ember-content-editable */
+.colouredMarkers:hover:not(:focus) {
+  /* outline: -webkit-focus-ring-color auto 15px; */
+  border: pink 3px dashed;
 }
 
 /* -------------------------------------------------------------------------- */

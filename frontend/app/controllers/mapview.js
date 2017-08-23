@@ -45,8 +45,9 @@ export default Ember.Controller.extend({
     return this.selectedMarkers.length;
   }),
 
-  hasData: Ember.computed('selectedMaps', function() {
-    return this.selectedMaps.length > 0;
+  hasData: Ember.computed('selectedMaps', 'mapsToView', function() {
+    return this.selectedMaps.length > 0
+			|| this.mapsToView.length > 0;
   }),
 
   mapsToViewChanged: function (a, b, c) {
@@ -55,8 +56,8 @@ export default Ember.Controller.extend({
     {
       let m=mtv[i-1], im, exists;
       console.log("mapsToViewChanged", mtv.length, mtv, i, m, a, b, c);
-      console.log(this.selectedMaps.length, this.selectedMaps);
-      console.log(this.availableMaps.length, this.availableMaps);
+      console.log(this.get('selectedMaps').length, this.get('selectedMaps'), this.get('hasData'));
+      // console.log(this.get('availableMaps'.length), this.get('availableMaps'));
       console.log(a.mapsToView.length, a.mapsToView);
       if (true)
       {

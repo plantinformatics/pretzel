@@ -183,7 +183,8 @@ export default Ember.Component.extend({
   /** object attributes */
   oa : {},
 
-  dataObserver : Ember.observer('dataReceived.length', function(sender, key/*, value, rev*/) {
+  dataObserver : Ember.on('init',
+   Ember.observer('dataReceived.length', function(sender, key/*, value, rev*/) {
     let me = this;
     // avoid recursion caused by dataReceived.popObject() below
     console.log("dataObserver", (this === sender), this, /*sender,*/ key /*, value, rev*/);
@@ -267,7 +268,7 @@ export default Ember.Component.extend({
     }
     }, 1000);
 
-  }),
+})),
 
 
   /** Draw the APs (Axis Pieces) and the paths between them.
@@ -1578,7 +1579,8 @@ export default Ember.Component.extend({
           alias: new Flow("alias", false, true, collateStacksA)	// aliases, not filtered for uniqueness.
         };
       // flows.U_alias.visible = flows.U_alias.enabled = false;
-      // flows.U_alias.enabled = flows.alias.enabled = false;
+      // flows.alias.visible = flows.alias.enabled = false;
+      // flows.direct.visible = flows.direct.enabled = false;
       flows.direct.pathData = d3Markers;
       // if both direct and U_alias are enabled, only 1 should call collateStacks1().
       if (flows.U_alias.enabled && flows.direct.enabled && (flows.U_alias.collate == flows.direct.collate))
@@ -1823,7 +1825,7 @@ export default Ember.Component.extend({
       svgContainer = oa.svgContainer;
 
 
-    svgRoot.classed("devel", (markerTotal / oa.apIDs.length) < 20);
+    // svgRoot.classed("devel", (markerTotal / oa.apIDs.length) < 20);
 
     function setCssVariable(name, value)
     {
@@ -2260,6 +2262,14 @@ export default Ember.Component.extend({
           pathMarkersHash = pathMarkers[sLine];
         }
       }
+      /** pathClasses uses this datum instead of d.  */
+      let classSet = pathClasses(this, d), classSetText;
+      if (classSet)
+      {
+        console.log(this, d, classSet, classSetText);
+        classSetText = "<br />" + classSet;
+      }
+
       // console.log(d, markerNameOfData(d), sLine, pathMarkersHash);
       let listMarkers  = "";
       // stroke attributes of this are changed via css rule for path.hovered
@@ -2272,6 +2282,7 @@ export default Ember.Component.extend({
       Object.keys(pathMarkersHash).map(function(a){
         let hoverExtraText = pathMarkersHash[a];
         if (hoverExtraText === 1) hoverExtraText = "";
+        else if (classSetText) hoverExtraText += classSetText;
         listMarkers = listMarkers + a + hoverExtraText + "<br />";
       });
       toolTip.html(listMarkers)     
@@ -2683,10 +2694,10 @@ export default Ember.Component.extend({
        * have aliases, aliasedDone is used.
        */
       let a0, a1;
-      if (apName < apName1 || ! adjacent_both_dir)
-      { a0 = apName; a1 = apName1; }
-      else
+      if (! adjacent_both_dir && (apName > apName1))
       { a0 = apName1; a1 = apName; }
+      else
+      { a0 = apName; a1 = apName1; }
       let a = aliasedDone[a0] && aliasedDone[a0][a1];
       if (trace_adj)
       {
@@ -2726,13 +2737,16 @@ export default Ember.Component.extend({
         {
           let za = oa.z[apName];
           let adjs = adjAPs[apName];
-          if (adjs)
-          {
-            adjs = adjs.filter(function(apName1) {
+          if (adjs && adjs.length
+	      &&
+              (adjs = adjs.filter(function(apName1) {
               adjCount++;
               let a = getAliased(apName, apName1);
               if (!a) adjCountNew++;
-              return ! a; } );
+		  return ! a; } ))
+	      &&
+	      adjs.length)
+          {
             if (trace_adj > 1)
             {
               console.log(apName, APid2Name(apName));
@@ -2751,6 +2765,7 @@ export default Ember.Component.extend({
                   let mi = mas[i],
                   markerAPs = oa.markerAPs,
                   APs = markerAPs[mi];
+		  // APs will be undefined if mi is not in a AP which is displayed.
                   if (APs === undefined)
                   {
                     if (trace_adj && trace_count-- > 0)
@@ -3083,6 +3098,8 @@ export default Ember.Component.extend({
     function pathUg(d) {
       let mmaa = dataOfPath(this),
       p = pathU(mmaa);
+      if (trace_path > 2)
+        console.log(this, d);
       return p;
     }
 
@@ -3826,7 +3843,7 @@ export default Ember.Component.extend({
       /* if (unique_1_1_mapping)
        {*/
       if (trace_path)
-        console.log("pathUpdate() pathData", pathData.length, g.size()); // , pathData
+        console.log("pathUpdate() pathData", flow.name, pathData.length, g.size()); // , pathData
       if (trace_path > 1)
         for (let pi=0; pi < pathData.length; pi++)
           log_mmaa(pathData[pi]);
@@ -4037,7 +4054,7 @@ export default Ember.Component.extend({
       let dataIsMmaa = typeof(da) === "object";
       let markerName = dataIsMmaa ? da[0] : da, // also @see markerNameOfPath(pathElt)
       colourOrdinal;
-      if (use_path_colour_scale <= 4)
+      if (use_path_colour_scale < 4)
       {
         colourOrdinal = markerName;
       }
