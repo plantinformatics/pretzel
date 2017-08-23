@@ -2262,6 +2262,14 @@ export default Ember.Component.extend({
           pathMarkersHash = pathMarkers[sLine];
         }
       }
+      /** pathClasses uses this datum instead of d.  */
+      let classSet = pathClasses(this, d), classSetText;
+      if (classSet)
+      {
+        console.log(this, d, classSet, classSetText);
+        classSetText = "<br />" + classSet;
+      }
+
       // console.log(d, markerNameOfData(d), sLine, pathMarkersHash);
       let listMarkers  = "";
       // stroke attributes of this are changed via css rule for path.hovered
@@ -2274,6 +2282,7 @@ export default Ember.Component.extend({
       Object.keys(pathMarkersHash).map(function(a){
         let hoverExtraText = pathMarkersHash[a];
         if (hoverExtraText === 1) hoverExtraText = "";
+        else if (classSetText) hoverExtraText += classSetText;
         listMarkers = listMarkers + a + hoverExtraText + "<br />";
       });
       toolTip.html(listMarkers)     
@@ -4045,7 +4054,7 @@ export default Ember.Component.extend({
       let dataIsMmaa = typeof(da) === "object";
       let markerName = dataIsMmaa ? da[0] : da, // also @see markerNameOfPath(pathElt)
       colourOrdinal;
-      if (use_path_colour_scale <= 4)
+      if (use_path_colour_scale < 4)
       {
         colourOrdinal = markerName;
       }
