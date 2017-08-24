@@ -15,7 +15,7 @@ var config = {
     "host": process.env.DB_HOST,
     "port": process.env.DB_PORT,
     "url": "",
-    "database": process.env.DB_NAME,
+    "database": process.env.DB_NAME || 'pretzel',
     "authSource": "admin",
     "password": process.env.DB_PASS,
     "name": "mongoDs",
