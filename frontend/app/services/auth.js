@@ -23,6 +23,10 @@ export default Service.extend({
     return this._ajax('Clients/', 'POST', data, false)
   },
 
+  uploadData(data) {
+    return this._ajax('Geneticmaps/upload', 'POST', data, true)
+  },
+
   checkError(data, mapper) {
     // console.log('checkError')
     try {

@@ -80,84 +80,69 @@ function createChunked (data, model, len) {
  * @param {Object} models - Loopback database models
  */
 exports.json = (msg, models) => {
-  console.log('start uploading json to database')
   // current json spec has high level genetic map prop with data nested
   var content = msg.geneticmap
-  console.log(content)
-  var arrayGeneticmaps = [{
-    name: content.name
-  }]
-  var arrayChromosomes = content.chromosomes.map(function(chromosome) {
-    return {
-      name: chromosome.name
+  if (!content || !content.name) {
+    throw Error("Unable to extract geneticmap from json");
+  }
+  return checkGeneticmapExists(content.name, models)
+  .then(function(exists) {
+    if (exists) {
+      throw Error("Duplicate geneticmap");
     }
-  })
-  var arrayMarkers = content.chromosomes.map(function(chromosome) {
-    return chromosome.markers.map(function(markers) {
-      return markers
+    var arrayGeneticmaps = [{
+      name: content.name
+    }]
+    var arrayChromosomes = content.chromosomes.map(function(chromosome) {
+      return {
+        name: chromosome.name
+      }
     })
-  })
-
-  return models.Geneticmap.create(arrayGeneticmaps)
-  .then(function(data) {
-    // gather the genetic map identifiers to attach to chromosomes
-    console.log('created geneticmaps', data)
-    let geneticmapId = data[0].id
-    // attaching id to chromosomes
-    arrayChromosomes = arrayChromosomes.map(function(chromosome) {
-      chromosome.geneticmapId = geneticmapId
-      return chromosome
-    })
-    return models.Chromosome.create(arrayChromosomes)
-  })
-  .then(function(data) {
-    // gather the genetic map identifiers to attach to markers
-    console.log('created chromosomes', data)
-    // attaching id to markers
-    arrayMarkers = arrayMarkers.map(function(chromosomeMarkers, idx) {
-      let chromosomeId = data[idx].id
-      return chromosomeMarkers.map(function(marker) {
-        if (!marker.aliases) marker.aliases = []
-        marker.chromosomeId = chromosomeId
-        return marker
+    var arrayMarkers = content.chromosomes.map(function(chromosome) {
+      return chromosome.markers.map(function(markers) {
+        return markers
       })
     })
-    // concatenate the array markers into a flat array
-    arrayMarkers = [].concat.apply([], arrayMarkers);
-    return models.Marker.create(arrayMarkers)
-
-    // return createChunked(arrayMarkers, models.Marker, 5000)
-  })
-  .catch(function(err) {
-    console.log('ERROR', err)
-    throw err
-  })
+  
+    return models.Geneticmap.create(arrayGeneticmaps)
+    .then(function(data) {
+      // gather the genetic map identifiers to attach to chromosomes
+      let geneticmapId = data[0].id
+      // attaching id to chromosomes
+      arrayChromosomes = arrayChromosomes.map(function(chromosome) {
+        chromosome.geneticmapId = geneticmapId
+        return chromosome
+      })
+      return models.Chromosome.create(arrayChromosomes)
+    })
+    .then(function(data) {
+      // gather the genetic map identifiers to attach to markers
+      // attaching id to markers
+      arrayMarkers = arrayMarkers.map(function(chromosomeMarkers, idx) {
+        let chromosomeId = data[idx].id
+        return chromosomeMarkers.map(function(marker) {
+          if (!marker.aliases) marker.aliases = []
+          marker.chromosomeId = chromosomeId
+          return marker
+        })
+      })
+      // concatenate the array markers into a flat array
+      arrayMarkers = [].concat.apply([], arrayMarkers);
+      return models.Marker.create(arrayMarkers)
+  
+      // return createChunked(arrayMarkers, models.Marker, 5000)
+    })
+  });
 }
 
 /**
- * Perform upload after confirming data not already uploaded
- * @param {string} data - path to load the file
- * @callback cb
+ * Check whether the specified geneticmap already exists in the db
+ * @param {Object} name - the name of geneticmap to check
+ * @returns {boolean} - true if exists
  */
-exports.jsonCheckDuplicate = (data, models) => {
-
-  console.log('jsonCheckDuplicate')
-  let name = data.geneticmap.name
-
-  console.log(name)
-
-  return models.Geneticmap.find({where: {name: name}, limit: 3})
+function checkGeneticmapExists(name, models) {
+  return models.Geneticmap.find({where: {name: name}, limit: 1})
   .then(function(results) {
-    // console.log(results)
-    if (results.length < 1) {
-      console.log('uploading json to database')
-      return exports.json(data, models)
-    } else {
-      throw Error(`entry already in database!`)
-    }
-  })
-  .then(function(results) {
-    console.log('done with upload')
-    return true
-  })
+    return results.length > 0;
+  });
 }

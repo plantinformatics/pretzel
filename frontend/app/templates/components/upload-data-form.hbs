@@ -1,0 +1,25 @@
+<div class="col-sm-6">
+  <h1 class="title">Upload Data</h1>
+  <form {{action 'submitForm' on='submit'}}>
+    <input type='file' accept=".json,.gz" onchange={{action 'upload'}}>
+    <input type="submit" class="btn btn-info {{if isProcessing 'disabled'}}">
+  </form>
+  {{#if errorMessage}}
+    <br>
+    <div class="panel panel-danger">
+      <div class="panel-heading">Error</div>
+      <div class="panel-body">
+        {{errorMessage}}
+      </div>
+    </div>
+  {{/if}}
+  {{#if successMessage}}
+    <br>
+    <div class="panel panel-success">
+      <div class="panel-heading">Success</div>
+      <div class="panel-body">
+        {{successMessage}}
+      </div>
+    </div>
+  {{/if}}
+</div>
