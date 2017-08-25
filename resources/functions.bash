@@ -28,10 +28,15 @@ function load_test_data_file()
     then
 	URL_VARIABLES="?access_token=$API_ACCESS_TOKEN"
     fi
+    if [ -n "$API_Authorization" ]
+    then
+	EXTRA_ARGS=("-H" "Authorization:$API_Authorization")
+    fi
     for mapJsonFileName in $*
     do
     curl -X POST \
 	 -H "Accept: application/json" -H "Content-type: application/json" \
+	 ${EXTRA_ARGS[*]}	\
 	 -d @$mapJsonFileName \
 	 "$GM_API_URL/$API_PATH_GM/upload$URL_VARIABLES"
     done
