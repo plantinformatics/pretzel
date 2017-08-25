@@ -10,7 +10,7 @@ export default DS.RESTAdapter.extend(DataAdapterMixin, PartialModelAdapter, {
   urlForFindRecord(id, type, snapshot) {
     let url = this._super(...arguments);
     // facilitating loopback filter structure
-    if (snapshot.adapterOptions.filter) {
+    if (snapshot.adapterOptions && snapshot.adapterOptions.filter) {
       let queryParams = Ember.$.param(snapshot.adapterOptions);
       return `${url}?${queryParams}`;
     }
