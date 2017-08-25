@@ -219,7 +219,10 @@ export default Ember.Component.extend({
                 newChr = mtv[im];
                 console.log(newChr);
                 {
-                  let thisStore = me.get('store'), pc=thisStore.findRecord('chromosome', m, { reload: true });
+                  let thisStore = me.get('store'), pc=thisStore.findRecord
+		    ('chromosome', m,
+		     { reload: true,
+		       adapterOptions:{ filter: {include: "markers" } }});
                   pc.then(function (ch){
                     console.log(ch.get('name'));
                     if (true)
