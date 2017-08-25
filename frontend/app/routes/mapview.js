@@ -9,7 +9,7 @@ export default Ember.Route.extend(AuthenticatedRouteMixin, {
     mapsToView: {
       // The initial architecture (up until feature/render-promises) was for changes in the URL mapsToView query parameter to trigger
       // a model refresh, using :
-       refreshModel: true
+      // refreshModel: true
       //
       // Instead : controller : mapsToViewChanged() .observes('mapsToView'),
       // does store.findRecord(chromosome) and delivers the data or promise via
