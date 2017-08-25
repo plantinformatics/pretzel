@@ -203,6 +203,15 @@ div.colouredMarkers
   fill-opacity: .125;
   shape-rendering: crispEdges;
 }
+g.brush:hover > rect.handle {
+  stroke: blue;
+}
+
+.horizTick
+{
+  stroke: green;
+  stroke-width : 2px;
+}
 
 /* Button */
 .btn { cursor: pointer; }

@@ -1685,6 +1685,10 @@ export default Ember.Component.extend({
     var path_colour_scale;
     let markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
     let intervals = {}, intervalNames = new Set(), intervalTree = {};
+    /** scaffoldTicks[apID] is a set of y locations, relative to the y axis of apID, of horizontal tick marks.
+     * General purpose; first use is for scaffold edges.
+     */
+    let scaffoldTicks = {};
     if (use_path_colour_scale)
     {
       let path_colour_domain;
@@ -1763,6 +1767,20 @@ export default Ember.Component.extend({
               let domain = Array.from(intervalNames.keys());
               console.log("domain.length", domain.length);
               path_colour_scale.domain(domain);
+            }
+            else if (use_path_colour_scale === 6)
+            {
+              for (let i=0; i<markerNames.length; i++)
+              {
+                let col=markerNames[i].split(/[ \t]+/),
+                mapChrName = col[0], tickLocation = col[1];
+                let apName = mapChrName2AP(mapChrName);
+                if (scaffoldTicks[apName] === undefined)
+                  scaffoldTicks[apName] = new Set();
+                scaffoldTicks[apName].add(tickLocation);
+              }
+              console.log("scaffoldTicks", scaffoldTicks);
+              showTickLocations(scaffoldTicks);
             }
             else if (trace_path_colour > 2)
               console.log("use_path_colour_scale", use_path_colour_scale);
@@ -2305,6 +2323,42 @@ export default Ember.Component.extend({
       console.log("Refresh");
     }
 
+    /*------------------------------------------------------------------------*/
+    /** Draw horizontal ticks on the axes, representing scaffold boundaries.
+     */
+    function showTickLocations(scaffoldTicks)
+    {
+      d3.keys(scaffoldTicks).forEach
+      (function(apName)
+       {
+         let tickLocations = Array.from(scaffoldTicks[apName].keys());
+         /** -  if apName matches nothing, then skip this. */
+        let aS = d3.select("#" + axisEltId(apName));
+        if (!aS.empty())
+        {
+          let pS = aS.selectAll("path.horizTick")
+             .data(tickLocations),
+             pSE = pS.enter()
+             .append("path")
+            .attr("class", "horizTick");
+         let pSM = pSE.merge(pS);
+         pSM.attr("d", function(tickY) {
+           // based on axisMarkerTick(ai, d)
+           /** shiftRight moves right end of tick out of axis zone, so it can
+            * receive hover events.
+            */
+           const xOffset = 10, shiftRight=5;
+           let ak = apName,
+               sLine = lineHoriz(ak, tickY, xOffset, shiftRight);
+           return sLine;
+         });
+        }
+       }
+      );
+    }
+    /*------------------------------------------------------------------------*/
+
+
 
     /** Construct a unique name for a group of aliases - sort the aliases and catenate them.
      */
@@ -2743,7 +2797,7 @@ export default Ember.Component.extend({
               adjCount++;
               let a = getAliased(apName, apName1);
               if (!a) adjCountNew++;
-		  return ! a; } ))
+                return ! a; } ))
 	      &&
 	      adjs.length)
           {
@@ -2765,7 +2819,7 @@ export default Ember.Component.extend({
                   let mi = mas[i],
                   markerAPs = oa.markerAPs,
                   APs = markerAPs[mi];
-		  // APs will be undefined if mi is not in a AP which is displayed.
+                  // APs will be undefined if mi is not in a AP which is displayed.
                   if (APs === undefined)
                   {
                     if (trace_adj && trace_count-- > 0)
@@ -2983,6 +3037,30 @@ export default Ember.Component.extend({
       let o = oa.o;
       return line([[o[ak]-xOffset + shiftRight, akY],
                    [o[ak]+xOffset + shiftRight, akY]]);
+    }
+    /** calculate SVG line path for an horizontal line.
+     *
+     * Currently this is used for paths within axis group elt,
+     * which is within stack elt, which has an x translation,
+     * so the path x position is relative to 0.
+     *
+     * @param ak apID.
+     * @param akY Y	position (relative to AP of ak?)
+     * @param xOffset add&subtract to x value, measured in pixels
+     * Tick length is 2 * xOffset, centred on the axis + shiftRight.
+     * @return line path for an horizontal line.
+     * Derived from markerLineS(), can be used to factor it and markerLine()
+     */
+    function lineHoriz(ak, akY, xOffset, shiftRight)
+    {
+      /** scaled to axis */
+      let akYs = oa.y[ak](akY);
+      /* If the path was within g.foreground, which doesn't have x translation
+       * for the stack, would calculate x position :
+       * o = oa.o;  x position of axis ak : o[ak]
+       */
+      return line([[-xOffset + shiftRight, akYs],
+                   [+xOffset + shiftRight, akYs]]);
     }
     /** Similar to @see markerLine2().
      * @param k index into apIDs[]
