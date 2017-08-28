@@ -1832,7 +1832,7 @@ export default Ember.Component.extend({
                 scaffoldTicks[apName].add(tickLocation);
               }
               console.log("scaffoldTicks", scaffoldTicks);
-              showTickLocations(scaffoldTicks);
+              showTickLocations(scaffoldTicks, undefined);
             }
             else if (trace_path_colour > 2)
               console.log("use_path_colour_scale", use_path_colour_scale);
@@ -2388,8 +2388,9 @@ export default Ember.Component.extend({
 
     /*------------------------------------------------------------------------*/
     /** Draw horizontal ticks on the axes, representing scaffold boundaries.
+     * @param t transition or undefined
      */
-    function showTickLocations(scaffoldTicks)
+    function showTickLocations(scaffoldTicks, t)
     {
       d3.keys(scaffoldTicks).forEach
       (function(apName)
@@ -2405,7 +2406,11 @@ export default Ember.Component.extend({
              .append("path")
             .attr("class", "horizTick");
          let pSM = pSE.merge(pS);
-         pSM.attr("d", function(tickY) {
+
+          /* update attr d in a transition if one was given.  */
+          let p1 = (t === undefined) ? pSM
+            : pSM.transition(t);
+          p1.attr("d", function(tickY) {
            // based on axisMarkerTick(ai, d)
            /** shiftRight moves right end of tick out of axis zone, so it can
             * receive hover events.
@@ -3638,6 +3643,7 @@ export default Ember.Component.extend({
             });
             let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
             axisTickS.attr("transform", yAxisTicksScale);
+            showTickLocations(scaffoldTicks, t);
 
             pathUpdate(t);
             let resetScope = apID ? apS : svgContainer;
@@ -3701,6 +3707,7 @@ export default Ember.Component.extend({
           axisGS.attr("transform", yAxisTicksScale);
         }
       });
+      showTickLocations(scaffoldTicks, t);
     }
 
     function brushended() {
