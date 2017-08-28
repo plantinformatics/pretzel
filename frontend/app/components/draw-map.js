@@ -1081,6 +1081,48 @@ export default Ember.Component.extend({
         return s;
       }
     };
+    /** Remove the nominated AP (Stacked) from this Stack;
+     * if this Stack is now empty, remove it from stacks[].
+     * static
+     * @param apName  name of AP to remove
+     * @return false if not found, otherwise it is removed
+     */
+    Stack.removeStacked = function (apName)
+    {
+      console.log("removeStacked", apName);
+      let ap = oa.aps[apName];
+      if (ap === undefined)
+        console.log("removeStacked", apName, "not in", aps);
+      else
+      {
+        let stack = ap.stack;
+        stack.removeStacked1(apName);
+      }
+    };
+    Stack.prototype.removeStacked1 = function (apName)
+    {
+      let ap = oa.aps[apName],
+      removedAp = this.remove(apName);
+      if (removedAp === undefined)
+        console.log("removeStacked", apName);
+      /* else
+        delete oa.aps[apName]; */ // release memory
+      if (this.empty())
+      {
+        if (! this.delete())
+        {
+          console.log("removeStacked", this, "not found for delete");
+        }
+      }
+      else
+      {
+        console.log("removeStacked", this);
+        // copied from .dropOut()
+        let released = ap.portion;
+        ap.portion = 1;
+        this.releasePortion(released);
+      }
+    };
     /** Remove this Stack from stacks[].
      * @return false if not found, otherwise it is removed
      */
@@ -2141,6 +2183,8 @@ export default Ember.Component.extend({
       .attr("y", -axisFontSize)
       .style("font-size", axisFontSize)
       .text(axisTitle /*String*/);
+    axisTitleS
+        .each(configureAPtitleMenu);
     let axisSpacing = (axisXRange[1]-axisXRange[0])/stacks.length;
     let verticalTitle;
     if ((verticalTitle = axisSpacing < 90))
@@ -2222,6 +2266,15 @@ export default Ember.Component.extend({
     //  console.log("Delete");
     //}
 
+    /** remove g#apName;  pathUpdate
+     */
+    function removeAP(apName)
+    {
+      let apS = svgContainer.selectAll("g.axis#" + axisEltId(apName));
+      console.log("removeAP", apName, apS.empty(), apS);
+      apS.data([]).exit().remove();
+      pathUpdate(undefined);
+    }
 
     //d3.selectAll(".foreground > g > g").selectAll("path")
     /* (Don, 2017Mar03) my reading of handleMouse{Over,Out}() is that they are
@@ -4454,6 +4507,43 @@ export default Ember.Component.extend({
       agClasses = {};
       pathColourUpdate(undefined, undefined);
     });
+
+    let apTitleSel = "g.ap > text";
+    /** Setup hover menus over AP titles.
+     * So far used just for Delete
+     * @see based on similar configurejQueryTooltip()
+     */
+    function  configureAPtitleMenu(apName) {
+      console.log("configureAPtitleMenu", apName, this, this.outerHTML);
+        let node_ = this;
+        Ember.$(node_)
+        .popover({
+          trigger : "hover", // manual", // "click focus",
+          sticky: true,
+          delay: {show: 200, hide: 3000},
+          container: 'div#holder',
+          placement : "auto bottom",
+          title : apName,
+          html: true,
+          content : ""
+            + '<button class="DeleteMap" id="Delete:' + apName + '" href="#">Delete</button>'
+        })
+        // .popover('show');
+      
+        .on("shown.bs.popover", function(event) {
+          console.log("shown.bs.popover", event, event.target);
+          // button is not found when show.bs.popover, but is when shown.bs.popover.
+          // Could select via id from <text> attr aria-describedby=​"popover800256".
+          let deleteButtonS = d3.select("button.DeleteMap");
+          console.log(deleteButtonS.empty(), deleteButtonS.node());
+          deleteButtonS
+            .on('click', function (buttonElt /*, i, g*/) {
+              console.log("delete", apName, this);
+              Stack.removeStacked(apName);
+              removeAP(apName);
+            });
+        });
+    }
 
     /** The Zoom & Reset buttons (g.btn) can be hidden by clicking the 'Publish
      * Mode' checkbox.  This provides a clear view of the visualisation
