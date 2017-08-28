@@ -1738,6 +1738,7 @@ export default Ember.Component.extend({
       {
       case 1 : path_colour_domain = oa.markers; break;
       case 2 : path_colour_domain = d3.keys(oa.ag); break;
+      default:
       case 4:
       case 3 : path_colour_domain = ["unused"];
         this.set('colouredMarkersChanged', function(colouredMarkers_) {
@@ -1746,7 +1747,16 @@ export default Ember.Component.extend({
           if ((colouredMarkers_.length !== 0) &&
               ((val = getUsePatchColour()) !== undefined))
           {
-            use_path_colour_scale = val;
+            /** use_path_colour_scale manages the effect of the path colouring
+             * date entered here; this doesn't allow the different modes
+             * selected by use_path_colour_scale to co-exist effectively, but
+             * scaffoldTicks is separate, so by distinguishing
+             * input_path_colour_scale from use_path_colour_scale, it is
+             * possible to use 6 with e.g. 4.
+             */
+            let input_path_colour_scale = val;
+            if (val != 6)
+              use_path_colour_scale = val;
 
             /** depending on use_path_colour_scale === 3, 4 each line of markerNames is 
              * 3: markerName 
@@ -1757,9 +1767,9 @@ export default Ember.Component.extend({
             // .match(/\S+/g) || [];
               .match(/[^\r\n]+/g);
             path_colour_scale_domain_set = markerNames.length > 0;
-            if (use_path_colour_scale === 3)
+            if (input_path_colour_scale === 3)
               path_colour_scale.domain(markerNames);
-            else if (use_path_colour_scale === 4)
+            else if (input_path_colour_scale === 4)
             {
               for (let i=0; i<markerNames.length; i++)
               {
@@ -1787,7 +1797,7 @@ export default Ember.Component.extend({
               console.log("domain.length", domain.length);
               path_colour_scale.domain(domain);
             }
-            else if (use_path_colour_scale === 5)
+            else if (input_path_colour_scale === 5)
             {
               for (let i=0; i<markerNames.length; i++)
               {
@@ -1810,7 +1820,7 @@ export default Ember.Component.extend({
               console.log("domain.length", domain.length);
               path_colour_scale.domain(domain);
             }
-            else if (use_path_colour_scale === 6)
+            else if (input_path_colour_scale === 6)
             {
               for (let i=0; i<markerNames.length; i++)
               {
