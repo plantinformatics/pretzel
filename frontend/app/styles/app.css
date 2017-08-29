@@ -189,6 +189,12 @@ div.colouredMarkers
   border: pink 3px dashed;
 }
 
+div.ExportFlowData
+{
+    clear: both;
+}
+
+
 /* -------------------------------------------------------------------------- */
 
 .axis path,

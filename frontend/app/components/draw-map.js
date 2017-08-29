@@ -35,7 +35,7 @@ function breakPoint()
 let flowButtonsSel = "div.drawing-controls > div.flowButtons";
 
 
-function configurejQueryTooltip(node) {
+function configurejQueryTooltip(oa, node) {
   d3.selectAll(node + " > div.flowButton")
     .each(function (flowName) {
       // console.log("configurejQueryTooltip", flowName, this, this.outerHTML);
@@ -61,18 +61,34 @@ function configurejQueryTooltip(node) {
         .popover({
           trigger : "hover",
           sticky: true,
-          delay: {show: 200, hide: 700},
+          delay: {show: 200, hide: 3000},
           placement : "auto bottom",
-          // similar jQuery function .tooltip() takes parameter content in place of template.
-          // This is using : bower_components/bootstrap/js/popover.js, via bower.json
-          template: '<div class="popover" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div>'
-            + '<button id="Export:' + flowName + '" href="#">Export</button>'
-            + '</div>'
+          title : flowName,
+          html: true,
+          /* Possibly some variation between jQuery function .tooltip() and
+           * bootstrap popover (used here) : may take parameter template in
+           * place of content.
+           * This is using : bower_components/bootstrap/js/popover.js, via bower.json
+           */
+          content : ""
+            + '<button class="ExportFlowData" id="Export:' + flowName + '" href="#">Export</button>'
           /*
            })
            .popover("show")
            ;
            */
+        })
+        .on("shown.bs.popover", function(event) {
+          console.log("shown.bs.popover", "Export", event, event.target);
+          let exportButtonS = d3.select("button.ExportFlowData");
+          console.log(exportButtonS.empty(), exportButtonS.node());
+          exportButtonS
+            .on('click', function (buttonElt /*, i, g*/) {
+              console.log("Export", flowName, this);
+              let flow = oa.flows[flowName];
+              // output flow name and data to div.pathDataTable
+              flow.ExportDataToDiv("div.ExportFlowData");
+            });
         });
     });
 };
@@ -1741,7 +1757,7 @@ export default Ember.Component.extend({
     /** scaffoldTicks[apID] is a set of y locations, relative to the y axis of apID, of horizontal tick marks.
      * General purpose; first use is for scaffold edges.
      */
-    let scaffoldTicks = {};
+    let scaffoldTicks =  oa.scaffoldTicks || (oa.scaffoldTicks = {});
     if (use_path_colour_scale)
     {
       let path_colour_domain;
@@ -2755,6 +2771,21 @@ export default Ember.Component.extend({
         m1 = z[a1.apName][marker1];
         console.log(marker0, marker1, a0.mapName, a0.apName, a1.mapName, a1.apName, m0.location, m1.location, direction, agName);
       }
+    }
+    function mmaa2text(mmaa)
+    {
+      let s = "";
+      if ((mmaa === undefined) || (typeof mmaa == "string") || (mmaa.length === undefined))
+        s += mmaa;
+      else
+      {
+        let     [marker0, marker1, a0, a1, direction, agName] = mmaa,
+        z = oa.z,
+        m0 = z[a0.apName][marker0],
+        m1 = z[a1.apName][marker1];
+        s += marker0 + ", " + marker1 + ", " + a0.mapName + ", " + a0.apName + ", " + a1.mapName + ", " + a1.apName + ", " + m0.location + ", " + m1.location + ", " + direction + ", " + agName;
+      }
+      return s;
     }
 
     let adjAPs;
@@ -4706,7 +4737,7 @@ export default Ember.Component.extend({
 
     };
     flows_showControls(flowButtonsSel);
-    configurejQueryTooltip(flowButtonsSel);
+    configurejQueryTooltip(oa, flowButtonsSel);
     setupToggleModePublish();
     setupVariousControls();
 
@@ -4755,9 +4786,20 @@ export default Ember.Component.extend({
       return val;
     }
 
-  },
+    Flow.prototype.ExportDataToDiv = function (eltSel)
+    {
+      let elts = Ember.$(eltSel), elt = elts[0];
+      // or for text : elt.append()
+      elt.innerHTML =
+        "<div><h5>" + this.name + "</h5> : " + this.pathData.length + "</div>\n";
+      this.pathData.forEach(function (mmaa) {
+        let s = "<div>" + mmaa2text(mmaa) + "</div>\n";
+        elt.insertAdjacentHTML('beforeend', s);
+      });
+    };
 
 
+  },   // draw()
 
 
   didInsertElement() {
