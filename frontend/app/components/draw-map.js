@@ -317,7 +317,7 @@ export default Ember.Component.extend({
     /** mapName (apName) of each chromosome, indexed by chr name. */
     let cmName = oa.cmName || (oa.cmName = {});
     /** AP id of each chromosome, indexed by AP name. */
-    let mapChr2AP = {};
+    let mapChr2AP = oa.mapChr2AP || (oa.mapChr2AP = {});
 
     /** Plan for layout of stacked axes.
 
@@ -568,7 +568,13 @@ export default Ember.Component.extend({
        * when the marker is not in a AP of an adjacent Stack.
        * Makes the marker location visible, because otherwise there is no path to indicate it.
        */
-      showAll = true;
+      showAll = true,
+    /** Show brushed markers, i.e. pass them to updatedSelectedMarkers().
+     * The purpse is to save processing time, so this condition does not disable
+     * the calls to updatedSelectedMarkers which are clearing the markers (but
+     * could do - factor the me.send('updatedSelectedMarkers', selectedMarkers);.
+     */
+    showSelectedMarkers = true;
 
     /** Alias groups : ag[agName] : [ marker ]    marker references AP and array of aliases */
     let ag = oa.ag || (oa.ag = {});
@@ -755,8 +761,13 @@ export default Ember.Component.extend({
       return Math.round((num + 0.00001) * 100) / 100;
     }
     /*------------------------------------------------------------------------*/
-    const trace_stack = 3;
-    const trace_alias = 1;
+    /** These trace variables follow this pattern : 0 means no trace;
+     * 1 means O(0) - constant size trace, i.e. just the array lengths, not the arrays.
+     * further increments will trace the whole arrays, i.e. O(N),
+     * and trace cross-products of arrays - O(N^2) e.g. trace the whole array for O(N) events.
+     */
+    const trace_stack = 1;
+    const trace_alias = 1;  // currently no trace at level 1.
     const trace_path = 1;
     const trace_path_colour = 0;
     /** enable trace of adjacency between axes, and stacks. */
@@ -1827,11 +1838,16 @@ export default Ember.Component.extend({
                 let col=markerNames[i].split(/[ \t]+/),
                 mapChrName = col[0], tickLocation = col[1];
                 let apName = mapChrName2AP(mapChrName);
-                if (scaffoldTicks[apName] === undefined)
-                  scaffoldTicks[apName] = new Set();
-                scaffoldTicks[apName].add(tickLocation);
+                if (apName === undefined)
+                  console.log("AP not found for :", markerNames[i], mapChr2AP);
+                else
+                {
+                  if (scaffoldTicks[apName] === undefined)
+                    scaffoldTicks[apName] = new Set();
+                  scaffoldTicks[apName].add(tickLocation);
+                }
               }
-              console.log("scaffoldTicks", scaffoldTicks);
+              console.log(scaffoldTicks);
               showTickLocations(scaffoldTicks, undefined);
             }
             else if (trace_path_colour > 2)
@@ -3567,7 +3583,8 @@ export default Ember.Component.extend({
             }
           });
         });
-        me.send('updatedSelectedMarkers', selectedMarkers);
+        if (showSelectedMarkers)
+          me.send('updatedSelectedMarkers', selectedMarkers);
 
         function markerNotSelected2(d)
         {
@@ -4609,6 +4626,17 @@ export default Ember.Component.extend({
       }
       );
     }
+    function setupToggleShowSelectedMarkers()
+    {
+      /* initial value of showSelectedMarkers is true, so .hbs has : checked="checked" */
+      setupToggle
+      ("checkbox-toggleShowSelectedMarkers",
+      function (checked) {
+        showSelectedMarkers = checked;
+        pathUpdate(undefined);
+      }
+      );
+    }
     /** The stroke -opacity and -width can be adjusted using these sliders.
      * In the first instance this is for the .manyPaths rule, but
      * it could be used to factor other rules (.faded, .strong), or they may have separate controls.
@@ -4633,6 +4661,7 @@ export default Ember.Component.extend({
     function setupVariousControls()
     {
       setupToggleShowAll();
+      setupToggleShowSelectedMarkers();
       setupPathOpacity();
       setupPathWidth();
     }
