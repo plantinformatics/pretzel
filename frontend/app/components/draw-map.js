@@ -2379,8 +2379,18 @@ export default Ember.Component.extend({
       let classSet = pathClasses(this, d), classSetText;
       if (classSet)
       {
-        console.log(this, d, classSet, classSetText);
-        classSetText = "<br />" + classSet;
+        if (typeof classSet == "string")
+        {
+          console.log(this, d, classSet, classSetText);
+          classSetText = "<br />" + classSet;
+        }
+        else if (classSet.size && classSet.size > 0)
+        {
+          classSet.forEach(function (className) {
+            console.log(className);
+            classSetText = "<br />" + className;
+          });
+        }
       }
 
       // console.log(d, markerNameOfData(d), sLine, pathMarkersHash);
@@ -3368,7 +3378,7 @@ export default Ember.Component.extend({
       {
         hoverExtraText += 
           "<div>" + markerAliasesText(d0, ma0) + "</div>" +
-          (ma1 ? 
+          (d1 && ma1 ? 
            "<div>" + markerAliasesText(d1, ma1) + "</div>" : "");
       }
       let d = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
