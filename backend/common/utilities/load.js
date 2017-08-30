@@ -24,6 +24,22 @@ exports.file = (filePath) => {
 }
 
 /**
+ * Reads in binary file
+ * @param {string} filePath - path to load the file
+ * @returns data
+ */
+exports.fileBinary = (filePath) => {
+  console.log(`reading file ${filePath}`)
+  return fs.readFileAsync(filePath, 'binary')
+  .then(function(buf) {
+    // console.log('file read')
+    // console.log(buf.length)
+    // console.log(buf)
+    return buf
+  })
+}
+
+/**
  * Unpack a geneticmap from gzip compression
  * @param {string} data - path to load the file
  * @returns data

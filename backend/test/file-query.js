@@ -2,6 +2,7 @@
 
 var assert = require('chai').assert;
 var superagent = require('superagent');
+var path = require('path');
 
 describe('Client File Relation Access', function() {
   var app, server, endpoint, smtp, database, parse
@@ -11,11 +12,11 @@ describe('Client File Relation Access', function() {
   var load, upload
 
   var filesGzip = [
-    // '../resources/90k_consensus.json.gz',
-    '../resources/NIAB_8wMAGIC.json.gz'
+    './test/fixtures/example_map1.json.gz',
+    './test/fixtures/example_map2.json.gz'
   ]
 
-    var files = [
+  var files = [
     // '../resources/90k_consensus.json.gz',
     './test/fixtures/example_map1.json'
   ]
@@ -140,19 +141,76 @@ describe('Client File Relation Access', function() {
       );
     });
   });
-
+  
   it(`should load json ${files[0]} into database`, function(done) {
-    load.fileJson(files[0])
+    load.fileBinary(files[0])
     .then(function(data) {
-      return upload.json(data, app.models)
-    })
-    .then(function(data) {
-      console.log('DONE JSON UPLOAD')
-      done()
+      var fileName = path.basename(files[0]);
+      var msg = {data : data, fileName: fileName};
+
+      superagent
+        .post(`${endpoint}/Geneticmaps/upload`)
+        .send(msg)
+        .set('Accept', 'application/json')
+        .set('Content-Type', 'application/json')
+        .set('Authorization', userToken)
+        .end(function(err, res) {
+          if (err) { return done(err); }
+          assert.equal(res.status, 200);
+          done();
+        }
+      );
     })
     .catch(function(err) {
       done(err);
+    });
+  });
+
+  it(`should load gzip ${filesGzip[1]} into database`, function(done) {
+    load.fileBinary(filesGzip[1])
+    .then(function(data) {
+      var fileName = path.basename(filesGzip[1]);
+      var msg = {data : data, fileName: fileName};
+
+      superagent
+        .post(`${endpoint}/Geneticmaps/upload`)
+        .send(msg)
+        .set('Accept', 'application/json')
+        .set('Content-Type', 'application/json')
+        .set('Authorization', userToken)
+        .end(function(err, res) {
+          if (err) { return done(err); }
+          assert.equal(res.status, 200);
+          done();
+        }
+      );
     })
+    .catch(function(err) {
+      done(err);
+    });
+  });
+
+  it(`should not load duplicate data into database`, function(done) {
+    load.fileBinary(filesGzip[0])
+    .then(function(data) {
+      var fileName = path.basename(filesGzip[0]);
+      var msg = {data : data, fileName: fileName};
+
+      superagent
+        .post(`${endpoint}/Geneticmaps/upload`)
+        .send(msg)
+        .set('Accept', 'application/json')
+        .set('Content-Type', 'application/json')
+        .set('Authorization', userToken)
+        .end(function(err, res) {
+          assert.equal(res.status, 500);
+          done();
+        }
+      );
+    })
+    .catch(function(err) {
+      done(err);
+    });
   });
 
   runs.forEach(function (run, idx) {
