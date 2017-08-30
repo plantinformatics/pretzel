@@ -567,7 +567,15 @@ export default Ember.Component.extend({
       for (k=oa.apIDs.length-1; (k>=0) && (oa.apIDs[k] != ap); k--) { }
       return k;
     }
-
+    /** Find apName in oa.apIDs, and remove it. */
+    function deleteAPfromapIDs(apName)
+    {
+      let k = apIDFind(apName);
+      if (k === -1)
+        console.log("deleteAPfromapIDs", "not found:", apName);
+      else
+        delete oa.apIDs[k];
+    }
 
     //creates a new Array instance from an array-like or iterable object.
     let d3Markers = Array.from(oa.d3MarkerSet);
@@ -1112,22 +1120,40 @@ export default Ember.Component.extend({
      * if this Stack is now empty, remove it from stacks[].
      * static
      * @param apName  name of AP to remove
-     * @return false if not found, otherwise it is removed
+     * @return undefined if not found, else -1, or stackID if the parent stack is also removed.
+     * -1 indicates that the Stacked was removed OK and its parent was not removed because it has other children.
      */
     Stack.removeStacked = function (apName)
     {
+      let result;
       console.log("removeStacked", apName);
       let ap = oa.aps[apName];
       if (ap === undefined)
+      {
         console.log("removeStacked", apName, "not in", aps);
+        result = undefined; // just for clarity. result is already undefined
+      }
       else
       {
         let stack = ap.stack;
-        stack.removeStacked1(apName);
+        result = stack.removeStacked1(apName);
+        if (result === undefined)
+          result = -1; // OK
       }
+      if (trace_stack)
+        console.log("removeStacked", apName, result);
+      return result;
     };
+    /** Remove the nominated AP (Stacked) from this Stack;
+     * if this Stack is now empty, remove it from stacks[].
+     *
+     * @param apName  name of AP to remove
+     * @return this.stackID if this is delete()-d, otherwise undefined
+     * @see Stack.removeStacked(), which calls this.
+     */
     Stack.prototype.removeStacked1 = function (apName)
     {
+      let result;
       let ap = oa.aps[apName],
       removedAp = this.remove(apName);
       if (removedAp === undefined)
@@ -1136,6 +1162,7 @@ export default Ember.Component.extend({
         delete oa.aps[apName]; */ // release memory
       if (this.empty())
       {
+        result = this.stackID;
         if (! this.delete())
         {
           console.log("removeStacked", this, "not found for delete");
@@ -1148,7 +1175,9 @@ export default Ember.Component.extend({
         let released = ap.portion;
         ap.portion = 1;
         this.releasePortion(released);
+        // result is already undefined
       }
+      return result;
     };
     /** Remove this Stack from stacks[].
      * @return false if not found, otherwise it is removed
@@ -1565,7 +1594,7 @@ export default Ember.Component.extend({
         function (a, index)
         {
           /** transition does not (yet) support .classed() */
-          let as = d3.selectAll(".ap#" + eltId(a.apName));
+          let as = svgContainer.selectAll(".ap#" + eltId(a.apName));
           as.classed("leftmost", stackClass == "leftmost");
           as.classed("rightmost", stackClass == "rightmost");
           as.classed("not_top", index > 0);
@@ -2308,15 +2337,43 @@ export default Ember.Component.extend({
     //  console.log("Delete");
     //}
 
-    /** remove g#apName;  pathUpdate
+    /** remove g#apName
      */
-    function removeAP(apName)
+    function removeAP(apName, t)
     {
-      let apS = svgContainer.selectAll("g.axis#" + axisEltId(apName));
+      let apS = svgContainer.select("g.ap#" + eltId(apName));
       console.log("removeAP", apName, apS.empty(), apS);
-      apS.data([]).exit().remove();
-      pathUpdate(undefined);
+      apS.remove();
     }
+    /** remove g.stack#id<stackID
+     */
+    function removeStack(stackID, t)
+    {
+      let stackS = svgContainer.select("g.stack#" + eltId(stackID));
+      console.log("removeStack", stackID, stackS.empty(), stackS);
+      stackS.remove();
+    }
+    /** remove AP, and if it was only child, the parent stack;  pathUpdate
+     * @param stackID undefined or id of stack to remove
+     */
+    function removeAPmaybeStack(apName, stackID)
+    {
+      let t = svgContainer.transition().duration(750);
+      removeAP(apName, t);
+      if (stackID != -1)
+      {
+        removeStack(stackID, t);
+
+        // copied from dragended().
+        /* let t =*/ stacksAdjust(); // could pass t in to stacksAdjust().
+        /* Only need redrawAdjacencies() for the stacks on either side of the removed stack. */
+        stacks.forEach(function (s) { s.redrawAdjacencies(); });
+      }
+
+      pathUpdate(t);
+    }
+
+
 
     //d3.selectAll(".foreground > g > g").selectAll("path")
     /* (Don, 2017Mar03) my reading of handleMouse{Over,Out}() is that they are
@@ -4614,8 +4671,9 @@ export default Ember.Component.extend({
           deleteButtonS
             .on('click', function (buttonElt /*, i, g*/) {
               console.log("delete", apName, this);
-              Stack.removeStacked(apName);
-              removeAP(apName);
+              let stackID = Stack.removeStacked(apName);
+              deleteAPfromapIDs(apName);
+              removeAPmaybeStack(apName, stackID);
             });
         });
     }
