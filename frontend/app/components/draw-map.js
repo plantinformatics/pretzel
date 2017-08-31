@@ -1167,6 +1167,8 @@ export default Ember.Component.extend({
         {
           console.log("removeStacked", this, "not found for delete");
         }
+        else if (trace_stack)
+          Stack.log();
       }
       else
       {
@@ -2823,7 +2825,10 @@ export default Ember.Component.extend({
       if (pu)
         for (let pi=0; pi<pu.length; pi++)
       {
-          let p = pu[pi]; console.log(p[0], p[1], p[2].mapName, p[3].mapName);
+          let p = pu[pi];
+          // log_mmaa() give more detail than this.
+          // console.log(p[0], p[1], p[2].mapName, p[3].mapName);
+          log_mmaa(p);
         }
     }
     function log_mmaa(mmaa)
@@ -4142,6 +4147,7 @@ export default Ember.Component.extend({
         // log_path_data(flow.g);
         // pa = g.selectAll("path").data(path)
         pa = p2.enter().append("path");
+        p2.exit().remove();
       }
       else
       {
