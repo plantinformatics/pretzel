@@ -12,6 +12,7 @@ export default Ember.Route.extend({
       // Instead : controller : mapsToViewChanged() .observes('mapsToView'),
       // does store.findRecord(chromosome) and delivers the data or promise via
       // dataReceived.
+      replace : true
     },
     chr: {
       refreshModel: true
