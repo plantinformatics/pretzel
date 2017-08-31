@@ -378,6 +378,47 @@ li.dropdown-submenu > ul.dropdown-menu {
     border-radius: 6px 0 6px 6px;
 }
 /* -------------------------------------------------------------------------- */
+div.drawing-controls > div.drawing
+{
+  margin-top: 0.5em;
+  margin-bottom: 1em;
+}
+.maps-aligned
+{
+    margin-right: 8em;
+}
+div.drawing-controls > div > a.dropdown-toggle,
+div.drawing-controls > div > a.dropdown-toggle:hover
+{
+  text-decoration-line: none;
+}
+div.drawing-controls > div.dropdown:hover > ul.dropdown-menu
+{
+  display: block;
+}
+div.drawing-controls > div > ul > li
+{
+  padding-left: 1em;
+  padding-right: 1em;
+}
+.vspace1 > div
+{
+    margin: 0.8em 0;
+}
+.bordered
+{
+    /* colour is based on the Draw-Map button colour, rgba(51, 122, 183, 0.2), with increased luminance and reduced opacity */
+    border: 5px solid hsla(208, 56%, 55%, 0.10);
+}
+.border-top-none
+{
+    border-top : 0px;
+}
+.control-panel
+{
+    padding: 1em;
+}
+/* -------------------------------------------------------------------------- */
 /** style the flow control buttons in  div.drawing-controls */
 div.drawing-controls > div.flowButtons > .flowButton
 {
@@ -443,6 +484,11 @@ svg > g.publishMode .btn
 }
 
 /* -------------------------------------------------------------------------- */
+#choose_path_colour_scale
+{
+  border-bottom: 0px;
+  border-right: 0px;
+}
 
 #choose_path_colour_scale > table > tr > th,
 #choose_path_colour_scale > table > tr > td
