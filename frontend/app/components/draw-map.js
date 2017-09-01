@@ -2522,7 +2522,7 @@ export default Ember.Component.extend({
            /** shiftRight moves right end of tick out of axis zone, so it can
             * receive hover events.
             */
-           const xOffset = 10, shiftRight=5;
+           const xOffset = 25, shiftRight=5;
            let ak = apName,
                sLine = lineHoriz(ak, tickY, xOffset, shiftRight);
            return sLine;
@@ -3226,7 +3226,7 @@ export default Ember.Component.extend({
     function markerLineS(ak, d, xOffset)
     {
       let akY = markerY_(ak, d);
-      let shiftRight = 5;
+      let shiftRight = 9;
       let o = oa.o;
       return line([[o[ak]-xOffset + shiftRight, akY],
                    [o[ak]+xOffset + shiftRight, akY]]);
