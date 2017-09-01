@@ -10,6 +10,32 @@ export default Ember.Controller.extend({
 	// console.log("updateSelectedMarkers in mapview controller", markers.length);
       this.set('selectedMarkers', markers);
     },
+
+    /**  remove mapName from this.get('mapsToView') and update URL
+     */
+    mapsToViewDelete : function(mapName)
+    {
+      let mtv = this.get('mapsToView');
+      console.log("controller/mapview", "mapsToViewDelete", mapName, mtv);
+      let di;
+      for (di = mtv.length; di >= 0; di--)
+      {
+        if (mtv[di] == mapName)
+        {
+          console.log("mapsToViewDelete", "found", mapName, "at", di, mtv.length);
+          break;
+        }
+      }
+      if (di >= 0)
+      {
+        mtv.removeAt(di, 1);
+        console.log("mapsToViewDelete", "deleted", mapName, "at", di, mtv.length, mtv);
+        console.log("mapsToViewDelete", "mapsToView:", this.get('mapsToView'));
+        let queryParams = this.get('queryParams');
+        console.log("queryParams", queryParams);
+        this.transitionToRoute({'queryParams': queryParams });
+      }
+    },
     toggleShowUnique: function() {
       console.log("controllers/mapview:toggleShowUnique()", this);
       this.set('isShowUnique', ! this.get('isShowUnique'));

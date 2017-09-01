@@ -188,6 +188,12 @@ export default Ember.Component.extend({
       this.sendAction('updatedStacks', stacksText);
     },
 
+    mapsToViewDelete : function(mapName)
+    {
+      console.log("controller/draw-map", "mapsToViewDelete", mapName);
+      this.sendAction('mapsToViewDelete', mapName);
+    },
+
     resizeView : function()
     {
       console.log("resizeView()");
@@ -4680,6 +4686,7 @@ export default Ember.Component.extend({
               let stackID = Stack.removeStacked(apName);
               deleteAPfromapIDs(apName);
               removeAPmaybeStack(apName, stackID);
+              me.send('mapsToViewDelete', apName);
             });
         });
     }
