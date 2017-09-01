@@ -2512,6 +2512,8 @@ export default Ember.Component.extend({
              pSE = pS.enter()
              .append("path")
             .attr("class", "horizTick");
+          pSE
+            .each(configureHorizTickHover);
          let pSM = pSE.merge(pS);
 
           /* update attr d in a transition if one was given.  */
@@ -2531,6 +2533,37 @@ export default Ember.Component.extend({
        }
       );
     }
+
+    /** Setup hover info text over scaffold horizTick-s.
+     * @see based on similar configureAPtitleMenu()
+     */
+    function  configureHorizTickHover(location)
+    {
+      console.log("configureHorizTickHover", location, this, this.outerHTML);
+      let node_ = this;
+      Ember.$(node_)
+        .popover({
+          trigger : "click hover",
+          sticky: true,
+          delay: {show: 200, hide: 3000},
+          container: 'div#holder',
+          placement : "auto right",
+          /* The popover placement is 65px too high (might depend on window size).
+           * As a simple fix, offset was tried with no apparent effect, possibly
+           * depends on a recent version.  An alternative would be to use a
+           * placement function.
+           * offset : "0 65px",
+           */
+          /* Could show location in content or title; better in content because
+           * when content is undefined a small content area is still displayed,
+           * whereas undefined title takes no visual space.
+           * title : location,
+           */
+           content : "" + location
+        });
+    }
+
+
     /*------------------------------------------------------------------------*/
 
 
