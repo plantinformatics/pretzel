@@ -385,7 +385,11 @@ div.drawing-controls > div.drawing
 }
 .maps-aligned
 {
-    margin-right: 8em;
+  margin-right: 8em;
+}
+div.drawing-controls > div > ul.dropdown-menu
+{
+  padding-right: 2em;
 }
 div.drawing-controls > div > a.dropdown-toggle,
 div.drawing-controls > div > a.dropdown-toggle:hover
@@ -398,50 +402,54 @@ div.drawing-controls > div.dropdown:hover > ul.dropdown-menu
 }
 div.drawing-controls > div > ul > li
 {
-  padding-left: 1em;
-  padding-right: 1em;
+  margin-left: 1em;
+}
+div.drawing-controls > div > ul > li > label
+{
+  max-width: 85%;
+  margin-right: 1em;
 }
 .vspace1 > div
 {
-    margin: 0.8em 0;
+  margin: 0.8em 0;
 }
 .bordered
 {
-    /* colour is based on the Draw-Map button colour, rgba(51, 122, 183, 0.2), with increased luminance and reduced opacity */
-    border: 5px solid hsla(208, 56%, 55%, 0.10);
+  /* colour is based on the Draw-Map button colour, rgba(51, 122, 183, 0.2), with increased luminance and reduced opacity */
+  border: 5px solid hsla(208, 56%, 55%, 0.10);
 }
 .border-top-none
 {
-    border-top : 0px;
+  border-top : 0px;
 }
 .control-panel
 {
-    padding: 1em;
+  padding: 1em;
 }
 /* -------------------------------------------------------------------------- */
 /** style the flow control buttons in  div.drawing-controls */
 div.drawing-controls > div.flowButtons > .flowButton
 {
-    float: left;
-    width: 35px;
-    height: 35px;
-    margin: 0px 5px;
+  float: left;
+  width: 35px;
+  height: 35px;
+  margin: 0px 5px;
 
-    border-radius: 16px;
-    border-width: 10px;
-    /* border-style: dashed; */
+  border-radius: 16px;
+  border-width: 10px;
+  /* border-style: dashed; */
 }
 div.drawing-controls > div.flowButtons > .flowButton.selected
 {
-    border-width: 8px;
-    /* border-style: solid; */
-    border-radius: 0px;
+  border-width: 8px;
+  /* border-style: solid; */
+  border-radius: 0px;
 }
 /* -------------------------------------------------------------------------- */
 /* style the flowButtons popover menu */
 div.drawing-controls > div.flowButtons > div.popover > button
 {
-    width: 100%;
+  width: 100%;
 }
 
 /* -------------------------------------------------------------------------- */
