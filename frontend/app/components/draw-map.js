@@ -2362,7 +2362,7 @@ export default Ember.Component.extend({
       stackS.remove();
     }
     /** remove AP, and if it was only child, the parent stack;  pathUpdate
-     * @param stackID undefined or id of stack to remove
+     * @param stackID -1 (result of .removeStacked) or id of stack to remove
      */
     function removeAPmaybeStack(apName, stackID)
     {
@@ -2376,6 +2376,14 @@ export default Ember.Component.extend({
         /* let t =*/ stacksAdjust(); // could pass t in to stacksAdjust().
         /* Only need redrawAdjacencies() for the stacks on either side of the removed stack. */
         stacks.forEach(function (s) { s.redrawAdjacencies(); });
+      }
+      else
+      {
+        let ap = oa.aps[apName],
+        stack = ap.stack;
+        console.log("removeAPmaybeStack", apName, stackID, ap, stack);
+        if (stack)
+          stack.redraw(t);
       }
 
       pathUpdate(t);
