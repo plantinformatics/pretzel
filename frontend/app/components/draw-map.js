@@ -1759,17 +1759,8 @@ export default Ember.Component.extend({
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
     //console.log(axis.scale(y[apIDs))
 
-    let t = stacksAdjust();
+    let t = stacksAdjust(true, undefined);
     xDropOutDistance_update();
-
-    // if this is used, then could factor it in to stacksAdjust().
-    // pathUpdate() uses flow.g, which is set after oa.foreground.
-    if (false && oa.foreground)
-    {
-      pathUpdate(t);
-      oa.stacks.forEach(function (s) { s.redrawAdjacencies(); });
-    }
-
 
     /** update ys[a.apName] for the given AP,
      * according the AP's current .portion.
@@ -2368,14 +2359,11 @@ export default Ember.Component.extend({
     {
       let t = svgContainer.transition().duration(750);
       removeAP(apName, t);
-      if (stackID != -1)
+      /** number of stacks is changing */
+      let changedNum = stackID != -1;
+      if (changedNum)
       {
         removeStack(stackID, t);
-
-        // copied from dragended().
-        /* let t =*/ stacksAdjust(); // could pass t in to stacksAdjust().
-        /* Only need redrawAdjacencies() for the stacks on either side of the removed stack. */
-        stacks.forEach(function (s) { s.redrawAdjacencies(); });
       }
       else
       {
@@ -2385,8 +2373,16 @@ export default Ember.Component.extend({
         if (stack)
           stack.redraw(t);
       }
-
-      pathUpdate(t);
+      /* Parts of stacksAdjust() are applicable to the 2 cases above : either a
+       * stack is removed, or a stack is non-empty after an AP is removed from
+       * it.  This is selected by changedNum.
+       *
+       * stacksAdjust() calls redrawAdjacencies() (when changedNum) for all
+       * stacks, but only need it for the stacks on either side of the removed
+       * stack.
+       */
+      stacksAdjust(changedNum, t);
+      showTickLocations(scaffoldTicks, t);
     }
 
 
@@ -2864,8 +2860,21 @@ export default Ember.Component.extend({
       }
       if (pu)
         console.log("collateStacks", " maN", d3.keys(oa.maN).length, ", pu", pu.length);
+      if (trace_path > 4)
+      {
+        for (let markerj in maN) {
+          let maNj = maN[markerj];
+          console.log("collateStacks1", markerj, maNj.length);
+          for (let i = 0; i < maNj.length; i++)
+          {
+            log_maamm(maNj[i]);
+          }
+        }
+      }
       if (trace_path > 3)
+      {
         pu_log(pu);
+      }
     }
     function pu_log(pu)
     {
@@ -2877,6 +2886,13 @@ export default Ember.Component.extend({
           // console.log(p[0], p[1], p[2].mapName, p[3].mapName);
           log_mmaa(p);
         }
+    }
+    /** log content of maN[markerName][i] */
+    function log_maamm(m)
+    {
+      let     [marker0, a0, a1, m0, m1] = m,
+      z = oa.z;
+      console.log(marker0, a0.mapName, a0.apName, a1.mapName, a1.apName, m0.location, m1.location);
     }
     function log_mmaa(mmaa)
     {
@@ -3522,6 +3538,8 @@ export default Ember.Component.extend({
         {
           console.log("patham()", d0, d1, cmName[a0].mapName, cmName[a1].mapName, a0, a1, z[a0][d0].location, d1 && z[a1][d1].location, sLine);
         }
+        else if (trace_path > 4)
+          console.log("patham()", d0, d1, cmName[a0] && cmName[a0].mapName, cmName[a1] && cmName[a1].mapName, a0, a1, z && z[a0] && z[a0][d0] && z[a0][d0].location, d1 && z && z[a1] && z[a1][d1] && z[a1][d1].location, sLine);          
         r = sLine;
         let z = oa.z;
         if (pathDataIsLine)
@@ -4177,8 +4195,11 @@ export default Ember.Component.extend({
         if (true)
         {
           let gg0 = gg._groups[0];
-          for (let gi=0; gi < gg0.length; gi++)
+          for (let gi=0; (gi < gg0.length) && (gi < 10); gi++)
+          {
             log_mmaa(gg0[gi].__data__);
+            console.log(gg0[gi]);
+          }
         }
       }
       gn = g.enter().append("g");
@@ -4194,12 +4215,24 @@ export default Ember.Component.extend({
         // log_path_data(flow.g);
         // pa = g.selectAll("path").data(path)
         pa = p2.enter().append("path");
-        p2.exit().remove();
+        let p2x = p2.exit();
+        if (! p2x.empty())
+        {
+          console.log("pathUpdate_", "p2x", p2x._groups[0]);
+          p2x.remove();
+        }
+
       }
       else
       {
         pa =
           gn.append("path");
+        let gx = g.exit();
+        if (! gx.empty())
+        {
+          console.log("pathUpdate_", "gx", gx._groups[0]);
+          gx.remove();
+        }
         if (! pathDataInG)
           g.selectAll("path").data(pathData);
       }
@@ -4586,13 +4619,27 @@ export default Ember.Component.extend({
       }
       Stack.verify();
     }
-    /** recalculate stacks X position and show via transition */
-    function stacksAdjust()
+    /** recalculate stacks X position and show via transition
+     * @param changedNum  true means the number of stacks has changed.
+     * @param t undefined or transition to use for apTransformO change
+     */
+    function stacksAdjust(changedNum, t)
     {
-      collateO();
+      if (changedNum)
+        collateO();
       collateStacks();
-      let t = d3.transition().duration(dragTransitionTime);
-      t.selectAll(".ap").attr("transform", Stack.prototype.apTransformO);
+      if (changedNum)
+      {
+        if (t === undefined)
+          t = d3.transition().duration(dragTransitionTime);
+        t.selectAll(".ap").attr("transform", Stack.prototype.apTransformO);
+        if (svgContainer)
+          oa.stacks.forEach(function (s) { s.redrawAdjacencies(); });
+      }
+      // pathUpdate() uses flow.g, which is set after oa.foreground.
+      if (oa.foreground)
+        pathUpdate(t);
+
       return t;
     }
     function dragended(/*d*/) {
@@ -4607,7 +4654,7 @@ export default Ember.Component.extend({
       
       let stacks = oa.stacks;
       stacks.sortLocation();
-      let t = stacksAdjust();
+      let t = stacksAdjust(false, undefined);
       // already done in xScale()
       // x.domain(apIDs).range(axisXRange);
       pathUpdate(t);
