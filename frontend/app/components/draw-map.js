@@ -1769,6 +1769,7 @@ export default Ember.Component.extend({
     function updateRange(a)
     {
       let ys = oa.ys;
+      // console.log("updateRange", a, a.apName, ys.length, ys[a.apName]);
       // if called before ys is set up, do nothing.
       if (ys && ys[a.apName])
       {
@@ -1929,6 +1930,8 @@ export default Ember.Component.extend({
         .extent([[-8,0],[8,myRange]])
         .on("end", brushended);
     });
+    /** when draw( , 'dataReceived'), pathUpdate() is not valid until ys is updated. */
+    let ysUpdated = true;
 
     let svgRoot;
     let newRender = (svgRoot = oa.svgRoot) === undefined;
@@ -4637,7 +4640,7 @@ export default Ember.Component.extend({
           oa.stacks.forEach(function (s) { s.redrawAdjacencies(); });
       }
       // pathUpdate() uses flow.g, which is set after oa.foreground.
-      if (oa.foreground)
+      if (oa.foreground && ysUpdated)
         pathUpdate(t);
 
       return t;
@@ -4654,15 +4657,15 @@ export default Ember.Component.extend({
       
       let stacks = oa.stacks;
       stacks.sortLocation();
-      let t = stacksAdjust(false, undefined);
+      let t = stacksAdjust(true, undefined);
       // already done in xScale()
       // x.domain(apIDs).range(axisXRange);
-      pathUpdate(t);
+      // stacksAdjust() calls redrawAdjacencies().  Also :
       /* redrawAdjacencies() is called from .redraw(), and is mostly updated
        * during dragged(), but the stacks on either side of the origin of the
        * drag can be missed, so simply recalc all here.
        */
-      stacks.forEach(function (s) { s.redrawAdjacencies(); });
+
       d3.select(this).classed("active", false);
       let svgContainer = oa.svgContainer;
       svgContainer.classed("axisDrag", false);
