@@ -2106,6 +2106,11 @@ export default Ember.Component.extend({
     let g = stackS.selectAll(".ap")
       .data(stack_apIDs)
       .enter().append("g");
+    if (trace_stack)
+    {
+      oa.stacks.forEach(function(s){console.log(s.apIDs());});
+      console.log("g.ap", g.enter().size(), g.exit().size(), stacks.length);
+    }
     let gt = newRender ? g :
       g.transition().duration(dragTransitionTime);
     gt
@@ -2127,7 +2132,7 @@ export default Ember.Component.extend({
      * on the DropTarget-s.  While dragging this is used to know the DropTarget
      * into which the cursor is dragged.
      */
-    let currentDropTarget /*= undefined*/;
+    // oa.currentDropTarget /*= undefined*/;
 
     function DropTarget() {
       let size = {
@@ -2216,7 +2221,7 @@ export default Ember.Component.extend({
 
       function storeDropTarget(apName, classList)
       {
-        currentDropTarget = {apName: apName, classList: classList};
+        oa.currentDropTarget = {apName: apName, classList: classList};
       }
 
       function dropTargetMouseOver(data, index, group){
@@ -2227,7 +2232,7 @@ export default Ember.Component.extend({
       function dropTargetMouseOut(d){
         console.log("dropTargetMouseOut", d);
         this.classList.remove("dragHover");
-        currentDropTarget = undefined;
+        oa.currentDropTarget = undefined;
       }
 
     }
@@ -3953,6 +3958,7 @@ export default Ember.Component.extend({
       let t;
       /** X distance from start of drag */
       let xDistance;
+      let currentDropTarget = oa.currentDropTarget;
       if (dragging++ > 0) { console.log("dragged drop"); return;}
       if (! oa.svgContainer.classed("dragTransition"))
       {
