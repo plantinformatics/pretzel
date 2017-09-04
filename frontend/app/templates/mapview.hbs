@@ -32,30 +32,12 @@
 <br/>
 <br/>
 
-Maps to align:
-
-<ul>
-{{#each selectedMaps as |chr|}}
-  <li>{{chr.map.name}} {{chr.name}} {{#link-to "mapview" (query-params mapsToView=chr.chrDeleteLink)}}Delete{{/link-to}}</li>
-{{/each}}
-</ul>
-<div class="drawing-controls">
-      {{input type="checkbox" checked=isShowUnique class="toggle"}}
-      <label {{action "toggleShowUnique" on="doubleClick"}}>toggleShowUnique</label>
-      {{input type="checkbox" checked=pathColourScale class="toggle"}}
-      <label {{action "togglePathColourScale" on="doubleClick"}}>togglePathColourScale</label>
-      {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
-      <label>toggleShowScaffoldMarkers</label>
-      {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
-      <label>toggleShowAsymmetricAliases</label>
-      <div class="flowButtons"></div>
-</div>
-
 {{#if hasData}}
   {{draw-map
     updatedSelectedMarkers='updateSelectedMarkers'
     data=model
     dataReceived=dataReceived
+    mapsToViewDelete='mapsToViewDelete'
     isShowUnique=isShowUnique
     pathColourScale=pathColourScale
     scaffolds=scaffolds
@@ -63,8 +45,54 @@ Maps to align:
     showScaffoldMarkers=showScaffoldMarkers
     showAsymmetricAliases=showAsymmetricAliases}}
 
+  <div class="bordered border-top-none control-panel" style="display: inline-block;">
 
-  {{numMarkers}} selected markers
+    <div class="pull-left maps-aligned">
+      Maps aligned :
+      <ul>
+	{{#each selectedMaps as |chr|}}
+	  <li>{{chr.map.name}} {{chr.name}}</li>
+	{{/each}}
+      </ul>
+    </div>
+
+    <div class="pull-left vspace1">
+      <div>
+	{{numMarkers}} selected markers
+      </div>
+
+      <div class="drawing-controls vspace1">
+	<div class="dropdown">
+	  <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+	    Display Toggles
+	    <b class="caret"></b>
+	  </a>
+	  <ul class="dropdown-menu">
+	    <li class="sub-menu">
+	      {{input type="checkbox" checked=isShowUnique class="toggle"}}
+	      <label {{action "toggleShowUnique" on="doubleClick"}}>toggleShowUnique</label>
+	    </li>
+	    <li class="sub-menu">
+	      {{input type="checkbox" checked=pathColourScale class="toggle"}}
+	      <label {{action "togglePathColourScale" on="doubleClick"}}>togglePathColourScale</label>
+	    </li>
+	    <li class="sub-menu">
+	      {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
+	      <label>toggleShowScaffoldMarkers</label>
+	    </li>
+	    <li class="sub-menu">
+	      {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
+	      <label>toggleShowAsymmetricAliases</label>
+	    </li>
+	  </ul>
+	</div>
+
+	<div class="flowButtons"></div>
+      </div>
+    </div>
+
+  </div>
+
 
   {{selected-markers data=selectedMarkers scaffolds=scaffolds scaffoldMarkers=scaffoldMarkers showScaffoldMarkers=showScaffoldMarkers}}
 

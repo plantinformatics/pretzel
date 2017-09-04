@@ -1,4 +1,4 @@
-<div class="pull-left" >
+<div class="pull-left bordered control-panel" >
   <div class="btn-group space-between">
     <button {{action "clearScaffoldColours"}}>Clear Scaffold Colours</button>
     <button {{action "flipRegion"}}>Flip region</button>
@@ -19,6 +19,14 @@
 	     checked="checked"
       />
       <label>Show All</label>
+    </div>
+    <div>
+      <input type="checkbox" 
+	     id="checkbox-toggleShowSelectedMarkers" 
+	     name="toggleShowSelectedMarkers" 
+	     checked="checked"
+      />
+      <label>List Selected Markers</label>
     </div>
   </div>
 
@@ -47,7 +55,7 @@
 </div>
 
 <div class="clearfix"></div>
-<div id="choose_path_colour_scale" class="clearfix"  data-toggle="buttons-checkbox" >
+<div id="choose_path_colour_scale" class="clearfix bordered border-top-none"  data-toggle="buttons-checkbox" >
   Colour according to input from colouredMarkers;
   (scaffoldName can be generalised as class name.)
   <table>
@@ -61,6 +69,10 @@
     <tr>
       <td><input type="radio" name="optradioPathColour" data-value="5"></td>
       <td>5</td><td>chromosomeName location-start and -end</td><td>interval id : chrName_startLoc_endLoc</td>
+    </tr>
+    <tr>
+      <td><input type="radio" name="optradioPathColour" data-value="6"></td>
+      <td></td><td>chromosomeName tick-location</td><td></td>
     </tr>
   </table>
 </div>
@@ -93,6 +105,7 @@
   class="colouredMarkers"
   type="text"}}
 
+<div class="ExportFlowData"></div>
 <div id='grid'></div>
 
 {{yield}}
