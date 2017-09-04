@@ -212,6 +212,7 @@ export default Ember.Component.extend({
     console.log("dataObserver", (this === sender), this, /*sender,*/ key /*, value, rev*/);
     let dataReceived = this.get('dataReceived'), newData;
     Ember.run.later(function () {
+      let trace_data;	// undefined
       if (dataReceived && (newData = dataReceived.get('content')))
         for (let ind=0; ind<newData.length; ind++)
     {
@@ -252,8 +253,11 @@ export default Ember.Component.extend({
                      ppc.get('map').get('name'),
                      ppc.get('name'));
 
-                     let ma = ppc.get('markers');
-                     ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
+		     if (trace_data)
+		     {
+                       let ma = ppc.get('markers');
+                       ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
+		     }
                       ch = ppc;
                     }
                     let rc = chrData(ch),
@@ -377,7 +381,7 @@ export default Ember.Component.extend({
     /// approx height of text block below graph which says 'n selected markers'
     selectedMarkersTextHeight = 14,
     /// dimensions of the graph border
-    graphDim = {w: w*0.6, h: h - 2 * dropTargetYMargin - apSelectionHeight - apNameHeight - selectedMarkersTextHeight},
+    graphDim = {w: w*0.9, h: h - 2 * dropTargetYMargin - apSelectionHeight - apNameHeight - selectedMarkersTextHeight},
     /// yRange is the axis length
     yRange = graphDim.h - 40,
     /** X Distance user is required to drag axis before it drops out of Stack.
@@ -1946,7 +1950,7 @@ export default Ember.Component.extend({
       oa.svgRoot = 
     svgRoot = d3.select('#holder').append('svg')
       .attr("viewBox", "0 0 " + graphDim.w + " " + graphDim.h)
-      .attr("preserveAspectRatio", "xMinYMin meet")
+      .attr("preserveAspectRatio", "none"/*"xMinYMin meet"*/)
       .attr('width', "100%" /*graphDim.w*/)
       .attr('height', graphDim.h /*"auto"*/);
       oa.svgContainer =
@@ -2077,13 +2081,21 @@ export default Ember.Component.extend({
     // Add a group element for each stack.
     // Stacks contain 1 or more APs.
     /** selection of stacks */
-    let stackS = svgContainer.selectAll(".stack")
-      .data(stacks)
+    let stackSd = svgContainer.selectAll(".stack")
+      .data(stacks),
+	stackS = stackSd
       .enter()
       .append("g");
+      if (trace_stack)
+      {
+	  console.log("append g.stack", stackS.size(), stackSd.exit().size());
+      }
+      /*
     let st = newRender ? stackS :
       stackS.transition().duration(dragTransitionTime);
     let stackS_ = st
+       */
+      stackS
       .attr("class", "stack")
       .attr("id", stackEltId);
 
