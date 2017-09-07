@@ -10,11 +10,17 @@ body.ember-application > div.ember-view > div.container
 
 svg {
   font-size: 14px;
+  /* this targets an intermittent issue whereby axes in a certain position are not drawn;
+   * dragging another stack to that position causes it to dissappear and the other axis to draw ok;
+   * slight changes to width cause other stacks to be not drawn.
+  */
+  width: 99%;
 }
 svg.verticalTitle
 {
   padding-top: 79px;
 }
+
 
 .active {
   stroke: #f93;
@@ -218,6 +224,21 @@ g.brush:hover > rect.handle {
   stroke: green;
   stroke-width : 2px;
 }
+
+path.syntenyEdge
+{
+  fill-opacity: 0.05;
+  fill: magenta;
+  stroke: purple;
+  stroke-dasharray: 8 4 8 20;
+}
+path.syntenyEdge.inverted
+{
+  fill: orangered;
+  stroke: orangered;
+  stroke-dasharray: 16 8 16 40;
+}
+
 
 /* Button */
 .btn { cursor: pointer; }
