@@ -31,11 +31,12 @@ my @curr;
 sub output($$)
 {
     my ($p, $l) = @_;
-    my $chrs = $$l[$c{"adj"}]; $chrs =~ s/([1-7][ABD])_([1-7][ABD])/CS\1\tCS\2/;
+    my $chrs = $$l[$c{"adj"}]; $chrs =~ s/([1-7][ABD])_([1-7][ABD])/CS\1:\1\tCS\2:\2/;
     print $chrs, "\t",	
 	$$p[$c{"gene0"}] . "_1", "\t", $$l[$c{"gene0"}] . "_1", "\t", 
 	$$p[$c{"gene1"}] . "_1", "\t", $$l[$c{"gene1"}] . "_1", "\t", 
-	$$l[$c{"nGenes"}], ",", 
+	$$l[$c{"sbID"}], "\t", 
+	$$l[$c{"nGenes"}], "\t", 
 	$$l[$c{"sign"}], ",", 
 	$$l[$c{"scaffold0"}], ",", 
 	$$l[$c{"scaffold1"}], "\n";
