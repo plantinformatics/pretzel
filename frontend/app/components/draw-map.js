@@ -243,9 +243,9 @@ export default Ember.Component.extend({
                 console.log(newChr);
                 {
                   let thisStore = me.get('store'), pc=thisStore.findRecord
-		    ('chromosome', m,
-		     { reload: true,
-		       adapterOptions:{ filter: {include: "markers" } }});
+                  ('chromosome', m,
+                   { reload: true,
+                     adapterOptions:{ filter: {include: "markers" } }});
                   pc.then(function (ch){
                     console.log(ch.get('name'));
                     if (true)
@@ -811,7 +811,7 @@ export default Ember.Component.extend({
     const trace_path_colour = 0;
     /** enable trace of adjacency between axes, and stacks. */
     const trace_adj = 1;
-    const trace_synteny = 1;
+    const trace_synteny = 2;
     const trace_gui = 0;
     /*------------------------------------------------------------------------*/
 
@@ -1833,6 +1833,7 @@ export default Ember.Component.extend({
      * synteny block display is physical maps / genes).
      */
     let syntenyBlocks =  oa.syntenyBlocks || (oa.syntenyBlocks = []);
+    if (oa.sbSizeThreshold == undefined)  oa.sbSizeThreshold = 20;      
     if (use_path_colour_scale)
     {
       let path_colour_domain;
@@ -1960,7 +1961,7 @@ export default Ember.Component.extend({
                     let m = cols[2 + 2*j + k];
                     if (oa.z[apName][m] === undefined)
                     {
-                      console.log(m, "not in", apName);
+                      console.log(m, "not in", apName, APid2Name(apName));
                       ok = false;
                     }
                   }
@@ -2688,6 +2689,11 @@ export default Ember.Component.extend({
      */
     function showSynteny(syntenyBlocks, t)
     {
+      /** indexes into the columns of syntenyBlocks[]
+       * 0,1 : chr0, chr1
+       * 2,3,4,5 : gene 1,2,3,4
+       */
+      const SB_ID = 6, SB_SIZE = 7;
       let sbS=svgContainer.selectAll("g.synteny")
         .data(["synteny"]), // datum could be used for class, etc
       sbE = sbS.enter()
@@ -2697,10 +2703,15 @@ export default Ember.Component.extend({
       if (trace_synteny)
         console.log("showSynteny", sbS.size(), sbE.size(), sbM.size(), sbM.node());
 
-      let adjSynteny = syntenyBlocks.filter(function (sb) {
+      function sbChrAreAdjacent(sb) {
         let a0 = sb[0], a1 = sb[1], adj = isAdjacent(a0, a1);
         return adj;
-      });
+      }
+      function sbSizeFilter(sb) {
+        return sb[SB_SIZE] > oa.sbSizeThreshold;
+      }
+      let adjSynteny = syntenyBlocks.filter(sbChrAreAdjacent)
+        .filter(sbSizeFilter);
 
       function blockLine (s) {
         let sLine = patham2(s[0], s[1], s.slice(2));
@@ -2745,7 +2756,7 @@ export default Ember.Component.extend({
           .attr("d", blockLine);
       pSX.remove();
       if (trace_synteny > 1)
-        console.log("showSynteny", syntenyBlocks.length, adjSynteny.length, pS.size(), pSE.size(), pSX.size(), pSM.size(), pSM.node());
+        console.log("showSynteny", syntenyBlocks.length, oa.sbSizeThreshold, adjSynteny.length, pS.size(), pSE.size(), pSX.size(), pSM.size(), pSM.node());
       if (trace_synteny > 2)
         console.log(pSM._groups[0]);
 
@@ -3238,14 +3249,14 @@ export default Ember.Component.extend({
           let za = oa.z[apName];
           let adjs = adjAPs[apName];
           if (adjs && adjs.length
-	      &&
+              &&
               (adjs = adjs.filter(function(apName1) {
               adjCount++;
               let a = getAliased(apName, apName1);
               if (!a) adjCountNew++;
                 return ! a; } ))
-	      &&
-	      adjs.length)
+              &&
+              adjs.length)
           {
             if (trace_adj > 1)
             {
@@ -4799,8 +4810,8 @@ export default Ember.Component.extend({
         gd.attr("class", function(d) {
           let scaffold, c,
           classes = pathClasses(this, d),
-							simpleClass;
-          if (simpleClass = (typeof(classes) !== "object"))
+          simpleClass;
+          if ((simpleClass = ((typeof(classes) != "object"))))
           {
             scaffold = classes;
           }
@@ -5116,6 +5127,11 @@ export default Ember.Component.extend({
     /** The stroke -opacity and -width can be adjusted using these sliders.
      * In the first instance this is for the .manyPaths rule, but
      * it could be used to factor other rules (.faded, .strong), or they may have separate controls.
+     * @param varName string : name of css variable to set the input value into,
+     * or otherwise a function to call with the input value.
+     * (this will be split into 2 functions with different signatures, the varName version calling the function version)
+     * @param factor  scale the input (integer) value down by factor.
+     * (perhaps change this to # decimal-digits, and display a value with decimal places)
      */
     function setupInputRange(inputId, varName, factor)
     {
@@ -5123,7 +5139,10 @@ export default Ember.Component.extend({
       input.on('input', function (event) {
         let value = input[0].value / factor;
         console.log(inputId, value, event.originalEvent, oa.svgRoot._groups[0][0]);
-        setCssVariable(varName, value);
+        if (typeof varName == "string")
+          setCssVariable(varName, value);
+        else
+          Ember.run.later(function () { varName(value); });
       });
     }
     function setupPathOpacity()
@@ -5134,12 +5153,30 @@ export default Ember.Component.extend({
     {
       setupInputRange("range-pathWidth", "--path-stroke-width", 100);
     }
+    function updateSbSizeThresh(value) {
+      /** goal : aim is ~50 steps from 0 to 1000, with an initial/default value of 20.
+       * base : x
+       * x^50 = 1000 => 50 log(x) = log(1000) => x = e ^ log(1000) / 50
+       * x = Math.pow(2.718, Math.log(1000) / 50) = 1.1481371748750222
+       *	initial/default value of slider : y
+       * x^y = 20 => y log(x) = log(20) => y = Math.log(20) / Math.log(1.148137) = 21.6861056
+       * round to 22
+       * so : in .hbs : id="range-sbSizeThreshold" :  min="0" max="50" value="22"
+       *  min value is 0, so -1 to get 0. */
+      oa.sbSizeThreshold=Math.pow(1.148137, value) - 1;
+      Ember.run.later( function () { showSynteny(syntenyBlocks, undefined); });
+    }
+    function setupSbSizeThresh()
+    {
+      setupInputRange("range-sbSizeThreshold", updateSbSizeThresh, 1);
+    }
     function setupVariousControls()
     {
       setupToggleShowAll();
       setupToggleShowSelectedMarkers();
       setupPathOpacity();
       setupPathWidth();
+      setupSbSizeThresh();
     }
 
     function flows_showControls (parentSelector)
