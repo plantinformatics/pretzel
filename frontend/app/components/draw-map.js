@@ -5151,7 +5151,16 @@ export default Ember.Component.extend({
       setupInputRange("range-pathWidth", "--path-stroke-width", 100);
     }
     function updateSbSizeThresh(value) {
-      oa.sbSizeThreshold=value;
+      /** goal : aim is ~50 steps from 0 to 1000, with an initial/default value of 20.
+       * base : x
+       * x^50 = 1000 => 50 log(x) = log(1000) => x = e ^ log(1000) / 50
+       * x = Math.pow(2.718, Math.log(1000) / 50) = 1.1481371748750222
+       *	initial/default value of slider : y
+       * x^y = 20 => y log(x) = log(20) => y = Math.log(20) / Math.log(1.148137) = 21.6861056
+       * round to 22
+       * so : in .hbs : id="range-sbSizeThreshold" :  min="0" max="50" value="22"
+       *  min value is 0, so -1 to get 0. */
+      oa.sbSizeThreshold=Math.pow(1.148137, value) - 1;
       Ember.run.later( function () { showSynteny(syntenyBlocks, undefined); });
     }
     function setupSbSizeThresh()
