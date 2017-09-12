@@ -1738,7 +1738,7 @@ export default Ember.Component.extend({
 
     let pathMarkers = oa.pathMarkers || (oa.pathMarkers = {}); //For tool tip
 
-    let selectedAps = [];
+    let selectedAps = oa.selectedAps || (oa.selectedAps = []);;
     let selectedMarkers = {};
     let brushedRegions = {};
 
@@ -4968,9 +4968,15 @@ export default Ember.Component.extend({
      * and input via text box
      */
     this.set('draw_flipRegion', function(markers) {
-      let brushedMap = selectedAps[0];
-      let zm = oa.z[brushedMap];
-
+      let brushedMap, zm,
+      selectedAps = oa.selectedAps;
+      if (selectedAps.length === 0)
+        console.log('draw_flipRegion', 'selectedAps is empty', selectedAps);
+      else if ((brushedMap = selectedAps[0]) === undefined)
+        console.log('draw_flipRegion', 'selectedAps[0] is undefined', selectedAps);
+      else if ((zm = oa.z[brushedMap]) === undefined)
+        console.log('draw_flipRegion', 'z[', brushedMap, '] is undefined', selectedAps, oa.z);
+      else
       if (markers.length)
       {
         /** the first and last markers have the minimum and maximum position
