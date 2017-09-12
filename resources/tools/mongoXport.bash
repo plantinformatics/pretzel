@@ -12,6 +12,28 @@
 
 #-------------------------------------------------------------------------------
 
+# Select documents out of a mongoexport using a pattern,
+# fold the output for further processing.
+# To prepare the output for re-import via mongoimport, pipe through: (tr -d '\n'; echo)
+#
+# Usage e.g. : 
+#   docHead "IRGSP 3"  < 2017Aug15 > IRGSP_3.fold
+#   docHead CS5B 2017Aug15 > CS5B.fold
+#
+# @param pattern	match the document name; this pattern is (currently) wrapped with \"\" in the regexp by this function
+# @param source file(s)	remaining params are used as source, if none then stdin is read
+#
+# @see docHead()
+function docFold()
+{
+    pattern="$1";
+    shift;
+    fgrep "\"$pattern\"" $* | sed "s/},/},\n/g"
+}
+
+#-------------------------------------------------------------------------------
+
+
 # Usage e.g. : 
 #
 # docHead "IRGSP 3" IRGSP_3 200 < 2017Aug15
@@ -35,3 +57,34 @@ function docHead()
     <$name sed "s/},/},\n/g" > $name.fold
     (head -$length $name.fold  | sed '$s/,$//' ; tail -1 $name.fold | sed  ' s/"aliases" : \[\] } //') > $name.json
 }
+
+#-------------------------------------------------------------------------------
+
+# Wrap chrSelect.pl, piped to mongoimport
+#
+# @see chrSelect.pl header comment re. param geneSelection :
+# Given a file with a list of gene names, select just those genese from $* or stdin.
+# The input is a valid mongodb export file, except that it is folded (sed
+# "s/},/},\n/g") e.g. by mongoXport.bash: docHead() or docFold().
+# The result of chrSelect.pl is formatted for input to mongoimport (join, remove
+# trailing comma, close braces and brackets)
+#
+# 
+# Usage e.g. : 
+# cd ~/tmp/x/data/; chrSelect bracket_TraesCS7 < ../CS7A.fold
+#
+# @param geneSelection	path name of file with a list of gene names, 1 per line, to select from the input
+# @param chrName	e.g. CS7A
+# @param source file(s)	remaining params are used as source, if none then stdin is read
+function chrSelect()
+{
+    geneSelection="$1";
+    shift;
+
+    perl -0pe  's/\n( "aliases")/\1/g' $*	\
+	|  $MMV/resources/tools/chrSelect.pl $geneSelection \
+	| ( sed '$,$s/,$//'  ; echo  ' ] } ], "__v" : 0 }' )	\
+	| tr '\n' ' '  | mongoimport --db test --collection geneticmaps
+}
+
+#-------------------------------------------------------------------------------
