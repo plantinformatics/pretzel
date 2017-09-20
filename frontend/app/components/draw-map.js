@@ -211,9 +211,10 @@ export default Ember.Component.extend({
     // avoid recursion caused by dataReceived.popObject() below
     console.log("dataObserver", (this === sender), this, /*sender,*/ key /*, value, rev*/);
     let dataReceived = this.get('dataReceived'), newData;
+    if (dataReceived)
     Ember.run.later(function () {
       let trace_data;	// undefined
-      if (dataReceived && (newData = dataReceived.get('content')))
+      if ((newData = dataReceived.get('content')))
         for (let ind=0; ind<newData.length; ind++)
     {
       let content = newData;
@@ -244,26 +245,40 @@ export default Ember.Component.extend({
                 {
                   let thisStore = me.get('store'), pc=thisStore.findRecord('chromosome', m, { reload: true });
                   pc.then(function (ch){
-                    console.log(ch.get('name'));
-                    if (true)
+                    let map, mapId, chrName = ch.get('name'), chr = ch.get('id'), markers, rc;
+                    console.log(chrName, chr);
+                    if (chrName && chr && (map = ch.get('map')) && (mapId = map.get('id'))
+                           && (markers = ch.get('markers')))
                     {
-                     let ppc=thisStore.peekRecord('chromosome', m);
-                     console.log
-                     (ppc._internalModel.id,
-                     ppc.get('map').get('name'),
-                     ppc.get('name'));
-
-                      if (trace_data)
-                      {
-                        let ma = ppc.get('markers');
-                        ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
-                      }
-                      ch = ppc;
+                      console.log("findRecord then", chrName, chr, map, mapId, markers);
                     }
-                    let rc = chrData(ch),
-                    chr = ch.get('map').get('id'),
+                    else
+                    {
+                      let ppc=thisStore.peekRecord('chromosome', m);
+                      if (ppc !== undefined)
+                      {
+                        console.log("after findRecord(chromosome, ", m, "), peekRecord() returned", ppc);
+                      }
+                      else
+                      {
+                        console.log
+                        (ppc._internalModel.id,
+                         ppc.get('map').get('name'),
+                         ppc.get('name'));
+
+                        if (trace_data)
+                        {
+                          let ma = ppc.get('markers');
+                          ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
+                        }
+                        ch = ppc;
+                        chr = ch.get('id');
+                        console.log("chr = ch.get(id)", chr);
+                      }
+                    }
+                    rc = chrData(ch);
                     /** Only 1 chr in hash, but use same structure as routes/mapview.js */
-                    retHash = {};
+                    let retHash = {};
                     retHash[chr] = rc;
                     me.draw(retHash, 'dataReceived');
                   });
@@ -311,7 +326,8 @@ export default Ember.Component.extend({
    * @param source undefined or 'dataReceived', indicating an added map.
    */
   draw: function(myData, source) {
-    console.log("draw()", myData, myData.length, source);
+    let myDataKeys = d3.keys(myData);
+    console.log("draw()", myData, myDataKeys.length, source);
 
     // Draw functionality goes here.
     let me = this;
@@ -337,9 +353,12 @@ export default Ember.Component.extend({
       delete myData.highlightMarker;
     }
 
-    if (source != 'dataReceived')
-    /// apIDs are <apName>_<chromosomeName>
-    oa.apIDs = d3.keys(myData);
+
+    /** apIDs are <apName>_<chromosomeName> */
+    if (source == 'dataReceived')
+      oa.apIDs = oa.apIDs.concat(myDataKeys);
+    else
+      oa.apIDs = myDataKeys;
     /** mapName (apName) of each chromosome, indexed by chr name. */
     let cmName = oa.cmName || (oa.cmName = {});
     /** AP id of each chromosome, indexed by AP name. */
@@ -584,7 +603,11 @@ export default Ember.Component.extend({
       if (k === -1)
         console.log("deleteAPfromapIDs", "not found:", apName);
       else
-        delete oa.apIDs[k];
+      {
+        console.log("deleteAPfromapIDs", apName, k, oa.apIDs);
+        let a = oa.apIDs.splice(k, 1);
+        console.log(oa.apIDs, "deleted:", a);
+      }
     }
 
     //creates a new Array instance from an array-like or iterable object.
@@ -1188,8 +1211,8 @@ export default Ember.Component.extend({
       removedAp = this.remove(apName);
       if (removedAp === undefined)
         console.log("removeStacked", apName);
-      /* else
-        delete oa.aps[apName]; */ // release memory
+      else
+        delete oa.aps[apName];
       if (this.empty())
       {
         result = this.stackID;
@@ -2450,8 +2473,9 @@ export default Ember.Component.extend({
     }
     /** remove AP, and if it was only child, the parent stack;  pathUpdate
      * @param stackID -1 (result of .removeStacked) or id of stack to remove
+     * @param stack refn to stack - if not being removed, redraw it
      */
-    function removeAPmaybeStack(apName, stackID)
+    function removeAPmaybeStack(apName, stackID, stack)
     {
       let t = svgContainer.transition().duration(750);
       removeAP(apName, t);
@@ -2463,9 +2487,7 @@ export default Ember.Component.extend({
       }
       else
       {
-        let ap = oa.aps[apName],
-        stack = ap.stack;
-        console.log("removeAPmaybeStack", apName, stackID, ap, stack);
+        console.log("removeAPmaybeStack", apName, stackID, stack);
         if (stack)
           stack.redraw(t);
       }
@@ -5061,9 +5083,11 @@ export default Ember.Component.extend({
           deleteButtonS
             .on('click', function (buttonElt /*, i, g*/) {
               console.log("delete", apName, this);
+              let ap = oa.aps[apName], stack = ap && ap.stack;
+              // aps[apName] is deleted by removeStacked1() 
               let stackID = Stack.removeStacked(apName);
               deleteAPfromapIDs(apName);
-              removeAPmaybeStack(apName, stackID);
+              removeAPmaybeStack(apName, stackID, stack);
               me.send('mapsToViewDelete', apName);
             });
         });
