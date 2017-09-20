@@ -18,11 +18,13 @@ export default DS.Model.extend({
   chrDeleteLink: Ember.computed('extraChrs', function() {
     let exChrs = this.get("extraChrs");
     let that = this;
+    // console.log("chrDeleteLink", this.get('name'), this.get('id'), exChrs);
     return exChrs.filter(function(chrid) { return chrid != that.get("id"); });
   }),
 
   chrLink: Ember.computed('extraChrs', function() {
     var retlist = this.get("extraChrs");
+    // console.log("chrLink", this.get('name'), this.get('id'), retlist);
     if (retlist == null) {
       return [this.get("id")];
     }

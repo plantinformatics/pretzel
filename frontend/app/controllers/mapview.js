@@ -31,10 +31,45 @@ export default Ember.Controller.extend({
         mtv.removeAt(di, 1);
         console.log("mapsToViewDelete", "deleted", mapName, "at", di, mtv.length, mtv);
         console.log("mapsToViewDelete", "mapsToView:", this.get('mapsToView'));
-        let queryParams = this.get('queryParams');
+        let queryParams = // this.get('queryParams');
+	        {'mapsToView' : mtv };
         console.log("queryParams", queryParams);
         this.transitionToRoute({'queryParams': queryParams });
       }
+    },
+    updateChrs : function(/*chrID*/) {
+      let availableChrs = this.get('availableChrs'),
+      availableMaps = this.get('availableMaps'),
+      mtv = this.get('mapsToView'),
+      extraChrs = availableChrs;
+      console.log("updateChrs", availableChrs, mtv); // , chrID
+      this.set('extraChrs', extraChrs);
+      // the above is draft replacement for the following.
+
+      // copied (with some excisions) from routes/mapview model(); this needs to be reorganised - probably to a controllers/chromosome.js
+      let selMaps = [];
+      let genmaps = this.get("availableMaps");
+      genmaps.forEach(function(map) {
+        let chrs = map.get('chromosomes');
+        chrs.forEach(function(chr) {
+          var exChrs = [];
+          chr.set('isSelected', false); // In case it has been de-selected.
+          if (mtv) {
+            for (var i=0; i < mtv.length; i++) {
+              if (chr.get('id') != mtv[i]) {
+                exChrs.push(mtv[i]);
+              }
+              else {
+                chr.set('isSelected', true);
+                selMaps.push(chr);
+              }
+            }
+          }
+          chr.set('extraChrs', exChrs);
+        });
+      });
+      this.set("selectedMaps", selMaps);
+
     },
     toggleShowUnique: function() {
       console.log("controllers/mapview:toggleShowUnique()", this);
@@ -94,6 +129,7 @@ export default Ember.Controller.extend({
           console.log(this);
       }
     }
-  }.observes('mapsToView')
+    this.send('updateChrs');
+  }.observes('mapsToView.length')
 
 });
