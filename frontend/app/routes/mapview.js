@@ -97,23 +97,18 @@ export default Ember.Route.extend({
     let promises = {};
 
     params.mapsToView.forEach(function(param) {
+      console.log("findRecord", param);
       promises[param] = that.get('store').findRecord('chromosome', param, { reload: true });
+      /* previous functionality was approx equiv to :
+       * afterChrPromise(promises[param]), but it put data for chr in retHash[chr]
+       * instead of rc, and returned retHash.
+       * An alternative to returning array of promises : use afterChrPromise(), but
+       * instead of call to receiveChr(), send via dataReceived:
+       * this.send('receivedChr', rc, c.get('name'));
+       */
     });
 
-    return Ember.RSVP.hash(promises).then(function(chrs) {
-      d3.keys(chrs).forEach(function(chr) {
-        let c = chrs[chr],
-        rc = retHash[chr] = {mapName : c.get('map').get('name'), chrName : c.get('name')};
-        let m = chrs[chr].get('markers');
-        m.forEach(function(marker) {
-          let markerName = marker.get('name');
-          let markerPosition = marker.get('position');
-          let markerAliases = marker.get('aliases');
-          retHash[chr][markerName] = {location: markerPosition, aliases: markerAliases};
-        });
-      });
-      return retHash;
-    });
+    return promises;
   }
 
 });

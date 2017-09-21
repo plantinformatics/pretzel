@@ -238,6 +238,8 @@ export default Ember.Component.extend({
             {
               if (oa.aps[m = mtv[im]])
                 console.log("mapsToView[", im, "] === ", m);
+              else if (oa.chrPromises && oa.chrPromises[m])
+                console.log("promise pending for", m);
               else
               {
                 newChr = mtv[im];
@@ -250,7 +252,7 @@ export default Ember.Component.extend({
                     if (chrName && chr && (map = ch.get('map')) && (mapId = map.get('id'))
                            && (markers = ch.get('markers')))
                     {
-                      console.log("findRecord then", chrName, chr, map, mapId, markers);
+                      console.log("findRecord then", chrName, chr, map.get('name'), mapId, markers.length);
                     }
                     else
                     {
@@ -323,16 +325,28 @@ export default Ember.Component.extend({
    * mapName is referred to as apName (AP - Axis Piece) for generality.
    *
    * @param myData hash indexed by AP names
-   * @param source undefined or 'dataReceived', indicating an added map.
+   * @param source 'didRender' or 'dataReceived' indicating an added map.
    */
   draw: function(myData, source) {
-    let myDataKeys = d3.keys(myData);
+    let chrPromises, myDataKeys;
+    if (source === 'didRender')
+    {
+      chrPromises = myData;
+      myData = {};
+    }
+    myDataKeys = d3.keys(myData);
     console.log("draw()", myData, myDataKeys.length, source);
 
     // Draw functionality goes here.
     let me = this;
 
     let oa = this.get('oa');
+
+    /* The draw() from didRender() has the model promise array in myData;
+     * not the draw() from dataObserver().
+     */
+    if (source === 'didRender')
+      oa.chrPromises = chrPromises; // used in dataObserver()
 
     /** Each stack contains 1 or more Axis Pieces (APs).
      * stacks are numbered from 0 at the left.
@@ -537,12 +551,40 @@ export default Ember.Component.extend({
     if (oa.d3MarkerSet === undefined)
       oa.d3MarkerSet = new Set();
 
-    d3.keys(myData).forEach(function (ap) {
+      if (source === 'didRender')
+        d3.keys(chrPromises).forEach(function (ap) {
         /** ap is chr name */
-        let c = myData[ap];
-      receiveChr(ap, c, source);
+        let c = chrPromises[ap];
+        afterChrPromise(c);
+        });
+      else
+        d3.keys(myData).forEach(function (ap) {
+        /** ap is chr name */
+      receiveChr(ap, myData[ap], source);
       });
- 
+    function afterChrPromise(p)
+    {
+      console.log("afterChrPromise setup");
+      // moved here from routes/mapview model(), placing data for chr in rc instead of retHash[chr]
+      p.then(function(c) {
+        let
+        rc = {mapName : c.get('map').get('name'), chrName : c.get('name')};
+        console.log("afterChrPromise", rc);
+        let m = c.get('markers');
+        m.forEach(function(marker) {
+          let markerName = marker.get('name');
+          let markerPosition = marker.get('position');
+          let markerAliases = marker.get('aliases');
+          rc[markerName] = {location: markerPosition, aliases: markerAliases};
+        });
+        receiveChr(c.get('id'), rc, 'dataReceived');
+        Ember.run.debounce(function () {
+          console.log("afterChrPromise then after receiveChr", oa.apIDs, oa.aps);
+          oa.stacks.log();
+          me.draw({}, 'dataReceived');
+        }, 800);
+      });
+    }
     function receiveChr(ap, c, source) {
       let z = oa.z, cmName = oa.cmName;
       if ((z[ap] === undefined) || (cmName[ap] === undefined))
@@ -1775,7 +1817,8 @@ export default Ember.Component.extend({
       console.log("collateO", oa.apIDs.length, oa.apIDs);
       oa.apIDs.forEach(function(d){
         let o = oa.o;
-        console.log(d, APid2Name(d), o[d], x(d));
+        if (trace_stack > 1)
+          console.log(d, APid2Name(d), o[d], x(d));
         o[d] = x(d);
         checkIsNumber(oa.o[d]);
         if (o[d] === undefined) { debugger; console.log(x(d)); }
@@ -2219,6 +2262,7 @@ export default Ember.Component.extend({
       .enter().append("g");
     if (trace_stack)
     {
+      if (trace_stack > 1)
       oa.stacks.forEach(function(s){console.log(s.apIDs());});
       console.log("g.ap", g.enter().size(), g.exit().size(), stacks.length);
     }
@@ -5313,7 +5357,7 @@ export default Ember.Component.extend({
     // draw each time.
     //
     let data = this.get('data');
-    this.draw(data);
+    this.draw(data, 'didRender');
   },
 
   resize() {
