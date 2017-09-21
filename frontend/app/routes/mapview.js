@@ -38,12 +38,32 @@ export default Ember.Route.extend(AuthenticatedRouteMixin, {
     return value;
   },
 
+  /** chr.extraChrs (aka exChrs) is the list of chrs which are in params.mapsToView
+   * other than this chr.
+   * Used in :
+   *  chrDeleteLink():  extraChrs - this chr
+   *  chrLink():        extraChrs + this chr
+   *
+   * Suggested changes: the filter in chrDeleteLink makes it unnecessary for
+   * each chr having its own copy of extraChrs, instead simply use
+   * params.mapsToView, or a hash computed from mapsToView which would make
+   * it easier to filter out this chr.
+   * Currently the filter is not needed, because this chr is excluded from
+   * extraChrs by in the model() below.
+   *
+   * selectedMaps[] is almost a copy of params.mapsToView[], except that maps in
+   * params which are not chrs in API result are filtered out, i.e.
+   * store .findAll('geneticmap') .forEach() .get('chromosomes')
+   */
+
   model(params) {
 
     // Get all available maps.
     let selMaps = [];
     let that = this;
     let retHash = {};
+    /** collation of all chrs of all maps.  value is currently true, could be a refn to parent map. */
+    let availableChrs = {}; // or new Set();
     if (params.highlightMarker)
       retHash.highlightMarker = params.highlightMarker;
     let seenChrs = new Set();
@@ -57,10 +77,12 @@ export default Ember.Route.extend(AuthenticatedRouteMixin, {
     )
     .then(function(genmaps) {
       that.controllerFor("mapview").set("availableMaps", genmaps);
+      console.log("routes/mapview model()", params.mapsToView.length, params.mapsToView);
       genmaps.forEach(function(map) {
         let chrs = map.get('chromosomes');
         chrs.forEach(function(chr) {
           var exChrs = [];
+          availableChrs[chr.get('id')] = map.get('name'); // or true; // could be map or map.get('id');
           chr.set('isSelected', false); // In case it has been de-selected.
           // console.log(chr, map);
           chr.set('map', map);  // reference to parent map
@@ -79,11 +101,13 @@ export default Ember.Route.extend(AuthenticatedRouteMixin, {
           chr.set('extraChrs', exChrs);
         });
       });
+      that.controllerFor("mapview").set('availableChrs', availableChrs);
     });
 
     let promises = {};
 
     params.mapsToView.forEach(function(param) {
+      // console.log("findRecord", param);
       promises[param] = that.get('store').findRecord(
         'chromosome',
         param,
@@ -95,22 +119,16 @@ export default Ember.Route.extend(AuthenticatedRouteMixin, {
           }}
         }
       );
+      /* previous functionality was approx equiv to :
+       * afterChrPromise(promises[param]), but it put data for chr in retHash[chr]
+       * instead of rc, and returned retHash.
+       * An alternative to returning array of promises : use afterChrPromise(), but
+       * instead of call to receiveChr(), send via dataReceived:
+       * this.send('receivedChr', rc, c.get('name'));
+       */
     });
 
-    return Ember.RSVP.hash(promises).then(function(chrs) {
-      d3.keys(chrs).forEach(function(chr) {
-        let c = chrs[chr],
-        rc = retHash[chr] = {mapName : c.get('map').get('name'), chrName : c.get('name')};
-        let m = chrs[chr].get('markers');
-        m.forEach(function(marker) {
-          let markerName = marker.get('name');
-          let markerPosition = marker.get('position');
-          let markerAliases = marker.get('aliases');
-          retHash[chr][markerName] = {location: markerPosition, aliases: markerAliases};
-        });
-      });
-      return retHash;
-    });
+    return promises;
   }
 
 });
