@@ -394,11 +394,16 @@ export default Ember.Component.extend({
     /// width in pixels of the axisHeaderText, which is
     /// 30 chars when the AP (chromosome) name contains the 24 hex char mongodb numeric id,
     /// e.g. 58a29c715a9b3a3d3242fe70_MyChr
-    let axisHeaderTextLen = 203.5;
+    let axisHeaderTextLen = 204; // 203.5, rounded up to a multiple of 2;
+    let divHolder=Ember.$('div#holder'),
+    holderWidth = divHolder.width();
     //margins, width and height (defined but not be used)
-    let margins = [10+14+1, 10, 10, 10],	// margins : top right bottom left
+    let margins = [20+14+1, 0, 0, 0], // 10, 10, 10],	// margins : top right bottom left
+
     marginIndex = {top:0, right:1, bottom:2, left:3},	// indices into margins[]; standard CSS sequence.
-    viewPort = {w: document.documentElement.clientWidth, h:document.documentElement.clientHeight},
+    /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
+    viewPort = {w: holderWidth, h:document.documentElement.clientHeight},
+
 
     /// small offset from axis end so it can be visually distinguished.
     dropTargetYMargin = 10,
@@ -1606,6 +1611,7 @@ export default Ember.Component.extend({
       if (xVal === undefined)
         xVal = oa.o[this.apName];
       checkIsNumber(xVal);
+      xVal = Math.round(xVal);
       let transform =
         [
           "translate(" + xVal, yOffsetText, ")",
@@ -1734,6 +1740,7 @@ export default Ember.Component.extend({
       let scale = this.portion,
       scaleText = Number.isNaN(scale) || (scale === 1) ? "" : " scale(1," + scale + ")";
       let xVal = checkIsNumber(oa.o[this.apName]);
+      xVal = Math.round(xVal);
       let transform =
         [
           " translate(" + xVal, yOffsetText, ")",
