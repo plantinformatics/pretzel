@@ -2299,14 +2299,14 @@ export default Ember.Component.extend({
     function DropTarget() {
       let size = {
         /** Avoid overlap, assuming about 5-7 stacks. */
-        w : Math.min(axisHeaderTextLen, viewPort.w/15),
+        w : Math.round(Math.min(axisHeaderTextLen, viewPort.w/15)),
         // height of dropTarget at the end of an axis
         h : Math.min(80, viewPort.h/10),
         // height of dropTarget covering the adjacent ends of two stacked axes
         h2 : Math.min(80, viewPort.h/10) * 2 /* + axis gap */
       },
       posn = {
-        X : size.w/2,
+        X : Math.round(size.w/2),
         Y : /*YMargin*/10 + size.h
       },
       /** top and bottom edges relative to the AP's transform. bottom depends
