@@ -6,6 +6,17 @@ console.log("controllers/mapview.js");
 export default Ember.Controller.extend({
 
   actions: {
+    // layout configuration
+    setVisibility: function(side) {
+      console.log("setVisibility", side);
+      let visibility = this.get(`layout.${side}.visible`)
+      this.set(`layout.${side}.visible`, !visibility);
+    },
+    setTab: function(side, tab) {
+      console.log("setTab", side, tab);
+      this.set(`layout${side}.tab`, tab);
+    },
+
     updateSelectedMarkers: function(markers) {
 	// console.log("updateSelectedMarkers in mapview controller", markers.length);
       this.set('selectedMarkers', markers);
@@ -46,6 +57,17 @@ export default Ember.Controller.extend({
       this.set('pathColourScale', ! this.get('pathColourScale'));
     }
     , pathColourScale: true
+  },
+
+  layout: {
+    'left': {
+      'visible': true,
+      'tab': 'view'
+    },
+    'right': {
+      'visible': true,
+      'tab': 'selection'
+    }
   },
 
   queryParams: ['mapsToView'],
