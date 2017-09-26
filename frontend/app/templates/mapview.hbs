@@ -1,101 +1,149 @@
-<div class="btn-group">
-  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-    Add map
-    <span class="caret"></span>
-  </button>
-  <ul class="dropdown-menu multi-level" role="menu" aria-labelledby="dropdownMenu">
-  {{#each availableMaps as |mymap|}}
-  <li class="dropdown-submenu">
-    <a tabindex="-1" href="#">{{mymap.name}}</a>
-    <ul class="dropdown-menu">
-    {{#each mymap.chromosomes as |chr|}}
-      {{#if chr.isSelected}}
-      <li class="disabled">
-        {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
-          {{chr.name}}
-        {{/link-to}}
-      </li>
-      {{else}}
-      <li class="enabled">
-        {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
-          {{chr.name}}
-        {{/link-to}}
-      </li>
-      {{/if}}
-    {{/each}}
-    </ul>
-  </li>
-  {{/each}}
-  </ul>
-</div>
 
-<br/>
-<br/>
+{{!-- <br/>
+<br/> --}}
 
-{{#if hasData}}
-  {{draw-map
-    updatedSelectedMarkers='updateSelectedMarkers'
-    data=model
-    dataReceived=dataReceived
-    mapsToViewDelete='mapsToViewDelete'
-    isShowUnique=isShowUnique
-    pathColourScale=pathColourScale
-    scaffolds=scaffolds
-    scaffoldMarkers=scaffoldMarkers
-    showScaffoldMarkers=showScaffoldMarkers
-    showAsymmetricAliases=showAsymmetricAliases}}
+{{!-- {{#if hasData}} --}}
+  <div class="row">
+    {{!-- <div class="btn-group-vertical" role="group" aria-label="...">
+      <button type="button" class="btn btn-default">1</button>
+      <button type="button" class="btn btn-default">2</button>
+      <button type="button" class="btn btn-default">1</button>
+      <button type="button" class="btn btn-default">2</button>
+    </div> --}}
 
-  <div class="bordered border-top-none control-panel" style="display: inline-block;">
+    {{!-- <div class="{{if selectedMarkers 'col-md-8' 'col-md-12'}}"> --}}
+    <div class="col-md-3" style="height: 862px; overflow-y: auto;">
 
-    <div class="pull-left maps-aligned">
-      Maps aligned :
-      <ul>
-	{{#each selectedMaps as |chr|}}
-	  <li>{{chr.map.name}} {{chr.name}}</li>
-	{{/each}}
-      </ul>
-    </div>
 
-    <div class="pull-left vspace1">
-      <div>
-	{{numMarkers}} selected markers
+      <div class="btn-group">
+        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+          Add map
+          <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu multi-level" role="menu" aria-labelledby="dropdownMenu">
+        {{#each availableMaps as |mymap|}}
+        <li class="dropdown-submenu">
+          <a tabindex="-1" href="#">{{mymap.name}}</a>
+          <ul class="dropdown-menu">
+          {{#each mymap.chromosomes as |chr|}}
+            {{#if chr.isSelected}}
+              <li class="disabled">
+                {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
+                  {{chr.name}}
+                {{/link-to}}
+              </li>
+            {{else}}
+            <li class="enabled">
+              {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
+                {{chr.name}}
+              {{/link-to}}
+            </li>
+            {{/if}}
+          {{/each}}
+          </ul>
+        </li>
+        {{/each}}
+        </ul>
       </div>
 
-      <div class="drawing-controls vspace1">
-	<div class="dropdown">
-	  <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-	    Display Toggles
-	    <b class="caret"></b>
-	  </a>
-	  <ul class="dropdown-menu">
-	    <li class="sub-menu">
-	      {{input type="checkbox" checked=isShowUnique class="toggle"}}
-	      <label {{action "toggleShowUnique" on="doubleClick"}}>toggleShowUnique</label>
-	    </li>
-	    <li class="sub-menu">
-	      {{input type="checkbox" checked=pathColourScale class="toggle"}}
-	      <label {{action "togglePathColourScale" on="doubleClick"}}>togglePathColourScale</label>
-	    </li>
-	    <li class="sub-menu">
-	      {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
-	      <label>toggleShowScaffoldMarkers</label>
-	    </li>
-	    <li class="sub-menu">
-	      {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
-	      <label>toggleShowAsymmetricAliases</label>
-	    </li>
-	  </ul>
-	</div>
 
-	<div class="flowButtons"></div>
+
+
+
+
+      <div class="bordered border-top-none control-panel" style="display: inline-block;">
+
+        <div class="pull-left maps-aligned">
+          Maps aligned :
+          <ul>
+      {{#each selectedMaps as |chr|}}
+        <li>{{chr.map.name}} {{chr.name}}</li>
+      {{/each}}
+          </ul>
+        </div>
+
+        <div class="pull-left vspace1">
+          <div>
+      {{numMarkers}} selected markers
+          </div>
+
+          <div class="drawing-controls vspace1">
+      <div class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+          Display Toggles
+          <b class="caret"></b>
+        </a>
+        <ul class="dropdown-menu">
+          <li class="sub-menu">
+            {{input type="checkbox" checked=isShowUnique class="toggle"}}
+            <label {{action "toggleShowUnique" on="doubleClick"}}>toggleShowUnique</label>
+          </li>
+          <li class="sub-menu">
+            {{input type="checkbox" checked=pathColourScale class="toggle"}}
+            <label {{action "togglePathColourScale" on="doubleClick"}}>togglePathColourScale</label>
+          </li>
+          <li class="sub-menu">
+            {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
+            <label>toggleShowScaffoldMarkers</label>
+          </li>
+          <li class="sub-menu">
+            {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
+            <label>toggleShowAsymmetricAliases</label>
+          </li>
+        </ul>
       </div>
-    </div>
 
+      <div class="flowButtons"></div>
+          </div>
+        </div>
+
+      </div>
+
+
+
+
+      {{selected-markers
+        data=selectedMarkers
+        scaffolds=scaffolds
+        scaffoldMarkers=scaffoldMarkers
+        showScaffoldMarkers=showScaffoldMarkers}}
+
+
+
+
+
+
+    </div>
+    
+    
+    <div class="col-md-6">
+        {{draw-map
+          updatedSelectedMarkers='updateSelectedMarkers'
+          data=model
+          dataReceived=dataReceived
+          mapsToViewDelete='mapsToViewDelete'
+          isShowUnique=isShowUnique
+          pathColourScale=pathColourScale
+          scaffolds=scaffolds
+          scaffoldMarkers=scaffoldMarkers
+          showScaffoldMarkers=showScaffoldMarkers
+          showAsymmetricAliases=showAsymmetricAliases}}
+    </div>
+    {{#if selectedMarkers}}
+      <div class="col-md-3" style="height: 862px; overflow-y: auto;">
+        {{marker-detail
+          data=selectedMarkers}}
+      </div>
+    {{/if}}
   </div>
 
 
-  {{selected-markers data=selectedMarkers scaffolds=scaffolds scaffoldMarkers=scaffoldMarkers showScaffoldMarkers=showScaffoldMarkers}}
 
-{{/if}}
+
+
+
+
+
+{{!-- {{/if}} --}}
 
 {{outlet}}

@@ -1,0 +1,22 @@
+{{!-- app/components/marker-detail.js --}}
+aaaa
+
+{{#if selection}}
+YEAH
+{{/if}}
+
+{{selection.length}}
+
+{{!-- we will need to hook in to the selected chromosome--}}
+{{!-- could gather from dominant chromosome on markers --}}
+{{!-- {{content-editable
+  value=selection
+  placeholder="Markers to be coloured"
+  escape-press="putContent"
+  class="colouredMarkers"
+  type="text"}} --}}
+
+<div id='griddy'></div>
+
+{{yield}}
+
