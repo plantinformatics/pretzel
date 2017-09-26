@@ -177,7 +177,13 @@ div#scaffoldLegend > ul
 .row, .header {
  /* clear: left; */
  font-size: 12px; line-height: 18px; height: 18px;}
-.row:nth-child(odd) { background: rgba(0,0,0,0.05); }
+
+
+/* .row:nth-child(odd) { background: rgba(0,0,0,0.05); } */
+.rowstripe:nth-child(odd) {
+  background: rgba(0,0,0,0.05);
+}
+
 .header { font-weight: bold; }
 .cell { float: left; overflow: hidden; white-space: nowrap; width: 180px; height: 18px;}
 .col-0 { width: 100x; }
@@ -277,6 +283,10 @@ div.highlightMarker
     width: "auto";
     opacity:  0.9;
     display: "inline";
+}
+
+.navbar {
+  margin-bottom: 0px;
 }
 
 /* -------------------------------------------------------------------------- */
