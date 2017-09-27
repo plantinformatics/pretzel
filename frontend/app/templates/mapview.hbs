@@ -4,15 +4,24 @@
   {{#if layout.left.visible}}
     <div class="" style="width: 400px">
       <ul class="nav nav-tabs">
-        <li role="presentation" class="{{if (compare layout.left.tab '===' 'view') 'active'}}">
-          <a href="#" {{action "setTab" "left" "view" on='click'}}>View</a>
-        </li>
-        <li role="presentation" class="{{if (compare layout.left.tab '===' 'upload') 'active'}}">
-          <a href="#" {{action "setTab" "left" "upload" on='click'}}>Upload</a>
-        </li>
-        <li role="presentation" class="pull-right">
-          <a href="#" {{action "setVisibility" "left" on='click'}}>arrow</a>
-        </li>
+        {{#tab-button
+          side="left"
+          key="view"
+          state=layout.left.tab onClick="setTab"}}
+          View
+        {{/tab-button}}
+        {{#tab-button
+          side="left"
+          key="upload"
+          state=layout.left.tab onClick="setTab"}}
+          Upload
+        {{/tab-button}}
+        {{#tab-button
+          class="pull-right"
+          side="left"
+          onClick="setVisibility"}}
+          arrow
+        {{/tab-button}}
       </ul>
       <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
         {{#if (compare layout.left.tab '===' 'view')}}
@@ -133,15 +142,24 @@
   {{#if layout.right.visible}}
     <div class="" style="width: 400px">
       <ul class="nav nav-tabs">
-        <li role="presentation" class="{{if (compare layout.right.tab '===' 'selection') 'active'}}">
-          <a href="#" {{action "setTab" "right" "selection" on='click'}}>Selection <span class="badge">{{selectedMarkers.length}}</span></a>
-        </li>
-        <li role="presentation" class="{{if (compare layout.right.tab '===' 'detail') 'active'}}">
-          <a href="#" {{action "setTab" "right" "detail" on='click'}}>Detail</a>
-        </li>
-        <li role="presentation" class="pull-right">
-          <a href="#" {{action "setVisibility" "right" on='click'}}>arrow</a>
-        </li>
+        {{#tab-button
+          side="right"
+          key="selection"
+          state=layout.right.tab onClick="setTab"}}
+          Selection <span class="badge">{{selectedMarkers.length}}</span>
+        {{/tab-button}}
+        {{#tab-button
+          side="right"
+          key="detail"
+          state=layout.right.tab onClick="setTab"}}
+          Detail
+        {{/tab-button}}
+        {{#tab-button
+          class="pull-right"
+          side="right"
+          onClick="setVisibility"}}
+          arrow
+        {{/tab-button}}
       </ul>
 
       <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">

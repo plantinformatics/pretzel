@@ -8,12 +8,12 @@ export default Ember.Controller.extend({
   actions: {
     // layout configuration
     setVisibility: function(side) {
-      console.log("setVisibility", side);
+      // console.log("setVisibility", side);
       let visibility = this.get(`layout.${side}.visible`)
       this.set(`layout.${side}.visible`, !visibility);
     },
     setTab: function(side, tab) {
-      console.log("setTab", side, tab);
+      // console.log("setTab", side, tab);
       this.set(`layout.${side}.tab`, tab);
     },
 
