@@ -14,7 +14,7 @@ export default Ember.Controller.extend({
     },
     setTab: function(side, tab) {
       console.log("setTab", side, tab);
-      this.set(`layout${side}.tab`, tab);
+      this.set(`layout.${side}.tab`, tab);
     },
 
     updateSelectedMarkers: function(markers) {

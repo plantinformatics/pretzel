@@ -1,14 +1,13 @@
 {{!-- app/controllers/mapview.js --}}
 <div class="" style="display: flex">
   {{!-- <div class="{{if selectedMarkers 'col-md-8' 'col-md-12'}}"> --}}
-
   {{#if layout.left.visible}}
     <div class="" style="width: 400px">
       <ul class="nav nav-tabs">
-        <li role="presentation" class="{{if layout.left.tab 'view' 'active'}}">
+        <li role="presentation" class="{{if (compare layout.left.tab '===' 'view') 'active'}}">
           <a href="#" {{action "setTab" "left" "view" on='click'}}>View</a>
         </li>
-        <li role="presentation" class="{{if layout.left.tab 'upload' 'active'}}">
+        <li role="presentation" class="{{if (compare layout.left.tab '===' 'upload') 'active'}}">
           <a href="#" {{action "setTab" "left" "upload" on='click'}}>Upload</a>
         </li>
         <li role="presentation" class="pull-right">
@@ -16,6 +15,7 @@
         </li>
       </ul>
       <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
+        {{#if (compare layout.left.tab '===' 'view')}}
         <div style="">
           <div class="btn-group">
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -103,8 +103,15 @@
             showScaffoldMarkers=showScaffoldMarkers}}
 
         </div>
+        {{else if (compare layout.left.tab '===' 'upload')}}
+          {{upload-data-form}}
+        {{else if (compare layout.left.tab '===' 'bbb')}}
+          bbb
+        {{/if}}
       </div>
     </div>
+  {{else}}
+    <a href="#" {{action "setVisibility" "left" on='click'}}>arrow</a>
   {{/if}}
   
   <div class="" style="flex-grow: 1">
@@ -126,20 +133,24 @@
   {{#if layout.right.visible}}
     <div class="" style="width: 400px">
       <ul class="nav nav-tabs">
-        <li role="presentation" class="active">
-          <a href="#">Selection <span class="badge">{{selectedMarkers.length}}</span></a>
-          </li>
-        <li role="presentation"><a href="#">Detail</a></li>
+        <li role="presentation" class="{{if (compare layout.right.tab '===' 'selection') 'active'}}">
+          <a href="#" {{action "setTab" "right" "selection" on='click'}}>Selection <span class="badge">{{selectedMarkers.length}}</span></a>
+        </li>
+        <li role="presentation" class="{{if (compare layout.right.tab '===' 'detail') 'active'}}">
+          <a href="#" {{action "setTab" "right" "detail" on='click'}}>Detail</a>
+        </li>
         <li role="presentation" class="pull-right">
           <a href="#" {{action "setVisibility" "right" on='click'}}>arrow</a>
         </li>
       </ul>
 
       <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
-        <div style="">
+        {{#if (compare layout.right.tab '===' 'selection')}}
           {{marker-detail
             data=selectedMarkers}}
-        </div>
+        {{else if (compare layout.right.tab '===' 'detail')}}
+          Marker detail pane
+        {{/if}}
       </div>
     </div>
   {{else}}
