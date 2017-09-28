@@ -6,25 +6,37 @@ export default Service.extend({
   session: service('session'),
 
   changePassword(data) {
-    return this._ajax('Clients/change-password', 'POST', data, true)
+    return this._ajax('Clients/change-password', 'POST', JSON.stringify(data), true)
   },
 
   resetPassword(data, token) {
-    return this._ajax('Clients/reset-password', 'POST', data, token)
+    return this._ajax('Clients/reset-password', 'POST', JSON.stringify(data), token)
   },
 
   resetRequest(data) {
     console.log('resetRequest')
-    return this._ajax('Clients/reset', 'POST', data, false)
+    return this._ajax('Clients/reset', 'POST', JSON.stringify(data), false)
   },
 
   signupRequest(data) {
     console.log('signupRequest')
-    return this._ajax('Clients/', 'POST', data, false)
+    return this._ajax('Clients/', 'POST', JSON.stringify(data), false)
   },
 
   uploadData(data) {
-    return this._ajax('Geneticmaps/upload', 'POST', data, true)
+    return this._ajax('Geneticmaps/upload', 'POST', JSON.stringify(data), true)
+  },
+
+  tableUpload(data) {
+    return this._ajax('Geneticmaps/tableUpload', 'POST', JSON.stringify(data), true)
+  },
+
+  getChromosomes() {
+    return this._ajax('Geneticmaps', 'GET', {'filter[include]': 'chromosomes'}, true)
+  },
+
+  createGeneticmap(name) {
+    return this._ajax('Geneticmaps', 'POST', JSON.stringify({name: name}), true)
   },
 
   checkError(data, mapper) {
@@ -58,7 +70,7 @@ export default Service.extend({
       contentType: 'application/json'
     }
 
-    if (data) config.data = JSON.stringify(data)
+    if (data) config.data = data
 
     if (token == true) {
       let accessToken = this._accessToken()

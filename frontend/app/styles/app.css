@@ -525,3 +525,9 @@ svg > g.publishMode .btn
   padding: 0 1em;
 }
 /* -------------------------------------------------------------------------- */
+.actual-row
+{
+  width:100%;
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
