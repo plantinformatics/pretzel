@@ -1,19 +1,23 @@
 {{!-- app/components/marker-detail.js --}}
+<div class="col-sm-12">
+  <h4>Selection</h4>
+  {{#if selection}}
+  {{!-- Selected {{selection.length}} --}}
+  {{else}}
+    <div class="well">
+      Click and drag vertically {{app-icon name="resize-vertical"}} along a map {{app-icon name="globe"}} to select markers. 
+    </div>
+  {{/if}}
 
-{{#if selection}}
-Selected {{selection.length}}
-{{else}}
-No markers selected!
-{{/if}}
+  {{!-- {{content-editable
+    value=selection
+    placeholder="Markers to be coloured"
+    escape-press="putContent"
+    class="colouredMarkers"
+    type="text"}} --}}
 
-{{!-- {{content-editable
-  value=selection
-  placeholder="Markers to be coloured"
-  escape-press="putContent"
-  class="colouredMarkers"
-  type="text"}} --}}
+  <div id='griddy'></div>
 
-<div id='griddy'></div>
+  {{yield}}
 
-{{yield}}
-
+</div>

@@ -1,5 +1,5 @@
-<div class="col-sm-6">
-  <h1 class="title">Upload Data</h1>
+<div class="col-sm-12">
+  <h4>Upload Data</h4>
   <form {{action 'submitForm' on='submit'}}>
     <input type='file' accept=".json,.gz" onchange={{action 'upload'}}>
     <input type="submit" class="btn btn-info {{if isProcessing 'disabled'}}">

@@ -42,5 +42,9 @@ module.exports = function(defaults) {
   app.import('bower_components/d3/d3.js');
   app.import('vendor/js/divgrid/divgrid.js');
 
+  app.import('bower_components/bootstrap/dist/fonts/glyphicons-halflings-regular.woff', {
+    destDir: 'fonts'
+  });
+
   return app.toTree();
 };
