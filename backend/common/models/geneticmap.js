@@ -53,12 +53,72 @@ module.exports = function(Geneticmap) {
     }
   }
 
+  Geneticmap.tableUpload = function(data, cb) {
+    var models = this.app.models;
+    var chromosomes = {};
+    var genMap = null;
+    var chromosomes_by_name = [];
+
+    models.Geneticmap.findById(data.geneticmap_id, {include: "chromosomes"})
+    .then(function(map) {
+      if (map) {
+        genMap = map;
+        data.markers.forEach(function(marker) {
+          chromosomes[marker.chrom] = false;
+        });
+        var existing_chromosomes = [];
+        map.chromosomes().forEach(function(chrom) {
+          if (chrom.name in chromosomes) {
+            chromosomes[chrom.name] = true;
+            existing_chromosomes.push(chrom.id);
+            chromosomes_by_name[chrom.name] = chrom.id;
+          }
+        });
+        // delete old markers
+        return models.Marker.deleteAll({chromosomeId: {inq: existing_chromosomes}})
+      } else {
+        cb(Error("Geneticmap not found"));
+      }
+    })
+    .then(function(deleted_markers) {
+      var new_chromosomes = [];
+      Object.keys(chromosomes).forEach(function(name) {
+        if (chromosomes[name] === false) {
+          new_chromosomes.push({name: name, geneticmapId: genMap.id});
+        }
+      });
+      // create new chromosomes
+      return models.Chromosome.create(new_chromosomes);
+    })
+    .then(function(new_chromosomes) {
+      new_chromosomes.forEach(function(chrom) {
+        chromosomes_by_name[chrom.name] = chrom.id;
+      });
+      var array_markers = [];
+      data.markers.forEach(function(marker) {
+        array_markers.push({name: marker.name, position: marker.pos, chromosomeId: chromosomes_by_name[marker.chrom], aliases: []});
+      });
+      // create new markers
+      return models.Marker.create(array_markers);
+    })
+    .then(function(new_markers) {
+      cb(null, "Successfully uploaded " + new_markers.length + " markers");
+    });
+  }
+
   Geneticmap.remoteMethod('upload', {
         accepts: [
           {arg: 'msg', type: 'object', required: true, http: {source: 'body'}}
         ],
         returns: {arg: 'status', type: 'string'},
         description: "Perform a bulk upload of a genetic map with associated chromosomes and markers"
+  });
+  Geneticmap.remoteMethod('tableUpload', {
+    accepts: [
+      {arg: 'data', type: 'object', required: true, http: {source: 'body'}}
+    ],
+    returns: {arg: 'status', type: 'string'},
+    description: "Perform a bulk upload of a markers from tabular form"
   });
 };
 
