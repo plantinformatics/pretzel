@@ -57,40 +57,40 @@ module.exports = function(Geneticmap) {
     var models = this.app.models;
     var chromosomes = {};
     var genMap = null;
-    var duplicate_chromosomes = [];
+    var chromosomes_by_name = [];
 
     models.Geneticmap.findById(data.geneticmap_id, {include: "chromosomes"})
     .then(function(map) {
       if (map) {
         genMap = map;
         data.markers.forEach(function(marker) {
-          chromosomes[marker.chrom] = true;
-        })
+          chromosomes[marker.chrom] = false;
+        });
+        var existing_chromosomes = [];
         map.chromosomes().forEach(function(chrom) {
-          if (chromosomes[chrom.name]) {
-            duplicate_chromosomes.push(chrom.id);
+          if (chrom.name in chromosomes) {
+            chromosomes[chrom.name] = true;
+            existing_chromosomes.push(chrom.id);
+            chromosomes_by_name[chrom.name] = chrom.id;
           }
         });
         // delete old markers
-        return models.Marker.deleteAll({chromosomeId: {inq: duplicate_chromosomes}})
+        return models.Marker.deleteAll({chromosomeId: {inq: existing_chromosomes}})
       } else {
         cb(Error("Geneticmap not found"));
       }
     })
     .then(function(deleted_markers) {
-      // delete old chromosomes
-      return models.Chromosome.deleteAll({id: {inq: duplicate_chromosomes}})
-    })
-    .then(function(deleted_chromosomes) {
-      var array_chromosomes = [];
-      Object.keys(chromosomes).forEach(function(chrom_name) {
-        array_chromosomes.push({name: chrom_name, geneticmapId: genMap.id});
-      })
+      var new_chromosomes = [];
+      Object.keys(chromosomes).forEach(function(name) {
+        if (chromosomes[name] === false) {
+          new_chromosomes.push({name: name, geneticmapId: genMap.id});
+        }
+      });
       // create new chromosomes
-      return models.Chromosome.create(array_chromosomes);
+      return models.Chromosome.create(new_chromosomes);
     })
     .then(function(new_chromosomes) {
-      var chromosomes_by_name = {};
       new_chromosomes.forEach(function(chrom) {
         chromosomes_by_name[chrom.name] = chrom.id;
       });
