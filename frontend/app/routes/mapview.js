@@ -1,4 +1,7 @@
 import Ember from 'ember';
+import DS from 'ember-data';
+
+const { RSVP: { Promise } } = Ember;
 
 export default Ember.Route.extend({
   titleToken: 'MapView',
@@ -52,6 +55,9 @@ export default Ember.Route.extend({
    * selectedMaps[] is almost a copy of params.mapsToView[], except that maps in
    * params which are not chrs in API result are filtered out, i.e.
    * store .findAll('geneticmap') .forEach() .get('chromosomes')
+   *
+   * mapsDerived.selectedMaps is different to draw-map.js: oa.selectedAps,
+   * which is the brushed APs (maps).
    */
 
   model(params) {
@@ -59,20 +65,26 @@ export default Ember.Route.extend({
     // Get all available maps.
     let selMaps = [];
     let that = this;
-    let retHash = {};
+    let result;
     /** collation of all chrs of all maps.  value is currently true, could be a refn to parent map. */
     let availableChrs = {}; // or new Set();
-    if (params.highlightMarker)
-      retHash.highlightMarker = params.highlightMarker;
+    /** These values are calculated from the list of available maps when maps promise resolves.
+     availableChrs : availableChrs,
+     selectedMaps: selMaps;
+     */
+    let mapsDerivedValue = {availableChrs: availableChrs, selectedMaps: selMaps};
+
     let seenChrs = new Set();
     var maps = that.get('store').findAll('geneticmap').then(function(genmaps) {
-      that.controllerFor("mapview").set("availableMaps", genmaps);
+      // that.controllerFor("mapview").set("availableMaps", genmaps);
       console.log("routes/mapview model()", params.mapsToView.length, params.mapsToView);
+      mapsDerivedValue.availableMaps = genmaps.toArray();
+      console.log("genmaps.toArray()", mapsDerivedValue.availableMaps);
       genmaps.forEach(function(map) {
         let chrs = map.get('chromosomes');
         chrs.forEach(function(chr) {
           var exChrs = [];
-          availableChrs[chr.get('id')] = map.get('name'); // or true; // could be map or map.get('id');
+          mapsDerivedValue.availableChrs[chr.get('id')] = map.get('name'); // or true; // could be map or map.get('id');
           chr.set('isSelected', false); // In case it has been de-selected.
           // console.log(chr, map);
           chr.set('map', map);  // reference to parent map
@@ -84,31 +96,47 @@ export default Ember.Route.extend({
               else {
                 chr.set('isSelected', true);
                 selMaps.push(chr);
-                that.controllerFor("mapview").set("selectedMaps", selMaps);
               }
             }
           }
           chr.set('extraChrs', exChrs);
         });
       });
-      that.controllerFor("mapview").set('availableChrs', availableChrs);
-    });
-
+      return Promise.resolve(mapsDerivedValue);
+    },
+      function(reason) {
+        console.log("findAll geneticmap", reason);
+      }
+    );
     let promises = {};
 
     params.mapsToView.forEach(function(param) {
       console.log("findRecord", param);
       promises[param] = that.get('store').findRecord('chromosome', param, { reload: true });
       /* previous functionality was approx equiv to :
-       * afterChrPromise(promises[param]), but it put data for chr in retHash[chr]
-       * instead of rc, and returned retHash.
+       * afterChrPromise(promises[param]), but it put data for chr in result[chr]
+       * instead of rc, and returned result.
        * An alternative to returning array of promises : use afterChrPromise(), but
        * instead of call to receiveChr(), send via dataReceived:
        * this.send('receivedChr', rc, c.get('name'));
        */
     });
 
-    return promises;
+    maps.then(function (result) { console.log("maps result", result, maps._result); });
+
+    let ObjectPromiseProxy = Ember.ObjectProxy.extend(Ember.PromiseProxyMixin);
+    let a= ObjectPromiseProxy.create({promise: maps});
+    a.then(function (result) { console.log("maps result 2", result, "availableChrs", result.availableChrs, "availableMaps", result.availableMaps); });
+    result =
+      {chrPromises: promises,
+       mapsToView : params.mapsToView,
+       mapsDerived : ObjectPromiseProxy.create({promise: maps}),
+       mapsPromise : maps,
+       highlightMarker: params.highlightMarker
+      };
+    console.log("routes/mapview: model() result", result);
+    return result;
+
   }
 
 });

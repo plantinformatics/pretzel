@@ -282,7 +282,7 @@ export default Ember.Component.extend({
                     /** Only 1 chr in hash, but use same structure as routes/mapview.js */
                     let retHash = {};
                     retHash[chr] = rc;
-                    me.draw(retHash, 'dataReceived');
+                    me.draw(retHash, undefined, 'dataReceived');
                   });
                 }
               }
@@ -325,9 +325,10 @@ export default Ember.Component.extend({
    * mapName is referred to as apName (AP - Axis Piece) for generality.
    *
    * @param myData hash indexed by AP names
+   * @param availableMaps if not undefined then it is a promise; when this promise has resolved, chrPromises[*].get('map') is available
    * @param source 'didRender' or 'dataReceived' indicating an added map.
    */
-  draw: function(myData, source) {
+  draw: function(myData, availableMaps, source) {
     let chrPromises, myDataKeys;
     if (source === 'didRender')
     {
@@ -560,19 +561,30 @@ export default Ember.Component.extend({
         d3.keys(chrPromises).forEach(function (ap) {
         /** ap is chr name */
         let c = chrPromises[ap];
-        afterChrPromise(c);
+        afterChrPromise(c, availableMaps);
         });
       else
         d3.keys(myData).forEach(function (ap) {
         /** ap is chr name */
       receiveChr(ap, myData[ap], source);
       });
-    function afterChrPromise(p)
+    /** When data is received for a chromosome, draw it.
+     * @param p promise delivers data of a chromosome
+     * @param availableMaps is used to indicate that chr.map has been set.
+     * undefined means don't wait - already set; it is set by the resolution of
+     * the /geneticmap request, so waiting is only required for the initial display.
+     */
+    function afterChrPromise(p, availableMaps)
     {
-      console.log("afterChrPromise setup");
+      // console.log("afterChrPromise setup");
       // moved here from routes/mapview model(), placing data for chr in rc instead of retHash[chr]
-      p.then(function(c) {
+
+      let waitFor = [p];
+      if (availableMaps)
+        waitFor.push(availableMaps);
+      Ember.RSVP.all(waitFor).then(function(results) {
         let
+          c = results[0],
         rc = {mapName : c.get('map').get('name'), chrName : c.get('name')};
         console.log("afterChrPromise", rc);
         let m = c.get('markers');
@@ -583,12 +595,18 @@ export default Ember.Component.extend({
           rc[markerName] = {location: markerPosition, aliases: markerAliases};
         });
         receiveChr(c.get('id'), rc, 'dataReceived');
-        Ember.run.debounce(function () {
-          console.log("afterChrPromise then after receiveChr", oa.apIDs, oa.aps);
-          oa.stacks.log();
-          me.draw({}, 'dataReceived');
-        }, 800);
+        // using named function redraw() instead of anonymous function, so that debounce is effective.
+        Ember.run.debounce(redraw, 800);
+      })
+      .catch(function(reason){
+        console.log("afterChrPromise", reason);
       });
+    }
+    function redraw()
+    {
+      console.log("redraw, afterChrPromise then after receiveChr", oa.apIDs, oa.aps);
+      oa.stacks.log();
+      me.draw({}, undefined, 'dataReceived');
     }
     function receiveChr(ap, c, source) {
       let z = oa.z, cmName = oa.cmName;
@@ -5369,8 +5387,20 @@ export default Ember.Component.extend({
     // Called on re-render (eg: add another AP) so should call
     // draw each time.
     //
+    let me = this;
     let data = this.get('data');
-    this.draw(data, 'didRender');
+    let mapsDerived = this.get('mapsDerived');
+    let Model = me.get('Model'),
+    mp = Model.mapsPromise;
+    mp.then(function (result) { console.log("mp", result); });
+    mapsDerived.then(function (mapsDerivedValue) {
+      let availableMaps = me.get('availableMaps');
+      console.log("Model", Model, "mapsDerivedValue.availableMaps", mapsDerivedValue.availableMaps);
+      console.log("didRender", mapsDerivedValue);
+      let mpr=mapsDerivedValue; // mp._result;
+      console.log("mpr.availableChrs", mpr.availableChrs, "availableMaps", mpr.availableMaps, "selectedMaps", mpr.selectedMaps, "Model.mapsToView", Model.mapsToView);
+      me.draw(data, mapsDerived, 'didRender');
+    });
   },
 
   resize() {

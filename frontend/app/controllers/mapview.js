@@ -38,8 +38,14 @@ export default Ember.Controller.extend({
       }
     },
     updateChrs : function(/*chrID*/) {
-      let availableChrs = this.get('availableChrs'),
-      availableMaps = this.get('availableMaps'),
+      let mdv=this.get('model.mapsDerived.content');
+      if ((mdv === undefined) || (mdv === null))
+        console.log("updateChrs", this.get('model'));
+      else
+      {
+        let
+      availableChrs = mdv.availableChrs,
+      availableMaps = mdv.availableMaps,
       mtv = this.get('mapsToView'),
       extraChrs = availableChrs;
       console.log("updateChrs", availableChrs, mtv); // , chrID
@@ -48,7 +54,9 @@ export default Ember.Controller.extend({
 
       // copied (with some excisions) from routes/mapview model(); this needs to be reorganised - probably to a controllers/chromosome.js
       let selMaps = [];
-      let genmaps = this.get("availableMaps");
+      if (availableMaps) {
+      // availableMaps.then(function(genmaps) );
+      let genmaps = availableMaps;
       genmaps.forEach(function(map) {
         let chrs = map.get('chromosomes');
         chrs.forEach(function(chr) {
@@ -68,8 +76,9 @@ export default Ember.Controller.extend({
           chr.set('extraChrs', exChrs);
         });
       });
+      }
       this.set("selectedMaps", selMaps);
-
+      }
     },
     toggleShowUnique: function() {
       console.log("controllers/mapview:toggleShowUnique()", this);
@@ -86,9 +95,11 @@ export default Ember.Controller.extend({
   queryParams: ['mapsToView'],
   mapsToView: [],
 
+/*
   availableMaps: [],
 
   selectedMaps: [],
+*/
   selectedMarkers: [],
 
   dataReceived : Ember.ArrayProxy.create({ content: Ember.A() }),
@@ -106,8 +117,10 @@ export default Ember.Controller.extend({
     return this.selectedMarkers.length;
   }),
 
-  hasData: Ember.computed('selectedMaps', 'mapsToView', function() {
-    return this.selectedMaps.length > 0
+  hasData: Ember.computed('model.mapsDerived.content.selectedMaps', 'mapsToView', function() {
+    let selectedMaps = this.get('model.mapsDerived.content.selectedMaps');
+    console.log("hasData", ! selectedMaps || selectedMaps.length, this.mapsToView.length);
+    return (selectedMaps && selectedMaps.length > 0)
 			|| this.mapsToView.length > 0;
   }),
 
@@ -117,8 +130,15 @@ export default Ember.Controller.extend({
     {
       let m=mtv[i-1], im, exists;
       console.log("mapsToViewChanged", mtv.length, mtv, i, m, a, b, c);
-      console.log(this.get('selectedMaps').length, this.get('selectedMaps'), this.get('hasData'));
-      // console.log(this.get('availableMaps'.length), this.get('availableMaps'));
+
+      let mapsDerived = this.get('model.mapsDerived');
+      let me = this;
+      if (mapsDerived)
+      mapsDerived.then(function (value) {
+        console.log("mapsDerived isPending", mapsDerived.get('isPending'), mapsDerived.get('content'), me.get('hasData'));
+      });
+
+      // console.log(this.get('model.availableMaps'.length), this.get('model.availableMaps'));
       console.log(a.mapsToView.length, a.mapsToView);
       if (true)
       {
@@ -129,7 +149,19 @@ export default Ember.Controller.extend({
           console.log(this);
       }
     }
+    /* initial mapsToView via URL sets model; maps are added or deleted after
+     * that update the add-map and delete-map button sensitivities (extraChrs,
+     * chrLink(), chrDeleteLink()), via : */
+    if (this.get('model.mapsDerived.content'))
+    {
+      console.log('mapsToViewChanged() -> updateChrs()');
+      this.send('updateChrs');
+    }
+  }.observes('mapsToView.length'),
+
+  chrsChanged: function () {
     this.send('updateChrs');
-  }.observes('mapsToView.length')
+  }.observes('model.mapsDerived.content')
+
 
 });
