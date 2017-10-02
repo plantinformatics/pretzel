@@ -2,6 +2,7 @@ import Ember from 'ember';
 
 console.log("controllers/mapview.js");
 
+let trace_promise = 1;
 
 export default Ember.Controller.extend({
 
@@ -48,6 +49,7 @@ export default Ember.Controller.extend({
       availableMaps = mdv.availableMaps,
       mtv = this.get('mapsToView'),
       extraChrs = availableChrs;
+        if (trace_promise > 1)
       console.log("updateChrs", availableChrs, mtv); // , chrID
       this.set('extraChrs', extraChrs);
       // the above is draft replacement for the following.
@@ -119,6 +121,7 @@ export default Ember.Controller.extend({
 
   hasData: Ember.computed('model.mapsDerived.content.selectedMaps', 'mapsToView', function() {
     let selectedMaps = this.get('model.mapsDerived.content.selectedMaps');
+    if (trace_promise)
     console.log("hasData", ! selectedMaps || selectedMaps.length, this.mapsToView.length);
     return (selectedMaps && selectedMaps.length > 0)
 			|| this.mapsToView.length > 0;
@@ -133,12 +136,13 @@ export default Ember.Controller.extend({
 
       let mapsDerived = this.get('model.mapsDerived');
       let me = this;
-      if (mapsDerived)
+      if ((trace_promise > 1) && mapsDerived)
       mapsDerived.then(function (value) {
         console.log("mapsDerived isPending", mapsDerived.get('isPending'), mapsDerived.get('content'), me.get('hasData'));
       });
 
       // console.log(this.get('model.availableMaps'.length), this.get('model.availableMaps'));
+      if (trace_promise > 1)
       console.log(a.mapsToView.length, a.mapsToView);
       if (true)
       {
@@ -154,6 +158,7 @@ export default Ember.Controller.extend({
      * chrLink(), chrDeleteLink()), via : */
     if (this.get('model.mapsDerived.content'))
     {
+      if (trace_promise > 1)
       console.log('mapsToViewChanged() -> updateChrs()');
       this.send('updateChrs');
     }

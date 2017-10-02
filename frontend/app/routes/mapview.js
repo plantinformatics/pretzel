@@ -3,6 +3,8 @@ import DS from 'ember-data';
 
 const { RSVP: { Promise } } = Ember;
 
+let trace_promise = 1;
+
 export default Ember.Route.extend({
   titleToken: 'MapView',
 
@@ -79,6 +81,7 @@ export default Ember.Route.extend({
       // that.controllerFor("mapview").set("availableMaps", genmaps);
       console.log("routes/mapview model()", params.mapsToView.length, params.mapsToView);
       mapsDerivedValue.availableMaps = genmaps.toArray();
+      if (trace_promise > 1)
       console.log("genmaps.toArray()", mapsDerivedValue.availableMaps);
       genmaps.forEach(function(map) {
         let chrs = map.get('chromosomes');
@@ -111,6 +114,7 @@ export default Ember.Route.extend({
     let promises = {};
 
     params.mapsToView.forEach(function(param) {
+      if (trace_promise > 1)
       console.log("findRecord", param);
       promises[param] = that.get('store').findRecord('chromosome', param, { reload: true });
       /* previous functionality was approx equiv to :
@@ -122,11 +126,15 @@ export default Ember.Route.extend({
        */
     });
 
+    if (trace_promise > 1)
     maps.then(function (result) { console.log("maps result", result, maps._result); });
 
     let ObjectPromiseProxy = Ember.ObjectProxy.extend(Ember.PromiseProxyMixin);
+    if (trace_promise > 1)
+    {
     let a= ObjectPromiseProxy.create({promise: maps});
     a.then(function (result) { console.log("maps result 2", result, "availableChrs", result.availableChrs, "availableMaps", result.availableMaps); });
+    }
     result =
       {chrPromises: promises,
        mapsToView : params.mapsToView,

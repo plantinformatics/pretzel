@@ -56,7 +56,7 @@ export default Ember.Component.extend({
           {
             data: 'Position',
             type: 'numeric',
-            format: '0.000'
+            format: '0[.]0'
           }
         ],
         colHeaders: [

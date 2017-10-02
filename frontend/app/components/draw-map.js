@@ -21,6 +21,7 @@ import { chrData } from '../utils/utility-chromosome';
 /*global d3 */
 
 let trace_updatedStacks = true;
+let trace_promise = 1;
 
 let breakPointEnable = 1;
 function breakPoint()
@@ -604,8 +605,11 @@ export default Ember.Component.extend({
     }
     function redraw()
     {
+      if (trace_promise > 1)
+      {
       console.log("redraw, afterChrPromise then after receiveChr", oa.apIDs, oa.aps);
       oa.stacks.log();
+      }
       me.draw({}, undefined, 'dataReceived');
     }
     function receiveChr(ap, c, source) {
@@ -5390,15 +5394,23 @@ export default Ember.Component.extend({
     let me = this;
     let data = this.get('data');
     let mapsDerived = this.get('mapsDerived');
+    /** mapview.hbs passes Model=model to {{draw-map }}, just for devel trace -
+     * the other parameters provide all the required information. */
+    if (trace_promise > 1)
+    {
     let Model = me.get('Model'),
     mp = Model.mapsPromise;
     mp.then(function (result) { console.log("mp", result); });
+    }
     mapsDerived.then(function (mapsDerivedValue) {
+      if (trace_promise > 1)
+      {
       let availableMaps = me.get('availableMaps');
       console.log("Model", Model, "mapsDerivedValue.availableMaps", mapsDerivedValue.availableMaps);
       console.log("didRender", mapsDerivedValue);
       let mpr=mapsDerivedValue; // mp._result;
       console.log("mpr.availableChrs", mpr.availableChrs, "availableMaps", mpr.availableMaps, "selectedMaps", mpr.selectedMaps, "Model.mapsToView", Model.mapsToView);
+      }
       me.draw(data, mapsDerived, 'didRender');
     });
   },
