@@ -1,4 +1,4 @@
-{{#auth-form title="Reset Your Password" errorMessage=errorMessage}}
+{{#form/auth-base title="Reset Your Password" errorMessage=errorMessage}}
   {{#if isRegistered}}
     {{#elem-panel
       name="success"
@@ -25,4 +25,4 @@
       {{submit-button loading=isProcessing}}
     </form>
   {{/if}}
-{{/auth-form}}
+{{/form/auth-base}}

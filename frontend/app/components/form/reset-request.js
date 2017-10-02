@@ -1,4 +1,4 @@
-import BaseForm from './base-form';
+import BaseForm from './base';
 
 export default BaseForm.extend({
   authMethod: 'resetRequest',
