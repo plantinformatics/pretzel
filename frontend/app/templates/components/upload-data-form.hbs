@@ -2,30 +2,27 @@
   <h4>Upload Data</h4>
   {{#if errorMessage}}
     <br>
-    <div class="panel panel-danger">
-      <div class="panel-heading">Error</div>
-      <div class="panel-body">
-        {{errorMessage}}
-      </div>
-    </div>
+    {{#elem-panel
+      name="danger"
+      heading="Error"}}
+      {{errorMessage}}
+    {{/elem-panel}}
   {{/if}}
   {{#if successMessage}}
     <br>
-    <div class="panel panel-success">
-      <div class="panel-heading">Success</div>
-      <div class="panel-body">
-        {{successMessage}}
-      </div>
-    </div>
+    {{#elem-panel
+      name="success"
+      heading="Success"}}
+      {{successMessage}}
+    {{/elem-panel}}
   {{/if}}
   {{#if warningMessage}}
     <br>
-    <div class="panel panel-warning">
-      <div class="panel-heading">Warning</div>
-      <div class="panel-body">
-        {{warningMessage}}
-      </div>
-    </div>
+    {{#elem-panel
+      name="warning"
+      heading="Warning"}}
+      {{warningMessage}}
+    {{/elem-panel}}
   {{/if}}
 
   <div class="actual-row">

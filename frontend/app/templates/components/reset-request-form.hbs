@@ -1,11 +1,10 @@
 {{#auth-form title="Reset Your Password" errorMessage=errorMessage}}
   {{#if isRegistered}}
-    <div class="panel panel-success">
-      <div class="panel-heading">Success</div>
-      <div class="panel-body">
-        A password reset request has been submitted. You will receive an email shortly if the email address exists.
-      </div>
-    </div>
+    {{#elem-panel
+      name="success"
+      heading="Success"}}
+      A password reset request has been submitted. You will receive an email shortly if the email address exists.
+    {{/elem-panel}}
   {{else}}
     <form {{action 'submitForm' on='submit'}}>
       {{auth-input

@@ -8,19 +8,19 @@
           side="left"
           key="view"
           state=layout.left.tab onClick="setTab"}}
-          {{app-icon name="eye-open"}}
+          {{elem-icon name="eye-open"}}
         {{/tab-button}}
         {{#tab-button
           side="left"
           key="upload"
           state=layout.left.tab onClick="setTab"}}
-          {{app-icon name="cloud-upload"}}
+          {{elem-icon name="cloud-upload"}}
         {{/tab-button}}
         {{#tab-button
           class="pull-right"
           side="left"
           onClick="setVisibility"}}
-          {{app-icon name="remove"}}
+          {{elem-icon name="remove"}}
         {{/tab-button}}
       </ul>
       <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
@@ -115,7 +115,7 @@
                 showScaffoldMarkers=showScaffoldMarkers}}
             {{!-- {{else}}
               <div class="well">
-                Select maps {{app-icon name="globe"}} to populate the chart.
+                Select maps {{elem-icon name="globe"}} to populate the chart.
               </div>
             {{/if}} --}}
           </div>
@@ -129,7 +129,7 @@
     </div>
   {{else}}
     <button type="button" class="btn btn-default" {{action "setVisibility" "left" on='click'}}>
-      <a href="#" >{{app-icon name="chevron-right"}}</a>
+      <a href="#" >{{elem-icon name="chevron-right"}}</a>
     </button>
   {{/if}}
   
@@ -156,13 +156,13 @@
           side="right"
           key="selection"
           state=layout.right.tab onClick="setTab"}}
-          {{app-icon name="th-list"}} <span class="badge">{{selectedMarkers.length}}</span>
+          {{elem-icon name="th-list"}} <span class="badge">{{selectedMarkers.length}}</span>
         {{/tab-button}}
         {{#tab-button
           class="pull-right"
           side="right"
           onClick="setVisibility"}}
-          {{app-icon name="remove"}}
+          {{elem-icon name="remove"}}
         {{/tab-button}}
       </ul>
       <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
@@ -174,7 +174,7 @@
     </div>
   {{else}}
     <button type="button" class="btn btn-default" {{action "setVisibility" "right" on='click'}}>
-      <a href="#" >{{app-icon name="chevron-left"}}</a>
+      <a href="#" >{{elem-icon name="chevron-left"}}</a>
     </button> 
   {{/if}}
 </div>

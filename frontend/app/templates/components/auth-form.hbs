@@ -10,12 +10,11 @@
       {{yield}}
       {{#if errorMessage}}
         <br>
-        <div class="panel panel-danger">
-          <div class="panel-heading">Error</div>
-          <div class="panel-body">
-            {{errorMessage}}
-          </div>
-        </div>
+        {{#elem-panel
+          name="danger"
+          heading="Error"}}
+          {{errorMessage}}
+        {{/elem-panel}}
       {{/if}}
     </div>
   </div>
