@@ -40,6 +40,8 @@ module.exports = function(defaults) {
   app.import('bower_components/bootstrap/dist/css/bootstrap.css');
   app.import('bower_components/bootstrap/dist/js/bootstrap.min.js');
   app.import('bower_components/d3/d3.js');
+  app.import('bower_components/handsontable/dist/handsontable.full.min.js');
+  app.import('bower_components/handsontable/dist/handsontable.full.min.css');
   app.import('vendor/js/divgrid/divgrid.js');
 
   return app.toTree();

@@ -9,6 +9,7 @@
     "jquery-mousewheel": "^3.1.13",
     "antiscroll": "8dc9793150",
     "minimatch": "isaacs/minimatch#^3.0.4",
+    "handsontable": "^0.34.4",
     "d3": "^4.10.2"
   },
   "devDependencies": {
