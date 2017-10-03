@@ -2,7 +2,16 @@
 <!--<ul>
 <li>{{selectedMapset.name}}</li>
 </ul> -->
-<div class="resizer" style="float:right;"> &lt; &#8212; &gt; </div>
+
+  <div class="resizer" style="float:right;">
+    <!-- bootstrap has glyphicons included; icon sequence seems jumbled; would
+    use glyphicon-resize-horizontal but didn't find it, so compose from the
+    following three, which appear as right-arrow, vertical bar, left arrow -->
+    <span class="glyphicon glyphicon-download-alt"></span>
+    <span class="glyphicon glyphicon-scale"></span>
+    <span class="glyphicon glyphicon-upload"></span>
+ </div>
+
 </div>
 
 {{yield}}
