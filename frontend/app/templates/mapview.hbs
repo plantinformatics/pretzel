@@ -63,7 +63,7 @@ content: {{model.mapsDerived.availableMaps}}
     showScaffoldMarkers=showScaffoldMarkers
     showAsymmetricAliases=showAsymmetricAliases}}
 
-  <div class="bordered border-top-none control-panel" style="display: inline-block;">
+  <div class="bordered control-panel" style="display: inline-block;">
 
     <div class="pull-left maps-aligned">
       Maps aligned :
@@ -111,9 +111,9 @@ content: {{model.mapsDerived.availableMaps}}
 
   </div>
 
+  {{tabbed-table selectedMarkers=selectedMarkers}}
 
   {{selected-markers data=selectedMarkers scaffolds=scaffolds scaffoldMarkers=scaffoldMarkers showScaffoldMarkers=showScaffoldMarkers}}
-  {{tabbed-table selectedMarkers=selectedMarkers}}
 
 {{/if}}
 

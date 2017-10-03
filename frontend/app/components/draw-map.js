@@ -100,6 +100,7 @@ function configurejQueryTooltip(oa, node) {
 
 
 export default Ember.Component.extend({
+  classNames: ['draw-map-container'],
 
   store: Ember.inject.service('store'),
 
@@ -5386,7 +5387,7 @@ export default Ember.Component.extend({
 
 
   didInsertElement() {
-    eltWidthResizable('#holder');
+    eltWidthResizable('.draw-map-container');
   },
 
   didRender() {
