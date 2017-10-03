@@ -14,9 +14,12 @@ export default Ember.Component.extend({
     {
       console.log("showData", d);
       let table = this.get('table');
-      /** filter out empty rows in d[] */
-      let data = d.filter(function(d1) { return d1.Chromosome; });
-      table.loadData(data);
+      if (table)
+      {
+        /** filter out empty rows in d[] */
+        let data = d.filter(function(d1) { return d1.Chromosome; });
+        table.loadData(data);
+      }
     }
 
   },
@@ -80,9 +83,12 @@ export default Ember.Component.extend({
     let data = this.get('data'),
     me = this,
     table = this.get('table');
-    console.log("table-brushed.js", "onSelectionChange", table, data.length);
-    me.send('showData', data);
-    table.updateSettings({data:data});
+    if (table)
+    {
+      console.log("table-brushed.js", "onSelectionChange", table, data.length);
+      me.send('showData', data);
+      table.updateSettings({data:data});
+    }
   }.observes('data')
 
 

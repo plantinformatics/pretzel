@@ -5,6 +5,7 @@ import createIntervalTree from 'npm:interval-tree-1d';
 console.log("createIntervalTree", createIntervalTree);
 
 import { chrData } from '../utils/utility-chromosome';
+import { eltWidthResizable } from '../utils/domElements';
 
 
 /* jshint curly : false */
@@ -5385,6 +5386,7 @@ export default Ember.Component.extend({
 
 
   didInsertElement() {
+    eltWidthResizable('#holder');
   },
 
   didRender() {
