@@ -5,6 +5,7 @@ import createIntervalTree from 'npm:interval-tree-1d';
 console.log("createIntervalTree", createIntervalTree);
 
 import { chrData } from '../utils/utility-chromosome';
+import { eltWidthResizable } from '../utils/domElements';
 
 
 /* jshint curly : false */
@@ -21,6 +22,7 @@ import { chrData } from '../utils/utility-chromosome';
 /*global d3 */
 
 let trace_updatedStacks = true;
+let trace_promise = 1;
 
 let breakPointEnable = 1;
 function breakPoint()
@@ -98,6 +100,7 @@ function configurejQueryTooltip(oa, node) {
 
 
 export default Ember.Component.extend({
+  classNames: ['draw-map-container'],
 
   store: Ember.inject.service('store'),
 
@@ -211,9 +214,10 @@ export default Ember.Component.extend({
     // avoid recursion caused by dataReceived.popObject() below
     console.log("dataObserver", (this === sender), this, /*sender,*/ key /*, value, rev*/);
     let dataReceived = this.get('dataReceived'), newData;
+    if (dataReceived)
     Ember.run.later(function () {
       let trace_data;	// undefined
-      if (dataReceived && (newData = dataReceived.get('content')))
+      if ((newData = dataReceived.get('content')))
         for (let ind=0; ind<newData.length; ind++)
     {
       let content = newData;
@@ -237,6 +241,8 @@ export default Ember.Component.extend({
             {
               if (oa.aps[m = mtv[im]])
                 console.log("mapsToView[", im, "] === ", m);
+              else if (oa.chrPromises && oa.chrPromises[m])
+                console.log("promise pending for", m);
               else
               {
                 newChr = mtv[im];
@@ -247,28 +253,42 @@ export default Ember.Component.extend({
                    { reload: true,
                      adapterOptions:{ filter: {include: "markers" } }});
                   pc.then(function (ch){
-                    console.log(ch.get('name'));
-                    if (true)
+                    let map, mapId, chrName = ch.get('name'), chr = ch.get('id'), markers, rc;
+                    console.log(chrName, chr);
+                    if (chrName && chr && (map = ch.get('map')) && (mapId = map.get('id'))
+                           && (markers = ch.get('markers')))
                     {
-                     let ppc=thisStore.peekRecord('chromosome', m);
-                     console.log
-                     (ppc._internalModel.id,
-                     ppc.get('map').get('name'),
-                     ppc.get('name'));
-
-                      if (trace_data)
-                      {
-                        let ma = ppc.get('markers');
-                        ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
-                      }
-                      ch = ppc;
+                      console.log("findRecord then", chrName, chr, map.get('name'), mapId, markers.length);
                     }
-                    let rc = chrData(ch),
-                    chr = ch.get('map').get('id'),
+                    else
+                    {
+                      let ppc=thisStore.peekRecord('chromosome', m);
+                      if (ppc !== undefined)
+                      {
+                        console.log("after findRecord(chromosome, ", m, "), peekRecord() returned", ppc);
+                      }
+                      else
+                      {
+                        console.log
+                        (ppc._internalModel.id,
+                         ppc.get('map').get('name'),
+                         ppc.get('name'));
+
+                        if (trace_data)
+                        {
+                          let ma = ppc.get('markers');
+                          ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
+                        }
+                        ch = ppc;
+                        chr = ch.get('id');
+                        console.log("chr = ch.get(id)", chr);
+                      }
+                    }
+                    rc = chrData(ch);
                     /** Only 1 chr in hash, but use same structure as routes/mapview.js */
-                    retHash = {};
+                    let retHash = {};
                     retHash[chr] = rc;
-                    me.draw(retHash, 'dataReceived');
+                    me.draw(retHash, undefined, 'dataReceived');
                   });
                 }
               }
@@ -311,15 +331,29 @@ export default Ember.Component.extend({
    * mapName is referred to as apName (AP - Axis Piece) for generality.
    *
    * @param myData hash indexed by AP names
-   * @param source undefined or 'dataReceived', indicating an added map.
+   * @param availableMaps if not undefined then it is a promise; when this promise has resolved, chrPromises[*].get('map') is available
+   * @param source 'didRender' or 'dataReceived' indicating an added map.
    */
-  draw: function(myData, source) {
-    console.log("draw()", myData, myData.length, source);
+  draw: function(myData, availableMaps, source) {
+    let chrPromises, myDataKeys;
+    if (source === 'didRender')
+    {
+      chrPromises = myData;
+      myData = {};
+    }
+    myDataKeys = d3.keys(myData);
+    console.log("draw()", myData, myDataKeys.length, source);
 
     // Draw functionality goes here.
     let me = this;
 
     let oa = this.get('oa');
+
+    /* The draw() from didRender() has the model promise array in myData;
+     * not the draw() from dataObserver().
+     */
+    if (source === 'didRender')
+      oa.chrPromises = chrPromises; // used in dataObserver()
 
     /** Each stack contains 1 or more Axis Pieces (APs).
      * stacks are numbered from 0 at the left.
@@ -340,9 +374,12 @@ export default Ember.Component.extend({
       delete myData.highlightMarker;
     }
 
-    if (source != 'dataReceived')
-    /// apIDs are <apName>_<chromosomeName>
-    oa.apIDs = d3.keys(myData);
+
+    /** apIDs are <apName>_<chromosomeName> */
+    if (source == 'dataReceived')
+      oa.apIDs = oa.apIDs.concat(myDataKeys);
+    else
+      oa.apIDs = myDataKeys;
     /** mapName (apName) of each chromosome, indexed by chr name. */
     let cmName = oa.cmName || (oa.cmName = {});
     /** AP id of each chromosome, indexed by AP name. */
@@ -364,11 +401,16 @@ export default Ember.Component.extend({
     /// width in pixels of the axisHeaderText, which is
     /// 30 chars when the AP (chromosome) name contains the 24 hex char mongodb numeric id,
     /// e.g. 58a29c715a9b3a3d3242fe70_MyChr
-    let axisHeaderTextLen = 203.5;
+    let axisHeaderTextLen = 204; // 203.5, rounded up to a multiple of 2;
+    let divHolder=Ember.$('div#holder'),
+    holderWidth = divHolder.width();
     //margins, width and height (defined but not be used)
-    let margins = [10+14+1, 10, 10, 10],	// margins : top right bottom left
+    let margins = [20+14+1, 0, 0, 0], // 10, 10, 10],	// margins : top right bottom left
+
     marginIndex = {top:0, right:1, bottom:2, left:3},	// indices into margins[]; standard CSS sequence.
-    viewPort = {w: document.documentElement.clientWidth, h:document.documentElement.clientHeight},
+    /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
+    viewPort = {w: holderWidth, h:document.documentElement.clientHeight},
+
 
     /// small offset from axis end so it can be visually distinguished.
     dropTargetYMargin = 10,
@@ -521,12 +563,60 @@ export default Ember.Component.extend({
     if (oa.d3MarkerSet === undefined)
       oa.d3MarkerSet = new Set();
 
-    d3.keys(myData).forEach(function (ap) {
+      if (source === 'didRender')
+        d3.keys(chrPromises).forEach(function (ap) {
         /** ap is chr name */
-        let c = myData[ap];
-      receiveChr(ap, c, source);
+        let c = chrPromises[ap];
+        afterChrPromise(c, availableMaps);
+        });
+      else
+        d3.keys(myData).forEach(function (ap) {
+        /** ap is chr name */
+      receiveChr(ap, myData[ap], source);
       });
- 
+    /** When data is received for a chromosome, draw it.
+     * @param p promise delivers data of a chromosome
+     * @param availableMaps is used to indicate that chr.map has been set.
+     * undefined means don't wait - already set; it is set by the resolution of
+     * the /geneticmap request, so waiting is only required for the initial display.
+     */
+    function afterChrPromise(p, availableMaps)
+    {
+      // console.log("afterChrPromise setup");
+      // moved here from routes/mapview model(), placing data for chr in rc instead of retHash[chr]
+
+      let waitFor = [p];
+      if (availableMaps)
+        waitFor.push(availableMaps);
+      Ember.RSVP.all(waitFor).then(function(results) {
+        let
+          c = results[0],
+        rc = {mapName : c.get('map').get('name'), chrName : c.get('name')};
+        console.log("afterChrPromise", rc);
+        let m = c.get('markers');
+        m.forEach(function(marker) {
+          let markerName = marker.get('name');
+          let markerPosition = marker.get('position');
+          let markerAliases = marker.get('aliases');
+          rc[markerName] = {location: markerPosition, aliases: markerAliases};
+        });
+        receiveChr(c.get('id'), rc, 'dataReceived');
+        // using named function redraw() instead of anonymous function, so that debounce is effective.
+        Ember.run.debounce(redraw, 800);
+      })
+      .catch(function(reason){
+        console.log("afterChrPromise", reason);
+      });
+    }
+    function redraw()
+    {
+      if (trace_promise > 1)
+      {
+        console.log("redraw, afterChrPromise then after receiveChr", oa.apIDs, oa.aps);
+        oa.stacks.log();
+      }
+      me.draw({}, undefined, 'dataReceived');
+    }
     function receiveChr(ap, c, source) {
       let z = oa.z, cmName = oa.cmName;
       if ((z[ap] === undefined) || (cmName[ap] === undefined))
@@ -587,7 +677,11 @@ export default Ember.Component.extend({
       if (k === -1)
         console.log("deleteAPfromapIDs", "not found:", apName);
       else
-        delete oa.apIDs[k];
+      {
+        console.log("deleteAPfromapIDs", apName, k, oa.apIDs);
+        let a = oa.apIDs.splice(k, 1);
+        console.log(oa.apIDs, "deleted:", a);
+      }
     }
 
     //creates a new Array instance from an array-like or iterable object.
@@ -1191,8 +1285,8 @@ export default Ember.Component.extend({
       removedAp = this.remove(apName);
       if (removedAp === undefined)
         console.log("removeStacked", apName);
-      /* else
-        delete oa.aps[apName]; */ // release memory
+      else
+        delete oa.aps[apName];
       if (this.empty())
       {
         result = this.stackID;
@@ -1544,6 +1638,7 @@ export default Ember.Component.extend({
       if (xVal === undefined)
         xVal = oa.o[this.apName];
       checkIsNumber(xVal);
+      xVal = Math.round(xVal);
       let transform =
         [
           "translate(" + xVal, yOffsetText, ")",
@@ -1672,6 +1767,7 @@ export default Ember.Component.extend({
       let scale = this.portion,
       scaleText = Number.isNaN(scale) || (scale === 1) ? "" : " scale(1," + scale + ")";
       let xVal = checkIsNumber(oa.o[this.apName]);
+      xVal = Math.round(xVal);
       let transform =
         [
           " translate(" + xVal, yOffsetText, ")",
@@ -1741,7 +1837,7 @@ export default Ember.Component.extend({
 
     let pathMarkers = oa.pathMarkers || (oa.pathMarkers = {}); //For tool tip
 
-    let selectedAps = [];
+    let selectedAps = oa.selectedAps || (oa.selectedAps = []);;
     let selectedMarkers = {};
     let brushedRegions = {};
 
@@ -1755,7 +1851,8 @@ export default Ember.Component.extend({
       console.log("collateO", oa.apIDs.length, oa.apIDs);
       oa.apIDs.forEach(function(d){
         let o = oa.o;
-        console.log(d, APid2Name(d), o[d], x(d));
+        if (trace_stack > 1)
+          console.log(d, APid2Name(d), o[d], x(d));
         o[d] = x(d);
         checkIsNumber(oa.o[d]);
         if (o[d] === undefined) { debugger; console.log(x(d)); }
@@ -2199,6 +2296,7 @@ export default Ember.Component.extend({
       .enter().append("g");
     if (trace_stack)
     {
+      if (trace_stack > 1)
       oa.stacks.forEach(function(s){console.log(s.apIDs());});
       console.log("g.ap", g.enter().size(), g.exit().size(), stacks.length);
     }
@@ -2228,14 +2326,14 @@ export default Ember.Component.extend({
     function DropTarget() {
       let size = {
         /** Avoid overlap, assuming about 5-7 stacks. */
-        w : Math.min(axisHeaderTextLen, viewPort.w/15),
+        w : Math.round(Math.min(axisHeaderTextLen, viewPort.w/15)),
         // height of dropTarget at the end of an axis
         h : Math.min(80, viewPort.h/10),
         // height of dropTarget covering the adjacent ends of two stacked axes
         h2 : Math.min(80, viewPort.h/10) * 2 /* + axis gap */
       },
       posn = {
-        X : size.w/2,
+        X : Math.round(size.w/2),
         Y : /*YMargin*/10 + size.h
       },
       /** top and bottom edges relative to the AP's transform. bottom depends
@@ -2453,8 +2551,9 @@ export default Ember.Component.extend({
     }
     /** remove AP, and if it was only child, the parent stack;  pathUpdate
      * @param stackID -1 (result of .removeStacked) or id of stack to remove
+     * @param stack refn to stack - if not being removed, redraw it
      */
-    function removeAPmaybeStack(apName, stackID)
+    function removeAPmaybeStack(apName, stackID, stack)
     {
       let t = svgContainer.transition().duration(750);
       removeAP(apName, t);
@@ -2466,9 +2565,7 @@ export default Ember.Component.extend({
       }
       else
       {
-        let ap = oa.aps[apName],
-        stack = ap.stack;
-        console.log("removeAPmaybeStack", apName, stackID, ap, stack);
+        console.log("removeAPmaybeStack", apName, stackID, stack);
         if (stack)
           stack.redraw(t);
       }
@@ -4971,9 +5068,15 @@ export default Ember.Component.extend({
      * and input via text box
      */
     this.set('draw_flipRegion', function(markers) {
-      let brushedMap = selectedAps[0];
-      let zm = oa.z[brushedMap];
-
+      let brushedMap, zm,
+      selectedAps = oa.selectedAps;
+      if (selectedAps.length === 0)
+        console.log('draw_flipRegion', 'selectedAps is empty', selectedAps);
+      else if ((brushedMap = selectedAps[0]) === undefined)
+        console.log('draw_flipRegion', 'selectedAps[0] is undefined', selectedAps);
+      else if ((zm = oa.z[brushedMap]) === undefined)
+        console.log('draw_flipRegion', 'z[', brushedMap, '] is undefined', selectedAps, oa.z);
+      else
       if (markers.length)
       {
         /** the first and last markers have the minimum and maximum position
@@ -5058,9 +5161,11 @@ export default Ember.Component.extend({
           deleteButtonS
             .on('click', function (buttonElt /*, i, g*/) {
               console.log("delete", apName, this);
+              let ap = oa.aps[apName], stack = ap && ap.stack;
+              // aps[apName] is deleted by removeStacked1() 
               let stackID = Stack.removeStacked(apName);
               deleteAPfromapIDs(apName);
-              removeAPmaybeStack(apName, stackID);
+              removeAPmaybeStack(apName, stackID, stack);
               me.send('mapsToViewDelete', apName);
             });
         });
@@ -5285,14 +5390,36 @@ export default Ember.Component.extend({
 
 
   didInsertElement() {
+    eltWidthResizable('.draw-map-container');
+    eltWidthResizable('.tabbed-table-container');
   },
 
   didRender() {
     // Called on re-render (eg: add another AP) so should call
     // draw each time.
     //
+    let me = this;
     let data = this.get('data');
-    this.draw(data);
+    let mapsDerived = this.get('mapsDerived');
+    /** mapview.hbs passes Model=model to {{draw-map }}, just for devel trace -
+     * the other parameters provide all the required information. */
+    if (trace_promise > 1)
+    {
+      let Model = me.get('Model'),
+      mp = Model.mapsPromise;
+      mp.then(function (result) { console.log("mp", result); });
+    }
+    mapsDerived.then(function (mapsDerivedValue) {
+      if (trace_promise > 1)
+      {
+        let availableMaps = me.get('availableMaps');
+        console.log("Model", Model, "mapsDerivedValue.availableMaps", mapsDerivedValue.availableMaps);
+        console.log("didRender", mapsDerivedValue);
+        let mpr=mapsDerivedValue; // mp._result;
+        console.log("mpr.availableChrs", mpr.availableChrs, "availableMaps", mpr.availableMaps, "selectedMaps", mpr.selectedMaps, "Model.mapsToView", Model.mapsToView);
+      }
+      me.draw(data, mapsDerived, 'didRender');
+    });
   },
 
   resize() {

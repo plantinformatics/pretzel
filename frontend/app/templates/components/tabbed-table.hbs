@@ -1,0 +1,39 @@
+<div class="resizer" style="float:right;">
+   <span class="glyphicon glyphicon-resize-horizontal"></span>
+</div>
+
+<ul class="nav nav-tabs">
+  <li class="active"><a data-toggle="tab" href="#tab-brushed-marker">Brushed Marker</a></li>
+  <li><a data-toggle="tab" href="#tab-marker">Marker</a></li>
+  <li><a data-toggle="tab" href="#tab-scaffold">Scaffold</a></li>
+  <li><a data-toggle="tab" href="#tab-location-range">Chr Location Range</a></li>
+  <li><a data-toggle="tab" href="#tab-tick-location">Chr Tick Location</a></li>
+  <li><a data-toggle="tab" href="#tab-syntenyBlock">Synteny Block</a></li>
+</ul>
+
+<div class="tab-content">
+  <div id="tab-brushed-marker" class="tab-pane fade in active">
+    <h3>Brushed Markers</h3>
+    {{table-brushed data=selectedMarkers}}
+  </div>
+  <div id="tab-marker" class="tab-pane fade in">
+    <h3>Marker Name</h3>
+    <p>markerName-s</p>
+  </div>
+  <div id="tab-scaffold" class="tab-pane fade">
+    <h3>scaffoldName TAB markerName</h3>
+    <p>scaffoldName-s</p>
+  </div>
+  <div id="tab-location-range" class="tab-pane fade">
+    <h3>chromosomeName location-start and -end</h3>
+    <p>interval id : chrName_startLoc_endLoc</p>
+  </div>
+  <div id="tab-tick-location" class="tab-pane fade">
+    <h3>chromosomeName tick-location</h3>
+    <p></p>
+  </div>
+  <div id="tab-syntenyBlock" class="tab-pane fade">
+    <h3>syntenyBlock: chr1 chr2 g1 g2 g3 g4 id size</h3>
+    <p></p>
+  </div>
+</div>

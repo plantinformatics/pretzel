@@ -144,6 +144,51 @@ markerPositions()
           },"
     done
 }
+# Same as markerPositions, in TSV format
+# @param chromosomeName
+# Example Usage:
+# (( echo marker{B,C,D,E,F,A} ; echo 0.{1,2,3,4,5,6} ) | markerPositionsTsv MyMap5; \
+#    ( echo marker{L,G,H,I,J,K} ; echo 0.{7,8,9} 1.{0,1,2}) | markerPositionsTsv MyMap5; \
+# ) > resources/example_map5.tsv
+markerPositionsTsv()
+{
+    chromosomeName=$1; shift
+
+    read -a markerNames
+    read -a markerPositions
+    read -a markerAliases
+    len=${#markerNames[@]}
+    lastIndex=`expr $len - 1`
+
+    for i in 0 `yes '' | head -$lastIndex | cat -n`
+    do
+	ma=${markerAliases[$i]}
+	if [ -z "$ma" ]
+	then
+	    aliasGroups=
+	else
+	    aliasGroups=\"`eval echo $ma | sed 's/ /","/g'`\"
+	fi
+	echo "$chromosomeName	${markerNames[$i]}	${markerPositions[$i]}	$aliasGroups"
+    done
+}
+# wrap markerPositionsTsv
+# usage : cd .../Dav127/
+# (chrHead MyMap5
+#    ( echo marker{B,C,D,E,F,A} ; echo 0.{1,2,3,4,5,6} ) | markerPositions
+#    ( echo marker{L,G,H,I,J,K} ; echo 0.{7,8,9} 1.{0,1,2}) | markerPositions
+# chrTail) > resources/example_map5.json
+chrHead()
+{
+    chromosomeName=$1; shift
+    head -9 resources/example_map4.json | sed s/MyMap4/$chromosomeName/;
+}
+chrTail()
+{
+    tail -6 resources/example_map4.json
+}
+
+
 
 # used as input to markerPositions (the 3rd line - aliases)
 # Generate alias groups with 0,1,2,3,4,5 aliases respectively.
