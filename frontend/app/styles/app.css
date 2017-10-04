@@ -17,7 +17,7 @@ body.ember-application > div.ember-view > div.container
 @media (min-width: 1200px) {
 .draw-map-container
 {
-    width: 60%;
+    width: 95%;
 }
 }
 
@@ -25,7 +25,7 @@ body.ember-application > div.ember-view > div.container
 @media (min-width: 768px) and (max-width: 979px) {
 .draw-map-container
 {
-    width: 90%;
+    width: 95%;
 }
 }
 
