@@ -46,13 +46,17 @@ body.ember-application > div.ember-view > div.container
  * Used by app/utils/domElements.js : eltWidthResizable() */
 .resizer
 {
-  width: 4em;
-  height: 4ex;
   font-weight: bold;
+  color: #337ab7;
+  font-weight: 900;
+  font-size: larger;
+  float: right;
+  margin-right: -6px;
 }
 .resizer:hover
 {
-  border: 1px grey dashed;
+  border: 1px #337ab7 dashed;
+  border-radius :  6px;
   padding : 2px 2px;
 }
 
