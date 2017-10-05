@@ -5390,7 +5390,7 @@ export default Ember.Component.extend({
 
 
   didInsertElement() {
-    eltWidthResizable('.draw-map-container');
+    eltWidthResizable('.resizable');
     eltWidthResizable('.tabbed-table-container');
   },
 

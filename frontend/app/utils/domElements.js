@@ -1,3 +1,5 @@
+import Ember from 'ember';
+
 /*global d3 */
 
 /*----------------------------------------------------------------------------*/
@@ -22,7 +24,9 @@ function eltWidthResizable(eltSelector)
 {
   /** refn : meetamit https://stackoverflow.com/a/25792309  */
   let resizable = d3.select(eltSelector);
-  let resizer = resizable.select('.resizer');
+  let resizer = resizable.select('.resizer'),
+  /** assumes single '.resizer', or they all have some flex-grow. */
+  resizable_flex_grow = resizable.node().style['flex-grow'];
 
   let dragResize = d3.drag()  // d3 v3: was .behavior
     .on('drag', function() {
@@ -33,7 +37,20 @@ function eltWidthResizable(eltSelector)
       x = Math.max(50, x);
 
       resizable.style('width', x + 'px');
+      /* If the parent (resizable) has "flex-grow: 1", disable that so that it can be adjusted.
+       */
+      resizable.style('flex-grow', 'inherit');
     });
+
+  /* If the window is changed (in particular reduced then increased),
+   * restore the previous value, so that the flex-grow can
+   * automatically absorb the increased width.
+   */
+  Ember.$( window ).resize(function() {
+    console.log("eltWidthResizable window resize", eltSelector, resizable_flex_grow);
+    resizable.style('flex-grow', resizable_flex_grow);
+  });
+
   if (resizer)
     resizer.call(dragResize);
   else

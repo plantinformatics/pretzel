@@ -17,7 +17,7 @@ body.ember-application > div.ember-view > div.container
 @media (min-width: 1200px) {
 .draw-map-container
 {
-    width: 95%;
+    width: 100%;
 }
 }
 
@@ -25,7 +25,7 @@ body.ember-application > div.ember-view > div.container
 @media (min-width: 768px) and (max-width: 979px) {
 .draw-map-container
 {
-    width: 95%;
+    width: 100%;
 }
 }
 
@@ -60,6 +60,11 @@ body.ember-application > div.ember-view > div.container
   padding : 2px 2px;
 }
 
+/* -------------------------------------------------------------------------- */
+#table-brushed
+{
+overflow-x: scroll;
+}
 /* -------------------------------------------------------------------------- */
 
 svg {
