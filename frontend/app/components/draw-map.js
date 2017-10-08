@@ -2291,12 +2291,36 @@ export default Ember.Component.extend({
     let g = stackS.selectAll(".ap")
       .data(stack_apIDs)
       .enter().append("g");
+      let defs=svgRoot.selectAll("defs").data([1]).enter().append("defs");
+      let tg = g,
+	  td = defs
+	      .data(oa.apIDs)
+	      .enter()
+	      .append('g')
+	      .attr("id", eltIdDefs);
+      g = td;	// draw in defs instead of g.
+      function eltIdDefs(d, i, g) { return "defs" + d; }
+      function eltIdGpRef(d, i, g)
+      {
+	  console.log("eltIdGpRef", this, d, i, g);
+	  let p2 = this.parentNode.parentElement;
+	  return "#defs" + p2.__data__;
+      }
+      let ug = tg.selectAll("g.axis-use")
+	      .data([0, 50])	// x translation of left and right
+	      .enter()	// also .exit().remove()
+	      .append("g")
+	      .attr("class", "axis-use");
+      ug.attr("transform",function(d) {return "translate(" + d + ",0)";})
+	  .append("use").attr("xlink:xlink:href", eltIdGpRef);
+
     if (trace_stack)
     {
       if (trace_stack > 1)
       oa.stacks.forEach(function(s){console.log(s.apIDs());});
       console.log("g.ap", g.enter().size(), g.exit().size(), stacks.length);
     }
+      g = tg;
     let gt = newRender ? g :
       g.transition().duration(dragTransitionTime);
     gt
@@ -2430,7 +2454,7 @@ export default Ember.Component.extend({
     });
 
 
-
+      g = td;
     // Add an axis and title
     g.append("g")
       .attr("class", "axis")
