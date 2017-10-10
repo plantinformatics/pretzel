@@ -8,6 +8,65 @@ body.ember-application > div.ember-view > div.container
 
 /* -------------------------------------------------------------------------- */
 
+.draw-map-container,
+.tabbed-table-container
+{
+    float: left;
+}
+/* Large desktop */
+@media (min-width: 1200px) {
+.draw-map-container
+{
+    width: 100%;
+}
+}
+
+/* Portrait tablet to landscape and desktop */
+@media (min-width: 768px) and (max-width: 979px) {
+.draw-map-container
+{
+    width: 100%;
+}
+}
+
+/* Landscape phone to portrait tablet */
+@media (max-width: 767px) {
+    width: 100%;
+}
+
+/* Landscape phones and down */
+@media (max-width: 480px) {
+    width: 100%;
+}
+
+
+
+/* -------------------------------------------------------------------------- */
+/* Handle to resize a panel width. 
+ * Used by app/utils/domElements.js : eltWidthResizable() */
+.resizer
+{
+  font-weight: bold;
+  color: #337ab7;
+  font-weight: 900;
+  font-size: larger;
+  float: right;
+  margin-right: -6px;
+}
+.resizer:hover
+{
+  border: 1px #337ab7 dashed;
+  border-radius :  6px;
+  padding : 2px 2px;
+}
+
+/* -------------------------------------------------------------------------- */
+#table-brushed
+{
+overflow-x: scroll;
+}
+/* -------------------------------------------------------------------------- */
+
 svg {
   font-size: 14px;
   /* this targets an intermittent issue whereby axes in a certain position are not drawn;

@@ -28,13 +28,19 @@
           <div class="col-sm-12">
             <h4>View</h4>
 
-            <div class="btn-group">
+            {{#if model.mapsDerived.isPending}}
+                Loading available maps ...
+              {{else}}
+              <p class="devel_trace" style="display:none;">
+              content: {{model.mapsDerived.availableMaps}}
+              </p>
+              <div class="btn-group">
               <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                 Add map
                 <span class="caret"></span>
               </button>
               <ul class="dropdown-menu multi-level" role="menu" aria-labelledby="dropdownMenu">
-              {{#each availableMaps as |mymap|}}
+                {{#each model.mapsDerived.availableMaps as |mymap|}}
               <li class="dropdown-submenu">
                 <a tabindex="-1" href="#">{{mymap.name}}</a>
                 <ul class="dropdown-menu">
@@ -58,14 +64,15 @@
               {{/each}}
               </ul>
             </div>
-
+            {{/if}}
+ 
             {{!-- {{#if selectedMaps}} --}}
-              <div class="bordered border-top-none control-panel" style="display: inline-block;">
+              <div class="bordered control-panel" style="display: inline-block;">
 
                 <div class="pull-left maps-aligned">
                   Maps aligned :
                   <ul>
-                    {{#each selectedMaps as |chr|}}
+                    {{#each model.mapsDerived.selectedMaps as |chr|}}
                       <li>{{chr.map.name}} {{chr.name}}</li>
                     {{/each}}
                   </ul>
@@ -133,11 +140,26 @@
     </button>
   {{/if}}
   
-  <div class="" style="flex-grow: 1">
+  <div class="resizable" style="flex-grow: 1">
+    <div class="resizer">
+      <span class="glyphicon glyphicon-resize-horizontal"></span>
+    </div>
+
+    <p class="devel_trace" style="display:none;">
+     hasData {{hasData}}
+     model {{model}}
+     mapsToView {{model.mapsToView}}
+     availableMaps {{model.mapsDerived.availableMaps.length}}
+     availableChrs {{model.mapsDerived.availableChrs.length}}
+     selectedMaps {{model.mapsDerived.selectedMaps.length}}
+    </p>
     {{#if hasData}}
       {{draw-map
         updatedSelectedMarkers='updateSelectedMarkers'
-        data=model
+        data=model.chrPromises
+        Model=model
+        mapsDerived=model.mapsDerived
+        availableMaps=model.mapsDerived.availableMaps
         dataReceived=dataReceived
         mapsToViewDelete='mapsToViewDelete'
         isShowUnique=isShowUnique
@@ -167,8 +189,9 @@
       </ul>
       <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
         {{#if (compare layout.right.tab '===' 'selection')}}
-          {{marker-detail
-            data=selectedMarkers}}
+          {{tabbed-table selectedMarkers=selectedMarkers}}
+          {{!-- marker-detail
+            data=selectedMarkers --}}
         {{/if}}
       </div>
     </div>
