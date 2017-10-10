@@ -1,0 +1,48 @@
+<div class="col-sm-12 actual-row">
+  <h4>Upload Data</h4>
+  {{#if errorMessage}}
+    <br>
+    {{#elem-panel
+      name="danger"
+      heading="Error"}}
+      {{errorMessage}}
+    {{/elem-panel}}
+  {{/if}}
+  {{#if successMessage}}
+    <br>
+    {{#elem-panel
+      name="success"
+      heading="Success"}}
+      {{successMessage}}
+    {{/elem-panel}}
+  {{/if}}
+  {{#if warningMessage}}
+    <br>
+    {{#elem-panel
+      name="warning"
+      heading="Warning"}}
+      {{warningMessage}}
+    {{/elem-panel}}
+  {{/if}}
+
+  <div class="actual-row">
+    <h5>Upload Chromosomes</h5>
+    <label>Geneticmap: </label><select id="geneticmap"></select><input id="geneticmap_new" hidden />
+    <br><label>Load from file: </label><input type="file" accept=".csv" id="tableFile" onchange={{action 'uploadToTable'}}>
+    <div id="hotable" class="actual-row">
+    </div>
+    <input type="submit" class="btn btn-primary {{if isProcessing 'disabled'}}" onclick={{action 'uploadChromosomes'}}>
+    <button class="btn" onclick={{action 'clearTable'}}>Clear</button>
+  </div>
+
+  <div class="actual-row">
+    <h5>Upload Geneticmaps (JSON / gzip)</h5>
+    <form {{action 'submitForm' on='submit'}}>
+      <input type='file' accept=".json,.gz" onchange={{action 'upload'}}>
+      <br>
+      <input type="submit" class="btn btn-primary {{if isProcessing 'disabled'}}">
+    </form>
+  </div>
+
+</div>
+

@@ -1,0 +1,21 @@
+{{!--this form is used as a wrapper for login / signup / reset forms--}}
+{{!--TODO core app requires CSS scoping to avoid overriding bootstrap default CSS--}}
+<div class="row" style="background: rgba(0,0,0,0);">
+  <div class="col-sm-4 col-sm-offset-4">
+    <div class="">
+      {{#if title}}
+        <h1 class="title">{{title}}</h1>
+      {{/if}}
+      {{!--nested content appears here--}}
+      {{yield}}
+      {{#if errorMessage}}
+        <br>
+        {{#elem-panel
+          name="danger"
+          heading="Error"}}
+          {{errorMessage}}
+        {{/elem-panel}}
+      {{/if}}
+    </div>
+  </div>
+</div>

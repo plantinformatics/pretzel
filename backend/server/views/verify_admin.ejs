@@ -1,0 +1,12 @@
+<% var email_topic = 'New User Registration'; %>
+<%- include _header.ejs %>
+
+<p>
+  A user has registered for the site (<%= email_user %>). Please click the link below to accept their registration.
+</p>
+
+<p>
+  <a href="<%= verifyHref %>">Click here to verify the user</a>
+</p>
+
+<%- include _footer.ejs %>

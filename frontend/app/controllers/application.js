@@ -1,7 +1,14 @@
 import Ember from 'ember';
 import config from '../config/environment';
 
-export default Ember.Controller.extend({
+const { Controller } = Ember;
+
+export default Controller.extend({
   buildDate: config.APP.buildDate,
-  version: config.APP.version
+  version: config.APP.version,
+  actions: {
+    transitionToLoginRoute() {
+      this.transitionToRoute('login');
+    }
+  }
 });

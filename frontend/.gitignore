@@ -16,5 +16,4 @@
 npm-debug.log
 testem.log
 
-app/adapters/application.js
 public/

@@ -1,7 +1,0 @@
-import DS from 'ember-data';
-import PartialModelAdapter from 'ember-data-partial-model/mixins/adapter';
-
-export default DS.RESTAdapter.extend(PartialModelAdapter, {
-  host: 'http://localhost:1776',
-});
-

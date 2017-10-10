@@ -1,15 +1,73 @@
-<div class="pull-left" style=" margin: 1em inherit;" >
-  <button {{action "clearScaffoldColours"}}>Clear Scaffold Colours</button>
-  <button {{action "flipRegion"}}>Flip region</button>
-  <input type="checkbox" 
-	 id="checkbox-toggleModePublish" 
-	 name="toggleCheckbox" 
-  />
-  <label>Publish Mode</label>
+<div class="pull-left bordered control-panel" >
+  <div class="btn-group space-between">
+    <button {{action "clearScaffoldColours"}}>Clear Scaffold Colours</button>
+    <button {{action "flipRegion"}}>Flip region</button>
+    <button {{action "resetZooms"}}>Reset Zooms</button>
+  </div>
+</div>
+<div class="pull-left bordered control-panel" >
+  <div class="btn-group">
+    <div>
+      <input type="checkbox" 
+	     id="checkbox-toggleModePublish" 
+	     name="toggleCheckbox" 
+      />
+      <label>Publish Mode</label>
+    </div>
+    <div>
+      <input type="checkbox" 
+	     id="checkbox-toggleShowAll" 
+	     name="toggleShowAll" 
+	     checked="checked"
+      />
+      <label>Show All</label>
+    </div>
+    <div>
+      <input type="checkbox" 
+	     id="checkbox-toggleShowSelectedMarkers" 
+	     name="toggleShowSelectedMarkers" 
+	     checked="checked"
+      />
+      <label>List Selected Markers</label>
+    </div>
+  </div>
+
+  <div class="input-range-group btn-group">
+    <div>
+      <label>Path Opacity</label>
+      <input type="range" 
+	     id="range-pathOpacity" 
+	     name="pathOpacity" 
+	     min="0" max="100"
+	     value="12.5"
+      />
+    </div>
+
+    <div>
+      <label>Path Width</label>
+      <input type="range" 
+	     id="range-pathWidth" 
+	     name="pathWidth" 
+	     min="0" max="300"
+	     value="75"
+      />
+    </div>
+
+    <div>
+      <label>Synteny Block Size Threshold</label>
+      <input type="range" 
+	     id="range-sbSizeThreshold" 
+	     name="sbSizeThreshold" 
+	     min="0" max="50"
+	     value="22"
+      />
+    </div>
+  </div>
+
 </div>
 
 <div class="clearfix"></div>
-<div id="choose_path_colour_scale" class="clearfix"  data-toggle="buttons-checkbox" >
+<div id="choose_path_colour_scale" class="clearfix control-panel bordered"  data-toggle="buttons-checkbox" >
   Colour according to input from colouredMarkers;
   (scaffoldName can be generalised as class name.)
   <table>
@@ -23,6 +81,14 @@
     <tr>
       <td><input type="radio" name="optradioPathColour" data-value="5"></td>
       <td>5</td><td>chromosomeName location-start and -end</td><td>interval id : chrName_startLoc_endLoc</td>
+    </tr>
+    <tr>
+      <td><input type="radio" name="optradioPathColour" data-value="6"></td>
+      <td></td><td>chromosomeName tick-location</td><td></td>
+    </tr>
+    <tr>
+      <td><input type="radio" name="optradioPathColour" data-value="7"></td>
+      <td></td><td>syntenyBlock: chr1 chr2 g1 g2 g3 g4</td><td></td>
     </tr>
   </table>
 </div>
@@ -55,6 +121,7 @@
   class="colouredMarkers"
   type="text"}}
 
+<div class="ExportFlowData"></div>
 <div id='grid'></div>
 
 {{yield}}

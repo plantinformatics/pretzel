@@ -1,64 +1,205 @@
-<div class="btn-group">
-  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-    Add map
-    <span class="caret"></span>
-  </button>
-  <ul class="dropdown-menu multi-level" role="menu" aria-labelledby="dropdownMenu">
-  {{#each availableMaps as |mymap|}}
-  <li class="dropdown-submenu">
-    <a tabindex="-1" href="#">{{mymap.name}}</a>
-    <ul class="dropdown-menu">
-    {{#each mymap.chromosomes as |chr|}}
-      {{#if chr.isSelected}}
-      <li class="disabled">
-        {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
-          {{chr.name}}
-        {{/link-to}}
-      </li>
-      {{else}}
-      <li class="enabled">
-        {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
-          {{chr.name}}
-        {{/link-to}}
-      </li>
-      {{/if}}
-    {{/each}}
-    </ul>
-  </li>
-  {{/each}}
-  </ul>
+{{!-- app/controllers/mapview.js --}}
+<div class="" style="display: flex">
+  {{!-- <div class="{{if selectedMarkers 'col-md-8' 'col-md-12'}}"> --}}
+  {{#if layout.left.visible}}
+    <div class="" style="width: 400px">
+      <ul class="nav nav-tabs">
+        {{#tab-button
+          side="left"
+          key="view"
+          state=layout.left.tab onClick="setTab"}}
+          {{elem-icon name="eye-open"}}
+        {{/tab-button}}
+        {{#tab-button
+          side="left"
+          key="upload"
+          state=layout.left.tab onClick="setTab"}}
+          {{elem-icon name="cloud-upload"}}
+        {{/tab-button}}
+        {{#tab-button
+          class="pull-right"
+          side="left"
+          onClick="setVisibility"}}
+          {{elem-icon name="remove"}}
+        {{/tab-button}}
+      </ul>
+      <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
+        {{#if (compare layout.left.tab '===' 'view')}}
+          <div class="col-sm-12">
+            <h4>View</h4>
+
+            {{#if model.mapsDerived.isPending}}
+                Loading available maps ...
+              {{else}}
+              <p class="devel_trace" style="display:none;">
+              content: {{model.mapsDerived.availableMaps}}
+              </p>
+              <div class="btn-group">
+              <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                Add map
+                <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu multi-level" role="menu" aria-labelledby="dropdownMenu">
+                {{#each model.mapsDerived.availableMaps as |mymap|}}
+              <li class="dropdown-submenu">
+                <a tabindex="-1" href="#">{{mymap.name}}</a>
+                <ul class="dropdown-menu">
+                {{#each mymap.chromosomes as |chr|}}
+                  {{#if chr.isSelected}}
+                    <li class="disabled">
+                      {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
+                        {{chr.name}}
+                      {{/link-to}}
+                    </li>
+                  {{else}}
+                  <li class="enabled">
+                    {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
+                      {{chr.name}}
+                    {{/link-to}}
+                  </li>
+                  {{/if}}
+                {{/each}}
+                </ul>
+              </li>
+              {{/each}}
+              </ul>
+            </div>
+            {{/if}}
+ 
+            {{!-- {{#if selectedMaps}} --}}
+              <div class="bordered control-panel" style="display: inline-block;">
+
+                <div class="pull-left maps-aligned">
+                  Maps aligned :
+                  <ul>
+                    {{#each model.mapsDerived.selectedMaps as |chr|}}
+                      <li>{{chr.map.name}} {{chr.name}}</li>
+                    {{/each}}
+                  </ul>
+                </div>
+
+                <div class="pull-left vspace1">
+                  <div>
+                    {{numMarkers}} selected markers
+                  </div>
+
+                  <div class="drawing-controls vspace1">
+              <div class="dropdown">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                  Display Toggles
+                  <b class="caret"></b>
+                </a>
+                <ul class="dropdown-menu">
+                  <li class="sub-menu">
+                    {{input type="checkbox" checked=isShowUnique class="toggle"}}
+                    <label {{action "toggleShowUnique" on="doubleClick"}}>toggleShowUnique</label>
+                  </li>
+                  <li class="sub-menu">
+                    {{input type="checkbox" checked=pathColourScale class="toggle"}}
+                    <label {{action "togglePathColourScale" on="doubleClick"}}>togglePathColourScale</label>
+                  </li>
+                  <li class="sub-menu">
+                    {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
+                    <label>toggleShowScaffoldMarkers</label>
+                  </li>
+                  <li class="sub-menu">
+                    {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
+                    <label>toggleShowAsymmetricAliases</label>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="flowButtons"></div>
+                  </div>
+                </div>
+
+              </div>
+
+              {{selected-markers
+                data=selectedMarkers
+                scaffolds=scaffolds
+                scaffoldMarkers=scaffoldMarkers
+                showScaffoldMarkers=showScaffoldMarkers}}
+            {{!-- {{else}}
+              <div class="well">
+                Select maps {{elem-icon name="globe"}} to populate the chart.
+              </div>
+            {{/if}} --}}
+          </div>
+
+        {{else if (compare layout.left.tab '===' 'upload')}}
+          {{form/upload-data}}
+        {{else if (compare layout.left.tab '===' 'bbb')}}
+          bbb
+        {{/if}}
+      </div>
+    </div>
+  {{else}}
+    <button type="button" class="btn btn-default" {{action "setVisibility" "left" on='click'}}>
+      <a href="#" >{{elem-icon name="chevron-right"}}</a>
+    </button>
+  {{/if}}
+  
+  <div class="resizable" style="flex-grow: 1">
+    <div class="resizer">
+      <span class="glyphicon glyphicon-resize-horizontal"></span>
+    </div>
+
+    <p class="devel_trace" style="display:none;">
+     hasData {{hasData}}
+     model {{model}}
+     mapsToView {{model.mapsToView}}
+     availableMaps {{model.mapsDerived.availableMaps.length}}
+     availableChrs {{model.mapsDerived.availableChrs.length}}
+     selectedMaps {{model.mapsDerived.selectedMaps.length}}
+    </p>
+    {{#if hasData}}
+      {{draw-map
+        updatedSelectedMarkers='updateSelectedMarkers'
+        data=model.chrPromises
+        Model=model
+        mapsDerived=model.mapsDerived
+        availableMaps=model.mapsDerived.availableMaps
+        dataReceived=dataReceived
+        mapsToViewDelete='mapsToViewDelete'
+        isShowUnique=isShowUnique
+        pathColourScale=pathColourScale
+        scaffolds=scaffolds
+        scaffoldMarkers=scaffoldMarkers
+        showScaffoldMarkers=showScaffoldMarkers
+        showAsymmetricAliases=showAsymmetricAliases}}
+    {{/if}}
+  </div>
+
+  {{#if layout.right.visible}}
+    <div class="" style="width: 400px">
+      <ul class="nav nav-tabs">
+        {{#tab-button
+          side="right"
+          key="selection"
+          state=layout.right.tab onClick="setTab"}}
+          {{elem-icon name="th-list"}} <span class="badge">{{selectedMarkers.length}}</span>
+        {{/tab-button}}
+        {{#tab-button
+          class="pull-right"
+          side="right"
+          onClick="setVisibility"}}
+          {{elem-icon name="remove"}}
+        {{/tab-button}}
+      </ul>
+      <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
+        {{#if (compare layout.right.tab '===' 'selection')}}
+          {{tabbed-table selectedMarkers=selectedMarkers}}
+          {{!-- marker-detail
+            data=selectedMarkers --}}
+        {{/if}}
+      </div>
+    </div>
+  {{else}}
+    <button type="button" class="btn btn-default" {{action "setVisibility" "right" on='click'}}>
+      <a href="#" >{{elem-icon name="chevron-left"}}</a>
+    </button> 
+  {{/if}}
 </div>
-
-<br/>
-<br/>
-
-Maps to align:
-
-<ul>
-{{#each selectedMaps as |chr|}}
-  <li>{{chr.map.name}} {{chr.name}} {{#link-to "mapview" (query-params mapsToView=chr.chrDeleteLink)}}Delete{{/link-to}}</li>
-{{/each}}
-</ul>
-<div class="drawing-controls">
-      {{input type="checkbox" checked=isShowUnique class="toggle"}}
-      <label {{action "toggleShowUnique" on="doubleClick"}}>toggleShowUnique</label>
-      {{input type="checkbox" checked=pathColourScale class="toggle"}}
-      <label {{action "togglePathColourScale" on="doubleClick"}}>togglePathColourScale</label>
-      {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
-      <label>toggleShowScaffoldMarkers</label>
-      {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
-      <label>toggleShowAsymmetricAliases</label>
-      <div class="flowButtons"></div>
-</div>
-
-{{#if hasData}}
-  {{draw-map updatedSelectedMarkers='updateSelectedMarkers' data=model isShowUnique=isShowUnique pathColourScale=pathColourScale scaffolds=scaffolds scaffoldMarkers=scaffoldMarkers showScaffoldMarkers=showScaffoldMarkers showAsymmetricAliases=showAsymmetricAliases}}
-
-
-  {{numMarkers}} selected markers
-
-  {{selected-markers data=selectedMarkers scaffolds=scaffolds scaffoldMarkers=scaffoldMarkers showScaffoldMarkers=showScaffoldMarkers}}
-
-{{/if}}
 
 {{outlet}}

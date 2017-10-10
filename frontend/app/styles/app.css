@@ -8,9 +8,78 @@ body.ember-application > div.ember-view > div.container
 
 /* -------------------------------------------------------------------------- */
 
+.draw-map-container,
+.tabbed-table-container
+{
+    float: left;
+}
+/* Large desktop */
+@media (min-width: 1200px) {
+.draw-map-container
+{
+    width: 100%;
+}
+}
+
+/* Portrait tablet to landscape and desktop */
+@media (min-width: 768px) and (max-width: 979px) {
+.draw-map-container
+{
+    width: 100%;
+}
+}
+
+/* Landscape phone to portrait tablet */
+@media (max-width: 767px) {
+    width: 100%;
+}
+
+/* Landscape phones and down */
+@media (max-width: 480px) {
+    width: 100%;
+}
+
+
+
+/* -------------------------------------------------------------------------- */
+/* Handle to resize a panel width. 
+ * Used by app/utils/domElements.js : eltWidthResizable() */
+.resizer
+{
+  font-weight: bold;
+  color: #337ab7;
+  font-weight: 900;
+  font-size: larger;
+  float: right;
+  margin-right: -6px;
+}
+.resizer:hover
+{
+  border: 1px #337ab7 dashed;
+  border-radius :  6px;
+  padding : 2px 2px;
+}
+
+/* -------------------------------------------------------------------------- */
+#table-brushed
+{
+overflow-x: scroll;
+}
+/* -------------------------------------------------------------------------- */
+
 svg {
   font-size: 14px;
+  /* this targets an intermittent issue whereby axes in a certain position are not drawn;
+   * dragging another stack to that position causes it to dissappear and the other axis to draw ok;
+   * slight changes to width cause other stacks to be not drawn.
+  */
+  width: 99%;
 }
+svg.verticalTitle
+{
+  padding-top: 79px;
+}
+
 
 .active {
   stroke: #f93;
@@ -52,9 +121,23 @@ div.drawing-controls > div.flowButtons > .flowButton.direct,
 
 .foreground path {
   fill: none;
-  stroke-opacity: .125;
-  stroke-width: 0.75px;
   stroke: #808;
+}
+:root {
+  --path-stroke-opacity : .125;
+  --path-stroke-width: 0.75px;
+  --manyPaths-stroke-opacity: calc(var(--path-stroke-opacity)*0.8); //.125;
+  --manyPaths-stroke-width: calc(var(--path-stroke-width)*0.8); // 0.75px;
+}
+.foreground path {
+  stroke-opacity: var(--path-stroke-opacity); //.125;
+  stroke-width: var(--path-stroke-width); // 0.75px;
+}
+.manyPaths .foreground path {
+    /* Works for Chrome, haven't found a working configuration for Firefox.
+  stroke-opacity: var(--manyPaths-stroke-opacity);
+  stroke-width: var(--manyPaths-stroke-width);
+   */
 }
 
 /* or :hover if transition is not required. */
@@ -72,11 +155,15 @@ div.drawing-controls > div.flowButtons > .flowButton.direct,
     stroke-opacity : 1;
     fill : none;
 }
+:root
+{
+  --faded-stroke-opacity: calc(var(--path-stroke-opacity)*0.7);
+}
 .foreground .faded path {
   fill: none;
   stroke: #000;
-  stroke-width: 0.75px;
-  stroke-opacity: .05;
+  stroke-width: var(--path-stroke-width);
+  stroke-opacity: var(--faded-stroke-opacity);
 }
 
 .devel .foreground path {
@@ -149,7 +236,13 @@ div#scaffoldLegend > ul
 .row, .header {
  /* clear: left; */
  font-size: 12px; line-height: 18px; height: 18px;}
-.row:nth-child(odd) { background: rgba(0,0,0,0.05); }
+
+
+/* .row:nth-child(odd) { background: rgba(0,0,0,0.05); } */
+.rowstripe:nth-child(odd) {
+  background: rgba(0,0,0,0.05);
+}
+
 .header { font-weight: bold; }
 .cell { float: left; overflow: hidden; white-space: nowrap; width: 180px; height: 18px;}
 .col-0 { width: 100x; }
@@ -161,6 +254,17 @@ div.colouredMarkers
   min-height: 10em;
   min-width: 6em;
 }
+/* text input box / table.   ember-content-editable */
+.colouredMarkers:hover:not(:focus) {
+  /* outline: -webkit-focus-ring-color auto 15px; */
+  border: pink 3px dashed;
+}
+
+div.ExportFlowData
+{
+    clear: both;
+}
+
 
 /* -------------------------------------------------------------------------- */
 
@@ -176,6 +280,30 @@ div.colouredMarkers
   fill-opacity: .125;
   shape-rendering: crispEdges;
 }
+g.brush:hover > rect.handle {
+  stroke: blue;
+}
+
+.horizTick
+{
+  stroke: green;
+  stroke-width : 2px;
+}
+
+path.syntenyEdge
+{
+  fill-opacity: 0.05;
+  fill: magenta;
+  stroke: purple;
+  stroke-dasharray: 8 4 8 20;
+}
+path.syntenyEdge.inverted
+{
+  fill: orangered;
+  stroke: orangered;
+  stroke-dasharray: 16 8 16 40;
+}
+
 
 /* Button */
 .btn { cursor: pointer; }
@@ -216,6 +344,10 @@ div.highlightMarker
     display: "inline";
 }
 
+.navbar {
+  margin-bottom: 0px;
+}
+
 /* -------------------------------------------------------------------------- */
 /* target zone for axis stacking drag&drop
  */
@@ -244,7 +376,7 @@ div.highlightMarker
     pointer-events: inherit;
     cursor: copy;
 }
-.stackDropTarget.current .dragHover {
+.stackDropTarget.current.dragHover {
     fill: rgba(80, 80, 255, 0.2);
     stroke: rgba(255, 80, 80, 0.6);
     stroke-dasharray: 2,6;
@@ -270,6 +402,40 @@ div.highlightMarker
 
 .dropdown-submenu:hover>.dropdown-menu {
     display: block;
+}
+ul.dropdown-menu[role=menu]
+{
+    padding-top: 0px;
+}
+div.btn-group > button.btn.btn-default:hover
+{
+    font-weight : bold;
+}
+div.btn-group.open > button.btn.btn-default,
+button.btn.btn-default.dropdown-toggle,
+li.dropdown-submenu,
+ul.dropdown-menu > li.enabled
+{
+    border-width : 2px;
+    background-color: rgba(51, 122, 183, 0.2); /* #337ab7 0.5 opacity*/
+}
+ul.dropdown-menu :hover,
+ul.dropdown-menu > li.enabled > a
+{
+    font-weight : bold;
+}
+ul.dropdown-menu
+{
+    background-color: #fff;
+}
+ul.dropdown-menu > li > a
+{
+    opacity : 1;
+}
+li.dropdown-submenu > ul.dropdown-menu {
+  padding-top: 0px;
+  padding-bottom: 0px;
+  margin-top: -2px;
 }
 
 .dropdown-submenu>a:after {
@@ -302,37 +468,112 @@ div.highlightMarker
     border-radius: 6px 0 6px 6px;
 }
 /* -------------------------------------------------------------------------- */
+div.drawing-controls > div.drawing
+{
+  margin-top: 0.5em;
+  margin-bottom: 1em;
+}
+.maps-aligned
+{
+  margin-right: 8em;
+}
+div.drawing-controls > div > ul.dropdown-menu
+{
+  padding-right: 2em;
+}
+div.drawing-controls > div > a.dropdown-toggle,
+div.drawing-controls > div > a.dropdown-toggle:hover
+{
+  text-decoration-line: none;
+}
+div.drawing-controls > div.dropdown:hover > ul.dropdown-menu
+{
+  display: block;
+}
+div.drawing-controls > div > ul > li
+{
+  margin-left: 1em;
+}
+div.drawing-controls > div > ul > li > label
+{
+  max-width: 85%;
+  margin-right: 1em;
+}
+.vspace1 > div
+{
+  margin: 0.8em 0;
+}
+.bordered
+{
+  /* colour is based on the Draw-Map button colour, rgba(51, 122, 183, 0.2), with increased luminance and reduced opacity */
+  border: 5px solid hsla(208, 56%, 55%, 0.10);
+}
+.border-top-none
+{
+  border-top : 0px;
+}
+.control-panel
+{
+  padding: 1em;
+}
+/* -------------------------------------------------------------------------- */
 /** style the flow control buttons in  div.drawing-controls */
 div.drawing-controls > div.flowButtons > .flowButton
 {
-    float: left;
-    width: 35px;
-    height: 35px;
-    margin: 0px 5px;
+  float: left;
+  width: 35px;
+  height: 35px;
+  margin: 0px 5px;
 
-    border-radius: 16px;
-    border-width: 10px;
-    /* border-style: dashed; */
+  border-radius: 16px;
+  border-width: 10px;
+  /* border-style: dashed; */
 }
 div.drawing-controls > div.flowButtons > .flowButton.selected
 {
-    border-width: 8px;
-    /* border-style: solid; */
-    border-radius: 0px;
+  border-width: 8px;
+  /* border-style: solid; */
+  border-radius: 0px;
 }
 /* -------------------------------------------------------------------------- */
 /* style the flowButtons popover menu */
 div.drawing-controls > div.flowButtons > div.popover > button
 {
-    width: 100%;
+  width: 100%;
 }
 
 /* -------------------------------------------------------------------------- */
+/* for selected-markers.hbs : clearScaffoldColours, flipRegion, (could exclude last child : resetZooms) */
+.btn-group.space-between > button {
+  margin-right: 1em;
+}
+/* -------------------------------------------------------------------------- */
 
-/* @see setupToggleModePublish() */
+input#checkbox-toggleShowAll,
+input#range-pathOpacity,
+input#range-pathWidth
+{
+/*
+  width: 10em;
+  display: inline-block;
+  margin-left: 1em;
+*/
+}
+.input-range-group > div > input
+{
+  display : inline-block;
+  width : auto;
+  margin-left: 1em;
+  float: right;
+}
+.btn-group
+{
+  margin-right: 2.5em;
+}
+/* @see setupToggle(), setupToggleModePublish() */
+input#checkbox-toggleShowAll,
 #checkbox-toggleModePublish
 {
-  margin-left: 1.5em;
 }
 
 svg > g.publishMode .btn
@@ -341,6 +582,11 @@ svg > g.publishMode .btn
 }
 
 /* -------------------------------------------------------------------------- */
+#choose_path_colour_scale
+{
+  border-bottom: 0px;
+  border-right: 0px;
+}
 
 #choose_path_colour_scale > table > tr > th,
 #choose_path_colour_scale > table > tr > td
@@ -348,3 +594,9 @@ svg > g.publishMode .btn
   padding: 0 1em;
 }
 /* -------------------------------------------------------------------------- */
+.actual-row
+{
+  width:100%;
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
