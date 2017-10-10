@@ -1,5 +1,6 @@
 'use strict';
 
+var acl = require('../utilities/acl')
 var task = require('../utilities/task')
 
 module.exports = function(Chromosome) {
@@ -12,6 +13,22 @@ module.exports = function(Chromosome) {
   //   // console.log('next')
   //   next()
   // })
+  var rules = [
+    {
+      'accessType': '*',
+      'principalType': 'ROLE',
+      'principalId': '$everyone',
+      'permission': 'DENY',
+    },
+    {
+      'accessType': '*',
+      'principalType': 'ROLE',
+      'principalId': '$authenticated',
+      'permission': 'ALLOW',
+    },
+  ];
+
+  acl.assign(Chromosome, rules);
 
   Chromosome.paths = function(left, right, cb) {
     task.paths(this.app.models, left, right)

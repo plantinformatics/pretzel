@@ -7,12 +7,6 @@
             Pretzel
           {{/link-to}}
         </li>
-
-        <li>
-          {{#link-to 'about' classNames='' tagName='a'}}
-            About
-          {{/link-to}}
-        </li>
         {{#if session.isAuthenticated}}
           <li>
             {{#link-to 'mapview' classNames='' tagName='a'}}
@@ -22,11 +16,6 @@
           <li>
             {{#link-to 'change-password' classNames='' tagName='a'}}
               Change Password
-            {{/link-to}}
-          </li> 
-          <li>
-            {{#link-to 'upload-data' classNames='' tagName='a'}}
-              Upload Data
             {{/link-to}}
           </li> 
         {{/if}}

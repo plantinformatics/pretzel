@@ -6,7 +6,7 @@ var upload = require('../../common/utilities/upload')
 module.exports = function(app) {
   // paths are based on cwd of process
   // let files = ['../../resources/90k_consensus.json.gz']
-  let files = ['../resources/90k_consensus.json.gz', '../resources/NIAB_8wMAGIC.json.gz']
+  let files = ['../path/to/file.json.gz']
 
   // files.forEach(function(file) {
   //   load.fileGzip(file)

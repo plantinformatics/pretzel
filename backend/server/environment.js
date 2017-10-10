@@ -46,6 +46,17 @@ if (verifyOptions.indexOf(process.env.EMAIL_VERIFY) < 0) {
   errorAndExit(`EMAIL_VERIFY mode ${process.env.EMAIL_VERIFY} is not valid`);
 }
 
+let authOptions = ['NONE', 'ALL']
+if (!process.env.AUTH) {
+  process.env.AUTH = 'ALL'
+  console.log(`AUTH missing, options are ${authOptions}, set as ${process.env.AUTH} by default`);
+}
+
+// checking AUTH setting against handled options
+if (authOptions.indexOf(process.env.AUTH) < 0) {
+  errorAndExit(`AUTH mode ${process.env.AUTH} is not valid`);
+}
+
 // test scenarios for various email config
 if (process.env.EMAIL_ACTIVE == 'true') {
 

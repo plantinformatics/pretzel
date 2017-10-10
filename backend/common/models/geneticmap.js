@@ -1,5 +1,6 @@
 'use strict';
 
+var acl = require('../utilities/acl')
 var upload = require('../utilities/upload')
 var load = require('../utilities/load')
 
@@ -13,13 +14,28 @@ module.exports = function(Geneticmap) {
   //   // console.log('next')
   //   next()
   // })
+  var rules = [
+    {
+      'accessType': '*',
+      'principalType': 'ROLE',
+      'principalId': '$everyone',
+      'permission': 'DENY',
+    },
+    {
+      'accessType': '*',
+      'principalType': 'ROLE',
+      'principalId': '$authenticated',
+      'permission': 'ALLOW',
+    },
+  ];
+  acl.assign(Geneticmap, rules);
 
   Geneticmap.upload = function(msg, cb) {
     var models = this.app.models;
     if (msg.fileName.endsWith('.json')) {
       try {
       var jsonMap = JSON.parse(msg.data);
-      } catch(e) {
+      } catch (e) {
         console.log(e);
         cb(Error("Failed to parse JSON"));
       }
