@@ -22,13 +22,5 @@ export default BaseForm.extend({
       this.set('successMessage', 'Thank you for registering.')
     }
     this._super(res)
-  },
-  handleError(err, status) {
-    let codes = this.get('errorMap');
-    if (codes[err.status]) {
-      this.set("errorMessage", codes[err.status]);
-    } else {
-      this.set("errorMessage", err.responseJSON.error.message);
-    }
   }
 });

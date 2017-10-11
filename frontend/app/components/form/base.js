@@ -58,24 +58,22 @@ export default Component.extend({
     });
   },
   handleError(err, status) {
+    console.log(err);
     this.setProperties({isProcessing: false})
-    var response = err.responseText;
-    response = JSON.parse(response)
 
-    let error = this.checkError(response, this.get('errorMap'))
+    let error = this.checkError(err.responseJSON, this.get('errorMap'))
     if (error) {
       this.set('errorMessage', error);
     }
   },
   checkError(data, mapper) {
-    // console.log('checkError')
     try {
       if (data.error && data.error[0]) {
         return data.error[0]
-      } else if (data.error && data.error.code) {
-        let code = data.error.code
+      } else if (data.error && data.error.statusCode) {
+        let code = data.error.statusCode
         if (mapper[code]) return mapper[code]
-        else return code
+        else return data.error.message;
       } else {
         return false
       }
