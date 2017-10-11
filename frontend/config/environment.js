@@ -59,6 +59,7 @@ module.exports = function(environment) {
   if (environment === 'production') {
     ENV.apiHost = '';
     // ENV.APP.AUTH = false
+    if (process.env.AUTH === 'NONE') ENV.APP.AUTH = false
   }
 
   return ENV;

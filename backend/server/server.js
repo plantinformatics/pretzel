@@ -103,13 +103,23 @@ app.set('views', path.resolve(__dirname, 'views'));
 //
 // - - - - - FILE DELIVERY CONFIG - - - - - -
 //
-// default route handling to deliver client files
-app.use('/', loopback.static(path.resolve(__dirname, '../client')));
-// using a regex to avoid wildcard matching of api route,
-// but delivering files when hitting all other routes.
-// this was an issue when providing the confirm token on email
-// validation, as the confirm API request would deliver files
-// instead of hitting the API as desired.
-app.use(/^((?!api).)*$/, loopback.static(path.resolve(__dirname, '../client')));
+// 
+if (process.env.AUTH === 'NONE') {
+  // scenario - no auth solution for API, deliver open client
+  // default route handling to deliver client files
+  app.use('/', loopback.static(path.resolve(__dirname, '../client/open')));
+  // using a regex to avoid wildcard matching of api route,
+  // but delivering files when hitting all other routes.
+  // this was an issue when providing the confirm token on email
+  // validation, as the confirm API request would deliver files
+  // instead of hitting the API as desired.
+  app.use(/^((?!api).)*$/, loopback.static(path.resolve(__dirname, '../client/open')));
+  console.log('Delivering site from /client/open')
+} else {
+  // scenario - API with ACL settings, deliver standard auth solution
+  app.use('/', loopback.static(path.resolve(__dirname, '../client/auth')));
+  app.use(/^((?!api).)*$/, loopback.static(path.resolve(__dirname, '../client/auth')));
+  console.log('Delivering site from /client/auth')
+}
 
 module.exports = app; // for testing
