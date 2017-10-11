@@ -7,17 +7,25 @@
             Pretzel
           {{/link-to}}
         </li>
-        {{#if session.isAuthenticated}}
+        {{#if auth}}
+          {{#if session.isAuthenticated}}
+            <li>
+              {{#link-to 'mapview' classNames='' tagName='a'}}
+                Map Viewer
+              {{/link-to}}
+            </li>
+            <li>
+              {{#link-to 'change-password' classNames='' tagName='a'}}
+                Change Password {{elem-icon name="user"}}
+              {{/link-to}}
+            </li> 
+          {{/if}}
+        {{else}}
           <li>
             {{#link-to 'mapview' classNames='' tagName='a'}}
               Map Viewer
             {{/link-to}}
           </li>
-          <li>
-            {{#link-to 'change-password' classNames='' tagName='a'}}
-              Change Password
-            {{/link-to}}
-          </li> 
         {{/if}}
       </ul>
       <ul class="nav navbar-nav navbar-right">
@@ -26,26 +34,28 @@
             View on GitHub
           </a>
         </li>
-        {{#if session.isAuthenticated}}
-          <li>
-            <a {{action 'logout'}} class="">
-              Logout
-            </a>
-          </li>
-          {{#if sessionAccount.account}}
-            <p class="navbar-text pull-right">Signed in as {{sessionAccount.account.name}}</p>
+        {{#if auth}}
+          {{#if session.isAuthenticated}}
+            <li>
+              <a {{action 'logout'}} class="">
+                Logout {{elem-icon name="log-out"}}
+              </a>
+            </li>
+            {{#if sessionAccount.account}}
+              <p class="navbar-text pull-right">Signed in as {{sessionAccount.account.name}}</p>
+            {{/if}}
+          {{else}}
+            <li>
+              {{#link-to 'signup' classNames='' tagName='a'}}
+                Sign Up {{elem-icon name="edit"}}
+              {{/link-to}}
+            </li>
+            <li>
+              {{#link-to 'login' classNames='' tagName='a'}}
+                Log In {{elem-icon name="log-in"}}
+              {{/link-to}}
+            </li>
           {{/if}}
-        {{else}}
-          <li>
-            {{#link-to 'signup' classNames='' tagName='a'}}
-              Sign Up
-            {{/link-to}}
-          </li>
-          <li>
-            {{#link-to 'login' classNames='' tagName='a'}}
-              Log In
-            {{/link-to}}
-          </li>
         {{/if}}
       </ul>
     </div>

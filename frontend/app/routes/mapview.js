@@ -1,13 +1,13 @@
 import Ember from 'ember';
 import AuthenticatedRouteMixin from 'ember-simple-auth/mixins/authenticated-route-mixin';
+import ENV from '../config/environment';
 
 const { RSVP: { Promise } } = Ember;
 const { Route } = Ember;
 
 let trace_promise = 1;
 
-
-export default Ember.Route.extend(AuthenticatedRouteMixin, {
+let config = {
   titleToken: 'MapView',
   queryParams: {
     mapsToView: {
@@ -167,4 +167,10 @@ export default Ember.Route.extend(AuthenticatedRouteMixin, {
 
   }
 
-});
+}
+
+var args = [config]
+
+if (ENV.APP.AUTH != false) args.unshift(AuthenticatedRouteMixin);
+
+export default Ember.Route.extend(...args);

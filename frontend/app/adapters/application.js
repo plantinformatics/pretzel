@@ -1,12 +1,12 @@
 import DS from 'ember-data';
 import DataAdapterMixin from 'ember-simple-auth/mixins/data-adapter-mixin';
 import PartialModelAdapter from 'ember-data-partial-model/mixins/adapter';
-import config from '../config/environment';
+import ENV from '../config/environment';
 
-export default DS.RESTAdapter.extend(DataAdapterMixin, PartialModelAdapter, {
+var config = {
   authorizer: 'authorizer:application', // required by DataAdapterMixin
-  host: config.apiHost,
-  namespace: config.apiNamespace,
+  host: ENV.apiHost,
+  namespace: ENV.apiNamespace,
   urlForFindRecord(id, type, snapshot) {
     let url = this._super(...arguments);
     // facilitating loopback filter structure
@@ -16,4 +16,10 @@ export default DS.RESTAdapter.extend(DataAdapterMixin, PartialModelAdapter, {
     }
     return url;
   }
-});
+}
+
+var args = [PartialModelAdapter, config]
+
+if (ENV.APP.AUTH != false) args.unshift(DataAdapterMixin);
+
+export default DS.RESTAdapter.extend(...args);
