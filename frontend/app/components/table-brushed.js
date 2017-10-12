@@ -73,7 +73,24 @@ export default Ember.Component.extend({
         manualColumnResize: true,
         manualRowMove: true,
         manualColumnMove: true,
-        contextMenu: true
+        contextMenu: true,
+        afterChange: function(e) {
+          $("#table-brushed").find("tr").on('mouseenter', function(e) {
+            if (e.currentTarget.children[2]) {
+              var marker_name = $(e.currentTarget.children[2]).text();
+              if (marker_name.indexOf(" ") == -1) {
+                that.highlightMarker(marker_name);
+                return;
+              }
+            }
+            that.highlightMarker();
+          }).on('mouseleave', function(e) {
+            that.highlightMarker();
+          });
+          $("#table-brushed").on('mouseleave', function(e) {
+            that.highlightMarker();
+          })
+        }
       });
       that.set('table', table);
   },
@@ -89,7 +106,24 @@ export default Ember.Component.extend({
       me.send('showData', data);
       table.updateSettings({data:data});
     }
-  }.observes('data')
+  }.observes('data'),
+
+  highlightMarker: function(marker) {
+    d3.selection.prototype.moveToFront = function() {  
+      return this.each(function(){
+        this.parentNode.appendChild(this);
+      });
+    };
+    d3.selectAll("circle")
+      .attr("r", 2)
+      .style("fill", "red");
+    if (marker) {
+      d3.selectAll("circle." + marker)
+        .attr("r", 4)
+        .style("fill", "black")
+        .moveToFront();
+    }
+  }
 
 
 });
