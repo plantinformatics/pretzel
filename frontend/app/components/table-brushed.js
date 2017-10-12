@@ -116,11 +116,13 @@ export default Ember.Component.extend({
     };
     d3.selectAll("circle")
       .attr("r", 2)
-      .style("fill", "red");
+      .style("fill", "red")
+      .style("stroke", "red");
     if (marker) {
       d3.selectAll("circle." + marker)
-        .attr("r", 4)
-        .style("fill", "black")
+        .attr("r", 5)
+        .style("fill", "yellow")
+        .style("stroke", "black")
         .moveToFront();
     }
   }
