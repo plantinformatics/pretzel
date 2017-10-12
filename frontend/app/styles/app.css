@@ -13,6 +13,10 @@ body.ember-application > div.ember-view > div.container
 {
     float: left;
 }
+.draw-map-container
+{
+    width: 100%;
+}
 /* Large desktop */
 @media (min-width: 1200px) {
 .draw-map-container
@@ -31,12 +35,10 @@ body.ember-application > div.ember-view > div.container
 
 /* Landscape phone to portrait tablet */
 @media (max-width: 767px) {
-    width: 100%;
 }
 
 /* Landscape phones and down */
 @media (max-width: 480px) {
-    width: 100%;
 }
 
 
@@ -84,6 +86,27 @@ svg.verticalTitle
 .map.zoomed g.axis {
     cursor: move;
 }
+
+/* ---------------------------------- */
+
+g.axis-use > rect {
+  fill: none;
+  stroke: blue;
+}
+
+/* overflow:scroll within foreignObject works in firefox, not chrome;  see
+ * https://stackoverflow.com/questions/34206459/scroll-is-not-working-inside-svg-foreign-object-in-chrome
+ *  http://jsfiddle.net/ranr/ncry8Lmx/
+ * code.google.com/p/chromium/issues/detail?id=568614
+ */
+.foreignObject body.axis-table {
+    overflow: hidden;
+    /* overflow: scroll; */
+}
+.foreignObject body.axis-table:not(:-moz-handler-blocked) {
+    overflow: scroll;
+}
+
 
 /* ---------------------------------- */
 
@@ -267,6 +290,13 @@ div.ExportFlowData
 }
 g.brush:hover > rect.handle {
   stroke: blue;
+}
+g.brush:hover > rect.overlay {
+    outline: 1px dashed purple; 
+    -webkit-tap-highlight-color: rgba(70, 30, 50, 0);
+}
+g.tick:hover {
+    outline: 1px dashed orange; 
 }
 
 .horizTick

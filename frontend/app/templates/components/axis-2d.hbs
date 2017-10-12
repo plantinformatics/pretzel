@@ -1,0 +1,8 @@
+{{#ember-wormhole to="axis2D"}}
+  {{#data-table data=data selectionMode='multiple' 
+     selectionChanged=(action 'selectionChanged') classNames=tableClassNames as |t|}}
+  {{t.selectionColumn}}
+  {{t.column propertyName='marker' name='Marker'}}
+  {{t.column propertyName='position' name='Position'}}
+{{/data-table}}
+{{/ember-wormhole}}

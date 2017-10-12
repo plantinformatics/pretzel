@@ -197,6 +197,11 @@ export default Ember.Component.extend({
       this.sendAction('mapsToViewDelete', mapName);
     },
 
+      enableAxis2D: function(enabled) {
+        console.log("enableAxis2D in components/draw-map", enabled);
+        this.set('axis2DEnabled', enabled);
+    },
+
     resizeView : function()
     {
       console.log("resizeView()");
@@ -236,7 +241,9 @@ export default Ember.Component.extend({
             let mtv = content[ic],
             m, im, newChr;
             let oa = me.get('oa');
-            console.log("mtv", mtv.length, mtv, "aps", oa.aps.length, oa.aps);
+              if ((oa.aps === undefined) || trace_promise)
+                console.log("mtv", mtv.length, mtv, "aps", oa.aps, oa.aps && oa.aps.length);
+            if (oa.aps !== undefined)
             for (im=0; im < mtv.length; im++)
             {
               if (oa.aps[m = mtv[im]])
@@ -2288,15 +2295,96 @@ export default Ember.Component.extend({
 
     // Add a group element for each AP.
     // Stacks are selection groups in the result of this .selectAll()
-    let g = stackS.selectAll(".ap")
+    let apG = stackS.selectAll(".ap")
       .data(stack_apIDs)
       .enter().append("g");
+    let allG = apG
+      .append('g')
+      .attr("class", "axis-all")
+      .attr("id", eltIdAll);
+    function eltIdAll(d) { return "all" + d; }
+    function eltIdGpRef(d, i, g)
+    {
+      console.log("eltIdGpRef", this, d, i, g);
+      let p2 = this.parentNode.parentElement;
+      return "#a" + p2.__data__;
+    }
+    function apShowExtend(ap, apName, apG)
+    {
+      let initialWidth = 50,
+      offsets = ap.extended ? [initialWidth] : [];
+      if (apG === undefined)
+        apG = svgContainer.selectAll("g.ap#id" + apName);
+      let ug = apG.selectAll("g.axis-use")
+        .data(offsets);	// x translation of right axis
+      let ugx = ug
+        .exit()
+        .transition().duration(500)
+        .remove();
+      ugx
+        .selectAll("use")
+        .attr("transform",function(d) {return "translate(0,0)";});
+      ugx
+        .selectAll("rect")
+        .attr("width", 0);
+      ugx
+        .selectAll(".foreignObject")
+        .attr("width", 0);
+      let eg = ug
+        .enter()
+        .append("g")
+        .attr("class", "axis-use");
+      // merge / update ?
+
+      let eu = eg
+      /* extra "xlink:" seems required currently to work, refn :  dsummersl -
+       * https://stackoverflow.com/questions/10423933/how-do-i-define-an-svg-doc-under-defs-and-reuse-with-the-use-tag */
+        .append("use").attr("xlink:xlink:href", eltIdGpRef);
+      eu.transition().duration(1000)
+        .attr("transform",function(d) {return "translate(" + d + ",0)";});
+
+      let er = eg
+        .append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", 0)
+        .attr("height", yRange);
+      er
+        .transition().duration(1000)
+        .attr("width", initialWidth);
+
+      // foreignObject is case sensitive - refn https://gist.github.com/mbostock/1424037
+      let ef = eg
+        .append("g")
+        .append("foreignObject")
+        .attr("class", "foreignObject")
+      /*.attr("x", 0)
+       .attr("y", 0) */
+        .attr("width", initialWidth /*0*/)
+        .attr("height", yRange)
+        .append("xhtml:body")
+        .attr("class", "axis-table");
+      ef
+        .transition().duration(1000)
+        .attr("width", initialWidth);
+      if (ef.node() !== null)	  // .style() uses .node()
+        ef
+        .append("div")
+        .attr("id", "axis2D")
+        .style("border:1px green solid");
+
+      me.set('selectedMarkers', [{marker: "A1", position: 11}, {marker: "A2", position: 12}]);
+      me.send('enableAxis2D', ap.extended);
+    }
+
     if (trace_stack)
     {
       if (trace_stack > 1)
-      oa.stacks.forEach(function(s){console.log(s.apIDs());});
+        oa.stacks.forEach(function(s){console.log(s.apIDs());});
+      let g = apG;
       console.log("g.ap", g.enter().size(), g.exit().size(), stacks.length);
     }
+    let g = apG;
     let gt = newRender ? g :
       g.transition().duration(dragTransitionTime);
     gt
@@ -2430,8 +2518,10 @@ export default Ember.Component.extend({
     });
 
 
-
+      g = allG;
     // Add an axis and title
+      /** This g is referenced by the <use>. It contains axis path, ticks, title text, brush. */
+      let defG =
     g.append("g")
       .attr("class", "axis")
       .each(function(d) { d3.select(this).attr("id",axisEltId(d)).call(axis.scale(y[d])); });  
@@ -2502,7 +2592,7 @@ export default Ember.Component.extend({
     }
 
     // Add a brush for each axis.
-    g.append("g")
+    allG.append("g")
       .attr("class", "brush")
       .each(function(d) { d3.select(this).call(oa.y[d].brush); });
 
@@ -2521,7 +2611,7 @@ export default Ember.Component.extend({
 
 
     //Setup the tool tip.
-    let toolTip = d3.select("body").append("div")
+      let toolTip = d3.selectAll("html > div#toolTip.toolTip").data([1]).enter().append("div")
       .attr("class", "toolTip")
       .attr("id","toolTip")
       .style("opacity", 0);
@@ -5125,6 +5215,12 @@ export default Ember.Component.extend({
     });
 
     let apTitleSel = "g.ap > text";
+      function glyphiconButton (className, id, glyphiconName, href) {
+        return ''
+              + '<button class="' + className + '" id="' + id + '" href="' + href + '">'
+              + '<span class="glyphicon ' + glyphiconName + '" aria-hidden=true></span>'
+              + '</button>';
+      }
     /** Setup hover menus over AP titles.
      * So far used just for Delete
      * @see based on similar configurejQueryTooltip()
@@ -5133,17 +5229,19 @@ export default Ember.Component.extend({
       if (trace_gui)
       console.log("configureAPtitleMenu", apName, this, this.outerHTML);
         let node_ = this;
+      let remap = true;	// using the bundled glyphicon, getting jumbled order.
         Ember.$(node_)
         .popover({
-          trigger : "hover", // manual", // "click focus",
+            trigger : "hover", // manual", // "click focus",
           sticky: true,
-          delay: {show: 200, hide: 3000},
+          delay: {show: 200, hide: 1500},
           container: 'div#holder',
           placement : "auto bottom",
-          title : apName,
+          // title : apName,
           html: true,
           content : ""
-            + '<button class="DeleteMap" id="Delete:' + apName + '" href="#">Delete</button>'
+            + glyphiconButton("DeleteMap", "Delete_" + apName, remap ? "glyphicon-sound-7-1" : "glyphicon-remove-sign", "#")
+            + glyphiconButton("ExtendMap", "Extend_" + apName, remap ? "glyphicon-star" : "glyphicon-arrow-right", "#")
         })
         // .popover('show');
       
@@ -5165,6 +5263,19 @@ export default Ember.Component.extend({
               removeAPmaybeStack(apName, stackID, stack);
               me.send('mapsToViewDelete', apName);
             });
+
+          let extendButtonS = d3.select("button.ExtendMap");
+          if (trace_gui)
+            console.log(extendButtonS.empty(), extendButtonS.node());
+          extendButtonS
+            .on('click', function (buttonElt /*, i, g*/) {
+              console.log("extend", apName, this);
+              let ap = oa.aps[apName], stack = ap && ap.stack;
+              // toggle ap.extended, which is initially undefined.
+              ap.extended = ! ap.extended;
+              apShowExtend(ap, apName, undefined);
+            });
+
         });
     }
 
