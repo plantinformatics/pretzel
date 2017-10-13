@@ -1,7 +1,5 @@
 import Ember from 'ember';
 
-import ENV from '../config/environment';
-
 const { inject: { service }, Component } = Ember;
 
 export default Component.extend({
@@ -19,5 +17,5 @@ export default Component.extend({
       this.get('session').invalidate();
     }
   },
-  auth: ENV.APP.AUTH
+  auth: window['AUTH'] !== 'NONE'
 });

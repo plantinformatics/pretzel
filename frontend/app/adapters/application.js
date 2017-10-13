@@ -20,6 +20,8 @@ var config = {
 
 var args = [PartialModelAdapter, config]
 
-if (ENV.APP.AUTH != false) args.unshift(DataAdapterMixin);
+if (window['AUTH'] !== 'NONE'){
+  args.unshift(DataAdapterMixin);
+}
 
 export default DS.RESTAdapter.extend(...args);

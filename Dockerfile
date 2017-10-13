@@ -20,12 +20,9 @@ RUN cd ./frontend && \
     npm install && \
     npm install bower -g && \
     bower install --allow-root && \
-    AUTH=ALL npm run build && \
+    npm run build && \
     mkdir -p ../app/client && \
-    cp -r ./dist/. ../app/client/auth && \
-    AUTH=NONE npm run build && \
-    mkdir -p ../app/client && \
-    cp -r ./dist/. ../app/client/open && \
+    cp -r ./dist/. ../app/client && \
     cd .. && \
     rm -rf ./frontend && \
     npm uninstall -g bower && \

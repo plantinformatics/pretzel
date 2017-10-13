@@ -15,6 +15,14 @@
     {{content-for "head-footer"}}
   </head>
   <body>
+
+    <script name="pretzel">
+      // global settings connecting into application
+      // typically populated by server
+      // such as
+      // window['AUTH'] = 'NONE'
+    </script>
+
     {{content-for "body"}}
 
     <script src="/assets/vendor.js"></script>

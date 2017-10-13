@@ -1,1 +1,0 @@
-store frontend built with AUTH=ALL here

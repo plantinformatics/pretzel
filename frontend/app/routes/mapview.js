@@ -1,6 +1,5 @@
 import Ember from 'ember';
 import AuthenticatedRouteMixin from 'ember-simple-auth/mixins/authenticated-route-mixin';
-import ENV from '../config/environment';
 
 const { RSVP: { Promise } } = Ember;
 const { Route } = Ember;
@@ -171,6 +170,8 @@ let config = {
 
 var args = [config]
 
-if (ENV.APP.AUTH != false) args.unshift(AuthenticatedRouteMixin);
+if (window['AUTH'] !== 'NONE') {
+  args.unshift(AuthenticatedRouteMixin);
+}
 
 export default Ember.Route.extend(...args);

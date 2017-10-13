@@ -11,8 +11,6 @@ var loopback = require('loopback');
 var boot = require('loopback-boot');
 var loopbackPassport = require('loopback-component-passport');
 var morgan = require('morgan');
-// TODO determine if body parsing is needed
-// when data structures are amalgamated
 var bodyParser = require('body-parser');
 
 var app = module.exports = loopback();
@@ -104,22 +102,16 @@ app.set('views', path.resolve(__dirname, 'views'));
 // - - - - - FILE DELIVERY CONFIG - - - - - -
 //
 // 
-if (process.env.AUTH === 'NONE') {
-  // scenario - no auth solution for API, deliver open client
-  // default route handling to deliver client files
-  app.use('/', loopback.static(path.resolve(__dirname, '../client/open')));
-  // using a regex to avoid wildcard matching of api route,
-  // but delivering files when hitting all other routes.
-  // this was an issue when providing the confirm token on email
-  // validation, as the confirm API request would deliver files
-  // instead of hitting the API as desired.
-  app.use(/^((?!api).)*$/, loopback.static(path.resolve(__dirname, '../client/open')));
-  console.log('Delivering site from /client/open')
-} else {
-  // scenario - API with ACL settings, deliver standard auth solution
-  app.use('/', loopback.static(path.resolve(__dirname, '../client/auth')));
-  app.use(/^((?!api).)*$/, loopback.static(path.resolve(__dirname, '../client/auth')));
-  console.log('Delivering site from /client/auth')
-}
+
+let clientPath = path.resolve(__dirname, '../client')
+
+// default route handling to deliver client files
+app.use('/', loopback.static(clientPath));
+// using a regex to avoid wildcard matching of api route,
+// but delivering files when hitting all other routes.
+// this was an issue when providing the confirm token on email
+// validation, as the confirm API request would deliver files
+// instead of hitting the API as desired.
+app.use(/^((?!api).)*$/, loopback.static(clientPath));
 
 module.exports = app; // for testing

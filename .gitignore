@@ -2,10 +2,7 @@
 
 # compiled output
 /dist
-/backend/client/auth/*
-/backend/client/open/*
-!/backend/client/auth/note.txt
-!/backend/client/open/note.txt
+/backend/client/*
 /tmp
 /log
 *.log

@@ -12,12 +12,12 @@ module.exports = function(environment) {
     EmberENV: {
       FEATURES: {
         // Here you can enable experimental features on an ember canary build
-        // e.g. 'with-controller': true
+        // e.g. 'with-controller': tru
       },
       EXTEND_PROTOTYPES: {
         // Prevent Ember Data from overriding Date.parse.
         Date: false
-      }
+      }, 
     },
     'ember-simple-auth': {
         authenticationRoute: 'login',
@@ -28,10 +28,6 @@ module.exports = function(environment) {
     APP: {
       // Here you can pass flags/options to your application instance
       // when it is created
-
-      // default config is for authorisation to be enabled
-      // override this option in the environment tests below
-      AUTH: true
     }
   };
 
@@ -41,7 +37,6 @@ module.exports = function(environment) {
     // ENV.APP.LOG_TRANSITIONS = true;
     // ENV.APP.LOG_TRANSITIONS_INTERNAL = true;
     // ENV.APP.LOG_VIEW_LOOKUPS = true;
-    // ENV.APP.AUTH = false
   }
 
   if (environment === 'test') {
@@ -53,13 +48,10 @@ module.exports = function(environment) {
     ENV.APP.LOG_VIEW_LOOKUPS = false;
 
     ENV.APP.rootElement = '#ember-testing';
-    // ENV.APP.AUTH = false
   }
 
   if (environment === 'production') {
     ENV.apiHost = '';
-    // ENV.APP.AUTH = false
-    if (process.env.AUTH === 'NONE') ENV.APP.AUTH = false
   }
 
   return ENV;
