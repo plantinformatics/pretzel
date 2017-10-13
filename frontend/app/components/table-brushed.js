@@ -67,32 +67,30 @@ export default Ember.Component.extend({
           'Marker / Gene',
           'Position'
         ],
-        width: "100%",
-        stretchH: 'all',
+        colWidths: [100, 135, 60],
+        height: 500,
         manualRowResize: true,
         manualColumnResize: true,
         manualRowMove: true,
         manualColumnMove: true,
-        contextMenu: true,
-        afterChange: function(e) {
-          $("#table-brushed").find("tr").on('mouseenter', function(e) {
-            if (e.currentTarget.children[2]) {
-              var marker_name = $(e.currentTarget.children[2]).text();
-              if (marker_name.indexOf(" ") == -1) {
-                that.highlightMarker(marker_name);
-                return;
-              }
-            }
-            that.highlightMarker();
-          }).on('mouseleave', function(e) {
-            that.highlightMarker();
-          });
-          $("#table-brushed").on('mouseleave', function(e) {
-            that.highlightMarker();
-          })
-        }
+        contextMenu: true
       });
       that.set('table', table);
+      $("#table-brushed").on('mouseleave', function(e) {
+        that.highlightMarker();
+      }).on("mouseover", function(e) {
+        if (e.target.tagName == "TD") {
+          var tr = e.target.parentNode;
+          if (tr.childNodes[2]) {
+            var marker_name = $(tr.childNodes[2]).text();
+            if (marker_name.indexOf(" ") == -1) {
+              that.highlightMarker(marker_name);
+              return;
+            }
+          }
+        }
+        that.highlightMarker();
+      });
   },
 
 

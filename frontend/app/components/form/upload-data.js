@@ -67,9 +67,8 @@ export default Component.extend({
           'Chromosome',
           'Position'
         ],
-        // width: 500,
         height: 500,
-        stretchH: 'all',
+        colWidths: [100, 100, 100],
         manualRowResize: true,
         manualColumnResize: true,
         manualRowMove: true,
