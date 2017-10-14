@@ -17,23 +17,35 @@
  * Usage eg.     eltWidthResizable('#holder');
  *
  * @param eltSelector DOM element to make resizable
+ * @param filter  undefined or event filter - refn github.com/d3/d3-drag#drag_filter
+ * @param resized undefined or callback when resized
  */
-function eltWidthResizable(eltSelector)
+function eltWidthResizable(eltSelector, filter, resized)
 {
   /** refn : meetamit https://stackoverflow.com/a/25792309  */
   let resizable = d3.select(eltSelector);
   let resizer = resizable.select('.resizer');
+  if ((resizable.node() === null) || (resizer.node() === null))
+    console.log("eltWidthResizable() resizer=", resizer, eltSelector, resizable.node(), resizer.node());
 
+  let startX;
   let dragResize = d3.drag()  // d3 v3: was .behavior
     .on('drag', function() {
       // Determine resizer position relative to resizable (parent)
       let x = d3.mouse(this.parentNode)[0];
-      // console.log("eltWidthResizable drag x=", x);
+      let dx = d3.event.dx;
+      console.log("eltWidthResizable drag x=", x, dx);
       // Avoid negative or really small widths
       x = Math.max(50, x);
 
       resizable.style('width', x + 'px');
+      if (resized)
+        // this is resizer elt
+        resized(x, dx, eltSelector, resizable, resizer, this);
     });
+  // if (filter)
+    dragResize.filter(shiftKeyfilter/*filter*/);
+
   if (resizer)
     resizer.call(dragResize);
   else
@@ -42,4 +54,19 @@ function eltWidthResizable(eltSelector)
 
 /*----------------------------------------------------------------------------*/
 
-export { eltWidthResizable };
+/** Event filter for eltWidthResizable() ... d3 drag.filter()
+ *  refn github.com/d3/d3-drag#drag_filter
+ */
+function shiftKeyfilter() {
+  let ev = d3.event.sourceEvent || d3.event; 
+  return ev.shiftKey;
+}
+
+function noShiftKeyfilter() {
+  let ev = d3.event.sourceEvent || d3.event; 
+  return ! ev.shiftKey;
+}
+
+/*----------------------------------------------------------------------------*/
+
+export { eltWidthResizable, shiftKeyfilter, noShiftKeyfilter };

@@ -5,7 +5,7 @@ import createIntervalTree from 'npm:interval-tree-1d';
 console.log("createIntervalTree", createIntervalTree);
 
 import { chrData } from '../utils/utility-chromosome';
-import { eltWidthResizable } from '../utils/domElements';
+import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
 
 
 /* jshint curly : false */
@@ -162,6 +162,8 @@ export default Ember.Component.extend({
   
   scroller: Ember.inject.service(),
 
+  axisData : [{marker: "A1", position: 11}, {marker: "A2", position: 12}],
+
   /*------------------------------------------------------------------------*/
 
   actions: {
@@ -200,6 +202,12 @@ export default Ember.Component.extend({
       enableAxis2D: function(enabled) {
         console.log("enableAxis2D in components/draw-map", enabled);
         this.set('axis2DEnabled', enabled);
+    },
+
+    axisWidthResize : function(apID, width, dx) {
+      console.log("axisWidthResize in components/draw-map", apID, width, dx);
+      let axisWidthResize = this.get('axisWidthResize');
+      if (axisWidthResize) axisWidthResize(apID, width, dx);
     },
 
     resizeView : function()
@@ -379,11 +387,13 @@ export default Ember.Component.extend({
     }
 
 
+    console.log("oa.apIDs", oa.apIDs, source);
     /** apIDs are <apName>_<chromosomeName> */
     if (source == 'dataReceived')
       oa.apIDs = oa.apIDs.concat(myDataKeys);
-    else
+    else if ((myDataKeys.length > 0) || (oa.apIDs === undefined))
       oa.apIDs = myDataKeys;
+    console.log("oa.apIDs", oa.apIDs);
     /** mapName (apName) of each chromosome, indexed by chr name. */
     let cmName = oa.cmName || (oa.cmName = {});
     /** AP id of each chromosome, indexed by AP name. */
@@ -1737,7 +1747,72 @@ export default Ember.Component.extend({
         });
     };
 
+    /*------------------------------------------------------------------------*/
 
+    /** width of the AP.  either 0 or .extended (current width of extension) */
+    Stacked.prototype.extendedWidth = function()
+    {
+      // console.log("Stacked extendedWidth()", this, this.extended);
+      return this.extended || 0;
+    };
+
+    /** @return range of widths, [min, max] of the APs in this stack */
+    Stack.prototype.extendedWidth = function()
+    {
+      let range = [undefined, undefined];
+      this.aps.forEach(
+        function (a, index)
+        {
+          let w = a.extendedWidth();
+          if ((range[0] === undefined) || (range[0] > w))
+            range[0] = w;
+          if ((range[1] === undefined) || (range[1] < w))
+            range[1] = w;
+        });
+      // console.log("Stack extendedWidth()", this, range);
+      return range;
+    };
+
+    /*------------------------------------------------------------------------*/
+
+    /** Scale to map axis names to x position of axes.
+     * sum of stacks, constant inter-space, use max of .extendedWidth().
+     * (combine) 2 scales - map stack key to domain space, then to range.
+     * Replaces @see xScale() when axes may be split - .extended
+      */
+    function xScaleExtend()
+    {
+      /* .extended is measured in the range space (pixels),
+       * so calculate space between axes.
+       */
+      let count = 0, width = 0;
+      stacks.forEach(
+        function(s){count++; let widthRange = s.extendedWidth(); width += widthRange[1];}
+      );
+      let widths = stacks.map(
+        function(s){ let widthRange = s.extendedWidth(); return widthRange[1];}
+      );
+
+      let rangeWidth = axisXRange[1] - axisXRange[0],
+      paddingInner = rangeWidth*0.10, paddingOuter = rangeWidth*0.05;
+      let gap = (rangeWidth - paddingOuter*2) - width; // total gap
+      if (count > 1)
+        gap =  gap / (count - 1);
+
+      let stackDomain = Array.from(oa.stacks.keys()); // was apIDs
+      let outputs = [], cursor = axisXRange[0];
+      count = 0;
+      stacks.forEach(
+        function(s){
+          count++; let widthRange = s.extendedWidth(); width += widthRange[1];
+          outputs.push(cursor);
+          cursor += width + gap;
+        }
+      );
+      console.log("xScaleExtend", widths, count, width, axisXRange, paddingInner, paddingOuter, gap, stackDomain, outputs, cursor);
+      return d3.scaleOrdinal().domain(stackDomain).range(outputs);
+      // .unknown(axisXRange*0.98) ?
+    }
 
     /*------------------------------------------------------------------------*/
 
@@ -1876,8 +1951,60 @@ export default Ember.Component.extend({
         stack.calculatePositions();
       }
     });
-    // xScale() uses stacks.keys().
-    oa.xs = xScale();
+    function axisWidthResize(apID, width, dx)
+    {
+      console.log("axisWidthResize", apID, width, dx);
+      oa.aps[apID].extended = width;
+      if (true)
+        axisWidthResizeRight(apID, width, dx);
+      else
+      {
+        updateXScale();
+        stacks.changed = 0x01;
+        let t = stacksAdjust(false, undefined);
+      }
+    };
+    /**  add width change to the x translation of axes to the right of this one.
+      */
+    function axisWidthResizeRight(apID, width, dx)
+    {
+      console.log("axisWidthResizeRight", apID, width, dx);
+      /** this is like Stack.apStackIndex().  */
+      let ap = oa.aps[apID], from = ap.stack,
+      fromSix = from.stackIndex(),   o = oa.o;
+      for (let six=0; six < stacks.length; six++)
+      {
+        let stack = stacks[six],
+        /** apply the dx proportionally to the closeness of the stack to the cursor (e.g. stack index or x distance),
+         * and apply it -ve to those to the left, including the stack of the axis extend being resized, so that it mirrors,
+         * i.e. right side goes same distance as dx, left side same and opposite,
+         */
+        close =
+          (six == fromSix)
+          ? -1/2
+          : (six < fromSix)
+          ? (six - fromSix) / fromSix
+          : (six - fromSix) / (stacks.length - fromSix);
+        console.log("close", close, fromSix, six, stacks.length);
+        stack.aps.forEach(
+          function (a, index)
+          {
+            o[a.apName] += (dx * close);
+          }
+        );
+        // could filter the selection - just those right of the extended axis
+        svgContainer.selectAll(".ap").attr("transform", Stack.prototype.apTransformO);
+        stack.aps.forEach( function (a, index) { apRedrawText(aps[a.apName]); });
+        pathUpdate(undefined);
+      }
+    };
+    this.set('axisWidthResize', function (apID, width, dx) { axisWidthResize(apID, width, dx); });
+    function updateXScale()
+    {
+      // xScale() uses stacks.keys().
+      oa.xs = xScaleExtend(); // or xScale();
+    }
+    updateXScale();
     function x(apID)
     {
       let i = Stack.apStackIndex(apID);
@@ -2361,20 +2488,21 @@ export default Ember.Component.extend({
       /*.attr("x", 0)
        .attr("y", 0) */
         .attr("width", initialWidth /*0*/)
-        .attr("height", yRange)
+        .attr("height", yRange);
+      let eb = ef
         .append("xhtml:body")
         .attr("class", "axis-table");
       ef
         .transition().duration(1000)
         .attr("width", initialWidth);
-      if (ef.node() !== null)	  // .style() uses .node()
-        ef
+      if (eb.node() !== null)	  // .style() uses .node()
+        eb
         .append("div")
         .attr("id", "axis2D")
         .style("border:1px green solid");
 
-      me.set('selectedMarkers', [{marker: "A1", position: 11}, {marker: "A2", position: 12}]);
       me.send('enableAxis2D', ap.extended);
+
     }
 
     if (trace_stack)
@@ -2395,6 +2523,7 @@ export default Ember.Component.extend({
       .call(
         d3.drag()
           .subject(function(d) { return {x: x(d)}; }) //origin replaced by subject
+          .filter(noShiftKeyfilter)
           .on("start", dragstarted) //start instead of dragstart in v4. 
           .on("drag", dragged)
           .on("end", dragended));//function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
@@ -5112,7 +5241,7 @@ export default Ember.Component.extend({
       // x is defined for this AP.
       //
       // Order of apIDs may have changed so need to redefine x and o.
-      oa.xs = xScale();
+      updateXScale();
       // if caching, recalc : collateApPositions();
       
       let stacks = oa.stacks;
