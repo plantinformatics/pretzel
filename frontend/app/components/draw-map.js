@@ -1785,9 +1785,9 @@ export default Ember.Component.extend({
       /* .extended is measured in the range space (pixels),
        * so calculate space between axes.
        */
-      let count = 0, width = 0;
+      let count = 0, widthSum = 0;
       stacks.forEach(
-        function(s){count++; let widthRange = s.extendedWidth(); width += widthRange[1];}
+        function(s){count++; let widthRange = s.extendedWidth(); widthSum += widthRange[1];}
       );
       let widths = stacks.map(
         function(s){ let widthRange = s.extendedWidth(); return widthRange[1];}
@@ -1795,7 +1795,7 @@ export default Ember.Component.extend({
 
       let rangeWidth = axisXRange[1] - axisXRange[0],
       paddingInner = rangeWidth*0.10, paddingOuter = rangeWidth*0.05;
-      let gap = (rangeWidth - paddingOuter*2) - width; // total gap
+      let gap = (rangeWidth - paddingOuter*2) - widthSum; // total gap
       if (count > 1)
         gap =  gap / (count - 1);
 
@@ -1804,12 +1804,12 @@ export default Ember.Component.extend({
       count = 0;
       stacks.forEach(
         function(s){
-          count++; let widthRange = s.extendedWidth(); width += widthRange[1];
+          count++; let widthRange = s.extendedWidth(); let width = widthRange[1];
           outputs.push(cursor);
           cursor += width + gap;
         }
       );
-      console.log("xScaleExtend", widths, count, width, axisXRange, paddingInner, paddingOuter, gap, stackDomain, outputs, cursor);
+      console.log("xScaleExtend", widths, count, widthSum, axisXRange, paddingInner, paddingOuter, gap, stackDomain, outputs, cursor);
       return d3.scaleOrdinal().domain(stackDomain).range(outputs);
       // .unknown(axisXRange*0.98) ?
     }
