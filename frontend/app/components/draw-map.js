@@ -209,6 +209,11 @@ export default Ember.Component.extend({
       let axisWidthResize = this.get('axisWidthResize');
       if (axisWidthResize) axisWidthResize(apID, width, dx);
     },
+    axisWidthResizeEnded : function() {
+      console.log("axisWidthResizeEnded in components/draw-map");
+      let axisWidthResizeEnded = this.get('axisWidthResizeEnded');
+      if (axisWidthResizeEnded) axisWidthResizeEnded();
+    },
 
     resizeView : function()
     {
@@ -1955,14 +1960,15 @@ export default Ember.Component.extend({
     {
       console.log("axisWidthResize", apID, width, dx);
       oa.aps[apID].extended = width;
-      if (true)
-        axisWidthResizeRight(apID, width, dx);
-      else
-      {
-        updateXScale();
-        stacks.changed = 0x01;
-        let t = stacksAdjust(false, undefined);
-      }
+      axisWidthResizeRight(apID, width, dx);
+    };
+    function axisWidthResizeEnded()
+    {
+      console.log("axisWidthResizeEnded");
+
+      updateXScale();
+      stacks.changed = 0x10;
+      let t = stacksAdjust(true, undefined);
     };
     /**  add width change to the x translation of axes to the right of this one.
       */
@@ -1999,6 +2005,7 @@ export default Ember.Component.extend({
       }
     };
     this.set('axisWidthResize', function (apID, width, dx) { axisWidthResize(apID, width, dx); });
+    this.set('axisWidthResizeEnded', function () { axisWidthResizeEnded(); });
     function updateXScale()
     {
       // xScale() uses stacks.keys().

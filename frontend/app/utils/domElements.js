@@ -19,6 +19,9 @@
  * @param eltSelector DOM element to make resizable
  * @param filter  undefined or event filter - refn github.com/d3/d3-drag#drag_filter
  * @param resized undefined or callback when resized
+ * @return the d3 drag object, so that the caller can register for drag events.
+ * The caller could use eltWidthResizable(...).on('drag') instead of passing resized,
+ * but this function wraps the calculation of x and dx which is useful.
  */
 function eltWidthResizable(eltSelector, filter, resized)
 {
@@ -40,7 +43,8 @@ function eltWidthResizable(eltSelector, filter, resized)
 
       resizable.style('width', x + 'px');
       if (resized)
-        // this is resizer elt
+        // 'this' is resizer elt.
+        // Only the first 2 args are used so far - the others can be dropped.
         resized(x, dx, eltSelector, resizable, resizer, this);
     });
   // if (filter)
@@ -50,6 +54,7 @@ function eltWidthResizable(eltSelector, filter, resized)
     resizer.call(dragResize);
   else
     console.log("eltWidthResizable() resizer=", resizer, eltSelector, dragResize);
+    return dragResize;
 }
 
 /*----------------------------------------------------------------------------*/

@@ -35,9 +35,16 @@ export default Ember.Component.extend({
        * A possible optimisation : instead, add width change to the x translation of axes to the right of this one.
        */
       parentView.send('axisWidthResize', apID, width, dx);
+    };
+    function resizeEnded()
+    {
+      let parentView = me.get('parentView');
+      console.log("resizeEnded");
+      parentView.send('axisWidthResizeEnded');
     }
     Ember.run.later( function () { 
-      eltWidthResizable('.foreignObject', undefined, resized);	// #axis2D
+      let dragResize = eltWidthResizable('.foreignObject', undefined, resized);	// #axis2D
+      dragResize.on('end', resizeEnded);
     }, 1000);
   },
 
