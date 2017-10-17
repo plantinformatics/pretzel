@@ -600,3 +600,11 @@ svg > g.publishMode .btn
   margin-top: 20px;
   margin-bottom: 10px;
 }
+
+ul#maps_aligned > li.selected {
+  font-weight: bold;
+}
+
+g.ap.selected > text {
+  font-weight: bold;
+}

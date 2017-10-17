@@ -102,7 +102,13 @@ export default Ember.Controller.extend({
       console.log("controllers/mapview:togglePathColourScale()", this);
       this.set('pathColourScale', ! this.get('pathColourScale'));
     }
-    , pathColourScale: true
+    , pathColourScale: true,
+    selectChr: function(chr) {
+      d3.selectAll("ul#maps_aligned > li").classed("selected", false);
+      d3.select('ul#maps_aligned > li[data-chr-id="' + chr.id + '"]').classed("selected", true);
+      d3.selectAll("g.ap").classed("selected", false);
+      d3.select("g#id" + chr.id).classed("selected", true);
+    }
   },
 
   layout: {

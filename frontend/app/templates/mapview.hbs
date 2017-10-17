@@ -71,9 +71,9 @@
 
                 <div class="pull-left maps-aligned">
                   Maps aligned :
-                  <ul>
-                    {{#each model.mapsDerived.selectedMaps as |chr|}}
-                      <li>{{chr.map.name}} {{chr.name}}</li>
+                  <ul id="maps_aligned">
+                    {{#each selectedMaps as |chr|}}
+                      <li data-chr-id={{chr.id}} {{action "selectChr" chr on="click"}}>{{chr.map.name}} {{chr.name}}</li>
                     {{/each}}
                   </ul>
                 </div>
