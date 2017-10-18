@@ -5,13 +5,35 @@ import { eltWidthResizable } from '../utils/domElements';
 
 export default Ember.Component.extend({
 
-  actions: {
-    selectionChanged: function(selA) {
-      console.log("selectionChanged in components/axis-2d", selA);
-      for (let i=0; i<selA.length; i++)
-        console.log(selA[i].marker, selA[i].position);
-    },
+  needs: ['component:tracks'],
 
+  subComponents : [],
+
+  actions: {
+    addTracks : function()
+    {
+      if (false)
+      {
+        // works if axisArea is (string selector and) is not within an existing ember view
+      const tracksComponent = Ember.getOwner(this).factoryFor('component:tracks');
+      let axisArea = Ember.$('.foreignObject > body > #axis2D');
+      console.log("components/axis-2d addTracks", axisArea, tracksComponent);
+      let t = tracksComponent.create();
+        t.appendTo(axisArea);
+      }
+      else
+      {
+        this.get('subComponents').pushObject('axis-tracks');
+      }
+    },
+    addTable : function()
+    {
+        this.get('subComponents').pushObject('axis-table');
+    },
+    remove: function(){
+      this.remove();
+      console.log("components/axis-2d remove()");
+    }
   },
 
   didRender() {

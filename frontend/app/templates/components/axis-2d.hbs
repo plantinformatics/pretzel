@@ -1,14 +1,22 @@
+{{!-- axis-2d is used within a <foreignObject> within a g.axis, created by apShowExtend()
+   It is rendered into div#axis2D (will add APid) using ember-wormhole.
+   --}}
 {{#ember-wormhole to="axis2D"}}
-  <div class="resizer" style="float:right;">
-    <span class="glyphicon glyphicon-download-alt"></span>
-    <span class="glyphicon glyphicon-scale"></span>
-    <span class="glyphicon glyphicon-upload"></span>
+  <div class="resizer inFO" style="float:right;">
+    {{!-- Being within <foreignObject>, this alternative is used to create and position the resizer arrow;
+                Because content is not displayed when position: relative; set via  .resizer:not(.inFO)::after.
+                Setting class inFO skips that ::after content, and instead the content is given here.
+                --}}
+    &#x21F9;
+    <div class="subMenu">
+      <button {{action "addTracks"}}>&#x2225;</button>
+      <button {{action "addTable"}}>&#x25A6;</button>
+    </div>
   </div>
 
-  {{#data-table data=data selectionMode='multiple' 
-     selectionChanged=(action 'selectionChanged') classNames=tableClassNames as |t|}}
-  {{t.selectionColumn}}
-  {{t.column propertyName='marker' name='Marker'}}
-  {{t.column propertyName='position' name='Position'}}
-{{/data-table}}
+  <div class="accordion-div">
+    {{component "axis-accordion" subComponents=subComponents data=data}}
+  </div>
+
+
 {{/ember-wormhole}}

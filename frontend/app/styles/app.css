@@ -48,14 +48,36 @@ body.ember-application > div.ember-view > div.container
  * Used by app/utils/domElements.js : eltWidthResizable() */
 .resizer
 {
-  width: 4em;
-  height: 4ex;
-  font-weight: bold;
+  /* float: right;  alternative to ::after  */
+  font-size: x-large;
+  color: #337ab7;  // brand blue;
+}
+/* This doesn't work within <foreignObject>, so :not(.inFO) is used. */
+.resizer:not(.inFO)::after {
+  content: "\e025\e230\e027";
+  right: -20px;
+  position: relative;
+}
+/*.foreignObject*/ .resizer.inFO {
+  position : inherit;
+}
+/* This is for ::after content;  position:fixed mostly works, but y position is variable.
+.foreignObject .resizer.inFO::after {
+  position: fixed;
+  right: -25px;
+ */
 }
 .resizer:hover
 {
-  border: 1px grey dashed;
-  padding : 2px 2px;
+  opacity : 0.7;
+  font-weight: 900;
+  color: hsl(208, 95%, 52%);	// #337ab7 with increased saturation and luminosity
+}
+.resizer > .subMenu {
+    display : none;
+}
+.resizer:hover > .subMenu {
+    display : inherit;
 }
 
 /* -------------------------------------------------------------------------- */
