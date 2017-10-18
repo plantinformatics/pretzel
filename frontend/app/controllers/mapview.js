@@ -104,6 +104,7 @@ export default Ember.Controller.extend({
     }
     , pathColourScale: true,
     selectChr: function(chr) {
+      this.set('selectedChr', chr);
       d3.selectAll("ul#maps_aligned > li").classed("selected", false);
       d3.select('ul#maps_aligned > li[data-chr-id="' + chr.id + '"]').classed("selected", true);
       d3.selectAll("g.ap").classed("selected", false);

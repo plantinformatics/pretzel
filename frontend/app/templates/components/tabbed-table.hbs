@@ -14,7 +14,11 @@
 <div class="tab-content">
   <div id="tab-brushed-marker" class="tab-pane fade in active">
     <h3>Brushed Markers</h3>
-    {{table-brushed data=selectedMarkers}}
+    <label>Filter:</label>
+    <input type="radio" name="filter" value="all" checked {{action "changeFilter" "all" preventDefault=false}}><label>All</label>
+    <input type="radio" name="filter" value="chrom" {{action "changeFilter" "chrom" preventDefault=false}}><label>Chromosome</label>
+    <input type="radio" name="filter" value="union" {{action "changeFilter" "union" preventDefault=false}}><label>Union</label>
+    {{table-brushed data=data}}
   </div>
   <div id="tab-marker" class="tab-pane fade in">
     <h3>Marker Name</h3>

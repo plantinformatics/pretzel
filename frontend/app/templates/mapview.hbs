@@ -189,7 +189,9 @@
       </ul>
       <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
         {{#if (compare layout.right.tab '===' 'selection')}}
-          {{tabbed-table selectedMarkers=selectedMarkers}}
+          {{tabbed-table 
+            selectedMarkers=selectedMarkers
+            selectedChr=selectedChr}}
           {{!-- marker-detail
             data=selectedMarkers --}}
         {{/if}}
