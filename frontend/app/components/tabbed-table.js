@@ -3,15 +3,15 @@ import Ember from 'ember';
 export default Ember.Component.extend({
   classNames: ['tabbed-table-container', 'bordered', 'control-panel'],
   filter: 'all',
-  data: Ember.computed('selectedChr', 'selectedMarkers', 'filter', function() {
-    let selectedChr = this.get('selectedChr')
+  data: Ember.computed('selectedChrom', 'selectedMarkers', 'filter', function() {
+    let selectedChrom = this.get('selectedChrom')
     let selectedMarkers = this.get('selectedMarkers')
     let filter = this.get('filter')
     // perform filtering according to selectedChr
     let filtered = selectedMarkers //all
-    if (filter == 'chrom' && selectedChr) {
+    if (filter == 'chrom' && selectedChrom) {
       filtered = selectedMarkers.filter(function(marker) {
-        return marker.Chromosome === selectedChr
+        return marker.Chromosome === selectedChrom.id
       })
     } else if (filter == 'union') {
       //split by chrom

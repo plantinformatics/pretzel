@@ -4048,7 +4048,7 @@ export default Ember.Component.extend({
       /** name[0] is apID of the brushed axis. name.length should be 1. */
       let name = d3.select(that).data();
       let brushedApID = name[0];
-      me.set('selectedChr', brushedApID);
+      me.sendAction('selectChromById', brushedApID)
 
       let svgContainer = oa.svgContainer;
       //Remove old circles.

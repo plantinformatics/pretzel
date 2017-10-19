@@ -73,7 +73,7 @@
                   Maps aligned :
                   <ul id="maps_aligned">
                     {{#each selectedMaps as |chr|}}
-                      <li data-chr-id={{chr.id}} {{action "selectChr" chr on="click"}}>{{chr.map.name}} {{chr.name}}</li>
+                      <li data-chr-id={{chr.id}} {{action "selectChrom" chr on="click"}}>{{chr.map.name}} {{chr.name}}</li>
                     {{/each}}
                   </ul>
                 </div>
@@ -168,7 +168,8 @@
         scaffoldMarkers=scaffoldMarkers
         showScaffoldMarkers=showScaffoldMarkers
         showAsymmetricAliases=showAsymmetricAliases
-        selectedChr=selectedChr}}
+        selectedChrom=selectedChrom
+        selectChromById='selectChromById'}}
     {{/if}}
   </div>
 
@@ -182,6 +183,12 @@
           {{elem-icon name="th-list"}} <span class="badge">{{selectedMarkers.length}}</span>
         {{/tab-button}}
         {{#tab-button
+          side="right"
+          key="chrom"
+          state=layout.right.tab onClick="setTab"}}
+          {{elem-icon name="th-list"}} <span class="badge">Chrom</span>
+        {{/tab-button}}
+        {{#tab-button
           class="pull-right"
           side="right"
           onClick="setVisibility"}}
@@ -192,9 +199,12 @@
         {{#if (compare layout.right.tab '===' 'selection')}}
           {{tabbed-table 
             selectedMarkers=selectedMarkers
-            selectedChr=selectedChr}}
+            selectedChrom=selectedChrom}}
           {{!-- marker-detail
             data=selectedMarkers --}}
+        {{else if (compare layout.right.tab '===' 'chrom')}}
+          {{chromosome-panel
+            selectedChrom=selectedChrom}}
         {{/if}}
       </div>
     </div>
