@@ -1842,7 +1842,7 @@ export default Ember.Component.extend({
     let brushedRegions = {};
 
     //Reset the selected Marker region, everytime an AP gets deleted
-    me.send('updatedSelectedMarkers', selectedMarkers);
+    // me.send('updatedSelectedMarkers', selectedMarkers);
 
     collateData();
 
@@ -4048,6 +4048,7 @@ export default Ember.Component.extend({
       /** name[0] is apID of the brushed axis. name.length should be 1. */
       let name = d3.select(that).data();
       let brushedApID = name[0];
+      me.set('selectedChr', brushedApID);
 
       let svgContainer = oa.svgContainer;
       //Remove old circles.

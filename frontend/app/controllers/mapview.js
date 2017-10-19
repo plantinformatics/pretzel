@@ -104,13 +104,18 @@ export default Ember.Controller.extend({
     }
     , pathColourScale: true,
     selectChr: function(chr) {
-      this.set('selectedChr', chr);
-      d3.selectAll("ul#maps_aligned > li").classed("selected", false);
-      d3.select('ul#maps_aligned > li[data-chr-id="' + chr.id + '"]').classed("selected", true);
-      d3.selectAll("g.ap").classed("selected", false);
-      d3.select("g#id" + chr.id).classed("selected", true);
+      this.set('selectedChr', chr.id);
     }
   },
+
+  selectedChr: null,
+  selectedChrChanged: function() {
+    let chrId = this.get('selectedChr');
+    d3.selectAll("ul#maps_aligned > li").classed("selected", false);
+    d3.select('ul#maps_aligned > li[data-chr-id="' + chrId + '"]').classed("selected", true);
+    d3.selectAll("g.ap").classed("selected", false);
+    d3.select("g#id" + chrId).classed("selected", true);
+  }.observes('selectedChr'),
 
   layout: {
     'left': {

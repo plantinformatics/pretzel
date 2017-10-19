@@ -11,7 +11,7 @@ export default Ember.Component.extend({
     let filtered = selectedMarkers //all
     if (filter == 'chrom' && selectedChr) {
       filtered = selectedMarkers.filter(function(marker) {
-        return marker.Chromosome === selectedChr.id
+        return marker.Chromosome === selectedChr
       })
     } else if (filter == 'union') {
       //split by chrom
