@@ -44,7 +44,7 @@ export default Ember.Component.extend({
     let tableDiv = Ember.$("#table-brushed")[0];
     console.log("tableDiv", tableDiv);
       var table = new Handsontable(tableDiv, {
-        data: [['', '', '']],
+        data: this.get('data') || [['', '', '']],
         minRows: 1,
         rowHeaders: true,
         columns: [

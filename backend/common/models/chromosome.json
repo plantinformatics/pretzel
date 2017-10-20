@@ -9,6 +9,16 @@
     "name": {
       "type": "string",
       "required": true
+    },
+    "tags" : {
+      "type": ["string"],
+      "required": false
+    },
+    "createdAt" : {
+      "type": "date"
+    },
+    "updatedAt" : {
+      "type": "date"
     }
   },
   "validations": [],

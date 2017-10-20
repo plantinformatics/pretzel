@@ -30,6 +30,18 @@ module.exports = function(Chromosome) {
 
   acl.assign(Chromosome, rules);
 
+  Chromosome.beforeCreate = function(next, model) {
+    var newDate = Date.now();
+    model.createdAt = newDate;
+    model.updatedAt = newDate;
+    next();
+  };
+
+  Chromosome.beforeUpdate = function(next, model) {
+    model.updatedAt = Date.now();
+    next();
+  };
+
   Chromosome.paths = function(left, right, cb) {
     task.paths(this.app.models, left, right)
     .then(function(data) {

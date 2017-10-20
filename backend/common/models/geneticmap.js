@@ -74,6 +74,7 @@ module.exports = function(Geneticmap) {
     var chromosomes = {};
     var genMap = null;
     var chromosomes_by_name = [];
+    var existing_chromosomes = [];
 
     models.Geneticmap.findById(data.geneticmap_id, {include: "chromosomes"})
     .then(function(map) {
@@ -82,7 +83,6 @@ module.exports = function(Geneticmap) {
         data.markers.forEach(function(marker) {
           chromosomes[marker.chrom] = false;
         });
-        var existing_chromosomes = [];
         map.chromosomes().forEach(function(chrom) {
           if (chrom.name in chromosomes) {
             chromosomes[chrom.name] = true;
@@ -97,6 +97,8 @@ module.exports = function(Geneticmap) {
       }
     })
     .then(function(deleted_markers) {
+      return models.Chromosome.updateAll({id: {inq: existing_chromosomes}}, {updatedAt: new Date()})
+    }).then(function(updated_chromosomes) {
       var new_chromosomes = [];
       Object.keys(chromosomes).forEach(function(name) {
         if (chromosomes[name] === false) {
