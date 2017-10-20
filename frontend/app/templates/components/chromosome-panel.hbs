@@ -2,8 +2,11 @@
 <div class="col-sm-12">
     <h3>{{chr.map.name}} {{chr.name}}</h3>
     <label>id</label><p>{{chr.id}}</p>
-    <label>markers</label><p>{{markers.length}}</p>
+    <label>markers</label><p>{{chr.markers.length}}</p>
     <label>tags</label><p>{{chr.tags}}</p>
+    {{input value=newTag}}
+    <button {{action 'addNewTag'}}>Add</button>
+    <br><br>
     <label>Created</label><p>{{chr.createdAt}}</p>
     <label>Updated</label><p>{{chr.updatedAt}}</p>
 </div>
