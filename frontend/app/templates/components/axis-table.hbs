@@ -1,5 +1,5 @@
 
-{{#data-table data=data selectionMode='multiple' 
+{{#data-table data=tableData selectionMode='multiple' 
    selectionChanged=(action 'selectionChanged') classNames=tableClassNames as |t|}}
   {{t.selectionColumn}}
   {{t.column propertyName='marker' name='Marker'}}

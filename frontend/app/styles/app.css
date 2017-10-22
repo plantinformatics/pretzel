@@ -111,10 +111,20 @@ svg.verticalTitle
 
 /* ---------------------------------- */
 
-g.axis-use > rect {
+g.axis-use > g.tracks > g > rect {
   fill: none;
   stroke: blue;
 }
+g.axis-use > g.tracks > g > rect.track {
+  fill: none;
+  stroke: green;
+}
+.trackData {
+  overflow: hidden;
+  word-wrap: inherit;
+}
+
+
 
 /* overflow:scroll within foreignObject works in firefox, not chrome;  see
  * https://stackoverflow.com/questions/34206459/scroll-is-not-working-inside-svg-foreign-object-in-chrome

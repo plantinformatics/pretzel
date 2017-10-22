@@ -37,7 +37,7 @@ function eltWidthResizable(eltSelector, filter, resized)
       // Determine resizer position relative to resizable (parent)
       let x = d3.mouse(this.parentNode)[0];
       let dx = d3.event.dx;
-      console.log("eltWidthResizable drag x=", x, dx);
+      // console.log("eltWidthResizable drag x=", x, dx);
       // Avoid negative or really small widths
       x = Math.max(50, x);
 
