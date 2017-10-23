@@ -1838,11 +1838,36 @@ export default Ember.Component.extend({
     let pathMarkers = oa.pathMarkers || (oa.pathMarkers = {}); //For tool tip
 
     let selectedAps = oa.selectedAps || (oa.selectedAps = []);;
-    let selectedMarkers = {};
-    let brushedRegions = {};
+    let selectedMarkers = oa.selectedMarkers || (oa.selectedMarkers = {});
+    let brushedRegions = oa.brushedRegions || (oa.brushedRegions = {});
 
+    /** planning to move selectedMarkers out to a separate class/component;
+     * these 2 functions would be actions on it. */
     //Reset the selected Marker region, everytime an AP gets deleted
-    // me.send('updatedSelectedMarkers', selectedMarkers);
+   function sendUpdatedSelectedMarkers()
+   {
+     if (showSelectedMarkers)
+     me.send('updatedSelectedMarkers', selectedMarkers);
+   }
+   function selectedMarkers_clear()
+   {
+     selectedMarkers = {};
+     sendUpdatedSelectedMarkers();
+   }
+   /** When an AP is deleted, it is removed from selectedAps and its markers are removed from selectedMarkers.
+    * Those markers may be selected in another axis which is not deleted; in
+    * which case they should not be deleted from selectedMarkers, but this is
+    * quicker, and may be useful.
+    * Possibly versions of the app did not update selectedAps in some cases, e.g. when zooms are reset.
+    */
+   function selectedMarkers_removeAp(apName)
+   {
+     selectedAps.removeObject(apName);
+     let p = apName; // based on brushHelper()
+     d3.keys(oa.z[p]).forEach(function(m) {
+       delete selectedMarkers[p];
+     });
+   }
 
     collateData();
 
@@ -4054,6 +4079,9 @@ export default Ember.Component.extend({
       //Remove old circles.
       svgContainer.selectAll("circle").remove();
 
+     /* d3.event.selection is null when brushHelper() is called via zoom() ... brush.move.
+      * This causes selectedAps to update here; when an axis is zoomed its brush is removed.
+      */
       if (d3.event.selection == null) {
         selectedAps.removeObject(name[0]);
       }
@@ -4067,7 +4095,10 @@ export default Ember.Component.extend({
       if (selectedAps.length > 0) {
         console.log("Selected: ", " ", selectedAps.length);
         // APs have been selected - now work out selected markers.
-        brushedRegions[name[0]] = d3.event.selection;
+        if (d3.event.selection === null)
+          delete brushedRegions[brushedApID];
+        else
+          brushedRegions[brushedApID] = d3.event.selection;
         brushExtents = selectedAps.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
 
         selectedMarkers = {};
@@ -4107,8 +4138,7 @@ export default Ember.Component.extend({
             }
           });
         });
-        if (showSelectedMarkers)
-          me.send('updatedSelectedMarkers', selectedMarkers);
+        sendUpdatedSelectedMarkers();
 
         function markerNotSelected2(d)
         {
@@ -4191,8 +4221,8 @@ export default Ember.Component.extend({
               resetScope.selectAll(".btn").remove();
             if (apID === undefined)
             {
-              selectedMarkers = {};
-              me.send('updatedSelectedMarkers', selectedMarkers);
+              // reset zoom of all axes clears selectedMarkers - check if this was the intention; also should selectedAps be cleared ?
+              selectedMarkers_clear();
             }
             zoomed = false; // not used
           }
@@ -4209,9 +4239,8 @@ export default Ember.Component.extend({
           svgContainer.selectAll(".btn").remove();
         svgContainer.selectAll("circle").remove();
         d3.selectAll(".foreground > g > g").classed("faded", false);
-        selectedMarkers = {};
-        me.send('updatedSelectedMarkers', selectedMarkers);
-        brushedRegions = {};
+        selectedMarkers_clear();
+        brushedRegions = oa.brushedRegions = {};
       }
 
     } // brushHelper
@@ -5168,6 +5197,9 @@ export default Ember.Component.extend({
               deleteAPfromapIDs(apName);
               removeAPmaybeStack(apName, stackID, stack);
               me.send('mapsToViewDelete', apName);
+              // filter apName out of selectedMarkers and selectedAps
+              selectedMarkers_removeAp(apName);
+              sendUpdatedSelectedMarkers();
             });
         });
     }
