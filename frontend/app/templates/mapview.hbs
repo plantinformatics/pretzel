@@ -8,13 +8,13 @@
           side="left"
           key="view"
           state=layout.left.tab onClick="setTab"}}
-          {{elem-icon name="eye-open"}}
+          View {{elem-icon name="eye-open"}}
         {{/tab-button}}
         {{#tab-button
           side="left"
           key="upload"
           state=layout.left.tab onClick="setTab"}}
-          {{elem-icon name="cloud-upload"}}
+          Upload {{elem-icon name="cloud-upload"}}
         {{/tab-button}}
         {{!-- {{#tab-button
           side="left"
@@ -106,13 +106,13 @@
           side="right"
           key="selection"
           state=layout.right.tab onClick="setTab"}}
-          {{elem-icon name="th-list"}} <span class="badge">{{selectedMarkers.length}}</span>
+          Markers <span class="badge">{{selectedMarkers.length}}</span>
         {{/tab-button}}
         {{#tab-button
           side="right"
           key="chrom"
           state=layout.right.tab onClick="setTab"}}
-          {{elem-icon name="th-list"}} <span class="badge">Chrom</span>
+          Map {{elem-icon name="globe"}}
         {{/tab-button}}
         {{#tab-button
           class="pull-right"

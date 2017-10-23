@@ -1,17 +1,66 @@
 {{#if chr}}
 <div class="col-sm-12">
-    <h3>{{chr.map.name}} {{chr.name}}</h3>
-    <label>id</label><p>{{chr.id}}</p>
-    <label>markers</label><p>{{chr.markers.length}}</p>
-    <label>tags</label><p>{{chr.tags}}</p>
-    {{input value=newTag}}
-    <button {{action 'addNewTag'}}>Add</button>
-    <br><br>
-    <label>Created</label><p>{{chr.createdAt}}</p>
-    <label>Updated</label><p>{{chr.updatedAt}}</p>
+  <h3>{{chr.map.name}} {{chr.name}}</h3>
+  {{!-- <label>id</label><p>{{chr.id}}</p> --}}
+  <p><span class="label label-default">ID: {{chr.id}}</span></p>
+  <div class="row">
+    <div class="col-sm-6">
+      <label>Created</label><p>{{chr.createdAt}}</p>
+    </div>
+    <div class="col-sm-6">
+      <label>Updated</label><p>{{chr.updatedAt}}</p>
+    </div>
+  </div>
+  
+  <label>Markers</label><p>{{chr.markers.length}}</p>
+  <label>Tags <span class="label label-info">{{chr.tags.length}}</span></label>
+  {{#if chr.tags}}
+    <div class="list-group">
+      {{!-- existing tags --}}
+      {{#each chr.tags as |tag index|}}
+        <a href="#" class="list-group-item">
+          {{tag}}
+          <span class="pull-right">
+            <span
+              class="btn btn-xs btn-danger"
+              {{action 'removeTag' index}}>
+                {{elem-icon name="minus"}}
+            </span>
+          </span>
+        </a>
+      {{/each}}
+    </div>
+  {{/if}}
+  <div class="list-group">
+    {{!-- new tag --}}
+    <a href="#" class="list-group-item">
+      <div class="input-group">
+        {{input
+          action="addTag"
+          type="text"
+          value=newTag
+          class="form-control"
+          placeholder="New tag..."}}
+        <span class="input-group-btn">
+          <button
+            class="btn btn-success"
+            type="button"
+            disabled={{duplicateTag}}
+            {{action "addTag"}}>
+            {{elem-icon name="plus"}}
+          </button>
+        </span>
+      </div>
+    </a>
+  </div>
 </div>
 {{else}}
 <div class="col-sm-12">
-    <h3>Select a Chromosome</h3>
+    <h3>No Map Selected</h3>
+
+    <div class="well">
+      Click and drag vertically {{elem-icon name="resize-vertical"}} along a map {{elem-icon name="globe"}}. 
+    </div>
+
 </div>
 {{/if}}

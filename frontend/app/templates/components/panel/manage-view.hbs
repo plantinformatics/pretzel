@@ -14,27 +14,27 @@
     </button>
     <ul class="dropdown-menu multi-level" role="menu" aria-labelledby="dropdownMenu">
       {{#each model.mapsDerived.availableMaps as |mymap|}}
-    <li class="dropdown-submenu">
-      <a tabindex="-1" href="#">{{mymap.name}}</a>
-      <ul class="dropdown-menu">
-      {{#each mymap.chromosomes as |chr|}}
-        {{#if chr.isSelected}}
-          <li class="disabled">
-            {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
-              {{chr.name}}
-            {{/link-to}}
-          </li>
-        {{else}}
-        <li class="enabled">
-          {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
-            {{chr.name}}
-          {{/link-to}}
+        <li class="dropdown-submenu">
+          <a tabindex="-1" href="#">{{mymap.name}}</a>
+          <ul class="dropdown-menu">
+          {{#each mymap.chromosomes as |chr|}}
+            {{#if chr.isSelected}}
+              <li class="disabled">
+                {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
+                  {{chr.name}}
+                {{/link-to}}
+              </li>
+            {{else}}
+            <li class="enabled">
+              {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
+                {{chr.name}}
+              {{/link-to}}
+            </li>
+            {{/if}}
+          {{/each}}
+          </ul>
         </li>
-        {{/if}}
       {{/each}}
-      </ul>
-    </li>
-    {{/each}}
     </ul>
   </div>
   {{/if}}
