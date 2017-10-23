@@ -74,6 +74,7 @@ body.ember-application > div.ember-view > div.container
   color: hsl(208, 95%, 52%);	// #337ab7 with increased saturation and luminosity
 }
 .resizer > .subMenu {
+    /* position: fixed; */
     display : none;
 }
 .resizer:hover > .subMenu {
@@ -111,12 +112,13 @@ svg.verticalTitle
 
 /* ---------------------------------- */
 
+g.axis-use > rect,
 g.axis-use > g.tracks > g > rect {
   fill: none;
   stroke: blue;
 }
 g.axis-use > g.tracks > g > rect.track {
-  fill: none;
+  fill: white;
   stroke: green;
 }
 .trackData {

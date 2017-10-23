@@ -2514,6 +2514,7 @@ export default Ember.Component.extend({
       // foreignObject is case sensitive - refn https://gist.github.com/mbostock/1424037
       let ef = eg
         .append("g")
+        .attr("class", "axis-html")
         .append("foreignObject")
         .attr("class", "foreignObject")
       /*.attr("x", 0)

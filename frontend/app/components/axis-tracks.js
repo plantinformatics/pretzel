@@ -1,6 +1,7 @@
 import Ember from 'ember';
 
 import createIntervalTree from 'npm:interval-tree-1d';
+import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
 
 /*----------------------------------------------------------------------------*/
 /* copied from draw-map.js - will import when that is split */
@@ -42,8 +43,68 @@ function regionOfTree(intervalTree, domain)
     intervals.push(interval);
   }
   intervalTree.queryInterval(domain[0], domain[1], visit);
+  // Build another tree with just those intervals which intersect domain.
+  let subTree = createIntervalTree(intervals);
+  /** for each interval, if it does not have a layer,
+   * get list of intervals in subTree it intersects,
+   * note the layers of those which already have a layer assigned,
+   * give the remainder (starting with the current interval) layers which are not assigned in that group.
+   * (this alg is approx, but probably ok;  seems like a bin-packing problem)
+   */
+  let i1 = subTree.intervals, layers = {}, nextLayer = 0, largestLayer = 0;
+  for (let j=0; j<i1.length; j++)
+  {
+    // could continue if (i1[j].layer)
+    let i=i1[j], overlaps = [], layersUsed = [];
+    function noteLayers(interval) {
+      overlaps.push(interval);
+      if (interval.layer) layersUsed[interval.layer] = true; /* or interval*/
+    };
+    subTree.queryInterval(i[0], i[1], noteLayers);
+    function unusedLayers() {
+      let unused = [];
+      for (let j3 = 0; j<layersUsed.length; j++)
+      {
+        if (! layersUsed[j3])
+          unused.push(j3);
+      }
+      return unused;
+    }
+    /** if layersUsed is empty, then ++lastUsed is 0,  */
+    let lastUsed = layersUsed.length-1,
+    u =  unusedLayers();
+    function chooseNext() {
+      let next = u.pop() || ++lastUsed;
+      return next;
+    }
+    function assignRemainder(interval) {
+    };
+    for (let j2 = 0; j2 < overlaps.length; j2++)
+    {
+      let o = overlaps[j2];
+      if (! o.layer)
+        o.layer = chooseNext();
+    }
+    if (lastUsed > largestLayer)
+      largestLayer = lastUsed;
+  }
+  let trackWidth = 10;
+  setClipWidth((largestLayer+1) * trackWidth * 2);
+
   return intervals;
 }
+
+function setClipWidth(width)
+{
+  /** This will need APid. */
+  let cp = d3.select("g.axis-use > g.tracks > clipPath#axis-clip > rect");
+  cp
+    .attr("width", width);
+  let gh = d3.select("g.axis-use > g.axis-html");
+  gh
+    .attr("transform", "translate(" + width + ")");
+}
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -180,14 +241,25 @@ export default Ember.Component.extend({
     data = regionOfTree(t, yDomain);
     console.log(data.length, y(data[0][0]));
     /** datum is interval array : [start, end];   with attribute .description. */
+    function xPosn(d) { /*console.log("xPosn", d);*/ return ((d.layer || 0) + 1) *  trackWidth * 2; };
     function yPosn(d) { /*console.log("yPosn", d);*/ return y(d[0]); };
     function height(d)  { return y(d[1]) - y(d[0]); };
+    /** parent; contains a clipPath, g > rect, text.resizer.  */
     let gp =   gAxis
       .selectAll("g.tracks")
       .data([1])
       .enter()
       .append("g")
       .attr('class', 'tracks');
+    if (false) { // not completed.  Can base resized() on axis-2d.js
+    let text = gp
+      .append("text")
+      .attr('class', 'resizer')
+      .html("⇹")
+      .attr("x", bbox.width-10);
+    if (gp.size() > 0)
+      eltWidthResizable("g.axis-use > g.tracks > text.resizer", resized);
+  }
     gp // define the clipPath
       .append("clipPath")       // define a clip path
       .attr("id", "axis-clip") // give the clipPath an ID
@@ -212,7 +284,7 @@ export default Ember.Component.extend({
     ra
       .merge(rs)
       .transition().duration(1500)
-      .attr('x', trackWidth * 2)
+      .attr('x', xPosn)
       .attr('y', yPosn)
       .attr('height' , height)
     ;
@@ -234,11 +306,21 @@ export default Ember.Component.extend({
     parseIntervals = this.get('parseIntervals'),
     layoutAndDrawTracks = this.get('layoutAndDrawTracks');
     let inputElt=Ember.$('.trackData');
-    inputElt.empty();
+    Ember.run.later(function() { inputElt.empty(); } );
     let tracks = parseIntervals(textPlain);
-    this.set('tracks', tracks);
+    this.set('tracks', tracks); // used by axisStackChanged() : layoutAndDrawTracks()
+    let forTable = tracks.intervalTree[1].intervals.map(intervalToStartEnd);
     // intersect with axis zoom region;  layer the overlapping tracks; draw tracks.
     layoutAndDrawTracks.apply(this, [tracks]);
+
+    function intervalToStartEnd(interval) {
+      interval.start = interval[0];
+      interval.end = interval[0];
+      return interval;
+    };
+    this.set('data.tracks', forTable);
+
+    return false;
   },
   keypress: function(event) {
     console.log("components/axis-tracks keypress", event);
