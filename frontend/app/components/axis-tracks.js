@@ -34,13 +34,15 @@ function  configureTrackHover(interval)
 /*----------------------------------------------------------------------------*/
 
 /** filter intervalTree : select those intervals which intersect domain.
+ * @param sizeThreshold intervals smaller than sizeThreshold are filtered out
  * @return intervals  array of intervals
 */
-function regionOfTree(intervalTree, domain)
+function regionOfTree(intervalTree, domain, sizeThreshold)
 {
   let intervals = [];
   function visit(interval) {
-    intervals.push(interval);
+    if (interval[1] - interval[0] > sizeThreshold)
+      intervals.push(interval);
   }
   intervalTree.queryInterval(domain[0], domain[1], visit);
   // Build another tree with just those intervals which intersect domain.
@@ -238,8 +240,9 @@ export default Ember.Component.extend({
     apID = gAxis.node().parentElement.__data__,
     y = oa.y[apID],
     yDomain = [y.invert(yrange[0]), y.invert(yrange[1])],
-    data = regionOfTree(t, yDomain);
-    console.log(data.length, y(data[0][0]));
+    pxSize = (yDomain[1] - yDomain[0]) / bbox.height,
+    data = regionOfTree(t, yDomain, pxSize * 1/*5*/);
+    console.log(data.length, (data.length == 0) || y(data[0][0]));
     /** datum is interval array : [start, end];   with attribute .description. */
     function xPosn(d) { /*console.log("xPosn", d);*/ return ((d.layer || 0) + 1) *  trackWidth * 2; };
     function yPosn(d) { /*console.log("yPosn", d);*/ return y(d[0]); };
