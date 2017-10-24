@@ -940,6 +940,10 @@ export default Ember.Component.extend({
        * .position is the whole axis [0, 1].
        */
       this.position = (portion === 1) ? [0, 1] : undefined;
+      /** If flipped, the domain direction is reversed.  This affects the
+       * domains of scales y and ys, and the axis brush extent.
+       */
+      this.flipped = false;
       /** Reference to parent stack.  Set in Stack.prototype.{add,insert}(). */
       this.stack = undefined;
       /* AP objects persist through being dragged in and out of Stacks. */
@@ -2253,21 +2257,35 @@ export default Ember.Component.extend({
       path_colour_scale.range(d3.schemeCategory10);
     }
 
+    function maybeFlip(domain, flipped)
+    {
+      return flipped
+        ? [domain[1], domain[0]]
+        : domain;
+    }
+    /** @param extent [[left,top],[right,bottom]], e.g. [[-8,0],[8,myRange]].
+     * @return if flipped, [[left,bottom],[right,top]] */
+    function maybeFlipExtent(extent, flipped)
+    {
+      return flipped
+        ? [[extent[0][0], extent[1][1]], [extent[1][0], extent[0][1]]]
+        : extent;
+    }
+
     oa.apIDs.forEach(function(d) {
       /** Find the max of locations of all markers of AP name d. */
       let yDomainMax = d3.max(Object.keys(oa.z[d]), function(a) { return oa.z[d][a].location; } );
       let a = oa.aps[d], myRange = a.yRange(), ys = oa.ys, y = oa.y;
       ys[d] = d3.scaleLinear()
-        .domain([0, yDomainMax])
+        .domain(maybeFlip([0, yDomainMax], a.flipped))
         .range([0, myRange]); // set scales for each AP
       
       //console.log("OOO " + y[d].domain);
-      ys[d].flipped = false;
       // y and ys are the same until the AP is stacked.
       // The brush is on y.
       y[d] = ys[d].copy();
       y[d].brush = d3.brushY()
-        .extent([[-8,0],[8,myRange]])
+        .extent(maybeFlipExtent([[-8,0],[8,myRange]], a.flipped))
         .on("end", brushended);
     });
     /** when draw( , 'dataReceived'), pathUpdate() is not valid until ys is updated. */
@@ -4431,8 +4449,10 @@ export default Ember.Component.extend({
             apIDs.forEach(function(d) {
               let idName = axisEltId(d); // axis ids have "a" prefix
               let yDomainMax = d3.max(Object.keys(oa.z[d]), function(a) { return oa.z[d][a].location; } );
-              oa.y[d].domain([0, yDomainMax]);
-              oa.ys[d].domain([0, yDomainMax]);
+              let  a = oa.aps[d];
+              let domain = maybeFlip([0, yDomainMax], a.flipped);
+              oa.y[d].domain(domain);
+              oa.ys[d].domain(domain);
               let yAxis = d3.axisLeft(oa.y[d]).ticks(10);
               oa.svgContainer.select("#"+idName).transition(t).call(yAxis);
             });
@@ -4491,17 +4511,26 @@ export default Ember.Component.extend({
           console.log("zoom", apName, p, i, yp.domain(), yp.range(), brushExtents[i], ap.portion, brushedDomain);
           y[p].domain(brushedDomain);
           oa.ys[p].domain(brushedDomain);
-          let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * ap.portion);
-          let idName = axisEltId(p);
-          svgContainer.select("#"+idName).transition(t).call(yAxis);
-          pathUpdate(t);
+          axisScaleChanged(p, t);
           // `that` refers to the brush g element
           d3.select(that).call(y[p].brush.move,null);
-          let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(p) + " > g.tick > text");
-          axisGS.attr("transform", yAxisTicksScale);
         }
       });
       axisStackChanged(t);
+    }
+    /** @param p  apName */
+    function axisScaleChanged(p, t)
+    {
+      let y = oa.y, svgContainer = oa.svgContainer;
+      let yp = y[p],
+      ap = oa.aps[p];
+      let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * ap.portion);
+      let idName = axisEltId(p);
+      svgContainer.select("#"+idName).transition(t).call(yAxis);
+      pathUpdate(t);
+
+      let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(p) + " > g.tick > text");
+      axisGS.attr("transform", yAxisTicksScale);
     }
 
     function brushended() {
@@ -5408,6 +5437,7 @@ export default Ember.Component.extend({
           html: true,
           content : ""
             + glyphiconButton("DeleteMap", "Delete_" + apName, remap ? "glyphicon-sound-7-1" : "glyphicon-remove-sign", "#")
+            + glyphiconButton("FlipAxis", "Flip_" + apName, remap ? "glyphicon glyphicon-bell" : "glyphicon-retweet", "#")
             + glyphiconButton("ExtendMap", "Extend_" + apName, remap ? "glyphicon-star" : "glyphicon-arrow-right", "#")
         })
         // .popover('show');
@@ -5432,6 +5462,21 @@ export default Ember.Component.extend({
               // filter apName out of selectedMarkers and selectedAps
               selectedMarkers_removeAp(apName);
               sendUpdatedSelectedMarkers();
+            });
+          let flipButtonS = d3.select("button.FlipAxis");
+          flipButtonS
+            .on('click', function (buttonElt /*, i, g*/) {
+              console.log("flip", apName, this);
+              let ap = oa.aps[apName], ya = oa.y[apName], ysa=oa.ys[apName],
+              domain = maybeFlip(ya.domain(), true);
+              ap.flipped = ! ap.flipped;
+              ya.domain(domain);
+              ysa.domain(domain);
+
+              let b = ya.brush;
+              b.extent(maybeFlipExtent(b.extent()(), true));
+              let t = oa.svgContainer.transition().duration(750);
+              axisScaleChanged(apName, t);
             });
 
           let extendButtonS = d3.select("button.ExtendMap");
