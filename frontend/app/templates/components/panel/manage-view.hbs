@@ -1,56 +1,123 @@
-<div class="col-sm-12">
-  <h4>View</h4>
+{{#elem-panel}}
+  <div class="panel panel-primary">
+    <div class="panel-heading">Aligned Maps {{elem-icon name="globe"}}</div>
+      {{#unless selectedMaps}}
+        <div class="panel-body">
+          <div class="well">
+            Click and drag {{elem-icon name="resize-vertical"}} along a map {{elem-icon name="globe"}}, or select {{elem-icon name='info'}} a map from the view panel {{elem-icon name='eye'}}. 
+          </div>
+        </div>
+      {{/unless}}
+    <ul class="list-group">
+      {{#each selectedMaps as |chr|}}
+        <li class="list-group-item {{if (compare chr.id '===' selectedChrom.id) 'list-group-item-warning'}}"
+        data-chr-id={{chr.id}}>
+          {{chr.map.name}} {{chr.name}}
 
-  {{#if model.mapsDerived.isPending}}
-      Loading available maps ...
-    {{else}}
-    <p class="devel_trace" style="display:none;">
-    content: {{model.mapsDerived.availableMaps}}
-    </p>
-    <div class="btn-group">
-    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-      Add map
-      <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu multi-level" role="menu" aria-labelledby="dropdownMenu">
-      {{#each model.mapsDerived.availableMaps as |mymap|}}
-        <li class="dropdown-submenu">
-          <a tabindex="-1" href="#">{{mymap.name}}</a>
-          <ul class="dropdown-menu">
-          {{#each mymap.chromosomes as |chr|}}
-            {{#if chr.isSelected}}
-              <li class="disabled">
-                {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
-                  {{chr.name}}
-                {{/link-to}}
-              </li>
-            {{else}}
-            <li class="enabled">
-              {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
-                {{chr.name}}
-              {{/link-to}}
-            </li>
-            {{/if}}
-          {{/each}}
-          </ul>
+          <span class="pull-right">
+            {{elem-button
+              classSize='xs'
+              classColour='info'
+              icon='info-sign'
+              onClick=(action "selectChrom" chr)}}
+            {{!-- {{elem-button
+              classSize='xs'
+              classColour='danger'
+              icon='minus'
+              onClick=(action "selectChrom" chr)}} --}}
+          </span>
+
+          <p class="list-group-item-text">
+            {{#each chr.tags as |tag|}}
+              <span class="label label-default" style="display: inline-block">
+                {{tag}}
+              </span>
+            {{/each}}
+          </p>
         </li>
       {{/each}}
     </ul>
   </div>
-  {{/if}}
 
+  {{!-- {{layout.remote.active}} --}}
+
+  {{!-- {{#each layout.remote.active as |active|}}
+    {{active}}
+  {{/each}} --}}
+  <div class="panel panel-primary">
+    <div class="panel-heading">
+      Explore Maps {{elem-icon name="globe"}} 
+      {{!-- <span class="pull-right">
+        {{elem-button
+          classSize='xs'
+          classColour='info'
+          icon='refresh'}}
+      </span>   --}}
+    </div>
+      {{#if model.mapsDerived.isPending}}
+        <div class="panel-body">
+          <div class="well">
+            Loading map {{elem-icon name="globe"}} resources. 
+          </div>
+        </div>
+      {{/if}}
+    <ul class="list-group">
+      {{#each model.mapsDerived.availableMaps as |geneticmap|}}
+        {{!-- genetic map entry atop chromosome entries --}}
+        <li class="list-group-item list-group-item-info">
+          {{#if (compare layout.remote.active '!=' geneticmap.id)}}
+            {{elem-button
+              classSize='xs'
+              classColour='default'
+              icon='plus'
+              onClick=(action "switchGeneticmap" geneticmap)}}
+          {{/if}}
+          {{geneticmap.name}}
+          <span class="badge">{{geneticmap.chromosomes.length}}</span>
+        </li>
+
+        {{!-- {{showGeneticmap(geneticmap)}} --}}
+        {{#if (compare layout.remote.active '===' geneticmap.id)}}
+          {{#each geneticmap.chromosomes as |chr|}}
+            <li class="list-group-item {{if (compare chr.id '===' selectedChrom.id) 'list-group-item-warning'}}">
+              {{chr.name}}
+              <span class="pull-right">
+                {{elem-button
+                  classSize='xs'
+                  classColour='info'
+                  icon='info-sign'
+                  onClick=(action "selectChrom" chr)}}
+                {{#if chr.isSelected}}
+                  {{!-- {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
+                    {{elem-button
+                      classSize='xs'
+                      classColour='danger'
+                      icon='minus'}}
+                  {{/link-to}} --}}
+                {{else}}
+                  {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
+                    {{elem-button
+                      classSize='xs'
+                      classColour='success'
+                      icon='plus'}}
+                  {{/link-to}}
+                {{/if}}
+              </span>
+              <p class="list-group-item-text">
+                {{#each chr.tags as |tag|}}
+                  <span class="label label-default" style="display: inline-block">
+                    {{tag}}
+                  </span>
+                {{/each}}
+              </p>
+            </li>
+          {{/each}}
+        {{/if}}
+      {{/each}}
+    </ul>
+  </div>
   {{!-- {{#if selectedMaps}} --}}
     <div class="bordered control-panel" style="display: inline-block;">
-
-      <div class="pull-left maps-aligned">
-        Maps aligned :
-        <ul id="maps_aligned">
-          {{#each selectedMaps as |chr|}}
-            <li data-chr-id={{chr.id}} {{action "selectChrom" chr on="click"}}>{{chr.map.name}} {{chr.name}}</li>
-          {{/each}}
-        </ul>
-      </div>
-
       <div class="pull-left vspace1">
         <div class="drawing-controls vspace1">
           <div class="dropdown">
@@ -61,30 +128,23 @@
             <ul class="dropdown-menu">
               <li class="sub-menu">
                 {{input type="checkbox" checked=isShowUnique class="toggle"}}
-                <label {{action "toggleShowUnique" on="doubleClick"}}>toggleShowUnique</label>
+                <label {{action "toggleShowUnique" on="doubleClick"}}>Show Unique</label>
               </li>
               <li class="sub-menu">
                 {{input type="checkbox" checked=pathColourScale class="toggle"}}
-                <label {{action "togglePathColourScale" on="doubleClick"}}>togglePathColourScale</label>
+                <label {{action "togglePathColourScale" on="doubleClick"}}>Path Colour Scale</label>
               </li>
               <li class="sub-menu">
                 {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
-                <label>toggleShowScaffoldMarkers</label>
+                <label>Show Scaffold Markers</label>
               </li>
               <li class="sub-menu">
                 {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
-                <label>toggleShowAsymmetricAliases</label>
+                <label>Show Asymmetric Aliases</label>
               </li>
             </ul>
           </div>
         </div>
       </div>
-
   </div>
-
-  {{!-- {{else}}
-    <div class="well">
-      Select maps {{elem-icon name="globe"}} to populate the chart.
-    </div>
-  {{/if}} --}}
-</div>
+{{/elem-panel}}

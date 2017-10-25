@@ -1,0 +1,11 @@
+{{#elem-panel}}
+  <div class="panel panel-primary">
+    <div class="panel-heading">Filters {{elem-icon name="filter"}}</div>
+      <div class="panel-body">
+        <input type="radio" name="filter" value="all" checked {{action "changeFilter" "all" preventDefault=false}}><label>All</label>
+        <input type="radio" name="filter" value="chrom" {{action "changeFilter" "chrom" preventDefault=false}}><label>Map</label>
+        <input type="radio" name="filter" value="union" {{action "changeFilter" "union" preventDefault=false}}><label>Union</label>
+      </div>
+  </div>
+  {{table-brushed data=data}}
+{{/elem-panel}}

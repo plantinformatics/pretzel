@@ -115,6 +115,12 @@
           Map {{elem-icon name="globe"}}
         {{/tab-button}}
         {{#tab-button
+          side="right"
+          key="settings"
+          state=layout.right.tab onClick="setTab"}}
+          Advanced {{elem-icon name="cog"}}
+        {{/tab-button}}
+        {{#tab-button
           class="pull-right"
           side="right"
           onClick="setVisibility"}}
@@ -123,14 +129,18 @@
       </ul>
       <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
         {{#if (compare layout.right.tab '===' 'selection')}}
-          {{panel/tabbed-table 
+          {{panel/manage-markers
             selectedMarkers=selectedMarkers
             selectedChrom=selectedChrom}}
           {{!-- marker-detail
             data=selectedMarkers --}}
         {{else if (compare layout.right.tab '===' 'chrom')}}
-          {{panel/selected-chromosome
+          {{panel/manage-chromosome
             chr=selectedChrom}}
+        {{else if (compare layout.right.tab '===' 'settings')}}
+          {{panel/manage-settings
+            selectedMarkers=selectedMarkers
+            selectedChrom=selectedChrom}}
         {{/if}}
       </div>
     </div>

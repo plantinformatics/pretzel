@@ -5424,7 +5424,7 @@ export default Ember.Component.extend({
 
   didInsertElement() {
     eltWidthResizable('.resizable');
-    eltWidthResizable('.tabbed-table-container');
+    // eltWidthResizable('.tabbed-table-container');
   },
 
   didRender() {
