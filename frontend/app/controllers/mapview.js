@@ -17,32 +17,27 @@ export default Ember.Controller.extend({
       // console.log("setTab", side, tab);
       this.set(`layout.${side}.tab`, tab);
     },
-
     updateSelectedMarkers: function(markers) {
-	// console.log("updateSelectedMarkers in mapview controller", markers.length);
+    	// console.log("updateSelectedMarkers in mapview", markers.length);
       this.set('selectedMarkers', markers);
     },
 
     /**  remove mapName from this.get('mapsToView') and update URL
      */
-    mapsToViewDelete : function(mapName)
-    {
+    removeMap : function(mapName) {
       let mtv = this.get('mapsToView');
-      console.log("controller/mapview", "mapsToViewDelete", mapName, mtv);
+      console.log("controller/mapview", "removeMap", mapName, mtv);
       let di;
-      for (di = mtv.length; di >= 0; di--)
-      {
-        if (mtv[di] == mapName)
-        {
-          console.log("mapsToViewDelete", "found", mapName, "at", di, mtv.length);
+      for (di = mtv.length; di >= 0; di--) {
+        if (mtv[di] == mapName) {
+          console.log("removeMap", "found", mapName, "at", di, mtv.length);
           break;
         }
       }
-      if (di >= 0)
-      {
+      if (di >= 0) {
         mtv.removeAt(di, 1);
-        console.log("mapsToViewDelete", "deleted", mapName, "at", di, mtv.length, mtv);
-        console.log("mapsToViewDelete", "mapsToView:", this.get('mapsToView'));
+        console.log("removeMap", "deleted", mapName, "at", di, mtv.length, mtv);
+        console.log("removeMap", "mapsToView:", this.get('mapsToView'));
         let queryParams = // this.get('queryParams');
           {'mapsToView' : mtv };
         console.log("queryParams", queryParams);
@@ -51,46 +46,45 @@ export default Ember.Controller.extend({
     },
     updateChrs : function(/*chrID*/) {
       let mdv=this.get('model.mapsDerived.content');
-      if ((mdv === undefined) || (mdv === null))
+      if ((mdv === undefined) || (mdv === null)) {
         console.log("updateChrs", this.get('model'));
-      else
-      {
+      } else {
         let
-      availableChrs = mdv.availableChrs,
-      availableMaps = mdv.availableMaps,
-      mtv = this.get('mapsToView'),
-      extraChrs = availableChrs;
-        if (trace_promise > 1)
-      console.log("updateChrs", availableChrs, mtv); // , chrID
-      this.set('extraChrs', extraChrs);
-      // the above is draft replacement for the following.
+        availableChrs = mdv.availableChrs,
+        availableMaps = mdv.availableMaps,
+        mtv = this.get('mapsToView'),
+        extraChrs = availableChrs;
+          if (trace_promise > 1)
+        console.log("updateChrs", availableChrs, mtv); // , chrID
+        this.set('extraChrs', extraChrs);
+        // the above is draft replacement for the following.
 
-      // copied (with some excisions) from routes/mapview model(); this needs to be reorganised - probably to a controllers/chromosome.js
-      let selMaps = [];
-      if (availableMaps) {
-      // availableMaps.then(function(genmaps) );
-      let genmaps = availableMaps;
-      genmaps.forEach(function(map) {
-        let chrs = map.get('chromosomes');
-        chrs.forEach(function(chr) {
-          var exChrs = [];
-          chr.set('isSelected', false); // In case it has been de-selected.
-          if (mtv) {
-            for (var i=0; i < mtv.length; i++) {
-              if (chr.get('id') != mtv[i]) {
-                exChrs.push(mtv[i]);
-              }
-              else {
-                chr.set('isSelected', true);
-                selMaps.push(chr);
+        // copied (with some excisions) from routes/mapview model(); this needs to be reorganised - probably to a controllers/chromosome.js
+        let selMaps = [];
+        if (availableMaps) {
+        // availableMaps.then(function(genmaps) );
+        let genmaps = availableMaps;
+        genmaps.forEach(function(map) {
+          let chrs = map.get('chromosomes');
+          chrs.forEach(function(chr) {
+            var exChrs = [];
+            chr.set('isSelected', false); // In case it has been de-selected.
+            if (mtv) {
+              for (var i=0; i < mtv.length; i++) {
+                if (chr.get('id') != mtv[i]) {
+                  exChrs.push(mtv[i]);
+                }
+                else {
+                  chr.set('isSelected', true);
+                  selMaps.push(chr);
+                }
               }
             }
-          }
-          chr.set('extraChrs', exChrs);
+            chr.set('extraChrs', exChrs);
+          });
         });
-      });
-      }
-      this.set("selectedMaps", selMaps);
+        }
+        this.set("selectedMaps", selMaps);
       }
     },
     toggleShowUnique: function() {

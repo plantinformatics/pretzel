@@ -10,21 +10,18 @@
       {{/unless}}
     <ul class="list-group">
       {{#each selectedMaps as |chr|}}
-        <li class="list-group-item {{if (compare chr.id '===' selectedChrom.id) 'list-group-item-warning'}}"
-        data-chr-id={{chr.id}}>
+        <li 
+          class="list-group-item {{if (compare chr.id '===' selectedChrom.id) 'list-group-item-warning'}}"
+          data-chr-id={{chr.id}}
+          {{action "selectChrom" chr on="click"}}>
           {{chr.map.name}} {{chr.name}}
 
           <span class="pull-right">
-            {{elem-button
-              classSize='xs'
-              classColour='info'
-              icon='info-sign'
-              onClick=(action "selectChrom" chr)}}
             {{!-- {{elem-button
               classSize='xs'
               classColour='danger'
               icon='minus'
-              onClick=(action "selectChrom" chr)}} --}}
+              onClick=(action "deleteChrom" chr)}} --}}
           </span>
 
           <p class="list-group-item-text">
@@ -79,14 +76,16 @@
         {{!-- {{showGeneticmap(geneticmap)}} --}}
         {{#if (compare layout.remote.active '===' geneticmap.id)}}
           {{#each geneticmap.chromosomes as |chr|}}
-            <li class="list-group-item {{if (compare chr.id '===' selectedChrom.id) 'list-group-item-warning'}}">
+            <li 
+              class="list-group-item {{if (compare chr.id '===' selectedChrom.id) 'list-group-item-warning'}}"
+              {{action "selectChrom" chr on="click"}}>
               {{chr.name}}
               <span class="pull-right">
-                {{elem-button
+                {{!-- {{elem-button
                   classSize='xs'
                   classColour='info'
                   icon='info-sign'
-                  onClick=(action "selectChrom" chr)}}
+                  onClick=(action "selectChrom" chr)}} --}}
                 {{#if chr.isSelected}}
                   {{!-- {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
                     {{elem-button

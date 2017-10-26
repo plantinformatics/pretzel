@@ -17,6 +17,9 @@ export default Component.extend({
     selectChrom(chr) {
       this.sendAction('selectChrom', chr);
     },
+    deleteChrom(chr) {
+      this.sendAction('deleteChrom', chr.id);
+    },
     switchGeneticmap(geneticmap) {
       // intent is to switch to an array of map ids, as
       // this makes more sense for the interface. There are

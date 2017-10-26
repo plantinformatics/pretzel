@@ -6,7 +6,6 @@ export default Component.extend({
   tagName: 'span',
   // attributes
   click: function() {
-    console.log('click fired! - ' + this.get('name'));
     this.sendAction('onClick');
   },
   // classes

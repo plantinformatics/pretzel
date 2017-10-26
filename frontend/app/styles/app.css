@@ -6,6 +6,13 @@ body.ember-application > div.ember-view > div.container
     padding-left: 5px;
 }
 
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus{
+    color: #555555;
+    background-color: lightblue;  
+} 
+
 /* -------------------------------------------------------------------------- */
 
 .draw-map-container,

@@ -68,7 +68,7 @@ export default Ember.Component.extend({
           'Position'
         ],
         colWidths: [100, 135, 60],
-        height: 500,
+        height: 600,
         manualRowResize: true,
         manualColumnResize: true,
         manualRowMove: true,
