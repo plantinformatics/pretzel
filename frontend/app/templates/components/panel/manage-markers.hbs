@@ -2,9 +2,19 @@
   <div class="panel panel-primary">
     <div class="panel-heading">Filters {{elem-icon name="filter"}}</div>
       <div class="panel-body">
-        <input type="radio" name="filter" value="all" checked {{action "changeFilter" "all" preventDefault=false}}><label>All</label>
-        <input type="radio" name="filter" value="chrom" {{action "changeFilter" "chrom" preventDefault=false}}><label>Map</label>
-        <input type="radio" name="filter" value="union" {{action "changeFilter" "union" preventDefault=false}}><label>Union</label>
+        <div class="btn-group btn-group-justified" role="group" aria-label="...">
+          {{#each-in filterOptions as |key value|}}
+            <div class="btn-group" role="group">
+              <button
+                type="button"
+                class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
+                {{action "changeFilter" key preventDefault=false}}>
+                {{value.formal}}
+                {{elem-icon name=value.icon}}
+              </button>
+            </div>
+          {{/each-in}}
+        </div>
       </div>
   </div>
   {{table-brushed data=data}}

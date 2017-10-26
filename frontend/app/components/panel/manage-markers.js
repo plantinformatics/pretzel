@@ -3,6 +3,11 @@ import Ember from 'ember';
 export default Ember.Component.extend({
   // classNames: ['tabbed-table-container', 'bordered', 'control-panel'],
   // classNames: ['tabbed-table-container', 'control-panel'],
+  filterOptions: {
+    'all': {'formal': 'All', 'icon': 'asterisk'},
+    'chrom': {'formal': 'Map', 'icon': 'globe'},
+    'union': {'formal': 'Union', 'icon': 'magnet'}
+  },
   filter: 'all',
   data: Ember.computed('selectedChrom', 'selectedMarkers', 'filter', function() {
     let selectedChrom = this.get('selectedChrom')

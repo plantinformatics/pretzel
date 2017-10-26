@@ -26,7 +26,12 @@
 
   <div class="actual-row">
     <h5>Upload Chromosomes</h5>
-    <label>Geneticmap: </label><select id="geneticmap"></select><input id="geneticmap_new" hidden />
+    <label>Geneticmap: </label><select id="geneticmap"></select>
+    <input
+      hidden
+      id="geneticmap_new"
+      class="form-control"
+      placeholder="New geneticmap name..." />
     <br><label>Load from file: </label><input type="file" accept=".csv" id="tableFile" onchange={{action 'uploadToTable'}}>
     <div id="hotable" class="actual-row">
     </div>
