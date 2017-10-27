@@ -12,16 +12,16 @@
         {{/tab-button}}
         {{#tab-button
           side="left"
+          key="explore"
+          state=layout.left.tab onClick="setTab"}}
+          Explorer {{elem-icon name="folder-open"}}
+        {{/tab-button}}
+        {{#tab-button
+          side="left"
           key="upload"
           state=layout.left.tab onClick="setTab"}}
           Upload {{elem-icon name="cloud-upload"}}
         {{/tab-button}}
-        {{!-- {{#tab-button
-          side="left"
-          key="tester"
-          state=layout.left.tab onClick="setTab"}}
-          {{elem-icon name="cloud-upload"}}
-        {{/tab-button}} --}}
         {{#tab-button
           class="pull-right"
           side="left"
@@ -53,8 +53,19 @@
 
         {{else if (compare layout.left.tab '===' 'upload')}}
           {{panel/upload-data}}
-        {{else if (compare layout.left.tab '===' 'tester')}}
-          TESTER PANEL
+        {{else if (compare layout.left.tab '===' 'explore')}}
+          {{panel/manage-explorer
+            model=model
+            selectedMaps=selectedMaps
+            selectedChrom=selectedChrom
+            isShowUnique=isShowUnique
+            pathColourScale=pathColourScale
+            scaffolds=scaffolds
+            scaffoldMarkers=scaffoldMarkers
+            showScaffoldMarkers=showScaffoldMarkers
+            showAsymmetricAliases=showAsymmetricAliases
+            selectChrom="selectChrom"
+            deleteChrom="removeMap"}}
         {{/if}}
       </div>
     </div>

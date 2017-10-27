@@ -35,33 +35,6 @@
       {{/each}}
     </ul>
   </div>
-  <div class="panel panel-primary">
-    <div class="panel-heading">
-      Explore Maps {{elem-icon name="globe"}} 
-      {{!-- <span class="pull-right">
-        {{elem-button
-          classSize='xs'
-          classColour='info'
-          icon='refresh'}}
-      </span>   --}}
-    </div>
-      {{#if model.mapsDerived.isPending}}
-        <div class="panel-body">
-          <div class="well">
-            Loading map {{elem-icon name="globe"}} resources. 
-          </div>
-        </div>
-      {{/if}}
-    <ul class="list-group">
-      {{#each model.mapsDerived.availableMaps as |geneticmap|}}
-        {{panel/manage-view-geneticmap
-          geneticmap=geneticmap
-          selectedChrom=selectedChrom
-          selectChrom="selectChrom"
-          deleteChrom="deleteChrom"}}
-      {{/each}}
-    </ul>
-  </div>
   {{!-- {{#if selectedMaps}} --}}
     <div class="bordered control-panel" style="display: inline-block;">
       <div class="pull-left vspace1">
