@@ -35,12 +35,6 @@
       {{/each}}
     </ul>
   </div>
-
-  {{!-- {{layout.remote.active}} --}}
-
-  {{!-- {{#each layout.remote.active as |active|}}
-    {{active}}
-  {{/each}} --}}
   <div class="panel panel-primary">
     <div class="panel-heading">
       Explore Maps {{elem-icon name="globe"}} 
@@ -60,58 +54,11 @@
       {{/if}}
     <ul class="list-group">
       {{#each model.mapsDerived.availableMaps as |geneticmap|}}
-        {{!-- genetic map entry atop chromosome entries --}}
-        <li class="list-group-item list-group-item-info">
-          {{#if (compare layout.remote.active '!=' geneticmap.id)}}
-            {{elem-button
-              classSize='xs'
-              classColour='default'
-              icon='plus'
-              onClick=(action "switchGeneticmap" geneticmap)}}
-          {{/if}}
-          {{geneticmap.name}}
-          <span class="badge">{{geneticmap.chromosomes.length}}</span>
-        </li>
-
-        {{!-- {{showGeneticmap(geneticmap)}} --}}
-        {{#if (compare layout.remote.active '===' geneticmap.id)}}
-          {{#each geneticmap.chromosomes as |chr|}}
-            <li 
-              class="list-group-item {{if (compare chr.id '===' selectedChrom.id) 'list-group-item-warning'}}"
-              {{action "selectChrom" chr on="click"}}>
-              {{chr.name}}
-              <span class="pull-right">
-                {{!-- {{elem-button
-                  classSize='xs'
-                  classColour='info'
-                  icon='info-sign'
-                  onClick=(action "selectChrom" chr)}} --}}
-                {{#if chr.isSelected}}
-                  {{!-- {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
-                    {{elem-button
-                      classSize='xs'
-                      classColour='danger'
-                      icon='minus'}}
-                  {{/link-to}} --}}
-                {{else}}
-                  {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
-                    {{elem-button
-                      classSize='xs'
-                      classColour='success'
-                      icon='plus'}}
-                  {{/link-to}}
-                {{/if}}
-              </span>
-              <p class="list-group-item-text">
-                {{#each chr.tags as |tag|}}
-                  <span class="label label-default" style="display: inline-block">
-                    {{tag}}
-                  </span>
-                {{/each}}
-              </p>
-            </li>
-          {{/each}}
-        {{/if}}
+        {{panel/manage-view-geneticmap
+          geneticmap=geneticmap
+          selectedChrom=selectedChrom
+          selectChrom="selectChrom"
+          deleteChrom="deleteChrom"}}
       {{/each}}
     </ul>
   </div>
