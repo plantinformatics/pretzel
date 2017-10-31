@@ -2,6 +2,7 @@ import Ember from 'ember';
 
 import createIntervalTree from 'npm:interval-tree-1d';
 import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
+import InAxis from './in-axis';
 
 /*----------------------------------------------------------------------------*/
 /* copied from draw-map.js - will import when that is split */
@@ -112,25 +113,7 @@ function setClipWidth(width)
 
 /* global d3 */
 
-export default Ember.Component.extend({
-
-  feed: Ember.inject.service(),
-
-  listen: function() {
-    let f = this.get('feed');
-    console.log("listen", f);
-    if (f === undefined)
-      console.log('feed service not injected');
-    else {
-      f.on('axisStackChanged', this, 'axisStackChanged');
-    }
-  }.on('init'),
-
-  // remove the binding created in listen() above, upon component destruction
-  cleanup: function() {
-    let f = this.get('feed');
-    f.off('axisStackChanged', this, 'axisStackChanged');
-  }.on('willDestroyElement'),
+export default InAxis.extend({
 
 
   actions: {
@@ -180,6 +163,7 @@ export default Ember.Component.extend({
       }
       else if ((i == 0) && (col[0].startsWith("#")))
       {
+        col[0] = col[0].substring(1); // trim off the leading #
         colIdx["start"] = col.indexOf("start");
         colIdx["end"] = col.indexOf("end");
         colIdx["description"] = col.indexOf("description");
@@ -252,7 +236,7 @@ export default Ember.Component.extend({
       .selectAll("g.tracks")
       .data([1])
       .enter()
-      .append("g")
+      .append("g")  // .insert(, ":last-child")
       .attr('class', 'tracks');
     if (false) { // not completed.  Can base resized() on axis-2d.js
     let text = gp
@@ -296,20 +280,13 @@ export default Ember.Component.extend({
 
   },
 
-  paste: function(event) {
-    console.log("components/axis-tracks paste", event);
+  pasteProcess: function(textPlain) {
+    console.log("components/axis-tracks pasteProcess", textPlain.length);
 
-    let cb = event.originalEvent.clipboardData;
-    if (false)
-    for (let i=0; i<cb.types.length; i++)
-    {
-      console.log(i, cb.types[i], cb.getData(cb.types[i]));
-    };
-    let i = cb.types.indexOf("text/plain"), textPlain = cb.getData(cb.types[i]),
+    let
     parseIntervals = this.get('parseIntervals'),
     layoutAndDrawTracks = this.get('layoutAndDrawTracks');
-    let inputElt=Ember.$('.trackData');
-    Ember.run.later(function() { inputElt.empty(); } );
+
     let tracks = parseIntervals(textPlain);
     this.set('tracks', tracks); // used by axisStackChanged() : layoutAndDrawTracks()
     let forTable = tracks.intervalTree[1].intervals.map(intervalToStartEnd);
@@ -322,9 +299,8 @@ export default Ember.Component.extend({
       return interval;
     };
     this.set('data.tracks', forTable);
-
-    return false;
   },
+
   keypress: function(event) {
     console.log("components/axis-tracks keypress", event);
   },

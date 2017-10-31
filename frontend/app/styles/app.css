@@ -126,6 +126,22 @@ g.axis-use > g.tracks > g > rect.track {
   word-wrap: inherit;
 }
 
+/* ---------------------------------- */
+
+/* context is :
+g.axis-use 
+> g.chart
+> g (clip-path)
+> g (transform)
+> rect.chartRow
+*/
+rect.chartRow {
+  fill: aqua;
+  opacity : 0.5;
+  stroke: blue;
+}
+
+/* ---------------------------------- */
 
 
 /* overflow:scroll within foreignObject works in firefox, not chrome;  see

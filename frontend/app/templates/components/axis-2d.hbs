@@ -10,12 +10,13 @@
     &#x21F9;
     <div class="subMenu">
       <button {{action "addTracks"}}>&#x2225;</button>
+      <button {{action "addChart"}}>&#x2630;</button>
       <button {{action "addTable"}}>&#x25A6;</button>
     </div>
   </div>
 
   <div class="accordion-div">
-    {{component "axis-accordion" subComponents=subComponents data=data tableData=tableData}}
+    {{component "axis-accordion" subComponents=subComponents data=data tableData=tableData axis=this}}
   </div>
 
 

@@ -3,7 +3,7 @@ import { eltWidthResizable } from '../utils/domElements';
 
 /* global d3 */
 
-export default Ember.Component.extend({
+export default Ember.Component.extend(Ember.Evented, {
 
   needs: ['component:tracks'],
 
@@ -30,6 +30,10 @@ export default Ember.Component.extend({
     {
         this.get('subComponents').pushObject('axis-table');
     },
+    addChart : function()
+    {
+        this.get('subComponents').pushObject('axis-chart');
+    },
     remove: function(){
       this.remove();
       console.log("components/axis-2d remove()");
@@ -38,6 +42,7 @@ export default Ember.Component.extend({
 
   didRender() {
     let me = this;
+    let prevSize,  currentSize;
     function resized(width, dx, eltSelector, resizable, resizer,  resizerElt)
     {
       console.log("resized", width, dx, eltSelector, resizable.node(), resizer.node(),  resizerElt);
@@ -51,6 +56,7 @@ export default Ember.Component.extend({
       rect.attr("width", width);
       let useElt = Ember.$(".axis-use"), apID;
       (useElt.length > 0) && (apID = useElt[0].parentElement.__data__);
+      currentSize = width; // dx ?
 
       let parentView = me.get('parentView');
       /* Recalculate positions & translations of axes.
@@ -63,6 +69,8 @@ export default Ember.Component.extend({
       let parentView = me.get('parentView');
       console.log("resizeEnded");
       parentView.send('axisWidthResizeEnded');
+      me.trigger('resized', prevSize, currentSize);
+      prevSize = currentSize;
     }
     Ember.run.later( function () { 
       let dragResize = eltWidthResizable('.foreignObject', undefined, resized);	// #axis2D
