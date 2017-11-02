@@ -99,7 +99,7 @@ function configurejQueryTooltip(oa, node) {
 
 
 
-export default Ember.Component.extend({
+export default Ember.Component.extend(Ember.Evented, {
   classNames: ['draw-map-container'],
 
   store: Ember.inject.service('store'),
@@ -2857,7 +2857,7 @@ export default Ember.Component.extend({
       showTickLocations(scaffoldTicks, t);
       showSynteny(syntenyBlocks, t);
 
-      me.get('feedService').trigger('axisStackChanged');
+      me.trigger('axisStackChanged', t);
     }
 
 
@@ -4459,6 +4459,7 @@ export default Ember.Component.extend({
             let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
             axisTickS.attr("transform", yAxisTicksScale);
             axisStackChanged(t);
+            me.trigger("zoomedAxis", [apID, t]);
 
             pathUpdate(t);
             let resetScope = apID ? apS : svgContainer;
@@ -4500,6 +4501,8 @@ export default Ember.Component.extend({
      */
     function zoom(that, brushExtents) {
       let apName = d3.select(that).data();
+      if (apName.length == 1)
+        apName = apName[0];
       let t = oa.svgContainer.transition().duration(750);
       selectedAps.map(function(p, i) {
         if(p == apName){
@@ -4517,6 +4520,7 @@ export default Ember.Component.extend({
         }
       });
       axisStackChanged(t);
+      me.trigger("zoomedAxis", [apName, t]);
     }
     /** @param p  apName */
     function axisScaleChanged(p, t)

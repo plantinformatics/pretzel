@@ -11,6 +11,31 @@ function breakToDebugger(a, b)
   console.log(a, b);
   debugger;
 }
+/*----------------------------------------------------------------------------*/
+/* Copied from draw-map.js */
+    /**
+     * @return true if a is in the closed interval range[]
+     * @param a value
+     * @param range array of 2 values - limits of range.
+     */
+    function inRange(a, range)
+    {
+      return range[0] <= a && a <= range[1];
+    }
+
+function markerLocation(oa, apID, d)
+{
+  let marker = oa.z[apID][d];
+  if (marker === undefined)
+  {
+    console.log("axis-chart markerY_", apID, oa.z[apID], "does not contain marker", d);
+    return undefined;
+  }
+  else
+    return marker.location;
+}
+  
+
 /* variant of copy from draw-map.js - to merge when that is split out. */
 /** Calculate relative marker location in the AP.
  * Result Y is relative to the stack, not the AP,
@@ -29,16 +54,13 @@ function markerY_(oa, apID, d, stackRelative)
   // if stackRelative, ys is used - the y scale for the stacked position&portion of the AP.
   let yScales = stackRelative ? oa.ys : oa.y,
   ysa = yScales[apID],
-  marker = oa.z[apID][d];
-  if (marker === undefined)
-  {
-    console.log("axis-chart markerY_", apID, oa.z[apID], "does not contain marker", d);
-    return undefined;
-  }
+  location = markerLocation(oa, apID, d);
+  if (location === undefined)
+    return location;
   else
   {
     let
-  aky = ysa(marker.location),
+  aky = ysa(location),
   apY = stackRelative ? oa.aps[apID].yOffset() : 0;
   // if (! tracedApScale[apID])
   {
@@ -69,29 +91,15 @@ function markerLineS2(oa, ak1, ak2, d1, d2)
 
 export default InAxis.extend({
 
-  listen: function() {
-      this.on('axisStackChanged', this, 'axisStackChanged');
-  }.on('init'),
-
-  // remove the binding created in listen() above, upon component destruction
-  cleanup: function() {
-    this.off('axisStackChanged', this, 'axisStackChanged');
-  }.on('willDestroyElement'),
-
 
   didRender() {
     console.log("components/axis-chart didRender()");
   },
 
-  axisStackChanged : function() {
-    console.log("axisStackChanged in components/axis-chart");
-    let redraw = this.get('redraw');
-    redraw.apply(this, []);
-  },
-  redraw   : function() {
+  redraw   : function(apID, t) {
     let data = this.get(className),
     layoutAndDrawChart = this.get('layoutAndDrawChart');
-    console.log("redraw", this, (data === undefined) || data.length);
+    console.log("redraw", this, (data === undefined) || data.length, apID, t);
     if (data)
       layoutAndDrawChart.apply(this, [data]);
   },
@@ -174,7 +182,10 @@ export default InAxis.extend({
     yAxis = oa.y[apID], // this.get('y')
     yDomain = [yAxis.invert(yrange[0]), yAxis.invert(yrange[1])],
     pxSize = (yDomain[1] - yDomain[0]) / bbox.height,
-    data = chart;
+    withinZoomRegion = function(d) {
+      return inRange(datum2Location(d), yDomain);
+    },
+    data = chart.filter(withinZoomRegion);
     let resizedWidth = this.get('width');
     console.log(resizedWidth, bbox, yDomain, pxSize, data.length, (data.length == 0) || datum2Location(data[0]));
     if (resizedWidth)
@@ -187,7 +198,7 @@ export default InAxis.extend({
          * @param d1 marker name, i.e. ak1:d1
          */
       let ak1 = apID,  d1 = name;
-      return markerY_(oa, ak1, d1, false);
+      return markerLocation(oa, ak1, d1);
     }
     function datum2Location(d) { return name2Location(d.name); }
     function datum2Value(d) { return d.value; }
@@ -195,11 +206,18 @@ export default InAxis.extend({
      * x  .value
      * y  .name Location
      */
-
-    function barChart(parentG, options)
+    /** 1-dimensional chart, within an axis. */
+    function Chart1(parentG, options)
+    {
+      this.parentG = parentG;
+      this.options = options;
+    }
+    Chart1.prototype.draw =  function ()
     {
       // based on https://bl.ocks.org/mbostock/3885304,  axes x & y swapped.
       let
+        options = this.options,
+      parentG = this.parentG,
         margin = {top: 10, right: 20, bottom: 40, left: 20},
       // pp=parentG.node().parentElement,
       parentW = options.bbox.width, // +pp.attr("width")
@@ -211,12 +229,15 @@ export default InAxis.extend({
       yRange = [height, 0],
       y = d3.scaleBand().rangeRound(yRange).padding(0.1),
       x = d3.scaleLinear().rangeRound(xRange);
-      console.log("barChart", parentW, parentH, xRange, yRange);
+      this.y = y;
+      console.log("Chart1", parentW, parentH, xRange, yRange);
 
       /* these can be renamed datum2{abscissa,ordinate}{,Scaled}() */
       /* apply y after scale applied by datum2Location */
       function datum2LocationScaled(d) { return y(options.datum2Location(d)); }
       function datum2ValueScaled(d) { return x(options.datum2Value(d)); }
+      this. datum2LocationScaled = datum2LocationScaled;
+      this. datum2ValueScaled = datum2ValueScaled;
 
       let gs = parentG
         .selectAll("g > g")
@@ -226,12 +247,13 @@ export default InAxis.extend({
         .append("g")  // maybe drop this g, move margin calc to gp
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
       g = gsa.merge(gs);
+      this.g = g;
 
       /**  first draft will show all data;  next :
-       * -  select region from y domain
+       * + select region from y domain
        * place data in tree for fast subset by region
-       * alternate view : line
-       * transition between views, zoom, stack
+       * -	alternate view : line
+       * + transition between views, zoom, stack
        */
       y.domain(data.map(options.datum2Location));
       x.domain([0, d3.max(data, options.datum2Value)]);
@@ -256,6 +278,13 @@ export default InAxis.extend({
         .attr("text-anchor", "end")
         .text(valueName);
 
+      this.bars(parentG, options);
+    };
+    Chart1.prototype.bars = function ()
+    {
+      let
+        options = this.options,
+      g = this.g;
       let
         rs = g
       // .select("g." + className + " > g")
@@ -274,12 +303,11 @@ export default InAxis.extend({
         .merge(rs)
         .transition().duration(1500)
         .attr("x", 0)
-        .attr("y", datum2LocationScaled)
-        .attr("height", y.bandwidth())
-        .attr("width", datum2ValueScaled);
+        .attr("y", this.datum2LocationScaled)
+        .attr("height", this.y.bandwidth())
+        .attr("width", this.datum2ValueScaled);
       rx.remove();
       console.log(gAxis.node(), rs.nodes(), re.nodes());
-
     };
 
     /** datum is value in hash : {value : , description: } and with optional attribute description. */
@@ -318,13 +346,14 @@ export default InAxis.extend({
     let g = 
       gps.merge(gp).selectAll("g." + className+  " > g");
 
-    barChart(g,
+    let b = new Chart1(g,
              {
                bbox : bbox,
                barClassName : classNameSub,
                datum2Location : datum2Location,
                datum2Value : datum2Value
              });
+    b.draw();
 
   },
 

@@ -6,23 +6,6 @@ import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
 
 export default Ember.Component.extend({
 
-  feed: Ember.inject.service(),
-
-  listen: function() {
-    let f = this.get('feed');
-    console.log("listen", f);
-    if (f === undefined)
-      console.log('feed service not injected');
-    else {
-      f.on('axisStackChanged', this, 'axisStackChanged');
-    }
-  }.on('init'),
-
-  // remove the binding created in listen() above, upon component destruction
-  cleanup: function() {
-    let f = this.get('feed');
-    f.off('axisStackChanged', this, 'axisStackChanged');
-  }.on('willDestroyElement'),
 
   didInsertElement : function() {
     console.log("components/in-axis didInsertElement()");
@@ -47,6 +30,18 @@ export default Ember.Component.extend({
     console.log("components/in-axis didRender()");
   },
 
+  /** @param [apID, t] */
+  redrawOnce(apID_t) {
+    console.log("redrawOnce", apID_t);
+    // -  redraw if apID matches this axis
+    // possibly use transition t for redraw 
+    let redraw = this.get('redraw');
+    if (redraw)
+      redraw.apply(this, apID_t);
+  },
+  redrawDebounced(apID_t) {
+    Ember.run.debounce(this, this.redrawOnce, apID_t, 1000);
+  },
 
   width : undefined,
   resized : function(prevSize, currentSize) {
@@ -57,12 +52,11 @@ export default Ember.Component.extend({
       ? width * currentSize / prevSize
       : currentSize / 1 /* or number of subComponents */;
     this.set('width', width);
-    let redraw = this.get('redraw');
-    if (redraw)
-      redraw.apply(this, []);
+    this.redrawDebounced();
   },
-  zoomed : function() {
-    console.log("zoomed in components/in-axis", this);
+  zoomed : function(apID_t) {
+    console.log("zoomed in components/in-axis", this, apID_t);
+    this.redrawDebounced(apID_t);
   },
 
   paste: function(event) {

@@ -9,6 +9,66 @@ export default Ember.Component.extend(Ember.Evented, {
 
   subComponents : [],
 
+  /*--------------------------------------------------------------------------*/
+
+  feed: Ember.inject.service(),
+
+  listen: function() {
+    let f = this.get('feed'); 
+    console.log("listen", f);
+    if (f === undefined)
+      console.log('feed service not injected');
+    else {
+    }
+
+    /** handle of the draw-map oa */
+    let drawMap = this.get('drawMap'); 
+    console.log("listen", drawMap);
+    if (drawMap === undefined)
+      console.log('parent component drawMap not passed');
+    else {
+      drawMap.on('axisStackChanged', this, 'axisStackChanged');
+      drawMap.on('zoomedAxis', this, 'zoomedAxis');
+    }
+  }.on('init'),
+
+  // remove the binding created in listen() above, upon component destruction
+  cleanup: function() {
+    let f = this.get('feed');
+    if (f)
+    {
+    }
+
+    let drawMap = this.get('drawMap');
+    if (drawMap)
+    drawMap.off('axisStackChanged', this, 'axisStackChanged');
+    drawMap.off('zoomedAxis', this, 'zoomedAxis');
+  }.on('willDestroyElement'),
+
+  /** axis-2d receives axisStackChanged from draw-map and propagates it as zoomed to its children.
+   * axisStackChanged() also sends zoomed, so debounce.
+   */
+  axisStackChanged : function() {
+    console.log("axisStackChanged in components/axis-2d");
+    Ember.run.debounce(this, this.sendZoomed, [], 500);
+  },
+
+  /** @param [apID, t] */
+  sendZoomed : function(apID_t)
+  {
+    console.log("sendZoomed", apID_t);
+    this.trigger("zoomed", apID_t);
+  },
+
+  /** @param [apID, t] */
+  zoomedAxis : function(apID_t) {
+    console.log("zoomedAxis in components/axis-2d", apID_t);
+    Ember.run.debounce(this, this.sendZoomed, apID_t, 500);
+  },
+
+
+  /*--------------------------------------------------------------------------*/
+
   actions: {
     addTracks : function()
     {
