@@ -212,6 +212,7 @@ export default InAxis.extend({
       this.parentG = parentG;
       this.options = options;
     }
+    Chart1.prototype.barsLine =  true;
     Chart1.prototype.draw =  function ()
     {
       // based on https://bl.ocks.org/mbostock/3885304,  axes x & y swapped.
@@ -229,15 +230,21 @@ export default InAxis.extend({
       yRange = [height, 0],
       y = d3.scaleBand().rangeRound(yRange).padding(0.1),
       x = d3.scaleLinear().rangeRound(xRange);
+      // datum2LocationScaled() uses me.x rather than the value in the closure in which it was created.
+      this.x = x;
+      // Used by bars() - could be moved there, along with  datum2LocationScaled().
       this.y = y;
+      // line() does not use y;  it creates yLine and uses yRange, to set its range.
+      this.yRange = yRange;
       console.log("Chart1", parentW, parentH, xRange, yRange);
 
+      let me = this;
       /* these can be renamed datum2{abscissa,ordinate}{,Scaled}() */
       /* apply y after scale applied by datum2Location */
-      function datum2LocationScaled(d) { return y(options.datum2Location(d)); }
-      function datum2ValueScaled(d) { return x(options.datum2Value(d)); }
-      this. datum2LocationScaled = datum2LocationScaled;
-      this. datum2ValueScaled = datum2ValueScaled;
+      function datum2LocationScaled(d) { return me.y(options.datum2Location(d)); }
+      function datum2ValueScaled(d) { return me.x(options.datum2Value(d)); }
+      this.datum2LocationScaled = datum2LocationScaled;
+      this.datum2ValueScaled = datum2ValueScaled;
 
       let gs = parentG
         .selectAll("g > g")
@@ -249,10 +256,10 @@ export default InAxis.extend({
       g = gsa.merge(gs);
       this.g = g;
 
-      /**  first draft will show all data;  next :
+      /**  first draft showed all data;  subsequently adding :
        * + select region from y domain
-       * place data in tree for fast subset by region
-       * -	alternate view : line
+       * -	place data in tree for fast subset by region
+       * +	alternate view : line
        * + transition between views, zoom, stack
        */
       y.domain(data.map(options.datum2Location));
@@ -278,7 +285,7 @@ export default InAxis.extend({
         .attr("text-anchor", "end")
         .text(valueName);
 
-      this.bars(parentG, options);
+      this.drawContent();
     };
     Chart1.prototype.bars = function ()
     {
@@ -292,9 +299,6 @@ export default InAxis.extend({
         .data(data),
       re =  rs.enter(), rx = rs.exit();
       let ra = re
-      /*g.selectAll("." + options.barClassName)
-       .data(data)
-       .enter()       */
         .append("rect");
       ra
         .attr("class", options.barClassName)
@@ -308,6 +312,57 @@ export default InAxis.extend({
         .attr("width", this.datum2ValueScaled);
       rx.remove();
       console.log(gAxis.node(), rs.nodes(), re.nodes());
+    };
+    Chart1.prototype.line = function ()
+    {
+      // based on https://bl.ocks.org/mbostock/3883245
+      if (! this.yLine)
+        this.yLine = d3.scaleLinear()
+        .rangeRound(this.yRange);
+      let y = this.yLine, options = this.options;
+
+      function datum2LocationScaled(d) { return y(options.datum2Location(d)); }
+
+      let line = d3.line()
+        .x(this.datum2ValueScaled)
+        .y(datum2LocationScaled);
+
+      y.domain(d3.extent(data, this.options.datum2Location));
+      console.log("line x domain", this.x.domain(), this.x.range());
+
+      let
+        g = this.g,
+      ps = g
+        .selectAll("g > path." + options.barClassName)
+        .data([1]);
+      ps
+        .enter()
+        .append("path")
+        .attr("class", options.barClassName + " line")
+        .datum([data[0], data[data.length-1]])
+        .attr("d", line)
+        .merge(ps)
+        .datum(data)
+        .transition().duration(1500)
+        .attr("d", line);
+      // data length is constant 1, so .remove() is not needed
+      ps.exit().remove();
+    };
+    /** Alternate between bar chart and line chart */
+    Chart1.prototype.toggleBarsLine = function ()
+    {
+      console.log("toggleBarsLine", this);
+      d3.event.stopPropagation();
+      this.barsLine = ! this.barsLine;
+      this.chartTypeToggle
+        .classed("pushed", this.barsLine);
+      this.g.selectAll("g > *").remove();
+      this.drawContent();
+    };
+    Chart1.prototype.drawContent = function()
+    {
+      let chartDraw = this.barsLine ? this.bars : this.line;
+      chartDraw.apply(this, []);
     };
 
     /** datum is value in hash : {value : , description: } and with optional attribute description. */
@@ -343,18 +398,50 @@ export default InAxis.extend({
     ;
     gp.append("g")
       .attr("clip-path", "url(#axis-clip)"); // clip the rectangle
+
     let g = 
       gps.merge(gp).selectAll("g." + className+  " > g");
 
-    let b = new Chart1(g,
+    /* It is possible to recreate Chart1 for each call, but that leads to
+     * complexity in ensuring that the instance rendered by toggleBarsLineClosure() is
+     * the same one whose options.bbox.width is updated from axis-chart.width.
+    */
+    let chart1 = this.get("chart1");
+    if (chart1)
+    {
+      chart1.options.bbox.width = bbox.width;
+    }
+    else
+    {
+      chart1 = new Chart1(g,
              {
                bbox : bbox,
                barClassName : classNameSub,
                datum2Location : datum2Location,
                datum2Value : datum2Value
              });
-    b.draw();
+      this.set("chart1", chart1);
+    }
+    let b = chart1; // b for barChart
 
+    function toggleBarsLineClosure(e)
+    {
+      b.toggleBarsLine();
+    }
+
+    /** currently placed at g.chart, could be inside g.chart>g (clip-path=). */
+    let chartTypeToggle = gp
+      .append("circle")
+      .attr("class", "radio toggle chartType")
+      .attr("r", 6)
+      .on("click", toggleBarsLineClosure);
+    chartTypeToggle.merge(gps.selectAll("g > circle"))
+      .attr("cx", bbox.x + bbox.width / 2)   /* was o[p], but g.ap translation does x offset of stack.  */
+      .attr("cy", bbox.height * 0.92)
+      .classed("pushed", b.barsLine);
+    b.chartTypeToggle = chartTypeToggle;
+
+    b.draw();
   },
 
   pasteProcess: function(textPlain) {

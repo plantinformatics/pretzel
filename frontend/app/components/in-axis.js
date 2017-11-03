@@ -51,6 +51,7 @@ export default Ember.Component.extend({
     width = width
       ? width * currentSize / prevSize
       : currentSize / 1 /* or number of subComponents */;
+    console.log("resized from width", this.get('width'), "to", width);
     this.set('width', width);
     this.redrawDebounced();
   },

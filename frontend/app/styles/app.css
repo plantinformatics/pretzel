@@ -143,6 +143,29 @@ rect.chartRow {
 
 /* ---------------------------------- */
 
+path.chartRow.line
+{
+      fill : none;
+      stroke : magenta;
+      stroke-linejoin : round;
+      stroke-linecap : round;
+      stroke-width : 1.5;
+}
+
+circle.radio.toggle.chartType
+{
+      fill : orchid;
+      fill-opacity : 0.2;
+      stroke : magenta;
+      stroke-width : 2;
+}
+circle.radio.toggle.chartType.pushed
+{
+      fill-opacity : 1;
+}
+
+/* ---------------------------------- */
+
 
 /* overflow:scroll within foreignObject works in firefox, not chrome;  see
  * https://stackoverflow.com/questions/34206459/scroll-is-not-working-inside-svg-foreign-object-in-chrome
