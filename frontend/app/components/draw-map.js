@@ -3832,6 +3832,30 @@ export default Ember.Component.extend(Ember.Evented, {
       return line([[o[ak1], markerY(k1, d)],
                    [o[ak2], markerY(k2, d)]]);
     }
+    /**  Return the x positions of the given axes; if the leftmost is split, add
+     *  its width to the corresponding returned axis position.
+     * @param cached  true means use the "old" / cached positions o[ak], otherwise use the current scale x(ak).
+     * @return 2 x-positions, in an array, in the given order (ak1, ak2).
+     */
+    function inside(ak1, ak2, cached)
+    {
+      let xi = cached
+        ? [o[ak1], o[ak2]]
+        : [x(ak1), x(ak2)],
+      /** true if ak1 is left of ak2 */
+      order = xi[0] < xi[1],
+      /** If the rightmost axis is split it does not effect the endpoint, since its left side is the axis position.
+       * This is the index of the left axis. */
+      left = order ? 0 : 1,
+      akL = order ? ak1 : ak2,
+      aL = oa.aps[akL];
+      if (aL.extended)
+      {
+        console.log("inside", ak1, ak2, cached, xi, order, left, akL);
+        xi[left] += aL.extended;
+      }
+      return xi;
+    }
     /** Stacks version of markerLine2().
      * A line between a marker's location in APs in adjacent Stacks.
      * @param ak1, ak2 AP names, (exist in apIDs[])
@@ -3840,10 +3864,13 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function markerLineS2(ak1, ak2, d1, d2)
     {
-      let o = oa.o;
+      let o = oa.o,
+      /** x endpoints of the line;  if either axis is split then the side closer the other axis is used.  */
+      xi = inside(ak1, ak2, true);
       // o[p], the map location,
-      return line([[o[ak1], markerY_(ak1, d1)],
-                   [o[ak2], markerY_(ak2, d2)]]);
+      return line([
+        [xi[0], markerY_(ak1, d1)],
+        [xi[1], markerY_(ak2, d2)]]);
     }
     /** Show a parallelogram between 2 axes, defined by
      * 4 marker locations in APs in adjacent Stacks.
@@ -3853,7 +3880,9 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function markerLineS3(ak1, ak2, d)
     {
-      let o = oa.o, oak = [x(ak1), x(ak2)], // o[ak1], o[ak2]],
+      let o = oa.o,
+      xi = inside(ak1, ak2, false),
+      oak = xi, // o[ak1], o[ak2]],
       p = [[oak[0], markerY_(ak1, d[0])],
            [oak[0], markerY_(ak1, d[1])],
            // order swapped in ak2 so that 2nd point of ak1 is adjacent 2nd point of ak2
