@@ -36,42 +36,6 @@ function markerLocation(oa, apID, d)
 }
   
 
-/* variant of copy from draw-map.js - to merge when that is split out. */
-/** Calculate relative marker location in the AP.
- * Result Y is relative to the stack, not the AP,
- * because .foreground does not have the AP transform (APs which are ends
- * of path will have different Y translations).
- *
- * @param oa  object attributes from draw-map : for the marker data z, and scales y and ys ;  later just those values, indexed by apID, will be passed to axis-chart
- * @param apID name of AP  (exists in apIDs[])
- * @param d marker name
- * @param stackRelative true means add the offset for the stacked position of the axis
- */
-function markerY_(oa, apID, d, stackRelative)
-{
-  // z[p][m].location, actual position of marker m in the AP p, 
-  // y[p](z[p][m].location) is the relative marker position in the svg
-  // if stackRelative, ys is used - the y scale for the stacked position&portion of the AP.
-  let yScales = stackRelative ? oa.ys : oa.y,
-  ysa = yScales[apID],
-  location = markerLocation(oa, apID, d);
-  if (location === undefined)
-    return location;
-  else
-  {
-    let
-  aky = ysa(location),
-  apY = stackRelative ? oa.aps[apID].yOffset() : 0;
-  // if (! tracedApScale[apID])
-  {
-    // tracedApScale[apID] = true;
-    /* let yDomain = ysa.domain();
-     console.log("markerY_", apID, d, z[apID][d].location, aky, apY, yDomain, ysa.range()); */
-  }
-  return aky + apY;
-  }
-}
-
 /*----------------------------------------------------------------------------*/
 
 
@@ -425,7 +389,7 @@ export default InAxis.extend({
       .on("click", toggleBarsLineClosure);
     chartTypeToggle.merge(gps.selectAll("g > circle"))
       .attr("cx", bbox.x + bbox.width / 2)   /* was o[p], but g.ap translation does x offset of stack.  */
-      .attr("cy", bbox.height * 0.99)
+      .attr("cy", bbox.height * 0.96)
       .classed("pushed", b.barsLine);
     b.chartTypeToggle = chartTypeToggle;
 
