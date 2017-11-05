@@ -72,18 +72,6 @@ function markerY_(oa, apID, d, stackRelative)
   }
 }
 
-/*
- * A line between a marker's location in APs in adjacent Stacks.
- * @param ak1, ak2 AP names, (exist in apIDs[])
- * @param d1, d2 marker names, i.e. ak1:d1, ak1:d1
- * If d1 != d2, they are connected by an alias.
- */
-function markerLineS2(oa, ak1, ak2, d1, d2)
-{
-  let o = oa.o;
-  // o[p], the map location,
-  return d3.line([[o[ak1], markerY_(oa, ak1, d1, false)],]);
-}
 /*----------------------------------------------------------------------------*/
 
 
@@ -437,7 +425,7 @@ export default InAxis.extend({
       .on("click", toggleBarsLineClosure);
     chartTypeToggle.merge(gps.selectAll("g > circle"))
       .attr("cx", bbox.x + bbox.width / 2)   /* was o[p], but g.ap translation does x offset of stack.  */
-      .attr("cy", bbox.height * 0.92)
+      .attr("cy", bbox.height * 0.99)
       .classed("pushed", b.barsLine);
     b.chartTypeToggle = chartTypeToggle;
 
