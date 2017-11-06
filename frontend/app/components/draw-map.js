@@ -944,6 +944,9 @@ export default Ember.Component.extend(Ember.Evented, {
        * domains of scales y and ys, and the axis brush extent.
        */
       this.flipped = false;
+      /** If perpendicular, axis is rotated 90 degrees and paths are shown as dots (dot plot).
+       */
+      this.perpendicular = false;
       /** Reference to parent stack.  Set in Stack.prototype.{add,insert}(). */
       this.stack = undefined;
       /* AP objects persist through being dragged in and out of Stacks. */
@@ -1847,7 +1850,7 @@ export default Ember.Component.extend(Ember.Evented, {
         debugger;
       }
       let yOffset = this.yOffset(),
-      yOffsetText = Number.isNaN(yOffset) ? "" : "," + this.yOffset();
+      yOffsetText =  Number.isNaN(yOffset) ? "" : "," + this.yOffset();
       /** x scale doesn't matter because x is 0; use 1 for clarity.
        * no need for scale when this.portion === 1
        */
@@ -1855,12 +1858,24 @@ export default Ember.Component.extend(Ember.Evented, {
       scaleText = Number.isNaN(scale) || (scale === 1) ? "" : " scale(1," + scale + ")";
       let xVal = checkIsNumber(oa.o[this.apName]);
       xVal = Math.round(xVal);
+      let rotateText = "", ap = oa.aps[this.apName];
+      if (ap.perpendicular)
+      {
+        /** shift to centre of axis for rotation. */
+        let shift = -yRange/2;
+        rotateText =
+          "rotate(90)"
+          +  " translate(0," + shift + ")";
+        let a = d3.select("g#id" + this.apName + ".ap");
+        console.log("perpendicular", shift, rotateText, a.node());
+      }
       let transform =
         [
           " translate(" + xVal, yOffsetText, ")",
+          rotateText,
           scaleText
         ].join("");
-      // console.log("apTransformO", this, transform);
+       console.log("apTransformO", this, transform);
       return transform;
     };
 
@@ -2790,10 +2805,13 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
     //Setup the tool tip.
-      let toolTip = d3.selectAll("html > div#toolTip.toolTip").data([1]).enter().append("div")
+    let toolTipS = d3.selectAll("html > div#toolTip.toolTip").data([1]),
+    toolTip = toolTipS
+      .enter().append("div")
       .attr("class", "toolTip")
       .attr("id","toolTip")
-      .style("opacity", 0);
+      .style("opacity", 0)
+      .merge(toolTipS);
     //Probably leave the delete function to Ember
     //function deleteAp(){
     //  console.log("Delete");
@@ -3856,6 +3874,19 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       return xi;
     }
+    /** @return a short line segment, length approx 1, around the given point.
+     */
+    function pointSegment(point)
+    {
+      let  floor = Math.floor, ceil = Math.ceil,
+      s = [[floor(point[0]), floor(point[1])],
+               [ceil(point[0]), ceil(point[1])]];
+      if (s[0][0] == s[1][0])
+        s[1][0] += 1;
+      if (s[0][1] == s[1][1])
+        s[1][1] += 1;
+      return s;
+    }
     /** Stacks version of markerLine2().
      * A line between a marker's location in APs in adjacent Stacks.
      * @param ak1, ak2 AP names, (exist in apIDs[])
@@ -3865,12 +3896,29 @@ export default Ember.Component.extend(Ember.Evented, {
     function markerLineS2(ak1, ak2, d1, d2)
     {
       let o = oa.o,
+      ap1 = oa.aps[ak1],
+      ap2 = oa.aps[ak2],
       /** x endpoints of the line;  if either axis is split then the side closer the other axis is used.  */
       xi = inside(ak1, ak2, true);
+      let l;
+      if (ap1.perpendicular && ap2.perpendicular)
+      { /* maybe a circos plot :-) */ }
+      else if (ap1.perpendicular)
+      {
+        let point = [xi[0] + yRange/2 - markerY_(ak1, d1), markerY_(ak2, d2)];
+        l =  line(pointSegment(point));
+      }
+      else if (ap2.perpendicular)
+      {
+        let point = [xi[1] + yRange/2 - markerY_(ak2, d2), markerY_(ak1, d1)];
+        l =  line(pointSegment(point));
+      }
+      else
       // o[p], the map location,
-      return line([
+      l =  line([
         [xi[0], markerY_(ak1, d1)],
         [xi[1], markerY_(ak2, d2)]]);
+      return l;
     }
     /** Show a parallelogram between 2 axes, defined by
      * 4 marker locations in APs in adjacent Stacks.
@@ -3883,13 +3931,42 @@ export default Ember.Component.extend(Ember.Evented, {
       let o = oa.o,
       xi = inside(ak1, ak2, false),
       oak = xi, // o[ak1], o[ak2]],
-      p = [[oak[0], markerY_(ak1, d[0])],
+      ap1 = oa.aps[ak1],
+      ap2 = oa.aps[ak2],
+      my = [[markerY_(ak1, d[0]), markerY_(ak1, d[1])],
+            [markerY_(ak2, d[2]), markerY_(ak2, d[3])]];
+      let sLine;
+
+      /** if one of the axes is perpendicular, draw a line segment using the d
+       * values of the perpendicular axes as the x values, and the other as the
+       * y values. */
+      if (ap1.perpendicular && ap2.perpendicular)
+      {  }
+      else if (ap1.perpendicular)
+      {
+        xi[0] += yRange/2;
+        let s = [[xi[0] - my[0][0], my[1][0]],
+                 [xi[0] - my[0][1], my[1][1]]];
+        sLine =  line(s);
+      }
+      else if (ap2.perpendicular)
+      {
+        xi[1] += yRange/2;
+        let s = [[xi[1] - my[1][0], my[0][0]],
+                 [xi[1] - my[1][1], my[0][1]]];
+        sLine =  line(s);
+      }
+      else
+      {
+        let
+          p = [[oak[0], markerY_(ak1, d[0])],
            [oak[0], markerY_(ak1, d[1])],
            // order swapped in ak2 so that 2nd point of ak1 is adjacent 2nd point of ak2
            [oak[1], markerY_(ak2, d[3])],
            [oak[1], markerY_(ak2, d[2])],
-          ],
-      sLine = line(p) + "Z";
+          ];
+        sLine = line(p) + "Z";
+      }
       if (trace_synteny > 4)
         console.log("markerLineS3", ak1, ak2, d, oak, p, sLine);
       return sLine;
@@ -5471,6 +5548,7 @@ export default Ember.Component.extend(Ember.Evented, {
           content : ""
             + glyphiconButton("DeleteMap", "Delete_" + apName, remap ? "glyphicon-sound-7-1" : "glyphicon-remove-sign", "#")
             + glyphiconButton("FlipAxis", "Flip_" + apName, remap ? "glyphicon glyphicon-bell" : "glyphicon-retweet", "#")
+            + glyphiconButton("PerpendicularAxis", "Perpendicular_" + apName, remap ? "glyphicon glyphicon-bell" : "glyphicon-retweet", "#")
             + glyphiconButton("ExtendMap", "Extend_" + apName, remap ? "glyphicon-star" : "glyphicon-arrow-right", "#")
         })
         // .popover('show');
@@ -5510,6 +5588,19 @@ export default Ember.Component.extend(Ember.Evented, {
               b.extent(maybeFlipExtent(b.extent()(), true));
               let t = oa.svgContainer.transition().duration(750);
               axisScaleChanged(apName, t);
+            });
+          let perpendicularButtonS = d3.select("button.PerpendicularAxis");
+          perpendicularButtonS
+            .on('click', function (buttonElt /*, i, g*/) {
+              console.log("perpendicular", apName, this);
+              let ap = oa.aps[apName];
+              ap.perpendicular = ! ap.perpendicular;
+
+              let t = oa.svgContainer.transition().duration(750);
+              t.selectAll(".ap").attr("transform", Stack.prototype.apTransformO);
+              pathUpdate(t /*st*/);
+              Ember.run.later( function () { showSynteny(syntenyBlocks, undefined); });
+              // axisScaleChanged(apName, t);
             });
 
           let extendButtonS = d3.select("button.ExtendMap");
