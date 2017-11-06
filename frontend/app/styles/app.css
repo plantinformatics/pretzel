@@ -54,7 +54,8 @@ body.ember-application > div.ember-view > div.container
 }
 /* This doesn't work within <foreignObject>, so :not(.inFO) is used. */
 .resizer:not(.inFO)::after {
-  content: "\e025\e230\e027";
+/*	⇹	8697	21F9	 	LEFT RIGHT ARROW WITH VERTICAL STROKE	*/
+  content: "\21F9";
   right: -20px;
   position: relative;
 }

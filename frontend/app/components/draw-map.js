@@ -5521,12 +5521,22 @@ export default Ember.Component.extend(Ember.Evented, {
     });
 
     let apTitleSel = "g.ap > text";
-      function glyphiconButton (className, id, glyphiconName, href) {
+      function glyphIcon(className, id, glyphiconName, href) {
         return ''
-              + '<button class="' + className + '" id="' + id + '" href="' + href + '">'
-              + '<span class="glyphicon ' + glyphiconName + '" aria-hidden=true></span>'
-              + '</button>';
+          + '<span class="glyphicon ' + glyphiconName + '" aria-hidden=true></span>';
       }
+    function iconButton(className, id, htmlIcon, glyphiconName, href)
+    {
+      /** selects glyphicon or html icon */
+      let useGlyphIcon = false;
+        return ''
+        + '<button class="' + className + '" id="' + id + '" href="' + href + '">'
+        + (useGlyphIcon ? glyphIcon(glyphiconName) : htmlIcon)
+        + '</button>';
+    }
+
+
+
     /** Setup hover menus over AP titles.
      * So far used just for Delete
      * @see based on similar configurejQueryTooltip()
@@ -5535,7 +5545,6 @@ export default Ember.Component.extend(Ember.Evented, {
       if (trace_gui)
       console.log("configureAPtitleMenu", apName, this, this.outerHTML);
         let node_ = this;
-      let remap = true;	// using the bundled glyphicon, getting jumbled order.
         Ember.$(node_)
         .popover({
             trigger : "hover", // manual", // "click focus",
@@ -5545,11 +5554,17 @@ export default Ember.Component.extend(Ember.Evented, {
           placement : "auto bottom",
           // title : apName,
           html: true,
+          /*
+           *	╳	9587	2573	 	BOX DRAWINGS LIGHT DIAGONAL CROSS
+           *	⇅	8645	21C5	 	UPWARDS ARROW LEFTWARDS OF DOWNWARDS ARROW
+           *	↷	8631	21B7	 	CLOCKWISE TOP SEMICIRCLE ARROW
+           *	⇲	8690	21F2	 	SOUTH EAST ARROW TO CORNER
+           */
           content : ""
-            + glyphiconButton("DeleteMap", "Delete_" + apName, remap ? "glyphicon-sound-7-1" : "glyphicon-remove-sign", "#")
-            + glyphiconButton("FlipAxis", "Flip_" + apName, remap ? "glyphicon glyphicon-bell" : "glyphicon-retweet", "#")
-            + glyphiconButton("PerpendicularAxis", "Perpendicular_" + apName, remap ? "glyphicon glyphicon-bell" : "glyphicon-retweet", "#")
-            + glyphiconButton("ExtendMap", "Extend_" + apName, remap ? "glyphicon-star" : "glyphicon-arrow-right", "#")
+            + iconButton("DeleteMap", "Delete_" + apName, "&#x2573;" /*glyphicon-sound-7-1*/, "glyphicon-remove-sign", "#")
+            + iconButton("FlipAxis", "Flip_" + apName, "&#x21C5;" /*glyphicon-bell*/, "glyphicon-retweet", "#")
+            + iconButton("PerpendicularAxis", "Perpendicular_" + apName, "&#x21B7;" /*glyphicon-bell*/, "glyphicon-retweet", "#")
+            + iconButton("ExtendMap", "Extend_" + apName, "&#x21F2;" /*glyphicon-star*/, "glyphicon-arrow-right", "#")
         })
         // .popover('show');
       
