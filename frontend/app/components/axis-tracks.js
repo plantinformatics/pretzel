@@ -115,7 +115,8 @@ function setClipWidth(width)
 
 export default InAxis.extend({
 
-
+  className : "tracks",
+  
   actions: {
 
     selectionChanged: function(selA) {

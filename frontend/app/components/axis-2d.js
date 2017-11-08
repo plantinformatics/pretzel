@@ -7,7 +7,13 @@ export default Ember.Component.extend(Ember.Evented, {
 
   needs: ['component:tracks'],
 
-  subComponents : [],
+  subComponents : undefined,
+
+  targetEltId : Ember.computed('apID', function() {
+    let id = 'axis2D_' + this.apID;
+    console.log("targetEltId", this, id);
+    return id;
+  }),
 
   /*--------------------------------------------------------------------------*/
 
@@ -84,20 +90,28 @@ export default Ember.Component.extend(Ember.Evented, {
       else
       {
         this.get('subComponents').pushObject('axis-tracks');
+        console.log("addTracks", this.get('apID'), this.get('subComponents'));
       }
     },
     addTable : function()
     {
         this.get('subComponents').pushObject('axis-table');
+      console.log("addTable", this.get('apID'), this.get('subComponents'));
     },
     addChart : function()
     {
         this.get('subComponents').pushObject('axis-chart');
+      console.log("addChart", this.get('apID'), this.get('subComponents'));
     },
     remove: function(){
       this.remove();
       console.log("components/axis-2d remove()");
     }
+  },
+
+  didInsertElement() {
+    console.log("axis-2d didInsertElement", this, this.get('apID'));
+    this.set('subComponents', []);
   },
 
   didRender() {

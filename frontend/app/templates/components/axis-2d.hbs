@@ -1,7 +1,7 @@
 {{!-- axis-2d is used within a <foreignObject> within a g.axis, created by apShowExtend()
    It is rendered into div#axis2D (will add APid) using ember-wormhole.
    --}}
-{{#ember-wormhole to="axis2D"}}
+{{#ember-wormhole to=targetEltId }}
   <div class="resizer inFO" style="float:right;">
     {{!-- Being within <foreignObject>, this alternative is used to create and position the resizer arrow;
                 Because content is not displayed when position: relative; set via  .resizer:not(.inFO)::after.
@@ -28,3 +28,10 @@
 
 {{/ember-wormhole}}
 
+<div>axis-2d :{{this}}, {{apID}}, {{targetEltId}},  {{subComponents.length}} :
+  <div>subComponents :
+    {{#each subComponents as |subComponent|}}
+      {{subComponent}}
+    {{/each}}
+  </div>
+</div>

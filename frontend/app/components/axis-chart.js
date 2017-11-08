@@ -43,6 +43,7 @@ function markerLocation(oa, apID, d)
 
 export default InAxis.extend({
 
+  className : className,
 
   didRender() {
     console.log("components/axis-chart didRender()");
@@ -69,7 +70,7 @@ export default InAxis.extend({
      * It currently implements the feature that header is optional;   to replicate that can use
      * dsv.parse() when header is input and dsv.parseRows() otherwise.
     */
-    let apName = "1", values = [];
+    let values = [];
     let rows = tableText.split(/[\n\r]+/);
     let colIdx = {name : 0, value : 1, description : 2};
     for (let i=0; i<rows.length; i++)
@@ -117,7 +118,11 @@ export default InAxis.extend({
     console.log("layoutAndDrawChart", chart);
     // initial version supports only 1 split axis; next identify axis by APid (and possibly stack id)
     // <g class="axis-use">
-    let gAxis = d3.select("g.axis-use"),
+    // g.ap#id<apID>
+    let
+      axisComponent = this.get("axis"),
+    apID = axisComponent.apID,
+    gAxis = d3.select("g.ap#id" + apID + "> g.axis-use"),
     /** relative to the transform of parent g.ap */
     bbox = gAxis.node().getBBox(),
     yrange = [bbox.y, bbox.height];
@@ -130,7 +135,7 @@ export default InAxis.extend({
     barWidth = 10,
     valueName = chart.valueName || "Values",
     oa = this.get('data'),
-    apID = gAxis.node().parentElement.__data__,
+    // apID = gAxis.node().parentElement.__data__,
     yAxis = oa.y[apID], // this.get('y')
     yDomain = [yAxis.invert(yrange[0]), yAxis.invert(yrange[1])],
     pxSize = (yDomain[1] - yDomain[0]) / bbox.height,
@@ -325,7 +330,7 @@ export default InAxis.extend({
       .data([1]),
     gp = gps
       .enter()
-      .insert("g", ":last-child")
+      .insert("g", ":first-child")
       .attr('class', className);
     if (false) { // not completed.  Can base resized() on axis-2d.js
     let text = gp
@@ -404,7 +409,7 @@ export default InAxis.extend({
     layoutAndDrawChart = this.get('layoutAndDrawChart');
 
     let chart = parseTextData(textPlain);
-    this.set(className, chart); // used by axisStackChanged() : layoutAndDrawChart()
+    this.set(className, chart); // used by axisStackChanged() : redraw() : layoutAndDrawChart()
     let forTable = chart;
     chart.valueName = "values"; // add user config
     // ; draw chart.

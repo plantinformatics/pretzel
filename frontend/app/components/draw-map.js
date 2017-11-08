@@ -162,6 +162,10 @@ export default Ember.Component.extend(Ember.Evented, {
   
   scroller: Ember.inject.service(),
 
+  /** later axes can be all displayed axes, but in this first stage:  just add them when they are extended */
+  axes : [],
+  splitAxes: Ember.computed.filterBy('axes', 'extended', true),
+
   axisData : [{marker: "A1", position: 11}, {marker: "A2", position: 12}],
 
   /*------------------------------------------------------------------------*/
@@ -199,9 +203,19 @@ export default Ember.Component.extend(Ember.Evented, {
       this.sendAction('mapsToViewDelete', mapName);
     },
 
-      enableAxis2D: function(enabled) {
-        console.log("enableAxis2D in components/draw-map", enabled);
-        this.set('axis2DEnabled', enabled);
+    enableAxis2D: function(apID, enabled) {
+      let axes = this.get('axes');
+      let axis = axes.findBy('apID', apID);
+      if (axis === undefined)
+      {
+        axis = Ember.Object.create({ apID : apID });
+        axes.pushObject(axis);
+        console.log("create", apID, axis, "in", axes);
+      }
+      console.log("enableAxis2D in components/draw-map", apID, enabled, axis);
+        axis.set('extended', enabled);  // was axis2DEnabled
+      console.log("splitAxes", this.get('splitAxes'));
+      console.log("axes", this.get('axes'));
     },
 
     axisWidthResize : function(apID, width, dx) {
@@ -2500,14 +2514,23 @@ export default Ember.Component.extend(Ember.Evented, {
       let p2 = this.parentNode.parentElement;
       return "#a" + p2.__data__;
     }
-    function apShowExtend(ap, apName, apG)
+    function getAxisExtendedWidth(apID)
     {
-      let initialWidth = 50,
-      offsets = ap.extended ? [initialWidth] : [];
+      let ap = oa.aps[apID],
+      initialWidth = 50,
+      width = ap ? ((ap.extended === true) ? initialWidth : ap.extended) : undefined;
+      return width;
+    }
+    function apShowExtend(ap, apID, apG)
+    {
+	    /** x translation of right axis */
+      let 
+        initialWidth = 50,
+      axisData = ap.extended ? [apID] : [];
       if (apG === undefined)
-        apG = svgContainer.selectAll("g.ap#id" + apName);
+        apG = svgContainer.selectAll("g.ap#id" + apID);
       let ug = apG.selectAll("g.axis-use")
-        .data(offsets);	// x translation of right axis
+        .data(axisData);
       let ugx = ug
         .exit()
         .transition().duration(500)
@@ -2532,7 +2555,7 @@ export default Ember.Component.extend(Ember.Evented, {
        * https://stackoverflow.com/questions/10423933/how-do-i-define-an-svg-doc-under-defs-and-reuse-with-the-use-tag */
         .append("use").attr("xlink:xlink:href", eltIdGpRef);
       eu.transition().duration(1000)
-        .attr("transform",function(d) {return "translate(" + d + ",0)";});
+        .attr("transform",function(d) {return "translate(" + getAxisExtendedWidth(d) + ",0)";});
 
       let er = eg
         .append("rect")
@@ -2563,11 +2586,10 @@ export default Ember.Component.extend(Ember.Evented, {
       if (eb.node() !== null)	  // .style() uses .node()
         eb
         .append("div")
-        .attr("id", "axis2D")
+        .attr("id", "axis2D_" + apID) // matches axis-2d:targetEltId()
         .style("border:1px green solid");
 
-      me.send('enableAxis2D', ap.extended);
-
+      me.send('enableAxis2D', apID, ap.extended);
     }
 
     if (trace_stack)

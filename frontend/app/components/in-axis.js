@@ -8,13 +8,12 @@ export default Ember.Component.extend({
 
 
   didInsertElement : function() {
-    console.log("components/in-axis didInsertElement()");
     /* grandparent component - listen for resize and zoom events.
      * possibly these events will move from axis-2d to axis-accordion.
      * This event handling will move to in-axis, since it is shared by all children of axis-2d/axis-accordion.
      */
     let axisComponent = this.get("axis");
-    // console.log(axisComponent);
+    console.log("components/in-axis didInsertElement()", axisComponent, axisComponent.apID);
     axisComponent.on('resized', this, 'resized');
     axisComponent.on('zoomed', this, 'zoomed');
   },
@@ -43,6 +42,43 @@ export default Ember.Component.extend({
     Ember.run.debounce(this, this.redrawOnce, apID_t, 1000);
   },
 
+  /*--------------------------------------------------------------------------*/
+
+  getRanges()
+  {
+    // initial version supports only 1 split axis; next identify axis by APid (and possibly stack id)
+    // <g class="axis-use">
+    let gAxis = d3.select("g.axis-use"),
+    /** relative to the transform of parent g.ap */
+    bbox = gAxis.node().getBBox(),
+    yrange = [bbox.y, bbox.height];
+    if (bbox.x < 0)
+    {
+      console.log("x < 0", bbox);
+      bbox.x = 0;
+    }
+
+    let
+      oa = this.get('data'),
+    apID = gAxis.node().parentElement.__data__,
+    yAxis = oa.y[apID], // this.get('y')
+    yDomain = [yAxis.invert(yrange[0]), yAxis.invert(yrange[1])],
+    pxSize = (yDomain[1] - yDomain[0]) / bbox.height,
+    result =
+      {
+        apID : apID,
+        gAxis : gAxis,
+        bbox : bbox,
+        yAxis : yAxis,
+        yDomain : yDomain,
+        pxSize : pxSize
+      };
+    return result;
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+
   width : undefined,
   resized : function(prevSize, currentSize) {
     console.log("resized in components/in-axis", this, prevSize, currentSize);
@@ -61,7 +97,7 @@ export default Ember.Component.extend({
   },
 
   paste: function(event) {
-    console.log("components/in-axis paste", event);
+    console.log("components/in-axis paste", event, this, event.target);
 
     let cb = event.originalEvent.clipboardData;
 
@@ -71,7 +107,15 @@ export default Ember.Component.extend({
         console.log(i, cb.types[i], cb.getData(cb.types[i]));
       };
     let i = cb.types.indexOf("text/plain"), textPlain = cb.getData(cb.types[i]),
-    inputElt=Ember.$('.trackData');
+    className = this.get('className'),
+    inputElt=Ember.$('.' + className + '.pasteData')
+    // inputElt = event.target
+    ;
+    /* multiple subcomponents of the same type not supported yet - clashes here in paste selector,
+     * and in output target addressing.
+     */
+    if (inputElt.length !== 1)
+      console.log("inputElt", inputElt, className, this);
     Ember.run.later(function() { inputElt.empty(); } );
 
     let pasteProcess = this.get('pasteProcess');

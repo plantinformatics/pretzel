@@ -122,7 +122,7 @@ g.axis-use > g.tracks > g > rect.track {
   fill: white;
   stroke: green;
 }
-.trackData {
+.pasteData {
   overflow: hidden;
   word-wrap: inherit;
 }

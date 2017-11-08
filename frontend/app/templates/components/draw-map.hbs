@@ -1,16 +1,19 @@
-  <div class="resizer" style="float:right;">
- </div>
+<div class="resizer" style="float:right;">
+</div>
 
 <div id='holder' class="bordered">
-<!--<ul>
-<li>{{selectedMapset.name}}</li>
-</ul> -->
+  <!--<ul>
+       <li>{{selectedMapset.name}}</li>
+       </ul> -->
 
 
 </div>
 
 {{yield}}
 
-{{#if axis2DEnabled}}
-  {{axis-2d drawMap=this data=oa tableData=axisData}}
-{{/if}}
+<div>splitAxes : {{splitAxes}}</div>
+<div>axes : {{axes.length}}</div>
+{{#each axes as |axisS|}}
+  <div>axis : {{axisS}}, {{axisS.apID}}, {{axisS.extended}}</div>
+  {{axis-2d drawMap=this data=oa apID=axisS.apID tableData=axisData}}
+{{/each}}
