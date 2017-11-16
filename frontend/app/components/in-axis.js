@@ -6,6 +6,7 @@ import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
 
 export default Ember.Component.extend({
 
+  className : undefined,
 
   didInsertElement : function() {
     /* grandparent component - listen for resize and zoom events.
@@ -44,7 +45,7 @@ export default Ember.Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  getRanges()
+  getRanges(margin)
   {
     // initial version supports only 1 split axis; next identify axis by APid (and possibly stack id)
     // <g class="axis-use">
@@ -59,6 +60,12 @@ export default Ember.Component.extend({
     }
 
     let
+            parentW = bbox.width,
+      parentH = bbox.height,
+      width = parentW - margin.left - margin.right,
+      height = parentH - margin.top - margin.bottom;
+
+    let
       oa = this.get('data'),
     apID = gAxis.node().parentElement.__data__,
     yAxis = oa.y[apID], // this.get('y')
@@ -68,12 +75,72 @@ export default Ember.Component.extend({
       {
         apID : apID,
         gAxis : gAxis,
+        margin : margin,
         bbox : bbox,
+        drawSize : [width, height],
         yAxis : yAxis,
         yDomain : yDomain,
         pxSize : pxSize
       };
+    console.log("in-axis: getRanges", result);
     return result;
+  },
+
+  /** Create/manage the frame elements which are common to components mixed with
+   * in-axis, i.e. sub-components of axis-2d / axis-accordion
+ */
+  commonFrame(gAxis, ranges)
+  {
+    let bbox = ranges.bbox;
+    let className = this.get('className');
+    // factored from axis-chart.js: layoutAndDrawChart()
+    /** parent; contains a clipPath, g > rect, text.resizer.  */
+    let gps =   gAxis
+      .selectAll("g." + className)
+      .data([1]),
+    gp = gps
+      .enter()
+      .insert("g", ":first-child")
+      .attr('class', className);
+    // see @axis-chart:layoutAndDrawChart() for draft resizer code
+    let gpa =
+    gp // define the clipPath
+      .append("clipPath")       // define a clip path
+      .attr("id", "axis-clip") // give the clipPath an ID
+      .append("rect"),          // shape it as an ellipse
+    gprm = 
+    gpa.merge(gps.selectAll("g > clipPath > rect"))
+      .attr("x", bbox.x)
+      .attr("y", bbox.y)
+      .attr("width", bbox.width)
+      .attr("height", bbox.height)
+    ;
+    gp.append("g")
+      .attr("clip-path", "url(#axis-clip)"); // clip the rectangle
+
+    let
+      margin  = ranges.margin;
+
+    let g = 
+      gps.merge(gp).selectAll("g." + className+  " > g");
+    g
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    return g;
+  },
+
+  /** Add a <g> to wrap some content. */
+  group(g, groupClassName)
+  {
+      let gs = g
+        .selectAll("g > g." + groupClassName)
+        .data([1]), // or inherit g.datum(), or [groupClassName]
+      gsa = gs
+        .enter()
+        .append("g")
+        .attr("class", groupClassName),
+      resultG = gsa.merge(gs);
+    return resultG;
   },
 
   /*--------------------------------------------------------------------------*/

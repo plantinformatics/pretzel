@@ -103,6 +103,11 @@ export default Ember.Component.extend(Ember.Evented, {
         this.get('subComponents').pushObject('axis-chart');
       console.log("addChart", this.get('apID'), this.get('subComponents'));
     },
+    addLd : function()
+    {
+      this.get('subComponents').pushObject('axis-ld');
+      console.log("addLd", this.get('apID'), this.get('subComponents'));
+    },
     remove: function(){
       this.remove();
       console.log("components/axis-2d remove()");
