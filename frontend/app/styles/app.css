@@ -725,3 +725,14 @@ ul#maps_aligned > li.selected {
 g.ap.selected > text {
   font-weight: bold;
 }
+/* -------------------------------------------------------------------------- */
+/* for controlling display of devel monitoring info. */
+.devel-visible
+{
+    display : none;
+}
+.devel .devel-visible
+{
+    display : inherit;
+}
+/* -------------------------------------------------------------------------- */
