@@ -1,0 +1,17 @@
+<div class="Tracks">
+  {{content-editable
+    value=selection
+    placeholder="Paste Tracks Here"
+    escape-press="putContent"
+    class="tracks pasteData"
+    type="text"}}
+
+  {{#data-table data=data.tracks selectionMode='multiple' 
+     selectionChanged=(action 'selectionChanged') classNames=tableClassNames as |t|}}
+    {{t.selectionColumn}}
+    {{t.column propertyName='start' name='Start'}}
+    {{t.column propertyName='end' name='End'}}
+    {{t.column propertyName='description' name='Description'}}
+  {{/data-table}}
+
+</div>

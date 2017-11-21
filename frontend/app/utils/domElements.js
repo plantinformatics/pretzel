@@ -19,28 +19,48 @@ import Ember from 'ember';
  * Usage eg.     eltWidthResizable('#holder');
  *
  * @param eltSelector DOM element to make resizable
+ * @param filter  undefined or event filter - refn github.com/d3/d3-drag#drag_filter
+ * @param resized undefined or callback when resized
+ * @return the d3 drag object, so that the caller can register for drag events.
+ * The caller could use eltWidthResizable(...).on('drag') instead of passing resized,
+ * but this function wraps the calculation of x and dx which is useful.
  */
-function eltWidthResizable(eltSelector)
+function eltWidthResizable(eltSelector, filter, resized)
 {
   /** refn : meetamit https://stackoverflow.com/a/25792309  */
   let resizable = d3.select(eltSelector);
+
   let resizer = resizable.select('.resizer'),
+
   /** assumes single '.resizer', or they all have some flex-grow. */
   resizable_flex_grow = resizable.node().style['flex-grow'];
 
+  if ((resizable.node() === null) || (resizer.node() === null))
+    console.log("eltWidthResizable() resizer=", resizer, eltSelector, resizable.node(), resizer.node());
+
+  let startX;
   let dragResize = d3.drag()  // d3 v3: was .behavior
     .on('drag', function() {
       // Determine resizer position relative to resizable (parent)
       let x = d3.mouse(this.parentNode)[0];
-      // console.log("eltWidthResizable drag x=", x);
+      let dx = d3.event.dx;
+      // console.log("eltWidthResizable drag x=", x, dx);
       // Avoid negative or really small widths
       x = Math.max(50, x);
 
       resizable.style('width', x + 'px');
+
       /* If the parent (resizable) has "flex-grow: 1", disable that so that it can be adjusted.
        */
       resizable.style('flex-grow', 'inherit');
+
+      if (resized)
+        // 'this' is resizer elt.
+        // Only the first 2 args are used so far - the others can be dropped.
+        resized(x, dx, eltSelector, resizable, resizer, this);
     });
+  // if (filter)
+    dragResize.filter(shiftKeyfilter/*filter*/);
 
   /* If the window is changed (in particular reduced then increased),
    * restore the previous value, so that the flex-grow can
@@ -55,8 +75,24 @@ function eltWidthResizable(eltSelector)
     resizer.call(dragResize);
   else
     console.log("eltWidthResizable() resizer=", resizer, eltSelector, dragResize);
+    return dragResize;
 }
 
 /*----------------------------------------------------------------------------*/
 
-export { eltWidthResizable };
+/** Event filter for eltWidthResizable() ... d3 drag.filter()
+ *  refn github.com/d3/d3-drag#drag_filter
+ */
+function shiftKeyfilter() {
+  let ev = d3.event.sourceEvent || d3.event; 
+  return ev.shiftKey;
+}
+
+function noShiftKeyfilter() {
+  let ev = d3.event.sourceEvent || d3.event; 
+  return ! ev.shiftKey;
+}
+
+/*----------------------------------------------------------------------------*/
+
+export { eltWidthResizable, shiftKeyfilter, noShiftKeyfilter };

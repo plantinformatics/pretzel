@@ -5,7 +5,7 @@ import createIntervalTree from 'npm:interval-tree-1d';
 console.log("createIntervalTree", createIntervalTree);
 
 import { chrData } from '../utils/utility-chromosome';
-import { eltWidthResizable } from '../utils/domElements';
+import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
 
 
 /* jshint curly : false */
@@ -99,7 +99,7 @@ function configurejQueryTooltip(oa, node) {
 
 
 
-export default Ember.Component.extend({
+export default Ember.Component.extend(Ember.Evented, {
   classNames: ['draw-map-container'],
 
   store: Ember.inject.service('store'),
@@ -162,6 +162,12 @@ export default Ember.Component.extend({
   
   scroller: Ember.inject.service(),
 
+  /** later axes can be all displayed axes, but in this first stage:  just add them when they are extended */
+  axes : [],
+  splitAxes: Ember.computed.filterBy('axes', 'extended', true),
+
+  axisData : [{marker: "A1", position: 11}, {marker: "A2", position: 12}],
+
   /*------------------------------------------------------------------------*/
 
   actions: {
@@ -195,6 +201,32 @@ export default Ember.Component.extend({
     {
       console.log("controller/draw-map", "mapsToViewDelete", mapName);
       this.sendAction('mapsToViewDelete', mapName);
+    },
+
+    enableAxis2D: function(apID, enabled) {
+      let axes = this.get('axes');
+      let axis = axes.findBy('apID', apID);
+      if (axis === undefined)
+      {
+        axis = Ember.Object.create({ apID : apID });
+        axes.pushObject(axis);
+        console.log("create", apID, axis, "in", axes);
+      }
+      console.log("enableAxis2D in components/draw-map", apID, enabled, axis);
+        axis.set('extended', enabled);  // was axis2DEnabled
+      console.log("splitAxes", this.get('splitAxes'));
+      console.log("axes", this.get('axes'));
+    },
+
+    axisWidthResize : function(apID, width, dx) {
+      console.log("axisWidthResize in components/draw-map", apID, width, dx);
+      let axisWidthResize = this.get('axisWidthResize');
+      if (axisWidthResize) axisWidthResize(apID, width, dx);
+    },
+    axisWidthResizeEnded : function() {
+      console.log("axisWidthResizeEnded in components/draw-map");
+      let axisWidthResizeEnded = this.get('axisWidthResizeEnded');
+      if (axisWidthResizeEnded) axisWidthResizeEnded();
     },
 
     resizeView : function()
@@ -236,7 +268,9 @@ export default Ember.Component.extend({
             let mtv = content[ic],
             m, im, newChr;
             let oa = me.get('oa');
-            console.log("mtv", mtv.length, mtv, "aps", oa.aps.length, oa.aps);
+              if ((oa.aps === undefined) || trace_promise)
+                console.log("mtv", mtv.length, mtv, "aps", oa.aps, oa.aps && oa.aps.length);
+            if (oa.aps !== undefined)
             for (im=0; im < mtv.length; im++)
             {
               if (oa.aps[m = mtv[im]])
@@ -375,11 +409,13 @@ export default Ember.Component.extend({
     }
 
 
+    console.log("oa.apIDs", oa.apIDs, source);
     /** apIDs are <apName>_<chromosomeName> */
     if (source == 'dataReceived')
       oa.apIDs = oa.apIDs.concat(myDataKeys);
-    else
+    else if ((myDataKeys.length > 0) || (oa.apIDs === undefined))
       oa.apIDs = myDataKeys;
+    console.log("oa.apIDs", oa.apIDs);
     /** mapName (apName) of each chromosome, indexed by chr name. */
     let cmName = oa.cmName || (oa.cmName = {});
     /** AP id of each chromosome, indexed by AP name. */
@@ -701,9 +737,8 @@ export default Ember.Component.extend({
        */
       showAll = true,
     /** Show brushed markers, i.e. pass them to updatedSelectedMarkers().
-     * The purpse is to save processing time, so this condition does not disable
-     * the calls to updatedSelectedMarkers which are clearing the markers (but
-     * could do - factor the me.send('updatedSelectedMarkers', selectedMarkers);.
+     * The purpose is to save processing time; this is toggled by 
+     * setupToggleShowSelectedMarkers() - #checkbox-toggleShowSelectedMarkers.
      */
     showSelectedMarkers = true;
 
@@ -922,6 +957,13 @@ export default Ember.Component.extend({
        * .position is the whole axis [0, 1].
        */
       this.position = (portion === 1) ? [0, 1] : undefined;
+      /** If flipped, the domain direction is reversed.  This affects the
+       * domains of scales y and ys, and the axis brush extent.
+       */
+      this.flipped = false;
+      /** If perpendicular, axis is rotated 90 degrees and paths are shown as dots (dot plot).
+       */
+      this.perpendicular = false;
       /** Reference to parent stack.  Set in Stack.prototype.{add,insert}(). */
       this.stack = undefined;
       /* AP objects persist through being dragged in and out of Stacks. */
@@ -1733,7 +1775,72 @@ export default Ember.Component.extend({
         });
     };
 
+    /*------------------------------------------------------------------------*/
 
+    /** width of the AP.  either 0 or .extended (current width of extension) */
+    Stacked.prototype.extendedWidth = function()
+    {
+      // console.log("Stacked extendedWidth()", this, this.extended);
+      return this.extended || 0;
+    };
+
+    /** @return range of widths, [min, max] of the APs in this stack */
+    Stack.prototype.extendedWidth = function()
+    {
+      let range = [undefined, undefined];
+      this.aps.forEach(
+        function (a, index)
+        {
+          let w = a.extendedWidth();
+          if ((range[0] === undefined) || (range[0] > w))
+            range[0] = w;
+          if ((range[1] === undefined) || (range[1] < w))
+            range[1] = w;
+        });
+      // console.log("Stack extendedWidth()", this, range);
+      return range;
+    };
+
+    /*------------------------------------------------------------------------*/
+
+    /** Scale to map axis names to x position of axes.
+     * sum of stacks, constant inter-space, use max of .extendedWidth().
+     * (combine) 2 scales - map stack key to domain space, then to range.
+     * Replaces @see xScale() when axes may be split - .extended
+      */
+    function xScaleExtend()
+    {
+      /* .extended is measured in the range space (pixels),
+       * so calculate space between axes.
+       */
+      let count = 0, widthSum = 0;
+      stacks.forEach(
+        function(s){count++; let widthRange = s.extendedWidth(); widthSum += widthRange[1];}
+      );
+      let widths = stacks.map(
+        function(s){ let widthRange = s.extendedWidth(); return widthRange[1];}
+      );
+
+      let rangeWidth = axisXRange[1] - axisXRange[0],
+      paddingInner = rangeWidth*0.10, paddingOuter = rangeWidth*0.05;
+      let gap = (rangeWidth - paddingOuter*2) - widthSum; // total gap
+      if (count > 1)
+        gap =  gap / (count - 1);
+
+      let stackDomain = Array.from(oa.stacks.keys()); // was apIDs
+      let outputs = [], cursor = axisXRange[0];
+      count = 0;
+      stacks.forEach(
+        function(s){
+          count++; let widthRange = s.extendedWidth(); let width = widthRange[1];
+          outputs.push(cursor);
+          cursor += width + gap;
+        }
+      );
+      console.log("xScaleExtend", widths, count, widthSum, axisXRange, paddingInner, paddingOuter, gap, stackDomain, outputs, cursor);
+      return d3.scaleOrdinal().domain(stackDomain).range(outputs);
+      // .unknown(axisXRange*0.98) ?
+    }
 
     /*------------------------------------------------------------------------*/
 
@@ -1760,7 +1867,7 @@ export default Ember.Component.extend({
         debugger;
       }
       let yOffset = this.yOffset(),
-      yOffsetText = Number.isNaN(yOffset) ? "" : "," + this.yOffset();
+      yOffsetText =  Number.isNaN(yOffset) ? "" : "," + this.yOffset();
       /** x scale doesn't matter because x is 0; use 1 for clarity.
        * no need for scale when this.portion === 1
        */
@@ -1768,12 +1875,24 @@ export default Ember.Component.extend({
       scaleText = Number.isNaN(scale) || (scale === 1) ? "" : " scale(1," + scale + ")";
       let xVal = checkIsNumber(oa.o[this.apName]);
       xVal = Math.round(xVal);
+      let rotateText = "", ap = oa.aps[this.apName];
+      if (ap.perpendicular)
+      {
+        /** shift to centre of axis for rotation. */
+        let shift = -yRange/2;
+        rotateText =
+          "rotate(90)"
+          +  " translate(0," + shift + ")";
+        let a = d3.select("g#id" + this.apName + ".ap");
+        console.log("perpendicular", shift, rotateText, a.node());
+      }
       let transform =
         [
           " translate(" + xVal, yOffsetText, ")",
+          rotateText,
           scaleText
         ].join("");
-      // console.log("apTransformO", this, transform);
+       console.log("apTransformO", this, transform);
       return transform;
     };
 
@@ -1844,30 +1963,30 @@ export default Ember.Component.extend({
     /** planning to move selectedMarkers out to a separate class/component;
      * these 2 functions would be actions on it. */
     //Reset the selected Marker region, everytime an AP gets deleted
-   function sendUpdatedSelectedMarkers()
-   {
-     if (showSelectedMarkers)
-     me.send('updatedSelectedMarkers', selectedMarkers);
-   }
-   function selectedMarkers_clear()
-   {
-     selectedMarkers = {};
-     sendUpdatedSelectedMarkers();
-   }
-   /** When an AP is deleted, it is removed from selectedAps and its markers are removed from selectedMarkers.
-    * Those markers may be selected in another axis which is not deleted; in
-    * which case they should not be deleted from selectedMarkers, but this is
-    * quicker, and may be useful.
-    * Possibly versions of the app did not update selectedAps in some cases, e.g. when zooms are reset.
-    */
-   function selectedMarkers_removeAp(apName)
-   {
-     selectedAps.removeObject(apName);
-     let p = apName; // based on brushHelper()
-     d3.keys(oa.z[p]).forEach(function(m) {
-       delete selectedMarkers[p];
-     });
-   }
+    function sendUpdatedSelectedMarkers()
+    {
+      if (showSelectedMarkers)
+        me.send('updatedSelectedMarkers', selectedMarkers);
+    }
+    function selectedMarkers_clear()
+    {
+      selectedMarkers = {};
+      sendUpdatedSelectedMarkers();
+    }
+    /** When an AP is deleted, it is removed from selectedAps and its markers are removed from selectedMarkers.
+     * Those markers may be selected in another axis which is not deleted; in
+     * which case they should not be deleted from selectedMarkers, but this is
+     * quicker, and may be useful.
+     * Possibly versions of the app did not update selectedAps in some cases, e.g. when zooms are reset.
+     */
+    function selectedMarkers_removeAp(apName)
+    {
+      selectedAps.removeObject(apName);
+      let p = apName; // based on brushHelper()
+      d3.keys(oa.z[p]).forEach(function(m) {
+        delete selectedMarkers[p];
+      });
+    }
 
     collateData();
 
@@ -1897,8 +2016,62 @@ export default Ember.Component.extend({
         stack.calculatePositions();
       }
     });
-    // xScale() uses stacks.keys().
-    oa.xs = xScale();
+    function axisWidthResize(apID, width, dx)
+    {
+      console.log("axisWidthResize", apID, width, dx);
+      oa.aps[apID].extended = width;
+      axisWidthResizeRight(apID, width, dx);
+    };
+    function axisWidthResizeEnded()
+    {
+      console.log("axisWidthResizeEnded");
+
+      updateXScale();
+      stacks.changed = 0x10;
+      let t = stacksAdjust(true, undefined);
+    };
+    /**  add width change to the x translation of axes to the right of this one.
+      */
+    function axisWidthResizeRight(apID, width, dx)
+    {
+      console.log("axisWidthResizeRight", apID, width, dx);
+      /** this is like Stack.apStackIndex().  */
+      let ap = oa.aps[apID], from = ap.stack,
+      fromSix = from.stackIndex(),   o = oa.o;
+      for (let six=0; six < stacks.length; six++)
+      {
+        let stack = stacks[six],
+        /** apply the dx proportionally to the closeness of the stack to the cursor (e.g. stack index or x distance),
+         * and apply it -ve to those to the left, including the stack of the axis extend being resized, so that it mirrors,
+         * i.e. right side goes same distance as dx, left side same and opposite,
+         */
+        close =
+          (six == fromSix)
+          ? -1/2
+          : (six < fromSix)
+          ? (six - fromSix) / fromSix
+          : (six - fromSix) / (stacks.length - fromSix);
+        console.log("close", close, fromSix, six, stacks.length);
+        stack.aps.forEach(
+          function (a, index)
+          {
+            o[a.apName] += (dx * close);
+          }
+        );
+        // could filter the selection - just those right of the extended axis
+        svgContainer.selectAll(".ap").attr("transform", Stack.prototype.apTransformO);
+        stack.aps.forEach( function (a, index) { apRedrawText(aps[a.apName]); });
+        pathUpdate(undefined);
+      }
+    };
+    this.set('axisWidthResize', function (apID, width, dx) { axisWidthResize(apID, width, dx); });
+    this.set('axisWidthResizeEnded', function () { axisWidthResizeEnded(); });
+    function updateXScale()
+    {
+      // xScale() uses stacks.keys().
+      oa.xs = xScaleExtend(); // or xScale();
+    }
+    updateXScale();
     function x(apID)
     {
       let i = Stack.apStackIndex(apID);
@@ -2116,21 +2289,35 @@ export default Ember.Component.extend({
       path_colour_scale.range(d3.schemeCategory10);
     }
 
+    function maybeFlip(domain, flipped)
+    {
+      return flipped
+        ? [domain[1], domain[0]]
+        : domain;
+    }
+    /** @param extent [[left,top],[right,bottom]], e.g. [[-8,0],[8,myRange]].
+     * @return if flipped, [[left,bottom],[right,top]] */
+    function maybeFlipExtent(extent, flipped)
+    {
+      return flipped
+        ? [[extent[0][0], extent[1][1]], [extent[1][0], extent[0][1]]]
+        : extent;
+    }
+
     oa.apIDs.forEach(function(d) {
       /** Find the max of locations of all markers of AP name d. */
       let yDomainMax = d3.max(Object.keys(oa.z[d]), function(a) { return oa.z[d][a].location; } );
       let a = oa.aps[d], myRange = a.yRange(), ys = oa.ys, y = oa.y;
       ys[d] = d3.scaleLinear()
-        .domain([0, yDomainMax])
+        .domain(maybeFlip([0, yDomainMax], a.flipped))
         .range([0, myRange]); // set scales for each AP
       
       //console.log("OOO " + y[d].domain);
-      ys[d].flipped = false;
       // y and ys are the same until the AP is stacked.
       // The brush is on y.
       y[d] = ys[d].copy();
       y[d].brush = d3.brushY()
-        .extent([[-8,0],[8,myRange]])
+        .extent(maybeFlipExtent([[-8,0],[8,myRange]], a.flipped))
         .on("end", brushended);
     });
     /** when draw( , 'dataReceived'), pathUpdate() is not valid until ys is updated. */
@@ -2316,15 +2503,106 @@ export default Ember.Component.extend({
 
     // Add a group element for each AP.
     // Stacks are selection groups in the result of this .selectAll()
-    let g = stackS.selectAll(".ap")
+    let apG = stackS.selectAll(".ap")
       .data(stack_apIDs)
       .enter().append("g");
+    let allG = apG
+      .append('g')
+      .attr("class", "axis-all")
+      .attr("id", eltIdAll);
+    function eltIdAll(d) { return "all" + d; }
+    function eltIdGpRef(d, i, g)
+    {
+      console.log("eltIdGpRef", this, d, i, g);
+      let p2 = this.parentNode.parentElement;
+      return "#a" + p2.__data__;
+    }
+    function getAxisExtendedWidth(apID)
+    {
+      let ap = oa.aps[apID],
+      initialWidth = 50,
+      width = ap ? ((ap.extended === true) ? initialWidth : ap.extended) : undefined;
+      return width;
+    }
+    function apShowExtend(ap, apID, apG)
+    {
+	    /** x translation of right axis */
+      let 
+        initialWidth = 50,
+      axisData = ap.extended ? [apID] : [];
+      if (apG === undefined)
+        apG = svgContainer.selectAll("g.ap#id" + apID);
+      let ug = apG.selectAll("g.axis-use")
+        .data(axisData);
+      let ugx = ug
+        .exit()
+        .transition().duration(500)
+        .remove();
+      ugx
+        .selectAll("use")
+        .attr("transform",function(d) {return "translate(0,0)";});
+      ugx
+        .selectAll("rect")
+        .attr("width", 0);
+      ugx
+        .selectAll(".foreignObject")
+        .attr("width", 0);
+      let eg = ug
+        .enter()
+        .append("g")
+        .attr("class", "axis-use");
+      // merge / update ?
+
+      let eu = eg
+      /* extra "xlink:" seems required currently to work, refn :  dsummersl -
+       * https://stackoverflow.com/questions/10423933/how-do-i-define-an-svg-doc-under-defs-and-reuse-with-the-use-tag */
+        .append("use").attr("xlink:xlink:href", eltIdGpRef);
+      eu.transition().duration(1000)
+        .attr("transform",function(d) {return "translate(" + getAxisExtendedWidth(d) + ",0)";});
+
+      let er = eg
+        .append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", 0)
+        .attr("height", yRange);
+      er
+        .transition().duration(1000)
+        .attr("width", initialWidth);
+
+      // foreignObject is case sensitive - refn https://gist.github.com/mbostock/1424037
+      let ef = eg
+        .append("g")
+        .attr("class", "axis-html")
+        .append("foreignObject")
+        .attr("class", "foreignObject")
+      /*.attr("x", 0)
+       .attr("y", 0) */
+        .attr("width", initialWidth /*0*/)
+        .attr("height", yRange);
+      let eb = ef
+        .append("xhtml:body")
+        .attr("class", "axis-table");
+      ef
+        .transition().duration(1000)
+        .attr("width", initialWidth);
+      if (eb.node() !== null)	  // .style() uses .node()
+        eb
+        .append("div")
+        .attr("id", "axis2D_" + apID) // matches axis-2d:targetEltId()
+        .style("border:1px green solid");
+
+      me.send('enableAxis2D', apID, ap.extended);
+    }
+
     if (trace_stack)
     {
       if (trace_stack > 1)
-      oa.stacks.forEach(function(s){console.log(s.apIDs());});
+        oa.stacks.forEach(function(s){console.log(s.apIDs());});
+      let g = apG;
       console.log("g.ap", g.enter().size(), g.exit().size(), stacks.length);
     }
+    let g = apG;
     let gt = newRender ? g :
       g.transition().duration(dragTransitionTime);
     gt
@@ -2335,6 +2613,7 @@ export default Ember.Component.extend({
       .call(
         d3.drag()
           .subject(function(d) { return {x: x(d)}; }) //origin replaced by subject
+          .filter(noShiftKeyfilter)
           .on("start", dragstarted) //start instead of dragstart in v4. 
           .on("drag", dragged)
           .on("end", dragended));//function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
@@ -2458,8 +2737,10 @@ export default Ember.Component.extend({
     });
 
 
-
+      g = allG;
     // Add an axis and title
+      /** This g is referenced by the <use>. It contains axis path, ticks, title text, brush. */
+      let defG =
     g.append("g")
       .attr("class", "axis")
       .each(function(d) { d3.select(this).attr("id",axisEltId(d)).call(axis.scale(y[d])); });  
@@ -2530,7 +2811,7 @@ export default Ember.Component.extend({
     }
 
     // Add a brush for each axis.
-    g.append("g")
+    allG.append("g")
       .attr("class", "brush")
       .each(function(d) { d3.select(this).call(oa.y[d].brush); });
 
@@ -2549,10 +2830,13 @@ export default Ember.Component.extend({
 
 
     //Setup the tool tip.
-    let toolTip = d3.select("body").append("div")
+    let toolTipS = d3.selectAll("html > div#toolTip.toolTip").data([1]),
+    toolTip = toolTipS
+      .enter().append("div")
       .attr("class", "toolTip")
       .attr("id","toolTip")
-      .style("opacity", 0);
+      .style("opacity", 0)
+      .merge(toolTipS);
     //Probably leave the delete function to Ember
     //function deleteAp(){
     //  console.log("Delete");
@@ -2615,6 +2899,8 @@ export default Ember.Component.extend({
     {
       showTickLocations(scaffoldTicks, t);
       showSynteny(syntenyBlocks, t);
+
+      me.trigger('axisStackChanged', t);
     }
 
 
@@ -3589,6 +3875,43 @@ export default Ember.Component.extend({
       return line([[o[ak1], markerY(k1, d)],
                    [o[ak2], markerY(k2, d)]]);
     }
+    /**  Return the x positions of the given axes; if the leftmost is split, add
+     *  its width to the corresponding returned axis position.
+     * @param cached  true means use the "old" / cached positions o[ak], otherwise use the current scale x(ak).
+     * @return 2 x-positions, in an array, in the given order (ak1, ak2).
+     */
+    function inside(ak1, ak2, cached)
+    {
+      let xi = cached
+        ? [o[ak1], o[ak2]]
+        : [x(ak1), x(ak2)],
+      /** true if ak1 is left of ak2 */
+      order = xi[0] < xi[1],
+      /** If the rightmost axis is split it does not effect the endpoint, since its left side is the axis position.
+       * This is the index of the left axis. */
+      left = order ? 0 : 1,
+      akL = order ? ak1 : ak2,
+      aL = oa.aps[akL];
+      if (aL.extended)
+      {
+        console.log("inside", ak1, ak2, cached, xi, order, left, akL);
+        xi[left] += aL.extended;
+      }
+      return xi;
+    }
+    /** @return a short line segment, length approx 1, around the given point.
+     */
+    function pointSegment(point)
+    {
+      let  floor = Math.floor, ceil = Math.ceil,
+      s = [[floor(point[0]), floor(point[1])],
+               [ceil(point[0]), ceil(point[1])]];
+      if (s[0][0] == s[1][0])
+        s[1][0] += 1;
+      if (s[0][1] == s[1][1])
+        s[1][1] += 1;
+      return s;
+    }
     /** Stacks version of markerLine2().
      * A line between a marker's location in APs in adjacent Stacks.
      * @param ak1, ak2 AP names, (exist in apIDs[])
@@ -3597,10 +3920,30 @@ export default Ember.Component.extend({
      */
     function markerLineS2(ak1, ak2, d1, d2)
     {
-      let o = oa.o;
+      let o = oa.o,
+      ap1 = oa.aps[ak1],
+      ap2 = oa.aps[ak2],
+      /** x endpoints of the line;  if either axis is split then the side closer the other axis is used.  */
+      xi = inside(ak1, ak2, true);
+      let l;
+      if (ap1.perpendicular && ap2.perpendicular)
+      { /* maybe a circos plot :-) */ }
+      else if (ap1.perpendicular)
+      {
+        let point = [xi[0] + yRange/2 - markerY_(ak1, d1), markerY_(ak2, d2)];
+        l =  line(pointSegment(point));
+      }
+      else if (ap2.perpendicular)
+      {
+        let point = [xi[1] + yRange/2 - markerY_(ak2, d2), markerY_(ak1, d1)];
+        l =  line(pointSegment(point));
+      }
+      else
       // o[p], the map location,
-      return line([[o[ak1], markerY_(ak1, d1)],
-                   [o[ak2], markerY_(ak2, d2)]]);
+      l =  line([
+        [xi[0], markerY_(ak1, d1)],
+        [xi[1], markerY_(ak2, d2)]]);
+      return l;
     }
     /** Show a parallelogram between 2 axes, defined by
      * 4 marker locations in APs in adjacent Stacks.
@@ -3610,14 +3953,45 @@ export default Ember.Component.extend({
      */
     function markerLineS3(ak1, ak2, d)
     {
-      let o = oa.o, oak = [x(ak1), x(ak2)], // o[ak1], o[ak2]],
-      p = [[oak[0], markerY_(ak1, d[0])],
+      let o = oa.o,
+      xi = inside(ak1, ak2, false),
+      oak = xi, // o[ak1], o[ak2]],
+      ap1 = oa.aps[ak1],
+      ap2 = oa.aps[ak2],
+      my = [[markerY_(ak1, d[0]), markerY_(ak1, d[1])],
+            [markerY_(ak2, d[2]), markerY_(ak2, d[3])]];
+      let sLine;
+
+      /** if one of the axes is perpendicular, draw a line segment using the d
+       * values of the perpendicular axes as the x values, and the other as the
+       * y values. */
+      if (ap1.perpendicular && ap2.perpendicular)
+      {  }
+      else if (ap1.perpendicular)
+      {
+        xi[0] += yRange/2;
+        let s = [[xi[0] - my[0][0], my[1][0]],
+                 [xi[0] - my[0][1], my[1][1]]];
+        sLine =  line(s);
+      }
+      else if (ap2.perpendicular)
+      {
+        xi[1] += yRange/2;
+        let s = [[xi[1] - my[1][0], my[0][0]],
+                 [xi[1] - my[1][1], my[0][1]]];
+        sLine =  line(s);
+      }
+      else
+      {
+        let
+          p = [[oak[0], markerY_(ak1, d[0])],
            [oak[0], markerY_(ak1, d[1])],
            // order swapped in ak2 so that 2nd point of ak1 is adjacent 2nd point of ak2
            [oak[1], markerY_(ak2, d[3])],
            [oak[1], markerY_(ak2, d[2])],
-          ],
-      sLine = line(p) + "Z";
+          ];
+        sLine = line(p) + "Z";
+      }
       if (trace_synteny > 4)
         console.log("markerLineS3", ak1, ak2, d, oak, p, sLine);
       return sLine;
@@ -4079,9 +4453,9 @@ export default Ember.Component.extend({
       //Remove old circles.
       svgContainer.selectAll("circle").remove();
 
-     /* d3.event.selection is null when brushHelper() is called via zoom() ... brush.move.
-      * This causes selectedAps to update here; when an axis is zoomed its brush is removed.
-      */
+      /* d3.event.selection is null when brushHelper() is called via zoom() ... brush.move.
+       * This causes selectedAps to update here; when an axis is zoomed its brush is removed.
+       */
       if (d3.event.selection == null) {
         selectedAps.removeObject(name[0]);
       }
@@ -4207,14 +4581,17 @@ export default Ember.Component.extend({
             apIDs.forEach(function(d) {
               let idName = axisEltId(d); // axis ids have "a" prefix
               let yDomainMax = d3.max(Object.keys(oa.z[d]), function(a) { return oa.z[d][a].location; } );
-              oa.y[d].domain([0, yDomainMax]);
-              oa.ys[d].domain([0, yDomainMax]);
+              let  a = oa.aps[d];
+              let domain = maybeFlip([0, yDomainMax], a.flipped);
+              oa.y[d].domain(domain);
+              oa.ys[d].domain(domain);
               let yAxis = d3.axisLeft(oa.y[d]).ticks(10);
               oa.svgContainer.select("#"+idName).transition(t).call(yAxis);
             });
             let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
             axisTickS.attr("transform", yAxisTicksScale);
             axisStackChanged(t);
+            me.trigger("zoomedAxis", [apID, t]);
 
             pathUpdate(t);
             let resetScope = apID ? apS : svgContainer;
@@ -4256,6 +4633,8 @@ export default Ember.Component.extend({
      */
     function zoom(that, brushExtents) {
       let apName = d3.select(that).data();
+      if (apName.length == 1)
+        apName = apName[0];
       let t = oa.svgContainer.transition().duration(750);
       selectedAps.map(function(p, i) {
         if(p == apName){
@@ -4267,17 +4646,27 @@ export default Ember.Component.extend({
           console.log("zoom", apName, p, i, yp.domain(), yp.range(), brushExtents[i], ap.portion, brushedDomain);
           y[p].domain(brushedDomain);
           oa.ys[p].domain(brushedDomain);
-          let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * ap.portion);
-          let idName = axisEltId(p);
-          svgContainer.select("#"+idName).transition(t).call(yAxis);
-          pathUpdate(t);
+          axisScaleChanged(p, t);
           // `that` refers to the brush g element
           d3.select(that).call(y[p].brush.move,null);
-          let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(p) + " > g.tick > text");
-          axisGS.attr("transform", yAxisTicksScale);
         }
       });
       axisStackChanged(t);
+      me.trigger("zoomedAxis", [apName, t]);
+    }
+    /** @param p  apName */
+    function axisScaleChanged(p, t)
+    {
+      let y = oa.y, svgContainer = oa.svgContainer;
+      let yp = y[p],
+      ap = oa.aps[p];
+      let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * ap.portion);
+      let idName = axisEltId(p);
+      svgContainer.select("#"+idName).transition(t).call(yAxis);
+      pathUpdate(t);
+
+      let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(p) + " > g.tick > text");
+      axisGS.attr("transform", yAxisTicksScale);
     }
 
     function brushended() {
@@ -5055,7 +5444,7 @@ export default Ember.Component.extend({
       // x is defined for this AP.
       //
       // Order of apIDs may have changed so need to redefine x and o.
-      oa.xs = xScale();
+      updateXScale();
       // if caching, recalc : collateApPositions();
       
       let stacks = oa.stacks;
@@ -5158,6 +5547,22 @@ export default Ember.Component.extend({
     });
 
     let apTitleSel = "g.ap > text";
+      function glyphIcon(className, id, glyphiconName, href) {
+        return ''
+          + '<span class="glyphicon ' + glyphiconName + '" aria-hidden=true></span>';
+      }
+    function iconButton(className, id, htmlIcon, glyphiconName, href)
+    {
+      /** selects glyphicon or html icon */
+      let useGlyphIcon = false;
+        return ''
+        + '<button class="' + className + '" id="' + id + '" href="' + href + '">'
+        + (useGlyphIcon ? glyphIcon(glyphiconName) : htmlIcon)
+        + '</button>';
+    }
+
+
+
     /** Setup hover menus over AP titles.
      * So far used just for Delete
      * @see based on similar configurejQueryTooltip()
@@ -5168,15 +5573,24 @@ export default Ember.Component.extend({
         let node_ = this;
         Ember.$(node_)
         .popover({
-          trigger : "hover", // manual", // "click focus",
+            trigger : "hover", // manual", // "click focus",
           sticky: true,
-          delay: {show: 200, hide: 3000},
+          delay: {show: 200, hide: 1500},
           container: 'div#holder',
           placement : "auto bottom",
-          title : apName,
+          // title : apName,
           html: true,
+          /*
+           *	╳	9587	2573	 	BOX DRAWINGS LIGHT DIAGONAL CROSS
+           *	⇅	8645	21C5	 	UPWARDS ARROW LEFTWARDS OF DOWNWARDS ARROW
+           *	↷	8631	21B7	 	CLOCKWISE TOP SEMICIRCLE ARROW
+           *	⇲	8690	21F2	 	SOUTH EAST ARROW TO CORNER
+           */
           content : ""
-            + '<button class="DeleteMap" id="Delete:' + apName + '" href="#">Delete</button>'
+            + iconButton("DeleteMap", "Delete_" + apName, "&#x2573;" /*glyphicon-sound-7-1*/, "glyphicon-remove-sign", "#")
+            + iconButton("FlipAxis", "Flip_" + apName, "&#x21C5;" /*glyphicon-bell*/, "glyphicon-retweet", "#")
+            + iconButton("PerpendicularAxis", "Perpendicular_" + apName, "&#x21B7;" /*glyphicon-bell*/, "glyphicon-retweet", "#")
+            + iconButton("ExtendMap", "Extend_" + apName, "&#x21F2;" /*glyphicon-star*/, "glyphicon-arrow-right", "#")
         })
         // .popover('show');
       
@@ -5201,6 +5615,47 @@ export default Ember.Component.extend({
               selectedMarkers_removeAp(apName);
               sendUpdatedSelectedMarkers();
             });
+          let flipButtonS = d3.select("button.FlipAxis");
+          flipButtonS
+            .on('click', function (buttonElt /*, i, g*/) {
+              console.log("flip", apName, this);
+              let ap = oa.aps[apName], ya = oa.y[apName], ysa=oa.ys[apName],
+              domain = maybeFlip(ya.domain(), true);
+              ap.flipped = ! ap.flipped;
+              ya.domain(domain);
+              ysa.domain(domain);
+
+              let b = ya.brush;
+              b.extent(maybeFlipExtent(b.extent()(), true));
+              let t = oa.svgContainer.transition().duration(750);
+              axisScaleChanged(apName, t);
+            });
+          let perpendicularButtonS = d3.select("button.PerpendicularAxis");
+          perpendicularButtonS
+            .on('click', function (buttonElt /*, i, g*/) {
+              console.log("perpendicular", apName, this);
+              let ap = oa.aps[apName];
+              ap.perpendicular = ! ap.perpendicular;
+
+              let t = oa.svgContainer.transition().duration(750);
+              t.selectAll(".ap").attr("transform", Stack.prototype.apTransformO);
+              pathUpdate(t /*st*/);
+              Ember.run.later( function () { showSynteny(syntenyBlocks, undefined); });
+              // axisScaleChanged(apName, t);
+            });
+
+          let extendButtonS = d3.select("button.ExtendMap");
+          if (trace_gui)
+            console.log(extendButtonS.empty(), extendButtonS.node());
+          extendButtonS
+            .on('click', function (buttonElt /*, i, g*/) {
+              console.log("extend", apName, this);
+              let ap = oa.aps[apName], stack = ap && ap.stack;
+              // toggle ap.extended, which is initially undefined.
+              ap.extended = ! ap.extended;
+              apShowExtend(ap, apName, undefined);
+            });
+
         });
     }
 
@@ -5424,7 +5879,10 @@ export default Ember.Component.extend({
 
   didInsertElement() {
     eltWidthResizable('.resizable');
-    // eltWidthResizable('.tabbed-table-container');
+
+    // initial test data for axis-tracks - will discard this.
+    let oa = this.get('oa');
+    oa.tracks  = [{start: 10, end : 20, description : "track One"}];
   },
 
   didRender() {

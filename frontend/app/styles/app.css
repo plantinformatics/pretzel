@@ -20,6 +20,10 @@ body.ember-application > div.ember-view > div.container
 {
     float: left;
 }
+.draw-map-container
+{
+    width: 100%;
+}
 /* Large desktop */
 @media (min-width: 1200px) {
 .draw-map-container
@@ -38,12 +42,10 @@ body.ember-application > div.ember-view > div.container
 
 /* Landscape phone to portrait tablet */
 @media (max-width: 767px) {
-    width: 100%;
 }
 
 /* Landscape phones and down */
 @media (max-width: 480px) {
-    width: 100%;
 }
 
 
@@ -53,8 +55,6 @@ body.ember-application > div.ember-view > div.container
  * Used by app/utils/domElements.js : eltWidthResizable() */
 .resizer
 {
-  font-weight: bold;
-  color: #337ab7;
   font-weight: 900;
   font-size: larger;
   float: right;
@@ -65,6 +65,38 @@ body.ember-application > div.ember-view > div.container
   border: 1px #337ab7 dashed;
   border-radius :  6px;
   padding : 2px 2px;
+
+  font-size: x-large;
+  color: #337ab7;  // brand blue;
+}
+/* This doesn't work within <foreignObject>, so :not(.inFO) is used. */
+.resizer:not(.inFO)::after {
+/*	⇹	8697	21F9	 	LEFT RIGHT ARROW WITH VERTICAL STROKE	*/
+  content: "\21F9";
+  right: -20px;
+  position: relative;
+}
+/*.foreignObject*/ .resizer.inFO {
+  position : inherit;
+}
+/* This is for ::after content;  position:fixed mostly works, but y position is variable.
+.foreignObject .resizer.inFO::after {
+  position: fixed;
+  right: -25px;
+ */
+}
+.resizer:hover
+{
+  opacity : 0.7;
+  font-weight: 900;
+  color: hsl(208, 95%, 52%);	// #337ab7 with increased saturation and luminosity
+}
+.resizer > .subMenu {
+    /* position: fixed; */
+    display : none;
+}
+.resizer:hover > .subMenu {
+    display : inherit;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -100,6 +132,77 @@ svg.verticalTitle
 .map.zoomed g.axis {
     cursor: move;
 }
+
+/* ---------------------------------- */
+
+g.axis-use > rect,
+g.axis-use > g.tracks > g > rect {
+  fill: none;
+  stroke: blue;
+}
+g.axis-use > g.tracks > g > rect.track {
+  fill: white;
+  stroke: green;
+}
+.pasteData {
+  overflow: hidden;
+  word-wrap: inherit;
+}
+
+/* ---------------------------------- */
+
+/* context is :
+g.axis-use 
+> g.chart
+> g (clip-path)
+> g (transform)
+> rect.chartRow
+*/
+rect.chartRow {
+  fill: aqua;
+  opacity : 0.5;
+  stroke: blue;
+}
+
+/* ---------------------------------- */
+
+path.chartRow.line
+{
+      fill : none;
+      stroke : magenta;
+      stroke-linejoin : round;
+      stroke-linecap : round;
+      stroke-width : 1.5;
+}
+
+circle.radio.toggle.chartType
+{
+      fill : orchid;
+      fill-opacity : 0.2;
+      stroke : magenta;
+      stroke-width : 2;
+}
+circle.radio.toggle.chartType.pushed
+{
+      fill-opacity : 1;
+}
+
+/* ---------------------------------- */
+
+
+/* overflow:scroll within foreignObject works in firefox, not chrome;  see
+ * https://stackoverflow.com/questions/34206459/scroll-is-not-working-inside-svg-foreign-object-in-chrome
+ *  http://jsfiddle.net/ranr/ncry8Lmx/
+ * code.google.com/p/chromium/issues/detail?id=568614
+ */
+.foreignObject body.axis-table {
+    overflow: hidden;
+    /* overflow: scroll; */
+}
+.foreignObject body.axis-table:not(:-moz-handler-blocked) {
+    overflow: scroll;
+}
+
 
 /* ---------------------------------- */
 
@@ -289,6 +392,13 @@ div.ExportFlowData
 }
 g.brush:hover > rect.handle {
   stroke: blue;
+}
+g.brush:hover > rect.overlay {
+    outline: 1px dashed purple; 
+    -webkit-tap-highlight-color: rgba(70, 30, 50, 0);
+}
+g.tick:hover {
+    outline: 1px dashed orange; 
 }
 
 .horizTick

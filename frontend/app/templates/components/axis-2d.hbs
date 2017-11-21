@@ -1,0 +1,38 @@
+{{!-- axis-2d is used within a <foreignObject> within a g.axis, created by apShowExtend()
+   It is rendered into div#axis2D (will add APid) using ember-wormhole.
+   --}}
+{{#ember-wormhole to=targetEltId }}
+  <div class="resizer inFO" style="float:right;">
+    {{!-- Being within <foreignObject>, this alternative is used to create and position the resizer arrow;
+                Because content is not displayed when position: relative; set via  .resizer:not(.inFO)::after.
+                Setting class inFO skips that ::after content, and instead the content is given here.                
+                --}}
+    {{!-- 
+	        ⇹	8697	21F9	 	LEFT RIGHT ARROW WITH VERTICAL STROKE
+	        ∥	8741	2225	 	PARALLEL TO
+                ☰	9776	2630	 	TRIGRAM FOR HEAVEN
+                ▦	9638	25A6	 	SQUARE WITH ORTHOGONAL CROSSHATCH FILL
+                --}}
+    &#x21F9;
+    <div class="subMenu">
+      <button {{action "addTracks"}}>&#x2225;</button>
+      <button {{action "addChart"}}>&#x2630;</button>
+      <button {{action "addLd"}}>&#x25B6;</button>
+      <button {{action "addTable"}}>&#x25A6;</button>
+    </div>
+  </div>
+
+  <div class="accordion-div">
+    {{component "axis-accordion" subComponents=subComponents data=data tableData=tableData axis=this}}
+  </div>
+
+
+{{/ember-wormhole}}
+
+<div>axis-2d :{{this}}, {{apID}}, {{targetEltId}},  {{subComponents.length}} :
+  <div>subComponents :
+    {{#each subComponents as |subComponent|}}
+      {{subComponent}}
+    {{/each}}
+  </div>
+</div>
