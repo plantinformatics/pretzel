@@ -2829,14 +2829,16 @@ export default Ember.Component.extend(Ember.Evented, {
       .style("top", "" + hmPos[1] + "px");
 
 
-    //Setup the tool tip.
-    let toolTipS = d3.selectAll("html > div#toolTip.toolTip").data([1]),
-    toolTip = toolTipS
-      .enter().append("div")
-      .attr("class", "toolTip")
-      .attr("id","toolTip")
-      .style("opacity", 0)
-      .merge(toolTipS);
+    // Setup the path hover tool tip.
+    let toolTip = oa.toolTip || (oa.toolTip =
+      d3.tip()
+        .attr("class", "toolTip d3-tip")
+        .attr("id","toolTip")
+    );
+    toolTip.offset([-15,0]);
+    svgRoot.call(toolTip);
+
+
     //Probably leave the delete function to Ember
     //function deleteAp(){
     //  console.log("Delete");
@@ -2939,7 +2941,7 @@ export default Ember.Component.extend(Ember.Evented, {
      * @param d   SVG path data string of path
      * @param this  path element
      */
-    function handleMouseOver(d){
+    function handleMouseOver(d, i){
       let sLine, pathMarkersHash;
       let pathMarkers = oa.pathMarkers;
       /** d is either sLine (pathDataIsLine===true) or array mmaa. */
@@ -2984,26 +2986,22 @@ export default Ember.Component.extend(Ember.Evented, {
       // stroke attributes of this are changed via css rule for path.hovered
       d3.select(this)
         .classed("hovered", true);
-      toolTip.style("height","auto")
-        .style("width","auto")
-        .style("opacity", 0.9)
-        .style("display","inline");  
       Object.keys(pathMarkersHash).map(function(a){
         let hoverExtraText = pathMarkersHash[a];
         if (hoverExtraText === 1) hoverExtraText = "";
         else if (classSetText) hoverExtraText += classSetText;
         listMarkers = listMarkers + a + hoverExtraText + "<br />";
       });
-      toolTip.html(listMarkers)     
-        .style("left", (d3.event.pageX) + "px")             
-        .style("top", (d3.event.pageY - 28) + "px");
+      toolTip.html(listMarkers);
+      toolTip.show(d, i);
     }
 
-    function handleMouseOut(/*d*/){
+    function handleMouseOut(d){
       // stroke attributes of this revert to default, as hover ends
       d3.select(this)
         .classed("hovered", false);
-      toolTip.style("display","none");
+      function hidePathHoverToolTip() { toolTip.hide(d); }
+      Ember.run.debounce(hidePathHoverToolTip, 1000);
     }
 
 

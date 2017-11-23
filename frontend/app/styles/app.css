@@ -443,14 +443,24 @@ path.syntenyEdge.inverted
 /* Tool tip */
 div.highlightMarker,
 div.toolTip{
-  position:absolute;
-  text-align: lift;
-  padding: 2px;
+  /* seems based on https://github.com/Caged/d3-tip/blob/master/examples/example-styles.css */
+  /* position:absolute; */  /* overridden by d3-tip */
+  text-align: left;
+  padding: 0.5em;
   font: 12px sans-serif;
-  background: rgba(0, 0, 0, 0.8);
-  color: #fff;
-  border: 0px;
-  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.8); /* dark theme: rgba(0, 0, 0, 0.8) */
+  color: #000; /*dark theme:  #fff */
+  border: 1px solid lightgrey;
+  border-radius: 0.6em;
+}
+/* from: https://github.com/Caged/d3-tip/blob/master/examples/example-styles.css */
+/* Northward tooltips */
+.d3-tip.n:after {
+  content: "\25BC";
+  margin: -1px 0 0 0;
+  top: 100%;
+  left: 0;
+  text-align: center;
 }
 
 div.highlightMarker
