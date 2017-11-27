@@ -4,7 +4,7 @@ console.log("controllers/mapview.js");
 
 let trace_promise = 1;
 
-export default Ember.Controller.extend({
+export default Ember.Controller.extend(Ember.Evented, {
 
   actions: {
     // layout configuration

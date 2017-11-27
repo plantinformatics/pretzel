@@ -45,6 +45,7 @@
             selectChrom="selectChrom"
             deleteChrom="removeMap"}}
           
+	  {{draw-controls drawActions=this}}
           {{selected-markers
             data=selectedMarkers
             scaffolds=scaffolds
@@ -93,6 +94,7 @@
         updatedSelectedMarkers='updateSelectedMarkers'
         data=model.chrPromises
         Model=model
+        drawActions=this
         mapsDerived=model.mapsDerived
         availableMaps=model.mapsDerived.availableMaps
         dataReceived=dataReceived

@@ -106,11 +106,48 @@ export default Ember.Component.extend(Ember.Evented, {
 
   /*------------------------------------------------------------------------*/
 
+  drawActionsListen: function(listen, name, target, method) {
+    /** drawActions is an action&event bus specific to one draw-map; it is a reference
+     * to mapview (see map-view.hbs) but could be owned by the draw-map. */
+    let drawActions = this.get('drawActions'); 
+    console.log("drawActionsListen", listen, drawActions, this);
+    if (drawActions === undefined)
+      console.log('parent component drawActions not passed', this);
+    else
+    {
+      // let onOff = listen ? drawActions.on : drawActions.off;
+        if (listen)
+          drawActions.on(name, target, method);
+        else
+          drawActions.off(name, target, method);
+      }
+  },
+
+  drawControlsListen(listen)
+  {
+    this.drawActionsListen(listen, 'drawControlsLife', this, this.drawControlsLife);
+  },
+  /** handle life-cycle events (didInsertElement, willDestroyElement) from draw-controls. */
+   drawControlsLife : function(start) {
+     console.log("drawControlsLife in components/draw-map (drawActions)", start);
+     if (this.drawControlsLifeC)
+       this.drawControlsLifeC(start);
+   },
+ 
+
+
+  /*------------------------------------------------------------------------*/
+
   /** Used for receiving colouredMarkers from selected-markers.js,
    * and flipRegion, ...
    */
   feedService: (console.log("feedService"), Ember.inject.service('feed')),
 
+    /** these actions on feedService can be moved to drawActions;
+     * feedService is global, whereas drawActions is specific to a single draw-map;
+     * currently there is only one draw-map, but having multiple draw-maps in
+     * one browser tab would be useful.
+     */
   listen: function() {
     let f = this.get('feedService');
     console.log("listen", f);
@@ -122,6 +159,8 @@ export default Ember.Component.extend(Ember.Evented, {
       f.on('flipRegion', this, 'flipRegion');
       f.on('resetZooms', this, 'resetZooms');
     }
+
+    this.drawControlsListen(true);
   }.on('init'),
 
   // remove the binding created in listen() above, upon component destruction
@@ -131,6 +170,8 @@ export default Ember.Component.extend(Ember.Evented, {
     f.off('clearScaffoldColours', this, 'clearScaffoldColours');
     f.off('flipRegion', this, 'flipRegion');
     f.off('resetZooms', this, 'resetZooms');
+
+    this.drawControlsListen(false);
   }.on('willDestroyElement'),
 
   /** undefined, or a function to call when colouredMarkers are received  */
@@ -382,6 +423,25 @@ export default Ember.Component.extend(Ember.Evented, {
     let me = this;
 
     let oa = this.get('oa');
+
+    if (this.drawControlsLifeC === undefined)
+    {
+      console.log("set(drawControlsLife) (drawActions)", this, oa.stacks === undefined);
+      /** It is sufficient to connect the graph drawing control panel life cycle
+       * events to setupVariousControls() within the draw() closure, and it then
+       * references other functions within that closure.
+       * The individual controls can be factored out, e.g. creating an event API
+       * for each control to deliver events from the component to the drawing.
+       */
+      this.set('drawControlsLifeC', function(start) {
+        console.log("drawControlsLife in components/draw-map  (drawActions)", start);
+        if (start)
+          setupVariousControls();
+      });
+    }
+
+  /*------------------------------------------------------------------------*/
+
 
     /* The draw() from didRender() has the model promise array in myData;
      * not the draw() from dataObserver().
@@ -2526,7 +2586,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     function apShowExtend(ap, apID, apG)
     {
-	    /** x translation of right axis */
+      /** x translation of right axis */
       let 
         initialWidth = 50,
       axisData = ap.extended ? [apID] : [];
@@ -4445,7 +4505,7 @@ export default Ember.Component.extend(Ember.Evented, {
       /** name[0] is apID of the brushed axis. name.length should be 1. */
       let name = d3.select(that).data();
       let brushedApID = name[0];
-      me.sendAction('selectChromById', brushedApID)
+      me.sendAction('selectChromById', brushedApID);
 
       let svgContainer = oa.svgContainer;
       //Remove old circles.
