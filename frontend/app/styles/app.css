@@ -206,6 +206,13 @@ circle.radio.toggle.chartType.pushed
 
 /* ---------------------------------- */
 
+/* in the panel layout, widen to avoid wrapping the display toggles text.  */
+.panel > .panel-body > .bordered.control-panel,
+.panel > .panel-body > .bordered.control-panel > div {
+  width: 100%;
+}
+/* ---------------------------------- */
+
 /* These selectors are for HTML and SVG respectively; they are bundled so that
 the user can easily edit them at the same time, keeping colours in sync.  */
 div.drawing-controls > div.flowButtons > .flowButton.alias,
