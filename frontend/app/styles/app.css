@@ -91,6 +91,11 @@ body.ember-application > div.ember-view > div.container
   font-weight: 900;
   color: hsl(208, 95%, 52%);	// #337ab7 with increased saturation and luminosity
 }
+/* The resizer icon is wrapped in div.menuHead : width: 100%, so that it remains
+ * under cursor when hover increases parent width.  */
+.resizer > .menuHead {
+    width: 100%;
+}
 .resizer > .subMenu {
     /* position: fixed; */
     display : none;
