@@ -5,15 +5,15 @@ var upload = require('../utilities/upload')
 var load = require('../utilities/load')
 
 module.exports = function(Geneticmap) {
-  // Geneticmap.afterRemote('find', function(ctx, output, next) {
-  //   // console.log('> Geneticmap.find triggered');
-  //   // console.log(output)
-  //   ctx.result = {
-  //     'geneticmaps': ctx.result
-  //   };
-  //   // console.log('next')
-  //   next()
-  // })
+  Geneticmap.afterRemote('find', function(ctx, output, next) {
+    console.log('> Geneticmap.find triggered');
+    console.log(output)
+    // ctx.result = {
+    //   'geneticmaps': ctx.result
+    // };
+    // console.log('next')
+    next()
+  })
   var rules = [
     {
       'accessType': '*',
@@ -29,6 +29,20 @@ module.exports = function(Geneticmap) {
     },
   ];
   acl.assign(Geneticmap, rules);
+
+  Geneticmap.observe('before save', function(ctx, next) {
+    if (ctx.instance) {
+      // populate with userId
+      // this appears to be sidestepped by populating at upload time
+      // TODO revisit this during / after 
+      // ctx.Model.clientId = ctx.options.accessToken.userId
+      var newDate = Date.now();  
+      // ctx.instance.createdAt = newDate;
+      // ctx.Model.updatedAt = newDate;
+      ctx.instance.clientId = ctx.options.accessToken.userId
+    }
+    next();
+  });
 
   Geneticmap.upload = function(msg, cb) {
     var models = this.app.models;
@@ -69,7 +83,9 @@ module.exports = function(Geneticmap) {
     }
   }
 
-  Geneticmap.tableUpload = function(data, cb) {
+  Geneticmap.tableUpload = function(data, options, cb) {
+    var userId = options.accessToken.userId
+
     var models = this.app.models;
     var chromosomes = {};
     var genMap = null;
@@ -102,7 +118,11 @@ module.exports = function(Geneticmap) {
       var new_chromosomes = [];
       Object.keys(chromosomes).forEach(function(name) {
         if (chromosomes[name] === false) {
-          new_chromosomes.push({name: name, geneticmapId: genMap.id});
+          new_chromosomes.push({
+            name: name,
+            geneticmapId: genMap.id,
+            clientId: userId
+          });
         }
       });
       // create new chromosomes
@@ -133,7 +153,8 @@ module.exports = function(Geneticmap) {
   });
   Geneticmap.remoteMethod('tableUpload', {
     accepts: [
-      {arg: 'data', type: 'object', required: true, http: {source: 'body'}}
+      {arg: 'data', type: 'object', required: true, http: {source: 'body'}},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
     ],
     returns: {arg: 'status', type: 'string'},
     description: "Perform a bulk upload of a markers from tabular form"

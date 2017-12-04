@@ -1,5 +1,6 @@
 {
   "name": "Client",
+  "description": "User management services",  
   "base": "User",
   "idInjection": true,
   "options": {
@@ -7,7 +8,18 @@
   },
   "properties": {},
   "validations": [],
-  "relations": {},
+  "relations": {
+    "chromosomes": {
+      "type": "hasMany",
+      "model": "Chromosome",
+      "foreignKey": "clientId"
+    },
+    "geneticmaps": {
+      "type": "hasMany",
+      "model": "Geneticmap",
+      "foreignKey": "clientId"
+    }
+  },
   "acls": [],
   "methods": {}
 }

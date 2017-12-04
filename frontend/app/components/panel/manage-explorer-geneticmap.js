@@ -3,26 +3,25 @@ import Ember from 'ember';
 const { Component } = Ember;
 
 export default Component.extend({
-  filterOptions: {
-    'all': {'formal': 'All', 'icon': 'plus'},
-    'public': {'formal': 'Public', 'icon': 'eye-open'},
-    'owner': {'formal': 'Mine', 'icon': 'user'}
-  },
-  filter: 'all',
-  layout: {
-  },
-  data: Ember.computed('model.mapsDerived.availableMaps', 'filter', function() {
-    let availableMaps = this.get('model.mapsDerived.availableMaps')
+  initSteps: function() {
+    let layout = {
+      'active': false
+    }
+    this.set('layout',layout);
+  }.on('init'),
+  data: Ember.computed('geneticmap.chromosomes', 'filter', function() {
+    console.log('geneticmap explorer computed')
+    let availableMaps = this.get('geneticmap.chromosomes')
     let filter = this.get('filter')
     // perform filtering according to selectedChr
     // let filtered = availableMaps //all
     if (filter == 'public') {
-      let maps = availableMaps.filterBy('public', true)
-      return maps.filterBy('chromosomes', 'public', true)
+      return availableMaps.filterBy('public', true)
+      // return maps.filterBy('chromosomes', 'public', true)
     } else if (filter == 'owner') {
       return availableMaps.filterBy('owner', true)
     } else {
-      return this.get('model.mapsDerived.availableMaps')
+      return this.get('geneticmap.chromosomes')
     }
   }),
   dataEmpty: Ember.computed('data', function() {
@@ -37,8 +36,10 @@ export default Component.extend({
     deleteChrom(chr) {
       this.sendAction('deleteChrom', chr.id);
     },
-    changeFilter: function(f) {
-      this.set('filter', f)
+    switchGeneticmap(geneticmap) {
+      console.log('switchGeneticmap')
+      let active = this.get('layout.active')
+      this.set('layout.active', !active)
     }
   }
 });

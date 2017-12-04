@@ -1,0 +1,38 @@
+{
+  "name": "Interval",
+  "base": "PersistedModel",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true
+  },
+  "properties": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "starting": {
+      "type": "string",
+      "required": true
+    },
+    "ending": {
+      "type": "string",
+      "required": true
+    },
+    "createdAt" : {
+      "type": "date"
+    },
+    "updatedAt" : {
+      "type": "date"
+    }
+  },
+  "validations": [],
+  "relations": {
+    "intervallink": {
+      "type": "belongsTo",
+      "polymorphic": true
+    }
+  },
+  "acls": [
+  ],
+  "methods": {}
+}

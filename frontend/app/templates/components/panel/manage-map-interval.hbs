@@ -1,0 +1,21 @@
+{{!-- {{interval}} --}}
+{{interval.name}}
+{{interval.id}}
+<span class="pull-right">
+  <span
+    class="btn btn-xs btn-danger"
+    {{action 'deleteInterval' interval}}>
+      {{elem-icon name="minus"}}
+  </span>
+</span>
+
+<h5> {{elem-icon name="arrow-up"}}
+  <span class="label label-info">
+    {{elem-icon name="asterisk"}} {{interval.starting}}
+  </span>
+</h5>
+<h5> {{elem-icon name="arrow-down"}}
+  <span class="label label-info">
+    {{elem-icon name="asterisk"}} {{interval.ending}}
+  </span>
+</h5>

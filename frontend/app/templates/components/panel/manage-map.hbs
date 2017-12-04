@@ -1,0 +1,146 @@
+{{#if chr}}
+<div class="col-sm-12">
+  <h3>{{chr.map.name}} {{chr.name}}</h3>
+  {{!-- <p><span class="label label-default">ID: {{chr.id}}</span></p> --}}
+  <ul class="list-group">
+    {{#if chr.owner}}
+      <li class="list-group-item list-group-item-success">{{elem-icon-owner state=chr.owner}} You are the Map owner</li>
+    {{else}}
+      <li class="list-group-item list-group-item-warning">{{elem-icon-owner state=chr.owner}} Someone else is the Map owner</li>
+    {{/if}}
+    {{#if chr.public}}
+      <li class="list-group-item list-group-item-success">{{elem-icon-visible state=chr.public}} Everyone can view this Map</li>
+    {{else}}
+      <li class="list-group-item list-group-item-warning">{{elem-icon-visible state=chr.public}} Only you can view this Map</li>
+    {{/if}}
+  </ul>
+  
+  <label>Features</label><p>{{chr.markers.length}}</p>
+
+  <div class="panel panel-primary">
+    <div class="panel-heading">
+      Tags
+      {{elem-icon name='tags'}}
+      <span class="pull-right">
+        <span class="badge">{{chr.tags.length}}</span>
+      </span>
+    </div>
+
+      <ul class="list-group">
+        {{!-- existing tags --}}
+        {{#if chr.tags}}
+          {{#each chr.tags as |tag index|}}
+            <li href="#" class="list-group-item">
+              {{tag}}
+              <span class="pull-right">
+                <span
+                  class="btn btn-xs btn-danger"
+                  {{action 'removeTag' index}}>
+                    {{elem-icon name="minus"}}
+                </span>
+              </span>
+            </li>
+          {{/each}}
+        {{else}}
+          <li class="list-group-item list-group-item-default">
+            <div class="well well-sm">
+              Add a tag {{elem-icon name='tag'}} to give context to your map {{elem-icon name='globe'}}. 
+            </div>
+          </li>
+        {{/if}}
+        <li href="#" class="list-group-item">
+          <div class="input-group">
+            {{input
+              enter="addTag"
+              type="text"
+              value=newTag
+              class="form-control"
+              placeholder="New tag..."}}
+            <span class="input-group-btn">
+              <button
+                class="btn btn-success"
+                type="button"
+                disabled={{disableCreateTag}}
+                {{action "addTag"}}>
+                {{elem-icon name="plus"}}
+              </button>
+            </span>
+          </div>
+        </li>
+      </ul>
+  </div>
+
+  <div class="panel panel-primary">
+    <div class="panel-heading">
+      Intervals
+      {{elem-icon name='resize-vertical'}}
+      <span class="pull-right">
+        <span class="badge">{{chr.intervals.length}}</span>
+      </span>
+    </div>
+
+      <ul class="list-group">
+        {{#if chr.intervals}}
+          {{#each chr.intervals as |interval index|}}
+            {{panel/manage-map-interval
+              interval=interval
+              selectChrom="selectChrom"
+              deleteChrom="deleteChrom"}}
+          {{/each}}
+        {{else}}
+          <li class="list-group-item list-group-item-default">
+            <div class="well well-sm">
+              Add an interval {{elem-icon name='resize-vertical'}} to give context to your map {{elem-icon name='globe'}}. 
+            </div>
+          </li>
+        {{/if}}
+        {{#if intervalSelected}}
+          <li href="#" class="list-group-item">
+            <div class="input-group">
+              {{input
+                action="addTag"
+                type="text"
+                value=newInterval
+                class="form-control"
+                placeholder="New interval name..."}}
+              <span class="input-group-btn">
+                <button
+                  class="btn btn-success"
+                  type="button"
+                  disabled={{disableCreateInterval}}
+                  {{action "addTag"}}>
+                  {{elem-icon name="plus"}}
+                </button>
+              </span>
+            </div>
+            <h5> {{elem-icon name="arrow-up"}}
+              <span class="label label-info">
+                {{elem-icon name="asterisk"}} {{intervalSelected.start.Marker}}
+              </span>
+            </h5>
+            <h5> {{elem-icon name="arrow-down"}}
+              <span class="label label-info">
+                {{elem-icon name="asterisk"}} {{intervalSelected.end.Marker}}
+              </span>
+            </h5>
+          </li>
+        {{else}}
+          <li class="list-group-item list-group-item-default">
+            <div class="well well-sm">
+              Click and drag up a map {{elem-icon name='globe'}} to select an interval {{elem-icon name='resize-vertical'}}. 
+            </div>
+          </li>
+        {{/if}}
+      </ul>
+  </div>
+</div>
+{{else}}
+<div class="col-sm-12">
+    <h3>No Map Selected</h3>
+
+    <div class="well">
+      Click and drag {{elem-icon name="resize-vertical"}} along a map {{elem-icon name="globe"}}, or select {{elem-icon name='info-sign'}} a map from the view panel {{elem-icon name='eye-open'}}.
+    </div>
+
+</div>
+{{/if}}

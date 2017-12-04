@@ -40,7 +40,8 @@ export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
   }*/
 
   attrs: {
-    markers: { embedded: 'always' }
+    markers: { embedded: 'always' },
+    intervals: { embedded: 'always' }
   }
 
 });

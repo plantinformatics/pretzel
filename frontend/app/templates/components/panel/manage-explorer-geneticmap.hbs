@@ -13,14 +13,18 @@
       onClick=(action "switchGeneticmap" geneticmap)}}
   {{/if}}
   {{geneticmap.name}}
-  <span class="badge">{{geneticmap.chromosomes.length}}</span>
+  {{elem-icon-owner state=geneticmap.owner}}
+  {{elem-icon-visible state=geneticmap.public}}
+  <span class="badge">{{data.length}}</span>
 </li>
 {{#if layout.active}}
-  {{#each geneticmap.chromosomes as |chr|}}
+  {{#each data as |chr|}}
     <li 
       class="list-group-item {{if (compare chr.id '===' selectedChrom.id) 'list-group-item-warning'}}"
       {{action "selectChrom" chr on="click"}}>
       {{chr.name}}
+      {{elem-icon-owner state=chr.owner}}
+      {{elem-icon-visible state=chr.public}}
       <span class="pull-right">
         {{!-- {{elem-button
           classSize='xs'

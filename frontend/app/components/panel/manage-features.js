@@ -4,9 +4,9 @@ export default Ember.Component.extend({
   // classNames: ['tabbed-table-container', 'bordered', 'control-panel'],
   // classNames: ['tabbed-table-container', 'control-panel'],
   filterOptions: {
-    'all': {'formal': 'All', 'icon': 'asterisk'},
+    'all': {'formal': 'All', 'icon': 'plus'},
     'chrom': {'formal': 'Map', 'icon': 'globe'},
-    'union': {'formal': 'Union', 'icon': 'magnet'}
+    'intersect': {'formal': 'Intersect', 'icon': 'random'}
   },
   filter: 'all',
   data: Ember.computed('selectedChrom', 'selectedMarkers', 'filter', function() {
@@ -19,7 +19,7 @@ export default Ember.Component.extend({
       filtered = selectedMarkers.filter(function(marker) {
         return marker.Chromosome === selectedChrom.id
       })
-    } else if (filter == 'union') {
+    } else if (filter == 'intersect') {
       //split by chrom
       let chromosomes = {}
       selectedMarkers.forEach(function(marker) {

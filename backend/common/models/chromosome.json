@@ -14,15 +14,30 @@
       "type": ["string"],
       "required": false
     },
+    "public": {
+      "type": "boolean",
+      "default": false
+    },
     "createdAt" : {
-      "type": "date"
+      "type": "date",
+      "default": "$now"
     },
     "updatedAt" : {
-      "type": "date"
+      "type": "date",
+      "default": "$now"
+    },
+    "clientId": {
+      "type": "string",
+      "required": true
     }
   },
   "validations": [],
   "relations": {
+    "clients": {
+      "type": "belongsTo",
+      "model": "Client",
+      "foreignKey": "clientId"
+    },
     "geneticmap": {
       "type": "belongsTo",
       "model": "Geneticmap",
@@ -32,9 +47,17 @@
       "type": "hasMany",
       "model": "Marker",
       "foreignKey": ""
+    },
+    "intervals": {
+      "type": "hasMany",
+      "model": "Interval",
+      "polymorphic": "intervallink"
     }
   },
   "acls": [
   ],
-  "methods": {}
+  "methods": {},
+  "scope": {
+    "include": "intervals"
+  }
 }

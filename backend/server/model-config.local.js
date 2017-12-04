@@ -57,17 +57,21 @@ var config = {
     "dataSource": "db",
     "public": false
   },
+  "Chromosome": {
+    "dataSource": "mongoDs",
+    "public": true
+  },
   "Geneticmap": {
     "dataSource": "mongoDs",
     "public": true
   },
-  "Chromosome": {
+  "Interval": {
     "dataSource": "mongoDs",
     "public": true
   },
   "Marker": {
     "dataSource": "mongoDs",
-    "public": true
+    "public": false
   },
   "Client": {
     "dataSource": "mongoDs",

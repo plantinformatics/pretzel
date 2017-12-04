@@ -121,7 +121,7 @@
         {{/tab-button}}
         {{#tab-button
           side="right"
-          key="chrom"
+          key="map"
           state=layout.right.tab onClick="setTab"}}
           Map {{elem-icon name="globe"}}
         {{/tab-button}}
@@ -140,13 +140,14 @@
       </ul>
       <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
         {{#if (compare layout.right.tab '===' 'selection')}}
-          {{panel/manage-markers
+          {{panel/manage-features
             selectedMarkers=selectedMarkers
             selectedChrom=selectedChrom}}
           {{!-- marker-detail
             data=selectedMarkers --}}
-        {{else if (compare layout.right.tab '===' 'chrom')}}
-          {{panel/manage-chromosome
+        {{else if (compare layout.right.tab '===' 'map')}}
+          {{panel/manage-map
+            selectedMarkers=selectedMarkers
             chr=selectedChrom}}
         {{else if (compare layout.right.tab '===' 'settings')}}
           {{panel/manage-settings

@@ -30,17 +30,21 @@ module.exports = function(Chromosome) {
 
   acl.assign(Chromosome, rules);
 
-  Chromosome.beforeCreate = function(next, model) {
+  Chromosome.observe('before save', function(ctx, next) {
     var newDate = Date.now();
-    model.createdAt = newDate;
-    model.updatedAt = newDate;
-    next();
-  };
 
-  Chromosome.beforeUpdate = function(next, model) {
-    model.updatedAt = Date.now();
+    if (ctx.instance) {
+      // populate with userId
+      // this appears to be sidestepped by populating at upload time
+      // TODO revisit this during / after 
+      // ctx.Model.clientId = ctx.options.accessToken.userId
+      // ctx.instance.createdAt = newDate;
+      // ctx.instance.updatedAt = newDate;
+    }
+
+
     next();
-  };
+  });
 
   Chromosome.paths = function(left, right, cb) {
     task.paths(this.app.models, left, right)
