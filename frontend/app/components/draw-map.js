@@ -498,46 +498,109 @@ export default Ember.Component.extend(Ember.Evented, {
     /// 30 chars when the AP (chromosome) name contains the 24 hex char mongodb numeric id,
     /// e.g. 58a29c715a9b3a3d3242fe70_MyChr
     let axisHeaderTextLen = 204; // 203.5, rounded up to a multiple of 2;
-    let divHolder=Ember.$('div#holder'),
-    holderWidth = divHolder.width();
-    //margins, width and height (defined but not be used)
-    let margins = [20+14+1, 0, 0, 0], // 10, 10, 10],	// margins : top right bottom left
 
-    marginIndex = {top:0, right:1, bottom:2, left:3},	// indices into margins[]; standard CSS sequence.
-    /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
-    viewPort = {w: holderWidth, h:document.documentElement.clientHeight},
+    let divHolder,
+    holderWidth;
+    /** margins: top right bottom left */
+    let margins,
+    	/** indices into margins[]; standard CSS sequence. */
+      marginIndex = {top:0, right:1, bottom:2, left:3};
+    let viewPort,
 
-
-    /// small offset from axis end so it can be visually distinguished.
+    /** small offset from axis end so it can be visually distinguished. */
     dropTargetYMargin = 10,
     dropTargetXMargin = 10,
 
-    /// Width and Height.  viewport dimensions - margins.
-    w = viewPort.w  - margins[marginIndex.right] - margins[marginIndex.left],
-    h = viewPort.h - margins[marginIndex.top] - margins[marginIndex.bottom],
-    /// approx height of map / chromosome selection buttons above graph
-    apSelectionHeight = 140,
-    /// approx height of text name of map+chromosome displayed above axis.
+    /** Width and Height.  viewport dimensions - margins. */
+    w,
+    h,
+
+    /** approx height of map / chromosome selection buttons above graph */
+    apSelectionHeight = 80,
+    /** approx height of text name of map+chromosome displayed above axis. */
     apNameHeight = 14,
-    /// approx height of text block below graph which says 'n selected markers'
+    /** approx height of text block below graph which says 'n selected markers' */
     selectedMarkersTextHeight = 14,
-    /// dimensions of the graph border
-    graphDim = {w: w*0.9, h: h - 2 * dropTargetYMargin - apSelectionHeight - apNameHeight - selectedMarkersTextHeight},
-    /// yRange is the axis length
-    yRange = graphDim.h - 40,
-    /** X Distance user is required to drag axis before it drops out of Stack.
-     * Based on stacks.length, use apIDs.length until the stacks are formed.
-     * See also DropTarget.size.w */
-    xDropOutDistance = viewPort.w/(oa.apIDs.length*6),
-    /// left and right limits of dragging the axes / chromosomes / linkage-groups.
-    dragLimit = {min:-50, max:graphDim.w+70};
-    console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
-    /// pixels.  can calculate this from AP name * font width
-    let
+
+    /** dimensions of the graph border */
+    graphDim,
+
+    /** yRange is the stack height, i.e. sum of stacked axis lengths */
+    yRange,
+
+    /** X Distance user is required to drag axis before it drops out of Stack. */
+    xDropOutDistance,
+
+    /** left and right limits of dragging the axes / chromosomes / linkage-groups. */
+    dragLimit,
+    /** x range of the axis centres. */
+    axisXRange;
+
+    /** Calculate values which depend on the width and height of the DOM element
+     * which contains the drawing.  This is used at first render, and when the
+     * user resizes the browser tab or clicks a side panel open/close/resize
+     * button.  */
+    /** Measure the screen size allocated to the drawing, and calculate
+     * size-related variables.
+     * Attributes :
+     * .margins, .viewPort, .graphDim, .yRange, .xDropOutDistance, .dragLimit, ..axisXRange
+     */
+    function Viewport()
+    {
+    };
+    Viewport.prototype.calc = function(oa)
+    {
+      divHolder=Ember.$('div#holder');
+      holderWidth = divHolder.width();
+      /** 	margins : top right bottom left */
+      this.margins =
+        // 14 was maybe for apNameHeight, not needed
+      margins = [20/*+14*/+1, 0, 10, 0]; // 10, 10, 10],
+
+      /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
+      this.viewPort =
+      viewPort = {w: holderWidth, h:document.documentElement.clientHeight};
+
+      /// Width and Height.  viewport dimensions - margins.
+      w = viewPort.w  - margins[marginIndex.right] - margins[marginIndex.left];
+      h = viewPort.h - margins[marginIndex.top] - margins[marginIndex.bottom];
+
+      /// dimensions of the graph border
+      this.graphDim =
+      graphDim = {w: w*0.9, h: h - 2 * dropTargetYMargin - apSelectionHeight - apNameHeight};
+      // layout has changed, no value in this :  - selectedMarkersTextHeight
+
+      this.yRange = 
+      yRange = graphDim.h - 40;
+      /* Based on stacks.length, use apIDs.length until the stacks are formed.
+       * See also DropTarget.size.w */
+      this.xDropOutDistance =
+      xDropOutDistance = viewPort.w/(oa.apIDs.length*6);
+
+      this.dragLimit =
+      dragLimit = {min:-50, max:graphDim.w+70};
+      console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
+      /// pixels.  can calculate this from AP name * font width
+
       /// x range of the axis centres. left space at left and right for
       /// axisHeaderTextLen which is centred on the axis.
       /// index: 0:left, 1:right
-      axisXRange = [0 + axisHeaderTextLen/2, graphDim.w - axisHeaderTextLen/2];
+      this.axisXRange = [0 + axisHeaderTextLen/2, graphDim.w - axisHeaderTextLen/2];
+      // -  some other results of Viewport().calc() are currently accessed within a previous draw() closure  (yRange, xDropOutDistance, dragLimit)
+      console.log("Viewport.calc()", this);
+    };
+    let vc = oa.vc || (oa.vc = new Viewport());
+    console.log(oa, vc);
+    vc.calc(oa);
+    margins = vc.margins;
+    viewPort = vc.viewPort;
+    graphDim = vc.graphDim;
+    yRange = vc.yRange;
+    xDropOutDistance = vc.xDropOutDistance;
+    dragLimit = vc.dragLimit;
+    axisXRange = vc.axisXRange;
+
+
     let
       /** number of ticks in y axis when AP is not stacked.  reduce this
        * proportionately when AP is stacked. */
@@ -552,9 +615,13 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     let pathColourDefault = "#808";
 
-    function xDropOutDistance_update () {
-      xDropOutDistance = viewPort.w/(oa.stacks.length*6);
-    }
+    Viewport.prototype.xDropOutDistance_update = function (oa) {
+      let viewPort = this.viewPort;
+      /** If no stacks then result is not used; avoid divide-by-zero. */
+      let nStacks = oa.stacks.length || 1;
+      this.xDropOutDistance =
+      xDropOutDistance = viewPort.w/(nStacks*6);
+    };
 
     /** Draw paths between markers on APs even if one end of the path is outside the svg.
      * This was the behaviour of an earlier version of this Marker Map Viewer, and it
@@ -1056,17 +1123,17 @@ export default Ember.Component.extend(Ember.Evented, {
     { return function (s) { return s.apName === apName; };};
     Stacked.prototype.yOffset = function ()
     {
-      let yOffset = yRange * this.position[0];
+      let yOffset = vc.yRange * this.position[0];
       if (Number.isNaN(yOffset))
       {
-        console.log("Stacked#yOffset", yRange, this.position);
+        console.log("Stacked#yOffset", vc.yRange, this.position);
         debugger;
       }
       return yOffset;
     };
     Stacked.prototype.yRange = function ()
     {
-      return yRange * this.portion;
+      return vc.yRange * this.portion;
     };
     /** Constructor for Stack type.
      * Construct a Stacked containing 1 AP (apName, portion),
@@ -1725,9 +1792,9 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     Stacked.prototype.apTransform = function ()
     {
-      if (this.position === undefined || yRange === undefined)
+      if (this.position === undefined || vc.yRange === undefined)
       {
-        console.log("apTransform()", this.apName, this, yRange);
+        console.log("apTransform()", this.apName, this, vc.yRange);
         debugger;
       }
       let yOffset = this.yOffset(),
@@ -1881,6 +1948,9 @@ export default Ember.Component.extend(Ember.Evented, {
         function(s){ let widthRange = s.extendedWidth(); return widthRange[1];}
       );
 
+      let axisXRange = oa.vc.axisXRange;
+      if (axisXRange === undefined)
+        console.log("xScaleExtend axisXRange undefined", oa);
       let rangeWidth = axisXRange[1] - axisXRange[0],
       paddingInner = rangeWidth*0.10, paddingOuter = rangeWidth*0.05;
       let gap = (rangeWidth - paddingOuter*2) - widthSum; // total gap
@@ -1921,9 +1991,9 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     Stacked.prototype.apTransformO = function ()
     {
-      if (this.position === undefined || yRange === undefined)
+      if (this.position === undefined || vc.yRange === undefined)
       {
-        console.log("apTransformO()", this.apName, this, yRange);
+        console.log("apTransformO()", this.apName, this, vc.yRange);
         debugger;
       }
       let yOffset = this.yOffset(),
@@ -1939,11 +2009,12 @@ export default Ember.Component.extend(Ember.Evented, {
       if (ap.perpendicular)
       {
         /** shift to centre of axis for rotation. */
-        let shift = -yRange/2;
+        let shift = -vc.yRange/2;
         rotateText =
           "rotate(90)"
           +  " translate(0," + shift + ")";
         let a = d3.select("g#id" + this.apName + ".ap");
+        if (trace_stack > 1)
         console.log("perpendicular", shift, rotateText, a.node());
       }
       let transform =
@@ -1952,6 +2023,7 @@ export default Ember.Component.extend(Ember.Evented, {
           rotateText,
           scaleText
         ].join("");
+      if (trace_stack > 1)
        console.log("apTransformO", this, transform);
       return transform;
     };
@@ -2146,10 +2218,10 @@ export default Ember.Component.extend(Ember.Evented, {
     if (source == 'dataReceived')
       stacks.changed = 0x10;
     let t = stacksAdjust(true, undefined);
-    xDropOutDistance_update();
+    vc.xDropOutDistance_update(oa);
 
-    /** update ys[a.apName] for the given AP,
-     * according the AP's current .portion.
+    /** update ys[a.apName]  and y[a.apName] for the given AP,
+     * according to the current yRange, and for ys, the AP's current .portion.
      * @param a AP (i.e. aps[a.apName] == a)
      */
     function updateRange(a)
@@ -2160,8 +2232,9 @@ export default Ember.Component.extend(Ember.Evented, {
       if (ys && ys[a.apName])
       {
         let myRange = a.yRange();
-        console.log("updateRange", a.apName, a.position, a.portion, myRange);
+        console.log("updateRange", a.apName, a.position, a.portion, myRange, oa.vc.yRange);
         ys[a.apName].range([0, myRange]);
+        y[a.apName].range([0, oa.vc.yRange]);
       }
     }
 
@@ -2403,6 +2476,20 @@ export default Ember.Component.extend(Ember.Evented, {
     svgContainer = svgRoot
       .append("svg:g")
       .attr("transform", translateTransform);
+
+      console.log(oa.svgRoot.node(), '.on(resize', this.resize);
+
+      let resizeThis =
+        // this.resize.bind(oa);
+        function() { Ember.run.debounce(oa, me.resize, 500); };
+
+      if (false)  // less fine, only detects window-level resize, and should not be needed
+       d3.select(window)
+        .on('resize', resizeThis);
+      /* 2 callbacks on window resize, register in the (reverse) order that they
+       * need to be called (reorganise this).
+       * Revert .resizable flex-grow before Viewport().calc() so the latter gets the new size.  */
+      eltWidthResizable('.resizable', undefined, resizeThis);
     }
     else
       svgContainer = oa.svgContainer;
@@ -2563,7 +2650,8 @@ export default Ember.Component.extend(Ember.Evented, {
 
     // Add a group element for each AP.
     // Stacks are selection groups in the result of this .selectAll()
-    let apG = stackS.selectAll(".ap")
+    let apS = stackS.selectAll(".ap"),
+    apG = apS
       .data(stack_apIDs)
       .enter().append("g");
     let allG = apG
@@ -2625,7 +2713,7 @@ export default Ember.Component.extend(Ember.Evented, {
         .attr("x", 0)
         .attr("y", 0)
         .attr("width", 0)
-        .attr("height", yRange);
+        .attr("height", vc.yRange);
       er
         .transition().duration(1000)
         .attr("width", initialWidth);
@@ -2639,7 +2727,7 @@ export default Ember.Component.extend(Ember.Evented, {
       /*.attr("x", 0)
        .attr("y", 0) */
         .attr("width", initialWidth /*0*/)
-        .attr("height", yRange);
+        .attr("height", vc.yRange);
       let eb = ef
         .append("xhtml:body")
         .attr("class", "axis-table");
@@ -2688,6 +2776,7 @@ export default Ember.Component.extend(Ember.Evented, {
     // oa.currentDropTarget /*= undefined*/;
 
     function DropTarget() {
+      let viewPort = oa.vc.viewPort;
       let size = {
         /** Avoid overlap, assuming about 5-7 stacks. */
         w : Math.round(Math.min(axisHeaderTextLen, viewPort.w/15)),
@@ -2825,8 +2914,13 @@ export default Ember.Component.extend(Ember.Evented, {
       // first approx : 30 -> 30, 10 -> 90.  could use trig fns instead of linear.
       let angle = (90-axisSpacing);
       if (angle > 90) angle = 90;
-      // should apply this to all consistently, not just appended axis.
-      axisTitleS
+      // apply this to all consistently, not just appended axis.
+      // Need to update this when ! verticalTitle, and also 
+      // incorporate extendedWidth() / getAxisExtendedWidth() in the
+      // calculation, perhaps integrated in xScaleExtend()
+      let axisTitleA =
+        apG.merge(apS).selectAll("g.axis-all > text");
+      axisTitleA
         .style("text-anchor", "start")
         .attr("transform", "rotate(-"+angle+")");
     }
@@ -3988,12 +4082,12 @@ export default Ember.Component.extend(Ember.Evented, {
       { /* maybe a circos plot :-) */ }
       else if (ap1.perpendicular)
       {
-        let point = [xi[0] + yRange/2 - markerY_(ak1, d1), markerY_(ak2, d2)];
+        let point = [xi[0] + vc.yRange/2 - markerY_(ak1, d1), markerY_(ak2, d2)];
         l =  line(pointSegment(point));
       }
       else if (ap2.perpendicular)
       {
-        let point = [xi[1] + yRange/2 - markerY_(ak2, d2), markerY_(ak1, d1)];
+        let point = [xi[1] + vc.yRange/2 - markerY_(ak2, d2), markerY_(ak1, d1)];
         l =  line(pointSegment(point));
       }
       else
@@ -4027,14 +4121,14 @@ export default Ember.Component.extend(Ember.Evented, {
       {  }
       else if (ap1.perpendicular)
       {
-        xi[0] += yRange/2;
+        xi[0] += vc.yRange/2;
         let s = [[xi[0] - my[0][0], my[1][0]],
                  [xi[0] - my[0][1], my[1][1]]];
         sLine =  line(s);
       }
       else if (ap2.perpendicular)
       {
-        xi[1] += yRange/2;
+        xi[1] += vc.yRange/2;
         let s = [[xi[1] - my[1][0], my[0][0]],
                  [xi[1] - my[1][1], my[0][1]]];
         sLine =  line(s);
@@ -4301,7 +4395,7 @@ export default Ember.Component.extend(Ember.Evented, {
       // let [stackIndex, a0, a1] = maga[d];
       let r;
 
-      let range = [0, yRange];
+      let range = [0, vc.yRange];
 
       /** if d1 is undefined, then its value is d0 : direct connection, not alias. */
       let d1_ = d1 || d0;
@@ -4351,7 +4445,7 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function patham2(a0, a1, d) {
       let r;
-      let range = [0, yRange];
+      let range = [0, vc.yRange];
 
       /** Filter out those parallelograms which are wholly outside the svg, because of zooming on either end axis. */
       let lineIn = allowPathsOutsideZoom ||
@@ -4459,8 +4553,8 @@ export default Ember.Component.extend(Ember.Evented, {
            */
           let markerYk = [markerY(k, d), markerY(k+1, d)];
           // Filter out those paths that either side locates out of the svg
-          if (inRange(markerYk[0], [0, yRange]) &&
-              inRange(markerYk[1], [0, yRange])) {
+          if (inRange(markerYk[0], [0, vc.yRange]) &&
+              inRange(markerYk[1], [0, vc.yRange])) {
             let sLine = line(
               [[o[oa.apIDs[k]], markerYk[0]],
                [o[oa.apIDs[k+1]], markerYk[1]]]);
@@ -4704,7 +4798,7 @@ export default Ember.Component.extend(Ember.Evented, {
           console.log("zoom", apName, p, i, yp.domain(), yp.range(), brushExtents[i], ap.portion, brushedDomain);
           y[p].domain(brushedDomain);
           oa.ys[p].domain(brushedDomain);
-          axisScaleChanged(p, t);
+          axisScaleChanged(p, t, true);
           // `that` refers to the brush g element
           d3.select(that).call(y[p].brush.move,null);
         }
@@ -4712,8 +4806,10 @@ export default Ember.Component.extend(Ember.Evented, {
       axisStackChanged(t);
       me.trigger("zoomedAxis", [apName, t]);
     }
-    /** @param p  apName */
-    function axisScaleChanged(p, t)
+    /** @param p  apName
+     * @param updatePaths true : also update foreground paths.
+     */
+    function axisScaleChanged(p, t, updatePaths)
     {
       let y = oa.y, svgContainer = oa.svgContainer;
       let yp = y[p],
@@ -4721,7 +4817,8 @@ export default Ember.Component.extend(Ember.Evented, {
       let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * ap.portion);
       let idName = axisEltId(p);
       svgContainer.select("#"+idName).transition(t).call(yAxis);
-      pathUpdate(t);
+      if (updatePaths)
+        pathUpdate(t);
 
       let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(p) + " > g.tick > text");
       axisGS.attr("transform", yAxisTicksScale);
@@ -5457,6 +5554,13 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       Stack.verify();
     }
+    /** recalculate all stacks' Y position.
+     * Used after drawing / window resize.
+     */
+    function stacksAdjustY()
+    {
+      oa.stacks.forEach(function (s) { s.calculatePositions(); });
+    }
     /** recalculate stacks X position and show via transition
      * @param changedNum  true means the number of stacks has changed.
      * @param t undefined or transition to use for apTransformO change
@@ -5528,7 +5632,7 @@ export default Ember.Component.extend(Ember.Evented, {
       Stack.currentDrag = undefined;
       /** This could be updated during a drag, whenever dropIn/Out(), but it is
        * not critical.  */
-      xDropOutDistance_update();
+      vc.xDropOutDistance_update(oa);
 
 
       if (svgContainer.classed("dragTransition"))
@@ -5686,7 +5790,7 @@ export default Ember.Component.extend(Ember.Evented, {
               let b = ya.brush;
               b.extent(maybeFlipExtent(b.extent()(), true));
               let t = oa.svgContainer.transition().duration(750);
-              axisScaleChanged(apName, t);
+              axisScaleChanged(apName, t, true);
             });
           let perpendicularButtonS = d3.select("button.PerpendicularAxis");
           perpendicularButtonS
@@ -5695,11 +5799,7 @@ export default Ember.Component.extend(Ember.Evented, {
               let ap = oa.aps[apName];
               ap.perpendicular = ! ap.perpendicular;
 
-              let t = oa.svgContainer.transition().duration(750);
-              t.selectAll(".ap").attr("transform", Stack.prototype.apTransformO);
-              pathUpdate(t /*st*/);
-              Ember.run.later( function () { showSynteny(syntenyBlocks, undefined); });
-              // axisScaleChanged(apName, t);
+              oa.showResize(true, true);
             });
 
           let extendButtonS = d3.select("button.ExtendMap");
@@ -5716,6 +5816,40 @@ export default Ember.Component.extend(Ember.Evented, {
 
         });
     }
+
+    if (oa.showResize === undefined)
+      /** Render the affect of resize on the drawing.
+       * @param widthChanged, heightChanged   true if width (resp. height) changed
+       * @param transition  undefined (default true), or false for no transition
+       */
+      oa.showResize = function(widthChanged, heightChanged, transition)
+    {
+        updateXScale();
+        collateO();
+        let 
+          duration = transition || (transition === undefined) ? 750 : 0,
+        t = oa.svgContainer.transition().duration(duration);
+        let graphDim = oa.vc.graphDim;
+        oa.svgRoot
+          .attr("viewBox", "0 0 " + graphDim.w + " " + graphDim.h)
+          .attr('height', graphDim.h /*"auto"*/);
+
+        if (widthChanged)
+        {
+        t.selectAll(".ap").attr("transform", Stack.prototype.apTransformO);
+          // also xDropOutDistance_update (),  update DropTarget().size
+        }
+
+        if (heightChanged)
+        {
+          stacksAdjustY();
+          oa.apIDs.forEach(function(apName) {
+            axisScaleChanged(apName, t, false);
+          });
+          pathUpdate(t /*st*/);
+        }
+        Ember.run.later( function () { showSynteny(syntenyBlocks, undefined); });
+      };
 
     /** The Zoom & Reset buttons (g.btn) can be hidden by clicking the 'Publish
      * Mode' checkbox.  This provides a clear view of the visualisation
@@ -5936,7 +6070,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
   didInsertElement() {
-    eltWidthResizable('.resizable');
+    // eltWidthResizable('.resizable');
 
     // initial test data for axis-tracks - will discard this.
     let oa = this.get('oa');
@@ -5972,12 +6106,24 @@ export default Ember.Component.extend(Ember.Evented, {
   },
 
   resize() {
-    // rerender each individual element with the new width+height of the parent node
-    d3.select('svg')
-    // need to recalc viewPort{} and all the sizes, (from document.documentElement.clientWidth,Height)
-    // .attr('width', newWidth)
-    ;
-    //etc... and many lines of code depending upon how complex my visualisation is
+    console.log("resize");
+    // logWindowDimensions('', w);
+    let oa = this;
+    function resizeDrawing() { 
+      oa.vc.calc(oa);
+      // rerender each individual element with the new width+height of the parent node
+      // need to recalc viewPort{} and all the sizes, (from document.documentElement.clientWidth,Height)
+      // .attr('width', newWidth)
+      /* Called from .resizable : .on(drag) .. resizeThis() , the browser has
+       * already resized the <svg>, so a transition looks like 1 step back and 2
+       * steps forward, hence pass transition=false to showResize().
+      */
+      oa.showResize(true, true, false);
+    }
+    // Currently debounce-d in resizeThis(), so call directly here.
+    resizeDrawing();
+    // Ember.run.debounce(resizeDrawing, 300);  // 0.3sec
+
   }
 
 });

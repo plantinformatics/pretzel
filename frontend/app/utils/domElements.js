@@ -40,7 +40,11 @@ function eltWidthResizable(eltSelector, filter, resized)
 
   let startX;
   let dragResize = d3.drag()  // d3 v3: was .behavior
-    .on('drag', function() {
+    .on('drag', function(d, i, g) {
+      logElementDimensions(g[0], 'on drag');
+
+      // as for .resize() below,
+      // .on() seems to apply a reasonable debounce, but if not, use Ember.run.debounce()
       // Determine resizer position relative to resizable (parent)
       let x = d3.mouse(this.parentNode)[0];
       let dx = d3.event.dx;
@@ -62,20 +66,54 @@ function eltWidthResizable(eltSelector, filter, resized)
   // if (filter)
     dragResize.filter(shiftKeyfilter/*filter*/);
 
-  /* If the window is changed (in particular reduced then increased),
+  /* If the window size is changed (in particular reduced then increased),
    * restore the previous value, so that the flex-grow can
    * automatically absorb the increased width.
    */
-  Ember.$( window ).resize(function() {
-    console.log("eltWidthResizable window resize", eltSelector, resizable_flex_grow);
-    resizable.style('flex-grow', resizable_flex_grow);
+  let w =
+    Ember.$( window );
+  console.log(w);
+  w.resize(function() {
+    /*  .resize() may apply some debounce also - refn https://api.jquery.com/resize/.
+     * Seems that the version used is frontend/bower_components/jquery/dist/jquery.js
+     * (noting also bower_components/jquery-ui/ui/widgets/resizable.js).
+     */
+    Ember.run.debounce(resizeEnd, 300);
   });
+  function resizeEnd() { 
+    console.log("eltWidthResizable window resize", eltSelector, resizable_flex_grow);
+    logWindowDimensions(window, 'drag');
+    resizable.style('flex-grow', resizable_flex_grow);
+  };
+
 
   if (resizer)
     resizer.call(dragResize);
   else
     console.log("eltWidthResizable() resizer=", resizer, eltSelector, dragResize);
     return dragResize;
+}
+
+function logWindowDimensions(w, text)
+{
+  let s = w.screen, v = w.visualViewport;
+  console.log
+  (
+    text, 'inner', w.innerWidth, "x", w.innerHeight, 
+    'avail', s.availWidth, 'x',  s.availHeight,
+    'screen', s.width, 'x', s.height, 'visualViewport', v.width, 'x', v.height
+  );
+}
+
+function logElementDimensions(e, text)
+{
+  console.log
+  (
+    text,
+    'client', e.clientWidth, 'x', e.clientHeight, e.clientLeft, ',', e.clientTop,
+    'offset', e.offsetWidth, 'x', e.offsetHeight, e.offsetLeft, ',', e.offsetTop, e.offsetParent,
+    'scroll', e.scrollWidth, 'x', e.scrollHeight, e.scrollLeft, ',', e.scrollTop
+  );
 }
 
 /*----------------------------------------------------------------------------*/
