@@ -4,6 +4,43 @@ var acl = require('../utilities/acl')
 var task = require('../utilities/task')
 
 module.exports = function(Chromosome) {
+
+  Chromosome.observe('access', function(ctx, next) {
+    console.log('> Chromosome.access');
+    // console.log(ctx)
+    // ctx.result = {
+    //   'geneticmaps': ctx.result
+    // };
+    // console.log('next')
+    next()
+  })
+
+  Chromosome.observe('loaded', function(ctx, next) {
+    console.log('> Chromosome.loaded');
+
+    // let accessToken = ctx.options.accessToken
+    // let userId = String(accessToken.id)
+
+    // let data = ctx.data
+
+    // if (data.public != true) {
+    //   if (String(data.clientId) != userId) {
+    //     console.log('REMOVED')
+    //     // ctx.data = {}
+    //     delete ctx.data
+    //   }
+    // }
+
+    // ctx.data = data
+
+    // console.log(ctx)
+    // ctx.result = {
+    //   'geneticmaps': ctx.result
+    // };
+    // console.log('next')
+    next()
+  })
+
   // Chromosome.afterRemote('findById', function(ctx, output, next) {
   //   console.log('> Chromosome.findById triggered');
   //   // console.log(output)

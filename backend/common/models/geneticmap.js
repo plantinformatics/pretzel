@@ -1,19 +1,94 @@
 'use strict';
 
+var _ = require('lodash')
+
 var acl = require('../utilities/acl')
 var upload = require('../utilities/upload')
 var load = require('../utilities/load')
 
 module.exports = function(Geneticmap) {
-  Geneticmap.afterRemote('find', function(ctx, output, next) {
-    console.log('> Geneticmap.find triggered');
-    console.log(output)
+  Geneticmap.observe('access', function(ctx, next) {
+    console.log('> Geneticmap.access');
+    // console.log(ctx)
     // ctx.result = {
     //   'geneticmaps': ctx.result
     // };
     // console.log('next')
     next()
   })
+
+  Geneticmap.afterRemote('find', function(ctx, modelInstance, next) {
+    console.log('> Geneticmap.loaded');
+
+    // TODO handling not needed on authless Pretzel instance
+    // may be worth centralising logic for this section
+
+    // bear in mind that conventional ACL systems have already
+    // run at this point, so further work here is solely for
+    // publicity filtering
+    let accessToken = ctx.req.accessToken
+    let userId = String(accessToken.userId)
+
+    console.log(modelInstance.length)
+
+    let datasets = ctx.result
+
+    // high-level filtering on geneticmaps
+    datasets = _.filter(datasets, function(o) {
+      if (o.public != true) {
+        return String(o.clientId) == userId
+      } else return true
+    })
+
+    // low-level filtering on chromosomes
+    datasets = _.forEach(datasets, function(element) {
+      if (element.chromosomes) {
+
+        // for (var i = element.chromosomes.length - 1; i >= 0; --i) {
+        //   let chr = element.chromosomes[i]
+
+        //   if (chr.public != true) {
+        //     if (String(chr.clientId) != userId) {
+        //       element.chromosomes.splice(i, 1)
+        //     }
+        //   }
+        // }
+
+        let chromosomes = _.filter(element.chromosomes, function(o) {
+          if (o.public != true) {
+            return String(o.clientId) == userId
+          } else return true
+        })
+
+        element.chromosomes.splice(0, element.chromosomes.length);
+
+        // element.unsetAttribute('chromosomes')
+
+        // how the hell to assign
+        console.log(true)
+        // element.chromosomes = chromosomes
+        element.updateAttribute('chromosomes', chromosomes)
+        console.log(false)
+      }
+    })
+
+
+    // console.log(modelInstance.length)
+
+    ctx.result = datasets
+
+    // intent is to filter out entries which are not public
+    // and are not owned by the user
+
+
+    // console.log(ctx)
+    // ctx.result = {
+    //   'geneticmaps': ctx.result
+    // };
+    // console.log('next')
+    next()
+  })
+
   var rules = [
     {
       'accessType': '*',
