@@ -18,6 +18,12 @@ export default Ember.Component.extend({
         this.set('newTag', '')
       }
     },
+    flipPublic: function() {
+      let chr = this.get('chr')
+      let visible = chr.get('public')
+      chr.set('public', !visible)
+      chr.save()
+    },
     removeTag: function(index) {
       let chr = this.get('chr')
       let tags = chr.get('tags')

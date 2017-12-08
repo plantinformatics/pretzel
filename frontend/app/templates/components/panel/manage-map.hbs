@@ -4,14 +4,29 @@
   {{!-- <p><span class="label label-default">ID: {{chr.id}}</span></p> --}}
   <ul class="list-group">
     {{#if chr.owner}}
-      <li class="list-group-item list-group-item-success">{{elem-icon-owner state=chr.owner}} You are the Map owner</li>
-    {{else}}
-      <li class="list-group-item list-group-item-warning">{{elem-icon-owner state=chr.owner}} Someone else is the Map owner</li>
+      <li class="list-group-item list-group-item-success">
+        {{elem-icon-owner state=chr.owner}} You are the Map owner
+      </li>
     {{/if}}
     {{#if chr.public}}
-      <li class="list-group-item list-group-item-success">{{elem-icon-visible state=chr.public}} Everyone can view this Map</li>
+      <li class="list-group-item list-group-item-success">
+        {{elem-icon-visible state=chr.public}} Everyone can view this Map
+        {{#elem-button
+          classSize='sm'
+          classColour='default'
+          icon='eye-close'
+          onClick='flipPublic'}} Make Private {{/elem-button}}
+      </li>
     {{else}}
-      <li class="list-group-item list-group-item-warning">{{elem-icon-visible state=chr.public}} Only you can view this Map</li>
+      <li class="list-group-item list-group-item-warning">
+        {{elem-icon-visible state=chr.public}} Only you can view this Map
+        {{#elem-button
+          classSize='sm'
+          classColour='default'
+          icon='eye-open'
+          onClick='flipPublic'}} Make Public {{/elem-button}}
+      </li>
+      {{elem-button text="yeah?"}}
     {{/if}}
   </ul>
   
