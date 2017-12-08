@@ -7,13 +7,59 @@ var upload = require('../utilities/upload')
 var load = require('../utilities/load')
 
 module.exports = function(Geneticmap) {
+
+  // Geneticmap.beforeRemote('find', function(ctx, modelInstance, next) {
+  //   console.log('> Geneticmap.find')
+
+  //   let accessToken = ctx.req.accessToken
+  //   let userId = String(accessToken.userId)
+
+  //   let where = {};
+  //   where = {or: [{clientId: userId}, {public: true}]};
+  //   if (ctx.args.filter && ctx.args.filter.where) {
+  //     where = {and: [where, ctx.args.filter.where]}
+  //   }
+  //   if (!ctx.args.filter) {
+  //     ctx.args.filter = {};
+  //   }
+  //   ctx.args.filter.where = where;
+
+  //   console.log(ctx.args)
+  //   next()
+  // })
+
   Geneticmap.observe('access', function(ctx, next) {
     console.log('> Geneticmap.access');
-    // console.log(ctx)
-    // ctx.result = {
-    //   'geneticmaps': ctx.result
-    // };
-    // console.log('next')
+    let accessToken = ctx.options.accessToken
+    let userId = String(accessToken.userId)
+
+    
+    let where = {};
+    where = {or: [{clientId: userId}, {public: true}]};
+    if (ctx.options.filter && ctx.options.filter.where) {
+      where = {and: [where, ctx.options.filter.where]}
+    }
+    if (!ctx.options.filter) {
+      ctx.options.filter = {};
+    }
+    ctx.query.where = where;
+
+    console.log(ctx.options)
+
+
+
+    // let where = {};
+    // where = {or: [{clientId: userId}, {public: true}]};
+    // if (ctx.args.filter && ctx.args.filter.where) {
+    //   where = {and: [where, ctx.args.filter.where]}
+    // }
+    // if (!ctx.args.filter) {
+    //   ctx.args.filter = {};
+    // }
+    // ctx.args.filter.where = where;
+
+    // console.log(ctx.args)
+
     next()
   })
 
@@ -26,56 +72,59 @@ module.exports = function(Geneticmap) {
     // bear in mind that conventional ACL systems have already
     // run at this point, so further work here is solely for
     // publicity filtering
-    let accessToken = ctx.req.accessToken
-    let userId = String(accessToken.userId)
+    // let accessToken = ctx.req.accessToken
+    // let userId = String(accessToken.userId)
 
-    console.log(modelInstance.length)
+    // console.log(modelInstance.length)
 
-    let datasets = ctx.result
+    // let datasets = ctx.result
 
-    // high-level filtering on geneticmaps
-    datasets = _.filter(datasets, function(o) {
-      if (o.public != true) {
-        return String(o.clientId) == userId
-      } else return true
-    })
+    // // high-level filtering on geneticmaps
+    // datasets = _.filter(datasets, function(o) {
+    //   if (o.public != true) {
+    //     return String(o.clientId) == userId
+    //   } else return true
+    // })
 
-    // low-level filtering on chromosomes
-    datasets = _.forEach(datasets, function(element) {
-      if (element.chromosomes) {
 
-        // for (var i = element.chromosomes.length - 1; i >= 0; --i) {
-        //   let chr = element.chromosomes[i]
 
-        //   if (chr.public != true) {
-        //     if (String(chr.clientId) != userId) {
-        //       element.chromosomes.splice(i, 1)
-        //     }
-        //   }
-        // }
 
-        let chromosomes = _.filter(element.chromosomes, function(o) {
-          if (o.public != true) {
-            return String(o.clientId) == userId
-          } else return true
-        })
 
-        element.chromosomes.splice(0, element.chromosomes.length);
+    // // low-level filtering on chromosomes
+    // datasets = _.forEach(datasets, function(element) {
+    //   if (element.chromosomes) {
 
-        // element.unsetAttribute('chromosomes')
+    //     // for (var i = element.chromosomes.length - 1; i >= 0; --i) {
+    //     //   let chr = element.chromosomes[i]
 
-        // how the hell to assign
-        console.log(true)
-        // element.chromosomes = chromosomes
-        element.updateAttribute('chromosomes', chromosomes)
-        console.log(false)
-      }
-    })
+    //     //   if (chr.public != true) {
+    //     //     if (String(chr.clientId) != userId) {
+    //     //       element.chromosomes.splice(i, 1)
+    //     //     }
+    //     //   }
+    //     // }
+
+    //     let chromosomes = _.filter(element.chromosomes, function(o) {
+    //       if (o.public != true) {
+    //         return String(o.clientId) == userId
+    //       } else return true
+    //     })
+
+    //     element.chromosomes.splice(0, element.chromosomes.length);
+
+    //     // element.unsetAttribute('chromosomes')
+
+    //     console.log(true)
+    //     // element.chromosomes = chromosomes
+    //     element.updateAttribute('chromosomes', chromosomes)
+    //     console.log(false)
+    //   }
+    // })
 
 
     // console.log(modelInstance.length)
 
-    ctx.result = datasets
+    // ctx.result = datasets
 
     // intent is to filter out entries which are not public
     // and are not owned by the user
@@ -96,12 +145,24 @@ module.exports = function(Geneticmap) {
       'principalId': '$everyone',
       'permission': 'DENY',
     },
+    // {
+    //   'accessType': 'READ',
+    //   'principalType': 'ROLE',
+    //   'principalId': 'public',
+    //   'permission': 'ALLOW',
+    // },
+    // {
+    //   'accessType': '*',
+    //   'principalType': 'ROLE',
+    //   'principalId': '$owner',
+    //   'permission': 'ALLOW',
+    // }
     {
       'accessType': '*',
       'principalType': 'ROLE',
       'principalId': '$authenticated',
       'permission': 'ALLOW',
-    },
+    }
   ];
   acl.assign(Geneticmap, rules);
 

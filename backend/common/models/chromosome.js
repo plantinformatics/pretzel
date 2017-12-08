@@ -7,11 +7,21 @@ module.exports = function(Chromosome) {
 
   Chromosome.observe('access', function(ctx, next) {
     console.log('> Chromosome.access');
-    // console.log(ctx)
-    // ctx.result = {
-    //   'geneticmaps': ctx.result
-    // };
-    // console.log('next')
+    let accessToken = ctx.options.accessToken
+    let userId = String(accessToken.userId)
+
+    
+    let where = {};
+    where = {or: [{clientId: userId}, {public: true}]};
+    if (ctx.options.filter && ctx.options.filter.where) {
+      where = {and: [where, ctx.options.filter.where]}
+    }
+    if (!ctx.options.filter) {
+      ctx.options.filter = {};
+    }
+    ctx.query.where = where;
+
+    console.log(ctx.options)
     next()
   })
 
