@@ -10,14 +10,15 @@ module.exports = function(Chromosome) {
     let accessToken = ctx.options.accessToken
     let userId = String(accessToken.userId)
 
+    if (!ctx.query.where) ctx.query.where = {}
+    ctx.query.where['or'] = [{clientId: userId}, {public: true}]
     
-    let where = {};
-    where = {or: [{clientId: userId}, {public: true}]};
-    if (ctx.options.filter && ctx.options.filter.where) {
-      where = {and: [where, ctx.options.filter.where]}
+    if (!ctx.query) {
+      ctx.query = {};
     }
-    if (!ctx.options.filter) {
-      ctx.options.filter = {};
+    let where = {or: [{clientId: userId}, {public: true}]};
+    if (ctx.query && ctx.query.where) {
+      where = {and: [where, ctx.query.where]}
     }
     ctx.query.where = where;
 
@@ -26,40 +27,11 @@ module.exports = function(Chromosome) {
   })
 
   Chromosome.observe('loaded', function(ctx, next) {
-    console.log('> Chromosome.loaded');
+    // console.log('> Chromosome.loaded');
 
-    // let accessToken = ctx.options.accessToken
-    // let userId = String(accessToken.id)
-
-    // let data = ctx.data
-
-    // if (data.public != true) {
-    //   if (String(data.clientId) != userId) {
-    //     console.log('REMOVED')
-    //     // ctx.data = {}
-    //     delete ctx.data
-    //   }
-    // }
-
-    // ctx.data = data
-
-    // console.log(ctx)
-    // ctx.result = {
-    //   'geneticmaps': ctx.result
-    // };
-    // console.log('next')
     next()
   })
 
-  // Chromosome.afterRemote('findById', function(ctx, output, next) {
-  //   console.log('> Chromosome.findById triggered');
-  //   // console.log(output)
-  //   ctx.result = {
-  //     'chromosome': ctx.result
-  //   };
-  //   // console.log('next')
-  //   next()
-  // })
   var rules = [
     {
       'accessType': '*',
@@ -88,7 +60,6 @@ module.exports = function(Chromosome) {
       // ctx.instance.createdAt = newDate;
       // ctx.instance.updatedAt = newDate;
     }
-
 
     next();
   });
