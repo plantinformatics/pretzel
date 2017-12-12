@@ -22,7 +22,7 @@ module.exports = function(Chromosome) {
     }
     ctx.query.where = where;
 
-    console.log(ctx.options)
+    // console.log(ctx.options)
     next()
   })
 

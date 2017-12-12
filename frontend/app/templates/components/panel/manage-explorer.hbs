@@ -21,12 +21,13 @@
   <div class="panel panel-primary">
     <div class="panel-heading">
       Available Maps {{elem-icon name="globe"}} 
-      {{!-- <span class="pull-right">
+      <span class="pull-right">
         {{elem-button
           classSize='xs'
-          classColour='info'
-          icon='refresh'}}
-      </span>   --}}
+          classColour='default'
+          icon='refresh'
+          onClick=(action 'refreshAvailable')}}
+      </span>  
     </div>
       {{#if model.mapsDerived.isPending}}
         <div class="panel-body">

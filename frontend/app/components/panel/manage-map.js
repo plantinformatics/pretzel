@@ -18,11 +18,18 @@ export default Ember.Component.extend({
         this.set('newTag', '')
       }
     },
-    flipPublic: function() {
-      let chr = this.get('chr')
-      let visible = chr.get('public')
-      chr.set('public', !visible)
-      chr.save()
+    flipPublic: function(record) {
+      console.log('FLIPPUBLIC', record)
+      let recordId = record.get('id')
+      // let model = 
+      let visible = record.get('public')
+      record.set('public', !visible)
+      record.save()
+
+      // let chr = this.get('chr')
+      // let visible = chr.get('public')
+      // chr.set('public', !visible)
+      // chr.save()
     },
     removeTag: function(index) {
       let chr = this.get('chr')
@@ -43,6 +50,14 @@ export default Ember.Component.extend({
     } else {
       return false
     }
+  }),
+  geneticmap: Ember.computed('chr', function() {
+    let chr = this.get('chr')
+    console.log('CHROMOSOME')
+    console.log(chr)
+    // let geneticmapId = chr.get('geneticmapId')
+    let geneticmap = chr.get('map')
+    return geneticmap
   }),
   disableCreateInterval: Ember.computed('newInterval', 'chr.intervals', function() {
     let chr = this.get('chr')

@@ -1,35 +1,73 @@
 {{#if chr}}
 <div class="col-sm-12">
-  <h3>{{chr.map.name}} {{chr.name}}</h3>
-  {{!-- <p><span class="label label-default">ID: {{chr.id}}</span></p> --}}
-  <ul class="list-group">
-    {{#if chr.owner}}
-      <li class="list-group-item list-group-item-success">
-        {{elem-icon-owner state=chr.owner}} You are the Map owner
-      </li>
-    {{/if}}
-    {{#if chr.public}}
-      <li class="list-group-item list-group-item-success">
-        {{elem-icon-visible state=chr.public}} Everyone can view this Map
+  <h4>
+    {{chr.map.name}}
+    {{#if geneticmap.owner}}
+      {{!-- {{#if geneticmap.public}}
+          {{#elem-button
+            classSize='sm'
+            classColour='primary'
+            icon='eye-close'
+            onClick=(action 'flipPublic' geneticmap)}} Make Private {{/elem-button}}
+      {{else}}
+        <span class="label label-default">{{elem-icon name='tags'}}</span>
         {{#elem-button
           classSize='sm'
-          classColour='default'
-          icon='eye-close'
-          onClick='flipPublic'}} Make Private {{/elem-button}}
-      </li>
-    {{else}}
-      <li class="list-group-item list-group-item-warning">
-        {{elem-icon-visible state=chr.public}} Only you can view this Map
-        {{#elem-button
-          classSize='sm'
-          classColour='default'
+          classColour='primary'
           icon='eye-open'
-          onClick='flipPublic'}} Make Public {{/elem-button}}
-      </li>
-      {{elem-button text="yeah?"}}
+          onClick=(action 'flipPublic' geneticmap)}} Make Public {{/elem-button}}
+      {{/if}} --}}
+      {{#if geneticmap.public}}
+      {{else}}
+        {{elem-icon name='lock'}}
+      {{/if}}
+      <div class="btn-group btn-group-sm pull-right">
+        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          {{elem-icon name='option-horizontal'}}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-right">
+          {{#if geneticmap.public}}
+            <li><a href="#" {{action 'flipPublic' geneticmap}}>Make Private</a></li>
+          {{else}}
+            <li><a href="#" {{action 'flipPublic' geneticmap}}>Make Public</a></li>
+          {{/if}}
+          <li><a href="#">Something else here</a></li>
+          <li role="separator" class="divider"></li>
+          <li><a href="#">Separated link</a></li>
+        </ul>
+      </div>
+
     {{/if}}
-  </ul>
-  
+  </h4>
+
+  <h4>
+    {{chr.name}}
+    {{#if chr.owner}}
+      {{#if chr.public}}
+      {{else}}
+        {{elem-icon name='lock'}}
+      {{/if}}
+      <div class="btn-group btn-group-sm pull-right">
+        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          {{elem-icon name='option-horizontal'}}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-right">
+          {{#if chr.public}}
+            <li><a href="#" {{action 'flipPublic' chr}}>Make Private</a></li>
+          {{else}}
+            <li><a href="#" {{action 'flipPublic' chr}}>Make Public</a></li>
+          {{/if}}
+          <li><a href="#">Something else here</a></li>
+          <li role="separator" class="divider"></li>
+          <li><a href="#">Separated link</a></li>
+        </ul>
+      </div>
+    {{/if}}
+  </h4>
+  {{!-- <p><span class="label label-default">ID: {{chr.id}}</span></p> --}}
+  {{!-- {{geneticmap}}
+  {{geneticmap.name}} --}}
+
   <label>Features</label><p>{{chr.markers.length}}</p>
 
   <div class="panel panel-primary">

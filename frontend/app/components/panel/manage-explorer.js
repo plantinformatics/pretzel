@@ -1,8 +1,10 @@
 import Ember from 'ember';
 
-const { Component } = Ember;
+const { Component, inject: { service } } = Ember;
 
 export default Component.extend({
+  store: service(),
+
   filterOptions: {
     'all': {'formal': 'All', 'icon': 'plus'},
     'public': {'formal': 'Public', 'icon': 'eye-open'},
@@ -31,6 +33,17 @@ export default Component.extend({
     else { return true; }
   }),
   actions: {
+    refreshAvailable() {
+      // this.sendAction('selectChrom', chr);
+      var maps = this.get('store').query(
+        'geneticmap',
+        {
+          filter: {
+            'include': 'chromosomes'
+          }
+        }
+      )
+    },
     selectChrom(chr) {
       this.sendAction('selectChrom', chr);
     },

@@ -41,7 +41,7 @@ module.exports = function(Geneticmap) {
       where = {and: [where, ctx.query.where]}
     }
     ctx.query.where = where;
-    console.log(ctx.query)
+    // console.log(ctx.query)
 
     next()
   })
