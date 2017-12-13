@@ -8,28 +8,9 @@ var load = require('../utilities/load')
 
 module.exports = function(Geneticmap) {
 
-  // Geneticmap.beforeRemote('find', function(ctx, modelInstance, next) {
-  //   console.log('> Geneticmap.find')
-
-  //   let accessToken = ctx.req.accessToken
-  //   let userId = String(accessToken.userId)
-
-  //   let where = {};
-  //   where = {or: [{clientId: userId}, {public: true}]};
-  //   if (ctx.args.filter && ctx.args.filter.where) {
-  //     where = {and: [where, ctx.args.filter.where]}
-  //   }
-  //   if (!ctx.args.filter) {
-  //     ctx.args.filter = {};
-  //   }
-  //   ctx.args.filter.where = where;
-
-  //   console.log(ctx.args)
-  //   next()
-  // })
-
   Geneticmap.observe('access', function(ctx, next) {
     console.log('> Geneticmap.access');
+
     let accessToken = ctx.options.accessToken
     let userId = String(accessToken.userId)
     
@@ -37,11 +18,10 @@ module.exports = function(Geneticmap) {
       ctx.query = {};
     }
     let where = {or: [{clientId: userId}, {public: true}]};
-    if (ctx.query && ctx.query.where) {
+    if (ctx.query.where) {
       where = {and: [where, ctx.query.where]}
     }
     ctx.query.where = where;
-    // console.log(ctx.query)
 
     next()
   })
@@ -62,7 +42,7 @@ module.exports = function(Geneticmap) {
     // {
     //   'accessType': 'READ',
     //   'principalType': 'ROLE',
-    //   'principalId': 'public',
+    //   'principalId': '$authenticated',
     //   'permission': 'ALLOW',
     // },
     // {
@@ -142,7 +122,7 @@ module.exports = function(Geneticmap) {
     var chromosomes_by_name = [];
     var existing_chromosomes = [];
 
-    models.Geneticmap.findById(data.geneticmap_id, {include: "chromosomes"})
+    models.Geneticmap.findById(data.geneticmap_id, {include: "chromosomes"}, options)
     .then(function(map) {
       if (map) {
         genMap = map;
@@ -157,13 +137,13 @@ module.exports = function(Geneticmap) {
           }
         });
         // delete old markers
-        return models.Marker.deleteAll({chromosomeId: {inq: existing_chromosomes}})
+        return models.Marker.deleteAll({chromosomeId: {inq: existing_chromosomes}}, options)
       } else {
         cb(Error("Geneticmap not found"));
       }
     })
     .then(function(deleted_markers) {
-      return models.Chromosome.updateAll({id: {inq: existing_chromosomes}}, {updatedAt: new Date()})
+      return models.Chromosome.updateAll({id: {inq: existing_chromosomes}}, {updatedAt: new Date()}, options)
     }).then(function(updated_chromosomes) {
       var new_chromosomes = [];
       Object.keys(chromosomes).forEach(function(name) {

@@ -7,22 +7,19 @@ module.exports = function(Chromosome) {
 
   Chromosome.observe('access', function(ctx, next) {
     console.log('> Chromosome.access');
+
     let accessToken = ctx.options.accessToken
     let userId = String(accessToken.userId)
-
-    if (!ctx.query.where) ctx.query.where = {}
-    ctx.query.where['or'] = [{clientId: userId}, {public: true}]
     
     if (!ctx.query) {
       ctx.query = {};
     }
     let where = {or: [{clientId: userId}, {public: true}]};
-    if (ctx.query && ctx.query.where) {
+    if (ctx.query.where) {
       where = {and: [where, ctx.query.where]}
     }
     ctx.query.where = where;
 
-    // console.log(ctx.options)
     next()
   })
 
