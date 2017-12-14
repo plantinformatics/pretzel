@@ -34,15 +34,7 @@ export default Component.extend({
   }),
   actions: {
     refreshAvailable() {
-      // this.sendAction('selectChrom', chr);
-      var maps = this.get('store').query(
-        'geneticmap',
-        {
-          filter: {
-            'include': 'chromosomes'
-          }
-        }
-      )
+      this.sendAction('updateModel')
     },
     selectChrom(chr) {
       this.sendAction('selectChrom', chr);
