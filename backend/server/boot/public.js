@@ -1,64 +1,151 @@
-// module.exports = function(app) {
-//   var Role = app.models.Role;
+module.exports = function(app) {
+  var Role = app.models.Role;
 
-//   // the intent of this resolver is to give availability
-//   // of publicised resources to other users on the instance.
-//   // another ACL will give write access if it is provided
+  // the intent of this resolver is to give availability
+  // of publicised resources to other users on the instance.
+  // another ACL will give write access if it is provided
 
-//   Role.registerResolver('public', function(role, context, cb) {
+  function publicityDecision(data, userId) {
+    let clientId = data.clientId
+    let publicity = data.public
 
-//     var modelName = context.modelName
+    let checkMatchUser = clientId == userId
+    let checkPublic = publicity == true
 
-//     // Q: Is the current request accessing a Geneticmap or Chromosome?
-//     if (modelName !== 'geneticmap' && modelName !== 'chromosome') {
-//       // A: No. This role is only for geneticmap or chromosome: callback with FALSE
-//       return process.nextTick(() => cb(null, false));
-//     }
+    if (checkMatchUser || checkPublic) {
+      return true
+    } else {
+      return false
+    }
+  }
 
-//     //Q: Is the user logged in? (there will be an accessToken with an ID if so)
-//     var userId = context.accessToken.userId;
-//     if (!userId) {
-//       //A: No, user is NOT logged in: callback with FALSE
-//       return process.nextTick(() => cb(null, false));
-//     }
+  Role.registerResolver('public', function(role, context, cb) {
 
-//     // separate handling for geneticmap and chromosome models
-//     if (modelName == 'geneticmap') {
-//       // perform a straight boolean check against the public prop
-//     } else if (modelName == 'chromosome') {
-//       // gather the geneticmap and check boolean as above
-//     }
+    var modelName = context.modelName
 
-//     // Q: Is the current logged-in user associated with this Project?
-//     // Step 1: lookup the requested project
-//     context.model.findById(context.modelId, function(err, project) {
-//       // A: The datastore produced an error! Pass error to callback
-//       if(err) return cb(err);
-//       // A: There's no project by this ID! Pass error to callback
-//       if(!project) return cb(new Error("Project not found"));
+    // building options object to pass through to DB calls, as collection
+    // observers may require accessToken for visibility checks
+    let options = {}
+    if (context.accessToken) options.accessToken = context.accessToken
 
-//       // Step 2: check if User is part of the Team associated with this Project
-//       // (using count() because we only want to know if such a record exists)
-//       var Team = app.models.Team;
-//       Team.count({
-//         ownerId: project.ownerId,
-//         memberId: userId
-//       }, function(err, count) {
-//         // A: The datastore produced an error! Pass error to callback
-//         if (err) return cb(err);
+    // Q: Is the request not looking for a specific resource?
+    if (context.property == 'find') {
+      // A: Yes. Have no way to check specific resource.
+      // Delegate visibility filtering of results to access observers
+      return process.nextTick(() => cb(null, true));
+    }
 
-//         if(count > 0){
-//           // A: YES. At least one Team associated with this User AND Project
-//           // callback with TRUE, user is role:`teamMember`
-//           return cb(null, true);
-//         } else {
-//           // A: NO, User is not in this Project's Team
-//           // callback with FALSE, user is NOT role:`teamMember`
-//           return cb(null, false);
-//         }
-//       });
-//     });
+    // Q: Is the current request accessing a Geneticmap or Chromosome?
+    if (modelName !== 'Geneticmap' && modelName !== 'Chromosome' && modelName !== 'Marker') {
+      // A: No. This role is only for geneticmap or chromosome: callback with FALSE
+      return process.nextTick(() => cb(null, false));
+    }
 
+    //Q: Is the user logged in? (there will be an accessToken with an ID if so)
+    var userId = context.accessToken.userId;
+    if (!userId) {
+      //A: No, user is NOT logged in: callback with FALSE
+      return process.nextTick(() => cb(null, false));
+    }
 
-//   });
-// };
+    // separate handling for geneticmap and chromosome models
+    if (modelName == 'Geneticmap') {
+      // gather geneticmap to confirm publicity
+      context.model.findById(context.modelId, {}, options)
+      .then(function(data) {
+        if (data) {
+          if (publicityDecision(data, userId)) {
+            cb(null, true)
+          } else {
+            cb(null, false)
+          }
+        } else {
+          cb(Error(`${modelName} not found`));
+        }
+      })
+      .catch(function(err) {
+        console.log('ERROR', err)
+        cb(err);
+      })
+    } else if (modelName == 'Chromosome') {
+      // need to gather both chromosome and geneticmap to confirm publicity
+      context.model.findById(context.modelId, {}, options)
+      .then(function(data) {
+        if (data) {
+          if (publicityDecision(data, userId)) {
+            // check geneticmap for same conditions
+            var Geneticmap = app.models.Geneticmap
+            var geneticmapId = data.geneticmapId
+            return Geneticmap.findById(geneticmapId, {}, options)
+          } else {
+            cb(null, false)
+          }
+        } else {
+          cb(Error(`${modelName} not found`));
+        }
+      })
+      .then(function(data) {
+        if (data) {
+          if (publicityDecision(data, userId)) {
+            cb(null, true)
+          } else {
+            cb(null, false)
+          }
+        } else {
+          cb(Error(`Geneticmap not found`));
+        }
+      })
+      .catch(function(err) {
+        console.log('ERROR', err)
+        cb(err);
+      })
+
+    } else if (modelName == 'Marker') {
+      // need to gather both chromosome and geneticmap to confirm publicity
+      context.model.findById(context.modelId, {}, options)
+      .then(function(data) {
+        // Marker data, no publicity check since it's ties to Chromosome
+        if (data) {
+          // check chromosome for same conditions
+          var Chromosome = app.models.Chromosome
+          var chromosomeId = data.chromosomeId
+          return Chromosome.findById(chromosomeId, {}, options)
+        } else {
+          cb(Error(`${modelName} not found`));
+        }
+      })
+      .then(function(data) {
+        // Chromosome data
+        if (data) {
+          if (publicityDecision(data, userId)) {
+            // check geneticmap for same conditions
+            var Geneticmap = app.models.Geneticmap
+            var geneticmapId = data.geneticmapId
+            return Geneticmap.findById(geneticmapId, {}, options)
+          } else {
+            cb(null, false)
+          }
+        } else {
+          cb(Error(`Chromosome not found`));
+        }
+      })
+      .then(function(data) {
+        // Geneticmap data
+        if (data) {
+          if (publicityDecision(data, userId)) {
+            cb(null, true)
+          } else {
+            cb(null, false)
+          }
+        } else {
+          cb(Error(`Geneticmap not found`));
+        }
+      })
+      .catch(function(err) {
+        console.log('ERROR', err)
+        cb(err);
+      })
+
+    }
+  });
+};
