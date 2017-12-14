@@ -922,10 +922,8 @@ export default Ember.Component.extend(Ember.Evented, {
       axis = d3.axisLeft(),
       foreground,
       // brushActives = [],
-      /** Extent of current brush (applied to y axis of a AP). */
-      brushExtents = [];
     /** guard against repeated drag event before previous dragged() has returned. */
-    let dragging = 0;
+    dragging = 0;
     /** trace scale of each AP just once after this is cleared.  */
     let tracedApScale = {};
 
@@ -2441,6 +2439,13 @@ export default Ember.Component.extend(Ember.Evented, {
       /** Find the max of locations of all markers of AP name d. */
       let yDomainMax = d3.max(Object.keys(oa.z[d]), function(a) { return oa.z[d][a].location; } );
       let a = oa.aps[d], myRange = a.yRange(), ys = oa.ys, y = oa.y;
+      if (ys[d])
+      {
+        if (trace_stack)
+          console.log("ys exists", d, ys[d].domain(), y[d].domain(), ys[d].range());
+      }
+      else
+      {
       ys[d] = d3.scaleLinear()
         .domain(maybeFlip([0, yDomainMax], a.flipped))
         .range([0, myRange]); // set scales for each AP
@@ -2452,6 +2457,7 @@ export default Ember.Component.extend(Ember.Evented, {
       y[d].brush = d3.brushY()
         .extent(maybeFlipExtent([[-8,0],[8,myRange]], a.flipped))
         .on("end", brushended);
+      }
     });
     /** when draw( , 'dataReceived'), pathUpdate() is not valid until ys is updated. */
     let ysUpdated = true;
@@ -4625,6 +4631,8 @@ export default Ember.Component.extend(Ember.Evented, {
           delete brushedRegions[brushedApID];
         else
           brushedRegions[brushedApID] = d3.event.selection;
+        /** Extent of current brush (applied to y axis of a AP). */
+        let
         brushExtents = selectedAps.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
 
         selectedMarkers = {};
@@ -4633,11 +4641,15 @@ export default Ember.Component.extend(Ember.Evented, {
           /** d3 selection of one of the APs selected by user brush on axis. */
           let apS = oa.svgContainer.selectAll("#" + eltId(p));
           selectedMarkers[p] = [];
+          let enable_log = brushExtents[i] === undefined;
+            if (enable_log)
+            console.log("brushHelper", p, i);
 
           let yp = oa.y[p],
           ap = oa.aps[p],
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *ap.portion */); });
-          //console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], ap.portion, brushedDomain);
+          if (enable_log)
+            console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], ap.portion, brushedDomain);
 
           d3.keys(oa.z[p]).forEach(function(m) {
             let z = oa.z;
@@ -4791,6 +4803,13 @@ export default Ember.Component.extend(Ember.Evented, {
       selectedAps.map(function(p, i) {
         if(p == apName){
           let y = oa.y, svgContainer = oa.svgContainer;
+          // possibly selectedAps changed after this callback was registered
+          // The need for brushExtents[] is not clear; it retains earlier values from brushedRegions, but is addressed relative to selectedAps[].
+          if (brushExtents[i] === undefined)
+          {
+            console.log("zoom() brushExtents[i]===undefined", apName, p, i, "use", brushedRegions[p]);
+            brushExtents[i] = brushedRegions[p];
+          }
           let yp = y[p],
           ap = oa.aps[p],
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *ap.portion*/); });
