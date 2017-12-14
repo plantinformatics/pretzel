@@ -41,7 +41,7 @@ module.exports = function(Geneticmap) {
       where = {and: [where, ctx.query.where]}
     }
     ctx.query.where = where;
-    // console.log(ctx.query)
+    console.log(ctx.query)
 
     next()
   })
@@ -59,22 +59,16 @@ module.exports = function(Geneticmap) {
       'principalId': '$everyone',
       'permission': 'DENY',
     },
-    // {
-    //   'accessType': 'READ',
-    //   'principalType': 'ROLE',
-    //   'principalId': 'public',
-    //   'permission': 'ALLOW',
-    // },
-    // {
-    //   'accessType': '*',
-    //   'principalType': 'ROLE',
-    //   'principalId': '$owner',
-    //   'permission': 'ALLOW',
-    // }
     {
       'accessType': '*',
       'principalType': 'ROLE',
-      'principalId': '$authenticated',
+      'principalId': '$owner',
+      'permission': 'ALLOW',
+    },
+    {
+      'accessType': 'READ',
+      'principalType': 'ROLE',
+      'principalId': 'public',
       'permission': 'ALLOW',
     }
   ];

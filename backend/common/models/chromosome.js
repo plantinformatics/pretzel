@@ -42,9 +42,15 @@ module.exports = function(Chromosome) {
     {
       'accessType': '*',
       'principalType': 'ROLE',
-      'principalId': '$authenticated',
+      'principalId': '$owner',
       'permission': 'ALLOW',
     },
+    {
+      'accessType': 'READ',
+      'principalType': 'ROLE',
+      'principalId': 'public',
+      'permission': 'ALLOW',
+    }
   ];
 
   acl.assign(Chromosome, rules);

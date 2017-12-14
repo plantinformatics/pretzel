@@ -20,7 +20,7 @@ export default Ember.Component.extend({
     },
     flipPublic: function(record) {
       console.log('FLIPPUBLIC', record)
-      let recordId = record.get('id')
+      // let recordId = record.get('id')
       // let model = 
       let visible = record.get('public')
       record.set('public', !visible)
