@@ -438,6 +438,14 @@ export default Ember.Component.extend(Ember.Evented, {
         if (start)
           setupVariousControls();
       });
+
+      /** currently have an instance of goto-marker in mapview.hbs (may remove
+       * this - also have it via draw-map.hbs -> path-hover.hbs with data=oa ->
+       * marker-name.hbs -> goto-marker ); this is just to get oa to that instance; not
+       * ideal.  */
+      let drawActions = this.get('drawActions'); 
+      drawActions.trigger('drawObjectAttributes', this.get('oa')); // 
+      console.log("draw() drawActions oa", drawActions, oa);
     }
 
   /*------------------------------------------------------------------------*/
@@ -2439,9 +2447,9 @@ export default Ember.Component.extend(Ember.Evented, {
       /** Find the max of locations of all markers of AP name d. */
       let yDomainMax = d3.max(Object.keys(oa.z[d]), function(a) { return oa.z[d][a].location; } );
       let a = oa.aps[d], myRange = a.yRange(), ys = oa.ys, y = oa.y;
-      if (ys[d])
+      if (ys[d])  // equivalent to (y[d]==true), y[d] and ys[d] are created together
       {
-        if (trace_stack)
+        if (trace_stack > 1)
           console.log("ys exists", d, ys[d].domain(), y[d].domain(), ys[d].range());
       }
       else
@@ -2990,11 +2998,14 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
     // Setup the path hover tool tip.
+    let toolTipCreated = ! oa.toolTip;
     let toolTip = oa.toolTip || (oa.toolTip =
       d3.tip()
         .attr("class", "toolTip d3-tip")
         .attr("id","toolTip")
     );
+    if (toolTipCreated)
+      me.set("toolTipCreated", true);
     toolTip.offset([-15,0]);
     svgRoot.call(toolTip);
 
@@ -3104,11 +3115,14 @@ export default Ember.Component.extend(Ember.Evented, {
     function handleMouseOver(d, i){
       let sLine, pathMarkersHash;
       let pathMarkers = oa.pathMarkers;
+      let hoverMarkers;
       /** d is either sLine (pathDataIsLine===true) or array mmaa. */
       let pathDataIsLine = typeof(d) === "string";
       if (pathDataIsLine)
       {
         pathMarkersHash = pathMarkers[d];
+        hoverMarkers = Object.keys(pathMarkersHash);
+        console.log("hoverMarkers 1", hoverMarkers);
       }
       else
       {
@@ -3122,6 +3136,13 @@ export default Ember.Component.extend(Ember.Evented, {
           pathMarkerStore(sLine, marker0, marker1, z[a0.apName][marker0], z[a1.apName][marker1]);
           pathMarkersHash = pathMarkers[sLine];
         }
+        // can also append the list of aliases of the 2 markers
+        hoverMarkers = Object.keys(pathMarkersHash)
+          .reduce(function(all, a){
+            // console.log(all, a, a.split(','));
+            return  all.concat(a.split(","));
+          }, []);
+        console.log("hoverMarkers 2,3", hoverMarkers);
       }
       /** pathClasses uses this datum instead of d.  */
       let classSet = pathClasses(this, d), classSetText;
@@ -3154,6 +3175,9 @@ export default Ember.Component.extend(Ember.Evented, {
       });
       toolTip.html(listMarkers);
       toolTip.show(d, i);
+      Ember.run.once(function() {
+        me.set("hoverMarkers", hoverMarkers);
+      });
     }
 
     function handleMouseOut(d){
@@ -4388,7 +4412,8 @@ export default Ember.Component.extend(Ember.Evented, {
           (d1 && ma1 ? 
            "<div>" + markerAliasesText(d1, ma1) + "</div>" : "");
       }
-      let d = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
+      // these are split (at ",") when assigned to hoverMarkers
+      let d = d1 && (d1 != d0) ? d0 + "," + d1: d0;
       pathMarkers[sLine][d] = hoverExtraText; // 1;
     }
 
@@ -6094,6 +6119,8 @@ export default Ember.Component.extend(Ember.Evented, {
     // initial test data for axis-tracks - will discard this.
     let oa = this.get('oa');
     oa.tracks  = [{start: 10, end : 20, description : "track One"}];
+    Ember.run.later(function() {
+      Ember.$('.make-ui-draggable').draggable(); });
   },
 
   didRender() {

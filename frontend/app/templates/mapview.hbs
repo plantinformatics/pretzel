@@ -5,27 +5,27 @@
     <div class="" style="width: 400px">
       <ul class="nav nav-tabs">
         {{#tab-button
-          side="left"
-          key="view"
-          state=layout.left.tab onClick="setTab"}}
+           side="left"
+           key="view"
+           state=layout.left.tab onClick="setTab"}}
           View {{elem-icon name="eye-open"}}
         {{/tab-button}}
         {{#tab-button
-          side="left"
-          key="explore"
-          state=layout.left.tab onClick="setTab"}}
+           side="left"
+           key="explore"
+           state=layout.left.tab onClick="setTab"}}
           Explorer {{elem-icon name="folder-open"}}
         {{/tab-button}}
         {{#tab-button
-          side="left"
-          key="upload"
-          state=layout.left.tab onClick="setTab"}}
+           side="left"
+           key="upload"
+           state=layout.left.tab onClick="setTab"}}
           Upload {{elem-icon name="cloud-upload"}}
         {{/tab-button}}
         {{#tab-button
-          class="pull-right"
-          side="left"
-          onClick="setVisibility"}}
+           class="pull-right"
+           side="left"
+           onClick="setVisibility"}}
           {{elem-icon name="remove"}}
         {{/tab-button}}
       </ul>
@@ -46,6 +46,7 @@
             deleteChrom="removeMap"}}
           
 	  {{draw-controls drawActions=this}}
+	  {{goto-marker  drawActions=this class="pull-left bordered control-panel make-ui-draggable"}}
           {{selected-markers
             data=selectedMarkers
             scaffolds=scaffolds
@@ -82,12 +83,12 @@
     </div>
 
     <p class="devel_trace" style="display:none;">
-     hasData {{hasData}}
-     model {{model}}
-     mapsToView {{model.mapsToView}}
-     availableMaps {{model.mapsDerived.availableMaps.length}}
-     availableChrs {{model.mapsDerived.availableChrs.length}}
-     selectedMaps {{model.mapsDerived.selectedMaps.length}}
+      hasData {{hasData}}
+      model {{model}}
+      mapsToView {{model.mapsToView}}
+      availableMaps {{model.mapsDerived.availableMaps.length}}
+      availableChrs {{model.mapsDerived.availableChrs.length}}
+      selectedMaps {{model.mapsDerived.selectedMaps.length}}
     </p>
     {{#if hasData}}
       {{draw-map
@@ -114,27 +115,27 @@
     <div class="" style="width: 400px">
       <ul class="nav nav-tabs">
         {{#tab-button
-          side="right"
-          key="selection"
-          state=layout.right.tab onClick="setTab"}}
+           side="right"
+           key="selection"
+           state=layout.right.tab onClick="setTab"}}
           Markers <span class="badge">{{selectedMarkers.length}}</span>
         {{/tab-button}}
         {{#tab-button
-          side="right"
-          key="chrom"
-          state=layout.right.tab onClick="setTab"}}
+           side="right"
+           key="chrom"
+           state=layout.right.tab onClick="setTab"}}
           Map {{elem-icon name="globe"}}
         {{/tab-button}}
         {{#tab-button
-          side="right"
-          key="settings"
-          state=layout.right.tab onClick="setTab"}}
+           side="right"
+           key="settings"
+           state=layout.right.tab onClick="setTab"}}
           Advanced {{elem-icon name="cog"}}
         {{/tab-button}}
         {{#tab-button
-          class="pull-right"
-          side="right"
-          onClick="setVisibility"}}
+           class="pull-right"
+           side="right"
+           onClick="setVisibility"}}
           {{elem-icon name="remove"}}
         {{/tab-button}}
       </ul>
@@ -144,7 +145,7 @@
             selectedMarkers=selectedMarkers
             selectedChrom=selectedChrom}}
           {{!-- marker-detail
-            data=selectedMarkers --}}
+          data=selectedMarkers --}}
         {{else if (compare layout.right.tab '===' 'chrom')}}
           {{panel/manage-chromosome
             chr=selectedChrom}}

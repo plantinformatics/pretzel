@@ -1,0 +1,6 @@
+{{!-- display marker name, with click/hover action to display goto-marker  --}}
+{{!-- {{bind-attr __data=marker}} --}}
+{{marker}}
+{{#ember-popover  }} {{!--targetId="markerName"  --}}
+  {{goto-marker data=data marker1=marker}}
+{{/ember-popover }}

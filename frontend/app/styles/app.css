@@ -758,3 +758,14 @@ g.ap.selected > text {
     display : inherit;
 }
 /* -------------------------------------------------------------------------- */
+div#goto-marker > div
+{
+    display : inline-block;
+}
+.tooltip-inner  /*.ember-popover*/
+{
+  background-color : #f2f2f2;
+  color: #000;
+}
+
+/* -------------------------------------------------------------------------- */
