@@ -3,6 +3,7 @@
 var _ = require('lodash')
 
 var acl = require('../utilities/acl')
+var identity = require('../utilities/identity')
 var upload = require('../utilities/upload')
 var load = require('../utilities/load')
 
@@ -10,29 +11,12 @@ module.exports = function(Geneticmap) {
 
   Geneticmap.observe('access', function(ctx, next) {
     console.log('> Geneticmap.access');
-
-    let accessToken = ctx.options.accessToken
-    let userId = String(accessToken.userId)
-    
-    if (!ctx.query) {
-      ctx.query = {};
-    }
-    let where = {or: [{clientId: userId}, {public: true}]};
-    if (ctx.query.where) {
-      where = {and: [where, ctx.query.where]}
-    }
-    ctx.query.where = where;
-<<<<<<< HEAD
-    console.log(ctx.query)
-=======
->>>>>>> 36910c63ca8f683070393fe1f500df025526a1c0
-
+    identity.queryFilterAccessible(ctx)
     next()
   })
 
   Geneticmap.afterRemote('find', function(ctx, modelInstance, next) {
     console.log('> Geneticmap.loaded');
-
     next()
   })
 
@@ -43,8 +27,6 @@ module.exports = function(Geneticmap) {
       'principalId': '$everyone',
       'permission': 'DENY',
     },
-<<<<<<< HEAD
-=======
     // {
     //   'accessType': 'READ',
     //   'principalType': 'ROLE',
@@ -57,7 +39,6 @@ module.exports = function(Geneticmap) {
     //   'principalId': '$owner',
     //   'permission': 'ALLOW',
     // }
->>>>>>> 36910c63ca8f683070393fe1f500df025526a1c0
     {
       'accessType': '*',
       'principalType': 'ROLE',
@@ -75,14 +56,14 @@ module.exports = function(Geneticmap) {
 
   Geneticmap.observe('before save', function(ctx, next) {
     if (ctx.instance) {
-      // populate with userId
-      // this appears to be sidestepped by populating at upload time
-      // TODO revisit this during / after 
-      // ctx.Model.clientId = ctx.options.accessToken.userId
       var newDate = Date.now();  
       // ctx.instance.createdAt = newDate;
       // ctx.Model.updatedAt = newDate;
-      ctx.instance.clientId = ctx.options.accessToken.userId
+
+      let clientId = identity.gatherClientId(ctx)
+      if (clientId) {
+        ctx.instance.clientId = clientId
+      }
     }
     next();
   });
@@ -127,7 +108,7 @@ module.exports = function(Geneticmap) {
   }
 
   Geneticmap.tableUpload = function(data, options, cb) {
-    var userId = options.accessToken.userId
+    let clientId = identity.gatherClientId(options)
 
     var models = this.app.models;
     var chromosomes = {};
@@ -161,11 +142,14 @@ module.exports = function(Geneticmap) {
       var new_chromosomes = [];
       Object.keys(chromosomes).forEach(function(name) {
         if (chromosomes[name] === false) {
-          new_chromosomes.push({
+          let payload = {
             name: name,
-            geneticmapId: genMap.id,
-            clientId: userId
-          });
+            geneticmapId: genMap.id
+          }
+          if (clientId) {
+            payload['clientId'] = clientId
+          }
+          new_chromosomes.push(payload);
         }
       });
       // create new chromosomes
@@ -188,11 +172,11 @@ module.exports = function(Geneticmap) {
   }
 
   Geneticmap.remoteMethod('upload', {
-        accepts: [
-          {arg: 'msg', type: 'object', required: true, http: {source: 'body'}}
-        ],
-        returns: {arg: 'status', type: 'string'},
-        description: "Perform a bulk upload of a genetic map with associated chromosomes and markers"
+    accepts: [
+      {arg: 'msg', type: 'object', required: true, http: {source: 'body'}}
+    ],
+    returns: {arg: 'status', type: 'string'},
+    description: "Perform a bulk upload of a genetic map with associated chromosomes and markers"
   });
   Geneticmap.remoteMethod('tableUpload', {
     accepts: [

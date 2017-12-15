@@ -9,14 +9,24 @@
   "properties": {},
   "validations": [],
   "relations": {
+    "geneticmaps": {
+      "type": "hasMany",
+      "model": "Geneticmap",
+      "foreignKey": "clientId"
+    },
     "chromosomes": {
       "type": "hasMany",
       "model": "Chromosome",
       "foreignKey": "clientId"
     },
-    "geneticmaps": {
+    "annotations": {
       "type": "hasMany",
-      "model": "Geneticmap",
+      "model": "Annotation",
+      "foreignKey": "clientId"
+    },
+    "intervals": {
+      "type": "hasMany",
+      "model": "Interval",
       "foreignKey": "clientId"
     }
   },

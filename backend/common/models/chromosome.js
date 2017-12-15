@@ -1,25 +1,14 @@
 'use strict';
 
 var acl = require('../utilities/acl')
+var identity = require('../utilities/identity')
 var task = require('../utilities/task')
 
 module.exports = function(Chromosome) {
 
   Chromosome.observe('access', function(ctx, next) {
     console.log('> Chromosome.access');
-
-    let accessToken = ctx.options.accessToken
-    let userId = String(accessToken.userId)
-    
-    if (!ctx.query) {
-      ctx.query = {};
-    }
-    let where = {or: [{clientId: userId}, {public: true}]};
-    if (ctx.query.where) {
-      where = {and: [where, ctx.query.where]}
-    }
-    ctx.query.where = where;
-
+    identity.queryFilterAccessible(ctx)
     next()
   })
 
@@ -56,10 +45,6 @@ module.exports = function(Chromosome) {
     var newDate = Date.now();
 
     if (ctx.instance) {
-      // populate with userId
-      // this appears to be sidestepped by populating at upload time
-      // TODO revisit this during / after 
-      // ctx.Model.clientId = ctx.options.accessToken.userId
       // ctx.instance.createdAt = newDate;
       // ctx.instance.updatedAt = newDate;
     }

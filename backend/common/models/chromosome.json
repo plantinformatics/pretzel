@@ -1,43 +1,14 @@
 {
   "name": "Chromosome",
   "base": "PersistedModel",
-  "idInjection": true,
-  "options": {
-    "validateUpsert": true
-  },
   "properties": {
-    "name": {
-      "type": "string",
-      "required": true
-    },
     "tags" : {
       "type": ["string"],
       "required": false
-    },
-    "public": {
-      "type": "boolean",
-      "default": false
-    },
-    "createdAt" : {
-      "type": "date",
-      "default": "$now"
-    },
-    "updatedAt" : {
-      "type": "date",
-      "default": "$now"
-    },
-    "clientId": {
-      "type": "string",
-      "required": true
     }
   },
   "validations": [],
   "relations": {
-    "clients": {
-      "type": "belongsTo",
-      "model": "Client",
-      "foreignKey": "clientId"
-    },
     "geneticmap": {
       "type": "belongsTo",
       "model": "Geneticmap",

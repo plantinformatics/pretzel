@@ -1,39 +1,11 @@
 {
   "name": "Geneticmap",
   "description": "High level data structure containing chromosomes",
-  "base": "PersistedModel",
-  "idInjection": true,
-  "options": {
-    "validateUpsert": true
-  },
+  "base": "Record",
   "properties": {
-    "name": {
-      "type": "string",
-      "required": true
-    },
-    "public": {
-      "type": "boolean",
-      "default": false
-    },
-    "createdAt" : {
-      "type": "date",
-      "default": "$now"
-    },
-    "updatedAt" : {
-      "type": "date",
-      "default": "$now"
-    },
-    "clientId": {
-      "type": "string"
-    }
   },
   "validations": [],
   "relations": {
-    "clients": {
-      "type": "belongsTo",
-      "model": "Client",
-      "foreignKey": "clientId"
-    },
     "chromosomes": {
       "type": "hasMany",
       "model": "Chromosome",

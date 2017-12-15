@@ -6,7 +6,7 @@ module.exports = function(app) {
   // another ACL will give write access if it is provided
 
   function publicityDecision(data, userId) {
-    let clientId = data.clientId
+    let clientId = String(data.clientId)
     let publicity = data.public
 
     let checkMatchUser = clientId == userId

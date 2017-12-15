@@ -1,0 +1,42 @@
+{
+  "name": "Record",
+  "base": "PersistedModel",
+  "description": "Base model for owned resources",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true
+  },
+  "properties": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "public": {
+      "type": "boolean",
+      "default": false
+    },
+    "createdAt" : {
+      "type": "date",
+      "default": "$now"
+    },
+    "updatedAt" : {
+      "type": "date",
+      "default": "$now"
+    },
+    "clientId": {
+      "type": "string",
+      "required": true
+    }
+  },
+  "validations": [],
+  "relations": {
+    "clients": {
+      "type": "belongsTo",
+      "model": "Client",
+      "foreignKey": "clientId"
+    }
+  },
+  "acls": [
+  ],
+  "methods": {}
+}

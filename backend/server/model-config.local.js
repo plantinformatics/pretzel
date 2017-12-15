@@ -65,6 +65,10 @@ var config = {
     "dataSource": "mongoDs",
     "public": true
   },
+  "Annotation": {
+    "dataSource": "mongoDs",
+    "public": true
+  },
   "Interval": {
     "dataSource": "mongoDs",
     "public": true

@@ -1,15 +1,8 @@
 {
   "name": "Interval",
-  "base": "PersistedModel",
-  "idInjection": true,
-  "options": {
-    "validateUpsert": true
-  },
+  "base": "Annotation",
+  "description": "Commentary on Feature range",
   "properties": {
-    "name": {
-      "type": "string",
-      "required": true
-    },
     "starting": {
       "type": "string",
       "required": true
@@ -17,12 +10,6 @@
     "ending": {
       "type": "string",
       "required": true
-    },
-    "createdAt" : {
-      "type": "date"
-    },
-    "updatedAt" : {
-      "type": "date"
     }
   },
   "validations": [],
