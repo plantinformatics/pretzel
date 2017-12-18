@@ -22,15 +22,11 @@
     "updatedAt" : {
       "type": "date",
       "default": "$now"
-    },
-    "clientId": {
-      "type": "string",
-      "required": true
     }
   },
   "validations": [],
   "relations": {
-    "clients": {
+    "client": {
       "type": "belongsTo",
       "model": "Client",
       "foreignKey": "clientId"

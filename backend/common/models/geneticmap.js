@@ -11,7 +11,7 @@ module.exports = function(Geneticmap) {
 
   Geneticmap.observe('access', function(ctx, next) {
     console.log('> Geneticmap.access');
-    identity.queryFilterAccessible(ctx)
+    // identity.queryFilterAccessible(ctx)
     next()
   })
 
@@ -20,39 +20,27 @@ module.exports = function(Geneticmap) {
     next()
   })
 
-  var rules = [
-    {
-      'accessType': '*',
-      'principalType': 'ROLE',
-      'principalId': '$everyone',
-      'permission': 'DENY',
-    },
-    // {
-    //   'accessType': 'READ',
-    //   'principalType': 'ROLE',
-    //   'principalId': '$authenticated',
-    //   'permission': 'ALLOW',
-    // },
-    // {
-    //   'accessType': '*',
-    //   'principalType': 'ROLE',
-    //   'principalId': '$owner',
-    //   'permission': 'ALLOW',
-    // }
-    {
-      'accessType': '*',
-      'principalType': 'ROLE',
-      'principalId': '$owner',
-      'permission': 'ALLOW',
-    },
-    {
-      'accessType': 'READ',
-      'principalType': 'ROLE',
-      'principalId': 'public',
-      'permission': 'ALLOW',
-    }
-  ];
-  acl.assign(Geneticmap, rules);
+  // var rules = [
+  //   {
+  //     'accessType': '*',
+  //     'principalType': 'ROLE',
+  //     'principalId': '$everyone',
+  //     'permission': 'DENY',
+  //   },
+  //   {
+  //     'accessType': '*',
+  //     'principalType': 'ROLE',
+  //     'principalId': '$owner',
+  //     'permission': 'ALLOW',
+  //   },
+  //   {
+  //     'accessType': 'READ',
+  //     'principalType': 'ROLE',
+  //     'principalId': 'public',
+  //     'permission': 'ALLOW',
+  //   }
+  // ];
+  // acl.assign(Geneticmap, rules);
 
   Geneticmap.observe('before save', function(ctx, next) {
     if (ctx.instance) {
@@ -186,12 +174,7 @@ module.exports = function(Geneticmap) {
     returns: {arg: 'status', type: 'string'},
     description: "Perform a bulk upload of a markers from tabular form"
   });
-};
 
-// NOTES
-// the 'scope' property in the associated json file allows us to add in the
-// relation to chromosomes. If this property is not added, then all we will receive
-// is the high-level geneticmap info, and will have to perform another call to gather
-// the chromosome info. While this is suitable in the short-term, in the long-term
-// this may need to be changed if the number of chromosomes is high for the geneticmaps
-// in aggregate
+  acl.assignRulesRecord(Geneticmap)
+  acl.limitRemoteMethods(Geneticmap)
+};

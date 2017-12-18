@@ -20,6 +20,7 @@ module.exports = function(app) {
   }
 
   Role.registerResolver('public', function(role, context, cb) {
+    console.log(`resolver ${role}`)
 
     var modelName = context.modelName
 
@@ -28,6 +29,16 @@ module.exports = function(app) {
     let options = {}
     if (context.accessToken) options.accessToken = context.accessToken
 
+    //Q: Is the user logged in? (there will be an accessToken with an ID if so)
+    var clientId = context.accessToken.userId
+    var checkIdMissing = !clientId;
+    var checkAuth = process.env.AUTH == 'ALL'
+    if (checkAuth && checkIdMissing) {
+      //A: No, user is NOT logged in: callback with FALSE
+      return process.nextTick(() => cb(null, false));
+    }
+    
+
     // Q: Is the request not looking for a specific resource?
     if (context.property == 'find') {
       // A: Yes. Have no way to check specific resource.
@@ -35,44 +46,13 @@ module.exports = function(app) {
       return process.nextTick(() => cb(null, true));
     }
 
-    // Q: Is the current request accessing a Geneticmap or Chromosome?
-    if (modelName !== 'Geneticmap' && modelName !== 'Chromosome' && modelName !== 'Marker') {
-      // A: No. This role is only for geneticmap or chromosome: callback with FALSE
-      return process.nextTick(() => cb(null, false));
-    }
-
-    //Q: Is the user logged in? (there will be an accessToken with an ID if so)
-    var userId = context.accessToken.userId;
-    if (!userId) {
-      //A: No, user is NOT logged in: callback with FALSE
-      return process.nextTick(() => cb(null, false));
-    }
-
     // separate handling for geneticmap and chromosome models
-    if (modelName == 'Geneticmap') {
-      // gather geneticmap to confirm publicity
-      context.model.findById(context.modelId, {}, options)
-      .then(function(data) {
-        if (data) {
-          if (publicityDecision(data, userId)) {
-            cb(null, true)
-          } else {
-            cb(null, false)
-          }
-        } else {
-          cb(Error(`${modelName} not found`));
-        }
-      })
-      .catch(function(err) {
-        console.log('ERROR', err)
-        cb(err);
-      })
-    } else if (modelName == 'Chromosome') {
+    if (modelName == 'Chromosome') {
       // need to gather both chromosome and geneticmap to confirm publicity
       context.model.findById(context.modelId, {}, options)
       .then(function(data) {
         if (data) {
-          if (publicityDecision(data, userId)) {
+          if (publicityDecision(data, clientId)) {
             // check geneticmap for same conditions
             var Geneticmap = app.models.Geneticmap
             var geneticmapId = data.geneticmapId
@@ -86,7 +66,7 @@ module.exports = function(app) {
       })
       .then(function(data) {
         if (data) {
-          if (publicityDecision(data, userId)) {
+          if (publicityDecision(data, clientId)) {
             cb(null, true)
           } else {
             cb(null, false)
@@ -99,7 +79,6 @@ module.exports = function(app) {
         console.log('ERROR', err)
         cb(err);
       })
-
     } else if (modelName == 'Marker') {
       // need to gather both chromosome and geneticmap to confirm publicity
       context.model.findById(context.modelId, {}, options)
@@ -117,7 +96,7 @@ module.exports = function(app) {
       .then(function(data) {
         // Chromosome data
         if (data) {
-          if (publicityDecision(data, userId)) {
+          if (publicityDecision(data, clientId)) {
             // check geneticmap for same conditions
             var Geneticmap = app.models.Geneticmap
             var geneticmapId = data.geneticmapId
@@ -132,7 +111,7 @@ module.exports = function(app) {
       .then(function(data) {
         // Geneticmap data
         if (data) {
-          if (publicityDecision(data, userId)) {
+          if (publicityDecision(data, clientId)) {
             cb(null, true)
           } else {
             cb(null, false)
@@ -146,6 +125,25 @@ module.exports = function(app) {
         cb(err);
       })
 
+    } else {
+      // check publicity on particular model with no dependencies
+      // it is assumed that the model has client ownership properties
+      context.model.findById(context.modelId, {}, options)
+      .then(function(data) {
+        if (data) {
+          if (publicityDecision(data, clientId)) {
+            cb(null, true)
+          } else {
+            cb(null, false)
+          }
+        } else {
+          cb(Error(`${modelName} not found`));
+        }
+      })
+      .catch(function(err) {
+        console.log('ERROR', err)
+        cb(err);
+      })
     }
   });
 };

@@ -14,9 +14,15 @@
   },
   "validations": [],
   "relations": {
-    "intervallink": {
+    "starting": {
       "type": "belongsTo",
-      "polymorphic": true
+      "model": "Marker",
+      "foreignKey": "starting"
+    },
+    "ending": {
+      "type": "belongsTo",
+      "model": "Marker",
+      "foreignKey": "ending"
     }
   },
   "acls": [

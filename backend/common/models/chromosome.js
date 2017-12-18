@@ -8,49 +8,19 @@ module.exports = function(Chromosome) {
 
   Chromosome.observe('access', function(ctx, next) {
     console.log('> Chromosome.access');
-    identity.queryFilterAccessible(ctx)
+    // identity.queryFilterAccessible(ctx)
     next()
   })
 
   Chromosome.observe('loaded', function(ctx, next) {
     // console.log('> Chromosome.loaded');
-
     next()
   })
 
-  var rules = [
-    {
-      'accessType': '*',
-      'principalType': 'ROLE',
-      'principalId': '$everyone',
-      'permission': 'DENY',
-    },
-    {
-      'accessType': '*',
-      'principalType': 'ROLE',
-      'principalId': '$owner',
-      'permission': 'ALLOW',
-    },
-    {
-      'accessType': 'READ',
-      'principalType': 'ROLE',
-      'principalId': 'public',
-      'permission': 'ALLOW',
-    }
-  ];
-
-  acl.assign(Chromosome, rules);
-
-  Chromosome.observe('before save', function(ctx, next) {
-    var newDate = Date.now();
-
-    if (ctx.instance) {
-      // ctx.instance.createdAt = newDate;
-      // ctx.instance.updatedAt = newDate;
-    }
-
-    next();
-  });
+  // Chromosome.observe('before save', function(ctx, next) {
+  //   console.log('> Chromosome.before save');
+  //   next();
+  // });
 
   Chromosome.paths = function(left, right, cb) {
     task.paths(this.app.models, left, right)
@@ -96,4 +66,6 @@ module.exports = function(Chromosome) {
     description: "Request syntenic blocks for left and right chromosomes"
   });
 
+  acl.assignRulesRecord(Chromosome)
+  acl.limitRemoteMethods(Chromosome)
 };

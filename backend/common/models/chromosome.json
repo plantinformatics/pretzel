@@ -19,10 +19,15 @@
       "model": "Marker",
       "foreignKey": ""
     },
+    "annotations": {
+      "type": "hasMany",
+      "model": "Annotation",
+      "foreignKey": ""
+    },
     "intervals": {
       "type": "hasMany",
       "model": "Interval",
-      "polymorphic": "intervallink"
+      "foreignKey": ""
     }
   },
   "acls": [

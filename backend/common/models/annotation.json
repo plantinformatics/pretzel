@@ -10,6 +10,11 @@
   },
   "validations": [],
   "relations": {
+    "chromosome": {
+      "type": "belongsTo",
+      "model": "Chromosome",
+      "foreignKey": ""
+    }
   },
   "acls": [
   ],
