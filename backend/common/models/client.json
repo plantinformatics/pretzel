@@ -9,14 +9,14 @@
   "properties": {},
   "validations": [],
   "relations": {
-    "geneticmaps": {
+    "datasets": {
       "type": "hasMany",
-      "model": "Geneticmap",
+      "model": "Dataset",
       "foreignKey": "clientId"
     },
-    "chromosomes": {
+    "blocks": {
       "type": "hasMany",
-      "model": "Chromosome",
+      "model": "Block",
       "foreignKey": "clientId"
     },
     "annotations": {

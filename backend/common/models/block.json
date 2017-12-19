@@ -1,7 +1,7 @@
 {
-  "name": "Chromosome",
+  "name": "Block",
   "base": "Record",
-  "description": "Containing markers",
+  "description": "Containing features",
   "properties": {
     "tags" : {
       "type": ["string"],
@@ -10,14 +10,14 @@
   },
   "validations": [],
   "relations": {
-    "geneticmap": {
+    "dataset": {
       "type": "belongsTo",
-      "model": "Geneticmap",
+      "model": "Dataset",
       "foreignKey": ""
     },
-    "markers": {
+    "features": {
       "type": "hasMany",
-      "model": "Marker",
+      "model": "Feature",
       "foreignKey": ""
     },
     "annotations": {

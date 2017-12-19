@@ -1,24 +1,24 @@
-{ "geneticmap":
+{ "dataset":
   {
     "name": "MyMap1",
-    "chromosomes":
+    "blocks":
     [
       {
-      "name": "MyChr",
-      "markers":
+      "name": "MyBlock",
+      "features":
         [
           {
-          "name": "markerA",
+          "name": "featureA",
           "position": 1
           },
           {
-          "name": "markerB",
+          "name": "featureB",
           "position": 1.5
           },
           {
-          "name": "markerC",
+          "name": "featureC",
           "position": 1.8,
-          "aliases": ["markerD"]
+          "aliases": ["featureD"]
           }
         ]
       }

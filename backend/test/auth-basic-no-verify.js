@@ -158,9 +158,9 @@ describe('auth-basic-no-verify', function() {
   });
 
   var runs = [
-    {model: 'geneticmaps'},
-    {model: 'chromosomes'},
-    // {model: 'markers'}
+    {model: 'datasets'},
+    {model: 'blocks'},
+    // {model: 'features'}
   ];
 
   runs.forEach(function (run, idx) {

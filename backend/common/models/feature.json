@@ -1,5 +1,5 @@
 {
-  "name": "Marker",
+  "name": "Feature",
   "base": "PersistedModel",
   "description": "Unit of data that can contain other units",
   "idInjection": true,
@@ -22,9 +22,9 @@
   },
   "validations": [],
   "relations": {
-    "chromosome": {
+    "block": {
       "type": "belongsTo",
-      "model": "Chromosome",
+      "model": "Block",
       "foreignKey": ""
     }
   },

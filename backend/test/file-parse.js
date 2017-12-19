@@ -48,9 +48,9 @@
 //         })
 //         .then(function(data) {
 //           assert.ok(data instanceof Object)
-//           assert.hasAllKeys(data, ['geneticmap']);
-//           assert.hasAllKeys(data.geneticmap, ['chromosomes', 'name']);
-//           assert.isArray(data.geneticmap.chromosomes);
+//           assert.hasAllKeys(data, ['dataset']);
+//           assert.hasAllKeys(data.dataset, ['blocks', 'name']);
+//           assert.isArray(data.dataset.blocks);
 //           done()
 //         })
 //         .catch(function(err) {

@@ -75,73 +75,73 @@ function createChunked (data, model, len) {
 }
 
 /**
- * Send a json geneticmap structure to the database
- * @param {Object} msg - The geneticmap object to be processed
+ * Send a json dataset structure to the database
+ * @param {Object} msg - The dataset object to be processed
  * @param {Object} models - Loopback database models
  */
 exports.json = (msg, models) => {
-  // current json spec has high level genetic map prop with data nested
-  var content = msg.geneticmap
+  // current json spec has high level dataset map prop with data nested
+  var content = msg.dataset
   if (!content || !content.name) {
-    throw Error("Unable to extract geneticmap from json");
+    throw Error("Unable to extract dataset from json");
   }
-  return checkGeneticmapExists(content.name, models)
+  return checkDatasetExists(content.name, models)
   .then(function(exists) {
     if (exists) {
-      throw Error("Duplicate geneticmap");
+      throw Error("Duplicate dataset");
     }
-    var arrayGeneticmaps = [{
+    var arrayDatasets = [{
       name: content.name
     }]
-    var arrayChromosomes = content.chromosomes.map(function(chromosome) {
+    var arrayBlocks = content.blocks.map(function(block) {
       return {
-        name: chromosome.name
+        name: block.name
       }
     })
-    var arrayMarkers = content.chromosomes.map(function(chromosome) {
-      return chromosome.markers.map(function(markers) {
-        return markers
+    var arrayFeatures = content.blocks.map(function(block) {
+      return block.features.map(function(features) {
+        return features
       })
     })
   
-    return models.Geneticmap.create(arrayGeneticmaps)
+    return models.Dataset.create(arrayDatasets)
     .then(function(data) {
-      // gather the genetic map identifiers to attach to chromosomes
-      let geneticmapId = data[0].id
-      // attaching id to chromosomes
-      arrayChromosomes = arrayChromosomes.map(function(chromosome) {
-        chromosome.geneticmapId = geneticmapId
-        return chromosome
+      // gather the dataset map identifiers to attach to blocks
+      let datasetId = data[0].id
+      // attaching id to blocks
+      arrayBlocks = arrayBlocks.map(function(block) {
+        block.datasetId = datasetId
+        return block
       })
-      return models.Chromosome.create(arrayChromosomes)
+      return models.block.create(arrayBlocks)
     })
     .then(function(data) {
-      // gather the genetic map identifiers to attach to markers
-      // attaching id to markers
-      arrayMarkers = arrayMarkers.map(function(chromosomeMarkers, idx) {
-        let chromosomeId = data[idx].id
-        return chromosomeMarkers.map(function(marker) {
-          if (!marker.aliases) marker.aliases = []
-          marker.chromosomeId = chromosomeId
-          return marker
+      // gather the dataset map identifiers to attach to features
+      // attaching id to features
+      arrayFeatures = arrayFeatures.map(function(blockFeatures, idx) {
+        let blockId = data[idx].id
+        return blockFeatures.map(function(feature) {
+          if (!feature.aliases) feature.aliases = []
+          feature.blockId = blockId
+          return feature
         })
       })
-      // concatenate the array markers into a flat array
-      arrayMarkers = [].concat.apply([], arrayMarkers);
-      return models.Marker.create(arrayMarkers)
+      // concatenate the array features into a flat array
+      arrayFeatures = [].concat.apply([], arrayFeatures);
+      return models.Feature.create(arrayFeatures)
   
-      // return createChunked(arrayMarkers, models.Marker, 5000)
+      // return createChunked(arrayFeatures, models.Feature, 5000)
     })
   });
 }
 
 /**
- * Check whether the specified geneticmap already exists in the db
- * @param {Object} name - the name of geneticmap to check
+ * Check whether the specified dataset already exists in the db
+ * @param {Object} name - the name of dataset to check
  * @returns {boolean} - true if exists
  */
-function checkGeneticmapExists(name, models) {
-  return models.Geneticmap.find({where: {name: name}, limit: 1})
+function checkDatasetExists(name, models) {
+  return models.Dataset.find({where: {name: name}, limit: 1})
   .then(function(results) {
     return results.length > 0;
   });

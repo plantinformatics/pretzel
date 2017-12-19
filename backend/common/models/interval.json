@@ -3,25 +3,17 @@
   "base": "Annotation",
   "description": "Commentary on Feature range",
   "properties": {
-    "starting": {
-      "type": "string",
-      "required": true
-    },
-    "ending": {
-      "type": "string",
-      "required": true
-    }
   },
   "validations": [],
   "relations": {
     "starting": {
       "type": "belongsTo",
-      "model": "Marker",
+      "model": "Feature",
       "foreignKey": "starting"
     },
     "ending": {
       "type": "belongsTo",
-      "model": "Marker",
+      "model": "Feature",
       "foreignKey": "ending"
     }
   },

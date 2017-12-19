@@ -38,6 +38,12 @@ var config = {
     "dataSource": "mongoDs",
     "public": false
   },
+  "Client": {
+    "dataSource": "mongoDs",
+    "public": true,
+    "options": {
+    }
+  },
   "AccessToken": {
     "dataSource": "mongoDs",
     "public": false
@@ -57,11 +63,15 @@ var config = {
     "dataSource": "db",
     "public": false
   },
-  "Chromosome": {
+  "Dataset": {
     "dataSource": "mongoDs",
     "public": true
   },
-  "Geneticmap": {
+  "Block": {
+    "dataSource": "mongoDs",
+    "public": true
+  },
+  "Feature": {
     "dataSource": "mongoDs",
     "public": true
   },
@@ -72,16 +82,6 @@ var config = {
   "Interval": {
     "dataSource": "mongoDs",
     "public": true
-  },
-  "Marker": {
-    "dataSource": "mongoDs",
-    "public": true
-  },
-  "Client": {
-    "dataSource": "mongoDs",
-    "public": true,
-    "options": {
-    }
   },
 }
 

@@ -28,37 +28,37 @@ module.exports = function(app) {
     return false;
   }
 
-  function chromosomePermissions(chrom, userId, permission, context, cb) {
-    app.models.Geneticmap.findById(chrom.geneticmapId, {}, context)
+  function blockPermissions(block, userId, permission, context, cb) {
+    app.models.Dataset.findById(block.DatasetId, {}, context)
     .then(function(map) {
       if (map) {
         cb(permission(map, userId))
       } else {
-        throw Error("Geneticmap not found")
+        throw Error("Dataset not found")
       }
     })
   }
 
-  function markerPermissions(marker, userId, permission, context, cb) {
-    app.models.Chromosome.findById(marker.chromosomeId, {}, context)
-    .then(function(chrom) {
-      if (chrom) {
-        chromosomePermissions(chrom, userId, permission, context, function(allow) {
+  function featurePermissions(feature, userId, permission, context, cb) {
+    app.models.Block.findById(feature.blockId, {}, context)
+    .then(function(block) {
+      if (block) {
+        blockPermissions(block, userId, permission, context, function(allow) {
           cb(allow)
         })
       } else {
-        throw Error("Chromsome not found")
+        throw Error("Block not found")
       }
     })
   }
 
   function access(modelName, model, userId, permission, context, cb) {
-    if (modelName == "Chromsome") {
-      chromosomePermissions(model, userId, permission, context, function(allow) {
+    if (modelName == "Block") {
+      blockPermissions(model, userId, permission, context, function(allow) {
         cb(allow)
       })
-    } else if (modelName == "Marker") {
-      markerPermissions(model, userId, permission, context, function(allow) {
+    } else if (modelName == "Feature") {
+      featurePermissions(model, userId, permission, context, function(allow) {
         cb(allow)
       })
     } else {

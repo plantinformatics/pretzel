@@ -1,14 +1,14 @@
 {
-  "name": "Geneticmap",
-  "description": "High level data structure containing chromosomes",
+  "name": "Dataset",
+  "description": "High level data structure containing blocks",
   "base": "Record",
   "properties": {
   },
   "validations": [],
   "relations": {
-    "chromosomes": {
+    "blocks": {
       "type": "hasMany",
-      "model": "Chromosome",
+      "model": "Block",
       "foreignKey": ""
     }
   },

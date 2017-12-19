@@ -117,8 +117,10 @@ exports.limitRemoteMethodsRelated = (model) => {
   try {
     Object.keys(model.definition.settings.relations).forEach(function(relation) {
 
-      var nameMethods = ['findById', 'destroyById', 'updateById', 'exists',
-        'link', 'get', 'create', 'update', 'destroy', 'unlink', 'count', 'delete']
+      var nameMethods = [
+        'findById', 'destroyById', 'updateById', 'exists', 'link', 'get',
+        // 'create',
+        'update', 'destroy', 'unlink', 'count', 'delete']
       
       nameMethods.forEach(function(method) {
         relationMethods.push({ name: `prototype.__${method}__${relation}`});
