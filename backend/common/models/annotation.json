@@ -3,16 +3,17 @@
   "base": "Record",
   "description": "Data commentary and insights",
   "properties": {
-    "feature": {
-      "type": "string",
-      "required": true
-    }
   },
   "validations": [],
   "relations": {
     "chromosome": {
       "type": "belongsTo",
       "model": "Chromosome",
+      "foreignKey": ""
+    },
+    "feature": {
+      "type": "belongsTo",
+      "model": "Marker",
       "foreignKey": ""
     }
   },

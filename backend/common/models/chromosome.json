@@ -1,6 +1,7 @@
 {
   "name": "Chromosome",
   "base": "Record",
+  "description": "Containing markers",
   "properties": {
     "tags" : {
       "type": ["string"],

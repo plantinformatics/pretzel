@@ -20,37 +20,14 @@ module.exports = function(Record) {
     next()
   })
 
-  // var rules = [
-  //   {
-  //     'accessType': '*',
-  //     'principalType': 'ROLE',
-  //     'principalId': '$everyone',
-  //     'permission': 'DENY',
-  //   },
-  //   {
-  //     'accessType': '*',
-  //     'principalType': 'ROLE',
-  //     'principalId': '$owner',
-  //     'permission': 'ALLOW',
-  //   },
-  //   {
-  //     'accessType': 'READ',
-  //     'principalType': 'ROLE',
-  //     'principalId': 'public',
-  //     'permission': 'ALLOW',
-  //   }
-  // ];
-  // acl.assign(Record, rules);
-
   Record.observe('before save', function(ctx, next) {
     console.log(`> Record.before save ${ctx.Model.modelName}`)
-    var newDate = Date.now();
-
-    if (ctx.instance) {
-      // ctx.instance.createdAt = newDate;
-      // ctx.instance.updatedAt = newDate;
+    if (ctx.currentInstance) {
+      // assigning creation / update times to resource
+      var newDate = Date.now();
+      if (!ctx.currentInstance.createdAt) ctx.currentInstance.createdAt = newDate
+      ctx.currentInstance.updatedAt = newDate;
     }
-
     next();
   });
   

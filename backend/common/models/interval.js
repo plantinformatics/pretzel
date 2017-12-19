@@ -13,4 +13,6 @@ module.exports = function(Interval) {
 
   acl.assignRulesRecord(Interval)
   acl.limitRemoteMethods(Interval)
+  acl.limitRemoteMethodsSubrecord(Interval)
+  acl.limitRemoteMethodsRelated(Interval)
 };

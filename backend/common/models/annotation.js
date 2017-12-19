@@ -13,4 +13,6 @@ module.exports = function(Annotation) {
 
   acl.assignRulesRecord(Annotation)
   acl.limitRemoteMethods(Annotation)
+  acl.limitRemoteMethodsSubrecord(Annotation)
+  acl.limitRemoteMethodsRelated(Annotation)
 };

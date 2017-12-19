@@ -68,4 +68,6 @@ module.exports = function(Chromosome) {
 
   acl.assignRulesRecord(Chromosome)
   acl.limitRemoteMethods(Chromosome)
+  acl.limitRemoteMethodsSubrecord(Chromosome)
+  acl.limitRemoteMethodsRelated(Chromosome)
 };

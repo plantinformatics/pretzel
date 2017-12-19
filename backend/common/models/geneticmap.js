@@ -20,28 +20,6 @@ module.exports = function(Geneticmap) {
     next()
   })
 
-  // var rules = [
-  //   {
-  //     'accessType': '*',
-  //     'principalType': 'ROLE',
-  //     'principalId': '$everyone',
-  //     'permission': 'DENY',
-  //   },
-  //   {
-  //     'accessType': '*',
-  //     'principalType': 'ROLE',
-  //     'principalId': '$owner',
-  //     'permission': 'ALLOW',
-  //   },
-  //   {
-  //     'accessType': 'READ',
-  //     'principalType': 'ROLE',
-  //     'principalId': 'public',
-  //     'permission': 'ALLOW',
-  //   }
-  // ];
-  // acl.assign(Geneticmap, rules);
-
   Geneticmap.observe('before save', function(ctx, next) {
     if (ctx.instance) {
       var newDate = Date.now();  
@@ -177,4 +155,5 @@ module.exports = function(Geneticmap) {
 
   acl.assignRulesRecord(Geneticmap)
   acl.limitRemoteMethods(Geneticmap)
+  acl.limitRemoteMethodsRelated(Geneticmap)
 };

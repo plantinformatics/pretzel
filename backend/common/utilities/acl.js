@@ -80,3 +80,57 @@ exports.limitRemoteMethods = (model) => {
   });
 
 }
+
+/**
+ * Limit subrecord model methods to those required for Pretzel application
+ * @param {Object} model - Loopback database model
+ */
+exports.limitRemoteMethodsSubrecord = (model) => {
+
+  var methodNames = [
+    // 'create',
+    // 'deleteById',
+    // 'updateAttributes',
+    // 'patchAttributes',
+    'find',
+    // 'findById',
+  ];
+
+  methodNames.forEach(function (methodName) {
+    if (!!model.prototype[methodName]) {
+      model.disableRemoteMethodByName('prototype.' + methodName);
+    } else {
+      model.disableRemoteMethodByName(methodName);
+    }
+  });
+
+}
+
+/**
+ * Limit related model methods to those required for Pretzel application
+ * @param {Object} model - Loopback database model
+ */
+exports.limitRemoteMethodsRelated = (model) => {
+
+  var relationMethods = [];
+  
+  try {
+    Object.keys(model.definition.settings.relations).forEach(function(relation) {
+
+      var nameMethods = ['findById', 'destroyById', 'updateById', 'exists',
+        'link', 'get', 'create', 'update', 'destroy', 'unlink', 'count', 'delete']
+      
+      nameMethods.forEach(function(method) {
+        relationMethods.push({ name: `prototype.__${method}__${relation}`});
+      });
+    });
+  } catch(err) {
+    throw err
+  }
+
+  relationMethods.forEach(function(method) {
+    var methodName = method.name;
+    model.disableRemoteMethodByName(methodName);
+  });
+
+}
