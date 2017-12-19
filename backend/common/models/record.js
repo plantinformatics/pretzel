@@ -43,7 +43,7 @@ module.exports = function(Record) {
   // acl.assign(Record, rules);
 
   Record.observe('before save', function(ctx, next) {
-    console.log('Record.before save')
+    console.log(`> Record.before save ${ctx.Model.modelName}`)
     var newDate = Date.now();
 
     if (ctx.instance) {

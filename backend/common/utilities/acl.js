@@ -30,15 +30,15 @@ exports.assignRulesRecord = (model) => {
       'permission': 'DENY',
     },
     {
-      'accessType': '*',
+      'accessType': 'READ',
       'principalType': 'ROLE',
-      'principalId': '$owner',
+      'principalId': 'viewer',
       'permission': 'ALLOW',
     },
     {
-      'accessType': 'READ',
+      'accessType': 'WRITE',
       'principalType': 'ROLE',
-      'principalId': 'public',
+      'principalId': 'editor',
       'permission': 'ALLOW',
     }
   ];
