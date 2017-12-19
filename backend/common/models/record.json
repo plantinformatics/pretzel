@@ -15,6 +15,10 @@
       "type": "boolean",
       "default": false
     },
+    "readOnly": {
+      "type": "boolean",
+      "default": true
+    },
     "createdAt" : {
       "type": "date",
       "default": "$now"

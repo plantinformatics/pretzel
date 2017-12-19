@@ -10,7 +10,7 @@ var load = require('../utilities/load')
 module.exports = function(Record) {
 
   Record.observe('access', function(ctx, next) {
-    console.log('> Record.access');
+    console.log(`> Record.access ${ctx.Model.modelName}`);
     identity.queryFilterAccessible(ctx)
     next()
   })

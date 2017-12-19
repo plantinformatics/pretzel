@@ -1,6 +1,6 @@
 {
   "name": "Chromosome",
-  "base": "PersistedModel",
+  "base": "Record",
   "properties": {
     "tags" : {
       "type": ["string"],
@@ -34,6 +34,6 @@
   ],
   "methods": {},
   "scope": {
-    "include": "intervals"
+    "include": ["annotations", "intervals"]
   }
 }
