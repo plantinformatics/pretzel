@@ -1,6 +1,7 @@
 {
   "name": "Marker",
   "base": "PersistedModel",
+  "description": "Unit of data that can contain other units",
   "idInjection": true,
   "options": {
     "validateUpsert": true

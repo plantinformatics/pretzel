@@ -75,7 +75,7 @@ var config = {
   },
   "Marker": {
     "dataSource": "mongoDs",
-    "public": false
+    "public": true
   },
   "Client": {
     "dataSource": "mongoDs",
