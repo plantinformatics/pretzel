@@ -43,10 +43,10 @@
         </div>
       {{/if}}
     <ul class="list-group">
-      {{#each data as |geneticmap|}}
-        {{panel/manage-explorer-geneticmap
+      {{#each data as |dataset|}}
+        {{panel/manage-explorer-dataset
           filter=filter
-          geneticmap=geneticmap
+          dataset=dataset
           selectedChrom=selectedChrom
           selectChrom="selectChrom"
           deleteChrom="deleteChrom"}}

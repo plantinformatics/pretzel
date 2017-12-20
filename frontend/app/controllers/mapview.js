@@ -17,9 +17,9 @@ export default Ember.Controller.extend(Ember.Evented, {
       // console.log("setTab", side, tab);
       this.set(`layout.${side}.tab`, tab);
     },
-    updateSelectedMarkers: function(markers) {
-    	// console.log("updateSelectedMarkers in mapview", markers.length);
-      this.set('selectedMarkers', markers);
+    updateSelectedFeatures: function(features) {
+    	// console.log("updateselectedFeatures in mapview", features.length);
+      this.set('selectedFeatures', features);
     },
 
     /**  remove mapName from this.get('mapsToView') and update URL
@@ -45,46 +45,47 @@ export default Ember.Controller.extend(Ember.Evented, {
       }
     },
     updateChrs : function(/*chrID*/) {
-      let mdv=this.get('model.mapsDerived.content');
+      let mdv = this.get('model.mapsDerived.content');
       if ((mdv === undefined) || (mdv === null)) {
         console.log("updateChrs", this.get('model'));
       } else {
-        let
-        availableChrs = mdv.availableChrs,
-        availableMaps = mdv.availableMaps,
-        mtv = this.get('mapsToView'),
-        extraChrs = availableChrs;
-          if (trace_promise > 1)
-        console.log("updateChrs", availableChrs, mtv); // , chrID
-        this.set('extraChrs', extraChrs);
+        let availableBlocks = mdv.availableChrs
+        let availableDatasets = mdv.availableMaps
+        let mtv = this.get('mapsToView')
+        // let extraChrs = availableBlocks;
+        
+        if (trace_promise > 1) console.log("updateChrs", availableBlocks, mtv); // , chrID
+        
+        this.set('extraChrs', availableBlocks);
         // the above is draft replacement for the following.
 
-        // copied (with some excisions) from routes/mapview model(); this needs to be reorganised - probably to a controllers/chromosome.js
-        let selMaps = [];
-        if (availableMaps) {
-        // availableMaps.then(function(genmaps) );
-        let genmaps = availableMaps;
-        genmaps.forEach(function(map) {
-          let chrs = map.get('chromosomes');
-          chrs.forEach(function(chr) {
-            var exChrs = [];
-            chr.set('isSelected', false); // In case it has been de-selected.
+        // copied (with some excisions) from routes/mapview model();
+        // this needs to be reorganised - probably to a controllers/chromosome.js
+        let selectedDatasets = [];
+        if (availableDatasets) {
+        // availableDatasets.then(function(genmaps) );
+        // let genmaps = availableDatasets;
+        availableDatasets.forEach(function(dataset) {
+          let blocks = dataset.get('blocks');
+          blocks.forEach(function(block) {
+            var exblocks = [];
+            block.set('isSelected', false); // In case it has been de-selected.
             if (mtv) {
               for (var i=0; i < mtv.length; i++) {
-                if (chr.get('id') != mtv[i]) {
-                  exChrs.push(mtv[i]);
+                if (block.get('id') != mtv[i]) {
+                  exblocks.push(mtv[i]);
                 }
                 else {
-                  chr.set('isSelected', true);
-                  selMaps.push(chr);
+                  block.set('isSelected', true);
+                  selectedDatasets.push(block);
                 }
               }
             }
-            chr.set('extraChrs', exChrs);
+            block.set('extrablocks', exblocks);
           });
         });
         }
-        this.set("selectedMaps", selMaps);
+        this.set("selectedMaps", selectedDatasets);
       }
     },
     toggleShowUnique: function() {
@@ -97,22 +98,22 @@ export default Ember.Controller.extend(Ember.Evented, {
       this.set('pathColourScale', ! this.get('pathColourScale'));
     }
     , pathColourScale: true,
-    selectChrom: function(chr) {
-      this.set('selectedChrom', chr);
+    selectBlock: function(chr) {
+      this.set('selectedBlock', chr);
       d3.selectAll("ul#maps_aligned > li").classed("selected", false);
       d3.select('ul#maps_aligned > li[data-chr-id="' + chr.id + '"]').classed("selected", true);
       d3.selectAll("g.ap").classed("selected", false);
       d3.select("g#id" + chr.id).classed("selected", true);
     },
-    selectChromById: function(chrId) {
+    selectBlockById: function(blockId) {
       let selectedMaps = this.get('selectedMaps')
-      let chrom = null;
-      selectedMaps.forEach(function(chr) {
-        if (chr.id == chrId) {
-          chrom = chr;
+      let selectedBlock = null;
+      selectedMaps.forEach(function(block) {
+        if (block.id == blockId) {
+          selectedBlock = block;
         }
       })
-      this.send('selectChrom', chrom)
+      this.send('selectBlock', selectedBlock)
     },
     /** 
      * This function is a copy of the code in the routes/mapview.js file without the references to params
@@ -172,13 +173,13 @@ export default Ember.Controller.extend(Ember.Evented, {
         let a= ObjectPromiseProxy.create({promise: maps});
         a.then(function (result) { console.log("maps result 2", result, "availableChrs", result.availableChrs, "availableMaps", result.availableMaps); });
       }
-      result =
-        {chrPromises: promises,
-         mapsToView : [],
-         mapsDerived : ObjectPromiseProxy.create({promise: maps}),
-         mapsPromise : maps,
-         highlightMarker: false
-        };
+      result = {
+        chrPromises: promises,
+        mapsToView : [],
+        mapsDerived : ObjectPromiseProxy.create({promise: maps}),
+        mapsPromise : maps,
+        highlightMarker: false
+      };
       // console.log("routes/mapview: model() result", result);
       this.set('model', result);
       // return result;

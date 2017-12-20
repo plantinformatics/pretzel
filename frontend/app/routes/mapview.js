@@ -77,12 +77,10 @@ let config = {
     let mapsDerivedValue = {availableChrs: availableChrs, selectedMaps: selMaps};
 
     let seenChrs = new Set();
-    var maps = that.get('store').query(
-      'dataset',
+    
+    let maps = that.get('store').query('dataset',
       {
-        filter: {
-          'include': 'blocks'
-        }
+        filter: {'include': 'blocks'}
       }
     )
     .then(function(genmaps) {
@@ -93,25 +91,28 @@ let config = {
         console.log("genmaps.toArray()", mapsDerivedValue.availableMaps);
       genmaps.forEach(function(map) {
         let chrs = map.get('blocks');
-        chrs.forEach(function(chr) {
-          var exChrs = [];
-          mapsDerivedValue.availableChrs[chr.get('id')] = map.get('name'); // or true; // could be map or map.get('id');
-          chr.set('isSelected', false); // In case it has been de-selected.
-          // console.log(chr, map);
-          chr.set('map', map);  // reference to parent map
-          if (params.mapsToView) {
-            for (var i=0; i < params.mapsToView.length; i++) {
-              if (chr.get('id') != params.mapsToView[i]) {
-                exChrs.push(params.mapsToView[i]);
-              }
-              else {
-                chr.set('isSelected', true);
-                selMaps.push(chr);
+        console.log('CHRS', chrs)
+        if (chrs) {
+          chrs.forEach(function(chr) {
+            var exChrs = [];
+            mapsDerivedValue.availableChrs[chr.get('id')] = map.get('name'); // or true; // could be map or map.get('id');
+            chr.set('isSelected', false); // In case it has been de-selected.
+            // console.log(chr, map);
+            chr.set('map', map);  // reference to parent map
+            if (params.mapsToView) {
+              for (var i=0; i < params.mapsToView.length; i++) {
+                if (chr.get('id') != params.mapsToView[i]) {
+                  exChrs.push(params.mapsToView[i]);
+                }
+                else {
+                  chr.set('isSelected', true);
+                  selMaps.push(chr);
+                }
               }
             }
-          }
-          chr.set('extraChrs', exChrs);
-        });
+            chr.set('extraChrs', exChrs);
+          });
+        }
       });
       return Promise.resolve(mapsDerivedValue);
     },

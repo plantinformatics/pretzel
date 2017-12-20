@@ -9,7 +9,7 @@ const { inject: { service } } = Ember;
 export default DS.Model.extend({
   session: service('session'),
   name: attr('string'),
-  chromosomes: DS.hasMany('chromosome', { async: false }),
+  blocks: DS.hasMany('block', { async: false }),
   clientId: attr('string'),
   public: attr('boolean'),
   owner: Ember.computed('clientId', function() {

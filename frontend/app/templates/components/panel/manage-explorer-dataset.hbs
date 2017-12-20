@@ -4,42 +4,42 @@
       classSize='xs'
       classColour='default'
       icon='minus'
-      onClick=(action "switchGeneticmap" geneticmap)}}
+      onClick=(action "switchDataset" dataset)}}
   {{else}}
     {{elem-button
       classSize='xs'
       classColour='default'
       icon='plus'
-      onClick=(action "switchGeneticmap" geneticmap)}}
+      onClick=(action "switchDataset" dataset)}}
   {{/if}}
-  {{geneticmap.name}}
-  {{elem-icon-owner state=geneticmap.owner}}
-  {{elem-icon-visible state=geneticmap.public}}
+  {{dataset.name}}
+  {{elem-icon-owner state=dataset.owner}}
+  {{elem-icon-visible state=dataset.public}}
   <span class="badge">{{data.length}}</span>
 </li>
 {{#if layout.active}}
-  {{#each data as |chr|}}
+  {{#each data as |block|}}
     <li 
-      class="list-group-item {{if (compare chr.id '===' selectedChrom.id) 'list-group-item-warning'}}"
-      {{action "selectChrom" chr on="click"}}>
-      {{chr.name}}
-      {{elem-icon-owner state=chr.owner}}
-      {{elem-icon-visible state=chr.public}}
+      class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
+      {{action "selectBlock" block on="click"}}>
+      {{block.name}}
+      {{!-- {{elem-icon-owner state=block.owner}} --}}
+      {{!-- {{elem-icon-visible state=block.public}} --}}
       <span class="pull-right">
         {{!-- {{elem-button
           classSize='xs'
           classColour='info'
           icon='info-sign'
-          onClick=(action "selectChrom" chr)}} --}}
-        {{#if chr.isSelected}}
-          {{!-- {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
+          onClick=(action "selectBlock" block)}} --}}
+        {{#if block.isSelected}}
+          {{!-- {{#link-to "mapview" (query-params mapsToView=block.blockLink)}}
             {{elem-button
               classSize='xs'
               classColour='danger'
               icon='minus'}}
           {{/link-to}} --}}
         {{else}}
-          {{#link-to "mapview" (query-params mapsToView=chr.chrLink)}}
+          {{#link-to "mapview" (query-params mapsToView=block.blockLink)}}
             {{elem-button
               classSize='xs'
               classColour='success'
@@ -48,7 +48,7 @@
         {{/if}}
       </span>
       <p class="list-group-item-text">
-        {{#each chr.tags as |tag|}}
+        {{#each block.tags as |tag|}}
           <span class="label label-default" style="display: inline-block">
             {{tag}}
           </span>

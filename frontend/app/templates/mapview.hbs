@@ -66,8 +66,7 @@
             showScaffoldMarkers=showScaffoldMarkers
             showAsymmetricAliases=showAsymmetricAliases
             selectChrom="selectChrom"
-            deleteChrom="removeMap"
-            updateModel="updateModel"}}
+            deleteChrom="removeMap"}}
         {{/if}}
       </div>
     </div>
@@ -90,7 +89,7 @@
      availableChrs {{model.mapsDerived.availableChrs.length}}
      selectedMaps {{model.mapsDerived.selectedMaps.length}}
     </p>
-    {{#if hasData}}
+    {{!-- {{#if hasData}} --}}
       {{draw-map
         updatedSelectedMarkers='updateSelectedMarkers'
         data=model.chrPromises
@@ -108,7 +107,7 @@
         showAsymmetricAliases=showAsymmetricAliases
         selectedChrom=selectedChrom
         selectChromById='selectChromById'}}
-    {{/if}}
+    {{!-- {{/if}} --}}
   </div>
 
   {{#if layout.right.visible}}
@@ -118,13 +117,13 @@
           side="right"
           key="selection"
           state=layout.right.tab onClick="setTab"}}
-          Markers <span class="badge">{{selectedMarkers.length}}</span>
+          Features <span class="badge">{{selectedMarkers.length}}</span>
         {{/tab-button}}
         {{#tab-button
           side="right"
-          key="map"
+          key="block"
           state=layout.right.tab onClick="setTab"}}
-          Map {{elem-icon name="globe"}}
+          Block {{elem-icon name="globe"}}
         {{/tab-button}}
         {{#tab-button
           side="right"
@@ -142,18 +141,18 @@
       <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
         {{#if (compare layout.right.tab '===' 'selection')}}
           {{panel/manage-features
-            selectedMarkers=selectedMarkers
-            selectedChrom=selectedChrom}}
+            selectedFeatures=selectedFeatures
+            selectedBlock=selectedBlock}}
           {{!-- marker-detail
-            data=selectedMarkers --}}
-        {{else if (compare layout.right.tab '===' 'map')}}
-          {{panel/manage-map
-            selectedMarkers=selectedMarkers
-            chr=selectedChrom}}
+            data=selectedFeatures --}}
+        {{else if (compare layout.right.tab '===' 'block')}}
+          {{panel/manage-block
+            selectedFeatures=selectedFeatures
+            block=selectedBlock}}
         {{else if (compare layout.right.tab '===' 'settings')}}
           {{panel/manage-settings
-            selectedMarkers=selectedMarkers
-            selectedChrom=selectedChrom}}
+            selectedFeatures=selectedFeatures
+            selectedBlock=selectedBlock}}
         {{/if}}
       </div>
     </div>

@@ -2,6 +2,9 @@ import Ember from 'ember';
 import DS from 'ember-data';
 import ApplicationSerializer from './application';
 
+const { EmbeddedRecordsMixin } = DS;
+const { Mixin } = Ember;
+
 export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
   normalize(model, hash, prop) {
     var ret = this._super(...arguments);
@@ -9,8 +12,7 @@ export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
   },
   serialize(snapshot, options) {
     let json = this._super(...arguments);
-    // delete json.chromosomes
-    json.chromosomes = []
+    delete json.features
     delete json.createdAt
     delete json.updatedAt
     return json;
@@ -25,7 +27,21 @@ export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
     return hash;
   },
 
+  /*partialSerializersExtensions: {
+    extended: {
+      attrs: {
+        markers: { embedded: 'always' }
+      }
+    }
+  },
+
+  partialSerializersMixins: {
+    extended: [EmbeddedRecordsMixin]
+  }*/
+
   attrs: {
-    chromosomes: { embedded: 'always' }
+    markers: { embedded: 'always' },
+    intervals: { embedded: 'always' }
   }
+
 });
