@@ -10,6 +10,7 @@ export default DS.Model.extend({
   name: attr('string'),
   // tags: attr('null', { defaultValue: []}),
   tags: attr(),
+  // annotations: DS.hasMany('annotation', { async: false }),
   intervals: DS.hasMany('interval', { async: false }),
   createdAt: attr("date"),
   updatedAt: attr("date"),

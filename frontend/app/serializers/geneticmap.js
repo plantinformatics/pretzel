@@ -9,7 +9,8 @@ export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
   },
   serialize(snapshot, options) {
     let json = this._super(...arguments);
-    delete json.chromosomes
+    // delete json.chromosomes
+    json.chromosomes = []
     delete json.createdAt
     delete json.updatedAt
     return json;

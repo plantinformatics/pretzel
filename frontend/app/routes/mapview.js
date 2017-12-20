@@ -78,10 +78,10 @@ let config = {
 
     let seenChrs = new Set();
     var maps = that.get('store').query(
-      'geneticmap',
+      'dataset',
       {
         filter: {
-          'include': 'chromosomes'
+          'include': 'blocks'
         }
       }
     )
@@ -92,7 +92,7 @@ let config = {
       if (trace_promise > 1)
         console.log("genmaps.toArray()", mapsDerivedValue.availableMaps);
       genmaps.forEach(function(map) {
-        let chrs = map.get('chromosomes');
+        let chrs = map.get('blocks');
         chrs.forEach(function(chr) {
           var exChrs = [];
           mapsDerivedValue.availableChrs[chr.get('id')] = map.get('name'); // or true; // could be map or map.get('id');
