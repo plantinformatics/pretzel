@@ -6,9 +6,9 @@ export default Component.extend({
   session: service('session'),
   auth: service('auth'),
 
-  loadGeneticmaps: function(id) {
+  loadDatasets: function(id) {
     var that = this;
-    this.get('auth').getChromosomes().then(function(res) {
+    this.get('auth').getBlocks().then(function(res) {
       that.set('geneticmaps', res);
       $("#geneticmap").html('');
       $.each(res, function (i, item) {
@@ -31,7 +31,7 @@ export default Component.extend({
   onInit: function() {
     var that = this;
 
-    that.loadGeneticmaps();
+    that.loadDatasets();
     $(function() {
       $("#geneticmap").on('change', function() {
         var selectedMap = $("#geneticmap").val();
@@ -40,7 +40,7 @@ export default Component.extend({
         } else {
           $("#geneticmap_new").hide();
         }
-        that.checkChromosomes();
+        that.checkBlocks();
       });
 
       var table = new Handsontable($("#hotable")[0], {
@@ -54,7 +54,7 @@ export default Component.extend({
             type: 'text'
           },
           {
-            data: 'chrom',
+            data: 'block',
             type: 'text'
           },
           {
@@ -63,8 +63,8 @@ export default Component.extend({
           }
         ],
         colHeaders: [
-          'Marker / Gene',
-          'Chromosome',
+          'Feature',
+          'Block',
           'Position'
         ],
         height: 500,
@@ -75,17 +75,17 @@ export default Component.extend({
         manualColumnMove: true,
         contextMenu: true,
         afterChange: function() {
-          that.checkChromosomes();
+          that.checkBlocks();
         },
         afterRemoveRow: function() {
-          that.checkChromosomes();
+          that.checkBlocks();
         }
       });
       that.set('table', table);
     });
   }.on('init'),
 
-  checkChromosomes() {
+  checkBlocks() {
     var that = this;
     var maps = that.get('geneticmaps');
     var warning = null;
@@ -150,7 +150,7 @@ export default Component.extend({
         if (selectedMap == 'new') {
           that.get('auth').createGeneticmap(newMap)
           .then(function(res) {
-            that.loadGeneticmaps(res.id);
+            that.loadDatasets(res.id);
             resolve(res.id);
           });
         }

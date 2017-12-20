@@ -79,7 +79,7 @@ function createChunked (data, model, len) {
  * @param {Object} msg - The dataset object to be processed
  * @param {Object} models - Loopback database models
  */
-exports.json = (msg, models) => {
+exports.json = (msg, models, clientId) => {
   // current json spec has high level dataset map prop with data nested
   var content = msg.dataset
   if (!content || !content.name) {
@@ -91,11 +91,13 @@ exports.json = (msg, models) => {
       throw Error("Duplicate dataset");
     }
     var arrayDatasets = [{
-      name: content.name
+      name: content.name,
+      clientId: clientId
     }]
     var arrayBlocks = content.blocks.map(function(block) {
       return {
-        name: block.name
+        name: block.name,
+        clientId: clientId
       }
     })
     var arrayFeatures = content.blocks.map(function(block) {
@@ -113,7 +115,7 @@ exports.json = (msg, models) => {
         block.datasetId = datasetId
         return block
       })
-      return models.block.create(arrayBlocks)
+      return models.Block.create(arrayBlocks)
     })
     .then(function(data) {
       // gather the dataset map identifiers to attach to features

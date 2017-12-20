@@ -36,7 +36,7 @@ exports.assignRulesRecord = (model) => {
       'permission': 'ALLOW',
     },
     {
-      'accessType': 'WRITE',
+      'accessType': '*',
       'principalType': 'ROLE',
       'principalId': 'editor',
       'permission': 'ALLOW',

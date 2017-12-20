@@ -24,19 +24,19 @@ export default Service.extend({
   },
 
   uploadData(data) {
-    return this._ajax('Geneticmaps/upload', 'POST', JSON.stringify(data), true)
+    return this._ajax('Datasets/upload', 'POST', JSON.stringify(data), true)
   },
 
   tableUpload(data) {
-    return this._ajax('Geneticmaps/tableUpload', 'POST', JSON.stringify(data), true)
+    return this._ajax('Datasets/tableUpload', 'POST', JSON.stringify(data), true)
   },
 
-  getChromosomes() {
-    return this._ajax('Geneticmaps', 'GET', {'filter[include]': 'chromosomes'}, true)
+  getBlocks() {
+    return this._ajax('Datasets', 'GET', {'filter[include]': 'blocks'}, true)
   },
 
   createGeneticmap(name) {
-    return this._ajax('Geneticmaps', 'POST', JSON.stringify({name: name}), true)
+    return this._ajax('Datasets', 'POST', JSON.stringify({name: name}), true)
   },
 
   checkError(data, mapper) {

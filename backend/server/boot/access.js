@@ -66,52 +66,29 @@ module.exports = function(app) {
     }
   }
 
-  Role.registerResolver('viewer', function(role, context, cb) {
+  function genericResolver(role, context, cb) {
     console.log(`resolver ${role}`)
     
     if (!context.accessToken || !context.accessToken.userId) {
       // Not logged in -> deny
       return process.nextTick(() => cb(null, false))
     }
-    if (context.property == 'find') {
-      // allow find request
+    if (context.property == 'find' || context.property == 'upload') {
+      // allow find and upload requests
       return process.nextTick(() => cb(null, true))
     }
-
-    let userId = context.accessToken.userId
-    let modelName = context.modelName
-
-    let permission = canRead;
-
-    //Retrieve the model
-    context.model.findById(context.modelId, {}, context)
-    .then(function(model) {
-      if (model) {
-        access(modelName, model, userId, permission, context, function(allow) {
-          cb(null, allow)
-        })
-      } else {
-        cb(Error(`${modelName} not found`), false)
-      }
-    })
-  })
-
-  Role.registerResolver('editor', function(role, context, cb) {
-    console.log(`resolver ${role}`)
-    
-    if (!context.accessToken || !context.accessToken.userId) {
-      // Not logged in -> deny
+    if (!context.modelId) {
+      // No model id -> deny
       return process.nextTick(() => cb(null, false))
-    }
-    if (context.property == 'find') {
-      // allow find request
-      return process.nextTick(() => cb(null, true))
     }
 
     let userId = context.accessToken.userId
     let modelName = context.modelName
 
     let permission = canWrite;
+    if (role == 'viewer') {
+      permission = canRead;
+    }
 
     //Retrieve the model
     context.model.findById(context.modelId, {}, context)
@@ -124,5 +101,8 @@ module.exports = function(app) {
         cb(Error(`${modelName} not found`), false)
       }
     })
-  })
+  }
+
+  Role.registerResolver('viewer', genericResolver)
+  Role.registerResolver('editor', genericResolver)
 };

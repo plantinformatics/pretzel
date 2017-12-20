@@ -34,16 +34,17 @@ module.exports = function(Dataset) {
     next();
   });
 
-  Dataset.upload = function(msg, cb) {
+  Dataset.upload = function(msg, options, cb) {
+    let clientId = identity.gatherClientId(options)
     var models = this.app.models;
     if (msg.fileName.endsWith('.json')) {
       try {
-      var jsonMap = JSON.parse(msg.data);
+        var jsonMap = JSON.parse(msg.data);
       } catch (e) {
         console.log(e);
         cb(Error("Failed to parse JSON"));
       }
-      upload.json(jsonMap, models)
+      upload.json(jsonMap, models, clientId)
       .then(function(data) {
         cb(null, 'Success');
       })
@@ -144,7 +145,8 @@ module.exports = function(Dataset) {
 
   Dataset.remoteMethod('upload', {
     accepts: [
-      {arg: 'msg', type: 'object', required: true, http: {source: 'body'}}
+      {arg: 'msg', type: 'object', required: true, http: {source: 'body'}},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
     ],
     returns: {arg: 'status', type: 'string'},
     description: "Perform a bulk upload of a dataset with associated blocks and features"
