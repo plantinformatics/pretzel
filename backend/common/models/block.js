@@ -6,22 +6,6 @@ var task = require('../utilities/task')
 
 module.exports = function(Block) {
 
-  Block.observe('access', function(ctx, next) {
-    console.log('> Block.access');
-    // identity.queryFilterAccessible(ctx)
-    next()
-  })
-
-  Block.observe('loaded', function(ctx, next) {
-    // console.log('> Block.loaded');
-    next()
-  })
-
-  // Block.observe('before save', function(ctx, next) {
-  //   console.log('> Block.before save');
-  //   next();
-  // });
-
   Block.paths = function(left, right, cb) {
     task.paths(this.app.models, left, right)
     .then(function(data) {

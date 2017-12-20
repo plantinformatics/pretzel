@@ -22,11 +22,16 @@ module.exports = function(Record) {
 
   Record.observe('before save', function(ctx, next) {
     console.log(`> Record.before save ${ctx.Model.modelName}`)
+    var newDate = Date.now();
     if (ctx.currentInstance) {
-      // assigning creation / update times to resource
-      var newDate = Date.now();
-      if (!ctx.currentInstance.createdAt) ctx.currentInstance.createdAt = newDate
+      // update
       ctx.currentInstance.updatedAt = newDate;
+    } else if (ctx.isNewInstance) {
+      // create
+      let clientId = identity.gatherClientId(ctx)
+      if (clientId) ctx.instance.clientId = clientId
+      ctx.instance.createdAt = newDate
+      ctx.instance.updatedAt = newDate;
     }
     next();
   });

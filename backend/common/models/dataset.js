@@ -9,33 +9,7 @@ var load = require('../utilities/load')
 
 module.exports = function(Dataset) {
 
-  Dataset.observe('access', function(ctx, next) {
-    console.log('> Dataset.access');
-    // identity.queryFilterAccessible(ctx)
-    next()
-  })
-
-  Dataset.afterRemote('find', function(ctx, modelInstance, next) {
-    console.log('> Dataset.loaded');
-    next()
-  })
-
-  Dataset.observe('before save', function(ctx, next) {
-    if (ctx.instance) {
-      var newDate = Date.now();  
-      // ctx.instance.createdAt = newDate;
-      // ctx.Model.updatedAt = newDate;
-
-      let clientId = identity.gatherClientId(ctx)
-      if (clientId) {
-        ctx.instance.clientId = clientId
-      }
-    }
-    next();
-  });
-
   Dataset.upload = function(msg, options, cb) {
-    let clientId = identity.gatherClientId(options)
     var models = this.app.models;
     if (msg.fileName.endsWith('.json')) {
       try {
@@ -44,7 +18,7 @@ module.exports = function(Dataset) {
         console.log(e);
         cb(Error("Failed to parse JSON"));
       }
-      upload.json(jsonMap, models, clientId)
+      upload.json(jsonMap, models, options)
       .then(function(data) {
         cb(null, 'Success');
       })
@@ -75,8 +49,6 @@ module.exports = function(Dataset) {
   }
 
   Dataset.tableUpload = function(data, options, cb) {
-    let clientId = identity.gatherClientId(options)
-
     var models = this.app.models;
     var blocks = {};
     var datasetGroup = null;
@@ -113,14 +85,11 @@ module.exports = function(Dataset) {
             name: name,
             datasetId: datasetGroup.id
           }
-          if (clientId) {
-            payload['clientId'] = clientId
-          }
           new_blocks.push(payload);
         }
       });
       // create new blocks
-      return models.Block.create(new_blocks);
+      return models.Block.create(new_blocks, options);
     })
     .then(function(new_blocks) {
       new_blocks.forEach(function(block) {
