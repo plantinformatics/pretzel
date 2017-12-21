@@ -35,7 +35,7 @@ export default Service.extend({
     return this._ajax('Datasets', 'GET', {'filter[include]': 'blocks'}, true)
   },
 
-  createGeneticmap(name) {
+  createDataset(name) {
     return this._ajax('Datasets', 'POST', JSON.stringify({name: name}), true)
   },
 

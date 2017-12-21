@@ -73,8 +73,11 @@ module.exports = function(app) {
       // Not logged in -> deny
       return process.nextTick(() => cb(null, false))
     }
-    if (context.property == 'find' || context.property == 'upload') {
-      // allow find and upload requests
+    if (context.property == 'find' ||
+      context.property ==  'create' ||
+      context.property == 'upload' ||
+      context.property == 'tableUpload') {
+      // allow find, create and upload requests
       return process.nextTick(() => cb(null, true))
     }
     if (!context.modelId) {

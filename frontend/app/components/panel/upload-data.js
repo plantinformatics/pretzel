@@ -243,10 +243,10 @@ export default Component.extend({
       var table = that.get('table');
       var dataset_id = null;
       that.validateData(table.getData())
-      .then(function(markers) {
-        if (markers.length > 0) {
+      .then(function(features) {
+        if (features.length > 0) {
           that.getDatasetId().then(function(map_id) {
-            var data = {dataset_id: map_id, markers: markers};
+            var data = {dataset_id: map_id, features: features};
             that.set('isProcessing', true);
             that.get('auth').tableUpload(data)
             .then(function(res){
