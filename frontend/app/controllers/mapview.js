@@ -63,8 +63,8 @@ export default Ember.Controller.extend(Ember.Evented, {
         // this needs to be reorganised - probably to a controllers/chromosome.js
         let selectedDatasets = [];
         if (availableDatasets) {
-        // availableDatasets.then(function(genmaps) );
-        // let genmaps = availableDatasets;
+        // availableDatasets.then(function(datasets) );
+        // let datasets = availableDatasets;
         availableDatasets.forEach(function(dataset) {
           let blocks = dataset.get('blocks');
           blocks.forEach(function(block) {
@@ -134,19 +134,16 @@ export default Ember.Controller.extend(Ember.Evented, {
       let mapsDerivedValue = {availableChrs: availableChrs, selectedMaps: selMaps};
   
       let seenChrs = new Set();
-      var maps = that.get('store').query(
-        'dataset',
+      var maps = that.get('store').query('dataset',
         {
-          filter: {
-            'include': 'blocks'
-          }
+          filter: {'include': 'blocks'}
         }
       )
-      .then(function(genmaps) {
-        mapsDerivedValue.availableMaps = genmaps.toArray();
+      .then(function(datasets) {
+        mapsDerivedValue.availableMaps = datasets.toArray();
         if (trace_promise > 1)
-          console.log("genmaps.toArray()", mapsDerivedValue.availableMaps);
-        genmaps.forEach(function(map) {
+          console.log("datasets.toArray()", mapsDerivedValue.availableMaps);
+        datasets.forEach(function(map) {
           let chrs = map.get('blocks');
           chrs.forEach(function(chr) {
             var exChrs = [];

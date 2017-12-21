@@ -42,27 +42,6 @@
 
   <h4>
     {{block.name}}
-    {{#if block.owner}}
-      {{#if block.public}}
-      {{else}}
-        {{elem-icon name='lock'}}
-      {{/if}}
-      <div class="btn-group btn-group-sm pull-right">
-        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-          {{elem-icon name='option-horizontal'}}
-        </button>
-        <ul class="dropdown-menu dropdown-menu-right">
-          {{#if block.public}}
-            <li><a href="#" {{action 'flipPublic' block}}>Make Private</a></li>
-          {{else}}
-            <li><a href="#" {{action 'flipPublic' block}}>Make Public</a></li>
-          {{/if}}
-          <li><a href="#">Something else here</a></li>
-          <li role="separator" class="divider"></li>
-          <li><a href="#">Separated link</a></li>
-        </ul>
-      </div>
-    {{/if}}
   </h4>
   {{!-- <p><span class="label label-default">ID: {{block.id}}</span></p> --}}
   {{!-- {{dataset}}

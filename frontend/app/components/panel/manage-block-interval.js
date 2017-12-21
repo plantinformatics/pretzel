@@ -1,18 +1,6 @@
-import Ember from 'ember';
+import Annotation from './manage-block-annotation';
 
-const { Component } = Ember;
-
-export default Component.extend({
-  tagName: 'li',
-  // attributes
-  // classes
-  classNames: ['list-group-item'],
-  initSteps: function() {
-    let layout = {
-      'active': false
-    }
-    this.set('layout',layout);
-  }.on('init'),
+export default Annotation.extend({
   actions: {
     selectInterval(interval) {
       this.sendAction('selectInterval', chr);

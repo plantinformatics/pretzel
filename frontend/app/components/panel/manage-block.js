@@ -4,39 +4,12 @@ export default Ember.Component.extend({
   newTag: '',
   newInterval: '',
   actions: {
-    addTag: function() {
-      let duplicate = this.get('duplicateTag')
-      if (!duplicate) {
-        let new_tag = this.get('newTag')
-        let block = this.get('block')
-        if (new_tag) {
-          let new_tags = block.get('tags') || []
-          new_tags.push(new_tag)
-          block.set('tags', new_tags)
-          block.save()
-        }
-        this.set('newTag', '')
-      }
-    },
+    // alter publicity boolean on particular record type
     flipPublic: function(record) {
       console.log('FLIPPUBLIC', record)
-      // let recordId = record.get('id')
-      // let model = 
       let visible = record.get('public')
       record.set('public', !visible)
       record.save()
-
-      // let block = this.get('block')
-      // let visible = block.get('public')
-      // block.set('public', !visible)
-      // block.save()
-    },
-    removeTag: function(index) {
-      let block = this.get('block')
-      let tags = block.get('tags')
-      tags.splice(index, 1)
-      block.set('tags', tags)
-      block.save()
     }
   },
   disableCreateTag: Ember.computed('newTag', 'block.tags', function() {
@@ -58,18 +31,20 @@ export default Ember.Component.extend({
     let dataset = block.get('map')
     return dataset
   }),
+  // determine if interval can be created according to conditions
   disableCreateInterval: Ember.computed('newInterval', 'block.intervals', function() {
     let block = this.get('block')
     let newInterval = block.get('newInterval')
-    console.log('newInterval', this.newInterval, this.newTag.length)
+    console.log('newInterval', this.newInterval, this.newInterval.length)
     if (this.newTag.length < 1) {
       return true
     } else if (newInterval) {
-      return newInterval.indexOf(this.newTag) > -1
+      return newInterval.indexOf(this.newInterval) > -1
     } else {
       return false
     }
   }),
+  // display potential interval from selectedFeatures, if valid
   intervalSelected: Ember.computed('block', 'selectedFeatures', function() {
     let block = this.get('block')
     let selectedFeatures = this.get('selectedFeatures')

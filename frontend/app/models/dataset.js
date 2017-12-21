@@ -1,20 +1,8 @@
-import Ember from 'ember';
 import DS from 'ember-data';
-import Model from 'ember-data/model';
 import attr from 'ember-data/attr';
-// const { attr } = DS;
 
-const { inject: { service } } = Ember;
+import Record from './record';
 
-export default DS.Model.extend({
-  session: service('session'),
-  name: attr('string'),
-  blocks: DS.hasMany('block', { async: false }),
-  clientId: attr('string'),
-  public: attr('boolean'),
-  owner: Ember.computed('clientId', function() {
-    let clientIdSession = this.get('session.data.authenticated.clientId')
-    let clientId = this.get('clientId')
-    return clientIdSession == clientId;
-  }),
+export default Record.extend({
+  blocks: DS.hasMany('block', { async: false })
 });

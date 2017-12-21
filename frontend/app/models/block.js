@@ -1,35 +1,18 @@
 import Ember from 'ember';
 import DS from 'ember-data';
 import attr from 'ember-data/attr';
-import { PartialModel, partial } from 'ember-data-partial-model/utils/model';
+// import { PartialModel, partial } from 'ember-data-partial-model/utils/model';
 
-const { inject: { service } } = Ember;
+import Record from './record';
 
-export default DS.Model.extend({
-  session: service('session'),
-  name: attr('string'),
-  // tags: attr('null', { defaultValue: []}),
-  // tags: attr(),
+export default Record.extend({
+  datasetId: attr('string'), // TODO update
   annotations: DS.hasMany('annotation', { async: false }),
   intervals: DS.hasMany('interval', { async: false }),
-  createdAt: attr("date"),
-  updatedAt: attr("date"),
-  // id: attr('string'),
-  geneticmapId: attr('string'),
-  clientId: attr('string'),
-  public: attr('boolean'),
-  //extended: partial('chromosome', 'extended', {
-  markers: DS.hasMany('marker', { async: false }),
-  //}),
+  features: DS.hasMany('feature', { async: false }),
 
   extraChrs: [],
   isSelected: false,
-
-  owner: Ember.computed('clientId', function() {
-    let clientIdSession = this.get('session.data.authenticated.clientId')
-    let clientId = this.get('clientId')
-    return clientIdSession == clientId;
-  }),
 
   linkTo: Ember.computed('name', function() {
     return [this.get("id")];
@@ -39,7 +22,9 @@ export default DS.Model.extend({
     let exChrs = this.get("extraChrs");
     let that = this;
     // console.log("chrDeleteLink", this.get('name'), this.get('id'), exChrs);
-    return exChrs.filter(function(chrid) { return chrid != that.get("id"); });
+    return exChrs.filter(function(chrid) {
+      return chrid != that.get("id");
+    });
   }),
 
   chrLink: Ember.computed('extraChrs', function() {
