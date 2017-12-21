@@ -8,23 +8,24 @@ export default Component.extend({
 
   loadDatasets: function(id) {
     var that = this;
-    this.get('auth').getBlocks().then(function(res) {
-      that.set('geneticmaps', res);
-      $("#geneticmap").html('');
+    this.get('auth').getBlocks()
+    .then(function(res) {
+      that.set('datasets', res);
+      $("#dataset").html('');
       $.each(res, function (i, item) {
-        $('#geneticmap').append($('<option>', { 
+        $('#dataset').append($('<option>', { 
             value: item.id,
             text : item.name
         }));
       });
       if (id) {
-        $("#geneticmap").val(id);
+        $("#dataset").val(id);
       }
-      $("#geneticmap").append($('<option>', {
+      $("#dataset").append($('<option>', {
         value: 'new',
         text: 'new'
       }));
-      $("#geneticmap").trigger('change');
+      $("#dataset").trigger('change');
     });
   },
 
@@ -33,12 +34,12 @@ export default Component.extend({
 
     that.loadDatasets();
     $(function() {
-      $("#geneticmap").on('change', function() {
-        var selectedMap = $("#geneticmap").val();
+      $("#dataset").on('change', function() {
+        var selectedMap = $("#dataset").val();
         if (selectedMap == 'new') {
-          $("#geneticmap_new").show();
+          $("#dataset_new").show();
         } else {
-          $("#geneticmap_new").hide();
+          $("#dataset_new").hide();
         }
         that.checkBlocks();
       });
@@ -87,11 +88,11 @@ export default Component.extend({
 
   checkBlocks() {
     var that = this;
-    var maps = that.get('geneticmaps');
+    var maps = that.get('datasets');
     var warning = null;
     if (maps) {
-      // find selected geneticmap
-      var selectedMap = $("#geneticmap").val();
+      // find selected dataset
+      var selectedMap = $("#dataset").val();
       var map = null;
       maps.forEach(function(m) {
         if (m.id == selectedMap) {
@@ -99,29 +100,29 @@ export default Component.extend({
         }
       });
       if (map) {
-        // find duplicate chromosomes
-        var chromosomes = {};
-        map.chromosomes.forEach(function(chrom) {
-          chromosomes[chrom.name] = false;
+        // find duplicate blocks
+        var blocks = {};
+        map.blocks.forEach(function(block) {
+          blocks[block.name] = false;
         });
         var data = that.get('table').getSourceData();
         var found = false;
         data.forEach(function(row) {
-          if (row.chrom && row.chrom in chromosomes) {
-            chromosomes[row.chrom] = true;
+          if (row.block && row.block in blocks) {
+            blocks[row.block] = true;
             found = true;
           }
         });
         if (found) {
           //build warning msg
           var duplicates = [];
-          Object.keys(chromosomes).forEach(function(chrom) {
-            if (chromosomes[chrom]) {
-              duplicates.push(chrom);
+          Object.keys(blocks).forEach(function(block) {
+            if (blocks[block]) {
+              duplicates.push(block);
             }
           });
-          warning = "The chromosome"  + (duplicates.length > 1? "s":"")
-           + " (" + duplicates.join(', ') + ") already exist in the selected geneticmap and will be overwritten by the new data";
+          warning = "The block "  + (duplicates.length > 1? "s":"")
+           + " (" + duplicates.join(', ') + ") already exist in the selected dataset and will be overwritten by the new data";
         }
       }
     }
@@ -132,23 +133,23 @@ export default Component.extend({
     });
   },
 
-  getGeneticmapId() {
+  getDatasetId() {
     var that = this;
     return new Ember.RSVP.Promise(function(resolve, reject) {
-      var selectedMap = $("#geneticmap").val();
+      var selectedMap = $("#dataset").val();
       if (selectedMap != 'new') {
         resolve(selectedMap);
       } else {
-        var newMap = $("#geneticmap_new").val();
+        var newMap = $("#dataset_new").val();
         //check if duplicate
-        that.get('geneticmaps').forEach(function(geneticmap) {
-          if (geneticmap.name == newMap) {
-            selectedMap = geneticmap.id;
+        that.get('datasets').forEach(function(dataset) {
+          if (dataset.name == newMap) {
+            selectedMap = dataset.id;
             resolve(selectedMap);
           }
         });
         if (selectedMap == 'new') {
-          that.get('auth').createGeneticmap(newMap)
+          that.get('auth').createDataset(newMap)
           .then(function(res) {
             that.loadDatasets(res.id);
             resolve(res.id);
@@ -170,7 +171,7 @@ export default Component.extend({
       }
       for (var i=0; i<sourceData.length; i++) {
         var row = sourceData[i];
-        if (row[cols['pos']] || row[cols['name']] || row[cols['chrom']]) {
+        if (row[cols['pos']] || row[cols['name']] || row[cols['block']]) {
           if (!row[cols['pos']] && row[cols['pos']] != 0) {
             reject({r: i, c: cols['pos'], msg: 'Position required'});
             break;
@@ -180,16 +181,16 @@ export default Component.extend({
             break;
           }
           if (!row[cols['name']]) {
-            reject({r: i, c: cols['name'], msg: 'Marker / Gene name required'});
+            reject({r: i, c: cols['name'], msg: 'Feature name required'});
             break;
           }
-          if (!row[cols['chrom']]) {
-            reject({r: i, c: cols['chrom'], msg: 'Chromosome required'});
+          if (!row[cols['block']]) {
+            reject({r: i, c: cols['block'], msg: 'Block required'});
             break;
           }
           validatedData.push({
             name: row[cols['name']],
-            chrom: row[cols['chrom']],
+            block: row[cols['block']],
             pos: row[cols['pos']]
           });
         }
@@ -210,7 +211,7 @@ export default Component.extend({
           .then(function(res){
             that.setProperties({
               isProcessing: false, 
-              successMessage: "Geneticmap data uploaded successfully!",
+              successMessage: "Dataset uploaded successfully!",
               errorMessage: null
             });
             $("body").animate({ scrollTop: 0 }, "slow");
@@ -237,15 +238,15 @@ export default Component.extend({
         this.set('file', files[0]);
       }
     },
-    uploadChromosomes() {
+    uploadBlocks() {
       var that = this;
       var table = that.get('table');
-      var geneticmap_id = null;
+      var dataset_id = null;
       that.validateData(table.getData())
       .then(function(markers) {
         if (markers.length > 0) {
-          that.getGeneticmapId().then(function(map_id) {
-            var data = {geneticmap_id: map_id, markers: markers};
+          that.getDatasetId().then(function(map_id) {
+            var data = {dataset_id: map_id, markers: markers};
             that.set('isProcessing', true);
             that.get('auth').tableUpload(data)
             .then(function(res){

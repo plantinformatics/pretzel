@@ -30,11 +30,12 @@ export default Component.extend({
     else { return true; }
   }),
   actions: {
-    selectBlock(chr) {
-      this.sendAction('selectBlock', chr);
+    selectBlock(block) {
+      console.log('SELECT BLOCK manage-explorer-dataset', block)
+      this.sendAction('selectBlock', block);
     },
-    deleteBlock(chr) {
-      this.sendAction('deleteBlock', chr.id);
+    deleteBlock(block) {
+      this.sendAction('deleteBlock', block.id);
     },
     switchDataset(dataset) {
       console.log('switchDataset')

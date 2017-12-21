@@ -3,10 +3,6 @@
   "base": "Record",
   "description": "Containing features",
   "properties": {
-    "tags" : {
-      "type": ["string"],
-      "required": false
-    }
   },
   "validations": [],
   "relations": {

@@ -36,11 +36,12 @@ export default Component.extend({
     refreshAvailable() {
       this.sendAction('updateModel')
     },
-    selectChrom(chr) {
-      this.sendAction('selectChrom', chr);
+    selectBlock(chr) {
+      console.log('SELECT BLOCK manage-explorer', chr)
+      this.sendAction('selectBlock', chr);
     },
-    deleteChrom(chr) {
-      this.sendAction('deleteChrom', chr.id);
+    deleteBlock(chr) {
+      this.sendAction('deleteBlock', chr.id);
     },
     changeFilter: function(f) {
       this.set('filter', f)

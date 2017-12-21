@@ -9,25 +9,25 @@
         </div>
       {{/unless}}
     <ul class="list-group">
-      {{#each selectedMaps as |chr|}}
+      {{#each selectedMaps as |block|}}
         <li 
-          class="list-group-item {{if (compare chr.id '===' selectedChrom.id) 'list-group-item-warning'}}"
-          data-chr-id={{chr.id}}
-          {{action "selectChrom" chr on="click"}}>
-          {{chr.map.name}} {{chr.name}} {{elem-icon-owner state=chr.owner}} {{elem-icon-visible state=chr.public}}
+          class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
+          data-chr-id={{block.id}}
+          {{action "selectChrom" block on="click"}}>
+          {{block.map.name}} {{block.name}} {{elem-icon-owner state=block.owner}} {{elem-icon-visible state=block.public}}
 
           <span class="pull-right">
             {{!-- {{elem-button
               classSize='xs'
               classColour='danger'
               icon='minus'
-              onClick=(action "deleteChrom" chr)}} --}}
+              onClick=(action "deleteBlock" block)}} --}}
           </span>
 
           <p class="list-group-item-text">
-            {{#each chr.tags as |tag|}}
+            {{#each block.annotations as |annotation|}}
               <span class="label label-default" style="display: inline-block">
-                {{tag}}
+                {{annotation}}
               </span>
             {{/each}}
           </p>

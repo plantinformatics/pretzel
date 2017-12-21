@@ -98,12 +98,13 @@ export default Ember.Controller.extend(Ember.Evented, {
       this.set('pathColourScale', ! this.get('pathColourScale'));
     }
     , pathColourScale: true,
-    selectBlock: function(chr) {
-      this.set('selectedBlock', chr);
+    selectBlock: function(block) {
+      console.log('SELECT BLOCK mapview', block)
+      this.set('selectedBlock', block);
       d3.selectAll("ul#maps_aligned > li").classed("selected", false);
-      d3.select('ul#maps_aligned > li[data-chr-id="' + chr.id + '"]').classed("selected", true);
+      d3.select('ul#maps_aligned > li[data-chr-id="' + block.id + '"]').classed("selected", true);
       d3.selectAll("g.ap").classed("selected", false);
-      d3.select("g#id" + chr.id).classed("selected", true);
+      d3.select("g#id" + block.id).classed("selected", true);
     },
     selectBlockById: function(blockId) {
       let selectedMaps = this.get('selectedMaps')
@@ -205,7 +206,7 @@ export default Ember.Controller.extend(Ember.Evented, {
 
   selectedMaps: [],
 */
-  selectedMarkers: [],
+  selectedFeatures: [],
 
   dataReceived : Ember.ArrayProxy.create({ content: Ember.A() }),
 
@@ -214,12 +215,12 @@ export default Ember.Controller.extend(Ember.Evented, {
   showScaffoldMarkers : false,
   showAsymmetricAliases : false,
 
-  markersSelected: Ember.computed('selectedMarkers', function() {
-    return this.selectedMarkers.length > 0;
+  markersSelected: Ember.computed('selectedFeatures', function() {
+    return this.selectedFeatures.length > 0;
   }),
 
-  numMarkers: Ember.computed('selectedMarkers', function() {
-    return this.selectedMarkers.length;
+  numMarkers: Ember.computed('selectedFeatures', function() {
+    return this.selectedFeatures.length;
   }),
 
   hasData: Ember.computed('model.mapsDerived.content.selectedMaps', 'mapsToView', function() {

@@ -3,30 +3,30 @@ import Ember from 'ember';
 export default Ember.Component.extend({
   classNames: ['tabbed-table-container', 'bordered', 'control-panel'],
   filter: 'all',
-  data: Ember.computed('selectedChrom', 'selectedMarkers', 'filter', function() {
-    let selectedChrom = this.get('selectedChrom')
-    let selectedMarkers = this.get('selectedMarkers')
+  data: Ember.computed('selectedBlock', 'selectedFeatures', 'filter', function() {
+    let selectedBlock = this.get('selectedBlock')
+    let selectedFeatures = this.get('selectedFeatures')
     let filter = this.get('filter')
     // perform filtering according to selectedChr
-    let filtered = selectedMarkers //all
-    if (filter == 'chrom' && selectedChrom) {
-      filtered = selectedMarkers.filter(function(marker) {
-        return marker.Chromosome === selectedChrom.id
+    let filtered = selectedFeatures //all
+    if (filter == 'chrom' && selectedBlock) {
+      filtered = selectedFeatures.filter(function(feature) {
+        return feature.Block === selectedBlock.id
       })
     } else if (filter == 'union') {
       //split by chrom
-      let chromosomes = {}
-      selectedMarkers.forEach(function(marker) {
-        if (!chromosomes[marker.Chromosome]) {
-          chromosomes[marker.Chromosome] = {}
+      let blocks = {}
+      selectedFeatures.forEach(function(feature) {
+        if (!blocks[feature.Block]) {
+          blocks[feature.Block] = {}
         }
-        let chrom = chromosomes[marker.Chromosome]
-        chrom[marker.Marker] = true
+        let chrom = blocks[feature.Block]
+        chrom[feature.Feature] = true
       })
-      filtered = selectedMarkers.filter(function(marker) {
+      filtered = selectedFeatures.filter(function(feature) {
         var include = true
-        Object.keys(chromosomes).forEach(function(chromId) {
-          if (!chromosomes[chromId][marker.Marker]) {
+        Object.keys(blocks).forEach(function(blockId) {
+          if (!blocks[blockId][feature.Feature]) {
             include = false
           }
         })

@@ -25,25 +25,35 @@
   {{/if}}
 
   <div class="actual-row">
-    <label>Dataset: </label><select id="geneticmap"></select>
+    <label>Dataset: </label><select id="dataset"></select>
     <input
       hidden
-      id="geneticmap_new"
+      id="dataset_new"
       class="form-control"
-      placeholder="New geneticmap name..." />
+      placeholder="New dataset name..." />
     <br><label>Load from file: </label><input type="file" accept=".csv" id="tableFile" onchange={{action 'uploadToTable'}}>
     <div id="hotable" class="actual-row">
     </div>
-    <input type="submit" class="btn btn-primary {{if isProcessing 'disabled'}}" onclick={{action 'uploadChromosomes'}}>
-    <button class="btn" onclick={{action 'clearTable'}}>Clear</button>
+    <input
+      type="submit"
+      class="btn btn-primary {{if isProcessing 'disabled'}}"
+      onclick={{action 'uploadBlocks'}}>
+    <button
+      class="btn"
+      onclick={{action 'clearTable'}}>Clear</button>
   </div>
 
   <div class="actual-row">
-    <h5>Upload Geneticmaps (JSON / gzip)</h5>
+    <h5>Upload Datasets (JSON / gzip)</h5>
     <form {{action 'submitForm' on='submit'}}>
-      <input type='file' accept=".json,.gz" onchange={{action 'upload'}}>
+      <input
+        type='file'
+        accept=".json,.gz"
+        onchange={{action 'upload'}}>
       <br>
-      <input type="submit" class="btn btn-primary {{if isProcessing 'disabled'}}">
+      <input
+        type="submit"
+        class="btn btn-primary {{if isProcessing 'disabled'}}">
     </form>
   </div>
 

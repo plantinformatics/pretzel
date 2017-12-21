@@ -8,12 +8,12 @@ export default Ember.Component.extend({
       let duplicate = this.get('duplicateTag')
       if (!duplicate) {
         let new_tag = this.get('newTag')
-        let chr = this.get('chr')
+        let block = this.get('block')
         if (new_tag) {
-          let new_tags = chr.get('tags') || []
+          let new_tags = block.get('tags') || []
           new_tags.push(new_tag)
-          chr.set('tags', new_tags)
-          chr.save()
+          block.set('tags', new_tags)
+          block.save()
         }
         this.set('newTag', '')
       }
@@ -26,22 +26,22 @@ export default Ember.Component.extend({
       record.set('public', !visible)
       record.save()
 
-      // let chr = this.get('chr')
-      // let visible = chr.get('public')
-      // chr.set('public', !visible)
-      // chr.save()
+      // let block = this.get('block')
+      // let visible = block.get('public')
+      // block.set('public', !visible)
+      // block.save()
     },
     removeTag: function(index) {
-      let chr = this.get('chr')
-      let tags = chr.get('tags')
+      let block = this.get('block')
+      let tags = block.get('tags')
       tags.splice(index, 1)
-      chr.set('tags', tags)
-      chr.save()
+      block.set('tags', tags)
+      block.save()
     }
   },
-  disableCreateTag: Ember.computed('newTag', 'chr.tags', function() {
-    let chr = this.get('chr')
-    let tags = chr.get('tags')
+  disableCreateTag: Ember.computed('newTag', 'block.tags', function() {
+    let block = this.get('block')
+    let tags = block.get('tags')
     console.log('newTag', this.newTag, this.newTag.length)
     if (this.newTag.length < 1) {
       return true
@@ -51,17 +51,16 @@ export default Ember.Component.extend({
       return false
     }
   }),
-  geneticmap: Ember.computed('chr', function() {
-    let chr = this.get('chr')
-    console.log('CHROMOSOME')
-    console.log(chr)
-    // let geneticmapId = chr.get('geneticmapId')
-    let geneticmap = chr.get('map')
-    return geneticmap
+  dataset: Ember.computed('block', function() {
+    let block = this.get('block')
+    console.log('BLOCK', block)
+    // let datasetId = block.get('datasetId')
+    let dataset = block.get('map')
+    return dataset
   }),
-  disableCreateInterval: Ember.computed('newInterval', 'chr.intervals', function() {
-    let chr = this.get('chr')
-    let newInterval = chr.get('newInterval')
+  disableCreateInterval: Ember.computed('newInterval', 'block.intervals', function() {
+    let block = this.get('block')
+    let newInterval = block.get('newInterval')
     console.log('newInterval', this.newInterval, this.newTag.length)
     if (this.newTag.length < 1) {
       return true
@@ -71,21 +70,21 @@ export default Ember.Component.extend({
       return false
     }
   }),
-  intervalSelected: Ember.computed('chr', 'selectedMarkers', function() {
-    let chr = this.get('chr')
-    let selectedMarkers = this.get('selectedMarkers')
-    if (selectedMarkers) {
-      let chrId = chr.id
-      selectedMarkers = selectedMarkers.filter(function(marker) {
-        return marker.Chromosome == chrId
+  intervalSelected: Ember.computed('block', 'selectedFeatures', function() {
+    let block = this.get('block')
+    let selectedFeatures = this.get('selectedFeatures')
+    if (selectedFeatures) {
+      let blockId = block.id
+      selectedFeatures = selectedFeatures.filter(function(feature) {
+        return feature.Block == blockId
       })
-      selectedMarkers = selectedMarkers.sort(function (a, b) {
+      selectedFeatures = selectedFeatures.sort(function (a, b) {
         return a.position - b.position;
       });
-      if (selectedMarkers.length >= 2) {
+      if (selectedFeatures.length >= 2) {
         let payload = {
-          'start': selectedMarkers[0],
-          'end': selectedMarkers[selectedMarkers.length - 1]
+          'start': selectedFeatures[0],
+          'end': selectedFeatures[selectedFeatures.length - 1]
         }
         return payload
       } else {
