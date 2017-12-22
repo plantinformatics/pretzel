@@ -5,6 +5,7 @@ const { inject: { service }, Component } = Ember;
 export default Component.extend({
   session: service('session'),
   auth: service('auth'),
+  store: Ember.inject.service(),
 
   loadDatasets: function(id) {
     var that = this;
@@ -149,11 +150,13 @@ export default Component.extend({
           }
         });
         if (selectedMap == 'new') {
-          that.get('auth').createDataset(newMap)
-          .then(function(res) {
-            that.loadDatasets(res.id);
-            resolve(res.id);
-          });
+          let newDataset = that.get('store').createRecord('Dataset', {
+            name: newMap
+          })
+          newDataset.save().then(function() {
+            that.loadDatasets(newDataset.id)
+            resolve(newDataset.id)
+          })
         }
       }
     })
