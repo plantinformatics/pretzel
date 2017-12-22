@@ -6,7 +6,7 @@ import attr from 'ember-data/attr';
 import Record from './record';
 
 export default Record.extend({
-  datasetId: attr('string'), // TODO update
+  datasetId: DS.belongsTo('dataset'),
   annotations: DS.hasMany('annotation', { async: false }),
   intervals: DS.hasMany('interval', { async: false }),
   features: DS.hasMany('feature', { async: false }),

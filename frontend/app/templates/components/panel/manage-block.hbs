@@ -83,9 +83,9 @@
         <li href="#" class="list-group-item">
           <div class="input-group">
             {{input
-              enter="addTag"
+              enter="addAnnotation"
               type="text"
-              value=newTag
+              value=newAnnotation
               class="form-control"
               placeholder="New annotation..."}}
             <span class="input-group-btn">
@@ -93,7 +93,7 @@
                 class="btn btn-success"
                 type="button"
                 disabled={{disableCreateTag}}
-                {{action "addTag"}}>
+                {{action "addAnnotation"}}>
                 {{elem-icon name="plus"}}
               </button>
             </span>
@@ -130,7 +130,7 @@
           <li href="#" class="list-group-item">
             <div class="input-group">
               {{input
-                action="addTag"
+                action="addAnnotation"
                 type="text"
                 value=newInterval
                 class="form-control"
@@ -140,7 +140,7 @@
                   class="btn btn-success"
                   type="button"
                   disabled={{disableCreateInterval}}
-                  {{action "addTag"}}>
+                  {{action "addAnnotation"}}>
                   {{elem-icon name="plus"}}
                 </button>
               </span>

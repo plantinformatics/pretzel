@@ -1,7 +1,10 @@
 import Ember from 'ember';
 
+const { Component, inject: { service } } = Ember;
+
 export default Ember.Component.extend({
-  newTag: '',
+  store: service(),
+  newAnnotation: '',
   newInterval: '',
   actions: {
     // alter publicity boolean on particular record type
@@ -10,20 +13,46 @@ export default Ember.Component.extend({
       let visible = record.get('public')
       record.set('public', !visible)
       record.save()
+    },
+    addAnnotation: function() {
+      console.log('ADD ANNOTATION')
+      // let duplicate = this.get('duplicateTag')
+      // if (!duplicate) {
+      let newAnnotation = this.get('newAnnotation')
+      let block = this.get('block')
+      let blockId = block.get('id')
+      let store = this.get('store')
+      if (newAnnotation) {
+        console.log('NEW ANNOTATION', newAnnotation)
+        console.log('block id', block.get('id'))
+        var annotation = store.createRecord('annotation', {
+          name: newAnnotation,
+          blockId: blockId
+        });
+
+        console.log('ANNOTATION', annotation)
+        // newAnnotations.push(newAnnotation)
+        // block.set('tags', newAnnotations)
+        annotation.save()
+      }
+      this.set('newAnnotation', '')
+      // }
+    },
+    addInterval: function() {
+      let duplicate = this.get('duplicateInterval')
+      if (!duplicate) {
+        let new_tag = this.get('newAnnotation')
+        let block = this.get('block')
+        if (new_tag) {
+          let new_tags = block.get('tags') || []
+          new_tags.push(new_tag)
+          block.set('tags', new_tags)
+          block.save()
+        }
+        this.set('newAnnotation', '')
+      }
     }
   },
-  disableCreateTag: Ember.computed('newTag', 'block.tags', function() {
-    let block = this.get('block')
-    let tags = block.get('tags')
-    console.log('newTag', this.newTag, this.newTag.length)
-    if (this.newTag.length < 1) {
-      return true
-    } else if (tags) {
-      return tags.indexOf(this.newTag) > -1
-    } else {
-      return false
-    }
-  }),
   dataset: Ember.computed('block', function() {
     let block = this.get('block')
     console.log('BLOCK', block)
@@ -31,12 +60,24 @@ export default Ember.Component.extend({
     let dataset = block.get('map')
     return dataset
   }),
+  disableCreateTag: Ember.computed('newAnnotation', 'block.annotations', function() {
+    let block = this.get('block')
+    let tags = block.get('tags')
+    console.log('newAnnotation', this.newAnnotation, this.newAnnotation.length)
+    if (this.newAnnotation.length < 1) {
+      return true
+    } else if (tags) {
+      return tags.indexOf(this.newAnnotation) > -1
+    } else {
+      return false
+    }
+  }),
   // determine if interval can be created according to conditions
   disableCreateInterval: Ember.computed('newInterval', 'block.intervals', function() {
     let block = this.get('block')
     let newInterval = block.get('newInterval')
     console.log('newInterval', this.newInterval, this.newInterval.length)
-    if (this.newTag.length < 1) {
+    if (this.newInterval.length < 1) {
       return true
     } else if (newInterval) {
       return newInterval.indexOf(this.newInterval) > -1
