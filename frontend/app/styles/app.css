@@ -707,7 +707,8 @@ input#range-pathWidth
 }
 .btn-group
 {
-  margin-right: 2.5em;
+  /* modifier is too generic */
+  /* margin-right: 2.5em; */
 }
 /* @see setupToggle(), setupToggleModePublish() */
 input#checkbox-toggleShowAll,

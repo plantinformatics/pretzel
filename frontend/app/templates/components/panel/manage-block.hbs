@@ -61,8 +61,10 @@
       <ul class="list-group">
         {{!-- existing annotations --}}
         {{#if block.annotations}}
-          {{#each block.annotations as |tag index|}}
-            <li href="#" class="list-group-item">
+          {{#each block.annotations as |entry index|}}
+            {{panel/manage-block-annotation
+              entry=entry}}
+            {{!-- <li href="#" class="list-group-item">
               {{tag}}
               <span class="pull-right">
                 <span
@@ -71,7 +73,7 @@
                     {{elem-icon name="minus"}}
                 </span>
               </span>
-            </li>
+            </li> --}}
           {{/each}}
         {{else}}
           <li class="list-group-item list-group-item-default">

@@ -1,14 +1,40 @@
-{{!-- {{interval}} --}}
-{{interval.name}}
-{{interval.id}}
+{{entry.name}}
+{{!-- {{entry.id}} --}}
+
+{{#if entry.owner}}
+  {{#if entry.public}}
+  {{else}}
+    {{elem-icon name='lock'}}
+  {{/if}}
+  {{#if entry.readOnly}}
+  {{else}}
+    {{elem-icon name='pencil'}}
+  {{/if}}
+{{/if}}
+
 <span class="pull-right">
-  <span
-    class="btn btn-xs btn-danger"
-    {{action 'deleteInterval' interval}}>
-      {{elem-icon name="minus"}}
-  </span>
+  <div class="btn-group btn-group-sm">
+    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      {{elem-icon name='option-horizontal'}}
+    </button>
+    <ul class="dropdown-menu dropdown-menu-right">
+      {{#if entry.public}}
+        <li><a href="#" {{action 'flipPublic' entry}}>Make Private</a></li>
+      {{else}}
+        <li><a href="#" {{action 'flipPublic' entry}}>Make Public</a></li>
+      {{/if}}
+      {{#if entry.readOnly}}
+        <li><a href="#" {{action 'flipReadOnly' entry}}>Make Editable</a></li>
+      {{else}}
+        <li><a href="#" {{action 'flipReadOnly' entry}}>Make Read-Only</a></li>
+      {{/if}}
+      <li role="separator" class="divider"></li>
+      <li><a href="#" {{action 'deleteRecord' entry}}>{{elem-icon name='remove'}} Delete</a></li>
+    </ul>
+  </div>
 </span>
 
+{{!-- 
 <h5> {{elem-icon name="arrow-up"}}
   <span class="label label-info">
     {{elem-icon name="asterisk"}} {{interval.starting}}
@@ -18,4 +44,4 @@
   <span class="label label-info">
     {{elem-icon name="asterisk"}} {{interval.ending}}
   </span>
-</h5>
+</h5> --}}

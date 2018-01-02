@@ -15,6 +15,34 @@ var config = {
       return `${url}?${queryParams}`;
     }
     return url;
+  },
+  updateRecord(store, type, snapshot) {
+    // updateRecord calls PUT rather than PATCH, which is
+    // contrary to the record.save method documentation
+    // the JSONAPI adapter calls patch, while the
+    // RESTAdapter calls PUT
+    let data = {};
+    let serializer = store.serializerFor(type.modelName);
+
+    serializer.serializeIntoHash(data, type, snapshot);
+
+    let id = snapshot.id;
+    let url = this.buildURL(type.modelName, id, snapshot, 'updateRecord');
+
+    return this.ajax(url, "PATCH", { data: data });
+  },
+  deleteRecord(store, type, snapshot) {
+    // loopback responds with 200 and a count of deleted entries
+    // with the request. ember expects a 204 with an empty payload.
+    return this._super(...arguments)
+    .then(res => {
+      if (Object.keys(res).length === 1 && res.count) {
+        // Return null instead of an empty object, indicating to
+        // ember a deleted record is persisted
+        return null; 
+      }
+      return res;
+    });
   }
 }
 

@@ -1,19 +1,9 @@
-import Ember from 'ember';
+import Record from './manage-record';
 
-const { Component, inject: { service } } = Ember;
-
-export default Ember.Component.extend({
-  store: service(),
+export default Record.extend({
   newAnnotation: '',
   newInterval: '',
   actions: {
-    // alter publicity boolean on particular record type
-    flipPublic: function(record) {
-      console.log('FLIPPUBLIC', record)
-      let visible = record.get('public')
-      record.set('public', !visible)
-      record.save()
-    },
     addAnnotation: function() {
       console.log('ADD ANNOTATION')
       // let duplicate = this.get('duplicateTag')
@@ -27,7 +17,7 @@ export default Ember.Component.extend({
         console.log('block id', block.get('id'))
         var annotation = store.createRecord('annotation', {
           name: newAnnotation,
-          blockId: blockId
+          blockId: block
         });
 
         console.log('ANNOTATION', annotation)

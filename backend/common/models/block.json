@@ -31,6 +31,6 @@
   ],
   "methods": {},
   "scope": {
-    "include": []
+    "include": ["annotations", "intervals"]
   }
 }
