@@ -5,7 +5,7 @@ export default ManageBase.extend({
   newInterval: '',
   actions: {
     addAnnotation: function() {
-      console.log('ADD ANNOTATION')
+      // console.log('ADD ANNOTATION')
       // let duplicate = this.get('duplicateTag')
       // if (!duplicate) {
       let newAnnotation = this.get('newAnnotation')
@@ -39,7 +39,7 @@ export default ManageBase.extend({
   },
   dataset: Ember.computed('block', function() {
     let block = this.get('block')
-    console.log('BLOCK', block)
+    // console.log('BLOCK', block)
     // let datasetId = block.get('datasetId')
     let dataset = block.get('map')
     return dataset
@@ -47,7 +47,7 @@ export default ManageBase.extend({
   disableCreateTag: Ember.computed('newAnnotation', 'block.annotations', function() {
     let block = this.get('block')
     let tags = block.get('tags')
-    console.log('newAnnotation', this.newAnnotation, this.newAnnotation.length)
+    // console.log('newAnnotation', this.newAnnotation, this.newAnnotation.length)
     if (this.newAnnotation.length < 1) {
       return true
     } else if (tags) {
@@ -60,7 +60,7 @@ export default ManageBase.extend({
   disableCreateInterval: Ember.computed('newInterval', 'block.intervals', function() {
     let block = this.get('block')
     let newInterval = block.get('newInterval')
-    console.log('newInterval', this.newInterval, this.newInterval.length)
+    // console.log('newInterval', this.newInterval, this.newInterval.length)
     if (this.newInterval.length < 1) {
       return true
     } else if (newInterval) {

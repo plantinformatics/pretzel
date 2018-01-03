@@ -26,3 +26,4 @@ package-lock.json
 *~
 # etags file
 TAGS
+.vscodeignore

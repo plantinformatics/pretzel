@@ -324,7 +324,7 @@ export default Ember.Component.extend(Ember.Evented, {
                 console.log(newChr);
                 {
                   let thisStore = me.get('store'), pc=thisStore.findRecord
-                  ('chromosome', m,
+                  ('block', m,
                    { reload: true,
                      adapterOptions:{ filter: {include: "markers" } }});
                   pc.then(function (ch){
@@ -337,10 +337,10 @@ export default Ember.Component.extend(Ember.Evented, {
                     }
                     else
                     {
-                      let ppc=thisStore.peekRecord('chromosome', m);
+                      let ppc=thisStore.peekRecord('block', m);
                       if (ppc !== undefined)
                       {
-                        console.log("after findRecord(chromosome, ", m, "), peekRecord() returned", ppc);
+                        console.log("after findRecord(block, ", m, "), peekRecord() returned", ppc);
                       }
                       else
                       {
@@ -689,7 +689,7 @@ export default Ember.Component.extend(Ember.Evented, {
           c = results[0],
         rc = {mapName : c.get('map').get('name'), chrName : c.get('name')};
         console.log("afterChrPromise", rc);
-        let m = c.get('markers');
+        let m = c.get('features');
         m.forEach(function(marker) {
           let markerName = marker.get('name');
           let markerPosition = marker.get('position');
@@ -2387,7 +2387,7 @@ export default Ember.Component.extend(Ember.Evented, {
     let newRender = (svgRoot = oa.svgRoot) === undefined;
     if (newRender)
     {
-    d3.select("svg").remove();
+    // d3.select("svg").remove();
     d3.select("div.d3-tip").remove();
     }
     let translateTransform = "translate(" + margins[marginIndex.left] + "," + margins[marginIndex.top] + ")";

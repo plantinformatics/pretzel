@@ -92,14 +92,12 @@
     </p>
     {{!-- {{#if hasData}} --}}
       {{draw-map
-        updatedSelectedMarkers='updateSelectedMarkers'
         data=model.chrPromises
         Model=model
         drawActions=this
         mapsDerived=model.mapsDerived
         availableMaps=model.mapsDerived.availableMaps
         dataReceived=dataReceived
-        mapsToViewDelete='removeMap'
         isShowUnique=isShowUnique
         pathColourScale=pathColourScale
         scaffolds=scaffolds
@@ -107,7 +105,9 @@
         showScaffoldMarkers=showScaffoldMarkers
         showAsymmetricAliases=showAsymmetricAliases
         selectedBlock=selectedBlock
-        selectChromById='selectChromById'}}
+        mapsToViewDelete='removeMap'
+        updatedSelectedMarkers='updateSelectedFeatures'
+        selectChromById='selectBlockById'}}
     {{!-- {{/if}} --}}
   </div>
 

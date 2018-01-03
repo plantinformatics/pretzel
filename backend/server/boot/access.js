@@ -29,7 +29,7 @@ module.exports = function(app) {
   }
 
   function blockPermissions(block, userId, permission, context, cb) {
-    app.models.Dataset.findById(block.DatasetId, {}, context)
+    app.models.Dataset.findById(block.datasetId, {}, context)
     .then(function(map) {
       if (map) {
         cb(permission(map, userId))

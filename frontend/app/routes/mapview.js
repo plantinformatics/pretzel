@@ -117,7 +117,7 @@ let config = {
       return Promise.resolve(mapsDerivedValue);
     },
       function(reason) {
-        console.log("findAll geneticmap", reason);
+        console.log("findAll dataset", reason);
       }
     );
     let promises = {};
@@ -126,13 +126,13 @@ let config = {
       if (trace_promise > 1)
         console.log("findRecord", param);
       promises[param] = that.get('store').findRecord(
-        'chromosome',
+        'block',
         param,
         {
           reload: true,
           adapterOptions:{
           filter: {
-            'include': 'markers'
+            'include': 'features'
           }}
         }
       );
