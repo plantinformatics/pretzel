@@ -1,6 +1,6 @@
-import Ember from 'ember';
+import ManageBase from './manage-base'
 
-export default Ember.Component.extend({
+export default ManageBase.extend({
   // classNames: ['tabbed-table-container', 'bordered', 'control-panel'],
   // classNames: ['tabbed-table-container', 'control-panel'],
   filterOptions: {

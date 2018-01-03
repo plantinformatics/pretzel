@@ -1,51 +1,51 @@
-{{#elem/panel-form}}
-  <div class="panel panel-primary">
-    <div class="panel-heading">{{elem/icon-base name="filter"}}&nbsp;Filters</div>
-      <div class="panel-body">
-        <div class="btn-group btn-group-justified" role="group" aria-label="...">
-          {{#each-in filterOptions as |key value|}}
-            <div class="btn-group" role="group">
-              <button
-                type="button"
-                class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
-                {{action "changeFilter" key preventDefault=false}}>
-                {{value.formal}}
-                {{elem/icon-base name=value.icon}}
-              </button>
-            </div>
-          {{/each-in}}
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="filter"}}
+    Filters
+  {{/elem/panel-heading}}
+  <div class="panel-body">
+    <div class="btn-group btn-group-justified" role="group" aria-label="...">
+      {{#each-in filterOptions as |key value|}}
+        <div class="btn-group" role="group">
+          <button
+            type="button"
+            class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
+            {{action "changeFilter" key preventDefault=false}}>
+            {{value.formal}}
+            {{elem/icon-base name=value.icon}}
+          </button>
         </div>
-      </div>
-  </div>
-
-  <div class="panel panel-primary">
-    <div class="panel-heading">
-      {{elem/icon-base name="globe"}}&nbsp;Geneticmaps
-      {{elem/button-refresh
-        onClick=(action 'refreshAvailable')}}
+      {{/each-in}}
     </div>
-      {{#if model.mapsDerived.isPending}}
-        <div class="panel-body">
-          <div class="well">
-            Loading map {{elem/icon-base name="globe"}} resources. 
-          </div>
-        </div>
-      {{else if dataEmpty}}
-        <div class="panel-body">
-          <div class="well">
-            No datasets found!
-          </div>
-        </div>
-      {{/if}}
-    <ul class="list-group">
-      {{#each data as |dataset|}}
-        {{panel/manage-explorer-dataset
-          filter=filter
-          dataset=dataset
-          selectedBlock=selectedBlock
-          selectBlock="selectBlock"
-          deleteBlock="deleteBlock"}}
-      {{/each}}
-    </ul>
   </div>
-{{/elem/panel-form}}
+{{/elem/panel-container}}
+
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="globe"}}
+    Geneticmaps
+    {{elem/button-refresh
+      onClick=(action 'refreshAvailable')}}
+  {{/elem/panel-heading}}
+  {{#if model.mapsDerived.isPending}}
+    <div class="panel-body">
+      <div class="well">
+        Loading map {{elem/icon-base name="globe"}} resources. 
+      </div>
+    </div>
+  {{else if dataEmpty}}
+    <div class="panel-body">
+      <div class="well">
+        No datasets found!
+      </div>
+    </div>
+  {{/if}}
+  <ul class="list-group">
+    {{#each data as |dataset|}}
+      {{panel/manage-explorer-dataset
+        filter=filter
+        dataset=dataset
+        selectedBlock=selectedBlock
+        selectBlock="selectBlock"
+        deleteBlock="deleteBlock"}}
+    {{/each}}
+  </ul>
+{{/elem/panel-container}}

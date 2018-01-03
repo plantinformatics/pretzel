@@ -1,61 +1,58 @@
-{{#elem/panel-form}}
-  {{#if errorMessage}}
-    <br>
-    {{#elem/panel-form
-      name="danger"
-      heading="Error"}}
-      {{errorMessage}}
-    {{/elem/panel-form}}
-  {{/if}}
-  {{#if successMessage}}
-    <br>
-    {{#elem/panel-form
-      name="success"
-      heading="Success"}}
-      {{successMessage}}
-    {{/elem/panel-form}}
-  {{/if}}
-  {{#if warningMessage}}
-    <br>
-    {{#elem/panel-form
-      name="warning"
-      heading="Warning"}}
-      {{warningMessage}}
-    {{/elem/panel-form}}
-  {{/if}}
+{{#if errorMessage}}
+  <br>
+  {{#elem/panel-form
+    name="danger"
+    heading="Error"}}
+    {{errorMessage}}
+  {{/elem/panel-form}}
+{{/if}}
+{{#if successMessage}}
+  <br>
+  {{#elem/panel-form
+    name="success"
+    heading="Success"}}
+    {{successMessage}}
+  {{/elem/panel-form}}
+{{/if}}
+{{#if warningMessage}}
+  <br>
+  {{#elem/panel-form
+    name="warning"
+    heading="Warning"}}
+    {{warningMessage}}
+  {{/elem/panel-form}}
+{{/if}}
 
-  <div class="actual-row">
-    <label>Dataset: </label><select id="dataset"></select>
+<div class="actual-row">
+  <label>Dataset: </label><select id="dataset"></select>
+  <input
+    hidden
+    id="dataset_new"
+    class="form-control"
+    placeholder="New dataset name..." />
+  <br><label>Load from file: </label><input type="file" accept=".csv" id="tableFile" onchange={{action 'uploadToTable'}}>
+  <div id="hotable" class="actual-row">
+  </div>
+  <input
+    type="submit"
+    class="btn btn-primary {{if isProcessing 'disabled'}}"
+    onclick={{action 'uploadBlocks'}}>
+  <button
+    class="btn"
+    onclick={{action 'clearTable'}}>Clear</button>
+</div>
+
+<div class="actual-row">
+  <h5>Upload Datasets (JSON / gzip)</h5>
+  <form {{action 'submitForm' on='submit'}}>
     <input
-      hidden
-      id="dataset_new"
-      class="form-control"
-      placeholder="New dataset name..." />
-    <br><label>Load from file: </label><input type="file" accept=".csv" id="tableFile" onchange={{action 'uploadToTable'}}>
-    <div id="hotable" class="actual-row">
-    </div>
+      type='file'
+      accept=".json,.gz"
+      onchange={{action 'upload'}}>
+    <br>
     <input
       type="submit"
-      class="btn btn-primary {{if isProcessing 'disabled'}}"
-      onclick={{action 'uploadBlocks'}}>
-    <button
-      class="btn"
-      onclick={{action 'clearTable'}}>Clear</button>
-  </div>
-
-  <div class="actual-row">
-    <h5>Upload Datasets (JSON / gzip)</h5>
-    <form {{action 'submitForm' on='submit'}}>
-      <input
-        type='file'
-        accept=".json,.gz"
-        onchange={{action 'upload'}}>
-      <br>
-      <input
-        type="submit"
-        class="btn btn-primary {{if isProcessing 'disabled'}}">
-    </form>
-  </div>
-
-{{/elem/panel-form}}
+      class="btn btn-primary {{if isProcessing 'disabled'}}">
+  </form>
+</div>
 

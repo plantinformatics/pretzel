@@ -1,8 +1,8 @@
-import Ember from 'ember';
+import ManageBase from './manage-base'
 
 const { inject: { service }, Component } = Ember;
 
-export default Component.extend({
+export default ManageBase.extend({
   session: service('session'),
   auth: service('auth'),
   store: Ember.inject.service(),

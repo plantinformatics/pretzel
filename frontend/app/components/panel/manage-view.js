@@ -1,8 +1,6 @@
-import Ember from 'ember';
+import ManageBase from './manage-base'
 
-const { Component } = Ember;
-
-export default Component.extend({
+export default ManageBase.extend({
   layout: {
   },
   actions: {

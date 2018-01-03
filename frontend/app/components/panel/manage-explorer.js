@@ -1,9 +1,6 @@
-import Ember from 'ember';
+import ManageBase from './manage-base'
 
-const { Component, inject: { service } } = Ember;
-
-export default Component.extend({
-  store: service(),
+export default ManageBase.extend({
 
   filterOptions: {
     'all': {'formal': 'All', 'icon': 'plus'},

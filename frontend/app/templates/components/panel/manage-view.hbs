@@ -1,71 +1,70 @@
-{{#elem/panel-form}}
-  <div class="panel panel-primary">
-    <div class="panel-heading">Aligned Maps {{elem/icon-base name="globe"}}</div>
-      {{#unless selectedMaps}}
-        <div class="panel-body">
-          <div class="well">
-            Click and drag {{elem/icon-base name="resize-vertical"}} along a map {{elem/icon-base name="globe"}}, or select {{elem/icon-base name='info'}} a map from the Explorer {{elem/icon-base name='folder-open'}}. 
-          </div>
-        </div>
-      {{/unless}}
-    <ul class="list-group">
-      {{#each selectedMaps as |block|}}
-        <li 
-          class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
-          data-chr-id={{block.id}}
-          {{action "selectChrom" block on="click"}}>
-          {{block.map.name}} {{block.name}} {{elem/icon-owner state=block.owner}} {{elem/icon-visible state=block.public}}
-
-          <span class="pull-right">
-            {{!-- {{elem/button-base
-              classSize='xs'
-              classColour='danger'
-              icon='minus'
-              onClick=(action "deleteBlock" block)}} --}}
-          </span>
-          
-
-          <p class="list-group-item-text">
-            {{#each block.annotations as |annotation|}}
-              <span class="label label-default" style="display: inline-block">
-                {{annotation}}
-              </span>
-            {{/each}}
-          </p>
-        </li>
-      {{/each}}
-    </ul>
-  </div>
-  {{!-- {{#if selectedMaps}} --}}
-    <div class="bordered control-panel" style="display: inline-block;">
-      <div class="pull-left vspace1">
-        <div class="drawing-controls vspace1">
-          <div class="dropdown">
-            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-              Display Toggles
-              <b class="caret"></b>
-            </a>
-            <ul class="dropdown-menu">
-              <li class="sub-menu">
-                {{input type="checkbox" checked=isShowUnique class="toggle"}}
-                <label {{action "toggleShowUnique" on="doubleClick"}}>Show Unique</label>
-              </li>
-              <li class="sub-menu">
-                {{input type="checkbox" checked=pathColourScale class="toggle"}}
-                <label {{action "togglePathColourScale" on="doubleClick"}}>Path Colour Scale</label>
-              </li>
-              <li class="sub-menu">
-                {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
-                <label>Show Scaffold Markers</label>
-              </li>
-              <li class="sub-menu">
-                {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
-                <label>Show Asymmetric Aliases</label>
-              </li>
-            </ul>
-          </div>
-          <div class="flowButtons"></div>
-        </div>
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="globe"}}
+    Aligned Maps
+  {{/elem/panel-heading}}
+  {{#unless selectedMaps}}
+    <div class="panel-body">
+      <div class="well">
+        Click and drag {{elem/icon-base name="resize-vertical"}} along a map {{elem/icon-base name="globe"}}, or select {{elem/icon-base name='info'}} a map from the Explorer {{elem/icon-base name='folder-open'}}. 
       </div>
+    </div>
+  {{/unless}}
+  <ul class="list-group">
+    {{#each selectedMaps as |block|}}
+      <li 
+        class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
+        data-chr-id={{block.id}}
+        {{action "selectChrom" block on="click"}}>
+        {{block.map.name}} {{block.name}} {{elem/icon-owner state=block.owner}} {{elem/icon-visible state=block.public}}
+
+        <span class="pull-right">
+          {{!-- {{elem/button-base
+            classSize='xs'
+            classColour='danger'
+            icon='minus'
+            onClick=(action "deleteBlock" block)}} --}}
+        </span>
+        
+
+        <p class="list-group-item-text">
+          {{#each block.annotations as |annotation|}}
+            <span class="label label-default" style="display: inline-block">
+              {{annotation}}
+            </span>
+          {{/each}}
+        </p>
+      </li>
+    {{/each}}
+  </ul>
+{{/elem/panel-container}}
+<div class="bordered control-panel" style="display: inline-block;">
+  <div class="pull-left vspace1">
+    <div class="drawing-controls vspace1">
+      <div class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+          Display Toggles
+          <b class="caret"></b>
+        </a>
+        <ul class="dropdown-menu">
+          <li class="sub-menu">
+            {{input type="checkbox" checked=isShowUnique class="toggle"}}
+            <label {{action "toggleShowUnique" on="doubleClick"}}>Show Unique</label>
+          </li>
+          <li class="sub-menu">
+            {{input type="checkbox" checked=pathColourScale class="toggle"}}
+            <label {{action "togglePathColourScale" on="doubleClick"}}>Path Colour Scale</label>
+          </li>
+          <li class="sub-menu">
+            {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
+            <label>Show Scaffold Markers</label>
+          </li>
+          <li class="sub-menu">
+            {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
+            <label>Show Asymmetric Aliases</label>
+          </li>
+        </ul>
+      </div>
+      <div class="flowButtons"></div>
+    </div>
   </div>
-{{/elem/panel-form}}
+</div>

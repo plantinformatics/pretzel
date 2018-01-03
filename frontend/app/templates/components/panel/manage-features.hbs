@@ -1,21 +1,21 @@
-{{#elem/panel-form}}
-  <div class="panel panel-primary">
-    <div class="panel-heading">{{elem/icon-base name="filter"}}&nbsp;Filters</div>
-      <div class="panel-body">
-        <div class="btn-group btn-group-justified" role="group" aria-label="...">
-          {{#each-in filterOptions as |key value|}}
-            <div class="btn-group" role="group">
-              <button
-                type="button"
-                class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
-                {{action "changeFilter" key preventDefault=false}}>
-                {{value.formal}}
-                {{elem/icon-base name=value.icon}}
-              </button>
-            </div>
-          {{/each-in}}
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="filter"}}
+    Filters
+  {{/elem/panel-heading}}
+  <div class="panel-body">
+    <div class="btn-group btn-group-justified" role="group" aria-label="...">
+      {{#each-in filterOptions as |key value|}}
+        <div class="btn-group" role="group">
+          <button
+            type="button"
+            class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
+            {{action "changeFilter" key preventDefault=false}}>
+            {{value.formal}}
+            {{elem/icon-base name=value.icon}}
+          </button>
         </div>
-      </div>
+      {{/each-in}}
+    </div>
   </div>
-  {{table-brushed data=data}}
-{{/elem/panel-form}}
+{{/elem/panel-container}}
+{{table-brushed data=data}}

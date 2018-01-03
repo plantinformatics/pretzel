@@ -1,6 +1,6 @@
-import Record from './manage-record';
+import ManageBase from './manage-base';
 
-export default Record.extend({
+export default ManageBase.extend({
   newAnnotation: '',
   newInterval: '',
   actions: {
@@ -13,16 +13,10 @@ export default Record.extend({
       let blockId = block.get('id')
       let store = this.get('store')
       if (newAnnotation) {
-        console.log('NEW ANNOTATION', newAnnotation)
-        console.log('block id', block.get('id'))
         var annotation = store.createRecord('annotation', {
           name: newAnnotation,
           blockId: block
         });
-
-        console.log('ANNOTATION', annotation)
-        // newAnnotations.push(newAnnotation)
-        // block.set('tags', newAnnotations)
         annotation.save()
       }
       this.set('newAnnotation', '')

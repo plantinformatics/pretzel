@@ -1,5 +1,4 @@
 {{#if block}}
-<div class="col-sm-12">
   <h4>
     {{block.map.name}}
     {{elem/icon-acl record=dataset}}
@@ -34,118 +33,114 @@
 
   <label>Features</label><p>{{block.features.length}}</p>
 
-  <div class="panel panel-primary">
-    <div class="panel-heading">
-      {{elem/icon-base name='tags'}} &nbsp; Annotations
+  {{#elem/panel-container state="primary"}}
+    {{#elem/panel-heading icon="tags"}}
+      Annotations
       <span class="badge">{{block.annotations.length}}</span>
       {{elem/button-refresh}}
-    </div>
+    {{/elem/panel-heading}}
 
-      <ul class="list-group">
-        {{!-- existing annotations --}}
-        {{#if block.annotations}}
-          {{#each block.annotations as |entry index|}}
-            {{panel/manage-block-annotation
-              entry=entry}}
-          {{/each}}
-        {{else}}
-          <li class="list-group-item list-group-item-default">
-            <div class="well well-sm">
-              Add an annotation {{elem/icon-base name='tag'}} to give context to your map {{elem/icon-base name='globe'}}. 
-            </div>
-          </li>
-        {{/if}}
+    <ul class="list-group">
+      {{!-- existing annotations --}}
+      {{#if block.annotations}}
+        {{#each block.annotations as |entry index|}}
+          {{panel/manage-block-annotation
+            entry=entry}}
+        {{/each}}
+      {{else}}
+        <li class="list-group-item list-group-item-default">
+          <div class="well well-sm">
+            Add an annotation {{elem/icon-base name='tag'}} to give context to your map {{elem/icon-base name='globe'}}. 
+          </div>
+        </li>
+      {{/if}}
+      <li href="#" class="list-group-item">
+        <div class="input-group">
+          {{input
+            enter="addAnnotation"
+            type="text"
+            value=newAnnotation
+            class="form-control"
+            placeholder="New annotation..."}}
+          <span class="input-group-btn">
+            <button
+              class="btn btn-success"
+              type="button"
+              disabled={{disableCreateTag}}
+              {{action "addAnnotation"}}>
+              {{elem/icon-base name="plus"}}
+            </button>
+          </span>
+        </div>
+      </li>
+    </ul>
+  {{/elem/panel-container}}
+
+  {{#elem/panel-container state="primary"}}
+    {{#elem/panel-heading icon="resize-vertical"}}
+      Intervals
+      <span class="badge">{{block.intervals.length}}</span>
+      {{elem/button-refresh}}
+    {{/elem/panel-heading}}
+
+    <ul class="list-group">
+      {{#if block.intervals}}
+        {{#each block.intervals as |interval index|}}
+          {{panel/manage-block-interval
+            interval=interval
+            selectBlock="selectBlock"
+            deleteBlock="deleteBlock"}}
+        {{/each}}
+      {{else}}
+        <li class="list-group-item list-group-item-default">
+          <div class="well well-sm">
+            Add an interval {{elem/icon-base name='resize-vertical'}} to give context to your map {{elem/icon-base name='globe'}}. 
+          </div>
+        </li>
+      {{/if}}
+      {{#if intervalSelected}}
         <li href="#" class="list-group-item">
           <div class="input-group">
             {{input
-              enter="addAnnotation"
+              action="addAnnotation"
               type="text"
-              value=newAnnotation
+              value=newInterval
               class="form-control"
-              placeholder="New annotation..."}}
+              placeholder="New interval name..."}}
             <span class="input-group-btn">
               <button
                 class="btn btn-success"
                 type="button"
-                disabled={{disableCreateTag}}
+                disabled={{disableCreateInterval}}
                 {{action "addAnnotation"}}>
                 {{elem/icon-base name="plus"}}
               </button>
             </span>
           </div>
+          <h5> {{elem/icon-base name="arrow-up"}}
+            <span class="label label-info">
+              {{elem/icon-base name="asterisk"}} {{intervalSelected.start.Feature}}
+            </span>
+          </h5>
+          <h5> {{elem/icon-base name="arrow-down"}}
+            <span class="label label-info">
+              {{elem/icon-base name="asterisk"}} {{intervalSelected.end.Feature}}
+            </span>
+          </h5>
         </li>
-      </ul>
-  </div>
-
-  <div class="panel panel-primary">
-    <div class="panel-heading">
-      {{elem/icon-base name='resize-vertical'}} &nbsp; Intervals
-      <span class="badge">{{block.intervals.length}}</span>
-      {{elem/button-refresh}}
-    </div>
-
-      <ul class="list-group">
-        {{#if block.intervals}}
-          {{#each block.intervals as |interval index|}}
-            {{panel/manage-block-interval
-              interval=interval
-              selectBlock="selectBlock"
-              deleteBlock="deleteBlock"}}
-          {{/each}}
-        {{else}}
-          <li class="list-group-item list-group-item-default">
-            <div class="well well-sm">
-              Add an interval {{elem/icon-base name='resize-vertical'}} to give context to your map {{elem/icon-base name='globe'}}. 
-            </div>
-          </li>
-        {{/if}}
-        {{#if intervalSelected}}
-          <li href="#" class="list-group-item">
-            <div class="input-group">
-              {{input
-                action="addAnnotation"
-                type="text"
-                value=newInterval
-                class="form-control"
-                placeholder="New interval name..."}}
-              <span class="input-group-btn">
-                <button
-                  class="btn btn-success"
-                  type="button"
-                  disabled={{disableCreateInterval}}
-                  {{action "addAnnotation"}}>
-                  {{elem/icon-base name="plus"}}
-                </button>
-              </span>
-            </div>
-            <h5> {{elem/icon-base name="arrow-up"}}
-              <span class="label label-info">
-                {{elem/icon-base name="asterisk"}} {{intervalSelected.start.Feature}}
-              </span>
-            </h5>
-            <h5> {{elem/icon-base name="arrow-down"}}
-              <span class="label label-info">
-                {{elem/icon-base name="asterisk"}} {{intervalSelected.end.Feature}}
-              </span>
-            </h5>
-          </li>
-        {{else}}
-          <li class="list-group-item list-group-item-default">
-            <div class="well well-sm">
-              Click and drag up a map {{elem/icon-base name='globe'}} to select an interval {{elem/icon-base name='resize-vertical'}}. 
-            </div>
-          </li>
-        {{/if}}
-      </ul>
-  </div>
-</div>
+      {{else}}
+        <li class="list-group-item list-group-item-default">
+          <div class="well well-sm">
+            Click and drag up a map {{elem/icon-base name='globe'}} to select an interval {{elem/icon-base name='resize-vertical'}}. 
+          </div>
+        </li>
+      {{/if}}
+    </ul>
+  {{/elem/panel-container}}
 {{else}}
-<div class="col-sm-12">
-    <h3>No Map Selected</h3>
+  <h3>No Map Selected</h3>
 
-    <div class="well">
-      Click and drag {{elem/icon-base name="resize-vertical"}} along a map {{elem/icon-base name="globe"}}, or select {{elem/icon-base name='info-sign'}} a map from the view panel {{elem/icon-base name='eye-open'}}.
-    </div>
-
-</div>
+  <div class="well">
+    Click and drag {{elem/icon-base name="resize-vertical"}} along a map {{elem/icon-base name="globe"}}, or select {{elem/icon-base name='info-sign'}} a map from the view panel {{elem/icon-base name='eye-open'}}.
+  </div>
 {{/if}}
