@@ -10,11 +10,11 @@
       {{yield}}
       {{#if errorMessage}}
         <br>
-        {{#elem-panel
+        {{#elem/panel-form
           name="danger"
           heading="Error"}}
           {{errorMessage}}
-        {{/elem-panel}}
+        {{/elem/panel-form}}
       {{/if}}
     </div>
   </div>

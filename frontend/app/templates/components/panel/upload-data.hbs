@@ -1,27 +1,27 @@
-{{#elem-panel}}
+{{#elem/panel-form}}
   {{#if errorMessage}}
     <br>
-    {{#elem-panel
+    {{#elem/panel-form
       name="danger"
       heading="Error"}}
       {{errorMessage}}
-    {{/elem-panel}}
+    {{/elem/panel-form}}
   {{/if}}
   {{#if successMessage}}
     <br>
-    {{#elem-panel
+    {{#elem/panel-form
       name="success"
       heading="Success"}}
       {{successMessage}}
-    {{/elem-panel}}
+    {{/elem/panel-form}}
   {{/if}}
   {{#if warningMessage}}
     <br>
-    {{#elem-panel
+    {{#elem/panel-form
       name="warning"
       heading="Warning"}}
       {{warningMessage}}
-    {{/elem-panel}}
+    {{/elem/panel-form}}
   {{/if}}
 
   <div class="actual-row">
@@ -57,5 +57,5 @@
     </form>
   </div>
 
-{{/elem-panel}}
+{{/elem/panel-form}}
 

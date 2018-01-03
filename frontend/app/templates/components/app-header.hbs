@@ -4,7 +4,7 @@
       <ul class="nav navbar-nav navbar-left">
         <li>
           {{#link-to 'index' tagName='a'}}
-            {{elem-logo}}
+            {{elem/logo-pretzel}}
           {{/link-to}}
         </li>
         {{#if auth}}
@@ -16,7 +16,7 @@
             </li>
             <li>
               {{#link-to 'change-password' classNames='' tagName='a'}}
-                Change Password {{elem-icon name="user"}}
+                Change Password {{elem/icon-base name="user"}}
               {{/link-to}}
             </li> 
           {{/if}}
@@ -38,7 +38,7 @@
           {{#if session.isAuthenticated}}
             <li>
               <a {{action 'logout'}} class="">
-                Logout {{elem-icon name="log-out"}}
+                Logout {{elem/icon-base name="log-out"}}
               </a>
             </li>
             {{#if sessionAccount.account}}
@@ -47,12 +47,12 @@
           {{else}}
             <li>
               {{#link-to 'signup' classNames='' tagName='a'}}
-                Sign Up {{elem-icon name="edit"}}
+                Sign Up {{elem/icon-base name="edit"}}
               {{/link-to}}
             </li>
             <li>
               {{#link-to 'login' classNames='' tagName='a'}}
-                Log In {{elem-icon name="log-in"}}
+                Log In {{elem/icon-base name="log-in"}}
               {{/link-to}}
             </li>
           {{/if}}

@@ -2,60 +2,43 @@
 <div class="col-sm-12">
   <h4>
     {{block.map.name}}
+    {{elem/icon-acl record=dataset}}
     {{#if dataset.owner}}
-      {{!-- {{#if dataset.public}}
-          {{#elem-button
-            classSize='sm'
-            classColour='primary'
-            icon='eye-close'
-            onClick=(action 'flipPublic' dataset)}} Make Private {{/elem-button}}
-      {{else}}
-        <span class="label label-default">{{elem-icon name='tags'}}</span>
-        {{#elem-button
-          classSize='sm'
-          classColour='primary'
-          icon='eye-open'
-          onClick=(action 'flipPublic' dataset)}} Make Public {{/elem-button}}
-      {{/if}} --}}
-      {{#if dataset.public}}
-      {{else}}
-        {{elem-icon name='lock'}}
-      {{/if}}
-      <div class="btn-group btn-group-sm pull-right">
-        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-          {{elem-icon name='option-horizontal'}}
-        </button>
-        <ul class="dropdown-menu dropdown-menu-right">
+      {{#elem/dropdown-container
+        right=true}}
+        {{#elem/dropdown-row
+          icon="lock"
+          onClick=(action 'flipPublic' dataset)}}
           {{#if dataset.public}}
-            <li><a href="#" {{action 'flipPublic' dataset}}>Make Private</a></li>
+          Make Private
           {{else}}
-            <li><a href="#" {{action 'flipPublic' dataset}}>Make Public</a></li>
+          Make Public
           {{/if}}
-          <li><a href="#">Something else here</a></li>
-          <li role="separator" class="divider"></li>
-          <li><a href="#">Separated link</a></li>
-        </ul>
-      </div>
-
+        {{/elem/dropdown-row}}
+        {{#elem/dropdown-row
+          icon="pencil"
+          onClick=(action 'flipReadOnly' dataset)}}
+          {{#if dataset.readOnly}}
+          Make Editable
+          {{else}}
+          Make Read-Only
+          {{/if}}
+        {{/elem/dropdown-row}}
+      {{/elem/dropdown-container}}
     {{/if}}
   </h4>
 
   <h4>
     {{block.name}}
   </h4>
-  {{!-- <p><span class="label label-default">ID: {{block.id}}</span></p> --}}
-  {{!-- {{dataset}}
-  {{dataset.name}} --}}
 
   <label>Features</label><p>{{block.features.length}}</p>
 
   <div class="panel panel-primary">
     <div class="panel-heading">
-      Annotations
-      {{elem-icon name='tags'}}
-      <span class="pull-right">
-        <span class="badge">{{block.annotations.length}}</span>
-      </span>
+      {{elem/icon-base name='tags'}} &nbsp; Annotations
+      <span class="badge">{{block.annotations.length}}</span>
+      {{elem/button-refresh}}
     </div>
 
       <ul class="list-group">
@@ -64,21 +47,11 @@
           {{#each block.annotations as |entry index|}}
             {{panel/manage-block-annotation
               entry=entry}}
-            {{!-- <li href="#" class="list-group-item">
-              {{tag}}
-              <span class="pull-right">
-                <span
-                  class="btn btn-xs btn-danger"
-                  {{action 'removeTag' index}}>
-                    {{elem-icon name="minus"}}
-                </span>
-              </span>
-            </li> --}}
           {{/each}}
         {{else}}
           <li class="list-group-item list-group-item-default">
             <div class="well well-sm">
-              Add an annotation {{elem-icon name='tag'}} to give context to your map {{elem-icon name='globe'}}. 
+              Add an annotation {{elem/icon-base name='tag'}} to give context to your map {{elem/icon-base name='globe'}}. 
             </div>
           </li>
         {{/if}}
@@ -96,7 +69,7 @@
                 type="button"
                 disabled={{disableCreateTag}}
                 {{action "addAnnotation"}}>
-                {{elem-icon name="plus"}}
+                {{elem/icon-base name="plus"}}
               </button>
             </span>
           </div>
@@ -106,11 +79,9 @@
 
   <div class="panel panel-primary">
     <div class="panel-heading">
-      Intervals
-      {{elem-icon name='resize-vertical'}}
-      <span class="pull-right">
-        <span class="badge">{{block.intervals.length}}</span>
-      </span>
+      {{elem/icon-base name='resize-vertical'}} &nbsp; Intervals
+      <span class="badge">{{block.intervals.length}}</span>
+      {{elem/button-refresh}}
     </div>
 
       <ul class="list-group">
@@ -124,7 +95,7 @@
         {{else}}
           <li class="list-group-item list-group-item-default">
             <div class="well well-sm">
-              Add an interval {{elem-icon name='resize-vertical'}} to give context to your map {{elem-icon name='globe'}}. 
+              Add an interval {{elem/icon-base name='resize-vertical'}} to give context to your map {{elem/icon-base name='globe'}}. 
             </div>
           </li>
         {{/if}}
@@ -143,25 +114,25 @@
                   type="button"
                   disabled={{disableCreateInterval}}
                   {{action "addAnnotation"}}>
-                  {{elem-icon name="plus"}}
+                  {{elem/icon-base name="plus"}}
                 </button>
               </span>
             </div>
-            <h5> {{elem-icon name="arrow-up"}}
+            <h5> {{elem/icon-base name="arrow-up"}}
               <span class="label label-info">
-                {{elem-icon name="asterisk"}} {{intervalSelected.start.Feature}}
+                {{elem/icon-base name="asterisk"}} {{intervalSelected.start.Feature}}
               </span>
             </h5>
-            <h5> {{elem-icon name="arrow-down"}}
+            <h5> {{elem/icon-base name="arrow-down"}}
               <span class="label label-info">
-                {{elem-icon name="asterisk"}} {{intervalSelected.end.Feature}}
+                {{elem/icon-base name="asterisk"}} {{intervalSelected.end.Feature}}
               </span>
             </h5>
           </li>
         {{else}}
           <li class="list-group-item list-group-item-default">
             <div class="well well-sm">
-              Click and drag up a map {{elem-icon name='globe'}} to select an interval {{elem-icon name='resize-vertical'}}. 
+              Click and drag up a map {{elem/icon-base name='globe'}} to select an interval {{elem/icon-base name='resize-vertical'}}. 
             </div>
           </li>
         {{/if}}
@@ -173,7 +144,7 @@
     <h3>No Map Selected</h3>
 
     <div class="well">
-      Click and drag {{elem-icon name="resize-vertical"}} along a map {{elem-icon name="globe"}}, or select {{elem-icon name='info-sign'}} a map from the view panel {{elem-icon name='eye-open'}}.
+      Click and drag {{elem/icon-base name="resize-vertical"}} along a map {{elem/icon-base name="globe"}}, or select {{elem/icon-base name='info-sign'}} a map from the view panel {{elem/icon-base name='eye-open'}}.
     </div>
 
 </div>

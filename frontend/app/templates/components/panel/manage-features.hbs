@@ -1,6 +1,6 @@
-{{#elem-panel}}
+{{#elem/panel-form}}
   <div class="panel panel-primary">
-    <div class="panel-heading">Filters {{elem-icon name="filter"}}</div>
+    <div class="panel-heading">{{elem/icon-base name="filter"}}&nbsp;Filters</div>
       <div class="panel-body">
         <div class="btn-group btn-group-justified" role="group" aria-label="...">
           {{#each-in filterOptions as |key value|}}
@@ -10,7 +10,7 @@
                 class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
                 {{action "changeFilter" key preventDefault=false}}>
                 {{value.formal}}
-                {{elem-icon name=value.icon}}
+                {{elem/icon-base name=value.icon}}
               </button>
             </div>
           {{/each-in}}
@@ -18,4 +18,4 @@
       </div>
   </div>
   {{table-brushed data=data}}
-{{/elem-panel}}
+{{/elem/panel-form}}

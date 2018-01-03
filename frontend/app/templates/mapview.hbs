@@ -8,25 +8,25 @@
           side="left"
           key="view"
           state=layout.left.tab onClick="setTab"}}
-          View {{elem-icon name="eye-open"}}
+          View {{elem/icon-base name="eye-open"}}
         {{/tab-button}}
         {{#tab-button
           side="left"
           key="explore"
           state=layout.left.tab onClick="setTab"}}
-          Explorer {{elem-icon name="folder-open"}}
+          Explorer {{elem/icon-base name="folder-open"}}
         {{/tab-button}}
         {{#tab-button
           side="left"
           key="upload"
           state=layout.left.tab onClick="setTab"}}
-          Upload {{elem-icon name="cloud-upload"}}
+          Upload {{elem/icon-base name="cloud-upload"}}
         {{/tab-button}}
         {{#tab-button
           class="pull-right"
           side="left"
           onClick="setVisibility"}}
-          {{elem-icon name="remove"}}
+          {{elem/icon-base name="remove"}}
         {{/tab-button}}
       </ul>
       <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
@@ -45,7 +45,7 @@
             selectBlock="selectBlock"
             deleteBlock="removeMap"}}
           
-	  {{draw-controls drawActions=this}}
+	        {{draw-controls drawActions=this}}
           {{selected-markers
             data=selectedFeatures
             scaffolds=scaffolds
@@ -73,7 +73,7 @@
     </div>
   {{else}}
     <button type="button" class="btn btn-default" {{action "setVisibility" "left" on='click'}}>
-      <a href="#" >{{elem-icon name="chevron-right"}}</a>
+      <a href="#" >{{elem/icon-base name="chevron-right"}}</a>
     </button>
   {{/if}}
   
@@ -124,19 +124,19 @@
           side="right"
           key="block"
           state=layout.right.tab onClick="setTab"}}
-          Block {{elem-icon name="globe"}}
+          Block {{elem/icon-base name="globe"}}
         {{/tab-button}}
         {{#tab-button
           side="right"
           key="settings"
           state=layout.right.tab onClick="setTab"}}
-          Advanced {{elem-icon name="cog"}}
+          Advanced {{elem/icon-base name="cog"}}
         {{/tab-button}}
         {{#tab-button
           class="pull-right"
           side="right"
           onClick="setVisibility"}}
-          {{elem-icon name="remove"}}
+          {{elem/icon-base name="remove"}}
         {{/tab-button}}
       </ul>
       <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
@@ -144,8 +144,6 @@
           {{panel/manage-features
             selectedFeatures=selectedFeatures
             selectedBlock=selectedBlock}}
-          {{!-- marker-detail
-            data=selectedFeatures --}}
         {{else if (compare layout.right.tab '===' 'block')}}
           {{panel/manage-block
             selectedFeatures=selectedFeatures
@@ -159,7 +157,7 @@
     </div>
   {{else}}
     <button type="button" class="btn btn-default" {{action "setVisibility" "right" on='click'}}>
-      <a href="#" >{{elem-icon name="chevron-left"}}</a>
+      <a href="#" >{{elem/icon-base name="chevron-left"}}</a>
     </button> 
   {{/if}}
 </div>

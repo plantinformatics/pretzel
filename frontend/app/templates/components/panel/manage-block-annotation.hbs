@@ -1,47 +1,32 @@
 {{entry.name}}
-{{!-- {{entry.id}} --}}
+{{elem/icon-acl record=entry}}
 
 {{#if entry.owner}}
-  {{#if entry.public}}
-  {{else}}
-    {{elem-icon name='lock'}}
-  {{/if}}
-  {{#if entry.readOnly}}
-  {{else}}
-    {{elem-icon name='pencil'}}
-  {{/if}}
-{{/if}}
-
-<span class="pull-right">
-  <div class="btn-group btn-group-sm">
-    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-      {{elem-icon name='option-horizontal'}}
-    </button>
-    <ul class="dropdown-menu dropdown-menu-right">
+  {{#elem/dropdown-container
+    right=true}}
+    {{#elem/dropdown-row
+      icon="lock"
+      onClick=(action 'flipPublic' entry)}}
       {{#if entry.public}}
-        <li><a href="#" {{action 'flipPublic' entry}}>Make Private</a></li>
+      Make Private
       {{else}}
-        <li><a href="#" {{action 'flipPublic' entry}}>Make Public</a></li>
+      Make Public
       {{/if}}
+    {{/elem/dropdown-row}}
+    {{#elem/dropdown-row
+      icon="pencil"
+      onClick=(action 'flipReadOnly' entry)}}
       {{#if entry.readOnly}}
-        <li><a href="#" {{action 'flipReadOnly' entry}}>Make Editable</a></li>
+      Make Editable
       {{else}}
-        <li><a href="#" {{action 'flipReadOnly' entry}}>Make Read-Only</a></li>
+      Make Read-Only
       {{/if}}
-      <li role="separator" class="divider"></li>
-      <li><a href="#" {{action 'deleteRecord' entry}}>{{elem-icon name='remove'}} Delete</a></li>
-    </ul>
-  </div>
-</span>
-
-{{!-- 
-<h5> {{elem-icon name="arrow-up"}}
-  <span class="label label-info">
-    {{elem-icon name="asterisk"}} {{interval.starting}}
-  </span>
-</h5>
-<h5> {{elem-icon name="arrow-down"}}
-  <span class="label label-info">
-    {{elem-icon name="asterisk"}} {{interval.ending}}
-  </span>
-</h5> --}}
+    {{/elem/dropdown-row}}
+    {{elem/dropdown-separator}}
+    {{#elem/dropdown-row
+      icon="remove"
+      onClick=(action "deleteRecord" entry)}}
+      Delete
+    {{/elem/dropdown-row}}
+  {{/elem/dropdown-container}}
+{{/if}}

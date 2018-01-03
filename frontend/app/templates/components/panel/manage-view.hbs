@@ -1,10 +1,10 @@
-{{#elem-panel}}
+{{#elem/panel-form}}
   <div class="panel panel-primary">
-    <div class="panel-heading">Aligned Maps {{elem-icon name="globe"}}</div>
+    <div class="panel-heading">Aligned Maps {{elem/icon-base name="globe"}}</div>
       {{#unless selectedMaps}}
         <div class="panel-body">
           <div class="well">
-            Click and drag {{elem-icon name="resize-vertical"}} along a map {{elem-icon name="globe"}}, or select {{elem-icon name='info'}} a map from the view panel {{elem-icon name='eye'}}. 
+            Click and drag {{elem/icon-base name="resize-vertical"}} along a map {{elem/icon-base name="globe"}}, or select {{elem/icon-base name='info'}} a map from the Explorer {{elem/icon-base name='folder-open'}}. 
           </div>
         </div>
       {{/unless}}
@@ -14,15 +14,16 @@
           class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
           data-chr-id={{block.id}}
           {{action "selectChrom" block on="click"}}>
-          {{block.map.name}} {{block.name}} {{elem-icon-owner state=block.owner}} {{elem-icon-visible state=block.public}}
+          {{block.map.name}} {{block.name}} {{elem/icon-owner state=block.owner}} {{elem/icon-visible state=block.public}}
 
           <span class="pull-right">
-            {{!-- {{elem-button
+            {{!-- {{elem/button-base
               classSize='xs'
               classColour='danger'
               icon='minus'
               onClick=(action "deleteBlock" block)}} --}}
           </span>
+          
 
           <p class="list-group-item-text">
             {{#each block.annotations as |annotation|}}
@@ -67,4 +68,4 @@
         </div>
       </div>
   </div>
-{{/elem-panel}}
+{{/elem/panel-form}}

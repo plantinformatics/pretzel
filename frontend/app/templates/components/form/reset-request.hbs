@@ -1,10 +1,10 @@
 {{#form/auth-base title="Reset Your Password" errorMessage=errorMessage}}
   {{#if isRegistered}}
-    {{#elem-panel
+    {{#elem/panel-form
       name="success"
       heading="Success"}}
       A password reset request has been submitted. You will receive an email shortly if the email address exists.
-    {{/elem-panel}}
+    {{/elem/panel-form}}
   {{else}}
     <form {{action 'submitForm' on='submit'}}>
       {{auth-input

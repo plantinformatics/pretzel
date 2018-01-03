@@ -1,20 +1,19 @@
 <li class="list-group-item list-group-item-info">
   {{#if layout.active}}
-    {{elem-button
+    {{elem/button-base
       classSize='xs'
       classColour='default'
       icon='minus'
       onClick=(action "switchDataset" dataset)}}
   {{else}}
-    {{elem-button
+    {{elem/button-base
       classSize='xs'
       classColour='default'
       icon='plus'
       onClick=(action "switchDataset" dataset)}}
   {{/if}}
   {{dataset.name}}
-  {{elem-icon-owner state=dataset.owner}}
-  {{elem-icon-visible state=dataset.public}}
+  {{elem/icon-acl record=dataset}}
   <span class="badge">{{data.length}}</span>
 </li>
 {{#if layout.active}}
@@ -23,24 +22,24 @@
       class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
       {{action "selectBlock" block on="click"}}>
       {{block.name}}
-      {{!-- {{elem-icon-owner state=block.owner}} --}}
-      {{!-- {{elem-icon-visible state=block.public}} --}}
+      {{!-- {{elem/icon-base-owner state=block.owner}} --}}
+      {{!-- {{elem/icon-visible state=block.public}} --}}
       <span class="pull-right">
-        {{!-- {{elem-button
+        {{!-- {{elem/button-base
           classSize='xs'
           classColour='info'
           icon='info-sign'
           onClick=(action "selectBlock" block)}} --}}
         {{#if block.isSelected}}
           {{!-- {{#link-to "mapview" (query-params mapsToView=block.blockLink)}}
-            {{elem-button
+            {{elem/button-base
               classSize='xs'
               classColour='danger'
               icon='minus'}}
           {{/link-to}} --}}
         {{else}}
           {{#link-to "mapview" (query-params mapsToView=block.blockLink)}}
-            {{elem-button
+            {{elem/button-base
               classSize='xs'
               classColour='success'
               icon='plus'}}
