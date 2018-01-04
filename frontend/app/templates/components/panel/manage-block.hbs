@@ -54,7 +54,7 @@
           </div>
         </li>
       {{/if}}
-      <li href="#" class="list-group-item">
+      <li href="#" class="list-group-item list-group-item-info">
         <div class="input-group">
           {{input
             enter="addAnnotation"
@@ -99,7 +99,7 @@
         </li>
       {{/if}}
       {{#if intervalSelected}}
-        <li href="#" class="list-group-item">
+        <li href="#" class="list-group-item list-group-item-info">
           <div class="input-group">
             {{input
               action="addInterval"
@@ -129,7 +129,7 @@
           </h5>
         </li>
       {{else}}
-        <li class="list-group-item list-group-item-default">
+        <li class="list-group-item list-group-item-info">
           <div class="well well-sm">
             Click and drag up a map {{elem/icon-base name='globe'}} to select an interval {{elem/icon-base name='resize-vertical'}}. 
           </div>
@@ -138,7 +138,7 @@
     </ul>
   {{/elem/panel-container}}
 {{else}}
-  <h3>No Map Selected</h3>
+  <h4>No Map Selected</h4>
 
   <div class="well">
     Click and drag {{elem/icon-base name="resize-vertical"}} along a map {{elem/icon-base name="globe"}}, or select {{elem/icon-base name='info-sign'}} a map from the view panel {{elem/icon-base name='eye-open'}}.

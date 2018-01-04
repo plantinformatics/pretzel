@@ -10,8 +10,7 @@
             type="button"
             class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
             {{action "changeFilter" key preventDefault=false}}>
-            {{value.formal}}
-            {{elem/icon-base name=value.icon}}
+            {{elem/icon-base name=value.icon}} &nbsp;{{value.formal}}
           </button>
         </div>
       {{/each-in}}
@@ -47,5 +46,16 @@
         selectBlock="selectBlock"
         deleteBlock="deleteBlock"}}
     {{/each}}
+    <li 
+      class="list-group-item list-group-item-info">
+      {{elem/icon-base name='folder-open'}} &nbsp;Upload new data
+      <span class="pull-right">
+        {{elem/button-base
+          classSize='xs'
+          classColour='success'
+          icon='plus'
+          onClick=(action "setTab" "left" "upload")}}
+      </span>
+    </li>
   </ul>
 {{/elem/panel-container}}

@@ -10,8 +10,8 @@
             type="button"
             class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
             {{action "changeFilter" key preventDefault=false}}>
-            {{value.formal}}
-            {{elem/icon-base name=value.icon}}
+            {{elem/icon-base name=value.icon}} &nbsp;{{value.formal}}
+
           </button>
         </div>
       {{/each-in}}

@@ -4,30 +4,30 @@
   {{#if layout.left.visible}}
     <div class="" style="width: 400px">
       <ul class="nav nav-tabs">
-        {{#tab-button
+        {{#elem/button-tab
           side="left"
           key="view"
           state=layout.left.tab onClick="setTab"}}
           {{elem/icon-base name="picture"}}&nbsp; View
-        {{/tab-button}}
-        {{#tab-button
+        {{/elem/button-tab}}
+        {{#elem/button-tab
           side="left"
           key="explore"
           state=layout.left.tab onClick="setTab"}}
           {{elem/icon-base name="folder-open"}}&nbsp; Explorer
-        {{/tab-button}}
-        {{#tab-button
+        {{/elem/button-tab}}
+        {{#elem/button-tab
           side="left"
           key="upload"
           state=layout.left.tab onClick="setTab"}}
           {{elem/icon-base name="cloud-upload"}}&nbsp; Upload
-        {{/tab-button}}
-        {{#tab-button
+        {{/elem/button-tab}}
+        {{#elem/button-tab
           class="pull-right"
           side="left"
           onClick="setVisibility"}}
           {{elem/icon-base name="remove"}}
-        {{/tab-button}}
+        {{/elem/button-tab}}
       </ul>
       <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
         {{#if (compare layout.left.tab '===' 'view')}}
@@ -43,7 +43,8 @@
             showScaffoldMarkers=showScaffoldMarkers
             showAsymmetricAliases=showAsymmetricAliases
             selectBlock="selectBlock"
-            deleteBlock="removeMap"}}
+            deleteBlock="removeMap"
+            setTab="setTab"}}
           
 	        {{panel/view-controls drawActions=this}}
           {{selected-markers
@@ -67,7 +68,8 @@
             showAsymmetricAliases=showAsymmetricAliases
             selectBlock="selectBlock"
             deleteBlock="removeMap"
-            updateModel="updateModel"}}
+            updateModel="updateModel"
+            setTab="setTab"}}
         {{/if}}
       </div>
     </div>
@@ -114,30 +116,30 @@
   {{#if layout.right.visible}}
     <div class="" style="width: 400px">
       <ul class="nav nav-tabs">
-        {{#tab-button
+        {{#elem/button-tab
           side="right"
           key="selection"
           state=layout.right.tab onClick="setTab"}}
           {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{selectedFeatures.length}}</span>
-        {{/tab-button}}
-        {{#tab-button
+        {{/elem/button-tab}}
+        {{#elem/button-tab
           side="right"
           key="block"
           state=layout.right.tab onClick="setTab"}}
           {{elem/icon-base name="globe"}}&nbsp; Block
-        {{/tab-button}}
-        {{#tab-button
+        {{/elem/button-tab}}
+        {{#elem/button-tab
           side="right"
           key="settings"
           state=layout.right.tab onClick="setTab"}}
-          {{elem/icon-base name="cog"}}&nbsp; Advanced
-        {{/tab-button}}
-        {{#tab-button
+          {{elem/icon-base name="cog"}}&nbsp; Adv.
+        {{/elem/button-tab}}
+        {{#elem/button-tab
           class="pull-right"
           side="right"
           onClick="setVisibility"}}
           {{elem/icon-base name="remove"}}
-        {{/tab-button}}
+        {{/elem/button-tab}}
       </ul>
       <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
         {{#if (compare layout.right.tab '===' 'selection')}}

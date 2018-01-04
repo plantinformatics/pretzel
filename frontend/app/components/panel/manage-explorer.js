@@ -4,7 +4,7 @@ export default ManageBase.extend({
 
   filterOptions: {
     'all': {'formal': 'All', 'icon': 'plus'},
-    'public': {'formal': 'Public', 'icon': 'eye-open'},
+    'private': {'formal': 'Private', 'icon': 'lock'},
     'owner': {'formal': 'Mine', 'icon': 'user'}
   },
   filter: 'all',
@@ -15,9 +15,9 @@ export default ManageBase.extend({
     let filter = this.get('filter')
     // perform filtering according to selectedChr
     // let filtered = availableMaps //all
-    if (filter == 'public') {
-      let maps = availableMaps.filterBy('public', true)
-      return maps.filterBy('chromosomes', 'public', true)
+    if (filter == 'private') {
+      let maps = availableMaps.filterBy('public', false)
+      return maps
     } else if (filter == 'owner') {
       return availableMaps.filterBy('owner', true)
     } else {

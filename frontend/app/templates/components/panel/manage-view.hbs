@@ -2,13 +2,6 @@
   {{#elem/panel-heading icon="globe"}}
     Aligned Maps
   {{/elem/panel-heading}}
-  {{#unless selectedMaps}}
-    <div class="panel-body">
-      <div class="well">
-        Click and drag {{elem/icon-base name="resize-vertical"}} along a map {{elem/icon-base name="globe"}}, or select {{elem/icon-base name='info'}} a map from the Explorer {{elem/icon-base name='folder-open'}}. 
-      </div>
-    </div>
-  {{/unless}}
   <ul class="list-group">
     {{#each selectedMaps as |block|}}
       <li 
@@ -38,10 +31,21 @@
         </p>
       </li>
     {{/each}}
+    <li 
+      class="list-group-item list-group-item-info">
+      Select data from the {{elem/icon-base name='folder-open'}} &nbsp;Explorer
+      <span class="pull-right">
+        {{elem/button-base
+          classSize='xs'
+          classColour='success'
+          icon='plus'
+          onClick=(action "setTab" "left" "explore")}}
+      </span>
+    </li>
   </ul>
 {{/elem/panel-container}}
 
-{{#elem/panel-container state="info"}}
+{{#elem/panel-container state="primary"}}
   {{#elem/panel-heading icon="wrench"}}
     Chart Options
   {{/elem/panel-heading}}
