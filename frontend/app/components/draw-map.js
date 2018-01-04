@@ -426,7 +426,8 @@ export default Ember.Component.extend(Ember.Evented, {
    * @param myData array indexed by myAPs[*]; each value is a hash indexed by
    * <mapName>_<chromosomeName>, whose values are an array of markers {location,
    * map:<mapName>_<chromosomeName>, marker: markerName}
-   * mapName is referred to as apName (AP - Axis Piece) for generality.
+   * The index value is referred to as apName (AP - Axis Piece) for generality
+   * (originally "mapName", but it actually identifies a chromosome within a map).
    *
    * @param myData hash indexed by AP names
    * @param availableMaps if not undefined then it is a promise; when this promise has resolved, chrPromises[*].get('map') is available
@@ -499,11 +500,18 @@ export default Ember.Component.extend(Ember.Evented, {
       delete myData.highlightMarker;
     }
 
-
+    /**  oa.apIDs is an array, containing the AP ID-s (i.e. chr names made
+     *  unique by prepending their map name).
+     * The array is not ordered; the stack order (left-to-right) is recorded by
+     * the order of oa.stacks[].
+     */
     console.log("oa.apIDs", oa.apIDs, source);
-    /** apIDs are <apName>_<chromosomeName> */
+    /** apIDs are <mapName>_<chromosomeName> */
     if (source == 'dataReceived')
-      oa.apIDs = oa.apIDs.concat(myDataKeys);
+    {
+      // append each element of myDataKeys[] to oa.apIDs[] if not already present.
+      myDataKeys.forEach(function (apID) { apIDAdd(apID); } );
+    }
     else if ((myDataKeys.length > 0) || (oa.apIDs === undefined))
       oa.apIDs = myDataKeys;
     console.log("oa.apIDs", oa.apIDs);
@@ -821,8 +829,7 @@ export default Ember.Component.extend(Ember.Evented, {
       mapChr2AP[mapChrName] = ap;
         if (source == 'dataReceived')
         {
-          if (apIDFind(ap) < 0)
-            oa.apIDs.push(ap);
+          apIDAdd(ap);
         }
       delete c.mapName;
       delete c.chrName;
@@ -863,6 +870,16 @@ export default Ember.Component.extend(Ember.Evented, {
       let k;
       for (k=oa.apIDs.length-1; (k>=0) && (oa.apIDs[k] != ap); k--) { }
       return k;
+    }
+    /** If ap is not in oa.apIDs[], then append it.
+     * These 3 functions could be members of oa.apIDs[] - maybe a class.
+     */
+    function apIDAdd(ap) {
+      if (apIDFind(ap) < 0)
+      {
+        console.log("apIDAdd push", oa.apIDs, ap);
+        oa.apIDs.push(ap);
+      }
     }
     /** Find apName in oa.apIDs, and remove it. */
     function deleteAPfromapIDs(apName)
