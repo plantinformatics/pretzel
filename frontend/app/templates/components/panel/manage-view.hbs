@@ -14,7 +14,7 @@
       <li 
         class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
         data-chr-id={{block.id}}
-        {{action "selectChrom" block on="click"}}>
+        {{action "selectBlock" block on="click"}}>
         {{block.map.name}} {{block.name}} {{elem/icon-owner state=block.owner}} {{elem/icon-visible state=block.public}}
 
         <span class="pull-right">

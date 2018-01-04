@@ -238,8 +238,7 @@ export default Ember.Component.extend(Ember.Evented, {
       this.sendAction('updatedStacks', stacksText);
     },
 
-    mapsToViewDelete : function(mapName)
-    {
+    mapsToViewDelete : function(mapName) {
       console.log("controller/draw-map", "mapsToViewDelete", mapName);
       this.sendAction('mapsToViewDelete', mapName);
     },
@@ -291,67 +290,53 @@ export default Ember.Component.extend(Ember.Evented, {
     Ember.run.later(function () {
       let trace_data;	// undefined
       if ((newData = dataReceived.get('content')))
-        for (let ind=0; ind<newData.length; ind++)
-    {
+        for (let ind=0; ind<newData.length; ind++) {
       let content = newData;
       console.log("content", content.length, content);
-      if (content && content.length)
-          {
+      if (content && content.length) {
         console.log( newData.length);
         if (newData[0]) console.log(newData[0].length);
 
-        for (let ic=0; ic < content.length; ic++)
-        {
+        for (let ic=0; ic < content.length; ic++) {
           console.log(ic, content[ic]);
           Ember.run.later(function () { dataReceived.popObject(); });
 
           {
-            let mtv = content[ic],
-            m, im, newChr;
+            let mtv = content[ic], m, im, newChr;
             let oa = me.get('oa');
               if ((oa.aps === undefined) || trace_promise)
                 console.log("mtv", mtv.length, mtv, "aps", oa.aps, oa.aps && oa.aps.length);
             if (oa.aps !== undefined)
-            for (im=0; im < mtv.length; im++)
-            {
-              if (oa.aps[m = mtv[im]])
-                console.log("mapsToView[", im, "] === ", m);
-              else if (oa.chrPromises && oa.chrPromises[m])
-                console.log("promise pending for", m);
-              else
-              {
+            for (im=0; im < mtv.length; im++) {
+              if (oa.aps[m = mtv[im]]) { console.log("mapsToView[", im, "] === ", m); }
+              else if (oa.chrPromises && oa.chrPromises[m]) { console.log("promise pending for", m); }
+              else {
                 newChr = mtv[im];
                 console.log(newChr);
                 {
-                  let thisStore = me.get('store'), pc=thisStore.findRecord
-                  ('block', m,
-                   { reload: true,
-                     adapterOptions:{ filter: {include: "markers" } }});
+                  let thisStore = me.get('store')
+                  let pc = thisStore.findRecord('block', m,
+                    { reload: true,
+                      adapterOptions:{ filter: {include: "features" } }}
+                    );
                   pc.then(function (ch){
                     let map, mapId, chrName = ch.get('name'), chr = ch.get('id'), markers, rc;
                     console.log(chrName, chr);
                     if (chrName && chr && (map = ch.get('map')) && (mapId = map.get('id'))
-                           && (markers = ch.get('markers')))
-                    {
+                            && (markers = ch.get('features'))) {
                       console.log("findRecord then", chrName, chr, map.get('name'), mapId, markers.length);
-                    }
-                    else
-                    {
-                      let ppc=thisStore.peekRecord('block', m);
-                      if (ppc !== undefined)
-                      {
+                    } else {
+                      let ppc = thisStore.peekRecord('block', m);
+                      if (ppc !== undefined) {
                         console.log("after findRecord(block, ", m, "), peekRecord() returned", ppc);
-                      }
-                      else
-                      {
+                      } else {
                         console.log
                         (ppc._internalModel.id,
-                         ppc.get('map').get('name'),
-                         ppc.get('name'));
+                          ppc.get('map').get('name'),
+                          ppc.get('name'));
 
-                        if (trace_data)
-                        {
-                          let ma = ppc.get('markers');
+                        if (trace_data) {
+                          let ma = ppc.get('features');
                           ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
                         }
                         ch = ppc;
@@ -366,6 +351,7 @@ export default Ember.Component.extend(Ember.Evented, {
                     me.draw(retHash, undefined, 'dataReceived');
                   });
                 }
+
               }
             }
 
@@ -384,10 +370,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
         }
       }
-
-    }
-    else
-    {
+    } else {
       console.log("no dataReceived", dataReceived, newData);
     }
     }, 1000);

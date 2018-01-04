@@ -1,20 +1,25 @@
 {
   "name": "Interval",
-  "base": "Annotation",
+  "base": "Record",
   "description": "Commentary on Feature range",
   "properties": {
+    "features": {
+      "type": ["string"],
+      "required": false,
+      "default": []
+    },
+    "positions": {
+      "type": ["string"],
+      "required": false,
+      "default": []
+    }
   },
   "validations": [],
   "relations": {
-    "starting": {
+    "block": {
       "type": "belongsTo",
-      "model": "Feature",
-      "foreignKey": "starting"
-    },
-    "ending": {
-      "type": "belongsTo",
-      "model": "Feature",
-      "foreignKey": "ending"
+      "model": "Block",
+      "foreignKey": ""
     }
   },
   "acls": [

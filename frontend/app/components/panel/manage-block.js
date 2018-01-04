@@ -1,4 +1,5 @@
 import ManageBase from './manage-base';
+import interval from '../../models/interval';
 
 export default ManageBase.extend({
   newAnnotation: '',
@@ -6,11 +7,8 @@ export default ManageBase.extend({
   actions: {
     addAnnotation: function() {
       // console.log('ADD ANNOTATION')
-      // let duplicate = this.get('duplicateTag')
-      // if (!duplicate) {
       let newAnnotation = this.get('newAnnotation')
       let block = this.get('block')
-      let blockId = block.get('id')
       let store = this.get('store')
       if (newAnnotation) {
         var annotation = store.createRecord('annotation', {
@@ -23,18 +21,26 @@ export default ManageBase.extend({
       // }
     },
     addInterval: function() {
-      let duplicate = this.get('duplicateInterval')
-      if (!duplicate) {
-        let new_tag = this.get('newAnnotation')
-        let block = this.get('block')
-        if (new_tag) {
-          let new_tags = block.get('tags') || []
-          new_tags.push(new_tag)
-          block.set('tags', new_tags)
-          block.save()
+      let newInterval = this.get('newInterval')
+      let intervalSelected = this.get('intervalSelected')
+      let block = this.get('block')
+      let store = this.get('store')
+      if (newInterval) {
+        let payload = {
+          name: newInterval,
+          blockId: block
         }
-        this.set('newAnnotation', '')
+        let starting = intervalSelected.start
+        let ending = intervalSelected.end
+        // TODO update property references when chart amended
+        let positions = [starting.Position, ending.Position]
+        let features = [starting.Marker, ending.Marker]
+        payload.positions = positions
+        payload.features = features
+        var annotation = store.createRecord('interval', payload);
+        annotation.save()
       }
+      this.set('newInterval', '')
     }
   },
   dataset: Ember.computed('block', function() {
@@ -74,12 +80,13 @@ export default ManageBase.extend({
     let block = this.get('block')
     let selectedFeatures = this.get('selectedFeatures')
     if (selectedFeatures) {
-      let blockId = block.id
+      let blockId = block.id;
       selectedFeatures = selectedFeatures.filter(function(feature) {
-        return feature.Block == blockId
+        // TODO prop requires updating from charting files first
+        return feature.Chromosome == blockId
       })
       selectedFeatures = selectedFeatures.sort(function (a, b) {
-        return a.position - b.position;
+        return a.Position - b.Position;
       });
       if (selectedFeatures.length >= 2) {
         let payload = {

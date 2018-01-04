@@ -4,6 +4,6 @@ import Record from './record';
 
 export default Record.extend({
   blockId: DS.belongsTo('block'),
-  starting: attr('string'),
-  ending: attr('string')
+  features: attr('array'),
+  positions: attr('array')
 });

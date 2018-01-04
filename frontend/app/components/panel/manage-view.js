@@ -4,11 +4,11 @@ export default ManageBase.extend({
   layout: {
   },
   actions: {
-    selectChrom(chr) {
-      this.sendAction('selectChrom', chr);
+    selectBlock(chr) {
+      this.sendAction('selectBlock', chr);
     },
-    deleteChrom(chr) {
-      this.sendAction('deleteChrom', chr.id);
+    deleteBlock(chr) {
+      this.sendAction('deleteBlock', chr.id);
     }
   }
 });
