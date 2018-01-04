@@ -24,47 +24,49 @@
             icon='minus'
             onClick=(action "deleteBlock" block)}} --}}
         </span>
-        
 
-        {{!-- <p class="list-group-item-text">
-          {{#each block.annotations as |annotation|}}
-            <span class="label label-default" style="display: inline-block">
-              {{annotation}}
-            </span>
-          {{/each}}
-        </p> --}}
+        <p class="list-group-item-text">
+          <span class="label label-info">
+            {{elem/icon-base name="asterisk"}} &nbsp;{{block.features.length}}
+          </span> &nbsp;
+          <span class="label label-info">
+            {{elem/icon-base name="tag"}} &nbsp;{{block.annotations.length}}
+          </span> &nbsp;
+          <span class="label label-info">
+            {{elem/icon-base name="resize-vertical"}} &nbsp;{{block.intervals.length}}
+          </span>
+        </p>
       </li>
     {{/each}}
   </ul>
 {{/elem/panel-container}}
-<div class="bordered control-panel" style="display: inline-block;">
-  <div class="pull-left vspace1">
+
+{{#elem/panel-container state="info"}}
+  {{#elem/panel-heading icon="wrench"}}
+    Chart Options
+  {{/elem/panel-heading}}
+  <ul class="list-group">
+    <li class="list-group-item">
+      {{input type="checkbox" checked=isShowUnique class="toggle"}}
+      <label {{action "toggleShowUnique" on="click"}}>Show Unique</label>
+    </li>
+    <li class="list-group-item">
+      {{input type="checkbox" checked=pathColourScale class="toggle"}}
+      <label {{action "togglePathColourScale" on="click"}}>Path Colour Scale</label>
+    </li>
+    <li class="list-group-item">
+      {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
+      <label>Show Scaffold Features</label>
+    </li>
+    <li class="list-group-item">
+      {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
+      <label>Show Asymmetric Aliases</label>
+    </li>
+  </ul>
+
+  <div class="panel-body">
     <div class="drawing-controls vspace1">
-      <div class="dropdown">
-        <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-          Display Toggles
-          <b class="caret"></b>
-        </a>
-        <ul class="dropdown-menu">
-          <li class="sub-menu">
-            {{input type="checkbox" checked=isShowUnique class="toggle"}}
-            <label {{action "toggleShowUnique" on="doubleClick"}}>Show Unique</label>
-          </li>
-          <li class="sub-menu">
-            {{input type="checkbox" checked=pathColourScale class="toggle"}}
-            <label {{action "togglePathColourScale" on="doubleClick"}}>Path Colour Scale</label>
-          </li>
-          <li class="sub-menu">
-            {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
-            <label>Show Scaffold Markers</label>
-          </li>
-          <li class="sub-menu">
-            {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
-            <label>Show Asymmetric Aliases</label>
-          </li>
-        </ul>
-      </div>
       <div class="flowButtons"></div>
     </div>
   </div>
-</div>
+{{/elem/panel-container}}

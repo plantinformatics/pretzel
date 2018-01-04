@@ -8,19 +8,19 @@
           side="left"
           key="view"
           state=layout.left.tab onClick="setTab"}}
-          View {{elem/icon-base name="eye-open"}}
+          {{elem/icon-base name="picture"}}&nbsp; View
         {{/tab-button}}
         {{#tab-button
           side="left"
           key="explore"
           state=layout.left.tab onClick="setTab"}}
-          Explorer {{elem/icon-base name="folder-open"}}
+          {{elem/icon-base name="folder-open"}}&nbsp; Explorer
         {{/tab-button}}
         {{#tab-button
           side="left"
           key="upload"
           state=layout.left.tab onClick="setTab"}}
-          Upload {{elem/icon-base name="cloud-upload"}}
+          {{elem/icon-base name="cloud-upload"}}&nbsp; Upload
         {{/tab-button}}
         {{#tab-button
           class="pull-right"
@@ -45,7 +45,7 @@
             selectBlock="selectBlock"
             deleteBlock="removeMap"}}
           
-	        {{draw-controls drawActions=this}}
+	        {{panel/view-controls drawActions=this}}
           {{selected-markers
             data=selectedFeatures
             scaffolds=scaffolds
@@ -118,19 +118,19 @@
           side="right"
           key="selection"
           state=layout.right.tab onClick="setTab"}}
-          Features <span class="badge">{{selectedFeatures.length}}</span>
+          {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{selectedFeatures.length}}</span>
         {{/tab-button}}
         {{#tab-button
           side="right"
           key="block"
           state=layout.right.tab onClick="setTab"}}
-          Block {{elem/icon-base name="globe"}}
+          {{elem/icon-base name="globe"}}&nbsp; Block
         {{/tab-button}}
         {{#tab-button
           side="right"
           key="settings"
           state=layout.right.tab onClick="setTab"}}
-          Advanced {{elem/icon-base name="cog"}}
+          {{elem/icon-base name="cog"}}&nbsp; Advanced
         {{/tab-button}}
         {{#tab-button
           class="pull-right"
