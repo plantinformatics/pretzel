@@ -121,11 +121,39 @@ Apollo : link; new window or re-use, later axis-iframe.
       c = [];
     return c;
   },
+  /** Lookup the given map name in the current store.   Uses peek not find - does
+   * not load from back-end.
+   * @return map object refn, or undefined if not found
+   */
+  name2Map : function(store, mapName)
+  {
+    let
+      maps=store
+      .peekAll('geneticmap')
+      .filter(function (a) { return a.get('name') == mapName;}),
+    /** expect a.length == 1  */
+    map = maps.length > 0 ? maps[0] : undefined;
+    return map;
+  },
   /** @return map containing named chromosome */
   chrMap : function(chrName)
   {
     let oa = this.get('data') || this.get('oa'),
-    map = oa && oa.chrPromises[chrName].content.map;
+    chr = oa && oa.chrPromises[chrName], map;
+    if (chr)
+      map = chr.content.map;
+    else
+    {
+      let stacked = oa.aps[chrName], store = this.get('store');
+      if (stacked === undefined)
+        debugger;
+      else
+      /* Convert map name to object refn, for uniform result object type,
+       * because other branch returns map object refn .
+       */
+      map  =  this.name2Map(store, stacked.mapName);
+      console.log("goto-marker chrMap()", oa, oa.chrPromises, chrName, stacked, map);
+    }
     return map;
   },
 

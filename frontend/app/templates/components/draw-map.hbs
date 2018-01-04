@@ -23,5 +23,8 @@
 
 {{!-- wait until targetId="toolTip" will resolve --}}
 {{#if toolTipCreated}}
-  {{path-hover data=oa markers=hoverMarkers }}
+  {{path-hover data=oa markers=hoverMarkers targetId="toolTip" }}
+{{/if}}
+{{#if axisMarkerCircleHover}}
+  {{!-- path-hover data=oa markers=hoverMarkers targetId=axisMarkerTargetId  --}} {{!-- "holder" --}}
 {{/if}}

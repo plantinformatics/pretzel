@@ -281,6 +281,17 @@ export default Ember.Component.extend(Ember.Evented, {
   /** object attributes */
   oa : {},
 
+  drawPromisedChr : function(store, m)
+  {
+    // extracted from the else case of dataObserver()
+    let ch=store.peekRecord('chromosome', m), // ppc
+    chr = ch.get('id'),
+    rc = chrData(ch);
+    let retHash = {};
+    retHash[chr] = rc;
+    this.draw(retHash, undefined, 'dataReceived');
+  },
+
   dataObserver : Ember.on('init',
    Ember.observer('dataReceived.length', function(sender, key/*, value, rev*/) {
     let me = this;
@@ -317,7 +328,17 @@ export default Ember.Component.extend(Ember.Evented, {
               if (oa.aps[m = mtv[im]])
                 console.log("mapsToView[", im, "] === ", m);
               else if (oa.chrPromises && oa.chrPromises[m])
-                console.log("promise pending for", m);
+              {
+                let mp = oa.chrPromises[m], zm = oa.z[m],
+                ma = mp.get('markers'), m0 = ma.canonicalState[0].__data;
+                console.log("promise pending for", m, mp, zm, ma.length, m0);
+                if (mp.isFulfilled)
+                {
+                  me.drawPromisedChr(me.get('store'), m);
+                }
+                else  // could draw() here, but don't expect ! isFulfilled
+                  mp.then(function (a,b) { console.log("dataObserver resolved", a, b); });
+              }
               else
               {
                 newChr = mtv[im];
@@ -337,8 +358,9 @@ export default Ember.Component.extend(Ember.Evented, {
                     }
                     else
                     {
+                      // this branch is factored to drawPromisedChr(), plus the draw() call.
                       let ppc=thisStore.peekRecord('chromosome', m);
-                      if (ppc !== undefined)
+                      if (ppc == undefined)
                       {
                         console.log("after findRecord(chromosome, ", m, "), peekRecord() returned", ppc);
                       }
@@ -358,6 +380,7 @@ export default Ember.Component.extend(Ember.Evented, {
                         chr = ch.get('id');
                         console.log("chr = ch.get(id)", chr);
                       }
+                      debugger; // does this path get used ?
                     }
                     rc = chrData(ch);
                     /** Only 1 chr in hash, but use same structure as routes/mapview.js */
@@ -4693,7 +4716,7 @@ export default Ember.Component.extend(Ember.Evented, {
                 .attr("cy",oa.y[p](z[p][m].location))
                 .attr("r",2)
                 .style("fill", "red");
-
+              brushEnableMarkerHover(dot);
               
             } else {
               let m_ = eltClassName(m);
@@ -4810,6 +4833,56 @@ export default Ember.Component.extend(Ember.Evented, {
       }
 
     } // brushHelper
+
+    let targetIdCount = 0;
+    function handleMarkerCircleMouseOver(d, i)
+    {
+      let
+      /** d is the axis chromosome id */
+        chrName = d,
+      markerName = this.classList[0],
+      hoverMarkers = [markerName],
+      selector = "g.ap#" + eltId(chrName) + " > circle." + markerName,
+      targetId = "MC_" + ++targetIdCount;
+      console.log("handleMarkerCircleMouseOver", d, markerName, selector, targetId);
+      if (false)
+      {
+      d3.select(selector)
+        .attr('id', targetId);  // will add selector support to ember-tooltip targetId
+      }
+      else
+      {
+        toolTip.html('<span id="AxisCircleHoverTarget">AxisCircleHoverTarget</span>');
+        toolTip.show(d, i);
+        targetId = "devel-visible";
+      }
+      //  me.set("axisMarkerTargetId", targetId);
+      Ember.run.once(function() {
+        me.set("hoverMarkers", hoverMarkers);
+        // me.set("axisMarkerCircleHover", true);
+      });
+    }
+    function handleMarkerCircleMouseOut(d, i)
+    {
+      if (false)
+      Ember.run.debounce(
+        function() {
+          me.set("axisMarkerCircleHover", false);
+        },
+        10000);
+      else
+      {
+        function hidePathHoverToolTip() { toolTip.hide(d); }
+        Ember.run.debounce(hidePathHoverToolTip, 1000);
+      }
+    }
+    function brushEnableMarkerHover(circleSelection)
+    {
+      circleSelection
+        .on("mouseover", handleMarkerCircleMouseOver)
+        .on("mouseout", handleMarkerCircleMouseOut);
+    }
+
 
     /** Zoom the y axis of this AP to the given brushExtents[].
      * Called via on(click) of brushHelper() Zoom button (zoomSwitch).
