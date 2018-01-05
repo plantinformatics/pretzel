@@ -1,8 +1,8 @@
-import ManageRecord from './manage-record'
+import Ember from 'ember';
 
-const { inject: { service }, Component } = Ember;
+const { Component, inject: { service } } = Ember;
 
-export default ManageRecord.extend({
+export default Ember.Component.extend({
   session: service('session'),
   auth: service('auth'),
   store: Ember.inject.service(),

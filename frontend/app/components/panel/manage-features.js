@@ -20,6 +20,7 @@ export default ManageBase.extend({
     } else if (filter == 'intersect') {
       //split by block
       let blocks = {}
+      
       selectedFeatures.forEach(function(feature) {
         if (!blocks[feature.Block]) {
           blocks[feature.Block] = {}

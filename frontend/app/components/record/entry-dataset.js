@@ -12,6 +12,10 @@ export default Component.extend({
   data: Ember.computed('dataset.blocks', 'filter', function() {
     return this.get('dataset.blocks')
 
+    // below handling is in the case of ownership
+    // ACL handling at the block level, which may be
+    // a future direction
+
     // console.log('dataset explorer computed')
     // let availableBlocks = this.get('dataset.blocks')
     // let filter = this.get('filter')
@@ -33,14 +37,14 @@ export default Component.extend({
   }),
   actions: {
     selectBlock(block) {
-      console.log('SELECT BLOCK manage-explorer-dataset', block)
+      // console.log('SELECT BLOCK manage-explorer-dataset', block)
       this.sendAction('selectBlock', block);
     },
     deleteBlock(block) {
       this.sendAction('deleteBlock', block.id);
     },
     switchDataset(dataset) {
-      console.log('switchDataset')
+      // console.log('switchDataset')
       let active = this.get('layout.active')
       this.set('layout.active', !active)
     }

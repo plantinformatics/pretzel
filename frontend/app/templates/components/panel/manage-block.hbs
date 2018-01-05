@@ -1,31 +1,7 @@
 {{#if block}}
-  <h4>
-    {{block.map.name}}
-    {{elem/icon-acl record=dataset}}
-    {{#if dataset.owner}}
-      {{#elem/dropdown-container
-        right=true}}
-        {{#elem/dropdown-row
-          icon="lock"
-          onClick=(action 'flipPublic' dataset)}}
-          {{#if dataset.public}}
-          Make Private
-          {{else}}
-          Make Public
-          {{/if}}
-        {{/elem/dropdown-row}}
-        {{#elem/dropdown-row
-          icon="pencil"
-          onClick=(action 'flipReadOnly' dataset)}}
-          {{#if dataset.readOnly}}
-          Make Editable
-          {{else}}
-          Make Read-Only
-          {{/if}}
-        {{/elem/dropdown-row}}
-      {{/elem/dropdown-container}}
-    {{/if}}
-  </h4>
+  {{record/entry-block
+    block=block
+    dataset=dataset}}
 
   <h4>
     {{block.name}}
@@ -44,7 +20,7 @@
       {{!-- existing annotations --}}
       {{#if block.annotations}}
         {{#each block.annotations as |entry index|}}
-          {{panel/manage-block-annotation
+          {{record/entry-annotation
             entry=entry}}
         {{/each}}
       {{else}}
@@ -85,9 +61,9 @@
 
     <ul class="list-group">
       {{#if block.intervals}}
-        {{#each block.intervals as |interval index|}}
-          {{panel/manage-block-interval
-            interval=interval
+        {{#each block.intervals as |entry index|}}
+          {{record/entry-interval
+            entry=entry
             selectBlock="selectBlock"
             deleteBlock="deleteBlock"}}
         {{/each}}

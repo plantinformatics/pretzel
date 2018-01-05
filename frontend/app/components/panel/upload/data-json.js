@@ -1,4 +1,4 @@
-import UploadBase from './upload-data-base'
+import UploadBase from './data-base'
 
 export default UploadBase.extend({
   actions: {

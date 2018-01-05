@@ -38,8 +38,9 @@
     </div>
   {{/if}}
   <ul class="list-group">
+    
     {{#each data as |dataset|}}
-      {{panel/manage-explorer-dataset
+      {{record/entry-dataset
         filter=filter
         dataset=dataset
         selectedBlock=selectedBlock

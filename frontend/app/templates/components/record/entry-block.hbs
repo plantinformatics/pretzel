@@ -1,0 +1,27 @@
+<h4>
+  {{block.map.name}}
+  {{elem/icon-acl record=dataset}}
+  {{#if dataset.owner}}
+    {{#elem/dropdown-container
+      right=true}}
+      {{#elem/dropdown-row
+        icon="lock"
+        onClick=(action 'flipPublic' dataset)}}
+        {{#if dataset.public}}
+        Make Private
+        {{else}}
+        Make Public
+        {{/if}}
+      {{/elem/dropdown-row}}
+      {{#elem/dropdown-row
+        icon="pencil"
+        onClick=(action 'flipReadOnly' dataset)}}
+        {{#if dataset.readOnly}}
+        Make Editable
+        {{else}}
+        Make Read-Only
+        {{/if}}
+      {{/elem/dropdown-row}}
+    {{/elem/dropdown-container}}
+  {{/if}}
+</h4>

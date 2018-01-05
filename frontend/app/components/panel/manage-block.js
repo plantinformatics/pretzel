@@ -1,12 +1,10 @@
 import ManageBase from './manage-base';
-import interval from '../../models/interval';
 
 export default ManageBase.extend({
   newAnnotation: '',
   newInterval: '',
   actions: {
     addAnnotation: function() {
-      // console.log('ADD ANNOTATION')
       let newAnnotation = this.get('newAnnotation')
       let block = this.get('block')
       let store = this.get('store')
@@ -18,7 +16,6 @@ export default ManageBase.extend({
         annotation.save()
       }
       this.set('newAnnotation', '')
-      // }
     },
     addInterval: function() {
       let newInterval = this.get('newInterval')

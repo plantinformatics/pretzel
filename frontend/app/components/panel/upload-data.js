@@ -6,7 +6,7 @@ export default ManageBase.extend({
     'cell': {'formal': 'CSV', 'icon': 'th-large'},
     'json': {'formal': 'JSON', 'icon': 'list-alt'},
   },
-  filter: 'json',
+  filter: 'cell',
 
   actions: {
     changeFilter: function(f) {
