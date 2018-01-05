@@ -1,3 +1,24 @@
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="edit"}}
+    Data Specification
+  {{/elem/panel-heading}}
+  <div class="panel-body">
+    <div class="btn-group btn-group-justified" role="group" aria-label="...">
+      {{#each-in filterOptions as |key value|}}
+        <div class="btn-group" role="group">
+          <button
+            type="button"
+            class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
+            {{action "changeFilter" key preventDefault=false}}>
+            {{elem/icon-base name=value.icon}} &nbsp;{{value.formal}}
+
+          </button>
+        </div>
+      {{/each-in}}
+    </div>
+  </div>
+{{/elem/panel-container}}
+
 {{#if errorMessage}}
   <br>
   {{#elem/panel-form
@@ -23,36 +44,8 @@
   {{/elem/panel-form}}
 {{/if}}
 
-<div class="actual-row">
-  <label>Dataset: </label><select id="dataset"></select>
-  <input
-    hidden
-    id="dataset_new"
-    class="form-control"
-    placeholder="New dataset name..." />
-  <br><label>Load from file: </label><input type="file" accept=".csv" id="tableFile" onchange={{action 'uploadToTable'}}>
-  <div id="hotable" class="actual-row">
-  </div>
-  <input
-    type="submit"
-    class="btn btn-primary {{if isProcessing 'disabled'}}"
-    onclick={{action 'uploadBlocks'}}>
-  <button
-    class="btn"
-    onclick={{action 'clearTable'}}>Clear</button>
-</div>
-
-<div class="actual-row">
-  <h5>Upload Datasets (JSON / gzip)</h5>
-  <form {{action 'submitForm' on='submit'}}>
-    <input
-      type='file'
-      accept=".json,.gz"
-      onchange={{action 'upload'}}>
-    <br>
-    <input
-      type="submit"
-      class="btn btn-primary {{if isProcessing 'disabled'}}">
-  </form>
-</div>
-
+{{#if (compare filter '===' 'cell')}}
+  {{panel/upload-data-csv}}
+{{else if (compare filter '===' 'json')}}
+  {{panel/upload-data-json}} 
+{{/if}}

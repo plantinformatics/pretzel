@@ -1,8 +1,6 @@
 import ManageBase from './manage-base'
 
 export default ManageBase.extend({
-  // classNames: ['tabbed-table-container', 'bordered', 'control-panel'],
-  // classNames: ['tabbed-table-container', 'control-panel'],
   filterOptions: {
     'all': {'formal': 'All', 'icon': 'plus'},
     'block': {'formal': 'Block', 'icon': 'globe'},

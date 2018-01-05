@@ -1,0 +1,16 @@
+{{panel/upload-data-message
+  successMessage=successMessage
+  warningMessage=warningMessage
+  errorMessage=errorMessage}}
+
+  <h5>Upload Datasets (JSON / gzip)</h5>
+  <form {{action 'submitForm' on='submit'}}>
+    <input
+      type='file'
+      accept=".json,.gz"
+      onchange={{action 'upload'}}>
+    <br>
+    <input
+      type="submit"
+      class="btn btn-primary {{if isProcessing 'disabled'}}">
+  </form>

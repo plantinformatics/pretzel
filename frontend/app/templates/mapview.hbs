@@ -47,11 +47,6 @@
             setTab="setTab"}}
           
 	        {{panel/view-controls drawActions=this}}
-          {{selected-markers
-            data=selectedFeatures
-            scaffolds=scaffolds
-            scaffoldMarkers=scaffoldMarkers
-            showScaffoldMarkers=showScaffoldMarkers}}
 
         {{else if (compare layout.left.tab '===' 'upload')}}
           {{panel/upload-data}}
@@ -154,6 +149,13 @@
           {{panel/manage-settings
             selectedFeatures=selectedFeatures
             selectedBlock=selectedBlock}}
+
+          {{selected-markers
+            data=selectedFeatures
+            scaffolds=scaffolds
+            scaffoldMarkers=scaffoldMarkers
+            showScaffoldMarkers=showScaffoldMarkers}}
+
         {{/if}}
       </div>
     </div>
