@@ -11,7 +11,9 @@ module.exports = function(Record) {
 
   Record.observe('access', function(ctx, next) {
     console.log(`> Record.access ${ctx.Model.modelName}`);
-    identity.queryFilterAccessible(ctx)
+    if (ctx.Model.modelName != 'Block') {
+      identity.queryFilterAccessible(ctx)
+    }
     next()
   })
 
