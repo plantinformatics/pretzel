@@ -2,6 +2,7 @@ import Ember from 'ember';
 import DS from 'ember-data';
 import Model from 'ember-data/model';
 import attr from 'ember-data/attr';
+import { readOnly } from '@ember/object/computed';
 
 const { inject: { service } } = Ember;
 
@@ -18,4 +19,7 @@ export default DS.Model.extend({
     let clientId = this.get('clientId')
     return clientIdSession == clientId;
   }),
+  editable: Ember.computed('owner', 'readOnly', function() {
+    return this.get('owner') || !this.get('readOnly')
+  })
 });

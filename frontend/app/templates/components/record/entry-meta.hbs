@@ -1,32 +1,63 @@
-{{entry.name}}
-{{elem/icon-acl record=entry}}
-
-{{#if entry.owner}}
-  {{#elem/dropdown-container
-    right=true}}
-    {{#elem/dropdown-row
-      icon="lock"
-      onClick=(action 'flipPublic' entry)}}
-      {{#if entry.public}}
-      Make Private
-      {{else}}
-      Make Public
+{{#if editing }}
+  <div class="input-group">
+    {{input
+      enter=(action "saveEdit" entry)
+      type="text"
+      value=entry.name
+      class="form-control"
+      placeholder="Placeholder"}}
+    <span class="input-group-btn">
+      <button
+        class="btn btn-success"
+        type="button"
+        {{action "saveEdit" entry}}>
+        {{elem/icon-base name="ok"}}
+      </button>
+      <button
+        class="btn btn-danger"
+        type="button"
+        {{action "cancelEdit" entry}}>
+        {{elem/icon-base name="remove"}}
+      </button>
+    </span>
+  </div>
+{{else}}
+  {{entry.name}}
+  {{elem/icon-acl record=entry}}
+  {{#if entry.editable }}
+    {{#elem/dropdown-container
+      right=true}}
+      {{#elem/dropdown-row
+        icon="pencil"
+        onClick=(action 'enableEdit' entry)}}
+        Edit
+      {{/elem/dropdown-row}}
+      {{#if entry.owner }}
+        {{#elem/dropdown-row
+          icon="lock"
+          onClick=(action 'flipPublic' entry)}}
+          {{#if entry.public}}
+          Make Private
+          {{else}}
+          Make Public
+          {{/if}}
+        {{/elem/dropdown-row}}
+        {{#elem/dropdown-row
+          icon="pencil"
+          onClick=(action 'flipReadOnly' entry)}}
+          {{#if entry.readOnly}}
+          Make Editable
+          {{else}}
+          Make Read-Only
+          {{/if}}
+        {{/elem/dropdown-row}}
+        {{elem/dropdown-separator}}
+        {{#elem/dropdown-row
+          icon="remove"
+          onClick=(action "deleteRecord" entry)}}
+          Delete
+        {{/elem/dropdown-row}}
       {{/if}}
-    {{/elem/dropdown-row}}
-    {{#elem/dropdown-row
-      icon="pencil"
-      onClick=(action 'flipReadOnly' entry)}}
-      {{#if entry.readOnly}}
-      Make Editable
-      {{else}}
-      Make Read-Only
-      {{/if}}
-    {{/elem/dropdown-row}}
-    {{elem/dropdown-separator}}
-    {{#elem/dropdown-row
-      icon="remove"
-      onClick=(action "deleteRecord" entry)}}
-      Delete
-    {{/elem/dropdown-row}}
-  {{/elem/dropdown-container}}
+    {{/elem/dropdown-container}}
+  {{/if}}
 {{/if}}

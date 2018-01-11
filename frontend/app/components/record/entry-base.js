@@ -4,7 +4,21 @@ const { Component, inject: { service } } = Ember;
 
 export default Ember.Component.extend({
   store: service(),
+  onInit: function() {
+    this.set('editing', false)
+  }.on('init'),
   actions: {
+    enableEdit: function() {
+      this.set('editing', true)
+    },
+    cancelEdit: function(record) {
+      this.set('editing', false)
+      record.rollbackAttributes()
+    },
+    saveEdit: function(record) {
+      this.set('editing', false)
+      record.save()
+    },
     flipPublic: function(record) {
       // alter publicity boolean for record
       let visible = record.get('public')
