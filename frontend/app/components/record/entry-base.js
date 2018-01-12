@@ -16,8 +16,10 @@ export default Ember.Component.extend({
       record.rollbackAttributes()
     },
     saveEdit: function(record) {
-      this.set('editing', false)
-      record.save()
+      if (record.get('name').length > 0) {
+        this.set('editing', false)
+        record.save()
+      }
     },
     flipPublic: function(record) {
       // alter publicity boolean for record

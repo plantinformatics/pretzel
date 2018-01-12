@@ -8,6 +8,7 @@ export default Component.extend({
   click: function() {
     this.sendAction('onClick');
   },
+  attributeBindings: ['disabled'],
   // classes
   classNames: ['btn'],
   classNameBindings: ['sizeClass', 'colourClass'],

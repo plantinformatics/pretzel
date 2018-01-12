@@ -39,13 +39,12 @@
             class="form-control"
             placeholder="New annotation..."}}
           <span class="input-group-btn">
-            <button
-              class="btn btn-success"
-              type="button"
-              disabled={{disableCreateTag}}
-              {{action "addAnnotation"}}>
-              {{elem/icon-base name="plus"}}
-            </button>
+            {{elem/button-base
+              icon="plus"
+              classColour="success"
+              onClick=(action "addAnnotation")
+              disabled=disableCreateTag
+            }}
           </span>
         </div>
       </li>
@@ -84,13 +83,12 @@
               class="form-control"
               placeholder="New interval..."}}
             <span class="input-group-btn">
-              <button
-                class="btn btn-success"
-                type="button"
-                disabled={{disableCreateInterval}}
-                {{action "addInterval"}}>
-                {{elem/icon-base name="plus"}}
-              </button>
+              {{elem/button-base
+                icon="plus"
+                classColour="success"
+                onClick=(action "addInterval")
+                disabled=disableCreateInterval
+              }}
             </span>
           </div>
           <h5> {{elem/icon-base name="arrow-up"}}
