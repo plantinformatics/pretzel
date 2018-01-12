@@ -5,24 +5,30 @@
   <ul class="list-group">
     <li class="list-group-item">
       <div class="btn-group btn-group-sm btn-group-justified">
-        {{#elem/button-base
-          icon="adjust"
-          classColour="primary"
-          click=(action "clearScaffoldColours")}}
-          Clear Scaffold Colours
-        {{/elem/button-base}}
-        {{#elem/button-base
-          icon="random"
-          classColour="primary"
-          click=(action "flipRegion")}}
-          Flip Region
-        {{/elem/button-base}}
-        {{#elem/button-base
-          icon="resize-full"
-          classColour="primary"
-          click=(action "resetZooms")}}
-          Reset Zooms
-        {{/elem/button-base}}
+        <div class="btn-group">
+          {{#elem/button-base
+            icon="adjust"
+            classColour="primary"
+            click=(action "clearScaffoldColours")}}
+            Clear Scaffold Colours
+          {{/elem/button-base}}
+        </div>
+        <div class="btn-group">
+          {{#elem/button-base
+            icon="random"
+            classColour="primary"
+            click=(action "flipRegion")}}
+            Flip Region
+          {{/elem/button-base}}
+        </div>
+        <div class="btn-group">
+          {{#elem/button-base
+            icon="resize-full"
+            classColour="primary"
+            click=(action "resetZooms")}}
+            Reset Zooms
+          {{/elem/button-base}}
+        </div>
       </div>
     </li>
     <li class="list-group-item">
