@@ -1,6 +1,12 @@
 import Ember from 'ember';
 
 export default Ember.Component.extend({
+  actions : {
+    closeToolTip : function () {
+      console.log("path-hover closeToolTip");
+      this.sendAction('closeToolTip');
+    }
+  },
 
   didInsertElement() {
     let markers = this.markers, targetId = this.targetId,
@@ -8,13 +14,6 @@ export default Ember.Component.extend({
     
     console.log("components/path-hover didInsertElement()", this.element,
                 markers, targetId, this._targetObject, this.parentView.element);
-
-    Ember.$(this.element).position({
-      // my:        "left top",
-      // at:        "left bottom",
-      of:        Ember.$(targetSel), // this, // or $("#otherdiv")
-      // collision: "fit"
-    });
 
     Ember.run.later(function() {
       let d = Ember.$('.tooltip.ember-popover');  // make-ui-draggable

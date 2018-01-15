@@ -278,6 +278,15 @@ export default Ember.Component.extend(Ember.Evented, {
 
   },
 
+  /** set attribute name of this to value, if that is not the current value.
+   * It is expected that value is not a complex type.
+   */
+  ensureValue : function(name, value)
+  {
+    if (this.get(name) != value)
+      this.set(name, value);
+  },
+
   /** object attributes */
   oa : {},
 
@@ -2514,7 +2523,8 @@ export default Ember.Component.extend(Ember.Evented, {
     let newRender = (svgRoot = oa.svgRoot) === undefined;
     if (newRender)
     {
-    d3.select("svg").remove();
+      // Use class in selector to avoid removing logo, which is SVG.
+    d3.select("svg.MarkerMapViewer").remove();
     d3.select("div.d3-tip").remove();
     }
     let translateTransform = "translate(" + margins[marginIndex.left] + "," + margins[marginIndex.top] + ")";
@@ -2522,6 +2532,7 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       oa.svgRoot = 
     svgRoot = d3.select('#holder').append('svg')
+      .attr("class", "MarkerMapViewer")
       .attr("viewBox", "0 0 " + graphDim.w + " " + graphDim.h)
       .attr("preserveAspectRatio", "none"/*"xMinYMin meet"*/)
       .attr('width', "100%" /*graphDim.w*/)
@@ -3045,7 +3056,7 @@ export default Ember.Component.extend(Ember.Evented, {
         .attr("id","toolTip")
     );
     if (toolTipCreated)
-      me.set("toolTipCreated", true);
+      me.ensureValue("toolTipCreated", true);
     toolTip.offset([-15,0]);
     svgRoot.call(toolTip);
 
@@ -3148,6 +3159,45 @@ export default Ember.Component.extend(Ember.Evented, {
         .on("mouseout",handleMouseOut);
     }
 
+    function toolTipMouseOver()
+    {
+      let toolTipHovered = me.get('toolTipHovered') ;
+      console.log("toolTipMouseOver", toolTipHovered);
+      if (! toolTipHovered)
+	      me.set('toolTipHovered', true);
+    }
+    function toolTipMouseOut()
+    {
+      let toolTipHovered = me.get('toolTipHovered') ;
+      console.log("toolTipMouseOut", toolTipHovered);
+      if (toolTipHovered)
+	      me.set('toolTipHovered', false);
+      hidePathHoverToolTip();
+    }
+    function closeToolTip() 
+    {
+      console.log("draw-map closeToolTip");
+      me.ensureValue('toolTipHovered', false);
+      hidePathHoverToolTip();
+    }
+    if (this.actions.closeToolTipA === undefined)
+    {
+      this.actions.closeToolTipA = closeToolTip;
+    }
+    function setupToolTipMouseHover()
+    {
+      // may need to set toolTipHovered if toolTip already contains cursor when it is shown - will toolTipMouseOver() occur ?.
+	    // me.ensureValue('toolTipHovered', true);
+
+      d3.select("div.toolTip.d3-tip#toolTip")
+        .on("mouseover", toolTipMouseOver)
+        .on("mouseout", toolTipMouseOut);
+
+      Ember.$("div.toolTip.d3-tip#toolTip button#toolTipClose")
+        .on("click", closeToolTip);
+    }
+
+
     /**
      * @param d   SVG path data string of path
      * @param this  path element
@@ -3213,19 +3263,49 @@ export default Ember.Component.extend(Ember.Evented, {
         else if (classSetText) hoverExtraText += classSetText;
         listMarkers = listMarkers + a + hoverExtraText + "<br />";
       });
-      toolTip.html(listMarkers);
-      toolTip.show(d, i);
-      Ember.run.once(function() {
-        me.set("hoverMarkers", hoverMarkers);
+
+      let hoveredPath = this;
+      toolTip.offset(function() {
+        return [hoveredPath.getBBox().height / 2, 0];
       });
+
+      /** If path-hover currently exists in toolTip, avoid insert error by detaching it while updating html of parent toolTip */
+      /* after commit, search for ph within pt. */
+      let ph = Ember.$('.pathHover'),
+      ph1=ph.detach(),
+      pt=Ember.$('.toolTip.d3-tip#toolTip');
+
+      listMarkers += '\n<button id="toolTipClose">&#x2573;</button>\n'; // ╳
+      toolTip.html(listMarkers);
+
+      let ph2=ph1.appendTo(pt);
+
+      toolTip.show(d, i);
+      Ember.run.once(me, function() {
+        me.set("hoverMarkers", hoverMarkers);
+        me.ensureValue("pathHovered", true);
+      });
+      Ember.run.later(me, function() {
+        setupToolTipMouseHover();
+      }, 1000);
+    }
+
+    function hidePathHoverToolTip() {
+      console.log("hidePathHoverToolTip", me.get('toolTipHovered'));
+      Ember.run.debounce(me, function () {
+      if (! me.get('toolTipHovered'))
+      {
+        toolTip.hide();
+        me.ensureValue("pathHovered", false);
+      }
+      }, 1000);
     }
 
     function handleMouseOut(d){
       // stroke attributes of this revert to default, as hover ends
       d3.select(this)
         .classed("hovered", false);
-      function hidePathHoverToolTip() { toolTip.hide(d); }
-      Ember.run.debounce(hidePathHoverToolTip, 1000);
+      Ember.run.debounce(me, hidePathHoverToolTip, 2000);
     }
 
 
@@ -6209,6 +6289,7 @@ export default Ember.Component.extend(Ember.Evented, {
     // initial test data for axis-tracks - will discard this.
     let oa = this.get('oa');
     oa.tracks  = [{start: 10, end : 20, description : "track One"}];
+    this.set('toolTipHovered', false);
     Ember.run.later(function() {
       Ember.$('.make-ui-draggable').draggable(); });
   },

@@ -21,9 +21,12 @@
   {{/each}}
 </div>
 
+<div> {{ toolTipCreated }} pathHovered {{  pathHovered }} </div>
 {{!-- wait until targetId="toolTip" will resolve --}}
-{{#if toolTipCreated}}
-  {{path-hover data=oa markers=hoverMarkers targetId="toolTip" }}
+{{#if toolTipCreated }}
+  {{#if pathHovered }}
+    {{path-hover data=oa markers=hoverMarkers targetId="toolTip" closeToolTip=(action "closeToolTipA") }}
+  {{/if}}
 {{/if}}
 {{#if axisMarkerCircleHover}}
   {{!-- path-hover data=oa markers=hoverMarkers targetId=axisMarkerTargetId  --}} {{!-- "holder" --}}
