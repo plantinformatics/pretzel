@@ -1,16 +1,7 @@
 {{!-- <div class="container"> --}}
-<div class="">
+<div class="" style="display:flex; height: 100vh; flex-direction: column">
   {{app-header onLogin='transitionToLoginRoute'}}
-  <div class="body">
+  <div class="body" style="display: flex;">
     {{outlet}}
   </div>
-
-  <div style="clear:both"></div>
-  {{scroll-to
-    href='#holder'
-    label='Top'
-    duration=1000
-    offset=-60
-  }}
-
 </div>
