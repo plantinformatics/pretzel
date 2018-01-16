@@ -1,0 +1,57 @@
+{{!--
+          gene / marker / location / interval -> apollo |  map | etc
+          --}}
+
+<div id="goto-marker" class="clearfix control-panel bordered"  data-toggle="buttons-checkbox" >
+  Type of key values :
+  <div>
+    <input type="radio" name="optradioLimitType" data-value="Gene" />
+    <label>Gene</label>
+  </div>
+  <div>
+    <input type="radio" name="optradioLimitType" data-value="Marker" />
+    <label>Marker</label>
+  </div>
+  <div>
+    <input type="radio" name="optradioLimitType" data-value="Location" />
+    <label>Location</label>
+  </div>
+</div>
+
+{{input
+    value=marker1
+    class="form-control"
+    placeholder="Marker/Gene Name / Location" }}
+
+<div>
+  <input type="checkbox" 
+         id="checkbox-interval" 
+         name="toggle-interval" 
+         checked="checked"
+  />
+  <label>Interval</label>
+  {{input
+      hidden
+      value=marker2
+      class="form-control"
+      placeholder="Marker/Gene Name / Location" }}
+
+
+</div>
+<div>
+  <label>Range size kbp</label>
+  <input type="range" 
+	 id="range-surround" 
+	 name="surround" 
+	 min="0" max="1000"
+	 value="0"
+  />
+</div>
+
+<button>Map
+  {{#ember-popover  }}
+    {{goto-map mapList=mapsOfMarker }}
+  {{/ember-popover }}
+</button>
+{{goto-ensembl markerName=marker1 }}
+

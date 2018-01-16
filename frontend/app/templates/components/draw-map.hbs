@@ -20,3 +20,14 @@
     {{axis-2d drawMap=this data=oa apID=axisS.apID tableData=axisData}}
   {{/each}}
 </div>
+
+<div> {{ toolTipCreated }} pathHovered {{  pathHovered }} </div>
+{{!-- wait until targetId="toolTip" will resolve --}}
+{{#if toolTipCreated }}
+  {{#if pathHovered }}
+    {{path-hover data=oa markers=hoverMarkers targetId="toolTip" closeToolTip=(action "closeToolTipA") }}
+  {{/if}}
+{{/if}}
+{{#if axisMarkerCircleHover}}
+  {{!-- path-hover data=oa markers=hoverMarkers targetId=axisMarkerTargetId  --}} {{!-- "holder" --}}
+{{/if}}

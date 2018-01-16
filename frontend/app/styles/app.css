@@ -338,15 +338,26 @@ div#scaffoldLegend > ul
   cursor: move;
   text-anchor: middle;
 }
-.ap > text {
+/* since split axis, now have (g.ap (g.axis-all ( g.axis  (g.tick ...))) (text) ... ) */
+.ap > .axis-all > text,
+.ap .axis > .tick > text {
   text-anchor: middle;
 }
-.ap.rightmost.not_top > text {
+.ap.rightmost.not_top > .axis-all > text,
+.ap.rightmost .axis > .tick > text {
   text-anchor: start;
 }
-.ap.leftmost.not_top > text {
+.ap.leftmost.not_top > .axis-all > text,
+.ap.leftmost .axis > .tick > text {
   text-anchor: end;
 }
+.ap.rightmost .axis > .tick > text {
+  transform: translate(18px, 0px);
+}
+.ap.rightmost .axis > .tick > line {
+  transform: translate(6px, 0px);
+}
+
 
 /* -------------------------------------------------------------------------- */
 #grid {
@@ -758,4 +769,15 @@ g.ap.selected > text {
 {
     display : inherit;
 }
+/* -------------------------------------------------------------------------- */
+div#goto-marker > div
+{
+    display : inline-block;
+}
+.tooltip-inner  /*.ember-popover*/
+{
+  background-color : #f2f2f2;
+  color: #000;
+}
+
 /* -------------------------------------------------------------------------- */
