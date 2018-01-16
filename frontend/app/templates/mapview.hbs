@@ -1,8 +1,8 @@
 {{!-- app/controllers/mapview.js --}}
-<div class="" style="display: flex">
+<div class="" style="display: flex; flex: 1">
   {{!-- <div class="{{if selectedFeatures 'col-md-8' 'col-md-12'}}"> --}}
   {{#if layout.left.visible}}
-    <div class="" style="width: 400px">
+    <div class="" style="width: 400px; display:flex; flex-direction: column">
       <ul class="nav nav-tabs">
         {{#elem/button-tab
           side="left"
@@ -29,7 +29,7 @@
           {{elem/icon-base name="remove"}}
         {{/elem/button-tab}}
       </ul>
-      <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
+      <div style="overflow-y: auto; overflow-x: hidden">
         {{#if (compare layout.left.tab '===' 'view')}}
 
           {{panel/manage-view
