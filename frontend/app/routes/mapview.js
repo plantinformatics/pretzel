@@ -41,18 +41,18 @@ let config = {
     return value;
   },
 
-  /** chr.extraChrs (aka exChrs) is the list of chrs which are in params.mapsToView
+  /** chr.extraBlocks (aka exChrs) is the list of chrs which are in params.mapsToView
    * other than this chr.
    * Used in :
-   *  chrDeleteLink():  extraChrs - this chr
-   *  chrLink():        extraChrs + this chr
+   *  blockDeleteLink():  extraBlocks - this chr
+   *  chrLink():        extraBlocks + this chr
    *
-   * Suggested changes: the filter in chrDeleteLink makes it unnecessary for
-   * each chr having its own copy of extraChrs, instead simply use
+   * Suggested changes: the filter in blockDeleteLink makes it unnecessary for
+   * each chr having its own copy of extraBlocks, instead simply use
    * params.mapsToView, or a hash computed from mapsToView which would make
    * it easier to filter out this chr.
    * Currently the filter is not needed, because this chr is excluded from
-   * extraChrs by in the model() below.
+   * extraBlocks by in the model() below.
    *
    * selectedMaps[] is almost a copy of params.mapsToView[], except that maps in
    * params which are not chrs in API result are filtered out, i.e.
@@ -110,7 +110,7 @@ let config = {
                 }
               }
             }
-            chr.set('extraChrs', exChrs);
+            chr.set('extraBlocks', exChrs);
           });
         }
       });

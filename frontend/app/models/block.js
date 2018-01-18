@@ -11,25 +11,26 @@ export default Record.extend({
   intervals: DS.hasMany('interval', { async: false }),
   features: DS.hasMany('feature', { async: false }),
 
-  extraChrs: [],
+  extraBlocks: [],
+
   isSelected: false,
 
   linkTo: Ember.computed('name', function() {
     return [this.get("id")];
   }),
 
-  chrDeleteLink: Ember.computed('extraChrs', function() {
-    let exChrs = this.get("extraChrs");
+  blockDeleteLink: Ember.computed('extraBlocks', function() {
+    let exChrs = this.get("extraBlocks");
     let that = this;
-    // console.log("chrDeleteLink", this.get('name'), this.get('id'), exChrs);
+    // console.log("blockDeleteLink", this.get('name'), this.get('id'), exChrs);
     return exChrs.filter(function(chrid) {
       return chrid != that.get("id");
     });
   }),
 
-  chrLink: Ember.computed('extraChrs', function() {
-    var retlist = this.get("extraChrs");
-    // console.log("chrLink", this.get('name'), this.get('id'), retlist);
+  blockLink: Ember.computed('extraBlocks', function() {
+    var retlist = this.get("extraBlocks");
+    // console.log("blockLink", this.get('name'), this.get('id'), retlist);
     if (retlist == null) {
       return [this.get("id")];
     }

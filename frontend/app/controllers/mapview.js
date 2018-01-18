@@ -52,11 +52,11 @@ export default Ember.Controller.extend(Ember.Evented, {
         let availableBlocks = mdv.availableChrs
         let availableDatasets = mdv.availableMaps
         let mtv = this.get('mapsToView')
-        // let extraChrs = availableBlocks;
+        // let extraBlocks = availableBlocks;
         
         if (trace_promise > 1) console.log("updateChrs", availableBlocks, mtv); // , chrID
         
-        this.set('extraChrs', availableBlocks);
+        this.set('extraBlocks', availableBlocks);
         // the above is draft replacement for the following.
 
         // copied (with some excisions) from routes/mapview model();
@@ -81,7 +81,7 @@ export default Ember.Controller.extend(Ember.Evented, {
                 }
               }
             }
-            block.set('extrablocks', exblocks);
+            block.set('extraBlocks', exblocks);
           });
         });
         }
@@ -151,7 +151,7 @@ export default Ember.Controller.extend(Ember.Evented, {
             chr.set('isSelected', false); // In case it has been de-selected.
             // console.log(chr, map);
             chr.set('map', map);  // reference to parent map
-            chr.set('extraChrs', exChrs);
+            chr.set('extraBlocks', exChrs);
           });
         });
         return Promise.resolve(mapsDerivedValue);
@@ -212,14 +212,6 @@ export default Ember.Controller.extend(Ember.Evented, {
   showScaffoldMarkers : false,
   showAsymmetricAliases : false,
 
-  markersSelected: Ember.computed('selectedFeatures', function() {
-    return this.selectedFeatures.length > 0;
-  }),
-
-  numMarkers: Ember.computed('selectedFeatures', function() {
-    return this.selectedFeatures.length;
-  }),
-
   hasData: Ember.computed('model.mapsDerived.content.selectedMaps', 'mapsToView', function() {
     let selectedMaps = this.get('model.mapsDerived.content.selectedMaps');
     if (trace_promise)
@@ -255,8 +247,8 @@ export default Ember.Controller.extend(Ember.Evented, {
       }
     }
     /* initial mapsToView via URL sets model; maps are added or deleted after
-     * that update the add-map and delete-map button sensitivities (extraChrs,
-     * chrLink(), chrDeleteLink()), via : */
+     * that update the add-map and delete-map button sensitivities (extraBlocks,
+     * blockLink(), blockDeleteLink()), via : */
     if (this.get('model.mapsDerived.content'))
     {
       if (trace_promise > 1)
