@@ -1,0 +1,28 @@
+{
+  "name": "Interval",
+  "base": "Record",
+  "description": "Commentary on Feature range",
+  "properties": {
+    "features": {
+      "type": ["string"],
+      "required": false,
+      "default": []
+    },
+    "positions": {
+      "type": ["string"],
+      "required": false,
+      "default": []
+    }
+  },
+  "validations": [],
+  "relations": {
+    "block": {
+      "type": "belongsTo",
+      "model": "Block",
+      "foreignKey": ""
+    }
+  },
+  "acls": [
+  ],
+  "methods": {}
+}

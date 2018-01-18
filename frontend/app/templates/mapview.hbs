@@ -1,57 +1,53 @@
 {{!-- app/controllers/mapview.js --}}
-<div class="" style="display: flex">
-  {{!-- <div class="{{if selectedMarkers 'col-md-8' 'col-md-12'}}"> --}}
+<div class="" style="height:100%; display:flex">
+  {{!-- <div class="{{if selectedFeatures 'col-md-8' 'col-md-12'}}"> --}}
   {{#if layout.left.visible}}
-    <div class="" style="width: 400px">
-      <ul class="nav nav-tabs">
-        {{#tab-button
-           side="left"
-           key="view"
-           state=layout.left.tab onClick="setTab"}}
-          View {{elem-icon name="eye-open"}}
-        {{/tab-button}}
-        {{#tab-button
-           side="left"
-           key="explore"
-           state=layout.left.tab onClick="setTab"}}
-          Explorer {{elem-icon name="folder-open"}}
-        {{/tab-button}}
-        {{#tab-button
-           side="left"
-           key="upload"
-           state=layout.left.tab onClick="setTab"}}
-          Upload {{elem-icon name="cloud-upload"}}
-        {{/tab-button}}
-        {{#tab-button
-           class="pull-right"
-           side="left"
-           onClick="setVisibility"}}
-          {{elem-icon name="remove"}}
-        {{/tab-button}}
+    <div class="" style="width: 400px; display: flex; flex-direction:column">
+      <ul class="nav nav-tabs" style="">
+        {{#elem/button-tab
+          side="left"
+          key="view"
+          state=layout.left.tab onClick="setTab"}}
+          {{elem/icon-base name="picture"}}&nbsp; View
+        {{/elem/button-tab}}
+        {{#elem/button-tab
+          side="left"
+          key="explore"
+          state=layout.left.tab onClick="setTab"}}
+          {{elem/icon-base name="folder-open"}}&nbsp; Explorer
+        {{/elem/button-tab}}
+        {{#elem/button-tab
+          side="left"
+          key="upload"
+          state=layout.left.tab onClick="setTab"}}
+          {{elem/icon-base name="cloud-upload"}}&nbsp; Upload
+        {{/elem/button-tab}}
+        {{#elem/button-tab
+          class="pull-right"
+          side="left"
+          onClick="setVisibility"}}
+          {{elem/icon-base name="remove"}}
+        {{/elem/button-tab}}
       </ul>
-      <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
+      <div style="overflow-y: auto">
         {{#if (compare layout.left.tab '===' 'view')}}
 
           {{panel/manage-view
             model=model
             selectedMaps=selectedMaps
-            selectedChrom=selectedChrom
+            selectedBlock=selectedBlock
             isShowUnique=isShowUnique
             pathColourScale=pathColourScale
             scaffolds=scaffolds
             scaffoldMarkers=scaffoldMarkers
             showScaffoldMarkers=showScaffoldMarkers
             showAsymmetricAliases=showAsymmetricAliases
-            selectChrom="selectChrom"
-            deleteChrom="removeMap"}}
+            selectBlock="selectBlock"
+            deleteBlock="removeMap"
+            setTab="setTab"}}
           
-	  {{draw-controls drawActions=this}}
-	  {{goto-marker  drawActions=this class="pull-left bordered control-panel make-ui-draggable"}}
-          {{selected-markers
-            data=selectedMarkers
-            scaffolds=scaffolds
-            scaffoldMarkers=scaffoldMarkers
-            showScaffoldMarkers=showScaffoldMarkers}}
+	        {{panel/view-controls drawActions=this}}
+        {{goto-marker  drawActions=this class="pull-left bordered control-panel make-ui-draggable"}}
 
         {{else if (compare layout.left.tab '===' 'upload')}}
           {{panel/upload-data}}
@@ -59,21 +55,23 @@
           {{panel/manage-explorer
             model=model
             selectedMaps=selectedMaps
-            selectedChrom=selectedChrom
+            selectedBlock=selectedBlock
             isShowUnique=isShowUnique
             pathColourScale=pathColourScale
             scaffolds=scaffolds
             scaffoldMarkers=scaffoldMarkers
             showScaffoldMarkers=showScaffoldMarkers
             showAsymmetricAliases=showAsymmetricAliases
-            selectChrom="selectChrom"
-            deleteChrom="removeMap"}}
+            selectBlock="selectBlock"
+            deleteBlock="removeMap"
+            updateModel="updateModel"
+            setTab="setTab"}}
         {{/if}}
       </div>
     </div>
   {{else}}
     <button type="button" class="btn btn-default" {{action "setVisibility" "left" on='click'}}>
-      <a href="#" >{{elem-icon name="chevron-right"}}</a>
+      <a href="#" >{{elem/icon-base name="chevron-right"}}</a>
     </button>
   {{/if}}
   
@@ -90,75 +88,81 @@
       availableChrs {{model.mapsDerived.availableChrs.length}}
       selectedMaps {{model.mapsDerived.selectedMaps.length}}
     </p>
-    {{#if hasData}}
+    {{!-- {{#if hasData}} --}}
       {{draw-map
-        updatedSelectedMarkers='updateSelectedMarkers'
         data=model.chrPromises
         Model=model
         drawActions=this
         mapsDerived=model.mapsDerived
         availableMaps=model.mapsDerived.availableMaps
         dataReceived=dataReceived
-        mapsToViewDelete='removeMap'
         isShowUnique=isShowUnique
         pathColourScale=pathColourScale
         scaffolds=scaffolds
         scaffoldMarkers=scaffoldMarkers
         showScaffoldMarkers=showScaffoldMarkers
         showAsymmetricAliases=showAsymmetricAliases
-        selectedChrom=selectedChrom
-        selectChromById='selectChromById'}}
-    {{/if}}
+        selectedBlock=selectedBlock
+        mapsToViewDelete='removeMap'
+        updatedSelectedMarkers='updateSelectedFeatures'
+        selectChromById='selectBlockById'}}
+    {{!-- {{/if}} --}}
   </div>
 
   {{#if layout.right.visible}}
-    <div class="" style="width: 400px">
+    <div class="" style="width: 400px; display:flex; flex-direction:column">
       <ul class="nav nav-tabs">
-        {{#tab-button
-           side="right"
-           key="selection"
-           state=layout.right.tab onClick="setTab"}}
-          Markers <span class="badge">{{selectedMarkers.length}}</span>
-        {{/tab-button}}
-        {{#tab-button
-           side="right"
-           key="chrom"
-           state=layout.right.tab onClick="setTab"}}
-          Map {{elem-icon name="globe"}}
-        {{/tab-button}}
-        {{#tab-button
-           side="right"
-           key="settings"
-           state=layout.right.tab onClick="setTab"}}
-          Advanced {{elem-icon name="cog"}}
-        {{/tab-button}}
-        {{#tab-button
-           class="pull-right"
-           side="right"
-           onClick="setVisibility"}}
-          {{elem-icon name="remove"}}
-        {{/tab-button}}
+        {{#elem/button-tab
+          side="right"
+          key="selection"
+          state=layout.right.tab onClick="setTab"}}
+          {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{selectedFeatures.length}}</span>
+        {{/elem/button-tab}}
+        {{#elem/button-tab
+          side="right"
+          key="block"
+          state=layout.right.tab onClick="setTab"}}
+          {{elem/icon-base name="globe"}}&nbsp; Block
+        {{/elem/button-tab}}
+        {{#elem/button-tab
+          side="right"
+          key="settings"
+          state=layout.right.tab onClick="setTab"}}
+          {{elem/icon-base name="cog"}}&nbsp; Adv.
+        {{/elem/button-tab}}
+        {{#elem/button-tab
+          class="pull-right"
+          side="right"
+          onClick="setVisibility"}}
+          {{elem/icon-base name="remove"}}
+        {{/elem/button-tab}}
       </ul>
-      <div style="height: 800px; overflow-y: auto; overflow-x: hidden;">
+      <div style="overflow-y: auto">
         {{#if (compare layout.right.tab '===' 'selection')}}
-          {{panel/manage-markers
-            selectedMarkers=selectedMarkers
-            selectedChrom=selectedChrom}}
-          {{!-- marker-detail
-          data=selectedMarkers --}}
-        {{else if (compare layout.right.tab '===' 'chrom')}}
-          {{panel/manage-chromosome
-            chr=selectedChrom}}
+          {{panel/manage-features
+            selectedFeatures=selectedFeatures
+            selectedBlock=selectedBlock}}
+        {{else if (compare layout.right.tab '===' 'block')}}
+          {{panel/manage-block
+            selectedFeatures=selectedFeatures
+            block=selectedBlock}}
         {{else if (compare layout.right.tab '===' 'settings')}}
           {{panel/manage-settings
-            selectedMarkers=selectedMarkers
-            selectedChrom=selectedChrom}}
+            selectedFeatures=selectedFeatures
+            selectedBlock=selectedBlock}}
+
+          {{selected-markers
+            data=selectedFeatures
+            scaffolds=scaffolds
+            scaffoldMarkers=scaffoldMarkers
+            showScaffoldMarkers=showScaffoldMarkers}}
+
         {{/if}}
       </div>
     </div>
   {{else}}
     <button type="button" class="btn btn-default" {{action "setVisibility" "right" on='click'}}>
-      <a href="#" >{{elem-icon name="chevron-left"}}</a>
+      <a href="#" >{{elem/icon-base name="chevron-left"}}</a>
     </button> 
   {{/if}}
 </div>

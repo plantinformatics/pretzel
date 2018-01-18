@@ -72,8 +72,10 @@ export default Ember.Component.extend({
         manualRowResize: true,
         manualColumnResize: true,
         manualRowMove: true,
-        manualColumnMove: true,
-        contextMenu: true
+        // manualColumnMove: true,
+        contextMenu: true,
+        sortIndicator: true,
+        columnSorting: true
       });
       that.set('table', table);
       $("#table-brushed").on('mouseleave', function(e) {

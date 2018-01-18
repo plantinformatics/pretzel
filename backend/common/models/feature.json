@@ -1,0 +1,34 @@
+{
+  "name": "Feature",
+  "base": "PersistedModel",
+  "description": "Unit of data that can contain other units",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true
+  },
+  "properties": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "position": {
+      "type": "number",
+      "required": true
+    },
+    "aliases": {
+      "type": "array",
+      "required": false
+    }
+  },
+  "validations": [],
+  "relations": {
+    "block": {
+      "type": "belongsTo",
+      "model": "Block",
+      "foreignKey": ""
+    }
+  },
+  "acls": [
+  ],
+  "methods": {}
+}

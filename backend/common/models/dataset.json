@@ -1,0 +1,18 @@
+{
+  "name": "Dataset",
+  "description": "High level data structure containing blocks",
+  "base": "Record",
+  "properties": {
+  },
+  "validations": [],
+  "relations": {
+    "blocks": {
+      "type": "hasMany",
+      "model": "Block",
+      "foreignKey": ""
+    }
+  },
+  "acls": [
+  ],
+  "methods": {}
+}

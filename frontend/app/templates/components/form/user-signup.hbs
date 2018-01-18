@@ -1,10 +1,10 @@
 {{#form/auth-base title="Sign Up" errorMessage=errorMessage}}
   {{#if isRegistered}}
-    {{#elem-panel
+    {{#elem/panel-form
       name="success"
       heading="Success"}}
       {{successMessage}}
-    {{/elem-panel}}
+    {{/elem/panel-form}}
   {{else}}
     <form {{action 'submitForm' on='submit'}}>
       {{auth-input
@@ -19,7 +19,7 @@
         suggest-text="Already a member?"
         link-name="login"
         link-pretty="Log In"}}
-      {{submit-button loading=isProcessing}}
+      {{elem/button-submit loading=isProcessing}}
     </form>
   {{/if}}
 {{/form/auth-base}}

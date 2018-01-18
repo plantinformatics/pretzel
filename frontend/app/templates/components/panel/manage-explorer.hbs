@@ -1,30 +1,62 @@
-{{#elem-panel}}
-  <div class="panel panel-primary">
-    <div class="panel-heading">
-      Available Maps {{elem-icon name="globe"}} 
-      {{!-- <span class="pull-right">
-        {{elem-button
-          classSize='xs'
-          classColour='info'
-          icon='refresh'}}
-      </span>   --}}
-    </div>
-      {{#if model.mapsDerived.isPending}}
-        <div class="panel-body">
-          <div class="well">
-            Loading map {{elem-icon name="globe"}} resources. 
-          </div>
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="filter"}}
+    Filters
+  {{/elem/panel-heading}}
+  <div class="panel-body">
+    <div class="btn-group btn-group-justified" role="group" aria-label="...">
+      {{#each-in filterOptions as |key value|}}
+        <div class="btn-group" role="group">
+          <button
+            type="button"
+            class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
+            {{action "changeFilter" key preventDefault=false}}>
+            {{elem/icon-base name=value.icon}} &nbsp;{{value.formal}}
+          </button>
         </div>
-      {{/if}}
-    <ul class="list-group">
-      {{#each model.mapsDerived.availableMaps as |geneticmap|}}
-        {{panel/manage-view-geneticmap
-          geneticmap=geneticmap
-          selectedChrom=selectedChrom
-          selectChrom="selectChrom"
-          deleteChrom="deleteChrom"}}
-      {{/each}}
-    </ul>
+      {{/each-in}}
+    </div>
   </div>
-  {{!-- {{#if selectedMaps}} --}}
-{{/elem-panel}}
+{{/elem/panel-container}}
+
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="globe"}}
+    Geneticmaps
+    {{elem/button-refresh
+      onClick=(action 'refreshAvailable')}}
+  {{/elem/panel-heading}}
+  {{#if model.mapsDerived.isPending}}
+    <div class="panel-body">
+      <div class="well">
+        Loading map {{elem/icon-base name="globe"}} resources. 
+      </div>
+    </div>
+  {{else if dataEmpty}}
+    <div class="panel-body">
+      <div class="well">
+        No datasets found!
+      </div>
+    </div>
+  {{/if}}
+  <ul class="list-group">
+    
+    {{#each data as |dataset|}}
+      {{record/entry-dataset
+        filter=filter
+        dataset=dataset
+        selectedBlock=selectedBlock
+        selectBlock="selectBlock"
+        deleteBlock="deleteBlock"}}
+    {{/each}}
+    <li 
+      class="list-group-item list-group-item-info">
+      {{elem/icon-base name='folder-open'}} &nbsp;Upload new data
+      <span class="pull-right">
+        {{elem/button-base
+          classSize='xs'
+          classColour='success'
+          icon='plus'
+          onClick=(action "setTab" "left" "upload")}}
+      </span>
+    </li>
+  </ul>
+{{/elem/panel-container}}

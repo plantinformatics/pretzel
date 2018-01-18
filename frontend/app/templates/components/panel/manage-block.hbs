@@ -1,0 +1,120 @@
+{{#if block}}
+  {{record/entry-block
+    block=block
+    dataset=dataset}}
+
+  <h4>
+    {{block.name}}
+  </h4>
+
+  <label>Features</label><p>{{block.features.length}}</p>
+
+  {{#elem/panel-container state="primary"}}
+    {{#elem/panel-heading icon="tags"}}
+      Annotations
+      <span class="badge">{{block.annotations.length}}</span>
+      {{elem/button-refresh}}
+    {{/elem/panel-heading}}
+
+    <ul class="list-group">
+      {{!-- existing annotations --}}
+      {{#if block.annotations}}
+        {{#each block.annotations as |entry index|}}
+          {{record/entry-annotation
+            entry=entry}}
+        {{/each}}
+      {{else}}
+        <li class="list-group-item list-group-item-default">
+          <div class="well well-sm">
+            Add an annotation {{elem/icon-base name='tag'}} to give context to your map {{elem/icon-base name='globe'}}. 
+          </div>
+        </li>
+      {{/if}}
+      <li href="#" class="list-group-item list-group-item-info">
+        <div class="input-group">
+          {{input
+            enter="addAnnotation"
+            type="text"
+            value=newAnnotation
+            class="form-control"
+            placeholder="New annotation..."}}
+          <span class="input-group-btn">
+            {{elem/button-base
+              icon="plus"
+              classColour="success"
+              onClick=(action "addAnnotation")
+              disabled=disableCreateTag
+            }}
+          </span>
+        </div>
+      </li>
+    </ul>
+  {{/elem/panel-container}}
+
+  {{#elem/panel-container state="primary"}}
+    {{#elem/panel-heading icon="resize-vertical"}}
+      Intervals
+      <span class="badge">{{block.intervals.length}}</span>
+      {{elem/button-refresh}}
+    {{/elem/panel-heading}}
+
+    <ul class="list-group">
+      {{#if block.intervals}}
+        {{#each block.intervals as |entry index|}}
+          {{record/entry-interval
+            entry=entry
+            selectBlock="selectBlock"
+            deleteBlock="deleteBlock"}}
+        {{/each}}
+      {{else}}
+        <li class="list-group-item list-group-item-default">
+          <div class="well well-sm">
+            Add an interval {{elem/icon-base name='resize-vertical'}} to give context to your map {{elem/icon-base name='globe'}}. 
+          </div>
+        </li>
+      {{/if}}
+      {{#if intervalSelected}}
+        <li href="#" class="list-group-item list-group-item-info">
+          <div class="input-group">
+            {{input
+              enter="addInterval"
+              type="text"
+              value=newInterval
+              class="form-control"
+              placeholder="New interval..."}}
+            <span class="input-group-btn">
+              {{elem/button-base
+                icon="plus"
+                classColour="success"
+                onClick=(action "addInterval")
+                disabled=disableCreateInterval
+              }}
+            </span>
+          </div>
+          <h5> {{elem/icon-base name="arrow-up"}}
+            <span class="label label-info">
+              {{elem/icon-base name="asterisk"}} {{intervalSelected.start.Marker}} {{intervalSelected.start.Position}} 
+            </span>
+          </h5>
+          <h5> {{elem/icon-base name="arrow-down"}}
+            <span class="label label-info">
+              {{elem/icon-base name="asterisk"}} {{intervalSelected.end.Marker}} {{intervalSelected.end.Position}}
+            </span>
+          </h5>
+        </li>
+      {{else}}
+        <li class="list-group-item list-group-item-info">
+          <div class="well well-sm">
+            Click and drag up a map {{elem/icon-base name='globe'}} to select an interval {{elem/icon-base name='resize-vertical'}}. 
+          </div>
+        </li>
+      {{/if}}
+    </ul>
+  {{/elem/panel-container}}
+{{else}}
+  <h4>No Map Selected</h4>
+
+  <div class="well">
+    Click and drag {{elem/icon-base name="resize-vertical"}} along a map {{elem/icon-base name="globe"}}, or select {{elem/icon-base name='info-sign'}} a map from the  {{elem/icon-base name='picture'}} &nbsp;View panel.
+  </div>
+{{/if}}

@@ -1,0 +1,23 @@
+{
+  "name": "Annotation",
+  "base": "Record",
+  "description": "Data commentary and insights",
+  "properties": {
+  },
+  "validations": [],
+  "relations": {
+    "block": {
+      "type": "belongsTo",
+      "model": "Block",
+      "foreignKey": ""
+    },
+    "feature": {
+      "type": "belongsTo",
+      "model": "Feature",
+      "foreignKey": ""
+    }
+  },
+  "acls": [
+  ],
+  "methods": {}
+}

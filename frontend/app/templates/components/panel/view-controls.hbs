@@ -1,0 +1,86 @@
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="option-vertical"}}
+    Selected Axis Options
+  {{/elem/panel-heading}}
+  <ul class="list-group">
+    <li class="list-group-item">
+      <div class="btn-group btn-group-sm btn-group-justified">
+        <div class="btn-group">
+          {{#elem/button-base
+            icon="adjust"
+            classColour="primary"
+            click=(action "clearScaffoldColours")}}
+            Clear Scaffold Colours
+          {{/elem/button-base}}
+        </div>
+        <div class="btn-group">
+          {{#elem/button-base
+            icon="random"
+            classColour="primary"
+            click=(action "flipRegion")}}
+            Flip Region
+          {{/elem/button-base}}
+        </div>
+        <div class="btn-group">
+          {{#elem/button-base
+            icon="resize-full"
+            classColour="primary"
+            click=(action "resetZooms")}}
+            Reset Zooms
+          {{/elem/button-base}}
+        </div>
+      </div>
+    </li>
+    <li class="list-group-item">
+        <input type="checkbox" 
+        id="checkbox-toggleModePublish" 
+        name="toggleCheckbox" 
+        />
+        <label>Publish Mode</label>
+    </li>
+    <li class="list-group-item">
+      <input type="checkbox" 
+	     id="checkbox-toggleShowAll" 
+	     name="toggleShowAll" 
+	     checked="checked"
+      />
+      <label>Show All</label>
+    </li>
+    <li class="list-group-item">
+      <input type="checkbox" 
+	     id="checkbox-toggleShowSelectedMarkers" 
+	     name="toggleShowSelectedMarkers" 
+	     checked="checked"
+      />
+      <label>List Selected Features</label>
+    </li>
+
+    <li class="list-group-item">
+      <label>Path Opacity</label>
+      <input type="range" 
+	     id="range-pathOpacity" 
+	     name="pathOpacity" 
+	     min="0" max="100"
+	     value="12.5"
+      />
+    </li>
+    <li class="list-group-item">
+      <label>Path Width</label>
+      <input type="range" 
+	     id="range-pathWidth" 
+	     name="pathWidth" 
+	     min="0" max="300"
+	     value="75"
+      />
+    </li>
+    <li class="list-group-item">
+      <label>Synteny Block Size Threshold</label>
+      <input type="range" 
+	     id="range-sbSizeThreshold" 
+	     name="sbSizeThreshold" 
+	     min="0" max="50"
+	     value="22"
+      />
+    </li>
+  </ul>
+{{/elem/panel-container}}

@@ -2,22 +2,22 @@
 // let minimum_length = 3;
 // let continuity_threshold = 0.9;
 
-function findLinks(chrom_a, chrom_b) {
+function findLinks(block_a, block_b) {
     let links = [];
-    let markers_b = chrom_b.markers.slice(0);
+    let features_b = block_b.features.slice(0);
 
-    for (let i_a = 0; i_a < chrom_a.markers.length; i_a++) {
-        for (let i_b = 0; i_b < markers_b.length; i_b++) {
-            let marker_a = chrom_a.markers[i_a];
-            let marker_b = markers_b[i_b];
-            if (marker_a.name == marker_b.name) {
+    for (let i_a = 0; i_a < block_a.features.length; i_a++) {
+        for (let i_b = 0; i_b < features_b.length; i_b++) {
+            let feature_a = block_a.features[i_a];
+            let feature_b = features_b[i_b];
+            if (feature_a.name == feature_b.name) {
                 let link = {
-                    name: marker_a.name,
-                    pos_a: parseFloat(marker_a.position),
-                    pos_b: parseFloat(marker_b.position)
+                    name: feature_a.name,
+                    pos_a: parseFloat(feature_a.position),
+                    pos_b: parseFloat(feature_b.position)
                 };
                 links.push(link);
-                markers_b.splice(i_b, 1);
+                features_b.splice(i_b, 1);
                 break;                
             }
         }
@@ -217,9 +217,9 @@ function trimBlock(block) {
     return block;
 }
 
-function findBlocks(chrom_a, chrom_b) {
-    let links = findLinks(chrom_a, chrom_b);
-    // sort the list of links by position in chromosome B
+function findBlocks(block_a, block_b) {
+    let links = findLinks(block_a, block_b);
+    // sort the list of links by position in block B
     links.sort(function(a, b) {
         if (a.pos_b == b.pos_b) {
             if (a.pos_a == b.pos_a) {
@@ -230,12 +230,12 @@ function findBlocks(chrom_a, chrom_b) {
         }
         return a.pos_b - b.pos_b;
     });
-    // save the order in which the links appear in chromosome B
+    // save the order in which the links appear in block B
     for (let i=0; i<links.length; i++) {
         links[i]['index_b'] = i;
     }
     let links_b = links.slice(0);
-    // now sort the links by position in chromosome A
+    // now sort the links by position in block A
     // both sorts compare multiple properties to make the order consistent across both lists
     links.sort(function(a, b) {
         if (a.pos_a == b.pos_a) {
@@ -262,32 +262,32 @@ function findBlocks(chrom_a, chrom_b) {
 }
 
 /**
- * Request chromosome data for id
+ * Request block data for id
  * @param {Object} models - Loopback database models
- * @param {String} id - The specific chromosome identifier on database
+ * @param {String} id - The specific block identifier on database
  */
-function findChromosome(models, id) {
-    return models.Chromosome.findById(id, {include: ['markers']})
+function findBlock(models, id) {
+    return models.Block.findById(id, {include: ['features']})
 }
 
 /**
- * Request data for two chromosomes
+ * Request data for two blocks
  * @param {Object} models - Loopback database models
- * @param {String} id_left - The specific chromosome identifier on database
- * @param {String} id_right - The specific chromosome identifier on database
+ * @param {String} id_left - The specific block identifier on database
+ * @param {String} id_right - The specific block identifier on database
  */
-function findChromosomePair(models, id_left, id_right) {
+function findBlockPair(models, id_left, id_right) {
     // TODO will need to be mindful of permissions implications for further ACL granularity
     let data_left = null
     let data_right = null
-    return findChromosome(models, id_left)
+    return findBlock(models, id_left)
     .then(function(data) {
-        if (!data) throw new Error(`Missing data for chromosome ${id_left}`)
+        if (!data) throw new Error(`Missing data for block ${id_left}`)
         else data_left = data.__data
-        return findChromosome(models, id_right)
+        return findBlock(models, id_right)
     })
     .then(function(data) {
-        if (!data) throw new Error(`Missing data for chromosome ${id_right}`)
+        if (!data) throw new Error(`Missing data for block ${id_right}`)
         else data_right = data.__data
         return {
             left: data_left,
@@ -297,7 +297,7 @@ function findChromosomePair(models, id_left, id_right) {
 }
   
 exports.paths = function(models, id0, id1) {
-    return findChromosomePair(models, id0, id1)
+    return findBlockPair(models, id0, id1)
     .then(function(data) {
         return findLinks(data.left, data.right)
     })
@@ -308,7 +308,7 @@ exports.syntenies = function(models, id0, id1, thresholdSize, thresholdContinuit
     let minimum_length = thresholdSize || 20;
     let continuity_threshold = thresholdContinuity || 0.9;
 
-    return findChromosomePair(models, id0, id1, thresholdSize, thresholdContinuity)
+    return findBlockPair(models, id0, id1, thresholdSize, thresholdContinuity)
     .then(function(data) {
         return findBlocks(data.left, data.right)
     })

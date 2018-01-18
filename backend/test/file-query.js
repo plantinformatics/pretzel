@@ -7,7 +7,7 @@ var path = require('path');
 describe('Client File Relation Access', function() {
   var app, server, endpoint, smtp, database, parse
   var userEmail, userPassword, userId, userToken, verifyUrl
-  var geneticmapId, chromosomeId, markerId
+  var datasetId, blockId, featureId
 
   var load, upload
 
@@ -45,13 +45,13 @@ describe('Client File Relation Access', function() {
     userPassword = 'abcd'
     userId = null
     userToken = null
-    geneticmapId = null
-    chromosomeId = null
-    markerId = null
+    datasetId = null
+    blockId = null
+    featureId = null
 
     database.destroyUserByEmail(app.models, userEmail)
     .then(function(data) {
-      return database.destroyGeneticmapsAll(app.models)
+      return database.destroyDatasetsAll(app.models)
     })
     .then(function(data) {
       server = app.listen(done);
@@ -64,7 +64,7 @@ describe('Client File Relation Access', function() {
   after(function(done) {
     database.destroyUserByEmail(app.models, userEmail)
     .then(function(data) {
-      return database.destroyGeneticmapsAll(app.models)
+      return database.destroyDatasetsAll(app.models)
     })
     .then(function(data) {
       server.close(done);
@@ -116,9 +116,9 @@ describe('Client File Relation Access', function() {
   });
 
   var runs = [
-    {model: 'geneticmaps'},
-    {model: 'chromosomes'},
-    {model: 'markers'}
+    {model: 'datasets'},
+    {model: 'blocks'},
+    {model: 'features'}
   ];
 
   runs.forEach(function (run, idx) {
@@ -149,7 +149,7 @@ describe('Client File Relation Access', function() {
       var msg = {data : data, fileName: fileName};
 
       superagent
-        .post(`${endpoint}/Geneticmaps/upload`)
+        .post(`${endpoint}/Datasets/upload`)
         .send(msg)
         .set('Accept', 'application/json')
         .set('Content-Type', 'application/json')
@@ -173,7 +173,7 @@ describe('Client File Relation Access', function() {
       var msg = {data : data, fileName: fileName};
 
       superagent
-        .post(`${endpoint}/Geneticmaps/upload`)
+        .post(`${endpoint}/Datasets/upload`)
         .send(msg)
         .set('Accept', 'application/json')
         .set('Content-Type', 'application/json')
@@ -197,7 +197,7 @@ describe('Client File Relation Access', function() {
       var msg = {data : data, fileName: fileName};
 
       superagent
-        .post(`${endpoint}/Geneticmaps/upload`)
+        .post(`${endpoint}/Datasets/upload`)
         .send(msg)
         .set('Accept', 'application/json')
         .set('Content-Type', 'application/json')
@@ -234,9 +234,9 @@ describe('Client File Relation Access', function() {
     });
   });
 
-  it(`should access geneticmaps and chromosomes`, function(done) {
+  it(`should access datasets and blocks`, function(done) {
     superagent
-      .get(`${endpoint}/geneticmaps?filter[include]=chromosomes`)
+      .get(`${endpoint}/datasets?filter[include]=blocks`)
       .set('Accept', 'application/json')
       .set('Content-Type', 'application/json')
       .set('Authorization', userToken)
@@ -246,27 +246,27 @@ describe('Client File Relation Access', function() {
         var body = res.body;
         assert.isArray(body);
         assert.isNotEmpty(body);
-        var geneticmap = body[0];
-        assert.exists(geneticmap.name);
-        assert.exists(geneticmap.id);
-        geneticmapId = geneticmap.id;
-        var chromosomes = geneticmap.chromosomes;
-        assert.isArray(chromosomes);
-        assert.isNotEmpty(chromosomes);
-        var chromosome = chromosomes[0];
-        assert.exists(chromosome.name);
-        assert.exists(chromosome.id);
-        assert.exists(chromosome.geneticmapId);
-        chromosomeId = chromosome.id;
-        assert.equal(geneticmapId, chromosome.geneticmapId);
+        var dataset = body[0];
+        assert.exists(dataset.name);
+        assert.exists(dataset.id);
+        datasetId = dataset.id;
+        var blocks = dataset.blocks;
+        assert.isArray(blocks);
+        assert.isNotEmpty(blocks);
+        var block = blocks[0];
+        assert.exists(block.name);
+        assert.exists(block.id);
+        assert.exists(block.datasetId);
+        blockId = block.id;
+        assert.equal(datasetId, block.datasetId);
         done();
       }
     );
   });
 
-  it(`should access chromosomes and markers`, function(done) {
+  it(`should access blocks and features`, function(done) {
     superagent
-      .get(`${endpoint}/chromosomes?filter[include]=markers`)
+      .get(`${endpoint}/blocks?filter[include]=features`)
       .set('Accept', 'application/json')
       .set('Content-Type', 'application/json')
       .set('Authorization', userToken)
@@ -276,73 +276,73 @@ describe('Client File Relation Access', function() {
         var body = res.body;
         assert.isArray(body);
         assert.isNotEmpty(body);
-        var chromosome = body[0];
-        assert.exists(chromosome.name);
-        assert.exists(chromosome.id);
-        assert.exists(chromosome.geneticmapId);
-        var markers = chromosome.markers;
-        assert.isArray(markers);
-        assert.isNotEmpty(markers);
-        var marker = markers[0];
-        assert.exists(marker.name);
-        assert.exists(marker.id);
-        assert.exists(marker.chromosomeId);
-        assert.equal(chromosome.id, marker.chromosomeId);
-        markerId = marker.id;
+        var block = body[0];
+        assert.exists(block.name);
+        assert.exists(block.id);
+        assert.exists(block.datasetId);
+        var features = block.features;
+        assert.isArray(features);
+        assert.isNotEmpty(features);
+        var feature = features[0];
+        assert.exists(feature.name);
+        assert.exists(feature.id);
+        assert.exists(feature.blockId);
+        assert.equal(block.id, feature.blockId);
+        featureId = feature.id;
         done();
       }
     );
   });
 
-  it(`should access specific geneticmap with chromosomes`, function(done) {
+  it(`should access specific dataset with blocks`, function(done) {
     superagent
-      .get(`${endpoint}/geneticmaps/${geneticmapId}?filter[include]=chromosomes`)
+      .get(`${endpoint}/Datasets/${datasetId}?filter[include]=blocks`)
       .set('Accept', 'application/json')
       .set('Content-Type', 'application/json')
       .set('Authorization', userToken)
       .end(function(err, res) {
         if (err) { return done(err); }
         assert.equal(res.status, 200);
-        var geneticmap = res.body;
-        assert.exists(geneticmap.name);
-        assert.exists(geneticmap.id);
-        assert.equal(geneticmapId, geneticmap.id);
-        var chromosomes = geneticmap.chromosomes;
-        assert.isArray(chromosomes);
-        assert.isNotEmpty(chromosomes);
-        var chromosome = chromosomes[0];
-        assert.exists(chromosome.name);
-        assert.exists(chromosome.id);
-        assert.exists(chromosome.geneticmapId);
-        chromosomeId = chromosome.id;
-        assert.equal(geneticmapId, chromosome.geneticmapId);
+        var dataset = res.body;
+        assert.exists(dataset.name);
+        assert.exists(dataset.id);
+        assert.equal(datasetId, dataset.id);
+        var blocks = dataset.blocks;
+        assert.isArray(blocks);
+        assert.isNotEmpty(blocks);
+        var block = blocks[0];
+        assert.exists(block.name);
+        assert.exists(block.id);
+        assert.exists(block.datasetId);
+        blockId = block.id;
+        assert.equal(datasetId, block.datasetId);
         done();
       }
     );
   });
 
-  it(`should access specific chromosome with markers`, function(done) {
+  it(`should access specific block with features`, function(done) {
     superagent
-      .get(`${endpoint}/chromosomes/${chromosomeId}?filter[include]=markers`)
+      .get(`${endpoint}/blocks/${blockId}?filter[include]=features`)
       .set('Accept', 'application/json')
       .set('Content-Type', 'application/json')
       .set('Authorization', userToken)
       .end(function(err, res) {
         if (err) { return done(err); }
         assert.equal(res.status, 200);
-        var chromosome = res.body;
-        assert.exists(chromosome.name);
-        assert.exists(chromosome.id);
-        assert.exists(chromosome.geneticmapId);
-        assert.equal(chromosomeId, chromosome.id);
-        var markers = chromosome.markers;
-        assert.isArray(markers);
-        assert.isNotEmpty(markers);
-        var marker = markers[0];
-        assert.exists(marker.name);
-        assert.exists(marker.id);
-        assert.exists(marker.chromosomeId);
-        assert.equal(chromosomeId, marker.chromosomeId);
+        var block = res.body;
+        assert.exists(block.name);
+        assert.exists(block.id);
+        assert.exists(block.datasetId);
+        assert.equal(blockId, block.id);
+        var features = block.features;
+        assert.isArray(features);
+        assert.isNotEmpty(features);
+        var feature = features[0];
+        assert.exists(feature.name);
+        assert.exists(feature.id);
+        assert.exists(feature.blockId);
+        assert.equal(blockId, feature.blockId);
         done();
       }
     );

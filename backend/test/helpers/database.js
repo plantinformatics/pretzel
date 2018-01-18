@@ -13,16 +13,16 @@ exports.destroyUserByEmail = function(models, email) {
   })
 }
 
-exports.destroyGeneticmapsAll = function(models) {
-  // empty persisted storage for geneticmaps
-  var Geneticmap = models.Geneticmap;
-  var Chromosome = models.Chromosome;
-  var Marker = models.Marker;
-  return Geneticmap.destroyAll()
+exports.destroyDatasetsAll = function(models) {
+  // empty persisted storage for datasets
+  var Dataset = models.Dataset;
+  var Block = models.Block;
+  var Feature = models.Feature;
+  return Dataset.destroyAll()
   .then(function(data) {
-    return Chromosome.destroyAll()
+    return Block.destroyAll()
   })
   .then(function(data) {
-    return Marker.destroyAll()
+    return Feature.destroyAll()
   })
 }

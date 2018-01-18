@@ -10,7 +10,7 @@ function chrData(c) {
   let 
   /* rc aka retHash[chr] */
   rc  = {mapName : c.get('map').get('name'), chrName : c.get('name')};
-        let m = c.get('markers');
+        let m = c.get('features');
         m.forEach(function(marker) {
           let markerName = marker.get('name');
           let markerPosition = marker.get('position');

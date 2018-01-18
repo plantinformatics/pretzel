@@ -30,7 +30,8 @@ export default Base.extend({
         // console.log(response)
         Ember.run(function(){
           resolve({
-            token: response.id
+            token: response.id,
+            clientId: response.userId
           });
         });
       }, function(xhr, status, error) {

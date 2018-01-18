@@ -1,70 +1,76 @@
-{{#elem-panel}}
-  <div class="panel panel-primary">
-    <div class="panel-heading">Aligned Maps {{elem-icon name="globe"}}</div>
-      {{#unless selectedMaps}}
-        <div class="panel-body">
-          <div class="well">
-            Click and drag {{elem-icon name="resize-vertical"}} along a map {{elem-icon name="globe"}}, or select {{elem-icon name='info'}} a map from the view panel {{elem-icon name='eye'}}. 
-          </div>
-        </div>
-      {{/unless}}
-    <ul class="list-group">
-      {{#each selectedMaps as |chr|}}
-        <li 
-          class="list-group-item {{if (compare chr.id '===' selectedChrom.id) 'list-group-item-warning'}}"
-          data-chr-id={{chr.id}}
-          {{action "selectChrom" chr on="click"}}>
-          {{chr.map.name}} {{chr.name}}
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="globe"}}
+    Aligned Maps
+  {{/elem/panel-heading}}
+  <ul class="list-group">
+    {{#each selectedMaps as |block|}}
+      <li 
+        class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
+        data-chr-id={{block.id}}
+        {{action "selectBlock" block on="click"}}>
+        {{block.map.name}} {{block.name}} {{elem/icon-owner state=block.owner}} {{elem/icon-visible state=block.public}}
 
-          <span class="pull-right">
-            {{!-- {{elem-button
-              classSize='xs'
-              classColour='danger'
-              icon='minus'
-              onClick=(action "deleteChrom" chr)}} --}}
+        <span class="pull-right">
+          {{!-- {{elem/button-base
+            classSize='xs'
+            classColour='danger'
+            icon='minus'
+            onClick=(action "deleteBlock" block)}} --}}
+        </span>
+
+        <p class="list-group-item-text">
+          <span class="label label-info">
+            {{elem/icon-base name="asterisk"}} &nbsp;{{block.features.length}}
+          </span> &nbsp;
+          <span class="label label-info">
+            {{elem/icon-base name="tag"}} &nbsp;{{block.annotations.length}}
+          </span> &nbsp;
+          <span class="label label-info">
+            {{elem/icon-base name="resize-vertical"}} &nbsp;{{block.intervals.length}}
           </span>
+        </p>
+      </li>
+    {{/each}}
+    <li 
+      class="list-group-item list-group-item-info">
+      Select data from the {{elem/icon-base name='folder-open'}} &nbsp;Explorer
+      <span class="pull-right">
+        {{elem/button-base
+          classSize='xs'
+          classColour='success'
+          icon='plus'
+          onClick=(action "setTab" "left" "explore")}}
+      </span>
+    </li>
+  </ul>
+{{/elem/panel-container}}
 
-          <p class="list-group-item-text">
-            {{#each chr.tags as |tag|}}
-              <span class="label label-default" style="display: inline-block">
-                {{tag}}
-              </span>
-            {{/each}}
-          </p>
-        </li>
-      {{/each}}
-    </ul>
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="wrench"}}
+    Chart Options
+  {{/elem/panel-heading}}
+  <ul class="list-group">
+    <li class="list-group-item">
+      {{input type="checkbox" checked=isShowUnique class="toggle"}}
+      <label {{action "toggleShowUnique" on="click"}}>Show Unique</label>
+    </li>
+    <li class="list-group-item">
+      {{input type="checkbox" checked=pathColourScale class="toggle"}}
+      <label {{action "togglePathColourScale" on="click"}}>Path Colour Scale</label>
+    </li>
+    <li class="list-group-item">
+      {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
+      <label>Show Scaffold Features</label>
+    </li>
+    <li class="list-group-item">
+      {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
+      <label>Show Asymmetric Aliases</label>
+    </li>
+  </ul>
+
+  <div class="panel-body">
+    <div class="drawing-controls vspace1">
+      <div class="flowButtons"></div>
+    </div>
   </div>
-  {{!-- {{#if selectedMaps}} --}}
-    <div class="bordered control-panel" style="display: inline-block;">
-      <div class="pull-left vspace1">
-        <div class="drawing-controls vspace1">
-          <div class="dropdown">
-            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-              Display Toggles
-              <b class="caret"></b>
-            </a>
-            <ul class="dropdown-menu">
-              <li class="sub-menu">
-                {{input type="checkbox" checked=isShowUnique class="toggle"}}
-                <label {{action "toggleShowUnique" on="doubleClick"}}>Show Unique</label>
-              </li>
-              <li class="sub-menu">
-                {{input type="checkbox" checked=pathColourScale class="toggle"}}
-                <label {{action "togglePathColourScale" on="doubleClick"}}>Path Colour Scale</label>
-              </li>
-              <li class="sub-menu">
-                {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
-                <label>Show Scaffold Markers</label>
-              </li>
-              <li class="sub-menu">
-                {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
-                <label>Show Asymmetric Aliases</label>
-              </li>
-            </ul>
-          </div>
-          <div class="flowButtons"></div>
-        </div>
-      </div>
-  </div>
-{{/elem-panel}}
+{{/elem/panel-container}}

@@ -4,6 +4,8 @@ var path = require('path');
 
 var loopback = require('loopback'); // for rendering template in custom methods
 
+var acl = require('../utilities/acl')
+
 module.exports = function(Client) {
   //send verification email after registration
   Client.afterRemote('create', function(context, userInstance, next) {
@@ -100,6 +102,8 @@ module.exports = function(Client) {
     }
   });
 
+  acl.limitRemoteMethodsRelated(Client)
+
   // Client.disableRemoteMethodByName("create");
   Client.disableRemoteMethodByName("upsert");
   Client.disableRemoteMethodByName("updateAll");
@@ -111,16 +115,11 @@ module.exports = function(Client) {
 
   Client.disableRemoteMethodByName("deleteById");
 
+  Client.disableRemoteMethodByName("createChangeStream");
+
   // Client.disableRemoteMethodByName("confirm"); // this method is required for user auth handling
   Client.disableRemoteMethodByName("count");
   Client.disableRemoteMethodByName("exists");
   // Client.disableRemoteMethodByName("resetPassword");
-
-  Client.disableRemoteMethodByName('prototype.__count__accessTokens');
-  Client.disableRemoteMethodByName('prototype.__create__accessTokens');
-  Client.disableRemoteMethodByName('prototype.__delete__accessTokens');
-  Client.disableRemoteMethodByName('prototype.__destroyById__accessTokens');
-  Client.disableRemoteMethodByName('prototype.__findById__accessTokens');
-  Client.disableRemoteMethodByName('prototype.__get__accessTokens');
-  Client.disableRemoteMethodByName('prototype.__updateById__accessTokens');
+  Client.disableRemoteMethodByName("upsertWithWhere");
 };

@@ -8,7 +8,7 @@ Promise.promisifyAll(fs);
 Promise.promisifyAll(zlib);
 
 /**
- * Send a json geneticmap structure to the database
+ * Send a json dataset structure to the database
  * @param {string} filePath - path to load the file
  * @returns data
  */
@@ -40,7 +40,7 @@ exports.fileBinary = (filePath) => {
 }
 
 /**
- * Unpack a geneticmap from gzip compression
+ * Unpack a dataset from gzip compression
  * @param {string} data - path to load the file
  * @returns data
  */
@@ -55,7 +55,7 @@ exports.gzip = (buf) => {
 }
 
 /**
- * Unpack a geneticmap from gzip compression
+ * Unpack a dataset from gzip compression
  * @param {string} filePath - path to load the file
  * @returns data
  */
@@ -67,7 +67,7 @@ exports.fileJson = (filePath) => {
 }
 
 /**
- * Unpack a geneticmap from gzip compression
+ * Unpack a dataset from gzip compression
  * @param {string} filePath - path to load the file
  * @returns data
  */

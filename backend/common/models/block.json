@@ -1,0 +1,36 @@
+{
+  "name": "Block",
+  "base": "Record",
+  "description": "Containing features",
+  "properties": {
+  },
+  "validations": [],
+  "relations": {
+    "dataset": {
+      "type": "belongsTo",
+      "model": "Dataset",
+      "foreignKey": ""
+    },
+    "features": {
+      "type": "hasMany",
+      "model": "Feature",
+      "foreignKey": ""
+    },
+    "annotations": {
+      "type": "hasMany",
+      "model": "Annotation",
+      "foreignKey": ""
+    },
+    "intervals": {
+      "type": "hasMany",
+      "model": "Interval",
+      "foreignKey": ""
+    }
+  },
+  "acls": [
+  ],
+  "methods": {},
+  "scope": {
+    "include": ["annotations", "intervals"]
+  }
+}

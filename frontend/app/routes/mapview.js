@@ -77,12 +77,10 @@ let config = {
     let mapsDerivedValue = {availableChrs: availableChrs, selectedMaps: selMaps};
 
     let seenChrs = new Set();
-    var maps = that.get('store').query(
-      'geneticmap',
+    
+    let maps = that.get('store').query('dataset',
       {
-        filter: {
-          'include': 'chromosomes'
-        }
+        filter: {'include': 'blocks'}
       }
     )
     .then(function(genmaps) {
@@ -92,31 +90,34 @@ let config = {
       if (trace_promise > 1)
         console.log("genmaps.toArray()", mapsDerivedValue.availableMaps);
       genmaps.forEach(function(map) {
-        let chrs = map.get('chromosomes');
-        chrs.forEach(function(chr) {
-          var exChrs = [];
-          mapsDerivedValue.availableChrs[chr.get('id')] = map.get('name'); // or true; // could be map or map.get('id');
-          chr.set('isSelected', false); // In case it has been de-selected.
-          // console.log(chr, map);
-          chr.set('map', map);  // reference to parent map
-          if (params.mapsToView) {
-            for (var i=0; i < params.mapsToView.length; i++) {
-              if (chr.get('id') != params.mapsToView[i]) {
-                exChrs.push(params.mapsToView[i]);
-              }
-              else {
-                chr.set('isSelected', true);
-                selMaps.push(chr);
+        let chrs = map.get('blocks');
+        console.log('CHRS', chrs)
+        if (chrs) {
+          chrs.forEach(function(chr) {
+            var exChrs = [];
+            mapsDerivedValue.availableChrs[chr.get('id')] = map.get('name'); // or true; // could be map or map.get('id');
+            chr.set('isSelected', false); // In case it has been de-selected.
+            // console.log(chr, map);
+            chr.set('map', map);  // reference to parent map
+            if (params.mapsToView) {
+              for (var i=0; i < params.mapsToView.length; i++) {
+                if (chr.get('id') != params.mapsToView[i]) {
+                  exChrs.push(params.mapsToView[i]);
+                }
+                else {
+                  chr.set('isSelected', true);
+                  selMaps.push(chr);
+                }
               }
             }
-          }
-          chr.set('extraChrs', exChrs);
-        });
+            chr.set('extraChrs', exChrs);
+          });
+        }
       });
       return Promise.resolve(mapsDerivedValue);
     },
       function(reason) {
-        console.log("findAll geneticmap", reason);
+        console.log("findAll dataset", reason);
       }
     );
     let promises = {};
@@ -125,13 +126,13 @@ let config = {
       if (trace_promise > 1)
         console.log("findRecord", param);
       promises[param] = that.get('store').findRecord(
-        'chromosome',
+        'block',
         param,
         {
           reload: true,
           adapterOptions:{
           filter: {
-            'include': 'markers'
+            'include': 'features'
           }}
         }
       );

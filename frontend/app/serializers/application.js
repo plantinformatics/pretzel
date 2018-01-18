@@ -1,3 +1,4 @@
+import Ember from 'ember'
 import DS from 'ember-data';
 
 import PartialModelRESTSerializer from 'ember-data-partial-model/mixins/rest-serializer';
@@ -34,6 +35,16 @@ export default DS.RESTSerializer.extend(PartialModelRESTSerializer, {
   //   payloadTemp[type.modelName] = payload;
   //   return this._super(store, type, payloadTemp, id, requestType);
   // },
+  serializeIntoHash: function(data, type, record, options) {
+    console.log("SERIALIZE INTO HASH", data, record)
+    // var root = Ember.String.decamelize(type.modelName);
+    // data[root] = this.serialize(record, options);
+    var payload = this.serialize(record, options);
+    var props = Object.keys(payload)
+    props.forEach(function(entry) {
+      data[entry] = payload[entry]
+    })
+  },
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     let payloadTemp = {};
     payloadTemp[primaryModelClass.modelName] = payload

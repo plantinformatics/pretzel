@@ -1,59 +1,59 @@
-{ "geneticmap":
+{ "dataset":
   {
     "name": "MyMap5",
-    "chromosomes":
+    "blocks":
     [
       {
-      "name": "MyChr",
-      "markers":
+      "name": "MyBlock",
+      "features":
         [
   
           {
-          "name": "markerB",
+          "name": "featureB",
           "position": 0.1
           },
           {
-          "name": "markerC",
+          "name": "featureC",
           "position": 0.2
           },
           {
-          "name": "markerD",
+          "name": "featureD",
           "position": 0.3
           },
           {
-          "name": "markerE",
+          "name": "featureE",
           "position": 0.4
           },
           {
-          "name": "markerF",
+          "name": "featureF",
           "position": 0.5
           },
           {
-          "name": "markerA",
+          "name": "featureA",
           "position": 0.6
           },
           {
-          "name": "markerL",
+          "name": "featureL",
           "position": 0.7
           },
           {
-          "name": "markerG",
+          "name": "featureG",
           "position": 0.8
           },
           {
-          "name": "markerH",
+          "name": "featureH",
           "position": 0.9
           },
           {
-          "name": "markerI",
+          "name": "featureI",
           "position": 1.0
           },
           {
-          "name": "markerJ",
+          "name": "featureJ",
           "position": 1.1
           },
           {
-          "name": "markerK",
+          "name": "featureK",
           "position": 1.2
           }
 

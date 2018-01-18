@@ -1,16 +1,14 @@
-import Ember from 'ember';
+import ManageBase from './manage-base'
 
-const { Component } = Ember;
-
-export default Component.extend({
+export default ManageBase.extend({
   layout: {
   },
   actions: {
-    selectChrom(chr) {
-      this.sendAction('selectChrom', chr);
+    selectBlock(block) {
+      this.sendAction('selectBlock', block);
     },
-    deleteChrom(chr) {
-      this.sendAction('deleteChrom', chr.id);
+    deleteBlock(block) {
+      this.sendAction('deleteBlock', block.id);
     }
   }
 });
