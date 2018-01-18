@@ -1,7 +1,7 @@
 <ul class="list-group">
   {{#each mapList as |map|}}
-    {{panel/manage-view-geneticmap
-      geneticmap=map
+    {{record/entry-dataset
+      dataset=map
       selectedChrom=selectedChrom
       selectChrom="selectChrom"
       deleteChrom="deleteChrom"}}
