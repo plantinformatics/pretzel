@@ -28,39 +28,52 @@ module.exports = function(app) {
     return false;
   }
 
+  function datasetPermissions(dataset, userId, permission, context, cb) {
+    cb(permission(dataset, userId))
+  }
+
   function blockPermissions(block, userId, permission, context, cb) {
     app.models.Dataset.findById(block.datasetId, {}, context)
-    .then(function(map) {
-      if (map) {
-        cb(permission(map, userId))
+    .then(function(dataset) {
+      if (dataset) {
+        datasetPermissions(dataset, userId, permission, context, cb)
       } else {
         throw Error("Dataset not found")
       }
     })
   }
 
-  function featurePermissions(feature, userId, permission, context, cb) {
-    app.models.Block.findById(feature.blockId, {}, context)
+  function workspacePermissions(workspace, userId, permission, context, cb) {
+    app.models.Block.findById(workspace.blockId, {}, context)
     .then(function(block) {
       if (block) {
-        blockPermissions(block, userId, permission, context, function(allow) {
-          cb(allow)
-        })
+        blockPermissions(block, userId, permission, context, cb)
       } else {
         throw Error("Block not found")
       }
     })
   }
 
+  function featurePermissions(feature, userId, permission, context, cb) {
+    app.models.Workspace.findById(feature.workspaceId, {}, context)
+    .then(function(workspace) {
+      if (workspace) {
+        workspacePermissions(workspace, userId, permission, context, cb)
+      } else {
+        throw Error("Workspace not found")
+      }
+    })
+  }
+
   function access(modelName, model, userId, permission, context, cb) {
-    if (modelName == "Block") {
-      blockPermissions(model, userId, permission, context, function(allow) {
-        cb(allow)
-      })
-    } else if (modelName == "Feature") {
-      featurePermissions(model, userId, permission, context, function(allow) {
-        cb(allow)
-      })
+    if (modelName == 'Dataset') {
+      datasetPermissions(model, userId, permission, context, cb)
+    } else if (modelName == 'Block') {
+      blockPermissions(model, userId, permission, context, cb)
+    } else if (modelName == 'Workspace') {
+      workspacePermissions(model, userId, permission, context, cb)
+    } else if (modelName == 'Feature') {
+      featurePermissions(model, userId, permission, context, cb)
     } else {
       cb(permission(model, userId))
     }
@@ -76,7 +89,8 @@ module.exports = function(app) {
     if (context.property == 'find' ||
       context.property ==  'create' ||
       context.property == 'upload' ||
-      context.property == 'tableUpload') {
+      context.property == 'tableUpload'||
+      context.property == 'createComplete') {
       // allow find, create and upload requests
       return process.nextTick(() => cb(null, true))
     }

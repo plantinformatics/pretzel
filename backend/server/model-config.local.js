@@ -83,6 +83,10 @@ var config = {
     "dataSource": "mongoDs",
     "public": true
   },
+  "Workspace": {
+    "dataSource": "mongoDs",
+    "public": true
+  }
 }
 
 if (process.env.EMAIL_VERIFY != 'NONE') {

@@ -11,21 +11,25 @@
       "type": "string",
       "required": true
     },
-    "position": {
-      "type": "number",
+    "type": {
+      "type": "string",
       "required": true
     },
-    "aliases": {
-      "type": "array",
-      "required": false
+    "range": {
+      "type": ["number"],
+      "required": true
     }
   },
   "validations": [],
   "relations": {
     "block": {
       "type": "belongsTo",
-      "model": "Block",
+      "model": "Workspace",
       "foreignKey": ""
+    },
+    "parent": {
+      "type": "belongsTo",
+      "model": "Feature"
     }
   },
   "acls": [

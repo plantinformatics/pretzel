@@ -1,8 +1,12 @@
 {
   "name": "Block",
-  "base": "Record",
-  "description": "Containing features",
+  "base": "PersistedModel",
+  "description": "Containing workspaces",
   "properties": {
+    "size": {
+      "type": "number",
+      "required": true
+    }
   },
   "validations": [],
   "relations": {
@@ -11,9 +15,9 @@
       "model": "Dataset",
       "foreignKey": ""
     },
-    "features": {
+    "workspaces": {
       "type": "hasMany",
-      "model": "Feature",
+      "model": "Workspace",
       "foreignKey": ""
     },
     "annotations": {
@@ -31,6 +35,6 @@
   ],
   "methods": {},
   "scope": {
-    "include": ["annotations", "intervals"]
+    "include": ["annotations", "intervals", "workspaces"]
   }
 }

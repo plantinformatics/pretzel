@@ -112,6 +112,61 @@ module.exports = function(Dataset) {
     });
   }
 
+  Dataset.createComplete = function(data, options, cb) {
+    var models = this.app.models
+
+    //create dataset
+    models.Dataset.create(data, options)
+    .then(function(dataset) {
+      if (dataset.__cachedRelations.blocks) {
+        dataset.__cachedRelations.blocks.forEach(function(json_block) {
+          json_block.datasetId = dataset.id
+        })
+        //create blocks
+        models.Block.create(dataset.__cachedRelations.blocks, options)
+        .then(function(blocks) {
+          let json_workspaces = []
+          blocks.forEach(function(block) {
+            if (block.__cachedRelations.workspaces) {
+              block.__cachedRelations.workspaces.forEach(function(json_workspace) {
+                json_workspace.blockId = block.id
+                json_workspaces.push(json_workspace)
+              })
+            }
+          })
+          if (json_workspaces.length > 0) {
+            //create workspaces
+            models.Workspace.create(json_workspaces, options)
+            .then(function(workspaces) {
+              let json_features = [];
+              workspaces.forEach(function(workspace) {
+                if (workspace.__cachedRelations.features) {
+                  workspace.__cachedRelations.features.forEach(function(json_feature) {
+                    json_feature.workspaceId = workspace.id
+                    json_features.push(json_feature)
+                  })
+                }
+              })
+              if (json_features.length > 0) {
+                //create features
+                models.Feature.create(json_features, options)
+                .then(function(features) {
+                  cb(null, dataset.id)
+                })
+              } else {
+                cb(null, dataset.id)
+              }
+            })
+          } else {
+            cb(null, dataset.id)
+          }
+        })
+      } else {
+        cb(null, dataset.id)
+      }
+    })
+  }
+
   Dataset.remoteMethod('upload', {
     accepts: [
       {arg: 'msg', type: 'object', required: true, http: {source: 'body'}},
@@ -127,6 +182,14 @@ module.exports = function(Dataset) {
     ],
     returns: {arg: 'status', type: 'string'},
     description: "Perform a bulk upload of a features from tabular form"
+  });
+  Dataset.remoteMethod('createComplete', {
+    accepts: [
+      {arg: 'data', type: 'object', required: true, http: {source: 'body'}},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    returns: {arg: 'id', type: 'string'},
+    description: "Creates a dataset and all of its children"
   });
 
   acl.assignRulesRecord(Dataset)

@@ -1,0 +1,27 @@
+{
+  "name": "Workspace",
+  "base": "PersistedModel",
+  "description": "Containing features",
+  "properties": {
+    "name": {
+      "type": "string",
+      "required": true
+    }
+  },
+  "validations": [],
+  "relations": {
+    "block": {
+      "type": "belongsTo",
+      "model": "Block",
+      "foreignKey": ""
+    },
+    "features": {
+      "type": "hasMany",
+      "model": "Feature",
+      "foreignKey": ""
+    }
+  },
+  "acls": [
+  ],
+  "methods": {}
+}
