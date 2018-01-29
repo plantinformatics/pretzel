@@ -23,9 +23,10 @@
 
 {{!-- wait until targetId="toolTip" will resolve --}}
 {{#if toolTipCreated }}
-  {{#if pathHovered }}
-    {{path-hover data=oa markers=hoverMarkers targetId="toolTip" closeToolTip=(action "closeToolTipA") }}
-  {{/if}}
+  {{!-- 2nd line of args passed are through to path-hover --}}
+  {{contain-change  targetId="toolTip"    closeToolTip=(action "closeToolTipA") 
+     drawMap=this data=oa
+  }}
 {{/if}}
 {{#if axisMarkerCircleHover}}
   {{!-- path-hover data=oa markers=hoverMarkers targetId=axisMarkerTargetId  --}} {{!-- "holder" --}}

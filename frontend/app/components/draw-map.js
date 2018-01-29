@@ -3051,7 +3051,9 @@ export default Ember.Component.extend(Ember.Evented, {
         .attr("id","toolTip")
     );
     if (toolTipCreated)
+    {
       me.ensureValue("toolTipCreated", true);
+    }
     toolTip.offset([-15,0]);
     svgRoot.call(toolTip);
 
@@ -3265,20 +3267,28 @@ export default Ember.Component.extend(Ember.Evented, {
       });
 
       /** If path-hover currently exists in toolTip, avoid insert error by detaching it while updating html of parent toolTip */
-      /* after commit, search for ph within pt. */
-      let ph = Ember.$('.pathHover'),
-      ph1=ph.detach(),
-      pt=Ember.$('.toolTip.d3-tip#toolTip');
+      let
+	  pt=Ember.$('.toolTip.d3-tip#toolTip'),
+	ph = pt.find('.pathHover');
+	console.log(pt[0], "pathHover:", ph[0] || ph.length);
+	if (ph.length)
+	{
+	    console.log("pathHover detaching");
+	}
+	    let
+	ph1=ph.detach();
 
       listMarkers += '\n<button id="toolTipClose">&#x2573;</button>\n'; // ╳
       toolTip.html(listMarkers);
 
-      let ph2=ph1.appendTo(pt);
-
       toolTip.show(d, i);
+      let ph2=ph1.appendTo(pt);
       Ember.run.once(me, function() {
-        me.set("hoverMarkers", hoverMarkers);
-        me.ensureValue("pathHovered", true);
+	  let ph3= Ember.$('.pathHover');
+	  console.log(".pathHover", ph2[0] || ph2.length, ph3[0] || ph3.length);
+        // me.set("hoverMarkers", hoverMarkers);
+        // me.ensureValue("pathHovered", true);
+        me.trigger("pathHovered", true, hoverMarkers);
       });
       Ember.run.later(me, function() {
         setupToolTipMouseHover();
@@ -3291,7 +3301,8 @@ export default Ember.Component.extend(Ember.Evented, {
       if (! me.get('toolTipHovered'))
       {
         toolTip.hide();
-        me.ensureValue("pathHovered", false);
+        // me.ensureValue("pathHovered", false);
+        me.trigger("pathHovered", false);
       }
       }, 1000);
     }

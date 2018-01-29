@@ -1,0 +1,15 @@
+<span>pinned {{ pinned }} (contain-change outside)</span>
+{{#ember-wormhole to=targetId renderInPlace=pinned }}
+  <span class="pathHover">
+    <button {{action "pinToolTip"}}>&#x21F2;</button>
+    <button {{action "extendToolTip"}}>&#x26DB;</button>
+    <span>extended : {{ extended }}</span>
+    <div class="toolTipChild" id="toolTipChild">
+    {{#if extended}} {{!-- pathHoveredVar --}}
+      <span>path-hover goes here</span>
+      {{path-hover drawMap data markers=hoverMarkers}}
+    {{/if}}
+    </div>
+  </span>
+
+{{/ember-wormhole }}
