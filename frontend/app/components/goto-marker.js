@@ -66,7 +66,8 @@ export default Ember.Component.extend({
     if (this.get('data') === undefined)
     {
       this.createListener();
-      this.listener.listen(true);
+      if (this.listener)
+        this.listener.listen(true);
     }
   }.on('init'),
 

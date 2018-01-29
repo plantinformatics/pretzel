@@ -464,6 +464,12 @@ path.syntenyEdge.inverted
 
 
 /* Tool tip */
+.toolTipChild
+{
+  max-width: 11em;
+  max-height: 20em;
+  overflow: auto;
+}
 div.highlightMarker,
 div.toolTip{
   /* seems based on https://github.com/Caged/d3-tip/blob/master/examples/example-styles.css */
