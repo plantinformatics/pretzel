@@ -3,13 +3,13 @@ import DS from 'ember-data';
 import attr from 'ember-data/attr';
 // import { PartialModel, partial } from 'ember-data-partial-model/utils/model';
 
-import Record from './record';
-
-export default Record.extend({
+export default DS.Model.extend({
   datasetId: DS.belongsTo('dataset'),
   annotations: DS.hasMany('annotation', { async: false }),
   intervals: DS.hasMany('interval', { async: false }),
-  features: DS.hasMany('feature', { async: false }),
+  workspaces: DS.hasMany('workspace', { async: false }),
+  size: attr("number"),
+  name: attr("string"),
 
   extraBlocks: [],
 

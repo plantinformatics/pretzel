@@ -12,7 +12,7 @@ export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
   },
   serialize(snapshot, options) {
     let json = this._super(...arguments);
-    delete json.features
+    delete json.workspaces
     delete json.createdAt
     delete json.updatedAt
     return json;
@@ -42,7 +42,7 @@ export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
   attrs: {
     annotations: { embedded: 'always' },
     intervals: { embedded: 'always' },
-    features: { embedded: 'always' }
+    workspaces: { embedded: 'always' }
   }
 
 });

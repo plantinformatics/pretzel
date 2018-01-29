@@ -3,6 +3,10 @@
   "base": "PersistedModel",
   "description": "Containing workspaces",
   "properties": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
     "size": {
       "type": "number",
       "required": true

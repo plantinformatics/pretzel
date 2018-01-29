@@ -10,13 +10,18 @@ function chrData(c) {
   let 
   /* rc aka retHash[chr] */
   rc  = {mapName : c.get('map').get('name'), chrName : c.get('name')};
-        let m = c.get('features');
-        m.forEach(function(marker) {
-          let markerName = marker.get('name');
-          let markerPosition = marker.get('position');
-          let markerAliases = marker.get('aliases');
-          rc[markerName] = {location: markerPosition, aliases: markerAliases};
-        });
+  let workspaces = c.get('workspaces');
+  let features = []
+  workspaces.forEach(function(workspace) {
+    workspace.get('features').forEach(function(feature) {
+      features.push(feature)
+    })
+  })
+  features.forEach(function(feature) {
+    let markerName = feature.get('name');
+    let markerPosition = feature.get('range')[0];
+    rc[markerName] = {location: markerPosition, aliases: []};
+  });
   console.log("chrData", rc);
   return rc;
 }
