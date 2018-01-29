@@ -80,63 +80,90 @@ function createChunked (data, model, len) {
  * @param {Object} models - Loopback database models
  */
 exports.uploadDataset = (data, models, options, cb) => {
-  try {
-    //create dataset
-    models.Dataset.create(data, options)
-    .then(function(dataset) {
-      if (dataset.__cachedRelations.blocks) {
-        dataset.__cachedRelations.blocks.forEach(function(json_block) {
-          json_block.datasetId = dataset.id
+  let dataset_id
+  let json_blocks = []
+  let json_annotations = []
+  let json_intervals = []
+  let json_workspaces = []
+  let json_features = []
+
+  //create dataset
+  models.Dataset.create(data, options)
+  .then(function(dataset) {
+    dataset_id = dataset.id
+    if (dataset.__cachedRelations.blocks) {
+      dataset.__cachedRelations.blocks.forEach(function(json_block) {
+        json_block.datasetId = dataset.id
+        json_blocks.push(json_block)
+      })
+    }
+    //create blocks
+    return models.Block.create(json_blocks, options)
+  }).then(function(blocks) {
+    blocks.forEach(function(block) {
+      if (block.__cachedRelations.workspaces) {
+        block.__cachedRelations.workspaces.forEach(function(json_workspace) {
+          json_workspace.blockId = block.id
+          json_workspaces.push(json_workspace)
         })
-        //create blocks
-        models.Block.create(dataset.__cachedRelations.blocks, options)
-        .then(function(blocks) {
-          let json_workspaces = []
-          blocks.forEach(function(block) {
-            if (block.__cachedRelations.workspaces) {
-              block.__cachedRelations.workspaces.forEach(function(json_workspace) {
-                json_workspace.blockId = block.id
-                json_workspaces.push(json_workspace)
-              })
-            }
-          })
-          if (json_workspaces.length > 0) {
-            //create workspaces
-            models.Workspace.create(json_workspaces, options)
-            .then(function(workspaces) {
-              let json_features = [];
-              workspaces.forEach(function(workspace) {
-                if (workspace.__cachedRelations.features) {
-                  workspace.__cachedRelations.features.forEach(function(json_feature) {
-                    json_feature.workspaceId = workspace.id
-                    json_features.push(json_feature)
-                  })
-                }
-              })
-              if (json_features.length > 0) {
-                //create features
-                models.Feature.create(json_features, options)
-                .then(function(features) {
-                  cb(null, dataset.id)
-                })
-              } else {
-                cb(null, dataset.id)
-              }
-            })
-          } else {
-            cb(null, dataset.id)
-          }
+      }
+      if (block.__cachedRelations.annotations) {
+        block.__cachedRelations.annotations.forEach(function(json_annotation) {
+          json_annotation.blockId = block.id
+          json_annotations.push(json_annotation)
         })
-      } else {
-        cb(null, dataset.id)
+      }
+      if (block.__cachedRelations.intervals) {
+        block.__cachedRelations.intervals.forEach(function(json_interval) {
+          json_interval.blockId = block.id
+          json_intervals.push(json_interval)
+        })
       }
     })
-    .catch(function(e) {
-      cb(e)
+    //create annotations
+    return models.Annotation.create(json_annotations, options)
+  }).then(function(annotations) {
+    //create intervals
+    return models.Interval.create(json_intervals, options)
+  }).then(function(intervals) {
+    //create workspaces
+    return models.Workspace.create(json_workspaces, options)
+  }).then(function(workspaces) {
+    workspaces.forEach(function(workspace) {
+      if (workspace.__cachedRelations.features) {
+        workspace.__cachedRelations.features.forEach(function(json_feature) {
+          json_feature.workspaceId = workspace.id
+          json_features.push(json_feature)
+        })
+      }
     })
-  } catch(e) {
+
+    let reccursive_features = function(new_features_promise) {
+      return new_features_promise.then(function(features) {
+        json_features = []
+        features.forEach(function(feature) {
+          if (feature.__cachedRelations.features) {
+            feature.__cachedRelations.features.forEach(function(json_feature) {
+              json_feature.workspaceId = feature.workspaceId
+              json_feature.parentId = feature.id
+              json_features.push(json_feature)
+            })
+          }
+        })
+        if (json_features.length == 0) {
+          return features
+        } else {
+          return reccursive_features(models.Feature.create(json_features, options))
+        }
+      })
+    }
+    //create features
+    return reccursive_features(models.Feature.create(json_features, options))
+  }).then(function(features) {
+    cb(null, dataset_id)
+  }).catch(function(e){
     cb(e)
-  }
+  })
 }
 
 /**

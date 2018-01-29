@@ -24,12 +24,16 @@
   "relations": {
     "block": {
       "type": "belongsTo",
-      "model": "Workspace",
-      "foreignKey": ""
+      "model": "Workspace"
     },
     "parent": {
       "type": "belongsTo",
       "model": "Feature"
+    },
+    "features": {
+      "type": "hasMany",
+      "model": "Feature",
+      "foreignKey": "parentId"
     }
   },
   "acls": [
