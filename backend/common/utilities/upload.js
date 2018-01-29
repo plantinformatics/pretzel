@@ -76,63 +76,67 @@ function createChunked (data, model, len) {
 
 /**
  * Send a json dataset structure to the database
- * @param {Object} msg - The dataset object to be processed
+ * @param {Object} data - The dataset object to be processed
  * @param {Object} models - Loopback database models
  */
-exports.json = (msg, models, options) => {
-  // current json spec has high level dataset map prop with data nested
-  var content = msg.dataset
-  if (!content || !content.name) {
-    throw Error("Unable to extract dataset from json");
-  }
-  return checkDatasetExists(content.name, models)
-  .then(function(exists) {
-    if (exists) {
-      throw Error("Duplicate dataset");
-    }
-    var arrayDatasets = [{
-      name: content.name,
-    }]
-    var arrayBlocks = content.blocks.map(function(block) {
-      return {
-        name: block.name,
+exports.uploadDataset = (data, models, options, cb) => {
+  try {
+    //create dataset
+    models.Dataset.create(data, options)
+    .then(function(dataset) {
+      if (dataset.__cachedRelations.blocks) {
+        dataset.__cachedRelations.blocks.forEach(function(json_block) {
+          json_block.datasetId = dataset.id
+        })
+        //create blocks
+        models.Block.create(dataset.__cachedRelations.blocks, options)
+        .then(function(blocks) {
+          let json_workspaces = []
+          blocks.forEach(function(block) {
+            if (block.__cachedRelations.workspaces) {
+              block.__cachedRelations.workspaces.forEach(function(json_workspace) {
+                json_workspace.blockId = block.id
+                json_workspaces.push(json_workspace)
+              })
+            }
+          })
+          if (json_workspaces.length > 0) {
+            //create workspaces
+            models.Workspace.create(json_workspaces, options)
+            .then(function(workspaces) {
+              let json_features = [];
+              workspaces.forEach(function(workspace) {
+                if (workspace.__cachedRelations.features) {
+                  workspace.__cachedRelations.features.forEach(function(json_feature) {
+                    json_feature.workspaceId = workspace.id
+                    json_features.push(json_feature)
+                  })
+                }
+              })
+              if (json_features.length > 0) {
+                //create features
+                models.Feature.create(json_features, options)
+                .then(function(features) {
+                  cb(null, dataset.id)
+                })
+              } else {
+                cb(null, dataset.id)
+              }
+            })
+          } else {
+            cb(null, dataset.id)
+          }
+        })
+      } else {
+        cb(null, dataset.id)
       }
     })
-    var arrayFeatures = content.blocks.map(function(block) {
-      return block.features.map(function(features) {
-        return features
-      })
+    .catch(function(e) {
+      cb(e)
     })
-  
-    return models.Dataset.create(arrayDatasets, options)
-    .then(function(data) {
-      // gather the dataset map identifiers to attach to blocks
-      let datasetId = data[0].id
-      // attaching id to blocks
-      arrayBlocks = arrayBlocks.map(function(block) {
-        block.datasetId = datasetId
-        return block
-      })
-      return models.Block.create(arrayBlocks, options)
-    })
-    .then(function(data) {
-      // gather the dataset map identifiers to attach to features
-      // attaching id to features
-      arrayFeatures = arrayFeatures.map(function(blockFeatures, idx) {
-        let blockId = data[idx].id
-        return blockFeatures.map(function(feature) {
-          if (!feature.aliases) feature.aliases = []
-          feature.blockId = blockId
-          return feature
-        })
-      })
-      // concatenate the array features into a flat array
-      arrayFeatures = [].concat.apply([], arrayFeatures);
-      return models.Feature.create(arrayFeatures)
-  
-      // return createChunked(arrayFeatures, models.Feature, 5000)
-    })
-  });
+  } catch(e) {
+    cb(e)
+  }
 }
 
 /**

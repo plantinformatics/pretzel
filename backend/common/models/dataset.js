@@ -18,26 +18,12 @@ module.exports = function(Dataset) {
         console.log(e);
         cb(Error("Failed to parse JSON"));
       }
-      upload.json(jsonMap, models, options)
-      .then(function(data) {
-        cb(null, 'Success');
-      })
-      .catch(function(err) {
-        console.log(err);
-        cb(err);
-      })
+      upload.uploadDataset(jsonMap, models, options, cb)
     } else if (msg.fileName.endsWith('.gz')) {
       var buffer = new Buffer(msg.data, 'binary');
       load.gzip(buffer).then(function(json) {
         jsonMap = json;
-        upload.json(jsonMap, models)
-        .then(function(data) {
-          cb(null, 'Success');
-        })
-        .catch(function(err) {
-          console.log(err);
-          cb(err);
-        })
+        upload.uploadDataset(jsonMap, models, options, cb)
       })
       .catch(function(err) {
         console.log(err);
@@ -114,57 +100,7 @@ module.exports = function(Dataset) {
 
   Dataset.createComplete = function(data, options, cb) {
     var models = this.app.models
-
-    //create dataset
-    models.Dataset.create(data, options)
-    .then(function(dataset) {
-      if (dataset.__cachedRelations.blocks) {
-        dataset.__cachedRelations.blocks.forEach(function(json_block) {
-          json_block.datasetId = dataset.id
-        })
-        //create blocks
-        models.Block.create(dataset.__cachedRelations.blocks, options)
-        .then(function(blocks) {
-          let json_workspaces = []
-          blocks.forEach(function(block) {
-            if (block.__cachedRelations.workspaces) {
-              block.__cachedRelations.workspaces.forEach(function(json_workspace) {
-                json_workspace.blockId = block.id
-                json_workspaces.push(json_workspace)
-              })
-            }
-          })
-          if (json_workspaces.length > 0) {
-            //create workspaces
-            models.Workspace.create(json_workspaces, options)
-            .then(function(workspaces) {
-              let json_features = [];
-              workspaces.forEach(function(workspace) {
-                if (workspace.__cachedRelations.features) {
-                  workspace.__cachedRelations.features.forEach(function(json_feature) {
-                    json_feature.workspaceId = workspace.id
-                    json_features.push(json_feature)
-                  })
-                }
-              })
-              if (json_features.length > 0) {
-                //create features
-                models.Feature.create(json_features, options)
-                .then(function(features) {
-                  cb(null, dataset.id)
-                })
-              } else {
-                cb(null, dataset.id)
-              }
-            })
-          } else {
-            cb(null, dataset.id)
-          }
-        })
-      } else {
-        cb(null, dataset.id)
-      }
-    })
+    upload.uploadDataset(data, models, options, cb)
   }
 
   Dataset.remoteMethod('upload', {
