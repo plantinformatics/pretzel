@@ -354,7 +354,9 @@ export default Ember.Component.extend(Ember.Evented, {
                   let thisStore = me.get('store')
                   let pc = thisStore.findRecord('block', m,
                     { reload: true,
-                      adapterOptions:{ filter: {include: "features" } }}
+                      adapterOptions:{ 
+                        // filter: {include: "features"} 
+                      }}
                     );
                   pc.then(function (ch){
                     let map, mapId, chrName = ch.get('name'), chr = ch.get('id'), markers, rc;

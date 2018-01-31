@@ -1,20 +1,15 @@
 <li class="list-group-item list-group-item-info">
-  {{#if layout.active}}
+  {{#if notEditing }}
     {{elem/button-base
       classSize='xs'
       classColour='default'
-      icon='minus'
-      onClick=(action "switchDataset" dataset)}}
-  {{else}}
-    {{elem/button-base
-      classSize='xs'
-      classColour='default'
-      icon='plus'
+      icon=expandIcon
       onClick=(action "switchDataset" dataset)}}
   {{/if}}
-  {{dataset.name}}
-  {{elem/icon-acl record=dataset}}
-  <span class="badge">{{data.length}}</span>
+  {{record/entry-record 
+    entry=dataset 
+    setEditing="setEditing"
+    onDelete="onDelete"}}
 </li>
 {{#if layout.active}}
   {{#each data as |block|}}

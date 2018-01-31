@@ -8,16 +8,20 @@ export default Ember.Component.extend({
     this.set('editing', false)
   }.on('init'),
   actions: {
+    setEditing: function(editing) {
+      this.set('editing', editing)
+      this.sendAction('setEditing', editing)
+    },
     enableEdit: function() {
-      this.set('editing', true)
+      this.send('setEditing', true)
     },
     cancelEdit: function(record) {
-      this.set('editing', false)
+      this.send('setEditing', false)
       record.rollbackAttributes()
     },
     saveEdit: function(record) {
       if (record.get('name').length > 0) {
-        this.set('editing', false)
+        this.send('setEditing', false)
         record.save()
       }
     },
@@ -37,15 +41,10 @@ export default Ember.Component.extend({
       this.sendAction('selectRecord', record);
     },
     deleteRecord(record) {
-      console.log('DELETE record')
-      // console.log(this.record)
-      console.log(record)
-      console.log(record.id)
-
+      let id = record.id
       record.deleteRecord()
-      console.log('DELETED record')
       record.save()
-      console.log('SAVE record')
+      this.sendAction('onDelete', id)
     },
   }
 });

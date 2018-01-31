@@ -79,9 +79,7 @@ module.exports = function(app) {
     }
   }
 
-  function genericResolver(role, context, cb) {
-    console.log(`resolver ${role}`)
-    
+  function genericResolver(role, context, cb) {    
     if (!context.accessToken || !context.accessToken.userId) {
       // Not logged in -> deny
       return process.nextTick(() => cb(null, false))

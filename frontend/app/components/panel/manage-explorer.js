@@ -42,6 +42,16 @@ export default ManageBase.extend({
     },
     changeFilter: function(f) {
       this.set('filter', f)
+    },
+    onDelete(id) {
+      let availMaps = this.get('model.mapsDerived.availableMaps')
+      let newMaps = []
+      for (var i=0; i<availMaps.length; i++) {
+        if (availMaps[i].id != id) {
+          newMaps.push(availMaps[i])
+        }
+      }
+      this.set('model.mapsDerived.availableMaps', newMaps)
     }
   }
 });

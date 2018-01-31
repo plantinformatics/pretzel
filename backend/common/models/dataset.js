@@ -103,6 +103,21 @@ module.exports = function(Dataset) {
     upload.uploadDataset(data, models, options, cb)
   }
 
+  Dataset.observe('before delete', function(ctx, next) {
+    var Block = ctx.Model.app.models.Block
+    Block.find({
+      where: {
+        datasetId: ctx.where.and[1].id
+      }
+    }, ctx.options).then(function(blocks) {
+      blocks.forEach(function(block) {
+        Block.destroyById(block.id, ctx.options, function () {
+        });
+      })
+    })
+    next()
+  })
+
   Dataset.remoteMethod('upload', {
     accepts: [
       {arg: 'msg', type: 'object', required: true, http: {source: 'body'}},
