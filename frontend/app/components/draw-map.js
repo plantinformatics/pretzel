@@ -108,6 +108,8 @@ export default Ember.Component.extend(Ember.Evented, {
   store: Ember.inject.service('store'),
 
   /*------------------------------------------------------------------------*/
+  graphData: Ember.inject.service('graph-data'),
+  /*------------------------------------------------------------------------*/
 
   drawActionsListen: function(listen, name, target, method) {
     /** drawActions is an action&event bus specific to one draw-map; it is a reference
@@ -177,6 +179,7 @@ export default Ember.Component.extend(Ember.Evented, {
     this.drawControlsListen(false);
   }.on('willDestroyElement'),
 
+//{
   /** undefined, or a function to call when colouredMarkers are received  */
   colouredMarkersChanged : undefined,
 
@@ -201,6 +204,7 @@ export default Ember.Component.extend(Ember.Evented, {
     if (flipRegion)
       flipRegion(markers);
   },
+//}
 
   /*------------------------------------------------------------------------*/
   
@@ -215,6 +219,7 @@ export default Ember.Component.extend(Ember.Evented, {
   /*------------------------------------------------------------------------*/
 
   actions: {
+//-	?
     updatedSelectedMarkers: function(selectedMarkers) {
       let markersAsArray = d3.keys(selectedMarkers)
         .map(function (key) {
@@ -724,6 +729,7 @@ export default Ember.Component.extend(Ember.Evented, {
     console.log("draw() : dataReceived", dataReceived);
      */
 
+//-	?
     /** export scaffolds and scaffoldMarkers for use in selected-markers.hbs */
     let showScaffoldMarkers = this.get('showScaffoldMarkers');
     console.log("showScaffoldMarkers", showScaffoldMarkers);
@@ -807,6 +813,7 @@ export default Ember.Component.extend(Ember.Evented, {
           rc[markerName] = {location: markerPosition, aliases: markerAliases};
         });
         receiveChr(c.get('id'), rc, 'dataReceived');
+        //-	on 'new chr data' to from graph-data
         // using named function redraw() instead of anonymous function, so that debounce is effective.
         Ember.run.debounce(redraw, 800);
       })
@@ -831,6 +838,7 @@ export default Ember.Component.extend(Ember.Evented, {
       cmName[ap] = {mapName : c.mapName, chrName : c.chrName};
         let mapChrName = makeMapChrName(c.mapName, c.chrName);
       mapChr2AP[mapChrName] = ap;
+    //-	receive 'add apIDs'
         if (source == 'dataReceived')
         {
           apIDAdd(ap);
@@ -1045,6 +1053,9 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       return l;
     }
+    /*------------------------------------------------------------------------*/
+    import { inRange } from "../utils/graph-maths.js";
+    import {} from "../utils/elementIds.js";
 
     function mapChrName2AP(mapChrName)
     {
@@ -1065,6 +1076,7 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       return chrName + "_" + interval[0] + "_" + interval[1];
     }
+    import {} from "../utils/stacks-drag.js";
 
     /*------------------------------------------------------------------------*/
     /** Set svgContainer.class .dragTransition to make drop zones insensitive during drag transition.
@@ -1951,6 +1963,10 @@ export default Ember.Component.extend(Ember.Evented, {
           as.classed("not_top", index > 0);
         });
     };
+    import {} from "../utils/axis.js";
+
+    import {} from "../components/stacks.js";
+    import {} from "../utils/stacks.js";
 
     /*------------------------------------------------------------------------*/
 
@@ -2127,6 +2143,8 @@ export default Ember.Component.extend(Ember.Evented, {
           flow.collate();
       });
     }
+    import {} from "../utils/flows.js";
+    import {} from "../components/flows.js";
 
     /*------------------------------------------------------------------------*/
 
@@ -2264,6 +2282,9 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
     //console.log(axis.scale(y[apIDs))
+    stacks_for_apIDs(); //- added during split
+
+    //- moved to utils/stacks.js: oa.xs = xScale();
 
     if (source == 'dataReceived')
       stacks.changed = 0x10;
@@ -2288,14 +2309,19 @@ export default Ember.Component.extend(Ember.Evented, {
       }
     }
 
+    import {} from "../utils/paths.js";
+
+    import {} from "../utils/intervals.js";
 
     var path_colour_scale;
     let markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
     let intervals = {}, intervalNames = new Set(), intervalTree = {};
+//-scaffolds
     /** scaffoldTicks[apID] is a set of y locations, relative to the y axis of apID, of horizontal tick marks.
      * General purpose; first use is for scaffold edges.
      */
     let scaffoldTicks =  oa.scaffoldTicks || (oa.scaffoldTicks = {});
+//-sb
     /** syntenyBlocks is an array, each element defines a synteny block which
      * can be seen as a parallelogram connecting 2 axes (APs); the range on each
      * AP is defined by 2 gene names.
@@ -2312,6 +2338,7 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     let syntenyBlocks =  oa.syntenyBlocks || (oa.syntenyBlocks = []);
     if (oa.sbSizeThreshold == undefined)  oa.sbSizeThreshold = 20;      
+//- paths-classes
     if (use_path_colour_scale)
     {
       let path_colour_domain;
@@ -2487,6 +2514,7 @@ export default Ember.Component.extend(Ember.Evented, {
         : extent;
     }
 
+//-components/stacks 
     oa.apIDs.forEach(function(d) {
       /** Find the max of locations of all markers of AP name d. */
       let yDomainMax = d3.max(Object.keys(oa.z[d]), function(a) { return oa.z[d][a].location; } );
@@ -2562,6 +2590,7 @@ export default Ember.Component.extend(Ember.Evented, {
       oa.svgRoot.style(name, value);
     }
 
+//-paths
     /** total the # paths collated for the enabled flows.
      * Used to adjust the stroke-width and stroke-opacity.
      */
@@ -2622,6 +2651,7 @@ export default Ember.Component.extend(Ember.Evented, {
       }
     });
 
+//-paths
     //Add foreground lines.
     /** pathData is the data of .foreground > g > g, not .foreground > g > g > path */
     function pathDataSwitch() {
@@ -2673,6 +2703,7 @@ export default Ember.Component.extend(Ember.Evented, {
     pathUpdate(undefined);
     stacks.log();
 
+//-components/stacks
     // Add a group element for each stack.
     // Stacks contain 1 or more APs.
     /** selection of stacks */
@@ -2828,6 +2859,7 @@ export default Ember.Component.extend(Ember.Evented, {
     if (g && trace_stack)
       logSelection(g);
 
+//-components/axis
     /*------------------------------------------------------------------------*/
     /** the DropTarget which the cursor is in, recorded via mouseover/out events
      * on the DropTarget-s.  While dragging this is used to know the DropTarget
@@ -3125,6 +3157,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
 
+//-components/paths
     //d3.selectAll(".foreground > g > g").selectAll("path")
     /* (Don, 2017Mar03) my reading of handleMouse{Over,Out}() is that they are
      * intended only for the paths connecting markers in adjacent APs, not
@@ -3314,6 +3347,7 @@ export default Ember.Component.extend(Ember.Evented, {
       Ember.run.debounce(me, hidePathHoverToolTip, 2000);
     }
 
+//- axis
 
     function zoomAp(){
       console.log("Zoom : zoomAp()");
@@ -3394,6 +3428,7 @@ export default Ember.Component.extend(Ember.Evented, {
         });
     }
 
+//-components/sb
 
     /*------------------------------------------------------------------------*/
     /** Draw  synteny blocks between adjacent axes.
@@ -3481,7 +3516,7 @@ export default Ember.Component.extend(Ember.Evented, {
     /*------------------------------------------------------------------------*/
 
 
-
+//-collate (mixin?)
     /** Construct a unique name for a group of aliases - sort the aliases and catenate them.
      */
     function aliasesUniqueName(aliases)
@@ -3869,6 +3904,7 @@ export default Ember.Component.extend(Ember.Evented, {
       else if (trace_adj)
         console.log("collateAdjacentAPs", d3.keys(adjAPs).map(function (apName) { return APid2Name(apName);}));
     }
+    //-gd
     function APid2Name(APid)
     {
       let aps = oa.aps;
@@ -3879,6 +3915,7 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       return aps[APid].mapName;
     }
+//-stacks
     function log_adjAPs()
     {
       console.log("adjAPs");
@@ -3911,7 +3948,7 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       return result;
     }
-
+//-paths
     /** Check if aliases between apName and apName1 have been stored.  */
     function getAliased(apName, apName1)
     {
@@ -4099,6 +4136,7 @@ export default Ember.Component.extend(Ember.Evented, {
       console.log("filterPaths", put.length);
     }
 
+//-collate or gd
     /**
      * compile map of marker -> array of APs
      *  array of { stack{APs...} ... }
@@ -4145,7 +4183,7 @@ export default Ember.Component.extend(Ember.Evented, {
       }
     }
 
-
+//-stacks derived
     /** given 2 arrays of marker names, concat them and remove duplicates */
     function concatAndUnique(a, b)
     {
@@ -4154,8 +4192,8 @@ export default Ember.Component.extend(Ember.Evented, {
       let cu = [...new Set(c)];
       return cu;
     }
-
-    /** Return an array of APs contain Marker `marker` and are in stack `stackIndex`.
+//-stacks data / collate
+    /** Return an array ovf APs contain Marker `marker` and are in stack `stackIndex`.
      * @param marker  name of marker
      * @param stackIndex  index into stacks[]
      * @return array of APs
@@ -4357,6 +4395,7 @@ export default Ember.Component.extend(Ember.Evented, {
       return line([[o[ak]-xOffset, akY],
                    [o[ak]+xOffset, akY]]);
     }
+//- collate
     /**
      * change to use marker alias group as data of path;
      *  for non-aliased markers, data remains as marker - unchanged
@@ -4408,6 +4447,7 @@ export default Ember.Component.extend(Ember.Evented, {
       }
     }
 
+//- paths
     /** This is the stacks equivalent of path() / zoompath().
      * Returns an array of paths (links between APs) for a given marker.
      */
@@ -4492,6 +4532,7 @@ export default Ember.Component.extend(Ember.Evented, {
       return inRange(markerY_(apID, markerName), range);
     }
 
+//- paths-text
     /** @param m  marker reference i.e. z[apName][markerName]]
      * @return text for display in path hover tooltip */
     function markerAliasesText(mN, m)
@@ -4731,6 +4772,7 @@ export default Ember.Component.extend(Ember.Evented, {
       return r;
     }
 
+//- axis-brush-zoom
     /** Used when the user completes a brush action on the AP axis.
      * The datum of g.brush is the ID/name of its AP, call this apID.
      * If null selection then remove apID from selectedAps[], otherwise add it.
@@ -5050,6 +5092,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
 
+//- stacks-drag
     function dragstarted(start_d /*, start_index, start_group*/) {
       Stack.currentDrop = undefined;
       Stack.currentDrag = start_d;
@@ -5285,6 +5328,7 @@ export default Ember.Component.extend(Ember.Evented, {
       }
     }
 
+//- utils/log-selection
     function fromSelectionArray(s, datum)
     {
       let a=[];
@@ -5307,6 +5351,7 @@ export default Ember.Component.extend(Ember.Evented, {
       logSelectionLevel(s._parents);
     }
 
+//- paths
     function log_path_data(g)
     {
       let p3 = g.selectAll("g").selectAll("path");  // equiv : g.selectAll("g > path")
@@ -5471,6 +5516,7 @@ export default Ember.Component.extend(Ember.Evented, {
           pathUpdate_(t, flow);
       });
     }
+//- paths-classes
     /** Get the data corresponding to a path element, from its datum or its parent element's datum.
      * In the case of using aliases, the parent g's data is [m, m, ap, ap, ...] "mmaa".
      */
@@ -5762,6 +5808,7 @@ export default Ember.Component.extend(Ember.Evented, {
       }
     }
 
+//- axis/stacks-drag
     function deleteAfterDrag() {
       let stacks = oa.stacks;
       if (trace_stack)
@@ -5864,6 +5911,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     
 
+//- axis-brush-zoom
     /** flip the value of markers between the endpoints
      * @param markers is an array of marker names, created via (zoom) brush,
      * and input via text box
@@ -5921,6 +5969,7 @@ export default Ember.Component.extend(Ember.Evented, {
       }
     });
 
+//- paths-classes
     this.set('clearScaffoldColours', function() {
       console.log("clearScaffoldColours");
       markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
@@ -5928,6 +5977,7 @@ export default Ember.Component.extend(Ember.Evented, {
       pathColourUpdate(undefined, undefined);
     });
 
+//- axis-menu
     let apTitleSel = "g.ap > text";
       function glyphIcon(className, id, glyphiconName, href) {
         return ''
@@ -6071,6 +6121,7 @@ export default Ember.Component.extend(Ember.Evented, {
         Ember.run.later( function () { showSynteny(syntenyBlocks, undefined); });
       };
 
+//- brush-menu
     /** The Zoom & Reset buttons (g.btn) can be hidden by clicking the 'Publish
      * Mode' checkbox.  This provides a clear view of the visualisation
      * uncluttered by buttons and other GUI mechanisms
@@ -6085,6 +6136,7 @@ export default Ember.Component.extend(Ember.Evented, {
         onToggle(checked);
       });
     }
+//- graph-data or discard
     function dataReceivedCheck()
     {
         let dataReceived = me.get('dataReceived');
@@ -6096,6 +6148,7 @@ export default Ember.Component.extend(Ember.Evented, {
         dataReceived.push({ghi: 123});
         }
     }
+//- draw-controls
     function setupToggleModePublish()
     {
       setupToggle
@@ -6184,6 +6237,7 @@ export default Ember.Component.extend(Ember.Evented, {
       setupSbSizeThresh();
     }
 
+//- flows-controls
     function flows_showControls (parentSelector)
     {
       let parent = d3.select(parentSelector);
@@ -6228,6 +6282,7 @@ export default Ember.Component.extend(Ember.Evented, {
     setupToggleModePublish();
     setupVariousControls();
 
+//- draw-map
     /** After chromosome is added, draw() will update elements, so
      * this function is used to update d3 selections :
      * svgRoot, svgContainer, foreground, flows[*].g
@@ -6255,6 +6310,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
     };
 
+//- paths-classes, should be getUsePathColour() ?
     function getUsePatchColour()
     {
       let inputParent = '#choose_path_colour_scale',
@@ -6273,6 +6329,7 @@ export default Ember.Component.extend(Ember.Evented, {
       return val;
     }
 
+//- flows-controls
     Flow.prototype.ExportDataToDiv = function (eltSel)
     {
       let elts = Ember.$(eltSel), elt = elts[0];
