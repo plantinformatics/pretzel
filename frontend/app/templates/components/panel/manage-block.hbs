@@ -1,10 +1,6 @@
 {{#if block}}
-  {{record/entry-block
-    block=block
-    dataset=dataset}}
-
-  <h4>
-    {{block.name}}
+  <h4>{{record/entry-block
+    entry=block}}
   </h4>
 
   <label>Features</label><p>{{block.features.length}}</p>

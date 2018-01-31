@@ -16,10 +16,9 @@
     <li 
       class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
       {{action "selectBlock" block on="click"}}>
-      {{block.name}}
       {{!-- {{elem/icon-base-owner state=block.owner}} --}}
       {{!-- {{elem/icon-visible state=block.public}} --}}
-      <span class="pull-right">
+      <span class="">
         {{!-- {{elem/button-base
           classSize='xs'
           classColour='info'
@@ -41,6 +40,8 @@
           {{/link-to}}
         {{/if}}
       </span>
+      {{record/entry-block
+        entry=block}}
       <p class="list-group-item-text">
         {{#each block.tags as |tag|}}
           <span
