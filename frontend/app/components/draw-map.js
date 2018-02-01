@@ -6,7 +6,8 @@ console.log("createIntervalTree", createIntervalTree);
 
 import { chrData } from '../utils/utility-chromosome';
 import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
-
+import { /*fromSelectionArray,*/ logSelectionLevel, logSelection } from '../utils/log-selection';
+import { Viewport } from '../utils/draw/viewport';
 
 /* jshint curly : false */
 
@@ -108,7 +109,7 @@ export default Ember.Component.extend(Ember.Evented, {
   store: Ember.inject.service('store'),
 
   /*------------------------------------------------------------------------*/
-  graphData: Ember.inject.service('graph-data'),
+//-  graphData: Ember.inject.service('graph-data'),
   /*------------------------------------------------------------------------*/
 
   drawActionsListen: function(listen, name, target, method) {
@@ -542,111 +543,19 @@ export default Ember.Component.extend(Ember.Evented, {
 
     const dragTransitionTime = 1000;  // milliseconds
 
-    /// width in pixels of the axisHeaderText, which is
-    /// 30 chars when the AP (chromosome) name contains the 24 hex char mongodb numeric id,
-    /// e.g. 58a29c715a9b3a3d3242fe70_MyChr
-    let axisHeaderTextLen = 204; // 203.5, rounded up to a multiple of 2;
 
-    let divHolder,
-    holderWidth;
-    /** margins: top right bottom left */
-    let margins,
-    	/** indices into margins[]; standard CSS sequence. */
-      marginIndex = {top:0, right:1, bottom:2, left:3};
-    let viewPort,
-
-    /** small offset from axis end so it can be visually distinguished. */
-    dropTargetYMargin = 10,
-    dropTargetXMargin = 10,
-
-    /** Width and Height.  viewport dimensions - margins. */
-    w,
-    h,
-
-    /** approx height of map / chromosome selection buttons above graph */
-    apSelectionHeight = 80,
-    /** approx height of text name of map+chromosome displayed above axis. */
-    apNameHeight = 14,
-    /** approx height of text block below graph which says 'n selected markers' */
-    selectedMarkersTextHeight = 14,
-
-    /** dimensions of the graph border */
-    graphDim,
-
-    /** yRange is the stack height, i.e. sum of stacked axis lengths */
-    yRange,
-
-    /** X Distance user is required to drag axis before it drops out of Stack. */
-    xDropOutDistance,
-
-    /** left and right limits of dragging the axes / chromosomes / linkage-groups. */
-    dragLimit,
-    /** x range of the axis centres. */
-    axisXRange;
-
-    /** Calculate values which depend on the width and height of the DOM element
-     * which contains the drawing.  This is used at first render, and when the
-     * user resizes the browser tab or clicks a side panel open/close/resize
-     * button.  */
-    /** Measure the screen size allocated to the drawing, and calculate
-     * size-related variables.
-     * Attributes :
-     * .margins, .viewPort, .graphDim, .yRange, .xDropOutDistance, .dragLimit, ..axisXRange
-     */
-    function Viewport()
-    {
-    };
-    Viewport.prototype.calc = function(oa)
-    {
-      divHolder=Ember.$('div#holder');
-      holderWidth = divHolder.width();
-      /** 	margins : top right bottom left */
-      this.margins =
-        // 14 was maybe for apNameHeight, not needed
-      margins = [20/*+14*/+1, 0, 10, 0]; // 10, 10, 10],
-
-      /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
-      this.viewPort =
-      viewPort = {w: holderWidth, h:document.documentElement.clientHeight};
-
-      /// Width and Height.  viewport dimensions - margins.
-      w = viewPort.w  - margins[marginIndex.right] - margins[marginIndex.left];
-      h = viewPort.h - margins[marginIndex.top] - margins[marginIndex.bottom];
-
-      /// dimensions of the graph border
-      this.graphDim =
-      graphDim = {w: w*0.9, h: h - 2 * dropTargetYMargin - apSelectionHeight - apNameHeight};
-      // layout has changed, no value in this :  - selectedMarkersTextHeight
-
-      this.yRange = 
-      yRange = graphDim.h - 40;
-      /* Based on stacks.length, use apIDs.length until the stacks are formed.
-       * See also DropTarget.size.w */
-      this.xDropOutDistance =
-      xDropOutDistance = viewPort.w/(oa.apIDs.length*6);
-
-      this.dragLimit =
-      dragLimit = {min:-50, max:graphDim.w+70};
-      console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
-      /// pixels.  can calculate this from AP name * font width
-
-      /// x range of the axis centres. left space at left and right for
-      /// axisHeaderTextLen which is centred on the axis.
-      /// index: 0:left, 1:right
-      this.axisXRange = [0 + axisHeaderTextLen/2, graphDim.w - axisHeaderTextLen/2];
-      // -  some other results of Viewport().calc() are currently accessed within a previous draw() closure  (yRange, xDropOutDistance, dragLimit)
-      console.log("Viewport.calc()", this);
-    };
+//- moved to utils/draw/viewport.js : Viewport(), viewPort, graphDim, dragLimit
     let vc = oa.vc || (oa.vc = new Viewport());
     console.log(oa, vc);
     vc.calc(oa);
-    margins = vc.margins;
-    viewPort = vc.viewPort;
-    graphDim = vc.graphDim;
-    yRange = vc.yRange;
-    xDropOutDistance = vc.xDropOutDistance;
-    dragLimit = vc.dragLimit;
-    axisXRange = vc.axisXRange;
+    let
+      axisHeaderTextLen = vc.axisHeaderTextLen,
+    margins = vc.margins,
+    marginIndex = vc.marginIndex;
+    let yRange = vc.yRange;
+    let xDropOutDistance = vc.xDropOutDistance;
+    let dragLimit = vc.dragLimit;
+    let axisXRange = vc.axisXRange;
 
 
     let
@@ -663,13 +572,7 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     let pathColourDefault = "#808";
 
-    Viewport.prototype.xDropOutDistance_update = function (oa) {
-      let viewPort = this.viewPort;
-      /** If no stacks then result is not used; avoid divide-by-zero. */
-      let nStacks = oa.stacks.length || 1;
-      this.xDropOutDistance =
-      xDropOutDistance = viewPort.w/(nStacks*6);
-    };
+//- moved to utils/draw/viewport.js : xDropOutDistance_update()
 
     /** Draw paths between markers on APs even if one end of the path is outside the svg.
      * This was the behaviour of an earlier version of this Marker Map Viewer, and it
@@ -1054,8 +957,8 @@ export default Ember.Component.extend(Ember.Evented, {
       return l;
     }
     /*------------------------------------------------------------------------*/
-    import { inRange } from "../utils/graph-maths.js";
-    import {} from "../utils/elementIds.js";
+//-    import { inRange } from "../utils/graph-maths.js";
+//-    import {} from "../utils/elementIds.js";
 
     function mapChrName2AP(mapChrName)
     {
@@ -1076,7 +979,7 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       return chrName + "_" + interval[0] + "_" + interval[1];
     }
-    import {} from "../utils/stacks-drag.js";
+//-    import {} from "../utils/stacks-drag.js";
 
     /*------------------------------------------------------------------------*/
     /** Set svgContainer.class .dragTransition to make drop zones insensitive during drag transition.
@@ -1963,10 +1866,10 @@ export default Ember.Component.extend(Ember.Evented, {
           as.classed("not_top", index > 0);
         });
     };
-    import {} from "../utils/axis.js";
+//-    import {} from "../utils/axis.js";
 
-    import {} from "../components/stacks.js";
-    import {} from "../utils/stacks.js";
+//-    import {} from "../components/stacks.js";
+//-    import {} from "../utils/stacks.js";
 
     /*------------------------------------------------------------------------*/
 
@@ -2143,8 +2046,8 @@ export default Ember.Component.extend(Ember.Evented, {
           flow.collate();
       });
     }
-    import {} from "../utils/flows.js";
-    import {} from "../components/flows.js";
+//-    import {} from "../utils/flows.js";
+//-    import {} from "../components/flows.js";
 
     /*------------------------------------------------------------------------*/
 
@@ -2282,7 +2185,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
     //console.log(axis.scale(y[apIDs))
-    stacks_for_apIDs(); //- added during split
+    //- stacks_for_apIDs(); //- added during split
 
     //- moved to utils/stacks.js: oa.xs = xScale();
 
@@ -2309,9 +2212,9 @@ export default Ember.Component.extend(Ember.Evented, {
       }
     }
 
-    import {} from "../utils/paths.js";
+//-    import {} from "../utils/paths.js";
 
-    import {} from "../utils/intervals.js";
+//-    import {} from "../utils/intervals.js";
 
     var path_colour_scale;
     let markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
@@ -2553,6 +2456,7 @@ export default Ember.Component.extend(Ember.Evented, {
     let translateTransform = "translate(" + margins[marginIndex.left] + "," + margins[marginIndex.top] + ")";
     if (newRender)
     {
+        let graphDim = oa.vc.graphDim;
       oa.svgRoot = 
     svgRoot = d3.select('#holder').append('svg')
       .attr("class", "MarkerMapViewer")
@@ -2909,7 +2813,7 @@ export default Ember.Component.extend(Ember.Evented, {
           dropTargetY = function (datum/*, index, group*/) {
             let apName = datum,
             ap = oa.aps[apName],
-            yVal = top ? -dropTargetYMargin : edge.bottom(ap);
+            yVal = top ? -oa.vc.dropTargetYMargin : edge.bottom(ap);
             return yVal;
           };
         stackDropTarget
@@ -2942,9 +2846,9 @@ export default Ember.Component.extend(Ember.Evented, {
         }
         stackDropTarget
           .append("rect")
-          .attr("x", left ? -1 * (dropTargetXMargin + posn.X) : dropTargetXMargin )
+          .attr("x", left ? -1 * (oa.vc.dropTargetXMargin + posn.X) : oa.vc.dropTargetXMargin )
           .attr("y", edge.top)
-          .attr("width", posn.X /*- dropTargetXMargin*/)
+          .attr("width", posn.X /*- oa.vc.dropTargetXMargin*/)
           .attr("height", dropTargetHeight)
         ;
 
@@ -5328,28 +5232,7 @@ export default Ember.Component.extend(Ember.Evented, {
       }
     }
 
-//- utils/log-selection
-    function fromSelectionArray(s, datum)
-    {
-      let a=[];
-      for (let i=0; i<s.length; i++)
-        a.push(datum ? s[i] && s[i].__data__ : s[i]);
-      return a;
-    }
-    function logSelectionLevel(sl)
-    {
-      if (sl.length && sl[0].length)
-      {
-        console.log(fromSelectionArray(sl[0], false));
-        console.log(fromSelectionArray(sl[0], true));
-      }
-    }
-    function logSelection(s)
-    {
-      console.log(s, s._groups.length, s._parents.length);
-      logSelectionLevel(s._groups);
-      logSelectionLevel(s._parents);
-    }
+//- moved to utils/log-selection : fromSelectionArray(), logSelectionLevel(), logSelection()
 
 //- paths
     function log_path_data(g)
@@ -6366,10 +6249,11 @@ export default Ember.Component.extend(Ember.Evented, {
     let mapsDerived = this.get('mapsDerived');
     /** mapview.hbs passes Model=model to {{draw-map }}, just for devel trace -
      * the other parameters provide all the required information. */
+    let Model;
     if (trace_promise > 1)
     {
-      let Model = me.get('Model'),
-      mp = Model.mapsPromise;
+      Model = me.get('Model');
+      let mp = Model.mapsPromise;
       mp.then(function (result) { console.log("mp", result); });
     }
     mapsDerived.then(function (mapsDerivedValue) {
@@ -6387,7 +6271,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
   resize() {
     console.log("resize");
-    // logWindowDimensions('', w);
+    // logWindowDimensions('', oa.vc.w);  // defined in utils/domElements.js
     let oa = this;
     function resizeDrawing() { 
       oa.vc.calc(oa);
