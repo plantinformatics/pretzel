@@ -22,7 +22,7 @@ let config = {
     chr: {
       refreshModel: true
     },
-    highlightMarker: {
+    highlightFeature: {
       refreshModel: false
     }
   },
@@ -58,8 +58,8 @@ let config = {
    * params which are not chrs in API result are filtered out, i.e.
    * store .findAll('geneticmap') .forEach() .get('chromosomes')
    *
-   * mapsDerived.selectedMaps is different to draw-map.js: oa.selectedAps,
-   * which is the brushed APs (maps).
+   * mapsDerived.selectedMaps is different to draw-map.js: oa.selectedAxes,
+   * which is the brushed Axes (maps).
    */
 
   model(params) {
@@ -160,7 +160,7 @@ let config = {
        mapsToView : params.mapsToView,
        mapsDerived : ObjectPromiseProxy.create({promise: maps}),
        mapsPromise : maps,
-       highlightMarker: params.highlightMarker
+       highlightFeature: params.highlightFeature
       };
     console.log("routes/mapview: model() result", result);
     return result;

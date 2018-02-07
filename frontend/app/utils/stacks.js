@@ -10,16 +10,16 @@ import {  Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, eltId, axisElt
 const trace_stack = 1;
 const trace_updatedStacks = true;
 
-/** Each stack contains 1 or more Axis Pieces (APs).
+/** Each stack contains 1 or more Axis Pieces (Axes).
  * stacks are numbered from 0 at the left.
  * stack[i] is an array of Stack, which contains an array of Stacked,
- * which contains apID & portion.
+ * which contains axisID & portion.
  */
 var stacks = [];
 //- can pass to init() just the required values, instead of oa : o, x, >
 var oa;
 /** Ownership of this may move to data component. */
-var aps;
+var axes;
 
 //- maybe change stacks to a class Stacks(), and instantiate wth new Stacks(oa)
 /** also vc is copied to stacks.
@@ -33,26 +33,26 @@ stacks.init = function (oa_)
     /** Give each Stack a unique id so that its <g> can be selected. */
     stacks.nextStackID = 0;
 
-    aps =
-      /** Reference to all (Stacked) APs by apName.
+    axes =
+      /** Reference to all (Stacked) Axes by axisName.
        */
-      stacks.aps = {};
+      stacks.axes = {};
   }
-}
+};
 
 
 /*----------------------------------------------------------------------------*/
 
-function Stacked(apName, portion) {
-  this.apName = apName;
-  this.mapName = oa.cmName[apName].mapName;  // useful in devel trace.
-  /** Portion of the Stack height which this AP axis occupies. */
+function Stacked(axisName, portion) {
+  this.axisName = axisName;
+  this.mapName = oa.cmName[axisName].mapName;  // useful in devel trace.
+  /** Portion of the Stack height which this axis axis occupies. */
   this.portion = portion;
   // The following are derived attributes.
   /** .position is accumulated from .portion.
    * .position is [start, end], relative to the same space as portion.
-   * i.e. .portion = (end - start) / (sum of .portion for all APs in the same Stack).
-   * Initially, each AP is in a Stack by itself, .portion === 1, so
+   * i.e. .portion = (end - start) / (sum of .portion for all Axes in the same Stack).
+   * Initially, each axis is in a Stack by itself, .portion === 1, so
    * .position is the whole axis [0, 1].
    */
   this.position = (portion === 1) ? [0, 1] : undefined;
@@ -65,10 +65,10 @@ function Stacked(apName, portion) {
   this.perpendicular = false;
   /** Reference to parent stack.  Set in Stack.prototype.{add,insert}(). */
   this.stack = undefined;
-  /* AP objects persist through being dragged in and out of Stacks. */
-  oa.aps[apName] = this;
+  /* axis objects persist through being dragged in and out of Stacks. */
+  oa.axes[axisName] = this;
 };
-Stacked.prototype.apName = undefined;
+Stacked.prototype.axisName = undefined;
 Stacked.prototype.portion = undefined;
 function positionToString(p)
 {
@@ -80,19 +80,19 @@ function positionToString(p)
 Stacked.prototype.toString = function ()
 {
   let a =
-    [ "{apName=", this.apName, ":", this.apName, ", portion=" + round_2(this.portion),
+    [ "{axisName=", this.axisName, ":", this.axisName, ", portion=" + round_2(this.portion),
       positionToString(this.position) + this.stack.length, "}" ];
   return a.join("");
 };
 Stacked.prototype.log = function ()
 {
   console.log
-  ("{apName=", this.apName, ":", this.mapName, ", portion=", round_2(this.portion),
+  ("{axisName=", this.axisName, ":", this.mapName, ", portion=", round_2(this.portion),
    positionToString(this.position), this.stack,  "}");
 };
-Stacked.apName_match =
-  function (apName)
-{ return function (s) { return s.apName === apName; };};
+Stacked.axisName_match =
+  function (axisName)
+{ return function (s) { return s.axisName === axisName; };};
 Stacked.prototype.yOffset = function ()
 {
   let yRange = stacks.vc.yRange;
@@ -109,28 +109,28 @@ Stacked.prototype.yRange = function ()
   return stacks.vc.yRange * this.portion;
 };
 /** Constructor for Stack type.
- * Construct a Stacked containing 1 AP (apName, portion),
+ * Construct a Stacked containing 1 axis (axisName, portion),
  * and push onto this Stack.
  */
 function Stack(stackable) {
   console.log("new Stack", oa, stacks.nextStackID);
   this.stackID = stacks.nextStackID++;
-  /** The AP object (Stacked) has a reference to its parent stack which is the inverse of this reference : 
-   * aps{apName}.stack.aps[i] == aps{apName} for some i.
+  /** The axis object (Stacked) has a reference to its parent stack which is the inverse of this reference : 
+   * axes{axisName}.stack.axes[i] == axes{axisName} for some i.
    */
-  this.aps = [];
+  this.axes = [];
   Stack.prototype.add = Stack_add;
   this.add(stackable);
 };
 /**  Wrapper for new Stack() : implement a basic object re-use.
  *
- * The motive is that as a AP is dragged through a series of stacks, it is
+ * The motive is that as a axis is dragged through a series of stacks, it is
  * removed from its source stack, inserted into a destination stack, then as
  * cursor drag may continue, removed from that stack, and may finally be
  * moved into a new (empty) stack (dropOut()).  The abandoned empty stacks
  * are not deleted until dragended(), to avoid affecting the x positions of
  * the non-dragged stacks.  These could be collected, but it is simple to
- * re-use them if/when the AP is dropped-out.  By this means, there is at
+ * re-use them if/when the axis is dropped-out.  By this means, there is at
  * most 1 abandoned stack to be deleted at the end of the drag; this is
  * stacks.toDeleteAfterDrag.
  */
@@ -149,50 +149,50 @@ function new_Stack(stackable) {
   }
   return s;
 }
-/** undefined, or references to the AP (Stacked) which is currently dropped
+/** undefined, or references to the axis (Stacked) which is currently dropped
  * and the Stack which it is dropped into (dropIn) or out of (dropOut).
  * properties :
  * out : true for dropOut(), false for dropIn()
- * stack: the Stack which apName is dropped into / out of
- * 'apName': apName,
+ * stack: the Stack which axisName is dropped into / out of
+ * 'axisName': axisName,
  * dropTime : Date.now() when dropOut() / dropIn() is done
  *
  * static
  */
 Stack.currentDrop = undefined;
-/** undefined, or name of the AP which is currently being dragged. */
+/** undefined, or name of the axis which is currently being dragged. */
 Stack.currentDrag = undefined;
-/** @return true if this.aps[] is empty. */
+/** @return true if this.axes[] is empty. */
 Stack.prototype.empty = function ()
 {
-  return this.aps.length === 0;
+  return this.axes.length === 0;
 };
-/** @return array of apIDs of this Stack */
-Stack.prototype.apIDs = function ()
+/** @return array of axisIDs of this Stack */
+Stack.prototype.axisIDs = function ()
 {
   let a =
-    this.aps.map(function(s){return s.apName;});
+    this.axes.map(function(s){return s.axisName;});
   return a;
 };
 Stack.prototype.toString = function ()
 {
   let a =
     [
-      "{aps=[",
-      this.aps.map(function(s){return s.toString();}),
-      "] length=" + this.aps.length + "}"
+      "{axes=[",
+      this.axes.map(function(s){return s.toString();}),
+      "] length=" + this.axes.length + "}"
     ];
   return a.join("");
 };
 Stack.prototype.log = function ()
 {
-  console.log("{stackID=", this.stackID, ", aps=[");
-  this.aps.forEach(function(s){s.log();});
-  console.log("] length=", this.aps.length, "}");
+  console.log("{stackID=", this.stackID, ", axes=[");
+  this.axes.forEach(function(s){s.log();});
+  console.log("] length=", this.axes.length, "}");
 };
 Stack.prototype.verify = function ()
 {
-  if (this.aps.length == 0)
+  if (this.axes.length == 0)
   {
     this.log();
     /* breakPointEnable = 1;
@@ -247,7 +247,7 @@ stacks.stackIDs = function()
     });
   return sis;
 };
-/** Sort the stacks by the x position of their APs. */
+/** Sort the stacks by the x position of their Axes. */
 stacks.sortLocation = function()
 {
   stacks.sort(function(a, b) { return a.location() - b.location(); });
@@ -255,12 +255,12 @@ stacks.sortLocation = function()
 /** Return the x location of this stack.  Used for sorting after drag. */
 Stack.prototype.location = function()
 {
-  let l = this.aps[0].location();
+  let l = this.axes[0].location();
   checkIsNumber(l);
   return l;
 };
 /** Find this stack within stacks[] and return the index.
- * @return -1 or index of the parent stack of AP
+ * @return -1 or index of the parent stack of axis
  */
 Stack.prototype.stackIndex = function ()
 {
@@ -268,12 +268,12 @@ Stack.prototype.stackIndex = function ()
   let s = this, i = stacks.indexOf(s);
   return i;
 };
-/** Use the position of this stack within stacks[] to determine g.ap element classes.
+/** Use the position of this stack within stacks[] to determine g.axis-outer element classes.
  *
  * Use : the classes are used in css selectors to determine text-anchor.
  * If the stack is at the left or right edge of the diagram, then the titles
- * of APs in the stack will be displayed on the outside edge, so that paths
- * between APs (in .foreground) won't obscure the title.
+ * of Axes in the stack will be displayed on the outside edge, so that paths
+ * between Axes (in .foreground) won't obscure the title.
  *
  * @return "leftmost" or "rightmost" or "" (just one class)
  */
@@ -283,73 +283,73 @@ Stack.prototype.sideClasses = function ()
   let classes = (i == 0) ? "leftmost" : ((i == n-1) ? "rightmost" : "");
   return classes;
 };
-/** Find stack of apID and return the index of that stack within stacks.
+/** Find stack of axisID and return the index of that stack within stacks.
  * static
- * @param apID name of AP to find
+ * @param axisID name of axis to find
  * @return -1 or index of found stack
  */
-Stack.apStackIndex = function (apID)
+Stack.axisStackIndex = function (axisID)
 {
-  let ap = oa.aps[apID], s = ap.stack, i = s.stackIndex();
+  let axis = oa.axes[axisID], s = axis.stack, i = s.stackIndex();
   return i;
 };
-/** Find stack of apID and return the index of that stack within stacks.
+/** Find stack of axisID and return the index of that stack within stacks.
  * static
- * @param apID name of AP to find
+ * @param axisID name of axis to find
  * @return undefined or
- *  {stackIndex: number, apIndex: number}.
+ *  {stackIndex: number, axisIndex: number}.
  */
-Stack.apStackIndex2 = function (apID)
+Stack.axisStackIndex2 = function (axisID)
 {
-  let ap = oa.aps[apID];
-  if (ap === undefined)
+  let axis = oa.axes[axisID];
+  if (axis === undefined)
     return undefined;
   else
   {
-    let s = ap.stack, i = s.stackIndex();
+    let s = axis.stack, i = s.stackIndex();
     let j;
-    if ((i === -1) || (stacks[i] !== s) || (j=s.aps.indexOf(ap), s.aps[j].apName != apID))
+    if ((i === -1) || (stacks[i] !== s) || (j=s.axes.indexOf(axis), s.axes[j].axisName != axisID))
     {
-      console.log("stackIndex", apID, i, ap, s, j, s.aps[j]);
+      console.log("stackIndex", axisID, i, axis, s, j, s.axes[j]);
       debugger;
     }
-    return {stackIndex: i, apIndex: j};
+    return {stackIndex: i, axisIndex: j};
   }
 };
 
 Stack.prototype.add = function(stackable)
 {
-  this.aps.push(stackable);
+  this.axes.push(stackable);
   stackable.stack = this;
-  oa.aps[stackable.apName] = stackable;
+  oa.axes[stackable.axisName] = stackable;
 };
-Stack.prototype.addAp = function(apName, portion)
+Stack.prototype.addAxis = function(axisName, portion)
 {
-  let sd = new Stacked(apName, portion);
+  let sd = new Stacked(axisName, portion);
   this.add(sd);
 };
 /** Method of Stack.  @see Stack.prototype.add().
- * Add the given AP to this Stack.
- * @param sd  (stackable) Stacked / AP to add
+ * Add the given axis to this Stack.
+ * @param sd  (stackable) Stacked / axis to add
  */
 function Stack_add (sd)
 {
-  this.aps.push(sd);
+  this.axes.push(sd);
   sd.stack = this;
 };
-/** Insert stacked into aps[] at i, moving i..aps.length up
+/** Insert stacked into axes[] at i, moving i..axes.length up
  * @param i  same as param start of Array.splice()
  * @see {@link https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Array/splice | MDN Array Splice}
  */
 Stack.prototype.insert = function (stacked, i)
 {
-  let len = this.aps.length;
+  let len = this.axes.length;
   // this is supported via splice, and may be useful later, but initially it
   // would indicate an error.
   if ((i < 0) || (i > len))
     console.log("insert", stacked, i, len);
 
-  this.aps = this.aps.insertAt(i, stacked);
+  this.axes = this.axes.insertAt(i, stacked);
   /* this did not work (in Chrome) : .splice(i, 0, stacked);
    * That is based on :
    * https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Array/splice
@@ -358,75 +358,75 @@ Stack.prototype.insert = function (stacked, i)
 
   stacked.stack = this;
 };
-/** Find apName in this.aps[]. */
-Stack.prototype.findIndex = function (apName)
+/** Find axisName in this.axes[]. */
+Stack.prototype.findIndex = function (axisName)
 {
-  let mi = this.aps.findIndex(Stacked.apName_match(apName));
-  return mi;
+  let fi = this.axes.findIndex(Stacked.axisName_match(axisName));
+  return fi;
 };
-/** Find apName in this.aps[] and remove it.
- * @return the AP, or undefined if not found
+/** Find axisName in this.axes[] and remove it.
+ * @return the axis, or undefined if not found
  */
-Stack.prototype.remove = function (apName)
+Stack.prototype.remove = function (axisName)
 {
-  let si = this.findIndex(apName);
+  let si = this.findIndex(axisName);
   if (si < 0)
   {
-    console.log("Stack#remove named AP not in this stack", this, apName);
+    console.log("Stack#remove named axis not in this stack", this, axisName);
     return undefined;
   }
   else
   {
-    let s = this.aps[si];
-    this.aps = this.aps.removeAt(si, 1);
+    let s = this.axes[si];
+    this.axes = this.axes.removeAt(si, 1);
     // .splice(si, 1);
     return s;
   }
 };
-/** Remove the nominated AP (Stacked) from this Stack;
+/** Remove the nominated axis (Stacked) from this Stack;
  * if this Stack is now empty, remove it from stacks[].
  * static
- * @param apName  name of AP to remove
+ * @param axisName  name of axis to remove
  * @return undefined if not found, else -1, or stackID if the parent stack is also removed.
  * -1 indicates that the Stacked was removed OK and its parent was not removed because it has other children.
  */
-Stack.removeStacked = function (apName)
+Stack.removeStacked = function (axisName)
 {
   let result;
-  console.log("removeStacked", apName);
-  let ap = oa.aps[apName];
-  if (ap === undefined)
+  console.log("removeStacked", axisName);
+  let axis = oa.axes[axisName];
+  if (axis === undefined)
   {
-    console.log("removeStacked", apName, "not in", aps);
+    console.log("removeStacked", axisName, "not in", axes);
     result = undefined; // just for clarity. result is already undefined
   }
   else
   {
-    let stack = ap.stack;
-    result = stack.removeStacked1(apName);
+    let stack = axis.stack;
+    result = stack.removeStacked1(axisName);
     if (result === undefined)
       result = -1; // OK
   }
   if (trace_stack)
-    console.log("removeStacked", apName, result);
+    console.log("removeStacked", axisName, result);
   return result;
 };
-/** Remove the nominated AP (Stacked) from this Stack;
+/** Remove the nominated axis (Stacked) from this Stack;
  * if this Stack is now empty, remove it from stacks[].
  *
- * @param apName  name of AP to remove
+ * @param axisName  name of axis to remove
  * @return this.stackID if this is delete()-d, otherwise undefined
  * @see Stack.removeStacked(), which calls this.
  */
-Stack.prototype.removeStacked1 = function (apName)
+Stack.prototype.removeStacked1 = function (axisName)
 {
   let result;
-  let ap = oa.aps[apName],
-  removedAp = this.remove(apName);
-  if (removedAp === undefined)
-    console.log("removeStacked", apName);
+  let axis = oa.axes[axisName],
+  removedAxis = this.remove(axisName);
+  if (removedAxis === undefined)
+    console.log("removeStacked", axisName);
   else
-    delete oa.aps[apName];
+    delete oa.axes[axisName];
   if (this.empty())
   {
     result = this.stackID;
@@ -441,8 +441,8 @@ Stack.prototype.removeStacked1 = function (apName)
   {
     console.log("removeStacked", this);
     // copied from .dropOut()
-    let released = ap.portion;
-    ap.portion = 1;
+    let released = axis.portion;
+    axis.portion = 1;
     this.releasePortion(released);
     // result is already undefined
   }
@@ -469,15 +469,15 @@ Stack.prototype.delete = function ()
   return ok;
 };
 /**
- * Move named AP from one stack to another.
+ * Move named axis from one stack to another.
  * `this` is the source stack.
  * If first stack becomes empty - delete it.
  * If 2nd stack (destination) is new - create it (gui ? drag outside of top/bottom drop zones.)
- * @param apName name of AP to move
- * @param toStack undefined, or Stack to move AP to
- * @param insertIndex  index in toStack.aps[] to insert
+ * @param axisName name of axis to move
+ * @param toStack undefined, or Stack to move axis to
+ * @param insertIndex  index in toStack.axes[] to insert
  *
- * if toStack is undefined, create a new Stack to move the AP into;
+ * if toStack is undefined, create a new Stack to move the axis into;
  * The position in stacks[] to insert the new Stack is not given via params,
  * instead dragged() assigns x location to new Stack and sorts the stacks in x order.
  *
@@ -486,11 +486,11 @@ Stack.prototype.delete = function ()
  * array contains `this`; this is so that the caller can call
  * .calculatePositions().
  */
-Stack.prototype.move = function (apName, toStack, insertIndex)
+Stack.prototype.move = function (axisName, toStack, insertIndex)
 {
   let result = undefined;
-  let s = this.remove(apName);
-  // if apName is not in this.aps[], do nothing
+  let s = this.remove(axisName);
+  // if axisName is not in this.axes[], do nothing
   let ok = s !== undefined;
   if (ok)
   {
@@ -500,7 +500,7 @@ Stack.prototype.move = function (apName, toStack, insertIndex)
       /* Need to call .calculatePositions() for this and toStack;
        * That responsibility is left with the caller, except that
        * caller doesn't have toStack, so .move() looks after it.
-       * No : ap.position and .portion are updated after .move()
+       * No : axis.position and .portion are updated after .move()
        * so caller has to call .calculatePositions().
        toStack.calculatePositions();
        */
@@ -512,10 +512,10 @@ Stack.prototype.move = function (apName, toStack, insertIndex)
     {
       // this.delete();
       /* Defer delete because when it is deleted :
-       * If source stack has only 1 AP, then dropOut() deletes the stack
+       * If source stack has only 1 axis, then dropOut() deletes the stack
        * and stacks to its right shift left in the array to fill the gap;
        * That causes : destination stack moves to x of source stack when
-       * dragging to the right, iff the source stack has only 1 AP.
+       * dragging to the right, iff the source stack has only 1 axis.
        * That behaviour should occur after dragended, not during.
        */
       stacks.toDeleteAfterDrag = this;
@@ -528,256 +528,256 @@ Stack.prototype.move = function (apName, toStack, insertIndex)
   }
   return result;
 };
-/** Shift named AP to a different position within this Stack.
+/** Shift named axis to a different position within this Stack.
  * Portions will be unchanged, positions will be re-calculated.
- * Find apName in this.aps[] and move it.
+ * Find axisName in this.axes[] and move it.
 
- * @param apName name of AP to move
- * @param insertIndex  index in toStack.aps[] to insert
- * @return the AP, or undefined if not found
+ * @param axisName name of axis to move
+ * @param insertIndex  index in toStack.axes[] to insert
+ * @return the axis, or undefined if not found
  */
-Stack.prototype.shift = function (apName, insertIndex)
+Stack.prototype.shift = function (axisName, insertIndex)
 {
-  let si = this.findIndex(apName);
+  let si = this.findIndex(axisName);
   if (si < 0)
   {
-    console.log("Stack#remove named AP not in this stack", this, apName);
+    console.log("Stack#remove named axis not in this stack", this, axisName);
     return undefined;
   }
   else
   {
-    let s = this.aps[si];
-    console.log("shift(), before removeAt()", this, apName, insertIndex, this.aps.length, s);
+    let s = this.axes[si];
+    console.log("shift(), before removeAt()", this, axisName, insertIndex, this.axes.length, s);
     this.log();
-    this.aps = this.aps.removeAt(si, 1);
-    let len = this.aps.length;
+    this.axes = this.axes.removeAt(si, 1);
+    let len = this.axes.length;
     this.log();
     if (insertIndex >= len)
-      console.log("shift()", this, apName, insertIndex, " >= ", len, s);
+      console.log("shift()", this, axisName, insertIndex, " >= ", len, s);
     let insertIndexPos = (insertIndex < 0) ? len + insertIndex : insertIndex;
     // splice() supports insertIndex<0; if we support that, this condition need
     if (si < insertIndexPos)
       insertIndexPos--;
-    this.aps = this.aps.insertAt(insertIndexPos, s);
-    console.log("shift(), after insertAt()", insertIndexPos, this.aps.length);
+    this.axes = this.axes.insertAt(insertIndexPos, s);
+    console.log("shift(), after insertAt()", insertIndexPos, this.axes.length);
     this.log();
     return s;
   }
 };
-/** @return true if this Stack contains apName
+/** @return true if this Stack contains axisName
  */
-Stack.prototype.contains = function (apName)
+Stack.prototype.contains = function (axisName)
 {
-  return this === oa.aps[apName].stack;
+  return this === oa.axes[axisName].stack;
 };
-/** Insert the named AP into this.aps[] at insertIndex (before if top, after
+/** Insert the named axis into this.axes[] at insertIndex (before if top, after
  * if ! top).
- * Preserve the sum of this.aps[*].portion (which is designed to be 1).
- * Give the new AP a portion of 1/n, where n == this.aps.length after insertion.
+ * Preserve the sum of this.axes[*].portion (which is designed to be 1).
+ * Give the new axis a portion of 1/n, where n == this.axes.length after insertion.
  *
- * share yRange among APs in stack
- * (retain ratio among existing APs in stack)
+ * share yRange among Axes in stack
+ * (retain ratio among existing Axes in stack)
  *
- * @param apName name of AP to move
+ * @param axisName name of axis to move
  * @param insertIndex position in stack to insert at.
  * @param true for the DropTarget at the top of the axis, false for bottom.
  * @param transition  make changes within this transition
  */
-Stack.prototype.dropIn = function (apName, insertIndex, top, transition)
+Stack.prototype.dropIn = function (axisName, insertIndex, top, transition)
 {
-  let aps = oa.aps;
-  console.log("dropIn", this, apName, insertIndex, top);
-  let fromStack = aps[apName].stack;
-  /* It is valid to drop a AP into the stack it is in, e.g. to re-order the APs.
+  let axes = oa.axes;
+  console.log("dropIn", this, axisName, insertIndex, top);
+  let fromStack = axes[axisName].stack;
+  /* It is valid to drop a axis into the stack it is in, e.g. to re-order the Axes.
    * No change to portion, recalc position.
    */
   if (this === fromStack)
   {
-    console.log("Stack dropIn() AP ", apName, " is already in this stack");
-    this.shift(apName, insertIndex);
+    console.log("Stack dropIn() axis ", axisName, " is already in this stack");
+    this.shift(axisName, insertIndex);
     return;
   }
-  /** Any AP in the stack should have the same x position; use the first
+  /** Any axis in the stack should have the same x position; use the first
    * since it must have at least 1. */
-  let anApName = this.aps[0].apName,
+  let anAxisName = this.axes[0].axisName,
   /** Store both the cursor x and the stack x; the latter is used, and seems
    * to give the right feel. */
-  dropX = {event: d3.event.x, stack: oa.o[anApName]};
-  Stack.currentDrop = {out : false, stack: this, 'apName': apName, dropTime : Date.now(), x : dropX};
+  dropX = {event: d3.event.x, stack: oa.o[anAxisName]};
+  Stack.currentDrop = {out : false, stack: this, 'axisName': axisName, dropTime : Date.now(), x : dropX};
   if (! top)
     insertIndex++;
   let okStacks =
-    fromStack.move(apName, this, insertIndex);
-  // okStacks === undefined means apName not found in fromStack
+    fromStack.move(axisName, this, insertIndex);
+  // okStacks === undefined means axisName not found in fromStack
   if (okStacks)
   {
     // if fromStack is now empty, it will be deleted, and okStacks will be empty.
     // if fromStack is not deleted, call fromStack.calculatePositions()
-    let ap = aps[apName],
-    released = ap.portion;
+    let axis = axes[axisName],
+    released = axis.portion;
     console.log("dropIn", released, okStacks);
     okStacks.forEach(function(s) { 
       s.releasePortion(released);
       s.calculatePositions();
       s.redraw(transition); });
 
-    // For all APs in this (the destination stack), adjust portions, then calculatePositions().
-    /** the inserted AP */
-    let inserted = this.aps[insertIndex];
+    // For all Axes in this (the destination stack), adjust portions, then calculatePositions().
+    /** the inserted axis */
+    let inserted = this.axes[insertIndex];
     inserted.stack = this;
-    // apart from the inserted AP,
-    // reduce this.aps[*].portion by factor (n-1)/n
-    let n = this.aps.length,
+    // apart from the inserted axis,
+    // reduce this.axes[*].portion by factor (n-1)/n
+    let n = this.axes.length,
     factor = (n-1)/n;
     inserted.portion = 1/n;
-    this.aps.forEach(
+    this.axes.forEach(
       function (a, index) { if (index !== insertIndex) a.portion *= factor; });
     this.calculatePositions();
     stacks.changed = 0x11;
   }
 };
-/** Used when a AP is dragged out of a Stack.
- * re-allocate portions among remaining APs in stack
- * (retain ratio among existing APs in stack)
+/** Used when a axis is dragged out of a Stack.
+ * re-allocate portions among remaining Axes in stack
+ * (retain ratio among existing Axes in stack)
  * This is used from both dropIn() and dropOut(), for the Stack which the
- * AP is dragged out of.
- * @param released  the portion of the AP which is dragged out
+ * axis is dragged out of.
+ * @param released  the portion of the axis which is dragged out
  */
 Stack.prototype.releasePortion = function (released)
 {
   let
     factor = 1 / (1-released);
-  this.aps.forEach(
+  this.axes.forEach(
     function (a, index) { a.portion *= factor; });
   this.calculatePositions();
 };
-/** Drag the named AP out of this Stack.
- * Create a new Stack containing just the AP.
+/** Drag the named axis out of this Stack.
+ * Create a new Stack containing just the axis.
  *
- * re-allocate portions among remaining APs in stack
- * (retain ratio among existing APs in stack)
+ * re-allocate portions among remaining Axes in stack
+ * (retain ratio among existing Axes in stack)
  *
- * .dropIn() and .dropOut() both affect 2 stacks : the AP is dragged from
+ * .dropIn() and .dropOut() both affect 2 stacks : the axis is dragged from
  * one stack (the term 'source' stack is used in comments to refer this) to
  * another (call this the 'destination' stack). .dropOut() may create a new
  * stack for the destination.
  *
- * @param apName name of AP to move
+ * @param axisName name of axis to move
  */
-Stack.prototype.dropOut = function (apName)
+Stack.prototype.dropOut = function (axisName)
 {
-  console.log("dropOut", this, apName);
-  Stack.currentDrop = {out : true, stack: this, 'apName': apName, dropTime : Date.now()};
+  console.log("dropOut", this, axisName);
+  Stack.currentDrop = {out : true, stack: this, 'axisName': axisName, dropTime : Date.now()};
 
-  /* passing toStack===undefined to signify moving AP out into a new Stack,
-   * and hence insertIndex is also undefined (not used since extracted AP is only AP
+  /* passing toStack===undefined to signify moving axis out into a new Stack,
+   * and hence insertIndex is also undefined (not used since extracted axis is only axis
    * in newly-created Stack).
    */
   let okStacks =
-    this.move(apName, undefined, undefined);
-  /* move() will create a new Stack for the AP which was moved out, and
+    this.move(axisName, undefined, undefined);
+  /* move() will create a new Stack for the axis which was moved out, and
    * add that to Stacks.  dragged() will assign it a location and sort.
    */
 
   // Guard against the case that `this` became  empty and was deleted.
-  // That shouldn't happen because dropOut() would not be called if `this` contains only 1 AP.
+  // That shouldn't happen because dropOut() would not be called if `this` contains only 1 axis.
   if (okStacks && (okStacks[0] == this))
   {
-    // apName goes to full height. other APs in the stack take up the released height proportionately
-    let ap = oa.aps[apName],
-    released = ap.portion;
-    ap.portion = 1;
+    // axisName goes to full height. other Axes in the stack take up the released height proportionately
+    let axis = oa.axes[axisName],
+    released = axis.portion;
+    axis.portion = 1;
     this.releasePortion(released);
-    let toStack = ap.stack;
+    let toStack = axis.stack;
     toStack.calculatePositions();
     stacks.changed = 0x11;
   }
 };
-/** Calculate the positions of the APs in this stack
+/** Calculate the positions of the Axes in this stack
  * Position is a proportion of yRange.
  *
- * Call updateRange() to update ys[apName] for each AP in the stack.
+ * Call updateRange() to update ys[axisName] for each axis in the stack.
  */
 Stack.prototype.calculatePositions = function ()
 {
-  // console.log("calculatePositions", this.stackID, this.aps.length);
+  // console.log("calculatePositions", this.stackID, this.axes.length);
   let sumPortion = 0;
-  this.aps.forEach(
+  this.axes.forEach(
     function (a, index)
     {
       a.position = [sumPortion,  sumPortion += a.portion];
       //- axis          updateRange(a);
     });
 };
-/** find / lookup Stack of given AP.
- * This is now replaced by aps[apName]; could be used as a data structure
+/** find / lookup Stack of given axis.
+ * This is now replaced by axes[axisName]; could be used as a data structure
  * validation check.
  * static
  */
-Stack.apStack = function (apName)
+Stack.axisStack = function (axisName)
 {
-  // could use a cached structure such as apStack[apName].
-  // can now use : aps{apName}->stack
+  // could use a cached structure such as axisStack[axisName].
+  // can now use : axes{axisName}->stack
   let as = stacks.filter(
     function (s) {
-      let i = s.findIndex(apName);
+      let i = s.findIndex(axisName);
       return i >= 0;
     });
   if (as.length != 1)
-    console.log("apStack()", apName, as, as.length);
+    console.log("axisStack()", axisName, as, as.length);
   return as[0];
 };
-/** find / lookup Stack of given AP.
+/** find / lookup Stack of given axis.
  * static
  * @return undefined or
- *  {stackIndex: number, apIndex: number}.
+ *  {stackIndex: number, axisIndex: number}.
  *
- * See also above alternative apStackIndex().
+ * See also above alternative axisStackIndex().
  * This version accumulates an array (because reduce() doesn't stop at 1).
- * It will only accumulate the first match (apIndex) in each stack,
+ * It will only accumulate the first match (axisIndex) in each stack,
  * but by design there should be just 1 match across all stacks.
  * Only the first result in the array is returned, and a warning is given if
  * there are !== 1 results
  * Probably drop this version - not needed;  could be used as a data structure
  * validation check, e.g. in testing.
  */
-Stack.apStackIndexAll = function (apName)
+Stack.axisStackIndexAll = function (axisName)
 {
   /** called by stacks.reduce() */
-  function findIndex_apName
+  function findIndex_axisName
   (accumulator, currentValue, currentIndex /*,array*/)
   {
-    let i = currentValue.findIndex(apName);
+    let i = currentValue.findIndex(axisName);
     if (i >= 0)
-      accumulator.push({stackIndex: currentIndex, apIndex: i});
+      accumulator.push({stackIndex: currentIndex, axisIndex: i});
     return accumulator;
   };
-  let as = stacks.reduce(findIndex_apName, []);
+  let as = stacks.reduce(findIndex_axisName, []);
   if (as.length != 1)
   {
-    console.log("apStackIndexAll()", apName, as, as.length);
+    console.log("axisStackIndexAll()", axisName, as, as.length);
   }
   return as[0];
 };
-/** @return transform : translation, calculated from AP position within stack.
+/** @return transform : translation, calculated from axis position within stack.
  */
-Stacked.prototype.apTransform = function ()
+Stacked.prototype.axisTransform = function ()
 {
   let yRange = stacks.vc.yRange;
   if (this.position === undefined || yRange === undefined)
   {
-    console.log("apTransform()", this.apName, this, yRange);
+    console.log("axisTransform()", this.axisName, this, yRange);
     debugger;
   }
   let yOffset = this.yOffset(),
   yOffsetText = Number.isNaN(yOffset) ? "" : "," + this.yOffset();
   let scale = this.portion,
   scaleText = Number.isNaN(scale) ? "" : " scale(" + scale + ")";
-  /** Will be undefined when AP is dragged out to form a new Stack, which
+  /** Will be undefined when axis is dragged out to form a new Stack, which
    * is not allocated an x position (via xScale()) until dragended().  */
-  let xVal = x(this.apName);
+  let xVal = x(this.axisName);
   if (xVal === undefined)
-    xVal = oa.o[this.apName];
+    xVal = oa.o[this.axisName];
   checkIsNumber(xVal);
   xVal = Math.round(xVal);
   let transform =
@@ -785,22 +785,22 @@ Stacked.prototype.apTransform = function ()
       "translate(" + xVal, yOffsetText, ")",
       scaleText
     ].join("");
-  console.log("apTransform", this, transform);
+  console.log("axisTransform", this, transform);
   return transform;
 };
-/** Get stack of AP, return transform. */
-Stack.prototype.apTransform = function (apName)
+/** Get stack of axis, return transform. */
+Stack.prototype.axisTransform = function (axisName)
 {
-  let a = oa.aps[apName];
-  return a.apTransform();
+  let a = oa.axes[axisName];
+  return a.axisTransform();
 };
-/** Get stack of AP, return transform. */
-Stack.prototype.apTransformO = function (apName)
+/** Get stack of axis, return transform. */
+Stack.prototype.axisTransformO = function (axisName)
 {
-  let a = oa.aps[apName];
-  return a.apTransformO();
+  let a = oa.axes[axisName];
+  return a.axisTransformO();
 };
-/** For each AP in this Stack, redraw axis, brush, foreground paths.
+/** For each axis in this Stack, redraw axis, brush, foreground paths.
  * @param t transition in which to make changes
  */
 Stack.prototype.redraw = function (t)
@@ -815,48 +815,48 @@ Stack.prototype.redraw = function (t)
    * https://github.com/d3/d3-transition/blob/master/README.md#transition_on
    */
   t.on("end interrupt", dragTransitionEnd);
-  /** to make this work, would have to reparent the APs - what's the benefit
+  /** to make this work, would have to reparent the Axes - what's the benefit
    * let ts = 
-   *   t.selectAll("g.stack#" + eltId(this.stackID) + " > .ap");
+   *   t.selectAll("g.stack#" + eltId(this.stackID) + " > .axis-outer");
    */
   console.log("redraw() stackID:", this.stackID);
   let this_Stack = this;  // only used in trace
 
-  this.aps.forEach(
+  this.axes.forEach(
     function (a, index)
     {
-      /** Don't use a transition for the AP/axis which is currently being
+      /** Don't use a transition for the axis/axis which is currently being
        * dragged.  Instead the dragged object will closely track the cursor;
        * may later use a slight / short transition to smooth noise in
        * cursor.  */
-      let t_ = (Stack.currentDrag == a.apName) ? d3 : t;
-      // console.log("redraw", Stack.currentDrag, a.apName, Stack.currentDrag == a.apName);
+      let t_ = (Stack.currentDrag == a.axisName) ? d3 : t;
+      // console.log("redraw", Stack.currentDrag, a.axisName, Stack.currentDrag == a.axisName);
       let ts = 
-        t_.selectAll(".ap#" + eltId(a.apName));
+        t_.selectAll(".axis-outer#" + eltId(a.axisName));
       (trace_stack_redraw > 0) &&
         (((ts._groups.length === 1) && console.log(ts._groups[0], ts._groups[0][0]))
-         || ((trace_stack_redraw > 1) && console.log("redraw", this_Stack, a, index, a.apName)));
-      // console.log("redraw", a.apName);
+         || ((trace_stack_redraw > 1) && console.log("redraw", this_Stack, a, index, a.axisName)));
+      // console.log("redraw", a.axisName);
       // args passed to fn are data, index, group;  `this` is node (SVGGElement)
-      ts.attr("transform", Stack.prototype.apTransformO);
-      apRedrawText(a);
+      ts.attr("transform", Stack.prototype.axisTransformO);
+      axisRedrawText(a);
     });
 
   this.redrawAdjacencies();
 };
 
-function apRedrawText(a)
+function axisRedrawText(a)
 {
   let svgContainer = oa.svgContainer;
-  let axisTS = svgContainer.selectAll("g.ap#" + eltId(a.apName) + " > text");
+  let axisTS = svgContainer.selectAll("g.axis-outer#" + eltId(a.axisName) + " > text");
   axisTS.attr("transform", yAxisTextScale);
-  let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(a.apName) + " > g.tick > text");
+  let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(a.axisName) + " > g.tick > text");
   axisGS.attr("transform", yAxisTicksScale);
-  let axisBS = svgContainer.selectAll("g.axis#" + axisEltId(a.apName) + " > g.btn > text");
+  let axisBS = svgContainer.selectAll("g.axis#" + axisEltId(a.axisName) + " > g.btn > text");
   axisBS.attr("transform", yAxisBtnScale);
 }
 
-/** For each AP in this Stack, redraw axis title.
+/** For each axis in this Stack, redraw axis title.
  * The title position is affected by stack adjacencies.
  * Dragging a stack can affect the rendering of stacks on either side of its start and end position.
  */
@@ -864,11 +864,11 @@ Stack.prototype.redrawAdjacencies = function ()
 {
   let stackClass = this.sideClasses();
 
-  this.aps.forEach(
+  this.axes.forEach(
     function (a, index)
     {
       /** transition does not (yet) support .classed() */
-      let as = oa.svgContainer.selectAll(".ap#" + eltId(a.apName));
+      let as = oa.svgContainer.selectAll(".axis-outer#" + eltId(a.axisName));
       as.classed("leftmost", stackClass == "leftmost");
       as.classed("rightmost", stackClass == "rightmost");
       as.classed("not_top", index > 0);
@@ -881,18 +881,18 @@ Stack.prototype.redrawAdjacencies = function ()
 
 /*------------------------------------------------------------------------*/
 
-/** width of the AP.  either 0 or .extended (current width of extension) */
+/** width of the axis.  either 0 or .extended (current width of extension) */
 Stacked.prototype.extendedWidth = function()
 {
   // console.log("Stacked extendedWidth()", this, this.extended);
   return this.extended || 0;
 };
 
-/** @return range of widths, [min, max] of the APs in this stack */
+/** @return range of widths, [min, max] of the Axes in this stack */
 Stack.prototype.extendedWidth = function()
 {
   let range = [undefined, undefined];
-  this.aps.forEach(
+  this.axes.forEach(
     function (a, index)
     {
       let w = a.extendedWidth();
@@ -934,7 +934,7 @@ function xScaleExtend()
   if (count > 1)
     gap =  gap / (count - 1);
 
-  let stackDomain = Array.from(stacks.keys()); // was apIDs
+  let stackDomain = Array.from(stacks.keys()); // was axisIDs
   let outputs = [], cursor = axisXRange[0];
   count = 0;
   stacks.forEach(
@@ -951,27 +951,39 @@ function xScaleExtend()
 
 /*------------------------------------------------------------------------*/
 
-/** x scale which maps from apIDs[] to equidistant points in axisXRange
+/** x scale which maps from axisIDs[] to equidistant points in axisXRange
  */
 //d3 v4 scalePoint replace the rangePoint
-//let x = d3.scaleOrdinal().domain(apIDs).range([0, w]);
+//let x = d3.scaleOrdinal().domain(axisIDs).range([0, w]);
 function xScale() {
-  let stackDomain = Array.from(stacks.keys()); // was apIDs
+  let stackDomain = Array.from(stacks.keys()); // was axisIDs
   console.log("xScale()", stackDomain);
   return d3.scalePoint().domain(stackDomain).range(stacks.vc.axisXRange);
 }
 
-Stacked.prototype.location = function() { return checkIsNumber(oa.o[this.apName]); };
-/** Same as .apTransform(), but use o[d] instead of x(d)
+/** @return the scale of Axis axisID.  */
+function x(axisID)
+{
+  let i = Stack.axisStackIndex(axisID);
+  if (oa.xScaleExtend.domain().length === 2)
+    console.log("x()", axisID, i, oa.xScaleExtend(i), oa.xScaleExtend.domain(), oa.xScaleExtend.range());
+  if (i === -1) { console.log("x()", axisID, i); debugger; }
+  return oa.xScaleExtend(i);
+}
+stacks.x = x;
+
+
+Stacked.prototype.location = function() { return checkIsNumber(oa.o[this.axisName]); };
+/** Same as .axisTransform(), but use o[d] instead of x(d)
  * If this works, then the 2 can be factored.
- * @return transform : translation, calculated from AP position within stack.
+ * @return transform : translation, calculated from axis position within stack.
  */
-Stacked.prototype.apTransformO = function ()
+Stacked.prototype.axisTransformO = function ()
 {
   let yRange = stacks.vc.yRange;
   if (this.position === undefined || yRange === undefined)
   {
-    console.log("apTransformO()", this.apName, this, yRange);
+    console.log("axisTransformO()", this.axisName, this, yRange);
     debugger;
   }
   let yOffset = this.yOffset(),
@@ -981,17 +993,17 @@ Stacked.prototype.apTransformO = function ()
    */
   let scale = this.portion,
   scaleText = Number.isNaN(scale) || (scale === 1) ? "" : " scale(1," + scale + ")";
-  let xVal = checkIsNumber(oa.o[this.apName]);
+  let xVal = checkIsNumber(oa.o[this.axisName]);
   xVal = Math.round(xVal);
-  let rotateText = "", ap = oa.aps[this.apName];
-  if (ap.perpendicular)
+  let rotateText = "", axis = oa.axes[this.axisName];
+  if (axis.perpendicular)
   {
     /** shift to centre of axis for rotation. */
     let shift = -yRange/2;
     rotateText =
       "rotate(90)"
       +  " translate(0," + shift + ")";
-    let a = d3.select("g#id" + this.apName + ".ap");
+    let a = d3.select("g#id" + this.axisName + ".axis-outer");
     if (trace_stack > 1)
       console.log("perpendicular", shift, rotateText, a.node());
   }
@@ -1002,10 +1014,10 @@ Stacked.prototype.apTransformO = function ()
       scaleText
     ].join("");
   if (trace_stack > 1)
-    console.log("apTransformO", this, transform);
+    console.log("axisTransformO", this, transform);
   return transform;
 };
 
 /*----------------------------------------------------------------------------*/
 
-export  { Stacked, Stack, stacks, xScaleExtend } ;
+export  { Stacked, Stack, stacks, xScaleExtend, axisRedrawText } ;

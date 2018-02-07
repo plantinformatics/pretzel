@@ -17,7 +17,7 @@ function Viewport()
 Viewport.prototype.calc = function(oa)
 {
   /** width in pixels of the axisHeaderText, which is
-   * 30 chars when the AP (chromosome) name contains the 24 hex char mongodb numeric id,
+   * 30 chars when the axis (chromosome) name contains the 24 hex char mongodb numeric id,
    * e.g. 58a29c715a9b3a3d3242fe70_MyChr
    */
   let axisHeaderTextLen = 204; // 203.5, rounded up to a multiple of 2;
@@ -30,9 +30,9 @@ Viewport.prototype.calc = function(oa)
   marginIndex = {top:0, right:1, bottom:2, left:3};
 
   //- axis droptarget
-  let
     /** small offset from axis end so it can be visually distinguished. */
-    dropTargetYMargin = 10,
+  this.dropTargetYMargin = 10;  //- could be in .prototype, or ...
+  let
   dropTargetXMargin = 10,
 
   /** Width and Height.  viewport dimensions - margins. */
@@ -40,11 +40,11 @@ Viewport.prototype.calc = function(oa)
   h,
 
   /** approx height of map / chromosome selection buttons above graph */
-  apSelectionHeight = 80,
+  axisSelectionHeight = 80,
   /** approx height of text name of map+chromosome displayed above axis. */
-  apNameHeight = 14,
-  /** approx height of text block below graph which says 'n selected markers' */
-  selectedMarkersTextHeight = 14,
+  axisNameHeight = 14,
+  /** approx height of text block below graph which says 'n selected features' */
+  selectedFeaturesTextHeight = 14,
 
 
   /** yRange is the stack height, i.e. sum of stacked axis lengths */
@@ -68,7 +68,7 @@ Viewport.prototype.calc = function(oa)
   holderWidth = divHolder.width();
   /** 	margins : top right bottom left */
   this.margins =
-    // 14 was maybe for apNameHeight, not needed
+    // 14 was maybe for axisNameHeight, not needed
     margins = [20/*+14*/+1, 0, 10, 0]; // 10, 10, 10],
 
   /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
@@ -81,20 +81,20 @@ Viewport.prototype.calc = function(oa)
 
   /// dimensions of the graph border
   this.graphDim =
-    graphDim = {w: w*0.9, h: h - 2 * dropTargetYMargin - apSelectionHeight - apNameHeight};
-  // layout has changed, no value in this :  - selectedMarkersTextHeight
+    graphDim = {w: w*0.9, h: h - 2 * this.dropTargetYMargin - axisSelectionHeight - axisNameHeight};
+  // layout has changed, no value in this :  - selectedFeaturesTextHeight
 
   this.yRange = 
     yRange = graphDim.h - 40;
-  /* Based on stacks.length, use apIDs.length until the stacks are formed.
+  /* Based on stacks.length, use axisIDs.length until the stacks are formed.
    * See also DropTarget.size.w */
   this.xDropOutDistance =
-    xDropOutDistance = viewPort.w/(oa.apIDs.length*6);
+    xDropOutDistance = viewPort.w/(oa.axisIDs.length*6);
 
   this.dragLimit =
     dragLimit = {min:-50, max:graphDim.w+70};
   console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
-  /// pixels.  can calculate this from AP name * font width
+  /// pixels.  can calculate this from axis name * font width
 
   /// x range of the axis centres. left space at left and right for
   /// axisHeaderTextLen which is centred on the axis.

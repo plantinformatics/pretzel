@@ -8,7 +8,7 @@ export default Ember.Component.extend({
 
     /**
      * @param d array of e.g.
-     * {Chromosome: "599bca87501547126adea117", Marker: "markerL", Position: "1.2"}
+     * {Chromosome: "599bca87501547126adea117", Feature: "featureL", Position: "1.2"}
      */
     showData : function(d)
     {
@@ -53,7 +53,7 @@ export default Ember.Component.extend({
             type: 'text'
           },
           {
-            data: 'Marker',
+            data: 'Feature',
             type: 'text'
           },
           {
@@ -79,19 +79,19 @@ export default Ember.Component.extend({
       });
       that.set('table', table);
       $("#table-brushed").on('mouseleave', function(e) {
-        that.highlightMarker();
+        that.highlightFeature();
       }).on("mouseover", function(e) {
         if (e.target.tagName == "TD") {
           var tr = e.target.parentNode;
           if (tr.childNodes[2]) {
-            var marker_name = $(tr.childNodes[2]).text();
-            if (marker_name.indexOf(" ") == -1) {
-              that.highlightMarker(marker_name);
+            var feature_name = $(tr.childNodes[2]).text();
+            if (feature_name.indexOf(" ") == -1) {
+              that.highlightFeature(feature_name);
               return;
             }
           }
         }
-        that.highlightMarker();
+        that.highlightFeature();
       });
   },
 
@@ -108,7 +108,7 @@ export default Ember.Component.extend({
     }
   }.observes('data'),
 
-  highlightMarker: function(marker) {
+  highlightFeature: function(feature) {
     d3.selection.prototype.moveToFront = function() {  
       return this.each(function(){
         this.parentNode.appendChild(this);
@@ -118,8 +118,8 @@ export default Ember.Component.extend({
       .attr("r", 2)
       .style("fill", "red")
       .style("stroke", "red");
-    if (marker) {
-      d3.selectAll("circle." + marker)
+    if (feature) {
+      d3.selectAll("circle." + feature)
         .attr("r", 5)
         .style("fill", "yellow")
         .style("stroke", "black")

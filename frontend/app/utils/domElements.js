@@ -133,7 +133,7 @@ function noShiftKeyfilter() {
 
 /*----------------------------------------------------------------------------*/
 
-/** recognise any punctuation in m which is not allowed for a selector matching an element class name,
+/** recognise any punctuation in f which is not allowed for a selector matching an element class name,
  * and replace with _
  * Specifically :
  *   replace . with _,
@@ -148,11 +148,11 @@ function noShiftKeyfilter() {
  * A class with a numeric prefix is accepted by HTML5, but not for selectors (CSS, d3 or $),
  * so eltClassName() is required at least for that.
  */
-function eltClassName(m)
+function eltClassName(f)
 {
-  m = m.replace(".", "_")
+  f = f.replace(".", "_")
     .replace(/^([\d])/, "_$1");
-  return m;
+  return f;
 }
 
 /*----------------------------------------------------------------------------*/

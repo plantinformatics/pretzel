@@ -103,7 +103,7 @@ export default Ember.Controller.extend(Ember.Evented, {
       this.set('selectedBlock', block);
       d3.selectAll("ul#maps_aligned > li").classed("selected", false);
       d3.select('ul#maps_aligned > li[data-chr-id="' + block.id + '"]').classed("selected", true);
-      d3.selectAll("g.ap").classed("selected", false);
+      d3.selectAll("g.axis-outer").classed("selected", false);
       d3.select("g#id" + block.id).classed("selected", true);
     },
     selectBlockById: function(blockId) {
@@ -176,7 +176,7 @@ export default Ember.Controller.extend(Ember.Evented, {
         mapsToView : [],
         mapsDerived : ObjectPromiseProxy.create({promise: maps}),
         mapsPromise : maps,
-        highlightMarker: false
+        highlightFeature: false
       };
       // console.log("routes/mapview: model() result", result);
       this.set('model', result);
@@ -208,8 +208,8 @@ export default Ember.Controller.extend(Ember.Evented, {
   dataReceived : Ember.ArrayProxy.create({ content: Ember.A() }),
 
   scaffolds: undefined,
-  scaffoldMarkers: undefined,
-  showScaffoldMarkers : false,
+  scaffoldFeatures: undefined,
+  showScaffoldFeatures : false,
   showAsymmetricAliases : false,
 
   hasData: Ember.computed('model.mapsDerived.content.selectedMaps', 'mapsToView', function() {
@@ -224,7 +224,7 @@ export default Ember.Controller.extend(Ember.Evented, {
     let mtv = this.get('mapsToView'), i=mtv.length;
     if (i)
     {
-      let m=mtv[i-1], im, exists;
+      let m=mtv[i-1], ib, exists;
       console.log("mapsToViewChanged", mtv.length, mtv, i, m, a, b, c);
 
       let mapsDerived = this.get('model.mapsDerived');

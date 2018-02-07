@@ -34,12 +34,12 @@ function  groups(g, groupClassNames)
     return resultG;
 };
 
-function ldOfMarker(markerName, i, g)
+function ldOfFeature(featureName, i, g)
 {
-  console.log("ldOfMarker", markerName, i, g);
+  console.log("ldOfFeature", featureName, i, g);
   /** to be replaced by a triangular matrix of LD,
-   * indexed by [markerName1, markerName2]. */
-  let values = markerName.split(""),
+   * indexed by [featureName1, featureName2]. */
+  let values = featureName.split(""),
   data = [];
   for (let j = 0; j <= i; j++)
   {
@@ -72,7 +72,7 @@ TriangleLattice.prototype.cellColor =
   };
 
 /**
- * @param draw  array of marker names
+ * @param draw  array of feature names
 */
 TriangleLattice.prototype.draw =  function (data)
 {
@@ -86,7 +86,7 @@ TriangleLattice.prototype.draw =  function (data)
   gs = groups(g, data),
   rs = gs
     .selectAll("rect")
-    .data(ldOfMarker),
+    .data(ldOfFeature),
   re =  rs.enter(), rx = rs.exit();
   let ra = re
     .append("rect");
@@ -118,18 +118,18 @@ export default InAxis.extend({
     console.log("components/axis-ld didRender()");
   },
 
-  redraw   : function(apID, t) {
+  redraw   : function(axisID, t) {
     this.set('className', className);
     let data = className, // this.get(className),
     layoutAndDrawLd = this.get('layoutAndDrawLd');
-    console.log("redraw", this, (data === undefined) || data.length, apID, t);
+    console.log("redraw", this, (data === undefined) || data.length, axisID, t);
     if (data)
       layoutAndDrawLd.apply(this, [data]);
   },
 
   /** Convert input text to an array.
    * @param tableText text string, TSV, rows separated by \n and/or \r.
-   * First row contains a header with column names; these are the marker names.  
+   * First row contains a header with column names; these are the feature names.  
    */
   parseTextData(tableText)
   {
@@ -144,10 +144,10 @@ export default InAxis.extend({
     let
     oa = this.get('data'),
     axis= this.get("axis"),
-    apID = this.parentView.axis.apID, // axis.
-    /** first stage : all markers;  later  just the zoomed or brushed markers. */
-    markerNames = d3.keys(oa.z[apID]),
-    data = markerNames,
+    axisID = this.parentView.axis.axisID, // axis.
+    /** first stage : all features;  later  just the zoomed or brushed features. */
+    featureNames = d3.keys(oa.z[axisID]),
+    data = featureNames,
     margin = {top: 110, right: 20, bottom: 40, left: 20},
     ranges = this.getRanges(margin);
     console.log("layoutAndDrawLd", ld, oa, axis);

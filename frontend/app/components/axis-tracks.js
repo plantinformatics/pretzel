@@ -7,7 +7,7 @@ import InAxis from './in-axis';
 /*----------------------------------------------------------------------------*/
 /* copied from draw-map.js - will import when that is split */
     /** Setup hover info text over scaffold horizTick-s.
-     * @see based on similar configureAPtitleMenu()
+     * @see based on similar configureAxisTitleMenu()
      */
     function  configureHorizTickHover(location)
     {
@@ -99,7 +99,7 @@ function regionOfTree(intervalTree, domain, sizeThreshold)
 
 function setClipWidth(width)
 {
-  /** This will need APid. */
+  /** This will need axisID. */
   let cp = d3.select("g.axis-use > g.tracks > clipPath#axis-clip > rect");
   cp
     .attr("width", width);
@@ -122,7 +122,7 @@ export default InAxis.extend({
     selectionChanged: function(selA) {
       console.log("selectionChanged in components/axis-tracks", selA);
       for (let i=0; i<selA.length; i++)
-        console.log(selA[i].marker, selA[i].position);
+        console.log(selA[i].feature, selA[i].position);
     },
 
     putContent : function(object, event) {
@@ -152,7 +152,7 @@ export default InAxis.extend({
    */
   parseIntervals(tableText)
   {
-    let apName = "1", intervals = {}, intervalNames = new Set(), intervalTree = {};
+    let axisName = "1", intervals = {}, intervalNames = new Set(), intervalTree = {};
     let rows = tableText.split(/[\n\r]+/);
     let colIdx = {start : 0, end : 1, description : 2};
     for (let i=0; i<rows.length; i++)
@@ -183,10 +183,10 @@ export default InAxis.extend({
       }
     }
         interval.description = description;
-      // let apName = mapChrName2AP(mapChrName);
-      if (intervals[apName] === undefined)
-        intervals[apName] = [];
-      intervals[apName].push(interval);
+      // let axisName = mapChrName2Axis(mapChrName);
+      if (intervals[axisName] === undefined)
+        intervals[axisName] = [];
+      intervals[axisName].push(interval);
       let intervalName = col[colIdx["start"]] + "_" + col[colIdx["end"]]; //makeIntervalName(mapChrName, [col[1], + col[2]]);
       intervalNames.add(intervalName);
       }
@@ -194,9 +194,9 @@ export default InAxis.extend({
     /* input data errors such as [undefined, undefined] in intervals passed to createIntervalTree() can cause
      * e.g. RangeError: Maximum call stack size exceeded in Array.sort().
      */
-    d3.keys(intervals).forEach(function (apName) {
+    d3.keys(intervals).forEach(function (axisName) {
       //Build tree
-      intervalTree[apName] = createIntervalTree(intervals[apName]);
+      intervalTree[axisName] = createIntervalTree(intervals[axisName]);
     });
 
     // scaffolds and intervalNames operate in the same way - could be merged or factored.
@@ -213,17 +213,17 @@ export default InAxis.extend({
   layoutAndDrawTracks(tracks)
   {
     console.log("layoutAndDrawTracks", tracks, tracks.intervalNames, tracks.intervalTree);
-    // initial version supports only 1 split axis; next identify axis by APid (and possibly stack id)
+    // initial version supports only 1 split axis; next identify axis by axisID (and possibly stack id)
     // <g class="axis-use">
     let gAxis = d3.select("g.axis-use"),
-    /** relative to the transform of parent g.ap */
+    /** relative to the transform of parent g.axis-outer */
     bbox = gAxis.node().getBBox(),
     yrange = [bbox.y, bbox.height];
     let t = tracks.intervalTree["1"],
     trackWidth = 10,
     oa = this.get('data'),
-    apID = gAxis.node().parentElement.__data__,
-    y = oa.y[apID],
+    axisID = gAxis.node().parentElement.__data__,
+    y = oa.y[axisID],
     yDomain = [y.invert(yrange[0]), y.invert(yrange[1])],
     pxSize = (yDomain[1] - yDomain[0]) / bbox.height,
     data = regionOfTree(t, yDomain, pxSize * 1/*5*/);

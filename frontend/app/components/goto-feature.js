@@ -12,8 +12,8 @@ EventedListener.prototype.listen = function(listen)
     {
       let onOff = listen ? this.evented.on : this.evented.off,
       me = this;
-      this.methods.map(function (m) {
-        onOff.apply(me.evented, [m.name, m.target, m.method]);
+      this.methods.map(function (f) {
+        onOff.apply(me.evented, [f.name, f.target, f.method]);
       });
       /*
         if (listen)
@@ -33,17 +33,17 @@ export default Ember.Component.extend({
 
   // the life cycle functionality is based on draw-controls, may factor out.
   didInsertElement() {
-    console.log("components/goto-marker didInsertElement()", this.drawActions);
+    console.log("components/goto-feature didInsertElement()", this.drawActions);
     Ember.run.later(function() {
       let d = Ember.$('.tooltip.ember-popover');  // make-ui-draggable
     });
     if (this.drawActions)
-    this.drawActions.trigger("gotoMarkerLife", true);
+    this.drawActions.trigger("gotoFeatureLife", true);
   },
   willDestroyElement() {
-    console.log("components/goto-marker willDestroyElement()");
+    console.log("components/goto-feature willDestroyElement()");
     if (this.drawActions)
-    this.drawActions.trigger("gotoMarkerLife", false);
+    this.drawActions.trigger("gotoFeatureLife", false);
   },
   didRender() {
   },
@@ -78,30 +78,30 @@ export default Ember.Component.extend({
 
   drawObjectAttributes : function(oa)
   {
-    /** this is used if goto-marker is instantiated in mapview.hbs (comment in draw-map.js); may drop this  */
+    /** this is used if goto-feature is instantiated in mapview.hbs (comment in draw-map.js); may drop this  */
     this.set('oa', oa);
-    console.log("goto-marker drawObjectAttributes()", this.drawActions, this.drawActions.get('oa'));
+    console.log("goto-feature drawObjectAttributes()", this.drawActions, this.drawActions.get('oa'));
   },
 
 
   actions : {
     gotoMap() {
-      console.log("goto-marker: gotoMap");
+      console.log("goto-feature: gotoMap");
     },
     gotoApollo() {
-      console.log("goto-marker: gotoApollo");
+      console.log("goto-feature: gotoApollo");
     }
   },
   /*----------------------------------------------------------------------------
-gene/markerHover
+gene/featureHover
 intervalHover
 locationClick
 
 hover on brush on axis : d3-tip menu : apollo
-hover on gene/marker circle in brush on axis : d3-tip menu : Map / Apollo / endPoint
+hover on gene/feature circle in brush on axis : d3-tip menu : Map / Apollo / endPoint
 (set endPoint Limit)
-click in marker column of spreadsheet : ditto
-+ hover on path, click/+hover on marker or alias name : ditto
+click in feature column of spreadsheet : ditto
++ hover on path, click/+hover on feature or alias name : ditto
 
 Map : pull-down list of Map (URLs)
 Apollo : link; new window or re-use, later axis-iframe.
@@ -110,14 +110,14 @@ Apollo : link; new window or re-use, later axis-iframe.
 
   /* split these out e.g. to models/chromosome, and objectSet() to utils */
 
-  /** @return array of names of chromosomes containing marker */
-  markerChrs : function(markerName)
+  /** @return array of names of chromosomes containing feature */
+  featureChrs : function(featureName)
   {
     let c, oa = this.get('data') || this.get('oa');
-    // markerAPs may not have been initialised ?
-    if (oa && oa.markerAPs && oa.markerAPs[markerName])
-      // markerAPs is a hash of Sets
-      c = Array.from(oa.markerAPs[markerName].keys());
+    // featureAxisSets may not have been initialised ?
+    if (oa && oa.featureAxisSets && oa.featureAxisSets[featureName])
+      // featureAxisSets is a hash of Sets
+      c = Array.from(oa.featureAxisSets[featureName].keys());
     else
       c = [];
     return c;
@@ -145,7 +145,7 @@ Apollo : link; new window or re-use, later axis-iframe.
       map = chr.content.map;
     else
     {
-      let stacked = oa.aps[chrName], store = this.get('store');
+      let stacked = oa.axes[chrName], store = this.get('store');
       if (stacked === undefined)
         debugger;
       else
@@ -153,7 +153,7 @@ Apollo : link; new window or re-use, later axis-iframe.
        * because other branch returns map object refn .
        */
       map  =  this.name2Map(store, stacked.mapName);
-      console.log("goto-marker chrMap()", oa, oa.chrPromises, chrName, stacked, map);
+      console.log("goto-feature chrMap()", oa, oa.chrPromises, chrName, stacked, map);
     }
     return map;
   },
@@ -176,30 +176,30 @@ Apollo : link; new window or re-use, later axis-iframe.
 
   /*----------------------------------------------------------------------------*/
 
-  mapsOfMarker : Ember.computed('marker1', 'data', 'oa', function (newValue) {
-    console.log("mapsOfMarker", newValue);
+  mapsOfFeature : Ember.computed('feature1', 'data', 'oa', function (newValue) {
+    console.log("mapsOfFeature", newValue);
     let oa = this.get('data') || this.get('oa'),
     chrNames;    
     if (oa)
     {
-      let markerName = this.get('marker1');
-      chrNames = this.markerChrs.apply(this, [markerName]);
-      // console.log(markerName, "chrNames", chrNames);
+      let featureName = this.get('feature1');
+      chrNames = this.featureChrs.apply(this, [featureName]);
+      // console.log(featureName, "chrNames", chrNames);
     }
     else
     {
-      return [];  // because oa is needed by markerChrs() and chrMap()
+      return [];  // because oa is needed by featureChrs() and chrMap()
     }
     let
       me = this,
-    apsP = chrNames.map(function (chrName) {
+    axesParents = chrNames.map(function (chrName) {
       let map = me.chrMap.apply(me, [chrName]);
       return map;
     }),
-    uniqueAps = this.objectSet(apsP),
-    aps = Array.from(uniqueAps.keys());
-    console.log("mapsOfMarker", this.get('marker1'), chrNames, apsP, uniqueAps, aps);
-    return aps;
+    uniqueAxes = this.objectSet(axesParents),
+    axes = Array.from(uniqueAxes.keys());
+    console.log("mapsOfFeature", this.get('feature1'), chrNames, axesParents, uniqueAxes, axes);
+    return axes;
   })
 
 /*----------------------------------------------------------------------------*/

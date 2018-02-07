@@ -10,7 +10,7 @@ import { eltWidthResizable, noShiftKeyfilter, eltClassName  } from '../utils/dom
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection } from '../utils/log-selection';
 import { Viewport } from '../utils/draw/viewport';
 import {  Axes, /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId, highlightId  }  from '../utils/draw/axis';
-import { Stacked, Stack, stacks, xScaleExtend } from '../utils/stacks';
+import { Stacked, Stack, stacks, xScaleExtend, axisRedrawText } from '../utils/stacks';
 import { round_2, checkIsNumber} from '../utils/domCalcs';
 /*----------------------------------------------------------------------------*/
 
@@ -150,7 +150,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
   /*------------------------------------------------------------------------*/
 
-  /** Used for receiving colouredMarkers from selected-markers.js,
+  /** Used for receiving colouredFeatures from selected-features.js,
    * and flipRegion, ...
    */
   feedService: (console.log("feedService"), Ember.inject.service('feed')),
@@ -166,7 +166,7 @@ export default Ember.Component.extend(Ember.Evented, {
     if (f === undefined)
       debugger;
     else {
-      f.on('colouredMarkers', this, 'updateColouredMarkers');
+      f.on('colouredFeatures', this, 'updateColouredFeatures');
       f.on('clearScaffoldColours', this, 'clearScaffoldColours');
       f.on('flipRegion', this, 'flipRegion');
       f.on('resetZooms', this, 'resetZooms');
@@ -178,7 +178,7 @@ export default Ember.Component.extend(Ember.Evented, {
   // remove the binding created in listen() above, upon component destruction
   cleanup: function() {
     let f = this.get('feedService');
-    f.off('colouredMarkers', this, 'updateColouredMarkers');
+    f.off('colouredFeatures', this, 'updateColouredFeatures');
     f.off('clearScaffoldColours', this, 'clearScaffoldColours');
     f.off('flipRegion', this, 'flipRegion');
     f.off('resetZooms', this, 'resetZooms');
@@ -187,29 +187,29 @@ export default Ember.Component.extend(Ember.Evented, {
   }.on('willDestroyElement'),
 
 //{
-  /** undefined, or a function to call when colouredMarkers are received  */
-  colouredMarkersChanged : undefined,
+  /** undefined, or a function to call when colouredFeatures are received  */
+  colouredFeaturesChanged : undefined,
 
-  updateColouredMarkers: function(markers) {
-    console.log("updateColouredMarkers in components/draw-map.js");
+  updateColouredFeatures: function(features) {
+    console.log("updateColouredFeatures in components/draw-map.js");
     let self = this;
     this.get('scroller').scrollVertical('#holder', {
       duration : 1000,
       // easing : 'linear', // default is swing
       offset : -60
     }).then(function () {
-      let colouredMarkersChanged = self.get('colouredMarkersChanged');
-      if (colouredMarkersChanged)
-        colouredMarkersChanged(markers);
+      let colouredFeaturesChanged = self.get('colouredFeaturesChanged');
+      if (colouredFeaturesChanged)
+        colouredFeaturesChanged(features);
     });
   },
 
   draw_flipRegion : undefined,
-  flipRegion: function(markers) {
+  flipRegion: function(features) {
     console.log("flipRegion in components/draw-map.js");
     let flipRegion = this.get('draw_flipRegion');
     if (flipRegion)
-      flipRegion(markers);
+      flipRegion(features);
   },
 //}
 
@@ -221,28 +221,28 @@ export default Ember.Component.extend(Ember.Evented, {
   axes : [],
   splitAxes: Ember.computed.filterBy('axes', 'extended', true),
 
-  axisData : [{marker: "A1", position: 11}, {marker: "A2", position: 12}],
+  axisData : [{feature: "A1", position: 11}, {feature: "A2", position: 12}],
 
   /*------------------------------------------------------------------------*/
 
   actions: {
 //-	?
-    updatedSelectedMarkers: function(selectedMarkers) {
-      let markersAsArray = d3.keys(selectedMarkers)
+    updatedSelectedFeatures: function(selectedFeatures) {
+      let featuresAsArray = d3.keys(selectedFeatures)
         .map(function (key) {
-          return selectedMarkers[key].map(function(marker) {
-            //marker contains marker name and position, separated by " ".
-            var info = marker.split(" ");
-            return {Chromosome:key,Marker:info[0],Position:info[1]};
+          return selectedFeatures[key].map(function(feature) {
+            //feature contains feature name and position, separated by " ".
+            var info = feature.split(" ");
+            return {Chromosome:key,Feature:info[0],Position:info[1]};
           });
         })
         .reduce(function(a, b) { 
           return a.concat(b);
         }, []);
-      // console.log(markersAsArray);
-      console.log("updatedSelectedMarkers in draw-map component",
-                  selectedMarkers, markersAsArray.length);
-      this.sendAction('updatedSelectedMarkers', markersAsArray);
+      // console.log(featuresAsArray);
+      console.log("updatedSelectedFeatures in draw-map component",
+                  selectedFeatures, featuresAsArray.length);
+      this.sendAction('updatedSelectedFeatures', featuresAsArray);
     },
 
     updatedStacks: function(stacks) {
@@ -258,25 +258,25 @@ export default Ember.Component.extend(Ember.Evented, {
       this.sendAction('mapsToViewDelete', mapName);
     },
 
-    enableAxis2D: function(apID, enabled) {
+    enableAxis2D: function(axisID, enabled) {
       let axes = this.get('axes');
-      let axis = axes.findBy('apID', apID);
+      let axis = axes.findBy('axisID', axisID);
       if (axis === undefined)
       {
-        axis = Ember.Object.create({ apID : apID });
+        axis = Ember.Object.create({ axisID : axisID });
         axes.pushObject(axis);
-        console.log("create", apID, axis, "in", axes);
+        console.log("create", axisID, axis, "in", axes);
       }
-      console.log("enableAxis2D in components/draw-map", apID, enabled, axis);
+      console.log("enableAxis2D in components/draw-map", axisID, enabled, axis);
         axis.set('extended', enabled);  // was axis2DEnabled
       console.log("splitAxes", this.get('splitAxes'));
       console.log("axes", this.get('axes'));
     },
 
-    axisWidthResize : function(apID, width, dx) {
-      console.log("axisWidthResize in components/draw-map", apID, width, dx);
+    axisWidthResize : function(axisID, width, dx) {
+      console.log("axisWidthResize in components/draw-map", axisID, width, dx);
       let axisWidthResize = this.get('axisWidthResize');
-      if (axisWidthResize) axisWidthResize(apID, width, dx);
+      if (axisWidthResize) axisWidthResize(axisID, width, dx);
     },
     axisWidthResizeEnded : function() {
       console.log("axisWidthResizeEnded in components/draw-map");
@@ -304,6 +304,11 @@ export default Ember.Component.extend(Ember.Evented, {
   /** object attributes */
   oa : {},
 
+  /** 
+   * @param m "map", or more precisely a chromosome within a map, which could
+   * be named simply chromosome, which is now block.
+   * The name "map" is consistent with "mapsToView", but that also can change.
+   */
   drawPromisedChr : function(store, m)
   {
     // extracted from the else case of dataObserver()
@@ -337,20 +342,22 @@ export default Ember.Component.extend(Ember.Evented, {
           Ember.run.later(function () { dataReceived.popObject(); });
 
           {
-            let mtv = content[ic], m, im, newChr;
+            /** @see comment in drawPromisedChr() above about parameter m
+             */
+            let mtv = content[ic], m, ib, newChr;
             let oa = me.get('oa');
-              if ((oa.aps === undefined) || trace_promise)
-                console.log("mtv", mtv.length, mtv, "aps", oa.aps, oa.aps && oa.aps.length);
-            if (oa.aps !== undefined)
-            for (im=0; im < mtv.length; im++)
+              if ((oa.axes === undefined) || trace_promise)
+                console.log("mtv", mtv.length, mtv, "axes", oa.axes, oa.axes && oa.axes.length);
+            if (oa.axes !== undefined)
+            for (ib=0; ib < mtv.length; ib++)
             {
-              if (oa.aps[m = mtv[im]])
-                { console.log("mapsToView[", im, "] === ", m); }
+              if (oa.axes[m = mtv[ib]])
+                { console.log("mapsToView[", ib, "] === ", m); }
               else if (oa.chrPromises && oa.chrPromises[m])
               {
                 let mp = oa.chrPromises[m], zm = oa.z[m],
-                ma = mp.get('markers'), m0 = ma.canonicalState[0].__data;
-                console.log("promise pending for", m, mp, zm, ma.length, m0);
+                fa  = mp.get('features'), f0  = fa .canonicalState[0].__data;
+                console.log("promise pending for", m, mp, zm, fa .length, f0 );
                 if (mp.isFulfilled)
                 {
                   me.drawPromisedChr(me.get('store'), m);
@@ -360,20 +367,20 @@ export default Ember.Component.extend(Ember.Evented, {
               }
               else
               {
-                newChr = mtv[im];
+                newChr = mtv[ib];
                 console.log(newChr);
                 {
-                  let thisStore = me.get('store')
+                  let thisStore = me.get('store');
                   let pc = thisStore.findRecord('block', m,
                     { reload: true,
                       adapterOptions:{ filter: {include: "features" } }}
                     );
                   pc.then(function (ch){
-                    let map, mapId, chrName = ch.get('name'), chr = ch.get('id'), markers, rc;
+                    let map, mapId, chrName = ch.get('name'), chr = ch.get('id'), features, rc;
                     console.log(chrName, chr);
                     if (chrName && chr && (map = ch.get('map')) && (mapId = map.get('id'))
-                            && (markers = ch.get('features'))) {
-                      console.log("findRecord then", chrName, chr, map.get('name'), mapId, markers.length);
+                            && (features = ch.get('features'))) {
+                      console.log("findRecord then", chrName, chr, map.get('name'), mapId, features.length);
                     }
                     else
                     {
@@ -391,8 +398,8 @@ export default Ember.Component.extend(Ember.Evented, {
                           ppc.get('name'));
 
                         if (trace_data) {
-                          let ma = ppc.get('features');
-                          ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
+                          let fa  = ppc.get('features');
+                          fa .forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
                         }
                         ch = ppc;
                         chr = ch.get('id');
@@ -412,14 +419,14 @@ export default Ember.Component.extend(Ember.Evented, {
             }
 
             /*
-             let ppc = newData[0], ma = newData[1];
+             let ppc = newData[0], fa  = newData[1];
              console.log(newData[0]._internalModel, newData[1].record);
              console.log
              (ppc._internalModel.id,
              ppc.get('map').get('name'),
              ppc.get('name'));
 
-             ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
+             fa .forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
              */
 
           }
@@ -434,18 +441,18 @@ export default Ember.Component.extend(Ember.Evented, {
 })),
 
 
-  /** Draw the APs (Axis Pieces) and the paths between them.
-   * APs are Axis Pieces; in this first stage they correspond to chromosomes,
+  /** Draw the Axes (Axis Pieces) and the paths between them.
+   * Axes are Axis Pieces; in this first stage they correspond to chromosomes,
    * but the plan is for them to represent other data topics and types.
    * Each Chromosome is a part of a genetic map in this application.
    *
    * @param myData array indexed by myAPs[*]; each value is a hash indexed by
-   * <mapName>_<chromosomeName>, whose values are an array of markers {location,
-   * map:<mapName>_<chromosomeName>, marker: markerName}
-   * The index value is referred to as apName (AP - Axis Piece) for generality
+   * <mapName>_<chromosomeName>, whose values are an array of features {location,
+   * map:<mapName>_<chromosomeName>, feature: featureName}
+   * The index value is referred to as axisName (axis - Axis Piece) for generality
    * (originally "mapName", but it actually identifies a chromosome within a map).
    *
-   * @param myData hash indexed by AP names
+   * @param myData hash indexed by axis names
    * @param availableMaps if not undefined then it is a promise; when this promise has resolved, chrPromises[*].get('map') is available
    * @param source 'didRender' or 'dataReceived' indicating an added map.
    */
@@ -480,9 +487,9 @@ export default Ember.Component.extend(Ember.Evented, {
           setupVariousControls();
       });
 
-      /** currently have an instance of goto-marker in mapview.hbs (may remove
+      /** currently have an instance of goto-feature in mapview.hbs (may remove
        * this - also have it via draw-map.hbs -> path-hover.hbs with data=oa ->
-       * marker-name.hbs -> goto-marker ); this is just to get oa to that instance; not
+       * feature-name.hbs -> goto-feature ); this is just to get oa to that instance; not
        * ideal.  */
       let drawActions = this.get('drawActions'); 
       drawActions.trigger('drawObjectAttributes', this.get('oa')); // 
@@ -500,34 +507,34 @@ export default Ember.Component.extend(Ember.Evented, {
 
     oa.stacks = stacks;
     stacks.init(oa);
-    oa.aps = stacks.aps;
+    oa.axes = stacks.axes;
 
-    let highlightMarker = myData.highlightMarker;
-    if (highlightMarker)
+    let highlightFeature = myData.highlightFeature;
+    if (highlightFeature)
     {
-      console.log("highlightMarker", highlightMarker);
-      delete myData.highlightMarker;
+      console.log("highlightFeature", highlightFeature);
+      delete myData.highlightFeature;
     }
 
-    /**  oa.apIDs is an array, containing the AP ID-s (i.e. chr names made
+    /**  oa.axisIDs is an array, containing the axis ID-s (i.e. chr names made
      *  unique by prepending their map name).
      * The array is not ordered; the stack order (left-to-right) is recorded by
      * the order of oa.stacks[].
      */
-    console.log("oa.apIDs", oa.apIDs, source);
-    /** apIDs are <mapName>_<chromosomeName> */
+    console.log("oa.axisIDs", oa.axisIDs, source);
+    /** axisIDs are <mapName>_<chromosomeName> */
     if (source == 'dataReceived')
     {
-      // append each element of myDataKeys[] to oa.apIDs[] if not already present.
-      myDataKeys.forEach(function (apID) { apIDAdd(apID); } );
+      // append each element of myDataKeys[] to oa.axisIDs[] if not already present.
+      myDataKeys.forEach(function (axisID) { axisIDAdd(axisID); } );
     }
-    else if ((myDataKeys.length > 0) || (oa.apIDs === undefined))
-      oa.apIDs = myDataKeys;
-    console.log("oa.apIDs", oa.apIDs);
-    /** mapName (apName) of each chromosome, indexed by chr name. */
+    else if ((myDataKeys.length > 0) || (oa.axisIDs === undefined))
+      oa.axisIDs = myDataKeys;
+    console.log("oa.axisIDs", oa.axisIDs);
+    /** mapName (axisName) of each chromosome, indexed by chr name. */
     let cmName = oa.cmName || (oa.cmName = {});
-    /** AP id of each chromosome, indexed by AP name. */
-    let mapChr2AP = oa.mapChr2AP || (oa.mapChr2AP = {});
+    /** axis id of each chromosome, indexed by axis name. */
+    let mapChr2Axis = oa.mapChr2Axis || (oa.mapChr2Axis = {});
 
     /** Plan for layout of stacked axes.
 
@@ -557,36 +564,37 @@ export default Ember.Component.extend(Ember.Evented, {
     let dragLimit = vc.dragLimit;
     let axisXRange = vc.axisXRange;
 
-    if (oa.axes === undefined)
-      oa.axes = new Axes(oa);
+    //- possibly integrate with with oa.stacks.axes
+    if (oa.axesExtended === undefined)
+      oa.axesExtended = new Axes(oa);
 
     let
-      /** number of ticks in y axis when AP is not stacked.  reduce this
-       * proportionately when AP is stacked. */
+      /** number of ticks in y axis when axis is not stacked.  reduce this
+       * proportionately when axis is stacked. */
       axisTicks = 10,
     /** font-size of y axis ticks */
     axisFontSize = 12;
     /** default colour for paths; copied from app.css (.foreground path {
      * stroke: #808;}) so it can be returned from d3 stroke function.  Also
-     * used currently to recognise markers which are in colouredMarkers via
+     * used currently to recognise features which are in colouredFeatures via
      * path_colour_scale(), which is a useful interim measure until scales are
-     * set up for stroke-width of colouredMarkers, or better a class.
+     * set up for stroke-width of colouredFeatures, or better a class.
      */
     let pathColourDefault = "#808";
 
 //- moved to utils/draw/viewport.js : xDropOutDistance_update()
 
-    /** Draw paths between markers on APs even if one end of the path is outside the svg.
-     * This was the behaviour of an earlier version of this Marker Map Viewer, and it
+    /** Draw paths between features on Axes even if one end of the path is outside the svg.
+     * This was the behaviour of an earlier version of this Feature Map Viewer, and it
      * seems useful, especially with a transition, to show the progressive exclusion of
      * paths during zoom.n
      */
     let allowPathsOutsideZoom = false;
 
-    /** When working with aliases: only show unique connections between markers of adjacent APs.
-     * Markers are unique within APs, so this is always the case when there are no aliases.
-     * Counting the connections (paths) between markers based on aliases + direct connections,
-     * if there is only 1 connection between a pair of markers, i.e. the mapping between the APs is 1:1,
+    /** When working with aliases: only show unique connections between features of adjacent Axes.
+     * Features are unique within Axes, so this is always the case when there are no aliases.
+     * Counting the connections (paths) between features based on aliases + direct connections,
+     * if there is only 1 connection between a pair of features, i.e. the mapping between the Axes is 1:1,
      * then show the connection.
      *
      * Any truthy value of unique_1_1_mapping enables the above; special cases :
@@ -594,10 +602,10 @@ export default Ember.Component.extend(Ember.Evented, {
      * unique_1_1_mapping === 3 enables collateStacksA (asymmetric aliases).
      */
     let unique_1_1_mapping = 3;
-    /** Include direct connections in U_alias, (affects collateStacks1():pu). */
+    /** Include direct connections in U_alias, (affects collateStacks1():pathsUnique). */
     let directWithAliases = false;
     // let collateStacks = unique_1_1_mapping === 3 ? collateStacksA : collateStacks1;
-    /** look at aliases in adjacent APs both left and right (for unique_1_1_mapping = 3) */
+    /** look at aliases in adjacent Axes both left and right (for unique_1_1_mapping = 3) */
     let adjacent_both_dir = true;
     /** A simple mechanism for selecting a small percentage of the
      * physical maps, which are inconveniently large for debugging.
@@ -606,23 +614,23 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     const filter_location = false;
     /** true means the <path> datum is the text of the SVG line, otherwise it is
-     * the "mmaa" data and the "d" attr is the text of the SVG line.
-     * @see markerNameOfPath().
+     * the "ffaa" data and the "d" attr is the text of the SVG line.
+     * @see featureNameOfPath().
      */
     let pathDataIsLine;
     /** true means the path datum is not used - its corresponding data is held in its parent g
      */
     const pathDataInG = true;
 
-    /** Apply colours to the paths according to their marker name (datum); repeating ordinal scale.
+    /** Apply colours to the paths according to their feature name (datum); repeating ordinal scale.
      * meaning of values :
      *  set path_colour_domain to
-     *   1 : markers
-     *   2 : d3.keys(ag)
-     *  colour according to input from colouredMarkers; just the listed markerNames is coloured :
-     *  each line of markerNames is         domain is
-     *   3: markerName                      markerName-s
-     *   4: scaffoldName\tmarkerName        scaffoldName-s
+     *   1 : features
+     *   2 : d3.keys(aliasGroup)
+     *  colour according to input from colouredFeatures; just the listed featureNames is coloured :
+     *  each line of featureNames is         domain is
+     *   3: featureName                      featureName-s
+     *   4: scaffoldName\tfeatureName        scaffoldName-s
      *      scaffoldName can be generalised as class name.
      */
     let use_path_colour_scale = 4;
@@ -635,9 +643,9 @@ export default Ember.Component.extend(Ember.Evented, {
      */
 
 //-	?
-    /** export scaffolds and scaffoldMarkers for use in selected-markers.hbs */
-    let showScaffoldMarkers = this.get('showScaffoldMarkers');
-    console.log("showScaffoldMarkers", showScaffoldMarkers);
+    /** export scaffolds and scaffoldFeatures for use in selected-features.hbs */
+    let showScaffoldFeatures = this.get('showScaffoldFeatures');
+    console.log("showScaffoldFeatures", showScaffoldFeatures);
 
     let showAsymmetricAliases = this.get('showAsymmetricAliases');
     console.log("showAsymmetricAliases", showAsymmetricAliases);
@@ -653,43 +661,43 @@ export default Ember.Component.extend(Ember.Evented, {
     let svgContainer;
 
     let
-      /** y[apID] is the scale for AP apID.
-       * y[apID] has range [0, yRange], i.e. as if the AP is not stacked.
-       * g.AP has a transform to position the AP within its stack, so this scale is used
-       * for objects within g.AP, and notably its child g.axis, such as the brush.
+      /** y[axisID] is the scale for axis axisID.
+       * y[axisID] has range [0, yRange], i.e. as if the axis is not stacked.
+       * g.axis-outer has a transform to position the axis within its stack, so this scale is used
+       * for objects within g.axis-outer, and notably its child g.axis, such as the brush.
        * For objects in g.foreground, ys is the appropriate scale to use.
        */
       y = oa.y || (oa.y = {}),
-    /** ys[apID] is is the same as y[apID], with added translation and scale
-     * for the AP's current stacking (AP.position, AP.yOffset(), AP.portion).
+    /** ys[axisID] is is the same as y[axisID], with added translation and scale
+     * for the axis's current stacking (axis.position, axis.yOffset(), axis.portion).
      * See also comments for y re. the difference in uses of y and ys.
      */
     ys = oa.ys || (oa.ys = {}),
-    /** scaled x value of each AP, indexed by apIDs */
+    /** scaled x value of each axis, indexed by axisIDs */
     o = oa.o || (oa.o = {}),
-    /** Count markers in APs, to set stronger paths than normal when working
+    /** Count features in Axes, to set stronger paths than normal when working
      * with small data sets during devel.  */
-    markerTotal = 0,
-    /** z[APid] is a hash for AP APid mapping marker name to location.
-     * i.e. z[d.ap][d.marker] is the location of d.marker in d.ap.
+    featureTotal = 0,
+    /** z[axisID] is a hash for axis axisID mapping feature name to location.
+     * i.e. z[d.axis][d.feature] is the location of d.feature in d.axis.
      */
     z = oa.z || (oa.z = myData);
-    /** All marker names.
+    /** All feature names.
      * Initially a Set (to determine unique names), then converted to an array.
      */
-    if (oa.d3MarkerSet === undefined)
-      oa.d3MarkerSet = new Set();
+    if (oa.d3FeatureSet === undefined)
+      oa.d3FeatureSet = new Set();
 
       if (source === 'didRender')
-        d3.keys(chrPromises).forEach(function (ap) {
-        /** ap is chr name */
-        let c = chrPromises[ap];
+        d3.keys(chrPromises).forEach(function (axis) {
+        /** axis is chr name */
+        let c = chrPromises[axis];
         afterChrPromise(c, availableMaps);
         });
       else
-        d3.keys(myData).forEach(function (ap) {
-        /** ap is chr name */
-      receiveChr(ap, myData[ap], source);
+        d3.keys(myData).forEach(function (axis) {
+        /** axis is chr name */
+      receiveChr(axis, myData[axis], source);
       });
     /** When data is received for a chromosome, draw it.
      * @param p promise delivers data of a chromosome
@@ -710,12 +718,12 @@ export default Ember.Component.extend(Ember.Evented, {
           c = results[0],
         rc = {mapName : c.get('map').get('name'), chrName : c.get('name')};
         console.log("afterChrPromise", rc);
-        let m = c.get('features');
-        m.forEach(function(marker) {
-          let markerName = marker.get('name');
-          let markerPosition = marker.get('position');
-          let markerAliases = marker.get('aliases');
-          rc[markerName] = {location: markerPosition, aliases: markerAliases};
+        let f = c.get('features');
+        f.forEach(function(feature) {
+          let featureName = feature.get('name');
+          let featurePosition = feature.get('position');
+          let featureAliases = feature.get('aliases');
+          rc[featureName] = {location: featurePosition, aliases: featureAliases};
         });
         receiveChr(c.get('id'), rc, 'dataReceived');
         //-	on 'new chr data' to from graph-data
@@ -730,49 +738,49 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       if (trace_promise > 1)
       {
-        console.log("redraw, afterChrPromise then after receiveChr", oa.apIDs, oa.aps);
+        console.log("redraw, afterChrPromise then after receiveChr", oa.axisIDs, oa.axes);
         oa.stacks.log();
       }
       me.draw({}, undefined, 'dataReceived');
     }
-    function receiveChr(ap, c, source) {
+    function receiveChr(axis, c, source) {
       let z = oa.z, cmName = oa.cmName;
-      if ((z[ap] === undefined) || (cmName[ap] === undefined))
+      if ((z[axis] === undefined) || (cmName[axis] === undefined))
       {
-        z[ap] = c;
-      cmName[ap] = {mapName : c.mapName, chrName : c.chrName};
+        z[axis] = c;
+      cmName[axis] = {mapName : c.mapName, chrName : c.chrName};
         let mapChrName = makeMapChrName(c.mapName, c.chrName);
-      mapChr2AP[mapChrName] = ap;
-    //-	receive 'add apIDs'
+      mapChr2Axis[mapChrName] = axis;
+    //-	receive 'add axisIDs'
         if (source == 'dataReceived')
         {
-          apIDAdd(ap);
+          axisIDAdd(axis);
         }
       delete c.mapName;
       delete c.chrName;
-      console.log("receiveChr", ap, cmName[ap]);
-      d3.keys(c).forEach(function(marker) {
-        let m = z[ap][marker];
-        // alternate filter, suited to physical maps : m.location > 2000000
-        if ((markerTotal++ & 0x3) && filter_location)
-          delete z[ap][marker];
+      console.log("receiveChr", axis, cmName[axis]);
+      d3.keys(c).forEach(function(feature) {
+        let f = z[axis][feature];
+        // alternate filter, suited to physical maps : f.location > 2000000
+        if ((featureTotal++ & 0x3) && filter_location)
+          delete z[axis][feature];
         else
         {
-          oa.d3MarkerSet.add(marker);
-          // markerTotal++;
+          oa.d3FeatureSet.add(feature);
+          // featureTotal++;
 
           /** This implementation of aliases was used initially.
-           * The marker is simply duplicated (same location, same AP) for each alias.
-           * This works, but loses the distinction between direct connections (same marker / gene)
+           * The feature is simply duplicated (same location, same axis) for each alias.
+           * This works, but loses the distinction between direct connections (same feature / gene)
            * and indirect (via aliases).
            */
           if (! unique_1_1_mapping)
           {
-            let markerValue = z[ap][marker];
-            if (markerValue && markerValue.aliases)
-              for (let a of markerValue.aliases)
+            let featureValue = z[axis][feature];
+            if (featureValue && featureValue.aliases)
+              for (let a of featureValue.aliases)
             {
-                z[ap][a] = {location: markerValue.location};
+                z[axis][a] = {location: featureValue.location};
               }
           }
         }
@@ -780,104 +788,104 @@ export default Ember.Component.extend(Ember.Evented, {
       });
       }
     }
-    /** Check if ap exists in oa.apIDs[].
-     * @return index of ap in oa.apIDs[], -1 if not found
+    /** Check if axis exists in oa.axisIDs[].
+     * @return index of axis in oa.axisIDs[], -1 if not found
      */
-    function apIDFind(ap) {
+    function axisIDFind(axis) {
       let k;
-      for (k=oa.apIDs.length-1; (k>=0) && (oa.apIDs[k] != ap); k--) { }
+      for (k=oa.axisIDs.length-1; (k>=0) && (oa.axisIDs[k] != axis); k--) { }
       return k;
     }
-    /** If ap is not in oa.apIDs[], then append it.
-     * These 3 functions could be members of oa.apIDs[] - maybe a class.
+    /** If axis is not in oa.axisIDs[], then append it.
+     * These 3 functions could be members of oa.axisIDs[] - maybe a class.
      */
-    function apIDAdd(ap) {
-      if (apIDFind(ap) < 0)
+    function axisIDAdd(axis) {
+      if (axisIDFind(axis) < 0)
       {
-        console.log("apIDAdd push", oa.apIDs, ap);
-        oa.apIDs.push(ap);
+        console.log("axisIDAdd push", oa.axisIDs, axis);
+        oa.axisIDs.push(axis);
       }
     }
-    /** Find apName in oa.apIDs, and remove it. */
-    function deleteAPfromapIDs(apName)
+    /** Find axisName in oa.axisIDs, and remove it. */
+    function deleteAxisfromAxisIDs(axisName)
     {
-      let k = apIDFind(apName);
+      let k = axisIDFind(axisName);
       if (k === -1)
-        console.log("deleteAPfromapIDs", "not found:", apName);
+        console.log("deleteAxisfromAxisIDs", "not found:", axisName);
       else
       {
-        console.log("deleteAPfromapIDs", apName, k, oa.apIDs);
-        let a = oa.apIDs.splice(k, 1);
-        console.log(oa.apIDs, "deleted:", a);
+        console.log("deleteAxisfromAxisIDs", axisName, k, oa.axisIDs);
+        let a = oa.axisIDs.splice(k, 1);
+        console.log(oa.axisIDs, "deleted:", a);
       }
     }
 
     //creates a new Array instance from an array-like or iterable object.
-    let d3Markers = Array.from(oa.d3MarkerSet);
-    /** Indexed by markerName, value is a Set of APs in which the marker is present.
-     * Currently markerName-s are unique, present in just one AP (Chromosome),
+    let d3Features = Array.from(oa.d3FeatureSet);
+    /** Indexed by featureName, value is a Set of Axes in which the feature is present.
+     * Currently featureName-s are unique, present in just one axis (Chromosome),
      * but it seems likely that ambiguity will arise, e.g. 2 assemblies of the same Chromosome.
      * Terminology :
-     *   genetic map contains chromosomes with markers;
+     *   genetic map contains chromosomes with features;
      *   physical map (pseudo-molecule) contains genes
      */
-    let markerAPs = oa.markerAPs || (oa.markerAPs = {});
+    let featureAxisSets = oa.featureAxisSets || (oa.featureAxisSets = {});
     let
-      /** Draw a horizontal notch at the marker location on the axis,
-       * when the marker is not in a AP of an adjacent Stack.
-       * Makes the marker location visible, because otherwise there is no path to indicate it.
+      /** Draw a horizontal notch at the feature location on the axis,
+       * when the feature is not in a axis of an adjacent Stack.
+       * Makes the feature location visible, because otherwise there is no path to indicate it.
        */
       showAll = true,
-    /** Show brushed markers, i.e. pass them to updatedSelectedMarkers().
+    /** Show brushed features, i.e. pass them to updatedSelectedFeatures().
      * The purpose is to save processing time; this is toggled by 
-     * setupToggleShowSelectedMarkers() - #checkbox-toggleShowSelectedMarkers.
+     * setupToggleShowSelectedFeatures() - #checkbox-toggleShowSelectedFeatures.
      */
-    showSelectedMarkers = true;
+    showSelectedFeatures = true;
 
-    /** Alias groups : ag[agName] : [ marker ]    marker references AP and array of aliases */
-    let ag = oa.ag || (oa.ag = {});
+    /** Alias groups : aliasGroup[aliasGroupName] : [ feature ]    feature references axis and array of aliases */
+    let aliasGroup = oa.aliasGroup || (oa.aliasGroup = {});
 
 
-    /** Map from marker names to AP names.
-     * Compiled by collateMarkerMap() from z[], which is compiled from d3Data.
+    /** Map from feature names to axis names.
+     * Compiled by collateFeatureMap() from z[], which is compiled from d3Data.
      */
-    let am;
-    /** Map from marker names to AP names, via aliases of the marker.
-     * Compiled by collateMarkerMap() from z[], which is compiled from d3Data.
+    let featureToAxis;
+    /** Map from feature names to axis names, via aliases of the feature.
+     * Compiled by collateFeatureMap() from z[], which is compiled from d3Data.
      */
-    let aa;
+    let featureAliasToAxis;
 
     // results of collateData()
     let
-      /** ap / alias : marker    aam[ap][marker alias] : [marker] */
-      aam = oa.aam || (oa.aam = {}),
-    /** ap/marker : alias groups       amag[ap][marker] : ag
-     * absorbed into z[ap][marker].agName
-     amag = {},  */
+      /** axis / alias : feature    axisFeatureAliasToFeature[axis][feature alias] : [feature] */
+      axisFeatureAliasToFeature = oa.axisFeatureAliasToFeature || (oa.axisFeatureAliasToFeature = {}),
+    /** axis/feature : alias groups       axisFeatureAliasGroups[axis][feature] : aliasGroup
+     * absorbed into z[axis][feature].aliasGroupName
+     axisFeatureAliasGroups = {},  */
     // results of collateMagm() - not used
-    /** marker alias groups APs;  maga[markerName] is [stackIndex, a0, a1] */
-    maga = {};
+    /** feature alias groups Axes;  featureAliasGroupAxes[featureName] is [stackIndex, a0, a1] */
+    featureAliasGroupAxes = {};
 
-    /** class names assigned by colouredMarkers to alias groups, indexed by alias group name.
-     * result of collateMarkerClasses().
+    /** class names assigned by colouredFeatures to alias groups, indexed by alias group name.
+     * result of collateFeatureClasses().
      */
-    let agClasses = {};
+    let aliasGroupClasses = {};
 
     // results of collateStacks1()
     let
-      /** marker : AP - AP    maN[marker] : [[marker, marker]] */
-      maN = oa.maN || (oa.maN = {}),
-    /** Not used yet; for pathAg().
-     *  store : alias group : AP/marker - AP/marker   agam[ag] : [marker, marker]  markers have refn to parent AP
-     * i.e. [ag] -> [marker0, a0, a1, za0[marker0], za1[marker0]] */
-    agam = {},
-    /** path data in unique mode. [marker0, marker1, a0, a1] */
-    pu;
+      /** feature : axis - axis    featureAxes[feature] : [[feature, feature]] */
+      featureAxes = oa.featureAxes || (oa.featureAxes = {}),
+    /** Not used yet; for pathAliasGroup().
+     *  store : alias group : axis/feature - axis/feature   aliasGroupAxisFeatures[aliasGroup] : [feature, feature]  features have refn to parent axis
+     * i.e. [aliasGroup] -> [feature0, a0, a1, za0[feature0], za1[feature0]] */
+    aliasGroupAxisFeatures = {},
+    /** path data in unique mode. [feature0, feature1, a0, a1] */
+    pathsUnique;
     /** Paths - Unique, from Tree. */
     let put;
 
-    /** results of collateAdjacentAPs() */
-    let adjAPs = oa.adjAPs || (oa.adjAPs = {});
+    /** results of collateAdjacentAxes() */
+    let adjAxes = oa.adjAxes || (oa.adjAxes = {});
     /** results of collateStacksA() */
     let aliased = {};
     let aliasedDone = {};
@@ -889,8 +897,8 @@ export default Ember.Component.extend(Ember.Evented, {
       // brushActives = [],
     /** guard against repeated drag event before previous dragged() has returned. */
     dragging = 0;
-    /** trace scale of each AP just once after this is cleared.  */
-    let tracedApScale = {};
+    /** trace scale of each axis just once after this is cleared.  */
+    let tracedAxisScale = {};
 
 
     /**
@@ -914,15 +922,15 @@ export default Ember.Component.extend(Ember.Evented, {
 //-    import { inRange } from "../utils/graph-maths.js";
 //-    import {} from "../utils/elementIds.js";
 
-    function mapChrName2AP(mapChrName)
+    function mapChrName2Axis(mapChrName)
     {
-      let apName = mapChr2AP[mapChrName];
-      return apName;
+      let axisName = mapChr2Axis[mapChrName];
+      return axisName;
     }
-    /** @return chromosome name of AP id. */
-    function apName2Chr(apName)
+    /** @return chromosome name of axis id. */
+    function axisName2Chr(axisName)
     {
-      let c = oa.cmName[apName];
+      let c = oa.cmName[axisName];
       return c.chrName;
     }
     function makeMapChrName(mapName, chrName)
@@ -946,7 +954,7 @@ export default Ember.Component.extend(Ember.Evented, {
       t.ease(d3.easeCubic);
       return t;
     }
-    /** Signal the start or end of a drag transition, i.e. a AP is dragged from
+    /** Signal the start or end of a drag transition, i.e. a axis is dragged from
      * one Stack to another - dropIn() or dropOut().
      * During this transition, 
      * @param start signifies start (true) or end (false) of drag transition.
@@ -988,10 +996,10 @@ export default Ember.Component.extend(Ember.Evented, {
      *  Wrap the connection of data to display via calculations (aliases etc).
      * These functions operate on an array of Flow-s :  pathUpdate(), collateStacks().
      *
-     * The data points in a genetic map are markers, in a physical map (chromosome) they are genes.
-     * Here, the term marker is used to mean markers or genes as appropriate.
-     * @param direct	true : match marker names; false : match marker aliases against marker names.
-     * @param unique	require aliases to be unique 1:1; i.e. endpoints (markers or genes) with only 1 mapping in the adjacent AP are shown
+     * The data points in a genetic map are features, in a physical map (chromosome) they are genes.
+     * Here, the term feature is used to mean features or genes as appropriate.
+     * @param direct	true : match feature names; false : match feature aliases against feature names.
+     * @param unique	require aliases to be unique 1:1; i.e. endpoints (features or genes) with only 1 mapping in the adjacent axis are shown
      */
     function Flow(name, direct, unique, collate) {
       this.name = name;
@@ -1008,7 +1016,7 @@ export default Ember.Component.extend(Ember.Evented, {
       oa.flows =
         flows = 
         {
-          // direct path() uses maN, collated by collateStacks1();
+          // direct path() uses featureAxes, collated by collateStacks1();
           direct: new Flow("direct", true, false, collateStacks1/*undefined*/),
           U_alias: new Flow("U_alias", false, false, collateStacks1),	// unique aliases
           alias: new Flow("alias", false, true, collateStacksA)	// aliases, not filtered for uniqueness.
@@ -1016,7 +1024,7 @@ export default Ember.Component.extend(Ember.Evented, {
       // flows.U_alias.visible = flows.U_alias.enabled = false;
       // flows.alias.visible = flows.alias.enabled = false;
       // flows.direct.visible = flows.direct.enabled = false;
-      flows.direct.pathData = d3Markers;
+      flows.direct.pathData = d3Features;
       // if both direct and U_alias are enabled, only 1 should call collateStacks1().
       if (flows.U_alias.enabled && flows.direct.enabled && (flows.U_alias.collate == flows.direct.collate))
         flows.direct.collate = undefined;
@@ -1041,73 +1049,73 @@ export default Ember.Component.extend(Ember.Evented, {
     // let reset = false;
     // console.log("zoomSwitch", zoomSwitch);
 
-    let pathMarkers = oa.pathMarkers || (oa.pathMarkers = {}); //For tool tip
+    let pathFeatures = oa.pathFeatures || (oa.pathFeatures = {}); //For tool tip
 
-    let selectedAps = oa.selectedAps || (oa.selectedAps = []);;
-    let selectedMarkers = oa.selectedMarkers || (oa.selectedMarkers = {});
+    let selectedAxes = oa.selectedAxes || (oa.selectedAxes = []);;
+    let selectedFeatures = oa.selectedFeatures || (oa.selectedFeatures = {});
     let brushedRegions = oa.brushedRegions || (oa.brushedRegions = {});
 
-    /** planning to move selectedMarkers out to a separate class/component;
+    /** planning to move selectedFeatures out to a separate class/component;
      * these 2 functions would be actions on it. */
-    //Reset the selected Marker region, everytime an AP gets deleted
-    function sendUpdatedSelectedMarkers()
+    //Reset the selected Feature region, everytime an axis gets deleted
+    function sendUpdatedSelectedFeatures()
     {
-      if (showSelectedMarkers)
-        me.send('updatedSelectedMarkers', selectedMarkers);
+      if (showSelectedFeatures)
+        me.send('updatedSelectedFeatures', selectedFeatures);
     }
-    function selectedMarkers_clear()
+    function selectedFeatures_clear()
     {
-      selectedMarkers = {};
-      sendUpdatedSelectedMarkers();
+      selectedFeatures = {};
+      sendUpdatedSelectedFeatures();
     }
-    /** When an AP is deleted, it is removed from selectedAps and its markers are removed from selectedMarkers.
-     * Those markers may be selected in another axis which is not deleted; in
-     * which case they should not be deleted from selectedMarkers, but this is
+    /** When an axis is deleted, it is removed from selectedAxes and its features are removed from selectedFeatures.
+     * Those features may be selected in another axis which is not deleted; in
+     * which case they should not be deleted from selectedFeatures, but this is
      * quicker, and may be useful.
-     * Possibly versions of the app did not update selectedAps in some cases, e.g. when zooms are reset.
+     * Possibly versions of the app did not update selectedAxes in some cases, e.g. when zooms are reset.
      */
-    function selectedMarkers_removeAp(apName)
+    function selectedFeatures_removeAxis(axisName)
     {
-      selectedAps.removeObject(apName);
-      let p = apName; // based on brushHelper()
-      d3.keys(oa.z[p]).forEach(function(m) {
-        delete selectedMarkers[p];
+      selectedAxes.removeObject(axisName);
+      let p = axisName; // based on brushHelper()
+      d3.keys(oa.z[p]).forEach(function(f) {
+        delete selectedFeatures[p];
       });
     }
 
     collateData();
 
-    /** For all APs, store the x value of its axis, according to the current scale. */
+    /** For all Axes, store the x value of its axis, according to the current scale. */
     function collateO() {
-      console.log("collateO", oa.apIDs.length, oa.apIDs);
-      oa.apIDs.forEach(function(d){
+      console.log("collateO", oa.axisIDs.length, oa.axisIDs);
+      oa.axisIDs.forEach(function(d){
         let o = oa.o;
         if (trace_stack > 1)
-          console.log(d, APid2Name(d), o[d], x(d));
+          console.log(d, axisId2Name(d), o[d], x(d));
         o[d] = x(d);
         checkIsNumber(oa.o[d]);
         if (o[d] === undefined) { debugger; console.log(x(d)); }
       });
     }
-    oa.apIDs.forEach(function(d){
-      let s = Stack.apStackIndex2(d);
-      // if APid d does not exist in stacks[], add a new stack for it.
+    oa.axisIDs.forEach(function(d){
+      let s = Stack.axisStackIndex2(d);
+      // if axisID d does not exist in stacks[], add a new stack for it.
       if (s === undefined)
       {
-        // initial stacking : 1 AP per stack, but later when db contains Linkage
-        // Groups, can automatically stack APs.
+        // initial stacking : 1 axis per stack, but later when db contains Linkage
+        // Groups, can automatically stack Axes.
         let sd = new Stacked(d, 1),
         stack = new Stack(sd);
-        sd.z = oa.z[d];  // reference from Stacked AP to z[apID]
+        sd.z = oa.z[d];  // reference from Stacked axis to z[axisID]
         oa.stacks.append(stack);
         stack.calculatePositions();
       }
     });
-    function axisWidthResize(apID, width, dx)
+    function axisWidthResize(axisID, width, dx)
     {
-      console.log("axisWidthResize", apID, width, dx);
-      oa.aps[apID].extended = width;
-      axisWidthResizeRight(apID, width, dx);
+      console.log("axisWidthResize", axisID, width, dx);
+      oa.axes[axisID].extended = width;
+      axisWidthResizeRight(axisID, width, dx);
     };
     function axisWidthResizeEnded()
     {
@@ -1119,11 +1127,11 @@ export default Ember.Component.extend(Ember.Evented, {
     };
     /**  add width change to the x translation of axes to the right of this one.
       */
-    function axisWidthResizeRight(apID, width, dx)
+    function axisWidthResizeRight(axisID, width, dx)
     {
-      console.log("axisWidthResizeRight", apID, width, dx);
-      /** this is like Stack.apStackIndex().  */
-      let ap = oa.aps[apID], from = ap.stack,
+      console.log("axisWidthResizeRight", axisID, width, dx);
+      /** this is like Stack.axisStackIndex().  */
+      let axis = oa.axes[axisID], from = axis.stack,
       fromSix = from.stackIndex(),   o = oa.o;
       for (let six=0; six < stacks.length; six++)
       {
@@ -1139,60 +1147,53 @@ export default Ember.Component.extend(Ember.Evented, {
           ? (six - fromSix) / fromSix
           : (six - fromSix) / (stacks.length - fromSix);
         console.log("close", close, fromSix, six, stacks.length);
-        stack.aps.forEach(
+        stack.axes.forEach(
           function (a, index)
           {
-            o[a.apName] += (dx * close);
+            o[a.axisName] += (dx * close);
           }
         );
         // could filter the selection - just those right of the extended axis
-        svgContainer.selectAll(".ap").attr("transform", Stack.prototype.apTransformO);
-        stack.aps.forEach( function (a, index) { apRedrawText(aps[a.apName]); });
+        svgContainer.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
+        stack.axes.forEach( function (a, index) { axisRedrawText(oa.axes[a.axisName]); });
         pathUpdate(undefined);
       }
     };
-    this.set('axisWidthResize', function (apID, width, dx) { axisWidthResize(apID, width, dx); });
+    this.set('axisWidthResize', function (axisID, width, dx) { axisWidthResize(axisID, width, dx); });
     this.set('axisWidthResizeEnded', function () { axisWidthResizeEnded(); });
     function updateXScale()
     {
       // xScale() uses stacks.keys().
-      oa.xs = xScaleExtend(); // or xScale();
+      oa.xScaleExtend = xScaleExtend(); // or xScale();
     }
+    let x = stacks.x;
     updateXScale();
-    function x(apID)
-    {
-      let i = Stack.apStackIndex(apID);
-      if (oa.xs.domain().length === 2)
-      console.log("x()", apID, i, oa.xs(i), oa.xs.domain(), oa.xs.range());
-      if (i === -1) { console.log("x()", apID, i); debugger; }
-      return oa.xs(i);
-    }
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
-    //console.log(axis.scale(y[apIDs))
-    //- stacks_for_apIDs(); //- added during split
+    //console.log(axis.scale(y[axisIDs))
+    //- stacks_for_axisIDs(); //- added during split
 
-    //- moved to utils/stacks.js: oa.xs = xScale();
+    //- moved to utils/stacks.js: oa.xScaleExtend = xScale();
 
     if (source == 'dataReceived')
       stacks.changed = 0x10;
     let t = stacksAdjust(true, undefined);
     vc.xDropOutDistance_update(oa);
 
-    /** update ys[a.apName]  and y[a.apName] for the given AP,
-     * according to the current yRange, and for ys, the AP's current .portion.
-     * @param a AP (i.e. aps[a.apName] == a)
+    /** update ys[a.axisName]  and y[a.axisName] for the given axis,
+     * according to the current yRange, and for ys, the axis's current .portion.
+     * @param a axis (i.e. axes[a.axisName] == a)
      */
     function updateRange(a)
     {
       let ys = oa.ys;
-      // console.log("updateRange", a, a.apName, ys.length, ys[a.apName]);
+      // console.log("updateRange", a, a.axisName, ys.length, ys[a.axisName]);
       // if called before ys is set up, do nothing.
-      if (ys && ys[a.apName])
+      if (ys && ys[a.axisName])
       {
         let myRange = a.yRange();
-        console.log("updateRange", a.apName, a.position, a.portion, myRange, oa.vc.yRange);
-        ys[a.apName].range([0, myRange]);
-        y[a.apName].range([0, oa.vc.yRange]);
+        console.log("updateRange", a.axisName, a.position, a.portion, myRange, oa.vc.yRange);
+        ys[a.axisName].range([0, myRange]);
+        y[a.axisName].range([0, oa.vc.yRange]);
       }
     }
 
@@ -1201,17 +1202,17 @@ export default Ember.Component.extend(Ember.Evented, {
 //-    import {} from "../utils/intervals.js";
 
     var path_colour_scale;
-    let markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
+    let featureScaffold = {}, scaffolds = new Set(), scaffoldFeatures = {};
     let intervals = {}, intervalNames = new Set(), intervalTree = {};
 //-scaffolds
-    /** scaffoldTicks[apID] is a set of y locations, relative to the y axis of apID, of horizontal tick marks.
+    /** scaffoldTicks[axisID] is a set of y locations, relative to the y axis of axisID, of horizontal tick marks.
      * General purpose; first use is for scaffold edges.
      */
     let scaffoldTicks =  oa.scaffoldTicks || (oa.scaffoldTicks = {});
 //-sb
     /** syntenyBlocks is an array, each element defines a synteny block which
-     * can be seen as a parallelogram connecting 2 axes (APs); the range on each
-     * AP is defined by 2 gene names.
+     * can be seen as a parallelogram connecting 2 axes (Axes); the range on each
+     * axis is defined by 2 gene names.
      * This is a simple form for input via the content-editable; the result from the BE API may be factored to :
   { chr1, chr2,
     [
@@ -1220,7 +1221,7 @@ export default Ember.Component.extend(Ember.Evented, {
     ]
   }, ...
      *
-     * (the genes could instead be markers on a genetic map, but the planned use of
+     * (the genes could instead be features on a genetic map, but the planned use of
      * synteny block display is physical maps / genes).
      */
     let syntenyBlocks =  oa.syntenyBlocks || (oa.syntenyBlocks = []);
@@ -1231,15 +1232,15 @@ export default Ember.Component.extend(Ember.Evented, {
       let path_colour_domain;
       switch (use_path_colour_scale)
       {
-      case 1 : path_colour_domain = oa.markers; break;
-      case 2 : path_colour_domain = d3.keys(oa.ag); break;
+      case 1 : path_colour_domain = oa.features; break;
+      case 2 : path_colour_domain = d3.keys(oa.aliasGroup); break;
       default:
       case 4:
       case 3 : path_colour_domain = ["unused"];
-        this.set('colouredMarkersChanged', function(colouredMarkers_) {
-          console.log('colouredMarkers changed, length : ', colouredMarkers_.length);
+        this.set('colouredFeaturesChanged', function(colouredFeatures_) {
+          console.log('colouredFeatures changed, length : ', colouredFeatures_.length);
           let val;
-          if ((colouredMarkers_.length !== 0) &&
+          if ((colouredFeatures_.length !== 0) &&
               ((val = getUsePatchColour()) !== undefined))
           {
             /** use_path_colour_scale manages the effect of the path colouring
@@ -1254,40 +1255,40 @@ export default Ember.Component.extend(Ember.Evented, {
             if ((val != 6) && (val != 7))
               use_path_colour_scale = val;
 
-            /** depending on use_path_colour_scale === 3, 4 each line of markerNames is 
-             * 3: markerName 
-             * 4: scaffoldName\tmarkerName
+            /** depending on use_path_colour_scale === 3, 4 each line of featureNames is 
+             * 3: featureName 
+             * 4: scaffoldName\tfeatureName
              */
-            let markerNames = colouredMarkers_
+            let featureNames = colouredFeatures_
             // .split('\n');
             // .match(/\S+/g) || [];
               .match(/[^\r\n]+/g);
-            path_colour_scale_domain_set = markerNames.length > 0;
+            path_colour_scale_domain_set = featureNames.length > 0;
             if (input_path_colour_scale === 3)
-              path_colour_scale.domain(markerNames);
+              path_colour_scale.domain(featureNames);
             else if (input_path_colour_scale === 4)
             {
-              for (let i=0; i<markerNames.length; i++)
+              for (let i=0; i<featureNames.length; i++)
               {
-                let col=markerNames[i].split(/[ \t]+/),
-                scaffoldName = col[0], markerName = col[1];
-                markerScaffold[markerName] = scaffoldName;
+                let col=featureNames[i].split(/[ \t]+/),
+                scaffoldName = col[0], featureName = col[1];
+                featureScaffold[featureName] = scaffoldName;
                 // for the tooltip, maybe not required.
-                if (scaffoldMarkers[scaffoldName] === undefined)
-                  scaffoldMarkers[scaffoldName] = [];
-                scaffoldMarkers[scaffoldName].push(markerName);
+                if (scaffoldFeatures[scaffoldName] === undefined)
+                  scaffoldFeatures[scaffoldName] = [];
+                scaffoldFeatures[scaffoldName].push(featureName);
                 scaffolds.add(scaffoldName);
               }
-              collateMarkerClasses(markerScaffold);
-              if (showScaffoldMarkers !== me.get('showScaffoldMarkers'))
+              collateFeatureClasses(featureScaffold);
+              if (showScaffoldFeatures !== me.get('showScaffoldFeatures'))
               {
-                showScaffoldMarkers = me.get('showScaffoldMarkers');
-                console.log("showScaffoldMarkers", showScaffoldMarkers);
+                showScaffoldFeatures = me.get('showScaffoldFeatures');
+                console.log("showScaffoldFeatures", showScaffoldFeatures);
               }
-              if (showScaffoldMarkers)
+              if (showScaffoldFeatures)
               {
                 me.set('scaffolds', scaffolds);
-                me.set('scaffoldMarkers', scaffoldMarkers);
+                me.set('scaffoldFeatures', scaffoldFeatures);
               }
               let domain = Array.from(scaffolds.keys());
               console.log("domain.length", domain.length);
@@ -1295,20 +1296,20 @@ export default Ember.Component.extend(Ember.Evented, {
             }
             else if (input_path_colour_scale === 5)
             {
-              for (let i=0; i<markerNames.length; i++)
+              for (let i=0; i<featureNames.length; i++)
               {
-                let col=markerNames[i].split(/[ \t]+/),
+                let col=featureNames[i].split(/[ \t]+/),
                 mapChrName = col[0], interval = [col[1], col[2]];
-                let apName = mapChrName2AP(mapChrName);
-                if (intervals[apName] === undefined)
-                  intervals[apName] = [];
-                intervals[apName].push(interval);
+                let axisName = mapChrName2Axis(mapChrName);
+                if (intervals[axisName] === undefined)
+                  intervals[axisName] = [];
+                intervals[axisName].push(interval);
                 let intervalName = makeIntervalName(mapChrName, [col[1], + col[2]]);
                 intervalNames.add(intervalName);
               }
-              d3.keys(intervals).forEach(function (apName) {
+              d3.keys(intervals).forEach(function (axisName) {
                 //Build tree
-                intervalTree[apName] = createIntervalTree(intervals[apName]);
+                intervalTree[axisName] = createIntervalTree(intervals[axisName]);
               });
 
               // scaffolds and intervalNames operate in the same way - could be merged or factored.
@@ -1318,18 +1319,18 @@ export default Ember.Component.extend(Ember.Evented, {
             }
             else if (input_path_colour_scale === 6)
             {
-              for (let i=0; i<markerNames.length; i++)
+              for (let i=0; i<featureNames.length; i++)
               {
-                let col=markerNames[i].split(/[ \t]+/),
+                let col=featureNames[i].split(/[ \t]+/),
                 mapChrName = col[0], tickLocation = col[1];
-                let apName = mapChrName2AP(mapChrName);
-                if (apName === undefined)
-                  console.log("AP not found for :", markerNames[i], mapChr2AP);
+                let axisName = mapChrName2Axis(mapChrName);
+                if (axisName === undefined)
+                  console.log("axis not found for :", featureNames[i], mapChr2Axis);
                 else
                 {
-                  if (scaffoldTicks[apName] === undefined)
-                    scaffoldTicks[apName] = new Set();
-                  scaffoldTicks[apName].add(tickLocation);
+                  if (scaffoldTicks[axisName] === undefined)
+                    scaffoldTicks[axisName] = new Set();
+                  scaffoldTicks[axisName].add(tickLocation);
                 }
               }
               console.log(scaffoldTicks);
@@ -1337,27 +1338,27 @@ export default Ember.Component.extend(Ember.Evented, {
             }
             else if (input_path_colour_scale === 7)
             {
-              for (let i=0; i<markerNames.length; i++)
+              for (let i=0; i<featureNames.length; i++)
               {
-                let cols=markerNames[i].split(/[ \t]+/);
+                let cols=featureNames[i].split(/[ \t]+/);
                 let ok = true;
                 for (let j=0; j < 2; j++)
                 {
-                  /** APs of syntenyBlock may not be loaded yet. */
-                  let mapChr2AP = cols[j], apName = mapChrName2AP(mapChr2AP);
-                  cols[j] = apName;
-                  if (apName === undefined)
-                    console.log("AP not found for :", markerNames[i], mapChr2AP);
+                  /** Axes of syntenyBlock may not be loaded yet. */
+                  let mapChr2Axis = cols[j], axisName = mapChrName2Axis(mapChr2Axis);
+                  cols[j] = axisName;
+                  if (axisName === undefined)
+                    console.log("axis not found for :", featureNames[i], mapChr2Axis);
                   for (let k = 0; k < 2; k++)
                   {
-                    let m = cols[2 + 2*j + k];
-                    if (oa.z[apName][m] === undefined)
+                    let f = cols[2 + 2*j + k];
+                    if (oa.z[axisName][f] === undefined)
                     {
-                      console.log(m, "not in", apName, APid2Name(apName));
+                      console.log(f, "not in", axisName, axisId2Name(axisName));
                       ok = false;
                     }
                   }
-                  ok &= apName !== undefined;
+                  ok &= axisName !== undefined;
                 }
                 if (ok)
                 {
@@ -1402,10 +1403,10 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
 //-components/stacks 
-    oa.apIDs.forEach(function(d) {
-      /** Find the max of locations of all markers of AP name d. */
+    oa.axisIDs.forEach(function(d) {
+      /** Find the max of locations of all features of axis name d. */
       let yDomainMax = d3.max(Object.keys(oa.z[d]), function(a) { return oa.z[d][a].location; } );
-      let a = oa.aps[d], myRange = a.yRange(), ys = oa.ys, y = oa.y;
+      let a = oa.axes[d], myRange = a.yRange(), ys = oa.ys, y = oa.y;
       if (ys[d])  // equivalent to (y[d]==true), y[d] and ys[d] are created together
       {
         if (trace_stack > 1)
@@ -1415,10 +1416,10 @@ export default Ember.Component.extend(Ember.Evented, {
       {
       ys[d] = d3.scaleLinear()
         .domain(maybeFlip([0, yDomainMax], a.flipped))
-        .range([0, myRange]); // set scales for each AP
+        .range([0, myRange]); // set scales for each axis
       
       //console.log("OOO " + y[d].domain);
-      // y and ys are the same until the AP is stacked.
+      // y and ys are the same until the axis is stacked.
       // The brush is on y.
       y[d] = ys[d].copy();
       y[d].brush = d3.brushY()
@@ -1434,7 +1435,7 @@ export default Ember.Component.extend(Ember.Evented, {
     if (newRender)
     {
       // Use class in selector to avoid removing logo, which is SVG.
-    d3.select("svg.MarkerMapViewer").remove();
+    d3.select("svg.FeatureMapViewer").remove();
     d3.select("div.d3-tip").remove();
     }
     let translateTransform = "translate(" + margins[marginIndex.left] + "," + margins[marginIndex.top] + ")";
@@ -1443,7 +1444,7 @@ export default Ember.Component.extend(Ember.Evented, {
         let graphDim = oa.vc.graphDim;
       oa.svgRoot = 
     svgRoot = d3.select('#holder').append('svg')
-      .attr("class", "MarkerMapViewer")
+      .attr("class", "FeatureMapViewer")
       .attr("viewBox", "0 0 " + graphDim.w + " " + graphDim.h)
       .attr("preserveAspectRatio", "none"/*"xMinYMin meet"*/)
       .attr('width', "100%" /*graphDim.w*/)
@@ -1471,7 +1472,7 @@ export default Ember.Component.extend(Ember.Evented, {
       svgContainer = oa.svgContainer;
 
 
-    // svgRoot.classed("devel", (markerTotal / oa.apIDs.length) < 20);
+    // svgRoot.classed("devel", (featureTotal / oa.axisIDs.length) < 20);
 
     function setCssVariable(name, value)
     {
@@ -1517,22 +1518,22 @@ export default Ember.Component.extend(Ember.Evented, {
       }
     }
 
-    //User shortcut from the keybroad to manipulate the APs
+    //User shortcut from the keybroad to manipulate the Axes
     d3.select("#holder").on("keydown", function() {
       if ((String.fromCharCode(d3.event.keyCode)) == "D") {
-        console.log("Delete AP (not implemented)");
-        // deleteAp();
+        console.log("Delete axis (not implemented)");
+        // deleteAxis();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == "Z") {
-        zoomAp();
+        zoomAxis();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == "R") {
-        refreshAp();
+        refreshAxis();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == "A") {
         showAll = !showAll;
         console.log("showAll", showAll);
-        refreshAp();
+        refreshAxis();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == " ") {
         console.log("space");
@@ -1544,30 +1545,30 @@ export default Ember.Component.extend(Ember.Evented, {
     /** pathData is the data of .foreground > g > g, not .foreground > g > g > path */
     function pathDataSwitch() {
       let p = unique_1_1_mapping === 3 ? put
-        : (unique_1_1_mapping ? pu : d3Markers);
+        : (unique_1_1_mapping ? pathsUnique : d3Features);
       return p; }
     let pathData = pathDataSwitch();
     d3.keys(flows).forEach(function(flowName) {
       let flow = flows[flowName];
       // if flow.collate then flow.pathData has been set above by collateStacks().
       if (flow.enabled && ! flow.collate)
-        flow.pathData = flow.direct ? d3Markers : (flow.unique ? pu : put);
+        flow.pathData = flow.direct ? d3Features : (flow.unique ? pathsUnique : put);
     });
-    /** class of path or g, @see pathDataInG. currently just endpoint markers, could be agName.  */
+    /** class of path or g, @see pathDataInG. currently just endpoint features, could be aliasGroupName.  */
     /** If Flow.direct then use I for pathClass, otherwise pathClassA()  */
     function pathClassA(d)
     { let d0=d[0], d1=d[1], c = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
       return c; }
-    /**  If unique_1_1_mapping then path data is mmaa, i.e. [marker0, marker1, a0, a1]
+    /**  If unique_1_1_mapping then path data is ffaa, i.e. [feature0, feature1, a0, a1]
      */
-    function markerNameOfData(da)
+    function featureNameOfData(da)
     {
-      let markerName = (da.length === 4)  // i.e. unique_1_1_mapping
-        ? da[0]  //  mmaa, i.e. [marker0, marker1, a0, a1]
+      let featureName = (da.length === 4)  // i.e. unique_1_1_mapping
+        ? da[0]  //  ffaa, i.e. [feature0, feature1, a0, a1]
         : da;
-      return markerName;
+      return featureName;
     }
-    /** @see also pu_log()  */
+    /** @see also pathsUnique_log()  */
     function data_text(da)
     {
       return unique_1_1_mapping   // ! flow.direct
@@ -1579,7 +1580,7 @@ export default Ember.Component.extend(Ember.Evented, {
     if ((foreground = oa.foreground) === undefined)
     {
       oa.foreground =
-    foreground = svgContainer.append("g") // foreground has as elements "paths" that correspond to markers
+    foreground = svgContainer.append("g") // foreground has as elements "paths" that correspond to features
       .attr("class", "foreground");
     d3.keys(flows).forEach(function(flowName) {
       let flow = flows[flowName];
@@ -1593,7 +1594,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
 //-components/stacks
     // Add a group element for each stack.
-    // Stacks contain 1 or more APs.
+    // Stacks contain 1 or more Axes.
     /** selection of stacks */
     let stackSd = svgContainer.selectAll(".stack")
       .data(stacks),
@@ -1615,25 +1616,25 @@ export default Ember.Component.extend(Ember.Evented, {
 
     function stackEltId(s)
     { if (s.stackID === undefined) debugger;
-      console.log("stackEltId", s.stackID, s.aps[0].mapName, s);
+      console.log("stackEltId", s.stackID, s.axes[0].mapName, s);
       return eltId(s.stackID); }
 
-    /** For the given Stack, return its apIDs  */
-    function stack_apIDs(stack)
+    /** For the given Stack, return its axisIDs  */
+    function stack_axisIDs(stack)
     {
-      return stack.apIDs();
+      return stack.axisIDs();
     }
 
     if (stackS && trace_stack)
       logSelection(stackS);
 
-    // Add a group element for each AP.
+    // Add a group element for each axis.
     // Stacks are selection groups in the result of this .selectAll()
-    let apS = stackS.selectAll(".ap"),
-    apG = apS
-      .data(stack_apIDs)
+    let axes = stackS.selectAll(".axis-outer"),
+    axisG = axes
+      .data(stack_axisIDs)
       .enter().append("g");
-    let allG = apG
+    let allG = axisG
       .append('g')
       .attr("class", "axis-all")
       .attr("id", eltIdAll);
@@ -1644,22 +1645,22 @@ export default Ember.Component.extend(Ember.Evented, {
       let p2 = this.parentNode.parentElement;
       return "#a" + p2.__data__;
     }
-    function getAxisExtendedWidth(apID)
+    function getAxisExtendedWidth(axisID)
     {
-      let ap = oa.aps[apID],
+      let axis = oa.axes[axisID],
       initialWidth = 50,
-      width = ap ? ((ap.extended === true) ? initialWidth : ap.extended) : undefined;
+      width = axis ? ((axis.extended === true) ? initialWidth : axis.extended) : undefined;
       return width;
     }
-    function apShowExtend(ap, apID, apG)
+    function axisShowExtend(axis, axisID, axisG)
     {
       /** x translation of right axis */
       let 
         initialWidth = 50,
-      axisData = ap.extended ? [apID] : [];
-      if (apG === undefined)
-        apG = svgContainer.selectAll("g.ap#id" + apID);
-      let ug = apG.selectAll("g.axis-use")
+      axisData = axis.extended ? [axisID] : [];
+      if (axisG === undefined)
+        axisG = svgContainer.selectAll("g.axis-outer#id" + axisID);
+      let ug = axisG.selectAll("g.axis-use")
         .data(axisData);
       let ugx = ug
         .exit()
@@ -1716,30 +1717,30 @@ export default Ember.Component.extend(Ember.Evented, {
       if (eb.node() !== null)	  // .style() uses .node()
         eb
         .append("div")
-        .attr("id", "axis2D_" + apID) // matches axis-2d:targetEltId()
+        .attr("id", "axis2D_" + axisID) // matches axis-2d:targetEltId()
         .style("border:1px green solid");
 
-      me.send('enableAxis2D', apID, ap.extended);
+      me.send('enableAxis2D', axisID, axis.extended);
     }
 
     if (trace_stack)
     {
       if (trace_stack > 1)
-        oa.stacks.forEach(function(s){console.log(s.apIDs());});
-      let g = apG;
-      console.log("g.ap", g.enter().size(), g.exit().size(), stacks.length);
+        oa.stacks.forEach(function(s){console.log(s.axisIDs());});
+      let g = axisG;
+      console.log("g.axis-outer", g.enter().size(), g.exit().size(), stacks.length);
     }
-    let g = apG;
+    let g = axisG;
     let gt = newRender ? g :
       g.transition().duration(dragTransitionTime);
     gt
-      .attr("class", "ap")
+      .attr("class", "axis-outer")
       .attr("id", eltId)
-      .attr("transform", Stack.prototype.apTransformO);
+      .attr("transform", Stack.prototype.axisTransformO);
     g
       .call(
         d3.drag()
-          .subject(function(d) { return {x: x(d)}; }) //origin replaced by subject
+          .subject(function(d) { return {x: oa.stacks.x(d)}; }) //origin replaced by subject
           .filter(noShiftKeyfilter)
           .on("start", dragstarted) //start instead of dragstart in v4. 
           .on("drag", dragged)
@@ -1769,24 +1770,24 @@ export default Ember.Component.extend(Ember.Evented, {
         X : Math.round(size.w/2),
         Y : /*YMargin*/10 + size.h
       },
-      /** top and bottom edges relative to the AP's transform. bottom depends
-       * on the AP's portion
+      /** top and bottom edges relative to the axis's transform. bottom depends
+       * on the axis's portion
        */
       edge = {
         top : size.h,
-        bottom : function (ap) { return ap.yRange() - size.h; }
+        bottom : function (axis) { return axis.yRange() - size.h; }
       };
-      /** @return AP which this DropTarget is part of */
-      DropTarget.prototype.getAp = function ()
+      /** @return axis which this DropTarget is part of */
+      DropTarget.prototype.getAxis = function ()
       {
-        /** The datum of the DropTarget is the apName */
-        let apName = this.datum(),
-        ap = oa.aps[apName];
-        return ap;
+        /** The datum of the DropTarget is the axisName */
+        let axisName = this.datum(),
+        axis = oa.axes[axisName];
+        return axis;
       };
       /// @parameter top  true or false to indicate zone is positioned at top or
       /// bottom of axis
-      /// uses g, a selection <g> of all APs
+      /// uses g, a selection <g> of all Axes
       DropTarget.prototype.add = function (top)
       {
         // Add a target zone for axis stacking drag&drop
@@ -1795,9 +1796,14 @@ export default Ember.Component.extend(Ember.Evented, {
           .attr("class", "stackDropTarget" + " end " + (top ? "top" : "bottom"));
         let
           dropTargetY = function (datum/*, index, group*/) {
-            let apName = datum,
-            ap = oa.aps[apName],
-            yVal = top ? -oa.vc.dropTargetYMargin : edge.bottom(ap);
+            let axisName = datum,
+            axis = oa.axes[axisName],
+            yVal = top ? -oa.vc.dropTargetYMargin : edge.bottom(axis);
+            if (Number.isNaN(yVal))
+            {
+              console.log("dropTargetY", datum, axis, top, oa.vc.dropTargetYMargin, edge.bottom(axis));
+              debugger;
+            }
             return yVal;
           };
         stackDropTarget
@@ -1824,9 +1830,9 @@ export default Ember.Component.extend(Ember.Evented, {
         function dropTargetHeight(datum/*, index, group*/)
         {
           // console.log("dropTargetHeight", datum, index, group);
-          let apName = datum,
-          ap = oa.aps[apName];
-          return ap.yRange() - 2 * size.h;
+          let axisName = datum,
+          axis = oa.axes[axisName];
+          return axis.yRange() - 2 * size.h;
         }
         stackDropTarget
           .append("rect")
@@ -1841,9 +1847,9 @@ export default Ember.Component.extend(Ember.Evented, {
           .on("mouseout", dropTargetMouseOut);
       };
 
-      function storeDropTarget(apName, classList)
+      function storeDropTarget(axisName, classList)
       {
-        oa.currentDropTarget = {apName: apName, classList: classList};
+        oa.currentDropTarget = {axisName: axisName, classList: classList};
       }
 
       function dropTargetMouseOver(data, index, group){
@@ -1886,7 +1892,7 @@ export default Ember.Component.extend(Ember.Evented, {
       .style("font-size", axisFontSize)
       .text(axisTitle /*String*/);
     axisTitleS
-        .each(configureAPtitleMenu);
+        .each(configureAxisTitleMenu);
     let axisSpacing = (axisXRange[1]-axisXRange[0])/stacks.length;
     let verticalTitle;
     if ((verticalTitle = axisSpacing < 90))
@@ -1899,7 +1905,7 @@ export default Ember.Component.extend(Ember.Evented, {
       // incorporate extendedWidth() / getAxisExtendedWidth() in the
       // calculation, perhaps integrated in xScaleExtend()
       let axisTitleA =
-        apG.merge(apS).selectAll("g.axis-all > text");
+        axisG.merge(axes).selectAll("g.axis-all > text");
       axisTitleA
         .style("text-anchor", "start")
         .attr("transform", "rotate(-"+angle+")");
@@ -1913,16 +1919,16 @@ export default Ember.Component.extend(Ember.Evented, {
       .attr("class", "brush")
       .each(function(d) { d3.select(this).call(oa.y[d].brush); });
 
-    //Setup the gene / marker highlight, enabled by url param highlightMarker.
-    let highlightMarkerS =
-      d3.select('#holder').selectAll(".highlightMarker")
-      .data([highlightMarker])
+    //Setup the gene / feature highlight, enabled by url param highlightFeature.
+    let highlightFeatureS =
+      d3.select('#holder').selectAll(".highlightFeature")
+      .data([highlightFeature])
       .enter().append("div")
-      .attr("class", "highlightMarker")
+      .attr("class", "highlightFeature")
       .attr("id", highlightId);
 
     let hmPos = [20, 500];
-    highlightMarkerS.html(highlightMarker)
+    highlightFeatureS.html(highlightFeature)
       .style("left", "" + hmPos[0] + "px")             
       .style("top", "" + hmPos[1] + "px");
 
@@ -1943,17 +1949,17 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
     //Probably leave the delete function to Ember
-    //function deleteAp(){
+    //function deleteAxis(){
     //  console.log("Delete");
     //}
 
-    /** remove g#apName
+    /** remove g#axisName
      */
-    function removeAP(apName, t)
+    function removeAxis(axisName, t)
     {
-      let apS = svgContainer.select("g.ap#" + eltId(apName));
-      console.log("removeAP", apName, apS.empty(), apS);
-      apS.remove();
+      let axes = svgContainer.select("g.axis-outer#" + eltId(axisName));
+      console.log("removeAxis", axisName, axes.empty(), axes);
+      axes.remove();
     }
     /** remove g.stack#id<stackID
      */
@@ -1963,14 +1969,14 @@ export default Ember.Component.extend(Ember.Evented, {
       console.log("removeStack", stackID, stackS.empty(), stackS);
       stackS.remove();
     }
-    /** remove AP, and if it was only child, the parent stack;  pathUpdate
+    /** remove axis, and if it was only child, the parent stack;  pathUpdate
      * @param stackID -1 (result of .removeStacked) or id of stack to remove
      * @param stack refn to stack - if not being removed, redraw it
      */
-    function removeAPmaybeStack(apName, stackID, stack)
+    function removeAxisMaybeStack(axisName, stackID, stack)
     {
       let t = svgContainer.transition().duration(750);
-      removeAP(apName, t);
+      removeAxis(axisName, t);
       /** number of stacks is changing */
       let changedNum = stackID != -1;
       if (changedNum)
@@ -1979,13 +1985,13 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       else
       {
-        console.log("removeAPmaybeStack", apName, stackID, stack);
+        console.log("removeAxisMaybeStack", axisName, stackID, stack);
         if (stack)
           stack.redraw(t);
       }
       stacks.changed = 0x10;
       /* Parts of stacksAdjust() are applicable to the 2 cases above : either a
-       * stack is removed, or a stack is non-empty after an AP is removed from
+       * stack is removed, or a stack is non-empty after an axis is removed from
        * it.  This is selected by changedNum.
        *
        * stacksAdjust() calls redrawAdjacencies() (when changedNum) for all
@@ -2012,13 +2018,13 @@ export default Ember.Component.extend(Ember.Evented, {
 //-components/paths
     //d3.selectAll(".foreground > g > g").selectAll("path")
     /* (Don, 2017Mar03) my reading of handleMouse{Over,Out}() is that they are
-     * intended only for the paths connecting markers in adjacent APs, not
+     * intended only for the paths connecting features in adjacent Axes, not
      * e.g. the path in the y axis. So I have narrowed the selector to exclude
      * the axis path.  More exactly, these are the paths to include and exclude,
      * respectively :
-     *   svgContainer > g.foreground > g.flowName > g.<markerName> >  path
-     *   svgContainer > g.stack > g.ap > g.axis#<axisEltId(apName)> > path    (axisEltId() prepends "a"))
-     * (apName is e.g. 58b504ef5230723e534cd35c_MyChr).
+     *   svgContainer > g.foreground > g.flowName > g.<featureName> >  path
+     *   svgContainer > g.stack > g.axis-outer > g.axis#<axisEltId(axisName)> > path    (axisEltId() prepends "a"))
+     * (axisName is e.g. 58b504ef5230723e534cd35c_MyChr).
      * This matters because axis path does not have data (observed issue : a
      * call to handleMouseOver() with d===null; reproduced by brushing a region
      * on an axis then moving cursor over that axis).
@@ -2030,7 +2036,7 @@ export default Ember.Component.extend(Ember.Evented, {
     /** Setup the functions handleMouse{Over,Out}() on events mouse{over,out}
      * on elements in the given selection.
      * The selected path elements are assumed to have __data__ which is either
-     * sLine (svg line text) which identifies the hover text, or mmaa data
+     * sLine (svg line text) which identifies the hover text, or ffaa data
      * which enables hover text to be calculated.
      * @param pathSelection	<path> elements
      */
@@ -2085,36 +2091,36 @@ export default Ember.Component.extend(Ember.Evented, {
      * @param this  path element
      */
     function handleMouseOver(d, i){
-      let sLine, pathMarkersHash;
-      let pathMarkers = oa.pathMarkers;
-      let hoverMarkers;
-      /** d is either sLine (pathDataIsLine===true) or array mmaa. */
+      let sLine, pathFeaturesHash;
+      let pathFeatures = oa.pathFeatures;
+      let hoverFeatures;
+      /** d is either sLine (pathDataIsLine===true) or array ffaa. */
       let pathDataIsLine = typeof(d) === "string";
       if (pathDataIsLine)
       {
-        pathMarkersHash = pathMarkers[d];
-        hoverMarkers = Object.keys(pathMarkersHash);
-        console.log("hoverMarkers 1", hoverMarkers);
+        pathFeaturesHash = pathFeatures[d];
+        hoverFeatures = Object.keys(pathFeaturesHash);
+        console.log("hoverFeatures 1", hoverFeatures);
       }
       else
       {
         sLine = this.getAttribute("d");
-        pathMarkersHash = pathMarkers[sLine];
-        if ((pathMarkersHash === undefined) && ! pathDataIsLine)
+        pathFeaturesHash = pathFeatures[sLine];
+        if ((pathFeaturesHash === undefined) && ! pathDataIsLine)
         {
-          let mmaa = dataOfPath(this),
-          [marker0, marker1, a0, a1] = mmaa;
+          let ffaa = dataOfPath(this),
+          [feature0, feature1, a0, a1] = ffaa;
           let z = oa.z;
-          pathMarkerStore(sLine, marker0, marker1, z[a0.apName][marker0], z[a1.apName][marker1]);
-          pathMarkersHash = pathMarkers[sLine];
+          pathFeatureStore(sLine, feature0, feature1, z[a0.axisName][feature0], z[a1.axisName][feature1]);
+          pathFeaturesHash = pathFeatures[sLine];
         }
-        // can also append the list of aliases of the 2 markers
-        hoverMarkers = Object.keys(pathMarkersHash)
+        // can also append the list of aliases of the 2 features
+        hoverFeatures = Object.keys(pathFeaturesHash)
           .reduce(function(all, a){
             // console.log(all, a, a.split(','));
             return  all.concat(a.split(","));
           }, []);
-        console.log("hoverMarkers 2,3", hoverMarkers);
+        console.log("hoverFeatures 2,3", hoverFeatures);
       }
       /** pathClasses uses this datum instead of d.  */
       let classSet = pathClasses(this, d), classSetText;
@@ -2134,16 +2140,16 @@ export default Ember.Component.extend(Ember.Evented, {
         }
       }
 
-      // console.log(d, markerNameOfData(d), sLine, pathMarkersHash);
-      let listMarkers  = "";
+      // console.log(d, featureNameOfData(d), sLine, pathFeaturesHash);
+      let listFeatures  = "";
       // stroke attributes of this are changed via css rule for path.hovered
       d3.select(this)
         .classed("hovered", true);
-      Object.keys(pathMarkersHash).map(function(a){
-        let hoverExtraText = pathMarkersHash[a];
+      Object.keys(pathFeaturesHash).map(function(a){
+        let hoverExtraText = pathFeaturesHash[a];
         if (hoverExtraText === 1) hoverExtraText = "";
         else if (classSetText) hoverExtraText += classSetText;
-        listMarkers = listMarkers + a + hoverExtraText + "<br />";
+        listFeatures = listFeatures + a + hoverExtraText + "<br />";
       });
 
       let hoveredPath = this;
@@ -2163,17 +2169,17 @@ export default Ember.Component.extend(Ember.Evented, {
 	    let
 	ph1=ph.detach();
 
-      listMarkers += '\n<button id="toolTipClose">&#x2573;</button>\n'; // ╳
-      toolTip.html(listMarkers);
+      listFeatures += '\n<button id="toolTipClose">&#x2573;</button>\n'; // ╳
+      toolTip.html(listFeatures);
 
       toolTip.show(d, i);
       let ph2=ph1.appendTo(pt);
       Ember.run.once(me, function() {
 	  let ph3= Ember.$('.pathHover');
 	  console.log(".pathHover", ph2[0] || ph2.length, ph3[0] || ph3.length);
-        // me.set("hoverMarkers", hoverMarkers);
+        // me.set("hoverFeatures", hoverFeatures);
         // me.ensureValue("pathHovered", true);
-        me.trigger("pathHovered", true, hoverMarkers);
+        me.trigger("pathHovered", true, hoverFeatures);
       });
       Ember.run.later(me, function() {
         setupToolTipMouseHover();
@@ -2201,10 +2207,10 @@ export default Ember.Component.extend(Ember.Evented, {
 
 //- axis
 
-    function zoomAp(){
-      console.log("Zoom : zoomAp()");
+    function zoomAxis(){
+      console.log("Zoom : zoomAxis()");
     }
-    function refreshAp(){
+    function refreshAxis(){
       console.log("Refresh");
     }
 
@@ -2215,11 +2221,11 @@ export default Ember.Component.extend(Ember.Evented, {
     function showTickLocations(scaffoldTicks, t)
     {
       d3.keys(scaffoldTicks).forEach
-      (function(apName)
+      (function(axisName)
        {
-         let tickLocations = Array.from(scaffoldTicks[apName].keys());
-         /** -  if apName matches nothing, then skip this. */
-        let aS = d3.select("#" + axisEltId(apName));
+         let tickLocations = Array.from(scaffoldTicks[axisName].keys());
+         /** -  if axisName matches nothing, then skip this. */
+        let aS = d3.select("#" + axisEltId(axisName));
         if (!aS.empty())
         {
           let pS = aS.selectAll("path.horizTick")
@@ -2235,12 +2241,12 @@ export default Ember.Component.extend(Ember.Evented, {
           let p1 = (t === undefined) ? pSM
             : pSM.transition(t);
           p1.attr("d", function(tickY) {
-           // based on axisMarkerTick(ai, d)
+           // based on axisFeatureTick(ai, d)
            /** shiftRight moves right end of tick out of axis zone, so it can
             * receive hover events.
             */
            const xOffset = 25, shiftRight=5;
-           let ak = apName,
+           let ak = axisName,
                sLine = lineHoriz(ak, tickY, xOffset, shiftRight);
            return sLine;
          });
@@ -2250,7 +2256,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
     /** Setup hover info text over scaffold horizTick-s.
-     * @see based on similar configureAPtitleMenu()
+     * @see based on similar configureAxisTitleMenu()
      */
     function  configureHorizTickHover(location)
     {
@@ -2285,8 +2291,8 @@ export default Ember.Component.extend(Ember.Evented, {
     /*------------------------------------------------------------------------*/
     /** Draw  synteny blocks between adjacent axes.
      *
-     * Uses isAdjacent(), which uses adjAPs[], calculated in
-     * collateAdjacentAPs(), called via flows.alias : collateStacksA()
+     * Uses isAdjacent(), which uses adjAxes[], calculated in
+     * collateAdjacentAxes(), called via flows.alias : collateStacksA()
      *
      * @param t transition or undefined
      */
@@ -2325,7 +2331,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
       function intervalIsInverted(a, d0, d1)
       {
-        // could use markerY_(a, d0), if flipping is implemented via scale
+        // could use featureY_(a, d0), if flipping is implemented via scale
         let inverted = oa.z[a][d0].location > oa.z[a][d1].location;
         if (trace_synteny > 3)
           console.log("intervalIsInverted", a, d0, d1, inverted);
@@ -2341,7 +2347,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
       function  configureSyntenyBlockHover(sb)
       {
-        let j=0, text = APid2Name(sb[j++]) + "\n" + APid2Name(sb[j++]);
+        let j=0, text = axisId2Name(sb[j++]) + "\n" + axisId2Name(sb[j++]);
         for ( ; j < sb.length; j++) text += "\n" + sb[j];
         console.log("configureSyntenyBlockHover", sb, text);
         return configureHorizTickHover.apply(this, [text]);
@@ -2378,81 +2384,81 @@ export default Ember.Component.extend(Ember.Evented, {
       return s;
     }
     /** After data is loaded, collate to enable faster lookup in collateStacks() and dragged().
-     * for each AP
-     *   for each marker
-     *     store : ref to parent AP       .ap
-     *     store : marker -> array of APs (or set)  markers[marker] : set of APs
-     *     store       ag[ag] : [ marker ] marker references AP and array of aliases
-     *     {unique name of alias group (sort) : array of : AP / marker / array of aliases}
+     * for each axis
+     *   for each feature
+     *     store : ref to parent axis       .axis
+     *     store : feature -> array of Axes (or set)  features[feature] : set of Axes
+     *     store       aliasGroup[aliasGroup] : [ feature ] feature references axis and array of aliases
+     *     {unique name of alias group (sort) : array of : axis / feature / array of aliases}
      *     for each alias
-     *       store AP / alias : marker    aam[AP][marker alias] : marker
-     *       store AP/marker : alias groups  (or was that alias groups to marker)
-     *          z[AP][marker].agName (maybe later array [ag])
+     *       store axis / alias : feature    axisFeatureAliasToFeature[axis][feature alias] : feature
+     *       store axis/feature : alias groups  (or was that alias groups to feature)
+     *          z[axis][feature].aliasGroupName (maybe later array [aliasGroup])
      * 
      */
     function collateData()
     {
-      d3.keys(oa.z).forEach(function(ap) {
-        let za = oa.z[ap];
-        // console.log("collateData", ap, za);
-        if (maga[ap] === undefined)
-          maga[ap] = {};
-        let aam = oa.aam;
-        if (aam[ap] === undefined)
+      d3.keys(oa.z).forEach(function(axis) {
+        let za = oa.z[axis];
+        // console.log("collateData", axis, za);
+        if (featureAliasGroupAxes[axis] === undefined)
+          featureAliasGroupAxes[axis] = {};
+        let axisFeatureAliasToFeature = oa.axisFeatureAliasToFeature;
+        if (axisFeatureAliasToFeature[axis] === undefined)
         {
-          aam[ap] = {};
-        let aama = aam[ap];
-        d3.keys(za).forEach(function(marker) {
-          if ((marker != "mapName") && (marker != "chrName"))
+          axisFeatureAliasToFeature[axis] = {};
+        let aafa  = axisFeatureAliasToFeature[axis];
+        d3.keys(za).forEach(function(feature) {
+          if ((feature != "mapName") && (feature != "chrName"))
           {
           try
           {
-            za[marker].ap = z[ap]; // reference from marker to parent AP
-            // console.log("collateData", ap, za, za[marker]);
+            za[feature].axis = z[axis]; // reference from feature to parent axis
+            // console.log("collateData", axis, za, za[feature]);
           } catch (exc)
           {
-            console.log("collateData", ap, za, za[marker], exc);
+            console.log("collateData", axis, za, za[feature], exc);
             debugger;
           }
-          let markerAPs = oa.markerAPs;
-          if (markerAPs[marker] === undefined)
-            markerAPs[marker] = new Set();
-          markerAPs[marker].add(ap);
+          let featureAxisSets = oa.featureAxisSets;
+          if (featureAxisSets[feature] === undefined)
+            featureAxisSets[feature] = new Set();
+          featureAxisSets[feature].add(axis);
 
-          let marker_ = za[marker], mas = marker_.aliases;
-          marker_.name = marker;
-          if (mas && mas.length)
+          let feature_ = za[feature], fas = feature_.aliases;
+          feature_.name = feature;
+          if (fas && fas.length)
           {
-            /** Include marker's own name in the name of the group of its
+            /** Include feature's own name in the name of the group of its
              * aliases, because if aliases are symmetric, then e.g.
-             *  map/chr1 : M1 {m2,m3}
-             *  map/chr2 : m2 {M1,m3}, m3 {M1,m2}
-             * i.e. there is just one alias group : {M1,m2,m3}
+             *  map/chr1 : F1  {f2 ,f3 }
+             *  map/chr2 : f2  {F1 ,f3 }, f3  {F1 ,f2 }
+             * i.e. there is just one alias group : {F1 ,f2 ,f3 }
              * The physical data seems to contain symmetric alias groups of 5-20
-             * genes ("markers"); so recognising that there is just one alias
+             * genes ("features"); so recognising that there is just one alias
              * group can significantly reduce processing and memory.
              */
-            let agName = aliasesUniqueName(mas.concat([marker]));
-            let ag = oa.ag;
-            if (ag[agName] === undefined)
-              ag[agName] = [];
-            ag[agName].push(marker_);
+            let aliasGroupName = aliasesUniqueName(fas.concat([feature]));
+            let aliasGroup = oa.aliasGroup;
+            if (aliasGroup[aliasGroupName] === undefined)
+              aliasGroup[aliasGroupName] = [];
+            aliasGroup[aliasGroupName].push(feature_);
 
-            for (let markerAlias of mas)
+            for (let featureAlias of fas)
             {
               // done above, could be moved here, if still required :
-              // za[a] = {location: marker_.location};
+              // za[a] = {location: feature_.location};
 
-              if (aama[markerAlias] === undefined)
-                aama[markerAlias] = [];
-              aama[markerAlias].push(marker);
+              if (aafa [featureAlias] === undefined)
+                aafa [featureAlias] = [];
+              aafa [featureAlias].push(feature);
             }
 
-            if (marker_.agName)
+            if (feature_.aliasGroupName)
               // should be just 1
-              console.log("[marker] agName", ap, marker, marker_, agName);
+              console.log("[feature] aliasGroupName", axis, feature, feature_, aliasGroupName);
             else
-              marker_.agName = agName;
+              feature_.aliasGroupName = aliasGroupName;
           }
           }
         });
@@ -2460,35 +2466,35 @@ export default Ember.Component.extend(Ember.Evented, {
       });
     }
 
-    /** Collate the classes of markers via alias groups.
-     * Inputs : z (including .agName), markerScaffold (from colouredMarkers)
-     * Outputs : agClasses
+    /** Collate the classes of features via alias groups.
+     * Inputs : z (including .aliasGroupName), featureScaffold (from colouredFeatures)
+     * Outputs : aliasGroupClasses
      */
-    function collateMarkerClasses(markerScaffold)
+    function collateFeatureClasses(featureScaffold)
     {
       d3.keys(oa.z).forEach(
-        function(apName)
+        function(axisName)
         {
-          let za = oa.z[apName];
+          let za = oa.z[axisName];
           d3.keys(za).forEach(
-            function(markerName)
+            function(featureName)
             {
-              let  marker_ = za[markerName],
-              agName = marker_.agName,
-              mas = marker_.aliases;
-              if (mas.length > 0)
+              let  feature_ = za[featureName],
+              aliasGroupName = feature_.aliasGroupName,
+              fas = feature_.aliases;
+              if (fas.length > 0)
               {
-                // mas.length > 0 implies .agName is defined
-                let agc = agClasses[agName];
+                // fas.length > 0 implies .aliasGroupName is defined
+                let agc = aliasGroupClasses[aliasGroupName];
                 if (agc === undefined)
                 {
-                  agClasses[agName] = new Set();
-                  agc = agClasses[agName];
+                  aliasGroupClasses[aliasGroupName] = new Set();
+                  agc = aliasGroupClasses[aliasGroupName];
                 }
-                // marker_.name === markerName;
-                for (let i=0; i<mas.length; i++)
+                // feature_.name === featureName;
+                for (let i=0; i<fas.length; i++)
                 {
-                  let mi = mas[i], className = markerScaffold[mi];
+                  let fi = fas[i], className = featureScaffold[fi];
                   if (className)
                     agc.add(className);
                 }
@@ -2498,139 +2504,139 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
 
-    /**             is marker m1 in an alias group of a marker m0 in ap0  ?
-     * @return   the matching aliased marker m0 if only 1
+    /**             is feature f1  in an alias group of a feature f0  in axis0  ?
+     * @return   the matching aliased feature f0  if only 1
      */
-    function maInMaAG(ap0, ap1, m1)
+    function maInMaAG(axis0, axis1, f1 )
     {
-      /** Return the matching aliased marker if only 1; amC is the count of matches */
-      let am, amC=0;
-      /** aama inverts the aliases of m1; i.e. for each alias mA of m1, aama[mA] contains m1.
-       * so aama[m1] contains the markers which alias to m0
+      /** Return the matching aliased feature if only 1; afC is the count of matches */
+      let featureToAxis, afC=0;
+      /** aafa  inverts the aliases of f1 ; i.e. for each alias fa  of f1 , aafa [fa ] contains f1 .
+       * so aafa [f1 ] contains the features which alias to f0 
        * If there are only 1 of those, return it.
-       * ?(m1 if m0 is in the aliases of a0:m1)
+       * ?(f1  if f0  is in the aliases of a0:f1 )
        */
-      let aama = oa.aam[ap0.apName],
-      ma = aama[m1],
-      z0 = oa.z[ap0.apName];
-      let ams = [];
-      if (ma)
-        for (let mai=0; mai<ma.length; mai++)
+      let aafa  = oa.axisFeatureAliasToFeature[axis0.axisName],
+      fa  = aafa [f1 ],
+      z0 = oa.z[axis0.axisName];
+      let afs = [];
+      if (fa )
+        for (let fai=0; fai<fa .length; fai++)
       {
-          let mai_ = ma[mai];
-          if (z0[mai_])
+          let fai_ = fa [fai];
+          if (z0[fai_])
           {
-            am = mai_;
-            amC++;
+            featureToAxis = fai_;
+            afC++;
             if (trace_alias > 1)
-              ams.push(am); // for devel trace.
+              afs.push(featureToAxis); // for devel trace.
           }
         }
       if (trace_alias > 1)
-        console.log("maInMaAG()", ap0.mapName, ap1.mapName, m1, am, amC, ams);
-      if (amC > 1)
-        am = undefined;
+        console.log("maInMaAG()", axis0.mapName, axis1.mapName, f1 , featureToAxis, afC, afs);
+      if (afC > 1)
+        featureToAxis = undefined;
       else if (trace_alias > 1)
       {
-        console.log(aama, ma, z0);
+        console.log(aafa , fa , z0);
       }
-      return am;
+      return featureToAxis;
     }
 
     /** At time of axis adjacency change, collate data for faster lookup in dragged().
      *
      *   for each pair of adjacent stacks
 
-     *       for each marker in AP
-     *         lookup that marker in the other AP directly
-     *           store : marker : AP - AP    maN[marker] : [[marker, marker]]
-     *         any connection from a0:marker0 to a1 via alias :
-     *         lookup that marker in the other AP via inverted aliases
-     *           store : alias group : AP/marker - AP/marker   agam[ag] : [marker, marker]  markers have refn to parent AP
-     *         unique 1:1 connection between a0:marker0 and a1:marker1 :
-     *           for each marker, marker1, in AP1
-     *             consider direct and any alias of a0:marker0
-     *             is marker1 in marker0 alias group ?
-     *             is marker0 in marker1 alias group ?
-     *             (compile hash from each marker alias group)
-     *             for AP-AP data is list of ags
+     *       for each feature in axis
+     *         lookup that feature in the other axis directly
+     *           store : feature : axis - axis    featureAxes[feature] : [[feature, feature]]
+     *         any connection from a0:feature0 to a1 via alias :
+     *         lookup that feature in the other axis via inverted aliases
+     *           store : alias group : axis/feature - axis/feature   aliasGroupAxisFeatures[aliasGroup] : [feature, feature]  features have refn to parent axis
+     *         unique 1:1 connection between a0:feature0 and a1:feature1 :
+     *           for each feature, feature1, in AXIS1
+     *             consider direct and any alias of a0:feature0
+     *             is feature1 in feature0 alias group ?
+     *             is feature0 in feature1 alias group ?
+     *             (compile hash from each feature alias group)
+     *             for axis-axis data is list of ags
 
-     * Results are in pu, which is accessed via Flow.pathData
+     * Results are in pathsUnique, which is accessed via Flow.pathData
      */
     function collateStacks1()
     {
-      oa.maN = maN = {};
-      agam = {};
-      pu = flows.U_alias.pathData = [];
+      oa.featureAxes = featureAxes = {};
+      aliasGroupAxisFeatures = {};
+      pathsUnique = flows.U_alias.pathData = [];
       let stacks = oa.stacks;
 
       for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
-        mAPs0 = s0.aps,
-        mAPs1 = s1.aps;
-        if (mAPs0.length === 0 || mAPs1.length === 0)
+        fAxis_s0 = s0.axes,
+        fAxis_s1 = s1.axes;
+        if (fAxis_s0.length === 0 || fAxis_s1.length === 0)
         {
-          console.log("mAPs0,1.length", mAPs0.length, mAPs1.length);
+          console.log("fAxis_s0,1.length", fAxis_s0.length, fAxis_s1.length);
           // stacks.log();
         }
         // Cross-product of the two adjacent stacks
-        for (let a0i=0; a0i < mAPs0.length; a0i++) {
-          let a0 = mAPs0[a0i], za0 = a0.z, a0Name = a0.apName;
-          for (let a1i=0; a1i < mAPs1.length; a1i++) {
-            let a1 = mAPs1[a1i], za1 = a1.z;
-            d3.keys(za0).forEach(function(marker0) {
-              /** a0, a1 could be derived from za0[marker0].ap, za1[marker0].ap */
-              let maa = [marker0, a0, a1, za0[marker0], za1[marker0]];
-              let maN = oa.maN;
-              if (za1[marker0])
+        for (let a0i=0; a0i < fAxis_s0.length; a0i++) {
+          let a0 = fAxis_s0[a0i], za0 = a0.z, a0Name = a0.axisName;
+          for (let a1i=0; a1i < fAxis_s1.length; a1i++) {
+            let a1 = fAxis_s1[a1i], za1 = a1.z;
+            d3.keys(za0).forEach(function(feature0) {
+              /** a0, a1 could be derived from za0[feature0].axis, za1[feature0].axis */
+              let faa = [feature0, a0, a1, za0[feature0], za1[feature0]];
+              let featureAxes = oa.featureAxes;
+              if (za1[feature0])
               {
-                if (maN[marker0] === undefined)
-                  maN[marker0] = [];
-                maN[marker0].push(maa);
+                if (featureAxes[feature0] === undefined)
+                  featureAxes[feature0] = [];
+                featureAxes[feature0].push(faa);
                 if (trace_path > 3)
-                  console.log(marker0, maa);
+                  console.log(feature0, faa);
               }
-              // not used yet; to be shared to pathAg().
-              // any connection from a0:marker0 to a1 via alias :
-              let ag = za0[marker0].agName;
-              if (false && ag)
+              // not used yet; to be shared to pathAliasGroup().
+              // any connection from a0:feature0 to a1 via alias :
+              let aliasGroup = za0[feature0].aliasGroupName;
+              if (false && aliasGroup)
               {
-                if (agam[ag] === undefined)
-                  agam[ag] = [];
-                agam[ag].push(maa);
+                if (aliasGroupAxisFeatures[aliasGroup] === undefined)
+                  aliasGroupAxisFeatures[aliasGroup] = [];
+                aliasGroupAxisFeatures[aliasGroup].push(faa);
               }
 
-              /* If marker0 is in an alias of a1, 
-               * maInMaAG return the marker if just 1
+              /* If feature0 is in an alias of a1, 
+               * maInMaAG return the feature if just 1
                * 
                */
 
               let
                 aliasedM0,
-                aliasedM1 = maInMaAG(a1, a0, marker0),
-                isDirect = directWithAliases && oa.z[a1.apName][marker0] !== undefined;
+                aliasedM1 = maInMaAG(a1, a0, feature0),
+                isDirect = directWithAliases && oa.z[a1.axisName][feature0] !== undefined;
               let differentAlias;
               if (aliasedM1 || showAsymmetricAliases)
               {
-                /* alias group of marker0 may not be the same as the alias group
+                /* alias group of feature0 may not be the same as the alias group
                  * which links aliasedM1 to a0, but hopefully if aliasedM0 is
-                 * unique then it is marker0. */
+                 * unique then it is feature0. */
                 aliasedM0 = maInMaAG(a0, a1, aliasedM1);
-                /** aliasedM1 is the alias of marker0, so expect that the alias
-                 * of aliasedM1 is marker0.  But some data seems to have
+                /** aliasedM1 is the alias of feature0, so expect that the alias
+                 * of aliasedM1 is feature0.  But some data seems to have
                  * asymmetric alias groups.  In that case, we classify the alias
                  * as non-unique. */
-                differentAlias = aliasedM0 != marker0;
+                differentAlias = aliasedM0 != feature0;
                 if (trace_alias > 1 && differentAlias)
                 {
-                  let aam = oa.aam;
-                  console.log("aliasedM1", aliasedM1, "aliasedM0", aliasedM0, marker0, za0[marker0], za1[aliasedM1], aam[a1.apName][marker0], aam[a0.apName][aliasedM1]);
+                  let axisFeatureAliasToFeature = oa.axisFeatureAliasToFeature;
+                  console.log("aliasedM1", aliasedM1, "aliasedM0", aliasedM0, feature0, za0[feature0], za1[aliasedM1], axisFeatureAliasToFeature[a1.axisName][feature0], axisFeatureAliasToFeature[a0.axisName][aliasedM1]);
                 }
 
-                let d0 = marker0, d1 = aliasedM1;
+                let d0 = feature0, d1 = aliasedM1;
                 if (false)  // debugging support, could be removed.
                 {
-                  let traceTarget = marker0 == "markerK" && aliasedM1 == "markerK" &&
+                  let traceTarget = feature0 == "featureK" && aliasedM1 == "featureK" &&
                     a0.mapName == "MyMap5" && a1.mapName == "MyMap6";
                   if (traceTarget)
                     debugger;
@@ -2645,179 +2651,179 @@ export default Ember.Component.extend(Ember.Evented, {
               if ((nConnections === 1) && (showAsymmetricAliases || (differentAlias !== true))) // unique
               {
                 let 
-                  /** i.e. isDirect ? marker0 : aliasedM1 */
-                  marker1 = aliasedM1 || marker0,
-                mmaa = [marker0, marker1, a0, a1];
-                pu.push(mmaa);
-                // console.log(" pu", pu.length);
+                  /** i.e. isDirect ? feature0 : aliasedM1 */
+                  feature1 = aliasedM1 || feature0,
+                ffaa = [feature0, feature1, a0, a1];
+                pathsUnique.push(ffaa);
+                // console.log(" pathsUnique", pathsUnique.length);
               }
             });
           }
         }
       }
-      if (pu)
-        console.log("collateStacks", " maN", d3.keys(oa.maN).length, ", pu", pu.length);
+      if (pathsUnique)
+        console.log("collateStacks", " featureAxes", d3.keys(oa.featureAxes).length, ", pathsUnique", pathsUnique.length);
       if (trace_path > 4)
       {
-        for (let markerj in maN) {
-          let maNj = maN[markerj];
-          console.log("collateStacks1", markerj, maNj.length);
-          for (let i = 0; i < maNj.length; i++)
+        for (let featurej in featureAxes) {
+          let faNj = featureAxes[featurej];
+          console.log("collateStacks1", featurej, faNj.length);
+          for (let i = 0; i < faNj.length; i++)
           {
-            log_maamm(maNj[i]);
+            log_maamm(faNj[i]);
           }
         }
       }
       if (trace_path > 3)
       {
-        pu_log(pu);
+        pathsUnique_log(pathsUnique);
       }
     }
-    function pu_log(pu)
+    function pathsUnique_log(pathsUnique)
     {
-      if (pu)
-        for (let pi=0; pi<pu.length; pi++)
+      if (pathsUnique)
+        for (let pi=0; pi<pathsUnique.length; pi++)
       {
-          let p = pu[pi];
-          // log_mmaa() give more detail than this.
+          let p = pathsUnique[pi];
+          // log_ffaa() give more detail than this.
           // console.log(p[0], p[1], p[2].mapName, p[3].mapName);
-          log_mmaa(p);
+          log_ffaa(p);
         }
     }
-    /** log content of maN[markerName][i] */
-    function log_maamm(m)
+    /** log content of featureAxes[featureName][i] */
+    function log_maamm(f)
     {
-      let     [marker0, a0, a1, m0, m1] = m,
+      let     [feature0, a0, a1, f0 , f1 ] = f,
       z = oa.z;
-      console.log(marker0, a0.mapName, a0.apName, a1.mapName, a1.apName, m0.location, m1.location);
+      console.log(feature0, a0.mapName, a0.axisName, a1.mapName, a1.axisName, f0 .location, f1 .location);
     }
-    function log_mmaa(mmaa)
+    function log_ffaa(ffaa)
     {
-      if ((mmaa === undefined) || (typeof mmaa == "string") || (mmaa.length === undefined))
-        console.log(mmaa);
+      if ((ffaa === undefined) || (typeof ffaa == "string") || (ffaa.length === undefined))
+        console.log(ffaa);
       else
       {
-        let     [marker0, marker1, a0, a1, direction, agName] = mmaa,
+        let     [feature0, feature1, a0, a1, direction, aliasGroupName] = ffaa,
         z = oa.z,
-        m0 = z[a0.apName][marker0],
-        m1 = z[a1.apName][marker1];
-        console.log(marker0, marker1, a0.mapName, a0.apName, a1.mapName, a1.apName, m0.location, m1.location, direction, agName);
+        f0  = z[a0.axisName][feature0],
+        f1  = z[a1.axisName][feature1];
+        console.log(feature0, feature1, a0.mapName, a0.axisName, a1.mapName, a1.axisName, f0 .location, f1 .location, direction, aliasGroupName);
       }
     }
-    function mmaa2text(mmaa)
+    function mmaa2text(ffaa)
     {
       let s = "";
-      if ((mmaa === undefined) || (typeof mmaa == "string") || (mmaa.length === undefined))
-        s += mmaa;
+      if ((ffaa === undefined) || (typeof ffaa == "string") || (ffaa.length === undefined))
+        s += ffaa;
       else
       {
-        let     [marker0, marker1, a0, a1, direction, agName] = mmaa,
+        let     [feature0, feature1, a0, a1, direction, aliasGroupName] = ffaa,
         z = oa.z,
-        m0 = z[a0.apName][marker0],
-        m1 = z[a1.apName][marker1];
-        s += marker0 + ", " + marker1 + ", " + a0.mapName + ", " + a0.apName + ", " + a1.mapName + ", " + a1.apName + ", " + m0.location + ", " + m1.location + ", " + direction + ", " + agName;
+        f0  = z[a0.axisName][feature0],
+        f1  = z[a1.axisName][feature1];
+        s += feature0 + ", " + feature1 + ", " + a0.mapName + ", " + a0.axisName + ", " + a1.mapName + ", " + a1.axisName + ", " + f0 .location + ", " + f1 .location + ", " + direction + ", " + aliasGroupName;
       }
       return s;
     }
 
-    /** Collate adjacent APs, based on current stack adjacencies.
+    /** Collate adjacent Axes, based on current stack adjacencies.
      */
-    function collateAdjacentAPs()
+    function collateAdjacentAxes()
     {
-      adjAPs = oa.adjAPs = {};
+      adjAxes = oa.adjAxes = {};
       let stacks = oa.stacks;
       for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
-        mAPs0 = s0.aps,
-        mAPs1 = s1.aps;
-        // Cross-product of the APs in two adjacent stacks
-        for (let a0i=0; a0i < mAPs0.length; a0i++) {
-          let a0 = mAPs0[a0i], za0 = a0.z, a0Name = a0.apName;
+        fAxis_s0 = s0.axes,
+        fAxis_s1 = s1.axes;
+        // Cross-product of the Axes in two adjacent stacks
+        for (let a0i=0; a0i < fAxis_s0.length; a0i++) {
+          let a0 = fAxis_s0[a0i], za0 = a0.z, a0Name = a0.axisName;
           if (a0Name === undefined)
           {
-            console.log(mAPs0, mAPs1, a0i, a0);
+            console.log(fAxis_s0, fAxis_s1, a0i, a0);
           }
-          for (let a1i=0; a1i < mAPs1.length; a1i++) {
-            let a1 = mAPs1[a1i], za1 = a1.z;
-            if (adjAPs[a0Name] === undefined)
-              adjAPs[a0Name] = [];
-            adjAPs[a0Name].push(a1.apName);
+          for (let a1i=0; a1i < fAxis_s1.length; a1i++) {
+            let a1 = fAxis_s1[a1i], za1 = a1.z;
+            if (adjAxes[a0Name] === undefined)
+              adjAxes[a0Name] = [];
+            adjAxes[a0Name].push(a1.axisName);
             if (adjacent_both_dir)
             {
-              if (adjAPs[a1.apName] === undefined)
-                adjAPs[a1.apName] = [];
-              adjAPs[a1.apName].push(a0Name);
+              if (adjAxes[a1.axisName] === undefined)
+                adjAxes[a1.axisName] = [];
+              adjAxes[a1.axisName].push(a0Name);
             }
           }
         }
       }
       if (trace_adj > 1)
-        log_adjAPs(adjAPs);
+        log_adjAxes(adjAxes);
       else if (trace_adj)
-        console.log("collateAdjacentAPs", d3.keys(adjAPs).map(function (apName) { return APid2Name(apName);}));
+        console.log("collateAdjacentAxes", d3.keys(adjAxes).map(function (axisName) { return axisId2Name(axisName);}));
     }
     //-gd
-    function APid2Name(APid)
+    function axisId2Name(axisID)
     {
-      let aps = oa.aps;
-      if (APid === undefined || aps[APid] === undefined)
+      let axes = oa.axes;
+      if (axisID === undefined || axes[axisID] === undefined)
       {
-        console.log(aps, APid);
+        console.log(axes, axisID);
         debugger;
       }
-      return aps[APid].mapName;
+      return axes[axisID].mapName;
     }
 //-stacks
-    function log_adjAPs()
+    function log_adjAxes()
     {
-      console.log("adjAPs");
-      d3.keys(adjAPs).forEach(function(a0Name) {
-        let a0 = adjAPs[a0Name];
-        console.log(a0Name, APid2Name(a0Name), a0.length);
+      console.log("adjAxes");
+      d3.keys(adjAxes).forEach(function(a0Name) {
+        let a0 = adjAxes[a0Name];
+        console.log(a0Name, axisId2Name(a0Name), a0.length);
         for (let a1i=0; a1i < a0.length; a1i++) {
           let a1Name = a0[a1i];
-          console.log(a1Name, APid2Name(a1Name));
+          console.log(a1Name, axisId2Name(a1Name));
         }
       });
     }
-    function log_adjAPsa(adjs)
+    function log_adjAxes_a(adjs)
     {
       console.log("adjs", adjs.length);
       for (let a1i=0, a0=adjs; a1i < a0.length; a1i++) {
         let a1Name = a0[a1i];
-        console.log(a1Name, APid2Name(a1Name));
+        console.log(a1Name, axisId2Name(a1Name));
       }
     }
-    /** @return true if APs a0, a1 are adjacent, in either direction. */
+    /** @return true if Axes a0, a1 are adjacent, in either direction. */
     function isAdjacent(a0, a1)
     {
-      let result = false, adjs0 = oa.adjAPs[a0];
+      let result = false, adjs0 = oa.adjAxes[a0];
       if (adjs0)
         for (let a1i=0; (a1i < adjs0.length) && !result; a1i++) {
           result = a1 == adjs0[a1i];
           if (result)
-            console.log("isAdjacent", a0, APid2Name(a0), a1, APid2Name(a1));
+            console.log("isAdjacent", a0, axisId2Name(a0), a1, axisId2Name(a1));
       }
       return result;
     }
 //-paths
-    /** Check if aliases between apName and apName1 have been stored.  */
-    function getAliased(apName, apName1)
+    /** Check if aliases between axisName and axisName1 have been stored.  */
+    function getAliased(axisName, axisName1)
     {
-      /* If there are aliases between apName, apName1 then
-       * aliased[apName][apName1] (with apNames in lexicographic
+      /* If there are aliases between axisName, axisName1 then
+       * aliased[axisName][axisName1] (with apNames in lexicographic
        * order) will be defined, but because some adjacencies may not
        * have aliases, aliasedDone is used.
        */
       let a0, a1;
-      if (! adjacent_both_dir && (apName > apName1))
-      { a0 = apName1; a1 = apName; }
+      if (! adjacent_both_dir && (axisName > axisName1))
+      { a0 = axisName1; a1 = axisName; }
       else
-      { a0 = apName; a1 = apName1; }
+      { a0 = axisName; a1 = axisName1; }
       let a = aliasedDone[a0] && aliasedDone[a0][a1];
       if (trace_adj > 1)
       {
-        console.log("getAliased filter", apName, APid2Name(apName), apName1, APid2Name(apName1), a);
+        console.log("getAliased filter", axisName, axisId2Name(axisName), axisName1, axisId2Name(axisName1), a);
       }
       if (! a)
       {
@@ -2833,31 +2839,31 @@ export default Ember.Component.extend(Ember.Evented, {
      * require uniqueness, so this method may be as efficient and more general.
      *
      * for asymmetric aliases :
-     * for each AP
-     *   adjAPs = array (Set?) of adjacent APs, minus those already in tree[ap0]
-     *   for each marker m0 in AP
-     *     lookup aliases (markers) from m0 (could be to m0, but seems equiv)
-     *       are those aliased markers in APs in adjAPs ?	(use mapping markerAPs[markerName] -> APs)
+     * for each axis
+     *   adjAxes = array (Set?) of adjacent Axes, minus those already in tree[axis0]
+     *   for each feature f0  in axis
+     *     lookup aliases (features) from f0  (could be to f0 , but seems equiv)
+     *       are those aliased features in Axes in adjAxes ?	(use mapping featureAxisSets[featureName] -> Axes)
      *         add to tree, associate duplicates together (coming back the other way)
-     *           by sorting ap0 & ap1 in lexicographic order.
-     * 	         aliased[ap0][ap1][m0][m1]  : [m0, m1, ap0, ap1, direction, agName]
+     *           by sorting axis0 & axis1 in lexicographic order.
+     * 	         aliased[axis0][axis1][f0 ][f1 ]  : [f0 , f1 , axis0, axis1, direction, aliasGroupName]
      *
      * call filterPaths() to collate paths of current adjacencies in put, accessed via Flow.pathData
      */
     function collateStacksA()
     {
-      collateAdjacentAPs();
+      collateAdjacentAxes();
       let adjCount = 0, adjCountNew = 0, pathCount = 0;
       d3.keys(oa.z).forEach(
-        function(apName)
+        function(axisName)
         {
-          let za = oa.z[apName];
-          let adjs = adjAPs[apName];
+          let za = oa.z[axisName];
+          let adjs = adjAxes[axisName];
           if (adjs && adjs.length
               &&
-              (adjs = adjs.filter(function(apName1) {
+              (adjs = adjs.filter(function(axisName1) {
               adjCount++;
-              let a = getAliased(apName, apName1);
+              let a = getAliased(axisName, axisName1);
               if (!a) adjCountNew++;
                 return ! a; } ))
               &&
@@ -2865,55 +2871,55 @@ export default Ember.Component.extend(Ember.Evented, {
           {
             if (trace_adj > 1)
             {
-              console.log(apName, APid2Name(apName));
-              log_adjAPsa(adjs);
+              console.log(axisName, axisId2Name(axisName));
+              log_adjAxes_a(adjs);
             }
             let trace_count = 1;
             d3.keys(za).forEach(
-              function(markerName)
+              function(featureName)
               {
-                let  marker_ = za[markerName],
-                agName = marker_.agName;
+                let  feature_ = za[featureName],
+                aliasGroupName = feature_.aliasGroupName;
 
-                let mas = marker_.aliases;
-                for (let i=0; i<mas.length; i++)
+                let fas = feature_.aliases;
+                for (let i=0; i<fas.length; i++)
                 {
-                  let mi = mas[i],
-                  markerAPs = oa.markerAPs,
-                  APs = markerAPs[mi];
-                  // APs will be undefined if mi is not in a AP which is displayed.
-                  if (APs === undefined)
+                  let fi = fas[i],
+                  featureAxisSets = oa.featureAxisSets,
+                  Axes = featureAxisSets[fi];
+                  // Axes will be undefined if fi is not in a axis which is displayed.
+                  if (Axes === undefined)
                   {
                     if (trace_adj && trace_count-- > 0)
-                      console.log("collateStacksA", "APs === undefined", apName, adjs, markerName, marker_, i, mi, markerAPs);
+                      console.log("collateStacksA", "Axes === undefined", axisName, adjs, featureName, feature_, i, fi, featureAxisSets);
                   }
                   else
-                    // is there an intersection of adjs with APs
+                    // is there an intersection of adjs with Axes
                     for (let id=0; id<adjs.length; id++)
                   {
                       let aj = adjs[id],
-                      markerA = oa.z[aj][mi];
-                      if (APs.has(aj))
+                      featureA = oa.z[aj][fi];
+                      if (Axes.has(aj))
                       {
-                        let // agName = markerA.agName,
-                          direction = apName < aj,
-                        aps = oa.aps,
-                        apName_ = aps[apName],
-                        aj_ = aps[aj],
-                        am = [
-                          {m: markerName, ap: apName_},
-                          {m: mi, ap: aj_}
+                        let // aliasGroupName = featureA.aliasGroupName,
+                          direction = axisName < aj,
+                        axes = oa.axes,
+                        axisName_ = axes[axisName],
+                        aj_ = axes[aj],
+                        featureToAxis = [
+                          {f: featureName, axis: axisName_},
+                          {f: fi, axis: aj_}
                         ],
-                        am_= [am[1-direction], am[0+direction]],
-                        [m0, m1, ap0, ap1] = [am_[0].m, am_[1].m, am_[0].ap, am_[1].ap],
-                        mmaa = [m0, m1, ap0, ap1, direction, agName];
+                        featureToAxis_= [featureToAxis[1-direction], featureToAxis[0+direction]],
+                        [f0 , f1 , axis0, axis1] = [featureToAxis_[0].f, featureToAxis_[1].f, featureToAxis_[0].axis, featureToAxis_[1].axis],
+                        ffaa = [f0 , f1 , axis0, axis1, direction, aliasGroupName];
                         if (trace_adj && trace_count-- > 0)
-                          console.log("mmaa", mmaa, ap0.apName, ap1.apName, APid2Name(ap0.apName), APid2Name(ap1.apName));
-                        // log_mmaa(mmaa);
-                        // aliased[ap0][ap1][m0][m1] = mmaa;
+                          console.log("ffaa", ffaa, axis0.axisName, axis1.axisName, axisId2Name(axis0.axisName), axisId2Name(axis1.axisName));
+                        // log_ffaa(ffaa);
+                        // aliased[axis0][axis1][f0 ][f1 ] = ffaa;
                         /* objPut() can initialise aliased, but that is done above,
                          * needed by filter, so result is not used. */
-                        objPut(aliased, mmaa, ap0.apName, ap1.apName, m0, m1);
+                        objPut(aliased, ffaa, axis0.axisName, axis1.axisName, f0 , f1 );
                         pathCount++;
                       }
                     }
@@ -2924,7 +2930,7 @@ export default Ember.Component.extend(Ember.Evented, {
         });
       if (trace_adj)
         console.log("adjCount", adjCount, adjCountNew, pathCount);
-      // uses (calculated in) collateAdjacentAPs() : adjAPs, collateStacksA() : aliased.
+      // uses (calculated in) collateAdjacentAxes() : adjAxes, collateStacksA() : aliased.
       filterPaths();
     }
 
@@ -2960,74 +2966,74 @@ export default Ember.Component.extend(Ember.Evented, {
       {
         // this could be enabled by trace_adj also
         if (trace_path > 1)
-          console.log("a0Name", a0Name, APid2Name(a0Name));
-        adjAPs[a0Name].forEach(function (a1Name) { 
+          console.log("a0Name", a0Name, axisId2Name(a0Name));
+        adjAxes[a0Name].forEach(function (a1Name) { 
           if (trace_path > 1)
-            console.log("a1Name", a1Name, APid2Name(a1Name));
+            console.log("a1Name", a1Name, axisId2Name(a1Name));
           let b;
           if ((b = aliased[a0Name]) && (b = b[a1Name]))
-            d3.keys(b).forEach(function (m0) {
-              let b0=b[m0];
-              d3.keys(b0).forEach(function (m1) {
-                let b01=b0[m1];
-                let mmaa = b01;
+            d3.keys(b).forEach(function (f0 ) {
+              let b0=b[f0 ];
+              d3.keys(b0).forEach(function (f1 ) {
+                let b01=b0[f1 ];
+                let ffaa = b01;
                 // filter here, e.g. uniqueness
                 if (trace_path > 1)
                 {
-                  console.log(put.length, m0, m1, mmaa.length);
-                  log_mmaa(mmaa[0]);
+                  console.log(put.length, f0 , f1 , ffaa.length);
+                  log_ffaa(ffaa[0]);
                 }
-                put.push.apply(put, mmaa);
+                put.push.apply(put, ffaa);
               });
             });
         });
       };
       if (trace_path > 1)
         console.log("selectCurrentAdjPaths.length", selectCurrentAdjPaths.length);
-      d3.keys(adjAPs).forEach(selectCurrentAdjPaths);
+      d3.keys(adjAxes).forEach(selectCurrentAdjPaths);
       console.log("filterPaths", put.length);
     }
 
 //-collate or gd
     /**
-     * compile map of marker -> array of APs
-     *  array of { stack{APs...} ... }
-     * stacks change, but APs/chromosomes are changed only when page refresh
+     * compile map of feature -> array of Axes
+     *  array of { stack{Axes...} ... }
+     * stacks change, but Axes/chromosomes are changed only when page refresh
      */
-    function collateMarkerMap()
+    function collateFeatureMap()
     {
-      console.log("collateMarkerMap()");
-      if (am === undefined)
-        am = {};
-      aa || (aa = {});
+      console.log("collateFeatureMap()");
+      if (featureToAxis === undefined)
+        featureToAxis = {};
+      featureAliasToAxis || (featureAliasToAxis = {});
       let z = oa.z;
-      for (let ap in z)
+      for (let axis in z)
       {
-        for (let marker in z[ap])
+        for (let feature in z[axis])
         {
-          // console.log(ap, marker);
-          if (am[marker] === undefined)
-            am[marker] = [];
-          am[marker].push(ap);
+          // console.log(axis, feature);
+          if (featureToAxis[feature] === undefined)
+            featureToAxis[feature] = [];
+          featureToAxis[feature].push(axis);
         }
-        /* use marker aliases to match makers */
-        Object.entries(z[ap]).forEach
+        /* use feature aliases to match makers */
+        Object.entries(z[axis]).forEach
         (
-          /** marker is the marker name, m is the marker object in z[].  */
-          function ([marker, m])
+          /** feature is the feature name, f is the feature object in z[].  */
+          function ([feature, f])
           {
-            /** m.aliases is undefined for z entries created via an alias. */
-            let a = m.aliases;
-            // console.log(marker, a);
+            /** f.aliases is undefined for z entries created via an alias. */
+            let a = f.aliases;
+            // console.log(feature, a);
             if (a)
               for (let ai=0; ai < a.length; ai++)
             {
                 let alias = a[ai];
-                // use an arbitrary order (marker name), to reduce duplicate paths
-                if (alias < marker)
+                // use an arbitrary order (feature name), to reduce duplicate paths
+                if (alias < feature)
                 {
-                  aa[alias] || (aa[alias] = []);
-                  aa[alias].push(ap);
+                  featureAliasToAxis[alias] || (featureAliasToAxis[alias] = []);
+                  featureAliasToAxis[alias].push(axis);
                 }
               }
           }
@@ -3036,7 +3042,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
 //-stacks derived
-    /** given 2 arrays of marker names, concat them and remove duplicates */
+    /** given 2 arrays of feature names, concat them and remove duplicates */
     function concatAndUnique(a, b)
     {
       let c = a || [];
@@ -3045,33 +3051,33 @@ export default Ember.Component.extend(Ember.Evented, {
       return cu;
     }
 //-stacks data / collate
-    /** Return an array ovf APs contain Marker `marker` and are in stack `stackIndex`.
-     * @param marker  name of marker
+    /** Return an array ovf Axes contain Feature `feature` and are in stack `stackIndex`.
+     * @param feature  name of feature
      * @param stackIndex  index into stacks[]
-     * @return array of APs
+     * @return array of Axes
      */
-    function markerStackAPs(marker, stackIndex)
+    function featureStackAxes(feature, stackIndex)
     {
-      /** smi are the APs selected by marker. */
-      let stack = oa.stacks[stackIndex], smi=concatAndUnique(aa[marker], am[marker]);
-      // console.log("markerStackAPs()", marker, stackIndex, smi);
-      let mAPs = smi.filter(function (apID) {
-        let mInS = stack.contains(apID); return mInS; });
-      // console.log(mAPs);
-      return mAPs;
+      /** sfi are the Axes selected by feature. */
+      let stack = oa.stacks[stackIndex], sfi=concatAndUnique(featureAliasToAxis[feature], featureToAxis[feature]);
+      // console.log("featureStackAxes()", feature, stackIndex, sfi);
+      let fAxis_s  = sfi.filter(function (axisID) {
+        let mInS = stack.contains(axisID); return mInS; });
+      // console.log(fAxis_s );
+      return fAxis_s ;
     }
-    /** A line between a marker's location in adjacent APs.
-     * @param k1, k2 indices into apIDs[]
-     * @param d marker name
+    /** A line between a feature's location in adjacent Axes.
+     * @param k1, k2 indices into axisIDs[]
+     * @param d feature name
      */
-    function markerLine2(k1, k2, d)
+    function featureLine2(k1, k2, d)
     {
       let
         o = oa.o,
-        ak1 = oa.apIDs[k1],
-        ak2 = oa.apIDs[k2];
-      return line([[o[ak1], markerY(k1, d)],
-                   [o[ak2], markerY(k2, d)]]);
+        ak1 = oa.axisIDs[k1],
+        ak2 = oa.axisIDs[k2];
+      return line([[o[ak1], featureY(k1, d)],
+                   [o[ak2], featureY(k2, d)]]);
     }
     /**  Return the x positions of the given axes; if the leftmost is split, add
      *  its width to the corresponding returned axis position.
@@ -3089,7 +3095,7 @@ export default Ember.Component.extend(Ember.Evented, {
        * This is the index of the left axis. */
       left = order ? 0 : 1,
       akL = order ? ak1 : ak2,
-      aL = oa.aps[akL];
+      aL = oa.axes[akL];
       if (aL.extended)
       {
         console.log("inside", ak1, ak2, cached, xi, order, left, akL);
@@ -3110,69 +3116,69 @@ export default Ember.Component.extend(Ember.Evented, {
         s[1][1] += 1;
       return s;
     }
-    /** Stacks version of markerLine2().
-     * A line between a marker's location in APs in adjacent Stacks.
-     * @param ak1, ak2 AP names, (exist in apIDs[])
-     * @param d1, d2 marker names, i.e. ak1:d1, ak1:d1
+    /** Stacks version of featureLine2().
+     * A line between a feature's location in Axes in adjacent Stacks.
+     * @param ak1, ak2 axis names, (exist in axisIDs[])
+     * @param d1, d2 feature names, i.e. ak1:d1, ak1:d1
      * If d1 != d2, they are connected by an alias.
      */
-    function markerLineS2(ak1, ak2, d1, d2)
+    function featureLineS2(ak1, ak2, d1, d2)
     {
       let o = oa.o,
-      ap1 = oa.aps[ak1],
-      ap2 = oa.aps[ak2],
+      axis1 = oa.axes[ak1],
+      axis2 = oa.axes[ak2],
       /** x endpoints of the line;  if either axis is split then the side closer the other axis is used.  */
       xi = inside(ak1, ak2, true);
       let l;
-      if (ap1.perpendicular && ap2.perpendicular)
+      if (axis1.perpendicular && axis2.perpendicular)
       { /* maybe a circos plot :-) */ }
-      else if (ap1.perpendicular)
+      else if (axis1.perpendicular)
       {
-        let point = [xi[0] + vc.yRange/2 - markerY_(ak1, d1), markerY_(ak2, d2)];
+        let point = [xi[0] + vc.yRange/2 - featureY_(ak1, d1), featureY_(ak2, d2)];
         l =  line(pointSegment(point));
       }
-      else if (ap2.perpendicular)
+      else if (axis2.perpendicular)
       {
-        let point = [xi[1] + vc.yRange/2 - markerY_(ak2, d2), markerY_(ak1, d1)];
+        let point = [xi[1] + vc.yRange/2 - featureY_(ak2, d2), featureY_(ak1, d1)];
         l =  line(pointSegment(point));
       }
       else
       // o[p], the map location,
       l =  line([
-        [xi[0], markerY_(ak1, d1)],
-        [xi[1], markerY_(ak2, d2)]]);
+        [xi[0], featureY_(ak1, d1)],
+        [xi[1], featureY_(ak2, d2)]]);
       return l;
     }
     /** Show a parallelogram between 2 axes, defined by
-     * 4 marker locations in APs in adjacent Stacks.
-     * Like @see markerLineS2().
-     * @param ak1, ak2 AP names, (exist in apIDs[])
-     * @param d[0 .. 3] marker names, i.e. ak1:d[0] and d[1], ak2:d[2] and d[3]
+     * 4 feature locations in Axes in adjacent Stacks.
+     * Like @see featureLineS2().
+     * @param ak1, ak2 axis names, (exist in axisIDs[])
+     * @param d[0 .. 3] feature names, i.e. ak1:d[0] and d[1], ak2:d[2] and d[3]
      */
-    function markerLineS3(ak1, ak2, d)
+    function featureLineS3(ak1, ak2, d)
     {
       let o = oa.o,
       xi = inside(ak1, ak2, false),
       oak = xi, // o[ak1], o[ak2]],
-      ap1 = oa.aps[ak1],
-      ap2 = oa.aps[ak2],
-      my = [[markerY_(ak1, d[0]), markerY_(ak1, d[1])],
-            [markerY_(ak2, d[2]), markerY_(ak2, d[3])]];
+      axis1 = oa.axes[ak1],
+      axis2 = oa.axes[ak2],
+      my = [[featureY_(ak1, d[0]), featureY_(ak1, d[1])],
+            [featureY_(ak2, d[2]), featureY_(ak2, d[3])]];
       let sLine;
 
       /** if one of the axes is perpendicular, draw a line segment using the d
        * values of the perpendicular axes as the x values, and the other as the
        * y values. */
-      if (ap1.perpendicular && ap2.perpendicular)
+      if (axis1.perpendicular && axis2.perpendicular)
       {  }
-      else if (ap1.perpendicular)
+      else if (axis1.perpendicular)
       {
         xi[0] += vc.yRange/2;
         let s = [[xi[0] - my[0][0], my[1][0]],
                  [xi[0] - my[0][1], my[1][1]]];
         sLine =  line(s);
       }
-      else if (ap2.perpendicular)
+      else if (axis2.perpendicular)
       {
         xi[1] += vc.yRange/2;
         let s = [[xi[1] - my[1][0], my[0][0]],
@@ -3182,29 +3188,29 @@ export default Ember.Component.extend(Ember.Evented, {
       else
       {
         let
-          p = [[oak[0], markerY_(ak1, d[0])],
-           [oak[0], markerY_(ak1, d[1])],
+          p = [[oak[0], featureY_(ak1, d[0])],
+           [oak[0], featureY_(ak1, d[1])],
            // order swapped in ak2 so that 2nd point of ak1 is adjacent 2nd point of ak2
-           [oak[1], markerY_(ak2, d[3])],
-           [oak[1], markerY_(ak2, d[2])],
+           [oak[1], featureY_(ak2, d[3])],
+           [oak[1], featureY_(ak2, d[2])],
           ];
         sLine = line(p) + "Z";
       }
       if (trace_synteny > 4)
-        console.log("markerLineS3", ak1, ak2, d, oak, p, sLine);
+        console.log("featureLineS3", ak1, ak2, d, oak, /*p,*/ sLine);
       return sLine;
     }
 
-    /** Similar to @see markerLine().
-     * Draw a horizontal notch at the marker location on the axis.
-     * Used when showAll and the marker is not in a AP of an adjacent Stack.
-     * @param ak apID
-     * @param d marker name
+    /** Similar to @see featureLine().
+     * Draw a horizontal notch at the feature location on the axis.
+     * Used when showAll and the feature is not in a axis of an adjacent Stack.
+     * @param ak axisID
+     * @param d feature name
      * @param xOffset add&subtract to x value, measured in pixels
      */
-    function markerLineS(ak, d, xOffset)
+    function featureLineS(ak, d, xOffset)
     {
-      let akY = markerY_(ak, d);
+      let akY = featureY_(ak, d);
       let shiftRight = 9;
       let o = oa.o;
       return line([[o[ak]-xOffset + shiftRight, akY],
@@ -3216,12 +3222,12 @@ export default Ember.Component.extend(Ember.Evented, {
      * which is within stack elt, which has an x translation,
      * so the path x position is relative to 0.
      *
-     * @param ak apID.
-     * @param akY Y	position (relative to AP of ak?)
+     * @param ak axisID.
+     * @param akY Y	position (relative to axis of ak?)
      * @param xOffset add&subtract to x value, measured in pixels
      * Tick length is 2 * xOffset, centred on the axis + shiftRight.
      * @return line path for an horizontal line.
-     * Derived from markerLineS(), can be used to factor it and markerLine()
+     * Derived from featureLineS(), can be used to factor it and featureLine()
      */
     function lineHoriz(ak, akY, xOffset, shiftRight)
     {
@@ -3234,37 +3240,37 @@ export default Ember.Component.extend(Ember.Evented, {
       return line([[-xOffset + shiftRight, akYs],
                    [+xOffset + shiftRight, akYs]]);
     }
-    /** Similar to @see markerLine2().
-     * @param k index into apIDs[]
-     * @param d marker name
+    /** Similar to @see featureLine2().
+     * @param k index into axisIDs[]
+     * @param d feature name
      * @param xOffset add&subtract to x value, measured in pixels
      */
-    function markerLine(k, d, xOffset)
+    function featureLine(k, d, xOffset)
     {
-      let ak = oa.apIDs[k],
-      akY = markerY(k, d);
+      let ak = oa.axisIDs[k],
+      akY = featureY(k, d);
       let o = oa.o;
       return line([[o[ak]-xOffset, akY],
                    [o[ak]+xOffset, akY]]);
     }
 //- collate
     /**
-     * change to use marker alias group as data of path;
-     *  for non-aliased markers, data remains as marker - unchanged
+     * change to use feature alias group as data of path;
+     *  for non-aliased features, data remains as feature - unchanged
      * 
      * when stack adjacency changes (i.e. drop in/out, dragended) :
      * 
-     * compile a list, indexed by marker names,
+     * compile a list, indexed by feature names,
      *   array of
-     *     AP from / to (optional : stack index from / to)
+     *     axis from / to (optional : stack index from / to)
      * 
-     * compile a list, indexed by marker alias group names (catenation of aliased marker names),
-     *   marker name
+     * compile a list, indexed by feature alias group names (catenation of aliased feature names),
+     *   feature name
      *   array of
-     *     AP from / to (optional : stack index from / to)
+     *     axis from / to (optional : stack index from / to)
      * 
-     * I think these will use 2 variants of markerStackAPs() : one using am[] and the other aa[].
-     * Thinking about what the hover text should be for paths drawn due to an alias - the alias group (all names), or maybe the 2 actual markers.
+     * I think these will use 2 variants of featureStackAxes() : one using featureToAxis[] and the other featureAliasToAxis[].
+     * Thinking about what the hover text should be for paths drawn due to an alias - the alias group (all names), or maybe the 2 actual features.
      * that is why I think I'll need 2 variants.
      * 
      * path()
@@ -3275,25 +3281,25 @@ export default Ember.Component.extend(Ember.Evented, {
      */
 
     /** Replaced by collateStacks(). */
-    function collateMagm(d) // d is markerName
+    function collateMagm(d) // d is featureName
     {
-      /* This method originated in path(markerName), i.e. it starts from a given markerName;
+      /* This method originated in path(featureName), i.e. it starts from a given featureName;
        * in next version this can be re-written to walk through :
        *  all adjacent pairs of stacks  :
-       *   all APs of those stacks :
-       *    all markers of those APs
+       *   all Axes of those stacks :
+       *    all features of those Axes
        */
       for (let stackIndex=0; stackIndex<oa.stacks.length-1; stackIndex++) {
-        let mAPs0 = markerStackAPs(d, stackIndex),
-        mAPs1 = markerStackAPs(d, stackIndex+1);
-        // Cross-product of the two adjacent stacks; just the APs which contain the marker.
-        for (let a0i=0; a0i < mAPs0.length; a0i++) {
-          let a0 = mAPs0[a0i];
-          for (let a1i=0; a1i < mAPs1.length; a1i++) {
-            let a1 = mAPs1[a1i];
-            if (maga[d] === undefined)
-              maga[d] = [];
-            maga[d].push([stackIndex, a0, a1]);
+        let fAxis_s0 = featureStackAxes(d, stackIndex),
+        fAxis_s1 = featureStackAxes(d, stackIndex+1);
+        // Cross-product of the two adjacent stacks; just the Axes which contain the feature.
+        for (let a0i=0; a0i < fAxis_s0.length; a0i++) {
+          let a0 = fAxis_s0[a0i];
+          for (let a1i=0; a1i < fAxis_s1.length; a1i++) {
+            let a1 = fAxis_s1[a1i];
+            if (featureAliasGroupAxes[d] === undefined)
+              featureAliasGroupAxes[d] = [];
+            featureAliasGroupAxes[d].push([stackIndex, a0, a1]);
           }
         }
       }
@@ -3301,148 +3307,148 @@ export default Ember.Component.extend(Ember.Evented, {
 
 //- paths
     /** This is the stacks equivalent of path() / zoompath().
-     * Returns an array of paths (links between APs) for a given marker.
+     * Returns an array of paths (links between Axes) for a given feature.
      */
-    function path(markerName) {
+    function path(featureName) {
       let r = [];
-      // TODO : discard markers of the paths which change
-      // pathMarkers = {};
+      // TODO : discard features of the paths which change
+      // pathFeatures = {};
 
       /** 1 string per path segment */
       let
-        mmNm = oa.maN[markerName];
-      if (mmNm !== undefined)
-        /* console.log("path", markerName);
+        ffNf = oa.featureAxes[featureName];
+      if (ffNf !== undefined)
+        /* console.log("path", featureName);
          else */
-        if ((unique_1_1_mapping === 2) && (mmNm.length > 1))
-      { /* console.log("path : multiple", markerName, mmNm.length, mmNm); */ }
+        if ((unique_1_1_mapping === 2) && (ffNf.length > 1))
+      { /* console.log("path : multiple", featureName, ffNf.length, ffNf); */ }
       else
-        for (let i=0; i < mmNm.length; i++)
+        for (let i=0; i < ffNf.length; i++)
       {
-          let [markerName, a0_, a1_, za0, za1] = mmNm[i];
-          let a0 = a0_.apName, a1 = a1_.apName;
+          let [featureName, a0_, a1_, za0, za1] = ffNf[i];
+          let a0 = a0_.axisName, a1 = a1_.axisName;
           if ((za0 !== za1) && (a0 == a1))
-            console.log("path", i, markerName, za0, za1, a0, a1);
-          r[i] = patham(a0, a1, markerName, undefined);
+            console.log("path", i, featureName, za0, za1, a0, a1);
+          r[i] = patham(a0, a1, featureName, undefined);
         }
       if (trace_path > 3)
-        console.log("path", markerName, mmNm, r);
+        console.log("path", featureName, ffNf, r);
       if (r.length == 0)
         r.push("");
       return r;
     }
 
-    /** for unique paths between markers, which may be connected by alias,
-     * data is [marker0, marker1, a0, a1]
+    /** for unique paths between features, which may be connected by alias,
+     * data is [feature0, feature1, a0, a1]
      * Enabled by unique_1_1_mapping.
-     * @param mmaa  [marker0, marker1, a0, a1]
+     * @param ffaa  [feature0, feature1, a0, a1]
      */
-    function pathU(mmaa) {
-      if ((mmaa === undefined) || (mmaa.length === undefined))
-      { console.log("pathU", this, mmaa); debugger; }
-      let [marker0, marker1, a0, a1] = mmaa;
+    function pathU(ffaa) {
+      if ((ffaa === undefined) || (ffaa.length === undefined))
+      { console.log("pathU", this, ffaa); debugger; }
+      let [feature0, feature1, a0, a1] = ffaa;
       let p = [];
-      p[0] = patham(a0.apName, a1.apName, marker0, marker1);
+      p[0] = patham(a0.axisName, a1.axisName, feature0, feature1);
       if (trace_path > 1)
-        console.log("pathU", mmaa, a0.mapName, a1.mapName, p[0]);
+        console.log("pathU", ffaa, a0.mapName, a1.mapName, p[0]);
       return p;
     }
     function pathUg(d) {
-      let mmaa = dataOfPath(this),
-      p = pathU(mmaa);
+      let ffaa = dataOfPath(this),
+      p = pathU(ffaa);
       if (trace_path > 2)
         console.log(this, d);
       return p;
     }
 
     /** TODO : for paths with alias group as data
-     * @param ag   alias group (name)?
+     * @param aliasGroup   alias group (name)?
      */
-    function pathAg(ag) {
+    function pathAliasGroup(aliasGroup) {
       /** 1 string per path segment */
       let p = [],
-      agama = agam[ag]; // to be passed from collateStacks().
-      if (agama === undefined)
-        console.log("pathAg", ag);
+      agafa = aliasGroupAxisFeatures[aliasGroup]; // to be passed from collateStacks().
+      if (agafa === undefined)
+        console.log("pathAliasGroup", aliasGroup);
       else
-        for (let i=0; i < agama.length; i++)
+        for (let i=0; i < agafa.length; i++)
       {
-          let [markerName, a0, a1, za0, za1] = agama[i];
-          p[i] = patham(a0.apName, a1.apName, markerName, undefined);
+          let [featureName, a0, a1, za0, za1] = agafa[i];
+          p[i] = patham(a0.axisName, a1.axisName, featureName, undefined);
         }
       return p.join();
     }
 
-    /** Calculate relative location of marker markerName in the AP apID, and
+    /** Calculate relative location of feature featureName in the axis axisID, and
      * check if it is inRange 
-     * @param apID  ID of Axis Piece
-     * @param markerName  marker within apID
+     * @param axisID  ID of Axis Piece
+     * @param featureName  feature within axisID
      * @param range e.g. [0, yRange]
      */
-    function inRangeI(apID, markerName, range)
+    function inRangeI(axisID, featureName, range)
     {
-      return inRange(markerY_(apID, markerName), range);
+      return inRange(featureY_(axisID, featureName), range);
     }
 
 //- paths-text
-    /** @param m  marker reference i.e. z[apName][markerName]]
+    /** @param f  feature reference i.e. z[axisName][featureName]]
      * @return text for display in path hover tooltip */
-    function markerAliasesText(mN, m)
+    function featureAliasesText(fName, f)
     {
-      let s = mN + ":" + m.aliases.length + ":",
-      mas = m.aliases;
-      for (let i=0; i<mas.length; i++)
+      let s = fName + ":" + f.aliases.length + ":",
+      fas = f.aliases;
+      for (let i=0; i<fas.length; i++)
       {
-        s += mas[i] + ",";
+        s += fas[i] + ",";
       }
-      // console.log("markerAliasesText", mN, m, mas, s);
+      // console.log("featureAliasesText", fName, f, fas, s);
       return s;
     }
 
     /** Prepare a tool-tip for the line.
      * The line / path may be either connecting 2 axes, or a tick on one axis;
-     * in the latter case ma1 will be undefined.
+     * in the latter case fa1 will be undefined.
      * @param sLine svg path text
-     * @param d0, d1 marker names, i.e. a0:m0, a1:m1.
+     * @param d0, d1 feature names, i.e. a0:f0 , a1:f1 .
      * Iff d1!==undefined, they are connected by an alias.
-     * @param ma0, ma1  marker objects.
-     * ma1 will be undefined when called from axisMarkerTick()
+     * @param fa0, fa1  feature objects.
+     * fa1 will be undefined when called from axisFeatureTick()
      */
-    function pathMarkerStore(sLine, d0, d1, ma0, ma1)
+    function pathFeatureStore(sLine, d0, d1, fa0, fa1)
     {
-      let pathMarkers = oa.pathMarkers;
-      if (pathMarkers[sLine] === undefined)
-        pathMarkers[sLine] = {};
+      let pathFeatures = oa.pathFeatures;
+      if (pathFeatures[sLine] === undefined)
+        pathFeatures[sLine] = {};
 
       /** Show the x,y coords of the endpoints of the path segment.  Useful during devel. */
       const showHoverLineCoords = false;
       const showHoverAliases = true;
-      /** 1 signifies the normal behaviour - handleMouseOver() will show just the marker name.
+      /** 1 signifies the normal behaviour - handleMouseOver() will show just the feature name.
        * Values other than 1 will be appended as text. */
       let hoverExtraText = showHoverExtraText ?
-        " " + ma0.location +
-        (ma1 ?  "-" + ma1.location : "")
+        " " + fa0.location +
+        (fa1 ?  "-" + fa1.location : "")
         + (showHoverLineCoords ? " " + sLine : "")
       : 1;
       if (showHoverExtraText && showHoverAliases)
       {
         hoverExtraText += 
-          "<div>" + markerAliasesText(d0, ma0) + "</div>" +
-          (d1 && ma1 ? 
-           "<div>" + markerAliasesText(d1, ma1) + "</div>" : "");
+          "<div>" + featureAliasesText(d0, fa0) + "</div>" +
+          (d1 && fa1 ? 
+           "<div>" + featureAliasesText(d1, fa1) + "</div>" : "");
       }
-      // these are split (at ",") when assigned to hoverMarkers
+      // these are split (at ",") when assigned to hoverFeatures
       let d = d1 && (d1 != d0) ? d0 + "," + d1: d0;
-      pathMarkers[sLine][d] = hoverExtraText; // 1;
+      pathFeatures[sLine][d] = hoverExtraText; // 1;
     }
 
     /**
-     * @param  a0, a1  AP names
-     * @param d0, d1 marker names, i.e. a0:d0, a1:d1.
+     * @param  a0, a1  axis names
+     * @param d0, d1 feature names, i.e. a0:d0, a1:d1.
      * Iff d1!==undefined, they are connected by an alias.
      */
     function patham(a0, a1, d0, d1) {
-      // let [stackIndex, a0, a1] = maga[d];
+      // let [stackIndex, a0, a1] = featureAliasGroupAxes[d];
       let r;
 
       let range = [0, vc.yRange];
@@ -3456,9 +3462,9 @@ export default Ember.Component.extend(Ember.Evented, {
       // console.log("path()", stackIndex, a0, allowPathsOutsideZoom, inRangeI(a0), inRangeI(a1), lineIn);
       if (lineIn)
       {
-        let sLine = markerLineS2(a0, a1, d0, d1_);
+        let sLine = featureLineS2(a0, a1, d0, d1_);
         let cmName = oa.cmName;
-        let marker0 = d0, marker1 = d1, traceTarget = marker0 == "markerK" && marker1 == "markerK" &&
+        let feature0 = d0, feature1 = d1, traceTarget = feature0 == "featureK" && feature1 == "featureK" &&
           cmName[a0].mapName == "MyMap5" && cmName[a1].mapName == "MyMap6";
         if (traceTarget)
         {
@@ -3470,27 +3476,27 @@ export default Ember.Component.extend(Ember.Evented, {
         let z = oa.z;
         if (pathDataIsLine)
           /* Prepare a tool-tip for the line. */
-          pathMarkerStore(sLine, d0, d1, z[a0][d0], z[a1][d1_]);
+          pathFeatureStore(sLine, d0, d1, z[a0][d0], z[a1][d1_]);
       }
       else if (showAll) {
-        const markerTickLen = 10; // orig 5
-        function axisMarkerTick(ai, d) {
+        const featureTickLen = 10; // orig 5
+        function axisFeatureTick(ai, d) {
           let z = oa.z;
           if (d in z[a0])
           {
-            r = markerLineS(ai, d, markerTickLen);
-            pathMarkerStore(r, d, d, z[ai][d], undefined);
+            r = featureLineS(ai, d, featureTickLen);
+            pathFeatureStore(r, d, d, z[ai][d], undefined);
           }
         }
         // could filter these according to inRangeI() as above
-        axisMarkerTick(a0, d0);
-        axisMarkerTick(a1, d1_);
+        axisFeatureTick(a0, d0);
+        axisFeatureTick(a1, d1_);
       }
       return r;
     }
     /**
-     * @param  a0, a1  AP names
-     * @param d[0 .. 3], marker names, i.e. a0:d[0]-d[1], a1:d[2]-d[3].
+     * @param  a0, a1  axis names
+     * @param d[0 .. 3], feature names, i.e. a0:d[0]-d[1], a1:d[2]-d[3].
      * Unlike patham(), d does not contain undefined.
      */
     function patham2(a0, a1, d) {
@@ -3505,7 +3511,7 @@ export default Ember.Component.extend(Ember.Evented, {
          || inRangeI(a1, d[3], range));
       if (lineIn)
       {
-        let sLine = markerLineS3(a0, a1, d);
+        let sLine = featureLineS3(a0, a1, d);
         let cmName = oa.cmName;
         if (trace_synteny > 4)
           console.log("patham2()", d, cmName[a0] && cmName[a0].mapName, cmName[a1] && cmName[a1].mapName, a0, a1, z && z[a0] && z[a0][d[0]] && z[a0][d[0]].location, d[2] && z && z[a1] && z[a1][d[2]] && z[a1][d[2]].location, sLine);          
@@ -3518,105 +3524,105 @@ export default Ember.Component.extend(Ember.Evented, {
       return r;
     }
 
-    // Returns an array of paths (links between APs) for a given marker.
+    // Returns an array of paths (links between Axes) for a given feature.
     // This predates the addition of stacks; probably no features here which are
     // not in the later functions path(), pathU().
-    function path_pre_Stacks(d) { // d is a marker
+    function path_pre_Stacks(d) { // d is a feature
       let r = [];
-      let z = oa.z, pathMarkers = oa.pathMarkers;
+      let z = oa.z, pathFeatures = oa.pathFeatures;
 
-      for (let k=0; k<oa.apIDs.length-1; k++) {
-        let m_k  = oa.apIDs[k],
-        m_k1 = oa.apIDs[k+1];
-        if (d in z[m_k] && d in z[m_k1]) { // if markers is in both APs
-          //Multiple markers can be in the same path
-          let sLine = markerLine2(k, k+1, d);
-          //pathMarkers[sLine][d] = 1;
-          if(pathMarkers[sLine] != null){
-            pathMarkers[sLine][d] = 1;
+      for (let k=0; k<oa.axisIDs.length-1; k++) {
+        let f_k  = oa.axisIDs[k],
+        f_k1 = oa.axisIDs[k+1];
+        if (d in z[f_k] && d in z[f_k1]) { // if features is in both Axes
+          //Multiple features can be in the same path
+          let sLine = featureLine2(k, k+1, d);
+          //pathFeatures[sLine][d] = 1;
+          if(pathFeatures[sLine] != null){
+            pathFeatures[sLine][d] = 1;
           } else {
-            pathMarkers[sLine]= {};
-            pathMarkers[sLine][d] = 1;
+            pathFeatures[sLine]= {};
+            pathFeatures[sLine][d] = 1;
           }
           r.push(sLine);
         }
         else if (showAll) {
-          if (d in z[m_k]) { 
-            r.push(markerLine(k, d, 5));
+          if (d in z[f_k]) { 
+            r.push(featureLine(k, d, 5));
           }
-          if (d in z[m_k1]) {
-            r.push(markerLine(k+1, d, 5));
+          if (d in z[f_k1]) {
+            r.push(featureLine(k+1, d, 5));
           }
         }
       }
       return r;
     }
 
-    /** Calculate relative marker location in the AP.
-     * Result Y is relative to the stack, not the AP,
-     * because .foreground does not have the AP transform (APs which are ends
+    /** Calculate relative feature location in the axis.
+     * Result Y is relative to the stack, not the axis,
+     * because .foreground does not have the axis transform (Axes which are ends
      * of path will have different Y translations).
      *
-     * @param apID name of AP  (exists in apIDs[])
-     * @param d marker name
+     * @param axisID name of axis  (exists in axisIDs[])
+     * @param d feature name
      */
-    function markerY_(apID, d)
+    function featureY_(axisID, d)
     {
-      // z[p][m].location, actual position of marker m in the AP p, 
-      // y[p](z[p][m].location) is the relative marker position in the svg
-      // ys is used - the y scale for the stacked position&portion of the AP.
-      let ysa = oa.ys[apID],
-      aky = ysa(oa.z[apID][d].location),
-      apY = oa.aps[apID].yOffset();
-      if (! tracedApScale[apID])
+      // z[p][f].location, actual position of feature f in the axis p, 
+      // y[p](z[p][f].location) is the relative feature position in the svg
+      // ys is used - the y scale for the stacked position&portion of the axis.
+      let ysa = oa.ys[axisID],
+      aky = ysa(oa.z[axisID][d].location),
+      axisY = oa.axes[axisID].yOffset();
+      if (! tracedAxisScale[axisID])
       {
-        tracedApScale[apID] = true;
+        tracedAxisScale[axisID] = true;
         /* let yDomain = ysa.domain();
-         console.log("markerY_", apID, d, z[apID][d].location, aky, apY, yDomain, ysa.range()); */
+         console.log("featureY_", axisID, d, z[axisID][d].location, aky, axisY, yDomain, ysa.range()); */
       }
-      return aky + apY;
+      return aky + axisY;
     }
-    /** Calculate relative marker location in the AP
-     * @param k index into apIDs[]
-     * @param d marker name
+    /** Calculate relative feature location in the axis
+     * @param k index into axisIDs[]
+     * @param d feature name
      */
-    function markerY(k, d)
+    function featureY(k, d)
     {
-      return markerY_(oa.apIDs[k], d);
+      return featureY_(oa.axisIDs[k], d);
     }
 
 
-    // Returns an array of paths (links between APs) for a given marker when zoom in starts.
+    // Returns an array of paths (links between Axes) for a given feature when zoom in starts.
     // This is the zoom() equivalent of path_pre_Stacks(); the features here are
     // most likely present in the later path() function/s;  zoom() now uses pathUpdate().
-    function zoomPath(d) { // d is a marker
+    function zoomPath(d) { // d is a feature
       let r = [];
-      let z = oa.z, pathMarkers = oa.pathMarkers, o = oa.o;
-      for (let k=0; k<oa.apIDs.length-1; k++) {
+      let z = oa.z, pathFeatures = oa.pathFeatures, o = oa.o;
+      for (let k=0; k<oa.axisIDs.length-1; k++) {
         //ys[p].domain
-        //z[apIDs[k]][d].location marker location
+        //z[axisIDs[k]][d].location feature location
 
-        if (d in z[oa.apIDs[k]] && d in z[oa.apIDs[k+1]]) { // if markers is in both APs
-          /** relative marker location in the AP of 2 markers, k and k+1 :
-           * k  : markerYk[0]
-           * k+1: markerYk[1]
+        if (d in z[oa.axisIDs[k]] && d in z[oa.axisIDs[k+1]]) { // if features is in both Axes
+          /** relative feature location in the axis of 2 features, k and k+1 :
+           * k  : featureYk[0]
+           * k+1: featureYk[1]
            */
-          let markerYk = [markerY(k, d), markerY(k+1, d)];
+          let featureYk = [featureY(k, d), featureY(k+1, d)];
           // Filter out those paths that either side locates out of the svg
-          if (inRange(markerYk[0], [0, vc.yRange]) &&
-              inRange(markerYk[1], [0, vc.yRange])) {
+          if (inRange(featureYk[0], [0, vc.yRange]) &&
+              inRange(featureYk[1], [0, vc.yRange])) {
             let sLine = line(
-              [[o[oa.apIDs[k]], markerYk[0]],
-               [o[oa.apIDs[k+1]], markerYk[1]]]);
-            if(pathMarkers[sLine] != null){
-              pathMarkers[sLine][d] = 1;
+              [[o[oa.axisIDs[k]], featureYk[0]],
+               [o[oa.axisIDs[k+1]], featureYk[1]]]);
+            if(pathFeatures[sLine] != null){
+              pathFeatures[sLine][d] = 1;
             } else {
-              pathMarkers[sLine]= {};
-              pathMarkers[sLine][d] = 1;
+              pathFeatures[sLine]= {};
+              pathFeatures[sLine][d] = 1;
             }
             r.push(line(
-              [[o[oa.apIDs[k]], markerYk[0]],
-               [o[oa.apIDs[k+1]], markerYk[1]]]));
+              [[o[oa.axisIDs[k]], featureYk[0]],
+               [o[oa.axisIDs[k+1]], featureYk[1]]]));
           } 
           
         } 
@@ -3625,121 +3631,121 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
 //- axis-brush-zoom
-    /** Used when the user completes a brush action on the AP axis.
-     * The datum of g.brush is the ID/name of its AP, call this apID.
-     * If null selection then remove apID from selectedAps[], otherwise add it.
-     * Update selectedMarkers{}, brushedRegions{} : if selectedAps[] is empty, clear them.
-     * Otherwise, set brushedRegions[apID] to the current selection (i.e. of the brush).
-     * Set brushExtents[] to the brushedRegions[] of the APs in selectedAps[].
-     * For each AP in selectedAps[], clear selectedMarkers{} then store in it the
-     * names + locations of markers which are within the brush extent of the AP.
-     * Add circle.apID for those marker locations.
-     * Remove circles of markers (on all APs) outside brushExtents[apID].
-     * For elements in '.foreground > g.flowName > g', set class .faded iff the marker (which
-     * is the datum of the element) is not in the selectedMarkers[] of any AP.
+    /** Used when the user completes a brush action on the axis axis.
+     * The datum of g.brush is the ID/name of its axis, call this axisID.
+     * If null selection then remove axisID from selectedAxes[], otherwise add it.
+     * Update selectedFeatures{}, brushedRegions{} : if selectedAxes[] is empty, clear them.
+     * Otherwise, set brushedRegions[axisID] to the current selection (i.e. of the brush).
+     * Set brushExtents[] to the brushedRegions[] of the Axes in selectedAxes[].
+     * For each axis in selectedAxes[], clear selectedFeatures{} then store in it the
+     * names + locations of features which are within the brush extent of the axis.
+     * Add circle.axisID for those feature locations.
+     * Remove circles of features (on all Axes) outside brushExtents[axisID].
+     * For elements in '.foreground > g.flowName > g', set class .faded iff the feature (which
+     * is the datum of the element) is not in the selectedFeatures[] of any axis.
      *
      * Draw buttons to zoom to the brushExtents (zoomSwitch) or discard the brush : resetSwitch.
      * Called from brushended(), which is called on(end) of axis brush.
      *
      * @param that  the brush g element.
-     * The datum of `that` is the name/ID of the AP which owns the brushed axis.
+     * The datum of `that` is the name/ID of the axis which owns the brushed axis.
      * 
      */
     function brushHelper(that) {
       // Chromosome name, e.g. 32-1B
-      /** name[0] is apID of the brushed axis. name.length should be 1. */
+      /** name[0] is axisID of the brushed axis. name.length should be 1. */
       let name = d3.select(that).data();
-      let brushedApID = name[0];
-      me.sendAction('selectChromById', brushedApID);
+      let brushedAxisID = name[0];
+      me.sendAction('selectChromById', brushedAxisID);
 
       let svgContainer = oa.svgContainer;
       //Remove old circles.
       svgContainer.selectAll("circle").remove();
 
       /* d3.event.selection is null when brushHelper() is called via zoom() ... brush.move.
-       * This causes selectedAps to update here; when an axis is zoomed its brush is removed.
+       * This causes selectedAxes to update here; when an axis is zoomed its brush is removed.
        */
       if (d3.event.selection == null) {
-        selectedAps.removeObject(name[0]);
+        selectedAxes.removeObject(name[0]);
       }
       else {
-        selectedAps.addObject(name[0]); 
+        selectedAxes.addObject(name[0]); 
       }
 
-      // selectedAps is an array containing the IDs of the APs that
+      // selectedAxes is an array containing the IDs of the Axes that
       // have been selected.
       
-      if (selectedAps.length > 0) {
-        console.log("Selected: ", " ", selectedAps.length);
-        // APs have been selected - now work out selected markers.
+      if (selectedAxes.length > 0) {
+        console.log("Selected: ", " ", selectedAxes.length);
+        // Axes have been selected - now work out selected features.
         if (d3.event.selection === null)
-          delete brushedRegions[brushedApID];
+          delete brushedRegions[brushedAxisID];
         else
-          brushedRegions[brushedApID] = d3.event.selection;
-        /** Extent of current brush (applied to y axis of a AP). */
+          brushedRegions[brushedAxisID] = d3.event.selection;
+        /** Extent of current brush (applied to y axis of a axis). */
         let
-        brushExtents = selectedAps.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
+        brushExtents = selectedAxes.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
 
-        selectedMarkers = {};
-        let selectedMarkersSet = new Set();
-        selectedAps.forEach(function(p, i) {
-          /** d3 selection of one of the APs selected by user brush on axis. */
-          let apS = oa.svgContainer.selectAll("#" + eltId(p));
-          selectedMarkers[p] = [];
+        selectedFeatures = {};
+        let selectedFeaturesSet = new Set();
+        selectedAxes.forEach(function(p, i) {
+          /** d3 selection of one of the Axes selected by user brush on axis. */
+          let axes = oa.svgContainer.selectAll("#" + eltId(p));
+          selectedFeatures[p] = [];
           let enable_log = brushExtents[i] === undefined;
             if (enable_log)
             console.log("brushHelper", p, i);
 
           let yp = oa.y[p],
-          ap = oa.aps[p],
-          brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *ap.portion */); });
+          axis = oa.axes[p],
+          brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion */); });
           if (enable_log)
-            console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], ap.portion, brushedDomain);
+            console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
 
-          d3.keys(oa.z[p]).forEach(function(m) {
+          d3.keys(oa.z[p]).forEach(function(f) {
             let z = oa.z;
-            if ((z[p][m].location >= brushedDomain[0]) &&
-                (z[p][m].location <= brushedDomain[1])) {
-              //selectedMarkers[p].push(m);    
-              selectedMarkersSet.add(m);
-              selectedMarkers[p].push(m + " " + z[p][m].location);
-              //Highlight the markers in the brushed regions
-              //o[p], the ap location, z[p][m].location, actual marker position in the AP, 
-              //y[p](z[p][m].location) is the relative marker position in the svg
-              let dot = apS
+            if ((z[p][f].location >= brushedDomain[0]) &&
+                (z[p][f].location <= brushedDomain[1])) {
+              //selectedFeatures[p].push(f);    
+              selectedFeaturesSet.add(f);
+              selectedFeatures[p].push(f + " " + z[p][f].location);
+              //Highlight the features in the brushed regions
+              //o[p], the axis location, z[p][f].location, actual feature position in the axis, 
+              //y[p](z[p][f].location) is the relative feature position in the svg
+              let dot = axes
                 .append("circle")
-                .attr("class", eltClassName(m))
-                .attr("cx",0)   /* was o[p], but g.ap translation does x offset of stack.  */
-                .attr("cy",oa.y[p](z[p][m].location))
+                .attr("class", eltClassName(f))
+                .attr("cx",0)   /* was o[p], but g.axis-outer translation does x offset of stack.  */
+                .attr("cy",oa.y[p](z[p][f].location))
                 .attr("r",2)
                 .style("fill", "red");
-              brushEnableMarkerHover(dot);
+              brushEnableFeatureHover(dot);
               
             } else {
-              let m_ = eltClassName(m);
-              apS.selectAll("circle." + m_).remove();
+              let f_ = eltClassName(f);
+              axes.selectAll("circle." + f_).remove();
             }
           });
         });
-        sendUpdatedSelectedMarkers();
+        sendUpdatedSelectedFeatures();
 
-        function markerNotSelected2(d)
+        function featureNotSelected2(d)
         {
           let sel =
             unique_1_1_mapping && (typeof d != 'string') ?
-            ( selectedMarkersSet.has(d[0]) ||
-              selectedMarkersSet.has(d[1]) )
-            : selectedMarkersSet.has(d);
+            ( selectedFeaturesSet.has(d[0]) ||
+              selectedFeaturesSet.has(d[1]) )
+            : selectedFeaturesSet.has(d);
           /* if (sel)
-            console.log("markerNotSelected2", unique_1_1_mapping, d, selectedMarkersSet); */
+            console.log("featureNotSelected2", unique_1_1_mapping, d, selectedFeaturesSet); */
           return ! sel;
         }
 
-        d3.selectAll(".foreground > g > g").classed("faded", markerNotSelected2);
+        d3.selectAll(".foreground > g > g").classed("faded", featureNotSelected2);
 
-        /** d3 selection of the brushed AP. */
-        let apS = svgContainer.selectAll("#" + eltId(name[0]));
-        let zoomSwitchS = apS
+        /** d3 selection of the brushed axis. */
+        let axes = svgContainer.selectAll("#" + eltId(name[0]));
+        let zoomSwitchS = axes
           .selectAll('g.btn')
           .data([1]);
         let zoomSwitchE = zoomSwitchS
@@ -3771,26 +3777,26 @@ export default Ember.Component.extend(Ember.Evented, {
             .text('Reset');
 
           resetSwitch = zoomSwitch;
-          resetSwitch.on('click',function(){resetZoom(brushedApID);
+          resetSwitch.on('click',function(){resetZoom(brushedAxisID);
           });
           /* this need only be set once, can be set outside this callback.
            * for that, resetZoom() can be moved out of brushHelper():zoomSwitch.on()
            */
-          me.set('resetZooms', function(markers) {
+          me.set('resetZooms', function(features) {
             resetZoom();
           });
           /** Reset 1 or all zooms.
-           * @param apID  AP id to reset; undefined means reset all zoomed axes.
+           * @param axisID  axis id to reset; undefined means reset all zoomed axes.
            */
-          function resetZoom(apID)
+          function resetZoom(axisID)
           {
             let svgContainer = oa.svgContainer;
             let t = svgContainer.transition().duration(750);
-            let apIDs = apID ? [apID] : oa.apIDs;
-            apIDs.forEach(function(d) {
+            let axisIDs = axisID ? [axisID] : oa.axisIDs;
+            axisIDs.forEach(function(d) {
               let idName = axisEltId(d); // axis ids have "a" prefix
               let yDomainMax = d3.max(Object.keys(oa.z[d]), function(a) { return oa.z[d][a].location; } );
-              let  a = oa.aps[d];
+              let  a = oa.axes[d];
               let domain = maybeFlip([0, yDomainMax], a.flipped);
               oa.y[d].domain(domain);
               oa.ys[d].domain(domain);
@@ -3800,48 +3806,48 @@ export default Ember.Component.extend(Ember.Evented, {
             let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
             axisTickS.attr("transform", yAxisTicksScale);
             axisStackChanged(t);
-            me.trigger("zoomedAxis", [apID, t]);
+            me.trigger("zoomedAxis", [axisID, t]);
 
             pathUpdate(t);
-            let resetScope = apID ? apS : svgContainer;
+            let resetScope = axisID ? axes : svgContainer;
               resetScope.selectAll(".btn").remove();
-            if (apID === undefined)
+            if (axisID === undefined)
             {
-              // reset zoom of all axes clears selectedMarkers - check if this was the intention; also should selectedAps be cleared ?
-              selectedMarkers_clear();
+              // reset zoom of all axes clears selectedFeatures - check if this was the intention; also should selectedAxes be cleared ?
+              selectedFeatures_clear();
             }
             zoomed = false; // not used
           }
         });
         
       } else {
-        // brushHelper() is called from brushended() after zoom, with selectedAps.length===0
+        // brushHelper() is called from brushended() after zoom, with selectedAxes.length===0
         // At this time it doesn't make sense to remove the resetSwitch button
 
         // No axis selected so reset fading of paths or circles.
-        console.log("brushHelper", selectedAps.length);
+        console.log("brushHelper", selectedAxes.length);
         // some of this may be no longer required
         if (false)
           svgContainer.selectAll(".btn").remove();
         svgContainer.selectAll("circle").remove();
         d3.selectAll(".foreground > g > g").classed("faded", false);
-        selectedMarkers_clear();
+        selectedFeatures_clear();
         brushedRegions = oa.brushedRegions = {};
       }
 
     } // brushHelper
 
     let targetIdCount = 0;
-    function handleMarkerCircleMouseOver(d, i)
+    function handleFeatureCircleMouseOver(d, i)
     {
       let
       /** d is the axis chromosome id */
         chrName = d,
-      markerName = this.classList[0],
-      hoverMarkers = [markerName],
-      selector = "g.ap#" + eltId(chrName) + " > circle." + markerName,
+      featureName = this.classList[0],
+      hoverFeatures = [featureName],
+      selector = "g.axis-outer#" + eltId(chrName) + " > circle." + featureName,
       targetId = "MC_" + ++targetIdCount;
-      console.log("handleMarkerCircleMouseOver", d, markerName, selector, targetId);
+      console.log("handleFeatureCircleMouseOver", d, featureName, selector, targetId);
       if (false)
       {
       d3.select(selector)
@@ -3853,18 +3859,18 @@ export default Ember.Component.extend(Ember.Evented, {
         toolTip.show(d, i);
         targetId = "devel-visible";
       }
-      //  me.set("axisMarkerTargetId", targetId);
+      //  me.set("axisFeatureTargetId", targetId);
       Ember.run.once(function() {
-        me.set("hoverMarkers", hoverMarkers);
-        // me.set("axisMarkerCircleHover", true);
+        me.set("hoverFeatures", hoverFeatures);
+        // me.set("axisFeatureCircleHover", true);
       });
     }
-    function handleMarkerCircleMouseOut(d, i)
+    function handleFeatureCircleMouseOut(d, i)
     {
       if (false)
       Ember.run.debounce(
         function() {
-          me.set("axisMarkerCircleHover", false);
+          me.set("axisFeatureCircleHover", false);
         },
         10000);
       else
@@ -3873,43 +3879,43 @@ export default Ember.Component.extend(Ember.Evented, {
         Ember.run.debounce(hidePathHoverToolTip, 1000);
       }
     }
-    function brushEnableMarkerHover(circleSelection)
+    function brushEnableFeatureHover(circleSelection)
     {
       circleSelection
-        .on("mouseover", handleMarkerCircleMouseOver)
-        .on("mouseout", handleMarkerCircleMouseOut);
+        .on("mouseover", handleFeatureCircleMouseOver)
+        .on("mouseout", handleFeatureCircleMouseOut);
     }
 
 
-    /** Zoom the y axis of this AP to the given brushExtents[].
+    /** Zoom the y axis of this axis to the given brushExtents[].
      * Called via on(click) of brushHelper() Zoom button (zoomSwitch).
-     * Traverse selected APs, matching only the apName of the brushed AP.
-     * Set the y domain of the AP, from the inverse mapping of the brush extent limits.
+     * Traverse selected Axes, matching only the axisName of the brushed axis.
+     * Set the y domain of the axis, from the inverse mapping of the brush extent limits.
      * Remove the zoom button, redraw the axis, ticks, zoomPath. Move the brush.
      * @param that  the brush g element.
-     * The datum of `that` is the name of the AP which owns the brushed axis.
+     * The datum of `that` is the name of the axis which owns the brushed axis.
      * @param brushExtents  limits of the current brush, to which we are zooming
      */
     function zoom(that, brushExtents) {
-      let apName = d3.select(that).data();
-      if (apName.length == 1)
-        apName = apName[0];
+      let axisName = d3.select(that).data();
+      if (axisName.length == 1)
+        axisName = axisName[0];
       let t = oa.svgContainer.transition().duration(750);
-      selectedAps.map(function(p, i) {
-        if(p == apName){
+      selectedAxes.map(function(p, i) {
+        if(p == axisName){
           let y = oa.y, svgContainer = oa.svgContainer;
-          // possibly selectedAps changed after this callback was registered
-          // The need for brushExtents[] is not clear; it retains earlier values from brushedRegions, but is addressed relative to selectedAps[].
+          // possibly selectedAxes changed after this callback was registered
+          // The need for brushExtents[] is not clear; it retains earlier values from brushedRegions, but is addressed relative to selectedAxes[].
           if (brushExtents[i] === undefined)
           {
-            console.log("zoom() brushExtents[i]===undefined", apName, p, i, "use", brushedRegions[p]);
+            console.log("zoom() brushExtents[i]===undefined", axisName, p, i, "use", brushedRegions[p]);
             brushExtents[i] = brushedRegions[p];
           }
           let yp = y[p],
-          ap = oa.aps[p],
-          brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *ap.portion*/); });
+          axis = oa.axes[p],
+          brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion*/); });
           // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
-          console.log("zoom", apName, p, i, yp.domain(), yp.range(), brushExtents[i], ap.portion, brushedDomain);
+          console.log("zoom", axisName, p, i, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
           y[p].domain(brushedDomain);
           oa.ys[p].domain(brushedDomain);
           axisScaleChanged(p, t, true);
@@ -3918,17 +3924,17 @@ export default Ember.Component.extend(Ember.Evented, {
         }
       });
       axisStackChanged(t);
-      me.trigger("zoomedAxis", [apName, t]);
+      me.trigger("zoomedAxis", [axisName, t]);
     }
-    /** @param p  apName
+    /** @param p  axisName
      * @param updatePaths true : also update foreground paths.
      */
     function axisScaleChanged(p, t, updatePaths)
     {
       let y = oa.y, svgContainer = oa.svgContainer;
       let yp = y[p],
-      ap = oa.aps[p];
-      let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * ap.portion);
+      axis = oa.axes[p];
+      let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * axis.portion);
       let idName = axisEltId(p);
       svgContainer.select("#"+idName).transition(t).call(yAxis);
       if (updatePaths)
@@ -3953,15 +3959,15 @@ export default Ember.Component.extend(Ember.Evented, {
        * maybe have a pull-down selector because multi-value.
        use_path_colour_scale = me.get('pathColourScale'); */
       console.log("dragstarted", this, start_d/*, start_index, start_group*/);
-      let cl = {/*self: this,*/ d: start_d/*, index: start_index, group: start_group, apIDs: apIDs*/};
+      let cl = {/*self: this,*/ d: start_d/*, index: start_index, group: start_group, axisIDs: axisIDs*/};
       let svgContainer = oa.svgContainer;
       svgContainer.classed("axisDrag", true);
       d3.select(this).classed("active", true);
       console.log(d3.event.subject.fx, d3.event.subject.x);
       d3.event.subject.fx = d3.event.subject.x;
-      let apS = svgContainer.selectAll(".stack > .ap");
-      if (apS && trace_stack)
-        logSelection(apS);
+      let axes = svgContainer.selectAll(".stack > .axis-outer");
+      if (axes && trace_stack)
+        logSelection(axes);
       /* Assign class current to dropTarget-s depending on their relation to drag subject.
        add class 'current' to indicate which zones to get .dragHover
        axis being dragged does not get .current
@@ -3970,7 +3976,7 @@ export default Ember.Component.extend(Ember.Evented, {
        current if dg != i && (! middle || ((side == left) == (i < dg)))
        * for (i < dg), use x(d) < startx
        */
-      apS.selectAll('g.ap > g.stackDropTarget').classed
+      axes.selectAll('g.axis-outer > g.stackDropTarget').classed
       ("current",
        function(d /*, index, group*/)
        {
@@ -3987,7 +3993,7 @@ export default Ember.Component.extend(Ember.Evented, {
        });
     }
 
-    /** @param  d (datum) name of AP being dragged.
+    /** @param  d (datum) name of axis being dragged.
      */
     function dragged(d) {
       /** Transition created to manage any changes. */
@@ -3998,12 +4004,12 @@ export default Ember.Component.extend(Ember.Evented, {
       if (dragging++ > 0) { console.log("dragged drop"); return;}
       if (! oa.svgContainer.classed("dragTransition"))
       {
-        // if cursor is in top or bottom dropTarget-s, stack the AP,
-        // otherwise set AP x to cursor x, and sort.
+        // if cursor is in top or bottom dropTarget-s, stack the axis,
+        // otherwise set axis x to cursor x, and sort.
         let dropTargetEnd = currentDropTarget && currentDropTarget.classList.contains("end");
 
         const dropDelaySeconds = 0.5, milli = 1000;
-        /** currentDrop references the apName being dragged and the stack it is dropped into or out of. */
+        /** currentDrop references the axisName being dragged and the stack it is dropped into or out of. */
         let currentDrop = Stack.currentDrop,
         /** Use the start of the drag, or the most recent drop */
         xDistanceRef = (currentDrop && currentDrop.x) ? currentDrop.x.stack : d3.event.subject.fx,
@@ -4021,55 +4027,55 @@ export default Ember.Component.extend(Ember.Evented, {
         {
           if (dropTargetEnd)
           {
-            let targetApName = currentDropTarget.apName,
+            let targetAxisName = currentDropTarget.axisName,
             top = currentDropTarget.classList.contains("top"),
-            zoneParent = Stack.apStackIndex2(targetApName);
+            zoneParent = Stack.axisStackIndex2(targetAxisName);
             /** destination stack */
             let stack = oa.stacks[zoneParent.stackIndex];
             if (! stack.contains(d))
             {
               t = dragTransitionNew();
               /*  .dropIn() and .dropOut() don't redraw the stacks they affect (source and destination), that is done here,
-               * with this exception : .dropIn() redraws the source stack of the AP.
+               * with this exception : .dropIn() redraws the source stack of the axis.
                */
-              stack.dropIn(d, zoneParent.apIndex, top, t);
+              stack.dropIn(d, zoneParent.axisIndex, top, t);
               breakPointEnable = 1;
               deleteAfterDrag();
-              // apChangeGroupElt(d, t);
+              // axisChangeGroupElt(d, t);
               collateStacks();
               // number of stacks has decreased - not essential to recalc the domain.
               Stack.log();
               stack.redraw(t);
             }
-            // set x of dropped apID
+            // set x of dropped axisID
           }
           // For the case : drag ended in a middle zone (or outside any DropTarget zone)
           // else if d is in a >1 stack then remove it else move the stack
           else if ((! currentDrop || !currentDrop.out)
                    && ((xDistance = Math.abs(d3.event.x - xDistanceRef)) > xDropOutDistance))
           {
-            /** dragged AP, source stack */
-            let ap = oa.aps[d], stack = ap.stack;
+            /** dragged axis, source stack */
+            let axis = oa.axes[d], stack = axis.stack;
             if (currentDrop && currentDrop.stack !== stack)
             {
               console.log("dragged", d, currentDrop.stack, stack);
             }
-            if (stack.aps.length > 1)
+            if (stack.axes.length > 1)
             {
               t = dragTransitionNew();
               stack.dropOut(d);
               Stack.log();
-              // apChangeGroupElt(d, t);
+              // axisChangeGroupElt(d, t);
               collateStacks();
               /* if d is not in currentDrop.stack (=== stack), which would be a
                * program error, dropOut() could return false; in that case stack
                * redraw() may have no effect.
                */
               stack.redraw(t);
-              /* if AP is dropped out to a new stack, redraw now for
+              /* if axis is dropped out to a new stack, redraw now for
                * continuity, instead of waiting until dragended().
                */
-              apRedrawText(aps[d]);
+              axisRedrawText(axis);
               /* Following code will set o[d] and sort the Stack into location. */
             }
           }
@@ -4091,7 +4097,7 @@ export default Ember.Component.extend(Ember.Evented, {
         if (o[d] < dragLimit.min) { o[d] = dragLimit.min; }
         else if (o[d] > dragLimit.max) { o[d] = dragLimit.max; }
       }
-      //console.log(apIDs + " " + o[d]);
+      //console.log(axisIDs + " " + o[d]);
       if (this === undefined)
       {
         console.log("dragged this undefined", d);
@@ -4112,17 +4118,17 @@ export default Ember.Component.extend(Ember.Evented, {
       dragging--;
     } // dragged()
 
-    /** Redraw the AP/axis which is being dragged.
+    /** Redraw the axis/axis which is being dragged.
      * Calls pathUpdate() which will mostly change the paths connected to the dragged axis;
      * but when dropIn/dropOut(), paths to other axes can be changed when stacking / adjacencies change.
      *
-     * @param apElt  node/DOM element corresponding of AP. this of dragged()
-     * @param d apName
+     * @param axisElt  node/DOM element corresponding of axis. this of dragged()
+     * @param d axisName
      * @param t transition in which to make changes
      */
-    function draggedAxisRedraw(apElt, d, t)
+    function draggedAxisRedraw(axisElt, d, t)
     {
-      let st0 = d3.select(apElt);
+      let st0 = d3.select(axisElt);
       if (! st0.empty())
       {
         /* if (t === undefined)
@@ -4131,52 +4137,52 @@ export default Ember.Component.extend(Ember.Evented, {
         let st = st0; //.transition();  // t
         // st.ease(d3.easeQuadOut);
         // st.duration(dragTransitionTime);
-        st.attr("transform", Stack.prototype.apTransformO);
-        // zoomed affects transform via path() : apTransform.
+        st.attr("transform", Stack.prototype.axisTransformO);
+        // zoomed affects transform via path() : axisTransform.
         if (trace_path < 2)
           pathUpdate(t /*st*/);
-        //Do we need to keep the brushed region when we drag the AP? probably not.
-        //The highlighted markers together with the brushed regions will be removed once the dragging triggered.
+        //Do we need to keep the brushed region when we drag the axis? probably not.
+        //The highlighted features together with the brushed regions will be removed once the dragging triggered.
         // st0.select(".brush").call(y[d].brush.move,null);
-        //Remove all highlighted Markers.
+        //Remove all highlighted Features.
         oa.svgContainer.selectAll("circle").remove();
       }
     }
 
-    /** Called when apID has been dragged from one stack to another.
-     * It is expected that the group element of the AP, g.ap#<eltId(apID)>,
+    /** Called when axisID has been dragged from one stack to another.
+     * It is expected that the group element of the axis, g.axis-outer#<eltId(axisID)>,
      * needs to be moved from the source g.stack to destination.
-     * @param apID name/id of AP
+     * @param axisID name/id of axis
      * @param t drag transition
      */
-    function apChangeGroupElt(apID, t)
+    function axisChangeGroupElt(axisID, t)
     {
-      let aS_ = "g.ap#" + eltId(apID),
+      let aS_ = "g.axis-outer#" + eltId(axisID),
       aS = t.selectAll(aS_),
       gStack = aS._groups[0][0].parentNode;
       // let p = t.select(function() { return gStack; });
-      // console.log("apChangeGroupElt", apID, t, aS_, aS, p);
-      // compare with ap->stack
-      let ap = oa.aps[apID],
-      stackID = ap.stack && ap.stack.stackID,
+      // console.log("axisChangeGroupElt", axisID, t, aS_, aS, p);
+      // compare with axis->stack
+      let axis = oa.axes[axisID],
+      stackID = axis.stack && axis.stack.stackID,
       /** destination Stack selection */
-      dStack_ = "g.stack#" + stackEltId(ap.stack),
+      dStack_ = "g.stack#" + stackEltId(axis.stack),
       dStackS = t.selectAll(dStack_),
       dStack = dStackS._groups[0][0], // equiv : .node()
       differentStack = gStack !== dStack;
-      console.log("apChangeGroupElt", ap, stackID, dStack_, dStackS, dStack, differentStack);
+      console.log("axisChangeGroupElt", axis, stackID, dStack_, dStackS, dStack, differentStack);
 
       // not currently used - g.stack layer may be discarded.
       if (false && differentStack)
       {
-        var removedGAp = aS.remove(),
-        removedGApNode = removedGAp.node();
-        console.log("removedGAp", removedGAp, removedGApNode);
+        var removedGAxis = aS.remove(),
+        removedGAxisNode = removedGAxis.node();
+        console.log("removedGAxis", removedGAxis, removedGAxisNode);
         let dStackN = dStackS.node();
         // tried .append, .appendChild(), not working yet.
         if (dStackN && dStackN.append)
-          //  dStackN.append(removedGApNode);
-          dStackN.append(function() { return removedGApNode;});
+          //  dStackN.append(removedGAxisNode);
+          dStackN.append(function() { return removedGAxisNode;});
       }
     }
 
@@ -4189,7 +4195,7 @@ export default Ember.Component.extend(Ember.Evented, {
       console.log(p3._groups.length && p3._groups[0][0].__data__);
     }
 
-    /** Update the paths connecting markers present in adjacent stacks.
+    /** Update the paths connecting features present in adjacent stacks.
      * @param t undefined, or a d3 transition in which to perform the update.
      * @param flow  configures the data sources, processing, and output presentation
      */
@@ -4202,7 +4208,7 @@ export default Ember.Component.extend(Ember.Evented, {
       // "exported" to patham().
       pathDataIsLine = flow.direct;
       // console.log("pathUpdate");
-      tracedApScale = {};  // re-enable trace
+      tracedAxisScale = {};  // re-enable trace
       let g = flow.g.selectAll("g");
       let gn;
       /* if (unique_1_1_mapping)
@@ -4211,7 +4217,7 @@ export default Ember.Component.extend(Ember.Evented, {
         console.log("pathUpdate() pathData", flow.name, pathData.length, g.size()); // , pathData
       if (trace_path > 1)
         for (let pi=0; pi < pathData.length; pi++)
-          log_mmaa(pathData[pi]);
+          log_ffaa(pathData[pi]);
       g = g.data(pathData);
       if (trace_path)
         console.log("exit", g.exit().size(), "enter", g.enter().size());
@@ -4229,7 +4235,7 @@ export default Ember.Component.extend(Ember.Evented, {
           let gg0 = gg._groups[0];
           for (let gi=0; (gi < gg0.length) && (gi < 10); gi++)
           {
-            log_mmaa(gg0[gi].__data__);
+            log_ffaa(gg0[gi].__data__);
             console.log(gg0[gi]);
           }
         }
@@ -4276,16 +4282,16 @@ export default Ember.Component.extend(Ember.Evented, {
       //}
       let
         path_ = unique_1_1_mapping ? (pathDataInG ? pathUg : pathU) : path,
-      /** The data of g is marker name, data of path is SVG path string. */
-      keyFn =function(d) { let markerName = markerNameOfPath(this); 
-                           console.log("keyFn", d, this, markerName); 
-                           return markerName; };
-      /* The mmaa data of path's parent g is accessed from path attribute
+      /** The data of g is feature name, data of path is SVG path string. */
+      keyFn =function(d) { let featureName = featureNameOfPath(this); 
+                           console.log("keyFn", d, this, featureName); 
+                           return featureName; };
+      /* The ffaa data of path's parent g is accessed from path attribute
        * functions (i.e. style(stroke), classed(reSelected), gKeyFn(), d, etc.);
        * alternately it could be stored in the path's datum and accessed
        * directly.  This would be needed if there were multiple path's within a
        * g elt.  There is incomplete draft of this (changing the data of path to
-       * mmaa) in branch devel-path-data),
+       * ffaa) in branch devel-path-data),
        *
        * Here the SVG line string is calculated by path_ from the parent g data,
        * and the attr d function is identity (I) to copy the path datum.
@@ -4349,7 +4355,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 //- paths-classes
     /** Get the data corresponding to a path element, from its datum or its parent element's datum.
-     * In the case of using aliases, the parent g's data is [m, m, ap, ap, ...] "mmaa".
+     * In the case of using aliases, the parent g's data is [f, f, axis, axis, ...] "ffaa".
      */
     function dataOfPath(path)
     {
@@ -4359,25 +4365,25 @@ export default Ember.Component.extend(Ember.Evented, {
       da = pa.__data__;
       return da;
     }
-    /** Get the markerName of a path element, from its corresponding data accessed via dataOfPath().
+    /** Get the featureName of a path element, from its corresponding data accessed via dataOfPath().
      */
-    function markerNameOfPath(path)
+    function featureNameOfPath(path)
     {
       let da = dataOfPath(path),
-      markerName = markerNameOfData(da);
-      return markerName;
+      featureName = featureNameOfData(da);
+      return featureName;
     }
-    /** If markerName has an alias group with a marker with an assigned class (colour) then return the classes.
+    /** If featureName has an alias group with a feature with an assigned class (colour) then return the classes.
      * @return undefined otherwise
      */
-    function colouredAg(apName, markerName)
+    function colouredAg(axisName, featureName)
     {
       let classSet,
-      marker = oa.z[apName][markerName],
-      agName = marker.agName;
-      if (agName)
+      feature = oa.z[axisName][featureName],
+      aliasGroupName = feature.aliasGroupName;
+      if (aliasGroupName)
       {
-        classSet = agClasses[agName];
+        classSet = aliasGroupClasses[aliasGroupName];
       }
       return classSet;
     }
@@ -4387,21 +4393,21 @@ export default Ember.Component.extend(Ember.Evented, {
       let colourOrdinal = classSet.values().next().value;
       return colourOrdinal;
     }
-    /** @param apName could be chrName : marker name is looked up via apName,
+    /** @param axisName could be chrName : feature name is looked up via axisName,
      * but intervals might be defined in terms of chrName; which is currently
      * the same thing, but potentially 1 chr could be presented by multiple axes.
-     * see apName2Chr();
+     * see axisName2Chr();
      * @return name of interval, as per makeIntervalName()
      * Later maybe multiple results if intervals overlap.
      */
-    function locationClasses(apName, markerName)
+    function locationClasses(axisName, featureName)
     {
       let classes,
-      m = oa.z[apName][markerName],
-      location = m.location,
-      chrName = apName2Chr(apName),
-      mapChrName = APid2Name(apName) + ":" + chrName,
-      it = intervalTree[apName];
+      f = oa.z[axisName][featureName],
+      location = f.location,
+      chrName = axisName2Chr(axisName),
+      mapChrName = axisId2Name(axisName) + ":" + chrName,
+      it = intervalTree[axisName];
 
       if (it)
         //Find all intervals containing query point
@@ -4409,18 +4415,18 @@ export default Ember.Component.extend(Ember.Evented, {
           /* later return Set or array of classes.  */
           classes = makeIntervalName(mapChrName, interval);
           if (trace_path_colour > 2)
-            console.log("locationClasses", "apName", apName, "mapChrName", mapChrName, "markerName", markerName, ", scaffold/class", classes);
+            console.log("locationClasses", "axisName", axisName, "mapChrName", mapChrName, "featureName", featureName, ", scaffold/class", classes);
         });
       
       return classes;  
     }
-    /** Access markerName/s from d or __data__ of parent g of path.
+    /** Access featureName/s from d or __data__ of parent g of path.
      * Currently only used when (use_path_colour_scale === 4), but aims to be more general.
-     * Lookup markerScaffold to find class, or if (use_path_colour_scale === 4)
+     * Lookup featureScaffold to find class, or if (use_path_colour_scale === 4)
      * also look up colouredAg().  @see use_path_colour_scale
 
-     * The scaffold of a marker was the first use; this has been generalised to a "class";
-     * i.e. marker names are mapped (via colouredMarkers) to class names.
+     * The scaffold of a feature was the first use; this has been generalised to a "class";
+     * i.e. feature names are mapped (via colouredFeatures) to class names.
      * This function is used by stroke (todo) and class functions of path.
      * (based on a blend & update of those 2, mostly a copy of stroke).
      * @param pathElt <path> element which is to be coloured / classed
@@ -4433,25 +4439,25 @@ export default Ember.Component.extend(Ember.Evented, {
       let da = dataOfPath(pathElt);
       /** similar to : (da.length === 4) or unique_1_1_mapping */
       let dataIsMmaa = typeof(da) === "object";
-      let markerName = dataIsMmaa ? da[0] : da, // also @see markerNameOfPath(pathElt)
+      let featureName = dataIsMmaa ? da[0] : da, // also @see featureNameOfPath(pathElt)
       colourOrdinal;
       if (use_path_colour_scale < 4)
       {
-        colourOrdinal = markerName;
+        colourOrdinal = featureName;
       }
       else if (use_path_colour_scale === 4)
       {
-        colourOrdinal = markerScaffold[markerName];
+        colourOrdinal = featureScaffold[featureName];
         /* colour the path if either end has a class mapping defined.
          * if d[0] does not then check d[1].
          */
         if ((colourOrdinal === undefined) && dataIsMmaa
             && (da[0] != da[1]))
         {
-          colourOrdinal = /*markerScaffold[da[0]] ||*/ markerScaffold[da[1]];
+          colourOrdinal = /*featureScaffold[da[0]] ||*/ featureScaffold[da[1]];
         }
         if (trace_path_colour > 2)
-          console.log("markerName", markerName, ", scaffold/class", colourOrdinal);
+          console.log("featureName", featureName, ", scaffold/class", colourOrdinal);
       }
       else if (use_path_colour_scale === 5)
       {
@@ -4459,17 +4465,17 @@ export default Ember.Component.extend(Ember.Evented, {
         // and matching the domain value.
         if (dataIsMmaa)
         {
-          classes = locationClasses(da[2].apName, markerName)
-            || locationClasses(da[3].apName, da[1]);
+          classes = locationClasses(da[2].axisName, featureName)
+            || locationClasses(da[3].axisName, da[1]);
         }
         else
         {
-          let APs = oa.markerAPs[markerName], apName;
+          let Axes = oa.featureAxisSets[featureName], axisName;
           // choose the first chromosome;  may be unique.
-          // if not unique, could colour by the intervals on any of the APs,
-          // but want just the APs which are points on this path.
-          for (apName of APs) { break; }
-          classes = locationClasses(apName, markerName);
+          // if not unique, could colour by the intervals on any of the Axes,
+          // but want just the Axes which are points on this path.
+          for (axisName of Axes) { break; }
+          classes = locationClasses(axisName, featureName);
         }
       }
       if (classes !== undefined)
@@ -4480,15 +4486,15 @@ export default Ember.Component.extend(Ember.Evented, {
       else if (dataIsMmaa)
       {
         /* Like stroke function above, after direct lookup of path end
-         * markers in markerScaffold finds no class defined, lookup via
-         * aliases of end markers - transitive.
+         * features in featureScaffold finds no class defined, lookup via
+         * aliases of end features - transitive.
          */
-        /* if ! dataIsMmaa then have markerName but no APs; is result of a direct flow,
-         * so colouring by Ag may not be useful.
+        /* if ! dataIsMmaa then have featureName but no Axes; is result of a direct flow,
+         * so colouring by AliasGroup may not be useful.
          */
-        // collateStacks() / maInMaAG() could record in pu the alias group of the path.
-        let [marker0, marker1, a0, a1] = da;
-        let classSet = colouredAg(a0.apName, marker0) || colouredAg(a1.apName, marker1);
+        // collateStacks() / maInMaAG() could record in pathsUnique the alias group of the path.
+        let [feature0, feature1, a0, a1] = da;
+        let classSet = colouredAg(a0.axisName, feature0) || colouredAg(a1.axisName, feature1);
         classes = classSet;
       }
       return classes;
@@ -4515,18 +4521,18 @@ export default Ember.Component.extend(Ember.Evented, {
             let da = dataOfPath(this);
             /** similar to : (da.length === 4) or unique_1_1_mapping */
             let dataIsMmaa = typeof(da) === "object";
-            let markerName = dataIsMmaa ? da[0] : da, // also @see markerNameOfPath(this)
-            colourOrdinal = markerName;
+            let featureName = dataIsMmaa ? da[0] : da, // also @see featureNameOfPath(this)
+            colourOrdinal = featureName;
             if (use_path_colour_scale === 4)
             {
-              colourOrdinal = markerScaffold[markerName];
+              colourOrdinal = featureScaffold[featureName];
               /* colour the path if either end has a class mapping defined.
                * if d[0] does not then check d[1].
                */
               if ((colourOrdinal === undefined) && dataIsMmaa
                   && (da[0] != da[1]))
               {
-                colourOrdinal = markerScaffold[da[0]] || markerScaffold[da[1]];
+                colourOrdinal = featureScaffold[da[0]] || featureScaffold[da[1]];
               }
             }
             else if (use_path_colour_scale === 5)
@@ -4539,16 +4545,16 @@ export default Ember.Component.extend(Ember.Evented, {
             // path_colour_scale(undefined) maps to pathColourDefault
             if ((colourOrdinal === undefined) && dataIsMmaa)
             {
-              /* if ! dataIsMmaa then have markerName but no APs; is result of a direct flow,
-               * so colouring by Ag may not be useful.
+              /* if ! dataIsMmaa then have featureName but no Axes; is result of a direct flow,
+               * so colouring by AliasGroup may not be useful.
                */
-              // collateStacks() / maInMaAG() could record in pu the alias group of the path.
-              let [marker0, marker1, a0, a1] = da;
-              let classSet = colouredAg(a0.apName, marker0) || colouredAg(a1.apName, marker1);
+              // collateStacks() / maInMaAG() could record in pathsUnique the alias group of the path.
+              let [feature0, feature1, a0, a1] = da;
+              let classSet = colouredAg(a0.axisName, feature0) || colouredAg(a1.axisName, feature1);
               if (classSet)
                 colourOrdinal = classFromSet(classSet);
               if (false && colourOrdinal)
-                console.log(markerName, da, "colourOrdinal", colourOrdinal);
+                console.log(featureName, da, "colourOrdinal", colourOrdinal);
             }
             if (colourOrdinal === undefined)
               colour = undefined;
@@ -4556,7 +4562,7 @@ export default Ember.Component.extend(Ember.Evented, {
               colour = path_colour_scale(colourOrdinal);
 
             if (false && (colour !== pathColourDefault))  // change false to enable trace
-              console.log("stroke", markerName, colourOrdinal, colour);
+              console.log("stroke", featureName, colourOrdinal, colour);
             return colour;
           });
 
@@ -4565,11 +4571,11 @@ export default Ember.Component.extend(Ember.Evented, {
           /** d is path SVG line text */
           let da = dataOfPath(this);
           let dataIsMmaa = typeof(da) === "object";
-          let markerName = dataIsMmaa ? da[0] : da;
+          let featureName = dataIsMmaa ? da[0] : da;
 
-          let pathColour = path_colour_scale(markerName);
+          let pathColour = path_colour_scale(featureName);
 
-          // console.log(markerName, pathColour, d, i, g);
+          // console.log(featureName, pathColour, d, i, g);
           let isReSelected = pathColour !== pathColourDefault;
           return isReSelected;
         });
@@ -4602,7 +4608,7 @@ export default Ember.Component.extend(Ember.Evented, {
           }
           else if (false)
           {
-            console.log("class", this, markerNameOfPath(this), markerScaffold, scaffold, c, d);
+            console.log("class", this, featureNameOfPath(this), featureScaffold, scaffold, c, d);
           }
 
           return c;
@@ -4661,7 +4667,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     /** recalculate stacks X position and show via transition
      * @param changedNum  true means the number of stacks has changed.
-     * @param t undefined or transition to use for apTransformO change
+     * @param t undefined or transition to use for axisTransformO change
      */
     function stacksAdjust(changedNum, t)
     {
@@ -4672,7 +4678,7 @@ export default Ember.Component.extend(Ember.Evented, {
       {
         if (t === undefined)
           t = d3.transition().duration(dragTransitionTime);
-        t.selectAll(".ap").attr("transform", Stack.prototype.apTransformO);
+        t.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
         if (svgContainer)
           oa.stacks.forEach(function (s) { s.redrawAdjacencies(); });
       }
@@ -4701,11 +4707,11 @@ export default Ember.Component.extend(Ember.Evented, {
       deleteAfterDrag();
       // in the case of dropOut(),
       // number of stacks has increased - need to recalc the domain, so that
-      // x is defined for this AP.
+      // x is defined for this axis.
       //
-      // Order of apIDs may have changed so need to redefine x and o.
+      // Order of axisIDs may have changed so need to redefine x and o.
       updateXScale();
-      // if caching, recalc : collateApPositions();
+      // if caching, recalc : collateAxisPositions();
       
       let stacks = oa.stacks;
       stacks.sortLocation();
@@ -4716,7 +4722,7 @@ export default Ember.Component.extend(Ember.Evented, {
       stacks.changed = 0x10;
       let t = stacksAdjust(true, undefined);
       // already done in xScale()
-      // x.domain(apIDs).range(axisXRange);
+      // x.domain(axisIDs).range(axisXRange);
       // stacksAdjust() calls redrawAdjacencies().  Also :
       /* redrawAdjacencies() is called from .redraw(), and is mostly updated
        * during dragged(), but the stacks on either side of the origin of the
@@ -4743,30 +4749,30 @@ export default Ember.Component.extend(Ember.Evented, {
     
 
 //- axis-brush-zoom
-    /** flip the value of markers between the endpoints
-     * @param markers is an array of marker names, created via (zoom) brush,
+    /** flip the value of features between the endpoints
+     * @param features is an array of feature names, created via (zoom) brush,
      * and input via text box
      */
-    this.set('draw_flipRegion', function(markers) {
+    this.set('draw_flipRegion', function(features) {
       let brushedMap, zm,
-      selectedAps = oa.selectedAps;
-      if (selectedAps.length === 0)
-        console.log('draw_flipRegion', 'selectedAps is empty', selectedAps);
-      else if ((brushedMap = selectedAps[0]) === undefined)
-        console.log('draw_flipRegion', 'selectedAps[0] is undefined', selectedAps);
+      selectedAxes = oa.selectedAxes;
+      if (selectedAxes.length === 0)
+        console.log('draw_flipRegion', 'selectedAxes is empty', selectedAxes);
+      else if ((brushedMap = selectedAxes[0]) === undefined)
+        console.log('draw_flipRegion', 'selectedAxes[0] is undefined', selectedAxes);
       else if ((zm = oa.z[brushedMap]) === undefined)
-        console.log('draw_flipRegion', 'z[', brushedMap, '] is undefined', selectedAps, oa.z);
+        console.log('draw_flipRegion', 'z[', brushedMap, '] is undefined', selectedAxes, oa.z);
       else
-      if (markers.length)
+      if (features.length)
       {
-        /** the first and last markers have the minimum and maximum position
+        /** the first and last features have the minimum and maximum position
          * values, except where flipRegion has already been applied. */
         let limits = [undefined, undefined];
-        limits = markers
-          .reduce(function(limits_, mi) {
-            // console.log("reduce", mi, limits_, zm[mi]);
-            // marker aliases may be in the selection and yet not in the map
-            let zmi = zm[mi];
+        limits = features
+          .reduce(function(limits_, fi) {
+            // console.log("reduce", fi, limits_, zm[fi]);
+            // feature aliases may be in the selection and yet not in the map
+            let zmi = zm[fi];
             if (zmi)
             {
               let l = zmi.location;
@@ -4780,7 +4786,7 @@ export default Ember.Component.extend(Ember.Evented, {
           }, limits);
         // console.log("limits", limits);
 
-        let m0 = markers[0], m1 = markers[markers.length-1],
+        let f0  = features[0], f1  = features[features.length-1],
         locationRange = limits,
         /** delta of the locationRange interval */
         rd = locationRange[1] - locationRange[0],
@@ -4790,11 +4796,11 @@ export default Ember.Component.extend(Ember.Evented, {
           // console.log("invert", l, i);
           return i;
         };
-        console.log("draw_flipRegion", /*markers, zm,*/ m0, m1, locationRange, rd);
-        d3.keys(zm).forEach(function(marker) {
-          let marker_ = zm[marker], ml = marker_.location;
-          if (locationRange[0] <= ml && ml <= locationRange[1])
-            marker_.location = invert(ml);
+        console.log("draw_flipRegion", /*features, zm,*/ f0 , f1 , locationRange, rd);
+        d3.keys(zm).forEach(function(feature) {
+          let feature_ = zm[feature], fl = feature_.location;
+          if (locationRange[0] <= fl && fl <= locationRange[1])
+            feature_.location = invert(fl);
         });
         pathUpdate(undefined);
       }
@@ -4803,13 +4809,13 @@ export default Ember.Component.extend(Ember.Evented, {
 //- paths-classes
     this.set('clearScaffoldColours', function() {
       console.log("clearScaffoldColours");
-      markerScaffold = {}, scaffolds = new Set(), scaffoldMarkers = {};
-      agClasses = {};
+      featureScaffold = {}, scaffolds = new Set(), scaffoldFeatures = {};
+      aliasGroupClasses = {};
       pathColourUpdate(undefined, undefined);
     });
 
 //- axis-menu
-    let apTitleSel = "g.ap > text";
+    let apTitleSel = "g.axis-outer > text";
       function glyphIcon(className, id, glyphiconName, href) {
         return ''
           + '<span class="glyphicon ' + glyphiconName + '" aria-hidden=true></span>';
@@ -4826,13 +4832,13 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
 
-    /** Setup hover menus over AP titles.
+    /** Setup hover menus over axis titles.
      * So far used just for Delete
      * @see based on similar configurejQueryTooltip()
      */
-    function  configureAPtitleMenu(apName) {
+    function  configureAxisTitleMenu(axisName) {
       if (trace_gui)
-      console.log("configureAPtitleMenu", apName, this, this.outerHTML);
+      console.log("configureAxisTitleMenu", axisName, this, this.outerHTML);
         let node_ = this;
         Ember.$(node_)
         .popover({
@@ -4841,7 +4847,7 @@ export default Ember.Component.extend(Ember.Evented, {
           delay: {show: 200, hide: 1500},
           container: 'div#holder',
           placement : "auto bottom",
-          // title : apName,
+          // title : axisName,
           html: true,
           /*
            *	╳	9587	2573	 	BOX DRAWINGS LIGHT DIAGONAL CROSS
@@ -4850,10 +4856,10 @@ export default Ember.Component.extend(Ember.Evented, {
            *	⇲	8690	21F2	 	SOUTH EAST ARROW TO CORNER
            */
           content : ""
-            + iconButton("DeleteMap", "Delete_" + apName, "&#x2573;" /*glyphicon-sound-7-1*/, "glyphicon-remove-sign", "#")
-            + iconButton("FlipAxis", "Flip_" + apName, "&#x21C5;" /*glyphicon-bell*/, "glyphicon-retweet", "#")
-            + iconButton("PerpendicularAxis", "Perpendicular_" + apName, "&#x21B7;" /*glyphicon-bell*/, "glyphicon-retweet", "#")
-            + iconButton("ExtendMap", "Extend_" + apName, "&#x21F2;" /*glyphicon-star*/, "glyphicon-arrow-right", "#")
+            + iconButton("DeleteMap", "Delete_" + axisName, "&#x2573;" /*glyphicon-sound-7-1*/, "glyphicon-remove-sign", "#")
+            + iconButton("FlipAxis", "Flip_" + axisName, "&#x21C5;" /*glyphicon-bell*/, "glyphicon-retweet", "#")
+            + iconButton("PerpendicularAxis", "Perpendicular_" + axisName, "&#x21B7;" /*glyphicon-bell*/, "glyphicon-retweet", "#")
+            + iconButton("ExtendMap", "Extend_" + axisName, "&#x21F2;" /*glyphicon-star*/, "glyphicon-arrow-right", "#")
         })
         // .popover('show');
       
@@ -4867,38 +4873,38 @@ export default Ember.Component.extend(Ember.Evented, {
             console.log(deleteButtonS.empty(), deleteButtonS.node());
           deleteButtonS
             .on('click', function (buttonElt /*, i, g*/) {
-              console.log("delete", apName, this);
-              let ap = oa.aps[apName], stack = ap && ap.stack;
-              // aps[apName] is deleted by removeStacked1() 
-              let stackID = Stack.removeStacked(apName);
-              deleteAPfromapIDs(apName);
-              removeAPmaybeStack(apName, stackID, stack);
-              me.send('mapsToViewDelete', apName);
-              // filter apName out of selectedMarkers and selectedAps
-              selectedMarkers_removeAp(apName);
-              sendUpdatedSelectedMarkers();
+              console.log("delete", axisName, this);
+              let axis = oa.axes[axisName], stack = axis && axis.stack;
+              // axes[axisName] is deleted by removeStacked1() 
+              let stackID = Stack.removeStacked(axisName);
+              deleteAxisfromAxisIDs(axisName);
+              removeAxisMaybeStack(axisName, stackID, stack);
+              me.send('mapsToViewDelete', axisName);
+              // filter axisName out of selectedFeatures and selectedAxes
+              selectedFeatures_removeAxis(axisName);
+              sendUpdatedSelectedFeatures();
             });
           let flipButtonS = d3.select("button.FlipAxis");
           flipButtonS
             .on('click', function (buttonElt /*, i, g*/) {
-              console.log("flip", apName, this);
-              let ap = oa.aps[apName], ya = oa.y[apName], ysa=oa.ys[apName],
+              console.log("flip", axisName, this);
+              let axis = oa.axes[axisName], ya = oa.y[axisName], ysa=oa.ys[axisName],
               domain = maybeFlip(ya.domain(), true);
-              ap.flipped = ! ap.flipped;
+              axis.flipped = ! axis.flipped;
               ya.domain(domain);
               ysa.domain(domain);
 
               let b = ya.brush;
               b.extent(maybeFlipExtent(b.extent()(), true));
               let t = oa.svgContainer.transition().duration(750);
-              axisScaleChanged(apName, t, true);
+              axisScaleChanged(axisName, t, true);
             });
           let perpendicularButtonS = d3.select("button.PerpendicularAxis");
           perpendicularButtonS
             .on('click', function (buttonElt /*, i, g*/) {
-              console.log("perpendicular", apName, this);
-              let ap = oa.aps[apName];
-              ap.perpendicular = ! ap.perpendicular;
+              console.log("perpendicular", axisName, this);
+              let axis = oa.axes[axisName];
+              axis.perpendicular = ! axis.perpendicular;
 
               oa.showResize(true, true);
             });
@@ -4908,11 +4914,11 @@ export default Ember.Component.extend(Ember.Evented, {
             console.log(extendButtonS.empty(), extendButtonS.node());
           extendButtonS
             .on('click', function (buttonElt /*, i, g*/) {
-              console.log("extend", apName, this);
-              let ap = oa.aps[apName], stack = ap && ap.stack;
-              // toggle ap.extended, which is initially undefined.
-              ap.extended = ! ap.extended;
-              apShowExtend(ap, apName, undefined);
+              console.log("extend", axisName, this);
+              let axis = oa.axes[axisName], stack = axis && axis.stack;
+              // toggle axis.extended, which is initially undefined.
+              axis.extended = ! axis.extended;
+              axisShowExtend(axis, axisName, undefined);
             });
 
         });
@@ -4937,15 +4943,15 @@ export default Ember.Component.extend(Ember.Evented, {
 
         if (widthChanged)
         {
-        t.selectAll(".ap").attr("transform", Stack.prototype.apTransformO);
+        t.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
           // also xDropOutDistance_update (),  update DropTarget().size
         }
 
         if (heightChanged)
         {
           stacksAdjustY();
-          oa.apIDs.forEach(function(apName) {
-            axisScaleChanged(apName, t, false);
+          oa.axisIDs.forEach(function(axisName) {
+            axisScaleChanged(axisName, t, false);
           });
           pathUpdate(t /*st*/);
         }
@@ -5002,13 +5008,13 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       );
     }
-    function setupToggleShowSelectedMarkers()
+    function setupToggleShowSelectedFeatures()
     {
-      /* initial value of showSelectedMarkers is true, so .hbs has : checked="checked" */
+      /* initial value of showSelectedFeatures is true, so .hbs has : checked="checked" */
       setupToggle
-      ("checkbox-toggleShowSelectedMarkers",
+      ("checkbox-toggleShowSelectedFeatures",
       function (checked) {
-        showSelectedMarkers = checked;
+        showSelectedFeatures = checked;
         pathUpdate(undefined);
       }
       );
@@ -5062,7 +5068,7 @@ export default Ember.Component.extend(Ember.Evented, {
     function setupVariousControls()
     {
       setupToggleShowAll();
-      setupToggleShowSelectedMarkers();
+      setupToggleShowSelectedFeatures();
       setupPathOpacity();
       setupPathWidth();
       setupSbSizeThresh();
@@ -5167,8 +5173,8 @@ export default Ember.Component.extend(Ember.Evented, {
       // or for text : elt.append()
       elt.innerHTML =
         "<div><h5>" + this.name + "</h5> : " + this.pathData.length + "</div>\n";
-      this.pathData.forEach(function (mmaa) {
-        let s = "<div>" + mmaa2text(mmaa) + "</div>\n";
+      this.pathData.forEach(function (ffaa) {
+        let s = "<div>" + mmaa2text(ffaa) + "</div>\n";
         elt.insertAdjacentHTML('beforeend', s);
       });
     };
@@ -5189,7 +5195,7 @@ export default Ember.Component.extend(Ember.Evented, {
   },
 
   didRender() {
-    // Called on re-render (eg: add another AP) so should call
+    // Called on re-render (eg: add another axis) so should call
     // draw each time.
     //
     let me = this;

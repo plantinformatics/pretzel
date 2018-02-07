@@ -9,8 +9,8 @@ export default Ember.Component.extend(Ember.Evented, {
 
   subComponents : undefined,
 
-  targetEltId : Ember.computed('apID', function() {
-    let id = 'axis2D_' + this.apID;
+  targetEltId : Ember.computed('axisID', function() {
+    let id = 'axis2D_' + this.axisID;
     console.log("targetEltId", this, id);
     return id;
   }),
@@ -59,17 +59,17 @@ export default Ember.Component.extend(Ember.Evented, {
     Ember.run.debounce(this, this.sendZoomed, [], 500);
   },
 
-  /** @param [apID, t] */
-  sendZoomed : function(apID_t)
+  /** @param [axisID, t] */
+  sendZoomed : function(axisID_t)
   {
-    console.log("sendZoomed", apID_t);
-    this.trigger("zoomed", apID_t);
+    console.log("sendZoomed", axisID_t);
+    this.trigger("zoomed", axisID_t);
   },
 
-  /** @param [apID, t] */
-  zoomedAxis : function(apID_t) {
-    console.log("zoomedAxis in components/axis-2d", apID_t);
-    Ember.run.debounce(this, this.sendZoomed, apID_t, 500);
+  /** @param [axisID, t] */
+  zoomedAxis : function(axisID_t) {
+    console.log("zoomedAxis in components/axis-2d", axisID_t);
+    Ember.run.debounce(this, this.sendZoomed, axisID_t, 500);
   },
 
 
@@ -90,23 +90,23 @@ export default Ember.Component.extend(Ember.Evented, {
       else
       {
         this.get('subComponents').pushObject('axis-tracks');
-        console.log("addTracks", this.get('apID'), this.get('subComponents'));
+        console.log("addTracks", this.get('axisID'), this.get('subComponents'));
       }
     },
     addTable : function()
     {
         this.get('subComponents').pushObject('axis-table');
-      console.log("addTable", this.get('apID'), this.get('subComponents'));
+      console.log("addTable", this.get('axisID'), this.get('subComponents'));
     },
     addChart : function()
     {
         this.get('subComponents').pushObject('axis-chart');
-      console.log("addChart", this.get('apID'), this.get('subComponents'));
+      console.log("addChart", this.get('axisID'), this.get('subComponents'));
     },
     addLd : function()
     {
       this.get('subComponents').pushObject('axis-ld');
-      console.log("addLd", this.get('apID'), this.get('subComponents'));
+      console.log("addLd", this.get('axisID'), this.get('subComponents'));
     },
     remove: function(){
       this.remove();
@@ -115,7 +115,7 @@ export default Ember.Component.extend(Ember.Evented, {
   },
 
   didInsertElement() {
-    console.log("axis-2d didInsertElement", this, this.get('apID'));
+    console.log("axis-2d didInsertElement", this, this.get('axisID'));
     this.set('subComponents', []);
   },
 
@@ -125,23 +125,23 @@ export default Ember.Component.extend(Ember.Evented, {
     function resized(width, dx, eltSelector, resizable, resizer,  resizerElt)
     {
       console.log("resized", width, dx, eltSelector, resizable.node(), resizer.node(),  resizerElt);
-      // constructed in apShowExtend()
-      // narrow to : g.ap#id<APid> > g.axis-use
+      // constructed in axisShowExtend()
+      // narrow to : g.axis-outer#id<axisID> > g.axis-use
       let use=d3.select("g.axis-use > use"),
       rect = d3.select("g.axis-use > rect");
       use
         .data([width])
         .attr("transform", function(d) {return "translate(" + d + ",0)";});
       rect.attr("width", width);
-      let useElt = Ember.$(".axis-use"), apID;
-      (useElt.length > 0) && (apID = useElt[0].parentElement.__data__);
+      let useElt = Ember.$(".axis-use"), axisID;
+      (useElt.length > 0) && (axisID = useElt[0].parentElement.__data__);
       currentSize = width; // dx ?
 
       let parentView = me.get('parentView');
       /* Recalculate positions & translations of axes.
        * A possible optimisation : instead, add width change to the x translation of axes to the right of this one.
        */
-      parentView.send('axisWidthResize', apID, width, dx);
+      parentView.send('axisWidthResize', axisID, width, dx);
     };
     function resizeEnded()
     {
