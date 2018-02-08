@@ -2102,6 +2102,9 @@ export default Ember.Component.extend(Ember.Evented, {
       let hoverFeatures;
       /** d is either sLine (pathDataIsLine===true) or array ffaa. */
       let pathDataIsLine = typeof(d) === "string";
+      // don't interrupt dragging with pathHover
+      if (Stack.currentDrag)
+        return;
       if (pathDataIsLine)
       {
         pathFeaturesHash = pathFeatures[d];
