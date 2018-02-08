@@ -64,7 +64,7 @@ export default Ember.Component.extend({
         ],
         colHeaders: [
           'Chromosome',
-          'Marker / Gene',
+          'Feature :<br>Marker / Gene',
           'Position'
         ],
         colWidths: [100, 135, 60],

@@ -410,8 +410,8 @@ highlightMarker	highlightFeature
 (goto-char buffer-edit-start)	(replace-regexp "  gene / marker\\>" "  feature (gene / marker)")
 (goto-char buffer-edit-start)	(replace-regexp "\\<Feature/Gene\\>" "Marker/Gene")
 (goto-char buffer-edit-start)	(replace-regexp "\\<Feature / Gene\\>" "Marker / Gene")
-(goto-char buffer-edit-start)	(replace-regexp "\\<\"Marker/Gene\\>" "\"Feature  - Marker/Gene")
-(goto-char buffer-edit-start)	(replace-regexp "\\<'Marker / Gene\\>" "'Feature : Marker / Gene")
+(goto-char buffer-edit-start)	(replace-regexp "\"Marker/Gene\\>" "\"Feature  - Marker/Gene")
+(goto-char buffer-edit-start)	(replace-regexp "'Marker / Gene\\>" "'Feature : Marker / Gene")
 
 (goto-char buffer-edit-start)	(replace-regexp "\\<highlightMarker\\>" "highlightFeature")
 
