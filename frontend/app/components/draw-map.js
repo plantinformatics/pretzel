@@ -933,6 +933,12 @@ export default Ember.Component.extend(Ember.Evented, {
       let c = oa.cmName[axisName];
       return c.chrName;
     }
+    /** @return chromosome name of axis id, prefixed with mapName. */
+    function axisName2MapChr(axisName)
+    {
+      let c = oa.cmName[axisName];
+      return c && makeMapChrName(c.mapName, c.chrName);
+    }
     function makeMapChrName(mapName, chrName)
     {
       return mapName + ':' + chrName;
@@ -3691,7 +3697,8 @@ export default Ember.Component.extend(Ember.Evented, {
         selectedAxes.forEach(function(p, i) {
           /** d3 selection of one of the Axes selected by user brush on axis. */
           let axes = oa.svgContainer.selectAll("#" + eltId(p));
-          selectedFeatures[p] = [];
+          let mapChrName = axisName2MapChr(p);
+          selectedFeatures[mapChrName] = [];
           let enable_log = brushExtents[i] === undefined;
             if (enable_log)
             console.log("brushHelper", p, i);
@@ -3708,7 +3715,7 @@ export default Ember.Component.extend(Ember.Evented, {
                 (z[p][f].location <= brushedDomain[1])) {
               //selectedFeatures[p].push(f);    
               selectedFeaturesSet.add(f);
-              selectedFeatures[p].push(f + " " + z[p][f].location);
+              selectedFeatures[mapChrName].push(f + " " + z[p][f].location);
               //Highlight the features in the brushed regions
               //o[p], the axis location, z[p][f].location, actual feature position in the axis, 
               //y[p](z[p][f].location) is the relative feature position in the svg
