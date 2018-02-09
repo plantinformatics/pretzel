@@ -4,10 +4,11 @@
 
 import { round_2, checkIsNumber} from '../utils/domCalcs';
 import {  Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId, highlightId  }  from './draw/axis';
+import { variableBands } from '../utils/variableBands';
 
 /*----------------------------------------------------------------------------*/
 
-const trace_stack = 1;
+const trace_stack = 2;
 const trace_updatedStacks = true;
 
 /** Each stack contains 1 or more Axis Pieces (Axes).
@@ -814,7 +815,7 @@ Stack.prototype.redraw = function (t)
   /* tried "end", "start", "end.Dav127".  only "start" works.  refn:
    * https://github.com/d3/d3-transition/blob/master/README.md#transition_on
    */
-  t.on("end interrupt", dragTransitionEnd);
+  t.on("end interrupt", function() { console.log("dragTransitionEnd"); } /*or dragTransitionEnd*/);
   /** to make this work, would have to reparent the Axes - what's the benefit
    * let ts = 
    *   t.selectAll("g.stack#" + eltId(this.stackID) + " > .axis-outer");
@@ -908,8 +909,10 @@ Stack.prototype.extendedWidth = function()
 /*------------------------------------------------------------------------*/
 
 /** Scale to map axis names to x position of axes.
- * sum of stacks, constant inter-space, use max of .extendedWidth().
+ * sum of stacks, constant inter-space,  within each stack use max of .extendedWidth().
  * (combine) 2 scales - map stack key to domain space, then to range.
+ * Sum the stack widths, use .range() to span the free space remaining, and add
+ * a cumulative amount for the stack widths to the left of a given stack.
  * Replaces @see xScale() when axes may be split - .extended
  */
 function xScaleExtend()
@@ -917,37 +920,34 @@ function xScaleExtend()
   /* .extended is measured in the range space (pixels),
    * so calculate space between axes.
    */
-  let count = 0, widthSum = 0;
-  stacks.forEach(
-    function(s){count++; let widthRange = s.extendedWidth(); widthSum += widthRange[1];}
+  /** parallel to stacks[]. */
+  let widthRanges = stacks.map(
+    function(s){ let widthRange = s.extendedWidth(); return widthRange;}
   );
-  let widths = stacks.map(
-    function(s){ let widthRange = s.extendedWidth(); return widthRange[1];}
+  let widths = widthRanges.map(
+    function(widthRange){ return widthRange[1];}
   );
 
   let axisXRange = stacks.vc.axisXRange;
-  if (axisXRange === undefined)
-    console.log("xScaleExtend axisXRange undefined", oa);
-  let rangeWidth = axisXRange[1] - axisXRange[0],
-  paddingInner = rangeWidth*0.10, paddingOuter = rangeWidth*0.05;
-  let gap = (rangeWidth - paddingOuter*2) - widthSum; // total gap
-  if (count > 1)
-    gap =  gap / (count - 1);
-
   let stackDomain = Array.from(stacks.keys()); // was axisIDs
-  let outputs = [], cursor = axisXRange[0];
-  count = 0;
-  stacks.forEach(
-    function(s){
-      count++; let widthRange = s.extendedWidth(); let width = widthRange[1];
-      outputs.push(cursor);
-      cursor += width + gap;
-    }
-  );
-  console.log("xScaleExtend", widths, count, widthSum, axisXRange, paddingInner, paddingOuter, gap, stackDomain, outputs, cursor);
-  return d3.scaleOrdinal().domain(stackDomain).range(outputs);
+  console.log("xScaleExtend", widthRanges, widths, axisXRange, stackDomain);
+  let v = variableBands,  CombinedScale = v();
+  // let gapScale = // d3.scaleOrdinal()
+  CombinedScale
+    .domain(stackDomain)
+  ;
+  CombinedScale
+    .range(stacks.vc.axisXRange)
+  ;
+  CombinedScale.scale
+    .widths(widths)
+  ;
+
+  return CombinedScale;
   // .unknown(axisXRange*0.98) ?
 }
+
+
 
 /*------------------------------------------------------------------------*/
 
@@ -962,6 +962,7 @@ function xScale() {
 }
 
 /** @return the scale of Axis axisID.  */
+//- param axisID seems unnecessary - check this
 function x(axisID)
 {
   let i = Stack.axisStackIndex(axisID);

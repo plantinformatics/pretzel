@@ -42,6 +42,14 @@ function breakPoint()
     --breakPointEnable;
   }
 }
+let breakInDebugger = false;
+function breakToDebugger(a, b)
+{
+  console.log(a, b);
+  if (breakInDebugger)
+    debugger;
+}
+
 
 let flowButtonsSel = "div.drawing-controls > div.flowButtons";
 
@@ -320,8 +328,8 @@ export default Ember.Component.extend(Ember.Evented, {
     this.draw(retHash, undefined, 'dataReceived');
   },
 
-  dataObserver : Ember.on('init',
-   Ember.observer('dataReceived.length', function(sender, key/*, value, rev*/) {
+  dataObserver : /* Ember.on('init',
+   Ember.observer('dataReceived.length',*/ function(sender, key/*, value, rev*/) {
     let me = this;
     // avoid recursion caused by dataReceived.popObject() below
     console.log("dataObserver", (this === sender), this, /*sender,*/ key /*, value, rev*/);
@@ -438,7 +446,9 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     }, 1000);
 
-})),
+   }.observes('dataReceived.length')
+//))
+,
 
 
   /** Draw the Axes (Axis Pieces) and the paths between them.
@@ -1100,7 +1110,7 @@ export default Ember.Component.extend(Ember.Evented, {
           console.log(d, axisId2Name(d), o[d], x(d));
         o[d] = x(d);
         checkIsNumber(oa.o[d]);
-        if (o[d] === undefined) { debugger; console.log(x(d)); }
+        if (o[d] === undefined) { breakToDebugger("collateO"); }
       });
     }
     oa.axisIDs.forEach(function(d){
@@ -1609,7 +1619,12 @@ export default Ember.Component.extend(Ember.Evented, {
       .append("g");
       if (trace_stack)
       {
-        console.log("append g.stack", stackS.size(), stackSd.exit().size());
+        console.log("append g.stack", stackS.size(), stackSd.exit().size(), stackS.node(), stackS.nodes());
+        if (oa.stacks.length > stackSd.size() + stackS.size())
+        {
+          console.log("missed stack", oa.stacks.length, stackSd.size());
+          debugger;
+        }
       }
       /*
     let st = newRender ? stackS :
@@ -4011,7 +4026,7 @@ export default Ember.Component.extend(Ember.Evented, {
       /** X distance from start of drag */
       let xDistance;
       let currentDropTarget = oa.currentDropTarget;
-      if (dragging++ > 0) { console.log("dragged drop"); return;}
+      if (dragging++ > 0) { console.log("dragged drop", dragging); dragging--; return;}
       if (! oa.svgContainer.classed("dragTransition"))
       {
         // if cursor is in top or bottom dropTarget-s, stack the axis,

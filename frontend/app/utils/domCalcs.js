@@ -15,6 +15,9 @@ function round_2(num)
 
 /*----------------------------------------------------------------------------*/
 
+/** can factor this out - also defined in draw-map.js */
+let breakInDebugger = false;
+
 /** Check if the given value is a number, i.e. !== undefined and ! isNaN().
  * @param l value to check
  * @param return the given parameter l, so that the call can be in a function chain.
@@ -24,7 +27,7 @@ function checkIsNumber(l)
   if ((l === undefined) || Number.isNaN(l))
   {
     console.log("checkIsNumber", l);
-    debugger;
+    if (breakInDebugger)    debugger;
   }
   return l;
 }
