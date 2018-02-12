@@ -4788,6 +4788,10 @@ export default Ember.Component.extend(Ember.Evented, {
       let svgContainer = oa.svgContainer;
       //Remove old circles.
       svgContainer.selectAll("circle").remove();
+      let brushedRegions = oa.brushedRegions;
+
+      if (trace_gui)
+        console.log("brushHelper", that, brushedAxisID, selectedAxes, d3.event.selection, brushedRegions);
 
       /* d3.event.selection is null when brushHelper() is called via zoom() ... brush.move.
        * This causes selectedAps to update here; when an axis is zoomed its brush is removed.
