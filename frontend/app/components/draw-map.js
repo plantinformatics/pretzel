@@ -1232,6 +1232,8 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       return s;
     }
+    if (oa.svgRoot === undefined) // i.e. if (newRender)
+    {
     /** undefined, or references to the AP (Stacked) which is currently dropped
      * and the Stack which it is dropped into (dropIn) or out of (dropOut).
      * properties :
@@ -1245,6 +1247,7 @@ export default Ember.Component.extend(Ember.Evented, {
     Stack.currentDrop = undefined;
     /** undefined, or name of the AP which is currently being dragged. */
     Stack.currentDrag = undefined;
+    }
     /** @return true if this.aps[] is empty. */
     Stack.prototype.empty = function ()
     {
@@ -3209,6 +3212,9 @@ export default Ember.Component.extend(Ember.Evented, {
       let hoverMarkers;
       /** d is either sLine (pathDataIsLine===true) or array mmaa. */
       let pathDataIsLine = typeof(d) === "string";
+      // don't interrupt dragging with pathHover
+      if (Stack.currentDrag)
+        return;
       if (pathDataIsLine)
       {
         pathMarkersHash = pathMarkers[d];
