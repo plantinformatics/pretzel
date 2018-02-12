@@ -1057,6 +1057,12 @@ export default Ember.Component.extend(Ember.Evented, {
       let c = oa.cmName[apName];
       return c.chrName;
     }
+    /** @return chromosome name of axis id, prefixed with mapName. */
+    function axisName2MapChr(axisName)
+    {
+      let c = oa.cmName[axisName];
+      return c && makeMapChrName(c.mapName, c.chrName);
+    }
     function makeMapChrName(mapName, chrName)
     {
       return mapName + ':' + chrName;
@@ -4780,7 +4786,8 @@ export default Ember.Component.extend(Ember.Evented, {
         selectedAps.forEach(function(p, i) {
           /** d3 selection of one of the APs selected by user brush on axis. */
           let apS = oa.svgContainer.selectAll("#" + eltId(p));
-          selectedMarkers[p] = [];
+          let mapChrName = axisName2MapChr(p);
+          selectedMarkers[mapChrName] = [];
           let enable_log = brushExtents[i] === undefined;
             if (enable_log)
             console.log("brushHelper", p, i);
@@ -4797,7 +4804,7 @@ export default Ember.Component.extend(Ember.Evented, {
                 (z[p][m].location <= brushedDomain[1])) {
               //selectedMarkers[p].push(m);    
               selectedMarkersSet.add(m);
-              selectedMarkers[p].push(m + " " + z[p][m].location);
+              selectedMarkers[mapChrName].push(m + " " + z[p][m].location);
               //Highlight the markers in the brushed regions
               //o[p], the ap location, z[p][m].location, actual marker position in the AP, 
               //y[p](z[p][m].location) is the relative marker position in the svg
