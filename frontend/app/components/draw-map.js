@@ -841,6 +841,10 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     let featureAxisSets = oa.featureAxisSets || (oa.featureAxisSets = {});
     let
+      /** true enables display of info when mouse hovers over a path.
+       * A subsequent iteration will show reduced hover info in a fixed location below the graph when false.
+       */
+      showPathHover = false,
       /** Draw a horizontal notch at the feature location on the axis,
        * when the feature is not in a axis of an adjacent Stack.
        * Makes the feature location visible, because otherwise there is no path to indicate it.
@@ -2120,7 +2124,7 @@ export default Ember.Component.extend(Ember.Evented, {
       /** d is either sLine (pathDataIsLine===true) or array ffaa. */
       let pathDataIsLine = typeof(d) === "string";
       // don't interrupt dragging with pathHover
-      if (Stack.currentDrag)
+      if (Stack.currentDrag || ! showPathHover)
         return;
       if (pathDataIsLine)
       {
@@ -5035,6 +5039,16 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       );
     }
+    function setupToggleShowPathHover()
+    {
+      /* initial value of showPathHover is false */
+      setupToggle
+      ("checkbox-toggleModePathHover",
+      function (checked) {
+        showPathHover = checked;
+      }
+      );
+    }
     function setupToggleShowAll()
     {
       /* initial value of showAll is true, so .hbs has : checked="checked" */
@@ -5105,6 +5119,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     function setupVariousControls()
     {
+      setupToggleShowPathHover();
       setupToggleShowAll();
       setupToggleShowSelectedFeatures();
       setupPathOpacity();
