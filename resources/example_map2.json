@@ -1,11 +1,11 @@
-{ "geneticmap":
+{ "dataset":
   {
     "name": "MyMap2",
-    "chromosomes":
+    "blocks":
     [
       {
       "name": "MyChr",
-      "markers":
+      "features":
         [
           {
           "name": "markerA",
