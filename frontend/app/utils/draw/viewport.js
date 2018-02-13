@@ -65,11 +65,27 @@ Viewport.prototype.calc = function(oa)
 
 
   divHolder=Ember.$('div#holder');
+  /** @param jqElt  jQuery single DOM element */
+  function eltStylePaddingRect(e)
+  {
+    let s = e.style;
+    return [
+      s.paddingTop, 
+      s.paddingRight,
+      s.paddingBottom,
+      s.paddingLeft
+    ];
+  };
+  let holderElt = Ember.$("#holder")[0],
+  /** standard CSS order, same as margins : top right bottom left */
+  holderPadding = eltStylePaddingRect(holderElt);
   holderWidth = divHolder.width();
+  let topPanelHeight = 100; // px
   /** 	margins : top right bottom left */
   this.margins =
     // 14 was maybe for axisNameHeight, not needed
-    margins = [20/*+14*/+1, 0, 10, 0]; // 10, 10, 10],
+    margins = [20/*+14*/+1, 0, 10, 0] // 10, 10, 10],
+    .map(function (m, i) { return m + holderPadding[i]; });
 
   /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
   this.viewPort =
@@ -81,7 +97,7 @@ Viewport.prototype.calc = function(oa)
 
   /// dimensions of the graph border
   this.graphDim =
-    graphDim = {w: w*0.9, h: h - 2 * this.dropTargetYMargin - axisSelectionHeight - axisNameHeight};
+    graphDim = {w: w*0.9, h: h - 2 * this.dropTargetYMargin - axisSelectionHeight - axisNameHeight - topPanelHeight};
   // layout has changed, no value in this :  - selectedFeaturesTextHeight
 
   this.yRange = 

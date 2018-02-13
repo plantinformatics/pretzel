@@ -1940,6 +1940,8 @@ export default Ember.Component.extend(Ember.Evented, {
       .attr("class", "brush")
       .each(function(d) { d3.select(this).call(oa.y[d].brush); });
 
+    if (highlightFeature)
+    {
     //Setup the gene / feature highlight, enabled by url param highlightFeature.
     let highlightFeatureS =
       d3.select('#holder').selectAll(".highlightFeature")
@@ -1952,7 +1954,7 @@ export default Ember.Component.extend(Ember.Evented, {
     highlightFeatureS.html(highlightFeature)
       .style("left", "" + hmPos[0] + "px")             
       .style("top", "" + hmPos[1] + "px");
-
+    }
 
     // Setup the path hover tool tip.
     let toolTipCreated = ! oa.toolTip;
