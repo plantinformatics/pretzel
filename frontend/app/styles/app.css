@@ -48,7 +48,32 @@ body.ember-application > div.ember-view > div.container
 @media (max-width: 480px) {
 }
 
+/* -------------------------------------------------------------------------- */
 
+/* #holder contains the graph (svg);  it is within .draw-map-container */
+/* Large desktop */
+@media (min-width: 1200px) {
+#holder
+{
+    padding : 50px;
+}
+}
+
+/* Portrait tablet to landscape and desktop */
+@media (min-width: 768px) and (max-width: 979px) {
+#holder
+{
+    padding : 30px;
+}
+}
+
+/* Landscape phone to portrait tablet */
+@media (max-width: 767px) {
+}
+
+/* Landscape phones and down */
+@media (max-width: 480px) {
+}
 
 /* -------------------------------------------------------------------------- */
 /* Handle to resize a panel width. 

@@ -589,6 +589,18 @@ export default Ember.Component.extend(Ember.Evented, {
     /** x range of the axis centres. */
     axisXRange;
 
+  /** @param jqElt  jQuery single DOM element */
+  function eltStylePaddingRect(e)
+  {
+    let s = e.style;
+    return [
+      s.paddingTop, 
+      s.paddingRight,
+      s.paddingBottom,
+      s.paddingLeft
+    ];
+  };
+
     /** Calculate values which depend on the width and height of the DOM element
      * which contains the drawing.  This is used at first render, and when the
      * user resizes the browser tab or clicks a side panel open/close/resize
@@ -605,10 +617,17 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       divHolder=Ember.$('div#holder');
       holderWidth = divHolder.width();
+      let holderElt = divHolder[0],
+      /** standard CSS order, same as margins : top right bottom left */
+      holderPadding = eltStylePaddingRect(holderElt);
+
+      let topPanelHeight = 100; // px
       /** 	margins : top right bottom left */
       this.margins =
         // 14 was maybe for apNameHeight, not needed
-      margins = [20/*+14*/+1, 0, 10, 0]; // 10, 10, 10],
+    margins = [20/*+14*/+1, 0, 10, 0] // 10, 10, 10],
+    .map(function (m, i) { return m + holderPadding[i]; });
+
 
       /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
       this.viewPort =
@@ -620,7 +639,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
       /// dimensions of the graph border
       this.graphDim =
-      graphDim = {w: w*0.9, h: h - 2 * dropTargetYMargin - apSelectionHeight - apNameHeight};
+      graphDim = {w: w*0.9, h: h - 2 * dropTargetYMargin - apSelectionHeight - apNameHeight - topPanelHeight};
       // layout has changed, no value in this :  - selectedMarkersTextHeight
 
       this.yRange = 
@@ -3053,6 +3072,8 @@ export default Ember.Component.extend(Ember.Evented, {
       .attr("class", "brush")
       .each(function(d) { d3.select(this).call(oa.y[d].brush); });
 
+    if (highlightMarker)
+    {
     //Setup the gene / marker highlight, enabled by url param highlightMarker.
     let highlightMarkerS =
       d3.select('#holder').selectAll(".highlightMarker")
@@ -3065,7 +3086,7 @@ export default Ember.Component.extend(Ember.Evented, {
     highlightMarkerS.html(highlightMarker)
       .style("left", "" + hmPos[0] + "px")             
       .style("top", "" + hmPos[1] + "px");
-
+    }
 
     // Setup the path hover tool tip.
     let toolTipCreated = ! oa.toolTip;
