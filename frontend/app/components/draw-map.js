@@ -3728,6 +3728,13 @@ export default Ember.Component.extend(Ember.Evented, {
           let yp = oa.y[p],
           axis = oa.axes[p],
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion */); });
+          if (axis.flipped)
+          {
+            let swap = brushedDomain[0];
+            brushedDomain[0] = brushedDomain[1];
+            brushedDomain[1] = swap;
+          }
+
           if (enable_log)
             console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
 
