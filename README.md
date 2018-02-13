@@ -11,6 +11,12 @@ Funded by the Grains Research Development Corporation (GRDC).
 <img
 src="https://user-images.githubusercontent.com/20571319/36133307-12b81a22-10d1-11e8-8f51-68e52cede1f6.gif" align="center">
 
+NOTE: Genetic maps shown in the alignments on this page are:
+
+Gardner, K. A., Wittern, L. M. and Mackay, I. J. (2016), A highly recombined, high-density, eight-founder wheat MAGIC map reveals extensive segregation distortion and genomic locations of introgression segments. Plant Biotechnol J, 14: 1406–1417. doi:10.1111/pbi.12504
+
+Wang, S., Wong, D., Forrest, K., Allen, A., Chao, S., Huang, B. E., Maccaferri, M., Salvi, S., Milner, S. G., Cattivelli, L., Mastrangelo, A. M., Whan, A., Stephen, S., Barker, G., Wieseke, R., Plieske, J., International Wheat Genome Sequencing Consortium, Lillemo, M., Mather, D., Appels, R., Dolferus, R., Brown-Guedira, G., Korol, A., Akhunova, A. R., Feuillet, C., Salse, J., Morgante, M., Pozniak, C., Luo, M.-C., Dvorak, J., Morell, M., Dubcovsky, J., Ganal, M., Tuberosa, R., Lawley, C., Mikoulitch, I., Cavanagh, C., Edwards, K. J., Hayden, M. and Akhunov, E. (2014), Characterization of polyploid wheat genomic diversity using a high-density 90 000 single nucleotide polymorphism array. Plant Biotechnol J, 12: 787–796. doi:10.1111/pbi.12183
+
 ## Dependencies
 
 ### Database
