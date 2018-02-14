@@ -8,7 +8,7 @@ import { variableBands } from '../utils/variableBands';
 
 /*----------------------------------------------------------------------------*/
 
-const trace_stack = 2;
+const trace_stack = 1;
 const trace_updatedStacks = true;
 
 /** Each stack contains 1 or more Axis Pieces (Axes).

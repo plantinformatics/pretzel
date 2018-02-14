@@ -4363,14 +4363,13 @@ export default Ember.Component.extend(Ember.Evented, {
       }
 
       // .merge() ...
-      if (t === undefined) {t = d3; }
       if (true)
       {
         /** attr d function has not changed, but the data has.
          * even where the datum is the same, the axes may have moved.
          * So update all paths.
          */
-        let t1=flow.g.transition(t),
+        let t1= (t === undefined) ? foreground.select(" g." + flow.name)  : flow.g.transition(t),
         p1 = t1.selectAll("g > path"); // pa
         p1.attr("d", pathDataIsLine ? I : path_);
         if (trace_path > 3)
@@ -4379,6 +4378,7 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       else
       {
+        if (t === undefined) {t = d3; }
         t.selectAll(".foreground > g." + flow.name + "> g > path").attr("d", function(d) { return d; });
         setupMouseHover(
           flow.g.selectAll("g > path")
