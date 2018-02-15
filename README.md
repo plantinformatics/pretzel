@@ -24,7 +24,7 @@ Funded by the Grains Research Development Corporation (GRDC).
 
 ### Axis stacking
 
-<img src="" align="center">
+<img src="https://user-images.githubusercontent.com/20571319/36240958-80b982b2-1267-11e8-95b0-f59b999ead29.gif" align="center">
 
 NOTE: References for the genetic maps shown in the alignments on this page are available at the bottom of this page.
 
