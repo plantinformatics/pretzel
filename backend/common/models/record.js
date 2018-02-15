@@ -26,9 +26,14 @@ module.exports = function(Record) {
     } else if (ctx.isNewInstance) {
       // create
       let clientId = identity.gatherClientId(ctx)
-      if (clientId) ctx.instance.clientId = clientId
+      if (clientId) {
+        ctx.instance.clientId = clientId
+      } else {
+        ctx.instance.public = true
+        ctx.instance.readOnly = false
+      }
       ctx.instance.createdAt = newDate
-      ctx.instance.updatedAt = newDate;
+      ctx.instance.updatedAt = newDate
     }
     next();
   });

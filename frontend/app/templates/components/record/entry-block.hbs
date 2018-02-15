@@ -21,6 +21,15 @@
     </span>
   </div>
 {{else}}
+  {{#if entry.isSelected}}
+  {{else}}
+    {{#link-to "mapview" (query-params mapsToView=entry.blockLink)}}
+      {{elem/button-base
+        classSize='xs'
+        classColour='success'
+        icon='plus'}}
+    {{/link-to}}
+  {{/if}}
   {{entry.name}}
   {{#if entry.datasetId.editable }}
     {{#elem/dropdown-container

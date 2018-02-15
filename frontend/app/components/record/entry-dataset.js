@@ -34,9 +34,7 @@ export default EntryBase.extend({
     else { return true; }
   }),
   notEditing: Ember.computed('editing', function() {
-    let editing = this.get('editing')
-    console.log(editing)
-    return !editing
+    return !this.get('editing')
   }),
   expandIcon: Ember.computed('layout.active', function() {
     let active = this.get('layout.active')

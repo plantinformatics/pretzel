@@ -138,7 +138,7 @@ exports.uploadDataset = (data, models, options, cb) => {
       }
     })
 
-    let reccursive_features = function(new_features_promise) {
+    let recursive_features = function(new_features_promise) {
       return new_features_promise.then(function(features) {
         json_features = []
         features.forEach(function(feature) {
@@ -153,12 +153,12 @@ exports.uploadDataset = (data, models, options, cb) => {
         if (json_features.length == 0) {
           return features
         } else {
-          return reccursive_features(models.Feature.create(json_features, options))
+          return recursive_features(models.Feature.create(json_features, options))
         }
       })
     }
     //create features
-    return reccursive_features(models.Feature.create(json_features, options))
+    return recursive_features(models.Feature.create(json_features, options))
   }).then(function(features) {
     cb(null, dataset_id)
   }).catch(function(e){

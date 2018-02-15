@@ -18,28 +18,6 @@
       {{action "selectBlock" block on="click"}}>
       {{!-- {{elem/icon-base-owner state=block.owner}} --}}
       {{!-- {{elem/icon-visible state=block.public}} --}}
-      <span class="">
-        {{!-- {{elem/button-base
-          classSize='xs'
-          classColour='info'
-          icon='info-sign'
-          onClick=(action "selectBlock" block)}} --}}
-        {{#if block.isSelected}}
-          {{!-- {{#link-to "mapview" (query-params mapsToView=block.blockLink)}}
-            {{elem/button-base
-              classSize='xs'
-              classColour='danger'
-              icon='minus'}}
-          {{/link-to}} --}}
-        {{else}}
-          {{#link-to "mapview" (query-params mapsToView=block.blockLink)}}
-            {{elem/button-base
-              classSize='xs'
-              classColour='success'
-              icon='plus'}}
-          {{/link-to}}
-        {{/if}}
-      </span>
       {{record/entry-block
         entry=block}}
       <p class="list-group-item-text">
