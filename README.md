@@ -8,8 +8,12 @@ Developed by
 
 Funded by the Grains Research Development Corporation (GRDC).
 
+## Features
+
+### Axis re-ordering
+
 <img
-src="https://user-images.githubusercontent.com/20571319/36133307-12b81a22-10d1-11e8-8f51-68e52cede1f6.gif" align="center">
+src="https://user-images.githubusercontent.com/20571319/36240208-2781bdde-1264-11e8-9b25-4393021935e3.gif" align="center">
 
 NOTE: References for the genetic maps shown in the alignments on this page are available at the bottom of this page.
 
