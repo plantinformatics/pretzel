@@ -36,6 +36,14 @@ function breakPoint()
     --breakPointEnable;
   }
 }
+let breakInDebugger = false;
+function breakToDebugger(a, b)
+{
+  console.log(a, b);
+  if (breakInDebugger)
+    debugger;
+}
+
 
 let flowButtonsSel = "div.drawing-controls > div.flowButtons";
 
@@ -303,8 +311,8 @@ export default Ember.Component.extend(Ember.Evented, {
     this.draw(retHash, undefined, 'dataReceived');
   },
 
-  dataObserver : Ember.on('init',
-   Ember.observer('dataReceived.length', function(sender, key/*, value, rev*/) {
+  dataObserver : /* Ember.on('init',
+   Ember.observer('dataReceived.length',*/ function(sender, key/*, value, rev*/) {
     let me = this;
     // avoid recursion caused by dataReceived.popObject() below
     console.log("dataObserver", (this === sender), this, /*sender,*/ key /*, value, rev*/);
@@ -421,7 +429,9 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     }, 1000);
 
-})),
+   }.observes('dataReceived.length')
+//))
+,
 
 
   /** Draw the APs (Axis Pieces) and the paths between them.
@@ -581,6 +591,18 @@ export default Ember.Component.extend(Ember.Evented, {
     /** x range of the axis centres. */
     axisXRange;
 
+  /** @param jqElt  jQuery single DOM element */
+  function eltStylePaddingRect(e)
+  {
+    let s = e.style;
+    return [
+      s.paddingTop, 
+      s.paddingRight,
+      s.paddingBottom,
+      s.paddingLeft
+    ];
+  };
+
     /** Calculate values which depend on the width and height of the DOM element
      * which contains the drawing.  This is used at first render, and when the
      * user resizes the browser tab or clicks a side panel open/close/resize
@@ -597,10 +619,17 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       divHolder=Ember.$('div#holder');
       holderWidth = divHolder.width();
+      let holderElt = divHolder[0],
+      /** standard CSS order, same as margins : top right bottom left */
+      holderPadding = eltStylePaddingRect(holderElt);
+
+      let topPanelHeight = 100; // px
       /** 	margins : top right bottom left */
       this.margins =
         // 14 was maybe for apNameHeight, not needed
-      margins = [20/*+14*/+1, 0, 10, 0]; // 10, 10, 10],
+    margins = [20/*+14*/+1, 0, 10, 0] // 10, 10, 10],
+    .map(function (m, i) { return m + holderPadding[i]; });
+
 
       /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
       this.viewPort =
@@ -612,7 +641,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
       /// dimensions of the graph border
       this.graphDim =
-      graphDim = {w: w*0.9, h: h - 2 * dropTargetYMargin - apSelectionHeight - apNameHeight};
+      graphDim = {w: w*0.9, h: h - 2 * dropTargetYMargin - apSelectionHeight - apNameHeight - topPanelHeight};
       // layout has changed, no value in this :  - selectedMarkersTextHeight
 
       this.yRange = 
@@ -912,6 +941,10 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     let markerAPs = oa.markerAPs || (oa.markerAPs = {});
     let
+      /** true enables display of info when mouse hovers over a path.
+       * A subsequent iteration will show reduced hover info in a fixed location below the graph when false.
+       */
+      showPathHover = false,
       /** Draw a horizontal notch at the marker location on the axis,
        * when the marker is not in a AP of an adjacent Stack.
        * Makes the marker location visible, because otherwise there is no path to indicate it.
@@ -1058,6 +1091,12 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       let c = oa.cmName[apName];
       return c.chrName;
+    }
+    /** @return chromosome name of axis id, prefixed with mapName. */
+    function axisName2MapChr(axisName)
+    {
+      let c = oa.cmName[axisName];
+      return c && makeMapChrName(c.mapName, c.chrName);
     }
     function makeMapChrName(mapName, chrName)
     {
@@ -1228,6 +1267,8 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       return s;
     }
+    if (oa.svgRoot === undefined) // i.e. if (newRender)
+    {
     /** undefined, or references to the AP (Stacked) which is currently dropped
      * and the Stack which it is dropped into (dropIn) or out of (dropOut).
      * properties :
@@ -1241,6 +1282,7 @@ export default Ember.Component.extend(Ember.Evented, {
     Stack.currentDrop = undefined;
     /** undefined, or name of the AP which is currently being dragged. */
     Stack.currentDrag = undefined;
+    }
     /** @return true if this.aps[] is empty. */
     Stack.prototype.empty = function ()
     {
@@ -2183,7 +2225,7 @@ export default Ember.Component.extend(Ember.Evented, {
           console.log(d, APid2Name(d), o[d], x(d));
         o[d] = x(d);
         checkIsNumber(oa.o[d]);
-        if (o[d] === undefined) { debugger; console.log(x(d)); }
+        if (o[d] === undefined) { breakToDebugger("collateO"); }
       });
     }
     oa.apIDs.forEach(function(d){
@@ -2685,7 +2727,12 @@ export default Ember.Component.extend(Ember.Evented, {
       .append("g");
       if (trace_stack)
       {
-        console.log("append g.stack", stackS.size(), stackSd.exit().size());
+        console.log("append g.stack", stackS.size(), stackSd.exit().size(), stackS.node(), stackS.nodes());
+        if (oa.stacks.length > stackSd.size() + stackS.size())
+        {
+          console.log("missed stack", oa.stacks.length, stackSd.size());
+          debugger;
+        }
       }
       /*
     let st = newRender ? stackS :
@@ -3031,6 +3078,8 @@ export default Ember.Component.extend(Ember.Evented, {
       .attr("class", "brush")
       .each(function(d) { d3.select(this).call(oa.y[d].brush); });
 
+    if (highlightMarker)
+    {
     //Setup the gene / marker highlight, enabled by url param highlightMarker.
     let highlightMarkerS =
       d3.select('#holder').selectAll(".highlightMarker")
@@ -3043,7 +3092,7 @@ export default Ember.Component.extend(Ember.Evented, {
     highlightMarkerS.html(highlightMarker)
       .style("left", "" + hmPos[0] + "px")             
       .style("top", "" + hmPos[1] + "px");
-
+    }
 
     // Setup the path hover tool tip.
     let toolTipCreated = ! oa.toolTip;
@@ -3053,7 +3102,9 @@ export default Ember.Component.extend(Ember.Evented, {
         .attr("id","toolTip")
     );
     if (toolTipCreated)
+    {
       me.ensureValue("toolTipCreated", true);
+    }
     toolTip.offset([-15,0]);
     svgRoot.call(toolTip);
 
@@ -3205,6 +3256,9 @@ export default Ember.Component.extend(Ember.Evented, {
       let hoverMarkers;
       /** d is either sLine (pathDataIsLine===true) or array mmaa. */
       let pathDataIsLine = typeof(d) === "string";
+      // don't interrupt dragging with pathHover
+      if (Stack.currentDrag || ! showPathHover)
+        return;
       if (pathDataIsLine)
       {
         pathMarkersHash = pathMarkers[d];
@@ -3267,20 +3321,28 @@ export default Ember.Component.extend(Ember.Evented, {
       });
 
       /** If path-hover currently exists in toolTip, avoid insert error by detaching it while updating html of parent toolTip */
-      /* after commit, search for ph within pt. */
-      let ph = Ember.$('.pathHover'),
-      ph1=ph.detach(),
-      pt=Ember.$('.toolTip.d3-tip#toolTip');
+      let
+	  pt=Ember.$('.toolTip.d3-tip#toolTip'),
+	ph = pt.find('.pathHover');
+	console.log(pt[0], "pathHover:", ph[0] || ph.length);
+	if (ph.length)
+	{
+	    console.log("pathHover detaching");
+	}
+	    let
+	ph1=ph.detach();
 
       listMarkers += '\n<button id="toolTipClose">&#x2573;</button>\n'; // ╳
       toolTip.html(listMarkers);
 
-      let ph2=ph1.appendTo(pt);
-
       toolTip.show(d, i);
+      let ph2=ph1.appendTo(pt);
       Ember.run.once(me, function() {
-        me.set("hoverMarkers", hoverMarkers);
-        me.ensureValue("pathHovered", true);
+	  let ph3= Ember.$('.pathHover');
+	  console.log(".pathHover", ph2[0] || ph2.length, ph3[0] || ph3.length);
+        // me.set("hoverMarkers", hoverMarkers);
+        // me.ensureValue("pathHovered", true);
+        me.trigger("pathHovered", true, hoverMarkers);
       });
       Ember.run.later(me, function() {
         setupToolTipMouseHover();
@@ -3293,7 +3355,8 @@ export default Ember.Component.extend(Ember.Evented, {
       if (! me.get('toolTipHovered'))
       {
         toolTip.hide();
-        me.ensureValue("pathHovered", false);
+        // me.ensureValue("pathHovered", false);
+        me.trigger("pathHovered", false);
       }
       }, 1000);
     }
@@ -4752,6 +4815,10 @@ export default Ember.Component.extend(Ember.Evented, {
       let svgContainer = oa.svgContainer;
       //Remove old circles.
       svgContainer.selectAll("circle").remove();
+      let brushedRegions = oa.brushedRegions;
+
+      if (trace_gui)
+        console.log("brushHelper", that, brushedAxisID, selectedAxes, d3.event.selection, brushedRegions);
 
       /* d3.event.selection is null when brushHelper() is called via zoom() ... brush.move.
        * This causes selectedAps to update here; when an axis is zoomed its brush is removed.
@@ -4782,7 +4849,8 @@ export default Ember.Component.extend(Ember.Evented, {
         selectedAps.forEach(function(p, i) {
           /** d3 selection of one of the APs selected by user brush on axis. */
           let apS = oa.svgContainer.selectAll("#" + eltId(p));
-          selectedMarkers[p] = [];
+          let mapChrName = axisName2MapChr(p);
+          selectedMarkers[mapChrName] = [];
           let enable_log = brushExtents[i] === undefined;
             if (enable_log)
             console.log("brushHelper", p, i);
@@ -4790,6 +4858,13 @@ export default Ember.Component.extend(Ember.Evented, {
           let yp = oa.y[p],
           ap = oa.aps[p],
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *ap.portion */); });
+          if (ap.flipped)
+          {
+            let swap = brushedDomain[0];
+            brushedDomain[0] = brushedDomain[1];
+            brushedDomain[1] = swap;
+          }
+
           if (enable_log)
             console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], ap.portion, brushedDomain);
 
@@ -4799,7 +4874,7 @@ export default Ember.Component.extend(Ember.Evented, {
                 (z[p][m].location <= brushedDomain[1])) {
               //selectedMarkers[p].push(m);    
               selectedMarkersSet.add(m);
-              selectedMarkers[p].push(m + " " + z[p][m].location);
+              selectedMarkers[mapChrName].push(m + " " + z[p][m].location);
               //Highlight the markers in the brushed regions
               //o[p], the ap location, z[p][m].location, actual marker position in the AP, 
               //y[p](z[p][m].location) is the relative marker position in the svg
@@ -5091,7 +5166,7 @@ export default Ember.Component.extend(Ember.Evented, {
       /** X distance from start of drag */
       let xDistance;
       let currentDropTarget = oa.currentDropTarget;
-      if (dragging++ > 0) { console.log("dragged drop"); return;}
+      if (dragging++ > 0) { console.log("dragged drop", dragging); dragging--; return;}
       if (! oa.svgContainer.classed("dragTransition"))
       {
         // if cursor is in top or bottom dropTarget-s, stack the AP,
@@ -5430,14 +5505,13 @@ export default Ember.Component.extend(Ember.Evented, {
       }
 
       // .merge() ...
-      if (t === undefined) {t = d3; }
       if (true)
       {
         /** attr d function has not changed, but the data has.
          * even where the datum is the same, the axes may have moved.
          * So update all paths.
          */
-        let t1=flow.g.transition(t),
+        let t1= (t === undefined) ? foreground.select(" g." + flow.name)  : flow.g.transition(t),
         p1 = t1.selectAll("g > path"); // pa
         p1.attr("d", pathDataIsLine ? I : path_);
         if (trace_path > 3)
@@ -5446,6 +5520,7 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       else
       {
+        if (t === undefined) {t = d3; }
         t.selectAll(".foreground > g." + flow.name + "> g > path").attr("d", function(d) { return d; });
         setupMouseHover(
           flow.g.selectAll("g > path")
@@ -6098,6 +6173,16 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       );
     }
+    function setupToggleShowPathHover()
+    {
+      /* initial value of showPathHover is false */
+      setupToggle
+      ("checkbox-toggleModePathHover",
+      function (checked) {
+        showPathHover = checked;
+      }
+      );
+    }
     function setupToggleShowAll()
     {
       /* initial value of showAll is true, so .hbs has : checked="checked" */
@@ -6168,6 +6253,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     function setupVariousControls()
     {
+      setupToggleShowPathHover();
       setupToggleShowAll();
       setupToggleShowSelectedMarkers();
       setupPathOpacity();
