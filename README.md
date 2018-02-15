@@ -44,7 +44,7 @@ sudo npm install bower -g
 Clone the Github repository:
 
 ```
-git clone https://github.com/gabrielkg/Dav127.git
+git clone https://github.com/plantinformatics/pretzel.git
 ```
 
 ### Install Ember dependencies
