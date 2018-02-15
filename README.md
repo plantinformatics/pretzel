@@ -12,8 +12,19 @@ Funded by the Grains Research Development Corporation (GRDC).
 
 ### Axis re-ordering
 
-<img
-src="https://user-images.githubusercontent.com/20571319/36240208-2781bdde-1264-11e8-9b25-4393021935e3.gif" align="center">
+<img src="https://user-images.githubusercontent.com/20571319/36240208-2781bdde-1264-11e8-9b25-4393021935e3.gif" align="center">
+
+### Axis flipping
+
+<img src="https://user-images.githubusercontent.com/20571319/36240360-3b5db6fe-1265-11e8-9675-97b8bc9c8f07.gif" align="center">
+
+### Zoom
+
+<img src="https://user-images.githubusercontent.com/20571319/36240487-2a2b5840-1266-11e8-9d71-fe4d275c4adb.gif" align="center">
+
+### Axis stacking
+
+<img src="" align="center">
 
 NOTE: References for the genetic maps shown in the alignments on this page are available at the bottom of this page.
 
