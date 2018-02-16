@@ -39,6 +39,6 @@
   ],
   "methods": {},
   "scope": {
-    "include": ["annotations", "intervals", "workspaces"]
+    "include": ["annotations", "intervals"]
   }
 }

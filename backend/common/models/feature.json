@@ -22,7 +22,7 @@
   },
   "validations": [],
   "relations": {
-    "block": {
+    "workspace": {
       "type": "belongsTo",
       "model": "Workspace"
     },

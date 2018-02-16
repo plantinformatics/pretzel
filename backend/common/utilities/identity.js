@@ -33,7 +33,7 @@ exports.queryFilterAccessible = (ctx) => {
   if (!ctx.query) {
     ctx.query = {};
   }
-  let where = {or: [{clientId}, {public: true}]};
+  let where = {or: [{clientId: clientId}, {public: true}]};
   if (ctx.query.where) {
     where = {and: [where, ctx.query.where]}
   }

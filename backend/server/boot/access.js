@@ -87,8 +87,9 @@ module.exports = function(app) {
     if (context.property == 'find' ||
       context.property ==  'create' ||
       context.property == 'upload' ||
-      context.property == 'tableUpload'||
-      context.property == 'createComplete') {
+      context.property == 'tableUpload' ||
+      context.property == 'createComplete' ||
+      context.property == 'search') {
       // allow find, create and upload requests
       return process.nextTick(() => cb(null, true))
     }
