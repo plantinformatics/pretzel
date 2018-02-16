@@ -30,13 +30,18 @@ function eltWidthResizable(eltSelector, filter, resized)
   /** refn : meetamit https://stackoverflow.com/a/25792309  */
   let resizable = d3.select(eltSelector);
 
-  let resizer = resizable.select('.resizer'),
-
-  /** assumes single '.resizer', or they all have some flex-grow. */
-  resizable_flex_grow = resizable.node().style['flex-grow'];
+    let resizer = resizable.select('.resizer');
 
   if ((resizable.node() === null) || (resizer.node() === null))
+    {
     console.log("eltWidthResizable() resizer=", resizer, eltSelector, resizable.node(), resizer.node());
+      return;
+  }
+    /* instead of return: else { ...  } */
+
+  /** assumes single '.resizer', or they all have some flex-grow. */
+let
+  resizable_flex_grow = resizable.node().style['flex-grow'];
 
   let startX;
   let dragResize = d3.drag()  // d3 v3: was .behavior
@@ -73,15 +78,16 @@ function eltWidthResizable(eltSelector, filter, resized)
   let w =
     Ember.$( window );
   console.log(w);
-  w.resize(function() {
+    w.resize(function(e) {
+        console.log("w.resize", e); // 'this' is Window
     /*  .resize() may apply some debounce also - refn https://api.jquery.com/resize/.
      * Seems that the version used is frontend/bower_components/jquery/dist/jquery.js
      * (noting also bower_components/jquery-ui/ui/widgets/resizable.js).
      */
-    Ember.run.debounce(resizeEnd, 300);
+      Ember.run.debounce(resizeEnd, 300);
   });
   function resizeEnd() { 
-    console.log("eltWidthResizable window resize", eltSelector, resizable_flex_grow);
+      console.log("eltWidthResizable window resize", eltSelector, resizable_flex_grow);
     logWindowDimensions(window, 'drag');
     resizable.style('flex-grow', resizable_flex_grow);
   };

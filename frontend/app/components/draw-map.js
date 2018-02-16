@@ -1480,9 +1480,18 @@ export default Ember.Component.extend(Ember.Evented, {
         // this.resize.bind(oa);
         function() { Ember.run.debounce(oa, me.resize, 500); };
 
-      if (false)  // less fine, only detects window-level resize, and should not be needed
-       d3.select(window)
+        // This detects window resize, caused by min-/max-imise/full-screen.
+      if (true)
+      d3.select(window)
         .on('resize', resizeThis);
+        else  // also works, can drop if further testing doesn't indicate one is better.
+            Ember.$( window )
+            .resize(function(e) {
+                console.log("window resize", e);
+                // see notes in domElements.js regarding  .resize() debounce
+                Ember.run.debounce(resizeThis, 300);
+            });
+
       /* 2 callbacks on window resize, register in the (reverse) order that they
        * need to be called (reorganise this).
        * Revert .resizable flex-grow before Viewport().calc() so the latter gets the new size.  */
