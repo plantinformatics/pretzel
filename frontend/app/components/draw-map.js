@@ -1478,24 +1478,30 @@ export default Ember.Component.extend(Ember.Evented, {
 
       let resizeThis =
         // this.resize.bind(oa);
-        function() { Ember.run.debounce(oa, me.resize, 500); };
+              function(transition) {
+                  console.log("resizeThis", transition);
+                  Ember.run.debounce(oa, me.resize, [transition], 500);
+              };
+        /** d3 dispatch.on() does not take arguments, and similarly for eltWidthResizable() param resized. */
+        function resizeThisWithTransition() { resizeThis(true); }
+        function resizeThisWithoutTransition() { resizeThis(false); }
 
         // This detects window resize, caused by min-/max-imise/full-screen.
       if (true)
       d3.select(window)
-        .on('resize', resizeThis);
+        .on('resize', resizeThisWithTransition);
         else  // also works, can drop if further testing doesn't indicate one is better.
             Ember.$( window )
             .resize(function(e) {
                 console.log("window resize", e);
                 // see notes in domElements.js regarding  .resize() debounce
-                Ember.run.debounce(resizeThis, 300);
+                Ember.run.debounce(resizeThisWithTransition, 300);
             });
 
       /* 2 callbacks on window resize, register in the (reverse) order that they
        * need to be called (reorganise this).
        * Revert .resizable flex-grow before Viewport().calc() so the latter gets the new size.  */
-      eltWidthResizable('.resizable', undefined, resizeThis);
+      eltWidthResizable('.resizable', undefined, resizeThisWithoutTransition);
     }
     else
       svgContainer = oa.svgContainer;
@@ -5291,10 +5297,14 @@ export default Ember.Component.extend(Ember.Evented, {
     });
   },
 
-  resize() {
+    resize : function() {
     console.log("resize");
+        /** when called via .observes(), 'this' is draw-map object.  When called
+         * via Ember.run.debounce(oa, me.resize, ), 'this' is oa.
+         */
+        let layoutChanged = (arguments.length === 2),
+            oa =  layoutChanged ? this.oa : this;
     // logWindowDimensions('', oa.vc.w);  // defined in utils/domElements.js
-    let oa = this;
     function resizeDrawing() { 
       oa.vc.calc(oa);
       // rerender each individual element with the new width+height of the parent node
@@ -5304,13 +5314,24 @@ export default Ember.Component.extend(Ember.Evented, {
        * already resized the <svg>, so a transition looks like 1 step back and 2
        * steps forward, hence pass transition=false to showResize().
       */
-      oa.showResize(true, true, false);
+      oa.showResize(true, true, layoutChanged);
     }
-    // Currently debounce-d in resizeThis(), so call directly here.
-    resizeDrawing();
-    // Ember.run.debounce(resizeDrawing, 300);  // 0.3sec
+        console.log("oa.vc", oa.vc, arguments);
+        if (oa.vc)
+        {
+            if (! layoutChanged)
+                // Currently debounce-d in resizeThis(), so call directly here.
+                resizeDrawing();
+            else
+            {
+                console.log(arguments[1], arguments[0]);
+                Ember.run.debounce(resizeDrawing, 300);  // 0.3sec
+            }
+        }
+
 
   }
+        .observes('layout.left.visible', 'layout.right.visible')
 
 });
 

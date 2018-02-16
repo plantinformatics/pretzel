@@ -21,7 +21,8 @@ import Ember from 'ember';
  * @param eltSelector DOM element to make resizable
  * @param filter  undefined or event filter - refn github.com/d3/d3-drag#drag_filter
  * @param resized undefined or callback when resized
- * @return the d3 drag object, so that the caller can register for drag events.
+ * @return undefined if selectors eltSelector or resizer don't match, otherwise
+ * the d3 drag object, so that the caller can register for drag events.
  * The caller could use eltWidthResizable(...).on('drag') instead of passing resized,
  * but this function wraps the calculation of x and dx which is useful.
  */
@@ -35,7 +36,7 @@ function eltWidthResizable(eltSelector, filter, resized)
   if ((resizable.node() === null) || (resizer.node() === null))
     {
     console.log("eltWidthResizable() resizer=", resizer, eltSelector, resizable.node(), resizer.node());
-      return;
+      return undefined;
   }
     /* instead of return: else { ...  } */
 
