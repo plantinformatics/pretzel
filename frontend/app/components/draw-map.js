@@ -4606,9 +4606,13 @@ export default Ember.Component.extend(Ember.Evented, {
       /** if d1 is undefined, then its value is d0 : direct connection, not alias. */
       let d1_ = d1 || d0;
       /** Filter out those paths that either side locates out of the svg. */
-      let lineIn = allowPathsOutsideZoom ||
-        (inRangeI(a0, d0, range)
-         && inRangeI(a1, d1_, range));
+      let
+          inRangeLR = 
+            [inRangeI(a0, d0, range), 
+             inRangeI(a1, d1_, range)],
+        lineIn = allowPathsOutsideZoom ||
+            (inRangeLR[0]
+             && inRangeLR[1]);
       // console.log("path()", stackIndex, a0, allowPathsOutsideZoom, inRangeI(a0), inRangeI(a1), lineIn);
       if (lineIn)
       {
@@ -4632,15 +4636,17 @@ export default Ember.Component.extend(Ember.Evented, {
         const markerTickLen = 10; // orig 5
         function axisMarkerTick(ai, d) {
           let z = oa.z;
-          if (d in z[a0])
+          if (d in z[ai])
           {
             r = markerLineS(ai, d, markerTickLen);
             pathMarkerStore(r, d, d, z[ai][d], undefined);
           }
         }
-        // could filter these according to inRangeI() as above
-        axisMarkerTick(a0, d0);
-        axisMarkerTick(a1, d1_);
+        // Filter these according to inRangeI() as above : return 0 or 1 ticks, not 2 because at least one is out of range.
+          if (inRangeLR[0])
+              axisMarkerTick(a0, d0);
+          if (inRangeLR[1])
+              axisMarkerTick(a1, d1_);
       }
       return r;
     }
