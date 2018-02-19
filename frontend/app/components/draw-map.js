@@ -5,13 +5,17 @@ import createIntervalTree from 'npm:interval-tree-1d';
 console.log("createIntervalTree", createIntervalTree);
 
 /*----------------------------------------------------------------------------*/
+
+import { EventedListener } from '../utils/eventedListener';
 import { chrData } from '../utils/utility-chromosome';
 import { eltWidthResizable, noShiftKeyfilter, eltClassName  } from '../utils/domElements';
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection } from '../utils/log-selection';
 import { Viewport } from '../utils/draw/viewport';
 import {  Axes, /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId, highlightId  }  from '../utils/draw/axis';
 import { Stacked, Stack, stacks, xScaleExtend, axisRedrawText } from '../utils/stacks';
+import { updateRange } from '../utils/stacksLayout';
 import { round_2, checkIsNumber} from '../utils/domCalcs';
+
 /*----------------------------------------------------------------------------*/
 
 /* jshint curly : false */
@@ -154,7 +158,40 @@ export default Ember.Component.extend(Ember.Evented, {
        this.drawControlsLifeC(start);
    },
  
+  /** Listen for actions from sub-components of draw-map.
+   * Both mapview and draw-map component are Evented, and are used as event buses
+   * for components defined within their templates.
+   *
+   * Also  @see drawActionsListen(), drawControlsListen(), which connect to the mapview event bus.
+   * Based on components/goto-features createListener().
+   */
+  createListener(bus) {
+    if (bus === undefined)
+      console.log('Evented component not passed', bus);
+    else
+      this.set('listener', new EventedListener(
+        bus,
+        [{name: 'stackPositionsChanged', target: this, method: this.stackPositionsChanged}]
+      ));
+  },
 
+  /** listen to events sent by sub-components.
+   * Called when init and willDestroyElement. */
+  localBus : function (listen) {
+    if (listen && this.get('listener') === undefined)
+    {
+      let oa = this.get('oa');
+
+      /* oa.eventBus is used in stacks to send updatedStacks and stackPositionsChanged; 
+       * perhaps change ownership of those events to a stacks Evented component. */
+      let bus =
+      oa.eventBus = this;
+      if (this.get('listener') === undefined)
+        this.createListener(bus);
+    }
+    if (this.listener)
+      this.listener.listen(listen);
+  },
 
   /*------------------------------------------------------------------------*/
 
@@ -181,6 +218,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
     this.drawControlsListen(true);
+    this.localBus(true);
   }.on('init'),
 
   // remove the binding created in listen() above, upon component destruction
@@ -192,6 +230,7 @@ export default Ember.Component.extend(Ember.Evented, {
     f.off('resetZooms', this, 'resetZooms');
 
     this.drawControlsListen(false);
+    this.localBus(false);
   }.on('willDestroyElement'),
 
 //{
@@ -256,9 +295,18 @@ export default Ember.Component.extend(Ember.Evented, {
     updatedStacks: function(stacks) {
       let stacksText = stacks.toString();
       // stacks.log();
-      // console.log("updatedStacks in draw-map component");
-      // no effect :
-      this.sendAction('updatedStacks', stacksText);
+      console.log("updatedStacks in draw-map component");
+    },
+
+    stackPositionsChanged : function(stack) {
+      console.log("stackPositionsChanged in components/draw-map (drawActions)", stack);
+      let oa = this.get('oa');  // , stack = oa.stacks[stackID];
+      // console.log(oa.stacks, stack);
+      stack.axes.forEach(
+        function (a, index)
+        {
+          updateRange(oa.y, oa.ys, oa.vc, a);
+        });
     },
 
     mapsToViewDelete : function(mapName) {
@@ -480,7 +528,6 @@ export default Ember.Component.extend(Ember.Evented, {
     let me = this;
 
     let oa = this.get('oa');
-    oa.eventBus = this; //- used in stacks to send updatedStacks; perhaps change ownership of that event to stacks
 
     if (this.drawControlsLifeC === undefined)
     {
@@ -911,7 +958,7 @@ export default Ember.Component.extend(Ember.Evented, {
       // brushActives = [],
     /** guard against repeated drag event before previous dragged() has returned. */
     dragging = 0;
-    /** trace scale of each axis just once after this is cleared.  */
+    /** trace scale of each axis just once after this is cleared.  enabled by trace_scale_y.  */
     let tracedAxisScale = {};
 
 
@@ -999,6 +1046,7 @@ export default Ember.Component.extend(Ember.Evented, {
      * and trace cross-products of arrays - O(N^2) e.g. trace the whole array for O(N) events.
      */
     const trace_stack = 1;
+    const trace_scale_y = 0;
     const trace_alias = 1;  // currently no trace at level 1.
     const trace_path = 0;
     const trace_path_colour = 0;
@@ -1143,6 +1191,8 @@ export default Ember.Component.extend(Ember.Evented, {
 
       updateXScale();
       stacks.changed = 0x10;
+        /* Number of stacks hasn't changed, but X position needs to be
+         * recalculated, as would be required by a change in the number of stacks. */
       let t = stacksAdjust(true, undefined);
     };
     /**  add width change to the x translation of axes to the right of this one.
@@ -1199,23 +1249,7 @@ export default Ember.Component.extend(Ember.Evented, {
     let t = stacksAdjust(true, undefined);
     vc.xDropOutDistance_update(oa);
 
-    /** update ys[a.axisName]  and y[a.axisName] for the given axis,
-     * according to the current yRange, and for ys, the axis's current .portion.
-     * @param a axis (i.e. axes[a.axisName] == a)
-     */
-    function updateRange(a)
-    {
-      let ys = oa.ys;
-      // console.log("updateRange", a, a.axisName, ys.length, ys[a.axisName]);
-      // if called before ys is set up, do nothing.
-      if (ys && ys[a.axisName])
-      {
-        let myRange = a.yRange();
-        console.log("updateRange", a.axisName, a.position, a.portion, myRange, oa.vc.yRange);
-        ys[a.axisName].range([0, myRange]);
-        y[a.axisName].range([0, oa.vc.yRange]);
-      }
-    }
+    //- moved updateRange() to utils/stacksLayout
 
 //-    import {} from "../utils/paths.js";
 
@@ -3096,7 +3130,7 @@ export default Ember.Component.extend(Ember.Evented, {
       return cu;
     }
 //-stacks data / collate
-    /** Return an array ovf Axes contain Feature `feature` and are in stack `stackIndex`.
+    /** Return an array of Axes contain Feature `feature` and are in stack `stackIndex`.
      * @param feature  name of feature
      * @param stackIndex  index into stacks[]
      * @return array of Axes
@@ -3513,8 +3547,11 @@ export default Ember.Component.extend(Ember.Evented, {
       {
         let sLine = featureLineS2(a0, a1, d0, d1_);
         let cmName = oa.cmName;
-        let feature0 = d0, feature1 = d1, traceTarget = feature0 == "featureK" && feature1 == "featureK" &&
-          cmName[a0].mapName == "MyMap5" && cmName[a1].mapName == "MyMap6";
+        let feature0 = d0, feature1 = d1,
+        /** used for targeted debug trace (to filter, reduce volume)
+         * e.g. = feature0 == "featureK" && feature1 == "featureK" &&
+         cmName[a0].mapName == "MyMap5" && cmName[a1].mapName == "MyMap6"; */
+        traceTarget = false;
         if (traceTarget)
         {
           console.log("patham()", d0, d1, cmName[a0].mapName, cmName[a1].mapName, a0, a1, z[a0][d0].location, d1 && z[a1][d1].location, sLine);
@@ -3545,7 +3582,7 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       return r;
     }
-    /**
+    /** patham() draws a line (1-d object),  patham2 draws a parallelogram (2-d object).
      * @param  a0, a1  axis names
      * @param d[0 .. 3], feature names, i.e. a0:d[0]-d[1], a1:d[2]-d[3].
      * Unlike patham(), d does not contain undefined.
@@ -3625,11 +3662,12 @@ export default Ember.Component.extend(Ember.Evented, {
       let ysa = oa.ys[axisID],
       aky = ysa(oa.z[axisID][d].location),
       axisY = oa.axes[axisID].yOffset();
-      if (! tracedAxisScale[axisID])
+      if (trace_scale_y && ! tracedAxisScale[axisID])
       {
         tracedAxisScale[axisID] = true;
-        /* let yDomain = ysa.domain();
-         console.log("featureY_", axisID, d, z[axisID][d].location, aky, axisY, yDomain, ysa.range()); */
+        let yDomain = ysa.domain();
+          console.log("featureY_", axisID,  axisName2MapChr(axisID), d,
+                      z[axisID][d].location, aky, axisY, yDomain, ysa.range());
       }
       return aky + axisY;
     }
@@ -4271,7 +4309,7 @@ export default Ember.Component.extend(Ember.Evented, {
       // "exported" to patham().
       pathDataIsLine = flow.direct;
       // console.log("pathUpdate");
-      tracedAxisScale = {};  // re-enable trace
+      tracedAxisScale = {};  // re-enable trace, @see trace_scale_y
       let g = flow.g.selectAll("g");
       let gn;
       /* if (unique_1_1_mapping)

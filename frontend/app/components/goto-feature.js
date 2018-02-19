@@ -1,28 +1,6 @@
 import Ember from 'ember';
 
-function EventedListener(evented, methods)
-{
-  this.evented = evented;
-  this.methods = methods;
-}
-EventedListener.prototype.listen = function(listen)
-{
-  // based on drawActionsListen()
-    console.log("EventedListener listen()", listen, this);
-    {
-      let onOff = listen ? this.evented.on : this.evented.off,
-      me = this;
-      this.methods.map(function (f) {
-        onOff.apply(me.evented, [f.name, f.target, f.method]);
-      });
-      /*
-        if (listen)
-          this.evented.on(name, target, method);
-        else
-          this.evented.off(name, target, method);
-       */
-      }
-};
+import { EventedListener } from '../utils/eventedListener';
 
 
 export default Ember.Component.extend({
@@ -65,7 +43,8 @@ export default Ember.Component.extend({
     // if oa is not passed in as data then listen for it.
     if (this.get('data') === undefined)
     {
-      this.createListener();
+      if (this.listener === undefined)
+        this.createListener();
       if (this.listener)
         this.listener.listen(true);
     }

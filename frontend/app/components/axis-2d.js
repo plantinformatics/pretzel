@@ -27,7 +27,7 @@ export default Ember.Component.extend(Ember.Evented, {
     else {
     }
 
-    /** handle of the draw-map oa */
+    /** handle of the draw-map */
     let drawMap = this.get('drawMap'); 
     console.log("listen", drawMap);
     if (drawMap === undefined)

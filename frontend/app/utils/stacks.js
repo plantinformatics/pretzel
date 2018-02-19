@@ -207,11 +207,12 @@ Stack.prototype.verify = function ()
  * affecting the x positions of the non-dragged stacks.  @see new_Stack()
  *
  * stacks.changed
- * true when an axis and/or stack has been moved drag; this triggers
+ * true when an axis and/or stack has been moved during this drag; this triggers
  * axisStackChanged() to be called to update the drawing.
- * The update is split in 2 because x locations of stacks do not update during the drag (@see dragended() ) :
- * 0x01 : drag has not finished - interim redraw;
- * 0x10 : drag has finished.  The final x locations of stacks have been calculated.
+ * The update is split in 2 because x locations of stacks do not update during the drag,
+ * except the dragged axis,  (@see dragended() ) :
+ *   0x01 : drag has not finished - interim redraw;
+ *   0x10 : drag has finished.  The final x locations of stacks have been calculated.
  * (would use 0b instead of 0x but 0b may not be supported on IE)
  * This will evolve into a signal published by the stacks component,
  * listened to by draw components such as syntenyBlocks.
@@ -707,8 +708,8 @@ Stack.prototype.calculatePositions = function ()
     function (a, index)
     {
       a.position = [sumPortion,  sumPortion += a.portion];
-      //- axis          updateRange(a);
     });
+    oa.eventBus.send('stackPositionsChanged', this);
 };
 /** find / lookup Stack of given axis.
  * This is now replaced by axes[axisName]; could be used as a data structure
