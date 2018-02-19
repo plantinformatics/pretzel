@@ -2094,14 +2094,14 @@ export default Ember.Component.extend(Ember.Evented, {
       let toolTipHovered = me.get('toolTipHovered') ;
       console.log("toolTipMouseOver", toolTipHovered);
       if (! toolTipHovered)
-	      me.set('toolTipHovered', true);
+        me.set('toolTipHovered', true);
     }
     function toolTipMouseOut()
     {
       let toolTipHovered = me.get('toolTipHovered') ;
       console.log("toolTipMouseOut", toolTipHovered);
       if (toolTipHovered)
-	      me.set('toolTipHovered', false);
+        me.set('toolTipHovered', false);
       hidePathHoverToolTip();
     }
     function closeToolTip() 
@@ -2117,7 +2117,7 @@ export default Ember.Component.extend(Ember.Evented, {
     function setupToolTipMouseHover()
     {
       // may need to set toolTipHovered if toolTip already contains cursor when it is shown - will toolTipMouseOver() occur ?.
-	    // me.ensureValue('toolTipHovered', true);
+      // me.ensureValue('toolTipHovered', true);
 
       d3.select("div.toolTip.d3-tip#toolTip")
         .on("mouseover", toolTipMouseOver)
@@ -2204,15 +2204,15 @@ export default Ember.Component.extend(Ember.Evented, {
 
       /** If path-hover currently exists in toolTip, avoid insert error by detaching it while updating html of parent toolTip */
       let
-	  pt=Ember.$('.toolTip.d3-tip#toolTip'),
-	ph = pt.find('.pathHover');
-	console.log(pt[0], "pathHover:", ph[0] || ph.length);
-	if (ph.length)
-	{
-	    console.log("pathHover detaching");
-	}
-	    let
-	ph1=ph.detach();
+        pt=Ember.$('.toolTip.d3-tip#toolTip'),
+      ph = pt.find('.pathHover');
+      console.log(pt[0], "pathHover:", ph[0] || ph.length);
+      if (ph.length)
+      {
+        console.log("pathHover detaching");
+      }
+      let
+        ph1=ph.detach();
 
       listFeatures += '\n<button id="toolTipClose">&#x2573;</button>\n'; // ╳
       toolTip.html(listFeatures);
@@ -2220,8 +2220,8 @@ export default Ember.Component.extend(Ember.Evented, {
       toolTip.show(d, i);
       let ph2=ph1.appendTo(pt);
       Ember.run.once(me, function() {
-	  let ph3= Ember.$('.pathHover');
-	  console.log(".pathHover", ph2[0] || ph2.length, ph3[0] || ph3.length);
+        let ph3= Ember.$('.pathHover');
+        console.log(".pathHover", ph2[0] || ph2.length, ph3[0] || ph3.length);
         // me.set("hoverFeatures", hoverFeatures);
         // me.ensureValue("pathHovered", true);
         me.trigger("pathHovered", true, hoverFeatures);
