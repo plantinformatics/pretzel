@@ -14,6 +14,7 @@ import { Viewport } from '../utils/draw/viewport';
 import {  Axes, /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId, highlightId  }  from '../utils/draw/axis';
 import { Stacked, Stack, stacks, xScaleExtend, axisRedrawText } from '../utils/stacks';
 import { updateRange } from '../utils/stacksLayout';
+import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../utils/stacks-drag';
 import { round_2, checkIsNumber} from '../utils/domCalcs';
 
 /*----------------------------------------------------------------------------*/
@@ -604,7 +605,6 @@ export default Ember.Component.extend(Ember.Evented, {
      can adjust space assigned to each linkageGroup (thumb drag) 
      */
 
-    const dragTransitionTime = 1000;  // milliseconds
 
 
 //- moved to utils/draw/viewport.js : Viewport(), viewPort, graphDim, dragLimit
@@ -1008,35 +1008,8 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       return chrName + "_" + interval[0] + "_" + interval[1];
     }
-//-    import {} from "../utils/stacks-drag.js";
+//-    moved to "../utils/stacks-drag.js" : dragTransitionNew(), dragTransition(), dragTransitionEnd().
 
-    /*------------------------------------------------------------------------*/
-    /** Set svgContainer.class .dragTransition to make drop zones insensitive during drag transition.
-     * @return new drag transition
-     */
-    function dragTransitionNew()
-    {
-      dragTransition(true);
-      let t = d3.transition().duration(dragTransitionTime);
-      t.ease(d3.easeCubic);
-      return t;
-    }
-    /** Signal the start or end of a drag transition, i.e. a axis is dragged from
-     * one Stack to another - dropIn() or dropOut().
-     * During this transition, 
-     * @param start signifies start (true) or end (false) of drag transition.
-     */
-    function dragTransition(start)
-    {
-      if (start)
-        console.log("dragTransition(start)");
-      oa.svgContainer.classed("dragTransition", start);
-    }
-    function dragTransitionEnd(data, index, group)
-    {
-      console.log("dragTransitionEnd", /*this,*/ data, index, group);
-      dragTransition(false);
-    }
     /*------------------------------------------------------------------------*/
 //- moved to ../utils/domCalcs.js : round_2()
     /*------------------------------------------------------------------------*/
@@ -1047,6 +1020,7 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     const trace_stack = 1;
     const trace_scale_y = 0;
+    const trace_drag = 1;
     const trace_alias = 1;  // currently no trace at level 1.
     const trace_path = 0;
     const trace_path_colour = 0;
@@ -1507,6 +1481,8 @@ export default Ember.Component.extend(Ember.Evented, {
     svgContainer = svgRoot
       .append("svg:g")
       .attr("transform", translateTransform);
+
+      stacks.dragTransition = new DragTransition(oa.svgContainer);
 
       console.log(oa.svgRoot.node(), '.on(resize', this.resize);
 
@@ -4115,8 +4091,11 @@ export default Ember.Component.extend(Ember.Evented, {
         /** Use the start of the drag, or the most recent drop */
         xDistanceRef = (currentDrop && currentDrop.x) ? currentDrop.x.stack : d3.event.subject.fx,
         now = Date.now();
-        // console.log("dragged xDistanceRef", d3.event.x, currentDrop && currentDrop.x, xDistanceRef);
-        // console.log("dragged", currentDrop, d);
+        if (trace_drag)
+        {
+          console.log("dragged xDistanceRef", d3.event.x, currentDrop && currentDrop.x, xDistanceRef);
+          console.log("dragged", currentDrop, d);
+        }
         /** true iff currentDrop is recent */
         let recentDrop = currentDrop && (now - currentDrop.dropTime < dropDelaySeconds * milli);
 
@@ -4322,7 +4301,7 @@ export default Ember.Component.extend(Ember.Evented, {
       g = g.data(pathData);
       if (trace_path)
         console.log("exit", g.exit().size(), "enter", g.enter().size());
-      if (pathData.length === 0)
+      if (trace_path && pathData.length === 0)
       {
         console.log("pathData.length === 0");
       }
@@ -4416,7 +4395,7 @@ export default Ember.Component.extend(Ember.Evented, {
         console.log("pathUpdate", pathData.length, g.size(), gn.enter().size(), t);
       }
       let gp;
-      if (pathData.length != (gp = d3.selectAll(".foreground > g." + flow.name + " > g > path")).size())
+      if ((trace_path > 1) && (pathData.length != (gp = d3.selectAll(".foreground > g." + flow.name + " > g > path")).size()))
       {
         console.log("pathData.length", pathData.length, "!= gp.size()", gp.size());
       }

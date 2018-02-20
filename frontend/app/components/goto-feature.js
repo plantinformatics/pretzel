@@ -159,9 +159,9 @@ Apollo : link; new window or re-use, later axis-iframe.
     console.log("mapsOfFeature", newValue);
     let oa = this.get('data') || this.get('oa'),
     chrNames;    
-    if (oa)
+    let featureName = this.get('feature1');
+    if (oa && featureName)
     {
-      let featureName = this.get('feature1');
       chrNames = this.featureChrs.apply(this, [featureName]);
       // console.log(featureName, "chrNames", chrNames);
     }

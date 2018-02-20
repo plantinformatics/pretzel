@@ -2,6 +2,7 @@
 
 /*----------------------------------------------------------------------------*/
 
+import  { dragTransitionEnd} from '../utils/stacks-drag';
 import { round_2, checkIsNumber} from '../utils/domCalcs';
 import {  Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId, highlightId  }  from './draw/axis';
 import { variableBands } from '../utils/variableBands';
@@ -816,7 +817,7 @@ Stack.prototype.redraw = function (t)
   /* tried "end", "start", "end.Dav127".  only "start" works.  refn:
    * https://github.com/d3/d3-transition/blob/master/README.md#transition_on
    */
-  t.on("end interrupt", function() { console.log("dragTransitionEnd"); } /*or dragTransitionEnd*/);
+  t.on("end interrupt", dragTransitionEnd);
   /** to make this work, would have to reparent the Axes - what's the benefit
    * let ts = 
    *   t.selectAll("g.stack#" + eltId(this.stackID) + " > .axis-outer");
