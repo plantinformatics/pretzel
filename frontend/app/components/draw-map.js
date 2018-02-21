@@ -887,21 +887,31 @@ export default Ember.Component.extend(Ember.Evented, {
      *   physical map (pseudo-molecule) contains genes
      */
     let featureAxisSets = oa.featureAxisSets || (oa.featureAxisSets = {});
-    let
+
+    if (oa.drawOptions === undefined)
+    {
+      oa.drawOptions =
+      {
       /** true enables display of info when mouse hovers over a path.
        * A subsequent iteration will show reduced hover info in a fixed location below the graph when false.
        */
-      showPathHover = false,
+        showPathHover : false,
+      /** true enables display of info when mouse hovers over a brushed feature position (marked with a circle) on an axis.
+       * A subsequent iteration will show reduced hover info in a fixed location below the graph when false.
+       */
+      showCircleHover : false,
       /** Draw a horizontal notch at the feature location on the axis,
        * when the feature is not in a axis of an adjacent Stack.
        * Makes the feature location visible, because otherwise there is no path to indicate it.
        */
-      showAll = true,
+      showAll : true,
     /** Show brushed features, i.e. pass them to updatedSelectedFeatures().
      * The purpose is to save processing time; this is toggled by 
      * setupToggleShowSelectedFeatures() - #checkbox-toggleShowSelectedFeatures.
      */
-    showSelectedFeatures = true;
+    showSelectedFeatures : true
+      };
+    }
 
     /** Alias groups : aliasGroup[aliasGroupName] : [ feature ]    feature references axis and array of aliases */
     let aliasGroup = oa.aliasGroup || (oa.aliasGroup = {});
@@ -1102,7 +1112,7 @@ export default Ember.Component.extend(Ember.Evented, {
     //Reset the selected Feature region, everytime an axis gets deleted
     function sendUpdatedSelectedFeatures()
     {
-      if (showSelectedFeatures)
+      if (oa.drawOptions.showSelectedFeatures)
         me.send('updatedSelectedFeatures', selectedFeatures);
     }
     function selectedFeatures_clear()
@@ -1576,8 +1586,8 @@ export default Ember.Component.extend(Ember.Evented, {
         refreshAxis();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == "A") {
-        showAll = !showAll;
-        console.log("showAll", showAll);
+        oa.drawOptions.showAll = !oa.drawOptions.showAll;
+        console.log("showAll", oa.drawOptions.showAll);
         refreshAxis();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == " ") {
@@ -2149,7 +2159,7 @@ export default Ember.Component.extend(Ember.Evented, {
       /** d is either sLine (pathDataIsLine===true) or array ffaa. */
       let pathDataIsLine = typeof(d) === "string";
       // don't interrupt dragging with pathHover
-      if (Stack.currentDrag || ! showPathHover)
+      if (Stack.currentDrag || ! oa.drawOptions.showPathHover)
         return;
       if (pathDataIsLine)
       {
@@ -2232,7 +2242,7 @@ export default Ember.Component.extend(Ember.Evented, {
       Ember.run.once(me, function() {
         let ph3= Ember.$('.pathHover');
         console.log(".pathHover", ph2[0] || ph2.length, ph3[0] || ph3.length);
-        // me.set("hoverFeatures", hoverFeatures);
+        me.set("hoverFeatures", hoverFeatures);
         // me.ensureValue("pathHovered", true);
         me.trigger("pathHovered", true, hoverFeatures);
       });
@@ -3540,7 +3550,7 @@ export default Ember.Component.extend(Ember.Evented, {
           /* Prepare a tool-tip for the line. */
           pathFeatureStore(sLine, d0, d1, z[a0][d0], z[a1][d1_]);
       }
-      else if (showAll) {
+      else if (oa.drawOptions.showAll) {
         const featureTickLen = 10; // orig 5
         function axisFeatureTick(ai, d) {
           let z = oa.z;
@@ -3610,7 +3620,7 @@ export default Ember.Component.extend(Ember.Evented, {
           }
           r.push(sLine);
         }
-        else if (showAll) {
+        else if (oa.drawOptions.showAll) {
           if (d in z[f_k]) { 
             r.push(featureLine(k, d, 5));
           }
@@ -3921,20 +3931,24 @@ export default Ember.Component.extend(Ember.Evented, {
       /** d is the axis chromosome id */
         chrName = d,
       featureName = this.classList[0],
-      hoverFeatures = [featureName],
-      selector = "g.axis-outer#" + eltId(chrName) + " > circle." + featureName,
-      targetId = "MC_" + ++targetIdCount;
-      console.log("handleFeatureCircleMouseOver", d, featureName, selector, targetId);
-      if (false)
+      hoverFeatures = featureName ? [featureName] : [];
+      if (oa.drawOptions.showCircleHover)
       {
-      d3.select(selector)
-        .attr('id', targetId);  // will add selector support to ember-tooltip targetId
-      }
-      else
-      {
-        toolTip.html('<span id="AxisCircleHoverTarget">AxisCircleHoverTarget</span>');
-        toolTip.show(d, i);
-        targetId = "devel-visible";
+        let
+          selector = "g.axis-outer#" + eltId(chrName) + " > circle." + featureName,
+        targetId = "MC_" + ++targetIdCount;
+        console.log("handleFeatureCircleMouseOver", d, featureName, selector, targetId);
+        if (false)
+        {
+          d3.select(selector)
+            .attr('id', targetId);  // will add selector support to ember-tooltip targetId
+        }
+        else
+        {
+          toolTip.html('<span id="AxisCircleHoverTarget">AxisCircleHoverTarget</span>');
+          toolTip.show(d, i);
+          targetId = "devel-visible";
+        }
       }
       //  me.set("axisFeatureTargetId", targetId);
       Ember.run.once(function() {
@@ -5083,7 +5097,7 @@ export default Ember.Component.extend(Ember.Evented, {
       setupToggle
       ("checkbox-toggleModePathHover",
       function (checked) {
-        showPathHover = checked;
+        oa.drawOptions.showPathHover = checked;
       }
       );
     }
@@ -5093,7 +5107,7 @@ export default Ember.Component.extend(Ember.Evented, {
       setupToggle
       ("checkbox-toggleShowAll",
       function (checked) {
-        showAll = checked;
+        oa.drawOptions.showAll = checked;
         pathUpdate(undefined);
       }
       );
@@ -5104,7 +5118,7 @@ export default Ember.Component.extend(Ember.Evented, {
       setupToggle
       ("checkbox-toggleShowSelectedFeatures",
       function (checked) {
-        showSelectedFeatures = checked;
+        oa.drawOptions.showSelectedFeatures = checked;
         pathUpdate(undefined);
       }
       );
@@ -5205,10 +5219,13 @@ export default Ember.Component.extend(Ember.Evented, {
       ;
 
     };
+    if (newRender)
+    {
     flows_showControls(flowButtonsSel);
     configurejQueryTooltip(oa, flowButtonsSel);
     setupToggleModePublish();
     setupVariousControls();
+    }
 
 //- draw-map
     /** After chromosome is added, draw() will update elements, so

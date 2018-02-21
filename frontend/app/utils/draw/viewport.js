@@ -80,7 +80,10 @@ Viewport.prototype.calc = function(oa)
   /** standard CSS order, same as margins : top right bottom left */
   holderPadding = eltStylePaddingRect(holderElt);
   holderWidth = divHolder.width();
-  let topPanelHeight = 100; // px
+    /**  px */
+    let topPanelHeight = 100,
+        /** for display of marker details below graph */
+        bottomPanelHeight = 60;
   /** 	margins : top right bottom left */
   this.margins =
     // 14 was maybe for axisNameHeight, not needed
@@ -96,8 +99,13 @@ Viewport.prototype.calc = function(oa)
   h = viewPort.h - margins[marginIndex.top] - margins[marginIndex.bottom];
 
   /// dimensions of the graph border
-  this.graphDim =
-    graphDim = {w: w*0.9, h: h - 2 * this.dropTargetYMargin - axisSelectionHeight - axisNameHeight - topPanelHeight};
+    this.graphDim =
+        graphDim =
+        {
+            w: w*0.9,
+            h: h - 2 * this.dropTargetYMargin
+                - axisSelectionHeight - axisNameHeight - topPanelHeight - bottomPanelHeight
+        };
   // layout has changed, no value in this :  - selectedFeaturesTextHeight
 
   this.yRange = 

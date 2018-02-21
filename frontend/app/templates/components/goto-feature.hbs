@@ -53,5 +53,11 @@
     {{goto-map mapList=mapsOfFeature }}
   {{/ember-popover }}
 </button>
+<div>
+  {{#each mapsOfFeature as |map|}}
+    {{ map.name }}
+  {{/each}}
+</div>
+
 {{goto-ensembl featureName=feature1 }}
 

@@ -1,6 +1,7 @@
 import Ember from 'ember';
 
 import { EventedListener } from '../utils/eventedListener';
+import { featureChrs,  name2Map,   chrMap, objectSet,  mapsOfFeature } from '../utils/feature-lookup';
 
 
 export default Ember.Component.extend({
@@ -87,100 +88,18 @@ Apollo : link; new window or re-use, later axis-iframe.
 ------------------------------------------------------------------------------*/
 
 
-  /* split these out e.g. to models/chromosome, and objectSet() to utils */
+// moved to utils/feature-lookup.js : 
 
-  /** @return array of names of chromosomes containing feature */
-  featureChrs : function(featureName)
-  {
-    let c, oa = this.get('data') || this.get('oa');
-    // featureAxisSets may not have been initialised ?
-    if (oa && oa.featureAxisSets && oa.featureAxisSets[featureName])
-      // featureAxisSets is a hash of Sets
-      c = Array.from(oa.featureAxisSets[featureName].keys());
-    else
-      c = [];
-    return c;
-  },
-  /** Lookup the given map name in the current store.   Uses peek not find - does
-   * not load from back-end.
-   * @return map object refn, or undefined if not found
-   */
-  name2Map : function(store, mapName)
-  {
-    let
-      maps=store
-      .peekAll('geneticmap')
-      .filter(function (a) { return a.get('name') == mapName;}),
-    /** expect a.length == 1  */
-    map = maps.length > 0 ? maps[0] : undefined;
-    return map;
-  },
-  /** @return map containing named chromosome */
-  chrMap : function(chrName)
-  {
-    let oa = this.get('data') || this.get('oa'),
-    chr = oa && oa.chrPromises[chrName], map;
-    if (chr)
-      map = chr.content.map;
-    else
-    {
-      let stacked = oa.axes[chrName], store = this.get('store');
-      if (stacked === undefined)
-        debugger;
-      else
-      /* Convert map name to object refn, for uniform result object type,
-       * because other branch returns map object refn .
-       */
-      map  =  this.name2Map(store, stacked.mapName);
-      console.log("goto-feature chrMap()", oa, oa.chrPromises, chrName, stacked, map);
-    }
-    return map;
-  },
 
-  /*----------------------------------------------------------------------------*/
-
-  /** Convert the given array of object references into a Set,
-   * thereby determining the unique references.
-   * The caller may convert back to an array, with Array.from(result.keys())
-  */
-  objectSet : function(objArray)
-  {
-    function reduce_addToSet(accumulator, currentValue/*, currentIndex, array*/)
-    {
-      return accumulator.add(currentValue);
-    }
-    let s = objArray.reduce(reduce_addToSet, new Set());
-    return s;
-  },
-
-  /*----------------------------------------------------------------------------*/
-
+/*----------------------------------------------------------------------------*/
   mapsOfFeature : Ember.computed('feature1', 'data', 'oa', function (newValue) {
     console.log("mapsOfFeature", newValue);
-    let oa = this.get('data') || this.get('oa'),
-    chrNames;    
+    let store = this.get('store');
+    let oa = this.get('data') || this.get('oa');
     let featureName = this.get('feature1');
-    if (oa && featureName)
-    {
-      chrNames = this.featureChrs.apply(this, [featureName]);
-      // console.log(featureName, "chrNames", chrNames);
-    }
-    else
-    {
-      return [];  // because oa is needed by featureChrs() and chrMap()
-    }
-    let
-      me = this,
-    axesParents = chrNames.map(function (chrName) {
-      let map = me.chrMap.apply(me, [chrName]);
-      return map;
-    }),
-    uniqueAxes = this.objectSet(axesParents),
-    axes = Array.from(uniqueAxes.keys());
-    console.log("mapsOfFeature", this.get('feature1'), chrNames, axesParents, uniqueAxes, axes);
+    let axes = mapsOfFeature(store, oa, featureName);
     return axes;
   })
 
-/*----------------------------------------------------------------------------*/
 
 });
