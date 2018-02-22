@@ -16,8 +16,8 @@
   <div>splitAxes : {{splitAxes}}</div>
   <div>axes : {{axes.length}}</div>
   {{#each axes as |axisS|}}
-    <div>axis : {{axisS}}, {{axisS.apID}}, {{axisS.extended}}</div>
-    {{axis-2d drawMap=this data=oa apID=axisS.apID tableData=axisData}}
+    <div>axis : {{axisS}}, {{axisS.axisID}}, {{axisS.extended}}</div>
+    {{axis-2d drawMap=this data=oa axisID=axisS.axisID tableData=axisData}}
   {{/each}}
 
   {{!-- wait until targetId="toolTip" will resolve --}}
