@@ -7,7 +7,7 @@ module.exports = function(Feature) {
     Feature.find({
         "include": 
         {
-          "workspace": {"block": "dataset"}
+          "block": "dataset"
         },
         "where":
         {
@@ -18,8 +18,7 @@ module.exports = function(Feature) {
         }
     }, options).then(function(features) {
       features = features.filter(function(feature) {
-        let dataset = feature.__data.workspace.__data.block.__data.dataset
-        return dataset
+        return feature.__data.block.__data.dataset
       })
       return process.nextTick(() => cb(null, features))
     })

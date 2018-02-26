@@ -3,7 +3,7 @@ import attr from 'ember-data/attr';
 //import Fragment from 'model-fragments/fragment';
 
 export default DS.Model.extend({
-  workspaceId: DS.belongsTo('workspace'),
+  blockId: DS.belongsTo('block'),
   parentId: DS.belongsTo('feature'),
   name: attr('string'),
   range: attr('array'),

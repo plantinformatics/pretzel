@@ -84,7 +84,6 @@ exports.uploadDataset = (data, models, options, cb) => {
   let json_blocks = []
   let json_annotations = []
   let json_intervals = []
-  let json_workspaces = []
   let json_features = []
 
   //create dataset
@@ -101,12 +100,6 @@ exports.uploadDataset = (data, models, options, cb) => {
     return models.Block.create(json_blocks, options)
   }).then(function(blocks) {
     blocks.forEach(function(block) {
-      if (block.__cachedRelations.workspaces) {
-        block.__cachedRelations.workspaces.forEach(function(json_workspace) {
-          json_workspace.blockId = block.id
-          json_workspaces.push(json_workspace)
-        })
-      }
       if (block.__cachedRelations.annotations) {
         block.__cachedRelations.annotations.forEach(function(json_annotation) {
           json_annotation.blockId = block.id
@@ -119,6 +112,12 @@ exports.uploadDataset = (data, models, options, cb) => {
           json_intervals.push(json_interval)
         })
       }
+      if (block.__cachedRelations.features) {
+        block.__cachedRelations.features.forEach(function(json_feature) {
+          json_feature.blockId = block.id
+          json_features.push(json_feature)
+        })
+      }
     })
     //create annotations
     return models.Annotation.create(json_annotations, options)
@@ -126,25 +125,13 @@ exports.uploadDataset = (data, models, options, cb) => {
     //create intervals
     return models.Interval.create(json_intervals, options)
   }).then(function(intervals) {
-    //create workspaces
-    return models.Workspace.create(json_workspaces, options)
-  }).then(function(workspaces) {
-    workspaces.forEach(function(workspace) {
-      if (workspace.__cachedRelations.features) {
-        workspace.__cachedRelations.features.forEach(function(json_feature) {
-          json_feature.workspaceId = workspace.id
-          json_features.push(json_feature)
-        })
-      }
-    })
-
     let recursive_features = function(new_features_promise) {
       return new_features_promise.then(function(features) {
         json_features = []
         features.forEach(function(feature) {
           if (feature.__cachedRelations.features) {
             feature.__cachedRelations.features.forEach(function(json_feature) {
-              json_feature.workspaceId = feature.workspaceId
+              json_feature.blockId = feature.blockId
               json_feature.parentId = feature.id
               json_features.push(json_feature)
             })

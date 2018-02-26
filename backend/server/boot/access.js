@@ -43,8 +43,8 @@ module.exports = function(app) {
     })
   }
 
-  function workspacePermissions(workspace, userId, permission, context, cb) {
-    app.models.Block.findById(workspace.blockId, {}, context)
+  function featurePermissions(feature, userId, permission, context, cb) {
+    app.models.Block.findById(feature.blockId, {}, context)
     .then(function(block) {
       if (block) {
         blockPermissions(block, userId, permission, context, cb)
@@ -54,24 +54,11 @@ module.exports = function(app) {
     })
   }
 
-  function featurePermissions(feature, userId, permission, context, cb) {
-    app.models.Workspace.findById(feature.workspaceId, {}, context)
-    .then(function(workspace) {
-      if (workspace) {
-        workspacePermissions(workspace, userId, permission, context, cb)
-      } else {
-        throw Error("Workspace not found")
-      }
-    })
-  }
-
   function access(modelName, model, userId, permission, context, cb) {
     if (modelName == 'Dataset') {
       datasetPermissions(model, userId, permission, context, cb)
     } else if (modelName == 'Block') {
       blockPermissions(model, userId, permission, context, cb)
-    } else if (modelName == 'Workspace') {
-      workspacePermissions(model, userId, permission, context, cb)
     } else if (modelName == 'Feature') {
       featurePermissions(model, userId, permission, context, cb)
     } else {

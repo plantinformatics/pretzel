@@ -22,14 +22,14 @@ module.exports = function(Block) {
     var Block = ctx.Model.app.models.Block
     var Annotation = ctx.Model.app.models.Annotation
 
-    var Workspace = ctx.Model.app.models.Workspace
-    Workspace.find({
+    var Feature = ctx.Model.app.models.Feature
+    Feature.find({
       where: {
         blockId: ctx.where.id
       }
-    }, ctx.options).then(function(workspaces) {
-      workspaces.forEach(function(workspace) {
-        Workspace.destroyById(workspace.id, ctx.options, function () {
+    }, ctx.options).then(function(features) {
+      features.forEach(function(feature) {
+        Feature.destroyById(feature.id, ctx.options, function () {
         });
       })
     })

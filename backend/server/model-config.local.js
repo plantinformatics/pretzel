@@ -82,10 +82,6 @@ var config = {
   "Interval": {
     "dataSource": "mongoDs",
     "public": true
-  },
-  "Workspace": {
-    "dataSource": "mongoDs",
-    "public": true
   }
 }
 

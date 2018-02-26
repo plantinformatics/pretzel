@@ -7,7 +7,7 @@ export default DS.Model.extend({
   datasetId: DS.belongsTo('dataset'),
   annotations: DS.hasMany('annotation', { async: false }),
   intervals: DS.hasMany('interval', { async: false }),
-  workspaces: DS.hasMany('workspace', { async: false }),
+  features: DS.hasMany('feature', { async: false }),
   size: attr("number"),
   name: attr("string"),
 
