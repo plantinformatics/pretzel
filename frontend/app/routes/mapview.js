@@ -132,7 +132,7 @@ let config = {
           reload: true,
           adapterOptions:{
           filter: {
-            // 'include': 'features'
+             'include': 'features'
           }}
         }
       );

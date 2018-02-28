@@ -7,5 +7,7 @@ export default DS.Model.extend({
   parentId: DS.belongsTo('feature'),
   name: attr('string'),
   range: attr('array'),
+  type: attr('string'),
+  aliases: attr('array'),
   features: DS.hasMany('feature')
 });
