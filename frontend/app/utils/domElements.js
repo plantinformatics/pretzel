@@ -56,18 +56,25 @@ let
       let dx = d3.event.dx;
       // console.log("eltWidthResizable drag x=", x, dx);
       // Avoid negative or really small widths
+      // (perhaps if x < 50, don't call resized() or set width.)
       x = Math.max(50, x);
 
-      resizable.style('width', x + 'px');
+      /** if resized is given, and it returns a value, then only update width if value is truthy. */
+      let resizedOk;
 
       /* If the parent (resizable) has "flex-grow: 1", disable that so that it can be adjusted.
        */
       resizable.style('flex-grow', 'inherit');
 
       if (resized)
+        resizedOk =
         // 'this' is resizer elt.
         // Only the first 2 args are used so far - the others can be dropped.
-        resized(x, dx, eltSelector, resizable, resizer, this);
+        resized(x, dx, eltSelector, resizable, resizer, this, d);
+
+      if (resizedOk === undefined || resizedOk) 
+        resizable.style('width', x + 'px');
+
     });
   // if (filter)
     dragResize.filter(shiftKeyfilter/*filter*/);

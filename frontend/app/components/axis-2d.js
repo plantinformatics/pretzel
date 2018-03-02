@@ -114,35 +114,87 @@ export default Ember.Component.extend(Ember.Evented, {
     }
   },
 
+  rectWidth() {
+    let
+      axisUse = this.get('axisUse'),
+    rect2 = axisUse.select("g.axis-use > rect"),
+    width = rect2.attr('width');
+    console.log("rectWidth", this.get('startWidth'), this.currentWidth(), rect2.node(), width);
+    return width;
+  },
+  currentWidth() {
+    let use, use_data, currentWidth;
+    (use = this.get('use'))
+      && (use_data = use.data())
+      && (currentWidth = use_data[0]);
+    return currentWidth;
+  },
+
   didInsertElement() {
-    console.log("axis-2d didInsertElement", this, this.get('axisID'));
+    let oa = this.get('data'),
+    axisUse = oa.svgContainer.selectAll("g.axis-outer#id"+this.get('axisID')),
+    use = axisUse.selectAll("use");
+    this.set('axisUse', axisUse);
+    this.set('use', use);
+    console.log("axis-2d didInsertElement", this, this.get('axisID'), axisUse.node(), use.node());
     this.set('subComponents', []);
   },
 
   didRender() {
     let me = this;
     let prevSize,  currentSize;
-    function resized(width, dx, eltSelector, resizable, resizer,  resizerElt)
+    let stacks = this.get('data').stacks;
+    /** Called when resizer element for split axis resize is dragged.
+     * @param d data of the resizer elt, which is axisID of the axis being resized
+     */
+    function resized(width, dx, eltSelector, resizable, resizer,  resizerElt, d)
     {
-      console.log("resized", width, dx, eltSelector, resizable.node(), resizer.node(),  resizerElt);
+      console.log("resized", width, dx, eltSelector, resizable.node(), resizer.node(),  resizerElt, d);
       // constructed in axisShowExtend()
       // narrow to : g.axis-outer#id<axisID> > g.axis-use
-      let use=d3.select("g.axis-use > use"),
-      rect = d3.select("g.axis-use > rect");
-      use
-        .data([width])
-        .attr("transform", function(d) {return "translate(" + d + ",0)";});
-      rect.attr("width", width);
-      let useElt = Ember.$(".axis-use"), axisID;
-      (useElt.length > 0) && (axisID = useElt[0].parentElement.__data__);
-      currentSize = width; // dx ?
-
-      let parentView = me.get('parentView');
-      /* Recalculate positions & translations of axes.
-       * A possible optimisation : instead, add width change to the x translation of axes to the right of this one.
+      let 
+        axisUse = me.get('axisUse'),
+      rect = axisUse.select("g.axis-use > rect"),
+      /** based on axisID. */
+      use = me.get('use');
+      /** initially data of use is axisID (d), until .data([width]) below */
+      let
+        startWidth = me.get('startWidth');
+      let
+        delta = width - startWidth,
+      ok = delta < stacks.axisXRangeMargin;
+      console.log(startWidth, width, delta, "axisXRangeMargin", stacks.axisXRangeMargin, ok);
+      /* if !ok, maybe some animation to indicate the limit is reached,
+       * or can probably apply the above check as a filter :
+       * defaultFilter = dragResize.filter();  dragResize.filter(function () { defaultFilter(...) && ... ok; } );
        */
-      parentView.send('axisWidthResize', axisID, width, dx);
+      if (ok)
+      {
+        use
+          .data([width])
+          .attr("transform", function(d) {return "translate(" + d + ",0)";});
+        rect.attr("width", width);
+        /** Can use param d, same value as me.get('axisID').
+         * axisID is also on the parent of <use> :
+         * useElt = axisUse.node();
+         * (useElt.length > 0) && (axisID = useElt[0].parentElement.__data__);
+         */
+        let
+          axisID = me.get('axisID');
+        currentSize = width; // dx ?
+
+        let parentView = me.get('parentView');
+        /* Recalculate positions & translations of axes.
+         * A possible optimisation : instead, add width change to the x translation of axes to the right of this one.
+         */
+        parentView.send('axisWidthResize', axisID, width, dx);
+      }
+      return ok;
     };
+    function resizeStarted()
+    {
+      me.set('startWidth', me.rectWidth());
+    }
     function resizeEnded()
     {
       let parentView = me.get('parentView');
@@ -153,6 +205,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     Ember.run.later( function () { 
       let dragResize = eltWidthResizable('.foreignObject', undefined, resized);	// #axis2D
+      dragResize.on('start', resizeStarted);
       dragResize.on('end', resizeEnded);
     }, 1000);
   },

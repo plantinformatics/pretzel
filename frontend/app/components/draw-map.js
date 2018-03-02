@@ -3156,14 +3156,14 @@ export default Ember.Component.extend(Ember.Evented, {
         : [x(ak1), x(ak2)],
       /** true if ak1 is left of ak2 */
       order = xi[0] < xi[1],
-      /** If the rightmost axis is split it does not effect the endpoint, since its left side is the axis position.
+      /** If the rightmost axis is split it does not affect the endpoint, since its left side is the axis position.
        * This is the index of the left axis. */
       left = order ? 0 : 1,
       akL = order ? ak1 : ak2,
       aL = oa.axes[akL];
       if (aL.extended)
       {
-        console.log("inside", ak1, ak2, cached, xi, order, left, akL);
+        // console.log("inside", ak1, ak2, cached, xi, order, left, akL);
         xi[left] += aL.extended;
       }
       return xi;
@@ -4799,6 +4799,9 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     function dragended(/*d*/) {
       deleteAfterDrag();
+      let stacks = oa.stacks;
+      stacks.sortLocation();
+
       // in the case of dropOut(),
       // number of stacks has increased - need to recalc the domain, so that
       // x is defined for this axis.
@@ -4807,8 +4810,6 @@ export default Ember.Component.extend(Ember.Evented, {
       updateXScale();
       // if caching, recalc : collateAxisPositions();
       
-      let stacks = oa.stacks;
-      stacks.sortLocation();
       /* stacks.changed only needs to be set if sortLocation() has changed the
        * order, so for an optimisation : define stacks.inOrder() using reduce(),
        * true if stacks are in location order.

@@ -926,20 +926,29 @@ function xScaleExtend()
   let widthRanges = stacks.map(
     function(s){ let widthRange = s.extendedWidth(); return widthRange;}
   );
+  if (trace_stack > 1)
+    stacks.map(function(s) { console.log(s.axes[0].mapName, s.axes[0].extended); });
   let widths = widthRanges.map(
     function(widthRange){ return widthRange[1];}
+  ),
+  widthsSum = widths.reduce(
+    function(sum, width){ return sum + width;}, 0
   );
 
-  let axisXRange = stacks.vc.axisXRange;
+  let axisXRange = stacks.vc.axisXRange.copy(false); // shallow copy
+  axisXRange[1] -= widthsSum;
+  // 40 allows for width of axis ticks / text,  etc and a bit of padding
+  stacks.axisXRangeMargin = axisXRange[1] - stacks.length * 40;
   let stackDomain = Array.from(stacks.keys()); // was axisIDs
-  console.log("xScaleExtend", widthRanges, widths, axisXRange, stackDomain);
+
+  console.log("xScaleExtend", widthRanges, widths, widthsSum, stacks.vc.axisXRange, axisXRange, stackDomain);
   let v = variableBands,  CombinedScale = v();
   // let gapScale = // d3.scaleOrdinal()
   CombinedScale
     .domain(stackDomain)
   ;
   CombinedScale
-    .range(stacks.vc.axisXRange)
+    .range(axisXRange)
   ;
   CombinedScale.scale
     .widths(widths)
