@@ -36,7 +36,7 @@
     "ember-component-inbound-actions": "^1.2.1",
     "ember-content-editable": "0.10.0",
     "ember-data": "^2.15.0",
-    "ember-data-model-fragments": "^2.3.3",
+    "ember-data-model-fragments": "^2.14.0",
     "ember-data-partial-model": "^0.4.0",
     "ember-export-application-global": "^2.0.0",
     "ember-load-initializers": "^1.0.0",

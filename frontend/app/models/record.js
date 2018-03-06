@@ -17,6 +17,9 @@ export default DS.Model.extend({
   owner: Ember.computed('clientId', function() {
     let clientIdSession = this.get('session.data.authenticated.clientId')
     let clientId = this.get('clientId')
+    if (!clientId) {
+      return false;
+    }
     return clientIdSession == clientId;
   }),
   editable: Ember.computed('owner', 'readOnly', function() {

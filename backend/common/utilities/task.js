@@ -267,7 +267,7 @@ function findBlocks(block_a, block_b) {
  * @param {String} id - The specific block identifier on database
  */
 function findBlock(models, id) {
-    return models.Block.findById(id, {include: ['features']})
+    return models.Block.findById(id)
 }
 
 /**

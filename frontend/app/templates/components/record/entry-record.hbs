@@ -56,6 +56,15 @@
           onClick=(action "deleteRecord" entry)}}
           Delete
         {{/elem/dropdown-row}}
+      {{else}}
+        {{#if noAuth}}
+          {{elem/dropdown-separator}}
+          {{#elem/dropdown-row
+            icon="remove"
+            onClick=(action "deleteRecord" entry)}}
+            Delete
+          {{/elem/dropdown-row}}
+        {{/if}}
       {{/if}}
     {{/elem/dropdown-container}}
   {{/if}}

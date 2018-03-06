@@ -362,7 +362,9 @@ export default Ember.Component.extend(Ember.Evented, {
                   let thisStore = me.get('store')
                   let pc = thisStore.findRecord('block', m,
                     { reload: true,
-                      adapterOptions:{ filter: {include: "features" } }}
+                      adapterOptions:{ 
+                        filter: {include: "features"} 
+                      }}
                     );
                   pc.then(function (ch){
                     let map, mapId, chrName = ch.get('name'), chr = ch.get('id'), markers, rc;
@@ -826,15 +828,7 @@ export default Ember.Component.extend(Ember.Evented, {
       Ember.RSVP.all(waitFor).then(function(results) {
         let
           c = results[0],
-        rc = {mapName : c.get('map').get('name'), chrName : c.get('name')};
-        console.log("afterChrPromise", rc);
-        let m = c.get('features');
-        m.forEach(function(marker) {
-          let markerName = marker.get('name');
-          let markerPosition = marker.get('position');
-          let markerAliases = marker.get('aliases');
-          rc[markerName] = {location: markerPosition, aliases: markerAliases};
-        });
+        rc = chrData(c);
         receiveChr(c.get('id'), rc, 'dataReceived');
         // using named function redraw() instead of anonymous function, so that debounce is effective.
         Ember.run.debounce(redraw, 800);
@@ -3641,7 +3635,7 @@ export default Ember.Component.extend(Ember.Evented, {
               let  marker_ = za[markerName],
               agName = marker_.agName,
               mas = marker_.aliases;
-              if (mas.length > 0)
+              if (mas && mas.length > 0)
               {
                 // mas.length > 0 implies .agName is defined
                 let agc = agClasses[agName];
@@ -4039,6 +4033,7 @@ export default Ember.Component.extend(Ember.Evented, {
                 agName = marker_.agName;
 
                 let mas = marker_.aliases;
+                if (mas)
                 for (let i=0; i<mas.length; i++)
                 {
                   let mi = mas[i],
@@ -4548,8 +4543,10 @@ export default Ember.Component.extend(Ember.Evented, {
      * @return text for display in path hover tooltip */
     function markerAliasesText(mN, m)
     {
-      let s = mN + ":" + m.aliases.length + ":",
-      mas = m.aliases;
+      let
+        mas = m.aliases,
+      s = mN + ":" + (mas ? m.aliases.length : "") + ":";
+      if (mas)
       for (let i=0; i<mas.length; i++)
       {
         s += mas[i] + ",";

@@ -242,6 +242,84 @@ function aliases_7()
      tail -6 $example_template) > resources/example_map$mapN.json
 }
 
+#-------------------------------------------------------------------------------
+# Data format conversions
+
+# Using curl to upload.
+
+function wrapFileData() { file=$1;  (echo -n '{"data":"'; < $file tr -d '\r\n' | sed 's/"/\\\"/g' ;  echo '","fileName":"'$file.json'"}') > $file.data; }
+
+function uploadData() { file=$1;
+URL=$APIHOST/api/Datasets/createComplete
+"$CURL"  -H "Content-Type: application/json" -H "Accept: application/json"    --url $URL  -H "$Authorization"   --cookie @cookies.txt   --data-binary @$file
+}
+CURL=curl
+APIHOST=localhost:80
+
+# Examples of use :
+#
+# gzip -d < ../2017Aug15.CS1-7A-D.gz |  convertGM   | sed 's/^/{    "dataset": /;s/$/}/;s/"_id" : { "$oid" : "[0-9a-f]*" },//g;s/, "__v" : 0//' | split -1
+# time for i in x??; do echo $i; wrapFileData $i > $i.data; uploadData $i.data; done
+
+
+
+#-------------------------------------------------------------------------------
+# to get the Cookies and Authorization :
+#
+# either :  use the web-app GUI and web-inspector  (Network tab, Response headers, login request) :
+# or :
+# Web Inspector : Application tab : Storage : Cookies : (api URL) https://localhost:4200  : ember_simple_auth-session :
+# refn: https://developers.google.com/web/tools/chrome-devtools/manage-data/cookies
+#
+# cat >> cookies.txt <<EOF
+# ember_simple_auth-session=%7B%22authenticated%22%3A%7B%22authenticator%22%3A%22authenticator%3Apretzel-local%22%2C%22token   ...  %22%7D%7D
+# EOF
+#
+# export Authorization="Authorization: ... "
+#-------------------------------------------------------------------------------
+
+
+function getBlockAndFeatures()
+{
+    blockId=$1
+    "$CURL"  -H "Content-Type: application/json" -H "Accept: application/json"    -H "$Authorization"   --cookie @cookies.txt   --url $APIHOST/api/blocks/$blockId\?filter%5Binclude%5D=features
+}
+
+#-------------------------------------------------------------------------------
+# Data model updates
+
+# update data field names for data model change
+#  geneticmap	-> dataset
+#  chromosomes	-> blocks
+#  marker		-> feature
+#
+# Examples of use :
+# cd resources
+# $ convertGM < example_map3.json > new/example_map3.json
+function convertGM() { sed 's/"geneticmap"/"dataset"/g;s/"chromosomes"/"blocks"/g;s/"markers"/"features"/g' ;  }
+
+# In addition to renaming the fields (convertGM), rename the data values marker -> feature
+#
+# Examples of use :
+# $ convertGMf example_map4.json
+function convertGMf() { for i in $*; do  convertGM < $i | sed 's/"name": "marker/"name": "feature/'  > new/$i;  done ;  }
+
+#  update json data, for changes made in branch feature/workspaces :
+#   * remove the { "dataset" :   } wrapper 
+#   * append "_block" to the dataset name, to separate from the previous data objects
+#   * add to the dataset : "size" : 2 (2 is a nominal value, not yet used in draw-map)
+#   * position -> range[]
+#   * add to each feature : "type" : "marker",
+#   * rename the data values marker -> feature
+#
+# Examples of use :
+# mkdir new
+# position2range  < example_map1.json  > new/example_map1.json
+function position2range() {
+   sed '1d;/^}$/d;s/\("name": .*MyMap[^"]*\)/\1_block/;s/\("features":\)/"size" : 2,  \1/;s/"marker/"feature/;s/"position": \([^,]*\)/"type" : "marker", "range": [\1, \1]/'
+}
+
+
 
 #-------------------------------------------------------------------------------
 # Extract data and load from :

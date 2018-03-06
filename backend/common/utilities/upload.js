@@ -76,63 +76,81 @@ function createChunked (data, model, len) {
 
 /**
  * Send a json dataset structure to the database
- * @param {Object} msg - The dataset object to be processed
+ * @param {Object} data - The dataset object to be processed
  * @param {Object} models - Loopback database models
  */
-exports.json = (msg, models, options) => {
-  // current json spec has high level dataset map prop with data nested
-  var content = msg.dataset
-  if (!content || !content.name) {
-    throw Error("Unable to extract dataset from json");
-  }
-  return checkDatasetExists(content.name, models)
-  .then(function(exists) {
-    if (exists) {
-      throw Error("Duplicate dataset");
+exports.uploadDataset = (data, models, options, cb) => {
+  let dataset_id
+  let json_blocks = []
+  let json_annotations = []
+  let json_intervals = []
+  let json_features = []
+
+  //create dataset
+  models.Dataset.create(data, options)
+  .then(function(dataset) {
+    dataset_id = dataset.id
+    if (dataset.__cachedRelations.blocks) {
+      dataset.__cachedRelations.blocks.forEach(function(json_block) {
+        json_block.datasetId = dataset.id
+        json_blocks.push(json_block)
+      })
     }
-    var arrayDatasets = [{
-      name: content.name,
-    }]
-    var arrayBlocks = content.blocks.map(function(block) {
-      return {
-        name: block.name,
+    //create blocks
+    return models.Block.create(json_blocks, options)
+  }).then(function(blocks) {
+    blocks.forEach(function(block) {
+      if (block.__cachedRelations.annotations) {
+        block.__cachedRelations.annotations.forEach(function(json_annotation) {
+          json_annotation.blockId = block.id
+          json_annotations.push(json_annotation)
+        })
+      }
+      if (block.__cachedRelations.intervals) {
+        block.__cachedRelations.intervals.forEach(function(json_interval) {
+          json_interval.blockId = block.id
+          json_intervals.push(json_interval)
+        })
+      }
+      if (block.__cachedRelations.features) {
+        block.__cachedRelations.features.forEach(function(json_feature) {
+          json_feature.blockId = block.id
+          json_features.push(json_feature)
+        })
       }
     })
-    var arrayFeatures = content.blocks.map(function(block) {
-      return block.features.map(function(features) {
-        return features
-      })
-    })
-  
-    return models.Dataset.create(arrayDatasets, options)
-    .then(function(data) {
-      // gather the dataset map identifiers to attach to blocks
-      let datasetId = data[0].id
-      // attaching id to blocks
-      arrayBlocks = arrayBlocks.map(function(block) {
-        block.datasetId = datasetId
-        return block
-      })
-      return models.Block.create(arrayBlocks, options)
-    })
-    .then(function(data) {
-      // gather the dataset map identifiers to attach to features
-      // attaching id to features
-      arrayFeatures = arrayFeatures.map(function(blockFeatures, idx) {
-        let blockId = data[idx].id
-        return blockFeatures.map(function(feature) {
-          if (!feature.aliases) feature.aliases = []
-          feature.blockId = blockId
-          return feature
+    //create annotations
+    return models.Annotation.create(json_annotations, options)
+  }).then(function(annotations) {
+    //create intervals
+    return models.Interval.create(json_intervals, options)
+  }).then(function(intervals) {
+    let recursive_features = function(new_features_promise) {
+      return new_features_promise.then(function(features) {
+        json_features = []
+        features.forEach(function(feature) {
+          if (feature.__cachedRelations.features) {
+            feature.__cachedRelations.features.forEach(function(json_feature) {
+              json_feature.blockId = feature.blockId
+              json_feature.parentId = feature.id
+              json_features.push(json_feature)
+            })
+          }
         })
+        if (json_features.length == 0) {
+          return features
+        } else {
+          return recursive_features(models.Feature.create(json_features, options))
+        }
       })
-      // concatenate the array features into a flat array
-      arrayFeatures = [].concat.apply([], arrayFeatures);
-      return models.Feature.create(arrayFeatures)
-  
-      // return createChunked(arrayFeatures, models.Feature, 5000)
-    })
-  });
+    }
+    //create features
+    return recursive_features(models.Feature.create(json_features, options))
+  }).then(function(features) {
+    cb(null, dataset_id)
+  }).catch(function(e){
+    cb(e)
+  })
 }
 
 /**

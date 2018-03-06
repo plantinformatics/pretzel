@@ -1,27 +1,52 @@
-<h4>
-  {{block.map.name}}
-  {{elem/icon-acl record=dataset}}
-  {{#if dataset.owner}}
+{{#if editing }}
+  <div class="input-group">
+    {{input
+      enter=(action "saveEdit" entry)
+      escape-press=(action "cancelEdit" entry)
+      type="text"
+      value=entry.name
+      class="form-control"
+      placeholder="Placeholder"}}
+    <span class="input-group-btn">
+      {{elem/button-base
+        icon="ok"
+        classColour="success"
+        onClick=(action "saveEdit" entry)
+      }}
+      {{elem/button-base
+        icon="remove"
+        classColour="danger"
+        onClick=(action "cancelEdit" entry)
+      }}
+    </span>
+  </div>
+{{else}}
+  {{#if entry.isSelected}}
+  {{else}}
+    {{#link-to "mapview" (query-params mapsToView=entry.blockLink)}}
+      {{elem/button-base
+        classSize='xs'
+        classColour='success'
+        icon='plus'}}
+    {{/link-to}}
+  {{/if}}
+  {{entry.name}}
+  {{#if entry.datasetId.editable }}
     {{#elem/dropdown-container
       right=true}}
       {{#elem/dropdown-row
-        icon="lock"
-        onClick=(action 'flipPublic' dataset)}}
-        {{#if dataset.public}}
-        Make Private
-        {{else}}
-        Make Public
-        {{/if}}
-      {{/elem/dropdown-row}}
-      {{#elem/dropdown-row
         icon="pencil"
-        onClick=(action 'flipReadOnly' dataset)}}
-        {{#if dataset.readOnly}}
-        Make Editable
-        {{else}}
-        Make Read-Only
-        {{/if}}
+        onClick=(action 'enableEdit' entry)}}
+        Edit
       {{/elem/dropdown-row}}
+      {{#if entry.datasetId.owner }}
+        {{elem/dropdown-separator}}
+        {{#elem/dropdown-row
+          icon="remove"
+          onClick=(action "deleteRecord" entry)}}
+          Delete
+        {{/elem/dropdown-row}}
+      {{/if}}
     {{/elem/dropdown-container}}
   {{/if}}
-</h4>
+{{/if}}
