@@ -250,7 +250,7 @@ function aliases_7()
 function wrapFileData() { file=$1;  (echo -n '{"data":"'; < $file tr -d '\r\n' | sed 's/"/\\\"/g' ;  echo '","fileName":"'$file.json'"}') > $file.data; }
 
 function uploadData() { file=$1;
-URL=$APIHOST/api/Datasets/upload
+URL=$APIHOST/api/Datasets/createComplete
 "$CURL"  -H "Content-Type: application/json" -H "Accept: application/json"    --url $URL  -H "$Authorization"   --cookie @cookies.txt   --data-binary @$file
 }
 CURL=curl
