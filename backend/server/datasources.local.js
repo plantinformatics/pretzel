@@ -14,13 +14,14 @@ var config = {
   "mongoDs": {
     "host": process.env.DB_HOST,
     "port": process.env.DB_PORT,
-    "url": "",
     "database": process.env.DB_NAME || 'pretzel',
     "authSource": "admin",
     "password": process.env.DB_PASS,
     "name": "mongoDs",
     "user": process.env.DB_USER,
-    "connector": "mongodb"
+    "connector": "mongodb",
+    "connectionTimeoutMS": 1800000,
+    "socketTimeoutMS": 1800000
   },
   "email": {
     "name": "email",

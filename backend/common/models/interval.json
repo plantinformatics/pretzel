@@ -3,6 +3,10 @@
   "base": "Record",
   "description": "Commentary on Feature range",
   "properties": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
     "features": {
       "type": ["string"],
       "required": false,

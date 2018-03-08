@@ -9,7 +9,8 @@ var load = require('../utilities/load')
 
 module.exports = function(Dataset) {
 
-  Dataset.upload = function(msg, options, cb) {
+  Dataset.upload = function(msg, options, req, cb) {
+    req.setTimeout(0);
     var models = this.app.models;
     if (msg.fileName.endsWith('.json')) {
       try {
@@ -98,16 +99,17 @@ module.exports = function(Dataset) {
     });
   }
 
-  Dataset.createComplete = function(data, options, cb) {
-    var models = this.app.models
-    upload.uploadDataset(data, models, options, cb)
+  Dataset.createComplete = function(data, options, req, cb) {
+    req.setTimeout(0);
+    var models = this.app.models;
+    upload.uploadDataset(data, models, options, cb);
   }
 
   Dataset.observe('before delete', function(ctx, next) {
     var Block = ctx.Model.app.models.Block
     Block.find({
       where: {
-        datasetId: ctx.where.and[1].id
+        datasetId: ctx.where.and[1].name
       }
     }, ctx.options).then(function(blocks) {
       blocks.forEach(function(block) {
@@ -121,7 +123,8 @@ module.exports = function(Dataset) {
   Dataset.remoteMethod('upload', {
     accepts: [
       {arg: 'msg', type: 'object', required: true, http: {source: 'body'}},
-      {arg: "options", type: "object", http: "optionsFromRequest"}
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: "req", type: "object", http: {source: "req"}}
     ],
     returns: {arg: 'status', type: 'string'},
     description: "Perform a bulk upload of a dataset with associated blocks and features"
@@ -137,7 +140,8 @@ module.exports = function(Dataset) {
   Dataset.remoteMethod('createComplete', {
     accepts: [
       {arg: 'data', type: 'object', required: true, http: {source: 'body'}},
-      {arg: "options", type: "object", http: "optionsFromRequest"}
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: "req", type: "object", http: {source: "req"}}
     ],
     returns: {arg: 'id', type: 'string'},
     description: "Creates a dataset and all of its children"

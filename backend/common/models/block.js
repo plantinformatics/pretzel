@@ -16,23 +16,23 @@ module.exports = function(Block) {
       console.log('ERROR', err)
       cb(err);
     })
-  }
+  };
+
+  Block.observe('before save', function(ctx, next) {
+    if (ctx.instance) {
+      if (!ctx.instance.name) {
+        ctx.instance.name = ctx.instance.scope;
+      }
+    }
+    next();
+  });
 
   Block.observe('before delete', function(ctx, next) {
     var Block = ctx.Model.app.models.Block
     var Annotation = ctx.Model.app.models.Annotation
 
     var Feature = ctx.Model.app.models.Feature
-    Feature.find({
-      where: {
-        blockId: ctx.where.id
-      }
-    }, ctx.options).then(function(features) {
-      features.forEach(function(feature) {
-        Feature.destroyById(feature.id, ctx.options, function () {
-        });
-      })
-    })
+    Feature.destroyAll({blockId: ctx.where.id}, ctx.options);
 
     var Annotation = ctx.Model.app.models.Annotation
     Annotation.find({

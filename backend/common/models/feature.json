@@ -11,10 +11,6 @@
       "type": "string",
       "required": true
     },
-    "type": {
-      "type": "string",
-      "required": true
-    },
     "range": {
       "type": ["number"],
       "required": true

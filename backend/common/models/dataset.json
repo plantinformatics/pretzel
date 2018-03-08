@@ -3,13 +3,35 @@
   "description": "High level data structure containing blocks",
   "base": "Record",
   "properties": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "id": true
+    },
+    "namespace": {
+      "type": "string"
+    },
+    "tags": {
+      "type": ["string"]
+    },
+    "meta": {
+      "type": "object"
+    }
   },
   "validations": [],
   "relations": {
     "blocks": {
       "type": "hasMany",
-      "model": "Block",
-      "foreignKey": ""
+      "model": "Block"
+    },
+    "parent": {
+      "type": "belongsTo",
+      "model": "Dataset"
+    },
+    "children": {
+      "type": "hasMany",
+      "model": "Dataset",
+      "foreignKey": "parent"
     }
   },
   "acls": [

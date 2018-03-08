@@ -89,7 +89,7 @@ exports.uploadDataset = (data, models, options, cb) => {
   //create dataset
   models.Dataset.create(data, options)
   .then(function(dataset) {
-    dataset_id = dataset.id
+    dataset_id = dataset.name
     if (dataset.__cachedRelations.blocks) {
       dataset.__cachedRelations.blocks.forEach(function(json_block) {
         json_block.datasetId = dataset.id

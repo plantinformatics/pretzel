@@ -7,10 +7,6 @@
     "validateUpsert": true
   },
   "properties": {
-    "name": {
-      "type": "string",
-      "required": true
-    },
     "public": {
       "type": "boolean",
       "default": false
