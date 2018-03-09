@@ -1,0 +1,30 @@
+{
+  "name": "Alias",
+  "base": "PersistedModel",
+  "description": "Contains a link between two features",
+  "properties": {
+    "string1": {
+      "type": "string",
+      "required": true
+    },
+    "string2": {
+      "type": "string",
+      "required": true
+    },
+    "namespace1": {
+      "type": "string"
+    },
+    "namespace2": {
+      "type": "string"
+    },
+    "evidence": {
+      "type": "object"
+    }
+  },
+  "validations": [],
+  "relations": {
+  },
+  "acls": [
+  ],
+  "methods": {}
+}
