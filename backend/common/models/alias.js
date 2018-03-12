@@ -6,12 +6,20 @@ module.exports = function(Alias) {
 
   Alias.bulkCreate = function(data, options, req, cb) {
     req.setTimeout(0);
-    Alias.create(data, options)
-    .then(function(aliases) {
-      cb(null, aliases.length);
-    }).catch(function(e) {
-      cb(e);
-    })
+    //validate
+    data.forEach(function(row, i) {
+      if (!row['string1'] || !row['string2']) {
+        return process.nextTick(() => cb('Error in row ' + i + '. Alias requires string1 and string2 to be defined'));
+      }
+    });
+
+    //insert many using connector for performance reasons
+    Alias.dataSource.connector.connect(function(err, db) {
+      db.collection('Alias').insertMany(data)
+      .then(function(result) {
+        cb(null, result.insertedCount);
+      })
+    });
   }
 
   Alias.remoteMethod('bulkCreate', {
