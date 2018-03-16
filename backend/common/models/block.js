@@ -6,8 +6,8 @@ var task = require('../utilities/task')
 
 module.exports = function(Block) {
 
-  Block.paths = function(left, right, cb) {
-    task.paths(this.app.models, left, right)
+  Block.paths = function(left, right, options, cb) {
+    task.paths(this.app.models, left, right, options)
     .then(function(data) {
       // completed additions to database
       cb(null, data);
@@ -63,11 +63,12 @@ module.exports = function(Block) {
 
   Block.remoteMethod('paths', {
     accepts: [
-      {arg: '0', type: 'string', required: true}, // block reference
-      {arg: '1', type: 'string', required: true}, // block reference
+      {arg: 'blockA', type: 'string', required: true}, // block reference
+      {arg: 'blockB', type: 'string', required: true}, // block reference
+      {arg: "options", type: "object", http: "optionsFromRequest"},
     ],
     returns: {type: 'array', root: true},
-    description: "Request paths for left and right blocks"
+    description: "Request paths between the two blocks"
   });
 
   Block.syntenies = function(id0, id1, thresholdSize, thresholdContinuity, cb) {

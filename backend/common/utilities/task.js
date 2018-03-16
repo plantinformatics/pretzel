@@ -2,27 +2,72 @@
 // let minimum_length = 3;
 // let continuity_threshold = 0.9;
 
-function findLinks(block_a, block_b) {
+function findLinks(featuresA, featuresB) {
     let links = [];
-    let features_b = block_b.features.slice(0);
+    add_link = function(f1, f2, alias) {
+        let link = {featureA: f1, featureB: f2, alias: alias};
+        links.push(link);
+    }
+    let features_a_by_name = {};
+    featuresA.forEach(function(feature) {
+        features_a_by_name[feature.name] = feature;
+    });
 
-    for (let i_a = 0; i_a < block_a.features.length; i_a++) {
-        for (let i_b = 0; i_b < features_b.length; i_b++) {
-            let feature_a = block_a.features[i_a];
-            let feature_b = features_b[i_b];
-            if (feature_a.name == feature_b.name) {
-                let link = {
-                    name: feature_a.name,
-                    pos_a: parseFloat(feature_a.position),
-                    pos_b: parseFloat(feature_b.position)
-                };
-                links.push(link);
-                features_b.splice(i_b, 1);
-                break;                
+    featuresB.forEach(function(feature_b) {
+        if (feature_b.name in features_a_by_name) {
+            add_link(features_a_by_name[feature_b.name], feature_b);
+        } else {
+            for (var i=0; i<feature_b.aliases.length; i++) {
+                if (feature_b.aliases[i].string2 in features_a_by_name) {
+                    add_link(features_a_by_name[feature_b.aliases[i].string2], feature_b, feature_b.aliases[i].__data);
+                    break;
+                }
             }
         }
-    }
+        // clean up
+        delete feature_b.aliases;
+    });
     return links;
+}
+
+function loadAliases(models, block_a, block_b, options) {
+    // append aliases to block b features
+    let features_by_name = {};
+    block_b.features.forEach(function(feature) {
+        feature['aliases'] = [];
+        features_by_name[feature.name] = feature;
+    });
+
+    // find relevant aliases
+    let feature_b_names = Object.keys(features_by_name);
+    let conditions = [{string1: {inq: feature_b_names}}];
+    let conditions_mirror = [{string2: {inq: feature_b_names}}];
+    if (block_b.dataset.namespace) {
+        conditions.push({namespace1: block_b.dataset.namespace});
+        conditions_mirror.push({namespace2: block_b.dataset.namespace});
+    }
+    if (block_a.dataset.namespace) {
+        conditions.push({namespace2: block_a.dataset.namespace});
+        conditions_mirror.push({namespace1: block_a.dataset.namespace});
+    }
+    let where = {where: {or: [{and: conditions}, {and: conditions_mirror}]}};
+    return models.Alias.find(where, options)
+    .then(function(aliases) {
+        // match aliases to the features on blockB
+        aliases.forEach(function(alias) {
+            if (alias.namespace1 == block_b.dataset.namespace && alias.string1 in features_by_name) {
+                features_by_name[alias.string1]['aliases'].push(alias);
+            } else if (alias.namespace2 == block_b.dataset.namespace && alias.string2 in features_by_name) {
+                let alias_mirror = Object.assign({}, alias);
+                alias_mirror.namespace1 = alias.namespace2;
+                alias_mirror.namespace2 = alias.namespace1;
+                alias_mirror.string1 = alias.string2;
+                alias_mirror.string2 = alias.string1;
+                features_by_name[alias_mirror.string1]['aliases'].push(alias_mirror);
+            }
+        });
+        return {featuresA: block_a.features, featuresB: block_b.features};
+    });
 }
 
 function findSequences(links, links_b) {
@@ -266,41 +311,33 @@ function findBlocks(block_a, block_b) {
  * @param {Object} models - Loopback database models
  * @param {String} id - The specific block identifier on database
  */
-function findBlock(models, id) {
-    return models.Block.findById(id)
+function findBlock(models, id, options) {
+    return models.Block.findById(id, {include: ['features', 'dataset']}, options);
 }
 
 /**
- * Request data for two blocks
+ * Request data for two blocks concurrently
  * @param {Object} models - Loopback database models
  * @param {String} id_left - The specific block identifier on database
  * @param {String} id_right - The specific block identifier on database
  */
-function findBlockPair(models, id_left, id_right) {
-    // TODO will need to be mindful of permissions implications for further ACL granularity
-    let data_left = null
-    let data_right = null
-    return findBlock(models, id_left)
-    .then(function(data) {
-        if (!data) throw new Error(`Missing data for block ${id_left}`)
-        else data_left = data.__data
-        return findBlock(models, id_right)
-    })
-    .then(function(data) {
-        if (!data) throw new Error(`Missing data for block ${id_right}`)
-        else data_right = data.__data
-        return {
-            left: data_left,
-            right: data_right
-        }
-    })
+function findBlockPair(models, id_left, id_right, options) {
+    let promise_a = findBlock(models, id_left, options);
+    let promise_b = findBlock(models, id_right, options);
+    return promise_a.then(function(block_a) {
+        return promise_b.then(function(block_b) {
+            return {blockA: block_a.__data, blockB: block_b.__data};
+        });
+    });
 }
   
-exports.paths = function(models, id0, id1) {
-    return findBlockPair(models, id0, id1)
+exports.paths = function(models, id0, id1, options) {
+    return findBlockPair(models, id0, id1, options)
     .then(function(data) {
-        return findLinks(data.left, data.right)
-    })
+        return loadAliases(models, data.blockA, data.blockB, options);
+    }).then(function(data) {
+        return findLinks(data.featuresA, data.featuresB);
+    });
 }
 
 exports.syntenies = function(models, id0, id1, thresholdSize, thresholdContinuity) {

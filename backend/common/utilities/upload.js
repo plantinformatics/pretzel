@@ -167,7 +167,7 @@ exports.uploadDataset = (data, models, options, cb) => {
     });
   }).catch(function(e){
     cb(e)
-  })
+  });
 }
 
 /**
