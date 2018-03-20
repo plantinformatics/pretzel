@@ -5,7 +5,7 @@
 function findLinks(featuresA, featuresB) {
     let links = [];
     add_link = function(f1, f2, alias) {
-        let link = {featureA: f1, featureB: f2, alias: alias};
+        let link = {featureA: f1.id, featureB: f2.id, alias: alias};
         links.push(link);
     }
     let features_a_by_name = {};
