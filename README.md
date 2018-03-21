@@ -97,7 +97,7 @@ node_modules/ember-cli/bin/ember build --environment production
 The Loopback backend expects the compiled client in its client/ sub-directory. You can simply create a soft link:
 
 ```
-ln -s ../frontend/dist ../backend/client
+cd .. && ln -s ../frontend/dist backend/client
 ```
 
 ## Running
