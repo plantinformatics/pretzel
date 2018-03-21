@@ -69,7 +69,7 @@ Ember-specific dependencies):
 
 ```
 # cd into Ember directory
-cd frontend
+cd pretzel/frontend
 # Install Ember dependencies
 npm install
 bower install
@@ -88,7 +88,7 @@ example, `ember` is in `frontend/node_modules/ember-cli/bin/`.
 The app is served by the Loopback backend and needs to be pre-compiled:
 
 ```
-cd frontend
+cd ../frontend
 node_modules/ember-cli/bin/ember build --environment production
 ```
 
@@ -97,7 +97,7 @@ node_modules/ember-cli/bin/ember build --environment production
 The Loopback backend expects the compiled client in its client/ sub-directory. You can simply create a soft link:
 
 ```
-ln -s ../frontend/dist backend/client
+ln -s ../frontend/dist ../backend/client
 ```
 
 ## Running
@@ -107,14 +107,14 @@ ln -s ../frontend/dist backend/client
 You should now be able to start the Loopback backend:
 
 ```
-cd backend
+cd ../backend
 EMAIL_VERIFY=NONE AUTH=ALL node server/server.js
 ```
-Note this runs the app without any authentication or security and is only suitable for local installs or internal networks. See below for details on setting up user accounts and authentication.
+Note that this runs the app without any authentication or security and is only suitable for local installs or internal networks. See below for details on setting up user accounts and authentication.
 
 ### Checking things are running
 
-If everything has worked so far, you should be able to open `http://localhost:3000` in a browser and see a landing page. If you started the backend with the above command, you can create a user by signing up, then logging in with these details (with `EMAIL_VERIFY=NONE`, the user is created immediately without any extra verification).
+If everything has worked so far, you should be able to open [http://localhost:3000](http://localhost:3000) in a browser and see a landing page. If you started the backend with the above command, you can create a user by signing up, then logging in with these details (with `EMAIL_VERIFY=NONE`, the user is created immediately without any extra verification).
 
 ## Inserting data
 
@@ -127,4 +127,4 @@ Wang, S., Wong, D., Forrest, K., Allen, A., Chao, S., Huang, B. E., Maccaferri, 
 
 Gardner, K. A., Wittern, L. M. and Mackay, I. J. (2016), A highly recombined, high-density, eight-founder wheat MAGIC map reveals extensive segregation distortion and genomic locations of introgression segments. Plant Biotechnol J, 14: 1406–1417. doi:10.1111/pbi.12504
 
-Wen, W., He, Z., Gao, F., Liu, J., Jin, H., Zhai, S., \u2026 Xia, X. (2017). A High-Density Consensus Map of Common Wheat Integrating Four Mapping Populations Scanned by the 90K SNP Array. Frontiers in Plant Science, 8, 1389. http://doi.org/10.3389/fpls.2017.01389
+Wen, W., He, Z., Gao, F., Liu, J., Jin, H., Zhai, S., Xia, X. (2017). A High-Density Consensus Map of Common Wheat Integrating Four Mapping Populations Scanned by the 90K SNP Array. Frontiers in Plant Science, 8, 1389. http://doi.org/10.3389/fpls.2017.01389
