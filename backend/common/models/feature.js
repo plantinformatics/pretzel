@@ -29,6 +29,7 @@ module.exports = function(Feature) {
       {arg: 'filter', type: 'array', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"}
     ],
+    http: {verb: 'get'},
     returns: {arg: 'features', type: 'array'},
     description: "Search features"
   });

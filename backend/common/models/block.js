@@ -67,6 +67,7 @@ module.exports = function(Block) {
       {arg: 'blockB', type: 'string', required: true}, // block reference
       {arg: "options", type: "object", http: "optionsFromRequest"},
     ],
+    http: {verb: 'get'},
     returns: {type: 'array', root: true},
     description: "Request paths between the two blocks"
   });
