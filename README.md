@@ -62,6 +62,17 @@ Clone the Github repository:
 git clone https://github.com/plantinformatics/pretzel.git
 ```
 
+### Default Build
+
+To setup and build the frontend and backend, and run the backend :
+
+```
+npm run go
+```
+
+The following sections describe each of those steps individually.
+
+
 ### Install Ember dependencies
 
 To install the various plug-ins and add-ons required by the project, use NPM and Bower (for the
@@ -90,6 +101,7 @@ The app is served by the Loopback backend and needs to be pre-compiled:
 ```
 cd ../frontend
 node_modules/ember-cli/bin/ember build --environment production
+cd ..
 ```
 
 ### Set up soft links
@@ -97,7 +109,7 @@ node_modules/ember-cli/bin/ember build --environment production
 The Loopback backend expects the compiled client in its client/ sub-directory. You can simply create a soft link:
 
 ```
-cd .. && ln -s ../frontend/dist backend/client
+ln -s ../frontend/dist backend/client
 ```
 
 ## Running
@@ -107,7 +119,7 @@ cd .. && ln -s ../frontend/dist backend/client
 You should now be able to start the Loopback backend:
 
 ```
-cd ../backend
+cd backend
 EMAIL_VERIFY=NONE AUTH=ALL node server/server.js
 ```
 Note that this runs the app without any authentication or security and is only suitable for local installs or internal networks. See below for details on setting up user accounts and authentication.
