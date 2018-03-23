@@ -17,6 +17,7 @@ module.exports = function(Feature) {
           }
         }
     }, options).then(function(features) {
+      // filter out the features for which the user doesn't have access to the dataset
       features = features.filter(function(feature) {
         return feature.__data.block.__data.dataset
       })
@@ -31,7 +32,7 @@ module.exports = function(Feature) {
     ],
     http: {verb: 'get'},
     returns: {arg: 'features', type: 'array'},
-    description: "Search features"
+    description: "Returns features and their datasets given an array of feature names"
   });
   
   acl.assignRulesRecord(Feature)

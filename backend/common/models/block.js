@@ -18,6 +18,15 @@ module.exports = function(Block) {
     })
   };
 
+  Block.pathsByReference = function(blockA, blockB, referenceGenome, maxDistance, options, cb) {
+    task.pathsViaLookupReference(this.app.models, blockA, blockB, referenceGenome, maxDistance, options)
+    .then(function(paths) {
+      cb(null, paths);
+    }).catch(function(err) {
+      cb(err);
+    });
+  }
+
   Block.observe('before save', function(ctx, next) {
     if (ctx.instance) {
       if (!ctx.instance.name) {
@@ -69,7 +78,20 @@ module.exports = function(Block) {
     ],
     http: {verb: 'get'},
     returns: {type: 'array', root: true},
-    description: "Request paths between the two blocks"
+    description: "Returns paths between the two blocks"
+  });
+
+  Block.remoteMethod('pathsByReference', {
+    accepts: [
+      {arg: 'blockA', type: 'string', required: true},
+      {arg: 'blockB', type: 'string', required: true},
+      {arg: 'reference', type: 'string', required: true},
+      {arg: 'max_distance', type: 'number', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Returns paths between blockA and blockB via position on reference blocks blockB and blockC"
   });
 
   Block.syntenies = function(id0, id1, thresholdSize, thresholdContinuity, cb) {
