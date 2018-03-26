@@ -2,27 +2,162 @@
 // let minimum_length = 3;
 // let continuity_threshold = 0.9;
 
-function findLinks(block_a, block_b) {
+function findLinks(featuresA, featuresB) {
     let links = [];
-    let features_b = block_b.features.slice(0);
+    let add_link = function(f1, f2, alias) {
+        let link = {featureA: f1.id, featureB: f2.id, aliases: []};
+        if (alias) {
+            link.aliases.push(alias);
+        }
+        links.push(link);
+    }
 
-    for (let i_a = 0; i_a < block_a.features.length; i_a++) {
-        for (let i_b = 0; i_b < features_b.length; i_b++) {
-            let feature_a = block_a.features[i_a];
-            let feature_b = features_b[i_b];
-            if (feature_a.name == feature_b.name) {
-                let link = {
-                    name: feature_a.name,
-                    pos_a: parseFloat(feature_a.position),
-                    pos_b: parseFloat(feature_b.position)
-                };
-                links.push(link);
-                features_b.splice(i_b, 1);
-                break;                
+    // build a set for faster search
+    let features_a_by_name = {};
+    featuresA.forEach(function(feature) {
+        if (!features_a_by_name[feature.name]) {
+            features_a_by_name[feature.name] = [];
+        }
+        features_a_by_name[feature.name].push(feature);
+    });
+
+    featuresB.forEach(function(feature_b) {
+        // look for direct paths
+        if (feature_b.name in features_a_by_name) {
+            features_a_by_name[feature_b.name].forEach(function(feature_a) {
+                add_link(feature_a, feature_b);
+            })
+        }
+        // look for paths via aliases
+        for (var i=0; i<feature_b.aliases.length; i++) {
+            if (feature_b.aliases[i].string2 in features_a_by_name) {
+                features_a_by_name[feature_b.aliases[i].string2].forEach(function(feature_a) {
+                    add_link(feature_a, feature_b, feature_b.aliases[i].__data);
+                });
             }
         }
-    }
+        // clean up
+        delete feature_b.aliases;
+    });
     return links;
+}
+
+function findLinksByDistance(featuresA, featuresB, max_distance) {
+    let links = [];
+    let add_link = function(f1, f2, distance) {
+        links.push({featureA: f1.id, featureB: f2.id, aliases: [{evidence: {distance: distance}}]});
+    }
+    let calc_min_dist = function(f1, f2) {
+        let min_dist = Infinity;
+        f1.range.forEach(function(a) {
+            f2.range.forEach(function(b) {
+                let dist = Math.abs(a-b);
+                if (dist < min_dist) {
+                    min_dist = dist;
+                }
+            });
+        });
+        return min_dist;
+    }
+
+    featuresA.forEach(function(feature_a) {
+        featuresB.forEach(function(feature_b) {
+            let dist = calc_min_dist(feature_a, feature_b);
+            if (dist <= max_distance) {
+                add_link(feature_a, feature_b, dist);
+            }
+        });
+    });
+    return links;
+}
+
+function mergeLinks(linksA, linksB) {
+    // merge links on linksA.featureB == linksB.featureA
+    let links = [];
+
+    let merge_links = function(link_a, link_b) {
+        links.push({featureA: link_a.featureA, featureB: link_b.featureB, aliases: link_a.aliases.concat(link_b.aliases)});
+    }
+
+    // build a set for faster search
+    let link_a_features_b = {};
+    linksA.forEach(function(link) {
+        let feature_b = link.featureB;
+        if (!link_a_features_b[feature_b]) {
+            link_a_features_b[feature_b] = [];
+        }
+        link_a_features_b[feature_b].push(link);
+    });
+
+    linksB.forEach(function(link_b) {
+        let feature_a = link_b.featureA;
+        if (feature_a in link_a_features_b) {
+            // match
+            link_a_features_b[feature_a].forEach(function(link_a) {
+                merge_links(link_a, link_b);
+            });
+        }
+    });
+    return links;
+}
+
+function removeDuplicateLinks(links) {
+    // build a set of links
+    let links_set = {};
+    links.forEach(function(link) {
+        if (!links_set[link.featureA]) {
+            links_set[link.featureA] = {};
+        }
+        links_set[link.featureA][link.featureB] = link;
+    });
+
+    let unique_links = [];
+    Object.keys(links_set).forEach(function(feature_a) {
+        Object.keys(links_set[feature_a]).forEach(function(feature_b) {
+            unique_links.push(links_set[feature_a][feature_b]);
+        })
+    });
+    return unique_links;
+}
+
+function loadAliases(models, block_a, block_b, options) {
+    // append aliases to block b features
+    let features_by_name = {};
+    block_b.features.forEach(function(feature) {
+        feature['aliases'] = [];
+        features_by_name[feature.name] = feature;
+    });
+
+    // find relevant aliases
+    let feature_b_names = Object.keys(features_by_name);
+    let conditions = [{string1: {inq: feature_b_names}}];
+    let conditions_mirror = [{string2: {inq: feature_b_names}}];
+    if (block_b.dataset.namespace) {
+        conditions.push({namespace1: block_b.dataset.namespace});
+        conditions_mirror.push({namespace2: block_b.dataset.namespace});
+    }
+    if (block_a.dataset.namespace) {
+        conditions.push({namespace2: block_a.dataset.namespace});
+        conditions_mirror.push({namespace1: block_a.dataset.namespace});
+    }
+    let where = {where: {or: [{and: conditions}, {and: conditions_mirror}]}};
+    return models.Alias.find(where, options)
+    .then(function(aliases) {
+        // match aliases to the features on blockB
+        aliases.forEach(function(alias) {
+            if (alias.namespace1 == block_b.dataset.namespace && alias.string1 in features_by_name) {
+                features_by_name[alias.string1]['aliases'].push(alias);
+            } else if (alias.namespace2 == block_b.dataset.namespace && alias.string2 in features_by_name) {
+                let alias_mirror = Object.assign({}, alias);
+                alias_mirror.namespace1 = alias.namespace2;
+                alias_mirror.namespace2 = alias.namespace1;
+                alias_mirror.string1 = alias.string2;
+                alias_mirror.string2 = alias.string1;
+                features_by_name[alias_mirror.string1]['aliases'].push(alias_mirror);
+            }
+        });
+        return {featuresA: block_a.features, featuresB: block_b.features};
+    });
 }
 
 function findSequences(links, links_b) {
@@ -266,41 +401,129 @@ function findBlocks(block_a, block_b) {
  * @param {Object} models - Loopback database models
  * @param {String} id - The specific block identifier on database
  */
-function findBlock(models, id) {
-    return models.Block.findById(id)
+function findBlock(models, id, options) {
+    return models.Block.findById(id, {include: ['features', 'dataset']}, options);
 }
 
 /**
- * Request data for two blocks
+ * Request data for two blocks concurrently
  * @param {Object} models - Loopback database models
  * @param {String} id_left - The specific block identifier on database
  * @param {String} id_right - The specific block identifier on database
  */
-function findBlockPair(models, id_left, id_right) {
-    // TODO will need to be mindful of permissions implications for further ACL granularity
-    let data_left = null
-    let data_right = null
-    return findBlock(models, id_left)
-    .then(function(data) {
-        if (!data) throw new Error(`Missing data for block ${id_left}`)
-        else data_left = data.__data
-        return findBlock(models, id_right)
-    })
-    .then(function(data) {
-        if (!data) throw new Error(`Missing data for block ${id_right}`)
-        else data_right = data.__data
-        return {
-            left: data_left,
-            right: data_right
-        }
-    })
+function findBlockPair(models, id_left, id_right, options) {
+    let promise_a = findBlock(models, id_left, options);
+    let promise_b = findBlock(models, id_right, options);
+    return promise_a.then(function(block_a) {
+        return promise_b.then(function(block_b) {
+            return {blockA: block_a.__data, blockB: block_b.__data};
+        });
+    });
+}
+
+function findReferenceBlocks(models, block, reference, options) {
+    return models.Dataset.find({include: 'blocks', where: {and: [
+        {parent: reference},
+        {namespace: block.dataset.namespace}
+    ]}}, options).then(function(datasets) {
+        let block_ids = [];
+        datasets.forEach(function(ds) {
+            let relevant_blocks = ds.__data.blocks.filter(function(b) { return b.scope == block.scope });
+            block_ids = block_ids.concat(relevant_blocks.map(function(b) { return b.id }));
+        })
+        return models.Block.find({include: ['dataset', 'features'], where: {id: {inq: block_ids}}}, options)
+        .then(function(blocks) {
+            return blocks.map(function(b) {return b.__data});
+        });
+    });
 }
   
-exports.paths = function(models, id0, id1) {
-    return findBlockPair(models, id0, id1)
+exports.paths = function(models, id0, id1, options) {
+    return findBlockPair(models, id0, id1, options)
     .then(function(data) {
-        return findLinks(data.left, data.right)
+        return loadAliases(models, data.blockA, data.blockB, options);
+    }).then(function(data) {
+        return findLinks(data.featuresA, data.featuresB);
+    });
+}
+
+function resolve_all_promises(promises) {
+    let returns = [];
+    let promise = promises[0];
+    for (let i=1; i<promises.length; i++) {
+        promise = promise.then(function(data) {
+            returns.push(data);
+            return promises[i];
+        });
+    }
+    return promise.then(function(data) {
+        returns.push(data);
+        return returns;
     })
+}
+
+function paths_by_referece(models, blockA, blocksB, blocksC, blockD, max_distance, options) {
+    let promises_a_b = blocksB.map(function(blockB) {
+        return loadAliases(models, blockA, blockB, options);
+    });
+    let promises_c_d = blocksC.map(function(blockC) {
+        return loadAliases(models, blockC, blockD, options);
+    });
+    return resolve_all_promises(promises_a_b).then(function(returns_a_b) {
+        let links_a_b = [];
+        returns_a_b.forEach(function(data) {
+            links_a_b = links_a_b.concat(findLinks(data.featuresA, data.featuresB));
+        });
+
+        return resolve_all_promises(promises_c_d).then(function(returns_c_d) {
+            let links_c_d = [];
+            returns_c_d.forEach(function(data) {
+                links_c_d = links_c_d.concat(findLinks(data.featuresA, data.featuresB));
+            });
+
+            let links_b_c = [];
+            blocksB.forEach(function(blockB) {
+                blocksC.forEach(function(blockC) {
+                    if (blockB.scope == blockC.scope) {
+                        links_b_c = links_b_c.concat(findLinksByDistance(blockB.features, blockC.features, max_distance));
+                    }
+                });
+            });
+            let links_a_c = mergeLinks(links_a_b, links_b_c);
+            let links_a_d = mergeLinks(links_a_c, links_c_d);
+            return removeDuplicateLinks(links_a_d);
+        });
+    });
+}
+
+exports.pathsViaLookupReference = function(models, blockA_id, blockD_id, referenceGenome, max_distance, options) {
+    return models.Block.find({include: ['features', 'dataset'], where: {id: {inq: [blockA_id, blockD_id]}}}, options).then(function(blocks) {
+        let blockA = null;
+        let blockD = null;
+        blocks.forEach(function(block) {
+            if (block.id == blockA_id) {
+                blockA = block.__data;
+            }
+            if (block.id == blockD_id) {
+                blockD = block.__data;
+            }
+        });
+
+        return findReferenceBlocks(models, blockA, referenceGenome, options)
+        .then(function(blockBs) {
+            return findReferenceBlocks(models, blockD, referenceGenome, options)
+            .then(function(blockCs) {
+                if (blockBs.length == 0 || blockCs.length == 0) {
+                    return [];
+                } else {
+                    return paths_by_referece(models, blockA, blockBs, blockCs, blockD, max_distance, options)
+                    .then(function(paths) {
+                        return paths;
+                    });
+                }
+            });
+        });
+    });
 }
 
 exports.syntenies = function(models, id0, id1, thresholdSize, thresholdContinuity) {

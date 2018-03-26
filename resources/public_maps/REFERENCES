@@ -1,0 +1,14 @@
+References and details for publicly available maps
+--------------------------------------------------
+
+pbi0012-0787-SD23.fixed is adapted from Table S13 in (1). Columns 3, 4 and 8 have been extracted.
+
+PBI-14-1406-s005.fixed is adapted from Table S2 in (2). Markers with NULL in the Notes column of the original table have been retained. Marker names have been restored to the correct 90k names (the '-' character had been replaced by '_' in any marker names in the original table).
+
+Wen_et_al_2017.fixed is adapted from Table_6.XLSX in (3). Columns 2, 3 and 4 have been extracted.
+
+(1) Wang, S., Wong, D., Forrest, K., Allen, A., Chao, S., Huang, B. E., Maccaferri, M., Salvi, S., Milner, S. G., Cattivelli, L., Mastrangelo, A. M., Whan, A., Stephen, S., Barker, G., Wieseke, R., Plieske, J., International Wheat Genome Sequencing Consortium, Lillemo, M., Mather, D., Appels, R., Dolferus, R., Brown-Guedira, G., Korol, A., Akhunova, A. R., Feuillet, C., Salse, J., Morgante, M., Pozniak, C., Luo, M.-C., Dvorak, J., Morell, M., Dubcovsky, J., Ganal, M., Tuberosa, R., Lawley, C., Mikoulitch, I., Cavanagh, C., Edwards, K. J., Hayden, M. and Akhunov, E. (2014), Characterization of polyploid wheat genomic diversity using a high-density 90 000 single nucleotide polymorphism array. Plant Biotechnol J, 12: 787\u2013796. doi:10.1111/pbi.12183
+
+(2) Gardner, K. A., Wittern, L. M. and Mackay, I. J. (2016), A highly recombined, high-density, eight-founder wheat MAGIC map reveals extensive segregation distortion and genomic locations of introgression segments. Plant Biotechnol J, 14: 1406\u20131417. doi:10.1111/pbi.12504
+
+(3) Wen, W., He, Z., Gao, F., Liu, J., Jin, H., Zhai, S., \u2026 Xia, X. (2017). A High-Density Consensus Map of Common Wheat Integrating Four Mapping Populations Scanned by the 90K SNP Array. Frontiers in Plant Science, 8, 1389. http://doi.org/10.3389/fpls.2017.01389

@@ -34,5 +34,12 @@
   },
   "acls": [
   ],
-  "methods": {}
+  "methods": {},
+  "indexes": {
+    "block_index": {
+      "keys": {
+        "blockId": 1
+      }
+    }
+  }
 }

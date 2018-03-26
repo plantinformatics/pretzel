@@ -3,7 +3,10 @@
   "private": true,
   "version": "1.0.0",
   "dependencies": {
-    "ember-cli": "~2.4.1"
+  },
+  "repository" :
+  { "type" : "git"
+  , "url" : "https://github.com/plantinformatics/pretzel.git"
   },
   "keywords": [
     "ember",
@@ -11,7 +14,24 @@
     "express",
     "loopback"
   ],
-  "author": "",
-  "license": "MIT",
-  "description": ""
+  "author": "AgriBio / CSIRO",
+  "license": "GPL-3.0-or-later", 
+  "description": "A Loopback/Ember/D3 framework to display and interactively navigate complex datasets.",
+  "directories": {
+    "doc" : "doc/notes/"
+   } ,
+
+  "//": "See also README.md", 
+  "//": "in frontend directory : Install Ember dependencies", 
+  "//": "in backend directory : Install dependencies",
+	"//": "The message 'Entering directory' is common to e.g. make -w, and recognised by emacs compilation-mode to set default-directory",
+  "scripts": {
+    "postinstall" : "ln -s ../frontend/dist backend/client",
+    "go" : "npm run setup:frameworks && npm run build:frontend && npm run run:backend",
+    "setup:frameworks": "cd frontend && npm install && bower install && cd ../backend && npm install",
+    "build:frontend" : "cd frontend && node_modules/ember-cli/bin/ember build --environment production",
+    "run:backend" : "cd backend && EMAIL_VERIFY=NONE AUTH=ALL node server/server.js",
+    "run:frontend" : "cd frontend/app; echo \"Entering directory '$PWD'\"; cd ..; ember server",
+		"clean": "rm -r backend/node_modules   frontend/node_modules frontend/bower_components  backend/client/assets/* frontend/dist/*"
+  }
 }
