@@ -22,7 +22,19 @@ import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
 /*global d3 */
 
 const name_chromosome_block = 'block';	// was chromosome
+const name_position_range = "range";  // was position
 
+/** fields added to the chromosome / block object, which are not markers / features.
+ * The data structure will be refactored to separate these fields from the features.
+  */
+const isOtherField = {
+  "name" : true,
+  "range" : true,
+  "scope" : true,
+  "featureType" : true,
+  "dataset" : true,
+  "namespace" : true
+};
 
 let trace_updatedStacks = true;
 let trace_promise = 1;
@@ -43,6 +55,18 @@ function breakToDebugger(a, b)
   if (breakInDebugger)
     debugger;
 }
+
+/** filter an Object.
+   * from : https://stackoverflow.com/a/5072145  */
+Object.filter = function(obj, predicate) {
+    var result = {}, key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key) && predicate(obj[key])) {
+            result[key] = obj[key];
+        }
+    }
+    return result;
+};
 
 
 let flowButtonsSel = "div.drawing-controls > div.flowButtons";
@@ -106,6 +130,10 @@ function configurejQueryTooltip(oa, node) {
     });
 };
 
+
+let
+      axisTitle_colour_scale = d3.scaleOrdinal();
+      axisTitle_colour_scale.range(d3.schemeCategory10);
 
 
 
@@ -390,7 +418,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
                         if (trace_data) {
                           let ma = ppc.get('features');
-                          ma.forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
+                          ma.forEach(function (cc) { console.log(cc.get('name'), cc.get(name_position_range), cc.get('aliases'));});
                         }
                         ch = ppc;
                         chr = ch.get('id');
@@ -505,9 +533,24 @@ export default Ember.Component.extend(Ember.Evented, {
     let stacks = oa.stacks || (oa.stacks = []);
     /** Give each Stack a unique id so that its <g> can be selected. */
     if (oa.nextStackID === undefined) { oa.nextStackID = 0; }
+    /** Reference to all datasets by name.
+     * (datasets have no id, their child blocks' datasetId refers to their name) .
+     * Not used yet.
+     */
+    let datasets = oa.datasets || (oa.datasets = {});
     /** Reference to all (Stacked) APs by apName.
+     * aps[x] is === either blocks[x] or axes[x], not both.
      */
     let aps = oa.aps || (oa.aps = {});
+    /** Reference to all axes by apName.
+     */
+    let axes = oa.axes || (oa.axes = {});
+    /** Reference to all blocks by apName.
+     * Not used yet.
+    let blocks = oa.blocks || (oa.blocks = {});
+     */
+
+
 
     let highlightMarker = myData.highlightMarker;
     if (highlightMarker)
@@ -841,7 +884,7 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       if (trace_promise > 1)
       {
-        console.log("redraw, afterChrPromise then after receiveChr", oa.apIDs, oa.aps);
+        console.log("redraw, afterChrPromise then after receiveChr", oa.apIDs, oa.aps, oa.axes /*, oa.blocks*/);
         oa.stacks.log();
       }
       me.draw({}, undefined, 'dataReceived');
@@ -851,7 +894,21 @@ export default Ember.Component.extend(Ember.Evented, {
       if ((z[ap] === undefined) || (cmName[ap] === undefined))
       {
         z[ap] = c;
-      cmName[ap] = {mapName : c.mapName, chrName : c.chrName};
+        let dataset = c.dataset,
+        datasetName = dataset && dataset.get('name'),
+        parent = dataset && dataset.get('parent'),
+        parentName = parent  && parent.get('name')
+        ;
+        if (oa.datasets[datasetName] === undefined)
+        {
+          oa.datasets[datasetName] = dataset;
+        }
+      cmName[ap] = {mapName : c.mapName, chrName : c.chrName
+                    , parent: parentName
+                    , name : c.name, range : c.range
+                    , scope: c.scope, featureType: c.featureType
+                   };
+        
         let mapChrName = makeMapChrName(c.mapName, c.chrName);
       mapChr2AP[mapChrName] = ap;
         if (source == 'dataReceived')
@@ -1068,7 +1125,7 @@ export default Ember.Component.extend(Ember.Evented, {
       if ((l === undefined) || Number.isNaN(l))
       {
         console.log("checkIsNumber", l);
-        debugger;
+        breakPoint();
       }
       return l;
     }
@@ -1154,7 +1211,11 @@ export default Ember.Component.extend(Ember.Evented, {
     const trace_gui = 0;
     /*------------------------------------------------------------------------*/
 
-    function Stacked(apName, portion) {
+    /**
+     * @param parentAxis given if the block being added has a parent, in which case
+     * it will be displayed on its parent's axis.
+     */
+    function Stacked(apName, portion, parentAxis) {
       this.apName = apName;
       this.mapName = oa.cmName[apName].mapName;  // useful in devel trace.
       /** Portion of the Stack height which this AP axis occupies. */
@@ -1178,6 +1239,12 @@ export default Ember.Component.extend(Ember.Evented, {
       this.stack = undefined;
       /* AP objects persist through being dragged in and out of Stacks. */
       oa.aps[apName] = this;
+      if (! parentAxis)
+        oa.axes[apName] =
+        oa.aps[apName];
+      this.parent = parentAxis;
+      if (parentAxis)
+        console.log("Stacked()", this, parentAxis);
     };
     Stacked.prototype.apName = undefined;
     Stacked.prototype.portion = undefined;
@@ -1198,14 +1265,47 @@ export default Ember.Component.extend(Ember.Evented, {
     Stacked.prototype.log = function ()
     {
       console.log
-      ("{apName=", this.apName, ":", this.mapName, ", portion=", round_2(this.portion),
+      ("{apName=", this.apName, ":", this.mapName,
+       (this.parent && this.parent.mapName) ? "parent:" + this.parent.mapName : '',
+       (this.z && this.z.scope) ? "scope:" + this.z.scope : '',
+       ", portion=", round_2(this.portion),
        positionToString(this.position), this.stack,  "}");
+    };
+    Stacked.prototype.getStack = function ()
+    {
+      return this.stack || (this.parent && this.parent.stack);
+    };
+    /** static */
+    Stacked.getStack = function (apID)
+    {
+      let ap = oa.aps[apID], s = ap && ap.getStack();
+      return s;
     };
     Stacked.apName_match =
       function (apName)
     { return function (s) { return s.apName === apName; };};
+    /** If apName has a parent, return its name.
+     * This is static; for non-static @see .parent attribute of Stacked.
+     * This is useful where apName is used in geometry calculations, which may
+     * be factored into Stacked.prototype., bypassing this function.
+     */
+    Stacked.apName_parent =
+      function (apName)
+    { 
+        let 
+          a = oa.aps[apName],
+        parent = a && a.parent,
+        parentName = parent && parent.apName;
+        return parentName || apName ;
+      };
+
     Stacked.prototype.yOffset = function ()
     {
+      if (this.parent)
+      {
+        // console.log("yOffset", this, this.parent);
+        return this.parent.yOffset.apply(this.parent);
+      }
       let yOffset = vc.yRange * this.position[0];
       if (Number.isNaN(yOffset))
       {
@@ -1218,6 +1318,66 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       return vc.yRange * this.portion;
     };
+    Stacked.prototype.domainCalc = function ()
+    {
+      let d = this.apName, markers = oa.z[d],
+      blockAttr = cmName[d];
+      function markerLocation(a)
+      {
+        return ! isOtherField[a] && markers[a].location;
+      }
+      let
+      domain =
+        (blockAttr && blockAttr.range) ||
+        d3.extent(Object.keys(markers), markerLocation);
+      // console.log("domainCalc", this, d, markers, domain);
+      if (! domain || ! domain.length)
+        breakPoint();
+      return domain;
+    };
+    Stacked.prototype.getDomain = function ()
+    {
+      return this.domain || (this.domain = this.domainCalc());
+    };
+
+    /** 
+     * @param includeSelf if true, append self name to the result.
+     * @return an array of child ap names.
+     * currently scanning - this can be made much faster by giving the parent a hash of children.
+     */
+    Stacked.prototype.children = function (includeSelf)
+    {
+      let me = this, children = 
+        d3.keys(oa.aps).filter(function (a) { return oa.aps[a].parent == me; });
+      // console.log("children", this, children);
+      if (includeSelf)
+        children.push(this.apName);
+      return children;
+    };
+
+    Stack.prototype.childApNames = function (includeSelf)
+    {
+      let children = [].concat(
+        // repeated scans of oa.aps[] by Stacked.prototype.children(), maybe maintain a list of children (blocks).
+        this.aps.map(function (a) { return a.children(includeSelf); })
+      );
+      children = children[0];
+      // console.log("childApNames", includeSelf, this, children);
+     return children;
+    };
+    Stack.prototype.childAps = function ()
+    {
+      return this.childApNames(true).map(function (a) { return oa.aps[a]; } );
+    };
+    Stack.prototype.titleText = function ()
+    {
+      return this.childApNames(false).map(function (a) {
+        let apName = oa.aps[a].apName,
+        cmName = oa.cmName[apName];
+        return cmName.mapName + ":" + cmName.chrName;
+      } );
+    };
+
     /** Constructor for Stack type.
      * Construct a Stacked containing 1 AP (apName, portion),
      * and push onto this Stack.
@@ -1231,6 +1391,7 @@ export default Ember.Component.extend(Ember.Evented, {
       this.aps = [];
       Stack.prototype.add = Stack_add;
       this.add(stackable);
+      console.log(this, stackable, ".stack", stackable.stack);
     };
     /**  Wrapper for new Stack() : implement a basic object re-use.
      *
@@ -1305,12 +1466,29 @@ export default Ember.Component.extend(Ember.Evented, {
     };
     Stack.prototype.verify = function ()
     {
+      let me = this;
       if (this.aps.length == 0)
       {
         this.log();
         /* breakPointEnable = 1;
          breakPoint(); */
       }
+      else
+      this.aps.forEach(
+        function (a, index)
+        {
+          let ap = oa.aps[a.apName],
+          v1 = a.stack === me,
+          c = a.children(false),
+          v2 = true;
+          c.map(function (c1) { v2 &= c1.stack == me; } );
+          if (!v1 || !v2)
+          {
+            console.log("v1", v1, "v2", v2, ap, c);
+            me.log();
+            breakPoint();
+          }
+        });
     };
     /** Attributes of the stacks object.
      *
@@ -1405,23 +1583,31 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     Stack.apStackIndex = function (apID)
     {
-      let ap = oa.aps[apID], s = ap.stack, i = s.stackIndex();
+      let s = Stacked.getStack(apID), i = s  ? s.stackIndex() : -1;
       return i;
     };
     /** Find stack of apID and return the index of that stack within stacks.
+     * Similar logic to apStackIndex(); this also returns apIndex
+     * (i.e. result is a hash of 2 values).
      * static
      * @param apID name of AP to find
      * @return undefined or
      *  {stackIndex: number, apIndex: number}.
+     * @see apStackIndex()
      */
     Stack.apStackIndex2 = function (apID)
     {
+      /** can use instead :  s = Stacked.getStack(apID) */
       let ap = oa.aps[apID];
       if (ap === undefined)
         return undefined;
       else
       {
-        let s = ap.stack, i = s.stackIndex();
+        let s = ap.getStack();
+        if (! s)
+          return undefined;
+        let i = s.stackIndex();
+        /** data structure check */
         let j;
         if ((i === -1) || (stacks[i] !== s) || (j=s.aps.indexOf(ap), s.aps[j].apName != apID))
         {
@@ -1432,15 +1618,19 @@ export default Ember.Component.extend(Ember.Evented, {
       }
     };
 
+    if (false)  /** not used - @see Stack_add()  */
     Stack.prototype.add = function(stackable)
     {
       this.aps.push(stackable);
       stackable.stack = this;
       oa.aps[stackable.apName] = stackable;
+      console.log("Stack.prototype.add", this, stackable);
     };
+    /** not used */
     Stack.prototype.addAp = function(apName, portion)
     {
-      let sd = new Stacked(apName, portion);
+      console.log("Stack.prototype.addAp", apName, portion);
+      let sd = new Stacked(apName, portion, true);
       this.add(sd);
     };
     /** Method of Stack.  @see Stack.prototype.add().
@@ -1449,6 +1639,7 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function Stack_add (sd)
     {
+      console.log("Stack_add", this, sd);
       this.aps.push(sd);
       sd.stack = this;
     };
@@ -1541,7 +1732,10 @@ export default Ember.Component.extend(Ember.Evented, {
       if (removedAp === undefined)
         console.log("removeStacked", apName);
       else
-        delete oa.aps[apName];
+      {
+        delete oa.aps[apName];  // or delete ap['axis']
+        delete oa.axes[apName];
+      }
       if (this.empty())
       {
         result = this.stackID;
@@ -1683,7 +1877,12 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     Stack.prototype.contains = function (apName)
     {
-      return this === oa.aps[apName].stack;
+      /** or  Stacked.getStack(apName) */
+      let axis = oa.axes[apName] || oa.aps[apName].parent,
+      stack = axis.stack;
+      if (! stack)
+        console.log("contains", apName, oa.axes[apName], oa.aps[apName].parent, axis);
+      return this === stack;
     };
     /** Insert the named AP into this.aps[] at insertIndex (before if top, after
      * if ! top).
@@ -1700,7 +1899,7 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     Stack.prototype.dropIn = function (apName, insertIndex, top, transition)
     {
-      let aps = oa.aps;
+      let aps = oa.aps; // axes
       console.log("dropIn", this, apName, insertIndex, top);
       let fromStack = aps[apName].stack;
       /* It is valid to drop a AP into the stack it is in, e.g. to re-order the APs.
@@ -1878,6 +2077,11 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     Stacked.prototype.apTransform = function ()
     {
+      if (this.parent)
+      {
+        console.log("apTransform", this, this.parent);
+        return this.parent.apTransform.apply(this.parent);
+      }
       if (this.position === undefined || vc.yRange === undefined)
       {
         console.log("apTransform()", this.apName, this, vc.yRange);
@@ -2077,6 +2281,11 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     Stacked.prototype.apTransformO = function ()
     {
+      if (this.parent)
+      {
+        console.log("apTransformO", this, this.parent);
+        return this.parent.apTransformO.apply(this.parent);
+      }
       if (this.position === undefined || vc.yRange === undefined)
       {
         console.log("apTransformO()", this.apName, this, vc.yRange);
@@ -2221,17 +2430,126 @@ export default Ember.Component.extend(Ember.Evented, {
       });
     }
     oa.apIDs.forEach(function(d){
-      let s = Stack.apStackIndex2(d);
+      let s = Stacked.getStack(d);
       // if APid d does not exist in stacks[], add a new stack for it.
       if (s === undefined)
       {
+        let zd = oa.z[d],
+        dataset = zd.dataset,
+        parent = dataset && dataset.get('parent'),
+        parentName = parent && parent.get('name'),  // e.g. "myGenome"
+        parentId = parent && parent.get('id'),  // same as name
+        namespace = dataset && dataset.get('namespace'),
+        parentAxis
+        ;
+        Stack.verify();
+
+        console.log("zd", zd, dataset && dataset.get('name'), parent, parentName, parentId, namespace);
+          // zd.  scope, featureType, , namespace
+        if (parentName)
+        {
+          /** this is alternative to matchParentAndScope() - direct lookup. */
+          let parentDataset = oa.datasets[parentName];
+          console.log("dataset", parentName, parentDataset);
+          function matchParentAndScope (key, value) {
+            let block = oa.z[key],
+            match = (block.scope == zd.scope) && (block.dataset.get('name') == parentName);
+            console.log(key, block, match);
+            return match;
+          }
+          /** undefined if no parent found, otherwise is the id corresponding to parentName */
+          let blockName = d3.keys(oa.z).find(matchParentAndScope);
+          console.log(parentName, blockName);
+          if (blockName)
+          {
+            let block = oa.z[blockName];
+            parentAxis = oa.axes[blockName];
+            console.log(block.scope, block.featureType, block.dataset.get('name'), block.dataset.get('namespace'), "parentAxis", parentAxis);
+          }
+        }
+      {
         // initial stacking : 1 AP per stack, but later when db contains Linkage
         // Groups, can automatically stack APs.
-        let sd = new Stacked(d, 1),
-        stack = new Stack(sd);
+        let sd = new Stacked(d, 1, parentAxis);
+
+        /** if any children loaded before this, adopt them */
+        let adopt = 
+          d3.keys(oa.axes).filter(function (d2) {
+            let a = oa.axes[d2];
+            let match = 
+              (d != d2) &&  // not self
+              ! a.parent && (a.parentName == dataset.get('id')) &&
+              (a.z.scope == oa.cmName[d].scope);
+            if (! a.parent)
+            {
+              console.log( a.parentName,  dataset.get('id'),
+                           a.z && a.z.scope,  oa.cmName[d].scope, match); 
+          }
+            return match;
+          });
+
+        /** Use the stack of the first child to adopt.
+         * First draft created a new stack, this may transition better.
+         */
+        let adopt0;
+        if (adopt.length)
+        {          
+          console.log("adopt", adopt);
+          let d4 = adopt0 = adopt.shift();
+          let a = oa.axes[d4];
+          a.stack.log();
+          a.parent = sd;
+          a.stack.add(sd);
+          console.log(d4, a, sd, oa.axes[a.apName]);
+          sd.stack.log();
+        }
+
+        let
+        /** blocks which have a parent axis do not need a Stack. */
+        newStack = parentAxis || adopt0 ? undefined : new Stack(sd);
+        if (parentAxis)
+        {
+          console.log("pre-adopt", parentAxis, d, parentName);
+          parentAxis.stack.add(sd);
+        }
+        /** to recognise parent when it arrives.
+         * not need when parentAxis is defined.
+         */
+        if (parentName && ! parentAxis)
+        {
+          console.log(sd, ".parentName", parentName);
+          sd.parentName = parentName;
+        }
         sd.z = oa.z[d];  // reference from Stacked AP to z[apID]
-        oa.stacks.append(stack);
-        stack.calculatePositions();
+        if (newStack)
+        {
+          console.log("oa.stacks.append(stack)", d, newStack.stackID, oa.stacks);
+          oa.stacks.append(newStack);
+          console.log(oa.stacks);
+          newStack.calculatePositions();
+        }
+
+        adopt.map(function (d3) {
+            let a = oa.axes[d3];
+          a.parent = sd;
+          /** save a.stack before add() changes it */
+          let oldStack = a.stack;
+          sd.stack.add(a);
+          console.log(d3, a, sd, oa.axes[a.apName]);
+          sd.stack.log();
+          delete oa.axes[a.apName];
+          if (! oldStack)
+            console.log("adopted axis had no stack", a, a.apName, oa.stacks);
+          else
+          {
+            // remove Stack of a from oa.stacks.  a.stack is already replaced.
+            console.log("remove Stack", oldStack, oa.stacks);
+            oldStack.delete();
+            console.log("removed Stack", oa.stacks, oa.stacks.length, a);
+          }
+        });
+      }
+      Stack.verify();
       }
     });
     function axisWidthResize(apID, width, dx)
@@ -2295,7 +2613,7 @@ export default Ember.Component.extend(Ember.Evented, {
       let i = Stack.apStackIndex(apID);
       if (oa.xs.domain().length === 2)
       console.log("x()", apID, i, oa.xs(i), oa.xs.domain(), oa.xs.range());
-      if (i === -1) { console.log("x()", apID, i); debugger; }
+      if (i === -1) { console.log("x()", apID, i); breakPoint(); }
       return oa.xs(i);
     }
     //let dynamic = d3.scaleLinear().domain([0,1000]).range([0,1000]);
@@ -2524,9 +2842,16 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
     oa.apIDs.forEach(function(d) {
+      let a = oa.aps[d],
+      /** similar domain calcs in resetZoom().  */
+      domain = a.parent ? a.parent.getDomain() : a.getDomain();
+      if (false)      //  original, replaced by domainCalc().
+      {
       /** Find the max of locations of all markers of AP name d. */
       let yDomainMax = d3.max(Object.keys(oa.z[d]), function(a) { return oa.z[d][a].location; } );
-      let a = oa.aps[d], myRange = a.yRange(), ys = oa.ys, y = oa.y;
+        domain = [0, yDomainMax];
+      }
+      let myRange = a.yRange(), ys = oa.ys, y = oa.y;
       if (ys[d])  // equivalent to (y[d]==true), y[d] and ys[d] are created together
       {
         if (trace_stack > 1)
@@ -2535,7 +2860,7 @@ export default Ember.Component.extend(Ember.Evented, {
       else
       {
       ys[d] = d3.scaleLinear()
-        .domain(maybeFlip([0, yDomainMax], a.flipped))
+        .domain(maybeFlip(domain, a.flipped))
         .range([0, myRange]); // set scales for each AP
       
       //console.log("OOO " + y[d].domain);
@@ -2716,7 +3041,8 @@ export default Ember.Component.extend(Ember.Evented, {
       .data(stacks),
     stackS = stackSd
       .enter()
-      .append("g");
+      .append("g"),
+    stackX = stackSd.exit();
       if (trace_stack)
       {
         console.log("append g.stack", stackS.size(), stackSd.exit().size(), stackS.node(), stackS.nodes());
@@ -2726,6 +3052,9 @@ export default Ember.Component.extend(Ember.Evented, {
           debugger;
         }
       }
+    stackX
+      .transition().duration(500)
+      .remove();
       /*
     let st = newRender ? stackS :
       stackS.transition().duration(dragTransitionTime);
@@ -2987,7 +3316,11 @@ export default Ember.Component.extend(Ember.Evented, {
     });
 
 
-      g = allG;
+      g = allG
+      .filter(function (d) { return oa.axes[d]; } )
+    ;
+    console.log(oa.axes, "filter", g.size(), allG.size());
+
     // Add an axis and title
       /** This g is referenced by the <use>. It contains axis path, ticks, title text, brush. */
       let defG =
@@ -3001,11 +3334,34 @@ export default Ember.Component.extend(Ember.Evented, {
       // console.log(".axis text", chrID, cn);
       return cn.mapName + " " + cn.chrName;
     }
+    function axisTitleChildren(chrID)
+    {
+      let cn=oa.cmName[chrID],
+      children = oa.aps[chrID].stack.titleText();
+      return children;
+    }
 
     let axisTitleS = g.append("text")
       .attr("y", -axisFontSize)
       .style("font-size", axisFontSize)
       .text(axisTitle /*String*/);
+    axisTitleS.selectAll("tspan")
+      .data(axisTitleChildren)
+      .enter()
+      .append("tspan")
+      .text(function (d) { return d; })
+      .attr('x', '0px')
+      .attr('dx', '0px')
+      .attr('dy',  function (d, i) { return "" + (i*0.8+1.5)  + "em"; })
+      .style('stroke', function (d) {
+        let
+          colour = axisTitle_colour_scale(d);
+        return colour;
+      })
+    ;
+
+
+    ;
     axisTitleS
         .each(configureAPtitleMenu);
     let axisSpacing = (axisXRange[1]-axisXRange[0])/stacks.length;
@@ -3562,7 +3918,8 @@ export default Ember.Component.extend(Ember.Evented, {
           aam[ap] = {};
         let aama = aam[ap];
         d3.keys(za).forEach(function(marker) {
-          if ((marker != "mapName") && (marker != "chrName"))
+          if ((marker != "mapName") && (marker != "chrName")
+              && ! isOtherField[marker])
           {
           try
           {
@@ -3725,8 +4082,8 @@ export default Ember.Component.extend(Ember.Evented, {
 
       for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
-        mAPs0 = s0.aps,
-        mAPs1 = s1.aps;
+        mAPs0 = s0.childAps(),
+        mAPs1 = s1.childAps();
         if (mAPs0.length === 0 || mAPs1.length === 0)
         {
           console.log("mAPs0,1.length", mAPs0.length, mAPs1.length);
@@ -3887,8 +4244,8 @@ export default Ember.Component.extend(Ember.Evented, {
       let stacks = oa.stacks;
       for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
-        mAPs0 = s0.aps,
-        mAPs1 = s1.aps;
+        mAPs0 = s0.childAps(),
+        mAPs1 = s1.childAps();
         // Cross-product of the APs in two adjacent stacks
         for (let a0i=0; a0i < mAPs0.length; a0i++) {
           let a0 = mAPs0[a0i], za0 = a0.z, a0Name = a0.apName;
@@ -3921,7 +4278,7 @@ export default Ember.Component.extend(Ember.Evented, {
       if (APid === undefined || aps[APid] === undefined)
       {
         console.log(aps, APid);
-        debugger;
+        breakPoint();
       }
       return aps[APid].mapName;
     }
@@ -4727,9 +5084,12 @@ export default Ember.Component.extend(Ember.Evented, {
       // z[p][m].location, actual position of marker m in the AP p, 
       // y[p](z[p][m].location) is the relative marker position in the svg
       // ys is used - the y scale for the stacked position&portion of the AP.
-      let ysa = oa.ys[apID],
+      let parentName = Stacked.apName_parent(apID),
+      ysa = oa.ys[parentName],
       aky = ysa(oa.z[apID][d].location),
+      /**  parentName not essential here because yOffset() follows .parent */
       apY = oa.aps[apID].yOffset();
+      // can use parentName here, but initially good to have parent and child traced.
       if (! tracedApScale[apID])
       {
         tracedApScale[apID] = true;
@@ -4962,9 +5322,9 @@ export default Ember.Component.extend(Ember.Evented, {
             let apIDs = apID ? [apID] : oa.apIDs;
             apIDs.forEach(function(d) {
               let idName = axisEltId(d); // axis ids have "a" prefix
-              let yDomainMax = d3.max(Object.keys(oa.z[d]), function(a) { return oa.z[d][a].location; } );
-              let  a = oa.aps[d];
-              let domain = maybeFlip([0, yDomainMax], a.flipped);
+              let a = oa.aps[apID],
+              domain = a.parent ? a.parent.domain : a.getDomain();
+              domain = maybeFlip(domain, a.flipped);
               oa.y[d].domain(domain);
               oa.ys[d].domain(domain);
               let yAxis = d3.axisLeft(oa.y[d]).ticks(10);

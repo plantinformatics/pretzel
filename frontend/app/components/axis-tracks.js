@@ -224,7 +224,7 @@ export default InAxis.extend({
     oa = this.get('data'),
     apID = gAxis.node().parentElement.__data__,
     y = oa.y[apID],
-    yDomain = [y.invert(yrange[0]), y.invert(yrange[1])],
+    yDomain = [y.invert(yrange[0]), y.invert(yrange[1]*0.8)],
     pxSize = (yDomain[1] - yDomain[0]) / bbox.height,
     data = regionOfTree(t, yDomain, pxSize * 1/*5*/);
     console.log(data.length, (data.length == 0) || y(data[0][0]));

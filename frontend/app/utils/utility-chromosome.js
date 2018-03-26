@@ -8,8 +8,17 @@ function chrData(c) {
   /* factored from controllers/mapview.js, where it was originally developed. */
 
   let 
+    map = c.get('map'),
   /* rc aka retHash[chr] */
-  rc  = {mapName : c.get('map').get('name'), chrName : c.get('name')};
+  rc  = {mapName : c.get('map').get('name'), chrName : c.get('name')
+         /* , scope : c.get('scope'), featureType : c.get('featureType')
+         , namespace: map.namespace, */ , dataset : map
+        };
+  ['range', 'featureType', 'scope'].forEach(function (fieldName) {
+  if (c.get(fieldName))
+    rc[fieldName] = c.get(fieldName);
+  });
+
   let m = c.get('features');
   m.forEach(function(marker) {
     let markerName = marker.get('name');
