@@ -484,7 +484,9 @@ function paths_by_referece(models, blockA, blocksB, blocksC, blockD, max_distanc
             let links_b_c = [];
             blocksB.forEach(function(blockB) {
                 blocksC.forEach(function(blockC) {
-                    links_b_c = links_b_c.concat(findLinksByDistance(blockB.features, blockC.features, max_distance));
+                    if (blockB.scope == blockC.scope) {
+                        links_b_c = links_b_c.concat(findLinksByDistance(blockB.features, blockC.features, max_distance));
+                    }
                 });
             });
             let links_a_c = mergeLinks(links_a_b, links_b_c);
