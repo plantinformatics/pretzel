@@ -24,7 +24,8 @@ function chrData(c) {
     let markerName = marker.get('name');
     let markerPosition = marker.get('range')[0];
     let markerAliases = marker.get('aliases');
-    rc[markerName] = {location: markerPosition, aliases: markerAliases};
+    let markerId = marker.get('id');
+    rc[markerName] = {location: markerPosition, aliases: markerAliases, id: markerId};
   });
   console.log("chrData", rc);
   return rc;

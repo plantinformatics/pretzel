@@ -202,6 +202,14 @@ export default Ember.Component.extend(Ember.Evented, {
     this.drawControlsListen(true);
   }.on('init'),
 
+/** addPathsToCollation() is in draw closure, otherwise would register it here
+  willInsertElement : function () {
+    console.log("components/draw-map willInsertElement");
+    this._super(...arguments);
+    this.on('paths', this.addPathsToCollation);
+  },
+*/
+
   // remove the binding created in listen() above, upon component destruction
   cleanup: function() {
     let f = this.get('feedService');
@@ -211,6 +219,8 @@ export default Ember.Component.extend(Ember.Evented, {
     f.off('resetZooms', this, 'resetZooms');
 
     this.drawControlsListen(false);
+
+    this.off('paths');
   }.on('willDestroyElement'),
 
   /** undefined, or a function to call when colouredMarkers are received  */
@@ -514,6 +524,8 @@ export default Ember.Component.extend(Ember.Evented, {
       let drawActions = this.get('drawActions'); 
       drawActions.trigger('drawObjectAttributes', this.get('oa')); // 
       console.log("draw() drawActions oa", drawActions, oa);
+
+    this.on('paths', addPathsToCollation);
     }
 
   /*------------------------------------------------------------------------*/
@@ -843,6 +855,10 @@ export default Ember.Component.extend(Ember.Evented, {
     if (oa.d3MarkerSet === undefined)
       oa.d3MarkerSet = new Set();
 
+    /** Index of features (markers) by object id. the value refers to the marker hash,
+     * i.e. z[chr/ap/block name][feature/marker name] === featureIndex[feature/marker id] */
+    oa.featureIndex || (oa.featureIndex = []);
+
       if (source === 'didRender')
         d3.keys(chrPromises).forEach(function (ap) {
         /** ap is chr name */
@@ -923,9 +939,14 @@ export default Ember.Component.extend(Ember.Evented, {
         // alternate filter, suited to physical maps : m.location > 2000000
         if ((markerTotal++ & 0x3) && filter_location)
           delete z[ap][marker];
-        else
+        else if (! isOtherField[marker])
         {
           oa.d3MarkerSet.add(marker);
+          oa.featureIndex[m.id] = m;
+          /* could partition featureIndex by block name/id :
+           * oa.featureIndex[ap][m.id] = m; but not necessary because object id
+           * is unique. */
+
           // markerTotal++;
 
           /** This implementation of aliases was used initially.
@@ -4338,6 +4359,9 @@ export default Ember.Component.extend(Ember.Evented, {
         if (aliasedDone[a0] === undefined)
           aliasedDone[a0] = {};
         aliasedDone[a0][a1] = true;
+        /* The caller will now calculate aliases locally, and the following requests aliases from the backend.
+         * Either of these 2 can be made optional. */
+        me.trigger('expose', apName, apName1);
       }
       return a;
     }
@@ -4465,6 +4489,74 @@ export default Ember.Component.extend(Ember.Evented, {
       A.push(v);
       return a;
     }
+    /** convert aliases to hover text
+     * @param aliases array returned by api/Blocks/paths
+     * "they're the complete alias object
+     * which is something like {"str1": ..., "str2": ..., "namespace1": ..} "
+     */
+    function aliasesText(aliases)
+    {
+      let text = aliases.map(aliasText).join("\n");
+      return text;
+    }
+    function aliasText(alias)
+    {
+      let text =
+        d3.keys(alias).forEach(function(a) {
+          return a.toString() + alias[a];
+        });
+      return text;
+    }
+    function addPathsToCollation(blockA, blockB, paths)
+    {
+      console.log('addPathsToCollation', blockA, blockB, paths.length);
+      let apName = blockA, apName1 = blockB;
+      let trace_count = 1;
+      paths.map(function (p) {
+        /** example of result : 
+         *  {featureA: "5ab0755a3d9b2d6b45839b2f", featureB: "5ab07f5b3d9b2d6b45839b34", aliases: Array(0)}
+         * Result contains feature object ids; convert these to names using
+         * featureIndex[], as current data structure is based on marker (feature)
+         * names - that will change probably. */
+        let markerID = p.featureA,
+        markerName = oa.featureIndex[markerID].name,
+        /** If p.aliases.length == 0, then p is direct not alias so put it in maN[] instead.
+         * Will do that in next commit because it is useful in first pass to do visual comparison of
+         * paths calculated FE & BE by toggling the flow display enables
+         * (div.flowButton / flow.visible) "direct" and "alias".
+         */
+        agName = aliasesText(p.aliases),
+        mi = oa.featureIndex[p.featureB].name;
+      // modified(hacked) copy of code in collateStacksA() above, may factor to re-combine these.
+                      let aj = blockB, // adjs[id],
+                      markerA = oa.z[aj][mi];
+                      // if (APs.has(aj))
+                      {
+                        let // agName = markerA.agName,
+                          direction = apName < aj,
+                        aps = oa.aps,
+                        apName_ = aps[apName],
+                        aj_ = aps[aj],
+                        am = [
+                          {m: markerName, ap: apName_},
+                          {m: mi, ap: aj_}
+                        ],
+                        am_= [am[1-direction], am[0+direction]],
+                        [m0, m1, ap0, ap1] = [am_[0].m, am_[1].m, am_[0].ap, am_[1].ap],
+                        mmaa = [m0, m1, ap0, ap1, direction, agName];
+                        if (trace_adj && trace_count-- > 0)
+                          console.log("mmaa", mmaa, ap0.apName, ap1.apName, APid2Name(ap0.apName), APid2Name(ap1.apName));
+                        // log_mmaa(mmaa);
+                        objPut(aliased, mmaa, ap0.apName, ap1.apName, m0, m1);
+                      }
+      });
+
+      filterPaths();
+      /* the results can be direct or aliases, so when the directs are put in
+       * maN[], then do pathUpdate(undefined); * for now, just the aliases : */
+      pathUpdate_(undefined, flows["alias"]);
+    }
+
     /**
      * Results are in put, which is accessed via Flow.pathData
      */
@@ -5086,7 +5178,9 @@ export default Ember.Component.extend(Ember.Evented, {
       // ys is used - the y scale for the stacked position&portion of the AP.
       let parentName = Stacked.apName_parent(apID),
       ysa = oa.ys[parentName],
-      aky = ysa(oa.z[apID][d].location),
+      /** if d is object ID instead of name then featureIndex[] is used */
+      marker = oa.z[apID][d], // || oa.featureIndex[d],
+      aky = ysa(marker.location),
       /**  parentName not essential here because yOffset() follows .parent */
       apY = oa.aps[apID].yOffset();
       // can use parentName here, but initially good to have parent and child traced.
@@ -5923,7 +6017,7 @@ export default Ember.Component.extend(Ember.Evented, {
     function colouredAg(apName, markerName)
     {
       let classSet,
-      marker = oa.z[apName][markerName],
+      marker = oa.z[apName][markerName], //  || oa.featureIndex[markerName],  // use featureIndex[] if markerName was ID, but instead have converted IDs -> names.
       agName = marker.agName;
       if (agName)
       {

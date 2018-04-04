@@ -35,6 +35,11 @@ export default Service.extend({
     return this._ajax('Datasets', 'GET', {'filter[include]': 'blocks'}, true)
   },
 
+  getPaths(blockA, blockB, options) {
+    console.log('services/auth getPaths', blockA, blockB, options);
+    return this._ajax('Blocks/paths', 'GET', {blockA : blockA, blockB : blockB, options : options}, true)
+  },
+
   createDataset(name) {
     return this._ajax('Datasets', 'POST', JSON.stringify({name: name}), true)
   },
