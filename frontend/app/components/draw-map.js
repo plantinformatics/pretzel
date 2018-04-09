@@ -430,7 +430,9 @@ export default Ember.Component.extend(Ember.Evented, {
                   let thisStore = me.get('store');
                   let pc = thisStore.findRecord('block', m,
                     { reload: true,
-                      adapterOptions:{ filter: {include: "features" } }}
+                      adapterOptions:{ 
+                        filter: {include: "features"} 
+                      }}
                     );
                   pc.then(function (ch){
                     let map, mapId, chrName = ch.get('name'), chr = ch.get('id'), features, rc;
@@ -773,15 +775,7 @@ export default Ember.Component.extend(Ember.Evented, {
       Ember.RSVP.all(waitFor).then(function(results) {
         let
           c = results[0],
-        rc = {mapName : c.get('map').get('name'), chrName : c.get('name')};
-        console.log("afterChrPromise", rc);
-        let f = c.get('features');
-        f.forEach(function(feature) {
-          let featureName = feature.get('name');
-          let featurePosition = feature.get('position');
-          let featureAliases = feature.get('aliases');
-          rc[featureName] = {location: featurePosition, aliases: featureAliases};
-        });
+        rc = chrData(c);
         receiveChr(c.get('id'), rc, 'dataReceived');
         //-	on 'new chr data' to from graph-data
         // using named function redraw() instead of anonymous function, so that debounce is effective.
@@ -2547,7 +2541,7 @@ export default Ember.Component.extend(Ember.Evented, {
               let  feature_ = za[featureName],
               aliasGroupName = feature_.aliasGroupName,
               fas = feature_.aliases;
-              if (fas.length > 0)
+              if (fas && fas.length > 0)
               {
                 // fas.length > 0 implies .aliasGroupName is defined
                 let agc = aliasGroupClasses[aliasGroupName];
@@ -2947,6 +2941,7 @@ export default Ember.Component.extend(Ember.Evented, {
                 aliasGroupName = feature_.aliasGroupName;
 
                 let fas = feature_.aliases;
+                if (fas)
                 for (let i=0; i<fas.length; i++)
                 {
                   let fi = fas[i],
@@ -3460,8 +3455,10 @@ export default Ember.Component.extend(Ember.Evented, {
      * @return text for display in path hover tooltip */
     function featureAliasesText(fName, f)
     {
-      let s = fName + ":" + f.aliases.length + ":",
-      fas = f.aliases;
+      let
+        fas = f.aliases,
+      s = fName + ":" + (fas ? f.aliases.length : "") + ":";
+      if (fas)
       for (let i=0; i<fas.length; i++)
       {
         s += fas[i] + ",";

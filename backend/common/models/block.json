@@ -1,8 +1,16 @@
 {
   "name": "Block",
-  "base": "Record",
-  "description": "Containing features",
+  "base": "PersistedModel",
+  "description": "Data block that contains features",
   "properties": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "size": {
+      "type": "number",
+      "required": true
+    }
   },
   "validations": [],
   "relations": {

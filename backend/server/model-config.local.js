@@ -82,7 +82,7 @@ var config = {
   "Interval": {
     "dataSource": "mongoDs",
     "public": true
-  },
+  }
 }
 
 if (process.env.EMAIL_VERIFY != 'NONE') {

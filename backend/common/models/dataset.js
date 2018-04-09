@@ -18,26 +18,12 @@ module.exports = function(Dataset) {
         console.log(e);
         cb(Error("Failed to parse JSON"));
       }
-      upload.json(jsonMap, models, options)
-      .then(function(data) {
-        cb(null, 'Success');
-      })
-      .catch(function(err) {
-        console.log(err);
-        cb(err);
-      })
+      upload.uploadDataset(jsonMap, models, options, cb)
     } else if (msg.fileName.endsWith('.gz')) {
       var buffer = new Buffer(msg.data, 'binary');
       load.gzip(buffer).then(function(json) {
         jsonMap = json;
-        upload.json(jsonMap, models)
-        .then(function(data) {
-          cb(null, 'Success');
-        })
-        .catch(function(err) {
-          console.log(err);
-          cb(err);
-        })
+        upload.uploadDataset(jsonMap, models, options, cb)
       })
       .catch(function(err) {
         console.log(err);
@@ -112,6 +98,26 @@ module.exports = function(Dataset) {
     });
   }
 
+  Dataset.createComplete = function(data, options, cb) {
+    var models = this.app.models
+    upload.uploadDataset(data, models, options, cb)
+  }
+
+  Dataset.observe('before delete', function(ctx, next) {
+    var Block = ctx.Model.app.models.Block
+    Block.find({
+      where: {
+        datasetId: ctx.where.and[1].id
+      }
+    }, ctx.options).then(function(blocks) {
+      blocks.forEach(function(block) {
+        Block.destroyById(block.id, ctx.options, function () {
+        });
+      })
+    })
+    next()
+  })
+
   Dataset.remoteMethod('upload', {
     accepts: [
       {arg: 'msg', type: 'object', required: true, http: {source: 'body'}},
@@ -127,6 +133,14 @@ module.exports = function(Dataset) {
     ],
     returns: {arg: 'status', type: 'string'},
     description: "Perform a bulk upload of a features from tabular form"
+  });
+  Dataset.remoteMethod('createComplete', {
+    accepts: [
+      {arg: 'data', type: 'object', required: true, http: {source: 'body'}},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    returns: {arg: 'id', type: 'string'},
+    description: "Creates a dataset and all of its children"
   });
 
   acl.assignRulesRecord(Dataset)

@@ -10,20 +10,15 @@ var load = require('../utilities/load')
 module.exports = function(Record) {
 
   Record.observe('access', function(ctx, next) {
-    console.log(`> Record.access ${ctx.Model.modelName}`);
-    if (ctx.Model.modelName != 'Block') {
-      identity.queryFilterAccessible(ctx)
-    }
+    identity.queryFilterAccessible(ctx)
     next()
   })
 
   Record.afterRemote('find', function(ctx, modelInstance, next) {
-    console.log('> Record.loaded');
     next()
   })
 
   Record.observe('before save', function(ctx, next) {
-    console.log(`> Record.before save ${ctx.Model.modelName}`)
     var newDate = Date.now();
     if (ctx.currentInstance) {
       // update
@@ -31,9 +26,14 @@ module.exports = function(Record) {
     } else if (ctx.isNewInstance) {
       // create
       let clientId = identity.gatherClientId(ctx)
-      if (clientId) ctx.instance.clientId = clientId
+      if (clientId) {
+        ctx.instance.clientId = clientId
+      } else {
+        ctx.instance.public = true
+        ctx.instance.readOnly = false
+      }
       ctx.instance.createdAt = newDate
-      ctx.instance.updatedAt = newDate;
+      ctx.instance.updatedAt = newDate
     }
     next();
   });

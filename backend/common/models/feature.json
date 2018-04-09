@@ -11,21 +11,29 @@
       "type": "string",
       "required": true
     },
-    "position": {
-      "type": "number",
+    "type": {
+      "type": "string",
       "required": true
     },
-    "aliases": {
-      "type": "array",
-      "required": false
+    "range": {
+      "type": ["number"],
+      "required": true
     }
   },
   "validations": [],
   "relations": {
     "block": {
       "type": "belongsTo",
-      "model": "Block",
-      "foreignKey": ""
+      "model": "Block"
+    },
+    "parent": {
+      "type": "belongsTo",
+      "model": "Feature"
+    },
+    "features": {
+      "type": "hasMany",
+      "model": "Feature",
+      "foreignKey": "parentId"
     }
   },
   "acls": [

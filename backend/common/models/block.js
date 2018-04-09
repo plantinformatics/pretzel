@@ -18,6 +18,49 @@ module.exports = function(Block) {
     })
   }
 
+  Block.observe('before delete', function(ctx, next) {
+    var Block = ctx.Model.app.models.Block
+    var Annotation = ctx.Model.app.models.Annotation
+
+    var Feature = ctx.Model.app.models.Feature
+    Feature.find({
+      where: {
+        blockId: ctx.where.id
+      }
+    }, ctx.options).then(function(features) {
+      features.forEach(function(feature) {
+        Feature.destroyById(feature.id, ctx.options, function () {
+        });
+      })
+    })
+
+    var Annotation = ctx.Model.app.models.Annotation
+    Annotation.find({
+      where: {
+        blockId: ctx.where.id
+      }
+    }, ctx.options).then(function(annotations) {
+      annotations.forEach(function(annotation) {
+        Annotation.destroyById(annotation.id, ctx.options, function () {
+        });
+      })
+    })
+
+    var Interval = ctx.Model.app.models.Interval
+    Interval.find({
+      where: {
+        blockId: ctx.where.id
+      }
+    }, ctx.options).then(function(intervals) {
+      intervals.forEach(function(interval) {
+        Interval.destroyById(interval.id, ctx.options, function () {
+        });
+      })
+    })
+
+    next()
+  })
+
   Block.remoteMethod('paths', {
     accepts: [
       {arg: '0', type: 'string', required: true}, // block reference

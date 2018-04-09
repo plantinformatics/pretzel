@@ -1,6 +1,6 @@
 /*----------------------------------------------------------------------------*/
 
-/** bundle chr data (incl markers) for draw-map:draw().
+/** bundle chr data (incl features) for draw-map:draw().
  * copy of Ember.RSVP.hash(promises).then(); factor these together.
  * @param c aka chrs[chr]
  */
@@ -10,13 +10,13 @@ function chrData(c) {
   let 
   /* rc aka retHash[chr] */
   rc  = {mapName : c.get('map').get('name'), chrName : c.get('name')};
-        let m = c.get('features');
-        m.forEach(function(marker) {
-          let markerName = marker.get('name');
-          let markerPosition = marker.get('position');
-          let markerAliases = marker.get('aliases');
-          rc[markerName] = {location: markerPosition, aliases: markerAliases};
-        });
+  let f = c.get('features');
+  f.forEach(function(feature) {
+    let featureName = feature.get('name');
+    let featurePosition = feature.get('range')[0];
+    let featureAliases = feature.get('aliases');
+    rc[featureName] = {location: featurePosition, aliases: featureAliases};
+  });
   console.log("chrData", rc);
   return rc;
 }

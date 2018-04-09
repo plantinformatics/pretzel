@@ -76,7 +76,7 @@ Viewport.prototype.calc = function(oa)
       s.paddingLeft
     ];
   };
-  let holderElt = Ember.$("#holder")[0],
+  let holderElt = divHolder[0],
   /** standard CSS order, same as margins : top right bottom left */
   holderPadding = eltStylePaddingRect(holderElt);
   holderWidth = divHolder.width();
