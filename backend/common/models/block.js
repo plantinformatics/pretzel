@@ -6,8 +6,8 @@ var task = require('../utilities/task')
 
 module.exports = function(Block) {
 
-  Block.paths = function(left, right, cb) {
-    task.paths(this.app.models, left, right)
+  Block.paths = function(left, right, options, cb) {
+    task.paths(this.app.models, left, right, options)
     .then(function(data) {
       // completed additions to database
       cb(null, data);
@@ -16,23 +16,32 @@ module.exports = function(Block) {
       console.log('ERROR', err)
       cb(err);
     })
+  };
+
+  Block.pathsByReference = function(blockA, blockB, referenceGenome, maxDistance, options, cb) {
+    task.pathsViaLookupReference(this.app.models, blockA, blockB, referenceGenome, maxDistance, options)
+    .then(function(paths) {
+      cb(null, paths);
+    }).catch(function(err) {
+      cb(err);
+    });
   }
+
+  Block.observe('before save', function(ctx, next) {
+    if (ctx.instance) {
+      if (!ctx.instance.name) {
+        ctx.instance.name = ctx.instance.scope;
+      }
+    }
+    next();
+  });
 
   Block.observe('before delete', function(ctx, next) {
     var Block = ctx.Model.app.models.Block
     var Annotation = ctx.Model.app.models.Annotation
 
     var Feature = ctx.Model.app.models.Feature
-    Feature.find({
-      where: {
-        blockId: ctx.where.id
-      }
-    }, ctx.options).then(function(features) {
-      features.forEach(function(feature) {
-        Feature.destroyById(feature.id, ctx.options, function () {
-        });
-      })
-    })
+    Feature.destroyAll({blockId: ctx.where.id}, ctx.options);
 
     var Annotation = ctx.Model.app.models.Annotation
     Annotation.find({
@@ -63,11 +72,26 @@ module.exports = function(Block) {
 
   Block.remoteMethod('paths', {
     accepts: [
-      {arg: '0', type: 'string', required: true}, // block reference
-      {arg: '1', type: 'string', required: true}, // block reference
+      {arg: 'blockA', type: 'string', required: true}, // block reference
+      {arg: 'blockB', type: 'string', required: true}, // block reference
+      {arg: "options", type: "object", http: "optionsFromRequest"},
     ],
+    http: {verb: 'get'},
     returns: {type: 'array', root: true},
-    description: "Request paths for left and right blocks"
+    description: "Returns paths between the two blocks"
+  });
+
+  Block.remoteMethod('pathsByReference', {
+    accepts: [
+      {arg: 'blockA', type: 'string', required: true},
+      {arg: 'blockB', type: 'string', required: true},
+      {arg: 'reference', type: 'string', required: true},
+      {arg: 'max_distance', type: 'number', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Returns paths between blockA and blockB via position on reference blocks blockB and blockC"
   });
 
   Block.syntenies = function(id0, id1, thresholdSize, thresholdContinuity, cb) {

@@ -12,8 +12,6 @@
 #   backend/node_modules/  frontend/bower_components/  frontend/node_modules/
 node_modules
 bower_components
-# package-lock.json can be committed in the master releases; for devel branches package.json seems sufficient.
-package-lock.json
 
 # misc
 /.sass-cache

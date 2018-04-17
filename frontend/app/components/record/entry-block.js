@@ -5,5 +5,11 @@ export default EntryBase.extend({
   // attributes
   // classes
   actions: {
+    saveEdit: function(record) {
+      if (record.get('scope').length > 0) {
+        this.send('setEditing', false)
+        record.save()
+      }
+    },
   }
 });

@@ -4,10 +4,8 @@ import attr from 'ember-data/attr';
 
 export default DS.Model.extend({
   blockId: DS.belongsTo('block'),
-  parentId: DS.belongsTo('feature'),
   name: attr('string'),
   range: attr('array'),
-  type: attr('string'),
-  aliases: attr('array'),
-  features: DS.hasMany('feature')
+  parentId: DS.belongsTo('feature', {inverse: 'features'}),
+  features: DS.hasMany('feature', {inverse: 'parentId'})
 });

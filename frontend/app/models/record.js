@@ -8,7 +8,6 @@ const { inject: { service } } = Ember;
 
 export default DS.Model.extend({
   session: service('session'),
-  name: attr('string'),
   clientId: attr('string'),
   public: attr('boolean'),
   readOnly: attr('boolean'),

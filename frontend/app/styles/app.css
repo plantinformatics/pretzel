@@ -108,8 +108,8 @@ body.ember-application > div.ember-view > div.container
 .foreignObject .resizer.inFO::after {
   position: fixed;
   right: -25px;
- */
 }
+ */
 .resizer:hover
 {
   opacity : 0.7;

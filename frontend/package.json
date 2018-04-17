@@ -44,7 +44,6 @@
     "ember-scroll-to": "0.6.4",
     "ember-simple-auth": "^1.3.0",
     "ember-welcome-page": "^1.0.3",
-    "interval-tree-1d": "github:mikolalysenko/interval-tree-1d",
     "loader.js": "^4.0.10"
   },
   "engines": {
@@ -52,13 +51,15 @@
   },
   "private": true,
   "dependencies": {
+    "ember-array-helper": ">=0",
     "ember-cli-htmlbars": "^2.0.3",
     "ember-cli-htmlbars-inline-precompile": "^1.0.2",
     "ember-cli-shims": "^1.1.0",
     "ember-contextual-table": "^1.10.0",
     "ember-tooltips": "^3.0.0-beta.2",
     "ember-ui-sortable": ">=0.3.3",
-    "ember-array-helper": ">=0",
-    "ember-wormhole": "^0.5.2"
+    "ember-wormhole": "^0.5.2",
+    "interval-tree-1d": "github:mikolalysenko/interval-tree-1d",
+    "moment": "^2.20.1"
   }
 }

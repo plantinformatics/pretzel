@@ -89,7 +89,7 @@ exports.uploadDataset = (data, models, options, cb) => {
   //create dataset
   models.Dataset.create(data, options)
   .then(function(dataset) {
-    dataset_id = dataset.id
+    dataset_id = dataset.name
     if (dataset.__cachedRelations.blocks) {
       dataset.__cachedRelations.blocks.forEach(function(json_block) {
         json_block.datasetId = dataset.id
@@ -125,32 +125,49 @@ exports.uploadDataset = (data, models, options, cb) => {
     //create intervals
     return models.Interval.create(json_intervals, options)
   }).then(function(intervals) {
-    let recursive_features = function(new_features_promise) {
-      return new_features_promise.then(function(features) {
-        json_features = []
-        features.forEach(function(feature) {
-          if (feature.__cachedRelations.features) {
-            feature.__cachedRelations.features.forEach(function(json_feature) {
-              json_feature.blockId = feature.blockId
-              json_feature.parentId = feature.id
-              json_features.push(json_feature)
-            })
+    //create features using connector for performance
+    models.Feature.dataSource.connector.connect(function(err, db) {
+
+      let insert_features_recursive = function(features_to_insert) {
+        // no more features
+        if (features_to_insert.length == 0) {
+          return process.nextTick(() => cb(null, dataset_id));
+        }
+
+        let next_level_features = [];
+        // collect and prepare next level features
+        features_to_insert.forEach(function(feature, i) {
+          if (feature.features) {
+            feature.features.forEach(function(child_feature) {
+              child_feature.blockId = feature.blockId;
+              // save parent index to link with children after insertion
+              child_feature.parentIndex = i;
+              next_level_features.push(child_feature);
+            });
+            delete feature.features;
           }
         })
-        if (json_features.length == 0) {
-          return features
-        } else {
-          return recursive_features(models.Feature.create(json_features, options))
-        }
-      })
-    }
-    //create features
-    return recursive_features(models.Feature.create(json_features, options))
-  }).then(function(features) {
-    cb(null, dataset_id)
+
+        // insert current features
+        db.collection('Feature').insertMany(features_to_insert)
+        .then(function(result) {
+          // console.log(result);
+          // link parent ids
+          next_level_features.forEach(function(child_feature) {
+            child_feature.parentId = result.insertedIds[child_feature.parentIndex];
+            delete child_feature.parentIndex;
+          });
+          // insert next level
+          insert_features_recursive(next_level_features);
+        })
+
+      };
+
+      insert_features_recursive(json_features);
+    });
   }).catch(function(e){
     cb(e)
-  })
+  });
 }
 
 /**

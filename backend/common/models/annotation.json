@@ -3,6 +3,10 @@
   "base": "Record",
   "description": "Data commentary and insights",
   "properties": {
+    "name": {
+      "type": "string",
+      "required": true
+    }
   },
   "validations": [],
   "relations": {

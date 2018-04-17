@@ -11,10 +11,6 @@
       "type": "string",
       "required": true
     },
-    "type": {
-      "type": "string",
-      "required": true
-    },
     "range": {
       "type": ["number"],
       "required": true
@@ -38,5 +34,12 @@
   },
   "acls": [
   ],
-  "methods": {}
+  "methods": {},
+  "indexes": {
+    "block_index": {
+      "keys": {
+        "blockId": 1
+      }
+    }
+  }
 }

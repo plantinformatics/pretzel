@@ -27,7 +27,9 @@
       drawMap=this data=oa
     }}
   {{/if}}
+  <div>paths : {{paths.length}}</div>
 </div>
+{{draw/link-path stackEvents=this pathReceiver=this}}
 
 {{#if axisFeatureCircleHover}}
   {{path-hover data=oa features=hoverFeatures }} {{!-- targetId=axisFeatureTargetId  "holder" --}}

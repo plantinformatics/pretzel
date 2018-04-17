@@ -3,36 +3,37 @@
   "base": "PersistedModel",
   "description": "Data block that contains features",
   "properties": {
-    "name": {
+    "scope": {
       "type": "string",
       "required": true
     },
-    "size": {
-      "type": "number",
-      "required": true
+    "name": {
+      "type": "string"
+    },
+    "range": {
+      "type": ["number"]
+    },
+    "featureType": {
+      "type": "string"
     }
   },
   "validations": [],
   "relations": {
     "dataset": {
       "type": "belongsTo",
-      "model": "Dataset",
-      "foreignKey": ""
+      "model": "Dataset"
     },
     "features": {
       "type": "hasMany",
-      "model": "Feature",
-      "foreignKey": ""
+      "model": "Feature"
     },
     "annotations": {
       "type": "hasMany",
-      "model": "Annotation",
-      "foreignKey": ""
+      "model": "Annotation"
     },
     "intervals": {
       "type": "hasMany",
-      "model": "Interval",
-      "foreignKey": ""
+      "model": "Interval"
     }
   },
   "acls": [

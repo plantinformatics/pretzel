@@ -8,8 +8,10 @@ export default DS.Model.extend({
   annotations: DS.hasMany('annotation', { async: false }),
   intervals: DS.hasMany('interval', { async: false }),
   features: DS.hasMany('feature', { async: false }),
-  size: attr("number"),
-  name: attr("string"),
+  range: attr('array'),
+  scope: attr('string'),
+  name: attr('string'),
+  featureType: attr('string'),
 
   extraBlocks: [],
 

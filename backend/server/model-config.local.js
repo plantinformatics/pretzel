@@ -82,6 +82,10 @@ var config = {
   "Interval": {
     "dataSource": "mongoDs",
     "public": true
+  },
+  "Alias": {
+    "dataSource": "mongoDs",
+    "public": true
   }
 }
 

@@ -7,34 +7,13 @@ export default EntryBase.extend({
     }
     this.set('layout',layout);
   }.on('init'),
-  data: Ember.computed('dataset.blocks', 'filter', function() {
-    return this.get('dataset.blocks')
-
-    // below handling is in the case of ownership
-    // ACL handling at the block level, which may be
-    // a future direction
-
-    // console.log('dataset explorer computed')
-    // let availableBlocks = this.get('dataset.blocks')
-    // let filter = this.get('filter')
-    // // perform filtering according to selectedChr
-    // // let filtered = availableBlocks //all
-    // if (filter == 'public') {
-    //   return availableBlocks.filterBy('public', true)
-    //   // return maps.filterBy('blocks', 'public', true)
-    // } else if (filter == 'owner') {
-    //   return availableBlocks.filterBy('owner', true)
-    // } else {
-    //   return this.get('dataset.blocks')
-    // }
+  data: Ember.computed('entry.blocks', 'filter', function() {
+    return this.get('entry.blocks')
   }),
   dataEmpty: Ember.computed('data', function() {
     let availableBlocks = this.get('data')
     if (availableBlocks && availableBlocks.length > 0) { return false; }
     else { return true; }
-  }),
-  notEditing: Ember.computed('editing', function() {
-    return !this.get('editing')
   }),
   expandIcon: Ember.computed('layout.active', function() {
     let active = this.get('layout.active')
