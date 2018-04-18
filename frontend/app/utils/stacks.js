@@ -153,7 +153,7 @@ Stacked.prototype.yOffset = function ()
   if (this.parent)
   {
     // console.log("yOffset", this, this.parent);
-    return this.parent.yOffset.apply(this.parent);
+    return this.parent.yOffset();
   }
   let yRange = stacks.vc.yRange;
   let yOffset = yRange * this.position[0];
@@ -926,7 +926,7 @@ Stacked.prototype.axisTransform = function ()
   if (this.parent)
   {
     console.log("axisTransform", this, this.parent);
-    return this.parent.axisTransform.apply(this.parent);
+    return this.parent.axisTransform();
   }
   let yRange = stacks.vc.yRange;
   if (this.position === undefined || yRange === undefined)
@@ -1157,7 +1157,7 @@ Stacked.prototype.axisTransformO = function ()
   if (this.parent)
   {
     console.log("axisTransformO", this, this.parent);
-    return this.parent.axisTransformO.apply(this.parent);
+    return this.parent.axisTransformO();
   }
   let yRange = stacks.vc.yRange;
   if (this.position === undefined || yRange === undefined)
