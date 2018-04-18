@@ -86,6 +86,11 @@
 ;;
 ;; input list  
 (if nil (setq "input_list" "
+axes	axes2d
+oa.axes	oa.axes2d
+apS	axisS
+
+
 adjAPs	adjAxes
 markerAPs	markerAxisSet
 apIDs	axisIDs
@@ -255,6 +260,20 @@ highlightMarker	highlightFeature
 
   (save-excursion
     (goto-char buffer-edit-start)
+
+;; alternative : map axes -> axes2d in draw-map.{js,hbs} outside of comments, i.e. recognise comment start-of-line /**, //, * , in that context map axes -> AaxesA, then map axes -> axes2d, then revert AaxesA -> axes.
+(goto-char buffer-edit-start)	(replace-regexp "\\<axes :" "axes2d :")
+(goto-char buffer-edit-start)	(replace-regexp "\\<oa\\.axes\\>" "oa.axes2d")
+(goto-char buffer-edit-start)	(replace-regexp "\\<let axes\\>" "let axes2d")
+(goto-char buffer-edit-start)	(replace-regexp "'axes'" "'axes2d'")
+(goto-char buffer-edit-start)	(replace-regexp "\"axes\"" "\"axes2d\"")
+(goto-char buffer-edit-start)	(replace-regexp ", axes)" ", axes2d)")
+(goto-char buffer-edit-start)	(replace-regexp "\\<axes.findBy\\>" "axes2d.findBy")
+(goto-char buffer-edit-start)	(replace-regexp "\\<axes.pushObject\\>" "axes2d.pushObject")
+(goto-char buffer-edit-start)	(replace-regexp "\\<div>axes : {{axes\\>" "div>axes2d : {{axes2d")
+(goto-char buffer-edit-start)	(replace-regexp "\\<each axes\\>" "each axes2d")
+(goto-char buffer-edit-start)	(replace-regexp "\\<apS\\>" "axisS")
+
 
 (goto-char buffer-edit-start)	(replace-regexp "\\<adjAPs\\>" "adjAxes")
 (goto-char buffer-edit-start)	(replace-regexp "\\<markerAPs\\>" "markerAxisSets")

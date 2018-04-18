@@ -267,8 +267,8 @@ export default Ember.Component.extend(Ember.Evented, {
   scroller: Ember.inject.service(),
 
   /** later axes can be all displayed axes, but in this first stage:  just add them when they are extended */
-  axes : [],
-  splitAxes: Ember.computed.filterBy('axes', 'extended', true),
+  axes2d : [],
+  splitAxes: Ember.computed.filterBy('axes2d', 'extended', true),
 
   axisData : [{feature: "A1", position: 11}, {feature: "A2", position: 12}],
 
@@ -317,18 +317,18 @@ export default Ember.Component.extend(Ember.Evented, {
     },
 
     enableAxis2D: function(axisID, enabled) {
-      let axes = this.get('axes');
-      let axis = axes.findBy('axisID', axisID);
+      let axes2d = this.get('axes2d');
+      let axis = axes2d.findBy('axisID', axisID);
       if (axis === undefined)
       {
         axis = Ember.Object.create({ axisID : axisID });
-        axes.pushObject(axis);
-        console.log("create", axisID, axis, "in", axes);
+        axes2d.pushObject(axis);
+        console.log("create", axisID, axis, "in", axes2d);
       }
       console.log("enableAxis2D in components/draw-map", axisID, enabled, axis);
         axis.set('extended', enabled);  // was axis2DEnabled
       console.log("splitAxes", this.get('splitAxes'));
-      console.log("axes", this.get('axes'));
+      console.log("axes2d", this.get('axes2d'));
     },
 
     axisWidthResize : function(axisID, width, dx) {
@@ -639,9 +639,8 @@ export default Ember.Component.extend(Ember.Evented, {
     let dragLimit = vc.dragLimit;
     let axisXRange = vc.axisXRange;
 
-    //- possibly integrate with with oa.stacks.axes
-    if (oa.axesExtended === undefined)
-      oa.axesExtended = new Axes(oa);
+    if (oa.axes2d === undefined)
+      oa.axes2d = new Axes(oa);
 
     let
       /** number of ticks in y axis when axis is not stacked.  reduce this
@@ -1843,8 +1842,8 @@ export default Ember.Component.extend(Ember.Evented, {
 
     // Add a group element for each axis.
     // Stacks are selection groups in the result of this .selectAll()
-    let axes = stackS.selectAll(".axis-outer"),
-    axisG = axes
+    let axisS = stackS.selectAll(".axis-outer"),
+    axisG = axisS
       .data(stack_axisIDs)
       .enter().append("g");
     let allG = axisG
@@ -2145,7 +2144,7 @@ export default Ember.Component.extend(Ember.Evented, {
       // incorporate extendedWidth() / getAxisExtendedWidth() in the
       // calculation, perhaps integrated in xScaleExtend()
       let axisTitleA =
-        axisG.merge(axes).selectAll("g.axis-all > text");
+        axisG.merge(axisS).selectAll("g.axis-all > text");
       axisTitleA
         .style("text-anchor", "start")
         .attr("transform", "rotate(-"+angle+")");
@@ -2199,9 +2198,9 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function removeAxis(axisName, t)
     {
-      let axes = svgContainer.select("g.axis-outer#" + eltId(axisName));
-      console.log("removeAxis", axisName, axes.empty(), axes);
-      axes.remove();
+      let axisS = svgContainer.select("g.axis-outer#" + eltId(axisName));
+      console.log("removeAxis", axisName, axisS.empty(), axisS);
+      axisS.remove();
     }
     /** remove g.stack#id<stackID
      */
@@ -4029,7 +4028,7 @@ export default Ember.Component.extend(Ember.Evented, {
         let selectedFeaturesSet = new Set();
         selectedAxes.forEach(function(p, i) {
           /** d3 selection of one of the Axes selected by user brush on axis. */
-          let axes = oa.svgContainer.selectAll("#" + eltId(p));
+          let axisS = oa.svgContainer.selectAll("#" + eltId(p));
           let mapChrName = axisName2MapChr(p);
           selectedFeatures[mapChrName] = [];
           let enable_log = brushExtents[i] === undefined;
@@ -4059,7 +4058,7 @@ export default Ember.Component.extend(Ember.Evented, {
               //Highlight the features in the brushed regions
               //o[p], the axis location, z[p][f].location, actual feature position in the axis, 
               //y[p](z[p][f].location) is the relative feature position in the svg
-              let dot = axes
+              let dot = axisS
                 .append("circle")
                 .attr("class", eltClassName(f))
                 .attr("cx",0)   /* was o[p], but g.axis-outer translation does x offset of stack.  */
@@ -4070,7 +4069,7 @@ export default Ember.Component.extend(Ember.Evented, {
               
             } else {
               let f_ = eltClassName(f);
-              axes.selectAll("circle." + f_).remove();
+              axisS.selectAll("circle." + f_).remove();
             }
           });
         });
@@ -4091,8 +4090,8 @@ export default Ember.Component.extend(Ember.Evented, {
         d3.selectAll(".foreground > g > g").classed("faded", featureNotSelected2);
 
         /** d3 selection of the brushed axis. */
-        let axes = svgContainer.selectAll("#" + eltId(name[0]));
-        let zoomSwitchS = axes
+        let axisS = svgContainer.selectAll("#" + eltId(name[0]));
+        let zoomSwitchS = axisS
           .selectAll('g.btn')
           .data([1]);
         let zoomSwitchE = zoomSwitchS
@@ -4158,7 +4157,7 @@ export default Ember.Component.extend(Ember.Evented, {
             me.trigger("zoomedAxis", [axisID, t]);
 
             pathUpdate(t);
-            let resetScope = axisID ? axes : svgContainer;
+            let resetScope = axisID ? axisS : svgContainer;
               resetScope.selectAll(".btn").remove();
             if (axisID === undefined)
             {
@@ -4318,9 +4317,9 @@ export default Ember.Component.extend(Ember.Evented, {
       d3.select(this).classed("active", true);
       console.log(d3.event.subject.fx, d3.event.subject.x);
       d3.event.subject.fx = d3.event.subject.x;
-      let axes = svgContainer.selectAll(".stack > .axis-outer");
-      if (axes && trace_stack)
-        logSelection(axes);
+      let axisS = svgContainer.selectAll(".stack > .axis-outer");
+      if (axisS && trace_stack)
+        logSelection(axisS);
       /* Assign class current to dropTarget-s depending on their relation to drag subject.
        add class 'current' to indicate which zones to get .dragHover
        axis being dragged does not get .current
@@ -4329,7 +4328,7 @@ export default Ember.Component.extend(Ember.Evented, {
        current if dg != i && (! middle || ((side == left) == (i < dg)))
        * for (i < dg), use x(d) < startx
        */
-      axes.selectAll('g.axis-outer > g.stackDropTarget').classed
+      axisS.selectAll('g.axis-outer > g.stackDropTarget').classed
       ("current",
        function(d /*, index, group*/)
        {
