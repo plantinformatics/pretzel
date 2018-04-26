@@ -108,8 +108,8 @@ body.ember-application > div.ember-view > div.container
 .foreignObject .resizer.inFO::after {
   position: fixed;
   right: -25px;
- */
 }
+ */
 .resizer:hover
 {
   opacity : 0.7;
@@ -363,23 +363,23 @@ div#scaffoldLegend > ul
   cursor: move;
   text-anchor: middle;
 }
-/* since split axis, now have (g.ap (g.axis-all ( g.axis  (g.tick ...))) (text) ... ) */
-.ap > .axis-all > text,
-.ap .axis > .tick > text {
+/* since split axis, now have (g.axis-outer (g.axis-all ( g.axis  (g.tick ...))) (text) ... ) */
+.axis-outer > .axis-all > text,
+.axis-outer .axis > .tick > text {
   text-anchor: middle;
 }
-.ap.rightmost.not_top > .axis-all > text,
-.ap.rightmost .axis > .tick > text {
+.axis-outer.rightmost.not_top > .axis-all > text,
+.axis-outer.rightmost .axis > .tick > text {
   text-anchor: start;
 }
-.ap.leftmost.not_top > .axis-all > text,
-.ap.leftmost .axis > .tick > text {
+.axis-outer.leftmost.not_top > .axis-all > text,
+.axis-outer.leftmost .axis > .tick > text {
   text-anchor: end;
 }
-.ap.rightmost .axis > .tick > text {
+.axis-outer.rightmost .axis > .tick > text {
   transform: translate(18px, 0px);
 }
-.ap.rightmost .axis > .tick > line {
+.axis-outer.rightmost .axis > .tick > line {
   transform: translate(6px, 0px);
 }
 
@@ -405,7 +405,7 @@ div#scaffoldLegend > ul
 .cell { float: left; overflow: hidden; white-space: nowrap; width: 180px; height: 18px;}
 .col-0 { width: 100x; }
 
-div.colouredMarkers
+div.colouredFeatures
 {
   white-space: pre;
   float: left;
@@ -413,7 +413,7 @@ div.colouredMarkers
   min-width: 6em;
 }
 /* text input box / table.   ember-content-editable */
-.colouredMarkers:hover:not(:focus) {
+.colouredFeatures:hover:not(:focus) {
   /* outline: -webkit-focus-ring-color auto 15px; */
   border: pink 3px dashed;
 }
@@ -495,7 +495,7 @@ path.syntenyEdge.inverted
   max-height: 20em;
   overflow: auto;
 }
-div.highlightMarker,
+div.highlightFeature,
 div.toolTip{
   /* seems based on https://github.com/Caged/d3-tip/blob/master/examples/example-styles.css */
   /* position:absolute; */  /* overridden by d3-tip */
@@ -517,7 +517,7 @@ div.toolTip{
   text-align: center;
 }
 
-div.highlightMarker
+div.highlightFeature
 {
     height : "auto";
     width: "auto";
@@ -724,7 +724,7 @@ div.drawing-controls > div.flowButtons > div.popover > button
 }
 
 /* -------------------------------------------------------------------------- */
-/* for selected-markers.hbs : clearScaffoldColours, flipRegion, (could exclude last child : resetZooms) */
+/* for selected-features.hbs : clearScaffoldColours, flipRegion, (could exclude last child : resetZooms) */
 .btn-group.space-between > button {
   margin-right: 1em;
 }
@@ -787,7 +787,7 @@ ul#maps_aligned > li.selected {
   font-weight: bold;
 }
 
-g.ap.selected > text {
+g.axis-outer.selected > text {
   font-weight: bold;
 }
 /* -------------------------------------------------------------------------- */
@@ -801,7 +801,7 @@ g.ap.selected > text {
     display : inherit;
 }
 /* -------------------------------------------------------------------------- */
-div#goto-marker > div
+div#goto-feature > div
 {
     display : inline-block;
 }

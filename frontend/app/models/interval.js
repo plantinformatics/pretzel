@@ -1,4 +1,5 @@
 import attr from 'ember-data/attr';
+import DS from 'ember-data';
 
 import Record from './record';
 

@@ -25,6 +25,7 @@
     "qunit-notifications": "^0.1.0",
     "ember-resolver": "^4.5.0",
     "minimatch": "^3.0.4",
-    "tough-cookie": "^2.3.3"
+    "tough-cookie": "^2.3.3",
+    "route-recognizer"  : "^0.2.3"
   }
 }

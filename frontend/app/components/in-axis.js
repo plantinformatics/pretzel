@@ -14,7 +14,7 @@ export default Ember.Component.extend({
      * This event handling will move to in-axis, since it is shared by all children of axis-2d/axis-accordion.
      */
     let axisComponent = this.get("axis");
-    console.log("components/in-axis didInsertElement()", axisComponent, axisComponent.apID);
+    console.log("components/in-axis didInsertElement()", axisComponent, axisComponent.axisID);
     axisComponent.on('resized', this, 'resized');
     axisComponent.on('zoomed', this, 'zoomed');
   },
@@ -30,27 +30,27 @@ export default Ember.Component.extend({
     console.log("components/in-axis didRender()");
   },
 
-  /** @param [apID, t] */
-  redrawOnce(apID_t) {
-    console.log("redrawOnce", apID_t);
-    // -  redraw if apID matches this axis
+  /** @param [axisID, t] */
+  redrawOnce(axisID_t) {
+    console.log("redrawOnce", axisID_t);
+    // -  redraw if axisID matches this axis
     // possibly use transition t for redraw 
     let redraw = this.get('redraw');
     if (redraw)
-      redraw.apply(this, apID_t);
+      redraw.apply(this, axisID_t);
   },
-  redrawDebounced(apID_t) {
-    Ember.run.debounce(this, this.redrawOnce, apID_t, 1000);
+  redrawDebounced(axisID_t) {
+    Ember.run.debounce(this, this.redrawOnce, axisID_t, 1000);
   },
 
   /*--------------------------------------------------------------------------*/
 
   getRanges(margin)
   {
-    // initial version supports only 1 split axis; next identify axis by APid (and possibly stack id)
+    // initial version supports only 1 split axis; next identify axis by axisID (and possibly stack id)
     // <g class="axis-use">
     let gAxis = d3.select("g.axis-use"),
-    /** relative to the transform of parent g.ap */
+    /** relative to the transform of parent g.axis-outer */
     bbox = gAxis.node().getBBox(),
     yrange = [bbox.y, bbox.height];
     if (bbox.x < 0)
@@ -67,13 +67,13 @@ export default Ember.Component.extend({
 
     let
       oa = this.get('data'),
-    apID = gAxis.node().parentElement.__data__,
-    yAxis = oa.y[apID], // this.get('y')
+    axisID = gAxis.node().parentElement.__data__,
+    yAxis = oa.y[axisID], // this.get('y')
     yDomain = [yAxis.invert(yrange[0]), yAxis.invert(yrange[1])],
     pxSize = (yDomain[1] - yDomain[0]) / bbox.height,
     result =
       {
-        apID : apID,
+        axisID : axisID,
         gAxis : gAxis,
         margin : margin,
         bbox : bbox,
@@ -158,9 +158,9 @@ export default Ember.Component.extend({
     this.set('width', width);
     this.redrawDebounced();
   },
-  zoomed : function(apID_t) {
-    console.log("zoomed in components/in-axis", this, apID_t);
-    this.redrawDebounced(apID_t);
+  zoomed : function(axisID_t) {
+    console.log("zoomed in components/in-axis", this, axisID_t);
+    this.redrawDebounced(axisID_t);
   },
 
   paste: function(event) {

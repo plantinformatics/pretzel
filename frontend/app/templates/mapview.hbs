@@ -47,7 +47,7 @@
             setTab="setTab"}}
           
 	        {{panel/view-controls drawActions=this}}
-        {{goto-marker  drawActions=this class="pull-left bordered control-panel make-ui-draggable"}}
+        {{goto-feature  drawActions=this class="pull-left bordered control-panel make-ui-draggable"}}
 
         {{else if (compare layout.left.tab '===' 'upload')}}
           {{panel/upload-data}}
@@ -96,6 +96,7 @@
         mapsDerived=model.mapsDerived
         availableMaps=model.mapsDerived.availableMaps
         dataReceived=dataReceived
+	layout=layout
         isShowUnique=isShowUnique
         pathColourScale=pathColourScale
         scaffolds=scaffolds
@@ -104,7 +105,7 @@
         showAsymmetricAliases=showAsymmetricAliases
         selectedBlock=selectedBlock
         mapsToViewDelete='removeMap'
-        updatedSelectedMarkers='updateSelectedFeatures'
+        updatedSelectedFeatures='updateSelectedFeatures'
         selectChromById='selectBlockById'}}
     {{!-- {{/if}} --}}
   </div>

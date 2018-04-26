@@ -2,7 +2,7 @@
   {{!-- #ember-tooltip targetId=targetId  isShown=true       }} {{!-- enableLazyRendering=true event='none' --}}
   <span>Path details and actions:</span>
   {{!-- #each ([0,1]) as end  --}}
-  {{#each markers as |marker|}}
-    {{marker-name data=data marker=marker}}
+  {{#each features as |feature|}}
+    {{feature-name data=data feature=feature}}
   {{/each}}
   {{!-- /ember-tooltip --}}
