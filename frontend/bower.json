@@ -11,7 +11,7 @@
     "minimatch": "isaacs/minimatch#^3.0.4",
     "d3-tip" :  "VACLab/d3-tip",
     "d3": "^4.10.2",
-    "handsontable": "^0.34.4"
+    "handsontable": "^0.38.1"
   },
   "devDependencies": {
     "bootstrap": "^3.3.7"

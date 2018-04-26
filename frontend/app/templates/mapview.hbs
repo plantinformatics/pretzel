@@ -75,7 +75,7 @@
     </button>
   {{/if}}
   
-  <div class="resizable" style="flex-grow: 1">
+  <div class="resizable" style="flex-grow:20; resize:both">
     <div class="resizer">
       <span class="glyphicon glyphicon-resize-horizontal"></span>
     </div>
@@ -110,7 +110,7 @@
   </div>
 
   {{#if layout.right.visible}}
-    <div class="" style="width: 400px; display:flex; flex-direction:column">
+    <div class="" style="flex-basis:400px; flex-grow:1; display:flex; flex-direction:column">
       <ul class="nav nav-tabs">
         {{#elem/button-tab
           side="right"
