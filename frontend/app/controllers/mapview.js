@@ -22,6 +22,29 @@ export default Ember.Controller.extend(Ember.Evented, {
       this.set('selectedFeatures', features);
     },
 
+    /**  add mapName to this.get('mapsToView') and update URL
+     * (named map for consistency, but mapsToView really means block, and "name" is db ID)
+     */
+    addMap : function(mapName) {
+      let mtv = this.get('mapsToView');
+      console.log("controller/mapview", "addMap", mapName, mtv, this.target.currentURL);
+      mtv.pushObject(mapName);
+       let queryParams =
+        {'mapsToView' : mtv,
+         // chr : '', highlightFeature : ''
+         /* The URL is only updated if some extra params are given; chr and
+          * highlightFeature will be included in the URL if given, whereas 'abc'
+          * will not.
+          * Single-stepping into transitionToRoute() when 'abc' is omitted,
+          * at this line oldState.queryParams is the same newState.queryParams,
+          * which seems odd :
+          * function getTransitionByIntent(intent, isIntermediate) {
+          *     ... var queryParamChangelist = getChangelist(oldState.queryParams, newState.queryParams);
+          */
+         'abc' : 'def'
+        };
+      this.transitionToRoute({'queryParams': queryParams });  
+    },
     /**  remove mapName from this.get('mapsToView') and update URL
      */
     removeMap : function(mapName) {
@@ -212,6 +235,11 @@ export default Ember.Controller.extend(Ember.Evented, {
   showScaffoldFeatures : false,
   showAsymmetricAliases : false,
 
+
+  currentURLDidChange: function () {
+    console.log('currentURLDidChange', this.get('target.currentURL'));
+  }.observes('target.currentURL'),
+
   hasData: Ember.computed('model.mapsDerived.content.selectedMaps', 'mapsToView', function() {
     let selectedMaps = this.get('model.mapsDerived.content.selectedMaps');
     if (trace_promise)
@@ -221,31 +249,6 @@ export default Ember.Controller.extend(Ember.Evented, {
   }),
 
   mapsToViewChanged: function (a, b, c) {
-    let mtv = this.get('mapsToView'), i=mtv.length;
-    if (i)
-    {
-      let m=mtv[i-1], ib, exists;
-      console.log("mapsToViewChanged", mtv.length, mtv, i, m, a, b, c);
-
-      let mapsDerived = this.get('model.mapsDerived');
-      let me = this;
-      if ((trace_promise > 1) && mapsDerived)
-      mapsDerived.then(function (value) {
-        console.log("mapsDerived isPending", mapsDerived.get('isPending'), mapsDerived.get('content'), me.get('hasData'));
-      });
-
-      // console.log(this.get('model.availableMaps'.length), this.get('model.availableMaps'));
-      if (trace_promise > 1)
-      console.log(a.mapsToView.length, a.mapsToView);
-      if (true)
-      {
-        let dataReceived = this.get('dataReceived');
-        if (dataReceived)
-          dataReceived.pushObject(mtv);
-        else
-          console.log(this);
-      }
-    }
     /* initial mapsToView via URL sets model; maps are added or deleted after
      * that update the add-map and delete-map button sensitivities (extraBlocks,
      * blockLink(), blockDeleteLink()), via : */

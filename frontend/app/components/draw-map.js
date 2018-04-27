@@ -3,6 +3,8 @@ import compileSearch from 'npm:binary-search-bounds';
 console.log("compileSearch", compileSearch);
 import createIntervalTree from 'npm:interval-tree-1d';
 console.log("createIntervalTree", createIntervalTree);
+const { inject: { service } } = Ember;
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -117,6 +119,8 @@ export default Ember.Component.extend(Ember.Evented, {
   classNames: ['draw-map-container'],
 
   store: Ember.inject.service('store'),
+  blockService: service('data/block'),
+
 
   /*------------------------------------------------------------------------*/
 //-  graphData: Ember.inject.service('graph-data'),
@@ -211,6 +215,8 @@ export default Ember.Component.extend(Ember.Evented, {
 
     this.drawControlsListen(true);
     this.localBus(true);
+    let blockService = this.get('blockService');
+    blockService.on('receivedBlock', this, 'receivedBlock');
   }.on('init'),
 
 /** addPathsToCollation() is in draw closure, otherwise would register it here
@@ -233,6 +239,10 @@ export default Ember.Component.extend(Ember.Evented, {
     this.localBus(false);
 
     this.off('paths');
+
+    let blockService = this.get('blockService');
+    blockService.off('receivedBlock', this, 'receivedBlock');
+
   }.on('willDestroyElement'),
 
 //{
@@ -311,6 +321,10 @@ export default Ember.Component.extend(Ember.Evented, {
         });
     },
 
+    addMap : function(mapName) {
+      console.log("controller/draw-map", "addMap", mapName);
+      this.sendAction('addMap', mapName);
+    },
     mapsToViewDelete : function(mapName) {
       console.log("controller/draw-map", "mapsToViewDelete", mapName);
       this.sendAction('mapsToViewDelete', mapName);
@@ -362,145 +376,25 @@ export default Ember.Component.extend(Ember.Evented, {
   /** object attributes */
   oa : {},
 
-  /** 
-   * @param m "map", or more precisely a chromosome within a map, which could
-   * be named simply chromosome, which is now block.
-   * The name "map" is consistent with "mapsToView", but that also can change.
-   */
-  drawPromisedChr : function(store, m)
-  {
-    // extracted from the else case of dataObserver()
-    let ch=store.peekRecord('chromosome', m), // ppc
-    chr = ch.get('id'),
-    rc = chrData(ch);
-    let retHash = {};
-    retHash[chr] = rc;
-    this.draw(retHash, undefined, 'dataReceived');
-  },
+  /*------------------------------------------------------------------------------*/
 
-  dataObserver : /* Ember.on('init',
-   Ember.observer('dataReceived.length',*/ function(sender, key/*, value, rev*/) {
-    let me = this;
-    // avoid recursion caused by dataReceived.popObject() below
-    console.log("dataObserver", (this === sender), this, /*sender,*/ key /*, value, rev*/);
-    let dataReceived = this.get('dataReceived'), newData;
-    if (dataReceived)
-    Ember.run.later(function () {
-      let trace_data;	// undefined
-      if ((newData = dataReceived.get('content')))
-        for (let ind=0; ind<newData.length; ind++) {
-      let content = newData;
-      console.log("content", content.length, content);
-      if (content && content.length) {
-        console.log( newData.length);
-        if (newData[0]) console.log(newData[0].length);
-
-        for (let ic=0; ic < content.length; ic++) {
-          console.log(ic, content[ic]);
-          Ember.run.later(function () { dataReceived.popObject(); });
-
-          {
-            /** @see comment in drawPromisedChr() above about parameter m
-             */
-            let mtv = content[ic], m, ib, newChr;
-            let oa = me.get('oa');
-              if ((oa.axes === undefined) || trace_promise)
-                console.log("mtv", mtv.length, mtv, "axes", oa.axes, oa.axes && oa.axes.length);
-            if (oa.axes !== undefined)
-            for (ib=0; ib < mtv.length; ib++)
-            {
-              if (oa.axes[m = mtv[ib]])
-                { console.log("mapsToView[", ib, "] === ", m); }
-              else if (oa.chrPromises && oa.chrPromises[m])
-              {
-                let mp = oa.chrPromises[m], zm = oa.z[m],
-                fa  = mp.get('features'), f0  = fa .canonicalState[0].__data;
-                console.log("promise pending for", m, mp, zm, fa .length, f0 );
-                if (mp.isFulfilled)
-                {
-                  me.drawPromisedChr(me.get('store'), m);
-                }
-                else  // could draw() here, but don't expect ! isFulfilled
-                  mp.then(function (a,b) { console.log("dataObserver resolved", a, b); });
-              }
-              else
-              {
-                newChr = mtv[ib];
-                console.log(newChr);
-                {
-                  let thisStore = me.get('store');
-                  let pc = thisStore.findRecord('block', m,
-                    { reload: true,
-                      adapterOptions:{ 
-                        filter: {include: "features"} 
-                      }}
-                    );
-                  pc.then(function (ch){
-                    let map, mapId, chrName = ch.get('name'), chr = ch.get('id'), features, rc;
-                    console.log(chrName, chr);
-                    if (chrName && chr && (map = ch.get('map')) && (mapId = map.get('id'))
-                            && (features = ch.get('features'))) {
-                      console.log("findRecord then", chrName, chr, map.get('name'), mapId, features.length);
-                    }
-                    else
-                    {
-                      // this branch is factored to drawPromisedChr(), plus the draw() call.
-                      let ppc=thisStore.peekRecord(name_chromosome_block, m);
-                      if (ppc == undefined)
-                      {
-                          console.log("after findRecord(", name_chromosome_block, ", ", m, "), peekRecord() returned", ppc);
-                      }
-                      else
-                      {
-                        console.log
-                        (ppc._internalModel.id,
-                          ppc.get('map').get('name'),
-                          ppc.get('name'));
-
-                        if (trace_data) {
-                          let fa = ppc.get('features');
-                          fa.forEach(function (cc) { console.log(cc.get('name'), cc.get(name_position_range), cc.get('aliases'));});
-                        }
-                        ch = ppc;
-                        chr = ch.get('id');
-                        console.log("chr = ch.get(id)", chr);
-                      }
-                      debugger; // does this path get used ?
-                    }
+  receivedBlock : function (id, block) {
+    console.log('receivedBlock', this, id, block);
+    // copied from dataObserver() (similar to drawPromisedChr()) - can simplify and rename ch -> block, chr -> blockId, 
+    let
+      ch = block,
+    chr  = block.get('id'),
                     rc = chrData(ch);
                     /** Only 1 chr in hash, but use same structure as routes/mapview.js */
                     let retHash = {};
                     retHash[chr] = rc;
-                    me.draw(retHash, undefined, 'dataReceived');
-                  });
-                }
 
-              }
-            }
+    this.draw(retHash, undefined, 'dataReceived');
 
-            /*
-             let ppc = newData[0], fa  = newData[1];
-             console.log(newData[0]._internalModel, newData[1].record);
-             console.log
-             (ppc._internalModel.id,
-             ppc.get('map').get('name'),
-             ppc.get('name'));
-
-             fa .forEach(function (cc) { console.log(cc.get('name'), cc.get('position'), cc.get('aliases'));});
-             */
-
-          }
-
-        }
-      }
-    } else {
-      console.log("no dataReceived", dataReceived, newData);
-    }
-    }, 1000);
-
-   }.observes('dataReceived.length')
-//))
-,
+    /* inform mapview controller of the change of draw-map scope, to update the URL.
+     */
+    this.send('addMap', block.get('id'));
+  },
 
 
   /** Draw the Axes (Axis Pieces) and the paths between them.
@@ -3990,7 +3884,7 @@ export default Ember.Component.extend(Ember.Evented, {
       /** name[0] is axisID of the brushed axis. name.length should be 1. */
       let name = d3.select(that).data();
       let brushedAxisID = name[0];
-      me.sendAction('selectChromById', brushedAxisID);
+      me.send('selectChromById', brushedAxisID);
 
       let svgContainer = oa.svgContainer;
       //Remove old circles.

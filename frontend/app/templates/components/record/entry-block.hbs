@@ -23,12 +23,11 @@
 {{else}}
   {{#if entry.isSelected}}
   {{else}}
-    {{#link-to "mapview" (query-params mapsToView=entry.blockLink)}}
-      {{elem/button-base
-        classSize='xs'
-        classColour='success'
-        icon='plus'}}
-    {{/link-to}}
+    {{elem/button-base
+      onClick=(action 'get' entry)
+      classSize='xs'
+      classColour='success'
+      icon='plus'}}
   {{/if}}
   {{entry.name}}
   {{#if entry.datasetId.editable }}
