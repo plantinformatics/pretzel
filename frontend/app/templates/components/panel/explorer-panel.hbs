@@ -1,0 +1,64 @@
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="filter"}}
+    Filters
+  {{/elem/panel-heading}}
+  <div class="panel-body">
+    <div class="btn-group btn-group-justified" role="group" aria-label="...">
+      {{#each-in filterOptions as |key value|}}
+        <div class="btn-group" role="group">
+          <button
+            type="button"
+            class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
+            {{action "changeFilter" key preventDefault=false}}>
+            {{elem/icon-base name=value.icon}} &nbsp;{{value.formal}}
+          </button>
+        </div>
+      {{/each-in}}
+    </div>
+  </div>
+{{/elem/panel-container}}
+
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="folder-open"}}
+    Datasets
+    {{elem/button-refresh
+      onClick=(action 'refreshAvailable')}}
+  {{/elem/panel-heading}}
+  {{#if model.mapsDerived.isPending}}
+    <div class="panel-body">
+      <div class="well">
+        Loading resources. 
+      </div>
+    </div>
+  {{else if dataEmpty}}
+    <div class="panel-body">
+      <div class="well">
+        No datasets found!
+      </div>
+    </div>
+  {{/if}}
+  <ul class="list-group">
+    
+    {{#each data as |dataset|}}
+      {{record/entry-dataset
+        filter=filter
+        entry=dataset
+        selectedBlock=selectedBlock
+        selectBlock="selectBlock"
+        deleteBlock="deleteBlock"
+        onDelete="onDelete"
+        loadBlock="loadBlock"}}
+    {{/each}}
+    <li 
+      class="list-group-item list-group-item-info">
+      {{elem/icon-base name='cloud-upload'}} &nbsp;Upload new data
+      <span class="pull-right">
+        {{elem/button-base
+          classSize='xs'
+          classColour='success'
+          icon='plus'
+          onClick=(action "setTab" "left" "upload")}}
+      </span>
+    </li>
+  </ul>
+{{/elem/panel-container}}

@@ -1,0 +1,11 @@
+<div id="matrix-view" style="width:100%; height: 100%">
+    {{panel/left-panel
+        loadBlock="loadBlock"
+    }}
+    <div id="observational-table"></div>
+    {{#if noData}}
+        <div class="well">
+            <span>Select individuals to display using Dataset Explorer</span>
+        </div>
+    {{/if}}
+</div>

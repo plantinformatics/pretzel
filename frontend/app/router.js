@@ -19,6 +19,7 @@ Router.map(function() {
   // core app routes
   this.route('callback');
   this.route('mapview');
+  this.route('matrixview');
   this.route('geneticmaps', { path: '/geneticmaps' }, function() {
     this.route('geneticmap', { path: '/:geneticmap_id' });
   });

@@ -49,5 +49,8 @@ export default Ember.Component.extend({
       record.save()
       this.sendAction('onDelete', id)
     },
+    loadBlock(record) {
+      this.sendAction('loadBlock', record);
+    }
   }
 });

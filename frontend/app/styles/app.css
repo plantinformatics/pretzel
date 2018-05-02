@@ -812,3 +812,20 @@ div#goto-feature > div
 }
 
 /* -------------------------------------------------------------------------- */
+
+.panel-collapse-button {
+  padding:0 5px 0 5px;
+  border-radius:0;
+  z-index: 50;
+}
+
+#matrix-view {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+#observational-table {
+  flex: 1;
+  display: none;
+}
