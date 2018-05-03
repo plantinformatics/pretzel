@@ -13,6 +13,14 @@ export default Component.extend({
     },
     loadBlock(block) {
       this.sendAction('loadBlock', block);
+    },
+    changeTab(tab) {
+      $('.nav-tabs a[href="#left-panel-' + tab + '"]').tab('show');
+    },
+    selectBlock(block) {
+    },
+    removeBlock(block) {
+      this.sendAction('removeBlock', block);
     }
   }
 });

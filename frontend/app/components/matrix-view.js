@@ -11,11 +11,10 @@ export default Component.extend({
     let tableDiv = $("#observational-table")[0];
     let table = new Handsontable(tableDiv, {
       data: [],
-      // minRows: 0,
-      rowHeaders: false,
+      readOnly: true,
+      rowHeaders: true,
       manualRowResize: true,
       manualColumnResize: true,
-      manualRowMove: true,
       manualColumnMove: true,
       contextMenu: true,
       sortIndicator: true,
@@ -23,6 +22,7 @@ export default Component.extend({
       stretchH: 'all'
     });
     this.set('table', table);
+    this.set('displayData', []);
   },
 
   displayData: [],
@@ -40,16 +40,29 @@ export default Component.extend({
     });
     return Object.keys(features);
   }),
+  rowHeaderWidth: Ember.computed('rows', function() {
+    let rows = this.get('rows');
+    let longest_row = 0;
+    let length_checker = $("#length_checker");
+    rows.forEach(function(r) {
+      let w = length_checker.text(r).width();
+      if (w > longest_row) {
+        longest_row = w;
+      }
+    })
+    return longest_row + 10;
+  }),
 
   updateTable: function() {
     let individuals = this.get('displayData');
     let t = $("#observational-table");
     let rows = this.get('rows');
+    let rowHeaderWidth = this.get('rowHeaderWidth');
     let table = this.get('table');
 
     let data = [];
     rows.forEach(function(row_name) {
-      let d  = {"feature": row_name};
+      let d  = {};
       individuals.forEach(function(individual) {
         let individual_str = individual.get('datasetId').get('id') + ':' + individual.get('name');
         d[individual_str] = "";
@@ -65,14 +78,14 @@ export default Component.extend({
       t.show();
       let columns = Object.keys(data[0]);
 
-      table.updateSettings({
-        colHeaders: columns,
-        data: data
-      });
-      table.updateSettings({
-        colHeaders: columns,
-        data: data
-      });
+      for(let i=0; i<2; i++) {
+        table.updateSettings({
+          colHeaders: columns,
+          rowHeaders: rows,
+          rowHeaderWidth: rowHeaderWidth,
+          data: data
+        });
+      }
     } else {
       t.hide();
     }
@@ -94,6 +107,12 @@ export default Component.extend({
           data.pushObject(b);
         }
       });
+    },
+    removeBlock(block) {
+      let data = this.get('displayData');
+      if (data.includes(block)) {
+        data.removeObject(block);
+      }
     }
   }
 });
