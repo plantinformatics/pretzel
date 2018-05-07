@@ -11,7 +11,7 @@
                 {{#elem/panel-heading icon="globe"}}
                     Displayed Datasets
                 {{/elem/panel-heading}}
-                <ul class="list-group">
+                <ul id="display-blocks" class="list-group">
                     {{#each displayData as |block|}}
                     <li 
                         class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"

@@ -18,6 +18,7 @@ export default Component.extend({
       $('.nav-tabs a[href="#left-panel-' + tab + '"]').tab('show');
     },
     selectBlock(block) {
+      this.sendAction('selectBlock', block);
     },
     removeBlock(block) {
       this.sendAction('removeBlock', block);
