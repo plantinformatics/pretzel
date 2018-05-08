@@ -24,7 +24,7 @@
     {{elem/button-refresh
       onClick=(action 'refreshAvailable')}}
   {{/elem/panel-heading}}
-  {{#if model.mapsDerived.isPending}}
+  {{#if model.availableMapsTask.isRunning}}
     <div class="panel-body">
       <div class="well">
         Loading map {{elem/icon-base name="globe"}} resources. 

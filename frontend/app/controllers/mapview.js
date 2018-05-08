@@ -62,54 +62,15 @@ export default Ember.Controller.extend(Ember.Evented, {
         console.log("removeMap", "deleted", mapName, "at", di, mtv.length, mtv);
         console.log("removeMap", "mapsToView:", this.get('mapsToView'));
         let queryParams = // this.get('queryParams');
-          {'mapsToView' : mtv };
+          {'mapsToView' : mtv
+           , 'abc' : 'def'  // see comment re. queryParams in addMap() above.
+          };
         console.log("queryParams", queryParams);
         this.transitionToRoute({'queryParams': queryParams });
       }
     },
-    updateChrs : function(/*chrID*/) {
-      let mdv = this.get('model.mapsDerived.content');
-      if ((mdv === undefined) || (mdv === null)) {
-        console.log("updateChrs", this.get('model'));
-      } else {
-        let availableBlocks = mdv.availableChrs
-        let availableDatasets = mdv.availableMaps
-        let mtv = this.get('mapsToView')
-        // let extraBlocks = availableBlocks;
-        
-        if (trace_promise > 1) console.log("updateChrs", availableBlocks, mtv); // , chrID
-        
-        this.set('extraBlocks', availableBlocks);
-        // the above is draft replacement for the following.
-
-        // copied (with some excisions) from routes/mapview model();
-        // this needs to be reorganised - probably to a controllers/chromosome.js
-        let selectedDatasets = [];
-        if (availableDatasets) {
-        // availableDatasets.then(function(datasets) );
-        // let datasets = availableDatasets;
-        availableDatasets.forEach(function(dataset) {
-          let blocks = dataset.get('blocks');
-          blocks.forEach(function(block) {
-            var exblocks = [];
-            block.set('isSelected', false); // In case it has been de-selected.
-            if (mtv) {
-              for (var i=0; i < mtv.length; i++) {
-                if (block.get('id') != mtv[i]) {
-                  exblocks.push(mtv[i]);
-                }
-                else {
-                  block.set('isSelected', true);
-                  selectedDatasets.push(block);
-                }
-              }
-            }
-            block.set('extraBlocks', exblocks);
-          });
-        });
-        }
-        this.set("selectedMaps", selectedDatasets);
-      }
+    updateChrs : function() {
+      console.log("updateChrs TODO get datasets", this.get('model'));      
     },
     toggleShowUnique: function() {
       console.log("controllers/mapview:toggleShowUnique()", this);
@@ -130,13 +91,10 @@ export default Ember.Controller.extend(Ember.Evented, {
       d3.select("g#id" + block.id).classed("selected", true);
     },
     selectBlockById: function(blockId) {
-      let selectedMaps = this.get('selectedMaps')
-      let selectedBlock = null;
-      selectedMaps.forEach(function(block) {
-        if (block.id == blockId) {
-          selectedBlock = block;
-        }
-      })
+      let store = this.get('store'),
+      selectedBlock = store.peekRecord('block', blockId);
+      /* Previous version traversed all blocks of selectedMaps to find one
+       * matching blockId. */
       this.send('selectBlock', selectedBlock)
     },
     /** 
@@ -145,63 +103,11 @@ export default Ember.Controller.extend(Ember.Evented, {
      */
     updateModel: function() {
       // Get all available maps.
-      let selMaps = [];
-      let that = this;
-      let result;
-      /** collation of all chrs of all maps.  value is currently true, could be a refn to parent map. */
-      let availableChrs = {}; // or new Set();
-      /** These values are calculated from the list of available maps when maps promise resolves.
-       availableChrs : availableChrs,
-       selectedMaps: selMaps;
-       */
-      let mapsDerivedValue = {availableChrs: availableChrs, selectedMaps: selMaps};
-  
-      let seenChrs = new Set();
-      var maps = that.get('store').query('dataset',
-        {
-          filter: {'include': 'blocks'}
-        }
-      )
-      .then(function(datasets) {
-        mapsDerivedValue.availableMaps = datasets.toArray();
-        if (trace_promise > 1)
-          console.log("datasets.toArray()", mapsDerivedValue.availableMaps);
-        datasets.forEach(function(map) {
-          let chrs = map.get('blocks');
-          chrs.forEach(function(chr) {
-            var exChrs = [];
-            mapsDerivedValue.availableChrs[chr.get('id')] = map.get('name'); // or true; // could be map or map.get('id');
-            chr.set('isSelected', false); // In case it has been de-selected.
-            // console.log(chr, map);
-            chr.set('map', map);  // reference to parent map
-            chr.set('extraBlocks', exChrs);
-          });
-        });
-        return Promise.resolve(mapsDerivedValue);
-      },
-        function(reason) {
-          console.log("findAll geneticmap", reason);
-        }
-      );
-      let promises = {};
-  
-      if (trace_promise > 1)
-        maps.then(function (result) { console.log("maps result", result, maps._result); });
-  
-      let ObjectPromiseProxy = Ember.ObjectProxy.extend(Ember.PromiseProxyMixin);
-      if (trace_promise > 1)
-      {
-        let a= ObjectPromiseProxy.create({promise: maps});
-        a.then(function (result) { console.log("maps result 2", result, "availableChrs", result.availableChrs, "availableMaps", result.availableMaps); });
-      }
-      result = {
-        chrPromises: promises,
-        mapsToView : [],
-        mapsDerived : ObjectPromiseProxy.create({promise: maps}),
-        mapsPromise : maps,
-        highlightFeature: false
-      };
+
       // console.log("routes/mapview: model() result", result);
+      if (true)  // -  do in next commit.  Factor routes/mapview.js:model()
+        console.log('TODO : updateModel()');
+        else
       this.set('model', result);
       // return result;
     }
@@ -221,11 +127,6 @@ export default Ember.Controller.extend(Ember.Evented, {
   queryParams: ['mapsToView'],
   mapsToView: [],
 
-/*
-  availableMaps: [],
-
-  selectedMaps: [],
-*/
   selectedFeatures: [],
 
   dataReceived : Ember.ArrayProxy.create({ content: Ember.A() }),
@@ -240,29 +141,44 @@ export default Ember.Controller.extend(Ember.Evented, {
     console.log('currentURLDidChange', this.get('target.currentURL'));
   }.observes('target.currentURL'),
 
-  hasData: Ember.computed('model.mapsDerived.content.selectedMaps', 'mapsToView', function() {
-    let selectedMaps = this.get('model.mapsDerived.content.selectedMaps');
+  selectedMaps: Ember.computed('mapsToView', function() {
+    let mapsToView = this.get('mapsToView'),
+    store = this.get('store'),
+    /** filter against block ids of datasets from taskGetList() result */
+    validBlockIds = mapsToView.filter(function (blockId) {
+      let block = store.peekRecord('block', blockId);
+      return block !== undefined;
+    });
+  }),
+
+  /** Used by the template to indicate when & whether any data is loaded for the graph.
+   *
+   * Retaining for the moment mapsToView, but selectedMaps is a subset of
+   * mapsToView - just those which are loaded, whereas mapsToView is the
+   * requested block ids, which may be invalid, or the blocks may not yet be
+   * received, so it seems that mapsToView should be omitted here.
+   *
+   */
+  hasData: Ember.computed('selectedMaps', 'mapsToView', function() {
+    let selectedMaps = this.get('selectedMaps');
+    let mapsToView = this.get('mapsToView');
     if (trace_promise)
-    console.log("hasData", ! selectedMaps || selectedMaps.length, this.mapsToView.length);
+    console.log("hasData", ! selectedMaps || selectedMaps.length, mapsToView.length);
     return (selectedMaps && selectedMaps.length > 0)
-      || this.mapsToView.length > 0;
+      || mapsToView.length > 0;
   }),
 
   mapsToViewChanged: function (a, b, c) {
     /* initial mapsToView via URL sets model; maps are added or deleted after
      * that update the add-map and delete-map button sensitivities (extraBlocks,
      * blockLink(), blockDeleteLink()), via : */
-    if (this.get('model.mapsDerived.content'))
+    if (this.get('model.content'))
     {
       if (trace_promise > 1)
       console.log('mapsToViewChanged() -> updateChrs()');
       this.send('updateChrs');
     }
-  }.observes('mapsToView.length'),
-
-  chrsChanged: function () {
-    this.send('updateChrs');
-  }.observes('model.mapsDerived.content')
+  }.observes('mapsToView.length')
 
 
 });

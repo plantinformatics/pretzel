@@ -39,7 +39,7 @@ import { breakPoint, breakPointEnableSet } from '../utils/breakPoint';
 
 /*----------------------------------------------------------------------------*/
 
-let trace_promise = 1;
+let trace_dataflow = 1;
 
 
 Object.filter = Object_filter;
@@ -304,6 +304,10 @@ export default Ember.Component.extend(Ember.Evented, {
       this.sendAction('updatedSelectedFeatures', featuresAsArray);
     },
 
+    selectChromById : function (brushedAxisID) {
+      this.sendAction('selectChromById', brushedAxisID);
+    },
+
     updatedStacks: function(stacks) {
       let stacksText = stacks.toString();
       // stacks.log();
@@ -388,12 +392,23 @@ export default Ember.Component.extend(Ember.Evented, {
                     /** Only 1 chr in hash, but use same structure as routes/mapview.js */
                     let retHash = {};
                     retHash[chr] = rc;
+    this.get('receiveChr')(chr, rc, 'dataReceived');
+
 
     this.draw(retHash, undefined, 'dataReceived');
 
     /* inform mapview controller of the change of draw-map scope, to update the URL.
+     *
+     * Blocks identified in mapsToView[] as well as those via added entry-block
+     * action get -> block service taskGet() are loaded via receivedBlock(), so
+     * avoid duplication in mapsToView and hence in the URL.
+     * So far a block is shown in only 1 axis, but we are likely to support
+     * multiple instances of a block in a graph; this will then need to be
+     * revisited.
      */
-    this.send('addMap', block.get('id'));
+    let model = this.get('data'), mapsToView = model && model.mapsToView;
+    if (! mapsToView || ! mapsToView.includes(chr))
+      this.send('addMap', chr);
   },
 
 
@@ -409,14 +424,12 @@ export default Ember.Component.extend(Ember.Evented, {
    * (originally "mapName", but it actually identifies a chromosome within a map).
    *
    * @param myData hash indexed by axis names
-   * @param availableMaps if not undefined then it is a promise; when this promise has resolved, chrPromises[*].get('map') is available
    * @param source 'didRender' or 'dataReceived' indicating an added map.
    */
-  draw: function(myData, availableMaps, source) {
-    let chrPromises, myDataKeys;
+  draw: function(myData, source) {
+    let myDataKeys;
     if (source === 'didRender')
     {
-      chrPromises = myData;
       myData = {};
     }
     myDataKeys = d3.keys(myData);
@@ -456,11 +469,6 @@ export default Ember.Component.extend(Ember.Evented, {
   /*------------------------------------------------------------------------*/
 
 
-    /* The draw() from didRender() has the model promise array in myData;
-     * not the draw() from dataObserver().
-     */
-    if (source === 'didRender')
-      oa.chrPromises = chrPromises; // used in dataObserver()
 
     oa.stacks = stacks;
     stacks.init(oa);
@@ -493,7 +501,7 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     console.log("oa.axisIDs", oa.axisIDs, source);
     /** axisIDs are <mapName>_<chromosomeName> */
-    if (source == 'dataReceived')
+    if ((source == 'dataReceived') || oa.axisIDs)
     {
       // append each element of myDataKeys[] to oa.axisIDs[] if not already present.
       myDataKeys.forEach(function (axisID) { axisIDAdd(axisID); } );
@@ -649,7 +657,16 @@ export default Ember.Component.extend(Ember.Evented, {
     /** z[axisID] is a hash for axis axisID mapping feature name to location.
      * i.e. z[d.axis][d.feature] is the location of d.feature in d.axis.
      */
-    z = oa.z || (oa.z = myData);
+    z;  // was  = oa.z || (oa.z = myData);
+    if (! oa.z)
+      oa.z = myData;
+    else  // merge myData into oa.z
+      d3.keys(myData).forEach(function (blockId) {
+        if (! oa.z[blockId])
+          oa.z[blockId] = myData[blockId];
+      });
+    z = oa.z;
+
     /** All feature names.
      * Initially a Set (to determine unique names), then converted to an array.
      */
@@ -660,49 +677,20 @@ export default Ember.Component.extend(Ember.Evented, {
      * i.e. z[chr/ap/block name][feature/marker name] === featureIndex[feature/marker id] */
     oa.featureIndex || (oa.featureIndex = []);
 
-      if (source === 'didRender')
-        d3.keys(chrPromises).forEach(function (axis) {
-        /** axis is chr name */
-        let c = chrPromises[axis];
-        afterChrPromise(c, availableMaps);
-        });
+      if (source === 'didRender') {
+        // when tasks are complete, receiveChr() is called via blockService : receivedBlock
+      }
       else
         d3.keys(myData).forEach(function (axis) {
         /** axis is chr name */
       receiveChr(axis, myData[axis], source);
       });
-    /** When data is received for a chromosome, draw it.
-     * @param p promise delivers data of a chromosome
-     * @param availableMaps is used to indicate that chr.map has been set.
-     * undefined means don't wait - already set; it is set by the resolution of
-     * the /geneticmap request, so waiting is only required for the initial display.
-     */
-    function afterChrPromise(p, availableMaps)
-    {
-      // console.log("afterChrPromise setup");
-      // moved here from routes/mapview model(), placing data for chr in rc instead of retHash[chr]
 
-      let waitFor = [p];
-      if (availableMaps)
-        waitFor.push(availableMaps);
-      Ember.RSVP.all(waitFor).then(function(results) {
-        let
-          c = results[0],
-        rc = chrData(c);
-        receiveChr(c.get('id'), rc, 'dataReceived');
-        //-	on 'new chr data' to from graph-data
-        // using named function redraw() instead of anonymous function, so that debounce is effective.
-        Ember.run.debounce(redraw, 800);
-      })
-      .catch(function(reason){
-        console.log("afterChrPromise", reason);
-      });
-    }
     function redraw()
     {
-      if (trace_promise > 1)
+      if (trace_dataflow > 1)
       {
-        console.log("redraw, afterChrPromise then after receiveChr", oa.axisIDs, oa.axes /*, oa.blocks*/);
+        console.log("redraw", oa.axisIDs, oa.axes /*, oa.blocks*/);
         oa.stacks.log();
       }
       me.draw({}, undefined, 'dataReceived');
@@ -771,6 +759,10 @@ export default Ember.Component.extend(Ember.Evented, {
       });
       }
     }
+    // hack a connection to receiveChr() until it gets moved / refactored.
+    if (! this.get('receiveChr'))
+      this.set('receiveChr', receiveChr);
+
     /** Check if axis exists in oa.axisIDs[].
      * @return index of axis in oa.axisIDs[], -1 if not found
      */
@@ -954,7 +946,7 @@ export default Ember.Component.extend(Ember.Evented, {
      * further increments will trace the whole arrays, i.e. O(N),
      * and trace cross-products of arrays - O(N^2) e.g. trace the whole array for O(N) events.
      */
-    const trace_stack = 1;
+    const trace_stack = 2;
     const trace_scale_y = 0;
     const trace_drag = 1;
     const trace_alias = 1;  // currently no trace at level 1.
@@ -4917,6 +4909,7 @@ export default Ember.Component.extend(Ember.Evented, {
     /** recalculate stacks X position and show via transition
      * @param changedNum  true means the number of stacks has changed.
      * @param t undefined or transition to use for axisTransformO change
+     * @see stacks.log() for description of stacks.changed
      */
     function stacksAdjust(changedNum, t)
     {
@@ -5464,27 +5457,7 @@ export default Ember.Component.extend(Ember.Evented, {
     //
     let me = this;
     let data = this.get('data');
-    let mapsDerived = this.get('mapsDerived');
-    /** mapview.hbs passes Model=model to {{draw-map }}, just for devel trace -
-     * the other parameters provide all the required information. */
-    let Model;
-    if (trace_promise > 1)
-    {
-      Model = me.get('Model');
-      let mp = Model.mapsPromise;
-      mp.then(function (result) { console.log("mp", result); });
-    }
-    mapsDerived.then(function (mapsDerivedValue) {
-      if (trace_promise > 1)
-      {
-        let availableMaps = me.get('availableMaps');
-        console.log("Model", Model, "mapsDerivedValue.availableMaps", mapsDerivedValue.availableMaps);
-        console.log("didRender", mapsDerivedValue);
-        let mpr=mapsDerivedValue; // mp._result;
-        console.log("mpr.availableChrs", mpr.availableChrs, "availableMaps", mpr.availableMaps, "selectedMaps", mpr.selectedMaps, "Model.mapsToView", Model.mapsToView);
-      }
-      me.draw(data, mapsDerived, 'didRender');
-    });
+      me.draw(data, 'didRender');
   },
 
     resize : function() {

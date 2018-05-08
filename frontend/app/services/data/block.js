@@ -31,12 +31,12 @@ export default Service.extend(Ember.Evented, {
    */
   taskGet: task(function * (id) {
     let block = yield this.getData(id);
-    console.log('taskGet', this, id, block);
+    // console.log('taskGet', this, id, block);
     this.trigger('receivedBlock', id, block);
     return block;
   }),
   getData: function (id) {
-    console.log("block getData", id);
+    // console.log("block getData", id);
     let store = this.get('store');
     let blockP = store.findRecord(
       'block', id,

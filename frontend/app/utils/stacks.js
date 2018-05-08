@@ -17,7 +17,7 @@ Object.filter = Object_filter;
 
 /*----------------------------------------------------------------------------*/
 
-const trace_stack = 1;
+const trace_stack = 2;
 const trace_updatedStacks = true;
 
 /** Each stack contains 1 or more Axis Pieces (Axes).

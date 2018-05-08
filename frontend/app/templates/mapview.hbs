@@ -64,7 +64,7 @@
             showAsymmetricAliases=showAsymmetricAliases
             selectBlock="selectBlock"
             deleteBlock="removeMap"
-            updateModel="updateModel"
+            updateModel="updateChrs"
             setTab="setTab"}}
         {{/if}}
       </div>
@@ -84,18 +84,14 @@
       hasData {{hasData}}
       model {{model}}
       mapsToView {{model.mapsToView}}
-      availableMaps {{model.mapsDerived.availableMaps.length}}
-      availableChrs {{model.mapsDerived.availableChrs.length}}
-      selectedMaps {{model.mapsDerived.selectedMaps.length}}
+      availableMaps {{model.availableMapsTask.value.length}}
+      blockValues {{mapsToViewObj.length}}
+      selectedMaps {{selectedMaps.length}}
     </p>
     {{!-- {{#if hasData}} --}}
       {{draw-map
-        data=model.chrPromises
-        Model=model
+        data=model
         drawActions=this
-        mapsDerived=model.mapsDerived
-        availableMaps=model.mapsDerived.availableMaps
-        dataReceived=dataReceived
 	layout=layout
         isShowUnique=isShowUnique
         pathColourScale=pathColourScale

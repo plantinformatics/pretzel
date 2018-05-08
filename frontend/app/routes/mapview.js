@@ -3,10 +3,14 @@ import AuthenticatedRouteMixin from 'ember-simple-auth/mixins/authenticated-rout
 
 const { RSVP: { Promise } } = Ember;
 const { Route } = Ember;
+const { inject: { service } } = Ember;
+import { task } from 'ember-concurrency';
 
-let trace_promise = 1;
 
 let config = {
+  block: service('data/block'),
+  dataset: service('data/dataset'),
+
   titleToken: 'MapView',
   queryParams: {
     mapsToView: {
@@ -14,9 +18,10 @@ let config = {
       // a model refresh, using :
       // refreshModel: true
       //
-      // Instead : controller : mapsToViewChanged() .observes('mapsToView'),
-      // does store.findRecord(chromosome) and delivers the data or promise via
-      // dataReceived.
+      /* Now : model() initiates tasks via the block service which on completion
+       * trigger event receivedBlock, which is listened for by draw-map, calling
+       * receiveChr().
+       */
       replace : true
     },
     chr: {
@@ -41,133 +46,82 @@ let config = {
     return value;
   },
 
-  /** chr.extraBlocks (aka exChrs) is the list of chrs which are in params.mapsToView
-   * other than this chr.
-   * Used in :
-   *  blockDeleteLink():  extraBlocks - this chr
-   *  chrLink():        extraBlocks + this chr
+  /** Ember-concurrency tasks are returned in the model :
+   *  mapsToView : [ ]
+   *  availableMapsTask : task -> [ id , ... ]  task completion also sets this.availableDatasets
+   *  blockTasks : { id : task, ... }
    *
-   * Suggested changes: the filter in blockDeleteLink makes it unnecessary for
-   * each chr having its own copy of extraBlocks, instead simply use
-   * params.mapsToView, or a hash computed from mapsToView which would make
-   * it easier to filter out this chr.
-   * Currently the filter is not needed, because this chr is excluded from
-   * extraBlocks by in the model() below.
-   *
-   * selectedMaps[] is almost a copy of params.mapsToView[], except that maps in
-   * params which are not chrs in API result are filtered out, i.e.
-   * store .findAll('geneticmap') .forEach() .get('chromosomes')
-   *
-   * mapsDerived.selectedMaps is different to draw-map.js: oa.selectedAxes,
+   * selectedMaps() is a filtered copy of params.mapsToView[] : maps in
+   * params which are not chrs (blocks) in API result are filtered out, i.e.
+   * store .query('dataset') .forEach() .get('blocks')
+   * i.e. this case selected means viewed, whereas elsewhere
+   * selected{Features,Markers,Blocks,Maps} means brushed; to be distinguished
+   * in a separate commit.
+
+   * selectedMaps is different to draw-map.js: oa.selectedAxes,
    * which is the brushed Axes (maps).
    */
 
   model(params) {
 
     // Get all available maps.
-    let selMaps = [];
-    let that = this;
     let result;
-    /** collation of all chrs of all maps.  value is currently true, could be a refn to parent map. */
-    let availableChrs = {}; // or new Set();
-    /** These values are calculated from the list of available maps when maps promise resolves.
-     availableChrs : availableChrs,
-     selectedMaps: selMaps;
-     */
-    let mapsDerivedValue = {availableChrs: availableChrs, selectedMaps: selMaps};
 
-    let seenChrs = new Set();
     
-    let maps = that.get('store').query('dataset',
-      {
-        filter: {'include': 'blocks'}
-      }
-    )
-    .then(function(genmaps) {
-      // that.controllerFor("mapview").set("availableMaps", genmaps);
-      console.log("routes/mapview model()", params.mapsToView.length, params.mapsToView);
-      mapsDerivedValue.availableMaps = genmaps.toArray();
-      if (trace_promise > 1)
-        console.log("genmaps.toArray()", mapsDerivedValue.availableMaps);
-      genmaps.forEach(function(map) {
-        let chrs = map.get('blocks');
-        console.log('CHRS', chrs)
-        if (chrs) {
-          chrs.forEach(function(chr) {
-            var exChrs = [];
-            mapsDerivedValue.availableChrs[chr.get('id')] = map.get('name'); // or true; // could be map or map.get('id');
-            chr.set('isSelected', false); // In case it has been de-selected.
-            // console.log(chr, map);
-            chr.set('map', map);  // reference to parent map
-            if (params.mapsToView) {
-              for (var i=0; i < params.mapsToView.length; i++) {
-                if (chr.get('id') != params.mapsToView[i]) {
-                  exChrs.push(params.mapsToView[i]);
-                }
-                else {
-                  chr.set('isSelected', true);
-                  selMaps.push(chr);
-                }
-              }
-            }
-            chr.set('extraBlocks', exChrs);
-          });
-        }
+    let datasetService = this.get('dataset');
+    let taskGetList = datasetService.get('taskGetList');  // availableMaps
+    let datasetsTask = taskGetList.perform(); // renamed from 'maps'
+    this.get('getDatasets').perform(datasetsTask);
+
+    let blockService = this.get('block');
+    let taskGet = blockService.get('taskGet');
+
+    console.log("mapview model", params.mapsToView);
+    let blockTasks = params.mapsToView.map(
+      function (id) {
+        let blockTask = taskGet.perform(id);
+        console.log("mapview model", id, blockTask);
+        return blockTask;
       });
-      return Promise.resolve(mapsDerivedValue);
-    },
-      function(reason) {
-        console.log("findAll dataset", reason);
-      }
-    );
-    let promises = {};
+    let blockValues = this.get('mapsToViewObj') || this.set('mapsToViewObj', {}),
+    getValue = this.get('getBlock');
+    blockTasks.map(
+      function (task) {
+        getValue.perform(task, blockValues);
+      });
 
-    params.mapsToView.forEach(function(param) {
-      if (trace_promise > 1)
-        console.log("findRecord", param);
-      promises[param] = that.get('store').findRecord(
-        'block',
-        param,
-        {
-          reload: true,
-          adapterOptions:{
-          filter: {
-             'include': 'features'
-          }}
-        }
-      );
-
-      /* previous functionality was approx equiv to :
-       * afterChrPromise(promises[param]), but it put data for chr in result[chr]
-       * instead of rc, and returned result.
-       * An alternative to returning array of promises : use afterChrPromise(), but
-       * instead of call to receiveChr(), send via dataReceived:
-       * this.send('receivedChr', rc, c.get('name'));
-       */
-    });
-
-    if (trace_promise > 1)
-      maps.then(function (result) { console.log("maps result", result, maps._result); });
-
-    let ObjectPromiseProxy = Ember.ObjectProxy.extend(Ember.PromiseProxyMixin);
-    if (trace_promise > 1)
-    {
-      let a= ObjectPromiseProxy.create({promise: maps});
-      a.then(function (result) { console.log("maps result 2", result, "availableChrs", result.availableChrs, "availableMaps", result.availableMaps); });
-    }
     result =
-      {chrPromises: promises,
+      {
        mapsToView : params.mapsToView,
-       mapsDerived : ObjectPromiseProxy.create({promise: maps}),
-       mapsPromise : maps,
+        availableMapsTask : datasetsTask, // task result is -> [ id , ... ]
+        blockTasks : blockTasks,
        highlightFeature: params.highlightFeature
       };
     console.log("routes/mapview: model() result", result);
     return result;
 
-  }
+  },
 
-}
+
+  getDatasets : task(function * (datasetsTask) {
+    let datasets = yield datasetsTask;
+    // console.log("getDatasets", datasets);
+    this.set('availableDatasets', datasets);
+    if (datasets.length)
+    {
+      let blocks = datasets[0].get('blocks').toArray();
+      // console.log("getDatasets blocks", blocks, blocks[0].id);
+    }
+  }),
+
+  getBlock : task(function * (blockTask, blockValues) {
+    let block = yield blockTask;
+    // console.log("getBlock", block.id, block);
+    blockValues[block.id] = block;
+  })
+
+
+};
 
 var args = [config]
 

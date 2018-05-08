@@ -8,9 +8,9 @@ function chrData(c) {
   /* factored from controllers/mapview.js, where it was originally developed. */
 
   let 
-    map = c.get('map'),
+    map = c.get('datasetId'),  // replaces c.get('map'),
   /* rc aka retHash[chr] */
-  rc  = {mapName : c.get('map').get('name'), chrName : c.get('name')
+  rc  = {mapName : map.get('name'), chrName : c.get('name')
          /* , scope : c.get('scope'), featureType : c.get('featureType')
          , namespace: map.namespace, */ , dataset : map
         };
