@@ -10,6 +10,7 @@ export default Component.extend({
   selectedBlock: null,
 
   didInsertElement() {
+    let me = this;
     let tableDiv = $("#observational-table")[0];
     let table = new Handsontable(tableDiv, {
       data: [],
@@ -19,13 +20,17 @@ export default Component.extend({
       manualColumnResize: true,
       manualColumnMove: true,
       contextMenu: true,
-      sortIndicator: true,
-      columnSorting: true,
       stretchH: 'all',
       cells: function(row, col, prop) {
         let cellProperties = {};
         cellProperties.renderer = 'defaultRenderer';
         return cellProperties;
+      },
+      afterOnCellMouseDown: function(event, coords, td) {
+        if (coords.row == -1) {
+          let col_name = $(td).find('span').text();
+          me.send('selectBlock', me.get('columns')[col_name]);
+        }
       }
     });
     Handsontable.renderers.registerRenderer('defaultRenderer', function(instance, td, row, col, prop, value, cellProperties) {
@@ -65,6 +70,15 @@ export default Component.extend({
     });
     return Object.keys(features);
   }),
+  columns: Ember.computed('displayData.[]', function() {
+    let data = this.get('displayData');
+    let cols = {};
+    data.forEach(function(d) {
+      let col_name = d.get('datasetId').get('id') + ':' + d.get('name');
+      cols[col_name] = d;
+    });
+    return cols;
+  }),
   rowHeaderWidth: Ember.computed('rows', function() {
     let rows = this.get('rows');
     let longest_row = 0;
@@ -77,23 +91,22 @@ export default Component.extend({
     })
     return longest_row + 10;
   }),
-  data: Ember.computed('rows', 'displayData.[]', 'selectedBlock', function() {
+  data: Ember.computed('displayData.[]', 'selectedBlock', function() {
     let rows = this.get('rows');
-    let individuals = this.get('displayData');
+    let cols = this.get('columns');
     let selectedIndividual = this.get('selectedBlock');
 
     let data = [];
     if (selectedIndividual == null) {
       rows.forEach(function(row_name) {
         let d  = {};
-        individuals.forEach(function(individual) {
-          let individual_str = individual.get('datasetId').get('id') + ':' + individual.get('name');
-          d[individual_str] = "";
-          individual.get('features').toArray().forEach(function(feature) {
-            if (feature.get('name') == row_name) {
-              d[individual_str] = feature.get('value');
-            }
-          });
+        Object.keys(cols).forEach(function(col_name) {
+          let ind = cols[col_name];
+          d[col_name] = "";
+          let features = ind.get('features').toArray().filter(function(x) {return x.get('name') == row_name});
+          if (features.length > 0) {
+            d[col_name] = features[0].get('value');
+          }
         });
         data.push(d);
       });
@@ -101,23 +114,21 @@ export default Component.extend({
       let individual_vals = {};
       rows.forEach(function(row_name) {
         individual_vals[row_name] = "";
-        selectedIndividual.get('features').toArray().forEach(function(feature) {
-          if (feature.get('name') == row_name) {
-            individual_vals[row_name] = feature.get('value');
-          }
-        });
+        let features = selectedIndividual.get('features').toArray().filter(function(x) {return x.get('name') == row_name});
+        if (features.length > 0) {
+          individual_vals[row_name] = features[0].get('value');
+        }
       });
 
       rows.forEach(function(row_name) {
         let d = {};
-        individuals.forEach(function(ind) {
-          let ind_str = ind.get('datasetId').get('id') + ':' + ind.get('name');
-          d[ind_str] = "";
-          ind.get('features').toArray().forEach(function(feature) {
-            if (feature.get('name') == row_name) {
-              d[ind_str] = (feature.get('value') === individual_vals[row_name])? 'A' : 'B';
-            }
-          })
+        Object.keys(cols).forEach(function(col_name) {
+          let ind = cols[col_name];
+          d[col_name] = "";
+          let features = ind.get('features').toArray().filter(function(x) {return x.get('name') == row_name});
+          if (features.length > 0) {
+            d[col_name] = (features[0].get('value') == individual_vals[row_name])? 'A' : 'B';
+          }
         });
         data.push(d);
       });
@@ -174,15 +185,20 @@ export default Component.extend({
     },
     selectBlock(block) {
       let selectedBlock = this.get('selectedBlock');
+      let table = this.get('table');
       if (block == selectedBlock) {
         selectedBlock = null;
       } else {
         selectedBlock = block;
       }
       this.set('selectedBlock', selectedBlock);
-      $("ul#display-blocks > li").removeClass("selected");
+      $("ul#display-blocks > li").removeClass('selected');
+      $('#matrix-view').find('table').find('th').find('span').removeClass('selected');
       if (selectedBlock != null) {
         $('ul#display-blocks > li[data-chr-id="' + selectedBlock.id + '"]').addClass("selected");
+        let col_name = selectedBlock.get('datasetId').get('id') + ':' + selectedBlock.get('name');
+        table.selectColumns(col_name);
+        $('#matrix-view').find('table').find('th').find('span:contains("' + col_name + '")').addClass('selected');
       }
     }
   }

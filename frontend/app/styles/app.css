@@ -784,7 +784,8 @@ svg > g.publishMode .btn
 }
 
 ul#maps_aligned > li.selected,
-ul#display-blocks > li.selected {
+ul#display-blocks > li.selected,
+#observational-table th span.selected {
   font-weight: bold;
 }
 
