@@ -1,5 +1,7 @@
 import Ember from 'ember';
 
+const { computed : { readOnly } } = Ember;
+
 console.log("controllers/mapview.js");
 
 let trace_promise = 1;
@@ -141,15 +143,34 @@ export default Ember.Controller.extend(Ember.Evented, {
     console.log('currentURLDidChange', this.get('target.currentURL'));
   }.observes('target.currentURL'),
 
-  selectedMaps: Ember.computed('mapsToView', function() {
+  selectedMaps: readOnly('model.viewedBlocks.viewedBlocks'),
+/*
+   Ember.computed('model.blockValues.@each', 'model.blockIds.[]', function() {
+     let blockValues = this.get('model.blockValues');
+     console.log('selectedMaps', blockValues);
+     return blockValues;
+  }),
+*/
+
+  viewedBlockIds : Ember.computed('mapsToView', 'model.blockTasks.@each.isRunning', 'model.blockValues.@each', 'model.blockIds.[]', function() {
     let mapsToView = this.get('mapsToView'),
+    blockValues = this.get('model.blockValues'),
+    /** may as well use blockIds in place of selectedMaps */
+    blockIds = this.get('model.blockIds'),
     store = this.get('store'),
     /** filter against block ids of datasets from taskGetList() result */
     validBlockIds = mapsToView.filter(function (blockId) {
       let block = store.peekRecord('block', blockId);
-      return block !== undefined;
+      return !!block;
     });
+    console.log('viewedBlockIds', mapsToView, validBlockIds, blockValues, blockIds);
+    return validBlockIds;
   }),
+  blockTasks : readOnly('model.viewedBlocks.blockTasks'),
+  // viewedBlocks : readOnly('model.viewedBlocks.viewedBlocks'),
+  blockValues : readOnly('model.viewedBlocks.blockValues'),
+  blockIds : readOnly('model.viewedBlocks.blockIds'),
+
 
   /** Used by the template to indicate when & whether any data is loaded for the graph.
    *

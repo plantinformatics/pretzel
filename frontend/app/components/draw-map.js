@@ -1561,7 +1561,8 @@ export default Ember.Component.extend(Ember.Evented, {
       svgContainer = oa.svgContainer;
 
 
-    // svgRoot.classed("devel", (featureTotal / oa.axisIDs.length) < 20);
+    d3.select('body')
+      .classed("devel", this.get('data.params.devel'));
 
     function setCssVariable(name, value)
     {

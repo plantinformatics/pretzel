@@ -5,10 +5,10 @@ const { RSVP: { Promise } } = Ember;
 const { Route } = Ember;
 const { inject: { service } } = Ember;
 import { task } from 'ember-concurrency';
+import EmberObject from '@ember/object';
 
 
 let config = {
-  block: service('data/block'),
   dataset: service('data/dataset'),
 
   titleToken: 'MapView',
@@ -28,6 +28,9 @@ let config = {
       refreshModel: true
     },
     highlightFeature: {
+      refreshModel: false
+    },
+    devel: {
       refreshModel: false
     }
   },
@@ -73,30 +76,15 @@ let config = {
     let datasetsTask = taskGetList.perform(); // renamed from 'maps'
     this.get('getDatasets').perform(datasetsTask);
 
-    let blockService = this.get('block');
-    let taskGet = blockService.get('taskGet');
-
-    console.log("mapview model", params.mapsToView);
-    let blockTasks = params.mapsToView.map(
-      function (id) {
-        let blockTask = taskGet.perform(id);
-        console.log("mapview model", id, blockTask);
-        return blockTask;
-      });
-    let blockValues = this.get('mapsToViewObj') || this.set('mapsToViewObj', {}),
-    getValue = this.get('getBlock');
-    blockTasks.map(
-      function (task) {
-        getValue.perform(task, blockValues);
-      });
-
-    result =
+    result = EmberObject.create(
       {
-       mapsToView : params.mapsToView,
+        params : params,
+        mapsToView : params.mapsToView,
         availableMapsTask : datasetsTask, // task result is -> [ id , ... ]
-        blockTasks : blockTasks,
-       highlightFeature: params.highlightFeature
-      };
+        viewedBlocks : undefined, // populated by viewed-blocks
+        highlightFeature: params.highlightFeature
+      });
+
     console.log("routes/mapview: model() result", result);
     return result;
 
@@ -112,14 +100,7 @@ let config = {
       let blocks = datasets[0].get('blocks').toArray();
       // console.log("getDatasets blocks", blocks, blocks[0].id);
     }
-  }),
-
-  getBlock : task(function * (blockTask, blockValues) {
-    let block = yield blockTask;
-    // console.log("getBlock", block.id, block);
-    blockValues[block.id] = block;
   })
-
 
 };
 

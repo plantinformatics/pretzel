@@ -80,13 +80,15 @@
       <span class="glyphicon glyphicon-resize-horizontal"></span>
     </div>
 
-    <p class="devel_trace" style="display:none;">
+    <p class="devel-visible">
       hasData {{hasData}}
       model {{model}}
       mapsToView {{model.mapsToView}}
       availableMaps {{model.availableMapsTask.value.length}}
-      blockValues {{mapsToViewObj.length}}
       selectedMaps {{selectedMaps.length}}
+      viewedBlockIds {{model.viewedBlocks.blockIds.length}}
+      viewedBlocks {{model.viewedBlocks.viewedBlocks.length}}
+      {{viewed-blocks model=model}}
     </p>
     {{!-- {{#if hasData}} --}}
       {{draw-map
