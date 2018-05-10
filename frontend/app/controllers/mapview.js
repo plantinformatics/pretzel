@@ -4,7 +4,7 @@ const { computed : { readOnly } } = Ember;
 
 console.log("controllers/mapview.js");
 
-let trace_promise = 1;
+let trace_dataflow = 1;
 
 export default Ember.Controller.extend(Ember.Evented, {
 
@@ -152,20 +152,6 @@ export default Ember.Controller.extend(Ember.Evented, {
   }),
 */
 
-  viewedBlockIds : Ember.computed('mapsToView', 'model.blockTasks.@each.isRunning', 'model.blockValues.@each', 'model.blockIds.[]', function() {
-    let mapsToView = this.get('mapsToView'),
-    blockValues = this.get('model.blockValues'),
-    /** may as well use blockIds in place of selectedMaps */
-    blockIds = this.get('model.blockIds'),
-    store = this.get('store'),
-    /** filter against block ids of datasets from taskGetList() result */
-    validBlockIds = mapsToView.filter(function (blockId) {
-      let block = store.peekRecord('block', blockId);
-      return !!block;
-    });
-    console.log('viewedBlockIds', mapsToView, validBlockIds, blockValues, blockIds);
-    return validBlockIds;
-  }),
   blockTasks : readOnly('model.viewedBlocks.blockTasks'),
   // viewedBlocks : readOnly('model.viewedBlocks.viewedBlocks'),
   blockValues : readOnly('model.viewedBlocks.blockValues'),
@@ -183,7 +169,7 @@ export default Ember.Controller.extend(Ember.Evented, {
   hasData: Ember.computed('selectedMaps', 'mapsToView', function() {
     let selectedMaps = this.get('selectedMaps');
     let mapsToView = this.get('mapsToView');
-    if (trace_promise)
+    if (trace_dataflow)
     console.log("hasData", ! selectedMaps || selectedMaps.length, mapsToView.length);
     return (selectedMaps && selectedMaps.length > 0)
       || mapsToView.length > 0;
@@ -195,7 +181,7 @@ export default Ember.Controller.extend(Ember.Evented, {
      * blockLink(), blockDeleteLink()), via : */
     if (this.get('model.content'))
     {
-      if (trace_promise > 1)
+      if (trace_dataflow > 1)
       console.log('mapsToViewChanged() -> updateChrs()');
       this.send('updateChrs');
     }
