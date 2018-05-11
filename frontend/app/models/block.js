@@ -13,32 +13,22 @@ export default DS.Model.extend({
   name: attr('string'),
   featureType: attr('string'),
 
-  extraBlocks: [],
 
-  isSelected: false,
+  /** true when the block is displayed in the graph.
+   * set by adding the block to the graph (addMap),
+   * and cleared by removing the block from the display.
+   */
+  isViewed: false,
+  /** when a block is selected, it is highlighted wherever it is displayed, and
+   * it is used as the identifier for the block being edited in the panel
+   * manage-block.hbs
+   *
+   * isSelected is set by clicking on the element containing the block name, in
+   * the 'Aligned Maps' panel/manage-view.hbs, (map) Explorer panel at left -
+   * panel/manage-explorer.hbs, and also by brushing an axis in the draw-map
+   * component (can have multiple axes brushed, only the most recent one is
+   * 'selected').
+   */
+  isSelected: false
 
-  linkTo: Ember.computed('name', function() {
-    return [this.get("id")];
-  }),
-
-  blockDeleteLink: Ember.computed('extraBlocks', function() {
-    let exChrs = this.get("extraBlocks");
-    let that = this;
-    // console.log("blockDeleteLink", this.get('name'), this.get('id'), exChrs);
-    return exChrs.filter(function(chrid) {
-      return chrid != that.get("id");
-    });
-  }),
-
-  blockLink: Ember.computed('extraBlocks', function() {
-    var retlist = this.get("extraBlocks");
-    // console.log("blockLink", this.get('name'), this.get('id'), retlist);
-    if (retlist == null) {
-      return [this.get("id")];
-    }
-    else {
-      retlist.push(this.get("id"));
-      return retlist;
-    }
-  })
 });

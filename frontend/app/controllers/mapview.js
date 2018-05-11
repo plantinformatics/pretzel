@@ -1,12 +1,17 @@
 import Ember from 'ember';
 
 const { computed : { readOnly } } = Ember;
+const { inject: { service } } = Ember;
+
+/* global d3 */
 
 console.log("controllers/mapview.js");
 
 let trace_dataflow = 1;
+let trace_select = 1;
 
 export default Ember.Controller.extend(Ember.Evented, {
+  block: service('data/block'),
 
   actions: {
     // layout configuration
@@ -85,12 +90,15 @@ export default Ember.Controller.extend(Ember.Evented, {
     }
     , pathColourScale: true,
     selectBlock: function(block) {
-      console.log('SELECT BLOCK mapview', block)
+      console.log('SELECT BLOCK mapview', block.get('name'), block.get('mapName'), block.id, block);
       this.set('selectedBlock', block);
       d3.selectAll("ul#maps_aligned > li").classed("selected", false);
       d3.select('ul#maps_aligned > li[data-chr-id="' + block.id + '"]').classed("selected", true);
-      d3.selectAll("g.axis-outer").classed("selected", false);
-      d3.select("g#id" + block.id).classed("selected", true);
+
+      function dataIs(id) { return function (d) { return d == id; }; }; 
+      d3.selectAll("g.axis-outer").classed("selected", dataIs(block.id));
+      if (trace_select)
+      d3.selectAll("g.axis-outer").each(function(d, i, g) { console.log(this); });
     },
     selectBlockById: function(blockId) {
       let store = this.get('store'),
@@ -144,17 +152,16 @@ export default Ember.Controller.extend(Ember.Evented, {
   }.observes('target.currentURL'),
 
   selectedMaps: readOnly('model.viewedBlocks.viewedBlocks'),
-/*
-   Ember.computed('model.blockValues.@each', 'model.blockIds.[]', function() {
-     let blockValues = this.get('model.blockValues');
-     console.log('selectedMaps', blockValues);
-     return blockValues;
-  }),
-*/
-
   blockTasks : readOnly('model.viewedBlocks.blockTasks'),
   // viewedBlocks : readOnly('model.viewedBlocks.viewedBlocks'),
-  blockValues : readOnly('model.viewedBlocks.blockValues'),
+  blockValues : // readOnly('block.blockValues'),
+  Ember.computed('block.blockValues', function() {
+    let block = this.get('block'),
+    records = block.get('blockValues'),
+    array = records.toArray();
+    console.log('blockValues', block, records, array);
+    return array;
+  }),
   blockIds : readOnly('model.viewedBlocks.blockIds'),
 
 
@@ -173,19 +180,6 @@ export default Ember.Controller.extend(Ember.Evented, {
     console.log("hasData", ! selectedMaps || selectedMaps.length, mapsToView.length);
     return (selectedMaps && selectedMaps.length > 0)
       || mapsToView.length > 0;
-  }),
-
-  mapsToViewChanged: function (a, b, c) {
-    /* initial mapsToView via URL sets model; maps are added or deleted after
-     * that update the add-map and delete-map button sensitivities (extraBlocks,
-     * blockLink(), blockDeleteLink()), via : */
-    if (this.get('model.content'))
-    {
-      if (trace_dataflow > 1)
-      console.log('mapsToViewChanged() -> updateChrs()');
-      this.send('updateChrs');
-    }
-  }.observes('mapsToView.length')
-
+  })
 
 });
