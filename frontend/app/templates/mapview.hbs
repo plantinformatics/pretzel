@@ -46,8 +46,8 @@
             deleteBlock="removeMap"
             setTab="setTab"}}
           
-	        {{panel/view-controls drawActions=this}}
-        {{goto-feature  drawActions=this class="pull-left bordered control-panel make-ui-draggable"}}
+	  {{panel/view-controls drawActions=this}}
+          {{goto-feature  drawActions=this class="pull-left bordered control-panel make-ui-draggable"}}
 
         {{else if (compare layout.left.tab '===' 'upload')}}
           {{panel/upload-data}}
@@ -64,7 +64,7 @@
             showAsymmetricAliases=showAsymmetricAliases
             selectBlock="selectBlock"
             deleteBlock="removeMap"
-            updateModel="updateChrs"
+            updateModel="updateModel"
             setTab="setTab"}}
         {{/if}}
       </div>
@@ -86,8 +86,11 @@
       mapsToView {{model.mapsToView}}
       availableMaps {{model.availableMapsTask.value.length}}
       selectedMaps {{selectedMaps.length}}
-      viewedBlockIds {{model.viewedBlocks.blockIds.length}}
+      viewed blockIds {{model.viewedBlocks.blockIds.length}}
       viewedBlocks {{model.viewedBlocks.viewedBlocks.length}}
+      available blockValues {{block.blockValues.length}}
+      selected blocks {{block.selected.length}}
+      viewed blocks {{block.viewed.length}}
       {{viewed-blocks model=model}}
     </p>
     {{!-- {{#if hasData}} --}}

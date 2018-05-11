@@ -76,9 +76,6 @@ export default Ember.Controller.extend(Ember.Evented, {
         this.transitionToRoute({'queryParams': queryParams });
       }
     },
-    updateChrs : function() {
-      console.log("updateChrs TODO get datasets", this.get('model'));      
-    },
     toggleShowUnique: function() {
       console.log("controllers/mapview:toggleShowUnique()", this);
       this.set('isShowUnique', ! this.get('isShowUnique'));
@@ -107,19 +104,16 @@ export default Ember.Controller.extend(Ember.Evented, {
        * matching blockId. */
       this.send('selectBlock', selectedBlock)
     },
-    /** 
-     * This function is a copy of the code in the routes/mapview.js file without the references to params
-     * so that it can be called after initial load to refresh the model variables.
+    /** Get all available maps.
      */
     updateModel: function() {
-      // Get all available maps.
-
-      // console.log("routes/mapview: model() result", result);
-      if (true)  // -  do in next commit.  Factor routes/mapview.js:model()
-        console.log('TODO : updateModel()');
-        else
-      this.set('model', result);
-      // return result;
+      let model = this.get('model');
+      console.log("controller/mapview: model()", model, 'get datasets');
+      // see related : routes/mapview.js:model()
+      let datasetsTaskPerformance = model.get('availableMapsTask'),
+      newTaskInstance = datasetsTaskPerformance.task.perform();
+      console.log(datasetsTaskPerformance, newTaskInstance);
+      model.set('availableMapsTask', newTaskInstance);
     }
   },
 
@@ -173,7 +167,10 @@ export default Ember.Controller.extend(Ember.Evented, {
    * received, so it seems that mapsToView should be omitted here.
    *
    */
-  hasData: Ember.computed('selectedMaps', 'mapsToView', function() {
+  hasData: Ember.computed(
+    'selectedMaps', 'selectedMaps.[]', 'selectedMaps.length',
+    'mapsToView',
+    function() {
     let selectedMaps = this.get('selectedMaps');
     let mapsToView = this.get('mapsToView');
     if (trace_dataflow)

@@ -32,6 +32,7 @@ export default Service.extend(Ember.Evented, {
   taskGet: task(function * (id) {
     let block = yield this.getData(id);
     // console.log('taskGet', this, id, block);
+    block.set('isViewed', true);
     this.trigger('receivedBlock', id, block);
     return block;
   }),
@@ -49,5 +50,29 @@ export default Service.extend(Ember.Evented, {
     return blockP;
   }  // allow multiple in parallel - assume id-s are different
   // later can use ember-contextual-service to give each id its own task scheduler
+  ,
+
+  /** @return block records */
+  blockValues: Ember.computed(function() {
+    let records = this.get('store').peekAll('block');
+    console.log('blockValues', records);
+    return records;
+  }),
+  selected: Ember.computed(
+    'blockValues.@each.isSelected',
+    function() {
+    let records = this.get('blockValues')
+      .filterBy('isSelected', true);
+    console.log('selected', records);
+    return records;  // .toArray()
+    }),
+  viewed: Ember.computed(
+    'blockValues.@each.isViewed',
+    function() {
+    let records = this.get('blockValues')
+      .filterBy('isViewed', true);
+    console.log('viewed', records);
+    return records;  // .toArray()
+  })
   
 });

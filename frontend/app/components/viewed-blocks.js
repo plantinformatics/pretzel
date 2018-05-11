@@ -43,11 +43,11 @@ export default Component.extend({
      */
     let blockIds = this.get('blockIds') || this.set('blockIds', []),
     viewedBlocks = this.get('viewedBlocks') || this.set('viewedBlocks', []);
-    let blockValues = this.get('mapsToViewObj') || this.set('mapsToViewObj', {}),
+    let
     getValue = this.get('getBlock');
     blockTasks.map(
       function (task) {
-        getValue.perform(task, viewedBlocks, blockValues, blockIds);
+        getValue.perform(task, viewedBlocks, blockIds);
       });
 
     let
@@ -56,17 +56,16 @@ export default Component.extend({
         update : this,
         blockTasks : blockTasks,
         viewedBlocks : viewedBlocks,
-        blockValues : blockValues,
         blockIds : blockIds
       };
     console.log("components/viewed-blocks.js getInitialBlocks() result", result);
     model.set('viewedBlocks', result);
   },
 
-  getBlock : task(function * (blockTask, viewedBlocks, blockValues, blockIds) {
+  getBlock : task(function * (blockTask, viewedBlocks, blockIds) {
     let block = yield blockTask;
      console.log("getBlock", block.id, block);
-    blockValues[block.id] = block;
+    // block.set('isViewed', true);
     viewedBlocks.pushObject(block);
     blockIds.pushObject(block.id);
   })

@@ -21,7 +21,8 @@
     </span>
   </div>
 {{else}}
-  {{#if entry.isSelected}}
+  {{log 'entry.isViewed' entry.id entry.isViewed}}
+  {{#if entry.isViewed}}
   {{else}}
     {{elem/button-base
       onClick=(action 'get' entry)

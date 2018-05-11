@@ -51,7 +51,7 @@ let config = {
 
   /** Ember-concurrency tasks are returned in the model :
    *  mapsToView : [ ]
-   *  availableMapsTask : task -> [ id , ... ]  task completion also sets this.availableDatasets
+   *  availableMapsTask : task -> [ id , ... ]
    *  blockTasks : { id : task, ... }
    *
    * selectedMaps() is a filtered copy of params.mapsToView[] : maps in
@@ -74,7 +74,6 @@ let config = {
     let datasetService = this.get('dataset');
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
     let datasetsTask = taskGetList.perform(); // renamed from 'maps'
-    this.get('getDatasets').perform(datasetsTask);
 
     result = EmberObject.create(
       {
@@ -88,20 +87,7 @@ let config = {
     console.log("routes/mapview: model() result", result);
     return result;
 
-  },
-
-
-  getDatasets : task(function * (datasetsTask) {
-    let datasets = yield datasetsTask;
-    // console.log("getDatasets", datasets);
-    this.set('availableDatasets', datasets);
-    if (datasets.length)
-    {
-      let blocks = datasets[0].get('blocks').toArray();
-      // console.log("getDatasets blocks", blocks, blocks[0].id);
-    }
-  })
-
+  }
 };
 
 var args = [config]
