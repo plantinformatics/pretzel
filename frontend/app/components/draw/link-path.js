@@ -2,6 +2,7 @@ import Ember from 'ember';
 
 const { inject: { service } } = Ember;
 
+let trace_links = 1;
 
 /** Interact with the backend API Blocks/paths to request links / paths (direct and aliased) connecting blocks.
  * Driven by event / action from draw-map (or stacks) which notifies of :
@@ -17,10 +18,12 @@ export default Ember.Component.extend(Ember.Evented, {
   store: service(),
 
   willInsertElement() {
-    console.log('components/draw/link-path willInsertElement');
+    if (trace_links)
+      console.log('components/draw/link-path willInsertElement');
     let stackEvents = this.get('stackEvents');
     stackEvents.on('expose', this, function (blockA, blockB) {
-      console.log('path expose', blockA, blockB);
+      if (trace_links > 1)
+        console.log('path expose', blockA, blockB);
       this.request(blockA, blockB);
     } );
   },
@@ -30,16 +33,19 @@ export default Ember.Component.extend(Ember.Evented, {
   },
 
   request : function (blockA, blockB) {
-    console.log('path request', blockA, blockB);
+    if (trace_links > 2)
+      console.log('path request', blockA, blockB);
     let me = this;
 
     this.get('auth').getPaths(blockA, blockB, /*options*/{})
       .then(
         function(res){
-          console.log('path request then', res.length);
+          if (trace_links > 1)
+            console.log('path request then', res.length);
           let id = blockA + "," + blockB;
           me.push(id, res);
-          console.log('link-path pathReceiver', me.get('pathReceiver'));
+          if (trace_links > 1)
+            console.log('link-path pathReceiver', me.get('pathReceiver'));
           me.get('pathReceiver').trigger('paths', blockA, blockB, res);
         },
         function(err, status) {
@@ -50,7 +56,8 @@ export default Ember.Component.extend(Ember.Evented, {
   },
 
   push : function (id, paths) {
-    console.log('path push', paths.length);
+    if (trace_links > 2)
+      console.log('path push', paths.length);
     let pushData = 
       {
         data: {

@@ -11,7 +11,7 @@ const { inject: { service } } = Ember;
 import { EventedListener } from '../utils/eventedListener';
 import { chrData } from '../utils/utility-chromosome';
 import { eltWidthResizable, noShiftKeyfilter, eltClassName  } from '../utils/domElements';
-import { /*fromSelectionArray,*/ logSelectionLevel, logSelection } from '../utils/log-selection';
+import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
 import { Viewport } from '../utils/draw/viewport';
 import {  Axes, /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId, highlightId  }  from '../utils/draw/axis';
 import { Stacked, Stack, stacks, xScaleExtend, axisRedrawText } from '../utils/stacks';
@@ -395,7 +395,7 @@ export default Ember.Component.extend(Ember.Evented, {
     this.get('receiveChr')(chr, rc, 'dataReceived');
 
 
-    this.draw(retHash, undefined, 'dataReceived');
+    this.draw(retHash, 'dataReceived');
 
     /* inform mapview controller of the change of draw-map scope, to update the URL.
      *
@@ -693,7 +693,7 @@ export default Ember.Component.extend(Ember.Evented, {
         console.log("redraw", oa.axisIDs, oa.axes /*, oa.blocks*/);
         oa.stacks.log();
       }
-      me.draw({}, undefined, 'dataReceived');
+      me.draw({}, 'dataReceived');
     }
     function receiveChr(axis, c, source) {
       let z = oa.z, cmName = oa.cmName;
@@ -1829,12 +1829,34 @@ export default Ember.Component.extend(Ember.Evented, {
       let g = axisG;
       console.log("g.axis-outer", g.enter().size(), g.exit().size(), stacks.length);
     }
-    let g = axisG;
-    let gt = newRender ? g :
-      g.transition().duration(dragTransitionTime);
-    gt
+    axisG
       .attr("class", "axis-outer")
-      .attr("id", eltId)
+      .attr("id", eltId);
+    let g = axisG;
+    /** stackS / axisG / g / gt is the newly added stack & axis.
+     * The X position of all stacks is affected by this addition, so
+     * re-apply the X transform of all stacks / axes, not just the new axis.
+     */
+    let ao =
+      svgContainer.selectAll('.axis-outer');  // equiv: 'g.stack > g'
+    /** apply the transform with a transition if changing an existing drawing. */
+    let gt = newRender ? ao :
+      ao.transition().duration(dragTransitionTime);
+    if (trace_stack > 2)
+    {
+      console.log('.axis-outer');
+      logSelectionNodes(gt);
+    }
+    /* could be used to verify ao selection. */
+    if (trace_stack > 3)
+    {
+      let ga =  selectImmediateChildNodes(svgContainer);
+      console.log('svgContainer > g');
+      logSelectionNodes(ga);
+      let ao1 = svgContainer.selectAll("g.stack > g");  //.axis-outer
+      logSelectionNodes(ao1);
+    }
+    ao
       .attr("transform", Stack.prototype.axisTransformO);
     g
       .call(
@@ -4352,7 +4374,7 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       if (stacks.changed & 0x01)
       {
-        console.log("dragged", "stacks.changed", stacks.changed);
+        console.log("dragged", "stacks.changed 0x", stacks.changed.toString(16));
         stacks.changed ^= 0x01;
         axisStackChanged(undefined);
       }
@@ -4922,6 +4944,12 @@ export default Ember.Component.extend(Ember.Evented, {
         if (t === undefined)
           t = d3.transition().duration(dragTransitionTime);
         t.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
+        if (trace_stack > 2)
+        {
+          let a=t.selectAll(".axis-outer");
+          a.nodes().map(function(c) { console.log(c);});
+          console.log('stacksAdjust', changedNum, a.nodes().length);
+        }
         if (svgContainer)
           oa.stacks.forEach(function (s) { s.redrawAdjacencies(); });
       }
@@ -4934,7 +4962,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
       if (stacks.changed & 0x10)
       {
-        console.log("stacksAdjust", "stacks.changed", stacks.changed);
+        console.log("stacksAdjust", "stacks.changed 0x", stacks.changed.toString(16));
         stacks.changed ^= 0x10;
         if (svgContainer === undefined)
           Ember.run.later(function () {

@@ -51,13 +51,9 @@ export default ManageBase.extend({
     },
     onDelete(id) {
       let availMaps = this.get(model_availableDatasets)
-      let newMaps = []
-      for (var i=0; i<availMaps.length; i++) {
-        if (availMaps[i].id != id) {
-          newMaps.push(availMaps[i])
-        }
-      }
-      this.set(model_availableDatasets, newMaps)
+      /** check action connection - this trace not seen (when delete from explorer);
+       * entry-base deleteRecord() sends onDelete.  */
+      console.log('onDelete', availMaps);
     }
   }
 });

@@ -20,7 +20,7 @@ function fromSelectionArray(s, datum)
   return a;
 }
 
-/** given the  _groups or _parents of a d3 delection, log the data values of its first sub-array [0].
+/** given the  _groups or _parents of a d3 selection, log the data values of its first sub-array [0].
  * For  _groups, the __data__ attribute is collated;  for _parents the value is used directly.
  */
 function logSelectionLevel(sl)
@@ -32,7 +32,7 @@ function logSelectionLevel(sl)
   }
 }
 
-/** given a d3 delection, log the data values of its _groups and _parents. */
+/** given a d3 selection, log the data values of its _groups and _parents. */
 function logSelection(s)
 {
   console.log(s, s._groups.length, s._parents.length);
@@ -40,6 +40,37 @@ function logSelection(s)
   logSelectionLevel(s._parents);
 }
 
+/** given a d3 selection, log its nodes. */
+function logSelectionNodes(s)
+{
+  let a = s.nodes();
+  console.log('logSelectionNodes', a.length);
+  if ((a.length == 1) && (a[0].length))
+  {
+    console.log('sub');
+    a = a[0];
+  }
+  if (a.length < 20)
+    // .map is not defined on NodeList, use .forEach()
+    a.forEach(function(c) { console.log(c);});
+}
+
 /*----------------------------------------------------------------------------*/
 
-export {  fromSelectionArray, logSelectionLevel, logSelection };
+/** Given a d3 selection, select the immediate child nodes of the elements in the selection.
+ */
+function selectImmediateChildNodes(s)
+{
+  /* refn : https://stackoverflow.com/a/35694889
+   * from https://stackoverflow.com/questions/20569670/d3-selector-for-immediate-children
+   * noting that the accepted answer (d3.select(this).selectAll('div > ul'))
+   * seems to match anywhere in the subtree under the given element, not
+   * constrained to immediate children.
+   */
+  return s
+    .select(function(){ return this.childNodes; });
+}
+
+/*----------------------------------------------------------------------------*/
+
+export {  fromSelectionArray, logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes };

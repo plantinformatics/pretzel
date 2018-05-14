@@ -45,6 +45,7 @@ export default Ember.Component.extend({
     },
     deleteRecord(record) {
       let id = record.id
+      console.log('deleteRecord', id, record);
       record.deleteRecord()
       record.save()
       this.sendAction('onDelete', id)

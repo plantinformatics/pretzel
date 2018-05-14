@@ -119,6 +119,14 @@ Stacked.prototype.log = function ()
    (this.z && this.z.scope) ? "scope:" + this.z.scope : '',
    ", portion=", round_2(this.portion),
    positionToString(this.position), this.stack,  "}");
+  this.logElt();
+};
+/** corresponds to svgContainer */
+const selectPrefix = "div#holder > svg > g";
+Stacked.prototype.logElt = function ()
+{
+  let a = d3.select(selectPrefix + "> g.stack > g#id" + this.axisName + ".axis-outer");
+  console.log("logElt", a.node());
 };
 Stacked.prototype.getStack = function ()
 {
@@ -310,6 +318,12 @@ Stack.prototype.log = function ()
   console.log("{stackID=", this.stackID, ", axes=[");
   this.axes.forEach(function(s){s.log();});
   console.log("] length=", this.axes.length, "}");
+  this.logElt();
+};
+Stack.prototype.logElt = function ()
+{
+  let s = d3.select(selectPrefix + "> g#id" + this.stackID + ".stack");
+  console.log("logElt", s.node());
 };
 Stack.prototype.verify = function ()
 {
