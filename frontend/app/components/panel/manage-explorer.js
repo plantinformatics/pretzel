@@ -49,11 +49,12 @@ export default ManageBase.extend({
     changeFilter: function(f) {
       this.set('filter', f)
     },
-    onDelete(id) {
-      let availMaps = this.get(model_availableDatasets)
-      /** check action connection - this trace not seen (when delete from explorer);
-       * entry-base deleteRecord() sends onDelete.  */
-      console.log('onDelete', availMaps);
+    /** receives action from entry-base deleteRecord()
+     * @param id  block or dataset id
+     */
+    onDelete(modelName, id) {
+      console.log('onDelete', modelName, id);
+      this.sendAction('onDelete', modelName, id);
     }
   }
 });

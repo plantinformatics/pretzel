@@ -21,7 +21,7 @@ export default EntryBase.extend({
       let t = this.get('useTask');
       t.apply(this, [id]);
       // t.perform(id);
-    },
+    }
   },
   
   /** Use the task taskGet() defined in services/data/block.js

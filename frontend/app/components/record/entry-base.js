@@ -44,11 +44,13 @@ export default Ember.Component.extend({
       this.sendAction('selectRecord', record);
     },
     deleteRecord(record) {
-      let id = record.id
-      console.log('deleteRecord', id, record);
+      let id = record.id,
+      /** equiv : record._internalModel.modelName */
+      modelName = record.get('constructor.modelName');
+      console.log('deleteRecord', id, modelName, record);
       record.deleteRecord()
       record.save()
-      this.sendAction('onDelete', id)
+      this.sendAction('onDelete', modelName, id);
     },
   }
 });

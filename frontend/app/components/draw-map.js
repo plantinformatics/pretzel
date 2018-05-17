@@ -1993,10 +1993,13 @@ export default Ember.Component.extend(Ember.Evented, {
     });
 
 
+    /** from newly added g.axis-all : filter out those which have a parent which draws their axis. */
       g = allG
       .filter(function (d) { return oa.axesP[d]; } )
     ;
+    if (trace_stack > 1)
     console.log(oa.axesP, "filter", g.size(), allG.size());
+    logSelection(g);
 
     // Add an axis and title
       /** This g is referenced by the <use>. It contains axis path, ticks, title text, brush. */

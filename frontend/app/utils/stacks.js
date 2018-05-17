@@ -45,6 +45,7 @@ stacks.init = function (oa_)
     stacks.nextStackID = 0;
 
     /** Reference to all parent axes by apName.
+     * (currently if a block does not have a parent, then its axesP is itself)
      */
     axesP =
       stacks.axesP = {};

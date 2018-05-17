@@ -57,14 +57,12 @@ export default Ember.Controller.extend(Ember.Evented, {
     removeMap : function(mapName) {
       let mtv = this.get('mapsToView');
       console.log("controller/mapview", "removeMap", mapName, mtv);
-      let di;
-      for (di = mtv.length; di >= 0; di--) {
-        if (mtv[di] == mapName) {
-          console.log("removeMap", "found", mapName, "at", di, mtv.length);
-          break;
-        }
-      }
-      if (di >= 0) {
+      let di = mtv.indexOf(mapName);
+      if (di == -1)
+        console.log("removeMap", "not found", mapName, "in", mtv.length, mtv);
+      else
+      {
+        console.log("removeMap", "found", mapName, "at", di, mtv.length);
         mtv.removeAt(di, 1);
         console.log("removeMap", "deleted", mapName, "at", di, mtv.length, mtv);
         console.log("removeMap", "mapsToView:", this.get('mapsToView'));
@@ -75,6 +73,13 @@ export default Ember.Controller.extend(Ember.Evented, {
         console.log("queryParams", queryParams);
         this.transitionToRoute({'queryParams': queryParams });
       }
+    },
+    onDelete : function (modelName, id) {
+      console.log('onDelete', modelName, id);
+      if (modelName == 'block')
+        this.send('removeMap', id); // block
+      else
+        console.log('TODO : undisplay child blocks of', modelName, id);
     },
     toggleShowUnique: function() {
       console.log("controllers/mapview:toggleShowUnique()", this);
@@ -145,17 +150,11 @@ export default Ember.Controller.extend(Ember.Evented, {
     console.log('currentURLDidChange', this.get('target.currentURL'));
   }.observes('target.currentURL'),
 
-  selectedMaps: readOnly('model.viewedBlocks.viewedBlocks'),
+  selectedMaps: readOnly('block.viewed'),
   blockTasks : readOnly('model.viewedBlocks.blockTasks'),
-  // viewedBlocks : readOnly('model.viewedBlocks.viewedBlocks'),
-  blockValues : // readOnly('block.blockValues'),
-  Ember.computed('block.blockValues', function() {
-    let block = this.get('block'),
-    records = block.get('blockValues'),
-    array = records.toArray();
-    console.log('blockValues', block, records, array);
-    return array;
-  }),
+  /** all available */
+  blockValues : readOnly('block.blockValues'),
+  /** currently viewed */
   blockIds : readOnly('model.viewedBlocks.blockIds'),
 
 

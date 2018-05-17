@@ -64,6 +64,7 @@
             showAsymmetricAliases=showAsymmetricAliases
             selectBlock="selectBlock"
             deleteBlock="removeMap"
+            onDelete="onDelete"
             updateModel="updateModel"
             setTab="setTab"}}
         {{/if}}
@@ -81,16 +82,13 @@
     </div>
 
     <p class="devel-visible">
-      hasData {{hasData}}
-      model {{model}}
-      mapsToView {{model.mapsToView}}
-      availableMaps {{model.availableMapsTask.value.length}}
-      selectedMaps {{selectedMaps.length}}
-      viewed blockIds {{model.viewedBlocks.blockIds.length}}
-      viewedBlocks {{model.viewedBlocks.viewedBlocks.length}}
-      available blockValues {{block.blockValues.length}}
-      selected blocks {{block.selected.length}}
-      viewed blocks {{block.viewed.length}}
+      hasData {{hasData}},
+      mapsToView {{model.params.mapsToView}},
+      selectedMaps {{selectedMaps.length}},
+      availableMaps {{model.availableMapsTask.value.length}},
+      available blockValues {{block.blockValues.length}},
+      selected blocks {{block.selected.length}},
+      viewed blocks {{block.viewed.length}},
       {{viewed-blocks model=model}}
     </p>
     {{!-- {{#if hasData}} --}}

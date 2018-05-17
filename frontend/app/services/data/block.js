@@ -4,6 +4,8 @@ import { task } from 'ember-concurrency';
 
 const { inject: { service } } = Ember;
 
+let trace_block = 1;
+
 export default Service.extend(Ember.Evented, {
     auth: service('auth'),
     store: service(),
@@ -55,24 +57,37 @@ export default Service.extend(Ember.Evented, {
   /** @return block records */
   blockValues: Ember.computed(function() {
     let records = this.get('store').peekAll('block');
-    console.log('blockValues', records);
+    if (trace_block)
+      console.log('blockValues', records);
     return records;
   }),
   selected: Ember.computed(
     'blockValues.@each.isSelected',
     function() {
-    let records = this.get('blockValues')
-      .filterBy('isSelected', true);
-    console.log('selected', records);
-    return records;  // .toArray()
+      let records = this.get('blockValues')
+        .filterBy('isSelected', true);
+      if (trace_block)
+        console.log('selected', records);
+      return records;  // .toArray()
     }),
   viewed: Ember.computed(
     'blockValues.@each.isViewed',
     function() {
-    let records = this.get('blockValues')
-      .filterBy('isViewed', true);
-    console.log('viewed', records);
-    return records;  // .toArray()
-  })
+      let records = this.get('blockValues')
+        .filterBy('isViewed', true);
+      if (trace_block)
+        console.log('viewed', records);
+      return records;  // .toArray()
+    }),
+  viewedIds: Ember.computed(
+    'viewed.[]',
+    function() {
+      let ids = this.get('viewed');
+      if (trace_block > 1)
+        ids.map(function (a) { console.log('viewedIds', a); } );
+      if (trace_block)
+        console.log('viewedIds', ids);
+      return ids;
+    })
   
 });

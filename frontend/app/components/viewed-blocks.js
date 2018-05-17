@@ -39,35 +39,15 @@ export default Component.extend({
         console.log("mapview model", id, blockTask);
         return blockTask;
       });
-    /** This could be a count; it is only used to observe when a new block is received.
-     */
-    let blockIds = this.get('blockIds') || this.set('blockIds', []),
-    viewedBlocks = this.get('viewedBlocks') || this.set('viewedBlocks', []);
-    let
-    getValue = this.get('getBlock');
-    blockTasks.map(
-      function (task) {
-        getValue.perform(task, viewedBlocks, blockIds);
-      });
 
     let
     result =
       {
         update : this,
-        blockTasks : blockTasks,
-        viewedBlocks : viewedBlocks,
-        blockIds : blockIds
+        blockTasks : blockTasks
       };
     console.log("components/viewed-blocks.js getInitialBlocks() result", result);
     model.set('viewedBlocks', result);
-  },
-
-  getBlock : task(function * (blockTask, viewedBlocks, blockIds) {
-    let block = yield blockTask;
-     console.log("getBlock", block.id, block);
-    // block.set('isViewed', true);
-    viewedBlocks.pushObject(block);
-    blockIds.pushObject(block.id);
-  })
+  }
 
 });
