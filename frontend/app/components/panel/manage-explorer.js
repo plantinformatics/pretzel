@@ -1,6 +1,6 @@
 import ManageBase from './manage-base'
 
-const model_availableDatasets = "model.availableMapsTask.value";
+const model_availableDatasets = "dataset.values";
 
 export default ManageBase.extend({
 
@@ -31,9 +31,9 @@ export default ManageBase.extend({
     }
   }),
   dataEmpty: Ember.computed('data', function() {
-    let availableMaps = this.get('data')
-    if (availableMaps && availableMaps.length > 0) { return false; }
-    else { return true; }
+    let availableMaps = this.get('data');
+    let hasData = availableMaps && availableMaps.get('length') > 0;
+    return ! hasData;
   }),
   actions: {
     refreshAvailable() {

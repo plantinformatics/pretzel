@@ -11,6 +11,7 @@ let trace_dataflow = 1;
 let trace_select = 1;
 
 export default Ember.Controller.extend(Ember.Evented, {
+  dataset: service('data/dataset'),
   block: service('data/block'),
 
   actions: {

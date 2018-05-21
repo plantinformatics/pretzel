@@ -73,9 +73,11 @@ export default Service.extend(Ember.Evented, {
   }  // allow multiple in parallel - initially assume id-s are different
   ,
 
-  availableBlocks : function() {
-    console.log("availableBlocks", this);
-
-  }
+  /** @return dataset records */
+  values: Ember.computed(function() {
+    let records = this.get('store').peekAll('dataset');
+    console.log('values', records);
+    return records;
+  })
   
 });

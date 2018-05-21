@@ -54,6 +54,7 @@
         {{else if (compare layout.left.tab '===' 'explore')}}
           {{panel/manage-explorer
             model=model
+            dataset=dataset
             selectedMaps=selectedMaps
             selectedBlock=selectedBlock
             isShowUnique=isShowUnique
@@ -85,7 +86,8 @@
       hasData {{hasData}},
       mapsToView {{model.params.mapsToView}},
       selectedMaps {{selectedMaps.length}},
-      availableMaps {{model.availableMapsTask.value.length}},
+      datasets task value {{model.availableMapsTask.value.length}},
+      availableMaps {{ dataset.values.length }}
       available blockValues {{block.blockValues.length}},
       selected blocks {{block.selected.length}},
       viewed blocks {{block.viewed.length}},
