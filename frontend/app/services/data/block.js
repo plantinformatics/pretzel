@@ -32,10 +32,15 @@ export default Service.extend(Ember.Evented, {
    * Signal that receipt with receivedBlock(id, block).
    */
   taskGet: task(function * (id) {
+    /** if not already loaded and viewed, then trigger receivedBlock */
+    let isViewed = this.get('getIsViewed').apply(this, [id]);
     let block = yield this.getData(id);
     // console.log('taskGet', this, id, block);
-    block.set('isViewed', true);
-    this.trigger('receivedBlock', id, block);
+    if (! isViewed)
+    {
+      block.set('isViewed', true);
+      this.trigger('receivedBlock', id, block);
+    }
     return block;
   }),
   getData: function (id) {
@@ -53,6 +58,36 @@ export default Service.extend(Ember.Evented, {
   }  // allow multiple in parallel - assume id-s are different
   // later can use ember-contextual-service to give each id its own task scheduler
   ,
+  /*--------------------------------------------------------------------------*/
+
+  /** @return true if the block is loaded into the store from the backend, and has .isViewed==true.
+   */
+  getIsViewed(blockId)
+  {
+    let store = this.get('store'),
+    block = store.peekRecord('block', blockId),
+    isViewed = block && block.get('isViewed');
+    return isViewed;
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+  getBlocks(blockIds) {
+    let taskGet = this.get('taskGet');
+    console.log("getBlocks", blockIds);
+    let blockTasks = blockIds.map(
+      function (id) {
+        let blockTask = taskGet.perform(id);
+        console.log("mapview model", id, blockTask);
+        return blockTask;
+      });
+
+    console.log("getBlocks() result blockTasks", blockTasks);
+    return blockTasks;
+  },
+
+  /*--------------------------------------------------------------------------*/
+
 
   /** @return block records */
   blockValues: Ember.computed(function() {
@@ -84,9 +119,13 @@ export default Service.extend(Ember.Evented, {
     function() {
       let ids = this.get('viewed');
       if (trace_block > 1)
-        ids.map(function (a) { console.log('viewedIds', a); } );
+        ids.map(function (a) { console.log('viewedIds', a, a.get('id')); } );
       if (trace_block)
         console.log('viewedIds', ids);
+      ids = ids.map(function (a) { return a.get('id'); } );
+      if (trace_block)
+        console.log('viewedIds', ids);
+
       return ids;
     })
   

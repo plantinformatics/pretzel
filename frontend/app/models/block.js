@@ -15,7 +15,7 @@ export default DS.Model.extend({
 
 
   /** true when the block is displayed in the graph.
-   * set by adding the block to the graph (addMap),
+   * set by adding the block to the graph (entry-block: get()),
    * and cleared by removing the block from the display.
    */
   isViewed: false,

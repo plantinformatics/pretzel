@@ -3,6 +3,8 @@ import Ember from 'ember';
 const { computed : { readOnly } } = Ember;
 const { inject: { service } } = Ember;
 
+import ViewedBlocks from '../mixins/viewed-blocks';
+
 /* global d3 */
 
 console.log("controllers/mapview.js");
@@ -10,7 +12,7 @@ console.log("controllers/mapview.js");
 let trace_dataflow = 1;
 let trace_select = 1;
 
-export default Ember.Controller.extend(Ember.Evented, {
+export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   dataset: service('data/dataset'),
   block: service('data/block'),
 
@@ -30,51 +32,32 @@ export default Ember.Controller.extend(Ember.Evented, {
       this.set('selectedFeatures', features);
     },
 
-    /**  add mapName to this.get('mapsToView') and update URL
+    /** Change the state of the named block to viewed.
      * (named map for consistency, but mapsToView really means block, and "name" is db ID)
+     * Also @see components/record/entry-block.js : action get
      */
     addMap : function(mapName) {
-      let mtv = this.get('mapsToView');
-      console.log("controller/mapview", "addMap", mapName, mtv, this.target.currentURL);
-      mtv.pushObject(mapName);
-       let queryParams =
-        {'mapsToView' : mtv,
-         // chr : '', highlightFeature : ''
-         /* The URL is only updated if some extra params are given; chr and
-          * highlightFeature will be included in the URL if given, whereas 'abc'
-          * will not.
-          * Single-stepping into transitionToRoute() when 'abc' is omitted,
-          * at this line oldState.queryParams is the same newState.queryParams,
-          * which seems odd :
-          * function getTransitionByIntent(intent, isIntermediate) {
-          *     ... var queryParamChangelist = getChangelist(oldState.queryParams, newState.queryParams);
-          */
-         'abc' : 'def'
-        };
-      this.transitionToRoute({'queryParams': queryParams });  
+      this.get('setViewed').apply(this, [mapName, true]);
     },
-    /**  remove mapName from this.get('mapsToView') and update URL
+
+    updateRoute() {
+      let block_viewedIds = this.get('block.viewedIds');
+      console.log("controller/mapview", "updateRoute", this.target.currentURL, block_viewedIds);
+
+      let queryParams =
+        {'mapsToView' : block_viewedIds,
+         highlightFeature : this.get('model.params.highlightFeature')
+        };
+      let me = this;
+      Ember.run.later( function () {
+        me.transitionToRoute({'queryParams': queryParams }); });
+    },
+    /** Change the state of the named block to not-viewed.
      */
     removeMap : function(mapName) {
-      let mtv = this.get('mapsToView');
-      console.log("controller/mapview", "removeMap", mapName, mtv);
-      let di = mtv.indexOf(mapName);
-      if (di == -1)
-        console.log("removeMap", "not found", mapName, "in", mtv.length, mtv);
-      else
-      {
-        console.log("removeMap", "found", mapName, "at", di, mtv.length);
-        mtv.removeAt(di, 1);
-        console.log("removeMap", "deleted", mapName, "at", di, mtv.length, mtv);
-        console.log("removeMap", "mapsToView:", this.get('mapsToView'));
-        let queryParams = // this.get('queryParams');
-          {'mapsToView' : mtv
-           , 'abc' : 'def'  // see comment re. queryParams in addMap() above.
-          };
-        console.log("queryParams", queryParams);
-        this.transitionToRoute({'queryParams': queryParams });
-      }
+      this.get('setViewed').apply(this, [mapName, false]);
     },
+
     onDelete : function (modelName, id) {
       console.log('onDelete', modelName, id);
       if (modelName == 'block')
@@ -139,7 +122,6 @@ export default Ember.Controller.extend(Ember.Evented, {
 
   selectedFeatures: [],
 
-  dataReceived : Ember.ArrayProxy.create({ content: Ember.A() }),
 
   scaffolds: undefined,
   scaffoldFeatures: undefined,
@@ -151,7 +133,7 @@ export default Ember.Controller.extend(Ember.Evented, {
     console.log('currentURLDidChange', this.get('target.currentURL'));
   }.observes('target.currentURL'),
 
-  selectedMaps: readOnly('block.viewed'),
+
   blockTasks : readOnly('model.viewedBlocks.blockTasks'),
   /** all available */
   blockValues : readOnly('block.blockValues'),
@@ -160,23 +142,23 @@ export default Ember.Controller.extend(Ember.Evented, {
 
 
   /** Used by the template to indicate when & whether any data is loaded for the graph.
-   *
-   * Retaining for the moment mapsToView, but selectedMaps is a subset of
-   * mapsToView - just those which are loaded, whereas mapsToView is the
-   * requested block ids, which may be invalid, or the blocks may not yet be
-   * received, so it seems that mapsToView should be omitted here.
-   *
    */
   hasData: Ember.computed(
-    'selectedMaps', 'selectedMaps.[]', 'selectedMaps.length',
-    'mapsToView',
     function() {
-    let selectedMaps = this.get('selectedMaps');
-    let mapsToView = this.get('mapsToView');
-    if (trace_dataflow)
-    console.log("hasData", ! selectedMaps || selectedMaps.length, mapsToView.length);
-    return (selectedMaps && selectedMaps.length > 0)
-      || mapsToView.length > 0;
-  })
+      let viewedBlocks = this.get('block.viewed');
+      if (trace_dataflow)
+        console.log("hasData", ! viewedBlocks || viewedBlocks.length);
+      return (viewedBlocks && viewedBlocks.length > 0);
+    }),
+
+  /** Update queryParams and URL.
+   */
+  queryParamsValue : Ember.computed(
+    'block.viewedIds', 'block.viewedIds.[]', 'block.viewedIds.length',
+    function() {
+      console.log('queryParamsValue');
+      this.send('updateRoute');
+    })
+
 
 });

@@ -13,7 +13,7 @@ import { chrData } from '../utils/utility-chromosome';
 import { eltWidthResizable, noShiftKeyfilter, eltClassName  } from '../utils/domElements';
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
 import { Viewport } from '../utils/draw/viewport';
-import {  Axes, /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId, highlightId  }  from '../utils/draw/axis';
+import {  Axes, /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId  }  from '../utils/draw/axis';
 import { Stacked, Stack, stacks, xScaleExtend, axisRedrawText } from '../utils/stacks';
 import { updateRange } from '../utils/stacksLayout';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../utils/stacks-drag';
@@ -21,6 +21,7 @@ import { round_2, checkIsNumber} from '../utils/domCalcs';
 import { Object_filter } from '../utils/Object_filter';
 import { name_chromosome_block, name_position_range, isOtherField } from '../utils/field_names';
 import { breakPoint, breakPointEnableSet } from '../utils/breakPoint';
+import { highlightFeature_drawFromParams } from './draw/highlight-feature';
 
 /*----------------------------------------------------------------------------*/
 
@@ -396,19 +397,6 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
     this.draw(retHash, 'dataReceived');
-
-    /* inform mapview controller of the change of draw-map scope, to update the URL.
-     *
-     * Blocks identified in mapsToView[] as well as those via added entry-block
-     * action get -> block service taskGet() are loaded via receivedBlock(), so
-     * avoid duplication in mapsToView and hence in the URL.
-     * So far a block is shown in only 1 axis, but we are likely to support
-     * multiple instances of a block in a graph; this will then need to be
-     * revisited.
-     */
-    let model = this.get('data'), mapsToView = model && model.mapsToView;
-    if (! mapsToView || ! mapsToView.includes(chr))
-      this.send('addMap', chr);
   },
 
 
@@ -486,13 +474,6 @@ export default Ember.Component.extend(Ember.Evented, {
      */
 
 
-
-    let highlightFeature = myData.highlightFeature;
-    if (highlightFeature)
-    {
-      console.log("highlightFeature", highlightFeature);
-      delete myData.highlightFeature;
-    }
 
     /**  oa.axisIDs is an array, containing the axis ID-s (i.e. chr names made
      *  unique by prepending their map name).
@@ -612,11 +593,6 @@ export default Ember.Component.extend(Ember.Evented, {
     let use_path_colour_scale = 4;
     let path_colour_scale_domain_set = false;
 
-    /** queue of data received from 'Add Map' requests, accessed with push() and pop() */
-    /*
-    let dataReceived = this.get('dataReceived');
-    console.log("draw() : dataReceived", dataReceived);
-     */
 
 //-	?
     /** export scaffolds and scaffoldFeatures for use in selected-features.hbs */
@@ -2070,21 +2046,6 @@ export default Ember.Component.extend(Ember.Evented, {
       .attr("class", "brush")
       .each(function(d) { d3.select(this).call(oa.y[d].brush); });
 
-    if (highlightFeature)
-    {
-    //Setup the gene / feature highlight, enabled by url param highlightFeature.
-    let highlightFeatureS =
-      d3.select('#holder').selectAll(".highlightFeature")
-      .data([highlightFeature])
-      .enter().append("div")
-      .attr("class", "highlightFeature")
-      .attr("id", highlightId);
-
-    let hmPos = [20, 500];
-    highlightFeatureS.html(highlightFeature)
-      .style("left", "" + hmPos[0] + "px")             
-      .style("top", "" + hmPos[1] + "px");
-    }
 
     // Setup the path hover tool tip.
     let toolTipCreated = ! oa.toolTip;
@@ -5248,18 +5209,6 @@ export default Ember.Component.extend(Ember.Evented, {
         onToggle(checked);
       });
     }
-//- graph-data or discard
-    function dataReceivedCheck()
-    {
-        let dataReceived = me.get('dataReceived');
-        console.log("toggleModePublish() : dataReceived", dataReceived);
-        if (typeof dataReceived.length != "object")
-        {
-        let il = dataReceived.length-1, dr=dataReceived[il];
-        console.log(dataReceived.length, dr[0]._internalModel, dr[1].record);
-        dataReceived.push({ghi: 123});
-        }
-    }
 //- draw-controls
     function setupToggleModePublish()
     {
@@ -5490,6 +5439,8 @@ export default Ember.Component.extend(Ember.Evented, {
     let me = this;
     let data = this.get('data');
       me.draw(data, 'didRender');
+
+    highlightFeature_drawFromParams(this);
   },
 
     resize : function() {

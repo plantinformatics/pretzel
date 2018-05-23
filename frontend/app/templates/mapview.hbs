@@ -91,11 +91,12 @@
       available blockValues {{block.blockValues.length}},
       selected blocks {{block.selected.length}},
       viewed blocks {{block.viewed.length}},
-      {{viewed-blocks model=model}}
+      queryParamsValue {{ queryParamsValue }},
+      viewedIds {{ block.viewedIds.length }},
     </p>
     {{!-- {{#if hasData}} --}}
       {{draw-map
-        data=model
+        data=block.viewed
         drawActions=this
 	layout=layout
         isShowUnique=isShowUnique
@@ -104,6 +105,7 @@
         scaffoldMarkers=scaffoldMarkers
         showScaffoldMarkers=showScaffoldMarkers
         showAsymmetricAliases=showAsymmetricAliases
+        highlightFeature=model.params.highlightFeature
         selectedBlock=selectedBlock
         addMap='addMap'
         mapsToViewDelete='removeMap'

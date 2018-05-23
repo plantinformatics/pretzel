@@ -519,10 +519,11 @@ div.toolTip{
 
 div.highlightFeature
 {
-    height : "auto";
-    width: "auto";
-    opacity:  0.9;
-    display: "inline";
+  position:absolute;
+  /* height : auto; */
+  /* width: auto; */
+  opacity:  0.9;
+  /* display: inline; */
 }
 
 .navbar {

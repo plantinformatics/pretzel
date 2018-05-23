@@ -10,6 +10,7 @@ import EmberObject from '@ember/object';
 
 let config = {
   dataset: service('data/dataset'),
+  block: service('data/block'),
 
   titleToken: 'MapView',
   queryParams: {
@@ -50,19 +51,8 @@ let config = {
   },
 
   /** Ember-concurrency tasks are returned in the model :
-   *  mapsToView : [ ]
    *  availableMapsTask : task -> [ id , ... ]
    *  blockTasks : { id : task, ... }
-   *
-   * selectedMaps() is a filtered copy of params.mapsToView[] : maps in
-   * params which are not chrs (blocks) in API result are filtered out, i.e.
-   * store .query('dataset') .forEach() .get('blocks')
-   * i.e. this case selected means viewed, whereas elsewhere
-   * selected{Features,Markers,Blocks,Maps} means brushed; to be distinguished
-   * in a separate commit.
-
-   * selectedMaps is different to draw-map.js: oa.selectedAxes,
-   * which is the brushed Axes (maps).
    */
 
   model(params) {
@@ -75,13 +65,15 @@ let config = {
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
     let datasetsTask = taskGetList.perform(); // renamed from 'maps'
 
+    let blockService = this.get('block');
+    let getBlocks = blockService.get('getBlocks');
+    let viewedBlocksTasks = getBlocks.apply(blockService, [params.mapsToView]);
+
     result = EmberObject.create(
       {
         params : params,
-        mapsToView : params.mapsToView,
         availableMapsTask : datasetsTask, // task result is -> [ id , ... ]
-        viewedBlocks : undefined, // populated by viewed-blocks
-        highlightFeature: params.highlightFeature
+        viewedBlocks : viewedBlocksTasks
       });
 
     console.log("routes/mapview: model() result", result);
