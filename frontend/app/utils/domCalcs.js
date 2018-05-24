@@ -1,3 +1,4 @@
+import { breakPoint } from './breakPoint';
 
 /*----------------------------------------------------------------------------*/
 
@@ -15,8 +16,6 @@ function round_2(num)
 
 /*----------------------------------------------------------------------------*/
 
-/** can factor this out - also defined in draw-map.js */
-let breakInDebugger = false;
 
 /** Check if the given value is a number, i.e. !== undefined and ! isNaN().
  * @param l value to check
@@ -27,7 +26,7 @@ function checkIsNumber(l)
   if ((l === undefined) || Number.isNaN(l))
   {
     console.log("checkIsNumber", l);
-    if (breakInDebugger)    debugger;
+    breakPoint();
   }
   return l;
 }

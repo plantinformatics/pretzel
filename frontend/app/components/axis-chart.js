@@ -5,12 +5,7 @@ import InAxis from './in-axis';
 
 const className = "chart", classNameSub = "chartRow";
 
-/*----------------------------------------------------------------------------*/
-function breakToDebugger(a, b)
-{
-  console.log(a, b);
-  debugger;
-}
+
 /*----------------------------------------------------------------------------*/
 /* Copied from draw-map.js */
     /**

@@ -17,7 +17,7 @@ Object.filter = Object_filter;
 
 /*----------------------------------------------------------------------------*/
 
-const trace_stack = 2;
+const trace_stack = 1;
 const trace_updatedStacks = true;
 
 /** Each stack contains 1 or more Axis Pieces (Axes).
@@ -169,7 +169,7 @@ Stacked.prototype.yOffset = function ()
   if (Number.isNaN(yOffset))
   {
     console.log("Stacked#yOffset", yRange, this.position);
-    debugger;
+    breakPoint();
   }
   return yOffset;
 };
@@ -213,15 +213,21 @@ Stacked.prototype.children = function (includeSelf)
     children.push(this.axisName);
   return children;
 };
-
 Stack.prototype.childAxisNames = function (includeSelf)
+{
+  let children =
+    this.axes.reduce(function (children, a) { return children.concat(a.children(includeSelf)); }, []);
+  // console.log("childAxisNames", includeSelf, this, children);  this.log();
+  return children;
+};
+/** Result is grouped by axis, i.e. array of axes, each axis being an array of child names.  */
+Stack.prototype.childAxisNamesGrouped = function (includeSelf)
 {
   let children = [].concat(
     // repeated scans of oa.axes[] by Stacked.prototype.children(), maybe maintain a list of children (blocks).
     this.axes.map(function (a) { return a.children(includeSelf); })
   );
-  children = children[0];
-  // console.log("childAxisNames", includeSelf, this, children);
+  // console.log("childAxisNamesGrouped", includeSelf, this, children);  this.log();
   return children;
 };
 Stack.prototype.childAxes = function ()
@@ -473,7 +479,7 @@ Stack.axisStackIndex2 = function (axisID)
     if ((i === -1) || (stacks[i] !== s) || (j=s.axes.indexOf(axis), s.axes[j].axisName != axisID))
     {
       console.log("stackIndex", axisID, i, axis, s, j, s.axes[j]);
-      debugger;
+      breakPoint('axisStackIndex2');
     }
     return {stackIndex: i, axisIndex: j};
   }
@@ -947,7 +953,7 @@ Stacked.prototype.axisTransform = function ()
   if (this.position === undefined || yRange === undefined)
   {
     console.log("axisTransform()", this.axisName, this, yRange);
-    debugger;
+    breakPoint();
   }
   let yOffset = this.yOffset(),
   yOffsetText = Number.isNaN(yOffset) ? "" : "," + this.yOffset();
@@ -1178,7 +1184,7 @@ Stacked.prototype.axisTransformO = function ()
   if (this.position === undefined || yRange === undefined)
   {
     console.log("axisTransformO()", this.axisName, this, yRange);
-    debugger;
+    breakPoint();
   }
   let yOffset = this.yOffset(),
   yOffsetText =  Number.isNaN(yOffset) ? "" : "," + this.yOffset();

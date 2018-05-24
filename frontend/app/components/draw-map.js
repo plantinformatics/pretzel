@@ -206,7 +206,10 @@ export default Ember.Component.extend(Ember.Evented, {
     let f = this.get('feedService');
     console.log("listen", f);
     if (f === undefined)
-      debugger;
+    {
+      console.log('listen() : feedService undefined', this);
+      breakPoint();
+    }
     else {
       f.on('colouredFeatures', this, 'updateColouredFeatures');
       f.on('clearScaffoldColours', this, 'clearScaffoldColours');
@@ -922,7 +925,7 @@ export default Ember.Component.extend(Ember.Evented, {
      * further increments will trace the whole arrays, i.e. O(N),
      * and trace cross-products of arrays - O(N^2) e.g. trace the whole array for O(N) events.
      */
-    const trace_stack = 2;
+    const trace_stack = 1;
     const trace_scale_y = 0;
     const trace_drag = 1;
     const trace_alias = 1;  // currently no trace at level 1.
@@ -1538,7 +1541,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
     d3.select('body')
-      .classed("devel", this.get('data.params.devel'));
+      .classed("devel", this.get('params.devel'));
 
     function setCssVariable(name, value)
     {
@@ -1674,7 +1677,7 @@ export default Ember.Component.extend(Ember.Evented, {
         if (oa.stacks.length > stackSd.size() + stackS.size())
         {
           console.log("missed stack", oa.stacks.length, stackSd.size());
-          debugger;
+          breakPoint();
         }
       }
     stackX
@@ -1690,7 +1693,7 @@ export default Ember.Component.extend(Ember.Evented, {
       .attr("id", stackEltId);
 
     function stackEltId(s)
-    { if (s.stackID === undefined) debugger;
+    { if (s.stackID === undefined) breakPoint();
       console.log("stackEltId", s.stackID, s.axes[0].mapName, s);
       return eltId(s.stackID); }
 
@@ -1700,7 +1703,7 @@ export default Ember.Component.extend(Ember.Evented, {
       return stack.axisIDs();
     }
 
-    if (stackS && trace_stack)
+    if (stackS && trace_stack >= 1.5)
       logSelection(stackS);
 
     // Add a group element for each axis.
@@ -1842,7 +1845,7 @@ export default Ember.Component.extend(Ember.Evented, {
           .on("start", dragstarted) //start instead of dragstart in v4. 
           .on("drag", dragged)
           .on("end", dragended));//function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
-    if (g && trace_stack)
+    if (g && trace_stack >= 1.5)
       logSelection(g);
 
 //-components/axis
@@ -1899,7 +1902,7 @@ export default Ember.Component.extend(Ember.Evented, {
             if (Number.isNaN(yVal))
             {
               console.log("dropTargetY", datum, axis, top, oa.vc.dropTargetYMargin, edge.bottom(axis));
-              debugger;
+              breakPoint();
             }
             return yVal;
           };
@@ -1974,8 +1977,10 @@ export default Ember.Component.extend(Ember.Evented, {
       .filter(function (d) { return oa.axesP[d]; } )
     ;
     if (trace_stack > 1)
-    console.log(oa.axesP, "filter", g.size(), allG.size());
-    logSelection(g);
+    {
+      console.log(oa.axesP, "filter", g.size(), allG.size());
+      logSelection(g);
+    }
 
     // Add an axis and title
       /** This g is referenced by the <use>. It contains axis path, ticks, title text, brush. */
@@ -2536,7 +2541,7 @@ export default Ember.Component.extend(Ember.Evented, {
           } catch (exc)
           {
             console.log("collateData", axis, za, za[feature], exc);
-            debugger;
+            breakPoint();
           }
           let featureAxisSets = oa.featureAxisSets;
           if (featureAxisSets[feature] === undefined)
@@ -2752,13 +2757,6 @@ export default Ember.Component.extend(Ember.Evented, {
                 }
 
                 let d0 = feature0, d1 = aliasedM1;
-                if (false)  // debugging support, could be removed.
-                {
-                  let traceTarget = feature0 == "featureK" && aliasedM1 == "featureK" &&
-                    a0.mapName == "MyMap5" && a1.mapName == "MyMap6";
-                  if (traceTarget)
-                    debugger;
-                }
 
                 if (trace_alias > 1)
                   console.log("collateStacks()", d0, d1, a0.mapName, a1.mapName, a0, a1, za0[d0], za1[d1]);
@@ -2854,6 +2852,11 @@ export default Ember.Component.extend(Ember.Evented, {
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
         fAxis_s0 = s0.childAxes(),
         fAxis_s1 = s1.childAxes();
+        if (trace_adj > 2)
+        {
+          console.log('collateAdjacentAxes', stackIndex, fAxis_s0, stackIndex+1, fAxis_s1);
+          s0.log(); s1.log();
+        }
         // Cross-product of the Axes in two adjacent stacks
         for (let a0i=0; a0i < fAxis_s0.length; a0i++) {
           let a0 = fAxis_s0[a0i], za0 = a0.z, a0Name = a0.axisName;
@@ -2863,6 +2866,12 @@ export default Ember.Component.extend(Ember.Evented, {
           }
           for (let a1i=0; a1i < fAxis_s1.length; a1i++) {
             let a1 = fAxis_s1[a1i], za1 = a1.z;
+            if (trace_adj > 3)
+            {
+              console.log(a0i, a0Name, a1i, a1.axisName);
+              a0.log();
+              a1.log();
+            }
             if (adjAxes[a0Name] === undefined)
               adjAxes[a0Name] = [];
             adjAxes[a0Name].push(a1.axisName);
@@ -3535,7 +3544,7 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function pathU(ffaa) {
       if ((ffaa === undefined) || (ffaa.length === undefined))
-      { console.log("pathU", this, ffaa); debugger; }
+      { console.log("pathU", this, ffaa); breakPoint(); }
       let [feature0, feature1, a0, a1] = ffaa;
       let p = [];
       p[0] = patham(a0.axisName, a1.axisName, feature0, feature1);
@@ -4191,7 +4200,7 @@ export default Ember.Component.extend(Ember.Evented, {
       console.log(d3.event.subject.fx, d3.event.subject.x);
       d3.event.subject.fx = d3.event.subject.x;
       let axisS = svgContainer.selectAll(".stack > .axis-outer");
-      if (axisS && trace_stack)
+      if (axisS && trace_stack >= 1.5)
         logSelection(axisS);
       /* Assign class current to dropTarget-s depending on their relation to drag subject.
        add class 'current' to indicate which zones to get .dragHover
@@ -4368,7 +4377,7 @@ export default Ember.Component.extend(Ember.Evented, {
         st.attr("transform", Stack.prototype.axisTransformO);
         // zoomed affects transform via path() : axisTransform.
         if (trace_path < 2)
-          pathUpdate(t /*st*/);
+          pathUpdate(t || st);
         //Do we need to keep the brushed region when we drag the axis? probably not.
         //The highlighted features together with the brushed regions will be removed once the dragging triggered.
         // st0.select(".brush").call(y[d].brush.move,null);

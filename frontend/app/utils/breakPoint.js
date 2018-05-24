@@ -24,8 +24,9 @@ function breakPoint()
     }
     --breakPointEnable;
     /* absorbed this feature from breakToDebugger() */
+    /* comment out debugger when not in use - it impacts optimisation
     if (breakInDebugger)
-      debugger;
+      debugger; */
   }
 }
 

@@ -48,7 +48,10 @@ function chrMap(store, oa, chrName)
     {
       let stacked = oa.axes[chrName];
       if (stacked === undefined)
+      {
+        console.log('chrMap() : stacked undefined for', chrName);
         debugger;
+      }
       else
       /* Convert map name to object refn, for uniform result object type,
        * because other branch returns map object refn .
