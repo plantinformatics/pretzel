@@ -4376,7 +4376,7 @@ export default Ember.Component.extend(Ember.Evented, {
         // st.duration(dragTransitionTime);
         st.attr("transform", Stack.prototype.axisTransformO);
         // zoomed affects transform via path() : axisTransform.
-        if (trace_path < 2)
+        if (oa.drawOptions.continuousPathUpdate && (trace_path < 2))
           pathUpdate(t || st);
         //Do we need to keep the brushed region when we drag the axis? probably not.
         //The highlighted features together with the brushed regions will be removed once the dragging triggered.
@@ -5219,6 +5219,16 @@ export default Ember.Component.extend(Ember.Evented, {
       });
     }
 //- draw-controls
+    function setupTogglePathUpdate()
+    {
+      /* initial value of continuousPathUpdate is true, so .hbs has : checked="checked" */
+      setupToggle
+      ("checkbox-togglePathUpdate",
+      function (checked) {
+        oa.drawOptions.continuousPathUpdate = checked;
+      }
+      );
+    }
     function setupToggleModePublish()
     {
       setupToggle
@@ -5311,6 +5321,7 @@ export default Ember.Component.extend(Ember.Evented, {
     function setupVariousControls()
     {
       setupToggleShowPathHover();
+      setupTogglePathUpdate();
       setupToggleShowAll();
       setupToggleShowSelectedFeatures();
       setupPathOpacity();

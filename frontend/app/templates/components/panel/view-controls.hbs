@@ -7,43 +7,51 @@
       <div class="btn-group btn-group-sm btn-group-justified">
         <div class="btn-group">
           {{#elem/button-base
-            icon="adjust"
-            classColour="primary"
-            click=(action "clearScaffoldColours")}}
+             icon="adjust"
+             classColour="primary"
+             click=(action "clearScaffoldColours")}}
             Clear Scaffold Colours
           {{/elem/button-base}}
         </div>
         <div class="btn-group">
           {{#elem/button-base
-            icon="random"
-            classColour="primary"
-            click=(action "flipRegion")}}
+             icon="random"
+             classColour="primary"
+             click=(action "flipRegion")}}
             Flip Region
           {{/elem/button-base}}
         </div>
         <div class="btn-group">
           {{#elem/button-base
-            icon="resize-full"
-            classColour="primary"
-            click=(action "resetZooms")}}
+             icon="resize-full"
+             classColour="primary"
+             click=(action "resetZooms")}}
             Reset Zooms
           {{/elem/button-base}}
         </div>
       </div>
     </li>
     <li class="list-group-item">
-        <input type="checkbox" 
-        id="checkbox-toggleModePathHover" 
-        name="toggleCheckbox" 
-        />
-        <label>Path Hover info</label>
+      <input type="checkbox" 
+             id="checkbox-toggleModePathHover" 
+             name="toggleCheckbox" 
+      />
+      <label>Path Hover info</label>
     </li>
     <li class="list-group-item">
-        <input type="checkbox" 
-        id="checkbox-toggleModePublish" 
-        name="toggleCheckbox" 
-        />
-        <label>Publish Mode</label>
+      <input type="checkbox" 
+             id="checkbox-togglePathUpdate"
+             name="toggleCheckbox" 
+	     checked="checked"
+      />
+      <label>Path update during drag</label>
+    </li>
+    <li class="list-group-item">
+      <input type="checkbox" 
+             id="checkbox-toggleModePublish" 
+             name="toggleCheckbox" 
+      />
+      <label>Publish Mode</label>
     </li>
     <li class="list-group-item">
       <input type="checkbox" 
