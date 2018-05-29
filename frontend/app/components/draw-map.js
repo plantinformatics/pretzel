@@ -705,11 +705,12 @@ export default Ember.Component.extend(Ember.Evented, {
       delete c.chrName;
       console.log("receiveChr", axis, cmName[axis]);
       d3.keys(c).forEach(function(feature) {
+        if (! isOtherField[feature]) {
         let f = z[axis][feature];
         // alternate filter, suited to physical maps : f.location > 2000000
         if ((featureTotal++ & 0x3) && filter_location)
           delete z[axis][feature];
-        else if (! isOtherField[feature])
+        else
         {
           oa.d3FeatureSet.add(feature);
           oa.featureIndex[f.id] = f;
@@ -734,7 +735,7 @@ export default Ember.Component.extend(Ember.Evented, {
               }
           }
         }
-
+        }
       });
       }
     }
@@ -1028,7 +1029,8 @@ export default Ember.Component.extend(Ember.Evented, {
       selectedAxes.removeObject(axisName);
       let p = axisName; // based on brushHelper()
       d3.keys(oa.z[p]).forEach(function(f) {
-        delete selectedFeatures[p];
+        if (! isOtherField[f])
+          delete selectedFeatures[p];
       });
     }
 
@@ -1115,10 +1117,16 @@ export default Ember.Component.extend(Ember.Evented, {
           let d4 = adopt0 = adopt.shift();
           let a = oa.axesP[d4];
           a.stack.log();
+          a.axisName = d;
           a.parent = sd;
           a.stack.add(sd);
           console.log(d4, a, sd, oa.axesP[a.axisName]);
           sd.stack.log();
+
+          /** the y scales will be accessed via the new name d. - also update domain */
+          console.log('adopt scale', y[d], y[adopt0]);
+          if (y[d] === undefined)
+            y[d] = y[adopt0]; // could then delete y[adopt0]
 
           /** change the axisID of the DOM elements of the axis which is being adopted.  */
           let aStackS = oa.svgContainer.select("g.axis-outer#" + eltId(adopt0));
@@ -1140,6 +1148,21 @@ export default Ember.Component.extend(Ember.Evented, {
            */
           let axisTitleS = aStackS.select("g.axis-all > text");
           axisTitleFamily(axisTitleS);
+
+          /** update the __data__ of those elements which refer to axis parent block name */
+          let dataS = aStackS.selectAll("g.brush, g.stackDropTarget, g.stackDropTarget > rect");
+          dataS.each(function () { d3.select(this).datum(d); });
+
+          let axis = sd;
+          let gAxisS = aStackS.selectAll("g.axis");
+          gAxisS
+            .datum(d)
+            .attr('id', axisEltId(d))
+            .call(axis.scale(y[d]));
+
+          let checkS = aStackS.selectAll("g, g.stackDropTarget > rect");
+          checkS.forEach(function(b,i) {console.log(b,i,b.__data__); } );
+          // logSelectionNodes(checkS);
         }
 
         let
@@ -1149,6 +1172,9 @@ export default Ember.Component.extend(Ember.Evented, {
         {
           console.log("pre-adopt", parentAxis, d, parentName);
           parentAxis.stack.add(sd);
+          let aStackS1 = oa.svgContainer.select("g.axis-outer#" + eltId(parentAxis.axisName));
+          let axisTitleS = aStackS1.select("g.axis-all > text");
+          axisTitleFamily(axisTitleS);
         }
         /** to recognise parent when it arrives.
          * not need when parentAxis is defined.
@@ -2631,6 +2657,8 @@ export default Ember.Component.extend(Ember.Evented, {
           d3.keys(za).forEach(
             function(featureName)
             {
+              if (! isOtherField[featureName])
+              {
               let  feature_ = za[featureName],
               aliasGroupName = feature_.aliasGroupName,
               fas = feature_.aliases;
@@ -2650,6 +2678,7 @@ export default Ember.Component.extend(Ember.Evented, {
                   if (className)
                     agc.add(className);
                 }
+              }
               }
             });
         });
@@ -2735,8 +2764,10 @@ export default Ember.Component.extend(Ember.Evented, {
         for (let a0i=0; a0i < fAxis_s0.length; a0i++) {
           let a0 = fAxis_s0[a0i], za0 = a0.z, a0Name = a0.axisName;
           for (let a1i=0; a1i < fAxis_s1.length; a1i++) {
-            let a1 = fAxis_s1[a1i], za1 = a1.z;
+            let a1 = fAxis_s1[a1i], za1 = a1.z || /* mask error in stack.childAxisNames(true) */ oa.z[a1.axisName];
             d3.keys(za0).forEach(function(feature0) {
+              if (! isOtherField[feature0])
+              {
               /** a0, a1 could be derived from za0[feature0].axis, za1[feature0].axis */
               let faa = [feature0, a0, a1, za0[feature0], za1[feature0]];
               let featureAxes = oa.featureAxes;
@@ -2801,6 +2832,7 @@ export default Ember.Component.extend(Ember.Evented, {
                 ffaa = [feature0, feature1, a0, a1];
                 pathsUnique.push(ffaa);
                 // console.log(" pathsUnique", pathsUnique.length);
+              }
               }
             });
           }
@@ -3037,6 +3069,7 @@ export default Ember.Component.extend(Ember.Evented, {
             d3.keys(za).forEach(
               function(featureName)
               {
+                if (! isOtherField[featureName]) {
                 let  feature_ = za[featureName],
                 aliasGroupName = feature_.aliasGroupName;
 
@@ -3083,6 +3116,7 @@ export default Ember.Component.extend(Ember.Evented, {
                         pathCount++;
                       }
                     }
+                }
                 }
 
               });
@@ -3936,10 +3970,18 @@ export default Ember.Component.extend(Ember.Evented, {
         brushExtents = selectedAxes.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
 
         selectedFeatures = {};
+        /** selectedFeaturesSet contains feature f if selectedFeatures[d_b][f] for any dataset/block d_b.
+         * This is used to efficiently implement featureNotSelected2() which implements .faded.
+         */
         let selectedFeaturesSet = new Set();
+        /**
+         * @param p an axis selected by a current user brush
+         * @param i index of the brush of p in brushExtents[]
+         */
         selectedAxes.forEach(function(p, i) {
           /** d3 selection of one of the Axes selected by user brush on axis. */
           let axisS = oa.svgContainer.selectAll("#" + eltId(p));
+          /** compound name dataset:block (i.e. map:chr) for the selected axis p.  */
           let mapChrName = axisName2MapChr(p);
           selectedFeatures[mapChrName] = [];
           let enable_log = brushExtents[i] === undefined;
@@ -3959,21 +4001,30 @@ export default Ember.Component.extend(Ember.Evented, {
           if (enable_log)
             console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
 
-          d3.keys(oa.z[p]).forEach(function(f) {
-            let z = oa.z;
-            if ((z[p][f].location >= brushedDomain[0]) &&
-                (z[p][f].location <= brushedDomain[1])) {
-              //selectedFeatures[p].push(f);    
+          /** for all blocks in the axis */
+          let childBlocks = axis.children();
+          console.log(axis, 'childBlocks', childBlocks);
+          childBlocks.map(function (blockName) {
+          let blockFeatures = oa.z[blockName];
+          d3.keys(blockFeatures).forEach(function(f) {
+            let fLocation = ! isOtherField[f] && blockFeatures[f].location;
+            if (fLocation)
+            {
+            if ((fLocation >= brushedDomain[0]) &&
+                (fLocation <= brushedDomain[1])) {
+              //selectedFeatures[p].push(f);
               selectedFeaturesSet.add(f);
-              selectedFeatures[mapChrName].push(f + " " + z[p][f].location);
-              //Highlight the features in the brushed regions
-              //o[p], the axis location, z[p][f].location, actual feature position in the axis, 
-              //y[p](z[p][f].location) is the relative feature position in the svg
+              selectedFeatures[mapChrName].push(f + " " + fLocation);
+              /** Highlight the features in the brushed regions
+               * o[p] : the axis location;  now use 0 because the translation of parent g.axis-outer does x offset of stack.
+               * fLocation :  actual feature position in the axis, 
+               * yp(fLocation) :  is the relative feature position in the svg
+               */
               let dot = axisS
                 .append("circle")
                 .attr("class", eltClassName(f))
                 .attr("cx",0)   /* was o[p], but g.axis-outer translation does x offset of stack.  */
-                .attr("cy",oa.y[p](z[p][f].location))
+                .attr("cy", yp(fLocation))
                 .attr("r",2)
                 .style("fill", "red");
               brushEnableFeatureHover(dot);
@@ -3982,6 +4033,8 @@ export default Ember.Component.extend(Ember.Evented, {
               let f_ = eltClassName(f);
               axisS.selectAll("circle." + f_).remove();
             }
+            }
+          });
           });
         });
         sendUpdatedSelectedFeatures();
@@ -5072,9 +5125,11 @@ export default Ember.Component.extend(Ember.Evented, {
         };
         console.log("draw_flipRegion", /*features, zm,*/ f0 , f1 , locationRange, rd);
         d3.keys(zm).forEach(function(feature) {
+          if (! isOtherField[feature]) {
           let feature_ = zm[feature], fl = feature_.location;
           if (locationRange[0] <= fl && fl <= locationRange[1])
             feature_.location = invert(fl);
+          }
         });
         pathUpdate(undefined);
       }
