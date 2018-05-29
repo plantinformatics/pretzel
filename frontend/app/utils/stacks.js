@@ -303,6 +303,26 @@ Stack.prototype.empty = function ()
 {
   return this.axes.length === 0;
 };
+/** @return parent axis of this Stack,
+ * in an array - single element
+ */
+Stack.prototype.parentAxis = function ()
+{
+  let me = this,
+  a =
+    this.axes.reduce(function(result, s){
+      if (s.parent === undefined) result.push(s); return result; }, []);
+  if (trace_stack > 1 || a.length != 1)
+    console.log('parentAxis', a, a.axisName);
+  return a;
+};
+/** @return parent axis ID of this Stack,
+ * in an array - single element
+ */
+Stack.prototype.parentAxisID = function ()
+{
+  return this.parentAxis().map(function (s) { return s.axisName; });
+};
 /** @return array of axisIDs of this Stack */
 Stack.prototype.axisIDs = function ()
 {
@@ -342,14 +362,18 @@ Stack.prototype.verify = function ()
      breakPoint(); */
   }
   else
+    /* traverse the axes of this stack. */
     this.axes.forEach(
       function (a, index)
       {
         let axis = oa.axes[a.axisName],
+        /** true if the parent of axis a is stack me.  */
         v1 = a.stack === me,
+        /** children (blocks) of axis a, not including parent. */
         c = a.children(false),
+        /** clear v2 if stack me is not the stack of one of the children c.  */
         v2 = true;
-        c.map(function (c1) { v2 &= c1.stack == me; } );
+        c.map(function (c1) { let c1a = oa.axes[c1]; v2 &= c1a.stack === me; } );
         if (!v1 || !v2)
         {
           console.log("v1", v1, "v2", v2, axis, c);
@@ -808,6 +832,11 @@ Stack.prototype.dropIn = function (axisName, insertIndex, top, transition)
     inserted.stack = this;
     // apart from the inserted axis,
     // reduce this.axes[*].portion by factor (n-1)/n
+    if (this.axes.length == 0)
+    {
+      stacks.log();
+      breakPoint();
+    }
     let n = this.axes.length,
     factor = (n-1)/n;
     inserted.portion = 1/n;

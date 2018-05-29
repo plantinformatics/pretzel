@@ -1119,6 +1119,27 @@ export default Ember.Component.extend(Ember.Evented, {
           a.stack.add(sd);
           console.log(d4, a, sd, oa.axesP[a.axisName]);
           sd.stack.log();
+
+          /** change the axisID of the DOM elements of the axis which is being adopted.  */
+          let aStackS = oa.svgContainer.select("g.axis-outer#" + eltId(adopt0));
+          console.log('aStackS', aStackS.size());
+          aStackS
+            .datum(d)
+            .attr("id", eltId);
+          if (trace_stack > 1)
+          {
+          logSelection(aStackS);
+          logSelectionNodes(aStackS);
+          }
+
+          let gAll = 
+            aStackS.select("g.axis-all")
+            .attr("id", eltIdAll);
+
+          /** just the <text> which is immediate child of gAll;  could use selectImmediateChildNodes(gAll).
+           */
+          let axisTitleS = aStackS.select("g.axis-all > text");
+          axisTitleFamily(axisTitleS);
         }
 
         let
@@ -1697,10 +1718,12 @@ export default Ember.Component.extend(Ember.Evented, {
       console.log("stackEltId", s.stackID, s.axes[0].mapName, s);
       return eltId(s.stackID); }
 
-    /** For the given Stack, return its axisIDs  */
+    /** For the given Stack, return its axisIDs.
+     * Just the ID of the parent is returned
+     */
     function stack_axisIDs(stack)
     {
-      return stack.axisIDs();
+      return stack.parentAxisID();
     }
 
     if (stackS && trace_stack >= 1.5)
@@ -1712,6 +1735,7 @@ export default Ember.Component.extend(Ember.Evented, {
     axisG = axisS
       .data(stack_axisIDs)
       .enter().append("g");
+    console.log('stacks.length', stacks.length, axisG.size(), axisS.exit().size());
     let allG = axisG
       .append('g')
       .attr("class", "axis-all")
@@ -2004,7 +2028,11 @@ export default Ember.Component.extend(Ember.Evented, {
 
     let axisTitleS = g.append("text")
       .attr("y", -axisFontSize)
-      .style("font-size", axisFontSize)
+      .style("font-size", axisFontSize);
+    axisTitleFamily(axisTitleS);
+
+    function axisTitleFamily(axisTitleS) {
+      axisTitleS
       .text(axisTitle /*String*/);
     axisTitleS.selectAll("tspan")
       .data(axisTitleChildren)
@@ -2020,6 +2048,7 @@ export default Ember.Component.extend(Ember.Evented, {
         return colour;
       })
     ;
+    }
 
 
     ;

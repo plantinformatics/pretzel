@@ -7,7 +7,7 @@
  */
 let breakPointEnable = 1;
 let breakPoint_trace = 0;
-let breakInDebugger = false;
+let breakInDebugger = true;
 
 /** an improvised assert / debugger .
  * Only useful with Web Inspector, no effect otherwise, apart from javascript console trace.
@@ -25,8 +25,9 @@ function breakPoint()
     --breakPointEnable;
     /* absorbed this feature from breakToDebugger() */
     /* comment out debugger when not in use - it impacts optimisation
+ */
     if (breakInDebugger)
-      debugger; */
+      debugger;
   }
 }
 
