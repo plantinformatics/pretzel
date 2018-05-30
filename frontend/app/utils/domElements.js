@@ -130,6 +130,24 @@ function logElementDimensions(e, text)
   );
 }
 
+function logElementDimensions2(jq) {
+  let e = jq[0];
+  console.log(
+    'client',
+    e.clientHeight, e.clientWidth, e.clientLeft, e.clientTop,
+    e.getBoundingClientRect(),
+    'jq',
+    jq.width(),
+    jq.innerWidth(),
+    jq.outerWidth(),
+    jq.height(),
+    jq.innerHeight(),
+    jq.outerHeight(),
+    jq.position()
+  );
+}
+
+
 /*----------------------------------------------------------------------------*/
 
 /** Event filter for eltWidthResizable() ... d3 drag.filter()
@@ -171,4 +189,7 @@ function eltClassName(f)
 
 /*----------------------------------------------------------------------------*/
 
-export { eltWidthResizable, shiftKeyfilter, noShiftKeyfilter , eltClassName };
+export {
+  eltWidthResizable,
+  logWindowDimensions, logElementDimensions, logElementDimensions2,
+  shiftKeyfilter, noShiftKeyfilter , eltClassName };

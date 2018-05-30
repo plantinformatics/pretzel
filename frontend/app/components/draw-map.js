@@ -513,9 +513,20 @@ export default Ember.Component.extend(Ember.Evented, {
 
 //- moved to utils/draw/viewport.js : Viewport(), viewPort, graphDim, dragLimit
     let vc = oa.vc || (oa.vc = new Viewport());
-    console.log(oa, vc);
-    vc.calc(oa);
-    stacks.vc = vc; //- perhaps create vc earlier and pass vc to stacks.init()
+    if (vc.count < 2)
+    {
+      console.log(oa, vc);
+      vc.count++;
+      vc.calc(oa);
+      if (vc.count > 1)
+      {
+        let
+          widthChanged = oa.vc.viewPort.w != oa.vc.viewPortPrev.w,
+        heightChanged = oa.vc.viewPort.h != oa.vc.viewPortPrev.h;
+        oa.showResize(widthChanged, heightChanged);
+      }
+      stacks.vc = vc; //- perhaps create vc earlier and pass vc to stacks.init()
+    }
     let
       axisHeaderTextLen = vc.axisHeaderTextLen,
     margins = vc.margins,
@@ -928,7 +939,7 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     const trace_stack = 1;
     const trace_scale_y = 0;
-    const trace_drag = 1;
+    const trace_drag = 0;
     const trace_alias = 1;  // currently no trace at level 1.
     const trace_path = 0;
     const trace_path_colour = 0;
@@ -1117,14 +1128,15 @@ export default Ember.Component.extend(Ember.Evented, {
           let d4 = adopt0 = adopt.shift();
           let a = oa.axesP[d4];
           a.stack.log();
-          a.axisName = d;
+          // a.axisName = d;
           a.parent = sd;
           a.stack.add(sd);
           console.log(d4, a, sd, oa.axesP[a.axisName]);
           sd.stack.log();
 
+          sd.scale = a.scale;
           /** the y scales will be accessed via the new name d. - also update domain */
-          console.log('adopt scale', y[d], y[adopt0]);
+          console.log('adopt scale', y[d] && 'defined', y[adopt0] && 'defined');
           if (y[d] === undefined)
             y[d] = y[adopt0]; // could then delete y[adopt0]
 
@@ -1153,7 +1165,6 @@ export default Ember.Component.extend(Ember.Evented, {
           let dataS = aStackS.selectAll("g.brush, g.stackDropTarget, g.stackDropTarget > rect");
           dataS.each(function () { d3.select(this).datum(d); });
 
-          let axis = sd;
           let gAxisS = aStackS.selectAll("g.axis");
           gAxisS
             .datum(d)
@@ -5255,15 +5266,17 @@ export default Ember.Component.extend(Ember.Evented, {
 
     if (oa.showResize === undefined)
       /** Render the affect of resize on the drawing.
-       * @param widthChanged, heightChanged   true if width (resp. height) changed
-       * @param transition  undefined (default true), or false for no transition
+       * @param widthChanged   true if width changed
+       * @param heightChanged   true if height changed
+       * @param useTransition  undefined (default true), or false for no transition
        */
-      oa.showResize = function(widthChanged, heightChanged, transition)
+      oa.showResize = function(widthChanged, heightChanged, useTransition)
     {
+        console.log('showResize', widthChanged, heightChanged, useTransition);
         updateXScale();
         collateO();
         let 
-          duration = transition || (transition === undefined) ? 750 : 0,
+          duration = useTransition || (useTransition === undefined) ? 750 : 0,
         t = oa.svgContainer.transition().duration(duration);
         let graphDim = oa.vc.graphDim;
         oa.svgRoot
@@ -5557,6 +5570,10 @@ export default Ember.Component.extend(Ember.Evented, {
     // logWindowDimensions('', oa.vc.w);  // defined in utils/domElements.js
     function resizeDrawing() { 
       oa.vc.calc(oa);
+      let
+        widthChanged = oa.vc.viewPort.w != oa.vc.viewPortPrev.w,
+      heightChanged = oa.vc.viewPort.h != oa.vc.viewPortPrev.h;
+
       // rerender each individual element with the new width+height of the parent node
       // need to recalc viewPort{} and all the sizes, (from document.documentElement.clientWidth,Height)
       // .attr('width', newWidth)
@@ -5564,7 +5581,7 @@ export default Ember.Component.extend(Ember.Evented, {
        * already resized the <svg>, so a transition looks like 1 step back and 2
        * steps forward, hence pass transition=false to showResize().
       */
-      oa.showResize(true, true, layoutChanged);
+      oa.showResize(widthChanged, heightChanged, layoutChanged);
     }
         console.log("oa.vc", oa.vc, arguments);
         if (oa.vc)

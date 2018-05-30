@@ -1,5 +1,8 @@
 import Ember from 'ember';
 
+import  { logElementDimensions2 } from '../domElements';
+
+
 /*----------------------------------------------------------------------------*/
 
 /** Calculate values which depend on the width and height of the DOM element
@@ -14,6 +17,8 @@ import Ember from 'ember';
 function Viewport()
 {
 };
+/** Used by the caller to do an initial calc(), then 1 calc after sub-components have had time to render. */
+Viewport.prototype.count = 0;
 Viewport.prototype.calc = function(oa)
 {
   /** width in pixels of the axisHeaderText, which is
@@ -90,6 +95,9 @@ Viewport.prototype.calc = function(oa)
     margins = [20/*+14*/+1, 0, 10, 0] // 10, 10, 10],
     .map(function (m, i) { return m + holderPadding[i]; });
 
+  logElementDimensions2(divHolder);
+
+  this.viewPortPrev = this.viewPort;
   /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
   this.viewPort =
     viewPort = {w: holderWidth, h:document.documentElement.clientHeight};
