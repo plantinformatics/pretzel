@@ -4013,13 +4013,13 @@ export default Ember.Component.extend(Ember.Evented, {
             console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
 
           /** for all blocks in the axis */
-          let childBlocks = axis.children();
+          let childBlocks = axis.children(false/*true after .children is changed*/);
           console.log(axis, 'childBlocks', childBlocks);
           childBlocks.map(function (blockName) {
           let blockFeatures = oa.z[blockName];
           d3.keys(blockFeatures).forEach(function(f) {
-            let fLocation = ! isOtherField[f] && blockFeatures[f].location;
-            if (fLocation)
+            let fLocation;
+            if (! isOtherField[f] && ((fLocation = blockFeatures[f].location) !== undefined))
             {
             if ((fLocation >= brushedDomain[0]) &&
                 (fLocation <= brushedDomain[1])) {

@@ -4,8 +4,7 @@
   "description": "Data block that contains features",
   "properties": {
     "scope": {
-      "type": "string",
-      "required": true
+      "type": "string"
     },
     "name": {
       "type": "string"
@@ -13,7 +12,7 @@
     "range": {
       "type": ["number"]
     },
-    "featureType": {
+    "namespace": {
       "type": "string"
     }
   },

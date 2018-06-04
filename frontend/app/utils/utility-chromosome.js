@@ -24,9 +24,9 @@ function chrData(c) {
     let featureName = feature.get('name');
     /** range should be defined and be an array, but this will handle a mix of
      * data from other source versions without exception. */
-    let range = feature.get('range'),
+    let range = feature.get('value'), // was range
     featurePosition = range && range[0];
-    let featureAliases = feature.get('aliases');
+    let featureAliases = feature.get('aliases');  // feature.aliases field is removed from db
     let featureId = feature.get('id');
     rc[featureName] = {location: featurePosition, aliases: featureAliases, id: featureId};
     if (!range) console.log("chrData range", featureName, rc[featureName]);

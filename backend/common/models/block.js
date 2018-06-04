@@ -30,7 +30,11 @@ module.exports = function(Block) {
   Block.observe('before save', function(ctx, next) {
     if (ctx.instance) {
       if (!ctx.instance.name) {
-        ctx.instance.name = ctx.instance.scope;
+        if (ctx.instance.scope) {
+          ctx.instance.name = ctx.instance.scope;
+        } else if (ctx.instance.namespace) {
+          ctx.instance.name = ctx.instance.namespace;
+        }
       }
     }
     next();

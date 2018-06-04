@@ -25,10 +25,10 @@
   {{#if entry.isViewed}}
   {{else}}
     {{elem/button-base
-      onClick=(action 'get' entry)
       classSize='xs'
       classColour='success'
-      icon='plus'}}
+      icon='plus'
+      onClick=(action "loadBlock" entry)}}
   {{/if}}
   {{entry.name}}
   {{#if entry.datasetId.editable }}

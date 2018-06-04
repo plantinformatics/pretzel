@@ -132,22 +132,22 @@ function loadAliases(models, block_a, block_b, options) {
     let feature_b_names = Object.keys(features_by_name);
     let conditions = [{string1: {inq: feature_b_names}}];
     let conditions_mirror = [{string2: {inq: feature_b_names}}];
-    if (block_b.dataset.namespace) {
-        conditions.push({namespace1: block_b.dataset.namespace});
-        conditions_mirror.push({namespace2: block_b.dataset.namespace});
+    if (block_b.namespace) {
+        conditions.push({namespace1: block_b.namespace});
+        conditions_mirror.push({namespace2: block_b.namespace});
     }
-    if (block_a.dataset.namespace) {
-        conditions.push({namespace2: block_a.dataset.namespace});
-        conditions_mirror.push({namespace1: block_a.dataset.namespace});
+    if (block_a.namespace) {
+        conditions.push({namespace2: block_a.namespace});
+        conditions_mirror.push({namespace1: block_a.namespace});
     }
     let where = {where: {or: [{and: conditions}, {and: conditions_mirror}]}};
     return models.Alias.find(where, options)
     .then(function(aliases) {
         // match aliases to the features on blockB
         aliases.forEach(function(alias) {
-            if (alias.namespace1 == block_b.dataset.namespace && alias.string1 in features_by_name) {
+            if (alias.namespace1 == block_b.namespace && alias.string1 in features_by_name) {
                 features_by_name[alias.string1]['aliases'].push(alias);
-            } else if (alias.namespace2 == block_b.dataset.namespace && alias.string2 in features_by_name) {
+            } else if (alias.namespace2 == block_b.namespace && alias.string2 in features_by_name) {
                 let alias_mirror = Object.assign({}, alias);
                 alias_mirror.namespace1 = alias.namespace2;
                 alias_mirror.namespace2 = alias.namespace1;
@@ -424,7 +424,7 @@ function findBlockPair(models, id_left, id_right, options) {
 function findReferenceBlocks(models, block, reference, options) {
     return models.Dataset.find({include: 'blocks', where: {and: [
         {parent: reference},
-        {namespace: block.dataset.namespace}
+        {namespace: block.namespace}
     ]}}, options).then(function(datasets) {
         let block_ids = [];
         datasets.forEach(function(ds) {

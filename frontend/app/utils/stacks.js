@@ -224,7 +224,7 @@ Stack.prototype.childAxisNames = function (includeSelf)
 Stack.prototype.childAxisNamesGrouped = function (includeSelf)
 {
   let children = [].concat(
-    // repeated scans of oa.axes[] by Stacked.prototype.children(), maybe maintain a list of children (blocks).
+    // repeated scans of this.axes[] by Stacked.prototype.children(), maybe maintain a list of children (blocks).
     this.axes.map(function (a) { return a.children(includeSelf); })
   );
   // console.log("childAxisNamesGrouped", includeSelf, this, children);  this.log();
@@ -323,6 +323,14 @@ Stack.prototype.parentAxisID = function ()
 {
   return this.parentAxis().map(function (s) { return s.axisName; });
 };
+/** @return count of parent axes in this Stack,
+ */
+Stack.prototype.parentAxesCount = function ()
+{
+  return this.axes.reduce(function (result, a) {
+    if (a.parent === undefined) result++; return result;}, 0);
+};
+
 /** @return array of axisIDs of this Stack */
 Stack.prototype.axisIDs = function ()
 {
@@ -837,7 +845,7 @@ Stack.prototype.dropIn = function (axisName, insertIndex, top, transition)
       stacks.log();
       breakPoint();
     }
-    let n = this.axes.length,
+    let n = this.parentAxesCount(), // axes.length,
     factor = (n-1)/n;
     inserted.portion = 1/n;
     this.axes.forEach(

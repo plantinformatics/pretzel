@@ -784,7 +784,9 @@ svg > g.publishMode .btn
   margin-bottom: 10px;
 }
 
-ul#maps_aligned > li.selected {
+ul#maps_aligned > li.selected,
+ul#display-blocks > li.selected,
+#observational-table th span.selected {
   font-weight: bold;
 }
 
@@ -813,3 +815,19 @@ div#goto-feature > div
 }
 
 /* -------------------------------------------------------------------------- */
+
+.panel-collapse-button {
+  padding:0 5px 0 5px;
+  border-radius:0;
+  z-index: 50;
+}
+
+#matrix-view {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+#observational-table {
+  flex: 1;
+}

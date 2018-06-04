@@ -19,15 +19,15 @@
 {{/elem/panel-container}}
 
 {{#elem/panel-container state="primary"}}
-  {{#elem/panel-heading icon="globe"}}
-    Geneticmaps
+  {{#elem/panel-heading icon="folder-open"}}
+    Datasets
     {{elem/button-refresh
       onClick=(action 'refreshAvailable')}}
   {{/elem/panel-heading}}
-  {{#if model.availableMapsTask.isRunning}}
+  {{#if model.mapsDerived.isPending}}
     <div class="panel-body">
       <div class="well">
-        Loading map {{elem/icon-base name="globe"}} resources. 
+        Loading resources. 
       </div>
     </div>
   {{else if dataEmpty}}
@@ -45,13 +45,13 @@
         entry=dataset
         selectedBlock=selectedBlock
         selectBlock="selectBlock"
-        loadBlock="loadBlock"
         deleteBlock="deleteBlock"
-        onDelete="onDelete"}}
+        onDelete="onDelete"
+        loadBlock="loadBlock"}}
     {{/each}}
     <li 
       class="list-group-item list-group-item-info">
-      {{elem/icon-base name='folder-open'}} &nbsp;Upload new data
+      {{elem/icon-base name='cloud-upload'}} &nbsp;Upload new data
       <span class="pull-right">
         {{elem/button-base
           classSize='xs'

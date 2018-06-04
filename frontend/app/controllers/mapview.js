@@ -75,6 +75,14 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       this.set('pathColourScale', ! this.get('pathColourScale'));
     }
     , pathColourScale: true,
+
+    loadBlock : function(block) {
+      console.log('loadBlock', block);
+      let id = block.get('id');
+      let t = this.get('useTask');
+      t.apply(this, [id]);
+    },
+
     selectBlock: function(block) {
       console.log('SELECT BLOCK mapview', block.get('name'), block.get('mapName'), block.id, block);
       this.set('selectedBlock', block);
@@ -158,7 +166,19 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     function() {
       console.log('queryParamsValue');
       this.send('updateRoute');
-    })
+    }),
+
+  /** Use the task taskGet() defined in services/data/block.js
+   * to get the block data.
+   */
+  useTask : function (id) {
+    console.log("useTask", id);
+    let blockService = this.get('block');
+    let taskGet = blockService.get('taskGet');
+    let block = taskGet.perform(id);
+    console.log("block", id, block);
+    // block.set('isViewed', true);
+  }
 
 
 });

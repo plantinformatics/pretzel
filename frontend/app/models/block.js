@@ -11,7 +11,7 @@ export default DS.Model.extend({
   range: attr('array'),
   scope: attr('string'),
   name: attr('string'),
-  featureType: attr('string'),
+  namespace: attr('string'),
 
 
   /** true when the block is displayed in the graph.

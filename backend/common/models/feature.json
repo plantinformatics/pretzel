@@ -11,8 +11,8 @@
       "type": "string",
       "required": true
     },
-    "range": {
-      "type": ["number"],
+    "value": {
+      "type": "any",
       "required": true
     }
   },

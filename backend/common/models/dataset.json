@@ -8,11 +8,11 @@
       "required": true,
       "id": true
     },
-    "namespace": {
-      "type": "string"
-    },
     "tags": {
       "type": ["string"]
+    },
+    "type": {
+      "type": "string"
     },
     "meta": {
       "type": "object"

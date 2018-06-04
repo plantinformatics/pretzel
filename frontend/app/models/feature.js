@@ -5,7 +5,7 @@ import attr from 'ember-data/attr';
 export default DS.Model.extend({
   blockId: DS.belongsTo('block'),
   name: attr('string'),
-  range: attr('array'),
+  value: attr(),
   parentId: DS.belongsTo('feature', {inverse: 'features'}),
   features: DS.hasMany('feature', {inverse: 'parentId'})
 });
