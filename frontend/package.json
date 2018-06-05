@@ -60,6 +60,7 @@
     "ember-ui-sortable": ">=0.3.3",
     "ember-wormhole": "^0.5.2",
     "interval-tree-1d": "github:mikolalysenko/interval-tree-1d",
-    "moment": "^2.20.1"
+    "moment": "^2.20.1",
+    "node-sass": "^4.9.0"
   }
 }
