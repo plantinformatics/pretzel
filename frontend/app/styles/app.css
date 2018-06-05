@@ -831,3 +831,7 @@ div#goto-feature > div
 #observational-table {
   flex: 1;
 }
+
+#observational-table .head {
+  transform: rotate(90deg);
+}

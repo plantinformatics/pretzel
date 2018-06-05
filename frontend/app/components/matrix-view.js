@@ -6,24 +6,33 @@ export default Component.extend({
   store: service(),
   style: 'height:100%; width:100%',
   attributeBindings: ['style:style'],
+  numericalData: true,
 
   selectedBlock: null,
 
   didInsertElement() {
     let me = this;
+
     let tableDiv = $("#observational-table")[0];
     let table = new Handsontable(tableDiv, {
       data: [],
       readOnly: true,
       rowHeaders: true,
-      manualRowResize: true,
-      manualColumnResize: true,
       manualColumnMove: true,
-      contextMenu: true,
-      stretchH: 'all',
+      height: '100%',
+      colWidths: 25,
+      stretchH: 'none',
       cells: function(row, col, prop) {
         let cellProperties = {};
-        cellProperties.renderer = 'defaultRenderer';
+        let selectedBlock = me.get('selectedBlock');
+        let numericalData = me.get('numericalData');
+        if (numericalData) {
+          cellProperties.renderer = 'numericalDataRenderer';
+        } else if (selectedBlock == null) {
+          cellProperties.renderer = 'CATGRenderer';
+        } else {
+          cellProperties.renderer = 'ABRenderer';
+        }
         return cellProperties;
       },
       afterOnCellMouseDown: function(event, coords, td) {
@@ -33,9 +42,8 @@ export default Component.extend({
         }
       }
     });
-    Handsontable.renderers.registerRenderer('defaultRenderer', function(instance, td, row, col, prop, value, cellProperties) {
+    Handsontable.renderers.registerRenderer('CATGRenderer', function(instance, td, row, col, prop, value, cellProperties) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
-
       if (value == 'A') {
         td.style.background = 'green';
         td.style.color = 'white';
@@ -51,6 +59,36 @@ export default Component.extend({
       }
     });
 
+    Handsontable.renderers.registerRenderer('ABRenderer', function(instance, td, row, col, prop, value, cellProperties) {
+      Handsontable.renderers.TextRenderer.apply(this, arguments);
+      let abValues = me.get('abValues');
+      if (value != null && abValues[row] != null) {
+        if (value == abValues[row]) {
+          td.style.background = 'green';
+          td.style.color = 'white';
+          $(td).text('A');
+        } else {
+          td.style.background = 'red';
+          td.style.color = 'white';
+          $(td).text('B');
+        }
+      }
+    });
+
+    Handsontable.renderers.registerRenderer('numericalDataRenderer', function(instance, td, row, col, prop, value, cellProperties) {
+      Handsontable.renderers.TextRenderer.apply(this, arguments);
+      let row_ranges = me.get('rowRanges')
+
+      if (!isNaN(value)) {
+        let color_scale = d3.scaleLinear().domain(row_ranges[row])
+          .interpolate(d3.interpolateHsl)
+          .range([d3.rgb("#0000FF"), d3.rgb('#FFFFFF'), d3.rgb('#FF0000')]);
+        td.style.background = color_scale(value);
+        td.title = value;
+        $(td).css('font-size', 10);
+      }
+    });
+
     this.set('table', table);
     this.set('displayData', []);
   },
@@ -59,16 +97,6 @@ export default Component.extend({
   noData: Ember.computed('displayData.[]', function() {
     let d = this.get('displayData');
     return d.length == 0;
-  }),
-  rows: Ember.computed('displayData.[]', function() {
-    let features = {};
-    let data = this.get('displayData');
-    data.forEach(function(d) {
-      d.get('features').toArray().forEach(function(f) {
-        features[f.get('name')] = true;
-      });
-    });
-    return Object.keys(features);
   }),
   columns: Ember.computed('displayData.[]', function() {
     let data = this.get('displayData');
@@ -91,67 +119,129 @@ export default Component.extend({
     })
     return longest_row + 10;
   }),
-  data: Ember.computed('displayData.[]', 'selectedBlock', function() {
-    let rows = this.get('rows');
+  colHeaderHeight: Ember.computed('columns', function() {
     let cols = this.get('columns');
-    let selectedIndividual = this.get('selectedBlock');
-
-    let data = [];
-    if (selectedIndividual == null) {
-      rows.forEach(function(row_name) {
-        let d  = {};
-        Object.keys(cols).forEach(function(col_name) {
-          let ind = cols[col_name];
-          d[col_name] = "";
-          let features = ind.get('features').toArray().filter(function(x) {return x.get('name') == row_name});
-          if (features.length > 0) {
-            d[col_name] = features[0].get('value');
-          }
-        });
-        data.push(d);
-      });
-    } else {
-      let individual_vals = {};
-      rows.forEach(function(row_name) {
-        individual_vals[row_name] = "";
-        let features = selectedIndividual.get('features').toArray().filter(function(x) {return x.get('name') == row_name});
-        if (features.length > 0) {
-          individual_vals[row_name] = features[0].get('value');
+    let longest_row = 0;
+    let length_checker = $("#length_checker");
+    length_checker.css('font-weight', 'bold');
+    Object.keys(cols).forEach(function(col_name) {
+      let w = length_checker.text(col_name).width();
+      if (w > longest_row) {
+        longest_row = w;
+      }
+    });
+    return longest_row + 20;
+  }),
+  dataByRow: Ember.computed('displayData.[]', function() {
+    let nonNumerical = false;
+    let rows = {}
+    let cols = this.get('columns');
+    Object.keys(cols).forEach(function(col_name) {
+      let col = cols[col_name];
+      col.get('features').forEach(function(feature) {
+        let feature_name = feature.get('name');
+        if (rows[feature_name] == null) {
+          rows[feature_name] = {};
+        }
+        rows[feature_name][col_name] = feature.get('value');
+        
+        if (isNaN(feature.get('value'))) {
+          nonNumerical = true;
         }
       });
+    });
+    this.set('numericalData', !nonNumerical);
+    return rows;
+  }),
+  rows: Ember.computed('dataByRow', function() {
+    let data = this.get('dataByRow');
+    return Object.keys(data);
+  }),
+  abValues: Ember.computed('dataByRow', 'selectedBlock', function() {
+    let data = this.get('dataByRow');
+    let selectedBlock = this.get('selectedBlock');
+    let values = [];
 
-      rows.forEach(function(row_name) {
-        let d = {};
-        Object.keys(cols).forEach(function(col_name) {
-          let ind = cols[col_name];
-          d[col_name] = "";
-          let features = ind.get('features').toArray().filter(function(x) {return x.get('name') == row_name});
-          if (features.length > 0) {
-            d[col_name] = (features[0].get('value') == individual_vals[row_name])? 'A' : 'B';
-          }
-        });
-        data.push(d);
+    if (selectedBlock != null) {
+      let col_name = selectedBlock.get('datasetId').get('id') + ':' + selectedBlock.get('name');
+      Object.keys(data).forEach(function(row_name) {
+        values.push(data[row_name][col_name]);
       });
     }
+    return values;
+  }),
+  data: Ember.computed('displayData.[]', function() {
+    let cols = this.get('columns');
+    let rows = this.get('rows');
+    let dataByRow = this.get('dataByRow');
+
+    let data = [];
+    rows.forEach(function(row_name) {
+      let d  = {};
+      Object.keys(cols).forEach(function(col_name) {
+        d[col_name] = dataByRow[row_name][col_name];
+      });
+      data.push(d);
+    });
     return data;
+  }),
+  rowRanges: Ember.computed('dataByRow', function() {
+    let data = this.get('dataByRow');
+
+    let all_values = {};
+    Object.keys(data).forEach(function(row_name) {
+      let row = data[row_name];
+      if (all_values[row_name] == null) {
+        all_values[row_name] = [];
+      }
+      Object.keys(row).forEach(function(col_name) {
+        all_values[row_name].push(row[col_name]);
+      });
+    });
+
+    let ranges = [];
+    Object.keys(all_values).forEach(function(row_name) {
+      let row = all_values[row_name];
+      let min = Infinity;
+      let max = -Infinity;
+      let avg = 0;
+      let sum = 0;
+      row.forEach(function(x) {
+        sum += x;
+        if (x < min) {
+          min = x;
+        }
+        if (x > max) {
+          max = x;
+        }
+      });
+      avg = sum / row.length;
+      ranges.push([min, avg, max]);
+    });
+    return ranges;        
   }),
 
   updateTable: function() {
     let t = $("#observational-table");
     let rows = this.get('rows');
     let rowHeaderWidth = this.get('rowHeaderWidth');
+    let colHeaderHeight = this.get('colHeaderHeight');
     let table = this.get('table');
     let data = this.get('data');
 
     if (data.length > 0) {
       t.show();
       let columns = Object.keys(data[0]);
+      columns = columns.map(function(x) {
+        return '<div class="head">' + x + '</div>';
+      });
 
       for(let i=0; i<2; i++) {
         table.updateSettings({
           colHeaders: columns,
           rowHeaders: rows,
           rowHeaderWidth: rowHeaderWidth,
+          columnHeaderHeight: colHeaderHeight,
           data: data
         });
       }

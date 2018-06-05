@@ -1,11 +1,11 @@
-<div id="left-panel" class="left-panel-shown" style="height:100%; width: 400px; border-right:1px solid #ddd">
+<div id="left-panel" class="left-panel-shown" style="height:100%; width: 400px; border-right:1px solid #ddd; display: flex; flex-direction: column">
     <ul class="nav nav-tabs">
         <li class="active"><a data-toggle="tab" href="#left-panel-view">{{elem/icon-base name="picture"}} View</a></li>
         <li><a data-toggle="tab" href="#left-panel-explorer">{{elem/icon-base name="folder-open"}} Explorer</a></li>
         <li><a data-toggle="tab" href="#left-panel-upload">{{elem/icon-base name="cloud-upload"}} Upload</a></li>
     </ul>
     
-    <div class="tab-content">
+    <div class="tab-content" style="overflow: auto">
         <div id="left-panel-view" class="tab-pane fade in active">
             {{#elem/panel-container state="primary"}}
                 {{#elem/panel-heading icon="globe"}}
