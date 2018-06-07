@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <link rel="stylesheet" href="https://unpkg.com/mermaid@7.1.0/dist/mermaid.css">
+</head>
+
+  <body>
+
+    <script src="https://unpkg.com/mermaid@7.1.0/dist/mermaid.min.js"></script>
+
+    <script>
+mermaid.initialize({startOnLoad:true});
+    </script>
+
+<!-- h1,h2 generated from markdown :
+# Design
+## Draw-Map.js Data Structure Diagrams
+-->
+
+<h1>
+<a id="user-content-design" class="anchor" href="#design" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>
+Design
+</h1>
+<h2>
+<a id="user-content-stackjs-data-structure-diagrams" class="anchor" href="#stackjs-data-structure-diagrams" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>
+Stacks.js Data Structure Diagrams
+</h2>
+
+<link type="text/css" rel="Stylesheet" href="mermaid_classDiagram.css" />
+
+<!-- Note below about clearfix. -->
+<div  class="clearfix">
+
+<!-- based on text extracted from source via :
+cd ${MMVp}_be &&
+for i in Stack Stacked; do echo;  echo $i; sed -n "s/$i.prototype.//p" frontend/app/utils/stacks.js; done |
+  egrep -v '^ +\/\/|^ +\*|^ +/\*\*|^ +console.log'
+
+(replace-string " = function " "")
+(replace-string " = function" "")
+(query-replace-regexp "\\([sS]tack[a-z]*\\)\\." "    \\1 : ")
+  ;; ditto for Block
+
+ -->
+
+<p>Diagram Annotations</p>
+<ul>
+<li>A	Added for blocks layer</li>
+<li>0/1	suffix to split the diagram into separate columns</li>
+</ul>
+
+<div  class="clearfix">
+
+<div class="mermaid classDiagram" style="width: 100%;" >
+classDiagram
+    stacks .. Stack0 : [stackID 0..]
+    stacks : axes [axisName]
+    stacks : axesP [axisName]	A
+    stacks : blocks[axisName]	A
+    stacks : log()
+    stacks : append(stack)
+    stacks : insert(stack, i)
+    stacks : stackIDs()
+    stacks : sortLocation()
+
+    Stack .. Stacked0 : .axes[]
+
+    Stack : currentDrop
+    Stack : currentDrag
+    Stack : verify()
+    Stack : (static) axisStackIndex(axisID)
+    Stack : (static) axisStackIndex2(axisID)
+    Stack : childAxisNames(includeSelf)
+    Stack : childAxisNamesGrouped(includeSelf)
+    Stack : childAxes()
+    Stack : dataBlocks()
+    Stack : titleText()
+    Stack : add-Stack_add()
+    Stack : empty()
+    Stack : parentAxis()
+    Stack : parentAxisID()
+    Stack : parentAxesCount()
+    Stack : axisIDs()
+    Stack : toString()
+    Stack : log()
+    Stack : logElt()
+    Stack : verify()
+    Stack : location()
+    Stack : stackIndex()
+    Stack : sideClasses()
+
+    Stack : insert(stacked, i)
+    Stack : findIndex(axisName)
+    Stack : remove(axisName)
+    Stack : removeStacked1(axisName)
+    Stack : delete()
+    Stack : move(axisName, toStack, insertIndex)
+    Stack : shift(axisName, insertIndex)
+    Stack : contains(axisName)
+    Stack : dropIn(axisName, insertIndex, top, transition)
+    Stack : releasePortion(released)
+    Stack : dropOut(axisName)
+    Stack : calculatePositions()
+
+    Stack : (static) axisStack(axisName)
+    Stack : (static) axisStackIndexAll(axisName)
+
+    Stack : axisTransform(axisName)
+    Stack : axisTransformO(axisName)
+    Stack : redraw(t)
+    Stack : redrawAdjacencies()
+    Stack : extendedWidth()
+
+
+    Stack1 .. Stacked : .axes[]
+    Stacked .. Block0 : .blocks[]
+    Stacked : referenceBlock
+    Stacked : axisName
+    Stacked : mapName
+    Stacked : portion
+    Stacked : position
+    Stacked : flipped
+    Stacked : perpendicular
+    Stacked : stack
+    Stacked : blocks []	A	push, unshift (reference is [0])
+    Stacked : z
+
+    Stacked : referenceBlock
+    Stacked : axisName
+    Stacked : portion
+    Stacked : toString()
+    Stacked : log()
+    Stacked : logElt()
+    Stacked : getStack()
+    Stacked : axisName_match
+    Stacked : axisName_parent
+    Stacked : move()
+    Stacked : yOffset()
+    Stacked : yRange()
+    Stacked : domainCalc()
+    Stacked : getDomain()
+    Stacked : children(includeSelf)
+    Stacked : dataBlocks()
+    Stacked : axisTransform()
+    Stacked : extendedWidth()
+    Stacked : location() return checkIsNumber(oa.o[this.axisName])
+    Stacked : axisTransformO()
+
+
+    Block .. BlockRecord : .block
+    Block : axisName
+    Block : block
+    Block : parent	A	moved here from Stacked
+    Block : z
+    Block : getStack()
+    Block : log()
+
+    oa .. stacks1
+    oa : axes	 A	becomes axesP
+    oa : blocks	A
+
+
+</div>
+
+<!--
+
+/** not used */
+Stack.add(stackable)
+Stack.addAxis(axisName, portion)
+
+ -->
+
+<div  class="clearfix">
+
+<p>
+Notes :  may have :
+<ul>
+  <li>
+    reference with 0 or more blocks;
+  </li>
+  <li>
+    block which is its own reference (gm, or child waiting for parent arrival)
+  </li>
+</ul>
+</p>
+
+
+</div>
+
+<hr>
+<!-- Use either this, or class="clearfix" on the previous div. -->
+<div style="clear:both">
+</div>
+
+
+
+</body>
+</html>
