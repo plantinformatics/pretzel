@@ -29,6 +29,7 @@ Design
 Stacks.js Data Structure Diagrams
 </h2>
 
+<!-- seems like recent versions of mermaid css make this additional formatting unnecessary, and possibly not used. -->
 <link type="text/css" rel="Stylesheet" href="mermaid_classDiagram.css" />
 
 <!-- Note below about clearfix. -->
@@ -53,9 +54,14 @@ for i in Stack Stacked; do echo;  echo $i; sed -n "s/$i.prototype.//p" frontend/
 </ul>
 
 <div  class="clearfix">
+</div>
 
 <div class="mermaid classDiagram" style="width: 100%;" >
 classDiagram
+    oa .. stacks : .stacks
+    oa : axes	 A	becomes axesP
+    oa .. feature : z[axisID or blockID][featureId]
+
     stacks .. Stack0 : [stackID 0..]
     stacks : axes [axisName]
     stacks : axesP [axisName]	A
@@ -77,7 +83,6 @@ classDiagram
     Stack : childAxisNamesGrouped(includeSelf)
     Stack : childAxes()
     Stack : dataBlocks()
-    Stack : titleText()
     Stack : add-Stack_add()
     Stack : empty()
     Stack : parentAxis()
@@ -134,16 +139,22 @@ classDiagram
     Stacked : toString()
     Stacked : log()
     Stacked : logElt()
+    Stacked : getAxis()
     Stacked : getStack()
+    Stacked : referenceBlockS()
+    Stacked : (static) getStack(axisID)
+    Stacked : (static) getAxis(axisID)
     Stacked : axisName_match
     Stacked : axisName_parent
     Stacked : move()
     Stacked : yOffset()
     Stacked : yRange()
     Stacked : domainCalc()
+    Stacked : referenceDomain()
     Stacked : getDomain()
     Stacked : children(includeSelf)
     Stacked : dataBlocks()
+    Stacked : titleText()
     Stacked : axisTransform()
     Stacked : extendedWidth()
     Stacked : location() return checkIsNumber(oa.o[this.axisName])
@@ -153,15 +164,24 @@ classDiagram
     Block .. BlockRecord : .block
     Block : axisName
     Block : block
+    Block : axis	A	moved here from Stacked
+    Block : parentName	A	moved here from Stacked
     Block : parent	A	moved here from Stacked
     Block : z
+    Block : getAxis()
     Block : getStack()
     Block : log()
+    Block : axisTransformO()
+    Block : domainCalc()
 
-    oa .. stacks1
-    oa : axes	 A	becomes axesP
-    oa : blocks	A
 
+    BlockRecord : isViewed	added, with isSelected,  for data flow change
+    BlockRecord : isSelected
+    BlockRecord : view	A	
+
+
+    feature : location
+    feature : id
 
 </div>
 
@@ -174,6 +194,7 @@ Stack.addAxis(axisName, portion)
  -->
 
 <div  class="clearfix">
+</div>
 
 <p>
 Notes :  may have :
@@ -187,8 +208,10 @@ Notes :  may have :
 </ul>
 </p>
 
-
-</div>
+<p> Diagram drawn by :
+<a href="https://mermaidjs.github.io/">Mermaid</a>, 
+github <a href="https://github.com/knsv/mermaid">readme</a>
+</p>
 
 <hr>
 <!-- Use either this, or class="clearfix" on the previous div. -->
