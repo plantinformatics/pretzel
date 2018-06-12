@@ -19,6 +19,11 @@ export default DS.Model.extend({
    * and cleared by removing the block from the display.
    */
   isViewed: false,
+  /** undefined if ! isViewed, otherwise handle of Block in Stacked axis which displays this block.
+   * This attribute can split out into a mixin, in that case could merge with stacks.js : Block.
+   */
+  view : undefined,
+  
   /** when a block is selected, it is highlighted wherever it is displayed, and
    * it is used as the identifier for the block being edited in the panel
    * manage-block.hbs

@@ -31,6 +31,7 @@ var oa;
 /** Ownership of this may move to data component. */
 var axes;
 var axesP;
+let blocks;
 
 //- maybe change stacks to a class Stacks(), and instantiate wth new Stacks(oa)
 /** also vc is copied to stacks.
@@ -50,6 +51,8 @@ stacks.init = function (oa_)
     axesP =
       stacks.axesP = {};
 
+    blocks = stacks.blocks = {};
+
     axes =
       /** Reference to all (Stacked) Axes by axisName.
        * axes[x] is === either blocks[x] or axesP[x], not both.
@@ -61,11 +64,52 @@ stacks.init = function (oa_)
 
 /*----------------------------------------------------------------------------*/
 
-/**
- * @param parentAxis given if the block being added has a parent, in which case
- * it will be displayed on its parent's axis.
+/** Block is the data type of Stacked.blocks[] and Stacked.referenceBlock.
+ * @param block Ember Store record of block
+ *
+ * @param Attributes (not constructor params) :
+ * @param axis  axis on which this block is displayed, or is the reference for.
+ * @param parentName defined if the dataset of the block has a parent dataset,
+ * in which case it will be displayed on the parent's axis.  This name is used
+ * for matching if the parent block arrives after the child block.
+ * It is equivalent to block.get('dataset').get('parent').get('name').
+ * If parentName is undefined, then this block is the referenceBlock of its axis.
+ * @param parent undefined, or the block matching .parentName; i.e. it is the
+ * referenceBlock of the axis on which this block is displayed.
+ * @param z this block's data block.get('features') is copied into oa.z[blockId];
+ * this is a direct reference.
  */
-function Stacked(axisName, portion, parentAxis) {
+function Block(block) {
+  // provide .axisName for code in draw-map which may handle axes or blocks
+  let axisName = block.get('id');
+  this.axisName = axisName;
+  stacks.axes[axisName] =
+  stacks.blocks[axisName] = this;
+
+  this.block = block;
+  console.log("Stacked()", this, block, axisName);
+};
+Block.prototype.getAxis = function()
+{
+  return this.axis || (this.parent && this.parent.getAxis());
+};
+Block.prototype.getStack = function ()
+{
+  // return this.axis.stack;
+  //  - set .axis when adopt, or 
+  let axis = this.getAxis();
+  return axis.stack;  // or axis.getStack()
+};
+Block.prototype.log = function() {
+  console.log(
+    this.axisName, this.block.get('name'),
+    this.parentName,
+    (this.parent && this.parent.mapName) ? "parent:" + this.parent.mapName : ''
+    // this.parent.axisName
+  );
+};
+
+function Stacked(axisName, portion) {
   this.axisName = axisName;
   this.mapName = oa.cmName[axisName].mapName;  // useful in devel trace.
   /** Portion of the Stack height which this axis axis occupies. */
@@ -87,17 +131,32 @@ function Stacked(axisName, portion, parentAxis) {
   this.perpendicular = false;
   /** Reference to parent stack.  Set in Stack.prototype.{add,insert}(). */
   this.stack = undefined;
+  /** data blocks */
+  this.blocks = [];
   /* axis objects persist through being dragged in and out of Stacks. */
+  axesP[axisName] =
   oa.axes[axisName] = this;
-  if (! parentAxis)
-    axesP[axisName] =
-    oa.axes[axisName];
-  this.parent = parentAxis;
-  if (parentAxis)
-    console.log("Stacked()", this, parentAxis);
 };
+Stacked.prototype.referenceBlock = undefined;
 Stacked.prototype.axisName = undefined;
 Stacked.prototype.portion = undefined;
+/** So far Stacked and axis are 1:1; they are different concepts - the Stacked is 
+ * responsible for the interface with Stack (i.e. it is the thing which is
+ * stacked), and the axis concept is responsible for rendering which happens
+ * within the Stacked frame of reference; so it is a container / content
+ * pattern. They are bundled into a single class Stacked, but we could split out
+ * Axis as a separate class, either a mixin or a component, and in the latter
+ * case this function would return a reference to the separate Axis component.
+ * Both Block and Stacked implement getAxis(); this is used as an abstract
+ * interface which is implemented by both the parent (reference) and child
+ * blocks.  To refine further : Block could be split into Reference and Child
+ * block facets; some blocks (e.g. genetic maps) have both; the axis would be an
+ * attribute of the reference block.
+  */
+Stacked.prototype.getAxis = function()
+{
+  return this;
+};
 function positionToString(p)
 {
   return (p === undefined) ? ""
@@ -114,13 +173,28 @@ Stacked.prototype.toString = function ()
 };
 Stacked.prototype.log = function ()
 {
+  if (this.blocks.length && (this.blocks[0] === undefined))
+  {
+    console.log(this, this.blocks, '[0] is undefined');
+    this.blocks.splice(0, 1);
+  }
   console.log
   ("{axisName=", this.axisName, ":", this.mapName,
-   (this.parent && this.parent.mapName) ? "parent:" + this.parent.mapName : '',
    (this.z && this.z.scope) ? "scope:" + this.z.scope : '',
+   (this.referenceBlock && this.referenceBlock.get('name')),
    ", portion=", round_2(this.portion),
-   positionToString(this.position), this.stack,  "}");
+   positionToString(this.position), this.stack, 
+   this.blocks.map(function (b) { return b.axisName + b.block.get('name') + '/' + (b.parent ? b.parent.axisName : ''); } ),
+   "}");
   this.logElt();
+};
+Stacked.prototype.logBlocks = function ()
+{
+  for (let i=0; i < this.blocks.length; i++)
+  {
+    let b = this.blocks[i];
+    console.log(i, b.axisName, b.block.get('id'));
+  }
 };
 /** corresponds to svgContainer */
 const selectPrefix = "div#holder > svg > g";
@@ -129,14 +203,38 @@ Stacked.prototype.logElt = function ()
   let a = d3.select(selectPrefix + "> g.stack > g#id" + this.axisName + ".axis-outer");
   console.log("logElt", a.node());
 };
+/** S for stacks block, as distinct from the block record.
+ * @return the Block object corresponding to the block record .referenceBlock;
+ */
+Stacked.prototype.referenceBlockS = function ()
+{
+  // verification
+  if (this.referenceBlock.view != this.blocks[0])
+    breakPoint('referenceBlockS', this, this.referenceBlock && this.referenceBlock.view, this.blocks);
+  return this.blocks[0];
+};
 Stacked.prototype.getStack = function ()
 {
-  return this.stack || (this.parent && this.parent.stack);
+  return this.stack;
+};
+/** static */
+Stacked.getAxis = function (axisID)
+{
+  let block,
+  /** oa.axes[] contains Block-s also. Block implements getAxis() and getStack(). */
+  axis =
+    ((block = stacks.blocks[axisID]) && block.getAxis())
+    ||
+    oa.axes[axisID]
+  ;
+  return axis;
 };
 /** static */
 Stacked.getStack = function (axisID)
 {
-  let axis = oa.axes[axisID], s = axis && axis.getStack();
+  let axis = Stacked.getAxis(axisID),
+  /** oa.axes[] contains Block-s also. Block implements getStack(). */
+  s = axis && axis.getStack();
   return s;
 };
 Stacked.axisName_match =
@@ -146,24 +244,62 @@ Stacked.axisName_match =
  * This is static; for non-static @see .parent attribute of Stacked.
  * This is useful where axisName is used in geometry calculations, which may
  * be factored into Stacked.prototype., bypassing this function.
+ * @see Block.prototype.getAxis()
  */
-Stacked.axisName_parent =
+Block.axisName_parent =
   function (axisName)
 { 
     let 
-      a = oa.axes[axisName],
+      a = oa.stacks.blocks[axisName],
     parent = a && a.parent,
     parentName = parent && parent.axisName;
     return parentName || axisName ;
   };
 
+/** Move a block from one Stacked (axis) to another.
+ * @param this target
+ * @param source  Stacked to move from
+ * @param blockIndex index of block to move
+ */
+Stacked.prototype.move = function(source, blockIndex)
+{
+  if (source.blocks.length <= blockIndex)
+  {
+    console.log('move(): expected blocks.length', source.blocks.length, ' to be >', blockIndex);
+    source.log();
+  }
+  /** type is stacks:Block */
+  let aBlock = source.blocks[blockIndex];
+  console.log('move() before delete source.blocks', source, source.blocks, blockIndex, aBlock);
+  /** delete blockIndex element of source.blocks[]; */
+  let aBlockA = source.blocks.splice(0, 1);
+  if (aBlockA[0] !== aBlock)  // verification
+    breakPoint('move', aBlockA, '[0] !==', aBlock);
+  console.log('after delete', source.blocks);
+
+  this.blocks.push(aBlock);
+};
+
+/** Defer to the axis or parent's axis to calculate yOffset. */
+Block.prototype.yOffset = function ()
+{
+  let yOffset;
+  if (this.axis)
+  {
+    // console.log("yOffset via axis", this, this.axis);
+    yOffset = this.axis.yOffset();
+  }
+  else if (this.parent)
+  {
+    // console.log("yOffset via parent", this, this.parent);
+    yOffset = this.parent.yOffset();
+  }
+  return yOffset;
+};
+/** y offset of this axis, calculated from position of axis in stack, and yRange
+ * of stack. */
 Stacked.prototype.yOffset = function ()
 {
-  if (this.parent)
-  {
-    // console.log("yOffset", this, this.parent);
-    return this.parent.yOffset();
-  }
   let yRange = stacks.vc.yRange;
   let yOffset = yRange * this.position[0];
   if (Number.isNaN(yOffset))
@@ -177,7 +313,9 @@ Stacked.prototype.yRange = function ()
 {
   return stacks.vc.yRange * this.portion;
 };
-Stacked.prototype.domainCalc = function ()
+/** Calculate the domain of feature locations in the block named this.axisName.
+ */
+Block.prototype.domainCalc = function ()
 {
   let d = this.axisName, features = oa.z[d],
   blockAttr = oa.cmName[d];
@@ -194,53 +332,128 @@ Stacked.prototype.domainCalc = function ()
     breakPoint();
   return domain;
 };
+/** Traverse the blocks displayed on this axis, and return a domain which spans
+ * their domains.
+ */
+Stacked.prototype.domainCalc = function ()
+{
+  console.log('domainCalc', this, this.blocks);
+  let blockDomains = 
+    this.blocks.map(function (b) { return b.domain || (b.domain = b.domainCalc()); }),
+  /** refn : https://github.com/d3/d3-array/issues/64#issuecomment-356348729 */
+  domain = 
+    [
+      d3.min(blockDomains, array => d3.min(array)),
+      d3.max(blockDomains, array => d3.max(array))
+    ];
+  return domain;
+};
+/** @return the interval of the .referenceBlock of this axis.
+*/
+Stacked.prototype.referenceDomain = function ()
+{
+  let domain = this.referenceBlock.get('range');
+  return domain;
+};
+/** Calculate .domain if it is not calculated yet.
+ * Try referenceDomain() first - it should be defined, failing that use
+ * domainCalc().
+ * @return .domain
+ */
 Stacked.prototype.getDomain = function ()
 {
-  return this.domain || (this.domain = this.domainCalc());
+  return this.domain
+    || (this.domain = this.referenceDomain())
+    || (this.domain = this.domainCalc())
+  ;
 };
 
-/** 
- * @param includeSelf if true, append self name to the result.
- * @return an array of child axis names.
- * currently scanning - this can be made much faster by giving the parent a hash of children.
+/** Return an array of the blocks which are in this Stacked (axis).
+ * @param includeSelf if true, append self name (i.e. the referenceBlock) to the result.
+ * @param names true means return just the block names
+ * @return an array of child blocks / names.
  */
-Stacked.prototype.children = function (includeSelf)
+Stacked.prototype.children = function (includeSelf, names)
 {
-  let me = this, children = 
-    d3.keys(oa.axes).filter(function (a) { return oa.axes[a].parent == me; });
-  // console.log("children", this, children);
-  if (includeSelf)
-    children.push(this.axisName);
+  let children = this.blocks;
+  if (names)
+    children = children.map(function (a) { return a.block.get('name'); });
+  console.log("children", this, children);
+  if (! includeSelf)
+  {
+    // delete [0] element of children[]
+    if (names)
+      children.splice(0, 1);
+    else
+      // if ! names, then children === this.blocks, so make a copy,  don't delete from this.blocks[]
+      children = children.slice(1);
+  }
   return children;
 };
-Stack.prototype.childAxisNames = function (includeSelf)
+if (false)  // not required, possibly not up to date, replaced by .childBlocks(true)
+  Stack.prototype.childAxisNames = function (includeSelf)
 {
-  let children =
-    this.axes.reduce(function (children, a) { return children.concat(a.children(includeSelf)); }, []);
-  // console.log("childAxisNames", includeSelf, this, children);  this.log();
-  return children;
+    let children =
+      this.blocks.reduce(function (children, a) { return children.concat(a.children(includeSelf)); }, []);
+    // console.log("childAxisNames", includeSelf, this, children);  this.log();
+    return children;
+  };
+if (false)  // not required, possibly not up to date
+  /** Result is grouped by axis, i.e. array of axes, each axis being an array of child names.  */
+  Stack.prototype.childAxisNamesGrouped = function (includeSelf)
+{
+    let children = [].concat(
+      // repeated scans of this.axes[] by Stacked.prototype.children(), maybe maintain a list of children (blocks).
+      this.axes.map(function (a) { return a.children(includeSelf); })
+    );
+    // console.log("childAxisNamesGrouped", includeSelf, this, children);  this.log();
+    return children;
+  };
+/** Return an array of the blocks which are in this stack.
+ * (currently includes referenceBlock-s also).
+ * @param names true means return just the block names
+ */
+Stack.prototype.childBlocks = function (names)
+{
+  let me = this,
+  blocks  = d3.keys(stacks.blocks).filter(function (a) { return stacks.blocks[a].getStack() == me; } );
+  if (! names)
+    blocks = blocks.map(function (a) { return stacks.blocks[a]; } );
+  return blocks;
 };
-/** Result is grouped by axis, i.e. array of axes, each axis being an array of child names.  */
-Stack.prototype.childAxisNamesGrouped = function (includeSelf)
+Stacked.prototype.dataBlocks = function ()
 {
-  let children = [].concat(
-    // repeated scans of this.axes[] by Stacked.prototype.children(), maybe maintain a list of children (blocks).
-    this.axes.map(function (a) { return a.children(includeSelf); })
-  );
-  // console.log("childAxisNamesGrouped", includeSelf, this, children);  this.log();
-  return children;
+  return this.blocks;
 };
-Stack.prototype.childAxes = function ()
+/** @return all the blocks in this Stack, excluding parent blocks.
+ * Axes with a single non-parent block are included.
+ */
+Stack.prototype.dataBlocks = function ()
 {
-  return this.childAxisNames(true).map(function (a) { return oa.axes[a]; } );
+  /** set of all of this.axes, minus those which have a block referring to them as .parent */
+  let blockSet = new WeakSet(this.axes),
+  result;
+  this.axes.reduce(
+    function (result, a) {
+      let aParent = a.parent;
+      if (aParent && blockSet.has(aParent))
+        blockSet.delete(aParent);
+      return result;
+    },
+    blockSet);
+  result = this.axes.filter(function (a) {
+    return blockSet.has(a);
+  });
+  return result;
 };
-Stack.prototype.titleText = function ()
+Stacked.prototype.titleText = function ()
 {
-  return this.childAxisNames(false).map(function (a) {
-    let axisName = oa.axes[a].axisName,
-    cmName = oa.cmName[axisName];
-    return cmName.mapName + ":" + cmName.chrName;
-  } );
+  return this.children(false, false)
+    .map(function (block) {
+      let axisName = block.block.get('id'),
+      cmName = oa.cmName[axisName];
+      return cmName.mapName + ":" + cmName.chrName;
+    } );
 };
 
 /** Constructor for Stack type.
@@ -327,8 +540,7 @@ Stack.prototype.parentAxisID = function ()
  */
 Stack.prototype.parentAxesCount = function ()
 {
-  return this.axes.reduce(function (result, a) {
-    if (a.parent === undefined) result++; return result;}, 0);
+  return this.axes.length;
 };
 
 /** @return array of axisIDs of this Stack */
@@ -378,15 +590,24 @@ Stack.prototype.verify = function ()
         /** true if the parent of axis a is stack me.  */
         v1 = a.stack === me,
         /** children (blocks) of axis a, not including parent. */
-        c = a.children(false),
+        c = a.children(false, false),
         /** clear v2 if stack me is not the stack of one of the children c.  */
-        v2 = true;
-        c.map(function (c1) { let c1a = oa.axes[c1]; v2 &= c1a.stack === me; } );
+        v2 =
+          c.reduce(function (result, c1a) { return result && (c1a.getStack() === me); }, true );
         if (!v1 || !v2)
         {
           console.log("v1", v1, "v2", v2, axis, c);
           me.log();
           breakPoint();
+        }
+        /* this skips empty array elements anyway
+         * a.blocks.map(function (b) { if (! b) breakPoint(a, a.blocks, b);});
+         * so :
+         */
+        if (a.blocks.length && (a.blocks[0] === undefined))
+        {
+          console.log(a, a.blocks, '[0] is undefined');
+          a.blocks.splice(0, 1);
         }
       });
 };
@@ -418,7 +639,13 @@ stacks.log =
   };
 Stack.verify = function()
 {
-  stacks.forEach(function(s){s.verify();});
+  try {
+    stacks.forEach(function(s){s.verify();});
+  }
+  catch (e)
+  {
+    breakPoint('Stack.verify', e, this);
+  }
 };
 /** Append the given stack to stacks[]. */
 stacks.append = function(stack)
@@ -439,6 +666,12 @@ stacks.stackIDs = function()
     });
   return sis;
 };
+/** @return an array of the blockIds of the reference blocks of all axes (in all
+ * stacks).  */
+stacks.axisIDs = function()
+{
+  return d3.keys(this.axesP);
+}
 /** Sort the stacks by the x position of their Axes. */
 stacks.sortLocation = function()
 {
@@ -483,6 +716,10 @@ Stack.prototype.sideClasses = function ()
 Stack.axisStackIndex = function (axisID)
 {
   let s = Stacked.getStack(axisID), i = s  ? s.stackIndex() : -1;
+  if (i == -1)
+  {
+    breakPoint('Stack.axisStackIndex', axisID);
+  }
   return i;
 };
 /** Find stack of axisID and return the index of that stack within stacks.
@@ -520,11 +757,11 @@ Stack.axisStackIndex2 = function (axisID)
 if (false)  /** not used - @see Stack_add()  */
   Stack.prototype.add = function(stackable)
 {
-  this.axes.push(stackable);
-  stackable.stack = this;
-  oa.axes[stackable.axisName] = stackable;
+    this.axes.push(stackable);
+    stackable.stack = this;
+    oa.axes[stackable.axisName] = stackable;
     console.log("Stack.prototype.add", this, stackable);
-};
+  };
 /** not used */
 Stack.prototype.addAxis = function(axisName, portion)
 {
@@ -772,15 +1009,18 @@ Stack.prototype.shift = function (axisName, insertIndex)
     return s;
   }
 };
-/** @return true if this Stack contains axisName
+/** @param axisName may be a blockId, @see featureStackAxes()
+ * @return true if this Stack contains axisName
  */
 Stack.prototype.contains = function (axisName)
 {
-  /** or  Stacked.getStack(axisName) */
-  let axis = axesP[axisName] || oa.axes[axisName].parent,
-  stack = axis.stack;
+  let stack = Stacked.getStack(axisName);
+  /** or  
+   let axis = axesP[axisName] || oa.axes[axisName].parent,
+   stack = axis.stack;
+   */
   if (! stack)
-    console.log("contains", axisName, axesP[axisName], oa.axes[axisName].parent, axis);
+    console.log("contains", axisName, axesP[axisName], oa.axes[axisName].parent);
   return this === stack;
 };
 /** Insert the named axis into this.axes[] at insertIndex (before if top, after
@@ -845,7 +1085,7 @@ Stack.prototype.dropIn = function (axisName, insertIndex, top, transition)
       stacks.log();
       breakPoint();
     }
-    let n = this.parentAxesCount(), // axes.length,
+    let n = this.parentAxesCount(),
     factor = (n-1)/n;
     inserted.portion = 1/n;
     this.axes.forEach(
@@ -925,7 +1165,7 @@ Stack.prototype.calculatePositions = function ()
     {
       a.position = [sumPortion,  sumPortion += a.portion];
     });
-    oa.eventBus.send('stackPositionsChanged', this);
+  oa.eventBus.send('stackPositionsChanged', this);
 };
 /** find / lookup Stack of given axis.
  * This is now replaced by axes[axisName]; could be used as a data structure
@@ -977,51 +1217,58 @@ Stack.axisStackIndexAll = function (axisName)
   }
   return as[0];
 };
-/** @return transform : translation, calculated from axis position within stack.
- */
-Stacked.prototype.axisTransform = function ()
+if (false)  // replaced by axisTransformO
+  /** @return transform : translation, calculated from axis position within stack.
+   */
+  Stacked.prototype.axisTransform = function ()
 {
-  if (this.parent)
-  {
-    console.log("axisTransform", this, this.parent);
-    return this.parent.axisTransform();
-  }
-  let yRange = stacks.vc.yRange;
-  if (this.position === undefined || yRange === undefined)
-  {
-    console.log("axisTransform()", this.axisName, this, yRange);
-    breakPoint();
-  }
-  let yOffset = this.yOffset(),
-  yOffsetText = Number.isNaN(yOffset) ? "" : "," + this.yOffset();
-  let scale = this.portion,
-  scaleText = Number.isNaN(scale) ? "" : " scale(" + scale + ")";
-  /** Will be undefined when axis is dragged out to form a new Stack, which
-   * is not allocated an x position (via xScale()) until dragended().  */
-  let xVal = x(this.axisName);
-  if (xVal === undefined)
-    xVal = oa.o[this.axisName];
-  checkIsNumber(xVal);
-  xVal = Math.round(xVal);
-  let transform =
-    [
-      "translate(" + xVal, yOffsetText, ")",
-      scaleText
-    ].join("");
-  console.log("axisTransform", this, transform);
-  return transform;
-};
-/** Get stack of axis, return transform. */
-Stack.prototype.axisTransform = function (axisName)
+    if (this.parent)
+    {
+      console.log("axisTransform", this, this.parent);
+      return this.parent.axisTransform();
+    }
+    let yRange = stacks.vc.yRange;
+    if (this.position === undefined || yRange === undefined)
+    {
+      console.log("axisTransform()", this.axisName, this, yRange);
+      breakPoint();
+    }
+    let yOffset = this.yOffset(),
+    yOffsetText = Number.isNaN(yOffset) ? "" : "," + this.yOffset();
+    let scale = this.portion,
+    scaleText = Number.isNaN(scale) ? "" : " scale(" + scale + ")";
+    /** Will be undefined when axis is dragged out to form a new Stack, which
+     * is not allocated an x position (via xScale()) until dragended().  */
+    let xVal = x(this.axisName);
+    if (xVal === undefined)
+      xVal = oa.o[this.axisName];
+    checkIsNumber(xVal);
+    xVal = Math.round(xVal);
+    let transform =
+      [
+        "translate(" + xVal, yOffsetText, ")",
+        scaleText
+      ].join("");
+    console.log("axisTransform", this, transform);
+    return transform;
+  };
+if (false)  // replaced by axisTransformO
+  /** Get stack of axis, return transform. */
+  Stack.prototype.axisTransform = function (axisName)
 {
-  let a = oa.axes[axisName];
-  return a.axisTransform();
-};
+    let a = oa.axes[axisName];
+    return a.axisTransform();
+  };
 /** Get stack of axis, return transform. */
 Stack.prototype.axisTransformO = function (axisName)
 {
-  let a = oa.axes[axisName];
-  return a.axisTransformO();
+  let 
+    /* or : ((block = stacks.blocks[axisName]) && block.axisTransformO())
+     * || ((axis = axes[axisName]) && axis.axisTransformO())
+     */
+    a = axes[axisName],
+  axis = a.getAxis();
+  return axis.axisTransformO();
 };
 /** For each axis in this Stack, redraw axis, brush, foreground paths.
  * @param t transition in which to make changes
@@ -1206,17 +1453,21 @@ stacks.x = x;
 
 
 Stacked.prototype.location = function() { return checkIsNumber(oa.o[this.axisName]); };
+Block.prototype.axisTransformO = function ()
+{
+  let transform;
+  if (this.parent)
+    transform = this.parent.axisTransformO();
+  else
+    breakPoint("axisTransformO", this, this.parent);
+  return transform;
+};
 /** Same as .axisTransform(), but use o[d] instead of x(d)
  * If this works, then the 2 can be factored.
  * @return transform : translation, calculated from axis position within stack.
  */
 Stacked.prototype.axisTransformO = function ()
 {
-  if (this.parent)
-  {
-    console.log("axisTransformO", this, this.parent);
-    return this.parent.axisTransformO();
-  }
   let yRange = stacks.vc.yRange;
   if (this.position === undefined || yRange === undefined)
   {
@@ -1257,4 +1508,4 @@ Stacked.prototype.axisTransformO = function ()
 
 /*----------------------------------------------------------------------------*/
 
-export  { Stacked, Stack, stacks, xScaleExtend, axisRedrawText } ;
+export  { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText } ;

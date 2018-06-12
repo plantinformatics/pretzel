@@ -123,7 +123,7 @@ Viewport.prototype.calc = function(oa)
   /* Based on stacks.length, use axisIDs.length until the stacks are formed.
    * See also DropTarget.size.w */
   this.xDropOutDistance =
-    xDropOutDistance = viewPort.w/(oa.axisIDs.length*6);
+    xDropOutDistance = viewPort.w/(oa.stacks.length*6);
 
   this.dragLimit =
     dragLimit = {min:-50, max:graphDim.w+70};

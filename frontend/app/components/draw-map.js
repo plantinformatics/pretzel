@@ -14,7 +14,7 @@ import { eltWidthResizable, noShiftKeyfilter, eltClassName  } from '../utils/dom
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
 import { Viewport } from '../utils/draw/viewport';
 import {  Axes, /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId  }  from '../utils/draw/axis';
-import { Stacked, Stack, stacks, xScaleExtend, axisRedrawText } from '../utils/stacks';
+import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText } from '../utils/stacks';
 import { updateRange } from '../utils/stacksLayout';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../utils/stacks-drag';
 import { round_2, checkIsNumber} from '../utils/domCalcs';
@@ -386,6 +386,11 @@ export default Ember.Component.extend(Ember.Evented, {
 
   /*------------------------------------------------------------------------------*/
 
+  peekBlock : function(blockId) {
+    let blockService = this.get('blockService');
+    return blockService.peekBlock(blockId);
+  },
+
   receivedBlock : function (id, block) {
     console.log('receivedBlock', this, id, block);
     // copied from dataObserver() (similar to drawPromisedChr()) - can simplify and rename ch -> block, chr -> blockId, 
@@ -463,7 +468,8 @@ export default Ember.Component.extend(Ember.Evented, {
 
     oa.stacks = stacks;
     stacks.init(oa);
-    oa.axes = stacks.axes;
+    // stacks.axes[] is a mix of Stacked & Block; shouldn't be required & planning to retire it in these changes.
+    oa.axes = stacks.axesP;
     oa.axesP = stacks.axesP;
 
     /** Reference to all datasets by name.
@@ -478,16 +484,21 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
 
-    /**  oa.axisIDs is an array, containing the axis ID-s (i.e. chr names made
+    /**  oa.axisIDs is an array, containing the block ID-s (i.e. chr names made
      *  unique by prepending their map name).
      * The array is not ordered; the stack order (left-to-right) is recorded by
      * the order of oa.stacks[].
+     * This is all blocks, not just axesP (the parent / reference blocks).
+     * @see service/data/blocks.js:viewed(), which can replace oa.axisIDs[].
+     * @see stacks.axisIDs(), slight difference : blocks are added to
+     * oa.axisIDs[] by receiveChr() before they are added to stacks;
      */
     console.log("oa.axisIDs", oa.axisIDs, source);
     /** axisIDs are <mapName>_<chromosomeName> */
     if ((source == 'dataReceived') || oa.axisIDs)
     {
       // append each element of myDataKeys[] to oa.axisIDs[] if not already present.
+      // if (false)  // later limit it to axesP[], exclude blocks[]
       myDataKeys.forEach(function (axisID) { axisIDAdd(axisID); } );
     }
     else if ((myDataKeys.length > 0) || (oa.axisIDs === undefined))
@@ -1050,7 +1061,7 @@ export default Ember.Component.extend(Ember.Evented, {
     /** For all Axes, store the x value of its axis, according to the current scale. */
     function collateO() {
       console.log("collateO", oa.axisIDs.length, oa.axisIDs);
-      oa.axisIDs.forEach(function(d){
+      oa.stacks.axisIDs().forEach(function(d){
         let o = oa.o;
         if (trace_stack > 1)
           console.log(d, axisId2Name(d), o[d], stacks.x(d));
@@ -1059,10 +1070,27 @@ export default Ember.Component.extend(Ember.Evented, {
         if (o[d] === undefined) { breakPoint("collateO"); }
       });
     }
+    // Place new data blocks in an existing or new axis.
     oa.axisIDs.forEach(function(d){
+    // for (let d in oa.stacks.axes) {
+      /** ensure that d is shown in an axis & stack.
+       * dBlock should be !== undefined.
+       */
+      let dBlock = me.peekBlock(d),
+      sBlock = oa.stacks.blocks[d],
+      addedBlock = ! sBlock;
+      if (! sBlock) {
+        oa.stacks.blocks[d] = sBlock = new Block(dBlock);
+        dBlock.set('view', sBlock);
+      }
       let s = Stacked.getStack(d);
+      // verification
+      if (addedBlock == (s !== undefined))
+        breakPoint(d, 'addedBlock', addedBlock, sBlock, 'already in stack', s);
+      if (s && ! dBlock.get('view'))
+        console.log(d, 'has stack', s, 'but no axis', dBlock);
       // if axisID d does not exist in stacks[], add a new stack for it.
-      if (s === undefined)
+      if (! s)
       {
         let zd = oa.z[d],
         dataset = zd.dataset,
@@ -1070,12 +1098,14 @@ export default Ember.Component.extend(Ember.Evented, {
         parentName = parent && parent.get('name'),  // e.g. "myGenome"
         parentId = parent && parent.get('id'),  // same as name
         namespace = dataset && dataset.get('namespace'),
+        /** undefined or axis of parent block of d. */
         parentAxis
         ;
         Stack.verify();
 
         console.log("zd", zd, dataset && dataset.get('name'), parent, parentName, parentId, namespace);
           // zd.  scope, featureType, , namespace
+        // if block has a parent, find a block with name matching parentName, and matching scope.
         if (parentName)
         {
           /** this is alternative to matchParentAndScope() - direct lookup. */
@@ -1097,15 +1127,39 @@ export default Ember.Component.extend(Ember.Evented, {
             console.log(block.scope, block.featureType, block.dataset.get('name'), block.dataset.get('namespace'), "parentAxis", parentAxis);
           }
         }
+
+        let sd;
+        /** if any children loaded before this, adopt them */
+        let adopt;
+        /** Use the stack of the first child to adopt.
+         * First draft created a new stack, this may transition better.
+         */
+        let adopt0;
+
+        if (! parentAxis)
       {
         // initial stacking : 1 axis per stack, but later when db contains Linkage
         // Groups, can automatically stack Axes.
-        let sd = new Stacked(d, 1, parentAxis);
+        sd = new Stacked(d, 1, parentAxis); // parentAxis === undefined
+          sd.referenceBlock = dBlock;
+          console.log('before push sd', sd, sd.blocks, sBlock);
+          sd.logBlocks();
+          if (sd.blocks.length && sd.blocks[0] === sBlock)
+            breakPoint('sBlock already in sd.blocks', sd.blocks);
+          else
+          {
+            sd.blocks.push(sBlock);
+            console.log('after push', sd.blocks);
+            sd.logBlocks();
+          }
+          // .parent of referenceBlock is undefined.
+        	sBlock.axis = sd;
+          if (sBlock !== sd.referenceBlockS())
+            console.log('sBlock', sBlock, ' !== sd.referenceBlockS()',  sd.referenceBlockS());
 
-        /** if any children loaded before this, adopt them */
-        let adopt = 
+          adopt = 
           d3.keys(oa.axesP).filter(function (d2) {
-            let a = oa.axesP[d2];
+            let a = oa.stacks.blocks[d2]; //  could traverse just axesP[] and get their reference
             let match = 
               (d != d2) &&  // not self
               ! a.parent && (a.parentName == dataset.get('id')) &&
@@ -1118,20 +1172,21 @@ export default Ember.Component.extend(Ember.Evented, {
             return match;
           });
 
-        /** Use the stack of the first child to adopt.
-         * First draft created a new stack, this may transition better.
-         */
-        let adopt0;
         if (adopt.length)
-        {          
+        {
           console.log("adopt", adopt);
-          let d4 = adopt0 = adopt.shift();
-          let a = oa.axesP[d4];
+          adopt0 = adopt.shift();
+          let a = oa.axesP[adopt0];
           a.stack.log();
+          /** stacks:Block of the block being adopted */
+          let aBlock = a.referenceBlockS();
+          sd.move(a, 0);
+
+          delete oa.axesP[adopt0];
           // a.axisName = d;
           a.parent = sd;
           a.stack.add(sd);
-          console.log(d4, a, sd, oa.axesP[a.axisName]);
+          console.log(adopt0, a, sd, oa.axesP[a.axisName]);
           sd.stack.log();
 
           sd.scale = a.scale;
@@ -1175,17 +1230,52 @@ export default Ember.Component.extend(Ember.Evented, {
           checkS.forEach(function(b,i) {console.log(b,i,b.__data__); } );
           // logSelectionNodes(checkS);
         }
+        }
 
+          // verification : sd is defined iff this block doesn't have a parent axis and is not adopting a block with an axis.
+          if ((sd === undefined) != ((parentAxis || adopt0) === undefined))
+            console.log('sd', sd, parentAxis, adopt0);
         let
-        /** blocks which have a parent axis do not need a Stack. */
-        newStack = parentAxis || adopt0 ? undefined : new Stack(sd);
+        /** blocks which have a parent axis do not need a Stack.
+         * sd is defined if we need a new axis and hence a new Stack.
+         */
+        newStack = sd && new Stack(sd);
         if (parentAxis)
         {
           console.log("pre-adopt", parentAxis, d, parentName);
-          parentAxis.stack.add(sd);
+          console.log('before push parentAxis', parentAxis, parentAxis.blocks, sBlock);
+          parentAxis.logBlocks();
+          parentAxis.blocks.push(sBlock);
+          console.log('after push', parentAxis.blocks);
+          parentAxis.logBlocks();
+          sBlock.axis = parentAxis;
+          sBlock.parent = parentAxis.referenceBlockS();
           let aStackS1 = oa.svgContainer.select("g.axis-outer#" + eltId(parentAxis.axisName));
           let axisTitleS = aStackS1.select("g.axis-all > text");
           axisTitleFamily(axisTitleS);
+        }
+        else if (! adopt0)
+        {
+          /** handle GM-s and reference.
+          * : when reference arrives before any children : no .parent.
+          * Difference : GM has namespace and features;  reference has range
+           */
+          let isReference = dBlock.get('range') !== undefined;
+          // if (! isReference)
+          /* GM has no parent/child separation; it is its own reference and data block.  */
+          // set above : sd.referenceBlock = dBlock;
+          // sBlock.parent = sd;   //-	.parent should be Block not Stacked
+          // could push() - seems neater to place the reference block first.
+          console.log('before unshift sd', sd, sd.blocks, sBlock);
+          if (sd.blocks.length && sd.blocks[0] === sBlock)
+            console.log('sBlock already in sd.blocks', sd.blocks);
+          else
+          {
+            sd.logBlocks();
+            sd.blocks.unshift(sBlock);
+            console.log('after unshift', sd.blocks);
+            sd.logBlocks();
+          }
         }
         /** to recognise parent when it arrives.
          * not need when parentAxis is defined.
@@ -1193,9 +1283,13 @@ export default Ember.Component.extend(Ember.Evented, {
         if (parentName && ! parentAxis)
         {
           console.log(sd, ".parentName", parentName);
-          sd.parentName = parentName;
+          sBlock.parentName = parentName;
         }
+          if (sBlock) { sBlock.z = oa.z[d]; }
+        if (sd)
         sd.z = oa.z[d];  // reference from Stacked axis to z[axisID]
+
+          // newStack is only defined if sd is defined which is only true if ! parentAxis
         if (newStack)
         {
           console.log("oa.stacks.append(stack)", d, newStack.stackID, oa.stacks);
@@ -1204,15 +1298,24 @@ export default Ember.Component.extend(Ember.Evented, {
           newStack.calculatePositions();
         }
 
+        if (! parentAxis)
+          {
         adopt.map(function (d3) {
+          /** axis being adopted */
             let a = oa.axesP[d3];
           a.parent = sd;
-          /** save a.stack before add() changes it */
+          /** oldStack will be deleted. `a` will become unreferenced. */
           let oldStack = a.stack;
-          sd.stack.add(a);
-          console.log(d3, a, sd, oa.axesP[a.axisName]);
+
+          /** re-use the Block being adopted. */
+          let aBlock = a.referenceBlockS();
+          sd.move(a, 0);
+          //	-	check that oldStack.delete() will delete the (Stacked) a
+
+          console.log(d3, a, aBlock, sd, oa.axesP[a.axisName]);
           sd.stack.log();
           delete oa.axesP[a.axisName];
+          oa.stacks.blocks[a.axisName] = aBlock;
           if (! oldStack)
             console.log("adopted axis had no stack", a, a.axisName, oa.stacks);
           else
@@ -1505,8 +1608,17 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
 //-components/stacks 
-    oa.axisIDs.forEach(function(d) {
-      let a = oa.axes[d],
+    /* for each axis :
+     * calculate its domain if not already done; 
+     * ensure it has a y scale,
+     *   make a copy of the y scale - use 1 for the brush
+     */
+    oa.stacks.axisIDs().forEach(function(d) {
+      let a = oa.axes[d];
+      // now a is Stacked not Block, so expect ! a.parent
+      if (a.parent && ! a.parent.getDomain)
+        breakPoint('domain and ys', d, a, a.parent);
+      let
       /** similar domain calcs in resetZoom().  */
       domain = a.parent ? a.parent.getDomain() : a.getDomain();
       if (false)      //  original, replaced by domainCalc().
@@ -2059,7 +2171,7 @@ export default Ember.Component.extend(Ember.Evented, {
     function axisTitleChildren(chrID)
     {
       let cn=oa.cmName[chrID],
-      children = oa.axes[chrID].stack.titleText();
+      children = oa.stacks.blocks[chrID].getAxis().titleText();
       return children;
     }
 
@@ -2075,8 +2187,20 @@ export default Ember.Component.extend(Ember.Evented, {
     function axisTitleFamily(axisTitleS) {
       axisTitleS
       .text(axisTitle /*String*/)
-      .attr('y', '-30px')
+      // shift upwards if >1 line of text
+        .each(function (d) {
+          let axis = Stacked.getAxis(d),
+          length = axis && axis.blocks.length;
+          if (length && length > 1)
+          {
+            /** -12 is the default;  -30 looks OK for 2 rows of text. */
+            let y = '' + (-12 - ((length-1) * 18));
+            d3.select(this)
+              .attr('y', y + 'px');
+          }
+        })
       ;
+
     axisTitleS.selectAll("tspan")
       .data(axisTitleChildren)
       .enter()
@@ -2091,19 +2215,20 @@ export default Ember.Component.extend(Ember.Evented, {
         return colour;
       })
     ;
-    }
+    };
 
 
-    ;
+
     axisTitleS
         .each(configureAxisTitleMenu);
     let axisSpacing = (axisXRange[1]-axisXRange[0])/stacks.length;
     let verticalTitle;
-    if ((verticalTitle = someAxesHaveChildBlocks || (axisSpacing < 90)))
+    if ((verticalTitle = axisSpacing < 90))
     {
       // first approx : 30 -> 30, 10 -> 90.  could use trig fns instead of linear.
       let angle = (90-axisSpacing);
       if (angle > 90) angle = 90;
+      angle = -angle;
       // apply this to all consistently, not just appended axis.
       // Need to update this when ! verticalTitle, and also 
       // incorporate extendedWidth() / getAxisExtendedWidth() in the
@@ -2112,9 +2237,9 @@ export default Ember.Component.extend(Ember.Evented, {
         axisG.merge(axisS).selectAll("g.axis-all > text");
       axisTitleA
         .style("text-anchor", "start")
-        .attr("transform", "rotate(-"+angle+")");
+        .attr("transform", "rotate("+angle+")");
     }
-    svgRoot.classed("verticalTitle", verticalTitle);
+    svgRoot.classed("verticalTitle", verticalTitle || someAxesHaveChildBlocks);
 
 //- moved to ../utils/draw/axis.js : yAxisTextScale(),  yAxisTicksScale(),  yAxisBtnScale()
 
@@ -2770,8 +2895,8 @@ export default Ember.Component.extend(Ember.Evented, {
 
       for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
-        fAxis_s0 = s0.childAxes(),
-        fAxis_s1 = s1.childAxes();
+        fAxis_s0 = s0.childBlocks(),
+        fAxis_s1 = s1.childBlocks();
         if (fAxis_s0.length === 0 || fAxis_s1.length === 0)
         {
           console.log("fAxis_s0,1.length", fAxis_s0.length, fAxis_s1.length);
@@ -2928,8 +3053,8 @@ export default Ember.Component.extend(Ember.Evented, {
       let stacks = oa.stacks;
       for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
         let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
-        fAxis_s0 = s0.childAxes(),
-        fAxis_s1 = s1.childAxes();
+        fAxis_s0 = s0.childBlocks(),
+        fAxis_s1 = s1.childBlocks();
         if (trace_adj > 2)
         {
           console.log('collateAdjacentAxes', stackIndex, fAxis_s0, stackIndex+1, fAxis_s1);
@@ -2970,13 +3095,8 @@ export default Ember.Component.extend(Ember.Evented, {
     //-gd
     function axisId2Name(axisID)
     {
-      let axes = oa.axes;
-      if (axisID === undefined || axes[axisID] === undefined)
-      {
-        console.log(axes, axisID);
-        breakPoint();
-      }
-      return axes[axisID].mapName;
+      let axis = Stacked.getAxis(axisID);
+      return axis && axis.mapName;
     }
 //-stacks
     function log_adjAxes()
@@ -3114,7 +3234,7 @@ export default Ember.Component.extend(Ember.Evented, {
                         let // aliasGroupName = featureA.aliasGroupName,
                           direction = axisName < aj,
                         axes = oa.axes,
-                        axisName_ = axes[axisName],
+                        axisName_ = axes[axisName] || stacks.blocks[axisName],
                         aj_ = axes[aj],
                         featureToAxis = [
                           {f: featureName, axis: axisName_},
@@ -3346,17 +3466,15 @@ export default Ember.Component.extend(Ember.Evented, {
       return fAxis_s ;
     }
     /** A line between a feature's location in adjacent Axes.
-     * @param k1, k2 indices into axisIDs[]
+     * @param ak1, ak2 block IDs
      * @param d feature name
      */
-    function featureLine2(k1, k2, d)
+    function featureLine2(ak1, ak2, d)
     {
       let
-        o = oa.o,
-        ak1 = oa.axisIDs[k1],
-        ak2 = oa.axisIDs[k2];
-      return line([[o[ak1], featureY(k1, d)],
-                   [o[ak2], featureY(k2, d)]]);
+        o = oa.o;
+      return line([[o[ak1], featureY_(ak1, d)],
+                   [o[ak2], featureY_(ak2, d)]]);
     }
     /**  Return the x positions of the given axes; if the leftmost is split, add
      *  its width to the corresponding returned axis position.
@@ -3404,8 +3522,8 @@ export default Ember.Component.extend(Ember.Evented, {
     function featureLineS2(ak1, ak2, d1, d2)
     {
       let o = oa.o,
-      axis1 = oa.axes[ak1],
-      axis2 = oa.axes[ak2],
+      axis1 = Stacked.getAxis(ak1),
+      axis2 = Stacked.getAxis(ak2),
       /** x endpoints of the line;  if either axis is split then the side closer the other axis is used.  */
       xi = inside(ak1, ak2, true);
       let l;
@@ -3439,8 +3557,8 @@ export default Ember.Component.extend(Ember.Evented, {
       let o = oa.o,
       xi = inside(ak1, ak2, false),
       oak = xi, // o[ak1], o[ak2]],
-      axis1 = oa.axes[ak1],
-      axis2 = oa.axes[ak2],
+      axis1 = Stacked.getAxis(ak1),
+      axis2 = Stacked.getAxis(ak2),
       my = [[featureY_(ak1, d[0]), featureY_(ak1, d[1])],
             [featureY_(ak2, d[2]), featureY_(ak2, d[3])]];
       let sLine;
@@ -3520,14 +3638,17 @@ export default Ember.Component.extend(Ember.Evented, {
                    [+xOffset + shiftRight, akYs]]);
     }
     /** Similar to @see featureLine2().
-     * @param k index into axisIDs[]
+     * Only used in path_pre_Stacks() which will is now discarded;
+     * the apparent difference is the param xOffset, to which path_pre_Stacks()
+     * passed 5.
+     * @param ak blockId containing feature
      * @param d feature name
      * @param xOffset add&subtract to x value, measured in pixels
      */
-    function featureLine(k, d, xOffset)
+    function featureLine(ak, d, xOffset)
     {
-      let ak = oa.axisIDs[k],
-      akY = featureY(k, d);
+      let
+      akY = featureY_(ak, d);
       let o = oa.o;
       return line([[o[ak]-xOffset, akY],
                    [o[ak]+xOffset, akY]]);
@@ -3814,46 +3935,14 @@ export default Ember.Component.extend(Ember.Evented, {
       return r;
     }
 
-    // Returns an array of paths (links between Axes) for a given feature.
-    // This predates the addition of stacks; probably no features here which are
-    // not in the later functions path(), pathU().
-    function path_pre_Stacks(d) { // d is a feature
-      let r = [];
-      let z = oa.z, pathFeatures = oa.pathFeatures;
-
-      for (let k=0; k<oa.axisIDs.length-1; k++) {
-        let f_k  = oa.axisIDs[k],
-        f_k1 = oa.axisIDs[k+1];
-        if (d in z[f_k] && d in z[f_k1]) { // if features is in both Axes
-          //Multiple features can be in the same path
-          let sLine = featureLine2(k, k+1, d);
-          //pathFeatures[sLine][d] = 1;
-          if(pathFeatures[sLine] != null){
-            pathFeatures[sLine][d] = 1;
-          } else {
-            pathFeatures[sLine]= {};
-            pathFeatures[sLine][d] = 1;
-          }
-          r.push(sLine);
-        }
-        else if (oa.drawOptions.showAll) {
-          if (d in z[f_k]) { 
-            r.push(featureLine(k, d, 5));
-          }
-          if (d in z[f_k1]) {
-            r.push(featureLine(k+1, d, 5));
-          }
-        }
-      }
-      return r;
-    }
 
     /** Calculate relative feature location in the axis.
      * Result Y is relative to the stack, not the axis,
      * because .foreground does not have the axis transform (Axes which are ends
      * of path will have different Y translations).
      *
-     * @param axisID name of axis  (exists in axisIDs[])
+     * @param axisID name of axis or block  (if it is an axis it will be in axisIDs[])
+     * This parameter is the difference with the original featureY() which this function replaces.
      * @param d feature name
      */
     function featureY_(axisID, d)
@@ -3861,13 +3950,13 @@ export default Ember.Component.extend(Ember.Evented, {
       // z[p][f].location, actual position of feature f in the axis p, 
       // y[p](z[p][f].location) is the relative feature position in the svg
       // ys is used - the y scale for the stacked position&portion of the axis.
-      let parentName = Stacked.axisName_parent(axisID),
+      let parentName = Block.axisName_parent(axisID),
       ysa = oa.ys[parentName],
       /** if d is object ID instead of name then featureIndex[] is used */
       feature = oa.z[axisID][d], // || oa.featureIndex[d],
       aky = ysa(feature.location),
       /**  parentName not essential here because yOffset() follows .parent */
-      axisY = oa.axes[axisID].yOffset();
+      axisY = oa.stacks.blocks[axisID].yOffset();
       // can use parentName here, but initially good to have parent and child traced.
       if (trace_scale_y && ! tracedAxisScale[axisID])
       {
@@ -3878,53 +3967,8 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       return aky + axisY;
     }
-    /** Calculate relative feature location in the axis
-     * @param k index into axisIDs[]
-     * @param d feature name
-     */
-    function featureY(k, d)
-    {
-      return featureY_(oa.axisIDs[k], d);
-    }
 
 
-    // Returns an array of paths (links between Axes) for a given feature when zoom in starts.
-    // This is the zoom() equivalent of path_pre_Stacks(); the features here are
-    // most likely present in the later path() function/s;  zoom() now uses pathUpdate().
-    function zoomPath(d) { // d is a feature
-      let r = [];
-      let z = oa.z, pathFeatures = oa.pathFeatures, o = oa.o;
-      for (let k=0; k<oa.axisIDs.length-1; k++) {
-        //ys[p].domain
-        //z[axisIDs[k]][d].location feature location
-
-        if (d in z[oa.axisIDs[k]] && d in z[oa.axisIDs[k+1]]) { // if features is in both Axes
-          /** relative feature location in the axis of 2 features, k and k+1 :
-           * k  : featureYk[0]
-           * k+1: featureYk[1]
-           */
-          let featureYk = [featureY(k, d), featureY(k+1, d)];
-          // Filter out those paths that either side locates out of the svg
-          if (inRange(featureYk[0], [0, vc.yRange]) &&
-              inRange(featureYk[1], [0, vc.yRange])) {
-            let sLine = line(
-              [[o[oa.axisIDs[k]], featureYk[0]],
-               [o[oa.axisIDs[k+1]], featureYk[1]]]);
-            if(pathFeatures[sLine] != null){
-              pathFeatures[sLine][d] = 1;
-            } else {
-              pathFeatures[sLine]= {};
-              pathFeatures[sLine][d] = 1;
-            }
-            r.push(line(
-              [[o[oa.axisIDs[k]], featureYk[0]],
-               [o[oa.axisIDs[k+1]], featureYk[1]]]));
-          } 
-          
-        } 
-      }
-      return r;
-    }
 
 //- axis-brush-zoom
     /** Used when the user completes a brush action on the axis axis.
@@ -4019,10 +4063,10 @@ export default Ember.Component.extend(Ember.Evented, {
             console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
 
           /** for all blocks in the axis */
-          let childBlocks = axis.children(false/*true after .children is changed*/);
+          let childBlocks = axis.dataBlocks();
           console.log(axis, 'childBlocks', childBlocks);
-          childBlocks.map(function (blockName) {
-          let blockFeatures = oa.z[blockName];
+          childBlocks.map(function (block) {
+            let blockFeatures = oa.z[block.axisName]; // or block.get('features')
           d3.keys(blockFeatures).forEach(function(f) {
             let fLocation;
             if (! isOtherField[f] && ((fLocation = blockFeatures[f].location) !== undefined))
@@ -4119,7 +4163,7 @@ export default Ember.Component.extend(Ember.Evented, {
           {
             let svgContainer = oa.svgContainer;
             let t = svgContainer.transition().duration(750);
-            let axisIDs = axisID ? [axisID] : oa.axisIDs;
+            let axisIDs = axisID ? [axisID] : oa.stacks.axisIDs();
             axisIDs.forEach(function(d) {
               let idName = axisEltId(d); // axis ids have "a" prefix
                 if (d != axisID)
@@ -5298,7 +5342,7 @@ export default Ember.Component.extend(Ember.Evented, {
         if (heightChanged)
         {
           stacksAdjustY();
-          oa.axisIDs.forEach(function(axisName) {
+          oa.stacks.axisIDs().forEach(function(axisName) {
             axisScaleChanged(axisName, t, false);
           });
           pathUpdate(t /*st*/);

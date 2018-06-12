@@ -1,3 +1,5 @@
+import { breakPoint } from '../utils/breakPoint';
+
 /*----------------------------------------------------------------------------*/
 
 /* split out of components/goto-feature.js : 
@@ -41,23 +43,22 @@ function featureChrs(oa, featureName)
 function chrMap(store, oa, chrName)
   {
     let
-    chr = oa && oa.chrPromises[chrName], map;
-    if (chr)
-      map = chr.content.map;
+      chr = oa && oa.stacks.blocks[chrName], blockR = chr.block, map;
+    if (chr && blockR)
+      map = blockR.mapName || blockR.get('datasetId').get('id');
     else
     {
       let stacked = oa.axes[chrName];
       if (stacked === undefined)
       {
-        console.log('chrMap() : stacked undefined for', chrName);
-        debugger;
+        breakPoint('chrMap() : stacked undefined for', chrName);
       }
       else
       /* Convert map name to object refn, for uniform result object type,
        * because other branch returns map object refn .
        */
       map  =  name2Map(store, stacked.mapName);
-      console.log("goto-feature chrMap()", oa, oa.chrPromises, chrName, stacked, map);
+      console.log("goto-feature chrMap()", oa, oa.axes, chrName, stacked, map);
     }
     return map;
   }

@@ -60,6 +60,17 @@ export default Service.extend(Ember.Evented, {
   ,
   /*--------------------------------------------------------------------------*/
 
+  /** @return the block record handle if the block is loaded into the store from the backend.
+   */
+  peekBlock(blockId)
+  {
+    let store = this.get('store'),
+    block = store.peekRecord('block', blockId);
+    return block;
+  },
+
+  /*--------------------------------------------------------------------------*/
+
   /** @return true if the block is loaded into the store from the backend, and has .isViewed==true.
    */
   getIsViewed(blockId)
