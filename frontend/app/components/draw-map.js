@@ -2067,10 +2067,16 @@ export default Ember.Component.extend(Ember.Evented, {
       .attr("y", -axisFontSize)
       .style("font-size", axisFontSize);
     axisTitleFamily(axisTitleS);
+    /** true if any axes have children.  used to get extra Y space at top for multi-level axis title.
+      * later can calculate this, roughly : oa.stacks.axesP.reduce(function (haveChildren, a) { return haveChildren || oa.stacks.axesP[a].blocks.length; } )
+     */
+    let someAxesHaveChildBlocks = true;
 
     function axisTitleFamily(axisTitleS) {
       axisTitleS
-      .text(axisTitle /*String*/);
+      .text(axisTitle /*String*/)
+      .attr('y', '-30px')
+      ;
     axisTitleS.selectAll("tspan")
       .data(axisTitleChildren)
       .enter()
@@ -2093,7 +2099,7 @@ export default Ember.Component.extend(Ember.Evented, {
         .each(configureAxisTitleMenu);
     let axisSpacing = (axisXRange[1]-axisXRange[0])/stacks.length;
     let verticalTitle;
-    if ((verticalTitle = axisSpacing < 90))
+    if ((verticalTitle = someAxesHaveChildBlocks || (axisSpacing < 90)))
     {
       // first approx : 30 -> 30, 10 -> 90.  could use trig fns instead of linear.
       let angle = (90-axisSpacing);

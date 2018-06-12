@@ -46,8 +46,10 @@ Viewport.prototype.calc = function(oa)
 
   /** approx height of map / chromosome selection buttons above graph */
   axisSelectionHeight = 80,
-  /** approx height of text name of map+chromosome displayed above axis. */
-  axisNameHeight = 14,
+  /** approx height of text name of map+chromosome displayed above axis.
+   *  +30 for parent/child; later can make that dependent on whether there are any parent/child axes.
+   */
+  axisNameHeight = 14 + 30,
   /** approx height of text block below graph which says 'n selected features' */
   selectedFeaturesTextHeight = 14,
 
