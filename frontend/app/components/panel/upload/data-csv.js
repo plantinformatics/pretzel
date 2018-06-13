@@ -54,7 +54,7 @@ export default UploadBase.extend({
             type: 'text'
           },
           {
-            data: 'pos',
+            data: 'val',
             type: 'numeric'
           }
         ],
@@ -168,13 +168,13 @@ export default UploadBase.extend({
       }
       for (var i=0; i<sourceData.length; i++) {
         var row = sourceData[i];
-        if (row[cols['pos']] || row[cols['name']] || row[cols['block']]) {
-          if (!row[cols['pos']] && row[cols['pos']] != 0) {
-            reject({r: i, c: cols['pos'], msg: 'Position required'});
+        if (row[cols['val']] || row[cols['name']] || row[cols['block']]) {
+          if (!row[cols['val']] && row[cols['val']] != 0) {
+            reject({r: i, c: cols['val'], msg: 'Position required'});
             break;
           }
-          if (isNaN(row[cols['pos']])) {
-            reject({r: i, c: cols['pos'], msg: 'Position must be numeric'});
+          if (isNaN(row[cols['val']])) {
+            reject({r: i, c: cols['val'], msg: 'Position must be numeric'});
             break;
           }
           if (!row[cols['name']]) {
@@ -188,7 +188,7 @@ export default UploadBase.extend({
           validatedData.push({
             name: row[cols['name']],
             block: row[cols['block']],
-            pos: row[cols['pos']]
+            val: row[cols['val']]
           });
         }
       }
