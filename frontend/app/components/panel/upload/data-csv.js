@@ -6,6 +6,8 @@ export default UploadBase.extend({
     this.get('auth').getBlocks()
     .then(function(res) {
       that.set('datasets', res);
+
+      //build dataset select
       $("#dataset").html('');
       $.each(res, function (i, item) {
         $('#dataset').append($('<option>', { 
@@ -17,10 +19,21 @@ export default UploadBase.extend({
         $("#dataset").val(id);
       }
       $("#dataset").append($('<option>', {
-        value: 'new',
         text: 'new'
       }));
       $("#dataset").trigger('change');
+
+      //build parent select
+      $("#parent").html('');
+      $("#parent").append($('<option>', {
+        text: 'None'
+      }));
+      $.each(res, function (i, item) {
+        $('#parent').append($('<option>', {
+            text : item.name
+        }));
+      });
+
     });
   },
 
@@ -32,9 +45,9 @@ export default UploadBase.extend({
       $("#dataset").on('change', function() {
         var selectedMap = $("#dataset").val();
         if (selectedMap == 'new') {
-          $("#dataset_new").show();
+          $("#new_dataset_options").show();
         } else {
-          $("#dataset_new").hide();
+          $("#new_dataset_options").hide();
         }
         that.checkBlocks();
       });
@@ -145,8 +158,10 @@ export default UploadBase.extend({
         });
         if (selectedMap == 'new') {
           let newDataset = that.get('store').createRecord('Dataset', {
-            name: newMap
-          })
+            name: newMap,
+            type: $("#type").val(),
+            parent: $("#parent").val()
+          });
           newDataset.save().then(function() {
             that.loadDatasets(newDataset.id)
             resolve(newDataset.id)
