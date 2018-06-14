@@ -2702,6 +2702,62 @@ export default Ember.Component.extend(Ember.Evented, {
       aliases.name = s;
       return s;
     }
+    let traceCount_featureSet = 0, traceCount_featureIndex = 0;
+    /** Ensure that the given feature is referenced in featureIndex[].
+     * This is collated in receiveChr(), and should not be needed in
+     * collateData(); the purpose of this function is to clarify when & why that
+     * is not happening.
+     * @param featureId
+     * @param featureName
+     * @param blockId ID of block which contains feature
+     */
+    function ensureFeatureIndex(featureId, featureName, blockId)
+    {
+      if (! isOtherField[featureName]) {
+        let f = z[blockId][featureName];
+        /* For genetic maps, features (markers) are unique with a chromosome (block) of a map (dataset).
+         * For physical maps, they may not be unique, and hence this verification does not apply. 
+        if (f.id != featureId)
+          breakPoint('ensureFeatureIndex', 'f.id', f.id, '!= featureId', featureId);
+         */
+
+        if (! oa.d3FeatureSet.has(featureName))
+        {
+          if (traceCount_featureSet++ < 50)
+            console.log('d3FeatureSet', featureId, featureName);
+          oa.d3FeatureSet.add(featureName);
+        }
+        if (! oa.featureIndex[featureId])
+        {
+          if (traceCount_featureIndex++ < 50)
+            console.log('featureIndex', featureId, featureName);
+          oa.featureIndex[featureId] = f;
+        }
+      }
+    };
+    /** Lookup the featureName and blockId of featureId,
+     * and call @see ensureFeatureIndex().
+     * @param featureId
+     */
+    function featureLookupName(featureId)
+    {
+      let featureName, f = oa.featureIndex[featureId];
+      if (f)
+      {
+        featureName = f.name;
+      }
+      else
+      {
+        let feature = me.get('store').peekRecord('feature', featureId),
+        // in console .toJSON() was required - maybe just timing.
+        block = feature.get('blockId') || (feature = feature.toJSON()).get('blockId'),
+        blockId = block.get('id');
+        featureName = feature.get('name');
+        ensureFeatureIndex(featureId, featureName, blockId);
+      }
+      return featureName;
+    };
+
     /** After data is loaded, collate to enable faster lookup in collateStacks() and dragged().
      * for each axis
      *   for each feature
@@ -2780,6 +2836,7 @@ export default Ember.Component.extend(Ember.Evented, {
             else
               feature_.aliasGroupName = aliasGroupName;
           }
+            // ensureFeatureIndex(featureID, feature, axis);
           }
         });
         }
@@ -3316,15 +3373,15 @@ export default Ember.Component.extend(Ember.Evented, {
          * Result contains feature object ids; convert these to names using
          * featureIndex[], as current data structure is based on feature (feature)
          * names - that will change probably. */
-        let featureID = p.featureA,
-        featureName = oa.featureIndex[featureID].name,
+        let
+        featureName = featureLookupName(p.featureA),
         /** If p.aliases.length == 0, then p is direct not alias so put it in featureAxes[] instead.
          * Will do that in next commit because it is useful in first pass to do visual comparison of
          * paths calculated FE & BE by toggling the flow display enables
          * (div.flowButton / flow.visible) "direct" and "alias".
          */
         aliasGroupName = aliasesText(p.aliases),
-        fi = oa.featureIndex[p.featureB].name;
+        fi = featureLookupName(p.featureB);
       // modified(hacked) copy of code in collateStacksA() above, may factor to re-combine these.
                       let aj = blockB, // adjs[id],
                       featureA = oa.z[aj][fi];
@@ -3332,9 +3389,8 @@ export default Ember.Component.extend(Ember.Evented, {
                       {
                         let // aliasGroupName = featureA.aliasGroupName,
                           direction = axisName < aj,
-                        axes = oa.axes,
-                        axisName_ = axes[axisName],
-                        aj_ = axes[aj],
+                        axisName_ = Stacked.getAxis(axisName),
+                        aj_ = Stacked.getAxis(aj),
                         featureToAxis = [
                           {f: featureName, axis: axisName_},
                           {f: fi, axis: aj_}
@@ -3478,6 +3534,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     /**  Return the x positions of the given axes; if the leftmost is split, add
      *  its width to the corresponding returned axis position.
+     * @param ak1, ak2  axis IDs  (i.e. oa.axes[ak1] is Stacked, not Block)
      * @param cached  true means use the "old" / cached positions o[ak], otherwise use the current scale x(ak).
      * @return 2 x-positions, in an array, in the given order (ak1, ak2).
      */
@@ -3525,7 +3582,7 @@ export default Ember.Component.extend(Ember.Evented, {
       axis1 = Stacked.getAxis(ak1),
       axis2 = Stacked.getAxis(ak2),
       /** x endpoints of the line;  if either axis is split then the side closer the other axis is used.  */
-      xi = inside(ak1, ak2, true);
+      xi = inside(axis1.axisName, axis2.axisName, true);
       let l;
       if (axis1.perpendicular && axis2.perpendicular)
       { /* maybe a circos plot :-) */ }
@@ -3555,10 +3612,10 @@ export default Ember.Component.extend(Ember.Evented, {
     function featureLineS3(ak1, ak2, d)
     {
       let o = oa.o,
-      xi = inside(ak1, ak2, false),
-      oak = xi, // o[ak1], o[ak2]],
       axis1 = Stacked.getAxis(ak1),
       axis2 = Stacked.getAxis(ak2),
+      xi = inside(axis1.axisName, axis2.axisName, false),
+      oak = xi, // o[ak1], o[ak2]],
       my = [[featureY_(ak1, d[0]), featureY_(ak1, d[1])],
             [featureY_(ak2, d[2]), featureY_(ak2, d[3])]];
       let sLine;
