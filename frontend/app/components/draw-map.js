@@ -877,7 +877,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
     /** results of collateAdjacentAxes() */
     let adjAxes = oa.adjAxes || (oa.adjAxes = {});
-    /** results of collateStacksA() */
+    /** results of collateStacksA() and from addPathsToCollation() */
     let aliased = {};
     let aliasedDone = {};
 
@@ -2723,13 +2723,13 @@ export default Ember.Component.extend(Ember.Evented, {
 
         if (! oa.d3FeatureSet.has(featureName))
         {
-          if (traceCount_featureSet++ < 50)
+          if (traceCount_featureSet++ < 5)
             console.log('d3FeatureSet', featureId, featureName);
           oa.d3FeatureSet.add(featureName);
         }
         if (! oa.featureIndex[featureId])
         {
-          if (traceCount_featureIndex++ < 50)
+          if (traceCount_featureIndex++ < 5)
             console.log('featureIndex', featureId, featureName);
           oa.featureIndex[featureId] = f;
         }
@@ -3362,6 +3362,8 @@ export default Ember.Component.extend(Ember.Evented, {
         });
       return text;
     }
+    /** Store the results from api/Blocks/paths request, in the same structure,
+     * aliased, which collateStacksA() stores in. */
     function addPathsToCollation(blockA, blockB, paths)
     {
       console.log('addPathsToCollation', blockA, blockB, paths.length);
@@ -3387,13 +3389,20 @@ export default Ember.Component.extend(Ember.Evented, {
                       featureA = oa.z[aj][fi];
                       // if (Axes.has(aj))
                       {
+                        /** store paths in an a canonical order; paths between
+                         * blocks are not dependent on order of the adjacent
+                         * blocks.
+                         */
                         let // aliasGroupName = featureA.aliasGroupName,
                           direction = axisName < aj,
-                        axisName_ = Stacked.getAxis(axisName),
-                        aj_ = Stacked.getAxis(aj),
+                        blockA_ = oa.stacks.blocks[blockA],
+                        blockB_ = oa.stacks.blocks[blockB],
+                        /** indexed with direction to produce featureToAxis_[],
+                         * from which ffaa is extracted so that .axis0 < .axis1.
+                         */
                         featureToAxis = [
-                          {f: featureName, axis: axisName_},
-                          {f: fi, axis: aj_}
+                          {f: featureName, axis: blockA_},
+                          {f: fi, axis: blockB_}
                         ],
                         featureToAxis_= [featureToAxis[1-direction], featureToAxis[0+direction]],
                         [f0 , f1 , axis0, axis1] = [featureToAxis_[0].f, featureToAxis_[1].f, featureToAxis_[0].axis, featureToAxis_[1].axis],
