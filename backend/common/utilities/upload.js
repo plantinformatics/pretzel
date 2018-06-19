@@ -93,6 +93,9 @@ exports.uploadDataset = (data, models, options, cb) => {
     if (dataset.__cachedRelations.blocks) {
       dataset.__cachedRelations.blocks.forEach(function(json_block) {
         json_block.datasetId = dataset.id
+        if (json_block.namespace == null && data.namespace != null) {
+          json_block.namespace = data.namespace;
+        }
         json_blocks.push(json_block)
       })
     }
