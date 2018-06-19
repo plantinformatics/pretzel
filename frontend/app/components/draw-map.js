@@ -963,7 +963,7 @@ export default Ember.Component.extend(Ember.Evented, {
     /** enable trace of adjacency between axes, and stacks. */
     const trace_adj = 1;
     const trace_synteny = 2;
-    const trace_gui = 1;
+    const trace_gui = 0;
     /*------------------------------------------------------------------------*/
 //- moved to utils/stacks.js
 
@@ -1189,6 +1189,7 @@ export default Ember.Component.extend(Ember.Evented, {
           sd.move(a, 0);
 
           delete oa.axesP[adopt0];
+          deleteAxisfromAxisIDs(adopt0);
           // a.axisName = d;
           a.parent = sd;
           a.stack.add(sd);
@@ -1249,6 +1250,13 @@ export default Ember.Component.extend(Ember.Evented, {
         if (parentAxis)
         {
           console.log("pre-adopt", parentAxis, d, parentName);
+          /* axisIDAdd() has already been called (by receiveChr() or from
+           * myDataKeys above), so remove d from axisIDs because it is a child
+           * data block, not an axis / reference block.
+           * Alternative is to use stacks.axisIDs(); splitting out axes as a
+           * component will replace oa.axisIDs.
+           */
+          deleteAxisfromAxisIDs(d);
           console.log('before push parentAxis', parentAxis, parentAxis.blocks, sBlock);
           parentAxis.logBlocks();
           parentAxis.blocks.push(sBlock);
@@ -1322,6 +1330,7 @@ export default Ember.Component.extend(Ember.Evented, {
           sd.stack.log();
           delete oa.axesP[a.axisName];
           oa.stacks.blocks[a.axisName] = aBlock;
+          deleteAxisfromAxisIDs(a.axisName);
           if (! oldStack)
             console.log("adopted axis had no stack", a, a.axisName, oa.stacks);
           else
