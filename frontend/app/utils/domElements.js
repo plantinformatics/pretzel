@@ -110,12 +110,17 @@ let
 
 function logWindowDimensions(w, text)
 {
+  /** visualViewport enables distinction of visual and layout viewports, relevant to pinch-zoom.
+   * Only available on Chrome so far :
+   * https://developer.mozilla.org/en-US/docs/Web/API/VisualViewport#Browser_compatibility
+   */
   let s = w.screen, v = w.visualViewport;
   console.log
   (
     text, 'inner', w.innerWidth, "x", w.innerHeight, 
     'avail', s.availWidth, 'x',  s.availHeight,
-    'screen', s.width, 'x', s.height, 'visualViewport', v.width, 'x', v.height
+    'screen', s.width, 'x', s.height,
+    'visualViewport', v && ('' + v.width + 'x' + v.height)
   );
 }
 

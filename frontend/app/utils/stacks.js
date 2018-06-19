@@ -346,6 +346,12 @@ Stacked.prototype.domainCalc = function ()
       d3.min(blockDomains, array => d3.min(array)),
       d3.max(blockDomains, array => d3.max(array))
     ];
+  if (trace_stack)
+  {
+    console.log('domainCalc', this.axisName, this.blocks.length, blockDomains, domain);
+    if ((trace_stack > 2) && ! domain[0] && ! domain[1])
+      breakPoint();
+  }
   return domain;
 };
 /** @return the interval of the .referenceBlock of this axis.

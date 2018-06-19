@@ -462,6 +462,11 @@ export default Ember.Component.extend(Ember.Evented, {
     this.on('paths', addPathsToCollation);
     }
 
+    if (oa.showResize === undefined)
+    {
+      oa.showResize = showResize;
+    }
+
   /*------------------------------------------------------------------------*/
 
 
@@ -534,7 +539,8 @@ export default Ember.Component.extend(Ember.Evented, {
         let
           widthChanged = oa.vc.viewPort.w != oa.vc.viewPortPrev.w,
         heightChanged = oa.vc.viewPort.h != oa.vc.viewPortPrev.h;
-        oa.showResize(widthChanged, heightChanged);
+        if (oa.svgContainer)
+          oa.showResize(widthChanged, heightChanged);
       }
       stacks.vc = vc; //- perhaps create vc earlier and pass vc to stacks.init()
     }
@@ -957,7 +963,7 @@ export default Ember.Component.extend(Ember.Evented, {
     /** enable trace of adjacency between axes, and stacks. */
     const trace_adj = 1;
     const trace_synteny = 2;
-    const trace_gui = 0;
+    const trace_gui = 1;
     /*------------------------------------------------------------------------*/
 //- moved to utils/stacks.js
 
@@ -1666,7 +1672,7 @@ export default Ember.Component.extend(Ember.Evented, {
       oa.svgRoot = 
     svgRoot = d3.select('#holder').append('svg')
       .attr("class", "FeatureMapViewer")
-      .attr("viewBox", "0 0 " + graphDim.w + " " + graphDim.h)
+      .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
       .attr("preserveAspectRatio", "none"/*"xMinYMin meet"*/)
       .attr('width', "100%" /*graphDim.w*/)
       .attr('height', graphDim.h /*"auto"*/);
@@ -2181,6 +2187,7 @@ export default Ember.Component.extend(Ember.Evented, {
     axisTitleFamily(axisTitleS);
     /** true if any axes have children.  used to get extra Y space at top for multi-level axis title.
       * later can calculate this, roughly : oa.stacks.axesP.reduce(function (haveChildren, a) { return haveChildren || oa.stacks.axesP[a].blocks.length; } )
+     * The maximum value of that can be used as the value of Viewport:calc(): axisNameRows.
      */
     let someAxesHaveChildBlocks = true;
 
@@ -2239,7 +2246,7 @@ export default Ember.Component.extend(Ember.Evented, {
         .style("text-anchor", "start")
         .attr("transform", "rotate("+angle+")");
     }
-    svgRoot.classed("verticalTitle", verticalTitle || someAxesHaveChildBlocks);
+    svgRoot.classed("verticalTitle", verticalTitle);
 
 //- moved to ../utils/draw/axis.js : yAxisTextScale(),  yAxisTicksScale(),  yAxisBtnScale()
 
@@ -4068,14 +4075,24 @@ export default Ember.Component.extend(Ember.Evented, {
       //Remove old circles.
       svgContainer.selectAll("circle").remove();
       let brushedRegions = oa.brushedRegions;
+      let brushRange = d3.event.selection,
+      mouse = d3.mouse(that);
+      let brushSelection = d3.brushSelection(d3.select(that));
+      let brush_ = that.__brush,
+      brushSelection_ = brush_.selection,
+      brushExtent_ = brush_.extent;
 
       if (trace_gui)
-        console.log("brushHelper", that, brushedAxisID, selectedAxes, d3.event.selection, brushedRegions);
+        console.log("brushHelper", that, brushedAxisID, selectedAxes, brushRange, brushedRegions,
+                    brushSelection, mouse,
+                    brushSelection_ ? '' + brushSelection_[0] + '' + brushSelection_[1] : '', ', ',
+                    brushExtent_ ? '' + brushExtent_[0] + ',' + brushExtent_[1] : ''
+                   );
 
       /* d3.event.selection is null when brushHelper() is called via zoom() ... brush.move.
        * This causes selectedAxes to update here; when an axis is zoomed its brush is removed.
        */
-      if (d3.event.selection == null) {
+      if (brushRange == null) {
         selectedAxes.removeObject(name[0]);
       }
       else {
@@ -4088,10 +4105,10 @@ export default Ember.Component.extend(Ember.Evented, {
       if (selectedAxes.length > 0) {
         console.log("Selected: ", " ", selectedAxes.length);
         // Axes have been selected - now work out selected features.
-        if (d3.event.selection === null)
+        if (brushRange === null)
           delete brushedRegions[brushedAxisID];
         else
-          brushedRegions[brushedAxisID] = d3.event.selection;
+          brushedRegions[brushedAxisID] = brushRange;
         /** Extent of current brush (applied to y axis of a axis). */
         let
         brushExtents = selectedAxes.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
@@ -5380,13 +5397,12 @@ export default Ember.Component.extend(Ember.Evented, {
         });
     }
 
-    if (oa.showResize === undefined)
       /** Render the affect of resize on the drawing.
        * @param widthChanged   true if width changed
        * @param heightChanged   true if height changed
        * @param useTransition  undefined (default true), or false for no transition
        */
-      oa.showResize = function(widthChanged, heightChanged, useTransition)
+    function showResize(widthChanged, heightChanged, useTransition)
     {
         console.log('showResize', widthChanged, heightChanged, useTransition);
         updateXScale();
@@ -5396,7 +5412,7 @@ export default Ember.Component.extend(Ember.Evented, {
         t = oa.svgContainer.transition().duration(duration);
         let graphDim = oa.vc.graphDim;
         oa.svgRoot
-          .attr("viewBox", "0 0 " + graphDim.w + " " + graphDim.h)
+        .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
           .attr('height', graphDim.h /*"auto"*/);
 
         if (widthChanged)

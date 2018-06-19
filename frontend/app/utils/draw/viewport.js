@@ -45,11 +45,18 @@ Viewport.prototype.calc = function(oa)
   h,
 
   /** approx height of map / chromosome selection buttons above graph */
-  axisSelectionHeight = 80,
-  /** approx height of text name of map+chromosome displayed above axis.
-   *  +30 for parent/child; later can make that dependent on whether there are any parent/child axes.
+  axisSelectionHeight = 30,
+  /** Axes which have a reference block and multiple data blocks show each block
+   * name on a separate line in the axis title.  Other axes have just 1 line of
+   * text in the title, so the minimum value of axisNameRows is 1.
+   * This can be made a configurable option, and adjusted for the actual max #
+   * of rows in axis titles.
    */
-  axisNameHeight = 14 + 30,
+  axisNameRows = 5,
+  /** approx height of text name of map+chromosome displayed above axis.
+   *   *axisNameRows for parent/child; later can make that dependent on whether there are any parent/child axes.
+   */
+  axisNameHeight = 14 * axisNameRows,
   /** approx height of text block below graph which says 'n selected features' */
   selectedFeaturesTextHeight = 14,
 
@@ -70,6 +77,7 @@ Viewport.prototype.calc = function(oa)
   /** dimensions of the graph border */
   let graphDim;
 
+  this.axisTopOffset = axisSelectionHeight + axisNameHeight;
 
   divHolder=Ember.$('div#holder');
   /** @param jqElt  jQuery single DOM element */
@@ -114,7 +122,8 @@ Viewport.prototype.calc = function(oa)
         {
             w: w*0.9,
             h: h - 2 * this.dropTargetYMargin
-                - axisSelectionHeight - axisNameHeight - topPanelHeight - bottomPanelHeight
+            - this.axisTopOffset
+            - topPanelHeight - bottomPanelHeight
         };
   // layout has changed, no value in this :  - selectedFeaturesTextHeight
 
@@ -141,6 +150,12 @@ Viewport.prototype.calc = function(oa)
   this.axisHeaderTextLen = axisHeaderTextLen;
   this.margins = margins;
   this.marginIndex = marginIndex;
+};
+
+/** @return value for viewBox attribute of <svg> containing the graph */
+Viewport.prototype.viewBox = function()
+{
+  return "0 " + -this.axisTopOffset + " " + this.graphDim.w + " " + (this.graphDim.h + this.axisTopOffset);
 };
 
 Viewport.prototype.xDropOutDistance_update = function (oa) {
