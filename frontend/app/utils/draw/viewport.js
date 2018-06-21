@@ -77,7 +77,7 @@ Viewport.prototype.calc = function(oa)
   /** dimensions of the graph border */
   let graphDim;
 
-  this.axisTopOffset = axisSelectionHeight + axisNameHeight;
+  this.axisTopOffset = /*axisSelectionHeight +*/ axisNameHeight;
 
   divHolder=Ember.$('div#holder');
   /** @param jqElt  jQuery single DOM element */

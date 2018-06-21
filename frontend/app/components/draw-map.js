@@ -954,7 +954,7 @@ export default Ember.Component.extend(Ember.Evented, {
      * further increments will trace the whole arrays, i.e. O(N),
      * and trace cross-products of arrays - O(N^2) e.g. trace the whole array for O(N) events.
      */
-    const trace_stack = 1;
+    const trace_stack = 2;
     const trace_scale_y = 0;
     const trace_drag = 0;
     const trace_alias = 1;  // currently no trace at level 1.
@@ -1076,8 +1076,20 @@ export default Ember.Component.extend(Ember.Evented, {
         if (o[d] === undefined) { breakPoint("collateO"); }
       });
     }
+    let blocksToDraw = oa.axisIDs,
+      blocksToAdd = me.get('blockService').get('viewedIds');
+    blocksToAdd = blocksToAdd.filter(function (axisName) {
+      // axisName passes filter if it is not already in a stack
+      return ! Stacked.getAxis(axisName) && (blocksToDraw.indexOf(axisName) == -1) ; });
+    console.log(blocksToDraw, 'blocksToAdd', blocksToAdd);
+    if (blocksToAdd.length)
+      blocksToDraw = blocksToDraw.concat(blocksToAdd);
+    let duplicates = blocksToDraw.filter(function (v, i) { return blocksToDraw.indexOf(v, i+1) != -1; });
+    if (duplicates.length)
+      breakPoint('duplicates', duplicates, blocksToDraw, blocksToAdd, oa.axisIDs);
+
     // Place new data blocks in an existing or new axis.
-    oa.axisIDs.forEach(function(d){
+    blocksToDraw.forEach(function(d){
     // for (let d in oa.stacks.axes) {
       /** ensure that d is shown in an axis & stack.
        * dBlock should be !== undefined.
@@ -1090,11 +1102,23 @@ export default Ember.Component.extend(Ember.Evented, {
         dBlock.set('view', sBlock);
       }
       let s = Stacked.getStack(d);
-      // verification
+      /* verification
       if (addedBlock == (s !== undefined))
-        breakPoint(d, 'addedBlock', addedBlock, sBlock, 'already in stack', s);
+        breakPoint(d, 'addedBlock', addedBlock, sBlock, 'already in stack', s); */
       if (s && ! dBlock.get('view'))
         console.log(d, 'has stack', s, 'but no axis', dBlock);
+      if (s && (s.axes.length == 0))
+      {
+        let axis = sBlock.axis;
+        console.log('re-add to stack', d, s, axis);
+        s.add(axis);
+        oa.stacks.axesP[d] = axis;
+        if (oa.stacks.indexOf(s) == -1)
+          oa.stacks.append(s);
+        axisIDAdd(d);
+        s.log();
+      }
+      else
       // if axisID d does not exist in stacks[], add a new stack for it.
       if (! s)
       {
@@ -1190,8 +1214,13 @@ export default Ember.Component.extend(Ember.Evented, {
 
           delete oa.axesP[adopt0];
           deleteAxisfromAxisIDs(adopt0);
+          a.stack.remove(adopt0);
+          // roughly equivalent : a.stack.move(adopt0, newStack, -1)
+
           // a.axisName = d;
           a.parent = sd;
+          console.log('aBlock.axis', aBlock.axis);
+          // aBlock.axis = sd;
           a.stack.add(sd);
           console.log(adopt0, a, sd, oa.axesP[a.axisName]);
           sd.stack.log();
@@ -1234,7 +1263,7 @@ export default Ember.Component.extend(Ember.Evented, {
             .call(axis.scale(y[d]));
 
           let checkS = aStackS.selectAll("g, g.stackDropTarget > rect");
-          checkS.forEach(function(b,i) {console.log(b,i,b.__data__); } );
+          checkS.each(function(b,i) {console.log(this,b,i,b.__data__); } );
           // logSelectionNodes(checkS);
         }
         }
@@ -1257,6 +1286,7 @@ export default Ember.Component.extend(Ember.Evented, {
            * component will replace oa.axisIDs.
            */
           deleteAxisfromAxisIDs(d);
+          delete oa.axesP[d];
           console.log('before push parentAxis', parentAxis, parentAxis.blocks, sBlock);
           parentAxis.logBlocks();
           parentAxis.blocks.push(sBlock);
@@ -1330,6 +1360,8 @@ export default Ember.Component.extend(Ember.Evented, {
           sd.stack.log();
           delete oa.axesP[a.axisName];
           oa.stacks.blocks[a.axisName] = aBlock;
+          console.log('aBlock.axis', aBlock.axis);
+          // aBlock.axis = sd;
           deleteAxisfromAxisIDs(a.axisName);
           if (! oldStack)
             console.log("adopted axis had no stack", a, a.axisName, oa.stacks);
@@ -5360,6 +5392,9 @@ export default Ember.Component.extend(Ember.Evented, {
               // axes[axisName] is deleted by removeStacked1() 
               let stackID = Stack.removeStacked(axisName);
               deleteAxisfromAxisIDs(axisName);
+              let sBlock = oa.stacks.blocks[axisName];
+              console.log('sBlock.axis', sBlock.axis);
+              // sBlock.axis = undefined;
               removeAxisMaybeStack(axisName, stackID, stack);
               me.send('mapsToViewDelete', axisName);
               // filter axisName out of selectedFeatures and selectedAxes

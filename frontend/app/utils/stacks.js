@@ -17,7 +17,7 @@ Object.filter = Object_filter;
 
 /*----------------------------------------------------------------------------*/
 
-const trace_stack = 1;
+const trace_stack = 2;
 const trace_updatedStacks = true;
 
 /** Each stack contains 1 or more Axis Pieces (Axes).
@@ -108,6 +108,11 @@ Block.prototype.log = function() {
     // this.parent.axisName
   );
 };
+Block.prototype.longName = function() {
+  // .axisName is this.block.get('id')
+  return this.axisName + ':' + this.block.get('name')
+    + '/' + (this.parent ? this.parent.axisName : '');
+};
 
 function Stacked(axisName, portion) {
   this.axisName = axisName;
@@ -184,10 +189,17 @@ Stacked.prototype.log = function ()
    (this.referenceBlock && this.referenceBlock.get('name')),
    ", portion=", round_2(this.portion),
    positionToString(this.position), this.stack, 
-   this.blocks.map(function (b) { return b.axisName + b.block.get('name') + '/' + (b.parent ? b.parent.axisName : ''); } ),
+   this.blocks.map(function (b) { return b.longName(); } ),
    "}");
   this.logElt();
 };
+
+Stacked.prototype.longName = function ()
+{
+  return this.axisName + ":" + this.mapName +
+    ((this.z && this.z.scope) ? ":" + this.z.scope : '');
+};
+
 Stacked.prototype.logBlocks = function ()
 {
   for (let i=0; i < this.blocks.length; i++)
@@ -829,6 +841,21 @@ Stack.prototype.remove = function (axisName)
     this.axes = this.axes.removeAt(si, 1);
     // .splice(si, 1);
     return s;
+  }
+};
+/** Similar to @see Stack.prototype.remove(), a different signature.
+ * @param axis reference to Stacked (axis) object
+ */
+Stack.prototype.remove2 = function (axis)
+{
+  let si = this.axes.indexOf(axis);
+  if (si < 0)
+  {
+    console.log("Stack#remove axis not in this stack", this, axis.longName());
+  }
+  else
+  {
+    this.axes = this.axes.removeAt(si, 1);
   }
 };
 /** Remove the nominated axis (Stacked) from this Stack;
@@ -1490,6 +1517,21 @@ Stacked.prototype.axisTransformO = function ()
   let xVal = checkIsNumber(oa.o[this.axisName]);
   xVal = Math.round(xVal);
   let rotateText = "", axis = oa.axes[this.axisName];
+  if (! axis)
+  {
+    /* If the __data of g.axis* has not been updated during adoption of an axis,
+     * handle it here with some trace.
+     * This is equivalent to axis = Stacked.getAxis(this.axisName), plus some
+     * trace. */
+    let block;
+    if ((axis = oa.stacks.axes[this.axisName]))
+      console.log('axisTransformO', 'use axes[]', this.axisName, axis);
+    else if ((block = oa.stacks.blocks[this.axisName]) && block.axis)
+    {
+      axis = block.getAxis();
+      console.log('axisTransformO', 'use blocks[] .axis', this.axisName, axis);
+    }
+  }
   if (axis.perpendicular)
   {
     /** shift to centre of axis for rotation. */
