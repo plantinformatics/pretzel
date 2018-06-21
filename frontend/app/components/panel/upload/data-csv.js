@@ -7,6 +7,9 @@ export default UploadBase.extend({
 
     //build dataset select
     $("#dataset").html('');
+    $("#dataset").append($('<option>', {
+      text: 'new'
+    }));
     $.each(datasets, function (i, item) {
       $('#dataset').append($('<option>', {
           text : item.get('name')
@@ -15,9 +18,6 @@ export default UploadBase.extend({
     if (id) {
       $("#dataset").val(id);
     }
-    $("#dataset").append($('<option>', {
-      text: 'new'
-    }));
     $("#dataset").trigger('change');
 
     //build parent select
@@ -33,7 +33,7 @@ export default UploadBase.extend({
     });
   },
 
-  didRender: function() {
+  buildView: function() {
     var that = this;
 
     that.loadDatasets();
@@ -45,6 +45,9 @@ export default UploadBase.extend({
         } else {
           $("#new_dataset_options").hide();
         }
+        that.checkBlocks();
+      });
+      $('#parent').on('change', function() {
         that.checkBlocks();
       });
 
@@ -88,7 +91,7 @@ export default UploadBase.extend({
       });
       that.set('table', table);
     });
-  }.on('didRender'),
+  }.on('didInsertElement'),
 
   checkBlocks() {
     var that = this;
@@ -100,6 +103,7 @@ export default UploadBase.extend({
         // find selected dataset
         var selectedMap = $("#dataset").val();
         var map = null;
+        let parent = null;
         maps.forEach(function(m) {
           if (m.get('name') == selectedMap) {
             map = m;
@@ -107,11 +111,11 @@ export default UploadBase.extend({
         });
         if (map) {
           // find duplicate blocks
-          var blocks = {};
+          let blocks = {};
           map.get('blocks').forEach(function(block) {
-            blocks[block.name] = false;
+            blocks[block.get('name')] = false;
           });
-          var data = table.getSourceData();
+          let data = table.getSourceData();
           var found = false;
           data.forEach(function(row) {
             if (row.block && row.block in blocks) {
@@ -127,8 +131,47 @@ export default UploadBase.extend({
                 duplicates.push(block);
               }
             });
-            warning = "The block "  + (duplicates.length > 1? "s":"")
+            warning = "The blocks "
             + " (" + duplicates.join(', ') + ") already exist in the selected dataset and will be overwritten by the new data";
+          }
+
+          if (map.get('parent').get('name')) {
+            parent = map.get('parent');
+          }
+        } else if (selectedMap == 'new') {
+          let parent_id = $("#parent").val();
+          if (parent_id.length > 0) {
+            maps.forEach(function(m) {
+              if (m.get('name') == parent_id) {
+                parent = m;
+              }
+            });
+          }
+        }
+
+        // check if each block exists in the parent dataset
+        if (parent) {
+          let blocks = {};
+          parent.get('blocks').forEach(function(b) {
+            blocks[b.get('name')] = true;
+          });
+          let data = table.getSourceData();
+          let missing = [];
+          data.forEach(function(row) {
+            if (row.block) {
+              if (!blocks[row.block]) {
+                missing.push(row.block);
+              }
+            }
+          });
+          if (missing.length > 0) {
+            if (warning) {
+              warning += '\n\n\n';
+            } else {
+              warning = '';
+            }
+            warning += "The blocks"
+            + " (" + missing.join(', ') + ") do not exist in the parent dataset (" + parent.get('name') + ')';
           }
         }
       }
