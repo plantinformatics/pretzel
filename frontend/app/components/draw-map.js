@@ -1102,6 +1102,8 @@ export default Ember.Component.extend(Ember.Evented, {
         dBlock.set('view', sBlock);
       }
       let s = Stacked.getStack(d);
+      if (trace_stack > 1)
+        console.log(d, dBlock, 'sBlock', sBlock, s);
       /* verification
       if (addedBlock == (s !== undefined))
         breakPoint(d, 'addedBlock', addedBlock, sBlock, 'already in stack', s); */
@@ -1133,7 +1135,7 @@ export default Ember.Component.extend(Ember.Evented, {
         ;
         Stack.verify();
 
-        console.log("zd", zd, dataset && dataset.get('name'), parent, parentName, parentId, namespace);
+        console.log(d, "zd", zd, dataset && dataset.get('name'), parent, parentName, parentId, namespace);
           // zd.  scope, featureType, , namespace
         // if block has a parent, find a block with name matching parentName, and matching scope.
         if (parentName)
@@ -1192,11 +1194,11 @@ export default Ember.Component.extend(Ember.Evented, {
             let a = oa.stacks.blocks[d2]; //  could traverse just axesP[] and get their reference
             let match = 
               (d != d2) &&  // not self
-              ! a.parent && (a.parentName == dataset.get('id')) &&
-              (a.z.scope == oa.cmName[d].scope);
+              ! a.parent && a.parentName && (a.parentName == dataset.get('name')) &&
+              a.z.scope && (a.z.scope == oa.cmName[d].scope);
             if (! a.parent)
             {
-              console.log( a.parentName,  dataset.get('id'),
+              console.log(d2, a.parentName,  dataset.get('name'),
                            a.z && a.z.scope,  oa.cmName[d].scope, match); 
           }
             return match;
@@ -1219,8 +1221,8 @@ export default Ember.Component.extend(Ember.Evented, {
 
           // a.axisName = d;
           a.parent = sd;
-          console.log('aBlock.axis', aBlock.axis);
-          // aBlock.axis = sd;
+          console.log('aBlock.axis', aBlock.axis, sd);
+          aBlock.axis = sd;
           a.stack.add(sd);
           console.log(adopt0, a, sd, oa.axesP[a.axisName]);
           sd.stack.log();
@@ -1883,7 +1885,7 @@ export default Ember.Component.extend(Ember.Evented, {
     // Stacks contain 1 or more Axes.
     /** selection of stacks */
     let stackSd = svgContainer.selectAll(".stack")
-      .data(stacks),
+      .data(stacks, Stack.prototype.keyFunction),
     stackS = stackSd
       .enter()
       .append("g"),
@@ -1897,9 +1899,41 @@ export default Ember.Component.extend(Ember.Evented, {
           breakPoint();
         }
       }
+    let removedStacks = 
+      stackX;
+    if (removedStacks.size())
+    {
+      logSelection(removedStacks);
+      logSelectionNodes(removedStacks);
+      console.log('removedStacks', removedStacks.size());
+      let ra = removedStacks.selectAll("g.axis-outer");
+      console.log('ra', ra, ra.nodes(), ra.node());
+      ra.each(function (d, i, g) {
+        console.log(d, i, this);
+        let rag = this,
+        ras = Stacked.getStack(d), sDest;
+        if (! ras)
+        {
+          // this is OK - just information
+          console.log('axis no longer in a stack', d);
+        }
+        else
+          // check that target is not parent
+          if ((sDest = ras && svgContainer.select("g.stack#" + eltId(ras.stackID)))
+              && ! sDest.empty() && (sDest.node() !== this.parentElement))
+        {
+            console.log('to stack', ras.stackID, sDest.node());
+            let
+              moved = sDest.insert(function () { return rag; });
+            console.log(moved.node(), moved.node().parentElement);
+          }
+      });
+      console.log('remnant', removedStacks.node());
+    }
     stackX
       .transition().duration(500)
       .remove();
+
       /*
     let st = newRender ? stackS :
       stackS.transition().duration(dragTransitionTime);
@@ -1915,11 +1949,14 @@ export default Ember.Component.extend(Ember.Evented, {
       return eltId(s.stackID); }
 
     /** For the given Stack, return its axisIDs.
-     * Just the ID of the parent is returned
+     * @return [] containing string IDs of reference blocks of axes of the Stack.
      */
     function stack_axisIDs(stack)
     {
-      return stack.parentAxisID();
+      let result = stack.parentAxisIDs();
+      if (trace_stack > 1)
+        console.log('stack_axisIDs', stack, result);
+      return result;
     }
 
     if (stackS && trace_stack >= 1.5)
@@ -1927,15 +1964,23 @@ export default Ember.Component.extend(Ember.Evented, {
 
     // Add a group element for each axis.
     // Stacks are selection groups in the result of this .selectAll()
-    let axisS = stackS.selectAll(".axis-outer"),
+    let axisS =
+      stackSd.merge(stackS)
+      .selectAll(".axis-outer"),
     axisG = axisS
       .data(stack_axisIDs)
-      .enter().append("g");
-    console.log('stacks.length', stacks.length, axisG.size(), axisS.exit().size());
+      .enter().append("g"),
+    axisX = axisS.exit();
+    console.log('stacks.length', stacks.length, axisG.size(), axisX.size());
+    axisG.each(function(d, i, g) { console.log(d, i, this); });
+    axisX.each(function(d, i, g) { console.log('axisX', d, i, this); });
+    axisX.remove();
     let allG = axisG
       .append('g')
       .attr("class", "axis-all")
       .attr("id", eltIdAll);
+    if (axisG.size())
+      console.log(allG.nodes(), allG.node());
     function eltIdAll(d) { return "all" + d; }
     function eltIdGpRef(d, i, g)
     {

@@ -534,25 +534,23 @@ Stack.prototype.empty = function ()
 {
   return this.axes.length === 0;
 };
-/** @return parent axis of this Stack,
- * in an array - single element
+/** @return axes of this Stack,
+ * in an array.
+ *
+ * (This was more significant, then named .parentAxis(), before blocks[] were
+ * split of of .axes[]; now .axes[*].referenceBlock is a parent; may have value
+ * as an abstraction layer ?).
  */
-Stack.prototype.parentAxis = function ()
+Stack.prototype.parentAxes = function ()
 {
-  let me = this,
-  a =
-    this.axes.reduce(function(result, s){
-      if (s.parent === undefined) result.push(s); return result; }, []);
-  if (trace_stack > 1 || a.length != 1)
-    console.log('parentAxis', a, a.axisName);
-  return a;
+  return this.axes;
 };
-/** @return parent axis ID of this Stack,
- * in an array - single element
+/** @return parent axis IDs of this Stack,
+ * in an array
  */
-Stack.prototype.parentAxisID = function ()
+Stack.prototype.parentAxisIDs = function ()
 {
-  return this.parentAxis().map(function (s) { return s.axisName; });
+  return this.parentAxes().map(function (s) { return s.axisName; });
 };
 /** @return count of parent axes in this Stack,
  */
@@ -710,6 +708,12 @@ Stack.prototype.stackIndex = function ()
   /** Could cache result in s; this function is often used; may not affect speed much. */
   let s = this, i = stacks.indexOf(s);
   return i;
+};
+/** Passed to d3 .data() to identify the DOM element correlated with the Stack. */
+Stack.prototype.keyFunction = function (stack, i)
+{
+  console.log(this, stack.stackID, i);
+  return stack.stackID;
 };
 /** Use the position of this stack within stacks[] to determine g.axis-outer element classes.
  *
