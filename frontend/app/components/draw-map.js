@@ -954,7 +954,7 @@ export default Ember.Component.extend(Ember.Evented, {
      * further increments will trace the whole arrays, i.e. O(N),
      * and trace cross-products of arrays - O(N^2) e.g. trace the whole array for O(N) events.
      */
-    const trace_stack = 2;
+    const trace_stack = 1;
     const trace_scale_y = 0;
     const trace_drag = 0;
     const trace_alias = 1;  // currently no trace at level 1.
@@ -3240,7 +3240,7 @@ export default Ember.Component.extend(Ember.Evented, {
       if (trace_adj > 1)
         log_adjAxes(adjAxes);
       else if (trace_adj)
-        console.log("collateAdjacentAxes", d3.keys(adjAxes).map(function (axisName) { return axisId2Name(axisName);}));
+        console.log("collateAdjacentAxes", d3.keys(adjAxes).map(Stacked.longName));
     }
     //-gd
     function axisId2Name(axisID)
@@ -5439,7 +5439,7 @@ export default Ember.Component.extend(Ember.Evented, {
               deleteAxisfromAxisIDs(axisName);
               let sBlock = oa.stacks.blocks[axisName];
               console.log('sBlock.axis', sBlock.axis);
-              // sBlock.axis = undefined;
+              sBlock.axis = undefined;
               removeAxisMaybeStack(axisName, stackID, stack);
               me.send('mapsToViewDelete', axisName);
               // filter axisName out of selectedFeatures and selectedAxes

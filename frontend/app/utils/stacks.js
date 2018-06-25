@@ -17,7 +17,7 @@ Object.filter = Object_filter;
 
 /*----------------------------------------------------------------------------*/
 
-const trace_stack = 2;
+const trace_stack = 1;
 const trace_updatedStacks = true;
 
 /** Each stack contains 1 or more Axis Pieces (Axes).
@@ -89,16 +89,18 @@ function Block(block) {
   this.block = block;
   console.log("Stacked()", this, block, axisName);
 };
+/** @return axis of this block or if it has a parent, its parent's axis */
 Block.prototype.getAxis = function()
 {
   return this.axis || (this.parent && this.parent.getAxis());
 };
+/** @return stack of this block's axis.
+ * @see Block.prototype.getAxis()
+ */
 Block.prototype.getStack = function ()
 {
-  // return this.axis.stack;
-  //  - set .axis when adopt, or 
-  let axis = this.getAxis();
-  return axis.stack;  // or axis.getStack()
+  let axis;
+  return (axis = this.getAxis()) && axis.stack;
 };
 Block.prototype.log = function() {
   console.log(
@@ -248,6 +250,15 @@ Stacked.getStack = function (axisID)
   /** oa.axes[] contains Block-s also. Block implements getStack(). */
   s = axis && axis.getStack();
   return s;
+};
+/** static */
+Stacked.longName = function (axisID)
+{
+  let axis, block, blockR, longName =
+  ((axis = stacks.axesP[axisID]) && axis.longName()) ||
+    ((block = stacks.blocks[axisID]) && (blockR = block.block) && (axisID + ':' + blockR.get('scope'))) ||
+    axisID;
+  return longName;
 };
 Stacked.axisName_match =
   function (axisName)
