@@ -14,6 +14,7 @@ import { eltWidthResizable, noShiftKeyfilter, eltClassName  } from '../utils/dom
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
 import { Viewport } from '../utils/draw/viewport';
 import {  Axes, /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId  }  from '../utils/draw/axis';
+import { stacksAxesDomVerify  }  from '../utils/draw/stacksAxes';
 import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText } from '../utils/stacks';
 import { updateRange } from '../utils/stacksLayout';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../utils/stacks-drag';
@@ -1172,6 +1173,11 @@ export default Ember.Component.extend(Ember.Evented, {
       {
         // initial stacking : 1 axis per stack, but later when db contains Linkage
         // Groups, can automatically stack Axes.
+          /* It seems better to re-use oa.axesP[adopt0] instead of creating sd;
+           * that requires the adoption search to be done earlier, which is simple,
+           * and also will change this significantly, so is better deferred
+           * until after current release.
+           */
         sd = new Stacked(d, 1, parentAxis); // parentAxis === undefined
           sd.referenceBlock = dBlock;
           console.log('before push sd', sd, sd.blocks, sBlock);
@@ -1277,7 +1283,7 @@ export default Ember.Component.extend(Ember.Evented, {
         /** blocks which have a parent axis do not need a Stack.
          * sd is defined if we need a new axis and hence a new Stack.
          */
-        newStack = sd && new Stack(sd);
+        newStack = sd && ! adopt0 && new Stack(sd);
         if (parentAxis)
         {
           console.log("pre-adopt", parentAxis, d, parentName);
@@ -1335,7 +1341,7 @@ export default Ember.Component.extend(Ember.Evented, {
         if (sd)
         sd.z = oa.z[d];  // reference from Stacked axis to z[axisID]
 
-          // newStack is only defined if sd is defined which is only true if ! parentAxis
+          // newStack is only defined if sd is defined (and !adopt0) which is only true if ! parentAxis
         if (newStack)
         {
           console.log("oa.stacks.append(stack)", d, newStack.stackID, oa.stacks);
@@ -1363,7 +1369,7 @@ export default Ember.Component.extend(Ember.Evented, {
           delete oa.axesP[a.axisName];
           oa.stacks.blocks[a.axisName] = aBlock;
           console.log('aBlock.axis', aBlock.axis);
-          // aBlock.axis = sd;
+          aBlock.axis = sd;
           deleteAxisfromAxisIDs(a.axisName);
           if (! oldStack)
             console.log("adopted axis had no stack", a, a.axisName, oa.stacks);
@@ -1377,6 +1383,7 @@ export default Ember.Component.extend(Ember.Evented, {
         });
       }
       Stack.verify();
+      stacksAxesDomVerify(stacks, oa.svgContainer);
       }
     });
     function axisWidthResize(axisID, width, dx)
@@ -5206,6 +5213,7 @@ export default Ember.Component.extend(Ember.Evented, {
         stacks.toDeleteAfterDrag = undefined;
       }
       Stack.verify();
+      stacksAxesDomVerify(stacks, oa.svgContainer);
     }
     /** recalculate all stacks' Y position.
      * Used after drawing / window resize.
