@@ -1,3 +1,5 @@
+import {  maybeFlip, maybeFlipExtent }  from '../utils/draw/axis';
+
 /*----------------------------------------------------------------------------*/
 
     /** update ys[a.axisName]  and y[a.axisName] for the given axis,
@@ -17,9 +19,13 @@ function updateRange(y, ys, vc, a)
   if (ys && ys[a.axisName])
   {
     let myRange = a.yRange();
+    let axisName = a.axisName;
     console.log("updateRange", a.axisName, a.position, a.portion, myRange, vc.yRange);
     ys[a.axisName].range([0, myRange]);
     y[a.axisName].range([0, vc.yRange]);
+
+    y[axisName].brush
+      .extent(maybeFlipExtent([[-8,0],[8, vc.yRange /* not myRange */]], a.flipped));
   }
 }
 

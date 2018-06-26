@@ -13,7 +13,8 @@ import { chrData } from '../utils/utility-chromosome';
 import { eltWidthResizable, noShiftKeyfilter, eltClassName  } from '../utils/domElements';
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
 import { Viewport } from '../utils/draw/viewport';
-import {  Axes, /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId  }  from '../utils/draw/axis';
+import {  Axes, maybeFlip, maybeFlipExtent,
+          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify  }  from '../utils/draw/stacksAxes';
 import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText } from '../utils/stacks';
 import { updateRange } from '../utils/stacksLayout';
@@ -1647,20 +1648,7 @@ export default Ember.Component.extend(Ember.Evented, {
       path_colour_scale.range(d3.schemeCategory10);
     }
 
-    function maybeFlip(domain, flipped)
-    {
-      return flipped
-        ? [domain[1], domain[0]]
-        : domain;
-    }
-    /** @param extent [[left,top],[right,bottom]], e.g. [[-8,0],[8,myRange]].
-     * @return if flipped, [[left,bottom],[right,top]] */
-    function maybeFlipExtent(extent, flipped)
-    {
-      return flipped
-        ? [[extent[0][0], extent[1][1]], [extent[1][0], extent[0][1]]]
-        : extent;
-    }
+//- moved to utils/draw/axis.js : maybeFlip(), maybeFlipExtent()
 
 //-components/stacks 
     /* for each axis :
@@ -5511,7 +5499,8 @@ export default Ember.Component.extend(Ember.Evented, {
         .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
           .attr('height', graphDim.h /*"auto"*/);
 
-        if (widthChanged)
+      // for stacked axes, window height change affects the transform.
+        if (widthChanged || heightChanged)
         {
         t.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
           // also xDropOutDistance_update (),  update DropTarget().size
@@ -5523,6 +5512,11 @@ export default Ember.Component.extend(Ember.Evented, {
           oa.stacks.axisIDs().forEach(function(axisName) {
             axisScaleChanged(axisName, t, false);
           });
+          // let traceCount = 1;
+          svgContainer.selectAll('g.axis-all > g.brush')
+            .each(function(d) {
+              /* if (traceCount-->0) console.log(this, 'brush extent', oa.y[d].brush.extent()()); */
+              d3.select(this).call(oa.y[d].brush); });
           pathUpdate(t /*st*/);
         }
         Ember.run.later( function () { showSynteny(syntenyBlocks, undefined); });

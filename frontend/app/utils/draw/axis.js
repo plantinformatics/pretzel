@@ -7,6 +7,27 @@ function Axes(oa_)
   oa = oa_;
 };
 
+/*----------------------------------------------------------------------------*/
+// moved here from draw-map.js
+
+/** @param domain [min,max], e.g. result of d3.extent()
+ * @return if flipped, [max,min]
+ */
+function maybeFlip(domain, flipped)
+{
+  return flipped
+    ? [domain[1], domain[0]]
+    : domain;
+}
+/** @param extent [[left,top],[right,bottom]], e.g. [[-8,0],[8,myRange]].
+ * @return if flipped, [[left,bottom],[right,top]] */
+function maybeFlipExtent(extent, flipped)
+{
+  return flipped
+    ? [[extent[0][0], extent[1][1]], [extent[1][0], extent[0][1]]]
+    : extent;
+}
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -74,4 +95,4 @@ function highlightId(name)
 
 /*----------------------------------------------------------------------------*/
 
-export {  Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId, highlightId } ;
+export {  Axes, maybeFlip, maybeFlipExtent, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId, highlightId } ;
