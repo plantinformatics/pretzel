@@ -550,7 +550,6 @@ export default Ember.Component.extend(Ember.Evented, {
     margins = vc.margins,
     marginIndex = vc.marginIndex;
     let yRange = vc.yRange;
-    let xDropOutDistance = vc.xDropOutDistance;
     let dragLimit = vc.dragLimit;
     let axisXRange = vc.axisXRange;
 
@@ -4608,7 +4607,7 @@ export default Ember.Component.extend(Ember.Evented, {
           // For the case : drag ended in a middle zone (or outside any DropTarget zone)
           // else if d is in a >1 stack then remove it else move the stack
           else if ((! currentDrop || !currentDrop.out)
-                   && ((xDistance = Math.abs(d3.event.x - xDistanceRef)) > xDropOutDistance))
+                   && ((xDistance = Math.abs(d3.event.x - xDistanceRef)) > vc.xDropOutDistance))
           {
             /** dragged axis, source stack */
             let axis = oa.axes[d], stack = axis.stack;
