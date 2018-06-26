@@ -5653,6 +5653,10 @@ export default Ember.Component.extend(Ember.Evented, {
       setupPathOpacity();
       setupPathWidth();
       setupSbSizeThresh();
+
+      flows_showControls(flowButtonsSel);
+      configurejQueryTooltip(oa, flowButtonsSel);
+      setupToggleModePublish();
     }
 
 //- flows-controls
@@ -5697,9 +5701,6 @@ export default Ember.Component.extend(Ember.Evented, {
     };
     if (newRender)
     {
-    flows_showControls(flowButtonsSel);
-    configurejQueryTooltip(oa, flowButtonsSel);
-    setupToggleModePublish();
     setupVariousControls();
     }
 
