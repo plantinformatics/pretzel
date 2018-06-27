@@ -42,7 +42,10 @@ export default ManageBase.extend({
   }),
   actions: {
     refreshAvailable() {
-      this.sendAction('updateModel')
+      let me = this;
+      this.get('store').query('dataset', {filter: {'include': 'blocks', where: {'type': 'observational'}}}).then(function(datasets) {
+        me.set('datasets', datasets.toArray());
+      });
     },
     selectBlock(chr) {
       this.sendAction('selectBlock', chr);

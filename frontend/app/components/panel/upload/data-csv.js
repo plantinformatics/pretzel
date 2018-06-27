@@ -4,6 +4,14 @@ export default UploadBase.extend({
   loadDatasets: function(id) {
     var that = this;
     let datasets = that.get('store').peekAll('Dataset').toArray();
+    if (datasets.length == 0) {
+      // in case datasets haven't been loaded in yet, load them and refresh the list of datasets
+      that.get('store').query('Dataset', {filter: {'include': 'blocks'}}).then(function(data) {
+        if (data.toArray().length > 0) {
+          that.loadDatasets();
+        }
+      });
+    }
 
     //build dataset select
     $("#dataset").html('');
@@ -90,6 +98,11 @@ export default UploadBase.extend({
         }
       });
       that.set('table', table);
+
+      $('.nav-tabs a[href="#left-panel-upload"]').on('shown.bs.tab', function(e) {
+        // trigger rerender when tab is shown
+        table.updateSettings({});
+      });
     });
   }.on('didInsertElement'),
 
