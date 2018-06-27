@@ -5486,7 +5486,10 @@ export default Ember.Component.extend(Ember.Evented, {
           flipButtonS
             .on('click', function (buttonElt /*, i, g*/) {
               console.log("flip", axisName, this);
-              let axis = oa.axes[axisName], ya = oa.y[axisName], ysa=oa.ys[axisName],
+              /** Handle the possibility that axisName may have been adopted by
+               * another axis after this callback registration. */
+              let axis = Stacked.getAxis(axisName),
+              ya = oa.y[axisName = axis.axisName], ysa=oa.ys[axisName],
               domain = maybeFlip(ya.domain(), true);
               axis.flipped = ! axis.flipped;
               ya.domain(domain);
@@ -5501,7 +5504,7 @@ export default Ember.Component.extend(Ember.Evented, {
           perpendicularButtonS
             .on('click', function (buttonElt /*, i, g*/) {
               console.log("perpendicular", axisName, this);
-              let axis = oa.axes[axisName];
+              let axis = Stacked.getAxis(axisName);
               axis.perpendicular = ! axis.perpendicular;
 
               oa.showResize(true, true);
@@ -5513,7 +5516,7 @@ export default Ember.Component.extend(Ember.Evented, {
           extendButtonS
             .on('click', function (buttonElt /*, i, g*/) {
               console.log("extend", axisName, this);
-              let axis = oa.axes[axisName], stack = axis && axis.stack;
+              let axis = Stacked.getAxis(axisName), stack = axis && axis.stack;
               // toggle axis.extended, which is initially undefined.
               axis.extended = ! axis.extended;
               axisShowExtend(axis, axisName, undefined);
