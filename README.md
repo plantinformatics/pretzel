@@ -67,10 +67,11 @@ git clone https://github.com/plantinformatics/pretzel.git
 To setup and build the frontend and backend, and run the backend :
 
 ```
+cd pretzel
 npm run go
 ```
 
-The following sections describe each of those steps individually.
+The following sections describe each of those steps individually, as an alternative to `npm run go`.
 
 
 ### Install Ember dependencies

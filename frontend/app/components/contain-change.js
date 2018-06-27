@@ -37,11 +37,11 @@ export default Ember.Component.extend({
   },
 
   didInsertElement() {
-    let markers = this.markers, targetId = this.targetId,
+    let features = this.features, targetId = this.targetId,
     targetSel = "#" + targetId;
     
     console.log("components/path-hover didInsertElement()", this.element,
-                markers, targetId, this._targetObject, this.parentView.element);
+                features, targetId, this._targetObject, this.parentView.element);
 
     Ember.run.later(function() {
       let d = Ember.$('.tooltip.ember-popover');  // make-ui-draggable
@@ -66,10 +66,10 @@ export default Ember.Component.extend({
     this.set(name,  ! this.get(name));
   },
 
-  pathHovered: function(hovered, hoverMarkers) {
-    console.log("pathHovered in components/contain-change", hovered, hoverMarkers);
+  pathHovered: function(hovered, hoverFeatures) {
+    console.log("pathHovered in components/contain-change", hovered, hoverFeatures);
     this.ensureValue('pathHoveredVar', hovered);
-    this.set('hoverMarkers', hoverMarkers);
+    this.set('hoverFeatures', hoverFeatures);
   }
 
 });

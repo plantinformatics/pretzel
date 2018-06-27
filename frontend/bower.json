@@ -11,7 +11,7 @@
     "minimatch": "isaacs/minimatch#^3.0.4",
     "d3-tip" :  "VACLab/d3-tip",
     "d3": "^4.10.2",
-    "handsontable": "^0.34.4"
+    "handsontable": "^2.0.0"
   },
   "devDependencies": {
     "bootstrap": "^3.3.7"
@@ -25,6 +25,7 @@
     "qunit-notifications": "^0.1.0",
     "ember-resolver": "^4.5.0",
     "minimatch": "^3.0.4",
-    "tough-cookie": "^2.3.3"
+    "tough-cookie": "^2.3.3",
+    "route-recognizer"  : "^0.2.3"
   }
 }

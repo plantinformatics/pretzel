@@ -32,8 +32,13 @@ export default EntryBase.extend({
       let active = this.get('layout.active')
       this.set('layout.active', !active)
     },
-    onDelete(id) {
-      this.sendAction('onDelete', id)
+    /** Dataset receives onDelete block, which it forwards up to manage-explorer
+     * and thence mapview which translates it to removeMap, and dataset also, as
+     * entry-base, sends onDelete dataset to manage-explorer ...
+     */
+     onDelete(modelName, id) {
+      console.log('entry-dataset', 'onDelete', modelName, id);
+      this.sendAction('onDelete', modelName, id);
     }
   }
 });

@@ -7,23 +7,23 @@ export default Ember.Component.extend({
 
   feed: Ember.inject.service(),
 
-  colouredMarkers : undefined,
+  colouredFeatures : undefined,
 
   actions : {
     flipRegion : function () {
 	let
-	    textDiv = d3.select('.colouredMarkers.ember-content-editable'),
-	markerNames_ = textDiv.node().innerText,
-	markerNames = 
-	    (markerNames_.match(/\S+\r?\n|\S+\r?$/g) || [])
+	    textDiv = d3.select('.colouredFeatures.ember-content-editable'),
+	featureNames_ = textDiv.node().innerText,
+	featureNames = 
+	    (featureNames_.match(/\S+\r?\n|\S+\r?$/g) || [])
 	    .map(function(c) { return c.trim('\n'); } );
 	    // .match(/\S+/g) || [];
-	console.log("flipRegion", "selected-markers.js", markerNames_.length, markerNames.length);
-      this.get('feed').trigger('flipRegion', markerNames);
+	console.log("flipRegion", "selected-features.js", featureNames_.length, featureNames.length);
+      this.get('feed').trigger('flipRegion', featureNames);
     },
 
       clearScaffoldColours  : function () {
-      console.log("clearScaffoldColours", "selected-markers.js");
+      console.log("clearScaffoldColours", "selected-features.js");
       this.get('feed').trigger('clearScaffoldColours');
       },
 
@@ -33,17 +33,17 @@ export default Ember.Component.extend({
 
     putContent : function (component, event) {
       console.log("putContent", component, event);
-	let markerNames = event.target.innerText;
-      this.get('feed').trigger('colouredMarkers', markerNames);
+	let featureNames = event.target.innerText;
+      this.get('feed').trigger('colouredFeatures', featureNames);
     }
   },
     
-  resetGrid: function(markers) {
+  resetGrid: function(features) {
     /** grid was undefined - is this function used ? */
     console.log("resetGrid");
     let grid = d3.divgrid();
     d3.select('#grid')
-      .datum(markers)
+      .datum(features)
       .call(grid);
   },
 
@@ -63,21 +63,21 @@ export default Ember.Component.extend({
 
     onSelectionChange: function () {
 	let data = this.get('data');
-	console.log("selected-markers.js", "onSelectionChange", data.length);
-	let markerNamesText = data.map(function (d, i, g) { return d.Marker;}).join("\n");
-	this.set('selection', markerNamesText);
+	console.log("selected-features.js", "onSelectionChange", data.length);
+	let featureNamesText = data.map(function (d, i, g) { return d.Feature;}).join("\n");
+	this.set('selection', featureNamesText);
     }.observes('data'),
 
 
-    /** From the model data, extract the marker name column, and return these as a newline-concatenated string,
-     * for display in content-editable, passed as arg : {{content-editable  value=markerNames ... }}
+    /** From the model data, extract the feature name column, and return these as a newline-concatenated string,
+     * for display in content-editable, passed as arg : {{content-editable  value=featureNames ... }}
      */
-    markerNames: function(fnName) {
+    featureNames: function(fnName) {
 	let data = this.get('data');
-	console.log("selected-markers.js", fnName, data.length);
-	let markerNamesText = data.map(function (d, i, g) { return d.Marker;}).join("\n");
-	// this.set('colouredMarkers', markerNamesText);
-	return markerNamesText;
+	console.log("selected-features.js", fnName, data.length);
+	let featureNamesText = data.map(function (d, i, g) { return d.Feature;}).join("\n");
+	// this.set('colouredFeatures', featureNamesText);
+	return featureNamesText;
     }.property('data.[]')
 
 

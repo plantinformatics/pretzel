@@ -1,16 +1,16 @@
 {{!--
-          gene / marker / location / interval -> apollo |  map | etc
+          feature (gene / marker) / location / interval -> apollo |  map | etc
           --}}
 
-<div id="goto-marker" class="clearfix control-panel bordered"  data-toggle="buttons-checkbox" >
+<div id="goto-feature" class="clearfix control-panel bordered"  data-toggle="buttons-checkbox" >
   Type of key values :
   <div>
     <input type="radio" name="optradioLimitType" data-value="Gene" />
     <label>Gene</label>
   </div>
   <div>
-    <input type="radio" name="optradioLimitType" data-value="Marker" />
-    <label>Marker</label>
+    <input type="radio" name="optradioLimitType" data-value="Feature" />
+    <label>Feature</label>
   </div>
   <div>
     <input type="radio" name="optradioLimitType" data-value="Location" />
@@ -19,7 +19,7 @@
 </div>
 
 {{input
-    value=marker1
+    value=feature1
     class="form-control"
     placeholder="Marker/Gene Name / Location" }}
 
@@ -32,7 +32,7 @@
   <label>Interval</label>
   {{input
       hidden
-      value=marker2
+      value=feature2
       class="form-control"
       placeholder="Marker/Gene Name / Location" }}
 
@@ -50,8 +50,14 @@
 
 <button>Map
   {{#ember-popover  }}
-    {{goto-map mapList=mapsOfMarker }}
+    {{goto-map mapList=mapsOfFeature }}
   {{/ember-popover }}
 </button>
-{{goto-ensembl markerName=marker1 }}
+<div>
+  {{#each mapsOfFeature as |map|}}
+    {{ map.name }}
+  {{/each}}
+</div>
+
+{{goto-ensembl featureName=feature1 }}
 

@@ -5,13 +5,13 @@ const { Component } = Ember;
 export default Component.extend({
 
   actions: {
-    selectChrom(chr) {
-      console.log("goto-map", "selectChrom", chr);
-      this.sendAction('selectChrom', chr);
+    selectBlock(block) {
+      console.log("goto-map", "selectBlock", block);
+      this.sendAction('selectBlock', block);
     },
-    deleteChrom(chr) {
-      console.log("goto-map", "deleteChrom", chr.id);
-      this.sendAction('deleteChrom', chr.id);
+    deleteBlock(block) {
+      console.log("goto-map", "deleteBlock", block.id);
+      this.sendAction('deleteBlock', block.id);
     }
   }
 });
