@@ -2129,13 +2129,33 @@ export default Ember.Component.extend(Ember.Evented, {
         X : Math.round(size.w/2),
         Y : /*YMargin*/10 + size.h
       },
-      /** top and bottom edges relative to the axis's transform. bottom depends
-       * on the axis's portion
+      /** top and bottom edges relative to the axis's transform.
        */
       edge = {
         top : size.h,
-        bottom : function (axis) { return axis.yRange() - size.h; }
+        /** Originally bottom() depended on the axis's portion, but now g.axis-outer
+         * has a transform with translate and scale which apply the axis's portion
+         * to the elements within g.axis-outer.
+         * So bottom() is now based on vc.yRange instead of axis.yRange().
+         * @param axis is not used - see comment re. edge.
+         */
+        bottom : function (axis) { return vc.yRange /* formerly axis.yRange() */ - size.h; }
       };
+      /** Same as dropTargetY().
+       * Called via d3 .attr().
+       * @param this  <rect> DOM element in g.stackDropTarget
+       */
+      function dropTargetYresize () {
+        /** DOMTokenList. contains top or bottom etc */
+        let rect = this,
+        parentClasses = rect.parentElement.classList,
+        top = parentClasses.contains('top'),
+        bottom = parentClasses.contains('bottom'),
+        yVal = top ? -oa.vc.dropTargetYMargin : edge.bottom(undefined);
+        // console.log('dropTargetYresize', rect, parentClasses, top, bottom, yVal);
+        return yVal;
+      };
+
       /** @return axis which this DropTarget is part of */
       DropTarget.prototype.getAxis = function ()
       {
@@ -2178,8 +2198,12 @@ export default Ember.Component.extend(Ember.Evented, {
           .on("mouseout", dropTargetMouseOut);
       };
 
-      /// @parameter left  true or false to indicate zone is positioned at left or
-      /// right of axis
+      /** The original design included a drop zone near the middle of the axis,
+       * for dropping an axis out of its current stack; this is replaced by
+       * dropping past xDropOutDistance, so this is not enabled.
+       * @parameter left  true or false to indicate zone is positioned at left or
+       * right of axis
+       */
       DropTarget.prototype.addMiddle = function (left)
       {
         // Add a target zone for axis stacking drag&drop
@@ -2189,9 +2213,14 @@ export default Ember.Component.extend(Ember.Evented, {
         function dropTargetHeight(datum/*, index, group*/)
         {
           // console.log("dropTargetHeight", datum, index, group);
+          /** dropTargetHeight is axis height minus the height of the top and bottom drop zones.
+           * Translate and scale is provided by transform of g.axis-outer, so
+           * use vc yRange not axis.yRange().  More detailed comment in @see edge.bottom().
+           * So axis is not used :
           let axisName = datum,
           axis = oa.axes[axisName];
-          return axis.yRange() - 2 * size.h;
+           */
+          return vc.yRange - 2 * size.h;
         }
         stackDropTarget
           .append("rect")
@@ -2204,6 +2233,18 @@ export default Ember.Component.extend(Ember.Evented, {
         stackDropTarget
           .on("mouseover", dropTargetMouseOver)
           .on("mouseout", dropTargetMouseOut);
+      };
+
+      /** Show the affect of window resize on axis drop target zones.
+       * Only the y value of g.top > rect elements need be changed.
+       * Target zone width could be changed in response to window width change - that is not done.
+       */
+      DropTarget.prototype.showResize = function ()
+      {
+        svgContainer.selectAll('g.stackDropTarget.bottom > rect')
+          .attr("y", dropTargetYresize)
+          // .each(function(d, i, g) { console.log(d, i, this); })
+        ;
       };
 
       function storeDropTarget(axisName, classList)
@@ -5518,6 +5559,8 @@ export default Ember.Component.extend(Ember.Evented, {
               /* if (traceCount-->0) console.log(this, 'brush extent', oa.y[d].brush.extent()()); */
               d3.select(this).call(oa.y[d].brush); });
           pathUpdate(t /*st*/);
+
+          DropTarget.prototype.showResize();
         }
         Ember.run.later( function () { showSynteny(syntenyBlocks, undefined); });
       };
