@@ -2,6 +2,7 @@ import Ember from 'ember';
 
 import  { logElementDimensions2 } from '../domElements';
 
+const trace_resize = 0;
 
 /*----------------------------------------------------------------------------*/
 
@@ -138,7 +139,8 @@ Viewport.prototype.calc = function(oa)
 
   this.dragLimit =
     dragLimit = {min:-50, max:graphDim.w+70};
-  console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
+  if (trace_resize)
+    console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
   /// pixels.  can calculate this from axis name * font width
 
   /// x range of the axis centres. left space at left and right for
@@ -146,7 +148,8 @@ Viewport.prototype.calc = function(oa)
   /// index: 0:left, 1:right
   this.axisXRange = [0 + axisHeaderTextLen/2, graphDim.w - axisHeaderTextLen/2];
   // -  some other results of Viewport().calc() are currently accessed within a previous draw() closure  (yRange, xDropOutDistance, dragLimit)
-  console.log("Viewport.calc()", this);
+  if (trace_resize)
+    console.log("Viewport.calc()", this);
 
   // expose these values for use in draw-map
   this.axisHeaderTextLen = axisHeaderTextLen;
@@ -171,7 +174,8 @@ Viewport.prototype.xDropOutDistance_update = function (oa) {
   let previous = this.xDropOutDistance;
   this.xDropOutDistance =
     viewPort.w/(nStacks*6);
-  console.log('xDropOutDistance_update', previous, '->', this.xDropOutDistance, viewPort.w, nStacks);
+  if (trace_resize)
+    console.log('xDropOutDistance_update', previous, '->', this.xDropOutDistance, viewPort.w, nStacks);
 };
 
 

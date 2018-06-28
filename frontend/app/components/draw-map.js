@@ -1386,6 +1386,7 @@ export default Ember.Component.extend(Ember.Evented, {
       stacksAxesDomVerify(stacks, oa.svgContainer);
       }
     });
+    stacksAxesDomVerify(stacks, oa.svgContainer);
     function axisWidthResize(axisID, width, dx)
     {
       console.log("axisWidthResize", axisID, width, dx);
@@ -1897,8 +1898,11 @@ export default Ember.Component.extend(Ember.Evented, {
       stackX;
     if (removedStacks.size())
     {
-      logSelection(removedStacks);
-      logSelectionNodes(removedStacks);
+      if (trace_stack > 1)
+      {
+        logSelection(removedStacks);
+        logSelectionNodes(removedStacks);
+      }
       console.log('removedStacks', removedStacks.size());
       let ra = removedStacks.selectAll("g.axis-outer");
       console.log('ra', ra, ra.nodes(), ra.node());
@@ -1918,8 +1922,21 @@ export default Ember.Component.extend(Ember.Evented, {
         {
             console.log('to stack', ras.stackID, sDest.node());
             let
-              moved = sDest.insert(function () { return rag; });
-            console.log(moved.node(), moved.node().parentElement);
+              /** .insert() will change .__data__, refn d3 doc : " Each new
+               * element inherits the data of the current elements, if any, in
+               * the same manner as selection.select."
+               * Data of parent g.stack is Stack; data of g.axis-outer is axisID
+               */
+              ragd = rag.__data__,
+            moved = sDest.insert(function () { return rag; });
+            rag.__data__ = ragd;
+            if (trace_stack > 1)
+            {
+              console.log(moved.node(), moved.data(), moved.node().parentElement,
+                          rag.__data__);
+              Stack.verify();
+              stacksAxesDomVerify(stacks, oa.svgContainer);
+            }
           }
       });
       console.log('remnant', removedStacks.node());
@@ -2094,6 +2111,8 @@ export default Ember.Component.extend(Ember.Evented, {
       let ao1 = svgContainer.selectAll("g.stack > g");  //.axis-outer
       logSelectionNodes(ao1);
     }
+    Stack.verify();
+    stacksAxesDomVerify(stacks, oa.svgContainer);
     ao
       .attr("transform", Stack.prototype.axisTransformO);
     g
@@ -4868,7 +4887,7 @@ export default Ember.Component.extend(Ember.Evented, {
         path_ = unique_1_1_mapping ? (pathDataInG ? pathUg : pathU) : path,
       /** The data of g is feature name, data of path is SVG path string. */
       keyFn =function(d) { let featureName = featureNameOfPath(this); 
-                           console.log("keyFn", d, this, featureName); 
+                           console.log("keyFn", d, 'parent', this, featureName); 
                            return featureName; };
       /* The ffaa data of path's parent g is accessed from path attribute
        * functions (i.e. style(stroke), classed(reSelected), gKeyFn(), d, etc.);

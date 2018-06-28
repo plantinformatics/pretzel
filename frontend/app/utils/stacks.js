@@ -407,7 +407,8 @@ Stacked.prototype.children = function (includeSelf, names)
   let children = this.blocks;
   if (names)
     children = children.map(function (a) { return a.block.get('name'); });
-  console.log("children", this, children);
+  if (trace_stack > 1)
+    console.log("children", this, children);
   if (! includeSelf)
   {
     // delete [0] element of children[]
@@ -725,10 +726,20 @@ Stack.prototype.stackIndex = function ()
   let s = this, i = stacks.indexOf(s);
   return i;
 };
-/** Passed to d3 .data() to identify the DOM element correlated with the Stack. */
-Stack.prototype.keyFunction = function (stack, i)
+/** Passed to d3 .data() to identify the DOM element correlated with the Stack.
+ * @param this  parent of g.stack, i.e. svgContainer
+ */
+Stack.prototype.keyFunction = function (stack, i, group)
 {
-  console.log(this, stack.stackID, i);
+  /** keyFunction is called with `this` being the parent group nodes, then the selected elements.
+   * Different values are passed for group in those 2 cases, where p = group.__proto__ :
+   * `this` is :
+   *  g.stack :  p === NodeList.prototype;
+   *  the group argument :  p === Array.prototype, or p.isPrototypeOf(Array())
+   */
+  let thisIsParent = group.__proto__ === Array.prototype;
+  if (trace_stack > 1)
+    console.log(thisIsParent ? '' : this, stack.stackID, i);
   return stack.stackID;
 };
 /** Use the position of this stack within stacks[] to determine g.axis-outer element classes.

@@ -21,7 +21,7 @@ let breakInDebugger = true;
 function breakPoint()
 {
   if ((breakPointEnable > 0) || (breakPoint_trace > 1) )
-    console.log.apply(arguments);
+    console.log.apply(this, arguments);
   if (breakPointEnable > 0)
   {
     if (breakPoint_trace > 0)
