@@ -3677,16 +3677,38 @@ export default Ember.Component.extend(Ember.Evented, {
       // console.log(fAxis_s );
       return fAxis_s ;
     }
+
+    /** This is equivalent to o[ak].
+     * Whereas o[] keys are only axisIDs, this function handles block IDs.
+     *
+     * Where the feature d is in a child data block, featureY_(ak, d) requires
+     * the block id not the id of the axis which contains the block.  So
+     * functions which use featureY_() also use blockO().
+     *
+     * o[] contains x Offsets; the o may also have abbreviated Original, because
+     * it caches axis positions.  Blocko can be renamed when axes are split out;
+     * it is reminiscent of a bloco - a Carnival block party
+     * (https://en.wikipedia.org/wiki/Carnival_block)
+     */
+    function blockO(ak)
+    {
+      let axis = Stacked.getAxis(ak);
+      return o[axis.axisName];
+    }
+
     /** A line between a feature's location in adjacent Axes.
      * @param ak1, ak2 block IDs
      * @param d feature name
+     * Replaced by the stacks equivalent : @see featureLineS2()
      */
     function featureLine2(ak1, ak2, d)
     {
       let
-        o = oa.o;
-      return line([[o[ak1], featureY_(ak1, d)],
-                   [o[ak2], featureY_(ak2, d)]]);
+        o = oa.o,
+      /** use blockO() in place of o[] lookup to handle ak1,2 being child blocks */
+      ends = [ak1, ak2].map(function (ak) {
+        return [blockO(ak), featureY_(ak, d)]; });
+      return line(ends);
     }
     /**  Return the x positions of the given axes; if the leftmost is split, add
      *  its width to the corresponding returned axis position.
@@ -3822,9 +3844,10 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       let akY = featureY_(ak, d);
       let shiftRight = 9;
-      let o = oa.o;
-      return line([[o[ak]-xOffset + shiftRight, akY],
-                   [o[ak]+xOffset + shiftRight, akY]]);
+      let o = oa.o,
+      oak = blockO(ak);
+      return line([[oak-xOffset + shiftRight, akY],
+                   [oak+xOffset + shiftRight, akY]]);
     }
     /** calculate SVG line path for an horizontal line.
      *
@@ -3862,9 +3885,9 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       let
       akY = featureY_(ak, d);
-      let o = oa.o;
-      return line([[o[ak]-xOffset, akY],
-                   [o[ak]+xOffset, akY]]);
+      let o = oa.o, oak = blockO(ak);
+      return line([[oak-xOffset, akY],
+                   [oak+xOffset, akY]]);
     }
 //- collate
     /**
@@ -4154,7 +4177,6 @@ export default Ember.Component.extend(Ember.Evented, {
 
       return r;
     }
-
 
     /** Calculate relative feature location in the axis.
      * Result Y is relative to the stack, not the axis,
