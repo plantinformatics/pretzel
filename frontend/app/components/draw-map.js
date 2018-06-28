@@ -1202,7 +1202,7 @@ export default Ember.Component.extend(Ember.Evented, {
               (d != d2) &&  // not self
               ! a.parent && a.parentName && (a.parentName == dataset.get('name')) &&
               a.z.scope && (a.z.scope == oa.cmName[d].scope);
-            if (! a.parent)
+            if (! a.parent && trace_stack > 1)
             {
               console.log(d2, a.parentName,  dataset.get('name'),
                            a.z && a.z.scope,  oa.cmName[d].scope, match); 
@@ -4066,15 +4066,22 @@ export default Ember.Component.extend(Ember.Evented, {
       // let [stackIndex, a0, a1] = featureAliasGroupAxes[d];
       let r;
 
-      let range = [0, vc.yRange];
+      /** To allow lines which spread onto other axes in the same stack, but
+       * still remain within the stack limits, unlike allowPathsOutsideZoom, use
+       * [0, vc.yRange];
+       */
+      let
+        a0_ = Stacked.getAxis(a0),  range0 = a0_.yRange2(),
+      a1_ = Stacked.getAxis(a1),  range1 = a1_.yRange2();     
 
       /** if d1 is undefined, then its value is d0 : direct connection, not alias. */
       let d1_ = d1 || d0;
+      // can skip the inRangeLR[] calc if allowPathsOutsideZoom.
       /** Filter out those paths that either side locates out of the svg. */
       let
           inRangeLR = 
-            [inRangeI(a0, d0, range), 
-             inRangeI(a1, d1_, range)],
+            [inRangeI(a0, d0, range0), 
+             inRangeI(a1, d1_, range1)],
         lineIn = allowPathsOutsideZoom ||
             (inRangeLR[0]
              && inRangeLR[1]);

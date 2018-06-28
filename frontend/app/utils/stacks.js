@@ -263,7 +263,7 @@ Stacked.longName = function (axisID)
 Stacked.axisName_match =
   function (axisName)
 { return function (s) { return s.axisName === axisName; };};
-/** If axisName has a parent, return its name.
+/** If axisName has a parent, return its name, otherwise return undefined.
  * This is static; for non-static @see .parent attribute of Stacked.
  * This is useful where axisName is used in geometry calculations, which may
  * be factored into Stacked.prototype., bypassing this function.
@@ -332,9 +332,17 @@ Stacked.prototype.yOffset = function ()
   }
   return yOffset;
 };
+/** @return length of the axis in pixels */
 Stacked.prototype.yRange = function ()
 {
   return stacks.vc.yRange * this.portion;
+};
+/** @return range of axis in pixels relative to 0 - the end of the stack */
+Stacked.prototype.yRange2 = function ()
+{
+  let yRange = stacks.vc.yRange,
+  range = this.position.map(function (p) { return yRange * p; });
+  return range;
 };
 /** Calculate the domain of feature locations in the block named this.axisName.
  */
