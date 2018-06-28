@@ -1962,7 +1962,7 @@ export default Ember.Component.extend(Ember.Evented, {
       stackSd.merge(stackS)
       .selectAll(".axis-outer"),
     axisG = axisS
-      .data(stack_axisIDs)
+      .data(stack_axisIDs, Stacked.prototype.keyFunction)
       .enter().append("g"),
     axisX = axisS.exit();
     console.log('stacks.length', stacks.length, axisG.size(), axisX.size());

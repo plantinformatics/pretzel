@@ -475,6 +475,11 @@ Stack.prototype.dataBlocks = function ()
   });
   return result;
 };
+/** Passed to d3 .data() to identify the DOM element correlated with the axis. */
+Stacked.prototype.keyFunction = function (axisID)
+{
+  return axisID;
+};
 Stacked.prototype.titleText = function ()
 {
   return this.children(false, false)
