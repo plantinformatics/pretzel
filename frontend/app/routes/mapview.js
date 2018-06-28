@@ -1,6 +1,4 @@
 import Ember from 'ember';
-import AuthenticatedRouteMixin from 'ember-simple-auth/mixins/authenticated-route-mixin';
-
 const { RSVP: { Promise } } = Ember;
 const { Route } = Ember;
 const { inject: { service } } = Ember;
@@ -83,9 +81,5 @@ let config = {
 };
 
 var args = [config]
-
-if (window['AUTH'] !== 'NONE') {
-  args.unshift(AuthenticatedRouteMixin);
-}
 
 export default Ember.Route.extend(...args);
