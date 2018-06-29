@@ -551,7 +551,6 @@ export default Ember.Component.extend(Ember.Evented, {
     margins = vc.margins,
     marginIndex = vc.marginIndex;
     let yRange = vc.yRange;
-    let dragLimit = vc.dragLimit;
     let axisXRange = vc.axisXRange;
 
     if (oa.axes2d === undefined)
@@ -4725,7 +4724,8 @@ export default Ember.Component.extend(Ember.Evented, {
         // console.log("dragged o[d]", o[d], d3.event.x);
         o[d] = d3.event.x;
         // Now impose boundaries on the x-range you can drag.
-        // The boundary values are in dragLimit, defined previously.
+        /** The boundary values */
+        let dragLimit = oa.vc.dragLimit;
         if (o[d] < dragLimit.min) { o[d] = dragLimit.min; }
         else if (o[d] > dragLimit.max) { o[d] = dragLimit.max; }
       }
