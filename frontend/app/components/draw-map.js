@@ -10,7 +10,7 @@ const { inject: { service } } = Ember;
 
 import { EventedListener } from '../utils/eventedListener';
 import { chrData } from '../utils/utility-chromosome';
-import { eltWidthResizable, noShiftKeyfilter, eltClassName  } from '../utils/domElements';
+import { eltWidthResizable, eltResizeToAvailableWidth, noShiftKeyfilter, eltClassName  } from '../utils/domElements';
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
 import { Viewport } from '../utils/draw/viewport';
 import {  Axes, maybeFlip, maybeFlipExtent,
@@ -963,7 +963,7 @@ export default Ember.Component.extend(Ember.Evented, {
     const trace_path_colour = 0;
     /** enable trace of adjacency between axes, and stacks. */
     const trace_adj = 1;
-    const trace_synteny = 2;
+    const trace_synteny = 0;
     const trace_gui = 0;
     /*------------------------------------------------------------------------*/
 //- moved to utils/stacks.js
@@ -5596,6 +5596,7 @@ export default Ember.Component.extend(Ember.Evented, {
         {
         t.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
           // also xDropOutDistance_update (),  update DropTarget().size
+          pathUpdate(t /*st*/);
         }
 
         if (heightChanged)
@@ -5609,7 +5610,6 @@ export default Ember.Component.extend(Ember.Evented, {
             .each(function(d) {
               /* if (traceCount-->0) console.log(this, 'brush extent', oa.y[d].brush.extent()()); */
               d3.select(this).call(oa.y[d].brush); });
-          pathUpdate(t /*st*/);
 
           DropTarget.prototype.showResize();
         }
@@ -5878,14 +5878,24 @@ export default Ember.Component.extend(Ember.Evented, {
   },
 
     resize : function() {
-    console.log("resize");
+      console.log("resize", this, arguments);
         /** when called via .observes(), 'this' is draw-map object.  When called
-         * via Ember.run.debounce(oa, me.resize, ), 'this' is oa.
+         * via  window .on('resize' ... resizeThisWithTransition() ... resizeThis()
+         * ... Ember.run.debounce(oa, me.resize, ), 'this' is oa.
          */
-        let layoutChanged = (arguments.length === 2),
-            oa =  layoutChanged ? this.oa : this;
+        let calledFromObserve = (arguments.length === 2),
+      layoutChanged = calledFromObserve,
+      /** This can be passed in along with transition in arguments,
+       * when ! calledFromObserve.
+       */
+      windowResize = ! calledFromObserve,
+            oa =  calledFromObserve ? this.oa : this;
     // logWindowDimensions('', oa.vc.w);  // defined in utils/domElements.js
     function resizeDrawing() { 
+      if (windowResize)
+        eltResizeToAvailableWidth(
+          /*bodySel*/ 'div.ember-view > div > div.body > div',
+          /*centreSel*/ '.resizable');
       oa.vc.calc(oa);
       let
         widthChanged = oa.vc.viewPort.w != oa.vc.viewPortPrev.w,
@@ -5894,11 +5904,12 @@ export default Ember.Component.extend(Ember.Evented, {
       // rerender each individual element with the new width+height of the parent node
       // need to recalc viewPort{} and all the sizes, (from document.documentElement.clientWidth,Height)
       // .attr('width', newWidth)
-      /* Called from .resizable : .on(drag) .. resizeThis() , the browser has
+      /** Called from .resizable : .on(drag) .. resizeThis() , the browser has
        * already resized the <svg>, so a transition looks like 1 step back and 2
        * steps forward, hence pass transition=false to showResize().
       */
-      oa.showResize(widthChanged, heightChanged, layoutChanged);
+      let useTransition = layoutChanged;
+      oa.showResize(widthChanged, heightChanged, useTransition);
     }
         console.log("oa.vc", oa.vc, arguments);
         if (oa.vc)

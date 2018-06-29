@@ -108,6 +108,39 @@ let
     return dragResize;
 }
 
+
+/** Given a parent div which contains some left and right side panels, and a
+ * centre div, recalculate the width of the centre div, based on the widths of
+ * the side panels and the parent div.
+ *
+ * @param bodySel   jQuery selector for the parent div,
+ * e.g. bodySel = 'div.ember-view > div > div.body > div',
+ * @param centreSel jQuery .filter() selector for the centre div, relative to bodySel,
+ * e.g. centreSel = '.resizable',
+ */
+function eltResizeToAvailableWidth(bodySel, centreSel)
+{
+  let
+  a1=Ember.$(bodySel),
+  body =  a1,
+  bodyWidth = a1.innerWidth(),
+  siblingWidth = 0,
+  siblings = Ember.$(bodySel + ' > *')
+    .each(function (i, elt) { siblingWidth += elt.clientWidth; } )
+    .each(function (i, elt) { console.log(i, elt, elt.clientWidth); } )
+  ,
+  a = siblings,
+  ar=a.filter(centreSel),
+  centreDiv = ar,
+
+  sidePanelWidth = siblingWidth - centreDiv.width(),
+  spareWidth = bodyWidth - sidePanelWidth;
+
+  console.log('eltResizeToAvailableWidth', bodyWidth, centreDiv, a.length, bodyWidth, sidePanelWidth, spareWidth);
+  ar.innerWidth(spareWidth);
+}
+
+
 function logWindowDimensions(w, text)
 {
   /** visualViewport enables distinction of visual and layout viewports, relevant to pinch-zoom.
@@ -196,5 +229,6 @@ function eltClassName(f)
 
 export {
   eltWidthResizable,
+  eltResizeToAvailableWidth,
   logWindowDimensions, logElementDimensions, logElementDimensions2,
   shiftKeyfilter, noShiftKeyfilter , eltClassName };
