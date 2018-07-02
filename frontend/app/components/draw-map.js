@@ -462,6 +462,7 @@ export default Ember.Component.extend(Ember.Evented, {
       console.log("draw() drawActions oa", drawActions, oa);
 
     this.on('paths', addPathsToCollation);
+    this.on('pathsByReference', addPathsByReferenceToCollation);
     }
 
     if (oa.showResize === undefined)
@@ -2575,8 +2576,14 @@ export default Ember.Component.extend(Ember.Evented, {
         {
           let ffaa = dataOfPath(this),
           [feature0, feature1, a0, a1] = ffaa;
+          let direction, aliasGroupName;
+          if (ffaa.length == 6)
+          {
+            direction = ffaa[4];
+            aliasGroupName = ffaa[5];
+          }
           let z = oa.z;
-          pathFeatureStore(sLine, feature0, feature1, z[a0.axisName][feature0], z[a1.axisName][feature1]);
+          pathFeatureStore(sLine, feature0, feature1, z[a0.axisName][feature0], z[a1.axisName][feature1], aliasGroupName);
           pathFeaturesHash = pathFeatures[sLine];
         }
         // can also append the list of aliases of the 2 features
@@ -3512,9 +3519,9 @@ export default Ember.Component.extend(Ember.Evented, {
      * aliased, which collateStacksA() stores in. */
     function addPathsToCollation(blockA, blockB, paths)
     {
-      console.log('addPathsToCollation', blockA, blockB, paths.length);
+      console.log('addPathsToCollation', blockA, blockB, paths.length, arguments);
       let axisName = blockA, axisName1 = blockB;
-      let trace_count = 1;
+      let trace_count_path = 1;
       paths.map(function (p) {
         /** example of result : 
          *  {featureA: "5ab0755a3d9b2d6b45839b2f", featureB: "5ab07f5b3d9b2d6b45839b34", aliases: Array(0)}
@@ -3528,10 +3535,42 @@ export default Ember.Component.extend(Ember.Evented, {
          * paths calculated FE & BE by toggling the flow display enables
          * (div.flowButton / flow.visible) "direct" and "alias".
          */
-        aliasGroupName = aliasesText(p.aliases),
+        aliasGroupName = p.aliases.length ? JSON.stringify(p.aliases, null, '  ') : undefined, // was aliasesText(p.aliases),
         fi = featureLookupName(p.featureB);
-      // modified(hacked) copy of code in collateStacksA() above, may factor to re-combine these.
+        storePath(blockA, blockB, featureName, fi, aliasGroupName);
+      });
+
+      filterPaths();
+      /* the results can be direct or aliases, so when the directs are put in
+       * featureAxes[], then do pathUpdate(undefined); * for now, just the aliases : */
+      pathUpdate_(undefined, flows["alias"]);
+    }
+    /** Store the results from api/Blocks/pathsByReference request, in the same structure,
+     * aliased, which collateStacksA() stores in. */
+    function addPathsByReferenceToCollation(blockA, blockB, referenceGenome, maxDistance, paths)
+    {
+      console.log('addPathsByReferenceToCollation', blockA, blockB, referenceGenome, maxDistance, paths.length, arguments);
+      let axisName = blockA, axisName1 = blockB;
+      let trace_count_path = 1;
+      paths.map(function (p) {
+        /** @see addPathsToCollation() for further comments.  */
+        let
+        featureName = featureLookupName(p.featureA),
+        aliasGroupName = p.aliases.length ? JSON.stringify(p.aliases, null, '  ') : undefined,
+        fi = featureLookupName(p.featureB);
+        storePath(blockA, blockB, featureName, fi, aliasGroupName);
+      });
+
+      filterPaths();
+      pathUpdate_(undefined, flows["alias"]);
+    }
+
+    let trace_count_path;
+    function storePath(blockA, blockB, featureName, fi, aliasGroupName)
+    {
+      // factored out of collateStacksA() and addPathsToCollation() above.
                       let aj = blockB, // adjs[id],
+                      axisName = blockA,
                       featureA = oa.z[aj][fi];
                       // if (Axes.has(aj))
                       {
@@ -3553,17 +3592,11 @@ export default Ember.Component.extend(Ember.Evented, {
                         featureToAxis_= [featureToAxis[1-direction], featureToAxis[0+direction]],
                         [f0 , f1 , axis0, axis1] = [featureToAxis_[0].f, featureToAxis_[1].f, featureToAxis_[0].axis, featureToAxis_[1].axis],
                         ffaa = [f0 , f1 , axis0, axis1, direction, aliasGroupName];
-                        if (trace_adj && trace_count-- > 0)
+                        if (trace_adj && trace_count_path-- > 0)
                           console.log("ffaa", ffaa, axis0.axisName, axis1.axisName, axisId2Name(axis0.axisName), axisId2Name(axis1.axisName));
                         // log_ffaa(ffaa);
                         objPut(aliased, ffaa, axis0.axisName, axis1.axisName, f0 , f1 );
                       }
-      });
-
-      filterPaths();
-      /* the results can be direct or aliases, so when the directs are put in
-       * featureAxes[], then do pathUpdate(undefined); * for now, just the aliases : */
-      pathUpdate_(undefined, flows["alias"]);
     }
 
     /**
@@ -4050,8 +4083,9 @@ export default Ember.Component.extend(Ember.Evented, {
      * Iff d1!==undefined, they are connected by an alias.
      * @param fa0, fa1  feature objects.
      * fa1 will be undefined when called from axisFeatureTick()
+     * @param aliasDescription  undefined or text identifying the basis of the alias connection
      */
-    function pathFeatureStore(sLine, d0, d1, fa0, fa1)
+    function pathFeatureStore(sLine, d0, d1, fa0, fa1, aliasDescription)
     {
       let pathFeatures = oa.pathFeatures;
       if (pathFeatures[sLine] === undefined)
@@ -4067,7 +4101,9 @@ export default Ember.Component.extend(Ember.Evented, {
         (fa1 ?  "-" + fa1.location : "")
         + (showHoverLineCoords ? " " + sLine : "")
       : 1;
-      if (showHoverExtraText && showHoverAliases)
+      if (showHoverExtraText && showHoverAliases && aliasDescription)
+        hoverExtraText += "<div><pre>" + aliasDescription + "</pre></div>";
+      if (false)
       {
         hoverExtraText += 
           "<div>" + featureAliasesText(d0, fa0) + "</div>" +

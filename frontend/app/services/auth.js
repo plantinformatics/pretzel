@@ -40,6 +40,20 @@ export default Service.extend({
     return this._ajax('Blocks/paths', 'GET', {blockA : blockA, blockB : blockB, options : options}, true)
   },
 
+  /** Send GET request Blocks/pathsByReference,
+   * i.e. retrieve the paths connecting blockA and blockB via the reference assembly,
+   * allowing up to max_distance physical distance (base pairs) between the features in the reference.
+   * @param blockA	type:string,	required: true
+   * @param blockB	type:string,	required: true
+   * @param reference	type:string,	required: true  genome assembly
+   * @param max_distance	type:number,	required: true
+   * @param options	type:object,	http: optionsFromRequest
+   */
+  getPathsByReference(blockA, blockB, reference, max_distance, options) {
+    console.log('services/auth getPathsByReference', blockA, blockB, reference, max_distance, options);
+    return this._ajax('Blocks/pathsByReference', 'GET', {blockA : blockA, blockB : blockB, reference, max_distance, options : options}, true);
+  },
+
   createDataset(name) {
     return this._ajax('Datasets', 'POST', JSON.stringify({name: name}), true)
   },

@@ -25,6 +25,7 @@ export default Ember.Component.extend(Ember.Evented, {
       if (trace_links > 1)
         console.log('path expose', blockA, blockB);
       this.request(blockA, blockB);
+      this.requestByReference(blockA, blockB);
     } );
   },
   willDestroyElement() {
@@ -50,6 +51,33 @@ export default Ember.Component.extend(Ember.Evented, {
         },
         function(err, status) {
           console.log('path request', blockA, blockB, me, err.responseJSON[status] /* .error.message*/, status);
+        });
+
+
+  },
+  /** Request pathsByReference between the 2 blocks for a reference
+   * in which there are marker sets with the blocks' namespaces and scopes.
+   */
+  requestByReference : function (blockA, blockB) {
+    /** Will search for the reference to use.  */
+    let referenceGenome = "IWGSC_RefSeq_v1.0", // "myGenome",
+    /** e.g. 1% of the chromosome length */
+    maxDistance = 500000000 / 100;
+    if (trace_links > 2)
+      console.log('pathsByReference request', blockA, blockB);
+    let me = this;
+
+    this.get('auth').getPathsByReference(blockA, blockB, referenceGenome, maxDistance, /*options*/{})
+      .then(
+        function(res){
+          if (trace_links > 1)
+            console.log('pathsByReference request then', res.length);
+          if (trace_links > 2)
+            console.log('link-path pathReceiver', me.get('pathReceiver'));
+          me.get('pathReceiver').trigger('pathsByReference', blockA, blockB, referenceGenome, maxDistance, res);
+        },
+        function(err, status) {
+          console.log('path request', blockA, blockB, referenceGenome, maxDistance, me, err.responseJSON[status] /* .error.message*/, status);
         });
 
 
