@@ -5930,3 +5930,5 @@ export default Ember.Component.extend(Ember.Evented, {
 
 });
 
+
+    Ember.run.debounce(this.get('oa'), this.get('resize'), [/*transition*/true], 500);
