@@ -5875,6 +5875,7 @@ export default Ember.Component.extend(Ember.Evented, {
       me.draw(data, 'didRender');
 
     highlightFeature_drawFromParams(this);
+    Ember.run.debounce(this.get('oa'), this.get('resize'), [/*transition*/true], 500);
   },
 
     resize : function() {
@@ -5930,5 +5931,3 @@ export default Ember.Component.extend(Ember.Evented, {
 
 });
 
-
-    Ember.run.debounce(this.get('oa'), this.get('resize'), [/*transition*/true], 500);
