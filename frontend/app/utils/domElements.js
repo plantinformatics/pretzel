@@ -203,10 +203,43 @@ function noShiftKeyfilter() {
 
 /*----------------------------------------------------------------------------*/
 
+/** 
+ * @param text  e.g. feature name
+ * based on : https://stackoverflow.com/a/1354491
+ */
+function htmlHexEncode(text)
+{
+  var html = text.replace(/[\u00A0-\u00FF]/g, function(c) {
+    return '&#'+c.charCodeAt(0)+';';
+  });
+  return html;
+}
+
+/** Encode a text feature name which may contain punctuation into a form suitable for use a CSS class name. 
+ * @param text  e.g. feature name
+ */
+function cssHexEncode(text)
+{
+    /** based on : https://stackoverflow.com/a/1354491,
+     * changes are :
+     * . use css \ prefix,
+     * . use 6 hex chars \xxxxxx, so that trailing space is not required.
+     * described in https://www.w3.org/International/questions/qa-escapes
+     */
+  var html = text.replace(/[^-_A-Za-z0-9]/g, function(c) {
+    let c0 = c.charCodeAt(0);
+    // prefix a 5th '0' if c is <0x10, so that there are 6 hex chars
+    return '\\0000'+ ((c0 < 0x10) ? '0' : '' ) + c0.toString(16);
+  });
+  return html;
+}
+
+
+
 /** recognise any punctuation in f which is not allowed for a selector matching an element class name,
  * and replace with _
  * Specifically :
- *   replace . with _,
+ *   replace non-alphanumeric characters with their hex encoding @see cssHexEncode(),
  *   prefix leading digit with _
  *
  * HTML5 class names allow these forms, so eltClassName() is only required
@@ -220,8 +253,7 @@ function noShiftKeyfilter() {
  */
 function eltClassName(f)
 {
-  f = f.replace(".", "_")
-    .replace(/^([\d])/, "_$1");
+  f = cssHexEncode(f.replace(/^([\d])/, "_$1"));
   return f;
 }
 
@@ -231,4 +263,6 @@ export {
   eltWidthResizable,
   eltResizeToAvailableWidth,
   logWindowDimensions, logElementDimensions, logElementDimensions2,
-  shiftKeyfilter, noShiftKeyfilter , eltClassName };
+  shiftKeyfilter, noShiftKeyfilter ,
+  htmlHexEncode, cssHexEncode,
+  eltClassName };
