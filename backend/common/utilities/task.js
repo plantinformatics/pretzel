@@ -49,8 +49,12 @@ function findLinksByDistance(featuresA, featuresB, max_distance) {
     }
     let calc_min_dist = function(f1, f2) {
         let min_dist = Infinity;
-        f1.range.forEach(function(a) {
-            f2.range.forEach(function(b) {
+        // normalize "value" property of arrays
+        let f1_vals = (Array.isArray(f1.value))? f1.value : [f1.value];
+        let f2_vals = (Array.isArray(f2.value))? f2.value: [f2.value];
+        // find distance
+        f1_vals.forEach(function(a) {
+            f2_vals.forEach(function(b) {
                 let dist = Math.abs(a-b);
                 if (dist < min_dist) {
                     min_dist = dist;
@@ -422,13 +426,11 @@ function findBlockPair(models, id_left, id_right, options) {
 }
 
 function findReferenceBlocks(models, block, reference, options) {
-    return models.Dataset.find({include: 'blocks', where: {and: [
-        {parent: reference},
-        {namespace: block.namespace}
-    ]}}, options).then(function(datasets) {
+    return models.Dataset.find({include: 'blocks', where: {parent: reference}}, options)
+    .then(function(datasets) {
         let block_ids = [];
         datasets.forEach(function(ds) {
-            let relevant_blocks = ds.__data.blocks.filter(function(b) { return b.scope == block.scope });
+            let relevant_blocks = ds.__data.blocks.filter(function(b) { return b.scope == block.scope && b.namespace == block.namespace });
             block_ids = block_ids.concat(relevant_blocks.map(function(b) { return b.id }));
         })
         return models.Block.find({include: ['dataset', 'features'], where: {id: {inq: block_ids}}}, options)

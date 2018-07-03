@@ -38,7 +38,7 @@ module.exports = function(app) {
       if (dataset) {
         datasetPermissions(dataset, userId, permission, context, cb)
       } else {
-        throw Error("Dataset not found")
+        return process.nextTick(() => cb(Error("Dataset not found"), false));
       }
     })
   }
@@ -49,7 +49,7 @@ module.exports = function(app) {
       if (block) {
         blockPermissions(block, userId, permission, context, cb)
       } else {
-        throw Error("Block not found")
+        return process.nextTick(() => cb(Error("Block not found"), false));
       }
     })
   }
