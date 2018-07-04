@@ -34,7 +34,7 @@
 
           {{panel/manage-view
             model=model
-            selectedMaps=selectedMaps
+            selectedMaps=block.viewed
             selectedBlock=selectedBlock
             isShowUnique=isShowUnique
             pathColourScale=pathColourScale
@@ -55,7 +55,6 @@
           {{panel/manage-explorer
             model=model
             dataset=dataset
-            selectedMaps=selectedMaps
             selectedBlock=selectedBlock
             isShowUnique=isShowUnique
             pathColourScale=pathColourScale
@@ -86,7 +85,6 @@
     <p class="devel-visible">
       hasData {{hasData}},
       mapsToView {{model.params.mapsToView}},
-      selectedMaps {{selectedMaps.length}},
       datasets task value {{model.availableMapsTask.value.length}},
       availableMaps {{ dataset.values.length }}
       available blockValues {{block.blockValues.length}},
