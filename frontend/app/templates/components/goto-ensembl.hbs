@@ -1,5 +1,32 @@
-<a target="_blank"
-   href={{urlEnsembl}} >
-  Ensembl
-</a>
-<p>Feature name e.g. TRIAE_CS42_3DL_TGACv1_249024_AA0834820</p>
+<div style="display: flex;">
+  {{input
+    value=featureName
+    class="form-control"
+    placeholder="Marker/Gene Name" }}
+
+  <span href="#" data-toggle="tooltip"
+        style="margin-right: 1em; margin-left: 1em;"
+        title=
+        "Feature name e.g. GrainGenes : Xgwm382.1-2A;  Ensembl : TRIAE_CS42_3DL_TGACv1_249024_AA0834820">?</span>
+</div>
+
+<div style="display: flex;">
+  <select onchange={{action (mut website) value="target.value"}}>
+    {{#each websites as |websiteChoice|}}
+      <option value={{websiteChoice}} selected={{eq website websiteChoice}}>{{websiteChoice}}</option>
+    {{/each}}
+  </select>
+
+
+  <a target="_blank"
+     href={{url}}  style="margin-left: auto; margin-right: 1em;" >
+    {{featureName}}
+  </a>
+
+  <a target="_blank"
+     href={{urlSelected}}  style="margin-left: auto; margin-right: 1em;" >
+    {{selectedFeatures0Name}}
+  </a>
+
+
+</div>
