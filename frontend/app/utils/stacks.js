@@ -260,6 +260,13 @@ Stacked.longName = function (axisID)
     axisID;
   return longName;
 };
+function axisId2Name(axisID)
+{
+  let axis = Stacked.getAxis(axisID);
+  return axis && axis.mapName;
+}
+
+/** static */
 Stacked.axisName_match =
   function (axisName)
 { return function (s) { return s.axisName === axisName; };};
@@ -1595,4 +1602,6 @@ Stacked.prototype.axisTransformO = function ()
 
 /*----------------------------------------------------------------------------*/
 
-export  { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText } ;
+export  { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText,
+          axisId2Name
+        } ;

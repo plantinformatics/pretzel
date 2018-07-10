@@ -36,7 +36,7 @@ export default Ember.Component.extend({
     let
     selectedFeatures = this.get('selectedFeatures'),
     /**   form is e.g. : {Chromosome: "myMap:1A.1", Feature: "myMarkerA", Position: "0"} */
-    selectedFeatures0 = selectedFeatures.length ? selectedFeatures[0] : undefined,
+    selectedFeatures0 = selectedFeatures && selectedFeatures.length ? selectedFeatures[0] : undefined,
     featureName = selectedFeatures0 && selectedFeatures0.Feature;
     console.log('selectedFeatures0', selectedFeatures0, featureName);
     return featureName;
