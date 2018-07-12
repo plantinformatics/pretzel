@@ -19,8 +19,8 @@ function flowsServiceInject(flowsService_) { flowsService = flowsService_; }
 /*----------------------------------------------------------------------------*/
 
 // copied from components/draw-map.js
-    /** Used for d3 attributes whose value is the datum. */
-    function I(d) { /* console.log(this, d); */ return d; };
+/** Used for d3 attributes whose value is the datum. */
+function I(d) { /* console.log(this, d); */ return d; };
 
 
 /*----------------------------------------------------------------------------*/
@@ -92,81 +92,81 @@ function configurejQueryTooltip(node) {
 
 /*----------------------------------------------------------------------------*/
 
-    function flows_showControls (parentSelector)
-    {
-      let flows = flowsService.get('flows');
-      let parent = d3.select(parentSelector);
-      let flowNames = d3.keys(flows);
-      /** button to toggle flow visibilty. */
-      let b = parent.selectAll("div.flowButton")
-        .data(flowNames)
-        .enter().append("div");
-      b
-        .attr("class",  function (flowName) { return flowName;})
-        .classed("flowButton", true)
-        .classed("selected", function (flowName) { let flow = flows[flowName]; return flow.visible;})
-        .on('click', function (flowName /*, i, g*/) {
-          let event = d3.event;
-          console.log(flowName, event);
-          // sharing click with Export menu
-          if (event.shiftKey)
-            return;
-          // toggle visibilty
-          let flow = flows[flowName];
-          console.log('flow click', flow);
-          flow.visible = ! flow.visible;
-          let b1=d3.select(this);
-          b1.classed("selected", flow.visible);
-          updateSelections_flowControls();
-          flow.g.classed("hidden", ! flow.visible);
-        })
-      /* To get the hover text, it is sufficient to add attr title.
-       * jQuery doc (https://jqueryui.com/tooltip/) indicates .tooltip() need
-       * only be called once per document, perhaps that is already done by
-       * d3 / jQuery / bootstrap.
-       */
-        .attr("title", I)
-        .attr("data-id", function (flowName) {
-          return "Export:" + flowName;
-        })
-      ;
+function flows_showControls (parentSelector)
+{
+  let flows = flowsService.get('flows');
+  let parent = d3.select(parentSelector);
+  let flowNames = d3.keys(flows);
+  /** button to toggle flow visibilty. */
+  let b = parent.selectAll("div.flowButton")
+    .data(flowNames)
+    .enter().append("div");
+  b
+    .attr("class",  function (flowName) { return flowName;})
+    .classed("flowButton", true)
+    .classed("selected", function (flowName) { let flow = flows[flowName]; return flow.visible;})
+    .on('click', function (flowName /*, i, g*/) {
+      let event = d3.event;
+      console.log(flowName, event);
+      // sharing click with Export menu
+      if (event.shiftKey)
+        return;
+      // toggle visibilty
+      let flow = flows[flowName];
+      console.log('flow click', flow);
+      flow.visible = ! flow.visible;
+      let b1=d3.select(this);
+      b1.classed("selected", flow.visible);
+      updateSelections_flowControls();
+      flow.g.classed("hidden", ! flow.visible);
+    })
+  /* To get the hover text, it is sufficient to add attr title.
+   * jQuery doc (https://jqueryui.com/tooltip/) indicates .tooltip() need
+   * only be called once per document, perhaps that is already done by
+   * d3 / jQuery / bootstrap.
+   */
+    .attr("title", I)
+    .attr("data-id", function (flowName) {
+      return "Export:" + flowName;
+    })
+  ;
 
-    };
-
-/*----------------------------------------------------------------------------*/
-
-    /** In the event of flow-controls.hbs being re-rendered,
-     * this function is used to update d3 selections :
-     * flows[*].g
-     * Also @see draw-map.js:updateSelections(), from which this was split.
-     */
-    function updateSelections_flowControls() {
-      let flows = flowsService.get('flows');
-      let parent = d3.select(flowButtonsSel);
-      d3.keys(flows).forEach(function (flowName) {
-        let flow = flows[flowName];
-        if (flow.g)
-        console.log(flowName, " flow.g", flow.g._groups[0][0]);
-        flow.g = parent.select("g." + flow.name);
-        console.log(flowName, " flow.g", flow.g._groups[0][0]);
-      });
-
-    };
-
+};
 
 /*----------------------------------------------------------------------------*/
 
-    Flow.prototype.ExportDataToDiv = function (eltSel)
-    {
-      let elts = Ember.$(eltSel), elt = elts[0];
-      // or for text : elt.append()
-      elt.innerHTML =
-        "<div><h5>" + this.name + "</h5> : " + this.pathData.length + "</div>\n";
-      this.pathData.forEach(function (ffaa) {
-        let s = "<div>" + mmaa2text(ffaa) + "</div>\n";
-        elt.insertAdjacentHTML('beforeend', s);
-      });
-    };
+/** In the event of flow-controls.hbs being re-rendered,
+ * this function is used to update d3 selections :
+ * flows[*].g
+ * Also @see draw-map.js:updateSelections(), from which this was split.
+ */
+function updateSelections_flowControls() {
+  let flows = flowsService.get('flows');
+  let parent = d3.select(flowButtonsSel);
+  d3.keys(flows).forEach(function (flowName) {
+    let flow = flows[flowName];
+    if (flow.g)
+      console.log(flowName, " flow.g", flow.g._groups[0][0]);
+    flow.g = parent.select("g." + flow.name);
+    console.log(flowName, " flow.g", flow.g._groups[0][0]);
+  });
+
+};
+
+
+/*----------------------------------------------------------------------------*/
+
+Flow.prototype.ExportDataToDiv = function (eltSel)
+{
+  let elts = Ember.$(eltSel), elt = elts[0];
+  // or for text : elt.append()
+  elt.innerHTML =
+    "<div><h5>" + this.name + "</h5> : " + this.pathData.length + "</div>\n";
+  this.pathData.forEach(function (ffaa) {
+    let s = "<div>" + mmaa2text(ffaa) + "</div>\n";
+    elt.insertAdjacentHTML('beforeend', s);
+  });
+};
 
 
 /*----------------------------------------------------------------------------*/

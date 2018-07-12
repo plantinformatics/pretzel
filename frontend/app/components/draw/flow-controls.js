@@ -8,7 +8,7 @@ import { flowsServiceInject, flowButtonsSel, configurejQueryTooltip, flows_showC
 export default Ember.Component.extend({
   flowsService: service('data/flows-collate'),
 
-classNames: ['col-xs-12'],
+  classNames: ['col-xs-12'],
 
   init() {
     // trigger flowsService to be injected into utils/draw/flow-controls before didRender() calls that library.
