@@ -92,11 +92,27 @@ function configurejQueryTooltip(node) {
 
 /*----------------------------------------------------------------------------*/
 
+function enabledFlows(flows)
+{
+  let result = [];
+  for (let f in flows)
+    if (flows[f].enabled)
+      result.push(f);
+  return result;
+}
 function flows_showControls (parentSelector)
 {
   let flows = flowsService.get('flows');
   let parent = d3.select(parentSelector);
-  let flowNames = d3.keys(flows);
+  let flowNames = enabledFlows(flows);
+
+  function flowSelected(flowName)
+  {
+    let flow = flows[flowName],
+    visible = flow && flow.visible;
+    return visible;
+  }
+
   /** button to toggle flow visibilty. */
   let b = parent.selectAll("div.flowButton")
     .data(flowNames)
@@ -104,7 +120,7 @@ function flows_showControls (parentSelector)
   b
     .attr("class",  function (flowName) { return flowName;})
     .classed("flowButton", true)
-    .classed("selected", function (flowName) { let flow = flows[flowName]; return flow.visible;})
+    .classed("selected", flowSelected)
     .on('click', function (flowName /*, i, g*/) {
       let event = d3.event;
       console.log(flowName, event);
@@ -119,6 +135,7 @@ function flows_showControls (parentSelector)
       b1.classed("selected", flow.visible);
       updateSelections_flowControls();
       flow.g.classed("hidden", ! flow.visible);
+      console.log(flow.g.node());
     })
   /* To get the hover text, it is sufficient to add attr title.
    * jQuery doc (https://jqueryui.com/tooltip/) indicates .tooltip() need
@@ -143,12 +160,13 @@ function flows_showControls (parentSelector)
 function updateSelections_flowControls() {
   let flows = flowsService.get('flows');
   let parent = d3.select(flowButtonsSel);
+  let foreground = d3.select('#holder svg > g > g.foreground');
   d3.keys(flows).forEach(function (flowName) {
     let flow = flows[flowName];
     if (flow.g)
-      console.log(flowName, " flow.g", flow.g._groups[0][0]);
-    flow.g = parent.select("g." + flow.name);
-    console.log(flowName, " flow.g", flow.g._groups[0][0]);
+      console.log(flowName, " flow.g", flow.g.node());
+    flow.g = foreground.select("g." + flow.name);
+    console.log(flowName, " flow.g", flow.g.node());
   });
 
 };

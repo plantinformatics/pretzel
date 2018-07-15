@@ -44,7 +44,11 @@ function collateStacks()
   d3.keys(flows).forEach(function(flowName) {
     let flow = flows[flowName];
     if (flow.enabled && flow.collate)
+    {
+      if (trace_adj | trace_path)
+        console.log('collateStacks', flowName);
       flow.collate();
+    }
   });
 }
 
@@ -95,7 +99,7 @@ function aliasesUniqueName(aliases)
   aliases.name = s;
   return s;
 }
-let traceCount_featureSet = 0, traceCount_featureIndex = 0;
+let traceCount_featureSet = 0, traceCount_features = 0, traceCount_featureIndex = 0;
 /** Ensure that the given feature is referenced in featureIndex[].
  * This is collated in receiveChr(), and should not be needed in
  * collateData(); the purpose of this function is to clarify when & why that
@@ -120,6 +124,12 @@ function ensureFeatureIndex(featureId, featureName, blockId)
       if (traceCount_featureSet++ < 5)
         console.log('d3FeatureSet', featureId, featureName);
       oa.d3FeatureSet.add(featureName);
+    }
+    if (oa.d3Features.indexOf(featureName) < 0)
+    {
+      if (traceCount_features++ < 5)
+        console.log('d3Features', featureName, featureId, blockId);
+      flowsService.d3Features.push(featureName);
     }
     if (! oa.featureIndex[featureId])
     {
@@ -200,6 +210,7 @@ function collateData()
             featureAxisSets[feature] = new Set();
           featureAxisSets[feature].add(axis);
 
+          /** fas is undefined now that featureContainsAliases is false.  */
           let feature_ = za[feature], fas = feature_.aliases;
           feature_.name = feature;
           if (fas && fas.length)
@@ -700,6 +711,8 @@ function addPathsToCollation(blockA, blockB, paths)
   let axisName = blockA, axisName1 = blockB;
   let trace_count_path = 1;
   paths.map(function (p) {
+    /* could pass p.featureA, p.featureB to featureLookupName() as blockId;
+     * featureName is not in the result. */
     /** example of result : 
      *  {featureA: "5ab0755a3d9b2d6b45839b2f", featureB: "5ab07f5b3d9b2d6b45839b34", aliases: Array(0)}
      * Result contains feature object ids; convert these to names using
@@ -714,7 +727,27 @@ function addPathsToCollation(blockA, blockB, paths)
      */
     aliasGroupName = p.aliases.length ? JSON.stringify(p.aliases, null, '  ') : undefined, // was aliasesText(p.aliases),
     fi = featureLookupName(p.featureB);
-    storePath(blockA, blockB, featureName, fi, aliasGroupName);
+    if (! p.aliases.length)
+    {
+      // verify that p.featureA, p.featureB are in blockA, blockB, respectively.
+      let z = oa_().blockFeatureLocation,
+      featureIndex = oa_().featureIndex;
+      /** Check that the path endpoints are known in blockFeatureLocation.
+       * @param featureName name of featureId, or undefined, in which case name
+       * is found via featureIndex[]
+       */
+      function checkFeature(featureId, featureName, blockId) {
+        let 
+        block = z[blockId],
+        location = block && block[featureName || featureIndex[featureId].name];
+        if (! location)
+          breakPoint('result has additional feature', featureId, featureName, blockId, p, featureIndex[featureId]);
+      };
+      checkFeature(p.featureA, featureName, blockA);
+      checkFeature(p.featureB, fi, blockB);
+    }
+    else
+      storePath(blockA, blockB, featureName, fi, aliasGroupName);
   });
 
   filterPaths();
@@ -722,6 +755,7 @@ function addPathsToCollation(blockA, blockB, paths)
    * featureAxes[], then do pathUpdate(undefined); * for now, just the aliases : */
   /** same value as flowsService.stackEvents; possibly will settle on the latter.  */
   let stackEvents = oa_().eventBus;
+  stackEvents.trigger('pathUpdateFlow', undefined, flows["U_alias"]);
   stackEvents.trigger('pathUpdateFlow', undefined, flows["alias"]);
 }
 /** Store the results from api/Blocks/pathsByReference request, in the same structure,
@@ -737,11 +771,18 @@ function addPathsByReferenceToCollation(blockA, blockB, referenceGenome, maxDist
       featureName = featureLookupName(p.featureA),
     aliasGroupName = p.aliases.length ? JSON.stringify(p.aliases, null, '  ') : undefined,
     fi = featureLookupName(p.featureB);
-    storePath(blockA, blockB, featureName, fi, aliasGroupName);
+    if (! p.aliases.length)
+    {
+      // this API result should not contain directs, only aliases.
+      console.log('addPathsByReferenceToCollation empty aliases', p);
+    }
+    else
+      storePath(blockA, blockB, featureName, fi, aliasGroupName);
   });
 
   filterPaths();
   let stackEvents = oa_().eventBus;
+  stackEvents.trigger('pathUpdateFlow', undefined, flows["U_alias"]);
   stackEvents.trigger('pathUpdateFlow', undefined, flows["alias"]);
 }
 
@@ -788,6 +829,7 @@ function filterPaths()
 {
   /** Paths - Unique, from Tree. */
   let put = flows.alias.pathData = [];
+  let pathsUnique = flows.U_alias.pathData = [];
   /** results of collateAdjacentAxes() */
   let adjAxes = flowsService.adjAxes;
   let aliased = flowsService.aliased;
@@ -804,10 +846,20 @@ function filterPaths()
       if ((b = aliased[a0Name]) && (b = b[a1Name]))
         d3.keys(b).forEach(function (f0 ) {
           let b0=b[f0 ];
+          let b0_fs = d3.keys(b0),
+          b0_fs_n = b0_fs.length;
           d3.keys(b0).forEach(function (f1 ) {
             let b01=b0[f1 ];
             let ffaa = b01;
             // filter here, e.g. uniqueness
+            if (b0_fs_n == 1)
+            {
+              pathsUnique.push.apply(pathsUnique, ffaa);
+            }
+            else if (b0_fs_n > 1)
+            {
+              console.log("b0_fs_n", b0_fs_n, b0);
+            }
             if (trace_path > 1)
             {
               console.log(put.length, f0 , f1 , ffaa.length);
@@ -818,10 +870,8 @@ function filterPaths()
         });
     });
   };
-  if (trace_path > 1)
-    console.log("selectCurrentAdjPaths.length", selectCurrentAdjPaths.length);
   d3.keys(adjAxes).forEach(selectCurrentAdjPaths);
-  console.log("filterPaths", put.length);
+  console.log("filterPaths", put.length, pathsUnique.length);
 }
 
 //-collate or gd

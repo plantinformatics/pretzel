@@ -42,18 +42,30 @@ let flows;
 
 flows = 
   {
+    // Flow(name, direct, unique, collate)
     // direct path() uses featureAxes, collated by collateStacks1();
-    direct: new Flow("direct", true, false, collateStacks1/*undefined*/),
-    U_alias: new Flow("U_alias", false, false, collateStacks1),	// unique aliases
-    alias: new Flow("alias", false, true, collateStacksA)	// aliases, not filtered for uniqueness.
+    direct: new Flow("direct", true, true, collateStacks1/*undefined*/),
+    U_alias: new Flow("U_alias", false, true, collateStacks1),	// unique aliases
+    alias: new Flow("alias", false, false, collateStacksA)	// aliases, not filtered for uniqueness.
   };
-// flows.U_alias.visible = flows.U_alias.enabled = false;
-// flows.alias.visible = flows.alias.enabled = false;
+/** Set .visible and .enabled to the given value.
+ * This is currently seen as configuration - not something the user changes during runtime.
+ * The initial / default value of .enabled is true.
+ * @param enable  true or false
+ */
+Flow.prototype.enable = function (enable)
+{
+  this.visible = this.enabled = enable;
+};
 // flows.direct.visible = flows.direct.enabled = false;
+
 flows.direct.pathData = d3Features = [];
 // if both direct and U_alias are enabled, only 1 should call collateStacks1().
 if (flows.U_alias.enabled && flows.direct.enabled && (flows.U_alias.collate == flows.direct.collate))
   flows.direct.collate = undefined;
+
+// flows.direct.visible = false;
+// flows.alias.visible = false;
 
 flows.U_alias.pathData = [];
 flows.alias.pathData = [];
@@ -67,13 +79,20 @@ flows.alias.pathData = [];
 let flowConfig = {
   /** Include direct connections in U_alias, (affects collateStacks1():pathsUnique). */
   directWithAliases : false,
+  /** feature.aliases is no longer returned by the server in api/blocks; instead
+   * the api/Blocks/paths route returns the aliases separately.  */
+  featureContainsAliases : false,
   // let collateStacks = unique_1_1_mapping === 3 ? collateStacksA : collateStacks1;
-  /** look at aliases in adjacent Axes both left and right (for unique_1_1_mapping = 3) */
-  adjacent_both_dir : true
+  /** look at aliases in adjacent Axes both left and right (for unique_1_1_mapping = 3)
+   * The paths / aliases retrieved from the backend server are symmetric.
+   * adjacent_both_dir can be specific to a flow, i.e. moved into Flow.
+   */
+  adjacent_both_dir : false // === featureContainsAliases
 };
 
 /*----------------------------------------------------------------------------*/
 
+// this is replaced by receiveChr():d3Features.push(feature)
 //creates a new Array instance from an array-like or iterable object.
 // let d3Features = Array.from(oa.d3FeatureSet);
 /** Indexed by featureName, value is a Set of Axes in which the feature is present.

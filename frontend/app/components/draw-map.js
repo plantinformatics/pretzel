@@ -623,7 +623,7 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     z;  // was  = oa.z || (oa.z = myData);
     if (! oa.z)
-      oa.z = myData;
+      oa.blockFeatureLocation = oa.z = myData;
     else  // merge myData into oa.z
       d3.keys(myData).forEach(function (blockId) {
         if (! oa.z[blockId])
@@ -698,6 +698,7 @@ export default Ember.Component.extend(Ember.Evented, {
         else
         {
           oa.d3FeatureSet.add(feature);
+          flowsService.d3Features.push(feature);
           oa.featureIndex[f.id] = f;
           /* could partition featureIndex by block name/id :
            * oa.featureIndex[axis][f.id] = f; but not necessary because object id
@@ -760,8 +761,6 @@ export default Ember.Component.extend(Ember.Evented, {
       }
     }
 
-    //creates a new Array instance from an array-like or iterable object.
-    let d3Features = flowsService.d3Features;
     /** Indexed by featureName, value is a Set of Axes in which the feature is present.
      * Currently featureName-s are unique, present in just one axis (Chromosome),
      * but it seems likely that ambiguity will arise, e.g. 2 assemblies of the same Chromosome.
@@ -827,8 +826,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
     // results of collateStacks1()
     let
-      /** feature : axis - axis    featureAxes[feature] : [[feature, feature]] */
-      featureAxes = flowsService.featureAxes,
+
     /** Not used yet; for pathAliasGroup().
      *  store : alias group : axis/feature - axis/feature   aliasGroupAxisFeatures[aliasGroup] : [feature, feature]  features have refn to parent axis
      * i.e. [aliasGroup] -> [feature0, a0, a1, za0[feature0], za1[feature0]] */
@@ -1705,25 +1703,11 @@ export default Ember.Component.extend(Ember.Evented, {
 //- paths
     //Add foreground lines.
     /** pathData is the data of .foreground > g > g, not .foreground > g > g > path */
-    function pathDataSwitch() {
-      /** Paths - Unique, from Tree. */
-      let put = flows.alias.pathData,
-      /** path data in unique mode. [feature0, feature1, a0, a1] */
-      pathsUnique = flows.U_alias.pathData;
-      let p = unique_1_1_mapping === 3 ? put
-        : (unique_1_1_mapping ? pathsUnique : d3Features);
-      return p; }
-    let pathData = pathDataSwitch();
-    d3.keys(flows).forEach(function(flowName) {
-      let put = flows.alias.pathData,
-      pathsUnique = flows.U_alias.pathData;
-      let flow = flows[flowName];
-      // if flow.collate then flow.pathData has been set above by collateStacks().
-      if (flow.enabled && ! flow.collate)
-        flow.pathData = flow.direct ? d3Features : (flow.unique ? pathsUnique : put);
-    });
-    /** class of path or g, @see pathDataInG. currently just endpoint features, could be aliasGroupName.  */
-    /** If Flow.direct then use I for pathClass, otherwise pathClassA()  */
+
+    /** Determine class name of path or g, @see pathDataInG.
+     * Value is currently just concatenation of names of endpoint features, could be aliasGroupName.
+     * If Flow.direct then use I for pathClass, otherwise pathClassA()
+     */
     function pathClassA(d)
     { let d0=d[0], d1=d[1], c = d1 && (d1 != d0) ? d0 + "_" + d1: d0;
       return c; }
@@ -1731,7 +1715,7 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function featureNameOfData(da)
     {
-      let featureName = (da.length === 4)  // i.e. unique_1_1_mapping
+      let featureName = (da.length === 4)  // i.e. ffaa (enabled by unique_1_1_mapping)
         ? da[0]  //  ffaa, i.e. [feature0, feature1, a0, a1]
         : da;
       return featureName;
@@ -1744,17 +1728,33 @@ export default Ember.Component.extend(Ember.Evented, {
         : da;
     }
 
+    function flowName(flow)
+    {
+      return flow.name;
+    }
+    function flowHidden(flow)
+    {
+      let hidden = ! flow.visible;
+      return hidden;
+    }
+
     // this condition is equivalent to newRender
     if ((foreground = oa.foreground) === undefined)
     {
       oa.foreground =
     foreground = svgContainer.append("g") // foreground has as elements "paths" that correspond to features
       .attr("class", "foreground");
-    d3.keys(flows).forEach(function(flowName) {
-      let flow = flows[flowName];
-      flow.g = oa.foreground.append("g")
-        .attr("class", flowName);
-    });
+      let flowValues = d3.values(flows),
+      flowsg = oa.foreground.selectAll("g")
+        .data(flowValues)
+        .enter()
+        .append("g")
+        .attr("class", flowName)
+        .classed("hidden", flowHidden)
+        .each(function (flow, i, g) {
+          flow.g = d3.select(this);
+        })
+      ;
     }
     
     pathUpdate(undefined);
@@ -2973,7 +2973,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
       /** 1 string per path segment */
       let
-        ffNf = oa.featureAxes[featureName];
+        ffNf = flowsService.featureAxes[featureName];
       if (ffNf !== undefined)
         /* console.log("path", featureName);
          else */
@@ -3932,7 +3932,7 @@ export default Ember.Component.extend(Ember.Evented, {
           g.selectAll("path").data(pathData);
       }
       if (trace_path > 1)
-        log_foreground_g("g > g > path");
+        log_foreground_g("g." + flow.name + " > g > path");
       (pathDataInG ? gn : pa)
       //.merge()
         .attr("class", pathClass);
@@ -3988,7 +3988,10 @@ export default Ember.Component.extend(Ember.Evented, {
         p1 = t1.selectAll("g > path"); // pa
         p1.attr("d", pathDataIsLine ? I : path_);
         if (trace_path > 3)
+        {
+          console.log(t1.nodes(), t1.node(), p1.nodes(), p1.node());
           log_path_data(flow.g);
+        }
         setupMouseHover(pa);
       }
       else
