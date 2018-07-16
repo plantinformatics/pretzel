@@ -18,6 +18,9 @@ export default Ember.Component.extend({
     },
     selectBlock(chr) {
       this.sendAction('selectBlock', chr);
+    },
+    selectDataset(dataset) {
+      this.sendAction('selectDataset', dataset);
     }
-  }
+  },
 });

@@ -105,6 +105,9 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
        * matching blockId. */
       this.send('selectBlock', selectedBlock)
     },
+    selectDataset: function(ds) {
+      this.set('selectedDataset', ds);
+    },
     /** Get all available maps.
      */
     updateModel: function() {
