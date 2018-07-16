@@ -27,7 +27,7 @@ export default Ember.Component.extend({
             console.log(err.responseJSON.error);
             that.setProperties({
               isProcessing: false, 
-              errorMessage: err.responseJSON.error.message,
+              errorMessage: err.responseJSON.error.errmsg,
               successMessage: null
             });
             $("body").animate({ scrollTop: 0 }, "slow");
