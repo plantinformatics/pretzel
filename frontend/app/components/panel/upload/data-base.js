@@ -24,10 +24,19 @@ export default Ember.Component.extend({
             });
             $("body").animate({ scrollTop: 0 }, "slow");
           }, function(err, status) {
-            console.log(err.responseJSON.error);
+            let errobj = err.responseJSON.error;
+            console.log(errobj);
+            let errmsg = null;
+            if (errobj.message) {
+              errmsg = errobj.message;
+            } else if (errobj.errmsg) {
+              errmsg = errobj.errmsg;
+            } else if (errobj.name) {
+              errmsg = errobj.name;
+            }
             that.setProperties({
               isProcessing: false, 
-              errorMessage: err.responseJSON.error.errmsg,
+              errorMessage: errmsg,
               successMessage: null
             });
             $("body").animate({ scrollTop: 0 }, "slow");
