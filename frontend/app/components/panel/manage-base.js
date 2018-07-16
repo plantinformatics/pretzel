@@ -12,6 +12,12 @@ export default Ember.Component.extend({
   actions: {
     setTab(panelSide, panelName) {
       this.sendAction('setTab', panelSide, panelName);
+    },
+    changeTab(tab) {
+      this.sendAction('changeTab', tab);
+    },
+    selectBlock(chr) {
+      this.sendAction('selectBlock', chr);
     }
   }
 });

@@ -6,7 +6,6 @@ export default Ember.Component.extend({
   tagName: 'div',
   // attributes
   // classes
-  classNames: ['col-xs-12'],
 
   feed: Ember.inject.service(),
 

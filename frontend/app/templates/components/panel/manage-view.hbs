@@ -1,50 +1,52 @@
 {{#elem/panel-container state="primary"}}
-  {{#elem/panel-heading icon="globe"}}
-    Aligned Maps
-  {{/elem/panel-heading}}
-  <ul class="list-group">
-    {{#each selectedMaps as |block|}}
-      <li 
-        class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
-        data-chr-id={{block.id}}
-        {{action "selectBlock" block on="click"}}>
-        {{block.map.name}} {{block.name}} {{elem/icon-owner state=block.owner}} {{elem/icon-visible state=block.public}}
+    {{#elem/panel-heading icon="globe"}}
+        Displayed Datasets
+    {{/elem/panel-heading}}
+    <ul id="display-blocks" class="list-group">
+        {{#each displayData as |block|}}
+        <li 
+            class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
+            data-chr-id={{block.id}}
+            {{action "selectBlock" block on="click"}}>
+            {{block.datasetId.name}} {{block.name}} {{elem/icon-owner state=block.owner}} {{elem/icon-visible state=block.public}}
 
+            <span class="pull-right">
+            {{elem/button-base
+                classSize='xs'
+                classColour='danger'
+                icon='minus'
+                onClick=(action "removeBlock" block)}}
+            </span>
+
+            <p class="list-group-item-text">
+            <span class="label label-info">
+                {{elem/icon-base name="asterisk"}} &nbsp;{{block.features.length}}
+            </span> &nbsp;
+            <span class="label label-info">
+                {{elem/icon-base name="tag"}} &nbsp;{{block.annotations.length}}
+            </span> &nbsp;
+            <span class="label label-info">
+                {{elem/icon-base name="resize-vertical"}} &nbsp;{{block.intervals.length}}
+            </span>
+            </p>
+        </li>
+        {{/each}}
+        <li 
+        class="list-group-item list-group-item-info">
+        Add data from the {{elem/icon-base name='folder-open'}} &nbsp;Explorer tab
         <span class="pull-right">
-          {{!-- {{elem/button-base
+            {{elem/button-base
             classSize='xs'
-            classColour='danger'
-            icon='minus'
-            onClick=(action "deleteBlock" block)}} --}}
+            classColour='success'
+            icon='plus'
+            onClick=(action "changeTab" "explorer")}}
         </span>
-
-        <p class="list-group-item-text">
-          <span class="label label-info">
-            {{elem/icon-base name="asterisk"}} &nbsp;{{block.features.length}}
-          </span> &nbsp;
-          <span class="label label-info">
-            {{elem/icon-base name="tag"}} &nbsp;{{block.annotations.length}}
-          </span> &nbsp;
-          <span class="label label-info">
-            {{elem/icon-base name="resize-vertical"}} &nbsp;{{block.intervals.length}}
-          </span>
-        </p>
-      </li>
-    {{/each}}
-    <li 
-      class="list-group-item list-group-item-info">
-      Select data from the {{elem/icon-base name='folder-open'}} &nbsp;Explorer
-      <span class="pull-right">
-        {{elem/button-base
-          classSize='xs'
-          classColour='success'
-          icon='plus'
-          onClick=(action "setTab" "left" "explore")}}
-      </span>
-    </li>
-  </ul>
+        </li>
+    </ul>
 {{/elem/panel-container}}
 
+
+{{#if isMapview}}
 {{#elem/panel-container state="primary"}}
   {{#elem/panel-heading icon="wrench"}}
     Chart Options
@@ -74,3 +76,9 @@
     </div>
   </div>
 {{/elem/panel-container}}
+
+{{panel/view-controls drawActions=this}}
+{{goto-feature  drawActions=this class="pull-left bordered control-panel make-ui-draggable"
+    selectedFeatures=selectedFeatures
+}}
+{{/if}}

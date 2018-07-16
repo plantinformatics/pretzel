@@ -5,6 +5,7 @@ const { Component } = Ember;
 export default Component.extend({
   style: 'height:100%',
   attributeBindings: ['style:style'],
+  view: 'mapview',
 
   actions: {
     toggleLeftPanel() {

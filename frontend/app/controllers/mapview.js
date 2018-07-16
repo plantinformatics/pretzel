@@ -52,6 +52,10 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       Ember.run.later( function () {
         me.transitionToRoute({'queryParams': queryParams }); });
     },
+    removeBlock: function(block) {
+      let block_id = block.get('id');
+      this.send('removeMap', block_id);
+    },
     /** Change the state of the named block to not-viewed.
      */
     removeMap : function(mapName) {
