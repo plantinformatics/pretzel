@@ -832,12 +832,6 @@ export default Ember.Component.extend(Ember.Evented, {
      * i.e. [aliasGroup] -> [feature0, a0, a1, za0[feature0], za1[feature0]] */
     aliasGroupAxisFeatures = flowsService.aliasGroupAxisFeatures;
 
-    /** results of collateAdjacentAxes() */
-    let adjAxes = flowsService.adjAxes;
-    /** results of collateStacksA() and from addPathsToCollation() */
-    let aliased = flowsService.aliased;
-    let aliasedDone = flowsService.aliasedDone;
-
     let
       line = d3.line(),
       axis = d3.axisLeft(),
@@ -992,16 +986,27 @@ export default Ember.Component.extend(Ember.Evented, {
       });
     }
     let blocksToDraw = oa.axisIDs,
-      blocksToAdd = me.get('blockService').get('viewedIds');
-    blocksToAdd = blocksToAdd.filter(function (axisName) {
+    viewedBlocks = me.get('blockService').get('viewedIds'),
+    stackedBlocks = stacks.blockIDs(),
+    blocksUnviewed = stackedBlocks.filter(function (blockId, i) {
+      let foundAt = viewedBlocks.indexOf(blockId);
+      return foundAt < 0;
+    }),
+    blocksToAdd = viewedBlocks.filter(function (axisName) {
       // axisName passes filter if it is not already in a stack
       return ! Stacked.getAxis(axisName) && (blocksToDraw.indexOf(axisName) == -1) ; });
-    console.log(blocksToDraw, 'blocksToAdd', blocksToAdd);
+    console.log(
+      blocksToDraw, 'viewedBlocks', viewedBlocks,
+      'blocksUnviewed', blocksUnviewed, 'blocksToAdd', blocksToAdd);
     if (blocksToAdd.length)
       blocksToDraw = blocksToDraw.concat(blocksToAdd);
     let duplicates = blocksToDraw.filter(function (v, i) { return blocksToDraw.indexOf(v, i+1) != -1; });
     if (duplicates.length)
       breakPoint('duplicates', duplicates, blocksToDraw, blocksToAdd, oa.axisIDs);
+
+    blocksUnviewed.forEach(function (blockId) {
+      blockIsUnviewed(blockId);
+    });
 
     // Place new data blocks in an existing or new axis.
     blocksToDraw.forEach(function(d){
@@ -1346,7 +1351,7 @@ export default Ember.Component.extend(Ember.Evented, {
           }
         );
         // could filter the selection - just those right of the extended axis
-        svgContainer.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
+        oa.svgContainer.selectAll(".axis-outer").attr("transform", Stack.prototype.axisTransformO);
         stack.axes.forEach( function (a, index) { axisRedrawText(oa.axes[a.axisName]); });
         pathUpdate(undefined);
       }
@@ -1742,7 +1747,7 @@ export default Ember.Component.extend(Ember.Evented, {
     if ((foreground = oa.foreground) === undefined)
     {
       oa.foreground =
-    foreground = svgContainer.append("g") // foreground has as elements "paths" that correspond to features
+    foreground = oa.svgContainer.append("g") // foreground has as elements "paths" that correspond to features
       .attr("class", "foreground");
       let flowValues = d3.values(flows),
       flowsg = oa.foreground.selectAll("g")
@@ -1764,7 +1769,7 @@ export default Ember.Component.extend(Ember.Evented, {
     // Add a group element for each stack.
     // Stacks contain 1 or more Axes.
     /** selection of stacks */
-    let stackSd = svgContainer.selectAll(".stack")
+    let stackSd = oa.svgContainer.selectAll(".stack")
       .data(stacks, Stack.prototype.keyFunction),
     stackS = stackSd
       .enter()
@@ -1802,7 +1807,7 @@ export default Ember.Component.extend(Ember.Evented, {
         }
         else
           // check that target is not parent
-          if ((sDest = ras && svgContainer.select("g.stack#" + eltId(ras.stackID)))
+          if ((sDest = ras && oa.svgContainer.select("g.stack#" + eltId(ras.stackID)))
               && ! sDest.empty() && (sDest.node() !== this.parentElement))
         {
             console.log('to stack', ras.stackID, sDest.node());
@@ -1898,7 +1903,7 @@ export default Ember.Component.extend(Ember.Evented, {
         initialWidth = 50,
       axisData = axis.extended ? [axisID] : [];
       if (axisG === undefined)
-        axisG = svgContainer.selectAll("g.axis-outer#id" + axisID);
+        axisG = oa.svgContainer.selectAll("g.axis-outer#id" + axisID);
       let ug = axisG.selectAll("g.axis-use")
         .data(axisData);
       let ugx = ug
@@ -2145,7 +2150,7 @@ export default Ember.Component.extend(Ember.Evented, {
        */
       DropTarget.prototype.showResize = function ()
       {
-        svgContainer.selectAll('g.stackDropTarget.bottom > rect')
+        oa.svgContainer.selectAll('g.stackDropTarget.bottom > rect')
           .attr("y", dropTargetYresize)
           // .each(function(d, i, g) { console.log(d, i, this); })
         ;
@@ -2195,7 +2200,8 @@ export default Ember.Component.extend(Ember.Evented, {
 
     function axisTitle(chrID)
     {
-      let cn=oa.cmName[chrID];
+      let cn=oa.
+        cmName[chrID];
       // console.log(".axis text", chrID, cn);
       return cn.mapName + " " + cn.chrName;
     }
@@ -2249,6 +2255,11 @@ export default Ember.Component.extend(Ember.Evented, {
     ;
     };
 
+    function updateAxisTitles()
+    {
+      let axisTitleS = oa.svgContainer.selectAll("g.axis-all > text");
+      axisTitleFamily(axisTitleS);
+    }
 
 
     axisTitleS
@@ -2305,16 +2316,16 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function removeAxis(axisName, t)
     {
-      let axisS = svgContainer.select("g.axis-outer#" + eltId(axisName));
-      console.log("removeAxis", axisName, axisS.empty(), axisS);
+      let axisS = oa.svgContainer.select("g.axis-outer#" + eltId(axisName));
+      console.log("removeAxis", axisName, axisS.empty(), axisS.node());
       axisS.remove();
     }
     /** remove g.stack#id<stackID
      */
     function removeStack(stackID, t)
     {
-      let stackS = svgContainer.select("g.stack#" + eltId(stackID));
-      console.log("removeStack", stackID, stackS.empty(), stackS);
+      let stackS = oa.svgContainer.select("g.stack#" + eltId(stackID));
+      console.log("removeStack", stackID, stackS.empty(), stackS.node());
       stackS.remove();
     }
     /** remove axis, and if it was only child, the parent stack;  pathUpdate
@@ -2323,7 +2334,7 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function removeAxisMaybeStack(axisName, stackID, stack)
     {
-      let t = svgContainer.transition().duration(750);
+      let t = oa.svgContainer.transition().duration(750);
       removeAxis(axisName, t);
       /** number of stacks is changing */
       let changedNum = stackID != -1;
@@ -2357,7 +2368,8 @@ export default Ember.Component.extend(Ember.Evented, {
     function axisStackChanged(t)
     {
       showTickLocations(scaffoldTicks, t);
-      showSynteny(syntenyBlocks, t);
+      if (oa.syntenyBlocks)
+        showSynteny(oa.syntenyBlocks, t);
 
       me.trigger('axisStackChanged', t);
     }
@@ -2660,7 +2672,7 @@ export default Ember.Component.extend(Ember.Evented, {
        * 2,3,4,5 : gene 1,2,3,4
        */
       const SB_ID = 6, SB_SIZE = 7;
-      let sbS=svgContainer.selectAll("g.synteny")
+      let sbS=oa.svgContainer.selectAll("g.synteny")
         .data(["synteny"]), // datum could be used for class, etc
       sbE = sbS.enter()
         .append("g")
@@ -2722,7 +2734,7 @@ export default Ember.Component.extend(Ember.Evented, {
           .attr("d", blockLine);
       pSX.remove();
       if (trace_synteny > 1)
-        console.log("showSynteny", syntenyBlocks.length, oa.sbSizeThreshold, adjSynteny.length, pS.size(), pSE.size(), pSX.size(), pSM.size(), pSM.node());
+        console.log("showSynteny", oa.syntenyBlocks.length, oa.sbSizeThreshold, adjSynteny.length, pS.size(), pSE.size(), pSX.size(), pSM.size(), pSM.node());
       if (trace_synteny > 2)
         console.log(pSM._groups[0]);
 
@@ -2986,7 +2998,11 @@ export default Ember.Component.extend(Ember.Evented, {
           let a0 = a0_.axisName, a1 = a1_.axisName;
           if ((za0 !== za1) && (a0 == a1))
             console.log("path", i, featureName, za0, za1, a0, a1);
-          r[i] = patham(a0, a1, featureName, undefined);
+          if (a0_.axis && a1_.axis)
+          {
+            let paths = patham(a0, a1, featureName, undefined);
+            r.push(paths);
+          }
         }
       if (trace_path > 3)
         console.log("path", featureName, ffNf, r);
@@ -3984,7 +4000,7 @@ export default Ember.Component.extend(Ember.Evented, {
          * even where the datum is the same, the axes may have moved.
          * So update all paths.
          */
-        let t1= (t === undefined) ? foreground.select(" g." + flow.name)  : flow.g.transition(t),
+        let t1= (t === undefined) ? oa.foreground.select(" g." + flow.name)  : flow.g.transition(t),
         p1 = t1.selectAll("g > path"); // pa
         p1.attr("d", pathDataIsLine ? I : path_);
         if (trace_path > 3)
@@ -4358,7 +4374,7 @@ export default Ember.Component.extend(Ember.Evented, {
           a.nodes().map(function(c) { console.log(c);});
           console.log('stacksAdjust', changedNum, a.nodes().length);
         }
-        if (svgContainer)
+        if (oa.svgContainer)
           oa.stacks.forEach(function (s) { s.redrawAdjacencies(); });
       }
       // pathUpdate() uses flow.g, which is set after oa.foreground.
@@ -4372,7 +4388,7 @@ export default Ember.Component.extend(Ember.Evented, {
       {
         console.log("stacksAdjust", "stacks.changed 0x", stacks.changed.toString(16));
         stacks.changed ^= 0x10;
-        if (svgContainer === undefined)
+        if (oa.svgContainer === undefined)
           Ember.run.later(function () {
             axisStackChanged(t);
           });
@@ -4513,6 +4529,75 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
 
+    /** The given block has become unviewed, e.g. via manage-explorer.
+     * Update the stacks and the display.
+     * @param blockId may be a reference or child block; if the former then delete its axis.
+     */
+    function blockIsUnviewed(blockId) {
+      let axisName = blockId;
+      console.log("blockIsUnviewed", axisName, this);
+      let axis, sBlock;
+
+      // perhaps disallow unview of the parent block a non-empty axis
+      axis = oa.axes[axisName];
+      if (axis && axis.blocks.length > 1)
+      {
+        console.log(
+          'blockIsUnviewed', blockId,
+          'is the parent block of an axis which has child data blocks', axis.blocks, axis);
+        axis.log();
+        // augment blockId with name and map axis.blocks to names.
+        let cn = oa.cmName[blockId], blockName = cn && (cn.mapName + ':' + cn.chrName);
+        let blockNames = axis.blocks.map(function (block) { return block.longName(); } );
+        alert(blockId + '/' + blockName + ' is the parent block of an axis which has child data blocks ' + blockNames);
+      }
+
+      axis = Stacked.getAxis(blockId);
+      sBlock = axis.removeBlockByName(blockId);
+      console.log(axis, sBlock);
+      axis.log();
+      // delete oa.stacks.blocks[blockId];
+      if (axis.blocks.length)
+        axis = undefined;
+
+      // verify : oa.axes[axisName]
+      if (axis)
+      {
+        sBlock = axis.removeBlockByName(blockId);
+
+        let stack = axis && axis.stack;
+        // axes[axisName] is deleted by removeStacked1() 
+        let stackID = Stack.removeStacked(axisName);
+        console.log(sBlock, stack, stackID);
+        stack.log();
+        deleteAxisfromAxisIDs(axisName);
+        removeAxisMaybeStack(axisName, stackID, stack);
+        // already done in removeStacked1() : delete oa.axesP[axisName];
+
+      // already done, removeMap() triggers blockIsUnviewed()  : me.send('mapsToViewDelete', axisName);
+
+      // filter axisName out of selectedFeatures and selectedAxes
+      selectedFeatures_removeAxis(axisName);
+      sendUpdatedSelectedFeatures();
+      }
+      else
+      {
+        updateAxisTitles();
+        /* The if-then case above calls removeAxisMaybeStack(), which calls stacksAdjust();
+         * so here in the else case, use a selection of updates from stacksAdjust() to
+         * ensure that pathData is updated.
+         */
+        collateStacks();
+        if (oa.foreground)  // ysUpdated is true
+        {
+          pathUpdate(t);
+          countPathsWithData(oa.svgRoot);
+        }
+        pathUpdate(undefined);
+      }
+
+    }
+
 
     /** Setup hover menus over axis titles.
      * So far used just for Delete
@@ -4645,14 +4730,14 @@ export default Ember.Component.extend(Ember.Evented, {
             axisScaleChanged(axisName, t, false);
           });
           // let traceCount = 1;
-          svgContainer.selectAll('g.axis-all > g.brush')
+          oa.svgContainer.selectAll('g.axis-all > g.brush')
             .each(function(d) {
               /* if (traceCount-->0) console.log(this, 'brush extent', oa.y[d].brush.extent()()); */
               d3.select(this).call(oa.y[d].brush); });
 
           DropTarget.prototype.showResize();
         }
-        Ember.run.later( function () { showSynteny(syntenyBlocks, undefined); });
+        Ember.run.later( function () { showSynteny(oa.syntenyBlocks, undefined); });
       };
 
 //- brush-menu
@@ -4764,7 +4849,7 @@ export default Ember.Component.extend(Ember.Evented, {
        * so : in .hbs : id="range-sbSizeThreshold" :  min="0" max="50" value="22"
        *  min value is 0, so -1 to get 0. */
       oa.sbSizeThreshold=Math.pow(1.148137, value) - 1;
-      Ember.run.later( function () { showSynteny(syntenyBlocks, undefined); });
+      Ember.run.later( function () { showSynteny(oa.syntenyBlocks, undefined); });
     }
     function setupSbSizeThresh()
     {

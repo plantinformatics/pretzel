@@ -286,6 +286,42 @@ Block.axisName_parent =
     return parentName || axisName ;
   };
 
+/** Remove a block from a Stacked (axis).
+ * @param this target
+ * @param blockIndex index of block to move
+ */
+Stacked.prototype.removeBlock = function(blockIndex)
+{
+  // copied from Stacked.prototype.move() - factor that function to use this.
+
+  if (this.blocks.length <= blockIndex)
+  {
+    console.log('removeBlock(): expected blocks.length', this.blocks.length, ' to be >', blockIndex);
+    this.log();
+  }
+  /** type is stacks:Block */
+  let aBlock = this.blocks[blockIndex];
+  /** delete blockIndex element of source.blocks[]; */
+  let aBlockA = this.blocks.splice(blockIndex, 1);
+  if (aBlockA[0] !== aBlock)  // verification
+    breakPoint('removeBlock', aBlockA, '[0] !==', aBlock);
+  // aBlock will probably become unreferenced and soon deleted.
+  aBlock.axis = undefined;
+  aBlock.parent = undefined;  // the .parent relationship is not really changed.
+  return aBlock;
+};
+Stacked.prototype.removeBlockByName = function(blockId)
+{
+  let block_ = stacks.blocks[blockId],
+  blockIndex = block_ && this.blocks.indexOf(block_),
+  block = (blockIndex < 0) ? undefined : this.removeBlock(blockIndex);
+  // verification
+  if (block && block.axisName != blockId)
+    breakPoint('removeBlockByName', blockIndex, block.name, '!=', blockId);
+  else
+    console.log('removeBlockByName', blockId, blockIndex);
+  return block;
+};
 /** Move a block from one Stacked (axis) to another.
  * @param this target
  * @param source  Stacked to move from
@@ -719,7 +755,19 @@ stacks.stackIDs = function()
 stacks.axisIDs = function()
 {
   return d3.keys(this.axesP);
-}
+};
+/** @return an array of the blockIds of the all the blocks of all axes (in all
+ * stacks).  */
+stacks.blockIDs = function()
+{
+  // this.axisIDs() are contained in this.blocks.
+  let
+    blockIDs = d3.values(this.blocks).reduce(function (result, b) {
+      if (b.axis) result.push(b.axisName);
+      return result; }, []);
+  return blockIDs;
+};
+
 /** Sort the stacks by the x position of their Axes. */
 stacks.sortLocation = function()
 {
