@@ -69,7 +69,7 @@ module.exports = function(Dataset) {
       Object.keys(blocks).forEach(function(name) {
         if (blocks[name] === false) {
           let payload = {
-            name: name,
+            scope: name,
             datasetId: datasetGroup.id
           }
           new_blocks.push(payload);
@@ -86,9 +86,8 @@ module.exports = function(Dataset) {
       data.features.forEach(function(feature) {
         array_features.push({
           name: feature.name,
-          position: feature.pos,
-          blockId: blocks_by_name[feature.block],
-          aliases: []
+          value: [feature.val],
+          blockId: blocks_by_name[feature.block]
         });
       });
       // create new features

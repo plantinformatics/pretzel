@@ -49,8 +49,12 @@ function findLinksByDistance(featuresA, featuresB, max_distance) {
     }
     let calc_min_dist = function(f1, f2) {
         let min_dist = Infinity;
-        f1.range.forEach(function(a) {
-            f2.range.forEach(function(b) {
+        // normalize "value" property of arrays
+        let f1_vals = (Array.isArray(f1.value))? f1.value : [f1.value];
+        let f2_vals = (Array.isArray(f2.value))? f2.value: [f2.value];
+        // find distance
+        f1_vals.forEach(function(a) {
+            f2_vals.forEach(function(b) {
                 let dist = Math.abs(a-b);
                 if (dist < min_dist) {
                     min_dist = dist;
@@ -132,22 +136,22 @@ function loadAliases(models, block_a, block_b, options) {
     let feature_b_names = Object.keys(features_by_name);
     let conditions = [{string1: {inq: feature_b_names}}];
     let conditions_mirror = [{string2: {inq: feature_b_names}}];
-    if (block_b.dataset.namespace) {
-        conditions.push({namespace1: block_b.dataset.namespace});
-        conditions_mirror.push({namespace2: block_b.dataset.namespace});
+    if (block_b.namespace) {
+        conditions.push({namespace1: block_b.namespace});
+        conditions_mirror.push({namespace2: block_b.namespace});
     }
-    if (block_a.dataset.namespace) {
-        conditions.push({namespace2: block_a.dataset.namespace});
-        conditions_mirror.push({namespace1: block_a.dataset.namespace});
+    if (block_a.namespace) {
+        conditions.push({namespace2: block_a.namespace});
+        conditions_mirror.push({namespace1: block_a.namespace});
     }
     let where = {where: {or: [{and: conditions}, {and: conditions_mirror}]}};
     return models.Alias.find(where, options)
     .then(function(aliases) {
         // match aliases to the features on blockB
         aliases.forEach(function(alias) {
-            if (alias.namespace1 == block_b.dataset.namespace && alias.string1 in features_by_name) {
+            if (alias.namespace1 == block_b.namespace && alias.string1 in features_by_name) {
                 features_by_name[alias.string1]['aliases'].push(alias);
-            } else if (alias.namespace2 == block_b.dataset.namespace && alias.string2 in features_by_name) {
+            } else if (alias.namespace2 == block_b.namespace && alias.string2 in features_by_name) {
                 let alias_mirror = Object.assign({}, alias);
                 alias_mirror.namespace1 = alias.namespace2;
                 alias_mirror.namespace2 = alias.namespace1;
@@ -422,13 +426,11 @@ function findBlockPair(models, id_left, id_right, options) {
 }
 
 function findReferenceBlocks(models, block, reference, options) {
-    return models.Dataset.find({include: 'blocks', where: {and: [
-        {parent: reference},
-        {namespace: block.dataset.namespace}
-    ]}}, options).then(function(datasets) {
+    return models.Dataset.find({include: 'blocks', where: {parent: reference}}, options)
+    .then(function(datasets) {
         let block_ids = [];
         datasets.forEach(function(ds) {
-            let relevant_blocks = ds.__data.blocks.filter(function(b) { return b.scope == block.scope });
+            let relevant_blocks = ds.__data.blocks.filter(function(b) { return b.scope == block.scope && b.namespace == block.namespace });
             block_ids = block_ids.concat(relevant_blocks.map(function(b) { return b.id }));
         })
         return models.Block.find({include: ['dataset', 'features'], where: {id: {inq: block_ids}}}, options)

@@ -1,0 +1,73 @@
+<div id="left-panel" class="left-panel-shown" style="height:100%; width: 400px; border-right:1px solid #ddd; display: flex; flex-direction: column">
+    <ul class="nav nav-tabs">
+        <li class="active"><a data-toggle="tab" href="#left-panel-view">{{elem/icon-base name="picture"}} View</a></li>
+        <li><a data-toggle="tab" href="#left-panel-explorer">{{elem/icon-base name="folder-open"}} Explorer</a></li>
+        <li><a data-toggle="tab" href="#left-panel-upload">{{elem/icon-base name="cloud-upload"}} Upload</a></li>
+    </ul>
+    
+    <div class="tab-content" style="overflow: auto">
+        <div id="left-panel-view" class="tab-pane fade in active">
+            {{#elem/panel-container state="primary"}}
+                {{#elem/panel-heading icon="globe"}}
+                    Displayed Datasets
+                {{/elem/panel-heading}}
+                <ul id="display-blocks" class="list-group">
+                    {{#each displayData as |block|}}
+                    <li 
+                        class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
+                        data-chr-id={{block.id}}
+                        {{action "selectBlock" block on="click"}}>
+                        {{block.datasetId.name}} {{block.name}} {{elem/icon-owner state=block.owner}} {{elem/icon-visible state=block.public}}
+
+                        <span class="pull-right">
+                        {{elem/button-base
+                            classSize='xs'
+                            classColour='danger'
+                            icon='minus'
+                            onClick=(action "removeBlock" block)}}
+                        </span>
+
+                        <p class="list-group-item-text">
+                        <span class="label label-info">
+                            {{elem/icon-base name="asterisk"}} &nbsp;{{block.features.length}}
+                        </span> &nbsp;
+                        <span class="label label-info">
+                            {{elem/icon-base name="tag"}} &nbsp;{{block.annotations.length}}
+                        </span> &nbsp;
+                        <span class="label label-info">
+                            {{elem/icon-base name="resize-vertical"}} &nbsp;{{block.intervals.length}}
+                        </span>
+                        </p>
+                    </li>
+                    {{/each}}
+                    <li 
+                    class="list-group-item list-group-item-info">
+                    Add data from the {{elem/icon-base name='folder-open'}} &nbsp;Explorer tab
+                    <span class="pull-right">
+                        {{elem/button-base
+                        classSize='xs'
+                        classColour='success'
+                        icon='plus'
+                        onClick=(action "changeTab" "explorer")}}
+                    </span>
+                    </li>
+                </ul>
+            {{/elem/panel-container}}
+        </div>
+        <div id="left-panel-explorer" class="tab-pane fade">
+            {{panel/explorer-panel
+                loadBlock="loadBlock"
+            }}
+        </div>
+        <div id="left-panel-upload" class="tab-pane fade">
+            {{panel/upload-data}}
+        </div>
+    </div>
+
+    <button type="button" class="btn btn-default panel-collapse-button" {{action 'toggleLeftPanel'}} style="top:0; left:374px; position: absolute;">
+      {{elem/icon-base name="chevron-left"}}
+    </button>
+</div>
+<button type="button" class="left-panel-hidden btn btn-default panel-collapse-button" style="display:none" {{action 'toggleLeftPanel'}}>
+    {{elem/icon-base name="chevron-right"}}
+</button>

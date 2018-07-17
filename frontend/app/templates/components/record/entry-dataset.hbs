@@ -77,6 +77,8 @@
       class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
       {{action "selectBlock" block on="click"}}>
       {{record/entry-block
+        onDelete="onDelete"
+        loadBlock="loadBlock"
         entry=block}}
     </li>
   {{/each}}

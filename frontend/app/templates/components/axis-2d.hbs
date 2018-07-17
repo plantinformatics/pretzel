@@ -1,5 +1,5 @@
-{{!-- axis-2d is used within a <foreignObject> within a g.axis, created by apShowExtend()
-   It is rendered into div#axis2D (will add APid) using ember-wormhole.
+{{!-- axis-2d is used within a <foreignObject> within a g.axis, created by axisShowExtend()
+   It is rendered into div#axis2D (will add axisID) using ember-wormhole.
    --}}
 {{#ember-wormhole to=targetEltId }}
   <div class="resizer inFO" style="float:right;">
@@ -31,7 +31,7 @@
 
 {{/ember-wormhole}}
 
-<div>axis-2d :{{this}}, {{apID}}, {{targetEltId}},  {{subComponents.length}} :
+<div>axis-2d :{{this}}, {{axisID}}, {{targetEltId}},  {{subComponents.length}} :
   <div>subComponents :
     {{#each subComponents as |subComponent|}}
       {{subComponent}}

@@ -1,5 +1,7 @@
 import ManageBase from './manage-base'
 
+const model_availableDatasets = "dataset.values";
+
 export default ManageBase.extend({
 
   filterOptions: {
@@ -10,8 +12,12 @@ export default ManageBase.extend({
   filter: 'all',
   layout: {
   },
-  data: Ember.computed('model.mapsDerived.availableMaps', 'filter', function() {
-    let availableMaps = this.get('model.mapsDerived.availableMaps')
+  didInsertElement : function () {
+    console.log("manage-explorer didInsertElement() model", this.get('model'));
+  },
+  data: Ember.computed(model_availableDatasets, 'filter', function() {
+    let availableMaps = this.get(model_availableDatasets);
+    console.log("manage-explorer data() availableDatasets", availableMaps);
     let filter = this.get('filter')
     // perform filtering according to selectedChr
     // let filtered = availableMaps //all
@@ -21,13 +27,13 @@ export default ManageBase.extend({
     } else if (filter == 'owner') {
       return availableMaps.filterBy('owner', true)
     } else {
-      return this.get('model.mapsDerived.availableMaps')
+      return this.get(model_availableDatasets)
     }
   }),
   dataEmpty: Ember.computed('data', function() {
-    let availableMaps = this.get('data')
-    if (availableMaps && availableMaps.length > 0) { return false; }
-    else { return true; }
+    let availableMaps = this.get('data');
+    let hasData = availableMaps && availableMaps.get('length') > 0;
+    return ! hasData;
   }),
   actions: {
     refreshAvailable() {
@@ -37,21 +43,21 @@ export default ManageBase.extend({
       console.log('SELECT BLOCK manage-explorer', chr)
       this.sendAction('selectBlock', chr);
     },
+    loadBlock(block) {
+      this.sendAction('loadBlock', block);
+    },
     deleteBlock(chr) {
       this.sendAction('deleteBlock', chr.id);
     },
     changeFilter: function(f) {
       this.set('filter', f)
     },
-    onDelete(id) {
-      let availMaps = this.get('model.mapsDerived.availableMaps')
-      let newMaps = []
-      for (var i=0; i<availMaps.length; i++) {
-        if (availMaps[i].id != id) {
-          newMaps.push(availMaps[i])
-        }
-      }
-      this.set('model.mapsDerived.availableMaps', newMaps)
+    /** receives action from entry-base deleteRecord()
+     * @param id  block or dataset id
+     */
+    onDelete(modelName, id) {
+      console.log('onDelete', modelName, id);
+      this.sendAction('onDelete', modelName, id);
     }
   }
 });

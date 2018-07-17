@@ -1,6 +1,8 @@
+import Ember from 'ember';
 import EntryBase from './entry-base';
 
 export default EntryBase.extend({
+
   tagName: 'span',
   // attributes
   // classes
@@ -10,6 +12,7 @@ export default EntryBase.extend({
         this.send('setEditing', false)
         record.save()
       }
-    },
+    }
   }
+  
 });

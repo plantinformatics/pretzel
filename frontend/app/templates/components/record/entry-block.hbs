@@ -21,14 +21,14 @@
     </span>
   </div>
 {{else}}
-  {{#if entry.isSelected}}
+  {{!-- log 'entry.isViewed' entry.id entry.isViewed --}}
+  {{#if entry.isViewed}}
   {{else}}
-    {{#link-to "mapview" (query-params mapsToView=entry.blockLink)}}
-      {{elem/button-base
-        classSize='xs'
-        classColour='success'
-        icon='plus'}}
-    {{/link-to}}
+    {{elem/button-base
+      classSize='xs'
+      classColour='success'
+      icon='plus'
+      onClick=(action "loadBlock" entry)}}
   {{/if}}
   {{entry.name}}
   {{#if entry.datasetId.editable }}

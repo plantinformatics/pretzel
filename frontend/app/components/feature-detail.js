@@ -6,13 +6,13 @@ export default Ember.Component.extend({
 
   feed: Ember.inject.service(),
 
-  colouredMarkers : undefined,
+  colouredFeatures : undefined,
 
   actions : {
     putContent : function (component, event) {
       console.log("putContent", component, event);
-	let markerNames = event.target.innerText;
-      this.get('feed').trigger('colouredMarkers', markerNames);
+	let featureNames = event.target.innerText;
+      this.get('feed').trigger('colouredFeatures', featureNames);
     }
   },
 
@@ -29,9 +29,9 @@ export default Ember.Component.extend({
 
   onSelectionChange: function () {
     let data = this.get('data');
-    console.log("selected-markers.js", "onSelectionChange", data.length);
-    let markerNamesText = data.map(function (d, i, g) { return d.Marker;}).join("\n");
-    this.set('selection', markerNamesText);
+    console.log("selected-features.js", "onSelectionChange", data.length);
+    let featureNamesText = data.map(function (d, i, g) { return d.Feature;}).join("\n");
+    this.set('selection', featureNamesText);
   }.observes('data'),
 
 

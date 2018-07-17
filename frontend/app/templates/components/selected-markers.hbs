@@ -1,16 +1,16 @@
 
 <div class="clearfix"></div>
 <div id="choose_path_colour_scale" class="clearfix control-panel bordered"  data-toggle="buttons-checkbox" >
-  Colour according to input from colouredMarkers;
+  Colour according to input from colouredFeatures;
   (scaffoldName can be generalised as class name.)
   <table>
-    <tr><th></th><th>#</th><th>each line of markerNames is</th><th>domain is</th></tr>
+    <tr><th></th><th>#</th><th>each line of featureNames is</th><th>domain is</th></tr>
     <tr>
       <td><input type="radio" name="optradioPathColour" data-value="3"></td>
-      <td>3</td><td>markerName</td><td>markerName-s</td></tr>
+      <td>3</td><td>featureName</td><td>featureName-s</td></tr>
     <tr>
       <td><input type="radio" name="optradioPathColour" data-value="4"></td>
-      <td>4</td><td>scaffoldName TAB markerName</td><td>scaffoldName-s</td></tr>
+      <td>4</td><td>scaffoldName TAB featureName</td><td>scaffoldName-s</td></tr>
     <tr>
       <td><input type="radio" name="optradioPathColour" data-value="5"></td>
       <td>5</td><td>chromosomeName location-start and -end</td><td>interval id : chrName_startLoc_endLoc</td>
@@ -31,10 +31,10 @@
 
 <div class="pull-left">
   <ul>
-    {{#if showScaffoldMarkers}}
+    {{#if showScaffoldFeatures}}
       {{#each scaffolds as |scaffold index|}}
 	<li class="{{scaffold}}">
-	  <div data-toggle="tooltip" title={{scaffold-markers scaffolds index scaffoldMarkers}}>
+	  <div data-toggle="tooltip" title={{scaffold-features scaffolds index scaffoldFeatures}}>
 	    {{scaffold}}
 	  </div>
 	</li>
@@ -49,9 +49,9 @@
 
 {{content-editable
   value=selection
-  placeholder="Markers to be coloured"
+  placeholder="Features to be coloured"
   escape-press="putContent"
-  class="colouredMarkers"
+  class="colouredFeatures"
   type="text"}}
 
 <div class="ExportFlowData"></div>

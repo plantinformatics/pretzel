@@ -27,9 +27,12 @@
 	"//": "The message 'Entering directory' is common to e.g. make -w, and recognised by emacs compilation-mode to set default-directory",
   "scripts": {
     "postinstall" : "ln -s ../frontend/dist backend/client",
-    "go" : "npm run setup:frameworks && npm run build:frontend && npm run run:backend",
+    "go" : "npm run setup:frameworks && npm run build:frontend && npm run run:precheck && npm run run:backend",
     "setup:frameworks": "cd frontend && npm install && bower install && cd ../backend && npm install",
     "build:frontend" : "cd frontend && node_modules/ember-cli/bin/ember build --environment production",
+		"run:precheck" : "npm run run:checkLink && npm run run:checkMongo",
+		"run:checkLink" : "[ -f backend/client/index.html ] || npm run postinstall",
+		"run:checkMongo" : "mongo --eval 'hostname();'  admin || echo mongod is required to be running",
     "run:backend" : "cd backend && EMAIL_VERIFY=NONE AUTH=ALL node server/server.js",
     "run:frontend" : "cd frontend/app; echo \"Entering directory '$PWD'\"; cd ..; ember server",
 		"clean": "rm -r backend/node_modules   frontend/node_modules frontend/bower_components  backend/client/assets/* frontend/dist/*"

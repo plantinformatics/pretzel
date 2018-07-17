@@ -7,25 +7,24 @@
             {{elem/logo-pretzel}}
           {{/link-to}}
         </li>
+        <li>
+          {{#link-to 'mapview' classNames='' tagName='a'}}
+            Map Viewer
+          {{/link-to}}
+        </li>
+        <li>
+          {{#link-to 'matrixview' classNames='' tagName='a'}}
+            Individual Viewer
+          {{/link-to}}
+        </li>
         {{#if auth}}
           {{#if session.isAuthenticated}}
-            <li>
-              {{#link-to 'mapview' classNames='' tagName='a'}}
-                Map Viewer
-              {{/link-to}}
-            </li>
             <li>
               {{#link-to 'change-password' classNames='' tagName='a'}}
                 Change Password {{elem/icon-base name="user"}}
               {{/link-to}}
             </li> 
           {{/if}}
-        {{else}}
-          <li>
-            {{#link-to 'mapview' classNames='' tagName='a'}}
-              Map Viewer
-            {{/link-to}}
-          </li>
         {{/if}}
       </ul>
       <ul class="nav navbar-nav navbar-right">

@@ -38,6 +38,9 @@ export default ManageBase.extend({
         annotation.save()
       }
       this.set('newInterval', '')
+    },
+    loadBlock(block) {
+      this.sendAction('loadBlock', block);
     }
   },
   dataset: Ember.computed('block', function() {

@@ -4,12 +4,15 @@
   errorMessage=errorMessage}}
 
 
-<label>Dataset: </label><select id="dataset"></select>
-<input
-  hidden
-  id="dataset_new"
-  class="form-control"
-  placeholder="New dataset name..." />
+<label>Dataset: </label><select id="dataset"></select><br>
+<div id="new_dataset_options">
+  <input id="dataset_new" class="form-control" placeholder="New dataset name..." /><br>
+  <label>Parent: </label><select id="parent"></select><br>
+  <label>Type: </label><select id="type">
+    <option>linear</option>
+    <option>observational</option>
+  </select><br>
+</div>
 <br><label>Load from file: </label><input type="file" accept=".csv" id="tableFile" onchange={{action 'uploadToTable'}}>
 <div id="hotable" class="actual-row">
 </div>

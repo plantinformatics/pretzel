@@ -5,12 +5,7 @@ import InAxis from './in-axis';
 
 const className = "chart", classNameSub = "chartRow";
 
-/*----------------------------------------------------------------------------*/
-function breakToDebugger(a, b)
-{
-  console.log(a, b);
-  debugger;
-}
+
 /*----------------------------------------------------------------------------*/
 /* Copied from draw-map.js */
     /**
@@ -23,16 +18,16 @@ function breakToDebugger(a, b)
       return range[0] <= a && a <= range[1];
     }
 
-function markerLocation(oa, apID, d)
+function featureLocation(oa, axisID, d)
 {
-  let marker = oa.z[apID][d];
-  if (marker === undefined)
+  let feature = oa.z[axisID][d];
+  if (feature === undefined)
   {
-    console.log("axis-chart markerY_", apID, oa.z[apID], "does not contain marker", d);
+    console.log("axis-chart featureY_", axisID, oa.z[axisID], "does not contain feature", d);
     return undefined;
   }
   else
-    return marker.location;
+    return feature.location;
 }
   
 
@@ -49,10 +44,10 @@ export default InAxis.extend({
     console.log("components/axis-chart didRender()");
   },
 
-  redraw   : function(apID, t) {
+  redraw   : function(axisID, t) {
     let data = this.get(className),
     layoutAndDrawChart = this.get('layoutAndDrawChart');
-    console.log("redraw", this, (data === undefined) || data.length, apID, t);
+    console.log("redraw", this, (data === undefined) || data.length, axisID, t);
     if (data)
       layoutAndDrawChart.apply(this, [data]);
   },
@@ -116,14 +111,14 @@ export default InAxis.extend({
   layoutAndDrawChart(chart)
   {
     console.log("layoutAndDrawChart", chart);
-    // initial version supports only 1 split axis; next identify axis by APid (and possibly stack id)
+    // initial version supports only 1 split axis; next identify axis by axisID (and possibly stack id)
     // <g class="axis-use">
-    // g.ap#id<apID>
+    // g.axis-outer#id<axisID>
     let
       axisComponent = this.get("axis"),
-    apID = axisComponent.apID,
-    gAxis = d3.select("g.ap#id" + apID + "> g.axis-use"),
-    /** relative to the transform of parent g.ap */
+    axisID = axisComponent.axisID,
+    gAxis = d3.select("g.axis-outer#id" + axisID + "> g.axis-use"),
+    /** relative to the transform of parent g.axis-outer */
     bbox = gAxis.node().getBBox(),
     yrange = [bbox.y, bbox.height];
     if (bbox.x < 0)
@@ -135,8 +130,8 @@ export default InAxis.extend({
     barWidth = 10,
     valueName = chart.valueName || "Values",
     oa = this.get('data'),
-    // apID = gAxis.node().parentElement.__data__,
-    yAxis = oa.y[apID], // this.get('y')
+    // axisID = gAxis.node().parentElement.__data__,
+    yAxis = oa.y[axisID], // this.get('y')
     yDomain = [yAxis.invert(yrange[0]), yAxis.invert(yrange[1])],
     pxSize = (yDomain[1] - yDomain[0]) / bbox.height,
     withinZoomRegion = function(d) {
@@ -148,14 +143,14 @@ export default InAxis.extend({
     if (resizedWidth)
       bbox.width = resizedWidth;
   
-  /** @param name is a marker or gene name */
+  /** @param name is a feature or gene name */
     function name2Location(name)
     {
-        /** @param ak1 AP name, (exists in apIDs[])
-         * @param d1 marker name, i.e. ak1:d1
+        /** @param ak1 axis name, (exists in axisIDs[])
+         * @param d1 feature name, i.e. ak1:d1
          */
-      let ak1 = apID,  d1 = name;
-      return markerLocation(oa, ak1, d1);
+      let ak1 = axisID,  d1 = name;
+      return featureLocation(oa, ak1, d1);
     }
     function datum2Location(d) { return name2Location(d.name); }
     function datum2Value(d) { return d.value; }
@@ -393,7 +388,7 @@ export default InAxis.extend({
       .attr("r", 6)
       .on("click", toggleBarsLineClosure);
     chartTypeToggle.merge(gps.selectAll("g > circle"))
-      .attr("cx", bbox.x + bbox.width / 2)   /* was o[p], but g.ap translation does x offset of stack.  */
+      .attr("cx", bbox.x + bbox.width / 2)   /* was o[p], but g.axis-outer translation does x offset of stack.  */
       .attr("cy", bbox.height * 0.96)
       .classed("pushed", b.barsLine);
     b.chartTypeToggle = chartTypeToggle;

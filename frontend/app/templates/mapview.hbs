@@ -34,7 +34,7 @@
 
           {{panel/manage-view
             model=model
-            selectedMaps=selectedMaps
+            selectedMaps=block.viewed
             selectedBlock=selectedBlock
             isShowUnique=isShowUnique
             pathColourScale=pathColourScale
@@ -46,15 +46,17 @@
             deleteBlock="removeMap"
             setTab="setTab"}}
           
-	        {{panel/view-controls drawActions=this}}
-        {{goto-marker  drawActions=this class="pull-left bordered control-panel make-ui-draggable"}}
+	  {{panel/view-controls drawActions=this}}
+          {{goto-feature  drawActions=this class="pull-left bordered control-panel make-ui-draggable"
+            selectedFeatures=selectedFeatures
+          }}
 
         {{else if (compare layout.left.tab '===' 'upload')}}
           {{panel/upload-data}}
         {{else if (compare layout.left.tab '===' 'explore')}}
           {{panel/manage-explorer
             model=model
-            selectedMaps=selectedMaps
+            dataset=dataset
             selectedBlock=selectedBlock
             isShowUnique=isShowUnique
             pathColourScale=pathColourScale
@@ -63,7 +65,9 @@
             showScaffoldMarkers=showScaffoldMarkers
             showAsymmetricAliases=showAsymmetricAliases
             selectBlock="selectBlock"
+            loadBlock="loadBlock"
             deleteBlock="removeMap"
+            onDelete="onDelete"
             updateModel="updateModel"
             setTab="setTab"}}
         {{/if}}
@@ -75,42 +79,45 @@
     </button>
   {{/if}}
   
-  <div class="resizable" style="flex-grow: 1">
+  <div class="resizable" style="flex-grow:20; resize:both">
     <div class="resizer">
       <span class="glyphicon glyphicon-resize-horizontal"></span>
     </div>
 
-    <p class="devel_trace" style="display:none;">
-      hasData {{hasData}}
-      model {{model}}
-      mapsToView {{model.mapsToView}}
-      availableMaps {{model.mapsDerived.availableMaps.length}}
-      availableChrs {{model.mapsDerived.availableChrs.length}}
-      selectedMaps {{model.mapsDerived.selectedMaps.length}}
+    <p class="devel-visible">
+      hasData {{hasData}},
+      mapsToView {{model.params.mapsToView}},
+      datasets task value {{model.availableMapsTask.value.length}},
+      availableMaps {{ dataset.values.length }}
+      available blockValues {{block.blockValues.length}},
+      selected blocks {{block.selected.length}},
+      viewed blocks {{block.viewed.length}},
+      queryParamsValue {{ queryParamsValue }},
+      viewedIds {{ block.viewedIds.length }},
     </p>
     {{!-- {{#if hasData}} --}}
       {{draw-map
-        data=model.chrPromises
-        Model=model
+        data=block.viewed
         drawActions=this
-        mapsDerived=model.mapsDerived
-        availableMaps=model.mapsDerived.availableMaps
-        dataReceived=dataReceived
+	layout=layout
         isShowUnique=isShowUnique
         pathColourScale=pathColourScale
         scaffolds=scaffolds
         scaffoldMarkers=scaffoldMarkers
         showScaffoldMarkers=showScaffoldMarkers
         showAsymmetricAliases=showAsymmetricAliases
+        highlightFeature=model.params.highlightFeature
+        params=model.params
         selectedBlock=selectedBlock
+        addMap='addMap'
         mapsToViewDelete='removeMap'
-        updatedSelectedMarkers='updateSelectedFeatures'
+        updatedSelectedFeatures='updateSelectedFeatures'
         selectChromById='selectBlockById'}}
     {{!-- {{/if}} --}}
   </div>
 
   {{#if layout.right.visible}}
-    <div class="" style="width: 400px; display:flex; flex-direction:column">
+    <div class="" style="flex-basis:400px; flex-grow:1; display:flex; flex-direction:column">
       <ul class="nav nav-tabs">
         {{#elem/button-tab
           side="right"
@@ -145,6 +152,7 @@
         {{else if (compare layout.right.tab '===' 'block')}}
           {{panel/manage-block
             selectedFeatures=selectedFeatures
+            loadBlock="loadBlock"
             block=selectedBlock}}
         {{else if (compare layout.right.tab '===' 'settings')}}
           {{panel/manage-settings

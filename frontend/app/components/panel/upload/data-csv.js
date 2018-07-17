@@ -3,28 +3,45 @@ import UploadBase from './data-base'
 export default UploadBase.extend({
   loadDatasets: function(id) {
     var that = this;
-    this.get('auth').getBlocks()
-    .then(function(res) {
-      that.set('datasets', res);
-      $("#dataset").html('');
-      $.each(res, function (i, item) {
-        $('#dataset').append($('<option>', { 
-            value: item.id,
-            text : item.name
-        }));
+    let datasets = that.get('store').peekAll('Dataset').toArray();
+    if (datasets.length == 0) {
+      // in case datasets haven't been loaded in yet, load them and refresh the list of datasets
+      that.get('store').query('Dataset', {filter: {'include': 'blocks'}}).then(function(data) {
+        if (data.toArray().length > 0) {
+          that.loadDatasets();
+        }
       });
-      if (id) {
-        $("#dataset").val(id);
-      }
-      $("#dataset").append($('<option>', {
-        value: 'new',
-        text: 'new'
+    }
+
+    //build dataset select
+    $("#dataset").html('');
+    $("#dataset").append($('<option>', {
+      text: 'new'
+    }));
+    $.each(datasets, function (i, item) {
+      $('#dataset').append($('<option>', {
+          text : item.get('name')
       }));
-      $("#dataset").trigger('change');
+    });
+    if (id) {
+      $("#dataset").val(id);
+    }
+    $("#dataset").trigger('change');
+
+    //build parent select
+    $("#parent").html('');
+    $("#parent").append($('<option>', {
+      value: '',
+      text: 'None'
+    }));
+    $.each(datasets, function (i, item) {
+      $('#parent').append($('<option>', {
+          text : item.get('name')
+      }));
     });
   },
 
-  onInit: function() {
+  buildView: function() {
     var that = this;
 
     that.loadDatasets();
@@ -32,10 +49,13 @@ export default UploadBase.extend({
       $("#dataset").on('change', function() {
         var selectedMap = $("#dataset").val();
         if (selectedMap == 'new') {
-          $("#dataset_new").show();
+          $("#new_dataset_options").show();
         } else {
-          $("#dataset_new").hide();
+          $("#new_dataset_options").hide();
         }
+        that.checkBlocks();
+      });
+      $('#parent').on('change', function() {
         that.checkBlocks();
       });
 
@@ -54,7 +74,7 @@ export default UploadBase.extend({
             type: 'text'
           },
           {
-            data: 'pos',
+            data: 'val',
             type: 'numeric'
           }
         ],
@@ -78,46 +98,94 @@ export default UploadBase.extend({
         }
       });
       that.set('table', table);
+
+      $('.nav-tabs a[href="#left-panel-upload"]').on('shown.bs.tab', function(e) {
+        // trigger rerender when tab is shown
+        table.updateSettings({});
+      });
     });
-  }.on('init'),
+  }.on('didInsertElement'),
 
   checkBlocks() {
     var that = this;
-    var maps = that.get('datasets');
+    let table = that.get('table');
     var warning = null;
-    if (maps) {
-      // find selected dataset
-      var selectedMap = $("#dataset").val();
-      var map = null;
-      maps.forEach(function(m) {
-        if (m.id == selectedMap) {
-          map = m;
-        }
-      });
-      if (map) {
-        // find duplicate blocks
-        var blocks = {};
-        map.blocks.forEach(function(block) {
-          blocks[block.name] = false;
-        });
-        var data = that.get('table').getSourceData();
-        var found = false;
-        data.forEach(function(row) {
-          if (row.block && row.block in blocks) {
-            blocks[row.block] = true;
-            found = true;
+    if (table != null) {
+      var maps = that.get('store').peekAll('Dataset').toArray();
+      if (maps) {
+        // find selected dataset
+        var selectedMap = $("#dataset").val();
+        var map = null;
+        let parent = null;
+        maps.forEach(function(m) {
+          if (m.get('name') == selectedMap) {
+            map = m;
           }
         });
-        if (found) {
-          //build warning msg
-          var duplicates = [];
-          Object.keys(blocks).forEach(function(block) {
-            if (blocks[block]) {
-              duplicates.push(block);
+        if (map) {
+          // find duplicate blocks
+          let blocks = {};
+          map.get('blocks').forEach(function(block) {
+            blocks[block.get('name')] = false;
+          });
+          let data = table.getSourceData();
+          var found = false;
+          data.forEach(function(row) {
+            if (row.block && row.block in blocks) {
+              blocks[row.block] = true;
+              found = true;
             }
           });
-          warning = "The block "  + (duplicates.length > 1? "s":"")
-           + " (" + duplicates.join(', ') + ") already exist in the selected dataset and will be overwritten by the new data";
+          if (found) {
+            //build warning msg
+            var duplicates = [];
+            Object.keys(blocks).forEach(function(block) {
+              if (blocks[block]) {
+                duplicates.push(block);
+              }
+            });
+            warning = "The blocks "
+            + " (" + duplicates.join(', ') + ") already exist in the selected dataset and will be overwritten by the new data";
+          }
+
+          if (map.get('parent').get('name')) {
+            parent = map.get('parent');
+          }
+        } else if (selectedMap == 'new') {
+          let parent_id = $("#parent").val();
+          if (parent_id.length > 0) {
+            maps.forEach(function(m) {
+              if (m.get('name') == parent_id) {
+                parent = m;
+              }
+            });
+          }
+        }
+
+        // check if each block exists in the parent dataset
+        if (parent) {
+          let blocks = {};
+          parent.get('blocks').forEach(function(b) {
+            blocks[b.get('name')] = true;
+          });
+          let data = table.getSourceData();
+          let missing = [];
+          data.forEach(function(row) {
+            if (row.block) {
+              if (!blocks[row.block]) {
+                missing.push(row.block);
+              }
+            }
+          });
+          if (missing.length > 0) {
+            if (warning) {
+              warning += '\n\n\n';
+            } else {
+              warning = '';
+            }
+            warning += "The blocks"
+            + " (" + missing.join(', ') + ") do not exist in the parent dataset (" + parent.get('name') + ')';
+          }
         }
       }
     }
@@ -130,6 +198,7 @@ export default UploadBase.extend({
 
   getDatasetId() {
     var that = this;
+    let datasets = that.get('store').peekAll('Dataset').toArray();
     return new Ember.RSVP.Promise(function(resolve, reject) {
       var selectedMap = $("#dataset").val();
       if (selectedMap != 'new') {
@@ -137,16 +206,30 @@ export default UploadBase.extend({
       } else {
         var newMap = $("#dataset_new").val();
         //check if duplicate
-        that.get('datasets').forEach(function(dataset) {
-          if (dataset.name == newMap) {
+        datasets.forEach(function(dataset) {
+          if (dataset.get('name') == newMap) {
             selectedMap = dataset.id;
             resolve(selectedMap);
           }
         });
         if (selectedMap == 'new') {
+          let parentId = $("#parent").val();
+          let parent = null;
+          if (parentId.length > 0) {
+            datasets.forEach(function(dataset) {
+              if (dataset.get('name') == parentId) {
+                parent = dataset;
+              }
+            });
+          }
           let newDataset = that.get('store').createRecord('Dataset', {
-            name: newMap
-          })
+            name: newMap,
+            type: $("#type").val(),
+            blocks: []
+          });
+          if (parent != null) {
+            newDataset.set('parent', parent);
+          }
           newDataset.save().then(function() {
             that.loadDatasets(newDataset.id)
             resolve(newDataset.id)
@@ -168,13 +251,13 @@ export default UploadBase.extend({
       }
       for (var i=0; i<sourceData.length; i++) {
         var row = sourceData[i];
-        if (row[cols['pos']] || row[cols['name']] || row[cols['block']]) {
-          if (!row[cols['pos']] && row[cols['pos']] != 0) {
-            reject({r: i, c: cols['pos'], msg: 'Position required'});
+        if (row[cols['val']] || row[cols['name']] || row[cols['block']]) {
+          if (!row[cols['val']] && row[cols['val']] != 0) {
+            reject({r: i, c: cols['val'], msg: 'Position required'});
             break;
           }
-          if (isNaN(row[cols['pos']])) {
-            reject({r: i, c: cols['pos'], msg: 'Position must be numeric'});
+          if (isNaN(row[cols['val']])) {
+            reject({r: i, c: cols['val'], msg: 'Position must be numeric'});
             break;
           }
           if (!row[cols['name']]) {
@@ -188,7 +271,7 @@ export default UploadBase.extend({
           validatedData.push({
             name: row[cols['name']],
             block: row[cols['block']],
-            pos: row[cols['pos']]
+            val: row[cols['val']]
           });
         }
       }
