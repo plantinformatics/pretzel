@@ -804,6 +804,25 @@ g.axis-outer.selected /* > g.axis-all > g.axis > */ text {
     display : inherit;
 }
 /* -------------------------------------------------------------------------- */
+/* for controlling display of (left panel : view) "Chart Options". */
+.chart-options
+{
+    display : none;
+}
+.chartOptions .chart-options
+{
+    display : inherit;
+}
+/* -------------------------------------------------------------------------- */
+.goto-feature-whole
+{
+    display : none;
+}
+.gotoFeature .goto-feature-whole
+{
+    display : inherit;
+}
+/* -------------------------------------------------------------------------- */
 div#goto-feature > div
 {
     display : inline-block;

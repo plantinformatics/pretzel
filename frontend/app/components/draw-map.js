@@ -12,6 +12,7 @@ import { EventedListener } from '../utils/eventedListener';
 import { chrData } from '../utils/utility-chromosome';
 import { eltWidthResizable, eltResizeToAvailableWidth, noShiftKeyfilter, eltClassName  } from '../utils/domElements';
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
+import { parseOptions } from '../utils/common/strings';
 import { Viewport } from '../utils/draw/viewport';
 import {  Axes, maybeFlip, maybeFlipExtent,
           /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId  }  from '../utils/draw/axis';
@@ -341,6 +342,7 @@ export default Ember.Component.extend(Ember.Evented, {
     if (this.get(name) != value)
       this.set(name, value);
   },
+
 
   /** object attributes */
   oa : {},
@@ -1672,9 +1674,25 @@ export default Ember.Component.extend(Ember.Evented, {
     else
       svgContainer = oa.svgContainer;
 
-
-    d3.select('body')
-      .classed("devel", this.get('params.devel'));
+    let options_param = this.get('params.options'), options;
+    if (options_param && ! this.get('urlOptions')
+        && (options = parseOptions(options_param)))
+    {
+      this.set('urlOptions', options);
+      // alpha enables new features which are not yet robust.
+      options.splitAxes = options.alpha;
+      /** In addition to the options which are added as body classes in the
+       * following statement, the other supported options are :
+       *   splitAxes  (enables buttons for extended axis and dot-plot in configureAxisTitleMenu())
+       */
+      d3.select('body')
+        // alpha enables alpha features e.g. extended/split-axes, dot plot,
+        .classed("alpha", options.alpha)
+        // chartOptions enables (left panel : view) "Chart Options"
+        .classed("chartOptions", options.chartOptions)
+        .classed("gotoFeature", options.gotoFeature)
+        .classed("devel", options.devel); // enables some trace areas
+    }
 
     function setCssVariable(name, value)
     {
@@ -4604,6 +4622,8 @@ export default Ember.Component.extend(Ember.Evented, {
      * @see based on similar configurejQueryTooltip()
      */
     function  configureAxisTitleMenu(axisName) {
+      let options = me.get('urlOptions'),
+      splitAxes = options && options.splitAxes;
       if (trace_gui)
       console.log("configureAxisTitleMenu", axisName, this, this.outerHTML);
         let node_ = this;
@@ -4625,8 +4645,13 @@ export default Ember.Component.extend(Ember.Evented, {
           content : ""
             + iconButton("DeleteMap", "Delete_" + axisName, "&#x2573;" /*glyphicon-sound-7-1*/, "glyphicon-remove-sign", "#")
             + iconButton("FlipAxis", "Flip_" + axisName, "&#x21C5;" /*glyphicon-bell*/, "glyphicon-retweet", "#")
-            + iconButton("PerpendicularAxis", "Perpendicular_" + axisName, "&#x21B7;" /*glyphicon-bell*/, "glyphicon-retweet", "#")
-            + iconButton("ExtendMap", "Extend_" + axisName, "&#x21F2;" /*glyphicon-star*/, "glyphicon-arrow-right", "#")
+            + 
+            (splitAxes ?
+             (
+                 iconButton("PerpendicularAxis", "Perpendicular_" + axisName, "&#x21B7;" /*glyphicon-bell*/, "glyphicon-retweet", "#")
+               + iconButton("ExtendMap", "Extend_" + axisName, "&#x21F2;" /*glyphicon-star*/, "glyphicon-arrow-right", "#")
+             ) : ""
+            )
         })
         // .popover('show');
       

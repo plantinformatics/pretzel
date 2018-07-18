@@ -29,7 +29,7 @@ let config = {
     highlightFeature: {
       refreshModel: false
     },
-    devel: {
+    options: {
       refreshModel: false
     }
   },
