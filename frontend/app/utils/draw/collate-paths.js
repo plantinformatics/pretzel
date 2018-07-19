@@ -359,7 +359,7 @@ function maInMaAG(axis0, axis1, f1 )
 function collateStacks1()
 {
   let
-    featureAxes = flowsService.featureAxes,
+    featureAxes = flowsService.featureAxes = {},
   aliasGroupAxisFeatures = flowsService.aliasGroupAxisFeatures,
   pathsUnique = flows.U_alias.pathData = [];
   flowsService.set('pathsUnique', pathsUnique);

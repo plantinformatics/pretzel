@@ -1373,9 +1373,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
     //- moved to utils/stacks.js: oa.xScaleExtend = xScale();
 
-    if (source == 'dataReceived')
-      stacks.changed = 0x10;
-    let t = stacksAdjust(true, undefined);
+    collateO();
     vc.xDropOutDistance_update(oa);
 
     //- moved updateRange() to utils/stacksLayout
@@ -1385,7 +1383,8 @@ export default Ember.Component.extend(Ember.Evented, {
 //-    import {} from "../utils/intervals.js";
 
     var path_colour_scale;
-    let featureScaffold = {}, scaffolds = new Set(), scaffoldFeatures = {};
+    let featureScaffold = oa.featureScaffold || (oa.featureScaffold = {}),
+    scaffolds = new Set(), scaffoldFeatures = {};
     let intervals = {}, intervalNames = new Set(), intervalTree = {};
 //-scaffolds
     /** scaffoldTicks[axisID] is a set of y locations, relative to the y axis of axisID, of horizontal tick marks.
@@ -1613,8 +1612,16 @@ export default Ember.Component.extend(Ember.Evented, {
         .on("end", brushended);
       }
     });
-    /** when draw( , 'dataReceived'), pathUpdate() is not valid until ys is updated. */
+    /** when draw( , 'dataReceived'), pathUpdate() is not valid until ys is updated.
+     * ysUpdated is roughly equivalent to ysLength(), but on entry to a new
+     * draw() closure, ysUpdated is undefined until this point, while oa.ys
+     * contains existing axis scales.
+     */
     let ysUpdated = true;
+    function ysLength()
+    {
+      return oa && oa.ys && d3.keys(oa.ys).length;
+    }
 
     let svgRoot;
     let newRender = (svgRoot = oa.svgRoot) === undefined;
@@ -1780,7 +1787,7 @@ export default Ember.Component.extend(Ember.Evented, {
       ;
     }
     
-    pathUpdate(undefined);
+    // pathUpdate(undefined);
     stacks.log();
 
 //-components/stacks
@@ -2309,6 +2316,15 @@ export default Ember.Component.extend(Ember.Evented, {
       .attr("class", "brush")
       .each(function(d) { d3.select(this).call(oa.y[d].brush); });
 
+    /*------------------------------------------------------------------------*/
+    /* above is the setup of scales, stacks, axis */
+    /* stacksAdjust() calls pathUpdate() which depends on the axis y scales. */
+    if (source == 'dataReceived')
+      stacks.changed = 0x10;
+    let t = stacksAdjust(true, undefined);
+    /* below is the setup of path hover (path classes, colouring are setup
+     * above, but that can be moved following this, when split out). */
+    /*------------------------------------------------------------------------*/
 
     // Setup the path hover tool tip.
     let toolTipCreated = ! oa.toolTip;
@@ -4150,7 +4166,7 @@ export default Ember.Component.extend(Ember.Evented, {
       {
         colourOrdinal = featureName;
       }
-      else if (use_path_colour_scale === 4)
+      else if ((use_path_colour_scale === 4) && featureScaffold)
       {
         colourOrdinal = featureScaffold[featureName];
         /* colour the path if either end has a class mapping defined.
@@ -4228,7 +4244,7 @@ export default Ember.Component.extend(Ember.Evented, {
             let dataIsMmaa = typeof(da) === "object";
             let featureName = dataIsMmaa ? da[0] : da, // also @see featureNameOfPath(this)
             colourOrdinal = featureName;
-            if (use_path_colour_scale === 4)
+            if ((use_path_colour_scale === 4) && featureScaffold)
             {
               colourOrdinal = featureScaffold[featureName];
               /* colour the path if either end has a class mapping defined.
@@ -4396,11 +4412,13 @@ export default Ember.Component.extend(Ember.Evented, {
           oa.stacks.forEach(function (s) { s.redrawAdjacencies(); });
       }
       // pathUpdate() uses flow.g, which is set after oa.foreground.
-      if (oa.foreground && ysUpdated)
+      if (oa.foreground && ysLength())
       {
         pathUpdate(t);
         countPathsWithData(oa.svgRoot);
       }
+      else
+        console.log('stacksAdjust skipped pathUpdate', changedNum, oa.foreground, ysLength());
 
       if (stacks.changed & 0x10)
       {
@@ -4525,7 +4543,7 @@ export default Ember.Component.extend(Ember.Evented, {
 //- paths-classes
     this.set('clearScaffoldColours', function() {
       console.log("clearScaffoldColours");
-      featureScaffold = {}, scaffolds = new Set(), scaffoldFeatures = {};
+      featureScaffold = oa.featureScaffold = {}, scaffolds = new Set(), scaffoldFeatures = {};
       aliasGroupClasses = {};
       pathColourUpdate(undefined, undefined);
     });
@@ -4606,7 +4624,7 @@ export default Ember.Component.extend(Ember.Evented, {
          * ensure that pathData is updated.
          */
         collateStacks();
-        if (oa.foreground)  // ysUpdated is true
+        if (oa.foreground && ysLength())
         {
           pathUpdate(t);
           countPathsWithData(oa.svgRoot);
