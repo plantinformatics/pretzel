@@ -30,6 +30,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     updateSelectedFeatures: function(features) {
     	// console.log("updateselectedFeatures in mapview", features.length);
       this.set('selectedFeatures', features);
+      this.send('setTab', 'right', 'selection');
     },
 
     /** Change the state of the named block to viewed.
@@ -97,6 +98,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       d3.selectAll("g.axis-outer").classed("selected", dataIs(block.id));
       if (trace_select)
       d3.selectAll("g.axis-outer").each(function(d, i, g) { console.log(this); });
+      this.send('setTab', 'right', 'block');
     },
     selectBlockById: function(blockId) {
       let store = this.get('store'),
@@ -107,6 +109,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     },
     selectDataset: function(ds) {
       this.set('selectedDataset', ds);
+      this.send('setTab', 'right', 'dataset');
     },
     /** Get all available maps.
      */
