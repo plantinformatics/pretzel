@@ -814,6 +814,16 @@ g.axis-outer.selected /* > g.axis-all > g.axis > */ text {
     display : inherit;
 }
 /* -------------------------------------------------------------------------- */
+body div > ul > li > div > div.btn-group.ff-alpha,
+.ff-alpha
+{
+    display : none;
+}
+body.alpha .ff-alpha
+{
+    display : inherit;
+}
+/* -------------------------------------------------------------------------- */
 .goto-feature-whole
 {
     display : none;
