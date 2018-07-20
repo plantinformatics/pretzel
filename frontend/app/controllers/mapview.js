@@ -98,7 +98,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       d3.selectAll("g.axis-outer").classed("selected", dataIs(block.id));
       if (trace_select)
       d3.selectAll("g.axis-outer").each(function(d, i, g) { console.log(this); });
-      this.send('setTab', 'right', 'block');
+      // this.send('setTab', 'right', 'block');
     },
     selectBlockById: function(blockId) {
       let store = this.get('store'),
