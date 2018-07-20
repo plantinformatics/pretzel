@@ -536,6 +536,10 @@ function getAliased(axisName, axisName1)
   let aliasedDone = flowsService.aliasedDone;
   let adjacent_both_dir = flowsService.flowConfig.adjacent_both_dir;
   let stackEvents = flowsService.stackEvents;
+  /* If ! adjacent_both_dir then if the aliases have been requested for one
+   * direction <a0, a1> then there is no need to request <a1, a0> - the result
+   * is symmetric.
+   */
   if (! adjacent_both_dir && (axisName > axisName1))
   { a0 = axisName1; a1 = axisName; }
   else
@@ -663,6 +667,10 @@ function collateStacksA()
   filterPaths();
 }
 
+/* Both storePath() and collateStacksA() store (in aliased) with
+ * k1 < k2, because they rely on their alias connections being symmetric.
+ * (for those functions, k3 is a feature on axis k1, and k4 is a feature on axis k2).
+ */
 function objPut(a, v, k1, k2, k3, k4)
 {
   if (a === undefined)
@@ -840,10 +848,14 @@ function filterPaths()
     if (trace_path > 1)
       console.log("a0Name", a0Name, axisId2Name(a0Name));
     adjAxes[a0Name].forEach(function (a1Name) { 
+      /** @see objPut() header comment. */
+      let aNames = (a0Name > a1Name)
+        ? [a1Name, a0Name]
+        : [a0Name, a1Name];
       if (trace_path > 1)
-        console.log("a1Name", a1Name, axisId2Name(a1Name));
+        console.log("a1Name", a1Name, axisId2Name(a1Name), (a0Name > a1Name));
       let b;
-      if ((b = aliased[a0Name]) && (b = b[a1Name]))
+      if ((b = aliased[aNames[0]]) && (b = b[aNames[1]]))
         d3.keys(b).forEach(function (f0 ) {
           let b0=b[f0 ];
           let b0_fs = d3.keys(b0),
