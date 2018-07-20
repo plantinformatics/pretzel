@@ -870,14 +870,13 @@ function filterPaths()
             }
             else if (b0_fs_n > 1)
             {
-              console.log("b0_fs_n", b0_fs_n, b0);
+              put.push.apply(put, ffaa);
             }
             if (trace_path > 1)
             {
-              console.log(put.length, f0 , f1 , ffaa.length);
+              console.log(put.length, pathsUnique.length, "b0_fs_n", b0_fs_n, /*b0,*/ f0 , f1 , ffaa.length);
               log_ffaa(ffaa[0]);
             }
-            put.push.apply(put, ffaa);
           });
         });
     });
