@@ -3287,6 +3287,31 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
 //- axis-brush-zoom
+
+    /** Return the brushed domain of axis p
+     * Factored from brushHelper(); can use axisBrushedDomain() to replace that code in brushHelper().
+     */
+    function axisBrushedDomain(p, i)
+    {
+        /** Extent of current brush (applied to y axis of a axis). */
+        let
+        brushExtents = selectedAxes.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
+      /*----------------------------------------------------------------------*/
+
+
+          let yp = oa.y[p],
+          axis = oa.axes[p],
+          brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion */); });
+          if (axis.flipped)
+          {
+            let swap = brushedDomain[0];
+            brushedDomain[0] = brushedDomain[1];
+            brushedDomain[1] = swap;
+          }
+      console.log('axisBrushedDomain', p, i, brushExtents, brushedDomain);
+      return brushedDomain;
+    }
+
     /** Used when the user completes a brush action on the axis axis.
      * The datum of g.brush is the ID/name of its axis, call this axisID.
      * If null selection then remove axisID from selectedAxes[], otherwise add it.
@@ -4488,14 +4513,35 @@ export default Ember.Component.extend(Ember.Evented, {
     this.set('draw_flipRegion', function(features) {
       let brushedMap, zm,
       selectedAxes = oa.selectedAxes;
+      let limits;
       if (selectedAxes.length === 0)
         console.log('draw_flipRegion', 'selectedAxes is empty', selectedAxes);
+      /* axes = oa.selectedAxes;
+        brushedMap = axes && axes.length && axes[axes.length-1]; */
       else if ((brushedMap = selectedAxes[0]) === undefined)
         console.log('draw_flipRegion', 'selectedAxes[0] is undefined', selectedAxes);
       else if ((zm = oa.z[brushedMap]) === undefined)
         console.log('draw_flipRegion', 'z[', brushedMap, '] is undefined', selectedAxes, oa.z);
       else
-      if (features.length)
+      {
+        if (features && features.length)
+        {
+          limits = features2Limits(features);
+          flipRegionInLimits(brushedMap, limits);
+        }
+        else
+        {
+          console.log(oa.selectedAxes);
+          selectedAxes.forEach(function(p, i) {
+            // p is selectedAxes[i], including brushedMap === selectedAxes[0]
+            limits = axisBrushedDomain(p, i);
+            //  oa.brushedRegions[brushedMap];
+            console.log('flipRegion', p, i, brushedMap, limits);
+            flipRegionInLimits(p, limits);
+          });
+        }
+      }
+      function features2Limits()
       {
         /** the first and last features have the minimum and maximum position
          * values, except where flipRegion has already been applied. */
@@ -4517,9 +4563,15 @@ export default Ember.Component.extend(Ember.Evented, {
             return limits_;
           }, limits);
         // console.log("limits", limits);
+        let 
+          f0  = features[0], f1  = features[features.length-1];
+        console.log("features2Limits", /*features, zm,*/ f0 , f1, limits);
+        return limits;
+      }
 
-        let f0  = features[0], f1  = features[features.length-1],
-        locationRange = limits,
+      function flipRegionInLimits(p, locationRange)
+      {
+        let
         /** delta of the locationRange interval */
         rd = locationRange[1] - locationRange[0],
         invert = function (l)
@@ -4528,13 +4580,20 @@ export default Ember.Component.extend(Ember.Evented, {
           // console.log("invert", l, i);
           return i;
         };
-        console.log("draw_flipRegion", /*features, zm,*/ f0 , f1 , locationRange, rd);
-        d3.keys(zm).forEach(function(feature) {
-          if (! isOtherField[feature]) {
-          let feature_ = zm[feature], fl = feature_.location;
-          if (locationRange[0] <= fl && fl <= locationRange[1])
-            feature_.location = invert(fl);
-          }
+        console.log("flipRegionInLimits", locationRange, rd);
+        let axis = stacks.axesP[p],
+        blocks = axis && axis.blocks;
+        console.log(axis, blocks);
+        (blocks || []).map(function (block) {
+          zm = oa.z[block.axisName];
+          console.log(block.axisName, zm);
+          d3.keys(zm).forEach(function(feature) {
+            if (! isOtherField[feature]) {
+              let feature_ = zm[feature], fl = feature_.location;
+              if (locationRange[0] <= fl && fl <= locationRange[1])
+                feature_.location = invert(fl);
+            }
+          });
         });
         pathUpdate(undefined);
       }
