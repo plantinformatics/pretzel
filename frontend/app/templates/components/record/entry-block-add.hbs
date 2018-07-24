@@ -1,0 +1,13 @@
+{{#if entry.isViewed}}
+{{else}}
+  {{elem/button-base
+    classSize='xs'
+    classColour='success'
+    icon='plus'
+    onClick=(action "loadBlock" entry)}}
+{{/if}}
+{{entry.datasetId.content.name}}
+{{entry.name}}
+{{entry.scope}}
+{{entry.namespace}}
+<!-- {{entry.id}}  -->

@@ -1,0 +1,65 @@
+<div style="padding: 1em">
+
+  {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{selectedFeatures.length}}</span>
+
+  {{#if false}}	{{!-- debug trace --}}
+    <div>
+      <ul class="list-group">
+	{{#each selectedFeatures key="Feature" as |feature|}}
+	  <li class="list-group-item">
+            {{ feature.Chromosome }}
+            {{ feature.Feature }}
+            {{ feature.Position }}
+	  </li>
+	{{/each}}
+      </ul>
+    </div>
+  {{/if}}
+
+  <div style="clear:both; height:2em"></div>
+
+  {{!-- same icon as button-refresh, but override colour.
+   Use .list-group to get some margin-bottom; when upgrading bootstrap from 3
+   to 4, can use .mb-3
+
+   classNames is not updating when loaded; also tried :
+   classNames=(concat "btn btn-info pull-right" (if loading 'disabled'))
+   --}}
+  {{#elem/button-base
+     click=(action "getBlocksOfFeatures")
+     classNames=refreshClassNames
+     icon='refresh'
+     classColour="primary"
+  }}
+    <span>&nbsp; &rarr; Blocks</span>
+  {{/elem/button-base}}
+
+  {{!-- The above (if loading 'disabled') is not effective, so display
+   ⏰  U+023F0  ALARM CLOCK --}}
+  {{#if loading }}
+    <div class="pull-right">
+      &#x23F0;
+    </div>
+  {{/if}}
+
+  {{!-- →	&#8594;	&rarr;	RIGHTWARDS ARROW --}}
+
+  {{#if blocksOfFeatures.length}}
+    <span class="badge">
+      {{blocksOfFeatures.length}}
+    </span>
+  {{/if}}
+
+  <div style="clear:both; height:1em"></div>
+</div>
+
+<ul class="list-group">
+  {{#each blocksOfFeatures key="id" as |block|}}
+    <li class="list-group-item">
+      {{record/entry-block-add
+        entry=block
+        loadBlock="loadBlock"
+      }}
+    </li>
+  {{/each}}
+</ul>

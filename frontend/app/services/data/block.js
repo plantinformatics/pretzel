@@ -139,5 +139,17 @@ export default Service.extend(Ember.Evented, {
 
       return ids;
     })
-  
+  ,
+  /*----------------------------------------------------------------------------*/
+
+
+  /** Search for the named features, and return also their blocks and datasets.
+   */
+  getBlocksOfFeatures : task(function* (featureNames) {
+    let me = this, blocks =
+      yield this.get('auth').featureSearch(featureNames, /*options*/{});
+
+    return blocks;
+  })
+
 });

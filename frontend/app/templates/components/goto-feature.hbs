@@ -2,6 +2,7 @@
           feature (gene / marker) / location / interval -> apollo |  map | etc
           --}}
 
+<div class="goto-feature-range">
 <div id="goto-feature" class="clearfix control-panel bordered"  data-toggle="buttons-checkbox" >
   Type of key values :
   <div>
@@ -57,6 +58,7 @@
   {{#each mapsOfFeature as |map|}}
     {{ map.name }}
   {{/each}}
+</div>
 </div>
 
 {{goto-ensembl featureName=feature1 selectedFeatures=selectedFeatures }}

@@ -54,6 +54,13 @@ export default Service.extend({
     return this._ajax('Blocks/pathsByReference', 'GET', {blockA : blockA, blockB : blockB, reference, max_distance, options : options}, true);
   },
 
+  /** 
+   */
+  featureSearch(featureNames, options) {
+    console.log('services/auth featureSearch', featureNames, options);
+    return this._ajax('Features/search', 'GET', {filter : featureNames, options}, true);
+  },
+
   createDataset(name) {
     return this._ajax('Datasets', 'POST', JSON.stringify({name: name}), true)
   },

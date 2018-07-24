@@ -11,6 +11,9 @@ export default ManageBase.extend({
   }),
 
   actions: {
+    loadBlock(block) {
+      this.sendAction('loadBlock', block);
+    },
     removeBlock(block) {
       this.sendAction('removeBlock', block);
     }

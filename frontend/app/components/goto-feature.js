@@ -5,7 +5,7 @@ import { featureChrs,  name2Map,   chrMap, objectSet,  mapsOfFeature } from '../
 
 
 export default Ember.Component.extend({
-  classNames: ['goto-feature-whole'],
+  // classNames: ['goto-feature-whole'],
 
   store: Ember.inject.service('store'),
 

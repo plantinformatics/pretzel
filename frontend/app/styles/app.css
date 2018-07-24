@@ -824,11 +824,11 @@ body.alpha .ff-alpha
     display : inherit;
 }
 /* -------------------------------------------------------------------------- */
-.goto-feature-whole
+.goto-feature-range
 {
     display : none;
 }
-.gotoFeature .goto-feature-whole
+.gotoFeature .goto-feature-range
 {
     display : inherit;
 }

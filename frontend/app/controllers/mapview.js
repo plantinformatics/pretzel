@@ -83,7 +83,8 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
 
     loadBlock : function(block) {
       console.log('loadBlock', block);
-      let id = block.get('id');
+      /** in result of featureSearch(), used in goto-feature-list, .block has .id but not .get */
+      let id = block.get ? block.get('id') : block.id;
       let t = this.get('useTask');
       t.apply(this, [id]);
     },
