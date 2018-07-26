@@ -4967,8 +4967,6 @@ export default Ember.Component.extend(Ember.Evented, {
       setupPathWidth();
       setupSbSizeThresh();
 
-      flows_showControls(flowButtonsSel);
-      configurejQueryTooltip(flowButtonsSel);
       setupToggleModePublish();
     }
 

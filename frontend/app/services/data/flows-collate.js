@@ -42,11 +42,11 @@ let flows;
 
 flows = 
   {
-    // Flow(name, direct, unique, collate)
+    // Flow(name, title, direct, unique, collate)
     // direct path() uses featureAxes, collated by collateStacks1();
-    direct: new Flow("direct", true, true, collateStacks1/*undefined*/),
-    U_alias: new Flow("U_alias", false, true, collateStacks1),	// unique aliases
-    alias: new Flow("alias", false, false, collateStacksA)	// aliases, not filtered for uniqueness.
+    direct: new Flow("direct", "Direct", true, true, collateStacks1/*undefined*/),
+    U_alias: new Flow("U_alias", "Unique Aliases", false, true, collateStacks1),	// unique aliases
+    alias: new Flow("alias", "Aliases", false, false, collateStacksA)	// aliases, not filtered for uniqueness.
   };
 /** Set .visible and .enabled to the given value.
  * This is currently seen as configuration - not something the user changes during runtime.

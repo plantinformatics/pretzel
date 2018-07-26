@@ -1,1 +1,20 @@
 {{!-- will migrate to here from app/utils/draw/flow-controls.js --}}
+<span>Connections Enabled :</span>
+
+<ul class="list-group">
+  {{#each-in flowsService.flows as |name flow|  }}    {{!-- key="name" ? --}}
+    <li class="list-group-item">
+      
+      {{#if false }}  {{!-- debug trace --}}
+        {{ flow.direct }}
+        {{ flow.unique }}
+        {{ flow.visible }}
+        {{ flow.enabled }}
+      {{/if}}
+      {{input type="checkbox" checked=flow.visible class="toggle" input=(action "toggleVisible" name true) }}
+      <label {{action "toggleVisible" name true on="click" }}>{{flow.title}}</label>
+    </li>
+
+  {{/each-in}}
+</ul>
+

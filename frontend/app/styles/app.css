@@ -244,8 +244,12 @@ circle.radio.toggle.chartType.pushed
 /* ---------------------------------- */
 
 /* These selectors are for HTML and SVG respectively; they are bundled so that
-the user can easily edit them at the same time, keeping colours in sync.  */
-div.drawing-controls > div.flowButtons > .flowButton.alias,
+ * the user can easily edit them at the same time, keeping colours in sync.
+ * the start of this selector is the same as flowButtonsSel (in utils/draw/flow-controls.js)
+ * later will make the palettes user-editable, e.g. https://github.com/bugsnag/chromatic-sass,
+ *  https://blog.bugsnag.com/sass-color-palettes
+ */
+div.drawing-controls.flowButtons .flowButton.alias,
 .foreground > g.alias > g > path {
   /* HTML  */
   border-color : #955;
@@ -253,13 +257,13 @@ div.drawing-controls > div.flowButtons > .flowButton.alias,
   /* SVG  */
   stroke: #955;
 }
-div.drawing-controls > div.flowButtons > .flowButton.U_alias,
+div.drawing-controls.flowButtons .flowButton.U_alias,
 .foreground > g.U_alias > g > path {
   border-color : #545;
   background-color: #545;
   stroke: #545;
 }
-div.drawing-controls > div.flowButtons > .flowButton.direct,
+div.drawing-controls.flowButtons .flowButton.direct,
 .foreground > g.direct > g > path {
   border-color : #484;
   background-color: #484;
@@ -700,7 +704,7 @@ div.drawing-controls > div > ul > li > label
 }
 /* -------------------------------------------------------------------------- */
 /** style the flow control buttons in  div.drawing-controls */
-div.drawing-controls > div.flowButtons > .flowButton
+div.drawing-controls.flowButtons .flowButton
 {
   float: left;
   width: 35px;
@@ -711,7 +715,7 @@ div.drawing-controls > div.flowButtons > .flowButton
   border-width: 10px;
   /* border-style: dashed; */
 }
-div.drawing-controls > div.flowButtons > .flowButton.selected
+div.drawing-controls.flowButtons .flowButton.selected
 {
   border-width: 8px;
   /* border-style: solid; */
@@ -719,7 +723,7 @@ div.drawing-controls > div.flowButtons > .flowButton.selected
 }
 /* -------------------------------------------------------------------------- */
 /* style the flowButtons popover menu */
-div.drawing-controls > div.flowButtons > div.popover > button
+div.drawing-controls.flowButtons div.popover > button
 {
   width: 100%;
 }

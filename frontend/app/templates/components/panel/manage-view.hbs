@@ -71,9 +71,7 @@
   </ul>
 
   <div class="panel-body">
-    <div class="drawing-controls vspace1">
-      <div class="flowButtons"></div>
-      {{!-- probably migrate the content of flowButtons (d3) into flow-controls.hbs (this hbs is initially empty)  --}}
+    <div class="drawing-controls flowButtons vspace1">
       {{draw/flow-controls viewOptions=(hash isShowUnique pathColourScale showScaffoldMarkers showAsymmetricAliases )}}
     </div>
   </div>

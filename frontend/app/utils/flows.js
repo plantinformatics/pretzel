@@ -8,8 +8,9 @@
  * @param direct	true : match feature names; false : match feature aliases against feature names.
  * @param unique	require aliases to be unique 1:1; i.e. endpoints (features or genes) with only 1 mapping in the adjacent axis are shown
  */
-function Flow(name, direct, unique, collate) {
+function Flow(name, title, direct, unique, collate) {
   this.name = name;
+  this.title = title;
   this.direct = direct;
   this.unique = unique;
   this.collate = collate;

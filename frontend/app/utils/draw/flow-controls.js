@@ -27,12 +27,13 @@ function I(d) { /* console.log(this, d); */ return d; };
 
 // moved here from components/draw-map.js
 
-let flowButtonsSel = "div.drawing-controls > div.flowButtons";
+/** this selector is the same as the selector in styles/app.css, i.e. maintain them in sync. */
+let flowButtonsSel = "div.drawing-controls.flowButtons";
 
 /*----------------------------------------------------------------------------*/
 
 function configurejQueryTooltip(node) {
-  d3.selectAll(node + " > div.flowButton")
+  d3.selectAll(node + " div.flowButton")
     .each(function (flowName) {
       // console.log("configurejQueryTooltip", flowName, this, this.outerHTML);
       let node_ = this;
@@ -100,6 +101,9 @@ function enabledFlows(flows)
       result.push(f);
   return result;
 }
+/**
+ * @param parentSelector is flowButtonsSel
+ */
 function flows_showControls (parentSelector)
 {
   let flows = flowsService.get('flows');
@@ -114,9 +118,14 @@ function flows_showControls (parentSelector)
   }
 
   /** button to toggle flow visibilty. */
-  let b = parent.selectAll("div.flowButton")
+  let b = parent.selectAll("ul > li")
     .data(flowNames)
-    .enter().append("div");
+    .selectAll("div.flowButton")
+    .data(function (d) { return [d]; })
+    .enter()
+    .append("div");
+  if (! b.empty())
+    console.log('flows_showControls', b.nodes(), b.node());
   b
     .attr("class",  function (flowName) { return flowName;})
     .classed("flowButton", true)
@@ -130,10 +139,10 @@ function flows_showControls (parentSelector)
       // toggle visibilty
       let flow = flows[flowName];
       console.log('flow click', flow);
-      flow.visible = ! flow.visible;
+      flow.setVisible(! flow.visible);
       let b1=d3.select(this);
       b1.classed("selected", flow.visible);
-      updateSelections_flowControls();
+      // updateSelections_flowControls();
       flow.g.classed("hidden", ! flow.visible);
       console.log(flow.g.node());
     })
@@ -159,7 +168,7 @@ function flows_showControls (parentSelector)
  */
 function updateSelections_flowControls() {
   let flows = flowsService.get('flows');
-  let parent = d3.select(flowButtonsSel);
+  // let parent = d3.select(flowButtonsSel);
   let foreground = d3.select('#holder svg > g > g.foreground');
   d3.keys(flows).forEach(function (flowName) {
     let flow = flows[flowName];
@@ -176,7 +185,14 @@ function updateSelections_flowControls() {
 
 Flow.prototype.ExportDataToDiv = function (eltSel)
 {
-  let elts = Ember.$(eltSel), elt = elts[0];
+  let elts = Ember.$(eltSel);
+  if (! elts.length)
+  {
+    window.alert("Show the Adv tab in the right panel before Export\n(and scroll down).");
+  }
+  else
+  {
+    let elt = elts[0];
   // or for text : elt.append()
   elt.innerHTML =
     "<div><h5>" + this.name + "</h5> : " + this.pathData.length + "</div>\n";
@@ -184,6 +200,7 @@ Flow.prototype.ExportDataToDiv = function (eltSel)
     let s = "<div>" + mmaa2text(ffaa) + "</div>\n";
     elt.insertAdjacentHTML('beforeend', s);
   });
+  }
 };
 
 
