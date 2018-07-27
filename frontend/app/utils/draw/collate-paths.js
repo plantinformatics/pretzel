@@ -579,11 +579,13 @@ function getAliased(axisName, axisName1)
  */
 function collateStacksA()
 {
-  let adjAxes = flowsService.adjAxes;
   let aliased = flowsService.aliased;
   collateAdjacentAxes();
+  /** result of above collateAdjacentAxes(). */
+  let adjAxes = flowsService.adjAxes;
   let adjCount = 0, adjCountNew = 0, pathCount = 0;
   let oa = oa_();
+  // could change this to traverse adjAxes (post filter) instead of keys(oa.z)
   d3.keys(oa.z).forEach(
     function(axisName)
     {
@@ -715,7 +717,8 @@ function aliasText(alias)
  * aliased, which collateStacksA() stores in. */
 function addPathsToCollation(blockA, blockB, paths)
 {
-  console.log('addPathsToCollation', blockA, blockB, paths.length, arguments);
+  if ((trace_adj > 1) || (trace_adj && paths.length))
+    console.log('addPathsToCollation', blockA, blockB, paths.length, arguments);
   let axisName = blockA, axisName1 = blockB;
   let trace_count_path = 1;
   paths.map(function (p) {
@@ -770,7 +773,8 @@ function addPathsToCollation(blockA, blockB, paths)
  * aliased, which collateStacksA() stores in. */
 function addPathsByReferenceToCollation(blockA, blockB, referenceGenome, maxDistance, paths)
 {
-  console.log('addPathsByReferenceToCollation', blockA, blockB, referenceGenome, maxDistance, paths.length, arguments);
+  if ((trace_adj > 1) || (trace_adj && paths.length))
+    console.log('addPathsByReferenceToCollation', blockA, blockB, referenceGenome, maxDistance, paths.length, arguments);
   let axisName = blockA, axisName1 = blockB;
   let trace_count_path = 1;
   paths.map(function (p) {

@@ -502,14 +502,45 @@ Stack.prototype.childBlocks = function (names)
     blocks = blocks.map(function (a) { return stacks.blocks[a]; } );
   return blocks;
 };
+/** @return all the blocks in this axis which are data blocks, not reference blocks.
+ * Data blocks are recognised by having a .namespace;
+ */
 Stacked.prototype.dataBlocks = function ()
 {
-  return this.blocks;
+  let db = this.blocks
+    .filter(function (block) { return block.block.get('namespace'); });
+  if (trace_stack > 1)
+    console.log(
+      'Stacked', 'blocks', this.blocks.map(function (block) { return block.longName(); }),
+      this.axisName, this.mapName, 'dataBlocks',
+      db.map(function (block) { return block.longName(); }));
+  return db;
+};
+/** @return all the blocks in this Stack which are data blocks, not reference blocks.
+ * Data blocks are recognised by having a .namespace;
+ * this is a different criteria to @see Stack.prototype.dataBlocks0().
+ */
+Stack.prototype.dataBlocks = function ()
+{
+  let axesDataBlocks = this.axes
+    .map(function (stacked) { return stacked.dataBlocks(); } ),
+  db = Array.prototype.concat.apply([], axesDataBlocks)
+  ;
+  // Stacked.longName() handles blocks also.
+  if (trace_stack > 1)
+    console.log(
+      'Stack', this.stackID, 'axes', this.axes.map(Stacked.longName),
+      'dataBlocks',
+      db.map(function(block) { return block.longName(); })
+  );
+  return db;
 };
 /** @return all the blocks in this Stack, excluding parent blocks.
  * Axes with a single non-parent block are included.
+ * This is a different criteria to @see Stack.prototype.dataBlocks();
+ * this function is probably not yet used / debugged.
  */
-Stack.prototype.dataBlocks = function ()
+Stack.prototype.dataBlocks0 = function ()
 {
   /** set of all of this.axes, minus those which have a block referring to them as .parent */
   let blockSet = new WeakSet(this.axes),

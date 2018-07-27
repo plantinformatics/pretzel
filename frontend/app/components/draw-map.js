@@ -3413,7 +3413,8 @@ export default Ember.Component.extend(Ember.Evented, {
           if (enable_log)
             console.log("brushHelper", name, p, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
 
-          /** for all blocks in the axis */
+          /** for all data blocks in the axis; reference blocks don't contain
+           * features so don't brush them. */
           let childBlocks = axis.dataBlocks();
           console.log(axis, 'childBlocks', childBlocks);
           childBlocks.map(function (block) {

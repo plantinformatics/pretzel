@@ -27,10 +27,15 @@ function collateAdjacentAxes()
 {
   let adjAxes = flowsService.adjAxes = {};
   let adjacent_both_dir = flowsService.flowConfig.adjacent_both_dir;
+  /** Each stack, other than the end stacks, is visited twice in this loop,
+   * so the result stack.datablocks() is cached for the next pass.
+   * It is a minor time saving, but it makes the trace log clearer.
+   */
+  let dataBlocks = [];
   for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
     let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
-    fAxis_s0 = s0.childBlocks(),
-    fAxis_s1 = s1.childBlocks();
+    fAxis_s0 = dataBlocks[stackIndex] || (dataBlocks[stackIndex] = s0.dataBlocks()),
+    fAxis_s1 = dataBlocks[stackIndex+1] || (dataBlocks[stackIndex+1] = s1.dataBlocks());
     if (trace_adj > 2)
     {
       console.log('collateAdjacentAxes', stackIndex, fAxis_s0, stackIndex+1, fAxis_s1);
