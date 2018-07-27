@@ -707,11 +707,11 @@ div.drawing-controls > div > ul > li > label
 div.drawing-controls.flowButtons .flowButton
 {
   float: left;
-  width: 35px;
-  height: 35px;
+  width: 2em;
+  height: 2em;
   margin: 0px 5px;
 
-  border-radius: 16px;
+  border-radius: 1em;
   border-width: 10px;
   /* border-style: dashed; */
 }
