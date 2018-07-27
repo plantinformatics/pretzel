@@ -1,15 +1,21 @@
-<div class="jumbotron">
-  <h1>Pretzel</h1>
-  <p>An Express/Ember/D3 framework to display and interactively navigate complex datasets.</p>
-  <p>Developed by
-    - AgriBio, Department of Economic Development, Jobs, Transport and Resources (DEDJTR), Victoria,
+{{#if (is-rejected landingPageContent)}}
+  <div class="jumbotron">
+    <h1>Pretzel</h1>
+    <p>An Express/Ember/D3 framework to display and interactively navigate complex datasets.</p>
+    <p>Developed by
+      - AgriBio, Department of Economic Development, Jobs, Transport and Resources (DEDJTR), Victoria,
       Australia;
-    - CSIRO, Canberra, Australia.
+      - CSIRO, Canberra, Australia.
 
-    Funded by the Grains Research Development Corporation (GRDC).
-  </p>
+      Funded by the Grains Research Development Corporation (GRDC).
+    </p>
+  </div>
 
-  <hr>
-  {{{await logosEtc}}}
+  <div style="display:none;">
+    <hr>
+    {{ landingPageContent.reason }}
+  </div> 
 
-</div>
+{{else}}
+  {{{await landingPageContent}}}
+{{/if}}
