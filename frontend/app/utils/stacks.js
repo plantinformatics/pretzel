@@ -563,14 +563,11 @@ Stacked.prototype.keyFunction = function (axisID)
 {
   return axisID;
 };
-Stacked.prototype.titleText = function ()
+Block.prototype.titleText = function ()
 {
-  return this.children(false, false)
-    .map(function (block) {
-      let axisName = block.block.get('id'),
-      cmName = oa.cmName[axisName];
-      return cmName.mapName + ":" + cmName.chrName;
-    } );
+  let axisName = this.block.get('id'),
+  cmName = oa.cmName[axisName];
+  return cmName.mapName + ":" + cmName.chrName;
 };
 
 /** Constructor for Stack type.

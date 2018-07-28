@@ -2230,12 +2230,6 @@ export default Ember.Component.extend(Ember.Evented, {
       // console.log(".axis text", chrID, cn);
       return cn.mapName + " " + cn.chrName;
     }
-    function axisTitleChildren(chrID)
-    {
-      let cn=oa.cmName[chrID],
-      children = oa.stacks.blocks[chrID].getAxis().titleText();
-      return children;
-    }
 
     let axisTitleS = g.append("text")
       .attr("y", -axisFontSize)
@@ -2265,10 +2259,12 @@ export default Ember.Component.extend(Ember.Evented, {
       ;
 
     axisTitleS.selectAll("tspan")
-      .data(axisTitleChildren)
+        .data(function (axisName) {
+          let axis = Stacked.getAxis(axisName);
+          return axis.children(false, false); })
       .enter()
       .append("tspan")
-      .text(function (d) { return d; })
+      .text(function (block) { return block.titleText(); })
       .attr('x', '0px')
       .attr('dx', '0px')
       .attr('dy',  function (d, i) { return "" + (i*0.8+1.5)  + "em"; })
