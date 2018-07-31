@@ -797,6 +797,12 @@ ul#display-blocks > li.selected,
 g.axis-outer.selected /* > g.axis-all > g.axis > */ text {
   font-weight: bold;
 }
+/* hover menu for axis title or sub-title
+ * configureAxisSubTitleMenu() has a long title, so centre the buttons.
+ */
+div.popover/*.axis-menu*/ div.popover-content {
+  text-align: center;   /* equiv bootstrap .text-center */
+}
 /* -------------------------------------------------------------------------- */
 /* for controlling display of devel monitoring info. */
 .devel-visible

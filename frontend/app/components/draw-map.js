@@ -1191,9 +1191,12 @@ export default Ember.Component.extend(Ember.Evented, {
             .attr('id', axisEltId(d))
             .call(axis.scale(y[d]));
 
-          let checkS = aStackS.selectAll("g, g.stackDropTarget > rect");
-          checkS.each(function(b,i) {console.log(this,b,i,b.__data__); } );
-          // logSelectionNodes(checkS);
+          if (trace_stack > 1)
+          {
+            let checkS = aStackS.selectAll("g, g.stackDropTarget > rect");
+            checkS.each(function(b,i) {console.log(this,b,i,b.__data__); } );
+            // logSelectionNodes(checkS);
+          }
         }
         }
 
@@ -2243,7 +2246,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
     function axisTitleFamily(axisTitleS) {
       axisTitleS
-      .text(axisTitle /*String*/)
+      // .text(axisTitle /*String*/)
       // shift upwards if >1 line of text
         .each(function (d) {
           let axis = Stacked.getAxis(d),
@@ -2257,23 +2260,37 @@ export default Ember.Component.extend(Ember.Evented, {
           }
         })
       ;
-
+      /** for the stroke and fill of axis title menu */
+      function axisTitleColour (d, i) {
+        let
+          colour = (i == 0) ? undefined : axisTitle_colour_scale(d);
+        return colour;
+      };
+      let subTitleS =
     axisTitleS.selectAll("tspan")
+      /** @return type Block[]. blocks of axisName.
+       * first block is parent, remainder are data (non-reference) */
         .data(function (axisName) {
           let axis = Stacked.getAxis(axisName);
-          return axis.children(false, false); })
+          // equiv : axis.children(true, false)
+          return axis.blocks; }),
+      subTitleE = subTitleS
       .enter()
-      .append("tspan")
+      .append("tspan");
+      subTitleS.exit().remove();
+      subTitleE.merge(subTitleS)
       .text(function (block) { return block.titleText(); })
       .attr('x', '0px')
       .attr('dx', '0px')
       .attr('dy',  function (d, i) { return "" + (i*0.8+1.5)  + "em"; })
-      .style('stroke', function (d) {
-        let
-          colour = axisTitle_colour_scale(d);
-        return colour;
-      })
-    ;
+      .style('stroke', axisTitleColour)
+      .style('fill', axisTitleColour)
+        .each(function (block, i) {
+          let menuFn = (i == 0)
+            ? configureAxisTitleMenu
+            : configureAxisSubTitleMenu;
+          menuFn.apply(this, arguments);
+        });
     };
 
     function updateAxisTitles()
@@ -2283,8 +2300,6 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
 
-    axisTitleS
-        .each(configureAxisTitleMenu);
     let axisSpacing = (axisXRange[1]-axisXRange[0])/stacks.length;
     let verticalTitle;
     if ((verticalTitle = axisSpacing < 90))
@@ -4695,8 +4710,12 @@ export default Ember.Component.extend(Ember.Evented, {
      * So far used just for Delete
      * @see based on similar configurejQueryTooltip()
      */
-    function  configureAxisTitleMenu(axisName) {
+    function  configureAxisTitleMenu(block) {
       let options = me.get('urlOptions'),
+      /** the __data__ of the element triggering the menu was axisName, but is
+       * now block; the axis and stack lookups below could now go more directly
+       * via block. */
+      axisName = block.axisName,
       splitAxes = options && options.splitAxes;
       if (trace_gui)
       console.log("configureAxisTitleMenu", axisName, this, this.outerHTML);
@@ -4795,6 +4814,60 @@ export default Ember.Component.extend(Ember.Evented, {
 
         });
     }
+
+    /*------------------------------------------------------------------------*/
+
+    /** Setup hover menus over axis child data block sub-titles.
+     * Based on similar @see configureAxisTitleMenu()
+     * @param block (Block) is the __data__ of the <tspan>-s
+     */
+    function  configureAxisSubTitleMenu(block) {
+      if (trace_gui)
+      console.log("configureAxisSubTitleMenu", block.axisName, this, this.outerHTML);
+        let node_ = this;
+      let blockR = block.block,
+      title = blockR
+        ? blockR.get('namespace') + ' ' + blockR.get('scope')
+        : block.longName();
+        Ember.$(node_)
+        .popover({
+          /* would like to use .axis-menu as a selector in css,
+           * but 'class' is not effective; maybe in a later version. refn :
+           * https://github.com/twbs/bootstrap/pull/23874 */
+          class : 'axis-menu',
+            trigger : "hover",
+          sticky: true,
+          delay: {show: 200, hide: 1500},
+          container: 'div#holder',
+          placement : "auto bottom",
+          title : title,
+          html: true,
+	
+          content : ""
+            + iconButton("DeleteMap", "Delete_" + block.axisName, "&#x2573;" /*glyphicon-sound-7-1*/, "glyphicon-remove-sign", "#")
+          // glyphicon-eye-open	
+        })
+        // .popover('show');
+      
+        .on("shown.bs.popover", function(event) {
+          if (trace_gui)
+            console.log("shown.bs.popover", event, event.target);
+
+          let deleteButtonS = d3.select("button.DeleteMap");
+          if (trace_gui)
+            console.log(deleteButtonS.empty(), deleteButtonS.node());
+          deleteButtonS
+            .on('click', function (buttonElt /*, i, g*/) {
+              console.log("delete", block.axisName, this);
+              // this will do : block.block.setViewed(false);
+              me.send('mapsToViewDelete', block.axisName);
+            });
+
+        });
+    }
+
+
+    /*------------------------------------------------------------------------*/
 
       /** Render the affect of resize on the drawing.
        * @param widthChanged   true if width changed
