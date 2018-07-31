@@ -2285,6 +2285,7 @@ export default Ember.Component.extend(Ember.Evented, {
       .attr('dy',  function (d, i) { return "" + (i*0.8+1.5)  + "em"; })
       .style('stroke', axisTitleColour)
       .style('fill', axisTitleColour)
+        .style('opacity', function (block, i) { return (i > 0) && ! block.visible ? 0.5 : undefined; } )
         .each(function (block, i) {
           let menuFn = (i == 0)
             ? configureAxisTitleMenu
@@ -3434,7 +3435,8 @@ export default Ember.Component.extend(Ember.Evented, {
             let fLocation;
             if (! isOtherField[f] && ((fLocation = blockFeatures[f].location) !== undefined))
             {
-            if ((fLocation >= brushedDomain[0]) &&
+            if (block.visible &&
+                (fLocation >= brushedDomain[0]) &&
                 (fLocation <= brushedDomain[1])) {
               //selectedFeatures[p].push(f);
               selectedFeaturesSet.add(f);
@@ -4845,6 +4847,7 @@ export default Ember.Component.extend(Ember.Evented, {
 	
           content : ""
             + iconButton("DeleteMap", "Delete_" + block.axisName, "&#x2573;" /*glyphicon-sound-7-1*/, "glyphicon-remove-sign", "#")
+            + iconButton("VisibleAxis", "Visible_" + block.axisName, "&#x1F441;" /*Unicode Character 'EYE'*/, "glyphicon-eye-close", "#")
           // glyphicon-eye-open	
         })
         // .popover('show');
@@ -4861,6 +4864,24 @@ export default Ember.Component.extend(Ember.Evented, {
               console.log("delete", block.axisName, this);
               // this will do : block.block.setViewed(false);
               me.send('mapsToViewDelete', block.axisName);
+            });
+
+          let visibleButtonS = d3.select("button.VisibleAxis");
+          if (trace_gui)
+            console.log(visibleButtonS.empty(), visibleButtonS.node());
+
+          visibleButtonS
+            .on('click', function (buttonElt /*, i, g*/) {
+              console.log("visible", block.visible, block.longName(), this);
+              block.visible = ! block.visible;
+
+              updateAxisTitles();
+              collateStacks();  // does filterPaths();
+
+              selectedFeatures_removeAxis(block.axisName);
+              sendUpdatedSelectedFeatures();
+
+              pathUpdate(undefined);
             });
 
         });

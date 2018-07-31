@@ -89,6 +89,8 @@ function Block(block) {
   this.block = block;
   console.log("Stacked()", this, block, axisName);
 };
+/** .visible indicates the features of this block will be included in axis brushes & paths.  */
+Block.prototype.visible = true;
 /** @return axis of this block or if it has a parent, its parent's axis */
 Block.prototype.getAxis = function()
 {
@@ -504,14 +506,16 @@ Stack.prototype.childBlocks = function (names)
 };
 /** @return all the blocks in this axis which are data blocks, not reference blocks.
  * Data blocks are recognised by having a .namespace;
+ * @param visible if true then exclude blocks which are not visible
  */
-Stacked.prototype.dataBlocks = function ()
+Stacked.prototype.dataBlocks = function (visible)
 {
   let db = this.blocks
-    .filter(function (block) { return block.block.get('namespace'); });
+    .filter(function (block) {
+      return (! visible || block.visible) && block.block.get('namespace'); });
   if (trace_stack > 1)
     console.log(
-      'Stacked', 'blocks', this.blocks.map(function (block) { return block.longName(); }),
+      'Stacked', 'blocks', visible, this.blocks.map(function (block) { return block.longName(); }),
       this.axisName, this.mapName, 'dataBlocks',
       db.map(function (block) { return block.longName(); }));
   return db;
@@ -522,8 +526,10 @@ Stacked.prototype.dataBlocks = function ()
  */
 Stack.prototype.dataBlocks = function ()
 {
+  /** Currently only visible == true is used, but could make this a param.  */
+  let visible = true;
   let axesDataBlocks = this.axes
-    .map(function (stacked) { return stacked.dataBlocks(); } ),
+    .map(function (stacked) { return stacked.dataBlocks(visible); } ),
   db = Array.prototype.concat.apply([], axesDataBlocks)
   ;
   // Stacked.longName() handles blocks also.
