@@ -1,6 +1,15 @@
 {{#elem/panel-container state="primary"}}
     {{#elem/panel-heading icon="globe"}}
         Displayed Data
+        {{#if hasDisplayData}}
+        <span class="pull-right">
+          {{elem/button-base
+            classSize='xs'
+            classColour='danger'
+            icon='minus'
+            onClick=(action 'removeDisplayData')}}
+        </span>
+        {{/if}}
     {{/elem/panel-heading}}
     <ul id="display-blocks" class="list-group">
         {{#each displayData as |block|}}
