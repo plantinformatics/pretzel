@@ -3427,6 +3427,8 @@ export default Ember.Component.extend(Ember.Evented, {
 
           /** for all data blocks in the axis; reference blocks don't contain
            * features so don't brush them. */
+          /* can pass visible=true here - a slight optimisation; it depends on the
+           * expression in dataBlocks() which distinguishes data blocks. */
           let childBlocks = axis.dataBlocks();
           console.log(axis, 'childBlocks', childBlocks);
           childBlocks.map(function (block) {

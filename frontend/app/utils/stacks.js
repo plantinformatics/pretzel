@@ -87,10 +87,10 @@ function Block(block) {
   stacks.blocks[axisName] = this;
 
   this.block = block;
-  console.log("Stacked()", this, block, axisName);
+  /** .visible indicates the features of this block will be included in axis brushes & paths.  */
+  this.visible = true;
+  console.log("Block()", this, block, axisName);
 };
-/** .visible indicates the features of this block will be included in axis brushes & paths.  */
-Block.prototype.visible = true;
 /** @return axis of this block or if it has a parent, its parent's axis */
 Block.prototype.getAxis = function()
 {
@@ -512,7 +512,8 @@ Stacked.prototype.dataBlocks = function (visible)
 {
   let db = this.blocks
     .filter(function (block) {
-      return (! visible || block.visible) && block.block.get('namespace'); });
+      return (! visible || block.visible)
+        && (block.block.get('namespace') || block.block.get('features')); });
   if (trace_stack > 1)
     console.log(
       'Stacked', 'blocks', visible, this.blocks.map(function (block) { return block.longName(); }),
