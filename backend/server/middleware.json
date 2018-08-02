@@ -40,7 +40,12 @@
       ]
     }
   },
-  "files": {},
+  "files": {
+		"loopback#static": {
+			"paths": ["/landingPageContent"],
+			"params": "$!../client/landingPageContent.html" 
+		}
+	},
   "final": {
     "loopback#urlNotFound": {}
   },
