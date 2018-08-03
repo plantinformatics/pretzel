@@ -149,9 +149,9 @@ function loadAliases(models, block_a, block_b, options) {
     .then(function(aliases) {
         // match aliases to the features on blockB
         aliases.forEach(function(alias) {
-            if (alias.namespace1 == block_b.namespace && alias.string1 in features_by_name) {
+            if (alias.namespace1 == block_b.namespace && alias.namespace2 == block_a.namespace && alias.string1 in features_by_name) {
                 features_by_name[alias.string1]['aliases'].push(alias);
-            } else if (alias.namespace2 == block_b.namespace && alias.string2 in features_by_name) {
+            } else if (alias.namespace2 == block_b.namespace && alias.namespace1 == block_a.namespace && alias.string2 in features_by_name) {
                 let alias_mirror = Object.assign({}, alias);
                 alias_mirror.namespace1 = alias.namespace2;
                 alias_mirror.namespace2 = alias.namespace1;
@@ -443,9 +443,12 @@ function findReferenceBlocks(models, block, reference, options) {
 exports.paths = function(models, id0, id1, options) {
     return findBlockPair(models, id0, id1, options)
     .then(function(data) {
+        console.log(data.blockA.namespace, data.blockB.namespace);
         return loadAliases(models, data.blockA, data.blockB, options);
     }).then(function(data) {
-        return findLinks(data.featuresA, data.featuresB);
+        let p = findLinks(data.featuresA, data.featuresB);
+        console.log(p.length);
+        return p;
     });
 }
 
