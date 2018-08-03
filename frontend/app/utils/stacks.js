@@ -312,6 +312,9 @@ Stacked.prototype.removeBlock = function(blockIndex)
   aBlock.parent = undefined;  // the .parent relationship is not really changed.
   return aBlock;
 };
+/** Remove blockId from this axis.
+ * @return Block undefined if block is not in this.blocks[].
+ */
 Stacked.prototype.removeBlockByName = function(blockId)
 {
   let block_ = stacks.blocks[blockId],
@@ -512,6 +515,7 @@ Stacked.prototype.dataBlocks = function (visible)
 {
   let db = this.blocks
     .filter(function (block) {
+      //  -	also need to check if features.length > 0
       return (! visible || block.visible)
         && (block.block.get('namespace') || block.block.get('features')); });
   if (trace_stack > 1)
