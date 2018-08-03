@@ -16,8 +16,11 @@ import { breakPoint } from '../breakPoint';
 /*----------------------------------------------------------------------------*/
 
 /** Used only by featureLookupName(), to read feature name and blockId of a
- * feature which is already loaded into the store. */
-let store = service('store');
+ * feature which is already loaded into the store.
+ * can only inject service into an Ember object, not a library;
+ * collate-paths seems likely to be a service, so then it can inject store.
+ let store = service('store');
+ */
 let flowsService; // = service('data/flows-collate');
 let flows;
 function flowsServiceInject(flowsService_)
@@ -125,7 +128,7 @@ function ensureFeatureIndex(featureId, featureName, blockId)
         console.log('d3FeatureSet', featureId, featureName);
       oa.d3FeatureSet.add(featureName);
     }
-    if (oa.d3Features.indexOf(featureName) < 0)
+    if (flowsService.d3Features.indexOf(featureName) < 0)
     {
       if (traceCount_features++ < 5)
         console.log('d3Features', featureName, featureId, blockId);
@@ -153,6 +156,8 @@ function featureLookupName(featureId)
   }
   else
   {
+    /** see comments above about injecting store. */
+    let store = oa.eventBus.get('store');
     let feature = store.peekRecord('feature', featureId),
     // in console .toJSON() was required - maybe just timing.
     block = feature.get('blockId') || (feature = feature.toJSON()).get('blockId'),

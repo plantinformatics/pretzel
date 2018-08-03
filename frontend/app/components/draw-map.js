@@ -987,6 +987,10 @@ export default Ember.Component.extend(Ember.Evented, {
         if (o[d] === undefined) { breakPoint("collateO"); }
       });
     }
+    /** Map an Array of Block-s to their longNames(), useful in log trace. */
+    function Block_list_longName(blocks) {
+     return blocks.map(function (b) { return b.longName(); });
+    }
     let blocksToDraw = oa.axisIDs,
     viewedBlocks = me.get('blockService').get('viewedIds'),
     stackedBlocks = stacks.blockIDs(),
@@ -1006,8 +1010,48 @@ export default Ember.Component.extend(Ember.Evented, {
     if (duplicates.length)
       breakPoint('duplicates', duplicates, blocksToDraw, blocksToAdd, oa.axisIDs);
 
-    blocksUnviewed.forEach(function (blockId) {
-      blockIsUnviewed(blockId);
+    /* may have parent and child blocks in the same axis becoming unviewed in
+     * the same run-loop cycle, so ensure that the children are unviewed
+     * before the parents.
+     */
+    [true, false].forEach(function (filterChildren) {
+      /** Accumulate child data blocks whose parent is being unviewed;
+       * these will be unviewed before the parents.
+       */
+      let orphaned = [];
+      /** filter the generation indicated by filterChildren */
+      let     generationBlocksUnviewed = blocksUnviewed.filter(function (blockId, i) {
+        let b = oa.stacks.blocks[blockId],
+        /** These 2 criteria should be equivalent (i.e. isParent == ! isChild);
+         * the focus here is on unviewing the non-reference blocks of an axis
+         * before the reference block, so isParent is used.
+         * isChild says that the block is eligible to be a child; (it is possible,
+         * but seems very unlikely, that the block may have just been added and
+         * would be adopted below.)
+         */
+        isParent = b.axis && (b === b.axis.blocks[0]), // equivalent to b.axis.referenceBlock.view,
+        features = b.block.get('features'),
+        isChild = (b.block.get('namespace') || (features && features.length));
+        if (isParent == isChild)        // verification.
+          breakPoint(b.longName(), isParent, 'should be !=', isChild, b.axis, features);
+        if (filterChildren && isParent)
+        {
+          let add = b.axis.dataBlocks().filter(function (b) { return b.block.get('isViewed'); });
+          if (add.length)
+            console.log(b.longName(), 'add to orphaned :', Block_list_longName(add));
+          orphaned = orphaned.concat(add);
+        }
+        return filterChildren == ! isParent;
+      });
+      console.log('filterChildren', filterChildren, generationBlocksUnviewed);
+      if (filterChildren && orphaned.length) {
+        let orphanedIds = orphaned.map(function (b) { return b.axisName; });
+        console.log('orphaned', Block_list_longName(orphaned), orphanedIds);
+        generationBlocksUnviewed = generationBlocksUnviewed.concat(orphanedIds);
+      }
+      generationBlocksUnviewed.forEach(function (blockId) {
+        blockIsUnviewed(blockId);
+      });
     });
 
     // Place new data blocks in an existing or new axis.
@@ -4649,7 +4693,9 @@ export default Ember.Component.extend(Ember.Evented, {
       console.log("blockIsUnviewed", axisName, this);
       let axis, sBlock;
 
-      // perhaps disallow unview of the parent block a non-empty axis
+      /* prior to unview of the parent block of a non-empty axis, the child data blocks are unviewed.
+       * This is a verification check.
+       */
       axis = oa.axes[axisName];
       if (axis && axis.blocks.length > 1)
       {
@@ -4664,22 +4710,28 @@ export default Ember.Component.extend(Ember.Evented, {
       }
 
       axis = Stacked.getAxis(blockId);
-      sBlock = axis.removeBlockByName(blockId);
-      console.log(axis, sBlock);
-      axis.log();
-      // delete oa.stacks.blocks[blockId];
-      if (axis.blocks.length)
-        axis = undefined;
+      if (axis) {
+        sBlock = axis.removeBlockByName(blockId);
+        console.log(axis, sBlock);
+        axis.log();
+        // delete oa.stacks.blocks[blockId];
+        /* if the axis has other blocks then don't remove the axis.
+         * -  To handle this completely, the adoption would have to be reversed -
+         * i.e. split the children into single-block axes.
+         */
+        if (axis.blocks.length)
+          axis = undefined;
+      }
 
       // verify : oa.axes[axisName]
       if (axis)
       {
-        sBlock = axis.removeBlockByName(blockId);
+        // removeBlockByName() is already done above
 
         let stack = axis && axis.stack;
         // axes[axisName] is deleted by removeStacked1() 
         let stackID = Stack.removeStacked(axisName);
-        console.log(sBlock, stack, stackID);
+        console.log('removing axis', axisName, sBlock, stack, stackID);
         stack.log();
         deleteAxisfromAxisIDs(axisName);
         removeAxisMaybeStack(axisName, stackID, stack);
