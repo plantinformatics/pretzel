@@ -35,7 +35,8 @@ function chrData(c) {
      * Compare against undefined, because 0 is a valid value.
      */
     let value = feature.get('value'), range = feature.get('range'),
-    featurePosition = (value !== undefined) ? value : range && range[0];
+    value0 = (value && value.length ? value[0] : value),
+    featurePosition = (value0 !== undefined) ? value0 : range && range[0];
     let featureAliases = feature.get('aliases');  // feature.aliases field is removed from db
     let featureId = feature.get('id');
     if (featurePosition === undefined)
