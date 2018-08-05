@@ -1671,9 +1671,15 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
     let svgRoot;
-    let newRender = (svgRoot = oa.svgRoot) === undefined;
+    /** Diverting to the login component removes #holder and hence <svg>, so
+     * check if oa.svgRoot refers to a DOM element which has been removed. */
+    let newRender = ((svgRoot = oa.svgRoot) === undefined)
+      ||  (oa.svgRoot.node().getRootNode() !== window.document);
     if (newRender)
     {
+      if (oa.svgRoot)
+        console.log('newRender old svgRoot', oa.svgRoot.node(), oa.svgContainer.node(), oa.foreground.node());
+      
       // Use class in selector to avoid removing logo, which is SVG.
     d3.select("svg.FeatureMapViewer").remove();
     d3.select("div.d3-tip").remove();
@@ -1815,8 +1821,8 @@ export default Ember.Component.extend(Ember.Evented, {
       return hidden;
     }
 
-    // this condition is equivalent to newRender
-    if ((foreground = oa.foreground) === undefined)
+    // if (oa.foreground && newRender), oa.foreground has been removed; commented above.
+    if (((foreground = oa.foreground) === undefined) || newRender)
     {
       oa.foreground =
     foreground = oa.svgContainer.append("g") // foreground has as elements "paths" that correspond to features
