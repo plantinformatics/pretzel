@@ -117,6 +117,15 @@ Block.prototype.longName = function() {
   return this.axisName + ':' + this.block.get('name')
     + '/' + (this.parent ? this.parent.axisName : '');
 };
+/** @return undefined or .longName() of block if blockId is loaded.
+ * (static)
+ */
+Block.longName = function (blockId) {
+  let block = stacks.blocks[blockId];
+  return block && block.longName();
+}
+/*----------------------------------------------------------------------------*/
+
 
 function Stacked(axisName, portion) {
   this.axisName = axisName;

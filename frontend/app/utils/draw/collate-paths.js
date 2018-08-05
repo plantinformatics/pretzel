@@ -2,7 +2,7 @@ import Ember from 'ember';
 
 const { inject: { service } } = Ember;
 
-import { /*Block, Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText*/, axisId2Name } from '../stacks';
+import { Block, /*Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText*/, axisId2Name } from '../stacks';
 import { collateAdjacentAxes, log_adjAxes, log_adjAxes_a } from '../stacks-adj';
 
 import { isOtherField } from '../field_names';
@@ -35,7 +35,6 @@ const trace_alias = 1;  // currently no trace at level 1.
 const trace_path = 0;
 /** enable trace of adjacency between axes, and stacks. */
 const trace_adj = 1;
-
 
 
 
@@ -722,8 +721,9 @@ function aliasText(alias)
  * aliased, which collateStacksA() stores in. */
 function addPathsToCollation(blockA, blockB, paths)
 {
-  if ((trace_adj > 1) || (trace_adj && paths.length))
-    console.log('addPathsToCollation', blockA, blockB, paths.length, arguments);
+  if (trace_adj) // && ((trace_adj > 1) || (paths.length))
+    console.log('addPathsToCollation', blockA, blockB, paths.length,
+                Block.longName(blockA), Block.longName(blockB));
   let axisName = blockA, axisName1 = blockB;
   let trace_count_path = 1;
   paths.map(function (p) {

@@ -2074,7 +2074,7 @@ export default Ember.Component.extend(Ember.Evented, {
       logSelectionNodes(ao1);
     }
     Stack.verify();
-    stacksAxesDomVerify(stacks, oa.svgContainer);
+    stacksAxesDomVerify(stacks, oa.svgContainer, /*unviewedIsOK*/ true);
     ao
       .attr("transform", Stack.prototype.axisTransformO);
     g
