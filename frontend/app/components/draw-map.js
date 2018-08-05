@@ -2285,7 +2285,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
     let axisTitleS = g.append("text")
-      .attr("y", -axisFontSize)
+      .attr("y", -2 * axisFontSize)
       .style("font-size", axisFontSize);
     axisTitleFamily(axisTitleS);
     /** true if any axes have children.  used to get extra Y space at top for multi-level axis title.
@@ -2303,8 +2303,8 @@ export default Ember.Component.extend(Ember.Evented, {
           length = axis && axis.blocks.length;
           if (length && length > 1)
           {
-            /** -12 is the default;  -30 looks OK for 2 rows of text. */
-            let y = '' + (-12 - ((length-1) * 18));
+            /** -2 * axisFontSize is the default for a single row. */
+            let y = '-' + (length+1) * axisFontSize;
             d3.select(this)
               .attr('y', y + 'px');
           }
@@ -2332,7 +2332,7 @@ export default Ember.Component.extend(Ember.Evented, {
       .text(function (block) { return block.titleText(); })
       .attr('x', '0px')
       .attr('dx', '0px')
-      .attr('dy',  function (d, i) { return "" + (i*0.8+1.5)  + "em"; })
+        .attr('dy',  function (d, i) { return "" + (i ? 1.5 : 0)  + "em"; })
       .style('stroke', axisTitleColour)
       .style('fill', axisTitleColour)
         .style('opacity', function (block, i) { return (i > 0) && ! block.visible ? 0.5 : undefined; } )
