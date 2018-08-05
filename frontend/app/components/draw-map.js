@@ -3423,10 +3423,13 @@ export default Ember.Component.extend(Ember.Evented, {
        * This causes selectedAxes to update here; when an axis is zoomed its brush is removed.
        */
       if (brushRange == null) {
+        console.log('brush removed', brushedAxisID);
         selectedAxes.removeObject(name[0]);
+        delete brushedRegions[brushedAxisID];
       }
       else {
         selectedAxes.addObject(name[0]); 
+        brushedRegions[brushedAxisID] = brushRange;
       }
 
       // selectedAxes is an array containing the IDs of the Axes that
@@ -3435,10 +3438,7 @@ export default Ember.Component.extend(Ember.Evented, {
       if (selectedAxes.length > 0) {
         console.log("Selected: ", " ", selectedAxes.length);
         // Axes have been selected - now work out selected features.
-        if (brushRange === null)
-          delete brushedRegions[brushedAxisID];
-        else
-          brushedRegions[brushedAxisID] = brushRange;
+
         /** Extent of current brush (applied to y axis of a axis). */
         let
         brushExtents = selectedAxes.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
@@ -3567,12 +3567,31 @@ export default Ember.Component.extend(Ember.Evented, {
           resetSwitch = zoomSwitch;
           resetSwitch.on('click',function(){resetZoom(brushedAxisID);
           });
-          /* this need only be set once, can be set outside this callback.
-           * for that, resetZoom() can be moved out of brushHelper():zoomSwitch.on()
+        });
+
+          /** Call resetZoom(undefined) - reset the zoom of all zoomed axes (selectedAxes).
            */
-          me.set('resetZooms', function(features) {
-            resetZoom();
+          if (! me.get('resetZooms'))
+          me.set('resetZooms', function() {
+            console.log('resetZooms', oa.selectedAxes, oa.brushedRegions, brushExtents);
+            resetBrushes();
+            resetZoom(undefined);
+            console.log('after resetZoom', oa.selectedAxes, oa.brushedRegions, brushExtents);
           });
+        function resetBrushes()
+        {
+          let brushed = d3.selectAll("g.axis-all > g.brush");
+          brushed.each(function (axisName, i, g) {
+            /* `this` refers to the brush g element.
+             * pass selection==null to clear the brush.
+             * clearing the brush triggers brushHelper() which removes the brush from selectedAxes[] and brushedRegions.
+             * and hence index is 0.
+             */
+            let j = i;
+            console.log('resetBrushes', this, axisName, oa.selectedAxes[j], oa.brushedRegions[axisName], brushExtents[j]);
+            d3.select(this).call(y[axisName].brush.move, null);
+          });
+        }
           /** Reset 1 or all zooms.
            * @param axisID  axis id to reset; undefined means reset all zoomed axes.
            */
@@ -3580,6 +3599,9 @@ export default Ember.Component.extend(Ember.Evented, {
           {
             let svgContainer = oa.svgContainer;
             let t = svgContainer.transition().duration(750);
+            /** rather than all of axisIDs(), should be sufficient to use
+             * selectedAxes (related to brushedRegions)
+             */
             let axisIDs = axisID ? [axisID] : oa.stacks.axisIDs();
             axisIDs.forEach(function(d) {
               let idName = axisEltId(d); // axis ids have "a" prefix
@@ -3608,7 +3630,7 @@ export default Ember.Component.extend(Ember.Evented, {
             }
             zoomed = false; // not used
           }
-        });
+
         
       } else {
         // brushHelper() is called from brushended() after zoom, with selectedAxes.length===0
@@ -3622,7 +3644,13 @@ export default Ember.Component.extend(Ember.Evented, {
         svgContainer.selectAll("circle").remove();
         d3.selectAll(".foreground > g > g").classed("faded", false);
         selectedFeatures_clear();
-        brushedRegions = oa.brushedRegions = {};
+        /* clearing brushedRegions is not needed here because resetBrushes() (by
+         * clearing the brushes) causes brushHelper() to remove brushes from
+         * brushedRegions.
+         * (and changing the value of brushedRegions in draw() closure would
+         * require using oa.brushedRegions instead).
+         * brushedRegions = oa.brushedRegions = {};
+         */
       }
 
     } // brushHelper
