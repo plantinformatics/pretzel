@@ -26,6 +26,12 @@ import { flowsServiceInject as flowsServiceInject_stacksAdj } from "../../utils/
 let d3Features;
 /*----------------------------------------------------------------------------*/
 
+/** Expect to drop this flag after adding reverse check (bijective) on U_alias,
+ * otherwise would find a way to get this flag from url options.
+ */
+const flowsEnableUAlias = false;
+
+
 /** Defined and manage computation flows which which collate data to support
  * path calculation.
  *
@@ -59,6 +65,7 @@ Flow.prototype.enable = function (enable)
 };
 // flows.direct.visible = flows.direct.enabled = false;
 
+flows.U_alias.enable(flowsEnableUAlias);
 flows.direct.pathData = d3Features = [];
 // if both direct and U_alias are enabled, only 1 should call collateStacks1().
 if (flows.U_alias.enabled && flows.direct.enabled && (flows.U_alias.collate == flows.direct.collate))

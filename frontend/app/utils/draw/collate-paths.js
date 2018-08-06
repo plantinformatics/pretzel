@@ -873,13 +873,12 @@ function filterPaths()
             let b01=b0[f1 ];
             let ffaa = b01;
             // filter here, e.g. uniqueness
-            if (b0_fs_n == 1)
+            let flowData = 
+              (flows.U_alias.enabled && (b0_fs_n == 1))
+              ? pathsUnique : put ;
+            if (b0_fs_n)
             {
-              pathsUnique.push.apply(pathsUnique, ffaa);
-            }
-            else if (b0_fs_n > 1)
-            {
-              put.push.apply(put, ffaa);
+              flowData.push.apply(flowData, ffaa);
             }
             if (trace_path > 1)
             {
