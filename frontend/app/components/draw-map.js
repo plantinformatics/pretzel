@@ -1143,7 +1143,7 @@ export default Ember.Component.extend(Ember.Evented, {
            * and also will change this significantly, so is better deferred
            * until after current release.
            */
-        sd = new Stacked(d, 1, parentAxis); // parentAxis === undefined
+        sd = new Stacked(d, 1); // parentAxis === undefined
           sd.referenceBlock = dBlock;
           console.log('before push sd', sd, sd.blocks, sBlock);
           sd.logBlocks();
@@ -1191,7 +1191,9 @@ export default Ember.Component.extend(Ember.Evented, {
           // roughly equivalent : a.stack.move(adopt0, newStack, -1)
 
           // a.axisName = d;
-          a.parent = sd;
+          // sd.blocks[0] is sBlock
+          console.log('aBlock.parent', aBlock.parent, '->', sd.blocks[0]);
+          aBlock.parent = sd.blocks[0];
           console.log('aBlock.axis', aBlock.axis, sd);
           aBlock.axis = sd;
           a.stack.add(sd);
@@ -1227,6 +1229,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
           /** update the __data__ of those elements which refer to axis parent block name */
           let dataS = aStackS.selectAll("g.brush, g.stackDropTarget, g.stackDropTarget > rect");
+          console.log('dataS', dataS.nodes(), dataS.data(), '->', d);
           dataS.each(function () { d3.select(this).datum(d); });
 
           let gAxisS = aStackS.selectAll("g.axis");
@@ -3340,7 +3343,7 @@ export default Ember.Component.extend(Ember.Evented, {
       {
         tracedAxisScale[axisID] = true;
         let yDomain = ysa.domain();
-          console.log("featureY_", axisID,  axisName2MapChr(axisID), d,
+        console.log("featureY_", axisID,  axisName2MapChr(axisID), parentName, d,
                       z[axisID][d].location, aky, axisY, yDomain, ysa.range());
       }
       return aky + axisY;
@@ -3722,7 +3725,23 @@ export default Ember.Component.extend(Ember.Evented, {
       let axisName = d3.select(that).data();
       if (axisName.length == 1)
         axisName = axisName[0];
+      /* if parent (reference) block arrives after child (data) block, the brush
+       * datum is changed from child to parent in adoption.  This code verifies
+       * that.
+       */
+      let axis = oa.axesP[axisName],
+      parentName = Block.axisName_parent(axisName);
+      if (! axis || (parentName != axisName))
+        breakPoint('zoom changing datum', axisName, 'to', parentName);
+      else
+        axis.verify();
+
       let t = oa.svgContainer.transition().duration(750);
+      /* this uses .map() to find i such that selectedAxes[i] == axisName,
+       * and i is used to lookup the parallel array brushExtents[].
+       * #afterRelease, selectedAxes / brushExtents / brushedRegions can be
+       * better integrated, simplifying this calc and others.
+       */
       selectedAxes.map(function(p, i) {
         if(p == axisName){
           let y = oa.y, svgContainer = oa.svgContainer;

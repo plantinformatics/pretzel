@@ -462,6 +462,36 @@ Stacked.prototype.getDomain = function ()
   ;
 };
 
+
+Stacked.prototype.verify = function ()
+{
+  let me = this;
+  if (this.blocks.length == 0)
+  {
+    this.log();
+  }
+  else
+  {
+    /* traverse the axes of this stack. */
+    this.blocks.forEach(
+      function (b, index)
+      {
+        let block = stacks.blocks[b.axisName],
+        /** true if the parent of axis a is stack me.  */
+        v1 = block.axis === me,
+        v2 = (block.parent === me.blocks[0]) || (block === me.blocks[0]);
+        if (!v1 || !v2)
+        {
+          console.log("v1", v1, "v2", v2, me, block);
+          me.log();
+          block.log();
+          breakPoint();
+        }
+      });
+  }
+};
+
+
 /** Return an array of the blocks which are in this Stacked (axis).
  * @param includeSelf if true, append self name (i.e. the referenceBlock) to the result.
  * @param names true means return just the block names
@@ -741,6 +771,7 @@ Stack.prototype.verify = function ()
           console.log(a, a.blocks, '[0] is undefined');
           a.blocks.splice(0, 1);
         }
+        a.verify();
       });
 };
 /** Attributes of the stacks object.
@@ -926,7 +957,7 @@ if (false)  /** not used - @see Stack_add()  */
 Stack.prototype.addAxis = function(axisName, portion)
 {
   console.log("Stack.prototype.addAxis", axisName, portion);
-  let sd = new Stacked(axisName, portion, true);
+  let sd = new Stacked(axisName, portion);
   this.add(sd);
 };
 /** Method of Stack.  @see Stack.prototype.add().

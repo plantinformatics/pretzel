@@ -22,7 +22,7 @@ function stacksAxesDomVerify(stacks, svgContainer, unviewedIsOK)
       isViewed;
       if (! block
           || ! (axis = Stacked.getAxis(d))
-          || ! (unviewedIsOK || (isViewed = block.block.get('isViewed'))))
+          || ! ((isViewed = block.block.get('isViewed')) || unviewedIsOK))
         breakPoint('stacksAxesDomVerify', d, i, this, block, axis, isViewed);
       if (unviewedIsOK && ! isViewed)
         console.log('stacksAxesDomVerify unviewed', d, i, this, block, axis);
