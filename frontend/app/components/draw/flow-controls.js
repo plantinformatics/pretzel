@@ -3,6 +3,7 @@ const { inject: { service } } = Ember;
 
 import { flowsServiceInject, flowButtonsSel, configurejQueryTooltip, flows_showControls, updateSelections_flowControls  } from "../../utils/draw/flow-controls";
 import { Flow } from "../../utils/flows";
+import { parseOptions } from '../../utils/common/strings';
 
 
 /* global d3 */
@@ -40,7 +41,7 @@ export default Ember.Component.extend({
     let flows = this.get('flowsService.flows');
     flowsService.flowConfig.viewOptions = this.get('viewOptions');
 
-    this.get('renderColourBlocks')();
+    this.get('renderColourBlocks').apply(this, []);
     // checkbox has input action toggleVisible();  otherwise showVisible() here.
     if (false)
     {
@@ -66,7 +67,18 @@ export default Ember.Component.extend({
 
   renderColourBlocks() {
     flows_showControls(flowButtonsSel);
-    configurejQueryTooltip(flowButtonsSel);
+
+    let options = this.get('parsedOptions'),
+    options_param;
+    if (! options
+        && (options_param = this.get('modelParamOptions'))
+        && (options = parseOptions(options_param)))
+    {
+      console.log('renderColourBlocks', options);
+      this.set('parsedOptions', options);
+      if (options.flowExport)
+        configurejQueryTooltip(flowButtonsSel);
+    }
   },
   showVisible(flow) {
     {
