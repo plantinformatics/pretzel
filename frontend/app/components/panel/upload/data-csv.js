@@ -283,37 +283,6 @@ export default UploadBase.extend({
     changeFilter: function(f) {
       this.set('filter', f)
     },
-    submitForm() {
-      let f = this.get('file');
-      if (f && !this.get('isProcessing')) {
-        let reader = new FileReader();
-        var that = this;
-        reader.onload = function(e) {
-          let data = {data: reader.result, fileName: f.name};
-          that.get('auth').uploadData(data)
-          .then(function(res){
-            that.setProperties({
-              isProcessing: false, 
-              successMessage: "Dataset uploaded successfully!",
-              errorMessage: null
-            });
-            $("body").animate({ scrollTop: 0 }, "slow");
-          }, function(err, status) {
-            console.log(err.responseJSON.error);
-            that.setProperties({
-              isProcessing: false, 
-              errorMessage: err.responseJSON.error.message,
-              successMessage: null
-            });
-            $("body").animate({ scrollTop: 0 }, "slow");
-          });
-        }
-        reader.readAsBinaryString(f);
-        this.setProperties({
-          isProcessing: true
-        })
-      }
-    },
     uploadBlocks() {
       var that = this;
       var table = that.get('table');
@@ -322,7 +291,7 @@ export default UploadBase.extend({
       .then(function(features) {
         if (features.length > 0) {
           that.getDatasetId().then(function(map_id) {
-            var data = {dataset_id: map_id, features: features};
+            var data = {dataset_id: map_id, features: features, namespace: $("#namespace").val()};
             that.set('isProcessing', true);
             that.get('auth').tableUpload(data)
             .then(function(res){
