@@ -20,11 +20,11 @@ var config = {
     },
     "json": {
       "strict": false,
-      "limit": "200mb"
+      "limit": "2000mb"
     },
     "urlencoded": {
       "extended": true,
-      "limit": "200mb"
+      "limit": "2000mb"
     },
     "cors": false
   }
