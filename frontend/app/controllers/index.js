@@ -23,6 +23,20 @@ export default Ember.Controller.extend({
 
   landingPageContentFileName : siteSpecificHtmlUrl,
 
+  willRender : function () {
+    console.log('willRender', this.get('landingPageContentFileName'));
+    /** Each time the user clicks to another route and back, another copy of
+     * landingPageContent is inserted.  A rough solution is to remove any
+     * pre-existing content when entering this route.  That also prevents the
+     * landingPageContent from appearing on the signup and login pages.
+     * A more structured solution might be factor the pre-landingPageContent
+     * functionality out of index.js to base.js which index.js,
+     * signup, login can inherit.
+     */
+    let previousContent = Ember.$('div.landingPageContent');
+    previousContent.remove();
+  },
+  
   landingPageContent: Ember.computed('landingPageContentFileName', function () {
     let me = this;
     let fileUrl = this.get('landingPageContentFileName');
