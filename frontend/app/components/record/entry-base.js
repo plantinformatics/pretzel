@@ -7,9 +7,9 @@ export default Ember.Component.extend({
   onInit: function() {
     this.set('editing', false)
   }.on('init'),
-  noAuth: Ember.computed(function() {
-    return window['AUTH'] === 'NONE';
-  }),
+  noAuth: function() {
+    return window['AUTH'] === 'NONE'
+  },
   actions: {
     setEditing: function(editing) {
       this.set('editing', editing)

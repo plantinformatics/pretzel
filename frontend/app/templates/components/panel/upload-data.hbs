@@ -1,5 +1,3 @@
-{{#if allowUpload}}
-
 {{#elem/panel-container state="primary"}}
   {{#elem/panel-heading icon="edit"}}
     Data Specification
@@ -50,10 +48,4 @@
   {{panel/upload/data-csv}}
 {{else if (compare filter '===' 'json')}}
   {{panel/upload/data-json}} 
-{{/if}}
-
-{{else}}
-  <div class="panel-body">
-    You must {{#link-to 'login' classNames='' tagName='a'}}Log In{{/link-to}} to upload
-  </div>
 {{/if}}

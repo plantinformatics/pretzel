@@ -66,24 +66,19 @@ module.exports = function(app) {
     }
   }
 
-  function genericResolver(role, context, cb) {
-    // allow guest actions
-    if (context.property == 'find' ||
-        context.property == 'paths') {
-      return process.nextTick(() => cb(null, true));
-    }
+  function genericResolver(role, context, cb) {    
     if (!context.accessToken || !context.accessToken.userId) {
-      // if not logged in deny access unless findById is called
-      if (context.property != 'findById') {
-        return process.nextTick(() => cb(null, false))
-      }
+      // Not logged in -> deny
+      return process.nextTick(() => cb(null, false))
     }
-    if (context.property ==  'create' ||
+    if (context.property == 'find' ||
+      context.property ==  'create' ||
       context.property == 'upload' ||
       context.property == 'tableUpload' ||
       context.property == 'createComplete' ||
       context.property == 'search' ||
       context.property == 'bulkCreate' ||
+      context.property == 'paths' ||
       context.property == 'pathsByReference') {
       // allow find, create and upload requests
       return process.nextTick(() => cb(null, true))
