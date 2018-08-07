@@ -35,6 +35,27 @@ export default Ember.Component.extend({
     console.log('components/draw/flow-controls init', arguments);
     this._super.apply(this, arguments);
   },
+  willRender() {
+    let flowsService = this.get('flowsService');
+    let options = this.get('parsedOptions'),
+    uAlias = options && options.uAlias;
+    console.log('willRender', options, uAlias, flowsService.flowConfig);
+    if ((uAlias != undefined) && (flowsService.flowConfig.uAlias != uAlias))
+    {
+      flowsService.flowConfig.uAlias = uAlias;
+      if (uAlias)
+      {
+        let flows = this.get('flowsService.flows');
+        if (flows.alias.title == "Aliases")
+        {
+          flows.alias.title += ' (non-unique)';
+          flows.alias.description =
+            flows.alias.description
+            .replace(/by aliases /, 'by non-unique aliases');
+        }
+      }
+    }
+  },
   didRender() {
     console.log('flow-controls didRender');
     let flowsService = this.get('flowsService');
@@ -67,19 +88,22 @@ export default Ember.Component.extend({
 
   renderColourBlocks() {
     flows_showControls(flowButtonsSel);
-
-    let options = this.get('parsedOptions'),
+    let
+      options = this.get('parsedOptions');
+      if (options && options.flowExport)
+        configurejQueryTooltip(flowButtonsSel);
+  },
+  parsedOptions : Ember.computed('modelParamOptions', function () {
+    let options, //  = this.get('parsedOptions'),
     options_param;
-    if (! options
-        && (options_param = this.get('modelParamOptions'))
+    if (/*! options
+        &&*/ (options_param = this.get('modelParamOptions'))
         && (options = parseOptions(options_param)))
     {
-      console.log('renderColourBlocks', options);
-      this.set('parsedOptions', options);
-      if (options.flowExport)
-        configurejQueryTooltip(flowButtonsSel);
+      console.log('parsedOptions', options);
     }
-  },
+    return options;
+  }),
   showVisible(flow) {
     {
       // was clicked element `this` 
@@ -87,7 +111,7 @@ export default Ember.Component.extend({
       console.log(b1.nodes(), b1.node(), flow.visible);
       b1.classed("selected", flow.visible);
     }
-    console.log('toggleVisible', flow, flow.g.node());
+    console.log('showVisible', flow, flow.g.node());
     // updateSelections_flowControls();
     flow.g.classed("hidden", ! flow.visible);
   }

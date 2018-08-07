@@ -93,28 +93,35 @@ function configurejQueryTooltip(node) {
 
 /*----------------------------------------------------------------------------*/
 
-function enabledFlows(flows)
+function flow_names(flows)
 {
   let result = [];
   for (let f in flows)
-    if (flows[f].enabled)
-      result.push(f);
+    result.push(f);
   return result;
 }
+
 /**
  * @param parentSelector is flowButtonsSel
  */
 function flows_showControls (parentSelector)
 {
-  let flows = flowsService.get('flows');
+  let flows = flowsService.get('enabledFlows');
   let parent = d3.select(parentSelector);
-  let flowNames = enabledFlows(flows);
+  /** maintain order. */
+  let flowNames = flow_names(flows);
 
   function flowSelected(flowName)
   {
     let flow = flows[flowName],
     visible = flow && flow.visible;
     return visible;
+  }
+  function flowDescription(flowName)
+  {
+    let flow = flows[flowName],
+    description = (flow && flow.description) || flowName;
+    return description;
   }
 
   /** button to toggle flow visibilty. */
@@ -151,7 +158,7 @@ function flows_showControls (parentSelector)
    * only be called once per document, perhaps that is already done by
    * d3 / jQuery / bootstrap.
    */
-    .attr("title", I)
+    .attr("title", flowDescription)
     .attr("data-id", function (flowName) {
       return "Export:" + flowName;
     })
@@ -167,7 +174,7 @@ function flows_showControls (parentSelector)
  * Also @see draw-map.js:updateSelections(), from which this was split.
  */
 function updateSelections_flowControls() {
-  let flows = flowsService.get('flows');
+  let flows = flowsService.get('enabledFlows');
   // let parent = d3.select(flowButtonsSel);
   let foreground = d3.select('#holder svg > g > g.foreground');
   d3.keys(flows).forEach(function (flowName) {

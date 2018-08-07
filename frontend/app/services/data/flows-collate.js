@@ -1,3 +1,4 @@
+import Ember from 'ember';
 
 import Service from '@ember/service';
 
@@ -26,10 +27,10 @@ import { flowsServiceInject as flowsServiceInject_stacksAdj } from "../../utils/
 let d3Features;
 /*----------------------------------------------------------------------------*/
 
-/** Expect to drop this flag after adding reverse check (bijective) on U_alias,
- * otherwise would find a way to get this flag from url options.
+/** Expect to drop this flag after adding reverse check (bijective) on U_alias.
+ * This is superceded by the addition of flag ?options=uAlias.
  */
-const flowsEnableUAlias = false;
+const flowsEnableUAlias = true;
 
 
 /** Defined and manage computation flows which which collate data to support
@@ -46,13 +47,23 @@ const flowsEnableUAlias = false;
  */
 let flows;
 
+const
+desc1 = 'Draw paths between features',
+desc_direct = desc1 + ' of the same name (eg: markers)',
+desc_alias = desc1 + ' linked by aliases (eg: syntenic genes or alternate marker names)',
+desc_U_alias = desc_alias.replace(/aliases/, 'unique aliases')
+;
+
 flows = 
   {
-    // Flow(name, title, direct, unique, collate)
+    // Flow(name, title, description, direct, unique, collate)
     // direct path() uses featureAxes, collated by collateStacks1();
-    direct: new Flow("direct", "Direct", true, true, collateStacks1/*undefined*/),
-    U_alias: new Flow("U_alias", "Unique Aliases", false, true, collateStacks1),	// unique aliases
-    alias: new Flow("alias", "Aliases", false, false, collateStacksA)	// aliases, not filtered for uniqueness.
+    direct: new Flow("direct", "Direct", desc_direct, true, true, collateStacks1/*undefined*/),
+    U_alias: new Flow("U_alias", "Aliases (unique)", desc_U_alias, false, true, collateStacks1),	// unique aliases
+    /* if options.uAlias, ' (non-unique)' is appended to .title in flow-controls:willRender(),
+     * and inserted into .description
+     */
+    alias: new Flow("alias", "Aliases", desc_alias, false, false, collateStacksA)	// aliases, not filtered for uniqueness.
   };
 /** Set .visible and .enabled to the given value.
  * This is currently seen as configuration - not something the user changes during runtime.
@@ -69,7 +80,7 @@ flows.U_alias.enable(flowsEnableUAlias);
 flows.direct.pathData = d3Features = [];
 // if both direct and U_alias are enabled, only 1 should call collateStacks1().
 if (flows.U_alias.enabled && flows.direct.enabled && (flows.U_alias.collate == flows.direct.collate))
-  flows.direct.collate = undefined;
+  flows.U_alias.collate = undefined;
 
 // flows.direct.visible = false;
 // flows.alias.visible = false;
@@ -191,7 +202,21 @@ export default Service.extend({
     flowsServiceInject_collatePaths(this);
     flowsServiceInject_utilsDrawFlowControls(this);
     flowsServiceInject_stacksAdj(this);
-  }
+  },
+  enabledFlows : Ember.computed('flowConfig.uAlias', function () {
+    let uAlias = flowConfig.uAlias,
+    flows = this.get('flows');
+    if (flows.U_alias.enabled != uAlias)
+      flows.U_alias.enable(uAlias);
+      
+    let result = {};
+    for (let f in flows)
+      if (flows[f].enabled)
+        result[f] = flows[f];
+    console.log('enabledFlows', uAlias, flows.U_alias.enabled, result);
+    return result;
+  })
+
   
 });
 
