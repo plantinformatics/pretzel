@@ -87,7 +87,9 @@ function Block(block) {
   stacks.blocks[axisName] = this;
 
   this.block = block;
-  console.log("Stacked()", this, block, axisName);
+  /** .visible indicates the features of this block will be included in axis brushes & paths.  */
+  this.visible = true;
+  console.log("Block()", this, block, axisName);
 };
 /** @return axis of this block or if it has a parent, its parent's axis */
 Block.prototype.getAxis = function()
@@ -115,6 +117,15 @@ Block.prototype.longName = function() {
   return this.axisName + ':' + this.block.get('name')
     + '/' + (this.parent ? this.parent.axisName : '');
 };
+/** @return undefined or .longName() of block if blockId is loaded.
+ * (static)
+ */
+Block.longName = function (blockId) {
+  let block = stacks.blocks[blockId];
+  return block && block.longName();
+}
+/*----------------------------------------------------------------------------*/
+
 
 function Stacked(axisName, portion) {
   this.axisName = axisName;
@@ -260,6 +271,13 @@ Stacked.longName = function (axisID)
     axisID;
   return longName;
 };
+function axisId2Name(axisID)
+{
+  let axis = Stacked.getAxis(axisID);
+  return axis && axis.mapName;
+}
+
+/** static */
 Stacked.axisName_match =
   function (axisName)
 { return function (s) { return s.axisName === axisName; };};
@@ -279,6 +297,45 @@ Block.axisName_parent =
     return parentName || axisName ;
   };
 
+/** Remove a block from a Stacked (axis).
+ * @param this target
+ * @param blockIndex index of block to move
+ */
+Stacked.prototype.removeBlock = function(blockIndex)
+{
+  // copied from Stacked.prototype.move() - factor that function to use this.
+
+  if (this.blocks.length <= blockIndex)
+  {
+    console.log('removeBlock(): expected blocks.length', this.blocks.length, ' to be >', blockIndex);
+    this.log();
+  }
+  /** type is stacks:Block */
+  let aBlock = this.blocks[blockIndex];
+  /** delete blockIndex element of source.blocks[]; */
+  let aBlockA = this.blocks.splice(blockIndex, 1);
+  if (aBlockA[0] !== aBlock)  // verification
+    breakPoint('removeBlock', aBlockA, '[0] !==', aBlock);
+  // aBlock will probably become unreferenced and soon deleted.
+  aBlock.axis = undefined;
+  aBlock.parent = undefined;  // the .parent relationship is not really changed.
+  return aBlock;
+};
+/** Remove blockId from this axis.
+ * @return Block undefined if block is not in this.blocks[].
+ */
+Stacked.prototype.removeBlockByName = function(blockId)
+{
+  let block_ = stacks.blocks[blockId],
+  blockIndex = block_ && this.blocks.indexOf(block_),
+  block = (blockIndex < 0) ? undefined : this.removeBlock(blockIndex);
+  // verification
+  if (block && block.axisName != blockId)
+    breakPoint('removeBlockByName', blockIndex, block.name, '!=', blockId);
+  else
+    console.log('removeBlockByName', blockId, blockIndex);
+  return block;
+};
 /** Move a block from one Stacked (axis) to another.
  * @param this target
  * @param source  Stacked to move from
@@ -405,6 +462,36 @@ Stacked.prototype.getDomain = function ()
   ;
 };
 
+
+Stacked.prototype.verify = function ()
+{
+  let me = this;
+  if (this.blocks.length == 0)
+  {
+    this.log();
+  }
+  else
+  {
+    /* traverse the axes of this stack. */
+    this.blocks.forEach(
+      function (b, index)
+      {
+        let block = stacks.blocks[b.axisName],
+        /** true if the parent of axis a is stack me.  */
+        v1 = block.axis === me,
+        v2 = (block.parent === me.blocks[0]) || (block === me.blocks[0]);
+        if (!v1 || !v2)
+        {
+          console.log("v1", v1, "v2", v2, me, block);
+          me.log();
+          block.log();
+          breakPoint();
+        }
+      });
+  }
+};
+
+
 /** Return an array of the blocks which are in this Stacked (axis).
  * @param includeSelf if true, append self name (i.e. the referenceBlock) to the result.
  * @param names true means return just the block names
@@ -459,14 +546,51 @@ Stack.prototype.childBlocks = function (names)
     blocks = blocks.map(function (a) { return stacks.blocks[a]; } );
   return blocks;
 };
-Stacked.prototype.dataBlocks = function ()
+/** @return all the blocks in this axis which are data blocks, not reference blocks.
+ * Data blocks are recognised by having a .namespace;
+ * @param visible if true then exclude blocks which are not visible
+ */
+Stacked.prototype.dataBlocks = function (visible)
 {
-  return this.blocks;
+  let db = this.blocks
+    .filter(function (block) {
+      //  -	also need to check if features.length > 0
+      return (! visible || block.visible)
+        && (block.block.get('namespace') || block.block.get('features')); });
+  if (trace_stack > 1)
+    console.log(
+      'Stacked', 'blocks', visible, this.blocks.map(function (block) { return block.longName(); }),
+      this.axisName, this.mapName, 'dataBlocks',
+      db.map(function (block) { return block.longName(); }));
+  return db;
+};
+/** @return all the blocks in this Stack which are data blocks, not reference blocks.
+ * Data blocks are recognised by having a .namespace;
+ * this is a different criteria to @see Stack.prototype.dataBlocks0().
+ */
+Stack.prototype.dataBlocks = function ()
+{
+  /** Currently only visible == true is used, but could make this a param.  */
+  let visible = true;
+  let axesDataBlocks = this.axes
+    .map(function (stacked) { return stacked.dataBlocks(visible); } ),
+  db = Array.prototype.concat.apply([], axesDataBlocks)
+  ;
+  // Stacked.longName() handles blocks also.
+  if (trace_stack > 1)
+    console.log(
+      'Stack', this.stackID, 'axes', this.axes.map(Stacked.longName),
+      'dataBlocks',
+      db.map(function(block) { return block.longName(); })
+  );
+  return db;
 };
 /** @return all the blocks in this Stack, excluding parent blocks.
  * Axes with a single non-parent block are included.
+ * This is a different criteria to @see Stack.prototype.dataBlocks();
+ * this function is probably not yet used / debugged.
  */
-Stack.prototype.dataBlocks = function ()
+Stack.prototype.dataBlocks0 = function ()
 {
   /** set of all of this.axes, minus those which have a block referring to them as .parent */
   let blockSet = new WeakSet(this.axes),
@@ -489,14 +613,11 @@ Stacked.prototype.keyFunction = function (axisID)
 {
   return axisID;
 };
-Stacked.prototype.titleText = function ()
+Block.prototype.titleText = function ()
 {
-  return this.children(false, false)
-    .map(function (block) {
-      let axisName = block.block.get('id'),
-      cmName = oa.cmName[axisName];
-      return cmName.mapName + ":" + cmName.chrName;
-    } );
+  let axisName = this.block.get('id'),
+  cmName = oa.cmName[axisName];
+  return cmName.mapName + ":" + cmName.chrName;
 };
 
 /** Constructor for Stack type.
@@ -650,6 +771,7 @@ Stack.prototype.verify = function ()
           console.log(a, a.blocks, '[0] is undefined');
           a.blocks.splice(0, 1);
         }
+        a.verify();
       });
 };
 /** Attributes of the stacks object.
@@ -712,7 +834,19 @@ stacks.stackIDs = function()
 stacks.axisIDs = function()
 {
   return d3.keys(this.axesP);
-}
+};
+/** @return an array of the blockIds of the all the blocks of all axes (in all
+ * stacks).  */
+stacks.blockIDs = function()
+{
+  // this.axisIDs() are contained in this.blocks.
+  let
+    blockIDs = d3.values(this.blocks).reduce(function (result, b) {
+      if (b.axis) result.push(b.axisName);
+      return result; }, []);
+  return blockIDs;
+};
+
 /** Sort the stacks by the x position of their Axes. */
 stacks.sortLocation = function()
 {
@@ -823,7 +957,7 @@ if (false)  /** not used - @see Stack_add()  */
 Stack.prototype.addAxis = function(axisName, portion)
 {
   console.log("Stack.prototype.addAxis", axisName, portion);
-  let sd = new Stacked(axisName, portion, true);
+  let sd = new Stacked(axisName, portion);
   this.add(sd);
 };
 /** Method of Stack.  @see Stack.prototype.add().
@@ -1595,4 +1729,6 @@ Stacked.prototype.axisTransformO = function ()
 
 /*----------------------------------------------------------------------------*/
 
-export  { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText } ;
+export  { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText,
+          axisId2Name
+        } ;

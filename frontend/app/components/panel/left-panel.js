@@ -23,6 +23,9 @@ export default Component.extend({
     },
     removeBlock(block) {
       this.sendAction('removeBlock', block);
+    },
+    selectDataset(dataset) {
+      this.sendAction('selectDataset', dataset);
     }
   }
 });

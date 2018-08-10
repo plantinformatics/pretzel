@@ -4,6 +4,10 @@ import { breakPoint } from '../utils/breakPoint';
 
 /*----------------------------------------------------------------------------*/
 
+const trace_url = 0;
+
+/*----------------------------------------------------------------------------*/
+
 export default Ember.Component.extend({
 
   website: 'GrainGenes',
@@ -26,7 +30,8 @@ export default Ember.Component.extend({
     urlFunctionName = this.get('urlFunctions')[website],
     urlFunction = urlFunctionName && this.get(urlFunctionName),
     url = featureName && urlFunction(featureName);
-    console.log('urlOf', this.element, this.parentView.element, website, featureName, url);
+    if (trace_url)
+      console.log('urlOf', this.element, this.parentView.element, website, featureName, url);
     return url;
   },
   /** for now just show the first of selectedFeatures.
@@ -36,16 +41,18 @@ export default Ember.Component.extend({
     let
     selectedFeatures = this.get('selectedFeatures'),
     /**   form is e.g. : {Chromosome: "myMap:1A.1", Feature: "myMarkerA", Position: "0"} */
-    selectedFeatures0 = selectedFeatures.length ? selectedFeatures[0] : undefined,
+    selectedFeatures0 = selectedFeatures && selectedFeatures.length ? selectedFeatures[0] : undefined,
     featureName = selectedFeatures0 && selectedFeatures0.Feature;
-    console.log('selectedFeatures0', selectedFeatures0, featureName);
+    if (trace_url)
+      console.log('selectedFeatures0', selectedFeatures0, featureName);
     return featureName;
   }),
   urlSelected : Ember.computed('website', 'selectedFeatures0Name', function (newValue) {
     let website = this.get('website'),
     featureName = this.get('selectedFeatures0Name'),
     url = featureName && this.get('urlOf').apply(this, [website, featureName]);
-    console.log('urlSelected', featureName, url);
+    if (trace_url)
+      console.log('urlSelected', featureName, url);
     return url;
   }),
   url : Ember.computed('website', 'featureName', function (newValue) {
@@ -70,7 +77,8 @@ export default Ember.Component.extend({
     args2="name=" + featureName,
     options2=";show=possibleorthologs",
     url = protocol + domain + port + path + args1 + query + args2 + options2;
-    console.log("urlEnsembl", featureName);
+    if (trace_url)
+      console.log("urlEnsembl", featureName);
 
     return url;
   },
@@ -85,7 +93,8 @@ export default Ember.Component.extend({
     query="q=" + featureName + ";", // TRIAE_CS42_3DL_TGACv1_249024_AA0834820;
     args2="site=ensemblthis",
     url = protocol + domain + port + path + args1 + query + args2;
-    console.log("urlEnsembl", featureName);
+    if (trace_url)
+      console.log("urlEnsembl", featureName);
 
     return url;
   }

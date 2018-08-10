@@ -253,8 +253,13 @@ function cssHexEncode(text)
  */
 function eltClassName(f)
 {
-  f = cssHexEncode(f.replace(/^([\d])/, "_$1"));
-  return f;
+  /** Some genetic maps use integer numbers for marker names, these may appear
+   * in .json upload without wrapping "".  That will likely cause problems
+   * elsewhere, but handle it here by converting f to a string.
+   */
+  let fString = (typeof(f) == 'string') ? f : '' + f,
+  fPrefixed = cssHexEncode(fString.replace(/^([\d])/, "_$1"));
+  return fPrefixed;
 }
 
 /*----------------------------------------------------------------------------*/

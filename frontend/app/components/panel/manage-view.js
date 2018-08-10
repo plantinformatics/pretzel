@@ -10,9 +10,27 @@ export default ManageBase.extend({
     return false;
   }),
 
+  hasDisplayData: Ember.computed('displayData.[]', function() {
+    let displayData = this.get('displayData');
+    if (displayData && displayData.length > 0) {
+      return true;
+    }
+    return false;
+  }),
+
   actions: {
+    loadBlock(block) {
+      this.sendAction('loadBlock', block);
+    },
     removeBlock(block) {
       this.sendAction('removeBlock', block);
+    },
+    removeDisplayData() {
+      let me = this;
+      let displayData = this.get('displayData');
+      for (let i=displayData.length-1; i >= 0; i--) {
+        me.send('removeBlock', displayData[i]);
+      }
     }
   }
 });

@@ -1,6 +1,11 @@
 {
     "name": "PBI-14-1406-s005",
     "namespace": "90k",
+    "meta": {
+      "source": "https://doi.org/10.1111/pbi.12504",
+      "citation": "Gardner KA, Wittern LM, Mackay IJ. A highly recombined, high‐density, eight‐founder wheat MAGIC map reveals extensive segregation distortion and genomic locations of introgression segments. Plant Biotechnology Journal. 2016;14(6):1406-1417. doi:10.1111/pbi.12504.",
+      "notes": "Adapted from Table S2. Markers with NULL in the Notes column of the original table have been retained. Marker names have been restored to the correct 90k names (the '-' character had been replaced by '_' in any marker names in the original table)."
+    },
     "blocks": [
         {
             "scope": "1A",

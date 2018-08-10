@@ -70,7 +70,8 @@ module.exports = function(Dataset) {
         if (blocks[name] === false) {
           let payload = {
             scope: name,
-            datasetId: datasetGroup.id
+            datasetId: datasetGroup.id,
+            namespace: data.namespace
           }
           new_blocks.push(payload);
         }

@@ -29,11 +29,13 @@ function findLinks(featuresA, featuresB) {
             })
         }
         // look for paths via aliases
-        for (var i=0; i<feature_b.aliases.length; i++) {
-            if (feature_b.aliases[i].string2 in features_a_by_name) {
-                features_a_by_name[feature_b.aliases[i].string2].forEach(function(feature_a) {
-                    add_link(feature_a, feature_b, feature_b.aliases[i].__data);
-                });
+        if (feature_b['aliases']) {
+            for (var i=0; i<feature_b.aliases.length; i++) {
+                if (feature_b.aliases[i].string2 in features_a_by_name) {
+                    features_a_by_name[feature_b.aliases[i].string2].forEach(function(feature_a) {
+                        add_link(feature_a, feature_b, feature_b.aliases[i].__data);
+                    });
+                }
             }
         }
         // clean up
@@ -129,7 +131,10 @@ function loadAliases(models, block_a, block_b, options) {
     let features_by_name = {};
     block_b.features.forEach(function(feature) {
         feature['aliases'] = [];
-        features_by_name[feature.name] = feature;
+        if (!features_by_name[feature.name]) {
+            features_by_name[feature.name] = [];
+        }
+        features_by_name[feature.name].push(feature);
     });
 
     // find relevant aliases
@@ -149,15 +154,19 @@ function loadAliases(models, block_a, block_b, options) {
     .then(function(aliases) {
         // match aliases to the features on blockB
         aliases.forEach(function(alias) {
-            if (alias.namespace1 == block_b.namespace && alias.string1 in features_by_name) {
-                features_by_name[alias.string1]['aliases'].push(alias);
-            } else if (alias.namespace2 == block_b.namespace && alias.string2 in features_by_name) {
+            if (alias.namespace1 == block_b.namespace && alias.namespace2 == block_a.namespace && alias.string1 in features_by_name) {
+                features_by_name[alias.string1].forEach(function(feature) {
+                    feature['aliases'].push(alias);
+                })
+            } else if (alias.namespace2 == block_b.namespace && alias.namespace1 == block_a.namespace && alias.string2 in features_by_name) {
                 let alias_mirror = Object.assign({}, alias);
                 alias_mirror.namespace1 = alias.namespace2;
                 alias_mirror.namespace2 = alias.namespace1;
                 alias_mirror.string1 = alias.string2;
                 alias_mirror.string2 = alias.string1;
-                features_by_name[alias_mirror.string1]['aliases'].push(alias_mirror);
+                features_by_name[alias_mirror.string1].forEach(function(feature) {
+                    feature['aliases'].push(alias_mirror);
+                });
             }
         });
         return {featuresA: block_a.features, featuresB: block_b.features};

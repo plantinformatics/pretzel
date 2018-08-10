@@ -6,6 +6,15 @@ const { inject: { service } } = Ember;
 
 let trace_block = 1;
 
+/** Augment the store blocks with features to support mapview.
+ * In particular, add an `isViewed` attribute to blocks, which indicates that
+ * the block is viewed in the mapview.
+ *
+ *  It is possible that later there will be multiple mapviews in one route, in
+ *  which case the isViewed state might be split out of this singleton service,
+ *  or this may become a per-mapview component.
+ * 
+ */
 export default Service.extend(Ember.Evented, {
     auth: service('auth'),
     store: service(),
@@ -83,6 +92,66 @@ export default Service.extend(Ember.Evented, {
 
   /*--------------------------------------------------------------------------*/
 
+  /**
+   * The GUI does not provide a way for the user to unview a block which is not currently loaded.
+   *
+   * alternative implementation : mixins/viewed-blocks.js : @see setViewed()
+   *
+   * If viewed && unviewChildren && this block doesn't have .namespace then
+   * search the loaded blocks for blocks which reference the block being
+   * unviewed, and mark them as unviewed also.
+   * @param unviewChildren
+   *
+   * @return define a task
+   */
+  setViewedTask: task(function * (id, viewed, unviewChildren) {
+    console.log("setViewedTask", id, viewed, unviewChildren);
+    let getData = this.get('getData');
+    /* -  if ! viewed then no need to getData(), just Peek and if not loaded then return.
+     * The GUI only enables viewed==false when block is loaded, so that difference is moot.
+     */
+    let block = yield getData.apply(this, [id]);
+    console.log('setViewedTask', this, id, block);
+    if (block.get('isViewed') && ! viewed && unviewChildren)
+    {
+      let maybeUnview = this.get('loadedViewedChildBlocks'),
+      isChildOf = this.get('isChildOf'),
+      toUnview = maybeUnview.filter(function (dataBlock) {
+        return isChildOf(dataBlock, block);
+      });
+      console.log('setViewedTask', /*maybeUnview,*/ toUnview
+                  .map(function(blockR) { return blockR.view.longName(); }) );
+      toUnview.forEach(function (childBlock) {
+        childBlock.set('isViewed', viewed);
+      });
+    }
+    block.set('isViewed', viewed);
+    // this.trigger('receivedBlock', id, block);  // not required now ?
+  }),
+
+  /** @return true if dataBlock is a child of block.
+   * i.e. dataBlock.dataset.parent.id == block.dataset.id
+   * and dataBlock.scope == block.scope
+   */
+  isChildOf(dataBlock, block) {
+    let d = block.get('id'), d2 = dataBlock.get('id'), a = dataBlock,
+    dataset = block.get('datasetId'), ad = dataBlock.get('datasetId');
+    let match = 
+      (d != d2) &&  // not self
+      /* ! a.parent &&*/
+      ad && (ad.get('parent').get('id') === dataset.get('id')) &&
+      (dataBlock.get('scope') == block.get('scope'));
+    if (trace_block > 1)
+      console.log(
+        'isChildOf', match, dataBlock, block, d, d2, dataset, ad, 
+        dataBlock.get('scope'), block.get('scope'),
+        dataBlock.view.longName(), block.view.longName()
+    );
+    return match;
+  },
+
+  /*--------------------------------------------------------------------------*/
+
   getBlocks(blockIds) {
     let taskGet = this.get('taskGet');
     console.log("getBlocks", blockIds);
@@ -139,5 +208,34 @@ export default Service.extend(Ember.Evented, {
 
       return ids;
     })
-  
+  ,
+  /*----------------------------------------------------------------------------*/
+
+
+  /** Search for the named features, and return also their blocks and datasets.
+   */
+  getBlocksOfFeatures : task(function* (featureNames) {
+    let me = this, blocks =
+      yield this.get('auth').featureSearch(featureNames, /*options*/{});
+
+    return blocks;
+  }),
+
+
+  /** @return array of blocks */
+  loadedViewedChildBlocks: Ember.computed(
+    'viewed.[]',
+    function() {
+      let records =
+        this.get('viewed')
+        .filter(function (block) {
+          return block.get('namespace'); // i.e. !== undefined
+        });
+      if (trace_block > 1)
+        console.log(
+          'get', records
+            .map(function(blockR) { return blockR.view.longName(); })
+        );
+      return records;  // .toArray()
+    })
 });

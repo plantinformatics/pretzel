@@ -30,6 +30,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     updateSelectedFeatures: function(features) {
     	// console.log("updateselectedFeatures in mapview", features.length);
       this.set('selectedFeatures', features);
+      this.send('setTab', 'right', 'selection');
     },
 
     /** Change the state of the named block to viewed.
@@ -82,7 +83,8 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
 
     loadBlock : function(block) {
       console.log('loadBlock', block);
-      let id = block.get('id');
+      /** in result of featureSearch(), used in goto-feature-list, .block has .id but not .get */
+      let id = block.get ? block.get('id') : block.id;
       let t = this.get('useTask');
       t.apply(this, [id]);
     },
@@ -97,6 +99,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       d3.selectAll("g.axis-outer").classed("selected", dataIs(block.id));
       if (trace_select)
       d3.selectAll("g.axis-outer").each(function(d, i, g) { console.log(this); });
+      // this.send('setTab', 'right', 'block');
     },
     selectBlockById: function(blockId) {
       let store = this.get('store'),
@@ -104,6 +107,10 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       /* Previous version traversed all blocks of selectedMaps to find one
        * matching blockId. */
       this.send('selectBlock', selectedBlock)
+    },
+    selectDataset: function(ds) {
+      this.set('selectedDataset', ds);
+      this.send('setTab', 'right', 'dataset');
     },
     /** Get all available maps.
      */
@@ -140,6 +147,17 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   showScaffoldFeatures : false,
   showAsymmetricAliases : false,
 
+  init: function() {
+    /** refn : https://discuss.emberjs.com/t/is-this-possible-to-turn-off-some-deprecations-warnings/8196 */
+    let deprecationIds = ['ember-simple-auth.session.authorize'];
+    Ember.Debug.registerDeprecationHandler((message, options, next) => {
+      if (! deprecationIds.includes(options.id)) {
+        next(message, options);
+      }
+    });
+
+    this._super.apply(this, arguments);
+  },
 
   currentURLDidChange: function () {
     console.log('currentURLDidChange', this.get('target.currentURL'));

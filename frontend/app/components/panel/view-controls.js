@@ -20,14 +20,7 @@ export default Ember.Component.extend({
 
   actions : {
     flipRegion : function () {
-	    let textDiv = d3.select('.colouredMarkers.ember-content-editable');
-      let markerNames_ = textDiv.node().innerText;
-      let markerNames = (markerNames_.match(/\S+\r?\n|\S+\r?$/g) || []).map(function(c) {
-        return c.trim('\n');
-      } );
-	    // .match(/\S+/g) || [];
-	    console.log("flipRegion", "selected-markers.js", markerNames_.length, markerNames.length);
-      this.get('feed').trigger('flipRegion', markerNames);
+      this.get('feed').trigger('flipRegion', undefined);
     },
 
     clearScaffoldColours  : function () {

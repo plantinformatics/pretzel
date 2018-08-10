@@ -36,8 +36,9 @@ export default Mixin.create({
   /** Set the isViewed flag of the block identified by id.
    * Get record into store if it is not yet loaded.
    * If setting isViewed=false then there is no point loading the record, but most likely it is already loaded.
+   * Alternative : services/data/block.js @see setViewedTask()
    */
-  setViewed(id, viewed) {
+  setViewed0(id, viewed) {
     console.log("setViewed", id, viewed);
     let blockService = this.get('block');
     let taskGet = blockService.get('taskGet');
@@ -47,18 +48,14 @@ export default Mixin.create({
         block.set('isViewed', viewed);
       });
   },
-  /** alternative implementation : define a task */
-  setViewedTask: task(function * (id, viewed) {
+  /** Replaces setViewed0() above; this version passes unviewChildren==true to
+   * setViewTask(). */
+  setViewed(id, viewed) {
     console.log("setViewed", id, viewed);
     let blockService = this.get('block');
-    let getData = blockService.get('getData');
-    let block = yield getData(id);
-    console.log('setViewed', this, id, block);
-    block.set('isViewed', viewed);
-    // this.trigger('receivedBlock', id, block);  // not required now ?
-  }),
-
-
+    let setViewedTask = blockService.get('setViewedTask');
+    let blockTask = setViewedTask.perform(id, viewed, /*unviewChildren*/true);
+  },
 
   getInitialBlocks() {
     let model = this.get('model'),

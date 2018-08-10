@@ -6,6 +6,8 @@
     loadBlock="loadBlock"
     removeBlock="removeBlock"
     selectBlock="selectBlock"
+    selectDataset="selectDataset"
+    selectedDataset=selectedDataset
 
     model=model
     selectedBlock=selectedBlock
@@ -72,6 +74,12 @@
         {{/elem/button-tab}}
         {{#elem/button-tab
           side="right"
+          key="dataset"
+          state=layout.right.tab onClick="setTab"}}
+          {{elem/icon-base name="globe"}}&nbsp; Dataset
+        {{/elem/button-tab}}
+        {{#elem/button-tab
+          side="right"
           key="settings"
           state=layout.right.tab onClick="setTab"}}
           {{elem/icon-base name="cog"}}&nbsp; Adv.
@@ -93,6 +101,9 @@
             selectedFeatures=selectedFeatures
             loadBlock="loadBlock"
             block=selectedBlock}}
+        {{else if (compare layout.right.tab '===' 'dataset')}}
+          {{panel/manage-dataset
+            dataset=selectedDataset}}
         {{else if (compare layout.right.tab '===' 'settings')}}
           {{panel/manage-settings
             selectedFeatures=selectedFeatures
