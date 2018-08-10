@@ -86,6 +86,9 @@ var config = {
   "Alias": {
     "dataSource": "mongoDs",
     "public": true
+  },
+  "Email": {
+    "dataSource": "email"
   }
 }
 
@@ -94,10 +97,7 @@ if (process.env.EMAIL_VERIFY != 'NONE') {
   // enable email facilities if header present
   config.Client.options = {
     "emailVerificationRequired": true
-  }
-  config.Email = {
-    "dataSource": "email"
-  }
+  };
 } else {
   // no mail validation properties set
   console.log('No email model properties assigned')

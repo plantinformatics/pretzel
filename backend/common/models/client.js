@@ -83,9 +83,9 @@ module.exports = function(Client) {
       var html = template(templateConfig);
 
       // requires AccessToken.belongsTo(User)
-      info.accessToken.user(function (err, user) {
-        console.log(user); // the actual user
-      });
+      // info.accessToken.user(function (err, user) {
+      //   console.log(user); // the actual user
+      // });
 
       Client.app.models.Email.send({
         to: info.email,
