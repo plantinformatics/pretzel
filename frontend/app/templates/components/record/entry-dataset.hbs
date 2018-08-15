@@ -1,4 +1,4 @@
-<li class="list-group-item list-group-item-info {{if (compare entry.id '===' selectedDataset.id) 'list-group-item-warning'}}" {{action "selectDataset" entry on="click"}}>
+<li class="list-group-item list-group-item-info {{if (compare entry.id '===' selectedDataset.id) 'list-group-item-warning'}}" {{action "selectDataset" entry on="click"}} style="display:flex">
   {{#if editing }}
     <div class="input-group">
       {{input
@@ -27,7 +27,9 @@
       classColour='default'
       icon=expandIcon
       onClick=(action "switchDataset" entry)}}
-    {{entry.name}}
+    <span title={{entry.name}} class="truncate" style="flex: 1; padding: 0 10px 0 10px;">
+      {{entry.name}}
+    </span>
     {{elem/icon-acl record=entry}}
     {{#if entry.owner }}
       {{#elem/dropdown-container

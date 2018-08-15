@@ -874,3 +874,11 @@ div#goto-feature > div
 #observational-table .head {
   transform: rotate(90deg);
 }
+
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display:inline-block;
+  vertical-align: middle;
+}
