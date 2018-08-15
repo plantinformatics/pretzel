@@ -674,11 +674,13 @@ export default Ember.Component.extend(Ember.Evented, {
         if (oa.datasets[datasetName] === undefined)
         {
           oa.datasets[datasetName] = dataset;
+          console.log(datasetName, dataset.get('meta.shortName'));
         }
       cmName[axis] = {mapName : c.mapName, chrName : c.chrName
                     , parent: parentName
                     , name : c.name, range : c.range
                     , scope: c.scope, featureType: c.featureType
+                    , dataset : dataset
                    };
         
         let mapChrName = makeMapChrName(c.mapName, c.chrName);

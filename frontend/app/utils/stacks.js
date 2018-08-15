@@ -613,11 +613,17 @@ Stacked.prototype.keyFunction = function (axisID)
 {
   return axisID;
 };
+/** Text used in axis title, for each of the blocks (parent / reference and child / data blocks).
+ * This is the text shown in the <tspan>
+ */
 Block.prototype.titleText = function ()
 {
   let axisName = this.block.get('id'),
-  cmName = oa.cmName[axisName];
-  return cmName.mapName + ":" + cmName.chrName;
+  cmName = oa.cmName[axisName],
+  shortName = cmName && cmName.dataset.get('meta.shortName'),
+  name = shortName || cmName.mapName;
+  console.log('Block titleText', cmName, shortName, name, cmName.scope);
+  return name + " : " + cmName.chrName;
 };
 
 /** Constructor for Stack type.
