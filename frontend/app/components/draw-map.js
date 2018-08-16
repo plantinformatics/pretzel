@@ -514,7 +514,6 @@ export default Ember.Component.extend(Ember.Evented, {
     margins = vc.margins,
     marginIndex = vc.marginIndex;
     let yRange = vc.yRange;
-    let axisXRange = vc.axisXRange;
 
     if (oa.axes2d === undefined)
       oa.axes2d = new Axes(oa);
@@ -2355,26 +2354,49 @@ export default Ember.Component.extend(Ember.Evented, {
       axisTitleFamily(axisTitleS);
     }
 
+    /** Called when the width available to each axis changes,
+     * i.e. when collateO() is called.
+     */
+    function updateAxisTitleSize(axisTitleS)
+    {
+      if (! stacks.length)
+        return;
+      if (! axisTitleS)
+        axisTitleS = oa.svgContainer.selectAll("g.axis-all")
+        .transition().duration(dragTransitionTime)
+      ;
 
+      
+    let axisXRange = vc.axisXRange;
     let axisSpacing = (axisXRange[1]-axisXRange[0])/stacks.length;
-    let verticalTitle;
-    if ((verticalTitle = axisSpacing < 90))
+    let verticalTitle = axisSpacing < 90;
+    console.log('updateAxisTitleSize', axisXRange, axisTitleS.nodes(), axisSpacing, stacks.length, verticalTitle);
+    /** undefined when ! verticalTitle */
+    let transform;
+    if (verticalTitle)
     {
       // first approx : 30 -> 30, 10 -> 90.  could use trig fns instead of linear.
       let angle = (90-axisSpacing);
+      console.log(angle);
       if (angle > 90) angle = 90;
       angle = -angle;
-      // apply this to all consistently, not just appended axis.
-      // Need to update this when ! verticalTitle, and also 
-      // incorporate extendedWidth() / getAxisExtendedWidth() in the
+      transform = "rotate("+angle+")";
+    }
+      // applied to all axes consistently, not just appended axis.
+      // Update elements' class and transform when verticalTitle changes value.
+
+      // also incorporate extendedWidth() / getAxisExtendedWidth() in the
       // calculation, perhaps integrated in xScaleExtend()
       let axisTitleA =
-        axisG.merge(axisS).selectAll("g.axis-all > text");
+        axisTitleS.selectAll("g.axis-all > text");
       axisTitleA
+        // this attr does not change, can be done for just axisG
         .style("text-anchor", "start")
-        .attr("transform", "rotate("+angle+")");
-    }
+        .attr("transform", transform);
+
     svgRoot.classed("verticalTitle", verticalTitle);
+    }
+    updateAxisTitleSize(axisG.merge(axisS));
 
 //- moved to ../utils/draw/axis.js : yAxisTextScale(),  yAxisTicksScale(),  yAxisBtnScale()
 
@@ -4536,6 +4558,7 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       if (changedNum)
         collateO();
+      updateAxisTitleSize(undefined);
       collateStacks();
       if (changedNum)
       {
@@ -4801,6 +4824,7 @@ export default Ember.Component.extend(Ember.Evented, {
       else
       {
         updateAxisTitles();
+        updateAxisTitleSize(undefined);
         /* The if-then case above calls removeAxisMaybeStack(), which calls stacksAdjust();
          * so here in the else case, use a selection of updates from stacksAdjust() to
          * ensure that pathData is updated.
@@ -4985,6 +5009,7 @@ export default Ember.Component.extend(Ember.Evented, {
               block.visible = ! block.visible;
 
               updateAxisTitles();
+              updateAxisTitleSize(undefined);
               collateStacks();  // does filterPaths();
 
               selectedFeatures_removeAxis(block.axisName);
@@ -5009,6 +5034,8 @@ export default Ember.Component.extend(Ember.Evented, {
         console.log('showResize', widthChanged, heightChanged, useTransition);
         updateXScale();
         collateO();
+        if (widthChanged)
+          updateAxisTitleSize(undefined);
         let 
           duration = useTransition || (useTransition === undefined) ? 750 : 0,
         t = oa.svgContainer.transition().duration(duration);
