@@ -622,8 +622,25 @@ Block.prototype.titleText = function ()
   cmName = oa.cmName[axisName],
   shortName = cmName && cmName.dataset.get('meta.shortName'),
   name = shortName || cmName.mapName;
-  console.log('Block titleText', cmName, shortName, name, cmName.scope);
+  // console.log('Block titleText', cmName, shortName, name, cmName.scope);
   return name + " : " + cmName.chrName;
+};
+/** @return maximum length of the titles of the viewed blocks. */
+Block.titleTextMax = function (axisName)
+{ 
+  // later can use .get('blockService').get('viewed')
+  let
+    lengthMax = d3.keys(stacks.blocks).reduce(function (result, a) {
+      let block = stacks.blocks[a],
+      isViewed = block && block.block.get('isViewed'),
+      title = isViewed && block.titleText(),
+      length = title && title.length;
+      // console.log('titleTextMax', result, a, block, isViewed, title, length);
+      if (length > result)
+        result = length;
+      return result;
+    }, 0);
+  return lengthMax;
 };
 
 /** Constructor for Stack type.

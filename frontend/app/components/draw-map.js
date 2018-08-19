@@ -2369,16 +2369,26 @@ export default Ember.Component.extend(Ember.Evented, {
       
     let axisXRange = vc.axisXRange;
     let axisSpacing = (axisXRange[1]-axisXRange[0])/stacks.length;
-    let verticalTitle = axisSpacing < 90;
+    let titleLength = Block.titleTextMax(),
+      /** char width in px, ie. convert em to px.  Approx -	better to measure this. */
+      em2Px = 6,
+      titlePx = titleLength ? titleLength * em2Px : 0;
+    let verticalTitle = axisSpacing < titlePx;
     console.log('updateAxisTitleSize', axisXRange, axisTitleS.nodes(), axisSpacing, stacks.length, verticalTitle);
     /** undefined when ! verticalTitle */
-    let transform;
+    let transform, height;
     if (verticalTitle)
     {
       // first approx : 30 -> 30, 10 -> 90.  could use trig fns instead of linear.
-      let angle = (90-axisSpacing);
-      console.log(angle);
-      if (angle > 90) angle = 90;
+      let angle = Math.acos(axisSpacing / titlePx);
+      height = Math.sqrt(titlePx * titlePx - axisSpacing * axisSpacing);
+      // convert radians to degrees
+      angle = angle * 180 / Math.PI;
+      console.log(axisSpacing, titlePx, 'angle', angle, height);
+      // The <svg> viewBox -70 already gives 70px of vertical space above
+      // (from viewport.js: axisNameHeight)
+      height = height - 70;
+      if (height < 0) height = 0;
       angle = -angle;
       transform = "rotate("+angle+")";
     }
@@ -2394,7 +2404,9 @@ export default Ember.Component.extend(Ember.Evented, {
         .style("text-anchor", "start")
         .attr("transform", transform);
 
-    svgRoot.classed("verticalTitle", verticalTitle);
+      oa.svgRoot
+        .transition().duration(dragTransitionTime)
+        .style("padding-top", verticalTitle ? "" + height + "px" : "0px");
     }
     updateAxisTitleSize(axisG.merge(axisS));
 
