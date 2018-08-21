@@ -2372,6 +2372,7 @@ export default Ember.Component.extend(Ember.Evented, {
       ;
 
       
+      console.log('vc.axisXRange', vc.axisXRange);
     let axisXRange = vc.axisXRange;
     let axisSpacing = (axisXRange[1]-axisXRange[0])/stacks.length;
     let titleLength = Block.titleTextMax(),
@@ -2395,6 +2396,13 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       angle = Math.acos(axisSpacing / titlePx);
       height = Math.sqrt(titlePx * titlePx - axisSpacing * axisSpacing);
+      /** Allow text to overlap the adjacent column once it clears the adjacent title.  */
+      let angleThresh = 20 * Math.PI / 180;
+      if (angle > angleThresh)
+      {
+        angle = (angle - angleThresh) / 3 + angleThresh;
+        height = titlePx * Math.sin(angle);
+      }
       // convert radians to degrees
       angle = angle * 180 / Math.PI;
       console.log(axisSpacing, titlePx, 'angle', angle, height);
