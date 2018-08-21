@@ -2395,7 +2395,7 @@ export default Ember.Component.extend(Ember.Evented, {
         axisTitleS.selectAll("g.axis-all > text");
       axisTitleA
         // this attr does not change, can be done for just axisG
-        .style("text-anchor", "start")
+        .style("text-anchor", oa.axisTitleLayout.verticalTitle ? "start" : undefined)
         .attr("transform", yAxisTitleTransform(oa.axisTitleLayout));
 
       oa.svgRoot

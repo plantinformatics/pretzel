@@ -23,7 +23,7 @@ AxisTitleLayout.prototype.calc = function(axisSpacing, titlePx)
     angle = Math.acos(axisSpacing / titlePx);
     height = Math.sqrt(titlePx * titlePx - axisSpacing * axisSpacing);
     /** Allow text to overlap the adjacent column once it clears the adjacent title.  */
-    let angleThresh = 20 * Math.PI / 180;
+    let angleThresh = 12 * Math.PI / 180;
     if (angle > angleThresh)
     {
       angle = (angle - angleThresh) / 3 + angleThresh;
