@@ -68,6 +68,13 @@ function yAxisBtnScale(/*d, i, g*/)
 {
   return 'translate(10) ' + yAxisTextScale.apply(this, arguments);
 }
+function yAxisTitleTransform(axisTitleLayout)
+{
+  return function (/*d, i, g*/) {
+    // order : scale then rotate (then translate but none in this case)
+    return yAxisTextScale.apply(this, arguments) + ' ' + axisTitleLayout.transform();
+  };
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -86,6 +93,8 @@ function axisEltId(name)
 {
   return "a" + name;
 }
+/** id of g.axis-all element, based on axisName, with an "all" prefix. */
+function eltIdAll(d) { return "all" + d; }
 /** id of highlightFeature div element, based on feature name, with an "h" prefix. */
 function highlightId(name)
 {
@@ -95,4 +104,4 @@ function highlightId(name)
 
 /*----------------------------------------------------------------------------*/
 
-export {  Axes, maybeFlip, maybeFlipExtent, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId, highlightId } ;
+export {  Axes, maybeFlip, maybeFlipExtent, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, highlightId } ;

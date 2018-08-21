@@ -14,8 +14,10 @@ import { eltWidthResizable, eltResizeToAvailableWidth, noShiftKeyfilter, eltClas
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
 import { parseOptions } from '../utils/common/strings';
 import { Viewport } from '../utils/draw/viewport';
+import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
+
 import {  Axes, maybeFlip, maybeFlipExtent,
-          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId  }  from '../utils/draw/axis';
+          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify  }  from '../utils/draw/stacksAxes';
 import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Name } from '../utils/stacks';
 import { collateAdjacentAxes, log_adjAxes,  log_adjAxes_a, isAdjacent } from '../utils/stacks-adj';
@@ -509,6 +511,9 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       stacks.vc = vc; //- perhaps create vc earlier and pass vc to stacks.init()
     }
+    if (! oa.axisTitleLayout)
+      oa.axisTitleLayout = new AxisTitleLayout();
+
     let
       axisHeaderTextLen = vc.axisHeaderTextLen,
     margins = vc.margins,
@@ -1964,7 +1969,7 @@ export default Ember.Component.extend(Ember.Evented, {
       .attr("id", eltIdAll);
     if (axisG.size())
       console.log(allG.nodes(), allG.node());
-    function eltIdAll(d) { return "all" + d; }
+
     function eltIdGpRef(d, i, g)
     {
       console.log("eltIdGpRef", this, d, i, g);
@@ -2373,14 +2378,22 @@ export default Ember.Component.extend(Ember.Evented, {
       /** char width in px, ie. convert em to px.  Approx -	better to measure this. */
       em2Px = 6,
       titlePx = titleLength ? titleLength * em2Px : 0;
-    let verticalTitle = axisSpacing < titlePx;
-    console.log('updateAxisTitleSize', axisXRange, axisTitleS.nodes(), axisSpacing, stacks.length, verticalTitle);
-    /** undefined when ! verticalTitle */
-    let transform, height;
-    if (verticalTitle)
+    let titleText = vc.titleText || (vc.titleText = {});
+
+      // -  split calc() and transform() out to axisTitleLayout.js, in a tick commit.
+      if (! AxisTitleLayout.prototype.calc)
+      {
+        AxisTitleLayout.prototype.calc = function(axisSpacing, titlePx)
+      {
+          this.axisSpacing = axisSpacing;
+          this.titlePx = titlePx;
+    this.verticalTitle = axisSpacing < titlePx;
+    console.log('updateAxisTitleSize AxisTitleLayout.calc', axisXRange, axisTitleS.nodes(), axisSpacing, stacks.length, this.verticalTitle, this);
+    /** height, angle are undefined when ! verticalTitle */
+      let height, angle;
+    if (this.verticalTitle)
     {
-      // first approx : 30 -> 30, 10 -> 90.  could use trig fns instead of linear.
-      let angle = Math.acos(axisSpacing / titlePx);
+      angle = Math.acos(axisSpacing / titlePx);
       height = Math.sqrt(titlePx * titlePx - axisSpacing * axisSpacing);
       // convert radians to degrees
       angle = angle * 180 / Math.PI;
@@ -2390,8 +2403,23 @@ export default Ember.Component.extend(Ember.Evented, {
       height = height - 70;
       if (height < 0) height = 0;
       angle = -angle;
-      transform = "rotate("+angle+")";
     }
+      this.height = height;
+      this.angle = angle;
+        };
+
+        /** @return '' if ! .verticalTitle (i.e. ! .angle) */
+        AxisTitleLayout.prototype.transform = function()
+      {
+          let transform = this.angle ? "rotate("+this.angle+")" : '';
+          return transform;
+        };
+      }
+
+      oa.axisTitleLayout.calc(axisSpacing, titlePx);
+
+
+
       // applied to all axes consistently, not just appended axis.
       // Update elements' class and transform when verticalTitle changes value.
 
@@ -2402,11 +2430,11 @@ export default Ember.Component.extend(Ember.Evented, {
       axisTitleA
         // this attr does not change, can be done for just axisG
         .style("text-anchor", "start")
-        .attr("transform", transform);
+        .attr("transform", yAxisTitleTransform(oa.axisTitleLayout));
 
       oa.svgRoot
         .transition().duration(dragTransitionTime)
-        .style("padding-top", verticalTitle ? "" + height + "px" : "0px");
+        .style("padding-top", oa.axisTitleLayout.verticalTitle ? "" + oa.axisTitleLayout.height + "px" : "0px");
     }
     updateAxisTitleSize(axisG.merge(axisS));
 
