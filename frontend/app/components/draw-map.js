@@ -4753,14 +4753,15 @@ export default Ember.Component.extend(Ember.Evented, {
 
 //- axis-menu
     let apTitleSel = "g.axis-outer > text";
-      function glyphIcon(className, id, glyphiconName, href) {
+      function glyphIcon(glyphiconName) {
         return ''
           + '<span class="glyphicon ' + glyphiconName + '" aria-hidden=true></span>';
       }
-    function iconButton(className, id, htmlIcon, glyphiconName, href)
+    /** 
+     * @param useGlyphIcon  selects glyphicon or html icon. optional param : undefined implies false
+     */
+    function iconButton(className, id, htmlIcon, glyphiconName, href, useGlyphIcon)
     {
-      /** selects glyphicon or html icon */
-      let useGlyphIcon = false;
         return ''
         + '<button class="' + className + '" id="' + id + '" href="' + href + '">'
         + (useGlyphIcon ? glyphIcon(glyphiconName) : htmlIcon)
@@ -4986,7 +4987,7 @@ export default Ember.Component.extend(Ember.Evented, {
 	
           content : ""
             + iconButton("DeleteMap", "Delete_" + block.axisName, "&#x2573;" /*glyphicon-sound-7-1*/, "glyphicon-remove-sign", "#")
-            + iconButton("VisibleAxis", "Visible_" + block.axisName, "&#x1F441;" /*Unicode Character 'EYE'*/, "glyphicon-eye-close", "#")
+            + iconButton("VisibleAxis", "Visible_" + block.axisName, "&#x1F441;" /*Unicode Character 'EYE'*/, "glyphicon-eye-close", "#", true)
           // glyphicon-eye-open	
         })
         // .popover('show');
