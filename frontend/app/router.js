@@ -16,6 +16,7 @@ Router.map(function() {
   this.route('reset-password');
   this.route('verified');
   this.route('admin-verified');
+  this.route('access-request');
   // core app routes
   this.route('callback');
   this.route('mapview');

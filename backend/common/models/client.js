@@ -18,53 +18,95 @@ module.exports = function(Client) {
         context.result.code = 'EMAIL_NO_VERIFY';
         next();
     } else if (process.env.EMAIL_ACTIVE == 'true') {
-      if (process.env.EMAIL_VERIFY == 'USER') {
-        var options = {
-          type: 'email',
-          to: userInstance.email,
-          from: process.env.EMAIL_FROM,
-          subject: 'Welcome to Pretzel',
-          email_recipient: userInstance.email, // for template
-          host: process.env.API_HOST,
-          template: path.resolve(__dirname, '../../server/views/verify_user.ejs'),
-          redirect: '/verified',
-          user: Client
-        };
+      var options = {
+        type: 'email',
+        to: userInstance.email,
+        from: process.env.EMAIL_FROM,
+        subject: 'Welcome to Pretzel',
+        email_recipient: userInstance.email, // for template
+        host: process.env.API_HOST,
+        template: path.resolve(__dirname, '../../server/views/verify_user.ejs'),
+        redirect: '/verified',
+        user: userInstance
+      };
 
-        userInstance.verify(options, null, function(err, response) {
-          if (err) return next(err);
-          // response object is the following structure:
-          // { email, id }
-          context.result.code = 'EMAIL_USER_VERIFY';
-          next()
-        });
-      } else if (process.env.EMAIL_ADMIN && process.env.EMAIL_ADMIN.length > 0) {
-        var options = {
-          type: 'email',
-          to: process.env.EMAIL_ADMIN,
-          from: process.env.EMAIL_FROM,
-          subject: 'New Pretzel User Registration',
-          email_user: userInstance.email, // for template
-          email_recipient: process.env.EMAIL_ADMIN, // for template
-          host: process.env.API_HOST,
-          template: path.resolve(__dirname, '../../server/views/verify_admin.ejs'),
-          redirect: '/verified', // may be changed later for better handling
-          user: Client
-        };
+      userInstance.verify(options, null, function(err, response) {
+        if (err) return next(err);
 
-        userInstance.verify(options, null, function(err, response) {
-          if (err) return next(err);
-          // response object is the following structure:
-          // { email, id }
-          context.result.code = 'EMAIL_ADMIN_VERIFY';
-          next();
+        context.result.code = 'EMAIL_USER_VERIFY';
+        next()
+      });
+    } else {
+      next(new Error('Email could not be sent, missing configuration'));
+    }
+  });
+  
+  Client.beforeRemote('confirm', function(context, result, next) {
+    // Check whether admin also has to verify the user
+    if (process.env.EMAIL_ACTIVE == 'true' && process.env.EMAIL_VERIFY == 'ADMIN' && context.args.redirect == '/verified') {
+      if (process.env.EMAIL_ADMIN && process.env.EMAIL_ADMIN.length > 0) {
+
+        //Send access request email to admin
+        Client.findById(context.args.uid).then(function(userInstance) {
+          var options = {
+            type: 'email',
+            to: process.env.EMAIL_ADMIN,
+            from: process.env.EMAIL_FROM,
+            subject: 'New Pretzel User Registration',
+            email_user: userInstance.email, // for template
+            email_recipient: process.env.EMAIL_ADMIN, // for template
+            host: process.env.API_HOST,
+            template: path.resolve(__dirname, '../../server/views/verify_admin.ejs'),
+            redirect: '/admin-verified',
+            user: userInstance
+          };
+
+          userInstance.verify(options, null, function(err, response) {
+            if (err) return next(err);
+
+            //Redirect to prevent the user from being verified by loopback
+            let res = context.res;
+            res.redirect('/access-request');
+            return;
+          });
         });
+        
       } else {
         next(new Error('Email could not be sent, missing configuration'));
       }
     } else {
-      next(new Error('Email could not be sent, missing configuration'));
+      next();
     }
+  });
+
+  Client.afterRemote('confirm', function(context, result, next) {
+    if (process.env.EMAIL_VERIFY == 'ADMIN' && context.args.redirect == '/admin-verified') {
+      // Notify user that admin has accepted their access request
+      if (process.env.EMAIL_ACTIVE == 'true') {
+        Client.findById(context.args.uid).then(function(userInstance) {
+          var template = loopback.template(path.resolve(__dirname, '../../server/views/access_granted.ejs'));
+          var html = template({
+            email_recipient: userInstance.email,
+            login_url: context.req.protocol + '://' + context.req.host + ':' + process.env.API_PORT_EXT + '/login'
+          });
+
+          Client.app.models.Email.send({
+            to: userInstance.email,
+            from: process.env.EMAIL_FROM,
+            subject: 'Welcome to Pretzel',
+            html: html,
+          }, function(err) {
+            if (err) {
+              console.log(err);
+              console.log('> error sending access granted notification email');
+              return;
+            }
+            console.log('> sending access granted notification email to:', userInstance.email);
+          });
+        });
+      }
+    }
+    next();
   });
 
   Client.on('resetPasswordRequest', function (info) {
@@ -93,7 +135,11 @@ module.exports = function(Client) {
         subject: 'Pretzel Password Reset Request',
         html: html,
       }, function(err) {
-        if (err) return console.log('> error sending password reset email');
+        if (err) {
+          console.log(err);
+          console.log('> error sending password reset email');
+          return;
+        }
         console.log('> sending password reset email to:', info.email);
       });
     } else {
