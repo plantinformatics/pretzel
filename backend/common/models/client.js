@@ -96,7 +96,11 @@ module.exports = function(Client) {
             subject: 'Welcome to Pretzel',
             html: html,
           }, function(err) {
-            if (err) return console.log('> error sending access granted notification email');
+            if (err) {
+              console.log(err);
+              console.log('> error sending access granted notification email');
+              return;
+            }
             console.log('> sending access granted notification email to:', userInstance.email);
           });
         });
