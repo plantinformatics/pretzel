@@ -135,7 +135,11 @@ module.exports = function(Client) {
         subject: 'Pretzel Password Reset Request',
         html: html,
       }, function(err) {
-        if (err) return console.log('> error sending password reset email');
+        if (err) {
+          console.log(err);
+          console.log('> error sending password reset email');
+          return;
+        }
         console.log('> sending password reset email to:', info.email);
       });
     } else {
