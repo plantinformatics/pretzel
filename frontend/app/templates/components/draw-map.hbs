@@ -34,14 +34,16 @@
 {{#if axisFeatureCircleHover}}
   {{path-hover data=oa features=hoverFeatures }} {{!-- targetId=axisFeatureTargetId  "holder" --}}
 {{/if}}
-<div class="hoverFeatures">
+{{#if urlOptions.hoverFeatures}}
+  <div class="hoverFeatures">
   <span>Hovered Features</span>
   {{#each hoverFeatures as |feature|}}
     <div>
-    {{feature-name data=oa feature=feature}}
-    {{#each (maps-of-feature oa feature) as |map|}}
-      {{ map.name }}
-    {{/each}}
+      {{feature-name data=oa feature=feature}}
+      {{#each (maps-of-feature oa feature) as |map|}}
+        {{ map.name }}
+      {{/each}}
     </div>
-{{/each}}
+  {{/each}}
 </div>
+{{/if}}
