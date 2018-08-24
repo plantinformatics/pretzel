@@ -248,10 +248,10 @@ circle.radio.toggle.chartType.pushed
 div.drawing-controls.flowButtons .flowButton.alias,
 .foreground > g.alias > g > path {
   /* HTML  */
-  border-color : #955;
-  background-color: #955;
+  border-color : #719ea0;
+  background-color: #719ea0;
   /* SVG  */
-  stroke: #955;
+  stroke: #719ea0;
 }
 div.drawing-controls.flowButtons .flowButton.U_alias,
 .foreground > g.U_alias > g > path {
@@ -261,10 +261,17 @@ div.drawing-controls.flowButtons .flowButton.U_alias,
 }
 div.drawing-controls.flowButtons .flowButton.direct,
 .foreground > g.direct > g > path {
-  border-color : #484;
-  background-color: #484;
-  stroke: #484;
+  border-color : #884480;
+  background-color: #884480;
+  stroke: #884480;
 }
+div#holder {
+  background-color: #e8e8e8;
+}
+div#holder > svg {
+  background-color: #eeeeee;
+}
+
 
 .foreground path {
   fill: none;
