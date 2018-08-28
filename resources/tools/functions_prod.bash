@@ -13,36 +13,26 @@
 # End:
 #-------------------------------------------------------------------------------
 
-export PRETZEL_WORK_DIR=$(echo ${BASH_SOURCE-~/pretzel/resources} | sed 's,/resources,,')
+export PRETZEL_WORK_DIR=$(echo ${BASH_SOURCE-~/pretzel/resources} | sed 's,/resources.*,,')
+# echo $BASH_SOURCE : PRETZEL_WORK_DIR=$PRETZEL_WORK_DIR
 
+unusedValue=${CURL=curl}
+export CURL
 
-# export access_token=
-# export Authorization="Authorization: $access_token"
-# export TOKEN=$access_token
-export APIPORT=80
-
-export API_HOST=localhost
-export API_PORT_EXT=80
-
-source ~/pretzel/resources/functions.bash
-# These env echo-s cause problem for scp.
-#echo CURL=$CURL;
-#echo APIHOST=$APIHOST;
-#echo URL=$URL
-
-source ~/scripts/functions_hosted.bash
-
-export URL_A=$APIHOST/api/Aliases/bulkCreate;
-export URL_D=$APIHOST/api/Datasets/createComplete
+export API_A=Aliases/bulkCreate
+export API_D=Datasets/createComplete
+export URL_A=$APIHOST/api/$API_A;
+export URL_D=$APIHOST/api/$API_D
 
 export URL=$URL_D
 
-export T1=Triticum_aestivum_IWGSC_RefSeq_v1.0
-export DATA=~/data/wheat/Pretzel-LaunchData/extracted/unzipped
 
 function dockerContainer() {
   image=$1;
-  docker ps --format "{{.ID}}\t{{.Image}}" | sed -n "s/	$image//p"
+  if pgrep docker > /dev/null
+  then
+    docker ps --format "{{.ID}}\t{{.Image}}" | sed -n "s/	$image//p"
+  fi
 }
 DIM=$(dockerContainer mongo)
 
@@ -66,11 +56,12 @@ export H_json=( -H "Content-Type: application/json" -H "Accept: application/json
 # not used :  --cookie @cookies.txt 
 
 function uploadData() { file=$1;
+  # alternative authentication : append to URL "?access_token=${TOKEN}"
+  # equivalent parameters : --data or -d @ implies a file input as does --data-binary.
+  # the --data options imply -X POST			
 "$CURL"  "${H_json[@]}"    --url $URL  -H "$Authorization"   --data-binary @$file
 }
 
-# Same as uploadData()
-function uploadC() { curl -X POST "${H_json[@]}"  -d @${F}  "http://localhost:$APIPORT/api/Datasets/createComplete?access_token=${TOKEN}" ; }
 
 # Use uploadData().  Echo the filename, and show the result on the same line.
 function uploadDataList() {
@@ -91,6 +82,8 @@ function deleteDataset() {
 }
 function replaceDataset() {
   file=$1;
+  # deleteDataset() does not return an error code for e.g. 'Dataset not found';
+  # in that case we want to continue to uploadData() anyway.
   deleteDataset $file && \
   uploadData $file
 }
@@ -98,6 +91,10 @@ function replaceDataset() {
 #-------------------------------------------------------------------------------
 
 # usage : beServer
+#
+# further usage examples  (getting the PID of the server started) :
+# ( cd pretzel; beServer > log & ps -fp $! )
+# cd pretzel && beServer > log & ; jobs -l
 #
 # refs :
 # backend/.env:2:API_PORT_EXT=5000
