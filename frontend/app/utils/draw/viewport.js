@@ -151,6 +151,8 @@ Viewport.prototype.calc = function(oa)
   if (trace_resize)
     console.log("Viewport.calc()", this);
 
+  // save this value for use in .viewBox()
+  this.axisTitleLayout = oa.axisTitleLayout;
   // expose these values for use in draw-map
   this.axisHeaderTextLen = axisHeaderTextLen;
   this.margins = margins;
@@ -160,7 +162,12 @@ Viewport.prototype.calc = function(oa)
 /** @return value for viewBox attribute of <svg> containing the graph */
 Viewport.prototype.viewBox = function()
 {
-  return "0 " + -this.axisTopOffset + " " + this.graphDim.w + " " + (this.graphDim.h + this.axisTopOffset);
+  /** When verticalTitle, text-anchor:start, so move the graph left slightly and add title length to the width */
+  let verticalTitle = this.axisTitleLayout && this.axisTitleLayout.verticalTitle,
+  shiftLeft = verticalTitle ? 20 : 0,
+  increaseWidth = this.axisTitleLayout && this.axisTitleLayout.titlePx;
+  return "" + (0 + shiftLeft) + " " + -this.axisTopOffset + " " +
+    (this.graphDim.w + increaseWidth) + " " + (this.graphDim.h + this.axisTopOffset);
 };
 
 /** Based on drawing width and the number of stacks,
