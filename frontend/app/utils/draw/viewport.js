@@ -165,7 +165,7 @@ Viewport.prototype.viewBox = function()
   /** When verticalTitle, text-anchor:start, so move the graph left slightly and add title length to the width */
   let verticalTitle = this.axisTitleLayout && this.axisTitleLayout.verticalTitle,
   shiftLeft = verticalTitle ? 20 : 0,
-  increaseWidth = this.axisTitleLayout && this.axisTitleLayout.titlePx;
+  increaseWidth = (this.axisTitleLayout && this.axisTitleLayout.titlePx) || 0;
   return "" + (0 + shiftLeft) + " " + -this.axisTopOffset + " " +
     (this.graphDim.w + increaseWidth) + " " + (this.graphDim.h + this.axisTopOffset);
 };

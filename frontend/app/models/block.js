@@ -34,6 +34,53 @@ export default DS.Model.extend({
    * component (can have multiple axes brushed, only the most recent one is
    * 'selected').
    */
-  isSelected: false
+  isSelected: false,
+
+  /*--------------------------------------------------------------------------*/
+
+  /** If the dataset of this block has a parent, lookup the corresponding reference block in that parent, matching scope.
+   * @return the reference block or undefined if none
+   */
+  referenceBlock : Ember.computed('dataset', 'scope', function () {
+    let 
+      referenceBlock,
+    scope = this.get('scope'),
+    dataset = this.get('datasetId'),
+    reference = dataset && dataset.get('parent'),
+    namespace = this.get('namespace'),
+    /** reference dataset */
+    parent = dataset && dataset.get('parent'),
+    parentName = parent && parent.get('name');  // e.g. "myGenome"
+
+    console.log('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent.get('id'));
+    if (parent)
+    {
+      referenceBlock = this.get('store').peekAll('block')
+        .filter(function (b) {
+          let scope2 = b.get('scope'),
+          dataset2 = b.get('datasetId'),
+          /** Comparing parent === dataset2 doesn't work because one or both may
+           * be promises; refer e.g. :
+           *   https://discuss.emberjs.com/t/testing-for-record-equality-in-ember-data/11433/3
+           * Matching the objects directly seems slightly better than matching
+           * by name, although .datasetId may be replaced by name - currently
+           * being considered.
+           */
+          match = (parentName == dataset2.get('name')) && (scope2 == scope);
+          if ((parentName == dataset2.get('name')) || (dataset2 === parent))
+          {
+            console.log(dataset2.get('name'), scope2, match);
+          }
+          return match;})
+      ;
+      console.log('referenceBlock', referenceBlock);
+      // expect referenceBlock.length == 0 or 1
+      if (referenceBlock.length !== undefined)
+        referenceBlock = referenceBlock[0] || undefined;
+    }
+    return referenceBlock;
+  })
+
+  /*--------------------------------------------------------------------------*/
 
 });
