@@ -2374,14 +2374,18 @@ export default Ember.Component.extend(Ember.Evented, {
       
       console.log('vc.axisXRange', vc.axisXRange, axisTitleS.nodes(), stacks.length);
     let axisXRange = vc.axisXRange;
-      /** stacks.length is > 0 here */
-    let axisSpacing = (axisXRange[1]-axisXRange[0])/stacks.length;
+      /** axisXRange[] already allows for 1/2 title space either side, so use length-1.
+       * stacks.length is > 0 here */
+      let nStackAdjs = stacks.length > 1 ? stacks.length-1 : 1;
+    let axisSpacing = (axisXRange[1]-axisXRange[0])/nStackAdjs;
     let titleLength = Block.titleTextMax(),
       /** char width in px, ie. convert em to px.  Approx -	better to measure this. */
       em2Px = 6,
       titlePx = titleLength ? titleLength * em2Px : 0;
     let titleText = vc.titleText || (vc.titleText = {});
 
+      oa.vc.axisHeaderTextLen = titlePx;
+      oa.vc.calc(oa);
       oa.axisTitleLayout.calc(axisSpacing, titlePx);
 
 
