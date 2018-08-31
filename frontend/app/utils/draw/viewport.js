@@ -2,7 +2,7 @@ import Ember from 'ember';
 
 import  { logElementDimensions2 } from '../domElements';
 
-const trace_resize = 1;
+const trace_resize = 0;
 
 /*----------------------------------------------------------------------------*/
 
@@ -104,7 +104,7 @@ Viewport.prototype.calc = function(oa)
   let holderElt = divHolder[0],
   /** standard CSS order, same as margins : top right bottom left */
   holderPadding = eltStylePaddingRect(holderElt);
-  holderWidth = divHolder.innerWidth();
+  holderWidth = divHolder.width();
     /**  px */
     let topPanelHeight = 100,
         /** for display of marker details below graph */

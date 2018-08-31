@@ -2380,7 +2380,7 @@ export default Ember.Component.extend(Ember.Evented, {
     let axisSpacing = (axisXRange[1]-axisXRange[0])/nStackAdjs;
     let titleLength = Block.titleTextMax(),
       /** char width in px, ie. convert em to px.  Approx -	better to measure this. */
-      em2Px = 6,
+      em2Px = 7,
       titlePx = titleLength ? titleLength * em2Px : 0;
     let titleText = vc.titleText || (vc.titleText = {});
 
