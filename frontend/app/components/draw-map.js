@@ -3870,6 +3870,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
     /** @param  d (datum) name of axis being dragged.
+     * @see stacks.log() for description of stacks.changed
      */
     function dragged(d) {
       /** Transition created to manage any changes. */
@@ -4554,11 +4555,15 @@ export default Ember.Component.extend(Ember.Evented, {
       stacksAxesDomVerify(stacks, oa.svgContainer);
     }
     /** recalculate all stacks' Y position.
-     * Used after drawing / window resize.
+     * Recalculate Y scales.
+     * Used after drawing / window (height) resize.
      */
     function stacksAdjustY()
     {
       oa.stacks.forEach(function (s) { s.calculatePositions(); });
+      oa.stacks.axisIDs().forEach(function(axisName) {
+        axisScaleChanged(axisName, t, false);
+      });
     }
     /** recalculate stacks X position and show via transition
      * @param changedNum  true means the number of stacks has changed.
@@ -5056,6 +5061,10 @@ export default Ember.Component.extend(Ember.Evented, {
         .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
           .attr('height', graphDim.h /*"auto"*/);
 
+      // recalculate Y scales before pathUpdate().
+        if (heightChanged)
+          stacksAdjustY();
+
       // for stacked axes, window height change affects the transform.
         if (widthChanged || heightChanged)
         {
@@ -5066,10 +5075,6 @@ export default Ember.Component.extend(Ember.Evented, {
 
         if (heightChanged)
         {
-          stacksAdjustY();
-          oa.stacks.axisIDs().forEach(function(axisName) {
-            axisScaleChanged(axisName, t, false);
-          });
           // let traceCount = 1;
           oa.svgContainer.selectAll('g.axis-all > g.brush')
             .each(function(d) {
