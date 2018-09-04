@@ -443,6 +443,10 @@ export default Ember.Component.extend(Ember.Evented, {
     // stacks.axes[] is a mix of Stacked & Block; shouldn't be required & planning to retire it in these changes.
     oa.axes = stacks.axesP;
     oa.axesP = stacks.axesP;
+    if (! oa.axisApi)
+      oa.axisApi = {lineHoriz : lineHoriz};
+    console.log('draw-map stacks', stacks);
+    this.set('stacks', stacks);
 
     /** Reference to all datasets by name.
      * (datasets have no id, their child blocks' datasetId refers to their name) .
@@ -3371,7 +3375,8 @@ export default Ember.Component.extend(Ember.Evented, {
       /** if d is object ID instead of name then featureIndex[] is used */
       feature = oa.z[axisID][d], // || oa.featureIndex[d],
       aky = ysa(feature.location),
-      /**  parentName not essential here because yOffset() follows .parent */
+      /**  As noted in header comment, path Y value requires adding axisY = ... yOffset().
+       * parentName not essential here because Block yOffset() follows .parent reference. */
       axisY = oa.stacks.blocks[axisID].yOffset();
       // can use parentName here, but initially good to have parent and child traced.
       if (trace_scale_y && ! tracedAxisScale[axisID])

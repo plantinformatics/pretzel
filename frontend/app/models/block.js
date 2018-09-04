@@ -38,6 +38,25 @@ export default DS.Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** @return true if this block's dataset defined meta.paths and it is true.
+   */
+  showPaths : Ember.computed('datasetId.meta.paths', 'id', function () {
+    let
+    dataset = this.get('datasetId'),
+    paths = dataset.get('meta.paths')
+    /** for testing, without setting up datasets with meta.paths : true, check
+     * the parity of the 2nd last char of the block id, which is evenly even/odd.
+    , id = this.get('id'),
+    odd = id.charCodeAt(id.length - 2) & 0x1;
+    paths |= odd
+     */
+    ;
+    console.log('showPaths', dataset, paths /*, id, odd*/);
+    return paths;
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
   /** If the dataset of this block has a parent, lookup the corresponding reference block in that parent, matching scope.
    * @return the reference block or undefined if none
    */
