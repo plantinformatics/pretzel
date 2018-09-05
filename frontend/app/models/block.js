@@ -43,15 +43,23 @@ export default DS.Model.extend({
   showPaths : Ember.computed('datasetId.meta.paths', 'id', function () {
     let
     dataset = this.get('datasetId'),
-    paths = dataset.get('meta.paths')
+    paths = dataset.get('meta.paths');
+    // if no meta.paths, then default to paths : true.
+    if (paths === undefined)
+      paths = true;
+    else if (paths == "false")
+      paths = false;
     /** for testing, without setting up datasets with meta.paths : true, check
      * the parity of the 2nd last char of the block id, which is evenly even/odd.
-    , id = this.get('id'),
-    odd = id.charCodeAt(id.length - 2) & 0x1;
-    paths |= odd
      */
-    ;
-    console.log('showPaths', dataset, paths /*, id, odd*/);
+    if (false)
+    {
+      let id = this.get('id'),
+      odd = id.charCodeAt(id.length - 2) & 0x1;
+      paths |= odd;
+      console.log(id, odd);
+    }
+    console.log('showPaths', dataset, paths);
     return paths;
   }),
 

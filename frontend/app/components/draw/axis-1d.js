@@ -77,8 +77,8 @@ function showTickLocations(axis, axisApi)
      */
     const xOffset = 25, shiftRight=5;
     let ak = axisName,
-    value = feature.get('value'),
-    tickY = value && value.length && value[0],
+    range = feature.get('range') || feature.get('value'),
+    tickY = range && (range.length ? range[0] : range),
     sLine = axisApi.lineHoriz(ak, tickY, xOffset, shiftRight);
     return sLine;
   };
@@ -86,12 +86,13 @@ function showTickLocations(axis, axisApi)
   /** eg: "scaffold23432:1A:1-534243" */
   function hoverTextFn (feature, block) {
     let
-    value = feature.get('value'),
-    range = value && (value.length ? ('' + value[0] + ' - ' + value[1]) : value),
+      /** value is now renamed to range, this handles some older data. */
+    range = feature.get('range') || feature.get('value'),
+    rangeText = range && (range.length ? ('' + range[0] + ' - ' + range[1]) : range),
     blockR = block.block,
     // feature.get('name') 
     blockDesc = blockR && (blockR.get('name') + " : " + blockR.get('scope')),
-    text = blockDesc + " : " + range;
+    text = blockDesc + " : " + rangeText;
     return text;
   }
   // the code corresponding to hoverTextFn in the original is :
@@ -115,7 +116,8 @@ function  configureHorizTickHover(d, block, hoverTextFn)
       container: 'div#holder',
       placement : "auto right",
       // comment re. title versus content in @see draw-map.js: configureHorizTickHover() 
-      content : text
+      content : text,
+      html: false
     });
 }
 
