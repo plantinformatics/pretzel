@@ -1,11 +1,23 @@
 import Ember from 'ember';
 
+import AxisEvents from '../../utils/draw/axis-events';
 import { /* Block, Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText, axisId2Name*/ } from '../../utils/stacks';
 import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/  }  from '../../utils/draw/axis';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../../utils/stacks-drag';
 
 
 /* global d3 */
+
+
+/*------------------------------------------------------------------------*/
+
+/* milliseconds duration of transitions in which axis ticks are drawn / changed.
+ * Match with time used by draw-map.js : zoom() and resetZoom() : 750.
+ * also @see   dragTransitionTime.
+ */
+const axisTickTransitionTime = 750;
+
+/*------------------------------------------------------------------------*/
 
 
 /*------------------------------------------------------------------------*/
@@ -61,7 +73,7 @@ function showTickLocations(axis, axisApi)
       /* update attr d in a transition if one was given.  */
       let p1 = // (t === undefined) ? pSM :
          pSM.transition()
-         .duration(dragTransitionTime)
+         .duration(axisTickTransitionTime)
          .ease(d3.easeCubic);
 
       p1.attr("d", pathFn);
@@ -121,18 +133,49 @@ function  configureHorizTickHover(d, block, hoverTextFn)
     });
 }
 
-export default Ember.Component.extend({
+export default Ember.Component.extend(Ember.Evented, AxisEvents, {
+
+
+  /** axis-1d receives axisStackChanged and zoomedAxis from draw-map
+   * zoomedAxis is specific to an axisID, so respond to that if it matches this.axis.
+   */
+
+  axisStackChanged : function() {
+    console.log("axisStackChanged in components/axis-1d");
+    this.renderTicksDebounced();
+  },
+
+  /** @param [axisID, t] */
+  zoomedAxis : function(axisID_t) {
+    console.log("zoomedAxis in components/axis-1d", axisID_t);
+    let axisID = axisID_t[0],
+    axisName = this.get('axis.axisName');
+    if (axisID == axisName)
+    {
+      console.log('zoomedAxis matched', axisID, this.get('axis'));
+      this.renderTicksDebounced.apply(this, axisID_t);
+    }
+  },
+
+
 
   didInsertElement : function() {
+    console.log('axis-1d didInsertElement', this, this.get('listen'), this.get('off'));
   },
   didRender() {
+    this.get('renderTicks').apply(this, []);
+  },
+  renderTicks() {
     let block = this.get('axis'), blockId = block.get('id');
     let axisApi = this.get('drawMap.oa.axisApi');
     let oa = this.get('drawMap.oa');
     let axis = oa.axes[blockId];
-    // console.log('axis-1d didRender', block, blockId, axis);
+    // console.log('axis-1d renderTicks', block, blockId, axis);
 
     showTickLocations(axis, axisApi);
+  },
+  renderTicksDebounced(axisID_t) {
+    Ember.run.debounce(this, this.renderTicks, axisID_t, 250);
   }
 
 
