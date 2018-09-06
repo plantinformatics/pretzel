@@ -20,6 +20,7 @@ export default Mixin.create({
       console.log('parent component drawMap not passed');
     else {
       drawMap.on('axisStackChanged', this, 'axisStackChanged');
+      drawMap.on('resized', this, 'resized');
       drawMap.on('zoomedAxis', this, 'zoomedAxis');
     }
   }.on('init'),
@@ -30,6 +31,7 @@ export default Mixin.create({
     let drawMap = this.get('drawMap');
     if (drawMap)
     drawMap.off('axisStackChanged', this, 'axisStackChanged');
+    drawMap.off('resized', this, 'resized');
     drawMap.off('zoomedAxis', this, 'zoomedAxis');
       }.on('willDestroyElement')
 

@@ -161,6 +161,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * zoomedAxis is specific to an axisID, so respond to that if it matches this.axis.
    */
 
+  resized : function(widthChanged, heightChanged, useTransition) {
+    /* useTransition could be passed down to showTickLocations()
+     * (also could pass in duration or t from showResize()).
+     */
+    console.log("resized in components/axis-1d");
+    if (heightChanged)
+      this.renderTicksDebounce();
+  },
+
   axisStackChanged : function() {
     console.log("axisStackChanged in components/axis-1d");
     this.renderTicksDebounce();

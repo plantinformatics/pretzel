@@ -5092,6 +5092,7 @@ export default Ember.Component.extend(Ember.Evented, {
               d3.select(this).call(oa.y[d].brush); });
 
           DropTarget.prototype.showResize();
+          me.trigger('resized', widthChanged, heightChanged, useTransition);
         }
         Ember.run.later( function () { showSynteny(oa.syntenyBlocks, undefined); });
       };
