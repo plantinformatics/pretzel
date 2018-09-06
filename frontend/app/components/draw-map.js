@@ -444,7 +444,9 @@ export default Ember.Component.extend(Ember.Evented, {
     oa.axes = stacks.axesP;
     oa.axesP = stacks.axesP;
     if (! oa.axisApi)
-      oa.axisApi = {lineHoriz : lineHoriz};
+      oa.axisApi = {lineHoriz : lineHoriz,
+                    inRangeI : inRangeI
+                   };
     console.log('draw-map stacks', stacks);
     this.set('stacks', stacks);
 
@@ -2503,7 +2505,7 @@ export default Ember.Component.extend(Ember.Evented, {
      * Update the drawing to reflect those changes.
      * @param t undefined or transition to use for d3 element updates.
      */
-    function axisStackChanged(t)
+    function axisStackChanged_(t)
     {
       showTickLocations(scaffoldTicks, t);
       if (oa.syntenyBlocks)
@@ -2511,7 +2513,10 @@ export default Ember.Component.extend(Ember.Evented, {
 
       me.trigger('axisStackChanged', t);
     }
-
+    function axisStackChanged(t)
+    {
+      Ember.run.throttle(this, axisStackChanged_, [t], 500);
+    }
 
 //-components/paths
     //d3.selectAll(".foreground > g > g").selectAll("path")

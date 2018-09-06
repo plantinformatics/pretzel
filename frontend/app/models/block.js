@@ -59,7 +59,7 @@ export default DS.Model.extend({
       paths |= odd;
       console.log(id, odd);
     }
-    console.log('showPaths', dataset, paths);
+    // console.log('showPaths', dataset, paths);
     return paths;
   }),
 

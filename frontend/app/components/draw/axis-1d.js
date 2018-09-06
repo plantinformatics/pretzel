@@ -4,6 +4,8 @@ import AxisEvents from '../../utils/draw/axis-events';
 import { /* Block, Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText, axisId2Name*/ } from '../../utils/stacks';
 import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/  }  from '../../utils/draw/axis';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../../utils/stacks-drag';
+import { breakPoint } from '../../utils/breakPoint';
+
 
 
 /* global d3 */
@@ -50,6 +52,8 @@ function blockWithTicks(block)
 function showTickLocations(axis, axisApi)
 {
   let axisName = axis.axisName;
+  let
+    range0 = axis.yRange2();
 
   let aS = d3.select("#" + axisEltId(axisName));
   if (!aS.empty())
@@ -57,17 +61,26 @@ function showTickLocations(axis, axisApi)
 
     let blocks = axis.blocks.filter(blockWithTicks);
     blocks.forEach(function (block) {
+      function inRange(feature) {
+        let featureName = feature.get('name');
+        return axisApi.inRangeI(block.axisName, featureName, range0);
+      }
+
       let blockR = block.block,
       blockId = blockR.get('id'),
-      features = blockR.get('features').toArray();
+      features = blockR.get('features').toArray()
+        .filter(inRange);
+      console.log(features.length);
 
       let pS = aS.selectAll("path." + className)
-        .data(features),
+        .data(features, keyFn),
       pSE = pS.enter()
         .append("path")
         .attr("class", className);
       pSE
         .each(function (d) { return configureHorizTickHover.apply(this, [d, block, hoverTextFn]); });
+      pS.exit()
+        .remove();
       let pSM = pSE.merge(pS);
 
       /* update attr d in a transition if one was given.  */
@@ -82,6 +95,12 @@ function showTickLocations(axis, axisApi)
 
   }
 
+  function keyFn (feature) {
+    // here `this` is the parent of the <path>-s, e.g. g.axis
+    let featureName = feature.get('name');
+    // console.log('keyFn', feature, featureName); 
+    return featureName;
+  };
   function pathFn (feature) {
     // based on axisFeatureTick(ai, d)
     /** shiftRight moves right end of tick out of axis zone, so it can
@@ -102,11 +121,13 @@ function showTickLocations(axis, axisApi)
     range = feature.get('range') || feature.get('value'),
     rangeText = range && (range.length ? ('' + range[0] + ' - ' + range[1]) : range),
     blockR = block.block,
-    // feature.get('name') 
-    blockDesc = blockR && (blockR.get('name') + " : " + blockR.get('scope')),
-    text = blockDesc + " : " + rangeText;
+    featureName = feature.get('name'),
+    scope = blockR && blockR.get('scope'),
+    text = [featureName, scope, rangeText]
+      .filter(function (x) { return x; })
+      .join(" : ");
     return text;
-  }
+  };
   // the code corresponding to hoverTextFn in the original is :
   // (location == "string") ? location :  "" + location;
 
@@ -142,40 +163,59 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   axisStackChanged : function() {
     console.log("axisStackChanged in components/axis-1d");
-    this.renderTicksDebounced();
+    this.renderTicksDebounce();
   },
 
   /** @param [axisID, t] */
   zoomedAxis : function(axisID_t) {
-    console.log("zoomedAxis in components/axis-1d", axisID_t);
     let axisID = axisID_t[0],
-    axisName = this.get('axis.axisName');
+    axisName = this.get('axis.id');
+    console.log("zoomedAxis in components/axis-1d", axisID_t, axisName);
     if (axisID == axisName)
     {
       console.log('zoomedAxis matched', axisID, this.get('axis'));
-      this.renderTicksDebounced.apply(this, axisID_t);
+      // Not currently needed because axisStackChanged() already received.
+      // this.renderTicksDebounce.apply(this, axisID_t);
     }
   },
 
 
 
   didInsertElement : function() {
-    console.log('axis-1d didInsertElement', this, this.get('listen'), this.get('off'));
+    console.log('axis-1d didInsertElement', this, this.get('listen'));
   },
   didRender() {
     this.get('renderTicks').apply(this, []);
   },
   renderTicks() {
     let block = this.get('axis'), blockId = block.get('id');
+    console.log('renderTicks', blockId);
     let axisApi = this.get('drawMap.oa.axisApi');
     let oa = this.get('drawMap.oa');
     let axis = oa.axes[blockId];
     // console.log('axis-1d renderTicks', block, blockId, axis);
 
-    showTickLocations(axis, axisApi);
+    /* If block is a child block, don't render, expect to get an event for the
+     * parent (reference) block of the axis. */
+    if (! axis)
+      console.log('renderTicks block', block, blockId, oa.stacks.blocks[blockId]);
+    else
+      showTickLocations(axis, axisApi);
   },
-  renderTicksDebounced(axisID_t) {
-    Ember.run.debounce(this, this.renderTicks, axisID_t, 250);
+  /** call renderTicks().
+   * filter / debounce the calls to handle multiple events at the same time.
+   * @param axisID_t is defined by zoomedAxis(), undefined when called from
+   * axisStackChanged()
+   */
+  renderTicksDebounce(axisID_t) {
+    console.log('renderTicksDebounce', axisID_t);
+    // renderTicks() doesn't use axisID_t; this call chain is likely to be refined yet.
+    /* using throttle() instead of debounce() - the former has default immediate==true.
+     * It is possible that the last event in a group may indicate a change which
+     * should be rendered, but in this case it is likely there is no change
+     * after the first event in the group.
+     */
+    Ember.run.throttle(this, this.renderTicks, axisID_t, 500);
   }
 
 
