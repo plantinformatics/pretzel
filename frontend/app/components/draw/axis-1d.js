@@ -191,7 +191,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
 
   didInsertElement : function() {
-    console.log('axis-1d didInsertElement', this, this.get('listen'));
+    console.log('axis-1d didInsertElement', this, this.get('listen') !== undefined);
   },
   didRender() {
     this.get('renderTicks').apply(this, []);

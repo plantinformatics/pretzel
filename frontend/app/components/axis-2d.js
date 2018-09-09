@@ -1,6 +1,6 @@
 import Ember from 'ember';
 import { eltWidthResizable } from '../utils/domElements';
-import AxisEvents from '../utils/axis-events';
+import AxisEvents from '../utils/draw/axis-events';
 
 /* global d3 */
 
@@ -14,6 +14,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let id = 'axis2D_' + this.axisID;
     console.log("targetEltId", this, id);
     return id;
+  }),
+
+  blocks : Ember.computed('axisID', function() {
+    let axisID = this.get('axisID');
+    let stacks = this.get('drawMap.oa.stacks');
+    let axis = stacks.axesP[axisID];
+    return axis.blocks;
   }),
 
   /*--------------------------------------------------------------------------*/
