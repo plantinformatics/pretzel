@@ -1755,7 +1755,7 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       this.set('urlOptions', options);
       // alpha enables new features which are not yet robust.
-      options.splitAxes = options.alpha;
+      options.splitAxes |= options.alpha;
       /** In addition to the options which are added as body classes in the
        * following statement, the other supported options are :
        *   splitAxes  (enables buttons for extended axis and dot-plot in configureAxisTitleMenu())
