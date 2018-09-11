@@ -3,6 +3,8 @@ import Ember from 'ember';
 import createIntervalTree from 'npm:interval-tree-1d';
 import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
 import InAxis from './in-axis';
+import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,*/ eltId, axisEltId, eltIdAll, axisEltIdClipPath /*,highlightId*/  }  from '../utils/draw/axis';
+
 
 /*----------------------------------------------------------------------------*/
 /* milliseconds duration of transitions in which feature <rect>-s are drawn / changed.
@@ -11,6 +13,9 @@ import InAxis from './in-axis';
  */
 const featureTrackTransitionTime = 750;
 
+/** width of track <rect>s */
+const trackWidth = 10;
+
 /*------------------------------------------------------------------------*/
 /* copied from draw-map.js - will import when that is split */
     /** Setup hover info text over scaffold horizTick-s.
@@ -18,7 +23,7 @@ const featureTrackTransitionTime = 750;
      */
     function  configureHorizTickHover(location)
     {
-      console.log("configureHorizTickHover", location, this, this.outerHTML);
+      // console.log("configureHorizTickHover", location, this, this.outerHTML);
       /** typeof location may also be "number" or "object" - array : syntenyBlocks[x] */
       let text = (location == "string") ? location :  "" + location;
       let node_ = this;
@@ -43,11 +48,13 @@ function  configureTrackHover(interval)
 
 /** filter intervalTree : select those intervals which intersect domain.
  * @param sizeThreshold intervals smaller than sizeThreshold are filtered out
- * @return intervals  array of intervals
-*/
+ * @return {intervals:  array of intervals,
+ * layoutWidth : px width allocated for the layered tracks}
+ */
 function regionOfTree(intervalTree, domain, sizeThreshold)
 {
-  let intervals = [];
+  let intervals = [],
+  result = {intervals : intervals};
   function visit(interval) {
     if (interval[1] - interval[0] > sizeThreshold)
       intervals.push(interval);
@@ -98,19 +105,30 @@ function regionOfTree(intervalTree, domain, sizeThreshold)
     if (lastUsed > largestLayer)
       largestLayer = lastUsed;
   }
-  let trackWidth = 10;
-  setClipWidth((largestLayer+1) * trackWidth * 2);
+  result.layoutWidth = (largestLayer+1) * trackWidth * 2;
 
-  return intervals;
+  return result;
 }
 
-function setClipWidth(width)
+/** select the g.axis-outer which contains g.axis-use. */
+function selectAxis(axisID)
 {
-  /** This will need axisID. */
-  let cp = d3.select("g.axis-use > g.tracks > clipPath#axis-clip > rect");
+  let aS = d3.select("#" + eltId(axisID));
+  return aS;
+}
+
+function setClipWidth(axisID, width)
+{
+  let
+  aS = selectAxis(axisID),
+  cp = aS.select("g.axis-use > clipPath > rect");
+  /** If the user has resized to a larger width, don't reduce it.
+   * The role of this is to automatically increase the width if layout requires it.
+   */
+  if (cp.attr("width") < width)
   cp
     .attr("width", width);
-  let gh = d3.select("g.axis-use > g.axis-html");
+  let gh = aS.select("g.axis-use > g.axis-html");
   gh
     .attr("transform", "translate(" + width + ")");
 }
@@ -153,11 +171,11 @@ export default InAxis.extend({
     /* axisStackChanged() will be called before zoomed, otherwise
      * widthChanged==false could shadow the true passed by axisStackChanged(),
      * because of .throttle() */
-    this.showResize(false, true);
+    this.showResize(false, false, true);
   },
-  showResize : function(widthChanged, heightChanged) {
+  showResize : function(widthChanged, heightChanged, yScaleChanged) {
     let tracks = this.get('tracks'),
-    resized = {width : widthChanged, height : heightChanged};
+    resized = {width : widthChanged, height : heightChanged, yScale : yScaleChanged};
     console.log((tracks === undefined) || tracks.length);
     let args = [resized, tracks];
     console.log('showResize args', args);
@@ -245,31 +263,45 @@ export default InAxis.extend({
   {
     // seems run.throttle() .. .apply() is wrapping args with an extra [] ?
     if (resized && (resized.length == 2) && (tracks === undefined))
-  {
+    {
       tracks = resized[1];
       resized = resized[0];
     }
     console.log("layoutAndDrawTracks", resized, tracks, tracks.intervalNames, tracks.intervalTree);
-    // initial version supports only 1 split axis; next identify axis by axisID (and possibly stack id)
-    // <g class="axis-use">
-    let gAxis = d3.select("g.axis-use"),
+    /* identify axis by axisID.
+     * (initial version supported only 1 split axis).  Could prefix selection with stack id.
+     * <g class="axis-use">
+     */
+    let axisID = this.get('axisID'),
+    aS = selectAxis(axisID);
+    let gAxis = aS.select("g.axis-use"),
     /** relative to the transform of parent g.axis-outer */
     bbox = gAxis.node().getBBox(),
     yrange = [bbox.y, bbox.height];
-    let blockIds = d3.keys(tracks.intervalTree),
-    /** skip the reference block blockIds[0].  -	add remainder of blockIds[]*/
-    blockId = blockIds.length ? blockIds[blockIds.length-1] : undefined;
-    let t = tracks.intervalTree[blockId],
-    trackWidth = 10,
+    /** could skip the reference block blockIds[0]. */
+    let blockIds = d3.keys(tracks.intervalTree);
+    let
     oa = this.get('axis').drawMap.oa, // or pass in this.get('data'),
-    /** For parseIntervals(), blockId is "1"; otherwise expect that blockId is a child of axisID. */
-    axisID = gAxis.node().parentElement.__data__,
+    /** For parseIntervals(), blockId is "1"; otherwise expect that blockId is a child of axisID.
+    axisID = gAxis.node().parentElement.__data__, */
     y = oa.y[axisID],
-    /** 0.8 gives a bit of margin - may drop this (added in 6884d55).  */
-    yDomain = [y.invert(yrange[0]), y.invert(yrange[1]*0.8)],
-    pxSize = (yDomain[1] - yDomain[0]) / bbox.height,
-    data = regionOfTree(t, yDomain, pxSize * 1/*5*/);
-    console.log(data.length, (data.length == 0) || y(data[0][0]));
+    yDomain = y.domain();
+    /* bbox was originally (up until 1116292) used to calculate yrange, yDomain, pxSize;
+     * now use y.range(),.domain() instead because bbox.height is affected by zoom.
+     * yDomain = [y.invert(yrange[0]), y.invert(yrange[1])],
+     * pxSize = ... / bbox.height;
+     */
+    yrange = y.range();
+    let
+      pxSize = (yDomain[1] - yDomain[0]) / (yrange[1] - yrange[0]);
+    function trackBlocksData(blockId) {
+      let t = tracks.intervalTree[blockId],
+      tracksLayout = regionOfTree(t, yDomain, pxSize * 1/*5*/),
+      data = tracksLayout.intervals;
+      setClipWidth(axisID, tracksLayout.layoutWidth);
+      console.log('trackBlocksData', blockId, data.length, (data.length == 0) || y(data[0][0]));
+      return data;
+    };
     // a block with 1 feature will have pxSize == 0.  perhaps just skip the filter.
     if (pxSize == 0)
       console.log('pxSize is 0', yrange, yDomain);
@@ -277,12 +309,13 @@ export default InAxis.extend({
     function xPosn(d) { /*console.log("xPosn", d);*/ return ((d.layer || 0) + 1) *  trackWidth * 2; };
     function yPosn(d) { /*console.log("yPosn", d);*/ return y(d[0]); };
     function height(d)  { return y(d[1]) - y(d[0]); };
-    /** parent; contains a clipPath, g > rect, text.resizer.  */
+    /** parent; contains g > rect, maybe later a text.resizer.  */
     let gp =   gAxis
       .selectAll("g.tracks")
-      .data([blockId])  //  -	blockIds
+      .data(blockIds)
       .enter()
       .append("g")  // .insert(, ":last-child")
+      .attr('id', function (blockId) { return blockId; })
       .attr('class', 'tracks');
     /* this is for resizing the width of axis-tracks; may instead scale width of
      * rectangles to fit available width. */
@@ -295,27 +328,44 @@ export default InAxis.extend({
     if (gp.size() > 0)
       eltWidthResizable("g.axis-use > g.tracks > text.resizer", resizedParentElt);
   }
+    /** define the clipPath.  1 clipPath per axis. */
     let clipRect =
-    gp // define the clipPath
+      gAxis.selectAll('clipPath')
+      .data([axisID])
+      .enter()
       .append("clipPath")       // define a clip path
-      .attr("id", "axis-clip") // give the clipPath an ID
-      .append("rect")          // shape it as an ellipse
+      .attr("id", axisEltIdClipPath) // give the clipPath an ID
+      .append("rect")          // shape it as a rect
     ;
-    if (resized && (resized.width || resized.height) && (clipRect.size() == 0))
+    /* During zoom calcs, axis-ticks positions elements before the data is
+     * re-filtered, causing gAxis bbox to be large.  Don't resize to that.
+     * No longer using bbox.height anyway
+     * (resized && (resized.width || resized.height) && )
+     */
+    if (clipRect.size() == 0)
     {
-      clipRect = gAxis.selectAll("g.tracks > clipPath > rect");
-      console.log('clipRect', clipRect.node());
+      clipRect = gAxis.selectAll("clipPath > rect");
+      console.log('clipRect', clipRect.size(), bbox, clipRect.node());
     }
+    bbox.y = yrange[0] ;
+    bbox.height = yrange[1] - yrange[0];
     clipRect
       .attr("x", bbox.x)
       .attr("y", bbox.y)
       .attr("width", bbox.width)
       .attr("height", bbox.height)
     ;
+    if (clipRect.size())
+    {
+      console.log('clipRect', bbox.width, clipRect.node());
+    }
     let g = gp.append("g")
-      .attr("clip-path", "url(#axis-clip)"); // clip the rectangle
+      .attr("clip-path", "url(#" + axisEltIdClipPath(axisID) + ")"); // clip the rectangle
+    function trackKeyFn(featureData) { return featureData.description; }
+    /** Add the <rect> within <g clip-path...>  */
     let
-      rs = gAxis.select("g.tracks > g").selectAll("rect.track").data(data),
+      rs = gAxis.selectAll("g.axis-use > g.tracks > g").selectAll("rect.track")
+      .data(trackBlocksData, trackKeyFn),
     re =  rs.enter(), rx = rs.exit();
     let ra = re
       .append("rect");
@@ -331,8 +381,8 @@ export default InAxis.extend({
       .attr('y', yPosn)
       .attr('height' , height)
     ;
+    console.log(gAxis.node(), rs.nodes(), re.nodes(), rx.size());
     rx.remove();
-    console.log(gAxis.node(), rs.nodes(), re.nodes());
 
   },
 
@@ -345,9 +395,13 @@ export default InAxis.extend({
 
     let tracks = parseIntervals(textPlain);
     this.set('tracks', tracks); // used by axisStackChanged() : layoutAndDrawTracks()
-    let axisID = "1";
+    /** parseIntervals() puts the data into a blockId (refered to as axisName) "1".
+     * This was refactored to incorporate the addition of trackBlocks(), showTrackBlocks();
+     * if required these changes can be tested / debugged.
+     */
+    let blockId = "1";
     /** Parsed data is echoed in the table. */
-    let forTable = tracks.intervalTree[/*axisID*/1].intervals.map(this.intervalToStartEnd);
+    let forTable = tracks.intervalTree[/*blockId*/1].intervals.map(this.intervalToStartEnd);
     // intersect with axis zoom region;  layer the overlapping tracks; draw tracks.
     layoutAndDrawTracks.apply(this, [undefined, tracks]);
 

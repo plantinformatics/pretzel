@@ -95,6 +95,9 @@ function axisEltId(name)
 }
 /** id of g.axis-all element, based on axisName, with an "all" prefix. */
 function eltIdAll(d) { return "all" + d; }
+/** id of <g clippath> element, based on axisName, with an "axis-clip" prefix. */
+function axisEltIdClipPath(d) { return "axis-clip" + d; }
+
 /** id of highlightFeature div element, based on feature name, with an "h" prefix. */
 function highlightId(name)
 {
@@ -104,4 +107,4 @@ function highlightId(name)
 
 /*----------------------------------------------------------------------------*/
 
-export {  Axes, maybeFlip, maybeFlipExtent, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, highlightId } ;
+export {  Axes, maybeFlip, maybeFlipExtent, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisEltIdClipPath, highlightId } ;

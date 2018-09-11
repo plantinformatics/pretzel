@@ -18,7 +18,7 @@
   <div>axes2d : {{axes2d.length}}</div>
   {{#each axes2d as |axisS|}}
     <div>axis : {{axisS}}, {{axisS.axisID}}, {{axisS.extended}}</div>
-    {{axis-2d drawMap=this data=oa axisID=axisS.axisID tableData=axisData}}
+    {{axis-2d drawMap=this data=oa axisID=axisS.axisID tableData=axisData urlOptions=urlOptions}}
   {{/each}}
 
   {{!-- wait until targetId="toolTip" will resolve --}}
