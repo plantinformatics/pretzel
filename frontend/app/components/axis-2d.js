@@ -22,6 +22,16 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let axis = stacks.axesP[axisID];
     return axis.blocks;
   }),
+  /** @return just the ("child") data blocks, skipping the ("parent") reference
+   * block which is block[0].
+   */
+  dataBlocks : Ember.computed('blocks', function () {
+    let blocks = this.get('blocks'),
+    /** use slice() to copy - don't modify blocks[]; and skip blocks[0]. */
+    dataBlocks = blocks.slice(1);
+    return dataBlocks;
+  }),
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -50,7 +60,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    */
   axisStackChanged : function() {
     console.log("axisStackChanged in components/axis-2d");
-    Ember.run.debounce(this, this.sendZoomed, [], 500);
+    Ember.run.throttle(this, this.sendZoomed, [], 500);
   },
 
   /** @param [axisID, t] */
@@ -63,7 +73,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   /** @param [axisID, t] */
   zoomedAxis : function(axisID_t) {
     console.log("zoomedAxis in components/axis-2d", axisID_t);
-    Ember.run.debounce(this, this.sendZoomed, axisID_t, 500);
+    Ember.run.throttle(this, this.sendZoomed, axisID_t, 500);
   },
 
 

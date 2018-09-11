@@ -158,7 +158,8 @@ export default InAxis.extend({
 
   didRender() {
     console.log("components/axis-tracks didRender()");
-    if (this.get('trackBlocks'))
+    let trackBlocks = this.get('trackBlocks');
+    if (trackBlocks && trackBlocks.length)
       this.showTrackBlocks();
   },
 
@@ -298,6 +299,7 @@ export default InAxis.extend({
       let t = tracks.intervalTree[blockId],
       tracksLayout = regionOfTree(t, yDomain, pxSize * 1/*5*/),
       data = tracksLayout.intervals;
+      if (false)  // actually need to sum the .layoutWidth for all blockId-s, plus the block offsets which are calculated below
       setClipWidth(axisID, tracksLayout.layoutWidth);
       console.log('trackBlocksData', blockId, data.length, (data.length == 0) || y(data[0][0]));
       return data;
@@ -309,6 +311,11 @@ export default InAxis.extend({
     function xPosn(d) { /*console.log("xPosn", d);*/ return ((d.layer || 0) + 1) *  trackWidth * 2; };
     function yPosn(d) { /*console.log("yPosn", d);*/ return y(d[0]); };
     function height(d)  { return y(d[1]) - y(d[0]); };
+    function blockTransform(blockId, i) {
+      /** -	plus tracksLayout.layoutWidth for each of the blockId-s to the left of this one. */
+      let xOffset = (i+1) * 2 * trackWidth;
+      return 'translate(' + xOffset + ',0)';
+    }
     /** parent; contains g > rect, maybe later a text.resizer.  */
     let gp =   gAxis
       .selectAll("g.tracks")
@@ -316,6 +323,7 @@ export default InAxis.extend({
       .enter()
       .append("g")  // .insert(, ":last-child")
       .attr('id', function (blockId) { return blockId; })
+      .attr('transform', blockTransform)
       .attr('class', 'tracks');
     /* this is for resizing the width of axis-tracks; may instead scale width of
      * rectangles to fit available width. */
@@ -348,6 +356,7 @@ export default InAxis.extend({
       console.log('clipRect', clipRect.size(), bbox, clipRect.node());
     }
     bbox.y = yrange[0] ;
+    bbox.width = 40 + blockIds.length * 2 * trackWidth + 20;
     bbox.height = yrange[1] - yrange[0];
     clipRect
       .attr("x", bbox.x)
