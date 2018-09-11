@@ -131,6 +131,7 @@ function setClipWidth(axisID, width)
   let gh = aS.select("g.axis-use > g.axis-html");
   gh
     .attr("transform", "translate(" + width + ")");
+  console.log('setClipWidth', axisID, width, aS.node(), cp.node(), cp.attr("width"),  gh.node());
 }
 
 
@@ -154,6 +155,14 @@ export default InAxis.extend({
       console.log("putContent in components/axis-tracks", object, event, event.type, event.target.innerText);
     }
 
+  },
+
+  didInsertElement() {
+    this._super(...arguments);
+    let parentView = this.get('parentView'),
+    axisID = this.get('axisID'),
+    width = this.get('layoutWidth');
+    parentView.send('contentWidth', 'axis-tracks', axisID, width);
   },
 
   didRender() {
@@ -355,8 +364,10 @@ export default InAxis.extend({
       clipRect = gAxis.selectAll("clipPath > rect");
       console.log('clipRect', clipRect.size(), bbox, clipRect.node());
     }
+    if (bbox.x < 0)
+      bbox.x = 0;
     bbox.y = yrange[0] ;
-    bbox.width = 40 + blockIds.length * 2 * trackWidth + 20;
+    bbox.width = this.get('layoutWidth');
     bbox.height = yrange[1] - yrange[0];
     clipRect
       .attr("x", bbox.x)
@@ -448,6 +459,16 @@ export default InAxis.extend({
     // now that this is a computed function, don't need to store the result.
     this.set('tracks', tracks); // used by axisStackChanged() : passed to layoutAndDrawTracks()
     return tracks;
+  }),
+  layoutWidth : Ember.computed('trackBlocks', function () {
+    let
+    trackBlocks = this.get('trackBlocks'),
+    blockIds = trackBlocks.map(function (block) { return block.axisName; }),
+    /** @see blockTransform() */
+    width =
+      40 + blockIds.length * 2 * trackWidth + 20;
+    console.log('layoutWidth', blockIds, width);
+    return width;
   }),
   showTrackBlocks: function() {
     console.log('showTrackBlocks', this);
