@@ -198,6 +198,7 @@ export default Service.extend({
    */
 
   init : function() {
+    this._super(...arguments);
     console.log('flows-collate init', this);
     flowsServiceInject_collatePaths(this);
     flowsServiceInject_utilsDrawFlowControls(this);

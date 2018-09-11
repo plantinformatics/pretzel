@@ -5277,6 +5277,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
   didInsertElement() {
+    this._super(...arguments);
     // eltWidthResizable('.resizable');
 
     // initial test data for axis-tracks - will discard this.

@@ -191,6 +191,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
 
   didInsertElement : function() {
+    this._super(...arguments);
     console.log('axis-1d didInsertElement', this, this.get('listen') !== undefined);
   },
   didRender() {
