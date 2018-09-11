@@ -4,7 +4,7 @@
 
 import  { dragTransitionEnd} from '../utils/stacks-drag';
 import { round_2, checkIsNumber} from '../utils/domCalcs';
-import {  Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId, highlightId  }  from './draw/axis';
+import {  Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, highlightId  }  from './draw/axis';
 import { variableBands } from '../utils/variableBands';
 import { isOtherField } from '../utils/field_names';
 import { Object_filter } from '../utils/Object_filter';
@@ -613,11 +613,34 @@ Stacked.prototype.keyFunction = function (axisID)
 {
   return axisID;
 };
+/** Text used in axis title, for each of the blocks (parent / reference and child / data blocks).
+ * This is the text shown in the <tspan>
+ */
 Block.prototype.titleText = function ()
 {
   let axisName = this.block.get('id'),
-  cmName = oa.cmName[axisName];
-  return cmName.mapName + ":" + cmName.chrName;
+  cmName = oa.cmName[axisName],
+  shortName = cmName && cmName.dataset.get('meta.shortName'),
+  name = shortName || cmName.mapName;
+  // console.log('Block titleText', cmName, shortName, name, cmName.scope);
+  return name + " : " + cmName.chrName;
+};
+/** @return maximum length of the titles of the viewed blocks. */
+Block.titleTextMax = function (axisName)
+{ 
+  // later can use .get('blockService').get('viewed')
+  let
+    lengthMax = d3.keys(stacks.blocks).reduce(function (result, a) {
+      let block = stacks.blocks[a],
+      isViewed = block && block.block.get('isViewed'),
+      title = isViewed && block.titleText(),
+      length = title && title.length;
+      // console.log('titleTextMax', result, a, block, isViewed, title, length);
+      if (length > result)
+        result = length;
+      return result;
+    }, 0);
+  return lengthMax;
 };
 
 /** Constructor for Stack type.
@@ -1523,9 +1546,11 @@ Stack.prototype.redraw = function (t)
 
 function axisRedrawText(a)
 {
-  let svgContainer = oa.svgContainer;
-  let axisTS = svgContainer.selectAll("g.axis-outer#" + eltId(a.axisName) + " > text");
-  axisTS.attr("transform", yAxisTextScale);
+  let svgContainer = oa.svgContainer,
+  g_axisall_id = "g.axis-all#" + eltIdAll(a.axisName);
+  let axisTS = svgContainer.selectAll(g_axisall_id + " > text");
+  // console.log('axisRedrawText', g_axisall_id, axisTS.nodes(), axisTS.node());
+  axisTS.attr("transform", yAxisTitleTransform(oa.axisTitleLayout));
   let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(a.axisName) + " > g.tick > text");
   axisGS.attr("transform", yAxisTicksScale);
   let axisBS = svgContainer.selectAll("g.axis#" + axisEltId(a.axisName) + " > g.btn > text");

@@ -6,6 +6,19 @@ const trace_resize = 0;
 
 /*----------------------------------------------------------------------------*/
 
+/** width in pixels of the axisHeaderText, which is
+ * 30 chars when the axis (chromosome) name contains the 24 hex char mongodb numeric id,
+ * e.g. 58a29c715a9b3a3d3242fe70_MyChr
+ * This is a fairly arbitrary default; we no longer display mongodb numeric ids,
+ * but the real dataset and block names are 20-30 chars.
+ * This value is only used until the actual title lengths are measured by
+ * Block.titleTextMax().
+ */
+const axisHeaderTextLen = 204; // 203.5, rounded up to a multiple of 2;
+
+/*----------------------------------------------------------------------------*/
+
+
 /** Calculate values which depend on the width and height of the DOM element
  * which contains the drawing.  This is used at first render, and when the
  * user resizes the browser tab or clicks a side panel open/close/resize
@@ -17,17 +30,13 @@ const trace_resize = 0;
  */
 function Viewport()
 {
+  /** pixels.  the default is replaced by a value calculated from axis name * font width */
+  this.axisHeaderTextLen = axisHeaderTextLen;
 };
 /** Used by the caller to do an initial calc(), then 1 calc after sub-components have had time to render. */
 Viewport.prototype.count = 0;
 Viewport.prototype.calc = function(oa)
 {
-  /** width in pixels of the axisHeaderText, which is
-   * 30 chars when the axis (chromosome) name contains the 24 hex char mongodb numeric id,
-   * e.g. 58a29c715a9b3a3d3242fe70_MyChr
-   */
-  let axisHeaderTextLen = 204; // 203.5, rounded up to a multiple of 2;
-
   let divHolder,
   holderWidth;
   /** margins: top right bottom left */
@@ -121,7 +130,7 @@ Viewport.prototype.calc = function(oa)
     this.graphDim =
         graphDim =
         {
-            w: w*0.9,
+            w: w,
             h: h - 2 * this.dropTargetYMargin
             - this.axisTopOffset
             - topPanelHeight - bottomPanelHeight
@@ -141,18 +150,23 @@ Viewport.prototype.calc = function(oa)
     dragLimit = {min:-50, max:graphDim.w+70};
   if (trace_resize)
     console.log("viewPort=", viewPort, ", w=", w, ", h=", h, ", graphDim=", graphDim, ", yRange=", yRange);
-  /// pixels.  can calculate this from axis name * font width
 
-  /// x range of the axis centres. left space at left and right for
-  /// axisHeaderTextLen which is centred on the axis.
-  /// index: 0:left, 1:right
-  this.axisXRange = [0 + axisHeaderTextLen/2, graphDim.w - axisHeaderTextLen/2];
+  /** axisXRange is the
+   * x range of the axis centres. reserved space at left and right for
+   * axisHeaderTextLen which is centred on the axis.
+   * index: 0:left, 1:right
+   *
+   * outsideMargin has a lower limit of 90 for the index tick text (enough for 9
+   * digits with 2 commas).
+   */
+  let outsideMargin = Math.max(90, this.axisHeaderTextLen/2);
+  this.axisXRange = [0 + outsideMargin, graphDim.w - outsideMargin];
   // -  some other results of Viewport().calc() are currently accessed within a previous draw() closure  (yRange, xDropOutDistance, dragLimit)
   if (trace_resize)
     console.log("Viewport.calc()", this);
 
-  // expose these values for use in draw-map
-  this.axisHeaderTextLen = axisHeaderTextLen;
+  // save this value for use in .viewBox()
+  this.axisTitleLayout = oa.axisTitleLayout;
   this.margins = margins;
   this.marginIndex = marginIndex;
 };
@@ -160,7 +174,17 @@ Viewport.prototype.calc = function(oa)
 /** @return value for viewBox attribute of <svg> containing the graph */
 Viewport.prototype.viewBox = function()
 {
-  return "0 " + -this.axisTopOffset + " " + this.graphDim.w + " " + (this.graphDim.h + this.axisTopOffset);
+  /** When verticalTitle, text-anchor:start, so move the graph left slightly and add title length to the width */
+  let verticalTitle = this.axisTitleLayout && this.axisTitleLayout.verticalTitle,
+  shiftLeft = verticalTitle ? 20 : 0,
+  /** the right axis title needs more width when verticalTitle.
+   * have already allocated outsideMargin, which is half the title width.
+   * This can be pushed back into the outsideMargin calc.
+   */
+  increaseWidth = verticalTitle ?
+    ((this.axisTitleLayout && (this.axisTitleLayout.increaseRightMargin() / 2 - shiftLeft)) || 0) : 0;
+  return "" + (0 + shiftLeft) + " " + -this.axisTopOffset + " " +
+    (this.graphDim.w + increaseWidth) + " " + (this.graphDim.h + this.axisTopOffset);
 };
 
 /** Based on drawing width and the number of stacks,

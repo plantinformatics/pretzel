@@ -355,9 +355,10 @@ function loadRepeats()
 
 #-------------------------------------------------------------------------------
 
-# work-tree for github.com/Seanli52/Dav127
+# work-tree for github.com/plantinformatics/pretzel
 # used by emberServerStart()
-export MMV=~/new/projects/agribio/markerMapViewer/Dav127
+export PRETZEL_WORK_DIR=$(echo ${BASH_SOURCE-~/pretzel/resources} | sed 's,/resources.*,,')
+export MMV=$PRETZEL_WORK_DIR
 
 #-------------------------------------------------------------------------------
 # start and stop ember server
@@ -382,8 +383,8 @@ function emberServerRestart()
 
 #-------------------------------------------------------------------------------
 
-tmpDist=/tmp/don/ag/mmv/dist.zip
-tmpDistDir=`echo $tmpDist | sed s,/dist.zip,,`
+tmpDistDir=${TMPDIR-/tmp}
+tmpDist=$tmpDistDir/dist.zip
 # Give .js files a suffix to exclude them from the build.
 unusedSuffix=not_in_build
 

@@ -1,9 +1,10 @@
 import Ember from 'ember';
 import { eltWidthResizable } from '../utils/domElements';
+import AxisEvents from '../utils/draw/axis-events';
 
 /* global d3 */
 
-export default Ember.Component.extend(Ember.Evented, {
+export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   needs: ['component:tracks'],
 
@@ -15,40 +16,33 @@ export default Ember.Component.extend(Ember.Evented, {
     return id;
   }),
 
+  blocks : Ember.computed('axisID', function() {
+    let axisID = this.get('axisID');
+    let stacks = this.get('drawMap.oa.stacks');
+    let axis = stacks.axesP[axisID];
+    return axis.blocks;
+  }),
+
   /*--------------------------------------------------------------------------*/
 
   feed: Ember.inject.service(),
 
-  listen: function() {
+  listenFeed: function() {
     let f = this.get('feed'); 
     console.log("listen", f);
     if (f === undefined)
       console.log('feed service not injected');
     else {
     }
-
-    /** handle of the draw-map */
-    let drawMap = this.get('drawMap'); 
-    console.log("listen", drawMap);
-    if (drawMap === undefined)
-      console.log('parent component drawMap not passed');
-    else {
-      drawMap.on('axisStackChanged', this, 'axisStackChanged');
-      drawMap.on('zoomedAxis', this, 'zoomedAxis');
-    }
   }.on('init'),
 
   // remove the binding created in listen() above, upon component destruction
-  cleanup: function() {
+  cleanupFeed: function() {
     let f = this.get('feed');
     if (f)
     {
     }
 
-    let drawMap = this.get('drawMap');
-    if (drawMap)
-    drawMap.off('axisStackChanged', this, 'axisStackChanged');
-    drawMap.off('zoomedAxis', this, 'zoomedAxis');
   }.on('willDestroyElement'),
 
   /** axis-2d receives axisStackChanged from draw-map and propagates it as zoomed to its children.

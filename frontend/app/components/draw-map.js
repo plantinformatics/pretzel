@@ -14,8 +14,10 @@ import { eltWidthResizable, eltResizeToAvailableWidth, noShiftKeyfilter, eltClas
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
 import { parseOptions } from '../utils/common/strings';
 import { Viewport } from '../utils/draw/viewport';
+import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
+
 import {  Axes, maybeFlip, maybeFlipExtent,
-          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, eltId, axisEltId  }  from '../utils/draw/axis';
+          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify  }  from '../utils/draw/stacksAxes';
 import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Name } from '../utils/stacks';
 import { collateAdjacentAxes, log_adjAxes,  log_adjAxes_a, isAdjacent } from '../utils/stacks-adj';
@@ -441,6 +443,12 @@ export default Ember.Component.extend(Ember.Evented, {
     // stacks.axes[] is a mix of Stacked & Block; shouldn't be required & planning to retire it in these changes.
     oa.axes = stacks.axesP;
     oa.axesP = stacks.axesP;
+    if (! oa.axisApi)
+      oa.axisApi = {lineHoriz : lineHoriz,
+                    inRangeI : inRangeI
+                   };
+    console.log('draw-map stacks', stacks);
+    this.set('stacks', stacks);
 
     /** Reference to all datasets by name.
      * (datasets have no id, their child blocks' datasetId refers to their name) .
@@ -509,12 +517,14 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       stacks.vc = vc; //- perhaps create vc earlier and pass vc to stacks.init()
     }
+    if (! oa.axisTitleLayout)
+      oa.axisTitleLayout = new AxisTitleLayout();
+
     let
       axisHeaderTextLen = vc.axisHeaderTextLen,
     margins = vc.margins,
     marginIndex = vc.marginIndex;
     let yRange = vc.yRange;
-    let axisXRange = vc.axisXRange;
 
     if (oa.axes2d === undefined)
       oa.axes2d = new Axes(oa);
@@ -674,11 +684,13 @@ export default Ember.Component.extend(Ember.Evented, {
         if (oa.datasets[datasetName] === undefined)
         {
           oa.datasets[datasetName] = dataset;
+          console.log(datasetName, dataset.get('meta.shortName'));
         }
       cmName[axis] = {mapName : c.mapName, chrName : c.chrName
                     , parent: parentName
                     , name : c.name, range : c.range
                     , scope: c.scope, featureType: c.featureType
+                    , dataset : dataset
                    };
         
         let mapChrName = makeMapChrName(c.mapName, c.chrName);
@@ -1743,7 +1755,7 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       this.set('urlOptions', options);
       // alpha enables new features which are not yet robust.
-      options.splitAxes = options.alpha;
+      options.splitAxes |= options.alpha;
       /** In addition to the options which are added as body classes in the
        * following statement, the other supported options are :
        *   splitAxes  (enables buttons for extended axis and dot-plot in configureAxisTitleMenu())
@@ -1963,7 +1975,7 @@ export default Ember.Component.extend(Ember.Evented, {
       .attr("id", eltIdAll);
     if (axisG.size())
       console.log(allG.nodes(), allG.node());
-    function eltIdAll(d) { return "all" + d; }
+
     function eltIdGpRef(d, i, g)
     {
       console.log("eltIdGpRef", this, d, i, g);
@@ -2353,26 +2365,55 @@ export default Ember.Component.extend(Ember.Evented, {
       axisTitleFamily(axisTitleS);
     }
 
-
-    let axisSpacing = (axisXRange[1]-axisXRange[0])/stacks.length;
-    let verticalTitle;
-    if ((verticalTitle = axisSpacing < 90))
+    /** Called when the width available to each axis changes,
+     * i.e. when collateO() is called.
+     */
+    function updateAxisTitleSize(axisTitleS)
     {
-      // first approx : 30 -> 30, 10 -> 90.  could use trig fns instead of linear.
-      let angle = (90-axisSpacing);
-      if (angle > 90) angle = 90;
-      angle = -angle;
-      // apply this to all consistently, not just appended axis.
-      // Need to update this when ! verticalTitle, and also 
-      // incorporate extendedWidth() / getAxisExtendedWidth() in the
+      if (! stacks.length)
+        return;
+      if (! axisTitleS)
+        axisTitleS = oa.svgContainer.selectAll("g.axis-all")
+        .transition().duration(dragTransitionTime)
+      ;
+
+      
+      console.log('vc.axisXRange', vc.axisXRange, axisTitleS.nodes(), stacks.length);
+    let axisXRange = vc.axisXRange;
+      /** axisXRange[] already allows for 1/2 title space either side, so use length-1.
+       * stacks.length is > 0 here */
+      let nStackAdjs = stacks.length > 1 ? stacks.length-1 : 1;
+    let axisSpacing = (axisXRange[1]-axisXRange[0])/nStackAdjs;
+    let titleLength = Block.titleTextMax(),
+      /** char width in px, ie. convert em to px.  Approx -	better to measure this. */
+      em2Px = 7,
+      titlePx = titleLength ? titleLength * em2Px : 0;
+    let titleText = vc.titleText || (vc.titleText = {});
+
+      oa.vc.axisHeaderTextLen = titlePx;
+      oa.vc.calc(oa);
+      oa.axisTitleLayout.calc(axisSpacing, titlePx);
+
+
+
+      // applied to all axes consistently, not just appended axis.
+      // Update elements' class and transform when verticalTitle changes value.
+
+      // also incorporate extendedWidth() / getAxisExtendedWidth() in the
       // calculation, perhaps integrated in xScaleExtend()
       let axisTitleA =
-        axisG.merge(axisS).selectAll("g.axis-all > text");
+        axisTitleS.selectAll("g.axis-all > text");
       axisTitleA
-        .style("text-anchor", "start")
-        .attr("transform", "rotate("+angle+")");
+        // this attr does not change, can be done for just axisG
+        .style("text-anchor", oa.axisTitleLayout.verticalTitle ? "start" : undefined)
+        .attr("transform", yAxisTitleTransform(oa.axisTitleLayout));
+
+      oa.svgRoot
+        .transition().duration(dragTransitionTime)
+        .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
+        .style("padding-top", oa.axisTitleLayout.verticalTitle ? "" + oa.axisTitleLayout.height + "px" : "0px");
     }
-    svgRoot.classed("verticalTitle", verticalTitle);
+    updateAxisTitleSize(axisG.merge(axisS));
 
 //- moved to ../utils/draw/axis.js : yAxisTextScale(),  yAxisTicksScale(),  yAxisBtnScale()
 
@@ -2464,7 +2505,7 @@ export default Ember.Component.extend(Ember.Evented, {
      * Update the drawing to reflect those changes.
      * @param t undefined or transition to use for d3 element updates.
      */
-    function axisStackChanged(t)
+    function axisStackChanged_(t)
     {
       showTickLocations(scaffoldTicks, t);
       if (oa.syntenyBlocks)
@@ -2472,7 +2513,10 @@ export default Ember.Component.extend(Ember.Evented, {
 
       me.trigger('axisStackChanged', t);
     }
-
+    function axisStackChanged(t)
+    {
+      Ember.run.throttle(this, axisStackChanged_, [t], 500);
+    }
 
 //-components/paths
     //d3.selectAll(".foreground > g > g").selectAll("path")
@@ -3336,7 +3380,8 @@ export default Ember.Component.extend(Ember.Evented, {
       /** if d is object ID instead of name then featureIndex[] is used */
       feature = oa.z[axisID][d], // || oa.featureIndex[d],
       aky = ysa(feature.location),
-      /**  parentName not essential here because yOffset() follows .parent */
+      /**  As noted in header comment, path Y value requires adding axisY = ... yOffset().
+       * parentName not essential here because Block yOffset() follows .parent reference. */
       axisY = oa.stacks.blocks[axisID].yOffset();
       // can use parentName here, but initially good to have parent and child traced.
       if (trace_scale_y && ! tracedAxisScale[axisID])
@@ -3835,6 +3880,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
     /** @param  d (datum) name of axis being dragged.
+     * @see stacks.log() for description of stacks.changed
      */
     function dragged(d) {
       /** Transition created to manage any changes. */
@@ -4519,11 +4565,15 @@ export default Ember.Component.extend(Ember.Evented, {
       stacksAxesDomVerify(stacks, oa.svgContainer);
     }
     /** recalculate all stacks' Y position.
-     * Used after drawing / window resize.
+     * Recalculate Y scales.
+     * Used after drawing / window (height) resize.
      */
     function stacksAdjustY()
     {
       oa.stacks.forEach(function (s) { s.calculatePositions(); });
+      oa.stacks.axisIDs().forEach(function(axisName) {
+        axisScaleChanged(axisName, t, false);
+      });
     }
     /** recalculate stacks X position and show via transition
      * @param changedNum  true means the number of stacks has changed.
@@ -4534,6 +4584,7 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       if (changedNum)
         collateO();
+      updateAxisTitleSize(undefined);
       collateStacks();
       if (changedNum)
       {
@@ -4722,14 +4773,15 @@ export default Ember.Component.extend(Ember.Evented, {
 
 //- axis-menu
     let apTitleSel = "g.axis-outer > text";
-      function glyphIcon(className, id, glyphiconName, href) {
+      function glyphIcon(glyphiconName) {
         return ''
           + '<span class="glyphicon ' + glyphiconName + '" aria-hidden=true></span>';
       }
-    function iconButton(className, id, htmlIcon, glyphiconName, href)
+    /** 
+     * @param useGlyphIcon  selects glyphicon or html icon. optional param : undefined implies false
+     */
+    function iconButton(className, id, htmlIcon, glyphiconName, href, useGlyphIcon)
     {
-      /** selects glyphicon or html icon */
-      let useGlyphIcon = false;
         return ''
         + '<button class="' + className + '" id="' + id + '" href="' + href + '">'
         + (useGlyphIcon ? glyphIcon(glyphiconName) : htmlIcon)
@@ -4799,6 +4851,7 @@ export default Ember.Component.extend(Ember.Evented, {
       else
       {
         updateAxisTitles();
+        updateAxisTitleSize(undefined);
         /* The if-then case above calls removeAxisMaybeStack(), which calls stacksAdjust();
          * so here in the else case, use a selection of updates from stacksAdjust() to
          * ensure that pathData is updated.
@@ -4954,7 +5007,7 @@ export default Ember.Component.extend(Ember.Evented, {
 	
           content : ""
             + iconButton("DeleteMap", "Delete_" + block.axisName, "&#x2573;" /*glyphicon-sound-7-1*/, "glyphicon-remove-sign", "#")
-            + iconButton("VisibleAxis", "Visible_" + block.axisName, "&#x1F441;" /*Unicode Character 'EYE'*/, "glyphicon-eye-close", "#")
+            + iconButton("VisibleAxis", "Visible_" + block.axisName, "&#x1F441;" /*Unicode Character 'EYE'*/, "glyphicon-eye-close", "#", true)
           // glyphicon-eye-open	
         })
         // .popover('show');
@@ -4983,6 +5036,7 @@ export default Ember.Component.extend(Ember.Evented, {
               block.visible = ! block.visible;
 
               updateAxisTitles();
+              updateAxisTitleSize(undefined);
               collateStacks();  // does filterPaths();
 
               selectedFeatures_removeAxis(block.axisName);
@@ -5007,6 +5061,8 @@ export default Ember.Component.extend(Ember.Evented, {
         console.log('showResize', widthChanged, heightChanged, useTransition);
         updateXScale();
         collateO();
+        if (widthChanged)
+          updateAxisTitleSize(undefined);
         let 
           duration = useTransition || (useTransition === undefined) ? 750 : 0,
         t = oa.svgContainer.transition().duration(duration);
@@ -5014,6 +5070,10 @@ export default Ember.Component.extend(Ember.Evented, {
         oa.svgRoot
         .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
           .attr('height', graphDim.h /*"auto"*/);
+
+      // recalculate Y scales before pathUpdate().
+        if (heightChanged)
+          stacksAdjustY();
 
       // for stacked axes, window height change affects the transform.
         if (widthChanged || heightChanged)
@@ -5025,10 +5085,6 @@ export default Ember.Component.extend(Ember.Evented, {
 
         if (heightChanged)
         {
-          stacksAdjustY();
-          oa.stacks.axisIDs().forEach(function(axisName) {
-            axisScaleChanged(axisName, t, false);
-          });
           // let traceCount = 1;
           oa.svgContainer.selectAll('g.axis-all > g.brush')
             .each(function(d) {
@@ -5036,6 +5092,7 @@ export default Ember.Component.extend(Ember.Evented, {
               d3.select(this).call(oa.y[d].brush); });
 
           DropTarget.prototype.showResize();
+          me.trigger('resized', widthChanged, heightChanged, useTransition);
         }
         Ember.run.later( function () { showSynteny(oa.syntenyBlocks, undefined); });
       };

@@ -34,10 +34,16 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     },
 
     /** Change the state of the named block to viewed.
+     * If this block has a parent block, also add the parent.
+     * @param mapName
      * (named map for consistency, but mapsToView really means block, and "name" is db ID)
      * Also @see components/record/entry-block.js : action get
      */
     addMap : function(mapName) {
+      let block = this.get('blockFromId')(mapName),
+      referenceBlock = block.get('referenceBlock');
+      if (referenceBlock)
+        referenceBlock.get('setViewed').apply(this, [referenceBlock.get('id'), true]);
       this.get('setViewed').apply(this, [mapName, true]);
     },
 
@@ -81,12 +87,22 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     }
     , pathColourScale: true,
 
-    loadBlock : function(block) {
+    /** also load parent block */
+    loadBlock : function loadBlock(block) {
       console.log('loadBlock', block);
+      let referenceBlock = block.get('referenceBlock');
+      if (referenceBlock)
+        loadBlock.apply(this, [referenceBlock]);
+
       /** in result of featureSearch(), used in goto-feature-list, .block has .id but not .get */
       let id = block.get ? block.get('id') : block.id;
       let t = this.get('useTask');
       t.apply(this, [id]);
+    },
+    blockFromId : function(blockId) {
+      let store = this.get('store'),
+      block = store.peekRecord('block', blockId);
+      return block;
     },
 
     selectBlock: function(block) {

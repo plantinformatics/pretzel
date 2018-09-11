@@ -10,7 +10,7 @@ export default BaseForm.extend({
     422: "Your email already exists in our records. Please log in."
   },
   successMap: {
-    "EMAIL_USER_VERIFY": "Thank you for registering. You should receive a confirmation email shortly.",
+    "EMAIL_USER_VERIFY": "Thank you for registering. You should receive a verification email shortly.",
     "EMAIL_ADMIN_VERIFY": "Thank you for registering. Your sign up request has been sent to an administrator for approval",
     "EMAIL_NO_VERIFY": "Thank you for registering. Please log in."
   },
