@@ -10,7 +10,7 @@ module.exports = function(Client) {
   //send verification email after registration
   Client.afterRemote('create', function(context, userInstance, next) {
     // console.log('> user.afterRemote triggered');
-    // console.log(process.env.EMAIL_ADMIN)
+    // console.log('process.env.EMAIL_ADMIN => ', process.env.EMAIL_ADMIN);
     // console.log(process.env.EMAIL_VERIFY)
 
     if (process.env.EMAIL_VERIFY == 'NONE') {
