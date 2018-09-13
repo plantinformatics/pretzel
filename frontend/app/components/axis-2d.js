@@ -93,6 +93,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       {
         // works if axisArea is (string selector and) is not within an existing ember view
       const tracksComponent = Ember.getOwner(this).factoryFor('component:tracks');
+        // This selector should now be '... #axis2D_' + axisID
       let axisArea = Ember.$('.foreignObject > body > #axis2D');
       console.log("components/axis-2d addTracks", axisArea, tracksComponent);
       let t = tracksComponent.create();
@@ -217,9 +218,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
           .data([width])
           .transition().duration(axisTransitionTime)
           .attr("transform", function(d) {return "translate(" + d + ",0)";});
-        console.log('setWidth', use.node(), width, use.data(), use.attr('transform'), use.node());
-        rect.attr("width", width);
-        console.log(rect.node(), rect.attr('width')); 
+        console.log('setWidth', use.node(), width, use.data(), use.attr('transform'), use.transition());
+        if (rect.size() == 0)
+          console.log('setWidth rect', rect.node(), axisUse.node(), use.node());
+        else
+        {
+          rect.attr("width", width);
+          console.log(rect.node(), rect.attr('width'));
+        }
         /** Can use param d, same value as me.get('axisID').
          * axisID is also on the parent of <use> :
          * useElt = axisUse.node();
@@ -227,8 +233,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
          */
         let
           axisID = me.get('axisID');
-        let axis = this.get('axis');
-        console.log('extended', axis.extended, width);
+        let axis = me.get('axis');
+        console.log('extended', axis.extended, width, axis);
         axis.extended = width;
         currentSize = width; // dx ?
 
@@ -253,11 +259,20 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       me.trigger('resized', prevSize, currentSize);
       prevSize = currentSize;
     }
-    Ember.run.later( function () { 
-      let dragResize = eltWidthResizable('.foreignObject', undefined, resized);	// #axis2D
-      dragResize.on('start', resizeStarted);
-      dragResize.on('end', resizeEnded);
-    }, 1000);
+    function dragResizeListen () { 
+      let axisID = me.get('axisID'),
+      /** alternative : 'g.axis-outer#id' + axisID + ' .foreignObject' */
+       axisSel = 'div#axis2D_' + axisID;
+      let dragResize = eltWidthResizable(axisSel, undefined, resized);
+      if (! dragResize)
+        console.log('dragResizeListen', axisID, axisSel);
+      else
+      {
+        dragResize.on('start', resizeStarted);
+        dragResize.on('end', resizeEnded);
+      }
+    }
+    Ember.run.later(dragResizeListen, 1000);
   },
 
 });

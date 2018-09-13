@@ -307,12 +307,17 @@ export default Ember.Component.extend(Ember.Evented, {
       let axis = axes2d.findBy('axisID', axisID);
       if (axis === undefined)
       {
-        axis = Ember.Object.create({ axisID : axisID });
+        /* push will trigger : arrayContentDidChange()
+         * ... enumerableContentDidChange() ... didRender() (in axis-1d), so
+         * make give .extended its value before push.
+         */
+        axis = Ember.Object.create({ axisID : axisID, 'extended' : enabled });
         axes2d.pushObject(axis);
         console.log("create", axisID, axis, "in", axes2d);
       }
-      console.log("enableAxis2D in components/draw-map", axisID, enabled, axis);
+      else
         axis.set('extended', enabled);  // was axis2DEnabled
+      console.log("enableAxis2D in components/draw-map", axisID, enabled, axis);
       console.log("splitAxes", this.get('splitAxes'));
       console.log("axes2d", this.get('axes2d'));
     },
@@ -1985,7 +1990,13 @@ export default Ember.Component.extend(Ember.Evented, {
     function getAxisExtendedWidth(axisID)
     {
       let axis = oa.axes[axisID],
-      initialWidth = 50,
+      /** duplicates the calculation in axis-tracks.js : layoutWidth() */
+      blocks = axis && axis.blocks,
+      dataBlocksN = blocks && blocks.length - 1,
+      trackWidth = 10,
+      trackBlocksWidth =
+        40 + dataBlocksN * 2 * trackWidth + 20 + 50,
+      initialWidth = /*50*/ trackBlocksWidth,
       width = axis ? ((axis.extended === true) ? initialWidth : axis.extended) : undefined;
       return width;
     }
@@ -1993,7 +2004,7 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       /** x translation of right axis */
       let 
-        initialWidth = 50,
+        initialWidth = /*50*/ getAxisExtendedWidth(axisID),
       axisData = axis.extended ? [axisID] : [];
       if (axisG === undefined)
         axisG = oa.svgContainer.selectAll("g.axis-outer#id" + axisID);
@@ -2022,7 +2033,7 @@ export default Ember.Component.extend(Ember.Evented, {
       /* extra "xlink:" seems required currently to work, refn :  dsummersl -
        * https://stackoverflow.com/questions/10423933/how-do-i-define-an-svg-doc-under-defs-and-reuse-with-the-use-tag */
         .append("use").attr("xlink:xlink:href", eltIdGpRef);
-      eu.transition().duration(1000)
+      eu //.transition().duration(1000)
         .attr("transform",function(d) {return "translate(" + getAxisExtendedWidth(d) + ",0)";});
 
       let er = eg

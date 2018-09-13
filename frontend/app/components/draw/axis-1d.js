@@ -44,7 +44,12 @@ function blockWithTicks(block)
   return ! showPaths;
 }
 
-
+function selectAxis(axis)
+{
+  let axisName = axis.axisName;
+  let aS = d3.select("#" + axisEltId(axisName));
+  return aS;
+}
 /** Draw horizontal ticks on the axes, at feature locations.
  * @param axis  Stacked
  * @param axisApi for lineHoriz
@@ -54,8 +59,13 @@ function showTickLocations(axis, axisApi)
   let axisName = axis.axisName;
   let
     range0 = axis.yRange2();
+  let
+    axisObj = this.get('axisObj'),
+  /** using the computed function extended() would entail recursion. */
+  extended = axisObj && axisObj.extended;
+  console.log('showTickLocations', extended, axisObj);
 
-  let aS = d3.select("#" + axisEltId(axisName));
+  let aS = selectAxis(axis);
   if (!aS.empty())
   {
 
@@ -68,7 +78,7 @@ function showTickLocations(axis, axisApi)
 
       let blockR = block.block,
       blockId = blockR.get('id'),
-      features = blockR.get('features').toArray()
+      features = (extended ? [] : blockR.get('features').toArray())
         .filter(inRange);
       console.log(features.length);
 
@@ -188,16 +198,59 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     }
   },
 
-
+  axisObj : Ember.computed('axes2d.[]', function () {
+    let axes2d = this.get('axes2d'),
+    axisID = this.get('axis.id'),
+    axisObj = axes2d.findBy('axisID', axisID);
+    console.log('axes2d', axes2d, axisID, 'axisObj', axisObj, axisObj && axisObj.extended);
+    return axisObj;
+  }),
+  extended : Ember.computed('axisObj', 'axisObj.extended', function () {
+    let axisObj = this.get('axisObj'),
+    /** axes are (currently) added to axes2d when they are first extended, so if
+     * axis.id is not in the list then it is not extended. (Will likely replace
+     * axes2d with a list of sub-components, like axis-2d : subComponents but
+     * with axisID as source array)
+     */
+    extended = (axisObj === undefined) ? false : this.get('axisObj.extended'),
+    axisID = this.get('axis.id');
+    console.log('extended', extended, axisID, this.get('axisObj'));
+    if (extended)
+      this.removeTicks();
+    else
+    {
+      let axisID_t = [axisID, undefined];
+      this.renderTicksDebounce(axisID_t);
+    }
+    return extended;
+  }),
 
   didInsertElement : function() {
     this._super(...arguments);
     console.log('axis-1d didInsertElement', this, this.get('listen') !== undefined);
   },
+  willDestroyElement() {
+    console.log('willDestroyElement');
+    this.removeTicks();
+    this._super(...arguments);
+  },
+  removeTicks() {
+    /** Select all the <path.horizTick> of this axis and remove them.
+     * Could use : this.renderTicks() because when ! axis.extended,
+     * showTickLocations() will use features == [], which will remove ticks;
+     */
+    let axis = this.get('axis'),
+    aS = selectAxis(axis),
+    pS = aS.selectAll("path." + className);
+    pS.remove();
+  },
   didRender() {
     this.get('renderTicks').apply(this, []);
   },
   renderTicks() {
+    /** There is 1 axis-1d component per axis, so here `block` is an axis (Stacked),
+     * Can rename it to axis, assuming this structure remains.
+     */
     let block = this.get('axis'), blockId = block.get('id');
     console.log('renderTicks', blockId);
     let axisApi = this.get('drawMap.oa.axisApi');
@@ -210,7 +263,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     if (! axis)
       console.log('renderTicks block', block, blockId, oa.stacks.blocks[blockId]);
     else
-      showTickLocations(axis, axisApi);
+      showTickLocations.apply(this, [axis, axisApi]);
   },
   /** call renderTicks().
    * filter / debounce the calls to handle multiple events at the same time.
