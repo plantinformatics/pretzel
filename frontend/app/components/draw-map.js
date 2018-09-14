@@ -1031,6 +1031,15 @@ export default Ember.Component.extend(Ember.Evented, {
     if (duplicates.length)
       breakPoint('duplicates', duplicates, blocksToDraw, blocksToAdd, oa.axisIDs);
 
+    if (oa.zoomBehavior === undefined)
+    {
+      oa.zoomBehavior = d3.zoom()
+      .on('zoom', zoom)
+      ;
+      console.log('zoomBehavior', oa.zoomBehavior);
+    }
+
+
     /* may have parent and child blocks in the same axis becoming unviewed in
      * the same run-loop cycle, so ensure that the children are unviewed
      * before the parents.
@@ -1255,9 +1264,11 @@ export default Ember.Component.extend(Ember.Evented, {
           dataS.each(function () { d3.select(this).datum(d); });
 
           let gAxisS = aStackS.selectAll("g.axis");
+          console.log('zoomBehavior adopt.length', adopt.length, oa.zoomBehavior, gAxisS.nodes(), gAxisS.node());
           gAxisS
             .datum(d)
             .attr('id', axisEltId(d))
+            .call(oa.zoomBehavior)
             .call(axis.scale(y[d]));
 
           if (trace_stack > 1)
@@ -2439,6 +2450,10 @@ export default Ember.Component.extend(Ember.Evented, {
     allG.append("g")
       .attr("class", "brush")
       .each(function(d) { d3.select(this).call(oa.y[d].brush); });
+
+    console.log('zoomBehavior', oa.zoomBehavior, allG.nodes(), allG.node());
+    allG
+      .call(oa.zoomBehavior);
 
     /*------------------------------------------------------------------------*/
     /* above is the setup of scales, stacks, axis */
@@ -3810,9 +3825,37 @@ export default Ember.Component.extend(Ember.Evented, {
      * @param brushExtents  limits of the current brush, to which we are zooming
      */
     function zoom(that, brushExtents) {
-      let axisName = d3.select(that).data();
+      console.log('zoom', that, brushExtents, arguments, this);
+      let axisName;
+      if (d3.event.sourceEvent instanceof WheelEvent) {
+        axisName = arguments[0];
+        brushExtents = undefined;
+        let w = d3.event.sourceEvent;
+        console.log(
+          'WheelEvent', d3.event.sourceEvent, d3.event.transform, d3.event,
+          '\nclient', w.clientX, w.clientY,
+          'deltaY', w.deltaY,
+          'layer', w.layerX, w.layerY,
+          'movement', w.movementX, w.movementY,
+          'offset', w.offsetX, w.offsetY,
+          'page', w.pageX, w.pageY,
+          'screen', w.screenX, w.screenY,
+          'wheelDeltaY', w.wheelDeltaY,
+          '.', w.x, w.y
+        );
+        selectedAxes.push(axisName);
+      }
+      else if (d3.event.sourceEvent instanceof MouseEvent) {
+        console.log(
+          'MouseEvent', d3.event.sourceEvent);
+        return true;
+      }
+      else
+      {
+      axisName = d3.select(that).data();
       if (axisName.length == 1)
         axisName = axisName[0];
+      }
       /* if parent (reference) block arrives after child (data) block, the brush
        * datum is changed from child to parent in adoption.  This code verifies
        * that.
@@ -3833,6 +3876,7 @@ export default Ember.Component.extend(Ember.Evented, {
       selectedAxes.map(function(p, i) {
         if(p == axisName){
           let y = oa.y, svgContainer = oa.svgContainer;
+          if (brushExtents)
           // possibly selectedAxes changed after this callback was registered
           // The need for brushExtents[] is not clear; it retains earlier values from brushedRegions, but is addressed relative to selectedAxes[].
           if (brushExtents[i] === undefined)
@@ -3842,13 +3886,30 @@ export default Ember.Component.extend(Ember.Evented, {
           }
           let yp = y[p],
           axis = oa.axes[p],
+          brushedDomain;
+          if (brushExtents) {
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion*/); });
           // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
           console.log("zoom", axisName, p, i, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
           axis.zoomed = true;
           y[p].domain(brushedDomain);
           oa.ys[p].domain(brushedDomain);
+          }
+          else
+          {
+            console.log('zoom Wheel scale', y[p].domain(), y[p].range(), y, oa.ys);
+            let domain = y[p].domain(), centre = (domain[0] + domain[1])/2,
+            transform = d3.event.transform,
+            deltaY = d3.event.sourceEvent.deltaY,
+            deltaScale = 1 + deltaY/300,  // not transform.y
+            newInterval = (domain[1] - domain[0]) * deltaScale;
+            domain[0] = centre - newInterval/2;
+            domain[1] = centre + newInterval/2;
+            console.log(transform.y, 'newInterval', newInterval, domain);
+            y[p].domain(domain);
+          }
           axisScaleChanged(p, t, true);
+          if (brushExtents)
           // `that` refers to the brush g element
           d3.select(that).call(y[p].brush.move,null);
         }
