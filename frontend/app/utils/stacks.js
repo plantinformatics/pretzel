@@ -91,6 +91,14 @@ function Block(block) {
   this.visible = true;
   console.log("Block()", this, block, axisName);
 };
+/** At some point .axisName will be renamed to .blockId; this function will make
+ * that transparent, and avoid confusion with .getAxis().
+ * @return blockId of this block, aka .axisName
+ */
+Block.prototype.getId = function()
+{
+  return this.axisName;
+};
 /** @return axis of this block or if it has a parent, its parent's axis */
 Block.prototype.getAxis = function()
 {

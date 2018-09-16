@@ -3,7 +3,7 @@ import Ember from 'ember';
 import createIntervalTree from 'npm:interval-tree-1d';
 import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
 import InAxis from './in-axis';
-import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,*/ eltId, axisEltId, eltIdAll, axisEltIdClipPath /*,highlightId*/  }  from '../utils/draw/axis';
+import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,*/ eltId, axisEltId, eltIdAll, axisEltIdClipPath /*,highlightId*/ , axisTitleColour }  from '../utils/draw/axis';
 
 
 /*----------------------------------------------------------------------------*/
@@ -47,7 +47,8 @@ function  configureTrackHover(interval)
 /*----------------------------------------------------------------------------*/
 
 /** filter intervalTree : select those intervals which intersect domain.
- * @param sizeThreshold intervals smaller than sizeThreshold are filtered out
+ * @param sizeThreshold intervals smaller than sizeThreshold are filtered out;
+ * undefined means don't filter.
  * @return {intervals:  array of intervals,
  * layoutWidth : px width allocated for the layered tracks}
  */
@@ -56,7 +57,7 @@ function regionOfTree(intervalTree, domain, sizeThreshold)
   let intervals = [],
   result = {intervals : intervals};
   function visit(interval) {
-    if (interval[1] - interval[0] > sizeThreshold)
+    if ((sizeThreshold === undefined) || (interval[1] - interval[0] > sizeThreshold))
       intervals.push(interval);
   }
   intervalTree.queryInterval(domain[0], domain[1], visit);
@@ -306,7 +307,14 @@ export default InAxis.extend({
       pxSize = (yDomain[1] - yDomain[0]) / (yrange[1] - yrange[0]);
     function trackBlocksData(blockId) {
       let t = tracks.intervalTree[blockId],
-      tracksLayout = regionOfTree(t, yDomain, pxSize * 1/*5*/),
+      block = oa.stacks.blocks[blockId],
+      axis = block.getAxis(),
+      /** if zoomed in, tracks are not filtered by sizeThreshold.
+       * The logic is : if the user is zooming in, they are interested in
+       * features regardless of size, e.g. smaller than a pixel.
+       */
+      sizeThreshold = axis.zoomed ? undefined : pxSize * 1/*5*/,
+      tracksLayout = regionOfTree(t, yDomain, sizeThreshold),
       data = tracksLayout.intervals;
       if (false)  // actually need to sum the .layoutWidth for all blockId-s, plus the block offsets which are calculated below
       setClipWidth(axisID, tracksLayout.layoutWidth);
@@ -390,9 +398,9 @@ export default InAxis.extend({
     let ra = re
       .append("rect");
     ra
+      .attr('class', 'track')
       .transition().duration(featureTrackTransitionTime)
       .attr('width', trackWidth)
-      .attr('class', 'track')
       .each(configureTrackHover);
     ra
       .merge(rs)
@@ -400,9 +408,51 @@ export default InAxis.extend({
       .attr('x', xPosn)
       .attr('y', yPosn)
       .attr('height' , height)
+      .attr('stroke', function (b) {
+        let blockId = this.parentElement.__data__,
+        /** If blockIndex{} is not collated yet, can scan through blockIds[] to get index.
+         * Actually, the number of blocks will be 1-10, so collating a hash is
+         * probably not time-effective.
+         */
+        i = blockIndex && blockIndex[blockId];
+        if (i === undefined)
+          i = blockIds.indexOf(blockId);
+        // console.log(d,i,b);
+        // colour is calculated from i, not blockId.
+        // index into axis.blocks[] = <g.tracks> index + 1
+        return axisTitleColour(blockId, i+1) || 'black';
+      })
     ;
     console.log(gAxis.node(), rs.nodes(), re.nodes(), rx.size());
     rx.remove();
+
+    /** record the positions (index) of the elements g.selector
+     * This is used in assigning colours to block <g>-s.
+     */
+    function blockIndexes(selection) {
+      let blockIndex = {};
+      selection.each(function (d, i) { blockIndex[d] = i; });
+      return blockIndex;
+    }
+    let blockIndex = blockIndexes(d3.selectAll('g.tracks'));
+
+    function blockColour(selector) {
+    function blockTrackColour(d,i,g) {
+      d3.select(this).selectAll(selector)
+        // .transition().duration(featureTrackTransitionTime)
+        .attr('stroke', function (b) {
+          // console.log(d,i,b);
+          // index into axis.blocks[] = <g.tracks> index + 1
+          return axisTitleColour(d, i+1) || 'black';
+        });
+    }
+      return blockTrackColour;
+    }
+    let blockTrackColour = blockColour('rect.track');
+    if (false)
+    // gp
+     d3.selectAll('g.tracks')
+      .each(blockTrackColour);
 
   },
 

@@ -167,14 +167,13 @@ svg {
 
 /* ---------------------------------- */
 
-g.axis-use > rect,
-g.axis-use > g.tracks > g > rect {
+g.axis-use > rect {
   fill: none;
   stroke: blue;
 }
 g.axis-use > g.tracks > g > rect.track {
   fill: white;
-  stroke: green;
+  /* stroke: green; */
 }
 .pasteData {
   overflow: hidden;

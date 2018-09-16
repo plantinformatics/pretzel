@@ -17,7 +17,7 @@ import { Viewport } from '../utils/draw/viewport';
 import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
 
 import {  Axes, maybeFlip, maybeFlipExtent,
-          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll  }  from '../utils/draw/axis';
+          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisTitleColour  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify  }  from '../utils/draw/stacksAxes';
 import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Name } from '../utils/stacks';
 import { collateAdjacentAxes, log_adjAxes,  log_adjAxes_a, isAdjacent } from '../utils/stacks-adj';
@@ -68,10 +68,6 @@ Object.filter = Object_filter;
 
 //- moved to "../utils/draw/flow-controls.js" : flowButtonsSel, configurejQueryTooltip()
 
-
-let
-      axisTitle_colour_scale = d3.scaleOrdinal();
-      axisTitle_colour_scale.range(d3.schemeCategory10);
 
 
 
@@ -2336,12 +2332,6 @@ export default Ember.Component.extend(Ember.Evented, {
           }
         })
       ;
-      /** for the stroke and fill of axis title menu */
-      function axisTitleColour (d, i) {
-        let
-          colour = (i == 0) ? undefined : axisTitle_colour_scale(d);
-        return colour;
-      };
       let subTitleS =
     axisTitleS.selectAll("tspan")
       /** @return type Block[]. blocks of axisName.
@@ -3669,6 +3659,7 @@ export default Ember.Component.extend(Ember.Evented, {
               let a = oa.axes[d],
               domain = a.parent ? a.parent.domain : a.getDomain();
               domain = maybeFlip(domain, a.flipped);
+              a.zoomed = false;
               oa.y[d].domain(domain);
               oa.ys[d].domain(domain);
               let yAxis = d3.axisLeft(oa.y[d]).ticks(10);
@@ -3813,6 +3804,7 @@ export default Ember.Component.extend(Ember.Evented, {
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion*/); });
           // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
           console.log("zoom", axisName, p, i, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
+          axis.zoomed = true;
           y[p].domain(brushedDomain);
           oa.ys[p].domain(brushedDomain);
           axisScaleChanged(p, t, true);

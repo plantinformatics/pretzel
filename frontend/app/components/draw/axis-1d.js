@@ -2,7 +2,7 @@ import Ember from 'ember';
 
 import AxisEvents from '../../utils/draw/axis-events';
 import { /* Block, Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText, axisId2Name*/ } from '../../utils/stacks';
-import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/  }  from '../../utils/draw/axis';
+import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/ , axisTitleColour  }  from '../../utils/draw/axis';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../../utils/stacks-drag';
 import { breakPoint } from '../../utils/breakPoint';
 
@@ -18,6 +18,9 @@ import { breakPoint } from '../../utils/breakPoint';
  * also @see   dragTransitionTime.
  */
 const axisTickTransitionTime = 750;
+
+function blockKeyFn(block) { return block.axisName; }
+function blockTickEltId(block) { return className + '_' + block.axisName; }
 
 /*------------------------------------------------------------------------*/
 
@@ -68,9 +71,18 @@ function showTickLocations(axis, axisApi)
   let aS = selectAxis(axis);
   if (!aS.empty())
   {
+    /** show no ticks if axis is extended. */
+    let blocks = (extended ? [] : axis.blocks.filter(blockWithTicks));
+    let gS = aS.selectAll("g." + className)
+      .data(blocks, blockKeyFn);
+    gS.exit().remove();
+    let gA = gS.enter()
+      .append('g')
+      .attr('id', blockTickEltId)
+      .attr('class', className)
+    ;
 
-    let blocks = axis.blocks.filter(blockWithTicks);
-    blocks.forEach(function (block) {
+    function featuresOfBlock (block) {
       function inRange(feature) {
         let featureName = feature.get('name');
         return axisApi.inRangeI(block.axisName, featureName, range0);
@@ -78,17 +90,24 @@ function showTickLocations(axis, axisApi)
 
       let blockR = block.block,
       blockId = blockR.get('id'),
-      features = (extended ? [] : blockR.get('features').toArray())
+      features = blockR.get('features').toArray()
         .filter(inRange);
-      console.log(features.length);
+      console.log(blockId, features.length);
+      return features;
+    }
 
-      let pS = aS.selectAll("path." + className)
-        .data(features, keyFn),
+      let pS = gA.selectAll("path." + className)
+        .data(featuresOfBlock, keyFn),
       pSE = pS.enter()
         .append("path")
         .attr("class", className);
+    function setupHover (feature) 
+    {
+      let block = this.parentElement.__data__;
+      return configureHorizTickHover.apply(this, [feature, block, hoverTextFn]);
+    }
       pSE
-        .each(function (d) { return configureHorizTickHover.apply(this, [d, block, hoverTextFn]); });
+        .each(setupHover);
       pS.exit()
         .remove();
       let pSM = pSE.merge(pS);
@@ -101,7 +120,7 @@ function showTickLocations(axis, axisApi)
 
       p1.attr("d", pathFn);
 
-    });
+
 
   }
 
