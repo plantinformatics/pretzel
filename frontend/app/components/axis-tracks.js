@@ -285,6 +285,20 @@ export default InAxis.extend({
      */
     let axisID = this.get('axisID'),
     aS = selectAxis(axisID);
+    let
+    oa = this.get('axis').drawMap.oa, // or pass in this.get('data'),
+    axis = oa.axes[axisID];
+    if (! axis.extended)
+    {
+      let gp = 
+      // <g.axis-use> may already be gone.
+      aS.select("g.axis-use")
+        .selectAll("g.tracks");
+      console.log('removing', gp.nodes(), gp.node());
+      gp
+        .remove();
+      return;
+    }
     let gAxis = aS.select("g.axis-use"),
     /** relative to the transform of parent g.axis-outer */
     bbox = gAxis.node().getBBox(),
@@ -292,7 +306,6 @@ export default InAxis.extend({
     /** could skip the reference block blockIds[0]. */
     let blockIds = d3.keys(tracks.intervalTree);
     let
-    oa = this.get('axis').drawMap.oa, // or pass in this.get('data'),
     /** For parseIntervals(), blockId is "1"; otherwise expect that blockId is a child of axisID.
     axisID = gAxis.node().parentElement.__data__, */
     y = oa.y[axisID],

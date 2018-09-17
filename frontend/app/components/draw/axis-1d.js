@@ -68,6 +68,7 @@ function showTickLocations(axis, axisApi)
   extended = axisObj && axisObj.extended;
   console.log('showTickLocations', extended, axisObj);
 
+  let blockIndex = {};
   let aS = selectAxis(axis);
   if (!aS.empty())
   {
@@ -76,11 +77,17 @@ function showTickLocations(axis, axisApi)
     let gS = aS.selectAll("g." + className)
       .data(blocks, blockKeyFn);
     gS.exit().remove();
+    function storeBlockIndex (block, i) {
+      blockIndex[block.getId()] = i;
+      console.log('blockIndex', block.getId(), i);
+    };
     let gA = gS.enter()
       .append('g')
       .attr('id', blockTickEltId)
       .attr('class', className)
     ;
+    gS.merge(gA)
+      .each(storeBlockIndex);
 
     function featuresOfBlock (block) {
       function inRange(feature) {
@@ -96,11 +103,25 @@ function showTickLocations(axis, axisApi)
       return features;
     }
 
-      let pS = gA.selectAll("path." + className)
+    let pS = gS.merge(gA)
+      .selectAll("path." + className)
         .data(featuresOfBlock, keyFn),
       pSE = pS.enter()
         .append("path")
-        .attr("class", className);
+        .attr("class", className)
+    ;
+    function featurePathStroke (feature, i2) {
+        let block = this.parentElement.__data__,
+        blockId = block.getId(),
+        /** Add 1 to i because it is the elt index, not the
+         * index within axis.blocks[], i.e. the reference block is not included. */
+        i = blockIndex[blockId];
+      if (i2 < 2)
+         console.log(this, 'stroke', blockId, i);
+        return axisTitleColour(blockId, i+1) || 'black';
+      }
+
+
     function setupHover (feature) 
     {
       let block = this.parentElement.__data__;
@@ -118,7 +139,9 @@ function showTickLocations(axis, axisApi)
          .duration(axisTickTransitionTime)
          .ease(d3.easeCubic);
 
-      p1.attr("d", pathFn);
+      p1.attr("d", pathFn)
+      .attr('stroke', featurePathStroke)
+    ;
 
 
 

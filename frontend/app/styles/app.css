@@ -351,6 +351,7 @@ div#scaffoldLegend > ul
     stroke-opacity: 1;
 }
 
+/* this is partly a duplicate of a rule below (comment - Brush css style).  Both were added in b637845 (2016 Sep 23)  */
 /*.brush .extent {
   fill-opacity: .3;
   stroke: #fff;
@@ -359,8 +360,10 @@ div#scaffoldLegend > ul
 
 .axis line, .axis path {
   fill: none;
-  stroke: #000;
   shape-rendering: crispEdges;
+}
+.axis line, .axis path:not(.horizTick) {
+  stroke: #000; /* black */
 }
 
 .axis text {
@@ -431,12 +434,6 @@ div.ExportFlowData
 
 /* -------------------------------------------------------------------------- */
 
-.axis path,
-.axis line{
-  fill: none;
-  stroke: black;
-  shape-rendering: crispEdges;
-}
 /* Brush css style */
 .brush .extent {
   stroke: #000;
@@ -456,7 +453,7 @@ g.tick:hover {
 
 .horizTick
 {
-  stroke: green;
+  /* stroke (colour) is now provided by axisTitleColour(). */
   stroke-width : 2px;
 }
 
