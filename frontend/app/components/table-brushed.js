@@ -1,4 +1,5 @@
 import Ember from 'ember';
+import {  eltClassName  } from '../utils/domElements';
 
 // import Handsontable from 'handsontable';
 
@@ -119,7 +120,7 @@ export default Ember.Component.extend({
       .style("fill", "red")
       .style("stroke", "red");
     if (feature) {
-      d3.selectAll("circle." + feature)
+      d3.selectAll("circle." + eltClassName(eltClassName(feature)))
         .attr("r", 5)
         .style("fill", "yellow")
         .style("stroke", "black")
