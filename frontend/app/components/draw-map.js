@@ -1337,19 +1337,23 @@ export default Ember.Component.extend(Ember.Evented, {
         if (! parentAxis)
           {
         adopt.map(function (d3) {
-          /** axis being adopted */
+          /** axis being adopted.
+           * a is discarded, and a.blocks[0] is re-used.
+           */
             let a = oa.axesP[d3];
-          a.parent = sd;
           /** oldStack will be deleted. `a` will become unreferenced. */
           let oldStack = a.stack;
 
           /** re-use the Block being adopted. */
           let aBlock = a.referenceBlockS();
           sd.move(a, 0);
+          // could set .parent in .move()
+          aBlock.parent = sd;
           //	-	check that oldStack.delete() will delete the (Stacked) a
 
           console.log(d3, a, aBlock, sd, oa.axesP[a.axisName]);
           sd.stack.log();
+          // noting that d3 == a.axisName
           delete oa.axesP[a.axisName];
           oa.stacks.blocks[a.axisName] = aBlock;
           console.log('aBlock.axis', aBlock.axis);

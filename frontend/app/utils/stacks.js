@@ -236,7 +236,7 @@ Stacked.prototype.logElt = function ()
   let a = d3.select(selectPrefix + "> g.stack > g#id" + this.axisName + ".axis-outer");
   console.log("logElt", a.node());
 };
-/** S for stacks block, as distinct from the block record.
+/** S for stacks Block, as distinct from the (ember store) block record.
  * @return the Block object corresponding to the block record .referenceBlock;
  */
 Stacked.prototype.referenceBlockS = function ()
