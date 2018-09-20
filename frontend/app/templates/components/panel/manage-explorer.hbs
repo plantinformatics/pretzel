@@ -19,6 +19,25 @@
 {{/elem/panel-container}}
 
 {{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="globe"}}
+    Datasources
+  {{/elem/panel-heading}}
+  <ul class="list-group">
+    <li 
+      class="list-group-item list-group-item-info">
+      New
+      <span class="pull-right">
+        {{elem/button-base
+          classSize='xs'
+          classColour='success'
+          icon='plus'
+          onClick=(action "changeTab" "upload")}}
+      </span>
+    </li>
+  </ul>
+{{/elem/panel-container}}
+
+{{#elem/panel-container state="primary"}}
   {{#elem/panel-heading icon="folder-open"}}
     Datasets
     {{elem/button-refresh
