@@ -65,6 +65,25 @@ export default DS.Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** If the dataset of this block has a parent, return the name of that parent (reference dataset).
+   * @return the reference dataset name or undefined if none
+   */
+  referenceDatasetName : Ember.computed('dataset', function () {
+    // copied out of referenceBlock(); could be factored
+    let 
+      referenceBlock,
+    dataset = this.get('datasetId'),
+    reference = dataset && dataset.get('parent'),
+    /** reference dataset */
+    parent = dataset && dataset.get('parent'),
+    parentName = parent && parent.get('name');  // e.g. "myGenome"
+
+    console.log('referenceDatasetName', dataset, reference, parent, parentName, parent && parent.get('id'));
+
+    return parentName;
+  }),
+
+
   /** If the dataset of this block has a parent, lookup the corresponding reference block in that parent, matching scope.
    * @return the reference block or undefined if none
    */
@@ -79,7 +98,7 @@ export default DS.Model.extend({
     parent = dataset && dataset.get('parent'),
     parentName = parent && parent.get('name');  // e.g. "myGenome"
 
-    console.log('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent.get('id'));
+    console.log('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent && parent.get('id'));
     if (parent)
     {
       referenceBlock = this.get('store').peekAll('block')
