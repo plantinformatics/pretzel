@@ -77,8 +77,7 @@ export default UploadBase.extend({
             data: 'val',
             type: 'numeric',
             numericFormat: {
-              pattern: '0.*',
-              culture: 'en-US'
+              pattern: '0,0.*'
             }
           }
         ],

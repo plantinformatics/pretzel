@@ -61,8 +61,7 @@ export default Ember.Component.extend({
             data: 'Position',
             type: 'numeric',
             numericFormat: {
-              pattern: '0.*',
-              culture: 'en-US'
+              pattern: '0,0.*'
             }
           }
         ],
@@ -80,7 +79,10 @@ export default Ember.Component.extend({
         // manualColumnMove: true,
         contextMenu: true,
         sortIndicator: true,
-        columnSorting: true
+        columnSorting: {
+          column: 2,
+          sortOrder: true
+        }
       });
       that.set('table', table);
       $("#table-brushed").on('mouseleave', function(e) {
