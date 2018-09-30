@@ -16,15 +16,18 @@ export default Service.extend(Ember.Evented, {
   /** Get the list of available datasets, in a task - yield the dataset result.
    * Signal that receipt with receivedDatasets(datasets).
    */
-  taskGetList: task(function * () {
+  taskGetList: task(function * (endpoint) {
     /* This replaces controllers/mapview.js : updateChrs(), updateModel(). */
     let store = this.get('store'),
     apiEndpoints = this.get('apiEndpoints'),
+    /*
     endpoints = apiEndpoints.get('endpoints'),
-    /** -	repeat for each endpoint */
+    */
+    /** -	repeat for each endpoint
     endpoint = endpoints && endpoints[0],
-    _unused = console.log('taskGetList', endpoints, endpoint),
+    _unused = console.log('taskGetList', endpoints, endpoint), */
     trace_promise = false,
+
     adapterOptions = apiEndpoints.addId(
       endpoint,
       {

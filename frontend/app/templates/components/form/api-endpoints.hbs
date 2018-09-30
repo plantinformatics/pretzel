@@ -1,0 +1,24 @@
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="globe"}}
+    Datasources
+  {{/elem/panel-heading}}
+  <ul class="list-group">
+    {{log endpoints 'endpoints' }}
+    {{#each-in endpoints as |apiEndpointName apiEndpoint| }}
+
+      <li 
+          class="list-group-item list-group-item-info">
+        {{form/api-endpoint name=apiEndpointName data=apiEndpoint}}
+      </li>
+    {{/each-in}}
+    <span class="pull-right">
+      {{elem/button-base
+        classSize='xs'
+        classColour='success'
+        icon='plus'
+        onClick=(action "addEmpty")}}
+    </span>
+  </ul>
+{{/elem/panel-container}}
+
+

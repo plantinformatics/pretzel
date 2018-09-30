@@ -6,7 +6,6 @@ export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
   primaryKey: 'name',
   normalize(model, hash, prop) {
     var ret = this._super(...arguments);
-      console.log('normalize', this, model, hash, prop, arguments, ret);
     return ret;
   },
   serialize(snapshot, options) {

@@ -4,13 +4,23 @@
 
 import BaseAuthorizer from 'ember-simple-auth/authorizers/base'
 
+import Ember from 'ember';
+const { inject: { service } } = Ember;
+
+
 export default BaseAuthorizer.extend({
+  session: service('session'),
+
   // serverTokenEndpoint: `${config.apiHost}/Users/login`,
   // serverTokenRevocationEndpoint: `${config.apiHost}/Users/logout`
 
   authorize(data, block) {
-    // console.log('authorize', data, block)
+    let
+      endpoint = this.get('session.requestEndpoint'),
+    accessToken = endpoint && endpoint.token;
+    let token = accessToken || data.token;
+    console.log('authorize', data, token, block);
 
-    block('Authorization', data.token)
+    block('Authorization', token);
   }
 });

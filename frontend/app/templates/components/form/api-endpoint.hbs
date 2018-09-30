@@ -1,0 +1,20 @@
+<h5>{{name}}</h5>
+
+{{input
+  value=data.host
+  class="form-control"
+  placeholder="URL[:port] of API Host" }}
+
+{{input
+  value=data.user
+  class="form-control"
+  placeholder="User (email)"}}
+{{input
+  value=data.token
+  class="form-control"
+  placeholder="Authentication Token"}}
+
+<span class="pull-right">
+  {{elem/button-refresh
+    onClick=(action 'getDatasets')}}
+</span>
