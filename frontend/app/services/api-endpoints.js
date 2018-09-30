@@ -15,11 +15,22 @@ function ApiEndpoint(url, user, token) {
   console.log('ApiEndpoint', url, user, token);
   this.host = url;
   this.user = user;
-  this.name = (url || user)
-    ? url + '+' + user // -	sanitize user input before commit
+  // -	also sanitize user input
+  this.name = url
+    ? this.host_safe()
     : "New";
   this.token = token;
 }
+
+function removePunctuation(text) {
+  return text && text.replace(/[:/@\.]/g, '_');
+};
+ApiEndpoint.prototype.host_safe = function() {
+  return removePunctuation(this.host);
+};
+ApiEndpoint.prototype.name_safe = function() {
+  return removePunctuation(this.name);
+};
 
 /** used as a WeakMap id - for now */
 const currentEndpoint = {currentEndpoint : '' };
