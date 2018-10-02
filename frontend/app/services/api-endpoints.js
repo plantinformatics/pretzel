@@ -74,6 +74,25 @@ export default Service.extend({
     map.set(id, endpoint);
     // map.set(currentEndpoint, endpoint);
     return id;
+  },
+  EndpointLogin: function(url, user, password) {
+    let me = this;
+    if (url.indexOf('http://') == -1) {
+      url = 'http://' + url;
+    }
+    Ember.$.ajax({
+      url: url + '/api/Clients/login',
+      type: 'POST',
+      crossDomain: true,
+      contentType: 'application/json',
+      data: JSON.stringify({
+        email: user,
+        password: password
+      })
+    }).then(function(response) {
+      let token = response.id;
+      me.addEndpoint(url, user, token);
+    });
   }
 });
 
