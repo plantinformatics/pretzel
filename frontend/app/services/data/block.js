@@ -18,6 +18,7 @@ let trace_block = 1;
 export default Service.extend(Ember.Evented, {
     auth: service('auth'),
     store: service(),
+  apiEndpoints: service('api-endpoints'),
 
   /** Not required because findRecord() is used;
    * might later want this for other requests or calculation results, but can
@@ -55,12 +56,18 @@ export default Service.extend(Ember.Evented, {
   getData: function (id) {
     // console.log("block getData", id);
     let store = this.get('store');
+    let endpoint = this.blockEndpoint(id),
+    apiEndpoints = this.get('apiEndpoints'),
+    adapterOptions =
+      {
+        filter: {include: "features"}
+      };
+    if (endpoint)
+      adapterOptions = apiEndpoints.addId(endpoint, adapterOptions);
     let blockP = store.findRecord(
       'block', id,
       { reload: true,
-        adapterOptions:{
-          filter: {include: "features"}
-        }}
+        adapterOptions: adapterOptions}
     );
 
     return blockP;
@@ -76,6 +83,25 @@ export default Service.extend(Ember.Evented, {
     let store = this.get('store'),
     block = store.peekRecord('block', blockId);
     return block;
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Get the API host from which the block was received, from its dataset meta,
+   * and lookup the endpoint from the host.
+   * @return endpoint ApiEndpoint, or undefined.
+   */
+  blockEndpoint(blockId)
+  {
+    let
+    block = this.peekBlock(blockId),
+    datasetId = block && block.get('datasetId'), 
+    dataset = datasetId && datasetId.get('content'),
+    host = dataset && dataset.get('meta.apiHost'),
+    apiEndpoints = this.get('apiEndpoints'),
+    endpoint = apiEndpoints.lookupEndpoint(host);
+    console.log('blockEndpoint', block, dataset, host, endpoint);
+    return endpoint;
   },
 
   /*--------------------------------------------------------------------------*/

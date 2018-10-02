@@ -22,14 +22,16 @@ function ApiEndpoint(url, user, token) {
   this.token = token;
 }
 
+/** Convert punctuation, including whitespace, to _  */
 function removePunctuation(text) {
-  return text && text.replace(/[:/@\.]/g, '_');
+  // a normal input will contain e.g. :/@\.
+  return text && text.replace(/[^A-Za-z0-9]/g, '_');
 };
 ApiEndpoint.prototype.host_safe = function() {
   return removePunctuation(this.host);
 };
-ApiEndpoint.prototype.name_safe = function() {
-  return removePunctuation(this.name);
+ApiEndpoint.prototype.user_safe = function() {
+  return removePunctuation(this.user);
 };
 
 /** used as a WeakMap id - for now */
@@ -61,14 +63,29 @@ export default Service.extend({
     this.addEndpoint(protocol + host2, 'My.Email@gmail.com', undefined);
   },
 
+  /** Add a new ApiEndpoint.
+   * Store it in this.endpoints, indexed by .name = .host_safe()
+   */
   addEndpoint : function (url, user, token) {
 	    let endpoint = new ApiEndpoint(url, user, token),
 	  endpoints = this.get('endpoints'),
-    /**  -	sanitise inputs here also */
-    nameForIndex = endpoint.name.replace(/\./g, '_');
+    /**  .name is result of .host_safe().
+     * -	check if any further sanitising of inputs required */
+    nameForIndex = endpoint.name;
 	  // use .set() for CF updates
     endpoints.set(nameForIndex, endpoint);
     },
+
+  /** Lookup an endpoint by its API host URL.
+   * @param host  may be raw URL, or result of ApiEndpoint.host_safe().
+   * @return undefined if host is undefined
+   */
+  lookupEndpoint : function(host) {
+    let name = host && removePunctuation(host);
+    let endpoint = name && this.get('endpoints').get(name);
+    return endpoint;
+  },
+
   addId : function(endpoint, id) {
     let map = this.get('id2Endpoint');
     map.set(id, endpoint);
@@ -94,6 +111,7 @@ export default Service.extend({
       me.addEndpoint(url, user, token);
     });
   }
+
 });
 
 /*----------------------------------------------------------------------------*/

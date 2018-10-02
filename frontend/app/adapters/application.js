@@ -66,7 +66,11 @@ var config = {
         console.log('buildURL endpoint', endpoint, current);
       else
         endpoint = current;
-      if (endpoint) {
+      /* if endpoint is undefined or null then this clears this._endpoint and
+       * session.requestEndpoint, which means the default / local / primary
+       * endpoint is used.
+       */
+      {
         this._endpoint = endpoint;
         this.set('session.requestEndpoint', endpoint);
       }
