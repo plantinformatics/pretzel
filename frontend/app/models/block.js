@@ -79,7 +79,7 @@ export default DS.Model.extend({
     parent = dataset && dataset.get('parent'),
     parentName = parent && parent.get('name');  // e.g. "myGenome"
 
-    console.log('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent.get('id'));
+    console.log('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent && parent.get('id'));
     if (parent)
     {
       referenceBlock = this.get('store').peekAll('block')
