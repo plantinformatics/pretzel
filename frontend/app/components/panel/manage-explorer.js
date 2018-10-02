@@ -69,6 +69,9 @@ export default ManageBase.extend({
     },
     loadBlock(block) {
       this.sendAction('loadBlock', block);
+    },
+    addNewDatasource() {
+      $('#new-datasource-modal').modal('show');
     }
   }
 });

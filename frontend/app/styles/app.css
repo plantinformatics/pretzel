@@ -881,3 +881,7 @@ div#goto-feature > div
   display:inline-block;
   vertical-align: middle;
 }
+
+#new-datasource-modal input {
+  width: 100%;
+}
