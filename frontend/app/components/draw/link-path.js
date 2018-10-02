@@ -16,12 +16,20 @@ export default Ember.Component.extend(Ember.Evented, {
 
   auth: service('auth'),
   store: service(),
+  blockService: service('data/block'),
 
   willInsertElement() {
     if (trace_links)
       console.log('components/draw/link-path willInsertElement');
     let stackEvents = this.get('stackEvents');
+    let blockService = this.get('blockService'),
+    blocksSameEndpoint = blockService.get('blocksSameEndpoint');
     stackEvents.on('expose', this, function (blockA, blockB) {
+      if (! blocksSameEndpoint.apply(blockService, [blockA, blockB]))
+      {
+        console.log('blocksSameEndpoint', blockA, blockB);
+        return;
+      }
       if (trace_links > 1)
         console.log('path expose', blockA, blockB);
       this.request(blockA, blockB);

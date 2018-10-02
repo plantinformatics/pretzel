@@ -104,6 +104,15 @@ export default Service.extend(Ember.Evented, {
     return endpoint;
   },
 
+  /** @return true if the 2 blocks are received from the same API host endpoint. */
+  blocksSameEndpoint(blockA, blockB)
+  {
+    /* the object ID of 2 objects from the same mongodb will have a number of leading digits in common.  */
+    let a = this.blockEndpoint(blockA),
+    b = this.blockEndpoint(blockB);
+    return a === b;
+  },
+
   /*--------------------------------------------------------------------------*/
 
   /** @return true if the block is loaded into the store from the backend, and has .isViewed==true.
