@@ -1,3 +1,5 @@
+import Ember from 'ember';
+
 import ManageBase from './manage-base'
 
 export default ManageBase.extend({
@@ -26,8 +28,20 @@ export default ManageBase.extend({
   filter: 'all',
   layout: {
   },
+  datasetsBlocks : [],
+  datasetsBlocksRefresh : 0,
   datasets: [],
-  data: Ember.computed('datasets', 'filter', function() {
+  data: Ember.computed('datasetsBlocksRefresh', 'datasetsBlocks.@each', 'filteredData', function() {
+    let datasetsBlocks = this.get('datasetsBlocks'),
+    filteredData = this.get('filteredData'),
+    combined = filteredData;
+    datasetsBlocks.forEach(function (keyAndValue) {
+      let [hostUrl, add] = keyAndValue;
+      combined = combined.concat(add);
+    });
+    return combined;
+  }),
+  filteredData: Ember.computed('datasets', 'filter', function() {
     let availableMaps = this.get('datasets')
     let filter = this.get('filter')
     // perform filtering according to selectedChr
@@ -47,6 +61,10 @@ export default ManageBase.extend({
     else { return true; }
   }),
   actions: {
+    receivedDatasets(datasetsHandle, blockValues) {
+      console.log('receivedDatasets', datasetsHandle, blockValues);
+      this.set('datasetsBlocksRefresh', this.get('datasetsBlocksRefresh')+1);
+    },
     refreshAvailable() {
       let me = this;
       let view = me.get('view');
@@ -69,9 +87,6 @@ export default ManageBase.extend({
     },
     loadBlock(block) {
       this.sendAction('loadBlock', block);
-    },
-    addNewDatasource() {
-      $('#new-datasource-modal').modal('show');
     }
   }
 });

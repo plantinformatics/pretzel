@@ -16,15 +16,18 @@ export default Service.extend(Ember.Evented, {
   /** Get the list of available datasets, in a task - yield the dataset result.
    * Signal that receipt with receivedDatasets(datasets).
    */
-  taskGetList: task(function * () {
+  taskGetList: task(function * (endpoint) {
     /* This replaces controllers/mapview.js : updateChrs(), updateModel(). */
     let store = this.get('store'),
     apiEndpoints = this.get('apiEndpoints'),
+    /*
     endpoints = apiEndpoints.get('endpoints'),
-    /** -	repeat for each endpoint */
+    */
+    /** -	repeat for each endpoint
     endpoint = endpoints && endpoints[0],
-    _unused = console.log('taskGetList', endpoints, endpoint),
+    _unused = console.log('taskGetList', endpoints, endpoint), */
     trace_promise = false,
+
     adapterOptions = apiEndpoints.addId(
       endpoint,
       {
@@ -35,6 +38,17 @@ export default Service.extend(Ember.Evented, {
       dP.then(function (d) { console.log(d, d.toArray()[0].get('blocks').toArray());});
     let
     datasets = yield dP;
+
+    if (endpoint && endpoint.host)
+    {
+      /* Give each dataset a meta.apiHost attribute, referring to the API endpoint from which it was received.
+       * This is for display in the GUI, and can be used to select the endpoint for block contents request.
+       */
+      datasets.forEach(function(dataset) {
+        let meta = dataset.get('meta');
+        meta.apiHost = endpoint.host;
+      });
+    }
 
     /* Give each block a .mapName attribute, referring to the dataset which contains it.
      * This is mostly to support existing references to block/chr.mapName; they can be all changed to .get('datasetId').get('id') or 'name'

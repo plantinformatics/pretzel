@@ -9,12 +9,14 @@ const { inject: { service } } = Ember;
 var config = {
   apiEndpoints: service('api-endpoints'),
   authorizer: 'authorizer:application', // required by DataAdapterMixin
+  session: service('session'),
+
   /** host and port part of the url of the API
    * @see buildURL()
    */
   host: function () {
     let endpoint = this._endpoint,
-    host = endpoint ? endpoint.url : ENV.apiHost;
+    host = endpoint ? endpoint.host : ENV.apiHost;
     console.log('app/adapters/application.js host', this, arguments, endpoint, host);
     return host;
   }.property().volatile(),
@@ -57,13 +59,17 @@ var config = {
     {
       let map = this.get('apiEndpoints').get('id2Endpoint'),
       endpoint = map.get(endpointHandle),
+      /** - drop this - don't need current (also should be currentEndpoint
+       * because string 'current' cannot be WeakMap id). */
       current = map.get('current');
       if (endpoint)
         console.log('buildURL endpoint', endpoint, current);
       else
         endpoint = current;
-      if (endpoint)
+      if (endpoint) {
         this._endpoint = endpoint;
+        this.set('session.requestEndpoint', endpoint);
+      }
     }
     return this._super(modelName, id, snapshot, requestType, query);
   },
