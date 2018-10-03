@@ -43,7 +43,10 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       let block = this.get('blockFromId')(mapName),
       referenceBlock = block.get('referenceBlock');
       if (referenceBlock)
+      {
+        console.log('addMap referenceBlock', referenceBlock.get('id'));
         referenceBlock.get('setViewed').apply(this, [referenceBlock.get('id'), true]);
+      }
       this.get('setViewed').apply(this, [mapName, true]);
     },
 

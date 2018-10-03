@@ -94,7 +94,8 @@ let config = {
           result.push(referenceBlock);
         return result;}, []),
       referenceBlockIds = referenceBlocks.map(function (block) { return block.get('id'); });
-      console.log(referenceBlockIds);
+      if (referenceBlockIds.length)
+        console.log('referenceBlockIds adding', referenceBlockIds);
       /** could add this task list to result; not required yet. */
       let viewedBlockReferencesTasks = getBlocks.apply(blockService, [referenceBlockIds]);
     });

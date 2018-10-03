@@ -3,6 +3,8 @@ import DS from 'ember-data';
 import attr from 'ember-data/attr';
 // import { PartialModel, partial } from 'ember-data-partial-model/utils/model';
 
+const trace = 1;
+
 export default DS.Model.extend({
   datasetId: DS.belongsTo('dataset'),
   annotations: DS.hasMany('annotation', { async: false }),
@@ -93,13 +95,14 @@ export default DS.Model.extend({
            * by name, although .datasetId may be replaced by name - currently
            * being considered.
            */
-          match = (parentName == dataset2.get('name')) && (scope2 == scope);
-          if ((parentName == dataset2.get('name')) || (dataset2 === parent))
+          match = parentName && (parentName == dataset2.get('name')) && (scope2 == scope);
+          if ((trace > 1) && (parentName == dataset2.get('name')) || (dataset2 === parent))
           {
             console.log(dataset2.get('name'), scope2, match);
           }
           return match;})
       ;
+      if (referenceBlock.length || (trace > 1))
       console.log('referenceBlock', referenceBlock);
       // expect referenceBlock.length == 0 or 1
       if (referenceBlock.length !== undefined)
