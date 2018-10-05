@@ -822,6 +822,16 @@ div.popover/*.axis-menu*/ div.popover-content {
     display : inherit;
 }
 /* -------------------------------------------------------------------------- */
+/* for controlling display of width resizer in split axis. */
+.axis-use .resizer
+{
+    display : none;
+}
+.axis2dResizer .axis-use .resizer
+{
+    display : inherit;
+}
+/* -------------------------------------------------------------------------- */
 /* When the feature flag (ff) alpha is not defined, don't display the elements with class ff-alpha.  */
 body div > ul > li > div > div.btn-group.ff-alpha,
 .ff-alpha
