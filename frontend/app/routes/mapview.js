@@ -11,6 +11,7 @@ import EmberObject from '@ember/object';
 let config = {
   dataset: service('data/dataset'),
   block: service('data/block'),
+  apiEndpoints: service('api-endpoints'),
 
   titleToken: 'MapView',
   queryParams: {
@@ -62,9 +63,15 @@ let config = {
 
     let me = this;
     
+    if (false)
+    {
     let datasetService = this.get('dataset');
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
-    let datasetsTask = taskGetList.perform(); // renamed from 'maps'
+    }
+    let apiEndpoints = this.get('apiEndpoints'),
+    primaryEndpoint = apiEndpoints.get('primaryEndpoint'), 
+    datasetsTask = // taskGetList.perform(); // renamed from 'maps'
+      apiEndpoints.getDatasets(primaryEndpoint);
 
     let blockService = this.get('block');
     let getBlocks = blockService.get('getBlocks');

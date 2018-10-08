@@ -1,19 +1,23 @@
 import Ember from 'ember';
+import { inject as service } from '@ember/service';
 
 import ManageBase from './manage-base'
 
 export default ManageBase.extend({
+  apiEndpoints: service('api-endpoints'),
 
   init() {
     this._super();
     let store = this.get('store');
 
     let me = this;
+    this.get('apiEndpoints').on('receivedDatasets', function (datasets) { console.log('receivedDatasets', datasets); me.send('receivedDatasets', datasets); });
     let view = me.get('view');
     let filter = {'include': 'blocks'};
     if (view == 'matrixview') {
       filter['where'] = {'type': 'observational'};
     }
+    if (false)
     store.query('dataset', {filter: filter}).then(function(datasets) {
       me.set('datasets', datasets.toArray());
     })
@@ -28,21 +32,30 @@ export default ManageBase.extend({
   filter: 'all',
   layout: {
   },
-  datasetsBlocks : [],
+
+  datasetsBlocks : Ember.computed('datasetsBlocksRefresh', function() {
+    let
+      name = "http___localhost_4200",  // endpoint.get('name'),
+    endpointSo = this.get('apiEndpoints').lookupEndpoint(name),
+    datasetsBlocks = endpointSo && endpointSo.get("datasetsBlocks");
+    console.log('datasetsBlocks', name, endpointSo, datasetsBlocks);
+    return datasetsBlocks;
+  }),
+
   datasetsBlocksRefresh : 0,
-  datasets: [],
-  data: Ember.computed('datasetsBlocksRefresh', 'datasetsBlocks.@each', 'filteredData', function() {
-    let datasetsBlocks = this.get('datasetsBlocks'),
+  // datasets: [],
+
+  endpoints : Ember.computed.alias('apiEndpoints.endpoints'),
+
+  data: Ember.computed('filteredData', function() {
+    let
     filteredData = this.get('filteredData'),
     combined = filteredData;
-    datasetsBlocks.forEach(function (keyAndValue) {
-      let [hostUrl, add] = keyAndValue;
-      combined = combined.concat(add);
-    });
+    console.log('data', filteredData);
     return combined;
   }),
-  filteredData: Ember.computed('datasets', 'filter', function() {
-    let availableMaps = this.get('datasets')
+  filteredData: Ember.computed('datasetsBlocks', 'filter', function() {
+    let availableMaps = this.get('datasetsBlocks');
     let filter = this.get('filter')
     // perform filtering according to selectedChr
     // let filtered = availableMaps //all
@@ -72,6 +85,8 @@ export default ManageBase.extend({
       if (view == 'matrixview') {
         filter['where'] = {'type': 'observational'};
       }
+      console.log('refreshAvailable(), -	trigger service to query datasets');
+      if (false)
       this.get('store').query('dataset', {filter: filter}).then(function(datasets) {
         me.set('datasets', datasets.toArray());
       });
@@ -87,6 +102,14 @@ export default ManageBase.extend({
     },
     loadBlock(block) {
       this.sendAction('loadBlock', block);
+    },
+    /** invoked from hbs via {{compute (action "endpointTabId" apiEndpoint ) }}
+     * @return string suitable for naming a html tab, based on endpoint name.
+     */
+    endpointTabId(apiEndpoint) {
+      let id = apiEndpoint.get('tabId');
+      console.log('endpointTabId', id, apiEndpoint);
+      return id;
     }
   }
 });

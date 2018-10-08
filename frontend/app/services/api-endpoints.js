@@ -1,49 +1,31 @@
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
 import { isPresent } from '@ember/utils';
+import { default as ApiEndpoint, ApiEndpoint as ApiEndpointBase, removePunctuation } from '../components/service/api-endpoint';
 
 const { Service } = Ember;
 
 // import ENV from '../../config/environment';
 
-/*----------------------------------------------------------------------------*/
-
-/**
- * @param url host URL
- */
-function ApiEndpoint(url, user, token) {
-  console.log('ApiEndpoint', url, user, token);
-  this.host = url;
-  this.user = user;
-  // -	also sanitize user input
-  this.name = url
-    ? this.host_safe()
-    : "New";
-  this.token = token;
-}
-
-/** Convert punctuation, including whitespace, to _  */
-function removePunctuation(text) {
-  // a normal input will contain e.g. :/@\.
-  return text && text.replace(/[^A-Za-z0-9]/g, '_');
-};
-ApiEndpoint.prototype.host_safe = function() {
-  return removePunctuation(this.host);
-};
-ApiEndpoint.prototype.user_safe = function() {
-  return removePunctuation(this.user);
-};
 
 /** used as a WeakMap id - for now */
 const currentEndpoint = {currentEndpoint : '' };
 
 /*----------------------------------------------------------------------------*/
 
-export default Service.extend({
+/**
+ * Sends via Evented : receivedDatasets(datasets)
+ */
+export default Service.extend(Ember.Evented, {
   session: service(), 
   store: service(),
+  dataset: service('data/dataset'),
+
   endpoints : Ember.Object.create(),
+  endpointsLength : undefined,
   id2Endpoint : new WeakMap(),
+  /** Indexed by host url, value is an array of datasets, including blocks, returned from the api host. */
+  datasetsBlocks : {},
 
   init() {
     this._super.apply(this, ...arguments);
@@ -53,7 +35,8 @@ export default Service.extend({
       let store = this.get('store'),
       client = store.peekRecord('block', clientId);
       console.log('init token', token, clientId, client);
-      this.addEndpoint('http://localhost:4200', 'My.Email@gmail.com', token);
+      let primaryEndpoint = this.addEndpoint('http://localhost:4200', 'My.Email@gmail.com', token);
+      this.set('primaryEndpoint', primaryEndpoint);
     }
 
     let protocol='http://', host = 'plantinformatics.io', // ENV.apiHost,
@@ -63,17 +46,29 @@ export default Service.extend({
     this.addEndpoint(protocol + host2, 'My.Email@gmail.com', undefined);
   },
 
+  // needs: ['component:service/api-endpoint'],
+
   /** Add a new ApiEndpoint.
    * Store it in this.endpoints, indexed by .name = .host_safe()
+   * @return endpoint (Ember Object) ApiEndpoint
    */
   addEndpoint : function (url, user, token) {
-	    let endpoint = new ApiEndpoint(url, user, token),
+    // const MyComponent = Ember.getOwner(this).factoryFor('component:service/api-endpoint');
+	  let endpointBase = new ApiEndpointBase(url, user, token),
+    /** copy the value of .tabId() to the created Object.  */
+    tabId = endpointBase.tabId(),
+    endpoint = ApiEndpoint.create(
+      // Ember.getOwner(this).ownerInjection(),
+      endpointBase),
 	  endpoints = this.get('endpoints'),
     /**  .name is result of .host_safe().
      * -	check if any further sanitising of inputs required */
-    nameForIndex = endpoint.name;
-	  // use .set() for CF updates
+    nameForIndex = endpoint.get('name');
+    endpoint.set('tabId', tabId);
+    console.log('addEndpoint', endpointBase, tabId, endpoint, endpoints, nameForIndex);
     endpoints.set(nameForIndex, endpoint);
+    this.set('endpointsLength', Object.keys(endpoints).length);
+    return endpoint;
     },
 
   /** Lookup an endpoint by its API host URL.
@@ -110,7 +105,42 @@ export default Service.extend({
       let token = response.id;
       me.addEndpoint(url, user, token);
     });
+  },
+
+
+  /**
+   *
+   * @param endpoint
+   */
+  getDatasets : function (endpoint) {
+    let datasetService = this.get('dataset');
+    let taskGetList = datasetService.get('taskGetList');  // availableMaps
+    let datasetsTask = taskGetList.perform(endpoint);
+    let
+      me = this,
+      name = endpoint.get('name'),
+    endpointSo = this.lookupEndpoint(name),
+    datasetsBlocks = this.get('datasetsBlocks'),
+    datasetsHandle = endpoint && endpoint.host && endpoint.host_safe();
+    console.log('getDatasets', name, endpointSo);
+
+    datasetsTask.then(function (blockValues) {
+      console.log(datasetsHandle, 'datasetsTask then', blockValues);
+      if (datasetsHandle)
+      {
+        datasetsBlocks[datasetsHandle] = blockValues;
+        endpointSo.set("datasetsBlocks", blockValues);
+        // me.sendAction('receivedDatasets', datasetsHandle, blockValues);
+        me.trigger('receivedDatasets', blockValues);
+      }
+    });
+
+    console.log('getDatasets', this);
+    return datasetsTask;
   }
+
+
+
 
 });
 

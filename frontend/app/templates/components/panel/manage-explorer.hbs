@@ -18,8 +18,7 @@
   </div>
 {{/elem/panel-container}}
 
-{{form/api-endpoints datasetsBlocks=datasetsBlocks receivedDatasets=(action "receivedDatasets")}}
-{{datasetsBlocks.length}}
+{{form/api-endpoints datasetsBlocks=datasetsBlocks}}
 
 {{#elem/panel-container state="primary"}}
   {{#elem/panel-heading icon="folder-open"}}
@@ -42,6 +41,27 @@
   {{/if}}
   <ul class="list-group">
     
+    <ul class="nav nav-tabs">
+      {{log endpoints 'endpoints' }}
+      {{#each-in endpoints as |apiEndpointName apiEndpoint| }}
+        {{#with (compute (action "endpointTabId" apiEndpoint)) as |tabId| }}
+          <li><a data-toggle="tab" href={{concat "#tab-" tabId}} >{{tabId}}</a></li>
+        {{/with}}
+      {{/each-in}}
+    </ul>
+
+    <div class="tab-content">
+      {{#each-in endpoints as |apiEndpointName apiEndpoint| }}
+        {{#with (compute (action "endpointTabId" apiEndpoint)) as |tabId| }}
+          <div id={{concat "tab-" tabId}} class="tab-pane fade">
+            <h3>Dataset list goes here</h3>
+            <p></p>
+          </div>
+        {{/with}}
+      {{/each-in}}
+    </div>
+
+
     {{#each data as |dataset|}}
       {{record/entry-dataset
         filter=filter
