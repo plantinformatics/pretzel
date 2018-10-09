@@ -63,15 +63,22 @@ let config = {
 
     let me = this;
     
-    if (false)
+    let datasetsTask;
+    if (true)
     {
     let datasetService = this.get('dataset');
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
+      /** this will pass endpoint undefined, and
+       * services/data/dataset:taskGetList() will use primaryEndpoint. */
+      datasetsTask = taskGetList.perform(); // renamed from 'maps'
     }
-    let apiEndpoints = this.get('apiEndpoints'),
-    primaryEndpoint = apiEndpoints.get('primaryEndpoint'), 
-    datasetsTask = // taskGetList.perform(); // renamed from 'maps'
-      apiEndpoints.getDatasets(primaryEndpoint);
+    else
+    {
+      let apiEndpoints = this.get('apiEndpoints'),
+      primaryEndpoint = apiEndpoints.get('primaryEndpoint');
+      datasetsTask = 
+        apiEndpoints.getDatasets(primaryEndpoint);
+    }
 
     let blockService = this.get('block');
     let getBlocks = blockService.get('getBlocks');

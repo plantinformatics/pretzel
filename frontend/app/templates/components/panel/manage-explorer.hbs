@@ -18,7 +18,7 @@
   </div>
 {{/elem/panel-container}}
 
-{{form/api-endpoints datasetsBlocks=datasetsBlocks}}
+{{form/api-endpoints}}
 
 {{#elem/panel-container state="primary"}}
   {{#elem/panel-heading icon="folder-open"}}
@@ -42,25 +42,22 @@
   <ul class="list-group">
     
     <ul class="nav nav-tabs">
-      {{log endpoints 'endpoints' }}
       {{#each-in endpoints as |apiEndpointName apiEndpoint| }}
         {{#with (compute (action "endpointTabId" apiEndpoint)) as |tabId| }}
-          <li><a data-toggle="tab" href={{concat "#tab-" tabId}} >{{tabId}}</a></li>
+          <li><a data-toggle="tab" href={{concat "#tab-" tabId}}
+                 {{action "endpointTabSelected" tabId apiEndpointName apiEndpoint}} >{{tabId}}
+          </a></li>
         {{/with}}
       {{/each-in}}
     </ul>
-
-    <div class="tab-content">
-      {{#each-in endpoints as |apiEndpointName apiEndpoint| }}
-        {{#with (compute (action "endpointTabId" apiEndpoint)) as |tabId| }}
-          <div id={{concat "tab-" tabId}} class="tab-pane fade">
-            <h3>Dataset list goes here</h3>
-            <p></p>
-          </div>
-        {{/with}}
-      {{/each-in}}
-    </div>
-
+    {{!-- For endpoint-specific content selected by the above tab : add a
+       <div class="tab-content"> with each-in and with as above, and :
+       <div id={{concat "tab-" tabId}} class="tab-pane fade"> ... </div>
+       (e.g. see commit d86e9d6).
+       The data content in the following is switched by the above tab; instead
+       of maintaining each endpoint's content within a distinct tab-pane, within
+       tab-content.
+       --}}
 
     {{#each data as |dataset|}}
       {{record/entry-dataset

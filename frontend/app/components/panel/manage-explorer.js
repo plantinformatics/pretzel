@@ -33,12 +33,27 @@ export default ManageBase.extend({
   layout: {
   },
 
-  datasetsBlocks : Ember.computed('datasetsBlocksRefresh', function() {
+  datasetsBlocks : Ember.computed('datasetsBlocksRefresh', 'endpointTabSelected', 'primaryDatasets', function() {
     let
-      name = "http___localhost_4200",  // endpoint.get('name'),
-    endpointSo = this.get('apiEndpoints').lookupEndpoint(name),
+      name = // "http___localhost_5000",  // endpoint.get('name'),
+      this.get('endpointTabSelected'),
+    endpointSo = name &&
+      this.get('apiEndpoints').lookupEndpoint(name),
     datasetsBlocks = endpointSo && endpointSo.get("datasetsBlocks");
-    console.log('datasetsBlocks', name, endpointSo, datasetsBlocks);
+    if (datasetsBlocks)
+    {
+      console.log('datasetsBlocks', endpointSo, datasetsBlocks);
+    }
+    let isPrimary = endpointSo && (this.get('apiEndpoints').get('primaryEndpoint') === endpointSo);
+    if (! name || (! datasetsBlocks && isPrimary))
+    {
+      /* this is using the model datasets list for the primary API.
+       * Perhaps instead will change mapview to use apiEndpoints service.
+       */
+      datasetsBlocks = this.get('primaryDatasets');
+      console.log('datasetsBlocks()  using primaryDatasets', datasetsBlocks);
+    }
+
     return datasetsBlocks;
   }),
 
@@ -54,7 +69,7 @@ export default ManageBase.extend({
     console.log('data', filteredData);
     return combined;
   }),
-  filteredData: Ember.computed('datasetsBlocks', 'filter', function() {
+  filteredData: Ember.computed('datasetsBlocks', 'primaryDatasets', 'filter', function() {
     let availableMaps = this.get('datasetsBlocks');
     let filter = this.get('filter')
     // perform filtering according to selectedChr
@@ -74,6 +89,10 @@ export default ManageBase.extend({
     else { return true; }
   }),
   actions: {
+    endpointTabSelected(tabId, apiEndpointName, apiEndpoint) {
+      console.log('endpointTabSelected', tabId, apiEndpointName, apiEndpoint);
+      this.set('endpointTabSelected', apiEndpointName);
+    },
     receivedDatasets(datasetsHandle, blockValues) {
       console.log('receivedDatasets', datasetsHandle, blockValues);
       this.set('datasetsBlocksRefresh', this.get('datasetsBlocksRefresh')+1);

@@ -36,7 +36,7 @@ export default Base.extend({
         Ember.run(function(){
           let host = endpoint.replace(/\/api\/Clients\/login/, '');
           console.log('resolve', 'host url', host, 'token', response.id, 'clientId', response.userId);
-          let endpoint = apiEndpoints.addEndpoint(/*url*/ host, /*user*/ identification, /*token*/ response.id);
+          let apiEndpoint = apiEndpoints.addEndpoint(/*url*/ host, /*user*/ identification, /*token*/ response.id);
           resolve({
             token: response.id,
             clientId: response.userId

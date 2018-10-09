@@ -35,7 +35,8 @@ export default Service.extend(Ember.Evented, {
       let store = this.get('store'),
       client = store.peekRecord('block', clientId);
       console.log('init token', token, clientId, client);
-      let primaryEndpoint = this.addEndpoint('http://localhost:4200', 'My.Email@gmail.com', token);
+      /** default backend server API on :5000,  typical devel configuration : ember server on :4200 */
+      let primaryEndpoint = this.addEndpoint('http://localhost:5000', undefined, token);
       this.set('primaryEndpoint', primaryEndpoint);
     }
 
@@ -65,6 +66,8 @@ export default Service.extend(Ember.Evented, {
      * -	check if any further sanitising of inputs required */
     nameForIndex = endpoint.get('name');
     endpoint.set('tabId', tabId);
+    /* planning to merge ApiEndpointBase with (the Ember.Object) ApiEndpoint; then this reference (and the above set(.tabId)) won't be required. */
+    endpoint.set('endpointBase', endpointBase);
     console.log('addEndpoint', endpointBase, tabId, endpoint, endpoints, nameForIndex);
     endpoints.set(nameForIndex, endpoint);
     this.set('endpointsLength', Object.keys(endpoints).length);
@@ -118,7 +121,7 @@ export default Service.extend(Ember.Evented, {
     let datasetsTask = taskGetList.perform(endpoint);
     let
       me = this,
-      name = endpoint.get('name'),
+    name = endpoint.name, // get('name'),
     endpointSo = this.lookupEndpoint(name),
     datasetsBlocks = this.get('datasetsBlocks'),
     datasetsHandle = endpoint && endpoint.host && endpoint.host_safe();

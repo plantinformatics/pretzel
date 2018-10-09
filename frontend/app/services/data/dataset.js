@@ -25,11 +25,17 @@ export default Service.extend(Ember.Evented, {
     */
     /** -	repeat for each endpoint
     endpoint = endpoints && endpoints[0],
-    _unused = console.log('taskGetList', endpoints, endpoint), */
+     */
+    primaryEndpoint = apiEndpoints.get('primaryEndpoint'),
+    _unused = console.log('taskGetList', endpoint, primaryEndpoint),
+    /** routes/mapview:model() uses primaryEndpoint; possibly it will pass that
+     * in or perhaps formalise this to an if (endpoint) structure; sort that in
+     * next commit. */
+    _unused2 = endpoint || (endpoint = primaryEndpoint),
     trace_promise = false,
 
     adapterOptions = apiEndpoints.addId(
-      endpoint,
+      endpoint || primaryEndpoint,
       {
         filter: {'include': 'blocks'}
       }),
@@ -46,6 +52,11 @@ export default Service.extend(Ember.Evented, {
        */
       datasets.forEach(function(dataset) {
         let meta = dataset.get('meta');
+        if (! meta)
+        {
+          meta = {};
+          dataset.set('meta', meta);
+        }
         meta.apiHost = endpoint.host;
       });
     }
