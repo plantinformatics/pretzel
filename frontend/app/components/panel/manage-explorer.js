@@ -134,7 +134,7 @@ export default ManageBase.extend({
       return id;
     },
     /** Trim the leading http:// or https:// off the given URL.
-     * Similar : @see ApiEndpoint.prototype.tabId
+     * Similar : @see ApiEndpoint.tabId()
      */
     sansProtocol(url) {
       return url && url.replace(/^https?:\/\//, '');

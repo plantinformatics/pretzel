@@ -8,8 +8,6 @@ const { Service } = Ember;
 // import ENV from '../../config/environment';
 
 
-/** used as a WeakMap id - for now */
-const currentEndpoint = {currentEndpoint : '' };
 
 /*----------------------------------------------------------------------------*/
 
@@ -22,7 +20,7 @@ export default Service.extend(Ember.Evented, {
   dataset: service('data/dataset'),
 
   endpoints : Ember.Object.create(),
-  endpointsLength : undefined,
+  endpointsLength : 0,
   id2Endpoint : new WeakMap(),
   /** Indexed by host url, value is an array of datasets, including blocks, returned from the api host. */
   datasetsBlocks : {},
@@ -56,9 +54,12 @@ export default Service.extend(Ember.Evented, {
    */
   addEndpoint : function (url, user, token) {
     // const MyComponent = Ember.getOwner(this).factoryFor('component:service/api-endpoint');
-	  let endpointBase = new ApiEndpointBase(url, user, token),
-    /** copy the value of .tabId() to the created Object.  */
-    tabId = endpointBase.tabId(),
+	  let endpointBase = 
+      {
+        host : url,
+        user : user,
+        token : token
+      },
     endpoint = ApiEndpoint.create(
       // Ember.getOwner(this).ownerInjection(),
       endpointBase),
@@ -66,12 +67,12 @@ export default Service.extend(Ember.Evented, {
     /**  .name is result of .host_safe().
      * -	check if any further sanitising of inputs required */
     nameForIndex = endpoint.get('name');
-    endpoint.set('tabId', tabId);
-    /* planning to merge ApiEndpointBase with (the Ember.Object) ApiEndpoint; then this reference (and the above set(.tabId)) won't be required. */
-    endpoint.set('endpointBase', endpointBase);
-    console.log('addEndpoint', endpointBase, tabId, endpoint, endpoints, nameForIndex);
+    console.log('addEndpoint', endpointBase, endpoint.get('tabId'), endpoint, endpoints, nameForIndex);
     endpoints.set(nameForIndex, endpoint);
-    this.set('endpointsLength', Object.keys(endpoints).length);
+    /* not used yet, intended as a dependent value for a computed function, which
+     * cannot depend on .endpoints since it is a hash not an array. */
+    this.incrementProperty('endpointsLength');
+    // or equivalent : this.set('endpointsLength', Object.keys(endpoints).length);
     return endpoint;
     },
 
@@ -121,10 +122,10 @@ export default Service.extend(Ember.Evented, {
     let datasetsTask = taskGetList.perform(endpoint);
     let
       me = this,
-    name = endpoint.name, // get('name'),
+    name = endpoint.get('name'),
     endpointSo = this.lookupEndpoint(name),
     datasetsBlocks = this.get('datasetsBlocks'),
-    datasetsHandle = endpoint && endpoint.host && endpoint.host_safe();
+    datasetsHandle = endpoint && endpoint.host && endpoint.get('name');
     console.log('getDatasets', name, endpointSo);
 
     datasetsTask.then(function (blockValues) {

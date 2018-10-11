@@ -15,8 +15,7 @@ export default Component.extend({
 
   actions: {
     getDatasets : function () {
-      let endpoint = this.get('data')
-        .get('endpointBase');
+      let endpoint = this.get('data');
       console.log('action getDatasets', this, endpoint);
       this.getDatasets(endpoint);
     }

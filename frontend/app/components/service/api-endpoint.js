@@ -4,47 +4,47 @@ const { Component } = Ember;
 
 /*----------------------------------------------------------------------------*/
 
-/**
- * @param url host URL
- */
-function ApiEndpoint(url, user, token) {
-  console.log('ApiEndpoint', url, user, token);
-  this.host = url;
-  this.user = user;
-  // -	also sanitize user input
-  this.name = url
-    ? this.host_safe()
-    : "New";
-  this.token = token;
-}
 
 /** Convert punctuation, including whitespace, to _  */
 function removePunctuation(text) {
   // a normal input will contain e.g. :/@\.
   return text && text.replace(/[^A-Za-z0-9]/g, '_');
 };
-ApiEndpoint.prototype.host_safe = function() {
-  return removePunctuation(this.host);
-};
-ApiEndpoint.prototype.user_safe = function() {
-  return removePunctuation(this.user);
-};
-/** Used by manage-explorer.js: endpointTabId()
- */
-ApiEndpoint.prototype.tabId = function() {
-  let id = this.host_safe().replace(/^https?_+/, '');
-  console.log('tabId', id, this);
-  return id;
-};
 
 
 /** ApiEndpoint (components/service/api-endpoint)
- * Wraps ApiEndpoint Base above
+ *
+ * It is expected that values for the fields .host and .name are passed as
+ * attributes of the create() options.
+ *
+ * Fields :
+ *  .host URL of API host
+ *  .user email of user account on that host
+ *  .token  after login on that host, this is the authorization token;
+ *
  */
 export default Ember.Object.extend({
   init() {
     this._super(...arguments);
   },
+
+  /**  sanitize user input */
+  name : Ember.computed('host', function () {
+    let host = this.get('host'),
+    name = removePunctuation(this.host);
+    console.log('ApiEndpoint', this.host, this.user, this.token);
+    return name;
+  }),
+
+  /** Used by manage-explorer.js: endpointTabId()
+   * for unique IDs of tab DOM elements.
+   */
+  tabId : Ember.computed('name',  function() {
+    let name = this.get('name'),
+    id = name && name.replace(/^https?_+/, '');
+    console.log('tabId', id, this);
+    return id;
+  }),
 
   /** value is an array of datasets, including blocks, returned from the api host. */
   datasetsBlocks : undefined,
@@ -55,4 +55,4 @@ export default Ember.Object.extend({
 
 });
 
-export { removePunctuation, ApiEndpoint };
+export { removePunctuation };
