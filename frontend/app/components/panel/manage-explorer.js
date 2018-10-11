@@ -33,10 +33,13 @@ export default ManageBase.extend({
   layout: {
   },
 
+  /** Return a list of datasets, with their included blocks, for the currently-selected
+   * API endpoint tab
+   */
   datasetsBlocks : Ember.computed('datasetsBlocksRefresh', 'endpointTabSelected', 'primaryDatasets', function() {
+    /** e.g. "http___localhost_5000"  */
     let
-      name = // "http___localhost_5000",  // endpoint.get('name'),
-      this.get('endpointTabSelected'),
+      name = this.get('endpointTabSelected'),
     endpointSo = name &&
       this.get('apiEndpoints').lookupEndpoint(name),
     datasetsBlocks = endpointSo && endpointSo.get("datasetsBlocks");
@@ -95,7 +98,7 @@ export default ManageBase.extend({
     },
     receivedDatasets(datasetsHandle, blockValues) {
       console.log('receivedDatasets', datasetsHandle, blockValues);
-      this.set('datasetsBlocksRefresh', this.get('datasetsBlocksRefresh')+1);
+      this.incrementProperty('datasetsBlocksRefresh');
     },
     refreshAvailable() {
       let me = this;
@@ -129,6 +132,12 @@ export default ManageBase.extend({
       let id = apiEndpoint.get('tabId');
       console.log('endpointTabId', id, apiEndpoint);
       return id;
+    },
+    /** Trim the leading http:// or https:// off the given URL.
+     * Similar : @see ApiEndpoint.prototype.tabId
+     */
+    sansProtocol(url) {
+      return url && url.replace(/^https?:\/\//, '');
     }
   }
 });

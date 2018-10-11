@@ -45,7 +45,8 @@
       {{#each-in endpoints as |apiEndpointName apiEndpoint| }}
         {{#with (compute (action "endpointTabId" apiEndpoint)) as |tabId| }}
           <li><a data-toggle="tab" href={{concat "#tab-" tabId}}
-                 {{action "endpointTabSelected" tabId apiEndpointName apiEndpoint}} >{{tabId}}
+                 {{action "endpointTabSelected" tabId apiEndpointName apiEndpoint}} >
+            {{compute (action "sansProtocol" apiEndpoint.host) }}{{!-- tabId --}}
           </a></li>
         {{/with}}
       {{/each-in}}
@@ -72,7 +73,7 @@
         selectDataset="selectDataset"}}
     {{/each}}
     <li 
-      class="list-group-item list-group-item-info">
+        class="list-group-item list-group-item-info">
       {{elem/icon-base name='cloud-upload'}} &nbsp;Upload new data
       <span class="pull-right">
         {{elem/button-base

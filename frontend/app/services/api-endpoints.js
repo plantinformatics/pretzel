@@ -32,19 +32,20 @@ export default Service.extend(Ember.Evented, {
 
     let { token, clientId } = this.get('session.data.authenticated');
     if (isPresent(token)) {
-      let store = this.get('store'),
-      client = store.peekRecord('block', clientId);
-      console.log('init token', token, clientId, client);
+      console.log('init token', token, clientId);
       /** default backend server API on :5000,  typical devel configuration : ember server on :4200 */
       let primaryEndpoint = this.addEndpoint('http://localhost:5000', undefined, token);
       this.set('primaryEndpoint', primaryEndpoint);
     }
 
-    let protocol='http://', host = 'plantinformatics.io', // ENV.apiHost,
-    /** e.g. map :4200 to :4201, (/00$/, '01') */
-    host2 = host.replace(/^/, 'dev.');
-    // this.addEndpoint(protocol + host, 'My.Email@gmail.com', undefined);
-    this.addEndpoint(protocol + host2, 'My.Email@gmail.com', undefined);
+    if (false)  // useful in setting up development data
+    {
+      let protocol='http://', host = 'plantinformatics.io', // ENV.apiHost,
+      /** e.g. map :4200 to :4201, (/00$/, '01') */
+      host2 = host.replace(/^/, 'dev.');
+      // this.addEndpoint(protocol + host, 'My.Email@gmail.com', undefined);
+      this.addEndpoint(protocol + host2, 'My.Email@gmail.com', undefined);
+    }
   },
 
   // needs: ['component:service/api-endpoint'],
@@ -87,7 +88,6 @@ export default Service.extend(Ember.Evented, {
   addId : function(endpoint, id) {
     let map = this.get('id2Endpoint');
     map.set(id, endpoint);
-    // map.set(currentEndpoint, endpoint);
     return id;
   },
   EndpointLogin: function(url, user, password) {

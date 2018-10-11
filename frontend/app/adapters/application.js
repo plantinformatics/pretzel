@@ -55,18 +55,11 @@ var config = {
       endpointHandle = id;
       console.log('buildURL id', id);
     }
-    // if (endpointHandle) // or use 'current'
+    // this applies when endpointHandle is defined or undefined
     {
       let map = this.get('apiEndpoints').get('id2Endpoint'),
-      endpoint = map.get(endpointHandle),
-      /** - drop this - don't need current (also should be currentEndpoint
-       * because string 'current' cannot be WeakMap id). */
-      current = map.get('current');
-      if (endpoint)
-        console.log('buildURL endpoint', endpoint, current);
-      else
-        endpoint = current;
-      /* if endpoint is undefined or null then this clears this._endpoint and
+      endpoint = map.get(endpointHandle);
+      /* if endpoint is undefined or null then this code clears this._endpoint and
        * session.requestEndpoint, which means the default / local / primary
        * endpoint is used.
        */

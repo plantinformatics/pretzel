@@ -5,26 +5,15 @@ const { inject: { service }, Component } = Ember;
 export default Component.extend({
   apiEndpoints: service('api-endpoints'),
 
-    addEmpty : function () {
-      this.get('apiEndpoints').addEndpoint(undefined, undefined, undefined);
-      console.log('addEmpty', this);
-    },
-
+  /* Early prototypes, up until commit fa0c40e, had action&function addEmpty(),
+   * but not needed so dropped. */
 
   actions: {
-    addEmpty : function () {
-      console.log('action addEmpty', this);
-      this.addEmpty();
-    },
     addNewDatasource() {
       $('#new-datasource-modal').modal('show');
     }
   },
 
-  endpoints : Ember.computed('apiEndpoints.endpoints.@each', function () {
-    let endpoints = this.get('apiEndpoints.endpoints');
-    console.log('endpoints', endpoints, this);
-    return endpoints;
-  })
+  endpoints : Ember.computed.alias('apiEndpoints.endpoints')
 
 });

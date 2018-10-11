@@ -20,12 +20,6 @@ export default Service.extend(Ember.Evented, {
     /* This replaces controllers/mapview.js : updateChrs(), updateModel(). */
     let store = this.get('store'),
     apiEndpoints = this.get('apiEndpoints'),
-    /*
-    endpoints = apiEndpoints.get('endpoints'),
-    */
-    /** -	repeat for each endpoint
-    endpoint = endpoints && endpoints[0],
-     */
     primaryEndpoint = apiEndpoints.get('primaryEndpoint'),
     _unused = console.log('taskGetList', endpoint, primaryEndpoint),
     /** routes/mapview:model() uses primaryEndpoint; possibly it will pass that
@@ -79,9 +73,6 @@ export default Service.extend(Ember.Evented, {
     this.trigger('receivedDatasets', datasets);
     return datasets;
   }),
-
-
-  
   /** Call getData() in a task - yield the dataset result.
    * Signal that receipt with receivedDataset(id, dataset).
    *
