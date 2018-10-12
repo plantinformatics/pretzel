@@ -34,6 +34,7 @@ export default Service.extend(Ember.Evented, {
       /** default backend server API on :5000,  typical devel configuration : ember server on :4200 */
       let primaryEndpoint = this.addEndpoint('http://localhost:5000', undefined, token);
       this.set('primaryEndpoint', primaryEndpoint);
+      primaryEndpoint.set('firstTab', true);
     }
 
     if (false)  // useful in setting up development data

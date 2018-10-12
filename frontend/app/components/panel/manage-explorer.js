@@ -124,20 +124,6 @@ export default ManageBase.extend({
     },
     loadBlock(block) {
       this.sendAction('loadBlock', block);
-    },
-    /** invoked from hbs via {{compute (action "endpointTabId" apiEndpoint ) }}
-     * @return string suitable for naming a html tab, based on endpoint name.
-     */
-    endpointTabId(apiEndpoint) {
-      let id = apiEndpoint.get('tabId');
-      console.log('endpointTabId', id, apiEndpoint);
-      return id;
-    },
-    /** Trim the leading http:// or https:// off the given URL.
-     * Similar : @see ApiEndpoint.tabId()
-     */
-    sansProtocol(url) {
-      return url && url.replace(/^https?:\/\//, '');
     }
   }
 });

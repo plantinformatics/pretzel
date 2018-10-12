@@ -43,21 +43,15 @@
     
     <ul class="nav nav-tabs">
       {{#each-in endpoints as |apiEndpointName apiEndpoint| }}
-        {{#with (compute (action "endpointTabId" apiEndpoint)) as |tabId| }}
-          <li><a data-toggle="tab" href={{concat "#tab-" tabId}}
-                 {{action "endpointTabSelected" tabId apiEndpointName apiEndpoint}} >
-            {{compute (action "sansProtocol" apiEndpoint.host) }}{{!-- tabId --}}
-          </a></li>
-        {{/with}}
+        {{panel/api-endpoint-tab apiEndpointName=apiEndpointName apiEndpoint=apiEndpoint endpointTabSelected=(action "endpointTabSelected")}}
       {{/each-in}}
     </ul>
     {{!-- For endpoint-specific content selected by the above tab : add a
-       <div class="tab-content"> with each-in and with as above, and :
-       <div id={{concat "tab-" tabId}} class="tab-pane fade"> ... </div>
+       <div class="tab-content"> with each-in as above, and :
+       <div id={{concat "tab-" apiEndpoint.tabId}} class="tab-pane fade"> ... </div>
        (e.g. see commit d86e9d6).
-       The data content in the following is switched by the above tab; instead
-       of maintaining each endpoint's content within a distinct tab-pane, within
-       tab-content.
+       Instead of maintaining each endpoint's content within a distinct tab-pane within
+       tab-content,  the data content in the following is switched by the above tab.
        --}}
 
     {{#each data as |dataset|}}

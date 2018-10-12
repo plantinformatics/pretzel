@@ -36,7 +36,7 @@ export default Ember.Object.extend({
     return name;
   }),
 
-  /** Used by manage-explorer.js: endpointTabId()
+  /** Used by panel/api-endpoint-tab.hbs
    * for unique IDs of tab DOM elements.
    */
   tabId : Ember.computed('name',  function() {
@@ -44,6 +44,23 @@ export default Ember.Object.extend({
     id = name && name.replace(/^https?_+/, '');
     console.log('tabId', id, this);
     return id;
+  }),
+  /** Return text which is displayed on the API endpoint selector tabs in the
+   * data explorer.
+   *
+   * Trim the leading http:// or https://, referred to as the scheme or
+   * protocol, off the given URL.
+   * The remainder consists of the [userinfo@]host[:port]
+   * (https://en.wikipedia.org/wiki/Uniform_Resource_Identifier#Definition)
+   * and is referred to as the authority.
+   *
+   * Similar : @see tabId()
+   */
+  tabText : Ember.computed('host',  function() {
+    /** .host is actually the URL, i.e. userinfo+host+port (and possibly a path
+     * prefix), not including the sub-path for the route, and query params. */
+    let host = this.get('host');
+    return host && host.replace(/^https?:\/\//, '');
   }),
 
   /** value is an array of datasets, including blocks, returned from the api host. */
