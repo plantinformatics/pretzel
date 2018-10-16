@@ -1,4 +1,7 @@
 import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { breakPoint } from '../../utils/breakPoint';
+
 
 const { Component } = Ember;
 
@@ -24,6 +27,10 @@ function removePunctuation(text) {
  *
  */
 export default Ember.Object.extend({
+  dataset: service('data/dataset'),
+  apiEndpoints: service('api-endpoints'),
+
+
   init() {
     this._super(...arguments);
   },
@@ -68,7 +75,50 @@ export default Ember.Object.extend({
   
   actions: {
 
+  },
+
+
+    /**
+   *
+   * @param endpoint
+   */
+  getDatasets : function (endpoint) {
+    let datasetService = this.get('dataset');
+    let taskGetList = datasetService.get('taskGetList');  // availableMaps
+    let datasetsTask = taskGetList.perform(endpoint);
+    let
+      me = this,
+    name = endpoint.get('name'),
+    apiEndpoints = this.get('apiEndpoints'),
+    /** verification */
+    endpointSo = apiEndpoints.lookupEndpoint(name),
+    datasetsBlocks = this.get('datasetsBlocks'),
+    datasetsHandle = endpoint && endpoint.host && endpoint.get('name');
+    console.log('getDatasets', name, endpointSo);
+    if (endpointSo !== endpoint)
+      breakPoint('getDatasets', endpointSo, endpoint);
+
+    datasetsTask.then(function (blockValues) {
+      console.log(datasetsHandle, 'datasetsTask then', blockValues);
+      if (datasetsHandle)
+      {
+        /** change to : apiEndpoints can do .on() of .evented() on task  */
+        let datasetsBlocks = apiEndpoints.get('datasetsBlocks');
+        datasetsBlocks[datasetsHandle] = blockValues;
+        endpoint.set("datasetsBlocks", blockValues);
+        // me.sendAction('receivedDatasets', datasetsHandle, blockValues);
+        // or via .evented() on task
+        me.trigger('receivedDatasets', blockValues);
       }
+    });
+
+    console.log('getDatasets', this);
+    return datasetsTask;
+  }
+  // wrap with a service, endpoints OK in parallel, just 1 'getDatasets' per endpoint at once.
+  // .drop()
+
+
 
 });
 

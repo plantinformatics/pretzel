@@ -37,6 +37,7 @@ export default Base.extend({
           let host = endpoint.replace(/\/api\/Clients\/login/, '');
           console.log('resolve', 'host url', host, 'token', response.id, 'clientId', response.userId);
           let apiEndpoint = apiEndpoints.addEndpoint(/*url*/ host, /*user*/ identification, /*token*/ response.id);
+          apiEndpoint.set('firstTab', true);
           resolve({
             token: response.id,
             clientId: response.userId

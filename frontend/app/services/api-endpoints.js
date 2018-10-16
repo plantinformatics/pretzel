@@ -1,7 +1,8 @@
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
 import { isPresent } from '@ember/utils';
-import { default as ApiEndpoint, ApiEndpoint as ApiEndpointBase, removePunctuation } from '../components/service/api-endpoint';
+import { default as ApiEndpoint, removePunctuation } from '../components/service/api-endpoint';
+
 
 const { Service } = Ember;
 
@@ -110,40 +111,7 @@ export default Service.extend(Ember.Evented, {
       let token = response.id;
       me.addEndpoint(url, user, token);
     });
-  },
-
-
-  /**
-   *
-   * @param endpoint
-   */
-  getDatasets : function (endpoint) {
-    let datasetService = this.get('dataset');
-    let taskGetList = datasetService.get('taskGetList');  // availableMaps
-    let datasetsTask = taskGetList.perform(endpoint);
-    let
-      me = this,
-    name = endpoint.get('name'),
-    endpointSo = this.lookupEndpoint(name),
-    datasetsBlocks = this.get('datasetsBlocks'),
-    datasetsHandle = endpoint && endpoint.host && endpoint.get('name');
-    console.log('getDatasets', name, endpointSo);
-
-    datasetsTask.then(function (blockValues) {
-      console.log(datasetsHandle, 'datasetsTask then', blockValues);
-      if (datasetsHandle)
-      {
-        datasetsBlocks[datasetsHandle] = blockValues;
-        endpointSo.set("datasetsBlocks", blockValues);
-        // me.sendAction('receivedDatasets', datasetsHandle, blockValues);
-        me.trigger('receivedDatasets', blockValues);
-      }
-    });
-
-    console.log('getDatasets', this);
-    return datasetsTask;
   }
-
 
 
 

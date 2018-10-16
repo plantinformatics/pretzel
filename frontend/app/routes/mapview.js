@@ -77,7 +77,7 @@ let config = {
       let apiEndpoints = this.get('apiEndpoints'),
       primaryEndpoint = apiEndpoints.get('primaryEndpoint');
       datasetsTask = 
-        apiEndpoints.getDatasets(primaryEndpoint);
+        primaryEndpoint.getDatasets();
     }
 
     let blockService = this.get('block');

@@ -29,8 +29,7 @@ export default Component.extend({
    * @param endpoint
    */
   getDatasets : function (endpoint) {
-    let apiEndpoints = this.get('apiEndpoints');
-    apiEndpoints.getDatasets(endpoint);
+    endpoint.getDatasets();
   },
 
   actions: {
