@@ -1,5 +1,9 @@
 /*----------------------------------------------------------------------------*/
 
+/*global d3 */
+
+/*----------------------------------------------------------------------------*/
+
 var oa;
 
 function Axes(oa_)
@@ -95,13 +99,36 @@ function axisEltId(name)
 }
 /** id of g.axis-all element, based on axisName, with an "all" prefix. */
 function eltIdAll(d) { return "all" + d; }
+/** id of <g clippath> element, based on axisName, with an "axis-clip" prefix. */
+function axisEltIdClipPath(d) { return "axis-clip" + d; }
+
 /** id of highlightFeature div element, based on feature name, with an "h" prefix. */
 function highlightId(name)
 {
   return "h" + name;
 }
 
+/*----------------------------------------------------------------------------*/
+
+/** Used to colour the blocks within an axis distinctly;
+ * Originally was using blockId as index, but now using index within axis.blocks[].
+ */
+let
+      axisTitle_colour_scale = d3.scaleOrdinal();
+      axisTitle_colour_scale.range(d3.schemeCategory10);
+
+/** for the stroke and fill of axis title menu
+ * parameters match d3 call signature
+ * @param d blockId
+ * @param i index of element within group
+ * @param group
+ */
+function axisTitleColour (d, i) {
+  let
+    colour = (i == 0) ? undefined : axisTitle_colour_scale(i /*d*/);
+  return colour;
+};
 
 /*----------------------------------------------------------------------------*/
 
-export {  Axes, maybeFlip, maybeFlipExtent, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, highlightId } ;
+export {  Axes, maybeFlip, maybeFlipExtent, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisEltIdClipPath, highlightId, axisTitleColour } ;

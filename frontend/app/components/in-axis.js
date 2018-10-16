@@ -9,6 +9,7 @@ export default Ember.Component.extend({
   className : undefined,
 
   didInsertElement : function() {
+    this._super(...arguments);
     /* grandparent component - listen for resize and zoom events.
      * possibly these events will move from axis-2d to axis-accordion.
      * This event handling will move to in-axis, since it is shared by all children of axis-2d/axis-accordion.
@@ -23,10 +24,12 @@ export default Ember.Component.extend({
     // console.log(axisComponent);
     axisComponent.off('resized', this, 'resized');
     axisComponent.off('zoomed', this, 'zoomed');
+    this._super(...arguments);
   },
 
 
   didRender() {
+    this._super(...arguments);
     console.log("components/in-axis didRender()");
   },
 
@@ -107,7 +110,7 @@ export default Ember.Component.extend({
     gp // define the clipPath
       .append("clipPath")       // define a clip path
       .attr("id", "axis-clip") // give the clipPath an ID
-      .append("rect"),          // shape it as an ellipse
+      .append("rect"),          // shape it as a rect
     gprm = 
     gpa.merge(gps.selectAll("g > clipPath > rect"))
       .attr("x", bbox.x)

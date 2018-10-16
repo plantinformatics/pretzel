@@ -13,6 +13,7 @@ export default Ember.Component.extend({
 
   // the life cycle functionality is based on draw-controls, may factor out.
   didInsertElement() {
+    this._super(...arguments);
     console.log("components/goto-feature didInsertElement()", this.drawActions);
     Ember.run.later(function() {
       let d = Ember.$('.tooltip.ember-popover');  // make-ui-draggable
@@ -24,6 +25,7 @@ export default Ember.Component.extend({
     console.log("components/goto-feature willDestroyElement()");
     if (this.drawActions)
     this.drawActions.trigger("gotoFeatureLife", false);
+    this._super(...arguments);
   },
   didRender() {
   },

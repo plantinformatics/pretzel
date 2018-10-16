@@ -17,7 +17,7 @@ import { Viewport } from '../utils/draw/viewport';
 import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
 
 import {  Axes, maybeFlip, maybeFlipExtent,
-          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll  }  from '../utils/draw/axis';
+          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisTitleColour  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify  }  from '../utils/draw/stacksAxes';
 import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Name } from '../utils/stacks';
 import { collateAdjacentAxes, log_adjAxes,  log_adjAxes_a, isAdjacent } from '../utils/stacks-adj';
@@ -68,10 +68,6 @@ Object.filter = Object_filter;
 
 //- moved to "../utils/draw/flow-controls.js" : flowButtonsSel, configurejQueryTooltip()
 
-
-let
-      axisTitle_colour_scale = d3.scaleOrdinal();
-      axisTitle_colour_scale.range(d3.schemeCategory10);
 
 
 
@@ -307,12 +303,17 @@ export default Ember.Component.extend(Ember.Evented, {
       let axis = axes2d.findBy('axisID', axisID);
       if (axis === undefined)
       {
-        axis = Ember.Object.create({ axisID : axisID });
+        /* push will trigger : arrayContentDidChange()
+         * ... enumerableContentDidChange() ... didRender() (in axis-1d), so
+         * make give .extended its value before push.
+         */
+        axis = Ember.Object.create({ axisID : axisID, 'extended' : enabled });
         axes2d.pushObject(axis);
         console.log("create", axisID, axis, "in", axes2d);
       }
-      console.log("enableAxis2D in components/draw-map", axisID, enabled, axis);
+      else
         axis.set('extended', enabled);  // was axis2DEnabled
+      console.log("enableAxis2D in components/draw-map", axisID, enabled, axis);
       console.log("splitAxes", this.get('splitAxes'));
       console.log("axes2d", this.get('axes2d'));
     },
@@ -1336,19 +1337,23 @@ export default Ember.Component.extend(Ember.Evented, {
         if (! parentAxis)
           {
         adopt.map(function (d3) {
-          /** axis being adopted */
+          /** axis being adopted.
+           * a is discarded, and a.blocks[0] is re-used.
+           */
             let a = oa.axesP[d3];
-          a.parent = sd;
           /** oldStack will be deleted. `a` will become unreferenced. */
           let oldStack = a.stack;
 
           /** re-use the Block being adopted. */
           let aBlock = a.referenceBlockS();
           sd.move(a, 0);
+          // could set .parent in .move()
+          aBlock.parent = sd;
           //	-	check that oldStack.delete() will delete the (Stacked) a
 
           console.log(d3, a, aBlock, sd, oa.axesP[a.axisName]);
           sd.stack.log();
+          // noting that d3 == a.axisName
           delete oa.axesP[a.axisName];
           oa.stacks.blocks[a.axisName] = aBlock;
           console.log('aBlock.axis', aBlock.axis);
@@ -1766,7 +1771,9 @@ export default Ember.Component.extend(Ember.Evented, {
         // chartOptions enables (left panel : view) "Chart Options"
         .classed("chartOptions", options.chartOptions)
         .classed("gotoFeature", options.gotoFeature)
-        .classed("devel", options.devel); // enables some trace areas
+        .classed("devel", options.devel) // enables some trace areas
+        .classed("axis2dResizer", options.axis2dResizer)
+      ;
     }
 
     function setCssVariable(name, value)
@@ -1985,7 +1992,13 @@ export default Ember.Component.extend(Ember.Evented, {
     function getAxisExtendedWidth(axisID)
     {
       let axis = oa.axes[axisID],
-      initialWidth = 50,
+      /** duplicates the calculation in axis-tracks.js : layoutWidth() */
+      blocks = axis && axis.blocks,
+      dataBlocksN = blocks && blocks.length - 1,
+      trackWidth = 10,
+      trackBlocksWidth =
+        40 + dataBlocksN * 2 * trackWidth + 20 + 50,
+      initialWidth = /*50*/ trackBlocksWidth,
       width = axis ? ((axis.extended === true) ? initialWidth : axis.extended) : undefined;
       return width;
     }
@@ -1993,7 +2006,7 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       /** x translation of right axis */
       let 
-        initialWidth = 50,
+        initialWidth = /*50*/ getAxisExtendedWidth(axisID),
       axisData = axis.extended ? [axisID] : [];
       if (axisG === undefined)
         axisG = oa.svgContainer.selectAll("g.axis-outer#id" + axisID);
@@ -2022,7 +2035,7 @@ export default Ember.Component.extend(Ember.Evented, {
       /* extra "xlink:" seems required currently to work, refn :  dsummersl -
        * https://stackoverflow.com/questions/10423933/how-do-i-define-an-svg-doc-under-defs-and-reuse-with-the-use-tag */
         .append("use").attr("xlink:xlink:href", eltIdGpRef);
-      eu.transition().duration(1000)
+      eu //.transition().duration(1000)
         .attr("transform",function(d) {return "translate(" + getAxisExtendedWidth(d) + ",0)";});
 
       let er = eg
@@ -2325,12 +2338,6 @@ export default Ember.Component.extend(Ember.Evented, {
           }
         })
       ;
-      /** for the stroke and fill of axis title menu */
-      function axisTitleColour (d, i) {
-        let
-          colour = (i == 0) ? undefined : axisTitle_colour_scale(d);
-        return colour;
-      };
       let subTitleS =
     axisTitleS.selectAll("tspan")
       /** @return type Block[]. blocks of axisName.
@@ -3658,6 +3665,7 @@ export default Ember.Component.extend(Ember.Evented, {
               let a = oa.axes[d],
               domain = a.parent ? a.parent.domain : a.getDomain();
               domain = maybeFlip(domain, a.flipped);
+              a.zoomed = false;
               oa.y[d].domain(domain);
               oa.ys[d].domain(domain);
               let yAxis = d3.axisLeft(oa.y[d]).ticks(10);
@@ -3802,6 +3810,7 @@ export default Ember.Component.extend(Ember.Evented, {
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion*/); });
           // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
           console.log("zoom", axisName, p, i, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
+          axis.zoomed = true;
           y[p].domain(brushedDomain);
           oa.ys[p].domain(brushedDomain);
           axisScaleChanged(p, t, true);
@@ -4902,11 +4911,8 @@ export default Ember.Component.extend(Ember.Evented, {
             + iconButton("FlipAxis", "Flip_" + axisName, "&#x21C5;" /*glyphicon-bell*/, "glyphicon-retweet", "#")
             + 
             (splitAxes ?
-             (
-                 iconButton("PerpendicularAxis", "Perpendicular_" + axisName, "&#x21B7;" /*glyphicon-bell*/, "glyphicon-retweet", "#")
-               + iconButton("ExtendMap", "Extend_" + axisName, "&#x21F2;" /*glyphicon-star*/, "glyphicon-arrow-right", "#")
-             ) : ""
-            )
+             iconButton("PerpendicularAxis", "Perpendicular_" + axisName, "&#x21B7;" /*glyphicon-bell*/, "glyphicon-retweet", "#") : "")
+            + iconButton("ExtendMap", "Extend_" + axisName, "&#x21F2;" /*glyphicon-star*/, "glyphicon-arrow-right", "#")
         })
         // .popover('show');
       
@@ -5280,6 +5286,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
   didInsertElement() {
+    this._super(...arguments);
     // eltWidthResizable('.resizable');
 
     // initial test data for axis-tracks - will discard this.

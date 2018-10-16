@@ -77,6 +77,7 @@ module.exports = function(app) {
       context.property == 'tableUpload' ||
       context.property == 'createComplete' ||
       context.property == 'search' ||
+      context.property == 'depthSearch' ||
       context.property == 'bulkCreate' ||
       context.property == 'paths' ||
       context.property == 'pathsByReference') {

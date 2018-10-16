@@ -101,7 +101,7 @@ let
   };
 
 
-  if (resizer)
+  if (resizer.size())
     resizer.call(dragResize);
   else
     console.log("eltWidthResizable() resizer=", resizer, eltSelector, dragResize);

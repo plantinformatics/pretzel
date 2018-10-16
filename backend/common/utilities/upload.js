@@ -117,8 +117,9 @@ exports.uploadDataset = (data, models, options, cb) => {
       }
       if (block.__cachedRelations.features) {
         block.__cachedRelations.features.forEach(function(json_feature) {
-          json_feature.blockId = block.id
-          json_features.push(json_feature)
+          json_feature.blockId = block.id;
+          json_feature.parentId = null;
+          json_features.push(json_feature);
         })
       }
     })

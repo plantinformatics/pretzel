@@ -340,7 +340,7 @@ export default InAxis.extend({
     gp // define the clipPath
       .append("clipPath")       // define a clip path
       .attr("id", "axis-clip") // give the clipPath an ID
-      .append("rect"),          // shape it as an ellipse
+      .append("rect"),          // shape it as a rect
     gprm = 
     gpa.merge(gps.selectAll("g > clipPath > rect"))
       .attr("x", bbox.x)

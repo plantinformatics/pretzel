@@ -15,7 +15,9 @@ let trace_links = 1;
 export default Ember.Component.extend(Ember.Evented, {
 
   auth: service('auth'),
-  store: service(),
+  store: service(), // not used - can remove
+  blockService: service('data/block'),
+
 
   willInsertElement() {
     if (trace_links)
@@ -55,14 +57,40 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
   },
+
+
+  /** If the block's dataset's parent is the reference, then pathsByReference()
+   * would return a result like the direct links, so don't use it in this
+   * case. */
+  datasetParentIsReference : function(blockId, referenceName)
+  {
+    let block = this.get('blockService').peekBlock(blockId),
+    referenceDatasetName = block && block.get('referenceDatasetName'),
+    match = referenceName == referenceDatasetName;
+    if (trace_links /*> 1*/)
+      console.log('datasetParentIsReference', match, blockId, block, referenceDatasetName, 'for pathsByReference');
+    return match;
+  },
+
   /** Request pathsByReference between the 2 blocks for a reference
    * in which there are marker sets with the blocks' namespaces and scopes.
    */
   requestByReference : function (blockA, blockB) {
-    /** Will search for the reference to use.  */
-    let referenceGenome = "IWGSC_RefSeq_v1.0", // "myGenome",
+    /** Will search for the reference to use.
+     * With test dataset : "myGenome"
+     */
+    let referenceGenome = "Triticum_aestivum_IWGSC_RefSeq_v1.0",
     /** e.g. 1% of the chromosome length */
     maxDistance = 500000000 / 100;
+
+    if ( this.datasetParentIsReference(blockA, referenceGenome)
+         || this.datasetParentIsReference(blockB, referenceGenome)
+       )
+    {
+      return ;
+    }
+
+
     if (trace_links > 2)
       console.log('pathsByReference request', blockA, blockB);
     let me = this;
