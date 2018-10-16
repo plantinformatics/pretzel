@@ -62,8 +62,9 @@ export default Service.extend(Ember.Evented, {
         user : user,
         token : token
       },
+    ownerInjection = Ember.getOwner(this).ownerInjection(),
     endpoint = ApiEndpoint.create(
-      // Ember.getOwner(this).ownerInjection(),
+      ownerInjection,
       endpointBase),
 	  endpoints = this.get('endpoints'),
     /**  .name is result of .host_safe().
@@ -109,7 +110,9 @@ export default Service.extend(Ember.Evented, {
       })
     }).then(function(response) {
       let token = response.id;
+      let endpoint =
       me.addEndpoint(url, user, token);
+      endpoint.getDatasets();
     });
   }
 

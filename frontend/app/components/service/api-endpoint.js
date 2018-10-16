@@ -78,16 +78,16 @@ export default Ember.Object.extend({
   },
 
 
-    /**
+  /** Get the list of datasets, including their blocks, from this API endpoint.
    *
-   * @param endpoint
    */
-  getDatasets : function (endpoint) {
+  getDatasets : function () {
     let datasetService = this.get('dataset');
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
+    /** endpoint was a param when this function was an attribute of apiEndpoints. */
+    let endpoint = this;
     let datasetsTask = taskGetList.perform(endpoint);
     let
-      me = this,
     name = endpoint.get('name'),
     apiEndpoints = this.get('apiEndpoints'),
     /** verification */
@@ -106,16 +106,17 @@ export default Ember.Object.extend({
         let datasetsBlocks = apiEndpoints.get('datasetsBlocks');
         datasetsBlocks[datasetsHandle] = blockValues;
         endpoint.set("datasetsBlocks", blockValues);
+        // (where me = apiEndpoints)
         // me.sendAction('receivedDatasets', datasetsHandle, blockValues);
         // or via .evented() on task
-        me.trigger('receivedDatasets', blockValues);
+        apiEndpoints.trigger('receivedDatasets', blockValues);
       }
     });
 
     console.log('getDatasets', this);
     return datasetsTask;
   }
-  // wrap with a service, endpoints OK in parallel, just 1 'getDatasets' per endpoint at once.
+  // wrap in a task, requests to different endpoints OK in parallel, just 1 'getDatasets' per endpoint at once.
   // .drop()
 
 
