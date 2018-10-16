@@ -37,7 +37,7 @@ export default Ember.Component.extend({
     if (table === undefined)
       this.get('createTable').apply(this);
   },
-  
+
   createTable: function() {
     var that = this;
     console.log("createTable", this);
@@ -60,14 +60,17 @@ export default Ember.Component.extend({
           {
             data: 'Position',
             type: 'numeric',
-            format: '0[.]0'
+            numericFormat: {
+              pattern: '0,0.*'
+            }
           }
         ],
         colHeaders: [
-          'Chromosome',
-          'Feature :<br>Marker / Gene',
+          '<span title = "e.g. chromosome or linkage group">Block</span>',
+          '<span title = "e.g. marker / gene">Feature</span>',
           'Position'
         ],
+        headerTooltips: true,
         colWidths: [100, 135, 60],
         height: 600,
         manualRowResize: true,
@@ -76,7 +79,10 @@ export default Ember.Component.extend({
         // manualColumnMove: true,
         contextMenu: true,
         sortIndicator: true,
-        columnSorting: true
+        columnSorting: {
+          column: 2,
+          sortOrder: true
+        }
       });
       that.set('table', table);
       $("#table-brushed").on('mouseleave', function(e) {
@@ -110,7 +116,7 @@ export default Ember.Component.extend({
   }.observes('data'),
 
   highlightFeature: function(feature) {
-    d3.selection.prototype.moveToFront = function() {  
+    d3.selection.prototype.moveToFront = function() {
       return this.each(function(){
         this.parentNode.appendChild(this);
       });

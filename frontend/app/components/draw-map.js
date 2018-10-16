@@ -1771,7 +1771,9 @@ export default Ember.Component.extend(Ember.Evented, {
         // chartOptions enables (left panel : view) "Chart Options"
         .classed("chartOptions", options.chartOptions)
         .classed("gotoFeature", options.gotoFeature)
-        .classed("devel", options.devel); // enables some trace areas
+        .classed("devel", options.devel) // enables some trace areas
+        .classed("axis2dResizer", options.axis2dResizer)
+      ;
     }
 
     function setCssVariable(name, value)

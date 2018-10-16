@@ -75,7 +75,10 @@ export default UploadBase.extend({
           },
           {
             data: 'val',
-            type: 'numeric'
+            type: 'numeric',
+            numericFormat: {
+              pattern: '0,0.*'
+            }
           }
         ],
         colHeaders: [
@@ -296,7 +299,7 @@ export default UploadBase.extend({
             that.get('auth').tableUpload(data)
             .then(function(res){
               that.setProperties({
-                isProcessing: false, 
+                isProcessing: false,
                 successMessage: res.status,
                 errorMessage: null,
                 warningMessage: null
@@ -304,7 +307,7 @@ export default UploadBase.extend({
               $("body").animate({ scrollTop: 0 }, "slow");
             }, function(err, status) {
               that.setProperties({
-                isProcessing: false, 
+                isProcessing: false,
                 successMessage: null,
                 errorMessage: err.responseJSON.error.message,
                 warningMessage: null
