@@ -31,9 +31,20 @@ export default Service.extend(Ember.Evented, {
 
     let { token, clientId } = this.get('session.data.authenticated');
     if (isPresent(token)) {
-      console.log('init token', token, clientId);
+      let 
+      adapter = this.get('store').adapterFor('application'),
+      /** this is the API origin,  e.g.  'http://localhost:4200' */
+      host = adapter.get('host'),
+      apiOrigin = host,
+
+      /** this gets the site origin, which is not needed here. */
+      application = Ember.getOwner(this).lookup('controller:application'),
+      /** e.g.  'http://localhost:5000' */
+      siteOrigin = application.target.location.concreteImplementation.location.origin;
+
+      console.log('init token', token, clientId, 'api host', apiOrigin, siteOrigin);
       /** default backend server API on :5000,  typical devel configuration : ember server on :4200 */
-      let primaryEndpoint = this.addEndpoint('http://localhost:5000', undefined, token);
+      let primaryEndpoint = this.addEndpoint(apiOrigin, undefined, token);
       this.set('primaryEndpoint', primaryEndpoint);
       primaryEndpoint.set('firstTab', true);
     }
