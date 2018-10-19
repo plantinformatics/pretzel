@@ -5,6 +5,14 @@ import PartialModelAdapter from 'ember-data-partial-model/mixins/adapter';
 import ENV from '../config/environment';
 const { inject: { service } } = Ember;
 
+import {
+  getConfiguredEnvironment,
+  getSiteOrigin
+} from '../utils/configuration';
+
+import { breakPoint } from '../utils/breakPoint';
+
+/*----------------------------------------------------------------------------*/
 
 var config = {
   apiEndpoints: service('api-endpoints'),
@@ -16,8 +24,16 @@ var config = {
    */
   host: function () {
     let endpoint = this._endpoint,
-    host = endpoint ? endpoint.host : ENV.apiHost;
-    console.log('app/adapters/application.js host', this, arguments, endpoint, host);
+    /** similar calcs in @see services/api-endpoints.js : init() */
+    config =  getConfiguredEnvironment(this),
+    configApiHost = config.apiHost,
+    /** this gets the site origin. use this if ENV.apiHost is '' (as it is in
+     * production) or undefined. */
+    siteOrigin = getSiteOrigin(this),
+    host = endpoint ? endpoint.host : ENV.apiHost || siteOrigin;
+    if (ENV !== config)
+      breakPoint('ENV !== config', ENV, config, ENV.apiHost, configApiHost);
+    console.log('app/adapters/application.js host', this, arguments, endpoint, config, configApiHost, ENV.apiHost, host);
     return host;
   }.property().volatile(),
   namespace: ENV.apiNamespace,

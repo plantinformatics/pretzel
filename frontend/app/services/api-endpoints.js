@@ -3,11 +3,14 @@ import { inject as service } from '@ember/service';
 import { isPresent } from '@ember/utils';
 import { default as ApiEndpoint, removePunctuation } from '../components/service/api-endpoint';
 
-
 const { Service } = Ember;
 
 // import ENV from '../../config/environment';
 
+import {
+  getConfiguredEnvironment,
+  getSiteOrigin
+} from '../utils/configuration';
 
 
 /*----------------------------------------------------------------------------*/
@@ -32,25 +35,31 @@ export default Service.extend(Ember.Evented, {
     let { token, clientId } = this.get('session.data.authenticated');
     if (isPresent(token)) {
       let 
+        /** similar calcs in @see adapters/application.js : host() */
       adapter = this.get('store').adapterFor('application'),
-      /** this is the API origin,  e.g.  'http://localhost:4200' */
+      /** this is the API origin,  e.g.  'http://localhost:5000' */
       host = adapter.get('host'),
       apiOrigin = host,
 
-      /** this gets the site origin, which is not needed here. */
-      application = Ember.getOwner(this).lookup('controller:application'),
-      /** e.g.  'http://localhost:5000' */
-      siteOrigin = application.target.location.concreteImplementation.location.origin;
+      siteOrigin = getSiteOrigin(this);
 
       console.log('init token', token, clientId, 'api host', apiOrigin, siteOrigin);
-      /** default backend server API on :5000,  typical devel configuration : ember server on :4200 */
-      let primaryEndpoint = this.addEndpoint(apiOrigin, undefined, token);
+      /** ENV.apiHost is '' when environment=="production",
+       * as a result apiOrigin is '' when site is served from the backend
+       * rather than from ember server;  in this case use siteOrigin
+       * because site server and API server are the same.
+       * At the moment the same substitution of siteOrigin is done in
+       * adapter.host(), so it is not necessary to do apiOrigin || siteOrigin
+       * here.
+       */
+      let primaryEndpoint = this.addEndpoint(apiOrigin || siteOrigin, undefined, token);
       this.set('primaryEndpoint', primaryEndpoint);
       primaryEndpoint.set('firstTab', true);
     }
 
     if (false)  // useful in setting up development data
     {
+      /** default backend server API on :5000,  typical devel configuration : ember server on :4200 */
       let protocol='http://', host = 'plantinformatics.io', // ENV.apiHost,
       /** e.g. map :4200 to :4201, (/00$/, '01') */
       host2 = host.replace(/^/, 'dev.');
