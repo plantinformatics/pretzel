@@ -2,23 +2,26 @@ import Ember from 'ember';
 import Service from '@ember/service';
 import { task } from 'ember-concurrency';
 
-const { inject: { service } } = Ember;
-
+const { inject: { service }, getOwner } = Ember;
 
 // based on ./block.js
 
 export default Service.extend(Ember.Evented, {
     auth: service('auth'),
-    store: service(),
   apiEndpoints: service('api-endpoints'),
+  primaryEndpoint : Ember.computed.alias('apiEndpoints.primaryEndpoint'),
 
+  storeManager: Ember.inject.service('multi-store'),
 
   /** Get the list of available datasets, in a task - yield the dataset result.
    * Signal that receipt with receivedDatasets(datasets).
    */
   taskGetList: task(function * (endpoint) {
     /* This replaces controllers/mapview.js : updateChrs(), updateModel(). */
-    let store = this.get('store'),
+    let
+      owner = getOwner(this),
+    store0 = getOwner(this).lookup("service:store"),
+
     apiEndpoints = this.get('apiEndpoints'),
     primaryEndpoint = apiEndpoints.get('primaryEndpoint'),
     _unused = console.log('taskGetList', endpoint, primaryEndpoint),
@@ -26,13 +29,17 @@ export default Service.extend(Ember.Evented, {
      * in or perhaps formalise this to an if (endpoint) structure; sort that in
      * next commit. */
     _unused2 = endpoint || (endpoint = primaryEndpoint),
+    store = endpoint.store,
     trace_promise = false,
 
+    /** looks like store.adapterOptions is overridden by adapterOptions passed
+     * to query, so merge them. */
     adapterOptions = apiEndpoints.addId(
       endpoint || primaryEndpoint,
-      {
-        filter: {'include': 'blocks'}
-      }),
+    /* adapterOptions = store.adapterOptions ||*/ {
+    /* adapterOptions */
+      filter :  {'include': 'blocks'} }), /*;
+    let */
     dP = store.query('dataset', adapterOptions);
     if (trace_promise)
       dP.then(function (d) { console.log(d, d.toArray()[0].get('blocks').toArray());});
@@ -86,13 +93,15 @@ export default Service.extend(Ember.Evented, {
   }),
   getData: function (id) {
     console.log("dataset getData", id);
-    let store = this.get('store');
-    let endpoints = this.get('apiEndpoints').get('endpoints'),
+    let
+    /** This is draft; caller may pass in endpoint .. */
+    endpoint = this.get('primaryEndpoint'),
+    store = endpoint.store,
     adapterOptions = 
       {
           filter: {include: "blocks"}
       };
-    this.get('apiEndpoints').set(adapterOptions, endpoints[0]);
+    this.get('apiEndpoints').addId(endpoint, adapterOptions);
     let datasetP = store.findRecord(
       'dataset', id,
       { reload: true,
@@ -105,7 +114,10 @@ export default Service.extend(Ember.Evented, {
 
   /** @return dataset records */
   values: Ember.computed(function() {
-    let records = this.get('store').peekAll('dataset');
+    let 
+    endpoint = this.get('primaryEndpoint'),
+    store = endpoint.store,
+    records = store.peekAll('dataset');
     console.log('values', records);
     return records;
   })

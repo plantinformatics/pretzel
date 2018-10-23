@@ -22,6 +22,7 @@ export default Service.extend(Ember.Evented, {
   session: service(), 
   store: service(),
   dataset: service('data/dataset'),
+  storeManager: Ember.inject.service('multi-store'),
 
   endpoints : Ember.Object.create(),
   endpointsLength : 0,
@@ -39,7 +40,10 @@ export default Service.extend(Ember.Evented, {
       adapter = this.get('store').adapterFor('application'),
       /** this is the API origin,  e.g.  'http://localhost:5000' */
       host = adapter.get('host'),
-      apiOrigin = host,
+      config =  getConfiguredEnvironment(this),
+      configApiHost = config.apiHost,
+
+      apiOrigin = configApiHost, // host,
 
       siteOrigin = getSiteOrigin(this);
 
@@ -53,8 +57,7 @@ export default Service.extend(Ember.Evented, {
        * here.
        */
       let primaryEndpoint = this.addEndpoint(apiOrigin || siteOrigin, undefined, token);
-      this.set('primaryEndpoint', primaryEndpoint);
-      primaryEndpoint.set('firstTab', true);
+      console.log('primaryEndpoint', primaryEndpoint);
     }
 
     if (false)  // useful in setting up development data
@@ -91,7 +94,25 @@ export default Service.extend(Ember.Evented, {
      * -	check if any further sanitising of inputs required */
     nameForIndex = endpoint.get('name');
     console.log('addEndpoint', endpointBase, endpoint.get('tabId'), endpoint, endpoints, nameForIndex);
+    let existing = endpoints.get(nameForIndex);
+    if (existing)
+      console.log('addEndpoint existing=', existing, nameForIndex);
     endpoints.set(nameForIndex, endpoint);
+
+    let options = { adapterOptions : { host : url } },
+    storeManager = this.get('storeManager'),
+    store = storeManager.registerStore(nameForIndex, options) &&
+      storeManager.getStore(nameForIndex);
+    endpoint.set('store', store);
+    console.log('registered store', nameForIndex, store, endpoint, url);
+
+   /** isPrimary true means this is the API endpoint which serves the app,
+    * or which the app connects to when it starts.
+    */
+    let isPrimary = this.get('endpointsLength') == 0;
+    this.set('primaryEndpoint', endpoint);
+    endpoint.set('firstTab', true);
+
     /* not used yet, intended as a dependent value for a computed function, which
      * cannot depend on .endpoints since it is a hash not an array. */
     this.incrementProperty('endpointsLength');

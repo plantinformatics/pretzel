@@ -57,7 +57,7 @@ export default Base.extend({
           if (host == '')
             host = siteOrigin;
           let apiEndpoint = apiEndpoints.addEndpoint(/*url*/ host, /*user*/ identification, /*token*/ response.id);
-          apiEndpoint.set('firstTab', true);
+          console.log('primaryEndpoint', apiEndpoint);
           resolve({
             token: response.id,
             clientId: response.userId

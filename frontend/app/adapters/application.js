@@ -22,7 +22,7 @@ var config = {
   /** host and port part of the url of the API
    * @see buildURL()
    */
-  host: function () {
+  x_host: function () {
     let endpoint = this._endpoint,
     /** similar calcs in @see services/api-endpoints.js : init() */
     config =  getConfiguredEnvironment(this),
@@ -34,6 +34,13 @@ var config = {
     if (ENV !== config)
       breakPoint('ENV !== config', ENV, config, ENV.apiHost, configApiHost);
     console.log('app/adapters/application.js host', this, arguments, endpoint, config, configApiHost, ENV.apiHost, host);
+    return host;
+  },
+  host: function () {
+    let store = this.store,
+    adapterOptions = store && store.adapterOptions,
+    host = adapterOptions && adapterOptions.host;
+    console.log('app/adapters/application.js host', this, store, adapterOptions, host);
     return host;
   }.property().volatile(),
   namespace: ENV.apiNamespace,

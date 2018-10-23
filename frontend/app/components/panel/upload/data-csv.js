@@ -1,6 +1,19 @@
+import Ember from 'ember';
+
+const { inject: { service } } = Ember;
+
 import UploadBase from './data-base'
 
+
 export default UploadBase.extend({
+  apiEndpoints: service('api-endpoints'),
+  /** If endpoint may be given, then lookup as is done in
+   * services/data/dataset.js using apiEndpoints (this can be factored into
+   * components/service/api-endpoint.js) */
+  store : Ember.computed.alias('apiEndpoints.primaryEndpoint.store'),
+
+
+
   loadDatasets: function(id) {
     var that = this;
     let datasets = that.get('store').peekAll('Dataset').toArray();
