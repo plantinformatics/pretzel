@@ -29,6 +29,32 @@ Funded by the Grains Research Development Corporation (GRDC).
 NOTE: References for the genetic maps shown in the alignments on this page are available at the bottom of this page.
 
 
+## Quick start using docker
+
+For a quick start without installing any of the dependencies you will need docker engine running on your system.
+
+### Docker on linux
+
+```
+mkdir -p ~/mongodata \
+ && docker run --name mongo --detach --volume ~/mongodata:/data/db --net="host" mongo \
+ && until $(curl --silent --fail --output /dev/null localhost:27017); do printf '.'; sleep 1; done \
+ && docker run --name pretzel --detach --net="host" rsuchecki/pretzel  \
+ && until $(curl --silent --fail --output /dev/null localhost:3000); do printf '.'; sleep 1; done \
+ && docker logs pretzel
+```
+
+### Docker on windows
+
+```
+md mongodata
+docker run --name mongo --detach --publish 27017:27017 --volume mongodata:/data/db mongo
+docker run --name pretzel -e "DB_HOST=host.docker.internal" --publish 3000:3000 rsuchecki/pretzel
+```
+
+Once your pretzel instance is running you may want to populate it with some [pre-computed data](https://github.com/plantinformatics/pretzel-input-generator/releases/tag/v1.0).
+
+
 ## Dependencies
 
 ### Database
@@ -170,7 +196,7 @@ Copy/Paste the Value into a url decoder such as e.g. https://urldecode.org which
 Copy/paste the token value and set it in the command-line environment using :
 ```
 setToken  "authentication-token-goes-here"
-uploadData ~/Applications/Pretzel/pretzel-data/myMap.json 
+uploadData ~/Applications/Pretzel/pretzel-data/myMap.json
 ```
 
 
