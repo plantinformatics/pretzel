@@ -2,6 +2,8 @@ import Ember from 'ember';
 
 const { inject: { service } } = Ember;
 
+import { parseOptions } from '../../utils/common/strings';
+
 let trace_links = 1;
 
 /** Interact with the backend API Blocks/paths to request links / paths (direct and aliased) connecting blocks.
@@ -18,16 +20,33 @@ export default Ember.Component.extend(Ember.Evented, {
   store: service(), // not used - can remove
   blockService: service('data/block'),
 
+  /** based on similar in flow-controls.js */
+  parsedOptions : Ember.computed('modelParamOptions', function () {
+    let options,
+    options_param;
+    if ((options_param = this.get('modelParamOptions'))
+        && (options = parseOptions(options_param)))
+    {
+      console.log('parsedOptions', options);
+    }
+    return options;
+  }),
 
   willInsertElement() {
     if (trace_links)
       console.log('components/draw/link-path willInsertElement');
+
+    let options = this.get('parsedOptions'),
+    byReference = options && options.byReference;
+    console.log('willInsertElement', options, byReference);
+
     let stackEvents = this.get('stackEvents');
     stackEvents.on('expose', this, function (blockA, blockB) {
       if (trace_links > 1)
         console.log('path expose', blockA, blockB);
       this.request(blockA, blockB);
-      this.requestByReference(blockA, blockB);
+      if (byReference)
+        this.requestByReference(blockA, blockB);
     } );
   },
   willDestroyElement() {
