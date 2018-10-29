@@ -30,7 +30,7 @@
   {{/if}}
   <div>paths : {{paths.length}}</div>
 </div>
-{{draw/link-path stackEvents=this pathReceiver=this}}
+{{draw/link-path stackEvents=this pathReceiver=this modelParamOptions=params.options}}
 
 {{#if axisFeatureCircleHover}}
   {{path-hover data=oa features=hoverFeatures }} {{!-- targetId=axisFeatureTargetId  "holder" --}}
