@@ -36,3 +36,4 @@ RUN cd /frontend \
 ENV EMAIL_VERIFY=NONE AUTH=ALL
 
 ENTRYPOINT ["node", "/app/server/server.js"]
+
