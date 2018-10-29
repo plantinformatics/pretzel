@@ -31,13 +31,13 @@ NOTE: References for the genetic maps shown in the alignments on this page are a
 
 ## Quick start using docker
 
-For a quick start without installing any of the dependencies you will need docker engine running on your system. 
+For a quick start without installing any of the dependencies you will need docker engine running on your system.
 
 ### Docker on linux
 
 ```
 mkdir -p ~/mongodata \
- && docker run --name mongo --detach -v ~/mongodata:/data/db --net="host" mongo \
+ && docker run --name mongo --detach --volume ~/mongodata:/data/db --net="host" mongo \
  && until $(curl --silent --fail --output /dev/null localhost:27017); do printf '.'; sleep 1; done \
  && docker run --name pretzel --detach --net="host" rsuchecki/pretzel  \
  && until $(curl --silent --fail --output /dev/null localhost:3000); do printf '.'; sleep 1; done \
@@ -48,7 +48,7 @@ mkdir -p ~/mongodata \
 
 ```
 md mongodata
-docker run --name mongo --detach -p 27017:27017 --volume mongodata:/data/db mongo
+docker run --name mongo --detach --publish 27017:27017 --volume mongodata:/data/db mongo
 docker run --name pretzel -e "DB_HOST=host.docker.internal" --publish 3000:3000 rsuchecki/pretzel
 ```
 
