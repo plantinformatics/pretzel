@@ -29,6 +29,14 @@ Funded by the Grains Research Development Corporation (GRDC).
 NOTE: References for the genetic maps shown in the alignments on this page are available at the bottom of this page.
 
 
+## Quick start using docker
+
+```
+mkdir -p ~/mongodata
+docker run --name mongo --detach -v ~/mongodata:/data/db --net="host" mongo
+docker run --name pretzel --detach --net="host" rsuchecki/pretzel
+```
+
 ## Dependencies
 
 ### Database
@@ -170,7 +178,7 @@ Copy/Paste the Value into a url decoder such as e.g. https://urldecode.org which
 Copy/paste the token value and set it in the command-line environment using :
 ```
 setToken  "authentication-token-goes-here"
-uploadData ~/Applications/Pretzel/pretzel-data/myMap.json 
+uploadData ~/Applications/Pretzel/pretzel-data/myMap.json
 ```
 
 
