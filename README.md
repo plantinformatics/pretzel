@@ -31,6 +31,8 @@ NOTE: References for the genetic maps shown in the alignments on this page are a
 
 ## Quick start using docker
 
+For a quick start without installing any of the dependencies you will need docker engine running on your system. 
+
 ### Docker on linux
 
 ```
@@ -49,6 +51,9 @@ md mongodata
 docker run --name mongo --detach -p 27017:27017 --volume mongodata:/data/db mongo
 docker run --name pretzel -e "DB_HOST=host.docker.internal" --publish 3000:3000 rsuchecki/pretzel
 ```
+
+Once your pretzel instance is running you may want to populate it with some [pre-computed data](https://github.com/plantinformatics/pretzel-input-generator/releases/tag/v1.0).
+
 
 ## Dependencies
 
