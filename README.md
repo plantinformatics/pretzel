@@ -31,7 +31,7 @@ NOTE: References for the genetic maps shown in the alignments on this page are a
 
 ## Quick start using docker
 
-
+### Docker on linux
 
 ```
 mkdir -p ~/mongodata \
@@ -40,6 +40,14 @@ mkdir -p ~/mongodata \
  && docker run --name pretzel --detach --net="host" rsuchecki/pretzel  \
  && until $(curl --silent --fail --output /dev/null localhost:3000); do printf '.'; sleep 1; done \
  && docker logs pretzel
+```
+
+### Docker on windows
+
+```
+md mongodata
+docker run --name mongo --detach -p 27017:27017 --volume mongodata:/data/db mongo
+docker run --name pretzel -e "DB_HOST=host.docker.internal" --publish 3000:3000 rsuchecki/pretzel
 ```
 
 ## Dependencies
