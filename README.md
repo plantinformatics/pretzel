@@ -39,7 +39,7 @@ For a quick start without installing any of the dependencies you will need docke
 mkdir -p ~/mongodata \
  && docker run --name mongo --detach --volume ~/mongodata:/data/db --net="host" mongo \
  && until $(curl --silent --fail --output /dev/null localhost:27017); do printf '.'; sleep 1; done \
- && docker run --name pretzel --detach --net="host" rsuchecki/pretzel  \
+ && docker run --name pretzel --detach --net="host" plantinformaticscollaboration/pretzel  \
  && until $(curl --silent --fail --output /dev/null localhost:3000); do printf '.'; sleep 1; done \
  && docker logs pretzel
 ```
@@ -49,7 +49,7 @@ mkdir -p ~/mongodata \
 ```
 md mongodata
 docker run --name mongo --detach --publish 27017:27017 --volume mongodata:/data/db mongo
-docker run --name pretzel -e "DB_HOST=host.docker.internal" --publish 3000:3000 rsuchecki/pretzel
+docker run --name pretzel -e "DB_HOST=host.docker.internal" --publish 3000:3000 plantinformaticscollaboration/pretzel
 ```
 
 Once your pretzel instance is running you may want to populate it with some [pre-computed data](https://github.com/plantinformatics/pretzel-input-generator/releases/tag/v1.0).
