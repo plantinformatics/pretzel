@@ -885,9 +885,13 @@ div#goto-feature > div
 }
 
 .truncate {
-  white-space: nowrap;
+  overflow-wrap: break-word;
+  /*white-space: nowrap;*/
   overflow: hidden;
-  text-overflow: ellipsis;
+  /*text-overflow: ellipsis;*/
   display:inline-block;
   vertical-align: middle;
+  padding-left: 20px;
+  padding-right: 10px;
+  text-indent: -10px;
 }
