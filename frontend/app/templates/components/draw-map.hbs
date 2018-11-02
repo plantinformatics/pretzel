@@ -12,12 +12,13 @@
 {{yield}}
 
 <div class="devel-visible">
+  {{draw/stacks-view stacks=oa.stacks oa=oa drawMap=this axes2d=axes2d}}
   {{!-- This info will be thinned or removed as axes development progresses. --}}
   <div>splitAxes : {{splitAxes}}</div>
   <div>axes2d : {{axes2d.length}}</div>
   {{#each axes2d as |axisS|}}
     <div>axis : {{axisS}}, {{axisS.axisID}}, {{axisS.extended}}</div>
-    {{axis-2d drawMap=this data=oa axisID=axisS.axisID tableData=axisData}}
+    {{axis-2d drawMap=this data=oa axisID=axisS.axisID tableData=axisData urlOptions=urlOptions}}
   {{/each}}
 
   {{!-- wait until targetId="toolTip" will resolve --}}
@@ -29,7 +30,7 @@
   {{/if}}
   <div>paths : {{paths.length}}</div>
 </div>
-{{draw/link-path stackEvents=this pathReceiver=this}}
+{{draw/link-path stackEvents=this pathReceiver=this modelParamOptions=params.options}}
 
 {{#if axisFeatureCircleHover}}
   {{path-hover data=oa features=hoverFeatures }} {{!-- targetId=axisFeatureTargetId  "holder" --}}

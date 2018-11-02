@@ -37,6 +37,7 @@ export default Ember.Component.extend({
   },
 
   didInsertElement() {
+    this._super(...arguments);
     let features = this.features, targetId = this.targetId,
     targetSel = "#" + targetId;
     

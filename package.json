@@ -34,7 +34,8 @@
 		"run:checkLink" : "[ -f backend/client/index.html ] || npm run postinstall",
 		"run:checkMongo" : "mongo --eval 'hostname();'  admin || echo mongod is required to be running",
     "run:backend" : "cd backend && EMAIL_VERIFY=NONE AUTH=ALL node server/server.js",
-    "run:frontend" : "cd frontend/app; echo \"Entering directory '$PWD'\"; cd ..; ember server",
+    "dev:backend" : "cd backend && npm run dev",
+    "run:frontend" : "cd frontend; echo \"Entering directory '$PWD'\"; npm run start",
 		"clean": "rm -r backend/node_modules   frontend/node_modules frontend/bower_components  backend/client/assets/* frontend/dist/*"
   }
 }

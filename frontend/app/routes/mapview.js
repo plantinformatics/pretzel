@@ -60,6 +60,7 @@ let config = {
     // Get all available maps.
     let result;
 
+    let me = this;
     
     let datasetService = this.get('dataset');
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
@@ -75,6 +76,28 @@ let config = {
         availableMapsTask : datasetsTask, // task result is -> [ id , ... ]
         viewedBlocks : viewedBlocksTasks
       });
+
+    /* When the datasets result (actually the blocks) is received, use that
+     * information to determine if any of params.mapsToView[] have reference
+     * blocks, and if so, add them to the view.
+     */
+    datasetsTask.then(function (blockValues) {
+      console.log('datasetsTask then', blockValues);
+      // blockValues[] are all available blocks
+      let referenceBlocks =
+      params.mapsToView.reduce(function (result, blockId) {
+        /** same as controllers/mapview.js:blockFromId(), maybe factor to a mixin. */
+        let store = me.get('store'),
+        block = store.peekRecord('block', blockId);
+        let referenceBlock = block && block.get('referenceBlock');
+        if (referenceBlock)
+          result.push(referenceBlock);
+        return result;}, []),
+      referenceBlockIds = referenceBlocks.map(function (block) { return block.get('id'); });
+      console.log(referenceBlockIds);
+      /** could add this task list to result; not required yet. */
+      let viewedBlockReferencesTasks = getBlocks.apply(blockService, [referenceBlockIds]);
+    });
 
     console.log("routes/mapview: model() result", result);
     return result;

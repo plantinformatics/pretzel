@@ -29,15 +29,22 @@ export default Ember.Component.extend({
           console.log("getBlocksOfFeatures", selectedFeatureNames[0], features);
 
           let blockIds = new Set(),
+          blockCounts = {},
           blocks = features.features
             .filter(function (feature) {
               let blockId = feature.blockId,
               dup = blockIds.has(blockId);
+              if (!(blockId in blockCounts))
+                blockCounts[blockId] = 0;
+              blockCounts[blockId] += 1;
               if (! dup) blockIds.add(blockId);
               return ! dup; })
             .mapBy('block')
-            .map(peekBlock),
-          blocksUnique = blocks;
+            .map(peekBlock);
+          blocks.forEach(function(b) { b.count = blockCounts[b.id] });
+          let blocksUnique = Array.from(blocks);
+          blocksUnique = blocksUnique.sortBy("count").reverse();
+          console.log(blocksUnique);
           me.set('blocksOfFeatures', blocksUnique);
           console.log(blocksUnique);
         });

@@ -75,6 +75,12 @@ body.ember-application > div.ember-view > div.container
 @media (max-width: 480px) {
 }
 
+.devel #holder
+{
+    padding : inherit;
+}
+
+
 /* -------------------------------------------------------------------------- */
 /* Handle to resize a panel width. 
  * Used by app/utils/domElements.js : eltWidthResizable() */
@@ -161,14 +167,13 @@ svg {
 
 /* ---------------------------------- */
 
-g.axis-use > rect,
-g.axis-use > g.tracks > g > rect {
+g.axis-use > rect {
   fill: none;
   stroke: blue;
 }
 g.axis-use > g.tracks > g > rect.track {
   fill: white;
-  stroke: green;
+  /* stroke: green; */
 }
 .pasteData {
   overflow: hidden;
@@ -346,6 +351,7 @@ div#scaffoldLegend > ul
     stroke-opacity: 1;
 }
 
+/* this is partly a duplicate of a rule below (comment - Brush css style).  Both were added in b637845 (2016 Sep 23)  */
 /*.brush .extent {
   fill-opacity: .3;
   stroke: #fff;
@@ -354,8 +360,10 @@ div#scaffoldLegend > ul
 
 .axis line, .axis path {
   fill: none;
-  stroke: #000;
   shape-rendering: crispEdges;
+}
+.axis line, .axis path:not(.horizTick) {
+  stroke: #000; /* black */
 }
 
 .axis text {
@@ -426,12 +434,6 @@ div.ExportFlowData
 
 /* -------------------------------------------------------------------------- */
 
-.axis path,
-.axis line{
-  fill: none;
-  stroke: black;
-  shape-rendering: crispEdges;
-}
 /* Brush css style */
 .brush .extent {
   stroke: #000;
@@ -451,7 +453,7 @@ g.tick:hover {
 
 .horizTick
 {
-  stroke: green;
+  /* stroke (colour) is now provided by axisTitleColour(). */
   stroke-width : 2px;
 }
 
@@ -820,6 +822,17 @@ div.popover/*.axis-menu*/ div.popover-content {
     display : inherit;
 }
 /* -------------------------------------------------------------------------- */
+/* for controlling display of width resizer in split axis. */
+.axis-use .resizer
+{
+    display : none;
+}
+.axis2dResizer .axis-use .resizer
+{
+    display : inherit;
+}
+/* -------------------------------------------------------------------------- */
+/* When the feature flag (ff) alpha is not defined, don't display the elements with class ff-alpha.  */
 body div > ul > li > div > div.btn-group.ff-alpha,
 .ff-alpha
 {
@@ -872,9 +885,13 @@ div#goto-feature > div
 }
 
 .truncate {
-  white-space: nowrap;
+  overflow-wrap: break-word;
+  /*white-space: nowrap;*/
   overflow: hidden;
-  text-overflow: ellipsis;
+  /*text-overflow: ellipsis;*/
   display:inline-block;
   vertical-align: middle;
+  padding-left: 20px;
+  padding-right: 10px;
+  text-indent: -10px;
 }

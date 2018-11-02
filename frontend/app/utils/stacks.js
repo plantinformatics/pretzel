@@ -91,6 +91,14 @@ function Block(block) {
   this.visible = true;
   console.log("Block()", this, block, axisName);
 };
+/** At some point .axisName will be renamed to .blockId; this function will make
+ * that transparent, and avoid confusion with .getAxis().
+ * @return blockId of this block, aka .axisName
+ */
+Block.prototype.getId = function()
+{
+  return this.axisName;
+};
 /** @return axis of this block or if it has a parent, its parent's axis */
 Block.prototype.getAxis = function()
 {
@@ -228,7 +236,7 @@ Stacked.prototype.logElt = function ()
   let a = d3.select(selectPrefix + "> g.stack > g#id" + this.axisName + ".axis-outer");
   console.log("logElt", a.node());
 };
-/** S for stacks block, as distinct from the block record.
+/** S for stacks Block, as distinct from the (ember store) block record.
  * @return the Block object corresponding to the block record .referenceBlock;
  */
 Stacked.prototype.referenceBlockS = function ()

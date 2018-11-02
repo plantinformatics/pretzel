@@ -1,9 +1,13 @@
 import Ember from 'ember';
 import { eltWidthResizable } from '../utils/domElements';
+import AxisEvents from '../utils/draw/axis-events';
 
 /* global d3 */
 
-export default Ember.Component.extend(Ember.Evented, {
+const axisTransitionTime = 750;
+
+
+export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   needs: ['component:tracks'],
 
@@ -15,40 +19,47 @@ export default Ember.Component.extend(Ember.Evented, {
     return id;
   }),
 
+  axis : Ember.computed('axisID', function() {
+    let axisID = this.get('axisID');
+    let stacks = this.get('drawMap.oa.stacks');
+    let axis = stacks.axesP[axisID];
+    return axis;
+  }),
+  blocks : Ember.computed('axis', function() {
+    let axis = this.get('axis');
+    return axis && axis.blocks;
+  }),
+  /** @return just the ("child") data blocks, skipping the ("parent") reference
+   * block which is block[0].
+   */
+  dataBlocks : Ember.computed('blocks', function () {
+    let blocks = this.get('blocks'),
+    /** use slice() to copy - don't modify blocks[]; and skip blocks[0]. */
+    dataBlocks = blocks.slice(1);
+    return dataBlocks;
+  }),
+
+
   /*--------------------------------------------------------------------------*/
 
   feed: Ember.inject.service(),
 
-  listen: function() {
+  listenFeed: function() {
     let f = this.get('feed'); 
     console.log("listen", f);
     if (f === undefined)
       console.log('feed service not injected');
     else {
     }
-
-    /** handle of the draw-map */
-    let drawMap = this.get('drawMap'); 
-    console.log("listen", drawMap);
-    if (drawMap === undefined)
-      console.log('parent component drawMap not passed');
-    else {
-      drawMap.on('axisStackChanged', this, 'axisStackChanged');
-      drawMap.on('zoomedAxis', this, 'zoomedAxis');
-    }
   }.on('init'),
 
   // remove the binding created in listen() above, upon component destruction
-  cleanup: function() {
+  cleanupFeed: function() {
     let f = this.get('feed');
     if (f)
     {
     }
 
-    let drawMap = this.get('drawMap');
-    if (drawMap)
-    drawMap.off('axisStackChanged', this, 'axisStackChanged');
-    drawMap.off('zoomedAxis', this, 'zoomedAxis');
   }.on('willDestroyElement'),
 
   /** axis-2d receives axisStackChanged from draw-map and propagates it as zoomed to its children.
@@ -56,7 +67,7 @@ export default Ember.Component.extend(Ember.Evented, {
    */
   axisStackChanged : function() {
     console.log("axisStackChanged in components/axis-2d");
-    Ember.run.debounce(this, this.sendZoomed, [], 500);
+    Ember.run.throttle(this, this.sendZoomed, [], 500);
   },
 
   /** @param [axisID, t] */
@@ -69,7 +80,7 @@ export default Ember.Component.extend(Ember.Evented, {
   /** @param [axisID, t] */
   zoomedAxis : function(axisID_t) {
     console.log("zoomedAxis in components/axis-2d", axisID_t);
-    Ember.run.debounce(this, this.sendZoomed, axisID_t, 500);
+    Ember.run.throttle(this, this.sendZoomed, axisID_t, 500);
   },
 
 
@@ -82,6 +93,7 @@ export default Ember.Component.extend(Ember.Evented, {
       {
         // works if axisArea is (string selector and) is not within an existing ember view
       const tracksComponent = Ember.getOwner(this).factoryFor('component:tracks');
+        // This selector should now be '... #axis2D_' + axisID
       let axisArea = Ember.$('.foreignObject > body > #axis2D');
       console.log("components/axis-2d addTracks", axisArea, tracksComponent);
       let t = tracksComponent.create();
@@ -111,6 +123,12 @@ export default Ember.Component.extend(Ember.Evented, {
     remove: function(){
       this.remove();
       console.log("components/axis-2d remove()");
+    },
+    /**
+     * @param componentName e.g. 'axis-tracks'
+     */
+    contentWidth : function (componentName, axisID, width) {
+      this.contentWidth(componentName, axisID, width);
     }
   },
 
@@ -129,6 +147,29 @@ export default Ember.Component.extend(Ember.Evented, {
       && (currentWidth = use_data[0]);
     return currentWidth;
   },
+  childWidths : {},
+  contentWidth : function (componentName, axisID, width) {
+    let
+      childWidths = this.get('childWidths'),
+    previous = childWidths[componentName],
+    deltaWidth = width - (previous || 0),
+    startWidth = this.get('startWidth'),
+    total = (startWidth || 0) + width,
+    me = this,
+    args = [total, deltaWidth]
+    ;
+    console.log('contentWidth', componentName, axisID, width, childWidths, previous, deltaWidth, startWidth, total);
+     function call_setWidth() {
+      childWidths[componentName] = width;
+      me.setWidth.apply(me, args);
+    }
+    
+    if (this.setWidth)
+      call_setWidth();
+    else
+      Ember.run.later(call_setWidth);
+  },
+
 
   didInsertElement() {
     let oa = this.get('data'),
@@ -150,6 +191,9 @@ export default Ember.Component.extend(Ember.Evented, {
     function resized(width, dx, eltSelector, resizable, resizer,  resizerElt, d)
     {
       console.log("resized", width, dx, eltSelector, resizable.node(), resizer.node(),  resizerElt, d);
+      setWidth(width, dx);
+    }
+    function setWidth (width, dx) {
       // constructed in axisShowExtend()
       // narrow to : g.axis-outer#id<axisID> > g.axis-use
       let 
@@ -161,7 +205,7 @@ export default Ember.Component.extend(Ember.Evented, {
       let
         startWidth = me.get('startWidth');
       let
-        delta = width - startWidth,
+        delta = width - (startWidth || 0),
       ok = delta < stacks.axisXRangeMargin;
       console.log(startWidth, width, delta, "axisXRangeMargin", stacks.axisXRangeMargin, ok);
       /* if !ok, maybe some animation to indicate the limit is reached,
@@ -172,8 +216,16 @@ export default Ember.Component.extend(Ember.Evented, {
       {
         use
           .data([width])
+          .transition().duration(axisTransitionTime)
           .attr("transform", function(d) {return "translate(" + d + ",0)";});
-        rect.attr("width", width);
+        console.log('setWidth', use.node(), width, use.data(), use.attr('transform'), use.transition());
+        if (rect.size() == 0)
+          console.log('setWidth rect', rect.node(), axisUse.node(), use.node());
+        else
+        {
+          rect.attr("width", width);
+          console.log(rect.node(), rect.attr('width'));
+        }
         /** Can use param d, same value as me.get('axisID').
          * axisID is also on the parent of <use> :
          * useElt = axisUse.node();
@@ -181,6 +233,9 @@ export default Ember.Component.extend(Ember.Evented, {
          */
         let
           axisID = me.get('axisID');
+        let axis = me.get('axis');
+        console.log('extended', axis.extended, width, axis);
+        axis.extended = width;
         currentSize = width; // dx ?
 
         let parentView = me.get('parentView');
@@ -191,6 +246,7 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       return ok;
     };
+    this.set('setWidth', setWidth);
     function resizeStarted()
     {
       me.set('startWidth', me.rectWidth());
@@ -203,11 +259,20 @@ export default Ember.Component.extend(Ember.Evented, {
       me.trigger('resized', prevSize, currentSize);
       prevSize = currentSize;
     }
-    Ember.run.later( function () { 
-      let dragResize = eltWidthResizable('.foreignObject', undefined, resized);	// #axis2D
-      dragResize.on('start', resizeStarted);
-      dragResize.on('end', resizeEnded);
-    }, 1000);
+    function dragResizeListen () { 
+      let axisID = me.get('axisID'),
+      /** alternative : 'g.axis-outer#id' + axisID + ' .foreignObject' */
+       axisSel = 'div#axis2D_' + axisID;
+      let dragResize = eltWidthResizable(axisSel, undefined, resized);
+      if (! dragResize)
+        console.log('dragResizeListen', axisID, axisSel);
+      else
+      {
+        dragResize.on('start', resizeStarted);
+        dragResize.on('end', resizeEnded);
+      }
+    }
+    Ember.run.later(dragResizeListen, 1000);
   },
 
 });

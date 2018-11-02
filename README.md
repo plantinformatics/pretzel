@@ -29,6 +29,32 @@ Funded by the Grains Research Development Corporation (GRDC).
 NOTE: References for the genetic maps shown in the alignments on this page are available at the bottom of this page.
 
 
+## Quick start using docker
+
+For a quick start without installing any of the dependencies you will need docker engine running on your system.
+
+### Docker on linux
+
+```
+mkdir -p ~/mongodata \
+ && docker run --name mongo --detach --volume ~/mongodata:/data/db --net="host" mongo \
+ && until $(curl --silent --fail --output /dev/null localhost:27017); do printf '.'; sleep 1; done \
+ && docker run --name pretzel --detach --net="host" plantinformaticscollaboration/pretzel  \
+ && until $(curl --silent --fail --output /dev/null localhost:3000); do printf '.'; sleep 1; done \
+ && docker logs pretzel
+```
+
+### Docker on windows
+
+```
+md mongodata
+docker run --name mongo --detach --publish 27017:27017 --volume mongodata:/data/db mongo
+docker run --name pretzel -e "DB_HOST=host.docker.internal" --publish 3000:3000 plantinformaticscollaboration/pretzel
+```
+
+Once your pretzel instance is running you may want to populate it with some [pre-computed data](https://github.com/plantinformatics/pretzel-input-generator/releases/tag/v1.0).
+
+
 ## Dependencies
 
 ### Database
@@ -53,6 +79,28 @@ Bower is a front-end package manager and depends on Node.js and NPM. Install it 
 ```
 sudo npm install bower -g
 ```
+
+### Mac iOS install of Node and Mongodb
+
+Prerequisites :
+XCode :  https://itunes.apple.com/us/app/xcode/id497799835
+Homebrew : https://brew.sh
+
+```
+brew install node
+brew install mongodb
+npm install bower -g
+```
+
+The default location of the mongo database is /data/db;  to place the data in e.g. your home directory :
+```
+cd ~/Applications/
+mkdir Pretzel
+export MONGO_DATA_DB=$HOME/Applications/Pretzel/data_db
+mkdir $MONGO_DATA_DB
+mongod --dbpath $MONGO_DATA_DB
+```
+
 
 ## Cloning repository and set-up
 
@@ -132,6 +180,24 @@ If everything has worked so far, you should be able to open [http://localhost:30
 ## Inserting data
 
 There are five example maps in the `resources/` folder with simple dummy data. You can upload these by navigating to the Upload tab on the left panel, selecting JSON and browsing to the `resources/` folder to select a map. Once submitted, the maps should be visible in the Explorer tab.
+
+### Loading data via the command line
+
+An alternative to the Upload tab is to use the command-line, e.g. for larger files :
+
+export APIHOST=http://localhost:3000
+source ~/Applications/Pretzel/pretzel/resources/tools/functions_prod.bash
+
+While logged into Pretzel via the browser, use the Web Inspector to get the authentication token :
+From Ctrl-click : Inspect ...
+>> Application : Storage : Cookies : http://localhost:3000 :  Name : ember_simple_auth-session
+Copy/Paste the Value into a url decoder such as e.g. https://urldecode.org which will display the decoded parameters as e.g. :
+{"authenticated":{"authenticator":"authenticator:pretzel-local","token":"0uOnWyy08OGcDJbC9eRx5Ki73z2OYkqvrZqQTJmoAklmysU5CxtrYmrXUpcX8MOe","clientId":"5ba9c0870612bf19a6afed01"}}
+Copy/paste the token value and set it in the command-line environment using :
+```
+setToken  "authentication-token-goes-here"
+uploadData ~/Applications/Pretzel/pretzel-data/myMap.json
+```
 
 
 ## Public genetic map references

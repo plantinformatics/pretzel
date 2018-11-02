@@ -1,0 +1,5 @@
+<div>axesP : {{axesP.length}}</div>
+{{#each axesP as |axis axisName|}}
+  <div>axis : {{axis}}, {{axisName}}, {{axis.axisID}}, {{axis.extended}}</div>
+  {{draw/axis-1d drawMap=drawMap axis=axis axes2d=axes2d }}
+{{/each}}
