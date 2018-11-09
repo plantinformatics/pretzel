@@ -16,6 +16,9 @@ const featureTrackTransitionTime = 750;
 /** width of track <rect>s */
 const trackWidth = 10;
 
+/** for devel.  ref comment in @see height() */
+let trace_count_NaN = 10;
+
 /*------------------------------------------------------------------------*/
 /* copied from draw-map.js - will import when that is split */
     /** Setup hover info text over scaffold horizTick-s.
@@ -340,7 +343,21 @@ export default InAxis.extend({
     /** datum is interval array : [start, end];   with attribute .description. */
     function xPosn(d) { /*console.log("xPosn", d);*/ return ((d.layer || 0) + 1) *  trackWidth * 2; };
     function yPosn(d) { /*console.log("yPosn", d);*/ return y(d[0]); };
-    function height(d)  { return y(d[1]) - y(d[0]); };
+    function height(d) {
+      /** if axis.zoomed then 0-height intervals are included, not filtered out.
+       * In that case, need to give <rect> a height > 0.
+       */
+      let height = (d[1] == d[0]) ? 0.01 : y(d[1]) - y(d[0]);
+      /* There was an issue causing NaN here, likely caused by 1-element array
+       * .value, which is now handled.   Here that was causing d[1] undefined,
+       * and hence y(d[1]) NaN.
+       */
+      if (Number.isNaN(height) && (trace_count_NaN-- > 0))
+      {
+        console.log('height NaN', d, 'y:', y.domain(), y.range());
+      }
+      return height;
+    };
     function blockTransform(blockId, i) {
       /** -	plus tracksLayout.layoutWidth for each of the blockId-s to the left of this one. */
       let xOffset = (i+1) * 2 * trackWidth;
@@ -509,7 +526,9 @@ export default InAxis.extend({
          .toArray()  //  or ...
           .map(function (feature) {
             let interval = feature.get('range') || feature.get('value');
-            if (! interval.length)
+            /* copy/paste into CSV in upload panel causes feature.value to be a
+             * single-element array, e.g. {name : "my1AGene1", value : [5200] } */
+            if (! interval.length || (interval.length == 1))
               interval = [interval, interval];
             interval.description = feature.get('name');
             return interval;
