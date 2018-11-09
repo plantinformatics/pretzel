@@ -291,7 +291,9 @@ export default InAxis.extend({
     let
     oa = this.get('axis').drawMap.oa, // or pass in this.get('data'),
     axis = oa.axes[axisID];
-    if (! axis.extended)
+    /* if parent is un-viewed, this function may be called after axis is removed
+     * from stacks. */
+    if (! axis || ! axis.extended)
     {
       let gp = 
       // <g.axis-use> may already be gone.
