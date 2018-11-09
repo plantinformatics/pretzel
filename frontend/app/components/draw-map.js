@@ -8,6 +8,7 @@ const { inject: { service } } = Ember;
 
 /*----------------------------------------------------------------------------*/
 
+import config from '../config/environment';
 import { EventedListener } from '../utils/eventedListener';
 import { chrData } from '../utils/utility-chromosome';
 import { eltWidthResizable, eltResizeToAvailableWidth, noShiftKeyfilter, eltClassName  } from '../utils/domElements';
@@ -4887,7 +4888,13 @@ export default Ember.Component.extend(Ember.Evented, {
        * now block; the axis and stack lookups below could now go more directly
        * via block. */
       axisName = block.axisName,
-      splitAxes = options && options.splitAxes;
+      /** PerpendicularAxis */
+      dotPlot = options && options.dotPlot,
+      /** The first stage of split axes is enabled by options.splitAxes1,
+       * the remainder by options.splitAxes.
+       * In development, splitAxes1 is enabled by default; in production it is disabled by default. 
+       */
+      splitAxes1 = options && options.splitAxes1 || (config.environment !== 'production');
       if (trace_gui)
       console.log("configureAxisTitleMenu", axisName, this, this.outerHTML);
         let node_ = this;
@@ -4910,9 +4917,11 @@ export default Ember.Component.extend(Ember.Evented, {
             + iconButton("DeleteMap", "Delete_" + axisName, "&#x2573;" /*glyphicon-sound-7-1*/, "glyphicon-remove-sign", "#")
             + iconButton("FlipAxis", "Flip_" + axisName, "&#x21C5;" /*glyphicon-bell*/, "glyphicon-retweet", "#")
             + 
-            (splitAxes ?
+            (dotPlot ?
              iconButton("PerpendicularAxis", "Perpendicular_" + axisName, "&#x21B7;" /*glyphicon-bell*/, "glyphicon-retweet", "#") : "")
-            + iconButton("ExtendMap", "Extend_" + axisName, "&#x21F2;" /*glyphicon-star*/, "glyphicon-arrow-right", "#")
+            +
+            (splitAxes1 ?
+             iconButton("ExtendMap", "Extend_" + axisName, "&#x21F2;" /*glyphicon-star*/, "glyphicon-arrow-right", "#")  : "")
         })
         // .popover('show');
       

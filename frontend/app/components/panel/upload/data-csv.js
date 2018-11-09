@@ -274,7 +274,8 @@ export default UploadBase.extend({
           validatedData.push({
             name: row[cols['name']],
             block: row[cols['block']],
-            val: row[cols['val']]
+            // Make sure val is a number, not a string.
+            val: Number(row[cols['val']])
           });
         }
       }
@@ -354,7 +355,7 @@ export default UploadBase.extend({
             var row_array = row.split(csv? ',': '\t');
             var row_obj = {};
             for (var i=0; i<row_array.length; i++) {
-              row_obj[cols[i] || i] = row_array[i];
+              row_obj[cols[i] || i] = row_array[i].trim();
             }
             data.push(row_obj);
           });

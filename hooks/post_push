@@ -2,15 +2,17 @@
 
 set -e
 
-# Parse image name for repo name
-tagStart=$(expr index "$IMAGE_NAME" :)
-repoName=${IMAGE_NAME:0:tagStart-1}
+# Parse image name
+tagStart=$(expr index "${IMAGE_NAME}" :)
+#repoName=${IMAGE_NAME:0:tagStart-1}
 
-# Tag and push image for each additional tag
-for tag in \
-  $(git log -1 --pretty=%h) \
-  $(git branch | grep \* | cut -d ' ' -f2)\
-  $(git tag -l --points-at HEAD); do
-    docker tag $IMAGE_NAME ${repoName}:${tag}
-    docker push ${repoName}:${tag}
-done
+echo "Post-push processing image: ${IMAGE_NAME}. Tag: ${IMAGE_NAME:tagStart}" ## For some reason ${CACHE_TAG} is not available
+
+# Tag and push image for each additional tag if the original tag does not look like a version tag as these are triggered separately
+# [[ "${IMAGE_NAME:tagStart}" =~ ^v?([0-9]+\.)?([0-9]+\.)?(\*|[0-9]+)$ ]] \
+[[ "${IMAGE_NAME:tagStart}" =~ ^v?([0-9]+\.)?([0-9]+\.)?(\*|[0-9]+)$ ]] \
+  || for tag in ${SOURCE_COMMIT} ${SOURCE_BRANCH} $(git tag -l --points-at HEAD | sed 's/^v//' || echo ""); do
+      echo "Additional tag: ${tag}"
+      docker tag ${IMAGE_NAME} ${DOCKER_REPO}:${tag}
+      docker push ${DOCKER_REPO}:${tag}
+ done
