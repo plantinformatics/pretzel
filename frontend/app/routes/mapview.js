@@ -102,7 +102,22 @@ let config = {
     console.log("routes/mapview: model() result", result);
     return result;
 
+  },
+
+  /** Add body class, as in example :
+   * discuss.emberjs.com/t/changing-the-body-class-for-a-specific-route/6331
+   * Could instead use : github.com/stonecircle/ember-body-class
+   */
+  activate: function() {
+    this._super();
+    Ember.$('body').toggleClass("mapview");
+  },
+  deactivate: function() {
+    this._super();
+    Ember.$('body').toggleClass("mapview");
   }
+
+
 };
 
 var args = [config]
