@@ -1,9 +1,9 @@
 {{!-- <div class="container"> --}}
-<div class="" style="position: fixed; width:100%; height:100%">
-  <div style="position: fixed; top:0; height:69px; width:100%">
+<div id="Page-Outer" class="" style="width:100%;">
+  <div id="Page-Nav" style="width:100%">
     {{app-header onLogin='transitionToLoginRoute'}}
   </div>
-  <div class="body" style="position: fixed; width:100%; top:69px; bottom:0">
+  <div id="Page-Body" class="body" style="width:100%;">
     {{outlet}}
   </div>
 </div>
