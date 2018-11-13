@@ -229,7 +229,7 @@ export default Service.extend(Ember.Evented, {
       let records =
         this.get('viewed')
         .filter(function (block) {
-          return block.get('namespace'); // i.e. !== undefined
+          return block.get('isLoaded'); // i.e. !== undefined
         });
       if (trace_block > 1)
         console.log(
