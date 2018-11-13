@@ -1042,10 +1042,11 @@ export default Ember.Component.extend(Ember.Evented, {
          * isChild says that the block is eligible to be a child; (it is possible,
          * but seems very unlikely, that the block may have just been added and
          * would be adopted below.)
+	 * Child blocks have .parent and may have namespace; parent blocks don't have namespace.
          */
         isParent = b.axis && (b === b.axis.blocks[0]), // equivalent to b.axis.referenceBlock.view,
         features = b.block.get('features'),
-        isChild = (b.block.get('namespace') || (features && features.length));
+            isChild = (b.parent || b.block.get('namespace') || (features && features.length));
         if (isParent == isChild)        // verification.
           breakPoint(b.longName(), isParent, 'should be !=', isChild, b.axis, features);
         if (filterChildren && isParent)
@@ -4805,13 +4806,13 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function blockIsUnviewed(blockId) {
       let axisName = blockId;
-      console.log("blockIsUnviewed", axisName, this);
       let axis, sBlock;
 
       /* prior to unview of the parent block of a non-empty axis, the child data blocks are unviewed.
        * This is a verification check.
        */
       axis = oa.axes[axisName];
+      console.log("blockIsUnviewed", axisName, axis);
       if (axis && axis.blocks.length > 1)
       {
         console.log(
@@ -4936,6 +4937,7 @@ export default Ember.Component.extend(Ember.Evented, {
           deleteButtonS
             .on('click', function (buttonElt /*, i, g*/) {
               console.log("delete", axisName, this);
+		// this overlaps with the latter part of blockIsUnviewed()
               let axis = oa.axes[axisName], stack = axis && axis.stack;
               // axes[axisName] is deleted by removeStacked1() 
               let stackID = Stack.removeStacked(axisName);
