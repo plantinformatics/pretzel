@@ -1,0 +1,28 @@
+<ul class="nav nav-tabs">
+  <li class="active">
+    <a data-toggle="tab" href="#tab-selected-features">Selected Features</a>
+    <div>{{selectedFeatures.length}}</div>
+  </li>
+  <li>
+    <a data-toggle="tab" href="#tab-features">Features Input</a>
+    <div>{{activeFeatureList.featureNameList.length}} ({{featureNameList.length}})</div>
+  </li>
+
+</ul>
+
+
+<div class="tab-content">
+  <div id="tab-selected-features" class="tab-pane fade in active">
+    {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{selectedFeatures.length}}</span>
+
+  </div>
+  <div id="tab-features" class="tab-pane fade in">
+    {{input
+      value=featureNameList
+      class="form-control"
+      placeholder="Feature (Marker/Gene) Names\n(whitespace or comma separated)" }}
+
+  </div>
+</div>
+
+<hr >

@@ -882,6 +882,23 @@ div#goto-feature > div
 
 /* -------------------------------------------------------------------------- */
 
+/* match the color of .nav-tabs */
+.feature-list > hr {
+  border-top-color: #ddd;
+}
+.feature-list > ul.nav.nav-tabs > li > a {
+  float: left;
+  margin: 3px;
+}
+.feature-list > ul.nav.nav-tabs > li:not(.active) > div {
+    display : none;
+}
+.feature-list > ul.nav.nav-tabs > li > div {
+  float: right;
+}
+
+/* -------------------------------------------------------------------------- */
+
 .panel-collapse-button {
   padding:0 5px 0 5px;
   border-radius:0;
