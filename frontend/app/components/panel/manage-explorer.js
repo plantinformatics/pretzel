@@ -1,4 +1,8 @@
+import Ember from "ember";
+
 import ManageBase from './manage-base'
+
+/* global d3 */
 
 export default ManageBase.extend({
 
@@ -46,6 +50,34 @@ export default ManageBase.extend({
     if (availableMaps && availableMaps.length > 0) { return false; }
     else { return true; }
   }),
+  /** group the data in : Parent / Scope / Block
+   */
+  dataTree : Ember.computed('data', function() {
+    let datasets = this.get('data'),
+    n = d3.nest()
+      .key(function(f) { let p = f.get('parent'); return p ? p.get('name') : '_'; })
+      .entries(datasets);
+    let grouped =
+      n.reduce(
+        function (result, nd) {
+          result[nd.key] =
+	          nd.values.reduce(function (result2, d) {
+              // console.log('result2', result2, d);
+              let blocks = d.get('blocks').toArray();
+              let nestedBlocks=d3.nest()
+                .key(function(b) { return b.get('scope'); })
+                .entries(blocks),
+              datasetName = d.get('name');
+	            result2[datasetName] = nestedBlocks;
+              return result2;
+            }, {});
+          return result;
+        },
+	      {});
+    console.log('dataTree', grouped);
+    return grouped;
+  }),
+
   actions: {
     refreshAvailable() {
       let me = this;

@@ -1,0 +1,8 @@
+<ul>
+  {{#each data as |pair|}}
+    <li class="list-group-item list-group-item-info" >{{pair.key}}
+      {{record/entry-blocks
+        data=pair.values}}
+    </li>
+  {{/each}}
+</ul>

@@ -63,4 +63,28 @@
       </span>
     </li>
   </ul>
+  <div>
+    <ul class="nav nav-tabs">
+      <li class="active">
+	<a data-toggle="tab" href="#tab-explorer-parent">Parent / Scope</a>
+	<div>{{dataTree.length}}</div>
+      </li>
+      <li>
+	<a data-toggle="tab" href="#tab-explorer-datasets">Datasets</a>
+	<div>{{data.length}}</div>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+      <div id="tab-explorer-parent" class="tab-pane fade in active">
+	{{record/entry-parents
+	  dataTree=dataTree}}
+      </div>
+      <div id="tab-explorer-datasets" class="tab-pane fade in">
+	<span class="badge">{{data.length}}</span>
+      </div>
+    </div>
+
+  </div>
+
 {{/elem/panel-container}}

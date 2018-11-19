@@ -1,0 +1,8 @@
+<ul>
+  {{#each data as |block|}}
+    <li class="list-group-item list-group-item-info" >{{key}}
+      {{record/entry-block
+        entry=block}}
+    </li>
+  {{/each}}
+</ul>

@@ -1,0 +1,8 @@
+<ul>
+  {{#each-in dataTree as |key value|}}
+    <li  class="list-group-item list-group-item-info" >{{key}}
+      {{record/entry-datasets
+        data=value}}
+    </li>
+  {{/each-in}}
+</ul>
