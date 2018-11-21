@@ -42,7 +42,12 @@ export default Component.extend({
     for(var key in data) {
       if (!data[key]) {
         let errorString = requirements[key]
-        this.set('errorMessage', errorString);
+        /* So far there is only 1 field which is optional; if there are more we
+         * can add a more formal means to signify optional fields;  the following
+         * simply interprets a field as optional if its prompt message finishes
+         * in ", if applicable."  */
+        if (! errorString.match(/, if applicable.$/))
+          this.set('errorMessage', errorString);
       }
     }
   },

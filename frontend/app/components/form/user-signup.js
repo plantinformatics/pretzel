@@ -4,7 +4,10 @@ export default BaseForm.extend({
   authMethod: 'signupRequest',
   requirements: {
     'email': "Please enter an email.",
-    'password': "Please enter a password."
+    'password': "Please enter a password.",
+    'name' : 'Please enter your name.',
+    'institution' : 'Please enter the name of your institution.',
+    'project' : 'Please enter your GRDC project code, if applicable.'
   },
   errorMap: {
     422: "Your email already exists in our records. Please log in."
