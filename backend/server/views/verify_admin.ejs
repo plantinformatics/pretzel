@@ -4,6 +4,15 @@
 <p>
   A user has registered for the site (<%= email_user %>). Please click the link below to accept their registration.
 </p>
+<p>
+  The details entered by the user are :
+<ul>
+    <li>Name :               <%= user_name %> </li>
+    <li>Institution :         <%= user_institution %> </li>
+    <li>Project :            <%= user_project %> </li>
+</ul>
+</p>
+
 
 <p>
   <a href="<%= verifyHref %>">Click here to verify the user</a>
