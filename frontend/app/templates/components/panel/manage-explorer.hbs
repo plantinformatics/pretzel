@@ -67,7 +67,6 @@
     <ul class="nav nav-tabs">
       <li class="active">
 	<a data-toggle="tab" href="#tab-explorer-parent">Parent / Scope</a>
-	<div>{{dataTree.length}}</div>
       </li>
       <li>
 	<a data-toggle="tab" href="#tab-explorer-datasets">Datasets</a>
@@ -78,6 +77,7 @@
     <div class="tab-content">
       <div id="tab-explorer-parent" class="tab-pane fade in active">
 	{{record/entry-parents
+          loadBlock="loadBlock"
 	  dataTree=dataTree}}
       </div>
       <div id="tab-explorer-datasets" class="tab-pane fade in">

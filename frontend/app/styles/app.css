@@ -670,6 +670,16 @@ li.dropdown-submenu > ul.dropdown-menu {
     border-radius: 6px 0 6px 6px;
 }
 /* -------------------------------------------------------------------------- */
+/* dataset explorer : tree browser */
+li > span.blockInScope
+{
+    display: none;
+}
+li:hover > span.blockInScope
+{
+    display: inherit;
+}
+/* -------------------------------------------------------------------------- */
 div.drawing-controls > div.drawing
 {
   margin-top: 0.5em;

@@ -1,8 +1,13 @@
 <ul>
   {{#each data as |block|}}
-    <li class="list-group-item list-group-item-info" >{{key}}
-      {{record/entry-block
-        entry=block}}
+    <li class="list-group-item list-group-item-info" >
+      {{record/entry-block-by-scope
+        loadBlock="loadBlock"
+        entry=block }}
+      {{!--
+      {{block.datasetId.name}}
+      <span class="blockInScope">{{block.name}}</span>
+      --}}
     </li>
   {{/each}}
 </ul>

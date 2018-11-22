@@ -1,8 +1,9 @@
 <ul>
-  {{#each data as |pair|}}
-    <li class="list-group-item list-group-item-info" >{{pair.key}}
+  {{#each-in data as |key value|}}
+    <li class="list-group-item list-group-item-info" >{{key}}
       {{record/entry-blocks
-        data=pair.values}}
+        loadBlock="loadBlock"
+        data=value}}
     </li>
-  {{/each}}
+  {{/each-in}}
 </ul>

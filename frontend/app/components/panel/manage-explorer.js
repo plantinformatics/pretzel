@@ -57,23 +57,25 @@ export default ManageBase.extend({
     n = d3.nest()
       .key(function(f) { let p = f.get('parent'); return p ? p.get('name') : '_'; })
       .entries(datasets);
+    /** this reduce is mapping an array  [{key, values}, ..] to a hash {key : value, .. } */
     let grouped =
       n.reduce(
-        function (result, nd) {
-          result[nd.key] =
-	          nd.values.reduce(function (result2, d) {
-              // console.log('result2', result2, d);
-              let blocks = d.get('blocks').toArray();
-              let nestedBlocks=d3.nest()
-                .key(function(b) { return b.get('scope'); })
-                .entries(blocks),
-              datasetName = d.get('name');
-	            result2[datasetName] = nestedBlocks;
-              return result2;
+        function (result, datasetsByParent) {
+          result[datasetsByParent.key] =
+	          datasetsByParent.values.reduce(function (blocksByScope, dataset) {
+              // console.log('blocksByScope', blocksByScope, dataset);
+              let blocks = dataset.get('blocks').toArray();
+              blocks.forEach(
+                function (b) {
+                  let scope = b.get('scope'),
+                  blocksOfScope = blocksByScope[scope] || (blocksByScope[scope] = []);
+                  blocksOfScope.push(b);
+                });
+              return blocksByScope;
             }, {});
           return result;
         },
-	      {});
+        {});
     console.log('dataTree', grouped);
     return grouped;
   }),
