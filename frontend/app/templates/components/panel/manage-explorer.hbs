@@ -37,38 +37,12 @@
       </div>
     </div>
   {{/if}}
-  <ul class="list-group">
-    
-    {{#each data as |dataset|}}
-      {{record/entry-dataset
-        filter=filter
-        entry=dataset
-        selectedBlock=selectedBlock
-        selectBlock="selectBlock"
-        deleteBlock="deleteBlock"
-        onDelete="onDelete"
-        loadBlock="loadBlock"
-        selectedDataset=selectedDataset
-        selectDataset="selectDataset"}}
-    {{/each}}
-    <li 
-      class="list-group-item list-group-item-info">
-      {{elem/icon-base name='cloud-upload'}} &nbsp;Upload new data
-      <span class="pull-right">
-        {{elem/button-base
-          classSize='xs'
-          classColour='success'
-          icon='plus'
-          onClick=(action "changeTab" "upload")}}
-      </span>
-    </li>
-  </ul>
   <div>
     <ul class="nav nav-tabs">
       <li class="active">
 	<a data-toggle="tab" href="#tab-explorer-parent">Parent / Scope</a>
       </li>
-      <li>
+      <li class="active-detail">
 	<a data-toggle="tab" href="#tab-explorer-datasets">Datasets</a>
 	<div>{{data.length}}</div>
       </li>
@@ -81,7 +55,34 @@
 	  dataTree=dataTree}}
       </div>
       <div id="tab-explorer-datasets" class="tab-pane fade in">
-	<span class="badge">{{data.length}}</span>
+
+	<ul class="list-group">
+	  
+	  {{#each data as |dataset|}}
+	    {{record/entry-dataset
+              filter=filter
+              entry=dataset
+              selectedBlock=selectedBlock
+              selectBlock="selectBlock"
+              deleteBlock="deleteBlock"
+              onDelete="onDelete"
+              loadBlock="loadBlock"
+              selectedDataset=selectedDataset
+              selectDataset="selectDataset"}}
+	  {{/each}}
+	  <li 
+	      class="list-group-item list-group-item-info">
+	    {{elem/icon-base name='cloud-upload'}} &nbsp;Upload new data
+	    <span class="pull-right">
+              {{elem/button-base
+		classSize='xs'
+		classColour='success'
+		icon='plus'
+		onClick=(action "changeTab" "upload")}}
+	    </span>
+	  </li>
+	</ul>
+
       </div>
     </div>
 

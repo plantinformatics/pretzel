@@ -671,14 +671,36 @@ li.dropdown-submenu > ul.dropdown-menu {
 }
 /* -------------------------------------------------------------------------- */
 /* dataset explorer : tree browser */
+
+#tab-explorer-parent  ul {
+  /* there is enough indent in the li, so 0 is enough here. */
+  -webkit-padding-start: 0px;
+}
+#tab-explorer-parent > ul {
+  /* no padding here because it will be white, unlike the list. */
+  -webkit-padding-start: 0px;
+}
+
 li > span.blockInScope
 {
-    display: none;
+  display: none;
 }
 li:hover > span.blockInScope
 {
-    display: inherit;
+  display: inherit;
+  margin-left: 1em;
 }
+
+li.active-detail {
+  display:flex;
+}
+li.active-detail > div {
+  display: none;
+}
+li.active-detail.active > div {
+  display: inherit;
+}
+
 /* -------------------------------------------------------------------------- */
 div.drawing-controls > div.drawing
 {
