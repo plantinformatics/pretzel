@@ -54,16 +54,31 @@ function selectAxis(axis)
   return aS;
 }
 /** Draw horizontal ticks on the axes, at feature locations.
+ * This is used for 2 cases so far :
+ * . all features of blocks which have !showPaths, when axis is ! extended
+ * . features found in blocks using feature search (goto-feature-list)
+ *
  * @param axis  Stacked
  * @param axisApi for lineHoriz
+ * @param axis1d axis-1d component, to lookup axisObj.extended
  */
-function showTickLocations(axis, axisApi)
+function FeatureTicks(axis, axisApi, axis1d)
 {
+  this.axis = axis;
+  this.axisApi = axisApi;
+  this.axis1d = axis1d;
+}
+
+/** Draw horizontal ticks on the axes, at feature locations.
+ */
+FeatureTicks.prototype.showTickLocations = function ()
+{
+  let axis = this.axis, axisApi = this.axisApi;
   let axisName = axis.axisName;
   let
     range0 = axis.yRange2();
   let
-    axisObj = this.get('axisObj'),
+    axisObj = this.axis1d.get('axisObj'),
   /** using the computed function extended() would entail recursion. */
   extended = axisObj && axisObj.extended;
   console.log('showTickLocations', extended, axisObj);
@@ -183,7 +198,7 @@ function showTickLocations(axis, axisApi)
   // the code corresponding to hoverTextFn in the original is :
   // (location == "string") ? location :  "" + location;
 
-}
+};
 
 /** Setup hover info text over scaffold horizTick-s.
  * @see based on similar configureAxisTitleMenu()
@@ -267,7 +282,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     return extended;
   }),
 
-  didInsertElement : function() {
+  didReceiveAttrs() {
+    this._super(...arguments);
+    this.get('featureTicks') || this.constructFeatureTicks();
+  },
+  didInsertElement() {
     this._super(...arguments);
     console.log('axis-1d didInsertElement', this, this.get('listen') !== undefined);
   },
@@ -289,12 +308,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   didRender() {
     this.get('renderTicks').apply(this, []);
   },
-  renderTicks() {
+  constructFeatureTicks () {
     /** There is 1 axis-1d component per axis, so here `block` is an axis (Stacked),
      * Can rename it to axis, assuming this structure remains.
      */
     let block = this.get('axis'), blockId = block.get('id');
-    console.log('renderTicks', blockId);
+    console.log('constructFeatureTicks', blockId, this);
     let axisApi = this.get('drawMap.oa.axisApi');
     let oa = this.get('drawMap.oa');
     let axis = oa.axes[blockId];
@@ -304,8 +323,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      * parent (reference) block of the axis. */
     if (! axis)
       console.log('renderTicks block', block, blockId, oa.stacks.blocks[blockId]);
-    else
-      showTickLocations.apply(this, [axis, axisApi]);
+    else {
+      let featureTicks = new FeatureTicks(axis, axisApi, this);
+      console.log('featureTicks', featureTicks);
+      this.set('featureTicks',  featureTicks);
+    }
+  },
+  renderTicks() {
+    this.get('featureTicks').showTickLocations();
   },
   /** call renderTicks().
    * filter / debounce the calls to handle multiple events at the same time.
