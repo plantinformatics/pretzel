@@ -1,6 +1,8 @@
 <div style="padding: 1em">
 
-  {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{selectedFeatures.length}}</span>
+  {{panel/feature-list
+    selectedFeatures=selectedFeatures }}
+
 
   {{#if false}}	{{!-- debug trace --}}
     <div>
@@ -16,7 +18,7 @@
     </div>
   {{/if}}
 
-  <div style="clear:both; height:2em"></div>
+
 
   {{!-- same icon as button-refresh, but override colour.
    Use .list-group to get some margin-bottom; when upgrading bootstrap from 3
