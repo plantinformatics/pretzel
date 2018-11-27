@@ -474,6 +474,10 @@ g.tick:hover {
   /* stroke (colour) is now provided by axisTitleColour(). */
   stroke-width : 2px;
 }
+g.foundFeatures > path.horizTick
+{
+  stroke-dasharray: 8 4 8 20;
+}
 
 path.syntenyEdge
 {

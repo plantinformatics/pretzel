@@ -20,7 +20,15 @@ import { breakPoint } from '../../utils/breakPoint';
 const axisTickTransitionTime = 750;
 
 function blockKeyFn(block) { return block.axisName; }
-function blockTickEltId(block) { return className + '_' + block.axisName; }
+
+/** Get an attribute of an object which may be an ember store object, or not.
+ * Ember data operations such as findAll() will return ember store objects,
+ * and ajax requests which return JSON will be parsed into plain JS objects.
+ * Further details in comment in axis-1d.js : @see keyFn()
+ */
+function getAttrOrCP(object, attrName) {
+  return object.get ? object.get(attrName) : object[attrName];
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -71,7 +79,7 @@ function FeatureTicks(axis, axisApi, axis1d)
 
 /** Draw horizontal ticks on the axes, at feature locations.
  */
-FeatureTicks.prototype.showTickLocations = function ()
+FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setupHover, groupName, blockFilter)
 {
   let axis = this.axis, axisApi = this.axisApi;
   let axisName = axis.axisName;
@@ -81,15 +89,17 @@ FeatureTicks.prototype.showTickLocations = function ()
     axisObj = this.axis1d.get('axisObj'),
   /** using the computed function extended() would entail recursion. */
   extended = axisObj && axisObj.extended;
-  console.log('showTickLocations', extended, axisObj);
+  console.log('showTickLocations', extended, axisObj, groupName);
+
+  function blockTickEltId(block) { return className + '_' + groupName + '_' + block.axisName; }
 
   let blockIndex = {};
   let aS = selectAxis(axis);
   if (!aS.empty())
   {
     /** show no ticks if axis is extended. */
-    let blocks = (extended ? [] : axis.blocks.filter(blockWithTicks));
-    let gS = aS.selectAll("g." + className)
+    let blocks = (extended ? [] : blockFilter ? axis.blocks.filter(blockWithTicks) : axis.blocks);
+    let gS = aS.selectAll("g." + className + '.' + groupName)
       .data(blocks, blockKeyFn);
     gS.exit().remove();
     function storeBlockIndex (block, i) {
@@ -99,26 +109,31 @@ FeatureTicks.prototype.showTickLocations = function ()
     let gA = gS.enter()
       .append('g')
       .attr('id', blockTickEltId)
-      .attr('class', className)
+      .attr('class', className + ' ' + groupName)
     ;
     gS.merge(gA)
       .each(storeBlockIndex);
 
     function featuresOfBlock (block) {
       function inRange(feature) {
-        let featureName = feature.get('name');
+        /** comment in @see keyFn() */
+        let featureName = getAttrOrCP(feature, 'name');
         return axisApi.inRangeI(block.axisName, featureName, range0);
       }
 
       let blockR = block.block,
       blockId = blockR.get('id'),
-      features = blockR.get('features').toArray()
+      featuresAll = (featuresOfBlockLookup || function (blockR) {
+        return blockR.get('features').toArray();
+      })(blockR),
+      features = featuresAll
         .filter(inRange);
       console.log(blockId, features.length);
       return features;
-    }
+    };
 
-    let pS = gS.merge(gA)
+    let gSA = gS.merge(gA),
+    pS = gSA
       .selectAll("path." + className)
         .data(featuresOfBlock, keyFn),
       pSE = pS.enter()
@@ -136,14 +151,18 @@ FeatureTicks.prototype.showTickLocations = function ()
         return axisTitleColour(blockId, i+1) || 'black';
       }
 
-
+    if (setupHover === true)
+    {
+    setupHover = 
     function setupHover (feature) 
     {
       let block = this.parentElement.__data__;
       return configureHorizTickHover.apply(this, [feature, block, hoverTextFn]);
-    }
+    };
+
       pSE
         .each(setupHover);
+    }
       pS.exit()
         .remove();
       let pSM = pSE.merge(pS);
@@ -159,12 +178,22 @@ FeatureTicks.prototype.showTickLocations = function ()
     ;
 
 
-
   }
 
   function keyFn (feature) {
     // here `this` is the parent of the <path>-s, e.g. g.axis
-    let featureName = feature.get('name');
+
+    /** If feature is the result of block.get('features') then it will be an
+     * ember store object, but if it is the result of featureSearch() then it will be
+     * just the data attributes, and will not implement .get().
+     * Using feature.name instead of feature.get('name') will work in later
+     * versions of Ember, and will work after the computed property is
+     * evaluated, because name attribute does not change.
+     * The function getAttrOrCP() will use .get if defined, otherwise .name (via ['name']).
+     * This comment applies to use of 'feature.'{name,range,value} in
+     * inRange() (above), and keyFn(), pathFn(), hoverTextFn() below.
+     */
+    let featureName = getAttrOrCP(feature, 'name');
     // console.log('keyFn', feature, featureName); 
     return featureName;
   };
@@ -173,9 +202,16 @@ FeatureTicks.prototype.showTickLocations = function ()
     /** shiftRight moves right end of tick out of axis zone, so it can
      * receive hover events.
      */
-    const xOffset = 25, shiftRight=5;
+    let xOffset = 25, shiftRight=5;
+    /* the requirements for foundFeatures path will likely evolve after trial,
+     * so this informal customisation is sufficient until the requirements are
+     * settled.
+     */
+    if (groupName === 'foundFeatures') {
+      xOffset = 30; shiftRight=40;
+    }
     let ak = axisName,
-    range = feature.get('range') || feature.get('value'),
+    range = getAttrOrCP(feature, 'range') || getAttrOrCP(feature, 'value'),
     tickY = range && (range.length ? range[0] : range),
     sLine = axisApi.lineHoriz(ak, tickY, xOffset, shiftRight);
     return sLine;
@@ -185,10 +221,10 @@ FeatureTicks.prototype.showTickLocations = function ()
   function hoverTextFn (feature, block) {
     let
       /** value is now renamed to range, this handles some older data. */
-    range = feature.get('range') || feature.get('value'),
+      range = getAttrOrCP(feature, 'range') || getAttrOrCP(feature, 'value'),
     rangeText = range && (range.length ? ('' + range[0] + ' - ' + range[1]) : range),
     blockR = block.block,
-    featureName = feature.get('name'),
+    featureName = getAttrOrCP(feature, 'name'),
     scope = blockR && blockR.get('scope'),
     text = [featureName, scope, rangeText]
       .filter(function (x) { return x; })
@@ -330,7 +366,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     }
   },
   renderTicks() {
-    this.get('featureTicks').showTickLocations();
+    this.get('featureTicks').showTickLocations(undefined, true, 'notPaths', true);
   },
   /** call renderTicks().
    * filter / debounce the calls to handle multiple events at the same time.

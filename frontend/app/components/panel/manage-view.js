@@ -31,6 +31,9 @@ export default ManageBase.extend({
       for (let i=displayData.length-1; i >= 0; i--) {
         me.send('removeBlock', displayData[i]);
       }
+    },
+    updateFeaturesInBlocks(featuresInBlocks) {
+      this.sendAction('updateFeaturesInBlocks', featuresInBlocks);
     }
   }
 });

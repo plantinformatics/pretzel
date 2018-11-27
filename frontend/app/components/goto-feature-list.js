@@ -3,6 +3,9 @@ import Ember from 'ember';
 const { inject: { service } } = Ember;
 import { task } from 'ember-concurrency';
 
+/* global d3 */
+
+
 export default Ember.Component.extend({
   blockService: service('data/block'),
 
@@ -13,7 +16,9 @@ export default Ember.Component.extend({
     loadBlock(block) {
       this.sendAction('loadBlock', block);
     },
-
+    updateFeaturesInBlocks(featuresInBlocks) {
+      this.sendAction('updateFeaturesInBlocks', featuresInBlocks);
+    },
     getBlocksOfFeatures : function () {
       console.log("getBlocksOfFeatures", this);
       let 
@@ -26,6 +31,12 @@ export default Ember.Component.extend({
         : this.blocksUnique(selectedFeatureNames);
 
       this.set('blocksOfFeatures', blocksUnique);
+    },
+
+    /** not used - the requirements shifted from setting the axis brushes from
+     * the outer features to showing ticks for all found features.  */
+    brushFeatures : function () {
+      this.brushFeatures();
     }
   }, // actions
 
@@ -41,34 +52,41 @@ export default Ember.Component.extend({
 
           let blockIds = new Set(),
           blockCounts = {},
-          blocks = features.features
-            .filter(function (feature) {
-              let blockId = feature.blockId,
-              dup = blockIds.has(blockId);
-              if (!(blockId in blockCounts))
-                blockCounts[blockId] = 0;
-              blockCounts[blockId] += 1;
-              if (! dup) blockIds.add(blockId);
-              return ! dup; })
-            .mapBy('block')
+
+          n = d3.nest()
+            .key(function(f) { return f.blockId; })
+            .entries(features.features),
+          n1=n.sort(function (a,b) { return b.values.length - a.values.length; }),
+          // n1.map(function (d) { return d.key; }),
+          blocksUnique = n1.map(function (d) { return d.values[0].block; })
             .map(peekBlock);
-          blocks.forEach(function(b) { b.set('count', blockCounts[b.id]); });
-          let blocksUnique = Array.from(blocks);
-          console.log(blocksUnique);
-          blocksUnique = blocksUnique.sortBy("count").reverse();
-          console.log(blocksUnique);
+
           me.set('blocksOfFeatures', blocksUnique);
+          /** convert nest [{key, values}..] to hash [key] : values */
+          let featuresInBlocks = n.reduce(
+            function (result, value) { result[value.key] = value.values; return result; },
+            {} );
+          console.log('featuresInBlocks', featuresInBlocks);
+          me.send('updateFeaturesInBlocks', featuresInBlocks);
+
         });
   },
 
   /** didRender() is called in this component and in the child component
    * feature-list for each keypress in {{input value=featureNameList}} in the
-   * child,  so identifying featureList is done in didInsertElement().
+   * child,  so the call to lookupFeatureList(), identifying featureList,
+   * is done in didInsertElement().
    */
   didInsertElement() {
-    /** for trace */
-    const fnName = 'didInsertElement';
     this._super(...arguments);
+    this.lookupFeatureList();
+  },
+
+  /** Identify the feature-list child component.
+   */
+  lookupFeatureList() {
+    /** for trace */
+    const fnName = 'lookupFeatureList';
 
     /** possibly CF on childViews.@each */
     let children = this.get('childViews'),
@@ -88,6 +106,9 @@ export default Ember.Component.extend({
   refreshClassNames : Ember.computed('loading', function () {
     let classNames = "btn btn-info pull-right";
     return this.get('loading') ? classNames + ' disabled' : classNames;
-  })
+  }),
+
+  brushFeatures() {
+  }
 
 });
