@@ -476,7 +476,7 @@ g.tick:hover {
 }
 g.foundFeatures > path.horizTick
 {
-  stroke-dasharray: 8 4 8 20;
+  stroke-width : 3px;
 }
 
 path.syntenyEdge

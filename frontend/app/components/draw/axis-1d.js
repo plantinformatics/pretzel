@@ -208,7 +208,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
      * settled.
      */
     if (groupName === 'foundFeatures') {
-      xOffset = 30; shiftRight=40;
+      xOffset = 35;
     }
     let ak = axisName,
     range = getAttrOrCP(feature, 'range') || getAttrOrCP(feature, 'value'),
