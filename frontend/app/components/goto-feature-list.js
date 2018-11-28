@@ -61,6 +61,19 @@ export default Ember.Component.extend({
           blocksUnique = n1.map(function (d) { return d.values[0].block; })
             .map(peekBlock);
 
+          /* entry-block-add.hbs is displaying {{entry.count}}.
+           * Instead of modifying the store object, this can result in a
+           * mapping, or be done in a lookup action, which is passed to
+           * entry-block-add
+           */
+          n1.forEach(function (d) {
+            /** this peekBlock() is also done in the above n1.map(), and they
+             * could be integrated.  */
+            let block = blockService.peekBlock(d.key);
+            block.set('count', d.values.length);
+          });
+
+
           me.set('blocksOfFeatures', blocksUnique);
           /** convert nest [{key, values}..] to hash [key] : values */
           let featuresInBlocks = n.reduce(
