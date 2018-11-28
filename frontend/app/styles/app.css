@@ -934,3 +934,13 @@ div#goto-feature > div
   padding-right: 10px;
   text-indent: -10px;
 }
+
+div#left-panel-view > div > div > div > ul > li > div
+{
+  overflow-wrap: break-word;
+  text-indent: 1em;
+}
+div#left-panel-view > div > div > div > ul > li > div > button
+{
+    float : left;
+}
