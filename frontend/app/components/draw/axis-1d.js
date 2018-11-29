@@ -111,8 +111,11 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
       .attr('id', blockTickEltId)
       .attr('class', className + ' ' + groupName)
     ;
-    gS.merge(gA)
-      .each(storeBlockIndex);
+    /** data blocks of the axis, for calculating blockIndex i.e. colour.
+     * colour assignment includes non-visible blocks . */
+    let blocksUnfiltered = extended ? [] : axis.dataBlocks(false);
+    console.log('blockIndex', axisName, axis, axis.blocks);
+    blocksUnfiltered.forEach(storeBlockIndex);
 
     function featuresOfBlock (block) {
       function inRange(feature) {
