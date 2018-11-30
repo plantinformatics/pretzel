@@ -55,7 +55,19 @@ export default ManageBase.extend({
   dataTree : Ember.computed('data', function() {
     let datasets = this.get('data'),
     n = d3.nest()
-      .key(function(f) { let p = f.get('parent'); return p ? p.get('name') : '_'; })
+      .key(function(dataset) { 
+        let p = dataset.get('parent');
+        if(p) {
+          if(p.get('name')) {
+            return p.get('name')
+          }
+          else {
+            return dataset.get('name')
+          }
+        }
+        return '_'
+        // return p.get('name') ? p.get('name') : '_';
+      })
       .entries(datasets);
     /** this reduce is mapping an array  [{key, values}, ..] to a hash {key : value, .. } */
     let grouped =
@@ -63,7 +75,7 @@ export default ManageBase.extend({
         function (result, datasetsByParent) {
           result[datasetsByParent.key] =
 	          datasetsByParent.values.reduce(function (blocksByScope, dataset) {
-              // console.log('blocksByScope', blocksByScope, dataset);
+              console.log('blocksByScope', blocksByScope, dataset);
               let blocks = dataset.get('blocks').toArray();
               blocks.forEach(
                 function (b) {
