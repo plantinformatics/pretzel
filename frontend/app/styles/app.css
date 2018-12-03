@@ -474,6 +474,10 @@ g.tick:hover {
   /* stroke (colour) is now provided by axisTitleColour(). */
   stroke-width : 2px;
 }
+g.foundFeatures > path.horizTick
+{
+  stroke-width : 3px;
+}
 
 path.syntenyEdge
 {
@@ -929,4 +933,14 @@ div#goto-feature > div
   padding-left: 20px;
   padding-right: 10px;
   text-indent: -10px;
+}
+
+div#left-panel-view > div > div > div > ul > li > div
+{
+  overflow-wrap: break-word;
+  text-indent: 1em;
+}
+div#left-panel-view > div > div > div > ul > li > div > button
+{
+    float : left;
 }
