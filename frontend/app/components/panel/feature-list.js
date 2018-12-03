@@ -8,15 +8,21 @@ export default Ember.Component.extend({
 
   classNames : [className],
 
-  activeInput : Ember.computed(function () {
-    let 
-      /** can alternately get class .active from  "ul.nav.nav-tabs > li"
-       */
-      activeInputElt = Ember.$('.' + className + ' div#tab-features'),
-    activeInput = activeInputElt.hasClass('active');
-    console.log('activeInput', activeInputElt, activeInputElt.attr('class'), activeInput);
-    return activeInput;
-  }).volatile(),
+  actions : {
+    featureNameListInput() {
+      this.featureNameListInput();
+    },
+    toSelectedFeatures() {
+      this.toSelectedFeatures();
+    },
+    fromSelectedFeatures() {
+      this.fromSelectedFeatures();
+    }
+  },
+
+
+  activeInput : true,
+  featureNameListEnter : 0,
   
   /** Once the user has selected which tab to provide the feature list,
    * changes to that value should update activeFeatureNameList and hence
@@ -26,17 +32,23 @@ export default Ember.Component.extend({
    * having the user click '->Blocks' seems the right flow; can add that after
    * trialling.
    */
-  activeFeatureList  : Ember.computed('activeInput', 'featureNameList', 'selectedFeatures', function (newValue) {
+  activeFeatureList  : Ember.computed('activeInput', 'featureNameList', 'featureNameListEnter', 'selectedFeatures', function (newValue) {
     let
       activeInput = this.get('activeInput'),
     featureList = {};
     if (activeInput) {
-      let fl = this.get('featureNameList').split(/[ \n\t]+/);
+      let fl = this.get('featureNameList');
+      if (fl)
+      {
+        fl = fl
+        .split(/[ \n\t]+/);
       // If string has leading or following white-space, then result of split will have leading / trailing ""
       if (fl.length && (fl[0] === ""))
         fl.shift();
       if (fl.length && (fl[fl.length-1] === ""))
         fl.pop();
+      }
+      this.set('featureNameList', fl && fl.join('\n'));
       featureList.featureNameList = fl;
       featureList.empty = ! fl || (fl.length === 0);
     }
@@ -56,9 +68,24 @@ export default Ember.Component.extend({
                )
            );
     }
-    console.log('activeFeatureList', featureList);
+    console.log('activeFeatureList', activeInput, featureList);
     return featureList;
-  })
+  }),
+
+  /*----------------------------------------------------------------------------*/
+
+  featureNameListInput() {
+    console.log('featureNameListInput');
+    this.incrementProperty('featureNameListEnter');
+  },
+  toSelectedFeatures() {
+    console.log('toSelectedFeatures');
+    this.set('activeInput', true);
+  },
+  fromSelectedFeatures() {
+    console.log('fromSelectedFeatures');
+    this.set('activeInput', false);
+  }
 
 
   /*----------------------------------------------------------------------------*/

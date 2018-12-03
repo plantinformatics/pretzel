@@ -944,3 +944,10 @@ div#left-panel-view > div > div > div > ul > li > div > button
 {
     float : left;
 }
+
+.feature-list > div > div > div > a {
+    /* border : 1px dashed green; */
+}
+.feature-list > div > span {
+  margin-right: 1em;
+}

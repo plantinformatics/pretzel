@@ -1,28 +1,34 @@
-<ul class="nav nav-tabs">
-  <li class="active">
-    <a data-toggle="tab" href="#tab-selected-features">Selected Features</a>
-    <div>{{selectedFeatures.length}}</div>
-  </li>
-  <li>
-    <a data-toggle="tab" href="#tab-features">Features Input</a>
-    <div>{{activeFeatureList.featureNameList.length}} ({{featureNameList.length}})</div>
-  </li>
+<div style="display: flex;">
+  <span>Selected Features</span>
+  <span class="badge">{{selectedFeatures.length}}</span>
 
-</ul>
-
-
-<div class="tab-content">
-  <div id="tab-selected-features" class="tab-pane fade in active">
-    {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{selectedFeatures.length}}</span>
-
+  <div style="margin-top: -10px;">
+    {{!--
+                                                   Leftwards Arrow	←	←	&#x2190;
+                                                   Rightwards Arrow	→	→	&#x2192;
+                                                   --}}
+    <div style="position: absolute;"><a href="#" {{action "toSelectedFeatures" on='click'}}>&#x2190;</a></div>
+    <div style="padding-top: 13px;padding-left: 7px;"><a href="#" {{action "fromSelectedFeatures" on='click'}}>&#x2192;</a></div>
+    {{!--
+    <div><a >{{elem/icon-base name="arrow-left" click=(action "toSelectedFeatures") }}</a></div>
+    <div><a >{{elem/icon-base name="arrow-right"  click=(action "fromSelectedFeatures") }}</a></div>
+    --}}
   </div>
-  <div id="tab-features" class="tab-pane fade in">
-    {{input
-      value=featureNameList
-      class="form-control"
-      placeholder="Feature (Marker/Gene) Names\n(whitespace or comma separated)" }}
 
-  </div>
 </div>
+
+
+<div>
+  <span>Features Input</span>
+  <span class="badge" style="margin-left:3em">{{activeFeatureList.featureNameList.length}}</span>
+
+  {{textarea
+    value=featureNameList
+    class="form-control"
+    maxLength=15
+    enter=(action 'featureNameListInput')
+    placeholder="Feature (Marker/Gene) Names\n(whitespace or comma separated)" }}
+</div>
+
 
 <hr >
