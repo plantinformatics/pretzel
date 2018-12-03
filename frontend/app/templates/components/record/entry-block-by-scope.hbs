@@ -3,13 +3,7 @@
    identical to the sibling elements because the blocks are grouped by scope.
    --}}
 
-{{#unless entry.isViewed}}
-  {{elem/button-base
-    classSize='xs'
-    classColour='success'
-    icon='plus'
-    onClick=(action "loadBlock" entry) }}
-{{/unless}}
+{{record/entry-block-add-button entry=entry loadBlock="loadBlock"}}
 {{entry.datasetId.name}}
 <span class="blockInScope">{{entry.name}}</span>
 

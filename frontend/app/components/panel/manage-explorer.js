@@ -50,13 +50,28 @@ export default ManageBase.extend({
     if (availableMaps && availableMaps.length > 0) { return false; }
     else { return true; }
   }),
+  /** group the data in : Dataset / Block
+   * Used for datasets without a parent
+   */
+  byDataset : Ember.computed('data', function() {
+    let datasets = this.get('data'),
+    noParent = datasets.filter(function(f) { 
+      let p = f.get('parent');
+      console.log('byDataset', f, p, p.get('content'));
+      return ! p.get('content');
+    });
+    return noParent;
+  }),
   /** group the data in : Parent / Scope / Block
    */
   dataTree : Ember.computed('data', function() {
     let datasets = this.get('data'),
+    withParent = datasets.filter(function(f) {
+      let p = f.get('parent');
+      return p.get('content'); }),
     n = d3.nest()
       .key(function(f) { let p = f.get('parent'); return p ? p.get('name') : '_'; })
-      .entries(datasets);
+      .entries(withParent);
     /** this reduce is mapping an array  [{key, values}, ..] to a hash {key : value, .. } */
     let grouped =
       n.reduce(
