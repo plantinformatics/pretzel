@@ -945,8 +945,11 @@ div#left-panel-view > div > div > div > ul > li > div > button
     float : left;
 }
 
-.feature-list > div > div > div > a {
-    /* border : 1px dashed green; */
+.feature-list.active-input > div > div > div.from-input > a {
+    background-color : #e8e8f7;
+}
+.feature-list:not(.active-input) > div > div > div:not(.from-input) > a {
+    background-color : #e8e8f7;
 }
 .feature-list > div > span {
   margin-right: 1em;

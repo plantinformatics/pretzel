@@ -7,6 +7,7 @@ const className = "feature-list";
 export default Ember.Component.extend({
 
   classNames : [className],
+  classNameBindings: ['activeInput'],
 
   actions : {
     featureNameListInput() {

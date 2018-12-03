@@ -2,13 +2,13 @@
   <span>Selected Features</span>
   <span class="badge">{{selectedFeatures.length}}</span>
 
-  <div style="margin-top: -10px;">
-    {{!--
-                                                   Leftwards Arrow	←	←	&#x2190;
-                                                   Rightwards Arrow	→	→	&#x2192;
-                                                   --}}
-    <div style="position: absolute;"><a href="#" {{action "toSelectedFeatures" on='click'}}>&#x2190;</a></div>
-    <div style="padding-top: 13px;padding-left: 7px;"><a href="#" {{action "fromSelectedFeatures" on='click'}}>&#x2192;</a></div>
+  <div style="margin-top: -9px;">
+    {{!-- can use these in <a> instead of glyphicon-arrow-{left,right} (smaller)
+        Leftwards Arrow	←	←	&#x2190;
+        Rightwards Arrow	→	→	&#x2192;
+    --}}
+    <div class="from-input" style="position: absolute;"><a href="#" {{action "toSelectedFeatures" on='click'}} class="glyphicon glyphicon-arrow-left"></a></div>
+    <div style="padding-top: 13px;padding-left: 7px;"><a href="#" {{action "fromSelectedFeatures" on='click'}} class="glyphicon glyphicon-arrow-right"></a></div>
     {{!--
     <div><a >{{elem/icon-base name="arrow-left" click=(action "toSelectedFeatures") }}</a></div>
     <div><a >{{elem/icon-base name="arrow-right"  click=(action "fromSelectedFeatures") }}</a></div>
