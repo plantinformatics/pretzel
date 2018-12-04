@@ -954,3 +954,6 @@ div#left-panel-view > div > div > div > ul > li > div > button
 .feature-list > div > span {
   margin-right: 1em;
 }
+.feature-list > div > textarea {
+    height: 52ex;     /* approx 2.5ex per line */
+}

@@ -20,7 +20,9 @@
 
 <div>
   <span>Features Input</span>
-  <span class="badge" style="margin-left:3em">{{activeFeatureList.featureNameList.length}}</span>
+  {{#if activeInput}}
+    <span class="badge" style="margin-left:3em">{{featureNameList.featureNameList.length}}</span>
+  {{/if}}
 
   {{textarea
     class="form-control"

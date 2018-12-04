@@ -86,7 +86,7 @@ export default Ember.Component.extend({
       if (fl.length && (fl[fl.length-1] === ""))
         fl.pop();
       }
-    else
+    else  // e.g. if fl===""
       fl = [];
 
       text$.val(fl && fl.join('\n'));
