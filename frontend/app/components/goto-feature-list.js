@@ -23,9 +23,8 @@ export default Ember.Component.extend({
       console.log("getBlocksOfFeatures", this);
       let 
         activeFeatureList = this.get('activeFeatureList'),
-      selectedFeatures = activeFeatureList.selectedFeatures,
       selectedFeatureNames = activeFeatureList.hasOwnProperty('selectedFeatures') ?
-        selectedFeatures && selectedFeatures.mapBy('Feature')
+        activeFeatureList.selectedFeatures
         : activeFeatureList.featureNameList,
       blocksUnique = activeFeatureList.empty ? []
         : this.blocksUnique(selectedFeatureNames);

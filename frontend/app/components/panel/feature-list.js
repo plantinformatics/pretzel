@@ -4,12 +4,49 @@ import Ember from 'ember';
 
 const className = "feature-list";
 
+/**  data/event flow :
+
+selectedFeatures
+
+{{textarea featureNameList }}
+  . edit or Enter
+    -> set activeInput=true
+  . Enter
+    -> (click) Blocks [not implemented yet]
+
+Blocks (featureSearch)
+  . click : use value from (activeInput ? featureNameList : selectedFeatures)
+
+arrow (left) toSelectedFeatures	:
+  . copy featureNameList -> selectedFeatures
+  . (probably filter : check which features are loaded)
+  . set activeInput=true
+
+arrow (right) fromSelectedFeatures
+  . copy selectedFeatures -> featureNameList
+  . display in textarea
+  . set activeInput=false
+
+ */
+
 export default Ember.Component.extend({
 
   classNames : [className],
   classNameBindings: ['activeInput'],
 
   actions : {
+    paste: function(event) {
+      console.log('paste', event);
+      let me = this;
+      /** this function is called before jQuery val() is updated. */
+      Ember.run.later(function () {
+        if (! me.get('activeInput'))
+          me.set('activeInput', true);
+        me.featureNameListInput();
+        // trigger fold
+        console.log(me.get('featureNameList'));
+      }, 500);
+    },
     featureNameListInput() {
       this.featureNameListInput();
     },
@@ -33,12 +70,12 @@ export default Ember.Component.extend({
    * having the user click '->Blocks' seems the right flow; can add that after
    * trialling.
    */
-  activeFeatureList  : Ember.computed('activeInput', 'featureNameList', 'featureNameListEnter', 'selectedFeatures', function (newValue) {
+  featureNameList  : Ember.computed('featureNameListEnter', function () {
     let
-      activeInput = this.get('activeInput'),
-    featureList = {};
-    if (activeInput) {
-      let fl = this.get('featureNameList');
+      featureList = {};
+    let text$ = this.$('textarea'),
+      /** before textarea is created, .val() will be undefined. */
+      fl = text$.val();
       if (fl)
       {
         fl = fl
@@ -49,12 +86,19 @@ export default Ember.Component.extend({
       if (fl.length && (fl[fl.length-1] === ""))
         fl.pop();
       }
-      this.set('featureNameList', fl && fl.join('\n'));
+    else
+      fl = [];
+
+      text$.val(fl && fl.join('\n'));
       featureList.featureNameList = fl;
       featureList.empty = ! fl || (fl.length === 0);
-    }
-    else {
-      let selectedFeatures = featureList.selectedFeatures = this.get('selectedFeatures'), f;
+      return featureList;
+    }),
+  selectedFeatureNames  : Ember.computed('selectedFeatures', function () {
+    let
+    featureList = {};
+
+      let selectedFeatures = this.get('selectedFeatures'), f;
       /* the empty value of selectedFeatures is [{}],
        * or [{Chromosome: null, Feature: null, Position: null}] after a selection
        * is cleared (by clicking on the axis outside the brush).
@@ -68,10 +112,33 @@ export default Ember.Component.extend({
                 || (f.Chromosome === null && f.Feature === null && f.Position === null)
                )
            );
-    }
+    featureList.selectedFeatures = 
+      selectedFeatures && selectedFeatures.mapBy('Feature');
+
+    return featureList;
+  }),
+  activeFeatureListBase  : Ember.computed('activeInput', 'featureNameList', 'selectedFeatureNames', function () {
+    let featureList,
+      activeInput = this.get('activeInput');
+    if (activeInput)
+      featureList = this.get('featureNameList');
+    else
+      featureList = this.get('selectedFeatureNames');
     console.log('activeFeatureList', activeInput, featureList);
     return featureList;
   }),
+  /** When user clicks '-> Blocks' button, if ! activeInput, copy
+   * selectedFeatureNames to the input textarea */
+  activeFeatureList  : Ember.computed('activeFeatureListBase', function () {
+    let featureList = this.get('activeFeatureListBase');
+    if (! this.get('activeInput'))
+    {
+      let fl = featureList.selectedFeatures,
+      text$ = this.$('textarea');
+      text$.val(fl && fl.join('\n'));
+    }
+    return featureList;
+  }).volatile(),
 
   /*----------------------------------------------------------------------------*/
 
@@ -81,11 +148,33 @@ export default Ember.Component.extend({
   },
   toSelectedFeatures() {
     console.log('toSelectedFeatures');
-    this.set('activeInput', true);
+    if (! this.get('activeInput'))
+      this.set('activeInput', true);
+    else
+      // if activeInput is not changed, then trigger a re-evaluation of activeFeatureList()
+      this.featureNameListInput();
+    let featureList = this.get('activeFeatureList'),
+    selection = featureList.featureNameList
+      .map(function (featureName) {
+        let chrName = "", // e.g. "myMap:1A.1",
+        position = "", // e.g. "12.3",
+        result =
+          {Chromosome: chrName, Feature: featureName, Position: position};
+        return result;
+      });
+      this.set('selectedFeatures', selection);
   },
   fromSelectedFeatures() {
     console.log('fromSelectedFeatures');
-    this.set('activeInput', false);
+    if (this.get('activeInput'))
+      this.set('activeInput', false);
+    let text$ = this.$('textarea'),
+    selectedFeatures = this.get('selectedFeatures'),
+    selectedFeaturesNames = selectedFeatures.map(function (sf) {
+      return sf.Feature;
+    });
+    console.log('selectedFeatures', selectedFeatures, selectedFeaturesNames);
+    text$.val(selectedFeaturesNames.join('\n'));
   }
 
 

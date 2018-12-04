@@ -23,10 +23,12 @@
   <span class="badge" style="margin-left:3em">{{activeFeatureList.featureNameList.length}}</span>
 
   {{textarea
-    value=featureNameList
     class="form-control"
     maxLength=15
     enter=(action 'featureNameListInput')
+    insert-newline=(action 'featureNameListInput')
+    escape-press=(action 'featureNameListInput')
+    paste=(action 'paste')
     placeholder="Feature (Marker/Gene) Names\n(whitespace or comma separated)" }}
 </div>
 
