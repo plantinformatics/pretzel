@@ -43,11 +43,16 @@
 	<a data-toggle="tab" href="#tab-explorer-parent">Parent / Scope</a>
       </li>
       <li class="active-detail">
+	<a data-toggle="tab" href="#tab-explorer-byDataset">By Dataset</a>
+	<div>{{byDataset.length}}</div>
+      </li>
+      <li class="active-detail">
 	<a data-toggle="tab" href="#tab-explorer-datasets">Datasets ({{data.length}})</a>
       </li>
     </ul>
 
     <div class="tab-content">
+
       <div id="tab-explorer-parent" class="tab-pane fade in active">
   <ul class="list-group">
     {{#each-in dataTree as |parentName scopes|}}
@@ -58,6 +63,13 @@
     {{/each-in}}
   </ul>
       </div>
+
+      <div id="tab-explorer-byDataset" class="tab-pane fade in active">
+        {{record/entry-datasets
+          loadBlock="loadBlock"
+          data=byDataset}}
+      </div>
+
       <div id="tab-explorer-datasets" class="tab-pane fade in">
 
 	<ul class="list-group">
