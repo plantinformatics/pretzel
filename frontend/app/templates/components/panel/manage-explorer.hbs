@@ -49,9 +49,14 @@
 
     <div class="tab-content">
       <div id="tab-explorer-parent" class="tab-pane fade in active">
-	{{record/entry-parents
-          loadBlock="loadBlock"
-	  dataTree=dataTree}}
+  <ul class="list-group">
+    {{#each-in dataTree as |parentName scopes|}}
+      {{record/entry-parent
+              loadBlock="loadBlock"
+          	  parentName=parentName
+              scopes=scopes}}
+    {{/each-in}}
+  </ul>
       </div>
       <div id="tab-explorer-datasets" class="tab-pane fade in">
 

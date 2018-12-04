@@ -1,0 +1,23 @@
+
+<li class="list-group-item list-group-item-info" >
+  {{elem/button-base
+  classSize='xs'
+  classColour='default'
+  icon=expandIcon
+  onClick=(action "switch")
+  }}
+  <span title={{parentName}} class="truncate" style="flex: 1;">
+  {{parentName}}
+</span>
+
+  {{#if layout.active}}
+    <ul>
+      {{#each-in scopes as |scopeName blocks|}}
+        {{record/entry-scope
+          loadBlock="loadBlock"
+          scopeName=scopeName
+          blocks=blocks}}
+      {{/each-in}}
+    </ul>
+  {{/if}}
+</li>

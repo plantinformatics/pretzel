@@ -1,0 +1,14 @@
+<li class="list-group-item list-group-item-info" >
+  {{elem/button-base
+  classSize='xs'
+  classColour='default'
+  icon=expandIcon
+  onClick=(action "switch")
+  }}
+  {{scopeName}}
+  {{#if layout.active}}
+    {{record/entry-blocks
+      loadBlock="loadBlock"
+      data=blocks}}
+  {{/if}}
+</li>
