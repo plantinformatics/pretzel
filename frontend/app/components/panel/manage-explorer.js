@@ -57,15 +57,17 @@ export default ManageBase.extend({
     n = d3.nest()
       .key(function(dataset) { 
         let p = dataset.get('parent');
+        let key = '_'
         if(p) {
           if(p.get('name')) {
-            return p.get('name')
+            key = p.get('name')
           }
           else {
-            return dataset.get('name')
+            key = dataset.get('name')
           }
         }
-        return '_'
+        console.log('key => ', key);
+        return key
         // return p.get('name') ? p.get('name') : '_';
       })
       .entries(datasets);
