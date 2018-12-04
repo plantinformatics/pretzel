@@ -7,12 +7,10 @@
         Leftwards Arrow	←	←	&#x2190;
         Rightwards Arrow	→	→	&#x2192;
     --}}
-    <div class="from-input" style="position: absolute;"><a href="#" {{action "toSelectedFeatures" on='click'}} class="glyphicon glyphicon-arrow-left"></a></div>
-    <div style="padding-top: 13px;padding-left: 7px;"><a href="#" {{action "fromSelectedFeatures" on='click'}} class="glyphicon glyphicon-arrow-right"></a></div>
-    {{!--
-    <div><a >{{elem/icon-base name="arrow-left" click=(action "toSelectedFeatures") }}</a></div>
-    <div><a >{{elem/icon-base name="arrow-right"  click=(action "fromSelectedFeatures") }}</a></div>
+    {{!--       Can re-enable this later, not needed yet.  Also the arrows have been swapped, based on a suggestion that it would be clearer to users.
+    <div class="from-input" style="position: absolute;"><a >{{elem/icon-base name="arrow-right" click=(action "toSelectedFeatures") }}</a></div>
     --}}
+    <div style="padding-top: 13px;padding-left: 7px;"><a >{{elem/icon-base name="arrow-left"  click=(action "fromSelectedFeatures") }}</a></div>
   </div>
 
 </div>
