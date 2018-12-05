@@ -699,6 +699,14 @@ li.active-detail > div {
 }
 li.active-detail.active > div {
   display: inherit;
+  text-align: right;
+  margin-right: 0.5em;
+}
+
+/* (in e.g. data explorer) tabs have counts shown when active; best displayed
+ * below the tab so use display:block.  */
+ul.li-active-extra > li.active-detail.active {
+  display: block;
 }
 
 /* -------------------------------------------------------------------------- */

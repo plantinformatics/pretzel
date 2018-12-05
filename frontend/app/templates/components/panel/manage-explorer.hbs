@@ -38,16 +38,21 @@
     </div>
   {{/if}}
   <div>
-    <ul class="nav nav-tabs">
+    <ul class="nav nav-tabs li-active-extra">
       <li class="active">
-	<a data-toggle="tab" href="#tab-explorer-parent">Parent / Scope</a>
+	<a data-toggle="tab" href="#tab-explorer-parent"><div>Parent /</div><div>Scope</div></a>
       </li>
       <li class="active-detail">
-	<a data-toggle="tab" href="#tab-explorer-byDataset">By Dataset</a>
-	<div>{{byDataset.length}}</div>
+	<a data-toggle="tab" href="#tab-explorer-byDataset">GMs</a>
+	<div>{{dataWithoutParent.length}}</div>
       </li>
       <li class="active-detail">
-	<a data-toggle="tab" href="#tab-explorer-datasets">Datasets ({{data.length}})</a>
+	<a data-toggle="tab" href="#tab-explorer-references">References</a>
+	<div>{{parents.length}}</div>
+      </li>
+      <li class="active-detail">
+	<a data-toggle="tab" href="#tab-explorer-datasets">Datasets</a>
+	<div>{{data.length}}</div>
       </li>
     </ul>
 
@@ -64,10 +69,18 @@
   </ul>
       </div>
 
-      <div id="tab-explorer-byDataset" class="tab-pane fade in active">
+      <div id="tab-explorer-byDataset" class="tab-pane fade in">
+	<span>Genetic Maps</span>
         {{record/entry-datasets
           loadBlock="loadBlock"
-          data=byDataset}}
+          data=dataWithoutParent}}
+      </div>
+
+      <div id="tab-explorer-references" class="tab-pane fade in">
+	  <span>References</span>
+        {{record/entry-datasets
+          loadBlock="loadBlock"
+          data=parents}}
       </div>
 
       <div id="tab-explorer-datasets" class="tab-pane fade in">
