@@ -957,3 +957,11 @@ div#left-panel-view > div > div > div > ul > li > div > button
 .feature-list > div > textarea {
     height: 28ex;     /* approx 2.5ex per line */
 }
+/* -------------------------------------------------------------------------- */
+
+div#left-panel-feature-search > div > div > div > ul.list-group {
+  height: 28ex;
+  overflow-y: auto;
+}
+
+/* -------------------------------------------------------------------------- */
