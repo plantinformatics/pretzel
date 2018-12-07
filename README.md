@@ -39,7 +39,7 @@ For a quick start without installing any of the dependencies you will need docke
 mkdir -p ~/mongodata \
  && docker run --name mongo --detach --volume ~/mongodata:/data/db --net="host" mongo \
  && until $(curl --silent --fail --output /dev/null localhost:27017); do printf '.'; sleep 1; done \
- && docker run --name pretzel --detach --net="host" plantinformaticscollaboration/pretzel  \
+ && docker run --name pretzel --detach --net="host" plantinformaticscollaboration/pretzel:stable  \
  && until $(curl --silent --fail --output /dev/null localhost:3000); do printf '.'; sleep 1; done \
  && docker logs pretzel
 ```
@@ -49,7 +49,7 @@ mkdir -p ~/mongodata \
 ```
 md mongodata
 docker run --name mongo --detach --publish 27017:27017 --volume mongodata:/data/db mongo
-docker run --name pretzel -e "DB_HOST=host.docker.internal" --publish 3000:3000 plantinformaticscollaboration/pretzel
+docker run --name pretzel -e "DB_HOST=host.docker.internal" --publish 3000:3000 plantinformaticscollaboration/pretzel:stable
 ```
 
 Once your pretzel instance is running you may want to populate it with some [pre-computed data](https://github.com/plantinformatics/pretzel-input-generator/releases/tag/v1.0).
@@ -122,7 +122,7 @@ npm run go
 The following sections describe each of those steps individually, as an alternative to `npm run go`.
 
 
-### Install Ember dependencies
+#### Install Ember dependencies
 
 To install the various plug-ins and add-ons required by the project, use NPM and Bower (for the
 Ember-specific dependencies):
@@ -143,7 +143,7 @@ Note that `npm install` in `backend/` and `frontend/` will install the Express.j
 Ember.js dependencies, including Express.js and Ember.js themselves, into those directories. For
 example, `ember` is in `frontend/node_modules/ember-cli/bin/`.
 
-### Compile Ember app
+#### Compile Ember app
 
 The app is served by the Loopback backend and needs to be pre-compiled:
 
@@ -153,7 +153,7 @@ node_modules/ember-cli/bin/ember build --environment production
 cd ..
 ```
 
-### Set up soft links
+#### Set up soft links
 
 The Loopback backend expects the compiled client in its client/ sub-directory. You can simply create a soft link:
 
