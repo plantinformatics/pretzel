@@ -26,10 +26,13 @@ export default Ember.Component.extend({
       selectedFeatureNames = activeFeatureList.hasOwnProperty('selectedFeatures') ?
         activeFeatureList.selectedFeatures
         : activeFeatureList.featureNameList,
+      /** this.blocksUnique() doesn't return blocksUnique because that value is
+       * available only after a promise resolves. If the input for the search is
+       * empty, then set blocksOfFeatures to []. */
       blocksUnique = activeFeatureList.empty ? []
         : this.blocksUnique(selectedFeatureNames);
-
-      this.set('blocksOfFeatures', blocksUnique);
+      if (activeFeatureList.empty)
+        this.set('blocksOfFeatures', blocksUnique);
     },
 
     /** not used - the requirements shifted from setting the axis brushes from
@@ -39,6 +42,11 @@ export default Ember.Component.extend({
     }
   }, // actions
 
+  /** The result is expressed in 2 forms, for different presentations :
+   * . set in .blocksOfFeatures for display in goto-feature-list.hbs
+   * . via action updateFeaturesInBlocks, for display in axis-ticks-selected
+   * @return undefined
+   */
   blocksUnique : function (selectedFeatureNames) {
       let me = this;
       let blockService = this.get('blockService');
@@ -57,8 +65,13 @@ export default Ember.Component.extend({
             .entries(features.features),
           n1=n.sort(function (a,b) { return b.values.length - a.values.length; }),
           // n1.map(function (d) { return d.key; }),
-          blocksUnique = n1.map(function (d) { return d.values[0].block; })
-            .map(peekBlock);
+          /** augment d.key : add references to the (block) data and record. */
+          blocksUnique = n1.map(function (d) {
+            /** data is not an ember object, just the attribute data;  a POJO. */
+            let data = d.values[0].block,
+            key = {id: d.key, data : data, record : peekBlock(data)},
+            result = {key : key, values : d.values};
+            return result; });
 
           /* entry-block-add.hbs is displaying {{entry.count}}.
            * Instead of modifying the store object, this can result in a
@@ -72,9 +85,10 @@ export default Ember.Component.extend({
             block.set('count', d.values.length);
           });
 
-
           me.set('blocksOfFeatures', blocksUnique);
-          /** convert nest [{key, values}..] to hash [key] : values */
+
+          /** convert nest [{key, values}..] to hash [key] : values,
+           * used in e.g. axis-ticks-selected */
           let featuresInBlocks = n.reduce(
             function (result, value) { result[value.key] = value.values; return result; },
             {} );

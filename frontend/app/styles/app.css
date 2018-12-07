@@ -145,6 +145,7 @@ body.mapview div#Page-Body
 .resizer > .menuHead {
     width: 100%;
 }
+/* can change this to use .hover-parent, .hover-child  */
 .resizer > .subMenu {
     /* position: fixed; */
     display : none;
@@ -152,6 +153,18 @@ body.mapview div#Page-Body
 .resizer:hover > .subMenu {
     display : inherit;
 }
+
+/* -------------------------------------------------------------------------- */
+/* show the child when the parent is hovered */
+.hover-parent > .hover-child {
+    display : none;
+}
+.hover-parent:hover > .hover-child {
+    display : inherit;
+}
+
+
+
 
 /* -------------------------------------------------------------------------- */
 #table-brushed
@@ -958,10 +971,30 @@ div#left-panel-view > div > div > div > ul > li > div > button
     height: 28ex;     /* approx 2.5ex per line */
 }
 /* -------------------------------------------------------------------------- */
-
-div#left-panel-feature-search > div > div > div > ul.list-group {
+/* applies in this context :
+ * div#left-panel-feature-search > div > div > div.ember-popover
+ */
+ul.feature-found {
   height: 28ex;
   overflow-y: auto;
 }
-
+/* could use .list-unstyled, but it implies padding-left:0 */
+ul.feature-found
+{
+  list-style-type: none;
+  text-align : left;
+}
+ul.feature-found
+{
+  overflow-y: auto;
+  /* override user-agent stylesheet (Chrome) */
+  -webkit-padding-start: inherit;
+  /* target badge may be close to left so leave a margin for clipping.  */
+  margin-left: 2em;
+  height: auto;
+  max-height: 15ex;
+}
+ul.blocks-found > li > div > div.ember-popover {
+  padding: 3px 5px;
+}
 /* -------------------------------------------------------------------------- */
