@@ -17,6 +17,14 @@ export default EntryBase.extend({
     switch() {
       let active = this.get('layout.active')
       this.set('layout.active', !active)
+    },
+    selectDataset(dataset) {
+      console.log('dataset2 => ', dataset);
+      this.sendAction('selectDataset', dataset)
+    },
+    selectBlock(block) {
+      console.log('block2 => ', block);
+      this.sendAction('selectBlock', block)
     }
   }
 });
