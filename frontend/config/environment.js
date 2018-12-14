@@ -25,6 +25,9 @@ module.exports = function(environment) {
         routeAfterAuthentication: 'mapview',
         routeIfAlreadyAuthenticated: 'mapview'
     },
+    'ember-cli-htmlbars': {
+     templateCompilerPath: 'bower_components/ember/ember-template-compiler.js'
+    },
 
     APP: {
       // Here you can pass flags/options to your application instance
