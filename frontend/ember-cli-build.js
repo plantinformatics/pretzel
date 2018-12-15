@@ -19,8 +19,15 @@ module.exports = function(defaults) {
         }]
       ]
     },
+
     babel: {
       compact: false
+    },
+
+    'ember-bootstrap': {
+      'bootstrapVersion': 4,
+      'importBootstrapFont': true,
+      'importBootstrapCSS': true
     }
   });
 
