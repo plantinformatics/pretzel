@@ -127,11 +127,19 @@ export default Ember.Component.extend({
     console.log('activeFeatureList', activeInput, featureList);
     return featureList;
   }),
-  /** When user clicks '-> Blocks' button, if ! activeInput, copy
-   * selectedFeatureNames to the input textarea */
+  /** When user clicks the '-> Blocks' button :
+   *   if activeInput : read any text entered since the last newline / paste / etc.
+   *   if ! activeInput, copy selectedFeatureNames to the input textarea
+   */
   activeFeatureList  : Ember.computed('activeFeatureListBase', function () {
+    let activeInput = this.get('activeInput');
+    if (activeInput)
+    {
+      /* read any text entered since the last newline / paste / etc.  */
+      this.featureNameListInput();
+    }
     let featureList = this.get('activeFeatureListBase');
-    if (! this.get('activeInput'))
+    if (activeInput)
     {
       let fl = featureList.selectedFeatures,
       text$ = this.$('textarea');
