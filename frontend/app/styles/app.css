@@ -948,6 +948,12 @@ div#goto-feature > div
   text-indent: -10px;
 }
 
+/* -------------------------------------------------------------------------- */
+div#left-panel > ul
+{
+  display : block;
+}
+
 div#left-panel-view > div > div > div > ul > li > div
 {
   overflow-wrap: break-word;
