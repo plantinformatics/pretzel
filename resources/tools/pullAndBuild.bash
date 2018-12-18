@@ -4,17 +4,23 @@ source ~/.bash_custom
 # probably use a rolling log, e.g. 
 export LOG_GIT=~/log/build/git
 # cd $LOG_GIT; nLogs=$(ls | wc -l); nRemove=$(expr $nLogs - 8); [ $nRemove -gt 0 ] &&  rm $(ls -rt | head --lines=$nRemove)
-# logDateTime=$(date +'%Y%b%d_%H:%M')
-logDateTime=2018Dec10_03:00
+logDateTime=$(date +'%Y%b%d_%H:%M')
+# logDateTime=2018Dec10_03:00
 echo logDateTime=$logDateTime
 set -x
 
 #  If it is just frontend changes :
-cd ~/pretzel &&
- # git fetch && git status -sb && \
-#    ( git pull --ff-only |& tee $LOG_GIT/$logDateTime )  || exit
+cd ~/pretzel
+git fetch && git status -sb && \
+    ( git pull --ff-only |& tee $LOG_GIT/$logDateTime )  || exit
 # If git log contains just 'Already up-to-date.' then could exit here,
 # the remaining commands will do nothing.
+statusChars=$(wc -c $LOG_GIT/$logDateTime)
+if [ $statusChars -eq 19 ]
+then
+    statusText=$(cat $LOG_GIT/$logDateTime)
+    [ "$statusText"  = 'Already up-to-date.' ] && exit
+fi
 
 if fgrep frontend/package $LOG_GIT/$logDateTime
 then
