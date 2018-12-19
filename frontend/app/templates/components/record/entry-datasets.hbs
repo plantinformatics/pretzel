@@ -1,9 +1,11 @@
 <ul>
   {{#each data as |dataset|}}
-    <li  class="list-group-item list-group-item-info" >{{dataset.name}}
-      {{record/entry-blocks-array
-        loadBlock="loadBlock"
-        data=dataset.blocks}}
+    <li  class="list-group-item list-group-item-info" >
+      {{#record/entry-expander nodeName=dataset.name}}
+        {{record/entry-blocks-array
+          loadBlock="loadBlock"
+          data=dataset.blocks}}
+      {{/record/entry-expander}}
     </li>
   {{/each}}
 </ul>

@@ -1,0 +1,12 @@
+<li class="list-group-item list-group-item-info" >
+  {{elem/button-base
+  classSize='xs'
+  classColour='default'
+  icon=expandIcon
+  onClick=(action "switch")
+  }}
+  {{nodeName}}
+  {{#if layout.active}}
+    {{yield}}
+  {{/if}}
+</li>
