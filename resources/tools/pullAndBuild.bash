@@ -7,20 +7,38 @@ export LOG_GIT=~/log/build/git
 logDateTime=$(date +'%Y%b%d_%H:%M')
 # logDateTime=2018Dec10_03:00
 echo logDateTime=$logDateTime
-set -x
+
+function checkPackageLock()
+{
+    if git status -sb | sed -n "s/^ M //p"
+    then
+	if
+	    git status -sb | sed -n "s/^ M //p" | fgrep -v package-lock.json
+	then
+	    echo changes other than package-lock.json
+	    git status -sb
+	    exit
+	else
+	    git stash save "Just package-lock changes, stashed by pullAndBuild, $logDateTime"
+	fi
+    fi
+
+}
 
 #  If it is just frontend changes :
 cd ~/pretzel
-git fetch && git status -sb && \
+git fetch && git status -sb && checkPackageLock && \
     ( git pull --ff-only |& tee $LOG_GIT/$logDateTime )  || exit
 # If git log contains just 'Already up-to-date.' then could exit here,
 # the remaining commands will do nothing.
-statusChars=$(wc -c $LOG_GIT/$logDateTime)
-if [ $statusChars -eq 19 ]
+statusChars=$(wc -c <$LOG_GIT/$logDateTime)
+if [ $statusChars -eq 20 ]
 then
     statusText=$(cat $LOG_GIT/$logDateTime)
     [ "$statusText"  = 'Already up-to-date.' ] && exit
 fi
+set -x
+
 
 if fgrep frontend/package $LOG_GIT/$logDateTime
 then
@@ -35,8 +53,8 @@ fi
     npm run build:frontend )
 
 # ember build replaces dist/ so restore frontend/dist/landingPageContent
-if [ ( ! -d  ~/pretzel/backend/client/landingPageContent )
-     -a ( $HOSTNAME != 'ip-172-31-26-153')   # don't install landingPageContent on dev.
+if [  \! -d  ~/pretzel/backend/client/landingPageContent )
+     -a  $HOSTNAME \!= 'ip-172-31-26-153'   # don't install landingPageContent on dev.
    ]
 then
     if [ -d ~/content/landingPageContent ]
