@@ -59,7 +59,7 @@
     <div class="tab-content">
 
       <div id="tab-explorer-parent" class="tab-pane fade in active">
-  <ul class="list-group">
+	<ul class="list-group borderless">
     {{#each-in dataTree as |parentName scopes|}}
       {{record/entry-parent
               loadBlock="loadBlock"
@@ -73,14 +73,12 @@
       </div>
 
       <div id="tab-explorer-byDataset" class="tab-pane fade">
-	<span>Genetic Maps</span>
         {{record/entry-datasets
           loadBlock="loadBlock"
           data=dataWithoutParent}}
       </div>
 
       <div id="tab-explorer-references" class="tab-pane fade">
-	  <span>References</span>
         {{record/entry-datasets
           loadBlock="loadBlock"
           data=parents}}

@@ -970,3 +970,17 @@ div#goto-feature > div
   padding-right: 10px;
   text-indent: -10px;
 }
+/* -------------------------------------------------------------------------- */
+/* manage-explorer */
+
+ul.borderless li
+{
+  border: none;
+}
+
+div#tab-explorer-parent > ul > li > ul > li > ul > li {
+  background-color: inherit;
+}
+
+
+/* -------------------------------------------------------------------------- */
