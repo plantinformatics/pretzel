@@ -25,4 +25,3 @@ RUN mv /frontend/dist /app/client \
 ENV EMAIL_VERIFY=NONE AUTH=ALL
 
 ENTRYPOINT ["node", "/app/server/server.js"]
-
