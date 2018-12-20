@@ -139,7 +139,7 @@ export default Ember.Component.extend({
       this.featureNameListInput();
     }
     let featureList = this.get('activeFeatureListBase');
-    if (activeInput)
+    if (! activeInput)
     {
       let fl = featureList.selectedFeatures,
       text$ = this.$('textarea');
