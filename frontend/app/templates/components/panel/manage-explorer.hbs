@@ -75,12 +75,20 @@
       <div id="tab-explorer-byDataset" class="tab-pane fade">
         {{record/entry-datasets
           loadBlock="loadBlock"
+          selectBlock=(action 'selectBlock')
+          selectedBlock=selectedBlock
+          selectDataset=(action 'selectDataset')
+          selectedDataset=selectedDataset
           data=dataWithoutParent}}
       </div>
 
       <div id="tab-explorer-references" class="tab-pane fade">
         {{record/entry-datasets
           loadBlock="loadBlock"
+          selectBlock=(action 'selectBlock')
+          selectedBlock=selectedBlock
+          selectDataset=(action 'selectDataset')
+          selectedDataset=selectedDataset
           data=parents}}
       </div>
 

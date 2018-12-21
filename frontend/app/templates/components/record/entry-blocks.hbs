@@ -1,6 +1,6 @@
 <ul>
   {{#each data as |block|}}
-    <li class="list-group-item list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}" {{action "selectBlockAndDataset" block on="click"}} style="display: inline-block;">
+    <li class="list-group-item  {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}" {{action "selectBlockAndDataset" block on="click"}} style="display: inline-block;">
       {{record/entry-block-by-scope
         loadBlock="loadBlock"
         entry=block }}

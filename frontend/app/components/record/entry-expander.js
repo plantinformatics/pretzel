@@ -24,5 +24,7 @@ export default Ember.Component.extend({
       let active = this.get('layout.active');
       this.set('layout.active', !active);
     }
-  }
+  }   
+
+
 });

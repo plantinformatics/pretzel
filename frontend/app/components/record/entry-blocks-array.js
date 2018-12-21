@@ -1,8 +1,8 @@
 import Ember from 'ember';
-import EntryBase from './entry-base';
+import EntryBlocks from './entry-blocks';
 
 
-export default EntryBase.extend({
+export default EntryBlocks.extend({
 
 
 

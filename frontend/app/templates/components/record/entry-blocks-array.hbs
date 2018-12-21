@@ -1,10 +1,17 @@
 <ul>
   {{#each data as |block|}}
-    <li class="list-group-item list-group-item-info" style="display: inline-block;" >
+    {{#record/entry-selectable node=block nodeName=block.name
+       extraClasses="d-inline-block"
+       selectedNode=selectedBlock
+       selectNode=(action 'selectBlockAndDataset')}}
+      {{!-- node (block) is passed to selectNode  --}}
+
       {{record/entry-block-add-button
         loadBlock="loadBlock"
         entry=block }}
       {{block.name}}
-    </li>
+
+    {{/record/entry-selectable}}
+
   {{/each}}
 </ul>

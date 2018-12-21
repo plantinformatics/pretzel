@@ -973,6 +973,10 @@ div#goto-feature > div
 /* -------------------------------------------------------------------------- */
 /* manage-explorer */
 
+/* this will be provided by bootstrap v4 */
+li.d-inline-block {
+  display: inline-block;
+}
 ul.borderless li
 {
   border: none;
