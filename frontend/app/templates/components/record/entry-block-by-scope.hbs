@@ -5,6 +5,8 @@
 
 {{record/entry-block-add-button entry=entry loadBlock="loadBlock"}}
 {{entry.datasetId.name}}
+{{#if (compare entry.name '!==' entry.scope) }}
 <span class="blockInScope">{{entry.name}}</span>
+{{/if}}
 
 
