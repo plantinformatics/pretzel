@@ -53,7 +53,7 @@ fi
     npm run build:frontend )
 
 # ember build replaces dist/ so restore frontend/dist/landingPageContent
-if [  \! -d  ~/pretzel/backend/client/landingPageContent )
+if [  \! -d  ~/pretzel/backend/client/landingPageContent 
      -a  $HOSTNAME \!= 'ip-172-31-26-153'   # don't install landingPageContent on dev.
    ]
 then
