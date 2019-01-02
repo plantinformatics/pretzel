@@ -25,12 +25,13 @@
   {{textarea
     class="form-control"
     maxLength=15
+    input=(action 'inputIsActive')
     enter=(action 'featureNameListInput')
     insert-newline=(action 'featureNameListInput')
     escape-press=(action 'featureNameListInput')
     paste=(action 'paste')
     placeholder="Feature (Marker/Gene) Names
-(whitespace or comma separated)" }}
+    (whitespace or comma separated)" }}
 </div>
 
 

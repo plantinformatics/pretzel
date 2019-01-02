@@ -8,6 +8,9 @@ const className = "feature-list";
 
 selectedFeatures
 
+activeInput is true if this textarea is the current data source,
+false when selectedFeatures is the current data source.
+
 {{textarea featureNameList }}
   . edit or Enter
     -> set activeInput=true
@@ -40,12 +43,14 @@ export default Ember.Component.extend({
       let me = this;
       /** this function is called before jQuery val() is updated. */
       Ember.run.later(function () {
-        if (! me.get('activeInput'))
-          me.set('activeInput', true);
+        // featureNameListInput() does inputIsActive();
         me.featureNameListInput();
         // trigger fold
         console.log(me.get('featureNameList'));
       }, 500);
+    },
+    inputIsActive() {
+      this.inputIsActive();
     },
     featureNameListInput() {
       this.featureNameListInput();
@@ -150,8 +155,24 @@ export default Ember.Component.extend({
 
   /*----------------------------------------------------------------------------*/
 
+  /** The user has edited the featureNameList textarea, so note this input as active.
+   */
+  inputIsActive() {
+    // console.log('inputIsActive');
+    if (! this.get('activeInput'))
+      this.set('activeInput', true);
+  },
+  /** Called when : enter, insert-newline, escape-press, paste.
+   *
+   * It would be possible, and somewhat simpler, to update featureNameList after
+   * every key press, but that could trigger downstream recalculations and
+   * produce a noisy display.  Instead it is updated only for these major
+   * events, and the value of the textarea is read when the downstream component
+   * requires it.
+   */
   featureNameListInput() {
     console.log('featureNameListInput');
+    this.inputIsActive();
     this.incrementProperty('featureNameListEnter');
   },
   toSelectedFeatures() {
