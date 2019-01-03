@@ -32,6 +32,14 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       this.set('selectedFeatures', features);
       this.send('setTab', 'right', 'selection');
     },
+    /** goto-feature-list is given features by the user and finds them in
+     * blocks; this is that result in a hash, indexed by block id, with value
+     * being an array of features found in that block.
+     */
+    updateFeaturesInBlocks: function(featuresInBlocks) {
+      // console.log("updateFeaturesInBlocks in mapview", featuresInBlocks);
+      this.set('featuresInBlocks', featuresInBlocks);
+    },
 
     /** Change the state of the named block to viewed.
      * If this block has a parent block, also add the parent.

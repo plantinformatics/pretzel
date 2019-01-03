@@ -446,3 +446,31 @@ function swapApplicationHost()
     )
 }
 #-------------------------------------------------------------------------------
+# 
+
+# Create a timestamp to name a file, based on last change time.
+# The \n gets dropped when used like this :
+# Usage e.g. dt=$(file_dateTime $HISTFILE)
+function file_dateTime() { find $*  -printf '%CY%Cb%Cd_%CH%CM\n'; }
+
+# Generate TAGS file for browsing source with emacs.
+function make_emacs_tags () {
+  [ -d .git ] || { echo Expected Pretzel work-tree 1>&2; return 1 ; }
+  if [ -f TAGS ]
+  then
+    ls -gG TAGS
+    timestamp=$(file_dateTime TAGS)
+    if [ ! -d tmp/TAGS ]
+    then
+      rm TAGS
+    else
+      echo 1>&2 renaming TAGS to tmp/TAGS/$timestamp in 5 secs
+      sleep 5
+      mv -i TAGS to tmp/TAGS/$timestamp 
+    fi
+  fi
+
+   git ls-files | egrep -v 'LICENSE|\.md$|\.html$|\.png$|\.xml$|package.json|bower.json|\.pdf$|\.gitignore$|\.bowerrc$|package-lock|test/fixtures|\.gz$|\.JPG$|\.odg$|public_maps'  | xargs etags --append
+   ls -gG TAGS
+}
+#-------------------------------------------------------------------------------
