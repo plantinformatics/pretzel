@@ -145,6 +145,7 @@ body.mapview div#Page-Body
 .resizer > .menuHead {
     width: 100%;
 }
+/* can change this to use .hover-parent, .hover-child  */
 .resizer > .subMenu {
     /* position: fixed; */
     display : none;
@@ -152,6 +153,18 @@ body.mapview div#Page-Body
 .resizer:hover > .subMenu {
     display : inherit;
 }
+
+/* -------------------------------------------------------------------------- */
+/* show the child when the parent is hovered */
+.hover-parent > .hover-child {
+    display : none;
+}
+.hover-parent:hover > .hover-child {
+    display : inherit;
+}
+
+
+
 
 /* -------------------------------------------------------------------------- */
 #table-brushed
@@ -473,6 +486,10 @@ g.tick:hover {
 {
   /* stroke (colour) is now provided by axisTitleColour(). */
   stroke-width : 2px;
+}
+g.foundFeatures > path.horizTick
+{
+  stroke-width : 3px;
 }
 
 path.syntenyEdge
@@ -882,6 +899,23 @@ div#goto-feature > div
 
 /* -------------------------------------------------------------------------- */
 
+/* match the color of .nav-tabs */
+.feature-list > hr {
+  border-top-color: #ddd;
+}
+.feature-list > ul.nav.nav-tabs > li > a {
+  float: left;
+  margin: 3px;
+}
+.feature-list > ul.nav.nav-tabs > li:not(.active) > div {
+    display : none;
+}
+.feature-list > ul.nav.nav-tabs > li > div {
+  float: right;
+}
+
+/* -------------------------------------------------------------------------- */
+
 .panel-collapse-button {
   padding:0 5px 0 5px;
   border-radius:0;
@@ -913,3 +947,60 @@ div#goto-feature > div
   padding-right: 10px;
   text-indent: -10px;
 }
+
+/* -------------------------------------------------------------------------- */
+div#left-panel > ul
+{
+  display : block;
+}
+
+div#left-panel-view > div > div > div > ul > li > div
+{
+  overflow-wrap: break-word;
+  text-indent: 1em;
+}
+div#left-panel-view > div > div > div > ul > li > div > button
+{
+    float : left;
+}
+
+.feature-list.active-input > div > div > div.from-input > a {
+    background-color : #e8e8f7;
+}
+.feature-list:not(.active-input) > div > div > div:not(.from-input) > a {
+    background-color : #e8e8f7;
+}
+.feature-list > div > span {
+  margin-right: 2em;
+}
+.feature-list > div > textarea {
+    height: 28ex;     /* approx 2.5ex per line */
+}
+/* -------------------------------------------------------------------------- */
+/* applies in this context :
+ * div#left-panel-feature-search > div > div > div.ember-popover
+ */
+ul.feature-found {
+  height: 28ex;
+  overflow-y: auto;
+}
+/* could use .list-unstyled, but it implies padding-left:0 */
+ul.feature-found
+{
+  list-style-type: none;
+  text-align : left;
+}
+ul.feature-found
+{
+  overflow-y: auto;
+  /* override user-agent stylesheet (Chrome) */
+  -webkit-padding-start: inherit;
+  /* target badge may be close to left so leave a margin for clipping.  */
+  margin-left: 2em;
+  height: auto;
+  max-height: 15ex;
+}
+ul.blocks-found > li > div > div.ember-popover {
+  padding: 3px 5px;
+}
+/* -------------------------------------------------------------------------- */

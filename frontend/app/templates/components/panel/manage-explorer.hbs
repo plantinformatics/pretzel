@@ -7,9 +7,9 @@
       {{#each-in filterOptions as |key value|}}
         <div class="btn-group" role="group">
           <button
-            type="button"
-            class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
-            {{action "changeFilter" key preventDefault=false}}>
+              type="button"
+              class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
+              {{action "changeFilter" key preventDefault=false}}>
             {{elem/icon-base name=value.icon}} &nbsp;{{value.formal}}
           </button>
         </div>
@@ -24,7 +24,7 @@
     {{elem/button-refresh
       onClick=(action 'refreshAvailable')}}
   {{/elem/panel-heading}}
-  {{#if model.mapsDerived.isPending}}
+  {{#if model.availableMapsTask.isRunning}}
     <div class="panel-body">
       <div class="well">
         Loading resources. 
@@ -52,7 +52,7 @@
         selectDataset="selectDataset"}}
     {{/each}}
     <li 
-      class="list-group-item list-group-item-info">
+	class="list-group-item list-group-item-info">
       {{elem/icon-base name='cloud-upload'}} &nbsp;Upload new data
       <span class="pull-right">
         {{elem/button-base

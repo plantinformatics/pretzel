@@ -12,7 +12,9 @@
 {{yield}}
 
 <div class="devel-visible">
-  {{draw/stacks-view stacks=oa.stacks oa=oa drawMap=this axes2d=axes2d}}
+  {{draw/stacks-view stacks=oa.stacks oa=oa drawMap=this axes2d=axes2d
+    featuresInBlocks=featuresInBlocks
+  }}
   {{!-- This info will be thinned or removed as axes development progresses. --}}
   <div>splitAxes : {{splitAxes}}</div>
   <div>axes2d : {{axes2d.length}}</div>
