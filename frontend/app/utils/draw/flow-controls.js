@@ -2,6 +2,16 @@ import Ember from 'ember';
 
 const { inject: { service } } = Ember;
 
+import * as d3_collection from 'd3-collection';
+import * as d3_selection from 'd3-selection';
+
+/* global  */
+let d3 = Object.assign(
+  {},
+
+  d3_collection,  // .keys()
+  d3_selection    // .select{,All}, .event
+);
 
 /*----------------------------------------------------------------------------*/
 

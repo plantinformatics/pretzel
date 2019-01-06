@@ -9,8 +9,6 @@
     "jquery-mousewheel": "^3.1.13",
     "antiscroll": "8dc9793150",
     "minimatch": "isaacs/minimatch#^3.0.4",
-    "d3-tip" :  "VACLab/d3-tip",
-    "d3": "^4.10.2",
     "handsontable": "^2.0.0"
   },
   "devDependencies": {
@@ -23,9 +21,8 @@
     "ember": "^2.15.0",
     "ember-data": "^2.15.0",
     "qunit-notifications": "^0.1.0",
-    "ember-resolver": "^4.5.0",
     "minimatch": "^3.0.4",
     "tough-cookie": "^2.3.3",
-    "route-recognizer"  : "^0.2.3"
+    "route-recognizer": "^0.2.3"
   }
 }

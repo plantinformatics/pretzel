@@ -1,6 +1,9 @@
 /*----------------------------------------------------------------------------*/
 
 /*global d3 */
+import { scaleOrdinal } from 'd3-scale';
+import { schemeCategory10 } from 'd3-scale-chromatic';
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -114,8 +117,8 @@ function highlightId(name)
  * Originally was using blockId as index, but now using index within axis.blocks[].
  */
 let
-      axisTitle_colour_scale = d3.scaleOrdinal();
-      axisTitle_colour_scale.range(d3.schemeCategory10);
+      axisTitle_colour_scale = /*d3.*/scaleOrdinal();
+      axisTitle_colour_scale.range(/*d3.*/schemeCategory10);
 
 /** for the stroke and fill of axis title menu
  * parameters match d3 call signature

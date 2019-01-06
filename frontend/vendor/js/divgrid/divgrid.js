@@ -1,4 +1,4 @@
-d3.divgrid = function(config) {
+window.d3_divgrid = function(config) {
   var columns = [];
 
   var dg = function(selection) {
