@@ -2,6 +2,8 @@ import Ember from "ember";
 
 import { filter, filterBy, mapBy, setDiff, uniqBy } from '@ember/object/computed';
 
+import { group } from 'd3-array';
+
 import ManageBase from './manage-base'
 
 /* global d3 */
@@ -78,7 +80,7 @@ export default ManageBase.extend({
   }),
   // these 3 CFs are non-essential, used in trace.
   withoutParentNames : mapBy('withoutParent', 'name'),
-  parentsid : mapBy('withParent', 'parent.id'),
+  parentsid : mapBy('parentsNonUnique', 'id'),
   // an alternate method to calculate parents: parentsUnique
   parentsNonUnique : mapBy('withParent', 'parent'),
   parentsUnique : uniqBy('parentsNonUnique', 'name'),
@@ -119,13 +121,39 @@ export default ManageBase.extend({
 
   /* ------------------------------------------------------------------------ */
 
+  levelMeta : new WeakMap(),
+
   /** group the data in : Parent / Scope / Block
    */
   dataTree : Ember.computed('data', function() {
+    console.log('d3-array group', group);
+    debugger;
     let datasets = this.get('data'),
+    metaFieldName = 'Created',
+    metaFilter = function(f) {
+      let v = f.get('meta' + '.' + metaFieldName);
+      if (v) {
+        (v = v.split(', ')) && (v = v[0]);
+      }
+      return v;
+    },
+    map = /*d3.*/group(datasets, metaFilter),
+    /** parentAndScope() could be restructured as a key function, and used in the above .group(). */
+    map2 = Array.from(
+      map, ([key, value]) => [key, this.parentAndScope(value)]
+    );
+    for (var [key, value] of map2) {
+      console.log(key + ' : ' + value);
+    }
+    return map2;
+  }),
+  parentAndScope(datasets) {
+    let
+    levelMeta = this.get('levelMeta'),
     withParent = datasets.filter(function(f) {
       let p = f.get('parent');
       return p.get('content'); }),
+    /** can update this .nest() to d3.group() */
     n = d3.nest()
       .key(function(f) { let p = f.get('parent'); return p ? p.get('name') : '_'; })
       .entries(withParent);
@@ -133,6 +161,7 @@ export default ManageBase.extend({
     let grouped =
       n.reduce(
         function (result, datasetsByParent) {
+          let scopes = 
           result[datasetsByParent.key] =
 	          datasetsByParent.values.reduce(function (blocksByScope, dataset) {
               console.log('blocksByScope', blocksByScope, dataset);
@@ -145,12 +174,14 @@ export default ManageBase.extend({
                 });
               return blocksByScope;
             }, {});
+          levelMeta.set(scopes, "Scope");
           return result;
         },
         {});
     console.log('dataTree', grouped);
+    this.levelMeta.set(grouped, "Parent");
     return grouped;
-  }),
+  },
 
   actions: {
     refreshAvailable() {

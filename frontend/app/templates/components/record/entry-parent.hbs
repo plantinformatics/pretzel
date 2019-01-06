@@ -6,13 +6,13 @@
   icon=expandIcon
   onClick=(action "switch")
   }}
-  <span title={{parentName}} class="truncate" style="flex: 1;">
-  {{parentName}}
+  <span title={{name}} class="truncate" style="flex: 1;">
+  {{name}}
 </span>
 
   {{#if layout.active}}
     <ul>
-      {{#each-in scopes as |scopeName blocks|}}
+      {{#each-in values as |scopeName blocks|}}
         {{record/entry-scope
           loadBlock="loadBlock"
           scopeName=scopeName

@@ -1,0 +1,22 @@
+{{debugger}}
+{{#if values.length}}   {{!-- type is blocks array --}}
+
+  {{record/entry-blocks
+    loadBlock="loadBlock"
+    data=values
+    selectBlock="selectBlock"
+    selectedBlock=selectedBlock
+    selectDataset="selectDataset"}}
+
+{{else}}
+
+  {{#each-in values as |key value|}}
+      {{component levelComponent levelMeta=levelMeta name=key values=value
+        loadBlock="loadBlock"
+        selectBlock="selectBlock"
+        selectedBlock=selectedBlock
+        selectDataset="selectDataset"
+      }}
+  {{/each-in}}
+
+{{/if}}
