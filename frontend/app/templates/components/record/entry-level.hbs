@@ -1,16 +1,15 @@
-{{debugger}}
+
 <li class="list-group-item list-group-item-info" >
   {{#record/entry-expander nodeName=name}}
 
-  {{#if layout.active}}
-    <ul>
-      {{record/entry-values values=dataTree levelMeta=levelMeta
+    {{log 'entry-level' name values}}
+      <ul>
+        {{record/entry-values values=values levelMeta=levelMeta
           loadBlock="loadBlock"
           selectBlock="selectBlock"
           selectedBlock=selectedBlock
           selectDataset="selectDataset"}}
     </ul>
-  {{/if}}
 
   {{/record/entry-expander}}
 

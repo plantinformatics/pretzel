@@ -15,6 +15,21 @@ export default EntryBase.extend({
     }
   },
 
+ /** {{!-- type is blocks array */
+  valueIsBlocksArray : Ember.computed('values', function () {
+    let
+    values = this.get('values'),
+    isBlocksArray = values.length;
+    return isBlocksArray;
+  }),
+
+
+  valuesIsMap : Ember.computed('values', function () {
+    let
+    values = this.get('values'),
+    isMap = values.constructor === Map;
+    return isMap;
+  }),
 
   levelComponent : Ember.computed('levelMeta', 'values', function () {
     let levelMeta = this.get('levelMeta'),

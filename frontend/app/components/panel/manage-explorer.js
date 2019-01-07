@@ -2,7 +2,6 @@ import Ember from "ember";
 
 import { filter, filterBy, mapBy, setDiff, uniqBy } from '@ember/object/computed';
 
-import { group } from 'd3-array';
 
 import ManageBase from './manage-base'
 
@@ -126,26 +125,47 @@ export default ManageBase.extend({
   /** group the data in : Parent / Scope / Block
    */
   dataTree : Ember.computed('data', function() {
-    console.log('d3-array group', group);
-    debugger;
     let datasets = this.get('data'),
     metaFieldName = 'Created',
     metaFilter = function(f) {
+      let meta = f.get('meta');
+      console.log('metaFilter', f.get('name'), meta);
       let v = f.get('meta' + '.' + metaFieldName);
       if (v) {
         (v = v.split(', ')) && (v = v[0]);
       }
+      else if (meta) {
+        /** current test data doesn't have much meta, so match what is available.  */
+        v = v || meta.variety || 
+          meta.shortName || 
+          meta.paths || 
+          meta.year || 
+          meta.source;
+      }
       return v;
     },
-    map = /*d3.*/group(datasets, metaFilter),
-    /** parentAndScope() could be restructured as a key function, and used in the above .group(). */
-    map2 = Array.from(
-      map, ([key, value]) => [key, this.parentAndScope(value)]
+    /** n is an array : [{key, values}, ..] */
+    n = d3.nest()
+      .key(metaFilter)
+      .entries(datasets),
+    me = this,
+    /** parentAndScope() could be restructured as a key function, and used in d3-array.group(). */
+    /** reduce nest to a Map, processing values with parentAndScope() */
+    map2 = n.reduce(function (map, nestEntry) {
+      let key = nestEntry.key,
+      value = nestEntry.values;
+      map.set(key, me.parentAndScope(value));
+      return map; },
+      new Map()
     );
+    /** {{each}} of Map is yielding index instead of key, so convert Map to a hash */
+    let hash = {};
     for (var [key, value] of map2) {
       console.log(key + ' : ' + value);
+      hash[key] = value;
     }
-    return map2;
+    console.log('map2', map2, hash);
+    return hash;
   }),
   parentAndScope(datasets) {
     let
