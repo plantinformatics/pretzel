@@ -60,16 +60,12 @@
 
       <div id="tab-explorer-parent" class="tab-pane fade in active">
 	<ul class="list-group borderless">
-    {{#each-in dataTree as |parentName scopes|}}
-      {{record/entry-parent
+	  {{record/entry-values values=dataTree levelMeta=levelMeta
               loadBlock="loadBlock"
-          	  parentName=parentName
-              scopes=scopes
               selectBlock="selectBlock"
               selectedBlock=selectedBlock
               selectDataset="selectDataset"}}
-    {{/each-in}}
-  </ul>
+        </ul>
       </div>
 
       <div id="tab-explorer-byDataset" class="tab-pane fade">

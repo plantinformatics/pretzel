@@ -2,6 +2,7 @@ import Ember from "ember";
 
 import { filter, filterBy, mapBy, setDiff, uniqBy } from '@ember/object/computed';
 
+
 import ManageBase from './manage-base'
 
 /* global d3 */
@@ -78,7 +79,7 @@ export default ManageBase.extend({
   }),
   // these 3 CFs are non-essential, used in trace.
   withoutParentNames : mapBy('withoutParent', 'name'),
-  parentsid : mapBy('withParent', 'parent.id'),
+  parentsid : mapBy('parentsNonUnique', 'id'),
   // an alternate method to calculate parents: parentsUnique
   parentsNonUnique : mapBy('withParent', 'parent'),
   parentsUnique : uniqBy('parentsNonUnique', 'name'),
@@ -119,13 +120,60 @@ export default ManageBase.extend({
 
   /* ------------------------------------------------------------------------ */
 
+  levelMeta : new WeakMap(),
+
   /** group the data in : Parent / Scope / Block
    */
   dataTree : Ember.computed('data', function() {
     let datasets = this.get('data'),
+    metaFieldName = 'Created',
+    metaFilter = function(f) {
+      let meta = f.get('meta');
+      console.log('metaFilter', f.get('name'), meta);
+      let v = f.get('meta' + '.' + metaFieldName);
+      if (v) {
+        (v = v.split(', ')) && (v = v[0]);
+      }
+      else if (meta) {
+        /** current test data doesn't have much meta, so match what is available.  */
+        v = v || meta.variety || 
+          meta.shortName || 
+          meta.paths || 
+          meta.year || 
+          meta.source;
+      }
+      return v;
+    },
+    /** n is an array : [{key, values}, ..] */
+    n = d3.nest()
+      .key(metaFilter)
+      .entries(datasets),
+    me = this,
+    /** parentAndScope() could be restructured as a key function, and used in d3-array.group(). */
+    /** reduce nest to a Map, processing values with parentAndScope() */
+    map2 = n.reduce(function (map, nestEntry) {
+      let key = nestEntry.key,
+      value = nestEntry.values;
+      map.set(key, me.parentAndScope(value));
+      return map; },
+      new Map()
+    );
+    /** {{each}} of Map is yielding index instead of key, so convert Map to a hash */
+    let hash = {};
+    for (var [key, value] of map2) {
+      console.log(key + ' : ' + value);
+      hash[key] = value;
+    }
+    console.log('map2', map2, hash);
+    return hash;
+  }),
+  parentAndScope(datasets) {
+    let
+    levelMeta = this.get('levelMeta'),
     withParent = datasets.filter(function(f) {
       let p = f.get('parent');
       return p.get('content'); }),
+    /** can update this .nest() to d3.group() */
     n = d3.nest()
       .key(function(f) { let p = f.get('parent'); return p ? p.get('name') : '_'; })
       .entries(withParent);
@@ -133,6 +181,7 @@ export default ManageBase.extend({
     let grouped =
       n.reduce(
         function (result, datasetsByParent) {
+          let scopes = 
           result[datasetsByParent.key] =
 	          datasetsByParent.values.reduce(function (blocksByScope, dataset) {
               console.log('blocksByScope', blocksByScope, dataset);
@@ -145,12 +194,14 @@ export default ManageBase.extend({
                 });
               return blocksByScope;
             }, {});
+          levelMeta.set(scopes, "Scope");
           return result;
         },
         {});
     console.log('dataTree', grouped);
+    this.levelMeta.set(grouped, "Parent");
     return grouped;
-  }),
+  },
 
   actions: {
     refreshAvailable() {

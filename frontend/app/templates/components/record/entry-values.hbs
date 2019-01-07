@@ -1,0 +1,39 @@
+{{log 'entry-values' valueIsBlocksArray valuesIsMap}}
+
+{{#if valueIsBlocksArray}}   {{!-- type is blocks array --}}
+  {{log 'entry-blocks'}}
+  {{debugger}}
+  {{record/entry-blocks
+    loadBlock="loadBlock"
+    data=values
+    selectBlock="selectBlock"
+    selectedBlock=selectedBlock
+    selectDataset="selectDataset"}}
+
+{{else if valuesIsMap}}
+  {{log 'valuesIsMap:each'}}
+
+  {{#each values as |key value|}}
+      {{log  'value' value 'key' key}}
+      {{component levelComponent levelMeta=levelMeta name=key values=value
+        loadBlock="loadBlock"
+        selectBlock="selectBlock"
+        selectedBlock=selectedBlock
+        selectDataset="selectDataset"
+      }}
+  {{/each}}
+
+{{else}}
+  {{log 'each-in'}}
+
+  {{#each-in values as |key value|}}
+    {{log  'key' key 'value' value}}
+    {{component levelComponent levelMeta=levelMeta name=key values=value
+      loadBlock="loadBlock"
+      selectBlock="selectBlock"
+      selectedBlock=selectedBlock
+      selectDataset="selectDataset"
+    }}
+  {{/each-in}}
+
+{{/if}}
