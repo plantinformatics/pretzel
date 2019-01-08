@@ -7,28 +7,36 @@
   {{input
     value=pattern
     class="form-control"
-    enter=(action changed)
+    enter=(action changed this)
     placeholder="string or regular expression" }}
 
   {{!-- match string / pattern again key and/or value --}}
   <div>
     <label>Match against :</label>
     Key :
-    {{input type="checkbox" name="matchKey" checked=matchKey}}
+    {{input type="checkbox" name="matchKey" checked=matchKey
+      click=(action changed this preventDefault=false)
+    }}
     Value :
-    {{input type="checkbox" name="matchValue" checked=matchValue}}
+    {{input type="checkbox" name="matchValue" checked=matchValue
+      click=(action changed this preventDefault=false)
+    }}
   </div>
 
 
   {{!-- negate string / pattern --}}
   <span>
-    {{input type="checkbox" name="isNegated" checked=isNegated}}
+    {{input type="checkbox" name="isNegated" checked=isNegated
+      click=(action changed this preventDefault=false)
+    }}
     <label>Negate</label>
   </span>
 
   {{!-- pattern isRegExp --}}
   <span  style="margin-left:3em">
-    {{input type="checkbox" name="isRegExp" checked=isRegExp}}
+    {{input type="checkbox" name="isRegExp" checked=isRegExp
+      click=(action changed this preventDefault=false)
+    }}
     <label>RegExp</label>
   </span>
 
