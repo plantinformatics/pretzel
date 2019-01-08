@@ -1,0 +1,16 @@
+<ul>
+  {{#each data as |filterGroup|}}
+    {{log 'filterGroup' filterGroup}}
+    {{panel/filter-group data=filterGroup changed=(action changed filterGroup) }}
+  {{/each}}
+
+  <span class="input-group-btn">
+    {{elem/button-base
+      icon="plus"
+      classColour="success"
+      onClick=(action "addFilterOrGroup")
+    }}
+    {{!-- disabled=disableCreateTag --}}
+  </span>
+
+</ul>

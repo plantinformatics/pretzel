@@ -1,0 +1,36 @@
+<li>
+  {{input
+    value=pattern
+    class="form-control"
+    enter=(action changed)
+    placeholder="string or regular expression" }}
+
+  {{!-- negate string / pattern --}}
+  <div>
+    <label>Negate pattern :</label>
+    {{input type="checkbox" name="isNegated" checked=isNegated}}
+  </div>
+
+  {{!-- pattern isRegExp --}}
+  <div>
+    <label>Pattern is a Regular Expression :</label>
+    {{input type="checkbox" name="isRegExp" checked=isRegExp}}
+  </div>
+
+  {{!-- match string / pattern again key and/or value --}}
+  <div>
+    <label>Match against :</label>
+    Key :
+    {{input type="checkbox" name="matchKey" checked=matchKey}}
+  Value :
+  {{input type="checkbox" name="matchValue" checked=matchValue}}
+  </div>
+
+
+  <div>
+    <label>Filter or Group:</label>
+    <input type="radio" name="filterOrGroup" value="filter" {{action "changeFilterOrGroup" "filter" preventDefault=false}}><label>Filter</label>
+    <input type="radio" name="filterOrGroup" value="group" {{action "changeFilterOrGroup" "group" preventDefault=false}}><label>Group</label>
+  </div>
+
+</li>

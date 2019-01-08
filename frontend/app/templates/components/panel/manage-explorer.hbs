@@ -7,9 +7,9 @@
       {{#each-in filterOptions as |key value|}}
         <div class="btn-group" role="group">
           <button
-            type="button"
-            class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
-            {{action "changeFilter" key preventDefault=false}}>
+              type="button"
+              class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
+              {{action "changeFilter" key preventDefault=false}}>
             {{elem/icon-base name=value.icon}} &nbsp;{{value.formal}}
           </button>
         </div>
@@ -58,66 +58,68 @@
 
     <div class="tab-content">
 
+      {{panel/filter-groups data=filterGroups changed=(action 'filterGroupsChanged') }}
+
       <div id="tab-explorer-parent" class="tab-pane fade in active">
-	<ul class="list-group borderless">
-	  {{record/entry-values values=dataTree levelMeta=levelMeta
-              loadBlock="loadBlock"
-              selectBlock="selectBlock"
-              selectedBlock=selectedBlock
-              selectDataset="selectDataset"}}
-        </ul>
-      </div>
+	        <ul class="list-group borderless">
+	          {{record/entry-values values=dataTree levelMeta=levelMeta
+                    loadBlock="loadBlock"
+                    selectBlock="selectBlock"
+                    selectedBlock=selectedBlock
+                    selectDataset="selectDataset"}}
+                </ul>
+              </div>
 
-      <div id="tab-explorer-byDataset" class="tab-pane fade">
-        {{record/entry-datasets
-          loadBlock="loadBlock"
-          selectBlock=(action 'selectBlock')
-          selectedBlock=selectedBlock
-          selectDataset=(action 'selectDataset')
-          selectedDataset=selectedDataset
-          data=dataWithoutParent}}
-      </div>
+              <div id="tab-explorer-byDataset" class="tab-pane fade">
+                {{record/entry-datasets
+                  loadBlock="loadBlock"
+                  selectBlock=(action 'selectBlock')
+                  selectedBlock=selectedBlock
+                  selectDataset=(action 'selectDataset')
+                  selectedDataset=selectedDataset
+                  data=dataWithoutParent}}
+              </div>
 
-      <div id="tab-explorer-references" class="tab-pane fade">
-        {{record/entry-datasets
-          loadBlock="loadBlock"
-          selectBlock=(action 'selectBlock')
-          selectedBlock=selectedBlock
-          selectDataset=(action 'selectDataset')
-          selectedDataset=selectedDataset
-          data=parents}}
-      </div>
+              <div id="tab-explorer-references" class="tab-pane fade">
+                {{record/entry-datasets
+                  loadBlock="loadBlock"
+                  selectBlock=(action 'selectBlock')
+                  selectedBlock=selectedBlock
+                  selectDataset=(action 'selectDataset')
+                  selectedDataset=selectedDataset
+                  data=parents}}
+              </div>
 
-      <div id="tab-explorer-datasets" class="tab-pane fade">
+              <div id="tab-explorer-datasets" class="tab-pane fade">
 
-	<ul class="list-group">
-	  
-	  {{#each data as |dataset|}}
-	    {{record/entry-dataset
-              filter=filter
-              entry=dataset
-              selectedBlock=selectedBlock
-              selectBlock="selectBlock"
-              deleteBlock="deleteBlock"
-              onDelete="onDelete"
-              loadBlock="loadBlock"
-              selectedDataset=selectedDataset
-              selectDataset="selectDataset"}}
-	  {{/each}}
-	  <li 
-	      class="list-group-item list-group-item-info">
-	    {{elem/icon-base name='cloud-upload'}} &nbsp;Upload new data
-	    <span class="pull-right">
-              {{elem/button-base
-		classSize='xs'
-		classColour='success'
-		icon='plus'
-		onClick=(action "changeTab" "upload")}}
-	    </span>
-	  </li>
-	</ul>
+	        <ul class="list-group">
+	          
+	          {{#each data as |dataset|}}
+	            {{record/entry-dataset
+                      filter=filter
+                      entry=dataset
+                      selectedBlock=selectedBlock
+                      selectBlock="selectBlock"
+                      deleteBlock="deleteBlock"
+                      onDelete="onDelete"
+                      loadBlock="loadBlock"
+                      selectedDataset=selectedDataset
+                      selectDataset="selectDataset"}}
+	          {{/each}}
+	          <li 
+	              class="list-group-item list-group-item-info">
+	            {{elem/icon-base name='cloud-upload'}} &nbsp;Upload new data
+	            <span class="pull-right">
+                      {{elem/button-base
+		        classSize='xs'
+		        classColour='success'
+		        icon='plus'
+		        onClick=(action "changeTab" "upload")}}
+	            </span>
+	          </li>
+	    </ul>
 
-      </div>
+          </div>
     </div>
 
   </div>

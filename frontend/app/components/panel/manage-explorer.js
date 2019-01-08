@@ -7,10 +7,15 @@ import ManageBase from './manage-base'
 
 /* global d3 */
 
+let initRecursionCount = 0;
+
 export default ManageBase.extend({
 
   init() {
     this._super();
+    if (initRecursionCount++ > 5) {
+      debugger;
+    }
     let store = this.get('store');
 
     let me = this;
@@ -33,6 +38,9 @@ export default ManageBase.extend({
   filter: 'all',
   layout: {
   },
+  /** Filter / Group patterns.  initially 1 element. */
+  filterGroups : [{}],
+  filterGroupsChangeCounter : 0,
   datasets: [],
   data: Ember.computed('datasets', 'filter', function() {
     let availableMaps = this.get('datasets')
@@ -124,10 +132,14 @@ export default ManageBase.extend({
 
   /** group the data in : Parent / Scope / Block
    */
-  dataTree : Ember.computed('data', function() {
+  dataTree : Ember.computed(
+    'data', 'filterGroups.0.component.@each', 'filterGroupsChangeCounter',
+    function() {
     let datasets = this.get('data'),
+    filterGroup = this.get('filterGroups.0.component'),
     metaFieldName = 'Created',
-    metaFilter = function(f) {
+    /** used in development */
+    metaFilterDev = function(f) {
       let meta = f.get('meta');
       console.log('metaFilter', f.get('name'), meta);
       let v = f.get('meta' + '.' + metaFieldName);
@@ -144,6 +156,58 @@ export default ManageBase.extend({
       }
       return v;
     },
+    isFilter = filterGroup && (filterGroup.filterOrGroup === 'filter'),  //  else group
+    /** apply filter/group fg to f
+     * @return true/false if fg is a filter, otherwise the value to group on
+     */
+    metaFilterFG = function(f, fg) {
+      let meta = f.get('meta');
+      console.log('metaFilter', f.get('name'), meta);
+      /** key : value pair which matches fg.pattern  */
+      let key, value;
+      let
+        regexp = fg.isRegExp ? new RegExp(fg.pattern) : undefined,
+      /** apply fg.pattern to string a.
+       * fg.isRegExp indicates if pattern is a regular expression or a string
+       * @return true if match
+       */
+      match = function (a) {
+        let match = fg.isRegExp ? regexp(a) : a.includes(fg.pattern);
+        return match;
+      },
+      valueToString = function(v) {
+        let s =
+          (typeof v === 'string') ? v :
+          (typeof v === 'object') ? JSON.stringify(v) :
+          '' + v;
+        return s;
+      };
+
+      for (let key1 in meta) {
+        if (meta.hasOwnProperty(key1)) {
+          /** The value used for grouping should be a string.  */
+          let value1 = valueToString(meta[key1]),
+          matched = (fg.matchKey && match(key1)) ||
+            (fg.matchValue && match(value1));
+          if (matched) {
+            console.log(key1 + ' : ' + value1);
+          }
+          if (fg.isNegated)
+            matched = ! matched;
+          if (matched) {
+            key = key1;
+            /*  value may be large/complex - maybe truncate long JSON. */
+            value = value1;
+            break;
+          }
+        }
+      };
+
+      return value;
+    },
+    metaFilter = (filterGroup && filterGroup.pattern) ?
+      function (d) { return metaFilterFG(d, filterGroup); }
+    : metaFilterDev,
     /** n is an array : [{key, values}, ..] */
     n = d3.nest()
       .key(metaFilter)
@@ -220,6 +284,10 @@ export default ManageBase.extend({
     },
     changeFilter: function(f) {
       this.set('filter', f)
+    },
+    filterGroupsChanged : function(fg) {
+      console.log('filterGroupsChanged', fg);
+      this.incrementProperty('filterGroupsChangeCounter');
     },
     onDelete(id) {
       
