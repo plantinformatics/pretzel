@@ -38,8 +38,8 @@ export default ManageBase.extend({
   filter: 'all',
   layout: {
   },
-  /** Filter / Group patterns.  initially 1 element. */
-  filterGroups : [{}],
+  /** Filter / Group patterns.  initially 0 elements. */
+  filterGroups : Ember.A(), // [{}]
   filterGroupsChangeCounter : 0,
   datasets: [],
   data: Ember.computed('datasets', 'filter', function() {
@@ -192,16 +192,21 @@ export default ManageBase.extend({
           if (matched) {
             console.log(key1 + ' : ' + value1);
           }
-          if (fg.isNegated)
+          if (fg.isNegated && ! isFilter)
             matched = ! matched;
           if (matched) {
             key = key1;
+            if (isFilter)
+              value = true;
+            else
             /*  value may be large/complex - maybe truncate long JSON. */
             value = value1;
             break;
           }
         }
       };
+      if (fg.isNegated && isFilter)
+        value = ! value;
 
       return value;
     },

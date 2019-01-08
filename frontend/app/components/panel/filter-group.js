@@ -17,13 +17,15 @@ export default Ember.Component.extend({
 
   actions : {
     changeFilterOrGroup : function (value) {
-      console.log('changeFilterOrGroup', value);
-      this.changeFilterOrGroup();
+      let data = this.get('data');
+      console.log('changeFilterOrGroup', this, data, value);
+      this.changeFilterOrGroup(value);
       this.sendAction('changed', this);
     }
   },
 
   changeFilterOrGroup(value) {
+    let data = this.get('data');
     this.set('filterOrGroup', value);
   }
 

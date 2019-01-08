@@ -11,7 +11,7 @@ export default Ember.Component.extend({
 
   addFilterOrGroup() {
     let data = this.get('data');
-    data.push({});
+    data.pushObject(Ember.Object.create());
   }
 
 });
