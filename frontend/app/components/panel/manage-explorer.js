@@ -9,6 +9,8 @@ import ManageBase from './manage-base'
 
 let initRecursionCount = 0;
 
+let trace_dataTree = 1;
+
 export default ManageBase.extend({
 
   init() {
@@ -132,7 +134,13 @@ export default ManageBase.extend({
 
   /** group the data in : Parent / Scope / Block
    */
-  dataTree : Ember.computed(
+  dataTree : Ember.computed('data', 'dataTreeFG', 'filterGroups.[]',    function() {
+    let
+    filterGroups = this.get('filterGroups'),
+    datasets = (filterGroups.length) ? this.get('dataTreeFG') : this.parentAndScope(this.get('data'));
+    return datasets;
+  }),
+  dataTreeFG : Ember.computed(
     'data', 'filterGroups.0.component.@each', 'filterGroupsChangeCounter',
     function() {
     let datasets = this.get('data'),
@@ -141,7 +149,8 @@ export default ManageBase.extend({
     /** used in development */
     metaFilterDev = function(f) {
       let meta = f.get('meta');
-      console.log('metaFilter', f.get('name'), meta);
+      if (trace_dataTree > 1)
+        console.log('metaFilter', f.get('name'), meta);
       let v = f.get('meta' + '.' + metaFieldName);
       if (v) {
         (v = v.split(', ')) && (v = v[0]);
@@ -162,7 +171,8 @@ export default ManageBase.extend({
      */
     metaFilterFG = function(f, fg) {
       let meta = f.get('meta');
-      console.log('metaFilter', f.get('name'), meta);
+      if (trace_dataTree > 1)
+        console.log('metaFilter', f.get('name'), meta);
       /** key : value pair which matches fg.pattern  */
       let key, value;
       let
@@ -189,7 +199,7 @@ export default ManageBase.extend({
           let value1 = valueToString(meta[key1]),
           matched = (fg.matchKey && match(key1)) ||
             (fg.matchValue && match(value1));
-          if (matched) {
+          if ((trace_dataTree > 1) && matched) {
             console.log(key1 + ' : ' + value1);
           }
           if (fg.isNegated && ! isFilter)
@@ -230,10 +240,12 @@ export default ManageBase.extend({
     /** {{each}} of Map is yielding index instead of key, so convert Map to a hash */
     let hash = {};
     for (var [key, value] of map2) {
-      console.log(key + ' : ' + value);
+      if (trace_dataTree > 1)
+        console.log(key + ' : ' + value);
       hash[key] = value;
     }
-    console.log('map2', map2, hash);
+    if (trace_dataTree)
+      console.log('map2', map2, hash);
     return hash;
   }),
   parentAndScope(datasets) {
