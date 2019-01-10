@@ -170,9 +170,16 @@ export default ManageBase.extend({
      * @return true/false if fg is a filter, otherwise the value to group on
      */
     metaFilterFG = function(f, fg) {
-      let meta = f.get('meta');
+      let keyFields = [];
+      if (fg.fieldName)
+        keyFields.push('name');
+      if (fg.fieldScope)
+        keyFields.push('scope');
+      if (fg.fieldMeta)
+        keyFields.push('meta');
+
       if (trace_dataTree > 1)
-        console.log('metaFilter', f.get('name'), meta);
+        console.log('metaFilter', f.get('name'));
       /** key : value pair which matches fg.pattern  */
       let key, value;
       let
@@ -182,7 +189,7 @@ export default ManageBase.extend({
        * @return true if match
        */
       match = function (a) {
-        let match = fg.isRegExp ? regexp(a) : a.includes(fg.pattern);
+        let match = fg.isRegExp ? regexp.exec(a) : a.includes(fg.pattern);
         return match;
       },
       valueToString = function(v) {
@@ -193,11 +200,50 @@ export default ManageBase.extend({
         return s;
       };
 
-      for (let key1 in meta) {
-        if (meta.hasOwnProperty(key1)) {
-          /** The value used for grouping should be a string.  */
-          let value1 = valueToString(meta[key1]),
-          matched = (fg.matchKey && match(key1)) ||
+      for (let i = 0; ! value && (i < keyFields.length); i++) {
+        let fieldName = keyFields[i];
+        let meta = f.get(fieldName);
+        if (trace_dataTree > 2)
+          console.log(fieldName, '\t: ', meta);
+        if (typeof meta !== 'object')
+        {
+          /* it will be useful to be able to group by .name or .scope value;
+           * use specificKey=true to signify this,
+           * e.g. if pattern === fieldName, group by f.get[fieldName].
+           * otherwise (normal case), don't match key, match by value.
+           */
+          value = matchField(f, fieldName, true);
+        }
+        else
+        {
+          for (let key1 in meta) {
+            value = matchField(meta, key1, false);
+            if (value)
+              break;
+          }
+        }
+        /** match against the key and/or value of meta[key1]
+         * @param specificKey true for .name and .scope,  to indicate key implicitly matches.
+         */
+        function matchField(meta, key1, specificKey) {
+          /** @param obj may be an Ember Object, or the value of e.g. its .meta field. */
+          function getValue(obj, key) {
+            return (typeof meta.get === 'function') ?
+              meta.get(key)
+              : (meta.hasOwnProperty(key1) && meta[key]);
+          }
+          let value,
+          rawValue = getValue(meta, key1);
+          if (rawValue) {
+          /** The value used for grouping should be a string.
+           * The schema indicates that the values of .name and .scope are strings.
+           * So we could apply valueToString() only when ! meta.get,
+           * but structured fields in addition to .meta could be added to keyFields[].
+           */
+            let value1 = valueToString(rawValue),
+            matched =
+              (specificKey ? (fg.pattern == key1)
+               : (fg.matchKey && match(key1))) ||
             (fg.matchValue && match(value1));
           if ((trace_dataTree > 1) && matched) {
             console.log(key1 + ' : ' + value1);
@@ -211,8 +257,9 @@ export default ManageBase.extend({
             else
             /*  value may be large/complex - maybe truncate long JSON. */
             value = value1;
-            break;
           }
+        }
+          return value;
         }
       };
       if (fg.isNegated && isFilter)
@@ -265,7 +312,8 @@ export default ManageBase.extend({
           let scopes = 
           result[datasetsByParent.key] =
 	          datasetsByParent.values.reduce(function (blocksByScope, dataset) {
-              console.log('blocksByScope', blocksByScope, dataset);
+              if (trace_dataTree > 1)
+                console.log('blocksByScope', blocksByScope, dataset);
               let blocks = dataset.get('blocks').toArray();
               blocks.forEach(
                 function (b) {
@@ -279,7 +327,8 @@ export default ManageBase.extend({
           return result;
         },
         {});
-    console.log('dataTree', grouped);
+    if (trace_dataTree)
+      console.log('parentAndScope', grouped);
     this.levelMeta.set(grouped, "Parent");
     return grouped;
   },
@@ -303,7 +352,8 @@ export default ManageBase.extend({
       this.set('filter', f)
     },
     filterGroupsChanged : function(fg) {
-      console.log('filterGroupsChanged', fg);
+      if (trace_dataTree)
+        console.log('filterGroupsChanged', fg);
       this.incrementProperty('filterGroupsChangeCounter');
     },
     onDelete(id) {

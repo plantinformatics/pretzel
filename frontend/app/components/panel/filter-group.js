@@ -11,6 +11,23 @@ export default Ember.Component.extend({
       } else {
         data.component = this;
       }
+      /** copy initial values from data to this.
+       * These are the fields defined in filter-groups.js:addFilterOrGroup() : initialFilterGroup,
+       * which should be integrated with this; perhaps move initialFilterGroup to this component.
+       */
+      let me = this;
+      [
+        'filterOrGroup',
+        'fieldName',
+        'fieldScope',
+        'fieldMeta',
+        'matchKey',
+        'matchValue']
+        .forEach(function (fieldName) {
+          if (! me.get(fieldName)) {
+            me.set(fieldName, data[fieldName]);
+          }
+        });
     }
   },
 

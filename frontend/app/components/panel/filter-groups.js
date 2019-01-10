@@ -10,8 +10,16 @@ export default Ember.Component.extend({
   },
 
   addFilterOrGroup() {
-    let data = this.get('data');
-    data.pushObject(Ember.Object.create());
+    let data = this.get('data'),
+    initialFilterGroup = {
+      filterOrGroup: 'filter',
+      fieldName : true,
+      fieldScope : true,
+      fieldMeta : true,
+      matchKey : true,
+      matchValue : true
+    };
+    data.pushObject(Ember.Object.create(initialFilterGroup));
   }
 
 });

@@ -670,6 +670,12 @@ li.dropdown-submenu > ul.dropdown-menu {
     border-radius: 6px 0 6px 6px;
 }
 /* -------------------------------------------------------------------------- */
+/* dataset explorer : filter-group */
+
+.line-input-label > input {
+    margin-left : 1.2em;
+}
+
 /* dataset explorer : tree browser */
 
 #tab-explorer-parent  ul {

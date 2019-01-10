@@ -1,7 +1,13 @@
 <li>
-  <div>
-    <input type="radio" name="filterOrGroup" value="filter" {{action "changeFilterOrGroup" "filter" preventDefault=false}}><label>Filter</label>
-    <input type="radio" name="filterOrGroup" value="group" {{action "changeFilterOrGroup" "group" preventDefault=false}}><label>Group</label>
+  <div class="line-input-label">
+    {{radio-button value='filter' groupValue=filterOrGroup
+      changed=(action changed this preventDefault=false)
+    }}
+    <label>Filter</label>
+    {{radio-button value='group' groupValue=filterOrGroup
+      changed=(action changed this preventDefault=false)
+    }}
+    <label>Group</label>
   </div>
 
   {{input
@@ -10,17 +16,33 @@
     enter=(action changed this)
     placeholder="string or regular expression" }}
 
+  {{!-- scope of search can be : .name .scope .meta --}}
+  <div class="line-input-label">
+    <label style="margin-right:1em">Fields :</label>
+    {{input type="checkbox" name="fieldName" checked=fieldName
+      click=(action changed this preventDefault=false)
+    }}
+    <span>name</span>
+    {{input type="checkbox" name="fieldScope" checked=fieldScope
+      click=(action changed this preventDefault=false)
+    }}
+    <span>scope</span>
+    {{input type="checkbox" name="fieldMeta" checked=fieldMeta
+      click=(action changed this preventDefault=false)
+    }}
+    <span>meta</span>
+  </div>
   {{!-- match string / pattern again key and/or value --}}
-  <div>
+  <div class="line-input-label">
     <label>Match against :</label>
-    Key :
     {{input type="checkbox" name="matchKey" checked=matchKey
       click=(action changed this preventDefault=false)
     }}
-    Value :
+    <span>Key</span>
     {{input type="checkbox" name="matchValue" checked=matchValue
       click=(action changed this preventDefault=false)
     }}
+    <span>Value</span>
   </div>
 
 
