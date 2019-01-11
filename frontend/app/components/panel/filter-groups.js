@@ -2,6 +2,8 @@ import Ember from 'ember';
 
 export default Ember.Component.extend({
 
+  classNames : ["filter-groups"],
+
   actions : {
     addFilterOrGroup : function () {
       console.log('addFilterOrGroup');

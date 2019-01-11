@@ -15,6 +15,7 @@
         </div>
       {{/each-in}}
     </div>
+    {{panel/filter-groups data=filterGroups changed=(action 'filterGroupsChanged') }}
   </div>
 {{/elem/panel-container}}
 
@@ -57,8 +58,6 @@
     </ul>
 
     <div class="tab-content">
-
-      {{panel/filter-groups data=filterGroups changed=(action 'filterGroupsChanged') }}
 
       <div id="tab-explorer-parent" class="tab-pane fade in active">
 	        <ul class="list-group borderless">

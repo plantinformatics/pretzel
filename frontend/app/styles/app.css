@@ -672,6 +672,10 @@ li.dropdown-submenu > ul.dropdown-menu {
 /* -------------------------------------------------------------------------- */
 /* dataset explorer : filter-group */
 
+.filter-groups {
+  margin-top: 1em;
+}
+
 .line-input-label > input {
     margin-left : 1.2em;
 }
