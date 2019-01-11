@@ -1,4 +1,5 @@
 import Ember from "ember";
+import DS from 'ember-data';
 
 import { filter, filterBy, mapBy, setDiff, uniqBy } from '@ember/object/computed';
 
@@ -18,6 +19,9 @@ export default ManageBase.extend({
     if (initRecursionCount++ > 5) {
       debugger;
     }
+  },
+  datasetsRefreshCounter : 0,
+  datasets : Ember.computed('view', 'datasetsRefreshCounter', function () {
     let store = this.get('store');
 
     let me = this;
@@ -26,10 +30,14 @@ export default ManageBase.extend({
     if (view == 'matrixview') {
       filter['where'] = {'type': 'observational'};
     }
-    store.query('dataset', {filter: filter}).then(function(datasets) {
-      me.set('datasets', datasets.toArray());
-    })
-  },
+    let promise =
+    store.query('dataset', {filter: filter});
+    promise.then(function(datasets) {
+      console.log('datasets', datasets.toArray());
+    });
+
+    return DS.PromiseArray.create({ promise: promise });
+  }),
   datasetType: null,
 
   filterOptions: {
@@ -43,8 +51,7 @@ export default ManageBase.extend({
   /** Filter / Group patterns.  initially 0 elements. */
   filterGroups : Ember.A(), // [{}]
   filterGroupsChangeCounter : 0,
-  datasets: [],
-  data: Ember.computed('datasets', 'filter', function() {
+  data: Ember.computed('datasets', 'datasets.[]', 'filter', function() {
     let availableMaps = this.get('datasets')
     let filter = this.get('filter')
     // perform filtering according to selectedChr
@@ -335,15 +342,7 @@ export default ManageBase.extend({
 
   actions: {
     refreshAvailable() {
-      let me = this;
-      let view = me.get('view');
-      let filter = {'include': 'blocks'};
-      if (view == 'matrixview') {
-        filter['where'] = {'type': 'observational'};
-      }
-      this.get('store').query('dataset', {filter: filter}).then(function(datasets) {
-        me.set('datasets', datasets.toArray());
-      });
+      this.incrementProperty('datasetsRefreshCounter');
     },
     deleteBlock(chr) {
       this.sendAction('deleteBlock', chr.id);
