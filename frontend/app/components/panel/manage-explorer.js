@@ -10,7 +10,7 @@ import ManageBase from './manage-base'
 
 let initRecursionCount = 0;
 
-let trace_dataTree = 1;
+let trace_dataTree = 2;
 
 export default ManageBase.extend({
 
@@ -37,6 +37,7 @@ export default ManageBase.extend({
     });
 
     return DS.PromiseArray.create({ promise: promise });
+//      new Ember.RSVP.Promise((resolve) => { promise.then(function(datasets) { resolve(datasets); } ); } );
   }),
   datasetType: null,
 
@@ -51,9 +52,10 @@ export default ManageBase.extend({
   /** Filter / Group patterns.  initially 0 elements. */
   filterGroups : Ember.A(), // [{}]
   filterGroupsChangeCounter : 0,
-  data: Ember.computed('datasets', 'datasets.[]', 'filter', function() {
+  dataPre: Ember.computed('datasets', 'datasets.[]', 'filter', function() {
     let availableMaps = this.get('datasets')
     let filter = this.get('filter')
+    console.log('dataPre', availableMaps, filter);
     // perform filtering according to selectedChr
     // let filtered = availableMaps //all
     if (filter == 'private') {
@@ -65,10 +67,18 @@ export default ManageBase.extend({
       return availableMaps;
     }
   }),
-  dataEmpty: Ember.computed('data', function() {
-    let availableMaps = this.get('data')
-    if (availableMaps && availableMaps.length > 0) { return false; }
-    else { return true; }
+  /** @return result is downstream of filter and filterGroups */
+  data : Ember.computed('dataPre', 'dataFG',    function() {
+    let
+    filterGroups = this.get('filterGroups'),
+    datasets = (filterGroups.length) ? this.get('dataFG') : this.get('dataPre');
+// this.parentAndScope()
+    return datasets;
+  }),
+  dataEmpty: Ember.computed('datasets', 'datasets.length', 'datasets.[]', function() {
+    let length = this.get('datasets.length'),
+    nonEmpty = (length > 0);
+    return ! nonEmpty;
   }),
   /* ------------------------------------------------------------------------ */
   /** group the data in : Dataset / Block
@@ -143,15 +153,58 @@ export default ManageBase.extend({
    */
   dataTree : Ember.computed('data', 'dataTreeFG', 'filterGroups.[]',    function() {
     let
-    filterGroups = this.get('filterGroups'),
-    datasets = (filterGroups.length) ? this.get('dataTreeFG') : this.parentAndScope(this.get('data'));
+      filterGroupsLength = this.get('filterGroups.length'),
+    me = this,
+    dataP,
+    datasets = filterGroupsLength ?
+      DS.PromiseObject.create({promise : this.get('dataTreeFG') })
+      : (dataP = this.get('data'))
+      &&
+      DS.PromiseObject.create({
+        promise:
+        dataP.then(function (data) { data = data.toArray(); console.log('dataTree data', data);  return me.parentAndScope(data);
+                                   })
+      });
     return datasets;
   }),
+  /** @return promise of a hash */
   dataTreeFG : Ember.computed(
-    'data', 'filterGroups.0.component.@each', 'filterGroupsChangeCounter',
+    'dataFG',
     function() {
-    let datasets = this.get('data'),
-    filterGroup = this.get('filterGroups.0.component'),
+      let datasetGroupsP = this.get('dataFG'),
+      me = this,
+      promise = datasetGroupsP.then(function(datasetGroups) {
+        console.log('datasetGroups', datasetGroups);
+        let
+          result = {};
+        for (var key in datasetGroups) {
+          if (datasetGroups.hasOwnProperty(key)) {
+            result[key] = me.parentAndScope(datasetGroups[key]);
+          }
+        }
+        return result;
+      });
+      return promise;
+    }),
+  /**
+   * dataFG CF -> hash by value, of datasets
+   * -> dataTreeFG -> plus mapToParentScope
+   */
+  dataFG : Ember.computed(
+    'dataPre', 'filterGroups.[]', 
+    'filterGroups.0.component.@each', 'filterGroupsChangeCounter',
+    function() {
+      let datasetsP = this.get('dataPre'),
+      filterGroup = this.get('filterGroups.0.component'),
+      me = this;
+      return datasetsP.then(function (datasets) {
+        datasets = datasets.toArray();
+        return me.datasetFilter(datasets, filterGroup);
+      });
+    }),
+    datasetFilter(datasets, filterGroup) {
+      let
+      unused1 = filterGroup && console.log('dataFG filterGroup', filterGroup, filterGroup.filterOrGroup, filterGroup.pattern),
     metaFieldName = 'Created',
     /** used in development */
     metaFilterDev = function(f) {
@@ -280,14 +333,13 @@ export default ManageBase.extend({
     /** n is an array : [{key, values}, ..] */
     n = d3.nest()
       .key(metaFilter)
-      .entries(datasets),
-    me = this,
+      .entries(datasets || []),
     /** parentAndScope() could be restructured as a key function, and used in d3-array.group(). */
     /** reduce nest to a Map, processing values with parentAndScope() */
     map2 = n.reduce(function (map, nestEntry) {
       let key = nestEntry.key,
       value = nestEntry.values;
-      map.set(key, me.parentAndScope(value));
+      map.set(key, value);
       return map; },
       new Map()
     );
@@ -301,7 +353,7 @@ export default ManageBase.extend({
     if (trace_dataTree)
       console.log('map2', map2, hash);
     return hash;
-  }),
+    },
   parentAndScope(datasets) {
     let
     levelMeta = this.get('levelMeta'),
@@ -318,8 +370,8 @@ export default ManageBase.extend({
         function (result, datasetsByParent) {
           let scopes = 
           result[datasetsByParent.key] =
-	          datasetsByParent.values.reduce(function (blocksByScope, dataset) {
-              if (trace_dataTree > 1)
+            datasetsByParent.values.reduce(function (blocksByScope, dataset) {
+              if (trace_dataTree > 2)
                 console.log('blocksByScope', blocksByScope, dataset);
               let blocks = dataset.get('blocks').toArray();
               blocks.forEach(
@@ -352,7 +404,7 @@ export default ManageBase.extend({
     },
     filterGroupsChanged : function(fg) {
       if (trace_dataTree)
-        console.log('filterGroupsChanged', fg);
+        console.log('filterGroupsChanged', fg, this.get('filterGroups.0.component'), this.get('filterGroups.0'));
       this.incrementProperty('filterGroupsChangeCounter');
     },
     onDelete(id) {

@@ -1,3 +1,4 @@
+{{!-- values is an array of blocks --}}
 <li class="list-group-item list-group-item-info" >
   {{elem/button-base
   classSize='xs'
@@ -5,11 +6,11 @@
   icon=expandIcon
   onClick=(action "switch")
   }}
-  {{scopeName}}
+  {{name}}
   {{#if layout.active}}
     {{record/entry-blocks
       loadBlock="loadBlock"
-      data=blocks
+      data=values
       selectBlock="selectBlock"
       selectedBlock=selectedBlock
       selectDataset="selectDataset"}}

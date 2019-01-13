@@ -14,20 +14,20 @@
   {{log 'valuesIsMap:each'}}
 
   {{#each values as |key value|}}
-      {{log  'value' value 'key' key}}
-      {{component levelComponent levelMeta=levelMeta name=key values=value
-        loadBlock="loadBlock"
-        selectBlock="selectBlock"
-        selectedBlock=selectedBlock
-        selectDataset="selectDataset"
-      }}
+    {{log  'value' value 'key' key 'levelComponent' levelComponent}}
+    {{component levelComponent levelMeta=levelMeta name=key values=value
+      loadBlock="loadBlock"
+      selectBlock="selectBlock"
+      selectedBlock=selectedBlock
+      selectDataset="selectDataset"
+    }}
   {{/each}}
 
 {{else}}
   {{log 'each-in'}}
 
   {{#each-in values as |key value|}}
-    {{log  'key' key 'value' value}}
+    {{log  'key' key 'value' value 'levelComponent' levelComponent}}
     {{component levelComponent levelMeta=levelMeta name=key values=value
       loadBlock="loadBlock"
       selectBlock="selectBlock"

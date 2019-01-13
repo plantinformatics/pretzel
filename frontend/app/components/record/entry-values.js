@@ -1,6 +1,7 @@
 import Ember from 'ember';
 import EntryBase from './entry-base';
 
+import DS from 'ember-data';
 
 export default EntryBase.extend({
 
@@ -16,25 +17,29 @@ export default EntryBase.extend({
   },
 
  /** {{!-- type is blocks array */
-  valueIsBlocksArray : Ember.computed('values', function () {
+  valueIsBlocksArray : Ember.computed('values', 'values.length', function () {
     let
-    values = this.get('values'),
-    isBlocksArray = values.length;
+    length = this.get('values.length'),
+    isBlocksArray = length;
     return isBlocksArray;
   }),
 
 
   valuesIsMap : Ember.computed('values', function () {
+    function isMapFn (values) { return values.constructor === Map; };
     let
-    values = this.get('values'),
-    isMap = values.constructor === Map;
+      /** if values is a promise, then result is also.   */
+      values = this.get('values'),
+    isMap = values.then ?
+      DS.PromiseObject.create({promise : values.then(isMapFn)})
+    : isMapFn(values);
     return isMap;
   }),
 
   levelComponent : Ember.computed('levelMeta', 'values', function () {
     let levelMeta = this.get('levelMeta'),
     values = this.get('values'),
-    isMap = values.constructor === Map,
+    isMap = values && values.constructor === Map,
     dataTypeName = levelMeta.get(values),
     component =
       isMap ? 'record/entry-level' :

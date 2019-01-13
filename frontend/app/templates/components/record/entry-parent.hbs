@@ -15,8 +15,8 @@
       {{#each-in values as |scopeName blocks|}}
         {{record/entry-scope
           loadBlock="loadBlock"
-          scopeName=scopeName
-          blocks=blocks
+          name=scopeName
+          values=blocks
           selectBlock="selectBlock"
           selectedBlock=selectedBlock
           selectDataset="selectDataset"}}
