@@ -701,6 +701,8 @@ li:hover > span.blockInScope
   margin-left: 1em;
 }
 
+/* <li>-s with .active-detail contain a <div> with additional detail, e.g. a count,
+ * which is displayed when active */
 li.active-detail {
   display:flex;
 }
@@ -717,6 +719,15 @@ li.active-detail.active > div {
  * below the tab so use display:block.  */
 ul.li-active-extra > li.active-detail.active {
   display: block;
+}
+
+#left-panel-explorer > div > .panel > div > ul.nav > li {
+  border: 1px solid #ccc;
+  border-radius: 10px 10px 3px 3px;
+}
+
+#left-panel-explorer > div > .panel > div > ul.nav > li.active {
+  border-bottom : none;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -982,6 +993,7 @@ div#goto-feature > div
 }
 /* -------------------------------------------------------------------------- */
 /* manage-explorer */
+/* see also '#tab-explorer-parent' above - combine these when split out. */
 
 /* this will be provided by bootstrap v4 */
 li.d-inline-block {
