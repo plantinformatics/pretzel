@@ -1,13 +1,18 @@
 <li>
-  <div class="line-input-label">
-    {{radio-button value='filter' groupValue=filterOrGroup
-      changed=(action changed this preventDefault=false)
-    }}
-    <label>Filter</label>
-    {{radio-button value='group' groupValue=filterOrGroup
-      changed=(action changed this preventDefault=false)
-    }}
-    <label>Group</label>
+  <div>
+    {{elem/icon-toggle state=detailed iconTrue='arrow-up' iconFalse='arrow-down' }}
+    {{#if detailed}}
+      <div class="line-input-label">
+        {{radio-button value='filter' groupValue=filterOrGroup
+          changed=(action changed this preventDefault=false)
+        }}
+        <label>Filter</label>
+        {{radio-button value='group' groupValue=filterOrGroup
+          changed=(action changed this preventDefault=false)
+        }}
+        <label>Group</label>
+      </div>
+    {{/if}}
   </div>
 
   {{input
@@ -16,51 +21,54 @@
     enter=(action changed this)
     placeholder="string or regular expression" }}
 
-  {{!-- scope of search can be : .name .scope .meta --}}
-  <div class="line-input-label">
-    <label style="margin-right:1em">Fields :</label>
-    {{input type="checkbox" name="fieldName" checked=fieldName
-      click=(action changed this preventDefault=false)
-    }}
-    <span>name</span>
-    {{input type="checkbox" name="fieldScope" checked=fieldScope
-      click=(action changed this preventDefault=false)
-    }}
-    <span>scope</span>
-    {{input type="checkbox" name="fieldMeta" checked=fieldMeta
-      click=(action changed this preventDefault=false)
-    }}
-    <span>meta</span>
-  </div>
-  {{!-- match string / pattern again key and/or value --}}
-  <div class="line-input-label">
-    <label>Match against :</label>
-    {{input type="checkbox" name="matchKey" checked=matchKey
-      click=(action changed this preventDefault=false)
-    }}
-    <span>Key</span>
-    {{input type="checkbox" name="matchValue" checked=matchValue
-      click=(action changed this preventDefault=false)
-    }}
-    <span>Value</span>
-  </div>
+  {{#if detailed}}
+
+    {{!-- scope of search can be : .name .scope .meta --}}
+    <div class="line-input-label">
+      <label style="margin-right:1em">Fields :</label>
+      {{input type="checkbox" name="fieldName" checked=fieldName
+        click=(action changed this preventDefault=false)
+      }}
+      <span>name</span>
+      {{input type="checkbox" name="fieldScope" checked=fieldScope
+        click=(action changed this preventDefault=false)
+      }}
+      <span>scope</span>
+      {{input type="checkbox" name="fieldMeta" checked=fieldMeta
+        click=(action changed this preventDefault=false)
+      }}
+      <span>meta</span>
+    </div>
+    {{!-- match string / pattern again key and/or value --}}
+    <div class="line-input-label">
+      <label>Match against :</label>
+      {{input type="checkbox" name="matchKey" checked=matchKey
+        click=(action changed this preventDefault=false)
+      }}
+      <span>Key</span>
+      {{input type="checkbox" name="matchValue" checked=matchValue
+        click=(action changed this preventDefault=false)
+      }}
+      <span>Value</span>
+    </div>
 
 
-  {{!-- negate string / pattern --}}
-  <span>
-    {{input type="checkbox" name="isNegated" checked=isNegated
-      click=(action changed this preventDefault=false)
-    }}
-    <label>Negate</label>
-  </span>
+    {{!-- negate string / pattern --}}
+    <span>
+      {{input type="checkbox" name="isNegated" checked=isNegated
+        click=(action changed this preventDefault=false)
+      }}
+      <label>Negate</label>
+    </span>
 
-  {{!-- pattern isRegExp --}}
-  <span  style="margin-left:3em">
-    {{input type="checkbox" name="isRegExp" checked=isRegExp
-      click=(action changed this preventDefault=false)
-    }}
-    <label>RegExp</label>
-  </span>
+    {{!-- pattern isRegExp --}}
+    <span  style="margin-left:3em">
+      {{input type="checkbox" name="isRegExp" checked=isRegExp
+        click=(action changed this preventDefault=false)
+      }}
+      <label>RegExp</label>
+    </span>
 
+  {{/if}}
 
 </li>

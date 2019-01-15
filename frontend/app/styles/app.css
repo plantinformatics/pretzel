@@ -675,6 +675,13 @@ li.dropdown-submenu > ul.dropdown-menu {
 .filter-groups {
   margin-top: 1em;
 }
+.filter-groups > ul {
+   list-style-type: none;
+   padding-left: 0px;
+}
+.filter-groups > ul > li > div > input[name=detailed] {
+  float: left;
+}
 
 .line-input-label > input {
     margin-left : 1.2em;
