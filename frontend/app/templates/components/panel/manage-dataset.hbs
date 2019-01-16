@@ -12,8 +12,12 @@
       {{#each-in dataset.meta as |key value|}}
       <tr><td>{{key}}</td><td>{{value}}</td></tr>
       {{/each-in}}
+
     </tbody>
   </table>
+  <div>
+    {{json-editor json=dataset.meta onChange=(action "mutateJson")}}
+  </div>
 {{else}}
   <h4>No Dataset Selected</h4>
 
