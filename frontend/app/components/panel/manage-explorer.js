@@ -129,7 +129,7 @@ export default ManageBase.extend({
     set = parents.reduce(function(result, value) { return result.add(value); }, new Set());
     return set;
   }),
-  /** Alternative to dataWithoutParent based on setDiff.
+  /** Alternative to dataWithoutParent, which is based on setDiff.
    * The setDiff version is working OK, after introducing parentsContent,
    * so this equivalent is not required.
    */
@@ -186,22 +186,85 @@ export default ManageBase.extend({
       });
       return promise;
     }),
+  /** Split the datasets according to their dataset.meta.type,
+   * or otherwise by whether the dataset has a parent or children.
+   */
+  dataTyped : Ember.computed(
+    'dataPre',
+    function() {
+      let datasetsP = this.get('dataPre');
+      let me = this,
+      promise = datasetsP.then(function (datasets) {
+        datasets = datasets.toArray();
+        let dataTyped = {};
+        let parents = me.get('parents')
+          .map(function (p) { return p.content || p; });
+        console.log('parents', me.get('parents'), parents);
+        for (let i=0; i < datasets.length; i++) {
+          let d = datasets[i],
+          typeName = d.get('meta.type');
+          if (! typeName) {
+            let parent = d.get('parent');
+            if (parent.hasOwnProperty('content'))
+              parent = parent.content;
+            if (parent)
+              typeName = 'annotation';
+            else
+            {
+              let hasChildren = parents.indexOf(d) >= 0;  // i.e. !== -1
+              typeName = hasChildren ? "reference" : "genetic-map";
+              console.log(hasChildren, typeName);
+            }
+          }
+          if (! dataTyped[typeName])
+            dataTyped[typeName] = [];
+          dataTyped[typeName].push(d);
+        }
+        console.log('dataTyped', dataTyped);
+
+        dataTyped['annotation'] = me.parentAndScope(dataTyped['annotation']);
+        let levelMeta = me.levelMeta;
+        levelMeta.set(dataTyped['annotation'], "Parent");
+        levelMeta.set(dataTyped['reference'], "Datasets");
+        levelMeta.set(dataTyped['genetic-map'], "Datasets");
+
+        return dataTyped;
+      }),
+      promiseP = DS.PromiseObject.create({ promise: promise });
+      return  promiseP;
+    }),
   /**
+   * dataPre -> dataTyped ->
    * dataFG CF -> hash by value, of datasets
    * -> dataTreeFG -> plus mapToParentScope
    */
   dataFG : Ember.computed(
-    'dataPre', 'filterGroups.[]', 
+    'dataTyped', 'filterGroups.[]', 
     'filterGroups.0.component.@each', 'filterGroupsChangeCounter',
     function() {
-      let datasetsP = this.get('dataPre'),
+      let
+        dataTypedP = this.get('dataTyped'),
       filterGroup = this.get('filterGroups.0.component'),
       me = this;
-      return datasetsP.then(function (datasets) {
-        datasets = datasets.toArray();
-        return me.datasetFilter(datasets, filterGroup);
+      return dataTypedP.then(function (dataTyped) {
+        let typedFG = {};
+        Object.entries(dataTyped).forEach(
+          ([typeName, datasets]) => 
+            {
+              console.log(typeName, datasets);
+              // this is now done in dataTyped(), so not needed here
+              if (datasets.toArray) {
+                console.log('dataFG toArray?');
+                debugger;
+                datasets = datasets.toArray();
+              }
+              datasets = me.datasetFilter(datasets, filterGroup);
+              typedFG[typeName] = datasets;
+            }
+        );
       });
     }),
+  /** Apply filterGroup to datasets, and return the result. */
     datasetFilter(datasets, filterGroup) {
       let
       unused1 = filterGroup && console.log('dataFG filterGroup', filterGroup, filterGroup.filterOrGroup, filterGroup.pattern),
@@ -354,6 +417,9 @@ export default ManageBase.extend({
       console.log('map2', map2, hash);
     return hash;
     },
+  /** Given an array of datasets, group them by parent, then within each parent,
+   * group by scope the blocks of the datasets of the parent.
+   */
   parentAndScope(datasets) {
     let
     levelMeta = this.get('levelMeta'),
@@ -368,17 +434,22 @@ export default ManageBase.extend({
     let grouped =
       n.reduce(
         function (result, datasetsByParent) {
+          /** hash: [scope] -> [blocks]. */
           let scopes = 
+            /** key is parent name */
           result[datasetsByParent.key] =
             datasetsByParent.values.reduce(function (blocksByScope, dataset) {
               if (trace_dataTree > 2)
                 console.log('blocksByScope', blocksByScope, dataset);
+              /** Within a parent, for each dataset of that parent,
+               * reference all the blocks of dataset, by their scope.  */
               let blocks = dataset.get('blocks').toArray();
               blocks.forEach(
                 function (b) {
                   let scope = b.get('scope'),
                   blocksOfScope = blocksByScope[scope] || (blocksByScope[scope] = []);
                   blocksOfScope.push(b);
+                  levelMeta.set(b, "Blocks");
                 });
               return blocksByScope;
             }, {});

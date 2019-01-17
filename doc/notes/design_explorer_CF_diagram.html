@@ -99,7 +99,7 @@ B2(dataTreeFG) --> | filterGroups.length PO | A2(dataTree)
 C2(dataFG) --> | parentAndScope | B2(dataTreeFG)
 
 
-D2(dataPre) --> | datasetFilter datasets filterGroup | C2(dataFG)
+F(dataPre) --> | datasetFilter datasets filterGroup | C2(dataFG)
 E2(filterGroups.0) --> C2(dataFG)
 F2(filterGroupsChangeCounter) --> C2(dataFG)
 
