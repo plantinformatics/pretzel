@@ -10,7 +10,7 @@ import ManageBase from './manage-base'
 
 let initRecursionCount = 0;
 
-let trace_dataTree = 2;
+let trace_dataTree = 3;
 
 export default ManageBase.extend({
 
@@ -37,7 +37,6 @@ export default ManageBase.extend({
     });
 
     return DS.PromiseArray.create({ promise: promise });
-//      new Ember.RSVP.Promise((resolve) => { promise.then(function(datasets) { resolve(datasets); } ); } );
   }),
   datasetType: null,
 
@@ -66,6 +65,25 @@ export default ManageBase.extend({
     } else {
       return availableMaps;
     }
+  }),
+  /** @return the filterGroup if there is one, and it has a pattern. */
+  useFilterGroup : Ember.computed(
+    'filterGroups', 'filterGroups.[]',
+    'filterGroups.0.component.@each', 'filterGroupsChangeCounter',
+    function () {
+    let
+      filterGroupsLength = this.get('filterGroups.length'),
+    filterGroup;
+    if (filterGroupsLength) {
+      filterGroup = this.get('filterGroups.0.component');
+      if (filterGroup) {
+        /** possibly grouping does not need a pattern - can group on fieldName,fieldScope,fieldMeta */
+        let isFilter = (filterGroup.filterOrGroup === 'filter');
+        if (isFilter && (! filterGroup.pattern || (filterGroup.pattern.length == 0)))
+          filterGroup = undefined;
+      }
+    }
+    return filterGroup;
   }),
   /** @return result is downstream of filter and filterGroups */
   data : Ember.computed('dataPre', 'dataFG',    function() {
@@ -224,9 +242,16 @@ export default ManageBase.extend({
 
         dataTyped['annotation'] = me.parentAndScope(dataTyped['annotation']);
         let levelMeta = me.levelMeta;
-        levelMeta.set(dataTyped['annotation'], "Parent");
-        levelMeta.set(dataTyped['reference'], "Datasets");
-        levelMeta.set(dataTyped['genetic-map'], "Datasets");
+        function setType(typeName, template) {
+          let d = dataTyped[typeName];
+          if (d) {
+            try { levelMeta.set(d, template); }
+            catch (e) { console.log(typeName, template, d, e); debugger; }
+          }
+        }
+        setType('annotation', 'Parent');
+        setType('reference', 'Datasets');
+        setType('genetic-map', 'Datasets');
 
         return dataTyped;
       }),
@@ -239,35 +264,40 @@ export default ManageBase.extend({
    * -> dataTreeFG -> plus mapToParentScope
    */
   dataFG : Ember.computed(
-    'dataTyped', 'filterGroups.[]', 
-    'filterGroups.0.component.@each', 'filterGroupsChangeCounter',
+    'dataTyped', 'useFilterGroup',
     function() {
       let
         dataTypedP = this.get('dataTyped'),
-      filterGroup = this.get('filterGroups.0.component'),
+      filterGroup = this.get('useFilterGroup'),
       me = this;
-      return dataTypedP.then(function (dataTyped) {
-        let typedFG = {};
-        Object.entries(dataTyped).forEach(
-          ([typeName, datasets]) => 
-            {
-              console.log(typeName, datasets);
-              // this is now done in dataTyped(), so not needed here
-              if (datasets.toArray) {
-                console.log('dataFG toArray?');
-                debugger;
-                datasets = datasets.toArray();
+      if (filterGroup) {
+        dataTypedP = dataTypedP.then(applyFGs);
+        function applyFGs (dataTyped) {
+          let typedFG = {};
+          Object.entries(dataTyped).forEach(
+            ([typeName, datasets]) => 
+              {
+                console.log(typeName, datasets);
+                // toArray() is now done in dataTyped(), so not needed here
+                if (dataTyped.content && datasets.toArray) {
+                  console.log('dataFG toArray?');
+                  debugger;
+                  datasets = datasets.toArray();
+                }
+                datasets = me.datasetFilter(datasets, filterGroup);
+                typedFG[typeName] = datasets;
               }
-              datasets = me.datasetFilter(datasets, filterGroup);
-              typedFG[typeName] = datasets;
-            }
-        );
-      });
+          );
+        }
+      }
+      return dataTypedP;
     }),
   /** Apply filterGroup to datasets, and return the result. */
     datasetFilter(datasets, filterGroup) {
       let
       unused1 = filterGroup && console.log('dataFG filterGroup', filterGroup, filterGroup.filterOrGroup, filterGroup.pattern),
+      /** datasets is an array of either datasets or blocks.  fieldScope is not applicable to blocks  */
+      isDataset = datasets && datasets[0] && datasets[0].constructor.modelName === 'dataset',
     metaFieldName = 'Created',
     /** used in development */
     metaFilterDev = function(f) {
@@ -296,7 +326,7 @@ export default ManageBase.extend({
       let keyFields = [];
       if (fg.fieldName)
         keyFields.push('name');
-      if (fg.fieldScope)
+      if (fg.fieldScope && ! isDataset)
         keyFields.push('scope');
       if (fg.fieldMeta)
         keyFields.push('meta');
@@ -422,6 +452,7 @@ export default ManageBase.extend({
    */
   parentAndScope(datasets) {
     let
+      me = this,
     levelMeta = this.get('levelMeta'),
     withParent = datasets.filter(function(f) {
       let p = f.get('parent');
@@ -444,6 +475,21 @@ export default ManageBase.extend({
               /** Within a parent, for each dataset of that parent,
                * reference all the blocks of dataset, by their scope.  */
               let blocks = dataset.get('blocks').toArray();
+              let filterGroup;
+              if ((filterGroup = me.get('useFilterGroup'))) {
+                let
+                isBlockFilter = filterGroup && (filterGroup.filterOrGroup === 'filter') && filterGroup.fieldScope;
+                if (isBlockFilter) {
+                  let matched = me.datasetFilter(blocks, filterGroup),
+                  b = matched['true'];
+                  if (b && b.length)
+                    blocks = b;
+                  else {
+                    console.log('isBlockFilter', blocks, filterGroup, matched);
+                    blocks = [];
+                  }
+                }
+              }
               blocks.forEach(
                 function (b) {
                   let scope = b.get('scope'),
