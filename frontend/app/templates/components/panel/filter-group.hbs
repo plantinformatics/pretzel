@@ -30,14 +30,21 @@
         click=(action changed this preventDefault=false)
       }}
       <span>name</span>
-      {{input type="checkbox" name="fieldScope" checked=fieldScope
-        click=(action changed this preventDefault=false)
-      }}
-      <span>scope</span>
       {{input type="checkbox" name="fieldMeta" checked=fieldMeta
         click=(action changed this preventDefault=false)
       }}
       <span>meta</span>
+      <br/>
+      <span style="margin-left:2em">Block : </span>
+      {{input type="checkbox" name="fieldScope" checked=fieldScope
+        click=(action changed this preventDefault=false)
+      }}
+      <span>scope</span>
+      {{input type="checkbox" name="fieldNamespace" checked=fieldNamespace
+        click=(action changed this preventDefault=false)
+      }}
+      <span>namespace</span>
+
     </div>
     {{!-- match string / pattern again key and/or value --}}
     <div class="line-input-label">

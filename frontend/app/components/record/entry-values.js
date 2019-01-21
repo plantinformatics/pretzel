@@ -61,7 +61,7 @@ export default EntryBase.extend({
       levelMeta = this.get('levelMeta'),
     values = this.get('values'),  // values.then ...
     dataTypeName = values && levelMeta.get(values);
-    if (! dataTypeName && values.length)
+    if (! dataTypeName && values && values.length)
     {
       // e.g. "dataset".  equivalent to _internalModel.modelName
       dataTypeName = values[0].constructor.modelName.capitalize() + 's';

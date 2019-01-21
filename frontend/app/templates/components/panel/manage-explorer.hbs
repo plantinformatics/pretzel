@@ -65,7 +65,8 @@
 
     <div class="tab-content">
 
-      {{#each-in dataTyped as |tabTypeName tabData|}}
+      {{log 'dataTypedTreeFG' dataTypedTreeFG}}
+      {{#each-in dataTypedTreeFG as |tabTypeName tabData|}}
         {{log 'tabTypeName' tabTypeName 'tabData' tabData }}
         {{record/entry-tab 
           name=tabTypeName
