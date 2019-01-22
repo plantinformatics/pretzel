@@ -94,9 +94,7 @@ export default ManageBase.extend({
     if (filterGroupsLength) {
       filterGroup = this.get('filterGroups.0.component');
       if (filterGroup) {
-        /** possibly grouping does not need a pattern - can group on fieldName,fieldScope,fieldMeta */
-        let isFilter = (filterGroup.filterOrGroup === 'filter');
-        if (isFilter && (! filterGroup.pattern || (filterGroup.pattern.length == 0)))
+        if (! filterGroup.get('defined'))
           filterGroup = undefined;
       }
     }
@@ -349,10 +347,10 @@ export default ManageBase.extend({
    * dataFG CF -> hash by value, of datasets
    */
   dataFG : Ember.computed(
-    'dataPre', 'useFilterGroups',
+    'dataPre', 'useFilterGroup',
     function() {
       let datasetsP = this.get('dataPre'),
-      filterGroup = this.get('useFilterGroups'),
+      filterGroup = this.get('useFilterGroup'),
       me = this;
       return datasetsP.then(function (datasets) {
         datasets = datasets.toArray();
@@ -364,6 +362,12 @@ export default ManageBase.extend({
    * @param tabName the value of dataset.meta.type which datasets share, or 'all'.
    */
   datasetFilter(datasets, filterGroup, tabName) {
+    /** argument checking : expect that filterGroup exists and defines a filter / grouping */
+    if (! filterGroup || ! filterGroup.get('defined')) {
+      console.log('datasetFilter incomplete filterGroup :', filterGroup);
+      return [];
+    }
+
       let
       unused1 = filterGroup && console.log('dataFG filterGroup', filterGroup, filterGroup.filterOrGroup, filterGroup.pattern),
       /** datasets is an array of either datasets or blocks.  fieldScope and fieldNamespace are only applicable to blocks  */
@@ -408,14 +412,10 @@ export default ManageBase.extend({
       /** key : value pair which matches fg.pattern  */
       let key, value;
       let
-        regexp = fg.isRegExp ? new RegExp(fg.pattern) : undefined,
-      /** apply fg.pattern to string a.
-       * fg.isRegExp indicates if pattern is a regular expression or a string
-       * @return true if match
+      /** @return true if string a matches any of the patterns defined by fg.
        */
       match = function (a) {
-        let match = fg.isRegExp ? regexp.exec(a) : a.includes(fg.pattern);
-        return match;
+        return fg.match(a);
       },
       valueToString = function(v) {
         let s =
@@ -467,7 +467,7 @@ export default ManageBase.extend({
            */
             let value1 = valueToString(rawValue),
             matched =
-              (specificKey ? (fg.pattern == key1)
+              (specificKey ? ((fg.pattern == key1) || (fg.get('patterns').indexOf(key1) >= 0))
                : (fg.matchKey && match(key1))) ||
             (fg.matchValue && match(value1));
           if ((trace_dataTree > 1) && matched) {
@@ -492,7 +492,7 @@ export default ManageBase.extend({
 
       return value;
     },
-    metaFilter = (filterGroup && filterGroup.pattern) ?
+    metaFilter = filterGroup.pattern !== metaFilterDev ?
       function (d) { return metaFilterFG(d, filterGroup); }
     : metaFilterDev,
     /** n is an array : [{key, values}, ..] */
@@ -519,10 +519,18 @@ export default ManageBase.extend({
           filterMatched[tabName] = ! ! matched;
         /** map the unmatched key : 'undefined' -> 'unmatched' */
         let unmatched = map2.get('undefined');
+        /* for isFilter, result is an array, except if !matched && unmatched && !ignoreFilter,
+         * in which case unmatched is (currently) added, with key 'unmatched'.
+         * The 'unmatched' is mostly a devel feature, for checking the result,
+         * and may be flagged out.
+         */
         if (matched) {
           hash = matched;
-          hash.push({'unmatched' : unmatched}); // maybe
-        } else {
+          if (unmatched)
+            hash.push({'unmatched' : unmatched});
+        }
+        else if (unmatched)
+        {
           /** @see filterMatched  */
           let ignoreFilter = isDataset;
           if (ignoreFilter)
@@ -567,6 +575,8 @@ export default ManageBase.extend({
       n.reduce(
         function (result, datasetsByParent) {
           /** hash: [scope] -> [blocks]. */
+          if (trace_dataTree > 1)
+            console.log('datasetsByParent', datasetsByParent);
           let scopes = 
             /** key is parent name */
           result[datasetsByParent.key] =
@@ -585,7 +595,7 @@ export default ManageBase.extend({
                   (filterGroup.fieldScope || filterGroup.fieldNamespace);
                 if (isBlockFilter) {
                   let matched = me.datasetFilter(blocks, filterGroup, tabName),
-                  b = matched['true'];
+                  b = matched;
                   if (b && b.length)
                     blocks = b;
                   else {
@@ -596,10 +606,13 @@ export default ManageBase.extend({
               }
               blocks.forEach(
                 function (b) {
+                  // b may be : {unmatched: Array()} - skip it
+                  if (b && b.get) {
                   let scope = b.get('scope'),
                   blocksOfScope = blocksByScope[scope] || (blocksByScope[scope] = []);
                   blocksOfScope.push(b);
                   levelMeta.set(b, "Blocks");
+                  }
                 });
               return blocksByScope;
             }, {});
@@ -608,7 +621,7 @@ export default ManageBase.extend({
         },
         {});
     if (trace_dataTree)
-      console.log('parentAndScope', grouped);
+      console.log('parentAndScope', tabName, grouped);
     this.levelMeta.set(grouped, "Parent");
     return grouped;
   },
