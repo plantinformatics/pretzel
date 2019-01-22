@@ -9,6 +9,10 @@ export default ManageBase.extend({
       this.set("dataset.meta", json)
       console.log('this.get("dataset.meta") => ', this.get("dataset.meta"))
 
+      // this.get("dataset").save()
+    },
+    saveToDB() {
+      this.get("dataset").save()
     }
 
   },

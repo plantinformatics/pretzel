@@ -16,6 +16,20 @@
     </tbody>
   </table>
   <div>
+    <button
+      type="button"
+      class="btn btn-info"
+      {{action "edit" preventDefault=false}}>
+      {{elem/icon-base name="pencil"}} &nbsp;Edit
+    </button>
+    <button
+      type="button"
+      class="btn btn-info"
+      {{action "saveToDB" preventDefault=false}}>
+      {{elem/icon-base name="floppy-disk"}} &nbsp;Save
+    </button>
+  </div>
+  <div>
     {{json-editor json=dataset.meta onChange=(action "mutateJson")}}
   </div>
 {{else}}
