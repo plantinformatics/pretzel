@@ -21,6 +21,7 @@ export default Ember.Component.extend({
         'filterOrGroup',
         'fieldName',
         'fieldScope',
+        'fieldNamespace',
         'fieldMeta',
         'matchKey',
         'matchValue']

@@ -56,8 +56,8 @@ B(datasetsRefreshCounter) --> C
 C --> F(dataPre)
 E(filter) --> |filterBy :<br/> private : public:false <br/> owner : owner:true| F
 
-F(dataPre) --> |filterGroups.length| G(data)
-B2(dataFG) --> G(data)
+F(dataPre) --> G(data)
+C2(dataFG) --> |useFilterGroup| G(data)
 
 C --> |datasets.length| I(dataEmpty)
 
@@ -94,13 +94,15 @@ N(withoutParent) --> | filter parentsSet parents| W(dataWithoutParent1)
 
 
 G(data) --> | parentAndScope | A2(dataTree)
-B2(dataTreeFG) --> | filterGroups.length PO | A2(dataTree)
+B2(dataTypedTreeFG) --> | useFilterGroup, dataTypedTreeFG.annotation, PO | A2(dataTree)
 
-C2(dataFG) --> | parentAndScope | B2(dataTreeFG)
+G2(dataTypedFG) --> | addParentAndScopeLevels, annotation : parentAndScope | B2(dataTypedTreeFG, PO)
 
+D2(dataTyped) --> |useFilterGroup| G2(dataTypedFG)
 
-D2(dataPre) --> | datasetFilter datasets filterGroup | C2(dataFG)
-E2(filterGroups.0) --> C2(dataFG)
+F(dataPre) --> D2(dataTyped)
+D2(dataTyped) --> | datasetFilter datasets filterGroup | C2(dataFG)
+E2(useFilterGroup) --> C2(dataFG)
 F2(filterGroupsChangeCounter) --> C2(dataFG)
 
 </div>
@@ -157,11 +159,11 @@ dataWithoutParent1
   </li>
 
   <li>
-dataTreeFG  /** @return promise of a hash */
+dataTypedTreeFG  /** @return promise of a hash */
   </li>
   <li>
    dataFG CF -> hash by value, of datasets
-   -> dataTreeFG -> plus mapToParentScope
+   -> dataTypedTreeFG -> plus mapToParentScope
   </li>
 </ul>
 </p>

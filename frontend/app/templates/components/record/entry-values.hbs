@@ -1,14 +1,23 @@
-{{log 'entry-values' valueIsBlocksArray valuesIsMap}}
+{{log 'entry-values' values valueIsArray valueIsDatasetsArray valueIsBlocksArray valuesIsMap}}
 
-{{#if valueIsBlocksArray}}   {{!-- type is blocks array --}}
-  {{log 'entry-blocks'}}
-  {{debugger}}
-  {{record/entry-blocks
+{{#if valueIsDatasetsArray}}   {{!-- type is blocks array --}}
+  {{log 'entry-datasets' values}}
+  {{record/entry-datasets
     loadBlock="loadBlock"
-    data=values
-    selectBlock="selectBlock"
+    selectBlock=(action 'selectBlock')
     selectedBlock=selectedBlock
-    selectDataset="selectDataset"}}
+    selectDataset=(action 'selectDataset')
+    selectedDataset=selectedDataset
+    data=values}}
+
+{{else if valueIsBlocksArray }}   {{!-- type is blocks array --}}
+      {{log 'entry-blocks'}}
+      {{record/entry-blocks
+        loadBlock="loadBlock"
+        data=values
+        selectBlock="selectBlock"
+        selectedBlock=selectedBlock
+        selectDataset="selectDataset"}}
 
 {{else if valuesIsMap}}
   {{log 'valuesIsMap:each'}}

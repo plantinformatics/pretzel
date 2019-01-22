@@ -1,5 +1,6 @@
 <ul class="list-group borderless">
   {{#each data as |dataset|}}
+{{log 'dataset' dataset.name}}
     {{#record/entry-selectable node=dataset nodeName=dataset.name
        selectedNode=selectedDataset
        selectNode=selectDataset}}

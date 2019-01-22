@@ -10,7 +10,7 @@ import ManageBase from './manage-base'
 
 let initRecursionCount = 0;
 
-let trace_dataTree = 2;
+let trace_dataTree = 3;
 
 export default ManageBase.extend({
 
@@ -37,9 +37,25 @@ export default ManageBase.extend({
     });
 
     return DS.PromiseArray.create({ promise: promise });
-//      new Ember.RSVP.Promise((resolve) => { promise.then(function(datasets) { resolve(datasets); } ); } );
   }),
   datasetType: null,
+
+  /** keys are 'all', and the found values of dataset.meta.type;
+   * value is true if filterGroup is a filter, and datasetFilter matched at the datasets level.
+   *
+   * filterGroup may apply at both the dataset level and the blocks level, but
+   * it makes sense to apply it at only 1 level : if there are matches at the
+   * higher level (dataset) then don't apply it at a lower level (block).
+   * If there are no matches at the higher level then treat the filter as not
+   * having applied, and apply it instead at the lower level.
+   *  i.e.
+   * . if grouping, then it applies to dataset level only
+   * . if filter, if any matches in a tab at dataset level, then don't apply filter at blocks level for that tab.
+   *   if no matches at the dataset level then treat all values as having matched.
+   *
+   * filterMatched is used to implement this logic.
+   */
+  filterMatched : {},
 
   filterOptions: {
     'all': {'formal': 'All', 'icon': 'plus'},
@@ -67,11 +83,39 @@ export default ManageBase.extend({
       return availableMaps;
     }
   }),
-  /** @return result is downstream of filter and filterGroups */
-  data : Ember.computed('dataPre', 'dataFG',    function() {
+  /** @return the filterGroup if there is one, and it has a pattern. */
+  useFilterGroup : Ember.computed(
+    'filterGroups', 'filterGroups.[]',
+    'filterGroups.0.component.@each', 'filterGroupsChangeCounter',
+    function () {
     let
-    filterGroups = this.get('filterGroups'),
-    datasets = (filterGroups.length) ? this.get('dataFG') : this.get('dataPre');
+      filterGroupsLength = this.get('filterGroups.length'),
+    filterGroup;
+    if (filterGroupsLength) {
+      filterGroup = this.get('filterGroups.0.component');
+      if (filterGroup) {
+        /** possibly grouping does not need a pattern - can group on fieldName,fieldScope,fieldMeta */
+        let isFilter = (filterGroup.filterOrGroup === 'filter');
+        if (isFilter && (! filterGroup.pattern || (filterGroup.pattern.length == 0)))
+          filterGroup = undefined;
+      }
+    }
+    return filterGroup;
+  }),
+  /** @return true if a filterGroup is defined and it is a filter not a grouping. */
+  isFilter : Ember.computed('useFilterGroup', function () {
+    let filterGroup = this.get('useFilterGroup'),
+    isFilter = filterGroup && (filterGroup.filterOrGroup === 'filter');
+    return isFilter;
+  }),
+  /** @return result is downstream of filter and filterGroups */
+  data : Ember.computed('dataPre', 'dataFG', 'isFilter',    function() {
+    let
+      /** The result of a filter is an array of datasets, whereas a grouping results in a hash.
+       * The result of data() should be an array, so only use filterGroup if it is a filter.
+       */
+    isFilter = this.get('isFilter'),
+    datasets = isFilter ? this.get('dataFG') : this.get('dataPre');
 // this.parentAndScope()
     return datasets;
   }),
@@ -129,7 +173,7 @@ export default ManageBase.extend({
     set = parents.reduce(function(result, value) { return result.add(value); }, new Set());
     return set;
   }),
-  /** Alternative to dataWithoutParent based on setDiff.
+  /** Alternative to dataWithoutParent, which is based on setDiff.
    * The setDiff version is working OK, after introducing parentsContent,
    * so this equivalent is not required.
    */
@@ -151,60 +195,179 @@ export default ManageBase.extend({
 
   /** group the data in : Parent / Scope / Block
    */
-  dataTree : Ember.computed('data', 'dataTreeFG', 'filterGroups.[]',    function() {
+  dataTree : Ember.computed('data', 'dataTypedTreeFG', 'useFilterGroup',    function() {
     let
-      filterGroupsLength = this.get('filterGroups.length'),
+      filterGroup = this.get('useFilterGroup'),
     me = this,
-    dataP,
-    datasets = filterGroupsLength ?
-      DS.PromiseObject.create({promise : this.get('dataTreeFG') })
-      : (dataP = this.get('data'))
-      &&
-      DS.PromiseObject.create({
-        promise:
-        dataP.then(function (data) { data = data.toArray(); console.log('dataTree data', data);  return me.parentAndScope(data);
-                                   })
-      });
+    datasets;
+    if (filterGroup) {
+      /** dataTypedTreeFG is already a PromiseObject, but need to extract the
+       * value .annotation */
+      let promise = this.get('dataTypedTreeFG')
+        .then( function (d) { return d.annotation; } );
+      datasets =
+        DS.PromiseObject.create({promise : promise });
+    } else {
+      let dataP = this.get('data');
+      if (dataP ) {
+        datasets =
+          DS.PromiseObject.create({
+            promise:
+            dataP.then(function (data) {
+              data = data.toArray();
+              console.log('dataTree data', data);
+              return me.parentAndScope(data, 'all');
+            })
+          });
+      }
+    }
     return datasets;
   }),
   /** @return promise of a hash */
-  dataTreeFG : Ember.computed(
-    'dataFG',
+  dataTypedTreeFG : Ember.computed(
+    'dataTypedFG',
     function() {
-      let datasetGroupsP = this.get('dataFG'),
+      let datasetGroupsP = this.get('dataTypedFG'),
       me = this,
-      promise = datasetGroupsP.then(function(datasetGroups) {
+      promise = datasetGroupsP.then(addParentAndScopeLevels);
+      /** Given datasets grouped into tabs, add a grouping level for the parent of the datasets,
+       * and a level for the scope of the blocks of the datasets.
+       * (for those tabs for which it is enabled - e.g. annotation)
+       * @param datasetGroups is grouped by dataset.meta.type tabs
+       */
+      function addParentAndScopeLevels(datasetGroups) {
         console.log('datasetGroups', datasetGroups);
         let
           result = {};
         for (var key in datasetGroups) {
           if (datasetGroups.hasOwnProperty(key)) {
-            result[key] = me.parentAndScope(datasetGroups[key]);
+            let value = datasetGroups[key];
+            if (key === 'annotation') {
+              value = me.parentAndScope(value, key);
+              me.levelMeta.set(value, 'Parent');
+            }
+            result[key] = value;
           }
         }
+        console.log('dataTypedTreeFG', result);
         return result;
-      });
-      return promise;
+      }
+      let promiseObject =
+        DS.PromiseObject.create({promise : promise });
+      return promiseObject;
+    }),
+  /** Split the datasets according to their dataset.meta.type,
+   * or otherwise by whether the dataset has a parent or children.
+   */
+  dataTyped : Ember.computed(
+    'dataPre',
+    function() {
+      let datasetsP = this.get('dataPre');
+      let me = this,
+      promise = datasetsP.then(function (datasets) {
+        datasets = datasets.toArray();
+        let dataTyped = {};
+        let parents = me.get('parents')
+          .map(function (p) { return p.content || p; });
+        console.log('parents', me.get('parents'), parents);
+        for (let i=0; i < datasets.length; i++) {
+          let d = datasets[i],
+          typeName = d.get('meta.type');
+          if (! typeName) {
+            let parent = d.get('parent');
+            if (parent.hasOwnProperty('content'))
+              parent = parent.content;
+            if (parent)
+              typeName = 'annotation';
+            else
+            {
+              let hasChildren = parents.indexOf(d) >= 0;  // i.e. !== -1
+              typeName = hasChildren ? "reference" : "genetic-map";
+              console.log(hasChildren, typeName);
+            }
+          }
+          if (! dataTyped[typeName])
+            dataTyped[typeName] = [];
+          dataTyped[typeName].push(d);
+        }
+        console.log('dataTyped', dataTyped);
+
+        // dataTyped['annotation'] = me.parentAndScope(dataTyped['annotation']);
+        let levelMeta = me.levelMeta;
+        function setType(typeName, template) {
+          let d = dataTyped[typeName];
+          if (d) {
+            try { levelMeta.set(d, template); }
+            catch (e) { console.log(typeName, template, d, e); debugger; }
+          }
+        }
+        setType('annotation', 'Datasets');  // 'Parent'
+        setType('reference', 'Datasets');
+        setType('genetic-map', 'Datasets');
+
+        return dataTyped;
+      }),
+      promiseP = DS.PromiseObject.create({ promise: promise });
+      return  promiseP;
+    }),
+  /**
+   * dataPre -> dataTyped ->
+   * dataTypedFG CF -> hash by value, of datasets
+   * -> dataTypedTreeFG -> plus mapToParentScope
+   */
+  dataTypedFG : Ember.computed(
+    'dataTyped', 'useFilterGroup',
+    function() {
+      let
+        dataTypedP = this.get('dataTyped'),
+      filterGroup = this.get('useFilterGroup'),
+      me = this;
+      if (filterGroup) {
+        dataTypedP = dataTypedP.then(applyFGs);
+        function applyFGs (dataTyped) {
+          let typedFG = {};
+          Object.entries(dataTyped).forEach(
+            ([typeName, datasets]) => 
+              {
+                console.log(typeName, datasets);
+                // toArray() is now done in dataTyped(), so not needed here
+                if (dataTyped.content && datasets.toArray) {
+                  console.log('dataTypedFG toArray?');
+                  debugger;
+                  datasets = datasets.toArray();
+                }
+                datasets = me.datasetFilter(datasets, filterGroup, typeName);
+                typedFG[typeName] = datasets;
+              }
+          );
+          return typedFG;
+        }
+      }
+      return dataTypedP;
     }),
   /**
    * dataFG CF -> hash by value, of datasets
-   * -> dataTreeFG -> plus mapToParentScope
    */
   dataFG : Ember.computed(
-    'dataPre', 'filterGroups.[]', 
-    'filterGroups.0.component.@each', 'filterGroupsChangeCounter',
+    'dataPre', 'useFilterGroups',
     function() {
       let datasetsP = this.get('dataPre'),
-      filterGroup = this.get('filterGroups.0.component'),
+      filterGroup = this.get('useFilterGroups'),
       me = this;
       return datasetsP.then(function (datasets) {
         datasets = datasets.toArray();
-        return me.datasetFilter(datasets, filterGroup);
+        return me.datasetFilter(datasets, filterGroup, 'all');
       });
     }),
-    datasetFilter(datasets, filterGroup) {
+
+  /** Apply filterGroup to datasets, and return the result.
+   * @param tabName the value of dataset.meta.type which datasets share, or 'all'.
+   */
+  datasetFilter(datasets, filterGroup, tabName) {
       let
       unused1 = filterGroup && console.log('dataFG filterGroup', filterGroup, filterGroup.filterOrGroup, filterGroup.pattern),
+      /** datasets is an array of either datasets or blocks.  fieldScope and fieldNamespace are only applicable to blocks  */
+      isDataset = datasets && datasets[0] && datasets[0].constructor.modelName === 'dataset',
     metaFieldName = 'Created',
     /** used in development */
     metaFilterDev = function(f) {
@@ -233,8 +396,10 @@ export default ManageBase.extend({
       let keyFields = [];
       if (fg.fieldName)
         keyFields.push('name');
-      if (fg.fieldScope)
+      if (fg.fieldScope && ! isDataset)
         keyFields.push('scope');
+      if (fg.fieldNamespace && ! isDataset)
+        keyFields.push('namespace');
       if (fg.fieldMeta)
         keyFields.push('meta');
 
@@ -343,23 +508,56 @@ export default ManageBase.extend({
       return map; },
       new Map()
     );
+      /** if isFilter, result is an array, otherwise a hash */
+      let hash = {};
+      /* if isFilter, the matched values are within map2.get(true); this is the whole result. */
+      if (isFilter) {
+        // in n and map2  the keys are already strings, i.e. 'true' and 'undefined'
+        let matched = map2.get('true');
+        let filterMatched = this.get('filterMatched');
+        if (isDataset)
+          filterMatched[tabName] = ! ! matched;
+        /** map the unmatched key : 'undefined' -> 'unmatched' */
+        let unmatched = map2.get('undefined');
+        if (matched) {
+          hash = matched;
+          hash.push({'unmatched' : unmatched}); // maybe
+        } else {
+          /** @see filterMatched  */
+          let ignoreFilter = isDataset;
+          if (ignoreFilter)
+            hash = unmatched;
+          else
+            hash['unmatched'] = unmatched;
+        }
+      }
+      else {
     /** {{each}} of Map is yielding index instead of key, so convert Map to a hash */
-    let hash = {};
     for (var [key, value] of map2) {
       if (trace_dataTree > 1)
         console.log(key + ' : ' + value);
+      if (key === 'undefined')
+        key = 'unmatched';
       hash[key] = value;
     }
+      }
     if (trace_dataTree)
-      console.log('map2', map2, hash);
+      console.log(tabName, n, isFilter, 'map2', map2, hash);
     return hash;
     },
-  parentAndScope(datasets) {
+  /** Given an array of datasets, group them by parent, then within each parent,
+   * group by scope the blocks of the datasets of the parent.
+   * @param tabName the value of dataset.meta.type which datasets share, or 'all'.
+   */
+  parentAndScope(datasets, tabName) {
     let
+      me = this,
     levelMeta = this.get('levelMeta'),
-    withParent = datasets.filter(function(f) {
-      let p = f.get('parent');
-      return p.get('content'); }),
+    /** datasets may be : {unmatched: Array()} */
+    withParent = datasets.filter ? datasets.filter(function(f) {
+      /** f may be {unmatched: Array}, which can be skipped. */
+      let p = f.get && f.get('parent.content');
+      return p; }) : [],
     /** can update this .nest() to d3.group() */
     n = d3.nest()
       .key(function(f) { let p = f.get('parent'); return p ? p.get('name') : '_'; })
@@ -368,17 +566,40 @@ export default ManageBase.extend({
     let grouped =
       n.reduce(
         function (result, datasetsByParent) {
+          /** hash: [scope] -> [blocks]. */
           let scopes = 
+            /** key is parent name */
           result[datasetsByParent.key] =
             datasetsByParent.values.reduce(function (blocksByScope, dataset) {
               if (trace_dataTree > 2)
                 console.log('blocksByScope', blocksByScope, dataset);
+              /** Within a parent, for each dataset of that parent,
+               * reference all the blocks of dataset, by their scope.  */
               let blocks = dataset.get('blocks').toArray();
+              let filterMatched = me.get('filterMatched');
+              let isFiltered = filterMatched[tabName];
+              let filterGroup = me.get('useFilterGroup');
+              if (! isFiltered && filterGroup) {
+                let
+                  isBlockFilter = filterGroup && (filterGroup.filterOrGroup === 'filter') &&
+                  (filterGroup.fieldScope || filterGroup.fieldNamespace);
+                if (isBlockFilter) {
+                  let matched = me.datasetFilter(blocks, filterGroup, tabName),
+                  b = matched['true'];
+                  if (b && b.length)
+                    blocks = b;
+                  else {
+                    console.log('isBlockFilter', blocks, filterGroup, matched);
+                    blocks = [];
+                  }
+                }
+              }
               blocks.forEach(
                 function (b) {
                   let scope = b.get('scope'),
                   blocksOfScope = blocksByScope[scope] || (blocksByScope[scope] = []);
                   blocksOfScope.push(b);
+                  levelMeta.set(b, "Blocks");
                 });
               return blocksByScope;
             }, {});

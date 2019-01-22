@@ -40,6 +40,12 @@
   {{/if}}
   <div>
     <ul class="nav nav-tabs li-active-extra">
+      {{#each-in dataTyped as |tabTypeName tabData|}}
+        <li class="active-detail">
+	  <a data-toggle="tab" href={{concat "#tab-explorer-" tabTypeName}}>{{tabTypeName}}</a>
+        </li>
+      {{/each-in}}
+
       <li class="active">
 	<a data-toggle="tab" href="#tab-explorer-parent">Genomes</a>
       </li>
@@ -58,6 +64,19 @@
     </ul>
 
     <div class="tab-content">
+
+      {{log 'dataTypedTreeFG' dataTypedTreeFG}}
+      {{#each-in dataTypedTreeFG as |tabTypeName tabData|}}
+        {{log 'tabTypeName' tabTypeName 'tabData' tabData }}
+        {{record/entry-tab 
+          name=tabTypeName
+          values=tabData
+          levelMeta=levelMeta
+          loadBlock="loadBlock"
+          selectBlock="selectBlock"
+          selectedBlock=selectedBlock
+          selectDataset="selectDataset"}}
+      {{/each-in}}
 
       <div id="tab-explorer-parent" class="tab-pane fade in active">
 	        <ul class="list-group borderless">
