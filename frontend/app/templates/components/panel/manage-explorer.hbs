@@ -42,21 +42,27 @@
     <ul class="nav nav-tabs li-active-extra">
       {{#each-in dataTyped as |tabTypeName tabData|}}
         <li class="active-detail">
-	  <a data-toggle="tab" href={{concat "#tab-explorer-" tabTypeName}}>{{tabTypeName}}</a>
+	  <a data-toggle="tab" href={{concat "#" (compute (action "datasetTypeTabId" tabTypeName))}}>{{tabTypeName}}</a>
+	  <div>{{tabData.length}}</div>
         </li>
       {{/each-in}}
 
-      <li class="active">
-	<a data-toggle="tab" href="#tab-explorer-parent">Genomes</a>
-      </li>
-      <li class="active-detail">
-	<a data-toggle="tab" href="#tab-explorer-byDataset">Genetic Maps</a>
-	<div>{{dataWithoutParent.length}}</div>
-      </li>
-      <li class="active-detail">
-	<a data-toggle="tab" href="#tab-explorer-references">References</a>
-	<div>{{parents.length}}</div>
-      </li>
+      {{#if enable_datatypeFromFamily}}
+
+        <li class="active">
+	  <a data-toggle="tab" href="#tab-explorer-parent">Genomes</a>
+        </li>
+        <li class="active-detail">
+	  <a data-toggle="tab" href="#tab-explorer-byDataset">Genetic Maps</a>
+	  <div>{{dataWithoutParent.length}}</div>
+        </li>
+        <li class="active-detail">
+	  <a data-toggle="tab" href="#tab-explorer-references">References</a>
+	  <div>{{parents.length}}</div>
+        </li>
+
+      {{/if}}
+
       <li class="active-detail">
 	<a data-toggle="tab" href="#tab-explorer-datasets">Datasets</a>
 	<div>{{data.length}}</div>
@@ -77,6 +83,8 @@
           selectedBlock=selectedBlock
           selectDataset="selectDataset"}}
       {{/each-in}}
+
+      {{#if enable_datatypeFromFamily}}
 
       <div id="tab-explorer-parent" class="tab-pane fade in active">
 	        <ul class="list-group borderless">
@@ -107,6 +115,8 @@
                   selectedDataset=selectedDataset
                   data=parents}}
               </div>
+
+      {{/if}}
 
               <div id="tab-explorer-datasets" class="tab-pane fade">
 
