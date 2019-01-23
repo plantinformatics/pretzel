@@ -15,7 +15,7 @@
 
     </tbody>
   </table>
-  <div>
+  <div style="padding-bottom:5px">
     <button
       type="button"
       class="btn btn-info"
@@ -24,7 +24,7 @@
     </button>
   </div>
   <div>
-    {{json-editor json=datasetMeta onChange=(action "mutateJson")}}
+    {{json-editor json=datasetMeta disabled=true search=false}}
   </div>
   <div>
     {{#if editorVisible}}
