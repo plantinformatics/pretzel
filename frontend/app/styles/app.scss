@@ -1,5 +1,8 @@
 /* -------------------------------------------------------------------------- */
 
+@import "ember-modal-dialog/ember-modal-structure";
+@import "ember-modal-dialog/ember-modal-appearance";
+
 body.ember-application > div.ember-view > div.container
 {
     padding-right: 5px;

@@ -19,18 +19,37 @@
     <button
       type="button"
       class="btn btn-info"
-      {{action "edit" preventDefault=false}}>
-      {{elem/icon-base name="pencil"}} &nbsp;Edit
-    </button>
-    <button
-      type="button"
-      class="btn btn-info"
-      {{action "saveToDB" preventDefault=false}}>
-      {{elem/icon-base name="floppy-disk"}} &nbsp;Save
+      {{action "toggleEditor" preventDefault=false}}>
+      {{elem/icon-base name="pencil"}} &nbsp;Edit Metadata
     </button>
   </div>
   <div>
     {{json-editor json=datasetMeta onChange=(action "mutateJson")}}
+  </div>
+  <div>
+    {{#if editorVisible}}
+      {{#modal-dialog
+        onClose=(action "toggleEditor")
+        targetAttachment="center"
+        translucentOverlay=true
+      }}
+        <div>{{json-editor json=datasetMeta onChange=(action "mutateJson")}}</div>
+        <div>
+          <button
+            type="button"
+            class="btn btn-info"
+            {{action "saveJSONToDB" preventDefault=false}}>
+            {{elem/icon-base name="floppy-disk"}} &nbsp;Save
+          </button>
+          <button
+            type="button"
+            class="btn btn-danger"
+            {{action "toggleEditor" preventDefault=false}}>
+            Cancel
+          </button>
+        </div>
+      {{/modal-dialog}}
+    {{/if}}
   </div>
 {{else}}
   <h4>No Dataset Selected</h4>
