@@ -209,6 +209,22 @@ export default Service.extend(Ember.Evented, {
       return ids;
     })
   ,
+  viewedScopes: Ember.computed(
+    'viewed.[]',
+    function() {
+      let records = this.get('viewed');
+      if (trace_block > 1)
+        records.map(function (a) { console.log('viewedScopes', a, a.get('scope')); } );
+      if (trace_block)
+        console.log('viewedScopes', records);
+      let scopes = records.reduce(function (result, a) { let scope = a.get('scope'); return result.add(scope); }, new Set() );
+      scopes = Array.from(scopes);
+      if (trace_block)
+        console.log('viewedScopes', scopes);
+
+      return scopes;
+    }),
+
   /*----------------------------------------------------------------------------*/
 
 
