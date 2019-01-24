@@ -740,6 +740,12 @@ ul.li-active-extra > li.active-detail.active {
   border-bottom : none;
 }
 
+div#tab-explorer-datasets > ul.list-group > div.ember-view > li.list-group-item 
+{
+  display: inline-block;
+}
+
+
 /* -------------------------------------------------------------------------- */
 div.drawing-controls > div.drawing
 {
