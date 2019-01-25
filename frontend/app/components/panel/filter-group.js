@@ -1,6 +1,10 @@
 import Ember from 'ember';
 
+const { inject: { service } } = Ember;
+
 export default Ember.Component.extend({
+  blockService: service('data/block'),
+
   tagName : '',
 
   didRender() {
@@ -98,12 +102,24 @@ export default Ember.Component.extend({
       console.log('changeFilterOrGroup', this, data, value);
       // this.changeFilterOrGroup(value);
       this.sendAction('changed', this);
+    },
+    filterByCurrentScopes : function () {
+      console.log('filterByCurrentScopes', this);
+      this.filterByCurrentScopes();
     }
   },
 
   changeFilterOrGroup(value) {
     let data = this.get('data');
     this.set('filterOrGroup', value);
+  },
+
+  filterByCurrentScopes() {
+    let block_viewedScopes = this.get('blockService.viewedScopes'),
+    pattern = block_viewedScopes.join(' ');
+    console.log('filterByCurrentScopes', block_viewedScopes, pattern);
+    // possibly only set pattern when block_viewedScopes.length > 0
+    this.set('pattern', pattern);
   }
 
 });

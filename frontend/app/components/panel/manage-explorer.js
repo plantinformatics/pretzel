@@ -3,6 +3,8 @@ import DS from 'ember-data';
 
 import { filter, filterBy, mapBy, setDiff, uniqBy } from '@ember/object/computed';
 
+import {tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
+
 
 import ManageBase from './manage-base'
 
@@ -12,6 +14,14 @@ let initRecursionCount = 0;
 
 let trace_dataTree = 3;
 
+/** If true, use datatypeFromFamily() to intuit a dataset type for datasets
+ * which do not define meta.type.
+ * datatypeFromFamily() uses the dataset parent and children : datasets with
+ * neither are considered 'genetic-map', datasets with parents are 'annotation',
+ * and datasets with neither are 'reference'.
+  */
+const enable_datatypeFromFamily = false;
+
 export default ManageBase.extend({
 
   init() {
@@ -20,6 +30,9 @@ export default ManageBase.extend({
       debugger;
     }
   },
+
+  enable_datatypeFromFamily : enable_datatypeFromFamily,
+
   datasetsRefreshCounter : 0,
   datasets : Ember.computed('view', 'datasetsRefreshCounter', function () {
     let store = this.get('store');
@@ -271,7 +284,9 @@ export default ManageBase.extend({
         for (let i=0; i < datasets.length; i++) {
           let d = datasets[i],
           typeName = d.get('meta.type');
-          if (! typeName) {
+          if (! typeName && enable_datatypeFromFamily) {
+            typeName = datatypeFromFamily(d);
+            function datatypeFromFamily() {
             let parent = d.get('parent');
             if (parent.hasOwnProperty('content'))
               parent = parent.content;
@@ -283,10 +298,18 @@ export default ManageBase.extend({
               typeName = hasChildren ? "reference" : "genetic-map";
               console.log(hasChildren, typeName);
             }
+            }
           }
-          if (! dataTyped[typeName])
-            dataTyped[typeName] = [];
-          dataTyped[typeName].push(d);
+          if (! typeName)
+          {
+            console.log('dataset without typeName', d.get('name'));
+          }
+          else
+          {
+            if (! dataTyped[typeName])
+              dataTyped[typeName] = [];
+            dataTyped[typeName].push(d);
+          }
         }
         console.log('dataTyped', dataTyped);
 
@@ -627,6 +650,16 @@ export default ManageBase.extend({
   },
 
   actions: {
+    /** invoked from hbs via {{compute (action "datasetTypeTabId" datasetType ) }}
+     * @return string suitable for naming a html tab, based on datasetType name.
+     */
+    datasetTypeTabId(datasetType) {
+      let
+      id = tab_explorer_prefix + text2EltId(datasetType);
+      console.log('datasetTypeTabId', id, datasetType);
+      return id;
+    },
+
     refreshAvailable() {
       this.incrementProperty('datasetsRefreshCounter');
     },

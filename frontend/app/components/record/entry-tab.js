@@ -1,5 +1,7 @@
 import Ember from 'ember';
 
+import {tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
+
 /**
  * @param name  type name of the data in the tab
  * @param values  values of the data in the tab
@@ -11,7 +13,10 @@ export default Ember.Component.extend({
 
 
   id : Ember.computed('name', function () {
-    return "tab-explorer-" + this.get('name');
+    let name = this.get('name'),
+    id = tab_explorer_prefix + text2EltId(name);
+    console.log('id', id, name);
+    return id;
   }),
 
   actions : {

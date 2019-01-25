@@ -682,8 +682,15 @@ li.dropdown-submenu > ul.dropdown-menu {
    list-style-type: none;
    padding-left: 0px;
 }
+.filter-groups > ul > li {
+  margin-top: 1em;
+}
 .filter-groups > ul > li > div > input[name=detailed] {
   float: left;
+}
+.filter-groups > ul > li > div > button.btn {
+  padding: 3px 6px;
+  margin: 0.5em 1em;
 }
 
 .line-input-label > input {
@@ -739,6 +746,12 @@ ul.li-active-extra > li.active-detail.active {
 #left-panel-explorer > div > .panel > div > ul.nav > li.active {
   border-bottom : none;
 }
+
+div#tab-explorer-datasets > ul.list-group > div.ember-view > li.list-group-item 
+{
+  display: inline-block;
+}
+
 
 /* -------------------------------------------------------------------------- */
 div.drawing-controls > div.drawing

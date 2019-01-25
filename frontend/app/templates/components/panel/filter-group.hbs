@@ -13,6 +13,15 @@
         <label>Group</label>
       </div>
     {{/if}}
+
+    {{#elem/button-base
+       click=(action "filterByCurrentScopes")
+       icon='arrow-left'
+       classColour="info"
+    }}
+      <span>Current Scopes</span>
+    {{/elem/button-base}}
+
   </div>
 
   {{input
