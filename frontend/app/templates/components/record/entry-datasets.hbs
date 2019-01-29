@@ -1,19 +1,13 @@
 <ul class="list-group borderless">
   {{#each data as |dataset|}}
-{{log 'dataset' dataset.name}}
-    {{#record/entry-selectable node=dataset nodeName=dataset.name
-       selectedNode=selectedDataset
-       selectNode=selectDataset}}
 
-      {{#record/entry-expander nodeName=dataset.name}}
-        {{record/entry-blocks-array
-          loadBlock="loadBlock"
-          selectBlock=selectBlock
-          selectedBlock=selectedBlock
-          selectDataset=selectDataset
-          data=dataset.blocks}}
-      {{/record/entry-expander}}
+    {{record/entry-dataset-level
+      name=dataset.name
+      values=dataset
+      loadBlock="loadBlock"
+      selectBlock=selectBlock
+      selectedBlock=selectedBlock
+      selectDataset=selectDataset}}
 
-    {{/record/entry-selectable}}
   {{/each}}
 </ul>

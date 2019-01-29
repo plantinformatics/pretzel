@@ -1,4 +1,4 @@
-{{log 'entry-values' values valueIsArray valueIsDatasetsArray valueIsBlocksArray valuesIsMap}}
+{{log 'entry-values' values valueIsArray valueIsDatasetsArray valueIsBlocksArray valuesIsMap values_dataTypeName values_levelComponent}}
 
 {{#if valueIsDatasetsArray}}   {{!-- type is blocks array --}}
   {{log 'entry-datasets' values}}
@@ -11,24 +11,32 @@
     data=values}}
 
 {{else if valueIsBlocksArray }}   {{!-- type is blocks array --}}
-      {{log 'entry-blocks'}}
-      {{record/entry-blocks
-        loadBlock="loadBlock"
-        data=values
-        selectBlock="selectBlock"
-        selectedBlock=selectedBlock
-        selectDataset="selectDataset"}}
+  {{log 'entry-blocks'}}
+  {{record/entry-blocks
+    loadBlock="loadBlock"
+    data=values
+    selectBlock="selectBlock"
+    selectedBlock=selectedBlock
+    selectDataset=(action 'selectDataset')}}
 
+{{else if (eq values_dataTypeName 'Dataset') }}
+  {{log  'values' values 'levelComponent' values_levelComponent}}
+  {{component values_levelComponent levelMeta=levelMeta name=values.name values=values
+    loadBlock="loadBlock"
+    selectBlock="selectBlock"
+    selectedBlock=selectedBlock
+    selectDataset=(action 'selectDataset')
+  }}
 {{else if valuesIsMap}}
   {{log 'valuesIsMap:each'}}
 
   {{#each values as |key value|}}
-    {{log  'value' value 'key' key 'levelComponent' levelComponent}}
-    {{component levelComponent levelMeta=levelMeta name=key values=value
+    {{log  'value' value 'key' key 'levelComponent' values_levelComponent}}
+    {{component values_levelComponent levelMeta=levelMeta name=key values=value
       loadBlock="loadBlock"
       selectBlock="selectBlock"
       selectedBlock=selectedBlock
-      selectDataset="selectDataset"
+      selectDataset=(action 'selectDataset')
     }}
   {{/each}}
 
@@ -36,13 +44,15 @@
   {{log 'each-in'}}
 
   {{#each-in values as |key value|}}
-    {{log  'key' key 'value' value 'levelComponent' levelComponent}}
-    {{component levelComponent levelMeta=levelMeta name=key values=value
+    {{#with (compute (action 'levelComponent' value)) as |subComponent|}}
+      {{log  'key' key 'value' value 'subComponent' subComponent}}
+    {{component subComponent levelMeta=levelMeta name=key values=value
       loadBlock="loadBlock"
       selectBlock="selectBlock"
       selectedBlock=selectedBlock
-      selectDataset="selectDataset"
+      selectDataset=(action 'selectDataset')
     }}
+    {{/with}}
   {{/each-in}}
 
 {{/if}}

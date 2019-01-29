@@ -23,6 +23,12 @@ export default EntryBase.extend({
     selectBlock(block) {
       console.log('selectBlock', block);
       this.sendAction('selectBlock', block);
+    },
+    dataTypeName(value) {
+      return this.dataTypeName(value);
+    },
+    levelComponent(value) {
+      return this.levelComponent(value);
     }
   },
 
@@ -88,28 +94,77 @@ export default EntryBase.extend({
 
   /** @return true if values is a Map. */
   valuesIsMap : Ember.computed('values', function () {
-    function isMapFn (values) { return values.constructor === Map; };
+    function isMapFn (values) { return values && values.constructor === Map; };
     let
     isMap =
       this.valuesIs(isMapFn);
     return isMap;
   }),
 
+  /**
+   * @param value to lookup in levelMeta
+   * @return the dataTypeName of the values.
+   */
+  dataTypeName (value) {
+    let
+      levelMeta = this.get('levelMeta'),
+    dataTypeName = levelMeta.get(value)
+    ;
+    return dataTypeName;
+  },
+
   /** Based on the type of values, as recorded via levelMeta,
+   * @return the dataTypeName of the values.
+   * Initially, for Parent and Scope, dataTypeName referred to the type of the collection,
+   * but have now added both Dataset and Datasets, so to be consistent Parent and Scope should be Parents and Scopes.
+   */
+  values_dataTypeName : Ember.computed('levelMeta', 'values', function () {
+    let
+    values = this.get('values'),
+    dataTypeName = this.dataTypeName(values)
+    ;
+    return dataTypeName;
+  }),
+
+  /** Based on the type of values, as recorded via levelMeta,
+   * @param values to lookup in levelMeta
+   * @param dataTypeName  of values, or if undefined then lookup this.get('values').
+   * This handles the case of Dataset value within Parent values, or more generally,
+   * allows a value within a collection (values) to have a different type than
+   * the default indicated by the dataTypeName of the collection.
    * @return the name of the component which should be used to render values.
    */
-  levelComponent : Ember.computed('levelMeta', 'values', function () {
-    let levelMeta = this.get('levelMeta'),
-    values = this.get('values'),
+  levelComponent(values, dataTypeName) {
+    if (! dataTypeName) {
+      dataTypeName = this.dataTypeName(values);
+      let collection_dataTypeName = this.get('values_dataTypeName');
+      /* Except that the types Parent and Scope refer to the collection; i.e. if
+       * dataTypeName and collection_dataTypeName are collection types then use
+       * the latter; this use is beyond the capabilities of the design - will have
+       * to sort this out. */
+      if ((collection_dataTypeName === "Parent") && (dataTypeName === "Scope"))
+        dataTypeName = collection_dataTypeName;
+    }
+    let
     isMap = values && values.constructor === Map,
-    dataTypeName = levelMeta.get(values),
     component =
       isMap ? 'record/entry-level' :
+      (dataTypeName === 'Dataset') ? 'record/entry-dataset-level' :
       (dataTypeName === 'Datasets') ? 'record/entry-datasets' :
       (dataTypeName === 'Parent') ? 'record/entry-parent' :
       (dataTypeName === 'Scope') ? 'record/entry-scope' :
       'record/entry-level';
-    console.log('levelComponent', isMap, dataTypeName, component);
+    console.log('levelComponent', values, isMap, dataTypeName, component);
+    return component;
+  },
+  /** Based on the type of values, as recorded via levelMeta,
+   * @return the name of the component which should be used to render values.
+   */
+  values_levelComponent : Ember.computed('values_dataTypeName', 'values', function () {
+    let
+    values = this.get('values'),
+    dataTypeName = this.dataTypeName(values),
+    component = this.levelComponent(values, dataTypeName);
     return component;
   })
 

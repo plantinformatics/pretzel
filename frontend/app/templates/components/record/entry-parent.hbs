@@ -1,4 +1,4 @@
-
+{{log 'entry-parent' name values}}
 <li class="list-group-item list-group-item-info" >
   {{elem/button-base
   classSize='xs'
@@ -12,15 +12,11 @@
 
   {{#if layout.active}}
     <ul>
-      {{#each-in values as |scopeName blocks|}}
-        {{record/entry-scope
-          loadBlock="loadBlock"
-          name=scopeName
-          values=blocks
-          selectBlock="selectBlock"
-          selectedBlock=selectedBlock
-          selectDataset="selectDataset"}}
-      {{/each-in}}
+      {{record/entry-values values=values levelMeta=levelMeta
+        loadBlock="loadBlock"
+        selectBlock="selectBlock"
+        selectedBlock=selectedBlock
+        selectDataset="selectDataset"}}
     </ul>
   {{/if}}
 </li>

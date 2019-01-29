@@ -120,6 +120,7 @@ export default Ember.Component.extend({
     console.log('filterByCurrentScopes', block_viewedScopes, pattern);
     // possibly only set pattern when block_viewedScopes.length > 0
     this.set('pattern', pattern);
+    this.sendAction('changed', this);
   }
 
 });

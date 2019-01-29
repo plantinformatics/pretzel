@@ -21,7 +21,7 @@ export default Ember.Component.extend({
 
   actions : {
     selectBlockAndDataset(block) {
-      var dataset = block.get('datasetId');
+      var dataset = block.get('datasetId.content') || block.get('datasetId');
       console.log('selectBlockAndDataset', 'block => ', block.get('name'),
                   'dataset => ', dataset.get('name'));
       this.sendAction('selectDataset', dataset);
