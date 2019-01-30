@@ -23,6 +23,8 @@ let trace_dataTree = 3;
   */
 const enable_datatypeFromFamily = false;
 
+const selectorExplorer = 'div#left-panel-explorer';
+
 export default ManageBase.extend({
 
   init() {
@@ -815,5 +817,54 @@ export default ManageBase.extend({
     loadBlock(block) {
       this.sendAction('loadBlock', block);
     }
+  },
+
+  /** If a tab is active (selected), save its id.  */
+  willRender () {
+    let
+      explorerDiv = Ember.$(selectorExplorer),
+    /** active tab element.  Its child <a> href is '#'+id, but it is easier to
+     * extract id from the content div id. */
+    t = explorerDiv.find(' li.active-detail.active'),
+    /** active content element */
+    c = explorerDiv.find(' div.tab-content > .active '),
+    id = c[0] && c[0].id;
+    if (id) {
+      this.set('activeId', id);
+      console.log('willRender', id, t[0], c[0]);
+    }
+  },
+  /** For those tabs generated from data, after re-render the active class is lost.
+   * So re-add class .active to the tab header and content elements.
+   * this.activeId is recorded in willRender().
+   */
+  didRender () {
+    let
+      id = this.get('activeId');
+    if (id) {
+      let
+        /** didRender() is called several times during the render, and c.length
+         * and t.length will be 0 on some of these initial calls.  In which case
+         * the .addClass() does nothing.
+         *
+         * It is possible that didRender() is called after .addClass() has been
+         * done, or when c and a already have their .active class; in this case
+         * also .addClass() has no effect, and is probably as quick as checking
+         * if they have the class.
+         */
+        c = Ember.$(selectorExplorer + ' div.tab-content > #' + id);
+      c.addClass('active');
+
+      let
+        /** <a> whose href matches activeId. */
+        a = Ember.$('li.active-detail > a[href="#' + id + '"]'),
+      /** tab element containing a.  Ensure this has .active */
+      t = a.parent();
+      t.addClass('active');
+
+      if (c.length)
+        console.log('didRender', id, c[0], t[0], a[0]);
+    }
   }
+
 });
