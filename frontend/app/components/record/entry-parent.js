@@ -1,17 +1,17 @@
 import Ember from 'ember';
+const { inject: { service } } = Ember;
+
 import EntryBase from './entry-base';
 
+
 export default EntryBase.extend({
+  store: service(),
+
   tagName: '',
-  initSteps: function() {
-    let layout = {
-      'active': false
-    }
-    this.set('layout',layout);
-  }.on('init'),
-  expandIcon: Ember.computed('layout.active', function() {
-    let active = this.get('layout.active')
-    return active? 'minus' : 'plus'
+
+  node : Ember.computed('name', function () {
+    let store = this.get('store');
+    return store.peekRecord('Dataset', this.get('name'));
   }),
   actions: {
     switch() {

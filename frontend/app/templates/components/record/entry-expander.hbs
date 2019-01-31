@@ -1,13 +1,16 @@
 
 
-  {{elem/button-base
+{{elem/button-base
   classSize='xs'
   classColour='default'
   icon=expandIcon
   onClick=(action "switch")
-  }}
+}}
+<span title={{nodeName}} class="truncate" style="flex: 1;">
   {{nodeName}}
-  {{#if layout.active}}
+</span>
+
+{{#if layout.active}}
     {{yield}}
   {{/if}}
 

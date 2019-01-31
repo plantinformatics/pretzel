@@ -19,6 +19,7 @@ export default IconBase.extend({
   click(event) {
     // console.log('click', event, this.get('state'));
     this.toggleProperty('state');
+    this.sendAction('changed', this.get('state'));
   },
 
   /** name is used by icon-base to construct the icon name.

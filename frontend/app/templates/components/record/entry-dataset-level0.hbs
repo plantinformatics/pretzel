@@ -1,7 +1,7 @@
 {{log 'entry-dataset-level0' node name values this }}
 {{#record/entry-selectable node=node nodeName=name
    selectedNode=selectedDataset
-   selectDataset=(action 'selectDataset')}}
+   selectNode=(action 'selectDataset')}}
 
   {{#record/entry-expander nodeName=name}}
     {{record/entry-blocks-array
