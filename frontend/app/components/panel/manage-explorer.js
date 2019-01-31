@@ -4,7 +4,9 @@ import DS from 'ember-data';
 import { computed } from '@ember/object';
 import { filter, filterBy, mapBy, setDiff, uniqBy, uniq, union } from '@ember/object/computed';
 
-import {tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
+import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
+import { parseOptions } from '../../utils/common/strings';
+
 
 
 import ManageBase from './manage-base'
@@ -18,10 +20,10 @@ let trace_dataTree = 3;
 /** If true, use datatypeFromFamily() to intuit a dataset type for datasets
  * which do not define meta.type.
  * datatypeFromFamily() uses the dataset parent and children : datasets with
- * neither are considered 'genetic-map', datasets with parents are 'annotation',
- * and datasets with neither are 'reference'.
+ * neither are considered 'unrelated', datasets with parents are 'children',
+ * and datasets with children are 'references'.
+ *  enable_datatypeFromFamily 
   */
-const enable_datatypeFromFamily = false;
 
 const selectorExplorer = 'div#left-panel-explorer';
 
@@ -34,7 +36,12 @@ export default ManageBase.extend({
     }
   },
 
-  enable_datatypeFromFamily : enable_datatypeFromFamily,
+  urlOptions : Ember.computed('model.params.options', function () {
+    let options_param = this.get('model.params.options'),
+    options = options_param && parseOptions(options_param);
+      return options;
+  }),
+  enable_datatypeFromFamily : Ember.computed.alias('urlOptions.dataTabsFromFamily'),
 
   datasetsRefreshCounter : 0,
   datasets : Ember.computed('view', 'datasetsRefreshCounter', function () {
@@ -260,9 +267,9 @@ export default ManageBase.extend({
     datasets;
     if (filterGroup) {
       /** dataTypedTreeFG is already a PromiseObject, but need to extract the
-       * value .annotation */
+       * value .children */
       let promise = this.get('dataTypedTreeFG')
-        .then( function (d) { return d.annotation; } );
+        .then( function (d) { return d.children; } );
       datasets =
         DS.PromiseObject.create({promise : promise });
     } else {
@@ -301,7 +308,7 @@ export default ManageBase.extend({
       console.log('parentsTypes', parentsTypes);
       /** Given datasets grouped into tabs, add a grouping level for the parent of the datasets,
        * and a level for the scope of the blocks of the datasets.
-       * (for those tabs for which it is enabled - e.g. annotation)
+       * (for those tabs for which it is enabled - e.g. children)
        * @param datasetGroups is grouped by dataset.meta.type tabs
        */
       function addParentAndScopeLevels(datasetGroups) {
@@ -319,7 +326,7 @@ export default ManageBase.extend({
             isParent = parentsTypes.indexOf(key) >= 0;  // i.e. !== -1
             console.log('addParentAndScopeLevels', key, value, isParent);
 
-            if (isParent || (key === 'annotation')) {
+            if (isParent || (key === 'children')) {
               value = me.parentAndScope(value, key);
               me.levelMeta.set(value, 'Parent');
             }
@@ -357,7 +364,7 @@ export default ManageBase.extend({
           if (parentType === typeName)
             typeName = undefined;
 
-          if (! typeName && enable_datatypeFromFamily) {
+          if (! typeName && me.get('enable_datatypeFromFamily')) {
             typeName = datatypeFromFamily(d);
             function datatypeFromFamily() {
               let typeName;
@@ -365,11 +372,11 @@ export default ManageBase.extend({
             if (parent.hasOwnProperty('content'))
               parent = parent.content;
             if (parent)
-              typeName = 'annotation';
+              typeName = 'children';
             else
             {
               let hasChildren = parents.indexOf(d) >= 0;  // i.e. !== -1
-              typeName = hasChildren ? "reference" : "genetic-map";
+              typeName = hasChildren ? 'references' : 'unrelated';
               console.log(hasChildren, typeName);
             }
               return typeName;
@@ -389,7 +396,7 @@ export default ManageBase.extend({
         }
         console.log('dataTyped', dataTyped);
 
-        // dataTyped['annotation'] = me.parentAndScope(dataTyped['annotation']);
+        // dataTyped['children'] = me.parentAndScope(dataTyped['children']);
         let levelMeta = me.levelMeta;
         function setType(typeName, template) {
           let d = dataTyped[typeName];
@@ -398,9 +405,9 @@ export default ManageBase.extend({
             catch (e) { console.log(typeName, template, d, e); debugger; }
           }
         }
-        setType('annotation', 'Datasets');  // 'Parent'
-        setType('reference', 'Datasets');
-        setType('genetic-map', 'Datasets');
+        setType('children', 'Datasets');  // 'Parent'
+        setType('references', 'Datasets');
+        setType('unrelated', 'Datasets');
 
         return dataTyped;
       }),
