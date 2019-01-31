@@ -20,11 +20,19 @@ module.exports = function(defaults) {
         }]
       ]
     },
+
     babel: {
       compact: false
     },
+
     sassOptions: {
       implementation: nodeSass
+    },
+
+    'ember-bootstrap': {
+      'bootstrapVersion': 4,
+      'importBootstrapFont': true,
+      'importBootstrapCSS': true
     }
   });
 
@@ -48,6 +56,8 @@ module.exports = function(defaults) {
   app.import('bower_components/handsontable/dist/handsontable.full.min.js');
   app.import('bower_components/handsontable/dist/handsontable.full.min.css');
   app.import('vendor/js/divgrid/divgrid.js');
+  app.import('node_modules/popper.js/dist/umd/popper.js');
+  app.import('node_modules/tooltip.js/dist/umd/tooltip.js');
 
   app.import('bower_components/bootstrap/fonts/glyphicons-halflings-regular.woff', {
     destDir: 'fonts'

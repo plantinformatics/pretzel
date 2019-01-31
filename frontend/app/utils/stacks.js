@@ -125,13 +125,35 @@ Block.prototype.longName = function() {
   return this.axisName + ':' + this.block.get('name')
     + '/' + (this.parent ? this.parent.axisName : '');
 };
+/** @return true if this Block is a reference, not data block.
+ * A genetic map block is a data block and has no reference block; for the purpose of stacks it is the reference.
+ */
+Block.prototype.isReference = function() {
+  let axis = this.getAxis(),
+  blockR = this.block,
+  isReference =
+    (axis.referenceBlock === blockR);
+  return isReference;
+};
+/** @return true if this Block is a data block, not the reference block.
+ */
+Block.prototype.isData = function() {
+  let axis = this.getAxis(),
+  blockR = this.block,
+  isData =
+    //  checking if features is defined and features.length > 0
+    (blockR.get('namespace') || blockR.get('features.length'));
+  return isData;
+};
+
+
 /** @return undefined or .longName() of block if blockId is loaded.
  * (static)
  */
 Block.longName = function (blockId) {
   let block = stacks.blocks[blockId];
   return block && block.longName();
-}
+};
 /*----------------------------------------------------------------------------*/
 
 
@@ -562,9 +584,8 @@ Stacked.prototype.dataBlocks = function (visible)
 {
   let db = this.blocks
     .filter(function (block) {
-      //  -	also need to check if features.length > 0
       return (! visible || block.visible)
-        && (block.block.get('namespace') || block.block.get('features')); });
+        && block.isData(); });
   if (trace_stack > 1)
     console.log(
       'Stacked', 'blocks', visible, this.blocks.map(function (block) { return block.longName(); }),

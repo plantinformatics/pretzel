@@ -26,6 +26,9 @@ export default Component.extend({
     },
     selectDataset(dataset) {
       this.sendAction('selectDataset', dataset);
+    },
+    updateFeaturesInBlocks(featuresInBlocks) {
+      this.sendAction('updateFeaturesInBlocks', featuresInBlocks);
     }
   }
 });

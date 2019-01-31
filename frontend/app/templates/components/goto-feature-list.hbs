@@ -39,7 +39,7 @@
   {{!-- The above (if loading 'disabled') is not effective, so display
    ⏰  U+023F0  ALARM CLOCK --}}
   {{#if loading }}
-    <div class="pull-right">
+    <div class="pull-right" style="margin-right:2em;">
       &#x23F0;
     </div>
   {{/if}}
@@ -55,11 +55,12 @@
   <div style="clear:both; height:1em"></div>
 </div>
 
-<ul class="list-group">
-  {{#each blocksOfFeatures key="id" as |block|}}
+<ul class="list-group blocks-found">
+  {{#each blocksOfFeatures key="key.id" as |block|}}
     <li class="list-group-item">
       {{record/entry-block-add
-        entry=block
+        entry=block.key.record
+	features=block.values
         loadBlock="loadBlock"
       }}
     </li>

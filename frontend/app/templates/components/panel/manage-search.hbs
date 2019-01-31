@@ -1,0 +1,20 @@
+
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="search"}}
+    Feature Search
+  {{/elem/panel-heading}}
+  {{goto-feature-list  class="panel panel-primary"
+    selectedFeatures=selectedFeatures
+    updateFeaturesInBlocks="updateFeaturesInBlocks"
+    loadBlock=(action loadBlock)
+  }}
+{{/elem/panel-container}}
+
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="plane"}}
+    External Lookup
+  {{/elem/panel-heading}}
+  {{goto-feature  drawActions=this class="panel panel-primary"
+    selectedFeatures=selectedFeatures
+  }}
+{{/elem/panel-container}}

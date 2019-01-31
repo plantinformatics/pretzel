@@ -1,7 +1,7 @@
 <div class="navbar" role="navigation">
-  <div class="container-fluid">
-    <div class="navbar">
-      <ul class="nav navbar-nav navbar-left">
+  <div class="container-fluid" style="display: block;">
+    <div class="navbar" style="display: block;">
+      <ul class="nav navbar-left">
         <li>
           {{#link-to 'index' tagName='a'}}
             {{elem/logo-pretzel}}
@@ -33,7 +33,7 @@
           </li>
         {{/if}}
       </ul>
-      <ul class="nav navbar-nav navbar-right">
+      <ul class="nav navbar-right">
         <li>
           <a href='https://github.com/plantinformatics/pretzel/' target='_blank'>
             v{{version }} released {{buildDateFormatted}} View on GitHub
@@ -42,7 +42,10 @@
         {{#if auth}}
           {{#if session.isAuthenticated}}
             <li>
-              <a {{action 'logout'}} class="">
+	      {{!-- bootstrap reboot.scss now sets color color: inherit; for an
+		   <a> without attributes href or tabindex, so add a dummy
+		   tabindex to retain the default <a> colour. --}}
+              <a {{action 'logout'}} class="" tabindex>
                 Logout {{elem/icon-base name="log-out"}}
               </a>
             </li>
