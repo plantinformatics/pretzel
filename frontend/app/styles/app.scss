@@ -35,6 +35,12 @@ body.mapview div#Page-Body
 } 
 
 /* -------------------------------------------------------------------------- */
+/* Make the top (left & right) menus horizontal. */
+div#Page-Nav > div > div.navbar > div > div.navbar > ul.nav {
+  display: flex;
+}
+
+/* -------------------------------------------------------------------------- */
 
 .draw-map-container,
 .tabbed-table-container
