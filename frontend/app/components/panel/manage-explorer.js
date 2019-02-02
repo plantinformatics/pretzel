@@ -44,22 +44,34 @@ export default ManageBase.extend({
   enable_datatypeFromFamily : Ember.computed.alias('urlOptions.dataTabsFromFamily'),
 
   datasetsRefreshCounter : 0,
-  datasets : Ember.computed('view', 'datasetsRefreshCounter', function () {
-    let store = this.get('store');
+  datasets : Ember.computed('model', 'model.availableMapsTask', 'model.availableMapsTask.value', 'view', 'datasetsRefreshCounter', function () {
+    let task, promise, resultP;
 
     let me = this;
+    /** Using availableMapsTask which is shared between components is preferable
+     * to doing an additional store.query() here.  matrixview is not yet added to availableMapsTask.
+     */
     let view = me.get('view');
-    let filter = {'include': 'blocks'};
     if (view == 'matrixview') {
+      let store = this.get('store');
+      /** This filter is common to all views.
+       * For matrixview, select observational. */
+      let filter = {'include': 'blocks'};
       filter['where'] = {'type': 'observational'};
-    }
-    let promise =
-    store.query('dataset', {filter: filter});
-    promise.then(function(datasets) {
-      console.log('datasets', datasets.toArray());
-    });
 
-    return DS.PromiseArray.create({ promise: promise });
+      promise =
+        store.query('dataset', {filter: filter});
+      promise.then(function(datasets) {
+        console.log('datasets', datasets.toArray());
+      });
+    }
+    else {
+      task = this.get('model.availableMapsTask');
+      promise = task.then(function (value) { console.log('datasets from task', value); return value; });
+    }
+    resultP = DS.PromiseArray.create({ promise: promise });
+    console.log(task, promise, 'resultP', resultP);
+    return resultP;
   }),
   datasetType: null,
 
@@ -103,6 +115,8 @@ export default ManageBase.extend({
     } else if (filter == 'owner') {
       return availableMaps.filterBy('owner', true)
     } else {
+      if (trace_dataTree > 2)
+        availableMaps.then(function (value) { console.log('dataPre availableMaps ->', value); });
       return availableMaps;
     }
   }),
@@ -127,10 +141,12 @@ export default ManageBase.extend({
   isFilter : Ember.computed('useFilterGroup', function () {
     let filterGroup = this.get('useFilterGroup'),
     isFilter = filterGroup && (filterGroup.filterOrGroup === 'filter');
+    if (trace_dataTree > 2)
+      console.log('isFilter', isFilter);
     return isFilter;
   }),
   /** @return result is downstream of filter and filterGroups */
-  data : Ember.computed('dataPre', 'dataFG', 'isFilter',    function() {
+  data : Ember.computed('dataPre', 'dataPre.[]', 'dataFG', 'isFilter',    function() {
     let
       /** The result of a filter is an array of datasets, whereas a grouping results in a hash.
        * The result of data() should be an array, so only use filterGroup if it is a filter.
@@ -138,6 +154,8 @@ export default ManageBase.extend({
     isFilter = this.get('isFilter'),
     datasets = isFilter ? this.get('dataFG') : this.get('dataPre');
 // this.parentAndScope()
+    if (trace_dataTree > 2)
+      console.log('isFilter', isFilter, 'datasets', datasets);
     return datasets;
   }),
   dataEmpty: Ember.computed('datasets', 'datasets.length', 'datasets.[]', function() {
@@ -152,7 +170,10 @@ export default ManageBase.extend({
 
   /** datasets with a .parent, i.e. containing child data blocks */
   withParent: filter('data', function(dataset, index, array) {
-    return dataset.get('parent.content');
+    let parent = dataset.get('parent.content');
+    if (trace_dataTree > 2)
+    console.log('withParent', dataset._internalModel.__data, parent && parent._internalModel.__data);
+    return parent;
   }),
   /** Names of all datasets - just for trace / devel, not used. */
   names : mapBy('data', 'name'),
@@ -166,8 +187,36 @@ export default ManageBase.extend({
   /** names of parents(). */
   parentNames : mapBy('parents', 'name'),
   /** meta.types of parents(). */
-  parentsTypes : computed('parents', function () {
-    return this.get('parents').filterBy('meta.type').uniqBy('meta.type').mapBy('meta.type');
+  parentsTypes : computed('parents', 'parents.[]', function () {
+    if (trace_dataTree > 2) {
+      let withParent = this.get('withParent');
+      if (withParent.then)
+        withParent.then(function (withParent) { console.log('parentsTypes : withParent then', withParent); });
+      else
+        console.log('parentsTypes : withParent', withParent);
+
+      let child1 = this.get('child1');
+      if (child1.then)
+        child1.then(function (child1) { console.log('parentsTypes : child1 then', child1); });
+      else
+        console.log('parentsTypes : child1', child1);
+
+      let parents = this.get('parents');
+      if (parents.then)
+        parents.then(function (parents) { console.log('parentsTypes : parents then', parents); });
+      else
+        console.log('parentsTypes : parents', parents);
+    }
+    let promise = this.get('parents').filterBy('meta.type').uniqBy('meta.type').mapBy('meta.type');
+    if (trace_dataTree > 2) {
+      console.log('parents', this.get('parents'), 'parentsTypes', promise);
+      console.log('withParent :', this.get('withParent'), this.get('child1'), this.get('parents'));
+    }
+    let me = this;
+    if (trace_dataTree > 2)
+      if (promise.then)
+        promise.then(function (parentsTypes) { console.log('parentsTypes :', parentsTypes, me.get('withParent'), me.get('child1'), me.get('parents')); });
+    return promise;
   }),
   /** Datasets without a .parent; maybe a reference assembly (genome) or a GM. */
   withoutParent: filter('data', function(dataset, index, array) {
@@ -838,7 +887,8 @@ export default ManageBase.extend({
     id = c[0] && c[0].id;
     if (id) {
       this.set('activeId', id);
-      console.log('willRender', id, t[0], c[0]);
+      if (trace_dataTree > 2)
+        console.log('willRender', id, t[0], c[0]);
     }
   },
   /** For those tabs generated from data, after re-render the active class is lost.
@@ -870,7 +920,8 @@ export default ManageBase.extend({
       t.addClass('active');
 
       if (c.length)
-        console.log('didRender', id, c[0], t[0], a[0]);
+        if (trace_dataTree > 2)
+          console.log('didRender', id, c[0], t[0], a[0]);
     }
   }
 
