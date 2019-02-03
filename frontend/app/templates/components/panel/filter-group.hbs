@@ -1,6 +1,12 @@
-<li>
   <div>
     {{elem/icon-toggle state=detailed iconTrue='arrow-up' iconFalse='arrow-down' }}
+    {{elem/button-base
+       click=(action "deleteFilterOrGroup")
+       icon='remove'
+       classColour="info"
+      class='delete'
+    }}
+
     {{#if detailed}}
       <div class="line-input-label">
         {{radio-button value='filter' groupValue=filterOrGroup
@@ -87,4 +93,3 @@
 
   {{/if}}
 
-</li>

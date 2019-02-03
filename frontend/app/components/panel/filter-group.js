@@ -5,7 +5,8 @@ const { inject: { service } } = Ember;
 export default Ember.Component.extend({
   blockService: service('data/block'),
 
-  tagName : '',
+  tagName : 'li',
+  classNames : ['filter-group'],
 
   didRender() {
     this._super(...arguments);
@@ -96,6 +97,10 @@ export default Ember.Component.extend({
   },
 
   actions : {
+    deleteFilterOrGroup : function () {
+      console.log('deleteFilterOrGroup', this);
+      this.sendAction('deleteFilterOrGroup', this);
+    },
     changeFilterOrGroup : function () {
       let data = this.get('data'),
       value = this.get('filterOrGroup');

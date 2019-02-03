@@ -715,6 +715,9 @@ li.dropdown-submenu > ul.dropdown-menu {
   padding: 3px 6px;
   margin: 0.5em 1em;
 }
+.filter-group > div > button.delete {
+  float: right;
+}
 
 .line-input-label > input {
     margin-left : 1.2em;
