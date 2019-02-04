@@ -2753,7 +2753,7 @@ export default Ember.Component.extend(Ember.Evented, {
              .data(tickLocations),
              pSE = pS.enter()
              .append("path")
-            .attr("class", "horizTick");
+            .attr("class", "horizTick fromInput");
           pSE
             .each(configureHorizTickHover);
          let pSM = pSE.merge(pS);

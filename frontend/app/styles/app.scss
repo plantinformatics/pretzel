@@ -491,6 +491,17 @@ g.tick:hover {
     outline: 1px dashed orange; 
 }
 
+/* This (stroke colour) was applied for selector .horizTick until 655bfe3
+ * introduced axisTitleColour().
+ * Alternative to a constant in css, showTickLocations() could use axisName to
+ * lookup block index, as in featurePathStroke(), but that may not be more
+ * useful, instead perhaps classify in groups, e.g. give each group of added
+ * ticks a new id for an ordinal colour scale.
+ */
+path.horizTick.fromInput
+{
+    stroke: green;
+}
 .horizTick
 {
   /* stroke (colour) is now provided by axisTitleColour(). */
