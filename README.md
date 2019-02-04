@@ -37,6 +37,7 @@ Funded by the Grains Research Development Corporation (GRDC).
   - [Running](#running)
     - [Starting the app](#starting-the-app)
     - [Checking things are running](#checking-things-are-running-1)
+    - [Adding user verification](#adding-user-verification)
   - [Inserting data](#inserting-data)
     - [Loading data via the command line](#loading-data-via-the-command-line)
 - [Public genetic map references](#public-genetic-map-references)
@@ -239,6 +240,23 @@ Note that this runs the app without any authentication or security and is only s
 ### Checking things are running
 
 If everything has worked so far, you should be able to open [http://localhost:3000](http://localhost:3000) in a browser and see a landing page. If you started the backend with the above command, you can create a user by signing up, then logging in with these details (with `EMAIL_VERIFY=NONE`, the user is created immediately without any extra verification).
+
+### Adding user verification
+
+
+To use with [Postfix](http://www.postfix.org/) on Ubuntu 18.04, install `apt install mailutils` and follow the wizard defaults.
+
+Test postfix by sending yourself an email, e.g. `echo "Test message" | mail your.email@address.com` - the message may and up in your SPAM folder.
+
+If it works, specify required environmental variables and run the app as per the dummy example below.
+
+```
+API_HOST=your_IP_or_FQDN EMAIL_VERIFY=ADMIN EMAIL_FROM=your@ad.min EMAIL_ADMIN=your@ad.min EMAIL_HOST=localhost EMAIL_PORT=25 AUTH=ALL node server/server.js
+```
+
+Alternatively, if you have access to your organisation's or hosting provider's SMTP server, update `EMAIL_HOST` and `EMAIL_PORT` to appropriate values. You may also have to supply your credential by specifying `EMAIL_USER` and `EMAIL_PASS`.
+
+
 
 ## Inserting data
 
