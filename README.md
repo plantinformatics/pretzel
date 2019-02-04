@@ -243,18 +243,24 @@ If everything has worked so far, you should be able to open [http://localhost:30
 
 ### Adding user verification
 
-
-To use with [Postfix](http://www.postfix.org/) on Ubuntu 18.04, install `apt install mailutils` and follow the wizard defaults.
+To use with [Postfix](http://www.postfix.org/) on Ubuntu 18.04, run `apt install mailutils` and follow the wizard defaults (for 'Internet Site').
 
 Test postfix by sending yourself an email, e.g. `echo "Test message" | mail your.email@address.com` - the message may and up in your SPAM folder.
 
 If it works, specify required environmental variables and run the app as per the dummy example below.
 
 ```
-API_HOST=your_IP_or_FQDN EMAIL_VERIFY=ADMIN EMAIL_FROM=your@ad.min EMAIL_ADMIN=your@ad.min EMAIL_HOST=localhost EMAIL_PORT=25 AUTH=ALL node server/server.js
+API_HOST=your_IP_or_FQDN EMAIL_VERIFY=ADMIN EMAIL_FROM=noreply@pretzel EMAIL_ADMIN=your@admin EMAIL_HOST=localhost EMAIL_PORT=25 AUTH=ALL node server/server.js
 ```
 
-Alternatively, if you have access to your organisation's or hosting provider's SMTP server, update `EMAIL_HOST` and `EMAIL_PORT` to appropriate values. You may also have to supply your credential by specifying `EMAIL_USER` and `EMAIL_PASS`.
+Make sure you modify:
+
+* `API_HOST` - should be set either to host IP number or its fully qualified domain name (FQDN)
+* `EMAIL_ADMIN` - email address of the person who will authorise the registration of new users
+
+Alternatively, if you have access to your organisation's or hosting provider's SMTP server,
+then rather than using Postfix, update `EMAIL_HOST` and `EMAIL_PORT` to appropriate values.
+You may also have to supply your credential by specifying `EMAIL_USER` and `EMAIL_PASS`.
 
 
 
