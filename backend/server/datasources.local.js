@@ -27,7 +27,10 @@ var config = {
     "name": "email",
     "transports": [
       {
-        "type": "smtp"
+        "type": "smtp",
+        "tls": {
+          rejectUnauthorized: false
+        }
       }
     ],
     "connector": "mail"
