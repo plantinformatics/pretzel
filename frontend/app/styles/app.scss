@@ -719,6 +719,15 @@ li.dropdown-submenu > ul.dropdown-menu {
 .filter-groups > ul > li {
   margin-top: 1em;
 }
+li.filter-group > div > span {
+  margin: 0 0.5em;
+}
+li.filter-group > div > span:first-child {
+  margin-left : 0;
+}
+li.filter-group > div > span:last-child {
+  margin-right : auto;
+}
 .filter-groups > ul > li > div > input[name=detailed] {
   float: left;
 }

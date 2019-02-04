@@ -74,6 +74,8 @@ export default Ember.Component.extend({
    */
   match : function (a) {
     let match;
+    /** isCaseSensitive is currently applied to string patterns, not regular expressions. */
+    let isCaseSensitive = this.get('isCaseSensitive');
     if (this.get('isRegExp')) {
       match = this.get('patternsRE')
       .find(function (regexp) {
@@ -85,8 +87,12 @@ export default Ember.Component.extend({
     }
     else
     {
+      if (! isCaseSensitive)
+        a = a.toLowerCase();
       match = this.get('patterns')
       .find(function (pattern) {
+        if (! isCaseSensitive)
+          pattern = pattern.toLowerCase();
         let found = a.includes(pattern);
         if (found)
           console.log('match', pattern, a);
@@ -101,23 +107,12 @@ export default Ember.Component.extend({
       console.log('deleteFilterOrGroup', this);
       this.sendAction('deleteFilterOrGroup', this);
     },
-    changeFilterOrGroup : function () {
-      let data = this.get('data'),
-      value = this.get('filterOrGroup');
-      console.log('changeFilterOrGroup', this, data, value);
-      // this.changeFilterOrGroup(value);
-      this.sendAction('changed', this);
-    },
     filterByCurrentScopes : function () {
       console.log('filterByCurrentScopes', this);
       this.filterByCurrentScopes();
     }
   },
 
-  changeFilterOrGroup(value) {
-    let data = this.get('data');
-    this.set('filterOrGroup', value);
-  },
 
   filterByCurrentScopes() {
     let block_viewedScopes = this.get('blockService.viewedScopes'),

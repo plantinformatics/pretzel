@@ -863,9 +863,17 @@ export default ManageBase.extend({
       this.set('filter', f)
     },
     filterGroupsChanged : function(fg) {
+      /* note : fg === this.get('filterGroups.0')
+       * and    fg === this.get('filterGroups.0.component.data')
+       */
       if (trace_dataTree)
-        console.log('filterGroupsChanged', fg, this.get('filterGroups.0.component'), this.get('filterGroups.0'));
-      this.incrementProperty('filterGroupsChangeCounter');
+        console.log('filterGroupsChanged', fg, this.get('filterGroups.0.component'), this.get('filterGroups.0'), this.get('filterGroups.0.component.isCaseSensitive'));
+      // Wait for update of values of fg which are bound input elements.
+      let me = this;
+      Ember.run.later(function () {
+        console.log('filterGroupsChanged later', fg, me.get('filterGroups.0.component'), me.get('filterGroups.0'), me.get('filterGroups.0.component.isCaseSensitive'));
+        me.incrementProperty('filterGroupsChangeCounter');
+      });
     },
     onDelete(id) {
       
