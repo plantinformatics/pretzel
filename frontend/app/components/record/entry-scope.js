@@ -1,23 +1,27 @@
 import Ember from 'ember';
 import EntryBase from './entry-base';
 
+/**
+ * @param name
+ * @param values
+ */
 export default EntryBase.extend({
   tagName: '',
-  initSteps: function() {
-    let layout = {
-      'active': false
-    }
-    this.set('layout',layout);
-  }.on('init'),
-  expandIcon: Ember.computed('layout.active', function() {
-    let active = this.get('layout.active')
-    return active? 'minus' : 'plus'
+
+  /** store is inherited from EntryBase, and also action loadBlock, but
+   * otherwise EntryBase is not relevant to entry-scope, ditto for entry-parent. */
+
+  node : Ember.computed('name', function () {
+    let store = this.get('store'),
+    name = this.get('name');
+    /** problem : need dataset to make this unique. can annotate value with node. */
+    let blocks = store.peekAll('Block').filter(function (r) { return r.get('scope') === name;});
+    console.log('node Block', name, store, this, blocks);
+    // use the first matching block
+    return blocks.length && blocks[0];
   }),
+
   actions: {
-    switch() {
-      let active = this.get('layout.active')
-      this.set('layout.active', !active)
-    },
     selectDataset(dataset) {
       console.log('dataset2 => ', dataset);
       this.sendAction('selectDataset', dataset)

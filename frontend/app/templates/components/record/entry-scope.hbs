@@ -1,18 +1,19 @@
 {{!-- values is an array of blocks --}}
-<li class="list-group-item list-group-item-info" >
-  {{elem/button-base
-  classSize='xs'
-  classColour='default'
-  icon=expandIcon
-  onClick=(action "switch")
-  }}
-  {{name}}
-  {{#if layout.active}}
+
+{{log 'entry-scope' name values this this.parentView}}
+{{#record/entry-selectable node=node nodeName=name
+   selectedNode=selectedDataset
+   selectNode=(action 'selectDataset')}}
+
+  {{#record/entry-expander nodeName=name}}
+
     {{record/entry-blocks
       loadBlock="loadBlock"
       data=values
       selectBlock="selectBlock"
       selectedBlock=selectedBlock
       selectDataset="selectDataset"}}
-  {{/if}}
-</li>
+
+  {{/record/entry-expander}}
+
+{{/record/entry-selectable}}

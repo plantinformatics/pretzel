@@ -792,7 +792,7 @@ export default ManageBase.extend({
         {});
     if (trace_dataTree)
       console.log('parentAndScope', tabName, grouped);
-    this.levelMeta.set(grouped, "Parent");
+    this.levelMeta.set(grouped, "Parents");
     return grouped;
   },
   /** Given an array of datasets, group their blocks by the scope of the blocks. */
@@ -828,14 +828,15 @@ export default ManageBase.extend({
                   // b may be : {unmatched: Array()} - skip it
                   if (b && b.get) {
                   let scope = b.get('scope'),
-                  blocksOfScope = blocksByScope[scope] || (blocksByScope[scope] = []);
+                    newScope = function () { let s = []; levelMeta.set(s, "Scope"); return s; },
+                    blocksOfScope = blocksByScope[scope] || (blocksByScope[scope] = newScope());
                   blocksOfScope.push(b);
                   levelMeta.set(b, "Blocks");
                   }
                 });
               return blocksByScope;
             }, {});
-          levelMeta.set(scopes, "Scope");
+          levelMeta.set(scopes, "Scopes");
     return scopes;
   },
 
