@@ -1,16 +1,12 @@
 
 
-{{elem/button-base
-  classSize='xs'
-  classColour='default'
-  icon=expandIcon
-  onClick=(action "switch")
-}}
+{{elem/icon-toggle state=active iconTrue='minus' iconFalse='plus' }}
+
 <span title={{nodeName}} class="truncate" style="flex: 1;">
   {{nodeName}}
 </span>
 
-{{#if layout.active}}
-    {{yield}}
-  {{/if}}
+{{#if combinedActive}}
+  {{yield}}
+{{/if}}
 

@@ -1,16 +1,20 @@
 import Ember from 'ember';
 
+const trace_entryExpander = 1;
+
+function elt0(id) {
+  return Ember.$("#"+id)[0];
+}
+
 /**
  * @param nodeName  text to display in the expandable node
  */
 export default Ember.Component.extend({
   tagName: '',
 
-  layout : {
-      'active': false
-  },
+  active: false,
 
-  initTabActionBus : function() {
+  entryTab : Ember.computed(function () {
     /** the parent entry-tab will be passed in as an argument; improvising to
      * trial the setLayoutActive feature. */
     let parent = this.parentView;
@@ -18,43 +22,68 @@ export default Ember.Component.extend({
     {
       parent = parent.parentView;
     }
-    if (parent) {
+    return parent;
+  }),
+  allActive : Ember.computed('entryTab', 'entryTab.allActive', function () {
+    let allActive = this.get('entryTab.allActive');
+    // side effect : when allActive changes, it sets active.
+    // compare !a !== !b, because (false !== undefined).
+    if (! this.get('active') !== ! allActive) {
+      if (trace_entryExpander > 1)
+        console.log('allActive setting', this.get('active'), allActive,
+                    elt0(this.elementId || this.parentView.elementId));
+      Ember.run.scheduleOnce('afterRender', this, 'toggleActive');
+    }
+    if (trace_entryExpander > 1)
+      console.log('allActive', allActive, elt0(this.elementId || this.parentView.elementId));
+    return allActive;
+  }),
+  toggleActive : function () {
+    this.toggleProperty('active');
+  },
+  combinedActive : Ember.computed('active', 'allActive', function () {
+    let active = this.get('active');
+    let allActive = this.get('allActive');
+    if (trace_entryExpander > 1)
+      console.log('combinedActive', active, allActive, elt0(this.elementId || this.parentView.elementId));
+    return active;
+  }),
+  /** initTabActionBus(), termTabActionBus() are replaced by allActive(), combinedActive(). */
+  initTabActionBus : function() {
+    let parent = this.get('entryTab');
+    if (parent && ! this.get('tabActionBus')) {
+      if (trace_entryExpander > 2)
       // parent is entry-tab so use id not .elementId
-      console.log('tabActionBus', parent, Ember.$("#"+parent.get('id'))[0]);
+      console.log('tabActionBus', parent, Ember.$("#"+parent.get('id'))[0],
+                  Ember.$("#"+ this.parentView.elementId)[0]);
       this.set('tabActionBus', parent);
       let me = this;
-      parent.on('setLayoutActive', function (active) {
+      parent.on('setLayoutActive', setLayoutActive);
+      function setLayoutActive (active) {
         let id = me.elementId || me.parentView.elementId;
-        console.log('setLayoutActive', active, me.get('layout'), me,
+        console.log('setLayoutActive', active, me.get('active'),
                     Ember.$("#"+id)[0]);
-        me.set('layout.active', active);
-      });
+        if (me.get('active') !== active) {
+          let id = me.elementId || me.parentView.elementId;
+          console.log('setLayoutActive', active, me.get('active'), me,
+                      Ember.$("#"+id)[0]);
+          me.toggleProperty('active');
+        }
+      }
     }
-  }.on('didRender'),
+  }, // .on('willRender'),
   termTabActionBus : function() {
     let parent = this.get('tabActionBus');
     if (parent)
       parent.off('setLayoutActive');
   },
   willDestroyElement() {
-    this.termTabActionBus();
-  },
+    // this.termTabActionBus();
+  }
 
-  /** The result is passed as icon parameter of button-base,
-   * and thence as name to icon-base, used in iconClass(),
-   * i.e. it is the identifying part of a glyphicon- name.
+  /** expandIcon() and actions: switch() are replaced by using icon-toggle, with
+   * .active bound.
    */
-  expandIcon: Ember.computed('layout.active', function() {
-    let active = this.get('layout.active');
-    return active? 'minus' : 'plus';
-  }),
-
-  actions: {
-    switch() {
-      let active = this.get('layout.active');
-      this.set('layout.active', !active);
-    }
-  }   
 
 
 });

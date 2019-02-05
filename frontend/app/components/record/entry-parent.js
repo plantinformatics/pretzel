@@ -14,10 +14,6 @@ export default EntryBase.extend({
     return store.peekRecord('Dataset', this.get('name'));
   }),
   actions: {
-    switch() {
-      let active = this.get('layout.active')
-      this.set('layout.active', !active)
-    },
     selectDataset(dataset) {
       console.log('dataset3 => ', dataset);
       this.sendAction('selectDataset', dataset)
