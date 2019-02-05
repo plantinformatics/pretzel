@@ -131,9 +131,12 @@ export default ManageBase.extend({
     if (filterGroupsLength) {
       filterGroup = this.get('filterGroups.0.component');
       if (filterGroup) {
+        console.log('useFilterGroup filterGroup', filterGroup);
         if (! filterGroup.get('defined'))
           filterGroup = undefined;
       }
+      else
+        console.log('useFilterGroup', this.get('filterGroups'));
     }
     return filterGroup;
   }),
@@ -186,9 +189,24 @@ export default ManageBase.extend({
   parents : mapBy('child1', 'parent'),
   /** names of parents(). */
   parentNames : mapBy('parents', 'name'),
+  /** The same as parents, but without being filtered by FG;
+   * i.e. this does not change when the filterGroup changes.
+   */
+  parentsNotFG : computed('dataPre', function() {
+    /** the same calculation as withParent -> child1 -> parents, starting from
+     * dataPre instead of data
+     */
+    let parentsNotFG = this.get('dataPre')
+    /* withParent : */ .filter(function(dataset, index, array) {
+      return dataset.get('parent.content');
+    })
+    /* child1 :*/ .uniqBy('parent.name')
+    /* parents :*/ .mapBy('parent');
+    return parentsNotFG;
+  }),
   /** meta.types of parents(). */
-  parentsTypes : computed('parents', 'parents.[]', function () {
-    if (trace_dataTree > 2) {
+  parentsTypes : computed('parentsNotFG', 'parentsNotFG.[]', function () {
+    if (trace_dataTree > 5) {
       let withParent = this.get('withParent');
       if (withParent.then)
         withParent.then(function (withParent) { console.log('parentsTypes : withParent then', withParent); });
@@ -207,13 +225,13 @@ export default ManageBase.extend({
       else
         console.log('parentsTypes : parents', parents);
     }
-    let promise = this.get('parents').filterBy('meta.type').uniqBy('meta.type').mapBy('meta.type');
-    if (trace_dataTree > 2) {
+    let promise = this.get('parentsNotFG').filterBy('meta.type').uniqBy('meta.type').mapBy('meta.type');
+    if (trace_dataTree > 5) {
       console.log('parents', this.get('parents'), 'parentsTypes', promise);
       console.log('withParent :', this.get('withParent'), this.get('child1'), this.get('parents'));
     }
     let me = this;
-    if (trace_dataTree > 2)
+    if (trace_dataTree > 5)
       if (promise.then)
         promise.then(function (parentsTypes) { console.log('parentsTypes :', parentsTypes, me.get('withParent'), me.get('child1'), me.get('parents')); });
     return promise;
@@ -738,7 +756,7 @@ export default ManageBase.extend({
     /** can update this .nest() to d3.group() */
     n = d3.nest()
     /* the key function will return undefined for datasets without parents, which will result in a key of 'undefined'. */
-      .key(function(f) { let p = f.get('parent'); return p && p.get('name'); })
+      .key(function(f) { let p = f.get && f.get('parent'); return p && p.get('name'); })
       .entries(withParentOnly ? withParent : datasets);
     /** this reduce is mapping an array  [{key, values}, ..] to a hash {key : value, .. } */
     let grouped =
