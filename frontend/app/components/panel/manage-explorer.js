@@ -776,6 +776,8 @@ export default ManageBase.extend({
             // can change this to return value, and move result2[name] = value; outside .reduce()
             // grouped =   // keys are added to grouped,  object refn is unchanged.
             values.reduce(function (result2, dataset) {
+              // dataset may be {unmatched: Array(n)} - skip this
+              if (! dataset.get) return result2;
               let
                 name = dataset.get('name'),
               /** children may be a DS.PromiseManyArray. It should be fulfilled by now. */
