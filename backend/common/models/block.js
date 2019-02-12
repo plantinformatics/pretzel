@@ -3,11 +3,13 @@
 var acl = require('../utilities/acl')
 var identity = require('../utilities/identity')
 var task = require('../utilities/task')
+var pathsAggr = require('../utilities/paths-aggr');
 
 module.exports = function(Block) {
 
   Block.paths = function(left, right, options, cb) {
-    task.paths(this.app.models, left, right, options)
+      let blockCollection = this.dataSource.connector.collection("Block");
+      pathsAggr/*task*/.paths(blockCollection, this.app.models, left, right, options)
     .then(function(data) {
       // completed additions to database
       cb(null, data);
