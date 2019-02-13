@@ -3,6 +3,20 @@ import EntryBase from './entry-base';
 
 import DS from 'ember-data';
 
+import { logV  } from '../../utils/value-tree';
+
+import { parentOfType, elt0 } from '../../utils/ember-devel';
+
+/*----------------------------------------------------------------------------*/
+
+
+/** For use when debugging via web inspector console. */
+var levelMeta;
+
+
+/*----------------------------------------------------------------------------*/
+
+
 /** Render values using the appropriate {{each}} and / or template component
  * according to the type of values.
  *
@@ -33,28 +47,29 @@ export default EntryBase.extend({
   },
 
  /** type is array, e.g. blocks or datasets */
-  valueIsArray : Ember.computed('values', 'values.length', function () {
+  valueIsArray : Ember.computed('values', 'values.[]', function () {
     let
+      values = this.get('values'),
     length = this.get('values.length'),
-    isArray = length;
-    console.log('valueIsArray', isArray, this.get('name'), this.get('values'));
+    isArray = Ember.isArray(values);
+    console.log('valueIsArray', isArray, length, this.get('name'), values);
     return isArray;
   }),
 
   /** type of values is an array of Dataset-s */
-  valueIsDatasetsArray : Ember.computed('valuesIsMap', function () {
+  valueIsDatasetsArray : Ember.computed('valueIsArray', 'values_dataTypeName', function () {
     let
-      isMap = this.get('valuesIsMap'),
-    dataTypeName = this.valueLevelMeta(),
+      isMap = this.get('valueIsArray'),
+    dataTypeName = this.get('values_dataTypeName'),
     isDatasetsArray = ! isMap && (dataTypeName === 'Datasets');
     return isDatasetsArray;
   }),
 
  /** {{!-- type is blocks array */
-  valueIsBlocksArray : Ember.computed('valuesIsMap', function () {
+  valueIsBlocksArray : Ember.computed('valueIsArray', 'values_dataTypeName', function () {
     let
-      isMap = this.get('valuesIsMap'),
-    dataTypeName = this.valueLevelMeta(),
+      isMap = this.get('valueIsArray'),
+    dataTypeName = this.get('values_dataTypeName'),
     isBlocksArray = ! isMap && (dataTypeName === 'Blocks');
     return isBlocksArray;
   }),
@@ -62,18 +77,42 @@ export default EntryBase.extend({
   /** lookup the levelMeta for values.
    * (if none and values is an array, use modelName of an array element).
    */
-  valueLevelMeta() {
+  values_dataTypeName : Ember.computed('values',  function () {
     let
       levelMeta = this.get('levelMeta'),
     values = this.get('values'),  // values.then ...
-    dataTypeName = values && levelMeta.get(values);
-    if (! dataTypeName && values && values.length)
-    {
-      // e.g. "dataset".  equivalent to _internalModel.modelName
-      dataTypeName = values[0].constructor.modelName.capitalize() + 's';
-    }
+    dataTypeName = values && (levelMeta.get(values) || this.get('valuesModelName'));
     console.log('dataTypeName', dataTypeName, values);
     return dataTypeName;
+  }),
+  valuesModelName : Ember.computed('values',  function () {
+    let values = this.get('values'),
+    modelName = this.modelName2(values);
+    return modelName;
+  }),
+  /** Lookup modelName of values
+   * or if values is a non-empty array, use modelName of an array element.
+   */
+  modelName2(values) {
+    let modelName;
+    if (values) {
+      if (values.length && values[0])
+      {
+        modelName = this.modelName(values[0]);
+        if (modelName)
+          modelName = modelName + 's';
+      }
+      else
+        modelName = this.modelName(values);
+      if (modelName)
+        modelName = modelName.capitalize();
+    }
+    return modelName;
+  },
+  modelName(value) {
+    // e.g. "dataset".  equivalent to _internalModel.modelName
+    let modelName = value.constructor.modelName;
+    return modelName;
   },
 
   /** Evaluate isFn against this.get('values'), which may be a promise, so the
@@ -84,13 +123,22 @@ export default EntryBase.extend({
       values = this.get('values'),
     is =
       /** values should not be undefined - debugging */
-      !values ?
+      ((values === undefined) || (values === null)) ?
       (console.log('valuesIs', this), false)
       : values.then ?
       DS.PromiseObject.create({promise : values.then(isFn)})
     : isFn(values);
     return is;
   },
+
+  /** @return true if values is an Object. */
+  valuesIsObject : Ember.computed('values', function () {
+    function isObjectFn (values) { return typeof values === 'object'; };
+    let
+    isObject =
+      this.valuesIs(isObjectFn);
+    return isObject;
+  }),
 
   /** @return true if values is a Map. */
   valuesIsMap : Ember.computed('values', function () {
@@ -118,7 +166,7 @@ export default EntryBase.extend({
    * Initially, for Parent and Scope, dataTypeName referred to the type of the collection,
    * but have now added both Dataset and Datasets, so to be consistent Parent and Scope should be Parents and Scopes.
    */
-  values_dataTypeName : Ember.computed('levelMeta', 'values', function () {
+  values_dataTypeName0 : Ember.computed('levelMeta', 'values', function () {
     let
     values = this.get('values'),
     dataTypeName = this.dataTypeName(values)
@@ -127,16 +175,27 @@ export default EntryBase.extend({
   }),
 
   /** Based on the type of values, as recorded via levelMeta,
+   *
+   * The components named by the return value have a common API :
+   *  name
+   *  values  also passed as 'data' for entry-dataset-level
+   *  levelMeta
+   *  select / load for Dataset and Block : loadBlock, selectBlock, selectedBlock, selectDataset.
+   *
+   * In addition, this param is passed to prevent entry-values from recursing without progressing down from parent to child values :
+   *  parentDone=true
+   *
    * @param values to lookup in levelMeta.  May be e.g. a single element of this.get('values').
-   * @param dataTypeName  of values, or if undefined then lookup this.get('values').
-   * This handles the case of Dataset value within Parent values, or more generally,
-   * allows a value within a collection (values) to have a different type than
-   * the default indicated by the dataTypeName of the collection.
+   *  if undefined then lookup this.get('values').
    * @return the name of the component which should be used to render values.
    */
-  levelComponent(values, dataTypeName) {
+  levelComponent(values) {
+    if (values === undefined)
+      values = this.get('values');
+
+    let dataTypeName = this.dataTypeName(values);
     if (! dataTypeName && values) {
-      dataTypeName = this.dataTypeName(values);
+      dataTypeName = this.modelName2(values);
     }
     let
     isMap = values && values.constructor === Map,
@@ -146,6 +205,7 @@ export default EntryBase.extend({
       (dataTypeName === 'Datasets') ? 'record/entry-datasets' :
       (dataTypeName === 'Parent') ? 'record/entry-parent' :
       (dataTypeName === 'Scope') ? 'record/entry-scope' :
+      (dataTypeName === 'Blocks') ? 'record/entry-scope' :
       /** 'Parents' is passed to entry-values by entry-tab,
        * and 'Scopes' is passed to entry-values by entry-parent.
        * Because those 2 are hard-wired in the hbs, the 2 configurations
@@ -157,15 +217,62 @@ export default EntryBase.extend({
     console.log('levelComponent', values, isMap, dataTypeName, component);
     return component;
   },
-  /** Based on the type of values, as recorded via levelMeta,
+  /** Based on the type of values, as recorded via levelMeta and modelName,
    * @return the name of the component which should be used to render values.
    */
   values_levelComponent : Ember.computed('values_dataTypeName', 'values', function () {
     let
     values = this.get('values'),
-    dataTypeName = this.dataTypeName(values),
-    component = this.levelComponent(values, dataTypeName);
+    component = this.levelComponent(values);
     return component;
-  })
+  }),
+
+  /*--------------------------------------------------------------------------*/
+  log1() {
+    /** current component */
+    let c = this;
+    console.log(
+      c._debugContainerKey, c.get('name'), c.get('values'),
+      c.get('values_dataTypeName'), c.get('values_levelComponent'),
+      c.get('valueIsArray'),
+      elt0(c.elementId || c.parentView.elementId)
+    );
+  },
+  logP() {
+    let parent = parentOfType.apply(this, ["component:record/entry-values"]);
+    if (parent)
+      parent.log1();
+  },
+  logC() {
+    let children = this.childViews;
+    for (let i=0; i < children.length; i++) {
+      let child = children[i];
+      if (child.log1)
+        child.log1();
+      else {
+        let c = child;
+        console.log(
+          c._debugContainerKey, c.get('name'), c.get('values'),
+          this.dataTypeName(c.get('values')),
+          elt0(c.elementId || c.parentView.elementId));
+      }
+    }
+  },
+  log3() {
+    this.logP();
+    this.log1();
+    this.logC();
+  },
+  logV(v) {
+    if (v === undefined)
+      v = this.get('values');
+
+    /** global for debugging. */
+    if (! levelMeta)
+      levelMeta = this.get('levelMeta');
+    logV(levelMeta, v);
+  }
+  /*--------------------------------------------------------------------------*/
+
 
 });

@@ -1,10 +1,11 @@
 import Ember from 'ember';
 
+import { elt0 } from '../../utils/ember-devel';
+
 const trace_entryExpander = 1;
 
-function elt0(id) {
-  return Ember.$("#"+id)[0];
-}
+/*----------------------------------------------------------------------------*/
+
 
 /**
  * @param nodeName  text to display in the expandable node

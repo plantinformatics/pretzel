@@ -7,6 +7,7 @@ import { filter, filterBy, mapBy, setDiff, uniqBy, uniq, union } from '@ember/ob
 import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
 import { parseOptions } from '../../utils/common/strings';
 
+import { mapHash, logV } from '../../utils/value-tree';
 
 
 import ManageBase from './manage-base'
@@ -26,6 +27,10 @@ let trace_dataTree = 3;
   */
 
 const selectorExplorer = 'div#left-panel-explorer';
+
+
+/*----------------------------------------------------------------------------*/
+
 
 export default ManageBase.extend({
 
@@ -385,22 +390,49 @@ export default ManageBase.extend({
         for (var key in datasetGroups) {
           if (datasetGroups.hasOwnProperty(key)) {
             let value = datasetGroups[key],
+            /* value may be a hash of parents (by name) or groups thereof;
+             * Each parent value is an array of datasets.
+             * Process each parent value with ps.
+             */
 
+            ps = function (key, value) {
+              let
             /** parents.indexOf(d) (in dataTyped()) also checks if a given value
              * is a parent, but in that case d is the Dataset object, whereas key
              * is the meta.type (if a parent does not have meta.type it does not have a tab named by type).
              */
-            isParent = parentsTypes.indexOf(key) >= 0;  // i.e. !== -1
-            console.log('addParentAndScopeLevels', key, value, isParent);
+                valueType = me.levelMeta.get(value),
+                isParentType = parentsTypes.indexOf(key) >= 0,  // i.e. !== -1
+              valueIsParent =  value.length && value[0].get('children.length'),
+              isParent =  (valueType === 'Parent') || isParentType || valueIsParent;
+              console.log('addParentAndScopeLevels', key, value, valueType, isParentType, valueIsParent, isParent);
 
             if (isParent || (key === 'children')) {
               value = me.parentAndScope(value, key);
-              me.levelMeta.set(value, 'Parent');
+              // done in parentAndScope(): me.levelMeta.set(value, 'Parents');
             }
-            result[key] = value;
+              return value;
+            };
+            let resultValue, dataTypeName = me.levelMeta.get(value),
+            isGrouping = dataTypeName === 'Groups';
+            if (isGrouping) {
+              resultValue = mapHash(value, ps);
+              /* resultValue has the same structure as the input value - Groups. */
+              me.levelMeta.set(resultValue, dataTypeName);
+            }
+            else {
+              resultValue = ps(key, value);
+            }
+            if (resultValue && resultValue.myGenome2) {
+              console.log(value, 'resultValue', resultValue, dataTypeName, me.levelMeta.get(resultValue));
+            }
+
+            result[key] = resultValue;
           }
         }
         console.log('dataTypedTreeFG', result);
+        if (trace_dataTree > 2)
+          logV(me.levelMeta, result);
         return result;
       }
       let promiseObject =
@@ -725,6 +757,7 @@ export default ManageBase.extend({
         }
       }
       else {
+      this.levelMeta.set(hash, 'Groups');
     /** {{each}} of Map is yielding index instead of key, so convert Map to a hash */
     for (var [key, value] of map2) {
       if (trace_dataTree > 1)
@@ -732,6 +765,7 @@ export default ManageBase.extend({
       if (key === 'undefined')
         key = 'unmatched';
       hash[key] = value;
+      this.levelMeta.set(value, 'Group');
     }
       }
     if (trace_dataTree)
@@ -788,6 +822,7 @@ export default ManageBase.extend({
                 let 
                   value = me.datasetsToBlocksByScope(tabName, levelMeta, children);
                 me.levelMeta.set(value, 'Parent');
+                console.log('me.levelMeta.set(', value, 'Parent');
                 result2[name] = value;
               }
               else {

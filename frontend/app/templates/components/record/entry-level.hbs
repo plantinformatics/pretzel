@@ -3,12 +3,13 @@
   {{#record/entry-expander nodeName=name}}
 
     {{log 'entry-level' name values}}
-      <ul>
-        {{record/entry-values values=values levelMeta=levelMeta
-          loadBlock="loadBlock"
-          selectBlock="selectBlock"
-          selectedBlock=selectedBlock
-          selectDataset="selectDataset"}}
+    <ul>
+      {{record/entry-values values=values levelMeta=levelMeta
+        name=name
+        loadBlock="loadBlock"
+        selectBlock="selectBlock"
+        selectedBlock=selectedBlock
+        selectDataset="selectDataset"}}
     </ul>
 
   {{/record/entry-expander}}

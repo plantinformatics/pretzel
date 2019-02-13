@@ -1736,11 +1736,10 @@ Stacked.prototype.axisTransformO = function ()
   }
   let yOffset = this.yOffset(),
   yOffsetText =  Number.isNaN(yOffset) ? "" : "," + this.yOffset();
-  /** x scale doesn't matter because x is 0; use 1 for clarity.
+  /** Y scale.
    * no need for scale when this.portion === 1
    */
-  let scale = this.portion,
-  scaleText = Number.isNaN(scale) || (scale === 1) ? "" : " scale(1," + scale + ")";
+  let scale = this.portion;
   let xVal = checkIsNumber(oa.o[this.axisName]);
   xVal = Math.round(xVal);
   let rotateText = "", axis = oa.axes[this.axisName];
@@ -1769,7 +1768,23 @@ Stacked.prototype.axisTransformO = function ()
     let a = d3.select("g#id" + this.axisName + ".axis-outer");
     if (trace_stack > 1)
       console.log("perpendicular", shift, rotateText, a.node());
+
+    let axisXRange = stacks.vc.axisXRange;
+    /** nStackAdjs and nStackAdjs : copied from draw-map.js : updateAxisTitleSize() */
+    let nStackAdjs = stacks.length > 1 ? stacks.length-1 : 1;
+    let axisSpacing = (axisXRange[1]-axisXRange[0])/nStackAdjs;
+    /** if perpendicular (dotPlot), reduce the axis height (which is width
+     * because of the 90deg rotation from yRange to axisSpacing.
+     * if not perpendicular, x scale doesn't matter because x is 0; use 1 for clarity.
+     */
+    scale = axisSpacing / yRange;
+    shift *= axisSpacing / yRange;
   }
+
+  let
+  scaleText = Number.isNaN(scale) || ((scale === 1) && ! axis.perpendicular) ? "" : " scale(1," + scale + ")";
+  console.log('axisTransformO xScale', xScale, scaleText);
+
   let transform =
     [
       " translate(" + xVal, yOffsetText, ")",
