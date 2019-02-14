@@ -756,6 +756,14 @@ export default ManageBase.extend({
             hash['unmatched'] = unmatched;
         }
       }
+      // is grouping
+      else if ((n.length === 1) && (n[0].key === 'undefined'))
+      {
+        /** if it is a grouping and nothing matches, then pass through unaltered. */
+        let datasets = n[0].values;   /* i.e. map2['undefined']  */
+        this.levelMeta.set(datasets, 'Datasets');
+        hash = datasets;  // result type is an array of datasets in this case, not a hash.
+      }
       else {
       this.levelMeta.set(hash, 'Groups');
     /** {{each}} of Map is yielding index instead of key, so convert Map to a hash */
@@ -863,10 +871,12 @@ export default ManageBase.extend({
               let filterMatched = me.get('filterMatched');
               let isFiltered = filterMatched[tabName];
               let filterGroup = me.get('useFilterGroup');
+              /* if filter, filter the blocks  */
               if (! isFiltered && filterGroup) {
                 let
                   isBlockFilter = filterGroup && (filterGroup.filterOrGroup === 'filter') &&
                   (filterGroup.fieldScope || filterGroup.fieldNamespace);
+                /* grouping not implemented for blocks */
                 if (isBlockFilter) {
                   let matched = me.datasetFilter(blocks, filterGroup, tabName),
                   b = matched;
@@ -878,6 +888,7 @@ export default ManageBase.extend({
                   }
                 }
               }
+              /* group the (filtered) blocks by the scope of the blocks. */
               blocks.forEach(
                 function (b) {
                   // b may be : {unmatched: Array()} - skip it
