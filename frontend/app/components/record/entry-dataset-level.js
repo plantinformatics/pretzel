@@ -3,6 +3,7 @@ import EntryBase from './entry-base';
 
 
 export default EntryBase.extend({
+  tagName: '',
 
   actions: {
     selectDataset(dataset) {

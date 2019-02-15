@@ -28,6 +28,7 @@ var levelMeta;
  * @param selectDataset
  */
 export default EntryBase.extend({
+  tagName: '',
 
   actions: {
     selectDataset(dataset) {

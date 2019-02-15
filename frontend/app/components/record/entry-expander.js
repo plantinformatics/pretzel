@@ -9,6 +9,7 @@ const trace_entryExpander = 1;
 
 /**
  * @param nodeName  text to display in the expandable node
+ * @param hoverText hover text
  */
 export default Ember.Component.extend({
   tagName: '',
