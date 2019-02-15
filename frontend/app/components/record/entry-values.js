@@ -13,6 +13,7 @@ import { parentOfType, elt0 } from '../../utils/ember-devel';
 /** For use when debugging via web inspector console. */
 var levelMeta;
 
+const trace_entryValues = 1;
 
 /*----------------------------------------------------------------------------*/
 
@@ -47,13 +48,14 @@ export default EntryBase.extend({
     }
   },
 
- /** type is array, e.g. blocks or datasets */
+  /** type is array, e.g. blocks or datasets */
   valueIsArray : Ember.computed('values', 'values.[]', function () {
     let
       values = this.get('values'),
     length = this.get('values.length'),
     isArray = Ember.isArray(values);
-    console.log('valueIsArray', isArray, length, this.get('name'), values);
+    if (trace_entryValues)
+      console.log('valueIsArray', isArray, length, this.get('name'), values);
     return isArray;
   }),
 
@@ -66,7 +68,7 @@ export default EntryBase.extend({
     return isDatasetsArray;
   }),
 
- /** {{!-- type is blocks array */
+  /** {{!-- type is blocks array */
   valueIsBlocksArray : Ember.computed('valueIsArray', 'values_dataTypeName', function () {
     let
       isMap = this.get('valueIsArray'),
@@ -83,7 +85,8 @@ export default EntryBase.extend({
       levelMeta = this.get('levelMeta'),
     values = this.get('values'),  // values.then ...
     dataTypeName = values && (levelMeta.get(values) || this.get('valuesModelName'));
-    console.log('dataTypeName', dataTypeName, values);
+    if (trace_entryValues)
+      console.log('dataTypeName', dataTypeName, values);
     return dataTypeName;
   }),
   valuesModelName : Ember.computed('values',  function () {
@@ -125,7 +128,7 @@ export default EntryBase.extend({
     is =
       /** values should not be undefined - debugging */
       ((values === undefined) || (values === null)) ?
-      (console.log('valuesIs', this), false)
+      (trace_entryValues && console.log('valuesIs', this), false)
       : values.then ?
       DS.PromiseObject.create({promise : values.then(isFn)})
     : isFn(values);
@@ -136,7 +139,7 @@ export default EntryBase.extend({
   valuesIsObject : Ember.computed('values', function () {
     function isObjectFn (values) { return typeof values === 'object'; };
     let
-    isObject =
+      isObject =
       this.valuesIs(isObjectFn);
     return isObject;
   }),
@@ -145,7 +148,7 @@ export default EntryBase.extend({
   valuesIsMap : Ember.computed('values', function () {
     function isMapFn (values) { return values && values.constructor === Map; };
     let
-    isMap =
+      isMap =
       this.valuesIs(isMapFn);
     return isMap;
   }),
@@ -169,7 +172,7 @@ export default EntryBase.extend({
    */
   values_dataTypeName0 : Ember.computed('levelMeta', 'values', function () {
     let
-    values = this.get('values'),
+      values = this.get('values'),
     dataTypeName = this.dataTypeName(values)
     ;
     return dataTypeName;
@@ -199,7 +202,7 @@ export default EntryBase.extend({
       dataTypeName = this.modelName2(values);
     }
     let
-    isMap = values && values.constructor === Map,
+      isMap = values && values.constructor === Map,
     component =
       isMap ? 'record/entry-level' :
       (dataTypeName === 'Dataset') ? 'record/entry-dataset-level' :
@@ -217,7 +220,8 @@ export default EntryBase.extend({
       (dataTypeName === 'Groups') ? 'record/entry-values' :
       (dataTypeName === 'Group') ? 'record/entry-values' :
       'record/entry-level';
-    console.log('levelComponent', values, isMap, dataTypeName, component);
+    if (trace_entryValues)
+      console.log('levelComponent', values, isMap, dataTypeName, component);
     return component;
   },
   /** Based on the type of values, as recorded via levelMeta and modelName,
@@ -225,12 +229,16 @@ export default EntryBase.extend({
    */
   values_levelComponent : Ember.computed('values_dataTypeName', 'values', function () {
     let
-    values = this.get('values'),
+      values = this.get('values'),
     component = this.levelComponent(values);
     return component;
   }),
 
   /*--------------------------------------------------------------------------*/
+  /** Devel functions, useful in web inspector console, e.g. use Ember tab to
+   * select the Ember entry-values Component, export $E to the console and
+   * $E.log3(), etc.
+   */
   log1() {
     /** current component */
     let c = this;
@@ -241,11 +249,13 @@ export default EntryBase.extend({
       elt0(c.elementId || c.parentView.elementId)
     );
   },
+  /** log parent entry-values of this */
   logP() {
     let parent = parentOfType.apply(this, ["component:record/entry-values"]);
     if (parent)
       parent.log1();
   },
+  /** log childView-s of this */
   logC() {
     let children = this.childViews;
     for (let i=0; i < children.length; i++) {
@@ -266,6 +276,7 @@ export default EntryBase.extend({
     this.log1();
     this.logC();
   },
+  /** logV() shows the value tree, with types associated via levelMeta.  */
   logV(v) {
     if (v === undefined)
       v = this.get('values');
