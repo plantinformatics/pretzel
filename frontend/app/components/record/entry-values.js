@@ -209,10 +209,12 @@ export default EntryBase.extend({
       /** 'Parents' is passed to entry-values by entry-tab,
        * and 'Scopes' is passed to entry-values by entry-parent.
        * Because those 2 are hard-wired in the hbs, the 2 configurations
-       * here are not looked-up.
+       * here are not read / looked-up.
        */
       (dataTypeName === 'Parents') ? 'record/entry-values' :
       (dataTypeName === 'Scopes') ? 'record/entry-values' :
+      (dataTypeName === 'Groups') ? 'record/entry-values' :
+      (dataTypeName === 'Group') ? 'record/entry-values' :
       'record/entry-level';
     console.log('levelComponent', values, isMap, dataTypeName, component);
     return component;
