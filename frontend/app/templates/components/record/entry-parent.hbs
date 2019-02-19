@@ -6,6 +6,8 @@
   {{#record/entry-expander nodeName=name}}
     <ul>
       {{record/entry-values values=values levelMeta=levelMeta
+        name=name
+        parentDone=true
         loadBlock="loadBlock"
         selectBlock="selectBlock"
         selectedBlock=selectedBlock

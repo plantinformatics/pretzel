@@ -1,13 +1,15 @@
 import Ember from 'ember';
 
+import { elt0 } from '../../utils/ember-devel';
+
 const trace_entryExpander = 1;
 
-function elt0(id) {
-  return Ember.$("#"+id)[0];
-}
+/*----------------------------------------------------------------------------*/
+
 
 /**
  * @param nodeName  text to display in the expandable node
+ * @param hoverText hover text
  */
 export default Ember.Component.extend({
   tagName: '',
@@ -53,20 +55,20 @@ export default Ember.Component.extend({
     let parent = this.get('entryTab');
     if (parent && ! this.get('tabActionBus')) {
       if (trace_entryExpander > 2)
-      // parent is entry-tab so use id not .elementId
-      console.log('tabActionBus', parent, Ember.$("#"+parent.get('id'))[0],
-                  Ember.$("#"+ this.parentView.elementId)[0]);
+        // parent is entry-tab so use id not .elementId
+        console.log('tabActionBus', parent, elt0(parent.get('id')),
+                    elt0(this.parentView.elementId));
       this.set('tabActionBus', parent);
       let me = this;
       parent.on('setLayoutActive', setLayoutActive);
       function setLayoutActive (active) {
         let id = me.elementId || me.parentView.elementId;
         console.log('setLayoutActive', active, me.get('active'),
-                    Ember.$("#"+id)[0]);
+                    elt0(id));
         if (me.get('active') !== active) {
           let id = me.elementId || me.parentView.elementId;
           console.log('setLayoutActive', active, me.get('active'), me,
-                      Ember.$("#"+id)[0]);
+                      elt0(id));
           me.toggleProperty('active');
         }
       }

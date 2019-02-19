@@ -3,6 +3,7 @@ import EntryBase from './entry-base';
 
 /**
  * @param name
+ * @param parentName  optional - used as hoverText, otherwise name is used
  * @param values
  */
 export default EntryBase.extend({

@@ -753,6 +753,12 @@ li.filter-group > div > span:last-child {
   /* no padding here because it will be white, unlike the list. */
   -webkit-padding-start: 0px;
 }
+#left-panel-explorer div.tab-content ul ul {
+  padding-left: 0px;
+}
+#left-panel-explorer div.tab-content > div > ul > li {
+  padding-left: 5px;    /* reduced from 15px */
+}
 
 li > span.blockInScope
 {
