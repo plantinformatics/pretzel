@@ -48,6 +48,20 @@ function forEachHash(h, fn) {
 
 
 /*============================================================================*/
+
+/* global d3 */
+
+/**
+ * @return true if value is just {unmatched : ... }, i.e. it is an objet with
+ * only 1 key, and that key is 'unmatched'.
+ */
+function justUnmatched(value) {
+  // could instead pass a flag to datasetFilter() to discard unmatched.
+  let result = value.hasOwnProperty('unmatched') && (d3.keys(value).length === 1);
+  return result;
+}
+
+/*============================================================================*/
 /* For logging value tree constructed in data explorer - manage-explorer.js */
 
 /** For devel logging - log the contents of the given value tree v.
@@ -90,4 +104,4 @@ function logV(levelMeta, v) {
 
 /*----------------------------------------------------------------------------*/
 
-export { mapHash, forEachHash, logV };
+export { mapHash, forEachHash, justUnmatched, logV };

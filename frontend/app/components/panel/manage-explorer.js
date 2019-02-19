@@ -7,7 +7,7 @@ import { filter, filterBy, mapBy, setDiff, uniqBy, uniq, union } from '@ember/ob
 import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
 import { parseOptions } from '../../utils/common/strings';
 
-import { mapHash, logV } from '../../utils/value-tree';
+import { mapHash, justUnmatched, logV } from '../../utils/value-tree';
 
 
 import ManageBase from './manage-base'
@@ -409,10 +409,13 @@ export default ManageBase.extend({
             if (trace_dataTree > 1)
               console.log('addParentAndScopeLevels', key, value, valueType, isParentType, valueIsParent, isParent);
 
+            let tabName = valueName + ':' + key;
             if (isParent || (key === 'children')) {
-              let tabName = valueName + ':' + key;
               value = me.parentAndScope(value, tabName);
               // done in parentAndScope(): me.levelMeta.set(value, 'Parents');
+            }
+            else {
+              value = me.datasetsFilterBlocks(tabName, me.levelMeta, value);
             }
             return value;
           };
@@ -874,15 +877,50 @@ export default ManageBase.extend({
     this.levelMeta.set(grouped, "Parents");
     return grouped;
   },
-  /** Given an array of datasets, group their blocks by the scope of the blocks. */
-  datasetsToBlocksByScope(tabName, levelMeta, datasets) {
+  /** Given an array of datasets, filter their blocks. */
+  datasetsFilterBlocks(tabName, levelMeta, datasets) {
+    // based on extract from parentAndScope(), could factor out a common function.
     let me = this;
-    let scopes = 
-      datasets.reduce(function (blocksByScope, dataset) {
-        if (trace_dataTree > 2)
-          console.log('blocksByScope', blocksByScope, dataset);
-        /** Within a parent, for each dataset of that parent,
-         * reference all the blocks of dataset, by their scope.  */
+    let result = 
+      datasets.reduce(
+        function (result2, dataset) {
+          // dataset may be {unmatched: Array(n)} - skip this
+          if (! dataset.get) return result2;
+          let
+            name = dataset.get('name');
+
+          function filterBlocks(dataset) {
+            return me.datasetFilterBlocks(tabName, dataset);
+          }
+          let blocks;
+          if (dataset.isFulfilled) {
+            dataset = dataset.get('content');
+          } else if (dataset.then) {
+            dataset = DS.PromiseObject.create({
+              promise: dataset.then(function (dataset2) {
+                let blocks = filterBlocks(dataset);
+                console.log('datasetsFilterBlocks promise', dataset, name, blocks);
+                return blocks;
+              })
+            });
+          }
+          else {
+            blocks = filterBlocks(dataset);
+          }
+          console.log(name, levelMeta, 'levelMeta.set(', blocks, 'Blocks');
+          levelMeta.set(blocks, 'Blocks');
+          result2[name] = blocks;
+          return result2;
+        },
+        {});
+
+    this.levelMeta.set(result, "Groups");
+
+    return result;
+  },
+  /** Given a dataset, filter its blocks. */
+  datasetFilterBlocks(tabName, dataset) {
+    let me = this;
         let blocks = dataset.get('blocks').toArray();
         let filterMatched = me.get('filterMatched');
         let isFiltered = filterMatched[tabName];
@@ -894,16 +932,35 @@ export default ManageBase.extend({
             (filterGroup.fieldScope || filterGroup.fieldNamespace);
           /* grouping not implemented for blocks */
           if (isBlockFilter) {
-            let matched = me.datasetFilter(blocks, filterGroup, tabName),
-            b = matched;
-            if (b && b.length)
-              blocks = b;
+            let value = me.datasetFilter(blocks, filterGroup, tabName);
+            if (value.length) {
+              let last = value[value.length-1];
+              if (justUnmatched(last)) {
+                console.log('justUnmatched', last, value);
+                let unmatched = value.splice(value.length-1, 1);
+                console.log('after splice', value, unmatched);
+              }
+            }
+            if (value && value.length)
+              blocks = value;
             else {
-              console.log('isBlockFilter', blocks, filterGroup, matched);
+              console.log('isBlockFilter', blocks, filterGroup, value);
               blocks = [];
             }
           }
         }
+    return blocks;
+  },
+  /** Given an array of datasets, group their blocks by the scope of the blocks. */
+  datasetsToBlocksByScope(tabName, levelMeta, datasets) {
+    let me = this;
+    let scopes = 
+      datasets.reduce(function (blocksByScope, dataset) {
+        if (trace_dataTree > 2)
+          console.log('blocksByScope', blocksByScope, dataset);
+        /** Within a parent, for each dataset of that parent,
+         * reference all the blocks of dataset, by their scope.  */
+        let blocks = me.datasetFilterBlocks(tabName, dataset);
         /* group the (filtered) blocks by the scope of the blocks. */
         blocks.forEach(
           function (b) {

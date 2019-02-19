@@ -45,6 +45,9 @@ export default EntryBase.extend({
     },
     levelComponent(value) {
       return this.levelComponent(value);
+    },
+    levelComponentEach(value) {
+      return this.levelComponentEach(value);
     }
   },
 
@@ -209,7 +212,7 @@ export default EntryBase.extend({
       (dataTypeName === 'Datasets') ? 'record/entry-datasets' :
       (dataTypeName === 'Parent') ? 'record/entry-parent' :
       (dataTypeName === 'Scope') ? 'record/entry-scope' :
-      (dataTypeName === 'Blocks') ? 'record/entry-scope' :
+      (dataTypeName === 'Blocks') ? 'record/entry-blocks-array' :
       /** 'Parents' is passed to entry-values by entry-tab,
        * and 'Scopes' is passed to entry-values by entry-parent.
        * Because those 2 are hard-wired in the hbs, the 2 configurations
@@ -219,7 +222,7 @@ export default EntryBase.extend({
       (dataTypeName === 'Scopes') ? 'record/entry-values' :
       (dataTypeName === 'Groups') ? 'record/entry-values' :
       (dataTypeName === 'Group') ? 'record/entry-values' :
-      'record/entry-level';
+      undefined;
     if (trace_entryValues)
       console.log('levelComponent', values, isMap, dataTypeName, component);
     return component;
@@ -233,6 +236,18 @@ export default EntryBase.extend({
     component = this.levelComponent(values);
     return component;
   }),
+  /** Some of the templates returned by levelComponent() render the key as well as the value; the others will rely on entry-level to render the key.
+   * @return the name of the component which should be used to render key and values.
+   */
+  levelComponentEach : function (values) {
+    let
+    component = this.levelComponent(values);
+    if ((component !== 'record/entry-dataset-level') &&
+        (component !== 'record/entry-scope'))
+      component = 'record/entry-level';
+
+    return component;
+  },
 
   /*--------------------------------------------------------------------------*/
   /** Devel functions, useful in web inspector console, e.g. use Ember tab to
