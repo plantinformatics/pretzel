@@ -6,7 +6,8 @@ import ManageBase from './manage-base';
 export default ManageBase.extend({
   editorVisible: false,
   currentMeta: {},
-  
+
+  ownedByMe: Ember.computed.alias("dataset.owner"),
   datasetMeta: Ember.computed("dataset.meta", function() {
     return this.get("dataset.meta") || {}
   }),
