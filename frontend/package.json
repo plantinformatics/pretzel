@@ -11,7 +11,7 @@
   "repository": "",
   "scripts": {
     "build": "ember build --environment production",
-    "start": "API_URL=http://sc-25-mel.it.csiro.au:5000 ember serve",
+    "start": "ember serve",
     "test": "ember test"
   },
   "devDependencies": {
