@@ -71,3 +71,60 @@ function blockFeaturesSet(blockId, n) {
 }
 
 /*----------------------------------------------------------------------------*/
+
+/** Match features by name between the 2 given blocks.  The result is the alignment, for drawing paths between blocks.
+ * Usage e.g.
+ *  db.Block.find({"scope" : "1A"})  to choose a pair of blockIds
+ *  var blockId2="5b74f4c5b73fd85c2bcbc660"; var blockId="5b74f4c5b73fd85c2bcb97f9"; var n = 10 ;
+ * ...
+ */
+
+db.Block.aggregate ( [
+	{ $match :  {
+    $or : [{ "_id" : ObjectId(blockId) },
+           { "_id" : ObjectId(blockId2) }]} },
+
+	{$lookup: { from: 'Feature', localField: '_id', foreignField: 'blockId', as: 'featureObjects' }},
+  {$unwind: '$featureObjects' }
+
+	, { $group: { _id: {name : '$featureObjects.name', blockId : '$featureObjects.blockId'},
+                features : { $push: '$featureObjects' },
+                count: { $sum: 1 }
+              }   }
+
+  , { $group: {
+    _id: { name: "$_id.name" },
+    alignment: { $push: { blockId: '$_id.blockId', repeats: "$$ROOT" }}
+  }}
+
+  , { $match : { alignment : { $size : 2 } }}
+  , { $limit: 3 }
+] );
+
+/* example output */
+{ "_id" : { "name" : "RAC875_rep_c72774_131" },
+ "alignment" : [ { "blockId" : ObjectId("5b74f4c5b73fd85c2bcb97f9"), "repeats" : { "_id" : { "name" : "RAC875_rep_c72774_131", "blockId" : ObjectId("5b74f4c5b73fd85c2bcb97f9") },
+ "features" : [ { "_id" : ObjectId("5b74f4c5b73fd85c2bcb98f4"), "name" : "RAC875_rep_c72774_131", "value" : [ 37.07 ], "blockId" : ObjectId("5b74f4c5b73fd85c2bcb97f9") },
+ { "_id" : ObjectId("5b74f4c5b73fd85c2bcb98f9"), "name" : "RAC875_rep_c72774_131", "value" : [ 37.07 ], "blockId" : ObjectId("5b74f4c5b73fd85c2bcb97f9") },
+ { "_id" : ObjectId("5b74f4c5b73fd85c2bcb98fa"), "name" : "RAC875_rep_c72774_131", "value" : [ 37.07 ], "blockId" : ObjectId("5b74f4c5b73fd85c2bcb97f9") } ], "count" : 3 } },
+ { "blockId" : ObjectId("5b74f4c5b73fd85c2bcbc660"), "repeats" : { "_id" : { "name" : "RAC875_rep_c72774_131", "blockId" : ObjectId("5b74f4c5b73fd85c2bcbc660") },
+ "features" : [ { "_id" : ObjectId("5b74f4c5b73fd85c2bcbc7bb"), "value" : [ 98 ], "name" : "RAC875_rep_c72774_131", "blockId" : ObjectId("5b74f4c5b73fd85c2bcbc660") } ], "count" : 1 } } ] }
+/* { "_id" : { "name" : "wsnp_Ex_c4612_8254533" },
+   ...  } */
+
+/*----------------------------------------------------------------------------*/
+
+/** Count Features within evenly sized bins (buckets) on the given block.
+ * Usage e.g.
+ *  var blockId="5b74f4c5b73fd85c2bcb97f9";
+ *  ...
+ */
+db.Block.aggregate ( [
+	{$match : { "_id" : ObjectId(blockId) } },
+	{$lookup: { from: 'Feature', localField: '_id', foreignField: 'blockId', as: 'featureObjects' }},
+  {$unwind: '$featureObjects' }
+  , { $bucketAuto: { groupBy: {$arrayElemAt : ['$featureObjects.value', 0]}, buckets: 200, granularity : 'E192'}  }
+  , { $limit: 3 }
+] );
+
+/*----------------------------------------------------------------------------*/
