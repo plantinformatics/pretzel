@@ -787,7 +787,7 @@ export default ManageBase.extend({
       /** {{each}} of Map is yielding index instead of key, so convert Map to a hash */
       for (var [key, value] of map2) {
         if (trace_dataTree > 1)
-          console.log(key + ' : ' + value);
+          console.log(key, ' : ', value);
         if (key === 'undefined')
           key = 'unmatched';
         hash[key] = value;
