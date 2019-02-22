@@ -1033,3 +1033,9 @@ div#tab-explorer-parent > ul > li > ul > li > ul > li {
 
 
 /* -------------------------------------------------------------------------- */
+/* JSON editor, in RHS panel */
+
+div.metaeditor-panel div.jsoneditor-menu {
+  display: none;
+}
+/* -------------------------------------------------------------------------- */

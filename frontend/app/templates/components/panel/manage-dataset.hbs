@@ -23,7 +23,7 @@
       {{elem/icon-base name="pencil"}} &nbsp;Edit Metadata
     </button>
   </div>
-  <div>
+  <div class="metaeditor-panel">
     {{json-editor json=datasetMeta name='Metadata' disabled=true search=false}}
   </div>
   <div>
@@ -33,7 +33,7 @@
         targetAttachment="center"
         translucentOverlay=true
       }}
-        <div>{{json-editor json=datasetMeta onChange=(action "mutateJson")}}</div>
+        <div class="metaeditor-modal">{{json-editor json=datasetMeta onChange=(action "mutateJson")}}</div>
         <div>
           <button
             type="button"
