@@ -125,13 +125,35 @@ Block.prototype.longName = function() {
   return this.axisName + ':' + this.block.get('name')
     + '/' + (this.parent ? this.parent.axisName : '');
 };
+/** @return true if this Block is a reference, not data block.
+ * A genetic map block is a data block and has no reference block; for the purpose of stacks it is the reference.
+ */
+Block.prototype.isReference = function() {
+  let axis = this.getAxis(),
+  blockR = this.block,
+  isReference =
+    (axis.referenceBlock === blockR);
+  return isReference;
+};
+/** @return true if this Block is a data block, not the reference block.
+ */
+Block.prototype.isData = function() {
+  let axis = this.getAxis(),
+  blockR = this.block,
+  isData =
+    //  checking if features is defined and features.length > 0
+    (blockR.get('namespace') || blockR.get('features.length'));
+  return isData;
+};
+
+
 /** @return undefined or .longName() of block if blockId is loaded.
  * (static)
  */
 Block.longName = function (blockId) {
   let block = stacks.blocks[blockId];
   return block && block.longName();
-}
+};
 /*----------------------------------------------------------------------------*/
 
 
@@ -562,9 +584,8 @@ Stacked.prototype.dataBlocks = function (visible)
 {
   let db = this.blocks
     .filter(function (block) {
-      //  -	also need to check if features.length > 0
       return (! visible || block.visible)
-        && (block.block.get('namespace') || block.block.get('features')); });
+        && block.isData(); });
   if (trace_stack > 1)
     console.log(
       'Stacked', 'blocks', visible, this.blocks.map(function (block) { return block.longName(); }),
@@ -1715,11 +1736,10 @@ Stacked.prototype.axisTransformO = function ()
   }
   let yOffset = this.yOffset(),
   yOffsetText =  Number.isNaN(yOffset) ? "" : "," + this.yOffset();
-  /** x scale doesn't matter because x is 0; use 1 for clarity.
+  /** Y scale.
    * no need for scale when this.portion === 1
    */
-  let scale = this.portion,
-  scaleText = Number.isNaN(scale) || (scale === 1) ? "" : " scale(1," + scale + ")";
+  let scale = this.portion;
   let xVal = checkIsNumber(oa.o[this.axisName]);
   xVal = Math.round(xVal);
   let rotateText = "", axis = oa.axes[this.axisName];
@@ -1748,7 +1768,23 @@ Stacked.prototype.axisTransformO = function ()
     let a = d3.select("g#id" + this.axisName + ".axis-outer");
     if (trace_stack > 1)
       console.log("perpendicular", shift, rotateText, a.node());
+
+    let axisXRange = stacks.vc.axisXRange;
+    /** nStackAdjs and nStackAdjs : copied from draw-map.js : updateAxisTitleSize() */
+    let nStackAdjs = stacks.length > 1 ? stacks.length-1 : 1;
+    let axisSpacing = (axisXRange[1]-axisXRange[0])/nStackAdjs;
+    /** if perpendicular (dotPlot), reduce the axis height (which is width
+     * because of the 90deg rotation from yRange to axisSpacing.
+     * if not perpendicular, x scale doesn't matter because x is 0; use 1 for clarity.
+     */
+    scale = axisSpacing / yRange;
+    shift *= axisSpacing / yRange;
   }
+
+  let
+  scaleText = Number.isNaN(scale) || ((scale === 1) && ! axis.perpendicular) ? "" : " scale(1," + scale + ")";
+  console.log('axisTransformO xScale', xScale, scaleText);
+
   let transform =
     [
       " translate(" + xVal, yOffsetText, ")",

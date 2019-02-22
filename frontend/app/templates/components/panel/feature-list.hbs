@@ -1,28 +1,38 @@
-<ul class="nav nav-tabs">
-  <li class="active">
-    <a data-toggle="tab" href="#tab-selected-features">Selected Features</a>
-    <div>{{selectedFeatures.length}}</div>
-  </li>
-  <li>
-    <a data-toggle="tab" href="#tab-features">Features Input</a>
-    <div>{{activeFeatureList.featureNameList.length}} ({{featureNameList.length}})</div>
-  </li>
+<div style="display: flex;">
+  <span>Selected Features</span>
+  <span class="badge">{{selectedFeatures.length}}</span>
 
-</ul>
-
-
-<div class="tab-content">
-  <div id="tab-selected-features" class="tab-pane fade in active">
-    {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{selectedFeatures.length}}</span>
-
+  <div style="margin-top: -9px;">
+    {{!-- can use these in <a> instead of glyphicon-arrow-{left,right} (smaller)
+        Leftwards Arrow	←	←	&#x2190;
+        Rightwards Arrow	→	→	&#x2192;
+    --}}
+    {{!--       Can re-enable this later, not needed yet.  Also the arrows have been swapped, based on a suggestion that it would be clearer to users.
+    <div class="from-input" style="position: absolute;"><a >{{elem/icon-base name="arrow-right" click=(action "toSelectedFeatures") }}</a></div>
+    --}}
+    <div style="padding-top: 13px;padding-left: 7px;"><a >{{elem/icon-base name="arrow-left"  click=(action "fromSelectedFeatures") }}</a></div>
   </div>
-  <div id="tab-features" class="tab-pane fade in">
-    {{input
-      value=featureNameList
-      class="form-control"
-      placeholder="Feature (Marker/Gene) Names\n(whitespace or comma separated)" }}
 
-  </div>
 </div>
+
+
+<div>
+  <span>Features Input</span>
+  {{#if activeInput}}
+    <span class="badge">{{featureNameList.featureNameList.length}}</span>
+  {{/if}}
+
+  {{textarea
+    class="form-control"
+    maxLength=15
+    input=(action 'inputIsActive')
+    enter=(action 'featureNameListInput')
+    insert-newline=(action 'featureNameListInput')
+    escape-press=(action 'featureNameListInput')
+    paste=(action 'paste')
+    placeholder="Feature (Marker/Gene) Names
+    (whitespace or comma separated)" }}
+</div>
+
 
 <hr >

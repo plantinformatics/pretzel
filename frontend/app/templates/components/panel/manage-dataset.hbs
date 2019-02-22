@@ -16,12 +16,13 @@
     </tbody>
   </table>
   <div style="padding-bottom:10px">
-    <button
-      type="button"
-      class="btn btn-info"
-      {{action "toggleEditor" preventDefault=false}}>
-      {{elem/icon-base name="pencil"}} &nbsp;Edit Metadata
-    </button>
+    {{#elem/button-base
+      icon="pencil"
+      classColour="info"
+      onClick=(action "toggleEditor")
+      disabled=(not ownedByMe)}}
+      Edit Metadata
+    {{/elem/button-base}}
   </div>
   <div class="metaeditor-panel">
     {{json-editor json=datasetMeta name='Metadata' disabled=true search=false}}

@@ -35,6 +35,12 @@ body.mapview div#Page-Body
 } 
 
 /* -------------------------------------------------------------------------- */
+/* Make the top (left & right) menus horizontal. */
+div#Page-Nav > div > div.navbar > div > div.navbar > ul.nav {
+  display: flex;
+}
+
+/* -------------------------------------------------------------------------- */
 
 .draw-map-container,
 .tabbed-table-container
@@ -148,6 +154,7 @@ body.mapview div#Page-Body
 .resizer > .menuHead {
     width: 100%;
 }
+/* can change this to use .hover-parent, .hover-child  */
 .resizer > .subMenu {
     /* position: fixed; */
     display : none;
@@ -155,6 +162,18 @@ body.mapview div#Page-Body
 .resizer:hover > .subMenu {
     display : inherit;
 }
+
+/* -------------------------------------------------------------------------- */
+/* show the child when the parent is hovered */
+.hover-parent > .hover-child {
+    display : none;
+}
+.hover-parent:hover > .hover-child {
+    display : inherit;
+}
+
+
+
 
 /* -------------------------------------------------------------------------- */
 #table-brushed
@@ -472,10 +491,25 @@ g.tick:hover {
     outline: 1px dashed orange; 
 }
 
+/* This (stroke colour) was applied for selector .horizTick until 655bfe3
+ * introduced axisTitleColour().
+ * Alternative to a constant in css, showTickLocations() could use axisName to
+ * lookup block index, as in featurePathStroke(), but that may not be more
+ * useful, instead perhaps classify in groups, e.g. give each group of added
+ * ticks a new id for an ordinal colour scale.
+ */
+path.horizTick.fromInput
+{
+    stroke: green;
+}
 .horizTick
 {
   /* stroke (colour) is now provided by axisTitleColour(). */
   stroke-width : 2px;
+}
+g.foundFeatures > path.horizTick
+{
+  stroke-width : 3px;
 }
 
 path.syntenyEdge
@@ -685,12 +719,24 @@ li.dropdown-submenu > ul.dropdown-menu {
 .filter-groups > ul > li {
   margin-top: 1em;
 }
+li.filter-group > div > span {
+  margin: 0 0.5em;
+}
+li.filter-group > div > span:first-child {
+  margin-left : 0;
+}
+li.filter-group > div > span:last-child {
+  margin-right : auto;
+}
 .filter-groups > ul > li > div > input[name=detailed] {
   float: left;
 }
 .filter-groups > ul > li > div > button.btn {
   padding: 3px 6px;
   margin: 0.5em 1em;
+}
+.filter-group > div > button.delete {
+  float: right;
 }
 
 .line-input-label > input {
@@ -706,6 +752,12 @@ li.dropdown-submenu > ul.dropdown-menu {
 #tab-explorer-parent > ul {
   /* no padding here because it will be white, unlike the list. */
   -webkit-padding-start: 0px;
+}
+#left-panel-explorer div.tab-content ul ul {
+  padding-left: 0px;
+}
+#left-panel-explorer div.tab-content > div > ul > li {
+  padding-left: 5px;    /* reduced from 15px */
 }
 
 li > span.blockInScope
@@ -1032,6 +1084,62 @@ div#tab-explorer-parent > ul > li > ul > li > ul > li {
 }
 
 
+
+/* -------------------------------------------------------------------------- */
+div#left-panel > ul
+{
+  display : block;
+}
+
+div#left-panel-view > div > div > div > ul > li > div
+{
+  overflow-wrap: break-word;
+  text-indent: 1em;
+}
+div#left-panel-view > div > div > div > ul > li > div > button
+{
+    float : left;
+}
+
+.feature-list.active-input > div > div > div.from-input > a {
+    background-color : #e8e8f7;
+}
+.feature-list:not(.active-input) > div > div > div:not(.from-input) > a {
+    background-color : #e8e8f7;
+}
+.feature-list > div > span {
+  margin-right: 2em;
+}
+.feature-list > div > textarea {
+    height: 28ex;     /* approx 2.5ex per line */
+}
+/* -------------------------------------------------------------------------- */
+/* applies in this context :
+ * div#left-panel-feature-search > div > div > div.ember-popover
+ */
+ul.feature-found {
+  height: 28ex;
+  overflow-y: auto;
+}
+/* could use .list-unstyled, but it implies padding-left:0 */
+ul.feature-found
+{
+  list-style-type: none;
+  text-align : left;
+}
+ul.feature-found
+{
+  overflow-y: auto;
+  /* override user-agent stylesheet (Chrome) */
+  -webkit-padding-start: inherit;
+  /* target badge may be close to left so leave a margin for clipping.  */
+  margin-left: 2em;
+  height: auto;
+  max-height: 15ex;
+}
+ul.blocks-found > li > div > div.ember-popover {
+  padding: 3px 5px;
+}
 /* -------------------------------------------------------------------------- */
 /* JSON editor, in RHS panel */
 

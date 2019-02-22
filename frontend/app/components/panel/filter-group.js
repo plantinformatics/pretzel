@@ -5,7 +5,8 @@ const { inject: { service } } = Ember;
 export default Ember.Component.extend({
   blockService: service('data/block'),
 
-  tagName : '',
+  tagName : 'li',
+  classNames : ['filter-group'],
 
   didRender() {
     this._super(...arguments);
@@ -73,6 +74,8 @@ export default Ember.Component.extend({
    */
   match : function (a) {
     let match;
+    /** isCaseSensitive is currently applied to string patterns, not regular expressions. */
+    let isCaseSensitive = this.get('isCaseSensitive');
     if (this.get('isRegExp')) {
       match = this.get('patternsRE')
       .find(function (regexp) {
@@ -84,8 +87,12 @@ export default Ember.Component.extend({
     }
     else
     {
+      if (! isCaseSensitive)
+        a = a.toLowerCase();
       match = this.get('patterns')
       .find(function (pattern) {
+        if (! isCaseSensitive)
+          pattern = pattern.toLowerCase();
         let found = a.includes(pattern);
         if (found)
           console.log('match', pattern, a);
@@ -96,12 +103,9 @@ export default Ember.Component.extend({
   },
 
   actions : {
-    changeFilterOrGroup : function () {
-      let data = this.get('data'),
-      value = this.get('filterOrGroup');
-      console.log('changeFilterOrGroup', this, data, value);
-      // this.changeFilterOrGroup(value);
-      this.sendAction('changed', this);
+    deleteFilterOrGroup : function () {
+      console.log('deleteFilterOrGroup', this);
+      this.sendAction('deleteFilterOrGroup', this);
     },
     filterByCurrentScopes : function () {
       console.log('filterByCurrentScopes', this);
@@ -109,10 +113,6 @@ export default Ember.Component.extend({
     }
   },
 
-  changeFilterOrGroup(value) {
-    let data = this.get('data');
-    this.set('filterOrGroup', value);
-  },
 
   filterByCurrentScopes() {
     let block_viewedScopes = this.get('blockService.viewedScopes'),
@@ -120,6 +120,7 @@ export default Ember.Component.extend({
     console.log('filterByCurrentScopes', block_viewedScopes, pattern);
     // possibly only set pattern when block_viewedScopes.length > 0
     this.set('pattern', pattern);
+    this.sendAction('changed', this);
   }
 
 });

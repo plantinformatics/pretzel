@@ -6,7 +6,7 @@ import {tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
  * @param name  type name of the data in the tab
  * @param values  values of the data in the tab
  */
-export default Ember.Component.extend({
+export default Ember.Component.extend(Ember.Evented, {
 
   attributeBindings: ['id'],
   classNames : ['tab-pane', 'fade', 'in'],
@@ -21,7 +21,7 @@ export default Ember.Component.extend({
 
   actions : {
     selectBlockAndDataset(block) {
-      var dataset = block.get('datasetId');
+      var dataset = block.get('datasetId.content') || block.get('datasetId');
       console.log('selectBlockAndDataset', 'block => ', block.get('name'),
                   'dataset => ', dataset.get('name'));
       this.sendAction('selectDataset', dataset);
@@ -32,6 +32,10 @@ export default Ember.Component.extend({
     },
     loadBlock(block) {
       this.sendAction('loadBlock', block);
+    },
+    allActiveChanged(active) {
+      console.log('allActiveChanged', active, this.get('allActive'), this);
+      this.trigger('setLayoutActive', active);
     }
   }
 
