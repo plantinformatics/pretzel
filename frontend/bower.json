@@ -14,7 +14,7 @@
     "handsontable": "^2.0.0"
   },
   "devDependencies": {
-    "bootstrap": "^3.3.7"
+    "bootstrap": "3.3.7"
   },
   "resolutions": {
     "ember-qunit-notifications": "^0.1.0",
