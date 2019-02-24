@@ -1141,3 +1141,9 @@ ul.blocks-found > li > div > div.ember-popover {
   padding: 3px 5px;
 }
 /* -------------------------------------------------------------------------- */
+/* JSON editor, in RHS panel */
+
+div.metaeditor-panel div.jsoneditor-menu {
+  display: none;
+}
+/* -------------------------------------------------------------------------- */
