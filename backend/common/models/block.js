@@ -4,6 +4,7 @@ var acl = require('../utilities/acl')
 var identity = require('../utilities/identity')
 var task = require('../utilities/task')
 var pathsAggr = require('../utilities/paths-aggr');
+var ObjectId = require('mongodb').ObjectID
 
 module.exports = function(Block) {
 
@@ -19,6 +20,35 @@ module.exports = function(Block) {
       cb(err);
     })
   };
+
+
+  Block.pathsViaStream = function(blockId0, blockId1, options, cb) {
+    let db = this.dataSource
+    let blockCollection = db.connector.collection("Block");
+    
+    console.log("blockId0", blockId0)
+    console.log("blockId1", blockId1)
+
+    var cursor = blockCollection.aggregate ( [
+      { $match :  {
+          $or : [{ "_id" : ObjectId(blockId0) },
+                 { "_id" : ObjectId(blockId1) }]
+            }
+        },
+
+      {$lookup: { from: 'Feature', localField: '_id', foreignField: 'blockId', as: 'featureObjects' }},
+      {$unwind: '$featureObjects' },
+      {$limit: 5}
+      ]
+   )
+    cursor.on('data', function(doc) {
+      cb(null, doc)
+    })
+
+    cursor.once('end', function() {
+      // db.close();
+    })
+  }
 
   Block.pathsByReference = function(blockA, blockB, referenceGenome, maxDistance, options, cb) {
     task.pathsViaLookupReference(this.app.models, blockA, blockB, referenceGenome, maxDistance, options)
@@ -99,6 +129,17 @@ module.exports = function(Block) {
     returns: {type: 'array', root: true},
     description: "Returns paths between blockA and blockB via position on reference blocks blockB and blockC"
   });
+
+  Block.remoteMethod('pathsViaStream', {
+    accepts: [
+      {arg: 'blockA', type: 'string', required: true},
+      {arg: 'blockB', type: 'string', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Streams paths instead of throwing them all back to user"
+  })
 
   Block.syntenies = function(id0, id1, thresholdSize, thresholdContinuity, cb) {
     task.syntenies(this.app.models, id0, id1, thresholdSize, thresholdContinuity)
