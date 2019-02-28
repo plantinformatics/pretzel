@@ -40,6 +40,11 @@ export default Service.extend({
     return this._ajax('Blocks/paths', 'GET', {blockA : blockA, blockB : blockB, options : options}, true)
   },
 
+  getPathsProgressive(blockA, blockB, options) {
+    console.log('services/auth getPathsProgressive', blockA, blockB, options);
+    return this._ajax('Blocks/pathsProgressive', 'GET', {blockA : blockA, blockB : blockB, options : options}, true);
+  },
+
   /** Send GET request Blocks/pathsByReference,
    * i.e. retrieve the paths connecting blockA and blockB via the reference assembly,
    * allowing up to max_distance physical distance (base pairs) between the features in the reference.

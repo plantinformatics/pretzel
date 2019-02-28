@@ -4,6 +4,7 @@ import AxisEvents from '../../utils/draw/axis-events';
 import { /* Block, Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText, axisId2Name*/ } from '../../utils/stacks';
 import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/ , axisTitleColour  }  from '../../utils/draw/axis';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../../utils/stacks-drag';
+import { selectAxis } from '../../utils/draw/stacksAxes';
 import { breakPoint } from '../../utils/breakPoint';
 
 
@@ -55,12 +56,6 @@ function blockWithTicks(block)
   return ! showPaths;
 }
 
-function selectAxis(axis)
-{
-  let axisName = axis.axisName;
-  let aS = d3.select("#" + axisEltId(axisName));
-  return aS;
-}
 /** Draw horizontal ticks on the axes, at feature locations.
  * This is used for 2 cases so far :
  * . all features of blocks which have !showPaths, when axis is ! extended

@@ -398,6 +398,15 @@ div#scaffoldLegend > ul
   shape-rendering: crispEdges;
 }*/
 
+path.blockAdj {
+  /* emphasise the new (progressive) paths during devel. */
+  stroke: red;
+  stroke-width: 3px;
+  stroke-dasharray: 10 20;
+  /* stroke-opacity: 1; */
+}
+
+
 .axis line, .axis path {
   fill: none;
   shape-rendering: crispEdges;

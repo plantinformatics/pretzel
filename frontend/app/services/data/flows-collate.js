@@ -1,10 +1,14 @@
 import Ember from 'ember';
 
 import Service from '@ember/service';
+const { inject: { service } } = Ember;
 
 /*----------------------------------------------------------------------------*/
 
 import { Flow } from "../../utils/flows";
+
+import { axisId2Name } from '../../utils/stacks';
+
 
 
 import {
@@ -173,6 +177,8 @@ let aliasedDone = {};
 /*----------------------------------------------------------------------------*/
 
 export default Service.extend({
+  block: service('data/block'),
+
   flows : flows,
 
   flowConfig : flowConfig,
@@ -216,9 +222,40 @@ export default Service.extend({
         result[f] = flows[f];
     console.log('enabledFlows', uAlias, flows.U_alias.enabled, result);
     return result;
+  }),
+
+  /** From adjAxes (which records all block adjacencies in both directions), filter to
+   * output just 1 pair [b0, b1] for each pair of adjacent blocks.  The criteria b0 < b1 is
+   * used to select the direction which is used; this is stable during axis
+   * dragging which changes left-to-right order and stacking.
+   * The values b0, b1 are block IDs.
+   */
+  blockAdjs : Ember.computed('block.viewedIds.[]', /*'adjAxes',*/ function () {
+    let viewedIds = this.get('block.viewedIds');
+    let axesP = this.get('oa.axesP');
+    console.log('blockAdjs', viewedIds, axesP);
+    let blockAdjs = Ember.run(this, convert);
+    function convert () {
+    let adjAxes = this.get('adjAxes'),
+    blockAdjs2 =
+      Object.keys(adjAxes).reduce(function(result, b0Name) {
+        let b0 = adjAxes[b0Name];
+        console.log(b0Name, axisId2Name(b0Name), b0.length);
+        for (let b1i=0; b1i < b0.length; b1i++) {
+          let b1Name = b0[b1i];
+          /* let direction = b0Name < b1Name;
+          if (direction) */
+            result.push([b0Name, b1Name]);
+          // console.log(result);
+        }
+        return result;
+      }, []);
+      return blockAdjs2;
+    }
+    console.log('blockAdjs', blockAdjs);
+    return blockAdjs;
   })
 
-  
 });
 
 /*----------------------------------------------------------------------------*/
