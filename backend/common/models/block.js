@@ -23,9 +23,12 @@ module.exports = function(Block) {
   Block.pathsProgressive = function(left, right, options, cb) {
       let blockCollection = this.dataSource.connector.collection("Block");
     console.log('pathsProgressive', blockCollection, left, right, options, cb);
-      pathsAggr.paths(blockCollection, this.app.models, left, right, options)
+    let nFeatures = 4;
+    let cursor =
+      pathsAggr.pathsDirect(blockCollection, left, right, nFeatures);
+    cursor.toArray()
     .then(function(data) {
-      // completed additions to database
+      console.log('pathsProgressive then', data);
       cb(null, data);
     })
     .catch(function(err) {

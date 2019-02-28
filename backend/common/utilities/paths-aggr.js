@@ -1,3 +1,5 @@
+var ObjectID = require('mongodb').ObjectID;
+
 /*----------------------------------------------------------------------------*/
 
 /* global exports */
@@ -45,7 +47,7 @@ print(i);
 
 /** Determine aliases of features of the given block.
  *
- * Usage e.g. var a = alias2(ObjectId("5b7f8afd43a181430b81394d"), 3)
+ * Usage in mongo shell   e.g. var a = alias2(ObjectId("5b7f8afd43a181430b81394d"), 3)
  * var blockCollection = db.Block
  * @return cursor	aliases
  */
@@ -78,7 +80,7 @@ function alias2(blockCollection, blockId, n) {
 /*----------------------------------------------------------------------------*/
 
 /**
- * Usage e.g. var bfs = blockFeaturesSet(ObjectId("5b7f8afd43a181430b81394e"), 3);
+ * Usage in mongo shell   e.g. var bfs = blockFeaturesSet(ObjectId("5b7f8afd43a181430b81394e"), 3);
  * var blockCollection = db.Block;
  */
 function blockFeaturesSet(blockCollection, blockId, n) {
@@ -118,7 +120,7 @@ function aliasesTo(blockCollection, blockA, blockB)
   );
   return aliases;
 }
-exports.paths = function(blockCollection, models, id0, id1, options) {
+exports.paths = function(blockCollection, id0, id1, options) {
   /** also aliasesTo(id1, id0) */
   let aliases = aliasesTo(blockCollection, id0, id1),
   links = aliases.map(function (a) { return {
@@ -134,44 +136,70 @@ exports.paths = function(blockCollection, models, id0, id1, options) {
 /*----------------------------------------------------------------------------*/
 
 /** Match features by name between the 2 given blocks.  The result is the alignment, for drawing paths between blocks.
- * Usage e.g.
+ * Usage in mongo shell  e.g.
  *  db.Block.find({"scope" : "1A"})  to choose a pair of blockIds
- *  var blockId2="5b74f4c5b73fd85c2bcbc660"; var blockId="5b74f4c5b73fd85c2bcb97f9"; var n = 10 ;
- * ...
+ *  var blockId2 = ObjectId("5b74f4c5b73fd85c2bcbc660");
+ *  var blockId = ObjectId("5b74f4c5b73fd85c2bcb97f9");
+ *  var n = 10 ;
+ *  var blockCollection = db.Block
+ *  pathsDirect(blockCollection, blockId, blockId2, n)
+ *
+ * @return n number of features in result; later will refine this control
+ * @return cursor	aliases
  */
+exports.pathsDirect = function(blockCollection, blockId, blockId2, n) {
+  console.log('pathsDirect', blockCollection, blockId, blockId2, n, ObjectID);
+  let ObjectId = ObjectID;
+  if (n === undefined)
+    n = 3;
+  let result =
+    blockCollection.aggregate ( [
+	    { $match :  {
+        $or : [{ "_id" : ObjectId(blockId) },
+               { "_id" : ObjectId(blockId2) }]} },
 
-db.Block.aggregate ( [
-	{ $match :  {
-    $or : [{ "_id" : ObjectId(blockId) },
-           { "_id" : ObjectId(blockId2) }]} },
+	    {$lookup: { from: 'Feature', localField: '_id', foreignField: 'blockId', as: 'featureObjects' }},
+      {$unwind: '$featureObjects' }
 
-	{$lookup: { from: 'Feature', localField: '_id', foreignField: 'blockId', as: 'featureObjects' }},
-  {$unwind: '$featureObjects' }
+	    , { $group: { _id: {name : '$featureObjects.name', blockId : '$featureObjects.blockId'},
+                    features : { $push: '$featureObjects' },
+                    count: { $sum: 1 }
+                  }   }
 
-	, { $group: { _id: {name : '$featureObjects.name', blockId : '$featureObjects.blockId'},
-                features : { $push: '$featureObjects' },
-                count: { $sum: 1 }
-              }   }
+      , { $group: {
+        _id: { name: "$_id.name" },
+        alignment: { $push: { blockId: '$_id.blockId', repeats: "$$ROOT" }}
+      }}
 
-  , { $group: {
-    _id: { name: "$_id.name" },
-    alignment: { $push: { blockId: '$_id.blockId', repeats: "$$ROOT" }}
-  }}
+      , { $match : { alignment : { $size : 2 } }}
+      , { $limit: n }
+    ] );
 
-  , { $match : { alignment : { $size : 2 } }}
-  , { $limit: 3 }
-] );
+  return result;
+};
 
-/* example output */
-{ "_id" : { "name" : "RAC875_rep_c72774_131" },
- "alignment" : [ { "blockId" : ObjectId("5b74f4c5b73fd85c2bcb97f9"), "repeats" : { "_id" : { "name" : "RAC875_rep_c72774_131", "blockId" : ObjectId("5b74f4c5b73fd85c2bcb97f9") },
- "features" : [ { "_id" : ObjectId("5b74f4c5b73fd85c2bcb98f4"), "name" : "RAC875_rep_c72774_131", "value" : [ 37.07 ], "blockId" : ObjectId("5b74f4c5b73fd85c2bcb97f9") },
- { "_id" : ObjectId("5b74f4c5b73fd85c2bcb98f9"), "name" : "RAC875_rep_c72774_131", "value" : [ 37.07 ], "blockId" : ObjectId("5b74f4c5b73fd85c2bcb97f9") },
- { "_id" : ObjectId("5b74f4c5b73fd85c2bcb98fa"), "name" : "RAC875_rep_c72774_131", "value" : [ 37.07 ], "blockId" : ObjectId("5b74f4c5b73fd85c2bcb97f9") } ], "count" : 3 } },
- { "blockId" : ObjectId("5b74f4c5b73fd85c2bcbc660"), "repeats" : { "_id" : { "name" : "RAC875_rep_c72774_131", "blockId" : ObjectId("5b74f4c5b73fd85c2bcbc660") },
- "features" : [ { "_id" : ObjectId("5b74f4c5b73fd85c2bcbc7bb"), "value" : [ 98 ], "name" : "RAC875_rep_c72774_131", "blockId" : ObjectId("5b74f4c5b73fd85c2bcbc660") } ], "count" : 1 } } ] }
+/* example output; contains ObjectId() which is defined in mongo shell, not in
+ * node.js, so wrap with if (false) { } */
+if (false) {
+var example_output_pathsDirect = 
+  { "_id" : { "name" : "RAC875_rep_c72774_131" },
+    "alignment" : [
+      { "blockId" : ObjectId("5b74f4c5b73fd85c2bcb97f9"), "repeats" : {
+        "_id" : { "name" : "RAC875_rep_c72774_131", "blockId" : ObjectId("5b74f4c5b73fd85c2bcb97f9") },
+        "features" : [
+          /* When the data is cleaned up it won't contain these duplicates, but if the .aggregrate can filter them out without a significant performance cost it should do so. */
+          { "_id" : ObjectId("5b74f4c5b73fd85c2bcb98f4"), "name" : "RAC875_rep_c72774_131", "value" : [ 37.07 ], "blockId" : ObjectId("5b74f4c5b73fd85c2bcb97f9") },
+          { "_id" : ObjectId("5b74f4c5b73fd85c2bcb98f9"), "name" : "RAC875_rep_c72774_131", "value" : [ 37.07 ], "blockId" : ObjectId("5b74f4c5b73fd85c2bcb97f9") },
+          { "_id" : ObjectId("5b74f4c5b73fd85c2bcb98fa"), "name" : "RAC875_rep_c72774_131", "value" : [ 37.07 ], "blockId" : ObjectId("5b74f4c5b73fd85c2bcb97f9") } ], "count" : 3 } },
+      { "blockId" : ObjectId("5b74f4c5b73fd85c2bcbc660"), "repeats" : {
+        "_id" : { "name" : "RAC875_rep_c72774_131", "blockId" : ObjectId("5b74f4c5b73fd85c2bcbc660") },
+        "features" : [ {
+          "_id" : ObjectId("5b74f4c5b73fd85c2bcbc7bb"), "value" : [ 98 ], "name" : "RAC875_rep_c72774_131", "blockId" : ObjectId("5b74f4c5b73fd85c2bcbc660") } ], "count" : 1 } } ] }
 /* { "_id" : { "name" : "wsnp_Ex_c4612_8254533" },
    ...  } */
+  ;
+}
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -179,13 +207,31 @@ db.Block.aggregate ( [
  * Usage e.g.
  *  var blockId="5b74f4c5b73fd85c2bcb97f9";
  *  ...
+ *  var blockCollection = db.Block
+ *  blockBinFeatureCount(blockCollection, blockId, 200)
+ * Defaults for nBuckets and granularity are 200 and 'E192', which produces a reasonable number of buckets.
+ *
+ * @param blockCollection db.Block or dataSource.connector.collection("Block")
+ * @param blockId
+ * @param nBuckets
+ * @param granularity
+ * @return cursor	aliases
  */
-db.Block.aggregate ( [
-	{$match : { "_id" : ObjectId(blockId) } },
-	{$lookup: { from: 'Feature', localField: '_id', foreignField: 'blockId', as: 'featureObjects' }},
-  {$unwind: '$featureObjects' }
-  , { $bucketAuto: { groupBy: {$arrayElemAt : ['$featureObjects.value', 0]}, buckets: 200, granularity : 'E192'}  }
-  , { $limit: 3 }
-] );
+function blockBinFeatureCount(blockCollection, blockId, nBuckets, granularity) {
+  if (nBuckets === undefined)
+    nBuckets = 200;
+  if (granularity)
+    granularity = 'E192';
+  let result =
+    blockCollection.aggregate ( [
+	    {$match : { "_id" : ObjectId(blockId) } },
+	    {$lookup: { from: 'Feature', localField: '_id', foreignField: 'blockId', as: 'featureObjects' }},
+      {$unwind: '$featureObjects' },
+      { $bucketAuto: { groupBy: {$arrayElemAt : ['$featureObjects.value', 0]}, buckets: nBuckets, granularity : granularity}  }
+      , { $limit: 3 } // remove or comment-out after devel.
+    ] );
+  return result;
+}
+
 
 /*----------------------------------------------------------------------------*/
