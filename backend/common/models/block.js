@@ -6,6 +6,8 @@ var task = require('../utilities/task')
 var pathsAggr = require('../utilities/paths-aggr');
 var ObjectId = require('mongodb').ObjectID
 
+let cache = {}
+
 module.exports = function(Block) {
 
   Block.paths = function(left, right, options, cb) {
@@ -22,32 +24,83 @@ module.exports = function(Block) {
   };
 
 
-  Block.pathsViaStream = function(blockId0, blockId1, options, cb) {
+  Block.pathsViaStream = function(blockId0, blockId1, options, res, cb) {
     let db = this.dataSource
     let blockCollection = db.connector.collection("Block");
+
+    let cacheId0 = blockId0 + ":" + blockId1
+    let cacheId1 = blockId1 + ":" + blockId0
+    let array = []
+    let isCached = false
+
+    console.log('cache => ', cache);
+
+    if(cache[cacheId0] !== undefined) {
+      array = cache[cacheId0]
+      isCached = true
+      console.log("Found in cache with id ", cacheId0);
+      cb(null, array)
+    }
+    else if(cache[cacheId1]) {
+      array = cache[cacheId1]
+      isCached = true
+      console.log("Found in cache with id ", cacheId1);
+      cb(null, array)
+    }
+
     
-    console.log("blockId0", blockId0)
-    console.log("blockId1", blockId1)
+    // console.log("blockId0", blockId0)
+    // console.log("blockId1", blockId1)
 
-    var cursor = blockCollection.aggregate ( [
-      { $match :  {
-          $or : [{ "_id" : ObjectId(blockId0) },
-                 { "_id" : ObjectId(blockId1) }]
-            }
+    if(!isCached) { 
+      console.log("Not found in cache: ", cacheId0, " or ", cacheId1);
+      var cursor = blockCollection.aggregate ( [
+        { $match :  {
+            $or : [{ "_id" : ObjectId(blockId0) },
+                   { "_id" : ObjectId(blockId1) }]
+          }
         },
+        { $lookup: { from: 'Feature', localField: '_id', foreignField: 'blockId', as: 'featureObjects' }},
+        { $unwind: '$featureObjects' }, 
+        // { $limit: 5 }
+        { $group: { 
+            _id: {name : '$featureObjects.name', blockId : '$featureObjects.blockId'},
+            features : { $push: '$featureObjects' },
+            // count: { $sum: 1 }
+          }
+        },
+        { $group: {
+            _id: { name: "$_id.name" },
+            alignment: { $push: { blockId: '$_id.blockId', repeats: "$features"}}
+          }
+        },
+        { $match : { alignment : { $size : 2 } }}
+      ])
+      // res.pipe(cursor)
+      cursor.on('data', doc => {
+        // console.log('doc => ', doc);
+        array.push(doc)
+      })
 
-      {$lookup: { from: 'Feature', localField: '_id', foreignField: 'blockId', as: 'featureObjects' }},
-      {$unwind: '$featureObjects' },
-      {$limit: 5}
-      ]
-   )
-    cursor.on('data', function(doc) {
-      cb(null, doc)
-    })
+      cursor.on('end', () => {
+        // console.log('array => ', array);
+        cache[cacheId0] = array
+        cb(null, array)
+      })
+      // var cursor = blockCollection.find()
+    }
 
-    cursor.once('end', function() {
-      // db.close();
-    })
+  
+
+    
+    // cb(null, cursor, 'application/octet-stream');
+    // cursor.on('data', function(doc) {
+    //   console.log(doc);
+    // })
+
+    // cursor.once('end', function() {
+    //   // db.close();
+    // })
   }
 
   Block.pathsByReference = function(blockA, blockB, referenceGenome, maxDistance, options, cb) {
@@ -111,6 +164,7 @@ module.exports = function(Block) {
       {arg: 'blockA', type: 'string', required: true}, // block reference
       {arg: 'blockB', type: 'string', required: true}, // block reference
       {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'res', type: 'object', 'http': {source: 'res'}}
     ],
     http: {verb: 'get'},
     returns: {type: 'array', root: true},
@@ -134,10 +188,16 @@ module.exports = function(Block) {
     accepts: [
       {arg: 'blockA', type: 'string', required: true},
       {arg: 'blockB', type: 'string', required: true},
-      {arg: "options", type: "object", http: "optionsFromRequest"}
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      { arg: 'res', type: 'object', http: { source: 'res' }}
     ],
     http: {verb: 'get'},
     returns: {type: 'array', root: true},
+    /* For return a stream / file */
+    // returns: [
+    //   {arg: 'body', type: 'file', root: true},
+    //   {arg: 'Content-Type', type: 'string', http: { target: 'header' }}
+    // ],
     description: "Streams paths instead of throwing them all back to user"
   })
 
