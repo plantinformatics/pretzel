@@ -34,6 +34,11 @@
 </div>
 {{draw/link-path stackEvents=this pathReceiver=this modelParamOptions=params.options}}
 
+<div>{{block.viewedIds.length}}, {{axesP.length}} blockAdjs : {{flowsService.blockAdjs.length}}</div>
+{{#each flowsService.blockAdjs as |blockAdj| }}
+  {{draw/block-adj blockAdjId=blockAdj }}
+{{/each}}
+
 {{#if axisFeatureCircleHover}}
   {{path-hover data=oa features=hoverFeatures }} {{!-- targetId=axisFeatureTargetId  "holder" --}}
 {{/if}}

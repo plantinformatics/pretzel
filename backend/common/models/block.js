@@ -11,8 +11,7 @@ let cache = {}
 module.exports = function(Block) {
 
   Block.paths = function(left, right, options, cb) {
-      let blockCollection = this.dataSource.connector.collection("Block");
-      pathsAggr/*task*/.paths(blockCollection, this.app.models, left, right, options)
+    task.paths(this.app.models, left, right, options)
     .then(function(data) {
       // completed additions to database
       cb(null, data);
@@ -21,6 +20,23 @@ module.exports = function(Block) {
       console.log('ERROR', err)
       cb(err);
     })
+  };
+
+  Block.pathsProgressive = function(left, right, options, cb) {
+      let blockCollection = this.dataSource.connector.collection("Block");
+    console.log('pathsProgressive', blockCollection, left, right, options, cb);
+    let nFeatures = 4;
+    let cursor =
+      pathsAggr.pathsDirect(blockCollection, left, right, nFeatures);
+    cursor.toArray()
+    .then(function(data) {
+      console.log('pathsProgressive then', data);
+      cb(null, data);
+    })
+    .catch(function(err) {
+      console.log('ERROR', err);
+      cb(err);
+    });
   };
 
 
@@ -169,6 +185,17 @@ module.exports = function(Block) {
     http: {verb: 'get'},
     returns: {type: 'array', root: true},
     description: "Returns paths between the two blocks"
+  });
+
+  Block.remoteMethod('pathsProgressive', {
+    accepts: [
+      {arg: 'blockA', type: 'string', required: true},
+      {arg: 'blockB', type: 'string', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Returns paths between the two blocks, in progressive steps according to given parameters for range / resolution / page"
   });
 
   Block.remoteMethod('pathsByReference', {

@@ -151,7 +151,7 @@ function featureLookupName(featureId)
   let featureName, f = oa.featureIndex[featureId];
   if (f)
   {
-    featureName = f.name;
+    featureName = f.get ? f.get('name') : f.name;
   }
   else
   {

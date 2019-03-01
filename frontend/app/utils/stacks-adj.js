@@ -25,7 +25,16 @@ const trace_adj = 1;
  */
 function collateAdjacentAxes()
 {
-  let adjAxes = flowsService.adjAxes = {};
+  console.log('collateAdjacentAxes', flowsService);
+  let adjAxes = {};
+  if (flowsService.set)
+    flowsService.set('adjAxes', adjAxes);
+  else
+  {
+    // this path is no longer applicable / used; flowsService is an Ember object
+    console.log('flowsService', flowsService);
+    flowsService.adjAxes = adjAxes;
+  }
   let adjacent_both_dir = flowsService.flowConfig.adjacent_both_dir;
   /** Each stack, other than the end stacks, is visited twice in this loop,
    * so the result stack.datablocks() is cached for the next pass.

@@ -447,7 +447,9 @@ export default Ember.Component.extend(Ember.Evented, {
     oa.axesP = stacks.axesP;
     if (! oa.axisApi)
       oa.axisApi = {lineHoriz : lineHoriz,
-                    inRangeI : inRangeI
+                    inRangeI : inRangeI,
+                    patham,
+                    axisName2MapChr
                    };
     console.log('draw-map stacks', stacks);
     this.set('stacks', stacks);
@@ -713,9 +715,24 @@ export default Ember.Component.extend(Ember.Evented, {
           delete z[axis][feature];
         else
         {
+          /** store the given feature.
+           * @param feature name of feature (ID)
+           * @param f feature record
+           * @param axisID if not undefined, add feature to z[axisID], which has already been done above,
+           * but not when called from paths-progressive.
+           */
+          function storeFeature(feature, f, axisID) {
+            if (axisID && ! z[axisID][feature]) {
+              feature = oa.z[axisID][feature];
+            }
           oa.d3FeatureSet.add(feature);
           flowsService.d3Features.push(feature);
-          oa.featureIndex[f.id] = f;
+            oa.featureIndex[f.id] = f;
+          }
+          // until storeFeature() is factored out.
+          if (! oa.axisApi.storeFeature)
+            oa.axisApi.storeFeature = storeFeature;
+          storeFeature(feature, f, undefined);
           /* could partition featureIndex by block name/id :
            * oa.featureIndex[axis][f.id] = f; but not necessary because object id
            * is unique. */

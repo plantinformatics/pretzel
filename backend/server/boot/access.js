@@ -80,6 +80,7 @@ module.exports = function(app) {
       context.property == 'depthSearch' ||
       context.property == 'bulkCreate' ||
       context.property == 'paths' ||
+      context.property == 'pathsProgressive' ||
       context.property == 'pathsByReference' ||
       context.property == 'pathsViaStream') {
       // allow find, create and upload requests
