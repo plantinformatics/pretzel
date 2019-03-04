@@ -3,6 +3,7 @@
     "loopback#favicon": {}
   },
   "initial": {
+    "./middleware/route_time": {},
     "compression": {},
     "cors": {
       "params": {
