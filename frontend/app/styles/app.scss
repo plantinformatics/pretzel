@@ -401,7 +401,7 @@ div#scaffoldLegend > ul
 path.blockAdj {
   /* emphasise the new (progressive) paths during devel. */
   stroke: red;
-  stroke-width: 3px;
+  /* stroke-width: 2px; */
   stroke-dasharray: 10 20;
   /* stroke-opacity: 1; */
 }

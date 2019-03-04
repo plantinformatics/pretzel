@@ -1783,8 +1783,10 @@ Stacked.prototype.axisTransformO = function ()
 
   let
   scaleText = Number.isNaN(scale) || ((scale === 1) && ! axis.perpendicular) ? "" : " scale(1," + scale + ")";
-  console.log('axisTransformO xScale', xScale, scaleText);
-
+  console.log('axisTransformO scaleText', scaleText);
+  if (trace_stack > 1) {
+    let xS = xScale(); console.log('xScale', xS.domain(), xS.range());
+  }
   let transform =
     [
       " translate(" + xVal, yOffsetText, ")",

@@ -42,7 +42,7 @@ export default Service.extend({
     // based on link-path: request()
     let me = this;
     let promise = 
-      this.get('auth').getPathsProgressive(blockA, blockB, /*options*/{});
+      this.get('auth').getPathsProgressive(blockA, blockB, 100, /*options*/{});
     promise
       .then(
         function(res){
@@ -55,7 +55,8 @@ export default Service.extend({
               f.type = 'feature';
               let c = store.push({data : [f]});
               axisApi.storeFeature(f.name, c[0], f.blockId);
-              console.log(c[0].get('id'), c[0]._internalModel.__data);
+              if (trace_pathsP > 2)
+                console.log(c[0].get('id'), c[0]._internalModel.__data);
             }
           }
           let result = {
@@ -65,7 +66,8 @@ export default Service.extend({
             pathsResult : res
           };
           let c = store.push({data : [result]});
-          console.log(c[0].get('block0'), c[0]._internalModel.__data);
+          if (trace_pathsP > 2)
+            console.log(c[0].get('block0'), c[0]._internalModel.__data);
         },
         function(err, status) {
           console.log('path request', blockA, blockB, me, err.responseJSON[status] /* .error.message*/, status);

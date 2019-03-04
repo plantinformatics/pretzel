@@ -18,7 +18,7 @@ export default DS.Model.extend({
       // getPathsProgressive() expects an array of 2 (string) blockIds.
       paths = this.get('pathsP').getPathsProgressive([this.get('blockId0'), this.get('blockId1')]);
     paths.then(function (result) {
-      console.log('block-adj paths', result);
+      console.log('block-adj paths', result.length);
     });
     return paths;
   })

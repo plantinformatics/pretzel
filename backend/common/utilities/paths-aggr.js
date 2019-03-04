@@ -147,11 +147,9 @@ exports.paths = function(blockCollection, id0, id1, options) {
  * @return n number of features in result; later will refine this control
  * @return cursor	aliases
  */
-exports.pathsDirect = function(blockCollection, blockId, blockId2, n) {
-  console.log('pathsDirect', blockCollection, blockId, blockId2, n, ObjectID);
+exports.pathsDirect = function(blockCollection, blockId, blockId2, n = 3) {
+  console.log('pathsDirect', /*blockCollection,*/ blockId, blockId2, n);
   let ObjectId = ObjectID;
-  if (n === undefined)
-    n = 3;
   let result =
     blockCollection.aggregate ( [
 	    { $match :  {
