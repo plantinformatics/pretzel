@@ -10,7 +10,7 @@ let cache = {}
 
 module.exports = function(Block) {
 
-  Block.paths = function(left, right, options, cb) {
+  Block.paths = function(left, right, options, res, cb) {
     task.paths(this.app.models, left, right, options)
     .then(function(data) {
       // completed additions to database
@@ -22,7 +22,7 @@ module.exports = function(Block) {
     })
   };
 
-  Block.pathsProgressive = function(left, right, nFeatures, options, cb) {
+  Block.pathsProgressive = function(left, right, nFeatures, options, res, cb) {
       let blockCollection = this.dataSource.connector.collection("Block");
     console.log('pathsProgressive', /*blockCollection,*/ left, right, nFeatures /*, options, cb*/);
     let cursor =
@@ -183,6 +183,7 @@ module.exports = function(Block) {
       {arg: 'blockB', type: 'string', required: true},
       {arg: 'nFeatures', type: 'number', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'res', type: 'object', 'http': {source: 'res'}},
     ],
     http: {verb: 'get'},
     returns: {type: 'array', root: true},
