@@ -135,6 +135,53 @@ exports.paths = function(blockCollection, id0, id1, options) {
 
 /*----------------------------------------------------------------------------*/
 
+/** Calculations to support selecting a subset of the results, sized to meet the
+ * screen display space.
+ *
+ * This calculation seems workable for getting a subset of features of a block,
+ * because the # of features in a block can be determined efficiently using the
+ * index, but getting a subset of paths between 2 blocks has the complication
+ * that the # of paths can't be predicted.
+ * So something like this will probably be used ... still a work in progress.
+ *
+user slider density factor : increase density by 1/2 * or 2 *
+count = # features in domain interval / (screen pixel interval / 5px)
+Want to take 1 feature per count.
+Have count on both B0 & B1 so calc sqrt(count0 * count1), round to integer.
+ */
+function densityCount(totalCounts, intervals) {
+  let pixelspacing = 5;
+  // using total in block instead of # features in domain interval.
+  function blockCount(total, domain, range) {
+    return total * pixelspacing / (range[1] - range[0]);
+  }
+  let count,
+  counts = [0, 1].map(function (i) {
+    return blockCount(totalCounts[i], intervals.domain[i], intervals.range[i]);
+   });
+    /* intervals.axes.map(function (interval) {   })*/
+  count = Math.sqrt(counts[0] * counts[1]);
+  count = count / intervals.page.densityFactor;
+  count = Math.round(count);
+  console.log('densityCount', totalCounts, intervals);
+  return count;
+}
+
+function blockFeatures(db, blockId) {
+  let featureCollection = db.collection("Feature");
+  // console.log('blockFeatures', db, featureCollection);
+  let nFeatures = featureCollection
+    // .countDocuments( )
+    .aggregate([
+      { $match: {blockId : ObjectID(blockId)} },
+      { $group: { _id: null, n: { $sum: 1 } } }
+    ]);
+  nFeatures = nFeatures.toArray();
+  nFeatures.then(function (v) { console.log(v); });
+  // .estimatedDocumentCount()
+  return nFeatures;
+}
+
 /** Match features by name between the 2 given blocks.  The result is the alignment, for drawing paths between blocks.
  * Usage in mongo shell  e.g.
  *  db.Block.find({"scope" : "1A"})  to choose a pair of blockIds
@@ -144,14 +191,27 @@ exports.paths = function(blockCollection, id0, id1, options) {
  *  var blockCollection = db.Block
  *  pathsDirect(blockCollection, blockId, blockId2, n)
  *
- * @return n number of features in result; later will refine this control
+ * @param blockCollection dataSource collection
+ * @param blockId, blockId2 If the paths sought are symmetric, then pass blockId < blockId2.
+ * @param intervals  domain and range of axes, to limit the number of features in result
  * @return cursor	aliases
  */
-exports.pathsDirect = function(blockCollection, blockId, blockId2, n = 3) {
-  console.log('pathsDirect', /*blockCollection,*/ blockId, blockId2, n);
+exports.pathsDirect = function(db, blockId, blockId2, intervals) {
+  let blockCollection = db.collection("Block");
+  console.log('pathsDirect', /*blockCollection,*/ blockId, blockId2, intervals);
   let ObjectId = ObjectID;
-  let result =
-    blockCollection.aggregate ( [
+  if (false) {  // work in progress @see densityCount()
+    let
+      totalCounts = [blockId, blockId2].map(function (blockId) {
+        return blockFeatures(db, blockId);
+      });
+    let count = densityCount(totalCounts, intervals);
+  }
+  /* Feature location filtering against intervals.axes[].domain[] to be added,
+   * after changing this .aggregate to filter Features first instead of matching
+   * Blocks first.
+   */
+  let pipeline = [
 	    { $match :  {
         $or : [{ "_id" : ObjectId(blockId) },
                { "_id" : ObjectId(blockId2) }]} },
@@ -170,8 +230,15 @@ exports.pathsDirect = function(blockCollection, blockId, blockId2, n = 3) {
       }}
 
       , { $match : { alignment : { $size : 2 } }}
-      , { $limit: n }
-    ] );
+  ];
+  if (intervals.nSamples)
+    pipeline.push({ '$sample' : {size : +intervals.nSamples}});
+  if (intervals.nFeatures !== undefined)
+    pipeline.push({ $limit: +intervals.nFeatures });
+
+  let result =
+    blockCollection.aggregate ( pipeline );
+
 
   return result;
 };

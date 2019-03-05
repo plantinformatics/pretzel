@@ -3,7 +3,7 @@ import Ember from 'ember';
 import Service from '@ember/service';
 const { inject: { service } } = Ember;
 
-import { stacks } from '../../utils/stacks';
+import { stacks, Stacked } from '../../utils/stacks';
 
 let axisApi;
 
@@ -30,6 +30,17 @@ export default Service.extend({
     console.log('getPathsProgressive', blockAdj, paths);
     return paths;
   },
+  /** Determine the parameters for the paths request, - intervals and density.
+   */
+  intervals(blockAdj) {
+    let intervals = blockAdj.map(function (blockId) {
+      let axis = Stacked.getAxis(blockId);
+      return axis.axisDimensions();
+    }),
+    page = { thresholdFactor : 1.0 /* density*/ },
+    params = {axes : intervals, page, /*nFeatures : 100,*/ nSamples : 20 };
+    return params;
+  },
   /**
    * @return  promise yielding paths result
    */
@@ -41,8 +52,9 @@ export default Service.extend({
 
     // based on link-path: request()
     let me = this;
+    let intervalParams = this.intervals(blockAdj);
     let promise = 
-      this.get('auth').getPathsProgressive(blockA, blockB, 100, /*options*/{});
+      this.get('auth').getPathsProgressive(blockA, blockB, intervalParams, /*options*/{});
     promise
       .then(
         function(res){

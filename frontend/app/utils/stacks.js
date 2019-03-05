@@ -1800,6 +1800,23 @@ Stacked.prototype.axisTransformO = function ()
 
 /*----------------------------------------------------------------------------*/
 
+/** Return domain and range intervals for the axis.
+ * Used to construct the intervalParams passed to the API by requestPathsProgressive(), to guide how man results are returned.
+*
+ * @return length of the axis in pixels
+ */
+Stacked.prototype.axisDimensions = function ()
+{
+  let
+    /** y scale of this axis */
+    y = oa.y[this.axisName],
+  domain = y.domain(),
+  dim = { domain, range : this.yRange()};
+  return dim;
+};
+
+/*----------------------------------------------------------------------------*/
+
 export  { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText,
           axisId2Name
         } ;

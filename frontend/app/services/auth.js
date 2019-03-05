@@ -40,9 +40,9 @@ export default Service.extend({
     return this._ajax('Blocks/paths', 'GET', {blockA : blockA, blockB : blockB, options : options}, true)
   },
 
-  getPathsProgressive(blockA, blockB, nFeatures, options) {
-    console.log('services/auth getPathsProgressive', blockA, blockB, nFeatures, options);
-    return this._ajax('Blocks/pathsProgressive', 'GET', {blockA : blockA, blockB : blockB, nFeatures, options : options}, true);
+  getPathsProgressive(blockA, blockB, intervals, options) {
+    console.log('services/auth getPathsProgressive', blockA, blockB, intervals, options);
+    return this._ajax('Blocks/pathsProgressive', 'GET', {blockA : blockA, blockB : blockB, intervals, options : options}, true);
   },
 
   /** Send GET request Blocks/pathsByReference,

@@ -22,14 +22,14 @@ module.exports = function(Block) {
     })
   };
 
-  Block.pathsProgressive = function(left, right, nFeatures, options, res, cb) {
-      let blockCollection = this.dataSource.connector.collection("Block");
-    console.log('pathsProgressive', /*blockCollection,*/ left, right, nFeatures /*, options, cb*/);
+  Block.pathsProgressive = function(left, right, intervals, options, res, cb) {
+      let db = this.dataSource.connector;
+    console.log('pathsProgressive', /*db,*/ left, right, intervals /*, options, cb*/);
     let cursor =
-      pathsAggr.pathsDirect(blockCollection, left, right, nFeatures);
+      pathsAggr.pathsDirect(db, left, right, intervals);
     cursor.toArray()
     .then(function(data) {
-      console.log('pathsProgressive then', data);
+      console.log('pathsProgressive then', (data.length > 10) ? data.length : data);
       cb(null, data);
     })
     .catch(function(err) {
@@ -181,7 +181,7 @@ module.exports = function(Block) {
     accepts: [
       {arg: 'blockA', type: 'string', required: true},
       {arg: 'blockB', type: 'string', required: true},
-      {arg: 'nFeatures', type: 'number', required: true},
+      {arg: 'intervals', type: 'object', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},
     ],
