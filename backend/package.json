@@ -24,6 +24,7 @@
     "loopback-component-passport": "~3.4.0",
     "loopback-connector-mongodb": "^1.18.1",
     "loopback-datasource-juggler": "^3.23.0",
+    "memory-cache": "^0.2.0",
     "mongoose": "^4.10.4",
     "morgan": "^1.9.1",
     "passport-ldapauth": "2.0.0",
