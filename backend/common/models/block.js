@@ -4,9 +4,12 @@ var acl = require('../utilities/acl')
 var identity = require('../utilities/identity')
 var task = require('../utilities/task')
 var pathsAggr = require('../utilities/paths-aggr');
+var pathsFilter = require('../utilities/paths-filter');
+
 var ObjectId = require('mongodb').ObjectID
 
-let cache = {}
+var cache = require('memory-cache');
+
 
 module.exports = function(Block) {
 
@@ -25,17 +28,27 @@ module.exports = function(Block) {
   Block.pathsProgressive = function(left, right, intervals, options, res, cb) {
       let db = this.dataSource.connector;
     console.log('pathsProgressive', /*db,*/ left, right, intervals /*, options, cb*/);
-    let cursor =
-      pathsAggr.pathsDirect(db, left, right, intervals);
-    cursor.toArray()
-    .then(function(data) {
-      console.log('pathsProgressive then', (data.length > 10) ? data.length : data);
-      cb(null, data);
-    })
-    .catch(function(err) {
-      console.log('ERROR', err);
-      cb(err);
-    });
+    let cacheId = left + '_' + right,
+    cached = cache.get(cacheId);
+    if (cached) {
+      let filteredData = pathsFilter.filterPaths(cached, intervals);
+      cb(null, filteredData);
+    }
+    else {
+      let cursor =
+        pathsAggr.pathsDirect(db, left, right, intervals);
+      cursor.toArray()
+        .then(function(data) {
+          console.log('pathsProgressive then', (data.length > 10) ? data.length : data);
+          cache.put(cacheId, data);
+          let filteredData = pathsFilter.filterPaths(data, intervals);
+          cb(null, filteredData);
+        })
+        .catch(function(err) {
+          console.log('ERROR', err);
+          cb(err);
+        });
+    }
   };
 
 
