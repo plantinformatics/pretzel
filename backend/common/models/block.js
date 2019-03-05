@@ -39,31 +39,14 @@ module.exports = function(Block) {
   };
 
 
+  // Adding in res as an argument to trial using raw Express functions rather than rely on Loopback
+  // Trialling different methods of streaming, none successful yet
   Block.pathsViaStream = function(blockId0, blockId1, options, res, cb) {
     let db = this.dataSource
     let blockCollection = db.connector.collection("Block");
 
-    let cacheId = blockId0 > blockId1
-        ? blockId1 + ":" + blockId0
-        : blockId0 + ":" + blockId1
-
-    console.log("blockId0", blockId0)
-    console.log("blockId1", blockId1)
-    console.log('blockId0 > blockId1 => ', blockId0 > blockId1);
-    console.log('cacheId => ', cacheId);
-    
     let array = []
 
-    console.log('cache => ', cache);
-
-    if(cache[cacheId] !== undefined) {
-      array = cache[cacheId]
-      console.log("Found in cache with id ", cacheId);
-      cb(null, array)
-      return
-    }
-
-    console.log("Not found in cache: ", cacheId);
     var cursor = blockCollection.aggregate ( [
       { $match :  {
           $or : [{ "_id" : ObjectId(blockId0) },
@@ -88,25 +71,14 @@ module.exports = function(Block) {
     ])
     // res.pipe(cursor)
     cursor.on('data', doc => {
-      // console.log('doc => ', doc);
       array.push(doc)
     })
 
     cursor.on('end', () => {
       // console.log('array => ', array);
-      cache[cacheId] = array
       cb(null, array)
       return
     })
-    // var cursor = blockCollection.find()    
-    // cb(null, cursor, 'application/octet-stream');
-    // cursor.on('data', function(doc) {
-    //   console.log(doc);
-    // })
-
-    // cursor.once('end', function() {
-    //   // db.close();
-    // })
   }
 
   Block.pathsByReference = function(blockA, blockB, referenceGenome, maxDistance, options, cb) {
