@@ -1811,7 +1811,7 @@ Stacked.prototype.axisDimensions = function ()
     /** y scale of this axis */
     y = oa.y[this.axisName],
   domain = y.domain(),
-  dim = { domain, range : this.yRange()};
+  dim = { domain, range : this.yRange(), zoomed : this.zoomed};
   return dim;
 };
 

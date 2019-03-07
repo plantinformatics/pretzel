@@ -235,6 +235,22 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
     );
     return r;
   },
+  /** If axis b is zoomed, append conditions on location (value[]) to the given array eq.
+   *
+   * If the axis has not been zoomed then Stacked : zoomed will be undefined,
+   * and the result of axisDimensions() will include zoomed:undefined, which is
+   * omitted in the API URL, so a.hasOwnProperty('zoomed') can be false.
+   *
+   * @param eq  first part of block condition; append to this array and return result
+   * @return array
+   */
+  blockFilter = function (eq, b) {
+    let a = intervals.axes[b],
+    r = a.zoomed ?
+      eq.concat([valueBound(b, 0), valueBound(b, 1)]) :
+      eq;
+    return r;
+  },
   /** filter : value[0] and value[1] should be within :
    * blockId0 : [intervals.axes[0].domain[0], intervals.axes[0].domain[1]]
    * blockId1 :  [intervals.axes[1].domain[0], intervals.axes[1].domain[1]]
@@ -248,8 +264,8 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
   filterValue =
     [
       { $match : {$expr : {$or : [
-        {$and : [{$eq : [ "$blockId", ObjectId(blockId0) ]}, valueBound(0, 0), valueBound(0, 1)]},
-        {$and : [{$eq : [ "$blockId", ObjectId(blockId1) ]}, valueBound(1, 0), valueBound(1, 1)]},
+        {$and : blockFilter([{$eq : [ "$blockId", ObjectId(blockId0) ]}], 0) },
+        {$and : blockFilter([{$eq : [ "$blockId", ObjectId(blockId1) ]}], 1) },
       ]} }},
     ],
   group = 
@@ -268,8 +284,12 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
       , { $match : { alignment : { $size : 2 } }}
     ];
   let pipeline;
-  if (intervals.dbPathFilter) {
-    console.log('filterValue', filterValue, intervals.axes[0].domain[0], intervals.axes[1].domain[1]);
+  if (intervals.dbPathFilter && (intervals.axes[0].zoomed || intervals.axes[1].zoomed)) {
+    console.log(
+      'filterValue', filterValue,
+      intervals.axes[0].zoomed, intervals.axes[0].domain[0], '-', intervals.axes[0].domain[1],
+      intervals.axes[1].zoomed, intervals.axes[1].domain[0], '-', intervals.axes[1].domain[1]
+    );
     pipeline = filterValue.concat(group);
   }
   else
