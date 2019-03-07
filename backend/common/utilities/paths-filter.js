@@ -1,3 +1,4 @@
+/* global exports */
 
 /** TODO :
  * filter paths according to intervals.axes[].domain[]
@@ -7,4 +8,4 @@
 exports.filterPaths = function(paths, intervals) {
   let filteredPaths = paths/* ... */;
   return filteredPaths;
-}
+};

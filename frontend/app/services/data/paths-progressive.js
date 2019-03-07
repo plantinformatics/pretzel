@@ -38,7 +38,7 @@ export default Service.extend({
       return axis.axisDimensions();
     }),
     page = { thresholdFactor : 1.0 /* density*/ },
-    params = {axes : intervals, page, /*nFeatures : 100,*/ nSamples : 20 };
+    params = {axes : intervals, page, /*nFeatures : 100,*/ nSamples : 20, dbPathFilter : true };
     return params;
   },
   /**

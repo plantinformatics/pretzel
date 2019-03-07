@@ -185,44 +185,80 @@ function blockFeatures(db, blockId) {
 /** Match features by name between the 2 given blocks.  The result is the alignment, for drawing paths between blocks.
  * Usage in mongo shell  e.g.
  *  db.Block.find({"scope" : "1A"})  to choose a pair of blockIds
- *  var blockId2 = ObjectId("5b74f4c5b73fd85c2bcbc660");
- *  var blockId = ObjectId("5b74f4c5b73fd85c2bcb97f9");
+ *  var blockId1 = ObjectId("5b74f4c5b73fd85c2bcbc660");
+ *  var blockId0 = ObjectId("5b74f4c5b73fd85c2bcb97f9");
  *  var n = 10 ;
  *  var blockCollection = db.Block
- *  pathsDirect(blockCollection, blockId, blockId2, n)
+ *  pathsDirect(blockCollection, blockId0, blockId1, n)
  *
  * @param blockCollection dataSource collection
- * @param blockId, blockId2 If the paths sought are symmetric, then pass blockId < blockId2.
- * @param intervals  domain and range of axes, to limit the number of features in result
+ * @param blockId0, blockId1 If the paths sought are symmetric, then pass blockId0 < blockId1.
+ * @param intervals  domain and range of axes, to limit the number of features in result.
+ * If intervals.dbPathFilter then intervals.axes[{0,1}].domain[{0,1}] are included in the aggregrate filter.
+ * The domain[] is in the same order as the feature.value[], i.e. increasing order : 
+ * domain[0] < domain[1] (for all intervals.axes[]).
  * @return cursor	aliases
  */
-exports.pathsDirect = function(db, blockId, blockId2, intervals) {
-  let blockCollection = db.collection("Block");
-  console.log('pathsDirect', /*blockCollection,*/ blockId, blockId2, intervals);
+exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
+  let featureCollection = db.collection("Feature");
+  console.log('pathsDirect', /*featureCollection,*/ blockId0, blockId1, intervals);
   let ObjectId = ObjectID;
   if (false) {  // work in progress @see densityCount()
     let
-      totalCounts = [blockId, blockId2].map(function (blockId) {
+      totalCounts = [blockId0, blockId1].map(function (blockId) {
         return blockFeatures(db, blockId);
       });
     let count = densityCount(totalCounts, intervals);
   }
-  /* Feature location filtering against intervals.axes[].domain[] to be added,
-   * after changing this .aggregate to filter Features first instead of matching
-   * Blocks first.
+  /* Earlier version (until aa9c2ed) matched Blocks first, then did lookup() to
+   * join to Features; changed so that the first step in .aggregate() filters
+   * locations based on blockId, thus getting the benefit of the Feature index,
+   * and also optionally Feature location, against intervals.axes[].domain[].
    */
-  let pipeline = [
+  let
+    matchBlock =
+    [
 	    { $match :  {
-        $or : [{ "_id" : ObjectId(blockId) },
-               { "_id" : ObjectId(blockId2) }]} },
-
-	    {$lookup: { from: 'Feature', localField: '_id', foreignField: 'blockId', as: 'featureObjects' }},
-      {$unwind: '$featureObjects' }
-
-	    , { $group: { _id: {name : '$featureObjects.name', blockId : '$featureObjects.blockId'},
-                    features : { $push: '$featureObjects' },
-                    count: { $sum: 1 }
-                  }   }
+        $or : [{ "blockId" : ObjectId(blockId0) },
+               { "blockId" : ObjectId(blockId1) }]}}
+    ],
+  keyValue = function (k,v) { let r = {}; r[k] = v; return r; },
+  /** construct the expression for one end of the interval constraint on 1 block
+   * @param b 0 for blockId0, axes[0]
+   * @param l limit : 0 for domain[0] and lte, 1 for domain[1] and gte
+   */
+  valueBound = function (b, l) {
+    let r = keyValue(
+      l ? '$lte' : '$gte',
+      [ keyValue('$arrayElemAt', ['$value', l ? -1 : 0]),
+        +intervals.axes[b].domain[l]]
+    );
+    return r;
+  },
+  /** filter : value[0] and value[1] should be within :
+   * blockId0 : [intervals.axes[0].domain[0], intervals.axes[0].domain[1]]
+   * blockId1 :  [intervals.axes[1].domain[0], intervals.axes[1].domain[1]]
+   * This incorporates the blockId match - matchBlock, above.
+   *
+   * This tests if the feature interval is in the filter interval; a better test
+   * would allow for part of the feature interval to lie outside the filter
+   * interval; i.e. (f0 < d0) !== (f1 < d1) or-ed with (current) :
+   * (f0 > d0) && (f1 < d1)
+   */
+  filterValue =
+    [
+      { $match : {$expr : {$or : [
+        {$and : [{$eq : [ "$blockId", ObjectId(blockId0) ]}, valueBound(0, 0), valueBound(0, 1)]},
+        {$and : [{$eq : [ "$blockId", ObjectId(blockId1) ]}, valueBound(1, 0), valueBound(1, 1)]},
+      ]} }},
+    ],
+  group = 
+    [
+	    { $group: {
+        _id: {name : '$name', blockId : '$blockId'},
+        features : { $push: '$$ROOT' },
+        count: { $sum: 1 },
+      }   }
 
       , { $group: {
         _id: { name: "$_id.name" },
@@ -230,14 +266,22 @@ exports.pathsDirect = function(db, blockId, blockId2, intervals) {
       }}
 
       , { $match : { alignment : { $size : 2 } }}
-  ];
+    ];
+  let pipeline;
+  if (intervals.dbPathFilter) {
+    console.log('filterValue', filterValue, intervals.axes[0].domain[0], intervals.axes[1].domain[1]);
+    pipeline = filterValue.concat(group);
+  }
+  else
+    pipeline = matchBlock.concat(group);
+
   if (intervals.nSamples)
     pipeline.push({ '$sample' : {size : +intervals.nSamples}});
   if (intervals.nFeatures !== undefined)
     pipeline.push({ $limit: +intervals.nFeatures });
 
   let result =
-    blockCollection.aggregate ( pipeline );
+    featureCollection.aggregate ( pipeline );
 
 
   return result;

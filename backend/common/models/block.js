@@ -29,8 +29,13 @@ module.exports = function(Block) {
       let db = this.dataSource.connector;
     console.log('pathsProgressive', /*db,*/ left, right, intervals /*, options, cb*/);
     let cacheId = left + '_' + right,
+    /** If intervals.dbPathFilter, we could append the location filter to cacheId,
+     * but it is not clear yet whether that would perform better.
+     * e.g. filterId = intervals.dbPathFilter ? '_' + intervals.axes[0].domain[0] + '_' + ... : ''
+     */
+    useCache = ! intervals.dbPathFilter,
     cached = cache.get(cacheId);
-    if (cached) {
+    if (useCache && cached) {
       let filteredData = pathsFilter.filterPaths(cached, intervals);
       cb(null, filteredData);
     }
@@ -40,7 +45,8 @@ module.exports = function(Block) {
       cursor.toArray()
         .then(function(data) {
           console.log('pathsProgressive then', (data.length > 10) ? data.length : data);
-          cache.put(cacheId, data);
+          if (useCache)
+            cache.put(cacheId, data);
           let filteredData = pathsFilter.filterPaths(data, intervals);
           cb(null, filteredData);
         })
