@@ -41,6 +41,7 @@ export default Ember.Component.extend(Ember.Evented, {
     console.log('willInsertElement', options, byReference);
 
     let stackEvents = this.get('stackEvents');
+    if (options && options.allInitially)
     stackEvents.on('expose', this, function (blockA, blockB) {
       if (trace_links > 1)
         console.log('path expose', blockA, blockB);

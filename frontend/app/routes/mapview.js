@@ -7,6 +7,8 @@ const { inject: { service } } = Ember;
 import { task } from 'ember-concurrency';
 import EmberObject from '@ember/object';
 
+import { parseOptions } from '../utils/common/strings';
+
 
 let config = {
   dataset: service('data/dataset'),
@@ -62,12 +64,16 @@ let config = {
 
     let me = this;
     
+    if (params.options)
+      params.parsedOptions = parseOptions(params.options);
+
     let datasetService = this.get('dataset');
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
     let datasetsTask = taskGetList.perform(); // renamed from 'maps'
 
     let blockService = this.get('block');
-    let getBlocks = blockService.get('getBlocks');
+    let allInitially = params.parsedOptions && params.parsedOptions.allInitially;
+    let getBlocks = blockService.get('getBlocks' + (allInitially ? '' : 'Summary'));
     let viewedBlocksTasks = getBlocks.apply(blockService, [params.mapsToView]);
 
     result = EmberObject.create(

@@ -19,6 +19,10 @@ export default Service.extend(Ember.Evented, {
     auth: service('auth'),
     store: service(),
 
+  injectParsedOptions(parsedOptions) {
+    this.set('parsedOptions', parsedOptions);
+  },
+
   /** Not required because findRecord() is used;
    * might later want this for other requests or calculation results, but can
    * discard it.
@@ -55,18 +59,48 @@ export default Service.extend(Ember.Evented, {
   getData: function (id) {
     // console.log("block getData", id);
     let store = this.get('store');
+    let allInitially = this.get('parsedOptions.allInitially');
+    let options = 
+      { reload: true};
+    if (allInitially)
+      options.adapterOptions = 
+        {
+          filter: {include: "features"}
+        };
     let blockP = store.findRecord(
       'block', id,
-      { reload: true,
-        adapterOptions:{
-          filter: {include: "features"}
-        }}
+      options
     );
 
     return blockP;
   }  // allow multiple in parallel - assume id-s are different
   // later can use ember-contextual-service to give each id its own task scheduler
   ,
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Call getSummary() in a task - yield the block result.
+   * Signal that receipt with receivedBlock(id, block).
+   */
+  taskGetSummary: task(function * (id) {
+    /** if not already loaded and viewed, then trigger receivedBlock */
+    let isViewed = this.get('getIsViewed').apply(this, [id]);
+    let block = yield this.getSummary(id);
+    // console.log('taskGetSummary', this, id, block);
+    if (! isViewed)
+    {
+      block.set('isViewed', true);
+    }
+    return block;
+  }),
+  getSummary: function (id) {
+    // console.log("block getSummary", id);
+    let blockP =
+      Ember.RSVP.cast([[100, 123], [200, 456]]);
+    // TODO     this.get('auth').getBlockSummary(id, /*options*/{});
+    return blockP;
+  },
+
   /*--------------------------------------------------------------------------*/
 
   /** @return the block record handle if the block is loaded into the store from the backend.
@@ -165,6 +199,20 @@ export default Service.extend(Ember.Evented, {
     console.log("getBlocks() result blockTasks", blockTasks);
     return blockTasks;
   },
+
+  getBlocksSummary(blockIds) {
+    let taskGet = this.get('taskGetSummary');
+    console.log("getBlocksSummary", blockIds);
+    let blockTasks = blockIds.map(
+      function (id) {
+        let blockTask = taskGet.perform(id);
+        return blockTask;
+      });
+
+    console.log("getBlocksSummary() result blockTasks", blockTasks);
+    return blockTasks;
+  },
+
 
   /*--------------------------------------------------------------------------*/
 

@@ -398,7 +398,14 @@ div#scaffoldLegend > ul
   shape-rendering: crispEdges;
 }*/
 
-path.blockAdj {
+/* If loading all block feature initially, and also pathsProgressive, then
+ * differentiate the latter paths with colour and dashes.
+ * This selector is commented out during this phase of devel because it is
+ *  helpful to see the comparison of paths calculated on back- and front- end.
+ *
+body.allInitially
+ */
+ path.blockAdj {
   /* emphasise the new (progressive) paths during devel. */
   stroke: red;
   /* stroke-width: 2px; */

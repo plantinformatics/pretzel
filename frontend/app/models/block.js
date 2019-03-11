@@ -7,6 +7,7 @@ export default DS.Model.extend({
   datasetId: DS.belongsTo('dataset'),
   annotations: DS.hasMany('annotation', { async: false }),
   intervals: DS.hasMany('interval', { async: false }),
+  // possibly async:true when !allInitially, if needed.
   features: DS.hasMany('feature', { async: false }),
   range: attr('array'),
   scope: attr('string'),

@@ -4,14 +4,15 @@ import Service from '@ember/service';
 const { inject: { service } } = Ember;
 
 import { stacks, Stacked } from '../../utils/stacks';
-
-let axisApi;
+import { storeFeature } from '../../utils/feature-lookup';
+import { updateDomain } from '../../utils/stacksLayout';
 
 let trace_pathsP = 2;
 
 export default Service.extend({
   auth: service('auth'),
   store: service(),
+  flowsService: service('data/flows-collate'),
 
   /** Paths returned from API, between adjacent blocks.
    * Initially just a single result for each blockID pair,
@@ -47,11 +48,10 @@ export default Service.extend({
   requestPathsProgressive(blockAdj) {
     let blockA = blockAdj[0], blockB = blockAdj[1];
     let store = this.get('store');
-    if (! axisApi)
-      axisApi = stacks.oa.axisApi;
 
     // based on link-path: request()
     let me = this;
+    let flowsService = this.get('flowsService');
     let intervalParams = this.intervals(blockAdj);
     let promise = 
       this.get('auth').getPathsProgressive(blockA, blockB, intervalParams, /*options*/{});
@@ -64,11 +64,11 @@ export default Service.extend({
             for (let j=0; j < 2; j++) {
               let f = res[i].alignment[j].repeats.features[0];
               f.id = f._id;
-              f.type = 'feature';
-              let c = store.push({data : [f]});
-              axisApi.storeFeature(f.name, c[0], f.blockId);
+              let fn = store.normalize('feature', f);
+              let c = store.push(fn);
+              storeFeature(stacks.oa, flowsService, f.name, c, f.blockId);
               if (trace_pathsP > 2)
-                console.log(c[0].get('id'), c[0]._internalModel.__data);
+                console.log(c.get('id'), c._internalModel.__data);
             }
           }
           let result = {
@@ -77,9 +77,37 @@ export default Service.extend({
             block1 : blockAdj[1],
             pathsResult : res
           };
-          let c = store.push({data : [result]});
+          result.id = blockAdj;
+          let n = store.normalize(result.type, result);
+          let c = store.push(n);
           if (trace_pathsP > 2)
-            console.log(c[0].get('block0'), c[0]._internalModel.__data);
+            console.log(c.get('block0'), c._internalModel.__data);
+          // Ember.run.next(function () {
+            let axisApi = stacks.oa.axisApi;
+            let t = stacks.oa.svgContainer.transition().duration(750);
+          [blockA, blockB].map(function (blockId) {
+            let eventBus = stacks.oa.eventBus;
+            let
+              block = stacks.blocks[blockId];
+            console.log(blockId, 'before domainCalc, block.z', block.z); let
+            /** updateDomain() uses axis domainCalc() but that does not recalculate block domain. */
+            blockDomain = block.domain = block.domainCalc(),
+            axis = Stacked.getAxis(blockId),
+            /** axis domainCalc() also does not re-read the block's domains if axis.domain is already defined. */
+            axisDomain = axis.domain = axis.domainCalc(),
+            oa = stacks.oa;
+            console.log(blockId, 'blockDomain', blockDomain, axisDomain, block.z);
+            updateDomain(oa.y, oa.ys, axis);
+
+            let axisID = axis.axisName, p = axisID;
+            eventBus.trigger("zoomedAxis", [axisID, t]);
+            // true does pathUpdate(t);
+            axisApi.axisScaleChanged(p, t, true);
+
+          });
+            axisApi.axisStackChanged(t);
+          // });
+
         },
         function(err, status) {
           console.log('path request', blockA, blockB, me, err.responseJSON[status] /* .error.message*/, status);

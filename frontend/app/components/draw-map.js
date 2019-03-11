@@ -41,6 +41,7 @@ import { collateStacks, countPaths, countPathsWithData,
          collateFeatureMap, concatAndUnique, featureStackAxes,
          collateMagm
        } from "../utils/draw/collate-paths";
+import { storeFeature } from '../utils/feature-lookup';
 
 
 /*----------------------------------------------------------------------------*/
@@ -449,7 +450,9 @@ export default Ember.Component.extend(Ember.Evented, {
       oa.axisApi = {lineHoriz : lineHoriz,
                     inRangeI : inRangeI,
                     patham,
-                    axisName2MapChr
+                    axisName2MapChr,
+                    axisStackChanged,
+                    axisScaleChanged
                    };
     console.log('draw-map stacks', stacks);
     this.set('stacks', stacks);
@@ -715,24 +718,7 @@ export default Ember.Component.extend(Ember.Evented, {
           delete z[axis][feature];
         else
         {
-          /** store the given feature.
-           * @param feature name of feature (ID)
-           * @param f feature record
-           * @param axisID if not undefined, add feature to z[axisID], which has already been done above,
-           * but not when called from paths-progressive.
-           */
-          function storeFeature(feature, f, axisID) {
-            if (axisID && ! z[axisID][feature]) {
-              feature = oa.z[axisID][feature];
-            }
-          oa.d3FeatureSet.add(feature);
-          flowsService.d3Features.push(feature);
-            oa.featureIndex[f.id] = f;
-          }
-          // until storeFeature() is factored out.
-          if (! oa.axisApi.storeFeature)
-            oa.axisApi.storeFeature = storeFeature;
-          storeFeature(feature, f, undefined);
+          storeFeature(oa, flowsService, feature, f, undefined);
           /* could partition featureIndex by block name/id :
            * oa.featureIndex[axis][f.id] = f; but not necessary because object id
            * is unique. */
@@ -1778,6 +1764,7 @@ export default Ember.Component.extend(Ember.Evented, {
         && (options = parseOptions(options_param)))
     {
       this.set('urlOptions', options);
+      this.get('blockService').injectParsedOptions(options);
       // alpha enables new features which are not yet robust.
       options.splitAxes |= options.alpha;
       /** In addition to the options which are added as body classes in the
@@ -1792,6 +1779,7 @@ export default Ember.Component.extend(Ember.Evented, {
         .classed("gotoFeature", options.gotoFeature)
         .classed("devel", options.devel) // enables some trace areas
         .classed("axis2dResizer", options.axis2dResizer)
+        .classed('allInitially', options.allInitially)
       ;
     }
 
@@ -4128,7 +4116,10 @@ export default Ember.Component.extend(Ember.Evented, {
       pathDataIsLine = flow.direct;
       // console.log("pathUpdate");
       tracedAxisScale = {};  // re-enable trace, @see trace_scale_y
-      let g = flow.g.selectAll("g");
+      /** flow.g may not be rendered yet; could use an empty selection in place
+       * of flow.g, but flow.g is used several times here. */
+      if (! flow.g) return;
+      let g = flow.g ? flow.g.selectAll("g") :  d3.selectAll();
       let gn;
       /* if (unique_1_1_mapping)
        {*/
