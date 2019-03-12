@@ -88,14 +88,16 @@ module.exports = function(Block) {
       },
       { $match : { alignment : { $size : 2 } }}
     ])
-    // res.pipe(cursor)
-    cursor.on('data', doc => {
-      array.push(doc)
-    })
+
+    cursor.stream({transform: x => JSON.stringify(x)}).pipe(res)
+    // cursor.on('data', doc => {
+    //   array.push(doc)
+    // })
 
     cursor.on('end', () => {
       // console.log('array => ', array);
-      cb(null, array)
+      // cb(null, array)
+      res.end()
       return
     })
   }
