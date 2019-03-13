@@ -150,20 +150,23 @@ Want to take 1 feature per count.
 Have count on both B0 & B1 so calc sqrt(count0 * count1), round to integer.
  */
 function densityCount(totalCounts, intervals) {
+  console.log('totalCounts DC => ', totalCounts);
+  // console.log('intervals.axes => ', intervals.axes);
   let pixelspacing = 5;
   // using total in block instead of # features in domain interval.
   function blockCount(total, domain, range) {
+    console.log('total, domain, range => ', total, domain, range);
     return total * pixelspacing / (range[1] - range[0]);
   }
   let count,
-  counts = [0, 1].map(function (i) {
-    return blockCount(totalCounts[i], intervals.domain[i], intervals.range[i]);
-   });
+  counts = [0, 1].map(i => {
+    return blockCount(totalCounts[i], intervals.axes[i].domain, intervals.axes[i].range);
+  });
     /* intervals.axes.map(function (interval) {   })*/
   count = Math.sqrt(counts[0] * counts[1]);
-  count = count / intervals.page.densityFactor;
+  count = count / intervals.page.thresholdFactor;
   count = Math.round(count);
-  console.log('densityCount', totalCounts, intervals);
+  console.log('densityCount', count, intervals);
   return count;
 }
 
@@ -177,7 +180,7 @@ function blockFeatures(db, blockId) {
       { $group: { _id: null, n: { $sum: 1 } } }
     ]);
   nFeatures = nFeatures.toArray();
-  nFeatures.then(function (v) { console.log(v); });
+  nFeatures.then(function (v) { console.log(`Features for ${blockId} => `, v[0].n); });
   // .estimatedDocumentCount()
   return nFeatures;
 }
@@ -203,12 +206,20 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
   let featureCollection = db.collection("Feature");
   console.log('pathsDirect', /*featureCollection,*/ blockId0, blockId1, intervals);
   let ObjectId = ObjectID;
-  if (false) {  // work in progress @see densityCount()
-    let
-      totalCounts = [blockId0, blockId1].map(function (blockId) {
-        return blockFeatures(db, blockId);
-      });
-    let count = densityCount(totalCounts, intervals);
+  if (true) {  // work in progress @see densityCount()
+    let totalCounts = [blockId0, blockId1].map((blockId) => {
+      return blockFeatures(db, blockId);
+    });
+    let count
+    Promise.all(totalCounts)
+    .then(totalCounts => {
+      totalCounts = totalCounts.map(item => item[0].n)
+      count = densityCount(totalCounts, intervals)
+      console.log('count => ', count);
+    })
+    // Note: an "await" on this function will work if the whole method is an async method
+    // console.log('count 2 => ', count);
+
   }
   /* Earlier version (until aa9c2ed) matched Blocks first, then did lookup() to
    * join to Features; changed so that the first step in .aggregate() filters
