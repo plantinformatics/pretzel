@@ -14,19 +14,19 @@ export default Service.extend({
   store: service(),
   flowsService: service('data/flows-collate'),
 
-  /** Paths returned from API, between adjacent blocks.
+  /** Paths returned from API, between adjacent blocks,
+   * are stored in ember data store, as block-adj.
    * Initially just a single result for each blockID pair,
    * but will later hold results for sub-ranges of each block, at different resolutions.
    */
-  paths : {},
-
   getPathsProgressive(blockAdj) {
     console.log('getPathsProgressive', blockAdj);
-    let paths = this.get('paths')[blockAdj[0]];
+    let paths = this.get('store').peekRecord('block-adj', blockAdj[0]);
     if (paths) {
-      paths = paths[blockAdj[1]];
+      let result = paths.get('pathsResult');
+      paths = Promise.resolve(result);
     }
-    if (! paths)
+    else
       paths = this.requestPathsProgressive(blockAdj);
     console.log('getPathsProgressive', blockAdj, paths);
     return paths;
@@ -63,25 +63,32 @@ export default Service.extend({
           for (let i=0; i < res.length; i++) {
             for (let j=0; j < 2; j++) {
               let f = res[i].alignment[j].repeats.features[0];
+              let fr = store.peekRecord('feature', f._id);
+              if (fr) {
+                console.log('peekRecord feature', f._id, fr);
+              }
+              else
+              {
               f.id = f._id;
               let fn = store.normalize('feature', f);
               let c = store.push(fn);
               storeFeature(stacks.oa, flowsService, f.name, c, f.blockId);
               if (trace_pathsP > 2)
                 console.log(c.get('id'), c._internalModel.__data);
+              }
             }
           }
           let result = {
             type : 'blockAdj',
+            id : blockAdj[0],
             block0 : blockAdj[0],
             block1 : blockAdj[1],
             pathsResult : res
           };
-          result.id = blockAdj;
           let n = store.normalize(result.type, result);
           let c = store.push(n);
           if (trace_pathsP > 2)
-            console.log(c.get('block0'), c._internalModel.__data);
+            console.log(n, c.get('block0'), c._internalModel.__data);
           // Ember.run.next(function () {
             let axisApi = stacks.oa.axisApi;
             let t = stacks.oa.svgContainer.transition().duration(750);

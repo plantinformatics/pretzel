@@ -10,7 +10,7 @@ export default DS.Model.extend({
 
   block0: DS.attr('string'), // belongsTo('block'),
   block1: DS.attr('string'), // belongsTo('block'),
-  'paths-result' : DS.attr(),
+  'pathsResult' : DS.attr(),
 
   // range: attr(),
   paths : Ember.computed('blockId0', 'blockId1', function () {
