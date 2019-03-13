@@ -8,7 +8,7 @@
   "scripts": {
     "lint": "eslint .",
     "start": "node .",
-    "dev": "EMAIL_VERIFY=NONE AUTH=ALL API_PORT_EXT=5000 nodemon server/server.js",
+    "dev": "EMAIL_VERIFY=NONE AUTH=ALL API_PORT_EXT=5000 nodemon -L server/server.js",
     "test": "mocha --reporter spec --timeout 20000 test"
   },
   "dependencies": {
