@@ -152,8 +152,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       console.log('draw', blockAdjId);
     else
     {
+      let featureName = featurePaths[0]._id.name,
       /** groupAddedClass might be a classification of the feature, e.g. whether it is in a selection or group. */
-      let groupAddedClass = featurePaths[0]._id.name;
+       groupAddedClass = featureName;
       let gS = baS.selectAll("g." + className + '.' + groupAddedClass)
         .data(featurePaths, featurePathKeyFn);
       gS.exit().remove();
@@ -163,7 +164,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .attr('id', function (featurePath) { 
           let a = featurePath.alignment,
           id = [a[0].blockId, a[1].blockId];
-          return blockAdjEltId(id);}) 
+          return blockAdjEltId(id) + '_' + featureName;}) 
         .attr('class', className + ' ' + groupAddedClass)
       ;
 
