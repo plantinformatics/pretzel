@@ -48,6 +48,7 @@ module.exports = function(Block) {
           if (useCache)
             cache.put(cacheId, data);
           let filteredData = pathsFilter.filterPaths(data, intervals);
+          console.log("Num Filtered Paths => ", filteredData.length);
           cb(null, filteredData);
         })
         .catch(function(err) {

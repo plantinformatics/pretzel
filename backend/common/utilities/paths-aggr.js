@@ -206,7 +206,7 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
   let featureCollection = db.collection("Feature");
   console.log('pathsDirect', /*featureCollection,*/ blockId0, blockId1, intervals);
   let ObjectId = ObjectID;
-  if (true) {  // work in progress @see densityCount()
+  if (false) {  // work in progress @see densityCount()
     let totalCounts = [blockId0, blockId1].map((blockId) => {
       return blockFeatures(db, blockId);
     });
@@ -306,8 +306,9 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
   else
     pipeline = matchBlock.concat(group);
 
-  if (intervals.nSamples)
-    pipeline.push({ '$sample' : {size : +intervals.nSamples}});
+  // console.log('intervals.nSamples => ', intervals.nSamples);
+  // if (intervals.nSamples)
+    // pipeline.push({ '$sample' : {size : +intervals.nSamples}});
   if (intervals.nFeatures !== undefined)
     pipeline.push({ $limit: +intervals.nFeatures });
 
