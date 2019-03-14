@@ -153,6 +153,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       let featureName = featurePaths[0]._id.name,
       /** groupAddedClass might be a classification of the feature, e.g. whether it is in a selection or group. */
        groupAddedClass = featureName;
+      /* Generally feature names have an alpha prefix, but some genetic maps use
+       * the numeric form of the feature index. CSS class names need an alpha
+       * prefix.
+       */
+      if (groupAddedClass.match(/[0-9]/))
+        groupAddedClass = 'f_' + groupAddedClass;
       let gS = baS.selectAll("g." + className + '.' + groupAddedClass)
         .data(featurePaths, featurePathKeyFn);
       gS.exit().remove();
