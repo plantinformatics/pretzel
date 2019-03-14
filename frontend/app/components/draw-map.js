@@ -11,7 +11,7 @@ const { inject: { service } } = Ember;
 import config from '../config/environment';
 import { EventedListener } from '../utils/eventedListener';
 import { chrData } from '../utils/utility-chromosome';
-import { eltWidthResizable, eltResizeToAvailableWidth, noShiftKeyfilter, eltClassName  } from '../utils/domElements';
+import { eltWidthResizable, eltResizeToAvailableWidth, noShiftKeyfilter, eltClassName, tabActive, inputRangeValue, expRange  } from '../utils/domElements';
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
 import { parseOptions } from '../utils/common/strings';
 import { Viewport } from '../utils/draw/viewport';
@@ -810,7 +810,15 @@ export default Ember.Component.extend(Ember.Evented, {
      * The purpose is to save processing time; this is toggled by 
      * setupToggleShowSelectedFeatures() - #checkbox-toggleShowSelectedFeatures.
      */
-    showSelectedFeatures : true
+    showSelectedFeatures : true,
+
+        pathControlActiveDensity : function() {
+          return me.pathControlActiveDensity();
+        },
+        pathControlActiveSample : function() {
+          return me.pathControlActiveSample();
+        }
+
       };
     }
 
@@ -5303,6 +5311,28 @@ export default Ember.Component.extend(Ember.Evented, {
 
   },   // draw()
 
+  pathControlActiveDensity : function()
+  {
+    let active = tabActive('#tab-paths-density'),
+    density;
+    if (active) {
+      let value = density = inputRangeValue("range-pathDensity");
+      density = expRange(value, 100, 100, 1024);
+    }
+    return density;
+  },
+  pathControlActiveSample : function()
+  {
+    let active = tabActive('#tab-paths-sample'),
+    sample;
+    if (active) {
+      let value = inputRangeValue("range-pathSample");
+      sample = expRange(value, 100, 100, 1024);
+    }
+    return sample;
+  },
+
+  //----------------------------------------------------------------------------
 
   didInsertElement() {
     this._super(...arguments);

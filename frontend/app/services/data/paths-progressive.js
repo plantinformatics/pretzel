@@ -10,11 +10,12 @@ import { updateDomain } from '../../utils/stacksLayout';
 let trace_pathsP = 2;
 
 function verifyFeatureRecord(fr, f) {
-  let same = 
+  let frd = fr._internalModel.__data,
+  same = 
     (fr.id === f._id) &&
-    (fr._internalModel.__data.value[0] === f.value[0]) &&
-    (fr._internalModel.__data.value[1] === f.value[1]) &&
-    (fr._internalModel.__data.name === f.name);
+    (frd.value[0] === f.value[0]) &&
+    ((frd.value.length !== 1) || (frd.value[1] === f.value[1])) &&
+    (frd.name === f.name);
   return same;
 }
 
@@ -64,8 +65,25 @@ export default Service.extend({
       let axis = Stacked.getAxis(blockId);
       return axis.axisDimensions();
     }),
-    page = { thresholdFactor : 1.0 /* density*/ },
-    params = {axes : intervals, page, /*nFeatures : 100,*/ nSamples : 20, dbPathFilter : true };
+    page = { },
+    /*nFeatures : 100,*/ 
+    params = {axes : intervals, page,  dbPathFilter : true };
+    [0, 1].map(function (axis) {
+    if ((intervals[axis].domain[0] === 0) && (intervals[axis].domain[1] === 0))
+      intervals[axis].domain = undefined;
+    });
+
+    let oa = stacks.oa;
+    let sample = oa.drawOptions.pathControlActiveSample();
+    if (sample) {
+      params.nSamples = sample;
+    }
+    let densityFactor = oa.drawOptions.pathControlActiveDensity();
+    if (densityFactor) {
+      page.densityFactor = densityFactor;
+      page.thresholdFactor = densityFactor; // retire the name .thresholdFactor
+    }
+
     return params;
   },
   /**
