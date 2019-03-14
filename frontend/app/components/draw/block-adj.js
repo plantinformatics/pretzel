@@ -28,16 +28,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    *  Evented may be used in future to propagate events to components rendered within block-adj.
    */
   store: service(),
+  pathsP : service('data/paths-progressive'),
 
   needs: ['component:draw/path-data'],
 
   blockAdj : Ember.computed('blockAdjId', function () {
     let
       blockAdjId = this.get('blockAdjId'),
-    record = this.get('store').createRecord('blockAdj', {
-      blockId0 : blockAdjId[0],
-      blockId1 : blockAdjId[1]
-    });
+    record = this.get('pathsP').ensureBlockAdj(blockAdjId);
     console.log('blockAdjId', blockAdjId, blockAdjId[0], blockAdjId[1], record);
     return record;
   }),

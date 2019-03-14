@@ -8,8 +8,10 @@ export default DS.Model.extend({
 
   pathsP : service('data/paths-progressive'),
 
-  block0: DS.attr('string'), // belongsTo('block'),
-  block1: DS.attr('string'), // belongsTo('block'),
+  block0: DS.belongsTo('block', { inverse: null }),
+  block1: DS.belongsTo('block', { inverse: null }),
+  blockId0: DS.attr('string'), // belongsTo('block'),
+  blockId1: DS.attr('string'), // belongsTo('block'),
   'pathsResult' : DS.attr(),
 
   // range: attr(),

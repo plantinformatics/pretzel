@@ -9,10 +9,36 @@ import { updateDomain } from '../../utils/stacksLayout';
 
 let trace_pathsP = 2;
 
+function verifyFeatureRecord(fr, f) {
+  let same = 
+    (fr.id === f._id) &&
+    (fr._internalModel.__data.value[0] === f.value[0]) &&
+    (fr._internalModel.__data.value[1] === f.value[1]) &&
+    (fr._internalModel.__data.name === f.name);
+  return same;
+}
+
 export default Service.extend({
   auth: service('auth'),
   store: service(),
   flowsService: service('data/flows-collate'),
+
+  /** set up a block-adj object to hold results. */
+  ensureBlockAdj(blockAdjId) {
+    let store = this.get('store'),
+    r = store.peekRecord('blockAdj', blockAdjId);
+    if (r)
+      console.log('ensureBlockAdj', blockAdjId, r._internalModel.__data);
+    if (! r) {
+      r = store.createRecord('blockAdj', {
+        block0 : blockAdjId[0],
+        block1 : blockAdjId[1],
+        blockId0 : blockAdjId[0],
+        blockId1 : blockAdjId[1]
+      });
+    }
+    return r;
+  },
 
   /** Paths returned from API, between adjacent blocks,
    * are stored in ember data store, as block-adj.
@@ -65,7 +91,9 @@ export default Service.extend({
               let f = res[i].alignment[j].repeats.features[0];
               let fr = store.peekRecord('feature', f._id);
               if (fr) {
-                console.log('peekRecord feature', f._id, fr);
+                let verifyOK = verifyFeatureRecord(fr, f);
+                if (! verifyOK)
+                  console.log('peekRecord feature', f._id, f, fr._internalModel.__data, fr);
               }
               else
               {
@@ -80,7 +108,7 @@ export default Service.extend({
           }
           let result = {
             type : 'blockAdj',
-            id : blockAdj[0],
+            id : blockAdj,
             block0 : blockAdj[0],
             block1 : blockAdj[1],
             pathsResult : res
