@@ -2,6 +2,10 @@ import { breakPoint } from '../utils/breakPoint';
 
 /*----------------------------------------------------------------------------*/
 
+const trace_feature = 1;
+
+/*----------------------------------------------------------------------------*/
+
 /* split out of components/goto-feature.js : 
  * featureChrs(),  name2Map(),  chrMap(),  objectSet(),   reduce_addToSet(),  mapsOfFeature()
  * (considered also  models/chromosome, utils/utility-chromosome.js)
@@ -118,7 +122,8 @@ function storeFeature(oa, flowsService, feature, f, axisID) {
     /* when called from paths-progressive, emulate the data structure created by
      * chrData() / receiveChr()
      */
-    console.log('storeFeature', arguments);
+    if (trace_feature > 1)
+      console.log('storeFeature', arguments);
 
     /* copied from chrData(), replacing feature. with f. */
     let value = f.get('value'), range = f.get('range'),
@@ -128,7 +133,8 @@ function storeFeature(oa, flowsService, feature, f, axisID) {
     f.set('location', featurePosition);
     // f.aliases = [];
     // f.id is already set.
-    console.log('storeFeature', axisID, feature, featurePosition, f._internalModel.__data, f, oa.z[axisID]);
+    if (trace_feature > 1)
+      console.log('storeFeature', axisID, feature, featurePosition, f._internalModel.__data, f, oa.z[axisID]);
 
     oa.z[axisID][feature] = f;
   }

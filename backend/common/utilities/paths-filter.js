@@ -17,7 +17,11 @@ exports.filterPaths = function(paths, intervals) {
   // console.log('paths[1].alignment.length => ', paths[1].alignment.length);
   // console.log('paths[0].alignment[0] => ', paths[0].alignment[0]);
   // console.log('paths[0].alignment[0].repeats => ', paths[0].alignment[0].repeats);
-  let filteredPaths = domainFilter(paths, intervals)
+  let filteredPaths
+  if (intervals.axes[0].domain || intervals.axes[1].domain)
+    filteredPaths = domainFilter(paths, intervals)
+  else
+    filteredPaths = paths;
 
   let nSamples = densityCount(paths.length, intervals)
   // let filteredPaths = nthSample(paths, intervals.nSamples);
@@ -83,18 +87,25 @@ function domainFilter(paths, intervals) {
   let domains = [BLOCK0, BLOCK1].map(block => {
     return intervals.axes[block].domain
   })
-  // console.log('domains => ', domains);
+   console.log('domains => ', domains);
   return paths.filter(path => {
     let featureRanges = [BLOCK0, BLOCK1].map(block => {
       // has a magic number 0 atm, the array may fill up with other features
       // that will also have to be checked if they are within the domain
-      return path.alignment[block].repeats.features[0].range
+      let f = path.alignment[block].repeats.features[0];
+      // attribute name was formerly .range, handle some current data which has that form.
+      return f.value || f.range;
     })
     // console.log('featureRanges => ', featureRanges);
     let keepArray = [BLOCK0, BLOCK1].map(block => {
+      let featureValue = featureRanges[block];
+      // feature.value maybe be [x] or [start, end]
+      if (featureValue.length === 1)
+        featureValue[1] = featureValue[0];
       // Is left of feature in domain and right of feature in domain?
-      return featureRanges[block][LEFT] >= domains[block][LEFT] &&
-             featureRanges[block][RIGHT] <= domains[block][RIGHT]
+      return ! domains[block] ||
+        ((featureValue[LEFT] >= domains[block][LEFT]) &&
+         featureValue[RIGHT] <= domains[block][RIGHT])
     })
 
     // console.log('keepArray => ', keepArray);

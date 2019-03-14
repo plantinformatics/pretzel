@@ -296,11 +296,15 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
     ];
   let pipeline;
   if (intervals.dbPathFilter && (intervals.axes[0].zoomed || intervals.axes[1].zoomed)) {
-    console.log(
-      'filterValue', filterValue,
-      intervals.axes[0].zoomed, intervals.axes[0].domain[0], '-', intervals.axes[0].domain[1],
-      intervals.axes[1].zoomed, intervals.axes[1].domain[0], '-', intervals.axes[1].domain[1]
-    );
+    let l = ['filterValue', filterValue];
+    [0, 1].map(function (axis) {
+      /** log intervals.axes[axis].{zoomed,domain}  .domain may be undefined or [start,end]. */
+      let a = intervals.axes[axis];
+      l.push(a.zoomed);
+      if (a.domain)
+        l = l.concat([a.domain[0], '-', a.domain[1]]);
+    });
+    console.log.apply(undefined, l);
     pipeline = filterValue.concat(group);
   }
   else
