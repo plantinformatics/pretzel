@@ -32,6 +32,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   needs: ['component:draw/path-data'],
 
+  zoomCounter : 0,
+
   blockAdj : Ember.computed('blockAdjId', function () {
     let
       blockAdjId = this.get('blockAdjId'),
@@ -53,9 +55,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     return axes;
   }),
 
-  paths : Ember.computed('blockAdj.blockId0', 'blockAdj.blockId1', function () {
+  paths : Ember.computed('blockAdj.blockId0', 'blockAdj.blockId1', 'zoomCounter', function () {
     console.log(this, 'paths blockAdj', this.get('blockAdj'),
-                this.get('blockAdj.blockId0'), this.get('blockAdj.blockId1'));
+                this.get('blockAdj.blockId0'), this.get('blockAdj.blockId1'), this.get('zoomCounter'));
     /** if no other processing required here, this could be simply Ember.computed.alias('blockAdj.paths').property('blockAdj.blockId0', 'blockAdj.blockId1') */
     let
     paths = this.get('blockAdj.paths');
@@ -276,8 +278,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     if (this.isAdjacentToAxis(axisID))
     {
       console.log('zoomedAxis matched', axisID, blockAdjId, axes);
-      // Not currently needed because axisStackChanged() already received.
-      // this.updatePathsPositionDebounce.apply(this, axisID_t);
+      // paths positions are updated by event axisStackChanged() already received.
+      // With zoom, the densityCount() result changes so request paths again
+      this.incrementProperty('zoomCounter');
+      this.get('blockAdj').incrementProperty('zoomCounter');
     }
   }
   /*--------------------------------------------------------------------------*/

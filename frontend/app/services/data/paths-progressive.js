@@ -131,6 +131,8 @@ export default Service.extend({
             block1 : blockAdj[1],
             pathsResult : res
           };
+          let exists = 
+            store.peekRecord(result.type, blockAdj[0] + '-' + blockAdj[1]);
           let n = store.normalize(result.type, result);
           let c = store.push(n);
           if (trace_pathsP > 2)
@@ -138,6 +140,9 @@ export default Service.extend({
           // Ember.run.next(function () {
             let axisApi = stacks.oa.axisApi;
             let t = stacks.oa.svgContainer.transition().duration(750);
+          /* if zooming in on a pre-existing axis, then don't trigger zoomedAxis
+           * event, and no need for domainCalc(). */
+          if (! exists)
           [blockA, blockB].map(function (blockId) {
             let eventBus = stacks.oa.eventBus;
             let
@@ -156,7 +161,6 @@ export default Service.extend({
             eventBus.trigger("zoomedAxis", [axisID, t]);
             // true does pathUpdate(t);
             axisApi.axisScaleChanged(p, t, true);
-
           });
             axisApi.axisStackChanged(t);
           // });
