@@ -23,14 +23,16 @@ exports.filterPaths = function(paths, intervals) {
   else
     filteredPaths = paths;
 
-  let nSamples = densityCount(paths.length, intervals)
+  /** number of samples to skip. */
+  let count = densityCount(paths.length, intervals)
   // let filteredPaths = nthSample(paths, intervals.nSamples);
-  filteredPaths = nthSample(filteredPaths, nSamples);
+  if (count)
+    filteredPaths = nthSample(filteredPaths, count);
   return filteredPaths;
 };
 
-function nthSample(paths, nSamples) {
-  let nth = Math.ceil(paths.length/nSamples)
+function nthSample(paths, count) {
+  let nth = Math.ceil(count)
   return paths.filter((path, i) => {
     return (i % nth === 0)
   })
@@ -47,7 +49,7 @@ function densityCount(numPaths, intervals) {
   function blockCount(total, rangeLength) {
     // console.log('total, range => ', total, rangeLength);
     // console.log('range / pixelspacing => ', rangeLength / pixelspacing);
-    return rangeLength / pixelspacing
+    return total * pixelspacing / rangeLength;
   }
   // What should range (pixel space) look like?
   // Is it a range of values? (Start and end point of pixel space,
@@ -65,7 +67,7 @@ function densityCount(numPaths, intervals) {
   count = Math.sqrt(counts[0] * counts[1]);
   count = count / intervals.page.thresholdFactor;
   count = Math.round(count);
-  console.log('Calculated density count => ', count);
+  console.log('Calculated density count => ', count, counts, numPaths);
   return count
 }
 

@@ -47,7 +47,12 @@ module.exports = function(Block) {
           console.log('pathsProgressive then', (data.length > 10) ? data.length : data);
           if (useCache)
             cache.put(cacheId, data);
-          let filteredData = pathsFilter.filterPaths(data, intervals);
+          let filteredData;
+          // no filter required when user has nominated nSamples.
+          if (intervals.nSamples)
+            filteredData = data;
+          else
+            filteredData = pathsFilter.filterPaths(data, intervals);
           console.log("Num Filtered Paths => ", filteredData.length);
           cb(null, filteredData);
         })

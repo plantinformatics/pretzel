@@ -311,8 +311,8 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
     pipeline = matchBlock.concat(group);
 
   // console.log('intervals.nSamples => ', intervals.nSamples);
-  // if (intervals.nSamples)
-    // pipeline.push({ '$sample' : {size : +intervals.nSamples}});
+  if (intervals.nSamples)
+    pipeline.push({ '$sample' : {size : +intervals.nSamples}});
   if (intervals.nFeatures !== undefined)
     pipeline.push({ $limit: +intervals.nFeatures });
 
