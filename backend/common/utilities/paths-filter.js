@@ -1,3 +1,5 @@
+var _ = require('lodash')
+
 /* global exports */
 
 /** TODO :
@@ -24,7 +26,7 @@ exports.filterPaths = function(paths, intervals) {
     filteredPaths = paths;
 
   /** number of samples to skip. */
-  let count = densityCount(paths.length, intervals)
+  let count = densityCount(filteredPaths.length, intervals)
   // let filteredPaths = nthSample(paths, intervals.nSamples);
   if (count)
     filteredPaths = nthSample(filteredPaths, count);
@@ -75,6 +77,8 @@ function domainFilter(paths, intervals) {
   const LEFT = 0, RIGHT = 1
   const BLOCK0 = 0, BLOCK1 = 1
 
+  // paths = paths.slice(0, 3)
+
   /* Checking paths object structure */
   // console.log('paths[0].alignment[0] => ', paths[0].alignment[0]);
   // console.log('paths[0].alignment[0].blockId => ', paths[0].alignment[0].blockId);
@@ -89,29 +93,48 @@ function domainFilter(paths, intervals) {
   let domains = [BLOCK0, BLOCK1].map(block => {
     return intervals.axes[block].domain
   })
-   console.log('domains => ', domains);
-  return paths.filter(path => {
-    let featureRanges = [BLOCK0, BLOCK1].map(block => {
-      // has a magic number 0 atm, the array may fill up with other features
-      // that will also have to be checked if they are within the domain
-      let f = path.alignment[block].repeats.features[0];
-      // attribute name was formerly .range, handle some current data which has that form.
-      return f.value || f.range;
-    })
-    // console.log('featureRanges => ', featureRanges);
-    let keepArray = [BLOCK0, BLOCK1].map(block => {
-      let featureValue = featureRanges[block];
-      // feature.value maybe be [x] or [start, end]
-      if (featureValue.length === 1)
-        featureValue[1] = featureValue[0];
-      // Is left of feature in domain and right of feature in domain?
-      return ! domains[block] ||
-        ((featureValue[LEFT] >= domains[block][LEFT]) &&
-         featureValue[RIGHT] <= domains[block][RIGHT])
+  console.log('domains => ', domains);
+  // console.log('paths => ', paths);
+  let result = paths.map(original => {
+    let path = _.cloneDeep(original)
+    path.alignment = path.alignment.map((block, i) => {
+      if (!domains[i]) {
+        return block
+      }
+      // let features = block.repeats.features
+
+      // console.log('unfiltered features => ', block.repeats.features);
+      block.repeats.features = block.repeats.features.filter(f => {
+        let range = f.value || f.range
+        if (range.length === 1)
+          range[1] = range[0];
+        return ((range[LEFT] >= domains[i][LEFT]) &&
+                     range[RIGHT] <= domains[i][RIGHT])
+      })
+      // console.log('filtered features => ', block.repeats.features);
+      return block
     })
 
-    // console.log('keepArray => ', keepArray);
-    // Are both blocks within domain requested?
+    // console.log('path.alignment => ', path.alignment);
+    // console.log('path 0 => ', path.alignment[0].repeats.features);
+    // console.log('path 1 => ', path.alignment[1].repeats.features);
+    // console.log('original 0 => ', original.alignment[0].repeats.features);
+    // console.log('original 1 => ', original.alignment[1].repeats.features);
+
+    // let equal0 = path.alignment[0].repeats.features.length === original.alignment[0].repeats.features.length
+    // let equal1 = path.alignment[1].repeats.features.length === original.alignment[1].repeats.features.length
+
+    // console.log('equal0, equal1 => ', equal0, equal1);
+    return path
+  })
+  
+  return result.filter(path => {
+    let keepArray = [BLOCK0, BLOCK1].map(block => {
+      return path.alignment[block].repeats.features.length > 0
+    })
     return keepArray[BLOCK0] && keepArray[BLOCK1]
   })
 }
+
+
+
