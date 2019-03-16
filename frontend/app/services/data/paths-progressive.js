@@ -11,10 +11,13 @@ let trace_pathsP = 2;
 
 function verifyFeatureRecord(fr, f) {
   let frd = fr._internalModel.__data,
+  /** Handle some older data which has .range instead of .value */
+  frdv = frd.value || frd.range,
+  fv = f.value || f.range,
   same = 
     (fr.id === f._id) &&
-    (frd.value[0] === f.value[0]) &&
-    ((frd.value.length !== 1) || (frd.value[1] === f.value[1])) &&
+    (frdv[0] === fv[0]) &&
+    ((frdv.length !== 1) || (frdv[1] === fv[1])) &&
     (frd.name === f.name);
   return same;
 }
