@@ -70,7 +70,10 @@ export default Service.extend({
     }),
     page = { },
     /*nFeatures : 100,*/ 
-    params = {axes : intervals, page,  dbPathFilter : true };
+    noDbPathFilter = stacks.oa.eventBus.params.parsedOptions.noDbPathFilter,
+    /** default value is true, i.e. noDbPathFilter===undefined => dbPathFilter */
+    dbPathFilter = ! noDbPathFilter,
+    params = {axes : intervals, page,  dbPathFilter };
     [0, 1].map(function (axis) {
     if ((intervals[axis].domain[0] === 0) && (intervals[axis].domain[1] === 0))
       intervals[axis].domain = undefined;
