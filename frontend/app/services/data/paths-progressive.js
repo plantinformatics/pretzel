@@ -7,7 +7,7 @@ import { stacks, Stacked } from '../../utils/stacks';
 import { storeFeature } from '../../utils/feature-lookup';
 import { updateDomain } from '../../utils/stacksLayout';
 
-let trace_pathsP = 2;
+let trace_pathsP = 1;
 
 function verifyFeatureRecord(fr, f) {
   let frd = fr._internalModel.__data,
@@ -70,7 +70,7 @@ export default Service.extend({
     }),
     page = { },
     /*nFeatures : 100,*/ 
-    noDbPathFilter = stacks.oa.eventBus.params.parsedOptions.noDbPathFilter,
+    noDbPathFilter = stacks.oa.eventBus.get('params.parsedOptions.noDbPathFilter'),
     /** default value is true, i.e. noDbPathFilter===undefined => dbPathFilter */
     dbPathFilter = ! noDbPathFilter,
     params = {axes : intervals, page,  dbPathFilter };
@@ -103,16 +103,20 @@ export default Service.extend({
     let me = this;
     let flowsService = this.get('flowsService');
     let intervalParams = this.intervals(blockAdj);
+    let pathsViaStream = stacks.oa.eventBus.get('params.parsedOptions.pathsViaStream');
     let promise = 
+      pathsViaStream ?
+      this.get('auth').getPathsViaStream(blockA, blockB, intervalParams, /*options*/{dataEvent : receivedData}) :
       this.get('auth').getPathsProgressive(blockA, blockB, intervalParams, /*options*/{});
-    promise
-      .then(
-        function(res){
+        function receivedData(res){
           if (trace_pathsP > 1)
             console.log('path request then', res.length);
           for (let i=0; i < res.length; i++) {
             for (let j=0; j < 2; j++) {
-              let f = res[i].alignment[j].repeats.features[0];
+              let repeats = res[i].alignment[j].repeats,
+              // possibly filterPaths() is changing repeats.features[] to repeats[]
+              features = repeats.features || repeats,
+              f = features[0];
               let fr = store.peekRecord('feature', f._id);
               if (fr) {
                 let verifyOK = verifyFeatureRecord(fr, f);
@@ -139,6 +143,11 @@ export default Service.extend({
           };
           let exists = 
             store.peekRecord(result.type, blockAdj[0] + '-' + blockAdj[1]);
+          if (exists && pathsViaStream) {
+            let pathsAccumulated = exists.get('pathsResult') || [];
+            pathsAccumulated = pathsAccumulated.concat(res);
+            exists.set('pathsResult', pathsAccumulated);
+          }
           let n = store.normalize(result.type, result);
           let c = store.push(n);
           if (trace_pathsP > 2)
@@ -171,8 +180,14 @@ export default Service.extend({
             axisApi.axisStackChanged(t);
           // });
 
-        },
+        };
+    promise
+      .then(
+        receivedData,
         function(err, status) {
+          if (pathsViaStream)
+            console.log('path request', 'pathsViaStream', blockA, blockB, me, err, status);
+          else
           console.log('path request', blockA, blockB, me, err.responseJSON[status] /* .error.message*/, status);
         });
     return promise;

@@ -12,7 +12,7 @@ export default DS.Model.extend({
   block1: DS.belongsTo('block', { inverse: null }),
   blockId0: DS.attr('string'), // belongsTo('block'),
   blockId1: DS.attr('string'), // belongsTo('block'),
-  'pathsResult' : DS.attr(),
+  pathsResult : DS.attr(),
 
   zoomCounter : 0,
   // range: attr(),
@@ -26,7 +26,10 @@ export default DS.Model.extend({
       paths = this.get('pathsP').getPathsProgressive([this.get('blockId0'), this.get('blockId1')]);
     paths.then(function (result) {
       console.log('block-adj paths', result.length);
-    });
+    }, function (err) {
+      console.log('block-adj paths reject', err);
+    }
+    );
     return paths;
   })
 

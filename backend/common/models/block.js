@@ -10,6 +10,32 @@ var ObjectId = require('mongodb').ObjectID
 
 var cache = require('memory-cache');
 
+var SSE = require('express-sse');
+
+const { Writable } = require('stream');
+
+
+class SseWritable extends Writable {
+  constructor(sse, res) {
+    super({objectMode: true});
+    this.sse = sse;
+    this.res = res;
+    console.log('SseWritable()');
+  }
+ 
+  _write(chunk, encoding, callback) {
+    //process.stdout.write();
+    let content = chunk; // express-sse does : JSON.stringify();
+    let eventName = 'pathsViaStream';
+    console.log('SseWritable _write()', chunk);
+    this.sse.send(content, eventName);
+    this.res.flush();
+    callback();
+  }
+}
+
+
+/* global module require */
 
 module.exports = function(Block) {
 
@@ -66,9 +92,15 @@ module.exports = function(Block) {
 
   // Adding in res as an argument to trial using raw Express functions rather than rely on Loopback
   // Trialling different methods of streaming, none successful yet
-  Block.pathsViaStream = function(blockId0, blockId1, options, res, cb) {
+  Block.pathsViaStream = function(blockId0, blockId1, options, req, res, cb) {
     let db = this.dataSource
     let blockCollection = db.connector.collection("Block");
+
+    /** trial also performance of : isSerialized: true */
+    let sse = new SSE(undefined, {isCompressed : false});
+    sse.init(req, res);
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+
 
     let array = []
 
@@ -95,15 +127,28 @@ module.exports = function(Block) {
       { $match : { alignment : { $size : 2 } }}
     ])
 
-    cursor.stream({transform: x => JSON.stringify(x)}).pipe(res)
+    // as in example https://jira.mongodb.org/browse/NODE-1408
+    // cursor.stream({transform: x => JSON.stringify(x)}).pipe(res)
+    // which also gives this alternative form :
+    // https://jira.mongodb.org/browse/NODE-1408?focusedCommentId=1863180&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-1863180
+    cursor
+      .pipe(new SseWritable(sse, res));
+
     // cursor.on('data', doc => {
     //   array.push(doc)
     // })
 
+    req.on('close', () => {
+      console.log('req.on(close)');
+    });
+
     cursor.on('end', () => {
       // console.log('array => ', array);
       // cb(null, array)
-      res.end()
+      console.log('cursor.on(end)', arguments.length);
+      sse.send([], 'pathsViaStream', -1);
+      res.flush();
+      // res.end()
       return
     })
   }
@@ -207,6 +252,7 @@ module.exports = function(Block) {
       {arg: 'blockA', type: 'string', required: true},
       {arg: 'blockB', type: 'string', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'req', type: 'object', 'http': {source: 'req'}},
       { arg: 'res', type: 'object', http: { source: 'res' }}
     ],
     http: {verb: 'get'},
