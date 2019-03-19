@@ -17,7 +17,7 @@ function verifyFeatureRecord(fr, f) {
   same = 
     (fr.id === f._id) &&
     (frdv[0] === fv[0]) &&
-    ((frdv.length !== 1) || (frdv[1] === fv[1])) &&
+    ((frdv.length < 2) || (frdv[1] === fv[1])) &&
     (frd.name === f.name);
   return same;
 }

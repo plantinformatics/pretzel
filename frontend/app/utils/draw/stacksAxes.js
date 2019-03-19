@@ -49,6 +49,10 @@ function blockAdjEltId(blockAdjId)
 function blockAdjKeyFn(blockAdjId)
 { return blockAdjId[0] + '_' + blockAdjId[1]; }
 
+const featureEltIdPrefix = "f_";
+/** id of a feature g element, based on its ID a "f_" prefix. */
+
+
 const foregroundSelector = 'div#holder > svg > g > g.foreground';
 
 /**
@@ -66,5 +70,9 @@ function selectBlockAdj(parent, blockAdjId)
 
 /*----------------------------------------------------------------------------*/
 
-export { stacksAxesDomVerify, selectAxis, blockAdjKeyFn, blockAdjEltId, foregroundSelector, selectBlockAdj } ;
+export {
+  stacksAxesDomVerify, selectAxis, blockAdjKeyFn, blockAdjEltId,
+  featureEltIdPrefix,
+  foregroundSelector, selectBlockAdj
+} ;
 

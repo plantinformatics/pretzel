@@ -17,6 +17,8 @@ const { Writable, Transform, pipeline } = require('stream');
 /** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
 const SSE_EventID_EOF = -1;
 
+const trace_block = 1;
+
 class SseWritable extends Writable {
   // this class is based on a comment by Daniel Aprahamian in https://jira.mongodb.org/browse/NODE-1408
   constructor(sse, res) {
@@ -91,7 +93,8 @@ module.exports = function(Block) {
             filteredData = data;
           else
             filteredData = pathsFilter.filterPaths(data, intervals);
-          console.log("Num Filtered Paths => ", filteredData.length);
+          if (trace_block > 1)
+            console.log("Num Filtered Paths => ", filteredData.length);
           cb(null, filteredData);
         })
         .catch(function(err) {
@@ -135,13 +138,15 @@ module.exports = function(Block) {
         this.intervals = intervals;
       }
       _transform(data, encoding, callback) {
-        console.log('FilterPipe _transform', data);
+        if (trace_block > 2)
+          console.log('FilterPipe _transform', data);
         // data is a single document, not an array
         if (! data /*|| data.length */)
           debugger;
         else {
           let filteredData = pathsFilter.filterPaths([data], this.intervals);
-          console.log('filteredData', filteredData, filteredData.length);
+          if (trace_block > 2)
+            console.log('filteredData', filteredData, filteredData.length);
           if (filteredData && filteredData.length)
           {
             this.push(filteredData);
@@ -195,7 +200,8 @@ module.exports = function(Block) {
           if (err) {
             console.error('Pipeline failed.', err);
           } else {
-            console.log('Pipeline succeeded.');
+            if (trace_block > 2)
+              console.log('Pipeline succeeded.');
           }});
 
       // cursor.on('data', doc => {
