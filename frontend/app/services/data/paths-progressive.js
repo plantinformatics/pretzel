@@ -145,13 +145,16 @@ export default Service.extend({
             store.peekRecord(result.type, blockAdj[0] + '-' + blockAdj[1]);
           if (exists && pathsViaStream) {
             let pathsAccumulated = exists.get('pathsResult') || [];
+            // console.log('exists pathsResult', exists.get('pathsResult'), pathsAccumulated.length, res.length);
             pathsAccumulated = pathsAccumulated.concat(res);
             exists.set('pathsResult', pathsAccumulated);
           }
+          else {
           let n = store.normalize(result.type, result);
           let c = store.push(n);
           if (trace_pathsP > 2)
             console.log(n, c.get('block0'), c._internalModel.__data);
+          }
           // Ember.run.next(function () {
             let axisApi = stacks.oa.axisApi;
             let t = stacks.oa.svgContainer.transition().duration(750);

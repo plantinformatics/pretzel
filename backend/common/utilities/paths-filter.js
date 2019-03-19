@@ -25,11 +25,13 @@ exports.filterPaths = function(paths, intervals) {
   else
     filteredPaths = paths;
 
+  if (filteredPaths.length) {
   /** number of samples to skip. */
   let count = densityCount(filteredPaths.length, intervals)
   // let filteredPaths = nthSample(paths, intervals.nSamples);
   if (count)
     filteredPaths = nthSample(filteredPaths, count);
+  }
   return filteredPaths;
 };
 

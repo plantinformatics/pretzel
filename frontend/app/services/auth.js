@@ -2,9 +2,18 @@ import Ember from 'ember';
 
 const { inject: { service }, Service, isEmpty } = Ember;
 
+import { isObject, cloneDeepWith, isUndefined } from 'lodash/lang';
+import { omitBy, extendWith } from 'lodash/object';
+import { after } from 'lodash/function';
+
+
 /* global EventSource */
 
 const trace_paths = 1;
+
+/** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
+const SSE_EventID_EOF = '-1';
+
 
 export default Service.extend({
   session: service('session'),
@@ -53,14 +62,22 @@ export default Service.extend({
    * @param options.dataEvent callback which receives the data parcel
    */
   getPathsViaStream(blockA, blockB, intervals, options) {
+
+    /** jQuery.param() will translate {k: undefined} to {k : ''}, so deep-copy the
+     * interval parameters omitting the attributes with value === undefined.
+     */
+    function omitUndefined(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+    const filteredIntervalParams = omitUndefined(intervals);
     let
       route= 'Blocks/pathsViaStream',
     url = this._endpoint(route) +
       '?access_token=' + this._accessToken() + 
       '&blockA=' + blockA +
       '&blockB=' + blockB + '&' +
-      encodeURIComponent(JSON.stringify({intervals}));
-    console.log(url, blockA, blockB, intervals, options);
+      Ember.$.param({intervals : filteredIntervalParams});
+    console.log(url, blockA, blockB, intervals, filteredIntervalParams, options);
 
     let promise = new Promise((resolve, reject) => {
       this.listenEvents(url, options.dataEvent, resolve, reject);
@@ -75,13 +92,13 @@ export default Service.extend({
       var source = new EventSource(url, {withCredentials: true});
 
       function onMessage(e) {
-        let data = JSON.parse(e.data);
         if (trace_paths > 2)
-          console.log('onMessage', e, e.type, e.data, data, arguments);
-        if (e.lastEventId === '-1')
+          console.log('onMessage', e, e.type, e.data, arguments);
+        if (e.lastEventId === SSE_EventID_EOF)
           // This is the end of the stream
           source.close();
         else {
+          let data = JSON.parse(e.data);
           if (! Array.isArray(data))
             data = [data];
           dataEvent(data);
