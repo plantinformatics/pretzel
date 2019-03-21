@@ -117,8 +117,9 @@ export default Service.extend({
     let me = this;
     let flowsService = this.get('flowsService');
     let intervalParams = this.intervals(blockAdj);
-    intervalParams.nFeatures = 500;
-    let pathsViaStream = stacks.oa.eventBus.get('params.parsedOptions.pathsViaStream');
+    let drawMap = stacks.oa.eventBus;
+    intervalParams.nFeatures = drawMap.pathControlNFeatures();
+    let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
     let promise = 
       pathsViaStream ?
       this.get('auth').getPathsViaStream(blockA, blockB, intervalParams, /*options*/{dataEvent : receivedData}) :

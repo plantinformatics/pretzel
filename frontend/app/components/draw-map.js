@@ -817,6 +817,9 @@ export default Ember.Component.extend(Ember.Evented, {
         },
         pathControlActiveSample : function() {
           return me.pathControlActiveSample();
+        },
+        pathControlNFeatures : function() {
+          return me.pathControlNFeatures();
         }
 
       };
@@ -5131,10 +5134,6 @@ export default Ember.Component.extend(Ember.Evented, {
       };
 
 //- brush-menu
-    /** The Zoom & Reset buttons (g.btn) can be hidden by clicking the 'Publish
-     * Mode' checkbox.  This provides a clear view of the visualisation
-     * uncluttered by buttons and other GUI mechanisms
-     */
     function setupToggle(checkboxId, onToggle)
     {
       let 
@@ -5156,6 +5155,10 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       );
     }
+    /** The Zoom & Reset buttons (g.btn) can be hidden by clicking the 'Publish
+     * Mode' checkbox.  This provides a clear view of the visualisation
+     * uncluttered by buttons and other GUI mechanisms
+     */
     function setupToggleModePublish()
     {
       setupToggle
@@ -5316,7 +5319,7 @@ export default Ember.Component.extend(Ember.Evented, {
     let active = tabActive('#tab-paths-density'),
     density;
     if (active) {
-      let value = density = inputRangeValue("range-pathDensity");
+      let value = inputRangeValue("range-pathDensity");
       density = expRange(value, 100, 100, 1024);
     }
     return density;
@@ -5331,6 +5334,17 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     return sample;
   },
+  pathControlNFeatures : function()
+  {
+    let pathsViaStream = this.get('controls').view.pathsViaStream,
+    nFeatures;
+    if (pathsViaStream) {
+      let value = inputRangeValue("range-pathsNFeatures");
+      nFeatures = expRange(value, 100, 10000, 100);
+    }
+    return nFeatures;
+  },
+
 
   //----------------------------------------------------------------------------
 

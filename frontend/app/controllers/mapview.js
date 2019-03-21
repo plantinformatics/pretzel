@@ -160,6 +160,8 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     }
   },
 
+  controls : Ember.Object.create({ view : {  } }),
+
   queryParams: ['mapsToView'],
   mapsToView: [],
 
@@ -181,6 +183,12 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     });
 
     this._super.apply(this, arguments);
+
+    /** default to true if not given as URL query param e.g. options=pathsViaStream=false  */
+    let pathsViaStream = this.get('model.params.parsedOptions.pathsViaStream');
+    if (pathsViaStream === undefined)
+      pathsViaStream = true;
+    this.set('controls.view.pathsViaStream', pathsViaStream);
   },
 
   currentURLDidChange: function () {

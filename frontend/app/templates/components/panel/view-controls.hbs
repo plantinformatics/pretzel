@@ -70,6 +70,23 @@
       </div>
 
     </li>
+    <li class="list-group-item">
+      <div>
+        {{input type="checkbox" checked=controls.view.pathsViaStream class="toggle"}}
+        <label>Path Stream</label>
+      </div>
+      <div>
+        <input type="range" 
+	       id="range-pathsNFeatures" 
+	       name="pathsNFeatures" 
+	       min="0" max="100"
+	       value="60"
+        />
+      </div>
+
+    </li>
+
+
 
     <li class="list-group-item">
       <input type="checkbox" 
