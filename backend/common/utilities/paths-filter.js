@@ -8,6 +8,11 @@ const trace_filter = 1;
  * filter paths according to intervals.axes[].domain[]
  * 
  * Use pathsAggr.densityCount(), with some changes : instead of totalCounts[], can simply count the paths.
+ * When streaming, i.e. called from pathsViaStream(), skip the densityCount() and nthSample() because they don't apply.
+ * pathsViaStream() calls filterPaths() with paths.length === 1, and even when
+ * not streaming there doesn't seem much point in densityCount() and nthSample()
+ * when paths.length === 1, so this is used as the indicator condition for
+ * skipping those function.
 */
 exports.filterPaths = function(paths, intervals) {
   // pathsViaStream() calls .filterPaths() once for each path
@@ -30,7 +35,7 @@ exports.filterPaths = function(paths, intervals) {
   else
     filteredPaths = paths;
 
-  if (filteredPaths.length) {
+  if (filteredPaths.length > 1) {
   /** number of samples to skip. */
   let count = densityCount(filteredPaths.length, intervals)
   // let filteredPaths = nthSample(paths, intervals.nSamples);

@@ -117,6 +117,7 @@ export default Service.extend({
     let me = this;
     let flowsService = this.get('flowsService');
     let intervalParams = this.intervals(blockAdj);
+    intervalParams.nFeatures = 500;
     let pathsViaStream = stacks.oa.eventBus.get('params.parsedOptions.pathsViaStream');
     let promise = 
       pathsViaStream ?
@@ -170,7 +171,7 @@ export default Service.extend({
             else
               pathsResult = res;
             exists.set('pathsResult', pathsResult);
-            if (trace_pathsP /* > 1 */ )
+            if (trace_pathsP > 1 + pathsViaStream)
               console.log('pathsResult', pathsResult, exists, exists._internalModel.__attributes, exists._internalModel.__data);
           }
           else {
@@ -179,15 +180,39 @@ export default Service.extend({
           if (trace_pathsP > 2)
             console.log(n, c.get('block0'), c._internalModel.__data);
           }
-          // Ember.run.next(function () {
-            let axisApi = stacks.oa.axisApi;
-            let t = stacks.oa.svgContainer.transition().duration(750);
+
           /* if zooming in on a pre-existing axis, then don't trigger zoomedAxis
            * event, and no need for domainCalc() except when there was no
            * previous pathsResult, or if streaming and receiving results for the first request.
            */
           let domainCalc = pathsViaStream || firstResult,
           axisEvents = ! exists;
+
+          /* passing blockA, blockB as [blockA, blockB] would be neater but
+           * might prevent the merging of multiple calls with the same arguments
+           * into a single call.
+           */
+          Ember.run.throttle(
+            me, me.blocksUpdateDomain, 
+            blockA, blockB, domainCalc, axisEvents,
+            200, false);
+        };
+    promise
+      .then(
+        receivedData,
+        function(err, status) {
+          if (pathsViaStream)
+            console.log('path request', 'pathsViaStream', blockA, blockB, me, err, status);
+          else
+          console.log('path request', blockA, blockB, me, err.responseJSON[status] /* .error.message*/, status);
+        });
+    return promise;
+  },
+
+  blocksUpdateDomain : function(blockA, blockB, domainCalc, axisEvents) {
+            let axisApi = stacks.oa.axisApi;
+            let t = stacks.oa.svgContainer.transition().duration(750);
+
           if (domainCalc)
             [blockA, blockB].map(function (blockId) {
               let eventBus = stacks.oa.eventBus;
@@ -211,19 +236,6 @@ export default Service.extend({
               }
           });
             axisApi.axisStackChanged(t);
-          // });
-
-        };
-    promise
-      .then(
-        receivedData,
-        function(err, status) {
-          if (pathsViaStream)
-            console.log('path request', 'pathsViaStream', blockA, blockB, me, err, status);
-          else
-          console.log('path request', blockA, blockB, me, err.responseJSON[status] /* .error.message*/, status);
-        });
-    return promise;
-  }
+          }
 
 });

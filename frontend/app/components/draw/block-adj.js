@@ -1,6 +1,7 @@
 import Ember from 'ember';
 
 const { inject: { service } } = Ember;
+import { throttle } from '@ember/runloop';
 
 import PathData from './path-data';
 
@@ -67,12 +68,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     );
     return paths;
   }),
-  paths : Ember.computed('requestPaths', 'blockAdj.pathsResult.[]', function () {
+  paths : Ember.computed('pathsRequest', 'blockAdj.pathsResult.[]', function () {
     console.log('paths', this);
-    let paths0 = this.get('pathsRequest');
     let paths = this.get('blockAdj.pathsResult');
     if (paths && paths.length)
-      this.draw(paths);
+      throttle(this, this.draw, paths, 200, false);
+    else
+      paths = this.get('pathsRequest');
     return paths;
   }),
 
