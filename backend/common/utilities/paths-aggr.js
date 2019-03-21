@@ -295,7 +295,9 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
       , { $match : { alignment : { $size : 2 } }}
     ];
   let pipeline;
-  if (intervals.dbPathFilter && (intervals.axes[0].zoomed || intervals.axes[1].zoomed)) {
+  function toBool(x) {return (typeof x === "string") ? x.toLowerCase().trim() === "true" : x; };
+  let dbPathFilter = toBool(intervals.dbPathFilter);
+  if (dbPathFilter && (intervals.axes[0].zoomed || intervals.axes[1].zoomed)) {
     let l = ['filterValue', filterValue];
     [0, 1].map(function (axis) {
       /** log intervals.axes[axis].{zoomed,domain}  .domain may be undefined or [start,end]. */
