@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "start": "node .",
     "dev": "EMAIL_VERIFY=NONE AUTH=ALL API_PORT_EXT=5000 nodemon -L server/server.js",
-    "test": "mocha --reporter spec --timeout 20000 test"
+    "test": "NODE_ENV=test mocha --reporter spec --timeout 20000 --extension .spec.js test/*.spec.js --exit"
   },
   "dependencies": {
     "async": "^2.4.0",
@@ -38,7 +38,8 @@
     "mocha": "^5.2.0",
     "nodemon": "^1.18.4",
     "nsp": "^2.1.0",
-    "smtp-server": "^3.0.1"
+    "smtp-server": "^3.0.1",
+    "superagent": "^4.1.0"
   },
   "repository": {
     "type": "",
