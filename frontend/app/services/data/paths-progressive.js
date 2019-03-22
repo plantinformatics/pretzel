@@ -11,6 +11,8 @@ let trace_pathsP = 1;
 
 import { blockAdjKeyFn } from '../../utils/draw/stacksAxes';
 
+/* global Promise */
+
 function verifyFeatureRecord(fr, f) {
   let frd = fr._internalModel.__data,
   /** Handle some older data which has .range instead of .value */
@@ -65,22 +67,50 @@ export default Service.extend({
   getPathsProgressive(blockAdj) {
     console.log('getPathsProgressive', blockAdj);
     let paths = this.get('store').peekRecord('block-adj', blockAdjKeyFn(blockAdj));
-    let result;
-    if (paths && ((result = paths.get('pathsResult')))) {
-      paths = Promise.resolve(result);
+    if (! paths) {
+      console.log('getPathsProgressive not found:', blockAdj);
     }
-    else
-      paths = this.requestPathsProgressive(blockAdj);
-    console.log('getPathsProgressive', blockAdj, paths);
+    else {  // this can move to models/block-adj
+      let intervals = paths.get('intervalParams'),
+      intervalsAxes = this.axisDimensions(blockAdj),
+      domainsDiffer = function ()
+      {
+        let
+        domainChanges = [0, 1].map(function (i) {
+          let d = intervals.axes[i].domain,
+          d2 = intervalsAxes[i].domain;
+          return ((d === undefined) !== (d2 === undefined)) ||
+            (d[0] !== d2[0]) || (d[1] !== d2[1]);
+        });
+        let change = domainChanges[0] || domainChanges[1];
+        console.log('getPathsProgressive', intervals, intervalsAxes, domainChanges, change);
+        return change;
+      },
+      domainChange = ! intervals || domainsDiffer();
+
+      let result;
+      if (! domainChange && ((result = paths.get('pathsResult')))) {
+        paths = Promise.resolve(result);
+      }
+      else
+        paths = this.requestPathsProgressive(blockAdj);
+      console.log('getPathsProgressive', blockAdj, paths);
+    }
     return paths;
+  },
+  axisDimensions(blockAdj) {
+    let 
+      intervals =
+      blockAdj.map(function (blockId) {
+      let axis = Stacked.getAxis(blockId);
+      return axis.axisDimensions();
+      });
+    return intervals;
   },
   /** Determine the parameters for the paths request, - intervals and density.
    */
   intervals(blockAdj) {
-    let intervals = blockAdj.map(function (blockId) {
-      let axis = Stacked.getAxis(blockId);
-      return axis.axisDimensions();
-    }),
+    let intervals = this.axisDimensions(blockAdj),
     page = { },
     /*nFeatures : 100,*/ 
     noDbPathFilter = stacks.oa.eventBus.get('params.parsedOptions.noDbPathFilter'),
@@ -172,6 +202,7 @@ export default Service.extend({
             else
               pathsResult = res;
             exists.set('pathsResult', pathsResult);
+            exists.set('intervalParams', intervalParams);
             if (trace_pathsP > 1 + pathsViaStream)
               console.log('pathsResult', pathsResult, exists, exists._internalModel.__attributes, exists._internalModel.__data);
           }
@@ -180,6 +211,7 @@ export default Service.extend({
           let c = store.push(n);
           if (trace_pathsP > 2)
             console.log(n, c.get('block0'), c._internalModel.__data);
+            c.set('intervalParams', intervalParams);
           }
 
           /* if zooming in on a pre-existing axis, then don't trigger zoomedAxis

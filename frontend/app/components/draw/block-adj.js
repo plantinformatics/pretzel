@@ -56,26 +56,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     return axes;
   }),
 
-  pathsRequest : Ember.computed('blockAdj.blockId0', 'blockAdj.blockId1', 'zoomCounter', function () {
-    console.log(this, 'paths blockAdj', this.get('blockAdj'),
-                this.get('blockAdj.blockId0'), this.get('blockAdj.blockId1'), this.get('zoomCounter'));
-    /** if no other processing required here, this could be simply Ember.computed.alias('blockAdj.paths').property('blockAdj.blockId0', 'blockAdj.blockId1') */
-    let
-    paths = this.get('blockAdj.paths');
-    if (false)  // now done via dependence on .pathsResult
-    paths.then( (pathsValue) =>
-      this.draw(pathsValue)
-    );
-    return paths;
-  }),
-  paths : Ember.computed('pathsRequest', 'blockAdj.pathsResult.[]', function () {
+  paths : Ember.computed('blockAdj.pathsResult.[]', 'zoomCounter', function () {
     console.log('paths', this);
-    let paths = this.get('blockAdj.pathsResult');
+    let pathsP = this.get('blockAdj.paths');
+    pathsP.then(function (paths) {
     if (paths && paths.length)
       throttle(this, this.draw, paths, 200, false);
-    else
-      paths = this.get('pathsRequest');
-    return paths;
+    });
+    return pathsP;
   }),
 
   /*--------------------------------------------------------------------------*/
