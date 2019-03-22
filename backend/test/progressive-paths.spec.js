@@ -1,7 +1,8 @@
 'use strict';
 
-var assert = require('chai').assert;
-var http = require('superagent');
+var assert = require('chai').assert
+var http = require('superagent')
+var qs = require('qs')
 
 describe('progressive-path-loading', function() {
   var app, server, endpoint, smtp, database, parse
@@ -18,17 +19,17 @@ describe('progressive-path-loading', function() {
     console.log("Before");
     var environment = require('./helpers/environment')
 
-    process.env.AUTH = "ALL";
-    process.env.EMAIL_VERIFY = "NONE";
-    process.env.EMAIL_HOST = "";
-    process.env.EMAIL_PORT = "";
-    process.env.EMAIL_FROM = "";
-    process.env.EMAIL_ADMIN = "";
+    process.env.AUTH = "ALL"
+    process.env.EMAIL_VERIFY = "NONE"
+    process.env.EMAIL_HOST = ""
+    process.env.EMAIL_PORT = ""
+    process.env.EMAIL_FROM = ""
+    process.env.EMAIL_ADMIN = ""
 
     // scrubbing dependencies (if loaded)
     Object.keys(require.cache).forEach(function(key) { delete require.cache[key] })
 
-    app = require('../server/server');
+    app = require('../server/server')
     endpoint = require('./helpers/api').endpoint
     database = require('./helpers/database')
 
@@ -191,7 +192,7 @@ describe('progressive-path-loading', function() {
         .set('Authorization', userToken)
         .then(res => {
           console.log("Dataset created");
-          console.log('res.body => ', res.body);
+          // console.log('res.body => ', res.body);
           console.log('res.status => ', res.status);
           // assert.equal(res.status, 200);
         })
@@ -210,7 +211,7 @@ describe('progressive-path-loading', function() {
         .set('Authorization', userToken)
         .then(res => {
           console.log("Update completed");
-          console.log('res.body => ', res.body);
+          // console.log('res.body => ', res.body);
           console.log('res.status => ', res.status);
           return res.body
           // assert.equal(res.status, 200);
@@ -233,7 +234,7 @@ describe('progressive-path-loading', function() {
         .set('Authorization', userToken)
         .then(res => {
           console.log("Update completed");
-          console.log('res.body => ', res.body);
+          // console.log('res.body => ', res.body);
           console.log('res.status => ', res.status);
           // assert.equal(res.status, 200);
         })
@@ -252,17 +253,17 @@ describe('progressive-path-loading', function() {
         .set('Content-Type', 'application/json')
         .set('Authorization', userToken)
         .then(res => {
-          console.log("Get Dataset Obj with blocks via REST");
+          console.log("Get blocks successful");
           // console.log('res.body => ', res.body);
-          console.log('res.status => ', res.status);
-          console.log('res.body.blocks => ', res.body.blocks);
+          // console.log('res.status => ', res.status);
+          // console.log('res.body.blocks => ', res.body.blocks);
           blocks = res.body.blocks
           // return res
           // assert.equal(res.status, 200);
         })
         .catch(err => {
           // console.log('err => ', err);
-          console.log("Get Dataset Obj with blocks via REST");
+          console.log("Failed to get blocks");
           console.log('err.status => ', err.status);
           console.log('err.message => ', err.message);
           console.log('err.text => ', err.text);
@@ -332,14 +333,14 @@ describe('progressive-path-loading', function() {
           .set('Authorization', userToken)
           .then(res => {
             console.log("Dataset deleted");
-            console.log('res.body => ', res.body);
+            // console.log('res.body => ', res.body);
             console.log('res.status => ', res.status);
             // assert.equal(res.status, 200);
           })
           .catch(err => {
             console.log("Deleting dataset failed");
             console.log('err.status => ', err.status);
-            console.log('err.text => ', err.text);
+            console.log("err => ", getErrMessage(err));
           })
 
       // console.log("Delete myMap in db via LB");
@@ -368,27 +369,23 @@ describe('progressive-path-loading', function() {
   })
 
   it("'MyMap' exists", async function() {
-    try {
-      // console.log('myMap2 => ', myMap);
-      // console.log('myMap.name => ', myMap.name);
-      await http
-        .get(`${endpoint}/Datasets/${datasetName}`)
-        .set('Accept', 'application/json')
-        .set('Authorization', userToken)
-        .then(res => {
-          // console.log('test res.body => ', res.body);
-          assert.equal(res.status, 200);
-        })
-
-    }
-    catch(err) {
-      console.log('err => ', err);
-    }
+    // console.log('myMap2 => ', myMap);
+    // console.log('myMap.name => ', myMap.name);
+    await http
+      .get(`${endpoint}/Datasets/${datasetName}`)
+      .set('Accept', 'application/json')
+      .set('Authorization', userToken)
+      .then(res => {
+        // console.log('test res.body => ', res.body);
+        assert.equal(res.status, 200);
+      })
   })
 
-  it("Run paths-progressive", async function() {
-    let block0 = blocks[1].id,
-        block1 = blocks[2].id,
+  it("Run paths-progressive, 1 path", async function() {
+    let features
+    //Could set this as a search to find the specific blocks
+    let blockId0 = blocks[1].id,
+        blockId1 = blocks[2].id,
         intervals = {
           axes: [ {
             domain: [0, 100],
@@ -404,33 +401,178 @@ describe('progressive-path-loading', function() {
         }
 
     try {
-      console.log('block0, block1 => ', block0, block1);
+      // console.log('blockId0, blockId1 => ', blockId0, blockId1);
+      // console.log('intervals => ', intervals);
+
+      await http
+        .get(`${endpoint}/Blocks/pathsProgressive`)
+        .query({ blockA: blockId0 })
+        .query({ blockB: blockId1 })
+        .query(qs.stringify({ intervals }))
+        // .query("intervals[axes][0][domain][]=0")
+        // .query("intervals[axes][0][domain][]=100")
+        // .query("intervals[axes][0][range]=398")
+        // .query("intervals[axes][1][domain][]=0")
+        // .query("intervals[axes][1][domain][]=100")
+        // .query("intervals[axes][1][range]=398")
+        // .query("intervals[page][thresholdFactor]=1")
+        // .query("intervals[dbPathFilter]=true")
+        .set('Authorization', userToken)
+        .then(res => {
+          assert.equal(res.status, 200)
+          
+          features = res.body
+          console.log('features => ', features);
+        })
+    }
+    catch(err) {
+      //Extract the useful part of message returned by superagent
+      console.log('err.status => ', err.status);
+      console.log('err => ', getErrMessage(err))
+      // console.log('err.text.error => ', err.response.error.text.error);
+    }
+
+    assert.isArray(features)
+    assert.equal(features.length, 1)
+
+    let markerC = features[0]
+    assert.deepInclude(markerC, { _id: { name: "myMarkerC" } })
+    assert.property(markerC, "alignment")
+
+    let alignment = markerC.alignment
+    assert.isArray(alignment)
+    assert.equal(alignment.length, 2)
+
+    console.log('alignment => ', alignment);
+    alignment.forEach(block => {
+      assert.property(block, "blockId")
+      assert.property(block, "repeats")
+      console.log('block.repeats => ', block.repeats);
+      assert.property(block.repeats, "_id")
+      assert.property(block.repeats, "features")
+      assert.isArray(block.repeats.features)
+      assert.equal(block.repeats.features.length, 1)
+    })
+  })
+
+  it("Run paths-progressive, 0 paths", async function() {
+    let features
+    let blockId0 = blocks[0].id,
+        blockId1 = blocks[2].id,
+        intervals = {
+          axes: [ {
+            domain: [0, 100],
+            range: 400
+          }, {
+            domain: [0, 100],
+            range: 400
+          }],
+          page: {
+            thresholdFactor: 1
+          },
+          dbPathFilter: true
+        }
+
+    try {
+      console.log('blockId0, blockId1 => ', blockId0, blockId1);
       console.log('intervals => ', intervals);
 
       await http
         .get(`${endpoint}/Blocks/pathsProgressive`)
-        .query({ blockA: block0 })
-        .query({ blockB: block1 })
-        // .query({ intervals })
-        .query("intervals[axes][0][domain][]=0")
-        .query("intervals[axes][0][domain][]=100")
-        .query("intervals[axes][0][range]=398")
-        .query("intervals[axes][1][domain][]=0")
-        .query("intervals[axes][1][domain][]=100")
-        .query("intervals[axes][1][range]=398")
-        .query("intervals[page][thresholdFactor]=1")
-        .query("intervals[dbPathFilter]=true")
+        .query({ blockA: blockId0 })
+        .query({ blockB: blockId1 })
+        .query(qs.stringify({ intervals }))
+        // .query("intervals[axes][0][domain][]=0")
+        // .query("intervals[axes][0][domain][]=100")
+        // .query("intervals[axes][0][range]=398")
+        // .query("intervals[axes][1][domain][]=0")
+        // .query("intervals[axes][1][domain][]=100")
+        // .query("intervals[axes][1][range]=398")
+        // .query("intervals[page][thresholdFactor]=1")
+        // .query("intervals[dbPathFilter]=true")
         .set('Authorization', userToken)
         .then(res => {
-          console.log('test res.body => ', res.body);
-          assert.equal(res.status, 200);
+          assert.equal(res.status, 200)
+          
+          features = res.body
+          console.log('features => ', features);
         })
     }
     catch(err) {
-      console.log('err => ', JSON.parse(err.response.error.text).error.message)
-      // console.log('err.text.error => ', err.response.error.text.error);
+      //Extract the useful part of message returned by superagent
       console.log('err.status => ', err.status);
+      console.log('err => ', getErrMessage(err))
+      // console.log('err.text.error => ', err.response.error.text.error);
     }
+
+    assert.isArray(features)
+    assert.equal(features.length, 0)
+
+  })
+
+  it("Run paths-progressive, restricted domain", async function() {
+    let features
+    let blockId0 = blocks[1].id,
+        blockId1 = blocks[2].id,
+        intervals = {
+          axes: [ {
+            domain: [0, 2],
+            range: 400
+          }, {
+            domain: [0, 2],
+            range: 400
+          }],
+          page: {
+            thresholdFactor: 1
+          },
+          dbPathFilter: true
+        }
+
+    try {
+      console.log('blockId0, blockId1 => ', blockId0, blockId1);
+      console.log('intervals => ', intervals);
+
+      await http
+        .get(`${endpoint}/Blocks/pathsProgressive`)
+        .query({ blockA: blockId0 })
+        .query({ blockB: blockId1 })
+        .query(qs.stringify({ intervals }))
+        .set('Authorization', userToken)
+        .then(res => {
+          assert.equal(res.status, 200)
+          
+          features = res.body
+          console.log('features => ', features);
+        })
+    }
+    catch(err) {
+      //Extract the useful part of message returned by superagent
+      console.log('err.status => ', err.status);
+      console.log('err => ', getErrMessage(err))
+      // console.log('err.text.error => ', err.response.error.text.error);
+    }
+
+    assert.isArray(features)
+    assert.equal(features.length, 0)
+
   })
 
 })
+
+
+function getErrMessage(err) {
+  return JSON.parse(err.response.error.text).error.message
+}
+
+function mochaAsync(fn) {
+  return async (done) => {
+    try {
+      await fn()
+      done()
+    }
+    catch(err) {
+      done(err)
+      // console.log('err => ', err);
+    }
+  }
+}
