@@ -2,6 +2,19 @@ import Ember from 'ember';
 
 const { inject: { service }, Service, isEmpty } = Ember;
 
+import { isObject, cloneDeepWith, isUndefined } from 'lodash/lang';
+import { omitBy, extendWith } from 'lodash/object';
+import { after } from 'lodash/function';
+
+
+/* global EventSource */
+
+const trace_paths = 1;
+
+/** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
+const SSE_EventID_EOF = '-1';
+
+
 export default Service.extend({
   session: service('session'),
 
@@ -43,6 +56,81 @@ export default Service.extend({
   getPathsProgressive(blockA, blockB, intervals, options) {
     console.log('services/auth getPathsProgressive', blockA, blockB, intervals, options);
     return this._ajax('Blocks/pathsProgressive', 'GET', {blockA : blockA, blockB : blockB, intervals, options : options}, true);
+  },
+
+  /** 
+   * @param options.dataEvent callback which receives the data parcel
+   */
+  getPathsViaStream(blockA, blockB, intervals, options) {
+
+    /** jQuery.param() will translate {k: undefined} to {k : ''}, so deep-copy the
+     * interval parameters omitting the attributes with value === undefined.
+     */
+    function omitUndefined(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+    const filteredIntervalParams = omitUndefined(intervals);
+    let
+      route= 'Blocks/pathsViaStream',
+    url = this._endpoint(route) +
+      '?access_token=' + this._accessToken() + 
+      '&blockA=' + blockA +
+      '&blockB=' + blockB + '&' +
+      Ember.$.param({intervals : filteredIntervalParams});
+    console.log(url, blockA, blockB, intervals, filteredIntervalParams, options);
+
+    let promise = new Promise((resolve, reject) => {
+      this.listenEvents(url, options.dataEvent, resolve, reject);
+    });
+    return promise;
+  },
+
+  listenEvents(url, dataEvent, resolve, reject) {
+    console.log('listenEvents', url, dataEvent === resolve, arguments);
+    /* from example : https://www.terlici.com/2015/12/04/realtime-node-expressjs-with-sse.html */
+    if (!!window.EventSource) {
+      var source = new EventSource(url, {withCredentials: true});
+
+      function onMessage(e) {
+        if (trace_paths > 2)
+          console.log('onMessage', e, e.type, e.data, arguments);
+        if (e.lastEventId === SSE_EventID_EOF)
+          // This is the end of the stream
+          source.close();
+        else {
+          let data = JSON.parse(e.data);
+          if (! Array.isArray(data))
+            data = [data];
+          dataEvent(data);
+        }
+      };
+      /* https://stackoverflow.com/a/42803814 :
+       * "The onmessage handler assumes the event name is message. If you want to use other event names, you can subscribe to them using addEventListener." - Pappa.
+       */
+      source.addEventListener('pathsViaStream', onMessage, false);
+      // source.onmessage = onMessage;
+
+      source.addEventListener('open', function(e) {
+        console.log("Connection was opened", e.type, e);
+      }, false);
+      source.addEventListener('close', function(e) {
+        console.log("Connection was closed", e.type, e);
+      }, false);
+      function onError(e) {
+        let state = e.eventPhase; // this.readyState seems constant.
+        const stateName = ['CONNECTING', 'OPEN', 'CLOSED'];
+        console.log('listenEvents', e.type, e, this, ".readyState", this.readyState, state, stateName[state], e);
+        if (state === EventSource.CLOSED) {
+          resolve([]);
+        }
+        else if (state == EventSource.CONNECTING) {
+        }
+        else
+          reject(e);
+      };
+      source.onerror = onError; 
+      // source.addEventListener('error', onError, false);
+    }
   },
 
   /** Send GET request Blocks/pathsByReference,

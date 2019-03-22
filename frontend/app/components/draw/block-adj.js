@@ -1,12 +1,13 @@
 import Ember from 'ember';
 
 const { inject: { service } } = Ember;
+import { throttle } from '@ember/runloop';
 
 import PathData from './path-data';
 
 import AxisEvents from '../../utils/draw/axis-events';
 import { stacks, Stacked } from '../../utils/stacks';
-import { selectAxis, blockAdjKeyFn, blockAdjEltId, foregroundSelector, selectBlockAdj } from '../../utils/draw/stacksAxes';
+import { selectAxis, blockAdjKeyFn, blockAdjEltId, featureEltIdPrefix, foregroundSelector, selectBlockAdj } from '../../utils/draw/stacksAxes';
 
 /* global d3 */
 
@@ -32,6 +33,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   needs: ['component:draw/path-data'],
 
+  zoomCounter : 0,
+
   blockAdj : Ember.computed('blockAdjId', function () {
     let
       blockAdjId = this.get('blockAdjId'),
@@ -53,15 +56,25 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     return axes;
   }),
 
-  paths : Ember.computed('blockAdj.blockId0', 'blockAdj.blockId1', function () {
+  pathsRequest : Ember.computed('blockAdj.blockId0', 'blockAdj.blockId1', 'zoomCounter', function () {
     console.log(this, 'paths blockAdj', this.get('blockAdj'),
-                this.get('blockAdj.blockId0'), this.get('blockAdj.blockId1'));
+                this.get('blockAdj.blockId0'), this.get('blockAdj.blockId1'), this.get('zoomCounter'));
     /** if no other processing required here, this could be simply Ember.computed.alias('blockAdj.paths').property('blockAdj.blockId0', 'blockAdj.blockId1') */
     let
     paths = this.get('blockAdj.paths');
+    if (false)  // now done via dependence on .pathsResult
     paths.then( (pathsValue) =>
       this.draw(pathsValue)
     );
+    return paths;
+  }),
+  paths : Ember.computed('pathsRequest', 'blockAdj.pathsResult.[]', function () {
+    console.log('paths', this);
+    let paths = this.get('blockAdj.pathsResult');
+    if (paths && paths.length)
+      throttle(this, this.draw, paths, 200, false);
+    else
+      paths = this.get('pathsRequest');
     return paths;
   }),
 
@@ -109,7 +122,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .attr('id', blockAdjEltId)
         .attr('class', className + ' ' + groupAddedClass)
       ;
-    console.log(gA.nodes(), gA.node());
+      console.log(gA.nodes(), gA.node(), this);
     }
   },
 
@@ -150,27 +163,20 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       console.log('draw', blockAdjId);
     else
     {
-      let featureName = featurePaths[0]._id.name,
-      /** groupAddedClass might be a classification of the feature, e.g. whether it is in a selection or group. */
-       groupAddedClass = featureName;
-      /* Generally feature names have an alpha prefix, but some genetic maps use
-       * the numeric form of the feature index. CSS class names need an alpha
-       * prefix.
-       */
-      if (groupAddedClass.match(/[0-9]/))
-        groupAddedClass = 'f_' + groupAddedClass;
-      let gS = baS.selectAll("g." + className + '.' + groupAddedClass)
+      let gS = baS.selectAll("g." + className)
         .data(featurePaths, featurePathKeyFn);
       gS.exit().remove();
 
       let gA = gS.enter()
         .append('g')
-        .attr('id', function (featurePath) { 
-          let a = featurePath.alignment,
-          id = [a[0].blockId, a[1].blockId];
-          return blockAdjEltId(id) + '_' + featureName;}) 
-        .attr('class', className + ' ' + groupAddedClass)
+        .attr('id', featureGroupIdFn) 
+        .attr('class', className)
       ;
+      function featureGroupIdFn(featurePath) {
+        let a = featurePath.alignment,
+        id = [a[0].blockId, a[1].blockId];
+        return blockAdjEltId(id) + '_' + featureEltId(featurePath);
+      }
 
 
       console.log('PathData', PathData);
@@ -276,8 +282,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     if (this.isAdjacentToAxis(axisID))
     {
       console.log('zoomedAxis matched', axisID, blockAdjId, axes);
-      // Not currently needed because axisStackChanged() already received.
-      // this.updatePathsPositionDebounce.apply(this, axisID_t);
+      // paths positions are updated by event axisStackChanged() already received.
+      // With zoom, the densityCount() result changes so request paths again
+      this.incrementProperty('zoomCounter');
+      this.get('blockAdj').incrementProperty('zoomCounter');
     }
   }
   /*--------------------------------------------------------------------------*/
@@ -301,6 +309,17 @@ if (false) {
 
 /*----------------------------------------------------------------------------*/
 
+function featureEltId(featureBlock)
+{
+  let id = featurePathKeyFn(featureBlock);
+  /* Generally feature names have an alpha prefix, but some genetic maps use
+   * the numeric form of the feature index. CSS class names need an alpha
+   * prefix.
+   */
+  if (id.match(/[0-9]/))
+    id = featureEltIdPrefix + id;
+  return id;
+}
 
 function featurePathKeyFn (featureBlock)
 { return featureBlock._id.name; }

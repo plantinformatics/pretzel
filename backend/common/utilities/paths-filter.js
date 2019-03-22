@@ -2,12 +2,21 @@ var _ = require('lodash')
 
 /* global exports */
 
+const trace_filter = 1;
+
 /** TODO :
  * filter paths according to intervals.axes[].domain[]
  * 
  * Use pathsAggr.densityCount(), with some changes : instead of totalCounts[], can simply count the paths.
+ * When streaming, i.e. called from pathsViaStream(), skip the densityCount() and nthSample() because they don't apply.
+ * pathsViaStream() calls filterPaths() with paths.length === 1, and even when
+ * not streaming there doesn't seem much point in densityCount() and nthSample()
+ * when paths.length === 1, so this is used as the indicator condition for
+ * skipping those function.
 */
 exports.filterPaths = function(paths, intervals) {
+  // pathsViaStream() calls .filterPaths() once for each path
+  if (trace_filter > (2 - (paths.length > 1))) {
   // console.log('paths, intervals => ', paths, intervals);
   console.log('paths.length => ', paths.length);
   console.log('intervals.axes[0].domain => ', intervals.axes[0].domain);
@@ -19,17 +28,20 @@ exports.filterPaths = function(paths, intervals) {
   // console.log('paths[1].alignment.length => ', paths[1].alignment.length);
   // console.log('paths[0].alignment[0] => ', paths[0].alignment[0]);
   // console.log('paths[0].alignment[0].repeats => ', paths[0].alignment[0].repeats);
+  }
   let filteredPaths
   if (intervals.axes[0].domain || intervals.axes[1].domain)
     filteredPaths = domainFilter(paths, intervals)
   else
     filteredPaths = paths;
 
+  if (filteredPaths.length > 1) {
   /** number of samples to skip. */
   let count = densityCount(filteredPaths.length, intervals)
   // let filteredPaths = nthSample(paths, intervals.nSamples);
   if (count)
     filteredPaths = nthSample(filteredPaths, count);
+  }
   return filteredPaths;
 };
 
@@ -69,7 +81,8 @@ function densityCount(numPaths, intervals) {
   count = Math.sqrt(counts[0] * counts[1]);
   count = count / intervals.page.thresholdFactor;
   count = Math.round(count);
-  console.log('Calculated density count => ', count, counts, numPaths);
+  if (trace_filter > (2 - (numPaths > 1)))
+    console.log('Calculated density count => ', count, counts, numPaths);
   return count
 }
 

@@ -10,6 +10,37 @@ var ObjectId = require('mongodb').ObjectID
 
 var cache = require('memory-cache');
 
+var SSE = require('express-sse');
+
+const { Writable, Transform, pipeline } = require('stream');
+
+/** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
+const SSE_EventID_EOF = -1;
+
+const trace_block = 1;
+
+class SseWritable extends Writable {
+  // this class is based on a comment by Daniel Aprahamian in https://jira.mongodb.org/browse/NODE-1408
+  constructor(sse, res) {
+    super({objectMode: true});
+    this.sse = sse;
+    this.res = res;
+    // console.log('SseWritable()');
+  }
+ 
+  _write(chunk, encoding, callback) {
+    //process.stdout.write();
+    let content = chunk; // express-sse does : JSON.stringify();
+    let eventName = 'pathsViaStream';
+    // console.log('SseWritable _write()', chunk);
+    this.sse.send(content, eventName);
+    this.res.flush();
+    callback();
+  }
+}
+
+
+/* global module require */
 
 module.exports = function(Block) {
 
@@ -25,6 +56,15 @@ module.exports = function(Block) {
     })
   };
 
+  /**
+   * Apart from asymmetric alignents such as some aliases, the convention is to
+   * only lookup paths for one direction since the other lookup will have the
+   * identical result.  i.e. blockId0 < blockId1.
+   * They don't correspond in order to left or right axes.
+   *
+   * @param blockId0
+   * @param blockId1
+   */
   Block.pathsProgressive = function(left, right, intervals, options, res, cb) {
       let db = this.dataSource.connector;
     console.log('pathsProgressive', /*db,*/ left, right, intervals /*, options, cb*/);
@@ -53,7 +93,8 @@ module.exports = function(Block) {
             filteredData = data;
           else
             filteredData = pathsFilter.filterPaths(data, intervals);
-          console.log("Num Filtered Paths => ", filteredData.length);
+          if (trace_block > 1)
+            console.log("Num Filtered Paths => ", filteredData.length);
           cb(null, filteredData);
         })
         .catch(function(err) {
@@ -64,49 +105,126 @@ module.exports = function(Block) {
   };
 
 
-  // Adding in res as an argument to trial using raw Express functions rather than rely on Loopback
-  // Trialling different methods of streaming, none successful yet
-  Block.pathsViaStream = function(blockId0, blockId1, options, res, cb) {
-    let db = this.dataSource
-    let blockCollection = db.connector.collection("Block");
+  /**
+   * @param req to registor for req.on(close)
+   * @param res for using raw Express functions rather than rely on Loopback.
+   * Used for res.flush() and res.setHeader()
+   */
+  Block.pathsViaStream = function(blockId0, blockId1, intervals, options, req, res, cb) {
+    let db = this.dataSource.connector;
 
-    let array = []
+    class CacheWritable extends Writable {
+      constructor(cacheId) {
+        super({objectMode: true});
+        this.cacheId = cacheId;
 
-    var cursor = blockCollection.aggregate ( [
-      { $match :  {
-          $or : [{ "_id" : ObjectId(blockId0) },
-                 { "_id" : ObjectId(blockId1) }]
+      }
+      _write(chunk, encoding, callback) {
+        console.log('CacheWritable _write', chunk);
+        debugger;
+        let data = cache.get(this.cacheId);
+        if (data)
+          data = data.concat(chunk);
+        else
+          data = [];
+        cache.put(this.cacheId, data);
+        callback();
+      }
+    }
+
+    class FilterPipe extends Transform {
+      constructor(intervals) {
+        super({objectMode: true});
+        this.intervals = intervals;
+      }
+      _transform(data, encoding, callback) {
+        if (trace_block > 2)
+          console.log('FilterPipe _transform', data);
+        // data is a single document, not an array
+        if (! data /*|| data.length */)
+          debugger;
+        else {
+          let filteredData = pathsFilter.filterPaths([data], this.intervals);
+          if (trace_block > 2)
+            console.log('filteredData', filteredData, filteredData.length);
+          if (filteredData && filteredData.length)
+          {
+            this.push(filteredData);
+            callback();
+          }
         }
-      },
-      { $lookup: { from: 'Feature', localField: '_id', foreignField: 'blockId', as: 'featureObjects' }},
-      { $unwind: '$featureObjects' }, 
-      // { $limit: 5 }
-      { $group: { 
-          _id: {name : '$featureObjects.name', blockId : '$featureObjects.blockId'},
-          features : { $push: '$featureObjects' },
-          // count: { $sum: 1 }
-        }
-      },
-      { $group: {
-          _id: { name: "$_id.name" },
-          alignment: { $push: { blockId: '$_id.blockId', repeats: "$features"}}
-        }
-      },
-      { $match : { alignment : { $size : 2 } }}
-    ])
+      }
+    }
 
-    cursor.stream({transform: x => JSON.stringify(x)}).pipe(res)
-    // cursor.on('data', doc => {
-    //   array.push(doc)
-    // })
 
-    cursor.on('end', () => {
-      // console.log('array => ', array);
-      // cb(null, array)
-      res.end()
-      return
-    })
-  }
+    /** trial also performance of : isSerialized: true */
+    let sse = new SSE(undefined, {isCompressed : false});
+    sse.init(req, res);
+    // express-sse init() has no-cache by default; add no-transform
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+
+    /** same format as extractId() - serializers/block-adj */
+    let cacheId = blockId0 + '_' + blockId1,
+    useCache = ! intervals.dbPathFilter,
+    cached = cache.get(cacheId);
+    if (useCache && cached) {
+      let filteredData = pathsFilter.filterPaths(cached, intervals);
+      sse.send(filteredData, 'pathsViaStream');
+      res.flush();
+      sse.send([], 'pathsViaStream', SSE_EventID_EOF);
+      res.flush();
+    }
+    else {
+      let cursor =
+        pathsAggr.pathsDirect(db, blockId0, blockId1, intervals);
+      if (useCache)
+        cursor.
+        pipe(new CacheWritable(cacheId));
+
+      let pipeLine = [cursor];
+
+      /** no filter required when user has nominated nSamples. */
+      let useFilter = ! intervals.nSamples;
+      if (useFilter)
+        pipeLine.push(new FilterPipe(intervals));
+
+      // as in example https://jira.mongodb.org/browse/NODE-1408
+      // cursor.stream({transform: x => JSON.stringify(x)}).pipe(res)
+      // which also gives this alternative form :
+      // https://jira.mongodb.org/browse/NODE-1408?focusedCommentId=1863180&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-1863180
+      pipeLine.push(new SseWritable(sse, res));
+
+      pipeline(
+        pipeLine,
+        (err) => {
+          if (err) {
+            console.error('Pipeline failed.', err);
+          } else {
+            if (trace_block > 2)
+              console.log('Pipeline succeeded.');
+          }});
+
+      // cursor.on('data', doc => {
+      //   array.push(doc)
+      // })
+
+      /* maybe pipeLine.on ...  */
+      cursor.on('end', () => {
+        console.log('cursor.on(end)', arguments.length);
+        sse.send([], 'pathsViaStream', SSE_EventID_EOF);
+        res.flush();
+        // res.end()
+      });
+
+    }
+    
+
+
+    req.on('close', () => {
+      console.log('req.on(close)');
+    });
+
+  };
 
   Block.pathsByReference = function(blockA, blockB, referenceGenome, maxDistance, options, cb) {
     task.pathsViaLookupReference(this.app.models, blockA, blockB, referenceGenome, maxDistance, options)
@@ -206,7 +324,9 @@ module.exports = function(Block) {
     accepts: [
       {arg: 'blockA', type: 'string', required: true},
       {arg: 'blockB', type: 'string', required: true},
+      {arg: 'intervals', type: 'object', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'req', type: 'object', 'http': {source: 'req'}},
       { arg: 'res', type: 'object', http: { source: 'res' }}
     ],
     http: {verb: 'get'},
