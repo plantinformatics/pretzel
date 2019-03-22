@@ -6,13 +6,14 @@ var qs = require('qs')
 
 describe('progressive-path-loading', function() {
   var app, server, endpoint, smtp, database, parse
+  var datasetHelper, load
 
   var userEmail, userPassword, userId, userToken
 
   let datasetUrl = "https://github.com/plantinformatics/pretzel-data/raw/master/",
       datasetName = "myMap",
       datasetExt = ".json"
-  var myMap, blocks
+  var myMap, myMap3, blocks
   let Dataset
 
   before(async function() {
@@ -32,9 +33,13 @@ describe('progressive-path-loading', function() {
     app = require('../server/server')
     endpoint = require('./helpers/api').endpoint
     database = require('./helpers/database')
+    datasetHelper = require('./helpers/dataset')
+    load = require('../common/utilities/load')
 
     let Client = app.models.Client
     Dataset = app.models.Dataset
+
+
 
     // console.error("Client", Client);
     // console.log('app.models => ', app.models);
@@ -52,17 +57,6 @@ describe('progressive-path-loading', function() {
 
       console.log("Delete test user from previous tests");
       await database.destroyUserByEmail(app.models, userEmail)
-
-      // console.log("Delete myMap in db via LB from previous tests");
-      // await Dataset.destroyById(datasetName)
-      // .then(function(data) {
-      //   console.log("Dataset deleted");
-      //   console.log('data => ', data);
-      // })
-      // .catch(err => {
-      //   console.log("Deleting dataset failed");
-      //   console.log('err => ', err);
-      // })
 
       console.log("Create test user");
       await Client.create({email: userEmail, password: userPassword}, (err, instance) => {
@@ -86,24 +80,25 @@ describe('progressive-path-loading', function() {
         })
 
       /* Previous dataset should be deleted here, but permissions prevents this */
-      // console.log("Delete previous dataset via REST");
-      // await http
-      //     .del(`${endpoint}/Datasets/${myMap.name}`)
-      //     .set('Accept', 'application/json')
-      //     .set('Authorization', userToken)
-      //     .then(res => {
-      //       console.log("Dataset deleted");
-      //       console.log('res.body => ', res.body);
-      //       console.log('res.status => ', res.status);
-      //       // assert.equal(res.status, 200);
-      //     })
-      //     .catch(err => {
-      //       console.log("Deleting dataset failed");
-      //       console.log('err.status => ', err.status);
-      //       console.log('err.text => ', err.text);
-      //     })
+      
+    } catch(err) {
+      // console.log('err => ', err);
+    }
+  })
 
+  after(async function() {
+    console.log("After all");
+  })
 
+  it("Test Mocha", function(done) {
+    // console.log('app.models => ', app.models);
+    console.log("In test");
+    assert.equal(true, true)
+    done()
+  })
+
+  describe("MyMap tests", function() {
+    before(async function() {
       console.log("Retrieve test data from repo");
       myMap = 
         await http
@@ -116,150 +111,27 @@ describe('progressive-path-loading', function() {
             return res.text
           })
           .catch(err => console.log('err.text => ', err.text))
-
-      // console.log('myMap => ', myMap);
-      // myMap.name = myMap.name+"1"
-
-      // await console.log("Store data in db");
-      // await http
-      //   .post(`${endpoint}/Datasets`)
-      //   .send(JSON.stringify(myMap))
-      //   .set('Accept', 'application/json')
-      //   .set('Content-Type', 'application/json')
-      //   .set('Authorization', userToken)
-      //   .then(res => {
-      //     console.log('res.body => ', res.body);
-      //   })
-
-      // console.log('Dataset => ', Dataset);
-
-      // console.log("Find myMap in db via LB");
-      // await Dataset.find()
-      // .then(function(data) {
-      //   if (data) {
-      //     console.log('data => ', data);
-      //     // console.log("Deleting dataset");
-      //     // return Dataset.destroyById(data.id)
-      //   } else {
-      //     console.log("MyMap not found");
-      //     return null
-      //   }
-      // })
-
-
-      // console.log("Find myMap in db via REST");
-      // console.log('endpoint => ', endpoint);
-      // await http
-      //   .get(`${endpoint}/api/datasets/`)
-      //   .query("filter", {include: 'blocks'})
-      //   // .send(myMap)
-      //   .set('Accept', 'application/json')
-      //   .set('Content-Type', 'application/json')
-      //   .set('Authorization', userToken)
-      //   .then(res => {
-      //     console.log('res.body => ', res.body);
-      //     console.log('res.status => ', res.status);
-      //     // assert.equal(res.status, 200);
-      //   })
-      //   .catch(err => {
-      //     // console.log('err => ', err);
-      //     console.log('err.status => ', err.status);
-      //     console.log('err.message => ', err.message);
-      //     console.log('err.text => ', err.text);
-      //   })
       
-      // let allDatasets = await http
-      //   .get(`${endpoint}/Datasets`)
-      //   .set('Accept', 'application/json')
-      //   .set('Content-Type', 'application/json')
-      //   .set('Authorization', userToken)
-
-      // console.log('allDatasets => ', allDatasets.body);
-      // console.log('allDatasets.status => ', allDatasets.status);
-
-      // console.log("Create Dataset through Loopback");
-      // await Dataset.create(myMap, (err, instance) => {
-      //   if(err) console.log('err => ', err);
-      //   console.log('created instance => ', instance);
-      // })
-
-      console.log("Create Dataset through REST");
-      await http
-        .post(`${endpoint}/datasets/upload`)
-        .send({ data: myMap, fileName: datasetName + datasetExt})
-        .set('Accept', 'application/json')
-        .set('Content-Type', 'application/json')
-        .set('Authorization', userToken)
+      await datasetHelper.upload({dataset: myMap, name: datasetName, ext: datasetExt, userToken})
         .then(res => {
-          console.log("Dataset created");
+          console.log("Upload completed");
           // console.log('res.body => ', res.body);
           console.log('res.status => ', res.status);
           // assert.equal(res.status, 200);
         })
         .catch(err => {
-          console.log("Creating dataset failed");
+          console.log("Upload failed");
           console.log('err => ', err.status);
           console.log('err => ', err);
         })
 
-      console.log("Retrieve dataset to then be updated");
-      let myMapObj = await http
-        .get(`${endpoint}/datasets/${datasetName}`)
-        // .send(myMapObj)
-        .set('Accept', 'application/json')
-        // .set('Content-Type', 'application/json')
-        .set('Authorization', userToken)
+      blocks = await datasetHelper.getBlocks({name: datasetName, userToken})
         .then(res => {
-          console.log("Update completed");
-          // console.log('res.body => ', res.body);
-          console.log('res.status => ', res.status);
-          return res.body
-          // assert.equal(res.status, 200);
-        })
-        .catch(err => {
-          console.log("Update failed");
-          console.log('err => ', err.status);
-          console.log('err => ', err);
-        })
-
-      console.log('myMapObj => ', myMapObj);
-
-      myMapObj.public = true
-      console.log("Update dataset to be public");
-      await http
-        .patch(`${endpoint}/datasets/${datasetName}`)
-        .send(myMapObj)
-        .set('Accept', 'application/json')
-        .set('Content-Type', 'application/json')
-        .set('Authorization', userToken)
-        .then(res => {
-          console.log("Update completed");
-          // console.log('res.body => ', res.body);
-          console.log('res.status => ', res.status);
-          // assert.equal(res.status, 200);
-        })
-        .catch(err => {
-          console.log("Update failed");
-          console.log('err => ', err.status);
-          console.log('err => ', err);
-        })
-
-      console.log("Get Dataset Obj with blocks via REST");
-      await http
-        .get(`${endpoint}/datasets/${datasetName}`)
-        .query("filter[include]=blocks")
-        // .send(myMap)
-        .set('Accept', 'application/json')
-        .set('Content-Type', 'application/json')
-        .set('Authorization', userToken)
-        .then(res => {
-          console.log("Get blocks successful");
+          console.log("Successfully get blocks");
           // console.log('res.body => ', res.body);
           // console.log('res.status => ', res.status);
           // console.log('res.body.blocks => ', res.body.blocks);
-          blocks = res.body.blocks
-          // return res
-          // assert.equal(res.status, 200);
+          return res.body.blocks
         })
         .catch(err => {
           // console.log('err => ', err);
@@ -268,292 +140,539 @@ describe('progressive-path-loading', function() {
           console.log('err.message => ', err.message);
           console.log('err.text => ', err.text);
         })
+    })
 
+    after(async function() {
+      try {
+        console.log("Delete dataset via REST");
+        await http
+            .del(`${endpoint}/Datasets/${datasetName}`)
+            .set('Accept', 'application/json')
+            .set('Authorization', userToken)
+            .then(res => {
+              console.log("Dataset deleted");
+              // console.log('res.body => ', res.body);
+              console.log('res.status => ', res.status);
+              // assert.equal(res.status, 200);
+            })
+            .catch(err => {
+              console.log("Deleting dataset failed");
+              console.log('err.status => ', err.status);
+              console.log("err => ", getErrMessage(err));
+            })
 
+        // console.log("Delete myMap in db via LB");
+        // await Dataset.destroyById(myMap.name)
+        // .then(function(data) {
+        //   console.log("Dataset deleted");
+        //   console.log('data => ', data);
+        // })
+        // .catch(err => {
+        //   console.log("Deleting dataset failed");
+        //   console.log('err => ', err);
+        // })
+        // await http
+        // server.close(done);
+      }
+      catch(err) {
+        console.log('err => ', err);
+      }
+    })
 
-      // console.log("Get Dataset Obj created");
-      // await Dataset.find({where: {_id: myMap.name}}, (err, instance) => {
-      //   if(err) console.log('err => ', err.text);
-      //   console.log('found instance => ', instance);
-      // })
-
-      // console.log("Get Dataset Obj with blocks");
-      // await Dataset.findOne({where: {_id: myMap.name}, include: 'blocks'}, (err, instance) => {
-      //   if(err) console.log('err => ', err.text);
-      //   console.log('found one instance => ', instance);
-      //   if(instance) {
-      //     console.log('instance.blocks => ', instance.blocks);
-      //   }
-      //   // console.log('instance.blocks => ', instance.blocks());
-      // })
-
-      
-      // where: {_id: myMap.name}, 
-      // await Dataset.find({include: 'blocks'}, (err, instance) => {
-      //   if(err) console.log('err => ', err);
-      //   console.log('found many instance => ', instance[instance.length-1]);
-      //   // console.log('instance.blocks => ', instance[0].blocks());
-      // })
-
-
-      // done()
-    } catch(err) {
-      // console.log('err => ', err);
-    }
-    
-    // await http
-    //   .post(`${endpoint}/Clients/`)
-    //   .send({ email: userEmail, password: userPassword })
-    //   .set('Accept', 'application/json')
-    //   .set('Content-Type', 'application/json')
-    //   .end(function(err, res) {
-    //     if (err) { return done(err); }
-    //     // assert.equal(res.status, 200);
-    //     var body = res.body;
-    //     console.log('BODY', body)
-    //     // assert.exists(body);
-    //     // assert.exists(body.id);
-    //     userId = body.id; // assign for use later
-    //     // assert.equal(body.email, userEmail);
-    //     // assert.equal(body.code, 'EMAIL_NO_VERIFY');
-    //     // done();
-    //   }
-    // );
-
-  })
-
-  after(async function() {
-    console.log("After");
-
-    try {
-      console.log("Delete dataset via REST");
+    it("'MyMap' exists", async function() {
+      // console.log('myMap2 => ', myMap);
+      // console.log('myMap.name => ', myMap.name);
       await http
-          .del(`${endpoint}/Datasets/${datasetName}`)
-          .set('Accept', 'application/json')
-          .set('Authorization', userToken)
-          .then(res => {
-            console.log("Dataset deleted");
-            // console.log('res.body => ', res.body);
-            console.log('res.status => ', res.status);
-            // assert.equal(res.status, 200);
-          })
-          .catch(err => {
-            console.log("Deleting dataset failed");
-            console.log('err.status => ', err.status);
-            console.log("err => ", getErrMessage(err));
-          })
-
-      // console.log("Delete myMap in db via LB");
-      // await Dataset.destroyById(myMap.name)
-      // .then(function(data) {
-      //   console.log("Dataset deleted");
-      //   console.log('data => ', data);
-      // })
-      // .catch(err => {
-      //   console.log("Deleting dataset failed");
-      //   console.log('err => ', err);
-      // })
-      // await http
-      // server.close(done);
-    }
-    catch(err) {
-      console.log('err => ', err);
-    }
-  })
-
-  it("Test Mocha", function(done) {
-    // console.log('app.models => ', app.models);
-    console.log("In test");
-    assert.equal(true, true)
-    done()
-  })
-
-  it("'MyMap' exists", async function() {
-    // console.log('myMap2 => ', myMap);
-    // console.log('myMap.name => ', myMap.name);
-    await http
-      .get(`${endpoint}/Datasets/${datasetName}`)
-      .set('Accept', 'application/json')
-      .set('Authorization', userToken)
-      .then(res => {
-        // console.log('test res.body => ', res.body);
-        assert.equal(res.status, 200);
-      })
-  })
-
-  it("Run paths-progressive, 1 path", async function() {
-    let features
-    //Could set this as a search to find the specific blocks
-    let blockId0 = blocks[1].id,
-        blockId1 = blocks[2].id,
-        intervals = {
-          axes: [ {
-            domain: [0, 100],
-            range: 400
-          }, {
-            domain: [0, 100],
-            range: 400
-          }],
-          page: {
-            thresholdFactor: 1
-          },
-          dbPathFilter: true
-        }
-
-    try {
-      // console.log('blockId0, blockId1 => ', blockId0, blockId1);
-      // console.log('intervals => ', intervals);
-
-      await http
-        .get(`${endpoint}/Blocks/pathsProgressive`)
-        .query({ blockA: blockId0 })
-        .query({ blockB: blockId1 })
-        .query(qs.stringify({ intervals }))
-        // .query("intervals[axes][0][domain][]=0")
-        // .query("intervals[axes][0][domain][]=100")
-        // .query("intervals[axes][0][range]=398")
-        // .query("intervals[axes][1][domain][]=0")
-        // .query("intervals[axes][1][domain][]=100")
-        // .query("intervals[axes][1][range]=398")
-        // .query("intervals[page][thresholdFactor]=1")
-        // .query("intervals[dbPathFilter]=true")
+        .get(`${endpoint}/Datasets/${datasetName}`)
+        .set('Accept', 'application/json')
         .set('Authorization', userToken)
         .then(res => {
-          assert.equal(res.status, 200)
-          
-          features = res.body
-          console.log('features => ', features);
+          // console.log('test res.body => ', res.body);
+          assert.equal(res.status, 200);
         })
-    }
-    catch(err) {
-      //Extract the useful part of message returned by superagent
-      console.log('err.status => ', err.status);
-      console.log('err => ', getErrMessage(err))
-      // console.log('err.text.error => ', err.response.error.text.error);
-    }
+    })
 
-    assert.isArray(features)
-    assert.equal(features.length, 1)
+    it("Run paths-progressive, 1 path", async function() {
+      let features
+      //Could set this as a search to find the specific blocks
+      let blockId0 = blocks[1].id,
+          blockId1 = blocks[2].id,
+          intervals = {
+            axes: [ {
+              domain: [0, 100],
+              range: 400
+            }, {
+              domain: [0, 100],
+              range: 400
+            }],
+            page: {
+              thresholdFactor: 1
+            },
+            dbPathFilter: true
+          }
 
-    let markerC = features[0]
-    assert.deepInclude(markerC, { _id: { name: "myMarkerC" } })
-    assert.property(markerC, "alignment")
+      try {
+        // console.log('blockId0, blockId1 => ', blockId0, blockId1);
+        // console.log('intervals => ', intervals);
 
-    let alignment = markerC.alignment
-    assert.isArray(alignment)
-    assert.equal(alignment.length, 2)
+        await http
+          .get(`${endpoint}/Blocks/pathsProgressive`)
+          .query({ blockA: blockId0 })
+          .query({ blockB: blockId1 })
+          .query(qs.stringify({ intervals }))
+          // .query("intervals[axes][0][domain][]=0")
+          // .query("intervals[axes][0][domain][]=100")
+          // .query("intervals[axes][0][range]=398")
+          // .query("intervals[axes][1][domain][]=0")
+          // .query("intervals[axes][1][domain][]=100")
+          // .query("intervals[axes][1][range]=398")
+          // .query("intervals[page][thresholdFactor]=1")
+          // .query("intervals[dbPathFilter]=true")
+          .set('Authorization', userToken)
+          .then(res => {
+            assert.equal(res.status, 200)
+            
+            features = res.body
+            console.log('features => ', features);
+          })
+      }
+      catch(err) {
+        //Extract the useful part of message returned by superagent
+        console.log('err.status => ', err.status);
+        console.log('err => ', getErrMessage(err))
+        // console.log('err.text.error => ', err.response.error.text.error);
+      }
 
-    console.log('alignment => ', alignment);
-    alignment.forEach(block => {
-      assert.property(block, "blockId")
-      assert.property(block, "repeats")
-      console.log('block.repeats => ', block.repeats);
-      assert.property(block.repeats, "_id")
-      assert.property(block.repeats, "features")
-      assert.isArray(block.repeats.features)
-      assert.equal(block.repeats.features.length, 1)
+      assert.isArray(features)
+      assert.equal(features.length, 1)
+
+      let markerC = features[0]
+      assert.deepInclude(markerC, { _id: { name: "myMarkerC" } })
+      assert.property(markerC, "alignment")
+
+      let alignment = markerC.alignment
+      assert.isArray(alignment)
+      assert.equal(alignment.length, 2)
+
+      console.log('alignment => ', alignment);
+      alignment.forEach(block => {
+        assert.property(block, "blockId")
+        assert.property(block, "repeats")
+        console.log('block.repeats => ', block.repeats);
+        assert.property(block.repeats, "_id")
+        assert.property(block.repeats, "features")
+        assert.isArray(block.repeats.features)
+        assert.equal(block.repeats.features.length, 1)
+      })
+    })
+
+    it("Run paths-progressive, 0 paths", async function() {
+      let features
+      let blockId0 = blocks[0].id,
+          blockId1 = blocks[2].id,
+          intervals = {
+            axes: [ {
+              domain: [0, 100],
+              range: 400
+            }, {
+              domain: [0, 100],
+              range: 400
+            }],
+            page: {
+              thresholdFactor: 1
+            },
+            dbPathFilter: true
+          }
+
+      try {
+        console.log('blockId0, blockId1 => ', blockId0, blockId1);
+        console.log('intervals => ', intervals);
+
+        await http
+          .get(`${endpoint}/Blocks/pathsProgressive`)
+          .query({ blockA: blockId0 })
+          .query({ blockB: blockId1 })
+          .query(qs.stringify({ intervals }))
+          // .query("intervals[axes][0][domain][]=0")
+          // .query("intervals[axes][0][domain][]=100")
+          // .query("intervals[axes][0][range]=398")
+          // .query("intervals[axes][1][domain][]=0")
+          // .query("intervals[axes][1][domain][]=100")
+          // .query("intervals[axes][1][range]=398")
+          // .query("intervals[page][thresholdFactor]=1")
+          // .query("intervals[dbPathFilter]=true")
+          .set('Authorization', userToken)
+          .then(res => {
+            assert.equal(res.status, 200)
+            
+            features = res.body
+            console.log('features => ', features);
+          })
+      }
+      catch(err) {
+        //Extract the useful part of message returned by superagent
+        console.log('err.status => ', err.status);
+        console.log('err => ', getErrMessage(err))
+        // console.log('err.text.error => ', err.response.error.text.error);
+      }
+
+      console.log('features.length => ', features.length);
+      assert.isArray(features)
+      assert.equal(features.length, 0)
+
+    })
+
+    it("Run paths-progressive, restricted domain", async function() {
+      let features
+      let blockId0 = blocks[1].id,
+          blockId1 = blocks[2].id,
+          intervals = {
+            axes: [ {
+              domain: [0, 2],
+              range: 400
+            }, {
+              domain: [0, 2],
+              range: 400
+            }],
+            page: {
+              thresholdFactor: 1
+            },
+            dbPathFilter: true
+          }
+
+      try {
+        console.log('blockId0, blockId1 => ', blockId0, blockId1);
+        console.log('intervals => ', intervals);
+
+        await http
+          .get(`${endpoint}/Blocks/pathsProgressive`)
+          .query({ blockA: blockId0 })
+          .query({ blockB: blockId1 })
+          .query(qs.stringify({ intervals }))
+          .set('Authorization', userToken)
+          .then(res => {
+            assert.equal(res.status, 200)
+            
+            features = res.body
+            console.log('features => ', features);
+          })
+      }
+      catch(err) {
+        //Extract the useful part of message returned by superagent
+        console.log('err.status => ', err.status);
+        console.log('err => ', getErrMessage(err))
+        // console.log('err.text.error => ', err.response.error.text.error);
+      }
+
+      assert.isArray(features)
+      assert.equal(features.length, 0)
+
     })
   })
 
-  it("Run paths-progressive, 0 paths", async function() {
-    let features
-    let blockId0 = blocks[0].id,
-        blockId1 = blocks[2].id,
-        intervals = {
-          axes: [ {
-            domain: [0, 100],
-            range: 400
-          }, {
-            domain: [0, 100],
-            range: 400
-          }],
-          page: {
-            thresholdFactor: 1
-          },
-          dbPathFilter: true
-        }
+  describe("MyMap3 tests", function() {
+    before(async function() {
+      datasetName = "myMap3"
+      console.log("Retrieve test data from repo");
 
-    try {
-      console.log('blockId0, blockId1 => ', blockId0, blockId1);
-      console.log('intervals => ', intervals);
-
-      await http
-        .get(`${endpoint}/Blocks/pathsProgressive`)
-        .query({ blockA: blockId0 })
-        .query({ blockB: blockId1 })
-        .query(qs.stringify({ intervals }))
-        // .query("intervals[axes][0][domain][]=0")
-        // .query("intervals[axes][0][domain][]=100")
-        // .query("intervals[axes][0][range]=398")
-        // .query("intervals[axes][1][domain][]=0")
-        // .query("intervals[axes][1][domain][]=100")
-        // .query("intervals[axes][1][range]=398")
-        // .query("intervals[page][thresholdFactor]=1")
-        // .query("intervals[dbPathFilter]=true")
-        .set('Authorization', userToken)
+      myMap3 = 
+        await load.fileJson("./test/fixtures/myMap3.json")
+          .then(res => {
+            console.log("MyMap3 received");
+            console.log('res => ', res);
+            // console.log('res.data => ', res.data);
+            // console.log('res.text => ', res.text);
+            // return JSON.parse(res.text)
+            return JSON.stringify(res)
+          })
+          .catch(err => console.log('err => ', err))
+      
+      await datasetHelper.upload({dataset: myMap3, name: datasetName, ext: datasetExt, userToken})
         .then(res => {
-          assert.equal(res.status, 200)
-          
-          features = res.body
-          console.log('features => ', features);
+          console.log("Upload completed");
+          // console.log('res.body => ', res.body);
+          console.log('res.status => ', res.status);
+          // assert.equal(res.status, 200);
         })
-    }
-    catch(err) {
-      //Extract the useful part of message returned by superagent
-      console.log('err.status => ', err.status);
-      console.log('err => ', getErrMessage(err))
-      // console.log('err.text.error => ', err.response.error.text.error);
-    }
+        .catch(err => {
+          console.log("Upload failed");
+          console.log('err => ', err.status);
+          console.log('err => ', err);
+        })
 
-    assert.isArray(features)
-    assert.equal(features.length, 0)
-
-  })
-
-  it("Run paths-progressive, restricted domain", async function() {
-    let features
-    let blockId0 = blocks[1].id,
-        blockId1 = blocks[2].id,
-        intervals = {
-          axes: [ {
-            domain: [0, 2],
-            range: 400
-          }, {
-            domain: [0, 2],
-            range: 400
-          }],
-          page: {
-            thresholdFactor: 1
-          },
-          dbPathFilter: true
-        }
-
-    try {
-      console.log('blockId0, blockId1 => ', blockId0, blockId1);
-      console.log('intervals => ', intervals);
-
-      await http
-        .get(`${endpoint}/Blocks/pathsProgressive`)
-        .query({ blockA: blockId0 })
-        .query({ blockB: blockId1 })
-        .query(qs.stringify({ intervals }))
-        .set('Authorization', userToken)
+      blocks = await datasetHelper.getBlocks({name: datasetName, userToken})
         .then(res => {
-          assert.equal(res.status, 200)
-          
-          features = res.body
-          console.log('features => ', features);
+          console.log("Successfully get blocks");
+          // console.log('res.body => ', res.body);
+          // console.log('res.status => ', res.status);
+          // console.log('res.body.blocks => ', res.body.blocks);
+          return res.body.blocks
         })
-    }
-    catch(err) {
-      //Extract the useful part of message returned by superagent
-      console.log('err.status => ', err.status);
-      console.log('err => ', getErrMessage(err))
-      // console.log('err.text.error => ', err.response.error.text.error);
-    }
+        .catch(err => {
+          // console.log('err => ', err);
+          console.log("Failed to get blocks");
+          console.log('err.status => ', err.status);
+          console.log('err.message => ', err.message);
+          console.log('err.text => ', err.text);
+        })
+      // console.log('blocks => ', blocks);
+    })
 
-    assert.isArray(features)
-    assert.equal(features.length, 0)
+    after(async function() {
+      try {
+        console.log("Delete dataset via REST");
+        await http
+            .del(`${endpoint}/Datasets/${datasetName}`)
+            .set('Accept', 'application/json')
+            .set('Authorization', userToken)
+            .then(res => {
+              console.log("Dataset deleted");
+              // console.log('res.body => ', res.body);
+              console.log('res.status => ', res.status);
+              // assert.equal(res.status, 200);
+            })
+            .catch(err => {
+              console.log("Deleting dataset failed");
+              console.log('err.status => ', err.status);
+              console.log("err => ", getErrMessage(err));
+            })
+      }
+      catch(err) {
+        console.log('err => ', err);
+      }
+    })
+    // it("Run suite", function(done) {
+    //   // console.log('app.models => ', app.models);
+    //   console.log("In test");
+    //   assert.equal(true, true)
+    //   done()
+    // })
+
+    it("Run paths-progressive, 1 path", async function() {
+      // console.log("blocks in test", blocks);
+      let features
+      let blockId0 = blocks[0].id,
+          blockId1 = blocks[2].id,
+          intervals = {
+            axes: [ {
+              domain: [0, 100],
+              range: 400
+            }, {
+              domain: [0, 100],
+              range: 400
+            }],
+            page: {
+              thresholdFactor: 1
+            },
+            dbPathFilter: true
+          }
+
+      try {
+        console.log('blockId0, blockId1 => ', blockId0, blockId1);
+        // console.log('intervals => ', intervals);
+
+        await http
+          .get(`${endpoint}/Blocks/pathsProgressive`)
+          .query({ blockA: blockId0 })
+          .query({ blockB: blockId1 })
+          .query(qs.stringify({ intervals }))
+          .set('Authorization', userToken)
+          .then(res => {
+            assert.equal(res.status, 200)
+            
+            features = res.body
+            console.log('features => ', features);
+          })
+      }
+      catch(err) {
+        //Extract the useful part of message returned by superagent
+        console.log('err.status => ', err.status);
+        console.log('err => ', getErrMessage(err))
+        // console.log('err.text.error => ', err.response.error.text.error);
+      }
+
+      assert.isArray(features)
+      assert.equal(features.length, 1)
+
+      let marker = features[0]
+      assert.deepInclude(marker, { _id: { name: "myMarkerB" } })
+      assert.property(marker, "alignment")
+
+      let alignment = marker.alignment
+      assert.isArray(alignment)
+      assert.equal(alignment.length, 2)
+
+      // console.log('alignment => ', alignment);
+      // alignment.forEach(block => {
+      //   assert.property(block, "blockId")
+      //   assert.property(block, "repeats")
+      //   console.log('block.repeats => ', block.repeats);
+      //   assert.property(block.repeats, "_id")
+      //   assert.property(block.repeats, "features")
+      //   assert.isArray(block.repeats.features)
+      //   assert.equal(block.repeats.features.length, 1)
+      // })
+    })
+
+    it("Run paths-progressive, repeat features", async function() {
+      // console.log("blocks in test", blocks);
+      let features
+      let blockId0 = blocks[0].id,
+          blockId1 = blocks[1].id,
+          intervals = {
+            axes: [ {
+              domain: [0, 100],
+              range: 400
+            }, {
+              domain: [0, 100],
+              range: 400
+            }],
+            page: {
+              thresholdFactor: 1
+            },
+            dbPathFilter: true
+          }
+
+      try {
+        console.log('blockId0, blockId1 => ', blockId0, blockId1);
+        // console.log('intervals => ', intervals);
+
+        await http
+          .get(`${endpoint}/Blocks/pathsProgressive`)
+          .query({ blockA: blockId0 })
+          .query({ blockB: blockId1 })
+          .query(qs.stringify({ intervals }))
+          .set('Authorization', userToken)
+          .then(res => {
+            assert.equal(res.status, 200)
+            
+            features = res.body
+            // console.log('features => ', features);
+          })
+      }
+      catch(err) {
+        //Extract the useful part of message returned by superagent
+        console.log('err.status => ', err.status);
+        console.log('err => ', getErrMessage(err))
+        // console.log('err.text.error => ', err.response.error.text.error);
+      }
+
+      assert.isArray(features)
+      // assert.equal(features.length, 1)
+
+      let marker = features[0]
+      assert.deepInclude(marker, { _id: { name: "myMarkerA" } })
+      assert.property(marker, "alignment")
+
+      let alignment = marker.alignment
+      assert.isArray(alignment)
+      assert.equal(alignment.length, 2)
+
+      console.log('alignment => ', alignment);
+      alignment.forEach(block => {
+        assert.property(block, "blockId")
+        assert.property(block, "repeats")
+        // console.log('block.repeats => ', block.repeats);
+        assert.property(block.repeats, "_id")
+        assert.property(block.repeats, "features")
+        
+        let reps = block.repeats.features
+        assert.isArray(reps)
+
+        //uncertain about block order within alignment
+        if(block.blockId === blockId0) {
+          assert.equal(reps.length, 3)
+        }
+        else if(block.blockId === blockId1) {
+          assert.equal(reps.length, 2)
+        }
+        else {
+          throw Error("Block Id not recognised")
+        }
+        // console.log('block.repeats.features => ', block.repeats.features);
+        // assert.equal(block.repeats.features.length, 1)
+      })
+    })
+
+    it("Run paths-progressive, repeat features, restricted domain", async function() {
+      // console.log("blocks in test", blocks);
+      let features
+      let blockId0 = blocks[0].id,
+          blockId1 = blocks[1].id,
+          intervals = {
+            axes: [ {
+              domain: [0, 9],
+              range: 400
+            }, {
+              domain: [0, 40],
+              range: 400
+            }],
+            page: {
+              thresholdFactor: 1
+            },
+            dbPathFilter: true
+          }
+
+      try {
+        console.log('blockId0, blockId1 => ', blockId0, blockId1);
+        // console.log('intervals => ', intervals);
+
+        await http
+          .get(`${endpoint}/Blocks/pathsProgressive`)
+          .query({ blockA: blockId0 })
+          .query({ blockB: blockId1 })
+          .query(qs.stringify({ intervals }))
+          .set('Authorization', userToken)
+          .then(res => {
+            assert.equal(res.status, 200)
+            
+            features = res.body
+            // console.log('features => ', features);
+          })
+      }
+      catch(err) {
+        //Extract the useful part of message returned by superagent
+        console.log('err.status => ', err.status);
+        console.log('err => ', getErrMessage(err))
+        // console.log('err.text.error => ', err.response.error.text.error);
+      }
+
+      assert.isArray(features)
+      // assert.equal(features.length, 1)
+
+      let marker = features[0]
+      assert.deepInclude(marker, { _id: { name: "myMarkerA" } })
+
+      let alignment = marker.alignment
+      assert.isArray(alignment)
+
+      // console.log('alignment => ', alignment);
+      alignment.forEach(block => {
+        assert.property(block, "repeats")
+        assert.property(block.repeats, "features")
+        // console.log('block.repeats => ', block.repeats);
+        
+        let reps = block.repeats.features
+        assert.isArray(reps)
+
+        //uncertain about block order within alignment
+        if(block.blockId === blockId0) {
+          // console.log('reps => ', reps);
+          assert.equal(reps.length, 2)
+          // console.log("block0 ok");
+        }
+        else if(block.blockId === blockId1) {
+          // console.log('reps => ', reps);
+          assert.equal(reps.length, 1)
+          // console.log("block1 ok");
+        }
+        else {
+          throw Error("Block Id not recognised")
+        }
+        // console.log('block.repeats.features => ', block.repeats.features);
+        // assert.equal(block.repeats.features.length, 1)
+      })
+    })
 
   })
 
