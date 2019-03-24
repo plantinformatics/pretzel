@@ -59,7 +59,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   paths : Ember.computed('blockAdj.pathsResult.[]', 'zoomCounter', function () {
     console.log('paths', this);
     let pathsP = this.get('blockAdj.paths');
-    pathsP.then(function (paths) {
+    pathsP.then((paths) => {
     if (paths && paths.length)
       throttle(this, this.draw, paths, 200, false);
     });

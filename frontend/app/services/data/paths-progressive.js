@@ -122,12 +122,13 @@ export default Service.extend({
       intervals[axis].domain = undefined;
     });
 
-    let oa = stacks.oa;
-    let sample = oa.drawOptions.pathControlActiveSample();
+    let oa = stacks.oa,
+    controls = oa.drawOptions.controls;
+    let sample = controls.get('view.pathControlActiveSample');
     if (sample) {
       params.nSamples = sample;
     }
-    let densityFactor = oa.drawOptions.pathControlActiveDensity();
+    let densityFactor = controls.get('view.pathControlActiveDensity');
     if (densityFactor) {
       page.densityFactor = densityFactor;
       page.thresholdFactor = densityFactor; // retire the name .thresholdFactor

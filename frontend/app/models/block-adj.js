@@ -22,7 +22,7 @@ export default DS.Model.extend({
   // range: attr(),
   /**
    * Depending on zoomCounter is just a stand-in for depending on the domain of each block,
-   * which is part of changing the axes (Stacked) to Ember components, and the dependendt keys can be e.g. block0.axis.domain.
+   * which is part of changing the axes (Stacked) to Ember components, and the dependent keys can be e.g. block0.axis.domain.
    */
   paths : Ember.computed('blockId0', 'blockId1', 'zoomCounter', function () {
     let blockAdjId = [this.get('blockId0'), this.get('blockId1')],

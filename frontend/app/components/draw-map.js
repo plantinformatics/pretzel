@@ -812,12 +812,8 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     showSelectedFeatures : true,
 
-        pathControlActiveDensity : function() {
-          return me.pathControlActiveDensity();
-        },
-        pathControlActiveSample : function() {
-          return me.pathControlActiveSample();
-        },
+        controls : this.get('controls'),
+
         pathControlNFeatures : function() {
           return me.pathControlNFeatures();
         }
@@ -5314,26 +5310,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
   },   // draw()
 
-  pathControlActiveDensity : function()
-  {
-    let active = tabActive('#tab-paths-density'),
-    density;
-    if (active) {
-      let value = inputRangeValue("range-pathDensity");
-      density = expRange(value, 100, 100, 1024);
-    }
-    return density;
-  },
-  pathControlActiveSample : function()
-  {
-    let active = tabActive('#tab-paths-sample'),
-    sample;
-    if (active) {
-      let value = inputRangeValue("range-pathSample");
-      sample = expRange(value, 100, 100, 1024);
-    }
-    return sample;
-  },
+
   pathControlNFeatures : function()
   {
     let pathsViaStream = this.get('controls').view.pathsViaStream,
