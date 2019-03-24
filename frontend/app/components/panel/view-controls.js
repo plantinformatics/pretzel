@@ -1,6 +1,9 @@
 import Ember from 'ember';
 
-import { tabActive, inputRangeValue, expRange  } from '../../utils/domElements';
+import {
+  tabActive, inputRangeValue,
+  expRangeBase, expRange, expRangeInitial
+} from '../../utils/domElements';
 
 
 /* global d3 */
@@ -12,19 +15,24 @@ export default Ember.Component.extend({
 
   feed: Ember.inject.service(),
 
-  /** This will change to a value,
+  /** This slider value is mapped via an exponential (computed) function and
+   * available as :
    * controls.view.pathControlActiveDensity
+   *
+   * Calculation of initial / default value :
+   * Some explanation in see comment in @expRange()
+   * and @see updateSbSizeThresh() (draw-map.js)
    */
-  pathDensity : 12.5,
+  pathDensity : expRangeInitial(1, expRangeBase(100/2, 100)),
   /** ditto, 
    * controls.view.pathControlActiveSample
    */
-  pathSample : 100,
+  pathSample : expRangeInitial(50, expRangeBase(100, 1024)),
 
   pathControlActiveDensity : Ember.computed('pathDensityActive', 'pathDensity', function () {
     let active = this.get('pathDensityActive'),
      pathDensity = this.get('pathDensity'),
-      density = active && expRange(pathDensity, 100, 100, 1024);
+      density = active && expRange(pathDensity, 100/2, 100);
     if (density) {
       let digits = Math.log10(density),
       decimals =  (digits > 2) ? 0 : ((digits > 1) ? 1 : 2);
@@ -34,7 +42,7 @@ export default Ember.Component.extend({
     Ember.run.next(function () {
       let value2 = inputRangeValue('range-pathDensity');
       if (value !== value2)
-        console.log('range-pathDensity',  value);
+        console.log('range-pathDensity',  value, value2);
     });
 
     console.log('pathControlActiveDensity', pathDensity, density);
@@ -44,7 +52,7 @@ export default Ember.Component.extend({
   pathControlActiveSample : Ember.computed('pathSampleActive', 'pathSample', function () {
     let active = this.get('pathSampleActive'),
      pathSample = this.get('pathSample'),
-     sample = active && expRange(pathSample, 100, 100, 1024);
+     sample = active && expRange(pathSample, 100, 1024);
     if (sample) {
       sample = sample.toFixed();
     }
@@ -52,7 +60,7 @@ export default Ember.Component.extend({
     Ember.run.next(function () {
       let value2 = inputRangeValue('range-pathSample');
       if (value !== value2)
-        console.log('range-pathSample',  value);
+        console.log('range-pathSample',  value, value2);
     });
     console.log('pathControlActiveSample', pathSample, sample);
     return sample;
