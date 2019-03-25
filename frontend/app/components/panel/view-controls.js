@@ -5,6 +5,7 @@ import {
   expRangeBase, expRange, expRangeInitial
 } from '../../utils/domElements';
 
+import { toBool } from '../../utils/common/strings';
 
 /* global d3 */
 
@@ -14,6 +15,9 @@ export default Ember.Component.extend({
   // classes
 
   feed: Ember.inject.service(),
+
+  /** may be set via URL param - @see readParsedOptions(). */
+  pathsViaStream : true,
 
   /** This slider value is mapped via an exponential (computed) function and
    * available as :
@@ -69,10 +73,25 @@ export default Ember.Component.extend({
 
   didInsertElement() {
     console.log("components/draw-controls didInsertElement()", this.drawActions);
+    this._super(...arguments);
+
     this.drawActions.trigger("drawControlsLife", true);
     // initially 'Paths - Density' tab is active.
     this.send('pathTabActive', 'density');
+    this.readParsedOptions();
     this.set('controls.view', this);
+  },
+  readParsedOptions() {
+    /** this can be passed in from model.params.parsedOptions and then access pathsViaStream as 
+     * this.get('parsedOptions.pathsViaStream');
+     */
+    let parsedOptions = this.drawActions.model.params.parsedOptions;
+
+    /** default to true if not given as URL query param e.g. options=pathsViaStream=false  */
+    let pathsViaStream = parsedOptions.pathsViaStream;
+      // this.get('parsedOptions.pathsViaStream');
+    if (pathsViaStream !== undefined)
+      this.set('pathsViaStream', toBool(pathsViaStream));
   },
   willDestroyElement() {
     console.log("components/draw-controls willDestroyElement()");
