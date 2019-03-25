@@ -35,7 +35,7 @@ exports.filterPaths = function(paths, intervals) {
   else
     filteredPaths = paths;
 
-  if (filteredPaths.length > 1) {
+    if ((filteredPaths.length > 1) && (intervals.page && intervals.page.thresholdFactor)) {
   /** number of samples to skip. */
   let count = densityCount(filteredPaths.length, intervals)
   // let filteredPaths = nthSample(paths, intervals.nSamples);
@@ -106,7 +106,7 @@ function domainFilter(paths, intervals) {
   let domains = [BLOCK0, BLOCK1].map(block => {
     return intervals.axes[block].domain
   })
-  console.log('domains => ', domains);
+  // console.log('domains => ', domains);
   // console.log('paths => ', paths);
   let result = paths.map(original => {
     let path = _.cloneDeep(original)

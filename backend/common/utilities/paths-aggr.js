@@ -257,7 +257,7 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
    */
   blockFilter = function (eq, b) {
     let a = intervals.axes[b],
-    r = a.zoomed ?
+    r = a.zoomed && a.domain ?
       eq.concat([valueBound(b, 0), valueBound(b, 1)]) :
       eq;
     return r;

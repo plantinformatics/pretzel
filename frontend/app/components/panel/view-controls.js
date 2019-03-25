@@ -88,7 +88,7 @@ export default Ember.Component.extend({
     let parsedOptions = this.drawActions.model.params.parsedOptions;
 
     /** default to true if not given as URL query param e.g. options=pathsViaStream=false  */
-    let pathsViaStream = parsedOptions.pathsViaStream;
+    let pathsViaStream = parsedOptions && parsedOptions.pathsViaStream;
       // this.get('parsedOptions.pathsViaStream');
     if (pathsViaStream !== undefined)
       this.set('pathsViaStream', toBool(pathsViaStream));
