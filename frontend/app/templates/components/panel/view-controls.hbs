@@ -76,13 +76,14 @@
       <div>
         {{input type="checkbox" checked=pathsViaStream class="toggle"}}
         <label>Path Stream</label>
+        <span style="margin-left:2em; vertical-align: bottom;">Limit : {{ pathControlNFeatures }}</span>
       </div>
       <div>
         <input type="range" 
 	       id="range-pathsNFeatures" 
-	       name="pathsNFeatures" 
+	       value={{pathsNFeatures}} 
+               oninput={{action (mut pathNFeatures) value="target.value"}}
 	       min="0" max="100"
-	       value="60"
         />
       </div>
 

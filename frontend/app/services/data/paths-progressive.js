@@ -112,7 +112,6 @@ export default Service.extend({
   intervals(blockAdj) {
     let intervals = this.axisDimensions(blockAdj),
     page = { },
-    /*nFeatures : 100,*/ 
     noDbPathFilter = stacks.oa.eventBus.get('params.parsedOptions.noDbPathFilter'),
     /** default value is true, i.e. noDbPathFilter===undefined => dbPathFilter */
     dbPathFilter = ! noDbPathFilter,
@@ -133,6 +132,11 @@ export default Service.extend({
       page.densityFactor = densityFactor;
       page.thresholdFactor = densityFactor; // retire the name .thresholdFactor
     }
+    let nFeatures = controls.get('view.pathControlNFeatures');
+    if (nFeatures) {
+      params.nFeatures = nFeatures;
+    }
+
 
     return params;
   },
@@ -149,7 +153,6 @@ export default Service.extend({
     let flowsService = this.get('flowsService');
     let intervalParams = this.intervals(blockAdj);
     let drawMap = stacks.oa.eventBus;
-    intervalParams.nFeatures = drawMap.pathControlNFeatures();
     let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
     let promise = 
       pathsViaStream ?

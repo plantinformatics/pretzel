@@ -812,11 +812,7 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     showSelectedFeatures : true,
 
-        controls : this.get('controls'),
-
-        pathControlNFeatures : function() {
-          return me.pathControlNFeatures();
-        }
+        controls : this.get('controls')
 
       };
     }
@@ -5310,17 +5306,6 @@ export default Ember.Component.extend(Ember.Evented, {
 
   },   // draw()
 
-
-  pathControlNFeatures : function()
-  {
-    let pathsViaStream = this.get('controls').view.pathsViaStream,
-    nFeatures;
-    if (pathsViaStream) {
-      let value = inputRangeValue("range-pathsNFeatures");
-      nFeatures = expRange(value, 100, 10000, 100);
-    }
-    return nFeatures;
-  },
 
 
   //----------------------------------------------------------------------------

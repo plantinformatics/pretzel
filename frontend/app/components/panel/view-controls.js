@@ -70,6 +70,27 @@ export default Ember.Component.extend({
     return sample;
    }),
 
+  /** ditto, 
+   * controls.view.pathControlActiveNFeatures
+   */
+  pathNFeatures : expRangeInitial(60, expRangeBase(100, 10000)),
+
+  pathControlNFeatures : Ember.computed('pathNFeatures', 'pathNFeatures', function () {
+    /** May make nFeatures display and range slider sensitive only when
+     * pathsViaStream, or perhaps it will be a limit applicable also to other
+     * (non-streaming) request modes.
+     */
+    let active = this.get('pathsViaStream'),
+     pathNFeatures = this.get('pathNFeatures'),
+     nFeatures = active && expRange(pathNFeatures, 100, 10000);
+    if (nFeatures) {
+      nFeatures = nFeatures.toFixed();
+    }
+    console.log('pathControlNFeatures', pathNFeatures, nFeatures);
+    return nFeatures;
+   }),
+
+  /*--------------------------------------------------------------------------*/
 
   didInsertElement() {
     console.log("components/draw-controls didInsertElement()", this.drawActions);
