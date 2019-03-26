@@ -2,7 +2,7 @@
     "ignore": [
         ".git",
         "backend/node_modules/**/node_modules",
-        "*.spec.js"
+        "backend/test/"
     ],
     "events": {
         "restart": "osascript -e 'display notification \"App restarted due to:\n'$FILENAME'\" with title \"nodemon\"'"
