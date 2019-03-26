@@ -3,6 +3,7 @@
 var assert = require('chai').assert
 var http = require('superagent')
 var qs = require('qs')
+var _ = require('lodash')
 
 describe('progressive-path-loading', function() {
   var app, server, endpoint, smtp, database, parse
@@ -10,11 +11,11 @@ describe('progressive-path-loading', function() {
 
   var userEmail, userPassword, userId, userToken
 
-  let datasetUrl = "https://github.com/plantinformatics/pretzel-data/raw/master/",
-      datasetName = "myMap",
-      datasetExt = ".json"
-  var myMap, myMap3, blocks
-  let Dataset
+  var ds, blocks
+  // let Dataset
+
+  beforeEach(function() {
+  })
 
   before(async function() {
     console.log("Before");
@@ -37,19 +38,21 @@ describe('progressive-path-loading', function() {
     load = require('../common/utilities/load')
 
     let Client = app.models.Client
-    Dataset = app.models.Dataset
+    // Dataset = app.models.Dataset
 
-
-
-    // console.error("Client", Client);
-    // console.log('app.models => ', app.models);
-    // console.error('app.models => ', app.models);
+    ds = {
+      url: "https://github.com/plantinformatics/pretzel-data/raw/master/",
+      path: "",
+      filename: "myMap",
+      name: "myMap",
+      ext: ".json"
+    }
+    blocks = null
 
     userEmail = "test@test.com"
     userPassword = "test"
     userId = null
     userToken = null
-    myMap = null
 
     try {
       // console.log("Wipe db from previous tests");
@@ -99,67 +102,34 @@ describe('progressive-path-loading', function() {
 
   describe("MyMap tests", function() {
     before(async function() {
-      console.log("Retrieve test data from repo");
-      myMap = 
-        await http
-          .get(datasetUrl+datasetName+datasetExt)
-          .then(res => {
-            console.log("MyMap received");
-            // console.log('res.data => ', res.data);
-            // console.log('res.text => ', res.text);
-            // return JSON.parse(res.text)
-            return res.text
-          })
-          .catch(err => console.log('err.text => ', err.text))
-      
-      await datasetHelper.upload({dataset: myMap, name: datasetName, ext: datasetExt, userToken})
-        .then(res => {
-          console.log("Upload completed");
-          // console.log('res.body => ', res.body);
-          console.log('res.status => ', res.status);
-          // assert.equal(res.status, 200);
-        })
-        .catch(err => {
-          console.log("Upload failed");
-          console.log('err => ', err.status);
-          console.log('err => ', err);
-        })
+      blocks = null
+      ds.name = "myMap"
+      ds.filename = "myMap"
 
-      blocks = await datasetHelper.getBlocks({name: datasetName, userToken})
-        .then(res => {
-          console.log("Successfully get blocks");
-          // console.log('res.body => ', res.body);
-          // console.log('res.status => ', res.status);
-          // console.log('res.body.blocks => ', res.body.blocks);
-          return res.body.blocks
-        })
-        .catch(err => {
-          // console.log('err => ', err);
-          console.log("Failed to get blocks");
-          console.log('err.status => ', err.status);
-          console.log('err.message => ', err.message);
-          console.log('err.text => ', err.text);
-        })
+      blocks = await datasetHelper.setup({ds, userToken})
+      .then(res => {
+        console.log("Successfully get blocks");
+        return res.body.blocks
+      })
+      .catch(err => {
+        // console.log('err => ', err);
+        console.log("Failed to get blocks");
+        console.log('err.status => ', err.status);
+        console.log('err => ', getErrMessage(err));
+      })
     })
 
     after(async function() {
-      try {
-        console.log("Delete dataset via REST");
-        await http
-            .del(`${endpoint}/Datasets/${datasetName}`)
-            .set('Accept', 'application/json')
-            .set('Authorization', userToken)
-            .then(res => {
-              console.log("Dataset deleted");
-              // console.log('res.body => ', res.body);
-              console.log('res.status => ', res.status);
-              // assert.equal(res.status, 200);
-            })
-            .catch(err => {
-              console.log("Deleting dataset failed");
-              console.log('err.status => ', err.status);
-              console.log("err => ", getErrMessage(err));
-            })
+      await datasetHelper.del({name: ds.name, userToken})
+        .then(res => {
+          console.log("Dataset deleted");
+          console.log('res.status => ', res.status);
+        })
+        .catch(err => {
+          console.log("Deleting dataset failed");
+          console.log('err.status => ', err.status);
+          console.log("err => ", getErrMessage(err));
+        })
 
         // console.log("Delete myMap in db via LB");
         // await Dataset.destroyById(myMap.name)
@@ -173,17 +143,13 @@ describe('progressive-path-loading', function() {
         // })
         // await http
         // server.close(done);
-      }
-      catch(err) {
-        console.log('err => ', err);
-      }
     })
 
     it("'MyMap' exists", async function() {
       // console.log('myMap2 => ', myMap);
       // console.log('myMap.name => ', myMap.name);
       await http
-        .get(`${endpoint}/Datasets/${datasetName}`)
+        .get(`${endpoint}/Datasets/${ds.name}`)
         .set('Accept', 'application/json')
         .set('Authorization', userToken)
         .then(res => {
@@ -319,7 +285,6 @@ describe('progressive-path-loading', function() {
       console.log('features.length => ', features.length);
       assert.isArray(features)
       assert.equal(features.length, 0)
-
     })
 
     it("Run paths-progressive, restricted domain", async function() {
@@ -366,87 +331,41 @@ describe('progressive-path-loading', function() {
 
       assert.isArray(features)
       assert.equal(features.length, 0)
-
     })
   })
 
   describe("MyMap3 tests", function() {
     before(async function() {
-      datasetName = "myMap3"
-      console.log("Retrieve test data from repo");
-
-      myMap3 = 
-        await load.fileJson("./test/fixtures/myMap3.json")
-          .then(res => {
-            console.log("MyMap3 received");
-            console.log('res => ', res);
-            // console.log('res.data => ', res.data);
-            // console.log('res.text => ', res.text);
-            // return JSON.parse(res.text)
-            return JSON.stringify(res)
-          })
-          .catch(err => console.log('err => ', err))
+      blocks = null
+      ds.filename = "myMap3"
+      ds.name = "myMap3"
       
-      await datasetHelper.upload({dataset: myMap3, name: datasetName, ext: datasetExt, userToken})
-        .then(res => {
-          console.log("Upload completed");
-          // console.log('res.body => ', res.body);
-          console.log('res.status => ', res.status);
-          // assert.equal(res.status, 200);
-        })
-        .catch(err => {
-          console.log("Upload failed");
-          console.log('err => ', err.status);
-          console.log('err => ', err);
-        })
-
-      blocks = await datasetHelper.getBlocks({name: datasetName, userToken})
-        .then(res => {
-          console.log("Successfully get blocks");
-          // console.log('res.body => ', res.body);
-          // console.log('res.status => ', res.status);
-          // console.log('res.body.blocks => ', res.body.blocks);
-          return res.body.blocks
-        })
-        .catch(err => {
-          // console.log('err => ', err);
-          console.log("Failed to get blocks");
-          console.log('err.status => ', err.status);
-          console.log('err.message => ', err.message);
-          console.log('err.text => ', err.text);
-        })
+      blocks = await datasetHelper.setup({ds, userToken})
+      .then(res => {
+        console.log("Successfully get blocks");
+        return res.body.blocks
+      })
+      .catch(err => {
+        // console.log('err => ', err);
+        console.log("Failed to get blocks");
+        console.log('err.status => ', err.status);
+        console.log('err => ', getErrMessage(err));
+      })
       // console.log('blocks => ', blocks);
     })
 
     after(async function() {
-      try {
-        console.log("Delete dataset via REST");
-        await http
-            .del(`${endpoint}/Datasets/${datasetName}`)
-            .set('Accept', 'application/json')
-            .set('Authorization', userToken)
-            .then(res => {
-              console.log("Dataset deleted");
-              // console.log('res.body => ', res.body);
-              console.log('res.status => ', res.status);
-              // assert.equal(res.status, 200);
-            })
-            .catch(err => {
-              console.log("Deleting dataset failed");
-              console.log('err.status => ', err.status);
-              console.log("err => ", getErrMessage(err));
-            })
-      }
-      catch(err) {
-        console.log('err => ', err);
-      }
+      await datasetHelper.del({name: ds.name, userToken})
+        .then(res => {
+          console.log("Dataset deleted");
+          console.log('res.status => ', res.status);
+        })
+        .catch(err => {
+          console.log("Deleting dataset failed");
+          console.log('err.status => ', err.status);
+          console.log("err => ", getErrMessage(err));
+        })
     })
-    // it("Run suite", function(done) {
-    //   // console.log('app.models => ', app.models);
-    //   console.log("In test");
-    //   assert.equal(true, true)
-    //   done()
-    // })
 
     it("Run paths-progressive, 1 path", async function() {
       // console.log("blocks in test", blocks);
@@ -676,11 +595,131 @@ describe('progressive-path-loading', function() {
 
   })
 
+  describe("Small public data tests", function() {
+    let ds2
+    before(async function() {
+      blocks = null
+      ds2 = _.cloneDeep(ds)
+      ds.name = "Wen_et_al_2017"
+      ds.filename = "Wen_et_al_2017.fixed"
+      ds.path = "public_maps/json/"
+
+      ds2.name = "PBI-14-1406-s005"
+      ds2.filename = "PBI-14-1406-s005.fixed"
+      ds2.path = "public_maps/json/"
+
+      // console.log('ds, ds2 => ', ds, ds2);
+
+      let promises = [ds, ds2].map(async d => datasetHelper.setup({ds: d, userToken}))
+      await Promise.all(promises).then(values => {
+        console.log("Successfully get blocks");
+        blocks = values.reduce((arr, res) => {
+          // console.log('res => ', res);
+          // console.log('res.body => ', res.body);
+          // console.log('res.body.blocks => ', res.body.blocks);
+          return arr.concat(res.body.blocks)
+        }, [])
+        // return res.body.blocks
+      })
+      .catch(err => {
+        // console.log('err => ', err);
+        console.log("Failed to get blocks");
+        console.log('err.status => ', err.status);
+        console.log('err => ', err);
+        // console.log('err => ', getErrMessage(err));
+      })
+      // console.log('blocks => ', blocks);
+    })
+    after(async function() {
+      let promises = [ds, ds2].map(async d => datasetHelper.del({name: d.name, userToken}))
+      Promise.all(promises).then(res => {
+          console.log("Datasets deleted");
+          // console.log('res.body => ', res.body);
+          console.log('res.status => ', res.status);
+          // assert.equal(res.status, 200);
+        })
+        .catch(err => {
+          console.log("Deleting dataset failed");
+          console.log('err => ', err);
+        })
+    })
+
+    // it("Run suite", function(done) {
+    //   // console.log('app.models => ', app.models);
+    //   console.log("In test");
+    //   assert.equal(true, true)
+    //   done()
+    // })
+
+    it("Run paths-progressive, 1 path", async function() {
+      // console.log("blocks in test", blocks);
+      let features
+      let blockId0 = blocks.find(b => b.name === '1B').id,
+          blockId1 = blocks.find(b => b.name === '2B').id,
+          intervals = {
+            axes: [ {
+              domain: [0, 500],
+              range: 400
+            }, {
+              domain: [0, 500],
+              range: 400
+            }],
+            page: {
+              thresholdFactor: 1
+            },
+            dbPathFilter: true
+          }
+
+      try {
+        // console.log('blockId0, blockId1 => ', blockId0, blockId1);
+        // console.log('intervals => ', intervals);
+
+        await http
+          .get(`${endpoint}/Blocks/pathsProgressive`)
+          .query({ blockA: blockId0 })
+          .query({ blockB: blockId1 })
+          .query(qs.stringify({ intervals }))
+          .set('Authorization', userToken)
+          .then(res => {
+            assert.equal(res.status, 200)
+            
+            features = res.body
+            // console.log('features => ', features.slice(0,10));
+          })
+      }
+      catch(err) {
+        //Extract the useful part of message returned by superagent
+        console.log('err.status => ', err.status);
+        console.log('err => ', getErrMessage(err))
+        // console.log('err.text.error => ', err.response.error.text.error);
+      }
+
+      assert.isArray(features)
+      assert.equal(features.length, 14)
+      // console.log('features.length => ', features.length);
+
+      let marker = features[0]
+      // assert.deepInclude(marker, { _id: { name: "myMarkerB" } })
+      assert.property(marker, "alignment")
+      // console.log('marker.alignment[0] => ', marker.alignment[0]);
+      // console.log('marker.alignment[0].repeats => ', marker.alignment[0].repeats);
+    })
+
+
+  })
+
 })
 
 
 function getErrMessage(err) {
-  return JSON.parse(err.response.error.text).error.message
+  let temp = _.property("err.response.error.text")(err)
+  console.log('temp => ', temp);
+  if(!temp) {
+    return err
+  }
+  let temp2 = _.property("error.message")(JSON.parse(temp))
+  console.log('temp2 => ', temp2);
+  return temp2
 }
 
 function mochaAsync(fn) {
