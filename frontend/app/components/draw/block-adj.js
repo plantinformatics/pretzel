@@ -312,24 +312,42 @@ function featureEltId(featureBlock)
 function featurePathKeyFn (featureBlock)
 { return featureBlock._id.name; }
 
-/** This will later generate the cross-product feature.alignment[0].repeats X feature.alignment[1].repeats.
- * Currently just returns the first pair.
+/** Given the grouped data for a feature, from the pathsDirect() result,
+ * generate the cross-product feature.alignment[0].repeats X feature.alignment[1].repeats.
+ * The result is an array of pairs of features;  each pair defines a path and is of type PathData.
+ * for each pair an element of pairs[] :
+ *   pair.feature0 is in block pair.block0
+ *   pair.feature1 is in block pair.block1
+ *   pair.block0 === feature.alignment[0].blockId
+ *   pair.block1 === feature.alignment[1].blockId
+ * i.e. the path goes from the first block in the request params to the 2nd block
  * @param feature 1 element of the result array passed to draw()
  * @return [PathData, ...]
  */
 function pathsOfFeature(owner) {
   const PathData = owner.factoryFor('component:draw/path-data');
   return function (feature) {
-  let pair =
-    PathData.create({
-      feature0 : feature.alignment[0].repeats.features[0],
-      feature1 : feature.alignment[1].repeats.features[0],
-      block0 : feature.alignment[0].blockId,
-      block1 : feature.alignment[1].blockId
-    });
-    if (trace_blockAdj > 2)
-      console.log('PathData.create()', PathData, pair);
-    return [pair];
+    let blocksFeatures =
+      [0, 1].map(function (blockIndex) { return feature.alignment[blockIndex].repeats.features; });
+    let pairs = 
+      blocksFeatures[0].reduce(function (result, f0) {
+        let result1 = blocksFeatures[1].reduce(function (result, f1) {
+          let pair =
+            PathData.create({
+              feature0 : f0,
+              feature1 : f1,
+              block0 : feature.alignment[0].blockId,
+              block1 : feature.alignment[1].blockId
+            });
+          if (trace_blockAdj > 2)
+            console.log('PathData.create()', PathData, pair);
+
+          result.push(pair);
+          return result;
+        }, result);
+        return result1;
+      }, []);
+    return pairs;
   };
 }
 
