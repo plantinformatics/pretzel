@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "start": "node .",
     "dev": "EMAIL_VERIFY=NONE AUTH=ALL API_PORT_EXT=5000 nodemon -L server/server.js",
-    "test": "NODE_ENV=test mocha --reporter spec --timeout 20000 --extension .spec.js test/*.spec.js --exit"
+    "test": "NODE_ENV=test mocha --reporter spec --timeout 20000 --slow 700 --extension .spec.js test/*.spec.js --exit"
   },
   "dependencies": {
     "async": "^2.4.0",

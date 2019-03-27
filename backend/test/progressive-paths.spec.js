@@ -149,7 +149,7 @@ describe('progressive-path-loading', function() {
       // console.log('myMap2 => ', myMap);
       // console.log('myMap.name => ', myMap.name);
       await http
-        .get(`${endpoint}/Datasets/${ds.name}`)
+        .get(`${endpoint}/Datasets/test_pzl_${ds.name}`)
         .set('Accept', 'application/json')
         .set('Authorization', userToken)
         .then(res => {
@@ -335,6 +335,8 @@ describe('progressive-path-loading', function() {
   })
 
   describe("MyMap3 tests", function() {
+    let response
+
     before(async function() {
       blocks = null
       ds.filename = "myMap3"
@@ -400,6 +402,7 @@ describe('progressive-path-loading', function() {
             assert.equal(res.status, 200)
             
             features = res.body
+            response = features
             console.log('features => ', features);
           })
       }
@@ -431,6 +434,52 @@ describe('progressive-path-loading', function() {
       //   assert.isArray(block.repeats.features)
       //   assert.equal(block.repeats.features.length, 1)
       // })
+    })
+
+    it("Run paths-progressive, dbPathFilter false", async function() {
+      // console.log("blocks in test", blocks);
+      let features
+      let blockId0 = blocks[0].id,
+          blockId1 = blocks[2].id,
+          intervals = {
+            axes: [ {
+              domain: [0, 100],
+              range: 400
+            }, {
+              domain: [0, 100],
+              range: 400
+            }],
+            page: {
+              thresholdFactor: 1
+            },
+            dbPathFilter: false
+          }
+      try {
+        console.log('blockId0, blockId1 => ', blockId0, blockId1);
+        // console.log('intervals => ', intervals);
+
+        await http
+          .get(`${endpoint}/Blocks/pathsProgressive`)
+          .query({ blockA: blockId0 })
+          .query({ blockB: blockId1 })
+          .query(qs.stringify({ intervals }))
+          .set('Authorization', userToken)
+          .then(res => {
+            assert.equal(res.status, 200)
+            
+            features = res.body
+            // console.log('features => ', features);
+          })
+      }
+      catch(err) {
+        //Extract the useful part of message returned by superagent
+        console.log('err.status => ', err.status);
+        console.log('err => ', getErrMessage(err))
+        // console.log('err.text.error => ', err.response.error.text.error);
+      }
+
+      assert.isArray(features)
+      assert.deepEqual(response, features)
     })
 
     it("Run paths-progressive, repeat features", async function() {
@@ -508,9 +557,15 @@ describe('progressive-path-loading', function() {
         else {
           throw Error("Block Id not recognised")
         }
+
         // console.log('block.repeats.features => ', block.repeats.features);
         // assert.equal(block.repeats.features.length, 1)
       })
+
+      let numPaths = calcNumPaths(features)
+
+      console.log('numPaths => ', numPaths);
+      assert.equal(numPaths, 6)
     })
 
     it("Run paths-progressive, repeat features, restricted domain", async function() {
@@ -625,11 +680,12 @@ describe('progressive-path-loading', function() {
         // console.log('err => ', err);
         console.log("Failed to get blocks");
         console.log('err.status => ', err.status);
-        console.log('err => ', err);
+        console.log('err => ', getErrMessage(err));
         // console.log('err => ', getErrMessage(err));
       })
       // console.log('blocks => ', blocks);
     })
+    
     after(async function() {
       let promises = [ds, ds2].map(async d => datasetHelper.del({name: d.name, userToken}))
       Promise.all(promises).then(res => {
@@ -651,7 +707,7 @@ describe('progressive-path-loading', function() {
     //   done()
     // })
 
-    it("Run paths-progressive, 1 path", async function() {
+    it("Run paths-progressive, simple", async function() {
       // console.log("blocks in test", blocks);
       let features
       let blockId0 = blocks.find(b => b.name === '1B').id,
@@ -696,29 +752,319 @@ describe('progressive-path-loading', function() {
 
       assert.isArray(features)
       assert.equal(features.length, 14)
+      // console.log('features => ', features);
       // console.log('features.length => ', features.length);
 
-      let marker = features[0]
-      // assert.deepInclude(marker, { _id: { name: "myMarkerB" } })
-      assert.property(marker, "alignment")
+      let numPaths = calcNumPaths(features)
+
+      console.log('numPaths => ', numPaths);
+      
+      assert.equal(numPaths, 14)
+      // let marker = features[0]
+      // assert.property(marker, "alignment")
       // console.log('marker.alignment[0] => ', marker.alignment[0]);
       // console.log('marker.alignment[0].repeats => ', marker.alignment[0].repeats);
     })
 
+    it("Run paths-progressive, restricted domain", async function() {
+      // console.log("blocks in test", blocks);
+      let features
+      let blockId0 = blocks.find(b => b.name === '1B').id,
+          blockId1 = blocks.find(b => b.name === '2B').id,
+          intervals = {
+            axes: [ {
+              domain: [0, 400],
+              range: 400
+            }, {
+              domain: [0, 300],
+              range: 400
+            }],
+            page: {
+              thresholdFactor: 1
+            },
+            dbPathFilter: true
+          }
 
+      try {
+        console.log('userToken => ', userToken);
+        console.log('blockId0, blockId1 => ', blockId0, blockId1);
+        console.log('intervals => ', intervals);
+
+        await http
+          .get(`${endpoint}/Blocks/pathsProgressive`)
+          .query({ blockA: blockId0 })
+          .query({ blockB: blockId1 })
+          .query(qs.stringify({ intervals }))
+          .set('Authorization', userToken)
+          .then(res => {
+            assert.equal(res.status, 200)
+            
+            features = res.body
+            // console.log('features => ', features.slice(0,10));
+          })
+      }
+      catch(err) {
+        //Extract the useful part of message returned by superagent
+        console.log('err.status => ', err.status);
+        console.log('err => ', getErrMessage(err))
+        // console.log('err.text.error => ', err.response.error.text.error);
+      }
+
+      assert.isArray(features)
+      assert.equal(features.length, 9)
+
+      let numPaths = calcNumPaths(features)
+      // console.log('features => ', features);
+      // console.log('features.length => ', features.length);
+      // console.log('numPaths => ', numPaths);
+      assert.equal(numPaths, 9)      
+    })
+
+    it("Run paths-progressive, restricted range", async function() {
+      // console.log("blocks in test", blocks);
+      let features
+      let blockId0 = blocks.find(b => b.name === '1B').id,
+          blockId1 = blocks.find(b => b.name === '2B').id,
+          intervals = {
+            axes: [ {
+              domain: [0, 500],
+              range: 20
+            }, {
+              domain: [0, 500],
+              range: 40
+            }],
+            page: {
+              thresholdFactor: 1
+            },
+            dbPathFilter: true
+          }
+
+      try {
+        // console.log('blockId0, blockId1 => ', blockId0, blockId1);
+        // console.log('intervals => ', intervals);
+
+        await http
+          .get(`${endpoint}/Blocks/pathsProgressive`)
+          .query({ blockA: blockId0 })
+          .query({ blockB: blockId1 })
+          .query(qs.stringify({ intervals }))
+          .set('Authorization', userToken)
+          .then(res => {
+            assert.equal(res.status, 200)
+            
+            features = res.body
+            // console.log('features => ', features.slice(0,10));
+          })
+      }
+      catch(err) {
+        //Extract the useful part of message returned by superagent
+        console.log('err.status => ', err.status);
+        console.log('err => ', getErrMessage(err))
+        // console.log('err.text.error => ', err.response.error.text.error);
+      }
+
+      assert.isArray(features)
+      assert.equal(features.length, 7)
+
+      let numPaths = calcNumPaths(features)
+      assert.equal(numPaths, 7)
+    })
+
+    it("Run paths-progressive, restricted range, low threshold", async function() {
+      // console.log("blocks in test", blocks);
+      let features
+      let blockId0 = blocks.find(b => b.name === '1B').id,
+          blockId1 = blocks.find(b => b.name === '2B').id,
+          intervals = {
+            axes: [ {
+              domain: [0, 500],
+              range: 20
+            }, {
+              domain: [0, 500],
+              range: 40
+            }],
+            page: {
+              thresholdFactor: 0.1
+            },
+            dbPathFilter: true
+          }
+
+      try {
+        // console.log('blockId0, blockId1 => ', blockId0, blockId1);
+        // console.log('intervals => ', intervals);
+
+        await http
+          .get(`${endpoint}/Blocks/pathsProgressive`)
+          .query({ blockA: blockId0 })
+          .query({ blockB: blockId1 })
+          .query(qs.stringify({ intervals }))
+          .set('Authorization', userToken)
+          .then(res => {
+            assert.equal(res.status, 200)
+            
+            features = res.body
+            // console.log('features => ', features.slice(0,10));
+          })
+      }
+      catch(err) {
+        //Extract the useful part of message returned by superagent
+        console.log('err.status => ', err.status);
+        console.log('err => ', getErrMessage(err))
+        // console.log('err.text.error => ', err.response.error.text.error);
+      }
+
+      assert.isArray(features)
+      assert.equal(features.length, 1)
+
+      let numPaths = calcNumPaths(features)
+      assert.equal(numPaths, 1)
+    })
+
+    it("Run paths-progressive, restricted range, high threshold", async function() {
+      // console.log("blocks in test", blocks);
+      let features
+      let blockId0 = blocks.find(b => b.name === '1B').id,
+          blockId1 = blocks.find(b => b.name === '2B').id,
+          intervals = {
+            axes: [ {
+              domain: [0, 500],
+              range: 20
+            }, {
+              domain: [0, 500],
+              range: 40
+            }],
+            page: {
+              thresholdFactor: 10
+            },
+            dbPathFilter: true
+          }
+
+      try {
+        // console.log('blockId0, blockId1 => ', blockId0, blockId1);
+        // console.log('intervals => ', intervals);
+
+        await http
+          .get(`${endpoint}/Blocks/pathsProgressive`)
+          .query({ blockA: blockId0 })
+          .query({ blockB: blockId1 })
+          .query(qs.stringify({ intervals }))
+          .set('Authorization', userToken)
+          .then(res => {
+            assert.equal(res.status, 200)
+            
+            features = res.body
+            // console.log('features => ', features.slice(0,10));
+          })
+      }
+      catch(err) {
+        //Extract the useful part of message returned by superagent
+        console.log('err.status => ', err.status);
+        console.log('err => ', getErrMessage(err))
+        // console.log('err.text.error => ', err.response.error.text.error);
+      }
+
+      assert.isArray(features)
+      assert.equal(features.length, 14)
+
+      let numPaths = calcNumPaths(features)
+      assert.equal(numPaths, 14)
+    })
+
+    it("Run paths-progressive, nSamples", async function() {
+      // console.log("blocks in test", blocks);
+      let features
+      let blockId0 = blocks.find(b => b.name === '1B').id,
+          blockId1 = blocks.find(b => b.name === '2B').id,
+          intervals = {
+            axes: [ {
+              domain: [0, 500],
+              range: 400
+            }, {
+              domain: [0, 500],
+              range: 400
+            }],
+            page: {
+              thresholdFactor: 1
+            },
+            dbPathFilter: true,
+            nSamples: 5
+          }
+
+      try {
+        // console.log('blockId0, blockId1 => ', blockId0, blockId1);
+        // console.log('intervals => ', intervals);
+
+        await http
+          .get(`${endpoint}/Blocks/pathsProgressive`)
+          .query({ blockA: blockId0 })
+          .query({ blockB: blockId1 })
+          .query(qs.stringify({ intervals }))
+          .set('Authorization', userToken)
+          .then(res => {
+            assert.equal(res.status, 200)
+            
+            features = res.body
+            // console.log('features => ', features.slice(0,10));
+          })
+      }
+      catch(err) {
+        //Extract the useful part of message returned by superagent
+        console.log('err.status => ', err.status);
+        console.log('err => ', getErrMessage(err))
+        // console.log('err.text.error => ', err.response.error.text.error);
+      }
+
+      assert.isArray(features)
+      assert.equal(features.length, 5)
+
+      let numPaths = calcNumPaths(features)
+      assert.equal(numPaths, 5)
+    })
+
+  })
+
+  describe("Large public data tests", function() {
+    before(async function() {
+      blocks = null
+      // ds2 = _.cloneDeep(ds)
+      // ds.name = "Wen_et_al_2017"
+      // ds.filename = "Wen_et_al_2017.fixed"
+
+      // ds2.name = "PBI-14-1406-s005"
+      // ds2.filename = "PBI-14-1406-s005.fixed"
+
+      ds = {
+        url: "https://github.com/plantinformatics/pretzel-input-generator/",
+        path: "releases/download/v1.0/",
+        filename: "pretzel-genomes-features-aliases-JSON",
+        ext: ".tar.gz"
+      }
+
+      let allDatasets = await datasetHelper.download({ds})
+
+      /* TODO */
+      // console.log('blocks => ', blocks);
+    })
   })
 
 })
 
+function calcNumPaths(features) {
+  return features.map(feature => {
+    return [0, 1].map(block => {
+      return feature.alignment[block].repeats.features.length
+    })
+  }).reduce((total, array) => {
+    return total + array[0] * array[1]
+  }, 0 )
+}
 
 function getErrMessage(err) {
-  let temp = _.property("err.response.error.text")(err)
-  console.log('temp => ', temp);
+  let temp = _.property("response.error.text")(err)
   if(!temp) {
     return err
   }
   let temp2 = _.property("error.message")(JSON.parse(temp))
-  console.log('temp2 => ', temp2);
   return temp2
 }
 
