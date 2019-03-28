@@ -8,6 +8,9 @@ var ObjectID = require('mongodb').ObjectID;
 /* global db ObjectId print */
 /*----------------------------------------------------------------------------*/
 
+function toBool(x) {return (typeof x === "string") ? x.toLowerCase().trim() === "true" : x; };
+
+/*----------------------------------------------------------------------------*/
 
 /** mongo shell script to calculate aliases,
  * doesn't check namespace, only outputs string2
@@ -185,6 +188,46 @@ function blockFeatures(db, blockId) {
   return nFeatures;
 }
 
+/*----------------------------------------------------------------------------*/
+// construct pipeline from intervals param.  developed within pathsDirect() then
+// split out for use in blockFeaturesInterval().
+
+function keyValue (k,v) { let r = {}; r[k] = v; return r; };
+/** construct the expression for one end of the interval constraint on 1 block
+ * @param b 0 for blockId0, axes[0]
+ * @param l limit : 0 for domain[0] and lte, 1 for domain[1] and gte
+ */
+function valueBound(intervals, b, l) {
+  let r = keyValue(
+    l ? '$lte' : '$gte',
+    [ keyValue('$arrayElemAt', ['$value', l ? -1 : 0]),
+      +intervals.axes[b].domain[l]]
+  );
+  return r;
+};
+/** If axis b is zoomed, append conditions on location (value[]) to the given array eq.
+ *
+ * If the axis has not been zoomed then Stacked : zoomed will be undefined,
+ * and the result of axisDimensions() will include zoomed:undefined, which is
+ * omitted in the API URL, so a.hasOwnProperty('zoomed') can be false.
+ *
+ * @param intervals interval params
+ * @param eq  first part of block condition; append to this array and return result
+ * @param b axis index - 0 or 1
+ * @return array
+ */
+function blockFilter(intervals, eq, b) {
+  if (! intervals.axes || ! intervals.axes[b]) {
+    console.log('blockFilter', intervals, eq, b);
+  }
+  let a = intervals.axes[b],
+  r = a.zoomed && a.domain ?
+    eq.concat([valueBound(intervals, b, 0), valueBound(intervals, b, 1)]) :
+    eq;
+  return r;
+};
+/*----------------------------------------------------------------------------*/
+
 /** Match features by name between the 2 given blocks.  The result is the alignment, for drawing paths between blocks.
  * Usage in mongo shell  e.g.
  *  db.Block.find({"scope" : "1A"})  to choose a pair of blockIds
@@ -233,35 +276,7 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
         $or : [{ "blockId" : ObjectId(blockId0) },
                { "blockId" : ObjectId(blockId1) }]}}
     ],
-  keyValue = function (k,v) { let r = {}; r[k] = v; return r; },
-  /** construct the expression for one end of the interval constraint on 1 block
-   * @param b 0 for blockId0, axes[0]
-   * @param l limit : 0 for domain[0] and lte, 1 for domain[1] and gte
-   */
-  valueBound = function (b, l) {
-    let r = keyValue(
-      l ? '$lte' : '$gte',
-      [ keyValue('$arrayElemAt', ['$value', l ? -1 : 0]),
-        +intervals.axes[b].domain[l]]
-    );
-    return r;
-  },
-  /** If axis b is zoomed, append conditions on location (value[]) to the given array eq.
-   *
-   * If the axis has not been zoomed then Stacked : zoomed will be undefined,
-   * and the result of axisDimensions() will include zoomed:undefined, which is
-   * omitted in the API URL, so a.hasOwnProperty('zoomed') can be false.
-   *
-   * @param eq  first part of block condition; append to this array and return result
-   * @return array
-   */
-  blockFilter = function (eq, b) {
-    let a = intervals.axes[b],
-    r = a.zoomed && a.domain ?
-      eq.concat([valueBound(b, 0), valueBound(b, 1)]) :
-      eq;
-    return r;
-  },
+
   /** filter : value[0] and value[1] should be within :
    * blockId0 : [intervals.axes[0].domain[0], intervals.axes[0].domain[1]]
    * blockId1 :  [intervals.axes[1].domain[0], intervals.axes[1].domain[1]]
@@ -275,8 +290,8 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
   filterValue =
     [
       { $match : {$expr : {$or : [
-        {$and : blockFilter([{$eq : [ "$blockId", ObjectId(blockId0) ]}], 0) },
-        {$and : blockFilter([{$eq : [ "$blockId", ObjectId(blockId1) ]}], 1) },
+        {$and : blockFilter(intervals, [{$eq : [ "$blockId", ObjectId(blockId0) ]}], 0) },
+        {$and : blockFilter(intervals, [{$eq : [ "$blockId", ObjectId(blockId1) ]}], 1) },
       ]} }},
     ],
   group = 
@@ -295,23 +310,32 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
       , { $match : { alignment : { $size : 2 } }}
     ];
   let pipeline;
-  function toBool(x) {return (typeof x === "string") ? x.toLowerCase().trim() === "true" : x; };
+
   let dbPathFilter = toBool(intervals.dbPathFilter);
   if (dbPathFilter && (intervals.axes[0].zoomed || intervals.axes[1].zoomed)) {
-    let l = ['filterValue', filterValue];
-    [0, 1].map(function (axis) {
-      /** log intervals.axes[axis].{zoomed,domain}  .domain may be undefined or [start,end]. */
-      let a = intervals.axes[axis];
-      l.push(a.zoomed);
-      if (a.domain)
-        l = l.concat([a.domain[0], '-', a.domain[1]]);
-    });
-    console.log.apply(undefined, l);
+    log_filterValue_intervals(filterValue, intervals);
     pipeline = filterValue.concat(group);
   }
   else
     pipeline = matchBlock.concat(group);
 
+  let result = pipelineLimits(featureCollection, intervals, pipeline);
+
+  return result;
+};
+/** log the given filterValue, (which is derived from) intervals */
+function log_filterValue_intervals(filterValue, intervals) {
+    let l = ['filterValue', filterValue];
+    intervals.axes.map(function (a) {
+      /** log a.{zoomed,domain}  .domain may be undefined or [start,end]. */
+      l.push(a.zoomed);
+      if (a.domain)
+        l = l.concat([a.domain[0], '-', a.domain[1]]);
+    });
+    console.log.apply(undefined, l);
+}
+
+function pipelineLimits(featureCollection, intervals, pipeline) {
   // console.log('intervals.nSamples => ', intervals.nSamples);
   if (intervals.nSamples)
     pipeline.push({ '$sample' : {size : +intervals.nSamples}});
@@ -321,9 +345,47 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
   let result =
     featureCollection.aggregate ( pipeline );
 
+  return result;
+};
+
+/** Collect features of the given block, possibly constrained to the optional domain interval.
+ * @param blockCollection dataSource collection
+ * @param blockId0  id of block
+ * @param intervals  domain and range of axis of block, to limit the number of features in result.
+
+ * @return cursor	aliases
+ */
+exports.blockFeaturesInterval = function(db, blockId0, intervals) {
+  let featureCollection = db.collection("Feature");
+  console.log('pathsDirect', /*featureCollection,*/ blockId0, intervals);
+  let ObjectId = ObjectID;
+
+  let
+    matchBlock =
+    [
+	    { $match :  { "blockId" : ObjectId(blockId0) }}
+    ],
+
+  filterValue =
+    [
+      { $match : {$expr : {$and : blockFilter(intervals, [{$eq : [ "$blockId", ObjectId(blockId0) ]}], 0) }  }},
+    ];
+
+  let pipeline;
+
+  let dbPathFilter = toBool(intervals.dbPathFilter);
+  if (dbPathFilter && intervals.axes[0].zoomed) {
+    log_filterValue_intervals(filterValue, intervals);
+    pipeline = filterValue;
+  }
+  else
+    pipeline = matchBlock;
+
+  let result = pipelineLimits(featureCollection, intervals, pipeline);
 
   return result;
 };
+
 
 /* example output; contains ObjectId() which is defined in mongo shell, not in
  * node.js, so wrap with if (false) { } */

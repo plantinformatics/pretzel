@@ -116,10 +116,11 @@ export default Service.extend({
     /** default value is true, i.e. noDbPathFilter===undefined => dbPathFilter */
     dbPathFilter = ! noDbPathFilter,
     params = {axes : intervals, page,  dbPathFilter };
-    [0, 1].map(function (axis) {
-    if ((intervals[axis].domain[0] === 0) && (intervals[axis].domain[1] === 0))
-      intervals[axis].domain = undefined;
-    });
+    intervals.forEach(function (i) { 
+      // console.log(i.domain);
+      if ((i.domain[0] === 0) && (i.domain[1] === 0))
+        i.domain = undefined;
+    } );
 
     let oa = stacks.oa,
     controls = oa.drawOptions.controls;
@@ -168,21 +169,7 @@ export default Service.extend({
               // possibly filterPaths() is changing repeats.features[] to repeats[]
               features = repeats.features || repeats,
               f = features[0];
-              let fr = store.peekRecord('feature', f._id);
-              if (fr) {
-                let verifyOK = verifyFeatureRecord(fr, f);
-                if (! verifyOK)
-                  console.log('peekRecord feature', f._id, f, fr._internalModel.__data, fr);
-              }
-              else
-              {
-              f.id = f._id;
-              let fn = store.normalize('feature', f);
-              let c = store.push(fn);
-              storeFeature(stacks.oa, flowsService, f.name, c, f.blockId);
-              if (trace_pathsP > 2)
-                console.log(c.get('id'), c._internalModel.__data);
-              }
+              me.pushFeature(store, f, flowsService);
             }
           }
           let blockAdjIdText = blockAdjKeyFn(blockAdj);
@@ -246,12 +233,34 @@ export default Service.extend({
     return promise;
   },
 
+  pushFeature(store, f, flowsService) {
+    let fr = store.peekRecord('feature', f._id);
+    if (fr) {
+      let verifyOK = verifyFeatureRecord(fr, f);
+      if (! verifyOK)
+        console.log('peekRecord feature', f._id, f, fr._internalModel.__data, fr);
+    }
+    else
+    {
+      f.id = f._id;
+      let fn = store.normalize('feature', f);
+      let c = store.push(fn);
+      storeFeature(stacks.oa, flowsService, f.name, c, f.blockId);
+      if (trace_pathsP > 2)
+        console.log(c.get('id'), c._internalModel.__data);
+    }
+
+  },
+
+
   blocksUpdateDomain : function(blockA, blockB, domainCalc, axisEvents) {
             let axisApi = stacks.oa.axisApi;
             let t = stacks.oa.svgContainer.transition().duration(750);
 
+    let blocks = [blockA]; if (blockB) blocks.push(blockB);
+
           if (domainCalc)
-            [blockA, blockB].map(function (blockId) {
+            blocks.map(function (blockId) {
               let eventBus = stacks.oa.eventBus;
               let
                 block = stacks.blocks[blockId];
@@ -273,6 +282,113 @@ export default Service.extend({
               }
           });
             axisApi.axisStackChanged(t);
+  },
+
+  /** set up an axis-brush object to hold results. */
+  ensureAxisBrush(block) {
+    let store = this.get('store'),
+    typeName = 'axis-brush',
+    axisBrushId = block.id,
+    r = store.peekRecord(typeName, axisBrushId);
+    if (r)
+      console.log('ensureBlock', block.id, r._internalModel.__attributes, r._internalModel.__data);
+    if (! r) {
+      let ba = {
+        // type : typeName,
+        id : axisBrushId,
+        block : block.id
+      };
+      let
+      serializer = store.serializerFor(typeName),
+      modelClass = store.modelFor(typeName),
+      // ban1 = serializer.normalizeSingleResponse(store, modelClass, ba, axisBrushId, typeName),
+      // ban1 = {data: ban1};
+      // the above is equivalent long-hand for :
+      ban = store.normalize(typeName, ba);
+      r = store.push(ban);
+    }
+    return r;
+  },
+
+  /** Features returned from API, for the block,
+   * are stored in ember data store, as an attribute of block.
+   */
+  getBlockFeaturesInterval(blockId) {
+    let fnName = 'getBlockFeaturesInterval';
+    console.log(fnName, blockId);
+    let block = this.get('store').peekRecord('block', blockId);
+    let features;
+    if (! block) {
+      console.log(fnName, ' not found:', blockId);
+    }
+    else {
+      let result = block.get('featuresResult');
+      if (result) {
+        features = Promise.resolve(result);
+      }
+      else
+        features = this.requestBlockFeaturesInterval(blockId);
+      console.log(fnName, blockId, features);
+    }
+    return features;
+  },
+
+
+  /**
+   * @param blockA  blockID
+   * @return  promise yielding paths result
+   */
+  requestBlockFeaturesInterval(blockA) {
+    /** used in trace */
+    const apiName = 'blockFeaturesInterval';
+    let store = this.get('store');
+
+    let me = this;
+    let flowsService = this.get('flowsService');
+    let intervalParams = this.intervals([blockA]);
+    let drawMap = stacks.oa.eventBus;
+    let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
+    let axis = Stacked.getAxis(blockA),
+    axisBrush = me.get('store').peekRecord('axis-brush', blockA),
+    brushedDomain = axisBrush.brushedDomain;
+    console.log('domain', intervalParams.axes[0].domain, '-> brushedDomain', brushedDomain);
+    intervalParams.axes[0].domain = brushedDomain;
+    let promise = 
+      // streaming version not added yet
+      // pathsViaStream ?
+      // this.get('auth').getPathsViaStream(blockA, blockB, intervalParams, /*options*/{dataEvent : receivedData}) :
+      this.get('auth').getBlockFeaturesInterval(blockA, intervalParams, /*options*/{});
+        function receivedData(res){
+          if (trace_pathsP > 1)
+            console.log(apiName, ' request then', res.length);
+          let firstResult;
+          for (let i=0; i < res.length; i++) {
+              let f = res[i];
+              me.pushFeature(store, f, flowsService);
           }
+          // possibly accumulate the result into axis-brush in the same way that 
+          // requestPathsProgressive() above accumulates paths results into blockAdj
+
+          let domainCalc = true,
+          axisEvents = false;
+
+          Ember.run.throttle(
+            me, me.blocksUpdateDomain, 
+            blockA, undefined, domainCalc, axisEvents,
+            200, false);
+        };
+    promise
+      .then(
+        receivedData,
+        function(err, status) {
+          // if (pathsViaStream)
+          //  console.log(apiName, ' request', 'pathsViaStream', blockA, me, err, status);
+          // else
+            console.log(apiName, ' request', blockA, me, err.responseJSON[status] /* .error.message*/, status);
+        });
+    return promise;
+
+  }
+
 
 });

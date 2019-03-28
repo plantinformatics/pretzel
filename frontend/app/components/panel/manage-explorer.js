@@ -38,6 +38,7 @@ export default ManageBase.extend({
     this._super();
     if (initRecursionCount++ > 5) {
       debugger;
+      window.alert('initRecursionCount : ' + initRecursionCount);
     }
   },
 

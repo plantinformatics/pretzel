@@ -178,6 +178,7 @@ let aliasedDone = {};
 
 export default Service.extend({
   block: service('data/block'),
+  axisBrush: service('data/axis-brush'),
 
   flows : flows,
 

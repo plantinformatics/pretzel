@@ -52,6 +52,16 @@ function blockAdjKeyFn(blockAdjId)
 const featureEltIdPrefix = "f_";
 /** id of a feature g element, based on its ID a "f_" prefix. */
 
+function featureNameClass(name)
+{
+  /* Generally feature names have an alpha prefix, but some genetic maps use
+   * the numeric form of the feature index. CSS class names need an alpha
+   * prefix.
+   */
+  if (name.match(/[0-9]/))
+    name = featureEltIdPrefix + name;
+  return name;
+}
 
 const foregroundSelector = 'div#holder > svg > g > g.foreground';
 
@@ -72,7 +82,7 @@ function selectBlockAdj(parent, blockAdjId)
 
 export {
   stacksAxesDomVerify, selectAxis, blockAdjKeyFn, blockAdjEltId,
-  featureEltIdPrefix,
+  featureEltIdPrefix, featureNameClass,
   foregroundSelector, selectBlockAdj
 } ;
 

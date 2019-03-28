@@ -226,6 +226,58 @@ module.exports = function(Block) {
 
   };
 
+
+  /** Collate from the database a list of features within the given block, which
+   * meet the optional interval domain constraint.
+   *
+   * @param blockId0
+   */
+  Block.blockFeaturesInterval = function(blockId0, intervals, options, res, cb) {
+    // based on Block.pathsProgressive(); there is similarity which could be
+    // factored into a mixin, which may be relevant to factoring this with
+    // streaming equivalent (not yet added).
+
+      let db = this.dataSource.connector;
+    const apiName = 'blockFeaturesInterval';
+    console.log(apiName, /*db,*/ blockId0, intervals /*, options, cb*/);
+    let cacheId = blockId0,
+    /** If intervals.dbPathFilter, we could append the location filter to cacheId,
+     * but it is not clear yet whether that would perform better.
+     * e.g. filterId = intervals.dbPathFilter ? '_' + intervals.axes[0].domain[0] + '_' + ... : ''
+     */
+    useCache = ! intervals.dbPathFilter,
+    cached = cache.get(cacheId);
+    if (useCache && cached) {
+      let filteredData = pathsFilter.filterFeatures(cached, intervals);
+      cb(null, filteredData);
+    }
+    else {
+      let cursor =
+        pathsAggr.blockFeaturesInterval(db, blockId0, intervals);
+      cursor.toArray()
+        .then(function(data) {
+          console.log(apiName, ' then', (data.length > 10) ? data.length : data);
+          if (useCache)
+            cache.put(cacheId, data);
+          let filteredData;
+          // no filter required when user has nominated nSamples.
+          if (intervals.nSamples)
+            filteredData = data;
+          else
+            filteredData = pathsFilter.filterFeatures(data, intervals);
+          if (trace_block > 1)
+            console.log("Num Filtered Paths => ", filteredData.length);
+          cb(null, filteredData);
+        })
+        .catch(function(err) {
+          console.log('ERROR', err);
+          cb(err);
+        });
+    }
+  };
+
+
+
   Block.pathsByReference = function(blockA, blockB, referenceGenome, maxDistance, options, cb) {
     task.pathsViaLookupReference(this.app.models, blockA, blockB, referenceGenome, maxDistance, options)
     .then(function(paths) {
@@ -281,6 +333,19 @@ module.exports = function(Block) {
 
     next()
   })
+
+
+  Block.remoteMethod('blockFeaturesInterval', {
+    accepts: [
+      {arg: 'blockA', type: 'string', required: true},
+      {arg: 'intervals', type: 'object', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'res', type: 'object', 'http': {source: 'res'}},
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Returns Features of the block, within the interval optionally given in parameters, and filtering also for range / resolution"
+  });
 
   Block.remoteMethod('paths', {
     accepts: [

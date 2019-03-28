@@ -4,7 +4,7 @@ var _ = require('lodash')
 
 const trace_filter = 1;
 
-/** TODO :
+/**
  * filter paths according to intervals.axes[].domain[]
  * 
  * Use pathsAggr.densityCount(), with some changes : instead of totalCounts[], can simply count the paths.
@@ -45,6 +45,35 @@ exports.filterPaths = function(paths, intervals) {
   return filteredPaths;
 };
 
+/**
+ * @param intervals expect that intervals.axes.length === 1.
+ * axes[] doesn't need to be an array, but that offers potential for easier shared functionality with filterPaths()
+ */
+exports.filterFeatures = function(features, intervals) {
+  // based on exports.filterPaths().
+
+  // pathsViaStream() will call .filterFeatures() once for each feature
+  if (trace_filter > (2 - (features.length > 1))) {
+    // console.log('features, intervals => ', features, intervals);
+    console.log('features.length => ', features.length);
+  }
+  let filteredFeatures;
+  if (intervals.axes[0].domain)
+    filteredFeatures = domainFilterFeatures(features, intervals);
+  else
+    filteredFeatures = features;
+
+  if ((filteredFeatures.length > 1) && (intervals.page && intervals.page.thresholdFactor)) {
+    /** number of samples to skip. */
+    let count = densityCount(filteredFeatures.length, intervals);
+    if (count)
+      filteredFeatures = nthSample(filteredFeatures, count);
+  }
+  return filteredFeatures;
+};
+
+
+
 function nthSample(paths, count) {
   let nth = Math.ceil(count)
   return paths.filter((path, i) => {
@@ -72,9 +101,9 @@ function densityCount(numPaths, intervals) {
   // How does different ranges affect the samples?
 
   let count
-  let counts = [0, 1].map(i => {
+  let counts = intervals.axes.map(a => {
     // console.log('intervals.axes[i] => ', intervals.axes[i]);
-    var range = intervals.axes[i].range
+    var range = a.range
     var rangeLength = Array.isArray(range) ? (range[1] - range[0]) : range
     return blockCount(numPaths, rangeLength);
   });
@@ -149,5 +178,22 @@ function domainFilter(paths, intervals) {
   })
 }
 
+function inDomain(domain) {
+  return function (f) {
+    /** handle older data;  Feature.range is now named .value  */
+    let v = f.value || f.range,
+    /** handle value array with 1 or 2 elements */
+    v1 = (v.length === 1) ? v[0] : v[1],
+    in0 = domain[0] <= v[0],
+    in1 = v1 <= domain[1],
+    within = in0  &&  in1,
+    overlapping = in0 != in1;
+    return within || overlapping;
+  };
+}
 
-
+function domainFilterFeatures(features, intervals) {
+  let check = inDomain(intervals.axes[0].domain),
+  filtered = features.filter(check);
+  return filtered;
+}

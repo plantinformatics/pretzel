@@ -80,6 +80,7 @@ export default Ember.Component.extend(Ember.Evented, {
   store: Ember.inject.service('store'),
   blockService: service('data/block'),
   flowsService: service('data/flows-collate'),
+  pathsP : service('data/paths-progressive'),
 
 
   /*------------------------------------------------------------------------*/
@@ -3415,6 +3416,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
 //- axis-brush-zoom
 
+   
     /** Return the brushed domain of axis p
      * Factored from brushHelper(); can use axisBrushedDomain() to replace that code in brushHelper().
      */
@@ -3425,19 +3427,31 @@ export default Ember.Component.extend(Ember.Evented, {
         brushExtents = selectedAxes.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
       /*----------------------------------------------------------------------*/
 
-
-          let yp = oa.y[p],
-          axis = oa.axes[p],
-          brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion */); });
-          if (axis.flipped)
-          {
-            let swap = brushedDomain[0];
-            brushedDomain[0] = brushedDomain[1];
-            brushedDomain[1] = swap;
-          }
+      let brushedDomain = axisRange2Domain(p, brushExtents[i]);
       console.log('axisBrushedDomain', p, i, brushExtents, brushedDomain);
       return brushedDomain;
     }
+    /** Convert the given brush extent (range) to a brushDomain.
+     * @param p axisID
+     * @param range an interval in the axis range.  This may be e.g. a brush extent
+     * @return domain the (reverse) mapping of range into the axis domain
+     */
+    function axisRange2Domain(p, range)
+    {
+      // factored from axisBrushedDomain(), and brushHelper()
+      let yp = oa.y[p],
+      axis = oa.axes[p],
+      brushedDomain = range.map(function(ypx) { return yp.invert(ypx /* *axis.portion */); });
+      if (axis.flipped)
+      {
+        let swap = brushedDomain[0];
+        brushedDomain[0] = brushedDomain[1];
+        brushedDomain[1] = swap;
+      }
+      console.log('axisRange2Domain', p, range, brushedDomain);
+      return brushedDomain;
+    }
+
 
     /** Used when the user completes a brush action on the axis axis.
      * The datum of g.brush is the ID/name of its axis, call this axisID.
@@ -3464,7 +3478,6 @@ export default Ember.Component.extend(Ember.Evented, {
       /** name[0] is axisID of the brushed axis. name.length should be 1. */
       let name = d3.select(that).data();
       let brushedAxisID = name[0];
-      me.send('selectChromById', brushedAxisID);
 
       let svgContainer = oa.svgContainer;
       //Remove old circles.
@@ -3527,6 +3540,7 @@ export default Ember.Component.extend(Ember.Evented, {
             if (enable_log)
             console.log("brushHelper", p, i);
 
+          // this can use axisRange2Domain() which is based on this function.
           let yp = oa.y[p],
           axis = oa.axes[p],
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion */); });
@@ -3718,6 +3732,17 @@ export default Ember.Component.extend(Ember.Evented, {
          * brushedRegions = oa.brushedRegions = {};
          */
       }
+      let axisBrush = me.get('store').peekRecord('axis-brush', brushedAxisID);
+      if (!axisBrush) {
+        let axis = Stacked.getAxis(brushedAxisID);
+        let block = me.get('store').peekRecord('block', brushedAxisID);
+        axisBrush = me.get('pathsP').ensureAxisBrush(block);
+        console.log('axis', axis, axis.block, block, 'axisBrush', axisBrush);
+      }
+      let brushedDomain = brushRange ? axisRange2Domain(brushedAxisID, brushRange) : undefined;
+      axisBrush.set('brushedDomain', brushedDomain);
+
+      me.send('selectChromById', brushedAxisID);
 
     } // brushHelper
 
