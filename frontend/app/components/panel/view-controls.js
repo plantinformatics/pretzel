@@ -27,16 +27,16 @@ export default Ember.Component.extend({
    * Some explanation in see comment in @expRange()
    * and @see updateSbSizeThresh() (draw-map.js)
    */
-  pathDensity : expRangeInitial(1, expRangeBase(100/2, 100)),
+  pathDensity : expRangeInitial(1000, expRangeBase(100/2, 1000)),
   /** ditto, 
    * controls.view.pathControlActiveSample
    */
-  pathSample : expRangeInitial(50, expRangeBase(100, 1024)),
+  pathSample : expRangeInitial(10000, expRangeBase(100, 10000)),
 
   pathControlActiveDensity : Ember.computed('pathDensityActive', 'pathDensity', function () {
     let active = this.get('pathDensityActive'),
      pathDensity = this.get('pathDensity'),
-      density = active && expRange(pathDensity, 100/2, 100);
+      density = active && expRange(pathDensity, 100/2, 1000);
     if (density) {
       let digits = Math.log10(density),
       decimals =  (digits > 2) ? 0 : ((digits > 1) ? 1 : 2);
@@ -56,7 +56,7 @@ export default Ember.Component.extend({
   pathControlActiveSample : Ember.computed('pathSampleActive', 'pathSample', function () {
     let active = this.get('pathSampleActive'),
      pathSample = this.get('pathSample'),
-     sample = active && expRange(pathSample, 100, 1024);
+     sample = active && expRange(pathSample, 100, 10000);
     if (sample) {
       sample = sample.toFixed();
     }
@@ -73,7 +73,7 @@ export default Ember.Component.extend({
   /** ditto, 
    * controls.view.pathControlActiveNFeatures
    */
-  pathNFeatures : expRangeInitial(60, expRangeBase(100, 10000)),
+  pathNFeatures : expRangeInitial(10000, expRangeBase(100, 10000)),
 
   pathControlNFeatures : Ember.computed('pathNFeatures', 'pathNFeatures', function () {
     /** May make nFeatures display and range slider sensitive only when
