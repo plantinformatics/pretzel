@@ -221,7 +221,9 @@ function blockFilter(intervals, eq, b) {
     console.log('blockFilter', intervals, eq, b);
   }
   let a = intervals.axes[b],
-  r = a.zoomed && a.domain ?
+  /** if axisBrush, then zoom is not required. */
+  axisBrush = intervals.axes.length === 1,
+  r = (axisBrush || a.zoomed) && a.domain ?
     eq.concat([valueBound(intervals, b, 0), valueBound(intervals, b, 1)]) :
     eq;
   return r;
@@ -374,13 +376,16 @@ exports.blockFeaturesInterval = function(db, blockId0, intervals) {
   let pipeline;
 
   let dbPathFilter = toBool(intervals.dbPathFilter);
-  if (dbPathFilter && intervals.axes[0].zoomed) {
+  // .zoomed does not need to be true - features are requested when axis is
+  // brushed;   does not wait for user to click zoom.
+  if (dbPathFilter && intervals.axes[0].domain) {
     log_filterValue_intervals(filterValue, intervals);
     pipeline = filterValue;
   }
   else
     pipeline = matchBlock;
 
+  console.log('blockFeaturesInterval', pipeline);
   let result = pipelineLimits(featureCollection, intervals, pipeline);
 
   return result;

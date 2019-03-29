@@ -178,22 +178,62 @@ function domainFilter(paths, intervals) {
   })
 }
 
+/** Determine if the point v is in the interval domain.
+ * The result is analogous to the comparator function (cmp) result.
+ * Assume i[0] < i[1].
+ * @return 0 if v is in i, -1 if v < i, +1 if v > i
+ */
+function inInterval(i, v) {
+  let
+    in0 = i[0] <= v,
+  in1 = v <= i[1],
+  within = in0  &&  in1,
+  cmp = within ? 0 : (in0 ? 1 : -1);
+  return cmp;
+}
+
+/**
+ * @return a function which takes a feature as parameter and returns true if
+ * the feature value is within the domain.
+ */
 function inDomain(domain) {
   return function (f) {
     /** handle older data;  Feature.range is now named .value  */
     let v = f.value || f.range,
     /** handle value array with 1 or 2 elements */
-    v1 = (v.length === 1) ? v[0] : v[1],
-    in0 = domain[0] <= v[0],
-    in1 = v1 <= domain[1],
-    within = in0  &&  in1,
-    overlapping = in0 != in1;
-    return within || overlapping;
+    inA =
+      v.map(function (vi) { return inInterval(domain, vi); });
+    let result;
+    if (v.length === 1) {
+      let
+        in0 = (inA[0] === 0);
+      result = in0;
+    }
+    else {
+      let
+        in0 = (inA[0] === 0),
+        in1 = (inA[1] === 0),
+      within = in0  &&  in1,
+      /** i.e. feature value overlaps or contains domain as a subset. */
+      overlapping = inA[0] != inA[1];
+      result = within || overlapping;
+    }
+    return result;
   };
 }
 
 function domainFilterFeatures(features, intervals) {
+  console.log('domainFilterFeatures', features.length, intervals, intervals.axes[0].domain);
+  logArrayEnds('', features, 1);
   let check = inDomain(intervals.axes[0].domain),
   filtered = features.filter(check);
+  logArrayEnds('filtered', filtered, 1);
   return filtered;
+}
+
+/** Log the first and last elements of an array.
+ * Used to check filtering by interval.
+ */
+function logArrayEnds(label, a, margin) {
+  console.log(label, a.length, a.slice(0, margin), '...', a.length-2*margin, a.slice(-margin));
 }
