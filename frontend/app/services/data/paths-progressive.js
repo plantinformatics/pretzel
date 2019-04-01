@@ -272,13 +272,15 @@ export default Service.extend({
               axisDomain = axis.domain = axis.domainCalc(),
               oa = stacks.oa;
               console.log(blockId, 'blockDomain', blockDomain, axisDomain, block.z);
-              updateDomain(oa.y, oa.ys, axis);
+              if (! axis.zoomed) {
+                updateDomain(oa.y, oa.ys, axis);
 
-              if (axisEvents) {
-                let axisID = axis.axisName, p = axisID;
-                eventBus.trigger("zoomedAxis", [axisID, t]);
-                // true does pathUpdate(t);
-                axisApi.axisScaleChanged(p, t, true);
+                if (axisEvents) {
+                  let axisID = axis.axisName, p = axisID;
+                  eventBus.trigger("zoomedAxis", [axisID, t]);
+                  // true does pathUpdate(t);
+                  axisApi.axisScaleChanged(p, t, true);
+                }
               }
           });
             axisApi.axisStackChanged(t);

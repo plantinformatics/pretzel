@@ -192,6 +192,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     // based on draw().
     let dpS = d3.selectAll(foregroundSelector + '> g.direct_progress');
     let blockAdjId = this.get('blockAdjId');
+    if (trace_blockAdj > 1)
+      blockAdjId.forEach(function (blockId) {
+        let axis = Stacked.getAxis(blockId);
+        let y = stacks.oa.y[axis.axisName];
+        console.log('updatePathsPosition axis', axis.axisName, y.domain(), axis, y.domain());
+      });
     let baS = selectBlockAdj(dpS, blockAdjId);
     // let groupAddedClass = featurePaths[0]._id.name;
     //  + '.' + groupAddedClass
