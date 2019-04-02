@@ -146,10 +146,10 @@ describe('path-streaming', function() {
         })
     })
 
-    it("Stream features, 1 path", function(done) {
+    it("Stream features, 1 path", async function() {
       this.timeout(2000)
       // console.log('blocks => ', blocks);
-      let features = []
+      let features
       let blockId0 = blocks[1].id,
           blockId1 = blocks[2].id,
           intervals = {
@@ -165,57 +165,20 @@ describe('path-streaming', function() {
             },
             dbPathFilter: true
           }
+      
+      await eventsource.allData({path, blockId0, blockId1, intervals, userToken})
+        .then(data => {
+          console.log('features => ', data);
+          features = data
+        }, err => {
+          console.log('err => ', err);
+        })
 
-      let url = `${endpoint}/Blocks/pathsViaStream`+
-                `?access_token=${userToken}`+
-                `&blockA=${blockId0}`+
-                `&blockB=${blockId1}`+
-                `&${qs.stringify({ intervals })}`
+      assert.isArray(features)
+      assert.equal(features.length, 1)
 
-      // console.log('url => ', url);
-      var source = new EventSource(url, {withCredentials: true});
-      let count = 0
-
-      function onMessage(e) {
-        ++count
-        // if (trace_paths > 2)
-        // console.log('onMessage', e, e.type, e.data, arguments);
-        if (e.lastEventId === SSE_EventID_EOF) {
-          console.log('count => ', count);
-          // This is the end of the stream
-          source.close()
-          done()
-        }
-        else {
-          let data = JSON.parse(e.data)
-          console.log('data => ', data)
-
-        }
-      }
-
-      source.addEventListener('pathsViaStream', onMessage, false);
-      // source.onmessage = onMessage;
-
-      source.addEventListener('open', function(e) {
-        console.log("Connection was opened", e.type, e)
-      }, false)
-      // source.addEventListener('close', function(e) {
-      //   console.log("Connection was closed", e.type, e);
-      //   done()
-      // }, false);
-      function onError(e) {
-        let state = e.eventPhase // this.readyState seems constant.
-        const stateName = ['CONNECTING', 'OPEN', 'CLOSED']
-        console.log('listenEvents', e.type, e, this, ".readyState", this.readyState, state, stateName[state], e)
-        if (state === EventSource.CLOSED) {
-          done()
-        }
-        else if (state == EventSource.CONNECTING) {
-        }
-        else
-          throw e;
-      };
-      source.onerror = onError; 
+      // Test that calcNumPaths will fail if object is incorrectly formed
+      // let numPaths = calcNumPaths([{}])
 
     })
 
@@ -268,8 +231,15 @@ function calcNumPaths(features) {
   return features.map(feature => {
     console.log('feature => ', feature);
     return [0, 1].map(block => {
-      console.log(`feature.alignment[${block}].repeats.features => `, feature.alignment[block].repeats.features);
-      return feature.alignment[block].repeats.features.length
+      // console.log(`feature.alignment[${block}].repeats.features => `, feature.alignment[block].repeats.features);
+      let length = _.property(`alignment.${block}.repeats.features.length`)(feature)
+      console.log('length => ', length);
+      if (length !== undefined) {
+        return length
+      }
+      else {
+        throw Error("features object structure may be invalid")
+      }
     })
   }).reduce((total, array) => {
     console.log('array[0], array[1] => ', array[0], array[1]);
