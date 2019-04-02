@@ -186,14 +186,6 @@ describe('progressive-path-loading', function() {
           .query({ blockA: blockId0 })
           .query({ blockB: blockId1 })
           .query(qs.stringify({ intervals }))
-          // .query("intervals[axes][0][domain][]=0")
-          // .query("intervals[axes][0][domain][]=100")
-          // .query("intervals[axes][0][range]=398")
-          // .query("intervals[axes][1][domain][]=0")
-          // .query("intervals[axes][1][domain][]=100")
-          // .query("intervals[axes][1][range]=398")
-          // .query("intervals[page][thresholdFactor]=1")
-          // .query("intervals[dbPathFilter]=true")
           .set('Authorization', userToken)
           .then(res => {
             assert.equal(res.status, 200)
@@ -206,7 +198,6 @@ describe('progressive-path-loading', function() {
         //Extract the useful part of message returned by superagent
         console.log('err.status => ', err.status);
         console.log('err => ', getErrMessage(err))
-        // console.log('err.text.error => ', err.response.error.text.error);
       }
 
       assert.isArray(features)
@@ -259,14 +250,6 @@ describe('progressive-path-loading', function() {
           .query({ blockA: blockId0 })
           .query({ blockB: blockId1 })
           .query(qs.stringify({ intervals }))
-          // .query("intervals[axes][0][domain][]=0")
-          // .query("intervals[axes][0][domain][]=100")
-          // .query("intervals[axes][0][range]=398")
-          // .query("intervals[axes][1][domain][]=0")
-          // .query("intervals[axes][1][domain][]=100")
-          // .query("intervals[axes][1][range]=398")
-          // .query("intervals[page][thresholdFactor]=1")
-          // .query("intervals[dbPathFilter]=true")
           .set('Authorization', userToken)
           .then(res => {
             assert.equal(res.status, 200)
@@ -276,10 +259,8 @@ describe('progressive-path-loading', function() {
           })
       }
       catch(err) {
-        //Extract the useful part of message returned by superagent
         console.log('err.status => ', err.status);
         console.log('err => ', getErrMessage(err))
-        // console.log('err.text.error => ', err.response.error.text.error);
       }
 
       console.log('features.length => ', features.length);
@@ -323,10 +304,8 @@ describe('progressive-path-loading', function() {
           })
       }
       catch(err) {
-        //Extract the useful part of message returned by superagent
         console.log('err.status => ', err.status);
         console.log('err => ', getErrMessage(err))
-        // console.log('err.text.error => ', err.response.error.text.error);
       }
 
       assert.isArray(features)
@@ -402,6 +381,8 @@ describe('progressive-path-loading', function() {
             assert.equal(res.status, 200)
             
             features = res.body
+
+            // Set response to compare in next test
             response = features
             console.log('features => ', features);
           })
@@ -423,17 +404,6 @@ describe('progressive-path-loading', function() {
       let alignment = marker.alignment
       assert.isArray(alignment)
       assert.equal(alignment.length, 2)
-
-      // console.log('alignment => ', alignment);
-      // alignment.forEach(block => {
-      //   assert.property(block, "blockId")
-      //   assert.property(block, "repeats")
-      //   console.log('block.repeats => ', block.repeats);
-      //   assert.property(block.repeats, "_id")
-      //   assert.property(block.repeats, "features")
-      //   assert.isArray(block.repeats.features)
-      //   assert.equal(block.repeats.features.length, 1)
-      // })
     })
 
     it("Run paths-progressive, dbPathFilter false", async function() {
@@ -809,14 +779,21 @@ describe('progressive-path-loading', function() {
         console.log('err => ', getErrMessage(err))
         // console.log('err.text.error => ', err.response.error.text.error);
       }
+      let fs = require('fs')
+      if(features.length === 9) {
+        fs.appendFile('./test/restricted_domain1.json', JSON.stringify(features), (err) => {
+          if(err) console.log('err => ', err);
+          console.log("JSON written");
+        })
+      }
 
       assert.isArray(features)
       assert.equal(features.length, 9)
 
       let numPaths = calcNumPaths(features)
-      // console.log('features => ', features);
-      // console.log('features.length => ', features.length);
-      // console.log('numPaths => ', numPaths);
+      console.log('features => ', features);
+      console.log('features.length => ', features.length);
+      console.log('numPaths => ', numPaths);
       assert.equal(numPaths, 9)      
     })
 

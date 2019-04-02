@@ -15,6 +15,7 @@ var upload = async function({data, ds, userToken}) {
   let obj = JSON.parse(data)
   obj.name = getName(obj.name)
   // console.log('obj.name => ', obj.name);
+  // console.log('obj.blocks => ', obj.blocks);
   data = JSON.stringify(obj)
   await http
     .post(`${endpoint}/datasets/upload`)
@@ -34,6 +35,7 @@ var upload = async function({data, ds, userToken}) {
     })
 
   console.log("Retrieve dataset to then be updated");
+  // console.log('ds.name => ', ds.name);
   let dataset = await http
     .get(`${endpoint}/datasets/${getName(ds.name)}`)
     .set('Accept', 'application/json')
@@ -76,7 +78,7 @@ var getBlocks = function({name, userToken}) {
 
 var setup = async function({ds, userToken}) {
   console.log("Setup dataset");
-  console.log('ds.name => ', getName(ds.name));
+  // console.log('ds.name => ', getName(ds.name));
   let data = await download({ds})
     .then(res => res.text)
     .catch(err => {
@@ -84,9 +86,9 @@ var setup = async function({ds, userToken}) {
       console.log('err.text => ', err.text);
     })
   await upload({data, ds, userToken})
-    .then(() => console.log("Update completed"))
+    .then(() => console.log("Upload completed"))
     .catch(err => {
-      console.log("Update failed");
+      console.log("Upload failed");
       console.log('err => ', err.status);
       console.log('err => ', getErrMessage(err));
     })
