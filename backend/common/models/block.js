@@ -136,19 +136,28 @@ module.exports = function(Block) {
       constructor(intervals) {
         super({objectMode: true});
         this.intervals = intervals;
+        this.countIn = 0;
+        this.countOut = 0;
       }
       _transform(data, encoding, callback) {
-        if (trace_block > 2)
+        if (trace_block > 2 - (this.countIn < 3)*2)
           console.log('FilterPipe _transform', data);
         // data is a single document, not an array
         if (! data /*|| data.length */)
           debugger;
         else {
+          this.countIn++;
+          let trace = trace_block > 2 - (this.countIn < 3)*2;
+          if (trace)
+            intervals.trace_filter = 3;
+          else
+            delete intervals.trace_filter;
           let filteredData = pathsFilter.filterPaths([data], this.intervals);
-          if (trace_block > 2)
+          if (trace)
             console.log('filteredData', filteredData, filteredData.length);
           if (filteredData && filteredData.length)
           {
+            this.countOut++;
             this.push(filteredData);
             callback();
           }
@@ -167,7 +176,9 @@ module.exports = function(Block) {
     let cacheId = blockId0 + '_' + blockId1,
     useCache = ! intervals.dbPathFilter,
     cached = cache.get(cacheId);
+    console.log('useCache', useCache, intervals.dbPathFilter, cacheId);
     if (useCache && cached) {
+      console.log('from cache', cacheId, cached.length);
       let filteredData = pathsFilter.filterPaths(cached, intervals);
       sse.send(filteredData, 'pathsViaStream');
       res.flush();
@@ -185,8 +196,9 @@ module.exports = function(Block) {
 
       /** no filter required when user has nominated nSamples. */
       let useFilter = ! intervals.nSamples;
+      let filterPipe;
       if (useFilter)
-        pipeLine.push(new FilterPipe(intervals));
+        pipeLine.push(filterPipe = new FilterPipe(intervals));
 
       // as in example https://jira.mongodb.org/browse/NODE-1408
       // cursor.stream({transform: x => JSON.stringify(x)}).pipe(res)
@@ -211,6 +223,8 @@ module.exports = function(Block) {
       /* maybe pipeLine.on ...  */
       cursor.on('end', () => {
         console.log('cursor.on(end)', arguments.length);
+        if (filterPipe)
+          console.log('filterPipe', filterPipe.countIn, filterPipe.countOut);
         sse.send([], 'pathsViaStream', SSE_EventID_EOF);
         res.flush();
         // res.end()

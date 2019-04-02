@@ -10,6 +10,8 @@ var ObjectID = require('mongodb').ObjectID;
 
 function toBool(x) {return (typeof x === "string") ? x.toLowerCase().trim() === "true" : x; };
 
+const trace_aggr = 1;
+
 /*----------------------------------------------------------------------------*/
 
 /** mongo shell script to calculate aliases,
@@ -153,12 +155,14 @@ Want to take 1 feature per count.
 Have count on both B0 & B1 so calc sqrt(count0 * count1), round to integer.
  */
 function densityCount(totalCounts, intervals) {
-  console.log('totalCounts DC => ', totalCounts);
+  if (trace_aggr)
+    console.log('totalCounts DC => ', totalCounts);
   // console.log('intervals.axes => ', intervals.axes);
   let pixelspacing = 5;
   // using total in block instead of # features in domain interval.
   function blockCount(total, domain, range) {
-    console.log('total, domain, range => ', total, domain, range);
+    if (trace_aggr)
+      console.log('total, domain, range => ', total, domain, range);
     return total * pixelspacing / (range[1] - range[0]);
   }
   let count,
@@ -169,7 +173,8 @@ function densityCount(totalCounts, intervals) {
   count = Math.sqrt(counts[0] * counts[1]);
   count = count / intervals.page.thresholdFactor;
   count = Math.round(count);
-  console.log('densityCount', count, intervals);
+  if (trace_aggr)
+    console.log('densityCount', count, intervals);
   return count;
 }
 
@@ -183,7 +188,8 @@ function blockFeatures(db, blockId) {
       { $group: { _id: null, n: { $sum: 1 } } }
     ]);
   nFeatures = nFeatures.toArray();
-  nFeatures.then(function (v) { console.log(`Features for ${blockId} => `, v[0].n); });
+  if (trace_aggr)
+    nFeatures.then(function (v) { console.log(`Features for ${blockId} => `, v[0].n); });
   // .estimatedDocumentCount()
   return nFeatures;
 }
@@ -249,7 +255,8 @@ function blockFilter(intervals, eq, b) {
  */
 exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
   let featureCollection = db.collection("Feature");
-  console.log('pathsDirect', /*featureCollection,*/ blockId0, blockId1, intervals);
+  if (trace_aggr)
+    console.log('pathsDirect', /*featureCollection,*/ blockId0, blockId1, intervals);
   let ObjectId = ObjectID;
   if (false) {  // work in progress @see densityCount()
     let totalCounts = [blockId0, blockId1].map((blockId) => {
@@ -315,11 +322,14 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
 
   let dbPathFilter = toBool(intervals.dbPathFilter);
   if (dbPathFilter && (intervals.axes[0].zoomed || intervals.axes[1].zoomed)) {
-    log_filterValue_intervals(filterValue, intervals);
+    if (trace_aggr)
+      log_filterValue_intervals(filterValue, intervals);
     pipeline = filterValue.concat(group);
   }
   else
     pipeline = matchBlock.concat(group);
+  if (trace_aggr > 1)
+    console.dir(pipeline, { depth: null });
 
   let result = pipelineLimits(featureCollection, intervals, pipeline);
 
@@ -359,7 +369,8 @@ function pipelineLimits(featureCollection, intervals, pipeline) {
  */
 exports.blockFeaturesInterval = function(db, blockId0, intervals) {
   let featureCollection = db.collection("Feature");
-  console.log('pathsDirect', /*featureCollection,*/ blockId0, intervals);
+  if (trace_aggr)
+    console.log('blockFeaturesInterval', /*featureCollection,*/ blockId0, intervals);
   let ObjectId = ObjectID;
 
   let
@@ -379,13 +390,15 @@ exports.blockFeaturesInterval = function(db, blockId0, intervals) {
   // .zoomed does not need to be true - features are requested when axis is
   // brushed;   does not wait for user to click zoom.
   if (dbPathFilter && intervals.axes[0].domain) {
-    log_filterValue_intervals(filterValue, intervals);
+    if (trace_aggr)
+      log_filterValue_intervals(filterValue, intervals);
     pipeline = filterValue;
   }
   else
     pipeline = matchBlock;
 
-  console.log('blockFeaturesInterval', pipeline);
+  if (trace_aggr)
+    console.log('blockFeaturesInterval', pipeline);
   let result = pipelineLimits(featureCollection, intervals, pipeline);
 
   return result;

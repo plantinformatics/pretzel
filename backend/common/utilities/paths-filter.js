@@ -2,7 +2,7 @@ var _ = require('lodash')
 
 /* global exports */
 
-const trace_filter = 1;
+var trace_filter = 1;
 
 /**
  * filter paths according to intervals.axes[].domain[]
@@ -15,6 +15,11 @@ const trace_filter = 1;
  * skipping those function.
 */
 exports.filterPaths = function(paths, intervals) {
+  let trace_save;
+  if (intervals.trace_filter) {
+    trace_save = trace_filter;
+    trace_filter = intervals.trace_filter;
+  }
   // pathsViaStream() calls .filterPaths() once for each path
   if (trace_filter > (2 - (paths.length > 1))) {
   // console.log('paths, intervals => ', paths, intervals);
@@ -29,19 +34,34 @@ exports.filterPaths = function(paths, intervals) {
   // console.log('paths[0].alignment[0] => ', paths[0].alignment[0]);
   // console.log('paths[0].alignment[0].repeats => ', paths[0].alignment[0].repeats);
   }
+  let a = intervals.axes;
+  /** The domain may be provided when the full axis is displayed, i.e. before
+   * zooming in.
+   * The domain may be derived from the range of the reference / parent block,
+   * and in the case of data inconsistency may not encompass the locations of
+   * all the features in this child data block.  So ignore the
+   * intervals.axes[].domain[] given in the request if .zoomed is not true.
+   *
+   * @param i block index, i.e. index of the block within the request params.
+   * @return true if the request indicates
+   */
+  function filterDomain(i) { return a[0].zoomed && a[0].domain; };
   let filteredPaths
-  if (intervals.axes[0].domain || intervals.axes[1].domain)
+  if (filterDomain(0) || filterDomain(1))
     filteredPaths = domainFilter(paths, intervals)
   else
     filteredPaths = paths;
 
-    if ((filteredPaths.length > 1) && (intervals.page && intervals.page.thresholdFactor)) {
-  /** number of samples to skip. */
-  let count = densityCount(filteredPaths.length, intervals)
-  // let filteredPaths = nthSample(paths, intervals.nSamples);
-  if (count)
-    filteredPaths = nthSample(filteredPaths, count);
+  /* See header comment : in the case of streaming, densityCount() is not applied. */
+  if ((filteredPaths.length > 1) && (intervals.page && intervals.page.thresholdFactor)) {
+    /** number of samples to skip. */
+    let count = densityCount(filteredPaths.length, intervals)
+    // let filteredPaths = nthSample(paths, intervals.nSamples);
+    if (count)
+      filteredPaths = nthSample(filteredPaths, count);
   }
+  if (trace_save)
+    trace_filter = trace_save;
   return filteredPaths;
 };
 
@@ -122,6 +142,9 @@ function domainFilter(paths, intervals) {
   // paths = paths.slice(0, 3)
 
   /* Checking paths object structure */
+  if (trace_filter > 2) {
+    console.dir(paths[0], { depth: null });
+    console.dir(paths[1], { depth: null });
   // console.log('paths[0].alignment[0] => ', paths[0].alignment[0]);
   // console.log('paths[0].alignment[0].blockId => ', paths[0].alignment[0].blockId);
   // console.log('paths[0].alignment[1].blockId => ', paths[0].alignment[1].blockId);
@@ -131,13 +154,19 @@ function domainFilter(paths, intervals) {
   // console.log('paths[0].alignment[0].repeats.features => ', paths[0].alignment[0].repeats.features);
   // console.log('paths[0].alignment[0].repeats.features[0].range => ', paths[0].alignment[0].repeats.features[0].range);
   // console.log('paths[0].alignment[1].repeats.features[0].range => ', paths[0].alignment[1].repeats.features[0].range);
+  }
   
   let domains = [BLOCK0, BLOCK1].map(block => {
-    return intervals.axes[block].domain
+    /** ignore given domain if ! .zoomed; @see filterDomain() */
+    let a = intervals.axes[block];
+    return a.zoomed && a.domain;
   })
+  if (trace_filter > 2) {
+    console.dir(domains, { depth: null });
   // console.log('domains => ', domains);
-  // console.log('paths => ', paths);
-  let result = paths.map(original => {
+   console.log('paths.length => ', paths.length);
+  }
+  let result = paths.map((original, pathIndex) => {
     let path = _.cloneDeep(original)
     path.alignment = path.alignment.map((block, i) => {
       if (!domains[i]) {
@@ -145,28 +174,38 @@ function domainFilter(paths, intervals) {
       }
       // let features = block.repeats.features
 
-      // console.log('unfiltered features => ', block.repeats.features);
+      if ((trace_filter > 2) && (pathIndex < 3))
+        console.log('unfiltered features .length => ', block.repeats.features.length);
       block.repeats.features = block.repeats.features.filter(f => {
         let range = f.value || f.range
         if (range.length === 1)
           range[1] = range[0];
-        return ((range[LEFT] >= domains[i][LEFT]) &&
-                     range[RIGHT] <= domains[i][RIGHT])
+        let ok = ((range[LEFT] >= domains[i][LEFT]) &&
+                  range[RIGHT] <= domains[i][RIGHT]);
+        if ((trace_filter > 2) && (pathIndex < 3)) {
+          console.log(f, ok);
+          console.dir(range, { depth: null });
+          console.dir(domains[i], { depth: null });
+        }
+        return ok;
       })
-      // console.log('filtered features => ', block.repeats.features);
+      if ((trace_filter > 2) && (pathIndex < 3))
+        console.log('filtered features .length => ', block.repeats.features.length);
       return block
     })
 
-    // console.log('path.alignment => ', path.alignment);
-    // console.log('path 0 => ', path.alignment[0].repeats.features);
-    // console.log('path 1 => ', path.alignment[1].repeats.features);
-    // console.log('original 0 => ', original.alignment[0].repeats.features);
-    // console.log('original 1 => ', original.alignment[1].repeats.features);
+    if ((trace_filter > 2) && (pathIndex < 3)) {
+     console.log('path.alignment => ', path.alignment);
+     console.log('path 0 => ', path.alignment[0].repeats.features);
+     console.log('path 1 => ', path.alignment[1].repeats.features);
+     console.log('original 0 => ', original.alignment[0].repeats.features);
+     console.log('original 1 => ', original.alignment[1].repeats.features);
 
-    // let equal0 = path.alignment[0].repeats.features.length === original.alignment[0].repeats.features.length
-    // let equal1 = path.alignment[1].repeats.features.length === original.alignment[1].repeats.features.length
+     let equal0 = path.alignment[0].repeats.features.length === original.alignment[0].repeats.features.length
+     let equal1 = path.alignment[1].repeats.features.length === original.alignment[1].repeats.features.length
 
-    // console.log('equal0, equal1 => ', equal0, equal1);
+      console.log('equal0, equal1 => ', equal0, equal1);
+    }
     return path
   })
   
