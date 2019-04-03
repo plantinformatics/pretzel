@@ -106,6 +106,7 @@ describe('path-streaming', function() {
       path = "/Blocks/pathsViaStream"
       ds.name = "myMap3"
       ds.filename = "myMap3"
+      console.log('userToken => ', userToken);
 
       blocks = await datasetHelper.setup({ds, userToken})
       .then(res => {
@@ -238,7 +239,7 @@ function calcNumPaths(features) {
         return length
       }
       else {
-        throw Error("features object structure may be invalid")
+        throw Error("Number of features invalid - is features object structure valid?")
       }
     })
   }).reduce((total, array) => {

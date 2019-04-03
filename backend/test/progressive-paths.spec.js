@@ -275,10 +275,12 @@ describe('progressive-path-loading', function() {
           intervals = {
             axes: [ {
               domain: [0, 2],
-              range: 400
+              range: 400,
+              zoomed: true
             }, {
               domain: [0, 2],
-              range: 400
+              range: 400,
+              zoomed: true
             }],
             page: {
               thresholdFactor: 1
@@ -308,6 +310,7 @@ describe('progressive-path-loading', function() {
         console.log('err => ', getErrMessage(err))
       }
 
+      console.log('features => ', features);
       assert.isArray(features)
       assert.equal(features.length, 0)
     })
@@ -545,11 +548,13 @@ describe('progressive-path-loading', function() {
           blockId1 = blocks[1].id,
           intervals = {
             axes: [ {
-              domain: [0, 9],
-              range: 400
-            }, {
               domain: [0, 40],
-              range: 400
+              range: 400,
+              zoomed: true
+            }, {
+              domain: [9, 40],
+              range: 400,
+              zoomed: true
             }],
             page: {
               thresholdFactor: 1
@@ -580,6 +585,11 @@ describe('progressive-path-loading', function() {
         console.log('err => ', getErrMessage(err))
         // console.log('err.text.error => ', err.response.error.text.error);
       }
+
+      // features.forEach(f => {
+      //   console.log('f.alignment[0].repeats.features => ', f.alignment[0].repeats.features);
+      //   console.log('f.alignment[1].repeats.features => ', f.alignment[1].repeats.features);
+      // })
 
       assert.isArray(features)
       // assert.equal(features.length, 1)
@@ -744,10 +754,12 @@ describe('progressive-path-loading', function() {
           intervals = {
             axes: [ {
               domain: [0, 400],
-              range: 400
+              range: 400,
+              zoomed: true
             }, {
               domain: [0, 300],
-              range: 400
+              range: 400,
+              zoomed: true
             }],
             page: {
               thresholdFactor: 1
@@ -758,7 +770,7 @@ describe('progressive-path-loading', function() {
       try {
         console.log('userToken => ', userToken);
         console.log('blockId0, blockId1 => ', blockId0, blockId1);
-        console.log('intervals => ', intervals);
+        console.log('intervals.axes => ', intervals.axes);
 
         await http
           .get(`${endpoint}/Blocks/pathsProgressive`)
@@ -787,12 +799,16 @@ describe('progressive-path-loading', function() {
         })
       }
 
+      //Show the range and name of returned features
+      // features.forEach(f => {
+      //   console.log('f.alignment[0].repeats.features => ', f.alignment[0].repeats.features);
+      //   console.log('f.alignment[1].repeats.features => ', f.alignment[1].repeats.features);
+      // })
+      console.log('features.length => ', features.length);
       assert.isArray(features)
       assert.equal(features.length, 9)
 
       let numPaths = calcNumPaths(features)
-      console.log('features => ', features);
-      console.log('features.length => ', features.length);
       console.log('numPaths => ', numPaths);
       assert.equal(numPaths, 9)      
     })
@@ -1028,13 +1044,34 @@ describe('progressive-path-loading', function() {
 
 function calcNumPaths(features) {
   return features.map(feature => {
+    // console.log('feature => ', feature);
     return [0, 1].map(block => {
-      return feature.alignment[block].repeats.features.length
+      // console.log(`feature.alignment[${block}].repeats.features => `, feature.alignment[block].repeats.features);
+      let length = _.property(`alignment.${block}.repeats.features.length`)(feature)
+      // console.log('length => ', length);
+      if (length !== undefined) {
+        return length
+      }
+      else {
+        throw Error("Number of features invalid - is features object structure valid?")
+      }
     })
   }).reduce((total, array) => {
+    console.log('array[0], array[1] => ', array[0], array[1]);
     return total + array[0] * array[1]
   }, 0 )
 }
+
+// function calcNumPaths(features) {
+//   return features.map(feature => {
+//     return [0, 1].map(block => {
+//       return feature.alignment[block].repeats.features.length
+//     })
+//   }).reduce((total, array) => {
+//     return total + array[0] * array[1]
+//   }, 0 )
+// }
+
 
 function getErrMessage(err) {
   let temp = _.property("response.error.text")(err)
