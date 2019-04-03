@@ -22,17 +22,10 @@ exports.filterPaths = function(paths, intervals) {
   }
   // pathsViaStream() calls .filterPaths() once for each path
   if (trace_filter > (2 - (paths.length > 1))) {
-  // console.log('paths, intervals => ', paths, intervals);
-  console.log('paths.length => ', paths.length);
-  console.log('intervals.axes[0].domain => ', intervals.axes[0].domain);
-  console.log('intervals.axes[1].domain => ', intervals.axes[1].domain);
-  // console.log('paths[0] => ', paths[0]);
-  // console.log('paths[1] => ', paths[1]);
-  // console.log('paths[0].alignment => ', paths[0].alignment);
-  // console.log('paths[0].alignment.length => ', paths[0].alignment.length);
-  // console.log('paths[1].alignment.length => ', paths[1].alignment.length);
-  // console.log('paths[0].alignment[0] => ', paths[0].alignment[0]);
-  // console.log('paths[0].alignment[0].repeats => ', paths[0].alignment[0].repeats);
+    // console.log('paths, intervals => ', paths, intervals);
+    console.log('paths.length => ', paths.length);
+    console.log('intervals.axes[0].domain => ', intervals.axes[0].domain);
+    console.log('intervals.axes[1].domain => ', intervals.axes[1].domain);
   }
   let a = intervals.axes;
   /** The domain may be provided when the full axis is displayed, i.e. before
@@ -45,7 +38,7 @@ exports.filterPaths = function(paths, intervals) {
    * @param i block index, i.e. index of the block within the request params.
    * @return true if the request indicates
    */
-  function filterDomain(i) { return a[0].zoomed && a[0].domain; };
+  function filterDomain(i) { return a[i].zoomed && a[i].domain; };
   let filteredPaths
   if (filterDomain(0) || filterDomain(1))
     filteredPaths = domainFilter(paths, intervals)
