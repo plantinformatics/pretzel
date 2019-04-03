@@ -820,6 +820,15 @@ div#tab-explorer-datasets > ul.list-group > div.ember-view > li.list-group-item
   display: inline-block;
 }
 
+#left-panel-explorer .list-group-item {
+  /* The purpose of this is to maintain relatively straight columns of block elements.
+   * Users are free to create longer block names; handling all of that variation
+   * would require some calculation or user adjustment.
+   * This value works OK for each of the manage-explorer tabs, for block names/scopes
+   * which are generally 2-3 chars, e.g. 7A, or 1D2.  Element width also varies when
+   * the block is added / selected. */
+  min-width: 7.48em;
+}
 
 /* -------------------------------------------------------------------------- */
 div.drawing-controls > div.drawing
