@@ -254,14 +254,10 @@ export default Service.extend({
 
 
   blocksUpdateDomain : function(blockA, blockB, domainCalc, axisEvents) {
-            let axisApi = stacks.oa.axisApi;
-            let t = stacks.oa.svgContainer.transition().duration(750);
-
     let blocks = [blockA]; if (blockB) blocks.push(blockB);
 
           if (domainCalc)
             blocks.map(function (blockId) {
-              let eventBus = stacks.oa.eventBus;
               let
                 block = stacks.blocks[blockId];
               console.log(blockId, 'before domainCalc, block.z', block.z); let
@@ -269,21 +265,14 @@ export default Service.extend({
               blockDomain = block.domain = block.domainCalc(),
               axis = Stacked.getAxis(blockId),
               /** axis domainCalc() also does not re-read the block's domains if axis.domain is already defined. */
-              axisDomain = axis.domain = axis.domainCalc(),
-              oa = stacks.oa;
+              axisDomain = axis.domain = axis.domainCalc();
               console.log(blockId, 'blockDomain', blockDomain, axisDomain, block.z);
-              if (! axis.zoomed) {
-                updateDomain(oa.y, oa.ys, axis);
 
-                if (axisEvents) {
-                  let axisID = axis.axisName, p = axisID;
-                  eventBus.trigger("zoomedAxis", [axisID, t]);
-                  // true does pathUpdate(t);
-                  axisApi.axisScaleChanged(p, t, true);
-                }
+              if (! axis.zoomed) {
+                axis.updateDomain();
               }
+
           });
-            axisApi.axisStackChanged(t);
   },
 
   /** set up an axis-brush object to hold results. */
@@ -352,9 +341,17 @@ export default Service.extend({
     let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
     let axis = Stacked.getAxis(blockA),
     axisBrush = me.get('store').peekRecord('axis-brush', blockA),
-    brushedDomain = axisBrush.brushedDomain;
-    console.log('domain', intervalParams.axes[0].domain, '-> brushedDomain', brushedDomain);
-    intervalParams.axes[0].domain = brushedDomain;
+    brushedDomain = axisBrush.brushedDomain,
+    paramAxis = intervalParams.axes[0];
+    console.log('domain', paramAxis.domain, '-> brushedDomain', brushedDomain);
+    /* When the block is first viewed, if it does not have a reference which
+     * defines the range then the domain of the block's features is not known,
+     * and the axis.domain[] will be [0, 0].
+     */
+    if ((brushedDomain[0] === 0) && (brushedDomain[1] === 0))
+      delete paramAxis.domain;
+    else
+      paramAxis.domain = brushedDomain;
     let promise = 
       // streaming version not added yet
       // pathsViaStream ?

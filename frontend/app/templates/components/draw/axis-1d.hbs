@@ -1,2 +1,3 @@
-{{ extended }} {{ axis.id }}
+{{ extended }} {{ axis.id }} {{ domainChanged }} , {{ position }}, {{ axisS.currentStep }}, {{ axisS.position.[0].yDomain }} {{ zoomed }}
+{{ log 'axis-1d rendered domainContents' position }}
 {{yield this }}

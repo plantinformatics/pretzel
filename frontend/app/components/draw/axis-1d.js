@@ -1,7 +1,7 @@
 import Ember from 'ember';
 
 import AxisEvents from '../../utils/draw/axis-events';
-import { /* Block, Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText, axisId2Name*/ } from '../../utils/stacks';
+import { /* Block,*/ Stacked, /*Stack,*/ stacks /*, xScaleExtend, axisRedrawText, axisId2Name*/ } from '../../utils/stacks';
 import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/ , axisTitleColour  }  from '../../utils/draw/axis';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../../utils/stacks-drag';
 import { selectAxis } from '../../utils/draw/stacksAxes';
@@ -276,6 +276,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     this.renderTicksDebounce();
   },
 
+  /** @return the Stacked object corresponding to this axis. */
+  axisS : Ember.computed('axis.id', function () {
+    let
+      axisName = this.get('axis.id'),
+    axisS = Stacked.getAxis(axisName);
+    return axisS;
+  }),
+
   /** @param [axisID, t] */
   zoomedAxis : function(axisID_t) {
     let axisID = axisID_t[0],
@@ -286,7 +294,56 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       console.log('zoomedAxis matched', axisID, this.get('axis'));
       // Not currently needed because axisStackChanged() already received.
       // this.renderTicksDebounce.apply(this, axisID_t);
+      let axisS = this.get('axisS'),
+      dimensions = axisS.axisDimensions();
+      this.setDomain(dimensions.domain);
+      this.set('zoomed', dimensions.zoomed);
+      console.log('zoomedAxis', axisS, dimensions);
     }
+  },
+  setDomain(domain) {
+    let
+      attr = this.get('domain');
+    if (! attr)
+      this.set('domain', Ember.A(domain));
+    else
+    {
+      domain.forEach((d, i) => {
+        this.set('domain.' + i, d);
+      });
+    }
+    console.log('setDomain', domain, attr /*, this.attrs*/);
+  },
+  position : Ember.computed.alias('axisS.positions.0'),
+
+  /** this is an alias of .domain, but it updates when the array elemnts update. */
+  domainChanged : Ember.computed(
+    'domain.[0]', 'domain.[1]',
+    'position.yDomain.[0]', 'position.yDomain.[1]',
+    'domain.0', 'domain.1',
+    'position.yDomain.0', 'position.yDomain.1',
+    function () {
+      let domain = this.get('domain');
+      // use the VLinePosition:toString() for the position-s
+      console.log('domainChanged', domain, this.get('axisS'), this.get('axisS.positions'), ''+this.get('position'), ''+this.get('axisS.positions.1'), this.get('axisS.currentStep'));
+      this.notifyChanges();
+
+      return domain;
+    }),
+  notifyChanges() {
+    let axisID = this.get('axis.id');
+
+    let axisApi = stacks.oa.axisApi;
+    let t = stacks.oa.svgContainer.transition().duration(750);
+
+    let eventBus = stacks.oa.eventBus;
+
+    let p = axisID;
+    eventBus.trigger("zoomedAxis", [axisID, t]);
+    // true does pathUpdate(t);
+    axisApi.axisScaleChanged(p, t, true);
+
+    axisApi.axisStackChanged(t);
   },
 
   axisObj : Ember.computed('axes2d.[]', function () {

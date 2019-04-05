@@ -1,8 +1,10 @@
 import {  maybeFlip, maybeFlipExtent }  from '../utils/draw/axis';
 
+import { Stacked } from './stacks';
+
 /*----------------------------------------------------------------------------*/
 
-/** update ys[axis.axisName]  and y[axis.axisName] for the given axis,
+/** update ys  and y for the given axis,
  * according to the current domain of blocks on axis, and for ys, the axis's current .portion.
  * These 2 params are currently coming from oa.y, oa.ys :
  * @param y  axes yscale to update
@@ -11,6 +13,9 @@ import {  maybeFlip, maybeFlipExtent }  from '../utils/draw/axis';
  */
 function updateDomain(y, ys, axis)
 {
+  /* This is now called from Stacked.prototype.updateDomain(), and can be merged
+   * with that function. */
+
   /* based on similar code in draw-map.js : resetZoom(),
    * flipButtonS.on('click'), oa.stacks.axisIDs().forEach(), selectedAxes.map()
    */
@@ -21,8 +26,8 @@ function updateDomain(y, ys, axis)
   domain = a.parent ? a.parent.getDomain() : a.getDomain();
   console.log('updateDomain', axisName, domain, a, a.blocks[0].z);
   domain = maybeFlip(domain, a.flipped);
-  y[axisName].domain(domain);
-  ys[axisName].domain(domain);
+  y.domain(domain);
+  ys.domain(domain);
 }
 
 

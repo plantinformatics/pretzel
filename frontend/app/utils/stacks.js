@@ -1,3 +1,6 @@
+// for VLinePosition :
+import Ember from 'ember';
+
 /*global d3 */
 
 /*----------------------------------------------------------------------------*/
@@ -9,6 +12,8 @@ import { variableBands } from '../utils/variableBands';
 import { isOtherField } from '../utils/field_names';
 import { Object_filter } from '../utils/Object_filter';
 import { breakPoint, breakPointEnableSet } from '../utils/breakPoint';
+import { updateDomain } from './stacksLayout';
+
 
 
 /*----------------------------------------------------------------------------*/
@@ -1800,6 +1805,51 @@ Stacked.prototype.axisTransformO = function ()
 
 /*----------------------------------------------------------------------------*/
 
+/** Position of a vertical line segment, e.g. an axis (Stacked) or a Stack of axes.
+ * @param     y : domain, range, x : offset
+ */
+let VLinePosition = Ember.Object.extend(
+{
+  setValues : function(yDomain, yRange, xOffset) {
+    this.set('yDomain', yDomain);
+    this.set('yRange', yRange);
+    this.set('xOffset', xOffset);
+  },
+  toString() {
+    console.log('VLinePosition : toString()', this);
+    return "VLinePosition:" + this.yDomain + ',' + this.yRange + ',' + this.xOffset;
+  }
+
+});
+
+/** Reference the y scales.
+ * The scales y and ys are currently created in 
+ * The roles of the scales y and ys are noted in comments in draw-map.js : draw();
+ * the key difference is that ys has added translation and scale
+ * for the axis's current stacking.
+ */
+Stacked.prototype.getY = function ()
+{
+  let axisName = this.axisName;
+  /* y and ys will be referenced in the same call, since they are created at the same time.
+   * this.axisName will not change.  If it did in future, this function could become a CF.
+   */
+  if (! this.y)
+    this.y = oa.y[axisName];
+  if (! this.ys)
+    this.ys = oa.ys[axisName];
+  return this.y;
+};
+
+Stacked.prototype.getPositions = function ()
+{
+  if (this.currentStep === undefined)
+    this.currentStep = 0;
+  let positions = this.positions ||
+    (this.positions = Ember.A([VLinePosition.create(), VLinePosition.create()]));
+  return positions;
+};
+
 /** Return domain and range intervals for the axis.
  * Used to construct the intervalParams passed to the API by requestPathsProgressive(), to guide how man results are returned.
 *
@@ -1809,10 +1859,32 @@ Stacked.prototype.axisDimensions = function ()
 {
   let
     /** y scale of this axis */
-    y = oa.y[this.axisName],
-  domain = y.domain(),
+    y = this.getY(),
+  domain = this.y.domain(),
   dim = { domain, range : this.yRange(), zoomed : this.zoomed};
   return dim;
+};
+
+/** The position of the axis line segment is recorded as 2 values : the position
+ * when pathUpdate_() was last called, and the current position, which will be different
+ * if the user is dragging the axis.
+ * @return the current position
+ */
+Stacked.prototype.currentPosition = function ()
+{
+  let
+    positions = this.getPositions(),
+    position = positions[this.currentStep];
+  return position;
+};
+Stacked.prototype.updateDomain = function ()
+{
+  let y = this.getY(), ys = this.ys;
+  updateDomain(this.y, this.ys, this);
+  let domain = this.y.domain(),
+  axisPosition = this.currentPosition();
+  console.log(this, /*y, ys,*/ 'domain', domain, axisPosition);
+  axisPosition.set('yDomain', domain);
 };
 
 /*----------------------------------------------------------------------------*/
