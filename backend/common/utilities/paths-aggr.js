@@ -236,6 +236,24 @@ function blockFilter(intervals, eq, b) {
 };
 /*----------------------------------------------------------------------------*/
 
+/** The interval params passed to .pathsDirect() and .blockFeaturesInterval()
+ * may have the value 'false' which is truthy, so convert flags to boolean
+ * values.
+ *
+ * This function does not return a result - the raw 'false' values could cause
+ * bugs if they are inadvertently used.
+ */
+function parseIntervalFlags(intervals) {
+  intervals.axes.forEach(function (a) {
+    if (a.zoomed)
+      a.zoomed = toBool(a.zoomed);
+  });
+  if (intervals.dbPathFilter)
+    intervals.dbPathFilter = toBool(intervals.dbPathFilter);
+}
+
+/*----------------------------------------------------------------------------*/
+
 /** Match features by name between the 2 given blocks.  The result is the alignment, for drawing paths between blocks.
  * Usage in mongo shell  e.g.
  *  db.Block.find({"scope" : "1A"})  to choose a pair of blockIds
@@ -254,6 +272,7 @@ function blockFilter(intervals, eq, b) {
  * @return cursor	aliases
  */
 exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
+  parseIntervalFlags(intervals);
   let featureCollection = db.collection("Feature");
   if (trace_aggr)
     console.log('pathsDirect', /*featureCollection,*/ blockId0, blockId1, intervals);
@@ -320,7 +339,7 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
     ];
   let pipeline;
 
-  let dbPathFilter = toBool(intervals.dbPathFilter);
+  let dbPathFilter = intervals.dbPathFilter;
   if (dbPathFilter && (intervals.axes[0].zoomed || intervals.axes[1].zoomed)) {
     if (trace_aggr)
       log_filterValue_intervals(filterValue, intervals);
@@ -368,6 +387,7 @@ function pipelineLimits(featureCollection, intervals, pipeline) {
  * @return cursor	aliases
  */
 exports.blockFeaturesInterval = function(db, blockId0, intervals) {
+  parseIntervalFlags(intervals);
   let featureCollection = db.collection("Feature");
   if (trace_aggr)
     console.log('blockFeaturesInterval', /*featureCollection,*/ blockId0, intervals);
