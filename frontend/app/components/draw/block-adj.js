@@ -57,10 +57,21 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     return axes;
   }),
 
-  paths : Ember.computed('blockAdj.pathsResult.[]', 'zoomCounter', function () {
-    console.log('paths', this);
+  pathsResultLength : Ember.computed('blockAdj.pathsResult.[]', 'paths', function () {
+    let pathsP = this.get('paths'),
+    pathsResult = this.get('blockAdj.pathsResult'),
+    length = pathsResult && pathsResult.length;
+    console.log('pathsResultLength', this, length);
+    if (length)
+      this.draw(pathsResult);
+    return length;
+  }),
+  paths : Ember.computed('blockAdj', 'zoomCounter', function () {
+    /** in the case of pathsViaStream, this promise will not resolve -
+     * blockAdj.pathsResult is passed to draw() instead.  */
     let pathsP = this.get('blockAdj.paths');
     pathsP.then((paths) => {
+      console.log('blockAdj.paths length', paths && paths.length);
     if (paths && paths.length)
       throttle(this, this.draw, paths, 200, false);
     });
