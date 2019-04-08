@@ -244,17 +244,17 @@ module.exports = function(Block) {
   /** Collate from the database a list of features within the given block, which
    * meet the optional interval domain constraint.
    *
-   * @param blockId0
+   * @param blockIds  blocks
    */
-  Block.blockFeaturesInterval = function(blockId0, intervals, options, res, cb) {
+  Block.blockFeaturesInterval = function(blockIds, intervals, options, res, cb) {
     // based on Block.pathsProgressive(); there is similarity which could be
     // factored into a mixin, which may be relevant to factoring this with
     // streaming equivalent (not yet added).
 
       let db = this.dataSource.connector;
     const apiName = 'blockFeaturesInterval';
-    console.log(apiName, /*db,*/ blockId0, intervals /*, options, cb*/);
-    let cacheId = blockId0,
+    console.log(apiName, /*db,*/ blockIds, intervals /*, options, cb*/);
+    let cacheId = blockIds.join('_'),
     /** If intervals.dbPathFilter, we could append the location filter to cacheId,
      * but it is not clear yet whether that would perform better.
      * e.g. filterId = intervals.dbPathFilter ? '_' + intervals.axes[0].domain[0] + '_' + ... : ''
@@ -267,7 +267,7 @@ module.exports = function(Block) {
     }
     else {
       let cursor =
-        pathsAggr.blockFeaturesInterval(db, blockId0, intervals);
+        pathsAggr.blockFeaturesInterval(db, blockIds, intervals);
       cursor.toArray()
         .then(function(data) {
           console.log(apiName, ' then', (data.length > 10) ? data.length : data);
@@ -351,7 +351,7 @@ module.exports = function(Block) {
 
   Block.remoteMethod('blockFeaturesInterval', {
     accepts: [
-      {arg: 'blockA', type: 'string', required: true},
+      {arg: 'blocks', type: 'array', required: true},
       {arg: 'intervals', type: 'object', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},

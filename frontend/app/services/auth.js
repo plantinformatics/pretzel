@@ -147,9 +147,9 @@ export default Service.extend({
     return this._ajax('Blocks/pathsByReference', 'GET', {blockA : blockA, blockB : blockB, reference, max_distance, options : options}, true);
   },
 
-  getBlockFeaturesInterval(blockA, intervals, options) {
-    console.log('services/auth getBlockFeaturesInterval', blockA, intervals, options);
-    return this._ajax('Blocks/blockFeaturesInterval', 'GET', {blockA, intervals, options}, true);
+  getBlockFeaturesInterval(blocks, intervals, options) {
+    console.log('services/auth getBlockFeaturesInterval', blocks, intervals, options);
+    return this._ajax('Blocks/blockFeaturesInterval', 'GET', {blocks, intervals, options}, true);
   },
 
   /** 

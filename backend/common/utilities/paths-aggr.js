@@ -381,28 +381,34 @@ function pipelineLimits(featureCollection, intervals, pipeline) {
 
 /** Collect features of the given block, possibly constrained to the optional domain interval.
  * @param blockCollection dataSource collection
- * @param blockId0  id of block
+ * @param blockIds  ids of data blocks
  * @param intervals  domain and range of axis of block, to limit the number of features in result.
 
  * @return cursor	aliases
  */
-exports.blockFeaturesInterval = function(db, blockId0, intervals) {
+exports.blockFeaturesInterval = function(db, blockIds, intervals) {
   parseIntervalFlags(intervals);
   let featureCollection = db.collection("Feature");
   if (trace_aggr)
-    console.log('blockFeaturesInterval', /*featureCollection,*/ blockId0, intervals);
+    console.log('blockFeaturesInterval', /*featureCollection,*/ blockIds, intervals);
   let ObjectId = ObjectID;
 
   let
     matchBlock =
     [
-	    { $match :  { "blockId" : ObjectId(blockId0) }}
+	    { $match :  { "blockId" : {$in : blockIds.map(function (blockId) { return ObjectId(blockId); }) }}}
     ],
 
+  blockFilters = blockIds.map(function (blockId) {
+    return {$and : blockFilter(intervals, [{$eq : [ "$blockId", ObjectId(blockId) ]}], 0) };
+  }),
   filterValue =
     [
-      { $match : {$expr : {$and : blockFilter(intervals, [{$eq : [ "$blockId", ObjectId(blockId0) ]}], 0) }  }},
+      { $match : {$expr : {$or : 
+        blockFilters
+      } }},
     ];
+
 
   let pipeline;
 
@@ -419,6 +425,9 @@ exports.blockFeaturesInterval = function(db, blockId0, intervals) {
 
   if (trace_aggr)
     console.log('blockFeaturesInterval', pipeline);
+  if (trace_aggr > 1)
+    console.dir(pipeline, { depth: null });
+
   let result = pipelineLimits(featureCollection, intervals, pipeline);
 
   return result;

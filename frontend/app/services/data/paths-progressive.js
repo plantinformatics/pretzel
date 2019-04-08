@@ -218,7 +218,7 @@ export default Service.extend({
            */
           Ember.run.throttle(
             me, me.blocksUpdateDomain, 
-            blockA, blockB, domainCalc, axisEvents,
+            [blockA, blockB], domainCalc, axisEvents,
             200, false);
         };
     promise
@@ -253,8 +253,7 @@ export default Service.extend({
   },
 
 
-  blocksUpdateDomain : function(blockA, blockB, domainCalc, axisEvents) {
-    let blocks = [blockA]; if (blockB) blocks.push(blockB);
+  blocksUpdateDomain : function(blocks, domainCalc, axisEvents) {
 
           if (domainCalc)
             blocks.map(function (blockId) {
@@ -352,11 +351,14 @@ export default Service.extend({
       delete paramAxis.domain;
     else
       paramAxis.domain = brushedDomain;
+    let dataBlockIds = axis.dataBlocks(true)
+     // equiv : blockS.block.get('id')
+      .map(function (blockS) { return blockS.axisName; });
     let promise = 
       // streaming version not added yet
       // pathsViaStream ?
       // this.get('auth').getPathsViaStream(blockA, blockB, intervalParams, /*options*/{dataEvent : receivedData}) :
-      this.get('auth').getBlockFeaturesInterval(blockA, intervalParams, /*options*/{});
+      this.get('auth').getBlockFeaturesInterval(dataBlockIds, intervalParams, /*options*/{});
         function receivedData(res){
           if (trace_pathsP > 1)
             console.log(apiName, ' request then', res.length);
@@ -373,7 +375,7 @@ export default Service.extend({
 
           Ember.run.throttle(
             me, me.blocksUpdateDomain, 
-            blockA, undefined, domainCalc, axisEvents,
+            dataBlockIds, undefined, domainCalc, axisEvents,
             200, false);
         };
     promise
