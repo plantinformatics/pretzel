@@ -10,6 +10,33 @@ var download = function({ds}) {
     .get(ds.url + ds.path + ds.filename + ds.ext)
 }
 
+var createComplete = async function({data, userToken}) {
+  console.log("createComplete through REST");
+  data.name = getName(data.name)
+  return http
+    .post(`${endpoint}/datasets/createComplete`)
+    .send(data)
+    .set('Accept', 'application/json')
+    .set('Content-Type', 'application/json')
+    .set('Authorization', userToken)
+}
+
+var aliases = async function({data, userToken}) {
+  console.log("Upload aliases REST");
+  let testData = data.map(d => {
+    d.namespace1 = PREFIX + d.namespace1.replace(/:/, ":" + PREFIX)
+    d.namespace2 = PREFIX + d.namespace2.replace(/:/, ":" + PREFIX)
+    return d
+  })
+  // console.log('testData[0], testData[1] => ', testData[0], testData[1]);
+  return http
+    .post(`${endpoint}/aliases/bulkCreate`)
+    .send(testData)
+    .set('Accept', 'application/json')
+    .set('Content-Type', 'application/json')
+    .set('Authorization', userToken)
+}
+
 var upload = async function({data, ds, userToken}) {
   console.log("Create Dataset through REST");
   let obj = JSON.parse(data)
@@ -17,27 +44,19 @@ var upload = async function({data, ds, userToken}) {
   // console.log('obj.name => ', obj.name);
   // console.log('obj.blocks => ', obj.blocks);
   data = JSON.stringify(obj)
-  await http
+  return http
     .post(`${endpoint}/datasets/upload`)
     .send({ data, fileName: ds.filename + ds.ext})
     .set('Accept', 'application/json')
     .set('Content-Type', 'application/json')
     .set('Authorization', userToken)
-    .then(res => {
-      console.log("Dataset created");
-      // console.log('res.body => ', res.body);
-      console.log('res.status => ', res.status);
-    })
-    .catch(err => {
-      console.log("Creating dataset failed");
-      console.log('err => ', err.status);
-      console.log('err => ', getErrMessage(err));
-    })
+}
 
+var makePublic = async function ({name, userToken}) {
   console.log("Retrieve dataset to then be updated");
   // console.log('ds.name => ', ds.name);
   let dataset = await http
-    .get(`${endpoint}/datasets/${getName(ds.name)}`)
+    .get(`${endpoint}/datasets/${getName(name)}`)
     .set('Accept', 'application/json')
     // .set('Content-Type', 'application/json')
     .set('Authorization', userToken)
@@ -54,11 +73,10 @@ var upload = async function({data, ds, userToken}) {
     })
 
   // console.log('myMapObj => ', myMapObj);
-
   dataset.public = true
   console.log("Update dataset to be public");
   return http
-    .patch(`${endpoint}/datasets/${getName(ds.name)}`)
+    .patch(`${endpoint}/datasets/${getName(name)}`)
     .send(dataset)
     .set('Accept', 'application/json')
     .set('Content-Type', 'application/json')
@@ -86,9 +104,20 @@ var setup = async function({ds, userToken}) {
       console.log('err.text => ', err.text);
     })
   await upload({data, ds, userToken})
-    .then(() => console.log("Upload completed"))
+    .then(res => {
+      console.log("Dataset created");
+      // console.log('res.body => ', res.body);
+      console.log('res.status => ', res.status);
+    })
     .catch(err => {
-      console.log("Upload failed");
+      console.log("Creating dataset failed");
+      console.log('err => ', err.status);
+      console.log('err => ', getErrMessage(err));
+    })
+  await makePublic({name: ds.name, userToken})
+    .then(() => console.log("Make public completed"))
+    .catch(err => {
+      console.log("Make public failed");
       console.log('err => ', err.status);
       console.log('err => ', getErrMessage(err));
     })
@@ -106,7 +135,10 @@ var del = function({name, userToken}) {
 
 module.exports = {
   download,
+  createComplete,
+  aliases,
   upload,
+  makePublic,
   getBlocks,
   setup,
   del

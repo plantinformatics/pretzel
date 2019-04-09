@@ -1018,25 +1018,79 @@ describe('progressive-path-loading', function() {
 
   describe("Large public data tests", function() {
     before(async function() {
-      blocks = null
-      // ds2 = _.cloneDeep(ds)
-      // ds.name = "Wen_et_al_2017"
-      // ds.filename = "Wen_et_al_2017.fixed"
-
-      // ds2.name = "PBI-14-1406-s005"
-      // ds2.filename = "PBI-14-1406-s005.fixed"
-
+      this.timeout(0)
       ds = {
-        url: "https://github.com/plantinformatics/pretzel-input-generator/",
-        path: "releases/download/v1.0/",
-        filename: "pretzel-genomes-features-aliases-JSON",
-        ext: ".tar.gz"
+        path: './test/testdata/',
+        name: 'Triticum_aestivum_IWGSC_RefSeq_v1.0',
+        ext: '.json'
       }
+      blocks = null
+      await load.fileJson(ds.path + ds.name + '_genome.json')
+      .then(data => {
+        // console.log('data => ', data);
+        return datasetHelper.createComplete({data, userToken})
+      })
+      .then(data => datasetHelper.makePublic({name: ds.name, userToken}))
+      .then(() => console.log("Genome upload completed"))
+      .catch(err => {
+        console.log("Genome upload failed");
+        console.log('err => ', err.status);
+        console.log('err => ', getErrMessage(err));
+      })
 
-      let allDatasets = await datasetHelper.download({ds})
+      await load.fileGzip(ds.path + ds.name + '_HC_annotation.json.gz')
+      .then(data => {
+        // console.log('data2 => ', data);
+        return datasetHelper.createComplete({data, userToken})
+      })
+      .then(() => datasetHelper.makePublic({name: ds.name + '_HC_genes', userToken}))
+      .then(() => console.log("Annotations upload completed"))
+      .catch(err => {
+        console.log("Annotations upload failed");
+        console.log('err => ', err.status);
+        console.log('err => ', getErrMessage(err));
+      })
 
-      /* TODO */
-      // console.log('blocks => ', blocks);
+      await load.fileGzip(ds.path + ds.name + '_HC_VS_' + ds.name + '_HC_aliases.json.gz')
+      .then(data => {
+        // console.log('data3 => ', data);
+        return datasetHelper.aliases({data, userToken})
+      })
+      .then(() => console.log("Aliases upload completed"))
+      .catch(err => {
+        console.log("Aliases upload failed");
+        console.log('err => ', err.status);
+        console.log('err => ', getErrMessage(err));
+      })
+    })
+
+    after(async function() {
+      await datasetHelper.del({name: ds.name, userToken})
+      .then(res => {
+        console.log("Dataset deleted");
+        console.log('res.status => ', res.status);
+        return datasetHelper.del({name: ds.name + '_HC_genes', userToken})
+      })
+      .then(res => {
+        console.log("Dataset deleted");
+        console.log('res.status => ', res.status);
+        // await delete Aliases
+      })
+      // .then(res => {
+
+      // })
+      .catch(err => {
+        console.log("Deleting dataset failed");
+        console.log('err.status => ', err.status);
+        console.log("err => ", getErrMessage(err));
+      })
+    })
+
+    it("Run test", function(done) {
+      // console.log('app.models => ', app.models);
+      console.log("In test");
+      assert.equal(true, true)
+      done()
     })
   })
 
