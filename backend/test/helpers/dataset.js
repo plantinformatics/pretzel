@@ -102,6 +102,7 @@ var setup = async function({ds, userToken}) {
     .catch(err => {
       console.log("Downloading dataset failed");
       console.log('err.text => ', err.text);
+      console.log('err.status => ', err.status);
     })
   await upload({data, ds, userToken})
     .then(res => {
@@ -141,7 +142,8 @@ module.exports = {
   makePublic,
   getBlocks,
   setup,
-  del
+  del,
+  getName
 }
 
 function getName(name) {
