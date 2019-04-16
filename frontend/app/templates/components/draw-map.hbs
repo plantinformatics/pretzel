@@ -42,7 +42,7 @@
 
 <div>{{block.viewedIds.length}}, {{axesP.length}} blockAdjs : {{flowsService.blockAdjs.length}}</div>
 {{#each flowsService.blockAdjs as |blockAdj| }}
-  {{draw/block-adj blockAdjId=blockAdj drawMap=this }}
+  {{draw/block-adj blockAdj=blockAdj drawMap=this }}
 {{/each}}
 
 {{#if axisFeatureCircleHover}}

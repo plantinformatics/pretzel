@@ -48,9 +48,9 @@ export default Service.extend({
     return this._ajax('Datasets', 'GET', {'filter[include]': 'blocks'}, true)
   },
 
-  getPaths(blockA, blockB, options) {
-    console.log('services/auth getPaths', blockA, blockB, options);
-    return this._ajax('Blocks/paths', 'GET', {blockA : blockA, blockB : blockB, options : options}, true)
+  getPaths(blockA, blockB, withDirect, options) {
+    console.log('services/auth getPaths', blockA, blockB, withDirect, options);
+    return this._ajax('Blocks/paths', 'GET', {blockA : blockA, blockB : blockB, withDirect, options : options}, true)
   },
 
   getPathsProgressive(blockA, blockB, intervals, options) {

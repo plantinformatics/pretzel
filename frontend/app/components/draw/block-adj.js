@@ -36,26 +36,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   zoomCounter : 0,
 
-  blockAdj : Ember.computed('blockAdjId', function () {
-    let
-      blockAdjId = this.get('blockAdjId'),
-    record = this.get('pathsP').ensureBlockAdj(blockAdjId);
-    console.log('blockAdjId', blockAdjId, blockAdjId[0], blockAdjId[1], record);
-    return record;
+  blockAdjId : Ember.computed.alias('blockAdj.blockAdjId'),
+/*  ('blockAdj', function () {
+    let blockAdj = this.get('blockAdj'),
+    blockAdjId = blockAdj.get('blockAdjId');
+    console.log(blockAdj, 'blockAdjId', blockAdjId);
+    return blockAdjId;
   }),
-
-  /** Result is, for each blockID in blockAdjId,  the axis on which the block is displayed.
-   * Will need to add dependency on stacks component, because block can be un-viewed then re-viewed.
-   */
-  axes :  Ember.computed('blockAdjId', function () {
-    let
-      blockAdjId = this.get('blockAdjId'),
-    axes = blockAdjId.map(function (blockId) {
-      return Stacked.getAxis(blockId);
-    });
-    console.log('axes', axes);
-    return axes;
-  }),
+*/
+  axes :  Ember.computed.alias('blockAdj.axes'),
 
   pathsResultLength : Ember.computed('blockAdj.pathsResult.[]', 'paths', function () {
     let pathsP = this.get('paths'),

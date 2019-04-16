@@ -7,6 +7,11 @@ import { stacks, Stacked } from '../../utils/stacks';
 import { storeFeature } from '../../utils/feature-lookup';
 import { updateDomain } from '../../utils/stacksLayout';
 
+import {
+           addPathsToCollation, addPathsByReferenceToCollation,
+         storePath
+       } from "../../utils/draw/collate-paths";
+
 let trace_pathsP = 1;
 
 import { blockAdjKeyFn } from '../../utils/draw/stacksAxes';
@@ -40,23 +45,40 @@ export default Service.extend({
       console.log('ensureBlockAdj', blockAdjId, r._internalModel.__attributes, r._internalModel.__data);
     if (! r) {
       let ba = {
-        type : 'blockAdj',
+        type : 'block-adj',
         id : blockAdjIdText,
-        block0 : blockAdjId[0],
-        block1 : blockAdjId[1],
-        blockId0 : blockAdjId[0],
-        blockId1 : blockAdjId[1]
+        relationships : {
+          block0 : { data: { type: "block", "id": blockAdjId[0] } },
+          block1 : { data: { type: "block", "id": blockAdjId[1] } }
+        },
+        attributes : {
+          'block-id0' : blockAdjId[0],
+          'block-id1' : blockAdjId[1]
+        }
       };
       let
-      serializer = store.serializerFor('blockAdj'),
-      modelClass = store.modelFor('blockAdj'),
-      ban1 = serializer.normalizeSingleResponse(store, modelClass, ba, blockAdjIdText, 'blockAdj'),
-      // the above is equivalent long-hand for :
       ban = store.normalize('blockAdj', ba);
-      ban1 = {data: ban1};
-      r = store.push(ban1);
+      r = store.push(ban);
+      if (! r.get('blockId0')) {
+        debugger;
+        r.set('blockId0', blockAdjId[0]);
+      }
+      if (! r.get('blockId1'))
+        r.set('blockId1', blockAdjId[1]);
     }
     return r;
+  },
+  findBlockAdj(blockAdjId) {
+    let
+      store = this.get('store'),
+    blockAdj =
+      store.peekRecord('block-adj', blockAdjKeyFn(blockAdjId));
+    if (! blockAdj)
+    {
+      /** this is now done in ensureBlockAdj(), before the request. */
+      console.log('blockAdj not found', blockAdj, blockAdjId);
+    }
+    return blockAdj;
   },
 
   /** Paths returned from API, between adjacent blocks,
@@ -64,40 +86,27 @@ export default Service.extend({
    * Initially just a single result for each blockID pair,
    * but will later hold results for sub-ranges of each block, at different resolutions.
    */
-  getPathsProgressive(blockAdj) {
-    console.log('getPathsProgressive', blockAdj);
-    let paths = this.get('store').peekRecord('block-adj', blockAdjKeyFn(blockAdj));
-    if (! paths) {
-      console.log('getPathsProgressive not found:', blockAdj);
+  getPathsProgressive(blockAdj, blockAdjId) {
+    console.log('getPathsProgressive', blockAdj, blockAdjId);
+    let paths;
+    if (! blockAdj)
+      blockAdj = this.findBlockAdj(blockAdjId);
+    if (! blockAdj) {
+      console.log('getPathsProgressive not found:', blockAdjId);
     }
     else {  // this can move to models/block-adj
-      let intervals = paths.get('intervalParams'),
-      intervalsAxes = this.axisDimensions(blockAdj),
-      domainsDiffer = function ()
-      {
-        let
-        domainChanges = [0, 1].map(function (i) {
-          let d = intervals.axes[i].domain,
-          d2 = intervalsAxes[i].domain;
-          return ((d === undefined) !== (d2 === undefined)) ||
-            (d[0] !== d2[0]) || (d[1] !== d2[1]);
-        });
-        let change = domainChanges[0] || domainChanges[1];
-        console.log('getPathsProgressive', intervals, intervalsAxes, domainChanges, change);
-        return change;
-      },
-      domainChange = ! intervals || domainsDiffer();
-
+      let domainChange = blockAdj.get('domainChange');
       let result;
-      if (! domainChange && ((result = paths.get('pathsResult')))) {
+      if (! domainChange && ((result = blockAdj.get('pathsResult')))) {
         paths = Promise.resolve(result);
       }
       else
-        paths = this.requestPathsProgressive(blockAdj);
-      console.log('getPathsProgressive', blockAdj, paths);
+        paths = this.requestPathsProgressive(blockAdj, blockAdjId);
+      console.log('getPathsProgressive', blockAdj, blockAdjId, paths);
     }
     return paths;
   },
+  /** can move to draw/axis-1d.js */
   axisDimensions(blockAdj) {
     let 
       intervals =
@@ -108,15 +117,16 @@ export default Service.extend({
     return intervals;
   },
   /** Determine the parameters for the paths request, - intervals and density.
+   * @param intervals domain for each blockAdj
    */
-  intervals(blockAdj) {
-    let intervals = this.axisDimensions(blockAdj),
+  intervalParams(intervals) {
+    let
     page = { },
     noDbPathFilter = stacks.oa.eventBus.get('params.parsedOptions.noDbPathFilter'),
     /** default value is true, i.e. noDbPathFilter===undefined => dbPathFilter */
     dbPathFilter = ! noDbPathFilter,
     params = {axes : intervals, page,  dbPathFilter };
-    intervals.forEach(function (i) { 
+    intervals.forEach(function (i) {
       // console.log(i.domain);
       if ((i.domain[0] === 0) && (i.domain[1] === 0))
         i.domain = undefined;
@@ -142,27 +152,34 @@ export default Service.extend({
     return params;
   },
   /**
-   * @param blockAdj  array of 2 blockIDs
+   * @param blockAdj  defines the scope of the request; result is stored here.
+   * @param blockAdjId  array of 2 blockIDs which identify blockAdj
    * @return  promise yielding paths result
    */
-  requestPathsProgressive(blockAdj) {
-    let blockA = blockAdj[0], blockB = blockAdj[1];
+  requestPathsProgressive(blockAdj, blockAdjId) {
+    /** just for passing to auth getPathsViaStream, getPathsProgressive, will change signature of those functions. */
+    let blockA = blockAdjId[0], blockB = blockAdjId[1];
     let store = this.get('store');
 
     // based on link-path: request()
     let me = this;
     let flowsService = this.get('flowsService');
-    let intervalParams = this.intervals(blockAdj);
+    let blockAdjIdText,
+    exists = blockAdj || this.findBlockAdj(blockAdjId),
+    intervals = blockAdj.get('axisDimensions'),
+     intervalParams = this.intervalParams(intervals);
+    exists.set('intervalParams', intervalParams);
+
     let drawMap = stacks.oa.eventBus;
     let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
     let promise = 
       pathsViaStream ?
       this.get('auth').getPathsViaStream(blockA, blockB, intervalParams, /*options*/{dataEvent : receivedData}) :
       this.get('auth').getPathsProgressive(blockA, blockB, intervalParams, /*options*/{});
+
         function receivedData(res){
           if (trace_pathsP > 1)
             console.log('path request then', res.length);
-          let firstResult;
           for (let i=0; i < res.length; i++) {
             for (let j=0; j < 2; j++) {
               let repeats = res[i].alignment[j].repeats,
@@ -172,38 +189,10 @@ export default Service.extend({
               me.pushFeature(store, f, flowsService);
             }
           }
-          let blockAdjIdText = blockAdjKeyFn(blockAdj);
-          let result = {
-            type : 'blockAdj',
-            id : blockAdjIdText,
-            block0 : blockAdj[0],
-            block1 : blockAdj[1],
-            pathsResult : res
-          };
-          let exists = 
-            store.peekRecord(result.type, blockAdjIdText);
-          if (exists) {
-            let pathsResult = exists.get('pathsResult');
-            firstResult = !(pathsResult && pathsResult.length);
-            if (pathsViaStream) {
-              let pathsAccumulated = pathsResult || [];
-              // console.log('exists pathsResult', exists.get('pathsResult'), pathsAccumulated.length, res.length);
-              pathsResult = pathsAccumulated.concat(res);
-            }
-            else
-              pathsResult = res;
-            exists.set('pathsResult', pathsResult);
-            exists.set('intervalParams', intervalParams);
-            if (trace_pathsP > 1 + pathsViaStream)
-              console.log('pathsResult', pathsResult, exists, exists._internalModel.__attributes, exists._internalModel.__data);
-          }
-          else {
-          let n = store.normalize(result.type, result);
-          let c = store.push(n);
-          if (trace_pathsP > 2)
-            console.log(n, c.get('block0'), c._internalModel.__data);
-            c.set('intervalParams', intervalParams);
-          }
+          /** Return unique result identifier */
+          function resultIdName(res) { return res._id.name; }
+          let firstResult =
+            me.appendResult(blockAdj, 'pathsResult', pathsViaStream, res, resultIdName);
 
           /* if zooming in on a pre-existing axis, then don't trigger zoomedAxis
            * event, and no need for domainCalc() except when there was no
@@ -212,15 +201,15 @@ export default Service.extend({
           let domainCalc = pathsViaStream || firstResult,
           axisEvents = ! exists;
 
-          /* passing blockA, blockB as [blockA, blockB] would be neater but
-           * might prevent the merging of multiple calls with the same arguments
-           * into a single call.
+          /* check if passing blockAdjId prevents the merging of multiple calls
+           * to throttle with the same arguments into a single call.
            */
           Ember.run.throttle(
             me, me.blocksUpdateDomain, 
-            [blockA, blockB], domainCalc, axisEvents,
+            blockAdjId, domainCalc, axisEvents,
             200, false);
         };
+
     promise
       .then(
         receivedData,
@@ -252,6 +241,29 @@ export default Service.extend({
 
   },
 
+  appendResult(blockAdj, resultFieldName, pathsViaStream, res, resultIdName) {
+    let exists = blockAdj;
+    let pathsResult = exists.get(resultFieldName),
+    firstResult = !(pathsResult && pathsResult.length);
+    if (pathsViaStream) {
+      let pathsAccumulated = pathsResult || [];
+      // console.log('exists ', resultFieldName, exists.get(resultFieldName), pathsAccumulated.length, res.length);
+      /** Currently the API result may overlap previous results. */
+      let resIdName = resultIdName(res[0]);
+      let i = pathsAccumulated.findIndex(function (r) { return resultIdName(r) === resIdName; } );
+      if (i === -1) {
+        pathsResult = pathsAccumulated.concat(res);
+        console.log('pathsAccumulated', pathsAccumulated, res);
+      }
+    }
+    else
+      pathsResult = res;
+    exists.set(resultFieldName, pathsResult);
+    if (trace_pathsP > 1 + pathsViaStream)
+      console.log(resultFieldName, pathsResult, exists, exists._internalModel.__attributes, exists._internalModel.__data);
+
+    return firstResult;
+  },
 
   blocksUpdateDomain : function(blocks, domainCalc, axisEvents) {
 
@@ -274,6 +286,107 @@ export default Service.extend({
           });
   },
 
+  /* above : paths : direct */
+  /*--------------------------------------------------------------------------*/
+  /* aliases */
+
+  getPathsAliasesProgressive(blockAdj, blockAdjId) {
+    console.log('getPathsAliasesProgressive', blockAdj, blockAdjId);
+    let pathsAliases;
+    if (! blockAdj)
+      blockAdj = this.findBlockAdj(blockAdjId);
+    if (! blockAdj) {
+      console.log('getPathsAliasesProgressive not found:', blockAdjId);
+    }
+    else {
+      let domainChange = blockAdj.get('domainChange');
+      let result;
+      if (! domainChange && ((result = blockAdj.get('pathsAliasesResult')))) {
+        pathsAliases = Promise.resolve(result);
+      }
+      else
+        pathsAliases = this.requestAliases(blockAdj, blockAdjId);
+      console.log('getPathsAliasesProgressive', blockAdj, blockAdjId, pathsAliases);
+    }
+    return pathsAliases;
+  },
+
+  requestAliases : function (blockAdj, blockAdjId) {
+    let reqName = 'path alias request';
+    if (trace_pathsP > 2)
+      console.log(reqName, blockAdjId);
+    let store = this.get('store');
+    let me = this;
+    let flowsService = this.get('flowsService');
+    let drawMap = stacks.oa.eventBus;
+    let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
+
+    let blockA = blockAdjId[0], blockB = blockAdjId[1];
+    let promise = 
+
+      this.get('auth').getPaths(blockA, blockB, /*withDirect*/ false, /*options*/{})
+      .then(
+        receivedData,
+        function(err, status) {
+          console.log(reqName, blockAdjId, me, err.responseJSON[status] /* .error.message*/, status);
+        });
+
+        function receivedData(res) {
+          if (res === undefined)
+            return;
+          if (trace_pathsP > 1)
+            console.log('path request then', res.length);
+          if (false)
+            me.pushAlias(res);
+
+          if (res.length)
+            console.log('featureAObj', res[0].featureAObj, res[0].featureBObj, res[0], res);
+          res.forEach(function (r) {
+            [r.featureAObj, r.featureBObj].forEach(function (f) {
+              if (f._id === undefined)
+                f._id = f.id;
+              me.pushFeature(store, f, flowsService);
+            });
+          });
+          addPathsToCollation(blockA, blockB, res);
+
+          function resultIdName(res) { return res.featureA + '_' + res.featureB; }
+          let firstResult =
+            me.appendResult(blockAdj, 'pathsAliasesResult', pathsViaStream, res, resultIdName);
+
+        }
+
+    promise
+      .then(
+        receivedData,
+        function(err, status) {
+          if (pathsViaStream)
+            console.log(reqName, 'pathsViaStream', blockAdjId, me, err, status);
+          else
+          console.log(reqName, blockAdjId, me, err.responseJSON[status] /* .error.message*/, status);
+        });
+    return promise;
+  },
+
+  pushAlias : function (pathsAliases) {
+    // if (trace_pathsP > 2)
+      console.log('path push', pathsAliases.length);
+    let pushData = 
+      {
+        data: {
+          id: id,
+          type: 'alias',
+          attributes: pathsAliases
+        }
+      };
+    this.get('store').push(pushData);
+  },
+
+
+
+  /*--------------------------------------------------------------------------*/
+  /* features */
+
   /** set up an axis-brush object to hold results. */
   ensureAxisBrush(block) {
     let store = this.get('store'),
@@ -281,7 +394,7 @@ export default Service.extend({
     axisBrushId = block.id,
     r = store.peekRecord(typeName, axisBrushId);
     if (r)
-      console.log('ensureBlock', block.id, r._internalModel.__attributes, r._internalModel.__data);
+      console.log('ensureAxisBrush', block.id, r._internalModel.__attributes, r._internalModel.__data);
     if (! r) {
       let ba = {
         // type : typeName,
@@ -335,7 +448,8 @@ export default Service.extend({
 
     let me = this;
     let flowsService = this.get('flowsService');
-    let intervalParams = this.intervals([blockA]);
+    let interval = this.axisDimensions([blockA]),
+    intervalParams = this.intervalParams(interval);
     let drawMap = stacks.oa.eventBus;
     let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
     let axis = Stacked.getAxis(blockA),

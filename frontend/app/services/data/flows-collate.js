@@ -179,6 +179,7 @@ let aliasedDone = {};
 export default Service.extend({
   block: service('data/block'),
   axisBrush: service('data/axis-brush'),
+  pathsPro : service('data/paths-progressive'),
 
   flows : flows,
 
@@ -231,14 +232,16 @@ export default Service.extend({
    * dragging which changes left-to-right order and stacking.
    * The values b0, b1 are block IDs.
    */
-  blockAdjs : Ember.computed('block.viewedIds.[]', /*'adjAxes',*/ function () {
+  blockAdjIds : Ember.computed('block.viewedIds.[]', /*'adjAxes',*/ function () {
     let viewedIds = this.get('block.viewedIds');
     let axesP = this.get('oa.axesP');
-    console.log('blockAdjs', viewedIds, axesP);
-    let blockAdjs = Ember.run(this, convert);
+    console.log('blockAdjIds', viewedIds, axesP);
+    let blockAdjIds = Ember.run(this, convert);
+    /** Convert the hash adjAxes, e.g. adjAxes[b0] === b1, to an array of ordered pairs [b0, b1]
+     */
     function convert () {
     let adjAxes = this.get('adjAxes'),
-    blockAdjs2 =
+    blockAdjIds2 =
       Object.keys(adjAxes).reduce(function(result, b0Name) {
         let b0 = adjAxes[b0Name];
         console.log(b0Name, axisId2Name(b0Name), b0.length);
@@ -251,10 +254,20 @@ export default Service.extend({
         }
         return result;
       }, []);
-      return blockAdjs2;
+      return blockAdjIds2;
     }
-    console.log('blockAdjs', blockAdjs);
-    return blockAdjs;
+    console.log('blockAdjIds', blockAdjIds);
+    return blockAdjIds;
+  }),
+  blockAdjs : Ember.computed('blockAdjIds', function () {
+    let pathsPro = this.get('pathsPro'),
+    blockAdjIds = this.get('blockAdjIds'),
+    records = blockAdjIds.map(function (blockAdjId) {
+      let record = pathsPro.ensureBlockAdj(blockAdjId);
+      console.log('blockAdjId', blockAdjId, blockAdjId[0], blockAdjId[1], record);
+      return record;
+    });
+    return records;
   })
 
 });

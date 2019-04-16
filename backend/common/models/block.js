@@ -5,6 +5,7 @@ var identity = require('../utilities/identity')
 var task = require('../utilities/task')
 var pathsAggr = require('../utilities/paths-aggr');
 var pathsFilter = require('../utilities/paths-filter');
+var pathsStream = require('../utilities/paths-stream');
 
 var ObjectId = require('mongodb').ObjectID
 
@@ -12,7 +13,7 @@ var cache = require('memory-cache');
 
 var SSE = require('express-sse');
 
-const { Writable, Transform, pipeline } = require('stream');
+const { Writable, pipeline } = require('stream');
 
 /** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
 const SSE_EventID_EOF = -1;
@@ -44,8 +45,8 @@ class SseWritable extends Writable {
 
 module.exports = function(Block) {
 
-  Block.paths = function(left, right, options, res, cb) {
-    task.paths(this.app.models, left, right, options)
+  Block.paths = function(left, right, withDirect = true, options, res, cb) {
+    task.paths(this.app.models, left, right, withDirect, options)
     .then(function(data) {
       // completed additions to database
       cb(null, data);
@@ -112,60 +113,19 @@ module.exports = function(Block) {
    */
   Block.pathsViaStream = function(blockId0, blockId1, intervals, options, req, res, cb) {
     let db = this.dataSource.connector;
+    function dbLookup() {
+      let cursor =
+        pathsAggr.pathsDirect(db, blockId0, blockId1, intervals);
+      return cursor;
+    };
+    let
+      cacheId = blockId0 + '_' + blockId1,
+    useCache = ! intervals.dbPathFilter,
+    apiOptions = { useCache };
+    reqStream(dbLookup, pathsFilter.filterPaths, cacheId, intervals, req, res, apiOptions);
+  };
 
-    class CacheWritable extends Writable {
-      constructor(cacheId) {
-        super({objectMode: true});
-        this.cacheId = cacheId;
-
-      }
-      _write(chunk, encoding, callback) {
-        console.log('CacheWritable _write', chunk);
-        debugger;
-        let data = cache.get(this.cacheId);
-        if (data)
-          data = data.concat(chunk);
-        else
-          data = [];
-        cache.put(this.cacheId, data);
-        callback();
-      }
-    }
-
-    class FilterPipe extends Transform {
-      constructor(intervals) {
-        super({objectMode: true});
-        this.intervals = intervals;
-        this.countIn = 0;
-        this.countOut = 0;
-      }
-      _transform(data, encoding, callback) {
-        if (trace_block > 2 - (this.countIn < 3)*2)
-          console.log('FilterPipe _transform', data);
-        // data is a single document, not an array
-        if (! data /*|| data.length */)
-          debugger;
-        else {
-          this.countIn++;
-          let trace = trace_block > 2 - (this.countIn < 3)*2;
-          if (trace)
-            intervals.trace_filter = 3;
-          else
-            delete intervals.trace_filter;
-          let filteredData = pathsFilter.filterPaths([data], this.intervals);
-          if (trace)
-            console.log('filteredData', filteredData, filteredData.length);
-          if (filteredData && filteredData.length)
-          {
-            this.countOut++;
-            this.push(filteredData);
-            callback();
-          }
-        }
-      }
-    }
-
-
+  function reqStream(cursorFunction, filterFunction, cacheId, intervals, req, res, apiOptions) {
     /** trial also performance of : isSerialized: true */
     let sse = new SSE(undefined, {isCompressed : false});
     sse.init(req, res);
@@ -173,8 +133,8 @@ module.exports = function(Block) {
     res.setHeader('Cache-Control', 'no-cache, no-transform');
 
     /** same format as extractId() - serializers/block-adj */
-    let cacheId = blockId0 + '_' + blockId1,
-    useCache = ! intervals.dbPathFilter,
+    let
+      useCache = apiOptions.useCache,
     cached = cache.get(cacheId);
     console.log('useCache', useCache, intervals.dbPathFilter, cacheId);
     if (useCache && cached) {
@@ -186,11 +146,10 @@ module.exports = function(Block) {
       res.flush();
     }
     else {
-      let cursor =
-        pathsAggr.pathsDirect(db, blockId0, blockId1, intervals);
+      let cursor = cursorFunction();
       if (useCache)
         cursor.
-        pipe(new CacheWritable(cacheId));
+        pipe(new pathsStream.CacheWritable(cacheId));
 
       let pipeLine = [cursor];
 
@@ -198,7 +157,7 @@ module.exports = function(Block) {
       let useFilter = ! intervals.nSamples;
       let filterPipe;
       if (useFilter)
-        pipeLine.push(filterPipe = new FilterPipe(intervals));
+        pipeLine.push(filterPipe = new pathsStream.FilterPipe(intervals, filterFunction));
 
       // as in example https://jira.mongodb.org/browse/NODE-1408
       // cursor.stream({transform: x => JSON.stringify(x)}).pipe(res)
@@ -365,6 +324,7 @@ module.exports = function(Block) {
     accepts: [
       {arg: 'blockA', type: 'string', required: true}, // block reference
       {arg: 'blockB', type: 'string', required: true}, // block reference
+      {arg: 'withDirect', type: 'Boolean', required: false, default : 'true'}, // true means include direct (same name) links, otherwise just aliases
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}}
     ],
