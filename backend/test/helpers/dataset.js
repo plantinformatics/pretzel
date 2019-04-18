@@ -1,6 +1,7 @@
 var http = require('superagent')
 var _ = require('lodash')
 
+var environment = require('./environment')
 var endpoint = require('./api').endpoint
 
 let PREFIX = "test_pzl_"
@@ -69,7 +70,8 @@ var makePublic = async function ({name, userToken}) {
     .catch(err => {
       console.log("Get failed");
       console.log('err => ', err.status);
-      console.log('err => ', getErrMessage(err));
+      console.log('err => ', getErrMsg(err));
+      throw err
     })
 
   // console.log('myMapObj => ', myMapObj);
@@ -103,6 +105,7 @@ var setup = async function({ds, userToken}) {
       console.log("Downloading dataset failed");
       console.log('err.text => ', err.text);
       console.log('err.status => ', err.status);
+      throw err
     })
   await upload({data, ds, userToken})
     .then(res => {
@@ -113,14 +116,16 @@ var setup = async function({ds, userToken}) {
     .catch(err => {
       console.log("Creating dataset failed");
       console.log('err => ', err.status);
-      console.log('err => ', getErrMessage(err));
+      console.log('err => ', getErrMsg(err));
+      throw err
     })
   await makePublic({name: ds.name, userToken})
     .then(() => console.log("Make public completed"))
     .catch(err => {
       console.log("Make public failed");
       console.log('err => ', err.status);
-      console.log('err => ', getErrMessage(err));
+      console.log('err => ', getErrMsg(err));
+      throw err
     })
   return getBlocks({name: ds.name, userToken})
 }
@@ -134,6 +139,41 @@ var del = function({name, userToken}) {
 
 }
 
+function getName(name) {
+  return PREFIX + name
+}
+
+function getErrMsg(err) {
+  // console.log("keys", Object.keys(JSON.parse(err.response.error.text)))
+  let temp = _.property("response.error.text")(err)
+  // console.log('temp => ', temp);
+  if(!temp) {
+    return err
+  }
+  let temp2 = _.property("error.message")(JSON.parse(temp))
+  return temp2
+}
+
+function calcNumPaths(features) {
+  return features.map(feature => {
+    // console.log('feature => ', feature);
+    return [0, 1].map(block => {
+      // console.log(`feature.alignment[${block}].repeats.features => `, feature.alignment[block].repeats.features);
+      let length = _.property(`alignment.${block}.repeats.features.length`)(feature)
+      // console.log('length => ', length);
+      if (length !== undefined) {
+        return length
+      }
+      else {
+        throw Error("Number of features invalid - is features object structure valid?")
+      }
+    })
+  }).reduce((total, array) => {
+    // console.log('array[0], array[1] => ', array[0], array[1]);
+    return total + array[0] * array[1]
+  }, 0 )
+}
+
 module.exports = {
   download,
   createComplete,
@@ -143,20 +183,7 @@ module.exports = {
   getBlocks,
   setup,
   del,
-  getName
-}
-
-function getName(name) {
-  return PREFIX + name
-}
-
-function getErrMessage(err) {
-  // console.log("keys", Object.keys(JSON.parse(err.response.error.text)))
-  let temp = _.property("response.error.text")(err)
-  // console.log('temp => ', temp);
-  if(!temp) {
-    return err
-  }
-  let temp2 = _.property("error.message")(JSON.parse(temp))
-  return temp2
+  getName,
+  getErrMsg,
+  calcNumPaths
 }
