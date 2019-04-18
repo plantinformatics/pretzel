@@ -174,6 +174,18 @@ function calcNumPaths(features) {
   }, 0 )
 }
 
+// Finds a block within a collection with a given dataset name and scope
+// Returns blockId if found, undefined if block isn't found 
+// or undefined if id is undefined
+function findBlockId({blocks, name, scope}) {
+  let block = blocks.find(b => {
+    return b.name === scope &&
+           b.datasetId === getName(name)
+  })
+  if(block)
+    return block.id
+}
+
 module.exports = {
   download,
   createComplete,
@@ -185,5 +197,6 @@ module.exports = {
   del,
   getName,
   getErrMsg,
-  calcNumPaths
+  calcNumPaths,
+  findBlockId
 }

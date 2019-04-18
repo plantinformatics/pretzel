@@ -24,8 +24,9 @@ var blocks = null,
 var response
 
 describe("MyMap3 tests", function() {
-  this.timeout(20000)
   this.slow(1000)
+  // this.timeout(1500)
+  this.timeout(20000)
 
   before(async function() {
     ({ endpoint } = testSetup.initialise())
