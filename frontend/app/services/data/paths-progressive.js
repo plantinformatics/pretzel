@@ -241,19 +241,27 @@ export default Service.extend({
 
   },
 
+  /**
+   * @param res may be []; it's not clear there is any point in calling
+   * appendResult() in that case, except if ! pathsViaStream then it will set
+   * exists.`resultFieldName` to [], which may have some value.
+   */
   appendResult(blockAdj, resultFieldName, pathsViaStream, res, resultIdName) {
     let exists = blockAdj;
     let pathsResult = exists.get(resultFieldName),
     firstResult = !(pathsResult && pathsResult.length);
     if (pathsViaStream) {
-      let pathsAccumulated = pathsResult || [];
-      // console.log('exists ', resultFieldName, exists.get(resultFieldName), pathsAccumulated.length, res.length);
-      /** Currently the API result may overlap previous results. */
-      let resIdName = resultIdName(res[0]);
-      let i = pathsAccumulated.findIndex(function (r) { return resultIdName(r) === resIdName; } );
-      if (i === -1) {
-        pathsResult = pathsAccumulated.concat(res);
-        console.log('pathsAccumulated', pathsAccumulated, res);
+      if (res.length) {
+        let pathsAccumulated = pathsResult || [];
+        // console.log('exists ', resultFieldName, exists.get(resultFieldName), pathsAccumulated.length, res.length);
+        /** Currently the API result may overlap previous results. */
+        let resIdName = resultIdName(res[0]);
+        let i = pathsAccumulated.findIndex(function (r) { return resultIdName(r) === resIdName; } );
+        if (i === -1) {
+          pathsResult = pathsAccumulated.concat(res);
+          if (pathsAccumulated.length < 3)
+            console.log('pathsAccumulated', pathsAccumulated, res);
+        }
       }
     }
     else
@@ -318,18 +326,22 @@ export default Service.extend({
     let store = this.get('store');
     let me = this;
     let flowsService = this.get('flowsService');
+
+    let
+    intervals = blockAdj.get('axisDimensions'),
+    intervalParams = this.intervalParams(intervals);
+
     let drawMap = stacks.oa.eventBus;
     let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
 
     let blockA = blockAdjId[0], blockB = blockAdjId[1];
+    let auth = this.get('auth');
     let promise = 
-
-      this.get('auth').getPaths(blockA, blockB, /*withDirect*/ false, /*options*/{})
-      .then(
-        receivedData,
-        function(err, status) {
-          console.log(reqName, blockAdjId, me, err.responseJSON[status] /* .error.message*/, status);
-        });
+      // original API, non-progressive  
+      // auth.getPaths(blockA, blockB, /*withDirect*/ false, /*options*/{})
+      pathsViaStream ?
+      auth.getPathsAliasesViaStream(blockAdjId, intervalParams, {dataEvent : receivedData}) :
+    auth.getPathsAliasesProgressive(blockAdjId, intervalParams, {});
 
         function receivedData(res) {
           if (res === undefined)
@@ -361,7 +373,7 @@ export default Service.extend({
         receivedData,
         function(err, status) {
           if (pathsViaStream)
-            console.log(reqName, 'pathsViaStream', blockAdjId, me, err, status);
+            console.log(reqName, 'pathsAliasesViaStream', blockAdjId, me, err, status);
           else
           console.log(reqName, blockAdjId, me, err.responseJSON[status] /* .error.message*/, status);
         });

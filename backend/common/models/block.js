@@ -1,5 +1,6 @@
 'use strict';
 
+
 var acl = require('../utilities/acl')
 var identity = require('../utilities/identity')
 var task = require('../utilities/task')
@@ -13,7 +14,13 @@ var cache = require('memory-cache');
 
 var SSE = require('express-sse');
 
-const { Writable, pipeline } = require('stream');
+const { Writable, pipeline, Readable } = require('stream');
+/* This also works :
+ * const Readable = require('readable-stream').Readable;
+ * and also : var streamify = require('stream-array');
+ */
+
+
 
 /** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
 const SSE_EventID_EOF = -1;
@@ -56,6 +63,8 @@ module.exports = function(Block) {
       cb(err);
     })
   };
+
+  /*--------------------------------------------------------------------------*/
 
   /**
    * Apart from asymmetric alignents such as some aliases, the convention is to
@@ -125,9 +134,121 @@ module.exports = function(Block) {
     reqStream(dbLookup, pathsFilter.filterPaths, cacheId, intervals, req, res, apiOptions);
   };
 
+  /*--------------------------------------------------------------------------*/
+
+  /**
+   * @see pathsProgressive()
+   * @param blockIds  array[2] of blockIds
+   */
+  Block.pathsAliasesProgressive = function(blockIds, intervals, options, res, cb) {
+    let [left, right] = blockIds;
+    console.log('pathsAliasesProgressive', left, right, intervals /*, options, cb*/);
+    let cacheId = left + '_' + right,
+    useCache = ! intervals.dbPathFilter,
+    cached = cache.get(cacheId);
+    if (useCache && cached) {
+      let filteredData = pathsFilter.filterPathsAliases(cached, intervals);
+      cb(null, filteredData);
+    }
+    else {
+      /** promise yielding data array. */
+      let dataP;
+      if (pathsAggr.pathsAliasesDirect) { // not defined yet
+        let cursor = this.dbLookupAliases(left, right, intervals);
+        dataP = cursor.toArray();
+      }
+      else
+        dataP = this.apiLookupAliases(left, right, intervals);
+      dataP
+        .then(function(data) {
+          console.log('pathsAliasesProgressive then', (data.length > 3) ? data.length : data);
+          if (useCache)
+            cache.put(cacheId, data);
+          let filteredData;
+          // no filter required when user has nominated nSamples.
+          if (intervals.nSamples)
+            filteredData = data;
+          else
+            filteredData = pathsFilter.filterPathsAliases(data, intervals);
+          if (trace_block > 1)
+            console.log("Num Filtered PathsAliases => ", filteredData.length);
+          cb(null, filteredData);
+        })
+        .catch(function(err) {
+          console.log('ERROR', err);
+          cb(err);
+        });
+    }
+  };
+
+  Block.dbLookupAliases = function(blockId0, blockId1, intervals) {
+    let db = this.dataSource.connector,
+    cursor =
+      pathsAggr.pathsAliasesDirect(db, blockId0, blockId1, intervals);
+    return cursor;
+  };
+  Block.apiLookupAliases = function(blockId0, blockId1, intervals) {
+    return task.paths(this.app.models, blockId0, blockId1, /*withDirect*/ false, /*options*/ undefined);
+  };
+
+  /**
+   * @param req to registor for req.on(close)
+   * @param res for using raw Express functions rather than rely on Loopback.
+   * Used for res.flush() and res.setHeader()
+   */
+  Block.pathsAliasesViaStream = function(blockIds, intervals, options, req, res, cb) {
+    // console.log('pathsAliasesViaStream', blockIds, intervals, options, req, res, cb);
+    let me = this;
+
+    function aliasesCursor() {
+      let cursor;
+      if (pathsAggr.pathsAliasesDirect)
+        cursor = me.dbLookupAliases(blockIds[0], blockIds[1], intervals);
+      else {
+        let dataP = me.apiLookupAliases(blockIds[0], blockIds[1], intervals);
+        cursor =
+          dataP.then(function (data) {
+            console.log('dataP', data.length < 3 ? data : data.length);
+            let arrayReadable = 
+              // can also use : github.com/mimetnet/node-stream-array, streamify(data);
+              /* {objectMode:true} is required, otherwise get :
+               * Unhandled rejection TypeError [ERR_INVALID_ARG_TYPE]: The "chunk" argument must be one of type string, Buffer, or Uint8Array. Received type object
+               * or : (readable-stream) Unhandled rejection TypeError: Invalid non-string/buffer chunk
+               */
+            new Readable({objectMode:true});
+            data.forEach(a => arrayReadable.push(a));
+            // signal end of data.
+            arrayReadable.push(null);
+            return arrayReadable;
+          });
+      }
+      return cursor;
+    }
+
+    let
+      cacheId = blockIds[0] + '_' + blockIds[1],
+    useCache = ! intervals.dbPathFilter,
+    apiOptions = { useCache };
+    reqStream(aliasesCursor, pathsFilter.filterPathsAliases, cacheId, intervals, req, res, apiOptions);
+  };
+
+  /*--------------------------------------------------------------------------*/
+
+  /**  Read data from cache or cursorFunction, filter it and send it via SSE.
+   *
+   * If apiOptions.useCache, check if the data is in cache, identified by cacheId.
+   * Otherwise read data using cursorFunction, storing in cache if enabled.
+   * Filter it with filterFunction using intervals, 
+   */
   function reqStream(cursorFunction, filterFunction, cacheId, intervals, req, res, apiOptions) {
+    /* The params of reqStream() are largely passed to pipeStream() - starting to look like a class. */
+
     /** trial also performance of : isSerialized: true */
     let sse = new SSE(undefined, {isCompressed : false});
+    if (! res.setHeader) {
+      console.log('reqStream', cursorFunction, filterFunction, cacheId, intervals, req, res, apiOptions);
+      debugger;
+    }
     sse.init(req, res);
     // express-sse init() has no-cache by default; add no-transform
     res.setHeader('Cache-Control', 'no-cache, no-transform');
@@ -147,6 +268,24 @@ module.exports = function(Block) {
     }
     else {
       let cursor = cursorFunction();
+      if (cursor.then) {
+        cursor.then(function (cursorValue) {
+          pipeStream(sse, intervals, useCache, cacheId, filterFunction, res, cursorValue);
+        });
+      }
+      else
+        pipeStream(sse, intervals, useCache, cacheId, filterFunction, res, cursor);
+    }
+
+    req.on('close', () => {
+      console.log('req.on(close)');
+    });
+
+  };
+
+  /** Logically part of reqStream(), but split out so that it can be called
+   * directly or via a promise. */
+  function pipeStream(sse, intervals, useCache, cacheId, filterFunction, res, cursor) {
       if (useCache)
         cursor.
         pipe(new pathsStream.CacheWritable(cacheId));
@@ -190,15 +329,10 @@ module.exports = function(Block) {
       });
 
     }
-    
 
 
-    req.on('close', () => {
-      console.log('req.on(close)');
-    });
 
-  };
-
+  /*--------------------------------------------------------------------------*/
 
   /** Collate from the database a list of features within the given block, which
    * meet the optional interval domain constraint.
@@ -249,6 +383,7 @@ module.exports = function(Block) {
     }
   };
 
+  /*--------------------------------------------------------------------------*/
 
 
   Block.pathsByReference = function(blockA, blockB, referenceGenome, maxDistance, options, cb) {
@@ -259,6 +394,8 @@ module.exports = function(Block) {
       cb(err);
     });
   }
+
+  /*--------------------------------------------------------------------------*/
 
   Block.observe('before save', function(ctx, next) {
     if (ctx.instance) {
@@ -307,6 +444,9 @@ module.exports = function(Block) {
     next()
   })
 
+  //----------------------------------------------------------------------------
+  // When adding a API .remoteMethod() here, also add the route name to backend/common/utilities/paths-stream.js : genericResolver()
+  //----------------------------------------------------------------------------
 
   Block.remoteMethod('blockFeaturesInterval', {
     accepts: [
@@ -376,7 +516,33 @@ module.exports = function(Block) {
     //   {arg: 'Content-Type', type: 'string', http: { target: 'header' }}
     // ],
     description: "Streams paths instead of throwing them all back to user"
-  })
+  });
+
+  Block.remoteMethod('pathsAliasesProgressive', {
+    accepts: [
+      {arg: 'blockIds', type: 'array', required: true},
+      {arg: 'intervals', type: 'object', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'res', type: 'object', 'http': {source: 'res'}},
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Returns paths from aliases between the two blocks, constrained to the domains defined in intervals, and reduced in number according to given parameters for range / resolution / page in intervals; Enables progressive loading of paths data"
+  });
+
+  Block.remoteMethod('pathsAliasesViaStream', {
+    accepts: [
+      {arg: 'blockIds', type: 'array', required: true},
+      {arg: 'intervals', type: 'object', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'req', type: 'object', 'http': {source: 'req'}},
+      { arg: 'res', type: 'object', http: { source: 'res' }}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "As for pathsAliasesProgressive, but the paths are streamed via SSE instead of a single reply"
+  });
+
 
   Block.syntenies = function(id0, id1, thresholdSize, thresholdContinuity, cb) {
     task.syntenies(this.app.models, id0, id1, thresholdSize, thresholdContinuity)
