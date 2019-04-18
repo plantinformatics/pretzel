@@ -45,19 +45,21 @@ exports.FilterPipe = class extends Transform {
       debugger;
     else {
       this.countIn++;
-      let trace = trace_stream > 2 - (this.countIn < 3)*2;
-      if (trace)
-        intervals.trace_filter = 3;
-      else
-        delete intervals.trace_filter;
-      let filteredData = this.filterFunction([data], this.intervals);
-      if (trace)
-        console.log('filteredData', filteredData, filteredData.length);
-      if (filteredData && filteredData.length)
-      {
-        this.countOut++;
-        this.push(filteredData);
-        callback();
+      if (intervals.nFeatures && (this.countOut < intervals.nFeatures)) {
+        let trace = trace_stream > 2 - (this.countIn < 3)*2;
+        if (trace)
+          intervals.trace_filter = 3;
+        else
+          delete intervals.trace_filter;
+        let filteredData = this.filterFunction([data], this.intervals);
+        if (trace)
+          console.log('filteredData', filteredData, filteredData.length);
+        if (filteredData && filteredData.length)
+        {
+          this.countOut++;
+          this.push(filteredData);
+          callback();
+        }
       }
     }
   }

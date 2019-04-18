@@ -2,7 +2,7 @@ var _ = require('lodash')
 
 /* global exports */
 
-var trace_filter = 2;
+var trace_filter = 1;
 
 /**
  * filter paths according to intervals.axes[].domain[]
@@ -64,13 +64,20 @@ function filterDomain(intervals, i) {
 };
 
 function densityFilter(filteredPaths, intervals) {
-  /* See header comment : in the case of streaming, densityCount() is not applied. */
+  /** See header comment : in the case of streaming, densityCount() is not applied.
+   * @see filterPaths()
+   */
   if ((filteredPaths.length > 1) && (intervals.page && intervals.page.thresholdFactor)) {
     /** number of samples to skip. */
     let count = densityCount(filteredPaths.length, intervals)
     // let filteredPaths = nthSample(paths, intervals.nSamples);
     if (count)
       filteredPaths = nthSample(filteredPaths, count);
+  }
+  if (filteredPaths.length > intervals.nFeatures) {
+    if (trace_filter)
+      console.log(filteredPaths.length, '> nFeatures', intervals.nFeatures);
+    filteredPaths = filteredPaths.slice(intervals.nFeatures);
   }
   return filteredPaths;
 }
@@ -278,7 +285,7 @@ function inDomain(dataLocation, domain) {
  * @param data  paths from aliases
  */
 function domainFilterPathAliases(data, intervals) {
-  console.log('domainFilterFeatures', data.length, intervals, intervals.axes[0].domain);
+  console.log('domainFilterPathAliases', data.length, intervals, intervals.axes[0].domain);
   logArrayEnds('', data, 1);
   const featureFields = ["featureAObj", "featureBObj"];
   let debugCount = 1;
