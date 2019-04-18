@@ -2,7 +2,7 @@ var _ = require('lodash')
 
 /* global exports */
 
-var trace_filter = 1;
+var trace_filter = 2;
 
 /**
  * filter paths according to intervals.axes[].domain[]
@@ -14,7 +14,7 @@ var trace_filter = 1;
  * when paths.length === 1, so this is used as the indicator condition for
  * skipping those function.
 */
-exports.filterPaths = function(paths, intervals) {
+function filterPaths(domainFilterData, paths, intervals) {
   let trace_save;
   if (intervals.trace_filter) {
     trace_save = trace_filter;
@@ -27,24 +27,43 @@ exports.filterPaths = function(paths, intervals) {
     console.log('intervals.axes[0].domain => ', intervals.axes[0].domain);
     console.log('intervals.axes[1].domain => ', intervals.axes[1].domain);
   }
-  let a = intervals.axes;
-  /** The domain may be provided when the full axis is displayed, i.e. before
-   * zooming in.
-   * The domain may be derived from the range of the reference / parent block,
-   * and in the case of data inconsistency may not encompass the locations of
-   * all the features in this child data block.  So ignore the
-   * intervals.axes[].domain[] given in the request if .zoomed is not true.
-   *
-   * @param i block index, i.e. index of the block within the request params.
-   * @return true if the request indicates
-   */
-  function filterDomain(i) { return a[i].zoomed && a[i].domain; };
+
   let filteredPaths
-  if (filterDomain(0) || filterDomain(1))
-    filteredPaths = domainFilter(paths, intervals)
+  if (filterDomain(intervals, 0) || filterDomain(intervals, 1))
+    filteredPaths = domainFilterData(paths, intervals);
   else
     filteredPaths = paths;
 
+  filteredPaths = densityFilter(filteredPaths, intervals);
+
+  if (trace_save)
+    trace_filter = trace_save;
+  return filteredPaths;
+};
+exports.filterPaths = function(paths, intervals) {
+  return filterPaths(domainFilter, paths, intervals);
+};
+exports.filterPathsAliases = function(paths, intervals) {
+  return filterPaths(domainFilterPathAliases, paths, intervals);
+};
+
+
+/** The domain may be provided when the full axis is displayed, i.e. before
+ * zooming in.
+ * The domain may be derived from the range of the reference / parent block,
+ * and in the case of data inconsistency may not encompass the locations of
+ * all the features in this child data block.  So ignore the
+ * intervals.axes[].domain[] given in the request if .zoomed is not true.
+ *
+ * @param i block index, i.e. index of the block within the request params.
+ * @return true if the request indicates
+ */
+function filterDomain(intervals, i) {
+  let a = intervals.axes;
+  return a[i].zoomed && a[i].domain;
+};
+
+function densityFilter(filteredPaths, intervals) {
   /* See header comment : in the case of streaming, densityCount() is not applied. */
   if ((filteredPaths.length > 1) && (intervals.page && intervals.page.thresholdFactor)) {
     /** number of samples to skip. */
@@ -53,10 +72,10 @@ exports.filterPaths = function(paths, intervals) {
     if (count)
       filteredPaths = nthSample(filteredPaths, count);
   }
-  if (trace_save)
-    trace_filter = trace_save;
   return filteredPaths;
-};
+}
+
+
 
 /**
  * @param intervals expect that intervals.axes.length === 1.
@@ -227,11 +246,11 @@ function inInterval(i, v) {
 /**
  * @return a function which takes a feature as parameter and returns true if
  * the feature value is within the domain.
+ * @param dataLocation  function which reads the location value from the data
  */
-function inDomain(domain) {
+function inDomain(dataLocation, domain) {
   return function (f) {
-    /** handle older data;  Feature.range is now named .value  */
-    let v = f.value || f.range,
+    let v = dataLocation(f),
     /** handle value array with 1 or 2 elements */
     inA =
       v.map(function (vi) { return inInterval(domain, vi); });
@@ -254,10 +273,34 @@ function inDomain(domain) {
   };
 }
 
+/** Filter features by the domain defined in intervals.axes[0].
+ * Uses @see inDomain().
+ * @param data  paths from aliases
+ */
+function domainFilterPathAliases(data, intervals) {
+  console.log('domainFilterFeatures', data.length, intervals, intervals.axes[0].domain);
+  logArrayEnds('', data, 1);
+  const featureFields = ["featureAObj", "featureBObj"];
+  let debugCount = 1;
+  function debugCounter() { if (debugCount > 0) { debugCount--; debugger; }; };
+  function dataLocation(i) { return function (d) { /*debugCounter();*/ let f = d[featureFields[i]]; return f.value || f.range; }; };
+  function check1(i) { return inDomain(dataLocation(i), intervals.axes[i].domain); };
+  function check(p) { return check1(0)(p) && check1(1)(p); };
+  let
+  filtered = data.filter(check);
+  logArrayEnds('filtered', filtered, 1);
+  return filtered;
+}
+
+/** Filter features by the domain defined in intervals.axes[0].
+ * Uses @see inDomain().
+ */
 function domainFilterFeatures(features, intervals) {
   console.log('domainFilterFeatures', features.length, intervals, intervals.axes[0].domain);
   logArrayEnds('', features, 1);
-  let check = inDomain(intervals.axes[0].domain),
+  /** handle older data;  Feature.range is now named .value  */
+  function dataLocation(f) { return f.value || f.range; };
+  let check = inDomain(dataLocation, intervals.axes[0].domain),
   filtered = features.filter(check);
   logArrayEnds('filtered', filtered, 1);
   return filtered;

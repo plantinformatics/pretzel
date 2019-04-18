@@ -14,6 +14,16 @@ const trace_paths = 1;
 /** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
 const SSE_EventID_EOF = '-1';
 
+/*----------------------------------------------------------------------------*/
+
+/** jQuery.param() will translate {k: undefined} to {k : ''}, so deep-copy the
+ * interval parameters omitting the attributes with value === undefined.
+ */
+function omitUndefined(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+/*----------------------------------------------------------------------------*/
 
 export default Service.extend({
   session: service('session'),
@@ -63,12 +73,6 @@ export default Service.extend({
    */
   getPathsViaStream(blockA, blockB, intervals, options) {
 
-    /** jQuery.param() will translate {k: undefined} to {k : ''}, so deep-copy the
-     * interval parameters omitting the attributes with value === undefined.
-     */
-    function omitUndefined(value) {
-      return JSON.parse(JSON.stringify(value));
-    }
     const filteredIntervalParams = omitUndefined(intervals);
     let
       route= 'Blocks/pathsViaStream',
@@ -133,6 +137,34 @@ export default Service.extend({
     }
   },
 
+  getPathsAliasesProgressive(blockIds, intervals, options) {
+    console.log('services/auth getPathsAliasesProgressive', blockIds, intervals, options);
+    return this._ajax('Blocks/pathsAliasesProgressive', 'GET', {blockIds, intervals, options}, true);
+  },
+
+  /** 
+   * @param options.dataEvent callback which receives the data parcel
+   */
+  getPathsAliasesViaStream(blockIds, intervals, options) {
+
+    const filteredIntervalParams = omitUndefined(intervals);
+    let
+      route= 'Blocks/pathsAliasesViaStream',
+    url = this._endpoint(route) +
+      '?access_token=' + this._accessToken() + 
+      '&blockIds[]=' + blockIds[0] +
+      '&blockIds[]=' + blockIds[1] + '&' +
+      Ember.$.param({intervals : filteredIntervalParams});
+    console.log(url, blockIds, intervals, filteredIntervalParams, options);
+
+    let promise = new Promise((resolve, reject) => {
+      this.listenEvents(url, options.dataEvent, resolve, reject);
+    });
+    return promise;
+  },
+
+
+
   /** Send GET request Blocks/pathsByReference,
    * i.e. retrieve the paths connecting blockA and blockB via the reference assembly,
    * allowing up to max_distance physical distance (base pairs) between the features in the reference.
@@ -196,7 +228,7 @@ export default Service.extend({
 
     if (data) config.data = data
 
-    if (token == true) {
+    if (token === true) {
       let accessToken = this._accessToken()
       config.headers.Authorization = accessToken
     } else if (Ember.typeOf(token) == 'string') {

@@ -83,7 +83,10 @@ module.exports = function(app) {
       context.property == 'pathsProgressive' ||
       context.property == 'blockFeaturesInterval' ||
       context.property == 'pathsByReference' ||
-      context.property == 'pathsViaStream') {
+      context.property == 'pathsViaStream' ||
+      context.property == 'pathsAliasesProgressive' ||
+      context.property == 'pathsAliasesViaStream'
+       ) {
       // allow find, create and upload requests
       return process.nextTick(() => cb(null, true))
     }
