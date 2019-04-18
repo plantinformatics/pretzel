@@ -105,8 +105,6 @@ describe("MyMap3 tests", function() {
           
           features = res.body
 
-          // Set response to compare in next test
-          response = features
           console.log('features => ', features);
         })
     }
@@ -127,6 +125,9 @@ describe("MyMap3 tests", function() {
     let alignment = marker.alignment
     assert.isArray(alignment)
     assert.equal(alignment.length, 2)
+    
+    // Set response to compare in next test, only if this test passes
+    response = features
   })
 
   it("Run paths-progressive, dbPathFilter false", async function() {
