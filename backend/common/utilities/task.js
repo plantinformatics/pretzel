@@ -9,7 +9,7 @@
  */
 function findLinks(featuresA, featuresB, withDirect = true) {
     let links = [];
-  console.log('findLinks', featuresA, featuresB, withDirect);
+  console.log('findLinks', featuresA.length, featuresB.length, withDirect);
     let add_link = function(f1, f2, alias) {
         let link = {featureA: f1.id, featureB: f2.id, aliases: []};
         if (! withDirect) {
