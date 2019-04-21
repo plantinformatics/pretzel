@@ -351,7 +351,7 @@ export default Service.extend({
           if (false)
             me.pushAlias(res);
 
-          if (res.length)
+          if (trace_pathsP > 2 - (res.length > 1))
             console.log('featureAObj', res[0].featureAObj, res[0].featureBObj, res[0], res);
           res.forEach(function (r) {
             [r.featureAObj, r.featureBObj].forEach(function (f) {

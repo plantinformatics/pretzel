@@ -39,7 +39,7 @@ exports.FilterPipe = class extends Transform {
   _transform(data, encoding, callback) {
     let intervals = this.intervals;
     if (trace_stream > 2 - (this.countIn < 3)*2)
-      console.log('FilterPipe _transform', data);
+      console.log('FilterPipe _transform', data, this.countIn, this.countOut);
     // data is a single document, not an array
     if (! data /*|| data.length */)
       debugger;
@@ -58,9 +58,13 @@ exports.FilterPipe = class extends Transform {
         {
           this.countOut++;
           this.push(filteredData);
-          callback();
         }
       }
+      else if (trace_stream > 2 - (this.countOut < 3)*2)
+      {
+        console.log('countOut', this.countOut, intervals.nFeatures, this.countIn);
+      }
     }
+    callback();
   }
 };

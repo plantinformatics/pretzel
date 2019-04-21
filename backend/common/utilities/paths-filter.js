@@ -250,13 +250,16 @@ function inInterval(i, v) {
   return cmp;
 }
 
+function trueFunction() { return true; }
+
 /**
  * @return a function which takes a feature as parameter and returns true if
  * the feature value is within the domain.
  * @param dataLocation  function which reads the location value from the data
+ * @param domain  Array[2] of location limit values.  Not undefined.
  */
 function inDomain(dataLocation, domain) {
-  return function (f) {
+  function featureInDomain(f) {
     let v = dataLocation(f),
     /** handle value array with 1 or 2 elements */
     inA =
@@ -276,8 +279,10 @@ function inDomain(dataLocation, domain) {
       overlapping = inA[0] != inA[1];
       result = within || overlapping;
     }
+    // console.log('featureInDomain', f, v, inA, result);
     return result;
   };
+  return featureInDomain;
 }
 
 /** Filter features by the domain defined in intervals.axes[0].
@@ -285,17 +290,25 @@ function inDomain(dataLocation, domain) {
  * @param data  paths from aliases
  */
 function domainFilterPathAliases(data, intervals) {
-  console.log('domainFilterPathAliases', data.length, intervals, intervals.axes[0].domain);
-  logArrayEnds('', data, 1);
+  if (trace_filter > (1 - (data.length > 1)))
+    console.log('domainFilterPathAliases', data.length, intervals, intervals.axes[0].domain);
+  if (trace_filter > (2 - (data.length > 1)))
+    logArrayEnds('', data, 1);
   const featureFields = ["featureAObj", "featureBObj"];
   let debugCount = 1;
   function debugCounter() { if (debugCount > 0) { debugCount--; debugger; }; };
   function dataLocation(i) { return function (d) { /*debugCounter();*/ let f = d[featureFields[i]]; return f.value || f.range; }; };
-  function check1(i) { return inDomain(dataLocation(i), intervals.axes[i].domain); };
-  function check(p) { return check1(0)(p) && check1(1)(p); };
+  function check1(i) {
+    let a = intervals.axes[i];
+    return (a.zoomed && a.domain) ? inDomain(dataLocation(i), a.domain) : trueFunction;
+ };
+  let check1_0 = check1(0),
+  check1_1 = check1(1);
+  function check(p) { return check1_0(p) && check1_1(p); };
   let
   filtered = data.filter(check);
-  logArrayEnds('filtered', filtered, 1);
+  if (trace_filter > (2 - (data.length > 1)))
+    logArrayEnds('filtered', filtered, 1);
   return filtered;
 }
 
@@ -304,12 +317,14 @@ function domainFilterPathAliases(data, intervals) {
  */
 function domainFilterFeatures(features, intervals) {
   console.log('domainFilterFeatures', features.length, intervals, intervals.axes[0].domain);
-  logArrayEnds('', features, 1);
+  if (trace_filter > (2 - (features.length > 1))) 
+    logArrayEnds('', features, 1);
   /** handle older data;  Feature.range is now named .value  */
   function dataLocation(f) { return f.value || f.range; };
   let check = inDomain(dataLocation, intervals.axes[0].domain),
   filtered = features.filter(check);
-  logArrayEnds('filtered', filtered, 1);
+  if (trace_filter > (2 - (features.length > 1))) 
+    logArrayEnds('filtered', filtered, 1);
   return filtered;
 }
 
@@ -317,5 +332,7 @@ function domainFilterFeatures(features, intervals) {
  * Used to check filtering by interval.
  */
 function logArrayEnds(label, a, margin) {
-  console.log(label, a.length, a.slice(0, margin), '...', a.length-2*margin, a.slice(-margin));
+  console.log(label, a.length, a.slice(0, margin));
+  if (a.length > 1)
+    console.log('...', a.length-2*margin, a.slice(-margin));
 }
