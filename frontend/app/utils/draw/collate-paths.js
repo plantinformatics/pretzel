@@ -721,7 +721,7 @@ function aliasText(alias)
  * aliased, which collateStacksA() stores in. */
 function addPathsToCollation(blockA, blockB, paths)
 {
-  if (trace_adj) // && ((trace_adj > 1) || (paths.length))
+  if (trace_adj > 1 - (paths.length > 1))
     console.log('addPathsToCollation', blockA, blockB, paths.length,
                 Block.longName(blockA), Block.longName(blockB));
   let axisName = blockA, axisName1 = blockB;
@@ -890,7 +890,8 @@ function filterPaths()
     });
   };
   d3.keys(adjAxes).forEach(selectCurrentAdjPaths);
-  console.log("filterPaths", put.length, pathsUnique.length);
+  if (trace_adj > 1)
+    console.log("filterPaths", put.length, pathsUnique.length);
 }
 
 //-collate or gd
