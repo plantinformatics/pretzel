@@ -14,6 +14,8 @@ var download = function({ds}) {
 var createComplete = async function({data, userToken}) {
   console.log("createComplete through REST");
   data.name = getName(data.name)
+  data.parent = getName(data.parent)
+  // may also need fancy footwork to edit namespaces in each block
   return http
     .post(`${endpoint}/datasets/createComplete`)
     .send(data)
