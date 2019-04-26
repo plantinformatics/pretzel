@@ -332,6 +332,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     }),
   notifyChanges() {
     let axisID = this.get('axis.id');
+    console.log('notifyChanges', axisID);
 
     let axisApi = stacks.oa.axisApi;
     let t = stacks.oa.svgContainer.transition().duration(750);

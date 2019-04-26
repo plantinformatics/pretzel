@@ -5,6 +5,14 @@ import createIntervalTree from 'npm:interval-tree-1d';
 console.log("createIntervalTree", createIntervalTree);
 const { inject: { service } } = Ember;
 
+/* using scheduleIntoAnimationFrame() from github.com/runspired/ember-run-raf
+ * which uses github.com/kof/animation-frame to wrap requestAnimationFrame().
+ * Another possibility : github.com/html-next/ember-raf-scheduler
+ * Installed via : npm --expose-internals install --save ember-run-raf
+ * Tried import, e.g.  import scheduleIntoAnimationFrame from 'npm:ember-run-raf/addons/utils/schedule-frame';
+ */
+var scheduleFrame = require('ember-run-raf/utils/schedule-frame'),
+scheduleIntoAnimationFrame = scheduleFrame.default;
 
 /*----------------------------------------------------------------------------*/
 
@@ -2451,7 +2459,8 @@ export default Ember.Component.extend(Ember.Evented, {
       .attr("class", "brush")
       .each(function(d) { d3.select(this).call(oa.y[d].brush); });
 
-    console.log('zoomBehavior', oa.zoomBehavior, allG.nodes(), allG.node());
+    if (allG.nodes().length)
+      console.log('zoomBehavior', oa.zoomBehavior, allG.nodes(), allG.node());
     allG
       .call(oa.zoomBehavior);
 
@@ -3712,8 +3721,8 @@ export default Ember.Component.extend(Ember.Evented, {
             });
             let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
             axisTickS.attr("transform", yAxisTicksScale);
-            axisStackChanged(t);
-            me.trigger("zoomedAxis", [axisID, t]);
+            // axisStackChanged(t);
+            me.throttledZoomedAxis(axisID, t);
 
             pathUpdate(t);
             let resetScope = axisID ? axisS : svgContainer;
@@ -3825,6 +3834,7 @@ export default Ember.Component.extend(Ember.Evented, {
      * @param brushExtents  limits of the current brush, to which we are zooming
      */
     function zoom(that, brushExtents) {
+      const trace_zoom = 0;
       console.log('zoom', that, brushExtents, arguments, this);
       let axisName;
       if (d3.event.sourceEvent instanceof WheelEvent) {
@@ -3868,13 +3878,24 @@ export default Ember.Component.extend(Ember.Evented, {
         axis.verify();
 
       let t = oa.svgContainer.transition().duration(750);
+      /** The response to mousewheel zoom is direct, no transition delay.  requestAnimationFrame() is used. */
+      let tRaf = undefined; // or t.duration(10);
+
       /* this uses .map() to find i such that selectedAxes[i] == axisName,
        * and i is used to lookup the parallel array brushExtents[].
        * #afterRelease, selectedAxes / brushExtents / brushedRegions can be
        * better integrated, simplifying this calc and others.
        */
-      selectedAxes.map(function(p, i) {
-        if(p == axisName){
+      let selectedAxes_i = 
+        selectedAxes.reduce(function(result, p, i) {
+          if(p == axisName){
+            result.push([p, i]);
+          }
+          return result;
+        }, []);
+      selectedAxes_i.forEach(function(p_i) {
+        let [p, i] = p_i;
+        {
           let y = oa.y, svgContainer = oa.svgContainer;
           if (brushExtents)
           // possibly selectedAxes changed after this callback was registered
@@ -3897,7 +3918,8 @@ export default Ember.Component.extend(Ember.Evented, {
           }
           else
           {
-            console.log('zoom Wheel scale', y[p].domain(), y[p].range(), y, oa.ys);
+            if (trace_zoom)
+              console.log('zoom Wheel scale', y[p].domain(), y[p].range(), y, oa.ys);
             let domain = y[p].domain(), centre = (domain[0] + domain[1])/2,
             transform = d3.event.transform,
             deltaY = d3.event.sourceEvent.deltaY,
@@ -3905,17 +3927,24 @@ export default Ember.Component.extend(Ember.Evented, {
             newInterval = (domain[1] - domain[0]) * deltaScale;
             domain[0] = centre - newInterval/2;
             domain[1] = centre + newInterval/2;
-            console.log(transform.y, 'newInterval', newInterval, domain);
+            if (trace_zoom)
+              console.log(transform.y, 'newInterval', newInterval, domain);
             y[p].domain(domain);
           }
-          axisScaleChanged(p, t, true);
+          /* was updatePaths true, but pathUpdate() is too long for RAF.
+           * No transition required for RAF.
+           */
+          axisScaleChangedRaf(p, tRaf, false);
           if (brushExtents)
           // `that` refers to the brush g element
           d3.select(that).call(y[p].brush.move,null);
         }
       });
-      axisStackChanged(t);
-      me.trigger("zoomedAxis", [axisName, t]);
+      // axisStackChanged(t);
+      me.throttledZoomedAxis(axisName, t);
+    }
+    function axisScaleChangedRaf(p, t, updatePaths) {
+      scheduleIntoAnimationFrame(this, function () { axisScaleChanged(p, t, updatePaths); });
     }
     /** @param p  axisName
      * @param updatePaths true : also update foreground paths.
@@ -3926,11 +3955,13 @@ export default Ember.Component.extend(Ember.Evented, {
       let yp = y[p],
       axis = oa.axes[p];
       let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * axis.portion);
-      let idName = axisEltId(p);
-      svgContainer.select("#"+idName).transition(t).call(yAxis);
+      let idName = axisEltId(p),
+      axisS = svgContainer.select("#"+idName);
+      if (t)
+        axisS = axisS.transition(t);
+      axisS.call(yAxis);
       if (updatePaths)
         pathUpdate(t);
-
       let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(p) + " > g.tick > text");
       axisGS.attr("transform", yAxisTicksScale);
     }
@@ -5392,7 +5423,15 @@ export default Ember.Component.extend(Ember.Evented, {
 
   },   // draw()
 
+  //----------------------------------------------------------------------------
 
+  /** Provide a constant function value for use in .debounce(). */
+  triggerZoomedAxis : function (args) {
+    this.trigger("zoomedAxis", args);
+  },
+  throttledZoomedAxis : function (axisID, t) {
+    Ember.run.debounce(this, this.triggerZoomedAxis, [axisID, t], 1000);
+  },
 
   //----------------------------------------------------------------------------
 

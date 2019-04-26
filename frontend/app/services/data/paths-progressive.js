@@ -128,7 +128,11 @@ export default Service.extend({
     params = {axes : intervals, page,  dbPathFilter };
     intervals.forEach(function (i) {
       // console.log(i.domain);
-      if ((i.domain[0] === 0) && (i.domain[1] === 0))
+      // Block : domain may be [false, false] before Block features are known. ?
+      if (i.domain && (i.domain[0] === false) && (i.domain[1] === false)) {
+        console.log('intervalParams, empty Block ?', i.domain);
+      }
+      if (i.domain && (i.domain[0] === 0) && (i.domain[1] === 0))
         i.domain = undefined;
     } );
 
