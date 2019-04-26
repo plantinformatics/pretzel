@@ -767,17 +767,17 @@ function addPathsToCollation(blockA, blockB, paths)
   });
 
   /* when called from stream, paths.length===1, so don't redraw paths for each path received. */
-  filterAndPathUpdateDebounced(paths.length === 1);
+  filterAndPathUpdateThrottled(paths.length === 1);
 }
 /** Used by both addPathsToCollation() and addPathsByReferenceToCollation().
  * Those functions can be called from EventStream replies, with 1 path in each response,
- * so use debounce to avoid calling pathUpdateFlow() for every path received. 
+ * so use throttle to avoid calling pathUpdateFlow() for every path received. 
  */
-function filterAndPathUpdateDebounced(isStream) {
+function filterAndPathUpdateThrottled(isStream) {
   if (! isStream)
 	  filterAndPathUpdate();
   else
-	  Ember.run.debounce(filterAndPathUpdate, 500);
+	  Ember.run.throttle(filterAndPathUpdate, 500);
 }
 function filterAndPathUpdate() {
   filterPaths();
@@ -812,7 +812,7 @@ function addPathsByReferenceToCollation(blockA, blockB, referenceGenome, maxDist
       storePath(blockA, blockB, featureName, fi, aliasGroupName);
   });
 
-  filterAndPathUpdateDebounced(paths.length === 1);
+  filterAndPathUpdateThrottled(paths.length === 1);
 }
 
 let trace_count_path;
