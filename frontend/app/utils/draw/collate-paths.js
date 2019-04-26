@@ -766,6 +766,20 @@ function addPathsToCollation(blockA, blockB, paths)
       storePath(blockA, blockB, featureName, fi, aliasGroupName);
   });
 
+  /* when called from stream, paths.length===1, so don't redraw paths for each path received. */
+  filterAndPathUpdateDebounced(paths.length === 1);
+}
+/** Used by both addPathsToCollation() and addPathsByReferenceToCollation().
+ * Those functions can be called from EventStream replies, with 1 path in each response,
+ * so use debounce to avoid calling pathUpdateFlow() for every path received. 
+ */
+function filterAndPathUpdateDebounced(isStream) {
+  if (! isStream)
+	  filterAndPathUpdate();
+  else
+	  Ember.run.debounce(filterAndPathUpdate, 500);
+}
+function filterAndPathUpdate() {
   filterPaths();
   /* the results can be direct or aliases, so when the directs are put in
    * featureAxes[], then do pathUpdate(undefined); * for now, just the aliases : */
@@ -774,6 +788,7 @@ function addPathsToCollation(blockA, blockB, paths)
   stackEvents.trigger('pathUpdateFlow', undefined, flows["U_alias"]);
   stackEvents.trigger('pathUpdateFlow', undefined, flows["alias"]);
 }
+
 /** Store the results from api/Blocks/pathsByReference request, in the same structure,
  * aliased, which collateStacksA() stores in. */
 function addPathsByReferenceToCollation(blockA, blockB, referenceGenome, maxDistance, paths)
@@ -797,10 +812,7 @@ function addPathsByReferenceToCollation(blockA, blockB, referenceGenome, maxDist
       storePath(blockA, blockB, featureName, fi, aliasGroupName);
   });
 
-  filterPaths();
-  let stackEvents = oa_().eventBus;
-  stackEvents.trigger('pathUpdateFlow', undefined, flows["U_alias"]);
-  stackEvents.trigger('pathUpdateFlow', undefined, flows["alias"]);
+  filterAndPathUpdateDebounced(paths.length === 1);
 }
 
 let trace_count_path;
