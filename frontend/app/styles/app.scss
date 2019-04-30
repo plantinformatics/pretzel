@@ -400,11 +400,13 @@ div#scaffoldLegend > ul
 
 /* If loading all block feature initially, and also pathsProgressive, then
  * differentiate the latter paths with colour and dashes.
- * This selector is commented out during this phase of devel because it is
+ * .devel is also sufficient to engage this functionality because it is
  *  helpful to see the comparison of paths calculated on back- and front- end.
  *
-body.allInitially
  */
+body.devel
+ path.blockAdj,
+body.allInitially
  path.blockAdj {
   /* emphasise the new (progressive) paths during devel. */
   stroke: red;
@@ -1028,6 +1030,12 @@ div.popover/*.axis-menu*/ div.popover-content {
 {
     display : inherit;
 }
+.devel-visible
+{
+  height: 65px;
+  overflow-y: scroll;
+}
+
 /* -------------------------------------------------------------------------- */
 /* for controlling display of (left panel : view) "Chart Options". */
 .chart-options

@@ -34,16 +34,18 @@
 </div>
 {{draw/link-path stackEvents=this pathReceiver=this modelParamOptions=params.options}}
 
-<div>brushedAxes : {{flowsService.axisBrush.brushedAxes.length}}</div>
-{{log 'flowsService.axisBrush' flowsService.axisBrush}}
-{{#each flowsService.axisBrush.brushedAxes as |brushedAxis| }}
-  {{draw/axis-brush block=brushedAxis drawMap=this }}
-{{/each}}
+<div class="devel-visible">
+  <div>brushedAxes : {{flowsService.axisBrush.brushedAxes.length}}</div>
+  {{log 'flowsService.axisBrush' flowsService.axisBrush}}
+  {{#each flowsService.axisBrush.brushedAxes as |brushedAxis| }}
+    {{draw/axis-brush block=brushedAxis drawMap=this }}
+  {{/each}}
 
-<div>{{block.viewedIds.length}}, {{axesP.length}} blockAdjs : {{flowsService.blockAdjs.length}}</div>
-{{#each flowsService.blockAdjs as |blockAdj| }}
-  {{draw/block-adj blockAdj=blockAdj drawMap=this }}
-{{/each}}
+  <div>{{block.viewedIds.length}}, {{axesP.length}} blockAdjs : {{flowsService.blockAdjs.length}}</div>
+  {{#each flowsService.blockAdjs as |blockAdj| }}
+    {{draw/block-adj blockAdj=blockAdj drawMap=this }}
+  {{/each}}
+</div>
 
 {{#if axisFeatureCircleHover}}
   {{path-hover data=oa features=hoverFeatures }} {{!-- targetId=axisFeatureTargetId  "holder" --}}
@@ -55,9 +57,9 @@
       <div>
         {{feature-name data=oa feature=feature}}
         {{#each (maps-of-feature oa feature) as |map|}}
-        {{ map.name }}
-      {{/each}}
-    </div>
-  {{/each}}
-</div>
+          {{ map.name }}
+        {{/each}}
+      </div>
+    {{/each}}
+  </div>
 {{/if}}
