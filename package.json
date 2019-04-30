@@ -33,7 +33,7 @@
     "run:precheck" : "npm run run:checkLink && npm run run:checkMongo",
     "run:checkLink" : "[ -f backend/client/index.html ] || npm run postinstall",
     "run:checkMongo" : "mongo --eval 'hostname();'  admin || echo mongod is required to be running",
-    "run:backend" : "cd backend && EMAIL_VERIFY=NONE AUTH=ALL node --inspect server/server.js",
+    "run:backend" : "echo NODE_INSPECT=$NODE_INSPECT; cd backend && EMAIL_VERIFY=NONE AUTH=ALL node $NODE_INSPECT server/server.js",
     "dev:backend" : "cd backend && npm run dev",
     "run:frontend" : "cd frontend; echo \"Entering directory '$PWD'\"; npm run start",
     "clean": "rm -r backend/node_modules   frontend/node_modules frontend/bower_components  backend/client/assets/* frontend/dist/*"

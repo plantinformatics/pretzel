@@ -94,7 +94,7 @@ module.exports = function(Block) {
         pathsAggr.pathsDirect(db, left, right, intervals);
       cursor.toArray()
         .then(function(data) {
-          console.log('pathsProgressive then', (data.length > 10) ? data.length : data);
+          console.log('pathsProgressive then', (data.length > 2) ? data.length : data);
           if (useCache)
             cache.put(cacheId, data);
           let filteredData;
@@ -304,6 +304,7 @@ module.exports = function(Block) {
       // https://jira.mongodb.org/browse/NODE-1408?focusedCommentId=1863180&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-1863180
       pipeLine.push(new SseWritable(sse, res));
 
+    let pipeLine_ =
       pipeline(
         pipeLine,
         (err) => {
@@ -318,9 +319,14 @@ module.exports = function(Block) {
       //   array.push(doc)
       // })
 
-      /* maybe pipeLine.on ...  */
-      cursor.on('end', () => {
-        console.log('cursor.on(end)', arguments.length);
+      /* cursor.on('end') is likely to be too early - may send EOF before all
+       * messages are sent; the automatic tests were showing a variable number
+       * of paths returned from paths aliases streaming.
+       * Wait for pipeLine_.on('finish') - refn :
+       *   https://nodejs.org/api/stream.html#stream_event_finish
+       */
+      pipeLine_.on('finish', () => {
+        console.log('pipeLine_.on(finish)', arguments.length);
         if (filterPipe)
           console.log('filterPipe', filterPipe.countIn, filterPipe.countOut);
         sse.send([], 'pathsViaStream', SSE_EventID_EOF);

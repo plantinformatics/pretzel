@@ -4745,8 +4745,9 @@ export default Ember.Component.extend(Ember.Evented, {
         pathUpdate(t);
         countPathsWithData(oa.svgRoot);
       }
-      else
+      else {
         console.log('stacksAdjust skipped pathUpdate', changedNum, oa.foreground, ysLength());
+      }
 
       if (stacks.changed & 0x10)
       {

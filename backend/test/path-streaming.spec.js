@@ -64,6 +64,8 @@ describe('path-streaming', function() {
       console.log("Create test user");
       await Client.create({email: userEmail, password: userPassword}, (err, instance) => {
         console.log('instance => ', instance);
+        if (err)
+          console.log('err => ', err);
         userId = instance.id
       })
 
@@ -71,6 +73,7 @@ describe('path-streaming', function() {
       // server = app.listen();
 
       console.log("Login test user");
+      debugger;
       await http
         .post(`${endpoint}/Clients/login`)
         .send({ email: userEmail, password: userPassword })
@@ -85,7 +88,7 @@ describe('path-streaming', function() {
       /* Previous dataset should be deleted here, but permissions prevents this */
       
     } catch(err) {
-      // console.log('err => ', err);
+      console.log('err => ', err);
     }
   })
 

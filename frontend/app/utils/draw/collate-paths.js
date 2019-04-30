@@ -777,7 +777,7 @@ function filterAndPathUpdateThrottled(isStream) {
   if (! isStream)
 	  filterAndPathUpdate();
   else
-	  Ember.run.throttle(filterAndPathUpdate, 500);
+	  Ember.run.throttle(filterAndPathUpdate, 200, false);
 }
 function filterAndPathUpdate() {
   filterPaths();
