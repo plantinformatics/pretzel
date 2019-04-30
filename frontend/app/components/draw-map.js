@@ -1042,7 +1042,15 @@ export default Ember.Component.extend(Ember.Evented, {
     if (oa.zoomBehavior === undefined)
     {
       oa.zoomBehavior = d3.zoom()
-      .on('zoom', zoom)
+        .filter(function () {
+          /** WheelEvent is a subtype of MouseEvent; click to drag axis gets
+           * MouseEvent - this is filtered out here so it will be handle by dragged().
+           * ! d3.event.button is the default zoom.filter, possibly superfluous here.
+           */
+          let include = (d3.event instanceof WheelEvent) && ! d3.event.button;
+          // console.log('zoom.filter', this, arguments, d3.event, include);
+          return include; } )
+        .on('zoom', zoom)
       ;
       console.log('zoomBehavior', oa.zoomBehavior);
     }
@@ -1272,7 +1280,7 @@ export default Ember.Component.extend(Ember.Evented, {
           dataS.each(function () { d3.select(this).datum(d); });
 
           let gAxisS = aStackS.selectAll("g.axis");
-          console.log('zoomBehavior adopt.length', adopt.length, oa.zoomBehavior, gAxisS.nodes(), gAxisS.node());
+          console.log('zoomBehavior adopt.length', adopt.length, /*oa.zoomBehavior,*/ gAxisS.nodes(), gAxisS.node());
           gAxisS
             .datum(d)
             .attr('id', axisEltId(d))
@@ -3835,12 +3843,15 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function zoom(that, brushExtents) {
       const trace_zoom = 0;
+      let isWheelEvent = d3.event.sourceEvent instanceof WheelEvent;
+      if (trace_zoom > 1 - isWheelEvent)
       console.log('zoom', that, brushExtents, arguments, this);
       let axisName;
-      if (d3.event.sourceEvent instanceof WheelEvent) {
+      if (isWheelEvent) {
         axisName = arguments[0];
         brushExtents = undefined;
         let w = d3.event.sourceEvent;
+        if (trace_zoom) 
         console.log(
           'WheelEvent', d3.event.sourceEvent, d3.event.transform, d3.event,
           '\nclient', w.clientX, w.clientY,
@@ -3858,7 +3869,6 @@ export default Ember.Component.extend(Ember.Evented, {
       else if (d3.event.sourceEvent instanceof MouseEvent) {
         console.log(
           'MouseEvent', d3.event.sourceEvent);
-        return true;
       }
       else
       {
