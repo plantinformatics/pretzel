@@ -296,7 +296,8 @@ export default Service.extend({
               axisDomain = axis.domain = axis.domainCalc();
               console.log(blockId, 'blockDomain', blockDomain, axisDomain, block.z);
 
-              if (! axis.zoomed) {
+              // if zoomed in, then extension to the block's domain does not alter the viewed domain.
+              if (! axis.axis1d.zoomed) {
                 axis.axis1d.updateDomain();
               }
 

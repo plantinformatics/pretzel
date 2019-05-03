@@ -38,9 +38,10 @@ export default Mixin.create({
    */
   updateDomain()
   {
-    let y = this.getY(), ys = this.ys;
-    updateDomain(this.y, this.ys, this);
-    let domain = this.y.domain(),
+    let axisS=this.get('axisS');
+    let y = axisS.getY(), ys = axisS.ys;
+    updateDomain(axisS.y, axisS.ys, axisS);
+    let domain = axisS.y.domain(),
     axisPosition = this.get('currentPosition');
     console.log('updateDomain', this, /*y, ys,*/ 'domain', domain, axisPosition);
     axisPosition.set('yDomain', domain);
@@ -61,7 +62,7 @@ export default Mixin.create({
    */
   setZoomed(zoomed)
   {
-    console.log('setZoomed', this, 'zoomed', zoomed);
+    // console.log('setZoomed', this, 'zoomed', zoomed);
     // possibly .zoomed will move into .currentPosition
     this.set('zoomed', zoomed);
   }

@@ -1041,6 +1041,14 @@ export default Ember.Component.extend(Ember.Evented, {
 
     if (oa.zoomBehavior === undefined)
     {
+      /** default is 500.  "scaling applied in response to a WheelEvent ... is
+       * proportional to 2 ^ result of wheelDelta(). */
+      let wheelDeltaFactor = 500 * 3 * 8;
+      console.log('wheelDeltaFactor', wheelDeltaFactor);
+      function wheelDelta() {
+        return -d3.event.deltaY * (d3.event.deltaMode ? 120 : 1) / wheelDeltaFactor;
+      }
+
       oa.zoomBehavior = d3.zoom()
         .filter(function () {
           /** WheelEvent is a subtype of MouseEvent; click to drag axis gets
@@ -1050,6 +1058,7 @@ export default Ember.Component.extend(Ember.Evented, {
           let include = (d3.event instanceof WheelEvent) && ! d3.event.button;
           // console.log('zoom.filter', this, arguments, d3.event, include);
           return include; } )
+        .wheelDelta(wheelDelta)
         .on('zoom', zoom)
       ;
       console.log('zoomBehavior', oa.zoomBehavior);
@@ -3721,9 +3730,10 @@ export default Ember.Component.extend(Ember.Evented, {
               let a = oa.axes[d],
               domain = a.parent ? a.parent.domain : a.getDomain();
               domain = maybeFlip(domain, a.flipped);
-              a.zoomed = false;
+              a.setZoomed(false);
               oa.y[d].domain(domain);
               oa.ys[d].domain(domain);
+              a.setDomain(domain);
               let yAxis = d3.axisLeft(oa.y[d]).ticks(10);
               oa.svgContainer.select("#"+idName).transition(t).call(yAxis);
             });
@@ -3864,7 +3874,7 @@ export default Ember.Component.extend(Ember.Evented, {
           'wheelDeltaY', w.wheelDeltaY,
           '.', w.x, w.y
         );
-        selectedAxes.push(axisName);
+        selectedAxes.addObject(axisName);
       }
       else if (d3.event.sourceEvent instanceof MouseEvent) {
         console.log(
@@ -3940,7 +3950,7 @@ export default Ember.Component.extend(Ember.Evented, {
             if (trace_zoom)
               console.log(transform.y, 'newInterval', newInterval, domain);
           }
-          axis.zoomed = true;
+          axis.setZoomed(true);
           y[p].domain(domain);
           oa.ys[p].domain(domain);
           axis.setDomain(domain);

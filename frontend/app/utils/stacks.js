@@ -1844,11 +1844,12 @@ Stacked.prototype.axisDimensions = function ()
     /** y scale of this axis */
     y = this.getY(),
   domain = this.y.domain(),
-  dim = { domain, range : this.yRange(), zoomed : this.zoomed};
-  let axis1d = this.axis1d,
+  axis1d = this.axis1d,
+  dim = { domain, range : this.yRange(), zoomed : axis1d.zoomed};
+  let
   currentPosition = axis1d && axis1d.get('currentPosition');
-  if (! isEqual(domain, currentPosition.yDomain) || (this.zoomed !== axis1d.zoomed))
-    console.log('axisDimensions', domain, currentPosition.yDomain, this.zoomed, axis1d.zoomed, currentPosition);
+  if (! isEqual(domain, currentPosition.yDomain))
+    console.log('axisDimensions', domain, currentPosition.yDomain, axis1d.zoomed, currentPosition);
   return dim;
 };
 /** Set the domain of the current position to the given domain
@@ -1858,8 +1859,18 @@ Stacked.prototype.setDomain = function (domain)
   let axis1d = this.axis1d,
   axisPosition = axis1d && axis1d.currentPosition;
   // if (! axisPosition)
-    console.log('setDomain', this, 'domain', domain, axis1d, axisPosition);
+  //  console.log('setDomain', this, 'domain', domain, axis1d, axisPosition);
   axisPosition.set('yDomain', domain);
+};
+/** Set the zoomed of the current position to the given zoomed
+ */
+Stacked.prototype.setZoomed = function (zoomed)
+{
+  let axis1d = this.axis1d;
+  // later .zoomed may move into axis1d.currentPosition
+  // if (! axisPosition)
+  // console.log('setZoomed', this, 'zoomed', axis1d.zoomed, '->', zoomed, axis1d);
+  axis1d.setZoomed(zoomed);
 };
 
 

@@ -311,7 +311,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       let axisS = this.get('axisS'),
       dimensions = axisS.axisDimensions();
       this.setDomain(dimensions.domain);
-      this.set('zoomed', dimensions.zoomed);
+      // this.set('zoomed', dimensions.zoomed);
       console.log('zoomedAxis', axisS, dimensions);
     }
   },
