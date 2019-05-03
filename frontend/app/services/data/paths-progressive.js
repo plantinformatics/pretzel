@@ -277,6 +277,11 @@ export default Service.extend({
     return firstResult;
   },
 
+  /** Update the domain of the named blocks.
+   * @param blocks  array of blockId
+   * @param domainCalc  if false, do nothing (useful because this function is called via throttle().
+   * @param axisEvents  not used - axisEvents is factored to axis-1d : notifyChanges()
+   */
   blocksUpdateDomain : function(blocks, domainCalc, axisEvents) {
 
           if (domainCalc)
@@ -292,7 +297,7 @@ export default Service.extend({
               console.log(blockId, 'blockDomain', blockDomain, axisDomain, block.z);
 
               if (! axis.zoomed) {
-                axis.updateDomain();
+                axis.axis1d.updateDomain();
               }
 
           });
@@ -311,7 +316,18 @@ export default Service.extend({
       console.log('getPathsAliasesProgressive not found:', blockAdjId);
     }
     else {
-      let domainChange = blockAdj.get('domainChange');
+      let flowsService = this.get('flowsService'),
+      flows = flowsService.get('flows'),
+      multipleApis = flows.alias.visible && flows.direct.visible;
+      /* If both direct & aliases flows are enabled, then this check will return
+       * domainChange === false because the blockAdj.intervalParams is recorded
+       * by requestPathsProgressive(), and so at this point
+       * blockAdj.intervalParams.axes[*].domain will equal
+       * axisDimensions()[*].domain.
+       * To enable this, considering (next commit) : each API can have a
+       * separate copy of .intervalParams in blockAdj.
+       */
+      let domainChange = multipleApis || blockAdj.get('domainChange');
       let result;
       if (! domainChange && ((result = blockAdj.get('pathsAliasesResult')))) {
         pathsAliases = Promise.resolve(result);

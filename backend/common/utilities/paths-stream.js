@@ -2,7 +2,7 @@ const { Writable, Transform } = require('stream');
 
 /* global require exports */
 
-var trace_stream = 1;
+var trace_stream = 2;
 
 
 exports.CacheWritable = class extends Writable {

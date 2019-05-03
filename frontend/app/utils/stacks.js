@@ -1,5 +1,7 @@
 // for VLinePosition :
 import Ember from 'ember';
+import { isEqual } from 'lodash/lang';
+
 
 /*global d3 */
 
@@ -12,7 +14,6 @@ import { variableBands } from '../utils/variableBands';
 import { isOtherField } from '../utils/field_names';
 import { Object_filter } from '../utils/Object_filter';
 import { breakPoint, breakPointEnableSet } from '../utils/breakPoint';
-import { updateDomain } from './stacksLayout';
 
 
 
@@ -1805,23 +1806,6 @@ Stacked.prototype.axisTransformO = function ()
 
 /*----------------------------------------------------------------------------*/
 
-/** Position of a vertical line segment, e.g. an axis (Stacked) or a Stack of axes.
- * @param     y : domain, range, x : offset
- */
-let VLinePosition = Ember.Object.extend(
-{
-  setValues : function(yDomain, yRange, xOffset) {
-    this.set('yDomain', yDomain);
-    this.set('yRange', yRange);
-    this.set('xOffset', xOffset);
-  },
-  toString() {
-    console.log('VLinePosition : toString()', this);
-    return "VLinePosition:" + this.yDomain + ',' + this.yRange + ',' + this.xOffset;
-  }
-
-});
-
 /** Reference the y scales.
  * The scales y and ys are currently created in 
  * The roles of the scales y and ys are noted in comments in draw-map.js : draw();
@@ -1841,13 +1825,12 @@ Stacked.prototype.getY = function ()
   return this.y;
 };
 
-Stacked.prototype.getPositions = function ()
+/** .positions[] is [last update drawn, current], @see Stacked.prototype.currentPosition() */
+Stacked.prototype.currentPosition = function ()
 {
-  if (this.currentStep === undefined)
-    this.currentStep = 0;
-  let positions = this.positions ||
-    (this.positions = Ember.A([VLinePosition.create(), VLinePosition.create()]));
-  return positions;
+  let axis1d = this.axis1d,
+  currentPosition = axis1d && axis1d.get('currentPosition');
+  return currentPosition;
 };
 
 /** Return domain and range intervals for the axis.
@@ -1862,30 +1845,23 @@ Stacked.prototype.axisDimensions = function ()
     y = this.getY(),
   domain = this.y.domain(),
   dim = { domain, range : this.yRange(), zoomed : this.zoomed};
+  let axis1d = this.axis1d,
+  currentPosition = axis1d && axis1d.get('currentPosition');
+  if (! isEqual(domain, currentPosition.yDomain) || (this.zoomed !== axis1d.zoomed))
+    console.log('axisDimensions', domain, currentPosition.yDomain, this.zoomed, axis1d.zoomed, currentPosition);
   return dim;
 };
-
-/** The position of the axis line segment is recorded as 2 values : the position
- * when pathUpdate_() was last called, and the current position, which will be different
- * if the user is dragging the axis.
- * @return the current position
+/** Set the domain of the current position to the given domain
  */
-Stacked.prototype.currentPosition = function ()
+Stacked.prototype.setDomain = function (domain)
 {
-  let
-    positions = this.getPositions(),
-    position = positions[this.currentStep];
-  return position;
-};
-Stacked.prototype.updateDomain = function ()
-{
-  let y = this.getY(), ys = this.ys;
-  updateDomain(this.y, this.ys, this);
-  let domain = this.y.domain(),
-  axisPosition = this.currentPosition();
-  console.log(this, /*y, ys,*/ 'domain', domain, axisPosition);
+  let axis1d = this.axis1d,
+  axisPosition = axis1d && axis1d.currentPosition;
+  // if (! axisPosition)
+    console.log('setDomain', this, 'domain', domain, axis1d, axisPosition);
   axisPosition.set('yDomain', domain);
 };
+
 
 /*----------------------------------------------------------------------------*/
 

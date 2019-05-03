@@ -1,6 +1,7 @@
 import Ember from 'ember';
 
 import AxisEvents from '../../utils/draw/axis-events';
+import AxisPosition from '../../mixins/axis-position';
 import { /* Block,*/ Stacked, /*Stack,*/ stacks /*, xScaleExtend, axisRedrawText, axisId2Name*/ } from '../../utils/stacks';
 import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/ , axisTitleColour  }  from '../../utils/draw/axis';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../../utils/stacks-drag';
@@ -255,7 +256,20 @@ function  configureHorizTickHover(d, block, hoverTextFn)
     });
 }
 
-export default Ember.Component.extend(Ember.Evented, AxisEvents, {
+export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
+
+  init() {
+    this._super(...arguments);
+    let axisS = this.get('axisS');
+    if (! axisS || axisS.axis1d)
+    {
+      let axisName = this.get('axis.id');
+      console.log('axis-1d:init', this, axisName, this.get('axis'), axisS, axisS && axisS.axis1d);
+    }
+    else {
+      axisS.axis1d = this;
+    }
+  },
 
 
   /** axis-1d receives axisStackChanged and zoomedAxis from draw-map
@@ -314,7 +328,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     }
     console.log('setDomain', domain, attr /*, this.attrs*/);
   },
-  position : Ember.computed.alias('axisS.positions.0'),
+  /** position when last pathUpdate() drawn. */
+  position : Ember.computed.alias('axisPosition.current'),
 
   /** this is an alias of .domain, but it updates when the array elemnts update. */
   domainChanged : Ember.computed(
@@ -325,7 +340,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     function () {
       let domain = this.get('domain');
       // use the VLinePosition:toString() for the position-s
-      console.log('domainChanged', domain, this.get('axisS'), this.get('axisS.positions'), ''+this.get('position'), ''+this.get('axisS.positions.1'), this.get('axisS.currentStep'));
+      console.log('domainChanged', domain, this.get('axisS'), this.get('axisPosition'), ''+this.get('position'), this.get('axisPosition.lastDrawn'));
       this.notifyChanges();
 
       return domain;

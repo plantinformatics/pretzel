@@ -49,10 +49,16 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   pathsResultLength : Ember.computed('blockAdj.pathsResult.[]', 'paths', function () {
     let pathsP = this.get('paths'),
     pathsResult = this.get('blockAdj.pathsResult'),
-    length = pathsResult && pathsResult.length;
-    console.log('pathsResultLength', this, length);
+    pathsAliasesResult = this.get('blockAdj.pathsAliasesResult'),
+    length = pathsResult && pathsResult.length,
+    pathsAliasesLength = pathsAliasesResult && pathsAliasesResult.length;
+    console.log('pathsResultLength', this, length, pathsAliasesLength);
     if (length)
       this.draw(pathsResult);
+    /* pathsAliasesResult is in a different form to pathsResult; passing it to
+     * draw() will require some mapping */
+    if (false && pathsAliasesLength)
+      this.draw(pathsAliasesResult);
     return length;
   }),
   paths : Ember.computed('blockAdj', 'zoomCounter', function () {

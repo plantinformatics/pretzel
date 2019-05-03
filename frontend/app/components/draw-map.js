@@ -3917,20 +3917,20 @@ export default Ember.Component.extend(Ember.Evented, {
           }
           let yp = y[p],
           axis = oa.axes[p],
+          domain,
           brushedDomain;
           if (brushExtents) {
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion*/); });
           // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
           console.log("zoom", axisName, p, i, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
-          axis.zoomed = true;
-          y[p].domain(brushedDomain);
-          oa.ys[p].domain(brushedDomain);
+            domain = brushedDomain;
           }
           else
           {
             if (trace_zoom)
               console.log('zoom Wheel scale', y[p].domain(), y[p].range(), y, oa.ys);
-            let domain = y[p].domain(), centre = (domain[0] + domain[1])/2,
+            domain = y[p].domain();
+            let centre = (domain[0] + domain[1])/2,
             transform = d3.event.transform,
             deltaY = d3.event.sourceEvent.deltaY,
             deltaScale = 1 + deltaY/300,  // not transform.y
@@ -3939,8 +3939,12 @@ export default Ember.Component.extend(Ember.Evented, {
             domain[1] = centre + newInterval/2;
             if (trace_zoom)
               console.log(transform.y, 'newInterval', newInterval, domain);
-            y[p].domain(domain);
           }
+          axis.zoomed = true;
+          y[p].domain(domain);
+          oa.ys[p].domain(domain);
+          axis.setDomain(domain);
+
           /* was updatePaths true, but pathUpdate() is too long for RAF.
            * No transition required for RAF.
            */
