@@ -55,6 +55,12 @@ export default DS.Model.extend({
       axes = this.get('axes'),
       intervals =
       axes.map(function (axis) {
+        /** axes() needs to be recalculated after a block is adopted;
+         * can depend on axes[*].axis1d.axisStackChanged ...
+         */
+        if (axis.stack.axes[0] !== axis) {
+          axis = Stacked.getAxis(axis.axisName);
+        }
       return axis.axisDimensions();
       });
     return intervals;

@@ -269,7 +269,7 @@ function parseIntervalFlags(intervals) {
  * If intervals.dbPathFilter then intervals.axes[{0,1}].domain[{0,1}] are included in the aggregrate filter.
  * The domain[] is in the same order as the feature.value[], i.e. increasing order : 
  * domain[0] < domain[1] (for all intervals.axes[]).
- * @return cursor	aliases
+ * @return cursor	: direct paths
  */
 exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
   parseIntervalFlags(intervals);
@@ -384,7 +384,7 @@ function pipelineLimits(featureCollection, intervals, pipeline) {
  * @param blockIds  ids of data blocks
  * @param intervals  domain and range of axis of block, to limit the number of features in result.
 
- * @return cursor	aliases
+ * @return cursor	: features
  */
 exports.blockFeaturesInterval = function(db, blockIds, intervals) {
   parseIntervalFlags(intervals);
@@ -471,7 +471,7 @@ var example_output_pathsDirect =
  * @param blockId
  * @param nBuckets
  * @param granularity
- * @return cursor	aliases
+ * @return cursor	: feature counts
  */
 function blockBinFeatureCount(blockCollection, blockId, nBuckets, granularity) {
   if (nBuckets === undefined)

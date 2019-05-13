@@ -935,6 +935,7 @@ export default Ember.Component.extend(Ember.Evented, {
     const trace_drag = 0;
     //- moved to ../utils/draw/collate-paths.js : trace_alias, trace_adj
     const trace_path = 0;
+    let trace_path_count = 0;
     const trace_path_colour = 0;
     const trace_synteny = 0;
     const trace_gui = 0;
@@ -3355,19 +3356,17 @@ export default Ember.Component.extend(Ember.Evented, {
       {
         let sLine = featureLineS2(a0, a1, d0, d1_);
         let cmName = oa.cmName;
+        let z = oa.z;
         let feature0 = d0, feature1 = d1,
         /** used for targeted debug trace (to filter, reduce volume)
          * e.g. = feature0 == "featureK" && feature1 == "featureK" &&
          cmName[a0].mapName == "MyMap5" && cmName[a1].mapName == "MyMap6"; */
-        traceTarget = false;
+        traceTarget = 
+          ((trace_path_count !== undefined) && (trace_path_count-- > 0))
+           || (trace_path > 4);
         if (traceTarget)
-        {
-          console.log("patham()", d0, d1, cmName[a0].mapName, cmName[a1].mapName, a0, a1, z[a0][d0].location, d1 && z[a1][d1].location, sLine);
-        }
-        else if (trace_path > 4)
-          console.log("patham()", d0, d1, cmName[a0] && cmName[a0].mapName, cmName[a1] && cmName[a1].mapName, a0, a1, z && z[a0] && z[a0][d0] && z[a0][d0].location, d1 && z && z[a1] && z[a1][d1] && z[a1][d1].location, sLine);          
+          console.log("patham()", d0, d1, cmName[a0] && cmName[a0].mapName, cmName[a1] && cmName[a1].mapName, a0, a1, z && z[a0] && z[a0][d0] && z[a0][d0].location, d1 && z && z[a1] && z[a1][d1] && z[a1][d1].location, sLine);
         r = sLine;
-        let z = oa.z;
         if (pathDataIsLine)
           /* Prepare a tool-tip for the line. */
           pathFeatureStore(sLine, d0, d1, z[a0][d0], z[a1][d1_]);
@@ -4334,6 +4333,7 @@ export default Ember.Component.extend(Ember.Evented, {
       //.merge()
         .attr("class", pathClass);
       //}
+      // trace_path_count = 10;
       let
         path_ = unique_1_1_mapping ? (pathDataInG ? pathUg : pathU) : path,
       /** The data of g is feature name, data of path is SVG path string. */

@@ -144,9 +144,11 @@ module.exports = function(Block) {
     let [left, right] = blockIds;
     console.log('pathsAliasesProgressive', left, right, intervals /*, options, cb*/);
     let cacheId = left + '_' + right,
-    useCache = ! intervals.dbPathFilter,
+    /** if filtering in db query then don't use cache, but that won't apply until pathsAliasesDirect() is defined. */
+    useCache = ! pathsAggr.pathsAliasesDirect || ! intervals.dbPathFilter,
     cached = cache.get(cacheId);
     if (useCache && cached) {
+      console.log('pathsAliasesProgressive cache hit', cacheId);
       let filteredData = pathsFilter.filterPathsAliases(cached, intervals);
       cb(null, filteredData);
     }
