@@ -11,7 +11,7 @@ dbCollections()
 	 echo DIM : Docker identity of Mongo Instance is required
 	 return 1
     else
-	docker exec -it $DIM mongo --quiet admin --eval "db.getCollectionNames()" | tr -d '[\[\]",\i ]' | tr '\r' ' '
+	docker exec -it $DIM mongo --quiet admin --eval "db.getCollectionNames()" | tr -d '[\[\]",\t ]' | tr '\r' ' '
     fi
 }
 
@@ -28,5 +28,9 @@ function mongodump2S3()
   sleep 5
 
   # AccessToken Alias Block Client Dataset Feature 
-  for i in $collections; do echo $i; time  mongodump  --db admin --collection $i  -o -  | gzip -c | aws s3 cp - $S3_MON/$i.gz; done
+  for i in $collections; do echo $i; time docker exec -it $DIM mongodump  --db admin --collection $i; done
+
+  docker exec -i -e TERM=$TERM $DIM bash -c 'cd /dump/; tar zcf - admin' | aws s3 cp -  $S3_MON.tar.gz	\
+  && aws s3 ls $S3_MON.tar.gz	\
+  && docker exec -i -e TERM=$TERM $DIM bash -c 'rm -r /dump/admin'
 }
