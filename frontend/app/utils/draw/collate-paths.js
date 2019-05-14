@@ -2,6 +2,8 @@ import Ember from 'ember';
 
 const { inject: { service } } = Ember;
 
+const _ = require('lodash');
+
 import { Block, /*Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText*/, axisId2Name } from '../stacks';
 import { collateAdjacentAxes, log_adjAxes, log_adjAxes_a } from '../stacks-adj';
 
@@ -9,6 +11,7 @@ import { isOtherField } from '../field_names';
 import { breakPoint } from '../breakPoint';
 
 
+/* global require */
 /*global d3 */
 
 /*----------------------------------------------------------------------------*/
@@ -696,7 +699,13 @@ function objPut(a, v, k1, k2, k3, k4)
     A = A[k4] = [];
   else
     A = A_;
-  A.push(v);
+  // A is now a[k1][k2][k3][k4]
+  /** result is first A[i] which is deep equal to v.  */
+  let found = A.find(function (vi) { return _.isEqual(vi, v); } );
+  if (! found)
+  {
+    A.push(v);
+  }
   return a;
 }
 /** convert aliases to hover text
