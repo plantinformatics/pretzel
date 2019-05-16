@@ -141,6 +141,19 @@ Block.prototype.isReference = function() {
     (axis.referenceBlock === blockR);
   return isReference;
 };
+/** @return truthy if the dataset of this Block has a parent.
+ * A genetic map block is a data block and has no reference block; for the purpose of stacks it is the reference.
+ * @return e.g. null if (dp is a promise and) no parent
+ * @see isData()
+ * @see isReference()
+ */
+Block.prototype.datasetHasParent = function() {
+  let dataset = this.block.get('datasetId'),
+  dp = dataset.get('parent'),
+  hasParent = dp && (dp.isPending ? dp.get('content') : dp);
+  console.log('datasetHasParent', dataset, dp, hasParent); this.log();
+  return hasParent;  
+};
 /** @return true if this Block is a data block, not the reference block.
  */
 Block.prototype.isData = function() {
@@ -148,7 +161,7 @@ Block.prototype.isData = function() {
   blockR = this.block,
   isData =
     //  checking if features is defined and features.length > 0
-    (blockR.get('namespace') || blockR.get('features.length'));
+    (blockR.get('namespace') || blockR.get('features.length') || ! this.datasetHasParent());
   return isData;
 };
 
@@ -437,11 +450,23 @@ Stacked.prototype.yRange2 = function ()
   range = this.position.map(function (p) { return yRange * p; });
   return range;
 };
+/** Access the features hash of this block.
+ * The hash (currently) contains some additional block attributes, .dataset and
+ * .scope, which are ignored using isOtherField[].
+ */
+Block.prototype.features = function ()
+{
+  // this function abstracts access to .z so that it can be re-structured.
+  let d = this.axisName,
+  /** this.z should have the value oa.z[d]. */
+  z = this.z || oa.z[d];
+  return z;
+}
 /** Calculate the domain of feature locations in the block named this.axisName.
  */
 Block.prototype.domainCalc = function ()
 {
-  let d = this.axisName, features = oa.z[d],
+  let d = this.axisName, features = this.features(),
   blockAttr = oa.cmName[d];
   function featureLocation(a)
   {
@@ -451,10 +476,22 @@ Block.prototype.domainCalc = function ()
     domain =
     (blockAttr && blockAttr.range) ||
     d3.extent(Object.keys(features), featureLocation);
-  // console.log("domainCalc", this, d, features, domain);
+   console.log("domainCalc", this, d, features, domain);
   if (! domain || ! domain.length)
     breakPoint();
   return domain;
+};
+/** If the Block domain has not been calculated, then calculate it.
+ * The domain should be re-calculated after features are added.
+ * @return  domain, same result as .domainCalc()
+ */
+Block.prototype.maybeDomainCalc = function ()
+{
+  let d = this.domain,
+  features = this.features();
+  if (! d || (d.length === 2 && d[0] === false && d[1] === false))
+    this.domain = this.domainCalc();
+  return this.domain;
 };
 /** Traverse the blocks displayed on this axis, and return a domain which spans
  * their domains.
@@ -463,7 +500,7 @@ Stacked.prototype.domainCalc = function ()
 {
   console.log('domainCalc', this, this.blocks);
   let blockDomains = 
-    this.blocks.map(function (b) { return b.domain || (b.domain = b.domainCalc()); }),
+    this.blocks.map(function (b) { return b.maybeDomainCalc(); }),
   /** refn : https://github.com/d3/d3-array/issues/64#issuecomment-356348729 */
   domain = 
     [

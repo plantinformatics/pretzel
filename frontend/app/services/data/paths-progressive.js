@@ -102,7 +102,7 @@ export default Service.extend({
       }
       else
         paths = this.requestPathsProgressive(blockAdj, blockAdjId);
-      console.log('getPathsProgressive', blockAdj, blockAdjId, paths);
+      console.log('getPathsProgressive', blockAdj, blockAdjId, result || paths.state());
     }
     return paths;
   },
@@ -335,7 +335,7 @@ export default Service.extend({
       }
       else
         pathsAliases = this.requestAliases(blockAdj, blockAdjId);
-      console.log('getPathsAliasesProgressive', blockAdj, blockAdjId, pathsAliases);
+      console.log('getPathsAliasesProgressive', blockAdj, blockAdjId, result || pathsAliases.state());
     }
     return pathsAliases;
   },
@@ -464,7 +464,7 @@ export default Service.extend({
       }
       else
         features = this.requestBlockFeaturesInterval(blockId);
-      console.log(fnName, blockId, features);
+      console.log(fnName, blockId, result || features.state());
     }
     return features;
   },
@@ -522,7 +522,7 @@ export default Service.extend({
 
           Ember.run.throttle(
             me, me.blocksUpdateDomain, 
-            dataBlockIds, undefined, domainCalc, axisEvents,
+            dataBlockIds, domainCalc, axisEvents,
             200, false);
         };
     promise

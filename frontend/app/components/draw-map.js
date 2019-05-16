@@ -3576,9 +3576,22 @@ export default Ember.Component.extend(Ember.Evented, {
           /** compound name dataset:block (i.e. map:chr) for the selected axis p.  */
           let mapChrName = axisName2MapChr(p);
           selectedFeatures[mapChrName] = [];
-          let enable_log = brushExtents[i] === undefined;
+          let notBrushed = brushExtents[i] === undefined,
+          enable_log = notBrushed;
             if (enable_log)
             console.log("brushHelper", p, i);
+          /* brushExtents[i] is required for the following calculation of
+           * brushedDomain and hence the filtering, so return if it is undefined.
+           * The above selectedAxes.removeObject() is intended to prevent this but it seems to miss some case.
+           * And selectedAxes[] does not only derive from brushes - an axis can be selected in the data explorer.
+           * The whole flow of calculation in brushHelper() needs to be changed :
+           * it is unnecessary to traverse selectedAxes[] - only 1 axis has
+           * been brushed, and p is known via (thisElement.__data__, name[0], brushedAxisID).
+           * brushExtents[] is not required, and brushedRegions[] can be
+           * independent of selectedAxes[].
+           */
+          if (notBrushed)
+            return;
 
           // this can use axisRange2Domain() which is based on this function.
           let yp = oa.y[p],
