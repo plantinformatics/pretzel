@@ -127,6 +127,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * @param paths grouped by features
    */
   draw (featurePaths) {
+    /* If result of promises for both direct and aliases, then use just [0]
+     * which is the direct result, because draw() does not yet handle paths aliases format.
+     */
+    if (featurePaths.length && featurePaths[0].state) {
+      let direct = featurePaths[0];
+      featurePaths = direct.value;
+    }
     if (featurePaths.length === 0)
       return;
 

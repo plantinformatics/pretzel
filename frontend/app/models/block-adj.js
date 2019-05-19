@@ -1,6 +1,7 @@
 import Ember from 'ember';
 import DS from 'ember-data';
 import attr from 'ember-data/attr';
+import { task } from 'ember-concurrency';
 
 const { inject: { service } } = Ember;
 
@@ -106,11 +107,23 @@ export default DS.Model.extend({
     if (blockAdjId[0] === undefined)
       blockAdjId = this.id.split('_');
 
+    let result = this.get('taskGetPaths').perform(blockAdjId);
+    return result;
+  }),
+  /** Depending on flows.{direct,alias}.visible, call getPathsProgressive() and
+   * getPathsAliasesProgressive().
+   * Those functions may make a request to the backend server if a current result is not in hand,
+   * so this function is wrapped by taskGetPaths().
+   * @return promise of paths by either direct or alias connections.
+   */
+  getPaths : function (blockAdjId) {
+    let
+      result,
+    id = this.get('id');
     let flowsService = this.get('flowsService'),
     flows = flowsService.get('flows');
 
     let me = this;
-    let result;
 
     if (flows.direct.visible) {
       let
@@ -139,10 +152,24 @@ export default DS.Model.extend({
       );
       if (result === undefined)
         result = pathsAliases;
+      else
+        result = Ember.RSVP.allSettled([result, pathsAliases]);
     }
 
     return result;
-  })
+  },
+
+  /** Wrap getPaths() in a task, with .drop() to debounce requests to backend server.
+   * @return promise of paths by either direct or alias connections.
+   * @see getPaths()
+   */
+  taskGetPaths : task(function* (blockAdjId) {
+    let me = this, result =
+      yield this.getPaths(blockAdjId);
+    console.log('taskGetPaths', result);
+    return result;
+  }).drop()
+
 
   /*--------------------------------------------------------------------------*/
 

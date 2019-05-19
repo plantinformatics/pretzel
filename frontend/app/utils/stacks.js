@@ -161,7 +161,7 @@ Block.prototype.isData = function() {
   blockR = this.block,
   isData =
     //  checking if features is defined and features.length > 0
-    (blockR.get('namespace') || blockR.get('features.length') || ! this.datasetHasParent());
+    (blockR.get('namespace') || blockR.get('features.length') || ! this.isReference());
   return isData;
 };
 

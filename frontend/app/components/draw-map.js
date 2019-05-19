@@ -1060,6 +1060,7 @@ export default Ember.Component.extend(Ember.Evented, {
           // console.log('zoom.filter', this, arguments, d3.event, include);
           return include; } )
         .wheelDelta(wheelDelta)
+        .scaleExtent([1e-8, 1])
         .on('zoom', zoom)
       ;
       console.log('zoomBehavior', oa.zoomBehavior);

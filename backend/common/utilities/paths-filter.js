@@ -77,7 +77,7 @@ function densityFilter(filteredPaths, intervals) {
   if (filteredPaths.length > intervals.nFeatures) {
     if (trace_filter)
       console.log(filteredPaths.length, '> nFeatures', intervals.nFeatures);
-    filteredPaths = filteredPaths.slice(intervals.nFeatures);
+    filteredPaths = filteredPaths.slice(0, (intervals.nFeatures < 0) ? 0 : intervals.nFeatures);
   }
   return filteredPaths;
 }
