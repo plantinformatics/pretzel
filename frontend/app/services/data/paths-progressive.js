@@ -18,6 +18,8 @@ import { blockAdjKeyFn } from '../../utils/draw/stacksAxes';
 
 /* global Promise */
 
+//------------------------------------------------------------------------------
+
 function verifyFeatureRecord(fr, f) {
   let frd = fr._internalModel.__data,
   /** Handle some older data which has .range instead of .value */
@@ -30,6 +32,15 @@ function verifyFeatureRecord(fr, f) {
     (frd.name === f.name);
   return same;
 }
+
+/** Used when result paths is a promise;  simply shows 'pending'.
+ */
+function promiseText(promise) {
+  // Some types of promise used may have not .state().
+  return (promise.state && promise.state()) || promise;
+}
+
+//------------------------------------------------------------------------------
 
 export default Service.extend({
   auth: service('auth'),
@@ -102,7 +113,7 @@ export default Service.extend({
       }
       else
         paths = this.requestPathsProgressive(blockAdj, blockAdjId);
-      console.log('getPathsProgressive', blockAdj, blockAdjId, result || paths.state());
+      console.log('getPathsProgressive', blockAdj, blockAdjId, result || promiseText(paths));
     }
     return paths;
   },
@@ -335,7 +346,7 @@ export default Service.extend({
       }
       else
         pathsAliases = this.requestAliases(blockAdj, blockAdjId);
-      console.log('getPathsAliasesProgressive', blockAdj, blockAdjId, result || pathsAliases.state());
+      console.log('getPathsAliasesProgressive', blockAdj, blockAdjId, result || promiseText(pathsAliases));
     }
     return pathsAliases;
   },
@@ -464,7 +475,7 @@ export default Service.extend({
       }
       else
         features = this.requestBlockFeaturesInterval(blockId);
-      console.log(fnName, blockId, result || features.state());
+      console.log(fnName, blockId, result || promiseText(features));
     }
     return features;
   },

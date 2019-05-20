@@ -107,7 +107,16 @@ export default DS.Model.extend({
     if (blockAdjId[0] === undefined)
       blockAdjId = this.id.split('_');
 
-    let result = this.get('taskGetPaths').perform(blockAdjId);
+    let
+      result,
+    task = this.get('taskGetPaths');
+    // expected .drop() to handle this, but get "TaskInstance 'taskGetPaths' was canceled because it belongs to a 'drop' Task that was already running. "
+    if (task.numRunning || task.numQueued) {
+      console.log('paths taskGetPaths', task.numRunning, task.numQueued, blockAdjId);
+      result = Ember.RSVP.resolve([]);
+    }
+    else
+      result = task.perform(blockAdjId);
     return result;
   }),
   /** Depending on flows.{direct,alias}.visible, call getPathsProgressive() and
