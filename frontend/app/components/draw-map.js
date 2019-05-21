@@ -1060,10 +1060,10 @@ export default Ember.Component.extend(Ember.Evented, {
           // console.log('zoom.filter', this, arguments, d3.event, include);
           return include; } )
         .wheelDelta(wheelDelta)
-        .scaleExtent([1e8, 1])
+        .scaleExtent([1, 1e8])  // no effect
         .on('zoom', zoom)
       ;
-      console.log('zoomBehavior', oa.zoomBehavior);
+      // console.log('zoomBehavior', oa.zoomBehavior);
     }
 
 
@@ -1291,7 +1291,7 @@ export default Ember.Component.extend(Ember.Evented, {
           dataS.each(function () { d3.select(this).datum(d); });
 
           let gAxisS = aStackS.selectAll("g.axis");
-          console.log('zoomBehavior adopt.length', adopt.length, /*oa.zoomBehavior,*/ gAxisS.nodes(), gAxisS.node());
+          console.log('zoomBehavior adopt.length', adopt.length, gAxisS.nodes(), gAxisS.node());
           gAxisS
             .datum(d)
             .attr('id', axisEltId(d))
@@ -2479,7 +2479,7 @@ export default Ember.Component.extend(Ember.Evented, {
       .each(function(d) { d3.select(this).call(oa.y[d].brush); });
 
     if (allG.nodes().length)
-      console.log('zoomBehavior', oa.zoomBehavior, allG.nodes(), allG.node());
+      console.log('zoomBehavior', allG.nodes(), allG.node());
     allG
       .call(oa.zoomBehavior);
 
@@ -3899,6 +3899,9 @@ export default Ember.Component.extend(Ember.Evented, {
       if (axisName.length == 1)
         axisName = axisName[0];
       }
+      let mousePosition = d3.mouse(this);
+      if (trace_zoom) 
+        console.log('mousePosition', mousePosition);
       /* if parent (reference) block arrives after child (data) block, the brush
        * datum is changed from child to parent in adoption.  This code verifies
        * that.
@@ -3953,13 +3956,25 @@ export default Ember.Component.extend(Ember.Evented, {
             if (trace_zoom)
               console.log('zoom Wheel scale', y[p].domain(), y[p].range(), y, oa.ys);
             domain = y[p].domain();
-            let centre = (domain[0] + domain[1])/2,
+            let
+              range = y[p].range(),
+            rangeYCentre = mousePosition[1],
+            /** This is the centre of zoom, i.e. the mouse position, not the centre of the axis.
+             * axisRange2Domain() expects a 2-element array so pass 0 and ignore result[0]  */
+            centre = axisRange2Domain(p, [0, rangeYCentre])[1],
             transform = d3.event.transform,
             deltaY = d3.event.sourceEvent.deltaY,
             deltaScale = 1 + deltaY/300,  // not transform.y
-            newInterval = (domain[1] - domain[0]) * deltaScale;
-            domain[0] = centre - newInterval/2;
-            domain[1] = centre + newInterval/2;
+            newInterval = (domain[1] - domain[0]) * deltaScale,
+            rangeSize = range[1] - range[0],
+            newDomain = [
+              // range[0] < rangeYCentre, so this first offset from centre is -ve
+              centre + newInterval * (range[0] - rangeYCentre) / rangeSize,
+              centre + newInterval * (range[1] - rangeYCentre) / rangeSize
+              ];
+            if (trace_zoom)
+              console.log(rangeYCentre, rangeSize, 'centre', centre);
+            domain = newDomain;
             if (trace_zoom)
               console.log(transform.y, 'newInterval', newInterval, domain);
           }

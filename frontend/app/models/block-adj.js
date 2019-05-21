@@ -111,7 +111,7 @@ export default DS.Model.extend({
       result,
     task = this.get('taskGetPaths');
     // expected .drop() to handle this, but get "TaskInstance 'taskGetPaths' was canceled because it belongs to a 'drop' Task that was already running. "
-    if (task.numRunning || task.numQueued) {
+    if (! task.get('isIdle')) {
       console.log('paths taskGetPaths', task.numRunning, task.numQueued, blockAdjId);
       result = Ember.RSVP.resolve([]);
     }

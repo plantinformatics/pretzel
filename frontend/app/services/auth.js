@@ -98,10 +98,11 @@ export default Service.extend({
       function onMessage(e) {
         if (trace_paths > 2)
           console.log('onMessage', e, e.type, e.data, arguments);
-        if (e.lastEventId === SSE_EventID_EOF)
+        if (e.lastEventId === SSE_EventID_EOF) {
           // This is the end of the stream
           source.close();
-        else {
+          resolve([]);
+        } else {
           let data = JSON.parse(e.data);
           if (! Array.isArray(data))
             data = [data];
