@@ -3457,6 +3457,13 @@ export default Ember.Component.extend(Ember.Evented, {
 
 //- axis-brush-zoom
 
+    /** Map brushedRegions into an array parallel to selectedAxes[]. */
+    function getBrushExtents() {
+      /** Extent of current brush (applied to y axis of a axis). */
+      let
+        brushExtents = selectedAxes.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
+      return brushExtents;
+    }
    
     /** Return the brushed domain of axis p
      * Factored from brushHelper(); can use axisBrushedDomain() to replace that code in brushHelper().
@@ -3702,18 +3709,60 @@ export default Ember.Component.extend(Ember.Evented, {
           });
         });
 
+        
+      } else {
+        // brushHelper() is called from brushended() after zoom, with selectedAxes.length===0
+        // At this time it doesn't make sense to remove the resetSwitch button
+
+        // No axis selected so reset fading of paths or circles.
+        console.log("brushHelper", selectedAxes.length);
+        // some of this may be no longer required
+        if (false)
+          svgContainer.selectAll(".btn").remove();
+        svgContainer.selectAll("circle").remove();
+        d3.selectAll(".foreground > g > g").classed("faded", false);
+        selectedFeatures_clear();
+        /* clearing brushedRegions is not needed here because resetBrushes() (by
+         * clearing the brushes) causes brushHelper() to remove brushes from
+         * brushedRegions.
+         * (and changing the value of brushedRegions in draw() closure would
+         * require using oa.brushedRegions instead).
+         * brushedRegions = oa.brushedRegions = {};
+         */
+      }
+      let axisBrush = me.get('store').peekRecord('axis-brush', brushedAxisID);
+      if (!axisBrush) {
+        let axis = Stacked.getAxis(brushedAxisID);
+        let block = me.get('store').peekRecord('block', brushedAxisID);
+        axisBrush = me.get('pathsP').ensureAxisBrush(block);
+        console.log('axis', axis, axis.block, block, 'axisBrush', axisBrush);
+      }
+      let brushedDomain = brushRange ? axisRange2Domain(brushedAxisID, brushRange) : undefined;
+      axisBrush.set('brushedDomain', brushedDomain);
+
+      me.send('selectChromById', brushedAxisID);
+
+    } // brushHelper
+
+
           /** Call resetZoom(undefined) - reset the zoom of all zoomed axes (selectedAxes).
            */
+        // console.log("me.get('resetZooms')", me.get('resetZooms') !== undefined);
           if (! me.get('resetZooms'))
           me.set('resetZooms', function() {
-            console.log('resetZooms', oa.selectedAxes, oa.brushedRegions, brushExtents);
+            console.log('resetZooms', oa.selectedAxes, oa.brushedRegions);
             resetBrushes();
             resetZoom(undefined);
-            console.log('after resetZoom', oa.selectedAxes, oa.brushedRegions, brushExtents);
+            console.log('after resetZoom', oa.selectedAxes, oa.brushedRegions);
           });
         function resetBrushes()
         {
           let brushed = d3.selectAll("g.axis-all > g.brush");
+          /** brushed[j] may correspond to oa.selectedAxes[j] and hence
+           * brushExtents[j], but it seems possible for their order to not
+           * match.  This is only used in trace anyway.
+           */
+          let brushExtents = getBrushExtents();
           brushed.each(function (axisName, i, g) {
             /* `this` refers to the brush g element.
              * pass selection==null to clear the brush.
@@ -3765,41 +3814,6 @@ export default Ember.Component.extend(Ember.Evented, {
             }
             zoomed = false; // not used
           }
-
-        
-      } else {
-        // brushHelper() is called from brushended() after zoom, with selectedAxes.length===0
-        // At this time it doesn't make sense to remove the resetSwitch button
-
-        // No axis selected so reset fading of paths or circles.
-        console.log("brushHelper", selectedAxes.length);
-        // some of this may be no longer required
-        if (false)
-          svgContainer.selectAll(".btn").remove();
-        svgContainer.selectAll("circle").remove();
-        d3.selectAll(".foreground > g > g").classed("faded", false);
-        selectedFeatures_clear();
-        /* clearing brushedRegions is not needed here because resetBrushes() (by
-         * clearing the brushes) causes brushHelper() to remove brushes from
-         * brushedRegions.
-         * (and changing the value of brushedRegions in draw() closure would
-         * require using oa.brushedRegions instead).
-         * brushedRegions = oa.brushedRegions = {};
-         */
-      }
-      let axisBrush = me.get('store').peekRecord('axis-brush', brushedAxisID);
-      if (!axisBrush) {
-        let axis = Stacked.getAxis(brushedAxisID);
-        let block = me.get('store').peekRecord('block', brushedAxisID);
-        axisBrush = me.get('pathsP').ensureAxisBrush(block);
-        console.log('axis', axis, axis.block, block, 'axisBrush', axisBrush);
-      }
-      let brushedDomain = brushRange ? axisRange2Domain(brushedAxisID, brushRange) : undefined;
-      axisBrush.set('brushedDomain', brushedDomain);
-
-      me.send('selectChromById', brushedAxisID);
-
-    } // brushHelper
 
     let targetIdCount = 0;
     function handleFeatureCircleMouseOver(d, i)
@@ -3899,8 +3913,9 @@ export default Ember.Component.extend(Ember.Evented, {
       if (axisName.length == 1)
         axisName = axisName[0];
       }
-      let mousePosition = d3.mouse(this);
-      if (trace_zoom) 
+      /** mousePosition not used when called from zoomSwitch.on(click) */
+      let mousePosition = this && d3.mouse(this);
+      if (trace_zoom && mousePosition) 
         console.log('mousePosition', mousePosition);
       /* if parent (reference) block arrives after child (data) block, the brush
        * datum is changed from child to parent in adoption.  This code verifies
