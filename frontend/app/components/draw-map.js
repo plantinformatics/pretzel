@@ -3470,10 +3470,7 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function axisBrushedDomain(p, i)
     {
-        /** Extent of current brush (applied to y axis of a axis). */
-        let
-        brushExtents = selectedAxes.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
-      /*----------------------------------------------------------------------*/
+      let brushExtents = getBrushExtents();
 
       let brushedDomain = axisRange2Domain(p, brushExtents[i]);
       console.log('axisBrushedDomain', p, i, brushExtents, brushedDomain);
@@ -3565,9 +3562,7 @@ export default Ember.Component.extend(Ember.Evented, {
         console.log("Selected: ", " ", selectedAxes.length);
         // Axes have been selected - now work out selected features.
 
-        /** Extent of current brush (applied to y axis of a axis). */
-        let
-        brushExtents = selectedAxes.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
+        let brushExtents = getBrushExtents();
 
         selectedFeatures = {};
         /** selectedFeaturesSet contains feature f if selectedFeatures[d_b][f] for any dataset/block d_b.
