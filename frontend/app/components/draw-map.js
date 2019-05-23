@@ -3896,7 +3896,16 @@ export default Ember.Component.extend(Ember.Evented, {
           'wheelDeltaY', w.wheelDeltaY,
           '.', w.x, w.y
         );
-        selectedAxes.addObject(axisName);
+        /* The only apparent reason to add axis to selectedAxes[] when
+         * mouse-wheel zoom is to prop up selectedAxes_i below, which will be
+         * replaced.
+         *
+         * A couple of side-effects of WheelEvent adding axis to selectedAxes[] :
+         * . draw_flipRegion() will apply to it;
+         * . it is not apparent to the user that they should clear it,
+         * by clicking on axis, to remove class .faded.
+         */
+         selectedAxes.addObject(axisName);
       }
       else if (d3.event.sourceEvent instanceof MouseEvent) {
         console.log(

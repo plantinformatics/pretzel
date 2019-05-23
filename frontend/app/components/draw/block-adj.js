@@ -88,17 +88,26 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     this.drawGroup();
   },
 
-  /** Render the <g.direct_progress> which contains the <g> and <path>
+  /** Render the <g.progress><g.direct> which contains the <g> and <path>
    * rendered by this component. */
   drawGroup() {
     let foreground = d3.selectAll(foregroundSelector);
-    let pS = foreground
-      .selectAll('g > g.direct_progress')
+    let ppS = foreground
+      .selectAll('g > g.progress')
+      .data([1]),
+    ppA = ppS
+      .enter()
+      .append('g')
+      .attr('class', 'progress'),
+    ppM = ppS.merge(ppA),
+
+    pS = ppM
+      .selectAll('g > g.direct')
       .data([1]),
     pA = pS
       .enter()
       .append('g')
-      .attr('class', 'direct_progress'),
+      .attr('class', 'direct'),
     pM = pS.merge(pA);
     console.log('drawGroup', pS.nodes(), pS.node());
 
@@ -143,7 +152,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       blockAdjId = this.get('blockAdjId');
 
     if (featurePaths[0].alignment.length) {
-      const reversed = true;
+      /** blockAdjId is the order of Stacked / axes, whereas
+       * featurePaths[0].alignment is in request order. */
+      const reversed = blockAdjId[0] > blockAdjId[1];
       let a = featurePaths[0].alignment,
       ok = (a[0].blockId === blockAdjId[0+reversed]) && (a[1].blockId === blockAdjId[1-reversed]);
       if (! ok)
@@ -152,12 +163,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
     // let axisApi = this.get('drawMap.oa.axisApi');
     if (trace_blockAdj) {
-      let axis = stacks.axes[blockAdjId[0]];
-      let aS = selectAxis(axis);
-      console.log(aS.node());
+      blockAdjId.forEach(function (blockId) {
+        let axis = Stacked.getAxis(blockId);
+        let aS = selectAxis(axis);
+        console.log(blockId, aS.node());
+      });
     }
 
-    let dpS = d3.selectAll(foregroundSelector + '> g.direct_progress');
+    let dpS = d3.selectAll(foregroundSelector + '> g.progress > g.direct');
 
     let baS = selectBlockAdj(dpS, blockAdjId);
     console.log(baS.nodes(), baS.node());
@@ -203,7 +216,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   /** Update the "d" attribute of the <path>-s.  */
   updatePathsPosition() {
     // based on draw().
-    let dpS = d3.selectAll(foregroundSelector + '> g.direct_progress');
+    let dpS = d3.selectAll(foregroundSelector + '> g.progress > g.direct');
     let blockAdjId = this.get('blockAdjId');
     if (trace_blockAdj > 1)
       blockAdjId.forEach(function (blockId) {

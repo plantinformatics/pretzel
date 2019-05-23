@@ -305,7 +305,9 @@ div.drawing-controls.flowButtons .flowButton.U_alias,
   stroke: #545;
 }
 div.drawing-controls.flowButtons .flowButton.direct,
-.foreground > g.direct > g > path {
+.foreground > g.direct > g > path,
+.foreground > g.progress > g.direct > g.blockAdj > g > path
+{
   border-color : #484;
   background-color: #484;
   stroke: #484;
