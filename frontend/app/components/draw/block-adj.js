@@ -20,6 +20,15 @@ const CompName = 'components/axis-ticks-selected';
 const trace_blockAdj = 1;
 
 /*----------------------------------------------------------------------------*/
+/* milliseconds duration of transitions in which alignment <path>-s between
+ * features are drawn / changed, in particular the d attribute.
+ * Match with time used by draw-map.js : zoom() and resetZoom() : 750.
+ * also @see   dragTransitionTime and axisTickTransitionTime.
+ * @see featureTrackTransitionTime
+ */
+const pathTransitionTime = 750;
+
+/*----------------------------------------------------------------------------*/
 
 /**
  * @param blockAdj  [blockId0, blockId1]
@@ -206,9 +215,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .attr("class", className)
       ;
       pSE
+        .transition().duration(pathTransitionTime)
         .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
       // setupMouseHover(pSE);
-
+      pS.exit().remove();
     }
 
   },
@@ -248,6 +258,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      * repeatedly recalculating pathU.
      */
     pS
+      .transition().duration(pathTransitionTime)
       // pathU() is temporarily a function, will revert to a computed function, as commented in path().
       .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
   },
