@@ -1073,6 +1073,10 @@ export default ManageBase.extend({
         if (trace_dataTree > 2)
           console.log('didRender', id, c[0], t[0], a[0]);
     }
+  },
+  willDestroyElement() {
+    console.log('willDestroyElement', this);
+    this._super(...arguments);
   }
 
 });

@@ -81,6 +81,16 @@ function collateAdjacentAxes()
     log_adjAxes(adjAxes);
   else if (trace_adj)
     console.log("collateAdjacentAxes", d3.keys(adjAxes).map(Stacked.longName));
+  if (stacks.length) {
+    let adjAxesKeys = d3.keys(adjAxes);
+    if (adjAxesKeys.length) {
+      let current = flowsService.get('adjAxesArr');
+      if (current.length !== adjAxesKeys.length) {
+        console.log(current, 'adjAxesKeys', adjAxesKeys);
+        flowsService.set('adjAxesArr', adjAxesKeys);
+      }
+    }
+  }
 }
 
 /*----------------------------------------------------------------------------*/

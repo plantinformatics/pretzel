@@ -196,6 +196,8 @@ export default Service.extend({
   featureAxes : featureAxes,
   aliasGroupAxisFeatures : aliasGroupAxisFeatures,
   adjAxes : adjAxes,
+  adjAxesArr : [],
+  adjAxesCount : 0,
   aliased : aliased,
   aliasedDone : aliasedDone,
   /** Additional attributes, set elsewhere:
@@ -232,7 +234,7 @@ export default Service.extend({
    * dragging which changes left-to-right order and stacking.
    * The values b0, b1 are block IDs.
    */
-  blockAdjIds : Ember.computed('block.viewedIds.[]', /*'adjAxes',*/ function () {
+  blockAdjIds : Ember.computed('block.viewedIds.[]', 'adjAxesArr.[]', function () {
     let viewedIds = this.get('block.viewedIds');
     let axesP = this.get('oa.axesP');
     console.log('blockAdjIds', viewedIds, axesP);
