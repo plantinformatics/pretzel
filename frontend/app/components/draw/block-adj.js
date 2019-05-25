@@ -94,12 +94,25 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   didRender() {
     this._super(...arguments);
-    this.drawGroup();
+    let pM = this.drawGroupContainer();
+    this.drawGroup(pM, true);
   },
 
-  /** Render the <g.progress><g.direct> which contains the <g> and <path>
+  willDestroyElement() {
+    // didDestroyElement() would also be OK
+    console.log('willDestroyElement', this.get('blockAdjId'));
+    let foreground = d3.selectAll(foregroundSelector);
+    let pS = foreground
+      .selectAll('g > g.progress > g.direct');
+    this.drawGroup(pS, false);
+
+    this._super(...arguments);
+  },
+
+
+  /** Render the <g.progress><g.direct> which contains the <g.blockAdj> <g> <path>
    * rendered by this component. */
-  drawGroup() {
+  drawGroupContainer() {
     let foreground = d3.selectAll(foregroundSelector);
     let ppS = foreground
       .selectAll('g > g.progress')
@@ -118,7 +131,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .append('g')
       .attr('class', 'direct'),
     pM = pS.merge(pA);
-    console.log('drawGroup', pS.nodes(), pS.node());
+    console.log('drawGroupContainer', pS.nodes(), pS.node());
+    return pM;
+  },
+  /** Render the <g.blockAdj> which contains the <g><path>
+   * @param pM  selection within which to append <g>; result of drawGroupContainer().
+   * @param add  true to draw, false to remove
+   */
+  drawGroup(pM, add) {
 
     /* render the <g> for this block-adj */
     let
@@ -129,7 +149,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let gS = pM.selectAll('g' + '#' + id + '.' + className + '.' + groupAddedClass);
     /* could use .data(), given a list of all block adjacencies :
      * .data(flowsService.blockAdjs, blockAdjKeyFn); ... gS.enter() ... */
-    if (gS.empty()) {
+    if (add && gS.empty()) {
       let gA = pM
         .append('g')
         .datum(blockAdjId)
@@ -138,6 +158,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       ;
       console.log(gA.nodes(), gA.node(), this);
     }
+    else if (! add && ! gS.empty()) {
+      console.log('drawGroup remove', gS.nodes(), gS.node(), this);
+      gS.remove();
+    }
+      
   },
 
 
