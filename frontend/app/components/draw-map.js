@@ -1049,16 +1049,37 @@ export default Ember.Component.extend(Ember.Evented, {
       function wheelDelta() {
         return -d3.event.deltaY * (d3.event.deltaMode ? 120 : 1) / wheelDeltaFactor;
       }
+      function zoomFilter(d) {
+        let  include;
+        /** WheelEvent is a subtype of MouseEvent; click to drag axis gets
+         * MouseEvent - this is filtered out here so it will be handle by dragged().
+         * ! d3.event.button is the default zoom.filter, possibly superfluous here.
+         */
+        let isMouseWheel = (d3.event instanceof WheelEvent) && ! d3.event.button;
+        if (isMouseWheel) {
+          /** calculations extracted from zoom();  this can be factored into a zoom class or component. */
+          let axisName = d,
+          domain = y[axisName].domain(),
+          /** .sourceEvent is defined in zoom(); here d3.event.deltaY works. */
+          deltaY = d3.event/*.sourceEvent*/.deltaY,
+          deltaScale = 1 + deltaY/300,  // not transform.y
+          /** domain[] can get inverted during zooming, hence abs(). */
+          newInterval = Math.abs(domain[1] - domain[0]) * deltaScale,
+          axis = oa.axesP[axisName],
+          axisReferenceDomain = axis.referenceBlock && axis.referenceBlock.get('range'),
+          domainSize = axisReferenceDomain && axisReferenceDomain[1],
+          /** lower limit for zoom : GM : about 1 centiMorgan, physical map : about 1 base pair per pixel  */
+          lowerZoom = domainSize > 1e6 ? 50 : domainSize / 1e5;
+
+          include = (newInterval > lowerZoom) && (newInterval < (domainSize || 5e8));
+          if (false)  // (trace_zoom > 1)
+          console.log('zoom.filter', this, arguments, d3.event, axisName, domain, deltaY, deltaScale, newInterval, axis, axisReferenceDomain, include);
+        }
+        return include;
+      }
 
       oa.zoomBehavior = d3.zoom()
-        .filter(function () {
-          /** WheelEvent is a subtype of MouseEvent; click to drag axis gets
-           * MouseEvent - this is filtered out here so it will be handle by dragged().
-           * ! d3.event.button is the default zoom.filter, possibly superfluous here.
-           */
-          let include = (d3.event instanceof WheelEvent) && ! d3.event.button;
-          // console.log('zoom.filter', this, arguments, d3.event, include);
-          return include; } )
+        .filter(zoomFilter)
         .wheelDelta(wheelDelta)
         .scaleExtent([1, 1e8])  // no effect
         .on('zoom', zoom)
@@ -3991,6 +4012,9 @@ export default Ember.Component.extend(Ember.Evented, {
               centre + newInterval * (range[0] - rangeYCentre) / rangeSize,
               centre + newInterval * (range[1] - rangeYCentre) / rangeSize
               ];
+            // detect if domain is becoming flipped during zoom
+            if ((newInterval < 0) || ((newInterval < 0) !== ((newDomain[1] - newDomain[0]) < 0)))
+              console.log(domain, deltaScale, newInterval, newDomain);
             if (trace_zoom)
               console.log(rangeYCentre, rangeSize, 'centre', centre);
             domain = newDomain;
@@ -5526,7 +5550,9 @@ export default Ember.Component.extend(Ember.Evented, {
     //
     let me = this;
     let data = this.get('data');
+    Ember.run.throttle(function () {
       me.draw(data, 'didRender');
+    }, 1500);
 
     highlightFeature_drawFromParams(this);
     Ember.run.debounce(this.get('oa'), this.get('resize'), [/*transition*/true], 500);
