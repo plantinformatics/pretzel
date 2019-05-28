@@ -23,4 +23,15 @@ function elt0(id) {
 
 /*----------------------------------------------------------------------------*/
 
-export { parentOfType, elt0 };
+/** Get an attribute of an object which may be an ember store object, or not.
+ * Ember data operations such as findAll() will return ember store objects,
+ * and ajax requests which return JSON will be parsed into plain JS objects.
+ * Further details in comment in axis-1d.js : @see keyFn()
+ */
+function getAttrOrCP(object, attrName) {
+  return object.get ? object.get(attrName) : object[attrName];
+}
+
+/*----------------------------------------------------------------------------*/
+
+export { parentOfType, elt0, getAttrOrCP };

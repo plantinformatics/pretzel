@@ -7,8 +7,8 @@ import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleT
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../../utils/stacks-drag';
 import { selectAxis } from '../../utils/draw/stacksAxes';
 import { breakPoint } from '../../utils/breakPoint';
-
-
+import { configureHorizTickHover } from '../../utils/hover';
+import { getAttrOrCP } from '../../utils/ember-devel';
 
 /* global d3 */
 
@@ -23,14 +23,6 @@ const axisTickTransitionTime = 750;
 
 function blockKeyFn(block) { return block.axisName; }
 
-/** Get an attribute of an object which may be an ember store object, or not.
- * Ember data operations such as findAll() will return ember store objects,
- * and ajax requests which return JSON will be parsed into plain JS objects.
- * Further details in comment in axis-1d.js : @see keyFn()
- */
-function getAttrOrCP(object, attrName) {
-  return object.get ? object.get(attrName) : object[attrName];
-}
 
 /*------------------------------------------------------------------------*/
 
@@ -235,26 +227,6 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 
 };
 
-/** Setup hover info text over scaffold horizTick-s.
- * @see based on similar configureAxisTitleMenu()
- */
-function  configureHorizTickHover(d, block, hoverTextFn)
-{
-  // console.log("configureHorizTickHover", d, this, this.outerHTML);
-  let text = hoverTextFn(d, block);
-  let node_ = this;
-  Ember.$(node_)
-    .popover({
-      trigger : "click hover",
-      sticky: true,
-      delay: {show: 200, hide: 3000},
-      container: 'div#holder',
-      placement : "auto right",
-      // comment re. title versus content in @see draw-map.js: configureHorizTickHover() 
-      content : text,
-      html: false
-    });
-}
 
 export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
 

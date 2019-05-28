@@ -1,8 +1,10 @@
 import Ember from 'ember';
 const { inject: { service } } = Ember;
 
-
+import { getAttrOrCP } from '../utils/ember-devel';
+import { configureHorizTickHover } from '../utils/hover';
 import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
+
 import InAxis from './in-axis';
 
 const className = "chart", classNameSub = "chartRow";
@@ -32,6 +34,32 @@ function featureLocation(oa, axisID, d)
     return feature.location;
 }
   
+/*----------------------------------------------------------------------------*/
+/* based on axis-1d.js: hoverTextFn() and setupHover() */
+
+/** eg: "ChrA_283:A:283" */
+function hoverTextFn (feature, block) {
+  let
+    value = getAttrOrCP(feature, 'value'),
+  valueText = value && (value.length ? ('' + value[0] + ' - ' + value[1]) : value),
+
+  blockR = block.block,
+  featureName = getAttrOrCP(feature, 'name'),
+  /** common with dataConfig.datum2Description  */
+  description = value && JSON.stringify(value),
+
+  text = [featureName, valueText, description]
+    .filter(function (x) { return x; })
+    .join(" : ");
+  return text;
+};
+
+function configureChartHover(feature) 
+{
+  let block = this.parentElement.__data__;
+  return configureHorizTickHover.apply(this, [feature, block, hoverTextFn]);
+};
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -314,7 +342,7 @@ export default InAxis.extend({
         .append("rect");
       ra
         .attr("class", options.barClassName)
-      /*.each(configureChartHover)*/;
+      .each(configureChartHover);
       ra
         .merge(rs)
         .transition().duration(1500)
