@@ -66,11 +66,18 @@ export default DS.Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  isChartable : Ember.computed('datasetId.tags', function () {
+    let tags = this.get('datasetId.tags'),
+    isChartable = tags && tags.length && (tags.indexOf('chartable') >= 0);
+    return isChartable;
+  }),
+
   /** If the dataset of this block has a parent, return the name of that parent (reference dataset).
    * @return the reference dataset name or undefined if none
    */
   referenceDatasetName : Ember.computed('dataset', function () {
     // copied out of referenceBlock(); could be factored
+    // this function can be simply   : Ember.computed.alias('dataset.parent.name')
     let 
       referenceBlock,
     dataset = this.get('datasetId'),

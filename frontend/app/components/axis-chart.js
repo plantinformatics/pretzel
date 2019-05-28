@@ -61,6 +61,20 @@ function configureChartHover(feature)
 };
 
 
+/** Add a .hasChart class to the <g.axis-use> which contains this chart.
+ * Currently this is used to hide the <foreignObject> so that hover events are
+ * accessible on the chart bars, because the <foreignObject> is above the chart.
+ * Later can use e.g. axis-accordion to separate these horizontally;
+ * for axis-chart the foreignObject is not used.
+ *
+ * @param g parent of the chart. this is the <g> with clip-path axis-clip.
+ */
+function addParentClass(g) {
+  let axisUse=g.node().parentElement.parentElement,
+  us=d3.select(axisUse);
+  us.classed('hasChart', true);
+  console.log(us.node());
+};
 /*----------------------------------------------------------------------------*/
 
 
@@ -69,7 +83,7 @@ function configureChartHover(feature)
 /** Display data which has a numeric value for each y axis position (feature).
  * Shown as a line curve or bar chart, with the y axis of the graph as the baseline.
  *
- * @param block chartBlock
+ * @param block	a block returned by viewedChartable()
  * @param chart data (field name is className); may be either :
  * result of parseTextData() : array of {name : , value : , description : }
  * or chartBlock passed in : .features
@@ -90,27 +104,11 @@ export default InAxis.extend({
     console.log("components/axis-chart didRender()");
   },
 
-/*
-  blockFeatures : Ember.computed('block', function () {
-    let features = this.get('block.features');
-    if (features.length) {
-      if (! this.get("chart1")) 
-        this.drawBlockFeatures(features);
-    } else {
-      let blockId = this.get('block.id');
-      this.get('blockService').getBlocks([blockId])
-        .then(function (block) {
-          console.log('blockFeatures', block);
-          this.drawBlockFeatures(block.get('features'));
-        });
-    }
-  }),
-*/
   blockFeatures : Ember.computed('block', 'block.features.[]', 'axis.axis1d.domainChanged', function () {
     let features = this.get('block.features');
     let domain = this.get('axis.axis1d.domainChanged');
     console.log('blockFeatures', features.length, domain);
-    if (features.length)  // -  should also handle drawing when .length changes to 0
+    if (features.length)  // -	should also handle drawing when .length changes to 0
       this.drawBlockFeatures(features);
   }),
   drawBlockFeatures : function(features) {
@@ -462,6 +460,7 @@ export default InAxis.extend({
                datum2Description : dataConfig.datum2Description
              });
       this.set("chart1", chart1);
+      addParentClass(g);
     }
     let b = chart1; // b for barChart
 

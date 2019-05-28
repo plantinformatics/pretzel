@@ -37,7 +37,7 @@ my $datasetHeader = <<EOF;
     "name": "myMap",
     "type": "linear",
     "tags": [
-        "EffectsPlus"
+        "EffectsPlus", "chartable"
     ],
     "blocks": [
 EOF
@@ -48,7 +48,6 @@ my $blockHeader = <<EOF;
         {
             "name": "1A",
             "scope": "1A",
-            "namespace": "data",
             "features": [
 
 EOF

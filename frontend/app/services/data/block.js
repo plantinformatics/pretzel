@@ -273,6 +273,10 @@ export default Service.extend(Ember.Evented, {
       return scopes;
     }),
 
+  /** Return (a promise of) the viewed blocks which contain a numeric value for
+   * each feature, in addition to the feature position.
+   * These are suited to be rendered by axis-chart.
+   */
   viewedChartable: Ember.computed(
     'viewed.[]',
     function() {
@@ -280,14 +284,14 @@ export default Service.extend(Ember.Evented, {
         this.get('viewed')
         .filter(function (block) {
           let tags = block.get('datasetId.tags'),
-          line = tags && tags.length && tags[0] === 'EffectsPlus';
+          line = block.get('isChartable');
           if (line)
             console.log('viewedChartable', tags, block);
           return line;
         });
-      // if (trace_block > 1)
+      if (trace_block > 1)
         console.log(
-          'get', records
+          'viewedChartable', records
             .map(function(blockR) { return blockR.view.longName(); })
         );
       return records;  // .toArray()
@@ -317,7 +321,7 @@ export default Service.extend(Ember.Evented, {
         });
       if (trace_block > 1)
         console.log(
-          'get', records
+          'loadedViewedChildBlocks', records
             .map(function(blockR) { return blockR.view.longName(); })
         );
       return records;  // .toArray()

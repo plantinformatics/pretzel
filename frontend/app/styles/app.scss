@@ -274,6 +274,10 @@ circle.radio.toggle.chartType.pushed
     overflow: scroll;
 }
 
+g.axis-use.hasChart > g.axis-html > .foreignObject {
+    display : none;
+}
+
 
 /* ---------------------------------- */
 
