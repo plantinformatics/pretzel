@@ -4,6 +4,12 @@ import AxisEvents from '../../utils/draw/axis-events';
 
 const CompName = 'components/axis-ticks-selected';
 
+/** Display horizontal ticks on the axis to highlight the position of features
+ * found using Feature Search.
+ *
+ * @param featuresInBlocks results of Feature Search; a lookup function for these
+ * is passed to showTickLocations()
+ */
 export default Ember.Component.extend(AxisEvents, {
 
   

@@ -331,7 +331,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   /** position when last pathUpdate() drawn. */
   position : Ember.computed.alias('axisPosition.current'),
 
-  /** this is an alias of .domain, but it updates when the array elemnts update. */
+  /** this is an alias of .domain, but it updates when the array elements update. */
   domainChanged : Ember.computed(
     'domain.[0]', 'domain.[1]',
     'position.yDomain.[0]', 'position.yDomain.[1]',

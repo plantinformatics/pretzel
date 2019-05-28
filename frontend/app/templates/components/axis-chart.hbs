@@ -1,3 +1,7 @@
+{{#if block}}
+  {{log 'blockFeatures' blockFeatures.length}}
+  {{blockFeatures.length}}
+{{else}}
 <div class="Chart">
   {{content-editable
     value=selection
@@ -6,3 +10,4 @@
     type="text"}}
 
 </div>
+{{/if}}

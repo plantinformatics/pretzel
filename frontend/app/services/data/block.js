@@ -273,6 +273,26 @@ export default Service.extend(Ember.Evented, {
       return scopes;
     }),
 
+  viewedChartable: Ember.computed(
+    'viewed.[]',
+    function() {
+      let records =
+        this.get('viewed')
+        .filter(function (block) {
+          let tags = block.get('datasetId.tags'),
+          line = tags && tags.length && tags[0] === 'EffectsPlus';
+          if (line)
+            console.log('viewedChartable', tags, block);
+          return line;
+        });
+      // if (trace_block > 1)
+        console.log(
+          'get', records
+            .map(function(blockR) { return blockR.view.longName(); })
+        );
+      return records;  // .toArray()
+    }),
+
   /*----------------------------------------------------------------------------*/
 
 

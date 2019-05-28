@@ -2127,7 +2127,8 @@ export default Ember.Component.extend(Ember.Evented, {
       /*.attr("x", 0)
        .attr("y", 0) */
         .attr("width", initialWidth /*0*/)
-        .attr("height", vc.yRange);
+        // leave 4px unused at the bottom so as not to block sensitivity of chartTypeToggle (axis-chart)
+        .attr("height", vc.yRange-6);
       let eb = ef
         .append("xhtml:body")
         .attr("class", "axis-table");
@@ -3547,7 +3548,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
       let svgContainer = oa.svgContainer;
       //Remove old circles.
-      svgContainer.selectAll("circle").remove();
+      axisFeatureCircles_selectAll().remove();
       let brushedRegions = oa.brushedRegions;
       let brushRange = d3.event.selection,
       mouse = d3.mouse(that);
@@ -3716,7 +3717,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
           //reset function
           //Remove all the existing circles
-          oa.svgContainer.selectAll("circle").remove();
+          axisFeatureCircles_selectAll().remove();
           zoomResetSwitchText
             .text('Reset');
 
@@ -3735,7 +3736,7 @@ export default Ember.Component.extend(Ember.Evented, {
         // some of this may be no longer required
         if (false)
           svgContainer.selectAll(".btn").remove();
-        svgContainer.selectAll("circle").remove();
+        axisFeatureCircles_selectAll().remove();
         d3.selectAll(".foreground > g > g").classed("faded", false);
         selectedFeatures_clear();
         /* clearing brushedRegions is not needed here because resetBrushes() (by
@@ -3831,6 +3832,15 @@ export default Ember.Component.extend(Ember.Evented, {
             zoomed = false; // not used
           }
 
+    function axisFeatureCircles_selectAll() {
+      /** see also handleFeatureCircleMouseOver(), which targets a specific feature. */
+      let
+        selector = "g.axis-outer > circle",
+      selection = oa.svgContainer.selectAll(selector);
+      return selection;
+    }
+
+
     let targetIdCount = 0;
     function handleFeatureCircleMouseOver(d, i)
     {
@@ -3841,6 +3851,7 @@ export default Ember.Component.extend(Ember.Evented, {
       hoverFeatures = featureName ? [featureName] : [];
       if (oa.drawOptions.showCircleHover)
       {
+        /** related @see axisFeatureCircles_selectAll() */
         let
           selector = "g.axis-outer#" + eltId(chrName) + " > circle." + featureName,
         targetId = "MC_" + ++targetIdCount;
@@ -4267,7 +4278,7 @@ export default Ember.Component.extend(Ember.Evented, {
         //The highlighted features together with the brushed regions will be removed once the dragging triggered.
         // st0.select(".brush").call(y[d].brush.move,null);
         //Remove all highlighted Features.
-        oa.svgContainer.selectAll("circle").remove();
+        axisFeatureCircles_selectAll().remove();
       }
     }
 

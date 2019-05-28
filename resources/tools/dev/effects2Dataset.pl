@@ -48,6 +48,7 @@ my $blockHeader = <<EOF;
         {
             "name": "1A",
             "scope": "1A",
+            "namespace": "data",
             "features": [
 
 EOF
