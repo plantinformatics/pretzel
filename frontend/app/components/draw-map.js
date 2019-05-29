@@ -1050,6 +1050,7 @@ export default Ember.Component.extend(Ember.Evented, {
         return -d3.event.deltaY * (d3.event.deltaMode ? 120 : 1) / wheelDeltaFactor;
       }
       function zoomFilter(d) {
+        let  e = d3.event;
         let  include;
         /** WheelEvent is a subtype of MouseEvent; click to drag axis gets
          * MouseEvent - this is filtered out here so it will be handle by dragged().
@@ -1057,6 +1058,10 @@ export default Ember.Component.extend(Ember.Evented, {
          */
         let isMouseWheel = (d3.event instanceof WheelEvent) && ! d3.event.button;
         if (isMouseWheel) {
+          if (e.shiftKey) {
+            console.log('zoom.filter shiftKey', this, arguments, d3.event, d);
+            include = true;
+          } else {
           /** calculations extracted from zoom();  this can be factored into a zoom class or component. */
           let axisName = d,
           domain = y[axisName].domain(),
@@ -1074,6 +1079,7 @@ export default Ember.Component.extend(Ember.Evented, {
           include = (newInterval > lowerZoom) && (newInterval < (domainSize || 5e8));
           if (false)  // (trace_zoom > 1)
           console.log('zoom.filter', this, arguments, d3.event, axisName, domain, deltaY, deltaScale, newInterval, axis, axisReferenceDomain, include);
+          }
         }
         return include;
       }
@@ -3907,6 +3913,8 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function zoom(that, brushExtents) {
       const trace_zoom = 0;
+      /** can be undefined in some cases. it is defined for WheelEvent - mousewheel zoom. */
+      let e = d3.event.sourceEvent;
       let isWheelEvent = d3.event.sourceEvent instanceof WheelEvent;
       if (trace_zoom > 1 - isWheelEvent)
       console.log('zoom', that, brushExtents, arguments, this);
@@ -3914,7 +3922,7 @@ export default Ember.Component.extend(Ember.Evented, {
       if (isWheelEvent) {
         axisName = arguments[0];
         brushExtents = undefined;
-        let w = d3.event.sourceEvent;
+        let w = e;
         if (trace_zoom) 
         console.log(
           'WheelEvent', d3.event.sourceEvent, d3.event.transform, d3.event,
@@ -3939,9 +3947,9 @@ export default Ember.Component.extend(Ember.Evented, {
          */
          selectedAxes.addObject(axisName);
       }
-      else if (d3.event.sourceEvent instanceof MouseEvent) {
+      else if (e instanceof MouseEvent) {
         console.log(
-          'MouseEvent', d3.event.sourceEvent);
+          'MouseEvent', e);
       }
       else
       {
@@ -4014,17 +4022,27 @@ export default Ember.Component.extend(Ember.Evented, {
              * axisRange2Domain() expects a 2-element array so pass 0 and ignore result[0]  */
             centre = axisRange2Domain(p, [0, rangeYCentre])[1],
             transform = d3.event.transform,
-            deltaY = d3.event.sourceEvent.deltaY,
-            deltaScale = 1 + deltaY/300,  // not transform.y
+            deltaY = e.deltaY,
+            isPan = e.shiftKey,
+            deltaScale = (isPan ? 0 : 1) + deltaY/300,  // not transform.y
+            /** if isPan, then newInterval is the amount to shift domain by,
+             * otherwise (zoom) it is length of new domain.
+             */
             newInterval = (domain[1] - domain[0]) * deltaScale,
             rangeSize = range[1] - range[0],
-            newDomain = [
+            newDomain = isPan ?
+              [
+                domain[0] + newInterval,
+                domain[1] + newInterval
+              ]
+              :
+              [
               // range[0] < rangeYCentre, so this first offset from centre is -ve
               centre + newInterval * (range[0] - rangeYCentre) / rangeSize,
               centre + newInterval * (range[1] - rangeYCentre) / rangeSize
               ];
             // detect if domain is becoming flipped during zoom
-            if ((newInterval < 0) || ((newInterval < 0) !== ((newDomain[1] - newDomain[0]) < 0)))
+            if (! isPan && ((newInterval < 0) || ((newInterval < 0) !== ((newDomain[1] - newDomain[0]) < 0))))
               console.log(domain, deltaScale, newInterval, newDomain);
             if (trace_zoom)
               console.log(rangeYCentre, rangeSize, 'centre', centre);
