@@ -32,6 +32,7 @@ import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Nam
 import { collateAdjacentAxes, log_adjAxes,  log_adjAxes_a, isAdjacent } from '../utils/stacks-adj';
 import { updateRange } from '../utils/stacksLayout';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../utils/stacks-drag';
+import { wheelNewDomain } from '../utils/draw/zoomPanCalcs';
 import { round_2, checkIsNumber} from '../utils/domCalcs';
 import { Object_filter } from '../utils/Object_filter';
 import { name_chromosome_block, name_position_range, isOtherField } from '../utils/field_names';
@@ -461,7 +462,8 @@ export default Ember.Component.extend(Ember.Evented, {
                     patham,
                     axisName2MapChr,
                     axisStackChanged,
-                    axisScaleChanged
+                    axisScaleChanged,
+                    axisRange2Domain
                    };
     console.log('draw-map stacks', stacks);
     this.set('stacks', stacks);
@@ -1058,28 +1060,20 @@ export default Ember.Component.extend(Ember.Evented, {
          */
         let isMouseWheel = (d3.event instanceof WheelEvent) && ! d3.event.button;
         if (isMouseWheel) {
+
           if (e.shiftKey) {
             console.log('zoom.filter shiftKey', this, arguments, d3.event, d);
-            include = true;
-          } else {
-          /** calculations extracted from zoom();  this can be factored into a zoom class or component. */
-          let axisName = d,
-          domain = y[axisName].domain(),
-          /** .sourceEvent is defined in zoom(); here d3.event.deltaY works. */
-          deltaY = d3.event/*.sourceEvent*/.deltaY,
-          deltaScale = 1 + deltaY/300,  // not transform.y
-          /** domain[] can get inverted during zooming, hence abs(). */
-          newInterval = Math.abs(domain[1] - domain[0]) * deltaScale,
-          axis = oa.axesP[axisName],
-          axisReferenceDomain = axis.referenceBlock && axis.referenceBlock.get('range'),
-          domainSize = axisReferenceDomain && axisReferenceDomain[1],
-          /** lower limit for zoom : GM : about 1 centiMorgan, physical map : about 1 base pair per pixel  */
-          lowerZoom = domainSize > 1e6 ? 50 : domainSize / 1e5;
-
-          include = (newInterval > lowerZoom) && (newInterval < (domainSize || 5e8));
-          if (false)  // (trace_zoom > 1)
-          console.log('zoom.filter', this, arguments, d3.event, axisName, domain, deltaY, deltaScale, newInterval, axis, axisReferenceDomain, include);
           }
+
+          let axisName = d,
+          axis = oa.axesP[axisName];
+
+          if ((y[axisName] !== axis.y) || (oa.ys[axisName] !== axis.ys))
+            console.log('zoomFilter verify y', axisName, axis, oa);
+          if (axis.axisName !== d)
+            console.log('zoomFilter verify axisName', axisName, axis);
+
+          include = wheelNewDomain(axis, oa.axisApi, true); // uses d3.event
         }
         return include;
       }
@@ -3506,16 +3500,28 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     /** Convert the given brush extent (range) to a brushDomain.
      * @param p axisID
-     * @param range an interval in the axis range.  This may be e.g. a brush extent
+     * @return function to convert range a value to a domain value
+     */
+    function axisRange2DomainFn(p)
+    {
+      let
+        yp = oa.y[p];
+      function fn(ypx) { return yp.invert(ypx /* *axis.portion */); };
+      return fn;
+    }
+    /** Convert the given brush extent (range) to a brushDomain.
+     * @param p axisID
+     * @param range a value or an interval in the axis range.  This may be e.g. a brush extent
      * @return domain the (reverse) mapping of range into the axis domain
      */
     function axisRange2Domain(p, range)
     {
-      // factored from axisBrushedDomain(), and brushHelper()
-      let yp = oa.y[p],
+      // axisRange2Domain{,Fn} are factored from axisBrushedDomain(), and brushHelper()
+      let
+        r2dFn = axisRange2DomainFn(p),
       axis = oa.axes[p],
-      brushedDomain = range.map(function(ypx) { return yp.invert(ypx /* *axis.portion */); });
-      if (axis.flipped)
+      brushedDomain = range.length ? range.map(r2dFn) : r2dFn(range);
+      if (range.length && axis.flipped)
       {
         let swap = brushedDomain[0];
         brushedDomain[0] = brushedDomain[1];
@@ -3916,14 +3922,14 @@ export default Ember.Component.extend(Ember.Evented, {
       /** can be undefined in some cases. it is defined for WheelEvent - mousewheel zoom. */
       let e = d3.event.sourceEvent;
       let isWheelEvent = d3.event.sourceEvent instanceof WheelEvent;
-      if (trace_zoom > 1 - isWheelEvent)
+      if (trace_zoom > 0 + isWheelEvent)
       console.log('zoom', that, brushExtents, arguments, this);
       let axisName;
       if (isWheelEvent) {
         axisName = arguments[0];
         brushExtents = undefined;
         let w = e;
-        if (trace_zoom) 
+        if (trace_zoom > 1) 
         console.log(
           'WheelEvent', d3.event.sourceEvent, d3.event.transform, d3.event,
           '\nclient', w.clientX, w.clientY,
@@ -3957,10 +3963,6 @@ export default Ember.Component.extend(Ember.Evented, {
       if (axisName.length == 1)
         axisName = axisName[0];
       }
-      /** mousePosition not used when called from zoomSwitch.on(click) */
-      let mousePosition = this && d3.mouse(this);
-      if (trace_zoom && mousePosition) 
-        console.log('mousePosition', mousePosition);
       /* if parent (reference) block arrives after child (data) block, the brush
        * datum is changed from child to parent in adoption.  This code verifies
        * that.
@@ -3975,6 +3977,8 @@ export default Ember.Component.extend(Ember.Evented, {
       let t = oa.svgContainer.transition().duration(750);
       /** The response to mousewheel zoom is direct, no transition delay.  requestAnimationFrame() is used. */
       let tRaf = undefined; // or t.duration(10);
+      /** true if the axis domain is changed. */
+      let domainChanged = false;
 
       /* this uses .map() to find i such that selectedAxes[i] == axisName,
        * and i is used to lookup the parallel array brushExtents[].
@@ -4012,61 +4016,30 @@ export default Ember.Component.extend(Ember.Evented, {
           }
           else
           {
-            if (trace_zoom)
-              console.log('zoom Wheel scale', y[p].domain(), y[p].range(), y, oa.ys);
-            domain = y[p].domain();
-            let
-              range = y[p].range(),
-            rangeYCentre = mousePosition[1],
-            /** This is the centre of zoom, i.e. the mouse position, not the centre of the axis.
-             * axisRange2Domain() expects a 2-element array so pass 0 and ignore result[0]  */
-            centre = axisRange2Domain(p, [0, rangeYCentre])[1],
-            transform = d3.event.transform,
-            deltaY = e.deltaY,
-            isPan = e.shiftKey,
-            deltaScale = (isPan ? 0 : 1) + deltaY/300,  // not transform.y
-            /** if isPan, then newInterval is the amount to shift domain by,
-             * otherwise (zoom) it is length of new domain.
-             */
-            newInterval = (domain[1] - domain[0]) * deltaScale,
-            rangeSize = range[1] - range[0],
-            newDomain = isPan ?
-              [
-                domain[0] + newInterval,
-                domain[1] + newInterval
-              ]
-              :
-              [
-              // range[0] < rangeYCentre, so this first offset from centre is -ve
-              centre + newInterval * (range[0] - rangeYCentre) / rangeSize,
-              centre + newInterval * (range[1] - rangeYCentre) / rangeSize
-              ];
-            // detect if domain is becoming flipped during zoom
-            if (! isPan && ((newInterval < 0) || ((newInterval < 0) !== ((newDomain[1] - newDomain[0]) < 0))))
-              console.log(domain, deltaScale, newInterval, newDomain);
-            if (trace_zoom)
-              console.log(rangeYCentre, rangeSize, 'centre', centre);
-            domain = newDomain;
-            if (trace_zoom)
-              console.log(transform.y, 'newInterval', newInterval, domain);
+            domain = wheelNewDomain(axis, oa.axisApi, false);  // uses d3.event, d3.mouse()
           }
-          axis.setZoomed(true);
-          y[p].domain(domain);
-          oa.ys[p].domain(domain);
-          axis.setDomain(domain);
+          if (domain) {
+            domainChanged = true;
+            axis.setZoomed(true);
+            y[p].domain(domain);
+            oa.ys[p].domain(domain);
+            axis.setDomain(domain);
 
-          /* was updatePaths true, but pathUpdate() is too long for RAF.
-           * No transition required for RAF.
-           */
-          axisScaleChangedRaf(p, tRaf, false);
-          if (brushExtents)
-          // `that` refers to the brush g element
-          d3.select(that).call(y[p].brush.move,null);
+            /* was updatePaths true, but pathUpdate() is too long for RAF.
+             * No transition required for RAF.
+             */
+            axisScaleChangedRaf(p, tRaf, false);
+            if (brushExtents)
+              // `that` refers to the brush g element
+              d3.select(that).call(y[p].brush.move,null);
+          }
         }
       });
-      // axisStackChanged(t);
-      me.throttledZoomedAxis(axisName, t);
-    }
+      if (domainChanged) {
+        // axisStackChanged(t);
+        me.throttledZoomedAxis(axisName, t);
+      }
+    } // end of zoom()
     function axisScaleChangedRaf(p, t, updatePaths) {
       scheduleIntoAnimationFrame(this, function () { axisScaleChanged(p, t, updatePaths); });
     }
