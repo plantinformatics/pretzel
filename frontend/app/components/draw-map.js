@@ -1081,7 +1081,7 @@ export default Ember.Component.extend(Ember.Evented, {
       oa.zoomBehavior = d3.zoom()
         .filter(zoomFilter)
         .wheelDelta(wheelDelta)
-        .scaleExtent([1, 1e8])  // no effect
+        .scaleExtent([0.98, 1e8])  // constrains result of transform.k * 2^wheelData( ), which is in ~[0.98, 1.02]
         .on('zoom', zoom)
       ;
       // console.log('zoomBehavior', oa.zoomBehavior);

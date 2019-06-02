@@ -121,13 +121,13 @@ export default Ember.Component.extend({
         this.parentNode.appendChild(this);
       });
     };
-    d3.selectAll("g.axis-outer# > circle")
+    d3.selectAll("g.axis-outer > circle")
       .attr("r", 2)
       .style("fill", "red")
       .style("stroke", "red");
     if (feature) {
       /** see also handleFeatureCircleMouseOver(). */
-      d3.selectAll("g.axis-outer# > circle." + eltClassName(eltClassName(feature)))
+      d3.selectAll("g.axis-outer > circle." + eltClassName(eltClassName(feature)))
         .attr("r", 5)
         .style("fill", "yellow")
         .style("stroke", "black")

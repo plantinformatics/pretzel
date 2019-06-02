@@ -134,6 +134,8 @@ function wheelNewDomain(axis, axisApi, inFilter) {
     /** This is the centre of zoom, i.e. the mouse position, not the centre of the axis.  */
     centre = axisApi.axisRange2Domain(axis.axisName, rangeYCentre),
 
+    transform = inFilter ? elt.__zoom : d3.event.transform, // currently only used in trace
+
     deltaScale = 1 + deltaY/300,
     /** length of new domain. */
     newInterval = interval * deltaScale,
@@ -150,7 +152,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
     ];
 
     if (inFilter) {
-        include = (newInterval > lowerZoom) && (newInterval < (domainSize || 5e8));
+        include = (newInterval > lowerZoom) && (newInterval <= (domainSize || 5e8));
     }
 
     // detect if domain is becoming flipped during zoom
@@ -160,7 +162,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
     if (trace_zoom > 1)
       console.log(rangeYCentre, rangeSize, 'centre', centre);
     if (trace_zoom > 1)
-      console.log(deltaY, deltaScale, 'newInterval', newInterval, newDomain, include);
+      console.log(deltaY, deltaScale, transform, 'newInterval', newInterval, newDomain, include);
   }
   // if one (either) end of newDomain is outside axisReferenceDomain, set it to that limit
   if (! subInterval(newDomain, axisReferenceDomain))
