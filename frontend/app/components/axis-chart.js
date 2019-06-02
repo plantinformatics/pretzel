@@ -105,12 +105,15 @@ export default InAxis.extend({
   },
 
   blockFeatures : Ember.computed('block', 'block.features.[]', 'axis.axis1d.domainChanged', function () {
+      this.drawBlockFeatures0();
+  }),
+  drawBlockFeatures0 : function() {
     let features = this.get('block.features');
     let domain = this.get('axis.axis1d.domainChanged');
     console.log('blockFeatures', features.length, domain);
     if (features.length)  // -	should also handle drawing when .length changes to 0
       this.drawBlockFeatures(features);
-  }),
+  },
   drawBlockFeatures : function(features) {
     let f = features.toArray(),
     fa = f.map(function (f0) { return f0._internalModel.__data;});
@@ -120,9 +123,14 @@ export default InAxis.extend({
   redraw   : function(axisID, t) {
     let data = this.get(className),
     layoutAndDrawChart = this.get('layoutAndDrawChart');
+    if (data) {
     console.log("redraw", this, (data === undefined) || data.length, axisID, t);
     if (data)
       layoutAndDrawChart.apply(this, [data]);
+    }
+    else {  // use block.features when not using data parsed from table.
+      this.drawBlockFeatures0();
+    }
   },
 
   /** Convert input text to an array.

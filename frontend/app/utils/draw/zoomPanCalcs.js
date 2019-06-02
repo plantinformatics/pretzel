@@ -93,8 +93,12 @@ function wheelNewDomain(axis, axisApi, inFilter) {
   include;
 
   let
-    /** the whole domain of the axis reference block */
-    axisReferenceDomain = axis.referenceBlock && axis.referenceBlock.get('range'),
+    /** the whole domain of the axis reference block.
+     * If the axis does not have a reference block with a range, as in the case
+     * of GMs, use the domain of the reference Block
+     */
+    axisReferenceDomain = (axis.referenceBlock && axis.referenceBlock.get('range')) ||
+    axis.referenceBlockS().domain,
   domainSize = axisReferenceDomain && axisReferenceDomain[1],
   /** lower limit for zoom : GM : about 1 centiMorgan, physical map : about 1 base pair per pixel  */
   lowerZoom = domainSize > 1e6 ? 50 : domainSize / 1e5;
