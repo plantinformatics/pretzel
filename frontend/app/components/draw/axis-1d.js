@@ -1,4 +1,8 @@
 import Ember from 'ember';
+const { inject: { service } } = Ember;
+
+
+const _ = require('lodash');
 
 import AxisEvents from '../../utils/draw/axis-events';
 import AxisPosition from '../../mixins/axis-position';
@@ -11,7 +15,7 @@ import { configureHorizTickHover } from '../../utils/hover';
 import { getAttrOrCP } from '../../utils/ember-devel';
 
 /* global d3 */
-
+/* global require */
 
 /*------------------------------------------------------------------------*/
 
@@ -229,6 +233,8 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 
 
 export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
+  blockService: service('data/block'),
+
 
   init() {
     this._super(...arguments);
@@ -269,6 +275,34 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     axisS = Stacked.getAxis(axisName);
     return axisS;
   }),
+  /** @return data blocks of this axis.
+   * These are the Ember records, not the stack Block-s.
+   */
+  dataBlocks : Ember.computed('axisS', 'blockService.axesBlocks.@each', function () {
+    let axis = this.get('axisS'),
+    /** stack Block-s. */
+    dataBlocksS = axis.dataBlocks(),
+    dataBlocks = dataBlocksS.map(function (b) { return b.block; }),
+    axesBlocks = this.get('blockService.axesBlocks');
+    return dataBlocks;
+  }),
+  /** count of features of .dataBlocks */
+  featureLength : Ember.computed('dataBlocks', 'dataBlocks.0.features.length', 'dataBlocks.1.features.length', function () {
+    let dataBlocks = this.get('dataBlocks'),
+    featureLengths = dataBlocks.map(function (b) { return b.get('features.length'); } ),
+    featureLength = _.sum(featureLengths);
+    console.log(dataBlocks, featureLengths, 'featureLength', featureLength);
+    return featureLength;
+  }),
+  /** When featureLength changes, render.
+   * The suffix Effect is used to denote a Side Effect triggered by a CF.
+   */
+  featureLengthEffect : Ember.computed('featureLength', function () {
+    let featureLength = this.get('featureLength');
+    this.renderTicksDebounce();
+    return featureLength;
+  }),
+
 
   /** @param [axisID, t] */
   zoomedAxis : function(axisID_t) {
@@ -385,7 +419,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     pS.remove();
   },
   didRender() {
-    this.get('renderTicks').apply(this, []);
+    this.renderTicksDebounce();
   },
   constructFeatureTicks () {
     /** There is 1 axis-1d component per axis, so here `block` is an axis (Stacked),

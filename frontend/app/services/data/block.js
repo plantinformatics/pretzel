@@ -325,5 +325,28 @@ export default Service.extend(Ember.Evented, {
             .map(function(blockR) { return blockR.view.longName(); })
         );
       return records;  // .toArray()
+    }),
+
+  /** @return Map of axes to loaded viewed child blocks */
+  axesBlocks : Ember.computed(
+    'loadedViewedChildBlocks',
+    function () {
+      let records = this.get('loadedViewedChildBlocks'),
+      map = records.reduce(
+        function (map, block) {
+          let axis = block.get('view.axis');
+          if (axis) {
+            let blocks = map.get(axis);
+            if (! blocks)
+              map.set(axis, blocks = []);
+            blocks.push(block);
+          }
+          return map; },
+        new Map()
+      );
+
+      console.log('axesBlocks', map);
+      return map;
     })
+
 });
