@@ -2,7 +2,7 @@ import Ember from 'ember';
 const { inject: { service } } = Ember;
 
 
-const _ = require('lodash');
+import { sum } from 'lodash/math';
 
 import AxisEvents from '../../utils/draw/axis-events';
 import AxisPosition from '../../mixins/axis-position';
@@ -287,10 +287,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     return dataBlocks;
   }),
   /** count of features of .dataBlocks */
-  featureLength : Ember.computed('dataBlocks', 'dataBlocks.0.features.length', 'dataBlocks.1.features.length', function () {
+  featureLength : Ember.computed('dataBlocks', 'dataBlocks.@each.features.length', function () {
     let dataBlocks = this.get('dataBlocks'),
     featureLengths = dataBlocks.map(function (b) { return b.get('features.length'); } ),
-    featureLength = _.sum(featureLengths);
+    featureLength = sum(featureLengths);
     console.log(dataBlocks, featureLengths, 'featureLength', featureLength);
     return featureLength;
   }),
@@ -300,6 +300,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   featureLengthEffect : Ember.computed('featureLength', function () {
     let featureLength = this.get('featureLength');
     this.renderTicksDebounce();
+    let axisApi = stacks.oa.axisApi,
+    /** defined after first brushHelper() call. */
+    axisFeatureCirclesBrushed = axisApi.axisFeatureCirclesBrushed;
+    if (axisFeatureCirclesBrushed)
+      axisFeatureCirclesBrushed();
     return featureLength;
   }),
 
@@ -451,7 +456,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
    * axisStackChanged()
    */
   renderTicksDebounce(axisID_t) {
-    console.log('renderTicksDebounce', axisID_t);
+    // console.log('renderTicksDebounce', axisID_t);
     // renderTicks() doesn't use axisID_t; this call chain is likely to be refined yet.
     /* using throttle() instead of debounce() - the former has default immediate==true.
      * It is possible that the last event in a group may indicate a change which

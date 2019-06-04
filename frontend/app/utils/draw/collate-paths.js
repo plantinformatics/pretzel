@@ -2,7 +2,7 @@ import Ember from 'ember';
 
 const { inject: { service } } = Ember;
 
-const _ = require('lodash');
+import { isEqual } from 'lodash/lang';
 
 import { Block, /*Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText*/, axisId2Name } from '../stacks';
 import { collateAdjacentAxes, log_adjAxes, log_adjAxes_a } from '../stacks-adj';
@@ -701,7 +701,7 @@ function objPut(a, v, k1, k2, k3, k4)
     A = A_;
   // A is now a[k1][k2][k3][k4]
   /** result is first A[i] which is deep equal to v.  */
-  let found = A.find(function (vi) { return _.isEqual(vi, v); } );
+  let found = A.find(function (vi) { return isEqual(vi, v); } );
   if (! found)
   {
     A.push(v);

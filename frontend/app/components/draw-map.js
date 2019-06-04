@@ -263,6 +263,11 @@ export default Ember.Component.extend(Ember.Evented, {
   actions: {
 //-	?
     updatedSelectedFeatures: function(selectedFeatures) {
+      /* run once to handle multiple settings of selectedFeatures (panel/left-panel and draw/axis-1d)
+       * selectedFeatures is good candidate for converting to a model, simplifying this.
+       */
+      Ember.run.once(this, selectedFeaturesSendArray, selectedFeatures);
+      function selectedFeaturesSendArray(selectedFeatures) {
       let featuresAsArray = d3.keys(selectedFeatures)
         .map(function (key) {
           return selectedFeatures[key].map(function(feature) {
@@ -278,6 +283,7 @@ export default Ember.Component.extend(Ember.Evented, {
       console.log("updatedSelectedFeatures in draw-map component",
                   selectedFeatures, featuresAsArray.length);
       this.sendAction('updatedSelectedFeatures', featuresAsArray);
+      }
     },
 
     selectChromById : function (brushedAxisID) {
@@ -3598,6 +3604,20 @@ export default Ember.Component.extend(Ember.Evented, {
       // have been selected.
       
       if (selectedAxes.length > 0) {
+        axisFeatureCirclesBrushed();
+        
+        if (! oa.axisApi.axisFeatureCirclesBrushed)
+          oa.axisApi.axisFeatureCirclesBrushed = axisFeatureCirclesBrushed;
+
+        /** For those axes in selectedAxes, if the axis has a brushed region,
+         * draw axis circles for features within the brushed region.
+         */
+        function axisFeatureCirclesBrushed() {
+          /* This function can be split out similarly to axis-1d.js :
+           * FeatureTicks; possibly a sub-component of axis-1d.
+           */
+
+          let selectedAxes = oa.selectedAxes;
         console.log("Selected: ", " ", selectedAxes.length);
         // Axes have been selected - now work out selected features.
 
@@ -3680,7 +3700,10 @@ export default Ember.Component.extend(Ember.Evented, {
                 .attr("r",2)
                 .style("fill", "red");
               brushEnableFeatureHover(dot);
-              
+              /* This can be done via an added class and css :
+               * r, fill, stroke are toggled (to 5,yellow,black) by
+               * @see table-brushed.js: highlightFeature() */
+
             } else {
               let f_ = eltClassName(f);
               axisS.selectAll("circle." + f_).remove();
@@ -3704,6 +3727,7 @@ export default Ember.Component.extend(Ember.Evented, {
         }
 
         d3.selectAll(".foreground > g > g").classed("faded", featureNotSelected2);
+      } // axisFeatureCirclesBrushed()
 
         /** d3 selection of the brushed axis. */
         let axisS = svgContainer.selectAll("#" + eltId(name[0]));
@@ -3729,6 +3753,7 @@ export default Ember.Component.extend(Ember.Evented, {
         });
         zoomSwitch.on('click', function () {
           d3.event.stopPropagation();
+          let brushExtents = getBrushExtents();
           zoom(that,brushExtents);
           zoomed = true;
 
