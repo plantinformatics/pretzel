@@ -1,3 +1,5 @@
+import { isEqual } from 'lodash/lang';
+
 
 /* global d3 */
 
@@ -54,6 +56,16 @@ function constrainInterval(sub, interval) {
 /** Calculate the domain resulting from a mousewheel action (WheelEvent), which
  * is interpreted as a pan if the shift key is depressed, and a zoom otherwise.
  *
+ * This is used first by zoomFilter() (d3.zoom().filter()) to check if the event
+ * should be included or ignored, then called from zoom() (d3.zoom().on('zoom'))
+ * to implement the event.  The GUI philosophy of this is if the event would
+ * move the domain outside the permitted limits then position it at the limit it
+ * would exceed.  The limits are axisReferenceDomain and lowerZoom (the lower
+ * limit on zoom).  If the domain is already at that limit, then zoomFilter()
+ * can ignore the event because it would have no effect.
+ * So include indicates that the event is already constrained in the direction
+ * it is going.
+ *
  * zoom : if interval > domainSize, set it to that limit
  * zoom & pan : if one (either) end of newDomain is outside axisReferenceDomain, set it to that limit
  *
@@ -89,7 +101,9 @@ function wheelNewDomain(axis, axisApi, inFilter) {
   interval = domain[1] - domain[0],
   /** This is the result of zoom() */
   newDomain,
-  /** this is the result of zoom filter */
+  /** this is the result of zoom filter.
+   * Ignore event if it would have no effect, because it is constrained by limits.
+   */
   include;
 
   let
@@ -101,7 +115,9 @@ function wheelNewDomain(axis, axisApi, inFilter) {
     axis.referenceBlockS().domain,
   domainSize = axisReferenceDomain && axisReferenceDomain[1],
   /** lower limit for zoom : GM : about 1 centiMorgan, physical map : about 1 base pair per pixel  */
-  lowerZoom = domainSize > 1e6 ? 50 : domainSize / 1e5;
+  lowerZoom = domainSize > 1e6 ? 50 : domainSize / 1e5,
+  /** constraint on the length of the domain, aka interval, newInterval. */
+  intervalLimit = [lowerZoom, (domainSize || 5e8)];
 
   let
     deltaY = e.deltaY;
@@ -121,11 +137,9 @@ function wheelNewDomain(axis, axisApi, inFilter) {
         domain[0] + newInterval,
         domain[1] + newInterval
       ];
-    if (inFilter) {
-      include = subInterval(newDomain, axisReferenceDomain);
-    }
+
     if (trace_zoom > 1)
-      console.log(deltaY, delta, 'newInterval', newInterval, newDomain, include);
+      console.log(deltaY, delta, 'newInterval', newInterval, newDomain);
   }
   else /* zoom */ {
     /** mousePosition used as centre for zoom, not used for pan. */
@@ -144,20 +158,21 @@ function wheelNewDomain(axis, axisApi, inFilter) {
     /** length of new domain. */
     newInterval = interval * deltaScale,
     rangeSize = range[1] - range[0];
-    if (newInterval > domainSize) {
+    // similar to subInterval(newInterval, intervalLimit)
+    if (domainSize && (newInterval > domainSize)) {
       console.log('limit newInterval', newInterval, domainSize);
       newInterval = domainSize;
     }
+    else if (newInterval < intervalLimit[0]) {
+      newInterval = intervalLimit[0];
+    }
 
     newDomain = [
+      // can use zoom.center() for this.
       // range[0] < rangeYCentre, so this first offset from centre is -ve
       centre + newInterval * (range[0] - rangeYCentre) / rangeSize,
       centre + newInterval * (range[1] - rangeYCentre) / rangeSize
     ];
-
-    if (inFilter) {
-        include = (newInterval > lowerZoom) && (newInterval <= (domainSize || 5e8));
-    }
 
     // detect if domain is becoming flipped during zoom
     if ((newInterval < 0) || ((newInterval < 0) !== ((newDomain[1] - newDomain[0]) < 0)))
@@ -166,8 +181,9 @@ function wheelNewDomain(axis, axisApi, inFilter) {
     if (trace_zoom > 1)
       console.log(rangeYCentre, rangeSize, 'centre', centre);
     if (trace_zoom > 1)
-      console.log(deltaY, deltaScale, transform, 'newInterval', newInterval, newDomain, include);
+      console.log(deltaY, deltaScale, transform, 'newInterval', newInterval, newDomain);
   }
+
   // if one (either) end of newDomain is outside axisReferenceDomain, set it to that limit
   if (! subInterval(newDomain, axisReferenceDomain))
   {
@@ -176,6 +192,16 @@ function wheelNewDomain(axis, axisApi, inFilter) {
     console.log('result of constrainInterval', newDomain);
   }
 
+  if (inFilter) {
+    /* constrainInterval() will pan newDomain so that it fits within
+     * axisReferenceDomain, and newInterval is constrained to intervalLimit,
+     * so newDomain fits;  skip event if newDomain is unchanged from domain.
+     * Precision limit may cause jitter here; could insted use e.g. euler_distance((domain - newDomain) / (domain + newDomain)) < 1e-4
+     */
+    include = ! isEqual(newDomain, domain);
+
+    console.log('include', include);
+  }
 
   return inFilter ? include : newDomain;
 }
