@@ -4046,6 +4046,11 @@ export default Ember.Component.extend(Ember.Evented, {
           }
           else
           {
+            /** note the brushedDomain before the scale change, for updating the brush position */
+            let brushExtent = oa.brushedRegions[p];
+            if (brushExtent)
+              brushedDomain = axisRange2Domain(p, brushExtent);
+
             domain = wheelNewDomain(axis, oa.axisApi, false);  // uses d3.event, d3.mouse()
           }
           if (domain) {
@@ -4059,9 +4064,16 @@ export default Ember.Component.extend(Ember.Evented, {
              * No transition required for RAF.
              */
             axisScaleChangedRaf(p, tRaf, false);
+            let brushExtent = oa.brushedRegions[p];
             if (brushExtents)
               // `that` refers to the brush g element
               d3.select(that).call(y[p].brush.move,null);
+            else if (brushExtent) {
+              let gBrush = d3.event.sourceEvent.target.parentElement;
+              let newBrushExtent = brushedDomain.map(function (r) { return yp(r);});
+              console.log(brushExtent, brushedDomain, gBrush, newBrushExtent);
+              d3.select(gBrush).call(yp.brush.move, newBrushExtent);
+            }
           }
         }
       });

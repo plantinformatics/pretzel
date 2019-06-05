@@ -66,6 +66,11 @@ export default DS.Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  featuresLength : Ember.computed('features.[]', function () {
+    let featuresLength = this.get('features.length');
+    return featuresLength;
+  }),
+
   isChartable : Ember.computed('datasetId.tags', function () {
     let tags = this.get('datasetId.tags'),
     isChartable = tags && tags.length && (tags.indexOf('chartable') >= 0);

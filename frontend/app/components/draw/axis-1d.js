@@ -287,9 +287,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     return dataBlocks;
   }),
   /** count of features of .dataBlocks */
-  featureLength : Ember.computed('dataBlocks', 'dataBlocks.@each.features.length', function () {
+  featureLength : Ember.computed('dataBlocks', 'dataBlocks.@each.featuresLength', function () {
     let dataBlocks = this.get('dataBlocks'),
-    featureLengths = dataBlocks.map(function (b) { return b.get('features.length'); } ),
+    featureLengths = dataBlocks.map(function (b) { return b.get('featuresLength'); } ),
     featureLength = sum(featureLengths);
     console.log(dataBlocks, featureLengths, 'featureLength', featureLength);
     return featureLength;
