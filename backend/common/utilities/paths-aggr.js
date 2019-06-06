@@ -412,6 +412,7 @@ exports.blockFeaturesInterval = function(db, blockIds, intervals) {
 
   let pipeline;
 
+  let axisInterval = intervals.axes[0];
   let dbPathFilter = toBool(intervals.dbPathFilter);
   // .zoomed does not need to be true - features are requested when axis is
   // brushed;   does not wait for user to click zoom.
@@ -428,6 +429,16 @@ exports.blockFeaturesInterval = function(db, blockIds, intervals) {
   if (trace_aggr > 1)
     console.dir(pipeline, { depth: null });
 
+  if (intervals.nSamples === undefined) {
+    /** possibly same value as in @see densityCount() */
+    let pixelspacing = 5;
+    let nSamples = intervals.page.densityFactor * axisInterval.range / pixelspacing;
+    console.log(
+      axisInterval, intervals.page.densityFactor, axisInterval.range, 'nSamples', nSamples
+    );
+    intervals.nSamples = nSamples;
+  }
+  // if (intervals.nSamples < intervals.nFeatures) then $limit could be omitted.
   let result = pipelineLimits(featureCollection, intervals, pipeline);
 
   return result;

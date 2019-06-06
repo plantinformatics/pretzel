@@ -284,6 +284,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     dataBlocksS = axis.dataBlocks(),
     dataBlocks = dataBlocksS.map(function (b) { return b.block; }),
     axesBlocks = this.get('blockService.axesBlocks');
+    console.log(dataBlocksS, 'axesBlocks', axesBlocks, axis.axisName);
     return dataBlocks;
   }),
   /** count of features of .dataBlocks */
@@ -292,6 +293,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     featureLengths = dataBlocks.map(function (b) { return b.get('featuresLength'); } ),
     featureLength = sum(featureLengths);
     console.log(dataBlocks, featureLengths, 'featureLength', featureLength);
+    this.get('axisS').log();
     return featureLength;
   }),
   /** When featureLength changes, render.
