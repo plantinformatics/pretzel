@@ -56,7 +56,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     return axis;
   }),
 
-  features : Ember.computed('axisBrush.featuresResult.[]', 'zoomCounter', function () {
+  features : Ember.computed('axisBrush.features.[]', 'zoomCounter', function () {
     console.log('features', this);
     let featuresP = this.get('axisBrush.features');
     featuresP.then((features) => {

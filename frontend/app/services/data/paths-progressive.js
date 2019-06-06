@@ -3,6 +3,8 @@ import Ember from 'ember';
 import Service from '@ember/service';
 const { inject: { service } } = Ember;
 
+import { task } from 'ember-concurrency';
+
 import { stacks, Stacked } from '../../utils/stacks';
 import { storeFeature } from '../../utils/feature-lookup';
 import { updateDomain } from '../../utils/stacksLayout';
@@ -469,16 +471,28 @@ export default Service.extend({
       console.log(fnName, ' not found:', blockId);
     }
     else {
-      let result = block.get('featuresResult');
-      if (result) {
-        features = Promise.resolve(result);
-      }
-      else
-        features = this.requestBlockFeaturesInterval(blockId);
-      console.log(fnName, blockId, result || promiseText(features));
+        features = this.get('getBlockFeaturesIntervalTask').perform(blockId);
+      features
+        .then(function (features) {
+          console.log("getBlockFeaturesIntervalTask", blockId, features);
+        });
     }
     return features;
   },
+
+  getBlockFeaturesIntervalTask : task(function* (blockId) {
+    let
+      fnName = 'getBlockFeaturesIntervalTask',
+        features = yield this.requestBlockFeaturesInterval(blockId);
+      console.log(fnName, blockId, promiseText(features));
+    return features;
+    /* tried .enqueue().maxConcurrency(3), but got 2 identical requests, so .drop() instead;
+     * Perhaps later: split requestBlockFeaturesInterval() into parameter gathering and request;
+     * the latter function becomes the task; store last request params with the corresponding task;
+     * check request params against last and if match then return that task perform result.
+     */
+  }).drop(),
+
 
 
   /**

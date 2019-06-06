@@ -380,6 +380,12 @@ function pipelineLimits(featureCollection, intervals, pipeline) {
 };
 
 /** Collect features of the given block, possibly constrained to the optional domain interval.
+ *
+ * If intervals.nSamples is not given, calculate it from densityFactor *
+ * axisInterval.range / pixelspacing; this provides an even spread of features
+ * with the required density across the specified domain.  (This logic could be
+ * moved to the client side.)
+ *
  * @param blockCollection dataSource collection
  * @param blockIds  ids of data blocks
  * @param intervals  domain and range of axis of block, to limit the number of features in result.
