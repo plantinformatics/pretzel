@@ -24,6 +24,7 @@ import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNo
 import { parseOptions } from '../utils/common/strings';
 import { Viewport } from '../utils/draw/viewport';
 import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
+import { brushClip } from '../utils/draw/axisBrush';
 
 import {  Axes, maybeFlip, maybeFlipExtent,
           /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisTitleColour  }  from '../utils/draw/axis';
@@ -2509,7 +2510,11 @@ export default Ember.Component.extend(Ember.Evented, {
     // Add a brush for each axis.
     allG.append("g")
       .attr("class", "brush")
-      .each(function(d) { d3.select(this).call(oa.y[d].brush); });
+      .each(function(axisID) {
+        brushClip(d3.select(this), axisID)
+          .each(function(d) { d3.select(this).call(oa.y[d].brush); });
+      });
+
 
     if (allG.nodes().length)
       console.log('zoomBehavior', allG.nodes(), allG.node());

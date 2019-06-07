@@ -416,7 +416,7 @@ export default InAxis.extend({
     /** parent; contains a clipPath, g > rect, text.resizer.  */
     let gps =   gAxis
       .selectAll("g." + className)
-      .data([1]),
+      .data([axisID]),
     gp = gps
       .enter()
       .insert("g", ":first-child")
@@ -430,10 +430,12 @@ export default InAxis.extend({
     if (gp.size() > 0)
       eltWidthResizable("g.axis-use > g." + className + " > text.resizer", resized);
   }
+    /** datum is axisID, so id and clip-path could be functions. */
+    let axisClipId = "axis-clip-" + axisID;
     let gpa =
     gp // define the clipPath
       .append("clipPath")       // define a clip path
-      .attr("id", "axis-clip") // give the clipPath an ID
+      .attr("id", axisClipId) // give the clipPath an ID
       .append("rect"),          // shape it as a rect
     gprm = 
     gpa.merge(gps.selectAll("g > clipPath > rect"))
@@ -443,7 +445,7 @@ export default InAxis.extend({
       .attr("height", bbox.height)
     ;
     gp.append("g")
-      .attr("clip-path", "url(#axis-clip)"); // clip with the rectangle
+      .attr("clip-path", "url(#" + axisClipId + ")"); // clip with the rectangle
 
     let g = 
       gps.merge(gp).selectAll("g." + className+  " > g");

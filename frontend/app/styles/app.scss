@@ -504,10 +504,11 @@ div.ExportFlowData
   fill-opacity: .125;
   shape-rendering: crispEdges;
 }
-g.brush:hover > rect.handle {
+/* the middle g is g[clip-path] */
+g.brush:hover > g > rect.handle {
   stroke: blue;
 }
-g.brush:hover > rect.overlay {
+g.brush:hover > g > rect.overlay {
     outline: 1px dashed purple; 
     -webkit-tap-highlight-color: rgba(70, 30, 50, 0);
 }
