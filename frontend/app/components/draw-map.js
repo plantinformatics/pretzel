@@ -1319,7 +1319,14 @@ export default Ember.Component.extend(Ember.Evented, {
           axisTitleFamily(axisTitleS);
 
           /** update the __data__ of those elements which refer to axis parent block name */
-          let dataS = aStackS.selectAll("g.brush, g.stackDropTarget, g.stackDropTarget > rect");
+          let dataS = aStackS.selectAll("g.brush, g.brush > g[clip-path], g.stackDropTarget, g.stackDropTarget > rect");
+          /* could also update adopt0 -> d in : 
+           *  g.brush > clipPath#axis-clip-${axisID}
+           *  g.brush > g[clip-path] url(#axis-clip-${axisID})
+           * but adopt0 is unique and that is all that is required for now;
+           * will likely change datum of g axis* and brush to the Stacked axis
+           * when splitting out axes from draw-map, simplifying adoption.
+           */
           console.log('dataS', dataS.nodes(), dataS.data(), '->', d);
           dataS.each(function () { d3.select(this).datum(d); });
 
@@ -3679,16 +3686,20 @@ export default Ember.Component.extend(Ember.Evented, {
           /* can pass visible=true here - a slight optimisation; it depends on the
            * expression in dataBlocks() which distinguishes data blocks. */
           let childBlocks = axis.dataBlocks();
-          console.log(axis, 'childBlocks', childBlocks);
+          let range = [0, axis.yRange()];
+          console.log(axis, 'childBlocks', childBlocks, range);
           childBlocks.map(function (block) {
             let blockFeatures = oa.z[block.axisName]; // or block.get('features')
           d3.keys(blockFeatures).forEach(function(f) {
             let fLocation;
             if (! isOtherField[f] && ((fLocation = blockFeatures[f].location) !== undefined))
             {
+              let yPx;
             if (block.visible &&
                 (fLocation >= brushedDomain[0]) &&
-                (fLocation <= brushedDomain[1])) {
+                (fLocation <= brushedDomain[1]) &&
+                inRange((yPx = axis.y(fLocation)), range)
+               ) {
               //selectedFeatures[p].push(f);
               selectedFeaturesSet.add(f);
               selectedFeatures[mapChrName].push(f + " " + fLocation);

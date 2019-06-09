@@ -24,7 +24,7 @@ function brushClip(gp, axisID) {
     .append("rect"),          // shape it as a rect
   gprm = gp.selectAll("clipPath > rect")
     .attr("x", bbox.x)
-    .attr("y", bbox.y)
+    .attr("y", bbox.y + 30)
     .attr("width", bbox.width)
     .attr("height", bbox.height - 30)
   ;
