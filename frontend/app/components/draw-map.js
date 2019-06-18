@@ -3603,9 +3603,7 @@ export default Ember.Component.extend(Ember.Evented, {
        * This causes selectedAxes to update here; when an axis is zoomed its brush is removed.
        */
       if (brushRange == null) {
-        console.log('brush removed', brushedAxisID);
-        selectedAxes.removeObject(name[0]);
-        delete brushedRegions[brushedAxisID];
+        removeBrushExtent(brushedAxisID);
       }
       else {
         selectedAxes.addObject(name[0]); 
@@ -3846,9 +3844,20 @@ export default Ember.Component.extend(Ember.Evented, {
              */
             let j = i;
             console.log('resetBrushes', this, axisName, oa.selectedAxes[j], oa.brushedRegions[axisName], brushExtents[j]);
-            d3.select(this).call(y[axisName].brush.move, null);
+            if (this.__brush)
+              d3.select(this).call(y[axisName].brush.move, null);
+            let brushedAxisID = axisName;
+            if (oa.brushedRegions[brushedAxisID])
+              removeBrushExtent(brushedAxisID);
           });
         }
+
+    /** remove the brush extent of brushedAxisID from brushedRegions[] */
+    function removeBrushExtent(brushedAxisID) {
+        console.log('removeBrush', brushedAxisID);
+        oa.selectedAxes.removeObject(brushedAxisID);
+        delete oa.brushedRegions[brushedAxisID];
+    }
           /** Reset 1 or all zooms.
            * @param axisID  axis id to reset; undefined means reset all zoomed axes.
            */

@@ -144,20 +144,23 @@ module.exports = function(Block) {
     let [left, right] = blockIds;
     console.log('pathsAliasesProgressive', left, right, intervals /*, options, cb*/);
     let cacheId = left + '_' + right,
-    /** if filtering in db query then don't use cache, but that won't apply until pathsAliasesDirect() is defined. */
-    useCache = ! pathsAggr.pathsAliasesDirect || ! intervals.dbPathFilter,
+    /** if filtering in db query then don't use cache;  that applies now that pathsAliases() is defined. */
+    useCache = ! pathsAggr.pathsAliases || ! intervals.dbPathFilter,
+    /** filterPathsAliases() is not yet adapted to handle results of pathsAliases() */
+    dbPathFilter = pathsAggr.pathsAliases !== undefined,
     cached = cache.get(cacheId);
     if (useCache && cached) {
       console.log('pathsAliasesProgressive cache hit', cacheId);
-      let filteredData = pathsFilter.filterPathsAliases(cached, intervals);
+      let filteredData = dbPathFilter ? 
+        cached : pathsFilter.filterPathsAliases(cached, intervals);
       cb(null, filteredData);
     }
     else {
       /** promise yielding data array. */
       let dataP;
-      if (pathsAggr.pathsAliasesDirect) { // not defined yet
-        let cursor = this.dbLookupAliases(left, right, intervals);
-        dataP = cursor.toArray();
+      if (pathsAggr.pathsAliases) { // pathsAliases() is defined after 5576c1e.
+        let cursorP = this.dbLookupAliases(left, right, intervals);
+        dataP = cursorP.then(function (cursor) { return cursor.toArray(); });
       }
       else
         dataP = this.apiLookupAliases(left, right, intervals);
@@ -168,7 +171,7 @@ module.exports = function(Block) {
             cache.put(cacheId, data);
           let filteredData;
           // no filter required when user has nominated nSamples.
-          if (intervals.nSamples)
+          if (intervals.nSamples || dbPathFilter)
             filteredData = data;
           else
             filteredData = pathsFilter.filterPathsAliases(data, intervals);
@@ -183,10 +186,69 @@ module.exports = function(Block) {
     }
   };
 
-  Block.dbLookupAliases = function(blockId0, blockId1, intervals) {
+  /** 
+   * Results are cached in blockRecords, indexed by blockId;  also see blockRecordsOutdate().
+   * also in backend/common/utilities/task.js : @see findBlock(), findBlockPair()
+   */
+  Block.blockGet = function(blockIds) {
+    let models = this.app.models;
+    let promise =  models.Block.find({where: {id: {inq: blockIds}}} /*,options*/).then(blocks => {
+      return  blocks.map(blockR => {
+        let block = blockR.__data;
+        console.log('blockGet then map', block.id || block || blockR);
+        this.blockRecordsStore(block.id, block);
+        return block;
+      } );
+    });
+    return promise;
+  };
+  /** cache result from blockGet().
+   */
+  Block.blockRecords = {};
+  Block.blockRecordsStore = function(blockId, record) {
+    console.log('blockRecordsStore', blockId, record);
+    this.blockRecords[blockId] = record;
+  };
+  /** this could be called if an API was added which allowed Block .namespace to change. */
+  Block.blockRecordsOutdate = function (blockIds) {
+    blockIds.forEach(blockId => delete this.blockRecords[blockId] );
+  };
+
+/*----------------------------------------------------------------------------*/
+
+/** Lookup .namespace for the given blockIds.  Cached values are used if
+ * available, since this is used in the high-use pathsaliases() api, and we
+ * don't yet have an api for altering .namespace.
+ *
+ * @param blockIds  array of blocks for which to get .namespace
+ */
+Block.blockNamespace = async function(blockIds) {
+  /** Use cached values if all required values are cached. */
+  let n = blockIds.map(blockId =>  {
+    let block = this.blockRecords[blockId];
+    return block && block.namespace;
+  } );
+  if (n.indexOf(undefined) >= 0) {
+    let
+      p = this.blockGet(blockIds)
+      .map(function (b) { return b.namespace; } )
+      .catch (e => {
+        console.log('blockNamespace err', e);
+      });
+    n = await p;
+  }
+  else { console.log('using cached namespaces'); }
+  console.log('blockNamespace', n);
+  return n;
+};
+
+  Block.dbLookupAliases = async function(blockId0, blockId1, intervals) {
+    let namespaces = await this.blockNamespace([blockId0, blockId1]);
+
     let db = this.dataSource.connector,
     cursor =
-      pathsAggr.pathsAliasesDirect(db, blockId0, blockId1, intervals);
+      pathsAggr.pathsAliases(db, blockId0, blockId1, namespaces[0],  namespaces[1], intervals);
+    console.log('dbLookupAliases', namespaces);
     return cursor;
   };
   Block.apiLookupAliases = function(blockId0, blockId1, intervals) {
@@ -204,8 +266,10 @@ module.exports = function(Block) {
 
     function aliasesCursor() {
       let cursor;
-      if (pathsAggr.pathsAliasesDirect)
+      if (pathsAggr.pathsAliases) {
+        // result is a promise yielding a cursor
         cursor = me.dbLookupAliases(blockIds[0], blockIds[1], intervals);
+      }
       else {
         let dataP = me.apiLookupAliases(blockIds[0], blockIds[1], intervals);
         cursor =
@@ -230,8 +294,12 @@ module.exports = function(Block) {
     let
       cacheId = blockIds[0] + '_' + blockIds[1],
     useCache = ! intervals.dbPathFilter,
+    /** pathsAliases() does filter, and filterPathsAliases() is not yet adapted to handle results of pathsAliases() */
+    dbPathFilter = pathsAggr.pathsAliases !== undefined,
+    nullFilter = function (paths, intervals) { return paths; },
+    filterFunction = dbPathFilter ? nullFilter : pathsFilter.filterPathsAliases,
     apiOptions = { useCache };
-    reqStream(aliasesCursor, pathsFilter.filterPathsAliases, cacheId, intervals, req, res, apiOptions);
+    reqStream(aliasesCursor, filterFunction, cacheId, intervals, req, res, apiOptions);
   };
 
   /*--------------------------------------------------------------------------*/

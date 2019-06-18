@@ -12,7 +12,11 @@ function toBool(x) {return (typeof x === "string") ? x.toLowerCase().trim() === 
 
 const trace_aggr = 1;
 
+/** ObjectId is used in mongo shell; the equivalent defined by the node js client library is ObjectID; */
+const ObjectId = ObjectID;
+
 /*----------------------------------------------------------------------------*/
+
 
 /** mongo shell script to calculate aliases,
  * doesn't check namespace, only outputs string2
@@ -25,45 +29,139 @@ TraesCS1B01G479700
  *
  * @param n to limit result size in testing;  use is commented-out
  * e.g. 
+var blockId1 = ObjectId("5b7f8afd43a181430b81394e");
+var blockId2 = ObjectId("5b7f8afd43a181430b81394d");
+var n = 40; // use of limit n can be commented out after devel
+alias1(db.Block, blockId1, blockId2, n)
  */
-function alias1(n) {
+function alias1(blockCollection, blockId1, blockId2, n) {
 
-var b = db.Block.aggregate ( [
- { $match : { "_id" : ObjectId("5b7f8afd43a181430b81394e") } },
+var b = blockCollection.aggregate ( [
+ { $match : { "_id" : blockId1 } },
  {$lookup: { from: 'Feature', localField: '_id', foreignField: 'blockId', as: 'featureObjects' }}, {$unwind: '$featureObjects' } //, { $limit: n }
 , { $group: { _id: null, features : { $addToSet: "$featureObjects.name" } }   }
-] )
+] );
 
 var bf = new Set();
 b.forEach ( function (b0) {b0.features.forEach(function (f) { bf.add(f); }); });
 
-var a = db.Block.aggregate ( [
- { $match : { "_id" : ObjectId("5b7f8afd43a181430b81394d") } },
- {$lookup: { from: 'Feature', localField: '_id', foreignField: 'blockId', as: 'featureObjects' }}, {$unwind: '$featureObjects' } // , { $limit: 2 }
+var a = blockCollection.aggregate ( [
+ { $match : { "_id" : blockId2 } },
+ {$lookup: { from: 'Feature', localField: '_id', foreignField: 'blockId', as: 'featureObjects' }}, {$unwind: '$featureObjects' } // , { $limit: n }
 , { $lookup: { from: "Alias", localField: "featureObjects.name", foreignField: "string1", as: "feature_aliases" } }, {$unwind: '$feature_aliases' } // , { $limit: 2 }
 , { $group: { _id: null, aliased_features : { $addToSet: "$feature_aliases.string2" } }   }
- ] )
+] );
 
 var i = 0;  a.forEach ( function (a0) {a0.aliased_features.forEach(function (f) { if (bf.has(f) && (i++ < 10)) { print(f);  } }); });
 print(i);
+}
+
+/** create a temporary collection based on Alias, selecting namespace1 and namespace2.
+ * Used in :
+ * @see alias1a()
+ */
+function setup_for_alias1a(namespace1, namespace2) {
+  db.Alias.aggregate([
+    {$match : {$and : [{ namespace1 : namespace1}, { namespace2 : namespace2 }]}},
+    {$out : "aliasesInNamespace" }
+  ]);
+}
+/** @param blockCollection  db.Block in mongo shell, or db.collection("Block") in node
+ */
+async function blockNamespace0(blockCollection, blockId) {
+  /** for node.js, make this function async and await on a promise, resolve instead of return in map. */
+  var n = blockCollection.find({_id : ObjectId(blockId)}).map(function (b) { console.log('b=', b); return b.namespace; });
+  // or n = ... .find(...).toArray(function (err, items) {console.log(err, items); resolve(items); });
+  n = await n;
+  let namespace = n.length && n[0];
+  console.log('blockNamespace', blockId, n, namespace);
+  if (! namespace) {
+    debugger;
+  }
+  return namespace;
+}
+
+
+/** This function can be used in mongo shell; its content is now embodied in pathsAliases().
+ * @param domains blockId<i> features are selected within domains[i], for i in [0, 1];
+ * i.e. if domains[i][0] <= value[0] && value[1] <= domains[i][1].
+ * value[] may have 1, 2, 3 values; if it has 1, then we want to use value[0] in place of value[1];
+ * $arrayElemAt : ['$value', -1] is implemented as value[value.length-1], which works for .length == 1 or 2 but not 3.
+ */
+function alias1a(featureCollection, blockId0, blockId1, domains, n) {
+  var namespace0 = blockNamespace(/*blockCollection,*/ blockId0);
+  var namespace1 = blockNamespace(/*blockCollection,*/ blockId1);
+  var b = featureCollection.aggregate ( [
+    { $match : {$expr : {$or : [
+      {$and : [{$eq : [ "$blockId", blockId0 ]}, {$gte : [ {$arrayElemAt : ['$value', 0]}, domains[0][0]]}, {$lte : [ {$arrayElemAt : ['$value', 0]}, domains[0][1]]}]},
+      {$and : [{$eq : [ "$blockId", blockId1 ]}, {$gte : [ {$arrayElemAt : ['$value', -1]}, domains[1][0]]}, {$lte : [ {$arrayElemAt : ['$value', -1]}, domains[1][1]]}]}
+    ]} }},
+    // { $limit: n },
+
+    {$lookup:
+           {
+             from: "Alias", // or aliasesInNamespace
+             let: {
+               name : "$name"
+             },
+             pipeline: [
+               { $match:
+                 { $expr:
+                   { $and :
+                     [
+                       { $eq: [ "$namespace1", namespace0 ] },
+                       { $eq: [ "$namespace2", namespace1 ] },
+                       { $or:
+                         [
+                           { $eq: [ "$string1", "$$name" ] },
+                           { $eq: [ "$string2", "$$name" ] }
+                         ]
+                       }
+                     ]
+                   }
+                 }
+               }//,
+               // { $limit : n },
+               // { $project: { _id : 1 } }
+             ],
+             as: "feature_aliases"
+           }
+    },
+    {$match : {$expr: {$gt: [{$size: "$feature_aliases"}, 0]}}},
+
+    { $unwind: '$feature_aliases' }, // { $limit: n },
+    // { $lookup: { from: "Feature", localField: "features_alias._id", foreignField: "_id", as: "aliased_feature" } }
+ { $group: { _id: "$feature_aliases._id", aliased_features :  {$push : '$$ROOT'} }   },
+ {$match : {$expr: {$gt: [{$size: "$aliased_features"}, 1]}}}
+  ]) .pretty();
+
+  return b;
 }
 
 /*----------------------------------------------------------------------------*/
 
 /** Determine aliases of features of the given block.
  *
- * Usage in mongo shell   e.g. var a = alias2(ObjectId("5b7f8afd43a181430b81394d"), 3)
- * var blockCollection = db.Block
- * @return cursor	aliases
+ * The result is equivalent to alias1a(), but this is slower, so alias1a() is
+ * used as the basis for pathsAliases().  This can be used for verification etc.
+ *
+ * Usage in mongo shell   e.g.
+ DBQuery.shellBatchSize = 3;
+ var blockId0 = ObjectId("5cc69ed7de8ab9393f45052c");
+ var blockId1 = ObjectId("5cc69ed7de8ab9393f45052d");
+ var a = alias2(db.Block, blockId0, blockId1, 40)
+ a.next()
+ *
+ * @return cursor	of { block attributes, featureObjects, feature_aliases, aliased_feature }
  */
-function alias2(blockCollection, blockId, n) {
+function alias2(blockCollection, blockId0, blockId1, n) {
   /**
    * based on 2nd .aggregate from alias1()
    * developed 31 October  14:48 - 2018-10-31T05:21:57
    * commit [develop 452d7d7] in doc/mongo_functions_alias.js
    */
   var a = blockCollection.aggregate ( [
-    { $match : { "_id" : blockId } },
+    { $match : { "_id" : blockId0 } },
     {$lookup: { from: 'Feature', localField: '_id', foreignField: 'blockId', as: 'featureObjects' }}, {$unwind: '$featureObjects' }, { $limit: n }
     , { $lookup: { from: "Alias", localField: "featureObjects.name", foreignField: "string1", as: "feature_aliases" } }
     , { "$project": {
@@ -75,8 +173,15 @@ function alias2(blockCollection, blockId, n) {
       "datasetId" : 1,
       "featureType" : 1,
       "featureObjects" : 1
-    } }
-    //, {$unwind: '$feature_aliases' }, { $limit: n }
+    } },
+    {$unwind: '$feature_aliases' }, { $limit: n },
+    {$match : {$expr : {$or : [{$eq : [ "$namespace", "$feature_aliases.namespace1" ]  } ]  } } },
+
+    { $lookup: { from: "Feature", localField: "feature_aliases.string2", foreignField: "name", as: "aliased_feature" } },
+    {$unwind: '$aliased_feature' }, { $limit: n },
+
+    {$match : {$expr : {$or : [{$eq : [ "$aliased_feature.blockId", blockId1 ]  } ]  } } },
+
   ]);
 
   return a;
@@ -254,44 +359,12 @@ function parseIntervalFlags(intervals) {
 
 /*----------------------------------------------------------------------------*/
 
-/** Match features by name between the 2 given blocks.  The result is the alignment, for drawing paths between blocks.
- * Usage in mongo shell  e.g.
- *  db.Block.find({"scope" : "1A"})  to choose a pair of blockIds
- *  var blockId1 = ObjectId("5b74f4c5b73fd85c2bcbc660");
- *  var blockId0 = ObjectId("5b74f4c5b73fd85c2bcb97f9");
- *  var n = 10 ;
- *  var blockCollection = db.Block
- *  pathsDirect(blockCollection, blockId0, blockId1, n)
- *
- * @param blockCollection dataSource collection
- * @param blockId0, blockId1 If the paths sought are symmetric, then pass blockId0 < blockId1.
- * @param intervals  domain and range of axes, to limit the number of features in result.
- * If intervals.dbPathFilter then intervals.axes[{0,1}].domain[{0,1}] are included in the aggregrate filter.
- * The domain[] is in the same order as the feature.value[], i.e. increasing order : 
- * domain[0] < domain[1] (for all intervals.axes[]).
- * @return cursor	: direct paths
+/** Construct the start of the aggregate pipeline for pathsDirect() and pathsAliases().
+ * This part starts from a db.Feature.aggregate() (in pipelineLimits()), selects
+ * to match either block, and also filters by feature value (location) if
+ * intervals.axes[i] defines zoomed / domain.
  */
-exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
-  parseIntervalFlags(intervals);
-  let featureCollection = db.collection("Feature");
-  if (trace_aggr)
-    console.log('pathsDirect', /*featureCollection,*/ blockId0, blockId1, intervals);
-  let ObjectId = ObjectID;
-  if (false) {  // work in progress @see densityCount()
-    let totalCounts = [blockId0, blockId1].map((blockId) => {
-      return blockFeatures(db, blockId);
-    });
-    let count
-    Promise.all(totalCounts)
-    .then(totalCounts => {
-      totalCounts = totalCounts.map(item => item[0].n)
-      count = densityCount(totalCounts, intervals)
-      console.log('count => ', count);
-    })
-    // Note: an "await" on this function will work if the whole method is an async method
-    // console.log('count 2 => ', count);
-
-  }
+function featuresByBlocksAndDomains(blockId0, blockId1, intervals) {
   /* Earlier version (until aa9c2ed) matched Blocks first, then did lookup() to
    * join to Features; changed so that the first step in .aggregate() filters
    * locations based on blockId, thus getting the benefit of the Feature index,
@@ -321,7 +394,64 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
         {$and : blockFilter(intervals, [{$eq : [ "$blockId", ObjectId(blockId0) ]}], 0) },
         {$and : blockFilter(intervals, [{$eq : [ "$blockId", ObjectId(blockId1) ]}], 1) },
       ]} }},
-    ],
+    ];
+  /** The aggregate pipeline is assembled in this array. */
+  let pipeline;
+
+  let dbPathFilter = intervals.dbPathFilter;
+  let useDomainFilter = dbPathFilter && (intervals.axes[0].zoomed || intervals.axes[1].zoomed);
+  pipeline = useDomainFilter ? filterValue : matchBlock;
+
+  if (useDomainFilter) {
+    if (trace_aggr)
+      log_filterValue_intervals(filterValue, intervals);
+  }
+
+  return pipeline;
+};
+
+
+/** Match features by name between the 2 given blocks.  The result is the alignment, for drawing paths between blocks.
+ * Usage in mongo shell  e.g.
+ *  db.Block.find({"scope" : "1A"})  to choose a pair of blockIds
+ *  var blockId1 = ObjectId("5b74f4c5b73fd85c2bcbc660");
+ *  var blockId0 = ObjectId("5b74f4c5b73fd85c2bcb97f9");
+ *  var n = 10 ;
+ *  var featureCollection = db.Feature, instead of db.collection("Feature")
+ *  pathsDirect(db, blockId0, blockId1, n)
+ *
+ * @param db dataSource
+ * @param blockId0, blockId1 If the paths sought are symmetric, then pass blockId0 < blockId1.
+ * @param intervals  domain and range of axes, to limit the number of features in result.
+ * If intervals.dbPathFilter then intervals.axes[{0,1}].domain[{0,1}] are included in the aggregrate filter.
+ * The domain[] is in the same order as the feature.value[], i.e. increasing order : 
+ * domain[0] < domain[1] (for all intervals.axes[]).
+ * @return cursor	: direct paths
+ */
+exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
+  parseIntervalFlags(intervals);
+  let featureCollection = db.collection("Feature");
+  if (trace_aggr)
+    console.log('pathsDirect', /*featureCollection,*/ blockId0, blockId1, intervals);
+
+  if (false) {  // work in progress @see densityCount()
+    let totalCounts = [blockId0, blockId1].map((blockId) => {
+      return blockFeatures(db, blockId);
+    });
+    let count
+    Promise.all(totalCounts)
+    .then(totalCounts => {
+      totalCounts = totalCounts.map(item => item[0].n)
+      count = densityCount(totalCounts, intervals)
+      console.log('count => ', count);
+    })
+    // Note: an "await" on this function will work if the whole method is an async method
+    // console.log('count 2 => ', count);
+
+  }
+
+  let pipeline = featuresByBlocksAndDomains(blockId0, blockId1, intervals),
+
   group = 
     [
 	    { $group: {
@@ -337,16 +467,8 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
 
       , { $match : { alignment : { $size : 2 } }}
     ];
-  let pipeline;
 
-  let dbPathFilter = intervals.dbPathFilter;
-  if (dbPathFilter && (intervals.axes[0].zoomed || intervals.axes[1].zoomed)) {
-    if (trace_aggr)
-      log_filterValue_intervals(filterValue, intervals);
-    pipeline = filterValue.concat(group);
-  }
-  else
-    pipeline = matchBlock.concat(group);
+  pipeline = pipeline.concat(group);
   if (trace_aggr > 1)
     console.dir(pipeline, { depth: null });
 
@@ -354,6 +476,83 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
 
   return result;
 };
+/** Match features by name between the 2 given blocks.  The result is the alignment, for drawing paths between blocks.
+ *
+ * This implements alias1a() above - this function is used in the node server,
+ * whereas alias1a() is useful for prototyping changes directly in mongo shell
+ * during development. (alias1a() could be used in the node server, but instead
+ * featuresByBlocksAndDomains() is factored out.)
+ *
+ * @param blockId0, blockId1 If the paths sought are symmetric, then pass blockId0 < blockId1.
+ * @param namespace0,  namespace1,  namespaces of blockId0 and blockId1
+ * @param intervals  domain and range of axes, to limit the number of features in result.
+ * If intervals.dbPathFilter then intervals.axes[{0,1}].domain[{0,1}] are included in the aggregrate filter.
+ * The domain[] is in the same order as the feature.value[], i.e. increasing order : 
+ * domain[0] < domain[1] (for all intervals.axes[]).
+ * @return cursor	: direct paths
+ */
+exports.pathsAliases = function(db, blockId0, blockId1, namespace0,  namespace1, intervals) {
+  parseIntervalFlags(intervals);
+  let featureCollection = db.collection("Feature");
+  let blockCollection = db.collection("Block");
+  if (trace_aggr)
+    console.log('pathsAliases', blockId0, blockId1, namespace0,  namespace1, intervals);
+  let pipeline = featuresByBlocksAndDomains(blockId0, blockId1, intervals);
+
+  /** lookup aliases of the feature, group by alias id, match when both features
+   * of the alias have looked it up.
+   * The data has aliases between gene names which are specific to a chromosome
+   * (block), so does not contain aliases within a block, so if both features
+   * of the alias have looked it up then the alias is between the 2 requested
+   * blocks.
+   */
+  let group = 
+    [
+      {$lookup:
+       {
+         from: "Alias", // or aliasesInNamespace
+         let: {
+           name : "$name"
+         },
+         pipeline: [
+           { $match:
+             { $expr:
+               { $and :
+                 [
+                   { $eq: [ "$namespace1", namespace0 ] },
+                   { $eq: [ "$namespace2", namespace1 ] },
+                   { $or:
+                     [
+                       { $eq: [ "$string1", "$$name" ] },
+                       { $eq: [ "$string2", "$$name" ] }
+                     ]
+                   }
+                 ]
+               }
+             }
+           }//,
+           // { $limit : n },
+           // { $project: { _id : 1 } }
+         ],
+         as: "feature_aliases"
+       }
+      },
+      {$match : {$expr: {$gt: [{$size: "$feature_aliases"}, 0]}}},
+      { $unwind: '$feature_aliases' }, // { $limit: n },
+
+      { $group: { _id: "$feature_aliases._id", aliased_features :  {$push : '$$ROOT'} }   },
+      {$match : {$expr: {$gt: [{$size: "$aliased_features"}, 1]}}},
+    ];
+
+  pipeline = pipeline.concat(group);
+  if (trace_aggr > 1)
+    console.dir(pipeline, { depth: null });
+
+  let result = pipelineLimits(featureCollection, intervals, pipeline);
+
+  return result;
+};
+
 /** log the given filterValue, (which is derived from) intervals */
 function log_filterValue_intervals(filterValue, intervals) {
     let l = ['filterValue', filterValue];

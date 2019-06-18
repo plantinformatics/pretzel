@@ -387,6 +387,22 @@ export default Service.extend({
 
           if (trace_pathsP > 2 - (res.length > 1))
             console.log('featureAObj', res[0].featureAObj, res[0].featureBObj, res[0], res);
+          /** true if result is from pathsAliases() (via dbLookupAliases()), otherwise from apiLookupAliases(). */
+          let fromMongoQuery = (res.length && res[0].aliased_features) !== undefined;
+          if (fromMongoQuery) {
+            let resOrig = res;
+            res = res.map(function (r) {
+              let ro = {
+                featureA: r.aliased_features[0]._id,
+                featureB: r.aliased_features[1]._id,
+                // could append r.aliased_features[1].feature_aliases, but it should be identical
+                aliases: [r.aliased_features[0].feature_aliases],
+                featureAObj : r.aliased_features[0],
+                featureBObj : r.aliased_features[1]};
+              return ro;
+            });
+          }
+
           res.forEach(function (r) {
             [r.featureAObj, r.featureBObj].forEach(function (f) {
               if (f._id === undefined)
