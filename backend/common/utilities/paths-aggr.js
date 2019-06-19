@@ -573,7 +573,7 @@ function pipelineLimits(featureCollection, intervals, pipeline) {
     pipeline.push({ $limit: +intervals.nFeatures });
 
   let result =
-    featureCollection.aggregate ( pipeline );
+    featureCollection.aggregate ( pipeline, {allowDiskUse: true} );
 
   return result;
 };
