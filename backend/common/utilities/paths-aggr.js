@@ -519,8 +519,22 @@ exports.pathsAliases = function(db, blockId0, blockId1, namespace0,  namespace1,
              { $expr:
                { $and :
                  [
-                   { $eq: [ "$namespace1", namespace0 ] },
-                   { $eq: [ "$namespace2", namespace1 ] },
+                   { $or:
+                     [
+                       { $and :
+                         [
+                           { $eq: [ "$namespace1", namespace0 ] },
+                           { $eq: [ "$namespace2", namespace1 ] }
+                         ]
+                       },
+                       { $and :
+                         [
+                           { $eq: [ "$namespace2", namespace0 ] },
+                           { $eq: [ "$namespace1", namespace1 ] }
+                         ]
+                       }
+                       ]
+                   },
                    { $or:
                      [
                        { $eq: [ "$string1", "$$name" ] },

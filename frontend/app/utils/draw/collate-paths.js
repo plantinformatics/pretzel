@@ -744,14 +744,25 @@ function addPathsToCollation(blockA, blockB, paths)
      * featureIndex[], as current data structure is based on feature (feature)
      * names - that will change probably. */
     let
-      featureName = featureLookupName(p.featureA),
+      /** the order of p.featureA, p.featureB matches the alias order. */
+      aliasDirection = p.featureAObj.blockId === blockA,
+    aliasFeatures = [p.featureA, p.featureB],
+    /** the order of featureA and featureB matches the order of blockA and blockB,
+     * i.e.  featureA is in blockA, and featureB is in blockB
+     */
+    featureA = aliasFeatures[1-aliasDirection],
+    featureB = aliasFeatures[+aliasDirection],
+    featureName = featureLookupName(featureA),
     /** If p.aliases.length == 0, then p is direct not alias so put it in featureAxes[] instead.
      * Will do that in next commit because it is useful in first pass to do visual comparison of
      * paths calculated FE & BE by toggling the flow display enables
      * (div.flowButton / flow.visible) "direct" and "alias".
      */
     aliasGroupName = p.aliases.length ? JSON.stringify(p.aliases, null, '  ') : undefined, // was aliasesText(p.aliases),
-    fi = featureLookupName(p.featureB);
+    fi = featureLookupName(featureB);
+    /* if path is direct and not from alias, then check that features are
+     * stored, otherwise store them.
+     */
     if (! p.aliases.length)
     {
       // verify that p.featureA, p.featureB are in blockA, blockB, respectively.
@@ -853,6 +864,15 @@ function storePath(blockA, blockB, featureName, fi, aliasGroupName)
     featureToAxis_= [featureToAxis[1-direction], featureToAxis[0+direction]],
     [f0 , f1 , axis0, axis1] = [featureToAxis_[0].f, featureToAxis_[1].f, featureToAxis_[0].axis, featureToAxis_[1].axis],
     ffaa = [f0 , f1 , axis0, axis1, direction, aliasGroupName];
+    function checkFa(f, a) {
+      if (! oa.z[a.axisName][f]) {
+        console.log(
+          'checkFa', f, a._internalModel && a._internalModel.__data, [blockA, blockB, featureName, fi, aliasGroupName],
+          aliased, axisName, aj, direction, blockA_, blockB_, featureToAxis, featureToAxis_, ffaa);
+      }
+    }
+    checkFa(f0, axis0);
+    checkFa(f1, axis1);
     if (trace_adj && trace_count_path-- > 0)
       console.log("ffaa", ffaa, axis0.axisName, axis1.axisName, axisId2Name(axis0.axisName), axisId2Name(axis1.axisName));
     // log_ffaa(ffaa);
