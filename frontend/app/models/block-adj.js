@@ -100,6 +100,7 @@ export default DS.Model.extend({
   /**
    * Depending on zoomCounter is just a stand-in for depending on the domain of each block,
    * which is part of changing the axes (Stacked) to Ember components, and the dependent keys can be e.g. block0.axis.domain.
+   * @return promises of paths array from direct and/or aliases, in a hash {direct : promise, alias: promise}
    */
   paths : Ember.computed('blockId0', 'blockId1', 'zoomCounter', function () {
     let blockAdjId = this.get('blockAdjId'),
@@ -113,7 +114,7 @@ export default DS.Model.extend({
     // expected .drop() to handle this, but get "TaskInstance 'taskGetPaths' was canceled because it belongs to a 'drop' Task that was already running. "
     if (! task.get('isIdle')) {
       console.log('paths taskGetPaths', task.numRunning, task.numQueued, blockAdjId);
-      result = Ember.RSVP.resolve([]);
+      result = { direct: Ember.RSVP.resolve([]) };
     }
     else
       result = task.perform(blockAdjId);
@@ -123,11 +124,11 @@ export default DS.Model.extend({
    * getPathsAliasesProgressive().
    * Those functions may make a request to the backend server if a current result is not in hand,
    * so this function is wrapped by taskGetPaths().
-   * @return promise of paths by either direct or alias connections.
+   * @return promise of paths by direct and/or alias connections.
    */
   getPaths : function (blockAdjId) {
     let
-      result,
+      result = {},
     id = this.get('id');
     let flowsService = this.get('flowsService'),
     flows = flowsService.get('flows');
@@ -145,7 +146,7 @@ export default DS.Model.extend({
           console.log('block-adj paths reject', err);
         }
       );
-      result = paths;
+      result.direct = paths;
     }
 
     if (flows.alias.visible) {
@@ -159,10 +160,7 @@ export default DS.Model.extend({
           console.log('block-adj pathsResult reject', err);
         }
       );
-      if (result === undefined)
-        result = pathsAliases;
-      else
-        result = Ember.RSVP.allSettled([result, pathsAliases]);
+      result.alias = pathsAliases;
     }
 
     return result;

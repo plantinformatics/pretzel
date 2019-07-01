@@ -283,9 +283,11 @@ export default Service.extend({
     }
     else
       pathsResult = res;
-    exists.set(resultFieldName, pathsResult);
-    if (trace_pathsP > 1 + pathsViaStream)
-      console.log(resultFieldName, pathsResult, exists, exists._internalModel.__attributes, exists._internalModel.__data);
+    if (res.length || ! pathsViaStream) {
+      exists.set(resultFieldName, pathsResult);
+      if (trace_pathsP > 1 + pathsViaStream)
+        console.log(resultFieldName, pathsResult, exists, exists._internalModel.__attributes, exists._internalModel.__data);
+    }
 
     return firstResult;
   },
