@@ -3271,7 +3271,7 @@ export default Ember.Component.extend(Ember.Evented, {
       let [feature0, feature1, a0, a1] = ffaa;
       let p = [];
       p[0] = patham(a0.axisName, a1.axisName, feature0, feature1);
-      if (trace_path > 1)
+      if (trace_path > 2)
         console.log("pathU", ffaa, a0.mapName, a1.mapName, p[0]);
       return p;
     }
@@ -4409,7 +4409,7 @@ export default Ember.Component.extend(Ember.Evented, {
        {*/
       if (trace_path)
         console.log("pathUpdate() pathData", flow.name, pathData.length, g.size()); // , pathData
-      if (trace_path > 1)
+      if (trace_path > 2)
         for (let pi=0; pi < pathData.length; pi++)
           log_ffaa(pathData[pi]);
       g = g.data(pathData);
@@ -4423,8 +4423,8 @@ export default Ember.Component.extend(Ember.Evented, {
       function log_foreground_g(selector)
       {
         let gg = oa.foreground.selectAll(selector);
-        console.log("gg", selector, gg._groups[0], gg.size());
-        if (true)
+        console.log("gg", selector, (trace_path > 2) ? gg._groups[0] : gg.node(), gg.size());
+        if (trace_path > 2)
         {
           let gg0 = gg._groups[0];
           for (let gi=0; (gi < gg0.length) && (gi < 10); gi++)
