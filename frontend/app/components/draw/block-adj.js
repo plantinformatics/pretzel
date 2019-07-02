@@ -57,6 +57,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    */
   store: service(),
   pathsP : service('data/paths-progressive'),
+  flowsService: service('data/flows-collate'),
 
   needs: ['component:draw/path-data'],
 
@@ -161,6 +162,16 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     this._super(...arguments);
   },
 
+  /** Give the flow control a handle of the g.progress > g for each flow, so
+   * that flow-controls : action toggleVisible -> showVisible() can toggle
+   * .hidden on this <g>.
+   */
+  connectFlowControl(flowName, g) {
+    let flowsService = this.get('flowsService'),
+    flows = flowsService.get('flows');
+    console.log('connectFlowControl', flows, flows[flowName].g, g);
+    flows[flowName].g = g;
+  },
 
   /** Render the <g.progress><g.direct> which contains the <g.blockAdj> <g> <path>
    * rendered by this component. */
@@ -178,10 +189,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     pS = ppM
       .selectAll('g > g.direct, g > g.alias') // @see flowNames[]
       .data(flowNames),
+    me = this,
     pA = pS
       .enter()
       .append('g')
-      .attr('class', datumIdent),
+      .attr('class', datumIdent)
+      .each(function (d, i, g) { console.log(this); me.connectFlowControl(d, d3.select(this)); } ),
     pM = pS.merge(pA);
     console.log('drawGroupContainer', pS.nodes(), pS.node());
     return pM;
