@@ -4548,7 +4548,8 @@ export default Ember.Component.extend(Ember.Evented, {
        * @param t transition, which is likely to be undefined here.
        */
       this.pathUpdateFlow = function(t, flow) {
-        pathUpdate_(t, flow);
+        if (me.get('urlOptions.pathsCheck'))
+          pathUpdate_(t, flow);
       };
       this.on('pathUpdateFlow', this, this.pathUpdateFlow);
     }
@@ -4556,6 +4557,7 @@ export default Ember.Component.extend(Ember.Evented, {
     /** call pathUpdate(t) for each of the enabled flows. */
     function pathUpdate(t)
     {
+      if (me.get('urlOptions.pathsCheck'))
       d3.keys(flows).forEach(function(flowName) {
         let flow = flows[flowName];
         if (flow.enabled)

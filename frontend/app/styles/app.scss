@@ -295,7 +295,8 @@ g.axis-use.hasChart > g.axis-html > .foreignObject {
  *  https://blog.bugsnag.com/sass-color-palettes
  */
 div.drawing-controls.flowButtons .flowButton.alias,
-.foreground > g.alias > g > path {
+.foreground > g.alias > g > path,
+.foreground > g.progress > g.alias > g.blockAdj > g > path {
   /* HTML  */
   border-color : #955;
   background-color: #955;
@@ -303,7 +304,8 @@ div.drawing-controls.flowButtons .flowButton.alias,
   stroke: #955;
 }
 div.drawing-controls.flowButtons .flowButton.U_alias,
-.foreground > g.U_alias > g > path {
+.foreground > g.U_alias > g > path,
+.foreground > g.progress > g.U_alias > g.blockAdj > g > path {
   border-color : #545;
   background-color: #545;
   stroke: #545;
@@ -315,6 +317,15 @@ div.drawing-controls.flowButtons .flowButton.direct,
   border-color : #484;
   background-color: #484;
   stroke: #484;
+}
+body.devel .foreground > g > g > path {
+  stroke-dasharray: 30 50 calc(var(--path-stroke-width)*10);
+  stroke: rgb(50,50,100);
+  transform: translate(0px, 5px);
+}
+body.devel .foreground > g.progress > g > g.blockAdj > g > path {
+  stroke-dasharray: 10 40;
+  stroke: rgb(100,50,50);
 }
 
 .foreground path {

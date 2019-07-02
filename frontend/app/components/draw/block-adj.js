@@ -383,8 +383,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       console.log("zoomedAxis in ", CompName, axisID_t, blockAdjId, axes);
     /* zoomedAxis is specific to an axisID, so respond to that if
      * blockAdjId[0] or blockAdjId[1] are on this.axis.
+     * resetZooms() does resetZoom(undefined) meaning un-zoom all axes, so match
+     * if axisID is undefined.
      */
-    if (this.isAdjacentToAxis(axisID))
+    if (!axisID || this.isAdjacentToAxis(axisID))
     {
       console.log('zoomedAxis matched', axisID, blockAdjId, axes);
       // paths positions are updated by event axisStackChanged() already received.
