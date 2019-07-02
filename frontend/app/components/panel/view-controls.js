@@ -27,11 +27,11 @@ export default Ember.Component.extend({
    * Some explanation in see comment in @expRange()
    * and @see updateSbSizeThresh() (draw-map.js)
    */
-  pathDensity : expRangeInitial(1000, expRangeBase(100/2, 1000)),
+  pathDensity : expRangeInitial(100, expRangeBase(100/2, 1000)),
   /** ditto, 
    * controls.view.pathControlActiveSample
    */
-  pathSample : expRangeInitial(10000, expRangeBase(100, 10000)),
+  pathSample : expRangeInitial(1000, expRangeBase(100, 10000)),
 
   pathControlActiveDensity : Ember.computed('pathDensityActive', 'pathDensity', function () {
     let active = this.get('pathDensityActive'),
@@ -73,7 +73,7 @@ export default Ember.Component.extend({
   /** ditto, 
    * controls.view.pathControlActiveNFeatures
    */
-  pathNFeatures : expRangeInitial(10000, expRangeBase(100, 10000)),
+  pathNFeatures : expRangeInitial(1000, expRangeBase(100, 10000)),
 
   pathControlNFeatures : Ember.computed('pathNFeatures', 'pathNFeatures', function () {
     /** May make nFeatures display and range slider sensitive only when

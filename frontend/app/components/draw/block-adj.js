@@ -286,7 +286,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .append("path")
         .attr("class", className)
       ;
-      pSE
+      let pSA = pS.merge(pSE);
+      pSA
         .transition().duration(pathTransitionTime)
         .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
       // setupMouseHover(pSE);
