@@ -1,7 +1,8 @@
 import Ember from 'ember';
 import DS from 'ember-data';
 import attr from 'ember-data/attr';
-import { task } from 'ember-concurrency';
+
+import { task, timeout } from 'ember-concurrency';
 
 const { inject: { service } } = Ember;
 
@@ -111,10 +112,10 @@ export default DS.Model.extend({
     let
       result,
     task = this.get('taskGetPaths');
-    // expected .drop() to handle this, but get "TaskInstance 'taskGetPaths' was canceled because it belongs to a 'drop' Task that was already running. "
+    // expected .drop() to handle this, but get "TaskInstance 'taskGetPaths' was cancelled because it belongs to a 'drop' Task that was already running. "
     if (! task.get('isIdle')) {
       console.log('paths taskGetPaths', task.numRunning, task.numQueued, blockAdjId);
-      result = { direct: Ember.RSVP.resolve([]) };
+      result = task.get('lastPerformed');
     }
     else
       result = task.perform(blockAdjId);
@@ -166,17 +167,27 @@ export default DS.Model.extend({
     return result;
   },
 
-  /** Wrap getPaths() in a task, with .drop() to debounce requests to backend server.
+  /** Wrap getPaths() in a task, with .restartable() (was .drop) to debounce requests to backend server.
    * @return promise of paths by either direct or alias connections.
    * @see getPaths()
    */
   taskGetPaths : task(function* (blockAdjId) {
-    let me = this, result =
+    let
+      /** now and lastStarted are in milliseconds */
+      now = Date.now(),
+      lastStarted = this.get('lastStarted'),
+     elapsed;
+    if (lastStarted && ((elapsed = now - lastStarted) < 2000)) {
+      console.log('taskGetPaths : elapsed', elapsed);
+      let timeoutResult = yield timeout(500); // throttle
+      console.log('taskGetPaths : timeoutResult', timeoutResult);
+    }
+    this.set('lastStarted', now);
+    let result =
       yield this.getPaths(blockAdjId);
     console.log('taskGetPaths', result);
     return result;
-  }).drop()
-
+  }).maxConcurrency(2).restartable()
 
   /*--------------------------------------------------------------------------*/
 
