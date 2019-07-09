@@ -61,8 +61,6 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   needs: ['component:draw/path-data'],
 
-  zoomCounter : 0,
-
   blockAdjId : Ember.computed.alias('blockAdj.blockAdjId'),
 /*  ('blockAdj', function () {
     let blockAdj = this.get('blockAdj'),
@@ -102,14 +100,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       this.draw(pathsApiResultType /*pathsResultTypes.alias*/, pathsAliasesResult);
     return pathsAliasesLength;
   }),
-  paths : Ember.computed('blockAdj', 'zoomCounter', function () {
+  paths : Ember.computed('blockAdj', 'blockAdj.zoomCounter', function () {
     /** in the case of pathsViaStream, this promise will resolve with [] instead of the result -
      * blockAdj.pathsResult is passed to draw() instead.  */
     let pathsP = this.get('blockAdj.paths');
     console.log('blockAdj.paths', pathsP);
+      if (false)
     pathsP.then(result => {
       console.log('blockAdj.paths', result);
-      if (false)
     flowNames.forEach(flowName => {
       if (result[flowName])
         result[flowName].then((paths) => {
@@ -405,8 +403,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       console.log('zoomedAxis matched', axisID, blockAdjId, axes);
       // paths positions are updated by event axisStackChanged() already received.
       // With zoom, the densityCount() result changes so request paths again
-      this.incrementProperty('zoomCounter');
-      this.get('blockAdj').incrementProperty('zoomCounter');
+      this.incrementProperty('blockAdj.zoomCounter');
     }
   }
   /*--------------------------------------------------------------------------*/

@@ -97,13 +97,56 @@ export default DS.Model.extend({
 
 
 
+  pathsRequest : Ember.computed('pathsRequestCount', function () {
+    let pathsRequestCount = this.get('pathsRequestCount');
 
+    let blockAdjId = this.get('blockAdjId');
+    console.log('pathsRequestCount', pathsRequestCount, blockAdjId);
+    let p = this.call_taskGetPaths();
+
+    return p;
+  }),
+  pathsRequestLength : Ember.computed('pathsRequest', 'pathsRequestCount', function () {
+    let pathsRequest = this.get('pathsRequest');
+    let r = this.flowsAllSettled(pathsRequest);
+    return r;
+  }),
+  flowsAllSettled(pathsRequest) {
+    let r = [];
+    if (pathsRequest.direct)
+      r.push(pathsRequest.direct);
+    if (pathsRequest.alias)
+      r.push(pathsRequest.alias);
+    r = Ember.RSVP.allSettled(r);
+    return r;
+  },
+
+  lastPerformed : Ember.computed.alias('taskGetPaths._scheduler.lastPerformed'),
+  lastResult : Ember.computed('lastPerformed', function () {
+    let
+      result = this.get('lastPerformed');
+    if (! result) {
+      result = { };  // could include e.g. direct: Ember.RSVP.resolve([])
+    }
+    return result;
+  }),
   /**
    * Depending on zoomCounter is just a stand-in for depending on the domain of each block,
    * which is part of changing the axes (Stacked) to Ember components, and the dependent keys can be e.g. block0.axis.domain.
-   * @return promises of paths array from direct and/or aliases, in a hash {direct : promise, alias: promise}
+   * @return .lastResult()
+   * //  previous result :  promises of paths array from direct and/or aliases, in a hash {direct : promise, alias: promise}
    */
   paths : Ember.computed('blockId0', 'blockId1', 'zoomCounter', function () {
+    /** This adds a level of indirection between zoomCounter and
+     * pathsRequestCount, flattening out the nesting of run-loop calls.
+     */
+    this.incrementProperty('pathsRequestCount');
+    let result = this.get('lastResult');
+     // result = this.call_taskGetPaths();
+    return result;
+  }),
+  /** Setup params for calling taskGetPaths(). */
+  call_taskGetPaths() {
     let blockAdjId = this.get('blockAdjId'),
     id = this.get('id');
     if (blockAdjId[0] === undefined)
@@ -115,7 +158,7 @@ export default DS.Model.extend({
     // expected .drop() to handle this, but get "TaskInstance 'taskGetPaths' was cancelled because it belongs to a 'drop' Task that was already running. "
     if (! task.get('isIdle')) {
       console.log('paths taskGetPaths', task.numRunning, task.numQueued, blockAdjId);
-      result = task.get('lastPerformed');
+      result = this.get('lastResult');
     }
     else
       result = task.perform(blockAdjId);
@@ -169,6 +212,7 @@ export default DS.Model.extend({
 
   /** Wrap getPaths() in a task, with .restartable() (was .drop) to debounce requests to backend server.
    * @return promise of paths by either direct or alias connections.
+   * In the case of streaming results, the promise result is [], resolved after the end of the stream.
    * @see getPaths()
    */
   taskGetPaths : task(function* (blockAdjId) {
@@ -177,17 +221,38 @@ export default DS.Model.extend({
       now = Date.now(),
       lastStarted = this.get('lastStarted'),
      elapsed;
-    if (lastStarted && ((elapsed = now - lastStarted) < 2000)) {
+
+    if (lastStarted && ((elapsed = now - lastStarted) < 5000)) {
       console.log('taskGetPaths : elapsed', elapsed);
+
+      let lastPerformed = this.get('lastPerformed');
+      if (lastPerformed)
+        return lastPerformed;
+      if (false && lastPerformed) {
+        lastPerformed.then(function () {
+          console.log('taskGetPaths lastPerformed', this, arguments);
+        });
+        let val = yield lastPerformed;
+        console.log('taskGetPaths lastPerformed yield', val);
+        return val;
+      }
+
+      try {
       let timeoutResult = yield timeout(500); // throttle
       console.log('taskGetPaths : timeoutResult', timeoutResult);
+      }
+      finally {
+        console.log('taskGetPaths : finally', this, arguments);  
+      }
     }
     this.set('lastStarted', now);
+    console.log('taskGetPaths : lastStarted now', now);
     let result =
       yield this.getPaths(blockAdjId);
-    console.log('taskGetPaths', result);
+    result = yield this.flowsAllSettled(result);
+    console.log('taskGetPaths result', result);
     return result;
-  }).maxConcurrency(2).restartable()
+  })/*.maxConcurrency(2)*/.drop() // restartable()
 
   /*--------------------------------------------------------------------------*/
 

@@ -5598,7 +5598,7 @@ export default Ember.Component.extend(Ember.Evented, {
     this.trigger("zoomedAxis", args);
   },
   throttledZoomedAxis : function (axisID, t) {
-    Ember.run.debounce(this, this.triggerZoomedAxis, [axisID, t], 1000);
+    Ember.run.throttle(this, this.triggerZoomedAxis, [axisID, t], 400);
   },
 
   //----------------------------------------------------------------------------
