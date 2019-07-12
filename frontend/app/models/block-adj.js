@@ -1,6 +1,7 @@
 import Ember from 'ember';
 import DS from 'ember-data';
 import attr from 'ember-data/attr';
+import { on } from '@ember/object/evented';
 
 import { task, timeout } from 'ember-concurrency';
 
@@ -9,7 +10,7 @@ const { inject: { service } } = Ember;
 import { /*stacks,*/ Stacked } from '../utils/stacks';
 
 
-export default DS.Model.extend({
+export default DS.Model.extend(Ember.Evented, {
 
   pathsPro : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
@@ -155,22 +156,36 @@ export default DS.Model.extend({
     let
       result,
     task = this.get('taskGetPaths');
+
     // expected .drop() to handle this, but get "TaskInstance 'taskGetPaths' was cancelled because it belongs to a 'drop' Task that was already running. "
     if (! task.get('isIdle')) {
       console.log('paths taskGetPaths', task.numRunning, task.numQueued, blockAdjId);
-      result = this.get('lastResult');
+      // result = this.get('lastResult');
     }
-    else
-      result = task.perform(blockAdjId);
+
+    console.log('task.perform');
+    /* In some cases this gets : TaskInstance 'taskGetPaths' was canceled because it belongs to a 'restartable' Task that was .perform()ed again.
+     * Adding these has not solved that:
+     * .catch() here and finally() in task( )
+     * requestAliases: promise.catch
+     * auth.js : getPaths{,Aliases}ViaStream() : promise.catch(interruptStream )
+     */
+    result = task.perform(blockAdjId)
+      .catch().then(function () {
+        // arguments are 2 (direct & alias) of : {state: "fulfilled", value: [] }
+        console.log('call_taskGetPaths taskInstance.catch', blockAdjId); });
+
     return result;
-  }),
+  },
   /** Depending on flows.{direct,alias}.visible, call getPathsProgressive() and
    * getPathsAliasesProgressive().
    * Those functions may make a request to the backend server if a current result is not in hand,
    * so this function is wrapped by taskGetPaths().
+   * @param taskInstance  TaskInstance which is performing this call.
+   * Used to signal when to close EventSource.
    * @return promise of paths by direct and/or alias connections.
    */
-  getPaths : function (blockAdjId) {
+  getPaths : function (blockAdjId, taskInstance) {
     let
       result = {},
     id = this.get('id');
@@ -182,7 +197,7 @@ export default DS.Model.extend({
     if (flows.direct.visible) {
       let
         // getPathsProgressive() expects an array of 2 (string) blockIds.
-        paths = this.get('pathsPro').getPathsProgressive(this, blockAdjId);
+        paths = this.get('pathsPro').getPathsProgressive(this, blockAdjId, taskInstance);
       paths.then(
         function (result) {
           console.log('block-adj paths', result.length, me.get('pathsResult'), id, me);
@@ -196,7 +211,7 @@ export default DS.Model.extend({
     if (flows.alias.visible) {
       let
         // getPathsProgressive() expects an array of 2 (string) blockIds.
-        pathsAliases = this.get('pathsPro').getPathsAliasesProgressive(this, blockAdjId);
+        pathsAliases = this.get('pathsPro').getPathsAliasesProgressive(this, blockAdjId, taskInstance);
       pathsAliases.then(
         function (result) {
           console.log('block-adj pathsAliases', result && result.length, me.get('pathsAliasesResult'), id, me);
@@ -216,43 +231,62 @@ export default DS.Model.extend({
    * @see getPaths()
    */
   taskGetPaths : task(function* (blockAdjId) {
-    let
-      /** now and lastStarted are in milliseconds */
-      now = Date.now(),
+    let result;
+    try {
+      let
+        /** now and lastStarted are in milliseconds */
+        now = Date.now(),
       lastStarted = this.get('lastStarted'),
-     elapsed;
+      elapsed;
 
-    if (lastStarted && ((elapsed = now - lastStarted) < 5000)) {
-      console.log('taskGetPaths : elapsed', elapsed);
+      if (lastStarted && ((elapsed = now - lastStarted) < 5000)) {
+        console.log('taskGetPaths : elapsed', elapsed);
 
-      let lastPerformed = this.get('lastPerformed');
-      if (lastPerformed)
-        return lastPerformed;
-      if (false && lastPerformed) {
-        lastPerformed.then(function () {
-          console.log('taskGetPaths lastPerformed', this, arguments);
-        });
-        let val = yield lastPerformed;
-        console.log('taskGetPaths lastPerformed yield', val);
-        return val;
+        let lastPerformed = this.get('lastPerformed');
+        if (lastPerformed)
+          return lastPerformed;
+        if (false && lastPerformed) {
+          lastPerformed.then(function () {
+            console.log('taskGetPaths lastPerformed', this, arguments);
+          });
+          let val = yield lastPerformed;
+          console.log('taskGetPaths lastPerformed yield', val);
+          return val;
+        }
+      }
+      let task = this.get('taskGetPaths');
+      if (! task.get('isIdle')) {
+        try {
+          let timeoutResult = yield timeout(2000); // throttle
+          console.log('taskGetPaths : timeoutResult', timeoutResult);
+        }
+        finally {
+          console.log('taskGetPaths : finally', this, arguments);  
+        }
       }
 
-      try {
-      let timeoutResult = yield timeout(500); // throttle
-      console.log('taskGetPaths : timeoutResult', timeoutResult);
-      }
-      finally {
-        console.log('taskGetPaths : finally', this, arguments);  
-      }
+      this.set('lastStarted', now);
+      let 
+        lastPerformed = this.get('lastPerformed');
+      console.log('taskGetPaths : lastStarted now', now, lastPerformed);
+      result =
+        yield this.getPaths(blockAdjId, lastPerformed);
+      result = yield this.flowsAllSettled(result);
+      console.log('taskGetPaths result', result);
+
     }
-    this.set('lastStarted', now);
-    console.log('taskGetPaths : lastStarted now', now);
-    let result =
-      yield this.getPaths(blockAdjId);
-    result = yield this.flowsAllSettled(result);
-    console.log('taskGetPaths result', result);
+    finally {
+      if (! result)
+        console.log('taskGetPaths cancelled');
+      /* close EventSource.
+       * This is achieved by passing this taskInstance (lastPerformed) via
+       * getPaths(), so that listenEvents() : closeSource() will be called.
+       */
+    }
+
     return result;
-  })/*.maxConcurrency(2)*/.drop() // restartable()
+  }).maxConcurrency(2).restartable() // drop()
+
 
   /*--------------------------------------------------------------------------*/
 

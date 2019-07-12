@@ -83,13 +83,33 @@ export default Service.extend({
       Ember.$.param({intervals : filteredIntervalParams});
     console.log(url, blockA, blockB, intervals, filteredIntervalParams, options);
 
+    function interruptStream() {
+      console.log('interruptStream', this, arguments);
+    }
     let promise = new Promise((resolve, reject) => {
-      this.listenEvents(url, options.dataEvent, resolve, reject);
+      this.listenEvents(url, options, resolve, reject);
     });
+    promise.catch(interruptStream, 'handle Stream pre-emption by caller');
+
     return promise;
   },
 
-  listenEvents(url, dataEvent, resolve, reject) {
+  /** 
+   * @param options {
+   * dataEvent : function to call when data is received,
+   * closePromise: close the source when this promise resolves }
+   *
+   * It would be a simpler API to return source instead of passing in
+   * closePromise, but that would require splitting a couple of levels of
+   * functions which currently return just a promise :
+   * requestPathsProgressive(), auth.getPathsViaStream(),
+   * auth.getPathsAliasesViaStream(), getPathsAliasesProgressive(),
+   * requestAliases().
+   */
+  listenEvents(url, options, resolve, reject) {
+    let
+      dataEvent = options.dataEvent,
+    closePromise = options.closePromise;
     console.log('listenEvents', url, dataEvent === resolve, arguments);
     /* from example : https://www.terlici.com/2015/12/04/realtime-node-expressjs-with-sse.html */
     if (!!window.EventSource) {
@@ -121,6 +141,15 @@ export default Service.extend({
       source.addEventListener('close', function(e) {
         console.log("Connection was closed", e.type, e);
       }, false);
+      function closeSource () {
+        console.log('closePromise', url, source.readyState, source.readyState !== EventSource.CLOSED, arguments, this);
+        // .close() does nothing if the connection is already closed, refn https://developer.mozilla.org/en-US/docs/Web/API/EventSource
+        if (source.readyState !== EventSource.CLOSED)
+          source.close();
+      }
+      // closePromise is a ember-concurrency TaskInstance, which defines .finally().
+      // Could also closePromise.then(closeSource), but in that case the source has completed and would close normally.
+      closePromise.finally(closeSource);
       function onError(e) {
         let state = e.eventPhase; // this.readyState seems constant.
         const stateName = ['CONNECTING', 'OPEN', 'CLOSED'];
@@ -159,8 +188,13 @@ export default Service.extend({
     console.log(url, blockIds, intervals, filteredIntervalParams, options);
 
     let promise = new Promise((resolve, reject) => {
-      this.listenEvents(url, options.dataEvent, resolve, reject);
+      this.listenEvents(url, options, resolve, reject);
     });
+    function interruptStream() {
+      console.log('interruptStream', this, arguments);
+    }
+    promise.catch(interruptStream, 'handle Stream pre-emption by caller');
+
     return promise;
   },
 

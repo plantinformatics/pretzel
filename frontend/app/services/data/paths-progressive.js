@@ -99,7 +99,7 @@ export default Service.extend({
    * Initially just a single result for each blockID pair,
    * but will later hold results for sub-ranges of each block, at different resolutions.
    */
-  getPathsProgressive(blockAdj, blockAdjId) {
+  getPathsProgressive(blockAdj, blockAdjId, taskInstance) {
     console.log('getPathsProgressive', blockAdj, blockAdjId);
     let paths;
     if (! blockAdj)
@@ -114,7 +114,7 @@ export default Service.extend({
         paths = Promise.resolve(result);
       }
       else
-        paths = this.requestPathsProgressive(blockAdj, blockAdjId);
+        paths = this.requestPathsProgressive(blockAdj, blockAdjId, taskInstance);
       console.log('getPathsProgressive', blockAdj, blockAdjId, result || promiseText(paths));
     }
     return paths;
@@ -173,7 +173,7 @@ export default Service.extend({
    * @param blockAdjId  array of 2 blockIDs which identify blockAdj
    * @return  promise yielding paths result
    */
-  requestPathsProgressive(blockAdj, blockAdjId) {
+  requestPathsProgressive(blockAdj, blockAdjId, taskInstance) {
     /** just for passing to auth getPathsViaStream, getPathsProgressive, will change signature of those functions. */
     let blockA = blockAdjId[0], blockB = blockAdjId[1];
     let store = this.get('store');
@@ -191,7 +191,7 @@ export default Service.extend({
     let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
     let promise = 
       pathsViaStream ?
-      this.get('auth').getPathsViaStream(blockA, blockB, intervalParams, /*options*/{dataEvent : receivedData}) :
+      this.get('auth').getPathsViaStream(blockA, blockB, intervalParams, /*options*/{dataEvent : receivedData, closePromise : taskInstance}) :
       this.get('auth').getPathsProgressive(blockA, blockB, intervalParams, /*options*/{});
 
         function receivedData(res){
@@ -323,7 +323,7 @@ export default Service.extend({
   /*--------------------------------------------------------------------------*/
   /* aliases */
 
-  getPathsAliasesProgressive(blockAdj, blockAdjId) {
+  getPathsAliasesProgressive(blockAdj, blockAdjId, taskInstance) {
     console.log('getPathsAliasesProgressive', blockAdj, blockAdjId);
     let pathsAliases;
     if (! blockAdj)
@@ -349,13 +349,13 @@ export default Service.extend({
         pathsAliases = Promise.resolve(result);
       }
       else
-        pathsAliases = this.requestAliases(blockAdj, blockAdjId);
+        pathsAliases = this.requestAliases(blockAdj, blockAdjId, taskInstance);
       console.log('getPathsAliasesProgressive', blockAdj, blockAdjId, result || promiseText(pathsAliases));
     }
     return pathsAliases;
   },
 
-  requestAliases : function (blockAdj, blockAdjId) {
+  requestAliases : function (blockAdj, blockAdjId, taskInstance) {
     let reqName = 'path alias request';
     if (trace_pathsP > 2)
       console.log(reqName, blockAdjId);
@@ -376,7 +376,7 @@ export default Service.extend({
       // original API, non-progressive  
       // auth.getPaths(blockA, blockB, /*withDirect*/ false, /*options*/{})
       pathsViaStream ?
-      auth.getPathsAliasesViaStream(blockAdjId, intervalParams, {dataEvent : receivedData}) :
+      auth.getPathsAliasesViaStream(blockAdjId, intervalParams, {dataEvent : receivedData, closePromise : taskInstance}) :
     auth.getPathsAliasesProgressive(blockAdjId, intervalParams, {});
 
         function receivedData(res) {
@@ -419,6 +419,10 @@ export default Service.extend({
             me.appendResult(blockAdj, 'pathsAliasesResult', pathsViaStream, res, resultIdName);
 
         }
+
+    promise.catch(function (err, status) {
+      console.log(reqName, 'pathsAliasesViaStream', blockAdjId, 'catch', me, err, status);
+    });
 
     promise
       .then(

@@ -354,7 +354,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       let domain = this.get('domain');
       // use the VLinePosition:toString() for the position-s
       console.log('domainChanged', domain, this.get('axisS'), this.get('axisPosition'), ''+this.get('position'), this.get('axisPosition.lastDrawn'));
-      this.notifyChanges();
+      // this.notifyChanges();
 
       return domain;
     }),

@@ -328,6 +328,8 @@ Block.blockNamespace = async function(blockIds) {
       useCache = apiOptions.useCache,
     cached = cache.get(cacheId);
     console.log('useCache', useCache, intervals.dbPathFilter, cacheId);
+    /** defined only in else.  */
+    let cursor;
     if (useCache && cached) {
       console.log('from cache', cacheId, cached.length);
       let filteredData = pathsFilter.filterPaths(cached, intervals);
@@ -337,7 +339,7 @@ Block.blockNamespace = async function(blockIds) {
       res.flush();
     }
     else {
-      let cursor = cursorFunction();
+      cursor = cursorFunction();
       if (cursor.then) {
         cursor.then(function (cursorValue) {
           pipeStream(sse, intervals, useCache, cacheId, filterFunction, res, cursorValue);
@@ -349,6 +351,44 @@ Block.blockNamespace = async function(blockIds) {
 
     req.on('close', () => {
       console.log('req.on(close)');
+      if (cursor) {
+        // ! cursor.isExhausted() && cursor.hasNext()
+        if (cursor.isClosed && ! cursor.isClosed())
+          console.log('reqStream : close before end of cursor', intervals);
+        if (! cursor.close) {
+          console.log('cursor.close not defined' /*,cursor*/);
+
+          if (cursor.then) {
+            cursor.then(function (c) {
+              if (c.push && c.destroy) {
+                console.log('c.push(null)');
+                c.push(null);
+                c.destroy();
+              }
+              /* The client is closing the SSE, so close the database cursor.
+               * c.close() often gets ERR_STREAM_PREMATURE_CLOSE;
+               * that seems to be prevented by the above c.push(null); c.destroy();
+               * (refn : https://stackoverflow.com/questions/19277094/how-to-close-a-readable-stream-before-end#comment85664373_19277094)
+               * Testing indicates c.destroy() does not work without the c.push(null).  Also tried c.pause(), c.kill().
+               * Another approach may be : https://mongodb.github.io/node-mongodb-native/2.0/tutorials/aggregation/
+               * "... to terminate the each early you should return false in your each callback. This will stop the cursor from returning documents."
+               * that relies on .each() whereas .pipe() is used.
+               */
+              if (c.close) {
+                console.log('promise yielded cursor with .close' /*,c*/);
+                closeCursor(c);
+              }
+              else
+                debugger;
+            });
+          }
+          else
+            closeCursor(cursor);
+          function closeCursor(cursor) {
+            cursor.close(function () { console.log('cursor closed'); });
+          }
+        }
+      }
     });
 
   };
