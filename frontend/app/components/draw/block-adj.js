@@ -61,6 +61,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   needs: ['component:draw/path-data'],
 
+  /** counters to debounce CFs */
+  heightChanged : 0,
+  axisStackChangedCount : 0,
+
   blockAdjId : Ember.computed.alias('blockAdj.blockAdjId'),
 /*  ('blockAdj', function () {
     let blockAdj = this.get('blockAdj'),
@@ -351,19 +355,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   /** call updatePathsPosition().
    * filter / debounce the calls to handle multiple events at the same time.
-   * @param axisID_t is defined by zoomedAxis(), undefined when called from
-   * axisStackChanged()
    */
-  updatePathsPositionDebounce(axisID_t) {
-    console.log('updatePathsPositionDebounce', axisID_t);
-    // updatePathsPosition() doesn't use axisID_t; this call chain is likely to be refined yet.
-    /* may use .throttle() instead of .debounce();  (throttle has default immediate==true).
-     * It is possible that the last event in a group may indicate a change which
-     * should be rendered, but in this case it is likely there is no change
-     * after the first event in the group.
-     */
-    Ember.run.debounce(this, this.updatePathsPosition, axisID_t, 500);
-  },
+  updatePathsPositionDebounce : Ember.computed('heightChanged', 'axisStackChangedCount', function () {
+    let count = this.get('axisStackChangedCount'),
+    heightChanged = this.get('heightChanged');
+    console.log('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count);
+    this.updatePathsPosition();
+    return count;
+  }),
+
 
   /*--------------------------------------------------------------------------*/
   
@@ -378,12 +378,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     /* In addition to the usual causes of repeated events, block-adj will
      * respond to events relating to 2 axes. */
     if (heightChanged)
-      this.updatePathsPositionDebounce();
+      this.incrementProperty('heightChanged');
   },
 
   axisStackChanged : function() {
     console.log("axisStackChanged in components/block-adj");
-    this.updatePathsPositionDebounce();
+    this.incrementProperty('axisStackChangedCount');
   },
 
   /** @param [axisID, t] */
