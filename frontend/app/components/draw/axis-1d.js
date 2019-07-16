@@ -3,6 +3,8 @@ const { inject: { service } } = Ember;
 
 
 import { sum } from 'lodash/math';
+import { isEqual } from 'lodash/lang';
+
 
 import AxisEvents from '../../utils/draw/axis-events';
 import AxisPosition from '../../mixins/axis-position';
@@ -312,7 +314,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
 
 
   /** @param [axisID, t] */
-  zoomedAxis : function(axisID_t) {
+  zoomedAxis : function(axisID_t) { },
+  zoomedAxis_unused : function(axisID_t) {
     let axisID = axisID_t[0],
     axisName = this.get('axis.id');
     console.log("zoomedAxis in components/axis-1d", axisID_t, axisName);
@@ -323,14 +326,23 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       // this.renderTicksDebounce.apply(this, axisID_t);
       let axisS = this.get('axisS'),
       dimensions = axisS.axisDimensions();
+      console.log('zoomedAxis setDomain', this.get('domain'), this.get('currentPosition'), this.get('currentPosition.yDomain'), dimensions.domain);
       this.setDomain(dimensions.domain);
       // this.set('zoomed', dimensions.zoomed);
       console.log('zoomedAxis', axisS, dimensions);
     }
   },
-  setDomain(domain) {
+  setDomain_unused(domain) {
     let
       attr = this.get('domain');
+    let cpDomain = this.get('currentPosition.yDomain');
+    /* verification - this confirms that if zoomedAxis() -> setDomain() then
+     * .currentPosition.yDomain has already been set to domain.
+     * So zoomedAxis() and setDomain() are disabled by appending _unused to their names.
+     */
+    if (! isEqual(cpDomain, domain)) {
+      console.log('setDomain', cpDomain, domain, attr);
+    }
     if (! attr)
       this.set('domain', Ember.A(domain));
     else
@@ -342,18 +354,17 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     console.log('setDomain', domain, attr /*, this.attrs*/);
   },
   /** position when last pathUpdate() drawn. */
-  position : Ember.computed.alias('axisPosition.current'),
+  position : Ember.computed.alias('lastDrawn.yDomain'),
+  /** position as of the last zoom. */
+  domain : Ember.computed.alias('currentPosition.yDomain'),
 
   /** this is an alias of .domain, but it updates when the array elements update. */
   domainChanged : Ember.computed(
-    'domain.[0]', 'domain.[1]',
-    'position.yDomain.[0]', 'position.yDomain.[1]',
     'domain.0', 'domain.1',
-    'position.yDomain.0', 'position.yDomain.1',
     function () {
       let domain = this.get('domain');
       // use the VLinePosition:toString() for the position-s
-      console.log('domainChanged', domain, this.get('axisS'), this.get('axisPosition'), ''+this.get('position'), this.get('axisPosition.lastDrawn'));
+      console.log('domainChanged', domain, this.get('axisS'), ''+this.get('currentPosition'), ''+this.get('lastDrawn'));
       // this.notifyChanges();
 
       return domain;

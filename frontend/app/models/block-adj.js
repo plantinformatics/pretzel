@@ -49,9 +49,20 @@ export default DS.Model.extend(Ember.Evented, {
     console.log('axes', blockAdjId, axes);
     return axes;
   }),
-
+  axes1d : Ember.computed('axes', 'axes.@each', function () {
+    let axes = this.get('axes'),
+    axes1d = axes.mapBy('axis1d');
+    return axes1d;
+  }),
+  axesDomains : Ember.computed('axes1d', 'axes1d.@each.domain', function () {
+    let axes1d = this.get('axes1d'),
+    axesDomains = axes1d.mapBy('domain');
+    console.log('axesDomains', axesDomains, axes1d);
+    return axesDomains;
+  }),
   /** Result is, for each blockID in blockAdjId,  the interval params of the axis on which the block is displayed.
    * @see axes()
+   * @see axesDomains()
    */
   axisDimensions :  Ember.computed('axes', 'zoomCounter', function () {
     let 
@@ -74,6 +85,7 @@ export default DS.Model.extend(Ember.Evented, {
    */
   domainChange :  Ember.computed('axisDimensions', 'intervalParams', function () {
       let intervals = this.get('intervalParams'),
+    /** this can now be simplified to use axesDomains(). */
     intervalsAxes = this.get('axisDimensions'),
       domainsDiffer = function ()
       {

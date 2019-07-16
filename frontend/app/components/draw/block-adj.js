@@ -353,13 +353,21 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
+  axesDomains : Ember.computed.alias('blockAdj.axesDomains'),
   /** call updatePathsPosition().
    * filter / debounce the calls to handle multiple events at the same time.
    */
-  updatePathsPositionDebounce : Ember.computed('heightChanged', 'axisStackChangedCount', function () {
+  updatePathsPositionDebounce : Ember.computed(
+    'heightChanged', 'axisStackChangedCount',
+    'axesDomains.0.0',
+    'axesDomains.0.1',
+    'axesDomains.1.0',
+    'axesDomains.1.1',
+    function () {
     let count = this.get('axisStackChangedCount'),
-    heightChanged = this.get('heightChanged');
-    console.log('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count);
+      heightChanged = this.get('heightChanged'),
+      domainsChanged = this.get('axesDomains');
+      console.log('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, domainsChanged);
     this.updatePathsPosition();
     return count;
   }),

@@ -15,8 +15,8 @@ export default DS.Model.extend({
     this.set('xOffset', xOffset);
   },
   toString() {
-    console.log('VLinePosition : toString()', this);
-    return "VLinePosition:" + this.yDomain + ',' + this.yRange + ',' + this.xOffset;
+    // console.log('VLinePosition : toString()', this);
+    return "VLinePosition:" + (this.yDomain || '') + ',' + (this.yRange || '') + ',' + (this.xOffset || '');
   }
 
 });

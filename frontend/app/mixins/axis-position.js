@@ -8,7 +8,13 @@ import { updateDomain } from '../utils/stacksLayout';
 import VLinePosition from '../models/vline-position';
 
 
-
+/** Mixed-into axis-1d to describe the axis position.
+ *
+ * Adds these attributes, which map part of the axis' domain to the SVG position :
+ *   currentPosition  : vline-position
+ *   lastDrawn  : vline-position
+ *   zoomed : boolean
+ */
 export default Mixin.create({
   store: Ember.inject.service('store'),
 
