@@ -1,5 +1,7 @@
 import { isEqual } from 'lodash/lang';
 
+import normalizeWheel from 'normalize-wheel';
+
 
 /* global d3 */
 
@@ -89,6 +91,8 @@ function wheelNewDomain(axis, axisApi, inFilter) {
   isPan = e.shiftKey;
   if (trace_zoom > 1)
     console.log(axis, inFilter, 'zoom Wheel scale', yp.domain(), yp.range(), e /*, oa.y, oa.ys */);
+  const normalized = normalizeWheel(e);
+  console.log('normalizeWheel', normalized);
 
   /** the element which is the target of the WheelEvent zoom/pan
    * It is available as `this` in zoomFilter();  can instead be accessed via d3.event.currentTarget
@@ -120,7 +124,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
   intervalLimit = [lowerZoom, (domainSize || 5e8)];
 
   let
-    deltaY = e.deltaY;
+    deltaY = normalized.pixelY;  // equivalent to e.deltaY;
 
   if (trace_zoom > 1)
     console.log(axisReferenceDomain);
