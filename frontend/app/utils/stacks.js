@@ -105,6 +105,20 @@ Block.prototype.getId = function()
 {
   return this.axisName;
 };
+/** Set .axis
+ *
+ * Because .axis is used as a dependent key in a ComputedProperty, Ember adds
+ * .set() and then this must be used.
+ * @param a axis (Stacked)
+ */
+Block.prototype.setAxis = function(a)
+{
+  console.log('setAxis', !!this.set, a);  this.log();
+  if (true || this.set)
+    this.set('axis', a);
+  else
+    this.axis = a;
+};
 /** @return axis of this block or if it has a parent, its parent's axis */
 Block.prototype.getAxis = function()
 {
@@ -233,9 +247,11 @@ function positionToString(p)
  * arrays of strings, just concat the arrays, and caller can join the strings. */
 Stacked.prototype.toString = function ()
 {
-  let a =
+  let s = this.stack,
+  stackLength = (s ? s.length : ''),
+  a =
     [ "{axisName=", this.axisName, ":", this.axisName, ", portion=" + round_2(this.portion),
-      positionToString(this.position) + this.stack.length, "}" ];
+      positionToString(this.position) + stackLength, "}" ];
   return a.join("");
 };
 Stacked.prototype.log = function ()
@@ -558,6 +574,7 @@ Stacked.prototype.verify = function ()
           console.log("v1", v1, "v2", v2, me, block);
           me.log();
           block.log();
+          if (v2)
           breakPoint();
         }
       });
@@ -837,6 +854,10 @@ Stack.prototype.verify = function ()
     this.log();
     /* breakPointEnableSet(1);
      breakPoint(); */
+    /* verify() is called at a point between creating an axis and 'add a new stack for it',
+     * so don't break in this case.
+     */
+    console.log('Stack:verify() 0 axes', this);
   }
   else
     /* traverse the axes of this stack. */
@@ -899,6 +920,12 @@ Stack.verify = function()
 {
   try {
     stacks.forEach(function(s){s.verify();});
+
+    // all stacks : .axes is not empty
+    oa.stacks.mapBy('axes').mapBy('length').forEach(function (length, i) { if (!length) { console.log(i); oa.stacks[i].log(); } });
+    // all blocks : .axis has a .stack.
+    let b1 = Object.entries(oa.stacks.blocks).mapBy('1');
+    b1.mapBy('axis').forEach(function (a, i) { if (a && !a.stack) { console.log(i); a.log();  } });
   }
   catch (e)
   {

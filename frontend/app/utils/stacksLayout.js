@@ -24,7 +24,7 @@ function updateDomain(y, ys, axis)
     axisName = axis.axisName,
   a = axis,
   domain = a.parent ? a.parent.getDomain() : a.getDomain();
-  console.log('updateDomain', axisName, domain, a, a.blocks[0].z);
+  console.log('updateDomain', axisName, domain, a, a.blocks[0] && a.blocks[0].z);
   domain = maybeFlip(domain, a.flipped);
   y.domain(domain);
   ys.domain(domain);

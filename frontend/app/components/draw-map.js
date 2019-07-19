@@ -1286,7 +1286,16 @@ export default Ember.Component.extend(Ember.Evented, {
           console.log('aBlock.parent', aBlock.parent, '->', sd.blocks[0]);
           aBlock.parent = sd.blocks[0];
           console.log('aBlock.axis', aBlock.axis, sd);
-          aBlock.axis = sd;
+          /* .setAxis() triggers a render, so without run.later the following
+           * code would be skipped.  This is a clash of this imperative code
+           * with the reactive design, in particular the block-adj
+           * ComputedProperty.  Changes required - e.g. see the stacks / axes as
+           * part of the model and update them before render.
+           * As a work-around, set .axis at the end of this render.
+           * The data structure is inconsistent until then, so
+           * Stacked.prototype.verify() : v1 is ignored for now.
+           */
+          Ember.run.later(function () { aBlock.setAxis(sd); } );
           a.stack.add(sd);
           console.log(adopt0, a, sd, oa.axesP[a.axisName]);
           sd.stack.log();

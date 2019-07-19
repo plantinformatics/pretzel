@@ -7,7 +7,7 @@ import { task, timeout } from 'ember-concurrency';
 
 const { inject: { service } } = Ember;
 
-import { /*stacks,*/ Stacked } from '../utils/stacks';
+import { stacks, Stacked } from '../utils/stacks';
 
 
 export default DS.Model.extend(Ember.Evented, {
@@ -37,16 +37,19 @@ export default DS.Model.extend(Ember.Evented, {
   /*--------------------------------------------------------------------------*/
   /* CFs based on axes could be moved to a component, e.g. draw/ stacks-view or block-adj */
 
-  /** Result is, for each blockID in blockAdjId,  the axis on which the block is displayed.
-   * Will need to add dependency on stacks component, because block can be un-viewed then re-viewed.
-   */
-  axes :  Ember.computed('blockAdjId', function () {
+  blocks : Ember.computed('blockAdjId', function () {
     let
       blockAdjId = this.get('blockAdjId'),
-    axes = blockAdjId.map(function (blockId) {
-      return Stacked.getAxis(blockId);
-    });
-    console.log('axes', blockAdjId, axes);
+    blocks = blockAdjId.map(function (blockId) { return stacks.blocks[blockId]; } );
+    return blocks;
+  }),
+  /** Result is, for each blockID in blockAdjId,  the axis on which the block is displayed.
+   * May need to add dependency on stacks component, because block can be un-viewed then re-viewed.
+   */
+  axes : Ember.computed('blocks', 'blocks.@each.axis', function () {
+    let blocks = this.get('blocks'),
+    axes = blocks.map(function (b) { return b.getAxis(); });
+    console.log('axes', blocks, axes);
     return axes;
   }),
   axes1d : Ember.computed('axes', 'axes.@each', function () {
