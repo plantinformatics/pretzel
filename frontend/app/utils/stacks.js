@@ -114,10 +114,16 @@ Block.prototype.getId = function()
 Block.prototype.setAxis = function(a)
 {
   console.log('setAxis', !!this.set, a);  this.log();
-  if (true || this.set)
-    this.set('axis', a);
-  else
-    this.axis = a;
+  this.axis = a;
+  /* The block-adj CP axes depends on .axislater, setting this field triggers a
+   * render, so without run.later the code following the call to setAxis() would
+   * be skipped.
+   * .axislater has the same value as .axis, but setting it is deferred until
+   * the end of the current run loop, for this reason.  This is a work-around;
+   * planning to see the stacks / axes as part of the model and update them
+   * before render.
+   */
+  Ember.run.later(() => this.set('axislater', a) );
 };
 /** @return axis of this block or if it has a parent, its parent's axis */
 Block.prototype.getAxis = function()
@@ -299,8 +305,17 @@ Stacked.prototype.logElt = function ()
 Stacked.prototype.referenceBlockS = function ()
 {
   // verification
-  if (this.referenceBlock.view != this.blocks[0])
-    breakPoint('referenceBlockS', this, this.referenceBlock && this.referenceBlock.view, this.blocks);
+  let blockS = this.referenceBlock && this.referenceBlock.view;
+  /** check if this axis still exists - may be just a child Block now. */
+  if (! axesP[this.axisName]) {
+    breakPoint('referenceBlockS', this, blockS, this.axisName);
+  }
+  else if (! this.blocks.length) {
+    breakPoint('referenceBlockS', this, blockS, this.blocks);
+  }
+  else
+  if (blockS != this.blocks[0])
+    breakPoint('referenceBlockS', this, blockS, this.blocks);
   return this.blocks[0];
 };
 Stacked.prototype.getStack = function ()
@@ -574,7 +589,6 @@ Stacked.prototype.verify = function ()
           console.log("v1", v1, "v2", v2, me, block);
           me.log();
           block.log();
-          if (v2)
           breakPoint();
         }
       });

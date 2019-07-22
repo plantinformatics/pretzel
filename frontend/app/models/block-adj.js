@@ -46,7 +46,7 @@ export default DS.Model.extend(Ember.Evented, {
   /** Result is, for each blockID in blockAdjId,  the axis on which the block is displayed.
    * May need to add dependency on stacks component, because block can be un-viewed then re-viewed.
    */
-  axes : Ember.computed('blocks', 'blocks.@each.axis', function () {
+  axes : Ember.computed('blocks', 'blocks.@each.axislater', function () {
     let blocks = this.get('blocks'),
     axes = blocks.map(function (b) { return b.getAxis(); });
     console.log('axes', blocks, axes);
@@ -57,10 +57,26 @@ export default DS.Model.extend(Ember.Evented, {
     axes1d = axes.mapBy('axis1d');
     return axes1d;
   }),
-  axesDomains : Ember.computed('axes1d', 'axes1d.@each.domain', function () {
+  /** Return the domains (i.e. zoom scope) of the 2 axes of this block-adj.
+   * These are equivalent : 
+   * * this.get('axes').mapBy('domain')
+   * * this.get('axes1d'), then either .mapBy('axisS.domain') or .mapBy('axis.view.axis.domain')
+   */
+  axesDomains : Ember.computed('axes1d', 'axes1d.@each.domain', 'axes', function () {
     let axes1d = this.get('axes1d'),
     axesDomains = axes1d.mapBy('domain');
     console.log('axesDomains', axesDomains, axes1d);
+    /* if .currentPosition.yDomain has not yet been set, then use the range of
+     * the reference block of the axis.  The latter is the complete domain,
+     * whereas the former is a subset - the zoom scope. */
+    let axes = this.get('axes');
+    axesDomains = axesDomains.map(function (ad, i) {
+      if (ad === undefined) {
+        ad = axes[i].referenceBlockS().block.get('range');
+        console.log('axesDomains(): use range of referenceBlockS', i, ad);
+      }
+      return ad;
+    });
     return axesDomains;
   }),
   /** Result is, for each blockID in blockAdjId,  the interval params of the axis on which the block is displayed.
