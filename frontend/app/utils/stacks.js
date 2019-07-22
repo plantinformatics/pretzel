@@ -123,7 +123,12 @@ Block.prototype.setAxis = function(a)
    * planning to see the stacks / axes as part of the model and update them
    * before render.
    */
-  Ember.run.later(() => this.set('axislater', a) );
+    Ember.run.later(() => {
+      if (this.set)
+        this.set('axislater', a);
+      else
+        this.axislater = a;
+    });
 };
 /** @return axis of this block or if it has a parent, its parent's axis */
 Block.prototype.getAxis = function()

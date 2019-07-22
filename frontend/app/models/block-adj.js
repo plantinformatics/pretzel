@@ -72,8 +72,11 @@ export default DS.Model.extend(Ember.Evented, {
     let axes = this.get('axes');
     axesDomains = axesDomains.map(function (ad, i) {
       if (ad === undefined) {
-        ad = axes[i].referenceBlockS().block.get('range');
-        console.log('axesDomains(): use range of referenceBlockS', i, ad);
+        let rb = axes[i].referenceBlockS();
+        if (rb) {
+          ad = rb.block.get('range');
+          console.log('axesDomains(): use range of referenceBlockS', i, rb, ad);
+        }
       }
       return ad;
     });
