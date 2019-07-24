@@ -195,6 +195,8 @@ export default Service.extend({
       this.get('auth').getPathsProgressive(blockA, blockB, intervalParams, /*options*/{});
 
         function receivedData(res){
+          if (! res || ! res.length)
+            return;
           if (trace_pathsP > 1)
             console.log('path request then', res.length);
           for (let i=0; i < res.length; i++) {
@@ -306,14 +308,24 @@ export default Service.extend({
               console.log(blockId, 'before domainCalc, block.z', block.z); let
               /** updateDomain() uses axis domainCalc() but that does not recalculate block domain. */
               blockDomain = block.domain = block.domainCalc(),
-              axis = Stacked.getAxis(blockId),
+              axis = Stacked.getAxis(blockId);
+              if (! axis) {
+                // This can occur when axis is being deleted by the time the result arrives.
+                if ((axis = stacks.axesP [blockId])) {
+                  console.log('blocksUpdateDomain', blocks, blockId, axis);
+                  block.log(); axis.log();
+                }
+              }
+              else {
               /** axis domainCalc() also does not re-read the block's domains if axis.domain is already defined. */
+                let
               axisDomain = axis.domain = axis.domainCalc();
               console.log(blockId, 'blockDomain', blockDomain, axisDomain, block.z);
 
               // if zoomed in, then extension to the block's domain does not alter the viewed domain.
               if (! axis.axis1d.zoomed) {
                 axis.axis1d.updateDomain();
+              }
               }
 
           });
@@ -380,7 +392,7 @@ export default Service.extend({
     auth.getPathsAliasesProgressive(blockAdjId, intervalParams, {});
 
         function receivedData(res) {
-          if (res === undefined)
+          if (! res || ! res.length)
             return;
           if (trace_pathsP > 1)
             console.log('path request then', res.length);

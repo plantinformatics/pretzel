@@ -72,7 +72,14 @@ export default DS.Model.extend(Ember.Evented, {
     let axes = this.get('axes');
     axesDomains = axesDomains.map(function (ad, i) {
       if (ad === undefined) {
-        let rb = axes[i].referenceBlockS();
+        let axis = axes[i];
+        // handle update
+        if (! axis.blocks.length) {
+          let newAxis = axes1d[i].axis.view.axis;
+          console.log('axesDomains', axis, newAxis);
+          axis = newAxis;
+        }
+        let rb = axis.referenceBlockS();
         if (rb) {
           ad = rb.block.get('range');
           console.log('axesDomains(): use range of referenceBlockS', i, rb, ad);
@@ -90,12 +97,15 @@ export default DS.Model.extend(Ember.Evented, {
     let 
       axes = this.get('axes'),
       intervals =
-      axes.map(function (axis) {
+      axes.map(function (axis, i) {
         /** axes() needs to be recalculated after a block is adopted;
          * can depend on axes[*].axis1d.axisStackChanged ...
          */
         if (axis.stack.axes[0] !== axis) {
           axis = Stacked.getAxis(axis.axisName);
+          if (! axis) {
+            console.log('axisDimensions getAxis', axes[i]);
+          }
         }
       return axis.axisDimensions();
       });
@@ -157,12 +167,33 @@ export default DS.Model.extend(Ember.Evented, {
   },
 
   lastPerformed : Ember.computed.alias('taskGetPaths._scheduler.lastPerformed'),
-  lastResult : Ember.computed('lastPerformed', function () {
+  lastResult : Ember.computed('lastPerformed', 'currentResult.direct.[]', 'currentResult.alias.[]', function () {
     let
       result = this.get('lastPerformed');
-    if (! result) {
-      result = { };  // could include e.g. direct: Ember.RSVP.resolve([])
+    if (result && (result = result.value))
+    {
+      const fieldNames = ['direct', 'alias'];
+      result = result.reduce((r, v, i) => {
+        if ((v.state == "fulfilled") && (v = v.value) && v.length)
+          r[fieldNames[i]] = v;
+        return r;
+      }, {});
+      console.log('lastResult', result);
+      if (! Object.keys(result).length)
+        result = undefined;
     }
+    if (! result)
+    {
+      result = this.get('currentResult');
+    }
+    return result;
+  }),
+  currentResult : Ember.computed('pathsResult.[]', 'pathsAliasesResult.[]', function () {
+    let result = {}, p;
+    if ((p = this.get('pathsResult')))
+      result.direct = p;
+    if ((p = this.get('pathsAliasesResult')))
+      result.alias = p;
     return result;
   }),
   /**
@@ -171,13 +202,22 @@ export default DS.Model.extend(Ember.Evented, {
    * @return .lastResult()
    * //  previous result :  promises of paths array from direct and/or aliases, in a hash {direct : promise, alias: promise}
    */
-  paths : Ember.computed('blockId0', 'blockId1', 'zoomCounter', function () {
+  paths : Ember.computed('blockId0', 'blockId1', 'zoomCounter', 'lastResult', function () {
     /** This adds a level of indirection between zoomCounter and
      * pathsRequestCount, flattening out the nesting of run-loop calls.
      */
     this.incrementProperty('pathsRequestCount');
     let result = this.get('lastResult');
      // result = this.call_taskGetPaths();
+
+    // caller expects a hash of promises
+    if (result) {
+      let rp = Object.keys(result).reduce((r, fieldName) => {
+        r[fieldName] = Ember.RSVP.resolve(result[fieldName]);
+        return r;
+      }, {});
+    }
+
     return result;
   }),
   /** Setup params for calling taskGetPaths(). */

@@ -249,9 +249,10 @@ export default Service.extend({
         console.log(b0Name, axisId2Name(b0Name), b0.length);
         for (let b1i=0; b1i < b0.length; b1i++) {
           let b1Name = b0[b1i];
-          /* let direction = b0Name < b1Name;
-          if (direction) */
-            result.push([b0Name, b1Name]);
+          let // direction = b0Name < b1Name,
+            orderedPair = [b0Name, b1Name].sort();
+          // if (direction)
+            result.push(orderedPair);
           // console.log(result);
         }
         return result;

@@ -87,7 +87,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     pathsAliasesLength = this.get('pathsAliasesResultLength');
     console.log('pathsResultLength', this, length, pathsAliasesLength);
     if (length)
-      this.draw(/*pathsApiResultType*/ pathsResultTypes.direct, pathsResult);
+      Ember.run.later( () => 
+      this.draw(/*pathsApiResultType*/ pathsResultTypes.direct, pathsResult)
+                     );
     return length;
   }),
   pathsAliasesResultLength : Ember.computed('blockAdj.pathsAliasesResult.[]', 'paths', function () {
@@ -252,11 +254,19 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let blockIds = resultBlockIds(pathsResultType, featurePaths[0]);
     if (blockIds.length) {
       /** blockAdjId is the order of Stacked / axes, whereas
-       * featurePaths[0].alignment is in request order. */
-      const reversed = blockAdjId[0] > blockAdjId[1],
-      ok = (blockIds[0] === blockAdjId[0+reversed]) && (blockIds[1] === blockAdjId[1-reversed]);
+       * featurePaths[0].alignment is in request order.
+       * Requests (so far) are asymmetric, so blockAdjId[] and blockIds[] may be
+       * in opposite order.
+       */
+      // const reversed = blockAdjId[0] > blockAdjId[1],
+      function match(reversed) {
+        let
+          ok = (blockIds[0] === blockAdjId[0+reversed]) && (blockIds[1] === blockAdjId[1-reversed]);
+        return ok;
+      }
+      let ok = match(false) || match(true);
       if (! ok)
-        console.log('draw verify', blockAdjId, reversed, blockIds);
+        console.log('draw verify', blockAdjId, blockIds);
     }
 
     // let axisApi = this.get('drawMap.oa.axisApi');

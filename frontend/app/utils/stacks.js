@@ -133,7 +133,16 @@ Block.prototype.setAxis = function(a)
 /** @return axis of this block or if it has a parent, its parent's axis */
 Block.prototype.getAxis = function()
 {
-  return this.axis || (this.parent && this.parent.getAxis());
+  let axis = this.axis;
+  /* This guards against this.axis being a former axis of `this` (may have been
+   * retired during adoption), which seems to happen but perhaps should not.
+   */
+  if (! axis || (axis.blocks.length === 0)) {
+    if (axis)
+    { console.log('Block:getAxis', axis); axis.log(); }
+    axis = (this.parent && this.parent.getAxis());    
+  }
+  return axis;
 };
 /** @return stack of this block's axis.
  * @see Block.prototype.getAxis()

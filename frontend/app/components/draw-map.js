@@ -3595,6 +3595,11 @@ export default Ember.Component.extend(Ember.Evented, {
       let brush_ = that.__brush,
       brushSelection_ = brush_.selection,
       brushExtent_ = brush_.extent;
+      /** selects the g which may have .faded added.  Exclude g.progress because
+       * featureNotSelected2() does not yet support its datum type, and we
+       * should check with users if this feature should be maintained or varied.
+       */
+      const fadedSelector = ".foreground > g:not(.progress) > g";
 
       if (trace_gui)
         console.log("brushHelper", that, brushedAxisID, selectedAxes, brushRange, brushedRegions,
@@ -3744,7 +3749,7 @@ export default Ember.Component.extend(Ember.Evented, {
           return ! sel;
         }
 
-        d3.selectAll(".foreground > g > g").classed("faded", featureNotSelected2);
+        d3.selectAll(fadedSelector).classed("faded", featureNotSelected2);
       } // axisFeatureCirclesBrushed()
 
         /** d3 selection of the brushed axis. */
@@ -3797,7 +3802,7 @@ export default Ember.Component.extend(Ember.Evented, {
         if (false)
           svgContainer.selectAll(".btn").remove();
         axisFeatureCircles_selectAll().remove();
-        d3.selectAll(".foreground > g > g").classed("faded", false);
+        d3.selectAll(fadedSelector).classed("faded", false);
         selectedFeatures_clear();
         /* clearing brushedRegions is not needed here because resetBrushes() (by
          * clearing the brushes) causes brushHelper() to remove brushes from
