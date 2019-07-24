@@ -81,29 +81,41 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      * result of this promise.
      */
     let pathsP = this.get('paths'),
-    /** this can now be factored more, using .fieldName */
-    pathsResult = this.get('blockAdj.pathsResult'),
-    length = pathsResult && pathsResult.length,
+    length = this.drawCurrent(pathsResultTypes.direct),
     pathsAliasesLength = this.get('pathsAliasesResultLength');
-    console.log('pathsResultLength', this, length, pathsAliasesLength);
-    if (length)
-      Ember.run.later( () => 
-      this.draw(/*pathsApiResultType*/ pathsResultTypes.direct, pathsResult)
-                     );
     return length;
   }),
+  /** Used in paths{,Aliases}ResultLength().
+   */
+  drawCurrent : function(prType) {
+    let
+    /** e.g. 'pathsResult' or 'pathsAliasesResult' */
+    pathsResult = this.get('blockAdj.' + prType.fieldName),
+    fnName = prType.fieldName + 'Length',
+    length = pathsResult && pathsResult.length;
+    console.log(fnName, this, length);
+    /* The calling CPs paths{,Aliases}ResultLength() are called before didRender
+     * and hence before drawGroup{,Container}().   .draw() uses the <g>-s they
+     * maintain, so defer until end of run loop.
+     */
+    if (length)
+      Ember.run.later( () => 
+      this.draw(/*pathsApiResultType*/ prType, pathsResult)
+                     );
+
+    return length;
+  },
   pathsAliasesResultLength : Ember.computed('blockAdj.pathsAliasesResult.[]', 'paths', function () {
-    let pathsP = this.get('paths'),
-    pathsAliasesResult = this.get('blockAdj.pathsAliasesResult'),
-    pathsAliasesLength = pathsAliasesResult && pathsAliasesResult.length;
-    console.log('pathsAliasesResultLength', this, pathsAliasesLength);
     /* pathsAliasesResult is in a different form to pathsResult; passing it to
      * draw() requires some mapping, which is abstracted in 
      * pathsResultType e.g. pathsResultTypes.{direct,alias}
      */
     pathsApiResultType.flowName = pathsResultTypes.alias.flowName;
-    if (pathsAliasesLength)
-      this.draw(pathsApiResultType /*pathsResultTypes.alias*/, pathsAliasesResult);
+    pathsApiResultType.fieldName = pathsResultTypes.alias.fieldName;
+
+    let pathsP = this.get('paths'),
+    pathsAliasesLength = this.drawCurrent(pathsApiResultType /*pathsResultTypes.alias*/);
+
     return pathsAliasesLength;
   }),
   paths : Ember.computed('blockAdj', 'blockAdj.zoomCounter', function () {
