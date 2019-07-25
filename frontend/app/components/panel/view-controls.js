@@ -97,8 +97,10 @@ export default Ember.Component.extend({
     this._super(...arguments);
 
     this.drawActions.trigger("drawControlsLife", true);
-    // initially 'Paths - Density' tab is active.
-    this.send('pathTabActive', 'density');
+    // initially 'Paths - Sample' tab is active.
+    // To change the initial active tab, change this and also change .active
+    // class of .active-detail and .tab-pane, and .in class of the latter.
+    this.send('pathTabActive', 'sample');
     this.readParsedOptions();
     this.set('controls.view', this);
   },
