@@ -366,6 +366,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       // use the VLinePosition:toString() for the position-s
       console.log('domainChanged', domain, this.get('axisS'), ''+this.get('currentPosition'), ''+this.get('lastDrawn'));
       // this.notifyChanges();
+      this.updateAxis();
 
       return domain;
     }),
@@ -384,6 +385,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     axisApi.axisScaleChanged(p, t, true);
 
     axisApi.axisStackChanged(t);
+  },
+  updateAxis() {
+    // subset of notifyChanges()
+    let axisApi = stacks.oa.axisApi;
+    let axisID = this.get('axis.id');
+    console.log('updateAxis', axisID);
+    let t = stacks.oa.svgContainer.transition().duration(750);
+    axisApi.axisScaleChanged(axisID, t, true);
   },
 
   axisObj : Ember.computed('axes2d.[]', function () {
