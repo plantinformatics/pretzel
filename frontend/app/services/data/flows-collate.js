@@ -262,7 +262,7 @@ export default Service.extend({
     console.log('blockAdjIds', blockAdjIds);
     return blockAdjIds;
   }),
-  blockAdjs : Ember.computed('blockAdjIds', function () {
+  blockAdjs : Ember.computed('blockAdjIds.[]', function () {
     let pathsPro = this.get('pathsPro'),
     blockAdjIds = this.get('blockAdjIds'),
     records = blockAdjIds.map(function (blockAdjId) {
