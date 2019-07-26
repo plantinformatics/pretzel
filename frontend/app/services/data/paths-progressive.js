@@ -129,6 +129,16 @@ export default Service.extend({
       });
     return intervals;
   },
+  controls : Ember.computed(function () {
+    let oa = stacks.oa,
+    /** This occurs after mapview.js: controls : Ember.Object.create({ view : {  } }),
+     * and draw-map : draw() setup of  oa.drawOptions.
+     * This can be replaced with a controls service.
+     */
+    controls = oa.drawOptions.controls;
+    return controls;
+  }),
+  pathsDensityParams : Ember.computed.alias('controls.view.pathsDensityParams'),
   /** Determine the parameters for the paths request, - intervals and density.
    * @param intervals domain for each blockAdj
    */
@@ -149,22 +159,17 @@ export default Service.extend({
         i.domain = undefined;
     } );
 
-    let oa = stacks.oa,
-    controls = oa.drawOptions.controls;
-    let sample = controls.get('view.pathControlActiveSample');
-    if (sample) {
-      params.nSamples = sample;
+    let vcParams = this.get('pathsDensityParams');
+    if (vcParams.nSamples) {
+      params.nSamples = vcParams.nSamples;
     }
-    let densityFactor = controls.get('view.pathControlActiveDensity');
-    if (densityFactor) {
-      page.densityFactor = densityFactor;
-      page.thresholdFactor = densityFactor; // retire the name .thresholdFactor
+    if (vcParams.densityFactor) {
+      page.densityFactor = vcParams.densityFactor;
+      page.thresholdFactor = vcParams.densityFactor; // retire the name .thresholdFactor
     }
-    let nFeatures = controls.get('view.pathControlNFeatures');
-    if (nFeatures) {
-      params.nFeatures = nFeatures;
+    if (vcParams.nFeatures) {
+      params.nFeatures = vcParams.nFeatures;
     }
-
 
     return params;
   },

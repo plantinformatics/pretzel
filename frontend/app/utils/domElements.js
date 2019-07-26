@@ -274,7 +274,7 @@ function tabActive(jqSelector)
 
 /** Return the slider value of the identified <input> element.
  * @param inputId e.g. "range-pathDensity"
- * @return value, or undefined if inputId matches 0 or >1 elements
+ * @return (type is number) value, or undefined if inputId matches 0 or >1 elements
  */
 function inputRangeValue(inputId)
 {
@@ -282,7 +282,8 @@ function inputRangeValue(inputId)
   let input = Ember.$("#" + inputId);
   if (input.length !== 1)
     console.log('inputRangeValue', inputId, input.length, input.length && input[0]);
-  return (input.length === 1) ? input[0].value : undefined;
+  // .value is a string, so convert to number.
+  return (input.length === 1) ? +input[0].value : undefined;
 }
 
 /** 

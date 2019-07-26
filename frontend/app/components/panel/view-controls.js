@@ -35,12 +35,12 @@ export default Ember.Component.extend({
 
   pathControlActiveDensity : Ember.computed('pathDensityActive', 'pathDensity', function () {
     let active = this.get('pathDensityActive'),
-     pathDensity = this.get('pathDensity'),
+     pathDensity = +this.get('pathDensity'),
       density = active && expRange(pathDensity, 100/2, 1000);
     if (density) {
       let digits = Math.log10(density),
       decimals =  (digits > 2) ? 0 : ((digits > 1) ? 1 : 2);
-      density = density.toFixed(decimals);
+      density = +density.toFixed(decimals);
     }
     let value = inputRangeValue('range-pathDensity');
     Ember.run.next(function () {
@@ -55,10 +55,10 @@ export default Ember.Component.extend({
 
   pathControlActiveSample : Ember.computed('pathSampleActive', 'pathSample', function () {
     let active = this.get('pathSampleActive'),
-     pathSample = this.get('pathSample'),
+     pathSample = +this.get('pathSample'),
      sample = active && expRange(pathSample, 100, 10000);
     if (sample) {
-      sample = sample.toFixed();
+      sample = Math.round(sample);
     }
     let value = inputRangeValue('range-pathSample');
     Ember.run.next(function () {
@@ -81,14 +81,34 @@ export default Ember.Component.extend({
      * (non-streaming) request modes.
      */
     let active = this.get('pathsViaStream'),
-     pathNFeatures = this.get('pathNFeatures'),
+     pathNFeatures = +this.get('pathNFeatures'),
      nFeatures = active && expRange(pathNFeatures, 100, 10000);
     if (nFeatures) {
-      nFeatures = nFeatures.toFixed();
+      nFeatures = Math.round(nFeatures);
     }
     console.log('pathControlNFeatures', pathNFeatures, nFeatures);
     return nFeatures;
    }),
+
+  pathsDensityParams : Ember.computed(
+    'pathControlActiveSample', 'pathControlActiveDensity', 'pathControlNFeatures',
+    function () {
+      let params = {};
+
+      let nSamples = this.get('pathControlActiveSample');
+      if (nSamples) {
+        params.nSamples = nSamples;
+      }
+      let densityFactor = this.get('pathControlActiveDensity');
+      if (densityFactor) {
+        params.densityFactor = densityFactor;
+      }
+      let nFeatures = this.get('pathControlNFeatures');
+      if (nFeatures) {
+        params.nFeatures = nFeatures;
+      }
+      return params;
+    }),
 
   /*--------------------------------------------------------------------------*/
 

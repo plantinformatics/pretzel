@@ -8,6 +8,7 @@ import PathData from './path-data';
 import AxisEvents from '../../utils/draw/axis-events';
 import { stacks, Stacked } from '../../utils/stacks';
 import { selectAxis, blockAdjKeyFn, blockAdjEltId, featureEltIdPrefix, featureNameClass, foregroundSelector, selectBlockAdj } from '../../utils/draw/stacksAxes';
+import { targetNPaths, pathsFilter } from '../../utils/draw/paths-filter';
 
 /* global d3 */
 
@@ -75,7 +76,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 */
   axes :  Ember.computed.alias('blockAdj.axes'),
 
-  pathsResultLength : Ember.computed('blockAdj.pathsResult.[]', 'paths', 'pathsAliasesResultLength', function () {
+  pathsDensityParams : Ember.computed.alias('pathsP.pathsDensityParams'),
+  pathsResultLength : Ember.computed(
+    'blockAdj.pathsResult.[]', 'paths', 'pathsAliasesResultLength', 'pathsDensityParams',
+    function () {
     /** Trigger paths request - side-effect. In the streaming case, result when
      * the stream ends is [], so paths{,Aliases}Result are used instead of the
      * result of this promise.
@@ -94,18 +98,33 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     fnName = prType.fieldName + 'Length',
     length = pathsResult && pathsResult.length;
     console.log(fnName, this, length);
-    /* The calling CPs paths{,Aliases}ResultLength() are called before didRender
-     * and hence before drawGroup{,Container}().   .draw() uses the <g>-s they
-     * maintain, so defer until end of run loop.
-     */
-    if (length)
+    if (length) {
+      let pathsDensityParams = this.get('pathsDensityParams'),
+      axesRanges = this.get('axes').map((a) => a.yRange()),
+      axisLengthPx = Math.max.apply(null, axesRanges),
+      nPaths = targetNPaths(pathsDensityParams, axisLengthPx);
+      if (pathsResult.length < nPaths) {
+        /* a change of path density is not strictly a change of zoom, but is
+         * close, and both require a new request. */
+        this.incrementProperty('blockAdj.zoomCounter');
+      } else if (pathsResult.length > nPaths) {
+        // later may pass prType as a param to pathsFilter().
+        pathsResult = pathsFilter(pathsResult, nPaths);
+      }
+      /* The calling CPs paths{,Aliases}ResultLength() are called before didRender
+       * and hence before drawGroup{,Container}().   .draw() uses the <g>-s they
+       * maintain, so defer until end of run loop.
+       */
       Ember.run.later( () => 
-      this.draw(/*pathsApiResultType*/ prType, pathsResult)
+                       this.draw(/*pathsApiResultType*/ prType, pathsResult)
                      );
+    }
 
     return length;
   },
-  pathsAliasesResultLength : Ember.computed('blockAdj.pathsAliasesResult.[]', 'paths', function () {
+  pathsAliasesResultLength : Ember.computed(
+    'blockAdj.pathsAliasesResult.[]', 'paths', 'pathsDensityParams',
+    function () {
     /* pathsAliasesResult is in a different form to pathsResult; passing it to
      * draw() requires some mapping, which is abstracted in 
      * pathsResultType e.g. pathsResultTypes.{direct,alias}
