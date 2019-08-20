@@ -1228,6 +1228,34 @@ export default Ember.Component.extend(Ember.Evented, {
          */
         let adopt0;
 
+        /** if true then if child data blocks are received before their parent
+         * blocks, create an axis and stack for the child block, and when the
+         * parent arrives, re-assign the axis to the parent, adopting the child
+         * into the axis.
+         *
+         * The idea was to give the user some positive feedback if the child
+         * data arrived and not the parent block, but the updates involved in
+         * the adoption step may be a problem, so this is currently disabled.
+         */
+        const drawChildBlocksBeforeParent = false;
+        
+        if (! drawChildBlocksBeforeParent && parentName && ! parentAxis)
+        {
+          console.log(sd, ".parentName", parentName);
+          sBlock.parentName = parentName;
+          sBlock.z = oa.z[d];
+          /* Skip the remainder of the function, which implements the
+           * drawChildBlocksBeforeParent feature.
+           * Disabling adoption seems to avoid this error, which is probably
+           * caused by an axis-1d component being destroyed during adoption :
+           *  "Cannot update watchers for `domain` on `<... component:draw/axis-1d ...>` after it has been destroyed."
+           *
+           * This return can be re-structured to if/then, assuming this solution works.
+           */
+          return;
+        }
+
+
         if (! parentAxis)
       {
         // initial stacking : 1 axis per stack, but later when db contains Linkage

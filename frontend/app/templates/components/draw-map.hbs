@@ -42,9 +42,13 @@
   {{/each}}
 
   <div>{{block.viewedIds.length}}, {{axesP.length}} blockAdjs : {{flowsService.blockAdjs.length}}</div>
+  <div>
+    <!-- flowsService.blockAdjs. (this comment fixes : Cannot read property 'nextSibling' of null) -->
   {{#each flowsService.blockAdjs as |blockAdj| }}
     {{draw/block-adj blockAdj=blockAdj drawMap=this }}
   {{/each}}
+    <!-- end of flowsService.blockAdjs. -->
+  </div>
 </div>
 
 {{#if axisFeatureCircleHover}}

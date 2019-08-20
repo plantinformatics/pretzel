@@ -100,7 +100,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     console.log(fnName, this, length);
     if (length) {
       let pathsDensityParams = this.get('pathsDensityParams'),
-      axesRanges = this.get('axes').map((a) => a.yRange()),
+      axes = this.get('axes'),
+      // axesDomains = this.get('blockAdj.axesDomains'),
+      // Use the current zoom domain, not the overall domain, which is b.axis.domain.
+      blockDomains =
+        axes.mapBy('blocks')
+        .reduce(function (bd, bb) {
+          // if b.axis.axis1d.get('zoomed') is false, then domain will be undefined.
+          bb.forEach(function (b) { bd[b.axisName] = b.axis.axis1d.get('domain'); }); return bd; }, {}),
+      axesRanges = axes.map((a) => a.yRange()),
       axisLengthPx = Math.max.apply(null, axesRanges),
       nPaths = targetNPaths(pathsDensityParams, axisLengthPx);
       if (pathsResult.length < nPaths) {
@@ -109,7 +117,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         this.incrementProperty('blockAdj.zoomCounter');
       } else if (pathsResult.length > nPaths) {
         // later may pass prType as a param to pathsFilter().
-        pathsResult = pathsFilter(pathsResult, nPaths);
+        pathsResult = pathsFilter(prType, pathsResult, blockDomains, nPaths);
       }
       /* The calling CPs paths{,Aliases}ResultLength() are called before didRender
        * and hence before drawGroup{,Container}().   .draw() uses the <g>-s they

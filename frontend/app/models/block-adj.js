@@ -63,7 +63,10 @@ export default DS.Model.extend(Ember.Evented, {
    * * this.get('axes1d'), then either .mapBy('axisS.domain') or .mapBy('axis.view.axis.domain')
    */
   axesDomains : Ember.computed('axes1d', 'axes1d.@each.domain', 'axes', function () {
-    let axes1d = this.get('axes1d'),
+    let axes1d = this.get('axes1d')
+    /* axes1d may contain undefined while an axis is being removed; the
+     * block-adj will also be removed, so that state is transitory. */
+      .filter(v => v !== undefined),
     axesDomains = axes1d.mapBy('domain');
     console.log('axesDomains', axesDomains, axes1d);
     /* if .currentPosition.yDomain has not yet been set, then use the range of
@@ -245,7 +248,7 @@ export default DS.Model.extend(Ember.Evented, {
      * auth.js : getPaths{,Aliases}ViaStream() : promise.catch(interruptStream )
      */
     result = task.perform(blockAdjId)
-      .catch().then(function () {
+      .catch(function () {
         // arguments are 2 (direct & alias) of : {state: "fulfilled", value: [] }
         console.log('call_taskGetPaths taskInstance.catch', blockAdjId); });
 
