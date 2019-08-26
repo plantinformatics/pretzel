@@ -41,7 +41,7 @@ import { breakPoint, breakPointEnableSet } from '../utils/breakPoint';
 import { highlightFeature_drawFromParams } from './draw/highlight-feature';
 import { Flow } from "../utils/flows";
 import { flowButtonsSel, configurejQueryTooltip, flows_showControls  } from "../utils/draw/flow-controls";
-import { collateStacks, countPaths, countPathsWithData,
+import { collateStacks, countPaths, /*countPathsWithData,*/
          collateData, collateFeatureClasses, maInMaAG, collateStacks1,
          pathsUnique_log, log_maamm, log_ffaa, mmaa2text,
          getAliased, collateStacksA, objPut,
@@ -51,6 +51,11 @@ import { collateStacks, countPaths, countPathsWithData,
          collateFeatureMap, concatAndUnique, featureStackAxes,
          collateMagm
        } from "../utils/draw/collate-paths";
+/** We can replace countPathsWithData() (which does a DOM search and is not
+ * updated for progressive paths), with a sum of (pathsResult.length +
+ * pathsAliasesResult.length) for all block-adj in flows.blockAdjs
+ */
+function countPathsWithData() { }
 import { storeFeature } from '../utils/feature-lookup';
 
 
@@ -376,20 +381,29 @@ export default Ember.Component.extend(Ember.Evented, {
     return blockService.peekBlock(blockId);
   },
 
-  receivedBlock : function (id, block) {
-    console.log('receivedBlock', this, id, block);
+  receivedBlock : function (blocks) {
+    console.log('receivedBlock', this, blocks);
+    let retHash = 
+      blocks.reduce((retHash, b) => {
+      let block = b.obj;
     // copied from dataObserver() (similar to drawPromisedChr()) - can simplify and rename ch -> block, chr -> blockId, 
     let
       ch = block,
     chr  = block.get('id'),
                     rc = chrData(ch);
-                    /** Only 1 chr in hash, but use same structure as routes/mapview.js */
-                    let retHash = {};
+                    /** use same structure as routes/mapview.js */
                     retHash[chr] = rc;
     this.get('receiveChr')(chr, rc, 'dataReceived');
+      return retHash;
+    }, {});
 
-
-    this.draw(retHash, 'dataReceived');
+    Ember.run.later( () => {
+      /* Cause the evaluation of stacks-view:axesP; also evaluates blockAdjIds,
+       * and block-adj.hbs evaluates paths{,Aliases}ResultLength and hence
+       * requests paths.  This dependency architecture will be made clearer.  */
+      this.get('flowsService.blockAdjs');
+      this.draw(retHash, 'dataReceived');
+    });
   },
 
 
@@ -1185,7 +1199,7 @@ export default Ember.Component.extend(Ember.Evented, {
       if (! s)
       {
         let zd = oa.z[d],
-        dataset = zd.dataset,
+        dataset = zd ? zd.dataset : dBlock.get('datasetId'),
         parent = dataset && dataset.get('parent'),
         parentName = parent && parent.get('name'),  // e.g. "myGenome"
         parentId = parent && parent.get('id'),  // same as name
@@ -2444,6 +2458,16 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     let someAxesHaveChildBlocks = true;
 
+    if (! oa.axisApi.axisTitleFamily)
+      oa.axisApi.axisTitleFamily = axisTitleFamily;
+    /** Update the axis title, including the block sub-titles.
+     * From the number of block sub-titles, calculate 'y' : move title up to
+     * allow for more block sub-titles.
+     * Create / update a <tspan> for each block, including the parent / reference block.
+     * Configure a hover menu for each <tspan>, either axis (parent) or subtitle (data block).
+     *
+     * @param axisTitleS  d3 selection of the <text> within g.axis-all
+     */
     function axisTitleFamily(axisTitleS) {
       axisTitleS
       // .text(axisTitle /*String*/)
@@ -2473,7 +2497,7 @@ export default Ember.Component.extend(Ember.Evented, {
       .append("tspan");
       subTitleS.exit().remove();
       subTitleE.merge(subTitleS)
-      .text(function (block) { return block.titleText(); })
+        .text(function (block) { return block.titleText(); })
       .attr('x', '0px')
       .attr('dx', '0px')
         .attr('dy',  function (d, i) { return "" + (i ? 1.5 : 0)  + "em"; })

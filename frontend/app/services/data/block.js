@@ -52,7 +52,7 @@ export default Service.extend(Ember.Evented, {
     if (! isViewed)
     {
       block.set('isViewed', true);
-      this.trigger('receivedBlock', id, block);
+      this.trigger('receivedBlock', [{id, obj : block}]);
     }
     return block;
   }),
@@ -80,24 +80,58 @@ export default Service.extend(Ember.Evented, {
   /*--------------------------------------------------------------------------*/
 
   /** Call getSummary() in a task - yield the block result.
-   * Signal that receipt with receivedBlock(id, block).
+   * Signal that receipt with receivedBlock([{id, obj:block}]).
    */
-  taskGetSummary: task(function * (id) {
-    /** if not already loaded and viewed, then trigger receivedBlock */
-    let isViewed = this.get('getIsViewed').apply(this, [id]);
-    let block = yield this.getSummary(id);
-    // console.log('taskGetSummary', this, id, block);
-    if (! isViewed)
-    {
-      block.set('isViewed', true);
-    }
-    return block;
+  taskGetSummary: task(function * (blockIds) {
+    let blockFeatureCounts = yield this.getSummary(blockIds);
+    console.log('taskGetSummary', this, blockIds, blockFeatureCounts);
+    blockFeatureCounts.forEach((bfc) => {
+      let block = this.peekBlock(bfc._id);
+      if (! block)
+        console.log('taskGetSummary', bfc._id);
+      else
+        block.set('featureCount', bfc.featureCount);
+    });
+    /* blockFeatureCounts will omit reference blocks since they have no features,
+     * so use blockIds to set viewed and trigger receivedBlock.
+     */
+    let blocksToView =
+      blockIds.reduce((result, blockId) => {
+        let block = this.peekBlock(blockId);
+        if (! block)
+          console.log('taskGetSummary', blockId);
+        else {
+          let referenceBlock = block.get('referenceBlock');
+          if (referenceBlock) {
+            result.push({id : referenceBlock.get('id'), obj : referenceBlock});
+          }
+          result.push({id : blockId, obj : block});
+        }
+        return result;
+      }, []);
+    Ember.changeProperties(function() {
+      blocksToView.forEach(function(b) {
+        b.obj.set('isViewed', true);
+        console.log('taskGetSummary changeProperties isViewed', b.obj.get('id'));
+      });
+    });
+    /** trigger receivedBlock() for the requested blocks and their parents.
+     *
+     * Event triggers are immediate, growing the stack and possibly creating
+     * recursion, whereas ComputedProperty-s are evaluated in a batch within
+     * the run-loop cycle.  So this event trigger is likely to be transitioned
+     * to a ComputedProperty dependency.
+     * This concern is ameliorated by using a single trigger for all of the
+     * blocksIds, omitting those already viewed, and including their referenceBlock-s.
+     */
+    this.trigger('receivedBlock', blocksToView);
+
+    return blockFeatureCounts;
   }),
-  getSummary: function (id) {
+  getSummary: function (blockIds) {
     // console.log("block getSummary", id);
     let blockP =
-      Ember.RSVP.cast([[100, 123], [200, 456]]);
-    // TODO     this.get('auth').getBlockSummary(id, /*options*/{});
+      this.get('auth').getBlockFeaturesCount(blockIds, /*options*/{});
     return blockP;
   },
 
@@ -203,14 +237,9 @@ export default Service.extend(Ember.Evented, {
   getBlocksSummary(blockIds) {
     let taskGet = this.get('taskGetSummary');
     console.log("getBlocksSummary", blockIds);
-    let blockTasks = blockIds.map(
-      function (id) {
-        let blockTask = taskGet.perform(id);
-        return blockTask;
-      });
-
-    console.log("getBlocksSummary() result blockTasks", blockTasks);
-    return blockTasks;
+    let blocksTask = taskGet.perform(blockIds);
+    console.log("getBlocksSummary() result blocksTask", blocksTask);
+    return blocksTask;
   },
 
 
@@ -239,7 +268,7 @@ export default Service.extend(Ember.Evented, {
       let records = this.get('blockValues')
         .filterBy('isViewed', true);
       if (trace_block)
-        console.log('viewed', records);
+        console.log('viewed', records.toArray());
       return records;  // .toArray()
     }),
   viewedIds: Ember.computed(
@@ -322,7 +351,7 @@ export default Service.extend(Ember.Evented, {
       if (trace_block > 1)
         console.log(
           'loadedViewedChildBlocks', records
-            .map(function(blockR) { return blockR.view.longName(); })
+            .map(function(blockR) { return blockR.view && blockR.view.longName(); })
         );
       return records;  // .toArray()
     }),
@@ -341,6 +370,8 @@ export default Service.extend(Ember.Evented, {
               map.set(axis, blocks = []);
             blocks.push(block);
           }
+          else
+            console.log('axesBlocks', block.get('id'), block.get('view'), 'no view.axis');
           return map; },
         new Map()
       );

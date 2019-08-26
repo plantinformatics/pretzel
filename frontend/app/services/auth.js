@@ -214,6 +214,11 @@ export default Service.extend({
     return this._ajax('Blocks/pathsByReference', 'GET', {blockA : blockA, blockB : blockB, reference, max_distance, options : options}, true);
   },
 
+  getBlockFeaturesCount(blocks, options) {
+    console.log('services/auth getBlockFeaturesCount', blocks, options);
+    return this._ajax('Blocks/blockFeaturesCount', 'GET', {blocks, options}, true);
+  },
+
   getBlockFeaturesInterval(blocks, intervals, options) {
     console.log('services/auth getBlockFeaturesInterval', blocks, intervals, options);
     return this._ajax('Blocks/blockFeaturesInterval', 'GET', {blocks, intervals, options}, true);

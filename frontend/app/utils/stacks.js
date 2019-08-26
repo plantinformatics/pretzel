@@ -37,6 +37,11 @@ var oa;
 /** Ownership of this may move to data component. */
 var axes;
 var axesP;
+/** draw/axis-1d components, indexed by blockId of the parent / reference block.
+ * This will likely not be needed after axis-1d is more closely integrated with
+ * Stacked, e.g. the Stacked would be created by the axis-1d init().
+ */
+var axes1d;
 let blocks;
 
 //- maybe change stacks to a class Stacks(), and instantiate wth new Stacks(oa)
@@ -64,6 +69,10 @@ stacks.init = function (oa_)
        * axes[x] is === either blocks[x] or axesP[x], not both.
        */
       stacks.axes = {};
+
+    axes1d = stacks.axes1d = {};
+    stacks.axesPCount = Ember.Object.create({ count: 0 });
+
   }
 };
 
@@ -234,9 +243,14 @@ function Stacked(axisName, portion) {
   this.stack = undefined;
   /** data blocks */
   this.blocks = [];
+  /* Pick up the reference to the corresponding axis-1d component, in the case
+   * that it was created before this Stacked.  */
+  if (axes1d[axisName])
+    this.axis1d = axes1d[axisName];
   /* axis objects persist through being dragged in and out of Stacks. */
   axesP[axisName] =
   oa.axes[axisName] = this;
+  stacks.axesPCount.incrementProperty('count');
 };
 Stacked.prototype.referenceBlock = undefined;
 Stacked.prototype.axisName = undefined;
@@ -257,6 +271,12 @@ Stacked.prototype.portion = undefined;
 Stacked.prototype.getAxis = function()
 {
   return this;
+};
+/** Enable axis-1d to correlate with blockId.
+ * axesP[axisName].axis1d is also set to axis1dComponent, but axesP[axisName] may not have been created yet.
+ */
+Stacked.axis1dAdd = function (axisName, axis1dComponent) {
+  axes1d[axisName] = axis1dComponent;
 };
 function positionToString(p)
 {
@@ -738,9 +758,12 @@ Block.prototype.titleText = function ()
   let axisName = this.block.get('id'),
   cmName = oa.cmName[axisName],
   shortName = cmName && cmName.dataset.get('meta.shortName'),
-  name = shortName || cmName.mapName;
+  name = shortName || cmName.mapName,
+  featureCount = this.block && this.block.get('featureCount'),
+  featureCountLoaded = this.block.get('featuresLength'),
+  featureCountText = (featureCount || featureCountLoaded) ? ' : ' + featureCountLoaded + ' / ' + featureCount : '';
   // console.log('Block titleText', cmName, shortName, name, cmName.scope);
-  return name + " : " + cmName.chrName;
+  return name + " : " + cmName.chrName + featureCountText;
 };
 /** @return maximum length of the titles of the viewed blocks. */
 Block.titleTextMax = function (axisName)
@@ -1227,6 +1250,7 @@ Stack.prototype.removeStacked1 = function (axisName)
   {
     delete oa.axes[axisName];  // or delete axis['axis']
     delete axesP[axisName];
+    stacks.axesPCount.decrementProperty('count');
   }
   if (this.empty())
   {
@@ -1669,6 +1693,48 @@ Stack.prototype.redraw = function (t)
     });
 
   this.redrawAdjacencies();
+};
+
+/** Select the <g.axis-outer> DOM element of this axis.
+ * @return d3 selection
+ */
+Stacked.prototype.selectAll = function ()
+{
+  /* This function is factored from a pattern which appears in a number of
+   * places, which can now use this; (they can be seen with grep
+   * 'select.*axis-outer' ).
+   */
+
+  /** currently the <g.stack>-s are in svg > g, but there may be value in adding
+   * a <g.stacks> to parent the <g.stack>-s
+   */
+  let stackSel = "g#id" + this.stack.stackID + ".stack",
+  axisSel = stackSel + " > g#id" + this.axisName + ".axis-outer",
+  gAxis = Stacked.selectAll(axisSel);
+
+  /* later we may have multiple instances of an axis; their stackID will
+   * identify them uniquely if they are in separate stacks. */
+  if (gAxis.size() > 1)
+    console.log('Stacked:selectAll', gAxis.size(), gAxis.nodes(), gAxis.node);
+  return gAxis;
+};
+/** Select the <g.axis-outer> DOM element of the axis indicated by optional
+ * param axisSel, or all axes if axisSel is undefined.
+ * @param axisSel undefined for all axes, or a CSS-style selector.
+ * @return d3 selection
+ */
+Stacked.selectAll = function (axisSel)
+{
+  if (! axisSel)
+    axisSel = "g.stack > g.axis-outer";
+  let gAxis;
+  if (oa && oa.svgContainer)
+    gAxis = oa.svgContainer.selectAll("svg > g > " + axisSel);
+  else
+    gAxis = d3.selectAll(selectPrefix + ' > ' + axisSel);
+  if (trace_stack)
+    gAxis.nodes().forEach(function (n, i) { console.log(i, n);});
+  return gAxis;
 };
 
 function axisRedrawText(a)

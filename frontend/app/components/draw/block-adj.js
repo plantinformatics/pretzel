@@ -107,7 +107,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         axes.mapBy('blocks')
         .reduce(function (bd, bb) {
           // if b.axis.axis1d.get('zoomed') is false, then domain will be undefined.
-          bb.forEach(function (b) { bd[b.axisName] = b.axis.axis1d.get('domain'); }); return bd; }, {}),
+          // also b.axis.axis1d can be undefined, probably because of new axis, in which case it won't be zoomed yet (except when we add zoom domain to the URL).
+          bb.forEach(function (b) { bd[b.axisName] = b.axis.axis1d && b.axis.axis1d.get('domain'); }); return bd; }, {}),
       axesRanges = axes.map((a) => a.yRange()),
       axisLengthPx = Math.max.apply(null, axesRanges),
       nPaths = targetNPaths(pathsDensityParams, axisLengthPx);

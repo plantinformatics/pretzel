@@ -51,11 +51,14 @@ export default Ember.Component.extend(AxisEvents, {
 
   renderTicks(axisID_t) {
     console.log("renderTicks in ", CompName, axisID_t);
-    this.get('axis1d.featureTicks').showTickLocations(
+    let featureTicks = this.get('axis1d.featureTicks');
+    if (featureTicks) {
+      featureTicks.showTickLocations(
       this.featuresOfBlockLookup.bind(this),
       true,  /* undefined or false after text featureExtra is added */
       'foundFeatures', false
-    );
+      );
+    }
   },
   /** call renderTicks().
    * filter / throttle the calls to handle multiple events at the same time.

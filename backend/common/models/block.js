@@ -4,6 +4,7 @@
 var acl = require('../utilities/acl')
 var identity = require('../utilities/identity')
 var task = require('../utilities/task')
+var blockFeatures = require('../utilities/block-features');
 var pathsAggr = require('../utilities/paths-aggr');
 var pathsFilter = require('../utilities/paths-filter');
 var pathsStream = require('../utilities/paths-stream');
@@ -447,6 +448,23 @@ Block.blockNamespace = async function(blockIds) {
     }
 
 
+  /*--------------------------------------------------------------------------*/
+
+  /** Send a database request to count the features within the given blocks.
+   *
+   * @param blockIds  blocks
+   */
+  Block.blockFeaturesCount = function(blockIds, options, res, cb) {
+    let db = this.dataSource.connector;
+    let cursor =
+      blockFeatures.blockFeaturesCount(db, blockIds);
+    cursor.toArray()
+    .then(function(featureCounts) {
+      cb(null, featureCounts);
+    }).catch(function(err) {
+      cb(err);
+    });
+  };
 
   /*--------------------------------------------------------------------------*/
 
@@ -563,6 +581,17 @@ Block.blockNamespace = async function(blockIds) {
   //----------------------------------------------------------------------------
   // When adding a API .remoteMethod() here, also add the route name to backend/common/utilities/paths-stream.js : genericResolver()
   //----------------------------------------------------------------------------
+
+  Block.remoteMethod('blockFeaturesCount', {
+    accepts: [
+      {arg: 'blocks', type: 'array', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'res', type: 'object', 'http': {source: 'res'}},
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Returns a count of the Features in the block"
+  });
 
   Block.remoteMethod('blockFeaturesInterval', {
     accepts: [

@@ -72,6 +72,8 @@ function FeatureTicks(axis, axisApi, axis1d)
 }
 
 /** Draw horizontal ticks on the axes, at feature locations.
+ *
+ * @param axis  block (Ember object), result of stacks-view:axesP
  */
 FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setupHover, groupName, blockFilter)
 {
@@ -237,17 +239,21 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   blockService: service('data/block'),
 
+  stacks : stacks,
 
   init() {
     this._super(...arguments);
+    let axisName = this.get('axis.id');
+    /* axisS may not exist yet, so give Stacked a reference to this. */
+    Stacked.axis1dAdd(axisName, this);
     let axisS = this.get('axisS');
     if (! axisS || axisS.axis1d)
     {
-      let axisName = this.get('axis.id');
       console.log('axis-1d:init', this, axisName, this.get('axis'), axisS, axisS && axisS.axis1d);
     }
     else {
       axisS.axis1d = this;
+      console.log('axis-1d:init', this, this.get('axis.id'), axisS); axisS.log();
     }
   },
 
@@ -271,10 +277,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   },
 
   /** @return the Stacked object corresponding to this axis. */
-  axisS : Ember.computed('axis.id', function () {
+  axisS : Ember.computed('axis.id', 'stacks.axesPCount', function () {
     let
       axisName = this.get('axis.id'),
     axisS = Stacked.getAxis(axisName);
+    if (axisS && ! axisS.axis1d) {
+      axisS.axis1d = this;
+    }
     return axisS;
   }),
   /** @return data blocks of this axis.
@@ -282,26 +291,38 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
    */
   dataBlocks : Ember.computed('axisS', 'blockService.axesBlocks.@each', function () {
     let axis = this.get('axisS'),
-    /** stack Block-s. */
-    dataBlocksS = axis.dataBlocks(),
-    dataBlocks = dataBlocksS.map(function (b) { return b.block; }),
+    dataBlocks,
     axesBlocks = this.get('blockService.axesBlocks');
+    if (! axis) {
+      /* We can add a ComputedProperty for axes - allocate a Stack and Stacked
+       * (axis) for newly viewed non-child blocks. */
+      dataBlocks = [];
+      let
+        axisName = this.get('axis.id');
+      console.log('dataBlocks', axesBlocks, axisName, dataBlocks);
+    }
+    else {
+    let
+    /** stack Block-s. */
+      dataBlocksS = axis.dataBlocks();
+      dataBlocks = dataBlocksS.map(function (b) { return b.block; });
     console.log(dataBlocksS, 'axesBlocks', axesBlocks, axis.axisName);
+    }
     return dataBlocks;
   }),
   /** count of features of .dataBlocks */
-  featureLength : Ember.computed('dataBlocks', 'dataBlocks.@each.featuresLength', function () {
+  featureLength : Ember.computed('dataBlocks.@each.featuresLength', function () {
     let dataBlocks = this.get('dataBlocks'),
     featureLengths = dataBlocks.map(function (b) { return b.get('featuresLength'); } ),
     featureLength = sum(featureLengths);
-    console.log(dataBlocks, featureLengths, 'featureLength', featureLength);
-    this.get('axisS').log();
+    console.log(this, dataBlocks, featureLengths, 'featureLength', featureLength);
+    let axisS = this.get('axisS'); if (axisS) axisS.log();
     return featureLength;
   }),
   /** When featureLength changes, render.
    * The suffix Effect is used to denote a Side Effect triggered by a CF.
    */
-  featureLengthEffect : Ember.computed('featureLength', function () {
+  featureLengthEffect : Ember.computed('featureLength', 'axisS', function () {
     let featureLength = this.get('featureLength');
     this.renderTicksDebounce();
     let axisApi = stacks.oa.axisApi,
@@ -309,6 +330,21 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     axisFeatureCirclesBrushed = axisApi.axisFeatureCirclesBrushed;
     if (axisFeatureCirclesBrushed)
       axisFeatureCirclesBrushed();
+
+    /** Update the featureCount shown in the axis block title */
+    let axis = this.get('axisS');
+    if (axis) {
+      let
+        gAxis = axis.selectAll(),
+      axisTitleS = gAxis.select("g.axis-outer > g.axis-all > text");
+      console.log(
+        'featureLengthEffect', featureLength, axisTitleS.nodes(), axisTitleS.node(),
+        gAxis.nodes(), gAxis.node());
+      axisApi.axisTitleFamily(axisTitleS);
+    }
+    else if (featureLength)
+      console.log('featureLengthEffect', this.get('axis.id'), featureLength);
+
     return featureLength;
   }),
 
@@ -366,6 +402,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       // use the VLinePosition:toString() for the position-s
       console.log('domainChanged', domain, this.get('axisS'), ''+this.get('currentPosition'), ''+this.get('lastDrawn'));
       // this.notifyChanges();
+      if (! this.get('axisS'))
+        console.log('domainChanged() no axisS yet', domain, this.get('axis.id'));
+      else
       this.updateAxis();
 
       return domain;
@@ -470,7 +509,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     }
   },
   renderTicks() {
-    this.get('featureTicks').showTickLocations(undefined, true, 'notPaths', true);
+    let featureTicks = this.get('featureTicks');
+    if (! featureTicks && this.get('axisS')) {
+      this.constructFeatureTicks();
+      featureTicks = this.get('featureTicks');
+    }
+    if (! featureTicks)
+      console.log('renderTicks', featureTicks);
+    else
+      featureTicks.showTickLocations(undefined, true, 'notPaths', true);
   },
   /** call renderTicks().
    * filter / debounce the calls to handle multiple events at the same time.

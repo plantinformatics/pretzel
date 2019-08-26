@@ -4,6 +4,7 @@ import { task } from 'ember-concurrency';
 
 const { Mixin } = Ember;
 
+import { Stacked } from '../utils/stacks';
 import { updateDomain } from '../utils/stacksLayout';
 import VLinePosition from '../models/vline-position';
 
@@ -45,12 +46,25 @@ export default Mixin.create({
   updateDomain()
   {
     let axisS=this.get('axisS');
-    let y = axisS.getY(), ys = axisS.ys;
-    updateDomain(axisS.y, axisS.ys, axisS);
-    let domain = axisS.y.domain(),
-    axisPosition = this.get('currentPosition');
-    console.log('updateDomain', this, /*y, ys,*/ 'domain', domain, axisPosition);
-    axisPosition.set('yDomain', domain);
+    if (! axisS) {
+      /** This replicates the role of axis-1d.js:axisS();  this will be solved
+       * when Stacked is created and owned by axis-1d.
+       */
+      let axisName = this.get('axis.id');
+      axisS = Stacked.getAxis(axisName);
+      if (axisS) {
+        this.set('axisS', axisS);
+        console.log('axis-1d:updateDomain', this, axisName, axisS);
+      }
+    }
+    if (axisS) {
+      let y = axisS.getY(), ys = axisS.ys;
+      updateDomain(axisS.y, axisS.ys, axisS);
+      let domain = axisS.y.domain(),
+      axisPosition = this.get('currentPosition');
+      console.log('updateDomain', this, /*y, ys,*/ 'domain', domain, axisPosition);
+      axisPosition.set('yDomain', domain);
+    }
   },
   /** Set the domain of the current position to the given domain
    */

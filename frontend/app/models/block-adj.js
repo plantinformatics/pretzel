@@ -346,6 +346,8 @@ export default DS.Model.extend(Ember.Evented, {
       let 
         lastPerformed = this.get('lastPerformed');
       console.log('taskGetPaths : lastStarted now', now, lastPerformed);
+      if (lastPerformed.error)
+        console.log('taskGetPaths lastPerformed.error', lastPerformed.error);
       result =
         yield this.getPaths(blockAdjId, lastPerformed);
       result = yield this.flowsAllSettled(result);
@@ -353,8 +355,13 @@ export default DS.Model.extend(Ember.Evented, {
 
     }
     finally {
-      if (! result)
+      if (! result) {
         console.log('taskGetPaths cancelled');
+        let 
+          lastPerformed = this.get('lastPerformed');
+        if (lastPerformed.error)
+          console.log('taskGetPaths lastPerformed.error', lastPerformed.error);
+      }
       /* close EventSource.
        * This is achieved by passing this taskInstance (lastPerformed) via
        * getPaths(), so that listenEvents() : closeSource() will be called.
