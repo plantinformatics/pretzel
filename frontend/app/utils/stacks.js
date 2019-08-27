@@ -202,9 +202,21 @@ Block.prototype.datasetHasParent = function() {
 Block.prototype.isData = function() {
   let axis = this.getAxis(),
   blockR = this.block,
+  /** The most significant check here is blockR.get('featureCount'); now that we
+   * have this information readily information in the frontend that is the best
+   * way to distinguish a data block, and the other checks can be retired.
+   *
+   * The .namespace check may identify GMs, but some
+   * (e.g. Quraishi_2017_consensus) being a consensus of data from multiple
+   * namespaces don't have a .namespace.
+   *
+   * The check on features.length is fine if the features are loaded into the
+   * frontend - catch 22 because isData() is used by dataBlocks() which is used
+   * in populating the blocks parameter of getBlockFeaturesInterval().
+   * (checking if features is defined and features.length > 0)
+   */
   isData =
-    //  checking if features is defined and features.length > 0
-    (blockR.get('namespace') || blockR.get('isChartable') || blockR.get('features.length') || ! this.isReference());
+    (blockR.get('namespace') || blockR.get('isChartable') || blockR.get('features.length') || blockR.get('featureCount') || ! this.isReference());
   return isData;
 };
 
