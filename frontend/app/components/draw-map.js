@@ -62,6 +62,9 @@ import { collateStacks, countPaths, countPathsWithData,
 
 let trace_dataflow = 1;
 
+/** <button> is not rendered within the content of bootstrap popover, in some version. */
+const buttonTag = 'span'; // button
+
 
 Object.filter = Object_filter;
 
@@ -2442,7 +2445,7 @@ export default Ember.Component.extend(Ember.Evented, {
     /*------------------------------------------------------------------------*/
 
     // Setup the path hover tool tip.
-    let toolTipCreated = ! oa.toolTip;
+    let toolTipCreated = !! oa.toolTip;
     let toolTip = oa.toolTip || (oa.toolTip =
       d3.tip()
         .attr("class", "toolTip d3-tip")
@@ -4794,9 +4797,9 @@ export default Ember.Component.extend(Ember.Evented, {
     function iconButton(className, id, htmlIcon, glyphiconName, href, useGlyphIcon)
     {
         return ''
-        + '<button class="' + className + '" id="' + id + '" href="' + href + '">'
+        + '<' + buttonTag + ' class="btn btn-large ' + className + '" id="' + id + '" href="' + href + '">'
         + (useGlyphIcon ? glyphIcon(glyphiconName) : htmlIcon)
-        + '</button>';
+        + '</' + buttonTag + '>';
     }
 
 
@@ -4899,6 +4902,7 @@ export default Ember.Component.extend(Ember.Evented, {
       if (trace_gui)
       console.log("configureAxisTitleMenu", axisName, this, this.outerHTML);
         let node_ = this;
+        let content;
         Ember.$(node_)
         .popover({
             trigger : "hover", // manual", // "click focus",
@@ -4914,7 +4918,8 @@ export default Ember.Component.extend(Ember.Evented, {
            *	↷	8631	21B7	 	CLOCKWISE TOP SEMICIRCLE ARROW
            *	⇲	8690	21F2	 	SOUTH EAST ARROW TO CORNER
            */
-          content : ""
+          content : content =
+            (""
             + iconButton("DeleteMap", "Delete_" + axisName, "&#x2573;" /*glyphicon-sound-7-1*/, "glyphicon-remove-sign", "#")
             + iconButton("FlipAxis", "Flip_" + axisName, "&#x21C5;" /*glyphicon-bell*/, "glyphicon-retweet", "#")
             + 
@@ -4923,6 +4928,7 @@ export default Ember.Component.extend(Ember.Evented, {
             +
             (splitAxes1 ?
              iconButton("ExtendMap", "Extend_" + axisName, "&#x21F2;" /*glyphicon-star*/, "glyphicon-arrow-right", "#")  : "")
+            )
         })
         // .popover('show');
       
@@ -4931,7 +4937,7 @@ export default Ember.Component.extend(Ember.Evented, {
             console.log("shown.bs.popover", event, event.target);
           // button is not found when show.bs.popover, but is when shown.bs.popover.
           // Could select via id from <text> attr aria-describedby=​"popover800256".
-          let deleteButtonS = d3.select("button.DeleteMap");
+          let deleteButtonS = d3.select(buttonTag + ".DeleteMap");
           if (trace_gui)
             console.log(deleteButtonS.empty(), deleteButtonS.node());
           deleteButtonS
@@ -4951,7 +4957,8 @@ export default Ember.Component.extend(Ember.Evented, {
               selectedFeatures_removeAxis(axisName);
               sendUpdatedSelectedFeatures();
             });
-          let flipButtonS = d3.select("button.FlipAxis");
+          // console.log('configureAxisTitleMenu content', content);
+          let flipButtonS = d3.select(buttonTag + ".FlipAxis");
           flipButtonS
             .on('click', function (buttonElt /*, i, g*/) {
               console.log("flip", axisName, this);
@@ -4969,7 +4976,7 @@ export default Ember.Component.extend(Ember.Evented, {
               let t = oa.svgContainer.transition().duration(750);
               axisScaleChanged(axisName, t, true);
             });
-          let perpendicularButtonS = d3.select("button.PerpendicularAxis");
+          let perpendicularButtonS = d3.select(buttonTag + ".PerpendicularAxis");
           perpendicularButtonS
             .on('click', function (buttonElt /*, i, g*/) {
               console.log("perpendicular", axisName, this);
@@ -4979,7 +4986,7 @@ export default Ember.Component.extend(Ember.Evented, {
               oa.showResize(true, true);
             });
 
-          let extendButtonS = d3.select("button.ExtendMap");
+          let extendButtonS = d3.select(buttonTag + ".ExtendMap");
           if (trace_gui)
             console.log(extendButtonS.empty(), extendButtonS.node());
           extendButtonS
@@ -5033,7 +5040,7 @@ export default Ember.Component.extend(Ember.Evented, {
           if (trace_gui)
             console.log("shown.bs.popover", event, event.target);
 
-          let deleteButtonS = d3.select("button.DeleteMap");
+          let deleteButtonS = d3.select(buttonTag + ".DeleteMap");
           if (trace_gui)
             console.log(deleteButtonS.empty(), deleteButtonS.node());
           deleteButtonS
@@ -5043,7 +5050,7 @@ export default Ember.Component.extend(Ember.Evented, {
               me.send('mapsToViewDelete', block.axisName);
             });
 
-          let visibleButtonS = d3.select("button.VisibleAxis");
+          let visibleButtonS = d3.select(buttonTag + ".VisibleAxis");
           if (trace_gui)
             console.log(visibleButtonS.empty(), visibleButtonS.node());
 
