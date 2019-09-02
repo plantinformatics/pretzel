@@ -8,14 +8,15 @@
   "scripts": {
     "lint": "eslint .",
     "start": "node .",
-    "dev": "EMAIL_VERIFY=NONE AUTH=ALL API_PORT_EXT=5000 nodemon server/server.js",
-    "test": "mocha --reporter spec --timeout 20000 test"
+    "dev": "EMAIL_VERIFY=NONE AUTH=ALL API_PORT_EXT=5000 nodemon -L server/server.js",
+    "test": "NODE_ENV=test mocha --reporter spec --timeout 20000 --slow 700 --extension .spec.js test/*.spec.js --exit"
   },
   "dependencies": {
     "async": "^2.4.0",
     "body-parser": "^1.18.3",
     "compression": "^1.7.3",
     "cors": "^2.5.2",
+    "express-sse": "^0.5.0",
     "helmet": "^1.3.0",
     "lodash": "^4.17.11",
     "loopback": "^3.22.3",
@@ -24,6 +25,7 @@
     "loopback-component-passport": "~3.4.0",
     "loopback-connector-mongodb": "^1.18.1",
     "loopback-datasource-juggler": "^3.23.0",
+    "memory-cache": "^0.2.0",
     "mongoose": "^4.10.4",
     "morgan": "^1.9.1",
     "passport-ldapauth": "2.0.0",
@@ -34,10 +36,13 @@
     "chai": "^4.1.0",
     "eslint": "^3.17.1",
     "eslint-config-loopback": "^8.0.0",
+    "eventsource": "^1.0.7",
     "mocha": "^5.2.0",
     "nodemon": "^1.18.4",
     "nsp": "^2.1.0",
-    "smtp-server": "^3.0.1"
+    "qs": "^6.6.0",
+    "smtp-server": "^3.0.1",
+    "superagent": "^4.1.0"
   },
   "repository": {
     "type": "",

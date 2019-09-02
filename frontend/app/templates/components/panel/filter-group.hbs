@@ -1,0 +1,104 @@
+<div>
+  {{elem/icon-toggle state=detailed iconTrue='arrow-up' iconFalse='arrow-down' }}
+  {{elem/button-base
+    click=(action "deleteFilterOrGroup")
+    icon='remove'
+    classColour="info"
+    class='delete'
+  }}
+
+  {{#if detailed}}
+    <div class="line-input-label">
+      {{radio-button value='filter' groupValue=filterOrGroup
+        changed=(action changed this preventDefault=false)
+      }}
+      <label>Filter</label>
+      {{radio-button value='group' groupValue=filterOrGroup
+        changed=(action changed this preventDefault=false)
+      }}
+      <label>Group</label>
+    </div>
+  {{/if}}
+
+  {{#elem/button-base
+     click=(action "filterByCurrentScopes")
+     icon='arrow-left'
+     classColour="info"
+  }}
+    <span>Current Scopes</span>
+  {{/elem/button-base}}
+
+</div>
+
+{{input
+  value=pattern
+  class="form-control"
+  enter=(action changed this)
+  placeholder="string or regular expression" }}
+
+{{#if detailed}}
+
+  {{!-- scope of search can be : .name .scope .meta --}}
+  <div class="line-input-label">
+    <label style="margin-right:1em">Fields :</label>
+    {{input type="checkbox" name="fieldName" checked=fieldName
+      click=(action changed this preventDefault=false)
+    }}
+    <span>name</span>
+    {{input type="checkbox" name="fieldMeta" checked=fieldMeta
+      click=(action changed this preventDefault=false)
+    }}
+    <span>meta</span>
+    <br/>
+    <span style="margin-left:2em">Block : </span>
+    {{input type="checkbox" name="fieldScope" checked=fieldScope
+      click=(action changed this preventDefault=false)
+    }}
+    <span>scope</span>
+    {{input type="checkbox" name="fieldNamespace" checked=fieldNamespace
+      click=(action changed this preventDefault=false)
+    }}
+    <span>namespace</span>
+
+  </div>
+  {{!-- match string / pattern again key and/or value --}}
+  <div class="line-input-label">
+    <label>Match against :</label>
+    {{input type="checkbox" name="matchKey" checked=matchKey
+      click=(action changed this preventDefault=false)
+    }}
+    <span>Key</span>
+    {{input type="checkbox" name="matchValue" checked=matchValue
+      click=(action changed this preventDefault=false)
+    }}
+    <span>Value</span>
+  </div>
+
+  <div style="display:flex">
+  {{!-- caseSensitive string / pattern --}}
+  <span>
+    {{input type="checkbox" name="isCaseSensitive" checked=isCaseSensitive
+      click=(action changed this preventDefault=false)
+    }}
+    <label>Case Sensitive</label>
+  </span>
+
+  {{!-- negate string / pattern --}}
+  <span>
+    {{input type="checkbox" name="isNegated" checked=isNegated
+      click=(action changed this preventDefault=false)
+    }}
+    <label>Negate</label>
+  </span>
+
+  {{!-- pattern isRegExp --}}
+  <span>
+    {{input type="checkbox" name="isRegExp" checked=isRegExp
+      click=(action changed this preventDefault=false)
+    }}
+    <label>RegExp</label>
+  </span>
+  </div>
+
+{{/if}}
+

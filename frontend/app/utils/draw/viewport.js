@@ -89,7 +89,13 @@ Viewport.prototype.calc = function(oa)
 
   this.axisTopOffset = /*axisSelectionHeight +*/ axisNameHeight;
 
-  divHolder=Ember.$('div#holder');
+  const holderSelector = 'div#holder';
+  divHolder=Ember.$(holderSelector);
+  if (divHolder.length === 0) {
+    console.warn('Viewport() : element not found :', holderSelector, this, oa);
+    // size calculations depend on holder dimensions, so fail.
+    return;
+  }
   /** @param jqElt  jQuery single DOM element */
   function eltStylePaddingRect(e)
   {

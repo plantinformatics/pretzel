@@ -1,2 +1,3 @@
-{{ extended }} {{ axis.id }}
+axis-1d: {{ extended }} {{ axis.id }} {{ domainChanged }} , {{ position }}, {{ currentPosition }}, {{ lastDrawn }}, {{ currentPosition.yDomain }} {{ zoomed }}, {{ dataBlocks.length }} {{ dataBlocks.0.features.length }} {{ featureLengthEffect }}
+{{ log 'axis-1d rendered domainContents' position }}
 {{yield this }}

@@ -1,6 +1,10 @@
 import Ember from 'ember';
+const { inject: { service } } = Ember;
 
+import { getAttrOrCP } from '../utils/ember-devel';
+import { configureHorizTickHover } from '../utils/hover';
 import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
+
 import InAxis from './in-axis';
 
 const className = "chart", classNameSub = "chartRow";
@@ -30,13 +34,69 @@ function featureLocation(oa, axisID, d)
     return feature.location;
 }
   
+/*----------------------------------------------------------------------------*/
+/* based on axis-1d.js: hoverTextFn() and setupHover() */
 
+/** eg: "ChrA_283:A:283" */
+function hoverTextFn (feature, block) {
+  let
+    value = getAttrOrCP(feature, 'value'),
+  valueText = value && (value.length ? ('' + value[0] + ' - ' + value[1]) : value),
+
+  blockR = block.block,
+  featureName = getAttrOrCP(feature, 'name'),
+  /** common with dataConfig.datum2Description  */
+  description = value && JSON.stringify(value),
+
+  text = [featureName, valueText, description]
+    .filter(function (x) { return x; })
+    .join(" : ");
+  return text;
+};
+
+function configureChartHover(feature) 
+{
+  let block = this.parentElement.__data__;
+  return configureHorizTickHover.apply(this, [feature, block, hoverTextFn]);
+};
+
+
+/** Add a .hasChart class to the <g.axis-use> which contains this chart.
+ * Currently this is used to hide the <foreignObject> so that hover events are
+ * accessible on the chart bars, because the <foreignObject> is above the chart.
+ * Later can use e.g. axis-accordion to separate these horizontally;
+ * for axis-chart the foreignObject is not used.
+ *
+ * @param g parent of the chart. this is the <g> with clip-path axis-clip.
+ */
+function addParentClass(g) {
+  let axisUse=g.node().parentElement.parentElement,
+  us=d3.select(axisUse);
+  us.classed('hasChart', true);
+  console.log(us.node());
+};
 /*----------------------------------------------------------------------------*/
 
 
 /* global d3 */
 
+/** Display data which has a numeric value for each y axis position (feature).
+ * Shown as a line curve or bar chart, with the y axis of the graph as the baseline.
+ *
+ * @param block	a block returned by viewedChartable()
+ * @param chart data (field name is className); may be either :
+ * result of parseTextData() : array of {name : , value : , description : }
+ * or chartBlock passed in : .features
+ * @param axis  axisComponent;   parent axis-2d component
+ * @param axisID  axisID
+ * @param data oa
+ * @param width resizedWidth
+ *----------------
+ * data attributes created locally, not passed in :
+ * @param chart1
+ */
 export default InAxis.extend({
+  blockService: service('data/block'),
 
   className : className,
 
@@ -44,12 +104,33 @@ export default InAxis.extend({
     console.log("components/axis-chart didRender()");
   },
 
+  blockFeatures : Ember.computed('block', 'block.features.[]', 'axis.axis1d.domainChanged', function () {
+      this.drawBlockFeatures0();
+  }),
+  drawBlockFeatures0 : function() {
+    let features = this.get('block.features');
+    let domain = this.get('axis.axis1d.domainChanged');
+    console.log('blockFeatures', features.length, domain);
+    if (features.length)  // -	should also handle drawing when .length changes to 0
+      this.drawBlockFeatures(features);
+  },
+  drawBlockFeatures : function(features) {
+    let f = features.toArray(),
+    fa = f.map(function (f0) { return f0._internalModel.__data;});
+    this.layoutAndDrawChart(fa);
+  },
+
   redraw   : function(axisID, t) {
     let data = this.get(className),
     layoutAndDrawChart = this.get('layoutAndDrawChart');
+    if (data) {
     console.log("redraw", this, (data === undefined) || data.length, axisID, t);
     if (data)
       layoutAndDrawChart.apply(this, [data]);
+    }
+    else {  // use block.features when not using data parsed from table.
+      this.drawBlockFeatures0();
+    }
   },
 
   /** Convert input text to an array.
@@ -128,6 +209,7 @@ export default InAxis.extend({
     }
     let
     barWidth = 10,
+    isBlockData = chart[0].description === undefined,
     valueName = chart.valueName || "Values",
     oa = this.get('data'),
     // axisID = gAxis.node().parentElement.__data__,
@@ -154,6 +236,17 @@ export default InAxis.extend({
     }
     function datum2Location(d) { return name2Location(d.name); }
     function datum2Value(d) { return d.value; }
+    let parsedData = {
+      datum2Value : datum2Value,
+      datum2Description : function(d) { return d.description; }
+
+    },
+    blockData = {
+      datum2Value : function(d) { return d.value[0]; },
+      datum2Description : function(d) { return JSON.stringify(d.value); }
+    },
+    dataConfig = isBlockData ? blockData : parsedData;
+
     /*  axis
      * x  .value
      * y  .name Location
@@ -165,7 +258,7 @@ export default InAxis.extend({
       this.options = options;
     }
     Chart1.prototype.barsLine =  true;
-    Chart1.prototype.draw =  function ()
+    Chart1.prototype.draw =  function (data)
     {
       // based on https://bl.ocks.org/mbostock/3885304,  axes x & y swapped.
       let
@@ -237,9 +330,10 @@ export default InAxis.extend({
         .attr("text-anchor", "end")
         .text(valueName);
 
-      this.drawContent();
+      this.drawContent(data);
+      this.currentData = data;
     };
-    Chart1.prototype.bars = function ()
+    Chart1.prototype.bars = function (data)
     {
       let
         options = this.options,
@@ -254,7 +348,7 @@ export default InAxis.extend({
         .append("rect");
       ra
         .attr("class", options.barClassName)
-      /*.each(configureChartHover)*/;
+      .each(configureChartHover);
       ra
         .merge(rs)
         .transition().duration(1500)
@@ -265,7 +359,7 @@ export default InAxis.extend({
       rx.remove();
       console.log(gAxis.node(), rs.nodes(), re.nodes());
     };
-    Chart1.prototype.line = function ()
+    Chart1.prototype.line = function (data)
     {
       // based on https://bl.ocks.org/mbostock/3883245
       if (! this.yLine)
@@ -291,7 +385,7 @@ export default InAxis.extend({
         .enter()
         .append("path")
         .attr("class", options.barClassName + " line")
-        .datum([data[0], data[data.length-1]])
+        .datum(data)
         .attr("d", line)
         .merge(ps)
         .datum(data)
@@ -309,12 +403,12 @@ export default InAxis.extend({
       this.chartTypeToggle
         .classed("pushed", this.barsLine);
       this.g.selectAll("g > *").remove();
-      this.drawContent();
+      this.drawContent(this.currentData);
     };
-    Chart1.prototype.drawContent = function()
+    Chart1.prototype.drawContent = function(data)
     {
       let chartDraw = this.barsLine ? this.bars : this.line;
-      chartDraw.apply(this, []);
+      chartDraw.apply(this, [data]);
     };
 
     /** datum is value in hash : {value : , description: } and with optional attribute description. */
@@ -322,7 +416,7 @@ export default InAxis.extend({
     /** parent; contains a clipPath, g > rect, text.resizer.  */
     let gps =   gAxis
       .selectAll("g." + className)
-      .data([1]),
+      .data([axisID]),
     gp = gps
       .enter()
       .insert("g", ":first-child")
@@ -336,10 +430,12 @@ export default InAxis.extend({
     if (gp.size() > 0)
       eltWidthResizable("g.axis-use > g." + className + " > text.resizer", resized);
   }
+    /** datum is axisID, so id and clip-path could be functions. */
+    let axisClipId = "axis-clip-" + axisID;
     let gpa =
     gp // define the clipPath
       .append("clipPath")       // define a clip path
-      .attr("id", "axis-clip") // give the clipPath an ID
+      .attr("id", axisClipId) // give the clipPath an ID
       .append("rect"),          // shape it as a rect
     gprm = 
     gpa.merge(gps.selectAll("g > clipPath > rect"))
@@ -349,7 +445,7 @@ export default InAxis.extend({
       .attr("height", bbox.height)
     ;
     gp.append("g")
-      .attr("clip-path", "url(#axis-clip)"); // clip the rectangle
+      .attr("clip-path", "url(#" + axisClipId + ")"); // clip with the rectangle
 
     let g = 
       gps.merge(gp).selectAll("g." + className+  " > g");
@@ -370,9 +466,11 @@ export default InAxis.extend({
                bbox : bbox,
                barClassName : classNameSub,
                datum2Location : datum2Location,
-               datum2Value : datum2Value
+               datum2Value : dataConfig.datum2Value,
+               datum2Description : dataConfig.datum2Description
              });
       this.set("chart1", chart1);
+      addParentClass(g);
     }
     let b = chart1; // b for barChart
 
@@ -389,11 +487,11 @@ export default InAxis.extend({
       .on("click", toggleBarsLineClosure);
     chartTypeToggle.merge(gps.selectAll("g > circle"))
       .attr("cx", bbox.x + bbox.width / 2)   /* was o[p], but g.axis-outer translation does x offset of stack.  */
-      .attr("cy", bbox.height * 0.96)
+      .attr("cy", bbox.height - 10)
       .classed("pushed", b.barsLine);
     b.chartTypeToggle = chartTypeToggle;
 
-    b.draw();
+    b.draw(data);
   },
 
   pasteProcess: function(textPlain) {

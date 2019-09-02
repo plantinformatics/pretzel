@@ -35,6 +35,10 @@
 
 <div>axis-2d :{{this}}, {{axisID}}, {{targetEltId}},  {{subComponents.length}} :
   <div>subComponents :
+    {{#each blockService.viewedChartable as |chartBlock|}}
+      {{axis-chart data=data axis=this axisID=axisID block=chartBlock}}
+    {{/each}}
+    {{log 'blockService' blockService 'viewedChartable' blockService.viewedChartable}}
     {{axis-tracks axis=this axisID=axisID trackBlocks=dataBlocks}}
     {{#each subComponents as |subComponent|}}
       {{subComponent}}

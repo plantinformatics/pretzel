@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <!-- using jsdelivr for css because unpkg gets :
+Refused to apply style from 'https://unpkg.com/mermaid@8.0.0/dist/mermaid.css' because its MIME type ('text/plain') is not a supported stylesheet MIME type, and strict MIME checking is enabled.
+ -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.css">
+</head>
+
+  <body>
+
+    <script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+
+    <script>
+mermaid.initialize({startOnLoad:true});
+    </script>
+
+<!-- h1,h2 generated from markdown :
+# Design
+## Draw-Map.js Data Structure Diagrams
+-->
+
+<h1>
+<a id="user-content-design" class="anchor" href="#design" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>
+Design
+</h1>
+<h2>
+<a id="user-content-explorer-CF-data-flow-diagrams" class="anchor" href="#explorer-CF-data-flow-diagrams" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>
+manage-explorer.js Reactive (computed function) data flow Diagrams
+</h2>
+
+<!-- seems like recent versions of mermaid css make this additional formatting unnecessary, and possibly not used. -->
+<!-- for local editing, change href to mermaid_classDiagram.css -->
+<link type="text/css" rel="Stylesheet" href="https://cdn.jsdelivr.net/gh/plantinformatics/pretzel/doc/notes/mermaid_classDiagram.css" />
+
+<!-- Note below about clearfix. -->
+<div  class="clearfix">
+
+
+
+<p>Diagram Annotations</p>
+<ul>
+<li>PA	DS.PromiseArray</li>
+<li>PO	DS.PromiseObject</li>
+</ul>
+
+<div  class="clearfix">
+</div>
+
+
+<div class="mermaid classDiagram" style="width: 100%;" >
+graph TD
+
+A(view <br/> matrixview : filter.where=type:observational) --> C(datasets PA)
+B(datasetsRefreshCounter) --> C
+
+C --> F(dataPre)
+E(filter) --> |filterBy :<br/> private : public:false <br/> owner : owner:true| F
+
+F(dataPre) --> G(data)
+C2(dataFG) --> |useFilterGroup| G(data)
+
+C --> |datasets.length| I(dataEmpty)
+
+G --> H(withParent)
+
+G --> | mapBy : name | K(names)
+
+H(withParent) --> |uniqBy parent.name| J(child1)
+
+J(child1) --> | mapBy : parent | L(parents)
+
+L(parents) --> | mapBy name| M(parentNames)
+
+G(data) --> | filter : ! dataset.parent.content | N(withoutParent)
+N(withoutParent) --> | mapBy name| O(withoutParentNames)
+
+P(parentsNonUnique) --> |mapBy id| P1(parentsid)
+H(withParent) --> |mapBy parent| P(parentsNonUnique)
+P(parentsNonUnique) --> | uniqBy name| Q(parentsUnique)
+Q(parentsUnique) --> | mapBy name | R(parentsUniqueNames)
+
+O(withoutParentNames) --> | setDiff | R(dataWithoutParentNames)
+M(parentNames) --> R(dataWithoutParentNames)
+
+L(parents) --> | mapBy content | S(parentsContent)
+S(parentsContent) --> | setDiff | T(dataWithoutParent)
+N(withoutParent) --> T(dataWithoutParent)
+
+T(dataWithoutParent) --> | mapBy name| U(dataWithoutParent0Names)
+
+M(parentNames) --> | reduce : result.add value | V(parentsSet)
+
+N(withoutParent) --> | filter parentsSet parents| W(dataWithoutParent1)
+
+
+G(data) --> | parentAndScope | A2(dataTree)
+B2(dataTypedTreeFG) --> | useFilterGroup, dataTypedTreeFG.annotation, PO | A2(dataTree)
+
+G2(dataTypedFG) --> | addParentAndScopeLevels, annotation : parentAndScope | B2(dataTypedTreeFG, PO)
+
+D2(dataTyped) --> |useFilterGroup| G2(dataTypedFG)
+
+F(dataPre) --> D2(dataTyped)
+D2(dataTyped) --> | datasetFilter datasets filterGroup | C2(dataFG)
+E2(useFilterGroup) --> C2(dataFG)
+F2(filterGroupsChangeCounter) --> C2(dataFG)
+
+</div>
+
+<!--
+
+/** not used */
+
+: ! 
+
+ -->
+
+<div  class="clearfix">
+</div>
+
+<p>
+Notes :
+<ul>
+  <li>
+    names :   /** Names of all datasets - just for trace / devel, not used. */
+  </li>
+  <li>
+    parents :   /** parents of child1(), i.e. all the parent datasets, just once each.  */
+  </li>
+  parentNames : /** names of parents(). */
+  </li>
+  <li>
+  withoutParent  /** Datasets without a .parent; maybe a reference assembly (genome) or a GM. */
+  </li>
+  <li>
+  // these 3 CFs are non-essential, used in trace.
+  withoutParentNames
+  parentsid
+  parentsNonUnique & parentsUnique : // an alternate method to calculate parents
+  parentsUniqueNames
+  </li>
+
+  <li>
+dataWithoutParent : genetic maps
+  </li>
+  <li>
+dataWithoutParentNames : only used as checking trace / devel.
+  </li>
+  <li>
+dataWithoutParent0Names  /** Same result as dataWithoutParentNames; just for trace / checking. */
+  </li>
+  <li>
+parentsSet  /** used by dataWithoutParent1 (i.e. the non-setDiff version) */
+  </li>
+  <li>
+dataWithoutParent1
+  /** Alternative to dataWithoutParent which is based on setDiff;  not required.
+   */
+  </li>
+
+  <li>
+dataTypedTreeFG  /** @return promise of a hash */
+  </li>
+  <li>
+   dataFG CF -> hash by value, of datasets
+   -> dataTypedTreeFG -> plus mapToParentScope
+  </li>
+</ul>
+</p>
+
+<p> Diagram drawn by :
+<a href="https://mermaidjs.github.io/">Mermaid</a>, 
+github <a href="https://github.com/knsv/mermaid">readme</a>
+</p>
+
+<hr>
+<!-- Use either this, or class="clearfix" on the previous div. -->
+<div style="clear:both">
+</div>
+
+
+
+</body>
+</html>

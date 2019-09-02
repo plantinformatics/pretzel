@@ -49,7 +49,7 @@ then
     (cd frontend && bower install)
 fi
 
-( fgrep 'files changed' $LOG_GIT/$logDateTime  && \
+( grep 'files* changed' $LOG_GIT/$logDateTime  && \
     npm run build:frontend )
 
 # ember build replaces dist/ so restore frontend/dist/landingPageContent

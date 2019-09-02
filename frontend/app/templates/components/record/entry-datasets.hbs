@@ -1,0 +1,13 @@
+<ul class="list-group borderless">
+  {{#each data as |dataset|}}
+
+    {{record/entry-dataset-level
+      name=dataset.name
+      values=dataset
+      loadBlock="loadBlock"
+      selectBlock=selectBlock
+      selectedBlock=selectedBlock
+      selectDataset=selectDataset}}
+
+  {{/each}}
+</ul>

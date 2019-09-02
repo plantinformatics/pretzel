@@ -1,0 +1,14 @@
+<ul>
+  {{#each data as |block|}}
+    {{log  'entry-blocks' 'block.name' block.name }}
+    <li class="list-group-item  {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}" {{action "selectBlockAndDataset" block on="click"}} style="display: inline-block;">
+      {{record/entry-block-by-scope
+        loadBlock="loadBlock"
+        entry=block }}
+      {{!--
+      {{block.datasetId.name}}
+      <span class="blockInScope">{{block.name}}</span>
+      --}}
+    </li>
+  {{/each}}
+</ul>

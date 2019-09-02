@@ -12,8 +12,46 @@
       {{#each-in dataset.meta as |key value|}}
       <tr><td>{{key}}</td><td>{{value}}</td></tr>
       {{/each-in}}
+
     </tbody>
   </table>
+  <div style="padding-bottom:10px">
+    {{#elem/button-base
+      icon="pencil"
+      classColour="info"
+      onClick=(action "toggleEditor")
+      disabled=(not ownedByMe)}}
+      Edit Metadata
+    {{/elem/button-base}}
+  </div>
+  <div class="metaeditor-panel">
+    {{json-editor json=datasetMeta name='Metadata' disabled=true search=false}}
+  </div>
+  <div>
+    {{#if editorVisible}}
+      {{#modal-dialog
+        onClose=(action "toggleEditor")
+        targetAttachment="center"
+        translucentOverlay=true
+      }}
+        <div class="metaeditor-modal">{{json-editor json=datasetMeta onChange=(action "mutateJson")}}</div>
+        <div>
+          <button
+            type="button"
+            class="btn btn-info"
+            {{action "saveJSONToDB" preventDefault=false}}>
+            {{elem/icon-base name="floppy-disk"}} &nbsp;Save
+          </button>
+          <button
+            type="button"
+            class="btn btn-danger"
+            {{action "toggleEditor" preventDefault=false}}>
+            Cancel
+          </button>
+        </div>
+      {{/modal-dialog}}
+    {{/if}}
+  </div>
 {{else}}
   <h4>No Dataset Selected</h4>
 

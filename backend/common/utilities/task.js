@@ -2,10 +2,20 @@
 // let minimum_length = 3;
 // let continuity_threshold = 0.9;
 
-function findLinks(featuresA, featuresB) {
+/**
+ * @param withDirect  if true then include direct paths, otherwise only aliases;
+ * Also the full details of the feature objects are included in the result if ! withDirect.
+ * Before this param was added, withDirect was implicitly true and callers assume that.
+ */
+function findLinks(featuresA, featuresB, withDirect = true) {
     let links = [];
+  console.log('findLinks', featuresA.length, featuresB.length, withDirect);
     let add_link = function(f1, f2, alias) {
         let link = {featureA: f1.id, featureB: f2.id, aliases: []};
+        if (! withDirect) {
+          link.featureAObj = f1;
+          link.featureBObj = f2;
+        }
         if (alias) {
             link.aliases.push(alias);
         }
@@ -23,7 +33,7 @@ function findLinks(featuresA, featuresB) {
 
     featuresB.forEach(function(feature_b) {
         // look for direct paths
-        if (feature_b.name in features_a_by_name) {
+        if (withDirect && feature_b.name in features_a_by_name) {
             features_a_by_name[feature_b.name].forEach(function(feature_a) {
                 add_link(feature_a, feature_b);
             })
@@ -449,12 +459,13 @@ function findReferenceBlocks(models, block, reference, options) {
     });
 }
   
-exports.paths = function(models, id0, id1, options) {
+exports.paths = function(models, id0, id1, withDirect, options) {
+  console.log('paths withDirect', withDirect);
     return findBlockPair(models, id0, id1, options)
     .then(function(data) {
         return loadAliases(models, data.blockA, data.blockB, options);
     }).then(function(data) {
-        return findLinks(data.featuresA, data.featuresB);
+        return findLinks(data.featuresA, data.featuresB, withDirect);
     });
 }
 

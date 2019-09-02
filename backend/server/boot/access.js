@@ -80,7 +80,14 @@ module.exports = function(app) {
       context.property == 'depthSearch' ||
       context.property == 'bulkCreate' ||
       context.property == 'paths' ||
-      context.property == 'pathsByReference') {
+      context.property == 'pathsProgressive' ||
+      context.property == 'blockFeaturesCount' ||
+      context.property == 'blockFeaturesInterval' ||
+      context.property == 'pathsByReference' ||
+      context.property == 'pathsViaStream' ||
+      context.property == 'pathsAliasesProgressive' ||
+      context.property == 'pathsAliasesViaStream'
+       ) {
       // allow find, create and upload requests
       return process.nextTick(() => cb(null, true))
     }

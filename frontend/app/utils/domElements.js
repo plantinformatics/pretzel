@@ -264,10 +264,76 @@ function eltClassName(f)
 
 /*----------------------------------------------------------------------------*/
 
+function tabActive(jqSelector)
+{
+  let elt$ = Ember.$(jqSelector),
+  active = elt$.hasClass('active');
+  console.log('tabActive', jqSelector, active, elt$[0], elt$.length);
+  return active;
+}
+
+/** Return the slider value of the identified <input> element.
+ * @param inputId e.g. "range-pathDensity"
+ * @return (type is number) value, or undefined if inputId matches 0 or >1 elements
+ */
+function inputRangeValue(inputId)
+{
+  // based on part of setupInputRange()
+  let input = Ember.$("#" + inputId);
+  if (input.length !== 1)
+    console.log('inputRangeValue', inputId, input.length, input.length && input[0]);
+  // .value is a string, so convert to number.
+  return (input.length === 1) ? +input[0].value : undefined;
+}
+
+/** 
+ */
+function expRangeBase(steps, rangeMax) {
+  return  Math.pow(Math.E, Math.log(rangeMax) / steps);
+}
+/** Map the given value into an exponential range.
+
+ * This is used for sliders whose result is used as a factor, e.g. 1/2, 1, 2*
+ * should result from evenly spaced movement of the slider.
+ *
+ * Based on
+ * @see updateSbSizeThresh()
+ * @see expRangeBase()
+ * @see expRangeInitial()
+ */
+function expRange(value, steps, rangeMax /*, domainMax*/)
+{
+  let
+    base = expRangeBase(steps, rangeMax),
+  exp = Math.pow(base, value);  // in original updateSbSizeThresh() use :  - 1
+  return exp;
+}
+
+  /**	initial/default value of slider : y
+   *
+   * x^y = 20 => y log(x) = log(20) => y = Math.log(20) / Math.log(1.148137) = 21.6861056
+   *
+   rangeStart = e.g. 20
+   */
+function expRangeInitial(rangeStart, base) {
+  let
+  y = Math.log(rangeStart) / Math.log(base);
+  return y;
+}
+
+
+/*----------------------------------------------------------------------------*/
+
 export {
   eltWidthResizable,
   eltResizeToAvailableWidth,
   logWindowDimensions, logElementDimensions, logElementDimensions2,
   shiftKeyfilter, noShiftKeyfilter ,
   htmlHexEncode, cssHexEncode,
-  eltClassName };
+  eltClassName,
+  tabActive,
+  inputRangeValue,
+  expRangeBase,
+  expRange,
+  expRangeInitial
+ };

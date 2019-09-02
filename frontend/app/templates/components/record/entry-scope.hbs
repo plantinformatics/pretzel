@@ -1,0 +1,20 @@
+{{!-- values is an array of blocks --}}
+
+{{log 'entry-scope' name values this this.parentView}}
+{{#record/entry-selectable node=node nodeName=name
+   parentName=parentName
+   selectedNode=selectedDataset
+   selectNode=(action 'selectDataset')}}
+
+  {{#record/entry-expander nodeName=name hoverText=(or parentName name)}}
+
+    {{record/entry-blocks
+      loadBlock="loadBlock"
+      data=values
+      selectBlock="selectBlock"
+      selectedBlock=selectedBlock
+      selectDataset="selectDataset"}}
+
+  {{/record/entry-expander}}
+
+{{/record/entry-selectable}}

@@ -1,0 +1,15 @@
+{{log 'entry-dataset-level0' node name values this }}
+{{#record/entry-selectable node=node nodeName=name
+   selectedNode=selectedDataset
+   selectNode=(action 'selectDataset')}}
+
+  {{#record/entry-expander nodeName=name}}
+    {{record/entry-blocks-array
+      loadBlock="loadBlock"
+      selectBlock=selectBlock
+      selectedBlock=selectedBlock
+      selectDataset=(action 'selectDataset')
+      data=values}}
+      {{/record/entry-expander}}
+
+    {{/record/entry-selectable}}

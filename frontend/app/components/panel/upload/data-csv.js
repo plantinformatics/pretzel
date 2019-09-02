@@ -59,7 +59,12 @@ export default UploadBase.extend({
         that.checkBlocks();
       });
 
-      var table = new Handsontable($("#hotable")[0], {
+      let hotable = $("#hotable")[0];
+      if (! hotable) {
+        console.warn('upload/data-csv : #hotable not found', that);
+        return;  // fail
+      }
+      var table = new Handsontable(hotable, {
         data: [['', '', '']],
         minRows: 20,
         rowHeaders: true,

@@ -1,5 +1,8 @@
 /* -------------------------------------------------------------------------- */
 
+@import "ember-modal-dialog/ember-modal-structure";
+@import "ember-modal-dialog/ember-modal-appearance";
+
 body.ember-application > div.ember-view > div.container
 {
     padding-right: 5px;
@@ -30,6 +33,12 @@ body.mapview div#Page-Body
     color: #555555;
     background-color: lightblue;  
 } 
+
+/* -------------------------------------------------------------------------- */
+/* Make the top (left & right) menus horizontal. */
+div#Page-Nav > div > div.navbar > div > div.navbar > ul.nav {
+  display: flex;
+}
 
 /* -------------------------------------------------------------------------- */
 
@@ -96,6 +105,11 @@ body.mapview div#Page-Body
 .devel #holder
 {
     padding : inherit;
+}
+@media (min-height: 600px) and (max-height: 719px) {
+  body.devel div#holder {
+    height: 410px;
+  }
 }
 
 
@@ -265,6 +279,10 @@ circle.radio.toggle.chartType.pushed
     overflow: scroll;
 }
 
+g.axis-use.hasChart > g.axis-html > .foreignObject {
+    display : none;
+}
+
 
 /* ---------------------------------- */
 
@@ -282,7 +300,8 @@ circle.radio.toggle.chartType.pushed
  *  https://blog.bugsnag.com/sass-color-palettes
  */
 div.drawing-controls.flowButtons .flowButton.alias,
-.foreground > g.alias > g > path {
+.foreground > g.alias > g > path,
+.foreground > g.progress > g.alias > g.blockAdj > g > path {
   /* HTML  */
   border-color : #955;
   background-color: #955;
@@ -290,16 +309,28 @@ div.drawing-controls.flowButtons .flowButton.alias,
   stroke: #955;
 }
 div.drawing-controls.flowButtons .flowButton.U_alias,
-.foreground > g.U_alias > g > path {
+.foreground > g.U_alias > g > path,
+.foreground > g.progress > g.U_alias > g.blockAdj > g > path {
   border-color : #545;
   background-color: #545;
   stroke: #545;
 }
 div.drawing-controls.flowButtons .flowButton.direct,
-.foreground > g.direct > g > path {
+.foreground > g.direct > g > path,
+.foreground > g.progress > g.direct > g.blockAdj > g > path
+{
   border-color : #484;
   background-color: #484;
   stroke: #484;
+}
+body.devel .foreground > g > g > path {
+  stroke-dasharray: 30 50 calc(var(--path-stroke-width)*10);
+  stroke: rgb(50,50,100);
+  transform: translate(0px, 5px);
+}
+body.devel .foreground > g.progress > g > g.blockAdj > g > path {
+  stroke-dasharray: 10 40;
+  stroke: rgb(100,50,50);
 }
 
 .foreground path {
@@ -389,6 +420,24 @@ div#scaffoldLegend > ul
   shape-rendering: crispEdges;
 }*/
 
+/* If loading all block feature initially, and also pathsProgressive, then
+ * differentiate the latter paths with colour and dashes.
+ * .devel is also sufficient to engage this functionality because it is
+ *  helpful to see the comparison of paths calculated on back- and front- end.
+ *
+ */
+body.devel
+ path.blockAdj,
+body.allInitially
+ path.blockAdj {
+  /* emphasise the new (progressive) paths during devel. */
+  stroke: red;
+  /* stroke-width: 2px; */
+  stroke-dasharray: 10 20;
+  /* stroke-opacity: 1; */
+}
+
+
 .axis line, .axis path {
   fill: none;
   shape-rendering: crispEdges;
@@ -471,10 +520,11 @@ div.ExportFlowData
   fill-opacity: .125;
   shape-rendering: crispEdges;
 }
-g.brush:hover > rect.handle {
+/* the middle g is g[clip-path] */
+g.brush:hover > g > rect.handle {
   stroke: blue;
 }
-g.brush:hover > rect.overlay {
+g.brush:hover > g > rect.overlay {
     outline: 1px dashed purple; 
     -webkit-tap-highlight-color: rgba(70, 30, 50, 0);
 }
@@ -482,6 +532,17 @@ g.tick:hover {
     outline: 1px dashed orange; 
 }
 
+/* This (stroke colour) was applied for selector .horizTick until 655bfe3
+ * introduced axisTitleColour().
+ * Alternative to a constant in css, showTickLocations() could use axisName to
+ * lookup block index, as in featurePathStroke(), but that may not be more
+ * useful, instead perhaps classify in groups, e.g. give each group of added
+ * ticks a new id for an ordinal colour scale.
+ */
+path.horizTick.fromInput
+{
+    stroke: green;
+}
 .horizTick
 {
   /* stroke (colour) is now provided by axisTitleColour(). */
@@ -687,6 +748,152 @@ li.dropdown-submenu > ul.dropdown-menu {
     border-radius: 6px 0 6px 6px;
 }
 /* -------------------------------------------------------------------------- */
+/* dataset explorer : filter-group */
+
+.filter-groups {
+  margin-top: 1em;
+}
+.filter-groups > ul {
+   list-style-type: none;
+   padding-left: 0px;
+}
+.filter-groups > ul > li {
+  margin-top: 1em;
+}
+li.filter-group > div > span {
+  margin: 0 0.5em;
+}
+li.filter-group > div > span:first-child {
+  margin-left : 0;
+}
+li.filter-group > div > span:last-child {
+  margin-right : auto;
+}
+.filter-groups > ul > li > div > input[name=detailed] {
+  float: left;
+}
+.filter-groups > ul > li > div > button.btn {
+  padding: 3px 6px;
+  margin: 0.5em 1em;
+}
+.filter-group > div > button.delete {
+  float: right;
+}
+
+.line-input-label > input {
+    margin-left : 1.2em;
+}
+
+/* dataset explorer : tree browser */
+
+#tab-explorer-parent  ul {
+  /* there is enough indent in the li, so 0 is enough here. */
+  -webkit-padding-start: 0px;
+}
+#tab-explorer-parent > ul {
+  /* no padding here because it will be white, unlike the list. */
+  -webkit-padding-start: 0px;
+}
+#left-panel-explorer div.tab-content ul ul {
+  padding-left: 0px;
+}
+#left-panel-explorer div.tab-content > div > ul > li {
+  padding-left: 5px;    /* reduced from 15px */
+}
+
+li > span.blockInScope
+{
+  display: none;
+}
+li:hover > span.blockInScope
+{
+  display: inherit;
+  margin-left: 1em;
+}
+
+/* <li>-s with .active-detail contain a <div> with additional detail, e.g. a count,
+ * which is displayed when active */
+li.active-detail {
+  display:flex;
+}
+li.active-detail > div {
+  display: none;
+}
+li.active-detail.active > div {
+  display: inherit;
+  text-align: right;
+  margin-right: 0.5em;
+}
+
+/* (in e.g. data explorer) tabs have counts shown when active; best displayed
+ * below the tab so use display:block.  */
+ul.li-active-extra > li.active-detail.active {
+  display: block;
+}
+
+#left-panel-explorer > div > .panel > div > ul.nav > li {
+  border: 1px solid #ccc;
+  border-radius: 10px 10px 3px 3px;
+}
+
+#left-panel-explorer > div > .panel > div > ul.nav > li.active {
+  border-bottom : none;
+}
+
+div#tab-explorer-datasets > ul.list-group > div.ember-view > li.list-group-item 
+{
+  display: inline-block;
+}
+
+#left-panel-explorer .list-group-item {
+  /* The purpose of this is to maintain relatively straight columns of block elements.
+   * Users are free to create longer block names; handling all of that variation
+   * would require some calculation or user adjustment.
+   * This value works OK for each of the manage-explorer tabs, for block names/scopes
+   * which are generally 2-3 chars, e.g. 7A, or 1D2.  Element width also varies when
+   * the block is added / selected. */
+  min-width: 7.48em;
+}
+
+.entryClass0 {
+  background-color : #9bc2e433;
+}
+.entryClass1 {
+  /* background-color : #eee; */
+}
+
+div#tab-explorer-datasets  .list-group-item
+{
+  margin-right: -0.27em;
+}
+/* whitespace between </li><li> in the generated html is allocated about 1/3 em of white space.
+ * One way to suppress that is with negative margin, as is done in the preceding rule.
+ * The background-color of .entryClass0 has <1 opacity, so if the element
+ * overlaps too much, it produces a faint darker line.  This makes this method
+ * fairly fragile - -0.3 overlaps too much, whereas -0.25 leaves a white gap.
+ *
+ * Alternatively : applying { display : table } to the parent of the
+ * li.list-group-item works well :
+div#tab-explorer-datasets > ul.list-group > div
+{
+  display: table;
+}
+ */
+
+
+/* .panel-primary defines a blue (#337ab7) border which is being eclipsed by
+ * child elements, in particular the div.tab-explorer-datasets.  Defining some
+ * side margin prevents this, but it is not needed by .panel-header, so a better
+ * fix would be to work out which child elements are eclipsing the parent border
+ * and fix that instead.
+ */
+#left-panel-explorer > div > div.panel.panel-primary > div
+{
+  margin-left: 1px;
+  margin-right: 4px;
+}
+
+/* -------------------------------------------------------------------------- */
 div.drawing-controls > div.drawing
 {
   margin-top: 0.5em;
@@ -846,6 +1053,12 @@ div.popover/*.axis-menu*/ div.popover-content {
 {
     display : inherit;
 }
+.devel-visible
+{
+  height: 65px;
+  overflow-y: scroll;
+}
+
 /* -------------------------------------------------------------------------- */
 /* for controlling display of (left panel : view) "Chart Options". */
 .chart-options
@@ -947,6 +1160,24 @@ div#goto-feature > div
   padding-right: 10px;
   text-indent: -10px;
 }
+/* -------------------------------------------------------------------------- */
+/* manage-explorer */
+/* see also '#tab-explorer-parent' above - combine these when split out. */
+
+/* this will be provided by bootstrap v4 */
+li.d-inline-block {
+  display: inline-block;
+}
+ul.borderless li
+{
+  border: none;
+}
+
+div#tab-explorer-parent > ul > li > ul > li > ul > li {
+  background-color: inherit;
+}
+
+
 
 /* -------------------------------------------------------------------------- */
 div#left-panel > ul
@@ -1002,5 +1233,11 @@ ul.feature-found
 }
 ul.blocks-found > li > div > div.ember-popover {
   padding: 3px 5px;
+}
+/* -------------------------------------------------------------------------- */
+/* JSON editor, in RHS panel */
+
+div.metaeditor-panel div.jsoneditor-menu {
+  display: none;
 }
 /* -------------------------------------------------------------------------- */

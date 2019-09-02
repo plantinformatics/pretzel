@@ -474,3 +474,90 @@ function make_emacs_tags () {
    ls -gG TAGS
 }
 #-------------------------------------------------------------------------------
+#
+
+# Extract a small subset of HC_gene and Alias data, for development testing.
+# Usage e.g.
+subsetGenes4Aliases_usage() {
+cat <<\EOF
+subsetGenes4Aliases startDataZip [assemblyRefName [nAliases] ]
+startDataZip is a .zip file containing :
+         ${T1}_genome.json.gz	\
+         ${T1}_HC_annotation.json.gz	\
+         ${T1}_HC_VS_${T1}_HC_aliases.json.gz 
+where T1 is the param assemblyRefName, default Triticum_aestivum_IWGSC_RefSeq_v1.0
+nAliases is a number, default 200.
+Expected :
+$PWD is an empty directory, to ensure the files created do not overwrite other files.
+
+EOF
+}
+subsetGenes4Aliases_usage_eg() {
+  cd /tmp/$USER
+  mkdir ag{,/x}
+  cd ag/x
+  mkdir hcAlias
+  cd !$
+  setToken ...
+  subsetGenes4Aliases
+  echo $URL
+  uploadData HC_1B.features.json
+  uploadData HC_1D.features.json
+  export URL=$URL_A
+  uploadData HC_aliases_1BD.array.json
+}
+subsetGenes4Aliases() {
+  [ $# -eq 1 -o $# -eq 2 -o $# -eq 3 ] || { subsetGenes4Aliases_usage; return 1; }
+  startDataZip=$1
+  T1=${2-Triticum_aestivum_IWGSC_RefSeq_v1.0}
+  nAliases=${2-200}
+  [[ $nAliases =~ ^[0-9]+$ ]] || { echo param nAliases $nAliases should be numeric; return 1; }
+  # [ -n "$Authorization" ] || { status=$?; echo 2>&1 'Define $Authorization, e.g. using setToken.' ; return $status; }
+  [ -f $startDataZip ] || { status=$?; echo 2>&1 'Define $startDataZip, e.g. 08-08-2018.zip' ; return $status; }
+  jq --version > /dev/null || { status=$?; echo 2>&1 'jq is required in $PATH, from package or github.com/stedolan/jq' ; return $status; }
+
+  unzip  $startDataZip \
+         ${T1}_genome.json.gz	\
+         ${T1}_HC_annotation.json.gz	\
+         ${T1}_HC_VS_${T1}_HC_aliases.json.gz ||	\
+      { status=$?; echo 2>&1 "error from unzip $startDataZip." ; return $status; }
+  [ -f ${T1}_genome.json.gz	-a \
+       -f ${T1}_HC_annotation.json.gz -a	\
+       -f ${T1}_HC_VS_${T1}_HC_aliases.json.gz ] || \
+      { status=$?; echo 2>&1 "$startDataZip does not contain the required data files." ; return $status; }
+
+  # Form the aliases into 1 line per alias.
+  < ${T1}_HC_VS_${T1}_HC_aliases.json.gz gzip -d | grep -v '^[][]$' | sed 's/^    },$/    }/' |  jq -c . > HC_aliases.json
+
+  # Select aliases which reference both the blocks 1B and 1D
+  < HC_aliases.json grep 'TraesCS1[BD]..*TraesCS1[BD]' | head -$nAliases > HC_aliases_1BD.json
+
+  # Extract the feature names from HC_aliases_1BD.json
+  < HC_aliases_1BD.json  sed 's/","string[12]":"/\n/g;s/","evidence/\n/' | fgrep -v '"' > HC_aliases_1BD.names
+
+  # Can use this to get a single dataset containing just the 2 blocks 1B and 1D, with all their features.
+  # < ${T1}_HC_annotation.json.gz  gzip -d |   jq '.blocks |= map(select( .scope == "1B" or .scope == "1D"))' > HC_1BD.json
+
+  < ${T1}_HC_annotation.json.gz  gzip -d |   jq '.blocks |= map(select( .scope == "1B"))' > HC_1B.json
+  < ${T1}_HC_annotation.json.gz  gzip -d |   jq '.blocks |= map(select( .scope == "1D"))' > HC_1D.json
+
+  < HC_1B.json jq -c '.blocks[0].features | .[]' | sed 's/"range"/"value"/' > HC_1B.features.json
+  < HC_1D.json jq -c '.blocks[0].features | .[]' | sed 's/"range"/"value"/' > HC_1D.features.json
+  # HC_1{B,D}.features.json : All the features of each block.
+
+  # Select those features referenced by HC_aliases_1BD.json / HC_aliases_1BD.names
+  < HC_1B.features.json fgrep -f HC_aliases_1BD.names > HC_1B.features.4alias.$nAliases.json
+  < HC_1D.features.json fgrep -f HC_aliases_1BD.names > HC_1D.features.4alias.$nAliases.json
+
+  # Combine HC_1{B,D}.features.4alias.$nAliases.json into a loadable dataset file
+  (head -14 HC_1B.json | sed 's/"features": \[/"features": /'; < HC_1B.features.4alias.$nAliases.json jq -s '.'; tail -3 HC_1B.json   | head -1 | sed 's/$/,/';
+   head -14 HC_1D.json | tail -4 | sed 's/"features": \[/"features": /'; < HC_1D.features.4alias.$nAliases.json jq -s '.'; tail -3 HC_1D.json) > HC_1BD.4alias.$nAliases.json
+  # HC_1BD.4alias.$nAliases.json : 1 dataset file, with just blocks 1B and 1D, and just their features which are referenced by the selected aliases HC_aliases_1BD.json
+
+  # Convert to an array form, for upload.
+  < HC_aliases_1BD.json  jq -s . > HC_aliases_1BD.array.json
+}
+
+
+
+#-------------------------------------------------------------------------------

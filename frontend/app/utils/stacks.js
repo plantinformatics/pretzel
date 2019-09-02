@@ -1,3 +1,8 @@
+// for VLinePosition :
+import Ember from 'ember';
+import { isEqual } from 'lodash/lang';
+
+
 /*global d3 */
 
 /*----------------------------------------------------------------------------*/
@@ -9,6 +14,7 @@ import { variableBands } from '../utils/variableBands';
 import { isOtherField } from '../utils/field_names';
 import { Object_filter } from '../utils/Object_filter';
 import { breakPoint, breakPointEnableSet } from '../utils/breakPoint';
+
 
 
 /*----------------------------------------------------------------------------*/
@@ -31,6 +37,11 @@ var oa;
 /** Ownership of this may move to data component. */
 var axes;
 var axesP;
+/** draw/axis-1d components, indexed by blockId of the parent / reference block.
+ * This will likely not be needed after axis-1d is more closely integrated with
+ * Stacked, e.g. the Stacked would be created by the axis-1d init().
+ */
+var axes1d;
 let blocks;
 
 //- maybe change stacks to a class Stacks(), and instantiate wth new Stacks(oa)
@@ -58,6 +69,10 @@ stacks.init = function (oa_)
        * axes[x] is === either blocks[x] or axesP[x], not both.
        */
       stacks.axes = {};
+
+    axes1d = stacks.axes1d = {};
+    stacks.axesPCount = Ember.Object.create({ count: 0 });
+
   }
 };
 
@@ -99,10 +114,44 @@ Block.prototype.getId = function()
 {
   return this.axisName;
 };
+/** Set .axis
+ *
+ * Because .axis is used as a dependent key in a ComputedProperty, Ember adds
+ * .set() and then this must be used.
+ * @param a axis (Stacked)
+ */
+Block.prototype.setAxis = function(a)
+{
+  console.log('setAxis', !!this.set, a);  this.log();
+  this.axis = a;
+  /* The block-adj CP axes depends on .axislater, setting this field triggers a
+   * render, so without run.later the code following the call to setAxis() would
+   * be skipped.
+   * .axislater has the same value as .axis, but setting it is deferred until
+   * the end of the current run loop, for this reason.  This is a work-around;
+   * planning to see the stacks / axes as part of the model and update them
+   * before render.
+   */
+    Ember.run.later(() => {
+      if (this.set)
+        this.set('axislater', a);
+      else
+        this.axislater = a;
+    });
+};
 /** @return axis of this block or if it has a parent, its parent's axis */
 Block.prototype.getAxis = function()
 {
-  return this.axis || (this.parent && this.parent.getAxis());
+  let axis = this.axis;
+  /* This guards against this.axis being a former axis of `this` (may have been
+   * retired during adoption), which seems to happen but perhaps should not.
+   */
+  if (! axis || (axis.blocks.length === 0)) {
+    if (axis)
+    { console.log('Block:getAxis', axis); axis.log(); }
+    axis = (this.parent && this.parent.getAxis());    
+  }
+  return axis;
 };
 /** @return stack of this block's axis.
  * @see Block.prototype.getAxis()
@@ -135,14 +184,39 @@ Block.prototype.isReference = function() {
     (axis.referenceBlock === blockR);
   return isReference;
 };
+/** @return truthy if the dataset of this Block has a parent.
+ * A genetic map block is a data block and has no reference block; for the purpose of stacks it is the reference.
+ * @return e.g. null if (dp is a promise and) no parent
+ * @see isData()
+ * @see isReference()
+ */
+Block.prototype.datasetHasParent = function() {
+  let dataset = this.block.get('datasetId'),
+  dp = dataset.get('parent'),
+  hasParent = dp && (dp.isPending ? dp.get('content') : dp);
+  console.log('datasetHasParent', dataset, dp, hasParent); this.log();
+  return hasParent;  
+};
 /** @return true if this Block is a data block, not the reference block.
  */
 Block.prototype.isData = function() {
   let axis = this.getAxis(),
   blockR = this.block,
+  /** The most significant check here is blockR.get('featureCount'); now that we
+   * have this information readily information in the frontend that is the best
+   * way to distinguish a data block, and the other checks can be retired.
+   *
+   * The .namespace check may identify GMs, but some
+   * (e.g. Quraishi_2017_consensus) being a consensus of data from multiple
+   * namespaces don't have a .namespace.
+   *
+   * The check on features.length is fine if the features are loaded into the
+   * frontend - catch 22 because isData() is used by dataBlocks() which is used
+   * in populating the blocks parameter of getBlockFeaturesInterval().
+   * (checking if features is defined and features.length > 0)
+   */
   isData =
-    //  checking if features is defined and features.length > 0
-    (blockR.get('namespace') || blockR.get('features.length'));
+    (blockR.get('namespace') || blockR.get('isChartable') || blockR.get('features.length') || blockR.get('featureCount') || ! this.isReference());
   return isData;
 };
 
@@ -181,9 +255,14 @@ function Stacked(axisName, portion) {
   this.stack = undefined;
   /** data blocks */
   this.blocks = [];
+  /* Pick up the reference to the corresponding axis-1d component, in the case
+   * that it was created before this Stacked.  */
+  if (axes1d[axisName])
+    this.axis1d = axes1d[axisName];
   /* axis objects persist through being dragged in and out of Stacks. */
   axesP[axisName] =
   oa.axes[axisName] = this;
+  stacks.axesPCount.incrementProperty('count');
 };
 Stacked.prototype.referenceBlock = undefined;
 Stacked.prototype.axisName = undefined;
@@ -205,6 +284,12 @@ Stacked.prototype.getAxis = function()
 {
   return this;
 };
+/** Enable axis-1d to correlate with blockId.
+ * axesP[axisName].axis1d is also set to axis1dComponent, but axesP[axisName] may not have been created yet.
+ */
+Stacked.axis1dAdd = function (axisName, axis1dComponent) {
+  axes1d[axisName] = axis1dComponent;
+};
 function positionToString(p)
 {
   return (p === undefined) ? ""
@@ -214,9 +299,11 @@ function positionToString(p)
  * arrays of strings, just concat the arrays, and caller can join the strings. */
 Stacked.prototype.toString = function ()
 {
-  let a =
+  let s = this.stack,
+  stackLength = (s ? s.length : ''),
+  a =
     [ "{axisName=", this.axisName, ":", this.axisName, ", portion=" + round_2(this.portion),
-      positionToString(this.position) + this.stack.length, "}" ];
+      positionToString(this.position) + stackLength, "}" ];
   return a.join("");
 };
 Stacked.prototype.log = function ()
@@ -264,8 +351,17 @@ Stacked.prototype.logElt = function ()
 Stacked.prototype.referenceBlockS = function ()
 {
   // verification
-  if (this.referenceBlock.view != this.blocks[0])
-    breakPoint('referenceBlockS', this, this.referenceBlock && this.referenceBlock.view, this.blocks);
+  let blockS = this.referenceBlock && this.referenceBlock.view;
+  /** check if this axis still exists - may be just a child Block now. */
+  if (! axesP[this.axisName]) {
+    breakPoint('referenceBlockS', this, blockS, this.axisName);
+  }
+  else if (! this.blocks.length) {
+    breakPoint('referenceBlockS', this, blockS, this.blocks);
+  }
+  else
+  if (blockS != this.blocks[0])
+    breakPoint('referenceBlockS', this, blockS, this.blocks);
   return this.blocks[0];
 };
 Stacked.prototype.getStack = function ()
@@ -431,11 +527,23 @@ Stacked.prototype.yRange2 = function ()
   range = this.position.map(function (p) { return yRange * p; });
   return range;
 };
+/** Access the features hash of this block.
+ * The hash (currently) contains some additional block attributes, .dataset and
+ * .scope, which are ignored using isOtherField[].
+ */
+Block.prototype.features = function ()
+{
+  // this function abstracts access to .z so that it can be re-structured.
+  let d = this.axisName,
+  /** this.z should have the value oa.z[d]. */
+  z = this.z || oa.z[d];
+  return z;
+}
 /** Calculate the domain of feature locations in the block named this.axisName.
  */
 Block.prototype.domainCalc = function ()
 {
-  let d = this.axisName, features = oa.z[d],
+  let d = this.axisName, features = this.features(),
   blockAttr = oa.cmName[d];
   function featureLocation(a)
   {
@@ -445,10 +553,22 @@ Block.prototype.domainCalc = function ()
     domain =
     (blockAttr && blockAttr.range) ||
     d3.extent(Object.keys(features), featureLocation);
-  // console.log("domainCalc", this, d, features, domain);
+   console.log("domainCalc", this, d, features, domain);
   if (! domain || ! domain.length)
     breakPoint();
   return domain;
+};
+/** If the Block domain has not been calculated, then calculate it.
+ * The domain should be re-calculated after features are added.
+ * @return  domain, same result as .domainCalc()
+ */
+Block.prototype.maybeDomainCalc = function ()
+{
+  let d = this.domain,
+  features = this.features();
+  if (! d || (d.length === 2 && d[0] === false && d[1] === false))
+    this.domain = this.domainCalc();
+  return this.domain;
 };
 /** Traverse the blocks displayed on this axis, and return a domain which spans
  * their domains.
@@ -457,7 +577,7 @@ Stacked.prototype.domainCalc = function ()
 {
   console.log('domainCalc', this, this.blocks);
   let blockDomains = 
-    this.blocks.map(function (b) { return b.domain || (b.domain = b.domainCalc()); }),
+    this.blocks.map(function (b) { return b.maybeDomainCalc(); }),
   /** refn : https://github.com/d3/d3-array/issues/64#issuecomment-356348729 */
   domain = 
     [
@@ -650,9 +770,12 @@ Block.prototype.titleText = function ()
   let axisName = this.block.get('id'),
   cmName = oa.cmName[axisName],
   shortName = cmName && cmName.dataset.get('meta.shortName'),
-  name = shortName || cmName.mapName;
+  name = shortName || cmName.mapName,
+  featureCount = this.block && this.block.get('featureCount'),
+  featureCountLoaded = this.block.get('featuresLength'),
+  featureCountText = (featureCount || featureCountLoaded) ? ' : ' + featureCountLoaded + ' / ' + featureCount : '';
   // console.log('Block titleText', cmName, shortName, name, cmName.scope);
-  return name + " : " + cmName.chrName;
+  return name + " : " + cmName.chrName + featureCountText;
 };
 /** @return maximum length of the titles of the viewed blocks. */
 Block.titleTextMax = function (axisName)
@@ -794,6 +917,10 @@ Stack.prototype.verify = function ()
     this.log();
     /* breakPointEnableSet(1);
      breakPoint(); */
+    /* verify() is called at a point between creating an axis and 'add a new stack for it',
+     * so don't break in this case.
+     */
+    console.log('Stack:verify() 0 axes', this);
   }
   else
     /* traverse the axes of this stack. */
@@ -856,6 +983,12 @@ Stack.verify = function()
 {
   try {
     stacks.forEach(function(s){s.verify();});
+
+    // all stacks : .axes is not empty
+    oa.stacks.mapBy('axes').mapBy('length').forEach(function (length, i) { if (!length) { console.log(i); oa.stacks[i].log(); } });
+    // all blocks : .axis has a .stack.
+    let b1 = Object.entries(oa.stacks.blocks).mapBy('1');
+    b1.mapBy('axis').forEach(function (a, i) { if (a && !a.stack) { console.log(i); a.log();  } });
   }
   catch (e)
   {
@@ -1129,6 +1262,7 @@ Stack.prototype.removeStacked1 = function (axisName)
   {
     delete oa.axes[axisName];  // or delete axis['axis']
     delete axesP[axisName];
+    stacks.axesPCount.decrementProperty('count');
   }
   if (this.empty())
   {
@@ -1573,6 +1707,48 @@ Stack.prototype.redraw = function (t)
   this.redrawAdjacencies();
 };
 
+/** Select the <g.axis-outer> DOM element of this axis.
+ * @return d3 selection
+ */
+Stacked.prototype.selectAll = function ()
+{
+  /* This function is factored from a pattern which appears in a number of
+   * places, which can now use this; (they can be seen with grep
+   * 'select.*axis-outer' ).
+   */
+
+  /** currently the <g.stack>-s are in svg > g, but there may be value in adding
+   * a <g.stacks> to parent the <g.stack>-s
+   */
+  let stackSel = "g#id" + this.stack.stackID + ".stack",
+  axisSel = stackSel + " > g#id" + this.axisName + ".axis-outer",
+  gAxis = Stacked.selectAll(axisSel);
+
+  /* later we may have multiple instances of an axis; their stackID will
+   * identify them uniquely if they are in separate stacks. */
+  if (gAxis.size() > 1)
+    console.log('Stacked:selectAll', gAxis.size(), gAxis.nodes(), gAxis.node);
+  return gAxis;
+};
+/** Select the <g.axis-outer> DOM element of the axis indicated by optional
+ * param axisSel, or all axes if axisSel is undefined.
+ * @param axisSel undefined for all axes, or a CSS-style selector.
+ * @return d3 selection
+ */
+Stacked.selectAll = function (axisSel)
+{
+  if (! axisSel)
+    axisSel = "g.stack > g.axis-outer";
+  let gAxis;
+  if (oa && oa.svgContainer)
+    gAxis = oa.svgContainer.selectAll("svg > g > " + axisSel);
+  else
+    gAxis = d3.selectAll(selectPrefix + ' > ' + axisSel);
+  if (trace_stack)
+    gAxis.nodes().forEach(function (n, i) { console.log(i, n);});
+  return gAxis;
+};
+
 function axisRedrawText(a)
 {
   let svgContainer = oa.svgContainer,
@@ -1736,11 +1912,10 @@ Stacked.prototype.axisTransformO = function ()
   }
   let yOffset = this.yOffset(),
   yOffsetText =  Number.isNaN(yOffset) ? "" : "," + this.yOffset();
-  /** x scale doesn't matter because x is 0; use 1 for clarity.
+  /** Y scale.
    * no need for scale when this.portion === 1
    */
-  let scale = this.portion,
-  scaleText = Number.isNaN(scale) || (scale === 1) ? "" : " scale(1," + scale + ")";
+  let scale = this.portion;
   let xVal = checkIsNumber(oa.o[this.axisName]);
   xVal = Math.round(xVal);
   let rotateText = "", axis = oa.axes[this.axisName];
@@ -1769,6 +1944,24 @@ Stacked.prototype.axisTransformO = function ()
     let a = d3.select("g#id" + this.axisName + ".axis-outer");
     if (trace_stack > 1)
       console.log("perpendicular", shift, rotateText, a.node());
+
+    let axisXRange = stacks.vc.axisXRange;
+    /** nStackAdjs and nStackAdjs : copied from draw-map.js : updateAxisTitleSize() */
+    let nStackAdjs = stacks.length > 1 ? stacks.length-1 : 1;
+    let axisSpacing = (axisXRange[1]-axisXRange[0])/nStackAdjs;
+    /** if perpendicular (dotPlot), reduce the axis height (which is width
+     * because of the 90deg rotation from yRange to axisSpacing.
+     * if not perpendicular, x scale doesn't matter because x is 0; use 1 for clarity.
+     */
+    scale = axisSpacing / yRange;
+    shift *= axisSpacing / yRange;
+  }
+
+  let
+  scaleText = Number.isNaN(scale) || ((scale === 1) && ! axis.perpendicular) ? "" : " scale(1," + scale + ")";
+  console.log('axisTransformO scaleText', scaleText);
+  if (trace_stack > 1) {
+    let xS = xScale(); console.log('xScale', xS.domain(), xS.range());
   }
   let transform =
     [
@@ -1780,6 +1973,76 @@ Stacked.prototype.axisTransformO = function ()
     console.log("axisTransformO", this, transform);
   return transform;
 };
+
+/*----------------------------------------------------------------------------*/
+
+/** Reference the y scales.
+ * The scales y and ys are currently created in 
+ * The roles of the scales y and ys are noted in comments in draw-map.js : draw();
+ * the key difference is that ys has added translation and scale
+ * for the axis's current stacking.
+ */
+Stacked.prototype.getY = function ()
+{
+  let axisName = this.axisName;
+  /* y and ys will be referenced in the same call, since they are created at the same time.
+   * this.axisName will not change.  If it did in future, this function could become a CF.
+   */
+  if (! this.y)
+    this.y = oa.y[axisName];
+  if (! this.ys)
+    this.ys = oa.ys[axisName];
+  return this.y;
+};
+
+/** .positions[] is [last update drawn, current], @see Stacked.prototype.currentPosition() */
+Stacked.prototype.currentPosition = function ()
+{
+  let axis1d = this.axis1d,
+  currentPosition = axis1d && axis1d.get('currentPosition');
+  return currentPosition;
+};
+
+/** Return domain and range intervals for the axis.
+ * Used to construct the intervalParams passed to the API by requestPathsProgressive(), to guide how man results are returned.
+*
+ * @return length of the axis in pixels
+ */
+Stacked.prototype.axisDimensions = function ()
+{
+  let
+    /** y scale of this axis */
+    y = this.getY(),
+  domain = this.y.domain(),
+  axis1d = this.axis1d,
+  dim = { domain, range : this.yRange(), zoomed : axis1d.zoomed};
+  let
+  currentPosition = axis1d && axis1d.get('currentPosition');
+  if (! isEqual(domain, currentPosition.yDomain))
+    console.log('axisDimensions', domain, currentPosition.yDomain, axis1d.zoomed, currentPosition);
+  return dim;
+};
+/** Set the domain of the current position to the given domain
+ */
+Stacked.prototype.setDomain = function (domain)
+{
+  let axis1d = this.axis1d,
+  axisPosition = axis1d && axis1d.currentPosition;
+  // if (! axisPosition)
+  //  console.log('setDomain', this, 'domain', domain, axis1d, axisPosition);
+  axisPosition.set('yDomain', domain);
+};
+/** Set the zoomed of the current position to the given zoomed
+ */
+Stacked.prototype.setZoomed = function (zoomed)
+{
+  let axis1d = this.axis1d;
+  // later .zoomed may move into axis1d.currentPosition
+  // if (! axisPosition)
+  // console.log('setZoomed', this, 'zoomed', axis1d.zoomed, '->', zoomed, axis1d);
+  axis1d.setZoomed(zoomed);
+};
+
 
 /*----------------------------------------------------------------------------*/
 

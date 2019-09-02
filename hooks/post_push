@@ -14,7 +14,7 @@ echo "Current branch=${SOURCE_BRANCH}"
 # [[ "${IMAGE_NAME:tagStart}" =~ ^v?([0-9]+\.)?([0-9]+\.)?(\*|[0-9]+)$ ]] \
 [[ "${IMAGE_NAME:tagStart}" =~ ^v?([0-9]+\.)?([0-9]+\.)?(\*|[0-9]+)$ ]] \
   || for tag in ${SOURCE_COMMIT} ${SOURCE_BRANCH} $(git tag -l --points-at HEAD | sed 's/^v//' || echo ""); do
-      echo "Additional tag: ${tag}"
-      docker tag ${IMAGE_NAME} ${DOCKER_REPO}:${tag}
-      docker push ${DOCKER_REPO}:${tag}
+      echo "Additional tag: ${tag##*/}"
+      docker tag ${IMAGE_NAME} ${DOCKER_REPO}:${tag##*/}
+      docker push ${DOCKER_REPO}:${tag##*/}
  done

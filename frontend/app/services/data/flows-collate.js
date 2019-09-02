@@ -1,10 +1,14 @@
 import Ember from 'ember';
 
 import Service from '@ember/service';
+const { inject: { service } } = Ember;
 
 /*----------------------------------------------------------------------------*/
 
 import { Flow } from "../../utils/flows";
+
+import { axisId2Name } from '../../utils/stacks';
+
 
 
 import {
@@ -173,6 +177,10 @@ let aliasedDone = {};
 /*----------------------------------------------------------------------------*/
 
 export default Service.extend({
+  block: service('data/block'),
+  axisBrush: service('data/axis-brush'),
+  pathsPro : service('data/paths-progressive'),
+
   flows : flows,
 
   flowConfig : flowConfig,
@@ -188,6 +196,8 @@ export default Service.extend({
   featureAxes : featureAxes,
   aliasGroupAxisFeatures : aliasGroupAxisFeatures,
   adjAxes : adjAxes,
+  adjAxesArr : [],
+  adjAxesCount : 0,
   aliased : aliased,
   aliasedDone : aliasedDone,
   /** Additional attributes, set elsewhere:
@@ -216,9 +226,53 @@ export default Service.extend({
         result[f] = flows[f];
     console.log('enabledFlows', uAlias, flows.U_alias.enabled, result);
     return result;
+  }),
+
+  /** From adjAxes (which records all block adjacencies in both directions), filter to
+   * output just 1 pair [b0, b1] for each pair of adjacent blocks.  The criteria b0 < b1 is
+   * used to select the direction which is used; this is stable during axis
+   * dragging which changes left-to-right order and stacking.
+   * The values b0, b1 are block IDs.
+   */
+  blockAdjIds : Ember.computed('block.viewedIds.[]', 'adjAxesArr.[]', function () {
+    let viewedIds = this.get('block.viewedIds');
+    let axesP = this.get('oa.axesP');
+    console.log('blockAdjIds', viewedIds, axesP);
+    let blockAdjIds = Ember.run(this, convert);
+    /** Convert the hash adjAxes, e.g. adjAxes[b0] === b1, to an array of ordered pairs [b0, b1]
+     */
+    function convert () {
+    let adjAxes = this.get('adjAxes'),
+    blockAdjIds2 =
+      Object.keys(adjAxes).reduce(function(result, b0Name) {
+        let b0 = adjAxes[b0Name];
+        console.log(b0Name, axisId2Name(b0Name), b0.length);
+        for (let b1i=0; b1i < b0.length; b1i++) {
+          let b1Name = b0[b1i];
+          let // direction = b0Name < b1Name,
+            orderedPair = [b0Name, b1Name].sort();
+          // if (direction)
+            result.push(orderedPair);
+          // console.log(result);
+        }
+        return result;
+      }, []);
+      return blockAdjIds2;
+    }
+    console.log('blockAdjIds', blockAdjIds);
+    return blockAdjIds;
+  }),
+  blockAdjs : Ember.computed('blockAdjIds.[]', function () {
+    let pathsPro = this.get('pathsPro'),
+    blockAdjIds = this.get('blockAdjIds'),
+    records = blockAdjIds.map(function (blockAdjId) {
+      let record = pathsPro.ensureBlockAdj(blockAdjId);
+      console.log('blockAdjId', blockAdjId, blockAdjId[0], blockAdjId[1], record);
+      return record;
+    });
+    return records;
   })
 
-  
 });
 
 /*----------------------------------------------------------------------------*/

@@ -1,0 +1,21 @@
+{{log 'entry-parent' name values this this.parentView}}
+{{#record/entry-selectable node=node nodeName=name
+   selectedNode=selectedDataset
+   selectNode=(action 'selectDataset')}}
+
+  {{#record/entry-expander nodeName=name}}
+    <ul>
+      {{record/entry-values values=values levelMeta=levelMeta
+        name=name
+        parentDone=true
+        loadBlock="loadBlock"
+        selectBlock="selectBlock"
+        selectedBlock=selectedBlock
+        selectDataset="selectDataset"}}
+    </ul>
+
+
+  {{/record/entry-expander}}
+
+{{/record/entry-selectable}}
+

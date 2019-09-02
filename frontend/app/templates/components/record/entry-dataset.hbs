@@ -1,3 +1,4 @@
+{{!-- log 'entry-dataset' entry.name entry  --}}
 <li class="list-group-item list-group-item-info {{if (compare entry.id '===' selectedDataset.id) 'list-group-item-warning'}}" {{action "selectDataset" entry on="click"}} style="display:flex">
   {{#if editing }}
     <div class="input-group">
@@ -76,7 +77,7 @@
 {{#if layout.active}}
   {{#each data as |block|}}
     <li 
-      class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
+      class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}} {{nameClass block}}"
       {{action "selectBlock" block on="click"}}>
       {{record/entry-block
         onDelete="onDelete"

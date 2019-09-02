@@ -1,0 +1,11 @@
+{{elem/icon-toggle state=allActive
+  changed=(action 'allActiveChanged')
+  iconTrue='arrow-down' iconFalse='arrow-right' }}
+
+<ul class="list-group borderless">
+  {{record/entry-values values=values levelMeta=levelMeta
+    loadBlock="loadBlock"
+    selectBlock=(action 'selectBlockAndDataset')
+    selectedBlock=selectedBlock
+    selectDataset="selectDataset"}}
+</ul>

@@ -1,0 +1,80 @@
+{{log 'entry-values' values valueIsArray valueIsDatasetsArray valueIsBlocksArray valuesIsMap values_dataTypeName0 parentDone values_levelComponent values_dataTypeName 'name' name values.name (or name values.name)}}
+
+{{#if valueIsDatasetsArray}}
+  {{log 'entry-datasets' values}}
+  {{record/entry-datasets
+    loadBlock="loadBlock"
+    selectBlock=(action 'selectBlock')
+    selectedBlock=selectedBlock
+    selectDataset=(action 'selectDataset')
+    selectedDataset=selectedDataset
+    data=values}}
+
+{{else if valueIsBlocksArray }}   {{!-- type is blocks array --}}
+  {{log 'entry-blocks'}}
+  {{record/entry-blocks
+    loadBlock="loadBlock"
+    data=values
+    selectBlock="selectBlock"
+    selectedBlock=selectedBlock
+    selectDataset=(action 'selectDataset')}}
+
+{{else if (or valuesModelName (and values_levelComponent (not-eq values_levelComponent 'record/entry-values') (not parentDone) ) ) }}
+  {{log  'values' values 'levelComponent' values_levelComponent}}
+  {{component values_levelComponent levelMeta=levelMeta name=(or name values.name) values=values
+    data=values
+    parentDone=true
+    loadBlock="loadBlock"
+    selectBlock="selectBlock"
+    selectedBlock=selectedBlock
+    selectDataset=(action 'selectDataset')
+  }}
+
+{{else if valueIsArray}}
+  {{log 'valueIsArray'}}
+
+  {{#each values as |value index|}}
+    {{log  'value' value 'index' index 'levelComponent' values_levelComponent}}
+    {{record/entry-values values=value levelMeta=levelMeta
+      parentName=name
+      loadBlock="loadBlock"
+      selectBlock="selectBlock"
+      selectedBlock=selectedBlock
+      selectDataset=(action 'selectDataset')}}
+  {{/each}}
+
+{{else if valuesIsMap}}
+  {{log 'valuesIsMap:each'}}
+
+  {{#each values as |key value|}}
+    {{#with (compute (action 'levelComponent' value)) as |subComponent|}}
+      {{log  'value' value 'key' key 'subComponent' subComponent}}
+      {{component subComponent levelMeta=levelMeta name=key values=value
+        data=value
+        parentName=name
+        loadBlock="loadBlock"
+        selectBlock="selectBlock"
+        selectedBlock=selectedBlock
+        selectDataset=(action 'selectDataset')
+      }}
+    {{/with}}
+  {{/each}}
+
+{{else if valuesIsObject }}
+  {{log 'each-in'}}
+
+  {{#each-in values as |key value|}}
+    {{#with (compute (action 'levelComponentEach' value)) as |subComponent|}}
+      {{log  'key' key 'value' value 'subComponent' subComponent}}
+      {{component subComponent levelMeta=levelMeta name=key values=value
+        data=value
+        parentName=name
+        loadBlock="loadBlock"
+        selectBlock="selectBlock"
+        selectedBlock=selectedBlock
+        selectDataset=(action 'selectDataset')
+      }}
+    {{/with}}
+  {{/each-in}}
+
+{{/if}}

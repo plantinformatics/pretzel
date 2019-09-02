@@ -2,6 +2,14 @@ import Ember from 'ember';
 
 import AxisEvents from '../../utils/draw/axis-events';
 
+const CompName = 'components/axis-ticks-selected';
+
+/** Display horizontal ticks on the axis to highlight the position of features
+ * found using Feature Search.
+ *
+ * @param featuresInBlocks results of Feature Search; a lookup function for these
+ * is passed to showTickLocations()
+ */
 export default Ember.Component.extend(AxisEvents, {
 
   
@@ -9,7 +17,7 @@ export default Ember.Component.extend(AxisEvents, {
     /* useTransition could be passed down to showTickLocations()
      * (also could pass in duration or t from showResize()).
      */
-    console.log("resized in components/axis-1d");
+    console.log("resized in ", CompName);
     if (heightChanged)
       this.renderTicksThrottle();
   },
@@ -21,7 +29,7 @@ export default Ember.Component.extend(AxisEvents, {
 
 
   axisStackChanged : function() {
-    console.log("axisStackChanged in components/axis-1d");
+    console.log("axisStackChanged in ", CompName);
     /* draw-map : axisStackChanged() / axisStackChanged_() already does throttle. */
     this.renderTicks();
   },
@@ -42,12 +50,15 @@ export default Ember.Component.extend(AxisEvents, {
   },
 
   renderTicks(axisID_t) {
-    console.log("renderTicks in components/axis-1d", axisID_t);
-    this.get('axis1d.featureTicks').showTickLocations(
+    console.log("renderTicks in ", CompName, axisID_t);
+    let featureTicks = this.get('axis1d.featureTicks');
+    if (featureTicks) {
+      featureTicks.showTickLocations(
       this.featuresOfBlockLookup.bind(this),
       true,  /* undefined or false after text featureExtra is added */
       'foundFeatures', false
-    );
+      );
+    }
   },
   /** call renderTicks().
    * filter / throttle the calls to handle multiple events at the same time.

@@ -1,15 +1,23 @@
 import Ember from 'ember';
+const { inject: { service } } = Ember;
+
+
+import { sum } from 'lodash/math';
+import { isEqual } from 'lodash/lang';
+
 
 import AxisEvents from '../../utils/draw/axis-events';
-import { /* Block, Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText, axisId2Name*/ } from '../../utils/stacks';
+import AxisPosition from '../../mixins/axis-position';
+import { /* Block,*/ Stacked, /*Stack,*/ stacks /*, xScaleExtend, axisRedrawText, axisId2Name*/ } from '../../utils/stacks';
 import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/ , axisTitleColour  }  from '../../utils/draw/axis';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../../utils/stacks-drag';
+import { selectAxis } from '../../utils/draw/stacksAxes';
 import { breakPoint } from '../../utils/breakPoint';
-
-
+import { configureHorizTickHover } from '../../utils/hover';
+import { getAttrOrCP } from '../../utils/ember-devel';
 
 /* global d3 */
-
+/* global require */
 
 /*------------------------------------------------------------------------*/
 
@@ -21,14 +29,6 @@ const axisTickTransitionTime = 750;
 
 function blockKeyFn(block) { return block.axisName; }
 
-/** Get an attribute of an object which may be an ember store object, or not.
- * Ember data operations such as findAll() will return ember store objects,
- * and ajax requests which return JSON will be parsed into plain JS objects.
- * Further details in comment in axis-1d.js : @see keyFn()
- */
-function getAttrOrCP(object, attrName) {
-  return object.get ? object.get(attrName) : object[attrName];
-}
 
 /*------------------------------------------------------------------------*/
 
@@ -55,12 +55,6 @@ function blockWithTicks(block)
   return ! showPaths;
 }
 
-function selectAxis(axis)
-{
-  let axisName = axis.axisName;
-  let aS = d3.select("#" + axisEltId(axisName));
-  return aS;
-}
 /** Draw horizontal ticks on the axes, at feature locations.
  * This is used for 2 cases so far :
  * . all features of blocks which have !showPaths, when axis is ! extended
@@ -78,6 +72,8 @@ function FeatureTicks(axis, axisApi, axis1d)
 }
 
 /** Draw horizontal ticks on the axes, at feature locations.
+ *
+ * @param axis  block (Ember object), result of stacks-view:axesP
  */
 FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setupHover, groupName, blockFilter)
 {
@@ -239,28 +235,27 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 
 };
 
-/** Setup hover info text over scaffold horizTick-s.
- * @see based on similar configureAxisTitleMenu()
- */
-function  configureHorizTickHover(d, block, hoverTextFn)
-{
-  // console.log("configureHorizTickHover", d, this, this.outerHTML);
-  let text = hoverTextFn(d, block);
-  let node_ = this;
-  Ember.$(node_)
-    .popover({
-      trigger : "click hover",
-      sticky: true,
-      delay: {show: 200, hide: 3000},
-      container: 'div#holder',
-      placement : "auto right",
-      // comment re. title versus content in @see draw-map.js: configureHorizTickHover() 
-      content : text,
-      html: false
-    });
-}
 
-export default Ember.Component.extend(Ember.Evented, AxisEvents, {
+export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
+  blockService: service('data/block'),
+
+  stacks : stacks,
+
+  init() {
+    this._super(...arguments);
+    let axisName = this.get('axis.id');
+    /* axisS may not exist yet, so give Stacked a reference to this. */
+    Stacked.axis1dAdd(axisName, this);
+    let axisS = this.get('axisS');
+    if (! axisS || axisS.axis1d)
+    {
+      console.log('axis-1d:init', this, axisName, this.get('axis'), axisS, axisS && axisS.axis1d);
+    }
+    else {
+      axisS.axis1d = this;
+      console.log('axis-1d:init', this, this.get('axis.id'), axisS); axisS.log();
+    }
+  },
 
 
   /** axis-1d receives axisStackChanged and zoomedAxis from draw-map
@@ -281,8 +276,82 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     this.renderTicksDebounce();
   },
 
+  /** @return the Stacked object corresponding to this axis. */
+  axisS : Ember.computed('axis.id', 'stacks.axesPCount', function () {
+    let
+      axisName = this.get('axis.id'),
+    axisS = Stacked.getAxis(axisName);
+    if (axisS && ! axisS.axis1d) {
+      axisS.axis1d = this;
+    }
+    return axisS;
+  }),
+  /** @return data blocks of this axis.
+   * These are the Ember records, not the stack Block-s.
+   */
+  dataBlocks : Ember.computed('axisS', 'blockService.axesBlocks.@each', function () {
+    let axis = this.get('axisS'),
+    dataBlocks,
+    axesBlocks = this.get('blockService.axesBlocks');
+    if (! axis) {
+      /* We can add a ComputedProperty for axes - allocate a Stack and Stacked
+       * (axis) for newly viewed non-child blocks. */
+      dataBlocks = [];
+      let
+        axisName = this.get('axis.id');
+      console.log('dataBlocks', axesBlocks, axisName, dataBlocks);
+    }
+    else {
+    let
+    /** stack Block-s. */
+      dataBlocksS = axis.dataBlocks();
+      dataBlocks = dataBlocksS.map(function (b) { return b.block; });
+    console.log(dataBlocksS, 'axesBlocks', axesBlocks, axis.axisName);
+    }
+    return dataBlocks;
+  }),
+  /** count of features of .dataBlocks */
+  featureLength : Ember.computed('dataBlocks.@each.featuresLength', function () {
+    let dataBlocks = this.get('dataBlocks'),
+    featureLengths = dataBlocks.map(function (b) { return b.get('featuresLength'); } ),
+    featureLength = sum(featureLengths);
+    console.log(this, dataBlocks, featureLengths, 'featureLength', featureLength);
+    let axisS = this.get('axisS'); if (axisS) axisS.log();
+    return featureLength;
+  }),
+  /** When featureLength changes, render.
+   * The suffix Effect is used to denote a Side Effect triggered by a CF.
+   */
+  featureLengthEffect : Ember.computed('featureLength', 'axisS', function () {
+    let featureLength = this.get('featureLength');
+    this.renderTicksDebounce();
+    let axisApi = stacks.oa.axisApi,
+    /** defined after first brushHelper() call. */
+    axisFeatureCirclesBrushed = axisApi.axisFeatureCirclesBrushed;
+    if (axisFeatureCirclesBrushed)
+      axisFeatureCirclesBrushed();
+
+    /** Update the featureCount shown in the axis block title */
+    let axis = this.get('axisS');
+    if (axis) {
+      let
+        gAxis = axis.selectAll(),
+      axisTitleS = gAxis.select("g.axis-outer > g.axis-all > text");
+      console.log(
+        'featureLengthEffect', featureLength, axisTitleS.nodes(), axisTitleS.node(),
+        gAxis.nodes(), gAxis.node());
+      axisApi.axisTitleFamily(axisTitleS);
+    }
+    else if (featureLength)
+      console.log('featureLengthEffect', this.get('axis.id'), featureLength);
+
+    return featureLength;
+  }),
+
+
   /** @param [axisID, t] */
-  zoomedAxis : function(axisID_t) {
+  zoomedAxis : function(axisID_t) { },
+  zoomedAxis_unused : function(axisID_t) {
     let axisID = axisID_t[0],
     axisName = this.get('axis.id');
     console.log("zoomedAxis in components/axis-1d", axisID_t, axisName);
@@ -291,7 +360,78 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       console.log('zoomedAxis matched', axisID, this.get('axis'));
       // Not currently needed because axisStackChanged() already received.
       // this.renderTicksDebounce.apply(this, axisID_t);
+      let axisS = this.get('axisS'),
+      dimensions = axisS.axisDimensions();
+      console.log('zoomedAxis setDomain', this.get('domain'), this.get('currentPosition'), this.get('currentPosition.yDomain'), dimensions.domain);
+      this.setDomain(dimensions.domain);
+      // this.set('zoomed', dimensions.zoomed);
+      console.log('zoomedAxis', axisS, dimensions);
     }
+  },
+  setDomain_unused(domain) {
+    let
+      attr = this.get('domain');
+    let cpDomain = this.get('currentPosition.yDomain');
+    /* verification - this confirms that if zoomedAxis() -> setDomain() then
+     * .currentPosition.yDomain has already been set to domain.
+     * So zoomedAxis() and setDomain() are disabled by appending _unused to their names.
+     */
+    if (! isEqual(cpDomain, domain)) {
+      console.log('setDomain', cpDomain, domain, attr);
+    }
+    if (! attr)
+      this.set('domain', Ember.A(domain));
+    else
+    {
+      domain.forEach((d, i) => {
+        this.set('domain.' + i, d);
+      });
+    }
+    console.log('setDomain', domain, attr /*, this.attrs*/);
+  },
+  /** position when last pathUpdate() drawn. */
+  position : Ember.computed.alias('lastDrawn.yDomain'),
+  /** position as of the last zoom. */
+  domain : Ember.computed.alias('currentPosition.yDomain'),
+
+  /** this is an alias of .domain, but it updates when the array elements update. */
+  domainChanged : Ember.computed(
+    'domain.0', 'domain.1',
+    function () {
+      let domain = this.get('domain');
+      // use the VLinePosition:toString() for the position-s
+      console.log('domainChanged', domain, this.get('axisS'), ''+this.get('currentPosition'), ''+this.get('lastDrawn'));
+      // this.notifyChanges();
+      if (! this.get('axisS'))
+        console.log('domainChanged() no axisS yet', domain, this.get('axis.id'));
+      else
+      this.updateAxis();
+
+      return domain;
+    }),
+  notifyChanges() {
+    let axisID = this.get('axis.id');
+    console.log('notifyChanges', axisID);
+
+    let axisApi = stacks.oa.axisApi;
+    let t = stacks.oa.svgContainer.transition().duration(750);
+
+    let eventBus = stacks.oa.eventBus;
+
+    let p = axisID;
+    eventBus.trigger("zoomedAxis", [axisID, t]);
+    // true does pathUpdate(t);
+    axisApi.axisScaleChanged(p, t, true);
+
+    axisApi.axisStackChanged(t);
+  },
+  updateAxis() {
+    // subset of notifyChanges()
+    let axisApi = stacks.oa.axisApi;
+    let axisID = this.get('axis.id');
+    console.log('updateAxis', axisID);
+    let t = stacks.oa.svgContainer.transition().duration(750);
+    axisApi.axisScaleChanged(axisID, t, true);
   },
 
   axisObj : Ember.computed('axes2d.[]', function () {
@@ -345,7 +485,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     pS.remove();
   },
   didRender() {
-    this.get('renderTicks').apply(this, []);
+    this.renderTicksDebounce();
   },
   constructFeatureTicks () {
     /** There is 1 axis-1d component per axis, so here `block` is an axis (Stacked),
@@ -369,7 +509,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     }
   },
   renderTicks() {
-    this.get('featureTicks').showTickLocations(undefined, true, 'notPaths', true);
+    let featureTicks = this.get('featureTicks');
+    if (! featureTicks && this.get('axisS')) {
+      this.constructFeatureTicks();
+      featureTicks = this.get('featureTicks');
+    }
+    if (! featureTicks)
+      console.log('renderTicks', featureTicks);
+    else
+      featureTicks.showTickLocations(undefined, true, 'notPaths', true);
   },
   /** call renderTicks().
    * filter / debounce the calls to handle multiple events at the same time.
@@ -377,7 +525,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * axisStackChanged()
    */
   renderTicksDebounce(axisID_t) {
-    console.log('renderTicksDebounce', axisID_t);
+    // console.log('renderTicksDebounce', axisID_t);
     // renderTicks() doesn't use axisID_t; this call chain is likely to be refined yet.
     /* using throttle() instead of debounce() - the former has default immediate==true.
      * It is possible that the last event in a group may indicate a change which

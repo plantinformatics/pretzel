@@ -22,6 +22,15 @@ function parseOptions(options_param)
 
 /*----------------------------------------------------------------------------*/
 
+/** Convert a string to Boolean, e.g. 'false', 'true'.
+ * @return true or false
+ */
+function toBool(x) {return (typeof x === "string") ? x.toLowerCase().trim() === "true" : x; };
+// copied from backend/common/utilities/paths-aggr.js : pathsDirect()
+
+/*----------------------------------------------------------------------------*/
+
 export {
-  parseOptions
+  parseOptions,
+  toBool
 };

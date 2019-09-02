@@ -1,0 +1,18 @@
+
+<li class="list-group-item list-group-item-info" >
+  {{#record/entry-expander nodeName=name}}
+
+    {{log 'entry-level' name values}}
+    <ul>
+      {{record/entry-values values=values levelMeta=levelMeta
+        name=name
+        parentDone=true
+        loadBlock="loadBlock"
+        selectBlock="selectBlock"
+        selectedBlock=selectedBlock
+        selectDataset="selectDataset"}}
+    </ul>
+
+  {{/record/entry-expander}}
+
+</li>

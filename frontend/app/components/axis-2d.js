@@ -1,4 +1,6 @@
 import Ember from 'ember';
+const { inject: { service } } = Ember;
+
 import { eltWidthResizable } from '../utils/domElements';
 import AxisEvents from '../utils/draw/axis-events';
 
@@ -8,6 +10,7 @@ const axisTransitionTime = 750;
 
 
 export default Ember.Component.extend(Ember.Evented, AxisEvents, {
+  blockService: service('data/block'),
 
   needs: ['component:tracks'],
 
@@ -24,6 +27,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let stacks = this.get('drawMap.oa.stacks');
     let axis = stacks.axesP[axisID];
     return axis;
+  }),
+  axis1d : Ember.computed('axis', function() {
+    let axis = this.get('axis'),
+    axis1d = axis.axis1d;
+    console.log('axis1d', axis1d);
+    return axis1d;
   }),
   blocks : Ember.computed('axis', function() {
     let axis = this.get('axis');

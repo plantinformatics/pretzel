@@ -160,6 +160,8 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     }
   },
 
+  controls : Ember.Object.create({ view : {  } }),
+
   queryParams: ['mapsToView'],
   mapsToView: [],
 
@@ -220,6 +222,10 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   useTask : function (id) {
     console.log("useTask", id);
     let blockService = this.get('block');
+
+    let getBlocks = blockService.get('getBlocksSummary');
+    let blocksSummaryTasks = getBlocks.apply(blockService, [[id]]);
+
     let taskGet = blockService.get('taskGet');
     let block = taskGet.perform(id);
     console.log("block", id, block);
