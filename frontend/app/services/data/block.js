@@ -358,7 +358,7 @@ export default Service.extend(Ember.Evented, {
 
   /** @return Map of axes to loaded viewed child blocks */
   axesBlocks : Ember.computed(
-    'loadedViewedChildBlocks',
+    'loadedViewedChildBlocks.[]',
     function () {
       let records = this.get('loadedViewedChildBlocks'),
       map = records.reduce(

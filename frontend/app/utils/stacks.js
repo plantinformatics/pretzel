@@ -176,6 +176,7 @@ Block.prototype.longName = function() {
 };
 /** @return true if this Block is a reference, not data block.
  * A genetic map block is a data block and has no reference block; for the purpose of stacks it is the reference.
+ * Also @see isData()
  */
 Block.prototype.isReference = function() {
   let axis = this.getAxis(),

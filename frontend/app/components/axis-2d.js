@@ -28,10 +28,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let axis = stacks.axesP[axisID];
     return axis;
   }),
-  axis1d : Ember.computed('axis', function() {
+  axis1d : Ember.computed('axis', 'drawMap.oa.stacks.axesPCount', function() {
     let axis = this.get('axis'),
+    axesPCount = this.get('drawMap.oa.stacks.axesPCount'),
     axis1d = axis.axis1d;
-    console.log('axis1d', axis1d);
+    console.log('axis1d', axis1d, axesPCount);
     return axis1d;
   }),
   blocks : Ember.computed('axis', function() {
@@ -41,10 +42,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   /** @return just the ("child") data blocks, skipping the ("parent") reference
    * block which is block[0].
    */
-  dataBlocks : Ember.computed('blocks', function () {
+  dataBlocks : Ember.computed('blocks.[]', function () {
     let blocks = this.get('blocks'),
-    /** use slice() to copy - don't modify blocks[]; and skip blocks[0]. */
-    dataBlocks = blocks.slice(1);
+    /** skip reference block, which has no features. */
+    dataBlocks = blocks.filter(function (bS) {
+      let b = bS.block; return b && bS.isData(); });
+    console.log('dataBlocks', blocks, dataBlocks);
     return dataBlocks;
   }),
 
