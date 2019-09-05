@@ -68,15 +68,55 @@ function yAxisTicksScale(/*d, i, g*/)
   scaleText = yAxisTextScale.apply(gp, arguments);
   return scaleText;
 }
-function yAxisBtnScale(/*d, i, g*/)
+/**
+ * @param gAxis has __data__ which is axisName; may be g.axis-all or g.btn
+ */
+function axisExtended(gAxis)
 {
-  return 'translate(10) ' + yAxisTextScale.apply(this, arguments);
+  let
+  axisName = gAxis.__data__,
+  axis = oa.axes[axisName],
+  extended = axis.extended; // or axis.axis1d.get('extended'),
+  /* .extended should be false or width;  if it is just true then return the default initial width. */
+  if (extended === true)
+    extended = 130;
+  return extended;
 }
+/** @return transform for the Zoom / Reset button which is currently near the axis title.
+ * @description
+ * Usage : ... .selectAll('g.axis ... g.btn > text').attr("transform", yAxisBtnScale);
+ * @param d axisName
+ */
+function yAxisBtnScale(d/*, i, g*/)
+{
+  let g = this.parentElement,
+  axisName = d, // === g.__data__
+  extended = axisExtended(g),
+  /** If extended, the Zoom button is overlain by the split axis rectangle, so shift it up. */
+  yOffsetText = extended ? ',-40' : '';
+  console.log('yAxisBtnScale', g, axisName, yOffsetText);
+  return 'translate(10'+yOffsetText+') ' + yAxisTextScale.apply(this, arguments);
+}
+/** @return transform for the axis title
+ * @description
+ * Usage : ... .selectAll("g.axis-all > text")
+ * .attr("transform", yAxisTitleTransform(oa.axisTitleLayout))
+ * @param d axisName
+ */
 function yAxisTitleTransform(axisTitleLayout)
 {
-  return function (/*d, i, g*/) {
-    // order : scale then rotate (then translate but none in this case)
-    return yAxisTextScale.apply(this, arguments) + ' ' + axisTitleLayout.transform();
+  return function (d /*, i, g*/) {
+    // order : scale then rotate then translate.
+    let 
+      gAxis = this.parentElement,
+    axisName = d, // === gAxis.__data__
+    axis = oa.axes[axisName],
+    width = axisExtended(gAxis),
+    /** See also setWidth() which sets the same translate, initially. */
+    translateText = width ? " translate(" + width/2 + ",0)" : '';
+    console.log('yAxisTitleTransform', arguments, this, gAxis, axisName, axis, width, translateText);
+    return yAxisTextScale.apply(this, arguments) + ' ' + axisTitleLayout.transform()
+      + translateText;
   };
 }
 

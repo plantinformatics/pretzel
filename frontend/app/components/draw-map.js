@@ -2166,6 +2166,13 @@ export default Ember.Component.extend(Ember.Evented, {
         .attr("class", "axis-use");
       // merge / update ?
 
+      /** If dualAxis, use <use> to show 2 identical axes.
+       * Otherwise show only the left axis, and on the right side a line like an
+       * axis with no ticks, just the top & bottom tick lines, but reflected so
+       * that they point right.
+       */
+      let dualAxis = false;
+      if (dualAxis) {
       let eu = eg
       /* extra "xlink:" seems required currently to work, refn :  dsummersl -
        * https://stackoverflow.com/questions/10423933/how-do-i-define-an-svg-doc-under-defs-and-reuse-with-the-use-tag */
@@ -2182,6 +2189,27 @@ export default Ember.Component.extend(Ember.Evented, {
       er
         .transition().duration(1000)
         .attr("width", initialWidth);
+      }
+      else
+      {
+        /** based on showTickLocations() */
+        const xOffset = 25, shiftRight=5;
+        let 
+          tickWidth = xOffset/5,
+        edgeHeight = axis.yRange(),
+        sLine = line([
+          [+tickWidth, 0],
+          [0, 0],
+          [0, edgeHeight],
+          [+tickWidth, edgeHeight]
+        ]),
+        ra = eg
+          .append("path")
+          .attr("transform",function(d) {return "translate(" + (shiftRight + getAxisExtendedWidth(d)) + ",0)";})
+          .attr("d", sLine);
+        ra
+          .transition().duration(1000);
+      }
 
       // foreignObject is case sensitive - refn https://gist.github.com/mbostock/1424037
       let ef = eg
@@ -3812,10 +3840,11 @@ export default Ember.Component.extend(Ember.Evented, {
         let zoomSwitchE = zoomSwitchS
           .enter()
           .append('g')
-          .attr('class', 'btn')
-          .attr('transform', yAxisBtnScale);
+          .attr('class', 'btn');
         zoomSwitchE.append('rect');
         zoomSwitch = zoomSwitchS.merge(zoomSwitchE);
+        zoomSwitch
+          .attr('transform', yAxisBtnScale);
         let zoomResetSwitchTextE =
           zoomSwitchE.append('text')
           .attr('x', 30).attr('y', 20);

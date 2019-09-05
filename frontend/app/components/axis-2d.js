@@ -230,7 +230,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
           .data([width])
           .transition().duration(axisTransitionTime)
           .attr("transform", function(d) {return "translate(" + d + ",0)";});
-        console.log('setWidth', use.node(), width, use.data(), use.attr('transform'), use.transition());
+        if (! use.empty())  // use.data() is not valid if empty
+          console.log('setWidth', use.node(), width, use.data(), use.attr('transform'), use.transition());
         if (rect.size() == 0)
           console.log('setWidth rect', rect.node(), axisUse.node(), use.node());
         else
@@ -238,6 +239,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
           rect.attr("width", width);
           console.log(rect.node(), rect.attr('width'));
         }
+        let axisTitle = axisUse.selectAll('g > g.axis-all > text')
+          .transition().duration(axisTransitionTime)
+          // duplicated in utils/draw/axis.js : yAxisTitleTransform()
+          .attr("transform", "translate(" + width/2 + ",0)");
+        console.log('axisTitle', axisTitle);
+
         /** Can use param d, same value as me.get('axisID').
          * axisID is also on the parent of <use> :
          * useElt = axisUse.node();

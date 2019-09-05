@@ -214,11 +214,11 @@ svg {
 
 g.axis-use > rect {
   fill: none;
-  stroke: blue;
+  /* stroke: blue; */
 }
 g.axis-use > g.tracks > g > rect.track {
-  fill: white;
-  /* stroke: green; */
+  fill: lightblue;
+  stroke: lightblue; /* rgb(31, 119, 180); */
 }
 .pasteData {
   overflow: hidden;
@@ -438,11 +438,15 @@ body.allInitially
 }
 
 
-.axis line, .axis path {
+.axis line, .axis path,
+.axis-use > path
+{
   fill: none;
   shape-rendering: crispEdges;
 }
-.axis line, .axis path:not(.horizTick) {
+.axis line, .axis path:not(.horizTick),
+.axis-use > path
+{
   stroke: #000; /* black */
 }
 
