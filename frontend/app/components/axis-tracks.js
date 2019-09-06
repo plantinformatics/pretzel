@@ -184,11 +184,11 @@ export default InAxis.extend({
   currentPosition : Ember.computed.alias('axis1d.currentPosition'),
   yDomain : Ember.computed.alias('currentPosition.yDomain'),
 
-  /** From the stack Blocks, derive the Ember block objects. */
-  trackBlocksR : Ember.computed('trackBlocks.[]', function () {
-    let trackBlocks = this.get('trackBlocks'),
-    trackBlocksR = trackBlocks.mapBy('block');
-    return trackBlocksR;
+  /** From the Ember block objects, derive the stack Blocks. */
+  trackBlocks : Ember.computed('trackBlocksR.@each.view', function () {
+    let trackBlocksR = this.get('trackBlocksR'),
+    trackBlocks = trackBlocksR.mapBy('view');
+    return trackBlocks;
   }),
 
   /*--------------------------------------------------------------------------*/
@@ -574,6 +574,12 @@ export default InAxis.extend({
              * single-element array, e.g. {name : "my1AGene1", value : [5200] } */
             if (! interval.length || (interval.length == 1))
               interval = [interval, interval];
+            /* interval-tree:createIntervalTree() assumes the intervals are positive, and gets stack overflow if not. */
+            else if (interval[0] > interval[1]) {
+              let swap = interval[0];
+              interval[0] = interval[1];
+              interval[1] = swap;
+            }
             interval.description = feature.get('name');
             return interval;
           });

@@ -41,8 +41,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   }),
   /** @return just the ("child") data blocks, skipping the ("parent") reference
    * block which is block[0].
+   * Result type is [] of (stack.js) Block.
    */
-  dataBlocks : Ember.computed('blocks.[]', function () {
+  dataBlocksS : Ember.computed('blocks.[]', function () {
     let blocks = this.get('blocks'),
     /** skip reference block, which has no features. */
     dataBlocks = blocks.filter(function (bS) {
@@ -50,6 +51,21 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     console.log('dataBlocks', blocks, dataBlocks);
     return dataBlocks;
   }),
+  /** The above dataBlocksS() is based on stacks.js data structure for axes and blocks;
+   * this function instead is based on the Ember store blocks, via the ComputedProperty axesBlocks.
+   * This can replace dataBlocksS(), which may be updated after a delay.
+   */
+  dataBlocks : Ember.computed(
+    'axisID', 'blockService.dataBlocks.[]', 'blockService.dataBlocks.@each',
+    function () {
+      let
+        /** related : blockService.axesBlocks, axis1d.dataBlocks */
+        dataBlocksMap = this.get('blockService.dataBlocks'),
+      id = this.get('axisID'),
+      dataBlocks = dataBlocksMap && dataBlocksMap.get(id);
+      console.log('dataBlocksMap', id, dataBlocksMap, dataBlocks);
+      return dataBlocks;
+    }),
 
 
   /*--------------------------------------------------------------------------*/

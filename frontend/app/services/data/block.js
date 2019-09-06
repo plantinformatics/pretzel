@@ -4,6 +4,9 @@ import { task } from 'ember-concurrency';
 
 const { inject: { service } } = Ember;
 
+import { stacks } from '../../utils/stacks';
+
+
 let trace_block = 1;
 
 /** Augment the store blocks with features to support mapview.
@@ -339,14 +342,20 @@ export default Service.extend(Ember.Evented, {
   }),
 
 
-  /** @return array of blocks */
+  /** From the list of viewed blocks, filter out those which are not data
+   * blocks.
+   * @return array of blocks
+   */
   loadedViewedChildBlocks: Ember.computed(
     'viewed.[]',
     function() {
       let records =
         this.get('viewed')
         .filter(function (block) {
-          return block.get('isLoaded'); // i.e. !== undefined
+          // featureCount indicates isData.
+          // dataBlocks() wants the parent blocks also ... commented out featureCount, will rethink after hot-fix.
+          return block.get('isLoaded') // i.e. !== undefined
+            /*&& block.get('featureCount')*/;
         });
       if (trace_block > 1)
         console.log(
@@ -363,20 +372,58 @@ export default Service.extend(Ember.Evented, {
       let records = this.get('loadedViewedChildBlocks'),
       map = records.reduce(
         function (map, block) {
-          let axis = block.get('view.axis');
+          let axis = block.get('axis');
+          if (! axis) {
+            console.log('axesBlocks ensureAxis', block.get('id'));
+            stacks.oa.axisApi.ensureAxis(block.get('id'));
+            stacks.forEach(function(s){s.log();});
+            axis = block.get('axis');
+            console.log('axesBlocks', axis);
+          }
+
           if (axis) {
             let blocks = map.get(axis);
             if (! blocks)
               map.set(axis, blocks = []);
             blocks.push(block);
           }
-          else
-            console.log('axesBlocks', block.get('id'), block.get('view'), 'no view.axis');
           return map; },
         new Map()
       );
 
       console.log('axesBlocks', map);
+      return map;
+    }),
+  /** Collate the viewed blocks by their parent block id, or by their own block
+   * id if they are not parented.
+   * @return Map : blockId -> [blockId]
+   * @description
+   * Similar to @see axesBlocks().
+   */
+  dataBlocks : Ember.computed(
+    'loadedViewedChildBlocks.[]',
+    function () {
+      let records = this.get('loadedViewedChildBlocks'),
+      map = records.reduce(
+        function (map, block) {
+          let referenceBlock = block.get('referenceBlock'),
+           id = referenceBlock ? referenceBlock.get('id') : block.get('id');
+          if (! id)
+            console.log('dataBlocks', block.id, referenceBlock);
+          else {
+            let blocks = map.get(id);
+            if (! blocks)
+              map.set(id, blocks = []);
+            /* non-data (reference) blocks are map indexes, but are not put in
+             * the dataBlocks array. */
+            if (block.get('featureCount'))
+              blocks.push(block);
+          }
+          return map; },
+        new Map()
+      );
+
+      console.log('dataBlocks', map);
       return map;
     })
 

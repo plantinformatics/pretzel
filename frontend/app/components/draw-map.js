@@ -1161,11 +1161,18 @@ export default Ember.Component.extend(Ember.Evented, {
 
     // Place new data blocks in an existing or new axis.
     blocksToDraw.forEach(function(d){
+      ensureAxis(d);
+    });
+
+      if (! oa.axisApi.ensureAxis)
+        oa.axisApi.ensureAxis = ensureAxis;
     // for (let d in oa.stacks.axes) {
       /** ensure that d is shown in an axis & stack.
-       * dBlock should be !== undefined.
        */
-      let dBlock = me.peekBlock(d),
+      function ensureAxis(d) {
+        /** dBlock should be !== undefined.
+         */
+     let dBlock = me.peekBlock(d),
       sBlock = oa.stacks.blocks[d],
       addedBlock = ! sBlock;
       if (! sBlock) {
@@ -1506,7 +1513,8 @@ export default Ember.Component.extend(Ember.Evented, {
       Stack.verify();
       stacksAxesDomVerify(stacks, oa.svgContainer);
       }
-    });
+      }
+
     stacksAxesDomVerify(stacks, oa.svgContainer);
     function axisWidthResize(axisID, width, dx)
     {

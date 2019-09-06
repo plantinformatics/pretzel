@@ -139,6 +139,20 @@ export default DS.Model.extend({
         referenceBlock = referenceBlock[0] || undefined;
     }
     return referenceBlock;
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
+  axis : Ember.computed('view.axis', 'referenceBlock', function () {
+    let axis = this.get('view.axis');
+    let referenceBlock;
+    if (! axis) {
+      referenceBlock = this.get('referenceBlock');
+      if (referenceBlock)
+        axis = referenceBlock.get('view.axis');
+    }
+    if (! axis)
+      console.log('block axis', this.get('id'), this.get('view'), 'no view.axis for block or referenceBlock', referenceBlock);
   })
 
   /*--------------------------------------------------------------------------*/

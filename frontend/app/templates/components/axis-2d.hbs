@@ -39,7 +39,7 @@
       {{axis-chart data=data axis=this axisID=axisID block=chartBlock}}
     {{/each}}
     {{log 'blockService' blockService 'viewedChartable' blockService.viewedChartable}}
-    {{axis-tracks axis=this axisID=axisID trackBlocks=dataBlocks}}
+    {{axis-tracks axis=this axisID=axisID trackBlocksR=dataBlocks}}
     {{#each subComponents as |subComponent|}}
       {{subComponent}}
     {{/each}}
