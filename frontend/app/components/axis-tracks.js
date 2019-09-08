@@ -594,8 +594,8 @@ export default InAxis.extend({
   }),
   layoutWidth : Ember.computed('trackBlocks.[]', function () {
     let
-    trackBlocks = this.get('trackBlocks'),
-    blockIds = trackBlocks.map(function (block) { return block.axisName; }),
+    trackBlocksR = this.get('trackBlocksR'),
+    blockIds = trackBlocksR.mapBy('id'),
     /** Add 50 on the right to avoid clashing with the right axis ticks text,
      * which may later be switched off with CSS.
      * this includes xOffset from blockTransform(blockIds.length-1) 

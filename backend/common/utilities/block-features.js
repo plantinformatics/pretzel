@@ -36,7 +36,7 @@ exports.blockFeaturesCount = function(db, blockIds) {
     pipeline = matchBlock;
 
   if (trace_block)
-    console.log('blockFeaturesInterval', pipeline);
+    console.log('blockFeaturesCount', pipeline);
   if (trace_block > 1)
     console.dir(pipeline, { depth: null });
 

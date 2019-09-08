@@ -565,11 +565,21 @@ export default Service.extend({
     let dataBlockIds = axis.dataBlocks(true)
      // equiv : blockS.block.get('id')
       .map(function (blockS) { return blockS.axisName; });
+    /** The result of passing multiple blockIds to getBlockFeaturesInterval()
+     * has an unevenly distributed result : all the results come from just 1 of
+     * the blockIds.  This is because of the implementation of $sample
+     * (https://stackoverflow.com/a/46881483).
+     * So instead getBlockFeaturesInterval() is called once for each blockId;
+     * requestBlockIds is used in place of dataBlockIds.
+     */
+    let promises =
+    dataBlockIds.map(function (blockId) {
+      let requestBlockIds = [blockId];
     let promise = 
       // streaming version not added yet
       // pathsViaStream ?
       // this.get('auth').getPathsViaStream(blockA, blockB, intervalParams, /*options*/{dataEvent : receivedData}) :
-      this.get('auth').getBlockFeaturesInterval(dataBlockIds, intervalParams, /*options*/{});
+      me.get('auth').getBlockFeaturesInterval(requestBlockIds, intervalParams, /*options*/{});
         function receivedData(res){
           if (trace_pathsP > 1)
             console.log(apiName, ' request then', res.length);
@@ -586,7 +596,7 @@ export default Service.extend({
 
           Ember.run.throttle(
             me, me.blocksUpdateDomain, 
-            dataBlockIds, domainCalc, axisEvents,
+            requestBlockIds, domainCalc, axisEvents,
             200, false);
         };
     promise
@@ -598,6 +608,8 @@ export default Service.extend({
           // else
             console.log(apiName, ' request', blockA, me, err.responseJSON[status] /* .error.message*/, status);
         });
+    });
+    let promise = Ember.RSVP.allSettled(promises);
     return promise;
 
   }
