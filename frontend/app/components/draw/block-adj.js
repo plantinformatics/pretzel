@@ -401,6 +401,20 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
   },
 
+  /** Call updateAxis() for the axes which bound this block-adj.
+   * See comment in updatePathsPositionDebounce().
+   */
+  updateAxesScale() {
+    let
+      axes = this.get('axes'),
+    /** reference blocks */
+    axesBlocks = axes.mapBy('blocks');
+    console.log('updateAxesScale', axesBlocks.map((blocks) => blocks.mapBy('axisName')));
+    axesBlocks.forEach(function (blocks) {
+      blocks[0].axis.axis1d.updateAxis();
+    });
+  },
+
   /*--------------------------------------------------------------------------*/
 
   axesDomains : Ember.computed.alias('blockAdj.axesDomains'),
@@ -419,6 +433,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       domainsChanged = this.get('axesDomains');
       console.log('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, domainsChanged);
     this.updatePathsPosition();
+
+      /* this update is an alternative trigger for updating the axes ticks and
+       * scale when their domains change, e.g. when loaded features extend a
+       * block's domain.  The solution used instead is the ComputedProperty
+       * side-effect axis-1d : domainChanged(), which is a similar approach, but
+       * it localises the dependencies to a single axis whereas this would
+       * duplicate updates.  */
+    // this.updateAxesScale();
     return count;
   }),
 

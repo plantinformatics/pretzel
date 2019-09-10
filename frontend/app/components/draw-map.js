@@ -18,7 +18,7 @@ scheduleIntoAnimationFrame = scheduleFrame.default;
 
 import config from '../config/environment';
 import { EventedListener } from '../utils/eventedListener';
-import { chrData } from '../utils/utility-chromosome';
+import { chrData, cmNameAdd } from '../utils/utility-chromosome';
 import { eltWidthResizable, eltResizeToAvailableWidth, noShiftKeyfilter, eltClassName, tabActive, inputRangeValue, expRange  } from '../utils/domElements';
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
 import { parseOptions } from '../utils/common/strings';
@@ -484,7 +484,10 @@ export default Ember.Component.extend(Ember.Evented, {
                     axisName2MapChr,
                     axisStackChanged,
                     axisScaleChanged,
-                    axisRange2Domain
+                    axisRange2Domain,
+                    cmNameAdd,
+                    makeMapChrName,
+                    axisIDAdd
                    };
     console.log('draw-map stacks', stacks);
     this.set('stacks', stacks);
@@ -1176,8 +1179,21 @@ export default Ember.Component.extend(Ember.Evented, {
       sBlock = oa.stacks.blocks[d],
       addedBlock = ! sBlock;
       if (! sBlock) {
-        oa.stacks.blocks[d] = sBlock = new Block(dBlock);
-        dBlock.set('view', sBlock);
+        /** sBlock may already be associated with dBlock */
+        let view = dBlock.get('view');
+        sBlock = view || new Block(dBlock);
+        oa.stacks.blocks[d] = sBlock;
+        if (! view) {
+          /* this .set() was getting assertion fail (https://github.com/emberjs/ember.js/issues/13948),
+           * hence the catch and trace;  this has been resolved by not displaying .view in .hbs
+           */
+          try {
+            dBlock.set('view', sBlock);
+          }
+          catch (exc) {
+            console.log('ensureAxis', d, dBlock, sBlock, addedBlock, view, oa.stacks.blocks, exc.stack || exc);
+          }
+        }
       }
       let s = Stacked.getStack(d);
       if (trace_stack > 1)

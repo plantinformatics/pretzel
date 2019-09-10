@@ -266,9 +266,10 @@ export default Service.extend(Ember.Evented, {
       return records;  // .toArray()
     }),
   viewed: Ember.computed(
+    'blockValues.[]',
     'blockValues.@each.isViewed',
     function() {
-      let records = this.get('blockValues')
+      let records = this.get('store').peekAll('block') // this.get('blockValues')
         .filterBy('isViewed', true);
       if (trace_block)
         console.log('viewed', records.toArray());
@@ -374,8 +375,10 @@ export default Service.extend(Ember.Evented, {
         function (map, block) {
           let axis = block.get('axis');
           if (! axis) {
+            let oa = stacks.oa, axisApi = oa.axisApi;
+            axisApi.cmNameAdd(oa, block);
             console.log('axesBlocks ensureAxis', block.get('id'));
-            stacks.oa.axisApi.ensureAxis(block.get('id'));
+            axisApi.ensureAxis(block.get('id'));
             stacks.forEach(function(s){s.log();});
             axis = block.get('axis');
             console.log('axesBlocks', axis);

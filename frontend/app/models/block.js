@@ -3,6 +3,9 @@ import DS from 'ember-data';
 import attr from 'ember-data/attr';
 // import { PartialModel, partial } from 'ember-data-partial-model/utils/model';
 
+import { intervalMerge }  from '../utils/interval-calcs';
+
+
 export default DS.Model.extend({
   datasetId: DS.belongsTo('dataset'),
   annotations: DS.hasMany('annotation', { async: false }),
@@ -71,6 +74,21 @@ export default DS.Model.extend({
     console.log('featuresLength', featuresLength, this.get('id'));
     return featuresLength;
   }),
+  /** @return undefined if ! features.length,
+   * otherwise [min, max] of block's feature.value
+   */
+  featuresDomain : Ember.computed('features.[]', function () {
+    let featuresDomain, features = this.get('features');
+    if (features.length) {
+      featuresDomain = features
+        .mapBy('value')
+        .reduce(intervalMerge, []);
+
+      console.log('featuresDomain', featuresDomain, this.get('id'));
+    }
+    return featuresDomain;
+  }),
+
 
   isChartable : Ember.computed('datasetId.tags', function () {
     let tags = this.get('datasetId.tags'),

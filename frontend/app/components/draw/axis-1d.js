@@ -15,6 +15,9 @@ import { selectAxis } from '../../utils/draw/stacksAxes';
 import { breakPoint } from '../../utils/breakPoint';
 import { configureHorizTickHover } from '../../utils/hover';
 import { getAttrOrCP } from '../../utils/ember-devel';
+import { intervalExtent }  from '../../utils/interval-calcs';
+import { updateDomain } from '../../utils/stacksLayout';
+
 
 /* global d3 */
 /* global require */
@@ -310,6 +313,75 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     }
     return dataBlocks;
   }),
+  /** @return the domains of the data blocks of this axis.
+   * The result does not contain a domain for data blocks with no features loaded.
+   */
+  dataBlocksDomains : Ember.computed('dataBlocks.@each.featuresDomain', function () {
+    let dataBlocks = this.get('dataBlocks'),
+    dataBlockDomains = dataBlocks.map(function (b) { return b.get('featuresDomain'); } )
+    /* featuresDomain() will return undefined when block has no features loaded. */
+      .filter(d => d !== undefined);
+    return dataBlockDomains;
+  }),
+  referenceBlock : Ember.computed.alias('axisS.referenceBlock'),
+  /** @return the domains of all the blocks of this axis, including the reference block if any.
+   * @description related @see axesDomains() (draw/block-adj)
+   */
+  blocksDomains : Ember.computed('dataBlocksDomains.[]', 'referenceBlock.range', function () {
+    let
+      /* alternative :
+       * dataBlocksMap = this.get('blockService.dataBlocks'),
+       * axisId = this.get('axis.id'),
+       * datablocks = dataBlocksMap.get(axisId),
+       */
+      /** see also domainCalc(), blocksUpdateDomain() */
+      blocksDomains = this.get('dataBlocksDomains'),
+    /** equivalent : Stacked:referenceDomain() */
+    referenceRange = this.get('referenceBlock.range');
+    if (referenceRange) {
+      console.log('referenceRange', referenceRange, blocksDomains);
+      blocksDomains.push(referenceRange);
+    }
+    return blocksDomains;
+  }),
+  /** @return the union of blocksDomains[], i.e. the interval which contains all
+   * the blocksDomains intervals.
+   */
+  blocksDomain : Ember.computed('blocksDomains.[]', function () {
+    let 
+      blocksDomains = this.get('blocksDomains'),
+    domain = intervalExtent(blocksDomains);
+    console.log('blocksDomain', blocksDomains, domain);
+    return domain;
+  }),
+  blocksDomainEffect : Ember.computed('blocksDomain', function () {
+    let domain = this.get('blocksDomain'),
+    /** if domain is [0,0] or [false, false] then consider that undefined. */
+    domainDefined = domain && domain.length && (domain[0] || domain[1]);
+    if (domainDefined && ! this.get('zoomed'))
+      /* defer setting yDomain to the end of this render, to avoid assert fail
+       * re. change of domainChanged, refn issues/13948;
+       * that also breaks progressive loading and axis & path updates from zoom.
+       */
+      Ember.run.later(() => {
+        this.setDomain(domain);
+      });
+  }),
+  /** same as domainChanged, not used. */
+  domainEffect : Ember.computed('domain', function () {
+    let domain = this.get('domain');
+    if (domain) {
+      /* Similar to this.updateDomain(), defined in axis-position.js, */
+      let axisS = this.get('axisS');
+      console.log('domainEffect', domain, axisS);
+      if (axisS) {
+        let y = axisS.getY(), ys = axisS.ys;
+        updateDomain(axisS.y, axisS.ys, axisS);
+      }
+    }
+    return domain;
+  }),
+
   /** count of features of .dataBlocks */
   featureLength : Ember.computed('dataBlocks.@each.featuresLength', function () {
     let dataBlocks = this.get('dataBlocks'),
@@ -324,6 +396,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
    */
   featureLengthEffect : Ember.computed('featureLength', 'axisS', function () {
     let featureLength = this.get('featureLength');
+
     this.renderTicksDebounce();
     let axisApi = stacks.oa.axisApi,
     /** defined after first brushHelper() call. */
@@ -394,20 +467,24 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   /** position as of the last zoom. */
   domain : Ember.computed.alias('currentPosition.yDomain'),
 
-  /** this is an alias of .domain, but it updates when the array elements update. */
+  /** Updates when the array elements of .domain[] update.
+   *  @return undefined; value is unused.
+   */
   domainChanged : Ember.computed(
     'domain.0', 'domain.1',
     function () {
       let domain = this.get('domain');
-      // use the VLinePosition:toString() for the position-s
-      console.log('domainChanged', domain, this.get('axisS'), ''+this.get('currentPosition'), ''+this.get('lastDrawn'));
-      // this.notifyChanges();
-      if (! this.get('axisS'))
-        console.log('domainChanged() no axisS yet', domain, this.get('axis.id'));
-      else
-      this.updateAxis();
-
-      return domain;
+      // domain is initially undefined
+      if (domain) {
+        // use the VLinePosition:toString() for the position-s
+        console.log('domainChanged', domain, this.get('axisS'), ''+this.get('currentPosition'), ''+this.get('lastDrawn'));
+        // this.notifyChanges();
+        if (! this.get('axisS'))
+          console.log('domainChanged() no axisS yet', domain, this.get('axis.id'));
+        else
+          this.updateAxis();
+      }
+      return undefined;
     }),
   notifyChanges() {
     let axisID = this.get('axis.id');

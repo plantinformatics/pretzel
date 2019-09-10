@@ -49,6 +49,7 @@ export default Mixin.create({
     if (! axisS) {
       /** This replicates the role of axis-1d.js:axisS();  this will be solved
        * when Stacked is created and owned by axis-1d.
+       * (also : now using ensureAxis() in data/block.js : axesBlocks())
        */
       let axisName = this.get('axis.id');
       axisS = Stacked.getAxis(axisName);
