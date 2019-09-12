@@ -9,7 +9,7 @@ export default Ember.Component.extend({
   block: service('data/block'),
   previous : {},
 
-  stacksCount : Ember.computed('stacks.stacksCount.count', 'block.viewed', function () {
+  stacksCount : Ember.computed('stacks.stacksCount.count', 'block.viewed', 'axes2d.[]', function () {
     let count;
     if (! this.get('stacks') && stacks)
       Ember.run.later(() => {

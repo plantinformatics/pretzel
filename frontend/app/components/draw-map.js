@@ -5,6 +5,10 @@ import createIntervalTree from 'npm:interval-tree-1d';
 console.log("createIntervalTree", createIntervalTree);
 const { inject: { service } } = Ember;
 
+import { isEqual } from 'lodash/lang';
+
+
+
 /* using scheduleIntoAnimationFrame() from github.com/runspired/ember-run-raf
  * which uses github.com/kof/animation-frame to wrap requestAnimationFrame().
  * Another possibility : github.com/html-next/ember-raf-scheduler
@@ -472,7 +476,10 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
 
-    oa.stacks = stacks;
+    if (oa.__lookupGetter__('stacks'))
+      this.set('stacks', stacks);
+    else
+      oa.stacks = stacks;
     stacks.init(oa);
     // stacks.axes[] is a mix of Stacked & Block; shouldn't be required & planning to retire it in these changes.
     oa.axes = stacks.axesP;
@@ -490,7 +497,6 @@ export default Ember.Component.extend(Ember.Evented, {
                     axisIDAdd
                    };
     console.log('draw-map stacks', stacks);
-    this.set('stacks', stacks);
 
     /** Reference to all datasets by name.
      * (datasets have no id, their child blocks' datasetId refers to their name) .
@@ -5735,10 +5741,7 @@ export default Ember.Component.extend(Ember.Evented, {
       Ember.$('.make-ui-draggable').draggable(); });
   },
 
-  didRender() {
-    // Called on re-render (eg: add another axis) so should call
-    // draw each time.
-    //
+  drawEffect : Ember.computed('data', 'resizeEffect', function () {
     let me = this;
     let data = this.get('data');
     Ember.run.throttle(function () {
@@ -5746,7 +5749,57 @@ export default Ember.Component.extend(Ember.Evented, {
     }, 1500);
 
     highlightFeature_drawFromParams(this);
-    Ember.run.debounce(this.get('oa'), this.get('resize'), [/*transition*/true], 500);
+  }),
+  resizeEffect : Ember.computed('stacksWidthChanges', function () {
+    if (true) // try without debounce
+      this.get('resize').apply(this.get('oa'), [/*transition*/true]);
+    else
+      Ember.run.debounce(this.get('oa'), this.get('resize'), [/*transition*/true], 500);
+  }),
+
+  /** for CP dependency.  Depends on factors which affect the horizontal (X) layout of stacks.
+   * When this CP fires, updates are required to X position of stacks / axes, and hence the paths between them.
+   * @return value is for devel trace
+   */
+  stacksWidthChanges : Ember.computed(
+    'oa.stacks.stacksCount.count', 'splitAxes.[]',
+    'layout.left.visible', 'layout.right.visible',
+    function () {
+      let leftPanel = Ember.$('#left-panel'),
+      /** leftPanel.hasClass('left-panel-shown') is always true; instead the
+       * <div>'s display attribute is toggled between flex and none.
+       * This could be made consistent with right panel, but planning to use golden-layout in place of this anyway.
+       */
+      leftPanelShown = leftPanel[0].attributeStyleMap.get('display').value != 'none',
+      current = {
+        stacksCount : stacks.stacksCount.count,
+        splitAxes : this.get('splitAxes').length,
+        // this.get('layout.left.visible') is true, and does not update
+        left : leftPanelShown,
+        right : this.get('layout.right.visible')
+      };
+      console.log('stacksWidthChanges', current, leftPanel[0]);
+      return current;
+    }),
+
+  /** @return true if changes in #stacks or split axes impact the width and horizontal layout.
+   * (maybe dotPlot / axis.perpendicular will affect width also)
+   */
+  stacksWidthChanged() {
+    /* can change this to a CP, merged with resize() e.g. resizeEffect(), with
+     * dependencies on 'oa.stacks.stacksCount.count', 'splitAxes.[]'
+     */
+    let previous = this.get('previousRender'),
+    now = {
+      stacksCount : stacks.length,   // i.e. this.get('oa.stacks.stacksCount.count'),
+      splitAxes : this.get('splitAxes').length
+    },
+    changed = ! isEqual(previous, now);
+    if (changed) {
+      console.log('stacksWidthChanged', previous, now);
+      this.set('previousRender', now);
+    }
+    return changed;
   },
 
     resize : function() {
@@ -5770,7 +5823,8 @@ export default Ember.Component.extend(Ember.Evented, {
           /*centreSel*/ '.resizable');
       oa.vc.calc(oa);
       let
-        widthChanged = oa.vc.viewPort.w != oa.vc.viewPortPrev.w,
+        drawMap = oa.eventBus,
+      widthChanged = (oa.vc.viewPort.w != oa.vc.viewPortPrev.w) || drawMap.stacksWidthChanged(),
       heightChanged = oa.vc.viewPort.h != oa.vc.viewPortPrev.h;
 
       // rerender each individual element with the new width+height of the parent node
@@ -5786,7 +5840,7 @@ export default Ember.Component.extend(Ember.Evented, {
         console.log("oa.vc", oa.vc, arguments);
         if (oa.vc)
         {
-            if (! layoutChanged)
+            if (true || ! layoutChanged)  // may not need debounce, having dropped didRender().
                 // Currently debounce-d in resizeThis(), so call directly here.
                 resizeDrawing();
             else

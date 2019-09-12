@@ -427,11 +427,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     'axesDomains.0.1',
     'axesDomains.1.0',
     'axesDomains.1.1',
+    'drawMap.stacksWidthChanges',
     function () {
     let count = this.get('axisStackChangedCount'),
       heightChanged = this.get('heightChanged'),
-      domainsChanged = this.get('axesDomains');
-      console.log('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, domainsChanged);
+      domainsChanged = this.get('axesDomains'),
+      stacksWidthChanges = this.get('drawMap.stacksWidthChanges');
+      console.log('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, domainsChanged, stacksWidthChanges);
     this.updatePathsPosition();
 
       /* this update is an alternative trigger for updating the axes ticks and
