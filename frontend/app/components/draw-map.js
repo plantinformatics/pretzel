@@ -1171,6 +1171,7 @@ export default Ember.Component.extend(Ember.Evented, {
         oa.axisApi.ensureAxis = ensureAxis;
     // for (let d in oa.stacks.axes) {
       /** ensure that d is shown in an axis & stack.
+       * @return axis (Stacked)
        */
       function ensureAxis(d) {
         /** dBlock should be !== undefined.
@@ -2572,6 +2573,11 @@ export default Ember.Component.extend(Ember.Evented, {
 
     /** Called when the width available to each axis changes,
      * i.e. when collateO() is called.
+     * Calculate the size and layout of axis titles.
+     * Based on that layout, apply text-anchor and transform to the <text>,
+     * and adjust svg viewBox and padding-top.
+     * @param axisTitleS  d3 selection of g.axis-all, for one or more axes;
+     * if undefined then g.axis-all is selected for all axes.
      */
     function updateAxisTitleSize(axisTitleS)
     {

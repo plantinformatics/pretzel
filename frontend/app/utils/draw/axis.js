@@ -4,6 +4,10 @@
 
 /*----------------------------------------------------------------------------*/
 
+const trace_axis = 0;
+
+/*----------------------------------------------------------------------------*/
+
 var oa;
 
 function Axes(oa_)
@@ -114,7 +118,8 @@ function yAxisTitleTransform(axisTitleLayout)
     width = axisExtended(gAxis),
     /** See also setWidth() which sets the same translate, initially. */
     translateText = width ? " translate(" + width/2 + ",0)" : '';
-    console.log('yAxisTitleTransform', arguments, this, gAxis, axisName, axis, width, translateText);
+    if (trace_axis)
+      console.log('yAxisTitleTransform', arguments, this, gAxis, axisName, axis, width, translateText);
     return yAxisTextScale.apply(this, arguments) + ' ' + axisTitleLayout.transform()
       + translateText;
   };

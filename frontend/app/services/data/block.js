@@ -44,6 +44,9 @@ export default Service.extend(Ember.Evented, {
     this.get('store').push(pushData);
   },
 
+  /*--------------------------------------------------------------------------*/
+
+
   /** Call getData() in a task - yield the block result.
    * Signal that receipt with receivedBlock(id, block).
    */
@@ -273,9 +276,14 @@ export default Service.extend(Ember.Evented, {
         .filterBy('isViewed', true);
       if (trace_block)
         console.log('viewed', records.toArray());
+      // can separate this to an added CP viewedEffect
+      let axes = records.map((block) => this.blockAxis(block));
+      console.log('viewed axes', axes);
       return records;  // .toArray()
     }),
   viewedIds: Ember.computed(
+    'blockValues.[]',
+    'blockValues.@each.isViewed',
     'viewed.[]',
     function() {
       let ids = this.get('viewed');
@@ -372,18 +380,8 @@ export default Service.extend(Ember.Evented, {
     function () {
       let records = this.get('loadedViewedChildBlocks'),
       map = records.reduce(
-        function (map, block) {
-          let axis = block.get('axis');
-          if (! axis) {
-            let oa = stacks.oa, axisApi = oa.axisApi;
-            axisApi.cmNameAdd(oa, block);
-            console.log('axesBlocks ensureAxis', block.get('id'));
-            axisApi.ensureAxis(block.get('id'));
-            stacks.forEach(function(s){s.log();});
-            axis = block.get('axis');
-            console.log('axesBlocks', axis);
-          }
-
+        (map, block) => {
+          let axis = this.blockAxis(block);
           if (axis) {
             let blocks = map.get(axis);
             if (! blocks)
@@ -397,6 +395,29 @@ export default Service.extend(Ember.Evented, {
       console.log('axesBlocks', map);
       return map;
     }),
+  /** Lookup the axis of block, and if none then use ensureAxis().
+   */
+  blockAxis(block) {
+    let axis = block.get('axis');
+    if (! axis) {
+      this.ensureAxis(block);
+      axis = block.get('axis');
+      console.log('blockAxis', axis);
+    }
+    return axis;
+  },
+  /** Call axisApi.ensureAxis() for block. */
+  ensureAxis(block) {
+    /* stacks-view will map URL params configuring stacks for viewed blocks to
+     * rendered DOM elements with associated Stack .__data and these 2 functions
+     * (blockAxis and ensureAxis) can be absorbed into that.
+     */
+    let oa = stacks.oa, axisApi = oa.axisApi;
+    axisApi.cmNameAdd(oa, block);
+    console.log('ensureAxis', block.get('id'));
+    axisApi.ensureAxis(block.get('id'));
+    stacks.forEach(function(s){s.log();});
+  },
   /** Collate the viewed blocks by their parent block id, or by their own block
    * id if they are not parented.
    * @return Map : blockId -> [blockId]

@@ -72,6 +72,10 @@ stacks.init = function (oa_)
 
     axes1d = stacks.axes1d = {};
     stacks.axesPCount = Ember.Object.create({ count: 0 });
+    /* Counts which are used as ComputedProperty dependencies, so that stacks.js
+     * classes imperative actions can feed into CP data flows.
+     * This can merge with axesPCount as .counts.{axesP,stacks} */
+    stacks.stacksCount = Ember.Object.create({ count: 0 });
 
   }
 };
@@ -803,6 +807,7 @@ Block.titleTextMax = function (axisName)
 function Stack(stackable) {
   console.log("new Stack", oa, stacks.nextStackID);
   this.stackID = stacks.nextStackID++;
+  stacks.stacksCount.incrementProperty('count');  // stacks.length, or stacks.nextStackID
   /** The axis object (Stacked) has a reference to its parent stack which is the inverse of this reference : 
    * axes{axisName}.stack.axes[i] == axes{axisName} for some i.
    */
@@ -1303,6 +1308,7 @@ Stack.prototype.delete = function ()
     stacks = stacks.removeAt(si, 1);
     // .splice(si, 1);
     ok = true;
+    stacks.stacksCount.decrementProperty('count');  // stacks.length
   }
   return ok;
 };
