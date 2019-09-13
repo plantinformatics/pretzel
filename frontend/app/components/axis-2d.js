@@ -56,7 +56,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * This can replace dataBlocksS(), which may be updated after a delay.
    */
   dataBlocks : Ember.computed(
-    'axisID', 'blockService.dataBlocks.[]', 'blockService.dataBlocks.@each',
+    'axisID',  'blockService.dataBlocks.@each.{isViewed,hasFeatures}',
     function () {
       let
         /** related : blockService.axesBlocks, axis1d.dataBlocks */

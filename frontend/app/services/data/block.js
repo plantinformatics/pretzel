@@ -98,6 +98,18 @@ export default Service.extend(Ember.Evented, {
       else
         block.set('featureCount', bfc.featureCount);
     });
+    let blocksToView = this.blocksReferences(blockIds);
+    this.viewReferences(blocksToView);
+    this.receivedBlocks(blocksToView);
+    
+    return blockFeatureCounts;
+  }),
+  /** @return the reference blocks corresponding to the given blockIds.
+   * Result form is an array of {id : blockId, obj : block}.
+   * If a block is its own reference (GM) it is not included in the result.
+   * later : suppress duplicates.
+   */
+  blocksReferences(blockIds) {
     /* blockFeatureCounts will omit reference blocks since they have no features,
      * so use blockIds to set viewed and trigger receivedBlock.
      */
@@ -108,19 +120,24 @@ export default Service.extend(Ember.Evented, {
           console.log('taskGetSummary', blockId);
         else {
           let referenceBlock = block.get('referenceBlock');
-          if (referenceBlock) {
+          if (referenceBlock && (referenceBlock !== block)) {
             result.push({id : referenceBlock.get('id'), obj : referenceBlock});
           }
           result.push({id : blockId, obj : block});
         }
         return result;
       }, []);
+    return blocksToView;
+  },
+  viewReferences(blocksToView) {
     Ember.changeProperties(function() {
       blocksToView.forEach(function(b) {
         b.obj.set('isViewed', true);
         console.log('taskGetSummary changeProperties isViewed', b.obj.get('id'));
       });
     });
+  },
+  receivedBlocks(blocksToView) {
     /** trigger receivedBlock() for the requested blocks and their parents.
      *
      * Event triggers are immediate, growing the stack and possibly creating
@@ -131,9 +148,7 @@ export default Service.extend(Ember.Evented, {
      * blocksIds, omitting those already viewed, and including their referenceBlock-s.
      */
     this.trigger('receivedBlock', blocksToView);
-
-    return blockFeatureCounts;
-  }),
+  },
   getSummary: function (blockIds) {
     // console.log("block getSummary", id);
     let blockP =
@@ -351,20 +366,21 @@ export default Service.extend(Ember.Evented, {
   }),
 
 
-  /** From the list of viewed blocks, filter out those which are not data
+
+  /** From the list of viewed loaded blocks, filter out those which are not data
    * blocks.
    * @return array of blocks
    */
   loadedViewedChildBlocks: Ember.computed(
     'viewed.[]',
+    'blockValues.@each.{isViewed,isLoaded}',
     function() {
       let records =
         this.get('viewed')
         .filter(function (block) {
-          // featureCount indicates isData.
-          // dataBlocks() wants the parent blocks also ... commented out featureCount, will rethink after hot-fix.
+          // hasFeatures indicates isData.
           return block.get('isLoaded') // i.e. !== undefined
-            /*&& block.get('featureCount')*/;
+            && block.get('hasFeatures');
         });
       if (trace_block > 1)
         console.log(
@@ -426,6 +442,7 @@ export default Service.extend(Ember.Evented, {
    */
   dataBlocks : Ember.computed(
     'loadedViewedChildBlocks.[]',
+    'loadedViewedChildBlocks.@each.hasFeatures',
     function () {
       let records = this.get('loadedViewedChildBlocks'),
       map = records.reduce(
@@ -440,7 +457,7 @@ export default Service.extend(Ember.Evented, {
               map.set(id, blocks = []);
             /* non-data (reference) blocks are map indexes, but are not put in
              * the dataBlocks array. */
-            if (block.get('featureCount'))
+            if (block.get('hasFeatures'))
               blocks.push(block);
           }
           return map; },

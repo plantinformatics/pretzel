@@ -188,6 +188,7 @@ export default InAxis.extend({
   trackBlocks : Ember.computed('trackBlocksR.@each.view', function () {
     let trackBlocksR = this.get('trackBlocksR'),
     trackBlocks = trackBlocksR.mapBy('view');
+    console.log('trackBlocks', trackBlocksR, trackBlocks);
     return trackBlocks;
   }),
 
@@ -548,7 +549,10 @@ export default InAxis.extend({
 
   /** Not used; can be used in .hbs for trace, for comparison against the result
    * of showTrackBlocks(). */
-  blocksFeaturesLengths : Ember.computed('trackBlocks.[]', 'trackBlocksR.0.featuresLength', 'trackBlocksR.0.features.[]',  function () {
+  blocksFeaturesLengths : Ember.computed(
+    'trackBlocksR.@each.featuresLength',
+    'trackBlocks.[]', 'trackBlocksR.0.featuresLength', 'trackBlocksR.0.features.[]',
+    function () {
     let lengths = this.get('trackBlocks').map((block) => [block.axisName, block.block.get('featuresLength')]);
     // similar : d3.keys(block.features())
     console.log('blocksFeaturesLengths', lengths);
@@ -592,7 +596,7 @@ export default InAxis.extend({
     this.set('tracks', tracks); // used by axisStackChanged() : passed to layoutAndDrawTracks()
     return tracks;
   }),
-  layoutWidth : Ember.computed('trackBlocks.[]', function () {
+  layoutWidth : Ember.computed('trackBlocksR.[]', function () {
     let
     trackBlocksR = this.get('trackBlocksR'),
     blockIds = trackBlocksR.mapBy('id'),

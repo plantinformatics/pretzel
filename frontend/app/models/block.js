@@ -69,6 +69,13 @@ export default DS.Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  hasFeatures : Ember.computed('featureCount', function () {
+    return this.get('featureCount') > 0;
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
+
   featuresLength : Ember.computed('features.[]', function () {
     let featuresLength = this.get('features.length');
     console.log('featuresLength', featuresLength, this.get('id'));
