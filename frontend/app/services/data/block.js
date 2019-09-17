@@ -100,7 +100,10 @@ export default Service.extend(Ember.Evented, {
     });
     let blocksToView = this.blocksReferences(blockIds);
     this.viewReferences(blocksToView);
-    this.receivedBlocks(blocksToView);
+    let dataAndReferences = blocksToView.concat(
+      blockIds.map((blockId) => { return {id : blockId, obj : this.peekBlock(blockId)}; }));
+      console.log('taskGetSummary dataAndReferences', dataAndReferences);
+    this.receivedBlocks(dataAndReferences);
     
     return blockFeatureCounts;
   }),
@@ -373,7 +376,7 @@ export default Service.extend(Ember.Evented, {
    */
   loadedViewedChildBlocks: Ember.computed(
     'viewed.[]',
-    'blockValues.@each.{isViewed,isLoaded}',
+    'blockValues.@each.{isViewed,isLoaded,hasFeatures}',
     function() {
       let records =
         this.get('viewed')
@@ -393,6 +396,7 @@ export default Service.extend(Ember.Evented, {
   /** @return Map of axes to loaded viewed child blocks */
   axesBlocks : Ember.computed(
     'loadedViewedChildBlocks.[]',
+    'blockValues.@each.axis',
     function () {
       let records = this.get('loadedViewedChildBlocks'),
       map = records.reduce(
@@ -408,7 +412,7 @@ export default Service.extend(Ember.Evented, {
         new Map()
       );
 
-      console.log('axesBlocks', map);
+      console.log('axesBlocks', map, records);
       return map;
     }),
   /** Lookup the axis of block, and if none then use ensureAxis().

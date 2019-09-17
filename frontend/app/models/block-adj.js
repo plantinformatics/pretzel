@@ -273,7 +273,6 @@ export default DS.Model.extend(Ember.Evented, {
 
     if (flows.direct.visible) {
       let
-        // getPathsProgressive() expects an array of 2 (string) blockIds.
         paths = this.get('pathsPro').getPathsProgressive(this, blockAdjId, taskInstance);
       paths.then(
         function (result) {
@@ -287,7 +286,6 @@ export default DS.Model.extend(Ember.Evented, {
 
     if (flows.alias.visible) {
       let
-        // getPathsProgressive() expects an array of 2 (string) blockIds.
         pathsAliases = this.get('pathsPro').getPathsAliasesProgressive(this, blockAdjId, taskInstance);
       pathsAliases.then(
         function (result) {

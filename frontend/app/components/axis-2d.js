@@ -54,15 +54,17 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   /** The above dataBlocksS() is based on stacks.js data structure for axes and blocks;
    * this function instead is based on the Ember store blocks, via the ComputedProperty axesBlocks.
    * This can replace dataBlocksS(), which may be updated after a delay.
+   * @return [] if there are no blocks with data in the axis.
    */
   dataBlocks : Ember.computed(
     'axisID',  'blockService.dataBlocks.@each.{isViewed,hasFeatures}',
+    'blockService.viewed.[]',
     function () {
       let
         /** related : blockService.axesBlocks, axis1d.dataBlocks */
         dataBlocksMap = this.get('blockService.dataBlocks'),
       id = this.get('axisID'),
-      dataBlocks = dataBlocksMap && dataBlocksMap.get(id);
+      dataBlocks = (dataBlocksMap && dataBlocksMap.get(id)) || [];
       console.log('dataBlocksMap', id, dataBlocksMap, dataBlocks);
       return dataBlocks;
     }),

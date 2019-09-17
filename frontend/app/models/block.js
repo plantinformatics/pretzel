@@ -2,11 +2,17 @@ import Ember from 'ember';
 import DS from 'ember-data';
 import attr from 'ember-data/attr';
 // import { PartialModel, partial } from 'ember-data-partial-model/utils/model';
+const { inject: { service } } = Ember;
+
 
 import { intervalMerge }  from '../utils/interval-calcs';
 
+const moduleName = 'models/block';
+
 
 export default DS.Model.extend({
+  pathsP : service('data/paths-progressive'), // for getBlockFeaturesInterval()
+
   datasetId: DS.belongsTo('dataset'),
   annotations: DS.hasMany('annotation', { async: false }),
   intervals: DS.hasMany('interval', { async: false }),
@@ -178,8 +184,38 @@ export default DS.Model.extend({
     }
     if (! axis)
       console.log('block axis', this.get('id'), this.get('view'), 'no view.axis for block or referenceBlock', referenceBlock);
-  })
+  }),
 
   /*--------------------------------------------------------------------------*/
+
+  /** When block is added to an axis, request features, scoped by the axis
+   * current position.
+   */
+  featuresForAxis : Ember.computed('axis', function () {
+    /** This could be split out into a separate layer, concerned with reactively
+     * requesting data; the layers are : core attributes (of block); derived
+     * attributes (these first 2 are the above functions); actions based on
+     * those other attributes (e.g. this function), similar to
+     * services/data/block.js but for single-block requests.
+     * models/axis-brush.js is part of this, and can be renamed to suit;
+     * this function is equivalent to axis-brush.js : features().
+     */
+    const fnName = 'featuresForAxis';
+    let blockId = this.get('id');
+    let
+      features = this.get('pathsP').getBlockFeaturesInterval(blockId);
+
+    features.then(
+      (result) => {
+        console.log(moduleName, fnName, result.length, blockId, this);
+      },
+      function (err) {
+        console.log(moduleName, fnName, 'reject', err);
+      }
+    );
+
+    return features;
+  })
+
 
 });

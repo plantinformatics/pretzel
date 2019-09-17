@@ -30,6 +30,8 @@ import { updateDomain } from '../../utils/stacksLayout';
  */
 const axisTickTransitionTime = 750;
 
+
+
 function blockKeyFn(block) { return block.axisName; }
 
 
@@ -382,12 +384,16 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     return domain;
   }),
 
-  /** count of features of .dataBlocks */
-  featureLength : Ember.computed('dataBlocks.@each.featuresLength', function () {
+  /** count of features of .dataBlocks
+   * Also depend on block.featuresForAxis, to trigger a request for features of
+   * a block when it is added to an axis.
+   */
+  featureLength : Ember.computed('dataBlocks.@each.{featuresLength,featuresForAxis}', function () {
     let dataBlocks = this.get('dataBlocks'),
     featureLengths = dataBlocks.map(function (b) { return b.get('featuresLength'); } ),
     featureLength = sum(featureLengths);
-    console.log(this, dataBlocks, featureLengths, 'featureLength', featureLength);
+    let featuresForAxis = dataBlocks.map(function (b) { return b.get('featuresForAxis'); } );
+    console.log(this, dataBlocks, featureLengths, 'featureLength', featureLength, featuresForAxis /*.length*/);
     let axisS = this.get('axisS'); if (axisS) axisS.log();
     return featureLength;
   }),

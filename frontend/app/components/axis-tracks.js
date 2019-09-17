@@ -364,7 +364,7 @@ export default InAxis.extend({
       data = tracksLayout.intervals;
       if (false)  // actually need to sum the .layoutWidth for all blockId-s, plus the block offsets which are calculated below
       setClipWidth(axisID, tracksLayout.layoutWidth);
-      console.log('trackBlocksData', blockId, data.length, (data.length == 0) || y(data[0][0]));
+      console.log('trackBlocksData', blockId, data.length, (data.length == 0) ? '' : y(data[0][0]));
       return data;
     };
     // a block with 1 feature will have pxSize == 0.  perhaps just skip the filter.
@@ -394,14 +394,17 @@ export default InAxis.extend({
       return 'translate(' + xOffset + ',0)';
     }
     /** parent; contains g > rect, maybe later a text.resizer.  */
-    let gp =   gAxis
+    let gpS =   gAxis
       .selectAll("g.tracks")
-      .data(blockIds)
+      .data(blockIds),
+    gp = gpS
       .enter()
       .append("g")  // .insert(, ":last-child")
-      .attr('id', function (blockId) { return blockId; })
-      .attr('transform', blockTransform)
-      .attr('class', 'tracks');
+      .attr('class', 'tracks')
+      .merge(gpS)
+      .attr('id', function (blockId) { console.log('', this, blockId); return blockId; })
+      .attr('transform', blockTransform);
+    gpS.exit().remove();
     /* this is for resizing the width of axis-tracks; may instead scale width of
      * rectangles to fit available width. */
     if (false) { // not completed.  Can base resizedParentElt() on axis-2d.js : resized()
@@ -414,14 +417,17 @@ export default InAxis.extend({
       eltWidthResizable("g.axis-use > g.tracks > text.resizer", resizedParentElt);
   }
     /** define the clipPath.  1 clipPath per axis. */
-    let clipRect =
+    let clipRectS =
       gAxis.selectAll('clipPath')
-      .data([axisID])
+      .data([axisID]),
+    clipRect = clipRectS
       .enter()
       .append("clipPath")       // define a clip path
       .attr("id", axisEltIdClipPath) // give the clipPath an ID
       .append("rect")          // shape it as a rect
     ;
+    clipRectS
+      .exit().remove();
     /* During zoom calcs, axis-ticks positions elements before the data is
      * re-filtered, causing gAxis bbox to be large.  Don't resize to that.
      * No longer using bbox.height anyway
@@ -483,7 +489,7 @@ export default InAxis.extend({
         return axisTitleColour(blockId, i+1) || 'black';
       })
     ;
-    console.log(gAxis.node(), rs.nodes(), re.nodes(), 'ra', ra.nodes(), ra.node(), 'rx', rx.size());
+    console.log(gAxis.node(), rs.size(), re.size(), 'ra', ra.size(), ra.node(), 'rx', rx.size());
     rx.remove();
 
     /** record the positions (index) of the elements g.selector
@@ -611,14 +617,15 @@ export default InAxis.extend({
     return width;
   }),
   showTrackBlocks: Ember.computed(
-    'tracksTree', 'yDomain.0', 'yDomain.1', 'axis1d.zoomed', 'axis1d.extended',
+    'tracksTree', 'yDomain.0', 'yDomain.1', 'axis1d.zoomed', 'axis1d.extended', 'axis1d.featureLength',
     function() {
       let tracks = this.get('tracksTree');
       let axis1d = this.get('axis1d'),
       zoomed = this.get('axis1d.zoomed'),
       extended = this.get('axis1d.extended'),
+      featureLength = this.get('axis1d.featureLength'),
       yDomain = this.get('yDomain');
-      console.log('showTrackBlocks', this, tracks, axis1d, yDomain, 'axis1d.zoomed', zoomed, extended);
+      console.log('showTrackBlocks', this, tracks, axis1d, yDomain, 'axis1d.zoomed', zoomed, extended, featureLength);
     let blockIds = d3.keys(tracks.intervalTree);
     if (false) {
       let blockId = blockIds[0];

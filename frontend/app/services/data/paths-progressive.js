@@ -98,6 +98,11 @@ export default Service.extend({
    * are stored in ember data store, as block-adj.
    * Initially just a single result for each blockID pair,
    * but will later hold results for sub-ranges of each block, at different resolutions.
+   *
+   * @param blockAdj  block-adj which owns the request and the result.
+   * If undefined then the value is looked up from blockAdjId
+   * @param blockAdjId  an array of 2 (string) blockIds.
+   * Used when blockAdj===undefined, and also passed to blocksUpdateDomain().
    */
   getPathsProgressive(blockAdj, blockAdjId, taskInstance) {
     console.log('getPathsProgressive', blockAdj, blockAdjId);
@@ -175,7 +180,8 @@ export default Service.extend({
   },
   /**
    * @param blockAdj  defines the scope of the request; result is stored here.
-   * @param blockAdjId  array of 2 blockIDs which identify blockAdj
+   * @param blockAdjId  array of 2 blockIDs which identify blockAdj,
+   * also used as param to blocksUpdateDomain().
    * @return  promise yielding paths result
    */
   requestPathsProgressive(blockAdj, blockAdjId, taskInstance) {
@@ -340,6 +346,13 @@ export default Service.extend({
   /*--------------------------------------------------------------------------*/
   /* aliases */
 
+  /** 
+   * @param blockAdj  block-adj which owns the request and the result.
+   * If undefined then the value is looked up from blockAdjId
+   * @param blockAdjId  an array of 2 (string) blockIds.
+   * Used when blockAdj===undefined,
+   * and may be passed to blocksUpdateDomain() when that call is added.
+   */
   getPathsAliasesProgressive(blockAdj, blockAdjId, taskInstance) {
     console.log('getPathsAliasesProgressive', blockAdj, blockAdjId);
     let pathsAliases;
@@ -551,14 +564,17 @@ export default Service.extend({
     let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
     let axis = Stacked.getAxis(blockA),
     axisBrush = me.get('store').peekRecord('axis-brush', blockA),
-    brushedDomain = axisBrush.brushedDomain,
+    /** There may not be an axis brush, e.g. when triggered by
+     * featuresForAxis(); in this case : axisBrush is null; don't set
+     * paramAxis.domain. */
+    brushedDomain = axisBrush && axisBrush.brushedDomain,
     paramAxis = intervalParams.axes[0];
     console.log('domain', paramAxis.domain, '-> brushedDomain', brushedDomain);
     /* When the block is first viewed, if it does not have a reference which
      * defines the range then the domain of the block's features is not known,
      * and the axis.domain[] will be [0, 0].
      */
-    if ((brushedDomain[0] === 0) && (brushedDomain[1] === 0))
+    if (! brushedDomain  || ((brushedDomain[0] === 0) && (brushedDomain[1] === 0)))
       delete paramAxis.domain;
     else
       paramAxis.domain = brushedDomain;

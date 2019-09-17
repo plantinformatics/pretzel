@@ -27,7 +27,6 @@ export default DS.Model.extend({
     if (blockId === undefined)
       blockId = this.id;
     let
-      // getPathsProgressive() expects an array of 2 (string) blockIds.
       features = this.get('pathsP').getBlockFeaturesInterval(blockId);
     let me = this;
     features.then(function (result) {
