@@ -49,6 +49,11 @@ function  configureTrackHover(interval)
 
 /*----------------------------------------------------------------------------*/
 
+/** For d3 .data() key function */
+function I(d) { return d; }
+
+/*----------------------------------------------------------------------------*/
+
 /** filter intervalTree : select those intervals which intersect domain.
  * @param sizeThreshold intervals smaller than sizeThreshold are filtered out;
  * undefined means don't filter.
@@ -396,7 +401,7 @@ export default InAxis.extend({
     /** parent; contains g > rect, maybe later a text.resizer.  */
     let gpS =   gAxis
       .selectAll("g.tracks")
-      .data(blockIds),
+      .data(blockIds, I),
     gp = gpS
       .enter()
       .append("g")  // .insert(, ":last-child")

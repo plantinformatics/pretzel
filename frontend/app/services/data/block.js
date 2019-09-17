@@ -101,7 +101,9 @@ export default Service.extend(Ember.Evented, {
     let blocksToView = this.blocksReferences(blockIds);
     this.viewReferences(blocksToView);
     let dataAndReferences = blocksToView.concat(
-      blockIds.map((blockId) => { return {id : blockId, obj : this.peekBlock(blockId)}; }));
+      blockIds.map((blockId) => { return {id : blockId, obj : this.peekBlock(blockId)}; }))
+	    // filter out .obj === null, i.e. block not in store yet.
+	    .filter((blockIdObj) => blockIdObj.obj);
       console.log('taskGetSummary dataAndReferences', dataAndReferences);
     this.receivedBlocks(dataAndReferences);
     
