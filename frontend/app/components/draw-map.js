@@ -2550,7 +2550,7 @@ export default Ember.Component.extend(Ember.Evented, {
         .data(function (axisName) {
           let axis = Stacked.getAxis(axisName);
           // equiv : axis.children(true, false)
-          return axis.blocks; }),
+          return axis.blocks; }, (block) => block.getId()),
       subTitleE = subTitleS
       .enter()
       .append("tspan");
