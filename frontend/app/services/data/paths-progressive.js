@@ -228,15 +228,14 @@ export default Service.extend({
            * event, and no need for domainCalc() except when there was no
            * previous pathsResult, or if streaming and receiving results for the first request.
            */
-          let domainCalc = pathsViaStream || firstResult,
-          axisEvents = ! exists;
+          let domainCalc = pathsViaStream || firstResult;
 
           /* check if passing blockAdjId prevents the merging of multiple calls
            * to throttle with the same arguments into a single call.
            */
           Ember.run.throttle(
             me, me.blocksUpdateDomain, 
-            blockAdjId, domainCalc, axisEvents,
+            blockAdjId, domainCalc,
             200, false);
         };
 
@@ -308,9 +307,8 @@ export default Service.extend({
   /** Update the domain of the named blocks.
    * @param blocks  array of blockId
    * @param domainCalc  if false, do nothing (useful because this function is called via throttle().
-   * @param axisEvents  not used - axisEvents is factored to axis-1d : notifyChanges()
    */
-  blocksUpdateDomain : function(blocks, domainCalc, axisEvents) {
+  blocksUpdateDomain : function(blocks, domainCalc) {
 
           if (domainCalc)
             blocks.map(function (blockId) {
@@ -447,6 +445,13 @@ export default Service.extend({
           function resultIdName(res) { return res.featureA + '_' + res.featureB; }
           let firstResult =
             me.appendResult(blockAdj, 'pathsAliasesResult', pathsViaStream, res, resultIdName);
+
+          let domainCalc = pathsViaStream || firstResult,
+          axisEvents = ! blockAdj;
+          Ember.run.throttle(
+            me, me.blocksUpdateDomain, 
+            blockAdjId, domainCalc,
+            200, false);
 
         }
 
@@ -612,7 +617,7 @@ export default Service.extend({
 
           Ember.run.throttle(
             me, me.blocksUpdateDomain, 
-            requestBlockIds, domainCalc, axisEvents,
+            requestBlockIds, domainCalc,
             200, false);
         };
     promise
