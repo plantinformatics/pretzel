@@ -400,7 +400,8 @@ export default InAxis.extend({
     gp = gpS
       .enter()
       .append("g")  // .insert(, ":last-child")
-      .attr('class', 'tracks')
+      .attr('class', 'tracks'),
+    gpM = gp
       .merge(gpS)
       .attr('id', function (blockId) { console.log('', this, blockId); return blockId; })
       .attr('transform', blockTransform);
