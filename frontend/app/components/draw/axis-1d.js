@@ -428,21 +428,34 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       axisFeatureCirclesBrushed();
 
     /** Update the featureCount shown in the axis block title */
+    this.axisTitleFamily();
+    if (featureLength)
+      console.log('featureLengthEffect', this.get('axis.id'), featureLength);
+
+    return featureLength;
+  }),
+  axisTitleFamily() {
+    let axisApi = stacks.oa.axisApi;
     let axis = this.get('axisS');
     if (axis) {
       let
         gAxis = axis.selectAll(),
       axisTitleS = gAxis.select("g.axis-outer > g.axis-all > text");
       console.log(
-        'featureLengthEffect', featureLength, axisTitleS.nodes(), axisTitleS.node(),
+        'axisTitleFamily', axisTitleS.nodes(), axisTitleS.node(),
         gAxis.nodes(), gAxis.node());
       axisApi.axisTitleFamily(axisTitleS);
     }
-    else if (featureLength)
-      console.log('featureLengthEffect', this.get('axis.id'), featureLength);
-
-    return featureLength;
-  }),
+  },
+  updateAxisTitleSize() {
+    let axisApi = stacks.oa.axisApi;
+    let axis = this.get('axisS');
+    if (axis) {
+      let
+        gAxis = axis.selectAll();
+      axisApi.updateAxisTitleSize(gAxis);
+    }
+  },
 
 
   /** @param [axisID, t] */
@@ -558,6 +571,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       let axisID_t = [axisID, undefined];
       this.renderTicksDebounce(axisID_t);
     }
+    /* .extended has changed, so the centre of the axisTitle is changed. */
+    this.updateAxisTitleSize();
+
     return extended;
   }),
 
