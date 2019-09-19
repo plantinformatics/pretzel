@@ -9,7 +9,7 @@ import { isEqual } from 'lodash/lang';
 
 import  { dragTransitionEnd} from '../utils/stacks-drag';
 import { round_2, checkIsNumber} from '../utils/domCalcs';
-import {  Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, highlightId  }  from './draw/axis';
+import {  Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, highlightId, axisTitleColour  }  from './draw/axis';
 import { variableBands } from '../utils/variableBands';
 import { isOtherField } from '../utils/field_names';
 import { Object_filter } from '../utils/Object_filter';
@@ -798,6 +798,27 @@ Block.titleTextMax = function (axisName)
       return result;
     }, 0);
   return lengthMax;
+};
+
+/** Use axis1d.blockIndexes() and wrap utils/draw/axis.js:axisTitleColour()
+ */
+Block.prototype.axisTitleColour = function ()
+{
+  let colour,
+  axis1d = this.axis.axis1d;
+  if (axis1d) {
+    let
+    blockId = this.getId(),
+    blockIndexes = axis1d.get('blockIndexes'),
+    /** blockIndex is not used, except to distinguish the reference block.
+     * blockIndex could instead be calculated using the index of this in this.axis.blocks[]. */
+    blockIndex = blockIndexes[blockId];
+    /* axisTitleColour() blockIndex counts from 1; undefined is for the reference block,
+     * which gets colour undefined - no need to call axisTitleColour(). */
+    colour = (blockIndex === undefined) ? undefined : axisTitleColour(blockId, blockIndex+1);
+    console.log('axisTitleColour', this, blockId, blockIndexes, blockIndex, colour);
+  }
+  return colour;
 };
 
 /** Constructor for Stack type.

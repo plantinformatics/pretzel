@@ -31,7 +31,7 @@ import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
 import { brushClip } from '../utils/draw/axisBrush';
 
 import {  Axes, maybeFlip, maybeFlipExtent,
-          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisTitleColour  }  from '../utils/draw/axis';
+          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll /*, axisTitleColour*/  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify  }  from '../utils/draw/stacksAxes';
 import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Name } from '../utils/stacks';
 import { collateAdjacentAxes, log_adjAxes,  log_adjAxes_a, isAdjacent } from '../utils/stacks-adj';
@@ -89,6 +89,17 @@ Object.filter = Object_filter;
 
 //- moved to "../utils/draw/flow-controls.js" : flowButtonsSel, configurejQueryTooltip()
 
+/*----------------------------------------------------------------------------*/
+
+/** Use Block:axisTitleColour(), which uses axis.js:axisTitleColour().
+ * @param block (from g.axis-all > text > tspan  .__data__)
+ */
+function axisTitleColour(block) {
+  let colour = block.axisTitleColour();
+  console.log('axisTitleColour', colour, block, this);
+  return colour;
+}
+/*----------------------------------------------------------------------------*/
 
 
 

@@ -315,6 +315,23 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     }
     return dataBlocks;
   }),
+  /** Reverse map dataBlocks : map from blockId to index position within the dataBlocks[].
+   *
+   * This can replace storeBlockIndex(), which is defined in
+   * showTickLocations(); that is calculated at render time, whereas this is
+   * dependent on the base data.
+   */
+  blockIndexes : Ember.computed('dataBlocks.[]', function () {
+    // based on axis-tracks.js : blockIndexes(), translated to .reduce.
+    let dataBlocks = this.get('dataBlocks');
+    let blockIndexes =
+    dataBlocks.reduce(function (result, b, i) {
+      let d = b.get('id');  result[d] = i; 
+      return result;
+    }, {});
+    console.log('blockIndexes', blockIndexes, dataBlocks);
+    return blockIndexes;
+  }),
   /** @return the domains of the data blocks of this axis.
    * The result does not contain a domain for data blocks with no features loaded.
    */

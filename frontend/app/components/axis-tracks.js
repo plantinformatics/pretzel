@@ -474,6 +474,7 @@ export default InAxis.extend({
       .transition().duration(featureTrackTransitionTime)
       .attr('width', trackWidth)
       .each(configureTrackHover);
+    let blockIndex = this.get('axis1d.blockIndexes');
     ra
       .merge(rs)
       .transition().duration(featureTrackTransitionTime)
@@ -497,16 +498,6 @@ export default InAxis.extend({
     ;
     console.log(gAxis.node(), rs.size(), re.size(), 'ra', ra.size(), ra.node(), 'rx', rx.size());
     rx.remove();
-
-    /** record the positions (index) of the elements g.selector
-     * This is used in assigning colours to block <g>-s.
-     */
-    function blockIndexes(selection) {
-      let blockIndex = {};
-      selection.each(function (d, i) { blockIndex[d] = i; });
-      return blockIndex;
-    }
-    let blockIndex = blockIndexes(d3.selectAll('g.tracks'));
 
     function blockColour(selector) {
     function blockTrackColour(d,i,g) {

@@ -157,18 +157,24 @@ function highlightId(name)
 
 /** Used to colour the blocks within an axis distinctly;
  * Originally was using blockId as index, but now using index within axis.blocks[].
+ * The same colours are re-used on each axis.
  */
 let
       axisTitle_colour_scale = d3.scaleOrdinal();
       axisTitle_colour_scale.range(d3.schemeCategory10);
 
 /** for the stroke and fill of axis title menu
+ *
  * parameters match d3 call signature
- * @param d blockId
- * @param i index of element within group
+ * @param d block (g.axis-all > text > tspan) or blockId (g.axis-use > g.tracks)
+ * @param i index of element within group.  i===0 is the reference block, which has colour undefined; data blocks have i>0
  * @param group
  */
 function axisTitleColour (d, i) {
+  /** blockId can be used as the ordinal value, e.g. let blockId = (d.axisName || d);
+   * This results in unique colours for each block; we decided instead to re-use
+   * the same set of colours on each axis.
+   */
   let
     colour = (i == 0) ? undefined : axisTitle_colour_scale(i /*d*/);
   return colour;
