@@ -820,6 +820,18 @@ Block.prototype.axisTitleColour = function ()
   }
   return colour;
 };
+/** Use Block:axisTitleColour(), which uses axis.js:axisTitleColour().
+ *
+ * static; signature matches that required by d3 (this is element, args are (datum,index,group)).
+ * @param block (g.axis-all > text > tspan) or blockId (g.axis-use > g.tracks)
+ */
+Block.axisTitleColour = function (block)
+{
+  let colour = block.axisTitleColour();
+  console.log('axisTitleColour', colour, block, this);
+  return colour;
+};
+
 
 /** Constructor for Stack type.
  * Construct a Stacked containing 1 axis (axisName, portion),

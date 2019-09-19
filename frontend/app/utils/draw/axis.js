@@ -165,7 +165,10 @@ let
 
 /** for the stroke and fill of axis title menu
  *
- * parameters match d3 call signature
+ * parameters match d3 call signature, but now this is wrapped by
+ * Block.prototype.axisTitleColour() and Block.axisTitleColour(), which is
+ * called from d3.
+ *
  * @param d block (g.axis-all > text > tspan) or blockId (g.axis-use > g.tracks)
  * @param i index of element within group.  i===0 is the reference block, which has colour undefined; data blocks have i>0
  * @param group

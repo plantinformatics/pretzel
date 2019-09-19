@@ -91,16 +91,6 @@ Object.filter = Object_filter;
 
 /*----------------------------------------------------------------------------*/
 
-/** Use Block:axisTitleColour(), which uses axis.js:axisTitleColour().
- * @param block (from g.axis-all > text > tspan  .__data__)
- */
-function axisTitleColour(block) {
-  let colour = block.axisTitleColour();
-  console.log('axisTitleColour', colour, block, this);
-  return colour;
-}
-/*----------------------------------------------------------------------------*/
-
 
 
 
@@ -2571,8 +2561,8 @@ export default Ember.Component.extend(Ember.Evented, {
       .attr('x', '0px')
       .attr('dx', '0px')
         .attr('dy',  function (d, i) { return "" + (i ? 1.5 : 0)  + "em"; })
-      .style('stroke', axisTitleColour)
-      .style('fill', axisTitleColour)
+      .style('stroke', Block.axisTitleColour)
+      .style('fill', Block.axisTitleColour)
         .style('opacity', function (block, i) { return (i > 0) && ! block.visible ? 0.5 : undefined; } )
         .each(function (block, i) {
           let menuFn = (i == 0)
