@@ -109,22 +109,45 @@ function logV(levelMeta, v) {
  * It is desirable to expand all (using allActive) if the displayed list is then
  * only a couple of pages, i.e. if there are a reasonable number of leaves.
  * @see autoAllActive(), allActive
+ *
+ * @param levelMeta annotations of the value tree, e.g. dataTypeName text.
+ * @param values  a value tree
  */
-function leafCount(values) {
+function leafCount(levelMeta, values) {
+  /** Traverse the value tree, similar to logV() above; it is probably not
+   * necessary to handle all node types as logV() does, since leafCount() is
+   * simply counting the leaves not visiting them.
+   */
   let 
     datasetIds = Object.keys(values),
-  count =
-    datasetIds.reduce((dc, d) => {
+  count0 =
+    datasetIds.reduce((count1, d) => {
       let
-        scopes = values[d],
-      scopeNames =  Object.keys(scopes),
-      count = scopeNames.reduce((sum, s) => {console.log(sum, s, scopes[s]); return sum+=scopes[s].length; }, dc);
-      console.log(scopes, scopeNames, count);
-      return count;
+        value = values[d],
+      /** If value is an array of Blocks, simply add .length to count, otherwise
+       * it is a hash of scopes - traverse them and sum the .length of the
+       * blocks array of each.
+       * Ember.isArray(scopes) could instead be used to discern these 2 cases.
+       */
+      valueType = levelMeta.get(value);
+      if (valueType == "Blocks") {
+        count1 += value.length;
+      }
+      else {
+        let
+          scopes = value,
+          scopeNames =  Object.keys(scopes);
+        count1 = scopeNames.reduce((sum, s) => {
+          console.log(sum, s, scopes[s]);
+          return sum+=scopes[s].length;
+        }, count1);
+      }
+      console.log(value, valueType, count1);
+      return count1;
     }, 0);
-  console.log('leafCount', values, datasetIds, count);
+  console.log('leafCount', values, datasetIds, count0);
 
-  return count;
+  return count0;
 }
 
 /*----------------------------------------------------------------------------*/

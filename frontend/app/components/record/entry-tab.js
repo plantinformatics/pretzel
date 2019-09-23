@@ -28,8 +28,9 @@ export default Ember.Component.extend(Ember.Evented, {
    */
   autoAllActive : Ember.computed('values', function () {
     let values = this.get('values');
+    let levelMeta = this.get('levelMeta');
     /** Walk the value tree and count leaves (blocks). */
-    let count = leafCount(values);
+    let count = leafCount(levelMeta, values);
     let autoAllActive = count < 50;
     console.log('autoAllActive', this.get('name'), values, autoAllActive, count);
     /* only set when values change; this provides an initial default state which
