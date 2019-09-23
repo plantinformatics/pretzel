@@ -104,4 +104,29 @@ function logV(levelMeta, v) {
 
 /*----------------------------------------------------------------------------*/
 
-export { mapHash, forEachHash, justUnmatched, logV };
+/** Count the leaf values, i.e. the blocks.
+ * This is used when deciding whether to auto-expand all levels down to the leaves.
+ * It is desirable to expand all (using allActive) if the displayed list is then
+ * only a couple of pages, i.e. if there are a reasonable number of leaves.
+ * @see autoAllActive(), allActive
+ */
+function leafCount(values) {
+  let 
+    datasetIds = Object.keys(values),
+  count =
+    datasetIds.reduce((dc, d) => {
+      let
+        scopes = values[d],
+      scopeNames =  Object.keys(scopes),
+      count = scopeNames.reduce((sum, s) => {console.log(sum, s, scopes[s]); return sum+=scopes[s].length; }, dc);
+      console.log(scopes, scopeNames, count);
+      return count;
+    }, 0);
+  console.log('leafCount', values, datasetIds, count);
+
+  return count;
+}
+
+/*----------------------------------------------------------------------------*/
+
+export { mapHash, forEachHash, justUnmatched, logV, leafCount };
