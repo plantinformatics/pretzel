@@ -3,7 +3,7 @@ import DS from 'ember-data';
 import attr from 'ember-data/attr';
 // import { PartialModel, partial } from 'ember-data-partial-model/utils/model';
 const { inject: { service } } = Ember;
-
+import { A } from '@ember/array';
 
 import { intervalMerge }  from '../utils/interval-calcs';
 
@@ -90,15 +90,48 @@ export default DS.Model.extend({
   /** @return undefined if ! features.length,
    * otherwise [min, max] of block's feature.value
    */
-  featuresDomain : Ember.computed('features.[]', function () {
+  featuresDomainUpdate : Ember.computed('features.[]', function () {
     let featuresDomain, features = this.get('features');
     if (features.length) {
       featuresDomain = features
         .mapBy('value')
         .reduce(intervalMerge, []);
 
-      console.log('featuresDomain', featuresDomain, this.get('id'));
+      console.log('featuresDomainUpdate', featuresDomain, this.get('id'));
+      this.setDomain(featuresDomain);
     }
+    return featuresDomain;
+  }),
+  setDomain : function (domain) {
+    if (domain) {
+      let featuresDomain = this.get('featuresDomainValue');
+      function trace (i) { console.log('setDomain', featuresDomain, domain, i); }
+      if (! featuresDomain) {
+        trace('initialise');
+        featuresDomain = A(domain);
+      }
+      else {
+        /* if domain is outside current value then update;
+         * possibly update if !=, i.e. change < and > to !=
+         */
+        if (featuresDomain[0] > domain[0]) {
+          trace(0);
+          featuresDomain[0] = domain[0];
+        }
+        if (featuresDomain[1] < domain[1]) {
+          trace(1);
+          featuresDomain[1] = domain[1];
+        }
+      }
+    }
+  },
+  /** This CP updates when the domain changes, whereas featuresDomainUpdate()
+   * updates when new features are added - the added features may not extend the
+   * domain.
+   */
+  featuresDomain : Ember.computed('featuresDomainValue.[]', function () {
+    let featuresDomain = this.get('featuresDomainValue');
+    console.log('featuresDomain', featuresDomain, this.get('id'));
     return featuresDomain;
   }),
 
