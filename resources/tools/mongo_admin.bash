@@ -30,7 +30,7 @@ function mongodump2S3()
   # AccessToken Alias Block Client Dataset Feature 
   for i in $collections; do echo $i; time docker exec -it $DIM mongodump --gzip --db admin --collection $i; done
 
-  docker exec -i -e TERM=$TERM $DIM bash -c 'cd /dump/; tar zcf - admin' | aws s3 cp -  $S3_MON.tar.gz	\
+  docker exec -i -e TERM=$TERM $DIM bash -c 'cd /dump/; tar cf - admin' | aws s3 cp -  $S3_MON.tar.gz	\
   && aws s3 ls $S3_MON.tar.gz	\
   && docker exec -i -e TERM=$TERM $DIM bash -c 'rm -r /dump/admin'
 }
