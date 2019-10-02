@@ -222,7 +222,7 @@ cd ..
 The Loopback backend expects the compiled client in its client/ sub-directory. You can simply create a soft link:
 
 ```
-ln -s ../frontend/dist backend/client
+ln -s frontend/dist backend/client
 ```
 
 ## Running
