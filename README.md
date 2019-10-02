@@ -27,6 +27,7 @@ Funded by the Grains Research Development Corporation (GRDC).
     - [Using pretzel web interface](#using-pretzel-web-interface)
     - [Using command line](#using-command-line)
 - [Setting up your own instance (without docker)](#setting-up-your-own-instance-without-docker)
+  - [Note for Windows users](#note-for-windows-users)
   - [Dependencies](#dependencies)
     - [Database](#database)
     - [Node.js, NPM and Bower](#nodejs-npm-and-bower)
@@ -117,6 +118,14 @@ To upload multiple genomes along with feature definitions and aliases defining s
 3. Follow the [upload instructions](https://github.com/plantinformatics/pretzel-input-generator/blob/v1.0/doc/upload.md)
 
 # Setting up your own instance (without docker)
+
+## Note for Windows users
+
+The easiest way to set up a local instance on Windows is to first install the Windows Subsystem for Linux, as documented 
+[here for version 1](https://docs.microsoft.com/en-us/windows/wsl/install-win10) or 
+[here for version 2](https://docs.microsoft.com/en-us/windows/wsl/wsl2-install).  
+Once the WSL is installed and you are within a Linux subsystem -powered command-line shell, 
+all steps below may be followed as specified. 
 
 ## Dependencies
 
