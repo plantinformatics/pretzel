@@ -1,22 +1,20 @@
-{ "dataset":
-  {
-    "name": "MyMap3",
-    "blocks":
-    [
-      {
-      "name": "MyChr",
-      "features":
-        [
-          {
-          "name": "markerA",
-          "position": 1.7
-          },
-          {
-          "name": "markerB",
-          "position": 0.2
-          }
-        ]
-      }
-    ]
-  }
+{
+  "name": "MyMap3",
+  "blocks":
+  [
+    {
+    "name": "MyChr",
+    "features":
+      [
+        {
+        "name": "markerA",
+        "value": 1.7
+        },
+        {
+        "name": "markerB",
+        "value": 0.2
+        }
+      ]
+    }
+  ]
 }

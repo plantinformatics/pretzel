@@ -1,63 +1,61 @@
-{ "dataset":
-  {
-    "name": "MyMap4",
-    "blocks":
-    [
-      {
-      "name": "MyChr",
-      "features":
-        [
-          {
-          "name": "markerA",
-          "position": 0.1
-          },
-          {
-          "name": "markerB",
-          "position": 0.2
-          },
-          {
-          "name": "markerC",
-          "position": 0.3
-          },
-          {
-          "name": "markerD",
-          "position": 0.4
-          },
-          {
-          "name": "markerE",
-          "position": 0.5
-          },
-          {
-          "name": "markerF",
-          "position": 0.6
-          },
-          {
-          "name": "markerG",
-          "position": 0.7
-          },
-          {
-          "name": "markerH",
-          "position": 0.8
-          },
-          {
-          "name": "markerI",
-          "position": 0.9
-          },
-          {
-          "name": "markerJ",
-          "position": 1.0
-          },
-          {
-          "name": "markerK",
-          "position": 1.1
-          },
-          {
-          "name": "markerL",
-          "position": 1.2
-          }
+{
+  "name": "MyMap4",
+  "blocks":
+  [
+    {
+    "name": "MyChr",
+    "features":
+      [
+        {
+        "name": "markerA",
+        "value": 0.1
+        },
+        {
+        "name": "markerB",
+        "value": 0.2
+        },
+        {
+        "name": "markerC",
+        "value": 0.3
+        },
+        {
+        "name": "markerD",
+        "value": 0.4
+        },
+        {
+        "name": "markerE",
+        "value": 0.5
+        },
+        {
+        "name": "markerF",
+        "value": 0.6
+        },
+        {
+        "name": "markerG",
+        "value": 0.7
+        },
+        {
+        "name": "markerH",
+        "value": 0.8
+        },
+        {
+        "name": "markerI",
+        "value": 0.9
+        },
+        {
+        "name": "markerJ",
+        "value": 1.0
+        },
+        {
+        "name": "markerK",
+        "value": 1.1
+        },
+        {
+        "name": "markerL",
+        "value": 1.2
+        }
 
-        ]
-      }
-    ]
-  }
+      ]
+    }
+  ]
 }

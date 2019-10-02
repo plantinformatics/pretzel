@@ -1,27 +1,28 @@
-{ "dataset":
-  {
-    "name": "MyMap1",
-    "blocks":
-    [
-      {
-      "name": "MyChr",
-      "features":
-        [
-          {
-          "name": "markerA",
-          "position": 1
-          },
-          {
-          "name": "markerB",
-          "position": 1.5
-          },
-          {
-          "name": "markerC",
-          "position": 1.8,
-          "aliases": ["markerD"]
-          }
-        ]
-      }
-    ]
-  }
+{
+  "name": "MyMap1",
+  "blocks":
+  [
+    {
+    "name": "MyChr",
+    "features":
+      [
+        {
+        "name": "markerA",
+        "value": 1
+        },
+        {
+        "name": "markerB",
+        "value": 1.5
+        },
+        {
+        "name": "markerC",
+        "value": 1.8
+        },
+        {
+        "name": "markerD",
+        "value": 1.8
+        }
+      ]
+    }
+  ]
 }
