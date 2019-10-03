@@ -180,23 +180,15 @@ Navigating to `localhost:4200` in a browser, you should see a page load.
 
 ## Inserting data
 
-Two simple example genetic maps are in `resources/`:
-* resources/example_map1.json
-* resources/example_map2.json
+Refer to the section [Inserting data](README.md) in README.md
 
+That section refers to function uploadData() defined in pretzel/resources/tools/functions_prod.bash
+This script can be run using the bash executable which is included in the native MS Windows git download (above),  or WSL.
 
-Note that they both contain a chromosome called `MyChr` and two markers, `markerA` and `markerB`.
-
-These maps can be uploaded using CURL;
-as an example refer to the function uploadData() defined in resources/tools/dev/functions_dev.bash :
-
-
-```
-uploadData resources/example_map1.json
-uploadData resources/example_map2.json
-```
 The API will return JSON confirming the
 insertion if successful.
 
-You should now be able to load `localhost:4200` in a browser and select the two maps for alignment.
+
+After starting the servers as above, you can run the Pretzel web application by loading `localhost:4200` in a browser,
+and after inserting data you can refresh the dataset list and select the example maps for alignment.
 

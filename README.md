@@ -276,24 +276,42 @@ You may also have to supply your credential by specifying `EMAIL_USER` and `EMAI
 
 ## Inserting data
 
-There are five example maps in the `resources/` folder with simple dummy data. You can upload these by navigating to the Upload tab on the left panel, selecting JSON and browsing to the `resources/` folder to select a map. Once submitted, the maps should be visible in the Explorer tab.
+There are example datasets in the [pretzel-data](https://github.com/plantinformatics/pretzel-data) repository with simple dummy data. You can get the data with
+```
+git clone https://github.com/plantinformatics/pretzel-data
+```
+and upload these files by navigating to the Upload tab on the left panel, selecting JSON and browsing to pretzel-data/ to select a map. Once submitted, the maps should be visible in the Explorer tab.
+The file myDataset.json defines the reference myGenome, and hence should be uploaded before the files which refer to that reference : myAnnotation.json myMarkers.json  myMarkers2.json mySample.json aliases.json 
+
 
 ### Loading data via the command line
 
 An alternative to the Upload tab is to use the command-line, e.g. for larger files :
-
+```
 export APIHOST=http://localhost:3000
 source ~/Applications/Pretzel/pretzel/resources/tools/functions_prod.bash
+```
+
+Logging in to the web application authorises a token, which is required by the API.
 
 While logged into Pretzel via the browser, use the Web Inspector to get the authentication token :
+```
 From Ctrl-click : Inspect ...
 >> Application : Storage : Cookies : http://localhost:3000 :  Name : ember_simple_auth-session
+```
 Copy/Paste the Value into a url decoder such as e.g. https://urldecode.org which will display the decoded parameters as e.g. :
+```
 {"authenticated":{"authenticator":"authenticator:pretzel-local","token":"0uOnWyy08OGcDJbC9eRx5Ki73z2OYkqvrZqQTJmoAklmysU5CxtrYmrXUpcX8MOe","clientId":"5ba9c0870612bf19a6afed01"}}
+```
 Copy/paste the token value and set it in the command-line environment using :
 ```
 setToken  "authentication-token-goes-here"
+```
+Then in the same shell you can use the API to upload dataset files :
+```
 uploadData ~/Applications/Pretzel/pretzel-data/myMap.json
+uploadDataList myDataset.json myAnnotation.json myMarkers.json myMarkers2.json mySample.json
+URL=$URL_A uploadData aliases.json 
 ```
 
 
