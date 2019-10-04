@@ -1108,11 +1108,22 @@ div#goto-feature > div
 {
     display : inline-block;
 }
+/* -------------------------------------------------------------------------- */
 .tooltip-inner  /*.ember-popover*/
 {
   background-color : #f2f2f2;
   color: #000;
 }
+.ember-tooltip {
+  background: #337ab7;
+  text-shadow : none;
+  border-radius: 8px;
+}
+.tooltip-inner {
+  border-radius: 7px;
+}
+
+
 
 /* -------------------------------------------------------------------------- */
 

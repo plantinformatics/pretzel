@@ -1,10 +1,16 @@
 <span class="input-group-btn">
-  {{elem/button-base
+  {{#elem/button-base
     icon="plus"
     classColour="success"
     onClick=(action "addFilterOrGroup")
     disabled=data.length
   }}
+    {{#ember-tooltip side="right" delay=500}}
+      Add a filter / grouping, to focus the dataset 
+      <a href="https://github.com/plantinformatics/pretzel-user-guide#selecting-a-dataset-and-block">explorer</a>
+      on your domain of interest.
+    {{/ember-tooltip}}
+  {{/elem/button-base}}
 </span>
 
 <ul>
