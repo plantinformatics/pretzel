@@ -338,7 +338,7 @@ body.devel .foreground > g.progress > g > g.blockAdj > g > path {
   stroke: #808;
 }
 :root {
-  --path-stroke-opacity : .125;
+  --path-stroke-opacity : 1;//.125;
   --path-stroke-width: 0.75px;
   --manyPaths-stroke-opacity: calc(var(--path-stroke-opacity)*0.8); //.125;
   --manyPaths-stroke-width: calc(var(--path-stroke-width)*0.8); // 0.75px;

@@ -127,31 +127,38 @@ export default ManageBase.extend({
     }
   }),
   /** @return the filterGroup if there is one, and it has a pattern. */
-  useFilterGroup : Ember.computed(
+  definedFilterGroups : Ember.computed(
     'filterGroups', 'filterGroups.[]',
-    'filterGroups.0.component.@each', 'filterGroupsChangeCounter',
+    'filterGroups.0.@each', 'filterGroupsChangeCounter',
     function () {
       let
-        filterGroupsLength = this.get('filterGroups.length'),
-      filterGroup;
-      if (filterGroupsLength) {
-        filterGroup = this.get('filterGroups.0.component');
-        if (filterGroup) {
-          console.log('useFilterGroup filterGroup', filterGroup);
-          if (! filterGroup.get('defined'))
-            filterGroup = undefined;
-        }
-        else
-          console.log('useFilterGroup', this.get('filterGroups'));
-      }
-      return filterGroup;
+        filterGroups = this.get('filterGroups')
+        .filter((filterGroup) => {
+          console.log('definedFilterGroups filterGroup', filterGroup);
+          return filterGroup.get('defined');
+        });
+      return filterGroups;
     }),
-  /** @return true if a filterGroup is defined and it is a filter not a grouping. */
-  isFilter : Ember.computed('useFilterGroup', function () {
-    let filterGroup = this.get('useFilterGroup'),
+  datasetFilterGroup :  Ember.computed(
+    'definedFilterGroups.@each.applyDataset',
+    function () {
+      let filterGroups = this.get('definedFilterGroups')
+        .filter((filterGroup) => filterGroup.get('applyDataset'));
+      return filterGroups[0];
+    }),
+  blockFilterGroup :  Ember.computed(
+    'definedFilterGroups.@each.applyBlock',
+    function () {
+      let filterGroups = this.get('definedFilterGroups')
+        .filter((filterGroup) => filterGroup.get('applyBlock'));
+      return filterGroups[0];
+    }),
+  /** @return true if a dataset filterGroup is defined and it is a filter not a grouping. */
+  isDatasetFilter : Ember.computed('datasetFilterGroup', function () {
+    let filterGroup = this.get('datasetFilterGroup'),
     isFilter = filterGroup && (filterGroup.filterOrGroup === 'filter');
     if (trace_dataTree > 2)
-      console.log('isFilter', isFilter);
+      console.log('isDatasetFilter', isFilter);
     return isFilter;
   }),
   /** @return result is downstream of filter and filterGroups */
@@ -335,7 +342,7 @@ export default ManageBase.extend({
    */
   dataTree : Ember.computed('data', 'dataTypedTreeFG', 'useFilterGroup',    function() {
     let
-      filterGroup = this.get('useFilterGroup'),
+      filterGroup = this.get('datasetFilterGroup'),
     me = this,
     datasets;
     if (filterGroup) {
@@ -527,12 +534,12 @@ export default ManageBase.extend({
    * -> dataTypedTreeFG -> plus mapToParentScope
    */
   dataTypedFG : Ember.computed(
-    'dataTyped', 'useFilterGroup',
+    'dataTyped', 'useFilterGroup', 'datasetFilterGroup',
     function() {
       return this.applyFGs('dataTyped');
     }),
   dataParentTypedFG : Ember.computed(
-    'dataParentTyped', 'useFilterGroup',
+    'dataParentTyped', 'useFilterGroup', 'datasetFilterGroup',
     function() {
       return this.applyFGs('dataParentTyped');
     }),
@@ -543,7 +550,7 @@ export default ManageBase.extend({
   applyFGs : function(valueName) {
     let
       dataTypedP = this.get(valueName),
-    filterGroup = this.get('useFilterGroup'),
+    filterGroup = this.get('datasetFilterGroup'),
     me = this;
     if (filterGroup) {
       dataTypedP = dataTypedP.then(applyFGs);
@@ -579,10 +586,10 @@ export default ManageBase.extend({
    * dataFG CF -> hash by value, of datasets
    */
   dataFG : Ember.computed(
-    'dataPre', 'useFilterGroup',
+    'dataPre', 'datasetFilterGroup',
     function() {
       let datasetsP = this.get('dataPre'),
-      filterGroup = this.get('useFilterGroup'),
+      filterGroup = this.get('datasetFilterGroup'),
       me = this;
       return datasetsP.then(function (datasets) {
         datasets = datasets.toArray();
@@ -925,7 +932,7 @@ export default ManageBase.extend({
         let blocks = dataset.get('blocks').toArray();
         let filterMatched = me.get('filterMatched');
         let isFiltered = filterMatched[tabName];
-        let filterGroup = me.get('useFilterGroup');
+        let filterGroup = me.get('blockFilterGroup');
         /* if filter, filter the blocks  */
         if (! isFiltered && filterGroup) {
           let
@@ -1006,14 +1013,13 @@ export default ManageBase.extend({
     },
     filterGroupsChanged : function(fg) {
       /* note : fg === this.get('filterGroups.0')
-       * and    fg === this.get('filterGroups.0.component.data')
        */
       if (trace_dataTree)
-        console.log('filterGroupsChanged', fg, this.get('filterGroups.0.component'), this.get('filterGroups.0'), this.get('filterGroups.0.component.isCaseSensitive'));
+        console.log('filterGroupsChanged', fg, this.get('filterGroups.0'), this.get('filterGroups.0'), this.get('filterGroups.0.isCaseSensitive'));
       // Wait for update of values of fg which are bound input elements.
       let me = this;
       Ember.run.later(function () {
-        console.log('filterGroupsChanged later', fg, me.get('filterGroups.0.component'), me.get('filterGroups.0'), me.get('filterGroups.0.component.isCaseSensitive'));
+        console.log('filterGroupsChanged later', fg, me.get('filterGroups.0'), me.get('filterGroups.0'), me.get('filterGroups.0.isCaseSensitive'));
         me.incrementProperty('filterGroupsChangeCounter');
       });
     },

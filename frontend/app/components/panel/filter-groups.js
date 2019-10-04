@@ -1,6 +1,7 @@
 import Ember from 'ember';
 
 export default Ember.Component.extend({
+  store: Ember.inject.service('store'),
 
   classNames : ["filter-groups"],
 
@@ -17,16 +18,8 @@ export default Ember.Component.extend({
 
   addFilterOrGroup() {
     let data = this.get('data'),
-    initialFilterGroup = {
-      filterOrGroup: 'filter',
-      fieldName : true,
-      fieldScope : true,
-      fieldNamespace : true,
-      fieldMeta : true,
-      matchKey : true,
-      matchValue : true
-    };
-    data.pushObject(Ember.Object.create(initialFilterGroup));
+    filterGroup = this.get('store').createRecord('filter-Group');
+    data.pushObject(filterGroup);
   },
 
   deleteFilterOrGroup(filterGroup) {
