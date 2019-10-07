@@ -16,6 +16,12 @@ import ManageBase from './manage-base'
 
 let initRecursionCount = 0;
 
+/** true means show entries which don't match a FG as 'unmatched'.
+ * This could be used to enable the user to segrate datasets into matching and non-matching;
+ * so far it is has been used for checking results, in development.
+ */
+const showUnmatched = false;
+
 let trace_dataTree = 1;
 
 /** If true, use datatypeFromFamily() to intuit a dataset type for datasets
@@ -769,7 +775,7 @@ export default ManageBase.extend({
        */
       if (matched) {
         hash = matched;
-        if (unmatched)
+        if (unmatched && showUnmatched)
           hash.push({'unmatched' : unmatched});
       }
       else if (unmatched)
@@ -778,7 +784,7 @@ export default ManageBase.extend({
         let ignoreFilter = isDataset;
         if (ignoreFilter)
           hash = unmatched;
-        else
+        else if (showUnmatched)
           hash['unmatched'] = unmatched;
       }
     }
@@ -796,10 +802,12 @@ export default ManageBase.extend({
       for (var [key, value] of map2) {
         if (trace_dataTree > 1)
           console.log(key, ' : ', value);
-        if (key === 'undefined')
+        if ((key === 'undefined') && showUnmatched)
           key = 'unmatched';
-        hash[key] = value;
-        this.levelMeta.set(value, 'Group');
+        if (key !== 'undefined') {
+          hash[key] = value;
+          this.levelMeta.set(value, 'Group');
+        }
       }
     }
     if (trace_dataTree)
@@ -942,6 +950,7 @@ export default ManageBase.extend({
           if (isBlockFilter) {
             let value = me.datasetFilter(blocks, filterGroup, tabName);
             if (value.length) {
+              /** if there the last element of value[] is justUnmatched(), then excise it. */
               let last = value[value.length-1];
               if (justUnmatched(last)) {
                 console.log('justUnmatched', last, value);
