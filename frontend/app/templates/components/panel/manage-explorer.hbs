@@ -39,7 +39,7 @@
     </div>
   {{/if}}
   <div>
-    <ul class="nav nav-tabs li-active-extra">
+    <ul class="nav nav-tabs li-active-extra counts">
       {{#each-in dataTypedTreeFG as |tabTypeName tabData|}}
         {{log 'tabTypeName' tabTypeName 'tabData' tabData (compute (action 'keysLength' tabData)) }}
         <li class="active-detail">

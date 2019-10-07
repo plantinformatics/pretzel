@@ -11,6 +11,13 @@ export default Ember.Component.extend({
 
 
   actions : {
+
+    /** no function yet, may not be needed */
+    applyTabActive : function(tabName) {
+      console.log('applyTabActive', tabName);
+    },
+
+
     deleteFilterOrGroup : function () {
       console.log('deleteFilterOrGroup', this);
       this.sendAction('deleteFilterOrGroup', this);

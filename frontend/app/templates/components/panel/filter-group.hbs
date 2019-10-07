@@ -62,19 +62,53 @@
     }}
     <span>meta</span>
     <br/>
-    <span style="margin-left:2em">Block : </span>
-    {{input type="checkbox" name="fieldScope" checked=data.fieldScope
-      click=(action changed this preventDefault=false)
-    }}
-    <span>scope</span>
-    {{input type="checkbox" name="fieldNamespace" checked=data.fieldNamespace
-      click=(action changed this preventDefault=false)
-    }}
-    <span>namespace</span>
+
+    <div class="light-border">
+      <ul class="nav nav-tabs li-active-extra vertical">
+        <!-- To change the initial active tab, change .active class of both .active-detail and .tab-pane; change also .in class of the latter.
+             also change send(applyTabActive ) in didInsertElement(), if applyTabActive is used.
+           -->
+        <li class="active-detail">
+          <a data-toggle="tab" href="#tab-apply-dataset" onclick={{action "applyTabActive" "dataset"}}>Dataset</a>
+          {{input type="checkbox" name="applyDataset" checked=data.applyDataset
+            click=(action changed this preventDefault=false)
+          }}
+        </li>
+        <li class="active-detail active">
+          <a data-toggle="tab" href="#tab-apply-block" onclick={{action "applyTabActive" "block"}}>Block</a>
+          {{input type="checkbox" name="applyBlock" checked=data.applyBlock
+            click=(action changed this preventDefault=false)
+          }}
+        </li>
+
+      </ul>
+
+      <div class="tab-content">
+
+        <div id="tab-apply-dataset" class="tab-pane fade">
+        </div>
+
+        <div id="tab-apply-block" class="tab-pane fade in active">
+          {{input type="checkbox" name="fieldScope" checked=data.fieldScope
+            click=(action changed this preventDefault=false)
+            disabled=(not data.applyBlock)
+          }}
+          <span>scope</span>
+          {{input type="checkbox" name="fieldNamespace" checked=data.fieldNamespace
+            click=(action changed this preventDefault=false)
+            disabled=(not data.applyBlock)
+          }}
+          <span>namespace</span>
+
+        </div>
+
+      </div>
+
+    </div>
 
   </div>
   {{!-- match string / pattern again key and/or value --}}
-  <div class="line-input-label">
+  <div class="line-input-label clear-both">
     <label>Match against :</label>
     {{input type="checkbox" name="matchKey" checked=data.matchKey
       click=(action changed this preventDefault=false)

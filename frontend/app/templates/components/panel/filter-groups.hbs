@@ -3,7 +3,7 @@
     icon="plus"
     classColour="success"
     onClick=(action "addFilterOrGroup")
-    disabled=data.length
+    disabled=maxFilterGroups
   }}
     {{#ember-tooltip side="right" delay=500}}
       Add a filter / grouping, to focus the dataset 

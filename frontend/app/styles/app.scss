@@ -510,6 +510,7 @@ div.colouredFeatures
   border: pink 3px dashed;
 }
 
+.clear-both,
 div.ExportFlowData
 {
     clear: both;
@@ -764,6 +765,9 @@ li.dropdown-submenu > ul.dropdown-menu {
 .filter-groups > ul > li {
   margin-top: 1em;
 }
+li.filter-group {
+  border-top: #ccc 1px solid;
+}
 li.filter-group > div > span {
   margin: 0 0.5em;
 }
@@ -782,6 +786,17 @@ li.filter-group > div > span:last-child {
 }
 .filter-group > div > button.delete {
   float: right;
+}
+#left-panel-explorer .light-border {
+    overflow-y : hidden;
+}
+.filter-group ul.li-active-extra.vertical {
+  float : left;
+  width : 50%;
+}
+.light-border > ul > li.active-detail > a {
+  padding-top : 5px;
+  padding-bottom : 5px;
 }
 
 .line-input-label > input {
@@ -831,10 +846,11 @@ li.active-detail.active > div {
 
 /* (in e.g. data explorer) tabs have counts shown when active; best displayed
  * below the tab so use display:block.  */
-ul.li-active-extra > li.active-detail.active {
+ul.counts.li-active-extra > li.active-detail.active {
   display: block;
 }
 
+#left-panel-explorer .light-border,
 #left-panel-explorer > div > .panel > div > ul.nav > li {
   border: 1px solid #ccc;
   border-radius: 10px 10px 3px 3px;
@@ -1115,7 +1131,7 @@ div#goto-feature > div
   color: #000;
 }
 .ember-tooltip {
-  background: #337ab7;
+  background: #337ab7a0;
   text-shadow : none;
   border-radius: 8px;
 }

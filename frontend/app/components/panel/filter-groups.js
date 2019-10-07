@@ -5,6 +5,13 @@ export default Ember.Component.extend({
 
   classNames : ["filter-groups"],
 
+  /** only the first dataset fg and the first block fg are currently used,
+   * so limit data.length to 2.
+   */
+  maxFilterGroups : Ember.computed('data.length', function () {
+    return this.get('data.length') > 1;
+  }),
+
   actions : {
     addFilterOrGroup : function () {
       console.log('addFilterOrGroup');
