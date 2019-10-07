@@ -4,6 +4,10 @@ A MongoDb/NodeJs/Loopback/Ember/D3 framework to display and interactively naviga
 <img
 src="https://cloud.githubusercontent.com/assets/20571319/19416034/f1ee92b8-93d0-11e6-94a8-c18018ba40dc.png" align="center">
 
+## Introduction
+
+The Pretzel web application can be built on MS Windows using a container / virtualisation system ([Docker]((README.md#docker-on-windows), a VM, [WSL](README.md#note-for-installation-on-ms-windows)) to provide a linux-like build environment or using native binaries;  this document describes the latter approach.
+
 ## Dependencies
 
 ### Git
@@ -183,7 +187,7 @@ Navigating to `localhost:4200` in a browser, you should see a page load.
 Refer to the section [Inserting data](README.md) in README.md
 
 That section refers to function uploadData() defined in pretzel/resources/tools/functions_prod.bash
-This script can be run using the bash executable which is included in the native MS Windows git download (above),  or WSL.
+This script can be run using the bash executable which is included in the native MS Windows git download (above),  or [WSL](#introduction).
 
 The API will return JSON confirming the
 insertion if successful.
