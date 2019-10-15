@@ -262,7 +262,7 @@ export default Service.extend({
     console.log('blockAdjIds', blockAdjIds);
     return blockAdjIds;
   }),
-  blockAdjs : Ember.computed('blockAdjIds.[]', function () {
+  blockAdjsCP : Ember.computed('blockAdjIds.[]', function () {
     let pathsPro = this.get('pathsPro'),
     blockAdjIds = this.get('blockAdjIds'),
     records = blockAdjIds.map(function (blockAdjId) {
@@ -270,6 +270,14 @@ export default Service.extend({
       console.log('blockAdjId', blockAdjId, blockAdjId[0], blockAdjId[1], record);
       return record;
     });
+    /* The value blockAdjs was simply this CP, but version updates seem to cause error :
+     * Cannot read property 'nextSibling' of null
+     * in #each flowsService.blockAdjs in draw-map.hbs.
+     * Delaying the value blockAdjs by setting it in run.later()
+     * seems to fix this.  We can revisit this after getting the versions up to
+     * date across the board.
+     */
+    Ember.run.later(() => this.set('blockAdjs', records));
     return records;
   })
 
