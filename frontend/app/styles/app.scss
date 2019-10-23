@@ -784,6 +784,11 @@ li.filter-group > div > span:last-child {
   padding: 3px 6px;
   margin: 0.5em 1em;
 }
+.filter-groups > div > button.add {
+  float: right;
+  padding: 3px 6px;
+  margin: 0.5em 1em;
+}
 .filter-group > div > button.delete {
   float: right;
 }
