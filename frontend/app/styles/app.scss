@@ -804,6 +804,16 @@ li.filter-group > div > span:last-child {
   padding-bottom : 5px;
 }
 
+.filter-group-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.filter-group-col {
+  flex-grow: 1;
+  width: 33%;
+}
+
 .line-input-label > input {
     margin-left : 1.2em;
 }
