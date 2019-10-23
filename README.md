@@ -38,6 +38,7 @@ Funded by the Grains Research Development Corporation (GRDC).
   - [Running](#running)
     - [Starting the app](#starting-the-app)
     - [Checking things are running](#checking-things-are-running-1)
+    - [Starting for development](#starting-for-development)
     - [Adding user verification](#adding-user-verification)
   - [Inserting data](#inserting-data)
     - [Loading data via the command line](#loading-data-via-the-command-line)
@@ -250,6 +251,22 @@ Note that this runs the app without any authentication or security and is only s
 ### Checking things are running
 
 If everything has worked so far, you should be able to open [http://localhost:3000](http://localhost:3000) in a browser and see a landing page. If you started the backend with the above command, you can create a user by signing up, then logging in with these details (with `EMAIL_VERIFY=NONE`, the user is created immediately without any extra verification).
+
+### Starting for development
+
+To start the app for code development with live reloads on changes  
+1. Ensure the Ember-CLI tool is installed  globally  
+```
+npm install -g ember-cli
+```  
+2. Run the backend independently, with an assigned port  
+```
+EMAIL_VERIFY=NONE AUTH=ALL API_PORT_EXT=5000 npm run run:backend
+```  
+3. Run the frontend independently, using Ember CLI  
+```
+cd frontend && ember serve
+```  
 
 ### Adding user verification
 
