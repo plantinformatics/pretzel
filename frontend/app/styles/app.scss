@@ -764,9 +764,10 @@ li.dropdown-submenu > ul.dropdown-menu {
 }
 .filter-groups > ul > li {
   margin-top: 1em;
+  padding-bottom: 1em;
 }
 li.filter-group {
-  border-top: #ccc 1px solid;
+  border-bottom: #ccc 1px solid;
 }
 li.filter-group > div > span {
   margin: 0 0.5em;
@@ -807,11 +808,15 @@ li.filter-group > div > span:last-child {
 .filter-group-row {
   display: flex;
   flex-direction: row;
+  align-items: center;
 }
 
 .filter-group-col {
-  flex-grow: 1;
-  width: 33%;
+  width: 30%;
+}
+
+.filter-group-2cols {
+  width: 66%;
 }
 
 .line-input-label > input {

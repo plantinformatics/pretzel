@@ -1,5 +1,5 @@
 <div>
-  {{#elem/icon-toggle state=detailed iconTrue='chevron-up' iconFalse='chevron-down' }}
+  {{#elem/icon-toggle state=detailed iconTrue='collapse-down' iconFalse='expand' }}
     {{#ember-tooltip side="right" delay=500}}
       Toggle the detailed display of the filter / grouping.
     {{/ember-tooltip}}
@@ -27,34 +27,30 @@
       Delete this filter / grouping;  all datasets will be displayed.
     {{/ember-tooltip}}
   {{/elem/button-base}}
-
 </div>
 
-{{input
-  value=data.pattern
-  class="form-control"
-  enter=(action changed this)
-  placeholder="string or regular expression" }}
+<div class="filter-group-row">
+  {{input
+    value=data.pattern
+    class="form-control"
+    enter=(action changed this)
+    placeholder="string or regular expression" }}
+  {{#elem/button-base
+    click=(action changed this)
+    icon='ok'
+    classColour="info"
+    class='submit'
+  }}
+    {{#ember-tooltip side="left" delay=500}}
+      Submit
+    {{/ember-tooltip}}
+  {{/elem/button-base}}
+</div>
 
 {{#if detailed}}
-  <div class="filter-group-row" style="margin-top:1em">
-    <label class="filter-group-col">Apply...</label>
-    <span class="filter-group-col">
-      {{radio-button value='filter' groupValue=data.filterOrGroup
-        changed=(action changed this preventDefault=false)
-      }}
-      <label>Filter</label>
-    </span>
-    <span class="filter-group-col">
-      {{radio-button value='group' groupValue=data.filterOrGroup
-        changed=(action changed this preventDefault=false)
-      }}
-      <label>Group</label>
-    </span>
-  </div>
 
   {{!-- scope of search can be : .name .scope .meta --}}
-  <div class="filter-group-row">
+  <div class="filter-group-row" style="margin-top:1em">
     <label class="filter-group-col">Search...</label>
     <span class="filter-group-col">
       {{input type="checkbox" name="fieldName" checked=data.fieldName
@@ -87,26 +83,37 @@
     </span>
   </div>
 
-  {{!-- Blocks and datasets --}}
+  {{!-- Datasets --}}
   <div class="filter-group-row">
     <label class="filter-group-col">Include...</label>
-    <span class="filter-group-col">
+    <span class="filter-group-2cols">
       {{input type="checkbox" name="applyDataset" checked=data.applyDataset
         click=(action changed this preventDefault=false)
       }}
       Datasets
     </span>
+  </div>
+
+  {{!-- Blocks --}}
+  <div class="filter-group-row">
+    <div class="filter-group-col" />
     <span class="filter-group-col">
       {{input type="checkbox" name="applyBlock" checked=data.applyBlock
         click=(action changed this preventDefault=false)
       }}
       Blocks
     </span>
+    <span class="filter-group-col">
+      {{#elem/icon-toggle state=blockssubs iconTrue='collapse-down' iconFalse='expand' }}
+        {{#ember-tooltip side="bottom" delay=500}}
+          Toggle Block sub-options
+        {{/ember-tooltip}}
+      {{/elem/icon-toggle}}
+    </span>
   </div>
-
-  {{#if data.applyBlock}}
+  {{#if blockssubs}}
     <div class="filter-group-row">
-      <label class="filter-group-col">inc. block...</label>
+      <div class="filter-group-col" />
       <span class="filter-group-col">
         {{input type="checkbox" name="fieldScope" checked=data.fieldScope
           click=(action changed this preventDefault=false)
@@ -124,30 +131,50 @@
     </div>
   {{/if}}
 
+  {{!-- Regex negation and case sensitivity --}}
   <div class="filter-group-row">
-    {{!-- caseSensitive string / pattern --}}
-    <span>
-      {{input type="checkbox" name="isCaseSensitive" checked=data.isCaseSensitive
-        click=(action changed this preventDefault=false)
-      }}
-      <label>Case Sensitive</label>
-    </span>
-
-    {{!-- negate string / pattern --}}
-    <span>
-      {{input type="checkbox" name="isNegated" checked=data.isNegated
-        click=(action changed this preventDefault=false)
-      }}
-      <label>Negate</label>
-    </span>
-
+    <label class="filter-group-col">With...</label>
     {{!-- pattern isRegExp --}}
-    <span>
+    <span class="filter-group-col">
       {{input type="checkbox" name="isRegExp" checked=data.isRegExp
         click=(action changed this preventDefault=false)
       }}
-    <label>RegExp</label>
-  </span>
+      RegExp
+    </span>
+    {{!-- negate string / pattern --}}
+    <span class="filter-group-col">
+      {{input type="checkbox" name="isNegated" checked=data.isNegated
+        click=(action changed this preventDefault=false)
+      }}
+      Negation
+    </span>
+  </div>
+  <div class="filter-group-row">
+    <div class="filter-group-col" />
+    {{!-- caseSensitive string / pattern --}}
+    <span class="filter-group-2cols">
+      {{input type="checkbox" name="isCaseSensitive" checked=data.isCaseSensitive
+        click=(action changed this preventDefault=false)
+      }}
+      Case Sensitivity
+    </span>
+  </div>
+
+  {{!-- Filter or Grouping --}}
+  <div class="filter-group-row">
+    <label class="filter-group-col">Apply...</label>
+    <span class="filter-group-col">
+      {{radio-button value='filter' groupValue=data.filterOrGroup
+        changed=(action changed this preventDefault=false)
+      }}
+      Filter
+    </span>
+    <span class="filter-group-col">
+      {{radio-button value='group' groupValue=data.filterOrGroup
+        changed=(action changed this preventDefault=false)
+      }}
+      Grouping
+    </span>
   </div>
 
 {{/if}}
