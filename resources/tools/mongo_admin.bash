@@ -41,12 +41,8 @@ function mongodump2S3()
   echo $collections
   sleep 5
 
-  # AccessToken Alias Block Client Dataset Feature 
-  for i in $collections; do echo $i; time docker exec -it $DIM mongodump --gzip --db admin --collection $i; done
-
-  docker exec -i -e TERM=$TERM $DIM bash -c 'cd /dump/; tar cf - admin' | aws s3 cp -  $S3_MON.tar.gz	\
-  && aws s3 ls $S3_MON.tar.gz	\
-  && docker exec -i -e TERM=$TERM $DIM bash -c 'rm -r /dump/admin'
+  docker exec -i $DIM mongodump  --archive --gzip --db admin  | aws s3 cp -  $S3_MON.gz	\
+  && aws s3 ls $S3_MON.tar.gz
 }
 
 #-------------------------------------------------------------------------------
@@ -72,13 +68,14 @@ function signupList()
 db.Client.aggregate( [
   { \$match : { emailVerified: { \$exists: $emailVerified }} },
   { \$project: { _id: 0, signUp : {\$dateToString:{date:{\$toDate:"\$_id"}, format:"%Y-%m-%d %H:%M:%S %z", timezone : 'Australia/Melbourne'}}, email : 1, name : 1, institution : 1, project : 1, emailVerified : 1 } }
-])
+]).forEach(printjson)
 EOF
+# or DBQuery.shellBatchSize = 1000
 }
 function signupReport()
 {
   echo -e 'Email\tName\tInstitution\tProject\tSignUp'
-  signupList | egrep -v '\.Isdale' | jq -r 'map(.)  | @tsv'
+  signupList | jq -r 'map(.)  | @tsv'
 }
 
 
