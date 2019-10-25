@@ -42,15 +42,30 @@
     class='submit'
   }}
     {{#ember-tooltip side="left" delay=500}}
-      Submit
+      Apply filter/group
     {{/ember-tooltip}}
   {{/elem/button-base}}
 </div>
 
 {{#if detailed}}
 
-  {{!-- scope of search can be : .name .scope .meta --}}
+  {{!-- Filter or Grouping --}}
   <div class="filter-group-row" style="margin-top:1em">
+    <label class="filter-group-col">Apply...</label>
+    <span class="filter-group-2cols">
+      {{radio-button value='filter' groupValue=data.filterOrGroup
+        changed=(action changed this preventDefault=false)
+      }}
+      Filter &nbsp;&nbsp;
+      {{radio-button value='group' groupValue=data.filterOrGroup
+        changed=(action changed this preventDefault=false)
+      }}
+      Grouping
+    </span>
+  </div>
+
+  {{!-- scope of search can be : .name .scope .meta --}}
+  <div class="filter-group-row">
     <label class="filter-group-col">Search...</label>
     <span class="filter-group-col">
       {{input type="checkbox" name="fieldName" checked=data.fieldName
@@ -133,49 +148,27 @@
 
   {{!-- Regex negation and case sensitivity --}}
   <div class="filter-group-row">
-    <label class="filter-group-col">With...</label>
     {{!-- pattern isRegExp --}}
-    <span class="filter-group-col">
+    <span>
       {{input type="checkbox" name="isRegExp" checked=data.isRegExp
         click=(action changed this preventDefault=false)
       }}
       RegExp
     </span>
     {{!-- negate string / pattern --}}
-    <span class="filter-group-col">
+    <span>
       {{input type="checkbox" name="isNegated" checked=data.isNegated
         click=(action changed this preventDefault=false)
       }}
-      Negation
+      Negated
     </span>
-  </div>
-  <div class="filter-group-row">
-    <div class="filter-group-col" />
     {{!-- caseSensitive string / pattern --}}
-    <span class="filter-group-2cols">
+    <span>
       {{input type="checkbox" name="isCaseSensitive" checked=data.isCaseSensitive
         click=(action changed this preventDefault=false)
       }}
-      Case Sensitivity
+      Case Sensitive
     </span>
   </div>
-
-  {{!-- Filter or Grouping --}}
-  <div class="filter-group-row">
-    <label class="filter-group-col">Apply...</label>
-    <span class="filter-group-col">
-      {{radio-button value='filter' groupValue=data.filterOrGroup
-        changed=(action changed this preventDefault=false)
-      }}
-      Filter
-    </span>
-    <span class="filter-group-col">
-      {{radio-button value='group' groupValue=data.filterOrGroup
-        changed=(action changed this preventDefault=false)
-      }}
-      Grouping
-    </span>
-  </div>
-
 {{/if}}
 
