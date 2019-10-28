@@ -69,15 +69,15 @@ export default Service.extend({
           'block-id1' : blockAdjId[1]
         }
       };
+      if (false)
+      r = store.push({data: ba});
+      else {
       let
       ban = store.normalize('blockAdj', ba);
       r = store.push(ban);
-      if (! r.get('blockId0')) {
-        debugger;
-        r.set('blockId0', blockAdjId[0]);
-      }
-      if (! r.get('blockId1'))
-        r.set('blockId1', blockAdjId[1]);
+        console.log('ensureBlockAdj', ban);
+    }
+        console.log('ensureBlockAdj', r, r.get('blockAdjId'), r._internalModel, r._internalModel.__data, store, ba);
     }
     return r;
   },

@@ -165,7 +165,7 @@ export default DS.Model.extend({
   /** If the dataset of this block has a parent, lookup the corresponding reference block in that parent, matching scope.
    * @return the reference block or undefined if none
    */
-  referenceBlock : Ember.computed('dataset', 'scope', function () {
+  referenceBlock : Ember.computed('datasetId', 'scope', function () {
     let 
       referenceBlock,
     scope = this.get('scope'),

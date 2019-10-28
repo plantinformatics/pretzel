@@ -14,6 +14,8 @@ export default DS.Model.extend(Ember.Evented, {
 
   pathsPro : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
+  storeService: service('store'),
+
 
   /** id is blockAdjId[0] + '_' + blockAdjId[1], as per.  serializers/block-adj.js : extractId()
    * and utils/draw/stacksAxes : blockAdjKeyFn()
@@ -21,9 +23,9 @@ export default DS.Model.extend(Ember.Evented, {
 
   block0: DS.belongsTo('block', { inverse: null }),
   block1: DS.belongsTo('block', { inverse: null }),
-  blockId0: DS.attr('string'), // belongsTo('block'),
-  blockId1: DS.attr('string'), // belongsTo('block'),
-  pathsResult : DS.attr(),
+  blockId0: DS.attr('string'),
+  blockId1: DS.attr('string'),
+  // pathsResult : undefined,
 
   zoomCounter : 0,
   // range: attr(),
@@ -35,9 +37,28 @@ export default DS.Model.extend(Ember.Evented, {
   }),
 
   /*--------------------------------------------------------------------------*/
+
+  /** @return the block record handle if the block is loaded into the store from the backend.
+   */
+  peekBlock(blockId)
+  {
+    let store = this.get('storeService'),
+    block = store.peekRecord('block', blockId);
+    return block;
+  },
+
+  /*--------------------------------------------------------------------------*/
   /* CFs based on axes could be moved to a component, e.g. draw/ stacks-view or block-adj */
 
+
   blocks : Ember.computed('blockAdjId', function () {
+    let
+      blockAdjId = this.get('blockAdjId'),
+    blocks = blockAdjId.map((blockId) => { return this.peekBlock(blockId); } );
+    return blocks;
+  }),
+  /** Stacked Blocks - should be able to retire this. */
+  sBlocks : Ember.computed('blockAdjId', function () {
     let
       blockAdjId = this.get('blockAdjId'),
     blocks = blockAdjId.map(function (blockId) { return stacks.blocks[blockId]; } );
@@ -46,9 +67,9 @@ export default DS.Model.extend(Ember.Evented, {
   /** Result is, for each blockID in blockAdjId,  the axis on which the block is displayed.
    * May need to add dependency on stacks component, because block can be un-viewed then re-viewed.
    */
-  axes : Ember.computed('blocks', 'blocks.@each.axislater', function () {
+  axes : Ember.computed('blocks', 'blocks.@each.axis', function () {
     let blocks = this.get('blocks'),
-    axes = blocks.map(function (b) { return b.getAxis(); });
+    axes = blocks.map(function (b) { return b.get('axis'); });
     console.log('axes', blocks, axes);
     return axes;
   }),
@@ -238,6 +259,10 @@ export default DS.Model.extend(Ember.Evented, {
     if (! task.get('isIdle')) {
       console.log('paths taskGetPaths', task.numRunning, task.numQueued, blockAdjId);
       // result = this.get('lastResult');
+      if (task.numRunning > 1) {
+        result = task.get('lastPerformed');
+        return result;
+      }
     }
 
     console.log('task.perform');

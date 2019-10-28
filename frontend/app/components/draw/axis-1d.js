@@ -402,14 +402,20 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   }),
 
   /** count of features of .dataBlocks
-   * Also depend on block.featuresForAxis, to trigger a request for features of
+   * Maybe : Also depend on block.featuresForAxis, to trigger a request for features of
    * a block when it is added to an axis.
    */
   featureLength : Ember.computed('dataBlocks.@each.{featuresLength,featuresForAxis}', function () {
     let dataBlocks = this.get('dataBlocks'),
     featureLengths = dataBlocks.map(function (b) { return b.get('featuresLength'); } ),
     featureLength = sum(featureLengths);
-    let featuresForAxis = dataBlocks.map(function (b) { return b.get('featuresForAxis'); } );
+    /** This is only intended to trigger an initial featuresForAxis, but changes
+     * in dataBlocks[*].featuresLength will trigger this CP, so it would be
+     * recursive to request featuresForAxis here.
+     * If enabled this seems to cause "Cannot read property 'nextSibling' of null" in DOMChanges.insertAfter (runtime.js)
+     * seemingly because of multiple requests in a short time.
+     */
+    let featuresForAxis; // = dataBlocks.map(function (b) { return b.get('featuresForAxis'); } );
     console.log(this, dataBlocks, featureLengths, 'featureLength', featureLength, featuresForAxis /*.length*/);
     let axisS = this.get('axisS'); if (axisS) axisS.log();
     return featureLength;

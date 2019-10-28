@@ -66,7 +66,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   heightChanged : 0,
   axisStackChangedCount : 0,
 
+  /** The DB IDs of the blocks which this block-adj aligns.
+      * array[2] of blockId
+      */
   blockAdjId : Ember.computed.alias('blockAdj.blockAdjId'),
+  // blockAdj.id is the same values in a string form, separated by '_'
 /*  ('blockAdj', function () {
     let blockAdj = this.get('blockAdj'),
     blockAdjId = blockAdj.get('blockAdjId');
@@ -170,11 +174,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         });
     });
     });
+    if (false) {
     /** .direct and.alias are defined by the result of pathsP, not by pathsP, so
      * this would need to change; no purpose for this yet. */
     let resultP = (pathsP.direct && pathsP.alias) ?
     Ember.RSVP.allSettled([pathsP.direct, pathsP.alias])
       : (pathsP.direct || pathsP.alias);
+    }
     return pathsP;
   }),
 
@@ -634,7 +640,9 @@ flowNames = Object.keys(pathsResultTypes);
 // add .flowName to each of pathsResultTypes, which could later require non-const declaration.
 flowNames.forEach(function (flowName) { pathsResultTypes[flowName].flowName = flowName; } );
 
-
+/**
+ * @return	array[2] of blockId, equivalent to blockAdjId  
+ */
 function resultBlockIds(pathsResultType, featurePath) {
   let blockIds =
     [0, 1].map(function (blockIndex) { return pathsResultType.pathBlock(featurePath, blockIndex); });

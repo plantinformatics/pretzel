@@ -40,7 +40,9 @@ function selectAxis(axis)
 }
 
 const blockAdjEltIdPrefix = "ba_";
-/** id of block-adj g element, based on IDs of the 2 adjacent blocks, with a "ba_" prefix. */
+/** id of block-adj g element, based on IDs of the 2 adjacent blocks, with a "ba_" prefix.
+ * @param blockAdjId  array[2] of blockId
+ */
 function blockAdjEltId(blockAdjId)
 {
   return blockAdjEltIdPrefix + blockAdjKeyFn(blockAdjId);
@@ -68,6 +70,7 @@ const foregroundSelector = 'div#holder > svg > g > g.foreground';
 /**
  * @param parent  undefined, or selector of parent of g.block-adj
  * This optional argument is provided when creating a selector for .data().append().
+ * @param blockAdjId  array[2] of blockId
  */
 function selectBlockAdj(parent, blockAdjId)
 {

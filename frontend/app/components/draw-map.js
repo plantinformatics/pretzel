@@ -1324,7 +1324,7 @@ export default Ember.Component.extend(Ember.Evented, {
             sd.logBlocks();
           }
           // .parent of referenceBlock is undefined.
-        	sBlock.axis = sd;
+        	sBlock.setAxis(sd);
           if (sBlock !== sd.referenceBlockS())
             console.log('sBlock', sBlock, ' !== sd.referenceBlockS()',  sd.referenceBlockS());
 
@@ -1449,7 +1449,7 @@ export default Ember.Component.extend(Ember.Evented, {
           parentAxis.blocks.push(sBlock);
           console.log('after push', parentAxis.blocks);
           parentAxis.logBlocks();
-          sBlock.axis = parentAxis;
+          sBlock.setAxis(parentAxis);
           sBlock.parent = parentAxis.referenceBlockS();
           let aStackS1 = oa.svgContainer.select("g.axis-outer#" + eltId(parentAxis.axisName));
           let axisTitleS = aStackS1.select("g.axis-all > text");
@@ -5368,7 +5368,7 @@ export default Ember.Component.extend(Ember.Evented, {
               deleteAxisfromAxisIDs(axisName);
               let sBlock = oa.stacks.blocks[axisName];
               console.log('sBlock.axis', sBlock.axis);
-              sBlock.axis = undefined;
+              sBlock.setAxis(undefined);
               removeAxisMaybeStack(axisName, stackID, stack);
               me.send('mapsToViewDelete', axisName);
               // filter axisName out of selectedFeatures and selectedAxes
@@ -5764,9 +5764,13 @@ export default Ember.Component.extend(Ember.Evented, {
    * @return value is for devel trace
    */
   stacksWidthChanges : Ember.computed(
-    'oa.stacks.stacksCount.count', 'splitAxes.[]',
+    'blockService.stacksCount', 'splitAxes.[]',
     'layout.left.visible', 'layout.right.visible',
     function () {
+      let count = stacks.length;
+      // just checking - will retire stacks.stacksCount anyway.
+      if (count != stacks.stacksCount.count)
+	console.log('stacksWidthChanges',  count, '!=', stacks.stacksCount.count);
       let leftPanel = Ember.$('#left-panel'),
       /** leftPanel.hasClass('left-panel-shown') is always true; instead the
        * <div>'s display attribute is toggled between flex and none.
@@ -5774,7 +5778,7 @@ export default Ember.Component.extend(Ember.Evented, {
        */
       leftPanelShown = leftPanel[0].attributeStyleMap.get('display').value != 'none',
       current = {
-        stacksCount : stacks.stacksCount.count,
+        stacksCount : count,
         splitAxes : this.get('splitAxes').length,
         // this.get('layout.left.visible') is true, and does not update
         left : leftPanelShown,
@@ -5789,11 +5793,11 @@ export default Ember.Component.extend(Ember.Evented, {
    */
   stacksWidthChanged() {
     /* can change this to a CP, merged with resize() e.g. resizeEffect(), with
-     * dependencies on 'oa.stacks.stacksCount.count', 'splitAxes.[]'
+     * dependencies on 'blockService.stacksCount', 'splitAxes.[]'
      */
     let previous = this.get('previousRender'),
     now = {
-      stacksCount : stacks.length,   // i.e. this.get('oa.stacks.stacksCount.count'),
+      stacksCount : stacks.length,   // i.e. this.get('blockService.stacksCount'), or oa.stacks.stacksCount.count
       splitAxes : this.get('splitAxes').length
     },
     changed = ! isEqual(previous, now);

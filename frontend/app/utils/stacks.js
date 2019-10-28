@@ -128,6 +128,10 @@ Block.prototype.setAxis = function(a)
 {
   console.log('setAxis', !!this.set, a);  this.log();
   this.axis = a;
+  if (this.block) {
+    this.block.set('axis', a);
+  }
+  if (false)
   /* The block-adj CP axes depends on .axislater, setting this field triggers a
    * render, so without run.later the code following the call to setAxis() would
    * be skipped.
@@ -806,7 +810,7 @@ Block.prototype.axisTitleColour = function ()
 {
   let colour,
   axis1d = this.axis.axis1d;
-  if (axis1d) {
+  if (axis1d && ! axis1d.isDestroyed) {
     let
     blockId = this.getId(),
     blockIndexes = axis1d.get('blockIndexes'),

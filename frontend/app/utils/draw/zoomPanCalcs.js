@@ -82,6 +82,12 @@ function constrainInterval(sub, interval) {
  */
 function wheelNewDomain(axis, axisApi, inFilter) {
   let yp = axis.y;
+  /* if the axis does not yet have a domain then it won't have a scale.
+   * The domain should be received before the user can excercise the scroll
+   * wheel, but if this can happen if there is an error in requesting block
+   * features.
+   */
+  if (! yp) return;
   /** Access these fields from the DOM event : .shiftKey, .deltaY, .currentTarget.
    * When called from zoom(), d3.event is the d3 wrapper around the event, and
    * the DOM event is referenced by .sourceEvent,  whereas in zoomFilter()
