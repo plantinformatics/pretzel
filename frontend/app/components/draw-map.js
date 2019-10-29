@@ -5775,8 +5775,16 @@ export default Ember.Component.extend(Ember.Evented, {
       /** leftPanel.hasClass('left-panel-shown') is always true; instead the
        * <div>'s display attribute is toggled between flex and none.
        * This could be made consistent with right panel, but planning to use golden-layout in place of this anyway.
+       *
+       * .attributeStyleMap is part of CSS Typed OM; is in Chrome, not yet Firefox.
+       * https://github.com/Fyrd/caniuse/issues/4164
+       * https://developer.mozilla.org/en-US/docs/Web/API/CSS_Typed_OM_API
        */
-      leftPanelShown = leftPanel[0].attributeStyleMap.get('display').value != 'none',
+      haveCSSOM = leftPanel[0].hasAttribute('attributeStyleMap'),
+      leftPanelStyleDisplay = haveCSSOM ?
+        leftPanel[0].attributeStyleMap.get('display').value :
+        leftPanel[0].style.display,
+      leftPanelShown = leftPanelStyleDisplay != 'none',
       current = {
         stacksCount : count,
         splitAxes : this.get('splitAxes').length,

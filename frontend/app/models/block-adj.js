@@ -14,7 +14,6 @@ export default DS.Model.extend(Ember.Evented, {
 
   pathsPro : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
-  storeService: service('store'),
 
 
   /** id is blockAdjId[0] + '_' + blockAdjId[1], as per.  serializers/block-adj.js : extractId()
@@ -42,7 +41,7 @@ export default DS.Model.extend(Ember.Evented, {
    */
   peekBlock(blockId)
   {
-    let store = this.get('storeService'),
+    let store = this.get('store'),
     block = store.peekRecord('block', blockId);
     return block;
   },
