@@ -127,6 +127,7 @@ export default Service.extend(Ember.Evented, {
   },
   /** @return the reference blocks corresponding to the given blocks.
    * Result form is an array of {id : blockId, obj : block}.
+   * Each id occurs just once in the result.
    * @param blocks  Block records in Ember store
    * @param selfReferences  if false then
    * a block which is its own reference (GM) it is not included in the result.
@@ -136,17 +137,44 @@ export default Service.extend(Ember.Evented, {
     /* blockFeatureCounts will omit reference blocks since they have no features,
      * so use blockIds to set viewed and trigger receivedBlock.
      */
+    /** Using an array for output enables CPs to depend on sub-fields of the array.
+     * If selfReferences then need to avoid getting duplicates, so this hash
+     * keeps track of which blockIds have been added to blocksToView.
+     * (The array also maintains the original order, which may have some use).
+     * May split this out as a separate function, with one depending on the other;
+     * could be done in either order.
+     */
+    let blockIds = {};
     let blocksToView =
       blocks.reduce((result, block) => {
-          let referenceBlock = block.get('referenceBlock');
-          if (referenceBlock && (selfReferences || (referenceBlock !== block))) {
-            result.push({id : referenceBlock.get('id'), obj : referenceBlock});
+        function addIdObj(id, obj) {
+          if (! blockIds[id]) {
+            blockIds[id] = obj;
+            result.push({id, obj});
           }
-          result.push({id : block.id, obj : block});
+        }
+        /** .referenceBlock is undefined for GMs, as they have no parent.
+         */
+        let referenceBlock = block.get('referenceBlock');
+        if (referenceBlock) {
+          /* check is not needed as currently blocks which are their own
+           * reference (genetic maps) have .referenceBlock === undefined.
+           */
+          if (selfReferences || (referenceBlock !== block))
+            addIdObj(block.id, referenceBlock);
+        }
+        else if (selfReferences)
+          addIdObj(block.id, block);
         return result;
       }, []);
     return blocksToView;
   },
+  /** For trace in Web Inspector console.
+   * Usage e.g. this.get('blocksReferences').map(this.blocksReferencesText);
+   */
+  blocksReferencesText(io) {
+    let b=io.obj; return [io.id, b.view && b.view.longName(), b.mapName]; },
+
   /** Set .isViewed for each of the blocksToView[].obj
    * @param blocksToView form is the result of this.blocksReferences()
    */
@@ -240,7 +268,7 @@ export default Service.extend(Ember.Evented, {
     }
     block.set('isViewed', viewed);
     if (viewed) {
-        this.ensureAxis(block);
+      this.ensureAxis(block);
     }
     this.endPropertyChanges();
 
@@ -411,9 +439,33 @@ export default Service.extend(Ember.Evented, {
       if (trace_block > 1)
         console.log(
           'viewedBlocksReferences', blocksReferences
-            .map(function(blockR) { return blockR.view && blockR.view.longName(); })
+            .map(this.blocksReferencesText)
         );
       return blocksReferences;
+  }),
+
+  /** collate references (blocks) of viewed blocks
+   * @return map from reference (block object) to [block object]
+   */
+  axesViewedBlocks2 : Ember.computed(
+    'viewedBlocksReferences.[]',
+    function () {
+      let br = this.get('viewedBlocksReferences'),
+      map = br.reduce(
+        (map, id_obj) => {
+          let id = id_obj.id,
+          referenceBlock = id_obj.obj;
+          let blocks = map.get(referenceBlock);
+          if (! blocks)
+            map.set(referenceBlock, blocks = []);
+          let block = this.peekBlock(id);
+          if (blocks.indexOf(block) < 0)
+            blocks.push(block);
+          return map; },
+        new Map()
+      );
+      console.log('axesViewedBlocks2', map, br, br.map(this.blocksReferencesText));
+      return map;
   }),
 
   /** @return Map of stacks to axes (ie. of viewed blocks). */
@@ -425,7 +477,7 @@ export default Service.extend(Ember.Evented, {
         (map, blockIO) => {
           let block = blockIO.obj,
           axis = block.get('axis'),
-          stack = axis.getStack();
+          stack = axis && axis.getStack();
           if (stack) {
             let axes = map.get(stack);
             if (! axes)
@@ -445,13 +497,12 @@ export default Service.extend(Ember.Evented, {
    * @return array of blocks
    */
   loadedViewedChildBlocks: Ember.computed(
-    'viewed.[]',
-    'blockValues.@each.{isViewed,isLoaded,hasFeatures}',
+    'viewed.@each.{isViewed,isLoaded,hasFeatures}',
     function() {
       let records =
         this.get('viewed')
         .filter(function (block) {
-          // hasFeatures indicates isData.
+          // hasFeatures indicates isData.  - change to use block.isData
           return block.get('isLoaded') // i.e. !== undefined
             && block.get('hasFeatures');
         });
@@ -462,10 +513,29 @@ export default Service.extend(Ember.Evented, {
         );
       return records;  // .toArray()
     }),
+  /** @return Map of axes to viewed blocks */
+  axesViewedBlocks : Ember.computed(
+    'viewed.@each.axis',
+    function () {
+      let records = this.get('viewed'),
+      map = records.reduce(
+        (map, block) => {
+          let axis = this.blockAxis(block);
+          if (axis) {
+            let blocks = map.get(axis);
+            if (! blocks)
+              map.set(axis, blocks = []);
+            blocks.push(block);
+          }
+          return map; },
+        new Map()
+      );
+      console.log('axesViewedBlocks', map, records);
+      return map;
+    }),
   /** @return Map of axes to loaded viewed child blocks */
   axesBlocks : Ember.computed(
-    'loadedViewedChildBlocks.[]',
-    'blockValues.@each.axis',
+    'loadedViewedChildBlocks.@each.axis',
     function () {
       let records = this.get('loadedViewedChildBlocks'),
       map = records.reduce(
@@ -491,7 +561,7 @@ export default Service.extend(Ember.Evented, {
     if (! axis && block.get('isViewed')) {
       this.ensureAxis(block);
       axis = block.get('axis');
-      console.log('blockAxis', axis);
+      console.log('blockAxis', block.id, axis);
     }
     return axis;
   },
@@ -504,8 +574,10 @@ export default Service.extend(Ember.Evented, {
     let oa = stacks.oa, axisApi = oa.axisApi;
     axisApi.cmNameAdd(oa, block);
     console.log('ensureAxis', block.get('id'));
+    if (false) {
     axisApi.ensureAxis(block.get('id'));
-    stacks.forEach(function(s){s.log();});
+      stacks.forEach(function(s){s.log();});
+    }
   },
   /** Collate the viewed blocks by their parent block id, or by their own block
    * id if they are not parented.
@@ -514,7 +586,6 @@ export default Service.extend(Ember.Evented, {
    * Similar to @see axesBlocks().
    */
   dataBlocks : Ember.computed(
-    'loadedViewedChildBlocks.[]',
     'loadedViewedChildBlocks.@each.hasFeatures',
     function () {
       let records = this.get('loadedViewedChildBlocks'),

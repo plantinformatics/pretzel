@@ -22,6 +22,9 @@ import { blockAdjKeyFn } from '../../utils/draw/stacksAxes';
 
 //------------------------------------------------------------------------------
 
+/** transitioning to driving this calc from the Ember runloop instead of from the API response. */
+const blocksUpdateDomainEnabled = false;
+
 function verifyFeatureRecord(fr, f) {
   let frd = fr._internalModel.__data,
   /** Handle some older data which has .range instead of .value */
@@ -233,6 +236,7 @@ export default Service.extend({
           /* check if passing blockAdjId prevents the merging of multiple calls
            * to throttle with the same arguments into a single call.
            */
+          if (blocksUpdateDomainEnabled)
           Ember.run.throttle(
             me, me.blocksUpdateDomain, 
             blockAdjId, domainCalc,
@@ -615,6 +619,7 @@ export default Service.extend({
           let domainCalc = true,
           axisEvents = false;
 
+          if (blocksUpdateDomainEnabled)
           Ember.run.throttle(
             me, me.blocksUpdateDomain, 
             requestBlockIds, domainCalc,

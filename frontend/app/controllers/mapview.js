@@ -98,14 +98,22 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     /** also load parent block */
     loadBlock : function loadBlock(block) {
       console.log('loadBlock', block);
+      // also done in useTask() : (mixins/viewed-blocks)setViewed() : (data/block.js)setViewedTask()
+      block.set('isViewed', true);
       let referenceBlock = block.get('referenceBlock');
       if (referenceBlock)
         loadBlock.apply(this, [referenceBlock]);
 
-      /** in result of featureSearch(), used in goto-feature-list, .block has .id but not .get */
-      let id = block.get ? block.get('id') : block.id;
-      let t = this.get('useTask');
-      t.apply(this, [id]);
+      /* Before progressive loading this would load the data (features) of the block.
+       * The block record itself is already loaded in the initial Datasets request;
+       * - it is the parameter `block`.
+       */
+      if (false) {
+        /** in result of featureSearch(), used in goto-feature-list, .block has .id but not .get */
+        let id = block.get ? block.get('id') : block.id;
+        let t = this.get('useTask');
+        t.apply(this, [id]);
+      }
     },
     blockFromId : function(blockId) {
       let store = this.get('store'),
@@ -201,10 +209,10 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
    */
   hasData: Ember.computed(
     function() {
-      let viewedBlocks = this.get('block.viewed');
+      let viewedBlocksLength = this.get('block.viewed.length');
       if (trace_dataflow)
-        console.log("hasData", ! viewedBlocks || viewedBlocks.length);
-      return (viewedBlocks && viewedBlocks.length > 0);
+        console.log("hasData", viewedBlocksLength);
+      return viewedBlocksLength > 0;
     }),
 
   /** Update queryParams and URL.

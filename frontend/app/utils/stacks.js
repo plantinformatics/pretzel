@@ -126,10 +126,10 @@ Block.prototype.getId = function()
  */
 Block.prototype.setAxis = function(a)
 {
-  console.log('setAxis', !!this.set, a);  this.log();
+  console.log('setAxis', !!this.block.set, a);  this.log();
   this.axis = a;
-  if (this.block) {
-    this.block.set('axis', a);
+  if (this.block && this.block.set) {
+    Ember.run.later(() => this.block.set('axis', a) );
   }
   if (false)
   /* The block-adj CP axes depends on .axislater, setting this field triggers a
@@ -561,7 +561,8 @@ Block.prototype.domainCalc = function ()
   let
     domain =
     (blockAttr && blockAttr.range) ||
-    d3.extent(Object.keys(features), featureLocation);
+    (features &&
+      d3.extent(Object.keys(features), featureLocation));
    console.log("domainCalc", this, d, features, domain);
   if (! domain || ! domain.length)
     breakPoint();
@@ -586,9 +587,11 @@ Stacked.prototype.domainCalc = function ()
 {
   console.log('domainCalc', this, this.blocks);
   let blockDomains = 
-    this.blocks.map(function (b) { return b.maybeDomainCalc(); }),
+    this.blocks.map(function (b) { return b.maybeDomainCalc(); })
+    .filter((domain) => domain),
   /** refn : https://github.com/d3/d3-array/issues/64#issuecomment-356348729 */
   domain = 
+    blockDomains.length &&
     [
       d3.min(blockDomains, array => d3.min(array)),
       d3.max(blockDomains, array => d3.max(array))
@@ -631,7 +634,7 @@ Stacked.prototype.verify = function ()
   }
   else
   {
-    /* traverse the axes of this stack. */
+    /* traverse the blocks of this axis. */
     this.blocks.forEach(
       function (b, index)
       {
@@ -1297,7 +1300,9 @@ Stack.removeStacked = function (axisName)
 Stack.prototype.removeStacked1 = function (axisName)
 {
   let result;
-  let axis = oa.axes[axisName],
+  let axis = oa.axes[axisName];
+  axis.unviewBlocks();
+  let
   removedAxis = this.remove(axisName);
   if (removedAxis === undefined)
     console.log("removeStacked", axisName);
@@ -2086,6 +2091,15 @@ Stacked.prototype.setZoomed = function (zoomed)
   // console.log('setZoomed', this, 'zoomed', axis1d.zoomed, '->', zoomed, axis1d);
   axis1d.setZoomed(zoomed);
 };
+
+Stacked.prototype.unviewBlocks = function ()
+{
+  this.blocks.forEach((sBlock) => {
+    if (sBlock.block)
+      sBlock.block.set('isViewed', false);
+  });
+};
+
 
 
 /*----------------------------------------------------------------------------*/

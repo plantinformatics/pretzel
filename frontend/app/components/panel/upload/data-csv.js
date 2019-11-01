@@ -1,17 +1,39 @@
+import Ember from 'ember';
+const { inject: { service } } = Ember;
+
 import UploadBase from './data-base'
 
+
 export default UploadBase.extend({
-  loadDatasets: function(id) {
+  dataset: service('data/dataset'),
+
+  /** Ensure that the Datasets and Blocks are loaded.
+   *
+   * The mapview route also performs dataset.taskGetList at startup. The task
+   * has .drop() so only 1 request will be sent.
+   */
+  datasetsTaskInstance : Ember.computed(function () {
+    let datasetsTaskInstance = this.get('dataset.taskGetList').perform();
+    datasetsTaskInstance.then((datasets) => this.set('datasets', datasets));
+    return datasetsTaskInstance;
+  }),
+  loadDatasets: function(id, datasets) {
+    console.log('loadDatasets', id, datasets);
     var that = this;
-    let datasets = that.get('store').peekAll('Dataset').toArray();
-    if (datasets.length == 0) {
-      // in case datasets haven't been loaded in yet, load them and refresh the list of datasets
-      that.get('store').query('Dataset', {filter: {'include': 'blocks'}}).then(function(data) {
+    if (! datasets) {
+      let datasetsTaskInstance = this.get('datasetsTaskInstance');
+      /* This is a minimal change to the original, replacing the store query
+       * with the equivalent task performance.
+       * loadDatasets() could be split into load and draw; not sure if reload is
+       * intended after save. */
+      datasetsTaskInstance.then(function(data) {
         if (data.toArray().length > 0) {
-          that.loadDatasets();
+          that.loadDatasets(id, data);
         }
       });
+      return;
     }
+
 
     //build dataset select
     $("#dataset").html('');
@@ -223,7 +245,7 @@ export default UploadBase.extend({
         if (selectedMap == 'new') {
           let parentId = $("#parent").val();
           let parent = null;
-          if (parentId.length > 0) {
+          if (parentId && parentId.length > 0) {
             datasets.forEach(function(dataset) {
               if (dataset.get('name') == parentId) {
                 parent = dataset;

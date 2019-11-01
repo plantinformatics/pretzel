@@ -4,6 +4,8 @@ import attr from 'ember-data/attr';
 // import { PartialModel, partial } from 'ember-data-partial-model/utils/model';
 const { inject: { service } } = Ember;
 import { A } from '@ember/array';
+import { and } from '@ember/object/computed';
+
 
 import { intervalMerge }  from '../utils/interval-calcs';
 
@@ -78,6 +80,7 @@ export default DS.Model.extend({
   hasFeatures : Ember.computed('featureCount', function () {
     return this.get('featureCount') > 0;
   }),
+  isData : and('isLoaded', 'hasFeatures'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -145,9 +148,9 @@ export default DS.Model.extend({
   /** If the dataset of this block has a parent, return the name of that parent (reference dataset).
    * @return the reference dataset name or undefined if none
    */
-  referenceDatasetName : Ember.computed('dataset', function () {
+  referenceDatasetName : Ember.computed('datasetId', function () {
     // copied out of referenceBlock(); could be factored
-    // this function can be simply   : Ember.computed.alias('dataset.parent.name')
+    // this function can be simply   : Ember.computed.alias('datasetId.parent.name')
     let 
       referenceBlock,
     dataset = this.get('datasetId'),
@@ -165,7 +168,7 @@ export default DS.Model.extend({
   /** If the dataset of this block has a parent, lookup the corresponding reference block in that parent, matching scope.
    * @return the reference block or undefined if none
    */
-  referenceBlock : Ember.computed('datasetId', 'scope', function () {
+  referenceBlock : Ember.computed('datasetId', 'datasetId.parent.name', 'scope', function () {
     let 
       referenceBlock,
     scope = this.get('scope'),

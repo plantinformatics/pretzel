@@ -19,6 +19,8 @@ export default Ember.Component.extend({
       this.set('previous.stacks', count);
       Ember.run.later(function () {
         stacks.oa.showResize(true, false); });
+      this.get('drawMap').draw({}, 'dataReceived');
+      stacks.oa.axisApi.stacksAxesDomVerify();
     }
     return count;
   }),

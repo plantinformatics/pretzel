@@ -68,7 +68,10 @@ export default DS.Model.extend(Ember.Evented, {
    */
   axes : Ember.computed('blocks', 'blocks.@each.axis', function () {
     let blocks = this.get('blocks'),
-    axes = blocks.map(function (b) { return b.get('axis'); });
+    axes = blocks.map(function (b) { return b.get('axis'); })
+    /* When an axis is deleted, block.axis can become undefined before the
+     * block-adj component is destroyed.  So handle axis === undefined. */
+      .filter((b) => b);
     console.log('axes', blocks, axes);
     return axes;
   }),

@@ -291,10 +291,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     }
     return axisS;
   }),
-  /** @return data blocks of this axis.
+  /** new dataBlocks() is replacing this version, renamed as axisSdataBlocks().
+   * @return data blocks of this axis.
    * These are the Ember records, not the stack Block-s.
    */
-  dataBlocks : Ember.computed('axisS', 'blockService.axesBlocks.@each', function () {
+  axisSdataBlocks : Ember.computed('axisS', 'blockService.axesBlocks.@each', function () {
     let axis = this.get('axisS'),
     dataBlocks,
     axesBlocks = this.get('blockService.axesBlocks');
@@ -315,15 +316,36 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     }
     return dataBlocks;
   }),
+  /** viewed blocks on this axis.
+   * For just the data blocks (depends on .hasFeatures), @see dataBlocks()
+   */
+  viewedBlocks : Ember.computed('axis', 'blockService.axesViewedBlocks2.[]', function () {
+    let
+    blocks,
+    axesBlocks = this.get('blockService.axesViewedBlocks2'),
+    referenceBlock = this.get('axis');
+      blocks = axesBlocks.get(referenceBlock);
+      console.log('viewedBlocks', referenceBlock, axesBlocks, blocks);
+    return blocks || [];
+  }),
+  dataBlocks : Ember.computed('viewedBlocks.@each.isData', function () {
+    let
+    /** block.isData is similar to the block.hasFeatures filtering which is done in loadedViewedChildBlocks() */
+    dataBlocks = this.get('viewedBlocks')
+      .filter((block) => block.get('isData'));
+    console.log('dataBlocks', dataBlocks);
+    return dataBlocks;
+  }),
+
   /** Reverse map dataBlocks : map from blockId to index position within the dataBlocks[].
    *
    * This can replace storeBlockIndex(), which is defined in
    * showTickLocations(); that is calculated at render time, whereas this is
    * dependent on the base data.
    */
-  blockIndexes : Ember.computed('dataBlocks.[]', function () {
+  blockIndexes : Ember.computed('viewedBlocks.[]', function () {
     // based on axis-tracks.js : blockIndexes(), translated to .reduce.
-    let dataBlocks = this.get('dataBlocks');
+    let dataBlocks = this.get('viewedBlocks');
     let blockIndexes =
     dataBlocks.reduce(function (result, b, i) {
       let d = b.get('id');  result[d] = i; 
@@ -388,6 +410,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   }),
   /** same as domainChanged, not used. */
   domainEffect : Ember.computed('domain', function () {
+    if (this.isDestroyed) return undefined;
     let domain = this.get('domain');
     if (domain) {
       /* Similar to this.updateDomain(), defined in axis-position.js, */
@@ -400,6 +423,18 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     }
     return domain;
   }),
+  /** This is the currently viewed domain.
+   * @return if zoomed return the zoom yDomain, otherwise blockDomain.
+   */
+  domain : Ember.computed('zoomed', 'blocksDomain', 'zoomedDomain', function () {
+    /** Actually .zoomedDomain will be == blocksDomain when not zoomed, but
+     * using it as a CP dependency causes problems, whereas blocksDomain has a
+     * more direct dependency on axis' blocks' features' locations.
+     */
+    let domain = this.get('zoomed') ? this.get('zoomedDomain') : this.get('blocksDomain');
+    return domain;
+  }),
+
 
   /** count of features of .dataBlocks
    * Maybe : Also depend on block.featuresForAxis, to trigger a request for features of
@@ -507,7 +542,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   /** position when last pathUpdate() drawn. */
   position : Ember.computed.alias('lastDrawn.yDomain'),
   /** position as of the last zoom. */
-  domain : Ember.computed.alias('currentPosition.yDomain'),
+  zoomedDomain : Ember.computed.alias('currentPosition.yDomain'),
 
   /** Updates when the array elements of .domain[] update.
    *  @return undefined; value is unused.
@@ -515,6 +550,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   domainChanged : Ember.computed(
     'domain.0', 'domain.1',
     function () {
+      if (this.isDestroyed) return undefined;
       let domain = this.get('domain');
       // domain is initially undefined
       if (domain) {
@@ -552,6 +588,19 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     let t = stacks.oa.svgContainer.transition().duration(750);
     axisApi.axisScaleChanged(axisID, t, true);
   },
+
+  ensureAxis : Ember.computed('viewedBlocks', function () {
+    let viewedBlocks = this.get('viewedBlocks');
+    let axisApi = stacks.oa.axisApi;
+    let count = viewedBlocks.length;
+    viewedBlocks.forEach((block) => {
+      if (! block.get('axis'))
+        axisApi.ensureAxis(block.id);
+      if (! block.get('axis'))
+        count--;
+    });
+    return count;
+  }),
 
   axisObj : Ember.computed('axes2d.[]', function () {
     let axes2d = this.get('axes2d'),

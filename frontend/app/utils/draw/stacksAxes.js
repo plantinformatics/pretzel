@@ -28,7 +28,26 @@ function stacksAxesDomVerify(stacks, svgContainer, unviewedIsOK)
       if (unviewedIsOK && ! isViewed)
         console.log('stacksAxesDomVerify unviewed', d, i, this, block, axis);
     });
+  stacksAxesDomLog(svgContainer);
 }
+
+function stacksAxesDomLog(svgContainer = undefined) {
+  let
+    go = svgContainer &&
+    svgContainer.selectAll('svg > g > g.stack > g.axis-outer'),
+  ga = go ?
+    go.selectAll('g > g.axis-all') :
+    d3.selectAll('g.axis-all'),
+  t = ga.selectAll('g > text > tspan'),
+  tg = t._groups.map((g) => Array.from(g));
+  console.log('stacksAxesDomLog',  t.data(),   t.nodes(), t.node());
+  tg.forEach((tgi) => {
+    let tgd = tgi.map((t) => t.__data__);
+    console.log(tgd);
+    tgd.forEach((b) => {if (b) b.log();});
+  });
+}
+
 
 /*----------------------------------------------------------------------------*/
 

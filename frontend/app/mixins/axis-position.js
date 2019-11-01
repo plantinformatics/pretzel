@@ -61,16 +61,17 @@ export default Mixin.create({
     if (axisS) {
       let y = axisS.getY(), ys = axisS.ys;
       updateDomain(axisS.y, axisS.ys, axisS);
-      let domain = axisS.y.domain(),
-      axisPosition = this.get('currentPosition');
-      console.log('updateDomain', this, /*y, ys,*/ 'domain', domain, axisPosition);
-      axisPosition.set('yDomain', domain);
+      let domain = axisS.y.domain();
+      this.setDomain(domain);
     }
   },
   /** Set the domain of the current position to the given domain
    */
   setDomain(domain)
   {
+    if (this.get('isDestroyed') || this.get('isDestroying'))
+      return;
+
     /* Update of domain of scales (this.getY() and this.ys) is already done in draw-map: zoom(),
      * whereas this.updateDomain() above uses stacksLayout : updateDomain().
      */

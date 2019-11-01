@@ -496,7 +496,8 @@ export default Ember.Component.extend(Ember.Evented, {
                     axisRange2Domain,
                     cmNameAdd,
                     makeMapChrName,
-                    axisIDAdd
+                    axisIDAdd,
+                    stacksAxesDomVerify : function (unviewedIsOK = false) { stacksAxesDomVerify(stacks, oa.svgContainer, unviewedIsOK); } 
                    };
     console.log('draw-map stacks', stacks);
 
@@ -1170,7 +1171,21 @@ export default Ember.Component.extend(Ember.Evented, {
       });
     });
 
+    /** Add the block to z[].
+     * based on receivedBlock().
+     */
+    function receivedBlock2(block) {
+      let retHash = {},
+      ch = block,
+      blockId = block.get('id'), // chr
+      rc = chrData(ch);
+      /** use same structure as routes/mapview.js */
+      retHash[blockId] = rc;
+      this.get('receiveChr')(blockId, rc, 'dataReceived');
+    }
+
     // Place new data blocks in an existing or new axis.
+    if (false)
     blocksToDraw.forEach(function(d){
       ensureAxis(d);
     });
@@ -1187,6 +1202,11 @@ export default Ember.Component.extend(Ember.Evented, {
      let dBlock = me.peekBlock(d),
       sBlock = oa.stacks.blocks[d],
       addedBlock = ! sBlock;
+
+        if (! oa.z[dBlock.id])
+          receivedBlock2.apply(me, [dBlock]);
+
+
       if (! sBlock) {
         /** sBlock may already be associated with dBlock */
         let view = dBlock.get('view');
@@ -1250,6 +1270,8 @@ export default Ember.Component.extend(Ember.Evented, {
           let parentDataset = oa.datasets[parentName];
           console.log("dataset", parentName, parentDataset);
           function matchParentAndScope (key, value) {
+            if (! zd)
+              zd = oa.z[d];
             let block = oa.z[key],
             match = (block.scope == zd.scope) && (block.dataset.get('name') == parentName);
             console.log(key, block, match);
@@ -1830,7 +1852,7 @@ export default Ember.Component.extend(Ember.Evented, {
         if (trace_stack > 1)
           console.log("ys exists", d, ys[d].domain(), y[d].domain(), ys[d].range());
       }
-      else
+      else if (domain)
       {
       ys[d] = d3.scaleLinear()
         .domain(maybeFlip(domain, a.flipped))
@@ -4246,16 +4268,18 @@ export default Ember.Component.extend(Ember.Evented, {
       let y = oa.y, svgContainer = oa.svgContainer;
       let yp = y[p],
       axis = oa.axes[p];
-      let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * axis.portion);
-      let idName = axisEltId(p),
-      axisS = svgContainer.select("#"+idName);
-      if (t)
-        axisS = axisS.transition(t);
-      axisS.call(yAxis);
-      if (updatePaths)
-        pathUpdate(t);
-      let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(p) + " > g.tick > text");
-      axisGS.attr("transform", yAxisTicksScale);
+      if (yp && axis) {
+        let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * axis.portion);
+        let idName = axisEltId(p),
+        axisS = svgContainer.select("#"+idName);
+        if (t)
+          axisS = axisS.transition(t);
+        axisS.call(yAxis);
+        if (updatePaths)
+          pathUpdate(t);
+        let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(p) + " > g.tick > text");
+        axisGS.attr("transform", yAxisTicksScale);
+      }
     }
 
     function brushended() {
@@ -5747,6 +5771,9 @@ export default Ember.Component.extend(Ember.Evented, {
     let me = this;
     let data = this.get('data');
     Ember.run.throttle(function () {
+      /** viewed[] is equivalent to data[], apart from timing differences.  */
+      let viewed = me.get('blockService.viewed');
+      viewed.forEach((block) => me.oa.axisApi.ensureAxis(block.id));
       me.draw(data, 'didRender');
     }, 1500);
 

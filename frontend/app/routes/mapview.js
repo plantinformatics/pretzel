@@ -71,6 +71,8 @@ let config = {
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
     let datasetsTask = taskGetList.perform(); // renamed from 'maps'
 
+    this.controllerFor(this.fullRouteName).setViewedOnly(params.mapsToView, true);
+
     let blockService = this.get('block');
     let allInitially = params.parsedOptions && params.parsedOptions.allInitially;
     let getBlocks = blockService.get('getBlocks' + (allInitially ? '' : 'Summary'));
@@ -102,6 +104,7 @@ let config = {
         return result;}, []),
       referenceBlockIds = referenceBlocks.map(function (block) { return block.get('id'); });
       console.log('referenceBlockIds', referenceBlockIds);
+      me.controllerFor(me.fullRouteName).setViewedOnly(referenceBlockIds, true);
       /* currently getBlocksSummary() just gets the featureCount, which for a
        * reference block is 0, so this step could be skipped if ! allInitially,
        * but later the summary may contain other information */
