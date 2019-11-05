@@ -1,5 +1,5 @@
 import ManageBase from './manage-base';
-
+import Ember from 'ember';
 
 /** @param: dataset **/
 
@@ -9,7 +9,7 @@ export default ManageBase.extend({
 
   ownedByMe: Ember.computed.alias("dataset.owner"),
   datasetMeta: Ember.computed("dataset.meta", function() {
-    return this.get("dataset.meta") || {}
+    return this.get("dataset.meta") || {};
   }),
 
   actions: {
@@ -18,17 +18,14 @@ export default ManageBase.extend({
     },
     mutateJson(json) {
       console.log('currentMeta => ', this.get("currentMeta"));
-      this.set("currentMeta", json)
+      this.set("currentMeta", json);
       console.log('currentMeta => ', this.get("currentMeta"));
-      // console.log('this.get("dataset.meta") => ', this.get("dataset.meta"))
-
       // this.get("dataset").save()
     },
     saveJSONToDB() {
-      this.set("dataset.meta", this.get("currentMeta"))
-      this.get("dataset").save()
-      this.send("toggleEditor")
+      this.set("dataset.meta", this.get("currentMeta"));
+      this.get("dataset").save();
+      this.send("toggleEditor");
     }
   },
-  
 });

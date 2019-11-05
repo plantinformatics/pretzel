@@ -3,12 +3,12 @@
 
   <table class="table table-striped dataset-table">
     <tbody>
-      <tr><td>Type</td><td>{{dataset.type}}</td></tr>
+      <tr><td>Namespace</td><td>{{dataset.namespace}}</td></tr>
+      <tr><td>Parent</td><td>{{dataset.parent.id}}</td></tr>
       <tr><td>Created</td><td>{{formatDate dataset.createdAt}}</td></tr>
       <tr><td>Last Updated</td><td>{{formatDate dataset.updatedAt}}</td></tr>
       <tr><td>Public</td><td>{{dataset.public}}</td></tr>
       <tr><td>Read Only</td><td>{{dataset.readOnly}}</td></tr>
-      <tr><td>Parent</td><td>{{dataset.parent.id}}</td></tr>
     </tbody>
   </table>
   <div class="metaeditor-panel">
