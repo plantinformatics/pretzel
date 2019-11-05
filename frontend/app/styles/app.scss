@@ -1268,7 +1268,33 @@ ul.blocks-found > li > div > div.ember-popover {
 /* -------------------------------------------------------------------------- */
 /* JSON editor, in RHS panel */
 
+.dataset-table {
+  margin-bottom: 0;
+}
+
 div.metaeditor-panel div.jsoneditor-menu {
   display: none;
+}
+
+div.metaeditor-panel > button {
+  position: absolute;
+  right: 15px;
+  z-index: 2;
+  margin: 2px;
+  padding: 2px 8px 2px 8px;
+  height: 23px;
+  font-size: 10pt;
+}
+
+div.metaeditor-panel > div {
+  position: relative;
+}
+
+div.metaeditor-panel div.jsoneditor-treepath {
+  visibility: hidden;
+}
+
+div.metaeditor-panel div.jsoneditor {
+  border: 1px solid #d3d3d3
 }
 /* -------------------------------------------------------------------------- */
