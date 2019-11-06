@@ -1,9 +1,22 @@
 <div>
-  {{#elem/icon-toggle state=detailed iconTrue='arrow-up' iconFalse='arrow-down' }}
+  {{#elem/icon-toggle state=detailed iconTrue='collapse-down' iconFalse='expand' }}
     {{#ember-tooltip side="right" delay=500}}
       Toggle the detailed display of the filter / grouping.
     {{/ember-tooltip}}
   {{/elem/icon-toggle}}
+
+  {{#elem/button-base
+     click=(action "filterByCurrentScopes")
+     icon='import'
+     classColour="info"
+  }}
+    <span>Copy current view
+      {{#ember-tooltip side="bottom" delay=500}}
+        Copy the scopes (chromosome names) of the currently displayed references and maps to the filter pattern, to filter the datasets displayed in the explorer.
+      {{/ember-tooltip}}
+    </span>
+  {{/elem/button-base}}
+
   {{#elem/button-base
     click=(action "deleteFilterOrGroup")
     icon='remove'
@@ -14,137 +27,148 @@
       Delete this filter / grouping;  all datasets will be displayed.
     {{/ember-tooltip}}
   {{/elem/button-base}}
-
-  {{#if detailed}}
-    <div class="line-input-label">
-      {{radio-button value='filter' groupValue=data.filterOrGroup
-        changed=(action changed this preventDefault=false)
-      }}
-      <label>Filter</label>
-      {{radio-button value='group' groupValue=data.filterOrGroup
-        changed=(action changed this preventDefault=false)
-      }}
-      <label>Group</label>
-    </div>
-  {{/if}}
-
-  {{#elem/button-base
-     click=(action "filterByCurrentScopes")
-     icon='arrow-left'
-     classColour="info"
-  }}
-    <span>Current Scopes
-      {{#ember-tooltip side="bottom" delay=500}}
-        Copy the scopes (chromosome names) of the currently displayed references and maps to the filter pattern, to filter the datasets displayed in the explorer.
-      {{/ember-tooltip}}
-    </span>
-  {{/elem/button-base}}
-
 </div>
 
-{{input
-  value=data.pattern
-  class="form-control"
-  enter=(action changed this)
-  placeholder="string or regular expression" }}
+<div class="filter-group-row">
+  {{input
+    value=data.pattern
+    class="form-control"
+    enter=(action changed this)
+    placeholder="string or regular expression" }}
+  {{#elem/button-base
+    click=(action changed this)
+    icon='ok'
+    classColour="info"
+    class='submit'
+  }}
+    {{#ember-tooltip side="left" delay=500}}
+      Apply filter/group
+    {{/ember-tooltip}}
+  {{/elem/button-base}}
+</div>
 
 {{#if detailed}}
 
+  {{!-- Filter or Grouping --}}
+  <div class="filter-group-row" style="margin-top:1em">
+    <label class="filter-group-col">Apply...</label>
+    <span class="filter-group-2cols">
+      {{radio-button value='filter' groupValue=data.filterOrGroup
+        changed=(action changed this preventDefault=false)
+      }}
+      Filter &nbsp;&nbsp;
+      {{radio-button value='group' groupValue=data.filterOrGroup
+        changed=(action changed this preventDefault=false)
+      }}
+      Grouping
+    </span>
+  </div>
+
   {{!-- scope of search can be : .name .scope .meta --}}
-  <div class="line-input-label">
-    <label style="margin-right:1em">Fields :</label>
-    {{input type="checkbox" name="fieldName" checked=data.fieldName
-      click=(action changed this preventDefault=false)
-    }}
-    <span>name</span>
-    {{input type="checkbox" name="fieldMeta" checked=data.fieldMeta
-      click=(action changed this preventDefault=false)
-    }}
-    <span>meta</span>
-    <br/>
-
-    <div class="light-border">
-      <ul class="nav nav-tabs li-active-extra vertical">
-        <!-- To change the initial active tab, change .active class of both .active-detail and .tab-pane; change also .in class of the latter.
-             also change send(applyTabActive ) in didInsertElement(), if applyTabActive is used.
-           -->
-        <li class="active-detail">
-          <a data-toggle="tab" href="#tab-apply-dataset" onclick={{action "applyTabActive" "dataset"}}>Dataset</a>
-          {{input type="checkbox" name="applyDataset" checked=data.applyDataset
-            click=(action changed this preventDefault=false)
-          }}
-        </li>
-        <li class="active-detail active">
-          <a data-toggle="tab" href="#tab-apply-block" onclick={{action "applyTabActive" "block"}}>Block</a>
-          {{input type="checkbox" name="applyBlock" checked=data.applyBlock
-            click=(action changed this preventDefault=false)
-          }}
-        </li>
-
-      </ul>
-
-      <div class="tab-content">
-
-        <div id="tab-apply-dataset" class="tab-pane fade">
-        </div>
-
-        <div id="tab-apply-block" class="tab-pane fade in active">
-          {{input type="checkbox" name="fieldScope" checked=data.fieldScope
-            click=(action changed this preventDefault=false)
-            disabled=(not data.applyBlock)
-          }}
-          <span>scope</span>
-          {{input type="checkbox" name="fieldNamespace" checked=data.fieldNamespace
-            click=(action changed this preventDefault=false)
-            disabled=(not data.applyBlock)
-          }}
-          <span>namespace</span>
-
-        </div>
-
-      </div>
-
-    </div>
-
+  <div class="filter-group-row">
+    <label class="filter-group-col">Search...</label>
+    <span class="filter-group-col">
+      {{input type="checkbox" name="fieldName" checked=data.fieldName
+        click=(action changed this preventDefault=false)
+      }}
+      Names
+    </span>
+    <span class="filter-group-col">
+      {{input type="checkbox" name="fieldMeta" checked=data.fieldMeta
+        click=(action changed this preventDefault=false)
+      }}
+      Metadata
+    </span>
   </div>
+
   {{!-- match string / pattern again key and/or value --}}
-  <div class="line-input-label clear-both">
-    <label>Match against :</label>
-    {{input type="checkbox" name="matchKey" checked=data.matchKey
-      click=(action changed this preventDefault=false)
-    }}
-    <span>Key</span>
-    {{input type="checkbox" name="matchValue" checked=data.matchValue
-      click=(action changed this preventDefault=false)
-    }}
-    <span>Value</span>
+  <div class="filter-group-row">
+    <label class="filter-group-col">Matching...</label>
+    <span class="filter-group-col">
+      {{input type="checkbox" name="matchKey" checked=data.matchKey
+        click=(action changed this preventDefault=false)
+      }}
+      Keys
+    </span>
+    <span class="filter-group-col">
+      {{input type="checkbox" name="matchValue" checked=data.matchValue
+        click=(action changed this preventDefault=false)
+      }}
+      Values
+    </span>
   </div>
 
-  <div style="display:flex">
-    {{!-- caseSensitive string / pattern --}}
-    <span>
-      {{input type="checkbox" name="isCaseSensitive" checked=data.isCaseSensitive
+  {{!-- Datasets --}}
+  <div class="filter-group-row">
+    <label class="filter-group-col">Include...</label>
+    <span class="filter-group-2cols">
+      {{input type="checkbox" name="applyDataset" checked=data.applyDataset
         click=(action changed this preventDefault=false)
       }}
-      <label>Case Sensitive</label>
+      Datasets
     </span>
+  </div>
 
-    {{!-- negate string / pattern --}}
-    <span>
-      {{input type="checkbox" name="isNegated" checked=data.isNegated
+  {{!-- Blocks --}}
+  <div class="filter-group-row">
+    <div class="filter-group-col" />
+    <span class="filter-group-col">
+      {{input type="checkbox" name="applyBlock" checked=data.applyBlock
         click=(action changed this preventDefault=false)
       }}
-      <label>Negate</label>
+      Blocks
     </span>
+    <span class="filter-group-col">
+      {{#elem/icon-toggle state=blockssubs iconTrue='collapse-down' iconFalse='expand' }}
+        {{#ember-tooltip side="bottom" delay=500}}
+          Toggle Block sub-options
+        {{/ember-tooltip}}
+      {{/elem/icon-toggle}}
+    </span>
+  </div>
+  {{#if blockssubs}}
+    <div class="filter-group-row">
+      <div class="filter-group-col" />
+      <span class="filter-group-col">
+        {{input type="checkbox" name="fieldScope" checked=data.fieldScope
+          click=(action changed this preventDefault=false)
+          disabled=(not data.applyBlock)
+        }}
+        Scope
+      </span>
+      <span class="filter-group-col">
+        {{input type="checkbox" name="fieldNamespace" checked=data.fieldNamespace
+          click=(action changed this preventDefault=false)
+          disabled=(not data.applyBlock)
+        }}
+        Namespace
+      </span>
+    </div>
+  {{/if}}
 
+  {{!-- Regex negation and case sensitivity --}}
+  <div class="filter-group-row">
     {{!-- pattern isRegExp --}}
     <span>
       {{input type="checkbox" name="isRegExp" checked=data.isRegExp
         click=(action changed this preventDefault=false)
       }}
-    <label>RegExp</label>
-  </span>
+      RegExp
+    </span>
+    {{!-- negate string / pattern --}}
+    <span>
+      {{input type="checkbox" name="isNegated" checked=data.isNegated
+        click=(action changed this preventDefault=false)
+      }}
+      Negated
+    </span>
+    {{!-- caseSensitive string / pattern --}}
+    <span>
+      {{input type="checkbox" name="isCaseSensitive" checked=data.isCaseSensitive
+        click=(action changed this preventDefault=false)
+      }}
+      Case Sensitive
+    </span>
   </div>
-
 {{/if}}
 

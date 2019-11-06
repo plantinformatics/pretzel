@@ -764,9 +764,10 @@ li.dropdown-submenu > ul.dropdown-menu {
 }
 .filter-groups > ul > li {
   margin-top: 1em;
+  padding-bottom: 1em;
 }
 li.filter-group {
-  border-top: #ccc 1px solid;
+  border-bottom: #ccc 1px solid;
 }
 li.filter-group > div > span {
   margin: 0 0.5em;
@@ -784,6 +785,11 @@ li.filter-group > div > span:last-child {
   padding: 3px 6px;
   margin: 0.5em 1em;
 }
+.filter-groups > div > button.add {
+  float: right;
+  padding: 3px 6px;
+  margin: 0.5em 1em;
+}
 .filter-group > div > button.delete {
   float: right;
 }
@@ -797,6 +803,20 @@ li.filter-group > div > span:last-child {
 .light-border > ul > li.active-detail > a {
   padding-top : 5px;
   padding-bottom : 5px;
+}
+
+.filter-group-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.filter-group-col {
+  width: 30%;
+}
+
+.filter-group-2cols {
+  width: 66%;
 }
 
 .line-input-label > input {
