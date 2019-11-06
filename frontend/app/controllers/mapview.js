@@ -74,7 +74,8 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     /** Change the state of the named block to not-viewed.
      */
     removeMap : function(mapName) {
-      this.get('setViewed').apply(this, [mapName, false]);
+      /* delay to avoid nextSibling of null in insertAfter() */
+      Ember.run.later(() => this.get('setViewed').apply(this, [mapName, false]));
     },
 
     onDelete : function (modelName, id) {

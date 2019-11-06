@@ -252,7 +252,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     /* axisS may not exist yet, so give Stacked a reference to this. */
     Stacked.axis1dAdd(axisName, this);
     let axisS = this.get('axisS');
-    if (! axisS || axisS.axis1d)
+    if (! axisS || (axisS.axis1d && ! axisS.axis1d.isDestroyed))
     {
       console.log('axis-1d:init', this, axisName, this.get('axis'), axisS, axisS && axisS.axis1d);
     }
