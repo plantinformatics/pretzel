@@ -1236,6 +1236,18 @@ div#left-panel > ul
   display : block;
 }
 
+div#left-panel > div.tab-content
+{
+  height: inherit;
+}
+
+div#left-panel > div.tab-content > div.tab-pane
+{
+  height: inherit;
+  overflow-y: scroll;
+}
+
+
 div#left-panel-view > div > div > div > ul > li > div
 {
   overflow-wrap: break-word;
