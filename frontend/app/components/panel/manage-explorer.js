@@ -937,35 +937,35 @@ export default ManageBase.extend({
   /** Given a dataset, filter its blocks. */
   datasetFilterBlocks(tabName, dataset) {
     let me = this;
-        let blocks = dataset.get('blocks').toArray();
-        let filterMatched = me.get('filterMatched');
-        let isFiltered = filterMatched[tabName];
-        let filterGroup = me.get('blockFilterGroup');
-        /* if filter, filter the blocks  */
-        if (! isFiltered && filterGroup) {
-          let
-            isBlockFilter = filterGroup && (filterGroup.filterOrGroup === 'filter') &&
-            (filterGroup.fieldScope || filterGroup.fieldNamespace);
-          /* grouping not implemented for blocks */
-          if (isBlockFilter) {
-            let value = me.datasetFilter(blocks, filterGroup, tabName);
-            if (value.length) {
-              /** if there the last element of value[] is justUnmatched(), then excise it. */
-              let last = value[value.length-1];
-              if (justUnmatched(last)) {
-                console.log('justUnmatched', last, value);
-                let unmatched = value.splice(value.length-1, 1);
-                console.log('after splice', value, unmatched);
-              }
-            }
-            if (value && value.length)
-              blocks = value;
-            else {
-              console.log('isBlockFilter', blocks, filterGroup, value);
-              blocks = [];
-            }
+    let blocks = dataset.get('blocks').toArray();
+    let filterMatched = me.get('filterMatched');
+    let isFiltered = filterMatched[tabName];
+    let filterGroup = me.get('blockFilterGroup');
+    /* if filter, filter the blocks  */
+    if (! isFiltered && filterGroup) {
+      let
+        isBlockFilter = filterGroup && (filterGroup.filterOrGroup === 'filter') &&
+        (filterGroup.fieldScope || filterGroup.fieldNamespace);
+      /* grouping not implemented for blocks */
+      if (isBlockFilter) {
+        let value = me.datasetFilter(blocks, filterGroup, tabName);
+        if (value.length) {
+          /** if there the last element of value[] is justUnmatched(), then excise it. */
+          let last = value[value.length-1];
+          if (justUnmatched(last)) {
+            console.log('justUnmatched', last, value);
+            let unmatched = value.splice(value.length-1, 1);
+            console.log('after splice', value, unmatched);
           }
         }
+        if (value && value.length)
+          blocks = value;
+        else {
+          console.log('isBlockFilter', blocks, filterGroup, value);
+          blocks = [];
+        }
+      }
+    }
     return blocks;
   },
   /** Given an array of datasets, group their blocks by the scope of the blocks. */
