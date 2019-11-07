@@ -5,6 +5,8 @@ import { breakPoint } from '../breakPoint';
 
 /*global d3 */
 
+const dLog = console.debug;
+
 /*----------------------------------------------------------------------------*/
 /* DOM-related functions for stacks & axes */
 
@@ -26,7 +28,7 @@ function stacksAxesDomVerify(stacks, svgContainer, unviewedIsOK)
           || ! ((isViewed = block.block.get('isViewed')) || unviewedIsOK))
         breakPoint('stacksAxesDomVerify', d, i, this, block, axis, isViewed);
       if (unviewedIsOK && ! isViewed)
-        console.log('stacksAxesDomVerify unviewed', d, i, this, block, axis);
+        dLog('stacksAxesDomVerify unviewed', d, i, this, block, axis);
     });
   stacksAxesDomLog(svgContainer);
 }
@@ -40,10 +42,10 @@ function stacksAxesDomLog(svgContainer = undefined) {
     d3.selectAll('g.axis-all'),
   t = ga.selectAll('g > text > tspan'),
   tg = t._groups.map((g) => Array.from(g));
-  console.log('stacksAxesDomLog',  t.data(),   t.nodes(), t.node());
+  dLog('stacksAxesDomLog',  t.data(),   t.nodes(), t.node());
   tg.forEach((tgi) => {
     let tgd = tgi.map((t) => t.__data__);
-    console.log(tgd);
+    dLog(tgd);
     tgd.forEach((b) => {if (b) b.log();});
   });
 }
@@ -94,7 +96,7 @@ const foregroundSelector = 'div#holder > svg > g > g.foreground';
 function selectBlockAdj(parent, blockAdjId)
 {
   let id = blockAdjEltId(blockAdjId);
-  console.log('selectBlockAdj', id);
+  dLog('selectBlockAdj', id);
   let baS = (parent || d3).select("#" + id);
   return baS;
 }

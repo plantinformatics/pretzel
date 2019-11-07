@@ -1,12 +1,14 @@
 import DS from 'ember-data';
 
-const trace_extract = 2;
+const trace_extract = 0;
+const dLog = console.debug;
 
 export default DS.JSONAPISerializer.extend({
   compositeKeys: ['block-id0', 'block-id1'],
 
   extractId(modelClass, resourceHash) {
-     console.log('extractId', modelClass, resourceHash);
+    if (trace_extract)
+     dLog('extractId', modelClass, resourceHash);
     let i0 = this.compositeKeys.map(
       (key) => {
         let i = resourceHash.attributes[key];

@@ -7,10 +7,12 @@ import ViewedBlocks from '../mixins/viewed-blocks';
 
 /* global d3 */
 
-console.log("controllers/mapview.js");
+const dLog = console.debug;
 
-let trace_dataflow = 1;
-let trace_select = 1;
+dLog("controllers/mapview.js");
+
+let trace_dataflow = 0;
+let trace_select = 0;
 
 export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   dataset: service('data/dataset'),
@@ -19,16 +21,16 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   actions: {
     // layout configuration
     setVisibility: function(side) {
-      // console.log("setVisibility", side);
+      // dLog("setVisibility", side);
       let visibility = this.get(`layout.${side}.visible`)
       this.set(`layout.${side}.visible`, !visibility);
     },
     setTab: function(side, tab) {
-      // console.log("setTab", side, tab);
+      // dLog("setTab", side, tab);
       this.set(`layout.${side}.tab`, tab);
     },
     updateSelectedFeatures: function(features) {
-    	// console.log("updateselectedFeatures in mapview", features.length);
+    	// dLog("updateselectedFeatures in mapview", features.length);
       this.set('selectedFeatures', features);
       this.send('setTab', 'right', 'selection');
     },
@@ -37,7 +39,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
      * being an array of features found in that block.
      */
     updateFeaturesInBlocks: function(featuresInBlocks) {
-      // console.log("updateFeaturesInBlocks in mapview", featuresInBlocks);
+      // dLog("updateFeaturesInBlocks in mapview", featuresInBlocks);
       this.set('featuresInBlocks', featuresInBlocks);
     },
 
@@ -57,7 +59,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
 
     updateRoute() {
       let block_viewedIds = this.get('block.viewedIds');
-      console.log("controller/mapview", "updateRoute", this.target.currentURL, block_viewedIds);
+      dLog("controller/mapview", "updateRoute", this.target.currentURL, block_viewedIds);
 
       let queryParams =
         {'mapsToView' : block_viewedIds,
@@ -79,26 +81,26 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     },
 
     onDelete : function (modelName, id) {
-      console.log('onDelete', modelName, id);
+      dLog('onDelete', modelName, id);
       if (modelName == 'block')
         this.send('removeMap', id); // block
       else
-        console.log('TODO : undisplay child blocks of', modelName, id);
+        dLog('TODO : undisplay child blocks of', modelName, id);
     },
     toggleShowUnique: function() {
-      console.log("controllers/mapview:toggleShowUnique()", this);
+      dLog("controllers/mapview:toggleShowUnique()", this);
       this.set('isShowUnique', ! this.get('isShowUnique'));
     }
     , isShowUnique: false
     , togglePathColourScale: function() {
-      console.log("controllers/mapview:togglePathColourScale()", this);
+      dLog("controllers/mapview:togglePathColourScale()", this);
       this.set('pathColourScale', ! this.get('pathColourScale'));
     }
     , pathColourScale: true,
 
     /** also load parent block */
     loadBlock : function loadBlock(block) {
-      console.log('loadBlock', block);
+      dLog('loadBlock', block);
       // also done in useTask() : (mixins/viewed-blocks)setViewed() : (data/block.js)setViewedTask()
       block.set('isViewed', true);
       let referenceBlock = block.get('referenceBlock');
@@ -123,7 +125,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     },
 
     selectBlock: function(block) {
-      console.log('SELECT BLOCK mapview', block.get('name'), block.get('mapName'), block.id, block);
+      dLog('SELECT BLOCK mapview', block.get('name'), block.get('mapName'), block.id, block);
       this.set('selectedBlock', block);
       d3.selectAll("ul#maps_aligned > li").classed("selected", false);
       d3.select('ul#maps_aligned > li[data-chr-id="' + block.id + '"]').classed("selected", true);
@@ -131,7 +133,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       function dataIs(id) { return function (d) { return d == id; }; }; 
       d3.selectAll("g.axis-outer").classed("selected", dataIs(block.id));
       if (trace_select)
-      d3.selectAll("g.axis-outer").each(function(d, i, g) { console.log(this); });
+      d3.selectAll("g.axis-outer").each(function(d, i, g) { dLog(this); });
       // this.send('setTab', 'right', 'block');
     },
     selectBlockById: function(blockId) {
@@ -149,11 +151,11 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
      */
     updateModel: function() {
       let model = this.get('model');
-      console.log("controller/mapview: model()", model, 'get datasets');
+      dLog("controller/mapview: model()", model, 'get datasets');
       // see related : routes/mapview.js:model()
       let datasetsTaskPerformance = model.get('availableMapsTask'),
       newTaskInstance = datasetsTaskPerformance.task.perform();
-      console.log(datasetsTaskPerformance, newTaskInstance);
+      dLog(datasetsTaskPerformance, newTaskInstance);
       model.set('availableMapsTask', newTaskInstance);
     }
   },
@@ -195,7 +197,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   },
 
   currentURLDidChange: function () {
-    console.log('currentURLDidChange', this.get('target.currentURL'));
+    dLog('currentURLDidChange', this.get('target.currentURL'));
   }.observes('target.currentURL'),
 
 
@@ -212,7 +214,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     function() {
       let viewedBlocksLength = this.get('block.viewed.length');
       if (trace_dataflow)
-        console.log("hasData", viewedBlocksLength);
+        dLog("hasData", viewedBlocksLength);
       return viewedBlocksLength > 0;
     }),
 
@@ -221,7 +223,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   queryParamsValue : Ember.computed(
     'block.viewedIds', 'block.viewedIds.[]', 'block.viewedIds.length',
     function() {
-      console.log('queryParamsValue');
+      dLog('queryParamsValue');
       this.send('updateRoute');
     }),
 
@@ -229,7 +231,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
    * to get the block data.
    */
   useTask : function (id) {
-    console.log("useTask", id);
+    dLog("useTask", id);
     let blockService = this.get('block');
 
     let getBlocks = blockService.get('getBlocksSummary');
@@ -237,7 +239,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
 
     let taskGet = blockService.get('taskGet');
     let block = taskGet.perform(id);
-    console.log("block", id, block);
+    dLog("block", id, block);
     // block.set('isViewed', true);
   }
 

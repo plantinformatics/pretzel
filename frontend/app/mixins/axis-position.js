@@ -8,6 +8,7 @@ import { Stacked } from '../utils/stacks';
 import { updateDomain } from '../utils/stacksLayout';
 import VLinePosition from '../models/vline-position';
 
+const dLog = console.debug;
 
 /** Mixed-into axis-1d to describe the axis position.
  *
@@ -55,7 +56,7 @@ export default Mixin.create({
       axisS = Stacked.getAxis(axisName);
       if (axisS) {
         this.set('axisS', axisS);
-        console.log('axis-1d:updateDomain', this, axisName, axisS);
+        dLog('axis-1d:updateDomain', this, axisName, axisS);
       }
     }
     if (axisS) {
@@ -77,14 +78,14 @@ export default Mixin.create({
      */
     let
       axisPosition = this.get('currentPosition');
-    console.log('setDomain', this, 'domain', domain, axisPosition);
+    dLog('setDomain', this, 'domain', domain, axisPosition);
     axisPosition.set('yDomain', domain);
   },
   /** Set the zoomed of the current position to the given value
    */
   setZoomed(zoomed)
   {
-    // console.log('setZoomed', this, 'zoomed', zoomed);
+    // dLog('setZoomed', this, 'zoomed', zoomed);
     // possibly .zoomed will move into .currentPosition
     this.set('zoomed', zoomed);
   }

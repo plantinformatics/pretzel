@@ -2,6 +2,10 @@ import { breakPoint } from '../utils/breakPoint';
 
 /*----------------------------------------------------------------------------*/
 
+const dLog = console.debug;
+
+/*----------------------------------------------------------------------------*/
+
 /** Copy fields from a chromosome (block) Ember DS object.
  * @param c chromosome (block) object in the Ember data store
  */
@@ -54,7 +58,7 @@ function chrData(c) {
     rc[featureName] = {location: featurePosition, aliases: featureAliases, id: featureId};
     // if (!range) console.log("chrData range", featureName, rc[featureName]);
   });
-  console.log("chrData", rc);
+  dLog("chrData", rc);
   return rc;
 }
 
@@ -86,7 +90,7 @@ function cmNameAdd(oa, block) {
   if (oa.datasets[datasetName] === undefined)
   {
     oa.datasets[datasetName] = dataset;
-    console.log(datasetName, dataset.get('meta.shortName'));
+    dLog(datasetName, dataset.get('meta.shortName'));
   }
 
   cmName[axis] = {mapName : c.mapName, chrName : c.chrName

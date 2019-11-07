@@ -5,6 +5,8 @@ import { /* Block, Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText, ax
 
 /* global d3 */
 
+const dLog = console.debug;
+
 export default Ember.Component.extend({
   block: service('data/block'),
   previous : {},
@@ -13,8 +15,8 @@ export default Ember.Component.extend({
     let count;
     let previous = this.get('previous.stacks');
     count = this.get('block.stacksCount');
-    console.log('stacks', count, stacks);
-    console.log(stacks, stacks.axesPCount, 'stacksCount', stacks.stacksCount);
+    dLog('stacks', count, stacks);
+    dLog(stacks, stacks.axesPCount, 'stacksCount', stacks.stacksCount);
     if (count != previous) {    // may not be needed
       this.set('previous.stacks', count);
       Ember.run.later(function () {
@@ -29,14 +31,14 @@ export default Ember.Component.extend({
   axesP : Ember.computed('block.viewed', function () {
     let blockService = this.get('block');
     let viewedBlocks = blockService.get('viewed');
-    // console.log('viewedBlocks', viewedBlocks);
+    // dLog('viewedBlocks', viewedBlocks);
     let axesP = viewedBlocks.filter(function (block) {
       let blockId = block.get('id'),
       referenceBlock = block.get('referenceBlock');
-      console.log('axesP', block, blockId, referenceBlock && referenceBlock.get('id'));
+      dLog('axesP', block, blockId, referenceBlock && referenceBlock.get('id'));
       return referenceBlock === undefined;
     });
-    console.log('axesP', axesP, axesP.mapBy('_internalModel.__data'));
+    dLog('axesP', axesP, axesP.mapBy('_internalModel.__data'));
     return axesP;
   })
 

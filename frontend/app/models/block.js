@@ -9,6 +9,10 @@ import { and } from '@ember/object/computed';
 
 import { intervalMerge }  from '../utils/interval-calcs';
 
+const trace_block = 0;
+const dLog = console.debug;
+
+
 const moduleName = 'models/block';
 
 
@@ -70,9 +74,9 @@ export default DS.Model.extend({
       let id = this.get('id'),
       odd = id.charCodeAt(id.length - 2) & 0x1;
       paths |= odd;
-      console.log(id, odd);
+      dLog(id, odd);
     }
-    // console.log('showPaths', dataset, paths);
+    // dLog('showPaths', dataset, paths);
     return paths;
   }),
 
@@ -88,7 +92,8 @@ export default DS.Model.extend({
 
   featuresLength : Ember.computed('features.[]', function () {
     let featuresLength = this.get('features.length');
-    console.log('featuresLength', featuresLength, this.get('id'));
+    if (trace_block)
+      dLog('featuresLength', featuresLength, this.get('id'));
     return featuresLength;
   }),
   /** @return undefined if ! features.length,
@@ -101,7 +106,8 @@ export default DS.Model.extend({
         .mapBy('value')
         .reduce(intervalMerge, []);
 
-      console.log('featuresDomainUpdate', featuresDomain, this.get('id'));
+      if (trace_block)
+        dLog('featuresDomainUpdate', featuresDomain, this.get('id'));
       this.setDomain(featuresDomain);
     }
     return featuresDomain;
@@ -109,7 +115,7 @@ export default DS.Model.extend({
   setDomain : function (domain) {
     if (domain) {
       let featuresDomain = this.get('featuresDomainValue');
-      function trace (i) { console.log('setDomain', featuresDomain, domain, i); }
+      function trace (i) { if (trace_block) dLog('setDomain', featuresDomain, domain, i); }
       if (! featuresDomain) {
         trace('initialise');
         featuresDomain = A(domain);
@@ -135,7 +141,8 @@ export default DS.Model.extend({
    */
   featuresDomain : Ember.computed('featuresDomainValue.[]', function () {
     let featuresDomain = this.get('featuresDomainValue');
-    console.log('featuresDomain', featuresDomain, this.get('id'));
+    if (trace_block)
+      dLog('featuresDomain', featuresDomain, this.get('id'));
     return featuresDomain;
   }),
 
@@ -160,7 +167,7 @@ export default DS.Model.extend({
     parent = dataset && dataset.get('parent'),
     parentName = parent && parent.get('name');  // e.g. "myGenome"
 
-    console.log('referenceDatasetName', dataset, reference, parent, parentName, parent && parent.get('id'));
+    dLog('referenceDatasetName', dataset, reference, parent, parentName, parent && parent.get('id'));
 
     return parentName;
   }),
@@ -180,7 +187,7 @@ export default DS.Model.extend({
     parent = dataset && dataset.get('parent'),
     parentName = parent && parent.get('name');  // e.g. "myGenome"
 
-    console.log('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent && parent.get('id'));
+    dLog('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent && parent.get('id'));
     if (parent)
     {
       referenceBlock = this.get('store').peekAll('block')
@@ -197,11 +204,12 @@ export default DS.Model.extend({
           match = (parentName == dataset2.get('name')) && (scope2 == scope);
           if ((parentName == dataset2.get('name')) || (dataset2 === parent))
           {
-            console.log(dataset2.get('name'), scope2, match);
+            if (trace_block)
+              dLog(dataset2.get('name'), scope2, match);
           }
           return match;})
       ;
-      console.log('referenceBlock', referenceBlock);
+      dLog('referenceBlock', referenceBlock);
       // expect referenceBlock.length == 0 or 1
       if (referenceBlock.length !== undefined)
         referenceBlock = referenceBlock[0] || undefined;
@@ -225,7 +233,7 @@ export default DS.Model.extend({
         axis = referenceBlock.get('view.axis');
     }
     if (! axis)
-      console.log('block axis', this.get('id'), this.get('view'), 'no view.axis for block or referenceBlock', referenceBlock);
+      dLog('block axis', this.get('id'), this.get('view'), 'no view.axis for block or referenceBlock', referenceBlock);
   }),
 
   /*--------------------------------------------------------------------------*/
@@ -249,10 +257,11 @@ export default DS.Model.extend({
 
     features.then(
       (result) => {
-        console.log(moduleName, fnName, result.length, blockId, this);
+        if (trace_block)
+          dLog(moduleName, fnName, result.length, blockId, this);
       },
       function (err) {
-        console.log(moduleName, fnName, 'reject', err);
+        dLog(moduleName, fnName, 'reject', err);
       }
     );
 

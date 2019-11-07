@@ -9,6 +9,7 @@ const { inject: { service } } = Ember;
 
 import { stacks, Stacked } from '../utils/stacks';
 
+const dLog = console.debug;
 
 export default DS.Model.extend(Ember.Evented, {
 
@@ -72,7 +73,7 @@ export default DS.Model.extend(Ember.Evented, {
     /* When an axis is deleted, block.axis can become undefined before the
      * block-adj component is destroyed.  So handle axis === undefined. */
       .filter((b) => b);
-    console.log('axes', blocks, axes);
+    dLog('axes', blocks, axes);
     return axes;
   }),
   axes1d : Ember.computed('axes', 'axes.@each', function () {
@@ -91,7 +92,7 @@ export default DS.Model.extend(Ember.Evented, {
      * block-adj will also be removed, so that state is transitory. */
       .filter(v => v !== undefined),
     axesDomains = axes1d.mapBy('domain');
-    console.log('axesDomains', axesDomains, axes1d);
+    dLog('axesDomains', axesDomains, axes1d);
     /* if .currentPosition.yDomain has not yet been set, then use the range of
      * the reference block of the axis.  The latter is the complete domain,
      * whereas the former is a subset - the zoom scope. */
@@ -102,13 +103,13 @@ export default DS.Model.extend(Ember.Evented, {
         // handle update
         if (! axis.blocks.length) {
           let newAxis = axes1d[i].axis.view.axis;
-          console.log('axesDomains', axis, newAxis);
+          dLog('axesDomains', axis, newAxis);
           axis = newAxis;
         }
         let rb = axis.referenceBlockS();
         if (rb) {
           ad = rb.block.get('range');
-          console.log('axesDomains(): use range of referenceBlockS', i, rb, ad);
+          dLog('axesDomains(): use range of referenceBlockS', i, rb, ad);
         }
       }
       return ad;
@@ -130,7 +131,7 @@ export default DS.Model.extend(Ember.Evented, {
         if (axis.stack.axes[0] !== axis) {
           axis = Stacked.getAxis(axis.axisName);
           if (! axis) {
-            console.log('axisDimensions getAxis', axes[i]);
+            dLog('axisDimensions getAxis', axes[i]);
           }
         }
       return axis.axisDimensions();
@@ -159,7 +160,7 @@ export default DS.Model.extend(Ember.Evented, {
           return change;
         });
         let change = domainChanges[0] || domainChanges[1];
-        console.log('domainChange', intervals, intervalsAxes, domainChanges, change);
+        dLog('domainChange', intervals, intervalsAxes, domainChanges, change);
         return change;
       },
       domainChange = ! intervals || domainsDiffer();
@@ -172,7 +173,7 @@ export default DS.Model.extend(Ember.Evented, {
     let pathsRequestCount = this.get('pathsRequestCount');
 
     let blockAdjId = this.get('blockAdjId');
-    console.log('pathsRequestCount', pathsRequestCount, blockAdjId);
+    dLog('pathsRequestCount', pathsRequestCount, blockAdjId);
     let p = this.call_taskGetPaths();
 
     return p;
@@ -204,7 +205,7 @@ export default DS.Model.extend(Ember.Evented, {
           r[fieldNames[i]] = v;
         return r;
       }, {});
-      console.log('lastResult', result);
+      dLog('lastResult', result);
       if (! Object.keys(result).length)
         result = undefined;
     }
@@ -259,7 +260,7 @@ export default DS.Model.extend(Ember.Evented, {
 
     // expected .drop() to handle this, but get "TaskInstance 'taskGetPaths' was cancelled because it belongs to a 'drop' Task that was already running. "
     if (! task.get('isIdle')) {
-      console.log('paths taskGetPaths', task.numRunning, task.numQueued, blockAdjId);
+      dLog('paths taskGetPaths', task.numRunning, task.numQueued, blockAdjId);
       // result = this.get('lastResult');
       if (task.numRunning > 1) {
         result = task.get('lastPerformed');
@@ -267,7 +268,7 @@ export default DS.Model.extend(Ember.Evented, {
       }
     }
 
-    console.log('task.perform');
+    dLog('task.perform');
     /* In some cases this gets : TaskInstance 'taskGetPaths' was canceled because it belongs to a 'restartable' Task that was .perform()ed again.
      * Adding these has not solved that:
      * .catch() here and finally() in task( )
@@ -277,7 +278,7 @@ export default DS.Model.extend(Ember.Evented, {
     result = task.perform(blockAdjId)
       .catch(function () {
         // arguments are 2 (direct & alias) of : {state: "fulfilled", value: [] }
-        console.log('call_taskGetPaths taskInstance.catch', blockAdjId); });
+        dLog('call_taskGetPaths taskInstance.catch', blockAdjId); });
 
     return result;
   },
@@ -303,9 +304,9 @@ export default DS.Model.extend(Ember.Evented, {
         paths = this.get('pathsPro').getPathsProgressive(this, blockAdjId, taskInstance);
       paths.then(
         function (result) {
-          console.log('block-adj paths', result.length, me.get('pathsResult'), id, me);
+          dLog('block-adj paths', result.length, me.get('pathsResult'), id, me);
         }, function (err) {
-          console.log('block-adj paths reject', err);
+          dLog('block-adj paths reject', err);
         }
       );
       result.direct = paths;
@@ -316,9 +317,9 @@ export default DS.Model.extend(Ember.Evented, {
         pathsAliases = this.get('pathsPro').getPathsAliasesProgressive(this, blockAdjId, taskInstance);
       pathsAliases.then(
         function (result) {
-          console.log('block-adj pathsAliases', result && result.length, me.get('pathsAliasesResult'), id, me);
+          dLog('block-adj pathsAliases', result && result.length, me.get('pathsAliasesResult'), id, me);
         }, function (err) {
-          console.log('block-adj pathsResult reject', err);
+          dLog('block-adj pathsResult reject', err);
         }
       );
       result.alias = pathsAliases;
@@ -342,17 +343,17 @@ export default DS.Model.extend(Ember.Evented, {
       elapsed;
 
       if (lastStarted && ((elapsed = now - lastStarted) < 5000)) {
-        console.log('taskGetPaths : elapsed', elapsed);
+        dLog('taskGetPaths : elapsed', elapsed);
 
         let lastPerformed = this.get('lastPerformed');
         if (lastPerformed)
           return lastPerformed;
         if (false && lastPerformed) {
           lastPerformed.then(function () {
-            console.log('taskGetPaths lastPerformed', this, arguments);
+            dLog('taskGetPaths lastPerformed', this, arguments);
           });
           let val = yield lastPerformed;
-          console.log('taskGetPaths lastPerformed yield', val);
+          dLog('taskGetPaths lastPerformed yield', val);
           return val;
         }
       }
@@ -360,32 +361,32 @@ export default DS.Model.extend(Ember.Evented, {
       if (! task.get('isIdle')) {
         try {
           let timeoutResult = yield timeout(2000); // throttle
-          console.log('taskGetPaths : timeoutResult', timeoutResult);
+          dLog('taskGetPaths : timeoutResult', timeoutResult);
         }
         finally {
-          console.log('taskGetPaths : finally', this, arguments);  
+          dLog('taskGetPaths : finally', this, arguments);  
         }
       }
 
       this.set('lastStarted', now);
       let 
         lastPerformed = this.get('lastPerformed');
-      console.log('taskGetPaths : lastStarted now', now, lastPerformed);
+      dLog('taskGetPaths : lastStarted now', now, lastPerformed);
       if (lastPerformed.error)
-        console.log('taskGetPaths lastPerformed.error', lastPerformed.error);
+        dLog('taskGetPaths lastPerformed.error', lastPerformed.error);
       result =
         yield this.getPaths(blockAdjId, lastPerformed);
       result = yield this.flowsAllSettled(result);
-      console.log('taskGetPaths result', result);
+      dLog('taskGetPaths result', result);
 
     }
     finally {
       if (! result) {
-        console.log('taskGetPaths cancelled');
+        dLog('taskGetPaths cancelled');
         let 
           lastPerformed = this.get('lastPerformed');
         if (lastPerformed.error)
-          console.log('taskGetPaths lastPerformed.error', lastPerformed.error);
+          dLog('taskGetPaths lastPerformed.error', lastPerformed.error);
       }
       /* close EventSource.
        * This is achieved by passing this taskInstance (lastPerformed) via

@@ -1,6 +1,8 @@
 import Ember from 'ember';
 import DS from 'ember-data';
 
+const trace_FG = 0;
+
 const fieldNames=[
   'filterOrGroup',
   'applyDataset',
@@ -92,8 +94,8 @@ export default DS.Model.extend({
       match = this.get('patternsRE')
       .find(function (regexp) {
         let found = regexp.exec(a);
-        if (found)
-          console.log('match', regexp, a);
+        if (found && trace_FG)
+          dLog('match', regexp, a);
         return found;
       });
     }
@@ -106,8 +108,8 @@ export default DS.Model.extend({
         if (! isCaseSensitive)
           pattern = pattern.toLowerCase();
         let found = a.includes(pattern);
-        if (found)
-          console.log('match', pattern, a);
+        if (found && trace_FG)
+          dLog('match', pattern, a);
         return found;
       });
     }

@@ -24,6 +24,10 @@ import { updateDomain } from '../../utils/stacksLayout';
 
 /*------------------------------------------------------------------------*/
 
+const trace_stack = 0;
+
+const dLog = console.debug;
+
 /* milliseconds duration of transitions in which axis ticks are drawn / changed.
  * Match with time used by draw-map.js : zoom() and resetZoom() : 750.
  * also @see   dragTransitionTime.
@@ -56,7 +60,7 @@ const className = "horizTick";
 function blockWithTicks(block)
 {
   let showPaths = block.block.get('showPaths');
-  // console.log('blockWithTicks', block.axisName, showPaths);
+  // dLog('blockWithTicks', block.axisName, showPaths);
   return ! showPaths;
 }
 
@@ -90,7 +94,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     axisObj = this.axis1d.get('axisObj'),
   /** using the computed function extended() would entail recursion. */
   extended = axisObj && axisObj.extended;
-  console.log('showTickLocations', extended, axisObj, groupName);
+  dLog('showTickLocations', extended, axisObj, groupName);
 
   function blockTickEltId(block) { return className + '_' + groupName + '_' + block.axisName; }
 
@@ -105,7 +109,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     gS.exit().remove();
     function storeBlockIndex (block, i) {
       blockIndex[block.getId()] = i;
-      console.log('blockIndex', block.getId(), i);
+      dLog('blockIndex', block.getId(), i);
     };
     let gA = gS.enter()
       .append('g')
@@ -115,7 +119,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     /** data blocks of the axis, for calculating blockIndex i.e. colour.
      * colour assignment includes non-visible blocks . */
     let blocksUnfiltered = extended ? [] : axis.dataBlocks(false);
-    console.log('blockIndex', axisName, axis, axis.blocks);
+    dLog('blockIndex', axisName, axis, axis.blocks);
     blocksUnfiltered.forEach(storeBlockIndex);
 
     function featuresOfBlock (block) {
@@ -132,7 +136,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
       })(blockR),
       features = featuresAll
         .filter(inRange);
-      console.log(blockId, features.length);
+      dLog(blockId, features.length);
       return features;
     };
 
@@ -151,7 +155,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
          * index within axis.blocks[], i.e. the reference block is not included. */
         i = blockIndex[blockId];
       if (i2 < 2)
-         console.log(this, 'stroke', blockId, i);
+         dLog(this, 'stroke', blockId, i);
         return axisTitleColour(blockId, i+1) || 'black';
       }
 
@@ -198,7 +202,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
      * inRange() (above), and keyFn(), pathFn(), hoverTextFn() below.
      */
     let featureName = getAttrOrCP(feature, 'name');
-    // console.log('keyFn', feature, featureName); 
+    // dLog('keyFn', feature, featureName); 
     return featureName;
   };
   function pathFn (feature) {
@@ -254,11 +258,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     let axisS = this.get('axisS');
     if (! axisS || (axisS.axis1d && ! axisS.axis1d.isDestroyed))
     {
-      console.log('axis-1d:init', this, axisName, this.get('axis'), axisS, axisS && axisS.axis1d);
+      dLog('axis-1d:init', this, axisName, this.get('axis'), axisS, axisS && axisS.axis1d);
     }
     else {
       axisS.axis1d = this;
-      console.log('axis-1d:init', this, this.get('axis.id'), axisS); axisS.log();
+      if (trace_stack) {
+        dLog('axis-1d:init', this, this.get('axis.id'), axisS); axisS.log();
+      }
     }
   },
 
@@ -271,13 +277,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     /* useTransition could be passed down to showTickLocations()
      * (also could pass in duration or t from showResize()).
      */
-    console.log("resized in components/axis-1d");
+    dLog("resized in components/axis-1d");
     if (heightChanged)
       this.renderTicksDebounce();
   },
 
   axisStackChanged : function() {
-    console.log("axisStackChanged in components/axis-1d");
+    dLog("axisStackChanged in components/axis-1d");
     this.renderTicksDebounce();
   },
 
@@ -305,14 +311,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       dataBlocks = [];
       let
         axisName = this.get('axis.id');
-      console.log('dataBlocks', axesBlocks, axisName, dataBlocks);
+      dLog('dataBlocks', axesBlocks, axisName, dataBlocks);
     }
     else {
     let
     /** stack Block-s. */
       dataBlocksS = axis.dataBlocks();
       dataBlocks = dataBlocksS.map(function (b) { return b.block; });
-    console.log(dataBlocksS, 'axesBlocks', axesBlocks, axis.axisName);
+    dLog(dataBlocksS, 'axesBlocks', axesBlocks, axis.axisName);
     }
     return dataBlocks;
   }),
@@ -325,7 +331,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     axesBlocks = this.get('blockService.axesViewedBlocks2'),
     referenceBlock = this.get('axis');
       blocks = axesBlocks.get(referenceBlock);
-      console.log('viewedBlocks', referenceBlock, axesBlocks, blocks);
+      dLog('viewedBlocks', referenceBlock, axesBlocks, blocks);
     return blocks || [];
   }),
   dataBlocks : Ember.computed('viewedBlocks.@each.isData', function () {
@@ -333,7 +339,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     /** block.isData is similar to the block.hasFeatures filtering which is done in loadedViewedChildBlocks() */
     dataBlocks = this.get('viewedBlocks')
       .filter((block) => block.get('isData'));
-    console.log('dataBlocks', dataBlocks);
+    dLog('dataBlocks', dataBlocks);
     return dataBlocks;
   }),
 
@@ -351,7 +357,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       let d = b.get('id');  result[d] = i; 
       return result;
     }, {});
-    console.log('blockIndexes', blockIndexes, dataBlocks);
+    dLog('blockIndexes', blockIndexes, dataBlocks);
     return blockIndexes;
   }),
   /** @return the domains of the data blocks of this axis.
@@ -380,7 +386,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     /** equivalent : Stacked:referenceDomain() */
     referenceRange = this.get('referenceBlock.range');
     if (referenceRange) {
-      console.log('referenceRange', referenceRange, blocksDomains);
+      dLog('referenceRange', referenceRange, blocksDomains);
       blocksDomains.push(referenceRange);
     }
     return blocksDomains;
@@ -392,7 +398,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     let 
       blocksDomains = this.get('blocksDomains'),
     domain = intervalExtent(blocksDomains);
-    console.log('blocksDomain', blocksDomains, domain);
+    dLog('blocksDomain', blocksDomains, domain);
     return domain;
   }),
   blocksDomainEffect : Ember.computed('blocksDomain', function () {
@@ -415,7 +421,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     if (domain) {
       /* Similar to this.updateDomain(), defined in axis-position.js, */
       let axisS = this.get('axisS');
-      console.log('domainEffect', domain, axisS);
+      dLog('domainEffect', domain, axisS);
       if (axisS) {
         let y = axisS.getY(), ys = axisS.ys;
         updateDomain(axisS.y, axisS.ys, axisS);
@@ -451,8 +457,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
      * seemingly because of multiple requests in a short time.
      */
     let featuresForAxis; // = dataBlocks.map(function (b) { return b.get('featuresForAxis'); } );
-    console.log(this, dataBlocks, featureLengths, 'featureLength', featureLength, featuresForAxis /*.length*/);
-    let axisS = this.get('axisS'); if (axisS) axisS.log();
+    dLog(this, dataBlocks, featureLengths, 'featureLength', featureLength, featuresForAxis /*.length*/);
+    let axisS = this.get('axisS'); if (axisS && trace_stack) axisS.log();
     return featureLength;
   }),
   /** When featureLength changes, render.
@@ -471,7 +477,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     /** Update the featureCount shown in the axis block title */
     this.axisTitleFamily();
     if (featureLength)
-      console.log('featureLengthEffect', this.get('axis.id'), featureLength);
+      dLog('featureLengthEffect', this.get('axis.id'), featureLength);
 
     return featureLength;
   }),
@@ -482,7 +488,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       let
         gAxis = axis.selectAll(),
       axisTitleS = gAxis.select("g.axis-outer > g.axis-all > text");
-      console.log(
+      dLog(
         'axisTitleFamily', axisTitleS.nodes(), axisTitleS.node(),
         gAxis.nodes(), gAxis.node());
       axisApi.axisTitleFamily(axisTitleS);
@@ -504,18 +510,18 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   zoomedAxis_unused : function(axisID_t) {
     let axisID = axisID_t[0],
     axisName = this.get('axis.id');
-    console.log("zoomedAxis in components/axis-1d", axisID_t, axisName);
+    dLog("zoomedAxis in components/axis-1d", axisID_t, axisName);
     if (axisID == axisName)
     {
-      console.log('zoomedAxis matched', axisID, this.get('axis'));
+      dLog('zoomedAxis matched', axisID, this.get('axis'));
       // Not currently needed because axisStackChanged() already received.
       // this.renderTicksDebounce.apply(this, axisID_t);
       let axisS = this.get('axisS'),
       dimensions = axisS.axisDimensions();
-      console.log('zoomedAxis setDomain', this.get('domain'), this.get('currentPosition'), this.get('currentPosition.yDomain'), dimensions.domain);
+      dLog('zoomedAxis setDomain', this.get('domain'), this.get('currentPosition'), this.get('currentPosition.yDomain'), dimensions.domain);
       this.setDomain(dimensions.domain);
       // this.set('zoomed', dimensions.zoomed);
-      console.log('zoomedAxis', axisS, dimensions);
+      dLog('zoomedAxis', axisS, dimensions);
     }
   },
   setDomain_unused(domain) {
@@ -527,7 +533,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
      * So zoomedAxis() and setDomain() are disabled by appending _unused to their names.
      */
     if (! isEqual(cpDomain, domain)) {
-      console.log('setDomain', cpDomain, domain, attr);
+      dLog('setDomain', cpDomain, domain, attr);
     }
     if (! attr)
       this.set('domain', Ember.A(domain));
@@ -537,7 +543,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
         this.set('domain.' + i, d);
       });
     }
-    console.log('setDomain', domain, attr /*, this.attrs*/);
+    dLog('setDomain', domain, attr /*, this.attrs*/);
   },
   /** position when last pathUpdate() drawn. */
   position : Ember.computed.alias('lastDrawn.yDomain'),
@@ -555,10 +561,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       // domain is initially undefined
       if (domain) {
         // use the VLinePosition:toString() for the position-s
-        console.log('domainChanged', domain, this.get('axisS'), ''+this.get('currentPosition'), ''+this.get('lastDrawn'));
+        dLog('domainChanged', domain, this.get('axisS'), ''+this.get('currentPosition'), ''+this.get('lastDrawn'));
         // this.notifyChanges();
         if (! this.get('axisS'))
-          console.log('domainChanged() no axisS yet', domain, this.get('axis.id'));
+          dLog('domainChanged() no axisS yet', domain, this.get('axis.id'));
         else
           this.updateAxis();
       }
@@ -566,7 +572,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     }),
   notifyChanges() {
     let axisID = this.get('axis.id');
-    console.log('notifyChanges', axisID);
+    dLog('notifyChanges', axisID);
 
     let axisApi = stacks.oa.axisApi;
     let t = stacks.oa.svgContainer.transition().duration(750);
@@ -584,7 +590,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     // subset of notifyChanges()
     let axisApi = stacks.oa.axisApi;
     let axisID = this.get('axis.id');
-    console.log('updateAxis', axisID);
+    dLog('updateAxis', axisID);
     let t = stacks.oa.svgContainer.transition().duration(750);
     axisApi.axisScaleChanged(axisID, t, true);
   },
@@ -606,7 +612,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     let axes2d = this.get('axes2d'),
     axisID = this.get('axis.id'),
     axisObj = axes2d.findBy('axisID', axisID);
-    console.log('axes2d', axes2d, axisID, 'axisObj', axisObj, axisObj && axisObj.extended);
+    dLog('axes2d', axes2d, axisID, 'axisObj', axisObj, axisObj && axisObj.extended);
     return axisObj;
   }),
   extended : Ember.computed('axisObj', 'axisObj.extended', function () {
@@ -618,7 +624,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
      */
     extended = (axisObj === undefined) ? false : this.get('axisObj.extended'),
     axisID = this.get('axis.id');
-    console.log('extended', extended, axisID, this.get('axisObj'));
+    dLog('extended', extended, axisID, this.get('axisObj'));
     if (extended)
       this.removeTicks();
     else
@@ -638,10 +644,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   },
   didInsertElement() {
     this._super(...arguments);
-    console.log('axis-1d didInsertElement', this, this.get('listen') !== undefined);
+    dLog('axis-1d didInsertElement', this, this.get('listen') !== undefined);
   },
   willDestroyElement() {
-    console.log('willDestroyElement');
+    dLog('willDestroyElement');
     this.removeTicks();
     this._super(...arguments);
   },
@@ -663,19 +669,19 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
      * Can rename it to axis, assuming this structure remains.
      */
     let block = this.get('axis'), blockId = block.get('id');
-    console.log('constructFeatureTicks', blockId, this);
+    dLog('constructFeatureTicks', blockId, this);
     let axisApi = this.get('drawMap.oa.axisApi');
     let oa = this.get('drawMap.oa');
     let axis = oa.axes[blockId];
-    // console.log('axis-1d renderTicks', block, blockId, axis);
+    // dLog('axis-1d renderTicks', block, blockId, axis);
 
     /* If block is a child block, don't render, expect to get an event for the
      * parent (reference) block of the axis. */
     if (! axis)
-      console.log('renderTicks block', block, blockId, oa.stacks.blocks[blockId]);
+      dLog('renderTicks block', block, blockId, oa.stacks.blocks[blockId]);
     else {
       let featureTicks = new FeatureTicks(axis, axisApi, this);
-      console.log('featureTicks', featureTicks);
+      dLog('featureTicks', featureTicks);
       this.set('featureTicks',  featureTicks);
     }
   },
@@ -686,7 +692,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       featureTicks = this.get('featureTicks');
     }
     if (! featureTicks)
-      console.log('renderTicks', featureTicks);
+      dLog('renderTicks', featureTicks);
     else
       featureTicks.showTickLocations(undefined, true, 'notPaths', true);
   },
@@ -696,7 +702,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
    * axisStackChanged()
    */
   renderTicksDebounce(axisID_t) {
-    // console.log('renderTicksDebounce', axisID_t);
+    // dLog('renderTicksDebounce', axisID_t);
     // renderTicks() doesn't use axisID_t; this call chain is likely to be refined yet.
     /* using throttle() instead of debounce() - the former has default immediate==true.
      * It is possible that the last event in a group may indicate a change which

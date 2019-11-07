@@ -1,4 +1,5 @@
 
+const dLog = console.debug;
 
 // let  bbox  = { x: 1, y : 2, width: 20, height : undefined };
 
@@ -37,7 +38,7 @@ function brushClip(gp, axisID) {
     .attr("clip-path", "url(#" + axisClipId + ")") // clip with the rectangle
     .merge(gg);
 
-  console.log(axisID, bbox, 'brushClip', gp.node(), gprm.node(), gg.node(), g.node());
+  dLog(axisID, bbox, 'brushClip', gp.node(), gprm.node(), gg.node(), g.node());
 
   return g;
 }

@@ -22,7 +22,8 @@ let initRecursionCount = 0;
  */
 const showUnmatched = false;
 
-let trace_dataTree = 1;
+let trace_dataTree = 0;
+const dLog = console.debug;
 
 /** If true, use datatypeFromFamily() to intuit a dataset type for datasets
  * which do not define meta.type.
@@ -79,10 +80,10 @@ export default ManageBase.extend({
     }
     else {
       task = this.get('model.availableMapsTask');
-      promise = task.then(function (value) { console.log('datasets from task', value); return value; });
+      promise = task.then(function (value) { dLog('datasets from task', value); return value; });
     }
     resultP = DS.PromiseArray.create({ promise: promise });
-    console.log(task, promise, 'resultP', resultP);
+    dLog(task, promise, 'resultP', resultP);
     return resultP;
   }),
   datasetType: null,
@@ -118,7 +119,7 @@ export default ManageBase.extend({
   dataPre: Ember.computed('datasets', 'datasets.[]', 'filter', function() {
     let availableMaps = this.get('datasets')
     let filter = this.get('filter')
-    console.log('dataPre', availableMaps, filter);
+    dLog('dataPre', availableMaps, filter);
     // perform filtering according to selectedChr
     // let filtered = availableMaps //all
     if (filter == 'private') {
@@ -140,7 +141,7 @@ export default ManageBase.extend({
       let
         filterGroups = this.get('filterGroups')
         .filter((filterGroup) => {
-          console.log('definedFilterGroups filterGroup', filterGroup);
+          dLog('definedFilterGroups filterGroup', filterGroup);
           return filterGroup.get('defined');
         });
       return filterGroups;
@@ -335,7 +336,7 @@ export default ManageBase.extend({
             dataTyped[typeName].push(d);
           }
         }
-        console.log('dataParentTyped', dataTyped);
+        dLog('dataParentTyped', dataTyped);
         return dataTyped;
       }),
       promiseP = DS.PromiseObject.create({ promise: promise });
@@ -391,7 +392,7 @@ export default ManageBase.extend({
     me = this,
     parentsTypes = me.get('parentsTypes'),
     promise = datasetGroupsP.then(addParentAndScopeLevels);
-    console.log('parentsTypes', parentsTypes);
+    dLog('parentsTypes', parentsTypes);
     /** Given datasets grouped into tabs, add a grouping level for the parent of the datasets,
      * and a level for the scope of the blocks of the datasets.
      * (for those tabs for which it is enabled - e.g. children)
@@ -399,7 +400,7 @@ export default ManageBase.extend({
      */
     function addParentAndScopeLevels(datasetGroups) {
       if (trace_dataTree)
-        console.log('datasetGroups', datasetGroups);
+        dLog('datasetGroups', datasetGroups);
       let
         result = {};
       for (var key in datasetGroups) {
@@ -473,7 +474,7 @@ export default ManageBase.extend({
         let dataTyped = {};
         let parents = me.get('parents')
           .map(function (p) { return p.content || p; });
-        console.log('parents', me.get('parents'), parents);
+        dLog('parents', me.get('parents'), parents);
         for (let i=0; i < datasets.length; i++) {
           let d = datasets[i],
           typeName = d.get('meta.type');
@@ -514,7 +515,7 @@ export default ManageBase.extend({
             dataTyped[typeName].push(d);
           }
         }
-        console.log('dataTyped', dataTyped);
+        dLog('dataTyped', dataTyped);
 
         // dataTyped['children'] = me.parentAndScope(dataTyped['children']);
         let levelMeta = me.levelMeta;
@@ -614,7 +615,7 @@ export default ManageBase.extend({
     }
 
     let
-      unused1 = filterGroup && console.log('dataFG filterGroup', filterGroup, filterGroup.filterOrGroup, filterGroup.pattern),
+      unused1 = filterGroup && (trace_dataTree > 1) && dLog('dataFG filterGroup', filterGroup, filterGroup.filterOrGroup, filterGroup.pattern),
     /** datasets is an array of either datasets or blocks.  fieldScope and fieldNamespace are only applicable to blocks  */
     isDataset = datasets && datasets[0] && datasets[0].constructor.modelName === 'dataset',
     metaFieldName = 'Created',
@@ -865,13 +866,15 @@ export default ManageBase.extend({
                   let 
                     value = me.datasetsToBlocksByScope(tabName, levelMeta, children);
                   me.levelMeta.set(value, 'Parent');
-                  console.log('me.levelMeta.set(', value, 'Parent');
+                  if (trace_dataTree > 1)
+                    dLog('me.levelMeta.set(', value, 'Parent');
                   result2[name] = value;
                 }
                 else {
                   if (dataset.then)
                     dataset = DS.PromiseObject.create({ promise: dataset });
-                  console.log(name, levelMeta, 'levelMeta.set(', dataset, 'Dataset');
+                  if (trace_dataTree > 1)
+                  dLog(name, levelMeta, 'levelMeta.set(', dataset, 'Dataset');
                   levelMeta.set(dataset, 'Dataset');
                   result2[name] = dataset;
                 }
@@ -923,7 +926,7 @@ export default ManageBase.extend({
           else {
             blocks = filterBlocks(dataset);
           }
-          console.log(name, levelMeta, 'levelMeta.set(', blocks, 'Blocks');
+          dLog(name, levelMeta, 'levelMeta.set(', blocks, 'Blocks');
           levelMeta.set(blocks, 'Blocks');
           result2[name] = blocks;
           return result2;
@@ -961,7 +964,8 @@ export default ManageBase.extend({
         if (value && value.length)
           blocks = value;
         else {
-          console.log('isBlockFilter', blocks, filterGroup, value);
+          if (trace_dataTree)
+          dLog('isBlockFilter', blocks, filterGroup, value);
           blocks = [];
         }
       }
@@ -1004,7 +1008,7 @@ export default ManageBase.extend({
       let
         id = tab_explorer_prefix + text2EltId(datasetType);
       if (trace_dataTree)
-        console.log('datasetTypeTabId', id, datasetType);
+        dLog('datasetTypeTabId', id, datasetType);
       return id;
     },
     keysLength(object) {
@@ -1024,11 +1028,11 @@ export default ManageBase.extend({
       /* note : fg === this.get('filterGroups.0')
        */
       if (trace_dataTree)
-        console.log('filterGroupsChanged', fg, this.get('filterGroups.0'), this.get('filterGroups.0'), this.get('filterGroups.0.isCaseSensitive'));
+        dLog('filterGroupsChanged', fg, this.get('filterGroups.0'), this.get('filterGroups.0'), this.get('filterGroups.0.isCaseSensitive'));
       // Wait for update of values of fg which are bound input elements.
       let me = this;
       Ember.run.later(function () {
-        console.log('filterGroupsChanged later', fg, me.get('filterGroups.0'), me.get('filterGroups.0'), me.get('filterGroups.0.isCaseSensitive'));
+        dLog('filterGroupsChanged later', fg, me.get('filterGroups.0'), me.get('filterGroups.0'), me.get('filterGroups.0.isCaseSensitive'));
         me.incrementProperty('filterGroupsChangeCounter');
       });
     },

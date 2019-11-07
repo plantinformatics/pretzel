@@ -1,6 +1,6 @@
 <ul>
   {{#each data as |filterGroup|}}
-    {{log 'filterGroup' filterGroup}}
+    {{!-- log 'filterGroup' filterGroup --}}
     {{panel/filter-group
       data=filterGroup
       changed=(action changed filterGroup)

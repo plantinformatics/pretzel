@@ -1,6 +1,10 @@
 
 /* global Ember */
 
+const trace_values = 0;
+const dLog = console.debug;
+
+
 /*----------------------------------------------------------------------------*/
 /* Functional programming utilities.
  * Lodash is already included by various packages, so may use that, or possibly Ramda.
@@ -138,13 +142,16 @@ function leafCount(levelMeta, values) {
           scopes = value,
           scopeNames =  Object.keys(scopes);
         count1 = scopeNames.reduce((sum, s) => {
-          console.log(sum, s, scopes[s]);
+          if (trace_values > 1)
+          dLog(sum, s, scopes[s]);
           return sum+=scopes[s].length;
         }, count1);
       }
+      if (trace_values > 1)
       console.log(value, valueType, count1);
       return count1;
     }, 0);
+  if (trace_values)
   console.log('leafCount', values, datasetIds, count0);
 
   return count0;

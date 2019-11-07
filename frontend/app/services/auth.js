@@ -9,7 +9,8 @@ import { after } from 'lodash/function';
 
 /* global EventSource */
 
-const trace_paths = 1;
+const trace_paths = 0;
+const dLog = console.debug;
 
 /** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
 const SSE_EventID_EOF = '-1';
@@ -59,12 +60,14 @@ export default Service.extend({
   },
 
   getPaths(blockA, blockB, withDirect, options) {
-    console.log('services/auth getPaths', blockA, blockB, withDirect, options);
+    if (trace_paths)
+      dLog('services/auth getPaths', blockA, blockB, withDirect, options);
     return this._ajax('Blocks/paths', 'GET', {blockA : blockA, blockB : blockB, withDirect, options : options}, true)
   },
 
   getPathsProgressive(blockA, blockB, intervals, options) {
-    console.log('services/auth getPathsProgressive', blockA, blockB, intervals, options);
+    if (trace_paths)
+      dLog('services/auth getPathsProgressive', blockA, blockB, intervals, options);
     return this._ajax('Blocks/pathsProgressive', 'GET', {blockA : blockA, blockB : blockB, intervals, options : options}, true);
   },
 
@@ -81,10 +84,12 @@ export default Service.extend({
       '&blockA=' + blockA +
       '&blockB=' + blockB + '&' +
       Ember.$.param({intervals : filteredIntervalParams});
-    console.log(url, blockA, blockB, intervals, filteredIntervalParams, options);
+    if (trace_paths)
+      dLog(url, blockA, blockB, intervals, filteredIntervalParams, options);
 
     function interruptStream() {
-      console.log('interruptStream', this, arguments);
+      if (trace_paths)
+        dLog('interruptStream', this, arguments);
     }
     let promise = new Promise((resolve, reject) => {
       this.listenEvents(url, options, resolve, reject);
@@ -110,7 +115,8 @@ export default Service.extend({
     let
       dataEvent = options.dataEvent,
     closePromise = options.closePromise;
-    console.log('listenEvents', url, dataEvent === resolve, arguments);
+    if (trace_paths)
+      dLog('listenEvents', url, dataEvent === resolve, arguments);
     /* from example : https://www.terlici.com/2015/12/04/realtime-node-expressjs-with-sse.html */
     if (!!window.EventSource) {
       var source = new EventSource(url, {withCredentials: true});
@@ -136,13 +142,16 @@ export default Service.extend({
       // source.onmessage = onMessage;
 
       source.addEventListener('open', function(e) {
-        console.log("Connection was opened", e.type, e);
+        if (trace_paths)
+          dLog("Connection was opened", e.type, e);
       }, false);
       source.addEventListener('close', function(e) {
-        console.log("Connection was closed", e.type, e);
+        if (trace_paths)
+          dLog("Connection was closed", e.type, e);
       }, false);
       function closeSource () {
-        console.log('closePromise', url, source.readyState, source.readyState !== EventSource.CLOSED, arguments, this);
+        if (trace_paths)
+          dLog('closePromise', url, source.readyState, source.readyState !== EventSource.CLOSED, arguments, this);
         // .close() does nothing if the connection is already closed, refn https://developer.mozilla.org/en-US/docs/Web/API/EventSource
         if (source.readyState !== EventSource.CLOSED)
           source.close();
@@ -153,7 +162,8 @@ export default Service.extend({
       function onError(e) {
         let state = e.eventPhase; // this.readyState seems constant.
         const stateName = ['CONNECTING', 'OPEN', 'CLOSED'];
-        console.log('listenEvents', e.type, e, this, ".readyState", this.readyState, state, stateName[state], e);
+        if (trace_paths)
+          dLog('listenEvents', e.type, e, this, ".readyState", this.readyState, state, stateName[state], e);
         if (state === EventSource.CLOSED) {
           resolve([]);
         }
@@ -168,7 +178,8 @@ export default Service.extend({
   },
 
   getPathsAliasesProgressive(blockIds, intervals, options) {
-    console.log('services/auth getPathsAliasesProgressive', blockIds, intervals, options);
+    if (trace_paths)
+      dLog('services/auth getPathsAliasesProgressive', blockIds, intervals, options);
     return this._ajax('Blocks/pathsAliasesProgressive', 'GET', {blockIds, intervals, options}, true);
   },
 
@@ -185,13 +196,15 @@ export default Service.extend({
       '&blockIds[]=' + blockIds[0] +
       '&blockIds[]=' + blockIds[1] + '&' +
       Ember.$.param({intervals : filteredIntervalParams});
-    console.log(url, blockIds, intervals, filteredIntervalParams, options);
+    if (trace_paths)
+      dLog(url, blockIds, intervals, filteredIntervalParams, options);
 
     let promise = new Promise((resolve, reject) => {
       this.listenEvents(url, options, resolve, reject);
     });
     function interruptStream() {
-      console.log('interruptStream', this, arguments);
+      if (trace_paths)
+        dLog('interruptStream', this, arguments);
     }
     promise.catch(interruptStream, 'handle Stream pre-emption by caller');
 
@@ -210,24 +223,28 @@ export default Service.extend({
    * @param options	type:object,	http: optionsFromRequest
    */
   getPathsByReference(blockA, blockB, reference, max_distance, options) {
-    console.log('services/auth getPathsByReference', blockA, blockB, reference, max_distance, options);
+    if (trace_paths)
+      dLog('services/auth getPathsByReference', blockA, blockB, reference, max_distance, options);
     return this._ajax('Blocks/pathsByReference', 'GET', {blockA : blockA, blockB : blockB, reference, max_distance, options : options}, true);
   },
 
   getBlockFeaturesCount(blocks, options) {
-    console.log('services/auth getBlockFeaturesCount', blocks, options);
+    if (trace_paths)
+      dLog('services/auth getBlockFeaturesCount', blocks, options);
     return this._ajax('Blocks/blockFeaturesCount', 'GET', {blocks, options}, true);
   },
 
   getBlockFeaturesInterval(blocks, intervals, options) {
-    console.log('services/auth getBlockFeaturesInterval', blocks, intervals, options);
+    if (trace_paths)
+      dLog('services/auth getBlockFeaturesInterval', blocks, intervals, options);
     return this._ajax('Blocks/blockFeaturesInterval', 'GET', {blocks, intervals, options}, true);
   },
 
   /** 
    */
   featureSearch(featureNames, options) {
-    console.log('services/auth featureSearch', featureNames, options);
+    if (trace_paths)
+      dLog('services/auth featureSearch', featureNames, options);
     return this._ajax('Features/search', 'GET', {filter : featureNames, options}, true);
   },
 
@@ -236,7 +253,7 @@ export default Service.extend({
   },
 
   checkError(data, mapper) {
-    // console.log('checkError')
+    // dLog('checkError')
     try {
       if (data.error && data.error[0]) {
         return data.error[0]

@@ -4,6 +4,8 @@ import Ember from 'ember';
 /*--------------------------------------------------------------------------*/
 const { Mixin } = Ember;
 
+const dLog = console.debug;
+
 /** Listen for axisStackChanged and zoomedAxis on drawMap and call the
  * corresponding functions.
  * Used by axes-1d.js and axis-2d.js
@@ -15,9 +17,9 @@ export default Mixin.create({
 
     /** handle of the draw-map */
     let drawMap = this.get('drawMap'); 
-    console.log("listen", drawMap);
+    dLog("listen", drawMap);
     if (drawMap === undefined)
-      console.log('parent component drawMap not passed');
+      dLog('parent component drawMap not passed');
     else {
       drawMap.on('axisStackChanged', this, 'axisStackChanged');
       drawMap.on('resized', this, 'resized');

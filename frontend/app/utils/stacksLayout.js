@@ -2,6 +2,8 @@ import {  maybeFlip, maybeFlipExtent }  from '../utils/draw/axis';
 
 import { Stacked } from './stacks';
 
+const dLog = console.debug;
+
 /*----------------------------------------------------------------------------*/
 
 /** update ys  and y for the given axis,
@@ -24,7 +26,7 @@ function updateDomain(y, ys, axis)
     axisName = axis.axisName,
   a = axis,
   domain = a.parent ? a.parent.getDomain() : a.getDomain();
-  console.log('updateDomain', axisName, domain, a, a.blocks[0] && a.blocks[0].z);
+  dLog('updateDomain', axisName, domain, a, a.blocks[0] && a.blocks[0].z);
   domain = maybeFlip(domain, a.flipped);
   y.domain(domain);
   ys.domain(domain);
@@ -45,13 +47,13 @@ function updateRange(y, ys, vc, a)
 {
   // factored out of draw-map.js
 
-  // console.log("updateRange", a, a.axisName, ys.length, ys[a.axisName]);
+  // dLog("updateRange", a, a.axisName, ys.length, ys[a.axisName]);
   // if called before ys is set up, do nothing.
   if (ys && ys[a.axisName])
   {
     let myRange = a.yRange();
     let axisName = a.axisName;
-    console.log("updateRange", a.axisName, a.position, a.portion, myRange, vc.yRange);
+    dLog("updateRange", a.axisName, a.position, a.portion, myRange, vc.yRange);
     ys[a.axisName].range([0, myRange]);
     y[a.axisName].range([0, vc.yRange]);
 

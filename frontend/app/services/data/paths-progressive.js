@@ -14,11 +14,13 @@ import {
          storePath
        } from "../../utils/draw/collate-paths";
 
-let trace_pathsP = 1;
+let trace_pathsP = 0;
 
 import { blockAdjKeyFn } from '../../utils/draw/stacksAxes';
 
 /* global Promise */
+
+const dLog = console.debug;
 
 //------------------------------------------------------------------------------
 
@@ -58,7 +60,7 @@ export default Service.extend({
     blockAdjIdText = blockAdjKeyFn(blockAdjId),
     r = store.peekRecord('blockAdj', blockAdjIdText);
     if (r)
-      console.log('ensureBlockAdj', blockAdjId, r._internalModel.__attributes, r._internalModel.__data);
+      dLog('ensureBlockAdj', blockAdjId, r._internalModel.__attributes, r._internalModel.__data);
     if (! r) {
       let ba = {
         type : 'block-adj',
@@ -78,9 +80,10 @@ export default Service.extend({
       let
       ban = store.normalize('blockAdj', ba);
       r = store.push(ban);
-        console.log('ensureBlockAdj', ban);
+        dLog('ensureBlockAdj', ban);
     }
-        console.log('ensureBlockAdj', r, r.get('blockAdjId'), r._internalModel, r._internalModel.__data, store, ba);
+      if (trace_pathsP)
+        dLog('ensureBlockAdj', r, r.get('blockAdjId'), r._internalModel, r._internalModel.__data, store, ba);
     }
     return r;
   },
@@ -92,7 +95,7 @@ export default Service.extend({
     if (! blockAdj)
     {
       /** this is now done in ensureBlockAdj(), before the request. */
-      console.log('blockAdj not found', blockAdj, blockAdjId);
+      dLog('blockAdj not found', blockAdj, blockAdjId);
     }
     return blockAdj;
   },
@@ -108,12 +111,13 @@ export default Service.extend({
    * Used when blockAdj===undefined, and also passed to blocksUpdateDomain().
    */
   getPathsProgressive(blockAdj, blockAdjId, taskInstance) {
-    console.log('getPathsProgressive', blockAdj, blockAdjId);
+    if (trace_pathsP)
+      dLog('getPathsProgressive', blockAdj, blockAdjId);
     let paths;
     if (! blockAdj)
       blockAdj = this.findBlockAdj(blockAdjId);
     if (! blockAdj) {
-      console.log('getPathsProgressive not found:', blockAdjId);
+      dLog('getPathsProgressive not found:', blockAdjId);
     }
     else {  // this can move to models/block-adj
       let domainChange = blockAdj.get('domainChange');
@@ -123,7 +127,8 @@ export default Service.extend({
       }
       else
         paths = this.requestPathsProgressive(blockAdj, blockAdjId, taskInstance);
-      console.log('getPathsProgressive', blockAdj, blockAdjId, result || promiseText(paths));
+      if (trace_pathsP)
+        dLog('getPathsProgressive', blockAdj, blockAdjId, result || promiseText(paths));
     }
     return paths;
   },
@@ -158,10 +163,10 @@ export default Service.extend({
     dbPathFilter = ! noDbPathFilter,
     params = {axes : intervals, page,  dbPathFilter };
     intervals.forEach(function (i) {
-      // console.log(i.domain);
+      // dLog(i.domain);
       // Block : domain may be [false, false] before Block features are known. ?
       if (i.domain && (i.domain[0] === false) && (i.domain[1] === false)) {
-        console.log('intervalParams, empty Block ?', i.domain);
+        dLog('intervalParams, empty Block ?', i.domain);
       }
       if (i.domain && (i.domain[0] === 0) && (i.domain[1] === 0))
         i.domain = undefined;
@@ -212,7 +217,7 @@ export default Service.extend({
           if (! res || ! res.length)
             return;
           if (trace_pathsP > 1)
-            console.log('path request then', res.length);
+            dLog('path request then', res.length);
           for (let i=0; i < res.length; i++) {
             for (let j=0; j < 2; j++) {
               let repeats = res[i].alignment[j].repeats,
@@ -248,9 +253,9 @@ export default Service.extend({
         receivedData,
         function(err, status) {
           if (pathsViaStream)
-            console.log('path request', 'pathsViaStream', blockA, blockB, me, err, status);
+            dLog('path request', 'pathsViaStream', blockA, blockB, me, err, status);
           else
-          console.log('path request', blockA, blockB, me, err.responseJSON[status] /* .error.message*/, status);
+          dLog('path request', blockA, blockB, me, err.responseJSON[status] /* .error.message*/, status);
         });
     return promise;
   },
@@ -260,7 +265,7 @@ export default Service.extend({
     if (fr) {
       let verifyOK = verifyFeatureRecord(fr, f);
       if (! verifyOK)
-        console.log('peekRecord feature', f._id, f, fr._internalModel.__data, fr);
+        dLog('peekRecord feature', f._id, f, fr._internalModel.__data, fr);
     }
     else
     {
@@ -269,7 +274,7 @@ export default Service.extend({
       let c = store.push(fn);
       storeFeature(stacks.oa, flowsService, f.name, c, f.blockId);
       if (trace_pathsP > 2)
-        console.log(c.get('id'), c._internalModel.__data);
+        dLog(c.get('id'), c._internalModel.__data);
     }
 
   },
@@ -286,14 +291,15 @@ export default Service.extend({
     if (pathsViaStream) {
       if (res.length) {
         let pathsAccumulated = pathsResult || [];
-        // console.log('exists ', resultFieldName, exists.get(resultFieldName), pathsAccumulated.length, res.length);
+        // dLog('exists ', resultFieldName, exists.get(resultFieldName), pathsAccumulated.length, res.length);
         /** Currently the API result may overlap previous results. */
         let resIdName = resultIdName(res[0]);
         let i = pathsAccumulated.findIndex(function (r) { return resultIdName(r) === resIdName; } );
         if (i === -1) {
           pathsResult = pathsAccumulated.concat(res);
           if (pathsAccumulated.length < 3)
-            console.log('pathsAccumulated', pathsAccumulated, res);
+            if (trace_pathsP)
+              dLog('pathsAccumulated', pathsAccumulated, res);
         }
       }
     }
@@ -302,7 +308,7 @@ export default Service.extend({
     if (res.length || ! pathsViaStream) {
       exists.set(resultFieldName, pathsResult);
       if (trace_pathsP > 1 + pathsViaStream)
-        console.log(resultFieldName, pathsResult, exists, exists._internalModel.__attributes, exists._internalModel.__data);
+        dLog(resultFieldName, pathsResult, exists, exists._internalModel.__attributes, exists._internalModel.__data);
     }
 
     return firstResult;
@@ -318,14 +324,15 @@ export default Service.extend({
             blocks.map(function (blockId) {
               let
                 block = stacks.blocks[blockId];
-              console.log(blockId, 'before domainCalc, block.z', block.z); let
+              if (trace_pathsP)
+                dLog(blockId, 'before domainCalc, block.z', block.z); let
               /** updateDomain() uses axis domainCalc() but that does not recalculate block domain. */
               blockDomain = block.domain = block.domainCalc(),
               axis = Stacked.getAxis(blockId);
               if (! axis) {
                 // This can occur when axis is being deleted by the time the result arrives.
                 if ((axis = stacks.axesP [blockId])) {
-                  console.log('blocksUpdateDomain', blocks, blockId, axis);
+                  dLog('blocksUpdateDomain', blocks, blockId, axis);
                   block.log(); axis.log();
                 }
               }
@@ -333,7 +340,8 @@ export default Service.extend({
               /** axis domainCalc() also does not re-read the block's domains if axis.domain is already defined. */
                 let
               axisDomain = axis.domain = axis.domainCalc();
-              console.log(blockId, 'blockDomain', blockDomain, axisDomain, block.z);
+                if (trace_pathsP)
+                  dLog(blockId, 'blockDomain', blockDomain, axisDomain, block.z);
 
               // if zoomed in, then extension to the block's domain does not alter the viewed domain.
               if (! axis.axis1d.zoomed) {
@@ -356,12 +364,13 @@ export default Service.extend({
    * and may be passed to blocksUpdateDomain() when that call is added.
    */
   getPathsAliasesProgressive(blockAdj, blockAdjId, taskInstance) {
-    console.log('getPathsAliasesProgressive', blockAdj, blockAdjId);
+    if (trace_pathsP)
+      dLog('getPathsAliasesProgressive', blockAdj, blockAdjId);
     let pathsAliases;
     if (! blockAdj)
       blockAdj = this.findBlockAdj(blockAdjId);
     if (! blockAdj) {
-      console.log('getPathsAliasesProgressive not found:', blockAdjId);
+      dLog('getPathsAliasesProgressive not found:', blockAdjId);
     }
     else {
       let flowsService = this.get('flowsService'),
@@ -382,7 +391,8 @@ export default Service.extend({
       }
       else
         pathsAliases = this.requestAliases(blockAdj, blockAdjId, taskInstance);
-      console.log('getPathsAliasesProgressive', blockAdj, blockAdjId, result || promiseText(pathsAliases));
+      if (trace_pathsP)
+        dLog('getPathsAliasesProgressive', blockAdj, blockAdjId, result || promiseText(pathsAliases));
     }
     return pathsAliases;
   },
@@ -390,7 +400,7 @@ export default Service.extend({
   requestAliases : function (blockAdj, blockAdjId, taskInstance) {
     let reqName = 'path alias request';
     if (trace_pathsP > 2)
-      console.log(reqName, blockAdjId);
+      dLog(reqName, blockAdjId);
     let store = this.get('store');
     let me = this;
     let flowsService = this.get('flowsService');
@@ -415,12 +425,12 @@ export default Service.extend({
           if (! res || ! res.length)
             return;
           if (trace_pathsP > 1)
-            console.log('path request then', res.length);
+            dLog('path request then', res.length);
           if (false)
             me.pushAlias(res);
 
           if (trace_pathsP > 2 - (res.length > 1))
-            console.log('featureAObj', res[0].featureAObj, res[0].featureBObj, res[0], res);
+            dLog('featureAObj', res[0].featureAObj, res[0].featureBObj, res[0], res);
           /** true if result is from pathsAliases() (via dbLookupAliases()), otherwise from apiLookupAliases(). */
           let fromMongoQuery = (res.length && res[0].aliased_features) !== undefined;
           if (fromMongoQuery) {
@@ -460,7 +470,8 @@ export default Service.extend({
         }
 
     promise.catch(function (err, status) {
-      console.log(reqName, 'pathsAliasesViaStream', blockAdjId, 'catch', me, err, status);
+      if (trace_pathsP)
+        dLog(reqName, 'pathsAliasesViaStream', blockAdjId, 'catch', me, err, status);
     });
 
     promise
@@ -468,16 +479,16 @@ export default Service.extend({
         receivedData,
         function(err, status) {
           if (pathsViaStream)
-            console.log(reqName, 'pathsAliasesViaStream', blockAdjId, me, err, status);
+            dLog(reqName, 'pathsAliasesViaStream', blockAdjId, me, err, status);
           else
-          console.log(reqName, blockAdjId, me, err.responseJSON[status] /* .error.message*/, status);
+          dLog(reqName, blockAdjId, me, err.responseJSON[status] /* .error.message*/, status);
         });
     return promise;
   },
 
   pushAlias : function (pathsAliases) {
-    // if (trace_pathsP > 2)
-      console.log('path push', pathsAliases.length);
+    if (trace_pathsP > 2)
+      dLog('path push', pathsAliases.length);
     let pushData = 
       {
         data: {
@@ -500,8 +511,8 @@ export default Service.extend({
     typeName = 'axis-brush',
     axisBrushId = block.id,
     r = store.peekRecord(typeName, axisBrushId);
-    if (r)
-      console.log('ensureAxisBrush', block.id, r._internalModel.__attributes, r._internalModel.__data);
+    if (r && trace_pathsP)
+      dLog('ensureAxisBrush', block.id, r._internalModel.__attributes, r._internalModel.__data);
     if (! r) {
       let ba = {
         // type : typeName,
@@ -525,17 +536,19 @@ export default Service.extend({
    */
   getBlockFeaturesInterval(blockId) {
     let fnName = 'getBlockFeaturesInterval';
-    console.log(fnName, blockId);
+    if (trace_pathsP)
+      dLog(fnName, blockId);
     let block = this.get('store').peekRecord('block', blockId);
     let features;
     if (! block) {
-      console.log(fnName, ' not found:', blockId);
+      dLog(fnName, ' not found:', blockId);
     }
     else {
         features = this.get('getBlockFeaturesIntervalTask').perform(blockId);
       features
         .then(function (features) {
-          console.log("getBlockFeaturesIntervalTask", blockId, features);
+          if (trace_pathsP)
+            dLog("getBlockFeaturesIntervalTask", blockId, features);
         });
     }
     return features;
@@ -545,7 +558,8 @@ export default Service.extend({
     let
       fnName = 'getBlockFeaturesIntervalTask',
         features = yield this.requestBlockFeaturesInterval(blockId);
-      console.log(fnName, blockId, promiseText(features));
+      if (trace_pathsP)
+        dLog(fnName, blockId, promiseText(features));
     return features;
     /* tried .enqueue().maxConcurrency(3), but got 2 identical requests, so .drop() instead;
      * Perhaps later: split requestBlockFeaturesInterval() into parameter gathering and request;
@@ -578,7 +592,8 @@ export default Service.extend({
      * paramAxis.domain. */
     brushedDomain = axisBrush && axisBrush.brushedDomain,
     paramAxis = intervalParams.axes[0];
-    console.log('domain', paramAxis.domain, '-> brushedDomain', brushedDomain);
+    if (trace_pathsP)
+      dLog('domain', paramAxis.domain, '-> brushedDomain', brushedDomain);
     /* When the block is first viewed, if it does not have a reference which
      * defines the range then the domain of the block's features is not known,
      * and the axis.domain[] will be [0, 0].
@@ -607,7 +622,7 @@ export default Service.extend({
       me.get('auth').getBlockFeaturesInterval(requestBlockIds, intervalParams, /*options*/{});
         function receivedData(res){
           if (trace_pathsP > 1)
-            console.log(apiName, ' request then', res.length);
+            dLog(apiName, ' request then', res.length);
           let firstResult;
           for (let i=0; i < res.length; i++) {
               let f = res[i];
@@ -630,9 +645,9 @@ export default Service.extend({
         receivedData,
         function(err, status) {
           // if (pathsViaStream)
-          //  console.log(apiName, ' request', 'pathsViaStream', blockA, me, err, status);
+          //  dLog(apiName, ' request', 'pathsViaStream', blockA, me, err, status);
           // else
-            console.log(apiName, ' request', blockA, me, err.responseJSON[status] /* .error.message*/, status);
+            dLog(apiName, ' request', blockA, me, err.responseJSON[status] /* .error.message*/, status);
         });
     });
     let promise = Ember.RSVP.allSettled(promises);

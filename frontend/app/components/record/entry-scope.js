@@ -1,6 +1,8 @@
 import Ember from 'ember';
 import EntryBase from './entry-base';
 
+const trace = 0;
+
 /**
  * @param name
  * @param parentName  optional - used as hoverText, otherwise name is used
@@ -17,17 +19,20 @@ export default EntryBase.extend({
     name = this.get('name');
     /** problem : need dataset to make this unique. can annotate value with node. */
     let blocks = store.peekAll('Block').filter(function (r) { return r.get('scope') === name;});
-    console.log('node Block', name, store, this, blocks);
+    if (trace > 1)
+      console.log('node Block', name, store, this, blocks);
     // use the first matching block
     return blocks.length && blocks[0];
   }),
 
   actions: {
     selectDataset(dataset) {
+      if (trace)
       console.log('dataset2 => ', dataset);
       this.sendAction('selectDataset', dataset)
     },
     selectBlock(block) {
+      if (trace)
       console.log('block2 => ', block);
       this.sendAction('selectBlock', block)
     }

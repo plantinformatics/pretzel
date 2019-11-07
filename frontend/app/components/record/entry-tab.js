@@ -3,6 +3,7 @@ import Ember from 'ember';
 import {tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
 import { leafCount } from '../../utils/value-tree';
 
+const dLog = console.debug;
 
 /**
  * @param name  type name of the data in the tab
@@ -17,7 +18,7 @@ export default Ember.Component.extend(Ember.Evented, {
   id : Ember.computed('name', function () {
     let name = this.get('name'),
     id = tab_explorer_prefix + text2EltId(name);
-    console.log('id', id, name);
+    dLog('id', id, name);
     return id;
   }),
 
@@ -32,7 +33,7 @@ export default Ember.Component.extend(Ember.Evented, {
     /** Walk the value tree and count leaves (blocks). */
     let count = leafCount(levelMeta, values);
     let autoAllActive = count < 50;
-    console.log('autoAllActive', this.get('name'), values, autoAllActive, count);
+    dLog('autoAllActive', this.get('name'), values, autoAllActive, count);
     /* only set when values change; this provides an initial default state which
      * the user can toggle. */
     Ember.run.once(

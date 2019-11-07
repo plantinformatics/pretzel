@@ -9,6 +9,7 @@ import EmberObject from '@ember/object';
 
 import { parseOptions } from '../utils/common/strings';
 
+const dLog = console.debug;
 
 let config = {
   dataset: service('data/dataset'),
@@ -91,7 +92,7 @@ let config = {
      * blocks, and if so, add them to the view.
      */
     datasetsTask.then(function (blockValues) {
-      console.log('datasetsTask then', blockValues);
+      dLog('datasetsTask then', blockValues);
       // blockValues[] are all available blocks
       let referenceBlocks =
       params.mapsToView.reduce(function (result, blockId) {
@@ -103,7 +104,7 @@ let config = {
           result.push(referenceBlock);
         return result;}, []),
       referenceBlockIds = referenceBlocks.map(function (block) { return block.get('id'); });
-      console.log('referenceBlockIds', referenceBlockIds);
+      dLog('referenceBlockIds', referenceBlockIds);
       me.controllerFor(me.fullRouteName).setViewedOnly(referenceBlockIds, true);
       /* currently getBlocksSummary() just gets the featureCount, which for a
        * reference block is 0, so this step could be skipped if ! allInitially,
@@ -113,7 +114,7 @@ let config = {
         getBlocks.apply(blockService, [referenceBlockIds]) : Ember.RSVP.cast([]);
     });
 
-    console.log("routes/mapview: model() result", result);
+    dLog("routes/mapview: model() result", result);
     return result;
 
   },
