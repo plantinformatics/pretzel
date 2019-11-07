@@ -9,6 +9,27 @@ import { stacks } from '../../utils/stacks';
 
 let trace_block = 1;
 
+/*----------------------------------------------------------------------------*/
+
+/** @return some value identifying the block, suitable for logging. */
+function block_text(block) { return block.view ? block.view.longName() : block.id; }
+/** log a Map block -> [block].
+ * block -> undefined is handled.
+  */
+function log_Map(label, map) {
+  if (label === undefined)
+    label = '';
+  map.forEach(function (value, key) {
+    let blocks = value;
+    console.log(label, block_text(key), blocks && blocks.map(block_text));
+  });
+}
+
+
+/*----------------------------------------------------------------------------*/
+ 
+
+
 /** Augment the store blocks with features to support mapview.
  * In particular, add an `isViewed` attribute to blocks, which indicates that
  * the block is viewed in the mapview.
@@ -255,13 +276,11 @@ export default Service.extend(Ember.Evented, {
     this.beginPropertyChanges();
     if (block.get('isViewed') && ! viewed && unviewChildren)
     {
-      let maybeUnview = this.get('loadedViewedChildBlocks'),
-      isChildOf = this.get('isChildOf'),
-      toUnview = maybeUnview.filter(function (dataBlock) {
-        return isChildOf(dataBlock, block);
-      });
-      console.log('setViewedTask', /*maybeUnview,*/ toUnview
-                  .map(function(blockR) { return blockR.view.longName(); }) );
+      /** see also loadedViewedChildBlocks, but that depends on hasFeatures
+       * which depends on receiving response for feature count/s or features. */
+      let toUnview = block.get('childBlocks');
+      console.log('setViewedTask', toUnview
+                  .map(block_text) );
       toUnview.forEach(function (childBlock) {
         childBlock.set('isViewed', viewed);
       });
@@ -418,6 +437,32 @@ export default Service.extend(Ember.Evented, {
     }),
 
   /*----------------------------------------------------------------------------*/
+
+  /** collate the blocks by the parent they refer to.
+   * Based on Block.referenceBlock(), so the result does not include blocks
+   * which do not have a reference and are not referenced.
+   */
+  blocksByReference: Ember.computed(
+    'blockValues.@each.referenceBlock',
+    function() {
+      let map = this.get('blockValues')
+        .reduce(
+          (map, block) => {
+            let id = block.id,
+            referenceBlock = block.get('referenceBlock');
+            if (referenceBlock) {
+              let blocks = map.get(referenceBlock);
+              if (! blocks)
+                map.set(referenceBlock, blocks = []);
+              blocks.push(block);
+            }
+            return map; },
+          new Map());
+
+      if (trace_block)
+        log_Map('blocksByReference', map);
+      return map;
+    }),
 
 
   /** Search for the named features, and return also their blocks and datasets.

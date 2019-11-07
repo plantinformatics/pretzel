@@ -14,6 +14,7 @@ const moduleName = 'models/block';
 
 export default DS.Model.extend({
   pathsP : service('data/paths-progressive'), // for getBlockFeaturesInterval()
+  blockService : service('data/block'),
 
   datasetId: DS.belongsTo('dataset'),
   annotations: DS.hasMany('annotation', { async: false }),
@@ -206,6 +207,11 @@ export default DS.Model.extend({
         referenceBlock = referenceBlock[0] || undefined;
     }
     return referenceBlock;
+  }),
+  childBlocks : Ember.computed('blockService.blocksByReference', function () {
+    let blocksByReference = this.get('blockService.blocksByReference'),
+    childBlocks = blocksByReference && blocksByReference.get(this);
+    return childBlocks || [];
   }),
 
   /*--------------------------------------------------------------------------*/
