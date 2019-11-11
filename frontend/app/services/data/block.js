@@ -386,10 +386,11 @@ export default Service.extend(Ember.Evented, {
         this.get('viewed')
         .filter(function (block) {
           let tags = block.get('datasetId.tags'),
+          featuresCounts = block.get('featuresCounts'),
           line = block.get('isChartable');
           if (line)
             console.log('viewedChartable', tags, block);
-          return line;
+          return featuresCounts || line;
         });
       if (trace_block > 1)
         console.log(
