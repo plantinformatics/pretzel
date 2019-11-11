@@ -122,21 +122,30 @@ export default InAxis.extend({
   drawBlockFeaturesCounts : function() {
     let featuresCounts = this.get('block.featuresCounts');
     let domain = this.get('axis.axis1d.domainChanged');
-    console.log('blockFeatures', featuresCounts.length, domain);
-    /** example element of array f : */
-    const dataExample = 
-      {
-        "_id": {
-          "min": 100,
-          "max": 160
-        },
-        "count": 109
-      };
-    let f = featuresCounts.toArray(),
-    /** the min, max will be passed also - first need to factor out part of axis-chart for featuresCounts. */
-    fa = f.map(function (f0) { return f0.count;});
-    console.log('drawBlockFeaturesCounts', f);
-    // this.layoutAndDrawChart(fa);
+    if (featuresCounts) {
+      console.log('blockFeatures', featuresCounts.length, domain);
+
+      /** example element of array f : */
+      const dataExample = 
+        {
+          "_id": {
+            "min": 100,
+            "max": 160
+          },
+          "count": 109
+        };
+      let f = featuresCounts.toArray(),
+      /** the min, max will be passed also - first need to factor out part of axis-chart for featuresCounts. */
+      fa = f.map(function (f0) { return f0.count;});
+      console.log('drawBlockFeaturesCounts', f);
+      let 
+        featureCountData = {
+          datum2Value : function(d) { return d.count; },
+          datum2Description : function(d) { return JSON.stringify(d._id); }
+        };
+      // pass alternate dataConfig to layoutAndDrawChart(), defining alternate functions for {datum2Value, datum2Location }
+      this.layoutAndDrawChart(fa, featureCountData);
+    }
   },
   drawBlockFeatures : function(features) {
     let f = features.toArray(),
