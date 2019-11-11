@@ -101,6 +101,7 @@ G(data) --> | parentAndScope | A2(dataTree)
 B2(dataTypedTreeFG) --> | useFilterGroup, dataTypedTreeFG.annotation, PO | A2(dataTree)
 
 G2(dataTypedFG) --> | addParentAndScopeLevels, annotation : parentAndScope | B2(dataTypedTreeFG, PO)
+I2(parentsTypes) -->  B2(dataTypedTreeFG, PO)
 
 D2(dataTyped) --> |useFilterGroup| G2(dataTypedFG)
 
@@ -108,6 +109,15 @@ F(dataPre) --> D2(dataTyped)
 D2(dataTyped) --> | datasetFilter datasets filterGroup | C2(dataFG)
 E2(useFilterGroup) --> C2(dataFG)
 F2(filterGroupsChangeCounter) --> C2(dataFG)
+
+F(dataPre) --> H2(parentsNotFG)
+F(dataPre) --> L2(dataParentTyped)
+H2(parentsNotFG) -->  I2(parentsTypes)
+F(dataPre) --> J2(dataParentTypedFG)
+I2(parentsTypes) -->  L2(dataParentTyped)
+L2(dataParentTyped) --> | useFilterGroup, datasetFilterGroup | J2(dataParentTypedFG)
+J2(dataParentTypedFG) -->  K2(dataParentTypedFGTree)
+
 
 </div>
 

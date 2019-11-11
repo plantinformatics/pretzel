@@ -55,6 +55,14 @@ export default ManageBase.extend({
     return options;
   }),
   enable_datatypeFromFamily : Ember.computed.alias('urlOptions.dataTabsFromFamily'),
+  /** If true then use dataParentTypedFGTree in place of dataTypedTreeFG.
+   * The former groups the data by parent before filtering; the latter
+   * applies FG before grouping into parents.
+   * The results are the same in simple cases; still trialling to see
+   * which should be default;  each approach probably handles some
+   * search cases better than the other.
+   */
+  enable_parentBeforeFilter : Ember.computed.alias('urlOptions.parentBeforeFilter'),
 
   datasetsRefreshCounter : 0,
   datasets : Ember.computed('model', 'model.availableMapsTask', 'model.availableMapsTask.value', 'view', 'datasetsRefreshCounter', function () {
