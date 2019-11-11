@@ -469,9 +469,10 @@ Block.blockNamespace = async function(blockIds) {
 
   /*--------------------------------------------------------------------------*/
 
-  /** Send a database request to count the features within the given blocks.
+   /** Send a database request to collate feature counts in bins for the given block.
    *
-   * @param blockId  blocks
+   * @param blockId  block
+   * @param nBins number of bins to partition the block's features into
    */
   Block.blockFeaturesCounts = function(blockId, nBins, options, res, cb) {
     let db = this.dataSource.connector;
