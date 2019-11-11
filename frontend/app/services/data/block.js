@@ -223,6 +223,38 @@ export default Service.extend(Ember.Evented, {
     // console.log("block getSummary", id);
     let blockP =
       this.get('auth').getBlockFeaturesCount(blockIds, /*options*/{});
+
+    /** This will probably become user-configurable */
+    const nBins = 100;
+    /** As yet these result promises are not returned, not needed. */
+    let blockPs =
+      blockIds.map(
+        (blockId) => {
+          let taskId = blockId + '_' + nBins;
+          let summaryTask = this.get('summaryTask');
+          let p = summaryTask[taskId];
+          if (! p) {
+            getCounts.apply(this);
+            function getCounts() {
+            p = summaryTask[taskId] =
+              this.get('auth').getBlockFeaturesCounts(blockId, nBins, /*options*/{});
+            /* this could be structured as a task within models/block.js
+             * A task would have .drop() to avoid concurrent request, but
+             * actually want to bar any subsequent request for the same taskId,
+             * which is provided by summaryTask[taskId] above.
+             */
+            p.then((featuresCounts) => {
+              let block = this.peekBlock(blockId);
+              if (! block)
+                console.log('getSummary featuresCounts', featuresCounts, blockId);
+              else
+                block.set('featuresCounts', featuresCounts);
+            });
+            }
+          }
+          return p;
+        });
+
     return blockP;
   },
 
@@ -423,10 +455,11 @@ export default Service.extend(Ember.Evented, {
         this.get('viewed')
         .filter(function (block) {
           let tags = block.get('datasetId.tags'),
+          featuresCounts = block.get('featuresCounts'),
           line = block.get('isChartable');
           if (line)
             console.log('viewedChartable', tags, block);
-          return line;
+          return featuresCounts || line;
         });
       if (trace_block > 1)
         console.log(
