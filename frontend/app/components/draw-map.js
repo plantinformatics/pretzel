@@ -5412,6 +5412,8 @@ export default Ember.Component.extend(Ember.Evented, {
               ya = oa.y[axisName = axis.axisName], ysa=oa.ys[axisName],
               domain = maybeFlip(ya.domain(), true);
               axis.flipped = ! axis.flipped;
+              if (axis.axis1d)
+                axis.axis1d.toggleProperty('flipped');
               ya.domain(domain);
               ysa.domain(domain);
 

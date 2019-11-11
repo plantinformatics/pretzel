@@ -245,6 +245,10 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 };
 
 
+/**
+ * @property zoomed   selects either .zoomedDomain or .blocksDomain.  initially undefined (false).
+ * @property flipped  if true then the domain is flipped in the view.  initially undefined (false).
+ */
 export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   blockService: service('data/block'),
 
@@ -432,12 +436,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   /** This is the currently viewed domain.
    * @return if zoomed return the zoom yDomain, otherwise blockDomain.
    */
-  domain : Ember.computed('zoomed', 'blocksDomain', 'zoomedDomain', function () {
+  domain : Ember.computed('zoomed', 'flipped', 'blocksDomain', 'zoomedDomain', function () {
     /** Actually .zoomedDomain will be == blocksDomain when not zoomed, but
      * using it as a CP dependency causes problems, whereas blocksDomain has a
      * more direct dependency on axis' blocks' features' locations.
      */
     let domain = this.get('zoomed') ? this.get('zoomedDomain') : this.get('blocksDomain');
+    if (this.get('flipped')) {
+      domain = [domain[1], domain[0]];
+    }
     return domain;
   }),
 
