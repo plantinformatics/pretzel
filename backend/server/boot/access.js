@@ -82,6 +82,7 @@ module.exports = function(app) {
       context.property == 'paths' ||
       context.property == 'pathsProgressive' ||
       context.property == 'blockFeaturesCount' ||
+      context.property == 'blockFeaturesCounts' ||
       context.property == 'blockFeaturesInterval' ||
       context.property == 'pathsByReference' ||
       context.property == 'pathsViaStream' ||

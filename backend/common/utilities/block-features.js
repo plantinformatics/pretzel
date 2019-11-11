@@ -47,3 +47,44 @@ exports.blockFeaturesCount = function(db, blockIds) {
 
 };
 
+/*----------------------------------------------------------------------------*/
+
+
+/** Count features of the given block in bins.
+ *
+ * @param blockCollection dataSource collection
+ * @param blockId  id of data block
+ * @param nBins number of bins to group block's features into
+ *
+ * @return cursor	: binned feature counts
+ * { "_id" : { "min" : 4000000, "max" : 160000000 }, "count" : 22 }
+ * { "_id" : { "min" : 160000000, "max" : 400000000 }, "count" : 21 }
+ */
+exports.blockFeaturesCounts = function(db, blockId, nBins) {
+  // initial draft based on blockFeaturesCount()
+  let featureCollection = db.collection("Feature");
+  if (trace_block)
+    console.log('blockFeaturesCount', blockId);
+  let ObjectId = ObjectID;
+
+  let
+    matchBlock =
+    [
+      {$match : {blockId :  ObjectId(blockId)}},
+      { $bucketAuto: { groupBy: {$arrayElemAt : ['$value', 0]}, buckets: 10, granularity : 'R5'}  }
+    ],
+
+    pipeline = matchBlock;
+
+  if (trace_block)
+    console.log('blockFeaturesCount', pipeline);
+  if (trace_block > 1)
+    console.dir(pipeline, { depth: null });
+
+  let result =
+    featureCollection.aggregate ( pipeline, {allowDiskUse: true} );
+
+  return result;
+
+};
+

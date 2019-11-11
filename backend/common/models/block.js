@@ -469,6 +469,24 @@ Block.blockNamespace = async function(blockIds) {
 
   /*--------------------------------------------------------------------------*/
 
+  /** Send a database request to count the features within the given blocks.
+   *
+   * @param blockId  blocks
+   */
+  Block.blockFeaturesCounts = function(blockId, nBins, options, res, cb) {
+    let db = this.dataSource.connector;
+    let cursor =
+      blockFeatures.blockFeaturesCounts(db, blockId, nBins);
+    cursor.toArray()
+    .then(function(featureCounts) {
+      cb(null, featureCounts);
+    }).catch(function(err) {
+      cb(err);
+    });
+  };
+
+  /*--------------------------------------------------------------------------*/
+
   /** Collate from the database a list of features within the given block, which
    * meet the optional interval domain constraint.
    *
@@ -591,7 +609,19 @@ Block.blockNamespace = async function(blockIds) {
     ],
     http: {verb: 'get'},
     returns: {type: 'array', root: true},
-    description: "Returns a count of the Features in the block"
+    description: "Return a count of the Features in each block"
+  });
+
+  Block.remoteMethod('blockFeaturesCounts', {
+    accepts: [
+      {arg: 'block', type: 'string', required: true},
+      {arg: 'nBins', type: 'string', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'res', type: 'object', 'http': {source: 'res'}},
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Returns an array of N bins of counts of the Features in the block"
   });
 
   Block.remoteMethod('blockFeaturesInterval', {
