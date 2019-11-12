@@ -462,6 +462,7 @@ export default Service.extend({
 
           let domainCalc = pathsViaStream || firstResult,
           axisEvents = ! blockAdj;
+          if (blocksUpdateDomainEnabled)
           Ember.run.throttle(
             me, me.blocksUpdateDomain, 
             blockAdjId, domainCalc,

@@ -12,8 +12,10 @@ const dLog = console.debug;
  * @param y  axes yscale to update
  * @param ys  foreground yscale to update
  * @param axis  Stacked (i.e. axes[axis.axisName] == axis)
+ * @param domain (optional) : value to set as domain. If undefined then the
+ * domain is determined from axis .getDomain() and maybeFlip().
  */
-function updateDomain(y, ys, axis)
+function updateDomain(y, ys, axis, domain)
 {
   /* This is now called from Stacked.prototype.updateDomain(), and can be merged
    * with that function. */
@@ -24,10 +26,12 @@ function updateDomain(y, ys, axis)
   
   let
     axisName = axis.axisName,
-  a = axis,
-  domain = a.parent ? a.parent.getDomain() : a.getDomain();
-  dLog('updateDomain', axisName, domain, a, a.blocks[0] && a.blocks[0].z);
-  domain = maybeFlip(domain, a.flipped);
+  a = axis;
+  if (domain === undefined) {
+    domain = a.parent ? a.parent.getDomain() : a.getDomain();
+    dLog('updateDomain', axisName, domain, a, a.blocks[0] && a.blocks[0].z);
+    domain = maybeFlip(domain, a.flipped);
+  }
   y.domain(domain);
   ys.domain(domain);
 }

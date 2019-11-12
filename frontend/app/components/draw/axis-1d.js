@@ -405,7 +405,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     dLog('blocksDomain', blocksDomains, domain);
     return domain;
   }),
-  blocksDomainEffect : Ember.computed('blocksDomain', function () {
+  blocksDomainEffect_unused : Ember.computed('blocksDomain', function () {
     let domain = this.get('blocksDomain'),
     /** if domain is [0,0] or [false, false] then consider that undefined. */
     domainDefined = domain && domain.length && (domain[0] || domain[1]);
@@ -418,21 +418,21 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
         this.setDomain(domain);
       });
   }),
-  /** same as domainChanged, not used. */
-  domainEffect : Ember.computed('domain', function () {
+  /** Update the domain of the Y scales. */
+  updateScaleDomain() {
     if (this.isDestroyed) return undefined;
     let domain = this.get('domain');
     if (domain) {
       /* Similar to this.updateDomain(), defined in axis-position.js, */
       let axisS = this.get('axisS');
-      dLog('domainEffect', domain, axisS);
+      dLog('updateScaleDomain', domain, axisS);
       if (axisS) {
         let y = axisS.getY(), ys = axisS.ys;
-        updateDomain(axisS.y, axisS.ys, axisS);
+        updateDomain(axisS.y, axisS.ys, axisS, domain);
       }
     }
     return domain;
-  }),
+  },
   /** This is the currently viewed domain.
    * @return if zoomed return the zoom yDomain, otherwise blockDomain.
    */
@@ -572,8 +572,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
         // this.notifyChanges();
         if (! this.get('axisS'))
           dLog('domainChanged() no axisS yet', domain, this.get('axis.id'));
-        else
+        else {
+          this.updateScaleDomain();
           this.updateAxis();
+        }
       }
       return undefined;
     }),

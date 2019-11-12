@@ -44,7 +44,7 @@ export default Mixin.create({
 
   /** Set the domain of the current position using domainCalc() of Block / Axis (Stacked).
    */
-  updateDomain()
+  updateDomain_unused()
   {
     let axisS=this.get('axisS');
     if (! axisS) {

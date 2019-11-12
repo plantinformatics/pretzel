@@ -108,11 +108,10 @@ export default DS.Model.extend({
 
       if (trace_block)
         dLog('featuresDomainUpdate', featuresDomain, this.get('id'));
-      this.setDomain(featuresDomain);
     }
     return featuresDomain;
   }),
-  setDomain : function (domain) {
+  setDomain_unused : function (domain) {
     if (domain) {
       let featuresDomain = this.get('featuresDomainValue');
       function trace (i) { if (trace_block) dLog('setDomain', featuresDomain, domain, i); }
@@ -135,17 +134,7 @@ export default DS.Model.extend({
       }
     }
   },
-  /** This CP updates when the domain changes, whereas featuresDomainUpdate()
-   * updates when new features are added - the added features may not extend the
-   * domain.
-   */
-  featuresDomain : Ember.computed('featuresDomainValue.[]', function () {
-    let featuresDomain = this.get('featuresDomainValue');
-    if (trace_block)
-      dLog('featuresDomain', featuresDomain, this.get('id'));
-    return featuresDomain;
-  }),
-
+  featuresDomain : Ember.computed.alias('featuresDomainUpdate'),
 
   isChartable : Ember.computed('datasetId.tags', function () {
     let tags = this.get('datasetId.tags'),

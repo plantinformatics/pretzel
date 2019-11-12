@@ -1,7 +1,7 @@
 {{!-- commented-out values may be changed during the render which
            will cause displaying their value to produce an exception,
            refn https://github.com/emberjs/ember.js/issues/13948 --}}
-axis-1d: {{ extended }} {{ axis.id }}, {{!-- axis.view}} {{axis.view.axisName , --}}  {{ domainChanged }} , {{ position }}, {{ currentPosition }}, {{ lastDrawn }}, {{!-- currentPosition.yDomain --}} {{ zoomed }}, {{ dataBlocks.length }} {{ dataBlocks.0.features.length }} {{blockIndexes}} {{ featureLengthEffect }} {{ blocksDomainEffect }}
+axis-1d: {{ extended }} {{ axis.id }}, {{!-- axis.view}} {{axis.view.axisName , --}}  {{ domainChanged }} , {{ position }}, {{ currentPosition }}, {{ lastDrawn }}, {{!-- currentPosition.yDomain --}} {{ zoomed }}, {{ dataBlocks.length }} {{ dataBlocks.0.features.length }} {{blockIndexes}} {{ featureLengthEffect }}
 {{ ensureAxis }}
 {{ log 'axis-1d rendered domainContents' position }}
 {{yield this }}
