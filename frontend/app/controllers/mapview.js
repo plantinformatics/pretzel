@@ -108,10 +108,12 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
         loadBlock.apply(this, [referenceBlock]);
 
       /* Before progressive loading this would load the data (features) of the block.
+       * Now it just loads summary information : featuresCount (block total) and
+       * also featuresCounts (binned counts).
        * The block record itself is already loaded in the initial Datasets request;
        * - it is the parameter `block`.
        */
-      if (false) {
+      if (true) {
         /** in result of featureSearch(), used in goto-feature-list, .block has .id but not .get */
         let id = block.get ? block.get('id') : block.id;
         let t = this.get('useTask');
@@ -237,10 +239,14 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     let getBlocks = blockService.get('getBlocksSummary');
     let blocksSummaryTasks = getBlocks.apply(blockService, [[id]]);
 
-    let taskGet = blockService.get('taskGet');
-    let block = taskGet.perform(id);
-    dLog("block", id, block);
-    // block.set('isViewed', true);
+    /** Before progressive loading this would load the data (features) of the block. */
+    const progressiveLoading = true;
+    if (! progressiveLoading) {
+      let taskGet = blockService.get('taskGet');
+      let block = taskGet.perform(id);
+      dLog("block", id, block);
+      // block.set('isViewed', true);
+    }
   }
 
 

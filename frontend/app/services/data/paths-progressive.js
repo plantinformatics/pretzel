@@ -31,7 +31,12 @@ function verifyFeatureRecord(fr, f) {
   let frd = fr._internalModel.__data,
   /** Handle some older data which has .range instead of .value */
   frdv = frd.value || frd.range,
-  fv = f.value || f.range,
+  fv = f.value || f.range;
+  if ((typeof(frdv) == "number") || (frdv.length === undefined))
+    frdv = [frdv];
+  if ((typeof(fv) == "number") || (frdv.length === undefined))
+    frdv = [fv];
+  let
   same = 
     (fr.id === f._id) &&
     (frdv[0] === fv[0]) &&
@@ -270,6 +275,16 @@ export default Service.extend({
     else
     {
       f.id = f._id;
+      /** If f.value is not an array, replace it with an array.  This is a data
+       * error, and this code is not intended to handle data errors, it just
+       * works around an error in the current dev db.
+       * Could do the same for .range, but not expecting any .range in new user data.
+       */
+      const valueF = 'value', fv = f[valueF];
+      if ((typeof(fv) == "number") || (fv.length === undefined)) {
+        dLog('Feature.value is expected to be an array, value is :', typeof(fv), fv, f.get('name'), f.blockId);
+        f[valueF] = [fv];
+      }
       let fn = store.normalize('feature', f);
       let c = store.push(fn);
       storeFeature(stacks.oa, flowsService, f.name, c, f.blockId);

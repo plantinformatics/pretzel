@@ -60,7 +60,7 @@ exports.blockFeaturesCount = function(db, blockIds) {
  * { "_id" : { "min" : 4000000, "max" : 160000000 }, "count" : 22 }
  * { "_id" : { "min" : 160000000, "max" : 400000000 }, "count" : 21 }
  */
-exports.blockFeaturesCounts = function(db, blockId, nBins) {
+exports.blockFeaturesCounts = function(db, blockId, nBins = 10) {
   // initial draft based on blockFeaturesCount()
   let featureCollection = db.collection("Feature");
   if (trace_block)
@@ -71,7 +71,7 @@ exports.blockFeaturesCounts = function(db, blockId, nBins) {
     matchBlock =
     [
       {$match : {blockId :  ObjectId(blockId)}},
-      { $bucketAuto: { groupBy: {$arrayElemAt : ['$value', 0]}, buckets: 10, granularity : 'R5'}  }
+      { $bucketAuto: { groupBy: {$arrayElemAt : ['$value', 0]}, buckets: nBins, granularity : 'R5'}  }
     ],
 
     pipeline = matchBlock;
