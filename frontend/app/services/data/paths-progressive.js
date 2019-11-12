@@ -282,7 +282,7 @@ export default Service.extend({
        */
       const valueF = 'value', fv = f[valueF];
       if ((typeof(fv) == "number") || (fv.length === undefined)) {
-        dLog('Feature.value is expected to be an array, value is :', typeof(fv), fv, f.get('name'), f.blockId);
+        dLog('Feature.value is expected to be an array, value is :', typeof(fv), f);
         f[valueF] = [fv];
       }
       let fn = store.normalize('feature', f);

@@ -7,6 +7,8 @@ import normalizeWheel from 'normalize-wheel';
 
 /*----------------------------------------------------------------------------*/
 const trace_zoom = 2;
+const dLog = console.debug;
+
 /*----------------------------------------------------------------------------*/
 
 /* copied from draw-map.js; this has already been split out of draw-map.js into
@@ -117,12 +119,25 @@ function wheelNewDomain(axis, axisApi, inFilter) {
   include;
 
   let
+    axis1dReferenceDomain = axis.axis1d && axis.axis1d.get('blocksDomain'),
     /** the whole domain of the axis reference block.
      * If the axis does not have a reference block with a range, as in the case
      * of GMs, use the domain of the reference Block
+     * Prefer to use axis1dReferenceDomain because it is updated by CP, and 
+     * initially axis.referenceBlockS().domain may be [false, false].
+     * The latter is unlikely to be needed and can be dropped.
      */
-    axisReferenceDomain = (axis.referenceBlock && axis.referenceBlock.get('range')) ||
-    axis.referenceBlockS().domain,
+    axisReferenceDomain = axis1dReferenceDomain ||
+    (axis.referenceBlock && axis.referenceBlock.get('range')) ||
+    axis.referenceBlockS().domain;
+  
+  if ((axisReferenceDomain.length == 2) &&
+      (axisReferenceDomain[0] === false) &&
+      (axisReferenceDomain[1] === false)) {
+    if (trace_zoom)
+      dLog('wheelNewDomain() no domain yet', axisReferenceDomain);
+  }
+  let
   domainSize = axisReferenceDomain && axisReferenceDomain[1],
   /** lower limit for zoom : GM : about 1 centiMorgan, physical map : about 1 base pair per pixel  */
   lowerZoom = domainSize > 1e6 ? 50 : domainSize / 1e5,
