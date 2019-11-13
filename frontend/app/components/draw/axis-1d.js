@@ -440,8 +440,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     /** Actually .zoomedDomain will be == blocksDomain when not zoomed, but
      * using it as a CP dependency causes problems, whereas blocksDomain has a
      * more direct dependency on axis' blocks' features' locations.
+     * When .zoomed is set, .zoomedDomain may be undefined briefly; if so use .blocksDomain.
      */
-    let domain = this.get('zoomed') ? this.get('zoomedDomain') : this.get('blocksDomain');
+    let domain = this.get('zoomed') ? this.get('zoomedDomain') || this.get('blocksDomain') : this.get('blocksDomain');
     if (this.get('flipped')) {
       domain = [domain[1], domain[0]];
     }

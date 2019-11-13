@@ -110,6 +110,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
   let
     /** current domain of y scale. */
     domain = yp.domain(),
+  /** interval is signed. */
   interval = domain[1] - domain[0],
   /** This is the result of zoom() */
   newDomain,
@@ -136,9 +137,16 @@ function wheelNewDomain(axis, axisApi, inFilter) {
       (axisReferenceDomain[1] === false)) {
     if (trace_zoom)
       dLog('wheelNewDomain() no domain yet', axisReferenceDomain);
+    axisReferenceDomain = undefined;
+  }
+  if (axisReferenceDomain === undefined) {
+    if (! isPan)
+      // zoom calculate depends on axisReferenceDomain, domainSize.
+      return false;
   }
   let
-  domainSize = axisReferenceDomain && axisReferenceDomain[1],
+    /** domainSize is positive. */
+    domainSize = axisReferenceDomain && Math.abs(axisReferenceDomain[1] - axisReferenceDomain[0]),
   /** lower limit for zoom : GM : about 1 centiMorgan, physical map : about 1 base pair per pixel  */
   lowerZoom = domainSize > 1e6 ? 50 : domainSize / 1e5,
   /** constraint on the length of the domain, aka interval, newInterval. */
@@ -180,8 +188,10 @@ function wheelNewDomain(axis, axisApi, inFilter) {
     transform = inFilter ? elt.__zoom : d3.event.transform, // currently only used in trace
 
     deltaScale = 1 + deltaY/300,
-    /** length of new domain. */
-    newInterval = interval * deltaScale,
+    /** length of new domain.  Positive.
+     * newInterval is defined in both the Pan and Zoom cases; they are 2 similar but distinct variables.
+     */
+    newInterval = Math.abs(interval * deltaScale),
     rangeSize = range[1] - range[0];
     // similar to subInterval(newInterval, intervalLimit)
     if (domainSize && (newInterval > domainSize)) {
@@ -210,7 +220,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
   }
 
   // if one (either) end of newDomain is outside axisReferenceDomain, set it to that limit
-  if (! subInterval(newDomain, axisReferenceDomain))
+  if (axisReferenceDomain && ! subInterval(newDomain, axisReferenceDomain))
   {
     console.log('! subInterval', newDomain, axisReferenceDomain);
     constrainInterval(newDomain, axisReferenceDomain);
