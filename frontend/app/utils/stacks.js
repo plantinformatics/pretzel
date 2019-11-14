@@ -9,7 +9,7 @@ import { isEqual } from 'lodash/lang';
 
 import  { dragTransitionEnd} from '../utils/stacks-drag';
 import { round_2, checkIsNumber} from '../utils/domCalcs';
-import {  Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, highlightId, axisTitleColour  }  from './draw/axis';
+import {  Axes, noDomain, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, highlightId, axisTitleColour  }  from './draw/axis';
 import { variableBands } from '../utils/variableBands';
 import { isOtherField } from '../utils/field_names';
 import { Object_filter } from '../utils/Object_filter';
@@ -623,10 +623,23 @@ Stacked.prototype.referenceDomain = function ()
  */
 Stacked.prototype.getDomain = function ()
 {
-  return this.domain
+  let domain = this.domain
     || (this.domain = this.referenceDomain())
     || (this.domain = this.domainCalc())
   ;
+  if (noDomain(domain)) {
+    /* shifting the responsibility of domain calculation from Stacks to blocks.js and axis-1d.
+     * domainCalc() should be equivalent to axis1d.blocksDomain, but
+     * resetZooms() was setting the domains to [0, 0] so possibly there has been
+     * a loss of connection between the Block and it's features.
+     */
+    let blocksDomain = this.axis1d && this.axis1d.get('blocksDomain');
+    if (blocksDomain && blocksDomain.length) {
+      dLog('getDomain() noDomain', this.axisName, domain, blocksDomain);
+      domain = blocksDomain;
+    }
+  }
+  return domain;
 };
 
 
