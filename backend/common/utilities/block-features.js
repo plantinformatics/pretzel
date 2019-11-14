@@ -64,14 +64,14 @@ exports.blockFeaturesCounts = function(db, blockId, nBins = 10) {
   // initial draft based on blockFeaturesCount()
   let featureCollection = db.collection("Feature");
   if (trace_block)
-    console.log('blockFeaturesCount', blockId);
+    console.log('blockFeaturesCount', blockId, nBins);
   let ObjectId = ObjectID;
 
   let
     matchBlock =
     [
       {$match : {blockId :  ObjectId(blockId)}},
-      { $bucketAuto: { groupBy: {$arrayElemAt : ['$value', 0]}, buckets: nBins, granularity : 'R5'}  }
+      { $bucketAuto: { groupBy: {$arrayElemAt : ['$value', 0]}, buckets: Number(nBins), granularity : 'R5'}  }
     ],
 
     pipeline = matchBlock;
