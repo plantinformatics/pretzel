@@ -227,9 +227,8 @@ export default Service.extend({
             for (let j=0; j < 2; j++) {
               let repeats = res[i].alignment[j].repeats,
               // possibly filterPaths() is changing repeats.features[] to repeats[]
-              features = repeats.features || repeats,
-              f = features[0];
-              me.pushFeature(store, f, flowsService);
+              features = repeats.features || repeats;
+              me.pushFeatureField(store, features, 0, flowsService);
             }
           }
           /** Return unique result identifier */
@@ -266,6 +265,7 @@ export default Service.extend({
   },
 
   pushFeature(store, f, flowsService) {
+    let c;
     let fr = store.peekRecord('feature', f._id);
     if (fr) {
       let verifyOK = verifyFeatureRecord(fr, f);
@@ -286,12 +286,21 @@ export default Service.extend({
         f[valueF] = [fv];
       }
       let fn = store.normalize('feature', f);
-      let c = store.push(fn);
+      c = store.push(fn);
       storeFeature(stacks.oa, flowsService, f.name, c, f.blockId);
       if (trace_pathsP > 2)
         dLog(c.get('id'), c._internalModel.__data);
     }
-
+    return c;
+  },
+  /** wrapper around pushFeature() : push a feature value and replace the value with a record reference. */
+  pushFeatureField(store, res, fieldName, flowsService) {
+    let f = res[fieldName];
+    let fr = this.pushFeature(store, f, flowsService);
+    if (fr)
+      res[fieldName] = fr;
+    else
+      dLog('pushFeatureField', fieldName, f);
   },
 
   /**
@@ -463,10 +472,11 @@ export default Service.extend({
           }
 
           res.forEach(function (r) {
-            [r.featureAObj, r.featureBObj].forEach(function (f) {
+            ['featureAObj', 'featureBObj'].forEach(function (fName) {
+              let f = r[fName];
               if (f._id === undefined)
                 f._id = f.id;
-              me.pushFeature(store, f, flowsService);
+              me.pushFeatureField(store, r, fName, flowsService);
             });
           });
           addPathsToCollation(blockA, blockB, res);
@@ -641,8 +651,7 @@ export default Service.extend({
             dLog(apiName, ' request then', res.length);
           let firstResult;
           for (let i=0; i < res.length; i++) {
-              let f = res[i];
-              me.pushFeature(store, f, flowsService);
+              me.pushFeatureField(store, res, i, flowsService);
           }
           // possibly accumulate the result into axis-brush in the same way that 
           // requestPathsProgressive() above accumulates paths results into blockAdj
