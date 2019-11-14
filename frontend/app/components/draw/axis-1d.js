@@ -255,6 +255,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
 
   stacks : stacks,
 
+  /** flipRegion implies paths' positions should be updated.  The region is
+   * defined by brush so it is within the domain, so the domain does not change.
+   */
+  flipRegionCounter : 0,
+
+
   init() {
     this._super(...arguments);
     let axisName = this.get('axis.id');

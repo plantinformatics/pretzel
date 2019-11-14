@@ -5167,6 +5167,11 @@ export default Ember.Component.extend(Ember.Evented, {
             flipRegionInLimits(p, limits);
           });
         }
+        /** could operate on all of selectedAxes[], but the above just does [0]. */
+        let axis = Stacked.getAxis(brushedMap),
+        axis1d = axis && axis.axis1d;
+        if (axis1d)
+          axis1d.incrementProperty('flipRegionCounter');
       }
       function features2Limits()
       {

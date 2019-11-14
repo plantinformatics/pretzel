@@ -435,6 +435,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     'axesDomains.1.0',
     'axesDomains.1.1',
     'drawMap.stacksWidthChanges',
+    'blockAdj.axes1d.0.flipRegionCounter',
+    'blockAdj.axes1d.1.flipRegionCounter',
     function () {
     let count = this.get('axisStackChangedCount'),
       heightChanged = this.get('heightChanged'),
