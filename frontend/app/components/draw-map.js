@@ -4236,7 +4236,8 @@ export default Ember.Component.extend(Ember.Evented, {
             axis.setZoomed(true);
             y[p].domain(domain);
             oa.ys[p].domain(domain);
-            axis.setDomain(domain);
+            // scale domain is signed. currently .zoomedDomain is not, so maybeFlip().
+            axis.setDomain(maybeFlip(domain, axis.flipped));
 
             /* was updatePaths true, but pathUpdate() is too long for RAF.
              * No transition required for RAF.

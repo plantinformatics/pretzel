@@ -1,5 +1,7 @@
 import { isEqual } from 'lodash/lang';
 
+import { maybeFlip, noDomain }  from './axis';
+
 import normalizeWheel from 'normalize-wheel';
 
 
@@ -13,10 +15,20 @@ const dLog = console.debug;
 
 /* copied from draw-map.js; this has already been split out of draw-map.js into
  * utils/graph-maths.js in an unpushed branch (8fccbd3).
+ * Added : this version handles range[] being in -ve order, i.e. range[0] > range[1].
  */
 function inRange(a, range)
 {
-  return range[0] <= a && a <= range[1];
+  /* Using == instead of &&, to handle both +/- order of range[]
+   * visually,
+   *  +ve : range[0] < range[1]
+   *          a <= r1
+   *    r0 <= a
+   *  -ve : range[0] < range[1]
+   *     r1 < a               (i.e. ! (a <= range[1]) ==
+   *          a < r0                ! (range[0] <= a))
+   */
+  return (range[0] <= a) == (a <= range[1]);
 }
 
 /** Test if an array of values, which can be a pair defining an interval, is
@@ -54,6 +66,10 @@ function constrainInterval(sub, interval) {
   });
 }
 
+/** @return true if interval direction is +ve, i.e. interval[0] < interval[1] */
+function intervalSign(interval) {
+  return interval[0] < interval[1];
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -108,6 +124,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
   let elt = e.currentTarget;
 
   let
+    flipped = axis.flipped,
     /** current domain of y scale. */
     domain = yp.domain(),
   /** interval is signed. */
@@ -127,14 +144,16 @@ function wheelNewDomain(axis, axisApi, inFilter) {
      * Prefer to use axis1dReferenceDomain because it is updated by CP, and 
      * initially axis.referenceBlockS().domain may be [false, false].
      * The latter is unlikely to be needed and can be dropped.
+     *
+     * Sign is +ve for blocksDomain, and referenceBlock.range will normally be
+     * +ve but it could be -ve, e.g. if a user script generates the range in
+     * reverse order.
      */
     axisReferenceDomain = axis1dReferenceDomain ||
     (axis.referenceBlock && axis.referenceBlock.get('range')) ||
     axis.referenceBlockS().domain;
   
-  if ((axisReferenceDomain.length == 2) &&
-      (axisReferenceDomain[0] === false) &&
-      (axisReferenceDomain[1] === false)) {
+  if (noDomain(axisReferenceDomain)) {
     if (trace_zoom)
       dLog('wheelNewDomain() no domain yet', axisReferenceDomain);
     axisReferenceDomain = undefined;
@@ -144,6 +163,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
       // zoom calculate depends on axisReferenceDomain, domainSize.
       return false;
   }
+  let axisReferenceDomainF = axisReferenceDomain && maybeFlip(axisReferenceDomain, flipped);
   let
     /** domainSize is positive. */
     domainSize = axisReferenceDomain && Math.abs(axisReferenceDomain[1] - axisReferenceDomain[0]),
@@ -157,9 +177,13 @@ function wheelNewDomain(axis, axisApi, inFilter) {
 
   if (trace_zoom > 1)
     console.log(axisReferenceDomain);
+  // detect if domain is not flipped as expected
+  if (flipped != (interval < 0)) // i.e. intervalSign(domain))
+      console.log(domain, interval, 'flipped', flipped);
+
 
   if (isPan) {
-    if (axis.flipped)
+    if (flipped)
       deltaY = - deltaY;
     let
       delta = deltaY/300,
@@ -208,10 +232,12 @@ function wheelNewDomain(axis, axisApi, inFilter) {
       centre + newInterval * (range[0] - rangeYCentre) / rangeSize,
       centre + newInterval * (range[1] - rangeYCentre) / rangeSize
     ];
+    // newDomain is +ve, and newDomain is signed (i.e. in the direction of .flipped).
+    newDomain = maybeFlip(newDomain, flipped);
 
     // detect if domain is becoming flipped during zoom
-    if ((newInterval < 0) || ((newInterval < 0) !== ((newDomain[1] - newDomain[0]) < 0)))
-      console.log(domain, deltaScale, newInterval, newDomain);
+    if (flipped != ((interval > 0) !== intervalSign(newDomain)))
+      console.log(domain, deltaScale, newInterval, interval, newDomain, 'flipped', flipped);
 
     if (trace_zoom > 1)
       console.log(rangeYCentre, rangeSize, 'centre', centre);
@@ -219,11 +245,11 @@ function wheelNewDomain(axis, axisApi, inFilter) {
       console.log(deltaY, deltaScale, transform, 'newInterval', newInterval, newDomain);
   }
 
-  // if one (either) end of newDomain is outside axisReferenceDomain, set it to that limit
-  if (axisReferenceDomain && ! subInterval(newDomain, axisReferenceDomain))
+  // if one (either) end of newDomain is outside axisReferenceDomainF, set it to that limit
+  if (axisReferenceDomainF && ! subInterval(newDomain, axisReferenceDomainF))
   {
-    console.log('! subInterval', newDomain, axisReferenceDomain);
-    constrainInterval(newDomain, axisReferenceDomain);
+    console.log('! subInterval', newDomain, axisReferenceDomainF);
+    constrainInterval(newDomain, axisReferenceDomainF);
     console.log('result of constrainInterval', newDomain);
   }
 

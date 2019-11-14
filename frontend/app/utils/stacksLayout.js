@@ -14,6 +14,7 @@ const dLog = console.debug;
  * @param axis  Stacked (i.e. axes[axis.axisName] == axis)
  * @param domain (optional) : value to set as domain. If undefined then the
  * domain is determined from axis .getDomain() and maybeFlip().
+ * If defined then axis.flipped will not be applied - the caller should do that.
  */
 function updateDomain(y, ys, axis, domain)
 {

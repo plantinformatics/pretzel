@@ -9,7 +9,7 @@ import { isEqual } from 'lodash/lang';
 import AxisEvents from '../../utils/draw/axis-events';
 import AxisPosition from '../../mixins/axis-position';
 import { /* Block,*/ Stacked, /*Stack,*/ stacks /*, xScaleExtend, axisRedrawText, axisId2Name*/ } from '../../utils/stacks';
-import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/ , axisTitleColour  }  from '../../utils/draw/axis';
+import {  noDomain, /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/ , axisTitleColour  }  from '../../utils/draw/axis';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../../utils/stacks-drag';
 import { selectAxis } from '../../utils/draw/stacksAxes';
 import { breakPoint } from '../../utils/breakPoint';
@@ -17,6 +17,7 @@ import { configureHorizTickHover } from '../../utils/hover';
 import { getAttrOrCP } from '../../utils/ember-devel';
 import { intervalExtent }  from '../../utils/interval-calcs';
 import { updateDomain } from '../../utils/stacksLayout';
+
 
 
 /* global d3 */
@@ -405,10 +406,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     dLog('blocksDomain', blocksDomains, domain);
     return domain;
   }),
+  /** if domain is [0,0] or [false, false] then consider that undefined. */
+  domainDefined : Ember.computed('domain.0', 'domain.1', function () {
+    let domain = this.get('domain'),
+    defined = ! noDomain(domain);
+    return defined;
+  }),
   blocksDomainEffect_unused : Ember.computed('blocksDomain', function () {
     let domain = this.get('blocksDomain'),
-    /** if domain is [0,0] or [false, false] then consider that undefined. */
-    domainDefined = domain && domain.length && (domain[0] || domain[1]);
+    domainDefined = this.get('domainDefined');
     if (domainDefined && ! this.get('zoomed'))
       /* defer setting yDomain to the end of this render, to avoid assert fail
        * re. change of domainChanged, refn issues/13948;
@@ -421,8 +427,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   /** Update the domain of the Y scales. */
   updateScaleDomain() {
     if (this.isDestroyed) return undefined;
-    let domain = this.get('domain');
-    if (domain) {
+    let domain = this.get('domain'),
+    domainDefined = this.get('domainDefined');
+    if (domain && domainDefined) {
       /* Similar to this.updateDomain(), defined in axis-position.js, */
       let axisS = this.get('axisS');
       dLog('updateScaleDomain', domain, axisS);
@@ -565,9 +572,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     'domain.0', 'domain.1',
     function () {
       if (this.isDestroyed) return undefined;
-      let domain = this.get('domain');
-      // domain is initially undefined
-      if (domain) {
+      let domain = this.get('domain'),
+      domainDefined = this.get('domainDefined');
+      // domain is initially undefined or []
+      if (domain && domainDefined) {
         // use the VLinePosition:toString() for the position-s
         dLog('domainChanged', domain, this.get('axisS'), ''+this.get('currentPosition'), ''+this.get('lastDrawn'));
         // this.notifyChanges();

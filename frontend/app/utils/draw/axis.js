@@ -36,6 +36,15 @@ function maybeFlipExtent(extent, flipped)
     : extent;
 }
 
+/*----------------------------------------------------------------------------*/
+
+/** @return true if domain is undefined or [false, false] or [0, 0].
+ */
+function noDomain(domain) {
+  let noDomain = ! domain ||
+    ((domain.length == 2) && ! domain[0] && ! domain[1]);
+  return noDomain;
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -185,4 +194,4 @@ function axisTitleColour (d, i) {
 
 /*----------------------------------------------------------------------------*/
 
-export {  Axes, maybeFlip, maybeFlipExtent, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisEltIdClipPath, highlightId, axisTitleColour } ;
+export {  Axes, maybeFlip, maybeFlipExtent, noDomain, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisEltIdClipPath, highlightId, axisTitleColour } ;
