@@ -465,6 +465,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
     this.on('paths', addPathsToCollation);
     this.on('pathsByReference', addPathsByReferenceToCollation);
+    this.on('resized', function () { } );
     }
 
     if (oa.showResize === undefined)

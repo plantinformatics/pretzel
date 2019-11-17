@@ -290,6 +290,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     if (featurePaths.length === 0)
       return;
     pathsResultType.typeCheck(featurePaths[0]);
+    let store = this.get('store');
 
     /** blockAdjId is also contained in the result featurePaths
      */
@@ -353,7 +354,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       owner = Ember.getOwner(this),
       pS = gSA
         .selectAll("path." + className)
-        .data(pathsOfFeature(pathsResultType, owner), locationPairKeyFn),
+        .data(pathsOfFeature(store, pathsResultType, owner), locationPairKeyFn),
       pSE = pS.enter()
         .append("path")
         .attr("class", className)
@@ -387,7 +388,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .selectAll("path." + className);
     // Remove <path>s whose data refers to a block which has been removed from its axis.
     // later the block-adj will be removed, which will remove all contents.
-    let removed = pS
+   let removed = pS
       .filter(function (d) { return ! d.blocksHaveAxes(); });
     if (! removed.empty())
         dLog('updatePathsPosition removed', removed.nodes(), removed.node());
@@ -542,7 +543,7 @@ function featurePathKeyFn (featureBlock)
  * @param feature 1 element of the result array passed to draw()
  * @return [PathData, ...]
  */
-function pathsOfFeature(pathsResultType, owner) {
+function pathsOfFeature(store, pathsResultType, owner) {
   const PathData = owner.factoryFor('component:draw/path-data');
   return function (feature) {
     let blocksFeatures =
@@ -552,15 +553,7 @@ function pathsOfFeature(pathsResultType, owner) {
       blocksFeatures[0].reduce(function (result, f0) {
         let result1 = blocksFeatures[1].reduce(function (result, f1) {
           let pair =
-            PathData.create({
-              feature0 : f0,
-              feature1 : f1,
-              block0 : blocks[0],
-              block1 : blocks[1]
-            });
-          if (trace_blockAdj > 2)
-            dLog('PathData.create()', PathData, pair);
-
+            pathCreate(store, f0, f1, blocks[0], blocks[1]);
           result.push(pair);
           return result;
         }, result);
@@ -570,9 +563,71 @@ function pathsOfFeature(pathsResultType, owner) {
   };
 }
 
+const trace_ = 1;
+
+function pathCreate(store, feature0, feature1, block0, block1) {
+  let
+    /** not used - same as feature{0,1}.blockId. */
+    block0r = store.peekRecord('block', block0),
+    block1r = store.peekRecord('block', block1);
+  if (true) {
+  let properties = {
+	  feature0,
+    feature1/*,
+    block0r,
+    block1r*/
+  },
+    pair =
+      PathData.create({ renderer : {} });
+    pair.setProperties(properties);
+  // if (trace_ > 2)
+    dLog('PathData.create()', PathData, pair);
+    return pair;
+  }
+  else {
+    let
+      modelName = 'draw/path-data',
+    idText = locationPairKeyFn({ feature0, feature1}),
+    r = store.peekRecord(modelName, idText);
+    if (r)
+      dLog('pathCreate', feature0, feature1, block0, block1, r._internalModel.__attributes, r._internalModel.__data);
+    else if (false)
+    {
+      let data = {
+        type : modelName,
+        id : idText,
+        relationships : {
+          feature0 : { data: { type: "feature", "id": feature0 } },
+          feature1 : { data: { type: "feature", "id": feature1 } } /*,
+          block0 : { data: { type: "block", "id": block0r } },
+          block1 : { data: { type: "block", "id": block1r } }*/
+        }/*,
+        attributes : {
+          'block-id0' : block0,
+          'block-id1' : block1
+        }*/
+      };
+      r = store.push({data});
+      if (trace_)
+        dLog('pathCreate', r, r.get('id'), r._internalModel, r._internalModel.__data, store, data);
+    }
+    else {
+      let inputProperties = {
+	      feature0,
+        feature1/*,
+        block0r,
+        block1r*/
+      };
+      r = store.createRecord(modelName, inputProperties);
+    }
+    return r;
+  }
+}
+
+
 function locationPairKeyFn(locationPair)
 {
-  return locationPair.feature0._id + '_' + locationPair.feature1._id;
+  return locationPair.feature0.id + '_' + locationPair.feature1.id;
 }
 
 /*----------------------------------------------------------------------------*/
