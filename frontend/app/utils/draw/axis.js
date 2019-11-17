@@ -41,7 +41,7 @@ function maybeFlipExtent(extent, flipped)
 /** @return true if domain is undefined or [false, false] or [0, 0].
  */
 function noDomain(domain) {
-  let noDomain = ! domain ||
+  let noDomain = ! domain || ! domain.length ||
     ((domain.length == 2) && ! domain[0] && ! domain[1]);
   return noDomain;
 }
