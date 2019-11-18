@@ -64,8 +64,14 @@ export default ManageBase.extend({
    */
   enable_parentBeforeFilter : Ember.computed.alias('urlOptions.parentBeforeFilter'),
 
-  datasetsRefreshCounter : 0,
-  datasets : Ember.computed('model', 'model.availableMapsTask', 'model.availableMapsTask.value', 'view', 'datasetsRefreshCounter', function () {
+  /** Triggers a rerun of the availableMaps fetching task */
+  refreshAvailable: function(){
+    let reloadTask = this.get('model.availableMapsTask');
+    let newTaskInstance = reloadTask.task.perform();
+    this.set('model.availableMapsTask', newTaskInstance);
+  },
+
+  datasets : Ember.computed('model', 'model.availableMapsTask', 'model.availableMapsTask.value', 'view', function () {
     let task, promise, resultP;
 
     let me = this;
@@ -1023,8 +1029,9 @@ export default ManageBase.extend({
       return Object.keys(object).length;
     },
 
+    /** Triggered by refresh icon on datset list **/
     refreshAvailable() {
-      this.incrementProperty('datasetsRefreshCounter');
+      this.refreshAvailable(); // See method function above
     },
     deleteBlock(chr) {
       this.sendAction('deleteBlock', chr.id);
@@ -1044,8 +1051,9 @@ export default ManageBase.extend({
         me.incrementProperty('filterGroupsChangeCounter');
       });
     },
-    onDelete(id) {
-      
+    onDelete(modelName, id) {
+      this.refreshAvailable();
+      this.sendAction('onDelete', modelName, id);
     },
     loadBlock(block) {
       this.sendAction('loadBlock', block);
