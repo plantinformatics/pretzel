@@ -224,6 +224,8 @@ export default Service.extend(Ember.Evented, {
     let blockP =
       this.get('auth').getBlockFeaturesCount(blockIds, /*options*/{});
 
+    if (this.get('parsedOptions.featuresCounts')) {
+
     /** This will probably become user-configurable */
     const nBins = 100;
     /** As yet these result promises are not returned, not needed. */
@@ -254,6 +256,7 @@ export default Service.extend(Ember.Evented, {
           }
           return p;
         });
+    }
 
     return blockP;
   },
