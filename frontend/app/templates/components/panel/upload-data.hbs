@@ -45,7 +45,11 @@
 {{/if}}
 
 {{#if (compare filter '===' 'cell')}}
-  {{panel/upload/data-csv}}
+  {{panel/upload/data-csv
+    refreshDatasets=refreshDatasets
+  }}
 {{else if (compare filter '===' 'json')}}
-  {{panel/upload/data-json}} 
+  {{panel/upload/data-json
+    refreshDatasets=refreshDatasets
+  }} 
 {{/if}}

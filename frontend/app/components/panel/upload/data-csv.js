@@ -1,7 +1,7 @@
 import Ember from 'ember';
 const { inject: { service } } = Ember;
 
-import UploadBase from './data-base'
+import UploadBase from './data-base';
 
 
 export default UploadBase.extend({
@@ -261,12 +261,12 @@ export default UploadBase.extend({
             newDataset.set('parent', parent);
           }
           newDataset.save().then(function() {
-            that.loadDatasets(newDataset.id)
-            resolve(newDataset.id)
-          })
+            that.loadDatasets(newDataset.id);
+            resolve(newDataset.id);
+          });
         }
       }
-    })
+    });
   },
 
   validateData(sourceData) {
@@ -275,11 +275,11 @@ export default UploadBase.extend({
       var validatedData = [];
       var cols = {};
       var table = that.get('table');
-      for (var i=0; i<table.countCols(); i++) {
+      for (let i=0; i<table.countCols(); i++) {
         var prop = table.colToProp(i);
         cols[prop] = i;
       }
-      for (var i=0; i<sourceData.length; i++) {
+      for (let i=0; i<sourceData.length; i++) {
         var row = sourceData[i];
         if (row[cols['val']] || row[cols['name']] || row[cols['block']]) {
           if (!row[cols['val']] && row[cols['val']] != 0) {
@@ -312,12 +312,14 @@ export default UploadBase.extend({
 
   actions: {
     changeFilter: function(f) {
-      this.set('filter', f)
+      this.set('filter', f);
     },
     uploadBlocks() {
       var that = this;
       var table = that.get('table');
       var dataset_id = null;
+      // Controller-level function that reloads dataset list
+      let refreshDatasets = this.get('refreshDatasets');
       that.validateData(table.getData())
       .then(function(features) {
         if (features.length > 0) {
@@ -331,15 +333,17 @@ export default UploadBase.extend({
                 successMessage: res.status,
                 errorMessage: null,
                 warningMessage: null
-              })
+              });
               $("body").animate({ scrollTop: 0 }, "slow");
+              // On complete, trigger dataset list reload
+              refreshDatasets();
             }, function(err, status) {
               that.setProperties({
                 isProcessing: false,
                 successMessage: null,
                 errorMessage: err.responseJSON.error.message,
                 warningMessage: null
-              })
+              });
               console.log(err);
               $("body").animate({ scrollTop: 0 }, "slow");
             });
@@ -387,7 +391,7 @@ export default UploadBase.extend({
             data.push(row_obj);
           });
           table.loadData(data);
-        }
+        };
         reader.readAsText(file);
       }
     }
