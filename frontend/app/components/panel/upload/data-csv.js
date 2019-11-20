@@ -231,7 +231,8 @@ export default UploadBase.extend({
     let datasets = that.get('store').peekAll('Dataset').toArray();
     return new Ember.RSVP.Promise(function(resolve, reject) {
       var selectedMap = $("#dataset").val();
-      if (selectedMap != 'new') {
+      // If no selectedMap, treat as default 'new' 
+      if (selectedMap && selectedMap !== 'new') {
         resolve(selectedMap);
       } else {
         var newMap = $("#dataset_new").val();
@@ -242,7 +243,8 @@ export default UploadBase.extend({
             resolve(selectedMap);
           }
         });
-        if (selectedMap == 'new') {
+        // If no selectedMap, treat as default 'new'
+        if (!selectedMap || selectedMap === 'new') {
           let parentId = $("#parent").val();
           let parent = null;
           if (parentId && parentId.length > 0) {
