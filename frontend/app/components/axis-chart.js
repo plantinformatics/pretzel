@@ -143,6 +143,7 @@ export default InAxis.extend({
   },
 
   blockFeatures : Ember.computed('block', 'block.features.[]', 'axis.axis1d.domainChanged', function () {
+    if (this.get('block.isChartable'))
       this.drawBlockFeatures0();
   }),
   featuresCounts : Ember.computed('block', 'block.featuresCounts.[]', 'axis.axis1d.domainChanged', function () {
@@ -155,13 +156,18 @@ export default InAxis.extend({
     let domain = this.get('axis.axis1d.domainChanged');
     console.log('blockFeatures', features.length, domain);
     if (features.length)  // -	should also handle drawing when .length changes to 0
-      this.drawBlockFeatures(features);
+    {
+      if (features[0] === undefined)
+        dLog('drawBlockFeatures0', features.length, domain);
+      else
+        this.drawBlockFeatures(features);
+    }
   },
   drawBlockFeaturesCounts : function() {
     let featuresCounts = this.get('block.featuresCounts');
     let domain = this.get('axis.axis1d.domainChanged');
     if (featuresCounts) {
-      console.log('blockFeatures', featuresCounts.length, domain);
+      console.log('drawBlockFeaturesCounts', featuresCounts.length, domain, this.get('block.id'));
 
       /** example element of array f : */
       const dataExample = 

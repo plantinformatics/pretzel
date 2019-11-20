@@ -488,6 +488,23 @@ Block.blockNamespace = async function(blockIds) {
 
   /*--------------------------------------------------------------------------*/
 
+  /** Send a database request to collate feature value limits (max and min) for all blocks.
+   * @param blockId  undefined (meaning all blocks) or id of 1 block to find min/max for
+   */
+  Block.blockFeatureLimits = function(blockId, options, res, cb) {
+    let db = this.dataSource.connector;
+    let cursor =
+      blockFeatures.blockFeatureLimits(db, blockId);
+    cursor.toArray()
+    .then(function(limits) {
+      cb(null, limits);
+    }).catch(function(err) {
+      cb(err);
+    });
+  };
+
+  /*--------------------------------------------------------------------------*/
+
   /** Collate from the database a list of features within the given block, which
    * meet the optional interval domain constraint.
    *
@@ -616,13 +633,24 @@ Block.blockNamespace = async function(blockIds) {
   Block.remoteMethod('blockFeaturesCounts', {
     accepts: [
       {arg: 'block', type: 'string', required: true},
-      {arg: 'nBins', type: 'string', required: true},
+      {arg: 'nBins', type: 'number', required: false},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},
     ],
     http: {verb: 'get'},
     returns: {type: 'array', root: true},
     description: "Returns an array of N bins of counts of the Features in the block"
+  });
+
+  Block.remoteMethod('blockFeatureLimits', {
+    accepts: [
+      {arg: 'block', type: 'string', required: false},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'res', type: 'object', 'http': {source: 'res'}},
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Returns an array of blocks with their min&max Feature values."
   });
 
   Block.remoteMethod('blockFeaturesInterval', {

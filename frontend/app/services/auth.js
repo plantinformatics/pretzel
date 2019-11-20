@@ -240,6 +240,12 @@ export default Service.extend({
     return this._ajax('Blocks/blockFeaturesCount', 'GET', {blocks, options}, true);
   },
 
+  getBlockFeatureLimits(block, options) {
+    if (trace_paths)
+      dLog('services/auth getBlockFeatureLimits', block, options);
+    return this._ajax('Blocks/blockFeatureLimits', 'GET', {block, options}, true);
+  },
+
   getBlockFeaturesInterval(blocks, intervals, options) {
     if (trace_paths)
       dLog('services/auth getBlockFeaturesInterval', blocks, intervals, options);

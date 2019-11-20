@@ -8,6 +8,7 @@ import { stacks } from '../../utils/stacks';
 
 
 let trace_block = 1;
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
@@ -107,6 +108,38 @@ export default Service.extend(Ember.Evented, {
   ,
 
   /*--------------------------------------------------------------------------*/
+
+  /** Call getLimits() in a task - yield the block limits result.
+   */
+  taskGetLimits: task(function * (blockId) {
+    let blockLimits = yield this.getLimits(blockId);
+    dLog('taskGetLimits', this, blockId, blockLimits);
+    blockLimits.forEach((bfc) => {
+      let block = this.peekBlock(bfc._id);
+      if (! block)
+        console.log('taskGetLimits', bfc._id);
+      else {
+        // console.log('taskGetLimits', bfc, block);
+        block.set('featureLimits', [bfc.min, bfc.max]);
+        if (! block.get('featureCount'))
+          block.set('featureCount', bfc.featureCount);
+      }
+    });
+    
+    return blockLimits;
+  }).drop(),
+
+  getLimits: function (blockId) {
+    // console.log("block getLimits", blockId);
+    let blockP =
+      this.get('auth').getBlockFeatureLimits(blockId, /*options*/{});
+
+    return blockP;
+  },
+
+
+  /*--------------------------------------------------------------------------*/
+
 
   /** Call getSummary() in a task - yield the block result.
    * Signal that receipt with receivedBlock([{id, obj:block}]).
@@ -365,6 +398,26 @@ export default Service.extend(Ember.Evented, {
     console.log("getBlocks() result blockTasks", blockTasks);
     return blockTasks;
   },
+
+  /**
+   * @param blockId optional : get limits for just 1 block; normally this is
+   * undefined and limits are requested for all blocks.
+   */
+  getBlocksLimits(blockId) {
+    let taskGet = this.get('taskGetLimits');
+    console.log("getBlocksLimits", blockId);
+      let p =  new Ember.RSVP.Promise(function(resolve, reject){
+        Ember.run.later(() => {
+          let blocksTask = taskGet.perform(blockId);
+          blocksTask.then((result) => resolve(result));
+          blocksTask.catch((error) => reject(error));
+        });
+      });
+    let blocksTask = p;
+    console.log("getBlocksLimits() result blocksTask", blocksTask);
+    return blocksTask;
+  },
+
 
   getBlocksSummary(blockIds) {
     let taskGet = this.get('taskGetSummary');

@@ -134,7 +134,12 @@ export default DS.Model.extend({
       }
     }
   },
-  featuresDomain : Ember.computed.alias('featuresDomainUpdate'),
+  /** featureLimits is returned from API for all blocks initially.
+   * featuresDomainUpdate is essentially equivalent.
+   * If there are local changes (features added or feature values changed) then
+   * featuresDomainUpdate might be used also.
+   */
+  featuresDomain : Ember.computed.alias('featureLimits'),
 
   isChartable : Ember.computed('datasetId.tags', function () {
     let tags = this.get('datasetId.tags'),
