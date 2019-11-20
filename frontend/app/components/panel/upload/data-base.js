@@ -10,6 +10,8 @@ export default Ember.Component.extend({
   actions: {
     submitForm() {
       let f = this.get('file');
+      // Controller-level function that reloads dataset list
+      let refreshDatasets = this.get('refreshDatasets');
       if (f && !this.get('isProcessing')) {
         let reader = new FileReader();
         var that = this;
@@ -23,6 +25,8 @@ export default Ember.Component.extend({
               errorMessage: null
             });
             $("body").animate({ scrollTop: 0 }, "slow");
+            // On complete, trigger dataset list reload
+            refreshDatasets();
           }, function(err, status) {
             let errobj = err.responseJSON.error;
             console.log(errobj);
@@ -41,11 +45,11 @@ export default Ember.Component.extend({
             });
             $("body").animate({ scrollTop: 0 }, "slow");
           });
-        }
+        };
         reader.readAsBinaryString(f);
         this.setProperties({
           isProcessing: true
-        })
+        });
       }
     }
   }
