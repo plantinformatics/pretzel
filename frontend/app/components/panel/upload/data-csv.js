@@ -271,7 +271,13 @@ export default UploadBase.extend({
         if (features.length > 0) {
           that.getDatasetId().then(function(map_id) {
             var data = {dataset_id: map_id, features: features, namespace: $("#namespace").val()};
-            that.set('isProcessing', true);
+            that.setProperties({
+              isProcessing: true,
+              successMessage: null,
+              errorMessage: null,
+              warningMessage: null
+            });
+            $("#left-panel-upload").animate({ scrollTop: 0 }, "slow");
             that.get('auth').tableUpload(data)
             .then(function(res){
               that.setProperties({
@@ -280,7 +286,7 @@ export default UploadBase.extend({
                 errorMessage: null,
                 warningMessage: null
               });
-              $("body").animate({ scrollTop: 0 }, "slow");
+              $("#left-panel-upload").animate({ scrollTop: 0 }, "slow");
               // On complete, trigger dataset list reload
               refreshDatasets();
             }, function(err, status) {
@@ -291,14 +297,14 @@ export default UploadBase.extend({
                 warningMessage: null
               });
               console.log(err);
-              $("body").animate({ scrollTop: 0 }, "slow");
+              $("#left-panel-upload").animate({ scrollTop: 0 }, "slow");
             });
           });
         }
       }, function(err) {
         table.selectCell(err.r, err.c);
         that.set('errorMessage', err.msg);
-        $("body").animate({ scrollTop: 0 }, "slow");
+        $("#left-panel-upload").animate({ scrollTop: 0 }, "slow");
       });
     },
     clearTable() {

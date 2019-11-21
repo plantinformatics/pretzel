@@ -24,7 +24,7 @@ export default Ember.Component.extend({
               successMessage: "Dataset uploaded successfully!",
               errorMessage: null
             });
-            $("body").animate({ scrollTop: 0 }, "slow");
+            $("#left-panel-upload").animate({ scrollTop: 0 }, "slow");
             // On complete, trigger dataset list reload
             refreshDatasets();
           }, function(err, status) {
@@ -43,13 +43,17 @@ export default Ember.Component.extend({
               errorMessage: errmsg,
               successMessage: null
             });
-            $("body").animate({ scrollTop: 0 }, "slow");
+            $("#left-panel-upload").animate({ scrollTop: 0 }, "slow");
           });
         };
         reader.readAsBinaryString(f);
         this.setProperties({
-          isProcessing: true
+          isProcessing: true,
+          successMessage: null,
+          errorMessage: null,
+          warningMessage: null
         });
+        $("#left-panel-upload").animate({ scrollTop: 0 }, "slow");
       }
     }
   }
