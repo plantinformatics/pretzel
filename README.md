@@ -234,6 +234,7 @@ The Loopback backend expects the compiled client in its client/ sub-directory. Y
 
 ```
 ln -s ../frontend/dist backend/client
+ln -s ../../../../backend/common/utilities/interval-overlap.js frontend/app/utils/draw/.
 ```
 
 ## Running
