@@ -46,6 +46,7 @@
 
 {{#if (compare filter '===' 'cell')}}
   {{panel/upload/data-csv
+    datasets=datasets
     refreshDatasets=refreshDatasets
   }}
 {{else if (compare filter '===' 'json')}}

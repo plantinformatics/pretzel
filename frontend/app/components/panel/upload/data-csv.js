@@ -1,76 +1,14 @@
 import Ember from 'ember';
-const { inject: { service } } = Ember;
-
 import UploadBase from './data-base';
 
-
 export default UploadBase.extend({
-  dataset: service('data/dataset'),
-
-  /** Ensure that the Datasets and Blocks are loaded.
-   *
-   * The mapview route also performs dataset.taskGetList at startup. The task
-   * has .drop() so only 1 request will be sent.
-   */
-  datasetsTaskInstance : Ember.computed(function () {
-    let datasetsTaskInstance = this.get('dataset.taskGetList').perform();
-    datasetsTaskInstance.then((datasets) => this.set('datasets', datasets));
-    return datasetsTaskInstance;
-  }),
-  loadDatasets: function(id, datasets) {
-    console.log('loadDatasets', id, datasets);
-    var that = this;
-    if (! datasets) {
-      let datasetsTaskInstance = this.get('datasetsTaskInstance');
-      /* This is a minimal change to the original, replacing the store query
-       * with the equivalent task performance.
-       * loadDatasets() could be split into load and draw; not sure if reload is
-       * intended after save. */
-      datasetsTaskInstance.then(function(data) {
-        if (data.toArray().length > 0) {
-          that.loadDatasets(id, data);
-        }
-      });
-      return;
-    }
-
-
-    //build dataset select
-    $("#dataset").html('');
-    $("#dataset").append($('<option>', {
-      text: 'new'
-    }));
-    $.each(datasets, function (i, item) {
-      $('#dataset').append($('<option>', {
-          text : item.get('name')
-      }));
-    });
-    if (id) {
-      $("#dataset").val(id);
-    }
-    $("#dataset").trigger('change');
-
-    //build parent select
-    $("#parent").html('');
-    $("#parent").append($('<option>', {
-      value: '',
-      text: 'None'
-    }));
-    $.each(datasets, function (i, item) {
-      $('#parent').append($('<option>', {
-          text : item.get('name')
-      }));
-    });
-  },
-
   buildView: function() {
     var that = this;
 
-    that.loadDatasets();
     $(function() {
       $("#dataset").on('change', function() {
         var selectedMap = $("#dataset").val();
-        if (selectedMap == 'new') {
+        if (selectedMap === 'new') {
           $("#new_dataset_options").show();
         } else {
           $("#new_dataset_options").hide();
@@ -140,7 +78,7 @@ export default UploadBase.extend({
     var that = this;
     let table = that.get('table');
     var warning = null;
-    if (table != null) {
+    if (table !== null) {
       var maps = that.get('store').peekAll('Dataset').toArray();
       if (maps) {
         // find selected dataset
@@ -148,7 +86,7 @@ export default UploadBase.extend({
         var map = null;
         let parent = null;
         maps.forEach(function(m) {
-          if (m.get('name') == selectedMap) {
+          if (m.get('name') === selectedMap) {
             map = m;
           }
         });
@@ -174,18 +112,20 @@ export default UploadBase.extend({
                 duplicates.push(block);
               }
             });
-            warning = "The blocks "
-            + " (" + duplicates.join(', ') + ") already exist in the selected dataset and will be overwritten by the new data";
+            warning = 'The blocks ' +
+              ' (' +
+              duplicates.join(', ') +
+              ') already exist in the selected dataset and will be overwritten by the new data';
           }
 
           if (map.get('parent').get('name')) {
             parent = map.get('parent');
           }
-        } else if (selectedMap == 'new') {
+        } else if (selectedMap === 'new') {
           let parent_id = $("#parent").val();
           if (parent_id.length > 0) {
             maps.forEach(function(m) {
-              if (m.get('name') == parent_id) {
+              if (m.get('name') === parent_id) {
                 parent = m;
               }
             });
@@ -213,8 +153,13 @@ export default UploadBase.extend({
             } else {
               warning = '';
             }
-            warning += "The blocks"
-            + " (" + missing.join(', ') + ") do not exist in the parent dataset (" + parent.get('name') + ')';
+            warning +=
+              'The blocks' +
+              ' (' +
+              missing.join(', ') +
+              ') do not exist in the parent dataset (' +
+              parent.get('name') +
+              ')';
           }
         }
       }
@@ -238,7 +183,7 @@ export default UploadBase.extend({
         var newMap = $("#dataset_new").val();
         //check if duplicate
         datasets.forEach(function(dataset) {
-          if (dataset.get('name') == newMap) {
+          if (dataset.get('name') === newMap) {
             selectedMap = dataset.id;
             resolve(selectedMap);
           }
@@ -249,7 +194,7 @@ export default UploadBase.extend({
           let parent = null;
           if (parentId && parentId.length > 0) {
             datasets.forEach(function(dataset) {
-              if (dataset.get('name') == parentId) {
+              if (dataset.get('name') === parentId) {
                 parent = dataset;
               }
             });
@@ -259,11 +204,10 @@ export default UploadBase.extend({
             type: $("#type").val(),
             blocks: []
           });
-          if (parent != null) {
+          if (parent !== null) {
             newDataset.set('parent', parent);
           }
           newDataset.save().then(function() {
-            that.loadDatasets(newDataset.id);
             resolve(newDataset.id);
           });
         }
@@ -284,7 +228,7 @@ export default UploadBase.extend({
       for (let i=0; i<sourceData.length; i++) {
         var row = sourceData[i];
         if (row[cols['val']] || row[cols['name']] || row[cols['block']]) {
-          if (!row[cols['val']] && row[cols['val']] != 0) {
+          if (!row[cols['val']] && row[cols['val']] !== 0) {
             reject({r: i, c: cols['val'], msg: 'Position required'});
             break;
           }

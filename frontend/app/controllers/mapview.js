@@ -1,4 +1,5 @@
 import Ember from 'ember';
+import DS from 'ember-data';
 
 const { computed : { readOnly } } = Ember;
 const { inject: { service } } = Ember;
@@ -17,6 +18,16 @@ let trace_select = 0;
 export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   dataset: service('data/dataset'),
   block: service('data/block'),
+
+  /** Array of available datasets populated from model 
+   */
+  datasets: Ember.computed('model', 'model.availableMapsTask', 'model.availableMapsTask.value', function () {
+    let task = this.get('model.availableMapsTask');
+    let promise = task.then(function (value) { dLog('datasets from task', value); return value; });
+    let resultP = DS.PromiseArray.create({ promise: promise });
+    dLog(task, promise, 'resultP', resultP);
+    return resultP;
+  }),
 
   actions: {
     // layout configuration
@@ -149,15 +160,14 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       this.set('selectedDataset', ds);
       this.send('setTab', 'right', 'dataset');
     },
-    /** Get all available maps.
+    /** Re-perform task to get all available maps.
      */
     updateModel: function() {
       let model = this.get('model');
-      dLog("controller/mapview: model()", model, 'get datasets');
-      // see related : routes/mapview.js:model()
+      dLog('controller/mapview: updateModel()', model);
       let datasetsTaskPerformance = model.get('availableMapsTask'),
       newTaskInstance = datasetsTaskPerformance.task.perform();
-      dLog(datasetsTaskPerformance, newTaskInstance);
+      dLog('controller/mapview: updateModel()', newTaskInstance);
       model.set('availableMapsTask', newTaskInstance);
     }
   },

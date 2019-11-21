@@ -66,38 +66,30 @@ export default ManageBase.extend({
 
   /** Triggers a rerun of the availableMaps fetching task */
   refreshAvailable: function(){
-    let reloadTask = this.get('model.availableMapsTask');
-    let newTaskInstance = reloadTask.task.perform();
-    this.set('model.availableMapsTask', newTaskInstance);
+    this.get('refreshDatasets')();
   },
 
-  datasets : Ember.computed('model', 'model.availableMapsTask', 'model.availableMapsTask.value', 'view', function () {
-    let task, promise, resultP;
-
-    let me = this;
-    /** Using availableMapsTask which is shared between components is preferable
-     * to doing an additional store.query() here.  matrixview is not yet added to availableMapsTask.
-     */
-    let view = me.get('view');
-    if (view == 'matrixview') {
-      let store = this.get('store');
-      /** This filter is common to all views.
-       * For matrixview, select observational. */
-      let filter = {'include': 'blocks'};
-      filter['where'] = {'type': 'observational'};
-
-      promise =
-        store.query('dataset', {filter: filter});
-      promise.then(function(datasets) {
-        console.log('datasets', datasets.toArray());
-      });
+  /** Datasets passed in from MapView, but still need fetching on MatrixView
+   * MatrixView dataset retrieval should be raised to route model / controller in future
+   * At that time, 'mapviewDatasets' can be renamed to 'datasets'
+   * and this whole computed element may be removed */
+  datasets : Ember.computed('mapviewDatasets', 'view', function () {
+    let view = this.get('view');
+    if (view === 'mapview') {
+      return this.get('mapviewDatasets');
     }
-    else {
-      task = this.get('model.availableMapsTask');
-      promise = task.then(function (value) { dLog('datasets from task', value); return value; });
-    }
-    resultP = DS.PromiseArray.create({ promise: promise });
-    dLog(task, promise, 'resultP', resultP);
+    // Else, view === matrixview
+    let store = this.get('store');
+    /** This filter is common to all views.
+     * For matrixview, select observational. */
+    let filter = {'include': 'blocks'};
+    filter['where'] = {'type': 'observational'};
+    let promise = store.query('dataset', {filter: filter});
+    promise.then(function(datasets) {
+      console.log('datasets', datasets.toArray());
+    });
+    let resultP = DS.PromiseArray.create({ promise: promise });
+    dLog('manage-explorer matrixview datasets', promise, 'resultP', resultP);
     return resultP;
   }),
   datasetType: null,

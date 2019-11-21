@@ -3,11 +3,22 @@
   warningMessage=warningMessage
   errorMessage=errorMessage}}
 
-
-<label>Dataset: </label><select id="dataset"></select><br>
+<label>Dataset: </label>
+<select id="dataset">
+  <option selected>new</option>
+  {{#each datasets key="name" as |ds|}}
+    <option value={{ds.name}}>{{ds.name}}</option>
+  {{/each}}
+</select><br>
 <div id="new_dataset_options">
   <input id="dataset_new" class="form-control" placeholder="New dataset name..." /><br>
-  <label>Parent: </label><select id="parent"></select><br>
+  <label>Parent: </label>
+  <select id="parent">
+    <option value='' selected>None</option>
+    {{#each datasets key="name" as |ds|}}
+      <option value={{ds.name}}>{{ds.name}}</option>
+    {{/each}}
+  </select><br>
   <label>Type: </label><select id="type">
     <option>linear</option>
     <option>observational</option>
