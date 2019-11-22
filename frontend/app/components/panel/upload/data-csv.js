@@ -28,7 +28,6 @@ export default UploadBase.extend({
         data: [['', '', '']],
         minRows: 20,
         rowHeaders: true,
-        colHeaders: true,
         columns: [
           {
             data: 'name',
@@ -164,11 +163,10 @@ export default UploadBase.extend({
         }
       }
     }
-    that.setProperties({
-      warningMessage: warning,
-      successMessage: null,
-      errorMessage: null
-    });
+    if(warning){
+      that.setWarning(warning);
+      that.scrollToTop();
+    }
   },
 
   getDatasetId() {
@@ -260,51 +258,35 @@ export default UploadBase.extend({
     changeFilter: function(f) {
       this.set('filter', f);
     },
-    uploadBlocks() {
+    submitFile() {
       var that = this;
       var table = that.get('table');
       var dataset_id = null;
-      // Controller-level function that reloads dataset list
-      let refreshDatasets = this.get('refreshDatasets');
       that.validateData(table.getData())
       .then(function(features) {
         if (features.length > 0) {
           that.getDatasetId().then(function(map_id) {
             var data = {dataset_id: map_id, features: features, namespace: $("#namespace").val()};
-            that.setProperties({
-              isProcessing: true,
-              successMessage: null,
-              errorMessage: null,
-              warningMessage: null
-            });
-            $("#left-panel-upload").animate({ scrollTop: 0 }, "slow");
+            that.setProcessing();
+            that.scrollToTop();
             that.get('auth').tableUpload(data)
             .then(function(res){
-              that.setProperties({
-                isProcessing: false,
-                successMessage: res.status,
-                errorMessage: null,
-                warningMessage: null
-              });
-              $("#left-panel-upload").animate({ scrollTop: 0 }, "slow");
+              that.setSuccess(res.status);
+              that.scrollToTop();
               // On complete, trigger dataset list reload
-              refreshDatasets();
+              // through controller-level function
+              that.get('refreshDatasets')();
             }, function(err, status) {
-              that.setProperties({
-                isProcessing: false,
-                successMessage: null,
-                errorMessage: err.responseJSON.error.message,
-                warningMessage: null
-              });
               console.log(err);
-              $("#left-panel-upload").animate({ scrollTop: 0 }, "slow");
+              that.setError(err.responseJSON.error.message);
+              that.scrollToTop();
             });
           });
         }
       }, function(err) {
         table.selectCell(err.r, err.c);
-        that.set('errorMessage', err.msg);
-        $("#left-panel-upload").animate({ scrollTop: 0 }, "slow");
+        that.setError(err.msg);
+        that.scrollToTop();
       });
     },
     clearTable() {
@@ -312,7 +294,11 @@ export default UploadBase.extend({
       var table = this.get('table');
       table.updateSettings({data:[]});
     },
-    uploadToTable(e) {
+    setFile(e) {
+      // First call base version of this overidden function
+      // which sets file property
+      this._super(e);
+      // Then proceed to populate display table from file parse
       let file = e.target.files[0];
       var table = this.get('table');
       if (file) {

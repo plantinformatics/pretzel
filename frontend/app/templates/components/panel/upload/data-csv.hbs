@@ -33,14 +33,15 @@
   </select><br>
   <label>Namespace: </label><input id="namespace">
 </div>
-<br><label>Load from file: </label><input type="file" accept=".csv" id="tableFile" onchange={{action 'uploadToTable'}}>
+<br><label>Load from file: </label>
+<input type="file" accept=".csv" id="tableFile" onchange={{action 'setFile'}}>
 <div id="hotable" class="actual-row">
 </div>
 
 <input
   type="submit"
   class="btn btn-primary {{if isProcessing 'disabled'}}"
-  onclick={{action 'uploadBlocks'}}>
+  onclick={{action 'submitFile'}}>
 <button
   class="btn"
   onclick={{action 'clearTable'}}>Clear</button>
