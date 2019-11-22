@@ -287,7 +287,10 @@ export default Service.extend({
       }
       let fn = store.normalize('feature', f);
       c = store.push(fn);
-      storeFeature(stacks.oa, flowsService, f.name, c, f.blockId);
+      let blockId = f.blockId;
+      if (blockId.get)
+	blockId = blockId.get('id');
+      storeFeature(stacks.oa, flowsService, f.name, c, blockId);
       if (trace_pathsP > 2)
         dLog(c.get('id'), c._internalModel.__data);
     }

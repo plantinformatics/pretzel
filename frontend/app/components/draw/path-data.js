@@ -40,11 +40,18 @@ export default Ember.Component.extend({
    * Related : unique_1_1_mapping, pathDataInG
    */
 
+  feature2BlockId(i) {
+    let fieldName = 'feature' + i,
+    feature = this.get(fieldName),
+    blockId = feature.get ? feature.get('blockId.id') : feature.blockId;
+    return blockId;
+  },
+
   /** currently feature{0,1} are in this component, and they reference their respective blocks.
    * May instead use models/draw/path-data for the data attributes, or a non-store object.
    */
-  blockId0 : Ember.computed.alias('feature0.blockId.id'),
-  blockId1 : Ember.computed.alias('feature1.blockId.id'),
+  blockId0 : Ember.computed('feature0.blockId.id', function () { return this.feature2BlockId(0); }),
+  blockId1 : Ember.computed('feature1.blockId.id', function () { return this.feature2BlockId(1); }),
 
 
     /** Determine the svg <path> data attribute for this component.
@@ -71,7 +78,7 @@ export default Ember.Component.extend({
     if (trace_path > 1)
       console.log(
         "pathU",
-        axisName2MapChr(pathData.block0), axisName2MapChr(pathData.block1),
+        axisName2MapChr(block0), axisName2MapChr(block1),
         pathData.feature0, pathData.feature1, p[0]);
     return p;
   }/*)*/,
@@ -87,8 +94,8 @@ export default Ember.Component.extend({
     let block0 = pathData.get('blockId0'),
     block1 = pathData.get('blockId1');
     let haveAxes =
-      (pathData.get('feature0.block.isViewed') || getAxis(block0)) &&
-      (pathData.get('feature1.block.isViewed') || getAxis(block1));
+      (pathData.get('feature0.blockId.isViewed') || getAxis(block0)) &&
+      (pathData.get('feature1.blockId.isViewed') || getAxis(block1));
     return haveAxes;
   }
 
