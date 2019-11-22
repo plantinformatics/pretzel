@@ -299,7 +299,7 @@ export default Service.extend({
     let fr = this.pushFeature(store, f, flowsService);
     if (fr)
       res[fieldName] = fr;
-    else
+    else if (trace_pathsP > 2)
       dLog('pushFeatureField', fieldName, f);
   },
 

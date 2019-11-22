@@ -10,6 +10,7 @@ const { inject: { service } } = Ember;
 import { stacks, Stacked } from '../utils/stacks';
 
 const dLog = console.debug;
+const trace_blockAdj = 0;
 
 export default DS.Model.extend(Ember.Evented, {
 
@@ -144,19 +145,31 @@ export default DS.Model.extend(Ember.Evented, {
    */
   domainChange :  Ember.computed('axisDimensions', 'intervalParams', function () {
       let intervals = this.get('intervalParams'),
+    /** interim measure to include pathsDensityParams in comparison; planning to
+     * restructure using CP. */
+    pathsDensityParams = this.get('pathsPro.pathsDensityParams'),
     /** this can now be simplified to use axesDomains(). */
     intervalsAxes = this.get('axisDimensions'),
       domainsDiffer = function ()
       {
         let
         domainChanges = [0, 1].map(function (i) {
+          /**
+           * @param field name of parameter / field within pathsDensityParams and intervals.
+           * @return true if the given field name  current value pathsDensityParams differs from the cached value intervals
+           */
+          function ppDiff(field) { 
+            dLog('ppDiff', field, pathsDensityParams[field], intervals[field]);
+            return pathsDensityParams[field] && (pathsDensityParams[field] !== intervals[field]); }
           let d = intervals.axes[i].domain,
           d2 = intervalsAxes[i].domain,
           /** u === 1 means one domain is defined and the other is not, i.e. change is true.
            * Only evaluate d[] and d2[] if both domains are defined, i.e. u === 2. */
           u = (d === undefined) + (d2 === undefined),
           change = (u === 1) ||
-            ((u === 0) && ((d[0] !== d2[0]) || (d[1] !== d2[1])));
+            ((u === 0) && ((d[0] !== d2[0]) || (d[1] !== d2[1]))) ||
+            ppDiff('nSamples') || ppDiff('nFeatures') || ppDiff('densityFactor')
+          ;
           return change;
         });
         let change = domainChanges[0] || domainChanges[1];
@@ -298,13 +311,15 @@ export default DS.Model.extend(Ember.Evented, {
     flows = flowsService.get('flows');
 
     let me = this;
+    /** if ! trace_blockAdj then just trace .length. */
+    let trace_suffix = trace_blockAdj ? '' : '.length';
 
     if (flows.direct.visible) {
       let
         paths = this.get('pathsPro').getPathsProgressive(this, blockAdjId, taskInstance);
       paths.then(
         function (result) {
-          dLog('block-adj paths', result.length, me.get('pathsResult'), id, me);
+          dLog('block-adj paths', result.length, me.get('pathsResult' + trace_suffix), id, me);
         }, function (err) {
           dLog('block-adj paths reject', err);
         }
@@ -317,7 +332,7 @@ export default DS.Model.extend(Ember.Evented, {
         pathsAliases = this.get('pathsPro').getPathsAliasesProgressive(this, blockAdjId, taskInstance);
       pathsAliases.then(
         function (result) {
-          dLog('block-adj pathsAliases', result && result.length, me.get('pathsAliasesResult'), id, me);
+          dLog('block-adj pathsAliases', result && result.length, me.get('pathsAliasesResult' + trace_suffix), id, me);
         }, function (err) {
           dLog('block-adj pathsResult reject', err);
         }
@@ -336,44 +351,9 @@ export default DS.Model.extend(Ember.Evented, {
   taskGetPaths : task(function* (blockAdjId) {
     let result;
     try {
-      let
-        /** now and lastStarted are in milliseconds */
-        now = Date.now(),
-      lastStarted = this.get('lastStarted'),
-      elapsed;
 
-      if (lastStarted && ((elapsed = now - lastStarted) < 5000)) {
-        dLog('taskGetPaths : elapsed', elapsed);
-
-        let lastPerformed = this.get('lastPerformed');
-        if (lastPerformed)
-          return lastPerformed;
-        if (false && lastPerformed) {
-          lastPerformed.then(function () {
-            dLog('taskGetPaths lastPerformed', this, arguments);
-          });
-          let val = yield lastPerformed;
-          dLog('taskGetPaths lastPerformed yield', val);
-          return val;
-        }
-      }
-      let task = this.get('taskGetPaths');
-      if (! task.get('isIdle')) {
-        try {
-          let timeoutResult = yield timeout(2000); // throttle
-          dLog('taskGetPaths : timeoutResult', timeoutResult);
-        }
-        finally {
-          dLog('taskGetPaths : finally', this, arguments);  
-        }
-      }
-
-      this.set('lastStarted', now);
       let 
         lastPerformed = this.get('lastPerformed');
-      dLog('taskGetPaths : lastStarted now', now, lastPerformed);
-      if (lastPerformed.error)
-        dLog('taskGetPaths lastPerformed.error', lastPerformed.error);
       result =
         yield this.getPaths(blockAdjId, lastPerformed);
       result = yield this.flowsAllSettled(result);
@@ -395,7 +375,7 @@ export default DS.Model.extend(Ember.Evented, {
     }
 
     return result;
-  }).maxConcurrency(2).restartable() // drop()
+  }).drop() // maxConcurrency(2).restartable() // 
 
 
   /*--------------------------------------------------------------------------*/

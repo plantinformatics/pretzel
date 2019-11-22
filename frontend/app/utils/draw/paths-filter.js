@@ -55,7 +55,8 @@ function pathInDomain(prType, p, all, blockDomains) {
       if (domain) {
         let
           features = prType.blocksFeatures(p, i),
-        dataLocation = function(feature) { return feature.value; },
+        /** feature.value may be a ComputedProperty, so use get if defined. */
+        dataLocation = function(feature) { return feature.get ? feature.get('value') : feature.value; },
         /** a function (v) to check if dataLocation of v is within domain domain;
          * in simple terms : domain[0] <= v && v <= domain[1], but also handles direction.
          */

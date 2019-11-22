@@ -563,7 +563,7 @@ function pathsOfFeature(store, pathsResultType, owner) {
   };
 }
 
-const trace_ = 1;
+const trace_pc = 1;
 
 function pathCreate(store, feature0, feature1, block0, block1) {
   let
@@ -580,8 +580,8 @@ function pathCreate(store, feature0, feature1, block0, block1) {
     pair =
       PathData.create({ renderer : {} });
     pair.setProperties(properties);
-  // if (trace_ > 2)
-    dLog('PathData.create()', PathData, pair);
+    if (trace_pc > 2)
+      dLog('PathData.create()', PathData, pair);
     return pair;
   }
   else {
@@ -608,7 +608,7 @@ function pathCreate(store, feature0, feature1, block0, block1) {
         }*/
       };
       r = store.push({data});
-      if (trace_)
+      if (trace_pc)
         dLog('pathCreate', r, r.get('id'), r._internalModel, r._internalModel.__data, store, data);
     }
     else {
