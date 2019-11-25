@@ -12,11 +12,11 @@
 {{/if}}
 
   <h5>Upload Datasets (JSON / gzip)</h5>
-  <form {{action 'submitForm' on='submit'}}>
+  <form {{action 'submitFile' on='submit'}}>
     <input
       type='file'
       accept=".json,.gz"
-      onchange={{action 'upload'}}>
+      onchange={{action 'setFile'}}>
     <br>
     <input
       type="submit"
