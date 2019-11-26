@@ -1867,7 +1867,7 @@ export default Ember.Component.extend(Ember.Evented, {
       // The brush is on y.
       y[d] = ys[d].copy();
       y[d].brush = d3.brushY()
-        .extent(maybeFlipExtent([[-8,0],[8,myRange]], a.flipped))
+        .extent([[-8,0],[8,myRange]])
         .on("end", brushended);
       }
     });
@@ -3984,7 +3984,7 @@ export default Ember.Component.extend(Ember.Evented, {
           });
         function resetBrushes()
         {
-          let brushed = d3.selectAll("g.axis-all > g.brush");
+          let brushed = d3.selectAll("g.axis-all > g.brush > g[clip-path]");
           /** brushed[j] may correspond to oa.selectedAxes[j] and hence
            * brushExtents[j], but it seems possible for their order to not
            * match.  This is only used in trace anyway.
@@ -5388,7 +5388,7 @@ export default Ember.Component.extend(Ember.Evented, {
           if (trace_gui)
             console.log("shown.bs.popover", event, event.target);
           // button is not found when show.bs.popover, but is when shown.bs.popover.
-          // Could select via id from <text> attr aria-describedby=​"popover800256".
+          // Could select via id from <text> attr aria-describedby="popover800256".
           let deleteButtonS = d3.select("button.DeleteMap");
           if (trace_gui)
             console.log(deleteButtonS.empty(), deleteButtonS.node());
@@ -5424,8 +5424,6 @@ export default Ember.Component.extend(Ember.Evented, {
               ya.domain(domain);
               ysa.domain(domain);
 
-              let b = ya.brush;
-              b.extent(maybeFlipExtent(b.extent()(), true));
               let t = oa.svgContainer.transition().duration(750);
               axisScaleChanged(axisName, t, true);
             });
@@ -5563,11 +5561,26 @@ export default Ember.Component.extend(Ember.Evented, {
         if (heightChanged)
         {
           // let traceCount = 1;
-          oa.svgContainer.selectAll('g.axis-all > g.brush')
+          oa.svgContainer.selectAll('g.axis-all > g.brush > clipPath > rect')
+            .each(function(d) {
+              let a = oa.axesP[d],
+              ya = oa.y[d],
+              yaRange = ya.range();
+              // dLog('axis-brush', this, this.getBBox(), yaRange);
+              // see also brushClip().
+              d3.select(this)
+              // set 0 because getting y<0, probably from brushClip() - perhaps use [0, yRange] there.
+                .attr("y", 0)
+                .attr("height", yaRange[1]);
+            });
+          oa.svgContainer.selectAll('g.axis-all > g.brush > g[clip-path]')
             .each(function(d) {
               /* if (traceCount-->0) console.log(this, 'brush extent', oa.y[d].brush.extent()()); */
-              d3.select(this).call(oa.y[d].brush); });
-
+              let a = oa.axesP[d],
+              ya = oa.y[d],
+              b = ya.brush;
+              d3.select(this).call(b);
+            });
           DropTarget.prototype.showResize();
           me.trigger('resized', widthChanged, heightChanged, useTransition);
         }

@@ -63,7 +63,7 @@ function updateRange(y, ys, vc, a)
     y[a.axisName].range([0, vc.yRange]);
 
     y[axisName].brush
-      .extent(maybeFlipExtent([[-8,0],[8, vc.yRange /* not myRange */]], a.flipped));
+      .extent([[-8,0],[8, vc.yRange /* not myRange */]]);
   }
 }
 
