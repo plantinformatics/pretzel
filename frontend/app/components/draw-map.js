@@ -3657,6 +3657,12 @@ export default Ember.Component.extend(Ember.Evented, {
         brushExtents = selectedAxes.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
       return brushExtents;
     }
+    /** Could use this instead of maintaining oa.brushedRegions :
+     */
+    function getBrushedRegions() {
+      let brushedRegions = d3.selectAll('g.brush > g[clip-path]').nodes().reduce((br, e) => { let s = e.__brush.selection; br[e.__data__] = [s[0][1], s[1][1]]; return br; }, {});
+      return brushedRegions;
+    }
    
     /** Return the brushed domain of axis p
      * Factored from brushHelper(); can use axisBrushedDomain() to replace that code in brushHelper().
@@ -3702,6 +3708,29 @@ export default Ember.Component.extend(Ember.Evented, {
       return brushedDomain;
     }
 
+    /** update brush selection position for window / element height resize.
+     * @param gBrush  <g clip-path> within <g.brush>
+     */
+    function axisBrushShowSelection(p, gBrush) {
+      let yp = oa.y[p],
+      brushedAxisID = p;
+      /* based on similar functionality in zoom() which updates brush
+       * extent/position for (zoom) scale change (brushedDomain does not change).
+       *
+       * If axisBrush.brushedDomain is not available, can use brushedDomains
+       * calculated from existing brush extent in showResize before the scale is changed.
+       */
+      let brushedDomain;
+      if (! brushedDomain) {
+        let axisBrush = me.get('store').peekRecord('axis-brush', brushedAxisID);
+        brushedDomain = axisBrush && axisBrush.get('brushedDomain');
+      }
+      if (brushedDomain) {
+        let newBrushSelection = brushedDomain.map(function (r) { return yp(r);});
+        console.log('axisBrushShowSelection', brushedAxisID, brushedDomain, gBrush, newBrushSelection);
+        d3.select(gBrush).call(yp.brush.move, newBrushSelection);
+      }
+    }
 
     /** Used when the user completes a brush action on the axis axis.
      * The datum of g.brush is the ID/name of its axis, call this axisID.
@@ -4246,7 +4275,7 @@ export default Ember.Component.extend(Ember.Evented, {
             axisScaleChangedRaf(p, tRaf, false);
             let brushExtent = oa.brushedRegions[p];
             if (brushExtents)
-              // `that` refers to the brush g element
+              // `that` refers to the brush g element, i.e. <g clip-path> within <g.brush>
               d3.select(that).call(y[p].brush.move,null);
             else if (brushExtent) {
               let gBrush = d3.event.sourceEvent.target.parentElement;
@@ -5546,6 +5575,20 @@ export default Ember.Component.extend(Ember.Evented, {
         .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
           .attr('height', graphDim.h /*"auto"*/);
 
+      /** As in zoom(), note the brushedDomains before the scale change, for
+       * updating the brush selection position.
+       * This could be passed to axisBrushShowSelection() and used in place of
+       * axisBrush.brushedDomain; the current intention is to shift to using
+       * just axisBrush.brushedDomain and brushedRegions / brushExtents can be retired.
+       * oa.brushedRegions is equivalent to getBrushedRegions() - could use that for verification.
+       */
+      let brushedDomains = {};
+      Object.entries(oa.brushedRegions).forEach(
+        // similar to axisBrushedDomain().
+        ([refBlockId, region]) => brushedDomains[refBlockId] = axisRange2Domain(refBlockId, region)
+      );
+      dLog('brushedDomains', brushedDomains);
+
       // recalculate Y scales before pathUpdate().
         if (heightChanged)
           stacksAdjustY();
@@ -5579,7 +5622,11 @@ export default Ember.Component.extend(Ember.Evented, {
               let a = oa.axesP[d],
               ya = oa.y[d],
               b = ya.brush;
+              // draw the brush overlay using the changed scale
               d3.select(this).call(b);
+              /* if the user has created a selection on the brush, move it to a
+               * new position based on the changed scale. */
+              axisBrushShowSelection(d, this);
             });
           DropTarget.prototype.showResize();
           me.trigger('resized', widthChanged, heightChanged, useTransition);
