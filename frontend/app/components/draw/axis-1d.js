@@ -485,7 +485,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   /** When featureLength changes, render.
    * The suffix Effect is used to denote a Side Effect triggered by a CF.
    */
-  featureLengthEffect : Ember.computed('featureLength', 'axisS', function () {
+  featureLengthEffect : Ember.computed('featureLength', 'flipRegionCounter', 'axisS', function () {
     let featureLength = this.get('featureLength');
 
     this.renderTicksDebounce();

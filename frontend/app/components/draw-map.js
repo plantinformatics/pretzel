@@ -3868,6 +3868,12 @@ export default Ember.Component.extend(Ember.Evented, {
           let childBlocks = axis.dataBlocks();
           let range = [0, axis.yRange()];
           console.log(axis, 'childBlocks', childBlocks, range);
+          /* remove any existing circles - the following code simply appends.
+           * To implement transitions, we need to insert a layer : a <g> for
+           * each block, with datum blockId or block, to wrap the <circle>s, and
+           * a featuresOfBlock(blockId)->blockFeatures[] for the circle data.
+           */
+          axisS.selectAll("g > circle").remove();
           childBlocks.map(function (block) {
             let blockFeatures = oa.z[block.axisName]; // or block.get('features')
           d3.keys(blockFeatures).forEach(function(f) {
