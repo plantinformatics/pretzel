@@ -3868,12 +3868,15 @@ export default Ember.Component.extend(Ember.Evented, {
           let childBlocks = axis.dataBlocks();
           let range = [0, axis.yRange()];
           console.log(axis, 'childBlocks', childBlocks, range);
-          /* remove any existing circles - the following code simply appends.
-           * To implement transitions, we need to insert a layer : a <g> for
+          /*
+           * The circles have class feature.name (which should be prefixed with
+           * a letter), which may not be unique between sibling blocks of an
+           * axis.
+           * Using combinedId below is sufficient to implement transitions,
+           * but a more structured design is preferable to insert a layer : a <g> for
            * each block, with datum blockId or block, to wrap the <circle>s, and
            * a featuresOfBlock(blockId)->blockFeatures[] for the circle data.
            */
-          axisS.selectAll("g > circle").remove();
           childBlocks.map(function (block) {
             let blockFeatures = oa.z[block.axisName]; // or block.get('features')
           d3.keys(blockFeatures).forEach(function(f) {
@@ -3894,18 +3897,31 @@ export default Ember.Component.extend(Ember.Evented, {
                * fLocation :  actual feature position in the axis, 
                * yp(fLocation) :  is the relative feature position in the svg
                */
-              let dot = axisS
+              /** lacking the g.block structure which would enable f to be
+               * unique within its parent g, this combinedId enables transition
+               * to be implemented in an improvised way.
+               */
+              let combinedId = 'fc_' + block.axisName + '_' + f,
+              dot = axisS.selectAll('circle#' + combinedId);
+              if (! dot.empty()) {
+                dot
+                  .transition().duration(2000)
+                  .attr("cy", yp(fLocation));
+              }
+              else {
+              dot = axisS
                 .append("circle")
+                .attr('id', combinedId)
                 .attr("class", eltClassName(f))
                 .attr("cx",0)   /* was o[p], but g.axis-outer translation does x offset of stack.  */
                 .attr("cy", yp(fLocation))
                 .attr("r",2)
                 .style("fill", "red");
-              brushEnableFeatureHover(dot);
+                brushEnableFeatureHover(dot);
               /* This can be done via an added class and css :
                * r, fill, stroke are toggled (to 5,yellow,black) by
                * @see table-brushed.js: highlightFeature() */
-
+              }
             } else {
               let f_ = eltClassName(f);
               axisS.selectAll("circle." + f_).remove();
