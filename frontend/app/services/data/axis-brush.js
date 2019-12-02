@@ -10,7 +10,9 @@ export default Service.extend(Ember.Evented, {
   blockService: service('data/block'),
   store: service(),
 
-  /** @return block records */
+  /** look up axis-brush object instances in the store.
+   * @return all instances.
+   */
   all: Ember.computed(function() {
     let records = this.get('store').peekAll(typeName);
     if (trace_axisBrush)
@@ -18,6 +20,9 @@ export default Service.extend(Ember.Evented, {
     return records;
   }),
 
+  /** Collate a list of the axes which are brushed.
+   * @return reference blocks of the brushed axes.
+   */
   brushedAxes: Ember.computed(
     'blockService.viewed',
     'all.[]',

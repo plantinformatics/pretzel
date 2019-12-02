@@ -5,6 +5,7 @@ import { task } from 'ember-concurrency';
 
 /* global d3 */
 
+const dLog = console.debug;
 
 export default Ember.Component.extend({
   blockService: service('data/block'),
@@ -42,7 +43,8 @@ export default Ember.Component.extend({
     }
   }, // actions
 
-  /** The result is expressed in 2 forms, for different presentations :
+  /** From the result of feature search, group by block.
+   * The result is expressed in 2 forms, for different presentations :
    * . set in .blocksOfFeatures for display in goto-feature-list.hbs
    * . via action updateFeaturesInBlocks, for display in axis-ticks-selected
    * @return undefined
@@ -55,22 +57,30 @@ export default Ember.Component.extend({
       let taskGet = this.get('taskGet'); // blockService.get('getBlocksOfFeatures');
       let blockTask = taskGet.perform(selectedFeatureNames)
         .then(function (features) {
-          console.log("getBlocksOfFeatures", selectedFeatureNames[0], features);
+          dLog("getBlocksOfFeatures", selectedFeatureNames[0], features);
 
           let blockIds = new Set(),
           blockCounts = {},
 
           n = d3.nest()
-            .key(function(f) { return f.blockId; })
-            .entries(features.features),
+            .key(function(f) { return f.get('blockId.id'); /* was f.blockId */ })
+            .entries(features),
           n1=n.sort(function (a,b) { return b.values.length - a.values.length; }),
           // n1.map(function (d) { return d.key; }),
-          /** augment d.key : add references to the (block) data and record. */
+          /** augment d.key : add references to the (block) record. */
           blocksUnique = n1.map(function (d) {
-            /** data is not an ember object, just the attribute data;  a POJO. */
-            let data = d.values[0].block,
-            key = {id: d.key, data : data, record : peekBlock(data)},
+            /** in initial implementation data was just the attribute data - a POJO 
+             * (i.e. data = dv.block, block = peekBlock(data) );
+             * it is now an ember object and the JSON data is not retained.
+             * The features in d.values[] have the same .blockId - use [0] to the block.
+             */
+            let dv = d.values[0],
+            block = dv.get('blockId'),
+            /** .id and .record are the id and record of the block. */
+            key = {id: d.key, record : block},
+            /** .values are the features within the block */
             result = {key : key, values : d.values};
+            dLog('blocksUnique', d, dv, 'result', result);
             return result; });
 
           /* entry-block-add.hbs is displaying {{entry.count}}.

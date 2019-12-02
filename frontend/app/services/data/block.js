@@ -41,8 +41,10 @@ function log_Map(label, map) {
  * 
  */
 export default Service.extend(Ember.Evented, {
-    auth: service('auth'),
-    store: service(),
+  auth: service('auth'),
+  store: service(),
+  pathsPro : service('data/paths-progressive'),
+  flowsService: service('data/flows-collate'),
 
   summaryTask : {},
 
@@ -555,13 +557,52 @@ export default Service.extend(Ember.Evented, {
 
 
   /** Search for the named features, and return also their blocks and datasets.
+   * @return  features (store object references)
    */
   getBlocksOfFeatures : task(function* (featureNames) {
-    let me = this, blocks =
+    let me = this, featureResults =
       yield this.get('auth').featureSearch(featureNames, /*options*/{});
-
-    return blocks;
+    let features = this.pushFeatureSearchResults(featureResults.features);
+    return features;
   }),
+
+  /** map the given feature JSON values to store object references.
+   */
+  pushFeatureSearchResults : function(featureValues) {
+    let fnName = 'pushFeatureSearchResults',
+    store = this.get('store'),
+    pathsPro = this.get('pathsPro'),
+    flowsService = this.get('flowsService');
+
+    let features =
+      featureValues.map((f) => {
+        /** replace f.block with a reference to the block in store.
+         * The blocks and datasets are already loaded.
+         */
+        let block = store.peekRecord('block', f.block.id);
+        if (f.blockId !== f.block.id) {
+          dLog(fnName, f.blockId, '!==', f.block.id);
+        }
+        else if (! block)
+          dLog(fnName, f.block, 'not in store');
+        else
+          f.block = block;
+
+        let feature = store.peekRecord('feature', f.id);
+        if (! feature) {
+          if (f._id === undefined)
+            f._id = f.id;
+          feature = 
+            pathsPro.pushFeature(store, f, flowsService);
+          if (! feature)
+            dLog(fnName, f, 'push failed');
+        }
+        return feature;
+      });
+    dLog(fnName, featureValues, features);
+    return features;
+  },
+
 
   /** @return list of references (blocks) of viewed blocks */
   viewedBlocksReferences : Ember.computed(

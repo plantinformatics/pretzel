@@ -1450,7 +1450,7 @@ export default Ember.Component.extend(Ember.Evented, {
         }
 
           // verification : sd is defined iff this block doesn't have a parent axis and is not adopting a block with an axis.
-          if ((sd === undefined) != ((parentAxis || adopt0) === undefined))
+          if ((sd !== undefined) != ((parentAxis || adopt0) === undefined))
             dLog('sd', sd, parentAxis, adopt0);
         let
         /** blocks which have a parent axis do not need a Stack.
