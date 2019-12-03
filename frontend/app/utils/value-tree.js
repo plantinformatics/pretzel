@@ -137,6 +137,14 @@ function leafCount(levelMeta, values) {
       if (valueType == "Blocks") {
         count1 += value.length;
       }
+      else if (
+        // getting "Dataset";  not sure if values should include that.
+        (valueType == "Dataset") && 
+          value.get &&
+          value.get('isLoaded')) {
+        dLog('leafCount', valueType, value.get('id'), value.get('name'), value.get('blocks'));
+        count1 += value.get('blocks.length');
+      }
       else {
         let
           scopes = value,
