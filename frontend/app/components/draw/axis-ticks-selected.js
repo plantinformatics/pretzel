@@ -29,7 +29,7 @@ export default Ember.Component.extend(AxisEvents, {
    * not specific to an axisID.
    */
 
-
+  /** draw-map:axisStackChanged_(t) sends transition t. */
   axisStackChanged : function() {
     dLog("axisStackChanged in ", CompName);
     /* draw-map : axisStackChanged() / axisStackChanged_() already does throttle. */
@@ -38,11 +38,17 @@ export default Ember.Component.extend(AxisEvents, {
 
   /** @param [axisID, t] */
   zoomedAxis : function(axisID_t) {
-    let axisID = axisID_t && axisID_t[0],
-    axisName = this.get('axis.id');
-    dLog('zoomedAxis', axisID_t, axisID, axisName);
-    this.renderTicksThrottle(axisID_t);
   },
+
+  /** Render elements which are dependent on axis scale - i.e. the axis ticks.
+   */
+  axisScaleEffect : Ember.computed('axis1d.domainChanged', function () {
+    let axisScaleChanged = this.get('axis1d.domainChanged');
+    let axisID = this.get('axisID');
+    dLog('axisScaleChanged', axisID, this.get('axis.id'));
+    this.renderTicksThrottle(axisID);
+    return true;
+  }),
 
   didRender() {
     let featuresInBlocks = this.get('featuresInBlocks');
@@ -51,8 +57,8 @@ export default Ember.Component.extend(AxisEvents, {
     this.renderTicksThrottle();
   },
 
-  renderTicks(axisID_t) {
-    dLog("renderTicks in ", CompName, axisID_t);
+  renderTicks(axisID) {
+    dLog("renderTicks in ", CompName, axisID);
     let featureTicks = this.get('axis1d.featureTicks');
     if (featureTicks) {
       featureTicks.showTickLocations(
@@ -64,14 +70,19 @@ export default Ember.Component.extend(AxisEvents, {
   },
   /** call renderTicks().
    * filter / throttle the calls to handle multiple events at the same time.
-   * @param axisID_t is defined by zoomedAxis(), undefined when called from
-   * axisStackChanged()
+   * @param axisID  undefined, or this.get('axisID') (not required or used);
+   * undefined when called from axisStackChanged().
+   *
+   * (earlier versions called this from zoomedAxis(), which passed [axisID,
+   * transition], so that transition length could be consistent for an event
+   * across multiple components; axisStackChanged() can pass the transition,
+   * although showTickLocations() does not (yet) use it.)
    */
-  renderTicksThrottle(axisID_t) {
-    dLog('renderTicksThrottle', axisID_t);
+  renderTicksThrottle(axisID) {
+    dLog('renderTicksThrottle', axisID);
 
     /* see comments in axis-1d.js : renderTicksThrottle() re. throttle versus debounce */    
-    Ember.run.throttle(this, this.renderTicks, axisID_t, 500);
+    Ember.run.throttle(this, this.renderTicks, axisID, 500);
   },
 
   /** Lookup the given block in featuresInBlocks, and return its features which
