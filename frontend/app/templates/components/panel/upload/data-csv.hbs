@@ -2,6 +2,10 @@
   successMessage=successMessage
   warningMessage=warningMessage
   errorMessage=errorMessage}}
+{{#if nameWarning}}
+{{elem/panel-message
+  warningMessage=nameWarning}}
+{{/if}}
 
 {{#if isProcessing}}
   {{#elem/panel-form
@@ -12,27 +16,35 @@
 {{/if}}
 
 <label>Dataset: </label>
-<select id="dataset">
+<select id="dataset" onchange={{action (mut selectedDataset) value="target.value"}}>
   <option selected>new</option>
   {{#each datasets key="name" as |ds|}}
     <option value={{ds.name}}>{{ds.name}}</option>
   {{/each}}
-</select><br>
-<div id="new_dataset_options">
-  <input id="dataset_new" class="form-control" placeholder="New dataset name..." /><br>
+</select>
+<br>
+{{#if (eq selectedDataset 'new')}}
+  <div id="new_dataset_options">
+  {{input id="dataset_new" type="text" value=newDatasetName class="form-control" placeholder="New dataset name..."}}
+  <br>
   <label>Parent: </label>
-  <select id="parent">
+  <select id="parent" onchange={{action (mut selectedParent) value="target.value"}}>
     <option value='' selected>None</option>
     {{#each datasets key="name" as |ds|}}
       <option value={{ds.name}}>{{ds.name}}</option>
     {{/each}}
-  </select><br>
-  <label>Type: </label><select id="type">
+  </select>
+  <br>
+  <label>Type: </label>
+  <select id="type" onchange={{action (mut dataType) value="target.value"}}>
     <option>linear</option>
     <option>observational</option>
-  </select><br>
-  <label>Namespace: </label><input id="namespace">
-</div>
+  </select>
+  <br>
+  <label>Namespace: </label>
+  {{input id="namespace" type="text" value=namespace }}
+  </div>
+{{/if}}
 <br><label>Load from file: </label>
 <input type="file" accept=".csv" id="tableFile" onchange={{action 'setFile'}}>
 <div id="hotable" class="actual-row">

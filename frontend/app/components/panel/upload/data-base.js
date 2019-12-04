@@ -42,6 +42,13 @@ export default Ember.Component.extend({
       warningMessage: msg,
     });
   },
+  clearMsgs() {
+    this.setProperties({
+      successMessage: null,
+      errorMessage: null,
+      warningMessage: null,
+    });
+  },
   scrollToTop() {
     $("#left-panel-upload").animate({ scrollTop: 0 }, "slow");
   },
@@ -52,6 +59,7 @@ export default Ember.Component.extend({
       this.set('file', null);
       if (files.length > 0) {
         this.set('file', files[0]);
+        this.clearMsgs();
       }
     },
   }
