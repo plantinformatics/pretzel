@@ -185,19 +185,17 @@ export default UploadBase.extend({
         if(matched){
           reject({ msg: `Dataset name '${newMap}' is already in use` });
         } else {
-          let newDataset = that.get('store').createRecord('Dataset', {
+          let newDetails = {
             name: newMap,
             type: that.get('dataType'),
+            namespace: that.get('namespace'),
             blocks: []
-          });
+          };
           let parentId = that.get('selectedParent');
-          let parent = null;
           if (parentId && parentId.length > 0) {
-            parent = datasets.findBy('name', parentId);
+            newDetails.parent = datasets.findBy('name', parentId);
           }
-          if (parent) {
-            newDataset.set('parent', parent);
-          }
+          let newDataset = that.get('store').createRecord('Dataset', newDetails);
           newDataset.save().then(() => {
             resolve(newDataset.id);
           });
@@ -304,6 +302,15 @@ export default UploadBase.extend({
               console.log(err, status);
               that.setError(err.responseJSON.error.message);
               that.scrollToTop();
+              if(that.get('selectedDataset') === 'new'){
+                // If upload failed and here, a new record for new dataset name
+                // has been created by getDatasetId() and this should be undone
+                that.get('store')
+                  .findRecord('Dataset', map_id, { reload: true })
+                  .then((rec) => rec.destroyRecord()
+                    .then(() => rec.unloadRecord())
+                  );
+              }
             });
           }, (err) => {
             that.setError(err.msg);
