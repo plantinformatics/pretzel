@@ -47,6 +47,13 @@ export default Ember.Component.extend(AxisEvents, {
     let axisID = this.get('axisID');
     dLog('axisScaleChanged', axisID, this.get('axis.id'));
     this.renderTicksThrottle(axisID);
+    /** somehow renderTicks() is missing the latest scale.  redrawing after a
+     * delay gets the correct scale, so the next step would be to trace the axis
+     * scale in render to confirm that.
+     */
+    const reRenderLater = () => { this.renderTicksThrottle(axisID); };
+    Ember.run.debounce(reRenderLater, 750);
+
     return true;
   }),
 
