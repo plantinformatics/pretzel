@@ -1,5 +1,7 @@
 /*global d3 */
 
+const dLog = console.debug;
+
 /*----------------------------------------------------------------------------*/
 /** Define a d3 scale, similar to d3.scalePoint and d3.scaleBand,
  * with variable bandwidth.
@@ -64,13 +66,13 @@ function variableBands() {
   combinedScale.domain =
     function (_) {
       return arguments.length
-        ? ( console.log("combinedScale.domain", _), scale.domain(_))
+        ? ( dLog("combinedScale.domain", _), scale.domain(_))
         : scale.domain(); };
 
   combinedScale.range =
     function(_) {
       return arguments.length
-        ? ( console.log("combinedScale.range", _), scale.range(_))
+        ? ( dLog("combinedScale.range", _), scale.range(_))
         : scale.range();
     };
 

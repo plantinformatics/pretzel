@@ -1,8 +1,16 @@
 import Ember from 'ember';
 
 export default Ember.Component.extend({
+  store: Ember.inject.service('store'),
 
   classNames : ["filter-groups"],
+
+  /** only the first dataset fg and the first block fg are currently used,
+   * so limit data.length to 2.
+   */
+  maxFilterGroups : Ember.computed('data.length', function () {
+    return this.get('data.length') > 1;
+  }),
 
   actions : {
     addFilterOrGroup : function () {
@@ -17,16 +25,8 @@ export default Ember.Component.extend({
 
   addFilterOrGroup() {
     let data = this.get('data'),
-    initialFilterGroup = {
-      filterOrGroup: 'filter',
-      fieldName : true,
-      fieldScope : true,
-      fieldNamespace : true,
-      fieldMeta : true,
-      matchKey : true,
-      matchValue : true
-    };
-    data.pushObject(Ember.Object.create(initialFilterGroup));
+    filterGroup = this.get('store').createRecord('filter-Group');
+    data.pushObject(filterGroup);
   },
 
   deleteFilterOrGroup(filterGroup) {

@@ -4,11 +4,16 @@ const { inject: { service } } = Ember;
 import { getAttrOrCP } from '../utils/ember-devel';
 import { configureHorizTickHover } from '../utils/hover';
 import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
+import { noDomain } from '../utils/draw/axis';
+import { stacks } from '../utils/stacks'; // just for oa.z and .y, don't commit this.
 
 import InAxis from './in-axis';
 
 const className = "chart", classNameSub = "chartRow";
 
+/*----------------------------------------------------------------------------*/
+
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 /* Copied from draw-map.js */
@@ -77,6 +82,39 @@ function addParentClass(g) {
 };
 /*----------------------------------------------------------------------------*/
 
+let oa = stacks.oa,
+  axisID0;
+
+  /** @param name is a feature or gene name */
+    function name2Location(name)
+    {
+        /** @param ak1 axis name, (exists in axisIDs[])
+         * @param d1 feature name, i.e. ak1:d1
+         */
+      let ak1 = axisID0,  d1 = name;
+      return featureLocation(oa, ak1, d1);
+    }
+
+    /** Used for both blockData and parsedData. */
+    function datum2Location(d) { return name2Location(d.name); }
+    function datum2Value(d) { return d.value; }
+    let parsedData = {
+      dataTypeName : 'parsedData',
+      datum2Location,
+      datum2Value : datum2Value,
+      datum2Description : function(d) { return d.description; }
+
+    },
+    blockData = {
+      dataTypeName : 'blockData',
+      datum2Location,
+      datum2Value : function(d) { return d.value[0]; },
+      datum2Description : function(d) { return JSON.stringify(d.value); }
+    };
+
+
+/*----------------------------------------------------------------------------*/
+
 
 /* global d3 */
 
@@ -105,18 +143,67 @@ export default InAxis.extend({
   },
 
   blockFeatures : Ember.computed('block', 'block.features.[]', 'axis.axis1d.domainChanged', function () {
+    if (this.get('block.isChartable'))
       this.drawBlockFeatures0();
   }),
+  featuresCounts : Ember.computed('block', 'block.featuresCounts.[]', 'axis.axis1d.domainChanged', function () {
+    this.drawBlockFeaturesCounts();
+    return this.get('block.featuresCounts');
+  }),
+
   drawBlockFeatures0 : function() {
     let features = this.get('block.features');
     let domain = this.get('axis.axis1d.domainChanged');
     console.log('blockFeatures', features.length, domain);
     if (features.length)  // -	should also handle drawing when .length changes to 0
-      this.drawBlockFeatures(features);
+    {
+      if (features[0] === undefined)
+        dLog('drawBlockFeatures0', features.length, domain);
+      else
+        this.drawBlockFeatures(features);
+    }
+  },
+  drawBlockFeaturesCounts : function() {
+    let featuresCounts = this.get('block.featuresCounts');
+    let domain = this.get('axis.axis1d.domainChanged');
+    if (featuresCounts) {
+      console.log('drawBlockFeaturesCounts', featuresCounts.length, domain, this.get('block.id'));
+
+      /** example element of array f : */
+      const dataExample = 
+        {
+          "_id": {
+            "min": 100,
+            "max": 160
+          },
+          "count": 109
+        };
+      let f = featuresCounts.toArray(),
+      /** the min, max will be passed also - first need to factor out part of axis-chart for featuresCounts. */
+      fa = f; // .map(function (f0) { return f0.count;});
+      console.log('drawBlockFeaturesCounts', f);
+      let 
+        featureCountData = {
+          dataTypeName : 'featureCountData',
+          datum2Location : function datum2Location(d) { return d._id.min; },  // todo : use .max
+          datum2Value : function(d) { return d.count; },
+          datum2Description : function(d) { return JSON.stringify(d._id); }
+        };
+      // pass alternate dataConfig to layoutAndDrawChart(), defining alternate functions for {datum2Value, datum2Location }
+      this.layoutAndDrawChart(fa, featureCountData);
+    }
   },
   drawBlockFeatures : function(features) {
     let f = features.toArray(),
     fa = f.map(function (f0) { return f0._internalModel.__data;});
+
+    let axisID = this.get("axis.axisID"),
+    za = oa.z[axisID];
+    if (Object.keys(za).length == 2) {
+      dLog('drawBlockFeatures()', axisID, za, fa);
+      fa.forEach((f) => za[f.name] = f.value);
+    }
+
     this.layoutAndDrawChart(fa);
   },
 
@@ -189,9 +276,9 @@ export default InAxis.extend({
     return result;
   },
 
-  layoutAndDrawChart(chart)
+  layoutAndDrawChart(chart, dataConfig)
   {
-    console.log("layoutAndDrawChart", chart);
+    console.log("layoutAndDrawChart", chart, dataConfig && dataConfig.dataTypeName);
     // initial version supports only 1 split axis; next identify axis by axisID (and possibly stack id)
     // <g class="axis-use">
     // g.axis-outer#id<axisID>
@@ -202,6 +289,7 @@ export default InAxis.extend({
     /** relative to the transform of parent g.axis-outer */
     bbox = gAxis.node().getBBox(),
     yrange = [bbox.y, bbox.height];
+    axisID0 = axisID;
     if (bbox.x < 0)
     {
       console.log("x < 0", bbox);
@@ -209,44 +297,35 @@ export default InAxis.extend({
     }
     let
     barWidth = 10,
-    isBlockData = chart[0].description === undefined,
+    /** isBlockData is not used if dataConfig is defined.  this can be moved out to the caller. */
+    isBlockData = chart.length && (chart[0].description === undefined),
     valueName = chart.valueName || "Values",
     oa = this.get('data'),
     // axisID = gAxis.node().parentElement.__data__,
     yAxis = oa.y[axisID], // this.get('y')
-    yDomain = [yAxis.invert(yrange[0]), yAxis.invert(yrange[1])],
+    yAxisDomain = yAxis.domain(), yDomain;
+    if (noDomain(yAxisDomain) && chart.length) {
+      yAxisDomain = [chart[0]._id.min, chart[chart.length-1]._id.max];
+      yAxis.domain(yAxisDomain);
+      yDomain = yAxisDomain;
+    }
+    else
+      yDomain = [yAxis.invert(yrange[0]), yAxis.invert(yrange[1])];
+
+    if (! dataConfig)
+      dataConfig = isBlockData ? blockData : parsedData;
+
+    let
     pxSize = (yDomain[1] - yDomain[0]) / bbox.height,
     withinZoomRegion = function(d) {
-      return inRange(datum2Location(d), yDomain);
+      return inRange(dataConfig.datum2Location(d), yDomain);
     },
     data = chart.filter(withinZoomRegion);
     let resizedWidth = this.get('width');
-    console.log(resizedWidth, bbox, yDomain, pxSize, data.length, (data.length == 0) || datum2Location(data[0]));
+    console.log(resizedWidth, bbox, yDomain, pxSize, data.length, (data.length == 0) || dataConfig.datum2Location(data[0]));
     if (resizedWidth)
       bbox.width = resizedWidth;
   
-  /** @param name is a feature or gene name */
-    function name2Location(name)
-    {
-        /** @param ak1 axis name, (exists in axisIDs[])
-         * @param d1 feature name, i.e. ak1:d1
-         */
-      let ak1 = axisID,  d1 = name;
-      return featureLocation(oa, ak1, d1);
-    }
-    function datum2Location(d) { return name2Location(d.name); }
-    function datum2Value(d) { return d.value; }
-    let parsedData = {
-      datum2Value : datum2Value,
-      datum2Description : function(d) { return d.description; }
-
-    },
-    blockData = {
-      datum2Value : function(d) { return d.value[0]; },
-      datum2Description : function(d) { return JSON.stringify(d.value); }
-    },
-    dataConfig = isBlockData ? blockData : parsedData;
-
     /*  axis
      * x  .value
      * y  .name Location
@@ -281,7 +360,7 @@ export default InAxis.extend({
       this.y = y;
       // line() does not use y;  it creates yLine and uses yRange, to set its range.
       this.yRange = yRange;
-      console.log("Chart1", parentW, parentH, xRange, yRange);
+      console.log("Chart1", parentW, parentH, xRange, yRange, options.dataTypeName);
 
       let me = this;
       /* these can be renamed datum2{abscissa,ordinate}{,Scaled}() */
@@ -465,7 +544,8 @@ export default InAxis.extend({
              {
                bbox : bbox,
                barClassName : classNameSub,
-               datum2Location : datum2Location,
+               dataTypeName : dataConfig.dataTypeName,
+               datum2Location : dataConfig.datum2Location,
                datum2Value : dataConfig.datum2Value,
                datum2Description : dataConfig.datum2Description
              });

@@ -16,7 +16,14 @@ import ManageBase from './manage-base'
 
 let initRecursionCount = 0;
 
-let trace_dataTree = 1;
+/** true means show entries which don't match a FG as 'unmatched'.
+ * This could be used to enable the user to segrate datasets into matching and non-matching;
+ * so far it is has been used for checking results, in development.
+ */
+const showUnmatched = false;
+
+let trace_dataTree = 0;
+const dLog = console.debug;
 
 /** If true, use datatypeFromFamily() to intuit a dataset type for datasets
  * which do not define meta.type.
@@ -48,35 +55,41 @@ export default ManageBase.extend({
     return options;
   }),
   enable_datatypeFromFamily : Ember.computed.alias('urlOptions.dataTabsFromFamily'),
+  /** If true then use dataParentTypedFGTree in place of dataTypedTreeFG.
+   * The former groups the data by parent before filtering; the latter
+   * applies FG before grouping into parents.
+   * The results are the same in simple cases; still trialling to see
+   * which should be default;  each approach probably handles some
+   * search cases better than the other.
+   */
+  enable_parentBeforeFilter : Ember.computed.alias('urlOptions.parentBeforeFilter'),
 
-  datasetsRefreshCounter : 0,
-  datasets : Ember.computed('model', 'model.availableMapsTask', 'model.availableMapsTask.value', 'view', 'datasetsRefreshCounter', function () {
-    let task, promise, resultP;
+  /** Triggers a rerun of the availableMaps fetching task */
+  refreshAvailable: function(){
+    this.get('refreshDatasets')();
+  },
 
-    let me = this;
-    /** Using availableMapsTask which is shared between components is preferable
-     * to doing an additional store.query() here.  matrixview is not yet added to availableMapsTask.
-     */
-    let view = me.get('view');
-    if (view == 'matrixview') {
-      let store = this.get('store');
-      /** This filter is common to all views.
-       * For matrixview, select observational. */
-      let filter = {'include': 'blocks'};
-      filter['where'] = {'type': 'observational'};
-
-      promise =
-        store.query('dataset', {filter: filter});
-      promise.then(function(datasets) {
-        console.log('datasets', datasets.toArray());
-      });
+  /** Datasets passed in from MapView, but still need fetching on MatrixView
+   * MatrixView dataset retrieval should be raised to route model / controller in future
+   * At that time, 'mapviewDatasets' can be renamed to 'datasets'
+   * and this whole computed element may be removed */
+  datasets : Ember.computed('mapviewDatasets', 'view', function () {
+    let view = this.get('view');
+    if (view === 'mapview') {
+      return this.get('mapviewDatasets');
     }
-    else {
-      task = this.get('model.availableMapsTask');
-      promise = task.then(function (value) { console.log('datasets from task', value); return value; });
-    }
-    resultP = DS.PromiseArray.create({ promise: promise });
-    console.log(task, promise, 'resultP', resultP);
+    // Else, view === matrixview
+    let store = this.get('store');
+    /** This filter is common to all views.
+     * For matrixview, select observational. */
+    let filter = {'include': 'blocks'};
+    filter['where'] = {'type': 'observational'};
+    let promise = store.query('dataset', {filter: filter});
+    promise.then(function(datasets) {
+      console.log('datasets', datasets.toArray());
+    });
+    let resultP = DS.PromiseArray.create({ promise: promise });
+    dLog('manage-explorer matrixview datasets', promise, 'resultP', resultP);
     return resultP;
   }),
   datasetType: null,
@@ -112,7 +125,7 @@ export default ManageBase.extend({
   dataPre: Ember.computed('datasets', 'datasets.[]', 'filter', function() {
     let availableMaps = this.get('datasets')
     let filter = this.get('filter')
-    console.log('dataPre', availableMaps, filter);
+    dLog('dataPre', availableMaps, filter);
     // perform filtering according to selectedChr
     // let filtered = availableMaps //all
     if (filter == 'private') {
@@ -127,31 +140,38 @@ export default ManageBase.extend({
     }
   }),
   /** @return the filterGroup if there is one, and it has a pattern. */
-  useFilterGroup : Ember.computed(
+  definedFilterGroups : Ember.computed(
     'filterGroups', 'filterGroups.[]',
-    'filterGroups.0.component.@each', 'filterGroupsChangeCounter',
+    'filterGroups.0.@each', 'filterGroupsChangeCounter',
     function () {
       let
-        filterGroupsLength = this.get('filterGroups.length'),
-      filterGroup;
-      if (filterGroupsLength) {
-        filterGroup = this.get('filterGroups.0.component');
-        if (filterGroup) {
-          console.log('useFilterGroup filterGroup', filterGroup);
-          if (! filterGroup.get('defined'))
-            filterGroup = undefined;
-        }
-        else
-          console.log('useFilterGroup', this.get('filterGroups'));
-      }
-      return filterGroup;
+        filterGroups = this.get('filterGroups')
+        .filter((filterGroup) => {
+          dLog('definedFilterGroups filterGroup', filterGroup);
+          return filterGroup.get('defined');
+        });
+      return filterGroups;
     }),
-  /** @return true if a filterGroup is defined and it is a filter not a grouping. */
-  isFilter : Ember.computed('useFilterGroup', function () {
-    let filterGroup = this.get('useFilterGroup'),
+  datasetFilterGroup :  Ember.computed(
+    'definedFilterGroups.@each.applyDataset',
+    function () {
+      let filterGroups = this.get('definedFilterGroups')
+        .filter((filterGroup) => filterGroup.get('applyDataset'));
+      return filterGroups[0];
+    }),
+  blockFilterGroup :  Ember.computed(
+    'definedFilterGroups.@each.applyBlock',
+    function () {
+      let filterGroups = this.get('definedFilterGroups')
+        .filter((filterGroup) => filterGroup.get('applyBlock'));
+      return filterGroups[0];
+    }),
+  /** @return true if a dataset filterGroup is defined and it is a filter not a grouping. */
+  isDatasetFilter : Ember.computed('datasetFilterGroup', function () {
+    let filterGroup = this.get('datasetFilterGroup'),
     isFilter = filterGroup && (filterGroup.filterOrGroup === 'filter');
     if (trace_dataTree > 2)
-      console.log('isFilter', isFilter);
+      console.log('isDatasetFilter', isFilter);
     return isFilter;
   }),
   /** @return result is downstream of filter and filterGroups */
@@ -322,7 +342,7 @@ export default ManageBase.extend({
             dataTyped[typeName].push(d);
           }
         }
-        console.log('dataParentTyped', dataTyped);
+        dLog('dataParentTyped', dataTyped);
         return dataTyped;
       }),
       promiseP = DS.PromiseObject.create({ promise: promise });
@@ -335,7 +355,7 @@ export default ManageBase.extend({
    */
   dataTree : Ember.computed('data', 'dataTypedTreeFG', 'useFilterGroup',    function() {
     let
-      filterGroup = this.get('useFilterGroup'),
+      filterGroup = this.get('datasetFilterGroup'),
     me = this,
     datasets;
     if (filterGroup) {
@@ -378,7 +398,7 @@ export default ManageBase.extend({
     me = this,
     parentsTypes = me.get('parentsTypes'),
     promise = datasetGroupsP.then(addParentAndScopeLevels);
-    console.log('parentsTypes', parentsTypes);
+    dLog('parentsTypes', parentsTypes);
     /** Given datasets grouped into tabs, add a grouping level for the parent of the datasets,
      * and a level for the scope of the blocks of the datasets.
      * (for those tabs for which it is enabled - e.g. children)
@@ -386,7 +406,7 @@ export default ManageBase.extend({
      */
     function addParentAndScopeLevels(datasetGroups) {
       if (trace_dataTree)
-        console.log('datasetGroups', datasetGroups);
+        dLog('datasetGroups', datasetGroups);
       let
         result = {};
       for (var key in datasetGroups) {
@@ -460,7 +480,7 @@ export default ManageBase.extend({
         let dataTyped = {};
         let parents = me.get('parents')
           .map(function (p) { return p.content || p; });
-        console.log('parents', me.get('parents'), parents);
+        dLog('parents', me.get('parents'), parents);
         for (let i=0; i < datasets.length; i++) {
           let d = datasets[i],
           typeName = d.get('meta.type');
@@ -501,7 +521,7 @@ export default ManageBase.extend({
             dataTyped[typeName].push(d);
           }
         }
-        console.log('dataTyped', dataTyped);
+        dLog('dataTyped', dataTyped);
 
         // dataTyped['children'] = me.parentAndScope(dataTyped['children']);
         let levelMeta = me.levelMeta;
@@ -527,12 +547,12 @@ export default ManageBase.extend({
    * -> dataTypedTreeFG -> plus mapToParentScope
    */
   dataTypedFG : Ember.computed(
-    'dataTyped', 'useFilterGroup',
+    'dataTyped', 'useFilterGroup', 'datasetFilterGroup',
     function() {
       return this.applyFGs('dataTyped');
     }),
   dataParentTypedFG : Ember.computed(
-    'dataParentTyped', 'useFilterGroup',
+    'dataParentTyped', 'useFilterGroup', 'datasetFilterGroup',
     function() {
       return this.applyFGs('dataParentTyped');
     }),
@@ -543,7 +563,7 @@ export default ManageBase.extend({
   applyFGs : function(valueName) {
     let
       dataTypedP = this.get(valueName),
-    filterGroup = this.get('useFilterGroup'),
+    filterGroup = this.get('datasetFilterGroup'),
     me = this;
     if (filterGroup) {
       dataTypedP = dataTypedP.then(applyFGs);
@@ -579,10 +599,10 @@ export default ManageBase.extend({
    * dataFG CF -> hash by value, of datasets
    */
   dataFG : Ember.computed(
-    'dataPre', 'useFilterGroup',
+    'dataPre', 'datasetFilterGroup',
     function() {
       let datasetsP = this.get('dataPre'),
-      filterGroup = this.get('useFilterGroup'),
+      filterGroup = this.get('datasetFilterGroup'),
       me = this;
       return datasetsP.then(function (datasets) {
         datasets = datasets.toArray();
@@ -601,7 +621,7 @@ export default ManageBase.extend({
     }
 
     let
-      unused1 = filterGroup && console.log('dataFG filterGroup', filterGroup, filterGroup.filterOrGroup, filterGroup.pattern),
+      unused1 = filterGroup && (trace_dataTree > 1) && dLog('dataFG filterGroup', filterGroup, filterGroup.filterOrGroup, filterGroup.pattern),
     /** datasets is an array of either datasets or blocks.  fieldScope and fieldNamespace are only applicable to blocks  */
     isDataset = datasets && datasets[0] && datasets[0].constructor.modelName === 'dataset',
     metaFieldName = 'Created',
@@ -762,7 +782,7 @@ export default ManageBase.extend({
        */
       if (matched) {
         hash = matched;
-        if (unmatched)
+        if (unmatched && showUnmatched)
           hash.push({'unmatched' : unmatched});
       }
       else if (unmatched)
@@ -771,7 +791,7 @@ export default ManageBase.extend({
         let ignoreFilter = isDataset;
         if (ignoreFilter)
           hash = unmatched;
-        else
+        else if (showUnmatched)
           hash['unmatched'] = unmatched;
       }
     }
@@ -789,10 +809,12 @@ export default ManageBase.extend({
       for (var [key, value] of map2) {
         if (trace_dataTree > 1)
           console.log(key, ' : ', value);
-        if (key === 'undefined')
+        if ((key === 'undefined') && showUnmatched)
           key = 'unmatched';
-        hash[key] = value;
-        this.levelMeta.set(value, 'Group');
+        if (key !== 'undefined') {
+          hash[key] = value;
+          this.levelMeta.set(value, 'Group');
+        }
       }
     }
     if (trace_dataTree)
@@ -850,13 +872,15 @@ export default ManageBase.extend({
                   let 
                     value = me.datasetsToBlocksByScope(tabName, levelMeta, children);
                   me.levelMeta.set(value, 'Parent');
-                  console.log('me.levelMeta.set(', value, 'Parent');
+                  if (trace_dataTree > 1)
+                    dLog('me.levelMeta.set(', value, 'Parent');
                   result2[name] = value;
                 }
                 else {
                   if (dataset.then)
                     dataset = DS.PromiseObject.create({ promise: dataset });
-                  console.log(name, levelMeta, 'levelMeta.set(', dataset, 'Dataset');
+                  if (trace_dataTree > 1)
+                  dLog(name, levelMeta, 'levelMeta.set(', dataset, 'Dataset');
                   levelMeta.set(dataset, 'Dataset');
                   result2[name] = dataset;
                 }
@@ -908,7 +932,7 @@ export default ManageBase.extend({
           else {
             blocks = filterBlocks(dataset);
           }
-          console.log(name, levelMeta, 'levelMeta.set(', blocks, 'Blocks');
+          dLog(name, levelMeta, 'levelMeta.set(', blocks, 'Blocks');
           levelMeta.set(blocks, 'Blocks');
           result2[name] = blocks;
           return result2;
@@ -922,34 +946,36 @@ export default ManageBase.extend({
   /** Given a dataset, filter its blocks. */
   datasetFilterBlocks(tabName, dataset) {
     let me = this;
-        let blocks = dataset.get('blocks').toArray();
-        let filterMatched = me.get('filterMatched');
-        let isFiltered = filterMatched[tabName];
-        let filterGroup = me.get('useFilterGroup');
-        /* if filter, filter the blocks  */
-        if (! isFiltered && filterGroup) {
-          let
-            isBlockFilter = filterGroup && (filterGroup.filterOrGroup === 'filter') &&
-            (filterGroup.fieldScope || filterGroup.fieldNamespace);
-          /* grouping not implemented for blocks */
-          if (isBlockFilter) {
-            let value = me.datasetFilter(blocks, filterGroup, tabName);
-            if (value.length) {
-              let last = value[value.length-1];
-              if (justUnmatched(last)) {
-                console.log('justUnmatched', last, value);
-                let unmatched = value.splice(value.length-1, 1);
-                console.log('after splice', value, unmatched);
-              }
-            }
-            if (value && value.length)
-              blocks = value;
-            else {
-              console.log('isBlockFilter', blocks, filterGroup, value);
-              blocks = [];
-            }
+    let blocks = dataset.get('blocks').toArray();
+    let filterMatched = me.get('filterMatched');
+    let isFiltered = filterMatched[tabName];
+    let filterGroup = me.get('blockFilterGroup');
+    /* if filter, filter the blocks  */
+    if (! isFiltered && filterGroup) {
+      let
+        isBlockFilter = filterGroup && (filterGroup.filterOrGroup === 'filter') &&
+        (filterGroup.fieldScope || filterGroup.fieldNamespace);
+      /* grouping not implemented for blocks */
+      if (isBlockFilter) {
+        let value = me.datasetFilter(blocks, filterGroup, tabName);
+        if (value.length) {
+          /** if there the last element of value[] is justUnmatched(), then excise it. */
+          let last = value[value.length-1];
+          if (justUnmatched(last)) {
+            console.log('justUnmatched', last, value);
+            let unmatched = value.splice(value.length-1, 1);
+            console.log('after splice', value, unmatched);
           }
         }
+        if (value && value.length)
+          blocks = value;
+        else {
+          if (trace_dataTree)
+          dLog('isBlockFilter', blocks, filterGroup, value);
+          blocks = [];
+        }
+      }
+    }
     return blocks;
   },
   /** Given an array of datasets, group their blocks by the scope of the blocks. */
@@ -988,15 +1014,16 @@ export default ManageBase.extend({
       let
         id = tab_explorer_prefix + text2EltId(datasetType);
       if (trace_dataTree)
-        console.log('datasetTypeTabId', id, datasetType);
+        dLog('datasetTypeTabId', id, datasetType);
       return id;
     },
     keysLength(object) {
       return Object.keys(object).length;
     },
 
+    /** Triggered by refresh icon on datset list **/
     refreshAvailable() {
-      this.incrementProperty('datasetsRefreshCounter');
+      this.refreshAvailable(); // See method function above
     },
     deleteBlock(chr) {
       this.sendAction('deleteBlock', chr.id);
@@ -1006,19 +1033,19 @@ export default ManageBase.extend({
     },
     filterGroupsChanged : function(fg) {
       /* note : fg === this.get('filterGroups.0')
-       * and    fg === this.get('filterGroups.0.component.data')
        */
       if (trace_dataTree)
-        console.log('filterGroupsChanged', fg, this.get('filterGroups.0.component'), this.get('filterGroups.0'), this.get('filterGroups.0.component.isCaseSensitive'));
+        dLog('filterGroupsChanged', fg, this.get('filterGroups.0'), this.get('filterGroups.0'), this.get('filterGroups.0.isCaseSensitive'));
       // Wait for update of values of fg which are bound input elements.
       let me = this;
       Ember.run.later(function () {
-        console.log('filterGroupsChanged later', fg, me.get('filterGroups.0.component'), me.get('filterGroups.0'), me.get('filterGroups.0.component.isCaseSensitive'));
+        dLog('filterGroupsChanged later', fg, me.get('filterGroups.0'), me.get('filterGroups.0'), me.get('filterGroups.0.isCaseSensitive'));
         me.incrementProperty('filterGroupsChangeCounter');
       });
     },
-    onDelete(id) {
-      
+    onDelete(modelName, id) {
+      this.refreshAvailable();
+      this.sendAction('onDelete', modelName, id);
     },
     loadBlock(block) {
       this.sendAction('loadBlock', block);

@@ -556,11 +556,15 @@ exports.pathsAliases = function(db, blockId0, blockId1, namespace0,  namespace1,
 
       { $group: { _id: "$feature_aliases._id", aliased_features :  {$push : '$$ROOT'} }   },
       {$match : {$expr: {$gt: [{$size: "$aliased_features"}, 1]}}},
+      // filter out direct paths, i.e. aliased_features[0].name === aliased_features[1].name
+      // this could be incorporated into the above $match; probably similar performance.
+      {"$match": {$expr :  {$let : {vars : { n0 : {"$arrayElemAt":["$aliased_features",0]}, n1 : {"$arrayElemAt":["$aliased_features",-1]} }, in : {"$ne":["$$n0.name","$$n1.name"]}  } } } }
     ];
 
   pipeline = pipeline.concat(group);
   if (trace_aggr > 1)
-    console.dir(pipeline, { depth: null });
+    console.dir('pathsAliases pipeline', pipeline, { depth: null });
+  console.log('pathsAliases pipeline', JSON.stringify(pipeline));
 
   let result = pipelineLimits(featureCollection, intervals, pipeline);
 
@@ -601,6 +605,11 @@ function pipelineLimits(featureCollection, intervals, pipeline) {
  *
  * @param blockCollection dataSource collection
  * @param blockIds  ids of data blocks
+ *
+ * As commented in requestBlockFeaturesInterval(), using $sample will result in
+ * only 1 blockId in the result, so this function is called once for each
+ * blockId.
+ *
  * @param intervals  domain and range of axis of block, to limit the number of features in result.
 
  * @return cursor	: features
@@ -612,6 +621,13 @@ exports.blockFeaturesInterval = function(db, blockIds, intervals) {
     console.log('blockFeaturesInterval', /*featureCollection,*/ blockIds, intervals);
   let ObjectId = ObjectID;
 
+  /** When called from axis-brush:features(), the blocks being looked up are
+   * on the same axis, and hence interval domain is the same;    blockFilters will
+   * repeat the domain constraint for each block, but instead matchBlock could
+   * be used, in combination with a single domain constraint;  but this is a
+   * moot point because blockIds[] is only called with a single element - see
+   * comment above.
+   */
   let
     matchBlock =
     [

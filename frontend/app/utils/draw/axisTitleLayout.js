@@ -1,3 +1,8 @@
+
+/*----------------------------------------------------------------------------*/
+
+const dLog = console.debug;
+
 /*----------------------------------------------------------------------------*/
 
 function deg2Rad(degrees)
@@ -25,7 +30,7 @@ AxisTitleLayout.prototype.calc = function(axisSpacing, titlePx)
   this.axisSpacing = axisSpacing;
   this.titlePx = titlePx;
   this.verticalTitle = axisSpacing < titlePx;
-  console.log('updateAxisTitleSize AxisTitleLayout.calc', axisSpacing, this.verticalTitle, this);
+  dLog('updateAxisTitleSize AxisTitleLayout.calc', axisSpacing, this.verticalTitle, this);
   /** height, angle are undefined when ! verticalTitle */
   let height, angle;
   /** The title is rotated up to fit within width == axisSpacing, unless that
@@ -46,7 +51,7 @@ AxisTitleLayout.prototype.calc = function(axisSpacing, titlePx)
     }
     // convert radians to degrees
     angle = rad2Deg(angle);
-    console.log(axisSpacing, titlePx, 'angle', angle, width, height);
+    dLog(axisSpacing, titlePx, 'angle', angle, width, height);
     /* The <svg> viewBox -70 already gives 70px of vertical space above
      * (from viewport.js: axisNameHeight)
      * But also, the text is at y=-24 (-2 * axisFontSize)

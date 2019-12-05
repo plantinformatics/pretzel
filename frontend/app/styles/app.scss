@@ -40,6 +40,10 @@ div#Page-Nav > div > div.navbar > div > div.navbar > ul.nav {
   display: flex;
 }
 
+div#logo {
+  padding: 10px 15px;
+}
+
 /* -------------------------------------------------------------------------- */
 
 .draw-map-container,
@@ -214,11 +218,11 @@ svg {
 
 g.axis-use > rect {
   fill: none;
-  stroke: blue;
+  /* stroke: blue; */
 }
 g.axis-use > g.tracks > g > rect.track {
-  fill: white;
-  /* stroke: green; */
+  fill: lightblue;
+  /* stroke: lightblue; */
 }
 .pasteData {
   overflow: hidden;
@@ -338,7 +342,7 @@ body.devel .foreground > g.progress > g > g.blockAdj > g > path {
   stroke: #808;
 }
 :root {
-  --path-stroke-opacity : .125;
+  --path-stroke-opacity : 1;//.125;
   --path-stroke-width: 0.75px;
   --manyPaths-stroke-opacity: calc(var(--path-stroke-opacity)*0.8); //.125;
   --manyPaths-stroke-width: calc(var(--path-stroke-width)*0.8); // 0.75px;
@@ -438,11 +442,15 @@ body.allInitially
 }
 
 
-.axis line, .axis path {
+.axis line, .axis path,
+.axis-use > path
+{
   fill: none;
   shape-rendering: crispEdges;
 }
-.axis line, .axis path:not(.horizTick) {
+.axis line, .axis path:not(.horizTick),
+.axis-use > path
+{
   stroke: #000; /* black */
 }
 
@@ -506,6 +514,7 @@ div.colouredFeatures
   border: pink 3px dashed;
 }
 
+.clear-both,
 div.ExportFlowData
 {
     clear: both;
@@ -759,6 +768,10 @@ li.dropdown-submenu > ul.dropdown-menu {
 }
 .filter-groups > ul > li {
   margin-top: 1em;
+  padding-bottom: 1em;
+}
+li.filter-group {
+  border-bottom: #ccc 1px solid;
 }
 li.filter-group > div > span {
   margin: 0 0.5em;
@@ -776,8 +789,38 @@ li.filter-group > div > span:last-child {
   padding: 3px 6px;
   margin: 0.5em 1em;
 }
+.filter-groups > div > button.add {
+  float: right;
+  padding: 3px 6px;
+  margin: 0.5em 1em;
+}
 .filter-group > div > button.delete {
   float: right;
+}
+#left-panel-explorer .light-border {
+    overflow-y : hidden;
+}
+.filter-group ul.li-active-extra.vertical {
+  float : left;
+  width : 50%;
+}
+.light-border > ul > li.active-detail > a {
+  padding-top : 5px;
+  padding-bottom : 5px;
+}
+
+.filter-group-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.filter-group-col {
+  width: 30%;
+}
+
+.filter-group-2cols {
+  width: 66%;
 }
 
 .line-input-label > input {
@@ -827,10 +870,11 @@ li.active-detail.active > div {
 
 /* (in e.g. data explorer) tabs have counts shown when active; best displayed
  * below the tab so use display:block.  */
-ul.li-active-extra > li.active-detail.active {
+ul.counts.li-active-extra > li.active-detail.active {
   display: block;
 }
 
+#left-panel-explorer .light-border,
 #left-panel-explorer > div > .panel > div > ul.nav > li {
   border: 1px solid #ccc;
   border-radius: 10px 10px 3px 3px;
@@ -1104,11 +1148,22 @@ div#goto-feature > div
 {
     display : inline-block;
 }
+/* -------------------------------------------------------------------------- */
 .tooltip-inner  /*.ember-popover*/
 {
   background-color : #f2f2f2;
   color: #000;
 }
+.ember-tooltip {
+  background: #337ab7a0;
+  text-shadow : none;
+  border-radius: 8px;
+}
+.tooltip-inner {
+  border-radius: 7px;
+}
+
+
 
 /* -------------------------------------------------------------------------- */
 
@@ -1185,6 +1240,18 @@ div#left-panel > ul
   display : block;
 }
 
+div#left-panel > div.tab-content
+{
+  height: inherit;
+}
+
+div#left-panel > div.tab-content > div.tab-pane
+{
+  height: inherit;
+  overflow-y: scroll;
+}
+
+
 div#left-panel-view > div > div > div > ul > li > div
 {
   overflow-wrap: break-word;
@@ -1193,6 +1260,12 @@ div#left-panel-view > div > div > div > ul > li > div
 div#left-panel-view > div > div > div > ul > li > div > button
 {
     float : left;
+}
+
+div#left-panel-upload select
+{
+  max-width: 100%;
+  margin-bottom: 5px;
 }
 
 .feature-list.active-input > div > div > div.from-input > a {
@@ -1237,7 +1310,33 @@ ul.blocks-found > li > div > div.ember-popover {
 /* -------------------------------------------------------------------------- */
 /* JSON editor, in RHS panel */
 
+.dataset-table {
+  margin-bottom: 0;
+}
+
 div.metaeditor-panel div.jsoneditor-menu {
   display: none;
+}
+
+div.metaeditor-panel > button {
+  position: absolute;
+  right: 15px;
+  z-index: 2;
+  margin: 2px;
+  padding: 2px 8px 2px 8px;
+  height: 23px;
+  font-size: 10pt;
+}
+
+div.metaeditor-panel > div {
+  position: relative;
+}
+
+div.metaeditor-panel div.jsoneditor-treepath {
+  visibility: hidden;
+}
+
+div.metaeditor-panel div.jsoneditor {
+  border: 1px solid #d3d3d3
 }
 /* -------------------------------------------------------------------------- */

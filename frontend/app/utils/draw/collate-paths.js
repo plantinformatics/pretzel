@@ -14,6 +14,8 @@ import { breakPoint } from '../breakPoint';
 /* global require */
 /*global d3 */
 
+const dLog = console.debug;
+
 /*----------------------------------------------------------------------------*/
 /* created from functions split out of draw-map.js (commit 5db9073). */
 /*----------------------------------------------------------------------------*/
@@ -34,10 +36,10 @@ let oa__;
 function oa_() { return oa__ || (oa__ = flowsService.get('oa')); }
 
 
-const trace_alias = 1;  // currently no trace at level 1.
+const trace_alias = 0;  // currently no trace at level 1.
 const trace_path = 0;
 /** enable trace of adjacency between axes, and stacks. */
-const trace_adj = 1;
+const trace_adj = 0;
 
 
 
@@ -45,7 +47,8 @@ const trace_adj = 1;
 
 function collateStacks()
 {
-  console.log('collateStacks', flowsService, flows);
+  if (trace_adj)
+    console.log('collateStacks', flowsService, flows);
   d3.keys(flows).forEach(function(flowName) {
     let flow = flows[flowName];
     if (flow.enabled && flow.collate)
@@ -64,7 +67,8 @@ function collateStacks()
  */
 function countPaths(svgRoot)
 {
-  console.log("countPaths", svgRoot);
+  if (trace_path)
+    console.log("countPaths", svgRoot);
   if (svgRoot)
   {
     let nPaths = 0;
@@ -73,7 +77,8 @@ function countPaths(svgRoot)
       if (flow.enabled && flow.collate)
       {
         nPaths += flow.pathData.length;
-        console.log("countPaths", flow.name, flow.pathData.length, nPaths);
+        if (trace_path)
+          console.log("countPaths", flow.name, flow.pathData.length, nPaths);
       }
     });
     svgRoot.classed("manyPaths", nPaths > 200);
@@ -460,7 +465,7 @@ function collateStacks1()
       }
     }
   }
-  if (pathsUnique)
+  if (pathsUnique && trace_path)
     console.log("collateStacks", " featureAxes", d3.keys(featureAxes).length, ", pathsUnique", pathsUnique.length);
   if (trace_path > 4)
   {
@@ -826,7 +831,7 @@ function addPathsByReferenceToCollation(blockA, blockB, referenceGenome, maxDist
     if (! p.aliases.length)
     {
       // this API result should not contain directs, only aliases.
-      console.log('addPathsByReferenceToCollation empty aliases', p);
+      dLog('addPathsByReferenceToCollation empty aliases', p);
     }
     else
       storePath(blockA, blockB, featureName, fi, aliasGroupName);
@@ -943,7 +948,7 @@ function filterPaths()
  */
 function collateFeatureMap()
 {
-  console.log("collateFeatureMap()");
+  dLog("collateFeatureMap()");
   let
     featureToAxis = flowsService.featureToAxis,
   featureAliasToAxis = flowsService.featureAliasToAxis;

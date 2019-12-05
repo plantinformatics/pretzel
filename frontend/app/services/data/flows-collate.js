@@ -28,6 +28,8 @@ import { flowsServiceInject as flowsServiceInject_utilsDrawFlowControls } from "
 import { flowsServiceInject as flowsServiceInject_stacksAdj } from "../../utils/stacks-adj";
 
 /*----------------------------------------------------------------------------*/
+const dLog = console.debug;
+/*----------------------------------------------------------------------------*/
 let d3Features;
 /*----------------------------------------------------------------------------*/
 
@@ -209,7 +211,7 @@ export default Service.extend({
 
   init : function() {
     this._super(...arguments);
-    console.log('flows-collate init', this);
+    dLog('flows-collate init', this);
     flowsServiceInject_collatePaths(this);
     flowsServiceInject_utilsDrawFlowControls(this);
     flowsServiceInject_stacksAdj(this);
@@ -224,7 +226,7 @@ export default Service.extend({
     for (let f in flows)
       if (flows[f].enabled)
         result[f] = flows[f];
-    console.log('enabledFlows', uAlias, flows.U_alias.enabled, result);
+    dLog('enabledFlows', uAlias, flows.U_alias.enabled, result);
     return result;
   }),
 
@@ -237,7 +239,7 @@ export default Service.extend({
   blockAdjIds : Ember.computed('block.viewedIds.[]', 'adjAxesArr.[]', function () {
     let viewedIds = this.get('block.viewedIds');
     let axesP = this.get('oa.axesP');
-    console.log('blockAdjIds', viewedIds, axesP);
+    dLog('blockAdjIds', viewedIds, axesP);
     let blockAdjIds = Ember.run(this, convert);
     /** Convert the hash adjAxes, e.g. adjAxes[b0] === b1, to an array of ordered pairs [b0, b1]
      */
@@ -246,30 +248,38 @@ export default Service.extend({
     blockAdjIds2 =
       Object.keys(adjAxes).reduce(function(result, b0Name) {
         let b0 = adjAxes[b0Name];
-        console.log(b0Name, axisId2Name(b0Name), b0.length);
+        dLog(b0Name, axisId2Name(b0Name), b0.length);
         for (let b1i=0; b1i < b0.length; b1i++) {
           let b1Name = b0[b1i];
           let // direction = b0Name < b1Name,
             orderedPair = [b0Name, b1Name].sort();
           // if (direction)
             result.push(orderedPair);
-          // console.log(result);
+          // dLog(result);
         }
         return result;
       }, []);
       return blockAdjIds2;
     }
-    console.log('blockAdjIds', blockAdjIds);
+    dLog('blockAdjIds', blockAdjIds);
     return blockAdjIds;
   }),
-  blockAdjs : Ember.computed('blockAdjIds.[]', function () {
+  blockAdjsCP : Ember.computed('blockAdjIds.[]', function () {
     let pathsPro = this.get('pathsPro'),
     blockAdjIds = this.get('blockAdjIds'),
     records = blockAdjIds.map(function (blockAdjId) {
       let record = pathsPro.ensureBlockAdj(blockAdjId);
-      console.log('blockAdjId', blockAdjId, blockAdjId[0], blockAdjId[1], record);
+      dLog('blockAdjId', blockAdjId, blockAdjId[0], blockAdjId[1], record);
       return record;
     });
+    /* The value blockAdjs was simply this CP, but version updates seem to cause error :
+     * Cannot read property 'nextSibling' of null
+     * in #each flowsService.blockAdjs in draw-map.hbs.
+     * Delaying the value blockAdjs by setting it in run.later()
+     * seems to fix this.  We can revisit this after getting the versions up to
+     * date across the board.
+     */
+    Ember.run.later(() => this.set('blockAdjs', records));
     return records;
   })
 

@@ -12,6 +12,7 @@
 {{yield}}
 
 <div class="devel-visible">
+  {{resizeEffect}} {{drawEffect}} 
   {{draw/stacks-view stacks=oa.stacks oa=oa drawMap=this axes2d=axes2d
     featuresInBlocks=featuresInBlocks
   }}
@@ -41,13 +42,11 @@
     {{draw/axis-brush block=brushedAxis drawMap=this }}
   {{/each}}
 
-  <div>{{blockService.viewedIds.length}},  blockAdjs : {{flowsService.blockAdjIds.length}}  {{flowsService.blockAdjs.length}}</div>
+  <div>{{blockService.viewedIds.length}},  blockAdjs : {{flowsService.blockAdjIds.length}}  {{flowsService.blockAdjsCP.length}}</div>
   <div>
-    <!-- flowsService.blockAdjs. (this comment fixes : Cannot read property 'nextSibling' of null) -->
     {{#each flowsService.blockAdjs as |blockAdj| }}
       {{draw/block-adj blockAdj=blockAdj drawMap=this }}
     {{/each}}
-    <!-- end of flowsService.blockAdjs. -->
   </div>
 </div>
 

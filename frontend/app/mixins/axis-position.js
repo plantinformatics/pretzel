@@ -8,6 +8,7 @@ import { Stacked } from '../utils/stacks';
 import { updateDomain } from '../utils/stacksLayout';
 import VLinePosition from '../models/vline-position';
 
+const dLog = console.debug;
 
 /** Mixed-into axis-1d to describe the axis position.
  *
@@ -43,46 +44,48 @@ export default Mixin.create({
 
   /** Set the domain of the current position using domainCalc() of Block / Axis (Stacked).
    */
-  updateDomain()
+  updateDomain_unused()
   {
     let axisS=this.get('axisS');
     if (! axisS) {
       /** This replicates the role of axis-1d.js:axisS();  this will be solved
        * when Stacked is created and owned by axis-1d.
+       * (also : now using ensureAxis() in data/block.js : axesBlocks())
        */
       let axisName = this.get('axis.id');
       axisS = Stacked.getAxis(axisName);
       if (axisS) {
         this.set('axisS', axisS);
-        console.log('axis-1d:updateDomain', this, axisName, axisS);
+        dLog('axis-1d:updateDomain', this, axisName, axisS);
       }
     }
     if (axisS) {
       let y = axisS.getY(), ys = axisS.ys;
       updateDomain(axisS.y, axisS.ys, axisS);
-      let domain = axisS.y.domain(),
-      axisPosition = this.get('currentPosition');
-      console.log('updateDomain', this, /*y, ys,*/ 'domain', domain, axisPosition);
-      axisPosition.set('yDomain', domain);
+      let domain = axisS.y.domain();
+      this.setDomain(domain);
     }
   },
   /** Set the domain of the current position to the given domain
    */
   setDomain(domain)
   {
+    if (this.get('isDestroyed') || this.get('isDestroying'))
+      return;
+
     /* Update of domain of scales (this.getY() and this.ys) is already done in draw-map: zoom(),
      * whereas this.updateDomain() above uses stacksLayout : updateDomain().
      */
     let
       axisPosition = this.get('currentPosition');
-    console.log('setDomain', this, 'domain', domain, axisPosition);
+    dLog('setDomain', this, 'domain', domain, axisPosition);
     axisPosition.set('yDomain', domain);
   },
   /** Set the zoomed of the current position to the given value
    */
   setZoomed(zoomed)
   {
-    // console.log('setZoomed', this, 'zoomed', zoomed);
+    // dLog('setZoomed', this, 'zoomed', zoomed);
     // possibly .zoomed will move into .currentPosition
     this.set('zoomed', zoomed);
   }

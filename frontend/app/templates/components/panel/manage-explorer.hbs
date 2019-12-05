@@ -39,20 +39,24 @@
     </div>
   {{/if}}
   <div>
-    <ul class="nav nav-tabs li-active-extra">
-      {{#each-in dataTypedTreeFG as |tabTypeName tabData|}}
-        {{log 'tabTypeName' tabTypeName 'tabData' tabData (compute (action 'keysLength' tabData)) }}
-        <li class="active-detail">
-	  <a data-toggle="tab" href={{concat "#" (compute (action "datasetTypeTabId" tabTypeName))}}>{{tabTypeName}}</a>
-	  <div>{{compute (action 'keysLength' tabData)}}</div>
-        </li>
-      {{/each-in}}
-      {{#each-in dataParentTypedFGTree as |tabTypeName tabData|}}
-        <li class="active-detail">
-	  <a data-toggle="tab" href={{concat "#" (compute (action "datasetTypeTabId" tabTypeName)) '2'}}>{{tabTypeName}}</a>
-	  <div>{{compute (action 'keysLength' tabData)}}</div>
-        </li>
-      {{/each-in}}
+    <ul class="nav nav-tabs li-active-extra counts">
+
+      {{#unless enable_parentBeforeFilter}}
+	{{#each-in dataTypedTreeFG as |tabTypeName tabData|}}
+	  {{!-- log 'tabTypeName' tabTypeName 'tabData' tabData (compute (action 'keysLength' tabData)) --}}
+	  <li class="active-detail">
+	    <a data-toggle="tab" href={{concat "#" (compute (action "datasetTypeTabId" tabTypeName))}}>{{tabTypeName}}</a>
+	    <div>{{compute (action 'keysLength' tabData)}}</div>
+	  </li>
+	{{/each-in}}
+      {{else}}
+	{{#each-in dataParentTypedFGTree as |tabTypeName tabData|}}
+	  <li class="active-detail">
+	    <a data-toggle="tab" href={{concat "#" (compute (action "datasetTypeTabId" tabTypeName)) '2'}}>{{tabTypeName}}</a>
+	    <div>{{compute (action 'keysLength' tabData)}}</div>
+	  </li>
+	{{/each-in}}
+      {{/unless}}
 
 
       {{#if enable_datatypeFromFamily}}
@@ -79,30 +83,33 @@
 
     <div class="tab-content">
 
-      {{log 'dataTypedTreeFG' dataTypedTreeFG}}
-      {{#each-in dataTypedTreeFG as |tabTypeName tabData|}}
-        {{log 'tabTypeName' tabTypeName 'tabData' tabData (compute (action 'keysLength' tabData)) }}
-        {{record/entry-tab 
-          name=tabTypeName
-          values=tabData
-          levelMeta=levelMeta
-          loadBlock="loadBlock"
-          selectBlock="selectBlock"
-          selectedBlock=selectedBlock
-          selectDataset="selectDataset"}}
-      {{/each-in}}
-      {{log 'dataParentTypedFGTree' dataParentTypedFGTree}}
-      {{#each-in dataParentTypedFGTree as |tabTypeName tabData|}}
-        {{log 'tabTypeName' tabTypeName 'tabData' tabData (compute (action 'keysLength' tabData)) }}
-        {{record/entry-tab 
-          name=(concat tabTypeName '2')
-          values=tabData
-          levelMeta=levelMeta
-          loadBlock="loadBlock"
-          selectBlock="selectBlock"
-          selectedBlock=selectedBlock
-          selectDataset="selectDataset"}}
-      {{/each-in}}
+      {{#unless enable_parentBeforeFilter}}
+	{{!-- log 'dataTypedTreeFG' dataTypedTreeFG --}}
+	{{#each-in dataTypedTreeFG as |tabTypeName tabData|}}
+	  {{!-- log 'tabTypeName' tabTypeName 'tabData' tabData (compute (action 'keysLength' tabData)) --}}
+	  {{record/entry-tab 
+	    name=tabTypeName
+	    values=tabData
+	    levelMeta=levelMeta
+	    loadBlock="loadBlock"
+	    selectBlock="selectBlock"
+	    selectedBlock=selectedBlock
+	    selectDataset="selectDataset"}}
+	{{/each-in}}
+      {{else}}
+	{{!-- log 'dataParentTypedFGTree' dataParentTypedFGTree --}}
+	{{#each-in dataParentTypedFGTree as |tabTypeName tabData|}}
+	  {{!-- log 'tabTypeName' tabTypeName 'tabData' tabData (compute (action 'keysLength' tabData)) --}}
+	  {{record/entry-tab 
+	    name=(concat tabTypeName '2')
+	    values=tabData
+	    levelMeta=levelMeta
+	    loadBlock="loadBlock"
+	    selectBlock="selectBlock"
+	    selectedBlock=selectedBlock
+	    selectDataset="selectDataset"}}
+	{{/each-in}}
+      {{/unless}}
 
       {{#if enable_datatypeFromFamily}}
 

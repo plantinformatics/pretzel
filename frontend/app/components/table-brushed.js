@@ -3,6 +3,10 @@ import {  eltClassName  } from '../utils/domElements';
 
 // import Handsontable from 'handsontable';
 
+/* global d3 Handsontable */
+
+const dLog = console.debug;
+
 export default Ember.Component.extend({
 
   actions : {
@@ -13,7 +17,7 @@ export default Ember.Component.extend({
      */
     showData : function(d)
     {
-      console.log("showData", d);
+      dLog("showData", d);
       let table = this.get('table');
       if (table)
       {
@@ -27,12 +31,12 @@ export default Ember.Component.extend({
 
 
   didInsertElement() {
-    console.log("components/table-brushed.js: didInsertElement");
+    dLog("components/table-brushed.js: didInsertElement");
   },
 
 
   didRender() {
-    console.log("components/table-brushed.js: didRender");
+    dLog("components/table-brushed.js: didRender");
     let table = this.get('table');
     if (table === undefined)
       this.get('createTable').apply(this);
@@ -40,10 +44,10 @@ export default Ember.Component.extend({
 
   createTable: function() {
     var that = this;
-    console.log("createTable", this);
+    dLog("createTable", this);
 
     let tableDiv = Ember.$("#table-brushed")[0];
-    console.log("tableDiv", tableDiv);
+    dLog("tableDiv", tableDiv);
       var table = new Handsontable(tableDiv, {
         data: this.get('data') || [['', '', '']],
         minRows: 1,
@@ -109,7 +113,7 @@ export default Ember.Component.extend({
     table = this.get('table');
     if (table)
     {
-      console.log("table-brushed.js", "onSelectionChange", table, data.length);
+      dLog("table-brushed.js", "onSelectionChange", table, data.length);
       me.send('showData', data);
       table.updateSettings({data:data});
     }

@@ -1,8 +1,11 @@
-import { breakPoint } from '../utils/breakPoint';
+
+import { chrData, cmNameAdd } from './utility-chromosome';
+import { breakPoint } from './breakPoint';
 
 /*----------------------------------------------------------------------------*/
 
 const trace_feature = 1;
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
@@ -118,6 +121,18 @@ function mapsOfFeature(store, oa, featureName) {
  * but not when called from paths-progressive.
  */
 function storeFeature(oa, flowsService, feature, f, axisID) {
+  /* Populate the draw-map data structures, which will mostly be progressively
+   * replaced by CPs based on store data.
+   */
+  if (! oa.z[axisID]) {
+    let block = f.get('blockId.content');
+    cmNameAdd(oa, block);
+    if (! oa.z[axisID] ) {
+      // this covers the required part of receivedBlock2()
+      oa.z[axisID] = chrData(block);
+      dLog('storeFeature', axisID, oa.z[axisID]);
+    }
+  }
   if (axisID && ! oa.z[axisID][feature]) {
     /* when called from paths-progressive, emulate the data structure created by
      * chrData() / receiveChr()

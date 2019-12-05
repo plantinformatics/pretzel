@@ -26,8 +26,9 @@ export default Ember.Component.extend({
     }
     return parent;
   }),
-  allActive : Ember.computed('entryTab', 'entryTab.allActive', function () {
+  allActive : Ember.computed('entryTab', 'entryTab.allActive', 'entryTab.autoAllActive', function () {
     let allActive = this.get('entryTab.allActive');
+    let autoAllActive = this.get('entryTab.autoAllActive');
     // side effect : when allActive changes, it sets active.
     // compare !a !== !b, because (false !== undefined).
     if (! this.get('active') !== ! allActive) {
@@ -37,8 +38,8 @@ export default Ember.Component.extend({
       Ember.run.scheduleOnce('afterRender', this, 'toggleActive');
     }
     if (trace_entryExpander > 1)
-      console.log('allActive', allActive, elt0(this.elementId || this.parentView.elementId));
-    return allActive;
+      console.log('allActive', allActive, elt0(this.elementId || this.parentView.elementId), autoAllActive);
+    return allActive || autoAllActive;
   }),
   toggleActive : function () {
     this.toggleProperty('active');

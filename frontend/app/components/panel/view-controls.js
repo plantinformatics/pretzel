@@ -9,6 +9,9 @@ import { toBool } from '../../utils/common/strings';
 
 /* global d3 */
 
+const dLog = console.debug;
+
+
 export default Ember.Component.extend({
   tagName: 'div',
   // attributes
@@ -31,7 +34,7 @@ export default Ember.Component.extend({
   /** ditto, 
    * controls.view.pathControlActiveSample
    */
-  pathSample : expRangeInitial(1000, expRangeBase(100, 10000)),
+  pathSample : expRangeInitial(400, expRangeBase(100, 10000)),
 
   pathControlActiveDensity : Ember.computed('pathDensityActive', 'pathDensity', function () {
     let active = this.get('pathDensityActive'),
@@ -46,10 +49,10 @@ export default Ember.Component.extend({
     Ember.run.next(function () {
       let value2 = inputRangeValue('range-pathDensity');
       if (value !== value2)
-        console.log('range-pathDensity',  value, value2);
+        dLog('range-pathDensity',  value, value2);
     });
 
-    console.log('pathControlActiveDensity', pathDensity, density);
+    dLog('pathControlActiveDensity', pathDensity, density);
     return density;
    }),
 
@@ -64,9 +67,9 @@ export default Ember.Component.extend({
     Ember.run.next(function () {
       let value2 = inputRangeValue('range-pathSample');
       if (value !== value2)
-        console.log('range-pathSample',  value, value2);
+        dLog('range-pathSample',  value, value2);
     });
-    console.log('pathControlActiveSample', pathSample, sample);
+    dLog('pathControlActiveSample', pathSample, sample);
     return sample;
    }),
 
@@ -86,7 +89,7 @@ export default Ember.Component.extend({
     if (nFeatures) {
       nFeatures = Math.round(nFeatures);
     }
-    console.log('pathControlNFeatures', pathNFeatures, nFeatures);
+    dLog('pathControlNFeatures', pathNFeatures, nFeatures);
     return nFeatures;
    }),
 
@@ -113,7 +116,7 @@ export default Ember.Component.extend({
   /*--------------------------------------------------------------------------*/
 
   didInsertElement() {
-    console.log("components/draw-controls didInsertElement()", this.drawActions);
+    dLog("components/draw-controls didInsertElement()", this.drawActions);
     this._super(...arguments);
 
     this.drawActions.trigger("drawControlsLife", true);
@@ -137,7 +140,7 @@ export default Ember.Component.extend({
       this.set('pathsViaStream', toBool(pathsViaStream));
   },
   willDestroyElement() {
-    console.log("components/draw-controls willDestroyElement()");
+    dLog("components/draw-controls willDestroyElement()");
     this.drawActions.trigger("drawControlsLife", false);
   },
 
@@ -145,11 +148,11 @@ export default Ember.Component.extend({
     pathTabActive : function(tabName) {
       let active;
       active = tabName === 'density';
-      console.log('pathDensityActive', active, tabName);
+      dLog('pathDensityActive', active, tabName);
       this.set('pathDensityActive', active);
 
       active = tabName === 'sample';
-      console.log('pathSampleActive', active);
+      dLog('pathSampleActive', active);
       this.set('pathSampleActive', active);
     },
 
@@ -158,7 +161,7 @@ export default Ember.Component.extend({
     },
 
     clearScaffoldColours  : function () {
-      console.log("clearScaffoldColours", "selected-markers.js");
+      dLog("clearScaffoldColours", "selected-markers.js");
       this.get('feed').trigger('clearScaffoldColours');
     },
 

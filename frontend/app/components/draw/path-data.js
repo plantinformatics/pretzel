@@ -40,33 +40,63 @@ export default Ember.Component.extend({
    * Related : unique_1_1_mapping, pathDataInG
    */
 
+  feature2BlockId(i) {
+    let fieldName = 'feature' + i,
+    feature = this.get(fieldName),
+    blockId = feature.get ? feature.get('blockId.id') : feature.blockId;
+    return blockId;
+  },
+
+  /** currently feature{0,1} are in this component, and they reference their respective blocks.
+   * May instead use models/draw/path-data for the data attributes, or a non-store object.
+   */
+  blockId0 : Ember.computed('feature0.blockId.id', function () { return this.feature2BlockId(0); }),
+  blockId1 : Ember.computed('feature1.blockId.id', function () { return this.feature2BlockId(1); }),
+
+
     /** Determine the svg <path> data attribute for this component.
      * @param ffaa  [feature0, feature1, a0, a1]
      */
   // pathU needs to depend also on the positions of the stacked axes, which will
   // be possible when stacks / axes are components, then this can be a computed function.
+  /** In this commit, there is an instance of this component for each path, and `this` references the data;
+   * alternately the componenent can be a singleton or library, with the model data passed as argument pathData.
+   * If the component is per-path with a separate model path-data, then pathData will be an attribute of the component.
+   * @param pathData the models/draw/path-data instance, contains the data of the path.
+   */
   pathU : /*Ember.computed('feature0', 'feature1', 'block0', 'block1',*/ function() {
+    let pathData = this;
     // based on draw-map.js : pathU(), pathUg(); this is equivalent and can replace those functions. (related : dataOfPath()).
     if (! axisApi)
       axisApi = stacks.oa.axisApi;
     let p = [];
-    p[0] = axisApi.patham(this.get('block0'), this.get('block1'), this.get('feature0.name'), this.get('feature1.name'));
+    let block0 = pathData.get('blockId0'),
+    block1 = pathData.get('blockId1');
+      // pathData.get('block0'), pathData.get('block1');
+    p[0] = axisApi.patham(block0, block1, pathData.get('feature0.name'), pathData.get('feature1.name'));
     let axisName2MapChr = axisApi.axisName2MapChr;
     if (trace_path > 1)
       console.log(
         "pathU",
-        axisName2MapChr(this.block0), axisName2MapChr(this.block1),
-        this.feature0, this.feature1, p[0]);
+        axisName2MapChr(block0), axisName2MapChr(block1),
+        pathData.feature0, pathData.feature1, p[0]);
     return p;
   }/*)*/,
 
   /** Used to filter a selection of paths to find those whose blocks both have axes or not.
    * Depends on .block0 and .block1, but also on stacks, so this can be a CF
    * when stacks & axes are Components.
+   * @param pathData the models/draw/path-data instance, contains the data of the path.
    */
   blocksHaveAxes() {
+    let pathData = this;
     let getAxis = Stacked.getAxis;
-    return getAxis(this.block0) && getAxis(this.block1);
+    let block0 = pathData.get('blockId0'),
+    block1 = pathData.get('blockId1');
+    let haveAxes =
+      (pathData.get('feature0.blockId.isViewed') || getAxis(block0)) &&
+      (pathData.get('feature1.blockId.isViewed') || getAxis(block1));
+    return haveAxes;
   }
 
 

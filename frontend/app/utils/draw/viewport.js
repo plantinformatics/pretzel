@@ -121,7 +121,8 @@ Viewport.prototype.calc = function(oa)
     margins = [20/*+14*/+1, 0, 10, 0] // 10, 10, 10],
     .map(function (m, i) { return m + holderPadding[i]; });
 
-  logElementDimensions2(divHolder);
+  if (trace_resize)
+    logElementDimensions2(divHolder);
 
   this.viewPortPrev = this.viewPort;
   /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */

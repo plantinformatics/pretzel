@@ -15,6 +15,7 @@ export default Service.extend(Ember.Evented, {
    */
   taskGetList: task(function * () {
     /* This replaces controllers/mapview.js : updateChrs(), updateModel(). */
+    console.log('dataset taskGetList', this);
     let store = this.get('store'),
     trace_promise = false,
     dP = store.query('dataset',
@@ -43,7 +44,7 @@ export default Service.extend(Ember.Evented, {
     console.log('taskGetList', this, datasets.length);
     this.trigger('receivedDatasets', datasets);
     return datasets;
-  }),
+  }).drop(),
 
 
   

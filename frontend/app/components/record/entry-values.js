@@ -13,7 +13,7 @@ import { parentOfType, elt0 } from '../../utils/ember-devel';
 /** For use when debugging via web inspector console. */
 var levelMeta;
 
-const trace_entryValues = 1;
+const trace_entryValues = 0;
 
 /*----------------------------------------------------------------------------*/
 

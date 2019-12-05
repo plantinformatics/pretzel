@@ -49,6 +49,11 @@ function  configureTrackHover(interval)
 
 /*----------------------------------------------------------------------------*/
 
+/** For d3 .data() key function */
+function I(d) { return d; }
+
+/*----------------------------------------------------------------------------*/
+
 /** filter intervalTree : select those intervals which intersect domain.
  * @param sizeThreshold intervals smaller than sizeThreshold are filtered out;
  * undefined means don't filter.
@@ -147,6 +152,8 @@ export default InAxis.extend({
 
   className : "tracks",
   
+  /*--------------------------------------------------------------------------*/
+
   actions: {
 
     selectionChanged: function(selA) {
@@ -161,6 +168,8 @@ export default InAxis.extend({
 
   },
 
+  /*--------------------------------------------------------------------------*/
+
   didInsertElement() {
     this._super(...arguments);
     let parentView = this.get('parentView'),
@@ -171,22 +180,44 @@ export default InAxis.extend({
 
   didRender() {
     console.log("components/axis-tracks didRender()");
-    let trackBlocks = this.get('trackBlocks');
-    if (trackBlocks && trackBlocks.length)
-      this.showTrackBlocks();
   },
 
+  /*--------------------------------------------------------------------------*/
+
+  axis1d : Ember.computed.alias('axis.axis1d'),
+  axisS : Ember.computed.alias('axis.axis'),
+  currentPosition : Ember.computed.alias('axis1d.currentPosition'),
+  yDomain : Ember.computed.alias('currentPosition.yDomain'),
+
+  /** From the Ember block objects, derive the stack Blocks. */
+  trackBlocks : Ember.computed('trackBlocksR.@each.view', function () {
+    let trackBlocksR = this.get('trackBlocksR'),
+    trackBlocks = trackBlocksR.mapBy('view');
+    console.log('trackBlocks', trackBlocksR, trackBlocks);
+    return trackBlocks;
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
+  /** currently not called because (quoting from axis-2d comment) : axis-2d
+   * receives axisStackChanged from draw-map and propagates it as zoomed to its
+   * children.
+   * In a separate commit this can be connected;  the update is not required -
+   * the only effect of stacking would be a change of sizeThreshold, which could
+   * be dependent on axis yRange but it is not yet.
+   */
   axisStackChanged : function() {
     console.log("axisStackChanged in components/axis-tracks", this);
-    this.showResize(true, true);
+    // stack change would change the y display range of the axis, and hence the yScale
+    this.showResize(true, true /* , yScaleChanged ? */);
   },
-  zoomed : function() {
-    console.log("zoomed in components/axis-tracks", this);
-    /* axisStackChanged() will be called before zoomed, otherwise
-     * widthChanged==false could shadow the true passed by axisStackChanged(),
-     * because of .throttle() */
-    this.showResize(false, false, true);
-  },
+  /* Earlier version (prior to feature/progressive) defined zoomed() for InAxis;
+   * this is replaced by giving showTrackBlocks() dependency on yDomain and
+   * zoomed.
+   */
+
+  /*--------------------------------------------------------------------------*/
+
   showResize : function(widthChanged, heightChanged, yScaleChanged) {
     let tracks = this.get('tracks'),
     resized = {width : widthChanged, height : heightChanged, yScale : yScaleChanged};
@@ -196,6 +227,8 @@ export default InAxis.extend({
     if (tracks)
       Ember.run.throttle(this, this.layoutAndDrawTracks, args, 500, true);
   },
+
+  /*--------------------------------------------------------------------------*/
 
   /** Convert input text to an interval tree.
    * @param tableText text string, TSV, rows separated by \n and/or \r.
@@ -331,12 +364,12 @@ export default InAxis.extend({
        * The logic is : if the user is zooming in, they are interested in
        * features regardless of size, e.g. smaller than a pixel.
        */
-      sizeThreshold = axis.zoomed ? undefined : pxSize * 1/*5*/,
+      sizeThreshold = axis.axis1d.zoomed ? undefined : pxSize * 1/*5*/,
       tracksLayout = regionOfTree(t, yDomain, sizeThreshold),
       data = tracksLayout.intervals;
       if (false)  // actually need to sum the .layoutWidth for all blockId-s, plus the block offsets which are calculated below
       setClipWidth(axisID, tracksLayout.layoutWidth);
-      console.log('trackBlocksData', blockId, data.length, (data.length == 0) || y(data[0][0]));
+      console.log('trackBlocksData', blockId, data.length, (data.length == 0) ? '' : y(data[0][0]));
       return data;
     };
     // a block with 1 feature will have pxSize == 0.  perhaps just skip the filter.
@@ -366,14 +399,18 @@ export default InAxis.extend({
       return 'translate(' + xOffset + ',0)';
     }
     /** parent; contains g > rect, maybe later a text.resizer.  */
-    let gp =   gAxis
+    let gpS =   gAxis
       .selectAll("g.tracks")
-      .data(blockIds)
+      .data(blockIds, I),
+    gp = gpS
       .enter()
       .append("g")  // .insert(, ":last-child")
-      .attr('id', function (blockId) { return blockId; })
-      .attr('transform', blockTransform)
-      .attr('class', 'tracks');
+      .attr('class', 'tracks'),
+    gpM = gp
+      .merge(gpS)
+      .attr('id', function (blockId) { console.log('', this, blockId); return blockId; })
+      .attr('transform', blockTransform);
+    gpS.exit().remove();
     /* this is for resizing the width of axis-tracks; may instead scale width of
      * rectangles to fit available width. */
     if (false) { // not completed.  Can base resizedParentElt() on axis-2d.js : resized()
@@ -386,14 +423,17 @@ export default InAxis.extend({
       eltWidthResizable("g.axis-use > g.tracks > text.resizer", resizedParentElt);
   }
     /** define the clipPath.  1 clipPath per axis. */
-    let clipRect =
+    let clipRectS =
       gAxis.selectAll('clipPath')
-      .data([axisID])
+      .data([axisID]),
+    clipRect = clipRectS
       .enter()
       .append("clipPath")       // define a clip path
       .attr("id", axisEltIdClipPath) // give the clipPath an ID
       .append("rect")          // shape it as a rect
     ;
+    clipRectS
+      .exit().remove();
     /* During zoom calcs, axis-ticks positions elements before the data is
      * re-filtered, causing gAxis bbox to be large.  Don't resize to that.
      * No longer using bbox.height anyway
@@ -434,6 +474,7 @@ export default InAxis.extend({
       .transition().duration(featureTrackTransitionTime)
       .attr('width', trackWidth)
       .each(configureTrackHover);
+    let blockIndex = this.get('axis1d.blockIndexes');
     ra
       .merge(rs)
       .transition().duration(featureTrackTransitionTime)
@@ -455,18 +496,8 @@ export default InAxis.extend({
         return axisTitleColour(blockId, i+1) || 'black';
       })
     ;
-    console.log(gAxis.node(), rs.nodes(), re.nodes(), rx.size());
+    console.log(gAxis.node(), rs.size(), re.size(), 'ra', ra.size(), ra.node(), 'rx', rx.size());
     rx.remove();
-
-    /** record the positions (index) of the elements g.selector
-     * This is used in assigning colours to block <g>-s.
-     */
-    function blockIndexes(selection) {
-      let blockIndex = {};
-      selection.each(function (d, i) { blockIndex[d] = i; });
-      return blockIndex;
-    }
-    let blockIndex = blockIndexes(d3.selectAll('g.tracks'));
 
     function blockColour(selector) {
     function blockTrackColour(d,i,g) {
@@ -487,6 +518,8 @@ export default InAxis.extend({
       .each(blockTrackColour);
 
   },
+
+  /*--------------------------------------------------------------------------*/
 
   pasteProcess: function(textPlain) {
     console.log("components/axis-tracks pasteProcess", textPlain.length);
@@ -514,15 +547,31 @@ export default InAxis.extend({
       interval.end = interval[0];
       return interval;
     },
-  tracksTree : Ember.computed('trackBlocks', function () {
-    console.log('tracksTree', this);
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Not used; can be used in .hbs for trace, for comparison against the result
+   * of showTrackBlocks(). */
+  blocksFeaturesLengths : Ember.computed(
+    'trackBlocksR.@each.featuresLength',
+    'trackBlocks.[]', 'trackBlocksR.0.featuresLength', 'trackBlocksR.0.features.[]',
+    function () {
+    let lengths = this.get('trackBlocks').map((block) => [block.axisName, block.block.get('featuresLength')]);
+    // similar : d3.keys(block.features())
+    console.log('blocksFeaturesLengths', lengths);
+    return lengths;
+  }),
+  tracksTree : Ember.computed('trackBlocksR.@each.featuresLength', function () {
     let axisID = this.get('axisID'),
-    trackBlocks = this.get('trackBlocks'),
+    trackBlocksR = this.get('trackBlocksR'),
+    featuresLengths = this.get('trackBlocksR').mapBy('featuresLength');
+    console.log('tracksTree', axisID, this, trackBlocksR, featuresLengths);
+    let
     /** similar to : axis-1d.js : showTickLocations(), which also does .filter(inRange)
      */
-    intervals = trackBlocks.reduce(
-      function (blockFeatures, block) {
-        let blockR = block.block,
+    intervals = trackBlocksR.reduce(
+      function (blockFeatures, blockR) {
+        let
         blockId = blockR.get('id'),
         features = blockR.get('features')
          .toArray()  //  or ...
@@ -532,6 +581,12 @@ export default InAxis.extend({
              * single-element array, e.g. {name : "my1AGene1", value : [5200] } */
             if (! interval.length || (interval.length == 1))
               interval = [interval, interval];
+            /* interval-tree:createIntervalTree() assumes the intervals are positive, and gets stack overflow if not. */
+            else if (interval[0] > interval[1]) {
+              let swap = interval[0];
+              interval[0] = interval[1];
+              interval[1] = swap;
+            }
             interval.description = feature.get('name');
             return interval;
           });
@@ -544,10 +599,10 @@ export default InAxis.extend({
     this.set('tracks', tracks); // used by axisStackChanged() : passed to layoutAndDrawTracks()
     return tracks;
   }),
-  layoutWidth : Ember.computed('trackBlocks', function () {
+  layoutWidth : Ember.computed('trackBlocksR.[]', function () {
     let
-    trackBlocks = this.get('trackBlocks'),
-    blockIds = trackBlocks.map(function (block) { return block.axisName; }),
+    trackBlocksR = this.get('trackBlocksR'),
+    blockIds = trackBlocksR.mapBy('id'),
     /** Add 50 on the right to avoid clashing with the right axis ticks text,
      * which may later be switched off with CSS.
      * this includes xOffset from blockTransform(blockIds.length-1) 
@@ -558,18 +613,32 @@ export default InAxis.extend({
     console.log('layoutWidth', blockIds, width);
     return width;
   }),
-  showTrackBlocks: function() {
-    console.log('showTrackBlocks', this);
-    let tracks = this.get('tracksTree');
-    let blockId = d3.keys(tracks.intervalTree)[0];
-    let forTable = tracks.intervalTree[blockId].intervals.map(this.intervalToStartEnd);
+  showTrackBlocks: Ember.computed(
+    'tracksTree', 'yDomain.0', 'yDomain.1', 'axis1d.zoomed', 'axis1d.extended', 'axis1d.featureLength',
+    function() {
+      let tracks = this.get('tracksTree');
+      let axis1d = this.get('axis1d'),
+      zoomed = this.get('axis1d.zoomed'),
+      extended = this.get('axis1d.extended'),
+      featureLength = this.get('axis1d.featureLength'),
+      yDomain = this.get('yDomain');
+      console.log('showTrackBlocks', this, tracks, axis1d, yDomain, 'axis1d.zoomed', zoomed, extended, featureLength);
+    let blockIds = d3.keys(tracks.intervalTree);
+    if (false) {
+      let blockId = blockIds[0];
+      /** would use this to display the details of the features in the interval, in the data-table within the split axis. */
+      let forTable = tracks.intervalTree[blockId].intervals.map(this.intervalToStartEnd);
+    }
     // intersect with axis zoom region;  layer the overlapping tracks; draw tracks.
     this.layoutAndDrawTracks.apply(this, [undefined, tracks]);
-  },
+    let featuresLength = blockIds.map((blockId) => [blockId, tracks.intervalTree[blockId].intervals.length]);
+    console.log('showTrackBlocks() featuresLength', featuresLength);
+    return featuresLength;
+  }),
 
   keypress: function(event) {
     console.log("components/axis-tracks keypress", event);
-  },
+  }
 
 
 });

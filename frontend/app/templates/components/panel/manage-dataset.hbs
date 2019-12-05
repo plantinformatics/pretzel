@@ -1,30 +1,24 @@
 {{#if dataset}}
   <h4 class="truncate" style="max-width:300px" title={{dataset.name}}>{{dataset.name}}</h4>
 
-  <table class="table table-striped">
+  <table class="table table-striped dataset-table">
     <tbody>
-      <tr><td>Type</td><td>{{dataset.type}}</td></tr>
+      <tr><td>Namespace</td><td>{{dataset.namespace}}</td></tr>
+      <tr><td>Parent</td><td>{{dataset.parent.id}}</td></tr>
       <tr><td>Created</td><td>{{formatDate dataset.createdAt}}</td></tr>
       <tr><td>Last Updated</td><td>{{formatDate dataset.updatedAt}}</td></tr>
       <tr><td>Public</td><td>{{dataset.public}}</td></tr>
       <tr><td>Read Only</td><td>{{dataset.readOnly}}</td></tr>
-      <tr><td>Parent</td><td>{{dataset.parent.id}}</td></tr>
-      {{#each-in dataset.meta as |key value|}}
-      <tr><td>{{key}}</td><td>{{value}}</td></tr>
-      {{/each-in}}
-
     </tbody>
   </table>
-  <div style="padding-bottom:10px">
+  <div class="metaeditor-panel">
     {{#elem/button-base
       icon="pencil"
       classColour="info"
       onClick=(action "toggleEditor")
       disabled=(not ownedByMe)}}
-      Edit Metadata
+      Edit
     {{/elem/button-base}}
-  </div>
-  <div class="metaeditor-panel">
     {{json-editor json=datasetMeta name='Metadata' disabled=true search=false}}
   </div>
   <div>

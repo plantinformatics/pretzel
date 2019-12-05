@@ -1,9 +1,11 @@
 import Ember from 'ember';
 import compileSearch from 'npm:binary-search-bounds';
-console.log("compileSearch", compileSearch);
 import createIntervalTree from 'npm:interval-tree-1d';
-console.log("createIntervalTree", createIntervalTree);
 const { inject: { service } } = Ember;
+
+import { isEqual } from 'lodash/lang';
+
+
 
 /* using scheduleIntoAnimationFrame() from github.com/runspired/ember-run-raf
  * which uses github.com/kof/animation-frame to wrap requestAnimationFrame().
@@ -18,7 +20,7 @@ scheduleIntoAnimationFrame = scheduleFrame.default;
 
 import config from '../config/environment';
 import { EventedListener } from '../utils/eventedListener';
-import { chrData } from '../utils/utility-chromosome';
+import { chrData, cmNameAdd } from '../utils/utility-chromosome';
 import { eltWidthResizable, eltResizeToAvailableWidth, noShiftKeyfilter, eltClassName, tabActive, inputRangeValue, expRange  } from '../utils/domElements';
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
 import { parseOptions } from '../utils/common/strings';
@@ -27,7 +29,7 @@ import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
 import { brushClip } from '../utils/draw/axisBrush';
 
 import {  Axes, maybeFlip, maybeFlipExtent,
-          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisTitleColour  }  from '../utils/draw/axis';
+          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll /*, axisTitleColour*/  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify  }  from '../utils/draw/stacksAxes';
 import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Name } from '../utils/stacks';
 import { collateAdjacentAxes, log_adjAxes,  log_adjAxes_a, isAdjacent } from '../utils/stacks-adj';
@@ -76,8 +78,9 @@ import { storeFeature } from '../utils/feature-lookup';
 
 /*----------------------------------------------------------------------------*/
 
-let trace_dataflow = 1;
+let trace_dataflow = 0;
 
+const dLog = console.debug;
 
 Object.filter = Object_filter;
 
@@ -85,6 +88,7 @@ Object.filter = Object_filter;
 
 //- moved to "../utils/draw/flow-controls.js" : flowButtonsSel, configurejQueryTooltip()
 
+/*----------------------------------------------------------------------------*/
 
 
 
@@ -461,6 +465,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
     this.on('paths', addPathsToCollation);
     this.on('pathsByReference', addPathsByReferenceToCollation);
+    this.on('resized', function () { } );
     }
 
     if (oa.showResize === undefined)
@@ -472,7 +477,10 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
 
-    oa.stacks = stacks;
+    if (oa.__lookupGetter__('stacks'))
+      this.set('stacks', stacks);
+    else
+      oa.stacks = stacks;
     stacks.init(oa);
     // stacks.axes[] is a mix of Stacked & Block; shouldn't be required & planning to retire it in these changes.
     oa.axes = stacks.axesP;
@@ -482,12 +490,16 @@ export default Ember.Component.extend(Ember.Evented, {
                     inRangeI : inRangeI,
                     patham,
                     axisName2MapChr,
+                    updateAxisTitleSize,
                     axisStackChanged,
                     axisScaleChanged,
-                    axisRange2Domain
+                    axisRange2Domain,
+                    cmNameAdd,
+                    makeMapChrName,
+                    axisIDAdd,
+                    stacksAxesDomVerify : function (unviewedIsOK = false) { stacksAxesDomVerify(stacks, oa.svgContainer, unviewedIsOK); } 
                    };
-    console.log('draw-map stacks', stacks);
-    this.set('stacks', stacks);
+    dLog('draw-map stacks', stacks);
 
     /** Reference to all datasets by name.
      * (datasets have no id, their child blocks' datasetId refers to their name) .
@@ -510,7 +522,7 @@ export default Ember.Component.extend(Ember.Evented, {
      * @see stacks.axisIDs(), slight difference : blocks are added to
      * oa.axisIDs[] by receiveChr() before they are added to stacks;
      */
-    console.log("oa.axisIDs", oa.axisIDs, source);
+    dLog("oa.axisIDs", oa.axisIDs, source);
     /** axisIDs are <mapName>_<chromosomeName> */
     if ((source == 'dataReceived') || oa.axisIDs)
     {
@@ -520,7 +532,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     else if ((myDataKeys.length > 0) || (oa.axisIDs === undefined))
       oa.axisIDs = myDataKeys;
-    console.log("oa.axisIDs", oa.axisIDs);
+    dLog("oa.axisIDs", oa.axisIDs);
     /** mapName (axisName) of each chromosome, indexed by chr name. */
     let cmName = oa.cmName || (oa.cmName = {});
     /** axis id of each chromosome, indexed by axis name. */
@@ -636,10 +648,10 @@ export default Ember.Component.extend(Ember.Evented, {
 //-	?
     /** export scaffolds and scaffoldFeatures for use in selected-features.hbs */
     let showScaffoldFeatures = this.get('showScaffoldFeatures');
-    console.log("showScaffoldFeatures", showScaffoldFeatures);
+    dLog("showScaffoldFeatures", showScaffoldFeatures);
 
     let showAsymmetricAliases = this.get('showAsymmetricAliases');
-    console.log("showAsymmetricAliases", showAsymmetricAliases);
+    dLog("showAsymmetricAliases", showAsymmetricAliases);
 
     /** Enable display of extra info in the path hover (@see hoverExtraText).
      * Currently a debugging / devel feature, will probably re-purpose to display metadata.
@@ -741,7 +753,8 @@ export default Ember.Component.extend(Ember.Evented, {
         }
       delete c.mapName;
       delete c.chrName;
-      console.log("receiveChr", axis, cmName[axis]);
+        if (trace_stack)
+          dLog("receiveChr", axis, cmName[axis]);
       d3.keys(c).forEach(function(feature) {
         if (! isOtherField[feature]) {
         let f = z[axis][feature];
@@ -794,7 +807,8 @@ export default Ember.Component.extend(Ember.Evented, {
     function axisIDAdd(axis) {
       if (axisIDFind(axis) < 0)
       {
-        console.log("axisIDAdd push", oa.axisIDs, axis);
+        if (trace_stack)
+          dLog("axisIDAdd push", oa.axisIDs, axis);
         oa.axisIDs.push(axis);
       }
     }
@@ -953,7 +967,7 @@ export default Ember.Component.extend(Ember.Evented, {
      * further increments will trace the whole arrays, i.e. O(N),
      * and trace cross-products of arrays - O(N^2) e.g. trace the whole array for O(N) events.
      */
-    const trace_stack = 1;
+    const trace_stack = 0;
     const trace_scale_y = 0;
     const trace_drag = 0;
     //- moved to ../utils/draw/collate-paths.js : trace_alias, trace_adj
@@ -1030,7 +1044,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
     /** For all Axes, store the x value of its axis, according to the current scale. */
     function collateO() {
-      console.log("collateO", oa.axisIDs.length, oa.axisIDs);
+      dLog("collateO", oa.axisIDs.length, oa.axisIDs);
       oa.stacks.axisIDs().forEach(function(d){
         let o = oa.o;
         if (trace_stack > 1)
@@ -1054,7 +1068,7 @@ export default Ember.Component.extend(Ember.Evented, {
     blocksToAdd = viewedBlocks.filter(function (axisName) {
       // axisName passes filter if it is not already in a stack
       return ! Stacked.getAxis(axisName) && (blocksToDraw.indexOf(axisName) == -1) ; });
-    console.log(
+    dLog(
       blocksToDraw, 'viewedBlocks', viewedBlocks,
       'blocksUnviewed', blocksUnviewed, 'blocksToAdd', blocksToAdd);
     if (blocksToAdd.length)
@@ -1068,7 +1082,7 @@ export default Ember.Component.extend(Ember.Evented, {
       /** default is 500.  "scaling applied in response to a WheelEvent ... is
        * proportional to 2 ^ result of wheelDelta(). */
       let wheelDeltaFactor = 500 * 3 * 8;
-      console.log('wheelDeltaFactor', wheelDeltaFactor);
+      dLog('wheelDeltaFactor', wheelDeltaFactor);
       function wheelDelta() {
         return -d3.event.deltaY * (d3.event.deltaMode ? 120 : 1) / wheelDeltaFactor;
       }
@@ -1083,16 +1097,16 @@ export default Ember.Component.extend(Ember.Evented, {
         if (isMouseWheel) {
 
           if (e.shiftKey) {
-            console.log('zoom.filter shiftKey', this, arguments, d3.event, d);
+            dLog('zoom.filter shiftKey', this, arguments, d3.event, d);
           }
 
           let axisName = d,
           axis = oa.axesP[axisName];
 
           if ((y[axisName] !== axis.y) || (oa.ys[axisName] !== axis.ys))
-            console.log('zoomFilter verify y', axisName, axis, oa);
+            dLog('zoomFilter verify y', axisName, axis, oa);
           if (axis.axisName !== d)
-            console.log('zoomFilter verify axisName', axisName, axis);
+            dLog('zoomFilter verify axisName', axisName, axis);
 
           include = wheelNewDomain(axis, oa.axisApi, true); // uses d3.event
         }
@@ -1148,7 +1162,7 @@ export default Ember.Component.extend(Ember.Evented, {
         }
         return filterChildren == ! isParent;
       });
-      console.log('filterChildren', filterChildren, generationBlocksUnviewed);
+      dLog('filterChildren', filterChildren, generationBlocksUnviewed);
       if (filterChildren && orphaned.length) {
         let orphanedIds = orphaned.map(function (b) { return b.axisName; });
         console.log('orphaned', Block_list_longName(orphaned), orphanedIds);
@@ -1159,18 +1173,58 @@ export default Ember.Component.extend(Ember.Evented, {
       });
     });
 
+    /** Add the block to z[].
+     * based on receivedBlock().
+     */
+    function receivedBlock2(block) {
+      let retHash = {},
+      ch = block,
+      blockId = block.get('id'), // chr
+      rc = chrData(ch);
+      /** use same structure as routes/mapview.js */
+      retHash[blockId] = rc;
+      this.get('receiveChr')(blockId, rc, 'dataReceived');
+    }
+
     // Place new data blocks in an existing or new axis.
+    if (false)
     blocksToDraw.forEach(function(d){
+      ensureAxis(d);
+    });
+
+      if (! oa.axisApi.ensureAxis)
+        oa.axisApi.ensureAxis = ensureAxis;
     // for (let d in oa.stacks.axes) {
       /** ensure that d is shown in an axis & stack.
-       * dBlock should be !== undefined.
+       * @return axis (Stacked)
        */
-      let dBlock = me.peekBlock(d),
+      function ensureAxis(d) {
+        /** dBlock should be !== undefined.
+         */
+     let dBlock = me.peekBlock(d),
       sBlock = oa.stacks.blocks[d],
       addedBlock = ! sBlock;
+
+        if (! oa.z[dBlock.id])
+          receivedBlock2.apply(me, [dBlock]);
+
+
       if (! sBlock) {
-        oa.stacks.blocks[d] = sBlock = new Block(dBlock);
-        dBlock.set('view', sBlock);
+        /** sBlock may already be associated with dBlock */
+        let view = dBlock.get('view');
+        sBlock = view || new Block(dBlock);
+        oa.stacks.blocks[d] = sBlock;
+        if (! view) {
+          /* this .set() was getting assertion fail (https://github.com/emberjs/ember.js/issues/13948),
+           * hence the catch and trace;  this has been resolved by not displaying .view in .hbs
+           */
+          try {
+            dBlock.set('view', sBlock);
+          }
+          catch (exc) {
+            console.log('ensureAxis', d, dBlock, sBlock, addedBlock, view, oa.stacks.blocks, exc.stack || exc);
+          }
+        }
       }
       let s = Stacked.getStack(d);
       if (trace_stack > 1)
@@ -1183,7 +1237,7 @@ export default Ember.Component.extend(Ember.Evented, {
       if (s && (s.axes.length == 0))
       {
         let axis = sBlock.axis;
-        console.log('re-add to stack', d, s, axis);
+        dLog('re-add to stack', d, s, axis);
         sBlock.log();
         s.log();
         axis.log();
@@ -1216,21 +1270,23 @@ export default Ember.Component.extend(Ember.Evented, {
         {
           /** this is alternative to matchParentAndScope() - direct lookup. */
           let parentDataset = oa.datasets[parentName];
-          console.log("dataset", parentName, parentDataset);
+          dLog("dataset", parentName, parentDataset);
           function matchParentAndScope (key, value) {
+            if (! zd)
+              zd = oa.z[d];
             let block = oa.z[key],
             match = (block.scope == zd.scope) && (block.dataset.get('name') == parentName);
-            console.log(key, block, match);
+            dLog(key, block, match);
             return match;
           }
           /** undefined if no parent found, otherwise is the id corresponding to parentName */
           let blockName = d3.keys(oa.z).find(matchParentAndScope);
-          console.log(parentName, blockName);
+          dLog(parentName, blockName);
           if (blockName)
           {
             let block = oa.z[blockName];
             parentAxis = oa.axesP[blockName];
-            console.log(block.scope, block.featureType, block.dataset.get('name'), block.dataset.get('namespace'), "parentAxis", parentAxis);
+            dLog(block.scope, block.featureType, block.dataset.get('name'), block.dataset.get('namespace'), "parentAxis", parentAxis);
           }
         }
 
@@ -1255,7 +1311,7 @@ export default Ember.Component.extend(Ember.Evented, {
         
         if (! drawChildBlocksBeforeParent && parentName && ! parentAxis)
         {
-          console.log(sd, ".parentName", parentName);
+          dLog(sd, ".parentName", parentName);
           sBlock.parentName = parentName;
           sBlock.z = oa.z[d];
           /* Skip the remainder of the function, which implements the
@@ -1281,20 +1337,20 @@ export default Ember.Component.extend(Ember.Evented, {
            */
         sd = new Stacked(d, 1); // parentAxis === undefined
           sd.referenceBlock = dBlock;
-          console.log('before push sd', sd, sd.blocks, sBlock);
+          dLog('before push sd', sd, sd.blocks, sBlock);
           sd.logBlocks();
           if (sd.blocks.length && sd.blocks[0] === sBlock)
             breakPoint('sBlock already in sd.blocks', sd.blocks);
           else
           {
             sd.blocks.push(sBlock);
-            console.log('after push', sd.blocks);
+            dLog('after push', sd.blocks);
             sd.logBlocks();
           }
           // .parent of referenceBlock is undefined.
-        	sBlock.axis = sd;
+        	sBlock.setAxis(sd);
           if (sBlock !== sd.referenceBlockS())
-            console.log('sBlock', sBlock, ' !== sd.referenceBlockS()',  sd.referenceBlockS());
+            dLog('sBlock', sBlock, ' !== sd.referenceBlockS()',  sd.referenceBlockS());
 
           adopt = 
           d3.keys(oa.axesP).filter(function (d2) {
@@ -1313,7 +1369,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
         if (adopt.length)
         {
-          console.log("adopt", adopt);
+          dLog("adopt", adopt);
           adopt0 = adopt.shift();
           let a = oa.axesP[adopt0];
           a.stack.log();
@@ -1328,24 +1384,24 @@ export default Ember.Component.extend(Ember.Evented, {
 
           // a.axisName = d;
           // sd.blocks[0] is sBlock
-          console.log('aBlock.parent', aBlock.parent, '->', sd.blocks[0]);
+          dLog('aBlock.parent', aBlock.parent, '->', sd.blocks[0]);
           aBlock.parent = sd.blocks[0];
-          console.log('aBlock.axis', aBlock.axis, sd);
+          dLog('aBlock.axis', aBlock.axis, sd);
           // see comments re. axislater and run.later in @see Block.prototype.setAxis().
           aBlock.setAxis(sd);
           a.stack.add(sd);
-          console.log(adopt0, a, sd, oa.axesP[a.axisName]);
+          dLog(adopt0, a, sd, oa.axesP[a.axisName]);
           sd.stack.log();
 
           sd.scale = a.scale;
           /** the y scales will be accessed via the new name d. - also update domain */
-          console.log('adopt scale', y[d] && 'defined', y[adopt0] && 'defined');
+          dLog('adopt scale', y[d] && 'defined', y[adopt0] && 'defined');
           if (y[d] === undefined)
             y[d] = y[adopt0]; // could then delete y[adopt0]
 
           /** change the axisID of the DOM elements of the axis which is being adopted.  */
           let aStackS = oa.svgContainer.select("g.axis-outer#" + eltId(adopt0));
-          console.log('aStackS', aStackS.size());
+          dLog('aStackS', aStackS.size());
           aStackS
             .datum(d)
             .attr("id", eltId);
@@ -1373,11 +1429,11 @@ export default Ember.Component.extend(Ember.Evented, {
            * will likely change datum of g axis* and brush to the Stacked axis
            * when splitting out axes from draw-map, simplifying adoption.
            */
-          console.log('dataS', dataS.nodes(), dataS.data(), '->', d);
+          dLog('dataS', dataS.nodes(), dataS.data(), '->', d);
           dataS.each(function () { d3.select(this).datum(d); });
 
           let gAxisS = aStackS.selectAll("g.axis");
-          console.log('zoomBehavior adopt.length', adopt.length, gAxisS.nodes(), gAxisS.node());
+          dLog('zoomBehavior adopt.length', adopt.length, gAxisS.nodes(), gAxisS.node());
           gAxisS
             .datum(d)
             .attr('id', axisEltId(d))
@@ -1394,8 +1450,8 @@ export default Ember.Component.extend(Ember.Evented, {
         }
 
           // verification : sd is defined iff this block doesn't have a parent axis and is not adopting a block with an axis.
-          if ((sd === undefined) != ((parentAxis || adopt0) === undefined))
-            console.log('sd', sd, parentAxis, adopt0);
+          if ((sd !== undefined) != ((parentAxis || adopt0) === undefined))
+            dLog('sd', sd, parentAxis, adopt0);
         let
         /** blocks which have a parent axis do not need a Stack.
          * sd is defined if we need a new axis and hence a new Stack.
@@ -1403,7 +1459,7 @@ export default Ember.Component.extend(Ember.Evented, {
         newStack = sd && ! adopt0 && new Stack(sd);
         if (parentAxis)
         {
-          console.log("pre-adopt", parentAxis, d, parentName);
+          dLog("pre-adopt", parentAxis, d, parentName);
           /* axisIDAdd() has already been called (by receiveChr() or from
            * myDataKeys above), so remove d from axisIDs because it is a child
            * data block, not an axis / reference block.
@@ -1412,12 +1468,12 @@ export default Ember.Component.extend(Ember.Evented, {
            */
           deleteAxisfromAxisIDs(d);
           delete oa.axesP[d];
-          console.log('before push parentAxis', parentAxis, parentAxis.blocks, sBlock);
+          dLog('before push parentAxis', parentAxis, parentAxis.blocks, sBlock);
           parentAxis.logBlocks();
           parentAxis.blocks.push(sBlock);
-          console.log('after push', parentAxis.blocks);
+          dLog('after push', parentAxis.blocks);
           parentAxis.logBlocks();
-          sBlock.axis = parentAxis;
+          sBlock.setAxis(parentAxis);
           sBlock.parent = parentAxis.referenceBlockS();
           let aStackS1 = oa.svgContainer.select("g.axis-outer#" + eltId(parentAxis.axisName));
           let axisTitleS = aStackS1.select("g.axis-all > text");
@@ -1435,15 +1491,17 @@ export default Ember.Component.extend(Ember.Evented, {
           // set above : sd.referenceBlock = dBlock;
           // sBlock.parent = sd;   //-	.parent should be Block not Stacked
           // could push() - seems neater to place the reference block first.
-          console.log('before unshift sd', sd, sd.blocks, sBlock);
+          dLog('before unshift sd', sd, sd.blocks, sBlock);
           if (sd.blocks.length && sd.blocks[0] === sBlock)
-            console.log('sBlock already in sd.blocks', sd.blocks);
+            dLog('sBlock already in sd.blocks', sd.blocks);
           else
           {
-            sd.logBlocks();
+            if (trace_stack)
+              sd.logBlocks();
             sd.blocks.unshift(sBlock);
-            console.log('after unshift', sd.blocks);
-            sd.logBlocks();
+            dLog('after unshift', sd.blocks);
+            if (trace_stack)
+              sd.logBlocks();
           }
         }
         /** to recognise parent when it arrives.
@@ -1506,7 +1564,8 @@ export default Ember.Component.extend(Ember.Evented, {
       Stack.verify();
       stacksAxesDomVerify(stacks, oa.svgContainer);
       }
-    });
+      }
+
     stacksAxesDomVerify(stacks, oa.svgContainer);
     function axisWidthResize(axisID, width, dx)
     {
@@ -1797,7 +1856,7 @@ export default Ember.Component.extend(Ember.Evented, {
         if (trace_stack > 1)
           console.log("ys exists", d, ys[d].domain(), y[d].domain(), ys[d].range());
       }
-      else
+      else if (domain)
       {
       ys[d] = d3.scaleLinear()
         .domain(maybeFlip(domain, a.flipped))
@@ -1808,7 +1867,7 @@ export default Ember.Component.extend(Ember.Evented, {
       // The brush is on y.
       y[d] = ys[d].copy();
       y[d].brush = d3.brushY()
-        .extent(maybeFlipExtent([[-8,0],[8,myRange]], a.flipped))
+        .extent([[-8,0],[8,myRange]])
         .on("end", brushended);
       }
     });
@@ -2081,7 +2140,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
     function stackEltId(s)
     { if (s.stackID === undefined) breakPoint();
-      console.log("stackEltId", s.stackID, s.axes[0].mapName, s);
+      dLog("stackEltId", s.stackID, s.axes[0].mapName, s);
       return eltId(s.stackID); }
 
     /** For the given Stack, return its axisIDs.
@@ -2091,7 +2150,7 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       let result = stack.parentAxisIDs();
       if (trace_stack > 1)
-        console.log('stack_axisIDs', stack, result);
+        dLog('stack_axisIDs', stack, result);
       return result;
     }
 
@@ -2107,20 +2166,20 @@ export default Ember.Component.extend(Ember.Evented, {
       .data(stack_axisIDs, Stacked.prototype.keyFunction)
       .enter().append("g"),
     axisX = axisS.exit();
-    console.log('stacks.length', stacks.length, axisG.size(), axisX.size());
-    axisG.each(function(d, i, g) { console.log(d, i, this); });
-    axisX.each(function(d, i, g) { console.log('axisX', d, i, this); });
+    dLog('stacks.length', stacks.length, axisG.size(), axisX.size());
+    axisG.each(function(d, i, g) { dLog(d, i, this); });
+    axisX.each(function(d, i, g) { dLog('axisX', d, i, this); });
     axisX.remove();
     let allG = axisG
       .append('g')
       .attr("class", "axis-all")
       .attr("id", eltIdAll);
     if (axisG.size())
-      console.log(allG.nodes(), allG.node());
+      dLog(allG.nodes(), allG.node());
 
     function eltIdGpRef(d, i, g)
     {
-      console.log("eltIdGpRef", this, d, i, g);
+      dLog("eltIdGpRef", this, d, i, g);
       let p2 = this.parentNode.parentElement;
       return "#a" + p2.__data__;
     }
@@ -2166,6 +2225,13 @@ export default Ember.Component.extend(Ember.Evented, {
         .attr("class", "axis-use");
       // merge / update ?
 
+      /** If dualAxis, use <use> to show 2 identical axes.
+       * Otherwise show only the left axis, and on the right side a line like an
+       * axis with no ticks, just the top & bottom tick lines, but reflected so
+       * that they point right.
+       */
+      let dualAxis = false;
+      if (dualAxis) {
       let eu = eg
       /* extra "xlink:" seems required currently to work, refn :  dsummersl -
        * https://stackoverflow.com/questions/10423933/how-do-i-define-an-svg-doc-under-defs-and-reuse-with-the-use-tag */
@@ -2182,6 +2248,27 @@ export default Ember.Component.extend(Ember.Evented, {
       er
         .transition().duration(1000)
         .attr("width", initialWidth);
+      }
+      else
+      {
+        /** based on showTickLocations() */
+        const xOffset = 25, shiftRight=5;
+        let 
+          tickWidth = xOffset/5,
+        edgeHeight = axis.yRange(),
+        sLine = line([
+          [+tickWidth, 0],
+          [0, 0],
+          [0, edgeHeight],
+          [+tickWidth, edgeHeight]
+        ]),
+        ra = eg
+          .append("path")
+          .attr("transform",function(d) {return "translate(" + (shiftRight + getAxisExtendedWidth(d)) + ",0)";})
+          .attr("d", sLine);
+        ra
+          .transition().duration(1000);
+      }
 
       // foreignObject is case sensitive - refn https://gist.github.com/mbostock/1424037
       let ef = eg
@@ -2491,7 +2578,7 @@ export default Ember.Component.extend(Ember.Evented, {
         .data(function (axisName) {
           let axis = Stacked.getAxis(axisName);
           // equiv : axis.children(true, false)
-          return axis.blocks; }),
+          return axis.blocks; }, (block) => block.getId()),
       subTitleE = subTitleS
       .enter()
       .append("tspan");
@@ -2501,8 +2588,8 @@ export default Ember.Component.extend(Ember.Evented, {
       .attr('x', '0px')
       .attr('dx', '0px')
         .attr('dy',  function (d, i) { return "" + (i ? 1.5 : 0)  + "em"; })
-      .style('stroke', axisTitleColour)
-      .style('fill', axisTitleColour)
+      .style('stroke', Block.axisTitleColour)
+      .style('fill', Block.axisTitleColour)
         .style('opacity', function (block, i) { return (i > 0) && ! block.visible ? 0.5 : undefined; } )
         .each(function (block, i) {
           let menuFn = (i == 0)
@@ -2520,6 +2607,11 @@ export default Ember.Component.extend(Ember.Evented, {
 
     /** Called when the width available to each axis changes,
      * i.e. when collateO() is called.
+     * Calculate the size and layout of axis titles.
+     * Based on that layout, apply text-anchor and transform to the <text>,
+     * and adjust svg viewBox and padding-top.
+     * @param axisTitleS  d3 selection of g.axis-all, for one or more axes;
+     * if undefined then g.axis-all is selected for all axes.
      */
     function updateAxisTitleSize(axisTitleS)
     {
@@ -3565,6 +3657,12 @@ export default Ember.Component.extend(Ember.Evented, {
         brushExtents = selectedAxes.map(function(p) { return brushedRegions[p]; }); // extents of active brushes
       return brushExtents;
     }
+    /** Could use this instead of maintaining oa.brushedRegions :
+     */
+    function getBrushedRegions() {
+      let brushedRegions = d3.selectAll('g.brush > g[clip-path]').nodes().reduce((br, e) => { let s = e.__brush.selection; br[e.__data__] = [s[0][1], s[1][1]]; return br; }, {});
+      return brushedRegions;
+    }
    
     /** Return the brushed domain of axis p
      * Factored from brushHelper(); can use axisBrushedDomain() to replace that code in brushHelper().
@@ -3610,6 +3708,29 @@ export default Ember.Component.extend(Ember.Evented, {
       return brushedDomain;
     }
 
+    /** update brush selection position for window / element height resize.
+     * @param gBrush  <g clip-path> within <g.brush>
+     */
+    function axisBrushShowSelection(p, gBrush) {
+      let yp = oa.y[p],
+      brushedAxisID = p;
+      /* based on similar functionality in zoom() which updates brush
+       * extent/position for (zoom) scale change (brushedDomain does not change).
+       *
+       * If axisBrush.brushedDomain is not available, can use brushedDomains
+       * calculated from existing brush extent in showResize before the scale is changed.
+       */
+      let brushedDomain;
+      if (! brushedDomain) {
+        let axisBrush = me.get('store').peekRecord('axis-brush', brushedAxisID);
+        brushedDomain = axisBrush && axisBrush.get('brushedDomain');
+      }
+      if (brushedDomain) {
+        let newBrushSelection = brushedDomain.map(function (r) { return yp(r);});
+        console.log('axisBrushShowSelection', brushedAxisID, brushedDomain, gBrush, newBrushSelection);
+        d3.select(gBrush).call(yp.brush.move, newBrushSelection);
+      }
+    }
 
     /** Used when the user completes a brush action on the axis axis.
      * The datum of g.brush is the ID/name of its axis, call this axisID.
@@ -3747,6 +3868,15 @@ export default Ember.Component.extend(Ember.Evented, {
           let childBlocks = axis.dataBlocks();
           let range = [0, axis.yRange()];
           console.log(axis, 'childBlocks', childBlocks, range);
+          /*
+           * The circles have class feature.name (which should be prefixed with
+           * a letter), which may not be unique between sibling blocks of an
+           * axis.
+           * Using combinedId below is sufficient to implement transitions,
+           * but a more structured design is preferable to insert a layer : a <g> for
+           * each block, with datum blockId or block, to wrap the <circle>s, and
+           * a featuresOfBlock(blockId)->blockFeatures[] for the circle data.
+           */
           childBlocks.map(function (block) {
             let blockFeatures = oa.z[block.axisName]; // or block.get('features')
           d3.keys(blockFeatures).forEach(function(f) {
@@ -3767,18 +3897,31 @@ export default Ember.Component.extend(Ember.Evented, {
                * fLocation :  actual feature position in the axis, 
                * yp(fLocation) :  is the relative feature position in the svg
                */
-              let dot = axisS
+              /** lacking the g.block structure which would enable f to be
+               * unique within its parent g, this combinedId enables transition
+               * to be implemented in an improvised way.
+               */
+              let combinedId = 'fc_' + block.axisName + '_' + f,
+              dot = axisS.selectAll('circle#' + combinedId);
+              if (! dot.empty()) {
+                dot
+                  .transition().duration(2000)
+                  .attr("cy", yp(fLocation));
+              }
+              else {
+              dot = axisS
                 .append("circle")
+                .attr('id', combinedId)
                 .attr("class", eltClassName(f))
                 .attr("cx",0)   /* was o[p], but g.axis-outer translation does x offset of stack.  */
                 .attr("cy", yp(fLocation))
                 .attr("r",2)
                 .style("fill", "red");
-              brushEnableFeatureHover(dot);
+                brushEnableFeatureHover(dot);
               /* This can be done via an added class and css :
                * r, fill, stroke are toggled (to 5,yellow,black) by
                * @see table-brushed.js: highlightFeature() */
-
+              }
             } else {
               let f_ = eltClassName(f);
               axisS.selectAll("circle." + f_).remove();
@@ -3812,10 +3955,11 @@ export default Ember.Component.extend(Ember.Evented, {
         let zoomSwitchE = zoomSwitchS
           .enter()
           .append('g')
-          .attr('class', 'btn')
-          .attr('transform', yAxisBtnScale);
+          .attr('class', 'btn');
         zoomSwitchE.append('rect');
         zoomSwitch = zoomSwitchS.merge(zoomSwitchE);
+        zoomSwitch
+          .attr('transform', yAxisBtnScale);
         let zoomResetSwitchTextE =
           zoomSwitchE.append('text')
           .attr('x', 30).attr('y', 20);
@@ -3891,7 +4035,7 @@ export default Ember.Component.extend(Ember.Evented, {
           });
         function resetBrushes()
         {
-          let brushed = d3.selectAll("g.axis-all > g.brush");
+          let brushed = d3.selectAll("g.axis-all > g.brush > g[clip-path]");
           /** brushed[j] may correspond to oa.selectedAxes[j] and hence
            * brushExtents[j], but it seems possible for their order to not
            * match.  This is only used in trace anyway.
@@ -4144,7 +4288,8 @@ export default Ember.Component.extend(Ember.Evented, {
             axis.setZoomed(true);
             y[p].domain(domain);
             oa.ys[p].domain(domain);
-            axis.setDomain(domain);
+            // scale domain is signed. currently .zoomedDomain is not, so maybeFlip().
+            axis.setDomain(maybeFlip(domain, axis.flipped));
 
             /* was updatePaths true, but pathUpdate() is too long for RAF.
              * No transition required for RAF.
@@ -4152,7 +4297,7 @@ export default Ember.Component.extend(Ember.Evented, {
             axisScaleChangedRaf(p, tRaf, false);
             let brushExtent = oa.brushedRegions[p];
             if (brushExtents)
-              // `that` refers to the brush g element
+              // `that` refers to the brush g element, i.e. <g clip-path> within <g.brush>
               d3.select(that).call(y[p].brush.move,null);
             else if (brushExtent) {
               let gBrush = d3.event.sourceEvent.target.parentElement;
@@ -4179,16 +4324,18 @@ export default Ember.Component.extend(Ember.Evented, {
       let y = oa.y, svgContainer = oa.svgContainer;
       let yp = y[p],
       axis = oa.axes[p];
-      let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * axis.portion);
-      let idName = axisEltId(p),
-      axisS = svgContainer.select("#"+idName);
-      if (t)
-        axisS = axisS.transition(t);
-      axisS.call(yAxis);
-      if (updatePaths)
-        pathUpdate(t);
-      let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(p) + " > g.tick > text");
-      axisGS.attr("transform", yAxisTicksScale);
+      if (yp && axis) {
+        let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * axis.portion);
+        let idName = axisEltId(p),
+        axisS = svgContainer.select("#"+idName);
+        if (t)
+          axisS = axisS.transition(t);
+        axisS.call(yAxis);
+        if (updatePaths)
+          pathUpdate(t);
+        let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(p) + " > g.tick > text");
+        axisGS.attr("transform", yAxisTicksScale);
+      }
     }
 
     function brushended() {
@@ -5072,6 +5219,11 @@ export default Ember.Component.extend(Ember.Evented, {
             flipRegionInLimits(p, limits);
           });
         }
+        /** could operate on all of selectedAxes[], but the above just does [0]. */
+        let axis = Stacked.getAxis(brushedMap),
+        axis1d = axis && axis.axis1d;
+        if (axis1d)
+          axis1d.incrementProperty('flipRegionCounter');
       }
       function features2Limits()
       {
@@ -5287,7 +5439,7 @@ export default Ember.Component.extend(Ember.Evented, {
           if (trace_gui)
             console.log("shown.bs.popover", event, event.target);
           // button is not found when show.bs.popover, but is when shown.bs.popover.
-          // Could select via id from <text> attr aria-describedby=​"popover800256".
+          // Could select via id from <text> attr aria-describedby="popover800256".
           let deleteButtonS = d3.select("button.DeleteMap");
           if (trace_gui)
             console.log(deleteButtonS.empty(), deleteButtonS.node());
@@ -5301,7 +5453,7 @@ export default Ember.Component.extend(Ember.Evented, {
               deleteAxisfromAxisIDs(axisName);
               let sBlock = oa.stacks.blocks[axisName];
               console.log('sBlock.axis', sBlock.axis);
-              sBlock.axis = undefined;
+              sBlock.setAxis(undefined);
               removeAxisMaybeStack(axisName, stackID, stack);
               me.send('mapsToViewDelete', axisName);
               // filter axisName out of selectedFeatures and selectedAxes
@@ -5318,11 +5470,11 @@ export default Ember.Component.extend(Ember.Evented, {
               ya = oa.y[axisName = axis.axisName], ysa=oa.ys[axisName],
               domain = maybeFlip(ya.domain(), true);
               axis.flipped = ! axis.flipped;
+              if (axis.axis1d)
+                axis.axis1d.toggleProperty('flipped');
               ya.domain(domain);
               ysa.domain(domain);
 
-              let b = ya.brush;
-              b.extent(maybeFlipExtent(b.extent()(), true));
               let t = oa.svgContainer.transition().duration(750);
               axisScaleChanged(axisName, t, true);
             });
@@ -5445,6 +5597,20 @@ export default Ember.Component.extend(Ember.Evented, {
         .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
           .attr('height', graphDim.h /*"auto"*/);
 
+      /** As in zoom(), note the brushedDomains before the scale change, for
+       * updating the brush selection position.
+       * This could be passed to axisBrushShowSelection() and used in place of
+       * axisBrush.brushedDomain; the current intention is to shift to using
+       * just axisBrush.brushedDomain and brushedRegions / brushExtents can be retired.
+       * oa.brushedRegions is equivalent to getBrushedRegions() - could use that for verification.
+       */
+      let brushedDomains = {};
+      Object.entries(oa.brushedRegions).forEach(
+        // similar to axisBrushedDomain().
+        ([refBlockId, region]) => brushedDomains[refBlockId] = axisRange2Domain(refBlockId, region)
+      );
+      dLog('brushedDomains', brushedDomains);
+
       // recalculate Y scales before pathUpdate().
         if (heightChanged)
           stacksAdjustY();
@@ -5460,11 +5626,30 @@ export default Ember.Component.extend(Ember.Evented, {
         if (heightChanged)
         {
           // let traceCount = 1;
-          oa.svgContainer.selectAll('g.axis-all > g.brush')
+          oa.svgContainer.selectAll('g.axis-all > g.brush > clipPath > rect')
+            .each(function(d) {
+              let a = oa.axesP[d],
+              ya = oa.y[d],
+              yaRange = ya.range();
+              // dLog('axis-brush', this, this.getBBox(), yaRange);
+              // see also brushClip().
+              d3.select(this)
+              // set 0 because getting y<0, probably from brushClip() - perhaps use [0, yRange] there.
+                .attr("y", 0)
+                .attr("height", yaRange[1]);
+            });
+          oa.svgContainer.selectAll('g.axis-all > g.brush > g[clip-path]')
             .each(function(d) {
               /* if (traceCount-->0) console.log(this, 'brush extent', oa.y[d].brush.extent()()); */
-              d3.select(this).call(oa.y[d].brush); });
-
+              let a = oa.axesP[d],
+              ya = oa.y[d],
+              b = ya.brush;
+              // draw the brush overlay using the changed scale
+              d3.select(this).call(b);
+              /* if the user has created a selection on the brush, move it to a
+               * new position based on the changed scale. */
+              axisBrushShowSelection(d, this);
+            });
           DropTarget.prototype.showResize();
           me.trigger('resized', widthChanged, heightChanged, useTransition);
         }
@@ -5676,18 +5861,80 @@ export default Ember.Component.extend(Ember.Evented, {
       Ember.$('.make-ui-draggable').draggable(); });
   },
 
-  didRender() {
-    // Called on re-render (eg: add another axis) so should call
-    // draw each time.
-    //
+  drawEffect : Ember.computed('data', 'resizeEffect', function () {
     let me = this;
     let data = this.get('data');
     Ember.run.throttle(function () {
+      /** viewed[] is equivalent to data[], apart from timing differences.  */
+      let viewed = me.get('blockService.viewed');
+      viewed.forEach((block) => me.oa.axisApi.ensureAxis(block.id));
       me.draw(data, 'didRender');
     }, 1500);
 
     highlightFeature_drawFromParams(this);
-    Ember.run.debounce(this.get('oa'), this.get('resize'), [/*transition*/true], 500);
+  }),
+  resizeEffect : Ember.computed('stacksWidthChanges', function () {
+    if (true) // try without debounce
+      this.get('resize').apply(this.get('oa'), [/*transition*/true]);
+    else
+      Ember.run.debounce(this.get('oa'), this.get('resize'), [/*transition*/true], 500);
+  }),
+
+  /** for CP dependency.  Depends on factors which affect the horizontal (X) layout of stacks.
+   * When this CP fires, updates are required to X position of stacks / axes, and hence the paths between them.
+   * @return value is for devel trace
+   */
+  stacksWidthChanges : Ember.computed(
+    'blockService.stacksCount', 'splitAxes.[]',
+    'layout.left.visible', 'layout.right.visible',
+    function () {
+      let count = stacks.length;
+      // just checking - will retire stacks.stacksCount anyway.
+      if (count != stacks.stacksCount.count)
+	console.log('stacksWidthChanges',  count, '!=', stacks.stacksCount.count);
+      let leftPanel = Ember.$('#left-panel'),
+      /** leftPanel.hasClass('left-panel-shown') is always true; instead the
+       * <div>'s display attribute is toggled between flex and none.
+       * This could be made consistent with right panel, but planning to use golden-layout in place of this anyway.
+       *
+       * .attributeStyleMap is part of CSS Typed OM; is in Chrome, not yet Firefox.
+       * https://github.com/Fyrd/caniuse/issues/4164
+       * https://developer.mozilla.org/en-US/docs/Web/API/CSS_Typed_OM_API
+       */
+      haveCSSOM = leftPanel[0].hasAttribute('attributeStyleMap'),
+      leftPanelStyleDisplay = haveCSSOM ?
+        leftPanel[0].attributeStyleMap.get('display').value :
+        leftPanel[0].style.display,
+      leftPanelShown = leftPanelStyleDisplay != 'none',
+      current = {
+        stacksCount : count,
+        splitAxes : this.get('splitAxes').length,
+        // this.get('layout.left.visible') is true, and does not update
+        left : leftPanelShown,
+        right : this.get('layout.right.visible')
+      };
+      console.log('stacksWidthChanges', current, leftPanel[0]);
+      return current;
+    }),
+
+  /** @return true if changes in #stacks or split axes impact the width and horizontal layout.
+   * (maybe dotPlot / axis.perpendicular will affect width also)
+   */
+  stacksWidthChanged() {
+    /* can change this to a CP, merged with resize() e.g. resizeEffect(), with
+     * dependencies on 'blockService.stacksCount', 'splitAxes.[]'
+     */
+    let previous = this.get('previousRender'),
+    now = {
+      stacksCount : stacks.length,   // i.e. this.get('blockService.stacksCount'), or oa.stacks.stacksCount.count
+      splitAxes : this.get('splitAxes').length
+    },
+    changed = ! isEqual(previous, now);
+    if (changed) {
+      console.log('stacksWidthChanged', previous, now);
+      this.set('previousRender', now);
+    }
+    return changed;
   },
 
     resize : function() {
@@ -5711,7 +5958,8 @@ export default Ember.Component.extend(Ember.Evented, {
           /*centreSel*/ '.resizable');
       oa.vc.calc(oa);
       let
-        widthChanged = oa.vc.viewPort.w != oa.vc.viewPortPrev.w,
+        drawMap = oa.eventBus,
+      widthChanged = (oa.vc.viewPort.w != oa.vc.viewPortPrev.w) || drawMap.stacksWidthChanged(),
       heightChanged = oa.vc.viewPort.h != oa.vc.viewPortPrev.h;
 
       // rerender each individual element with the new width+height of the parent node
@@ -5727,7 +5975,7 @@ export default Ember.Component.extend(Ember.Evented, {
         console.log("oa.vc", oa.vc, arguments);
         if (oa.vc)
         {
-            if (! layoutChanged)
+            if (true || ! layoutChanged)  // may not need debounce, having dropped didRender().
                 // Currently debounce-d in resizeThis(), so call directly here.
                 resizeDrawing();
             else

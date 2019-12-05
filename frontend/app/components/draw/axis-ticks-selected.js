@@ -2,6 +2,8 @@ import Ember from 'ember';
 
 import AxisEvents from '../../utils/draw/axis-events';
 
+const dLog = console.debug;
+
 const CompName = 'components/axis-ticks-selected';
 
 /** Display horizontal ticks on the axis to highlight the position of features
@@ -17,7 +19,7 @@ export default Ember.Component.extend(AxisEvents, {
     /* useTransition could be passed down to showTickLocations()
      * (also could pass in duration or t from showResize()).
      */
-    console.log("resized in ", CompName);
+    dLog("resized in ", CompName);
     if (heightChanged)
       this.renderTicksThrottle();
   },
@@ -27,30 +29,43 @@ export default Ember.Component.extend(AxisEvents, {
    * not specific to an axisID.
    */
 
-
+  /** draw-map:axisStackChanged_(t) sends transition t. */
   axisStackChanged : function() {
-    console.log("axisStackChanged in ", CompName);
+    dLog("axisStackChanged in ", CompName);
     /* draw-map : axisStackChanged() / axisStackChanged_() already does throttle. */
     this.renderTicks();
   },
 
   /** @param [axisID, t] */
   zoomedAxis : function(axisID_t) {
-    let axisID = axisID_t && axisID_t[0],
-    axisName = this.get('axis.id');
-    console.log('zoomedAxis', axisID_t, axisID, axisName);
-    this.renderTicksThrottle(axisID_t);
   },
+
+  /** Render elements which are dependent on axis scale - i.e. the axis ticks.
+   */
+  axisScaleEffect : Ember.computed('axis1d.domainChanged', function () {
+    let axisScaleChanged = this.get('axis1d.domainChanged');
+    let axisID = this.get('axisID');
+    dLog('axisScaleChanged', axisID, this.get('axis.id'));
+    this.renderTicksThrottle(axisID);
+    /** somehow renderTicks() is missing the latest scale.  redrawing after a
+     * delay gets the correct scale, so the next step would be to trace the axis
+     * scale in render to confirm that.
+     */
+    const reRenderLater = () => { this.renderTicksThrottle(axisID); };
+    Ember.run.debounce(reRenderLater, 750);
+
+    return true;
+  }),
 
   didRender() {
     let featuresInBlocks = this.get('featuresInBlocks');
-    console.log('didRender', featuresInBlocks, this.get('axisId'),
+    dLog('didRender', featuresInBlocks, this.get('axisId'),
                 'axis1d ', this.get('axis1d'));
     this.renderTicksThrottle();
   },
 
-  renderTicks(axisID_t) {
-    console.log("renderTicks in ", CompName, axisID_t);
+  renderTicks(axisID) {
+    dLog("renderTicks in ", CompName, axisID);
     let featureTicks = this.get('axis1d.featureTicks');
     if (featureTicks) {
       featureTicks.showTickLocations(
@@ -62,14 +77,19 @@ export default Ember.Component.extend(AxisEvents, {
   },
   /** call renderTicks().
    * filter / throttle the calls to handle multiple events at the same time.
-   * @param axisID_t is defined by zoomedAxis(), undefined when called from
-   * axisStackChanged()
+   * @param axisID  undefined, or this.get('axisID') (not required or used);
+   * undefined when called from axisStackChanged().
+   *
+   * (earlier versions called this from zoomedAxis(), which passed [axisID,
+   * transition], so that transition length could be consistent for an event
+   * across multiple components; axisStackChanged() can pass the transition,
+   * although showTickLocations() does not (yet) use it.)
    */
-  renderTicksThrottle(axisID_t) {
-    console.log('renderTicksThrottle', axisID_t);
+  renderTicksThrottle(axisID) {
+    dLog('renderTicksThrottle', axisID);
 
     /* see comments in axis-1d.js : renderTicksThrottle() re. throttle versus debounce */    
-    Ember.run.throttle(this, this.renderTicks, axisID_t, 500);
+    Ember.run.throttle(this, this.renderTicks, axisID, 500);
   },
 
   /** Lookup the given block in featuresInBlocks, and return its features which
@@ -82,7 +102,7 @@ export default Ember.Component.extend(AxisEvents, {
     let blockId = block.get('id');
     /** return [] for blocks which don't have features in the search result. */
     let features = featuresInBlocks ? (featuresInBlocks[blockId] || []) : [];
-    console.log('featuresOfBlockLookup', featuresInBlocks, block, blockId, features);
+    dLog('featuresOfBlockLookup', featuresInBlocks, block, blockId, features);
     return features;
   }
   

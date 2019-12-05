@@ -5,6 +5,8 @@ import { breakPoint } from '../breakPoint';
 
 /*global d3 */
 
+const dLog = console.debug;
+
 /*----------------------------------------------------------------------------*/
 /* DOM-related functions for stacks & axes */
 
@@ -26,9 +28,28 @@ function stacksAxesDomVerify(stacks, svgContainer, unviewedIsOK)
           || ! ((isViewed = block.block.get('isViewed')) || unviewedIsOK))
         breakPoint('stacksAxesDomVerify', d, i, this, block, axis, isViewed);
       if (unviewedIsOK && ! isViewed)
-        console.log('stacksAxesDomVerify unviewed', d, i, this, block, axis);
+        dLog('stacksAxesDomVerify unviewed', d, i, this, block, axis);
     });
+  stacksAxesDomLog(svgContainer);
 }
+
+function stacksAxesDomLog(svgContainer = undefined) {
+  let
+    go = svgContainer &&
+    svgContainer.selectAll('svg > g > g.stack > g.axis-outer'),
+  ga = go ?
+    go.selectAll('g > g.axis-all') :
+    d3.selectAll('g.axis-all'),
+  t = ga.selectAll('g > text > tspan'),
+  tg = t._groups.map((g) => Array.from(g));
+  dLog('stacksAxesDomLog',  t.data(),   t.nodes(), t.node());
+  tg.forEach((tgi) => {
+    let tgd = tgi.map((t) => t.__data__);
+    dLog(tgd);
+    tgd.forEach((b) => {if (b) b.log();});
+  });
+}
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -40,7 +61,9 @@ function selectAxis(axis)
 }
 
 const blockAdjEltIdPrefix = "ba_";
-/** id of block-adj g element, based on IDs of the 2 adjacent blocks, with a "ba_" prefix. */
+/** id of block-adj g element, based on IDs of the 2 adjacent blocks, with a "ba_" prefix.
+ * @param blockAdjId  array[2] of blockId
+ */
 function blockAdjEltId(blockAdjId)
 {
   return blockAdjEltIdPrefix + blockAdjKeyFn(blockAdjId);
@@ -68,11 +91,12 @@ const foregroundSelector = 'div#holder > svg > g > g.foreground';
 /**
  * @param parent  undefined, or selector of parent of g.block-adj
  * This optional argument is provided when creating a selector for .data().append().
+ * @param blockAdjId  array[2] of blockId
  */
 function selectBlockAdj(parent, blockAdjId)
 {
   let id = blockAdjEltId(blockAdjId);
-  console.log('selectBlockAdj', id);
+  dLog('selectBlockAdj', id);
   let baS = (parent || d3).select("#" + id);
   return baS;
 }

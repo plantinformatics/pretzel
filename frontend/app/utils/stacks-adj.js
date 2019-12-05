@@ -17,8 +17,8 @@ let flowsService; // = service('data/flows-collate');
 function flowsServiceInject(flowsService_) { flowsService = flowsService_; }
 
 
-const trace_adj = 1;
-
+const trace_adj = 0;
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
@@ -28,7 +28,7 @@ const trace_adj = 1;
  */
 function collateAdjacentAxes()
 {
-  console.log('collateAdjacentAxes', flowsService);
+  dLog('collateAdjacentAxes', flowsService);
   let previous = flowsService.get ? flowsService.get('adjAxes') : flowsService.adjAxes;
   let adjAxes = {};
   if (flowsService.set)
@@ -110,7 +110,7 @@ function collateAdjacentAxes()
       let adjAxesKeys = d3.keys(adjAxes);
       let current = flowsService.get('adjAxesArr');
       
-      console.log(current, 'adjAxesKeys', adjAxesKeys);
+      dLog(current, 'adjAxesKeys', adjAxesKeys);
       flowsService.set('adjAxesArr', adjAxesKeys);
     }
   }
@@ -163,7 +163,7 @@ function isAdjacent(a0, a1)
     for (let a1i=0; (a1i < adjs0.length) && !result; a1i++) {
       result = a1 == adjs0[a1i];
       if (result)
-        console.log("isAdjacent", a0, axisId2Name(a0), a1, axisId2Name(a1));
+        dLog("isAdjacent", a0, axisId2Name(a0), a1, axisId2Name(a1));
     }
   return result;
 }

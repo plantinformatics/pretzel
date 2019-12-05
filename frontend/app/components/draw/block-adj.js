@@ -20,7 +20,8 @@ import { targetNPaths, pathsFilter } from '../../utils/draw/paths-filter';
 const className = "blockAdj";
 const CompName = 'components/axis-ticks-selected';
 
-const trace_blockAdj = 1;
+const trace_blockAdj = 0;
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 /* milliseconds duration of transitions in which alignment <path>-s between
@@ -66,11 +67,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   heightChanged : 0,
   axisStackChangedCount : 0,
 
+  /** The DB IDs of the blocks which this block-adj aligns.
+      * array[2] of blockId
+      */
   blockAdjId : Ember.computed.alias('blockAdj.blockAdjId'),
+  // blockAdj.id is the same values in a string form, separated by '_'
 /*  ('blockAdj', function () {
     let blockAdj = this.get('blockAdj'),
     blockAdjId = blockAdj.get('blockAdjId');
-    console.log(blockAdj, 'blockAdjId', blockAdjId);
+    dLog(blockAdj, 'blockAdjId', blockAdjId);
     return blockAdjId;
   }),
 */
@@ -97,7 +102,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     pathsResult = this.get('blockAdj.' + prType.fieldName),
     fnName = prType.fieldName + 'Length',
     length = pathsResult && pathsResult.length;
-    console.log(fnName, this, length);
+    dLog(fnName, this, length);
     if (length) {
       let pathsDensityParams = this.get('pathsDensityParams'),
       axes = this.get('axes'),
@@ -150,10 +155,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     /** in the case of pathsViaStream, this promise will resolve with [] instead of the result -
      * blockAdj.pathsResult is passed to draw() instead.  */
     let pathsP = this.get('blockAdj.paths');
-    console.log('blockAdj.paths', pathsP);
+    dLog('blockAdj.paths', pathsP);
       if (false)
     pathsP.then(result => {
-      console.log('blockAdj.paths', result);
+      dLog('blockAdj.paths', result);
     flowNames.forEach(flowName => {
       if (result[flowName])
         result[flowName].then((paths) => {
@@ -164,17 +169,19 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
            */
           let pathsResultType = paths.length && paths[0].featureAObj ?
             pathsApiResultType /*pathsResultTypes.pathsApi*/ : pathsResultTypes[flowName];
-          console.log('blockAdj.paths length', paths && paths.length, pathsResultType);
+          dLog('blockAdj.paths length', paths && paths.length, pathsResultType);
           if (paths && paths.length)
             throttle(this, this.draw, pathsResultType, paths, 200, false);
         });
     });
     });
+    if (false) {
     /** .direct and.alias are defined by the result of pathsP, not by pathsP, so
      * this would need to change; no purpose for this yet. */
     let resultP = (pathsP.direct && pathsP.alias) ?
     Ember.RSVP.allSettled([pathsP.direct, pathsP.alias])
       : (pathsP.direct || pathsP.alias);
+    }
     return pathsP;
   }),
 
@@ -196,7 +203,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   willDestroyElement() {
     // didDestroyElement() would also be OK
-    console.log('willDestroyElement', this.get('blockAdjId'));
+    dLog('willDestroyElement', this.get('blockAdjId'));
     let foreground = d3.selectAll(foregroundSelector);
     let pS = foreground
       // delete both g.direct and g.alias
@@ -213,7 +220,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   connectFlowControl(flowName, g) {
     let flowsService = this.get('flowsService'),
     flows = flowsService.get('flows');
-    console.log('connectFlowControl', flows, flows[flowName].g, g);
+    dLog('connectFlowControl', flows, flows[flowName].g, g);
     flows[flowName].g = g;
   },
 
@@ -238,9 +245,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .enter()
       .append('g')
       .attr('class', datumIdent)
-      .each(function (d, i, g) { console.log(this); me.connectFlowControl(d, d3.select(this)); } ),
+      .each(function (d, i, g) { dLog(this); me.connectFlowControl(d, d3.select(this)); } ),
     pM = pS.merge(pA);
-    console.log('drawGroupContainer', pS.nodes(), pS.node());
+    dLog('drawGroupContainer', pS.nodes(), pS.node());
     return pM;
   },
   /** Render the <g.blockAdj> which contains the <g><path>
@@ -265,10 +272,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .attr('id', blockAdjEltId)
         .attr('class', className + ' ' + groupAddedClass)
       ;
-      console.log(gA.nodes(), gA.node(), this);
+      dLog(gA.nodes(), gA.node(), this);
     }
     else if (! add && ! gS.empty()) {
-      console.log('drawGroup remove', gS.nodes(), gS.node(), this);
+      dLog('drawGroup remove', gS.nodes(), gS.node(), this);
       gS.remove();
     }
       
@@ -283,6 +290,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     if (featurePaths.length === 0)
       return;
     pathsResultType.typeCheck(featurePaths[0]);
+    let store = this.get('store');
 
     /** blockAdjId is also contained in the result featurePaths
      */
@@ -306,7 +314,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       }
       let ok = match(false) || match(true);
       if (! ok)
-        console.log('draw verify', blockAdjId, blockIds);
+        dLog('draw verify', blockAdjId, blockIds);
     }
 
     // let axisApi = this.get('drawMap.oa.axisApi');
@@ -314,17 +322,17 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       blockAdjId.forEach(function (blockId) {
         let axis = Stacked.getAxis(blockId);
         let aS = selectAxis(axis);
-        console.log(blockId, aS.node());
+        dLog(blockId, aS.node());
       });
     }
 
     let dpS = progressGroupsSelect(pathsResultType.flowName);
 
     let baS = selectBlockAdj(dpS, blockAdjId);
-    console.log(baS.nodes(), baS.node());
+    dLog(baS.nodes(), baS.node());
     
     if (baS.empty())
-      console.log('draw', blockAdjId);
+      dLog('draw', blockAdjId);
     else
     {
       let gS = baS.selectAll("g." + className)
@@ -346,7 +354,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       owner = Ember.getOwner(this),
       pS = gSA
         .selectAll("path." + className)
-        .data(pathsOfFeature(pathsResultType, owner), locationPairKeyFn),
+        .data(pathsOfFeature(store, pathsResultType, owner), locationPairKeyFn),
       pSE = pS.enter()
         .append("path")
         .attr("class", className)
@@ -370,7 +378,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       blockAdjId.forEach(function (blockId) {
         let axis = Stacked.getAxis(blockId);
         let y = stacks.oa.y[axis.axisName];
-        console.log('updatePathsPosition axis', axis.axisName, y.domain(), axis, y.domain());
+        dLog('updatePathsPosition axis', axis.axisName, y.domain(), axis, y.domain());
       });
     let baS = selectBlockAdj(dpS, blockAdjId);
     // let groupAddedClass = featurePaths[0]._id.name;
@@ -380,17 +388,17 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .selectAll("path." + className);
     // Remove <path>s whose data refers to a block which has been removed from its axis.
     // later the block-adj will be removed, which will remove all contents.
-    let removed = pS
+   let removed = pS
       .filter(function (d) { return ! d.blocksHaveAxes(); });
     if (! removed.empty())
-        console.log('updatePathsPosition removed', removed.nodes(), removed.node());
+        dLog('updatePathsPosition removed', removed.nodes(), removed.node());
     removed.remove();
     pS = gS
       .selectAll("path." + className)
       // don't call pathU() if axes are gone.
       .filter(function (d) { return d.blocksHaveAxes(); });
     if (! pS.empty())
-        console.log('updatePathsPosition before update pS', pS.nodes(), pS.node());
+        dLog('updatePathsPosition before update pS', pS.nodes(), pS.node());
     /* now that paths are within <g.block-adj>, path position can be altered
      * during dragging by updating a skew transform of <g.block-adj>, instead of
      * repeatedly recalculating pathU.
@@ -401,6 +409,20 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
   },
 
+  /** Call updateAxis() for the axes which bound this block-adj.
+   * See comment in updatePathsPositionDebounce().
+   */
+  updateAxesScale() {
+    let
+      axes = this.get('axes'),
+    /** reference blocks */
+    axesBlocks = axes.mapBy('blocks');
+    dLog('updateAxesScale', axesBlocks.map((blocks) => blocks.mapBy('axisName')));
+    axesBlocks.forEach(function (blocks) {
+      blocks[0].axis.axis1d.updateAxis();
+    });
+  },
+
   /*--------------------------------------------------------------------------*/
 
   axesDomains : Ember.computed.alias('blockAdj.axesDomains'),
@@ -409,16 +431,32 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    */
   updatePathsPositionDebounce : Ember.computed(
     'heightChanged', 'axisStackChangedCount',
+    /*
     'axesDomains.0.0',
     'axesDomains.0.1',
     'axesDomains.1.0',
     'axesDomains.1.1',
+     */
+    'drawMap.stacksWidthChanges',
+    'blockAdj.axes1d.0.flipRegionCounter',
+    'blockAdj.axes1d.1.flipRegionCounter',
+    'blockAdj.axes1d.0.scaleChanged',
+    'blockAdj.axes1d.1.scaleChanged',
     function () {
     let count = this.get('axisStackChangedCount'),
-      heightChanged = this.get('heightChanged'),
-      domainsChanged = this.get('axesDomains');
-      console.log('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, domainsChanged);
+      heightChanged = this.get('heightChanged');
+      // domainsChanged = this.get('axesDomains'),
+      // stacksWidthChanges = this.get('drawMap.stacksWidthChanges');
+      dLog('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, /*domainsChanged, stacksWidthChanges*/);
     this.updatePathsPosition();
+
+      /* this update is an alternative trigger for updating the axes ticks and
+       * scale when their domains change, e.g. when loaded features extend a
+       * block's domain.  The solution used instead is the ComputedProperty
+       * side-effect axis-1d : domainChanged(), which is a similar approach, but
+       * it localises the dependencies to a single axis whereas this would
+       * duplicate updates.  */
+    // this.updateAxesScale();
     return count;
   }),
 
@@ -432,7 +470,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     /* useTransition could be passed down to draw()
      * (also could pass in duration or t from showResize()).
      */
-    console.log("resized in components/block-adj");
+    dLog("resized in components/block-adj");
     /* In addition to the usual causes of repeated events, block-adj will
      * respond to events relating to 2 axes. */
     if (heightChanged)
@@ -440,7 +478,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   },
 
   axisStackChanged : function() {
-    console.log("axisStackChanged in components/block-adj");
+    dLog("axisStackChanged in components/block-adj");
     this.incrementProperty('axisStackChangedCount');
   },
 
@@ -450,7 +488,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     blockAdjId = this.get('blockAdjId'),
     axes = this.get('axes');
     if (trace_blockAdj > 1)
-      console.log("zoomedAxis in ", CompName, axisID_t, blockAdjId, axes);
+      dLog("zoomedAxis in ", CompName, axisID_t, blockAdjId, axes);
     /* zoomedAxis is specific to an axisID, so respond to that if
      * blockAdjId[0] or blockAdjId[1] are on this.axis.
      * resetZooms() does resetZoom(undefined) meaning un-zoom all axes, so match
@@ -458,7 +496,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      */
     if (!axisID || this.isAdjacentToAxis(axisID))
     {
-      console.log('zoomedAxis matched', axisID, blockAdjId, axes);
+      dLog('zoomedAxis matched', axisID, blockAdjId, axes);
       // paths positions are updated by event axisStackChanged() already received.
       // With zoom, the densityCount() result changes so request paths again
       this.incrementProperty('blockAdj.zoomCounter');
@@ -509,7 +547,7 @@ function featurePathKeyFn (featureBlock)
  * @param feature 1 element of the result array passed to draw()
  * @return [PathData, ...]
  */
-function pathsOfFeature(pathsResultType, owner) {
+function pathsOfFeature(store, pathsResultType, owner) {
   const PathData = owner.factoryFor('component:draw/path-data');
   return function (feature) {
     let blocksFeatures =
@@ -519,15 +557,7 @@ function pathsOfFeature(pathsResultType, owner) {
       blocksFeatures[0].reduce(function (result, f0) {
         let result1 = blocksFeatures[1].reduce(function (result, f1) {
           let pair =
-            PathData.create({
-              feature0 : f0,
-              feature1 : f1,
-              block0 : blocks[0],
-              block1 : blocks[1]
-            });
-          if (trace_blockAdj > 2)
-            console.log('PathData.create()', PathData, pair);
-
+            pathCreate(store, f0, f1, blocks[0], blocks[1]);
           result.push(pair);
           return result;
         }, result);
@@ -537,9 +567,71 @@ function pathsOfFeature(pathsResultType, owner) {
   };
 }
 
+const trace_pc = 1;
+
+function pathCreate(store, feature0, feature1, block0, block1) {
+  let
+    /** not used - same as feature{0,1}.blockId. */
+    block0r = store.peekRecord('block', block0),
+    block1r = store.peekRecord('block', block1);
+  if (true) {
+  let properties = {
+	  feature0,
+    feature1/*,
+    block0r,
+    block1r*/
+  },
+    pair =
+      PathData.create({ renderer : {} });
+    pair.setProperties(properties);
+    if (trace_pc > 2)
+      dLog('PathData.create()', PathData, pair);
+    return pair;
+  }
+  else {
+    let
+      modelName = 'draw/path-data',
+    idText = locationPairKeyFn({ feature0, feature1}),
+    r = store.peekRecord(modelName, idText);
+    if (r)
+      dLog('pathCreate', feature0, feature1, block0, block1, r._internalModel.__attributes, r._internalModel.__data);
+    else if (false)
+    {
+      let data = {
+        type : modelName,
+        id : idText,
+        relationships : {
+          feature0 : { data: { type: "feature", "id": feature0 } },
+          feature1 : { data: { type: "feature", "id": feature1 } } /*,
+          block0 : { data: { type: "block", "id": block0r } },
+          block1 : { data: { type: "block", "id": block1r } }*/
+        }/*,
+        attributes : {
+          'block-id0' : block0,
+          'block-id1' : block1
+        }*/
+      };
+      r = store.push({data});
+      if (trace_pc)
+        dLog('pathCreate', r, r.get('id'), r._internalModel, r._internalModel.__data, store, data);
+    }
+    else {
+      let inputProperties = {
+	      feature0,
+        feature1/*,
+        block0r,
+        block1r*/
+      };
+      r = store.createRecord(modelName, inputProperties);
+    }
+    return r;
+  }
+}
+
+
 function locationPairKeyFn(locationPair)
 {
-  return locationPair.feature0._id + '_' + locationPair.feature1._id;
+  return locationPair.feature0.id + '_' + locationPair.feature1.id;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -549,7 +641,7 @@ const pathsApiFields = ['featureAObj', 'featureBObj'];
 const pathsApiResultType = {
   // fieldName may be pathsResult or pathsAliasesResult
   typeCheck : function(resultElt) { if (! resultElt.featureAObj) {
-    console.log('pathsApiResultType : typeCheck', resultElt); } },
+    dLog('pathsApiResultType : typeCheck', resultElt); } },
   pathBlock :  function (resultElt, blockIndex) { return resultElt[pathsApiFields[blockIndex]].blockId; },
   /** direct.blocksFeatures() returns an array of features, so match that. See
    * similar commment in alias.blocksFeatures. */
@@ -576,7 +668,7 @@ const pathsResultTypes = {
   direct : {
     fieldName : 'pathsResult',
     typeCheck : function(resultElt) { if (! resultElt._id) {
-    console.log('direct : typeCheck', resultElt); } },
+    dLog('direct : typeCheck', resultElt); } },
     pathBlock :  function (resultElt, blockIndex) { return resultElt.alignment[blockIndex].blockId; },
     blocksFeatures : function (resultElt, blockIndex) { return resultElt.alignment[blockIndex].repeats.features; },
     featureEltId : featureEltId,
@@ -587,7 +679,7 @@ const pathsResultTypes = {
   {
     fieldName : 'pathsAliasesResult',
     typeCheck : function(resultElt) { if (! resultElt.aliased_features) {
-    console.log('alias : typeCheck', resultElt); } },
+    dLog('alias : typeCheck', resultElt); } },
     pathBlock :  function (resultElt, blockIndex) { return resultElt.aliased_features[blockIndex].blockId; },
     /** There is currently only 1 element in .aliased_features[blockIndex], but
      * pathsOfFeature() handles an array an produces a cross-product, so return
@@ -610,7 +702,9 @@ flowNames = Object.keys(pathsResultTypes);
 // add .flowName to each of pathsResultTypes, which could later require non-const declaration.
 flowNames.forEach(function (flowName) { pathsResultTypes[flowName].flowName = flowName; } );
 
-
+/**
+ * @return	array[2] of blockId, equivalent to blockAdjId  
+ */
 function resultBlockIds(pathsResultType, featurePath) {
   let blockIds =
     [0, 1].map(function (blockIndex) { return pathsResultType.pathBlock(featurePath, blockIndex); });

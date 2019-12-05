@@ -1,6 +1,10 @@
 
 /* global Ember */
 
+const trace_values = 0;
+const dLog = console.debug;
+
+
 /*----------------------------------------------------------------------------*/
 /* Functional programming utilities.
  * Lodash is already included by various packages, so may use that, or possibly Ramda.
@@ -104,4 +108,63 @@ function logV(levelMeta, v) {
 
 /*----------------------------------------------------------------------------*/
 
-export { mapHash, forEachHash, justUnmatched, logV };
+/** Count the leaf values, i.e. the blocks.
+ * This is used when deciding whether to auto-expand all levels down to the leaves.
+ * It is desirable to expand all (using allActive) if the displayed list is then
+ * only a couple of pages, i.e. if there are a reasonable number of leaves.
+ * @see autoAllActive(), allActive
+ *
+ * @param levelMeta annotations of the value tree, e.g. dataTypeName text.
+ * @param values  a value tree
+ */
+function leafCount(levelMeta, values) {
+  /** Traverse the value tree, similar to logV() above; it is probably not
+   * necessary to handle all node types as logV() does, since leafCount() is
+   * simply counting the leaves not visiting them.
+   */
+  let 
+    datasetIds = Object.keys(values),
+  count0 =
+    datasetIds.reduce((count1, d) => {
+      let
+        value = values[d],
+      /** If value is an array of Blocks, simply add .length to count, otherwise
+       * it is a hash of scopes - traverse them and sum the .length of the
+       * blocks array of each.
+       * Ember.isArray(scopes) could instead be used to discern these 2 cases.
+       */
+      valueType = levelMeta.get(value);
+      if (valueType == "Blocks") {
+        count1 += value.length;
+      }
+      else if (
+        // getting "Dataset";  not sure if values should include that.
+        (valueType == "Dataset") && 
+          value.get &&
+          value.get('isLoaded')) {
+        dLog('leafCount', valueType, value.get('id'), value.get('name'), value.get('blocks'));
+        count1 += value.get('blocks.length');
+      }
+      else {
+        let
+          scopes = value,
+          scopeNames =  Object.keys(scopes);
+        count1 = scopeNames.reduce((sum, s) => {
+          if (trace_values > 1)
+          dLog(sum, s, scopes[s]);
+          return sum+=scopes[s].length;
+        }, count1);
+      }
+      if (trace_values > 1)
+      console.log(value, valueType, count1);
+      return count1;
+    }, 0);
+  if (trace_values)
+  console.log('leafCount', values, datasetIds, count0);
+
+  return count0;
+}
+
+/*----------------------------------------------------------------------------*/
+
+export { mapHash, forEachHash, justUnmatched, logV, leafCount };

@@ -196,7 +196,8 @@ module.exports = function(Block) {
     let promise =  models.Block.find({where: {id: {inq: blockIds}}} /*,options*/).then(blocks => {
       return  blocks.map(blockR => {
         let block = blockR.__data;
-        console.log('blockGet then map', block.id || block || blockR);
+	// this trace can cause warning about deprecated .inspect() in node 10.
+        // console.log('blockGet then map', block.id || block || blockR);
         this.blockRecordsStore(block.id, block);
         return block;
       } );
@@ -468,6 +469,42 @@ Block.blockNamespace = async function(blockIds) {
 
   /*--------------------------------------------------------------------------*/
 
+   /** Send a database request to collate feature counts in bins for the given block.
+   *
+   * @param blockId  block
+   * @param nBins number of bins to partition the block's features into
+   */
+  Block.blockFeaturesCounts = function(blockId, nBins, options, res, cb) {
+    let db = this.dataSource.connector;
+    let cursor =
+      blockFeatures.blockFeaturesCounts(db, blockId, nBins);
+    cursor.toArray()
+    .then(function(featureCounts) {
+      cb(null, featureCounts);
+    }).catch(function(err) {
+      cb(err);
+    });
+  };
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Send a database request to collate feature value limits (max and min) for all blocks.
+   * @param blockId  undefined (meaning all blocks) or id of 1 block to find min/max for
+   */
+  Block.blockFeatureLimits = function(blockId, options, res, cb) {
+    let db = this.dataSource.connector;
+    let cursor =
+      blockFeatures.blockFeatureLimits(db, blockId);
+    cursor.toArray()
+    .then(function(limits) {
+      cb(null, limits);
+    }).catch(function(err) {
+      cb(err);
+    });
+  };
+
+  /*--------------------------------------------------------------------------*/
+
   /** Collate from the database a list of features within the given block, which
    * meet the optional interval domain constraint.
    *
@@ -590,7 +627,30 @@ Block.blockNamespace = async function(blockIds) {
     ],
     http: {verb: 'get'},
     returns: {type: 'array', root: true},
-    description: "Returns a count of the Features in the block"
+    description: "Return a count of the Features in each block"
+  });
+
+  Block.remoteMethod('blockFeaturesCounts', {
+    accepts: [
+      {arg: 'block', type: 'string', required: true},
+      {arg: 'nBins', type: 'number', required: false},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'res', type: 'object', 'http': {source: 'res'}},
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Returns an array of N bins of counts of the Features in the block"
+  });
+
+  Block.remoteMethod('blockFeatureLimits', {
+    accepts: [
+      {arg: 'block', type: 'string', required: false},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'res', type: 'object', 'http': {source: 'res'}},
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Returns an array of blocks with their min&max Feature values."
   });
 
   Block.remoteMethod('blockFeaturesInterval', {
