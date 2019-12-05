@@ -867,7 +867,6 @@ Block.axisTitleColour = function (block)
 function Stack(stackable) {
   dLog("new Stack", oa, stacks.nextStackID);
   this.stackID = stacks.nextStackID++;
-  stacks.stacksCount.incrementProperty('count');  // stacks.length, or stacks.nextStackID
   /** The axis object (Stacked) has a reference to its parent stack which is the inverse of this reference : 
    * axes{axisName}.stack.axes[i] == axes{axisName} for some i.
    */
@@ -875,6 +874,7 @@ function Stack(stackable) {
   Stack.prototype.add = Stack_add;
   this.add(stackable);
   dLog(this, stackable, ".stack", stackable.stack);
+  stacks.stacksCount.incrementProperty('count');  // stacks.length, or stacks.nextStackID
 };
 /**  Wrapper for new Stack() : implement a basic object re-use.
  *

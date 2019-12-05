@@ -664,8 +664,18 @@ export default Service.extend(Ember.Evented, {
       );
       return stacksAxes;
     }),
-  stacksCount : Ember.computed.alias('stacksAxes.size'),
-
+  /** This does not have a dependency on stacks.length, so it does not update.
+   * Replaced by stacksCount, following.
+   */
+  stacksCount_unused : Ember.computed.alias('stacksAxes.size'),
+  stacksCountObj : Ember.computed(function () {
+    /** lazy evaluation - hopefully .stacksCount is  */
+    let obj = stacks.stacksCount;
+    if (! obj)
+      dLog('stacksCountObj', obj, stacks);
+    return obj;
+  }),
+  stacksCount : Ember.computed.alias('stacksCountObj.count'),
 
   /** From the list of viewed loaded blocks, filter out those which are not data
    * blocks.
