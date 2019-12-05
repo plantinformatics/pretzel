@@ -627,16 +627,20 @@ Stacked.prototype.getDomain = function ()
     || (this.domain = this.referenceDomain())
     || (this.domain = this.domainCalc())
   ;
-  if (noDomain(domain)) {
+  if (noDomain(domain))
+    domain = [];
+  {
     /* shifting the responsibility of domain calculation from Stacks to blocks.js and axis-1d.
      * domainCalc() should be equivalent to axis1d.blocksDomain, but
      * resetZooms() was setting the domains to [0, 0] so possibly there has been
      * a loss of connection between the Block and it's features.
+     * Also this.domain above is not recalculated after additional features are received,
+     * whereas blocksDomain has the necessary dependency.
      */
     let blocksDomain = this.axis1d && this.axis1d.get('blocksDomain');
     if (blocksDomain && blocksDomain.length) {
-      dLog('getDomain() noDomain', this.axisName, domain, blocksDomain);
-      domain = blocksDomain;
+      dLog('getDomain()', this.axisName, domain, blocksDomain);
+      domain = d3.extent(domain.concat(blocksDomain));
     }
   }
   return domain;
