@@ -302,6 +302,15 @@ export default UploadBase.extend({
               console.log(err, status);
               that.setError(err.responseJSON.error.message);
               that.scrollToTop();
+              if(that.get('selectedDataset') === 'new'){
+                // If upload failed and here, a new record for new dataset name
+                // has been created by getDatasetId() and this should be undone
+                that.get('store')
+                  .findRecord('Dataset', map_id, { reload: true })
+                  .then((rec) => rec.destroyRecord()
+                    .then(() => rec.unloadRecord())
+                  );
+              }
             });
           }, (err) => {
             that.setError(err.msg);
