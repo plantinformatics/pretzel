@@ -1262,6 +1262,12 @@ div#left-panel-view > div > div > div > ul > li > div > button
     float : left;
 }
 
+div#left-panel-upload select
+{
+  max-width: 100%;
+  margin-bottom: 5px;
+}
+
 .feature-list.active-input > div > div > div.from-input > a {
     background-color : #e8e8f7;
 }
