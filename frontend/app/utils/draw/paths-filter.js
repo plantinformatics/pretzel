@@ -116,8 +116,10 @@ function pathsFilter(prType, pathsResult, blockDomains, nPaths) {
         result.push(path);
       return result;
     }, []);
+    /** trace the (array) value or just the length depending on trace level. */
+    function valueOrLength(value) { return (trace_filter > 1) ? value : value.length; }
     if (trace_filter)
-    console.log('pathsFilter', pathsResult, nPaths, modulus, pathsFiltered);
+      console.log('pathsFilter', valueOrLength(pathsResult), nPaths, modulus, valueOrLength(pathsFiltered));
   }
 
   return pathsFiltered;

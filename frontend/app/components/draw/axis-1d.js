@@ -95,7 +95,8 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     axisObj = this.axis1d.get('axisObj'),
   /** using the computed function extended() would entail recursion. */
   extended = axisObj && axisObj.extended;
-  dLog('showTickLocations', extended, axisObj, groupName);
+  if (trace_stack)
+    dLog('showTickLocations', extended, axisObj, groupName);
 
   function blockTickEltId(block) { return className + '_' + groupName + '_' + block.axisName; }
 

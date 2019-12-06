@@ -2,7 +2,8 @@ import Ember from 'ember';
 import Service from '@ember/service';
 const { inject: { service } } = Ember;
 
-let trace_axisBrush = 1;
+let trace_axisBrush = 0;
+const dLog = console.debug;
 
 const typeName = 'axis-brush';
 
@@ -16,7 +17,7 @@ export default Service.extend(Ember.Evented, {
   all: Ember.computed(function() {
     let records = this.get('store').peekAll(typeName);
     if (trace_axisBrush)
-      console.log('all', records);
+      dLog('all', records);
     return records;
   }),
 
@@ -29,18 +30,19 @@ export default Service.extend(Ember.Evented, {
     'all.@each.brushedDomain',
     // 'all.@each.block.isViewed',
     function() {
-      console.log('brushedAxes', this);
+      if (trace_axisBrush)
+        dLog('brushedAxes', this);
       const fnName = 'brushedAxes';
       let records = this.get('all');
       // if (trace_axisBrush > 1)
         records.map(function (a) { console.log(fnName, a, a.get('brushedDomain')); } );
       if (trace_axisBrush)
-        console.log('viewed Blocks', records);
+        dLog('viewed Blocks', records);
       let blocks = records.filter(function (ab) {
         return ab.get('block.isViewed') && ab.get('brushedDomain'); } );
       blocks = blocks.toArray(); // Array.from(blocks);
       if (trace_axisBrush)
-        console.log(fnName, blocks);
+        dLog(fnName, blocks);
 
       return blocks;
     })

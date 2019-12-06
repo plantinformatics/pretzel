@@ -8,7 +8,7 @@ import normalizeWheel from 'normalize-wheel';
 /* global d3 */
 
 /*----------------------------------------------------------------------------*/
-const trace_zoom = 2;
+const trace_zoom = 0;
 const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
@@ -114,9 +114,10 @@ function wheelNewDomain(axis, axisApi, inFilter) {
   let e = inFilter ? d3.event : d3.event.sourceEvent,
   isPan = e.shiftKey;
   if (trace_zoom > 1)
-    console.log(axis, inFilter, 'zoom Wheel scale', yp.domain(), yp.range(), e /*, oa.y, oa.ys */);
+    dLog(axis, inFilter, 'zoom Wheel scale', yp.domain(), yp.range(), e /*, oa.y, oa.ys */);
   const normalized = normalizeWheel(e);
-  console.log('normalizeWheel', normalized);
+  if (trace_zoom)
+    dLog('normalizeWheel', normalized);
 
   /** the element which is the target of the WheelEvent zoom/pan
    * It is available as `this` in zoomFilter();  can instead be accessed via d3.event.currentTarget
@@ -261,7 +262,8 @@ function wheelNewDomain(axis, axisApi, inFilter) {
      */
     include = ! isEqual(newDomain, domain);
 
-    console.log('include', include);
+    if (trace_zoom)
+      dLog('include', include);
   }
 
   return inFilter ? include : newDomain;

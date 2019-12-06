@@ -159,7 +159,8 @@ export default DS.Model.extend(Ember.Evented, {
            * @return true if the given field name  current value pathsDensityParams differs from the cached value intervals
            */
           function ppDiff(field) { 
-            dLog('ppDiff', field, pathsDensityParams[field], intervals[field]);
+            if (trace_blockAdj)
+              dLog('ppDiff', field, pathsDensityParams[field], intervals[field]);
             return pathsDensityParams[field] && (pathsDensityParams[field] !== intervals[field]); }
           let d = intervals.axes[i].domain,
           d2 = intervalsAxes[i].domain,
@@ -173,7 +174,8 @@ export default DS.Model.extend(Ember.Evented, {
           return change;
         });
         let change = domainChanges[0] || domainChanges[1];
-        dLog('domainChange', intervals, intervalsAxes, domainChanges, change);
+        if (trace_blockAdj)
+          dLog('domainChange', intervals, intervalsAxes, domainChanges, change);
         return change;
       },
       domainChange = ! intervals || domainsDiffer();
@@ -281,7 +283,8 @@ export default DS.Model.extend(Ember.Evented, {
       }
     }
 
-    dLog('task.perform');
+    if (trace_blockAdj)
+      dLog('task.perform');
     /* In some cases this gets : TaskInstance 'taskGetPaths' was canceled because it belongs to a 'restartable' Task that was .perform()ed again.
      * Adding these has not solved that:
      * .catch() here and finally() in task( )

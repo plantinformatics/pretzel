@@ -5,6 +5,7 @@ import {  eltClassName  } from '../utils/domElements';
 
 /* global d3 Handsontable */
 
+const trace = 0;
 const dLog = console.debug;
 
 export default Ember.Component.extend({
@@ -17,7 +18,8 @@ export default Ember.Component.extend({
      */
     showData : function(d)
     {
-      dLog("showData", d);
+      if (trace)
+        dLog("showData", d);
       let table = this.get('table');
       if (table)
       {
@@ -113,7 +115,8 @@ export default Ember.Component.extend({
     table = this.get('table');
     if (table)
     {
-      dLog("table-brushed.js", "onSelectionChange", table, data.length);
+      if (trace)
+        dLog("table-brushed.js", "onSelectionChange", table, data.length);
       me.send('showData', data);
       table.updateSettings({data:data});
     }

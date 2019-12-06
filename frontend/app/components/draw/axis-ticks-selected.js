@@ -2,6 +2,7 @@ import Ember from 'ember';
 
 import AxisEvents from '../../utils/draw/axis-events';
 
+const trace = 0;
 const dLog = console.debug;
 
 const CompName = 'components/axis-ticks-selected';
@@ -19,7 +20,8 @@ export default Ember.Component.extend(AxisEvents, {
     /* useTransition could be passed down to showTickLocations()
      * (also could pass in duration or t from showResize()).
      */
-    dLog("resized in ", CompName);
+    if (trace)
+      dLog("resized in ", CompName);
     if (heightChanged)
       this.renderTicksThrottle();
   },
@@ -31,7 +33,8 @@ export default Ember.Component.extend(AxisEvents, {
 
   /** draw-map:axisStackChanged_(t) sends transition t. */
   axisStackChanged : function() {
-    dLog("axisStackChanged in ", CompName);
+    if (trace)
+      dLog("axisStackChanged in ", CompName);
     /* draw-map : axisStackChanged() / axisStackChanged_() already does throttle. */
     this.renderTicks();
   },
@@ -45,7 +48,8 @@ export default Ember.Component.extend(AxisEvents, {
   axisScaleEffect : Ember.computed('axis1d.domainChanged', function () {
     let axisScaleChanged = this.get('axis1d.domainChanged');
     let axisID = this.get('axisID');
-    dLog('axisScaleChanged', axisID, this.get('axis.id'));
+    if (trace)
+      dLog('axisScaleChanged', axisID, this.get('axis.id'));
     this.renderTicksThrottle(axisID);
     /** somehow renderTicks() is missing the latest scale.  redrawing after a
      * delay gets the correct scale, so the next step would be to trace the axis
@@ -59,13 +63,15 @@ export default Ember.Component.extend(AxisEvents, {
 
   didRender() {
     let featuresInBlocks = this.get('featuresInBlocks');
-    dLog('didRender', featuresInBlocks, this.get('axisId'),
-                'axis1d ', this.get('axis1d'));
+    if (trace)
+      dLog('didRender', featuresInBlocks, this.get('axisId'),
+           'axis1d ', this.get('axis1d'));
     this.renderTicksThrottle();
   },
 
   renderTicks(axisID) {
-    dLog("renderTicks in ", CompName, axisID);
+    if (trace)
+      dLog("renderTicks in ", CompName, axisID);
     let featureTicks = this.get('axis1d.featureTicks');
     if (featureTicks) {
       featureTicks.showTickLocations(
@@ -86,7 +92,8 @@ export default Ember.Component.extend(AxisEvents, {
    * although showTickLocations() does not (yet) use it.)
    */
   renderTicksThrottle(axisID) {
-    dLog('renderTicksThrottle', axisID);
+    if (trace)
+      dLog('renderTicksThrottle', axisID);
 
     /* see comments in axis-1d.js : renderTicksThrottle() re. throttle versus debounce */    
     Ember.run.throttle(this, this.renderTicks, axisID, 500);
@@ -102,7 +109,8 @@ export default Ember.Component.extend(AxisEvents, {
     let blockId = block.get('id');
     /** return [] for blocks which don't have features in the search result. */
     let features = featuresInBlocks ? (featuresInBlocks[blockId] || []) : [];
-    dLog('featuresOfBlockLookup', featuresInBlocks, block, blockId, features);
+    if (trace)
+      dLog('featuresOfBlockLookup', featuresInBlocks, block, blockId, features);
     return features;
   }
   

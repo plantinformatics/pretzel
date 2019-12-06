@@ -433,7 +433,7 @@ export default Ember.Component.extend(Ember.Evented, {
       myData = {};
     }
     myDataKeys = d3.keys(myData);
-    console.log("draw()", myData, myDataKeys.length, source);
+    dLog("draw()", myData, myDataKeys.length, source);
 
     // Draw functionality goes here.
     let me = this;
@@ -3704,7 +3704,8 @@ export default Ember.Component.extend(Ember.Evented, {
         brushedDomain[0] = brushedDomain[1];
         brushedDomain[1] = swap;
       }
-      console.log('axisRange2Domain', p, range, brushedDomain);
+      if (trace_scale_y)
+        dLog('axisRange2Domain', p, range, brushedDomain);
       return brushedDomain;
     }
 

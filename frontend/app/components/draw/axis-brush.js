@@ -18,6 +18,8 @@ const className = "axisBrush";
 const CompName = 'components/axis-brush';
 
 const trace_axisBrush = 1;
+const dLog = console.debug;
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -39,7 +41,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       block = this.get('block'),
     /** axis-brush object in store */
     record = this.get('pathsP').ensureAxisBrush(block);
-    console.log('block', block.id, block, record);
+    if (trace_axisBrush)
+      dLog('block', block.id, block, record);
     return record;
   }),
 
@@ -103,14 +106,16 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    */
 
   resized : function(widthChanged, heightChanged, useTransition) {
-    console.log("resized in ", CompName);
+    if (trace_axisBrush > 1)
+      dLog("resized in ", CompName);
     if (heightChanged)
       // instead of debounce, can trigger position update with this.incrementProperty('rangeCounter');
       this.updateFeaturesPositionDebounce();
   },
 
   axisStackChanged : function() {
-    console.log("axisStackChanged in ", CompName);
+    if (trace_axisBrush > 1)
+      dLog("axisStackChanged in ", CompName);
     this.updateFeaturesPositionDebounce();
   },
 
@@ -123,7 +128,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       console.log("zoomedAxis in ", CompName, axisID_t, blockId, axis);
     if (this.isAxis(axisID))
     {
-      console.log('zoomedAxis matched', axisID, blockId, axis);
+      if (trace_axisBrush > 1)
+        dLog('zoomedAxis matched', axisID, blockId, axis);
       this.incrementProperty('zoomCounter');
     }
   }

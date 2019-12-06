@@ -9,6 +9,9 @@ import { stacks } from '../../utils/stacks';
 
 let trace_block = 1;
 const dLog = console.debug;
+/** trace the (array) value or just the length depending on trace level. */
+function valueOrLength(value) { return (trace_block > 1) ? value : value.length; }
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -115,7 +118,8 @@ export default Service.extend(Ember.Evented, {
    */
   taskGetLimits: task(function * (blockId) {
     let blockLimits = yield this.getLimits(blockId);
-    dLog('taskGetLimits', this, blockId, blockLimits);
+    if (trace_block)
+      dLog('taskGetLimits', this, blockId, valueOrLength(blockLimits));
     blockLimits.forEach((bfc) => {
       let block = this.peekBlock(bfc._id);
       if (! block)
