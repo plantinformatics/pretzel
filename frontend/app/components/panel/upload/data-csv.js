@@ -291,7 +291,7 @@ export default UploadBase.extend({
             that.setProcessing();
             that.scrollToTop();
             // 3. Submit upload to api
-            that.get('auth').tableUpload(data)
+            that.get('auth').tableUpload(data, that.updateProgress.bind(that))
             .then((res) => {
               that.setSuccess(res.status);
               that.scrollToTop();

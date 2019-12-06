@@ -11,8 +11,10 @@ export default Ember.Component.extend({
   successMessage: null,
   errorMessage: null,
   warningMessage: null,
+  progressMsg: '',
 
   setProcessing() {
+    this.updateProgress(0, 'up');
     this.setProperties({
       isProcessing: true,
       successMessage: null,
@@ -51,6 +53,22 @@ export default Ember.Component.extend({
   },
   scrollToTop() {
     $("#left-panel-upload").animate({ scrollTop: 0 }, "slow");
+  },
+
+  /** Callback used by data upload, to report progress percent updates */
+  updateProgress(percentComplete, direction) {
+    if (direction === 'up') {
+      if (percentComplete === 100) {
+        this.set('progressMsg', 'Please wait. Updating database.');
+      } else {
+        this.set('progressMsg',
+          'Please wait. File upload in progress (' +
+            percentComplete.toFixed(0) + '%)' );
+      }
+    } else {
+      this.set('progressMsg',
+        'Please wait. Receiving result (' + percentComplete.toFixed(0) + '%)' );
+    }
   },
 
   actions: {

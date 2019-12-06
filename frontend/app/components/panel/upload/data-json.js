@@ -9,7 +9,7 @@ export default UploadBase.extend({
         var that = this;
         reader.onload = function(e) {
           let data = {data: reader.result, fileName: f.name};
-          that.get('auth').uploadData(data)
+          that.get('auth').uploadData(data, that.updateProgress.bind(that))
           .then(function(res){
             that.setSuccess();
             that.scrollToTop();

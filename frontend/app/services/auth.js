@@ -47,12 +47,12 @@ export default Service.extend({
     return this._ajax('Clients/', 'POST', JSON.stringify(data), false)
   },
 
-  uploadData(data) {
-    return this._ajax('Datasets/upload', 'POST', JSON.stringify(data), true)
+  uploadData(data, onProgress) {
+    return this._ajax('Datasets/upload', 'POST', JSON.stringify(data), true, onProgress);
   },
 
-  tableUpload(data) {
-    return this._ajax('Datasets/tableUpload', 'POST', JSON.stringify(data), true)
+  tableUpload(data, onProgress) {
+    return this._ajax('Datasets/tableUpload', 'POST', JSON.stringify(data), true, onProgress);
   },
 
   getBlocks() {
@@ -284,7 +284,11 @@ export default Service.extend({
     }
   },
 
-  _ajax(route, method, data, token) {
+  /** Customised ajax caller
+   * token may be actual token string, or equal true to trigger token fetch
+   * onProgress is a callback accepting (percentComplete, data_direction)
+   */
+  _ajax(route, method, data, token, onProgress) {
     let endpoint = this._endpoint(route) 
 
     let config = {
@@ -302,6 +306,36 @@ export default Service.extend({
       config.headers.Authorization = accessToken
     } else if (Ember.typeOf(token) == 'string') {
       config.headers.Authorization = token
+    }
+
+    // If an onProgress function passed, add progress event listeners
+    if (onProgress instanceof Function) {
+      config.xhr = function() {
+        var xhr = new window.XMLHttpRequest();
+        //Upload progress
+        xhr.upload.addEventListener(
+          'progress',
+          function(evt) {
+            if (evt.lengthComputable) {
+              var percentComplete = (evt.loaded / evt.total) * 100;
+              onProgress(percentComplete, 'up');
+            }
+          },
+          false,
+        );
+        //Download progress
+        xhr.addEventListener(
+          'progress',
+          function(evt) {
+            if (evt.lengthComputable) {
+              var percentComplete = (evt.loaded / evt.total) * 100;
+              onProgress(percentComplete, 'down');
+            }
+          },
+          false,
+        );
+        return xhr;
+      };
     }
 
     return Ember.$.ajax(config)
