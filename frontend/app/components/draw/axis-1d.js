@@ -593,12 +593,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
           this.updateAxis();
         }
       }
-      return undefined;
+      return domainDefined && domain;
     }),
   /** Update when the domain has changed and the scale has been updated.
    */
   scaleChanged : Ember.computed('domainChanged', function () {
     let scale, domainDefined = this.get('domainChanged');
+    dLog('scaleChanged', domainDefined);
     if (domainDefined) {
       let axisS = this.get('axisS');
       if (axisS) {

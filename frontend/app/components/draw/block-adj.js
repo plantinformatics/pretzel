@@ -438,8 +438,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     'blockAdj.axes1d.1.scaleChanged',
     function () {
     let count = this.get('axisStackChangedCount'),
+	    flips = [this.get('blockAdj.axes1d.0.flipRegionCounter'),
+		           this.get('blockAdj.axes1d.1.flipRegionCounter')],
+      scaleChanges = [this.get('blockAdj.axes1d.0.scaleChanged'),
+                      this.get('blockAdj.axes1d.1.scaleChanged')],
+      zoomCounter = this.get('blockAdj.zoomCounter'),
       heightChanged = this.get('heightChanged');
-      dLog('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count);
+	    dLog('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, flips, zoomCounter, scaleChanges);
     this.updatePathsPosition();
 
       /* this update is an alternative trigger for updating the axes ticks and
