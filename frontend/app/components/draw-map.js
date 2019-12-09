@@ -5187,8 +5187,14 @@ export default Ember.Component.extend(Ember.Evented, {
 
 //- axis-brush-zoom
     /** flip the value of features between the endpoints
+     *
+     * This is done for each of selectedAxes[], except if param features is
+     * defined, it is done just for selectedAxes[0].
+     *
      * @param features is an array of feature names, created via (zoom) brush,
      * and input via text box
+     * features are passed by selected-markers.js : flipRegion(), but not
+     * view-controls.js:flipRegion().
      */
     this.set('draw_flipRegion', function(features) {
       let brushedMap, zm,
@@ -5207,7 +5213,9 @@ export default Ember.Component.extend(Ember.Evented, {
         if (features && features.length)
         {
           limits = features2Limits(features);
+          // possibly could apply to all of selectedAxes[], currently does just selectedAxes[0]
           flipRegionInLimits(brushedMap, limits);
+          flipRegionSignalAxis(brushedMap);
         }
         else
         {
@@ -5218,13 +5226,18 @@ export default Ember.Component.extend(Ember.Evented, {
             //  oa.brushedRegions[brushedMap];
             console.log('flipRegion', p, i, brushedMap, limits);
             flipRegionInLimits(p, limits);
+            flipRegionSignalAxis(p);
           });
         }
-        /** could operate on all of selectedAxes[], but the above just does [0]. */
-        let axis = Stacked.getAxis(brushedMap),
+        /** Flag the flip event for the axis - increment axis1d flipRegionCounter.
+         * @param axisID  brushedMap / selectedAxes[i]
+         */
+        function flipRegionSignalAxis(axisID) {
+        let axis = Stacked.getAxis(axisID),
         axis1d = axis && axis.axis1d;
         if (axis1d)
           axis1d.incrementProperty('flipRegionCounter');
+        }
       }
       function features2Limits()
       {
