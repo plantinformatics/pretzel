@@ -16,6 +16,7 @@ const dLog = console.debug;
  */
 function stacksAxesDomVerify(stacks, svgContainer, unviewedIsOK)
 {
+  const fnName = 'stacksAxesDomVerify';
   // this is just one verification - add more as needed.
   (svgContainer || d3.select("#holder svg > g"))
    .selectAll(".axis-outer")
@@ -25,10 +26,16 @@ function stacksAxesDomVerify(stacks, svgContainer, unviewedIsOK)
       isViewed;
       if (! block
           || ! (axis = Stacked.getAxis(d))
-          || ! ((isViewed = block.block.get('isViewed')) || unviewedIsOK))
-        breakPoint('stacksAxesDomVerify', d, i, this, block, axis, isViewed);
+          || ! ((isViewed = block.block.get('isViewed')) || unviewedIsOK)
+         )
+        breakPoint('fnName', d, i, this, block, axis, isViewed);
+      if (axis) {
+        let rightStack = this.parentElement.__data__ === axis.stack;
+        if (! rightStack)
+          dLog(fnName, this.parentElement.__data__, '!==', axis.stack, this, this.__data__);
+      }
       if (unviewedIsOK && ! isViewed)
-        dLog('stacksAxesDomVerify unviewed', d, i, this, block, axis);
+        dLog('fnName unviewed', d, i, this, block, axis);
     });
   stacksAxesDomLog(svgContainer);
 }

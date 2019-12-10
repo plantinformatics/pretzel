@@ -60,6 +60,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   store: service(),
   pathsP : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
+  block: service('data/block'),
 
   needs: ['component:draw/path-data'],
 
@@ -431,6 +432,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    */
   updatePathsPositionDebounce : Ember.computed(
     'heightChanged', 'axisStackChangedCount',
+    // stacksWidthChanges depends on stacksCount, so this dependency is implied anyway.
+    'block.stacksCount',
     'drawMap.stacksWidthChanges',
     'blockAdj.axes1d.0.flipRegionCounter',
     'blockAdj.axes1d.1.flipRegionCounter',
@@ -444,7 +447,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
                       this.get('blockAdj.axes1d.1.scaleChanged')],
       zoomCounter = this.get('blockAdj.zoomCounter'),
       heightChanged = this.get('heightChanged');
-	    dLog('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, flips, zoomCounter, scaleChanges);
+	    dLog('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, flips, zoomCounter, scaleChanges,
+           this.get('block.stacksCount'));
     this.updatePathsPosition();
 
       /* this update is an alternative trigger for updating the axes ticks and

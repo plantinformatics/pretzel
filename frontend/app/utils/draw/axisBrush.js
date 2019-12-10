@@ -1,4 +1,6 @@
 
+/* global d3 */
+
 const dLog = console.debug;
 
 // let  bbox  = { x: 1, y : 2, width: 20, height : undefined };
@@ -11,7 +13,14 @@ const dLog = console.debug;
  */
 function brushClip(gp, axisID) {
 
-  let bbox = gp.node().parentElement.getBBox();
+  let gpp = gp.node().parentElement;
+
+  // there may be a delay before getBBox is available.  if so, return an empty selection.
+  if (! gpp.getBBox)
+    return d3.select(undefined);
+
+  let bbox = gpp.getBBox();
+
   /** datum is axisID, so id and clip-path could be functions. */
   let axisClipId = "axis-clip-" + axisID;
 

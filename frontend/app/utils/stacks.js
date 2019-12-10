@@ -878,8 +878,16 @@ function Stack(stackable) {
   Stack.prototype.add = Stack_add;
   this.add(stackable);
   dLog(this, stackable, ".stack", stackable.stack);
-  stacks.stacksCount.incrementProperty('count');  // stacks.length, or stacks.nextStackID
+  setCount('Stack() stacksCount');
 };
+/** Update stacks.stacksCount.count */
+function setCount(label) {
+  let newCount = stacks.length - (stacks.toDeleteAfterDrag ? 1 : 0);
+  dLog(label, ' : stacksCount', stacks.stacksCount.get('count'), newCount);
+  /* if the value is not changed then this .set will not trigger CPs which
+   * depend on stacksCount.count. */
+  stacks.stacksCount.set('count', newCount);
+}
 /**  Wrapper for new Stack() : implement a basic object re-use.
  *
  * The motive is that as a axis is dragged through a series of stacks, it is
@@ -905,6 +913,7 @@ function new_Stack(stackable) {
     s = new Stack(stackable);
     stacks.append(s);
   }
+  setCount('new_Stack');
   return s;
 }
 /** undefined, or references to the axis (Stacked) which is currently dropped
@@ -1374,7 +1383,7 @@ Stack.prototype.delete = function ()
     stacks = stacks.removeAt(si, 1);
     // .splice(si, 1);
     ok = true;
-    stacks.stacksCount.decrementProperty('count');  // stacks.length
+    setCount('delete');
   }
   return ok;
 };
@@ -1436,6 +1445,7 @@ Stack.prototype.move = function (axisName, toStack, insertIndex)
       //- pass action bus to init()
       oa.eventBus.send('updatedStacks', stacks);
   }
+  setCount('move');
   return result;
 };
 /** Shift named axis to a different position within this Stack.

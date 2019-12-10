@@ -2088,21 +2088,42 @@ export default Ember.Component.extend(Ember.Evented, {
         logSelectionNodes(removedStacks);
       }
       console.log('removedStacks', removedStacks.size());
+      /** If there are g.axis-outer in removedStacks[], either move them to the
+       * correct g.stack or remove them.
+       *
+       * Generation of the stacks / axes will probably be simpler when converted
+       * to CP -> d3 join;   probably can still get the move transition for the
+       * g.axis-outer by doing .insert() of the g.axis-outer in the .exit() case
+       * of the g.stack.
+       */
       let ra = removedStacks.selectAll("g.axis-outer");
       console.log('ra', ra, ra.nodes(), ra.node());
       ra.each(function (d, i, g) {
         console.log(d, i, this);
         let rag = this,
-        ras = Stacked.getStack(d), sDest;
+        ras = Stacked.getStack(d), sDest, alreadyAxis;
         if (! ras)
         {
           // this is OK - just information
-          console.log('axis no longer in a stack', d);
+          console.log('removedStacks', 'axis no longer in a stack', d);
         }
         else
+          if (! (sDest = ras && oa.svgContainer.select("g.stack#" + eltId(ras.stackID)))
+              || sDest.empty()) {
+            dLog('removedStacks', 'No stack for axis', ras, ras.stackID, this);
+          }
+        else
           // check that target is not parent
-          if ((sDest = ras && oa.svgContainer.select("g.stack#" + eltId(ras.stackID)))
-              && ! sDest.empty() && (sDest.node() !== this.parentElement))
+          // if it is then no move required.
+          if (sDest.node() === this.parentElement) {
+            dLog('removedStacks', 'axis is already in the right parent', d, i, ras, this.parentElement);
+          }
+        // check if there is already a g.axis-outer with this id in that stack.
+        else if ((alreadyAxis = sDest.selectAll("g > g.axis-outer#id" + rag.__data__)) && ! alreadyAxis.empty()) {
+          dLog('removedStacks', 'axis is already in the right parent', rag.__data__, d, i, ras, sDest.node(), this.parentElement);
+          // rag is not needed and will be removed with its parent which is in removedStacks[] / stackX
+        }
+        else
         {
             console.log('to stack', ras.stackID, sDest.node());
             let
@@ -2162,9 +2183,26 @@ export default Ember.Component.extend(Ember.Evented, {
     let axisS =
       stackSd.merge(stackS)
       .selectAll(".axis-outer"),
+    /**
+     * @param d1	axisID (blockId)
+     * @param this	EnterNode
+     */
+    moveOrAdd = function (d1, i, g) {
+        let p = g[0]._parent,
+        r;
+        let gaExists = d3.selectAll("g.axis-outer#id" + d1);
+        if (gaExists.size()) {
+          r = gaExists.node();
+          dLog('gaExists', gaExists.nodes(), r, p);
+        }
+        else {
+          r = d3.creator('g').apply(this, [d1, i, g]);
+        }
+        return r;
+    },
     axisG = axisS
       .data(stack_axisIDs, Stacked.prototype.keyFunction)
-      .enter().append("g"),
+      .enter().append(moveOrAdd /*'g'*/),
     axisX = axisS.exit();
     dLog('stacks.length', stacks.length, axisG.size(), axisX.size());
     axisG.each(function(d, i, g) { dLog(d, i, this); });
@@ -5077,7 +5115,8 @@ export default Ember.Component.extend(Ember.Evented, {
         stacks.toDeleteAfterDrag = undefined;
       }
       Stack.verify();
-      stacksAxesDomVerify(stacks, oa.svgContainer);
+      // stacks change has not yet been rendered, so don't compare against DOM here.
+      // stacksAxesDomVerify(stacks, oa.svgContainer);
     }
     /** recalculate all stacks' Y position.
      * Recalculate Y scales.
@@ -5904,8 +5943,8 @@ export default Ember.Component.extend(Ember.Evented, {
     function () {
       let count = stacks.length;
       // just checking - will retire stacks.stacksCount anyway.
-      if (count != stacks.stacksCount.count)
-	console.log('stacksWidthChanges',  count, '!=', stacks.stacksCount.count);
+      if (count != stacks.stacksCount)
+	console.log('stacksWidthChanges',  count, '!=', stacks.stacksCount);
       let leftPanel = Ember.$('#left-panel'),
       /** leftPanel.hasClass('left-panel-shown') is always true; instead the
        * <div>'s display attribute is toggled between flex and none.
