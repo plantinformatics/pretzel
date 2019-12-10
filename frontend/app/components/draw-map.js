@@ -2208,10 +2208,22 @@ export default Ember.Component.extend(Ember.Evented, {
     axisG.each(function(d, i, g) { dLog(d, i, this); });
     axisX.each(function(d, i, g) { dLog('axisX', d, i, this); });
     axisX.remove();
-    let allG = axisG
+    let axisGE = axisG
+      .selectAll('g.axis-all')
+      .data((d) => [d])
+      .enter(),
+    /** filter axisG down to those elements without a g.axis-all child.
+     * This would be equivalent to those elements of axisG which are parents in
+     * the .enter() set axisGE, i.e. axisGE.nodes().mapBy('_parent')
+     */
+     axisGempty = 
+      axisG.filter( function (d) { return d3.select(this).selectAll('g > g.axis-all').empty(); }),
+    allG = axisGE
       .append('g')
       .attr("class", "axis-all")
       .attr("id", eltIdAll);
+    // following code appends sub-elements to axisG, so use axisGempty.
+    axisG = axisGempty;
     if (axisG.size())
       dLog(allG.nodes(), allG.node());
 
