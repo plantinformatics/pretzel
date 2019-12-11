@@ -2140,4 +2140,5 @@ Stacked.prototype.unviewBlocks = function ()
 
 export  { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText,
           axisId2Name
+	  , setCount
         } ;

@@ -31,7 +31,7 @@ import { brushClip } from '../utils/draw/axisBrush';
 import {  Axes, maybeFlip, maybeFlipExtent,
           /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll /*, axisTitleColour*/  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify  }  from '../utils/draw/stacksAxes';
-import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Name } from '../utils/stacks';
+import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Name, setCount } from '../utils/stacks';
 import { collateAdjacentAxes, log_adjAxes,  log_adjAxes_a, isAdjacent } from '../utils/stacks-adj';
 import { updateRange } from '../utils/stacksLayout';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../utils/stacks-drag';
@@ -5233,6 +5233,7 @@ export default Ember.Component.extend(Ember.Evented, {
         dragTransition(false);
       }
       stacks.log();
+      setCount('dragended');
     }
     
 
