@@ -2706,7 +2706,7 @@ export default Ember.Component.extend(Ember.Evented, {
       oa.svgRoot
         .transition().duration(dragTransitionTime)
         .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
-        .style("padding-top", oa.axisTitleLayout.verticalTitle ? "" + oa.axisTitleLayout.height + "px" : "0px");
+        .style("padding-top", oa.axisTitleLayout.verticalTitle ? "" + oa.axisTitleLayout.height + "px" : "50px");
     }
     updateAxisTitleSize(axisG.merge(axisS));
 

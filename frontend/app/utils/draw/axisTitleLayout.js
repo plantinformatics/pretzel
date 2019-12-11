@@ -55,6 +55,9 @@ AxisTitleLayout.prototype.calc = function(axisSpacing, titlePx)
     /* The <svg> viewBox -70 already gives 70px of vertical space above
      * (from viewport.js: axisNameHeight)
      * But also, the text is at y=-24 (-2 * axisFontSize)
+     *
+     * Changing #holder { padding-top } from 50px to 0, so that long titles can
+     * enter the white-space above the graph, instead of using padding.  So perhaps add that 50px here.
      */
     height = height - 70 + 2 * 12 /*axisFontSize*/;
     if (height < 0) height = 0;
