@@ -481,7 +481,10 @@ export default InAxis.extend({
       .attr('x', xPosn)
       .attr('y', yPosn)
       .attr('height' , height)
-      .attr('stroke', function (b) {
+      .attr('stroke', blockTrackColourI)
+      .attr('fill', blockTrackColourI)
+    ;
+    function blockTrackColourI (b) {
         let blockId = this.parentElement.__data__,
         /** If blockIndex{} is not collated yet, can scan through blockIds[] to get index.
          * Actually, the number of blocks will be 1-10, so collating a hash is
@@ -494,20 +497,22 @@ export default InAxis.extend({
         // colour is calculated from i, not blockId.
         // index into axis.blocks[] = <g.tracks> index + 1
         return axisTitleColour(blockId, i+1) || 'black';
-      })
-    ;
+      }
     console.log(gAxis.node(), rs.size(), re.size(), 'ra', ra.size(), ra.node(), 'rx', rx.size());
     rx.remove();
 
+    /** not yet used, see also above blockTrackColourI() */
     function blockColour(selector) {
     function blockTrackColour(d,i,g) {
       d3.select(this).selectAll(selector)
         // .transition().duration(featureTrackTransitionTime)
-        .attr('stroke', function (b) {
+        .attr('stroke', axisTitleColourI)
+        .attr('fill', axisTitleColourI);
+      function axisTitleColourI (b) {
           // console.log(d,i,b);
           // index into axis.blocks[] = <g.tracks> index + 1
           return axisTitleColour(d, i+1) || 'black';
-        });
+        }
     }
       return blockTrackColour;
     }
