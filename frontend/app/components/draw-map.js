@@ -2615,7 +2615,7 @@ export default Ember.Component.extend(Ember.Evented, {
           if (length && length > 1)
           {
             /** -2 * axisFontSize is the default for a single row. */
-            let y = '-' + (length+1) * axisFontSize;
+            let y = '-' + (length+1) * (1.3 * axisFontSize);
             d3.select(this)
               .attr('y', y + 'px');
           }
@@ -2706,7 +2706,7 @@ export default Ember.Component.extend(Ember.Evented, {
       oa.svgRoot
         .transition().duration(dragTransitionTime)
         .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
-        .style("padding-top", oa.axisTitleLayout.verticalTitle ? "" + oa.axisTitleLayout.height + "px" : "50px");
+      ;
     }
     updateAxisTitleSize(axisG.merge(axisS));
 

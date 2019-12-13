@@ -40,7 +40,10 @@ AxisTitleLayout.prototype.calc = function(axisSpacing, titlePx)
   if (this.verticalTitle)
   {
     angle = Math.acos(axisSpacing / titlePx);
-    height = Math.sqrt(titlePx * titlePx - axisSpacing * axisSpacing);
+    let adj2 = titlePx * titlePx - axisSpacing * axisSpacing;
+    if (adj2 <= 0)
+      dLog('titlePx', titlePx, '<', 'axisSpacing', axisSpacing);
+    height = (adj2 > 0) ? Math.sqrt(adj2) : 50;
     /** Allow text to overlap the adjacent column once it clears the adjacent title.  */
     let angleThresh = deg2Rad(12);
     if (angle > angleThresh)
@@ -57,9 +60,18 @@ AxisTitleLayout.prototype.calc = function(axisSpacing, titlePx)
      * But also, the text is at y=-24 (-2 * axisFontSize)
      *
      * Changing #holder { padding-top } from 50px to 0, so that long titles can
-     * enter the white-space above the graph, instead of using padding.  So perhaps add that 50px here.
+     * enter the white-space above the graph, instead of using padding.
+     * So adding that 50px here, plus headroom for verticalTitle, which can be
+     * calculated but for now use 300 to allow for 6 rows of axis title.
      */
-    height = height - 70 + 2 * 12 /*axisFontSize*/;
+    let
+      /** copied from viewport.js for quick change (demo); this logic can be
+       * moved here, along with using a CP to calculate axisNameRows,
+       * and calculating the height of the top-right corner.
+       */
+  axisNameRows = 7,
+    axisNameHeight = 14 * axisNameRows;
+    height = (height || 0) + 50 + axisNameHeight + 2 * 12 /*axisFontSize*/;
     if (height < 0) height = 0;
     angle = -angle;
   }

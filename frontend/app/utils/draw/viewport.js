@@ -3,6 +3,7 @@ import Ember from 'ember';
 import  { logElementDimensions2 } from '../domElements';
 
 const trace_resize = 0;
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
@@ -62,7 +63,7 @@ Viewport.prototype.calc = function(oa)
    * This can be made a configurable option, and adjusted for the actual max #
    * of rows in axis titles.
    */
-  axisNameRows = 5,
+  axisNameRows = 7,
   /** approx height of text name of map+chromosome displayed above axis.
    *   *axisNameRows for parent/child; later can make that dependent on whether there are any parent/child axes.
    */
@@ -139,8 +140,8 @@ Viewport.prototype.calc = function(oa)
         {
             w: w,
             h: h - 2 * this.dropTargetYMargin
-            - this.axisTopOffset
-            - topPanelHeight - bottomPanelHeight
+            // - this.axisTopOffset
+            - topPanelHeight // - bottomPanelHeight
         };
   // layout has changed, no value in this :  - selectedFeaturesTextHeight
 
@@ -190,8 +191,21 @@ Viewport.prototype.viewBox = function()
    */
   increaseWidth = verticalTitle ?
     ((this.axisTitleLayout && (this.axisTitleLayout.increaseRightMargin() / 2 - shiftLeft)) || 0) : 0;
-  return "" + (0 + shiftLeft) + " " + -this.axisTopOffset + " " +
-    (this.graphDim.w + increaseWidth) + " " + (this.graphDim.h + this.axisTopOffset);
+  /** increase height for the axis title; larger increase when verticalTitle.
+   * This replaces padding-top (earlier version of chrome didn't clip the
+   * <text><tspan> as it entered padding-top).
+   */
+  let increaseHeight = verticalTitle ? "" + this.axisTitleLayout.height : 50;
+  let axisTitleHeight = this.axisTopOffset + ((this.axisTitleLayout && this.axisTitleLayout.height !== undefined) ? this.axisTitleLayout.height : 0);
+  let viewBox = {
+    min_x : (0 + shiftLeft),
+    min_y : - axisTitleHeight,
+    width : (this.graphDim.w + increaseWidth),
+    height : (this.graphDim.h + axisTitleHeight)},
+  viewBoxText = "" + viewBox.min_x + " " + viewBox.min_y + " " +
+    viewBox.width + " " + viewBox.height;
+  dLog('viewBox', viewBox, viewBoxText, this, shiftLeft, increaseWidth);
+  return viewBoxText;
 };
 
 /** Based on drawing width and the number of stacks,
