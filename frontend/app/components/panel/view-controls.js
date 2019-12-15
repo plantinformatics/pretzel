@@ -34,7 +34,7 @@ export default Ember.Component.extend({
   /** ditto, 
    * controls.view.pathControlActiveSample
    */
-  pathSample : expRangeInitial(4/*00*/, expRangeBase(100, 10000)),
+  pathSample : expRangeInitial(400, expRangeBase(100, 10000)),
 
   pathControlActiveDensity : Ember.computed('pathDensityActive', 'pathDensity', function () {
     let active = this.get('pathDensityActive'),
