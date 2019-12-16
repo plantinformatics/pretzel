@@ -5,6 +5,7 @@
 /*----------------------------------------------------------------------------*/
 
 const trace_axis = 0;
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
@@ -168,9 +169,14 @@ function highlightId(name)
  * Originally was using blockId as index, but now using index within axis.blocks[].
  * The same colours are re-used on each axis.
  */
+const
+axisTitleColourKey = { index: 1, value : 2, slot : 3},
+axisTitleColourBy = axisTitleColourKey.slot;
 let
-      axisTitle_colour_scale = d3.scaleOrdinal();
-      axisTitle_colour_scale.range(d3.schemeCategory10);
+  axisTitle_colour_scale = (axisTitleColourBy === axisTitleColourKey.value) ?
+  d3.scaleOrdinal().range(d3.schemeCategory10) :
+  d3.scaleSequential().domain([1,11]).interpolator(d3.interpolateRainbow);
+
 
 /** for the stroke and fill of axis title menu
  *
@@ -187,8 +193,30 @@ function axisTitleColour (d, i) {
    * This results in unique colours for each block; we decided instead to re-use
    * the same set of colours on each axis.
    */
+  let value;
+  switch (axisTitleColourBy)  {
+  case axisTitleColourKey.index :
+    value = (i == 0) ? undefined : i;
+    break;
+  case axisTitleColourKey.value :
+    value = d;
+    break;
+  case axisTitleColourKey.slot :
+    /** d is axisName / blockId */
+    let
+    blockS = oa.stacks.axes[d],
+    block = blockS && blockS.block,
+    axis = blockS && blockS.axis, // if reference then === oa.axes[d],
+    axis1d = axis && axis.axis1d;
+    value = axis1d && axis1d.blockColour(block);
+    if (trace_axis > 1)
+      dLog('axisTitleColour', d, i, axis, block, axis1d, value);
+    if (value === -1)
+      value = undefined;
+    break;
+ };
   let
-    colour = (i == 0) ? undefined : axisTitle_colour_scale(i /*d*/);
+    colour = (value === undefined) ? undefined : axisTitle_colour_scale(value);
   return colour;
 };
 
