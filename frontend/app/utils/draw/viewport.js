@@ -55,20 +55,11 @@ Viewport.prototype.calc = function(oa)
   w,
   h,
 
-  /** approx height of map / chromosome selection buttons above graph */
-  axisSelectionHeight = 30,
-  /** Axes which have a reference block and multiple data blocks show each block
-   * name on a separate line in the axis title.  Other axes have just 1 line of
-   * text in the title, so the minimum value of axisNameRows is 1.
-   * This can be made a configurable option, and adjusted for the actual max #
-   * of rows in axis titles.
+  /** approx height of text block below graph which says 'n selected features'
+   * also
+   * @see axisTitleFontHeight
+   * @see axisFontSize
    */
-  axisNameRows = 7,
-  /** approx height of text name of map+chromosome displayed above axis.
-   *   *axisNameRows for parent/child; later can make that dependent on whether there are any parent/child axes.
-   */
-  axisNameHeight = 14 * axisNameRows,
-  /** approx height of text block below graph which says 'n selected features' */
   selectedFeaturesTextHeight = 14,
 
 
@@ -87,8 +78,6 @@ Viewport.prototype.calc = function(oa)
 
   /** dimensions of the graph border */
   let graphDim;
-
-  this.axisTopOffset = /*axisSelectionHeight +*/ axisNameHeight;
 
   const holderSelector = 'div#holder';
   divHolder=Ember.$(holderSelector);
@@ -191,12 +180,8 @@ Viewport.prototype.viewBox = function()
    */
   increaseWidth = verticalTitle ?
     ((this.axisTitleLayout && (this.axisTitleLayout.increaseRightMargin() / 2 - shiftLeft)) || 0) : 0;
-  /** increase height for the axis title; larger increase when verticalTitle.
-   * This replaces padding-top (earlier version of chrome didn't clip the
-   * <text><tspan> as it entered padding-top).
-   */
-  let increaseHeight = verticalTitle ? "" + this.axisTitleLayout.height : 50;
-  let axisTitleHeight = this.axisTopOffset + ((this.axisTitleLayout && this.axisTitleLayout.height !== undefined) ? this.axisTitleLayout.height : 0);
+
+  let axisTitleHeight = ((this.axisTitleLayout && this.axisTitleLayout.height !== undefined) ? this.axisTitleLayout.height : 0);
   let viewBox = {
     min_x : (0 + shiftLeft),
     min_y : - axisTitleHeight,

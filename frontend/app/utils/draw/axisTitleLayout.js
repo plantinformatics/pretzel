@@ -31,6 +31,31 @@ AxisTitleLayout.prototype.calc = function(axisSpacing, titlePx)
   this.titlePx = titlePx;
   this.verticalTitle = axisSpacing < titlePx;
   dLog('updateAxisTitleSize AxisTitleLayout.calc', axisSpacing, this.verticalTitle, this);
+
+  let
+  /** approx height of map / chromosome selection buttons above graph */
+  axisSelectionHeight = 30,
+  /** from css line-height, or approx axisFontSize + 3 */
+  axisTitleLineHeight = 17,
+
+  /* axisNameRows and axisNameHeight are moved here from viewport.js;
+   * In the medium term axisNameRows will be derived from axis-1d : viewedBlocks(),
+   * and will also calculate the height of the top-right corner from angle, axisNameHeight and width.
+   */
+
+  /** Axes which have a reference block and multiple data blocks show each block
+   * name on a separate line in the axis title.  Other axes have just 1 line of
+   * text in the title, so the minimum value of axisNameRows is 1.
+   * This can be made a configurable option, and adjusted for the actual max #
+   * of rows in axis titles.
+   */
+  axisNameRows = 7,
+  /** approx height of text name of map+chromosome displayed above axis.
+   *   *axisNameRows for parent/child; later can make that dependent on whether there are any parent/child axes.
+   */
+  axisNameHeight = axisTitleLineHeight * axisNameRows;
+
+
   /** height, angle are undefined when ! verticalTitle */
   let height, angle;
   /** The title is rotated up to fit within width == axisSpacing, unless that
@@ -55,27 +80,27 @@ AxisTitleLayout.prototype.calc = function(axisSpacing, titlePx)
     // convert radians to degrees
     angle = rad2Deg(angle);
     dLog(axisSpacing, titlePx, 'angle', angle, width, height);
-    /* The <svg> viewBox -70 already gives 70px of vertical space above
-     * (from viewport.js: axisNameHeight)
-     * But also, the text is at y=-24 (-2 * axisFontSize)
+    if (! height > 0) height = 0;
+    angle = -angle;
+  }
+  else
+    height = 0;
+    /**  height for the axis title, plus vertical allowances; larger increase when verticalTitle.
+     * The 50(px) replaces padding-top (earlier version of chrome didn't clip the
+     * <text><tspan> as it entered padding-top).
+     *
+     * Used for the <svg> viewBox
+     * The text is at y=-24 (-2 * axisFontSize)
+     * (addding 2 * axisTitleLineHeight here)
      *
      * Changing #holder { padding-top } from 50px to 0, so that long titles can
      * enter the white-space above the graph, instead of using padding.
-     * So adding that 50px here, plus headroom for verticalTitle, which can be
-     * calculated but for now use 300 to allow for 6 rows of axis title.
+     * So adding that 50px here, plus headroom for verticalTitle.
      */
-    let
-      /** copied from viewport.js for quick change (demo); this logic can be
-       * moved here, along with using a CP to calculate axisNameRows,
-       * and calculating the height of the top-right corner.
-       */
-  axisNameRows = 7,
-    axisNameHeight = 14 * axisNameRows;
-    height = (height || 0) + 50 + axisNameHeight + 2 * 12 /*axisFontSize*/;
-    if (height < 0) height = 0;
-    angle = -angle;
-  }
-  this.height = height;
+  let straightHeight = 
+    50 + axisNameHeight + 2 * axisTitleLineHeight;
+
+  this.height = straightHeight + height;
   this.angle = angle;
   this.width = width;
 };
