@@ -3878,9 +3878,9 @@ export default Ember.Component.extend(Ember.Evented, {
         selectedAxes.forEach(function(p, i) {
           /** d3 selection of one of the Axes selected by user brush on axis. */
           let axisS = oa.svgContainer.selectAll("#" + eltId(p));
-          /** compound name dataset:block (i.e. map:chr) for the selected axis p.  */
-          let mapChrName = axisName2MapChr(p);
-          selectedFeatures[mapChrName] = [];
+
+          // blockS = oa.stacks.axes[p],
+
           let notBrushed = brushExtents[i] === undefined,
           enable_log = notBrushed;
             if (enable_log)
@@ -3929,6 +3929,19 @@ export default Ember.Component.extend(Ember.Evented, {
            * a featuresOfBlock(blockId)->blockFeatures[] for the circle data.
            */
           childBlocks.map(function (block) {
+
+          let
+            blockR = block && block.block,
+          /** e.g. "IWGSC" */
+          shortName = blockR && blockR.get('datasetId.meta.shortName'),
+          /** e.g. "1B" */
+          scope = blockR && blockR.get('name'),
+          briefName = (shortName && scope) && (shortName + ':' + scope);
+
+          /** compound name dataset:block (i.e. map:chr) for the selected axis p.  */
+          let mapChrName = briefName || axisName2MapChr(p);
+          selectedFeatures[mapChrName] = [];
+
             let blockFeatures = oa.z[block.axisName]; // or block.get('features')
           d3.keys(blockFeatures).forEach(function(f) {
             let fLocation;
