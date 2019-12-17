@@ -372,6 +372,45 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     dLog('blockIndexes', blockIndexes, dataBlocks);
     return blockIndexes;
   }),
+  colourSlotsUsed : Ember.A([]),
+  /** assign colour slots to viewed blocks of an axis
+   * e.g. slots 0-10 for schemeCategory10
+   * @return array mapping colour slots to blocks, or perhaps blocks to slots
+   */
+  colourSlots : Ember.computed('dataBlocks.[]', function () {
+    /* 
+     * when .viewed blocks changes : for each viewed block
+     * if it is viewed and does not have a colour slot assigned
+     * look for a slot assigned to a block which is no longer viewed
+     * if 1 found, re-use that slot
+     * else use an incrementing count (maybe simply append - that would enable 2 identical colours after others are unviewed, but new allocations would be from the initial range because search from start)
+     */
+    let colourSlots,
+    used = this.get('colourSlotsUsed');
+    let dataBlocks = this.get('dataBlocks');
+    if (trace_stack > 1)
+      dLog('colourSlots', used, dataBlocks);
+    dataBlocks.forEach((b) => {
+      if (b.get('isViewed') && (this.blockColour(b) < 0)) {
+        let free = used.findIndex(function (bi, i) {
+          return !bi || !bi.get('isViewed');
+        });
+        if (free > 0)
+          used[free] = b;
+        else
+          used.push(b);
+      }
+    } );
+    colourSlots = used;
+    if (trace_stack)
+      dLog('colourSlots', colourSlots);
+    return colourSlots;
+  }),
+  blockColour(block) {
+    let used = this.get('colourSlotsUsed'),
+    i = used.indexOf(block);
+    return i;
+  },
   /** @return the domains of the data blocks of this axis.
    * The result does not contain a domain for data blocks with no features loaded.
    */

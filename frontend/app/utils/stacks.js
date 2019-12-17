@@ -842,9 +842,9 @@ Block.prototype.axisTitleColour = function ()
     /** blockIndex is not used, except to distinguish the reference block.
      * blockIndex could instead be calculated using the index of this in this.axis.blocks[]. */
     blockIndex = blockIndexes[blockId];
-    /* axisTitleColour() blockIndex counts from 1; undefined is for the reference block,
+    /* axisTitleColour() blockIndex counts from 1; 0 is for the reference block (may have been undefined in earlier versions),
      * which gets colour undefined - no need to call axisTitleColour(). */
-    colour = (blockIndex === undefined) ? undefined : axisTitleColour(blockId, blockIndex+1);
+    colour = (! blockIndex) ? undefined : axisTitleColour(blockId, blockIndex+1);
     if (trace_stack)
       dLog('axisTitleColour', this, blockId, blockIndexes, blockIndex, colour);
   }
