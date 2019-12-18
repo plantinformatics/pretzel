@@ -134,7 +134,7 @@ export default Ember.Component.extend({
       .style("stroke", "red");
     if (feature) {
       /** see also handleFeatureCircleMouseOver(). */
-      d3.selectAll("g.axis-outer > circle." + eltClassName(feature))
+      d3.selectAll("g.axis-outer > circle." + eltClassName(eltClassName(feature)))
         .attr("r", 5)
         .style("fill", "yellow")
         .style("stroke", "black")
