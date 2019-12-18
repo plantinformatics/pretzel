@@ -75,6 +75,7 @@ import { storeFeature } from '../utils/feature-lookup';
 /* jshint -W083 */
 
 /*global d3 */
+/* global CSS */
 
 /*----------------------------------------------------------------------------*/
 
@@ -3965,7 +3966,7 @@ export default Ember.Component.extend(Ember.Evented, {
                * unique within its parent g, this combinedId enables transition
                * to be implemented in an improvised way.
                */
-              let combinedId = 'fc_' + block.axisName + '_' + f,
+              let combinedId = CSS.escape('fc_' + block.axisName + '_' + f),
               dot = axisS.selectAll('circle#' + combinedId);
               if (! dot.empty()) {
                 dot
@@ -4189,7 +4190,7 @@ export default Ember.Component.extend(Ember.Evented, {
       {
         /** related @see axisFeatureCircles_selectAll() */
         let
-          selector = "g.axis-outer#" + eltId(chrName) + " > circle." + featureName,
+          selector = "g.axis-outer#" + eltId(chrName) + " > circle." + CSS.escape(featureName),
         targetId = "MC_" + ++targetIdCount;
         console.log("handleFeatureCircleMouseOver", d, featureName, selector, targetId);
         if (false)

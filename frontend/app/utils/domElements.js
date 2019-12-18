@@ -1,6 +1,7 @@
 import Ember from 'ember';
 
 /*global d3 */
+/* global CSS */
 
 const trace_dom = 0;
 const dLog = console.debug;
@@ -227,6 +228,7 @@ function htmlHexEncode(text)
 }
 
 /** Encode a text feature name which may contain punctuation into a form suitable for use a CSS class name. 
+ * Use CSS.escape() instead of this function.
  * @param text  e.g. feature name
  */
 function cssHexEncode(text)
@@ -250,14 +252,16 @@ function cssHexEncode(text)
 /** recognise any punctuation in f which is not allowed for a selector matching an element class name,
  * and replace with _
  * Specifically :
- *   replace non-alphanumeric characters with their hex encoding @see cssHexEncode(),
+ *   use CSS.escape() to escape punctuation which is not accepted in CSS selectors
  *   prefix leading digit with _
  *
  * HTML5 class names allow these forms, so eltClassName() is only required
  * where the class name will be the target of a selector.
  * CSS selectors can use \ escaping e.g. to prefix '.', and that works for
- * d3.select() and Ember.$() selectors (using \\);  for now at least
- * the simpler solution of replacing '.' with '_' is used.
+ * d3.select() and Ember.$() selectors (using \\);
+ * This is now done, using CSS.escape().
+ * Earlier versions replaced '.' with '_', and 
+ * replaced non-alphanumeric characters with their hex encoding @see cssHexEncode(),
  *
  * A class with a numeric prefix is accepted by HTML5, but not for selectors (CSS, d3 or $),
  * so eltClassName() is required at least for that.
@@ -269,7 +273,7 @@ function eltClassName(f)
    * elsewhere, but handle it here by converting f to a string.
    */
   let fString = (typeof(f) == 'string') ? f : '' + f,
-  fPrefixed = cssHexEncode(fString.replace(/^([\d])/, "_$1"));
+  fPrefixed = CSS.escape(f); // cssHexEncode(fString.replace(/^([\d])/, "_$1"));
   return fPrefixed;
 }
 
