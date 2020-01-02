@@ -5665,6 +5665,14 @@ export default Ember.Component.extend(Ember.Evented, {
     function showResize(widthChanged, heightChanged, useTransition)
     {
         console.log('showResize', widthChanged, heightChanged, useTransition);
+      console.log('showResize',   me.get('viewportWidth'), oa.vc.viewPort.w, me.get('viewportHeight'), oa.vc.viewPort.h);
+      let viewPort = oa && oa.vc && oa.vc.viewPort;
+      if (viewPort)
+        Ember.run.later(function () {
+        me.setProperties({
+          viewportWidth : viewPort.w,
+          viewportHeight : viewPort.h
+        }); });
         updateXScale();
         collateO();
         if (widthChanged)
@@ -5953,7 +5961,9 @@ export default Ember.Component.extend(Ember.Evented, {
 
     highlightFeature_drawFromParams(this);
   }),
-  resizeEffect : Ember.computed('stacksWidthChanges', function () {
+  resizeEffect : Ember.computed(
+    'stacksWidthChanges', 'viewportWidth', 'viewportHeight',
+    function () {
     if (true) // try without debounce
       this.get('resize').apply(this.get('oa'), [/*transition*/true]);
     else
@@ -6032,7 +6042,7 @@ export default Ember.Component.extend(Ember.Evented, {
             oa =  calledFromObserve ? this.oa : this;
     // logWindowDimensions('', oa.vc.w);  // defined in utils/domElements.js
     function resizeDrawing() { 
-      if (windowResize)
+      // if (windowResize)
         eltResizeToAvailableWidth(
           /*bodySel*/ 'div.ember-view > div > div.body > div',
           /*centreSel*/ '.resizable');
@@ -6055,13 +6065,15 @@ export default Ember.Component.extend(Ember.Evented, {
         console.log("oa.vc", oa.vc, arguments);
         if (oa.vc)
         {
-            if (true || ! layoutChanged)  // may not need debounce, having dropped didRender().
+            if (! layoutChanged)
                 // Currently debounce-d in resizeThis(), so call directly here.
                 resizeDrawing();
             else
             {
                 console.log(arguments[1], arguments[0]);
-                Ember.run.debounce(resizeDrawing, 300);  // 0.3sec
+                // may not need debounce, having dropped didRender().
+                // .later() seems required - wait for DOM reflow caused by changes to layout.{left,right}.visible.
+                Ember.run.later(resizeDrawing);
             }
         }
 
