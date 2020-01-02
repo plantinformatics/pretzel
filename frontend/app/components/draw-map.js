@@ -5739,8 +5739,10 @@ export default Ember.Component.extend(Ember.Evented, {
               axisBrushShowSelection(d, this);
             });
           DropTarget.prototype.showResize();
-          me.trigger('resized', widthChanged, heightChanged, useTransition);
         }
+        if (widthChanged || heightChanged)
+          me.trigger('resized', widthChanged, heightChanged, useTransition);
+        /* probably better to move the above .trigger() into .later(), such as this. */
         Ember.run.later( function () { showSynteny(oa.syntenyBlocks, undefined); });
       };
 
@@ -6079,7 +6081,7 @@ export default Ember.Component.extend(Ember.Evented, {
         console.log("oa.vc", oa.vc, arguments);
         if (oa.vc)
         {
-            if (! layoutChanged)
+            if (false && ! layoutChanged)
                 // Currently debounce-d in resizeThis(), so call directly here.
                 resizeDrawing();
             else
@@ -6087,13 +6089,16 @@ export default Ember.Component.extend(Ember.Evented, {
                 console.log(arguments[1], arguments[0]);
                 // may not need debounce, having dropped didRender().
                 // .later() seems required - wait for DOM reflow caused by changes to layout.{left,right}.visible.
-                Ember.run.later(resizeDrawing);
+                Ember.run.later(resizeDrawing, 300);
             }
         }
 
 
   }
-    .observes('layout.left.visible', 'layout.right.visible', 'layout.left.tab', 'leftPanelShown')
+    .observes('layout.left.visible', 'layout.right.visible', 'leftPanelShown')
+  /* could include in .observes() : 'layout.left.tab', but the tab name should not affect the width.
+   * (currently the value of layout.left.tab seems to not change - it is just 'view').
+   */
 
 
 });
