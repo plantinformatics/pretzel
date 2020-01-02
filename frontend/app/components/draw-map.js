@@ -5945,7 +5945,9 @@ export default Ember.Component.extend(Ember.Evented, {
     let oa = this.get('oa');
     oa.tracks  = [{start: 10, end : 20, description : "track One"}];
     this.set('toolTipHovered', false);
-    Ember.run.later(function() {
+    Ember.run.later(() => {
+      Ember.$('.left-panel-shown')
+        .on('toggled', (event) => this.readLeftPanelToggle() );
       Ember.$('.make-ui-draggable').draggable(); });
   },
 
@@ -5982,9 +5984,24 @@ export default Ember.Component.extend(Ember.Evented, {
       // just checking - will retire stacks.stacksCount anyway.
       if (count != stacks.stacksCount)
 	console.log('stacksWidthChanges',  count, '!=', stacks.stacksCount);
+      let leftPanelShown = this.readLeftPanelToggle(),
+      current = {
+        stacksCount : count,
+        splitAxes : this.get('splitAxes').length,
+        // this.get('layout.left.visible') is true, and does not update
+        left : leftPanelShown,
+        right : this.get('layout.right.visible')
+      };
+      console.log('stacksWidthChanges', current);
+      return current;
+    }),
+  /** Read the CSS attribute display of left-panel to determine if it is shown / visible.  */
+  readLeftPanelToggle() {
       let leftPanel = Ember.$('#left-panel'),
       /** leftPanel.hasClass('left-panel-shown') is always true; instead the
        * <div>'s display attribute is toggled between flex and none.
+       * using jQuery .toggle() applied to button.left-panel-{shown,hidden},
+       * in toggleLeftPanel(), via left-panel.hbs action of button.panel-collapse-button.
        * This could be made consistent with right panel, but planning to use golden-layout in place of this anyway.
        *
        * .attributeStyleMap is part of CSS Typed OM; is in Chrome, not yet Firefox.
@@ -5995,17 +6012,14 @@ export default Ember.Component.extend(Ember.Evented, {
       leftPanelStyleDisplay = haveCSSOM ?
         leftPanel[0].attributeStyleMap.get('display').value :
         leftPanel[0].style.display,
-      leftPanelShown = leftPanelStyleDisplay != 'none',
-      current = {
-        stacksCount : count,
-        splitAxes : this.get('splitAxes').length,
-        // this.get('layout.left.visible') is true, and does not update
-        left : leftPanelShown,
-        right : this.get('layout.right.visible')
-      };
-      console.log('stacksWidthChanges', current, leftPanel[0]);
-      return current;
-    }),
+      leftPanelShown = leftPanelStyleDisplay != 'none'
+    ;
+    dLog('readLeftPanelToggle', leftPanel[0], leftPanelShown);
+    /* The returned value is used only in trace.  This attribute .leftPanelShown is observed by resize()
+ */
+    this.set('leftPanelShown', leftPanelShown);
+    return leftPanelShown;
+  },
 
   /** @return true if changes in #stacks or split axes impact the width and horizontal layout.
    * (maybe dotPlot / axis.perpendicular will affect width also)
@@ -6079,7 +6093,8 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
   }
-        .observes('layout.left.visible', 'layout.right.visible')
+    .observes('layout.left.visible', 'layout.right.visible', 'layout.left.tab', 'leftPanelShown')
+
 
 });
 
