@@ -431,6 +431,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * filter / debounce the calls to handle multiple events at the same time.
    */
   updatePathsPositionDebounce : Ember.computed(
+    'widthChanged',
     'heightChanged', 'axisStackChangedCount',
     // stacksWidthChanges depends on stacksCount, so this dependency is implied anyway.
     'block.stacksCount',
@@ -441,6 +442,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     'blockAdj.axes1d.1.scaleChanged',
     function () {
     let count = this.get('axisStackChangedCount'),
+      stacksWidthChanges = this.get('drawMap.stacksWidthChanges'),
 	    flips = [this.get('blockAdj.axes1d.0.flipRegionCounter'),
 		           this.get('blockAdj.axes1d.1.flipRegionCounter')],
       scaleChanges = [this.get('blockAdj.axes1d.0.scaleChanged'),
@@ -448,6 +450,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       zoomCounter = this.get('blockAdj.zoomCounter'),
       heightChanged = this.get('heightChanged');
 	    dLog('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, flips, zoomCounter, scaleChanges,
+           stacksWidthChanges,
            this.get('block.stacksCount'));
     this.updatePathsPosition();
 
@@ -474,6 +477,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     dLog("resized in components/block-adj");
     /* In addition to the usual causes of repeated events, block-adj will
      * respond to events relating to 2 axes. */
+    if (widthChanged)
+      this.incrementProperty('widthChanged');
     if (heightChanged)
       this.incrementProperty('heightChanged');
   },
