@@ -885,8 +885,15 @@ function setCount(label) {
   let newCount = stacks.length - (stacks.toDeleteAfterDrag ? 1 : 0);
   dLog(label, ' : stacksCount', stacks.stacksCount.get('count'), newCount);
   /* if the value is not changed then this .set will not trigger CPs which
-   * depend on stacksCount.count. */
-  stacks.stacksCount.set('count', newCount);
+   * depend on stacksCount.count.
+   * stacksCount.count is used as a dependency by resizeEffect(), so change its
+   * value at the end of the run loop using .later() to avoid : assertion
+   * ... modified "resizeEffect" twice on component:draw-map ... in a single
+   * render
+   */
+  Ember.run.later(function () {
+    stacks.stacksCount.set('count', newCount);
+  });
 }
 /**  Wrapper for new Stack() : implement a basic object re-use.
  *

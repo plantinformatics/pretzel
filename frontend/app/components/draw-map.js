@@ -5657,6 +5657,16 @@ export default Ember.Component.extend(Ember.Evented, {
 
     /*------------------------------------------------------------------------*/
 
+    /** Record the viewport Width and Height for use as dependencies of
+     * @see resizeEffect()
+     */
+    function recordViewport(w, h) {
+      this.setProperties({
+        viewportWidth : w,
+        viewportHeight : h
+      });
+    };
+
       /** Render the affect of resize on the drawing.
        * @param widthChanged   true if width changed
        * @param heightChanged   true if height changed
@@ -5668,11 +5678,19 @@ export default Ember.Component.extend(Ember.Evented, {
       console.log('showResize',   me.get('viewportWidth'), oa.vc.viewPort.w, me.get('viewportHeight'), oa.vc.viewPort.h);
       let viewPort = oa && oa.vc && oa.vc.viewPort;
       if (viewPort)
-        Ember.run.later(function () {
-        me.setProperties({
-          viewportWidth : viewPort.w,
-          viewportHeight : viewPort.h
-        }); });
+        /* When visibility of side panels (left, right) is toggled, width of
+         * those panels changes in a transition (uses flex in CSS), and hence
+         * resize() -> showResize() are called repeatedly in close succession,
+         * with slightly changing width.
+         * Minimise the impact of this by using debounce, and .toFixed(), since
+         * changes < 1 pixel aren't worth a re-render.
+         */
+        Ember.run.debounce(
+          me,
+          recordViewport,
+          viewPort.w.toFixed(),
+          viewPort.h.toFixed(),
+          500);
         updateXScale();
         collateO();
         if (widthChanged)
@@ -5740,10 +5758,11 @@ export default Ember.Component.extend(Ember.Evented, {
             });
           DropTarget.prototype.showResize();
         }
-        if (widthChanged || heightChanged)
-          me.trigger('resized', widthChanged, heightChanged, useTransition);
-        /* probably better to move the above .trigger() into .later(), such as this. */
-        Ember.run.later( function () { showSynteny(oa.syntenyBlocks, undefined); });
+        Ember.run.later( function () {
+          /* probably better to do .trigger() within .later(); it works either way. */
+          if (widthChanged || heightChanged)
+            me.trigger('resized', widthChanged, heightChanged, useTransition);
+          showSynteny(oa.syntenyBlocks, undefined); });
       };
 
 //- brush-menu
@@ -5953,7 +5972,7 @@ export default Ember.Component.extend(Ember.Evented, {
       Ember.$('.make-ui-draggable').draggable(); });
   },
 
-  drawEffect : Ember.computed('data', 'resizeEffect', function () {
+  drawEffect : Ember.computed('data.[]', 'resizeEffect', function () {
     let me = this;
     let data = this.get('data');
     Ember.run.throttle(function () {
@@ -5966,9 +5985,14 @@ export default Ember.Component.extend(Ember.Evented, {
     highlightFeature_drawFromParams(this);
   }),
   resizeEffect : Ember.computed(
-    'stacksWidthChanges', 'viewportWidth', 'viewportHeight',
+    /* viewportWidth and viewportHeight will change as a result of changes in
+     * stacksWidthChanges.{left,right}, so these dependencies could be
+     * consolidated (checking that the dependencies change after the element size
+     * has changed).
+     */
+    'stacksWidthChanges.@each', 'viewportWidth', 'viewportHeight',
     function () {
-    if (true) // try without debounce
+    if (false) // currently the display is probably smoother with the debounce; later after tidying up the resize structure this direct call may be better.
       this.get('resize').apply(this.get('oa'), [/*transition*/true]);
     else
       Ember.run.debounce(this.get('oa'), this.get('resize'), [/*transition*/true], 500);
@@ -6056,6 +6080,7 @@ export default Ember.Component.extend(Ember.Evented, {
        */
       windowResize = ! calledFromObserve,
             oa =  calledFromObserve ? this.oa : this;
+      let me = calledFromObserve ? this : oa.eventBus;
     // logWindowDimensions('', oa.vc.w);  // defined in utils/domElements.js
     function resizeDrawing() { 
       // if (windowResize)
@@ -6087,9 +6112,14 @@ export default Ember.Component.extend(Ember.Evented, {
             else
             {
                 console.log(arguments[1], arguments[0]);
-                // may not need debounce, having dropped didRender().
-                // .later() seems required - wait for DOM reflow caused by changes to layout.{left,right}.visible.
-                Ember.run.later(resizeDrawing, 300);
+                /* debounce is used to absorb the progressive width changes of
+                 * the side panels when they open / close (open is more
+                 * progressive).
+                 * After the values layout.{left,right}.visible change, DOM
+                 * reflow will modify viewport width, so the delay helps with
+                 * waiting for that.
+                 */
+                Ember.run.debounce(resizeDrawing, 300);
             }
         }
 
@@ -6098,6 +6128,8 @@ export default Ember.Component.extend(Ember.Evented, {
     .observes('layout.left.visible', 'layout.right.visible', 'leftPanelShown')
   /* could include in .observes() : 'layout.left.tab', but the tab name should not affect the width.
    * (currently the value of layout.left.tab seems to not change - it is just 'view').
+   * stacksWidthChanges.{left,right} are equivalent to leftPanelShown and layout.right.visible,
+   * so there is some duplication of dependencies, since resizeEffect() depends on stacksWidthChanges.@each
    */
 
 
