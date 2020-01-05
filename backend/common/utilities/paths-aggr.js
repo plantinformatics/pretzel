@@ -311,7 +311,7 @@ function keyValue (k,v) { let r = {}; r[k] = v; return r; };
 function valueBound(intervals, b, l) {
   let r = keyValue(
     l ? '$lte' : '$gte',
-    [ keyValue('$arrayElemAt', ['$value', l ? -1 : 0]),
+    [ keyValue('$arrayElemAt', ['$value', l ? 1 : 0]),
       +intervals.axes[b].domain[l]]
   );
   return r;

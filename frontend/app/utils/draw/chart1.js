@@ -1,15 +1,14 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
 
-import { getAttrOrCP } from '../utils/ember-devel';
-import { configureHorizTickHover } from '../utils/hover';
-import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
-import { noDomain } from '../utils/draw/axis';
-import { stacks } from '../utils/stacks'; // just for oa.z and .y, don't commit this.
+import { getAttrOrCP } from '../ember-devel';
+import { configureHorizTickHover } from '../hover';
+import { eltWidthResizable, noShiftKeyfilter } from '../domElements';
+import { noDomain } from '../draw/axis';
+import { stacks } from '../stacks'; // just for oa.z and .y, don't commit this.
 
-import InAxis from './in-axis';
 
 const className = "chart", classNameSub = "chartRow";
+
+/* global d3 */
 
 /*----------------------------------------------------------------------------*/
 
@@ -115,175 +114,14 @@ let oa = stacks.oa,
 
 /*----------------------------------------------------------------------------*/
 
-
-/* global d3 */
-
-/** Display data which has a numeric value for each y axis position (feature).
- * Shown as a line curve or bar chart, with the y axis of the graph as the baseline.
- *
- * @param block	a block returned by viewedChartable()
- * @param chart data (field name is className); may be either :
- * result of parseTextData() : array of {name : , value : , description : }
- * or chartBlock passed in : .features
- * @param axis  axisComponent;   parent axis-2d component
- * @param axisID  axisID
- * @param data oa
- * @param width resizedWidth
- *----------------
- * data attributes created locally, not passed in :
- * @param chart1
- */
-export default InAxis.extend({
-  blockService: service('data/block'),
-
-  className : className,
-
-  didRender() {
-    console.log("components/axis-chart didRender()");
-  },
-
-  blockFeatures : Ember.computed('block', 'block.features.[]', 'axis.axis1d.domainChanged', function () {
-    if (this.get('block.isChartable'))
-      this.drawBlockFeatures0();
-  }),
-  featuresCounts : Ember.computed('block', 'block.featuresCounts.[]', 'axis.axis1d.domainChanged', function () {
-    this.drawBlockFeaturesCounts();
-    return this.get('block.featuresCounts');
-  }),
-
-  drawBlockFeatures0 : function() {
-    let features = this.get('block.features');
-    let domain = this.get('axis.axis1d.domainChanged');
-    console.log('blockFeatures', features.length, domain);
-    if (features.length)  // -	should also handle drawing when .length changes to 0
-    {
-      if (features[0] === undefined)
-        dLog('drawBlockFeatures0', features.length, domain);
-      else
-        this.drawBlockFeatures(features);
-    }
-  },
-  drawBlockFeaturesCounts : function() {
-    let featuresCounts = this.get('block.featuresCounts');
-    let domain = this.get('axis.axis1d.domainChanged');
-    if (featuresCounts) {
-      console.log('drawBlockFeaturesCounts', featuresCounts.length, domain, this.get('block.id'));
-
-      /** example element of array f : */
-      const dataExample = 
-        {
-          "_id": {
-            "min": 100,
-            "max": 160
-          },
-          "count": 109
-        };
-      let f = featuresCounts.toArray(),
-      /** the min, max will be passed also - first need to factor out part of axis-chart for featuresCounts. */
-      fa = f; // .map(function (f0) { return f0.count;});
-      console.log('drawBlockFeaturesCounts', f);
-      let 
-        featureCountData = {
-          dataTypeName : 'featureCountData',
-          datum2Location : function datum2Location(d) { return d._id.min; },  // todo : use .max
-          datum2Value : function(d) { return d.count; },
-          datum2Description : function(d) { return JSON.stringify(d._id); }
-        };
-      // pass alternate dataConfig to layoutAndDrawChart(), defining alternate functions for {datum2Value, datum2Location }
-      this.layoutAndDrawChart(fa, featureCountData);
-    }
-  },
-  drawBlockFeatures : function(features) {
-    let f = features.toArray(),
-    fa = f.map(function (f0) { return f0._internalModel.__data;});
-
-    let axisID = this.get("axis.axisID"),
-    za = oa.z[axisID];
-    if (Object.keys(za).length == 2) {
-      dLog('drawBlockFeatures()', axisID, za, fa);
-      fa.forEach((f) => za[f.name] = f.value);
-    }
-
-    this.layoutAndDrawChart(fa);
-  },
-
-  redraw   : function(axisID, t) {
-    let data = this.get(className),
-    layoutAndDrawChart = this.get('layoutAndDrawChart');
-    if (data) {
-    console.log("redraw", this, (data === undefined) || data.length, axisID, t);
-    if (data)
-      layoutAndDrawChart.apply(this, [data]);
-    }
-    else {  // use block.features when not using data parsed from table.
-      this.drawBlockFeatures0();
-    }
-  },
-
-  /** Convert input text to an array.
-   * @param tableText text string, TSV, rows separated by \n and/or \r.
-   * First row may contain a header with column names, indicated by leading #.
-   * Column names "name",  "value" and "description" indicate the columns containing those values,
-   * otherwise the default columns are 0, 1, 2 respectively.
-   * Other columns are appended to the description value of the row.
-   */
-  parseTextData(tableText)
-  {
-    /* can replace most of this function with d3.tsv;
-     * It currently implements the feature that header is optional;   to replicate that can use
-     * dsv.parse() when header is input and dsv.parseRows() otherwise.
-    */
-    let values = [];
-    let rows = tableText.split(/[\n\r]+/);
-    let colIdx = {name : 0, value : 1, description : 2};
-    for (let i=0; i<rows.length; i++)
-    {
-      let col=rows[i].split(/[ \t]+/);
-      if ((rows[i].length == 0) || (col.length == 0))
-      {
-        console.log("empty row", i, rows[i]);
-      }
-      else if ((i == 0) && (col[0].startsWith("#")))
-      {
-        col[0] = col[0].substring(1); // trim off the leading #
-        colIdx["name"] = col.indexOf("name");
-        colIdx["value"] = col.indexOf("value");
-        colIdx["description"] = col.indexOf("description");
-      }
-      else
-      {
-      let
-        rowValue = {
-          name : col[colIdx["name"]],
-          value : col[colIdx["value"]]
-        },
-      description = col[colIdx["description"]];
-    for (let ic=0; ic<col.length; ic++)
-    {
-      if ((ic != colIdx["name"]) && (ic !=colIdx["value"]) && (ic != colIdx["description"]))
-      {
-        description += "_" + col[ic];
-      }
-    }
-        rowValue.description = description;
-
-      values.push(rowValue);
-      }
-    }
-
-    console.log("parseTextData values.length", values.length);
-    let result  = values;
-    return result;
-  },
-
-  layoutAndDrawChart(chart, dataConfig)
+function layoutAndDrawChart(axisChart, chart, dataConfig)
   {
     console.log("layoutAndDrawChart", chart, dataConfig && dataConfig.dataTypeName);
     // initial version supports only 1 split axis; next identify axis by axisID (and possibly stack id)
     // <g class="axis-use">
     // g.axis-outer#id<axisID>
     let
-      axisComponent = this.get("axis"),
+      axisComponent = axisChart.get("axis"),
     axisID = axisComponent.axisID,
     gAxis = d3.select("g.axis-outer#id" + axisID + "> g.axis-use"),
     /** relative to the transform of parent g.axis-outer */
@@ -300,7 +138,7 @@ export default InAxis.extend({
     /** isBlockData is not used if dataConfig is defined.  this can be moved out to the caller. */
     isBlockData = chart.length && (chart[0].description === undefined),
     valueName = chart.valueName || "Values",
-    oa = this.get('data'),
+    oa = axisChart.get('data'),
     // axisID = gAxis.node().parentElement.__data__,
     yAxis = oa.y[axisID], // this.get('y')
     yAxisDomain = yAxis.domain(), yDomain;
@@ -321,7 +159,7 @@ export default InAxis.extend({
       return inRange(dataConfig.datum2Location(d), yDomain);
     },
     data = chart.filter(withinZoomRegion);
-    let resizedWidth = this.get('width');
+    let resizedWidth = axisChart.get('width');
     console.log(resizedWidth, bbox, yDomain, pxSize, data.length, (data.length == 0) || dataConfig.datum2Location(data[0]));
     if (resizedWidth)
       bbox.width = resizedWidth;
@@ -533,7 +371,7 @@ export default InAxis.extend({
      * complexity in ensuring that the instance rendered by toggleBarsLineClosure() is
      * the same one whose options.bbox.width is updated from axis-chart.width.
     */
-    let chart1 = this.get("chart1");
+    let chart1 = axisChart.get("chart1");
     if (chart1)
     {
       chart1.options.bbox.width = bbox.width;
@@ -549,7 +387,7 @@ export default InAxis.extend({
                datum2Value : dataConfig.datum2Value,
                datum2Description : dataConfig.datum2Description
              });
-      this.set("chart1", chart1);
+      axisChart.set("chart1", chart1);
       addParentClass(g);
     }
     let b = chart1; // b for barChart
@@ -572,24 +410,10 @@ export default InAxis.extend({
     b.chartTypeToggle = chartTypeToggle;
 
     b.draw(data);
-  },
+  }
+;
 
-  pasteProcess: function(textPlain) {
-    console.log("components/axis-chart pasteProcess", textPlain.length);
+/*----------------------------------------------------------------------------*/
 
-    let
-    parseTextData = this.get('parseTextData'),
-    layoutAndDrawChart = this.get('layoutAndDrawChart');
-
-    let chart = parseTextData(textPlain);
-    this.set(className, chart); // used by axisStackChanged() : redraw() : layoutAndDrawChart()
-    let forTable = chart;
-    chart.valueName = "values"; // add user config
-    // ; draw chart.
-    layoutAndDrawChart.apply(this, [chart]);
-
-    this.set('data.chart', forTable);
-  },
-
-
-});
+/* subsequent step will move layoutAndDrawChart into class Chart1, and export that instead. */
+export { className, layoutAndDrawChart /*Chart1*/ };

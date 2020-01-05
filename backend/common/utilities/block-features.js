@@ -114,10 +114,18 @@ exports.blockFeatureLimits = function(db, blockId) {
     console.log('blockFeatureLimits', blockId);
   let ObjectId = ObjectID;
 
+  /** unwind the values array of Features, and group by blockId, with the min &
+   * max values within the Block.
+   * value may be [from, to, anyValue], so use slice to extract just [from, to],
+   * and $match $ne null to ignore to === undefined.
+   * The version prior to adding this comment assumed value was just [from, to] (optional to);
+   * so we can revert to that code if we separate additional values from the [from,to] location range.
+   */
   let
     group = [
-      {$project : {_id : 1, name: 1, blockId : 1, value : 1 }},
+      {$project : {_id : 1, name: 1, blockId : 1, value : {$slice : ['$value', 2]} }},
       {$unwind : '$value'}, 
+      {$match: { $or: [ { value: { $ne: null } } ] } },
       {$group : {
         _id : '$blockId' ,
         featureCount : { $sum: 1 },
