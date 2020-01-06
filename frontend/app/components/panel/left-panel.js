@@ -11,6 +11,7 @@ export default Component.extend({
     toggleLeftPanel() {
       $(".left-panel-shown").toggle();
       $(".left-panel-hidden").toggle();
+      $(".left-panel-shown").trigger('toggled');
     },
     loadBlock(block) {
       this.sendAction('loadBlock', block);

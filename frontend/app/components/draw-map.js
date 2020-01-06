@@ -5657,6 +5657,16 @@ export default Ember.Component.extend(Ember.Evented, {
 
     /*------------------------------------------------------------------------*/
 
+    /** Record the viewport Width and Height for use as dependencies of
+     * @see resizeEffect()
+     */
+    function recordViewport(w, h) {
+      this.setProperties({
+        viewportWidth : w,
+        viewportHeight : h
+      });
+    };
+
       /** Render the affect of resize on the drawing.
        * @param widthChanged   true if width changed
        * @param heightChanged   true if height changed
@@ -5665,6 +5675,22 @@ export default Ember.Component.extend(Ember.Evented, {
     function showResize(widthChanged, heightChanged, useTransition)
     {
         console.log('showResize', widthChanged, heightChanged, useTransition);
+      console.log('showResize',   me.get('viewportWidth'), oa.vc.viewPort.w, me.get('viewportHeight'), oa.vc.viewPort.h);
+      let viewPort = oa && oa.vc && oa.vc.viewPort;
+      if (viewPort)
+        /* When visibility of side panels (left, right) is toggled, width of
+         * those panels changes in a transition (uses flex in CSS), and hence
+         * resize() -> showResize() are called repeatedly in close succession,
+         * with slightly changing width.
+         * Minimise the impact of this by using debounce, and .toFixed(), since
+         * changes < 1 pixel aren't worth a re-render.
+         */
+        Ember.run.debounce(
+          me,
+          recordViewport,
+          viewPort.w.toFixed(),
+          viewPort.h.toFixed(),
+          500);
         updateXScale();
         collateO();
         if (widthChanged)
@@ -5731,9 +5757,12 @@ export default Ember.Component.extend(Ember.Evented, {
               axisBrushShowSelection(d, this);
             });
           DropTarget.prototype.showResize();
-          me.trigger('resized', widthChanged, heightChanged, useTransition);
         }
-        Ember.run.later( function () { showSynteny(oa.syntenyBlocks, undefined); });
+        Ember.run.later( function () {
+          /* probably better to do .trigger() within .later(); it works either way. */
+          if (widthChanged || heightChanged)
+            me.trigger('resized', widthChanged, heightChanged, useTransition);
+          showSynteny(oa.syntenyBlocks, undefined); });
       };
 
 //- brush-menu
@@ -5937,11 +5966,13 @@ export default Ember.Component.extend(Ember.Evented, {
     let oa = this.get('oa');
     oa.tracks  = [{start: 10, end : 20, description : "track One"}];
     this.set('toolTipHovered', false);
-    Ember.run.later(function() {
+    Ember.run.later(() => {
+      Ember.$('.left-panel-shown')
+        .on('toggled', (event) => this.readLeftPanelToggle() );
       Ember.$('.make-ui-draggable').draggable(); });
   },
 
-  drawEffect : Ember.computed('data', 'resizeEffect', function () {
+  drawEffect : Ember.computed('data.[]', 'resizeEffect', function () {
     let me = this;
     let data = this.get('data');
     Ember.run.throttle(function () {
@@ -5953,8 +5984,15 @@ export default Ember.Component.extend(Ember.Evented, {
 
     highlightFeature_drawFromParams(this);
   }),
-  resizeEffect : Ember.computed('stacksWidthChanges', function () {
-    if (true) // try without debounce
+  resizeEffect : Ember.computed(
+    /* viewportWidth and viewportHeight will change as a result of changes in
+     * stacksWidthChanges.{left,right}, so these dependencies could be
+     * consolidated (checking that the dependencies change after the element size
+     * has changed).
+     */
+    'stacksWidthChanges.@each', 'viewportWidth', 'viewportHeight',
+    function () {
+    if (false) // currently the display is probably smoother with the debounce; later after tidying up the resize structure this direct call may be better.
       this.get('resize').apply(this.get('oa'), [/*transition*/true]);
     else
       Ember.run.debounce(this.get('oa'), this.get('resize'), [/*transition*/true], 500);
@@ -5972,9 +6010,24 @@ export default Ember.Component.extend(Ember.Evented, {
       // just checking - will retire stacks.stacksCount anyway.
       if (count != stacks.stacksCount)
 	console.log('stacksWidthChanges',  count, '!=', stacks.stacksCount);
+      let leftPanelShown = this.readLeftPanelToggle(),
+      current = {
+        stacksCount : count,
+        splitAxes : this.get('splitAxes').length,
+        // this.get('layout.left.visible') is true, and does not update
+        left : leftPanelShown,
+        right : this.get('layout.right.visible')
+      };
+      console.log('stacksWidthChanges', current);
+      return current;
+    }),
+  /** Read the CSS attribute display of left-panel to determine if it is shown / visible.  */
+  readLeftPanelToggle() {
       let leftPanel = Ember.$('#left-panel'),
       /** leftPanel.hasClass('left-panel-shown') is always true; instead the
        * <div>'s display attribute is toggled between flex and none.
+       * using jQuery .toggle() applied to button.left-panel-{shown,hidden},
+       * in toggleLeftPanel(), via left-panel.hbs action of button.panel-collapse-button.
        * This could be made consistent with right panel, but planning to use golden-layout in place of this anyway.
        *
        * .attributeStyleMap is part of CSS Typed OM; is in Chrome, not yet Firefox.
@@ -5985,17 +6038,14 @@ export default Ember.Component.extend(Ember.Evented, {
       leftPanelStyleDisplay = haveCSSOM ?
         leftPanel[0].attributeStyleMap.get('display').value :
         leftPanel[0].style.display,
-      leftPanelShown = leftPanelStyleDisplay != 'none',
-      current = {
-        stacksCount : count,
-        splitAxes : this.get('splitAxes').length,
-        // this.get('layout.left.visible') is true, and does not update
-        left : leftPanelShown,
-        right : this.get('layout.right.visible')
-      };
-      console.log('stacksWidthChanges', current, leftPanel[0]);
-      return current;
-    }),
+      leftPanelShown = leftPanelStyleDisplay != 'none'
+    ;
+    dLog('readLeftPanelToggle', leftPanel[0], leftPanelShown);
+    /* The returned value is used only in trace.  This attribute .leftPanelShown is observed by resize()
+ */
+    this.set('leftPanelShown', leftPanelShown);
+    return leftPanelShown;
+  },
 
   /** @return true if changes in #stacks or split axes impact the width and horizontal layout.
    * (maybe dotPlot / axis.perpendicular will affect width also)
@@ -6030,9 +6080,10 @@ export default Ember.Component.extend(Ember.Evented, {
        */
       windowResize = ! calledFromObserve,
             oa =  calledFromObserve ? this.oa : this;
+      let me = calledFromObserve ? this : oa.eventBus;
     // logWindowDimensions('', oa.vc.w);  // defined in utils/domElements.js
     function resizeDrawing() { 
-      if (windowResize)
+      // if (windowResize)
         eltResizeToAvailableWidth(
           /*bodySel*/ 'div.ember-view > div > div.body > div',
           /*centreSel*/ '.resizable');
@@ -6055,19 +6106,32 @@ export default Ember.Component.extend(Ember.Evented, {
         console.log("oa.vc", oa.vc, arguments);
         if (oa.vc)
         {
-            if (true || ! layoutChanged)  // may not need debounce, having dropped didRender().
+            if (false && ! layoutChanged)
                 // Currently debounce-d in resizeThis(), so call directly here.
                 resizeDrawing();
             else
             {
                 console.log(arguments[1], arguments[0]);
-                Ember.run.debounce(resizeDrawing, 300);  // 0.3sec
+                /* debounce is used to absorb the progressive width changes of
+                 * the side panels when they open / close (open is more
+                 * progressive).
+                 * After the values layout.{left,right}.visible change, DOM
+                 * reflow will modify viewport width, so the delay helps with
+                 * waiting for that.
+                 */
+                Ember.run.debounce(resizeDrawing, 300);
             }
         }
 
 
   }
-        .observes('layout.left.visible', 'layout.right.visible')
+    .observes('layout.left.visible', 'layout.right.visible', 'leftPanelShown')
+  /* could include in .observes() : 'layout.left.tab', but the tab name should not affect the width.
+   * (currently the value of layout.left.tab seems to not change - it is just 'view').
+   * stacksWidthChanges.{left,right} are equivalent to leftPanelShown and layout.right.visible,
+   * so there is some duplication of dependencies, since resizeEffect() depends on stacksWidthChanges.@each
+   */
+
 
 });
 
