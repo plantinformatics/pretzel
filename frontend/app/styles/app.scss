@@ -1248,7 +1248,8 @@ div#left-panel > ul
 
 div#left-panel > div.tab-content
 {
-  height: inherit;
+  height: 100%;
+  overflow-y: hidden;
 }
 
 div#left-panel > div.tab-content > div.tab-pane
