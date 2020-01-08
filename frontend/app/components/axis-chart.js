@@ -87,9 +87,16 @@ export default InAxis.extend({
       let 
         featureCountData = {
           dataTypeName : 'featureCountData',
-          datum2Location : function datum2Location(d) { return d._id.min; },  // todo : use .max
+          datum2Location : function datum2Location(d) { return [d._id.min, d._id.max]; },
           datum2Value : function(d) { return d.count; },
-          datum2Description : function(d) { return JSON.stringify(d._id); }
+          /** datum2Description() is not used;  possibly intended for the same
+           * purpose as hoverTextFn(), so they could be assimilated.  */
+          datum2Description : function(d) { return JSON.stringify(d._id); },
+          hoverTextFn : function (d, block) {
+            let valueText = '[' + d._id.min + ',' + d._id.max + '] : ' + d.count,
+            blockName = block.view && block.view.longName();
+            return valueText + '\n' + blockName;
+          }
         };
       // pass alternate dataConfig to layoutAndDrawChart(), defining alternate functions for {datum2Value, datum2Location }
       this.layoutAndDrawChart(fa, featureCountData);
@@ -121,8 +128,11 @@ export default InAxis.extend({
     if (data)
       layoutAndDrawChart.apply(this, [data]);
     }
-    else {  // use block.features when not using data parsed from table.
-      this.drawBlockFeatures0();
+    else {  // use block.features or block.featuresCounts when not using data parsed from table.
+      if (this.get('block.isChartable'))
+        this.drawBlockFeatures0();
+      else
+        this.drawBlockFeaturesCounts();
     }
   },
 

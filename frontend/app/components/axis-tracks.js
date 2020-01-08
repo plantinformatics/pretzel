@@ -587,6 +587,10 @@ export default InAxis.extend({
             if (! interval.length || (interval.length == 1))
               interval = [interval, interval];
             /* interval-tree:createIntervalTree() assumes the intervals are positive, and gets stack overflow if not. */
+            else if (interval[1] === null) {
+              /* undefined / null value[1] indicates 0-length interval.  */
+              interval[1] = interval[0];
+            }
             else if (interval[0] > interval[1]) {
               let swap = interval[0];
               interval[0] = interval[1];

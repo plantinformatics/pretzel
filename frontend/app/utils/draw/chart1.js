@@ -4,6 +4,7 @@ import { configureHorizTickHover } from '../hover';
 import { eltWidthResizable, noShiftKeyfilter } from '../domElements';
 import { noDomain } from '../draw/axis';
 import { stacks } from '../stacks'; // just for oa.z and .y, don't commit this.
+import { inRangeEither } from './zoomPanCalcs';
 
 
 const className = "chart", classNameSub = "chartRow";
@@ -16,15 +17,7 @@ const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 /* Copied from draw-map.js */
-    /**
-     * @return true if a is in the closed interval range[]
-     * @param a value
-     * @param range array of 2 values - limits of range.
-     */
-    function inRange(a, range)
-    {
-      return range[0] <= a && a <= range[1];
-    }
+
 
 function featureLocation(oa, axisID, d)
 {
@@ -37,7 +30,33 @@ function featureLocation(oa, axisID, d)
   else
     return feature.location;
 }
+
+/** If the given value is an interval, convert it to a single value by calculating the middle of the interval.
+ * @param location is a single value or an array [from, to]
+ * @return the middle of an interval
+ */
+function middle(location) {
+  let result = location.length ?
+    location.reduce((sum, val) => sum + val, 0) / location.length
+    : location;
+  return result;
+}
   
+/** @return a function to map a chart datum to a y value or interval.
+ */
+function scaleMaybeInterval(datum2Location, yScale) {
+  /* In both uses in this file, the result is passed to middle(), so an argument
+   * could be added to scaleMaybeInterval() to indicate the result should be a
+   * single value (using mid-point if datum location is an interval).
+   */
+
+  function datum2LocationScaled(d) {
+    /** location may be an interval [from, to] or a single value. */
+    let l = datum2Location(d);
+    return l.length ? l.map((li) => yScale(li)) : yScale(l); };
+  return datum2LocationScaled;
+}
+
 /*----------------------------------------------------------------------------*/
 /* based on axis-1d.js: hoverTextFn() and setupHover() */
 
@@ -45,23 +64,19 @@ function featureLocation(oa, axisID, d)
 function hoverTextFn (feature, block) {
   let
     value = getAttrOrCP(feature, 'value'),
+  /** undefined values are filtered out below. */
   valueText = value && (value.length ? ('' + value[0] + ' - ' + value[1]) : value),
 
-  blockR = block.block,
+  /** block.view is the Stacks Block. */
+  blockName = block.view && block.view.longName(),
   featureName = getAttrOrCP(feature, 'name'),
   /** common with dataConfig.datum2Description  */
   description = value && JSON.stringify(value),
 
-  text = [featureName, valueText, description]
+  text = [featureName, valueText, description, blockName]
     .filter(function (x) { return x; })
     .join(" : ");
   return text;
-};
-
-function configureChartHover(feature) 
-{
-  let block = this.parentElement.__data__;
-  return configureHorizTickHover.apply(this, [feature, block, hoverTextFn]);
 };
 
 
@@ -102,12 +117,14 @@ let oa = stacks.oa,
       datum2Location,
       datum2Value : datum2Value,
       datum2Description : function(d) { return d.description; }
-
     },
     blockData = {
       dataTypeName : 'blockData',
       datum2Location,
-      datum2Value : function(d) { return d.value[0]; },
+      /** The effects data is placed in .value[2] (the interval is in value[0..1]).
+       * Use the first effects value by default, but later will combine other values.
+       */
+      datum2Value : function(d) { let v = d.value[2]; if (v.length) v = v[0]; return v; },
       datum2Description : function(d) { return JSON.stringify(d.value); }
     };
 
@@ -150,13 +167,16 @@ function layoutAndDrawChart(axisChart, chart, dataConfig)
     else
       yDomain = [yAxis.invert(yrange[0]), yAxis.invert(yrange[1])];
 
-    if (! dataConfig)
+    if (! dataConfig) {
       dataConfig = isBlockData ? blockData : parsedData;
+      if (! dataConfig.hoverTextFn)
+        dataConfig.hoverTextFn = hoverTextFn;
+    }
 
     let
     pxSize = (yDomain[1] - yDomain[0]) / bbox.height,
     withinZoomRegion = function(d) {
-      return inRange(dataConfig.datum2Location(d), yDomain);
+      return inRangeEither(dataConfig.datum2Location(d), yDomain);
     },
     data = chart.filter(withinZoomRegion);
     let resizedWidth = axisChart.get('width');
@@ -187,23 +207,30 @@ function layoutAndDrawChart(axisChart, chart, dataConfig)
       parentH = options.bbox.height, // +pp.attr("height")
       width = parentW - margin.left - margin.right,
       height = parentH - margin.top - margin.bottom;
+      /** The chart is perpendicular to the usual presentation.
+       * The names x & y (in {x,y}Range and yLine) match the orientation on the
+       * screen, rather than the role of abscissa / ordinate; the data maps
+       * .name (location) -> .value, which is named y -> x.
+       */
       let
         xRange = [0, width],
-      yRange = [height, 0],
-      y = d3.scaleBand().rangeRound(yRange).padding(0.1),
+      yRange = [0, height],
+      // yRange is used as range of yLine by this.scaleLinear().
+      /* scaleBand would suit a data set with evenly spaced or ordinal / nominal y values.
+       * yBand = d3.scaleBand().rangeRound(yRange).padding(0.1),
+       */
+      y = this.scaleLinear(yRange, data),
       x = d3.scaleLinear().rangeRound(xRange);
       // datum2LocationScaled() uses me.x rather than the value in the closure in which it was created.
       this.x = x;
       // Used by bars() - could be moved there, along with  datum2LocationScaled().
       this.y = y;
-      // line() does not use y;  it creates yLine and uses yRange, to set its range.
-      this.yRange = yRange;
       console.log("Chart1", parentW, parentH, xRange, yRange, options.dataTypeName);
 
       let me = this;
       /* these can be renamed datum2{abscissa,ordinate}{,Scaled}() */
       /* apply y after scale applied by datum2Location */
-      function datum2LocationScaled(d) { return me.y(options.datum2Location(d)); }
+      let datum2LocationScaled = scaleMaybeInterval(options.datum2Location, me.y);
       function datum2ValueScaled(d) { return me.x(options.datum2Value(d)); }
       this.datum2LocationScaled = datum2LocationScaled;
       this.datum2ValueScaled = datum2ValueScaled;
@@ -224,7 +251,8 @@ function layoutAndDrawChart(axisChart, chart, dataConfig)
        * +	alternate view : line
        * + transition between views, zoom, stack
        */
-      y.domain(data.map(options.datum2Location));
+      // scaleBand() domain is a list of all y values.
+      // yBand.domain(data.map(options.datum2Location));
       x.domain([0, d3.max(data, options.datum2Value)]);
 
       let axisXa =
@@ -247,6 +275,7 @@ function layoutAndDrawChart(axisChart, chart, dataConfig)
         .attr("text-anchor", "end")
         .text(valueName);
 
+      data = data.sort((a,b) => middle(this.options.datum2Location(a)) - middle(this.options.datum2Location(b)));
       this.drawContent(data);
       this.currentData = data;
     };
@@ -254,6 +283,7 @@ function layoutAndDrawChart(axisChart, chart, dataConfig)
     {
       let
         options = this.options,
+      block = this.block,
       g = this.g;
       let
         rs = g
@@ -265,32 +295,85 @@ function layoutAndDrawChart(axisChart, chart, dataConfig)
         .append("rect");
       ra
         .attr("class", options.barClassName)
-      .each(configureChartHover);
+        /** parent datum is currently 1, but could be this.block;
+         * this.parentElement.parentElement.__data__ has the axis id (not the blockId),
+         */
+        .each(function (d) { configureHorizTickHover.apply(this, [d, block, options.hoverTextFn]); });
       ra
         .merge(rs)
         .transition().duration(1500)
         .attr("x", 0)
-        .attr("y", this.datum2LocationScaled)
-        .attr("height", this.y.bandwidth())
+        .attr("y", (d) => { let li = this.datum2LocationScaled(d); return li.length ? li[0] : li; })
+        // yBand.bandwidth()
+        .attr("height", this.rectHeight.bind(this))
         .attr("width", this.datum2ValueScaled);
       rx.remove();
       console.log(gAxis.node(), rs.nodes(), re.nodes());
     };
-    Chart1.prototype.line = function (data)
+    /** Calculate the height of rectangle to be used for this data point
+     * @param this  is Chart1, not DOM element.
+     */
+    Chart1.prototype.rectHeight = function (d, i, g)
+    {
+      let height, locationScaled;
+      /* if locationScaled is an interval, calculate height from it.
+       * Otherwise, use adjacent points to indicate height.
+       */
+      if ((locationScaled = this.datum2LocationScaled(d)).length) {
+        height = Math.abs(locationScaled[1] - locationScaled[0]);
+      }
+      else {
+        /* the boundary between 2 adjacent points is midway between them.
+         * So sum that half-distance for the previous and next points.
+         * the y range distance from the previous point to the next point.
+         * If this point is either end, simply double the other half-distance.
+         */
+        if (! g.length)
+          height = this.yLine.range() / 10;
+        else {
+          let r = [];
+          if (i > 0)
+            r.push(g[i-1].__data__);
+          r.push(d);
+          if (i < g.length-1)
+            r.push(g[i+1].__data__);
+          let y =
+            r.map(this.datum2ValueScaled);
+          height = Math.abs(y[y.length-1] - y[0]) * 2 / (y.length-1);
+          dLog('rectHeight', d, i, /*g,*/ r, y, height);
+          if (! height)
+            height = 1;
+        }
+      }
+      return height;
+    };
+    Chart1.prototype.scaleLinear = function (yRange, data)
     {
       // based on https://bl.ocks.org/mbostock/3883245
       if (! this.yLine)
-        this.yLine = d3.scaleLinear()
-        .rangeRound(this.yRange);
+        this.yLine = d3.scaleLinear();
+      let y = this.yLine;
+      y.rangeRound(yRange);
+      let
+        /** location may be an interval, so flatten the result.
+         * Later Array.flat() can be used.
+         */
+        yFlat = data
+        .map(this.options.datum2Location)
+        .reduce((acc, val) => acc.concat(val), []);
+      y.domain(d3.extent(yFlat));
+      console.log('scaleLinear domain', y.domain(), yFlat);
+      return y;
+    };
+    Chart1.prototype.line = function (data)
+    {
       let y = this.yLine, options = this.options;
 
-      function datum2LocationScaled(d) { return y(options.datum2Location(d)); }
-
+      let datum2LocationScaled = scaleMaybeInterval(options.datum2Location, y);
       let line = d3.line()
         .x(this.datum2ValueScaled)
-        .y(datum2LocationScaled);
+        .y((d) => middle(datum2LocationScaled(d)));
 
-      y.domain(d3.extent(data, this.options.datum2Location));
       console.log("line x domain", this.x.domain(), this.x.range());
 
       let
@@ -385,8 +468,10 @@ function layoutAndDrawChart(axisChart, chart, dataConfig)
                dataTypeName : dataConfig.dataTypeName,
                datum2Location : dataConfig.datum2Location,
                datum2Value : dataConfig.datum2Value,
-               datum2Description : dataConfig.datum2Description
+               datum2Description : dataConfig.datum2Description,
+               hoverTextFn : dataConfig.hoverTextFn
              });
+      chart1.block = axisChart.get('block');
       axisChart.set("chart1", chart1);
       addParentClass(g);
     }

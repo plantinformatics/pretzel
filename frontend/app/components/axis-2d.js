@@ -69,6 +69,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       return dataBlocks;
     }),
 
+  viewedChartable : Ember.computed('blockService.viewedChartable.[]', 'axisID',
+    function () {
+      let
+      id = this.get('axisID'),
+      viewedChartable = this.get('blockService.viewedChartable')
+        .filter((b) => b.axis.axisName === id);
+      console.log('viewedChartable', id, viewedChartable);
+      return viewedChartable;
+  }),
 
   /*--------------------------------------------------------------------------*/
 
