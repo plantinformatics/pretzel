@@ -169,6 +169,13 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       newTaskInstance = datasetsTaskPerformance.task.perform();
       dLog('controller/mapview: updateModel()', newTaskInstance);
       model.set('availableMapsTask', newTaskInstance);
+
+      /** If this is called as refreshDatasets from data-csv then we want to get
+       * blockFeatureLimits for the added block.
+       */
+      newTaskInstance.then((datasets) => {
+        this.get('block').ensureFeatureLimits();
+      });
     }
   },
 
@@ -248,6 +255,11 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
 
     let getBlocks = blockService.get('getBlocksSummary');
     let blocksSummaryTasks = getBlocks.apply(blockService, [[id]]);
+    /* get featureLimits if not already received.
+     * Also adding a similar request to updateModal (refreshDatasets) so by this
+     * time that result should have been received.
+     */
+    this.ensureFeatureLimits(id);
 
     /** Before progressive loading this would load the data (features) of the block. */
     const progressiveLoading = true;
