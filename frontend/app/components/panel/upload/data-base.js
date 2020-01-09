@@ -24,7 +24,10 @@ export default Ember.Component.extend({
   },
   setSuccess(msg) {
     let response = msg ? msg : 'Uploaded successfully';
-    response += ` from file "${this.get('file').name}"`;
+    /** .file is undefined (null) when data is read from table instead of from file */
+    let file = this.get('file');
+    if (file)
+      response += ` from file "${file.name}"`;
     this.setProperties({
       isProcessing: false,
       successMessage: response,
