@@ -1,4 +1,5 @@
 import Ember from 'ember';
+import DS from 'ember-data';
 
 const { computed : { readOnly } } = Ember;
 const { inject: { service } } = Ember;
@@ -7,28 +8,40 @@ import ViewedBlocks from '../mixins/viewed-blocks';
 
 /* global d3 */
 
-console.log("controllers/mapview.js");
+const dLog = console.debug;
 
-let trace_dataflow = 1;
-let trace_select = 1;
+dLog("controllers/mapview.js");
+
+let trace_dataflow = 0;
+let trace_select = 0;
 
 export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   dataset: service('data/dataset'),
   block: service('data/block'),
 
+  /** Array of available datasets populated from model 
+   */
+  datasets: Ember.computed('model', 'model.availableMapsTask', 'model.availableMapsTask.value', function () {
+    let task = this.get('model.availableMapsTask');
+    let promise = task.then(function (value) { dLog('datasets from task', value); return value; });
+    let resultP = DS.PromiseArray.create({ promise: promise });
+    dLog(task, promise, 'resultP', resultP);
+    return resultP;
+  }),
+
   actions: {
     // layout configuration
     setVisibility: function(side) {
-      // console.log("setVisibility", side);
+      // dLog("setVisibility", side);
       let visibility = this.get(`layout.${side}.visible`)
       this.set(`layout.${side}.visible`, !visibility);
     },
     setTab: function(side, tab) {
-      // console.log("setTab", side, tab);
+      // dLog("setTab", side, tab);
       this.set(`layout.${side}.tab`, tab);
     },
     updateSelectedFeatures: function(features) {
-    	// console.log("updateselectedFeatures in mapview", features.length);
+    	// dLog("updateselectedFeatures in mapview", features.length);
       this.set('selectedFeatures', features);
       this.send('setTab', 'right', 'selection');
     },
@@ -37,7 +50,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
      * being an array of features found in that block.
      */
     updateFeaturesInBlocks: function(featuresInBlocks) {
-      // console.log("updateFeaturesInBlocks in mapview", featuresInBlocks);
+      // dLog("updateFeaturesInBlocks in mapview", featuresInBlocks);
       this.set('featuresInBlocks', featuresInBlocks);
     },
 
@@ -57,7 +70,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
 
     updateRoute() {
       let block_viewedIds = this.get('block.viewedIds');
-      console.log("controller/mapview", "updateRoute", this.target.currentURL, block_viewedIds);
+      dLog("controller/mapview", "updateRoute", this.target.currentURL, block_viewedIds);
 
       let queryParams =
         {'mapsToView' : block_viewedIds,
@@ -74,38 +87,49 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     /** Change the state of the named block to not-viewed.
      */
     removeMap : function(mapName) {
-      this.get('setViewed').apply(this, [mapName, false]);
+      /* delay to avoid nextSibling of null in insertAfter() */
+      Ember.run.later(() => this.get('setViewed').apply(this, [mapName, false]));
     },
 
     onDelete : function (modelName, id) {
-      console.log('onDelete', modelName, id);
+      dLog('onDelete', modelName, id);
       if (modelName == 'block')
         this.send('removeMap', id); // block
       else
-        console.log('TODO : undisplay child blocks of', modelName, id);
+        dLog('TODO : undisplay child blocks of', modelName, id);
     },
     toggleShowUnique: function() {
-      console.log("controllers/mapview:toggleShowUnique()", this);
+      dLog("controllers/mapview:toggleShowUnique()", this);
       this.set('isShowUnique', ! this.get('isShowUnique'));
     }
     , isShowUnique: false
     , togglePathColourScale: function() {
-      console.log("controllers/mapview:togglePathColourScale()", this);
+      dLog("controllers/mapview:togglePathColourScale()", this);
       this.set('pathColourScale', ! this.get('pathColourScale'));
     }
     , pathColourScale: true,
 
     /** also load parent block */
     loadBlock : function loadBlock(block) {
-      console.log('loadBlock', block);
+      dLog('loadBlock', block);
+      // also done in useTask() : (mixins/viewed-blocks)setViewed() : (data/block.js)setViewedTask()
+      block.set('isViewed', true);
       let referenceBlock = block.get('referenceBlock');
       if (referenceBlock)
         loadBlock.apply(this, [referenceBlock]);
 
-      /** in result of featureSearch(), used in goto-feature-list, .block has .id but not .get */
-      let id = block.get ? block.get('id') : block.id;
-      let t = this.get('useTask');
-      t.apply(this, [id]);
+      /* Before progressive loading this would load the data (features) of the block.
+       * Now it just loads summary information : featuresCount (block total) and
+       * also featuresCounts (binned counts).
+       * The block record itself is already loaded in the initial Datasets request;
+       * - it is the parameter `block`.
+       */
+      if (true) {
+        /** in result of featureSearch(), used in goto-feature-list, .block has .id but not .get */
+        let id = block.get ? block.get('id') : block.id;
+        let t = this.get('useTask');
+        t.apply(this, [id]);
+      }
     },
     blockFromId : function(blockId) {
       let store = this.get('store'),
@@ -114,7 +138,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     },
 
     selectBlock: function(block) {
-      console.log('SELECT BLOCK mapview', block.get('name'), block.get('mapName'), block.id, block);
+      dLog('SELECT BLOCK mapview', block.get('name'), block.get('mapName'), block.id, block);
       this.set('selectedBlock', block);
       d3.selectAll("ul#maps_aligned > li").classed("selected", false);
       d3.select('ul#maps_aligned > li[data-chr-id="' + block.id + '"]').classed("selected", true);
@@ -122,7 +146,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       function dataIs(id) { return function (d) { return d == id; }; }; 
       d3.selectAll("g.axis-outer").classed("selected", dataIs(block.id));
       if (trace_select)
-      d3.selectAll("g.axis-outer").each(function(d, i, g) { console.log(this); });
+      d3.selectAll("g.axis-outer").each(function(d, i, g) { dLog(this); });
       // this.send('setTab', 'right', 'block');
     },
     selectBlockById: function(blockId) {
@@ -136,16 +160,22 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       this.set('selectedDataset', ds);
       this.send('setTab', 'right', 'dataset');
     },
-    /** Get all available maps.
+    /** Re-perform task to get all available maps.
      */
     updateModel: function() {
       let model = this.get('model');
-      console.log("controller/mapview: model()", model, 'get datasets');
-      // see related : routes/mapview.js:model()
+      dLog('controller/mapview: updateModel()', model);
       let datasetsTaskPerformance = model.get('availableMapsTask'),
       newTaskInstance = datasetsTaskPerformance.task.perform();
-      console.log(datasetsTaskPerformance, newTaskInstance);
+      dLog('controller/mapview: updateModel()', newTaskInstance);
       model.set('availableMapsTask', newTaskInstance);
+
+      /** If this is called as refreshDatasets from data-csv then we want to get
+       * blockFeatureLimits for the added block.
+       */
+      newTaskInstance.then((datasets) => {
+        this.get('block').ensureFeatureLimits();
+      });
     }
   },
 
@@ -159,6 +189,8 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       'tab': 'selection'
     }
   },
+
+  controls : Ember.Object.create({ view : {  } }),
 
   queryParams: ['mapsToView'],
   mapsToView: [],
@@ -184,7 +216,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   },
 
   currentURLDidChange: function () {
-    console.log('currentURLDidChange', this.get('target.currentURL'));
+    dLog('currentURLDidChange', this.get('target.currentURL'));
   }.observes('target.currentURL'),
 
 
@@ -199,10 +231,10 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
    */
   hasData: Ember.computed(
     function() {
-      let viewedBlocks = this.get('block.viewed');
+      let viewedBlocksLength = this.get('block.viewed.length');
       if (trace_dataflow)
-        console.log("hasData", ! viewedBlocks || viewedBlocks.length);
-      return (viewedBlocks && viewedBlocks.length > 0);
+        dLog("hasData", viewedBlocksLength);
+      return viewedBlocksLength > 0;
     }),
 
   /** Update queryParams and URL.
@@ -210,7 +242,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   queryParamsValue : Ember.computed(
     'block.viewedIds', 'block.viewedIds.[]', 'block.viewedIds.length',
     function() {
-      console.log('queryParamsValue');
+      dLog('queryParamsValue');
       this.send('updateRoute');
     }),
 
@@ -218,12 +250,25 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
    * to get the block data.
    */
   useTask : function (id) {
-    console.log("useTask", id);
+    dLog("useTask", id);
     let blockService = this.get('block');
-    let taskGet = blockService.get('taskGet');
-    let block = taskGet.perform(id);
-    console.log("block", id, block);
-    // block.set('isViewed', true);
+
+    let getBlocks = blockService.get('getBlocksSummary');
+    let blocksSummaryTasks = getBlocks.apply(blockService, [[id]]);
+    /* get featureLimits if not already received.
+     * Also adding a similar request to updateModal (refreshDatasets) so by this
+     * time that result should have been received.
+     */
+    this.ensureFeatureLimits(id);
+
+    /** Before progressive loading this would load the data (features) of the block. */
+    const progressiveLoading = true;
+    if (! progressiveLoading) {
+      let taskGet = blockService.get('taskGet');
+      let block = taskGet.perform(id);
+      dLog("block", id, block);
+      // block.set('isViewed', true);
+    }
   }
 
 

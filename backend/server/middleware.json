@@ -3,6 +3,7 @@
     "loopback#favicon": {}
   },
   "initial": {
+    "./middleware/route_time": {},
     "compression": {},
     "cors": {
       "params": {
@@ -28,6 +29,12 @@
     "helmet#noSniff": {},
     "helmet#noCache": {
       "enabled": false
+    },
+    "./middleware/memcache": {
+      "params": {
+        "duration": 3600
+      },
+      "paths": ["/api/Blocks/pathsViaStream"]
     }
   },
   "session": {},

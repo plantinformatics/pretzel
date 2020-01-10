@@ -1,0 +1,12 @@
+
+
+{{elem/icon-toggle state=active iconTrue='minus' iconFalse='plus' }}
+
+<span title={{hoverText}} class="truncate" style="flex: 1;">
+  {{nodeName}}
+</span>
+
+{{#if combinedActive}}
+  {{yield}}
+{{/if}}
+

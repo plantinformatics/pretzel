@@ -1,0 +1,14 @@
+{{!-- an extract from entry-block.hbs, sans the editing facilities, and with
+  added identification because the block name is often block.scope, will be
+  identical to the sibling elements because the blocks are grouped by scope.
+  --}}
+
+{{record/entry-block-add-button entry=entry loadBlock="loadBlock"}}
+<span title={{entry.datasetId.name}}>
+  {{or entry.datasetId.meta.explorerName entry.datasetId.meta.shortName entry.datasetId.shortName entry.datasetId.name }}
+</span>
+{{#if (compare entry.name '!==' entry.scope) }}
+  <span class="blockInScope" title={{entry.name}}>{{entry.name}}</span>
+{{/if}}
+
+

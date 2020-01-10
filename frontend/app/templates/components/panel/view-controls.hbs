@@ -31,6 +31,68 @@
         </div>
       </div>
     </li>
+
+    <li class="list-group-item">
+      <div>
+        <ul class="nav nav-tabs li-active-extra">
+          <!-- To change the initial active tab, change .active class of both .active-detail and .tab-pane; change also .in class of the latter.
+               also change send(pathTabActive ) in didInsertElement()
+             -->
+          <li class="active-detail">
+	    <a data-toggle="tab" href="#tab-paths-density" onclick={{action "pathTabActive" "density"}}>Paths - Density</a>
+            <div>{{ pathControlActiveDensity }}</div>
+          </li>
+          <li class="active-detail active">
+	    <a data-toggle="tab" href="#tab-paths-sample" onclick={{action "pathTabActive" "sample"}}>- Sample</a>
+            <div>{{ pathControlActiveSample }}</div>
+          </li>
+
+        </ul>
+
+        <div class="tab-content">
+
+          <div id="tab-paths-density" class="tab-pane fade">
+            <input type="range" 
+	           id="range-pathDensity" 
+	           value={{pathDensity}}
+                   oninput={{action (mut pathDensity) value="target.value"}}
+	           min="-50" max="50"
+            >
+          </div>
+
+          <div id="tab-paths-sample" class="tab-pane fade in active">
+            <input type="range" 
+	           id="range-pathSample" 
+	           value={{pathSample}}
+                   oninput={{action (mut pathSample) value="target.value"}}
+	           min="0" max="100"
+            >
+          </div>
+
+        </div>
+
+      </div>
+
+    </li>
+    <li class="list-group-item">
+      <div>
+        {{input type="checkbox" checked=pathsViaStream class="toggle"}}
+        <label>Path Stream</label>
+        <span style="margin-left:2em; vertical-align: bottom;">Limit : {{ pathControlNFeatures }}</span>
+      </div>
+      <div>
+        <input type="range" 
+	       id="range-pathNFeatures" 
+	       value={{pathNFeatures}} 
+               oninput={{action (mut pathNFeatures) value="target.value"}}
+	       min="0" max="100"
+        />
+      </div>
+
+    </li>
+
+
+
     <li class="list-group-item">
       <input type="checkbox" 
              id="checkbox-toggleModePathHover" 

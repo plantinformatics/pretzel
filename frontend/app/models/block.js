@@ -2,11 +2,28 @@ import Ember from 'ember';
 import DS from 'ember-data';
 import attr from 'ember-data/attr';
 // import { PartialModel, partial } from 'ember-data-partial-model/utils/model';
+const { inject: { service } } = Ember;
+import { A } from '@ember/array';
+import { and } from '@ember/object/computed';
+
+
+import { intervalMerge }  from '../utils/interval-calcs';
+
+const trace_block = 0;
+const dLog = console.debug;
+
+
+const moduleName = 'models/block';
+
 
 export default DS.Model.extend({
+  pathsP : service('data/paths-progressive'), // for getBlockFeaturesInterval()
+  blockService : service('data/block'),
+
   datasetId: DS.belongsTo('dataset'),
   annotations: DS.hasMany('annotation', { async: false }),
   intervals: DS.hasMany('interval', { async: false }),
+  // possibly async:true when !allInitially, if needed.
   features: DS.hasMany('feature', { async: false }),
   range: attr('array'),
   scope: attr('string'),
@@ -57,19 +74,85 @@ export default DS.Model.extend({
       let id = this.get('id'),
       odd = id.charCodeAt(id.length - 2) & 0x1;
       paths |= odd;
-      console.log(id, odd);
+      dLog(id, odd);
     }
-    // console.log('showPaths', dataset, paths);
+    // dLog('showPaths', dataset, paths);
     return paths;
   }),
 
   /*--------------------------------------------------------------------------*/
 
+  hasFeatures : Ember.computed('featureCount', function () {
+    return this.get('featureCount') > 0;
+  }),
+  isData : and('isLoaded', 'hasFeatures'),
+
+  /*--------------------------------------------------------------------------*/
+
+
+  featuresLength : Ember.computed('features.[]', function () {
+    let featuresLength = this.get('features.length');
+    if (trace_block)
+      dLog('featuresLength', featuresLength, this.get('id'));
+    return featuresLength;
+  }),
+  /** @return undefined if ! features.length,
+   * otherwise [min, max] of block's feature.value
+   */
+  featuresDomainUpdate : Ember.computed('features.[]', function () {
+    let featuresDomain, features = this.get('features');
+    if (features.length) {
+      featuresDomain = features
+        .mapBy('value')
+        .reduce(intervalMerge, []);
+
+      if (trace_block)
+        dLog('featuresDomainUpdate', featuresDomain, this.get('id'));
+    }
+    return featuresDomain;
+  }),
+  setDomain_unused : function (domain) {
+    if (domain) {
+      let featuresDomain = this.get('featuresDomainValue');
+      function trace (i) { if (trace_block) dLog('setDomain', featuresDomain, domain, i); }
+      if (! featuresDomain) {
+        trace('initialise');
+        featuresDomain = A(domain);
+      }
+      else {
+        /* if domain is outside current value then update;
+         * possibly update if !=, i.e. change < and > to !=
+         */
+        if (featuresDomain[0] > domain[0]) {
+          trace(0);
+          featuresDomain[0] = domain[0];
+        }
+        if (featuresDomain[1] < domain[1]) {
+          trace(1);
+          featuresDomain[1] = domain[1];
+        }
+      }
+    }
+  },
+  /** featureLimits is returned from API for all blocks initially.
+   * featuresDomainUpdate is essentially equivalent.
+   * If there are local changes (features added or feature values changed) then
+   * featuresDomainUpdate might be used also.
+   */
+  featuresDomain : Ember.computed.alias('featureLimits'),
+
+  isChartable : Ember.computed('datasetId.tags', function () {
+    let tags = this.get('datasetId.tags'),
+    isChartable = tags && tags.length && (tags.indexOf('chartable') >= 0);
+    return isChartable;
+  }),
+
   /** If the dataset of this block has a parent, return the name of that parent (reference dataset).
    * @return the reference dataset name or undefined if none
    */
-  referenceDatasetName : Ember.computed('dataset', function () {
+  referenceDatasetName : Ember.computed('datasetId', function () {
     // copied out of referenceBlock(); could be factored
+    // this function can be simply   : Ember.computed.alias('datasetId.parent.name')
     let 
       referenceBlock,
     dataset = this.get('datasetId'),
@@ -78,7 +161,7 @@ export default DS.Model.extend({
     parent = dataset && dataset.get('parent'),
     parentName = parent && parent.get('name');  // e.g. "myGenome"
 
-    console.log('referenceDatasetName', dataset, reference, parent, parentName, parent && parent.get('id'));
+    dLog('referenceDatasetName', dataset, reference, parent, parentName, parent && parent.get('id'));
 
     return parentName;
   }),
@@ -87,7 +170,7 @@ export default DS.Model.extend({
   /** If the dataset of this block has a parent, lookup the corresponding reference block in that parent, matching scope.
    * @return the reference block or undefined if none
    */
-  referenceBlock : Ember.computed('dataset', 'scope', function () {
+  referenceBlock : Ember.computed('datasetId', 'datasetId.parent.name', 'scope', function () {
     let 
       referenceBlock,
     scope = this.get('scope'),
@@ -98,7 +181,7 @@ export default DS.Model.extend({
     parent = dataset && dataset.get('parent'),
     parentName = parent && parent.get('name');  // e.g. "myGenome"
 
-    console.log('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent && parent.get('id'));
+    dLog('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent && parent.get('id'));
     if (parent)
     {
       referenceBlock = this.get('store').peekAll('block')
@@ -115,18 +198,69 @@ export default DS.Model.extend({
           match = (parentName == dataset2.get('name')) && (scope2 == scope);
           if ((parentName == dataset2.get('name')) || (dataset2 === parent))
           {
-            console.log(dataset2.get('name'), scope2, match);
+            if (trace_block)
+              dLog(dataset2.get('name'), scope2, match);
           }
           return match;})
       ;
-      console.log('referenceBlock', referenceBlock);
+      dLog('referenceBlock', referenceBlock);
       // expect referenceBlock.length == 0 or 1
       if (referenceBlock.length !== undefined)
         referenceBlock = referenceBlock[0] || undefined;
     }
     return referenceBlock;
-  })
+  }),
+  childBlocks : Ember.computed('blockService.blocksByReference', function () {
+    let blocksByReference = this.get('blockService.blocksByReference'),
+    childBlocks = blocksByReference && blocksByReference.get(this);
+    return childBlocks || [];
+  }),
 
   /*--------------------------------------------------------------------------*/
+
+  axis : Ember.computed('view.axis', 'referenceBlock', function () {
+    let axis = this.get('view.axis');
+    let referenceBlock;
+    if (! axis) {
+      referenceBlock = this.get('referenceBlock');
+      if (referenceBlock)
+        axis = referenceBlock.get('view.axis');
+    }
+    if (! axis)
+      dLog('block axis', this.get('id'), this.get('view'), 'no view.axis for block or referenceBlock', referenceBlock);
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
+  /** When block is added to an axis, request features, scoped by the axis
+   * current position.
+   */
+  featuresForAxis : Ember.computed('axis', function () {
+    /** This could be split out into a separate layer, concerned with reactively
+     * requesting data; the layers are : core attributes (of block); derived
+     * attributes (these first 2 are the above functions); actions based on
+     * those other attributes (e.g. this function), similar to
+     * services/data/block.js but for single-block requests.
+     * models/axis-brush.js is part of this, and can be renamed to suit;
+     * this function is equivalent to axis-brush.js : features().
+     */
+    const fnName = 'featuresForAxis';
+    let blockId = this.get('id');
+    let
+      features = this.get('pathsP').getBlockFeaturesInterval(blockId);
+
+    features.then(
+      (result) => {
+        if (trace_block)
+          dLog(moduleName, fnName, result.length, blockId, this);
+      },
+      function (err) {
+        dLog(moduleName, fnName, 'reject', err);
+      }
+    );
+
+    return features;
+  })
+
 
 });

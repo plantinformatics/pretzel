@@ -12,6 +12,7 @@
 {{yield}}
 
 <div class="devel-visible">
+  {{resizeEffect}} {{drawEffect}} 
   {{draw/stacks-view stacks=oa.stacks oa=oa drawMap=this axes2d=axes2d
     featuresInBlocks=featuresInBlocks
   }}
@@ -34,19 +35,34 @@
 </div>
 {{draw/link-path stackEvents=this pathReceiver=this modelParamOptions=params.options}}
 
+<div class="devel-visible">
+  <div>brushedAxes : {{flowsService.axisBrush.brushedAxes.length}}</div>
+  {{log 'flowsService.axisBrush' flowsService.axisBrush}}
+  {{#each flowsService.axisBrush.brushedAxes as |brushedAxis| }}
+    {{draw/axis-brush block=brushedAxis drawMap=this }}
+  {{/each}}
+
+  <div>{{blockService.viewedIds.length}},  blockAdjs : {{flowsService.blockAdjIds.length}}  {{flowsService.blockAdjsCP.length}}</div>
+  <div>
+    {{#each flowsService.blockAdjs as |blockAdj| }}
+      {{draw/block-adj blockAdj=blockAdj drawMap=this }}
+    {{/each}}
+  </div>
+</div>
+
 {{#if axisFeatureCircleHover}}
   {{path-hover data=oa features=hoverFeatures }} {{!-- targetId=axisFeatureTargetId  "holder" --}}
 {{/if}}
 {{#if urlOptions.hoverFeatures}}
   <div class="hoverFeatures">
-  <span>Hovered Features</span>
-  {{#each hoverFeatures as |feature|}}
-    <div>
-      {{feature-name data=oa feature=feature}}
-      {{#each (maps-of-feature oa feature) as |map|}}
-        {{ map.name }}
-      {{/each}}
-    </div>
-  {{/each}}
-</div>
+    <span>Hovered Features</span>
+    {{#each hoverFeatures as |feature|}}
+      <div>
+        {{feature-name data=oa feature=feature}}
+        {{#each (maps-of-feature oa feature) as |map|}}
+          {{ map.name }}
+        {{/each}}
+      </div>
+    {{/each}}
+  </div>
 {{/if}}

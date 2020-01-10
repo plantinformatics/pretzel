@@ -3,9 +3,7 @@
     <div class="navbar" style="display: block;">
       <ul class="nav navbar-left">
         <li>
-          {{#link-to 'index' tagName='a'}}
-            {{elem/logo-pretzel}}
-          {{/link-to}}
+          {{elem/logo-pretzel id="logo"}}
         </li>
         {{#if auth}}
           {{#if session.isAuthenticated}}
@@ -15,9 +13,11 @@
               {{/link-to}}
             </li>
             <li>
-              {{#link-to 'matrixview' classNames='' tagName='a'}}
-                Individual Viewer
-              {{/link-to}}
+              {{#if parsedOptions.individual}}
+                {{#link-to 'matrixview' classNames='' tagName='a'}}
+                  Individual Viewer
+                {{/link-to}}
+              {{/if}}
             </li>
             <li>
               {{#link-to 'change-password' classNames='' tagName='a'}}

@@ -1,0 +1,7 @@
+{{#unless entry.isViewed}}
+  {{elem/button-base
+    classSize='xs'
+    classColour='success'
+    icon='plus'
+    onClick=(action "loadBlock" entry) }}
+{{/unless}}

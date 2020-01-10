@@ -9,6 +9,7 @@ export default Record.extend({
   children: DS.hasMany('dataset', {inverse: 'parent'}),
   blocks: DS.hasMany('block', { async: false }),
   type: attr('string'),
+  namespace: attr('string'),
   tags: attr('array'),
   meta: attr()
 });

@@ -27,6 +27,7 @@ Funded by the Grains Research Development Corporation (GRDC).
     - [Using pretzel web interface](#using-pretzel-web-interface)
     - [Using command line](#using-command-line)
 - [Setting up your own instance (without docker)](#setting-up-your-own-instance-without-docker)
+  - [Note for installation on MS Windows](#note-for-installation-on-ms-windows)
   - [Dependencies](#dependencies)
     - [Database](#database)
     - [Node.js, NPM and Bower](#nodejs-npm-and-bower)
@@ -37,6 +38,8 @@ Funded by the Grains Research Development Corporation (GRDC).
   - [Running](#running)
     - [Starting the app](#starting-the-app)
     - [Checking things are running](#checking-things-are-running-1)
+    - [Starting for development](#starting-for-development)
+    - [Adding user verification](#adding-user-verification)
   - [Inserting data](#inserting-data)
     - [Loading data via the command line](#loading-data-via-the-command-line)
 - [Public genetic map references](#public-genetic-map-references)
@@ -118,6 +121,15 @@ To upload multiple genomes along with feature definitions and aliases defining s
 3. Follow the [upload instructions](https://github.com/plantinformatics/pretzel-input-generator/blob/v1.0/doc/upload.md)
 
 # Setting up your own instance (without docker)
+
+## Note for installation on MS Windows
+
+The easiest way to set up a local instance on Windows is to first install the Windows Subsystem for Linux, as documented
+* [here for version 1](https://docs.microsoft.com/en-us/windows/wsl/install-win10) or
+* [here for version 2](https://docs.microsoft.com/en-us/windows/wsl/wsl2-install).
+
+Once the WSL is installed and you are within a Linux subsystem -powered command-line shell,
+all steps below may be followed as specified.
 
 ## Dependencies
 
@@ -224,6 +236,7 @@ The Loopback backend expects the compiled client in its client/ sub-directory. Y
 
 ```
 ln -s ../frontend/dist backend/client
+ln -s ../../../../backend/common/utilities/interval-overlap.js frontend/app/utils/draw/.
 ```
 
 ## Running
@@ -242,26 +255,83 @@ Note that this runs the app without any authentication or security and is only s
 
 If everything has worked so far, you should be able to open [http://localhost:3000](http://localhost:3000) in a browser and see a landing page. If you started the backend with the above command, you can create a user by signing up, then logging in with these details (with `EMAIL_VERIFY=NONE`, the user is created immediately without any extra verification).
 
+### Starting for development
+
+To start the app for code development with live reloads on changes  
+1. Ensure the Ember-CLI tool is installed  globally  
+```
+npm install -g ember-cli
+```  
+2. Run the backend independently, with an assigned port  
+```
+EMAIL_VERIFY=NONE AUTH=ALL API_PORT_EXT=5000 npm run run:backend
+```  
+3. Run the frontend independently, using Ember CLI  
+```
+cd frontend && ember serve
+```  
+
+### Adding user verification
+
+To use with [Postfix](http://www.postfix.org/) on Ubuntu 18.04, run `apt install mailutils` and follow the wizard defaults (for 'Internet Site').
+
+Test postfix by sending yourself an email, e.g. `echo "Test message" | mail your.email@address.com` - the message may and up in your SPAM folder.
+
+If it works, specify required environmental variables and run the app as per the dummy example below.
+
+```
+API_HOST=your_IP_or_FQDN EMAIL_VERIFY=ADMIN EMAIL_FROM=noreply@pretzel EMAIL_ADMIN=your@admin EMAIL_HOST=localhost EMAIL_PORT=25 AUTH=ALL node server/server.js
+```
+
+Make sure you modify:
+
+* `API_HOST` - should be set either to host IP number or its fully qualified domain name (FQDN)
+* `EMAIL_ADMIN` - email address of the person who will authorise the registration of new users
+
+Alternatively, if you have access to your organisation's or hosting provider's SMTP server,
+then rather than using Postfix, update `EMAIL_HOST` and `EMAIL_PORT` to appropriate values.
+You may also have to supply your credential by specifying `EMAIL_USER` and `EMAIL_PASS`.
+
+
+
 ## Inserting data
 
-There are five example maps in the `resources/` folder with simple dummy data. You can upload these by navigating to the Upload tab on the left panel, selecting JSON and browsing to the `resources/` folder to select a map. Once submitted, the maps should be visible in the Explorer tab.
+There are example datasets in the [pretzel-data](https://github.com/plantinformatics/pretzel-data) repository with simple dummy data. You can get the data with
+```
+git clone https://github.com/plantinformatics/pretzel-data
+```
+and upload these files by navigating to the Upload tab on the left panel, selecting JSON and browsing to pretzel-data/ to select a map. Once submitted, the maps should be visible in the Explorer tab.
+The file myDataset.json defines the reference myGenome, and hence should be uploaded before the files which refer to that reference : myAnnotation.json myMarkers.json  myMarkers2.json mySample.json aliases.json 
+
 
 ### Loading data via the command line
 
 An alternative to the Upload tab is to use the command-line, e.g. for larger files :
-
+```
 export APIHOST=http://localhost:3000
 source ~/Applications/Pretzel/pretzel/resources/tools/functions_prod.bash
+```
+
+Logging in to the web application authorises a token, which is required by the API.
 
 While logged into Pretzel via the browser, use the Web Inspector to get the authentication token :
+```
 From Ctrl-click : Inspect ...
 >> Application : Storage : Cookies : http://localhost:3000 :  Name : ember_simple_auth-session
+```
 Copy/Paste the Value into a url decoder such as e.g. https://urldecode.org which will display the decoded parameters as e.g. :
+```
 {"authenticated":{"authenticator":"authenticator:pretzel-local","token":"0uOnWyy08OGcDJbC9eRx5Ki73z2OYkqvrZqQTJmoAklmysU5CxtrYmrXUpcX8MOe","clientId":"5ba9c0870612bf19a6afed01"}}
+```
 Copy/paste the token value and set it in the command-line environment using :
 ```
 setToken  "authentication-token-goes-here"
+```
+Then in the same shell you can use the API to upload dataset files :
+```
 uploadData ~/Applications/Pretzel/pretzel-data/myMap.json
+uploadDataList myDataset.json myAnnotation.json myMarkers.json myMarkers2.json mySample.json
+URL=$URL_A uploadData aliases.json 
 ```
 
 

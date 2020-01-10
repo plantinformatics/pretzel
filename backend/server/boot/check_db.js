@@ -1,5 +1,7 @@
 module.exports = function(app) {
-    let dataSource = app.dataSources.mongoDs;
+    let dataSource = process.env.NODE_ENV === "test" ?
+        app.dataSources.db :
+        app.dataSources.mongoDs;
     let model_list = [];
     Object.keys(dataSource.models).forEach(function(model) {
         model_list.push(dataSource.models[model].modelName);
