@@ -1,2 +1,27 @@
-<br>
-{{form/user-signup}}
+{{!-- This is useful for experimenting with path of static landingPageContent files, without having to rebuild.  --}}
+{{#if false}}
+<div>
+  {{input type="text" value=signupPageContentFileName }}
+</div> 
+{{/if}}
+
+{{#if (is-rejected signupPageContent)}}
+ 
+  <br>
+  {{form/user-signup}}
+  
+
+  <div style="display:none;">
+    <hr>
+    {{ signupPageContent.reason }}
+  </div> 
+
+{{else}}
+  <div class="signupPageContent">
+    {{{await signupPageContent}}}
+  </div>
+  
+  {{form/user-signup}}
+{{/if}}
+
+
