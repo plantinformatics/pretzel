@@ -41,6 +41,7 @@ export default Ember.Component.extend(Ember.Evented, {
     console.log('willInsertElement', options, byReference);
 
     let stackEvents = this.get('stackEvents');
+    if (options && options.allInitially)
     stackEvents.on('expose', this, function (blockA, blockB) {
       if (trace_links > 1)
         console.log('path expose', blockA, blockB);
@@ -59,13 +60,12 @@ export default Ember.Component.extend(Ember.Evented, {
       console.log('path request', blockA, blockB);
     let me = this;
 
-    this.get('auth').getPaths(blockA, blockB, /*options*/{})
+    this.get('auth').getPaths(blockA, blockB, true, /*options*/{})
       .then(
         function(res){
           if (trace_links > 1)
             console.log('path request then', res.length);
-          let id = blockA + "," + blockB;
-          me.push(id, res);
+
           if (trace_links > 1)
             console.log('link-path pathReceiver', me.get('pathReceiver'));
           me.get('pathReceiver').trigger('paths', blockA, blockB, res);
@@ -130,20 +130,6 @@ export default Ember.Component.extend(Ember.Evented, {
 
   },
 
-  push : function (id, paths) {
-    if (trace_links > 2)
-      console.log('path push', paths.length);
-    let pushData = 
-      {
-        data: {
-          id: id,
-          type: 'link-path',
-          attributes: paths
-        }
-      };
-    // silently fails to return
-    // this.get('store').push(pushData);
-  },
 
 
 });

@@ -10,7 +10,10 @@
     selectedDataset=selectedDataset
 
     model=model
+    datasets=datasets
+    refreshDatasets=(action "updateModel")
     selectedBlock=selectedBlock
+    controls=controls
     isShowUnique=isShowUnique
     pathColourScale=pathColourScale
     scaffolds=scaffolds
@@ -42,6 +45,7 @@
         data=block.viewed
         drawActions=this
 	layout=layout
+        controls=controls
         isShowUnique=isShowUnique
         pathColourScale=pathColourScale
         scaffolds=scaffolds
@@ -63,33 +67,35 @@
     <div class="" style="flex-basis:400px; flex-grow:1; display:flex; flex-direction:column">
       <ul class="nav nav-tabs">
         {{#elem/button-tab
-          side="right"
-          key="selection"
-          state=layout.right.tab onClick="setTab"}}
+           side="right"
+           key="selection"
+           state=layout.right.tab onClick="setTab"}}
           {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{selectedFeatures.length}}</span>
         {{/elem/button-tab}}
         {{#elem/button-tab
-          side="right"
-          key="block"
-          state=layout.right.tab onClick="setTab"}}
+           side="right"
+           key="block"
+           state=layout.right.tab onClick="setTab"}}
           {{elem/icon-base name="globe"}}&nbsp; Block
         {{/elem/button-tab}}
         {{#elem/button-tab
-          side="right"
-          key="dataset"
-          state=layout.right.tab onClick="setTab"}}
+           side="right"
+           key="dataset"
+           state=layout.right.tab onClick="setTab"}}
           {{elem/icon-base name="globe"}}&nbsp; Dataset
         {{/elem/button-tab}}
+        {{#if model.params.parsedOptions.advSettings}}
+          {{#elem/button-tab
+             side="right"
+             key="settings"
+             state=layout.right.tab onClick="setTab"}}
+            {{elem/icon-base name="cog"}}&nbsp; Adv.
+          {{/elem/button-tab}}
+        {{/if}}
         {{#elem/button-tab
-          side="right"
-          key="settings"
-          state=layout.right.tab onClick="setTab"}}
-          {{elem/icon-base name="cog"}}&nbsp; Adv.
-        {{/elem/button-tab}}
-        {{#elem/button-tab
-          class="pull-right"
-          side="right"
-          onClick="setVisibility"}}
+           class="pull-right"
+           side="right"
+           onClick="setVisibility"}}
           {{elem/icon-base name="remove"}}
         {{/elem/button-tab}}
       </ul>
@@ -106,7 +112,7 @@
         {{else if (compare layout.right.tab '===' 'dataset')}}
           {{panel/manage-dataset
             dataset=selectedDataset}}
-        {{else if (compare layout.right.tab '===' 'settings')}}
+        {{else if (and (compare layout.right.tab '===' 'settings') model.params.parsedOptions.advSettings)}}
           {{panel/manage-settings
             selectedFeatures=selectedFeatures
             selectedBlock=selectedBlock}}

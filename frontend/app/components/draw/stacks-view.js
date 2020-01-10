@@ -5,32 +5,40 @@ import { /* Block, Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText, ax
 
 /* global d3 */
 
+const dLog = console.debug;
+
 export default Ember.Component.extend({
   block: service('data/block'),
+  previous : {},
+
+  stacksCount : Ember.computed('block.stacksCount', 'block.viewed', 'axes2d.[]', function () {
+    let count;
+    let previous = this.get('previous.stacks');
+    count = this.get('block.stacksCount');
+    dLog('stacks', count, stacks);
+    dLog(stacks, stacks.axesPCount, 'stacksCount', stacks.stacksCount);
+    if (count != previous) {    // may not be needed
+      this.set('previous.stacks', count);
+      Ember.run.later(function () {
+        stacks.oa.showResize(true, false); });
+      this.get('drawMap').draw({}, 'dataReceived');
+      stacks.oa.axisApi.stacksAxesDomVerify();
+    }
+    return count;
+  }),
 
   /** @return blocks which correspond to axes, i.e. are not child blocks.  */
   axesP : Ember.computed('block.viewed', function () {
     let blockService = this.get('block');
     let viewedBlocks = blockService.get('viewed');
-    let axesPHash = this.get('axesP_initial');
-    // console.log('viewedBlocks', viewedBlocks, axesPHash);
+    // dLog('viewedBlocks', viewedBlocks);
     let axesP = viewedBlocks.filter(function (block) {
       let blockId = block.get('id'),
-      p = axesPHash[blockId];
-      // console.log(block, blockId, p);
-      return p !== undefined;
+      referenceBlock = block.get('referenceBlock');
+      dLog('axesP', block, blockId, referenceBlock && referenceBlock.get('id'));
+      return referenceBlock === undefined;
     });
-    console.log(axesP);
-    return axesP;
-  }),
-
-  /** This responds to change of drawMap.stacks but does not update for
-   * additions to axesP{} because it is not an Ember.Object.
-   */
-  axesP_initial : Ember.computed('drawMap.stacks', 'drawMap.stacks.axesP', 'drawMap.stacks.axesP.[]', function () {
-    let drawMap = this.get('drawMap'),
-    stacks = this.get('drawMap.stacks'), axesP = stacks && stacks.axesP;
-    console.log('stacks-view axesP', drawMap, stacks, axesP);
+    dLog('axesP', axesP, axesP.mapBy('_internalModel.__data'));
     return axesP;
   })
 

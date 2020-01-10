@@ -2,25 +2,83 @@
   successMessage=successMessage
   warningMessage=warningMessage
   errorMessage=errorMessage}}
+{{#if nameWarning}}
+{{elem/panel-message
+  warningMessage=nameWarning}}
+{{/if}}
 
+{{#if isProcessing}}
+  {{#elem/panel-form
+    name="info"
+    heading="Processing..." }}
+      {{progressMsg}}
+  {{/elem/panel-form}}
+{{/if}}
 
-<label>Dataset: </label><select id="dataset"></select><br>
-<div id="new_dataset_options">
-  <input id="dataset_new" class="form-control" placeholder="New dataset name..." /><br>
-  <label>Parent: </label><select id="parent"></select><br>
-  <label>Type: </label><select id="type">
+<label>Dataset: </label>
+<select 
+  id="dataset" 
+  onchange={{action (mut selectedDataset) value="target.value"}} 
+  disabled={{isProcessing}}
+>
+  <option selected>new</option>
+  {{#each datasets key="name" as |ds|}}
+    <option value={{ds.name}}>{{ds.name}}</option>
+  {{/each}}
+</select>
+<br>
+{{#if (eq selectedDataset 'new')}}
+  <div id="new_dataset_options">
+  {{input 
+    id="dataset_new" 
+    type="text" 
+    value=newDatasetName 
+    class="form-control" 
+    placeholder="New dataset name..." 
+    disabled=isProcessing
+  }}
+  <br>
+  <label>Parent: </label>
+  <select 
+    id="parent" 
+    onchange={{action (mut selectedParent) value="target.value"}} 
+    disabled={{isProcessing}}
+  >
+    <option value='' selected>None</option>
+    {{#each datasets key="name" as |ds|}}
+      <option value={{ds.name}}>{{ds.name}}</option>
+    {{/each}}
+  </select>
+  <br>
+  <label>Type: </label>
+  <select 
+    id="type" 
+    onchange={{action (mut dataType) value="target.value"}} 
+    disabled={{isProcessing}}
+  >
     <option>linear</option>
     <option>observational</option>
-  </select><br>
-  <label>Namespace: </label><input id="namespace">
-</div>
-<br><label>Load from file: </label><input type="file" accept=".csv" id="tableFile" onchange={{action 'uploadToTable'}}>
+  </select>
+  <br>
+  <label>Namespace: </label>
+  {{input id="namespace" type="text" value=namespace disabled=isProcessing }}
+  </div>
+{{/if}}
+<br><label>Load from file: </label>
+<input 
+  type="file" 
+  accept=".csv" 
+  id="tableFile" 
+  onchange={{action 'setFile'}} 
+  disabled={{isProcessing}}
+>
 <div id="hotable" class="actual-row">
 </div>
+
 <input
   type="submit"
   class="btn btn-primary {{if isProcessing 'disabled'}}"
-  onclick={{action 'uploadBlocks'}}>
+  onclick={{action 'submitFile'}}>
 <button
   class="btn"
   onclick={{action 'clearTable'}}>Clear</button>

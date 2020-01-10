@@ -1,6 +1,9 @@
 
 import { inject as service } from '@ember/service';
 
+import { isEqual } from 'lodash/lang';
+
+
 import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Name } from '../utils/stacks';
 
 /*----------------------------------------------------------------------------*/
@@ -14,8 +17,8 @@ let flowsService; // = service('data/flows-collate');
 function flowsServiceInject(flowsService_) { flowsService = flowsService_; }
 
 
-const trace_adj = 1;
-
+const trace_adj = 0;
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
@@ -25,7 +28,17 @@ const trace_adj = 1;
  */
 function collateAdjacentAxes()
 {
-  let adjAxes = flowsService.adjAxes = {};
+  dLog('collateAdjacentAxes', flowsService);
+  let previous = flowsService.get ? flowsService.get('adjAxes') : flowsService.adjAxes;
+  let adjAxes = {};
+  if (flowsService.set)
+    flowsService.set('adjAxes', adjAxes);
+  else
+  {
+    // this path is no longer applicable / used; flowsService is an Ember object
+    console.log('flowsService', flowsService);
+    flowsService.adjAxes = adjAxes;
+  }
   let adjacent_both_dir = flowsService.flowConfig.adjacent_both_dir;
   /** Each stack, other than the end stacks, is visited twice in this loop,
    * so the result stack.datablocks() is cached for the next pass.
@@ -72,7 +85,50 @@ function collateAdjacentAxes()
     log_adjAxes(adjAxes);
   else if (trace_adj)
     console.log("collateAdjacentAxes", d3.keys(adjAxes).map(Stacked.longName));
+
+  let changed = ! isEqual(previous, adjAxes);
+  if (changed) {
+    /** the above simple comparison can yield false positives because {A : [ B]} is equivalent to { B : [A] }.
+     * It doesn't really matter, but the follow can be used to convert previous
+     * and adjAxes to sorted ordered pairs, and compare those.
+     */
+    let 
+      previousPairs = adjAxesOrderedPairs(previous),
+    adjAxesPairs = adjAxesOrderedPairs(adjAxes),
+    changed2 = ! isEqual(previousPairs, adjAxesPairs);
+    if (changed != changed2) {
+      console.log(
+        'collateAdjacentAxes changed',
+        changed, changed2,
+        previous, adjAxes,
+        previousPairs, adjAxesPairs);
+    }
+    else {
+      /* if ! stacks.length || ! adjAxesKeys.length then adjAxesArr will be set to [].
+       * adjAxesArr is a dependent key of CP blockAdjIds (flows-collate.js).
+       */
+      let adjAxesKeys = d3.keys(adjAxes);
+      let current = flowsService.get('adjAxesArr');
+      
+      dLog(current, 'adjAxesKeys', adjAxesKeys);
+      flowsService.set('adjAxesArr', adjAxesKeys);
+    }
+  }
 }
+
+/** Given an object of the form {A : [ C, B], ...}, convert to ordered pairs and
+ * sort them i.e.  [ [A, B], [A, C] ... ]
+ * @param adjAxes is a value of flowsService.get('adjAxes')
+ */
+function adjAxesOrderedPairs(adjAxes) {
+  let 
+  a = Object.entries(adjAxes),
+  a3 = a.map((a2) => a2[1].map((b) => [a2[0], b] )),
+  a4 = a3.reduce((result, value) => result.concat(value), []),
+  sortedPairs = a4.sortBy('1').sortBy('0');
+  return sortedPairs;
+}
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -107,7 +163,7 @@ function isAdjacent(a0, a1)
     for (let a1i=0; (a1i < adjs0.length) && !result; a1i++) {
       result = a1 == adjs0[a1i];
       if (result)
-        console.log("isAdjacent", a0, axisId2Name(a0), a1, axisId2Name(a1));
+        dLog("isAdjacent", a0, axisId2Name(a0), a1, axisId2Name(a1));
     }
   return result;
 }

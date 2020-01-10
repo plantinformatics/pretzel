@@ -1,14 +1,20 @@
+// for VLinePosition :
+import Ember from 'ember';
+import { isEqual } from 'lodash/lang';
+
+
 /*global d3 */
 
 /*----------------------------------------------------------------------------*/
 
 import  { dragTransitionEnd} from '../utils/stacks-drag';
 import { round_2, checkIsNumber} from '../utils/domCalcs';
-import {  Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, highlightId  }  from './draw/axis';
+import {  Axes, noDomain, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, highlightId, axisTitleColour  }  from './draw/axis';
 import { variableBands } from '../utils/variableBands';
 import { isOtherField } from '../utils/field_names';
 import { Object_filter } from '../utils/Object_filter';
 import { breakPoint, breakPointEnableSet } from '../utils/breakPoint';
+
 
 
 /*----------------------------------------------------------------------------*/
@@ -17,8 +23,9 @@ Object.filter = Object_filter;
 
 /*----------------------------------------------------------------------------*/
 
-const trace_stack = 1;
+const trace_stack = 0;
 const trace_updatedStacks = true;
+const dLog = console.debug;
 
 /** Each stack contains 1 or more Axis Pieces (Axes).
  * stacks are numbered from 0 at the left.
@@ -31,6 +38,11 @@ var oa;
 /** Ownership of this may move to data component. */
 var axes;
 var axesP;
+/** draw/axis-1d components, indexed by blockId of the parent / reference block.
+ * This will likely not be needed after axis-1d is more closely integrated with
+ * Stacked, e.g. the Stacked would be created by the axis-1d init().
+ */
+var axes1d;
 let blocks;
 
 //- maybe change stacks to a class Stacks(), and instantiate wth new Stacks(oa)
@@ -58,6 +70,14 @@ stacks.init = function (oa_)
        * axes[x] is === either blocks[x] or axesP[x], not both.
        */
       stacks.axes = {};
+
+    axes1d = stacks.axes1d = {};
+    stacks.axesPCount = Ember.Object.create({ count: 0 });
+    /* Counts which are used as ComputedProperty dependencies, so that stacks.js
+     * classes imperative actions can feed into CP data flows.
+     * This can merge with axesPCount as .counts.{axesP,stacks} */
+    stacks.stacksCount = Ember.Object.create({ count: 0 });
+
   }
 };
 
@@ -89,7 +109,7 @@ function Block(block) {
   this.block = block;
   /** .visible indicates the features of this block will be included in axis brushes & paths.  */
   this.visible = true;
-  console.log("Block()", this, block, axisName);
+  dLog("Block()", this, block, axisName);
 };
 /** At some point .axisName will be renamed to .blockId; this function will make
  * that transparent, and avoid confusion with .getAxis().
@@ -99,10 +119,50 @@ Block.prototype.getId = function()
 {
   return this.axisName;
 };
+/** Set .axis
+ *
+ * Because .axis is used as a dependent key in a ComputedProperty, Ember adds
+ * .set() and then this must be used.
+ * @param a axis (Stacked)
+ */
+Block.prototype.setAxis = function(a)
+{
+  if (trace_stack) {
+    dLog('setAxis', !!this.block.set, a);  this.log();
+  }
+  this.axis = a;
+  if (this.block && this.block.set) {
+    Ember.run.later(() => this.block.set('axis', a) );
+  }
+  if (false)
+  /* The block-adj CP axes depends on .axislater, setting this field triggers a
+   * render, so without run.later the code following the call to setAxis() would
+   * be skipped.
+   * .axislater has the same value as .axis, but setting it is deferred until
+   * the end of the current run loop, for this reason.  This is a work-around;
+   * planning to see the stacks / axes as part of the model and update them
+   * before render.
+   */
+    Ember.run.later(() => {
+      if (this.set)
+        this.set('axislater', a);
+      else
+        this.axislater = a;
+    });
+};
 /** @return axis of this block or if it has a parent, its parent's axis */
 Block.prototype.getAxis = function()
 {
-  return this.axis || (this.parent && this.parent.getAxis());
+  let axis = this.axis;
+  /* This guards against this.axis being a former axis of `this` (may have been
+   * retired during adoption), which seems to happen but perhaps should not.
+   */
+  if (! axis || (axis.blocks.length === 0)) {
+    if (axis)
+    { dLog('Block:getAxis', axis); axis.log(); }
+    axis = (this.parent && this.parent.getAxis());    
+  }
+  return axis;
 };
 /** @return stack of this block's axis.
  * @see Block.prototype.getAxis()
@@ -113,7 +173,7 @@ Block.prototype.getStack = function ()
   return (axis = this.getAxis()) && axis.stack;
 };
 Block.prototype.log = function() {
-  console.log(
+  dLog(
     this.axisName, this.block.get('name'),
     this.parentName,
     (this.parent && this.parent.mapName) ? "parent:" + this.parent.mapName : ''
@@ -127,6 +187,7 @@ Block.prototype.longName = function() {
 };
 /** @return true if this Block is a reference, not data block.
  * A genetic map block is a data block and has no reference block; for the purpose of stacks it is the reference.
+ * Also @see isData()
  */
 Block.prototype.isReference = function() {
   let axis = this.getAxis(),
@@ -135,14 +196,39 @@ Block.prototype.isReference = function() {
     (axis.referenceBlock === blockR);
   return isReference;
 };
+/** @return truthy if the dataset of this Block has a parent.
+ * A genetic map block is a data block and has no reference block; for the purpose of stacks it is the reference.
+ * @return e.g. null if (dp is a promise and) no parent
+ * @see isData()
+ * @see isReference()
+ */
+Block.prototype.datasetHasParent = function() {
+  let dataset = this.block.get('datasetId'),
+  dp = dataset.get('parent'),
+  hasParent = dp && (dp.isPending ? dp.get('content') : dp);
+  dLog('datasetHasParent', dataset, dp, hasParent); this.log();
+  return hasParent;  
+};
 /** @return true if this Block is a data block, not the reference block.
  */
 Block.prototype.isData = function() {
   let axis = this.getAxis(),
   blockR = this.block,
+  /** The most significant check here is blockR.get('featureCount'); now that we
+   * have this information readily information in the frontend that is the best
+   * way to distinguish a data block, and the other checks can be retired.
+   *
+   * The .namespace check may identify GMs, but some
+   * (e.g. Quraishi_2017_consensus) being a consensus of data from multiple
+   * namespaces don't have a .namespace.
+   *
+   * The check on features.length is fine if the features are loaded into the
+   * frontend - catch 22 because isData() is used by dataBlocks() which is used
+   * in populating the blocks parameter of getBlockFeaturesInterval().
+   * (checking if features is defined and features.length > 0)
+   */
   isData =
-    //  checking if features is defined and features.length > 0
-    (blockR.get('namespace') || blockR.get('features.length'));
+    (blockR.get('namespace') || blockR.get('isChartable') || blockR.get('features.length') || blockR.get('featureCount') || ! this.isReference());
   return isData;
 };
 
@@ -181,9 +267,14 @@ function Stacked(axisName, portion) {
   this.stack = undefined;
   /** data blocks */
   this.blocks = [];
+  /* Pick up the reference to the corresponding axis-1d component, in the case
+   * that it was created before this Stacked.  */
+  if (axes1d[axisName])
+    this.axis1d = axes1d[axisName];
   /* axis objects persist through being dragged in and out of Stacks. */
   axesP[axisName] =
   oa.axes[axisName] = this;
+  stacks.axesPCount.incrementProperty('count');
 };
 Stacked.prototype.referenceBlock = undefined;
 Stacked.prototype.axisName = undefined;
@@ -205,6 +296,12 @@ Stacked.prototype.getAxis = function()
 {
   return this;
 };
+/** Enable axis-1d to correlate with blockId.
+ * axesP[axisName].axis1d is also set to axis1dComponent, but axesP[axisName] may not have been created yet.
+ */
+Stacked.axis1dAdd = function (axisName, axis1dComponent) {
+  axes1d[axisName] = axis1dComponent;
+};
 function positionToString(p)
 {
   return (p === undefined) ? ""
@@ -214,19 +311,21 @@ function positionToString(p)
  * arrays of strings, just concat the arrays, and caller can join the strings. */
 Stacked.prototype.toString = function ()
 {
-  let a =
+  let s = this.stack,
+  stackLength = (s ? s.length : ''),
+  a =
     [ "{axisName=", this.axisName, ":", this.axisName, ", portion=" + round_2(this.portion),
-      positionToString(this.position) + this.stack.length, "}" ];
+      positionToString(this.position) + stackLength, "}" ];
   return a.join("");
 };
 Stacked.prototype.log = function ()
 {
   if (this.blocks.length && (this.blocks[0] === undefined))
   {
-    console.log(this, this.blocks, '[0] is undefined');
+    dLog(this, this.blocks, '[0] is undefined');
     this.blocks.splice(0, 1);
   }
-  console.log
+  dLog
   ("{axisName=", this.axisName, ":", this.mapName,
    (this.z && this.z.scope) ? "scope:" + this.z.scope : '',
    (this.referenceBlock && this.referenceBlock.get('name')),
@@ -248,7 +347,7 @@ Stacked.prototype.logBlocks = function ()
   for (let i=0; i < this.blocks.length; i++)
   {
     let b = this.blocks[i];
-    console.log(i, b.axisName, b.block.get('id'));
+    dLog(i, b.axisName, b.block.get('id'));
   }
 };
 /** corresponds to svgContainer */
@@ -256,7 +355,7 @@ const selectPrefix = "div#holder > svg > g";
 Stacked.prototype.logElt = function ()
 {
   let a = d3.select(selectPrefix + "> g.stack > g#id" + this.axisName + ".axis-outer");
-  console.log("logElt", a.node());
+  dLog("logElt", a.node());
 };
 /** S for stacks Block, as distinct from the (ember store) block record.
  * @return the Block object corresponding to the block record .referenceBlock;
@@ -264,8 +363,17 @@ Stacked.prototype.logElt = function ()
 Stacked.prototype.referenceBlockS = function ()
 {
   // verification
-  if (this.referenceBlock.view != this.blocks[0])
-    breakPoint('referenceBlockS', this, this.referenceBlock && this.referenceBlock.view, this.blocks);
+  let blockS = this.referenceBlock && this.referenceBlock.view;
+  /** check if this axis still exists - may be just a child Block now. */
+  if (! axesP[this.axisName]) {
+    breakPoint('referenceBlockS', this, blockS, this.axisName);
+  }
+  else if (! this.blocks.length) {
+    breakPoint('referenceBlockS', this, blockS, this.blocks);
+  }
+  else
+  if (blockS != this.blocks[0])
+    breakPoint('referenceBlockS', this, blockS, this.blocks);
   return this.blocks[0];
 };
 Stacked.prototype.getStack = function ()
@@ -337,7 +445,7 @@ Stacked.prototype.removeBlock = function(blockIndex)
 
   if (this.blocks.length <= blockIndex)
   {
-    console.log('removeBlock(): expected blocks.length', this.blocks.length, ' to be >', blockIndex);
+    dLog('removeBlock(): expected blocks.length', this.blocks.length, ' to be >', blockIndex);
     this.log();
   }
   /** type is stacks:Block */
@@ -362,8 +470,8 @@ Stacked.prototype.removeBlockByName = function(blockId)
   // verification
   if (block && block.axisName != blockId)
     breakPoint('removeBlockByName', blockIndex, block.name, '!=', blockId);
-  else
-    console.log('removeBlockByName', blockId, blockIndex);
+  else if (trace_stack)
+    dLog('removeBlockByName', blockId, blockIndex);
   return block;
 };
 /** Move a block from one Stacked (axis) to another.
@@ -375,17 +483,17 @@ Stacked.prototype.move = function(source, blockIndex)
 {
   if (source.blocks.length <= blockIndex)
   {
-    console.log('move(): expected blocks.length', source.blocks.length, ' to be >', blockIndex);
+    dLog('move(): expected blocks.length', source.blocks.length, ' to be >', blockIndex);
     source.log();
   }
   /** type is stacks:Block */
   let aBlock = source.blocks[blockIndex];
-  console.log('move() before delete source.blocks', source, source.blocks, blockIndex, aBlock);
+  dLog('move() before delete source.blocks', source, source.blocks, blockIndex, aBlock);
   /** delete blockIndex element of source.blocks[]; */
   let aBlockA = source.blocks.splice(0, 1);
   if (aBlockA[0] !== aBlock)  // verification
     breakPoint('move', aBlockA, '[0] !==', aBlock);
-  console.log('after delete', source.blocks);
+  dLog('after delete', source.blocks);
 
   this.blocks.push(aBlock);
 };
@@ -396,12 +504,12 @@ Block.prototype.yOffset = function ()
   let yOffset;
   if (this.axis)
   {
-    // console.log("yOffset via axis", this, this.axis);
+    // dLog("yOffset via axis", this, this.axis);
     yOffset = this.axis.yOffset();
   }
   else if (this.parent)
   {
-    // console.log("yOffset via parent", this, this.parent);
+    // dLog("yOffset via parent", this, this.parent);
     yOffset = this.parent.yOffset();
   }
   return yOffset;
@@ -414,7 +522,7 @@ Stacked.prototype.yOffset = function ()
   let yOffset = yRange * this.position[0];
   if (Number.isNaN(yOffset))
   {
-    console.log("Stacked#yOffset", yRange, this.position);
+    dLog("Stacked#yOffset", yRange, this.position);
     breakPoint();
   }
   return yOffset;
@@ -431,11 +539,23 @@ Stacked.prototype.yRange2 = function ()
   range = this.position.map(function (p) { return yRange * p; });
   return range;
 };
+/** Access the features hash of this block.
+ * The hash (currently) contains some additional block attributes, .dataset and
+ * .scope, which are ignored using isOtherField[].
+ */
+Block.prototype.features = function ()
+{
+  // this function abstracts access to .z so that it can be re-structured.
+  let d = this.axisName,
+  /** this.z should have the value oa.z[d]. */
+  z = this.z || oa.z[d];
+  return z;
+}
 /** Calculate the domain of feature locations in the block named this.axisName.
  */
 Block.prototype.domainCalc = function ()
 {
-  let d = this.axisName, features = oa.z[d],
+  let d = this.axisName, features = this.features(),
   blockAttr = oa.cmName[d];
   function featureLocation(a)
   {
@@ -444,29 +564,46 @@ Block.prototype.domainCalc = function ()
   let
     domain =
     (blockAttr && blockAttr.range) ||
-    d3.extent(Object.keys(features), featureLocation);
-  // console.log("domainCalc", this, d, features, domain);
+    (features &&
+      d3.extent(Object.keys(features), featureLocation));
+  if (trace_stack)
+   dLog("domainCalc", this, d, features, domain);
   if (! domain || ! domain.length)
     breakPoint();
   return domain;
+};
+/** If the Block domain has not been calculated, then calculate it.
+ * The domain should be re-calculated after features are added.
+ * @return  domain, same result as .domainCalc()
+ */
+Block.prototype.maybeDomainCalc = function ()
+{
+  let d = this.domain,
+  features = this.features();
+  if (! d || (d.length === 2 && d[0] === false && d[1] === false))
+    this.domain = this.domainCalc();
+  return this.domain;
 };
 /** Traverse the blocks displayed on this axis, and return a domain which spans
  * their domains.
  */
 Stacked.prototype.domainCalc = function ()
 {
-  console.log('domainCalc', this, this.blocks);
+  if (trace_stack)
+    dLog('domainCalc', this, this.blocks);
   let blockDomains = 
-    this.blocks.map(function (b) { return b.domain || (b.domain = b.domainCalc()); }),
+    this.blocks.map(function (b) { return b.maybeDomainCalc(); })
+    .filter((domain) => domain),
   /** refn : https://github.com/d3/d3-array/issues/64#issuecomment-356348729 */
   domain = 
+    blockDomains.length &&
     [
       d3.min(blockDomains, array => d3.min(array)),
       d3.max(blockDomains, array => d3.max(array))
     ];
   if (trace_stack > 1)
   {
-    console.log('domainCalc', this.axisName, this.blocks.length, blockDomains, domain);
+    dLog('domainCalc', this.axisName, this.blocks.length, blockDomains, domain);
     if ((trace_stack > 2) && ! domain[0] && ! domain[1])
       breakPoint();
   }
@@ -486,10 +623,27 @@ Stacked.prototype.referenceDomain = function ()
  */
 Stacked.prototype.getDomain = function ()
 {
-  return this.domain
+  let domain = this.domain
     || (this.domain = this.referenceDomain())
     || (this.domain = this.domainCalc())
   ;
+  if (noDomain(domain))
+    domain = [];
+  {
+    /* shifting the responsibility of domain calculation from Stacks to blocks.js and axis-1d.
+     * domainCalc() should be equivalent to axis1d.blocksDomain, but
+     * resetZooms() was setting the domains to [0, 0] so possibly there has been
+     * a loss of connection between the Block and it's features.
+     * Also this.domain above is not recalculated after additional features are received,
+     * whereas blocksDomain has the necessary dependency.
+     */
+    let blocksDomain = this.axis1d && this.axis1d.get('blocksDomain');
+    if (blocksDomain && blocksDomain.length) {
+      dLog('getDomain()', this.axisName, domain, blocksDomain);
+      domain = d3.extent(domain.concat(blocksDomain));
+    }
+  }
+  return domain;
 };
 
 
@@ -502,7 +656,7 @@ Stacked.prototype.verify = function ()
   }
   else
   {
-    /* traverse the axes of this stack. */
+    /* traverse the blocks of this axis. */
     this.blocks.forEach(
       function (b, index)
       {
@@ -512,7 +666,7 @@ Stacked.prototype.verify = function ()
         v2 = (block.parent === me.blocks[0]) || (block === me.blocks[0]);
         if (!v1 || !v2)
         {
-          console.log("v1", v1, "v2", v2, me, block);
+          dLog("v1", v1, "v2", v2, me, block);
           me.log();
           block.log();
           breakPoint();
@@ -533,7 +687,7 @@ Stacked.prototype.children = function (includeSelf, names)
   if (names)
     children = children.map(function (a) { return a.block.get('name'); });
   if (trace_stack > 1)
-    console.log("children", this, children);
+    dLog("children", this, children);
   if (! includeSelf)
   {
     // delete [0] element of children[]
@@ -550,7 +704,7 @@ if (false)  // not required, possibly not up to date, replaced by .childBlocks(t
 {
     let children =
       this.blocks.reduce(function (children, a) { return children.concat(a.children(includeSelf)); }, []);
-    // console.log("childAxisNames", includeSelf, this, children);  this.log();
+    // dLog("childAxisNames", includeSelf, this, children);  this.log();
     return children;
   };
 if (false)  // not required, possibly not up to date
@@ -561,7 +715,7 @@ if (false)  // not required, possibly not up to date
       // repeated scans of this.axes[] by Stacked.prototype.children(), maybe maintain a list of children (blocks).
       this.axes.map(function (a) { return a.children(includeSelf); })
     );
-    // console.log("childAxisNamesGrouped", includeSelf, this, children);  this.log();
+    // dLog("childAxisNamesGrouped", includeSelf, this, children);  this.log();
     return children;
   };
 /** Return an array of the blocks which are in this stack.
@@ -587,7 +741,7 @@ Stacked.prototype.dataBlocks = function (visible)
       return (! visible || block.visible)
         && block.isData(); });
   if (trace_stack > 1)
-    console.log(
+    dLog(
       'Stacked', 'blocks', visible, this.blocks.map(function (block) { return block.longName(); }),
       this.axisName, this.mapName, 'dataBlocks',
       db.map(function (block) { return block.longName(); }));
@@ -607,7 +761,7 @@ Stack.prototype.dataBlocks = function ()
   ;
   // Stacked.longName() handles blocks also.
   if (trace_stack > 1)
-    console.log(
+    dLog(
       'Stack', this.stackID, 'axes', this.axes.map(Stacked.longName),
       'dataBlocks',
       db.map(function(block) { return block.longName(); })
@@ -650,9 +804,12 @@ Block.prototype.titleText = function ()
   let axisName = this.block.get('id'),
   cmName = oa.cmName[axisName],
   shortName = cmName && cmName.dataset.get('meta.shortName'),
-  name = shortName || cmName.mapName;
-  // console.log('Block titleText', cmName, shortName, name, cmName.scope);
-  return name + " : " + cmName.chrName;
+  name = shortName || cmName.mapName,
+  featureCount = this.block && this.block.get('featureCount'),
+  featureCountLoaded = this.block.get('featuresLength'),
+  featureCountText = (featureCount || featureCountLoaded) ? ' : ' + featureCountLoaded + ' / ' + featureCount : '';
+  // dLog('Block titleText', cmName, shortName, name, cmName.scope);
+  return name + " : " + cmName.chrName + featureCountText;
 };
 /** @return maximum length of the titles of the viewed blocks. */
 Block.titleTextMax = function (axisName)
@@ -664,7 +821,7 @@ Block.titleTextMax = function (axisName)
       isViewed = block && block.block.get('isViewed'),
       title = isViewed && block.titleText(),
       length = title && title.length;
-      // console.log('titleTextMax', result, a, block, isViewed, title, length);
+      // dLog('titleTextMax', result, a, block, isViewed, title, length);
       if (length > result)
         result = length;
       return result;
@@ -672,12 +829,47 @@ Block.titleTextMax = function (axisName)
   return lengthMax;
 };
 
+/** Use axis1d.blockIndexes() and wrap utils/draw/axis.js:axisTitleColour()
+ */
+Block.prototype.axisTitleColour = function ()
+{
+  let colour,
+  axis1d = this.axis.axis1d;
+  if (axis1d && ! axis1d.isDestroyed) {
+    let
+    blockId = this.getId(),
+    blockIndexes = axis1d.get('blockIndexes'),
+    /** blockIndex is not used, except to distinguish the reference block.
+     * blockIndex could instead be calculated using the index of this in this.axis.blocks[]. */
+    blockIndex = blockIndexes[blockId];
+    /* axisTitleColour() blockIndex counts from 1; 0 is for the reference block (may have been undefined in earlier versions),
+     * which gets colour undefined - no need to call axisTitleColour(). */
+    colour = (! blockIndex) ? undefined : axisTitleColour(blockId, blockIndex+1);
+    if (trace_stack)
+      dLog('axisTitleColour', this, blockId, blockIndexes, blockIndex, colour);
+  }
+  return colour;
+};
+/** Use Block:axisTitleColour(), which uses axis.js:axisTitleColour().
+ *
+ * static; signature matches that required by d3 (this is element, args are (datum,index,group)).
+ * @param block (g.axis-all > text > tspan) or blockId (g.axis-use > g.tracks)
+ */
+Block.axisTitleColour = function (block)
+{
+  let colour = block.axisTitleColour();
+  if (trace_stack)
+    dLog('axisTitleColour', colour, block, this);
+  return colour;
+};
+
+
 /** Constructor for Stack type.
  * Construct a Stacked containing 1 axis (axisName, portion),
  * and push onto this Stack.
  */
 function Stack(stackable) {
-  console.log("new Stack", oa, stacks.nextStackID);
+  dLog("new Stack", oa, stacks.nextStackID);
   this.stackID = stacks.nextStackID++;
   /** The axis object (Stacked) has a reference to its parent stack which is the inverse of this reference : 
    * axes{axisName}.stack.axes[i] == axes{axisName} for some i.
@@ -685,8 +877,24 @@ function Stack(stackable) {
   this.axes = [];
   Stack.prototype.add = Stack_add;
   this.add(stackable);
-  console.log(this, stackable, ".stack", stackable.stack);
+  dLog(this, stackable, ".stack", stackable.stack);
+  setCount('Stack() stacksCount');
 };
+/** Update stacks.stacksCount.count */
+function setCount(label) {
+  let newCount = stacks.length - (stacks.toDeleteAfterDrag ? 1 : 0);
+  dLog(label, ' : stacksCount', stacks.stacksCount.get('count'), newCount);
+  /* if the value is not changed then this .set will not trigger CPs which
+   * depend on stacksCount.count.
+   * stacksCount.count is used as a dependency by resizeEffect(), so change its
+   * value at the end of the run loop using .later() to avoid : assertion
+   * ... modified "resizeEffect" twice on component:draw-map ... in a single
+   * render
+   */
+  Ember.run.later(function () {
+    stacks.stacksCount.set('count', newCount);
+  });
+}
 /**  Wrapper for new Stack() : implement a basic object re-use.
  *
  * The motive is that as a axis is dragged through a series of stacks, it is
@@ -712,6 +920,7 @@ function new_Stack(stackable) {
     s = new Stack(stackable);
     stacks.append(s);
   }
+  setCount('new_Stack');
   return s;
 }
 /** undefined, or references to the axis (Stacked) which is currently dropped
@@ -776,15 +985,15 @@ Stack.prototype.toString = function ()
 };
 Stack.prototype.log = function ()
 {
-  console.log("{stackID=", this.stackID, ", axes=[");
+  dLog("{stackID=", this.stackID, ", axes=[");
   this.axes.forEach(function(s){s.log();});
-  console.log("] length=", this.axes.length, "}");
+  dLog("] length=", this.axes.length, "}");
   this.logElt();
 };
 Stack.prototype.logElt = function ()
 {
   let s = d3.select(selectPrefix + "> g#id" + this.stackID + ".stack");
-  console.log("logElt", s.node());
+  dLog("logElt", s.node());
 };
 Stack.prototype.verify = function ()
 {
@@ -794,6 +1003,10 @@ Stack.prototype.verify = function ()
     this.log();
     /* breakPointEnableSet(1);
      breakPoint(); */
+    /* verify() is called at a point between creating an axis and 'add a new stack for it',
+     * so don't break in this case.
+     */
+    dLog('Stack:verify() 0 axes', this);
   }
   else
     /* traverse the axes of this stack. */
@@ -810,7 +1023,7 @@ Stack.prototype.verify = function ()
           c.reduce(function (result, c1a) { return result && (c1a.getStack() === me); }, true );
         if (!v1 || !v2)
         {
-          console.log("v1", v1, "v2", v2, axis, c);
+          dLog("v1", v1, "v2", v2, axis, c);
           me.log();
           breakPoint();
         }
@@ -820,7 +1033,7 @@ Stack.prototype.verify = function ()
          */
         if (a.blocks.length && (a.blocks[0] === undefined))
         {
-          console.log(a, a.blocks, '[0] is undefined');
+          dLog(a, a.blocks, '[0] is undefined');
           a.blocks.splice(0, 1);
         }
         a.verify();
@@ -848,14 +1061,20 @@ stacks.log =
   Stack.log = function()
 {
     if (trace_stack < 2) return;
-    console.log("{stacks=[");
+    dLog("{stacks=[");
     stacks.forEach(function(s){s.log();});
-    console.log("] length=", stacks.length, "}");
+    dLog("] length=", stacks.length, "}");
   };
 Stack.verify = function()
 {
   try {
     stacks.forEach(function(s){s.verify();});
+
+    // all stacks : .axes is not empty
+    oa.stacks.mapBy('axes').mapBy('length').forEach(function (length, i) { if (!length) { dLog(i); oa.stacks[i].log(); } });
+    // all blocks : .axis has a .stack.
+    let b1 = Object.entries(oa.stacks.blocks).mapBy('1');
+    b1.mapBy('axis').forEach(function (a, i) { if (a && !a.stack) { dLog(i); a.log();  } });
   }
   catch (e)
   {
@@ -933,7 +1152,7 @@ Stack.prototype.keyFunction = function (stack, i, group)
    */
   let thisIsParent = group.__proto__ === Array.prototype;
   if (trace_stack > 1)
-    console.log(thisIsParent ? '' : this, stack.stackID, i);
+    dLog(thisIsParent ? '' : this, stack.stackID, i);
   return stack.stackID;
 };
 /** Use the position of this stack within stacks[] to determine g.axis-outer element classes.
@@ -990,7 +1209,7 @@ Stack.axisStackIndex2 = function (axisID)
     let j;
     if ((i === -1) || (stacks[i] !== s) || (j=s.axes.indexOf(axis), s.axes[j].axisName != axisID))
     {
-      console.log("stackIndex", axisID, i, axis, s, j, s.axes[j]);
+      dLog("stackIndex", axisID, i, axis, s, j, s.axes[j]);
       breakPoint('axisStackIndex2');
     }
     return {stackIndex: i, axisIndex: j};
@@ -1003,12 +1222,12 @@ if (false)  /** not used - @see Stack_add()  */
     this.axes.push(stackable);
     stackable.stack = this;
     oa.axes[stackable.axisName] = stackable;
-    console.log("Stack.prototype.add", this, stackable);
+    dLog("Stack.prototype.add", this, stackable);
   };
 /** not used */
 Stack.prototype.addAxis = function(axisName, portion)
 {
-  console.log("Stack.prototype.addAxis", axisName, portion);
+  dLog("Stack.prototype.addAxis", axisName, portion);
   let sd = new Stacked(axisName, portion);
   this.add(sd);
 };
@@ -1018,7 +1237,7 @@ Stack.prototype.addAxis = function(axisName, portion)
  */
 function Stack_add (sd)
 {
-  console.log("Stack_add", this, sd);
+  dLog("Stack_add", this, sd);
   this.axes.push(sd);
   sd.stack = this;
 };
@@ -1032,7 +1251,7 @@ Stack.prototype.insert = function (stacked, i)
   // this is supported via splice, and may be useful later, but initially it
   // would indicate an error.
   if ((i < 0) || (i > len))
-    console.log("insert", stacked, i, len);
+    dLog("insert", stacked, i, len);
 
   this.axes = this.axes.insertAt(i, stacked);
   /* this did not work (in Chrome) : .splice(i, 0, stacked);
@@ -1057,7 +1276,7 @@ Stack.prototype.remove = function (axisName)
   let si = this.findIndex(axisName);
   if (si < 0)
   {
-    console.log("Stack#remove named axis not in this stack", this, axisName);
+    dLog("Stack#remove named axis not in this stack", this, axisName);
     return undefined;
   }
   else
@@ -1076,7 +1295,7 @@ Stack.prototype.remove2 = function (axis)
   let si = this.axes.indexOf(axis);
   if (si < 0)
   {
-    console.log("Stack#remove axis not in this stack", this, axis.longName());
+    dLog("Stack#remove axis not in this stack", this, axis.longName());
   }
   else
   {
@@ -1093,11 +1312,11 @@ Stack.prototype.remove2 = function (axis)
 Stack.removeStacked = function (axisName)
 {
   let result;
-  console.log("removeStacked", axisName);
+  dLog("removeStacked", axisName);
   let axis = oa.axes[axisName];
   if (axis === undefined)
   {
-    console.log("removeStacked", axisName, "not in", axes);
+    dLog("removeStacked", axisName, "not in", axes);
     result = undefined; // just for clarity. result is already undefined
   }
   else
@@ -1108,7 +1327,7 @@ Stack.removeStacked = function (axisName)
       result = -1; // OK
   }
   if (trace_stack)
-    console.log("removeStacked", axisName, result);
+    dLog("removeStacked", axisName, result);
   return result;
 };
 /** Remove the nominated axis (Stacked) from this Stack;
@@ -1121,28 +1340,31 @@ Stack.removeStacked = function (axisName)
 Stack.prototype.removeStacked1 = function (axisName)
 {
   let result;
-  let axis = oa.axes[axisName],
+  let axis = oa.axes[axisName];
+  axis.unviewBlocks();
+  let
   removedAxis = this.remove(axisName);
   if (removedAxis === undefined)
-    console.log("removeStacked", axisName);
+    dLog("removeStacked", axisName);
   else
   {
     delete oa.axes[axisName];  // or delete axis['axis']
     delete axesP[axisName];
+    stacks.axesPCount.decrementProperty('count');
   }
   if (this.empty())
   {
     result = this.stackID;
     if (! this.delete())
     {
-      console.log("removeStacked", this, "not found for delete");
+      dLog("removeStacked", this, "not found for delete");
     }
     else if (trace_stack)
       Stack.log();
   }
   else
   {
-    console.log("removeStacked", this);
+    dLog("removeStacked", this);
     // copied from .dropOut()
     let released = axis.portion;
     axis.portion = 1;
@@ -1159,15 +1381,16 @@ Stack.prototype.delete = function ()
   let si = stacks.indexOf(this);
   let ok = false;
   if (si < 0)
-    console.log("Stack#delete program error: not found", this, stacks);
+    dLog("Stack#delete program error: not found", this, stacks);
   else if (this !== stacks[si])
-    console.log("Stack#delete program error: found value doesn't match",
+    dLog("Stack#delete program error: found value doesn't match",
                 this, stacks, si, stacks[si]);
   else
   {
     stacks = stacks.removeAt(si, 1);
     // .splice(si, 1);
     ok = true;
+    setCount('delete');
   }
   return ok;
 };
@@ -1229,6 +1452,7 @@ Stack.prototype.move = function (axisName, toStack, insertIndex)
       //- pass action bus to init()
       oa.eventBus.send('updatedStacks', stacks);
   }
+  setCount('move');
   return result;
 };
 /** Shift named axis to a different position within this Stack.
@@ -1244,25 +1468,25 @@ Stack.prototype.shift = function (axisName, insertIndex)
   let si = this.findIndex(axisName);
   if (si < 0)
   {
-    console.log("Stack#remove named axis not in this stack", this, axisName);
+    dLog("Stack#remove named axis not in this stack", this, axisName);
     return undefined;
   }
   else
   {
     let s = this.axes[si];
-    console.log("shift(), before removeAt()", this, axisName, insertIndex, this.axes.length, s);
+    dLog("shift(), before removeAt()", this, axisName, insertIndex, this.axes.length, s);
     this.log();
     this.axes = this.axes.removeAt(si, 1);
     let len = this.axes.length;
     this.log();
     if (insertIndex >= len)
-      console.log("shift()", this, axisName, insertIndex, " >= ", len, s);
+      dLog("shift()", this, axisName, insertIndex, " >= ", len, s);
     let insertIndexPos = (insertIndex < 0) ? len + insertIndex : insertIndex;
     // splice() supports insertIndex<0; if we support that, this condition need
     if (si < insertIndexPos)
       insertIndexPos--;
     this.axes = this.axes.insertAt(insertIndexPos, s);
-    console.log("shift(), after insertAt()", insertIndexPos, this.axes.length);
+    dLog("shift(), after insertAt()", insertIndexPos, this.axes.length);
     this.log();
     return s;
   }
@@ -1278,7 +1502,7 @@ Stack.prototype.contains = function (axisName)
    stack = axis.stack;
    */
   if (! stack)
-    console.log("contains", axisName, axesP[axisName], oa.axes[axisName].parent);
+    dLog("contains", axisName, axesP[axisName], oa.axes[axisName].parent);
   return this === stack;
 };
 /** Insert the named axis into this.axes[] at insertIndex (before if top, after
@@ -1297,14 +1521,14 @@ Stack.prototype.contains = function (axisName)
 Stack.prototype.dropIn = function (axisName, insertIndex, top, transition)
 {
   let axes = oa.axes;
-  console.log("dropIn", this, axisName, insertIndex, top);
+  dLog("dropIn", this, axisName, insertIndex, top);
   let fromStack = axes[axisName].stack;
   /* It is valid to drop a axis into the stack it is in, e.g. to re-order the Axes.
    * No change to portion, recalc position.
    */
   if (this === fromStack)
   {
-    console.log("Stack dropIn() axis ", axisName, " is already in this stack");
+    dLog("Stack dropIn() axis ", axisName, " is already in this stack");
     this.shift(axisName, insertIndex);
     return;
   }
@@ -1326,7 +1550,7 @@ Stack.prototype.dropIn = function (axisName, insertIndex, top, transition)
     // if fromStack is not deleted, call fromStack.calculatePositions()
     let axis = axes[axisName],
     released = axis.portion;
-    console.log("dropIn", released, okStacks);
+    dLog("dropIn", released, okStacks);
     okStacks.forEach(function(s) { 
       s.releasePortion(released);
       s.calculatePositions();
@@ -1382,7 +1606,7 @@ Stack.prototype.releasePortion = function (released)
  */
 Stack.prototype.dropOut = function (axisName)
 {
-  console.log("dropOut", this, axisName);
+  dLog("dropOut", this, axisName);
   Stack.currentDrop = {out : true, stack: this, 'axisName': axisName, dropTime : Date.now()};
 
   /* passing toStack===undefined to signify moving axis out into a new Stack,
@@ -1416,7 +1640,7 @@ Stack.prototype.dropOut = function (axisName)
  */
 Stack.prototype.calculatePositions = function ()
 {
-  // console.log("calculatePositions", this.stackID, this.axes.length);
+  // dLog("calculatePositions", this.stackID, this.axes.length);
   let sumPortion = 0;
   this.axes.forEach(
     function (a, index)
@@ -1440,7 +1664,7 @@ Stack.axisStack = function (axisName)
       return i >= 0;
     });
   if (as.length != 1)
-    console.log("axisStack()", axisName, as, as.length);
+    dLog("axisStack()", axisName, as, as.length);
   return as[0];
 };
 /** find / lookup Stack of given axis.
@@ -1471,7 +1695,7 @@ Stack.axisStackIndexAll = function (axisName)
   let as = stacks.reduce(findIndex_axisName, []);
   if (as.length != 1)
   {
-    console.log("axisStackIndexAll()", axisName, as, as.length);
+    dLog("axisStackIndexAll()", axisName, as, as.length);
   }
   return as[0];
 };
@@ -1482,13 +1706,13 @@ if (false)  // replaced by axisTransformO
 {
     if (this.parent)
     {
-      console.log("axisTransform", this, this.parent);
+      dLog("axisTransform", this, this.parent);
       return this.parent.axisTransform();
     }
     let yRange = stacks.vc.yRange;
     if (this.position === undefined || yRange === undefined)
     {
-      console.log("axisTransform()", this.axisName, this, yRange);
+      dLog("axisTransform()", this.axisName, this, yRange);
       breakPoint();
     }
     let yOffset = this.yOffset(),
@@ -1507,7 +1731,7 @@ if (false)  // replaced by axisTransformO
         "translate(" + xVal, yOffsetText, ")",
         scaleText
       ].join("");
-    console.log("axisTransform", this, transform);
+    dLog("axisTransform", this, transform);
     return transform;
   };
 if (false)  // replaced by axisTransformO
@@ -1547,7 +1771,7 @@ Stack.prototype.redraw = function (t)
    * let ts = 
    *   t.selectAll("g.stack#" + eltId(this.stackID) + " > .axis-outer");
    */
-  console.log("redraw() stackID:", this.stackID);
+  dLog("redraw() stackID:", this.stackID);
   let this_Stack = this;  // only used in trace
 
   this.axes.forEach(
@@ -1558,13 +1782,13 @@ Stack.prototype.redraw = function (t)
        * may later use a slight / short transition to smooth noise in
        * cursor.  */
       let t_ = (Stack.currentDrag == a.axisName) ? d3 : t;
-      // console.log("redraw", Stack.currentDrag, a.axisName, Stack.currentDrag == a.axisName);
+      // dLog("redraw", Stack.currentDrag, a.axisName, Stack.currentDrag == a.axisName);
       let ts = 
         t_.selectAll(".axis-outer#" + eltId(a.axisName));
       (trace_stack_redraw > 0) &&
-        (((ts._groups.length === 1) && console.log(ts._groups[0], ts._groups[0][0]))
-         || ((trace_stack_redraw > 1) && console.log("redraw", this_Stack, a, index, a.axisName)));
-      // console.log("redraw", a.axisName);
+        (((ts._groups.length === 1) && dLog(ts._groups[0], ts._groups[0][0]))
+         || ((trace_stack_redraw > 1) && dLog("redraw", this_Stack, a, index, a.axisName)));
+      // dLog("redraw", a.axisName);
       // args passed to fn are data, index, group;  `this` is node (SVGGElement)
       ts.attr("transform", Stack.prototype.axisTransformO);
       axisRedrawText(a);
@@ -1573,12 +1797,54 @@ Stack.prototype.redraw = function (t)
   this.redrawAdjacencies();
 };
 
+/** Select the <g.axis-outer> DOM element of this axis.
+ * @return d3 selection
+ */
+Stacked.prototype.selectAll = function ()
+{
+  /* This function is factored from a pattern which appears in a number of
+   * places, which can now use this; (they can be seen with grep
+   * 'select.*axis-outer' ).
+   */
+
+  /** currently the <g.stack>-s are in svg > g, but there may be value in adding
+   * a <g.stacks> to parent the <g.stack>-s
+   */
+  let stackSel = "g#id" + this.stack.stackID + ".stack",
+  axisSel = stackSel + " > g#id" + this.axisName + ".axis-outer",
+  gAxis = Stacked.selectAll(axisSel);
+
+  /* later we may have multiple instances of an axis; their stackID will
+   * identify them uniquely if they are in separate stacks. */
+  if (gAxis.size() > 1)
+    dLog('Stacked:selectAll', gAxis.size(), gAxis.nodes(), gAxis.node);
+  return gAxis;
+};
+/** Select the <g.axis-outer> DOM element of the axis indicated by optional
+ * param axisSel, or all axes if axisSel is undefined.
+ * @param axisSel undefined for all axes, or a CSS-style selector.
+ * @return d3 selection
+ */
+Stacked.selectAll = function (axisSel)
+{
+  if (! axisSel)
+    axisSel = "g.stack > g.axis-outer";
+  let gAxis;
+  if (oa && oa.svgContainer)
+    gAxis = oa.svgContainer.selectAll("svg > g > " + axisSel);
+  else
+    gAxis = d3.selectAll(selectPrefix + ' > ' + axisSel);
+  if (trace_stack)
+    gAxis.nodes().forEach(function (n, i) { dLog(i, n);});
+  return gAxis;
+};
+
 function axisRedrawText(a)
 {
   let svgContainer = oa.svgContainer,
   g_axisall_id = "g.axis-all#" + eltIdAll(a.axisName);
   let axisTS = svgContainer.selectAll(g_axisall_id + " > text");
-  // console.log('axisRedrawText', g_axisall_id, axisTS.nodes(), axisTS.node());
+  // dLog('axisRedrawText', g_axisall_id, axisTS.nodes(), axisTS.node());
   axisTS.attr("transform", yAxisTitleTransform(oa.axisTitleLayout));
   let axisGS = svgContainer.selectAll("g.axis#" + axisEltId(a.axisName) + " > g.tick > text");
   axisGS.attr("transform", yAxisTicksScale);
@@ -1614,7 +1880,7 @@ Stack.prototype.redrawAdjacencies = function ()
 /** width of the axis.  either 0 or .extended (current width of extension) */
 Stacked.prototype.extendedWidth = function()
 {
-  // console.log("Stacked extendedWidth()", this, this.extended);
+  // dLog("Stacked extendedWidth()", this, this.extended);
   return this.extended || 0;
 };
 
@@ -1631,7 +1897,7 @@ Stack.prototype.extendedWidth = function()
       if ((range[1] === undefined) || (range[1] < w))
         range[1] = w;
     });
-  // console.log("Stack extendedWidth()", this, range);
+  // dLog("Stack extendedWidth()", this, range);
   return range;
 };
 
@@ -1654,7 +1920,7 @@ function xScaleExtend()
     function(s){ let widthRange = s.extendedWidth(); return widthRange;}
   );
   if (trace_stack > 1)
-    stacks.map(function(s) { console.log(s.axes[0].mapName, s.axes[0].extended); });
+    stacks.map(function(s) { dLog(s.axes[0].mapName, s.axes[0].extended); });
   let widths = widthRanges.map(
     function(widthRange){ return widthRange[1];}
   ),
@@ -1668,7 +1934,7 @@ function xScaleExtend()
   stacks.axisXRangeMargin = axisXRange[1] - stacks.length * 40;
   let stackDomain = Array.from(stacks.keys()); // was axisIDs
 
-  console.log("xScaleExtend", widthRanges, widths, widthsSum, stacks.vc.axisXRange, axisXRange, stackDomain);
+  dLog("xScaleExtend", widthRanges, widths, widthsSum, stacks.vc.axisXRange, axisXRange, stackDomain);
   let v = variableBands,  CombinedScale = v();
   // let gapScale = // d3.scaleOrdinal()
   CombinedScale
@@ -1695,7 +1961,7 @@ function xScaleExtend()
 //let x = d3.scaleOrdinal().domain(axisIDs).range([0, w]);
 function xScale() {
   let stackDomain = Array.from(stacks.keys()); // was axisIDs
-  console.log("xScale()", stackDomain);
+  dLog("xScale()", stackDomain);
   return d3.scalePoint().domain(stackDomain).range(stacks.vc.axisXRange);
 }
 
@@ -1705,8 +1971,8 @@ function x(axisID)
 {
   let i = Stack.axisStackIndex(axisID);
   if (oa.xScaleExtend.domain().length === 2)
-    console.log("x()", axisID, i, oa.xScaleExtend(i), oa.xScaleExtend.domain(), oa.xScaleExtend.range());
-  if (i === -1) { console.log("x()", axisID, i); breakPoint(); }
+    dLog("x()", axisID, i, oa.xScaleExtend(i), oa.xScaleExtend.domain(), oa.xScaleExtend.range());
+  if (i === -1) { dLog("x()", axisID, i); breakPoint(); }
   return oa.xScaleExtend(i);
 }
 stacks.x = x;
@@ -1731,16 +1997,15 @@ Stacked.prototype.axisTransformO = function ()
   let yRange = stacks.vc.yRange;
   if (this.position === undefined || yRange === undefined)
   {
-    console.log("axisTransformO()", this.axisName, this, yRange);
+    dLog("axisTransformO()", this.axisName, this, yRange);
     breakPoint();
   }
   let yOffset = this.yOffset(),
   yOffsetText =  Number.isNaN(yOffset) ? "" : "," + this.yOffset();
-  /** x scale doesn't matter because x is 0; use 1 for clarity.
+  /** Y scale.
    * no need for scale when this.portion === 1
    */
-  let scale = this.portion,
-  scaleText = Number.isNaN(scale) || (scale === 1) ? "" : " scale(1," + scale + ")";
+  let scale = this.portion;
   let xVal = checkIsNumber(oa.o[this.axisName]);
   xVal = Math.round(xVal);
   let rotateText = "", axis = oa.axes[this.axisName];
@@ -1752,11 +2017,11 @@ Stacked.prototype.axisTransformO = function ()
      * trace. */
     let block;
     if ((axis = oa.stacks.axes[this.axisName]))
-      console.log('axisTransformO', 'use axes[]', this.axisName, axis);
+      dLog('axisTransformO', 'use axes[]', this.axisName, axis);
     else if ((block = oa.stacks.blocks[this.axisName]) && block.axis)
     {
       axis = block.getAxis();
-      console.log('axisTransformO', 'use blocks[] .axis', this.axisName, axis);
+      dLog('axisTransformO', 'use blocks[] .axis', this.axisName, axis);
     }
   }
   if (axis.perpendicular)
@@ -1768,7 +2033,25 @@ Stacked.prototype.axisTransformO = function ()
       +  " translate(0," + shift + ")";
     let a = d3.select("g#id" + this.axisName + ".axis-outer");
     if (trace_stack > 1)
-      console.log("perpendicular", shift, rotateText, a.node());
+      dLog("perpendicular", shift, rotateText, a.node());
+
+    let axisXRange = stacks.vc.axisXRange;
+    /** nStackAdjs and nStackAdjs : copied from draw-map.js : updateAxisTitleSize() */
+    let nStackAdjs = stacks.length > 1 ? stacks.length-1 : 1;
+    let axisSpacing = (axisXRange[1]-axisXRange[0])/nStackAdjs;
+    /** if perpendicular (dotPlot), reduce the axis height (which is width
+     * because of the 90deg rotation from yRange to axisSpacing.
+     * if not perpendicular, x scale doesn't matter because x is 0; use 1 for clarity.
+     */
+    scale = axisSpacing / yRange;
+    shift *= axisSpacing / yRange;
+  }
+
+  let
+  scaleText = Number.isNaN(scale) || ((scale === 1) && ! axis.perpendicular) ? "" : " scale(1," + scale + ")";
+  dLog('axisTransformO scaleText', scaleText);
+  if (trace_stack > 1) {
+    let xS = xScale(); dLog('xScale', xS.domain(), xS.range());
   }
   let transform =
     [
@@ -1777,12 +2060,92 @@ Stacked.prototype.axisTransformO = function ()
       scaleText
     ].join("");
   if (trace_stack > 1)
-    console.log("axisTransformO", this, transform);
+    dLog("axisTransformO", this, transform);
   return transform;
 };
 
 /*----------------------------------------------------------------------------*/
 
+/** Reference the y scales.
+ * The scales y and ys are currently created in 
+ * The roles of the scales y and ys are noted in comments in draw-map.js : draw();
+ * the key difference is that ys has added translation and scale
+ * for the axis's current stacking.
+ */
+Stacked.prototype.getY = function ()
+{
+  let axisName = this.axisName;
+  /* y and ys will be referenced in the same call, since they are created at the same time.
+   * this.axisName will not change.  If it did in future, this function could become a CF.
+   */
+  if (! this.y)
+    this.y = oa.y[axisName];
+  if (! this.ys)
+    this.ys = oa.ys[axisName];
+  return this.y;
+};
+
+/** .positions[] is [last update drawn, current], @see Stacked.prototype.currentPosition() */
+Stacked.prototype.currentPosition = function ()
+{
+  let axis1d = this.axis1d,
+  currentPosition = axis1d && axis1d.get('currentPosition');
+  return currentPosition;
+};
+
+/** Return domain and range intervals for the axis.
+ * Used to construct the intervalParams passed to the API by requestPathsProgressive(), to guide how man results are returned.
+*
+ * @return length of the axis in pixels
+ */
+Stacked.prototype.axisDimensions = function ()
+{
+  let
+    /** y scale of this axis */
+    y = this.getY(),
+  domain = this.y.domain(),
+  axis1d = this.axis1d,
+  dim = { domain, range : this.yRange(), zoomed : axis1d.zoomed};
+  let
+  currentPosition = axis1d && axis1d.get('currentPosition');
+  if (! isEqual(domain, currentPosition.yDomain))
+    dLog('axisDimensions', domain, currentPosition.yDomain, axis1d.zoomed, currentPosition);
+  return dim;
+};
+/** Set the domain of the current position to the given domain
+ */
+Stacked.prototype.setDomain = function (domain)
+{
+  let axis1d = this.axis1d,
+  axisPosition = axis1d && axis1d.currentPosition;
+  // if (! axisPosition)
+  //  dLog('setDomain', this, 'domain', domain, axis1d, axisPosition);
+  axisPosition.set('yDomain', domain);
+};
+/** Set the zoomed of the current position to the given zoomed
+ */
+Stacked.prototype.setZoomed = function (zoomed)
+{
+  let axis1d = this.axis1d;
+  // later .zoomed may move into axis1d.currentPosition
+  // if (! axisPosition)
+  // dLog('setZoomed', this, 'zoomed', axis1d.zoomed, '->', zoomed, axis1d);
+  axis1d.setZoomed(zoomed);
+};
+
+Stacked.prototype.unviewBlocks = function ()
+{
+  this.blocks.forEach((sBlock) => {
+    if (sBlock.block)
+      sBlock.block.set('isViewed', false);
+  });
+};
+
+
+
+/*----------------------------------------------------------------------------*/
+
 export  { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText,
           axisId2Name
+	  , setCount
         } ;

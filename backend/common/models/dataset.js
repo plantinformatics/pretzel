@@ -1,30 +1,52 @@
 'use strict';
 
-var _ = require('lodash')
+var _ = require('lodash');
 
-var acl = require('../utilities/acl')
-var identity = require('../utilities/identity')
-var upload = require('../utilities/upload')
-var load = require('../utilities/load')
+var acl = require('../utilities/acl');
+var identity = require('../utilities/identity');
+var upload = require('../utilities/upload');
+var load = require('../utilities/load');
 
 module.exports = function(Dataset) {
 
   Dataset.upload = function(msg, options, req, cb) {
     req.setTimeout(0);
     var models = this.app.models;
+    // Common steps for both .json and .gz files after parsing
+    const uploadParsed = (jsonMap) => {
+      if(!jsonMap.name){
+        cb(Error('Dataset JSON has no "name" field (required)'));
+      } else {
+        // Check if dataset name already exists
+        // Passing option of 'unfiltered: true' overrides filter for public/personal-only
+        models.Dataset.exists(jsonMap.name, { unfiltered: true }).then((exists) => {
+          if (exists) {
+            cb(Error(`Dataset name "${jsonMap.name}" is already in use`));
+          } else {
+            // Should be good to process saving of data
+            upload.uploadDataset(jsonMap, models, options, cb);
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          cb(Error('Error checking dataset existence'));
+        });
+      }
+    };
+    // Parse as either .json or .gz
     if (msg.fileName.endsWith('.json')) {
       try {
-        var jsonMap = JSON.parse(msg.data);
+        let jsonMap = JSON.parse(msg.data);
+        uploadParsed(jsonMap);
       } catch (e) {
         console.log(e);
         cb(Error("Failed to parse JSON"));
       }
-      upload.uploadDataset(jsonMap, models, options, cb)
     } else if (msg.fileName.endsWith('.gz')) {
       var buffer = new Buffer(msg.data, 'binary');
       load.gzip(buffer).then(function(json) {
-        jsonMap = json;
-        upload.uploadDataset(jsonMap, models, options, cb)
+        let jsonMap = json;
+        uploadParsed(jsonMap);
       })
       .catch(function(err) {
         console.log(err);
@@ -147,7 +169,7 @@ module.exports = function(Dataset) {
     description: "Creates a dataset and all of its children"
   });
 
-  acl.assignRulesRecord(Dataset)
-  acl.limitRemoteMethods(Dataset)
-  acl.limitRemoteMethodsRelated(Dataset)
+  acl.assignRulesRecord(Dataset);
+  acl.limitRemoteMethods(Dataset);
+  acl.limitRemoteMethodsRelated(Dataset);
 };

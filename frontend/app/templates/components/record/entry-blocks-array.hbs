@@ -1,0 +1,17 @@
+<ul>
+  {{#each data as |block|}}
+    {{#record/entry-selectable node=block nodeName=block.name
+       extraClasses="d-inline-block"
+       selectedNode=selectedBlock
+       selectNode=(action 'selectBlockAndDataset')}}
+      {{!-- node (block) is passed to selectNode  --}}
+
+      {{record/entry-block-add-button
+        loadBlock="loadBlock"
+        entry=block }}
+      <span title='{{block.name}}' >{{block.name}}</span>
+
+    {{/record/entry-selectable}}
+
+  {{/each}}
+</ul>

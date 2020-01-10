@@ -7,6 +7,9 @@ const { inject: { service } } = Ember;
 import { task } from 'ember-concurrency';
 import EmberObject from '@ember/object';
 
+import { parseOptions } from '../utils/common/strings';
+
+const dLog = console.debug;
 
 let config = {
   dataset: service('data/dataset'),
@@ -62,13 +65,21 @@ let config = {
 
     let me = this;
     
+    if (params.options)
+      params.parsedOptions = parseOptions(params.options);
+
     let datasetService = this.get('dataset');
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
     let datasetsTask = taskGetList.perform(); // renamed from 'maps'
 
+    this.controllerFor(this.fullRouteName).setViewedOnly(params.mapsToView, true);
+
     let blockService = this.get('block');
-    let getBlocks = blockService.get('getBlocks');
-    let viewedBlocksTasks = getBlocks.apply(blockService, [params.mapsToView]);
+    let blocksLimitsTask = blockService.getBlocksLimits(undefined);
+    let allInitially = params.parsedOptions && params.parsedOptions.allInitially;
+    let getBlocks = blockService.get('getBlocks' + (allInitially ? '' : 'Summary'));
+    let viewedBlocksTasks = (params.mapsToView && params.mapsToView.length) ?
+      getBlocks.apply(blockService, [params.mapsToView]) : Ember.RSVP.cast([]);
 
     result = EmberObject.create(
       {
@@ -82,7 +93,7 @@ let config = {
      * blocks, and if so, add them to the view.
      */
     datasetsTask.then(function (blockValues) {
-      console.log('datasetsTask then', blockValues);
+      dLog('datasetsTask then', blockValues);
       // blockValues[] are all available blocks
       let referenceBlocks =
       params.mapsToView.reduce(function (result, blockId) {
@@ -94,12 +105,17 @@ let config = {
           result.push(referenceBlock);
         return result;}, []),
       referenceBlockIds = referenceBlocks.map(function (block) { return block.get('id'); });
-      console.log(referenceBlockIds);
+      dLog('referenceBlockIds', referenceBlockIds);
+      me.controllerFor(me.fullRouteName).setViewedOnly(referenceBlockIds, true);
+      /* currently getBlocksSummary() just gets the featureCount, which for a
+       * reference block is 0, so this step could be skipped if ! allInitially,
+       * but later the summary may contain other information */
       /** could add this task list to result; not required yet. */
-      let viewedBlockReferencesTasks = getBlocks.apply(blockService, [referenceBlockIds]);
+      let viewedBlockReferencesTasks = referenceBlockIds.length ?
+        getBlocks.apply(blockService, [referenceBlockIds]) : Ember.RSVP.cast([]);
     });
 
-    console.log("routes/mapview: model() result", result);
+    dLog("routes/mapview: model() result", result);
     return result;
 
   },

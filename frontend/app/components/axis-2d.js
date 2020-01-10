@@ -1,4 +1,6 @@
 import Ember from 'ember';
+const { inject: { service } } = Ember;
+
 import { eltWidthResizable } from '../utils/domElements';
 import AxisEvents from '../utils/draw/axis-events';
 
@@ -8,6 +10,7 @@ const axisTransitionTime = 750;
 
 
 export default Ember.Component.extend(Ember.Evented, AxisEvents, {
+  blockService: service('data/block'),
 
   needs: ['component:tracks'],
 
@@ -25,19 +28,46 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let axis = stacks.axesP[axisID];
     return axis;
   }),
+  axis1d : Ember.computed('axis', 'drawMap.oa.stacks.axesPCount', function() {
+    let axis = this.get('axis'),
+    axesPCount = this.get('drawMap.oa.stacks.axesPCount'),
+    axis1d = axis.axis1d;
+    console.log('axis1d', axis1d, axesPCount);
+    return axis1d;
+  }),
   blocks : Ember.computed('axis', function() {
     let axis = this.get('axis');
     return axis && axis.blocks;
   }),
   /** @return just the ("child") data blocks, skipping the ("parent") reference
    * block which is block[0].
+   * Result type is [] of (stack.js) Block.
    */
-  dataBlocks : Ember.computed('blocks', function () {
+  dataBlocksS : Ember.computed('blocks.[]', function () {
     let blocks = this.get('blocks'),
-    /** use slice() to copy - don't modify blocks[]; and skip blocks[0]. */
-    dataBlocks = blocks.slice(1);
+    /** skip reference block, which has no features. */
+    dataBlocks = blocks.filter(function (bS) {
+      let b = bS.block; return b && bS.isData(); });
+    console.log('dataBlocks', blocks, dataBlocks);
     return dataBlocks;
   }),
+  /** The above dataBlocksS() is based on stacks.js data structure for axes and blocks;
+   * this function instead is based on the Ember store blocks, via the ComputedProperty axesBlocks.
+   * This can replace dataBlocksS(), which may be updated after a delay.
+   * @return [] if there are no blocks with data in the axis.
+   */
+  dataBlocks : Ember.computed(
+    'axisID',  'blockService.dataBlocks.@each.{isViewed,hasFeatures}',
+    'blockService.viewed.[]',
+    function () {
+      let
+        /** related : blockService.axesBlocks, axis1d.dataBlocks */
+        dataBlocksMap = this.get('blockService.dataBlocks'),
+      id = this.get('axisID'),
+      dataBlocks = (dataBlocksMap && dataBlocksMap.get(id)) || [];
+      console.log('dataBlocksMap', id, dataBlocksMap, dataBlocks);
+      return dataBlocks;
+    }),
 
 
   /*--------------------------------------------------------------------------*/
@@ -218,7 +248,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
           .data([width])
           .transition().duration(axisTransitionTime)
           .attr("transform", function(d) {return "translate(" + d + ",0)";});
-        console.log('setWidth', use.node(), width, use.data(), use.attr('transform'), use.transition());
+        if (! use.empty())  // use.data() is not valid if empty
+          console.log('setWidth', use.node(), width, use.data(), use.attr('transform'), use.transition());
         if (rect.size() == 0)
           console.log('setWidth rect', rect.node(), axisUse.node(), use.node());
         else
@@ -226,6 +257,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
           rect.attr("width", width);
           console.log(rect.node(), rect.attr('width'));
         }
+        let axisTitle = axisUse.selectAll('g > g.axis-all > text')
+          .transition().duration(axisTransitionTime)
+          // duplicated in utils/draw/axis.js : yAxisTitleTransform()
+          .attr("transform", "translate(" + width/2 + ",0)");
+        console.log('axisTitle', axisTitle);
+
         /** Can use param d, same value as me.get('axisID').
          * axisID is also on the parent of <use> :
          * useElt = axisUse.node();

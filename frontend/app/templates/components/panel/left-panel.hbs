@@ -6,7 +6,7 @@
         <li><a data-toggle="tab" href="#left-panel-upload">{{elem/icon-base name="cloud-upload"}} Upload</a></li>
     </ul>
     
-    <div class="tab-content" style="overflow: auto">
+    <div class="tab-content">
         <div id="left-panel-feature-search" class="tab-pane fade">
             {{panel/manage-search
                 view=view
@@ -20,6 +20,8 @@
             {{panel/manage-explorer
                 view=view
                 model=model
+                mapviewDatasets=datasets
+                refreshDatasets=refreshDatasets
                 loadBlock="loadBlock"
                 selectBlock="selectBlock"
                 selectedBlock=selectedBlock
@@ -39,6 +41,7 @@
                 selectBlock="selectBlock"
 
                 model=model
+                controls=controls
                 isShowUnique=isShowUnique
                 pathColourScale=pathColourScale
                 scaffolds=scaffolds
@@ -50,7 +53,10 @@
             }}
         </div>
         <div id="left-panel-upload" class="tab-pane fade">
-            {{panel/upload-data}}
+            {{panel/upload-data
+                datasets=datasets
+                refreshDatasets=refreshDatasets
+            }}
         </div>
     </div>
 
