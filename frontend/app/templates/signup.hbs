@@ -1,2 +1,7 @@
+{{#elem/embed-html path="signupPageContent" as |embedHtml|}}
+    {{{await embedHtml.promise}}}
+{{/elem/embed-html}}
+
+
 <br>
 {{form/user-signup}}
