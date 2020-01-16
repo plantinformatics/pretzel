@@ -36,11 +36,13 @@ export default Ember.Component.extend({
   /** @param [axisID, t] */
   redrawOnce(axisID_t) {
     console.log("redrawOnce", axisID_t);
-    // -  redraw if axisID matches this axis
-    // possibly use transition t for redraw 
-    let redraw = this.get('redraw');
-    if (redraw)
-      redraw.apply(this, axisID_t);
+    if (! this.isDestroying) {
+      // -  redraw if axisID matches this axis
+      // possibly use transition t for redraw 
+      let redraw = this.get('redraw');
+      if (redraw)
+        redraw.apply(this, axisID_t);
+    }
   },
   redrawDebounced(axisID_t) {
     Ember.run.debounce(this, this.redrawOnce, axisID_t, 1000);

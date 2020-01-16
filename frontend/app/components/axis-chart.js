@@ -96,7 +96,8 @@ export default InAxis.extend({
             let valueText = '[' + d._id.min + ',' + d._id.max + '] : ' + d.count,
             blockName = block.view && block.view.longName();
             return valueText + '\n' + blockName;
-          }
+          },
+          valueIsArea : true
         };
       // pass alternate dataConfig to layoutAndDrawChart(), defining alternate functions for {datum2Value, datum2Location }
       this.layoutAndDrawChart(fa, featureCountData);

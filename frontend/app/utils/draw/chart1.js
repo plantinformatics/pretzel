@@ -1,3 +1,4 @@
+import Ember from 'ember';
 
 import { getAttrOrCP } from '../ember-devel';
 import { configureHorizTickHover } from '../hover';
@@ -140,7 +141,12 @@ function layoutAndDrawChart(axisChart, chart, dataConfig)
     let
       axisComponent = axisChart.get("axis"),
     axisID = axisComponent.axisID,
-    gAxis = d3.select("g.axis-outer#id" + axisID + "> g.axis-use"),
+    gAxis = d3.select("g.axis-outer#id" + axisID + "> g.axis-use");
+    if (! gAxis.node()) { /* probably because axisShowExtend() has not added the g.axis-use yet - will sort out the dependencies ... . */
+      dLog('layoutAndDrawChart', d3.select("g.axis-outer#id" + axisID).node(), 'no g.axis-use', this, axisComponent, axisID);
+      return;
+    }
+    let
     /** relative to the transform of parent g.axis-outer */
     bbox = gAxis.node().getBBox(),
     yrange = [bbox.y, bbox.height];
@@ -171,6 +177,8 @@ function layoutAndDrawChart(axisChart, chart, dataConfig)
       dataConfig = isBlockData ? blockData : parsedData;
       if (! dataConfig.hoverTextFn)
         dataConfig.hoverTextFn = hoverTextFn;
+      if (dataConfig.valueIsArea === undefined)
+        dataConfig.valueIsArea = false;
     }
 
     let
@@ -231,6 +239,7 @@ function layoutAndDrawChart(axisChart, chart, dataConfig)
       /* these can be renamed datum2{abscissa,ordinate}{,Scaled}() */
       /* apply y after scale applied by datum2Location */
       let datum2LocationScaled = scaleMaybeInterval(options.datum2Location, me.y);
+      /** related @see rectWidth().  */
       function datum2ValueScaled(d) { return me.x(options.datum2Value(d)); }
       this.datum2LocationScaled = datum2LocationScaled;
       this.datum2ValueScaled = datum2ValueScaled;
@@ -253,7 +262,7 @@ function layoutAndDrawChart(axisChart, chart, dataConfig)
        */
       // scaleBand() domain is a list of all y values.
       // yBand.domain(data.map(options.datum2Location));
-      x.domain([0, d3.max(data, options.datum2Value)]);
+      x.domain([0, d3.max(data, this.rectWidth.bind(this, /*scaled*/false, /*gIsData*/false))]);
 
       let axisXa =
       gsa.append("g")
@@ -305,16 +314,40 @@ function layoutAndDrawChart(axisChart, chart, dataConfig)
         .attr("x", 0)
         .attr("y", (d) => { let li = this.datum2LocationScaled(d); return li.length ? li[0] : li; })
         // yBand.bandwidth()
-        .attr("height", this.rectHeight.bind(this))
-        .attr("width", this.datum2ValueScaled);
+        .attr("height", this.rectHeight.bind(this, /*gIsData*/false)) // equiv : (d, i, g) => this.rectHeight(false, d, i, g)
+        .attr("width", this.rectWidth.bind(this, /*scaled*/true, /*gIsData*/false));
       rx.remove();
       console.log(gAxis.node(), rs.nodes(), re.nodes());
     };
     /** Calculate the height of rectangle to be used for this data point
      * @param this  is Chart1, not DOM element.
+     * @param scaled  true means apply scale (x) to the result
+     * @param gIsData true meangs g is __data__, otherwise it is DOM element, and has .__data__ attribute.
+     * gIsData will be true when called from d3.max(), and false for d3 attr functions.
      */
-    Chart1.prototype.rectHeight = function (d, i, g)
+  Chart1.prototype.rectWidth = function (scaled, gIsData, d, i, g)
     {
+      Ember.assert('rectWidth arguments.length === 5', arguments.length === 5);
+      /** The scale is linear, so it is OK to scale before dividing by rectHeight.
+       * Otherwise could use datum2Value() here and apply this.x() before the return.
+       */
+      let d2v = (scaled ? this.datum2ValueScaled : this.options.datum2Value),
+      width = d2v(d);
+      if (this.options.valueIsArea) {
+        let h;
+        width /= (h = this.rectHeight(gIsData, d, i, g));
+        // dLog('rectWidth', h, width, gIsData);
+      }
+      return width;
+    };
+    /** Calculate the height of rectangle to be used for this data point
+     * @param this  is Chart1, not DOM element.
+     * @param gIsData true meangs g is __data__, otherwise it is DOM element, and has .__data__ attribute.
+     * gIsData will be true when called from d3.max(), and false for d3 attr functions.
+     */
+  Chart1.prototype.rectHeight = function (gIsData, d, i, g)
+    {
+      Ember.assert('rectHeight arguments.length === 4', arguments.length === 4);
       let height, locationScaled;
       /* if locationScaled is an interval, calculate height from it.
        * Otherwise, use adjacent points to indicate height.
@@ -332,15 +365,16 @@ function layoutAndDrawChart(axisChart, chart, dataConfig)
           height = this.yLine.range() / 10;
         else {
           let r = [];
+          function gData(i) { let gi = g[i]; return gIsData ? gi : gi.__data__; };
           if (i > 0)
-            r.push(g[i-1].__data__);
+            r.push(gData(i));
           r.push(d);
           if (i < g.length-1)
-            r.push(g[i+1].__data__);
+            r.push(gData(i+1));
           let y =
-            r.map(this.datum2ValueScaled);
+            r.map(this.datum2LocationScaled);
           height = Math.abs(y[y.length-1] - y[0]) * 2 / (y.length-1);
-          dLog('rectHeight', d, i, /*g,*/ r, y, height);
+          dLog('rectHeight', gIsData, d, i, /*g,*/ r, y, height);
           if (! height)
             height = 1;
         }
@@ -371,7 +405,7 @@ function layoutAndDrawChart(axisChart, chart, dataConfig)
 
       let datum2LocationScaled = scaleMaybeInterval(options.datum2Location, y);
       let line = d3.line()
-        .x(this.datum2ValueScaled)
+        .x(this.rectWidth.bind(this, /*scaled*/true, /*gIsData*/false))
         .y((d) => middle(datum2LocationScaled(d)));
 
       console.log("line x domain", this.x.domain(), this.x.range());
@@ -469,7 +503,8 @@ function layoutAndDrawChart(axisChart, chart, dataConfig)
                datum2Location : dataConfig.datum2Location,
                datum2Value : dataConfig.datum2Value,
                datum2Description : dataConfig.datum2Description,
-               hoverTextFn : dataConfig.hoverTextFn
+               hoverTextFn : dataConfig.hoverTextFn,
+               valueIsArea : dataConfig.valueIsArea
              });
       chart1.block = axisChart.get('block');
       axisChart.set("chart1", chart1);
