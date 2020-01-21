@@ -1,8 +1,7 @@
 import Ember from 'ember';
 const { inject: { service } } = Ember;
 
-import { className, layoutAndDrawChart /*Chart1*/ } from '../utils/draw/chart1';
-import InAxis from './in-axis';
+import { className, AxisCharts, layoutAndDrawChart, Chart1, DataConfig } from '../utils/draw/chart1';
 
 /*----------------------------------------------------------------------------*/
 
@@ -20,15 +19,16 @@ const dLog = console.debug;
  * @param chart data (field name is className); may be either :
  * result of parseTextData() : array of {name : , value : , description : }
  * or chartBlock passed in : .features
- * @param axis  axisComponent;   parent axis-2d component
- * @param axisID  axisID
- * @param data oa
+ * @param axis  axisComponent;   parent axis-2d component -	
+ * @param gContainer  -	
+ * @param axisID  axisID  -	local value ?
+ * @param data oa -	
  * @param width resizedWidth
  *----------------
  * data attributes created locally, not passed in :
  * @param chart1
  */
-export default InAxis.extend({
+export default Ember.Component.extend({
   blockService: service('data/block'),
 
   className : className,
@@ -37,18 +37,48 @@ export default InAxis.extend({
     console.log("components/axis-chart didRender()");
   },
 
+  axisID : Ember.computed.alias('axis.axisID'),
+
+  gAxis : Ember.computed('axisID', function () {
+    let axisID = this.get('axisID');
+    let axisCharts = this.get('axisCharts');
+    let gAxis = axisCharts.selectParentContainer(axisID);
+    return gAxis;
+  }),
+
+  yAxesScales : Ember.computed('data', function () {
+    let oa = this.get('data');
+    return oa.y;
+  }),
+  yAxisScale : Ember.computed('axisID', 'yAxesScales', function () {
+    let yAxesScales = this.get('yAxesScales'),
+    axisID = this.get('axisID'),
+    yAxis = yAxesScales[axisID];
+    dLog('yAxisScale', axisID, yAxis && yAxis.domain());
+    return yAxis;
+  }),
+
+  axisCharts : Ember.computed(function () {
+    return new AxisCharts();
+  }),
+
+
+
+
+
   blockFeatures : Ember.computed('block', 'block.features.[]', 'axis.axis1d.domainChanged', function () {
     if (this.get('block.isChartable'))
       this.drawBlockFeatures0();
   }),
   featuresCounts : Ember.computed('block', 'block.featuresCounts.[]', 'axis.axis1d.domainChanged', function () {
+    let featuresCounts = this.get('block.featuresCounts');
     /* perhaps later draw both, for the moment just draw 1, and since all data
      * blocks have featuresCounts, plot the features of those blocks which are
      * chartable, so that we can see both capabilities are working.
      */
     if (! this.get('block.isChartable'))
-      this.drawBlockFeaturesCounts();
-    return this.get('block.featuresCounts');
+      this.drawBlockFeaturesCounts(featuresCounts);
+    return featuresCounts;
   }),
 
   drawBlockFeatures0 : function() {
@@ -65,12 +95,19 @@ export default InAxis.extend({
         this.drawBlockFeatures(features);
     }
   },
-  drawBlockFeaturesCounts : function() {
-    let featuresCounts = this.get('block.featuresCounts');
+  drawBlockFeaturesCounts : function(featuresCounts) {
+    if (! featuresCounts)
+      featuresCounts = this.get('featuresCounts');
     let domain = this.get('axis.axis1d.domainChanged');
     if (featuresCounts) {
       console.log('drawBlockFeaturesCounts', featuresCounts.length, domain, this.get('block.id'));
 
+      let countsChart = this.get('countsChart');
+      // pass alternate dataConfig to layoutAndDrawChart(), defining alternate functions for {datum2Value, datum2Location }
+      this.layoutAndDrawChart(featuresCounts, countsChart);
+    }
+  },
+  countsChart : Ember.computed(function() {
       /** example element of array f : */
       const dataExample = 
         {
@@ -80,12 +117,8 @@ export default InAxis.extend({
           },
           "count": 109
         };
-      let f = featuresCounts.toArray(),
-      /** the min, max will be passed also - first need to factor out part of axis-chart for featuresCounts. */
-      fa = f; // .map(function (f0) { return f0.count;});
-      console.log('drawBlockFeaturesCounts', f);
       let 
-        featureCountData = {
+        featureCountDataProperties = {
           dataTypeName : 'featureCountData',
           datum2Location : function datum2Location(d) { return [d._id.min, d._id.max]; },
           datum2Value : function(d) { return d.count; },
@@ -98,16 +131,17 @@ export default InAxis.extend({
             return valueText + '\n' + blockName;
           },
           valueIsArea : true
-        };
-      // pass alternate dataConfig to layoutAndDrawChart(), defining alternate functions for {datum2Value, datum2Location }
-      this.layoutAndDrawChart(fa, featureCountData);
-    }
-  },
+        },
+    featureCountData = new DataConfig(featureCountDataProperties);
+    let countsChart = new Chart1(this.get('axisCharts.dom.gAxis'), featureCountData);
+    return countsChart;
+  }),
+
   drawBlockFeatures : function(features) {
     let f = features.toArray(),
     fa = f.map(function (f0) { return f0._internalModel.__data;});
 
-    let axisID = this.get("axis.axisID"),
+    let axisID = this.get("axisID"),
     oa = this.get('data'),
     za = oa.z[axisID];
     /* if za has not been populated with features, it will have just .dataset
@@ -201,8 +235,15 @@ export default InAxis.extend({
     return result;
   },
 
-  layoutAndDrawChart(chart, dataConfig) {
-    layoutAndDrawChart(this, chart, dataConfig);
+  layoutAndDrawChart(chartData, chart1) {
+    let
+      axisID = this.get("axisID"),
+    axisCharts = this.get('axisCharts'),
+    block = this.get('block'),
+    yAxisScale = this.get('yAxisScale'),
+    resizedWidth = this.get('width');
+    chart1 = layoutAndDrawChart(
+      axisID, axisCharts, chart1, chartData, block, /*dataConfig*/undefined, yAxisScale, resizedWidth);
   },
 
 

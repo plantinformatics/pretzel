@@ -35,6 +35,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     console.log('axis1d', axis1d, axesPCount);
     return axis1d;
   }),
+  /** @return the blocks of this axis.
+   * Result type is [] of (stack.js) Block.
+   * For the Ember data Object blocks, @see dataBlocks().
+   */
   blocks : Ember.computed('axis', function() {
     let axis = this.get('axis');
     return axis && axis.blocks;
@@ -69,12 +73,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       return dataBlocks;
     }),
 
+  /** @return blocks which are viewedChartable, and whose axis is this axis.
+   */
   viewedChartable : Ember.computed('blockService.viewedChartable.[]', 'axisID',
     function () {
       let
       id = this.get('axisID'),
       viewedChartable = this.get('blockService.viewedChartable')
-        .filter((b) => b.axis.axisName === id);
+        .filter((b) => { let axis = b.get('axis'); return axis && axis.axisName === id; });
       console.log('viewedChartable', id, viewedChartable);
       return viewedChartable;
   }),
