@@ -2135,9 +2135,17 @@ Stacked.prototype.setZoomed = function (zoomed)
 
 Stacked.prototype.unviewBlocks = function ()
 {
-  this.blocks.forEach((sBlock) => {
-    if (sBlock.block)
-      sBlock.block.set('isViewed', false);
+  /** Ember data objects. */
+  let blocks = this.blocks.mapBy('block')
+    .filter((b) => b);
+  Ember.run.later(() => {
+    blocks.forEach((block) => {
+      // undefined .block-s are filtered out above
+      block.setProperties({
+        'view': undefined,
+        'isViewed': false
+      });
+    });
   });
 };
 

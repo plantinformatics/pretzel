@@ -341,7 +341,8 @@ export default Ember.Component.extend(Ember.Evented, {
         console.log("create", axisID, axis, "in", axes2d);
       }
       else
-        axis.set('extended', enabled);  // was axis2DEnabled
+        Ember.run.later(
+          () => axis.set('extended', enabled));  // was axis2DEnabled
       console.log("enableAxis2D in components/draw-map", axisID, enabled, axis);
       console.log("splitAxes", this.get('splitAxes'));
       console.log("axes2d", this.get('axes2d'));
@@ -1210,11 +1211,13 @@ export default Ember.Component.extend(Ember.Evented, {
           receivedBlock2.apply(me, [dBlock]);
 
 
-      if (! sBlock) {
+      if (! sBlock || ! dBlock.get('view')) {
         /** sBlock may already be associated with dBlock */
         let view = dBlock.get('view');
         sBlock = view || new Block(dBlock);
-        oa.stacks.blocks[d] = sBlock;
+        // if view, then this is already set.
+        if (oa.stacks.blocks[d] !== sBlock)
+          oa.stacks.blocks[d] = sBlock;
         if (! view) {
           /* this .set() was getting assertion fail (https://github.com/emberjs/ember.js/issues/13948),
            * hence the catch and trace;  this has been resolved by not displaying .view in .hbs
@@ -5433,6 +5436,7 @@ export default Ember.Component.extend(Ember.Evented, {
       {
         // removeBlockByName() is already done above
 
+        // this can be factored with : deleteButtonS.on('click', ... )
         let stack = axis && axis.stack;
         // axes[axisName] is deleted by removeStacked1() 
         let stackID = Stack.removeStacked(axisName);
@@ -5527,6 +5531,7 @@ export default Ember.Component.extend(Ember.Evented, {
             .on('click', function (buttonElt /*, i, g*/) {
               console.log("delete", axisName, this);
 		// this overlaps with the latter part of blockIsUnviewed()
+              // and can be factored with that.
               let axis = oa.axes[axisName], stack = axis && axis.stack;
               // axes[axisName] is deleted by removeStacked1() 
               let stackID = Stack.removeStacked(axisName);
@@ -5534,6 +5539,7 @@ export default Ember.Component.extend(Ember.Evented, {
               let sBlock = oa.stacks.blocks[axisName];
               console.log('sBlock.axis', sBlock.axis);
               sBlock.setAxis(undefined);
+              removeBrushExtent(axisName);
               removeAxisMaybeStack(axisName, stackID, stack);
               me.send('mapsToViewDelete', axisName);
               // filter axisName out of selectedFeatures and selectedAxes
@@ -5759,9 +5765,13 @@ export default Ember.Component.extend(Ember.Evented, {
           DropTarget.prototype.showResize();
         }
         Ember.run.later( function () {
-          /* probably better to do .trigger() within .later(); it works either way. */
+          /* This does .trigger() within .later(), which seems marginally better than vice versa; it works either way.  (Planning to replace event:resize soon). */
           if (widthChanged || heightChanged)
-            me.trigger('resized', widthChanged, heightChanged, useTransition);
+            try {
+              me.trigger('resized', widthChanged, heightChanged, useTransition);
+            } catch (exc) {
+              console.log('showResize', 'resized', me, me.resized, widthChanged, heightChanged, useTransition, graphDim, brushedDomains, exc.stack || exc);
+            }
           showSynteny(oa.syntenyBlocks, undefined); });
       };
 
@@ -6065,6 +6075,14 @@ export default Ember.Component.extend(Ember.Evented, {
       this.set('previousRender', now);
     }
     return changed;
+  },
+
+  /** draw-map sends resized event to listening sub-components using trigger().
+   * It does not listen to this event, or need to, but defining resized() may fix :
+   * 't[m] is not a function,     at Object.applyStr (ember-utils.js:524)'
+   */
+  resized : function(prevSize, currentSize) {
+    console.log("resized in components/draw-map", this, prevSize, currentSize);
   },
 
     resize : function() {
