@@ -259,7 +259,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
      * Also adding a similar request to updateModal (refreshDatasets) so by this
      * time that result should have been received.
      */
-    this.ensureFeatureLimits(id);
+    this.get('block').ensureFeatureLimits(id);
 
     /** Before progressive loading this would load the data (features) of the block. */
     const progressiveLoading = true;
