@@ -1167,6 +1167,11 @@ div#goto-feature > div
 }
 .tooltip-inner {
   border-radius: 7px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  align-content: center;
 }
 
 
@@ -1291,27 +1296,21 @@ div#left-panel-upload select
 /* applies in this context :
  * div#left-panel-feature-search > div > div > div.ember-popover
  */
-ul.feature-found {
-  height: 28ex;
-  overflow-y: auto;
-}
 /* could use .list-unstyled, but it implies padding-left:0 */
-ul.feature-found
-{
+ul.feature-found {
   list-style-type: none;
-  text-align : left;
-}
-ul.feature-found
-{
-  overflow-y: auto;
+  text-align : center;
   /* override user-agent stylesheet (Chrome) */
   -webkit-padding-start: inherit;
   /* target badge may be close to left so leave a margin for clipping.  */
-  margin-left: 2em;
   height: auto;
   max-height: 15ex;
+  width: auto;
+  max-width: 200px;
+  overflow-y: auto;
+  margin-bottom: 0;
 }
-ul.blocks-found > li > div > div.ember-popover {
+body > div.ember-popover {
   padding: 3px 5px;
 }
 /* -------------------------------------------------------------------------- */
