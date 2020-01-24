@@ -405,6 +405,42 @@ export default Service.extend(Ember.Evented, {
     return blockTasks;
   },
 
+    /** get featureLimits if not already received.  After upload the block won't have
+     * .featureLimits until requested
+     * @param blockId if undefined then check all blocks
+     */
+  ensureFeatureLimits(blockId) {
+    let store = this.get('store');
+    if (true) {
+      /** If blockId is undefined then request limits for all blocks. */
+      let blocksLimitsTasks = this.getBlocksLimits(blockId);
+    }
+    else {
+      /** When called from data-csv refreshDatasets(), blockId is undefined
+       * (dataset name is known); in that case the above simply gets limits for
+       * all blocks, whereas the following skips the request for blocks which
+       * already have .featureLimits or are reference blocks.  It generates a
+       * burst of requests which is not compatible with the .drop() on taskGetLimits().
+       */
+      let
+        blocks = blockId ?
+        store.peekRecord('block', blockId)
+        : store.peekAll('block');
+      blocks.forEach((block) => {
+        let limits = block.get('featureLimits');
+        /** Reference blocks don't have .featureLimits so don't request it.
+         * block.get('isData') depends on featureCount, which won't be present for
+         * newly uploaded blocks.  Only references have .range (atm).
+         */
+        let isData = ! block.get('range');
+        if (! limits && isData) {
+          /** getBlocksLimits() takes a single blockId as param. */
+          let blocksLimitsTasks = this.getBlocksLimits(block.get('id'));
+        }
+      });
+    }
+  },
+
   /**
    * @param blockId optional : get limits for just 1 block; normally this is
    * undefined and limits are requested for all blocks.

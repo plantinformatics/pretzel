@@ -3731,12 +3731,16 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     /** Convert the given brush extent (range) to a brushDomain.
      * @param p axisID
-     * @return function to convert range a value to a domain value
+     * @return function to convert range a value to a domain value.
+     * undefined if scale has no domain.
      */
     function axisRange2DomainFn(p)
     {
       let
         yp = oa.y[p];
+      let ypDomain = yp.domain();
+      if (! ypDomain || ! ypDomain.length)
+        return undefined;
       function fn(ypx) { return yp.invert(ypx /* *axis.portion */); };
       return fn;
     }
@@ -3749,7 +3753,12 @@ export default Ember.Component.extend(Ember.Evented, {
     {
       // axisRange2Domain{,Fn} are factored from axisBrushedDomain(), and brushHelper()
       let
-        r2dFn = axisRange2DomainFn(p),
+        r2dFn = axisRange2DomainFn(p);
+      if (! r2dFn) {
+        dLog('axisRange2Domain', p, range, 'scale has no domain', oa.y[p].domain());
+        return undefined;
+      }
+      let
       axis = oa.axes[p],
       brushedDomain = range.length ? range.map(r2dFn) : r2dFn(range);
       if (range.length && axis.flipped)
@@ -3903,6 +3912,7 @@ export default Ember.Component.extend(Ember.Evented, {
             return;
 
           // this can use axisRange2Domain() which is based on this function.
+          // if yp.domain() is [], then this won't be useful.
           let yp = oa.y[p],
           axis = oa.axes[p],
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion */); });

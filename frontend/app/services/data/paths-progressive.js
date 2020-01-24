@@ -168,6 +168,8 @@ export default Service.extend({
     dbPathFilter = ! noDbPathFilter,
     params = {axes : intervals, page,  dbPathFilter };
     intervals.forEach(function (i) {
+      if (i.domain && ! i.domain.length)
+        i.domain = undefined;
       // dLog(i.domain);
       // Block : domain may be [false, false] before Block features are known. ?
       if (i.domain && (i.domain[0] === false) && (i.domain[1] === false)) {
@@ -629,7 +631,7 @@ export default Service.extend({
      */
     if (! brushedDomain  || ((brushedDomain[0] === 0) && (brushedDomain[1] === 0)))
       delete paramAxis.domain;
-    else
+    else if (brushedDomain)
       paramAxis.domain = brushedDomain;
     let dataBlockIds = axis.dataBlocks(true)
      // equiv : blockS.block.get('id')

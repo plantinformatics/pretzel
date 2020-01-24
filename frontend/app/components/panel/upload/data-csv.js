@@ -344,7 +344,7 @@ export default UploadBase.extend({
           // csv or tsv?
           var csv = false;
           if (rows[0]) {
-            if (rows[0].split(',').length > 0) {
+            if (rows[0].split(',').length > 1) {
               csv = true;
             }
           }
