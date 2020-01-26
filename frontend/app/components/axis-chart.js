@@ -1,11 +1,44 @@
 import Ember from 'ember';
 const { inject: { service } } = Ember;
 
-import { className, AxisCharts, layoutAndDrawChart, Chart1, DataConfig } from '../utils/draw/chart1';
+import { className, AxisCharts, setupChart, drawChart, Chart1, DataConfig, blockData, parsedData } from '../utils/draw/chart1';
 
 /*----------------------------------------------------------------------------*/
 
 const dLog = console.debug;
+
+/*----------------------------------------------------------------------------*/
+
+/** example element of array f : */
+const featureCountDataExample = 
+  {
+    "_id": {
+      "min": 100,
+      "max": 160
+    },
+    "count": 109
+  };
+
+const featureCountDataProperties = {
+  dataTypeName : 'featureCountData',
+  datum2Location : function datum2Location(d) { return [d._id.min, d._id.max]; },
+  datum2Value : function(d) { return d.count; },
+  /** datum2Description() is not used;  possibly intended for the same
+   * purpose as hoverTextFn(), so they could be assimilated.  */
+  datum2Description : function(d) { return JSON.stringify(d._id); },
+  hoverTextFn : function (d, block) {
+    let valueText = '[' + d._id.min + ',' + d._id.max + '] : ' + d.count,
+    blockName = block.view && block.view.longName();
+    return valueText + '\n' + blockName;
+  },
+  valueIsArea : true
+};
+
+const dataConfigs = 
+  [featureCountDataProperties, blockData, parsedData]
+  .reduce((result, properties) => { result[properties.dataTypeName] = new DataConfig(properties); return result; }, [] );
+
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -26,12 +59,24 @@ const dLog = console.debug;
  * @param width resizedWidth
  *----------------
  * data attributes created locally, not passed in :
- * @param chart1
+ * @param charts  map of Chart1, indexed by typeName
+ * @param blocksData  map of features, indexed by typeName, blockId,
  */
 export default Ember.Component.extend({
   blockService: service('data/block'),
 
   className : className,
+
+  /** blocks-view sets blocksData[blockId]. */
+  blocksData : undefined,
+  /** {dataTypeName : Chart1, ... } */
+  charts : undefined,
+
+  init() {
+    this._super(...arguments);
+    this.set('blocksData', Ember.Object.create());
+    this.set('charts', Ember.Object.create());
+  },
 
   didRender() {
     console.log("components/axis-chart didRender()");
@@ -59,42 +104,43 @@ export default Ember.Component.extend({
   }),
 
   axisCharts : Ember.computed(function () {
-    return new AxisCharts();
+    return new AxisCharts(this.get('axisID'));
   }),
 
 
-
-
-
-  blockFeatures : Ember.computed('block', 'block.features.[]', 'axis.axis1d.domainChanged', function () {
-    if (this.get('block.isChartable'))
-      this.drawBlockFeatures0();
-  }),
-  featuresCounts : Ember.computed('block', 'block.featuresCounts.[]', 'axis.axis1d.domainChanged', function () {
-    let featuresCounts = this.get('block.featuresCounts');
-    /* perhaps later draw both, for the moment just draw 1, and since all data
-     * blocks have featuresCounts, plot the features of those blocks which are
-     * chartable, so that we can see both capabilities are working.
-     */
-    if (! this.get('block.isChartable'))
-      this.drawBlockFeaturesCounts(featuresCounts);
-    return featuresCounts;
+  chartTypes : Ember.computed('blocksData.@each', function () {
+    let blocksData = this.get('blocksData'),
+    chartTypes = Object.keys(blocksData);
+    dLog('chartTypes', chartTypes);
+    return chartTypes;
   }),
 
-  drawBlockFeatures0 : function() {
-    let features = this.get('block.features');
-    let domain = this.get('axis.axis1d.domainChanged');
-    console.log('blockFeatures', features.length, domain);
-    if (features.length)  // -	should also handle drawing when .length changes to 0
-    {
-      if (features.hasOwnProperty('promise'))
-        features = features.toArray();
-      if (features[0] === undefined)
-        dLog('drawBlockFeatures0', features.length, domain);
-      else
-        this.drawBlockFeatures(features);
-    }
-  },
+  chartTypesEffect : Ember.computed('chartTypes.[]', function () {
+    let blocksData = this.get('blocksData'),
+    chartTypes = this.get('chartTypes'),
+    charts = this.get('charts');
+    chartTypes.forEach((typeName) => {
+      if (! charts[typeName]) {
+        let data = blocksData.get(typeName),
+        /** same as Chart1.blockIds(). */
+        blockIds = Object.keys(data),
+        /** may use firstBlock for isBlockData. */
+        firstBlock = data[blockIds[0]],
+        dataConfig = dataConfigs[typeName],
+        parentG = this.get('axisCharts.dom.g'), // this.get('gAxis'),
+        chart = new Chart1(parentG, dataConfig);
+        charts[typeName] = chart;
+        let axisCharts = this.get('axisCharts');
+        let blocks = this.get('blocks');
+        setupChart(
+          this.get('axisID'), axisCharts, chart, data, 
+          blocks, dataConfig, this.get('yAxisScale'), /*resizedWidth*/undefined);
+        drawChart(axisCharts, chart, data, blocks);
+      }
+    });
+    return chartTypes;
+  }),
+
   drawBlockFeaturesCounts : function(featuresCounts) {
     if (! featuresCounts)
       featuresCounts = this.get('featuresCounts');
@@ -102,58 +148,11 @@ export default Ember.Component.extend({
     if (featuresCounts) {
       console.log('drawBlockFeaturesCounts', featuresCounts.length, domain, this.get('block.id'));
 
-      let countsChart = this.get('countsChart');
       // pass alternate dataConfig to layoutAndDrawChart(), defining alternate functions for {datum2Value, datum2Location }
-      this.layoutAndDrawChart(featuresCounts, countsChart);
+      this.layoutAndDrawChart(featuresCounts, 'featureCountData');
     }
   },
-  countsChart : Ember.computed(function() {
-      /** example element of array f : */
-      const dataExample = 
-        {
-          "_id": {
-            "min": 100,
-            "max": 160
-          },
-          "count": 109
-        };
-      let 
-        featureCountDataProperties = {
-          dataTypeName : 'featureCountData',
-          datum2Location : function datum2Location(d) { return [d._id.min, d._id.max]; },
-          datum2Value : function(d) { return d.count; },
-          /** datum2Description() is not used;  possibly intended for the same
-           * purpose as hoverTextFn(), so they could be assimilated.  */
-          datum2Description : function(d) { return JSON.stringify(d._id); },
-          hoverTextFn : function (d, block) {
-            let valueText = '[' + d._id.min + ',' + d._id.max + '] : ' + d.count,
-            blockName = block.view && block.view.longName();
-            return valueText + '\n' + blockName;
-          },
-          valueIsArea : true
-        },
-    featureCountData = new DataConfig(featureCountDataProperties);
-    let countsChart = new Chart1(this.get('axisCharts.dom.gAxis'), featureCountData);
-    return countsChart;
-  }),
 
-  drawBlockFeatures : function(features) {
-    let f = features.toArray(),
-    fa = f.map(function (f0) { return f0._internalModel.__data;});
-
-    let axisID = this.get("axisID"),
-    oa = this.get('data'),
-    za = oa.z[axisID];
-    /* if za has not been populated with features, it will have just .dataset
-     * and .scope, i.e. .length === 2 */
-    if (Object.keys(za).length == 2) {
-      dLog('drawBlockFeatures()', axisID, za, fa);
-      // add features to za.
-      fa.forEach((f) => za[f.name] = f.value);
-    }
-
-    this.layoutAndDrawChart(fa);
-  },
 
   redraw   : function(axisID, t) {
     let data = this.get(className),
@@ -161,7 +160,7 @@ export default Ember.Component.extend({
     if (data) {
     console.log("redraw", this, (data === undefined) || data.length, axisID, t);
     if (data)
-      layoutAndDrawChart.apply(this, [data]);
+      layoutAndDrawChart.apply(this, [data, undefined]);
     }
     else {  // use block.features or block.featuresCounts when not using data parsed from table.
       if (this.get('block.isChartable'))
@@ -235,15 +234,20 @@ export default Ember.Component.extend({
     return result;
   },
 
-  layoutAndDrawChart(chartData, chart1) {
+  layoutAndDrawChart(chartData, dataTypeName) {
     let
       axisID = this.get("axisID"),
     axisCharts = this.get('axisCharts'),
-    block = this.get('block'),
+    blocks = this.get('blocks'),
     yAxisScale = this.get('yAxisScale'),
-    resizedWidth = this.get('width');
-    chart1 = layoutAndDrawChart(
-      axisID, axisCharts, chart1, chartData, block, /*dataConfig*/undefined, yAxisScale, resizedWidth);
+    dataConfig = dataConfigs[dataTypeName],
+    resizedWidth = this.get('width'),
+    chart1 = this.get('charts')[dataTypeName];
+    chart1 = setupChart(
+      axisID, axisCharts, chart1, chartData, blocks, dataConfig, yAxisScale, resizedWidth);
+    drawChart(axisCharts, chart1, chartData, blocks);
+    if (! this.get('charts') && chart1)
+      this.set('charts', chart1);
   },
 
 
@@ -265,7 +269,7 @@ export default Ember.Component.extend({
     let forTable = chart;
     chart.valueName = "values"; // add user config
     // ; draw chart.
-    layoutAndDrawChart.apply(this, [chart]);
+    layoutAndDrawChart.apply(this, [chart, 'parsedData']);
 
     this.set('data.chart', forTable);
   },

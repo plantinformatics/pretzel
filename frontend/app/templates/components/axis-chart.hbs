@@ -1,7 +1,8 @@
-{{#if block}}
-  {{log 'blockFeatures' blockFeatures.length}}
-  {{blockFeatures.length}}
-  featuresCounts {{featuresCounts.length}}
+{{#if blocks}}
+  {{#each blocks as |chartBlock|}}
+    {{draw/block-view axis=axis axisID=axisID block=chartBlock blocksData=blocksData}}
+  {{/each}}
+  {{log 'chartTypesEffect' chartTypesEffect }}
 {{else}}
 <div class="Chart">
   {{content-editable

@@ -45,7 +45,7 @@ function middle(location) {
     : location;
   return result;
 }
-
+  
 /** @return a function to map a chart datum to a y value or interval.
  */
 function scaleMaybeInterval(datum2Location, yScale) {
@@ -102,10 +102,10 @@ function addParentClass(g) {
 
 class DataConfig {
   /*
-   dataTypeName;
-   datum2Location;
-   datum2Value;
-   datum2Description;
+  dataTypeName;
+  datum2Location;
+  datum2Value;
+  datum2Description;
    */
   constructor (properties) {
     if (properties)
@@ -113,85 +113,99 @@ class DataConfig {
   }
 };
 
-
-/** @param name is a feature or gene name */
-function name2Location(name, blockId)
-{
-  /** @param ak1 axis name, (exists in axisIDs[])
-   * @param d1 feature name, i.e. ak1:d1
-   */
-  return featureLocation(blockId, name);
+class ChartLine {
+  constructor(g, dataConfig, scales) {
+      this.g = g;
+      this.dataConfig = dataConfig;
+      this.scales = scales;
+  }
 }
 
-/** Used for both blockData and parsedData. */
-function datum2LocationWithBlock(d, blockId) { return name2Location(d.name, blockId); }
-function datum2Value(d) { return d.value; }
-let parsedData = {
-  dataTypeName : 'parsedData',
-  // datum2LocationWithBlock assigned later,
-  datum2Value : datum2Value,
-  datum2Description : function(d) { return d.description; }
-},
-blockData = {
-  dataTypeName : 'blockData',
-  // datum2LocationWithBlock assigned later,
-  /** The effects data is placed in .value[2] (the interval is in value[0..1]).
-   * Use the first effects value by default, but later will combine other values.
-   */
-  datum2Value : function(d) { let v = d.value[2]; if (v.length) v = v[0]; return v; },
-  datum2Description : function(d) { return JSON.stringify(d.value); }
-};
+/*----------------------------------------------------------------------------*/
 
+  /** @param name is a feature or gene name */
+    function name2Location(name, blockId)
+    {
+        /** @param ak1 axis name, (exists in axisIDs[])
+         * @param d1 feature name, i.e. ak1:d1
+         */
+      return featureLocation(blockId, name);
+    }
+
+    /** Used for both blockData and parsedData. */
+    function datum2LocationWithBlock(d, blockId) { return name2Location(d.name, blockId); }
+    function datum2Value(d) { return d.value; }
+    let parsedData = {
+      dataTypeName : 'parsedData',
+      // datum2LocationWithBlock assigned later,
+      datum2Value : datum2Value,
+      datum2Description : function(d) { return d.description; }
+    },
+    blockData = {
+      dataTypeName : 'blockData',
+      // datum2LocationWithBlock assigned later,
+      /** The effects data is placed in .value[2] (the interval is in value[0..1]).
+       * Use the first effects value by default, but later will combine other values.
+       */
+      datum2Value : function(d) { let v = d.value[2]; if (v.length) v = v[0]; return v; },
+      datum2Description : function(d) { return JSON.stringify(d.value); }
+    };
+
+/** Determine the appropriate DataConfig for the given data.
+ */
+function blockDataConfig(chart) {
+  let
+  isBlockData = chart.length && (chart[0].description === undefined);
+
+  let dataConfigProperties = isBlockData ? blockData : parsedData;
+  return dataConfigProperties;
+}
+
+
+
+
+/*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
 
 class AxisCharts {
   /*
-   dataConfig;  // DataConfig (options)
-   ranges;  // .bbox, .height
-   dom;  // .gs, .gsa, 
+  ranges;  // .bbox, .height
+  dom;  // .gs, .gsa, 
    */
 
-  constructor(axisID, dataConfig) {
+  constructor(axisID) {
     this.axisID = axisID;
-    this.dataConfig = dataConfig;
     this.ranges = { };
     this.dom = { };
     // this will move to Chart1.
     this.scales = { /* x, y, yLine */ };
   }
+ };
+
+AxisCharts.prototype.setup = function(axisID, yAxisScale) {
+  this.selectParentContainer(axisID);
+  this.getBBox();
+  this.scales.yAxis = yAxisScale;
 };
 
 /**
  * @param yAxisScale 
  */
-function layoutAndDrawChart(axisID, axisCharts, chart1, chartData, block, dataConfig, yAxisScale, resizedWidth)
+function setupChart(axisID, axisCharts, chart1, chartData, blocks, dataConfig, yAxisScale, resizedWidth)
 {
-
-  axisCharts.selectParentContainer(axisID);
-  axisCharts.getBBox();
-  axisCharts.scales.yAxis = yAxisScale;
-
-  if (! chart1)
-    chart1 = new Chart1(axisCharts.dom.g, dataConfig);
+  axisCharts.setup(axisID, yAxisScale);
 
   // Plan is for Axischarts to own .ranges and Chart1 to own .scales, but for now there is some overlap.
-  if (chart1 && ! chart1.ranges) {
+  if (! chart1.ranges) {
     chart1.ranges = axisCharts.ranges;
     chart1.scales = axisCharts.scales;
+    chart1.dom = axisCharts.dom;
   }
 
-  /* dataConfig may be set up (for featuresCounts) by countsChart(),
-   * or (for blockData and parsedData) by .getRanges().
-   * In coming commits the latter will be factored out so that DataConfig it is
-   * uniformly passed in to Chart1().  This copying of .dataConfig is just provisional.
-   */
-  if (! dataConfig && ! axisCharts.dataConfig && chart1 && chart1.dataConfig)
-    axisCharts.dataConfig = chart1.dataConfig;
-  axisCharts.getRanges(chartData, block.get('id'), resizedWidth);
-  if (! dataConfig && chart1 && ! chart1.dataConfig && axisCharts.dataConfig)
-    chart1.dataConfig = axisCharts.dataConfig;
-  axisCharts.getRanges3(chartData, resizedWidth);
+  chart1.getRanges(axisCharts.ranges, chartData);
+
+  axisCharts.getRanges3(resizedWidth);
 
   // axisCharts.size(this.get('yAxisScale'), /*axisID, gAxis,*/   chartData, resizedWidth);  //  -	split size/width and data/draw
 
@@ -199,402 +213,522 @@ function layoutAndDrawChart(axisID, axisCharts, chart1, chartData, block, dataCo
 
   addParentClass(axisCharts.dom.gc);
 
-  if (dataConfig)
-    axisCharts.configure(dataConfig);
   axisCharts.controls(chart1);
 
-  // following are from b.draw(data)
   axisCharts.getRanges2();
 
-  chart1.prepareScales(chartData, axisCharts.ranges.drawSize);
-
   chart1.g =
-    axisCharts.group(axisCharts.dom.gc, 'axis-chart');
-  if (showChartAxes)
-    axisCharts.drawAxes(chartData);
-  chart1.block = block;  // used in Chart1:bars() for hover text.
-  chart1.data(chartData);
-
-
+  axisCharts.group(axisCharts.dom.gc, 'axis-chart');
 
   return chart1;
 };
 
-AxisCharts.prototype.selectParentContainer = function (axisID)
+function drawChart(axisCharts, chart1, chartData, blocks)
 {
+  /** possibly don't (yet) have chartData for each of blocks[],
+   * i.e. blocksById may be a subset of blocks.mapBy('id').
+    */
+  let blockIds = Object.keys(chartData),
+  blocksById = blocks.reduce(
+    (result, block) => { result[block.get('id')] = block; return result; }, []);
+  blockIds.forEach((blockId) => {
+    let block = blocksById[blockId];
+    chart1.data(blockId, block, chartData[blockId]);
+  });
+
+  chart1.prepareScales(chartData, axisCharts.ranges.drawSize);
+  blockIds.forEach((blockId) => {
+    chart1.chartLines[blockId].scaledConfig(); } );
+
+  if (showChartAxes)
+    chart1.drawAxes(chartData);
+
+  chart1.drawContent();
+};
+
+AxisCharts.prototype.selectParentContainer = function (axisID)
+  {
   this.axisID = axisID;
-  // to support multiple split axes,  identify axis by axisID (and possibly stack id)
-  // <g class="axis-use">
-  // g.axis-outer#id<axisID>
-  let gAxis = d3.select("g.axis-outer#id" + axisID + "> g.axis-use");
-  if (! gAxis.node()) { /* probably because axisShowExtend() has not added the g.axis-use yet - will sort out the dependencies ... . */
-    dLog('layoutAndDrawChart', d3.select("g.axis-outer#id" + axisID).node(), 'no g.axis-use', this, axisID);
-  }
+    // to support multiple split axes,  identify axis by axisID (and possibly stack id)
+    // <g class="axis-use">
+    // g.axis-outer#id<axisID>
+    let gAxis = d3.select("g.axis-outer#id" + axisID + "> g.axis-use");
+    if (! gAxis.node()) { /* probably because axisShowExtend() has not added the g.axis-use yet - will sort out the dependencies ... . */
+      dLog('layoutAndDrawChart', d3.select("g.axis-outer#id" + axisID).node(), 'no g.axis-use', this, axisID);
+    }
   this.dom.gAxis = gAxis;
   return gAxis;
 };
 AxisCharts.prototype.getBBox = function ()
-{
-  let axisID = this.axisID,
-  gAxis = this.dom.gAxis;
-  let
+  {
+    let
+    gAxis = this.dom.gAxis;
+    let
     /** relative to the transform of parent g.axis-outer */
     bbox = gAxis.node().getBBox(),
-  yrange = [bbox.y, bbox.height];
-  if (bbox.x < 0)
-  {
-    console.log("x < 0", bbox);
-    bbox.x = 0;
-  }
-  this.ranges.bbox = bbox;
-  this.ranges.yrange = yrange;
+    yrange = [bbox.y, bbox.height];
+    if (bbox.x < 0)
+    {
+      console.log("x < 0", bbox);
+      bbox.x = 0;
+    }
+    this.ranges.bbox = bbox;
+    this.ranges.yrange = yrange;
 };
-AxisCharts.prototype.getRanges = function (chart, blockId, resizedWidth) {
+Chart1.prototype.getRanges = function (ranges, chartData) {
   let
-  {yrange } = this.ranges,
-  {yAxis } = this.scales,
-  /** isBlockData is not used if dataConfig is defined.  this can be moved out to the caller. */
-  isBlockData = chart.length && (chart[0].description === undefined),
-  // axisID = gAxis.node().parentElement.__data__,
+    {yrange } = ranges,
+    {yAxis } = this.scales,
+    // if needed, use the first data array to calculate domain
+    chart = Object.values(chartData),
+    // axisID = gAxis.node().parentElement.__data__,
 
-  yAxisDomain = yAxis.domain(), yDomain;
-  if (noDomain(yAxisDomain) && chart.length) {
-    yAxisDomain = [chart[0]._id.min, chart[chart.length-1]._id.max];
-    yAxis.domain(yAxisDomain);
-    yDomain = yAxisDomain;
-  }
-  else
-    yDomain = [yAxis.invert(yrange[0]), yAxis.invert(yrange[1])];
+    yAxisDomain = yAxis.domain(), yDomain;
+    if (chart) 
+      chart = chart[0];
+    if (noDomain(yAxisDomain) && chart.length) {
+      // this assumes featureCountData;  don't expect to need this.
+      yAxisDomain = [chart[0]._id.min, chart[chart.length-1]._id.max];
+      yAxis.domain(yAxisDomain);
+      yDomain = yAxisDomain;
+    }
+    else
+      yDomain = [yAxis.invert(yrange[0]), yAxis.invert(yrange[1])];
 
-  let dataConfig = this.dataConfig;
-  if (! dataConfig) {
-    let dataConfigProperties = isBlockData ? blockData : parsedData;
-    dataConfigProperties.datum2Location = 
+    let dataConfig = this.dataConfig;
+      if (! dataConfig.hoverTextFn)
+        dataConfig.hoverTextFn = hoverTextFn;
+      if (dataConfig.valueIsArea === undefined)
+        dataConfig.valueIsArea = false;
+
+      if (! dataConfig.barClassName)
+        dataConfig.barClassName = classNameSub;
+      if (! dataConfig.valueName)
+        dataConfig.valueName = chart.valueName || "Values";
+
+    ranges.pxSize = (yDomain[1] - yDomain[0]) / ranges.bbox.height;
+};
+ChartLine.prototype.setup = function(blockId) {
+  /* Some types (blockData, parsedData) require a block to lookup the feature
+   * name for location.  They are denoted by .datum2Location not being in their
+   * pre-defined config.
+   */
+  if (! this.dataConfig.datum2Location) {
+    // copy dataConfig to give a custom value to this ChartLine.
+    let d = new DataConfig(this.dataConfig);
+      d.datum2Location = 
       (d) => datum2LocationWithBlock(d, blockId);
-    this.dataConfig = dataConfig = 
-      new DataConfig(dataConfigProperties);
-    if (! dataConfig.hoverTextFn)
-      dataConfig.hoverTextFn = hoverTextFn;
-    if (dataConfig.valueIsArea === undefined)
-      dataConfig.valueIsArea = false;
+    this.dataConfig = d;
   }
-  if (dataConfig) {
-    if (! dataConfig.barClassName)
-      dataConfig.barClassName = classNameSub;
-    if (! dataConfig.valueName)
-      dataConfig.valueName = chart.valueName || "Values";
-  }
-
-  this.ranges.pxSize = (yDomain[1] - yDomain[0]) / this.ranges.bbox.height;
 };
-AxisCharts.prototype.getRanges3 = function (chart, resizedWidth) {
-
-  let
-  {bbox} = this.ranges,
-  {yAxis} = this.scales,
-  yDomain = yAxis.domain(),
-  withinZoomRegion = (d) => {
-    return inRangeEither(this.dataConfig.datum2Location(d), yDomain);
-  },
-  data = chart.filter(withinZoomRegion);
-
-  console.log(resizedWidth, bbox, yDomain, data.length, (data.length == 0) || this.dataConfig.datum2Location(data[0]));
-  if (resizedWidth)
-    bbox.width = resizedWidth;
-};
-
-
-/*  axis
- * x  .value
- * y  .name Location
+/** Filter given data according to this.scales.yAxis.domain()
+ * and set .currentData
  */
-/** 1-dimensional chart, within an axis. */
-function Chart1(parentG, dataConfig)
-{
-  this.parentG = parentG;
-  this.dataConfig = dataConfig;
-}
-Chart1.prototype.barsLine =  true;
-AxisCharts.prototype.getRanges2 =  function ()
-{
-  // based on https://bl.ocks.org/mbostock/3885304,  axes x & y swapped.
-  let
-    // parentG = this.parentG,
-    bbox = this.ranges.bbox,
-  margin = showChartAxes ?
-    {top: 10, right: 20, bottom: 40, left: 20} :
-  {top: 0, right: 0, bottom: 0, left: 0},
-  // pp=parentG.node().parentElement,
-  parentW = bbox.width, // +pp.attr("width")
-  parentH = bbox.height, // +pp.attr("height")
-  width = parentW - margin.left - margin.right,
-  height = parentH - margin.top - margin.bottom;
-  this.ranges.drawSize = {width, height};
-  dLog('getRanges2', parentW, parentH, this.ranges.drawSize);
-};
-Chart1.prototype.prepareScales =  function (data, drawSize)
-{
-  /** The chart is perpendicular to the usual presentation.
-   * The names x & y (in {x,y}Range and yLine) match the orientation on the
-   * screen, rather than the role of abscissa / ordinate; the data maps
-   * .name (location) -> .value, which is named y -> x.
-   */
-  let
-    dataConfig = this.dataConfig,
-  width = drawSize.width,
-  height = drawSize.height,
-  xRange = [0, width],
-  yRange = [0, height],
-  // yRange is used as range of yLine by this.scaleLinear().
-  /* scaleBand would suit a data set with evenly spaced or ordinal / nominal y values.
-   * yBand = d3.scaleBand().rangeRound(yRange).padding(0.1),
-   */
-  y = this.scaleLinear(yRange, data),
-  x = d3.scaleLinear().rangeRound(xRange);
-  // datum2LocationScaled() uses me.scales.x rather than the value in the closure in which it was created.
-  this.scales.x = x;
-  // Used by bars() - could be moved there, along with  datum2LocationScaled().
-  this.scales.y = y;
-  console.log("Chart1", xRange, yRange, dataConfig.dataTypeName);
+ChartLine.prototype.filterToZoom = function(chart) {
+    let
+    {yAxis} = this.scales,
+    yDomain = yAxis.domain(),
+    withinZoomRegion = (d) => {
+      return inRangeEither(this.dataConfig.datum2Location(d), yDomain);
+    },
+    data = chart.filter(withinZoomRegion);
+    this.currentData = data;
 
-  let me = this;
-  /* these can be renamed datum2{abscissa,ordinate}{,Scaled}() */
-  /* apply y after scale applied by datum2Location */
-  let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, me.scales.y);
-  /** related @see rectWidth().  */
-  function datum2ValueScaled(d) { return me.scales.x(dataConfig.datum2Value(d)); }
-  dataConfig.datum2LocationScaled = datum2LocationScaled;
-  dataConfig.datum2ValueScaled = datum2ValueScaled;
+    dLog(yDomain, data.length, (data.length == 0) || this.dataConfig.datum2Location(data[0]));
+  return data;
 };
+
+AxisCharts.prototype.getRanges3 = function (resizedWidth) {
+  if (resizedWidth) {
+    let
+    {bbox} = this.ranges;
+    bbox.width = resizedWidth;
+    dLog('resizedWidth', resizedWidth, bbox);
+  }
+};
+
+  
+    /*  axis
+     * x  .value
+     * y  .name Location
+     */
+    /** 1-dimensional chart, within an axis. */
+    function Chart1(parentG, dataConfig)
+    {
+      this.parentG = parentG;
+      this.dataConfig = dataConfig;
+      this.chartLines = {};
+    }
+    Chart1.prototype.barsLine =  true;
+
+
+
+    AxisCharts.prototype.getRanges2 =  function ()
+    {
+      // based on https://bl.ocks.org/mbostock/3885304,  axes x & y swapped.
+      let
+      // parentG = this.parentG,
+      bbox = this.ranges.bbox,
+        margin = showChartAxes ?
+        {top: 10, right: 20, bottom: 40, left: 20} :
+        {top: 0, right: 0, bottom: 0, left: 0},
+      // pp=parentG.node().parentElement,
+      parentW = bbox.width, // +pp.attr("width")
+      parentH = bbox.height, // +pp.attr("height")
+      width = parentW - margin.left - margin.right,
+      height = parentH - margin.top - margin.bottom;
+      this.ranges.drawSize = {width, height};
+      dLog('getRanges2', parentW, parentH, this.ranges.drawSize);
+    };
+    Chart1.prototype.prepareScales =  function (data, drawSize)
+    {
+      /** The chart is perpendicular to the usual presentation.
+       * The names x & y (in {x,y}Range and yLine) match the orientation on the
+       * screen, rather than the role of abscissa / ordinate; the data maps
+       * .name (location) -> .value, which is named y -> x.
+       */
+      let
+        dataConfig = this.dataConfig,
+      width = drawSize.width,
+      height = drawSize.height,
+      xRange = [0, width],
+      yRange = [0, height],
+      // yRange is used as range of yLine by this.scaleLinear().
+      /* scaleBand would suit a data set with evenly spaced or ordinal / nominal y values.
+       * yBand = d3.scaleBand().rangeRound(yRange).padding(0.1),
+       */
+      y = this.scaleLinear(yRange, data),
+      x = d3.scaleLinear().rangeRound(xRange);
+      // datum2LocationScaled() uses me.scales.x rather than the value in the closure in which it was created.
+      this.scales.x = x;
+      // Used by bars() - could be moved there, along with  datum2LocationScaled().
+      this.scales.y = y;
+      console.log("Chart1", xRange, yRange, dataConfig.dataTypeName);
+
+      let
+        valueWidthFn = dataConfig.rectWidth.bind(dataConfig, /*scaled*/false, /*gIsData*/true),
+      valueCombinedDomain = this.domain(valueWidthFn, data);
+      x.domain(valueCombinedDomain);
+
+    };
+    Chart1.prototype.drawContent = function ()
+    {
+      Object.keys(this.chartLines).forEach((blockId) => {
+        let chartLine = this.chartLines[blockId];
+        chartLine.drawContent(this.barsLine);
+      });
+    };
+    /** Enables use of the scales which are set up in .prepareScales().
+     */
+    ChartLine.prototype.scaledConfig = function ()
+    {
+      let
+        dataConfig = this.dataConfig,
+        scales = this.scales;
+
+      /* these can be renamed datum2{abscissa,ordinate}{,Scaled}() */
+      /* apply y after scale applied by datum2Location */
+      let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, scales.y);
+      /** related @see rectWidth().  */
+      function datum2ValueScaled(d) { return scales.x(dataConfig.datum2Value(d)); }
+      dataConfig.datum2LocationScaled = datum2LocationScaled;
+      dataConfig.datum2ValueScaled = datum2ValueScaled;
+    };
 
 AxisCharts.prototype.group = function (parentG, groupClassName) {
-  /** parentG is g.axis-use.  add g.(groupClassName);
-   * within parentG there is also a sibling g.axis-html. */
-  let data = parentG.data(),
-  gs = parentG
-    .selectAll("g > g." + groupClassName)
-    .data(data), // inherit g.datum(), or perhaps [groupClassName]
-  gsa = gs
-    .enter()
-    .append("g")  // maybe drop this g, move margin calc to gp
-  // if drawing internal chart axes then move them inside the clip rect
-  // .attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
-    .attr("class", groupClassName),
-  g = gsa.merge(gs);
-  dLog('group', this, parentG, g.node());
-  this.dom.g = g;
-  this.dom.gs = gs;
-  this.dom.gsa = gsa;
+      /** parentG is g.axis-use.  add g.(groupClassName);
+       * within parentG there is also a sibling g.axis-html. */
+      let data = parentG.data(),
+      gs = parentG
+        .selectAll("g > g." + groupClassName)
+        .data(data), // inherit g.datum(), or perhaps [groupClassName]
+      gsa = gs
+        .enter()
+        .append("g")  // maybe drop this g, move margin calc to gp
+        // if drawing internal chart axes then move them inside the clip rect
+        // .attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
+        .attr("class", groupClassName),
+      g = gsa.merge(gs);
+      dLog('group', this, parentG, g.node());
+      this.dom.g = g;
+      this.dom.gs = gs;
+      this.dom.gsa = gsa;
   return g;
 };
 
-AxisCharts.prototype.drawAxes = function (data) {
+Chart1.prototype.drawAxes = function (data) {
 
-  /**  first draft showed all data;  subsequently adding :
-   * + select region from y domain
-   * -	place data in tree for fast subset by region
-   * +	alternate view : line
-   * + transition between views, zoom, stack
-   */
-  // scaleBand() domain is a list of all y values.
-  // yBand.domain(data.map(dataConfig.datum2Location));
-
-  let
-  {height} = this.ranges.drawSize,
-  {x, y} = this.scales,
-  {gs, gsa} = this.dom,
-  dataConfig = this.dataConfig;
-
-  x.domain([0, d3.max(data, dataConfig.rectWidth.bind(dataConfig, /*scaled*/false, /*gIsData*/false))]);
-
-  let axisXa =
-    gsa.append("g")
-  // -  handle .exit() for these 2 also
-    .attr("class", "axis axis--x");
-  axisXa.merge(gs.selectAll("g > g.axis--x"))
-    .attr("transform", "translate(0," + height + ")")
-    .call(d3.axisBottom(x));
-
-  let axisYa =
-    gsa.append("g")
-    .attr("class", "axis axis--y");
-  axisYa.merge(gs.selectAll("g > g.axis--y"))
-    .call(d3.axisLeft(y)) // .tickFormat(".2f") ?
-  // can option this out if !valueName
-    .append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("y", 6)
-    .attr("dy", "0.71em")
-    .attr("text-anchor", "end")
-    .text(dataConfig.valueName);
-};
-Chart1.prototype.data = function (data)
-{
-  let 
-    dataConfig = this.dataConfig;
-  data = data.sort((a,b) => middle(dataConfig.datum2Location(a)) - middle(dataConfig.datum2Location(b)));
-  this.drawContent(data);
-  this.currentData = data;
-};
-Chart1.prototype.bars = function (data)
-{
-  let
-    dataConfig = this.dataConfig,
-  block = this.block,
-  g = this.g;
-  let
-    rs = g
-  // .select("g." + className + " > g")
-    .selectAll("rect." + dataConfig.barClassName)
-    .data(data),
-  re =  rs.enter(), rx = rs.exit();
-  let ra = re
-    .append("rect");
-  ra
-    .attr("class", dataConfig.barClassName)
-  /** parent datum is currently 1, but could be this.block;
-   * this.parentElement.parentElement.__data__ has the axis id (not the blockId),
-   */
-    .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); });
-  ra
-    .merge(rs)
-    .transition().duration(1500)
-    .attr("x", 0)
-    .attr("y", (d) => { let li = dataConfig.datum2LocationScaled(d); return li.length ? li[0] : li; })
-  // yBand.bandwidth()
-    .attr("height", dataConfig.rectHeight.bind(dataConfig, /*gIsData*/false)) // equiv : (d, i, g) => dataConfig.rectHeight(false, d, i, g)
-    .attr("width", dataConfig.rectWidth.bind(dataConfig, /*scaled*/true, /*gIsData*/false));
-  rx.remove();
-  console.log(rs.nodes(), re.nodes());
-};
-/** Calculate the height of rectangle to be used for this data point
- * @param this  is DataConfig, not DOM element.
- * @param scaled  true means apply scale (x) to the result
- * @param gIsData true meangs g is __data__, otherwise it is DOM element, and has .__data__ attribute.
- * gIsData will be true when called from d3.max(), and false for d3 attr functions.
- */
-DataConfig.prototype.rectWidth = function (scaled, gIsData, d, i, g)
-{
-  Ember.assert('rectWidth arguments.length === 5', arguments.length === 5);
-  /** The scale is linear, so it is OK to scale before dividing by rectHeight.
-   * Otherwise could use datum2Value() here and apply this.x() before the return.
-   */
-  let d2v = (scaled ? this.datum2ValueScaled : this.datum2Value),
-  width = d2v(d);
-  if (this.valueIsArea) {
-    let h;
-    width /= (h = this.rectHeight(gIsData, d, i, g));
-    // dLog('rectWidth', h, width, gIsData);
-  }
-  return width;
-};
-/** Calculate the height of rectangle to be used for this data point
- * @param this  is DataConfig, not DOM element.
- * @param gIsData true meangs g is __data__, otherwise it is DOM element, and has .__data__ attribute.
- * gIsData will be true when called from d3.max(), and false for d3 attr functions.
- */
-DataConfig.prototype.rectHeight = function (gIsData, d, i, g)
-{
-  Ember.assert('rectHeight arguments.length === 4', arguments.length === 4);
-  let height, locationScaled;
-  /* if locationScaled is an interval, calculate height from it.
-   * Otherwise, use adjacent points to indicate height.
-   */
-  if ((locationScaled = this.datum2LocationScaled(d)).length) {
-    height = Math.abs(locationScaled[1] - locationScaled[0]);
-  }
-  else {
-    /* the boundary between 2 adjacent points is midway between them.
-     * So sum that half-distance for the previous and next points.
-     * the y range distance from the previous point to the next point.
-     * If this point is either end, simply double the other half-distance.
-     */
-    if (! g.length)
-      /* constant value OK - don't expect to be called if g.length is 0.
-       * this.scales.y.range() / 10;
+      /**  first draft showed all data;  subsequently adding :
+       * + select region from y domain
+       * -	place data in tree for fast subset by region
+       * +	alternate view : line
+       * + transition between views, zoom, stack
        */
-      height = 10;
-    else {
-      let r = [];
-      function gData(i) { let gi = g[i]; return gIsData ? gi : gi.__data__; };
-      if (i > 0)
-        r.push(gData(i));
-      r.push(d);
-      if (i < g.length-1)
-        r.push(gData(i+1));
-      let y =
-        r.map(this.datum2LocationScaled);
-      height = Math.abs(y[y.length-1] - y[0]) * 2 / (y.length-1);
-      dLog('rectHeight', gIsData, d, i, /*g,*/ r, y, height);
-      if (! height)
-        height = 1;
-    }
+      // scaleBand() domain is a list of all y values.
+      // yBand.domain(data.map(dataConfig.datum2Location));
+
+      let
+      {height} = this.ranges.drawSize,
+      {x, y} = this.scales,
+      dom = this.dom,
+      /** the axes were originally within the gs,gsa of .group();  hence the var names.
+       * gs selects the <g> into which the axes will be inserted, and gpa is the
+       * .enter().append() of that selection.
+       */
+      gs = dom.gc,
+      gsa = dom.gca,
+      dataConfig = this.dataConfig;
+
+      let axisXa =
+      gsa.append("g")
+      // -  handle .exit() for these 2 also
+        .attr("class", "axis axis--x");
+      axisXa.merge(gs.selectAll("g > g.axis--x"))
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x));
+
+      let axisYa =
+      gsa.append("g")
+        .attr("class", "axis axis--y");
+      axisYa.merge(gs.selectAll("g > g.axis--y"))
+        .call(d3.axisLeft(y)) // .tickFormat(".2f") ?
+        // can option this out if !valueName
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", "0.71em")
+        .attr("text-anchor", "end")
+        .text(dataConfig.valueName);
+};
+/**
+ * @param block hover
+ * used in Chart1:bars() for hover text.  passed to hoverTextFn() for .longName() 
+ */
+Chart1.prototype.data = function (blockId, block, data)
+{
+  let chartLine = this.chartLines[blockId];
+  if (! chartLine)
+    chartLine = this.chartLines[blockId] = new ChartLine(this.g, this.dataConfig, this.scales);
+  if (block) {
+    chartLine.block = block;
+    chartLine.setup(blockId);
+    // .setup() will copy dataConfig if need for custom config.
   }
-  return height;
+  function m(d) { return middle(chartLine.dataConfig.datum2Location(d)); }
+  data = data.sort((a,b) => m(a) - m(b));
+  data = chartLine.filterToZoom(data);
 };
-Chart1.prototype.scaleLinear = function (yRange, data)
+/** Draw a single ChartLine of this chart.
+ * To draw all ChartLine of this chart, @see Chart1:drawContent()
+ */
+Chart1.prototype.drawLine = function (blockId, block, data)
 {
-  // based on https://bl.ocks.org/mbostock/3883245
-  if (! this.scales.yLine)
-    this.scales.yLine = d3.scaleLinear();
-  let y = this.scales.yLine;
-  y.rangeRound(yRange);
-  let
-    /** location may be an interval, so flatten the result.
-     * Later Array.flat() can be used.
+  let chartLine = this.chartLines[blockId];
+  chartLine.drawContent(this.barsLine);
+};
+    ChartLine.prototype.bars = function (data)
+    {
+      let
+        dataConfig = this.dataConfig,
+      block = this.block,
+      g = this.g;
+      let
+        rs = g
+      // .select("g." + className + " > g")
+        .selectAll("rect." + dataConfig.barClassName)
+        .data(data),
+      re =  rs.enter(), rx = rs.exit();
+      let ra = re
+        .append("rect");
+      ra
+        .attr("class", dataConfig.barClassName)
+        /** parent datum is currently 1, but could be this.block;
+         * this.parentElement.parentElement.__data__ has the axis id (not the blockId),
+         */
+        .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); });
+      ra
+        .merge(rs)
+        .transition().duration(1500)
+        .attr("x", 0)
+        .attr("y", (d) => { let li = dataConfig.datum2LocationScaled(d); return li.length ? li[0] : li; })
+        // yBand.bandwidth()
+        .attr("height", dataConfig.rectHeight.bind(dataConfig, /*scaled*/true, /*gIsData*/false)) // equiv : (d, i, g) => dataConfig.rectHeight(true, false, d, i, g)
+        .attr("width", dataConfig.rectWidth.bind(dataConfig, /*scaled*/true, /*gIsData*/false));
+      rx.remove();
+      console.log(rs.nodes(), re.nodes());
+    };
+    /** Calculate the height of rectangle to be used for this data point
+     * @param this  is DataConfig, not DOM element.
+     * @param scaled  true means apply scale (x) to the result
+     * @param gIsData true meangs g is __data__, otherwise it is DOM element, and has .__data__ attribute.
+     * gIsData will be true when called from d3.max(), and false for d3 attr functions.
      */
-    yFlat = data
-    .map(this.dataConfig.datum2Location)
-    .reduce((acc, val) => acc.concat(val), []);
-  y.domain(d3.extent(yFlat));
-  console.log('scaleLinear domain', y.domain(), yFlat);
-  return y;
-};
-Chart1.prototype.line = function (data)
-{
-  let y = this.scales.yLine, dataConfig = this.dataConfig;
+    DataConfig.prototype.rectWidth = function (scaled, gIsData, d, i, g)
+    {
+      Ember.assert('rectWidth arguments.length === 5', arguments.length === 5);
+      /** The scale is linear, so it is OK to scale before dividing by rectHeight.
+       * Otherwise could use datum2Value() here and apply this.x() before the return.
+       */
+      let d2v = (scaled ? this.datum2ValueScaled : this.datum2Value),
+      width = d2v(d);
+      if (this.valueIsArea) {
+        let h;
+        width /= (h = this.rectHeight(scaled, gIsData, d, i, g));
+        // dLog('rectWidth', h, width, gIsData);
+      }
+      return width;
+    };
+    /** Calculate the height of rectangle to be used for this data point
+     * @param this  is DataConfig, not DOM element.
+     * @param scaled  true means apply scale (y) to the result
+     * @param gIsData true meangs g is __data__, otherwise it is DOM element, and has .__data__ attribute.
+     * gIsData will be true when called from d3.max(), and false for d3 attr functions.
+     */
+    DataConfig.prototype.rectHeight = function (scaled, gIsData, d, i, g)
+    {
+      Ember.assert('rectHeight arguments.length === 5', arguments.length === 5);
+      let height,
+      d2l = (scaled ? this.datum2LocationScaled : this.datum2Location),
+      location;
+      /* if location is an interval, calculate height from it.
+       * Otherwise, use adjacent points to indicate height.
+       */
+      if ((location = d2l(d)).length) {
+        height = Math.abs(location[1] - location[0]);
+      }
+      else {
+        /* the boundary between 2 adjacent points is midway between them.
+         * So sum that half-distance for the previous and next points.
+         * the y range distance from the previous point to the next point.
+         * If this point is either end, simply double the other half-distance.
+         */
+        if (! g.length)
+          /* constant value OK - don't expect to be called if g.length is 0.
+           * this.scales.y.range() / 10;
+           */
+          height = 10;
+        else {
+          let r = [];
+          function gData(i) { let gi = g[i]; return gIsData ? gi : gi.__data__; };
+          if (i > 0)
+            r.push(gData(i));
+          r.push(d);
+          if (i < g.length-1)
+            r.push(gData(i+1));
+          let y =
+            r.map(this.datum2LocationScaled);
+          height = Math.abs(y[y.length-1] - y[0]) * 2 / (y.length-1);
+          dLog('rectHeight', gIsData, d, i, /*g,*/ r, y, height);
+          if (! height)
+            height = 1;
+        }
+      }
+      return height;
+    };
+    Chart1.prototype.scaleLinear = function (yRange, data)
+    {
+      // based on https://bl.ocks.org/mbostock/3883245
+      if (! this.scales.yLine)
+        this.scales.yLine = d3.scaleLinear();
+      let y = this.scales.yLine;
+      y.rangeRound(yRange);
+      let 
+        d2l = this.dataConfig.datum2Location || Object.values(this.chartLines)[0].dataConfig.datum2Location;
+      let combinedDomain = this.domain(d2l, data);
+      y.domain(combinedDomain);
+      console.log('scaleLinear domain', combinedDomain);
+      return y;
+    };
+    /** Combine the domains of each of the component ChartLine-s.
+     * @param valueFn  e.g. datum2Location or datum2Value
+     */
+    Chart1.prototype.domain = function (valueFn, blocksData)
+    {
+      let blockIds = Object.keys(blocksData),
+      domains = blockIds.map((blockId) => {
+      let
+        data = blocksData[blockId],
+        chartLine = this.chartLines[blockId];
+        return chartLine.domain(valueFn, data);
+      });
+      /** Union the domains. */
+      let domain = domains
+        .reduce((acc, val) => acc.concat(val), []);
+      return domain;
+    };
+    /** Calculate the domain of some function of the data, which may be the data value or location.
+     * This can be used in independent of axis-chart, and can be factored out
+     * for more general use, along with Chart1:domain().
+     * @param valueFn  e.g. datum2Location or datum2Value
+     * In axis-chart, value is x, location is y.
+     */
+    ChartLine.prototype.domain = function (valueFn, data)
+    {
+      let
+        /** location may be an interval, so flatten the result.
+         * Later Array.flat() can be used.
+         * Value is not an interval (yet), so that .reduce is a no-op).
+         */
+        yFlat = data
+        .map(valueFn)
+        .reduce((acc, val) => acc.concat(val), []);
+        let domain = d3.extent(yFlat);
+      console.log('ChartLine domain', domain, yFlat);
+      return domain;
+    };
+    ChartLine.prototype.line = function (data)
+    {
+      let y = this.scales.yLine, dataConfig = this.dataConfig;
 
-  let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, y);
-  let line = d3.line()
-    .x(dataConfig.rectWidth.bind(dataConfig, /*scaled*/true, /*gIsData*/false))
-    .y((d) => middle(datum2LocationScaled(d)));
+      let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, y);
+      let line = d3.line()
+        .x(dataConfig.rectWidth.bind(dataConfig, /*scaled*/true, /*gIsData*/false))
+        .y((d) => middle(datum2LocationScaled(d)));
 
-  console.log("line x domain", this.scales.x.domain(), this.scales.x.range());
+      console.log("line x domain", this.scales.x.domain(), this.scales.x.range());
 
-  let
-    g = this.g,
-  ps = g
-    .selectAll("g > path." + dataConfig.barClassName)
-    .data([1]);
-  ps
-    .enter()
-    .append("path")
-    .attr("class", dataConfig.barClassName + " line")
-    .datum(data)
-    .attr("d", line)
-    .merge(ps)
-    .datum(data)
-    .transition().duration(1500)
-    .attr("d", line);
-  // data length is constant 1, so .remove() is not needed
-  ps.exit().remove();
-};
-/** Alternate between bar chart and line chart */
-Chart1.prototype.toggleBarsLine = function ()
-{
-  console.log("toggleBarsLine", this);
-  d3.event.stopPropagation();
-  this.barsLine = ! this.barsLine;
-  this.chartTypeToggle
-    .classed("pushed", this.barsLine);
-  this.g.selectAll("g > *").remove();
-  this.drawContent(this.currentData);
-};
-Chart1.prototype.drawContent = function(data)
-{
-  let chartDraw = this.barsLine ? this.bars : this.line;
-  chartDraw.apply(this, [data]);
-};
+      let
+        g = this.g,
+      ps = g
+        .selectAll("g > path." + dataConfig.barClassName)
+        .data([1]);
+      ps
+        .enter()
+        .append("path")
+        .attr("class", dataConfig.barClassName + " line")
+        .datum(data)
+        .attr("d", line)
+        .merge(ps)
+        .datum(data)
+        .transition().duration(1500)
+        .attr("d", line);
+      // data length is constant 1, so .remove() is not needed
+      ps.exit().remove();
+    };
+    /** Alternate between bar chart and line chart */
+    Chart1.prototype.toggleBarsLine = function ()
+    {
+      console.log("toggleBarsLine", this);
+      d3.event.stopPropagation();
+      this.barsLine = ! this.barsLine;
+      this.chartTypeToggle
+        .classed("pushed", this.barsLine);
+      this.g.selectAll("g > *").remove();
+      Object.keys(this.chartLines).forEach((blockId) => {
+        let chartLine = this.chartLines[blockId];
+        chartLine.drawContent(this.barsLine);
+      });
+    };
+    /** Draw, using .currentData, which is set by calling .filterToZoom().
+     * @param barsLine	if true, draw .bars, otherwise .line.
+     */
+    ChartLine.prototype.drawContent = function(barsLine)
+    {
+      let 
+        data = this.currentData;
+      let chartDraw = barsLine ? this.bars : this.line;
+      chartDraw.apply(this, [data]);
+    };
 
 AxisCharts.prototype.commonFrame = function container()
 {
@@ -602,18 +736,18 @@ AxisCharts.prototype.commonFrame = function container()
   gAxis = this.dom.gAxis,
   bbox = this.ranges.bbox;
 
-  /** datum is value in hash : {value : , description: } and with optional attribute description. */
+    /** datum is value in hash : {value : , description: } and with optional attribute description. */
 
-  dLog('container', gAxis.node());
-  /** parent; contains a clipPath, g > rect, text.resizer.  */
-  let gps =   gAxis
-    .selectAll("g." + className)
-    .data([axisID]),
-  gp = gps
-    .enter()
-    .insert("g", ":first-child")
-    .attr('class', className);
-  if (false) { // not completed.  Can base resized() on axis-2d.js
+    dLog('container', gAxis.node());
+    /** parent; contains a clipPath, g > rect, text.resizer.  */
+    let gps =   gAxis
+      .selectAll("g." + className)
+      .data([axisID]),
+    gp = gps
+      .enter()
+      .insert("g", ":first-child")
+      .attr('class', className);
+    if (false) { // not completed.  Can base resized() on axis-2d.js
     let text = gp
       .append("text")
       .attr('class', 'resizer')
@@ -622,48 +756,46 @@ AxisCharts.prototype.commonFrame = function container()
     if (gp.size() > 0)
       eltWidthResizable("g.axis-use > g." + className + " > text.resizer", resized);
   }
-  /** datum is axisID, so id and clip-path could be functions. */
-  let axisClipId = "axis-clip-" + axisID;
-  let gpa =
+    /** datum is axisID, so id and clip-path could be functions. */
+    let axisClipId = "axis-clip-" + axisID;
+    let gpa =
     gp // define the clipPath
-    .append("clipPath")       // define a clip path
-    .attr("id", axisClipId) // give the clipPath an ID
-    .append("rect"),          // shape it as a rect
-  gprm = 
+      .append("clipPath")       // define a clip path
+      .attr("id", axisClipId) // give the clipPath an ID
+      .append("rect"),          // shape it as a rect
+    gprm = 
     gpa.merge(gps.selectAll("g > clipPath > rect"))
-    .attr("x", bbox.x)
-    .attr("y", bbox.y)
-    .attr("width", bbox.width)
-    .attr("height", bbox.height)
-  ;
-  gp.append("g")
-    .attr("clip-path", "url(#" + axisClipId + ")"); // clip with the rectangle
+      .attr("x", bbox.x)
+      .attr("y", bbox.y)
+      .attr("width", bbox.width)
+      .attr("height", bbox.height)
+    ;
+  let gca =
+    gp.append("g")
+      .attr("clip-path", "url(#" + axisClipId + ")"); // clip with the rectangle
 
-  let g = 
-    gps.merge(gp).selectAll("g." + className+  " > g");
+    let g = 
+      gps.merge(gp).selectAll("g." + className+  " > g");
   if (! gp.empty() ) {
     addParentClass(g);
     /* .gc is <g clip-path=​"url(#axis-clip-{{axisID}})​">​</g>​
      * .g (assigned later) is g.axis-chart
      */
     this.dom.gc = g;
+    this.dom.gca = gca;
     this.dom.gp = gp;
     this.dom.gps = gps;
   }
 };
 
 /*
- class AxisChart {
- bbox;
- data;
- gp;
- gps;
+class AxisChart {
+  bbox;
+  data;
+  gp;
+  gps;
  };
- */
-AxisCharts.prototype.configure = function configure(dataConfig)
-{
-  this.dataConfig = dataConfig;
-};
+*/
 
 AxisCharts.prototype.controls = function controls(chart1)
 {
@@ -672,28 +804,28 @@ AxisCharts.prototype.controls = function controls(chart1)
   gp = this.dom.gp,
   gps = this.dom.gps;
 
-  let b = chart1; // b for barChart
+    let b = chart1; // b for barChart
 
-  function toggleBarsLineClosure(e)
-  {
-    b.toggleBarsLine();
-  }
+    function toggleBarsLineClosure(e)
+    {
+      b.toggleBarsLine();
+    }
 
-  /** currently placed at g.chart, could be inside g.chart>g (clip-path=). */
-  let chartTypeToggle = gp
-    .append("circle")
-    .attr("class", "radio toggle chartType")
-    .attr("r", 6)
-    .on("click", toggleBarsLineClosure);
-  chartTypeToggle.merge(gps.selectAll("g > circle"))
-    .attr("cx", bbox.x + bbox.width / 2)   /* was o[p], but g.axis-outer translation does x offset of stack.  */
-    .attr("cy", bbox.height - 10)
-    .classed("pushed", b.barsLine);
-  b.chartTypeToggle = chartTypeToggle;
+    /** currently placed at g.chart, could be inside g.chart>g (clip-path=). */
+    let chartTypeToggle = gp
+      .append("circle")
+      .attr("class", "radio toggle chartType")
+      .attr("r", 6)
+      .on("click", toggleBarsLineClosure);
+    chartTypeToggle.merge(gps.selectAll("g > circle"))
+      .attr("cx", bbox.x + bbox.width / 2)   /* was o[p], but g.axis-outer translation does x offset of stack.  */
+      .attr("cy", bbox.height - 10)
+      .classed("pushed", b.barsLine);
+    b.chartTypeToggle = chartTypeToggle;
 };
 
 /*----------------------------------------------------------------------------*/
 
 /* layoutAndDrawChart() has been split into class methods of AxisCharts and Chart1,
  * and replaced with a proxy which calls them, and can next be re-distributed into axis-chart. */
-export { layoutAndDrawChart, AxisCharts, /*AxisChart,*/ className, Chart1, DataConfig };
+export { setupChart, drawChart, AxisCharts, /*AxisChart,*/ className, Chart1, DataConfig, blockData, parsedData };

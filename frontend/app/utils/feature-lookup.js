@@ -169,4 +169,24 @@ function storeFeature(oa, flowsService, feature, f, axisID) {
 
 /*----------------------------------------------------------------------------*/
 
-export { featureChrs,  name2Map,   chrMap, objectSet,  mapsOfFeature, storeFeature };
+import { stacks } from './stacks';
+/** @param features contains the data attributes of the features.
+ */
+function ensureBlockFeatures(blockId, features) {
+  // may also need ensureFeatureIndex().
+  let
+    /** oa.z could be passed in as a parameter, but this will be replaced anyway.  */
+    oa = stacks.oa,
+  za = oa.z[blockId];
+  /* if za has not been populated with features, it will have just .dataset
+   * and .scope, i.e. .length === 2 */
+  if (Object.keys(za).length == 2) {
+    dLog('drawBlockFeatures()', blockId, za, features);
+    // add features to za.
+    features.forEach((f) => za[f.name] = f.value);
+  }
+}
+
+/*----------------------------------------------------------------------------*/
+
+export { featureChrs,  name2Map,   chrMap, objectSet,  mapsOfFeature, storeFeature, ensureBlockFeatures };
