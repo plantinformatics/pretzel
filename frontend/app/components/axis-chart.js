@@ -137,7 +137,7 @@ export default Ember.Component.extend({
     });
     setupFrame(
       this.get('axisID'), axisCharts,
-      chartTypes, charts, /*resizedWidth*/undefined);
+      charts, /*resizedWidth*/undefined);
 
 
     chartTypes.forEach((typeName) => {
@@ -149,12 +149,16 @@ export default Ember.Component.extend({
         let blocks = this.get('blocks');
 
         setupChart(
-          this.get('axisID'), axisCharts, chart, data, chartTypes, 
+          this.get('axisID'), axisCharts, chart, data,
           dataConfig, this.get('yAxisScale'), /*resizedWidth*/undefined);
 
         drawChart(axisCharts, chart, data, blocks);
       }
     });
+    const showChartAxes = true;
+    if (showChartAxes)
+      axisCharts.drawAxes(charts);
+
     return chartTypes;
   }),
 
@@ -261,7 +265,7 @@ export default Ember.Component.extend({
     resizedWidth = this.get('width'),
     chart1 = this.get('charts')[dataTypeName];
     chart1 = setupChart(
-      axisID, axisCharts, chart1, chartData, this.get('chartTypes'), dataConfig, yAxisScale, resizedWidth);
+      axisID, axisCharts, chart1, chartData, dataConfig, yAxisScale, resizedWidth);
     drawChart(axisCharts, chart1, chartData, blocks);
     if (! this.get('charts') && chart1)
       this.set('charts', chart1);

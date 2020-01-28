@@ -90,7 +90,7 @@ function hoverTextFn (feature, block) {
  * Later can use e.g. axis-accordion to separate these horizontally;
  * for axis-chart the foreignObject is not used.
  *
- * @param g parent of the chart. this is the <g> with clip-path axis-clip.
+ * @param g parent of the chart. this is the <g> with clip-path #axis-chart-clip.
  */
 function addParentClass(g) {
   let axisUse=g.node().parentElement.parentElement,
@@ -189,7 +189,7 @@ AxisCharts.prototype.setup = function(axisID) {
 
 /**
  */
-function setupFrame(axisID, axisCharts, chartTypes, charts, resizedWidth)
+function setupFrame(axisID, axisCharts, charts, resizedWidth)
 {
   axisCharts.setup(axisID);
 
@@ -202,15 +202,15 @@ function setupFrame(axisID, axisCharts, chartTypes, charts, resizedWidth)
   // equivalent to addParentClass();
   axisCharts.dom.gAxis.classed('hasChart', true);
 
-  axisCharts.frame(axisCharts.ranges.bbox, chartTypes);
+  axisCharts.frame(axisCharts.ranges.bbox, charts);
 
-  axisCharts.controls(charts);
+  axisCharts.controls();
 
   axisCharts.getRanges2();
 
   axisCharts.group(axisCharts.dom.gca, 'axis-chart', charts);
 }
-function setupChart(axisID, axisCharts, chart1, chartData, chartTypes, dataConfig, yAxisScale, resizedWidth)
+function setupChart(axisID, axisCharts, chart1, chartData, dataConfig, yAxisScale, resizedWidth)
 {
   // Plan is for Axischarts to own .ranges, but for now there is some overlap.
   if (! chart1.ranges) {
@@ -246,9 +246,6 @@ function drawChart(axisCharts, chart1, chartData, blocks)
   chart1.prepareScales(chartData, axisCharts.ranges.drawSize);
   blockIds.forEach((blockId) => {
     chart1.chartLines[blockId].scaledConfig(); } );
-
-  if (showChartAxes)
-    chart1.drawAxes(chartData);
 
   chart1.drawContent();
 };
@@ -464,12 +461,23 @@ AxisCharts.prototype.group = function (parentG, groupClassName, charts) {
       this.dom.g = g;
       this.dom.gs = gs;
       this.dom.gsa = gsa;
-  // set ChartLine .g; used by ChartLine.{lines,bars}.
-  gsa.each(function(typeName, i) { charts[typeName].g = d3.select(this) ; } );
+  // set Chart1 .g; passed to ChartLine() and used by ChartLine.{lines,bars}.
+  gsa.each(function(chart, i) { chart.g = d3.select(this) ; } );
   return g;
 };
 
-Chart1.prototype.drawAxes = function (data) {
+AxisCharts.prototype.drawAxes = function (charts) {
+  let
+      dom = this.dom,
+      /** the axes were originally within the gs,gsa of .group();  hence the var names.
+       * gs selects the <g> into which the axes will be inserted, and gpa is the
+       * .enter().append() of that selection.
+       */
+      gs = dom.gc,
+  gsa = dom.gca;
+  gsa.each(Chart1.prototype.drawAxes);
+};
+Chart1.prototype.drawAxes = function (chart, i, g) {
 
       /**  first draft showed all data;  subsequently adding :
        * + select region from y domain
@@ -481,16 +489,14 @@ Chart1.prototype.drawAxes = function (data) {
       // yBand.domain(data.map(dataConfig.datum2Location));
 
       let
-      {height} = this.ranges.drawSize,
-      {x, y} = this.scales,
-      dom = this.dom,
-      /** the axes were originally within the gs,gsa of .group();  hence the var names.
-       * gs selects the <g> into which the axes will be inserted, and gpa is the
-       * .enter().append() of that selection.
-       */
+        chart1 = this.__data__,
+      {height} = chart1.ranges.drawSize,
+      {x, y} = chart1.scales,
+      dom = chart1.dom,
       gs = dom.gc,
-      gsa = dom.gca,
-      dataConfig = this.dataConfig;
+      /** selection into which to append the axes. */
+      gsa = d3.select(this),
+      dataConfig = chart1.dataConfig;
 
       let axisXa =
       gsa.append("g")
@@ -773,7 +779,7 @@ AxisCharts.prototype.commonFrame = function container()
   this.dom.gp = gp;
 };
 
-AxisCharts.prototype.frame = function container(bbox, chartTypes)
+AxisCharts.prototype.frame = function container(bbox, charts)
 {
   let
   gps = this.dom.gps,
@@ -782,7 +788,7 @@ AxisCharts.prototype.frame = function container(bbox, chartTypes)
     /** datum is axisID, so id and clip-path can be functions.
      * e.g. this.dom.gp.data() is [axisID]
      */
-    function axisClipId(axisID) { return "axis-clip-" + axisID; }
+    function axisClipId(axisID) { return "axis-chart-clip-" + axisID; }
     let gpa =
     gp // define the clipPath
       .append("clipPath")       // define a clip path
@@ -799,10 +805,10 @@ AxisCharts.prototype.frame = function container(bbox, chartTypes)
     gp.append("g")
       .attr("clip-path", (d) => "url(#" + axisClipId(d) + ")") // clip with the rectangle
       .selectAll("g[clip-path]")
-      .data(chartTypes)
+      .data(Object.values(charts))
       .enter()
       .append("g")
-      .attr('class', (d) => d)
+      .attr('class', (d) => d.dataConfig.dataTypeName)
       .attr("transform", (d, i) => "translate(" + (i * 30) + ", 0)")
   ;
 
@@ -810,7 +816,7 @@ AxisCharts.prototype.frame = function container(bbox, chartTypes)
       gps.merge(gp).selectAll("g." + className+  " > g");
   if (! gp.empty() ) {
     addParentClass(g);
-    /* .gc is <g clip-path=​"url(#axis-clip-{{axisID}})​">​</g>​
+    /* .gc is <g clip-path=​"url(#axis-chart-clip-{{axisID}})​">​</g>​
      * .g (assigned later) is g.axis-chart
      * .gca contains a g for each chartType / dataTypeName, i.e. per Chart1.
      */
@@ -828,16 +834,16 @@ class AxisChart {
  };
 */
 
-AxisCharts.prototype.controls = function controls(charts)
+AxisCharts.prototype.controls = function controls()
 {
   let
     bbox = this.ranges.bbox,
   gp = this.dom.gca,
   gps = this.dom.gc;
 
-    function toggleBarsLineClosure(typeName /*, i, g*/)
+    function toggleBarsLineClosure(chart /*, i, g*/)
     {
-      charts[typeName].toggleBarsLine();
+      chart.toggleBarsLine();
     }
 
     /** currently placed at g.chart, could be inside g.chart>g (clip-path=). */
@@ -849,8 +855,8 @@ AxisCharts.prototype.controls = function controls(charts)
     chartTypeToggle.merge(gps.selectAll("g > circle"))
       .attr("cx", bbox.x + bbox.width / 2)   /* was o[p], but g.axis-outer translation does x offset of stack.  */
       .attr("cy", bbox.height - 10)
-    .classed("pushed", (typeName) => { let chart1 = charts[typeName]; return chart1.barsLine; });
-  chartTypeToggle.each(function(typeName) { charts[typeName].chartTypeToggle = d3.select(this); } );
+    .classed("pushed", (chart1) => { return chart1.barsLine; });
+  chartTypeToggle.each(function(chart) { chart.chartTypeToggle = d3.select(this); } );
 };
 
 /*----------------------------------------------------------------------------*/
