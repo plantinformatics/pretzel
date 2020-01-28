@@ -12,6 +12,7 @@ const className = "chart", classNameSub = "chartRow";
 /** Enables per-chart axes; X axes will be often useful; Y axis might be used if
  * zooming into different regions of an axis.  */
 const showChartAxes = true;
+const useLocalY = false;
 
 /* global d3 */
 
@@ -204,11 +205,11 @@ function setupFrame(axisID, axisCharts, charts, resizedWidth)
 
   axisCharts.frame(axisCharts.ranges.bbox, charts);
 
-  axisCharts.controls();
-
   axisCharts.getRanges2();
 
   axisCharts.group(axisCharts.dom.gca, 'axis-chart', charts);
+  // place controls after the ChartLine-s group, so that the toggle is above the bars and can be accessed.
+  axisCharts.controls();
 }
 function setupChart(axisID, axisCharts, chart1, chartData, dataConfig, yAxisScale, resizedWidth)
 {
@@ -362,7 +363,10 @@ AxisCharts.prototype.getRanges3 = function (resizedWidth) {
       this.parentG = parentG;
       this.dataConfig = dataConfig;
       this.chartLines = {};
-      // yAxis is imported, x & y are calculated locally.  yLine would be used if y is scaleBand.
+      /* yAxis is imported, x & yLine are calculated locally.
+       * y is used for drawing - it refers to yAxis or yLine.
+       * yLine would be used for .line() if yBand / scaleBand was used for .bars().
+       */
       this.scales = { /* yAxis, x, y, yLine */ };
     }
     Chart1.prototype.barsLine =  true;
@@ -403,7 +407,7 @@ AxisCharts.prototype.getRanges3 = function (resizedWidth) {
       /* scaleBand would suit a data set with evenly spaced or ordinal / nominal y values.
        * yBand = d3.scaleBand().rangeRound(yRange).padding(0.1),
        */
-      y = this.scaleLinear(yRange, data),
+      y = useLocalY ? this.scaleLinear(yRange, data) : this.scales.yAxis,
       x = d3.scaleLinear().rangeRound(xRange);
       // datum2LocationScaled() uses me.scales.x rather than the value in the closure in which it was created.
       this.scales.x = x;
@@ -506,6 +510,7 @@ Chart1.prototype.drawAxes = function (chart, i, g) {
         .attr("transform", "translate(0," + height + ")")
         .call(d3.axisBottom(x));
 
+  if (useLocalY) {
       let axisYa =
       gsa.append("g")
         .attr("class", "axis axis--y");
@@ -518,6 +523,7 @@ Chart1.prototype.drawAxes = function (chart, i, g) {
         .attr("dy", "0.71em")
         .attr("text-anchor", "end")
         .text(dataConfig.valueName);
+  }
 };
 /**
  * @param block hover
@@ -697,7 +703,7 @@ Chart1.prototype.drawLine = function (blockId, block, data)
     };
     ChartLine.prototype.line = function (data)
     {
-      let y = this.scales.yLine, dataConfig = this.dataConfig;
+      let y = this.scales.y, dataConfig = this.dataConfig;
 
       let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, y);
       let line = d3.line()
