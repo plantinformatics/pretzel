@@ -1,7 +1,7 @@
 import Ember from 'ember';
 const { inject: { service } } = Ember;
 
-import { className, AxisCharts, setupChart, drawChart, Chart1, DataConfig, blockData, parsedData } from '../utils/draw/chart1';
+import { className, AxisCharts, setupFrame, setupChart, drawChart, Chart1, DataConfig, blockData, parsedData } from '../utils/draw/chart1';
 
 /*----------------------------------------------------------------------------*/
 
@@ -119,6 +119,8 @@ export default Ember.Component.extend({
     let blocksData = this.get('blocksData'),
     chartTypes = this.get('chartTypes'),
     charts = this.get('charts');
+        let axisCharts = this.get('axisCharts');
+
     chartTypes.forEach((typeName) => {
       if (! charts[typeName]) {
         let data = blocksData.get(typeName),
@@ -126,15 +128,30 @@ export default Ember.Component.extend({
         blockIds = Object.keys(data),
         /** may use firstBlock for isBlockData. */
         firstBlock = data[blockIds[0]],
+
         dataConfig = dataConfigs[typeName],
         parentG = this.get('axisCharts.dom.g'), // this.get('gAxis'),
         chart = new Chart1(parentG, dataConfig);
         charts[typeName] = chart;
-        let axisCharts = this.get('axisCharts');
+      }
+    });
+    setupFrame(
+      this.get('axisID'), axisCharts,
+      chartTypes, charts, /*resizedWidth*/undefined);
+
+
+    chartTypes.forEach((typeName) => {
+      let
+        chart = charts[typeName];
+      if (! chart.ranges) {
+        let data = blocksData.get(typeName),
+          dataConfig = chart.dataConfig;
         let blocks = this.get('blocks');
+
         setupChart(
-          this.get('axisID'), axisCharts, chart, data, 
-          blocks, dataConfig, this.get('yAxisScale'), /*resizedWidth*/undefined);
+          this.get('axisID'), axisCharts, chart, data, chartTypes, 
+          dataConfig, this.get('yAxisScale'), /*resizedWidth*/undefined);
+
         drawChart(axisCharts, chart, data, blocks);
       }
     });
@@ -244,7 +261,7 @@ export default Ember.Component.extend({
     resizedWidth = this.get('width'),
     chart1 = this.get('charts')[dataTypeName];
     chart1 = setupChart(
-      axisID, axisCharts, chart1, chartData, blocks, dataConfig, yAxisScale, resizedWidth);
+      axisID, axisCharts, chart1, chartData, this.get('chartTypes'), dataConfig, yAxisScale, resizedWidth);
     drawChart(axisCharts, chart1, chartData, blocks);
     if (! this.get('charts') && chart1)
       this.set('charts', chart1);
