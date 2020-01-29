@@ -184,7 +184,15 @@ export default InAxis.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  axis1d : Ember.computed.alias('axis.axis1d'),
+  axis1d : Ember.computed('axis.axis1d', 'axis.axis1d.isDestroying', function () {
+    /** this CP could be simply a .alias, but it can get a reference to a axis1d
+     * which is being destroyed; probably need a small design change in the
+     * component relations. */
+    let axis1d = this.get('axis.axis1d');
+    if (axis1d.isDestroying)
+      axis1d = undefined;
+    return axis1d;
+  }),
   axisS : Ember.computed.alias('axis.axis'),
   currentPosition : Ember.computed.alias('axis1d.currentPosition'),
   yDomain : Ember.computed.alias('currentPosition.yDomain'),
