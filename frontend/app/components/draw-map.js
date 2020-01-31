@@ -5719,6 +5719,13 @@ export default Ember.Component.extend(Ember.Evented, {
         .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
           .attr('height', graphDim.h /*"auto"*/);
 
+      /* axes removed via manage-view : removeBlock don't remove any brush of
+       * that axis from brushedRegions, so check for that here.
+       * This check could be done when services/data/blocks:viewed.[] updates.
+       */
+      Object.keys(oa.brushedRegions).forEach(
+        (refBlockId) => { if (! oa.axes[refBlockId]) removeBrushExtent(refBlockId); } 
+      );
       /** As in zoom(), note the brushedDomains before the scale change, for
        * updating the brush selection position.
        * This could be passed to axisBrushShowSelection() and used in place of

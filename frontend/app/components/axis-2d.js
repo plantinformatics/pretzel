@@ -6,6 +6,8 @@ import AxisEvents from '../utils/draw/axis-events';
 
 /* global d3 */
 
+const dLog = console.debug;
+
 const axisTransitionTime = 750;
 
 
@@ -168,12 +170,6 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     remove: function(){
       this.remove();
       console.log("components/axis-2d remove()");
-    },
-    /**
-     * @param componentName e.g. 'axis-tracks'
-     */
-    contentWidth : function (componentName, axisID, width) {
-      this.contentWidth(componentName, axisID, width);
     }
   },
 
@@ -192,7 +188,53 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       && (currentWidth = use_data[0]);
     return currentWidth;
   },
-  childWidths : {},
+  /** width of sub-components within this axis-2d.  Indexed by componentName.
+   * For each sub-component, [min, max] : the minimum required width, and the
+   * maximum useful width, i.e. the maximum width that the component can fill
+   * with content.
+   * Measured nominally in pixels, but space may be allocated proportional to the width allocated to this axis-2d.
+   */
+  childWidths : undefined,
+  /** Allocate the available width among the children listed in .childWidths
+   * @return [horizontal start offset, width] for each child.
+   * The key of the result is the same as the input .childWidths
+   */
+  allocatedWidths : Ember.computed('childWidths.@each.1', 'childWidths.chart.1', function () {
+    let allocatedWidths,
+    childWidths = this.get('childWidths'),
+    groupNames = Object.keys(childWidths),
+    requested = 
+      groupNames.reduce((result, groupName) => {
+        let cw = childWidths[groupName];
+        result[0] += cw[0]; // min
+        result[1] += cw[1]; // max
+      }, [0, 0]);
+    /** Calculate the spare width after each child is assigned its requested
+     * minimum width, and apportion the spare width among them.
+     * If spare < 0 then each child will get < min, but not <0.
+     */
+    let
+    startWidth = this.get('startWidth'),
+    available = (this.get('axisUse') && this.rectWidth()) || startWidth || 120,
+    /** spare and share may be -ve */
+    spare = available - requested[0],
+    share = 0;
+    if (groupNames.length > 0) {
+      share = spare / groupNames.length;
+    }
+    /** horizontal offset to the start (left) of the child. */
+    let offset = 0;
+    allocatedWidths = groupNames.map((groupName) => {
+      let w = childWidths[groupName][0] + share;
+      if (w < 0)
+        w = 0;
+      let allocated = [offset, w];
+      offset += w;
+      return allocated;
+    });
+    dLog('allocatedWidths', allocatedWidths, childWidths);
+    return allocatedWidths;
+  }),
   contentWidth : function (componentName, axisID, width) {
     let
       childWidths = this.get('childWidths'),
@@ -215,6 +257,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       Ember.run.later(call_setWidth);
   },
 
+  init() {
+    this._super(...arguments);
+    this.set('childWidths', Ember.Object.create());
+  },
 
   didInsertElement() {
     let oa = this.get('data'),

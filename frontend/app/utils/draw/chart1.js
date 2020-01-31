@@ -189,11 +189,13 @@ AxisCharts.prototype.setup = function(axisID) {
 };
 
 /**
+ * @param allocatedWidth  [horizontal start offset, width]
  */
-function setupFrame(axisID, axisCharts, charts, resizedWidth)
+function setupFrame(axisID, axisCharts, charts, allocatedWidth)
 {
   axisCharts.setup(axisID);
 
+  let resizedWidth = allocatedWidth[1];
   axisCharts.getRanges3(resizedWidth);
 
   // axisCharts.size(this.get('yAxisScale'), /*axisID, gAxis,*/   chartData, resizedWidth);  //  -	split size/width and data/draw
@@ -203,7 +205,7 @@ function setupFrame(axisID, axisCharts, charts, resizedWidth)
   // equivalent to addParentClass();
   axisCharts.dom.gAxis.classed('hasChart', true);
 
-  axisCharts.frame(axisCharts.ranges.bbox, charts);
+  axisCharts.frame(axisCharts.ranges.bbox, charts, allocatedWidth);
 
   axisCharts.getRanges2();
 
@@ -598,7 +600,8 @@ Chart1.prototype.drawLine = function (blockId, block, data)
       width = d2v(d);
       if (this.valueIsArea) {
         let h;
-        width /= (h = this.rectHeight(scaled, gIsData, d, i, g));
+        // Factor the width consistently by h, don't sometimes use scaled (i.e. pass scaled==false).
+        width /= (h = this.rectHeight(false, gIsData, d, i, g));
         // dLog('rectWidth', h, width, gIsData);
       }
       return width;
@@ -785,7 +788,7 @@ AxisCharts.prototype.commonFrame = function container()
   this.dom.gp = gp;
 };
 
-AxisCharts.prototype.frame = function container(bbox, charts)
+AxisCharts.prototype.frame = function container(bbox, charts, allocatedWidth)
 {
   let
   gps = this.dom.gps,
@@ -807,6 +810,7 @@ AxisCharts.prototype.frame = function container(bbox, charts)
       .attr("width", bbox.width)
       .attr("height", bbox.height)
     ;
+  let [startOffset, width] = allocatedWidth;
   let gca =
     gp.append("g")
       .attr("clip-path", (d) => "url(#" + axisClipId(d) + ")") // clip with the rectangle
@@ -815,7 +819,7 @@ AxisCharts.prototype.frame = function container(bbox, charts)
       .enter()
       .append("g")
       .attr('class', (d) => d.dataConfig.dataTypeName)
-      .attr("transform", (d, i) => "translate(" + (i * 30) + ", 0)")
+      .attr("transform", (d, i) => "translate(" + (startOffset + (i * 30)) + ", 0)")
   ;
 
     let g = 

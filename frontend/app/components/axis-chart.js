@@ -1,6 +1,7 @@
 import Ember from 'ember';
 const { inject: { service } } = Ember;
 
+import InAxis from './in-axis';
 import { className, AxisCharts, setupFrame, setupChart, drawChart, Chart1, DataConfig, blockData, parsedData } from '../utils/draw/chart1';
 
 /*----------------------------------------------------------------------------*/
@@ -62,7 +63,7 @@ const dataConfigs =
  * @param charts  map of Chart1, indexed by typeName
  * @param blocksData  map of features, indexed by typeName, blockId,
  */
-export default Ember.Component.extend({
+export default InAxis.extend({
   blockService: service('data/block'),
 
   className : className,
@@ -137,7 +138,7 @@ export default Ember.Component.extend({
     });
     setupFrame(
       this.get('axisID'), axisCharts,
-      charts, /*resizedWidth*/undefined);
+      charts, this.get('allocatedWidth'));
 
 
     chartTypes.forEach((typeName) => {
