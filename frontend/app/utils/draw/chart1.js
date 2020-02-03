@@ -401,6 +401,7 @@ AxisCharts.prototype.getRanges3 = function (resizedWidth) {
        */
       let
         dataConfig = this.dataConfig,
+      scales = this.scales,
       width = drawSize.width,
       height = drawSize.height,
       xRange = [0, width],
@@ -409,18 +410,25 @@ AxisCharts.prototype.getRanges3 = function (resizedWidth) {
       /* scaleBand would suit a data set with evenly spaced or ordinal / nominal y values.
        * yBand = d3.scaleBand().rangeRound(yRange).padding(0.1),
        */
-      y = useLocalY ? this.scaleLinear(yRange, data) : this.scales.yAxis,
-      x = d3.scaleLinear().rangeRound(xRange);
+      y = useLocalY ? this.scaleLinear(yRange, data) : scales.yAxis;
+      scales.xWidth = 
+       d3.scaleLinear().rangeRound(xRange);
+      if (dataConfig.barAsHeatmap) {
+        scales.xColour = d3.scaleOrdinal().range(d3.schemeCategory20);
+      }
       // datum2LocationScaled() uses me.scales.x rather than the value in the closure in which it was created.
-      this.scales.x = x;
+      scales.x = dataConfig.barAsHeatmap ? scales.xColour : scales.xWidth;
+
       // Used by bars() - could be moved there, along with  datum2LocationScaled().
-      this.scales.y = y;
+      scales.y = y;
       console.log("Chart1", xRange, yRange, dataConfig.dataTypeName);
 
       let
         valueWidthFn = dataConfig.rectWidth.bind(dataConfig, /*scaled*/false, /*gIsData*/true),
       valueCombinedDomain = this.domain(valueWidthFn, data);
-      x.domain(valueCombinedDomain);
+      scales.xWidth.domain(valueCombinedDomain);
+      if (scales.xColour)
+        scales.xColour.domain(valueCombinedDomain);
 
     };
     Chart1.prototype.drawContent = function ()
@@ -509,7 +517,9 @@ Chart1.prototype.drawAxes = function (chart, i, g) {
       // -  handle .exit() for these 2 also
         .attr("class", "axis axis--x");
       axisXa.merge(gs.selectAll("g > g.axis--x"))
-        .attr("transform", "translate(0," + height + ")")
+        .attr("transform", "translate(0," + height + ")");
+      if (! dataConfig.barAsHeatmap)
+        axisXa
         .call(d3.axisBottom(x));
 
   if (useLocalY) {
@@ -559,6 +569,8 @@ Chart1.prototype.drawLine = function (blockId, block, data)
         dataConfig = this.dataConfig,
       block = this.block,
       g = this.g;
+      if (dataConfig.barAsHeatmap)
+        this.scales.x = this.scales.xColour;
       let
         rs = g
       // .select("g." + className + " > g")
@@ -579,8 +591,14 @@ Chart1.prototype.drawLine = function (blockId, block, data)
         .attr("x", 0)
         .attr("y", (d) => { let li = dataConfig.datum2LocationScaled(d); return li.length ? li[0] : li; })
         // yBand.bandwidth()
-        .attr("height", dataConfig.rectHeight.bind(dataConfig, /*scaled*/true, /*gIsData*/false)) // equiv : (d, i, g) => dataConfig.rectHeight(true, false, d, i, g)
-        .attr("width", dataConfig.rectWidth.bind(dataConfig, /*scaled*/true, /*gIsData*/false));
+        .attr("height", dataConfig.rectHeight.bind(dataConfig, /*scaled*/true, /*gIsData*/false)) // equiv : (d, i, g) => dataConfig.rectHeight(true, false, d, i, g);
+      ;
+      let barWidth = dataConfig.rectWidth.bind(dataConfig, /*scaled*/true, /*gIsData*/false);
+      ra
+        .attr("width", dataConfig.barAsHeatmap ? 20 : barWidth);
+      if (dataConfig.barAsHeatmap)
+      ra
+        .attr('fill', barWidth);
       rx.remove();
       console.log(rs.nodes(), re.nodes());
     };
@@ -707,6 +725,7 @@ Chart1.prototype.drawLine = function (blockId, block, data)
     ChartLine.prototype.line = function (data)
     {
       let y = this.scales.y, dataConfig = this.dataConfig;
+      this.scales.x = this.scales.xWidth;
 
       let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, y);
       let line = d3.line()

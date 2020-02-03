@@ -32,7 +32,8 @@ const featureCountDataProperties = {
     blockName = block.view && block.view.longName();
     return valueText + '\n' + blockName;
   },
-  valueIsArea : true
+  valueIsArea : false,
+  barAsHeatmap : true
 };
 
 const dataConfigs = 

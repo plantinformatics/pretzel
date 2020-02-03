@@ -245,9 +245,12 @@ g.axis-use
 > rect.chartRow
 */
 rect.chartRow {
-  fill: aqua;
   opacity : 0.5;
   stroke: blue;
+}
+/* .featureCountData colour is heatmap **/
+.blockData rect.chartRow {
+  fill: aqua;
 }
 
 /* ---------------------------------- */
