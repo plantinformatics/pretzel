@@ -194,7 +194,7 @@ export default InAxis.extend({
      * which is being destroyed; probably need a small design change in the
      * component relations. */
     let axis1d = this.get('axis.axis1d');
-    if (axis1d.isDestroying) {
+    if (axis1d && axis1d.isDestroying) {
       console.log('axis1d isDestroying', this);
       axis1d = undefined;
     }
@@ -375,11 +375,12 @@ export default InAxis.extend({
       let t = tracks.intervalTree[blockId],
       block = oa.stacks.blocks[blockId],
       axis = block.getAxis(),
+      zoomed = axis && axis.axis1d && axis.axis1d.zoomed,
       /** if zoomed in, tracks are not filtered by sizeThreshold.
        * The logic is : if the user is zooming in, they are interested in
        * features regardless of size, e.g. smaller than a pixel.
        */
-      sizeThreshold = axis.axis1d.zoomed ? undefined : pxSize * 1/*5*/,
+      sizeThreshold = zoomed ? undefined : pxSize * 1/*5*/,
       tracksLayout = regionOfTree(t, yDomain, sizeThreshold),
       data = tracksLayout.intervals;
       if (false)  // actually need to sum the .layoutWidth for all blockId-s, plus the block offsets which are calculated below

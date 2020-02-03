@@ -302,6 +302,15 @@ Stacked.prototype.getAxis = function()
 Stacked.axis1dAdd = function (axisName, axis1dComponent) {
   axes1d[axisName] = axis1dComponent;
 };
+Stacked.prototype.getAxis1d = function () {
+  let axis1d = this.axis1d || (this.axis1d = axes1d[this.axisName]);
+  if (axis1d && (axis1d.isDestroying || axis1d.isDestroying)) {
+    dLog('getAxis1d() isDestroying', axis1d, this);
+    axis1d = this.axis1d = undefined;
+    delete axes1d[this.axisName];
+  }
+  return axis1d;
+}
 function positionToString(p)
 {
   return (p === undefined) ? ""
@@ -2104,12 +2113,13 @@ Stacked.prototype.axisDimensions = function ()
     /** y scale of this axis */
     y = this.getY(),
   domain = this.y.domain(),
-  axis1d = this.axis1d,
-  dim = { domain, range : this.yRange(), zoomed : axis1d.zoomed};
+  axis1d = this.getAxis1d(),
+  zoomed = axis1d && axis1d.zoomed,
+  dim = { domain, range : this.yRange(), zoomed};
   let
   currentPosition = axis1d && axis1d.get('currentPosition');
   if (! isEqual(domain, currentPosition.yDomain))
-    dLog('axisDimensions', domain, currentPosition.yDomain, axis1d.zoomed, currentPosition);
+    dLog('axisDimensions', domain, currentPosition.yDomain, zoomed, currentPosition);
   return dim;
 };
 /** Set the domain of the current position to the given domain
@@ -2126,11 +2136,12 @@ Stacked.prototype.setDomain = function (domain)
  */
 Stacked.prototype.setZoomed = function (zoomed)
 {
-  let axis1d = this.axis1d;
+  let axis1d = this.getAxis1d();
   // later .zoomed may move into axis1d.currentPosition
   // if (! axisPosition)
   // dLog('setZoomed', this, 'zoomed', axis1d.zoomed, '->', zoomed, axis1d);
-  axis1d.setZoomed(zoomed);
+  if (axis1d)
+    axis1d.setZoomed(zoomed);
 };
 
 Stacked.prototype.unviewBlocks = function ()

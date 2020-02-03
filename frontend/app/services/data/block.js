@@ -28,7 +28,35 @@ function log_Map(label, map) {
     console.log(label, block_text(key), blocks && blocks.map(block_text));
   });
 }
+/** log a Map string -> Map (string -> [block])
+  */
+function log_Map_Map(label, map) {
+  map.forEach(function (value, key) {
+    console.log(label, 'key');
+    log_Map('', value);
+  });
+}
 
+/** Filter the values of the given map. If the filter result is undefined, omit
+ * the value from the result map.
+ * This is a combination of map and filter.
+ * @param map a Map
+ * @return a Map, or undefined if the result Map would be empty.
+ */
+function filterMap(map, mapFilterFn) {
+  /* factored out of viewedBlocksByReferenceAndScope(); similar to :
+   * https://stackoverflow.com/questions/48707227/how-to-filter-a-javascript-map/53065133 */
+  let result;
+  for (let [key, value] of map) {
+    let newValue = mapFilterFn(value);
+    if (newValue) {
+      if (! result)
+        result = new Map();
+      result.set(key, newValue);
+    }
+  }
+  return result;
+}
 
 /*----------------------------------------------------------------------------*/
  
@@ -594,6 +622,110 @@ export default Service.extend(Ember.Evented, {
         log_Map('blocksByReference', map);
       return map;
     }),
+
+  /** collate the blocks by the parent block they refer to, and by scope.
+   *
+   * Uses datasetsByParent(); this is more direct than blocksByReference()
+   * which uses Block.referenceBlock(), which does peekAll on blocks and filters
+   * on datasetId and scope.
+   *
+   * @return a Map, indexed by dataset name, each value being a further map
+   * indexed by block scope, and the value of that being an array of blocks,
+   * with the [0] position of the array reserved for the reference block.
+   *
+   * @desc
+   * Blocks without a parent / reference, will be mapped via their datasetId,
+   * and will be placed in [0] of the blocks array for their scope.
+   */
+  blocksByReferenceAndScope : Ember.computed(
+    'blockValues.[]',
+    function() {
+      const fnName = 'blocksByReferenceAndScope';
+      let map = this.get('blockValues')
+        .reduce(
+          (map, block) => {
+            // related : manage-explorer : datasetsToBlocksByScope() but that applies a filter.
+            let id = block.id,
+            scope = block.get('scope'),
+            /** If block is a promise, block.get('datasetId.parent') will be a
+             * promise - non-null regardless of whether the dataset has a
+             * .parent, whereas .get of .parent.name will return undefined iff
+             * there is no parent.
+             */
+            parentName = block.get('datasetId.parent.name');
+
+            function blocksOfDatasetAndScope(datasetId, scope) {
+              let mapByScope = map.get(datasetId);
+              if (! mapByScope) {
+                mapByScope = new Map();
+                map.set(datasetId, mapByScope);
+              }
+              let blocks = mapByScope.get(scope);
+              if (! blocks)
+                mapByScope.set(scope, blocks = [undefined]); // [0] is reference block
+              return blocks;
+            }
+
+            if (parentName) {
+              let blocks = blocksOfDatasetAndScope(parentName, scope);
+              blocks.push(block);
+            } else {
+              let datasetName = block.get('datasetId.name');
+              let blocks = blocksOfDatasetAndScope(datasetName, scope);
+              if (blocks[0]) {
+                // console.log(fnName, '() >1 reference blocks for scope', scope, blocks, block, map);
+                /* Reference chromosome assemblies, i.e. physical maps, define a
+                 * unique (reference) block for each scope, whereas Genetic Maps
+                 * are their own reference, and each block in a GM is both a
+                 * data block and a reference block, and a GM may define
+                 * multiple blocks with the same scope.
+                 * As a provisional measure, if there is a name clash (multiple
+                 * blocks with no parent and the same scope), append the
+                 * datasetName name to the scope to make it unique.
+                 */
+                blocks = blocksOfDatasetAndScope(datasetName, scope + '_' + datasetName);
+              }
+              blocks[0] = block; 
+            }
+            return map;
+          },
+          new Map());
+
+      if (trace_block > 1)
+        log_Map_Map(fnName, map);
+      return map;
+    }),
+
+  /** filter blocksByReferenceAndScope() for viewed blocks,
+   * @return Map, which may be empty
+   */
+  viewedBlocksByReferenceAndScope : Ember.computed('blocksByReferenceAndScope', 'viewed.[]', function () {
+    const fnName = 'viewedBlocksByReferenceAndScope';
+    let viewed = this.get('viewed');
+    let map = this.get('blocksByReferenceAndScope'),
+     resultMap = filterMap(map, referencesMapFilter);
+    function referencesMapFilter(mapByScope) {
+      let resultMap = filterMap(mapByScope, scopesMapFilter);
+      if (trace_block > 2)
+        dLog('referencesMapFilter', mapByScope, resultMap);
+      return resultMap;
+    };
+    function scopesMapFilter(blocks) {
+      // axis : blocks : [0] is included if any blocks[*] are viewed, ...
+      //  && .isLoaded ?
+      let blocksOut = blocks.filter((b, i) => ((i===0) || b.get('isViewed')));
+      // expect that blocksOut.length != 0 here.
+      if ((blocksOut.length === 1) && ! blocks[0].get('isViewed'))
+        blocksOut = undefined;
+      if (trace_block > 3)
+        dLog('scopesMapFilter', blocks, blocksOut);
+      return blocksOut;
+    };
+
+    if (trace_block && resultMap)
+      log_Map_Map(fnName, resultMap);
+    return resultMap;
+  }),
 
 
   /** Search for the named features, and return also their blocks and datasets.
