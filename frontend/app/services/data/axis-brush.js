@@ -34,8 +34,8 @@ export default Service.extend(Ember.Evented, {
         dLog('brushedAxes', this);
       const fnName = 'brushedAxes';
       let records = this.get('all');
-      // if (trace_axisBrush > 1)
-        records.map(function (a) { console.log(fnName, a, a.get('brushedDomain')); } );
+      if (trace_axisBrush > 1)
+        records.map(function (a) { dLog(fnName, a, a.get('brushedDomain')); } );
       if (trace_axisBrush)
         dLog('viewed Blocks', records);
       let blocks = records.filter(function (ab) {

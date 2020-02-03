@@ -646,7 +646,8 @@ Stacked.prototype.getDomain = function ()
      * Also this.domain above is not recalculated after additional features are received,
      * whereas blocksDomain has the necessary dependency.
      */
-    let blocksDomain = this.axis1d && this.axis1d.get('blocksDomain');
+    let axis1d = this.getAxis1d();
+    let blocksDomain = axis1d && axis1d.get('blocksDomain');
     if (blocksDomain && blocksDomain.length) {
       dLog('getDomain()', this.axisName, domain, blocksDomain);
       domain = d3.extent(domain.concat(blocksDomain));

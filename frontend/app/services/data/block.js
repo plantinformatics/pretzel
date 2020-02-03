@@ -575,7 +575,7 @@ export default Service.extend(Ember.Evented, {
    * These are suited to be rendered by axis-chart.
    */
   viewedChartable: Ember.computed(
-    'viewed.[]',
+    'viewed.@each.{featuresCounts,isChartable}',
     function() {
       let records =
         this.get('viewed')
@@ -715,7 +715,14 @@ export default Service.extend(Ember.Evented, {
       //  && .isLoaded ?
       let blocksOut = blocks.filter((b, i) => ((i===0) || b.get('isViewed')));
       // expect that blocksOut.length != 0 here.
-      if ((blocksOut.length === 1) && ! blocks[0].get('isViewed'))
+      /* If a data block's dataset's parent does not have a reference block for
+       * the corresponding scope, then blocks[0] will be undefined, which is
+       * filtered out here.
+       * Some options for conveying the error to the user : perhaps display in
+       * the dataset explorer with an error status for the data block, e.g. the
+       * add button for the data block could be insensitive.
+       */
+      if ((blocksOut.length === 1) && (! blocks[0] || ! blocks[0].get('isViewed')))
         blocksOut = undefined;
       if (trace_block > 3)
         dLog('scopesMapFilter', blocks, blocksOut);

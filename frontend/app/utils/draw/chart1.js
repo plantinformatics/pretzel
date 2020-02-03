@@ -602,6 +602,53 @@ Chart1.prototype.drawLine = function (blockId, block, data)
       rx.remove();
       console.log(rs.nodes(), re.nodes());
     };
+    /** A single horizontal line for each data point.
+     * Position is similar to the rectangle which would be drawn by bars():
+     * X limits are the same as the rectangle limits (left, right)
+     * and Y position is at the middle of the equivalent rectangle.
+     */
+    ChartLine.prototype.linebars = function (data)
+    {
+      let
+        dataConfig = this.dataConfig,
+      block = this.block,
+      scales = this.scales,
+      g = this.g;
+      let
+        rs = g
+      // .select("g." + className + " > g")
+        .selectAll("path." + dataConfig.barClassName)
+        .data(data),
+      re =  rs.enter(), rx = rs.exit();
+      let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, scales.y);
+      let line = d3.line();
+
+      function horizLine(d, i, g) {
+        let barWidth = dataConfig.rectWidth(/*scaled*/true, /*gIsData*/false, d, i, g);
+        let y = middle(datum2LocationScaled(d)),
+        l =  line([
+        [0, y],
+        [barWidth, y]]);
+        return [l];
+      }
+
+      let ra = re
+        .append("path");
+      ra
+        .attr("class", dataConfig.barClassName)
+        // same comment re parent datum as for bars()
+        .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); });
+      ra
+        .merge(rs)
+        .transition().duration(1500)
+        .attr('d', horizLine)
+        .attr("stroke", 'red')
+      ;
+
+      rx.remove();
+      console.log(rs.nodes(), re.nodes());
+    };
+
     /** Calculate the height of rectangle to be used for this data point
      * @param this  is DataConfig, not DOM element.
      * @param scaled  true means apply scale (x) to the result
@@ -773,7 +820,10 @@ Chart1.prototype.drawLine = function (blockId, block, data)
     {
       let 
         data = this.currentData;
-      let chartDraw = barsLine ? this.bars : this.line;
+      /** The effects data takes the form of an array of 5 probabilities, in the 3rd element of feature.value */
+      let isEffectsData = data.length && data[0].name && data[0].value && (data[0].value.length === 3) && (data[0].value[2].length === 6);
+      let bars = isEffectsData ? this.linebars : this.bars;
+      let chartDraw = barsLine ? bars : this.line;
       chartDraw.apply(this, [data]);
     };
 
