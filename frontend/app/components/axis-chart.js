@@ -32,8 +32,7 @@ const featureCountDataProperties = {
     blockName = block.view && block.view.longName();
     return valueText + '\n' + blockName;
   },
-  valueIsArea : false,
-  barAsHeatmap : true
+  valueIsArea : true
 };
 
 const dataConfigs = 
@@ -121,7 +120,7 @@ export default InAxis.extend({
     let blocksData = this.get('blocksData'),
     chartTypes = this.get('chartTypes'),
     charts = this.get('charts');
-        let axisCharts = this.get('axisCharts');
+    let axisCharts = this.get('axisCharts');
 
     chartTypes.forEach((typeName) => {
       if (! charts[typeName]) {
@@ -147,7 +146,7 @@ export default InAxis.extend({
         chart = charts[typeName];
       if (! chart.ranges) {
         let data = blocksData.get(typeName),
-          dataConfig = chart.dataConfig;
+        dataConfig = chart.dataConfig;
         let blocks = this.get('blocks');
 
         setupChart(
@@ -164,32 +163,37 @@ export default InAxis.extend({
     return chartTypes;
   }),
 
-  drawBlockFeaturesCounts : function(featuresCounts) {
-    if (! featuresCounts)
-      featuresCounts = this.get('featuresCounts');
-    let domain = this.get('axis.axis1d.domainChanged');
-    if (featuresCounts) {
-      console.log('drawBlockFeaturesCounts', featuresCounts.length, domain, this.get('block.id'));
 
-      // pass alternate dataConfig to layoutAndDrawChart(), defining alternate functions for {datum2Value, datum2Location }
-      this.layoutAndDrawChart(featuresCounts, 'featureCountData');
-    }
+  /** Retrieve charts handles from the DOM.
+   * This could be used as verification - the result should be the same as
+   * this.get('charts').
+   */
+  chartHandlesFromDom () {
+    let axisUse = this.get('axis.axisUse'),
+    g = axisUse.selectAll('g.chart > g[clip-path] > g'),
+    charts = g.data();
+    return charts;
   },
 
-
+  /** Called via in-axis:{zoomed or resized}() -> redrawDebounced() -> redrawOnce()
+   * Redraw the chart content.
+   * In the case of resize, the chart frame will need to be resized (not yet
+   * done; the setup functions are designed to be called again - in that case
+   * they will update sizes rather than add new elements).
+   */
   redraw   : function(axisID, t) {
+    let charts = this.get('charts');
+    /* y axis has been updated, so redrawing the content will update y positions. */
+    Object.values(charts).forEach((chart) => chart.drawContent());
+  },
+  /** for use with @see pasteProcess() */
+  redraw_from_paste   : function(axisID, t) {
     let data = this.get(className),
     layoutAndDrawChart = this.get('layoutAndDrawChart');
     if (data) {
     console.log("redraw", this, (data === undefined) || data.length, axisID, t);
     if (data)
       layoutAndDrawChart.apply(this, [data, undefined]);
-    }
-    else {  // use block.features or block.featuresCounts when not using data parsed from table.
-      if (this.get('block.isChartable'))
-        this.drawBlockFeatures0();
-      else
-        this.drawBlockFeaturesCounts();
     }
   },
 

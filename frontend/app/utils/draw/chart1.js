@@ -585,6 +585,15 @@ Chart1.prototype.drawLine = function (blockId, block, data)
   let chartLine = this.chartLines[blockId];
   chartLine.drawContent(this.barsLine);
 };
+
+ChartLine.prototype.blockColour = function ()
+{
+  let blockS = this.block && this.block.get('view'),
+  /* For axes without a reference, i.e. GMs, there is a single data block with colour===undefined. */
+  colour = (blockS && blockS.axisTitleColour()) || 'red';
+  return colour;
+};
+
     ChartLine.prototype.bars = function (data)
     {
       let
@@ -603,6 +612,7 @@ Chart1.prototype.drawLine = function (blockId, block, data)
         .append("rect");
       ra
         .attr("class", dataConfig.barClassName)
+        .attr("fill", (d) => this.blockColour())
         /** parent datum is currently 1, but could be this.block;
          * this.parentElement.parentElement.__data__ has the axis id (not the blockId),
          */
@@ -664,7 +674,7 @@ Chart1.prototype.drawLine = function (blockId, block, data)
         .merge(rs)
         .transition().duration(1500)
         .attr('d', horizLine)
-        .attr("stroke", 'red')
+        .attr("stroke", (d) => this.blockColour())
       ;
 
       rx.remove();
@@ -807,11 +817,12 @@ Chart1.prototype.drawLine = function (blockId, block, data)
         g = this.g,
       ps = g
         .selectAll("g > path." + dataConfig.barClassName)
-        .data([1]);
+        .data([this]);
       ps
         .enter()
         .append("path")
         .attr("class", dataConfig.barClassName + " line")
+        .attr("stroke", (d) => this.blockColour())
         .datum(data)
         .attr("d", line)
         .merge(ps)
@@ -829,7 +840,7 @@ Chart1.prototype.drawLine = function (blockId, block, data)
       this.barsLine = ! this.barsLine;
       this.chartTypeToggle
         .classed("pushed", this.barsLine);
-      this.g.selectAll("g > *").remove();
+      this.dom.g.selectAll("g > *").remove();
       Object.keys(this.chartLines).forEach((blockId) => {
         let chartLine = this.chartLines[blockId];
         chartLine.drawContent(this.barsLine);
