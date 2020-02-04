@@ -115,8 +115,7 @@ class DataConfig {
 };
 
 class ChartLine {
-  constructor(g, dataConfig, scales) {
-      this.g = g;
+  constructor(dataConfig, scales) {
       this.dataConfig = dataConfig;
       /* the scales have the same .range() as the parent Chart1, but the .domain() varies. */
       this.scales = scales; // Object.assign({}, scales);
@@ -208,12 +207,8 @@ function setupFrame(axisID, axisCharts, charts, allocatedWidth)
   axisCharts.frame(axisCharts.ranges.bbox, charts, allocatedWidth);
 
   axisCharts.getRanges2();
-
-  axisCharts.group(axisCharts.dom.gca, 'axis-chart', charts);
-  // place controls after the ChartLine-s group, so that the toggle is above the bars and can be accessed.
-  axisCharts.controls();
 }
-function setupChart(axisID, axisCharts, chart1, chartData, dataConfig, yAxisScale, resizedWidth)
+function setupChart(axisID, axisCharts, chart1, chartData, blocks, dataConfig, yAxisScale, resizedWidth)
 {
   // Plan is for Axischarts to own .ranges, but for now there is some overlap.
   if (! chart1.ranges) {
@@ -222,28 +217,46 @@ function setupChart(axisID, axisCharts, chart1, chartData, dataConfig, yAxisScal
   }
   chart1.scales.yAxis = yAxisScale;
 
+  //----------------------------------------------------------------------------
 
-  chart1.getRanges(axisCharts.ranges, chartData);
+  /* ChartLine:setup() makes a copy of Chart1's .dataConfig, so augment it
+   * before then (called in createLine()).
+   */
   /* pasteProcess() may set .valueName, possibly provided by GUI;
    * i.e. Object.values(chartData).mapBy('valueName').filter(n => n)
    * and that can be passed to addedDefaults().
    */
   dataConfig.addedDefaults();
 
+  //----------------------------------------------------------------------------
+  let
+  blocksById = blocks.reduce(
+    (result, block) => { result[block.get('id')] = block; return result; }, []),
+  blockIds = Object.keys(chartData);
+  blockIds.forEach((blockId) => {
+    let block = blocksById[blockId];
+    chart1.createLine(blockId, block);
+  });
+  chart1.group(axisCharts.dom.gca, 'chart-line');
+  // place controls after the ChartLine-s group, so that the toggle is above the bars and can be accessed.
+  axisCharts.controls();
+  //----------------------------------------------------------------------------
+
+
+
+  chart1.getRanges(axisCharts.ranges, chartData);
+
   return chart1;
 };
 
-function drawChart(axisCharts, chart1, chartData, blocks)
+function drawChart(axisCharts, chart1, chartData)
 {
   /** possibly don't (yet) have chartData for each of blocks[],
    * i.e. blocksById may be a subset of blocks.mapBy('id').
     */
-  let blockIds = Object.keys(chartData),
-  blocksById = blocks.reduce(
-    (result, block) => { result[block.get('id')] = block; return result; }, []);
+  let blockIds = Object.keys(chartData);
   blockIds.forEach((blockId) => {
-    let block = blocksById[blockId];
-    chart1.data(blockId, block, chartData[blockId]);
+    chart1.data(blockId, chartData[blockId]);
   });
 
   chart1.prepareScales(chartData, axisCharts.ranges.drawSize);
@@ -455,28 +468,31 @@ AxisCharts.prototype.getRanges3 = function (resizedWidth) {
       dataConfig.datum2ValueScaled = datum2ValueScaled;
     };
 
-AxisCharts.prototype.group = function (parentG, groupClassName, charts) {
-      /** parentG is g.axis-use.  add g.(groupClassName);
-       * within parentG there is also a sibling g.axis-html. */
+Chart1.prototype.group = function (parentG, groupClassName) {
+      /** parentG is g.{{dataTypeName}}, within : g.axis-use > g.chart > g[clip-path] > g.{{dataTypeName}}.
+       * add g.(groupClassName);
+       * within g.axis-use there is also a sibling g.axis-html. */
       let // data = parentG.data(),
       gs = parentG
-  /*
         .selectAll("g > g." + groupClassName)
-        .data(data), // inherit g.datum(), or perhaps [groupClassName]
-   */,
+        .data((chart) => Object.values(chart.chartLines)),
       gsa = gs
-//        .enter()
+        .enter()
         .append("g")  // maybe drop this g, move margin calc to gp
         // if drawing internal chart axes then move them inside the clip rect
         // .attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
-        .attr("class", groupClassName),
-  g = parentG.selectAll("g > g." + groupClassName); // gsa.merge(gs);
-      dLog('group', this, parentG, g.node());
+    .attr("class", (chartLine) => groupClassName)
+    .attr('id', (chartLine) => groupClassName + '-' + chartLine.block.id)
+    // .data((chartLine) => chartLine.currentData)
+  ,
+  // parentG.selectAll("g > g." + groupClassName); // 
+  g = gsa.merge(gs);
+  dLog('group', this, parentG.node(), parentG, g.node());
       this.dom.g = g;
       this.dom.gs = gs;
       this.dom.gsa = gsa;
-  // set Chart1 .g; passed to ChartLine() and used by ChartLine.{lines,bars}.
-  gsa.each(function(chart, i) { chart.g = d3.select(this) ; } );
+  // set ChartLine .g;   used by ChartLine.{lines,bars}.
+  gsa.each(function(chartLine, i) { chartLine.g = d3.select(this) ; } );
   return g;
 };
 
@@ -541,16 +557,22 @@ Chart1.prototype.drawAxes = function (chart, i, g) {
  * @param block hover
  * used in Chart1:bars() for hover text.  passed to hoverTextFn() for .longName() 
  */
-Chart1.prototype.data = function (blockId, block, data)
+
+Chart1.prototype.createLine = function (blockId, block)
 {
   let chartLine = this.chartLines[blockId];
-  if (! chartLine)
-    chartLine = this.chartLines[blockId] = new ChartLine(this.g, this.dataConfig, this.scales);
+  if (! chartLine) 
+    chartLine = this.chartLines[blockId] = new ChartLine(this.dataConfig, this.scales);
   if (block) {
     chartLine.block = block;
     chartLine.setup(blockId);
     // .setup() will copy dataConfig if need for custom config.
   }
+};
+Chart1.prototype.data = function (blockId, data)
+{
+  let chartLine = this.chartLines[blockId];
+
   function m(d) { return middle(chartLine.dataConfig.datum2Location(d)); }
   data = data.sort((a,b) => m(a) - m(b));
   data = chartLine.filterToZoom(data);
@@ -897,6 +919,7 @@ AxisCharts.prototype.frame = function container(bbox, charts, allocatedWidth)
     addParentClass(g);
     /* .gc is <g clip-path=​"url(#axis-chart-clip-{{axisID}})​">​</g>​
      * .g (assigned later) is g.axis-chart
+.chart-line ?
      * .gca contains a g for each chartType / dataTypeName, i.e. per Chart1.
      */
     this.dom.gc = g;

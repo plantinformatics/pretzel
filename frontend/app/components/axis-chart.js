@@ -151,10 +151,10 @@ export default InAxis.extend({
         let blocks = this.get('blocks');
 
         setupChart(
-          this.get('axisID'), axisCharts, chart, data,
+          this.get('axisID'), axisCharts, chart, data, blocks,
           dataConfig, this.get('yAxisScale'), /*resizedWidth*/undefined);
 
-        drawChart(axisCharts, chart, data, blocks);
+        drawChart(axisCharts, chart, data);
       }
     });
     const showChartAxes = true;
@@ -267,8 +267,8 @@ export default InAxis.extend({
     resizedWidth = this.get('width'),
     chart1 = this.get('charts')[dataTypeName];
     chart1 = setupChart(
-      axisID, axisCharts, chart1, chartData, dataConfig, yAxisScale, resizedWidth);
-    drawChart(axisCharts, chart1, chartData, blocks);
+      axisID, axisCharts, chart1, chartData, blocks, dataConfig, yAxisScale, resizedWidth);
+    drawChart(axisCharts, chart1, chartData);
     if (! this.get('charts') && chart1)
       this.set('charts', chart1);
   },
