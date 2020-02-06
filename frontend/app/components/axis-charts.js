@@ -2,43 +2,12 @@ import Ember from 'ember';
 const { inject: { service } } = Ember;
 
 import InAxis from './in-axis';
-import { className, AxisCharts, setupFrame, setupChart, drawChart, Chart1, DataConfig, blockData, parsedData } from '../utils/draw/chart1';
+import { className, AxisCharts, Chart1 } from '../utils/draw/chart1';
+import { DataConfig, dataConfigs, blockData, parsedData } from '../utils/data-types';
 
 /*----------------------------------------------------------------------------*/
 
 const dLog = console.debug;
-
-/*----------------------------------------------------------------------------*/
-
-/** example element of array f : */
-const featureCountDataExample = 
-  {
-    "_id": {
-      "min": 100,
-      "max": 160
-    },
-    "count": 109
-  };
-
-const featureCountDataProperties = {
-  dataTypeName : 'featureCountData',
-  datum2Location : function datum2Location(d) { return [d._id.min, d._id.max]; },
-  datum2Value : function(d) { return d.count; },
-  /** datum2Description() is not used;  possibly intended for the same
-   * purpose as hoverTextFn(), so they could be assimilated.  */
-  datum2Description : function(d) { return JSON.stringify(d._id); },
-  hoverTextFn : function (d, block) {
-    let valueText = '[' + d._id.min + ',' + d._id.max + '] : ' + d.count,
-    blockName = block.view && block.view.longName();
-    return valueText + '\n' + blockName;
-  },
-  valueIsArea : true
-};
-
-const dataConfigs = 
-  [featureCountDataProperties, blockData, parsedData]
-  .reduce((result, properties) => { result[properties.dataTypeName] = new DataConfig(properties); return result; }, [] );
-
 
 
 /*----------------------------------------------------------------------------*/
@@ -75,12 +44,14 @@ export default InAxis.extend({
 
   init() {
     this._super(...arguments);
+
     this.set('blocksData', Ember.Object.create());
     this.set('charts', Ember.Object.create());
   },
 
   didRender() {
     console.log("components/axis-chart didRender()");
+    this.draw();
   },
 
   axisID : Ember.computed.alias('axis.axisID'),
@@ -105,6 +76,8 @@ export default InAxis.extend({
   }),
 
   axisCharts : Ember.computed(function () {
+    /* axisID isn't planned to change for this component; could set this up in
+     * init();  using a CP has the benefit of lazy-evaluation. */
     return new AxisCharts(this.get('axisID'));
   }),
 
@@ -115,64 +88,102 @@ export default InAxis.extend({
     dLog('chartTypes', chartTypes);
     return chartTypes;
   }),
-
-  chartTypesEffect : Ember.computed('chartTypes.[]', function () {
-    let blocksData = this.get('blocksData'),
-    chartTypes = this.get('chartTypes'),
-    charts = this.get('charts');
-    let axisCharts = this.get('axisCharts');
-
-    chartTypes.forEach((typeName) => {
-      if (! charts[typeName]) {
-        let data = blocksData.get(typeName),
-        /** same as Chart1.blockIds(). */
-        blockIds = Object.keys(data),
-        /** may use firstBlock for isBlockData. */
-        firstBlock = data[blockIds[0]],
-
-        dataConfig = dataConfigs[typeName],
-        parentG = this.get('axisCharts.dom.g'), // this.get('gAxis'),
-        chart = new Chart1(parentG, dataConfig);
-        charts[typeName] = chart;
+  chartsArray : Ember.computed('chartTypes.[]',  function () {
+    /* The result is roughly equivalent to Object.values(this.get('charts')),
+     * but for any chartType which doesn't have an element in .charts, add
+     * it. */
+    let
+      chartTypes = this.get('chartTypes'),
+    charts = chartTypes.map((typeName) => {
+      let chart = this.charts[typeName];
+      if (! chart) {
+        let
+          dataConfig = dataConfigs[typeName],
+        parentG = this.get('axisCharts.dom.g'); // this.get('gAxis'),
+        chart = this.charts[typeName] = new Chart1(parentG, dataConfig);
+        let axisCharts = this.get('axisCharts');
+        chart.overlap(axisCharts);
       }
+      return chart;
     });
-    setupFrame(
-      this.get('axisID'), axisCharts,
-      charts, this.get('allocatedWidth'));
-
-
-    chartTypes.forEach((typeName) => {
-      let
-        chart = charts[typeName];
-      if (! chart.ranges) {
-        let data = blocksData.get(typeName),
-        dataConfig = chart.dataConfig;
-        let blocks = this.get('blocks');
-
-        setupChart(
-          this.get('axisID'), axisCharts, chart, data, blocks,
-          dataConfig, this.get('yAxisScale'), /*resizedWidth*/undefined);
-
-        drawChart(axisCharts, chart, data);
-      }
-    });
-    const showChartAxes = true;
-    if (showChartAxes)
-      axisCharts.drawAxes(charts);
-
-    return chartTypes;
+    return charts;
   }),
+
 
 
   /** Retrieve charts handles from the DOM.
    * This could be used as verification - the result should be the same as
-   * this.get('charts').
+   * this.get('chartsArray').
    */
   chartHandlesFromDom () {
+    /** this value is currently the g.axis-outer, which is 2
+     * levels out from the g.axis-use, so this is a misnomer - 
+     * will change either the name or the value.
+     * The result is the same because there is just 1 g.chart inside 'g.axis-outer > g.axis-all > g.axis-use'.
+     */
     let axisUse = this.get('axis.axisUse'),
     g = axisUse.selectAll('g.chart > g[clip-path] > g'),
     charts = g.data();
     return charts;
+  },
+
+  resizeEffectHere : Ember.computed('resizeEffect', function () {
+    dLog('resizeEffectHere in axis-charts', this.get('axisID'));
+  }),
+  zoomedDomainEffect : Ember.computed('zoomedDomain', function () {
+    dLog('zoomedDomainEffect in axis-charts', this.get('axisID'));
+    this.drawContent();
+  }),
+
+  draw() {
+    // probably this function can be factored out as AxisCharts:draw()
+    let axisCharts = this.get('axisCharts'),
+    charts = this.get('charts'),
+    allocatedWidth = this.get('allocatedWidth');
+    axisCharts.setupFrame(
+      this.get('axisID'),
+      charts, allocatedWidth);
+
+    let
+      chartTypes = this.get('chartTypes'),
+    // equiv : charts && Object.keys(charts).length,
+    nCharts = chartTypes && chartTypes.length;
+    if (nCharts)
+      allocatedWidth /= nCharts;
+    chartTypes.forEach((typeName) => {
+      // this function could be factored out as axis-chart:draw()
+      let
+        chart = charts[typeName];
+      /*if (! chart.ranges)*/ {
+        let
+          blocksData = this.get('blocksData'),
+        data = blocksData.get(typeName),
+        dataConfig = chart.dataConfig;
+        let blocks = this.get('blocks');
+
+        chart.setupChart(
+          this.get('axisID'), axisCharts, data, blocks,
+          dataConfig, this.get('yAxisScale'), allocatedWidth);
+
+        chart.drawChart(axisCharts, data);
+      }
+    });
+
+    /** drawAxes() uses the x scale updated in drawChart() -> prepareScales(), called above. */
+    const showChartAxes = true;
+    if (showChartAxes)
+      axisCharts.drawAxes(charts);
+
+    // place controls after the ChartLine-s group, so that the toggle is above the bars and can be accessed.
+    axisCharts.controls();
+
+  },
+
+  drawContent() {
+    let charts = this.get('chartsArray');
+    /* y axis has been updated, so redrawing the content will update y positions. */
+    if (charts)
+      charts.forEach((chart) => chart.drawContent());
   },
 
   /** Called via in-axis:{zoomed or resized}() -> redrawDebounced() -> redrawOnce()
@@ -182,9 +193,7 @@ export default InAxis.extend({
    * they will update sizes rather than add new elements).
    */
   redraw   : function(axisID, t) {
-    let charts = this.get('charts');
-    /* y axis has been updated, so redrawing the content will update y positions. */
-    Object.values(charts).forEach((chart) => chart.drawContent());
+    this.drawContent();
   },
   /** for use with @see pasteProcess() */
   redraw_from_paste   : function(axisID, t) {
@@ -261,6 +270,11 @@ export default InAxis.extend({
     return result;
   },
 
+  /** this function was used in all cases in the original development, but is
+   * now restricted to pasteProcess() / redraw_from_paste(); the paste
+   * functionality is not a current focus, so this is not up to date with some
+   * changes.
+   */
   layoutAndDrawChart(chartData, dataTypeName) {
     let
       axisID = this.get("axisID"),
@@ -270,9 +284,15 @@ export default InAxis.extend({
     dataConfig = dataConfigs[dataTypeName],
     resizedWidth = this.get('width'),
     chart1 = this.get('charts')[dataTypeName];
-    chart1 = setupChart(
-      axisID, axisCharts, chart1, chartData, blocks, dataConfig, yAxisScale, resizedWidth);
-    drawChart(axisCharts, chart1, chartData);
+    /* These have been split out of setupChart() and hence will need to be added as calls here :
+     */
+    chart1.overlap(axisCharts);
+    axisCharts.controls();
+    /* setupFrame() is now a method of AxisCharts;  setupChart() and drawChart() are now methods of Chart1.
+     */
+    chart1 = chart1.setupChart(
+      axisID, axisCharts, chartData, blocks, dataConfig, yAxisScale, resizedWidth);
+    chart1.drawChart(axisCharts, chartData);
     if (! this.get('charts') && chart1)
       this.set('charts', chart1);
   },

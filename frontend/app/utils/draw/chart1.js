@@ -6,6 +6,7 @@ import { eltWidthResizable, noShiftKeyfilter } from '../domElements';
 import { noDomain } from '../draw/axis';
 import { stacks } from '../stacks'; // just for oa.z and .y, don't commit this.
 import { inRangeEither } from './zoomPanCalcs';
+import { featureCountDataProperties, dataConfigs, DataConfig, blockDataConfig, hoverTextFn, middle, scaleMaybeInterval, datum2LocationWithBlock } from '../data-types';
 
 
 const className = "chart", classNameSub = "chartRow";
@@ -19,70 +20,6 @@ const useLocalY = false;
 /*----------------------------------------------------------------------------*/
 
 const dLog = console.debug;
-
-/*----------------------------------------------------------------------------*/
-/* Copied from draw-map.js */
-
-let blockFeatures = stacks.oa.z;
-
-function featureLocation(blockId, d)
-{
-  let feature = blockFeatures[blockId][d];
-  if (feature === undefined)
-  {
-    console.log("axis-chart featureY_", blockId, blockFeatures[blockId], "does not contain feature", d);
-  }
-  let location = feature && feature.location;
-  return location;
-}
-
-/** If the given value is an interval, convert it to a single value by calculating the middle of the interval.
- * @param location is a single value or an array [from, to]
- * @return the middle of an interval
- */
-function middle(location) {
-  let result = location.length ?
-    location.reduce((sum, val) => sum + val, 0) / location.length
-    : location;
-  return result;
-}
-  
-/** @return a function to map a chart datum to a y value or interval.
- */
-function scaleMaybeInterval(datum2Location, yScale) {
-  /* In both uses in this file, the result is passed to middle(), so an argument
-   * could be added to scaleMaybeInterval() to indicate the result should be a
-   * single value (using mid-point if datum location is an interval).
-   */
-
-  function datum2LocationScaled(d) {
-    /** location may be an interval [from, to] or a single value. */
-    let l = datum2Location(d);
-    return l.length ? l.map((li) => yScale(li)) : yScale(l); };
-  return datum2LocationScaled;
-}
-
-/*----------------------------------------------------------------------------*/
-/* based on axis-1d.js: hoverTextFn() and setupHover() */
-
-/** eg: "ChrA_283:A:283" */
-function hoverTextFn (feature, block) {
-  let
-    value = getAttrOrCP(feature, 'value'),
-  /** undefined values are filtered out below. */
-  valueText = value && (value.length ? ('' + value[0] + ' - ' + value[1]) : value),
-
-  /** block.view is the Stacks Block. */
-  blockName = block.view && block.view.longName(),
-  featureName = getAttrOrCP(feature, 'name'),
-  /** common with dataConfig.datum2Description  */
-  description = value && JSON.stringify(value),
-
-  text = [featureName, valueText, description, blockName]
-    .filter(function (x) { return x; })
-    .join(" : ");
-  return text;
-};
 
 
 /** Add a .hasChart class to the <g.axis-use> which contains this chart.
@@ -101,19 +38,6 @@ function addParentClass(g) {
 };
 /*----------------------------------------------------------------------------*/
 
-class DataConfig {
-  /*
-  dataTypeName;
-  datum2Location;
-  datum2Value;
-  datum2Description;
-   */
-  constructor (properties) {
-    if (properties)
-      Object.assign(this, properties);
-  }
-};
-
 class ChartLine {
   constructor(dataConfig, scales) {
       this.dataConfig = dataConfig;
@@ -121,51 +45,6 @@ class ChartLine {
       this.scales = scales; // Object.assign({}, scales);
   }
 }
-
-/*----------------------------------------------------------------------------*/
-
-  /** @param name is a feature or gene name */
-    function name2Location(name, blockId)
-    {
-        /** @param ak1 axis name, (exists in axisIDs[])
-         * @param d1 feature name, i.e. ak1:d1
-         */
-      return featureLocation(blockId, name);
-    }
-
-    /** Used for both blockData and parsedData. */
-    function datum2LocationWithBlock(d, blockId) { return name2Location(d.name, blockId); }
-    function datum2Value(d) { return d.value; }
-    let parsedData = {
-      dataTypeName : 'parsedData',
-      // datum2LocationWithBlock assigned later,
-      datum2Value : datum2Value,
-      datum2Description : function(d) { return d.description; }
-    },
-    blockData = {
-      dataTypeName : 'blockData',
-      // datum2LocationWithBlock assigned later,
-      /** The effects data is placed in .value[2] (the interval is in value[0..1]).
-       * Use the first effects value by default, but later will combine other values.
-       */
-      datum2Value : function(d) { let v = d.value[2]; if (v.length) v = v[0]; return v; },
-      datum2Description : function(d) { return JSON.stringify(d.value); }
-    };
-
-/** Determine the appropriate DataConfig for the given data.
- */
-function blockDataConfig(chart) {
-  let
-  isBlockData = chart.length && (chart[0].description === undefined);
-
-  let dataConfigProperties = isBlockData ? blockData : parsedData;
-  return dataConfigProperties;
-}
-
-
-
-
-/*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
 
@@ -190,8 +69,9 @@ AxisCharts.prototype.setup = function(axisID) {
 /**
  * @param allocatedWidth  [horizontal start offset, width]
  */
-function setupFrame(axisID, axisCharts, charts, allocatedWidth)
+AxisCharts.prototype.setupFrame = function(axisID, charts, allocatedWidth)
 {
+  let axisCharts = this;
   axisCharts.setup(axisID);
 
   let resizedWidth = allocatedWidth[1];
@@ -207,14 +87,21 @@ function setupFrame(axisID, axisCharts, charts, allocatedWidth)
   axisCharts.frame(axisCharts.ranges.bbox, charts, allocatedWidth);
 
   axisCharts.getRanges2();
-}
-function setupChart(axisID, axisCharts, chart1, chartData, blocks, dataConfig, yAxisScale, resizedWidth)
-{
+};
+
+
+
+Chart1.prototype.overlap = function(axisCharts) {
+  let chart1 = this;
   // Plan is for Axischarts to own .ranges, but for now there is some overlap.
   if (! chart1.ranges) {
     chart1.ranges = axisCharts.ranges;
     chart1.dom = axisCharts.dom;
   }
+};
+Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, dataConfig, yAxisScale, resizedWidth)
+{
+  let chart1 = this;
   chart1.scales.yAxis = yAxisScale;
 
   //----------------------------------------------------------------------------
@@ -229,6 +116,7 @@ function setupChart(axisID, axisCharts, chart1, chartData, blocks, dataConfig, y
   dataConfig.addedDefaults();
 
   //----------------------------------------------------------------------------
+
   let
   blocksById = blocks.reduce(
     (result, block) => { result[block.get('id')] = block; return result; }, []),
@@ -237,20 +125,18 @@ function setupChart(axisID, axisCharts, chart1, chartData, blocks, dataConfig, y
     let block = blocksById[blockId];
     chart1.createLine(blockId, block);
   });
-  chart1.group(axisCharts.dom.gca, 'chart-line');
-  // place controls after the ChartLine-s group, so that the toggle is above the bars and can be accessed.
-  axisCharts.controls();
+  chart1.group(chart1.dom.gca, 'chart-line');
+
   //----------------------------------------------------------------------------
 
-
-
-  chart1.getRanges(axisCharts.ranges, chartData);
+  chart1.getRanges(chart1.ranges, chartData);
 
   return chart1;
 };
 
-function drawChart(axisCharts, chart1, chartData)
+Chart1.prototype.drawChart = function(axisCharts, chartData)
 {
+  let chart1 = this;
   /** possibly don't (yet) have chartData for each of blocks[],
    * i.e. blocksById may be a subset of blocks.mapBy('id').
     */
@@ -282,10 +168,13 @@ AxisCharts.prototype.selectParentContainer = function (axisID)
 AxisCharts.prototype.getBBox = function ()
   {
     let
-    gAxis = this.dom.gAxis;
+      gAxis = this.dom.gAxis,
+  gAxisElt = gAxis.node();
+  /* If the selection is empty, nothing will be drawn. */
+  if (gAxisElt) {
     let
-    /** relative to the transform of parent g.axis-outer */
-    bbox = gAxis.node().getBBox(),
+      /** relative to the transform of parent g.axis-outer */
+      bbox = gAxisElt.getBBox(),
     yrange = [bbox.y, bbox.height];
     if (bbox.x < 0)
     {
@@ -294,6 +183,7 @@ AxisCharts.prototype.getBBox = function ()
     }
     this.ranges.bbox = bbox;
     this.ranges.yrange = yrange;
+  }
 };
 Chart1.prototype.getRanges = function (ranges, chartData) {
   let
@@ -853,7 +743,11 @@ ChartLine.prototype.blockColour = function ()
     {
       let 
         data = this.currentData;
-      /** The effects data takes the form of an array of 5 probabilities, in the 3rd element of feature.value */
+      /** The Effects probabilities data is keyed by a location which is a SNP, so linebars() is a sensible representaion.
+       * This uses the data shape to recognise Effects data; this is provisional
+       * - we can probably lookup the tag 'EffectsPlus' in dataset tags (refn resources/tools/dev/effects2Dataset.pl).
+       * The effects data takes the form of an array of 5 probabilities, in the 3rd element of feature.value.
+       */
       let isEffectsData = data.length && data[0].name && data[0].value && (data[0].value.length === 3) && (data[0].value[2].length === 6);
       let bars = isEffectsData ? this.linebars : this.bars;
       let chartDraw = barsLine ? bars : this.line;
@@ -976,4 +870,4 @@ AxisCharts.prototype.controls = function controls()
 
 /* layoutAndDrawChart() has been split into class methods of AxisCharts and Chart1,
  * and replaced with a proxy which calls them, and can next be re-distributed into axis-chart. */
-export { setupFrame, setupChart, drawChart, AxisCharts, /*AxisChart,*/ className, Chart1, DataConfig, blockData, parsedData };
+export { AxisCharts, /*AxisChart,*/ className, Chart1 };

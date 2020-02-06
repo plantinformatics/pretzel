@@ -53,6 +53,16 @@ export default Ember.Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** axis is the axis-2d; this is passed into axis-tracks and axis-charts;
+   * can be passed into subComponents also. */
+  axis1d : Ember.computed.alias('axis.axis1d'),
+  /** y scale of axis has changed */
+  scaleChanged : Ember.computed.alias('axis1d.scaleChanged'),
+  domainChanged : Ember.computed.alias('axis1d.domainChanged'),
+  zoomedDomain :  Ember.computed.alias('axis1d.zoomedDomain'),
+
+  /*--------------------------------------------------------------------------*/
+
   getRanges(margin)
   {
     // initial version supports only 1 split axis; next identify axis by axisID (and possibly stack id)

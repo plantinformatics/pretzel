@@ -35,9 +35,9 @@
 
 <div>axis-2d :{{this}}, {{axisID}}, {{targetEltId}},  {{subComponents.length}} :
   <div>subComponents :
-    {{axis-chart data=data axis=this axisID=axisID childWidths=childWidths allocatedWidths=allocatedWidths blocks=viewedChartable}}
+    {{axis-charts data=data axis=this axisID=axisID childWidths=childWidths allocatedWidths=allocatedWidths blocks=viewedChartable resizeEffect=resizeEffect}}
     {{log 'blockService' blockService 'viewedChartable' blockService.viewedChartable}}
-    {{axis-tracks axis=this axisID=axisID childWidths=childWidths allocatedWidths=allocatedWidths trackBlocksR=dataBlocks}}
+    {{axis-tracks axis=this axisID=axisID childWidths=childWidths allocatedWidths=allocatedWidths trackBlocksR=dataBlocks resizeEffect=resizeEffect}}
     {{#each subComponents as |subComponent|}}
       {{subComponent}}
     {{/each}}

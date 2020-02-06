@@ -262,6 +262,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     this.set('childWidths', Ember.Object.create());
   },
 
+  /*--------------------------------------------------------------------------*/
+
+  resizeEffect : Ember.computed.alias('drawMap.resizeEffect'),
+
+  /*--------------------------------------------------------------------------*/
+
   didInsertElement() {
     let oa = this.get('data'),
     axisUse = oa.svgContainer.selectAll("g.axis-outer#id"+this.get('axisID')),
