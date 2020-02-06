@@ -64,7 +64,7 @@ exports.blockFeaturesCounts = function(db, blockId, nBins = 10) {
   // initial draft based on blockFeaturesCount()
   let featureCollection = db.collection("Feature");
   if (trace_block)
-    console.log('blockFeaturesCount', blockId, nBins);
+    console.log('blockFeaturesCounts', blockId, nBins);
   let ObjectId = ObjectID;
 
   let
@@ -77,7 +77,7 @@ exports.blockFeaturesCounts = function(db, blockId, nBins = 10) {
     pipeline = matchBlock;
 
   if (trace_block)
-    console.log('blockFeaturesCount', pipeline);
+    console.log('blockFeaturesCounts', pipeline);
   if (trace_block > 1)
     console.dir(pipeline, { depth: null });
 
