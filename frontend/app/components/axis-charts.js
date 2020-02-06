@@ -200,9 +200,9 @@ export default InAxis.extend({
     let data = this.get(className),
     layoutAndDrawChart = this.get('layoutAndDrawChart');
     if (data) {
-    console.log("redraw", this, (data === undefined) || data.length, axisID, t);
-    if (data)
-      layoutAndDrawChart.apply(this, [data, undefined]);
+      console.log("redraw", this, (data === undefined) || data.length, axisID, t);
+      if (data)
+        layoutAndDrawChart.apply(this, [data, undefined]);
     }
   },
 
@@ -213,8 +213,8 @@ export default InAxis.extend({
    * have some use.
    */
 
-    /** Convert input text to an array.
-     * Used to process text from clip-board, by @see pasteProcess().
+  /** Convert input text to an array.
+   * Used to process text from clip-board, by @see pasteProcess().
    * @param tableText text string, TSV, rows separated by \n and/or \r.
    * First row may contain a header with column names, indicated by leading #.
    * Column names "name",  "value" and "description" indicate the columns containing those values,
@@ -226,7 +226,7 @@ export default InAxis.extend({
     /* can replace most of this function with d3.tsv;
      * It currently implements the feature that header is optional;   to replicate that can use
      * dsv.parse() when header is input and dsv.parseRows() otherwise.
-    */
+     */
     let values = [];
     let rows = tableText.split(/[\n\r]+/);
     let colIdx = {name : 0, value : 1, description : 2};
@@ -246,22 +246,22 @@ export default InAxis.extend({
       }
       else
       {
-      let
-        rowValue = {
-          name : col[colIdx["name"]],
-          value : col[colIdx["value"]]
-        },
-      description = col[colIdx["description"]];
-    for (let ic=0; ic<col.length; ic++)
-    {
-      if ((ic != colIdx["name"]) && (ic !=colIdx["value"]) && (ic != colIdx["description"]))
-      {
-        description += "_" + col[ic];
-      }
-    }
+        let
+          rowValue = {
+            name : col[colIdx["name"]],
+            value : col[colIdx["value"]]
+          },
+        description = col[colIdx["description"]];
+        for (let ic=0; ic<col.length; ic++)
+        {
+          if ((ic != colIdx["name"]) && (ic !=colIdx["value"]) && (ic != colIdx["description"]))
+          {
+            description += "_" + col[ic];
+          }
+        }
         rowValue.description = description;
 
-      values.push(rowValue);
+        values.push(rowValue);
       }
     }
 
@@ -308,7 +308,7 @@ export default InAxis.extend({
     console.log("components/axis-chart pasteProcess", textPlain.length);
 
     let
-    parseTextData = this.get('parseTextData'),
+      parseTextData = this.get('parseTextData'),
     layoutAndDrawChart = this.get('layoutAndDrawChart');
 
     let chart = parseTextData(textPlain);
