@@ -42,17 +42,26 @@ export default InAxis.extend({
   /** {dataTypeName : Chart1, ... } */
   charts : undefined,
 
-  init() {
+  didReceiveAttrs() {
     this._super(...arguments);
 
     this.set('blocksData', Ember.Object.create());
     this.set('charts', Ember.Object.create());
+    // axisID isn't planned to change for this component
+    this.set('axisCharts',  new AxisCharts(this.get('axisID')));
   },
 
   didRender() {
     console.log("components/axis-chart didRender()");
     this.draw();
   },
+  willDestroyElement() {
+    console.log("components/axis-chart willDestroyElement()");
+    this.undraw();
+
+    this._super(...arguments);
+  },
+
 
   axisID : Ember.computed.alias('axis.axisID'),
 
@@ -73,12 +82,6 @@ export default InAxis.extend({
     yAxis = yAxesScales[axisID];
     dLog('yAxisScale', axisID, yAxis && yAxis.domain());
     return yAxis;
-  }),
-
-  axisCharts : Ember.computed(function () {
-    /* axisID isn't planned to change for this component; could set this up in
-     * init();  using a CP has the benefit of lazy-evaluation. */
-    return new AxisCharts(this.get('axisID'));
   }),
 
 
@@ -177,6 +180,10 @@ export default InAxis.extend({
     // place controls after the ChartLine-s group, so that the toggle is above the bars and can be accessed.
     axisCharts.controls();
 
+  },
+
+  undraw() {
+    this.get('axisCharts').frameRemove();
   },
 
   drawContent() {

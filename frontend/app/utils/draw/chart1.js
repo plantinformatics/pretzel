@@ -175,13 +175,11 @@ AxisCharts.prototype.getRanges2 =  function ()
 AxisCharts.prototype.drawAxes = function (charts) {
   let
     dom = this.dom,
-  /** the axes were originally within the gs,gsa of .group();  hence the var names.
-   * gs selects the <g> into which the axes will be inserted, and gpa is the
-   * .enter().append() of that selection.
+  append = dom.gca;
+  /** the axes were originally within the gs,gsa of .group(), but are now within the g[clip-path];
+   * append here selects the <g> into which the axes will be inserted.
    */
-  gs = dom.gc,
-  gsa = dom.gca;
-  gsa.each(Chart1.prototype.drawAxes);
+  append.each(Chart1.prototype.drawAxes);
 };
 
 AxisCharts.prototype.commonFrame = function container()
@@ -193,7 +191,7 @@ AxisCharts.prototype.commonFrame = function container()
   /** datum is value in hash : {value : , description: } and with optional attribute description. */
 
   dLog('container', gAxis.node());
-  /** parent; contains a clipPath, g > rect, text.resizer.  */
+  /** parent selection ; contains a clipPath, g clip-path, text.resizer.  */
   let gps =   gAxis
     .selectAll("g." + className)
     .data([axisID]),
@@ -214,6 +212,11 @@ AxisCharts.prototype.commonFrame = function container()
   this.dom.gp = gp;
 };
 
+AxisCharts.prototype.frameRemove = function container() {
+  let gp = this.dom && this.dom.gp;
+  gp && gp.remove();
+};
+
 AxisCharts.prototype.frame = function container(bbox, charts, allocatedWidth)
 {
   let
@@ -224,6 +227,7 @@ AxisCharts.prototype.frame = function container(bbox, charts, allocatedWidth)
    * e.g. this.dom.gp.data() is [axisID]
    */
   function axisClipId(axisID) { return "axis-chart-clip-" + axisID; }
+  /** gp is the .enter() of g.chart, and gpa is the .append() of that selection. */
   let gpa =
     gp // define the clipPath
     .append("clipPath")       // define a clip path
@@ -267,8 +271,8 @@ AxisCharts.prototype.controls = function controls()
 {
   let
     bbox = this.ranges.bbox,
-  gp = this.dom.gca,
-  gps = this.dom.gc;
+  append = this.dom.gca,
+  select = this.dom.gc;
 
   function toggleBarsLineClosure(chart /*, i, g*/)
   {
@@ -276,12 +280,12 @@ AxisCharts.prototype.controls = function controls()
   }
 
   /** currently placed at g.chart, could be inside g.chart>g (clip-path=). */
-  let chartTypeToggle = gp
+  let chartTypeToggle = append
     .append("circle")
     .attr("class", "radio toggle chartType")
     .attr("r", 6)
     .on("click", toggleBarsLineClosure);
-  chartTypeToggle.merge(gps.selectAll("g > circle"))
+  chartTypeToggle.merge(select.selectAll("g > circle"))
     .attr("cx", bbox.x + bbox.width / 2)   /* was o[p], but g.axis-outer translation does x offset of stack.  */
     .attr("cy", bbox.height - 10)
     .classed("pushed", (chart1) => { return chart1.barsLine; });
@@ -304,7 +308,7 @@ AxisCharts.prototype.controls = function controls()
 
 Chart1.prototype.overlap = function(axisCharts) {
   let chart1 = this;
-  // Plan is for Axischarts to own .ranges, but for now there is some overlap.
+  // Plan is for AxisCharts to own .ranges, but for now there is some overlap.
   if (! chart1.ranges) {
     chart1.ranges = axisCharts.ranges;
     chart1.dom = axisCharts.dom;
@@ -312,8 +316,7 @@ Chart1.prototype.overlap = function(axisCharts) {
 };
 Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, dataConfig, yAxisScale, resizedWidth)
 {
-  let chart1 = this;
-  chart1.scales.yAxis = yAxisScale;
+  this.scales.yAxis = yAxisScale;
 
   //----------------------------------------------------------------------------
 
@@ -334,33 +337,32 @@ Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, da
   blockIds = Object.keys(chartData);
   blockIds.forEach((blockId) => {
     let block = blocksById[blockId];
-    chart1.createLine(blockId, block);
+    this.createLine(blockId, block);
   });
-  chart1.group(chart1.dom.gca, 'chart-line');
+  this.group(this.dom.gca, 'chart-line');
 
   //----------------------------------------------------------------------------
 
-  chart1.getRanges(chart1.ranges, chartData);
+  this.getRanges(this.ranges, chartData);
 
-  return chart1;
+  return this;
 };
 
 Chart1.prototype.drawChart = function(axisCharts, chartData)
 {
-  let chart1 = this;
   /** possibly don't (yet) have chartData for each of blocks[],
    * i.e. blocksById may be a subset of blocks.mapBy('id').
    */
   let blockIds = Object.keys(chartData);
   blockIds.forEach((blockId) => {
-    chart1.data(blockId, chartData[blockId]);
+    this.data(blockId, chartData[blockId]);
   });
 
-  chart1.prepareScales(chartData, axisCharts.ranges.drawSize);
+  this.prepareScales(chartData, this.ranges.drawSize);
   blockIds.forEach((blockId) => {
-    chart1.chartLines[blockId].scaledConfig(); } );
+    this.chartLines[blockId].scaledConfig(); } );
 
-  chart1.drawContent();
+  this.drawContent();
 };
 
 Chart1.prototype.getRanges = function (ranges, chartData) {
@@ -815,7 +817,7 @@ ChartLine.prototype.drawContent = function(barsLine)
 /** Calculate the height of rectangle to be used for this data point
  * @param this  is DataConfig, not DOM element.
  * @param scaled  true means apply scale (x) to the result
- * @param gIsData true meangs g is __data__, otherwise it is DOM element, and has .__data__ attribute.
+ * @param gIsData true means g is __data__, otherwise it is DOM element, and has .__data__ attribute.
  * gIsData will be true when called from d3.max(), and false for d3 attr functions.
  */
 DataConfig.prototype.rectWidth = function (scaled, gIsData, d, i, g)
@@ -837,7 +839,7 @@ DataConfig.prototype.rectWidth = function (scaled, gIsData, d, i, g)
 /** Calculate the height of rectangle to be used for this data point
  * @param this  is DataConfig, not DOM element.
  * @param scaled  true means apply scale (y) to the result
- * @param gIsData true meangs g is __data__, otherwise it is DOM element, and has .__data__ attribute.
+ * @param gIsData true means g is __data__, otherwise it is DOM element, and has .__data__ attribute.
  * gIsData will be true when called from d3.max(), and false for d3 attr functions.
  */
 DataConfig.prototype.rectHeight = function (scaled, gIsData, d, i, g)
