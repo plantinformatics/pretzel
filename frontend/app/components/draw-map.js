@@ -1954,6 +1954,9 @@ export default Ember.Component.extend(Ember.Evented, {
     if (options_param && ! this.get('urlOptions')
         && (options = parseOptions(options_param)))
     {
+      /* splitAxes1 is now enabled by default. */
+      if (! options.splitAxes1)
+        options.splitAxes1 = true;
       this.set('urlOptions', options);
       this.get('blockService').injectParsedOptions(options);
       // alpha enables new features which are not yet robust.

@@ -19,6 +19,21 @@ const useLocalY = false;
 
 /*----------------------------------------------------------------------------*/
 
+/** Introductory notes
+
+The axis charts code is organised into :
+. components/axis-charts.js	provides the data feed
+. utils/draw/chart1.js	renders the data using d3
+. utils/data-types.js	accesses values from the data
+It is not essential that they be divided this way, e.g. the Ember and JS classes could be combined, but it seems to provide a good module size, and plays to the strengths of each framework, using Ember as the integration / dynamics layer and d3 as the purely mechanistic rendering layer.
+
+The Ember component connects to other modules, delivering data flows to the rendering functions;  e.g. connections include events such as zoom & resize which trigger render updates.
+Using JS classes enables 4 small and closely related classes to be in a single file,  which was useful when the early prototype code was being split into the number of pieces required by the update structure, and moved between levels as the design took shape.
+
+ */
+
+/*----------------------------------------------------------------------------*/
+
 const dLog = console.debug;
 
 
@@ -149,7 +164,8 @@ AxisCharts.prototype.getRanges3 = function (resizedWidth) {
   if (resizedWidth) {
     let
     {bbox} = this.ranges;
-    bbox.width = resizedWidth;
+    if (bbox)
+      bbox.width = resizedWidth;
     dLog('resizedWidth', resizedWidth, bbox);
   }
 };
@@ -159,17 +175,20 @@ AxisCharts.prototype.getRanges2 =  function ()
   // based on https://bl.ocks.org/mbostock/3885304,  axes x & y swapped.
   let
     // parentG = this.parentG,
-    bbox = this.ranges.bbox,
-  margin = showChartAxes ?
-    {top: 10, right: 20, bottom: 40, left: 20} :
+    bbox = this.ranges && this.ranges.bbox;
+  if (bbox) {
+    let
+      margin = showChartAxes ?
+      {top: 10, right: 20, bottom: 40, left: 20} :
     {top: 0, right: 0, bottom: 0, left: 0},
-  // pp=parentG.node().parentElement,
-  parentW = bbox.width, // +pp.attr("width")
-  parentH = bbox.height, // +pp.attr("height")
-  width = parentW - margin.left - margin.right,
-  height = parentH - margin.top - margin.bottom;
-  this.ranges.drawSize = {width, height};
-  dLog('getRanges2', parentW, parentH, this.ranges.drawSize);
+    // pp=parentG.node().parentElement,
+    parentW = bbox.width, // +pp.attr("width")
+    parentH = bbox.height, // +pp.attr("height")
+    width = parentW - margin.left - margin.right,
+    height = parentH - margin.top - margin.bottom;
+    this.ranges.drawSize = {width, height};
+    dLog('getRanges2', parentW, parentH, this.ranges.drawSize);
+  }
 };
 
 AxisCharts.prototype.drawAxes = function (charts) {
@@ -385,7 +404,8 @@ Chart1.prototype.getRanges = function (ranges, chartData) {
   else
     yDomain = [yAxis.invert(yrange[0]), yAxis.invert(yrange[1])];
 
-  ranges.pxSize = (yDomain[1] - yDomain[0]) / ranges.bbox.height;
+  if (ranges && ranges.bbox)
+    ranges.pxSize = (yDomain[1] - yDomain[0]) / ranges.bbox.height;
 };
 
 

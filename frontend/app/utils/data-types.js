@@ -2,6 +2,24 @@ import { getAttrOrCP } from './ember-devel';
 
 
 /*----------------------------------------------------------------------------*/
+/** Feature values
+
+The API relies on Features having a .value which is a location or an interval,
+represented as [location] or [from, to].
+The plan is to support other values; using JSON in the database and API enables 
+variant value types to be added in a way which is opaque to the API.
+For example, the effects probability data has been added as [location, undefined, [probabilities, ... ]].
+The API relies on .value[0] and optionally .value[1], and ignores other elements of .values[].
+We might choose a different format as we include more data types in the scope,
+e.g. we could split non-location values out to a separate field,
+so it is desirable to access feature values through an access layer which abstracts away from the storage structure used.
+The DataConfig class defined here provides such an abstraction.
+It was added to support the axis-charts, but can be progressively used in other modules.
+This can be integrated into models/feature.js
+
+ */
+
+/*----------------------------------------------------------------------------*/
 
 class DataConfig {
   /*
