@@ -44,7 +44,6 @@ export default Ember.Component.extend({
             featuresA = features.map(function (f0) { return f0._internalModel.__data;});
           this.ensureBlockFeatures(featuresA);
           this.setBlockFeaturesData('blockData', featuresA);
-          // previous : .drawBlockFeatures0() -> drawBlockFeatures();
         }
       }
     }
@@ -52,9 +51,15 @@ export default Ember.Component.extend({
 
   featuresCounts : Ember.computed('block', 'block.featuresCounts.[]', 'axis.axis1d.domainChanged', function () {
     let featuresCounts = this.get('block.featuresCounts');
-    if (featuresCounts && featuresCounts.length)
-      this.setBlockFeaturesData('featureCountData', featuresCounts);
-      // previous : .drawBlockFeaturesCounts(featuresCounts);
+    if (featuresCounts && featuresCounts.length) {
+      /** recognise the data format : $bucketAuto ._id contains .min and .max, whereas $bucket ._id is a single value.
+       * @see featureCountAutoDataExample, featureCountDataExample 
+       */
+      let id = featuresCounts[0]._id,
+      /** id.min may be 0 */
+      dataTypeName = (id.min !== undefined) ? 'featureCountAutoData' : 'featureCountData';
+      this.setBlockFeaturesData(dataTypeName, featuresCounts);
+    }
 
     return featuresCounts;
   }),

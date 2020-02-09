@@ -21,6 +21,10 @@ This can be integrated into models/feature.js
 
 /*----------------------------------------------------------------------------*/
 
+const dLog = console.debug;
+
+/*----------------------------------------------------------------------------*/
+
 class DataConfig {
   /*
    dataTypeName;
@@ -79,8 +83,10 @@ function blockDataConfig(chart) {
 /*----------------------------------------------------------------------------*/
 
 
-/** example element of array f : */
-const featureCountDataExample = 
+/** example element of array f :
+ * result of $bucketAuto - it defines _id.{min,max}
+ */
+const featureCountAutoDataExample = 
   {
     "_id": {
       "min": 100,
@@ -89,8 +95,8 @@ const featureCountDataExample =
     "count": 109
   };
 
-const featureCountDataProperties = {
-  dataTypeName : 'featureCountData',
+const featureCountAutoDataProperties = {
+  dataTypeName : 'featureCountAutoData',
   datum2Location : function datum2Location(d) { return [d._id.min, d._id.max]; },
   datum2Value : function(d) { return d.count; },
   /** datum2Description() is not used;  possibly intended for the same
@@ -104,9 +110,41 @@ const featureCountDataProperties = {
   valueIsArea : true
 };
 
+/** example of result of $bucket - it defines _id as a single value (the lower boundary of the bin).
+*/
+const featureCountDataExample = 
+  {_id: 77, count: 3};
+
+const featureCountDataProperties = Object.assign(
+  {}, featureCountAutoDataProperties, {
+    dataTypeName : 'featureCountData',
+    datum2Location : function datum2Location(d) { return d._id; },
+    hoverTextFn : function (d, block) {
+      let valueText = '' + d._id + ' : ' + d.count,
+      blockName = block.view && block.view.longName();
+      return valueText + '\n' + blockName;
+    }
+  }
+);
+
+/** $bucket returns _id equal to the lower bound of the bin / bucket, and does
+ * not return the upper bound, since the caller provides the list of boundaries
+ * (see backend/common/utilities/block-features.js : boundaries()).
+ * The result is sparse - if a bin count is 0 then the bin is omitted from the
+ * result.  So blockFeaturesCounts() adds idWidth : lengthRounded to each bin in
+ * the result; this value is constant for all bins, because boundaries()
+ * generates constant-sized bins.
+ */
+featureCountDataProperties.rectHeight = function (scaled, gIsData, d, i, g) {
+  if (i < 2)
+    dLog('rectHeight', d);
+  return d.idWidth[0];
+};
+
+
 const dataConfigs = 
-  [featureCountDataProperties, blockData, parsedData]
-  .reduce((result, properties) => { result[properties.dataTypeName] = new DataConfig(properties); return result; }, [] );
+  [featureCountAutoDataProperties, featureCountDataProperties, blockData, parsedData]
+  .reduce((result, properties) => { result[properties.dataTypeName] = new DataConfig(properties); return result; }, {} );
 
 
 
@@ -183,4 +221,4 @@ function hoverTextFn (feature, block) {
 
 
 
-export { featureCountDataProperties, dataConfigs, DataConfig, blockDataConfig, blockData, parsedData, hoverTextFn, middle, scaleMaybeInterval, datum2LocationWithBlock };
+export { featureCountAutoDataProperties, featureCountDataProperties, dataConfigs, DataConfig, blockDataConfig, blockData, parsedData, hoverTextFn, middle, scaleMaybeInterval, datum2LocationWithBlock };

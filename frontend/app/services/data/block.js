@@ -259,9 +259,34 @@ export default Service.extend(Ember.Evented, {
   },
   /** For trace in Web Inspector console.
    * Usage e.g. this.get('blocksReferences').map(this.blocksReferencesText);
+   * @param io {id : blockId, obj : blockObject }
    */
   blocksReferencesText(io) {
     let b=io.obj; return [io.id, b.view && b.view.longName(), b.mapName]; },
+
+  /** Collate the ranges or feature limits of the references of the given blockIds.
+   * This is used for constructing boundaries in
+   * backend/common/utilities/block-features.js : blockFeaturesCounts().
+   * @return a hash object mapping from blockId to reference limits [from, to].
+   */
+  blocksReferencesLimits(blockIds) {
+    function blocksReferencesLimit(io) {
+      let b=io.obj; return b.get('range') || b.get('featureLimits'); };
+    let
+      blocksReferences = this.blockIdsReferences(blockIds, true),
+    result = blocksReferences.reduce(function (result, io) {
+      if (! result[io.id]) {
+        result[io.id] = blocksReferencesLimit(io);
+      }
+      return result;
+    }, {});
+
+    if (trace_block > 1)
+      dLog('blocksReferencesLimits', blockIds, result,
+           blocksReferences.map(this.blocksReferencesText) );
+    return result;
+  },
+
 
   /** Set .isViewed for each of the blocksToView[].obj
    * @param blocksToView form is the result of this.blocksReferences()
@@ -305,8 +330,10 @@ export default Service.extend(Ember.Evented, {
           if (! p) {
             getCounts.apply(this);
             function getCounts() {
+              let intervals = this.blocksReferencesLimits([blockId]),
+              interval = intervals[blockId];
             p = summaryTask[taskId] =
-              this.get('auth').getBlockFeaturesCounts(blockId, nBins, /*options*/{});
+              this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, /*options*/{});
             /* this could be structured as a task within models/block.js
              * A task would have .drop() to avoid concurrent request, but
              * actually want to bar any subsequent request for the same taskId,

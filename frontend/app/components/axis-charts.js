@@ -45,15 +45,29 @@ export default InAxis.extend({
   didReceiveAttrs() {
     this._super(...arguments);
 
-    this.set('blocksData', Ember.Object.create());
-    this.set('charts', Ember.Object.create());
-    // axisID isn't planned to change for this component
-    this.set('axisCharts',  new AxisCharts(this.get('axisID')));
+    this.createAttributes();
+  },
+
+  createAttributes() {
+    /** these objects persist for the life of the object. */
+    if (! this.get('blocksData')) {
+      this.set('blocksData', Ember.Object.create());
+      this.set('charts', Ember.Object.create());
+      // axisID isn't planned to change for this component
+      this.set('axisCharts',  new AxisCharts(this.get('axisID')));
+    }
   },
 
   didRender() {
-    console.log("components/axis-chart didRender()");
-    this.draw();
+    console.log("components/axis-chart didRender()", this.get('axisID'));
+
+    let axisID = this.get('axisID'),
+    axisCharts = this.get('axisCharts'),
+    gAxis = axisCharts && axisCharts.selectParentContainer(axisID);
+    if (! gAxis.empty())
+      this.draw();
+    else
+      Ember.run.later(() => this.draw(), 500);
   },
   willDestroyElement() {
     console.log("components/axis-chart willDestroyElement()");

@@ -201,7 +201,7 @@ AxisCharts.prototype.drawAxes = function (charts) {
   append.each(Chart1.prototype.drawAxes);
 };
 
-AxisCharts.prototype.commonFrame = function container()
+AxisCharts.prototype.commonFrame = function()
 {
   let axisID = this.axisID,
   gAxis = this.dom.gAxis,
@@ -209,51 +209,53 @@ AxisCharts.prototype.commonFrame = function container()
 
   /** datum is value in hash : {value : , description: } and with optional attribute description. */
 
-  dLog('container', gAxis.node());
+  dLog('commonFrame', gAxis.node());
   /** parent selection ; contains a clipPath, g clip-path, text.resizer.  */
   let gps =   gAxis
     .selectAll("g." + className)
     .data([axisID]),
-  gp = gps
+  gpa = gps
     .enter()
     .insert("g", ":first-child")
     .attr('class', className);
   if (false) { // not completed.  Can base resized() on axis-2d.js
-    let text = gp
+    let text = gpa
       .append("text")
       .attr('class', 'resizer')
       .html("⇹")
       .attr("x", bbox.width-10);
-    if (gp.size() > 0)
+    if (gpa.size() > 0)
       eltWidthResizable("g.axis-use > g." + className + " > text.resizer", resized);
   }
   this.dom.gps = gps;
-  this.dom.gp = gp;
+  this.dom.gpa = gpa;
+  this.dom.gp = gpa.merge(gps);
 };
 
-AxisCharts.prototype.frameRemove = function container() {
+AxisCharts.prototype.frameRemove = function() {
   let gp = this.dom && this.dom.gp;
   gp && gp.remove();
 };
 
-AxisCharts.prototype.frame = function container(bbox, charts, allocatedWidth)
+AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
 {
   let
     gps = this.dom.gps,
-  gp = this.dom.gp;
+  gpa = this.dom.gpa;
 
   /** datum is axisID, so id and clip-path can be functions.
    * e.g. this.dom.gp.data() is [axisID]
    */
   function axisClipId(axisID) { return "axis-chart-clip-" + axisID; }
-  /** gp is the .enter() of g.chart, and gpa is the .append() of that selection. */
-  let gpa =
-    gp // define the clipPath
+  /** gpa is the .enter().append() (insert) of g.chart, and gPa is the result of
+   * .append()-ing clipPath to that selection. */
+  let gPa =
+    gpa // define the clipPath
     .append("clipPath")       // define a clip path
     .attr("id", axisClipId) // give the clipPath an ID
     .append("rect"),          // shape it as a rect
   gprm = 
-    gpa.merge(gps.selectAll("g > clipPath > rect"))
+    gPa.merge(gps.selectAll("g > clipPath > rect"))
     .attr("x", bbox.x)
     .attr("y", bbox.y)
     .attr("width", bbox.width)
@@ -261,7 +263,7 @@ AxisCharts.prototype.frame = function container(bbox, charts, allocatedWidth)
   ;
   let [startOffset, width] = allocatedWidth;
   let gca =
-    gp.append("g")
+    gpa.append("g")
     .attr("clip-path", (d) => "url(#" + axisClipId(d) + ")") // clip with the rectangle
     .selectAll("g[clip-path]")
     .data(Object.values(charts))
@@ -272,8 +274,8 @@ AxisCharts.prototype.frame = function container(bbox, charts, allocatedWidth)
   ;
 
   let g = 
-    gps.merge(gp).selectAll("g." + className+  " > g");
-  if (! gp.empty() ) {
+    this.dom.gp.selectAll("g." + className+  " > g");
+  if (! gpa.empty() ) {
     addParentClass(g);
     /* .gc is <g clip-path=​"url(#axis-chart-clip-{{axisID}})​">​</g>​
      * .g (assigned later) is g.axis-chart
@@ -817,16 +819,19 @@ ChartLine.prototype.line = function (data)
 ChartLine.prototype.drawContent = function(barsLine)
 {
   let 
+    /** could pick up data from this.g.data(). */
     data = this.currentData;
-  /** The Effects probabilities data is keyed by a location which is a SNP, so linebars() is a sensible representaion.
-   * This uses the data shape to recognise Effects data; this is provisional
-   * - we can probably lookup the tag 'EffectsPlus' in dataset tags (refn resources/tools/dev/effects2Dataset.pl).
-   * The effects data takes the form of an array of 5 probabilities, in the 3rd element of feature.value.
-   */
-  let isEffectsData = data.length && data[0].name && data[0].value && (data[0].value.length === 3) && (data[0].value[2].length === 6);
-  let bars = isEffectsData ? this.linebars : this.bars;
-  let chartDraw = barsLine ? bars : this.line;
-  chartDraw.apply(this, [data]);
+  if (data) {
+    /** The Effects probabilities data is keyed by a location which is a SNP, so linebars() is a sensible representaion.
+     * This uses the data shape to recognise Effects data; this is provisional
+     * - we can probably lookup the tag 'EffectsPlus' in dataset tags (refn resources/tools/dev/effects2Dataset.pl).
+     * The effects data takes the form of an array of 5 probabilities, in the 3rd element of feature.value.
+     */
+    let isEffectsData = data.length && data[0].name && data[0].value && (data[0].value.length === 3) && (data[0].value[2].length === 6);
+    let bars = isEffectsData ? this.linebars : this.bars;
+    let chartDraw = barsLine ? bars : this.line;
+    chartDraw.apply(this, [data]);
+  }
 };
 
 
@@ -894,7 +899,7 @@ DataConfig.prototype.rectHeight = function (scaled, gIsData, d, i, g)
       if (i < g.length-1)
         r.push(gData(i+1));
       let y =
-        r.map(this.datum2LocationScaled);
+        r.map(d2l);
       height = Math.abs(y[y.length-1] - y[0]) * 2 / (y.length-1);
       dLog('rectHeight', gIsData, d, i, /*g,*/ r, y, height);
       if (! height)

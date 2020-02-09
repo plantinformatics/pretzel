@@ -181,7 +181,7 @@ function ensureBlockFeatures(blockId, features) {
   /* if za has not been populated with features, it will have just .dataset
    * and .scope, i.e. .length === 2 */
   if (Object.keys(za).length == 2) {
-    dLog('drawBlockFeatures()', blockId, za, features);
+    dLog('ensureBlockFeatures()', blockId, za, features);
     // add features to za.
     features.forEach((f) => za[f.name] = f.value);
   }
