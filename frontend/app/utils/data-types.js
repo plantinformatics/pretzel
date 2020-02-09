@@ -118,7 +118,7 @@ const featureCountDataExample =
 const featureCountDataProperties = Object.assign(
   {}, featureCountAutoDataProperties, {
     dataTypeName : 'featureCountData',
-    datum2Location : function datum2Location(d) { return d._id; },
+    datum2Location : function datum2Location(d) { return [d._id, d._id + d.idWidth[0]]; },
     hoverTextFn : function (d, block) {
       let valueText = '' + d._id + ' : ' + d.count,
       blockName = block.view && block.view.longName();
@@ -126,7 +126,6 @@ const featureCountDataProperties = Object.assign(
     }
   }
 );
-
 /** $bucket returns _id equal to the lower bound of the bin / bucket, and does
  * not return the upper bound, since the caller provides the list of boundaries
  * (see backend/common/utilities/block-features.js : boundaries()).
@@ -134,12 +133,11 @@ const featureCountDataProperties = Object.assign(
  * result.  So blockFeaturesCounts() adds idWidth : lengthRounded to each bin in
  * the result; this value is constant for all bins, because boundaries()
  * generates constant-sized bins.
+ * That is used above in featureCountDataProperties : datum2Location() : it
+ * generates the upper bound by adding idWidth to the lower bound.
+ * The form of idWidth is an array with a single value, because it is added
+ * using an output accumulator in the $bucket : groupBy.
  */
-featureCountDataProperties.rectHeight = function (scaled, gIsData, d, i, g) {
-  if (i < 2)
-    dLog('rectHeight', d);
-  return d.idWidth[0];
-};
 
 
 const dataConfigs = 

@@ -49,28 +49,44 @@ exports.blockFeaturesCount = function(db, blockIds) {
 
 /*----------------------------------------------------------------------------*/
 
-/** Generate an array of even-sized bins to span the given interval.
- * Used for mongo aggregation pipeline : $bucket : boundaries.
+/** Calculate the bin size for even-sized bins to span the given interval.
+ * The bin size is rounded to be a multiple of a power of 10, only the first 1-2
+ * digits are non-zero.
+ * Used in @see binBoundaries().
+ * @return lengthRounded
  */
-function boundaries(interval, nBins) {
-  let b;
+function binEvenLengthRound(interval, nBins) {
+  let lengthRounded;
   if (interval && (interval.length === 2) && (nBins > 0)) {
     /* if (interval[1] < interval[0])
      interval = interval.sort(); */
     let intervalLength = interval[1] - interval[0],
     binLength = intervalLength / nBins,
-    direction = Math.sign(intervalLength),
     digits = Math.floor(Math.log10(binLength)),
     eN1 = Math.exp(digits * Math.log(10)),
     mantissa = binLength / eN1,
     /** choose 1 2 or 5 as the first digit of the bin size. */
-    m1 = mantissa > 5 ? 5 : (mantissa > 2 ? 2 : 1),
-    lengthRounded = Math.round(m1 * eN1),
-    start = interval[0],
-    forward = (direction > 0) ? function (a,b)  {return a < b; } :
-    function (a,b)  {return a > b; }
-    ;
-    console.log('boundaries', interval, nBins, intervalLength, binLength, direction, digits, eN1, mantissa, m1, lengthRounded);
+    m1 = mantissa > 5 ? 5 : (mantissa > 2 ? 2 : 1);
+    lengthRounded = Math.round(m1 * eN1);
+
+    console.log('binEvenLengthRound', interval, nBins, intervalLength, binLength, digits, eN1, mantissa, m1, lengthRounded);
+  }
+  return lengthRounded;
+};
+/** Generate an array of even-sized bins to span the given interval.
+ * Used for mongo aggregation pipeline : $bucket : boundaries.
+ */
+function binBoundaries(interval, lengthRounded) {
+  let b;
+  if (lengthRounded) {
+    let
+      start = interval[0],
+    intervalLength = interval[1] - interval[0],
+    direction = Math.sign(intervalLength),
+    forward = (direction > 0) ?
+      function (a,b)  {return a < b; }
+    : function (a,b)  {return a > b; };
+
     let location = Math.floor(start / lengthRounded) * lengthRounded;
 	  b = [location];
     do {
@@ -78,10 +94,11 @@ function boundaries(interval, nBins) {
       b.push(location);
     }
     while (forward(location, interval[1]));
-    console.log('boundaries', b.length, location, b[0], b[b.length-1]);
+    console.log('binBoundaries', direction, b.length, location, b[0], b[b.length-1]);
   }
   return b;
 };
+
 
 
 
@@ -111,22 +128,27 @@ exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10) {
    * dataset [0, 800M]; the bin length increases in an exponential progression.
    *
    * So $bucket is used instead, and the boundaries are given explicitly.
+   * This requires interval; if it is not passed, $bucketAuto is used, without granularity.
    */
   const useBucketAuto = ! (interval && interval.length === 2);
   if (trace_block)
     console.log('blockFeaturesCounts', blockId, interval, nBins);
   let ObjectId = ObjectID;
-  let lengthRounded = 1;
-
+  let lengthRounded, boundaries;
+  if (! useBucketAuto) {
+    lengthRounded = binEvenLengthRound(interval, nBins),
+    boundaries = binBoundaries(interval, lengthRounded);
+  }
+    
   let
     matchBlock =
     [
       {$match : {blockId :  ObjectId(blockId)}},
       useBucketAuto ? 
-        { $bucketAuto : { groupBy: {$arrayElemAt : ['$value', 0]}, buckets: Number(nBins), granularity : 'R5'}  }
+        { $bucketAuto : { groupBy: {$arrayElemAt : ['$value', 0]}, buckets: Number(nBins)}  } // , granularity : 'R5'
       : { $bucket     :
           {
-            groupBy: {$arrayElemAt : ['$value', 0]}, boundaries : boundaries(interval, nBins),
+            groupBy: {$arrayElemAt : ['$value', 0]}, boundaries,
             output: {
               count: { $sum: 1 },
               idWidth : {$addToSet : lengthRounded }
