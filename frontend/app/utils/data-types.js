@@ -120,7 +120,7 @@ const featureCountDataProperties = Object.assign(
     dataTypeName : 'featureCountData',
     datum2Location : function datum2Location(d) { return [d._id, d._id + d.idWidth[0]]; },
     hoverTextFn : function (d, block) {
-      let valueText = '' + d._id + ' : ' + d.count,
+      let valueText = '' + d._id + ' +' + d.idWidth[0] + ' : ' + d.count,
       blockName = block.view && block.view.longName();
       return valueText + '\n' + blockName;
     }

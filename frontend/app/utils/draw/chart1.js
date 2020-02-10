@@ -277,14 +277,13 @@ AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
     this.dom.gp.selectAll("g." + className+  " > g");
   if (! gpa.empty() ) {
     addParentClass(g);
+  }
     /* .gc is <g clip-path=​"url(#axis-chart-clip-{{axisID}})​">​</g>​
-     * .g (assigned later) is g.axis-chart
-     .chart-line ?
+     * .g (assigned later) is all g.chart-line, i.e. all chart-lines of all Chart1-s of this axis
      * .gca contains a g for each chartType / dataTypeName, i.e. per Chart1.
      */
     this.dom.gc = g;
     this.dom.gca = gca;
-  }
 };
 
 
@@ -682,7 +681,7 @@ ChartLine.prototype.bars = function (data)
     rs = g
   // .select("g." + className + " > g")
     .selectAll("rect." + dataConfig.barClassName)
-    .data(data),
+    .data(data, dataConfig.keyFn.bind(dataConfig)),
   re =  rs.enter(), rx = rs.exit();
   let ra = re
     .append("rect");
@@ -727,7 +726,7 @@ ChartLine.prototype.linebars = function (data)
     rs = g
   // .select("g." + className + " > g")
     .selectAll("path." + dataConfig.barClassName)
-    .data(data),
+    .data(data, dataConfig.keyFn.bind(dataConfig)),
   re =  rs.enter(), rx = rs.exit();
   let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, scales.y);
   let line = d3.line();
@@ -838,6 +837,19 @@ ChartLine.prototype.drawContent = function(barsLine)
 
 
 /*----------------------------------------------------------------------------*/
+
+DataConfig.prototype.keyFn = function (d, i, g) {
+  let key = this.datum2Location(d, i, g);
+  /** looking at d3 bindKey() : it appends the result of the key function to
+   * "$", which works fine for both a single-value location and an interval;
+   * e.g. the interval [54.7, 64.8] -> keyValue "$54.7,64.8". Including the
+   * upper bound of the interval may improvide the identifying power of the key
+   * in some cases.  If there was a problem with this, an interval can be
+   * reduced to a single value, i.e.
+  if (key.length)
+    key = key[0]; */
+  return key;
+};
 
 /** Calculate the height of rectangle to be used for this data point
  * @param this  is DataConfig, not DOM element.

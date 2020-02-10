@@ -311,6 +311,48 @@ export default Service.extend(Ember.Evented, {
      */
     this.trigger('receivedBlock', blocksToView);
   },
+
+  /** controls() and pathsDensityParams() are copied from paths-progressive.js
+   * They can be moved into a service control-params, which will be backed by
+   * query params in the URL.
+   */
+  controls : Ember.computed(function () {
+    let oa = stacks.oa,
+    /** This occurs after mapview.js: controls : Ember.Object.create({ view : {  } }),
+     * and draw-map : draw() setup of  oa.drawOptions.
+     * This can be replaced with a controls service.
+     */
+    controls = oa.drawOptions.controls;
+    dLog('controls', controls);
+    return controls;
+  }),
+  /** This does have a dependency on the parameter values.  */
+  pathsDensityParams : Ember.computed.alias('controls.view.pathsDensityParams'),
+  /**
+   * @param blockId later will use this to lookup axis yRange
+   */
+  nBins(blockId) {
+    let nBins;
+    /** based on part of intervalParams(intervals) */
+    let vcParams = this.get('pathsDensityParams');
+    if (vcParams.nSamples) {
+      nBins = vcParams.nSamples;
+    }
+    if (vcParams.densityFactor) {
+      /** from paths-aggr.js : blockFeaturesInterval()
+       */
+      let pixelspacing = 5;
+      let range = 600;  // -	lookup axis yRange from block;
+      let nBins = vcParams.densityFactor * range / pixelspacing;
+    }
+    if (vcParams.nFeatures) {
+      if (nBins > vcParams.nFeatures)
+         nBins = vcParams.nFeatures;
+    }
+    dLog('nBins', nBins, vcParams);
+    return nBins;
+  },
+
   getSummary: function (blockIds) {
     // console.log("block getSummary", id);
     let blockP =
@@ -318,12 +360,12 @@ export default Service.extend(Ember.Evented, {
 
     if (this.get('parsedOptions.featuresCounts')) {
 
-    /** This will probably become user-configurable */
-    const nBins = 100;
     /** As yet these result promises are not returned, not needed. */
     let blockPs =
       blockIds.map(
         (blockId) => {
+          /** densityFactor requires axis yRange, so for that case this will (in future) lookup axis from blockId. */
+          const nBins = this.nBins(blockId);
           let taskId = blockId + '_' + nBins;
           let summaryTask = this.get('summaryTask');
           let p = summaryTask[taskId];
