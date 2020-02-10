@@ -83,6 +83,10 @@ export default Ember.Component.extend({
         manualColumnResize: true,
         manualRowMove: true,
         // manualColumnMove: true,
+        copyPaste: {
+          /** increase the limit on copy/paste.  default is 1000 rows. */
+          rowsLimit: 10000
+        },
         contextMenu: true,
         sortIndicator: true,
         columnSorting: {
