@@ -36,6 +36,44 @@ Using JS classes enables 4 small and closely related classes to be in a single f
 
 const dLog = console.debug;
 
+/*----------------------------------------------------------------------------*/
+
+/** Example of the structure of the DOM elements generated.   The .dom.* selections which address them are indicated in comments. 
+
+<g class="axis-use hasChart">   <!-- gAxis -->
+  <g class="chart">             <!-- gps, gpa, gp,  -->
+    <clipPath id="axis-chart-clip-5ced0aa73156212ab025de3a"><rect x="0" y="0" width="113" height="476"></rect></clipPath>
+    <g clip-path="url(#axis-chart-clip-5ced0aa73156212ab025de3a)">      <!-- gc -->
+      <g class="blockData" transform="translate(12, 0)">                <!-- gca - multiple Chart1 in an axis -->
+        <g class="chart-line" id="chart-line-5ced0aa73156212ab025de3a">         <!-- g, gs, gsa.  g addresses multiple ChartLine-s in multiple Chart1 in an axis  -->
+          <path class="chartRow" data-original-title="" title="" d="M0,71.20120793040937L38,71.20120793040937" stroke="rgb(255, 0, 0)"></path>
+          <!-- ... -->
+        </g>
+        <g class="axis axis--x" transform="translate(0,426)" fill="none" font-size="10" font-family="sans-serif" text-anchor="middle">
+          <path class="domain" stroke="#000" d="M0.5,6V0.5H73.5V6"></path>
+          <g class="tick" opacity="1" transform="translate(3.5,0)"><line stroke="#000" y2="6"></line><text fill="#000" y="9" dy="0.71em">0.1</text></g>
+          <!-- ... -->
+        </g>
+        <circle class="radio toggle chartType pushed" r="6" cx="56.5" cy="466"></circle>
+      </g>
+      <g class="featureCountData" transform="translate(42, 0)">                 <!-- gca -->
+        <g class="chart-line" id="chart-line-5ced0aa73156212ab025de3a">
+          <rect class="chartRow" fill="red" data-original-title="" title="" width="5.883523809523809" x="0" y="1.520982501358441" height="12.01679177145495"></rect>
+          <!-- ... -->
+        </g>
+        <g class="axis axis--x" transform="translate(0,426)" fill="none" font-size="10" font-family="sans-serif" text-anchor="middle">
+          <path class="domain" stroke="#000" d="M0.5,6V0.5H73.5V6"></path>
+          <g class="tick" opacity="1" transform="translate(8.5,0)"><line stroke="#000" y2="6"></line><text fill="#000" y="9" dy="0.71em">0.0005</text></g>
+          <!-- ... -->
+        </g>
+        <circle class="radio toggle chartType pushed" r="6" cx="56.5" cy="466"></circle>
+      </g>
+    </g>
+  </g>
+
+*/
+
+/*----------------------------------------------------------------------------*/
 
 /** Add a .hasChart class to the <g.axis-use> which contains this chart.
  * Currently this is used to hide the <foreignObject> so that hover events are
