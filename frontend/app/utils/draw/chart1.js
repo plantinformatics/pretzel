@@ -45,7 +45,7 @@ const dLog = console.debug;
     <clipPath id="axis-chart-clip-5ced0aa73156212ab025de3a"><rect x="0" y="0" width="113" height="476"></rect></clipPath>
     <g clip-path="url(#axis-chart-clip-5ced0aa73156212ab025de3a)">      <!-- gc -->
       <g class="blockData" transform="translate(12, 0)">                <!-- gca - multiple Chart1 in an axis -->
-        <g class="chart-line" id="chart-line-5ced0aa73156212ab025de3a">         <!-- g, gs, gsa.  g addresses multiple ChartLine-s in multiple Chart1 in an axis  -->
+        <g class="chart-line" id="chart-line-5ced0aa73156212ab025de3a">         <!-- chart1.g, dom.gs, dom.gsa.
           <path class="chartRow" data-original-title="" title="" d="M0,71.20120793040937L38,71.20120793040937" stroke="rgb(255, 0, 0)"></path>
           <!-- ... -->
         </g>
@@ -310,6 +310,11 @@ AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
     .attr('class', (d) => d.dataConfig.dataTypeName)
     .attr("transform", (d, i) => "translate(" + (startOffset + (i * 30)) + ", 0)")
   ;
+  /* to handle removal of chart types, split the above to get a handle for remove :
+   gcs = gpa ... data(...),
+   gca = gcs.enter() ...;
+   gcs.exit().remove();
+   */
 
   let g = 
     this.dom.gp.selectAll("g." + className+  " > g");
@@ -501,6 +506,10 @@ Chart1.prototype.group = function (parentG, groupClassName) {
   /** parentG is g.{{dataTypeName}}, within : g.axis-use > g.chart > g[clip-path] > g.{{dataTypeName}}.
    * add g.(groupClassName);
    * within g.axis-use there is also a sibling g.axis-html. */
+  /* on subsequent calls (didRender() is called whenever params change),
+   * parentG is empty, and hence g is empty.
+   * so this is likely to need a change to handle addition/removal of chartlines after first render.
+   */
   let // data = parentG.data(),
     gs = parentG
     .selectAll("g > g." + groupClassName)
@@ -516,8 +525,8 @@ Chart1.prototype.group = function (parentG, groupClassName) {
   ,
   // parentG.selectAll("g > g." + groupClassName); // 
   g = gsa.merge(gs);
+  gs.exit().remove();
   dLog('group', this, parentG.node(), parentG, g.node());
-  this.dom.g = g;
   this.dom.gs = gs;
   this.dom.gsa = gsa;
   // set ChartLine .g;   used by ChartLine.{lines,bars}.
@@ -643,9 +652,9 @@ Chart1.prototype.toggleBarsLine = function ()
   this.barsLine = ! this.barsLine;
   this.chartTypeToggle
     .classed("pushed", this.barsLine);
-  this.dom.g.selectAll("g > *").remove();
   Object.keys(this.chartLines).forEach((blockId) => {
     let chartLine = this.chartLines[blockId];
+    chartLine.g.selectAll("g > *").remove();
     chartLine.drawContent(this.barsLine);
   });
 };
@@ -730,6 +739,7 @@ ChartLine.prototype.bars = function (data)
    * this.parentElement.parentElement.__data__ has the axis id (not the blockId),
    */
     .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); });
+  let r =
   ra
     .merge(rs)
     .transition().duration(1500)
@@ -739,13 +749,13 @@ ChartLine.prototype.bars = function (data)
     .attr("height", dataConfig.rectHeight.bind(dataConfig, /*scaled*/true, /*gIsData*/false)) // equiv : (d, i, g) => dataConfig.rectHeight(true, false, d, i, g);
   ;
   let barWidth = dataConfig.rectWidth.bind(dataConfig, /*scaled*/true, /*gIsData*/false);
-  ra
+  r
     .attr("width", dataConfig.barAsHeatmap ? 20 : barWidth);
   if (dataConfig.barAsHeatmap)
     ra
     .attr('fill', barWidth);
   rx.remove();
-  console.log(rs.nodes(), re.nodes());
+  dLog(rs.nodes(), re.nodes());
 };
 
 /** A single horizontal line for each data point.
