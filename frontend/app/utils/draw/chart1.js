@@ -3,6 +3,7 @@ import Ember from 'ember';
 import { getAttrOrCP } from '../ember-devel';
 import { configureHorizTickHover } from '../hover';
 import { eltWidthResizable, noShiftKeyfilter } from '../domElements';
+import { logSelectionNodes } from '../log-selection';
 import { noDomain } from '../draw/axis';
 import { stacks } from '../stacks'; // just for oa.z and .y, don't commit this.
 import { inRangeEither } from './zoomPanCalcs';
@@ -367,6 +368,26 @@ AxisCharts.prototype.controls = function controls()
  */
 
 /*----------------------------------------------------------------------------*/
+
+/** For use in web inspector console, e.g.
+ * d3.selectAll('g.chart > g[clip-path] > g').each((d) => d.logSelectionNodes2())
+ * or from Ember inspector /axis-chart : $E.chart.logSelectionNodes2()
+ */
+Chart1.prototype.logSelectionNodes2 = function(dom)
+{
+  if (! dom)
+    dom = this.dom;
+  Object.keys(dom).forEach((k) => {dLog(k); logSelectionNodes(dom[k]); });
+};
+
+
+/** For use in web inspector console, e.g.
+ * d3.selectAll('g.chart > g[clip-path] > g').each((d) => d.logScales());
+ */
+Chart1.prototype.logScales = function() {
+  let scales = this.scales; 
+  Object.keys(scales).forEach((k) => {var s = scales[k]; console.log(k, s.domain(), s.range()); });
+};
 
 
 Chart1.prototype.overlap = function(axisCharts) {
