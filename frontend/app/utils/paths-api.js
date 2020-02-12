@@ -1,0 +1,217 @@
+
+import PathData from '../components/draw/path-data';
+import { featureNameClass } from './draw/stacksAxes';
+
+/*----------------------------------------------------------------------------*/
+
+const dLog = console.debug;
+
+/*----------------------------------------------------------------------------*/
+
+
+if (false) {
+  /** Example of param paths passed to draw() above. */
+  const examplePaths = 
+[{"_id":{"name":"myMarkerC"},
+  "alignment":[
+      {"blockId":"5c75d4f8792ccb326827daa2","repeats":{
+	  "_id":{"name":"myMarkerC","blockId":"5c75d4f8792ccb326827daa2"},
+	  "features":[{"_id":"5c75d4f8792ccb326827daa6","name":"myMarkerC","value":[3.1,3.1],"blockId":"5c75d4f8792ccb326827daa2","parentId":null}],"count":1}},
+      {"blockId":"5c75d4f8792ccb326827daa1","repeats":{
+	  "_id":{"name":"myMarkerC","blockId":"5c75d4f8792ccb326827daa1"},
+	      "features":[{"_id":"5c75d4f8792ccb326827daa5","name":"myMarkerC","value":[0,0],"blockId":"5c75d4f8792ccb326827daa1","parentId":null}],"count":1}}]}];
+}
+
+
+/*----------------------------------------------------------------------------*/
+
+function featureEltId(featureBlock)
+{
+  let id = featurePathKeyFn(featureBlock);
+  id = featureNameClass(id);
+  return id;
+}
+
+function featurePathKeyFn (featureBlock)
+{ return featureBlock._id.name; }
+
+/** Given the grouped data for a feature, from the pathsDirect() result,
+ * generate the cross-product feature.alignment[0].repeats X feature.alignment[1].repeats.
+ * The result is an array of pairs of features;  each pair defines a path and is of type PathData.
+ * for each pair an element of pairs[] :
+ *   pair.feature0 is in block pair.block0
+ *   pair.feature1 is in block pair.block1
+ *    (for the case of pathsResultTypes.direct) :
+ *   pair.block0 === feature.alignment[0].blockId
+ *   pair.block1 === feature.alignment[1].blockId
+ * i.e. the path goes from the first block in the request params to the 2nd block
+ * @param pathsResultType e.g. pathsResultTypes.{Direct,Aliases}
+ * @param feature 1 element of the result array passed to draw()
+ * @return [PathData, ...]
+ */
+function pathsOfFeature(store, pathsResultType, owner) {
+  const PathData = owner.factoryFor('component:draw/path-data');
+  return function (feature) {
+    let blocksFeatures =
+      [0, 1].map(function (blockIndex) { return pathsResultType.blocksFeatures(feature, blockIndex); }),
+    blocks = resultBlockIds(pathsResultType, feature),
+    pairs = 
+      blocksFeatures[0].reduce(function (result, f0) {
+        let result1 = blocksFeatures[1].reduce(function (result, f1) {
+          let pair =
+            pathCreate(store, f0, f1, blocks[0], blocks[1]);
+          result.push(pair);
+          return result;
+        }, result);
+        return result1;
+      }, []);
+    return pairs;
+  };
+}
+
+const trace_pc = 1;
+
+function pathCreate(store, feature0, feature1, block0, block1) {
+  let
+    /** not used - same as feature{0,1}.blockId. */
+    block0r = store.peekRecord('block', block0),
+    block1r = store.peekRecord('block', block1);
+  if (true) {
+  let properties = {
+	  feature0,
+    feature1/*,
+    block0r,
+    block1r*/
+  },
+    pair =
+      PathData.create({ renderer : {} });
+    pair.setProperties(properties);
+    if (trace_pc > 2)
+      dLog('PathData.create()', PathData, pair);
+    return pair;
+  }
+  else {
+    let
+      modelName = 'draw/path-data',
+    idText = locationPairKeyFn({ feature0, feature1}),
+    r = store.peekRecord(modelName, idText);
+    if (r)
+      dLog('pathCreate', feature0, feature1, block0, block1, r._internalModel.__attributes, r._internalModel.__data);
+    else if (false)
+    {
+      let data = {
+        type : modelName,
+        id : idText,
+        relationships : {
+          feature0 : { data: { type: "feature", "id": feature0 } },
+          feature1 : { data: { type: "feature", "id": feature1 } } /*,
+          block0 : { data: { type: "block", "id": block0r } },
+          block1 : { data: { type: "block", "id": block1r } }*/
+        }/*,
+        attributes : {
+          'block-id0' : block0,
+          'block-id1' : block1
+        }*/
+      };
+      r = store.push({data});
+      if (trace_pc)
+        dLog('pathCreate', r, r.get('id'), r._internalModel, r._internalModel.__data, store, data);
+    }
+    else {
+      let inputProperties = {
+	      feature0,
+        feature1/*,
+        block0r,
+        block1r*/
+      };
+      r = store.createRecord(modelName, inputProperties);
+    }
+    return r;
+  }
+}
+
+
+function locationPairKeyFn(locationPair)
+{
+  return locationPair.feature0.id + '_' + locationPair.feature1.id;
+}
+
+/*----------------------------------------------------------------------------*/
+
+const pathsApiFields = ['featureAObj', 'featureBObj'];
+/** This type is created by paths-progressive.js : requestAliases() : receivedData() */
+const pathsApiResultType = {
+  // fieldName may be pathsResult or pathsAliasesResult
+  typeCheck : function(resultElt) { if (! resultElt.featureAObj) {
+    dLog('pathsApiResultType : typeCheck', resultElt); } },
+  pathBlock :  function (resultElt, blockIndex) { return resultElt[pathsApiFields[blockIndex]].blockId; },
+  /** direct.blocksFeatures() returns an array of features, so match that. See
+   * similar commment in alias.blocksFeatures. */
+  blocksFeatures : function (resultElt, blockIndex) { return [ resultElt[pathsApiFields[blockIndex]] ]; },
+  featureEltId :
+    function (resultElt)
+    {
+      let id = pathsApiResultType.featurePathKeyFn(resultElt);
+      id = featureNameClass(id);
+      return id;
+    },
+  featurePathKeyFn : function (resultElt) { return resultElt.featureA + '_' + resultElt.featureB; }
+
+};
+
+/** This is provision for using the API result type as <path> data type; not used currently because
+ * the various forms of result data are converted to path-data.
+ * These are the result types from :
+ * Block/paths -> apiLookupAliases() ->  task.paths() 
+ * Blocks/pathsViaStream  -> pathsAggr.pathsDirect() 
+ * getPathsAliasesViaStream() / getPathsAliasesProgressive() -> Blocks/pathsAliasesProgressive -> dbLookupAliases() -> pathsAggr.pathsAliases()
+ */
+const pathsResultTypes = {
+  direct : {
+    fieldName : 'pathsResult',
+    typeCheck : function(resultElt) { if (! resultElt._id) {
+    dLog('direct : typeCheck', resultElt); } },
+    pathBlock :  function (resultElt, blockIndex) { return resultElt.alignment[blockIndex].blockId; },
+    blocksFeatures : function (resultElt, blockIndex) { return resultElt.alignment[blockIndex].repeats.features; },
+    featureEltId : featureEltId,
+    featurePathKeyFn : featurePathKeyFn
+  },
+
+  alias :
+  {
+    fieldName : 'pathsAliasesResult',
+    typeCheck : function(resultElt) { if (! resultElt.aliased_features) {
+    dLog('alias : typeCheck', resultElt); } },
+    pathBlock :  function (resultElt, blockIndex) { return resultElt.aliased_features[blockIndex].blockId; },
+    /** There is currently only 1 element in .aliased_features[blockIndex], but
+     * pathsOfFeature() handles an array an produces a cross-product, so return
+     * this 1 element as an array. */
+    blocksFeatures : function (resultElt, blockIndex) { return [resultElt.aliased_features[blockIndex]]; },
+    featureEltId :
+    function (resultElt)
+    {
+      let id = pathsResultTypes.alias.featurePathKeyFn(resultElt);
+      id = featureNameClass(id);
+      return id;
+    },
+    featurePathKeyFn : function (resultElt) {
+      return resultElt.aliased_features.map(function (f) { return f.name; } ).join('_');
+    }
+  }
+},
+/** This matches the index values of services/data/flows-collate.js : flows */
+flowNames = Object.keys(pathsResultTypes);
+// add .flowName to each of pathsResultTypes, which could later require non-const declaration.
+flowNames.forEach(function (flowName) { pathsResultTypes[flowName].flowName = flowName; } );
+
+/**
+ * @return	array[2] of blockId, equivalent to blockAdjId  
+ */
+function resultBlockIds(pathsResultType, featurePath) {
+  let blockIds =
+    [0, 1].map(function (blockIndex) { return pathsResultType.pathBlock(featurePath, blockIndex); });
+  return blockIds;
+}
+
+
+export  { pathsResultTypes, pathsApiResultType, flowNames, resultBlockIds, pathsOfFeature, locationPairKeyFn };

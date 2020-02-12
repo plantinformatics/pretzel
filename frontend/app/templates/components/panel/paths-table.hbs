@@ -1,0 +1,28 @@
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="filter"}}
+    Actions
+  {{/elem/panel-heading}}
+  <div class="panel-body">
+    <div class="btn-group btn-group-justified" role="group" aria-label="...">
+
+      {{!-- based on elem/button-submit.hbs, could be factored --}}
+      <div class="">
+        <button type="submit" class="btn btn-info pull-right {{if loading 'disabled'}}">Retrieve all paths in brushed interval</button>
+        <br>
+        <br>
+      </div>
+
+    </div>
+  </div>
+{{/elem/panel-container}}
+
+{{#data-sorter data=tableData as |ds|}}
+  {{#data-table data=ds.data selectionMode='multiple' 
+     selectionChanged=(action 'selectionChanged') classNames=tableClassNames as |t|}}
+    {{t.selectionColumn}}
+    {{t.sortableColumn propertyName='feature0'  name='From Feature' sortinformationupdated=(action ds.onsortfieldupdated)}}
+    {{t.sortableColumn propertyName='position0' name='Position'     sortinformationupdated=(action ds.onsortfieldupdated)}}
+    {{t.sortableColumn propertyName='feature1'  name='To Feature'   sortinformationupdated=(action ds.onsortfieldupdated)}}
+    {{t.sortableColumn propertyName='position1' name='Position'     sortinformationupdated=(action ds.onsortfieldupdated)}}
+  {{/data-table}}
+{{/data-sorter}}

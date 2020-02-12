@@ -49,6 +49,16 @@ export default DS.Model.extend(Ember.Evented, {
   },
 
   /*--------------------------------------------------------------------------*/
+
+  /** @return true if this block is adjacent to the given block-adj
+   */
+  adjacentTo (block) {
+    let blocks = this.get('blocks'),
+    found = blocks.indexOf(block);
+    return found > -1;
+  },
+
+  /*--------------------------------------------------------------------------*/
   /* CFs based on axes could be moved to a component, e.g. draw/ stacks-view or block-adj */
 
 

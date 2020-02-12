@@ -72,17 +72,25 @@
            state=layout.right.tab onClick="setTab"}}
           {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{selectedFeatures.length}}</span>
         {{/elem/button-tab}}
-        {{#elem/button-tab
-           side="right"
-           key="block"
-           state=layout.right.tab onClick="setTab"}}
-          {{elem/icon-base name="globe"}}&nbsp; Block
-        {{/elem/button-tab}}
+        {{#if model.params.parsedOptions.blockTab}}
+          {{#elem/button-tab
+             side="right"
+             key="block"
+             state=layout.right.tab onClick="setTab"}}
+            {{elem/icon-base name="globe"}}&nbsp; Block
+          {{/elem/button-tab}}
+        {{/if}}
         {{#elem/button-tab
            side="right"
            key="dataset"
            state=layout.right.tab onClick="setTab"}}
           {{elem/icon-base name="globe"}}&nbsp; Dataset
+        {{/elem/button-tab}}
+        {{#elem/button-tab
+           side="right"
+           key="paths"
+           state=layout.right.tab onClick="setTab"}}
+          {{elem/icon-base name="globe"}}&nbsp; Paths
         {{/elem/button-tab}}
         {{#if model.params.parsedOptions.advSettings}}
           {{#elem/button-tab
@@ -112,6 +120,10 @@
         {{else if (compare layout.right.tab '===' 'dataset')}}
           {{panel/manage-dataset
             dataset=selectedDataset}}
+        {{else if (compare layout.right.tab '===' 'paths')}}
+          {{panel/paths-table
+            selectedFeatures=selectedFeatures
+            block=selectedBlock}}
         {{else if (and (compare layout.right.tab '===' 'settings') model.params.parsedOptions.advSettings)}}
           {{panel/manage-settings
             selectedFeatures=selectedFeatures
