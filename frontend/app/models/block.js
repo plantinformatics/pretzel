@@ -147,6 +147,22 @@ export default DS.Model.extend({
     return isChartable;
   }),
 
+  /*--------------------------------------------------------------------------*/
+
+  /** generate a text name for the block, to be displayed - it should be
+   * user-readable and uniquely identify the block.
+   */
+  datasetNameAndScope : Ember.computed('datasetId.id', 'scope', function () {
+    /** This is currently the name format which is used in
+     * selectedFeatures.Chromosome
+     * In paths-table.js @see blockDatasetNameAndScope()
+     */
+    let name = (this.get('datasetId.meta.shortName') || this.get('datasetId.id')) + ':' + this.get('scope');
+    return name;
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
   /** If the dataset of this block has a parent, return the name of that parent (reference dataset).
    * @return the reference dataset name or undefined if none
    */

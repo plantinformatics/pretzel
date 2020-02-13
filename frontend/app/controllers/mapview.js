@@ -37,13 +37,19 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       this.set(`layout.${side}.visible`, !visibility);
     },
     setTab: function(side, tab) {
-      // dLog("setTab", side, tab);
+      dLog("setTab", side, tab, this.get('layout'));
       this.set(`layout.${side}.tab`, tab);
     },
     updateSelectedFeatures: function(features) {
     	// dLog("updateselectedFeatures in mapview", features.length);
       this.set('selectedFeatures', features);
-      this.send('setTab', 'right', 'selection');
+      /** results of a selection impact on the selection (selectedFeatures) tab
+       * and the paths tab, so if neither of these is currently shown, show the
+       * selection tab.
+       */
+      let rightTab = this.get('layout.right.tab');
+      if ((rightTab !== 'selection') && (rightTab !== 'paths'))
+        this.send('setTab', 'right', 'selection');
     },
     /** goto-feature-list is given features by the user and finds them in
      * blocks; this is that result in a hash, indexed by block id, with value

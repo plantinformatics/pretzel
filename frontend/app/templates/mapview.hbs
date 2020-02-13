@@ -123,7 +123,7 @@
         {{else if (compare layout.right.tab '===' 'paths')}}
           {{panel/paths-table
             selectedFeatures=selectedFeatures
-            block=selectedBlock}}
+            selectedBlock=selectedBlock}}
         {{else if (and (compare layout.right.tab '===' 'settings') model.params.parsedOptions.advSettings)}}
           {{panel/manage-settings
             selectedFeatures=selectedFeatures

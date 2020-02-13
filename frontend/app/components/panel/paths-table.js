@@ -10,11 +10,13 @@ const dLog = console.debug;
 
 export default Ember.Component.extend({
   flowsService: service('data/flows-collate'),
+  pathsPro : service('data/paths-progressive'),
+
 
   didReceiveAttrs() {
     this._super(...arguments);
 
-    dLog('didReceiveAttrs', this.get('block.id'));
+    dLog('didReceiveAttrs', this.get('block.id'), this);
   },
 
   /*--------------------------------------------------------------------------*/
@@ -27,16 +29,17 @@ export default Ember.Component.extend({
         dLog(selA[i].feature, selA[i].position);
       }
     },
+    requestAllPaths() {
+      this.requestAllPaths();
+    }
   },
 
   /*--------------------------------------------------------------------------*/
 
-  /**
-   * also in utils/paths-filter.js @see pathInDomain()
-   */
-  filterPaths(pathsResultField) {
+  selectedFeaturesByBlock : Ember.computed(
+    'selectedFeatures.[]',
+    function () {
 
-    let selectedBlock = this.get('selectedBlock');
     let selectedFeatures = this.get('selectedFeatures');
     /** map selectedFeatures to a hash by block (dataset name and scope).
      * selectedFeatures should be e.g. a WeakSet by feature id, not name.
@@ -50,6 +53,19 @@ export default Ember.Component.extend({
         }
         return result;
       }, {}) : {};
+      return selectedFeaturesByBlock;
+    }),
+
+
+  /*--------------------------------------------------------------------------*/
+
+  /**
+   * also in utils/paths-filter.js @see pathInDomain()
+   */
+  filterPaths(pathsResultField) {
+
+    let selectedBlock = this.get('selectedBlock');
+    let selectedFeaturesByBlock = this.get('selectedFeaturesByBlock');
 
     if (false) {
     /**   form is e.g. : {Chromosome: "myMap:1A.1", Feature: "myMarkerA", Position: "0"} */
@@ -140,18 +156,40 @@ export default Ember.Component.extend({
   },
 
   tableDataAliases : Ember.computed(
-    'pathsAliasesResult.[]', 'selectedFeatures.[]',
+    'pathsAliasesResult.[]',
+    'selectedBlock',
+    'selectedFeaturesByBlock.@each',
     function () {
       let tableData = this.filterPaths('pathsAliasesResult');
       dLog('tableData', tableData);
       return tableData;
     }),
-  tableData : Ember.computed(function () {
-    let tableData = this.filterPaths('pathsResult');
-    dLog('tableData', tableData);
-    return tableData;
-  }),
+  tableData : Ember.computed(
+    'pathsResult.[]',
+    'selectedBlock',
+    'selectedFeaturesByBlock.@each',
+    function () {
+      let tableData = this.filterPaths('pathsResult');
+      dLog('tableData', tableData);
+      return tableData;
+    }),
 
+  /*--------------------------------------------------------------------------*/
+
+  requestAllPaths() {
+    dLog('requestAllPaths', this);
+    
+    let pathsPro = this.get('pathsPro');
+    pathsPro.set('fullDensity', true);
+
+    let
+      blockAdjs = this.get('flowsService.blockAdjs');
+    blockAdjs.forEach(function (blockAdj) {
+      let p = blockAdj.call_taskGetPaths();
+    });
+
+    pathsPro.set('fullDensity', false);
+  },
   /*--------------------------------------------------------------------------*/
 
 });

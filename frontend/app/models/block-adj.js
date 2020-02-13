@@ -54,8 +54,14 @@ export default DS.Model.extend(Ember.Evented, {
    */
   adjacentTo (block) {
     let blocks = this.get('blocks'),
-    found = blocks.indexOf(block);
-    return found > -1;
+    found = blocks.indexOf(block) > -1;
+    if (! found) {
+      /** also check referenceBlocks because clicking on axis selects the reference block */
+      let referenceBlocks = this.get('referenceBlocks');
+      found = referenceBlocks.indexOf(block) > -1;
+      dLog('adjacentTo', found, referenceBlocks, block);
+    }
+    return found;
   },
 
   /*--------------------------------------------------------------------------*/
@@ -68,6 +74,7 @@ export default DS.Model.extend(Ember.Evented, {
     blocks = blockAdjId.map((blockId) => { return this.peekBlock(blockId); } );
     return blocks;
   }),
+  referenceBlocks : Ember.computed.mapBy('blocks', 'referenceBlock'),
   /** Stacked Blocks - should be able to retire this. */
   sBlocks : Ember.computed('blockAdjId', function () {
     let
@@ -158,6 +165,7 @@ export default DS.Model.extend(Ember.Evented, {
     /** interim measure to include pathsDensityParams in comparison; planning to
      * restructure using CP. */
     pathsDensityParams = this.get('pathsPro.pathsDensityParams'),
+    fullDensity = this.get('pathsPro.fullDensity'),
     /** this can now be simplified to use axesDomains(). */
     intervalsAxes = this.get('axisDimensions'),
       domainsDiffer = function ()
@@ -188,7 +196,7 @@ export default DS.Model.extend(Ember.Evented, {
           dLog('domainChange', intervals, intervalsAxes, domainChanges, change);
         return change;
       },
-      domainChange = ! intervals || domainsDiffer();
+      domainChange = fullDensity || ! intervals || domainsDiffer();
     return domainChange;
   }),
 
