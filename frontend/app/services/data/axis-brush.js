@@ -45,6 +45,23 @@ export default Service.extend(Ember.Evented, {
         dLog(fnName, blocks);
 
       return blocks;
-    })
+    }),
+  brushesByBlock : Ember.computed('brushedAxes.[]', function () {
+    let brushesByBlock = this.get('brushedAxes').reduce(function (result, ab) {
+      result[ab.get('block.id')] = ab;
+      return result; }, {} );
+    return brushesByBlock;
+  }),
+  /** Lookup brushedAxes for the given block, or its referenceBlock.
+   */
+  brushOfBlock(block) {
+    let brushesByBlock = this.get('brushesByBlock'),
+    brush = brushesByBlock[block.get('id')];
+    let referenceBlock;
+    if (! brush && (referenceBlock = block.get('referenceBlock'))) {
+      brush = brushesByBlock[referenceBlock.get('id')];
+    }
+    return brush;
+  }
 
 });

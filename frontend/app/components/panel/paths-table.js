@@ -11,6 +11,7 @@ const dLog = console.debug;
 export default Ember.Component.extend({
   flowsService: service('data/flows-collate'),
   pathsPro : service('data/paths-progressive'),
+  axisBrush: service('data/axis-brush'),
 
 
   didReceiveAttrs() {
@@ -66,6 +67,7 @@ export default Ember.Component.extend({
 
     let selectedBlock = this.get('selectedBlock');
     let selectedFeaturesByBlock = this.get('selectedFeaturesByBlock');
+    let axisBrush = this.get('axisBrush');
 
     if (false) {
     /**   form is e.g. : {Chromosome: "myMap:1A.1", Feature: "myMarkerA", Position: "0"} */
@@ -81,18 +83,37 @@ export default Ember.Component.extend({
     tableData = blockAdjs.reduce(function (result, blockAdj) {
       // components/panel/manage-settings.js:14:        return feature.Block === selectedBlock.id
       if (! selectedBlock || blockAdj.adjacentTo(selectedBlock)) {
+        /** Prepare a row with a pair of values to add to the table */
+        function setPair(row, i, feature, position) {
+          row['feature' + i] = feature;
+          row['position' + i] = position;
+          return row;
+        }
         /** push the names of the 2 adjacent blocks, as an interleaved title row in the table. */
         let blocks = blockAdj.get('blocks'),
         blocksById = blocks.reduce((r, b) => { r[b.get('id')] = b; return r; }, {}),
-        namesFlat = blocks.reduce((rowHash, b, i) => {
-          rowHash['feature' + i] = b.get('datasetId.id');
-          rowHash['position' + i] = b.get('scope');
+        namesFlat = blocks.reduce(
+          (rowHash, b, i) =>
+            setPair(rowHash, i, b.get('datasetId.id'), b.get('scope')), {});
+        // blank row to separate from previous blockAdj
+        result.push({'feature0': '_'});
+        result.push(namesFlat);
+        /** Add to the table the brushed domain of the 2 blocks. */
+        let brushedDomains = blocks.reduce((rowHash, b, i) => {
+          let ab = axisBrush.brushOfBlock(b),
+          brushedDomain = ab && ab.get('brushedDomain');
+          if (brushedDomain) {
+            setPair(rowHash, i, brushedDomain[0], brushedDomain[1]);
+          }
           return rowHash;
         }, {});
-        result.push(namesFlat);
+        result.push(brushedDomains);
 
         let resultElts = blockAdj.get(pathsResultField);
         if (resultElts) {
+        if (resultElts.length)
+          result.push(setPair({}, 0, 'Paths loaded', resultElts.length));
+          let outCount = 0;
           resultElts.forEach((resultElt) => {
             /** for each end of the path, if the endpoint is in a brushed block,
              * filter out if the endpoint is not in the (brushed)
@@ -144,8 +165,10 @@ export default Ember.Component.extend({
             let out = filterOut(resultElt, 0, path) || filterOut(resultElt, 1, path);
             if (! out) {
               result.push(path);
+              outCount++;
             }
           });
+          result.push(setPair({}, 0, 'Filtered Count', outCount));
         }
       }
       return result;
