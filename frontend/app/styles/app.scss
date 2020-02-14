@@ -1354,3 +1354,12 @@ div.metaeditor-panel div.jsoneditor {
   border: 1px solid #d3d3d3
 }
 /* -------------------------------------------------------------------------- */
+
+.paths-tables .optionControls {
+  display: flex;
+  margin-bottom: 1em;
+}
+.paths-tables .optionControls  > div {
+  flex-grow: 1;
+}
+/* -------------------------------------------------------------------------- */
