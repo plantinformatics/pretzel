@@ -50,6 +50,8 @@ export default Service.extend(Ember.Evented, {
     let brushesByBlock = this.get('brushedAxes').reduce(function (result, ab) {
       result[ab.get('block.id')] = ab;
       return result; }, {} );
+    if (trace_axisBrush)
+      dLog('brushesByBlock', brushesByBlock);
     return brushesByBlock;
   }),
   /** Lookup brushedAxes for the given block, or its referenceBlock.
@@ -61,6 +63,8 @@ export default Service.extend(Ember.Evented, {
     if (! brush && (referenceBlock = block.get('referenceBlock'))) {
       brush = brushesByBlock[referenceBlock.get('id')];
     }
+    if (trace_axisBrush > 1)
+      dLog('brushOfBlock', brush, brushesByBlock, referenceBlock);
     return brush;
   }
 

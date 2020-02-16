@@ -3,7 +3,7 @@ const { inject: { service } } = Ember;
 
 
 import PathData from '../draw/path-data';
-import { pathsResultTypes } from '../../utils/paths-api';
+import { pathsResultTypes, pathsApiResultType } from '../../utils/paths-api';
 
 
 const dLog = console.debug;
@@ -149,19 +149,11 @@ export default Ember.Component.extend({
              * selectedFeatures.
              */
 
-            /** for the given block, generate the name format which is used in
-             * selectedFeatures.Chromosome
-             *
-             * block.get('datasetNameAndScope') may be the same value; it can
-             * use shortName, and its purpose is display, whereas
-             * selectedFeatures.Chromosome is for identifying the block (and
-             * could be changed to blockId).
-             */
-            function blockDatasetNameAndScope(block) {
-              return block.get('datasetId.id') + ':' + block.get('scope');
-            }
             let
-              pathsResultType = Object.values(pathsResultTypes).find((prt) => prt.fieldName === pathsResultField);
+              pathsResultType =  (pathsResultField === 'pathsAliasesResult') ?
+              pathsApiResultType
+              : Object.values(pathsResultTypes).find((prt) => prt.fieldName === pathsResultField);
+
 
             /** accumulate names for table, not used if out is true. */
             let path = {};
@@ -181,8 +173,10 @@ export default Ember.Component.extend({
               feature = features[0],
               featureGet = feature.get ? (field) => feature.get(field) : (field) => feature[field], 
               block1 = featureGet('blockId'),
-              block = block1.get ? block1 : blocksById[block1],
-              chrName = blockDatasetNameAndScope(block),
+              block2 = block1.content || block1,
+              block = block2.get ? block2 : blocksById[block2],
+              /** brushes are identified by the referenceBlock (axisName). */
+              chrName = block.get('brushName'),
               selectedFeaturesOfBlock = selectedFeaturesByBlock[chrName],
               featureName = featureGet('name'),
               /** if the axis is brushed but there are no features in this block
@@ -220,7 +214,7 @@ export default Ember.Component.extend({
     return tableData;
   },
 
-  tableDataAliases : Ember.computed(
+  tableData/*Aliases*/ : Ember.computed(
     'pathsAliasesResult.[]',
     'selectedBlock',
     'selectedFeaturesByBlock.@each',
@@ -228,11 +222,18 @@ export default Ember.Component.extend({
     'showDomains',
     'showCounts',
     function () {
-      let tableData = this.filterPaths('pathsAliasesResult');
+      let tableDataAliases = this.filterPaths('pathsAliasesResult');
+      dLog('tableDataAliases', tableDataAliases);
+      let tableData = this.filterPaths('pathsResult');
       dLog('tableData', tableData);
-      return tableData;
+      let data = 
+        (tableDataAliases.length && tableData.length) ?
+        tableDataAliases.concat(tableData)
+        : (tableData.length ? tableData : tableDataAliases)
+      ;
+      return data;
     }),
-  tableData : Ember.computed(
+  tableData_bak : Ember.computed(
     'pathsResult.[]',
     'selectedBlock',
     'selectedFeaturesByBlock.@each',

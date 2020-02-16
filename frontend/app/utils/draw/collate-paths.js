@@ -750,7 +750,14 @@ function addPathsToCollation(blockA, blockB, paths)
      * names - that will change probably. */
     let
       /** the order of p.featureA, p.featureB matches the alias order. */
-      aliasDirection = p.featureAObj.blockId === blockA,
+      aliasDirection = p.featureAObj.get('blockId.id') === blockA;
+    if (! aliasDirection && (p.featureAObj.get('blockId.id') !== blockB)) {
+      dLog('aliasDirection no match', aliasDirection, 
+           p.featureAObj.get('blockId.id'), p.featureBObj.get('blockId.id'),
+           blockA, blockB, p);
+    }
+      
+    let
     aliasFeatures = [p.featureA, p.featureB],
     /** the order of featureA and featureB matches the order of blockA and blockB,
      * i.e.  featureA is in blockA, and featureB is in blockB

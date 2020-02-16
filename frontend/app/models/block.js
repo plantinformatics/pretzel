@@ -161,6 +161,43 @@ export default DS.Model.extend({
     return name;
   }),
 
+  /** for the given block, generate the name format which is used in
+   * selectedFeatures.Chromosome
+   * Used by e.g. paths-table to access selectedFeatures - need to match the
+   * block identification which is used by brushHelper() when it generates
+   * selectedFeatures.
+   *
+   * block.get('datasetNameAndScope') may be the same value; it can
+   * use shortName, and its purpose is display, whereas
+   * selectedFeatures.Chromosome is for identifying the block (and
+   * could be changed to blockId).
+   */
+  brushName : Ember.computed('name', 'datasetId', 'referenceBlock', function() {
+    /** This calculation replicates the value used by brushHelper(), which draws
+     * on axisName2MapChr(), makeMapChrName(), copyChrData().
+     * That can be replaced by simply this function, which will then be the
+     * source of the value .Chromosome in selectedFeatures.
+     */
+    let brushName;
+    /** brushHelper() uses blockR.get('datasetId.meta.shortName') where blockR is the data block,
+     * and axisName2MapChr(p) where p is the axisName (referenceBlock).
+     */
+    let shortName = this.get('datasetId.meta.shortName');
+    /** brushes are identified by the referenceBlock (axisName). */
+    let block = this.get('referenceBlock') || this;
+    if (block) {
+      let
+        /** e.g. "IWGSC" */
+        blockName = shortName || block.get('datasetId.name'),
+      /** e.g. "1B" */
+      scope = block.get('name');
+      brushName = blockName + ':' + scope;
+    }
+
+    return brushName;
+  }),
+
+
   /*--------------------------------------------------------------------------*/
 
   /** If the dataset of this block has a parent, return the name of that parent (reference dataset).
