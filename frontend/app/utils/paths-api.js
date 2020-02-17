@@ -142,8 +142,8 @@ const pathsApiFields = ['featureAObj', 'featureBObj'];
 /** This type is created by paths-progressive.js : requestAliases() : receivedData() */
 const pathsApiResultType = {
   // fieldName may be pathsResult or pathsAliasesResult
-  typeCheck : function(resultElt) { if (! resultElt.featureAObj) {
-    dLog('pathsApiResultType : typeCheck', resultElt); } },
+  typeCheck : function(resultElt, trace) { let ok = !! resultElt.featureAObj; if (! ok && trace) {
+    dLog('pathsApiResultType : typeCheck', resultElt); };  return ok;  },
   pathBlock :  function (resultElt, blockIndex) { return resultElt[pathsApiFields[blockIndex]].blockId; },
   /** direct.blocksFeatures() returns an array of features, so match that. See
    * similar commment in alias.blocksFeatures. */
@@ -169,8 +169,8 @@ const pathsApiResultType = {
 const pathsResultTypes = {
   direct : {
     fieldName : 'pathsResult',
-    typeCheck : function(resultElt) { if (! resultElt._id) {
-    dLog('direct : typeCheck', resultElt); } },
+    typeCheck : function(resultElt, trace) { let ok = !! resultElt._id; if (! ok && trace) {
+      dLog('direct : typeCheck', resultElt); }; return ok; },
     pathBlock :  function (resultElt, blockIndex) { return resultElt.alignment[blockIndex].blockId; },
     blocksFeatures : function (resultElt, blockIndex) { return resultElt.alignment[blockIndex].repeats.features; },
     featureEltId : featureEltId,
@@ -180,8 +180,8 @@ const pathsResultTypes = {
   alias :
   {
     fieldName : 'pathsAliasesResult',
-    typeCheck : function(resultElt) { if (! resultElt.aliased_features) {
-    dLog('alias : typeCheck', resultElt); } },
+    typeCheck : function(resultElt, trace) { let ok = !! resultElt.aliased_features;  if (! ok && trace) {
+      dLog('alias : typeCheck', resultElt); }; return ok; },
     pathBlock :  function (resultElt, blockIndex) { return resultElt.aliased_features[blockIndex].blockId; },
     /** There is currently only 1 element in .aliased_features[blockIndex], but
      * pathsOfFeature() handles an array an produces a cross-product, so return
@@ -204,6 +204,22 @@ flowNames = Object.keys(pathsResultTypes);
 // add .flowName to each of pathsResultTypes, which could later require non-const declaration.
 flowNames.forEach(function (flowName) { pathsResultTypes[flowName].flowName = flowName; } );
 
+pathsResultTypes.pathsApiResult = pathsApiResultType;
+
+/** Lookup the pathsResultType, given pathsResultField and optional resultElt.
+ *
+ * When matching each candidate pathsResultType (prt) :
+ * prt.fieldName is checked if it is defined.
+ * prt.typeCheck() is checked if resultElt is given.
+ */
+function pathsResultTypeFor(pathsResultField, resultElt) {
+  let pathsResultType =
+    Object.values(pathsResultTypes).find(
+      (prt) => (! prt.fieldName || (prt.fieldName === pathsResultField)) && (!resultElt || prt.typeCheck(resultElt, false)));
+  return pathsResultType;
+}
+
+
 /**
  * @return	array[2] of blockId, equivalent to blockAdjId  
  */
@@ -213,5 +229,23 @@ function resultBlockIds(pathsResultType, featurePath) {
   return blockIds;
 }
 
+/** Return an accessor function suited to the object type of feature.
+ */
+function featureGetFn(feature) {
+  let fn =
+    feature.get ? (field) => feature.get(field) : (field) => feature[field];
+  return fn;
+}
 
-export  { pathsResultTypes, pathsApiResultType, flowNames, resultBlockIds, pathsOfFeature, locationPairKeyFn };
+/** Used to get the block of a feature in pathsApiResultType (aliases).
+ */
+function featureGetBlock(feature, blocksById) {
+  let
+  block1 = featureGetFn(feature)('blockId'),
+  block2 = block1.content || block1,
+  block = block2.get ? block2 : blocksById[block2];
+  return block;
+}
+
+
+export  { pathsResultTypes, pathsApiResultType, flowNames, pathsResultTypeFor, resultBlockIds, pathsOfFeature, locationPairKeyFn, featureGetFn, featureGetBlock };

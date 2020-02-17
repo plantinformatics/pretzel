@@ -584,6 +584,15 @@ export default Service.extend(Ember.Evented, {
       console.log('blockValues', records);
     return records;
   }),
+  /** Can be used in place of peekBlock().
+   * @return array which maps from blockId to block   
+   */
+  blocksById: Ember.computed(
+    'blockValues.[]',
+    function() {
+      let blocksById = this.get('blockValues').reduce((r, b) => { r[b.get('id')] = b; return r; }, {});
+      return blocksById;
+    }),
   selected: Ember.computed(
     'blockValues.@each.isSelected',
     function() {

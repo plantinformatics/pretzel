@@ -3,7 +3,7 @@ const { inject: { service } } = Ember;
 
 
 import PathData from '../draw/path-data';
-import { pathsResultTypes, pathsApiResultType } from '../../utils/paths-api';
+import { pathsResultTypes, pathsApiResultType, pathsResultTypeFor, featureGetFn, featureGetBlock } from '../../utils/paths-api';
 
 
 const dLog = console.debug;
@@ -114,6 +114,7 @@ export default Ember.Component.extend({
         };
         let blocks = blockAdj.get('blocks'),
           blocksById = blocks.reduce((r, b) => { r[b.get('id')] = b; return r; }, {});
+        let blockIndex = blockAdj.get('blockIndex');
         if (! blockColumn) {
           /** push the names of the 2 adjacent blocks, as an interleaved title row in the table. */
           let
@@ -150,9 +151,8 @@ export default Ember.Component.extend({
              */
 
             let
-              pathsResultType =  (pathsResultField === 'pathsAliasesResult') ?
-              pathsApiResultType
-              : Object.values(pathsResultTypes).find((prt) => prt.fieldName === pathsResultField);
+              pathsResultTypeName = pathsResultField.replace(/Filtered$/, ''),
+              pathsResultType = pathsResultTypeFor(pathsResultTypeName, resultElt);
 
 
             /** accumulate names for table, not used if out is true. */
@@ -171,10 +171,8 @@ export default Ember.Component.extend({
                */
               features = pathsResultType.blocksFeatures(resultElt, i),
               feature = features[0],
-              featureGet = feature.get ? (field) => feature.get(field) : (field) => feature[field], 
-              block1 = featureGet('blockId'),
-              block2 = block1.content || block1,
-              block = block2.get ? block2 : blocksById[block2],
+              featureGet = featureGetFn(feature),
+              block = featureGetBlock(feature, blocksById),
               /** brushes are identified by the referenceBlock (axisName). */
               chrName = block.get('brushName'),
               selectedFeaturesOfBlock = selectedFeaturesByBlock[chrName],
@@ -191,6 +189,7 @@ export default Ember.Component.extend({
                 : isBrushed;
               if (! out) {
                 let value = featureGet('value');
+                let i = blockIndex.get(block);
                 path['block' + i] = block.get('datasetNameAndScope');
                 path['position' + i] = '' + value;
                 path['feature' + i] = featureName;
@@ -215,16 +214,17 @@ export default Ember.Component.extend({
   },
 
   tableData/*Aliases*/ : Ember.computed(
-    'pathsAliasesResult.[]',
+    'pathsResultFiltered.[]',
+    'pathsAliasesResultFiltered.[]',
     'selectedBlock',
     'selectedFeaturesByBlock.@each',
     'blockColumn',
     'showDomains',
     'showCounts',
     function () {
-      let tableDataAliases = this.filterPaths('pathsAliasesResult');
+      let tableDataAliases = this.filterPaths('pathsAliasesResultFiltered');
       dLog('tableDataAliases', tableDataAliases);
-      let tableData = this.filterPaths('pathsResult');
+      let tableData = this.filterPaths('pathsResultFiltered');
       dLog('tableData', tableData);
       let data = 
         (tableDataAliases.length && tableData.length) ?

@@ -283,6 +283,8 @@ export default DS.Model.extend({
       dLog('block axis', this.get('id'), this.get('view'), 'no view.axis for block or referenceBlock', referenceBlock);
   }),
 
+  zoomedDomain : Ember.computed.alias('axis.axis1d.zoomedDomain'),
+
   /*--------------------------------------------------------------------------*/
 
   /** When block is added to an axis, request features, scoped by the axis

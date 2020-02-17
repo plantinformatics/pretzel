@@ -8,6 +8,9 @@ import { task, timeout } from 'ember-concurrency';
 const { inject: { service } } = Ember;
 
 import { stacks, Stacked } from '../utils/stacks';
+import { pathsResultTypeFor, featureGetFn, featureGetBlock } from '../utils/paths-api';
+import { inRangeEither } from '../utils/draw/zoomPanCalcs';
+
 
 const dLog = console.debug;
 const trace_blockAdj = 0;
@@ -16,6 +19,7 @@ export default DS.Model.extend(Ember.Evented, {
 
   pathsPro : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
+  blocksService : service('data/block'),
 
 
   /** id is blockAdjId[0] + '_' + blockAdjId[1], as per.  serializers/block-adj.js : extractId()
@@ -67,7 +71,8 @@ export default DS.Model.extend(Ember.Evented, {
   /*--------------------------------------------------------------------------*/
   /* CFs based on axes could be moved to a component, e.g. draw/ stacks-view or block-adj */
 
-
+  /** @return an array of block-s, for blockId-s in blockAdjId
+   */
   blocks : Ember.computed('blockAdjId', function () {
     let
       blockAdjId = this.get('blockAdjId'),
@@ -99,6 +104,19 @@ export default DS.Model.extend(Ember.Evented, {
     axes1d = axes.mapBy('axis1d');
     return axes1d;
   }),
+
+  /** Return the zoomedDomain for each block of the block-adj, if they are
+   * zoomed, undefined otherwise.
+   *
+   * This is useful because filtering can be skipped if ! zoomed, and the API
+   * request also can omit the range filter if ! zoomed, so this might be used
+   * also by intervalParams() (paths-progressive.js).
+   *
+   * Similar to following @see axesDomains()
+   * @desc but that function determines the referenceBlock's domain if the block is not zoomed.
+   */
+  zoomedDomains :  Ember.computed.mapBy('axes1d', 'zoomedDomain'),
+
   /** Return the domains (i.e. zoom scope) of the 2 axes of this block-adj.
    * These are equivalent : 
    * * this.get('axes').mapBy('domain')
@@ -256,6 +274,71 @@ export default DS.Model.extend(Ember.Evented, {
       result.alias = p;
     return result;
   }),
+  /** @return a Map from a block of the block-adj to its position in blockAdjId.  */
+  blockIndex : Ember.computed('blocks', function () {
+    let blocks = this.get('blocks'),
+    blockIndex = blocks.reduce(function (index, block, i) {
+      index.set(block, i);
+      return index;
+    }, new Map());
+    return blockIndex;
+  }),
+  filterPathsResult(pathsResultTypeName) {
+    let paths, pathsFiltered;
+    let blocksById = this.get('blocksService.blocksById');
+    if ((paths = this.get(pathsResultTypeName))) {
+      let pathsResultType = pathsResultTypeFor(pathsResultTypeName, paths && paths[0]);
+      let 
+      blockIndex = this.get('blockIndex'),
+      /** blocks[] is parallel to zoomedDomains[]. */
+      blocks = this.get('blocks'),
+      /** just a check, will use block.get('zoomedDomain') in filter. */
+      zoomedDomains = this.get('zoomedDomains');
+
+      function filterOut(resultElt, i) {
+        /** based on filterPaths: filterOut() in paths-table */
+        let
+          blockId = pathsResultType.pathBlock(resultElt, i),
+        /** each end may have multiple features.
+         * Here any features outside of the zoomedDomain of the feature's
+         * block's axis are filtered out (or will be in a later version), and later the cross-product is
+         * generated from the remainder.  If all features of one end are
+         * filtered out then the resultElt is filtered out.
+         */
+        features = pathsResultType.blocksFeatures(resultElt, i),
+        /** currently only handles paths with 1 feature at each end; i.e. it
+         * will filter out the whole resultElt if feature[0] is out of range.
+         * To filter out just some features of a resultElt, will need to copy the resultElt and .features[].
+         */
+        feature = features[0],
+        featureGet = featureGetFn(feature), 
+        block = featureGetBlock(feature, blocksById),
+        index = blockIndex.get(block),
+        zoomedDomain = zoomedDomains[index],
+        value = featureGet('value'),
+        out = zoomedDomain && ! inRangeEither(value, zoomedDomain);
+        return out;
+      }
+
+      pathsFiltered = paths.filter(function (resultElt, i) {
+        let include;
+            let out = filterOut(resultElt, 0) || filterOut(resultElt, 1);
+        return ! out;
+      });
+    }
+    return pathsFiltered;
+  },
+  pathsResultFiltered : Ember.computed('blocks', 'pathsResult.[]', function () {
+    let
+    pathsFiltered = this.filterPathsResult('pathsResult');
+    return pathsFiltered;
+  }),
+  pathsAliasesResultFiltered : Ember.computed('pathsAliasesResult.[]', function () {
+    let
+    pathsFiltered = this.filterPathsResult('pathsAliasesResult');
+    return pathsFiltered;
+  }),
+
   /**
    * Depending on zoomCounter is just a stand-in for depending on the domain of each block,
    * which is part of changing the axes (Stacked) to Ember components, and the dependent keys can be e.g. block0.axis.domain.

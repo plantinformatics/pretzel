@@ -289,7 +289,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   draw (pathsResultType, featurePaths) {
     if (featurePaths.length === 0)
       return;
-    pathsResultType.typeCheck(featurePaths[0]);
+    pathsResultType.typeCheck(featurePaths[0], true);
     let store = this.get('store');
 
     /** blockAdjId is also contained in the result featurePaths
