@@ -8,6 +8,9 @@ import { pathsResultTypes, pathsApiResultType, pathsResultTypeFor, featureGetFn,
 
 const dLog = console.debug;
 
+const columnFields = ['block', 'feature', 'position'];
+
+
 /**
  * Arguments passed to template :
  * @param selectedFeatures  catenation of features within all brushed regions
@@ -246,21 +249,72 @@ export default Ember.Component.extend({
       return tableData;
     }),
 
+  csvExportData : Ember.computed('tableData', 'blockColumn', function () {
+    let activeFields = columnFields.slice(this.get('blockColumn') ? 0 : 1);
+    let headerRow =
+    [0, 1].reduce(function (result, end) {
+      activeFields.reduce(function (result, fieldName) {
+        result.push('"' + fieldName + end + '"');
+        return result;
+      }, result);
+      return result;
+    }, []);
+    dLog('csvExportData', headerRow);
+
+    let data = this.get('tableData').map((d, i) => {
+      let da =
+      [0, 1].reduce(function (result, end) {
+        activeFields.reduce(function (result, fieldName) {
+          // if undefined, push '' for a blank cell.
+          let v = d[fieldName + end],
+          /** wrap text fields with double-quotes, and also position with comma - i.e. intervals 'from,to'.  */
+          quote = (fieldName === 'block') || (fieldName === 'feature') || (v.indexOf(',') > -1),
+          outVal = v ? ( quote ? '"' + v + '"' : v) : '';
+          result.push(outVal);
+          return result;
+        }, result);
+        return result;
+      }, []);
+      if (i === 0)
+        dLog('csvExportData', d, da);
+      return da;
+    });
+    data.unshift(headerRow);
+    return data;
+  }),
+
   /*--------------------------------------------------------------------------*/
 
+  /** Send API request for the block-adj-s displayed in the table, with
+   * fullDensity=true, i.e. not limited by GUI path densityFactor / nSamples /
+   * nFeatures setings.
+   */
   requestAllPaths() {
     dLog('requestAllPaths', this);
-    
+
+    let selectedBlock = this.get('selectedBlock');
+    let loadingPromises = [];
+
     let pathsPro = this.get('pathsPro');
     pathsPro.set('fullDensity', true);
 
     let
       blockAdjs = this.get('flowsService.blockAdjs');
     blockAdjs.forEach(function (blockAdj) {
-      let p = blockAdj.call_taskGetPaths();
+      if (! selectedBlock || blockAdj.adjacentTo(selectedBlock)) {
+        let p = blockAdj.call_taskGetPaths();
+        loadingPromises.push(p);
+      }
     });
-
     pathsPro.set('fullDensity', false);
+
+    /* set .loading true while API requests are in progress. */
+    if (loadingPromises.length) {
+      let all = Ember.RSVP.allSettled(loadingPromises);
+      this.set('loading', true);
+      all.then(() => this.set('loading', false));
+    }
+
   },
   /*--------------------------------------------------------------------------*/
 

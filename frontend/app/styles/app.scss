@@ -1362,4 +1362,13 @@ div.metaeditor-panel div.jsoneditor {
 .paths-tables .optionControls  > div {
   flex-grow: 1;
 }
+
+.paths-tables div.panel-body > div.btn-group > div {
+  display: flex;
+}
+
+.paths-tables div.panel-body > div.btn-group > div > * {
+  margin: auto;
+}
+
 /* -------------------------------------------------------------------------- */

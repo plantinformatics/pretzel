@@ -7,7 +7,8 @@
 
       {{!-- based on elem/button-submit.hbs, could be factored --}}
       <div class="">
-        <button type="submit" {{action "requestAllPaths"}} class="btn btn-info pull-right {{if loading 'disabled'}}">Retrieve all paths in brushed interval</button>
+        <button type="submit" {{action "requestAllPaths"}} class="btn btn-info {{if loading 'disabled'}}">Retrieve all paths in brushed interval</button>
+        <span>{{#component "ember-csv@file-anchor" data=csvExportData}} CSV Download{{/component}} </span>
         <br>
         <br>
       </div>
@@ -24,18 +25,20 @@
   <div>{{input type="checkbox" name="showCounts" checked=showCounts }} Show Counts</div>
 </div>
 
-{{#data-sorter data=tableData as |ds|}}
-  {{#data-table data=ds.data
-     classNames=tableClassNames as |t|}}
-    {{#if blockColumn}}
-      {{t.sortableColumn propertyName='block0'  name='Block'        sortinformationupdated=(action ds.onsortfieldupdated)}}
-    {{/if}}
-    {{t.sortableColumn propertyName='feature0'  name='From Feature' sortinformationupdated=(action ds.onsortfieldupdated)}}
-    {{t.sortableColumn propertyName='position0' name='Position'     sortinformationupdated=(action ds.onsortfieldupdated)}}
-    {{#if blockColumn}}
-      {{t.sortableColumn propertyName='block1'  name='Block'        sortinformationupdated=(action ds.onsortfieldupdated)}}
+{{#data-filterer data=tableData as |df|}}
+  {{#data-sorter data=df.data as |ds|}}
+    {{#data-table data=ds.data
+       classNames=tableClassNames as |t|}}
+      {{#if blockColumn}}
+        {{t.filterableColumn propertyName='block0'  name='Block'        sortinformationupdated=(action ds.onsortfieldupdated) filterinformationupdated=(action df.onfilterfieldupdated) }}
+      {{/if}}
+      {{t.sortableColumn propertyName='feature0'  name='From Feature' sortinformationupdated=(action ds.onsortfieldupdated)}}
+      {{t.sortableColumn propertyName='position0' name='Position'     sortinformationupdated=(action ds.onsortfieldupdated)}}
+      {{#if blockColumn}}
+        {{t.filterableColumn propertyName='block1'  name='Block'        sortinformationupdated=(action ds.onsortfieldupdated) filterinformationupdated=(action df.onfilterfieldupdated) }}
     {{/if}}
     {{t.sortableColumn propertyName='feature1'  name='To Feature'   sortinformationupdated=(action ds.onsortfieldupdated)}}
     {{t.sortableColumn propertyName='position1' name='Position'     sortinformationupdated=(action ds.onsortfieldupdated)}}
   {{/data-table}}
 {{/data-sorter}}
+{{/data-filterer}}
