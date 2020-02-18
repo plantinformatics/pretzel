@@ -1355,20 +1355,24 @@ div.metaeditor-panel div.jsoneditor {
 }
 /* -------------------------------------------------------------------------- */
 
-.paths-tables .optionControls {
+.paths-table .optionControls {
   display: flex;
   margin-bottom: 1em;
 }
-.paths-tables .optionControls  > div {
+.paths-table .optionControls  > div {
   flex-grow: 1;
 }
 
-.paths-tables div.panel-body > div.btn-group > div {
+.paths-table div.panel-body > div.btn-group > div {
   display: flex;
 }
 
-.paths-tables div.panel-body > div.btn-group > div > * {
+.paths-table div.panel-body > div.btn-group > div > * {
   margin: auto;
+}
+
+.paths-table div.panel-body > div.btn-group > div > button > a {
+  color : inherit;
 }
 
 /* -------------------------------------------------------------------------- */
