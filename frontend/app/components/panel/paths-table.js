@@ -1,7 +1,8 @@
 import Ember from 'ember';
 const { inject: { service } } = Ember;
 
-/* global d3 Handsontable */
+/* global d3 */
+/* global Handsontable */
 
 
 import PathData from '../draw/path-data';
@@ -33,7 +34,7 @@ if (! d3.selection.prototype.moveToFront) {
 }
 
 /** Switch to select either HandsOnTable or ember-contextual-table. */
-const useHandsOnTable = true;
+const useHandsOnTable = false;
 /** id of element which will hold HandsOnTable. */
 const hoTableId = 'paths-table-ho';
 
@@ -61,6 +62,17 @@ export default Ember.Component.extend({
   showDomains : false,
 
   classNames: ['paths-table'],
+
+  didInsertElement() {
+    this._super(...arguments);
+
+    if (! useHandsOnTable) {
+      this.$(".contextual-data-table").colResizable({
+        liveDrag:true,
+        draggingClass:"dragging"
+      });
+    }
+  },
 
   didReceiveAttrs() {
     this._super(...arguments);
@@ -314,15 +326,20 @@ export default Ember.Component.extend({
         activeFields.reduce(function (result, fieldName) {
           // if undefined, push '' for a blank cell.
           let v = d[fieldName + end],
-          /** wrap text fields with double-quotes, and also position with comma - i.e. intervals 'from,to'.  */
-          quote = (fieldName === 'block') || (fieldName === 'feature') || (v.indexOf(',') > -1),
-          /** If position value is an interval, it will appear at this point as 'number,number'.
-           * What to use for interval separator ?  There is a convention of using
-           * '-' for intervals in genome data, but that may cause problems in a
-           * csv - Excel may evaluate it as minus.   In a tsv ',' would be ok.
-           * For now use ':'. */
-          v1 = v.replace(/,/, ':'),
-          outVal = v1 ? ( quote ? '"' + v1 + '"' : v1) : '';
+          outVal = v && format(fieldName, v);
+          function format (fieldName, v) {
+            let
+              /** wrap text fields with double-quotes, and also position with comma - i.e. intervals 'from,to'.  */
+              quote = (fieldName === 'block') || (fieldName === 'feature') || (v.indexOf(',') > -1),
+            /** If position value is an interval, it will appear at this point as 'number,number'.
+             * What to use for interval separator ?  There is a convention of using
+             * '-' for intervals in genome data, but that may cause problems in a
+             * csv - Excel may evaluate it as minus.   In a tsv ',' would be ok.
+             * For now use ':'. */
+            v1 = v.replace(/,/, ':'),
+            outVal = v1 ? ( quote ? '"' + v1 + '"' : v1) : '';
+            return outVal;
+          }
           result.push(outVal);
           return result;
         }, result);
