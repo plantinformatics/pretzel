@@ -34,7 +34,7 @@ if (! d3.selection.prototype.moveToFront) {
 }
 
 /** Switch to select either HandsOnTable or ember-contextual-table. */
-const useHandsOnTable = false;
+const useHandsOnTable = true;
 /** id of element which will hold HandsOnTable. */
 const hoTableId = 'paths-table-ho';
 
@@ -326,7 +326,15 @@ export default Ember.Component.extend({
         activeFields.reduce(function (result, fieldName) {
           // if undefined, push '' for a blank cell.
           let v = d[fieldName + end],
-          outVal = v && format(fieldName, v);
+          outVal = (v === undefined) ? '' : ((typeof v !== "string") ? v: format(fieldName, v));
+          /** Format some table cell values : wrap text values with double-quotes;
+           * If the position field is an interval it will present here as a
+           * string containing the start&end locations of the interval,
+           * separated by a comma - change the comma to a semi-colon.
+           *
+           * @param fieldName one of columnFields[]
+           * @param v is type "string" and is not undefined.
+           */
           function format (fieldName, v) {
             let
               /** wrap text fields with double-quotes, and also position with comma - i.e. intervals 'from,to'.  */
@@ -337,7 +345,7 @@ export default Ember.Component.extend({
              * csv - Excel may evaluate it as minus.   In a tsv ',' would be ok.
              * For now use ':'. */
             v1 = v.replace(/,/, ':'),
-            outVal = v1 ? ( quote ? '"' + v1 + '"' : v1) : '';
+            outVal = quote ? '"' + v1 + '"' : v1;
             return outVal;
           }
           result.push(outVal);
