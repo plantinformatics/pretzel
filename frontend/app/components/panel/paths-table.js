@@ -58,8 +58,14 @@ export default Ember.Component.extend({
   useHandsOnTable : useHandsOnTable,
   /** true enables display of the 'block' column for each end of the path. */
   blockColumn : true,
+  /** true enables checkboxes to enable the following in the GUI  */
+  devControls : false,
   /** true enables display of the brushedDomains in the table.  */
   showDomains : false,
+  /** true enables display in the table of paths counts pre & post filter.   */
+  showCounts : false,
+  /** true filters out paths which do not have >=1 end in a brush. */
+  onlyBrushedAxes : true,
 
   classNames: ['paths-table'],
 
@@ -157,6 +163,7 @@ export default Ember.Component.extend({
     let showDomains = this.get('showDomains');
     /** true means show counts of paths before and after filtering in the table.  */
     let showCounts = this.get('showCounts');
+    let onlyBrushedAxes = this.get('onlyBrushedAxes');
 
 
     let
@@ -226,7 +233,9 @@ export default Ember.Component.extend({
              * @param resultElt one row (path) of the paths result
              * @param i 0 or 1 to select either endpoint of the path resultElt
              * @param path  array to accumulate path endpoint details in text form for table output
-             * @return true if the endpoint is in selectedFeatures, or its block is not brushed.
+             * @return { axisBrushed : axis is brushed,
+             * out : axis is brushed and path endpoint is not in the brush (i.e. not in selectedFeatures)
+             * }
              */
             function filterOut(resultElt, i, path) {
               let
@@ -244,15 +253,21 @@ export default Ember.Component.extend({
               featureName = featureGet('name'),
               /** if the axis is brushed but there are no features in this block
                * within the brush, then selectedFeaturesOfBlock will be
-               * undefined (empty).  If the axis is not brushed then no filter
-               * is applied on this endpoint.
+               * undefined (empty).  If ! onlyBrushedAxes and the axis is not
+               * brushed then no filter is applied on this endpoint.
                */
               isBrushed = !!axisBrush.brushOfBlock(block),
+              /** out means path end is excluded from a brush, i.e. there is a
+               * brush on the axis of the path end, and the path end is not in it.
+               * (the requirement was changed after commit a6e884c, and
+               * onlyBrushedAxes was added).
+               */
               out = selectedFeaturesOfBlock ?
                 /* endpoint feature is not in selectedFeaturesOfBlock */
                 ! selectedFeaturesOfBlock[featureName]
+                /* end axis is brushed, yet feature is not selected, so it is out. */
                 : isBrushed;
-              if (! out) {
+              {
                 let value = featureGet('value');
                 let i = blockIndex.get(block);
                 path['block' + i] = block.get('datasetNameAndScope');
@@ -264,9 +279,18 @@ export default Ember.Component.extend({
                   path['position' + i] = '' + value;
                 path['feature' + i] = featureName;
               }
-              return out;
+              return {axisBrushed : isBrushed, out};
             }
-            let out = filterOut(resultElt, 0, path) || filterOut(resultElt, 1, path);
+            /** Considering the axes of each end of the path : 
+             * . one brushed : show paths with an end in the brush
+             * . both brushed : show paths with ends in both brushes
+             * . neither brushed : don't show
+             *
+             * Evaluate both because they populate path, and path is in if
+             * either end is in a brush, but out if both ends are not in a brush
+             * on its axis. */
+            let ends = [0, 1].map((i) => filterOut(resultElt, i, path)),
+            out = (ends[0].out || ends[1].out) || (onlyBrushedAxes ? (! ends[0].axisBrushed && ! ends[1].axisBrushed) : false);
             if (! out) {
               result.push(path);
               outCount++;
@@ -296,6 +320,7 @@ export default Ember.Component.extend({
     'showInterval',
     'showDomains',
     'showCounts',
+    'onlyBrushedAxes',
     function () {
       let tableData = this.filterPaths('pathsResultFiltered');
       if (tableData.length < 20)

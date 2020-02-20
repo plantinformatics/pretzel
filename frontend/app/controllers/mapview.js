@@ -48,6 +48,13 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
        * selection tab.
        */
       let rightTab = this.get('layout.right.tab');
+      /* this feature made sense when (selected) features table was new, but now
+       * there is also paths table so it is not clear which tab to switch to,
+       * and now the the table sizes (ie. counts of brushed features / paths)
+       * are shown in their respective tabs, which serves to draw attention to
+       * the newly available information, so this setTab() is not required.
+       */
+      if (false)
       if ((rightTab !== 'selection') && (rightTab !== 'paths'))
         this.send('setTab', 'right', 'selection');
     },
