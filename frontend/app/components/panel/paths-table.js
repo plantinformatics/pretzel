@@ -15,7 +15,7 @@ const trace = 0;
 /** for trace */
 const fileName = 'panel/paths-table.js';
 
-const columnFields = ['block', 'feature', 'position'];
+const columnFields = ['block', 'feature', 'position', 'positionEnd'];
 const columnFieldsCap = columnFields.map((s) => s.capitalize());
 
 var capitalize = (string) => {
@@ -149,6 +149,8 @@ export default Ember.Component.extend({
     let axisBrush = this.get('axisBrush');
     /** true means show the block name:scope in a column instead of as a row. */
     let blockColumn = this.get('blockColumn');
+    /** true means if the position is an interval, also show the end of the interval.  */
+    let showInterval = this.get('showInterval');
     /** true means show the brushed domains in the table. This may be omitted, although it
      * seems important to know if the axis was brushed and what the region
      * was.  */
@@ -167,7 +169,12 @@ export default Ember.Component.extend({
           if (block)
             row['block' + i] = block;
           row['feature' + i] = feature;
-          row['position' + i] = position;
+          if (showInterval && position.length) {
+            row['position' + i] = position[0];
+            row['positionEnd' + i] = position[1];
+          }
+          else
+            row['position' + i] = position;
           return row;
         };
         let blocks = blockAdj.get('blocks'),
@@ -189,7 +196,7 @@ export default Ember.Component.extend({
             let ab = axisBrush.brushOfBlock(b),
             brushedDomain = ab && ab.get('brushedDomain');
             if (brushedDomain) {
-              setEndpoint(rowHash, i, undefined, brushedDomain[0], brushedDomain[1]);
+              setEndpoint(rowHash, i, undefined, undefined, brushedDomain);
             }
             return rowHash;
           }, {});
@@ -249,7 +256,12 @@ export default Ember.Component.extend({
                 let value = featureGet('value');
                 let i = blockIndex.get(block);
                 path['block' + i] = block.get('datasetNameAndScope');
-                path['position' + i] = '' + value;
+                if (value.length) {
+                  path['position' + i] = value[0];
+                  path['positionEnd' + i] = value[1];
+                }
+                else
+                  path['position' + i] = '' + value;
                 path['feature' + i] = featureName;
               }
               return out;
@@ -281,6 +293,7 @@ export default Ember.Component.extend({
     'selectedBlock',
     'selectedFeaturesByBlock.@each',
     'blockColumn',
+    'showInterval',
     'showDomains',
     'showCounts',
     function () {
@@ -301,24 +314,40 @@ export default Ember.Component.extend({
   /** From columnFields, select those columns which are enabled.
    * The blockColumn flag enables the 'block' column.
    */
-  activeFields :  Ember.computed('blockColumn',  function () {
+  activeFields :  Ember.computed('blockColumn', 'showInterval', function () {
     let activeFields = columnFields.slice(this.get('blockColumn') ? 0 : 1);
+    if (! this.get('showInterval'))
+      activeFields.pop(); // pop off : positionEnd
     return activeFields;
+  }),
+  /** Generate the names of values in a row.  */
+  rowValues : Ember.computed('activeFields', function () {
+    let activeFields = this.get('activeFields');
+    let rowValues =
+    [0, 1].reduce(function (result, end) {
+      activeFields.reduce(function (result, fieldName) {
+        result.push(fieldName + end);
+        return result;
+      }, result);
+      return result;
+    }, []);
+    return rowValues;
+  }),
+  /** Generate the column headings row.
+   */
+  headerRow : Ember.computed('rowValues', function () {
+    let headerRow = this.get('rowValues').map((fieldName) => capitalize(fieldName));
+    dLog('headerRow', headerRow);
+    return headerRow;
   }),
   /** Map from tableData to the data form used by the csv export / download.
    */
   csvExportData : Ember.computed('tableData', 'blockColumn', function () {
     let activeFields = this.get('activeFields');
-    let headerRow =
-    [0, 1].reduce(function (result, end) {
-      activeFields.reduce(function (result, fieldName) {
-        let columnHeading = capitalize(fieldName);
-        result.push('"' + columnHeading + end + '"');
-        return result;
-      }, result);
-      return result;
-    }, []);
-    dLog('csvExportData', headerRow);
+    /** column header text does not contain punctuation, but wrapping with
+     * quotes may help clarify to Xl that it is text.
+     */
+    let headerRow = this.get('headerRow').map((name) => '"' + name + '"');
 
     let data = this.get('tableData').map((d, i) => {
       let da =
@@ -331,6 +360,10 @@ export default Ember.Component.extend({
            * If the position field is an interval it will present here as a
            * string containing the start&end locations of the interval,
            * separated by a comma - change the comma to a semi-colon.
+           *
+           * With the addition of showInterval, intervals won't be expressed as
+           * strings containing comma, so most of this will be not needed, can
+           * be reduced to just the quoting.
            *
            * @param fieldName one of columnFields[]
            * @param v is type "string" and is not undefined.
@@ -440,59 +473,76 @@ export default Ember.Component.extend({
     }
   },
 
+  /** for HO table configuration.   */
+  columns : Ember.computed('rowValues', function () {
+    let columns = this.get('rowValues').map((name) => {
+      let options = { data : name};
+      if (name.match(/^position/)) {
+        options.type = 'numeric';
+        options.numericFormat = {
+          pattern: '0,0.*'
+        };
+      }
+      else
+        options.type = 'text';
+      return options;
+    });
+    return columns;
+  }),
+
+  /** for HO table configuration. */
+  colTypes : {
+      block    : { width : 100, header : '<span title = "e.g. chromosome or linkage group">Block</span>'},
+      feature  : { width : 135, header : '<span title = "e.g. marker / gene">Feature</span>'},
+      position : { width :  60, header : 'Position'},
+      positionEnd : { width : 60, header : 'Position End'}
+    },
+  /** for HO table configuration.
+   *
+   * colTypeNames and colHeaders could also be used for generating
+   * filterableColumn / sortableColumn in the template, although for the current
+   * number of columns it probably would not reduce the code size.
+   */
+  colTypeNames : Ember.computed('rowValues', function () {
+    let colTypeNames = this.get('rowValues').map((name) => {
+      return name.replace(/[01]$/, '');
+    });
+    return colTypeNames;
+  }),
+  /** for HO table configuration. */
+  colHeaders : Ember.computed('colTypeNames', function () {
+    let colTypes = this.get('colTypes'),
+    colHeaders = this.get('colTypeNames').map((name) => colTypes[name].header);
+   return colHeaders;
+  }),
+  /** for HO table configuration.
+   * HO column settings (columns, colHeaders, colWidths) could be combined into
+   * a single CP, but the widths will change depending on window resize,
+   * independent of columns changing.
+   */
+  colWidths : Ember.computed('colTypeNames', function () {
+    let colTypes = this.get('colTypes'),
+     colWidths =  this.get('colTypeNames').map((name) => colTypes[name].width);
+    return colWidths;
+  }),
+
   createHoTable: function(data) {
     /** copied from table-brushed.js */
     var that = this;
     dLog("createHoTable", this);
 
     let tableDiv = Ember.$('#' + hoTableId)[0];
+
+
     dLog("tableDiv", tableDiv);
       var table = new Handsontable(tableDiv, {
         data: data || [['', '', '']],
         minRows: 1,
         rowHeaders: true,
-        columns: [
-          {
-            data: 'block0',
-            type: 'text'
-          },
-          {
-            data: 'feature0',
-            type: 'text'
-          },
-          {
-            data: 'position0',
-            type: 'numeric',
-            numericFormat: {
-              pattern: '0,0.*'
-            }
-          },
-          {
-            data: 'block1',
-            type: 'text'
-          },
-          {
-            data: 'feature1',
-            type: 'text'
-          },
-          {
-            data: 'position1',
-            type: 'numeric',
-            numericFormat: {
-              pattern: '0,0.*'
-            }
-          }
-        ],
-        colHeaders: [
-          '<span title = "e.g. chromosome or linkage group">Block</span>',
-          '<span title = "e.g. marker / gene">Feature</span>',
-          'Position',
-          '<span title = "e.g. chromosome or linkage group">Block</span>',
-          '<span title = "e.g. marker / gene">Feature</span>',
-          'Position'
-        ],
+        columns: this.get('columns'),
+        colHeaders: this.get('colHeaders'),
         headerTooltips: true,
-        colWidths: [100, 135, 60, 100, 135, 60],
+        colWidths: this.get('colWidths'),
         height: 600,
         manualRowResize: true,
         manualColumnResize: true,
@@ -536,18 +586,30 @@ export default Ember.Component.extend({
   },
 
 
-  onSelectionChange: function () {
+  onDataChange: function () {
     let data = this.get('tableData'),
     me = this,
     table = this.get('table');
     if (table)
     {
       if (trace)
-        dLog(fileName, "onSelectionChange", table, data.length);
+        dLog(fileName, "onDataChange", table, data.length);
       // me.send('showData', data);
       Ember.run.throttle(() => table.updateSettings({data:data}), 500);
     }
   }.observes('tableData'),
+
+  onColumnsChange : function ()  {
+    let table = this.get('table');
+    if (table) {
+      let colSettings = {
+        columns: this.get('columns'),
+        colHeaders: this.get('colHeaders'),
+        colWidths: this.get('colWidths')
+      };
+      table.updateSettings(colSettings);
+    }
+  }.observes('columns', 'colHeaders', 'colWidths'),
 
   highlightFeature: function(feature) {
     d3.selectAll("g.axis-outer > circle")

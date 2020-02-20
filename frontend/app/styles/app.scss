@@ -1375,4 +1375,16 @@ div.metaeditor-panel div.jsoneditor {
   color : inherit;
 }
 
+.paths-table td.contextual-cell.numeric {
+  /* Align a numeric value.
+   * CSS does not currently offer a way to align numeric content by decimal point
+   * where the fractional part may vary in length, or there may be no decimal point,
+   * as proposed here : https://www.w3.org/Style/CSS/Tracker/issues/38
+   * td align="char" char="." is not supported. (https://www.w3schools.com/tags/att_td_char.asp)
+   * An alternative is to split the integer and fractional part into 2 columns,
+   * e.g. https://stackoverflow.com/a/5937346, https://stackoverflow.com/a/29924653 */
+  text-align: right;
+  padding-right: 1em !important;
+}
+
 /* -------------------------------------------------------------------------- */
