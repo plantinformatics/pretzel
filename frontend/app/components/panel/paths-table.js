@@ -554,10 +554,15 @@ export default Ember.Component.extend({
         },
         contextMenu: true,
         sortIndicator: true,
-        columnSorting: {
-          column: 2,
-          sortOrder: true
-        }
+        multiColumnSorting: true,
+        /* in the latest non-commercial version 6.2.2, multiColumnSorting is
+         * present but didn't work with 'multiColumnSorting: true';
+         * it is fine for all other features used.
+         * The following line enables the app to work with versions after 6.2.2,
+         * refn : https://handsontable.com/blog/articles/2019/3/handsontable-drops-open-source-for-a-non-commercial-license
+         * This app is used for academic research.
+         */
+        licenseKey: 'non-commercial-and-evaluation'
       });
 
     let $ = Ember.$;

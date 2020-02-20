@@ -66,12 +66,6 @@
   {{#if layout.right.visible}}
     <div class="" style="flex-basis:400px; flex-grow:1; display:flex; flex-direction:column">
       <ul class="nav nav-tabs">
-        {{#elem/button-tab
-           side="right"
-           key="selection"
-           state=layout.right.tab onClick="setTab"}}
-          {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{selectedFeatures.length}}</span>
-        {{/elem/button-tab}}
         {{#if model.params.parsedOptions.blockTab}}
           {{#elem/button-tab
              side="right"
@@ -85,6 +79,12 @@
            key="dataset"
            state=layout.right.tab onClick="setTab"}}
           {{elem/icon-base name="globe"}}&nbsp; Dataset
+        {{/elem/button-tab}}
+        {{#elem/button-tab
+           side="right"
+           key="selection"
+           state=layout.right.tab onClick="setTab"}}
+          {{elem/icon-base name="asterisk"}}&nbsp; Features <span class="badge">{{selectedFeatures.length}}</span>
         {{/elem/button-tab}}
         {{#elem/button-tab
            side="right"

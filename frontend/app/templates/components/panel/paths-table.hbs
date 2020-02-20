@@ -7,7 +7,7 @@
 
       {{!-- based on elem/button-submit.hbs, could be factored --}}
       <div class="">
-        <button type="submit" {{action "requestAllPaths"}} class="btn btn-info {{if loading 'disabled'}}">Retrieve all paths in brushed interval</button>
+        <button type="submit" {{action "requestAllPaths"}} class="btn btn-info {{if loading 'disabled'}}">Get all brushed paths</button>
         <button class="btn btn-info">{{#component "ember-csv@file-anchor" data=csvExportData}} CSV Download{{/component}} </button>
         <br>
         <br>
@@ -22,8 +22,10 @@
 
   <div>{{input type="checkbox" name="blockColumn" checked=blockColumn }} Show block columns</div>
   <div>{{input type="checkbox" name="showInterval" checked=showInterval }} Show Interval</div>
+{{#if false}}
   <div>{{input type="checkbox" name="showDomains" checked=showDomains }} Show Brushed Regions</div>
   <div>{{input type="checkbox" name="showCounts" checked=showCounts }} Show Counts</div>
+{{/if}}
 </div>
 
 {{#if useHandsOnTable}}
