@@ -98,8 +98,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    */
   drawCurrent : function(prType) {
     let
-    /** e.g. 'pathsResult' or 'pathsAliasesResult' */
-    pathsResult = this.get('blockAdj.' + prType.fieldName),
+    /** e.g. 'pathsResult' or 'pathsAliasesResult'
+     * Use the filtered form of the API result.
+     */
+    pathsResult = this.get('blockAdj.' + prType.fieldName + 'Filtered'),
     fnName = prType.fieldName + 'Length',
     length = pathsResult && pathsResult.length;
     dLog(fnName, this, length);
