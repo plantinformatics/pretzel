@@ -273,7 +273,12 @@ function eltClassName(f)
    * elsewhere, but handle it here by converting f to a string.
    */
   let fString = (typeof(f) == 'string') ? f : '' + f,
-  fPrefixed = CSS.escape(f); // cssHexEncode(fString.replace(/^([\d])/, "_$1"));
+  /** d3.selectAll() is not matching the result of CSS.escape() on marker names
+   * starting with a digit. Prefixing with _ first works.  Then CSS.escape() can
+   * handle any following punctuation.
+   */
+  fPrefixNumber = fString.replace(/^([\d])/, "_$1"),
+  fPrefixed = CSS.escape(fPrefixNumber); // cssHexEncode();
   return fPrefixed;
 }
 
