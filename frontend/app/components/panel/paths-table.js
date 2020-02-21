@@ -22,6 +22,19 @@ var capitalize = (string) => {
   return string[0].toUpperCase() + string.slice(1);
 };
 
+/** Concat the given arrays.
+ * If either array is empty then return the other array (possibly Array.concat()
+ * does this optimisation already).
+ * Used in tableData() - it is expected in this use case that one or both of
+ * tableData{,Aliases} will commonly be empty.
+ */
+function concatOpt(a, b) {
+  let c = (a.length && b.length) ? a.concat(b)
+    : (b.length ? b : a);
+  return c;
+}
+
+
 /** .moveToFront() is used in highlightFeature()
  * table-brushed.js:highlightFeature() will also install (and override) this.
  */
@@ -80,6 +93,12 @@ export default Ember.Component.extend({
     }
   },
 
+  willDestroyElement() {
+    this.sendUpdatePathsCount('');
+
+    this._super(...arguments);
+  },
+
   didReceiveAttrs() {
     this._super(...arguments);
 
@@ -112,8 +131,16 @@ export default Ember.Component.extend({
     showData(d)
     {
       this.showData(d);
-    }
+    },
+    updatePathsCount(pathsCount) {
+      this.sendAction('updatePathsCount', pathsCount);
+    },
   },
+
+  sendUpdatePathsCount(pathsCount) {
+    Ember.run.later(() => this.send('updatePathsCount', pathsCount));
+  },
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -157,6 +184,7 @@ export default Ember.Component.extend({
     let blockColumn = this.get('blockColumn');
     /** true means if the position is an interval, also show the end of the interval.  */
     let showInterval = this.get('showInterval');
+    let devControls = this.get('devControls');
     /** true means show the brushed domains in the table. This may be omitted, although it
      * seems important to know if the axis was brushed and what the region
      * was.  */
@@ -187,8 +215,11 @@ export default Ember.Component.extend({
         let blocks = blockAdj.get('blocks'),
           blocksById = blocks.reduce((r, b) => { r[b.get('id')] = b; return r; }, {});
         let blockIndex = blockAdj.get('blockIndex');
-        if (! blockColumn) {
-          /** push the names of the 2 adjacent blocks, as an interleaved title row in the table. */
+        if (devControls && ! blockColumn) {
+          /** push the names of the 2 adjacent blocks, as an interleaved title row in the table.
+           * This may be a useful feature for some users, but for now is only
+           * enabled as a development check.
+           */
           let
           namesFlat = blocks.reduce(
             (rowHash, b, i) =>
@@ -328,11 +359,8 @@ export default Ember.Component.extend({
       let tableDataAliases = this.filterPaths('pathsAliasesResultFiltered');
       if (tableDataAliases.length < 20)
         dLog('tableDataAliases', tableDataAliases);
-      let data = 
-        (tableDataAliases.length && tableData.length) ?
-        tableDataAliases.concat(tableData)
-        : (tableData.length ? tableData : tableDataAliases)
-      ;
+      let data = concatOpt(tableData, tableDataAliases);
+      this.sendUpdatePathsCount(data.length);
       return data;
     }),
 

@@ -90,7 +90,7 @@
            side="right"
            key="paths"
            state=layout.right.tab onClick="setTab"}}
-          {{elem/icon-base name="globe"}}&nbsp; Paths
+          {{elem/icon-base name="globe"}}&nbsp; Paths <span class="badge">{{pathsTableSummary.count}}</span>
         {{/elem/button-tab}}
         {{#if model.params.parsedOptions.advSettings}}
           {{#elem/button-tab
@@ -123,7 +123,8 @@
         {{else if (compare layout.right.tab '===' 'paths')}}
           {{panel/paths-table
             selectedFeatures=selectedFeatures
-            selectedBlock=selectedBlock}}
+            selectedBlock=selectedBlock
+            updatePathsCount=(action 'updatePathsCount')}}
         {{else if (and (compare layout.right.tab '===' 'settings') model.params.parsedOptions.advSettings)}}
           {{panel/manage-settings
             selectedFeatures=selectedFeatures

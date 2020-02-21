@@ -66,6 +66,12 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       // dLog("updateFeaturesInBlocks in mapview", featuresInBlocks);
       this.set('featuresInBlocks', featuresInBlocks);
     },
+    /** from paths-table */
+    updatePathsCount: function(pathsCount) {
+      dLog("updatePathsCount in mapview", pathsCount);
+      this.set('pathsTableSummary.count', pathsCount);
+    },
+
 
     /** Change the state of the named block to viewed.
      * If this block has a parent block, also add the parent.
@@ -209,6 +215,8 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   mapsToView: [],
 
   selectedFeatures: [],
+  /** counts of selected paths, from paths-table; shown in tab. */
+  pathsTableSummary : {},
 
 
   scaffolds: undefined,
