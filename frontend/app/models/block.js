@@ -6,19 +6,28 @@ const { inject: { service } } = Ember;
 import { A } from '@ember/array';
 import { and } from '@ember/object/computed';
 
+import { task } from 'ember-concurrency';
 
 import { intervalMerge }  from '../utils/interval-calcs';
+
+/*----------------------------------------------------------------------------*/
 
 const trace_block = 0;
 const dLog = console.debug;
 
-
 const moduleName = 'models/block';
 
+/*----------------------------------------------------------------------------*/
+
+/** trace the (array) value or just the length depending on trace level. */
+function valueOrLength(value) { return (trace_block > 1) ? value : value.length; }
+
+/*----------------------------------------------------------------------------*/
 
 export default DS.Model.extend({
   pathsP : service('data/paths-progressive'), // for getBlockFeaturesInterval()
   blockService : service('data/block'),
+  auth: service('auth'),
 
   datasetId: DS.belongsTo('dataset'),
   annotations: DS.hasMany('annotation', { async: false }),
@@ -146,6 +155,64 @@ export default DS.Model.extend({
     isChartable = tags && tags.length && (tags.indexOf('chartable') >= 0);
     return isChartable;
   }),
+
+  /*--------------------------------------------------------------------------*/
+
+  /*--------------------------------------------------------------------------*/
+
+  /** these 3 functions ensureFeatureLimits(), taskGetLimits(), getLimits() (and
+   * also valueOrLength()) are copied from services/data/block.js;
+   * although the API is the same, this use case is for a loaded block, and the
+   * services/data/ case is for all blocks or a blockId (which may not be
+   * loaded).
+   * This can be rationalised when re-organising the model construction.
+   */
+
+  /** get featureLimits if not already received.  After upload the block won't have
+   * .featureLimits until requested
+   */
+  ensureFeatureLimits() {
+    let limits = this.get('featureLimits');
+    /** Reference blocks don't have .featureLimits so don't request it.
+     * block.get('isData') depends on featureCount, which won't be present for
+     * newly uploaded blocks.  Only references have .range (atm).
+     */
+    let isData = ! this.get('range');
+    if (! limits && isData) {
+      let blocksLimitsTasks = this.get('taskGetLimits').perform();
+    }
+  },
+
+  /** Call getLimits() in a task - yield the block limits result.
+   */
+  taskGetLimits: task(function * () {
+    let blockLimits = yield this.getLimits();
+    if (trace_block)
+      dLog('taskGetLimits', this, valueOrLength(blockLimits));
+    blockLimits.forEach((bfc) => {
+      if (bfc._id !== this.get('id'))
+        dLog('taskGetLimits', bfc._id);
+      else {
+        dLog('taskGetLimits', bfc, this);
+        this.set('featureLimits', [bfc.min, bfc.max]);
+        if (! this.get('featureCount'))
+          this.set('featureCount', bfc.featureCount);
+      }
+    });
+
+    return blockLimits;
+  }).drop(),
+
+  getLimits: function () {
+    let blockId = this.get('id');
+    dLog("block getLimits", blockId);
+
+    let blockP =
+      this.get('auth').getBlockFeatureLimits(blockId, /*options*/{});
+
+    return blockP;
+  },
+
 
   /*--------------------------------------------------------------------------*/
 

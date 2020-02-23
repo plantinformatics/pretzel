@@ -150,11 +150,6 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
         t.apply(this, [id]);
       }
     },
-    blockFromId : function(blockId) {
-      let store = this.get('store'),
-      block = store.peekRecord('block', blockId);
-      return block;
-    },
 
     selectBlock: function(block) {
       dLog('SELECT BLOCK mapview', block.get('name'), block.get('mapName'), block.id, block);
@@ -248,6 +243,13 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   blockIds : readOnly('model.viewedBlocks.blockIds'),
 
 
+  blockFromId : function(blockId) {
+    let store = this.get('store'),
+    block = store.peekRecord('block', blockId);
+    return block;
+  },
+
+
   /** Used by the template to indicate when & whether any data is loaded for the graph.
    */
   hasData: Ember.computed(
@@ -280,7 +282,11 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
      * Also adding a similar request to updateModal (refreshDatasets) so by this
      * time that result should have been received.
      */
-    this.get('block').ensureFeatureLimits(id);
+    let block = this.blockFromId(id);
+    if (block)
+      block.ensureFeatureLimits();
+    else
+      this.get('block').ensureFeatureLimits(id);
 
     /** Before progressive loading this would load the data (features) of the block. */
     const progressiveLoading = true;

@@ -521,19 +521,10 @@ export default Service.extend(Ember.Evented, {
        */
       let
         blocks = blockId ?
-        store.peekRecord('block', blockId)
+        [ store.peekRecord('block', blockId) ]
         : store.peekAll('block');
       blocks.forEach((block) => {
-        let limits = block.get('featureLimits');
-        /** Reference blocks don't have .featureLimits so don't request it.
-         * block.get('isData') depends on featureCount, which won't be present for
-         * newly uploaded blocks.  Only references have .range (atm).
-         */
-        let isData = ! block.get('range');
-        if (! limits && isData) {
-          /** getBlocksLimits() takes a single blockId as param. */
-          let blocksLimitsTasks = this.getBlocksLimits(block.get('id'));
-        }
+        block.ensureFeatureLimits();
       });
     }
   },
