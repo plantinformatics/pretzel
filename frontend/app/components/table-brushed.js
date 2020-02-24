@@ -3,7 +3,8 @@ import {  eltClassName  } from '../utils/domElements';
 
 // import Handsontable from 'handsontable';
 
-/* global d3 Handsontable */
+/* global d3 */
+/* global Handsontable */
 
 const trace = 0;
 const dLog = console.debug;
@@ -92,7 +93,9 @@ export default Ember.Component.extend({
         columnSorting: {
           column: 2,
           sortOrder: true
-        }
+        },
+        // see comment in paths-table.js
+        licenseKey: 'non-commercial-and-evaluation'
       });
       that.set('table', table);
       $("#table-brushed").on('mouseleave', function(e) {
