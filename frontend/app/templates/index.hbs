@@ -1,3 +1,5 @@
+{{#elem/embed-html path="landingPageContent" as |landingPageContent|}}
+
 {{!-- This is useful for experimenting with path of static landingPageContent files, without having to rebuild.  --}}
 {{#if false}}
 <div>
@@ -5,7 +7,8 @@
 </div> 
 {{/if}}
 
-{{#if (is-rejected landingPageContent)}}
+{{!-- log landingPageContent.promise --}}
+{{#if (is-rejected landingPageContent.promise)}}
   <div class="jumbotron">
     <h1>Pretzel</h1>
     <p>An Express/Ember/D3 framework to display and interactively navigate complex datasets.</p>
@@ -20,11 +23,13 @@
 
   <div style="display:none;">
     <hr>
-    {{ landingPageContent.reason }}
+    {{ landingPageContent.promise.reason }}
   </div> 
 
 {{else}}
   <div class="landingPageContent">
-    {{{await landingPageContent}}}
+    {{{await landingPageContent.promise}}}
   </div>
 {{/if}}
+
+{{/elem/embed-html}}

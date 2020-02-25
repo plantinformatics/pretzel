@@ -75,7 +75,12 @@ let config = {
     this.controllerFor(this.fullRouteName).setViewedOnly(params.mapsToView, true);
 
     let blockService = this.get('block');
-    let blocksLimitsTask = blockService.getBlocksLimits(undefined);
+    let blocksLimitsTask = this.get('blocksLimitsTask');
+    dLog('blocksLimitsTask', blocksLimitsTask);
+    if (! blocksLimitsTask || ! blocksLimitsTask.get('isRunning')) {
+      blocksLimitsTask = blockService.getBlocksLimits(undefined);
+      this.set('blocksLimitsTask', blocksLimitsTask);
+    }
     let allInitially = params.parsedOptions && params.parsedOptions.allInitially;
     let getBlocks = blockService.get('getBlocks' + (allInitially ? '' : 'Summary'));
     let viewedBlocksTasks = (params.mapsToView && params.mapsToView.length) ?

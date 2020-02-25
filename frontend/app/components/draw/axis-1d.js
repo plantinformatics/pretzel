@@ -84,6 +84,7 @@ function FeatureTicks(axis, axisApi, axis1d)
 /** Draw horizontal ticks on the axes, at feature locations.
  *
  * @param axis  block (Ember object), result of stacks-view:axesP
+ * If the axis has multiple (data) blocks, this is the reference block.
  */
 FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setupHover, groupName, blockFilter)
 {
@@ -304,8 +305,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     let
       axisName = this.get('axis.id'),
     axisS = Stacked.getAxis(axisName);
-    if (axisS && ! axisS.axis1d) {
-      axisS.axis1d = this;
+    if (axisS) {
+      if (axisS.axis1d === this && this.isDestroying)
+        axisS.axis1d = undefined;
+      else if (! axisS.axis1d && ! this.isDestroying) {
+        axisS.axis1d = this;
+      }
     }
     return axisS;
   }),
@@ -725,8 +730,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     dLog('axis-1d didInsertElement', this, this.get('listen') !== undefined);
   },
   willDestroyElement() {
-    dLog('willDestroyElement');
+    dLog('willDestroyElement', this.get('axis.id'));
     this.removeTicks();
+    let axisS = this.get('axisS');
+    if (axisS) {
+      if (axisS.axis1d === this)
+        delete axisS.axis1d;
+    }
     this._super(...arguments);
   },
   removeTicks() {

@@ -179,16 +179,24 @@ export default Service.extend({
         i.domain = undefined;
     } );
 
-    let vcParams = this.get('pathsDensityParams');
-    if (vcParams.nSamples) {
-      params.nSamples = vcParams.nSamples;
+    if (this.get('fullDensity')) {
+        params.nSamples = 1e6;
+        page.densityFactor = 1e6;
+        page.thresholdFactor = 1e6;
+        params.nFeatures = 1e6;
     }
-    if (vcParams.densityFactor) {
-      page.densityFactor = vcParams.densityFactor;
-      page.thresholdFactor = vcParams.densityFactor; // retire the name .thresholdFactor
-    }
-    if (vcParams.nFeatures) {
-      params.nFeatures = vcParams.nFeatures;
+    else {
+      let vcParams = this.get('pathsDensityParams');
+      if (vcParams.nSamples) {
+        params.nSamples = vcParams.nSamples;
+      }
+      if (vcParams.densityFactor) {
+        page.densityFactor = vcParams.densityFactor;
+        page.thresholdFactor = vcParams.densityFactor; // retire the name .thresholdFactor
+      }
+      if (vcParams.nFeatures) {
+        params.nFeatures = vcParams.nFeatures;
+      }
     }
 
     return params;

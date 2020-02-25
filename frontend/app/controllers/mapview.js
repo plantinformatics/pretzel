@@ -37,13 +37,26 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       this.set(`layout.${side}.visible`, !visibility);
     },
     setTab: function(side, tab) {
-      // dLog("setTab", side, tab);
+      dLog("setTab", side, tab, this.get('layout'));
       this.set(`layout.${side}.tab`, tab);
     },
     updateSelectedFeatures: function(features) {
     	// dLog("updateselectedFeatures in mapview", features.length);
       this.set('selectedFeatures', features);
-      this.send('setTab', 'right', 'selection');
+      /** results of a selection impact on the selection (selectedFeatures) tab
+       * and the paths tab, so if neither of these is currently shown, show the
+       * selection tab.
+       */
+      let rightTab = this.get('layout.right.tab');
+      /* this feature made sense when (selected) features table was new, but now
+       * there is also paths table so it is not clear which tab to switch to,
+       * and now the the table sizes (ie. counts of brushed features / paths)
+       * are shown in their respective tabs, which serves to draw attention to
+       * the newly available information, so this setTab() is not required.
+       */
+      if (false)
+      if ((rightTab !== 'selection') && (rightTab !== 'paths'))
+        this.send('setTab', 'right', 'selection');
     },
     /** goto-feature-list is given features by the user and finds them in
      * blocks; this is that result in a hash, indexed by block id, with value
@@ -53,6 +66,12 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       // dLog("updateFeaturesInBlocks in mapview", featuresInBlocks);
       this.set('featuresInBlocks', featuresInBlocks);
     },
+    /** from paths-table */
+    updatePathsCount: function(pathsCount) {
+      dLog("updatePathsCount in mapview", pathsCount);
+      this.set('pathsTableSummary.count', pathsCount);
+    },
+
 
     /** Change the state of the named block to viewed.
      * If this block has a parent block, also add the parent.
@@ -131,11 +150,6 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
         t.apply(this, [id]);
       }
     },
-    blockFromId : function(blockId) {
-      let store = this.get('store'),
-      block = store.peekRecord('block', blockId);
-      return block;
-    },
 
     selectBlock: function(block) {
       dLog('SELECT BLOCK mapview', block.get('name'), block.get('mapName'), block.id, block);
@@ -179,7 +193,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     }
   },
 
-  layout: {
+  layout: Ember.Object.create({
     'left': {
       'visible': true,
       'tab': 'view'
@@ -188,7 +202,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       'visible': true,
       'tab': 'selection'
     }
-  },
+  }),
 
   controls : Ember.Object.create({ view : {  } }),
 
@@ -196,6 +210,8 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   mapsToView: [],
 
   selectedFeatures: [],
+  /** counts of selected paths, from paths-table; shown in tab. */
+  pathsTableSummary : {},
 
 
   scaffolds: undefined,
@@ -225,6 +241,13 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   blockValues : readOnly('block.blockValues'),
   /** currently viewed */
   blockIds : readOnly('model.viewedBlocks.blockIds'),
+
+
+  blockFromId : function(blockId) {
+    let store = this.get('store'),
+    block = store.peekRecord('block', blockId);
+    return block;
+  },
 
 
   /** Used by the template to indicate when & whether any data is loaded for the graph.
@@ -259,7 +282,11 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
      * Also adding a similar request to updateModal (refreshDatasets) so by this
      * time that result should have been received.
      */
-    this.ensureFeatureLimits(id);
+    let block = this.blockFromId(id);
+    if (block)
+      block.ensureFeatureLimits();
+    else
+      this.get('block').ensureFeatureLimits(id);
 
     /** Before progressive loading this would load the data (features) of the block. */
     const progressiveLoading = true;
@@ -269,7 +296,19 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       dLog("block", id, block);
       // block.set('isViewed', true);
     }
-  }
+  },
 
+  /** Provide a class for the div which wraps the right panel.
+   *
+   * The class indicates which of the tabs in the right panel is currently
+   * selected/displayed.  paths-table css uses this to display:none the
+   * components div;   the remainder of the template is disabled via {{#if
+   * (compare layout.right.tab '===' 'paths')}} which wraps the whole component.
+   */
+  rightPanelClass : Ember.computed('layout.right.tab', function () {
+    let tab = this.get('layout.right.tab');
+    dLog('rightPanelClass', tab);
+    return 'right-panel-' + tab;
+  }),
 
 });

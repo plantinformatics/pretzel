@@ -4,12 +4,15 @@ import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
 
 /* global d3 */
 
+const dLog = console.debug;
+
 export default Ember.Component.extend({
 
   className : undefined,
 
   didInsertElement : function() {
     this._super(...arguments);
+
     /* grandparent component - listen for resize and zoom events.
      * possibly these events will move from axis-2d to axis-accordion.
      * This event handling will move to in-axis, since it is shared by all children of axis-2d/axis-accordion.
@@ -36,15 +39,27 @@ export default Ember.Component.extend({
   /** @param [axisID, t] */
   redrawOnce(axisID_t) {
     console.log("redrawOnce", axisID_t);
-    // -  redraw if axisID matches this axis
-    // possibly use transition t for redraw 
-    let redraw = this.get('redraw');
-    if (redraw)
-      redraw.apply(this, axisID_t);
+    if (! this.isDestroying) {
+      // -  redraw if axisID matches this axis
+      // possibly use transition t for redraw 
+      let redraw = this.get('redraw');
+      if (redraw)
+        redraw.apply(this, axisID_t);
+    }
   },
   redrawDebounced(axisID_t) {
     Ember.run.debounce(this, this.redrawOnce, axisID_t, 1000);
   },
+
+  /*--------------------------------------------------------------------------*/
+
+  /** axis is the axis-2d; this is passed into axis-tracks and axis-charts;
+   * can be passed into subComponents also. */
+  axis1d : Ember.computed.alias('axis.axis1d'),
+  /** y scale of axis has changed */
+  scaleChanged : Ember.computed.alias('axis1d.scaleChanged'),
+  domainChanged : Ember.computed.alias('axis1d.domainChanged'),
+  zoomedDomain :  Ember.computed.alias('axis1d.zoomedDomain'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -122,12 +137,13 @@ export default Ember.Component.extend({
       .attr("clip-path", "url(#axis-clip)"); // clip the rectangle
 
     let
+      allocatedWidth = this.get('allocatedWidth'),
       margin  = ranges.margin;
 
     let g = 
       gps.merge(gp).selectAll("g." + className+  " > g");
     g
-      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+      .attr("transform", "translate(" + (allocatedWidth[0] + margin.left) + "," + margin.top + ")");
 
     return g;
   },
@@ -148,6 +164,15 @@ export default Ember.Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  allocatedWidth : Ember.computed('allocatedWidths', function () {
+    let 
+      allocatedWidths = this.get('allocatedWidths'),
+      allocatedWidth = this.get('allocatedWidths.' + this.get('className'));
+    dLog('allocatedWidth', allocatedWidth, allocatedWidths);
+    if (! allocatedWidth)
+      allocatedWidth = [12, 113];
+    return allocatedWidth; 
+  }),
 
   width : undefined,
   resized : function(prevSize, currentSize) {

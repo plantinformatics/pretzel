@@ -1,3 +1,6 @@
+
+/* global Ember */
+
 /*------------------------------------------------------------------------*/
 /* copied from draw-map.js - will import when that is split */
 /* also @see configurejQueryTooltip() */

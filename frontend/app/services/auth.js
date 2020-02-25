@@ -228,10 +228,10 @@ export default Service.extend({
     return this._ajax('Blocks/pathsByReference', 'GET', {blockA : blockA, blockB : blockB, reference, max_distance, options : options}, true);
   },
 
-  getBlockFeaturesCounts(block, nBins, options) {
+  getBlockFeaturesCounts(block, interval, nBins, options) {
     if (trace_paths)
-      dLog('services/auth getBlockFeaturesCounts', block, nBins, options);
-    return this._ajax('Blocks/blockFeaturesCounts', 'GET', {block, nBins, options}, true);
+      dLog('services/auth getBlockFeaturesCounts', block, interval, nBins, options);
+    return this._ajax('Blocks/blockFeaturesCounts', 'GET', {block, interval, nBins, options}, true);
   },
 
   getBlockFeaturesCount(blocks, options) {

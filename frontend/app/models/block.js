@@ -6,19 +6,28 @@ const { inject: { service } } = Ember;
 import { A } from '@ember/array';
 import { and } from '@ember/object/computed';
 
+import { task } from 'ember-concurrency';
 
 import { intervalMerge }  from '../utils/interval-calcs';
+
+/*----------------------------------------------------------------------------*/
 
 const trace_block = 0;
 const dLog = console.debug;
 
-
 const moduleName = 'models/block';
 
+/*----------------------------------------------------------------------------*/
+
+/** trace the (array) value or just the length depending on trace level. */
+function valueOrLength(value) { return (trace_block > 1) ? value : value.length; }
+
+/*----------------------------------------------------------------------------*/
 
 export default DS.Model.extend({
   pathsP : service('data/paths-progressive'), // for getBlockFeaturesInterval()
   blockService : service('data/block'),
+  auth: service('auth'),
 
   datasetId: DS.belongsTo('dataset'),
   annotations: DS.hasMany('annotation', { async: false }),
@@ -147,6 +156,117 @@ export default DS.Model.extend({
     return isChartable;
   }),
 
+  /*--------------------------------------------------------------------------*/
+
+  /*--------------------------------------------------------------------------*/
+
+  /** these 3 functions ensureFeatureLimits(), taskGetLimits(), getLimits() (and
+   * also valueOrLength()) are copied from services/data/block.js;
+   * although the API is the same, this use case is for a loaded block, and the
+   * services/data/ case is for all blocks or a blockId (which may not be
+   * loaded).
+   * This can be rationalised when re-organising the model construction.
+   */
+
+  /** get featureLimits if not already received.  After upload the block won't have
+   * .featureLimits until requested
+   */
+  ensureFeatureLimits() {
+    let limits = this.get('featureLimits');
+    /** Reference blocks don't have .featureLimits so don't request it.
+     * block.get('isData') depends on featureCount, which won't be present for
+     * newly uploaded blocks.  Only references have .range (atm).
+     */
+    let isData = ! this.get('range');
+    if (! limits && isData) {
+      let blocksLimitsTasks = this.get('taskGetLimits').perform();
+    }
+  },
+
+  /** Call getLimits() in a task - yield the block limits result.
+   */
+  taskGetLimits: task(function * () {
+    let blockLimits = yield this.getLimits();
+    if (trace_block)
+      dLog('taskGetLimits', this, valueOrLength(blockLimits));
+    blockLimits.forEach((bfc) => {
+      if (bfc._id !== this.get('id'))
+        dLog('taskGetLimits', bfc._id);
+      else {
+        dLog('taskGetLimits', bfc, this);
+        this.set('featureLimits', [bfc.min, bfc.max]);
+        if (! this.get('featureCount'))
+          this.set('featureCount', bfc.featureCount);
+      }
+    });
+
+    return blockLimits;
+  }).drop(),
+
+  getLimits: function () {
+    let blockId = this.get('id');
+    dLog("block getLimits", blockId);
+
+    let blockP =
+      this.get('auth').getBlockFeatureLimits(blockId, /*options*/{});
+
+    return blockP;
+  },
+
+
+  /*--------------------------------------------------------------------------*/
+
+  /** generate a text name for the block, to be displayed - it should be
+   * user-readable and uniquely identify the block.
+   */
+  datasetNameAndScope : Ember.computed('datasetId.id', 'scope', function () {
+    /** This is currently the name format which is used in
+     * selectedFeatures.Chromosome
+     * In paths-table.js @see blockDatasetNameAndScope()
+     */
+    let name = (this.get('datasetId.meta.shortName') || this.get('datasetId.id')) + ':' + this.get('scope');
+    return name;
+  }),
+
+  /** for the given block, generate the name format which is used in
+   * selectedFeatures.Chromosome
+   * Used by e.g. paths-table to access selectedFeatures - need to match the
+   * block identification which is used by brushHelper() when it generates
+   * selectedFeatures.
+   *
+   * block.get('datasetNameAndScope') may be the same value; it can
+   * use shortName, and its purpose is display, whereas
+   * selectedFeatures.Chromosome is for identifying the block (and
+   * could be changed to blockId).
+   */
+  brushName : Ember.computed('name', 'datasetId', 'referenceBlock', function() {
+    /** This calculation replicates the value used by brushHelper(), which draws
+     * on axisName2MapChr(), makeMapChrName(), copyChrData().
+     * That can be replaced by simply this function, which will then be the
+     * source of the value .Chromosome in selectedFeatures.
+     */
+    let brushName;
+    /** brushHelper() uses blockR.get('datasetId.meta.shortName') where blockR is the data block,
+     * and axisName2MapChr(p) where p is the axisName (referenceBlock).
+     */
+    let shortName = this.get('datasetId.meta.shortName');
+    /** brushes are identified by the referenceBlock (axisName). */
+    let block = this.get('referenceBlock') || this;
+    if (block) {
+      let
+        /** e.g. "IWGSC" */
+        blockName = shortName || block.get('datasetId.name'),
+      /** e.g. "1B" */
+      scope = block.get('name');
+      brushName = blockName + ':' + scope;
+    }
+
+    return brushName;
+  }),
+
+
+  /*--------------------------------------------------------------------------*/
+
   /** If the dataset of this block has a parent, return the name of that parent (reference dataset).
    * @return the reference dataset name or undefined if none
    */
@@ -229,6 +349,8 @@ export default DS.Model.extend({
     if (! axis)
       dLog('block axis', this.get('id'), this.get('view'), 'no view.axis for block or referenceBlock', referenceBlock);
   }),
+
+  zoomedDomain : Ember.computed.alias('axis.axis1d.zoomedDomain'),
 
   /*--------------------------------------------------------------------------*/
 
