@@ -97,6 +97,13 @@ export default Ember.Component.extend({
         draggingClass:"dragging"
       });
     }
+
+    /** trigger the initial display of tableData.length (pathsCount) in tab.
+     * Another approach would be to yield this from the template, and in
+     * mapview.hbs ember-wormhole the count into span.badge (in button-tab paths
+     * Paths).
+     */
+    Ember.run.later(() => this.get('tableData.length'), 2000);
   },
 
   willDestroyElement() {
