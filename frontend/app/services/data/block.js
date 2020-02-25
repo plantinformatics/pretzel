@@ -28,7 +28,35 @@ function log_Map(label, map) {
     console.log(label, block_text(key), blocks && blocks.map(block_text));
   });
 }
+/** log a Map string -> Map (string -> [block])
+  */
+function log_Map_Map(label, map) {
+  map.forEach(function (value, key) {
+    console.log(label, 'key');
+    log_Map('', value);
+  });
+}
 
+/** Filter the values of the given map. If the filter result is undefined, omit
+ * the value from the result map.
+ * This is a combination of map and filter.
+ * @param map a Map
+ * @return a Map, or undefined if the result Map would be empty.
+ */
+function filterMap(map, mapFilterFn) {
+  /* factored out of viewedBlocksByReferenceAndScope(); similar to :
+   * https://stackoverflow.com/questions/48707227/how-to-filter-a-javascript-map/53065133 */
+  let result;
+  for (let [key, value] of map) {
+    let newValue = mapFilterFn(value);
+    if (newValue) {
+      if (! result)
+        result = new Map();
+      result.set(key, newValue);
+    }
+  }
+  return result;
+}
 
 /*----------------------------------------------------------------------------*/
  
@@ -231,9 +259,34 @@ export default Service.extend(Ember.Evented, {
   },
   /** For trace in Web Inspector console.
    * Usage e.g. this.get('blocksReferences').map(this.blocksReferencesText);
+   * @param io {id : blockId, obj : blockObject }
    */
   blocksReferencesText(io) {
     let b=io.obj; return [io.id, b.view && b.view.longName(), b.mapName]; },
+
+  /** Collate the ranges or feature limits of the references of the given blockIds.
+   * This is used for constructing boundaries in
+   * backend/common/utilities/block-features.js : blockFeaturesCounts().
+   * @return a hash object mapping from blockId to reference limits [from, to].
+   */
+  blocksReferencesLimits(blockIds) {
+    function blocksReferencesLimit(io) {
+      let b=io.obj; return b.get('range') || b.get('featureLimits'); };
+    let
+      blocksReferences = this.blockIdsReferences(blockIds, true),
+    result = blocksReferences.reduce(function (result, io) {
+      if (! result[io.id]) {
+        result[io.id] = blocksReferencesLimit(io);
+      }
+      return result;
+    }, {});
+
+    if (trace_block > 1)
+      dLog('blocksReferencesLimits', blockIds, result,
+           blocksReferences.map(this.blocksReferencesText) );
+    return result;
+  },
+
 
   /** Set .isViewed for each of the blocksToView[].obj
    * @param blocksToView form is the result of this.blocksReferences()
@@ -258,6 +311,48 @@ export default Service.extend(Ember.Evented, {
      */
     this.trigger('receivedBlock', blocksToView);
   },
+
+  /** controls() and pathsDensityParams() are copied from paths-progressive.js
+   * They can be moved into a service control-params, which will be backed by
+   * query params in the URL.
+   */
+  controls : Ember.computed(function () {
+    let oa = stacks.oa,
+    /** This occurs after mapview.js: controls : Ember.Object.create({ view : {  } }),
+     * and draw-map : draw() setup of  oa.drawOptions.
+     * This can be replaced with a controls service.
+     */
+    controls = oa.drawOptions.controls;
+    dLog('controls', controls);
+    return controls;
+  }),
+  /** This does have a dependency on the parameter values.  */
+  pathsDensityParams : Ember.computed.alias('controls.view.pathsDensityParams'),
+  /**
+   * @param blockId later will use this to lookup axis yRange
+   */
+  nBins(blockId) {
+    let nBins;
+    /** based on part of intervalParams(intervals) */
+    let vcParams = this.get('pathsDensityParams');
+    if (vcParams.nSamples) {
+      nBins = vcParams.nSamples;
+    }
+    if (vcParams.densityFactor) {
+      /** from paths-aggr.js : blockFeaturesInterval()
+       */
+      let pixelspacing = 5;
+      let range = 600;  // -	lookup axis yRange from block;
+      let nBins = vcParams.densityFactor * range / pixelspacing;
+    }
+    if (vcParams.nFeatures) {
+      if (nBins > vcParams.nFeatures)
+         nBins = vcParams.nFeatures;
+    }
+    dLog('nBins', nBins, vcParams);
+    return nBins;
+  },
+
   getSummary: function (blockIds) {
     // console.log("block getSummary", id);
     let blockP =
@@ -265,20 +360,22 @@ export default Service.extend(Ember.Evented, {
 
     if (this.get('parsedOptions.featuresCounts')) {
 
-    /** This will probably become user-configurable */
-    const nBins = 100;
     /** As yet these result promises are not returned, not needed. */
     let blockPs =
       blockIds.map(
         (blockId) => {
+          /** densityFactor requires axis yRange, so for that case this will (in future) lookup axis from blockId. */
+          const nBins = this.nBins(blockId);
           let taskId = blockId + '_' + nBins;
           let summaryTask = this.get('summaryTask');
           let p = summaryTask[taskId];
           if (! p) {
             getCounts.apply(this);
             function getCounts() {
+              let intervals = this.blocksReferencesLimits([blockId]),
+              interval = intervals[blockId];
             p = summaryTask[taskId] =
-              this.get('auth').getBlockFeaturesCounts(blockId, nBins, /*options*/{});
+              this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, /*options*/{});
             /* this could be structured as a task within models/block.js
              * A task would have .drop() to avoid concurrent request, but
              * actually want to bar any subsequent request for the same taskId,
@@ -424,19 +521,10 @@ export default Service.extend(Ember.Evented, {
        */
       let
         blocks = blockId ?
-        store.peekRecord('block', blockId)
+        [ store.peekRecord('block', blockId) ]
         : store.peekAll('block');
       blocks.forEach((block) => {
-        let limits = block.get('featureLimits');
-        /** Reference blocks don't have .featureLimits so don't request it.
-         * block.get('isData') depends on featureCount, which won't be present for
-         * newly uploaded blocks.  Only references have .range (atm).
-         */
-        let isData = ! block.get('range');
-        if (! limits && isData) {
-          /** getBlocksLimits() takes a single blockId as param. */
-          let blocksLimitsTasks = this.getBlocksLimits(block.get('id'));
-        }
+        block.ensureFeatureLimits();
       });
     }
   },
@@ -487,6 +575,15 @@ export default Service.extend(Ember.Evented, {
       console.log('blockValues', records);
     return records;
   }),
+  /** Can be used in place of peekBlock().
+   * @return array which maps from blockId to block   
+   */
+  blocksById: Ember.computed(
+    'blockValues.[]',
+    function() {
+      let blocksById = this.get('blockValues').reduce((r, b) => { r[b.get('id')] = b; return r; }, {});
+      return blocksById;
+    }),
   selected: Ember.computed(
     'blockValues.@each.isSelected',
     function() {
@@ -547,7 +644,7 @@ export default Service.extend(Ember.Evented, {
    * These are suited to be rendered by axis-chart.
    */
   viewedChartable: Ember.computed(
-    'viewed.[]',
+    'viewed.@each.{featuresCounts,isChartable}',
     function() {
       let records =
         this.get('viewed')
@@ -594,6 +691,117 @@ export default Service.extend(Ember.Evented, {
         log_Map('blocksByReference', map);
       return map;
     }),
+
+  /** collate the blocks by the parent block they refer to, and by scope.
+   *
+   * Uses datasetsByParent(); this is more direct than blocksByReference()
+   * which uses Block.referenceBlock(), which does peekAll on blocks and filters
+   * on datasetId and scope.
+   *
+   * @return a Map, indexed by dataset name, each value being a further map
+   * indexed by block scope, and the value of that being an array of blocks,
+   * with the [0] position of the array reserved for the reference block.
+   *
+   * @desc
+   * Blocks without a parent / reference, will be mapped via their datasetId,
+   * and will be placed in [0] of the blocks array for their scope.
+   */
+  blocksByReferenceAndScope : Ember.computed(
+    'blockValues.[]',
+    function() {
+      const fnName = 'blocksByReferenceAndScope';
+      let map = this.get('blockValues')
+        .reduce(
+          (map, block) => {
+            // related : manage-explorer : datasetsToBlocksByScope() but that applies a filter.
+            let id = block.id,
+            scope = block.get('scope'),
+            /** If block is a promise, block.get('datasetId.parent') will be a
+             * promise - non-null regardless of whether the dataset has a
+             * .parent, whereas .get of .parent.name will return undefined iff
+             * there is no parent.
+             */
+            parentName = block.get('datasetId.parent.name');
+
+            function blocksOfDatasetAndScope(datasetId, scope) {
+              let mapByScope = map.get(datasetId);
+              if (! mapByScope) {
+                mapByScope = new Map();
+                map.set(datasetId, mapByScope);
+              }
+              let blocks = mapByScope.get(scope);
+              if (! blocks)
+                mapByScope.set(scope, blocks = [undefined]); // [0] is reference block
+              return blocks;
+            }
+
+            if (parentName) {
+              let blocks = blocksOfDatasetAndScope(parentName, scope);
+              blocks.push(block);
+            } else {
+              let datasetName = block.get('datasetId.name');
+              let blocks = blocksOfDatasetAndScope(datasetName, scope);
+              if (blocks[0]) {
+                // console.log(fnName, '() >1 reference blocks for scope', scope, blocks, block, map);
+                /* Reference chromosome assemblies, i.e. physical maps, define a
+                 * unique (reference) block for each scope, whereas Genetic Maps
+                 * are their own reference, and each block in a GM is both a
+                 * data block and a reference block, and a GM may define
+                 * multiple blocks with the same scope.
+                 * As a provisional measure, if there is a name clash (multiple
+                 * blocks with no parent and the same scope), append the
+                 * datasetName name to the scope to make it unique.
+                 */
+                blocks = blocksOfDatasetAndScope(datasetName, scope + '_' + datasetName);
+              }
+              blocks[0] = block; 
+            }
+            return map;
+          },
+          new Map());
+
+      if (trace_block > 1)
+        log_Map_Map(fnName, map);
+      return map;
+    }),
+
+  /** filter blocksByReferenceAndScope() for viewed blocks,
+   * @return Map, which may be empty
+   */
+  viewedBlocksByReferenceAndScope : Ember.computed('blocksByReferenceAndScope', 'viewed.[]', function () {
+    const fnName = 'viewedBlocksByReferenceAndScope';
+    let viewed = this.get('viewed');
+    let map = this.get('blocksByReferenceAndScope'),
+     resultMap = filterMap(map, referencesMapFilter);
+    function referencesMapFilter(mapByScope) {
+      let resultMap = filterMap(mapByScope, scopesMapFilter);
+      if (trace_block > 2)
+        dLog('referencesMapFilter', mapByScope, resultMap);
+      return resultMap;
+    };
+    function scopesMapFilter(blocks) {
+      // axis : blocks : [0] is included if any blocks[*] are viewed, ...
+      //  && .isLoaded ?
+      let blocksOut = blocks.filter((b, i) => ((i===0) || b.get('isViewed')));
+      // expect that blocksOut.length != 0 here.
+      /* If a data block's dataset's parent does not have a reference block for
+       * the corresponding scope, then blocks[0] will be undefined, which is
+       * filtered out here.
+       * Some options for conveying the error to the user : perhaps display in
+       * the dataset explorer with an error status for the data block, e.g. the
+       * add button for the data block could be insensitive.
+       */
+      if ((blocksOut.length === 1) && (! blocks[0] || ! blocks[0].get('isViewed')))
+        blocksOut = undefined;
+      if (trace_block > 3)
+        dLog('scopesMapFilter', blocks, blocksOut);
+      return blocksOut;
+    };
+
+    if (trace_block && resultMap)
+      log_Map_Map(fnName, resultMap);
+    return resultMap;
+  }),
 
 
   /** Search for the named features, and return also their blocks and datasets.

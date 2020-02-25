@@ -749,8 +749,19 @@ function addPathsToCollation(blockA, blockB, paths)
      * featureIndex[], as current data structure is based on feature (feature)
      * names - that will change probably. */
     let
-      /** the order of p.featureA, p.featureB matches the alias order. */
-      aliasDirection = p.featureAObj.blockId === blockA,
+      getBlockId = p.featureAObj.get ?
+      ((o) => o.get('blockId.id'))
+      : ((o) => o.blockId),
+    aBlockId = getBlockId(p.featureAObj),
+    /** the order of p.featureA, p.featureB matches the alias order. */
+    aliasDirection = aBlockId === blockA;
+    if (! aliasDirection && (aBlockId !== blockB)) {
+      dLog('aliasDirection no match', aliasDirection, 
+           aBlockId, getBlockId(p.featureBObj),
+           blockA, blockB, p);
+    }
+      
+    let
     aliasFeatures = [p.featureA, p.featureB],
     /** the order of featureA and featureB matches the order of blockA and blockB,
      * i.e.  featureA is in blockA, and featureB is in blockB

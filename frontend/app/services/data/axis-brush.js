@@ -34,8 +34,8 @@ export default Service.extend(Ember.Evented, {
         dLog('brushedAxes', this);
       const fnName = 'brushedAxes';
       let records = this.get('all');
-      // if (trace_axisBrush > 1)
-        records.map(function (a) { console.log(fnName, a, a.get('brushedDomain')); } );
+      if (trace_axisBrush > 1)
+        records.map(function (a) { dLog(fnName, a, a.get('brushedDomain')); } );
       if (trace_axisBrush)
         dLog('viewed Blocks', records);
       let blocks = records.filter(function (ab) {
@@ -45,6 +45,27 @@ export default Service.extend(Ember.Evented, {
         dLog(fnName, blocks);
 
       return blocks;
-    })
+    }),
+  brushesByBlock : Ember.computed('brushedAxes.[]', function () {
+    let brushesByBlock = this.get('brushedAxes').reduce(function (result, ab) {
+      result[ab.get('block.id')] = ab;
+      return result; }, {} );
+    if (trace_axisBrush)
+      dLog('brushesByBlock', brushesByBlock);
+    return brushesByBlock;
+  }),
+  /** Lookup brushedAxes for the given block, or its referenceBlock.
+   */
+  brushOfBlock(block) {
+    let brushesByBlock = this.get('brushesByBlock'),
+    brush = brushesByBlock[block.get('id')];
+    let referenceBlock;
+    if (! brush && (referenceBlock = block.get('referenceBlock'))) {
+      brush = brushesByBlock[referenceBlock.get('id')];
+    }
+    if (trace_axisBrush > 1)
+      dLog('brushOfBlock', brush, brushesByBlock, referenceBlock);
+    return brush;
+  }
 
 });

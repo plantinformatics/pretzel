@@ -195,6 +195,11 @@ div#logo {
 {
 overflow-x: scroll;
 }
+
+table.contextual-data-table td {
+  padding-right: 1em;
+}
+
 /* -------------------------------------------------------------------------- */
 
 svg {
@@ -245,9 +250,12 @@ g.axis-use
 > rect.chartRow
 */
 rect.chartRow {
-  fill: aqua;
   opacity : 0.5;
   stroke: blue;
+}
+/* .featureCountData colour is heatmap **/
+.blockData rect.chartRow {
+  fill: aqua;
 }
 
 /* ---------------------------------- */
@@ -255,7 +263,7 @@ rect.chartRow {
 path.chartRow.line
 {
       fill : none;
-      stroke : magenta;
+      /* stroke : magenta; */
       stroke-linejoin : round;
       stroke-linecap : round;
       stroke-width : 1.5;
@@ -1314,6 +1322,17 @@ body > div.ember-popover {
   padding: 3px 5px;
 }
 /* -------------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------- */
+
+#right-panel-content > .right-panel-paths {
+    display : none;
+}
+#right-panel-content.right-panel-paths > .right-panel-paths {
+    display : block;
+}
+
+/* -------------------------------------------------------------------------- */
 /* JSON editor, in RHS panel */
 
 .dataset-table {
@@ -1345,4 +1364,38 @@ div.metaeditor-panel div.jsoneditor-treepath {
 div.metaeditor-panel div.jsoneditor {
   border: 1px solid #d3d3d3
 }
+/* -------------------------------------------------------------------------- */
+
+.paths-table .optionControls {
+  display: flex;
+  margin-bottom: 1em;
+}
+.paths-table .optionControls  > div {
+  flex-grow: 1;
+}
+
+.paths-table div.panel-body > div.btn-group > div {
+  display: flex;
+}
+
+.paths-table div.panel-body > div.btn-group > div > * {
+  margin: auto;
+}
+
+.paths-table div.panel-body > div.btn-group > div > button > a {
+  color : inherit;
+}
+
+.paths-table td.contextual-cell.numeric {
+  /* Align a numeric value.
+   * CSS does not currently offer a way to align numeric content by decimal point
+   * where the fractional part may vary in length, or there may be no decimal point,
+   * as proposed here : https://www.w3.org/Style/CSS/Tracker/issues/38
+   * td align="char" char="." is not supported. (https://www.w3schools.com/tags/att_td_char.asp)
+   * An alternative is to split the integer and fractional part into 2 columns,
+   * e.g. https://stackoverflow.com/a/5937346, https://stackoverflow.com/a/29924653 */
+  text-align: right;
+  padding-right: 1em !important;
+}
+
 /* -------------------------------------------------------------------------- */

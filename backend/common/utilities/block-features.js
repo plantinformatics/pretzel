@@ -49,35 +49,118 @@ exports.blockFeaturesCount = function(db, blockIds) {
 
 /*----------------------------------------------------------------------------*/
 
+/** Calculate the bin size for even-sized bins to span the given interval.
+ * The bin size is rounded to be a multiple of a power of 10, only the first 1-2
+ * digits are non-zero.
+ * Used in @see binBoundaries().
+ * @return lengthRounded
+ */
+function binEvenLengthRound(interval, nBins) {
+  let lengthRounded;
+  if (interval && (interval.length === 2) && (nBins > 0)) {
+    /* if (interval[1] < interval[0])
+     interval = interval.sort(); */
+    let intervalLength = interval[1] - interval[0],
+    binLength = intervalLength / nBins,
+    digits = Math.floor(Math.log10(binLength)),
+    eN1 = Math.exp(digits * Math.log(10)),
+    mantissa = binLength / eN1,
+    /** choose 1 2 or 5 as the first digit of the bin size. */
+    m1 = mantissa > 5 ? 5 : (mantissa > 2 ? 2 : 1);
+    lengthRounded = Math.round(m1 * eN1);
+
+    console.log('binEvenLengthRound', interval, nBins, intervalLength, binLength, digits, eN1, mantissa, m1, lengthRounded);
+  }
+  return lengthRounded;
+};
+/** Generate an array of even-sized bins to span the given interval.
+ * Used for mongo aggregation pipeline : $bucket : boundaries.
+ */
+function binBoundaries(interval, lengthRounded) {
+  let b;
+  if (lengthRounded) {
+    let
+      start = interval[0],
+    intervalLength = interval[1] - interval[0],
+    direction = Math.sign(intervalLength),
+    forward = (direction > 0) ?
+      function (a,b)  {return a < b; }
+    : function (a,b)  {return a > b; };
+
+    let location = Math.floor(start / lengthRounded) * lengthRounded;
+	  b = [location];
+    do {
+      location += lengthRounded;
+      b.push(location);
+    }
+    while (forward(location, interval[1]));
+    console.log('binBoundaries', direction, b.length, location, b[0], b[b.length-1]);
+  }
+  return b;
+};
+
+
+
 
 /** Count features of the given block in bins.
  *
  * @param blockCollection dataSource collection
  * @param blockId  id of data block
+ * @param interval  if given then use $bucket with boundaries in this range,
+ * otherwise use $bucketAuto.
  * @param nBins number of bins to group block's features into
  *
  * @return cursor	: binned feature counts
  * { "_id" : { "min" : 4000000, "max" : 160000000 }, "count" : 22 }
  * { "_id" : { "min" : 160000000, "max" : 400000000 }, "count" : 21 }
  */
-exports.blockFeaturesCounts = function(db, blockId, nBins = 10) {
+exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10) {
   // initial draft based on blockFeaturesCount()
   let featureCollection = db.collection("Feature");
+  /** The requirement (so far) is for even-size boundaries on even numbers,
+   * e.g. 1Mb bins, with each bin boundary a multiple of 1e6.
+   *
+   * $bucketAuto doesn't require the boundaries to be defined, but there may not
+   * be a way to get it to use even-sized boundaries which are multiples of 1eN.
+   * By default it defines bins which have even numbers of features, i.e. the
+   * bin length will vary.  If the parameter 'granularity' is given, the bin
+   * boundaries are multiples of 1e4 at the start and 1e7 near the end (in a
+   * dataset [0, 800M]; the bin length increases in an exponential progression.
+   *
+   * So $bucket is used instead, and the boundaries are given explicitly.
+   * This requires interval; if it is not passed, $bucketAuto is used, without granularity.
+   */
+  const useBucketAuto = ! (interval && interval.length === 2);
   if (trace_block)
-    console.log('blockFeaturesCount', blockId, nBins);
+    console.log('blockFeaturesCounts', blockId, interval, nBins);
   let ObjectId = ObjectID;
-
+  let lengthRounded, boundaries;
+  if (! useBucketAuto) {
+    lengthRounded = binEvenLengthRound(interval, nBins),
+    boundaries = binBoundaries(interval, lengthRounded);
+  }
+    
   let
     matchBlock =
     [
       {$match : {blockId :  ObjectId(blockId)}},
-      { $bucketAuto: { groupBy: {$arrayElemAt : ['$value', 0]}, buckets: Number(nBins), granularity : 'R5'}  }
+      useBucketAuto ? 
+        { $bucketAuto : { groupBy: {$arrayElemAt : ['$value', 0]}, buckets: Number(nBins)}  } // , granularity : 'R5'
+      : { $bucket     :
+          {
+            groupBy: {$arrayElemAt : ['$value', 0]}, boundaries,
+            output: {
+              count: { $sum: 1 },
+              idWidth : {$addToSet : lengthRounded }
+            }
+          }
+        }
     ],
 
     pipeline = matchBlock;
 
   if (trace_block)
-    console.log('blockFeaturesCount', pipeline);
+    console.log('blockFeaturesCounts', pipeline);
   if (trace_block > 1)
     console.dir(pipeline, { depth: null });
 
@@ -114,10 +197,18 @@ exports.blockFeatureLimits = function(db, blockId) {
     console.log('blockFeatureLimits', blockId);
   let ObjectId = ObjectID;
 
+  /** unwind the values array of Features, and group by blockId, with the min &
+   * max values within the Block.
+   * value may be [from, to, anyValue], so use slice to extract just [from, to],
+   * and $match $ne null to ignore to === undefined.
+   * The version prior to adding this comment assumed value was just [from, to] (optional to);
+   * so we can revert to that code if we separate additional values from the [from,to] location range.
+   */
   let
     group = [
-      {$project : {_id : 1, name: 1, blockId : 1, value : 1 }},
+      {$project : {_id : 1, name: 1, blockId : 1, value : {$slice : ['$value', 2]} }},
       {$unwind : '$value'}, 
+      {$match: { $or: [ { value: { $ne: null } } ] } },
       {$group : {
         _id : '$blockId' ,
         featureCount : { $sum: 1 },

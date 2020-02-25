@@ -474,10 +474,10 @@ Block.blockNamespace = async function(blockIds) {
    * @param blockId  block
    * @param nBins number of bins to partition the block's features into
    */
-  Block.blockFeaturesCounts = function(blockId, nBins, options, res, cb) {
+  Block.blockFeaturesCounts = function(blockId, interval, nBins, options, res, cb) {
     let db = this.dataSource.connector;
     let cursor =
-      blockFeatures.blockFeaturesCounts(db, blockId, nBins);
+      blockFeatures.blockFeaturesCounts(db, blockId, interval, nBins);
     cursor.toArray()
     .then(function(featureCounts) {
       cb(null, featureCounts);
@@ -633,6 +633,7 @@ Block.blockNamespace = async function(blockIds) {
   Block.remoteMethod('blockFeaturesCounts', {
     accepts: [
       {arg: 'block', type: 'string', required: true},
+      {arg: 'interval', type: 'array', required: false},
       {arg: 'nBins', type: 'number', required: false},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},
