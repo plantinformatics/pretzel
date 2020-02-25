@@ -12,7 +12,7 @@
     "d3-tip" :  "VACLab/d3-tip",
     "d3": "^4.10.2",
 		"animation-frame" : "^0.2.5",
-    "handsontable": "^2.0.0"
+    "handsontable": "^7"
   },
   "devDependencies": {
     "bootstrap": "3.3.7"

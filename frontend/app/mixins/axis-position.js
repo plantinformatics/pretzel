@@ -30,12 +30,12 @@ export default Mixin.create({
   currentPosition : undefined,
   lastDrawn : undefined,
 
-  init() {
+  init_1 : function() {
     let store = this.get('store');
     this.set('currentPosition', store.createRecord('vline-position'));
     this.set('lastDrawn', store.createRecord('vline-position'));
     this._super(...arguments);
-  },
+  }.on('init'),
 
 
   /* updateDomain() and setDomain() moved here from utils/stacks.js

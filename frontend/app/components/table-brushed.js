@@ -3,7 +3,8 @@ import {  eltClassName  } from '../utils/domElements';
 
 // import Handsontable from 'handsontable';
 
-/* global d3 Handsontable */
+/* global d3 */
+/* global Handsontable */
 
 const trace = 0;
 const dLog = console.debug;
@@ -34,6 +35,20 @@ export default Ember.Component.extend({
 
   didInsertElement() {
     dLog("components/table-brushed.js: didInsertElement");
+  },
+
+  /** Destroy the HandsOnTable so that it does not clash with the HandsOnTable
+   * created by paths-table.
+   */
+  willDestroyElement() {
+    let table = this.get('table');
+    if (table) {
+      dLog('willDestroyElement', table);
+      table.destroy();
+      this.set('table', undefined);
+    }
+
+    this._super(...arguments);
   },
 
 
@@ -83,12 +98,18 @@ export default Ember.Component.extend({
         manualColumnResize: true,
         manualRowMove: true,
         // manualColumnMove: true,
+        copyPaste: {
+          /** increase the limit on copy/paste.  default is 1000 rows. */
+          rowsLimit: 10000
+        },
         contextMenu: true,
         sortIndicator: true,
         columnSorting: {
           column: 2,
           sortOrder: true
-        }
+        },
+        // see comment in paths-table.js
+        licenseKey: 'non-commercial-and-evaluation'
       });
       that.set('table', table);
       $("#table-brushed").on('mouseleave', function(e) {
@@ -134,7 +155,7 @@ export default Ember.Component.extend({
       .style("stroke", "red");
     if (feature) {
       /** see also handleFeatureCircleMouseOver(). */
-      d3.selectAll("g.axis-outer > circle." + eltClassName(eltClassName(feature)))
+      d3.selectAll("g.axis-outer > circle." + eltClassName(feature))
         .attr("r", 5)
         .style("fill", "yellow")
         .style("stroke", "black")

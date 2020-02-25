@@ -19,6 +19,8 @@ const trackWidth = 10;
 /** for devel.  ref comment in @see height() */
 let trace_count_NaN = 10;
 
+const dLog = console.debug;
+
 /*------------------------------------------------------------------------*/
 /* copied from draw-map.js - will import when that is split */
     /** Setup hover info text over scaffold horizTick-s.
@@ -172,10 +174,13 @@ export default InAxis.extend({
 
   didInsertElement() {
     this._super(...arguments);
-    let parentView = this.get('parentView'),
+    let
+      childWidths = this.get('childWidths'),
     axisID = this.get('axisID'),
     width = this.get('layoutWidth');
-    parentView.send('contentWidth', 'axis-tracks', axisID, width);
+    dLog('didInsertElement', axisID, width);
+    // [min, max] width
+    childWidths.set(this.get('className'), [width, width]);
   },
 
   didRender() {
@@ -184,7 +189,17 @@ export default InAxis.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  axis1d : Ember.computed.alias('axis.axis1d'),
+  axis1d : Ember.computed('axis.axis1d', 'axis.axis1d.isDestroying', function () {
+    /** this CP could be simply a .alias, but it can get a reference to a axis1d
+     * which is being destroyed; probably need a small design change in the
+     * component relations. */
+    let axis1d = this.get('axis.axis1d');
+    if (axis1d && axis1d.isDestroying) {
+      console.log('axis1d isDestroying', this);
+      axis1d = undefined;
+    }
+    return axis1d;
+  }),
   axisS : Ember.computed.alias('axis.axis'),
   currentPosition : Ember.computed.alias('axis1d.currentPosition'),
   yDomain : Ember.computed.alias('currentPosition.yDomain'),
@@ -360,11 +375,12 @@ export default InAxis.extend({
       let t = tracks.intervalTree[blockId],
       block = oa.stacks.blocks[blockId],
       axis = block.getAxis(),
+      zoomed = axis && axis.axis1d && axis.axis1d.zoomed,
       /** if zoomed in, tracks are not filtered by sizeThreshold.
        * The logic is : if the user is zooming in, they are interested in
        * features regardless of size, e.g. smaller than a pixel.
        */
-      sizeThreshold = axis.axis1d.zoomed ? undefined : pxSize * 1/*5*/,
+      sizeThreshold = zoomed ? undefined : pxSize * 1/*5*/,
       tracksLayout = regionOfTree(t, yDomain, sizeThreshold),
       data = tracksLayout.intervals;
       if (false)  // actually need to sum the .layoutWidth for all blockId-s, plus the block offsets which are calculated below
@@ -587,6 +603,10 @@ export default InAxis.extend({
             if (! interval.length || (interval.length == 1))
               interval = [interval, interval];
             /* interval-tree:createIntervalTree() assumes the intervals are positive, and gets stack overflow if not. */
+            else if (interval[1] === null) {
+              /* undefined / null value[1] indicates 0-length interval.  */
+              interval[1] = interval[0];
+            }
             else if (interval[0] > interval[1]) {
               let swap = interval[0];
               interval[0] = interval[1];
@@ -616,6 +636,7 @@ export default InAxis.extend({
     width =
       40 + blockIds.length * 2 * trackWidth + 20 + 50;
     console.log('layoutWidth', blockIds, width);
+    this.get('childWidths').set(this.get('className'), [width, width]);
     return width;
   }),
   showTrackBlocks: Ember.computed(

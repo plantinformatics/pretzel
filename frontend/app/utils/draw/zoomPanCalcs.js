@@ -30,6 +30,15 @@ function inRange(a, range)
    */
   return (range[0] <= a) == (a <= range[1]);
 }
+/** Same as inRange / subInterval, using the appropriate function for the type of value a.
+ * @param a may be a single value or an interval [from, to]
+ * @param range an interval [from, to]
+ */
+function inRangeEither(a, range)
+{
+  return a.length ? subInterval(a, range) : inRange(a, range);
+}
+
 
 /** Test if an array of values, which can be a pair defining an interval, is
  * contained within another interval.
@@ -271,4 +280,4 @@ function wheelNewDomain(axis, axisApi, inFilter) {
 
 /*----------------------------------------------------------------------------*/
 
-export { wheelNewDomain };
+export {  inRangeEither, wheelNewDomain };

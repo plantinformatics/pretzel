@@ -66,6 +66,20 @@
   {{#if layout.right.visible}}
     <div class="" style="flex-basis:400px; flex-grow:1; display:flex; flex-direction:column">
       <ul class="nav nav-tabs">
+        {{#if model.params.parsedOptions.blockTab}}
+          {{#elem/button-tab
+             side="right"
+             key="block"
+             state=layout.right.tab onClick="setTab"}}
+            {{elem/icon-base name="globe"}}&nbsp; Block
+          {{/elem/button-tab}}
+        {{/if}}
+        {{#elem/button-tab
+           side="right"
+           key="dataset"
+           state=layout.right.tab onClick="setTab"}}
+          {{elem/icon-base name="globe"}}&nbsp; Dataset
+        {{/elem/button-tab}}
         {{#elem/button-tab
            side="right"
            key="selection"
@@ -74,15 +88,9 @@
         {{/elem/button-tab}}
         {{#elem/button-tab
            side="right"
-           key="block"
+           key="paths"
            state=layout.right.tab onClick="setTab"}}
-          {{elem/icon-base name="globe"}}&nbsp; Block
-        {{/elem/button-tab}}
-        {{#elem/button-tab
-           side="right"
-           key="dataset"
-           state=layout.right.tab onClick="setTab"}}
-          {{elem/icon-base name="globe"}}&nbsp; Dataset
+          {{elem/icon-base name="globe"}}&nbsp; Paths <span class="badge">{{pathsTableSummary.count}}</span>
         {{/elem/button-tab}}
         {{#if model.params.parsedOptions.advSettings}}
           {{#elem/button-tab
@@ -99,7 +107,7 @@
           {{elem/icon-base name="remove"}}
         {{/elem/button-tab}}
       </ul>
-      <div style="overflow-y: auto">
+      <div id="right-panel-content" style="overflow-y: auto" class={{rightPanelClass}}>
         {{#if (compare layout.right.tab '===' 'selection')}}
           {{panel/manage-features
             selectedFeatures=selectedFeatures
@@ -124,6 +132,13 @@
             showScaffoldMarkers=showScaffoldMarkers}}
 
         {{/if}}
+
+        {{panel/paths-table
+          visible=(compare layout.right.tab '===' 'paths')
+          selectedFeatures=selectedFeatures
+          selectedBlock=selectedBlock
+          updatePathsCount=(action 'updatePathsCount')}}
+
       </div>
     </div>
   {{else}}
