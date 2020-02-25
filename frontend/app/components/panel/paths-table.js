@@ -655,7 +655,11 @@ export default Ember.Component.extend({
           /** increase the limit on copy/paste.  default is 1000 rows. */
           rowsLimit: 10000
         },
-        contextMenu: true,
+        // disable editing, refn: https://stackoverflow.com/a/40801002
+        readOnly: true, // make table cells read-only
+        contextMenu: false, // disable context menu to change things
+        comments: false, // prevent editing of comments
+
         sortIndicator: true,
         multiColumnSorting: true,
         /* in the latest non-commercial version 6.2.2, multiColumnSorting is
