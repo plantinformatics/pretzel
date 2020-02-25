@@ -37,6 +37,20 @@ export default Ember.Component.extend({
     dLog("components/table-brushed.js: didInsertElement");
   },
 
+  /** Destroy the HandsOnTable so that it does not clash with the HandsOnTable
+   * created by paths-table.
+   */
+  willDestroyElement() {
+    let table = this.get('table');
+    if (table) {
+      dLog('willDestroyElement', table);
+      table.destroy();
+      this.set('table', undefined);
+    }
+
+    this._super(...arguments);
+  },
+
 
   didRender() {
     dLog("components/table-brushed.js: didRender");

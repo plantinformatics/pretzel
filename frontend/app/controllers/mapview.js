@@ -193,7 +193,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     }
   },
 
-  layout: {
+  layout: Ember.Object.create({
     'left': {
       'visible': true,
       'tab': 'view'
@@ -202,7 +202,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       'visible': true,
       'tab': 'selection'
     }
-  },
+  }),
 
   controls : Ember.Object.create({ view : {  } }),
 
@@ -296,7 +296,19 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       dLog("block", id, block);
       // block.set('isViewed', true);
     }
-  }
+  },
 
+  /** Provide a class for the div which wraps the right panel.
+   *
+   * The class indicates which of the tabs in the right panel is currently
+   * selected/displayed.  paths-table css uses this to display:none the
+   * components div;   the remainder of the template is disabled via {{#if
+   * (compare layout.right.tab '===' 'paths')}} which wraps the whole component.
+   */
+  rightPanelClass : Ember.computed('layout.right.tab', function () {
+    let tab = this.get('layout.right.tab');
+    dLog('rightPanelClass', tab);
+    return 'right-panel-' + tab;
+  }),
 
 });

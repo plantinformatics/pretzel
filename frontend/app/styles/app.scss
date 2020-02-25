@@ -1322,6 +1322,17 @@ body > div.ember-popover {
   padding: 3px 5px;
 }
 /* -------------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------- */
+
+#right-panel-content > .right-panel-paths {
+    display : none;
+}
+#right-panel-content.right-panel-paths > .right-panel-paths {
+    display : block;
+}
+
+/* -------------------------------------------------------------------------- */
 /* JSON editor, in RHS panel */
 
 .dataset-table {

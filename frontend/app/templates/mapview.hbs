@@ -107,7 +107,7 @@
           {{elem/icon-base name="remove"}}
         {{/elem/button-tab}}
       </ul>
-      <div style="overflow-y: auto">
+      <div id="right-panel-content" style="overflow-y: auto" class={{rightPanelClass}}>
         {{#if (compare layout.right.tab '===' 'selection')}}
           {{panel/manage-features
             selectedFeatures=selectedFeatures
@@ -120,11 +120,6 @@
         {{else if (compare layout.right.tab '===' 'dataset')}}
           {{panel/manage-dataset
             dataset=selectedDataset}}
-        {{else if (compare layout.right.tab '===' 'paths')}}
-          {{panel/paths-table
-            selectedFeatures=selectedFeatures
-            selectedBlock=selectedBlock
-            updatePathsCount=(action 'updatePathsCount')}}
         {{else if (and (compare layout.right.tab '===' 'settings') model.params.parsedOptions.advSettings)}}
           {{panel/manage-settings
             selectedFeatures=selectedFeatures
@@ -137,6 +132,13 @@
             showScaffoldMarkers=showScaffoldMarkers}}
 
         {{/if}}
+
+        {{panel/paths-table
+          visible=(compare layout.right.tab '===' 'paths')
+          selectedFeatures=selectedFeatures
+          selectedBlock=selectedBlock
+          updatePathsCount=(action 'updatePathsCount')}}
+
       </div>
     </div>
   {{else}}

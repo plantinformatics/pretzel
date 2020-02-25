@@ -56,6 +56,12 @@ const hoTableId = 'paths-table-ho';
  * Arguments passed to template :
  * @param selectedFeatures  catenation of features within all brushed regions
  * @param selectedBlock block selected via axis brush, or via click in dataset explorer or view panel, or adding the block.
+ * @param visible true when the tab containing the paths-table is selected.
+ * value is : mapview .get('layout.right.tab') === 'paths',
+ * This enables paths-table to provide continuous display of pathsCount in the tab,
+ * even while the table is not displayed.
+ * The paths-table component could be split into a calculation component and a display component.
+ * The calculation is parameterised by user selections and actions so a service doesn't seem suited.
  *
  * @desc inputs from template
  * @param blockColumn true means show the block name:scope in a column instead of as a row.
@@ -80,7 +86,7 @@ export default Ember.Component.extend({
   /** true filters out paths which do not have >=1 end in a brush. */
   onlyBrushedAxes : true,
 
-  classNames: ['paths-table'],
+  classNames: ['paths-table', 'right-panel-paths'],
 
   didInsertElement() {
     this._super(...arguments);
@@ -95,6 +101,7 @@ export default Ember.Component.extend({
 
   willDestroyElement() {
     this.sendUpdatePathsCount('');
+    this.destroyHoTable();
 
     this._super(...arguments);
   },
@@ -109,9 +116,45 @@ export default Ember.Component.extend({
   didRender() {
     if (trace)
       dLog(fileName + " : didRender()");
-    if (useHandsOnTable && ! this.get('table')) {
-      this.set('table', this.createHoTable(this.get('tableData')));
+    this.manageHoTable();
+  },
+
+  /** Create & destroy the HandsOnTable as indicated by .visible (layout.right.tab === 'paths')
+   * The sibling panel manage-features also has a HandsOnTable, and there seems
+   * to be a clash if they coexist.
+
+   * The paths-table component exists permanently so that it can provide
+   * tableData.length for display in the tab via updatePathsCount().
+   */
+  manageHoTable : function() {
+    if (useHandsOnTable) {
+      let
+        visible = this.get('visible'),
+      table = this.get('table');
+
+      dLog('manageHoTable', visible, table, this);
+      /* If the paths-table component was split into a calculation component and
+       * a display component, then these 2 parts would go into the
+       * didInsertElement() and willDestroyElement() of the display component.
+       */
+      if (visible && ! table) {
+        /* Using run.later() here prevents an overlap in time between the
+         * HandsOnTable-s of Features and Paths tables, when switching from
+         * Features to Paths.
+         */
+        Ember.run.later(() => this.set('table', this.createHoTable(this.get('tableData'))));
+      }
+      if (! visible && table) {
+        this.destroyHoTable();
+      }
     }
+  }.observes('visible'),
+
+  destroyHoTable() {
+    let table = this.get('table');
+    dLog('destroyHoTable', table);
+    table.destroy();
+    this.set('table', null);
   },
 
 
