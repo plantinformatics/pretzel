@@ -14,6 +14,7 @@ const dLog = console.debug;
 let config = {
   dataset: service('data/dataset'),
   block: service('data/block'),
+  queryParamsService: service('query-params'),
 
   titleToken: 'MapView',
   queryParams: {
@@ -55,16 +56,23 @@ let config = {
 
   /** Ember-concurrency tasks are returned in the model :
    *  availableMapsTask : task -> [ id , ... ]
-   *  blockTasks : { id : task, ... }
+   *  viewedBlocks : allinitially ? (blockTasks : { id : task, ... }) : single task for getBlocksSummary().
    */
 
-  model(params) {
+  model(paramsIn) {
 
     // Get all available maps.
     let result;
 
     let me = this;
     
+    let blockService = this.get('block');
+    /** blockService supports in computing the model. */
+    let params = this.get('queryParamsService').get('params');
+    dLog('paramsIn', paramsIn, params, paramsIn.mapsToView, params.mapsToView);
+    Object.assign(params, paramsIn);
+    dLog('params', params, params.mapsToView);
+
     if (params.options)
       params.parsedOptions = parseOptions(params.options);
 
@@ -72,9 +80,8 @@ let config = {
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
     let datasetsTask = taskGetList.perform(); // renamed from 'maps'
 
-    this.controllerFor(this.fullRouteName).setViewedOnly(params.mapsToView, true);
+    // this.controllerFor(this.fullRouteName).setViewedOnly(params.mapsToView, true);
 
-    let blockService = this.get('block');
     let blocksLimitsTask = this.get('blocksLimitsTask');
     dLog('blocksLimitsTask', blocksLimitsTask);
     if (! blocksLimitsTask || ! blocksLimitsTask.get('isRunning')) {
@@ -90,7 +97,8 @@ let config = {
       {
         params : params,
         availableMapsTask : datasetsTask, // task result is -> [ id , ... ]
-        viewedBlocks : viewedBlocksTasks
+        viewedBlocks : viewedBlocksTasks,
+        viewedById : blockService.get('viewedById')
       });
 
     /* When the datasets result (actually the blocks) is received, use that
@@ -110,8 +118,10 @@ let config = {
           result.push(referenceBlock);
         return result;}, []),
       referenceBlockIds = referenceBlocks.map(function (block) { return block.get('id'); });
-      dLog('referenceBlockIds', referenceBlockIds);
-      me.controllerFor(me.fullRouteName).setViewedOnly(referenceBlockIds, true);
+      if (referenceBlockIds.length) {
+        dLog('referenceBlockIds', referenceBlockIds);
+        blockService.setViewed(referenceBlockIds, true);
+      }
       /* currently getBlocksSummary() just gets the featureCount, which for a
        * reference block is 0, so this step could be skipped if ! allInitially,
        * but later the summary may contain other information */

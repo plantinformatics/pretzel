@@ -13,8 +13,11 @@ const axisTransitionTime = 750;
 
 export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   blockService: service('data/block'),
+  queryParams: service('query-params'),
 
   needs: ['component:tracks'],
+
+  urlOptions : Ember.computed.alias('queryParamsService.urlOptions'),
 
   subComponents : undefined,
 
@@ -24,42 +27,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     return id;
   }),
 
-  axis : Ember.computed('axisID', function() {
-    let axisID = this.get('axisID');
-    let stacks = this.get('drawMap.oa.stacks');
-    let axis = stacks.axesP[axisID];
-    return axis;
-  }),
-  axis1d : Ember.computed('axis', 'drawMap.oa.stacks.axesPCount', function() {
-    let axis = this.get('axis'),
-    axesPCount = this.get('drawMap.oa.stacks.axesPCount'),
-    axis1d = axis.axis1d;
-    console.log('axis1d', axis1d, axesPCount);
-    return axis1d;
-  }),
-  /** @return the blocks of this axis.
-   * Result type is [] of (stack.js) Block.
-   * For the Ember data Object blocks, @see dataBlocks().
+  /** Earlier versions had CP functions axis(), blocks(), dataBlocksS() based on
+   * stacks.js data structure for axes and blocks; these were dropped after
+   * version 1d6437a.
    */
-  blocks : Ember.computed('axis', function() {
-    let axis = this.get('axis');
-    return axis && axis.blocks;
-  }),
-  /** @return just the ("child") data blocks, skipping the ("parent") reference
-   * block which is block[0].
-   * Result type is [] of (stack.js) Block.
-   */
-  dataBlocksS : Ember.computed('blocks.[]', function () {
-    let blocks = this.get('blocks'),
-    /** skip reference block, which has no features. */
-    dataBlocks = blocks.filter(function (bS) {
-      let b = bS.block; return b && bS.isData(); });
-    console.log('dataBlocks', blocks, dataBlocks);
-    return dataBlocks;
-  }),
-  /** The above dataBlocksS() is based on stacks.js data structure for axes and blocks;
-   * this function instead is based on the Ember store blocks, via the ComputedProperty axesBlocks.
-   * This can replace dataBlocksS(), which may be updated after a delay.
+
+  /** @return the list of data blocks of this axis. These are the Ember Data store
+   * blocks, collated based on the ComputedProperty axesBlocks.
+   *
    * @return [] if there are no blocks with data in the axis.
    */
   dataBlocks : Ember.computed(
@@ -337,9 +312,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
          */
         let
           axisID = me.get('axisID');
-        let axis = me.get('axis');
-        console.log('extended', axis.extended, width, axis);
-        axis.extended = width;
+        console.log('extended', this.get('axis1d.extended'), width);
+        this.set('width', width);
         currentSize = width; // dx ?
 
         let parentView = me.get('parentView');

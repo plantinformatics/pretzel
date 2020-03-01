@@ -174,6 +174,8 @@ export default InAxis.extend({
 
   didInsertElement() {
     this._super(...arguments);
+
+    console.log("components/axis-tracks didInsertElement()");
     let
       childWidths = this.get('childWidths'),
     axisID = this.get('axisID'),
@@ -181,6 +183,11 @@ export default InAxis.extend({
     dLog('didInsertElement', axisID, width);
     // [min, max] width
     childWidths.set(this.get('className'), [width, width]);
+  },
+
+  willDestroyElement() {
+    this._super(...arguments);
+    console.log("components/axis-tracks willDestroyElement()");
   },
 
   didRender() {
@@ -337,7 +344,7 @@ export default InAxis.extend({
     let axisID = this.get('axisID'),
     aS = selectAxis(axisID);
     let
-    oa = this.get('axis').drawMap.oa, // or pass in this.get('data'),
+      oa = this.get('axis1d.drawMap.oa'),
     axis = oa.axes[axisID];
     /* if parent is un-viewed, this function may be called after axis is removed
      * from stacks. */
@@ -645,10 +652,13 @@ export default InAxis.extend({
       let tracks = this.get('tracksTree');
       let axis1d = this.get('axis1d'),
       zoomed = this.get('axis1d.zoomed'),
+      isViewed = axis1d.axis.get('isViewed'),
       extended = this.get('axis1d.extended'),
       featureLength = this.get('axis1d.featureLength'),
       yDomain = this.get('yDomain');
-      console.log('showTrackBlocks', this, tracks, axis1d, yDomain, 'axis1d.zoomed', zoomed, extended, featureLength);
+      console.log('showTrackBlocks', this, tracks, axis1d, isViewed, yDomain, 'axis1d.zoomed', zoomed, extended, featureLength);
+      let featuresLength;
+      if (isViewed) {
     let blockIds = d3.keys(tracks.intervalTree);
     if (false) {
       let blockId = blockIds[0];
@@ -657,8 +667,9 @@ export default InAxis.extend({
     }
     // intersect with axis zoom region;  layer the overlapping tracks; draw tracks.
     this.layoutAndDrawTracks.apply(this, [undefined, tracks]);
-    let featuresLength = blockIds.map((blockId) => [blockId, tracks.intervalTree[blockId].intervals.length]);
+    featuresLength = blockIds.map((blockId) => [blockId, tracks.intervalTree[blockId].intervals.length]);
     console.log('showTrackBlocks() featuresLength', featuresLength);
+      }
     return featuresLength;
   }),
 

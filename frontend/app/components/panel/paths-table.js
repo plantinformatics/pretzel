@@ -160,8 +160,10 @@ export default Ember.Component.extend({
   destroyHoTable() {
     let table = this.get('table');
     dLog('destroyHoTable', table);
-    table.destroy();
-    this.set('table', null);
+    if (table) {
+      table.destroy();
+      this.set('table', null);
+    }
   },
 
 

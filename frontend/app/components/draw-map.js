@@ -23,12 +23,12 @@ import { EventedListener } from '../utils/eventedListener';
 import { chrData, cmNameAdd } from '../utils/utility-chromosome';
 import { eltWidthResizable, eltResizeToAvailableWidth, noShiftKeyfilter, eltClassName, tabActive, inputRangeValue, expRange  } from '../utils/domElements';
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
-import { parseOptions } from '../utils/common/strings';
 import { Viewport } from '../utils/draw/viewport';
 import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
 import { brushClip } from '../utils/draw/axisBrush';
 
 import {  Axes, maybeFlip, maybeFlipExtent,
+          ensureYscaleDomain,
           /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll /*, axisTitleColour*/  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify  }  from '../utils/draw/stacksAxes';
 import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Name, setCount } from '../utils/stacks';
@@ -58,7 +58,7 @@ import { collateStacks, countPaths, /*countPathsWithData,*/
  * pathsAliasesResult.length) for all block-adj in flows.blockAdjs
  */
 function countPathsWithData() { }
-import { storeFeature } from '../utils/feature-lookup';
+import { storeFeature, lookupFeature } from '../utils/feature-lookup';
 
 
 /*----------------------------------------------------------------------------*/
@@ -101,7 +101,10 @@ export default Ember.Component.extend(Ember.Evented, {
   blockService: service('data/block'),
   flowsService: service('data/flows-collate'),
   pathsP : service('data/paths-progressive'),
+  queryParamsService: service('query-params'),
 
+  /*--------------------------------------------------------------------------*/
+  urlOptions : Ember.computed.alias('queryParamsService.urlOptions'),
 
   /*------------------------------------------------------------------------*/
 //-  graphData: Ember.inject.service('graph-data'),
@@ -263,11 +266,8 @@ export default Ember.Component.extend(Ember.Evented, {
   
   scroller: Ember.inject.service(),
 
-  /** later axes can be all displayed axes, but in this first stage:  just add them when they are extended */
-  axes2d : [],
-  splitAxes: Ember.computed.filterBy('axes2d', 'extended', true),
-
-  axisData : [{feature: "A1", position: 11}, {feature: "A2", position: 12}],
+  axes1d : Ember.computed( function () { return stacks.axes1d; }),
+  splitAxes: Ember.computed.filterBy('axes1d', 'extended', true),
 
   /*------------------------------------------------------------------------*/
 
@@ -319,33 +319,28 @@ export default Ember.Component.extend(Ember.Evented, {
     },
 
     addMap : function(mapName) {
-      console.log("controller/draw-map", "addMap", mapName);
+      dLog("controller/draw-map", "addMap", mapName);
       this.sendAction('addMap', mapName);
     },
-    mapsToViewDelete : function(mapName) {
-      console.log("controller/draw-map", "mapsToViewDelete", mapName);
-      this.sendAction('mapsToViewDelete', mapName);
+
+    removeBlock(block) {
+      dLog('removeBlock', block.id);
+      this.sendAction('removeBlock', block);
     },
 
+
     enableAxis2D: function(axisID, enabled) {
-      let axes2d = this.get('axes2d');
-      let axis = axes2d.findBy('axisID', axisID);
+      let axes1d = this.get('axes1d');
+      let axis = axes1d[axisID];
       if (axis === undefined)
       {
-        /* push will trigger : arrayContentDidChange()
-         * ... enumerableContentDidChange() ... didRender() (in axis-1d), so
-         * make give .extended its value before push.
-         */
-        axis = Ember.Object.create({ axisID : axisID, 'extended' : enabled });
-        axes2d.pushObject(axis);
-        console.log("create", axisID, axis, "in", axes2d);
+        dLog('enableAxis2D()', enabled, "no", axisID, "in", axes1d);
       }
       else
         Ember.run.later(
           () => axis.set('extended', enabled));  // was axis2DEnabled
       console.log("enableAxis2D in components/draw-map", axisID, enabled, axis);
       console.log("splitAxes", this.get('splitAxes'));
-      console.log("axes2d", this.get('axes2d'));
     },
 
     axisWidthResize : function(axisID, width, dx) {
@@ -1950,32 +1945,7 @@ export default Ember.Component.extend(Ember.Evented, {
     else
       svgContainer = oa.svgContainer;
 
-    let options_param = this.get('params.options'), options;
-    if (options_param && ! this.get('urlOptions')
-        && (options = parseOptions(options_param)))
-    {
-      /* splitAxes1 is now enabled by default. */
-      if (! options.splitAxes1)
-        options.splitAxes1 = true;
-      this.set('urlOptions', options);
-      this.get('blockService').injectParsedOptions(options);
-      // alpha enables new features which are not yet robust.
-      options.splitAxes |= options.alpha;
-      /** In addition to the options which are added as body classes in the
-       * following statement, the other supported options are :
-       *   splitAxes  (enables buttons for extended axis and dot-plot in configureAxisTitleMenu())
-       */
-      d3.select('body')
-        // alpha enables alpha features e.g. extended/split-axes, dot plot,
-        .classed("alpha", options.alpha)
-        // chartOptions enables (left panel : view) "Chart Options"
-        .classed("chartOptions", options.chartOptions)
-        .classed("gotoFeature", options.gotoFeature)
-        .classed("devel", options.devel) // enables some trace areas
-        .classed("axis2dResizer", options.axis2dResizer)
-        .classed('allInitially', options.allInitially)
-      ;
-    }
+    let options = this.get('urlOptions');
 
     function setCssVariable(name, value)
     {
@@ -3687,7 +3657,7 @@ export default Ember.Component.extend(Ember.Evented, {
       let parentName = Block.axisName_parent(axisID),
       ysa = oa.ys[parentName],
       /** if d is object ID instead of name then featureIndex[] is used */
-      feature = oa.z[axisID][d], // || oa.featureIndex[d],
+      feature = oa.z[axisID][d] || lookupFeature(oa, flowsService, oa.z, axisID, d), // || oa.featureIndex[d],
       aky = ysa(feature.location),
       /**  As noted in header comment, path Y value requires adding axisY = ... yOffset().
        * parentName not essential here because Block yOffset() follows .parent reference. */
@@ -3702,7 +3672,6 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       return aky + axisY;
     }
-
 
 
 //- axis-brush-zoom
@@ -4096,6 +4065,8 @@ export default Ember.Component.extend(Ember.Evented, {
         axisBrush = me.get('pathsP').ensureAxisBrush(block);
         console.log('axis', axis, axis.block, block, 'axisBrush', axisBrush);
       }
+      let yp = oa.y[brushedAxisID];
+      ensureYscaleDomain(yp, oa.axes[brushedAxisID]);
       let brushedDomain = brushRange ? axisRange2Domain(brushedAxisID, brushRange) : undefined;
       axisBrush.set('brushedDomain', brushedDomain);
 
@@ -4346,9 +4317,11 @@ export default Ember.Component.extend(Ember.Evented, {
             brushExtents[i] = brushedRegions[p];
           }
           let yp = y[p],
+          ypDomain = yp.domain(),
           axis = oa.axes[p],
           domain,
           brushedDomain;
+          ensureYscaleDomain(yp, axis);
           if (brushExtents) {
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion*/); });
           // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
@@ -5550,11 +5523,12 @@ export default Ember.Component.extend(Ember.Evented, {
               let stackID = Stack.removeStacked(axisName);
               deleteAxisfromAxisIDs(axisName);
               let sBlock = oa.stacks.blocks[axisName];
+              let block = sBlock.block;
               console.log('sBlock.axis', sBlock.axis);
               sBlock.setAxis(undefined);
               removeBrushExtent(axisName);
               removeAxisMaybeStack(axisName, stackID, stack);
-              me.send('mapsToViewDelete', axisName);
+              me.send('removeBlock', axisName);
               // filter axisName out of selectedFeatures and selectedAxes
               selectedFeatures_removeAxis(axisName);
               sendUpdatedSelectedFeatures();
@@ -5648,7 +5622,7 @@ export default Ember.Component.extend(Ember.Evented, {
             .on('click', function (buttonElt /*, i, g*/) {
               console.log("delete", block.axisName, this);
               // this will do : block.block.setViewed(false);
-              me.send('mapsToViewDelete', block.axisName);
+              me.send('removeBlock', block.block);
             });
 
           let visibleButtonS = d3.select("button.VisibleAxis");

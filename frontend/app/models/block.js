@@ -3,6 +3,7 @@ import DS from 'ember-data';
 import attr from 'ember-data/attr';
 // import { PartialModel, partial } from 'ember-data-partial-model/utils/model';
 const { inject: { service } } = Ember;
+// import { computed, set } from '@ember/object';
 import { A } from '@ember/array';
 import { and } from '@ember/object/computed';
 
@@ -44,7 +45,19 @@ export default DS.Model.extend({
    * set by adding the block to the graph (entry-block: get()),
    * and cleared by removing the block from the display.
    */
-  isViewed: false,
+  isViewed: Ember.computed('blockService.params.mapsToView.[]', {
+    get () {
+      // alternate dependency : 'blockService.viewed.[]'
+      let isViewed = this.get('blockService').getIsViewed(this.get('id'));
+      return isViewed;
+    },
+    set(key, value) {
+      dLog('isViewed', key, value);
+      this.get('blockService').setViewed(this.get('id'), value);
+
+      return value;
+    }
+  }),
   /** undefined if ! isViewed, otherwise handle of Block in Stacked axis which displays this block.
    * This attribute can split out into a mixin, in that case could merge with stacks.js : Block.
    */
@@ -335,6 +348,18 @@ export default DS.Model.extend({
     childBlocks = blocksByReference && blocksByReference.get(this);
     return childBlocks || [];
   }),
+  viewedChildBlocks : Ember.computed('childBlocks.@each.isViewed', function () {
+    let childBlocks = this.get('childBlocks'),
+    viewedChildBlocks = childBlocks.filterBy('isViewed');
+    dLog('viewedChildBlocks', viewedChildBlocks, childBlocks);
+    return viewedChildBlocks;
+  }),
+  unViewChildBlocks() {
+    let viewedChildBlocks = this.get('viewedChildBlocks');
+    if (viewedChildBlocks.length)
+      this.get('blockService').setViewed(viewedChildBlocks, false);
+  },
+
 
   /*--------------------------------------------------------------------------*/
 
