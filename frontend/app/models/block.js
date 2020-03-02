@@ -314,7 +314,8 @@ export default DS.Model.extend({
     parent = dataset && dataset.get('parent'),
     parentName = parent && parent.get('name');  // e.g. "myGenome"
 
-    dLog('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent && parent.get('id'));
+    if (trace_block)
+      dLog('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent && parent.get('id'));
     if (parent)
     {
       referenceBlock = this.get('store').peekAll('block')
@@ -336,7 +337,8 @@ export default DS.Model.extend({
           }
           return match;})
       ;
-      dLog('referenceBlock', referenceBlock);
+      if (trace_block)
+        dLog('referenceBlock', referenceBlock);
       // expect referenceBlock.length == 0 or 1
       if (referenceBlock.length !== undefined)
         referenceBlock = referenceBlock[0] || undefined;

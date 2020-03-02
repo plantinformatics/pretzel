@@ -112,7 +112,8 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     gS.exit().remove();
     function storeBlockIndex (block, i) {
       blockIndex[block.getId()] = i;
-      dLog('blockIndex', block.getId(), i);
+      if (trace_stack)
+        dLog('blockIndex', block.getId(), i);
     };
     let gA = gS.enter()
       .append('g')
@@ -122,7 +123,8 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     /** data blocks of the axis, for calculating blockIndex i.e. colour.
      * colour assignment includes non-visible blocks . */
     let blocksUnfiltered = extended ? [] : axis.dataBlocks(false);
-    dLog('blockIndex', axisName, axis, axis.blocks);
+    if (trace_stack)
+      dLog('blockIndex', axisName, axis, axis.blocks);
     blocksUnfiltered.forEach(storeBlockIndex);
 
     function featuresOfBlock (block) {
@@ -297,7 +299,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     /* useTransition could be passed down to showTickLocations()
      * (also could pass in duration or t from showResize()).
      */
-    dLog("resized in components/axis-1d");
+    if (trace_stack)
+      dLog("resized in components/axis-1d");
     if (heightChanged)
       this.renderTicksDebounce();
   },

@@ -1918,7 +1918,8 @@ export default Ember.Component.extend(Ember.Evented, {
       let resizeThis =
         // this.resize.bind(oa);
               function(transition) {
-                  console.log("resizeThis", transition);
+                if (trace_stack)
+                  dLog("resizeThis", transition);
                   Ember.run.debounce(oa, me.resize, [transition], 500);
               };
         /** d3 dispatch.on() does not take arguments, and similarly for eltWidthResizable() param resized. */
@@ -6076,6 +6077,7 @@ export default Ember.Component.extend(Ember.Evented, {
    * 't[m] is not a function,     at Object.applyStr (ember-utils.js:524)'
    */
   resized : function(prevSize, currentSize) {
+    if (trace_gui)
     console.log("resized in components/draw-map", this, prevSize, currentSize);
   },
 

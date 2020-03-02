@@ -738,7 +738,7 @@ export default Service.extend(Ember.Evented, {
             return map; },
           new Map());
 
-      if (trace_block)
+      if (trace_block > 1)
         log_Map('blocksByReference', map);
       return map;
     }),
