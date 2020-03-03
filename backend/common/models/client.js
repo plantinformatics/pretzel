@@ -40,7 +40,7 @@ module.exports = function(Client) {
       next(new Error('Email could not be sent, missing configuration'));
     }
   });
-  
+
   Client.beforeRemote('confirm', function(context, result, next) {
     // Check whether admin also has to verify the user
     if (process.env.EMAIL_ACTIVE == 'true' && process.env.EMAIL_VERIFY == 'ADMIN' && context.args.redirect == '/verified') {
@@ -52,7 +52,7 @@ module.exports = function(Client) {
             type: 'email',
             to: process.env.EMAIL_ADMIN,
             from: process.env.EMAIL_FROM,
-            subject: 'New Pretzel User Registration',
+            subject: 'New Pretzel User Registration: '+userInstance.email,
             email_user: userInstance.email, // for template
             email_recipient: process.env.EMAIL_ADMIN, // for template
             host: process.env.API_HOST,
@@ -70,7 +70,7 @@ module.exports = function(Client) {
             return;
           });
         });
-        
+
       } else {
         next(new Error('Email could not be sent, missing configuration'));
       }
