@@ -1275,7 +1275,7 @@ export default Ember.Component.extend(Ember.Evented, {
               zd = oa.z[d];
             let block = oa.z[key],
             match = (block.scope == zd.scope) && (block.dataset.get('name') == parentName);
-            dLog(key, block, match);
+            dLog(key, trace_stack ? block : block.dataset.get('name'), match);
             return match;
           }
           /** undefined if no parent found, otherwise is the id corresponding to parentName */
@@ -5982,8 +5982,14 @@ export default Ember.Component.extend(Ember.Evented, {
     let data = this.get('data');
     Ember.run.throttle(function () {
       /** viewed[] is equivalent to data[], apart from timing differences.  */
-      let viewed = me.get('blockService.viewed');
-      viewed.forEach((block) => me.oa.axisApi.ensureAxis(block.id));
+      let viewed = me.get('blockService.viewed'),
+      /** create axes for the reference blocks before the data blocks are added. */
+      referencesFirst = viewed.sort((a,b) => {
+        let aHasReference = !!a.get('referenceBlock'),
+        bHasReference = !!b.get('referenceBlock');
+        return aHasReference === bHasReference ? 0 : aHasReference ?  1 : -1;
+      });
+      referencesFirst.forEach((block) => me.oa.axisApi.ensureAxis(block.id));
       me.draw(data, 'didRender');
     }, 1500);
 
@@ -6077,8 +6083,9 @@ export default Ember.Component.extend(Ember.Evented, {
    * 't[m] is not a function,     at Object.applyStr (ember-utils.js:524)'
    */
   resized : function(prevSize, currentSize) {
+    const trace_gui = 0;
     if (trace_gui)
-    console.log("resized in components/draw-map", this, prevSize, currentSize);
+      dLog("resized in components/draw-map", this, prevSize, currentSize);
   },
 
     resize : function() {
