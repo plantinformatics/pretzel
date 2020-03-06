@@ -37,7 +37,7 @@ import { updateRange } from '../utils/stacksLayout';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../utils/stacks-drag';
 import { wheelNewDomain } from '../utils/draw/zoomPanCalcs';
 import { round_2, checkIsNumber} from '../utils/domCalcs';
-import { Object_filter } from '../utils/Object_filter';
+import { Object_filter, compareFields } from '../utils/Object_filter';
 import { name_chromosome_block, name_position_range, isOtherField } from '../utils/field_names';
 import { breakPoint, breakPointEnableSet } from '../utils/breakPoint';
 import { highlightFeature_drawFromParams } from './draw/highlight-feature';
@@ -330,7 +330,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
     enableAxis2D: function(axisID, enabled) {
-      let axes1d = this.get('axes1d');
+      let axes1d = this.get('axes1d') || this.get('stacks.axes1d');
       let axis = axes1d[axisID];
       if (axis === undefined)
       {
@@ -462,7 +462,6 @@ export default Ember.Component.extend(Ember.Evented, {
 
     this.on('paths', addPathsToCollation);
     this.on('pathsByReference', addPathsByReferenceToCollation);
-    this.on('resized', function () { } );
     }
 
     if (oa.showResize === undefined)
@@ -557,6 +556,7 @@ export default Ember.Component.extend(Ember.Evented, {
       vc.calc(oa);
       if (vc.count > 1)
       {
+        /** could use equalFields(). */
         let
           widthChanged = oa.vc.viewPort.w != oa.vc.viewPortPrev.w,
         heightChanged = oa.vc.viewPort.h != oa.vc.viewPortPrev.h;
@@ -2251,14 +2251,14 @@ export default Ember.Component.extend(Ember.Evented, {
         .enter()
         .append("g")
         .attr("class", "axis-use");
-      // merge / update ?
+      let em = ug.merge(eg);
 
       /** If dualAxis, use <use> to show 2 identical axes.
        * Otherwise show only the left axis, and on the right side a line like an
        * axis with no ticks, just the top & bottom tick lines, but reflected so
        * that they point right.
        */
-      let dualAxis = false;
+      let dualAxis = options && options.dualAxis;
       if (dualAxis) {
       let eu = eg
       /* extra "xlink:" seems required currently to work, refn :  dsummersl -
@@ -2271,9 +2271,10 @@ export default Ember.Component.extend(Ember.Evented, {
         .append("rect")
         .attr("x", 0)
         .attr("y", 0)
-        .attr("width", 0)
+        .attr("width", 0),
+        rm = er.merge(em.selectAll('g.axis-use > rect'))
         .attr("height", vc.yRange);
-      er
+      rm
         .transition().duration(1000)
         .attr("width", initialWidth);
       }
@@ -2291,11 +2292,11 @@ export default Ember.Component.extend(Ember.Evented, {
           [+tickWidth, edgeHeight]
         ]),
         ra = eg
-          .append("path")
+          .append("path"),
+        rm = ra.merge(em.selectAll('g.axis-use > path'))
+          .transition().duration(1000)
           .attr("transform",function(d) {return "translate(" + (shiftRight + getAxisExtendedWidth(d)) + ",0)";})
           .attr("d", sLine);
-        ra
-          .transition().duration(1000);
       }
 
       // foreignObject is case sensitive - refn https://gist.github.com/mbostock/1424037
@@ -2320,9 +2321,19 @@ export default Ember.Component.extend(Ember.Evented, {
         .append("div")
         .attr("id", "axis2D_" + axisID) // matches axis-2d:targetEltId()
         .style("border:1px green solid");
-
-      me.send('enableAxis2D', axisID, axis.extended);
     }
+    function axisShowExtendAll() {
+      // based on collateO
+      dLog("axisShowExtendAll", oa.axisIDs.length, oa.axisIDs);
+      oa.stacks.axisIDs().forEach(function(d){
+        let axisID = d,
+        axis = oa.axes[axisID];
+        if (trace_stack > 1)
+          dLog(d, axisId2Name(d), axis);
+        axisShowExtend(axis, axisID, undefined);
+      });
+    }
+
 
     if (trace_stack)
     {
@@ -5572,6 +5583,7 @@ export default Ember.Component.extend(Ember.Evented, {
               // toggle axis.extended, which is initially undefined.
               axis.extended = ! axis.extended;
               axisShowExtend(axis, axisName, undefined);
+              me.send('enableAxis2D', axisName, axis.extended);
             });
 
         });
@@ -5763,10 +5775,13 @@ export default Ember.Component.extend(Ember.Evented, {
           /* This does .trigger() within .later(), which seems marginally better than vice versa; it works either way.  (Planning to replace event:resize soon). */
           if (widthChanged || heightChanged)
             try {
+              /** draw-map sends 'resized' event to listening sub-components using trigger().
+               * It does not listen to this event. */
               me.trigger('resized', widthChanged, heightChanged, useTransition);
             } catch (exc) {
               console.log('showResize', 'resized', me, me.resized, widthChanged, heightChanged, useTransition, graphDim, brushedDomains, exc.stack || exc);
             }
+          axisShowExtendAll();
           showSynteny(oa.syntenyBlocks, undefined); });
       };
 
@@ -6003,10 +6018,26 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     'stacksWidthChanges.@each', 'viewportWidth', 'viewportHeight',
     function () {
+      let
+      stacksWidthChanges = this.get('stacksWidthChanges'),
+      viewportWidth = this.get('viewportWidth'),
+      viewportHeight = this.get('viewportHeight'),
+      result = {
+        stacksWidthChanges, viewportWidth, viewportHeight
+      };
+      let prev = this.get('resizePrev');
+      this.set('resizePrev', result);
+      if (prev) {
+        delete result.changed;
+        let changed = compareFields(prev, result, (a,b) => a !== b);
+        result.changed = changed;
+      }
+      dLog('resizeEffect', result);
     if (false) // currently the display is probably smoother with the debounce; later after tidying up the resize structure this direct call may be better.
       this.get('resize').apply(this.get('oa'), [/*transition*/true]);
     else
       Ember.run.debounce(this.get('oa'), this.get('resize'), [/*transition*/true], 500);
+      return result;
   }),
 
   /** for CP dependency.  Depends on factors which affect the horizontal (X) layout of stacks.
@@ -6076,16 +6107,6 @@ export default Ember.Component.extend(Ember.Evented, {
       this.set('previousRender', now);
     }
     return changed;
-  },
-
-  /** draw-map sends resized event to listening sub-components using trigger().
-   * It does not listen to this event, or need to, but defining resized() may fix :
-   * 't[m] is not a function,     at Object.applyStr (ember-utils.js:524)'
-   */
-  resized : function(prevSize, currentSize) {
-    const trace_gui = 0;
-    if (trace_gui)
-      dLog("resized in components/draw-map", this, prevSize, currentSize);
   },
 
     resize : function() {

@@ -253,6 +253,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     this.set('subComponents', []);
   },
 
+  /** receive notification of draw-map resize. */
+  resized : function(prevSize, currentSize) {
+    dLog("resized in components/axis-2d", this, prevSize, currentSize);
+  },
+
   didRender() {
     let me = this;
     let prevSize,  currentSize;

@@ -672,6 +672,16 @@ export default InAxis.extend({
       }
     return featuresLength;
   }),
+  resizeEffectHere : Ember.computed('resizeEffect', function () {
+    let result = this.get('resizeEffect');
+    dLog('resizeEffectHere in axis-tracks', this.get('axisID'), result);
+    /** @return true if rc[f] indicates a change of field f.
+     * if the previous size is not recorded, then treat it as a change.
+     */
+    function isChanged(rc, f) { return rc ? rc[f] : true; }
+    this.showResize(isChanged(result.changed, 'viewportWidth'), isChanged(result.changed, 'viewportHeight') /* , yScaleChanged ? */);
+  }),
+
 
   keypress: function(event) {
     console.log("components/axis-tracks keypress", event);
