@@ -706,6 +706,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     extended = this.get('extended'),
     axisID = this.get('axis.id');
     dLog('extended', extended, axisID);
+    // possibly add this to axisAPi, or pass an action param.
+    this.drawMap.axisWidthResizeEnded();
+
     if (extended)
       this.removeTicks();
     else
@@ -713,8 +716,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       let axisID_t = [axisID, undefined];
       this.renderTicksDebounce(axisID_t);
     }
-    /* .extended has changed, so the centre of the axisTitle is changed. */
-    this.updateAxisTitleSize();
+
+    /* .extended has changed, so the centre of the axisTitle is changed.
+     * this.updateAxisTitleSize() is called in axisWidthResizeEnded()->stacksAdjust()
+     */
 
     return extended;
   }),
