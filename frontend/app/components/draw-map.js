@@ -3231,6 +3231,9 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     /**  Return the x positions of the given axes; if the leftmost is split, add
      *  its width to the corresponding returned axis position.
+     * The purpose is to give the x positions which paths between the 2 axes
+     * should terminate at, hence the name 'inside' - it is concerned with the
+     * inside edges of the axes from the perspective of the space between them.
      * @param ak1, ak2  axis IDs  (i.e. oa.axes[ak1] is Stacked, not Block)
      * @param cached  true means use the "old" / cached positions o[ak], otherwise use the current scale x(ak).
      * @return 2 x-positions, in an array, in the given order (ak1, ak2).
@@ -3250,7 +3253,7 @@ export default Ember.Component.extend(Ember.Evented, {
       if (aL.extended)
       {
         // console.log("inside", ak1, ak2, cached, xi, order, left, akL);
-        xi[left] += aL.extended;
+        xi[left] += aL.extendedWidth();
       }
       return xi;
     }

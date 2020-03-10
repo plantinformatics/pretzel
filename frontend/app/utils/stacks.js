@@ -1902,7 +1902,8 @@ Stacked.prototype.extendedWidth = function()
     let axis2d = childViews && childViews.findBy( '_debugContainerKey', 'component:axis-2d');
     if (axis2d) {
       width = axis2d.rectWidth();
-      dLog('extendedWidth', this, childViews, axis2d, width);
+      if (trace_stack > 1)
+        dLog('extendedWidth', this, childViews, axis2d, width);
     } else
       width = 120;
   }
