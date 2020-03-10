@@ -2661,7 +2661,8 @@ export default Ember.Component.extend(Ember.Evented, {
         .transition().duration(dragTransitionTime)
       ;
 
-      
+      oa.vc.calc(oa);
+      // vc.calc() calculates .axisXRange, which is used here.
       console.log('vc.axisXRange', vc.axisXRange, axisTitleS.nodes(), stacks.length);
     let axisXRange = vc.axisXRange;
       /** axisXRange[] already allows for 1/2 title space either side, so use length-1.
@@ -2675,7 +2676,6 @@ export default Ember.Component.extend(Ember.Evented, {
     let titleText = vc.titleText || (vc.titleText = {});
 
       oa.vc.axisHeaderTextLen = titlePx;
-      oa.vc.calc(oa);
       oa.axisTitleLayout.calc(axisSpacing, titlePx);
 
 
@@ -5166,9 +5166,10 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function stacksAdjust(changedNum, t)
     {
+      updateAxisTitleSize(undefined);
+      /* updateAxisTitleSize() uses vc.axisXRange but not o, so call it before collateO(). */
       if (changedNum)
         collateO();
-      updateAxisTitleSize(undefined);
       collateStacks();
       if (changedNum)
       {
