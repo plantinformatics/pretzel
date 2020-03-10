@@ -330,7 +330,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
 
     enableAxis2D: function(axisID, enabled) {
-      let axes1d = this.get('axes1d') || this.get('stacks.axes1d');
+      let axes1d = this.get('axes1d') || this.get('oa.stacks.axes1d');
       let axis = axes1d[axisID];
       if (axis === undefined)
       {
