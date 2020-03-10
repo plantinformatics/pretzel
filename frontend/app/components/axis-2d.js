@@ -151,9 +151,19 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   rectWidth() {
     let
       axisUse = this.get('axisUse'),
+    dualAxis = false, // options && options.dualAxis
+    /** <rect> is present iff dualAxis.  Otherwise use the x translation of <path> */
     rect2 = axisUse.select("g.axis-use > rect"),
-    width = rect2.attr('width');
-    console.log("rectWidth", this.get('startWidth'), this.currentWidth(), rect2.node(), width);
+    path = axisUse.select('g.axis-use > path'),
+    width;
+    if (/*dualAxis*/ rect2.size()) {
+      width = rect2.attr('width');
+    } else {
+      let transform = path.attr('transform'),
+      match = transform.match(/translate\(([0-9]+),/);
+      width = match && +match[1];
+    }
+    console.log("rectWidth", this.get('startWidth'), this.currentWidth(), rect2.node(), path.node(), width);
     return width;
   },
   currentWidth() {
@@ -244,13 +254,24 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   /*--------------------------------------------------------------------------*/
 
   didInsertElement() {
+    this._super(...arguments);
+
+    this.getUse();
+  },
+  getUse(backoffTime) {
     let oa = this.get('data'),
     axisUse = oa.svgContainer.selectAll("g.axis-outer#id"+this.get('axisID')),
+    /** <use> is present iff dualAxis */
     use = axisUse.selectAll("use");
-    this.set('axisUse', axisUse);
-    this.set('use', use);
-    console.log("axis-2d didInsertElement", this, this.get('axisID'), axisUse.node(), use.node());
-    this.set('subComponents', []);
+    if (axisUse.empty()) {
+      dLog('getUse', backoffTime);
+      Ember.run.later(() => this.getUse(backoffTime ? backoffTime * 2 : 1000));
+    } else {
+      this.set('axisUse', axisUse);
+      this.set('use', use);
+      console.log("axis-2d didInsertElement", this, this.get('axisID'), axisUse.node(), use.node());
+      this.set('subComponents', []);
+    }
   },
 
   /** receive notification of draw-map resize. */

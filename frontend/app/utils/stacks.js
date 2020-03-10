@@ -1895,8 +1895,20 @@ Stack.prototype.redrawAdjacencies = function ()
 /** width of the axis.  either 0 or .extended (current width of extension) */
 Stacked.prototype.extendedWidth = function()
 {
+  let width = this.extended;
+  if (width === true) {
+    let childViews = Ember.get(this.axis1d, 'childViews');
+    /** replace this with a passed parameter enabling axis-2d to report .width back up to axis-1d.  */
+    let axis2d = childViews && childViews.findBy( '_debugContainerKey', 'component:axis-2d');
+    if (axis2d) {
+      width = axis2d.rectWidth();
+      dLog('extendedWidth', this, childViews, axis2d, width);
+    } else
+      width = 120;
+  }
+
   // dLog("Stacked extendedWidth()", this, this.extended);
-  return this.extended || 0;
+  return width || 0;
 };
 
 /** @return range of widths, [min, max] of the Axes in this stack */
