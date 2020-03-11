@@ -2211,6 +2211,8 @@ export default Ember.Component.extend(Ember.Evented, {
       let p2 = this.parentNode.parentElement;
       return "#a" + p2.__data__;
     }
+      if (! oa.axisApi.getAxisExtendedWidth)
+	  oa.axisApi.getAxisExtendedWidth = getAxisExtendedWidth;
     function getAxisExtendedWidth(axisID)
     {
       let axis = oa.axes[axisID],
@@ -5185,6 +5187,8 @@ export default Ember.Component.extend(Ember.Evented, {
         if (oa.svgContainer)
           oa.stacks.forEach(function (s) { s.redrawAdjacencies(); });
       }
+      // could limit this to axes for which dataBlocks has changed
+      axisShowExtendAll();
       // pathUpdate() uses flow.g, which is set after oa.foreground.
       if (oa.foreground && ysLength())
       {

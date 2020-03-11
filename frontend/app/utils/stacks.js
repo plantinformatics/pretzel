@@ -1904,8 +1904,14 @@ Stacked.prototype.extendedWidth = function()
       width = axis2d.rectWidth();
       if (trace_stack > 1)
         dLog('extendedWidth', this, childViews, axis2d, width);
-    } else
-      width = 120;
+    } else {
+      /** based on the path translate calculation in draw-map.js : axisShowExtend();
+       * These can be integrated when moved to axis-2d.
+       * Also axis-tracks.js : @see layoutWidth()
+       */
+      let shiftRight = 5;
+      width = shiftRight + stacks.oa.axisApi.getAxisExtendedWidth(this.axisName);
+    }
   }
 
   // dLog("Stacked extendedWidth()", this, this.extended);
