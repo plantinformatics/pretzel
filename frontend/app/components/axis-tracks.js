@@ -386,8 +386,9 @@ export default InAxis.extend({
       /** if zoomed in, tracks are not filtered by sizeThreshold.
        * The logic is : if the user is zooming in, they are interested in
        * features regardless of size, e.g. smaller than a pixel.
+       * [ sizeThreshold is disabled by setting to undefined, while we prototype how to select a sub-set of features to display ]
        */
-      sizeThreshold = zoomed ? undefined : pxSize * 1/*5*/,
+      sizeThreshold = undefined, // zoomed ? undefined : pxSize * 1/*5*/,
       tracksLayout = regionOfTree(t, yDomain, sizeThreshold),
       data = tracksLayout.intervals;
       if (false)  // actually need to sum the .layoutWidth for all blockId-s, plus the block offsets which are calculated below
@@ -578,6 +579,23 @@ export default InAxis.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  featuresForTrackBlocksRequestEffect : Ember.computed(
+    'trackBlocksR.[]',
+    // either axis1d.domain or yDomain is probably sufficient dependency.
+    'axis1d.domain', 'yDomain',
+    function () {
+      dLog('featuresForTrackBlocksRequestEffect');
+      let trackBlocks = this.get('trackBlocksR'),
+      /** featuresForAxis() uses getBlockFeaturesInterval(), which is also used by 
+       * models/axis-brush.js */
+      blockFeatures = trackBlocks.map(function (b) { return b.get('featuresForAxis'); } );
+      /* no return value - result is displayed by showTrackBlocks() with data
+       * collated by tracksTree(). */
+    }),
+
+  /*--------------------------------------------------------------------------*/
+
+
   /** Not used; can be used in .hbs for trace, for comparison against the result
    * of showTrackBlocks(). */
   blocksFeaturesLengths : Ember.computed(
@@ -648,7 +666,9 @@ export default InAxis.extend({
   }),
   showTrackBlocks: Ember.computed(
     'tracksTree', 'yDomain.0', 'yDomain.1', 'axis1d.zoomed', 'axis1d.extended', 'axis1d.featureLength',
+    'featuresForTrackBlocksRequestEffect',
     function() {
+      this.get('featuresForTrackBlocksRequestEffect');
       let tracks = this.get('tracksTree');
       let axis1d = this.get('axis1d'),
       zoomed = this.get('axis1d.zoomed'),

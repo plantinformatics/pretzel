@@ -383,6 +383,8 @@ export default DS.Model.extend({
 
   /** When block is added to an axis, request features, scoped by the axis
    * current position.
+   * As used in axis-tracks : when axis is open/split, request features in
+   * response to, and as defined by, zoom changes.
    */
   featuresForAxis : Ember.computed('axis', function () {
     /** This could be split out into a separate layer, concerned with reactively
