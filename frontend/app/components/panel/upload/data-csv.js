@@ -57,7 +57,13 @@ export default UploadBase.extend({
         },
         afterRemoveRow: function() {
           that.checkData();
-        }
+        },
+        /*
+         * The following line enables the app to work with versions after 6.2.2,
+         * refn : https://handsontable.com/blog/articles/2019/3/handsontable-drops-open-source-for-a-non-commercial-license
+         * This app is used for academic research.
+         */
+        licenseKey: 'non-commercial-and-evaluation'
       });
       that.set('table', table);
       $('.nav-tabs a[href="#left-panel-upload"]').on('shown.bs.tab', function() {
@@ -175,7 +181,7 @@ export default UploadBase.extend({
     return new Ember.RSVP.Promise(function(resolve, reject) {
       var selectedMap = that.get('selectDataset');
       // If a selected dataset, can simply return it
-      // If no selectedMap, treat as default, 'new' 
+      // If no selectedMap, treat as default, 'new'
       if (selectedMap && selectedMap !== 'new') {
         resolve(selectedMap);
       } else {
