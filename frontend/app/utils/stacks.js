@@ -269,8 +269,7 @@ function Stacked(axisName, portion) {
   this.blocks = [];
   /* Pick up the reference to the corresponding axis-1d component, in the case
    * that it was created before this Stacked.  */
-  if (axes1d[axisName])
-    this.axis1d = axes1d[axisName];
+  this.getAxis1d();
   /* axis objects persist through being dragged in and out of Stacks. */
   axesP[axisName] =
   oa.axes[axisName] = this;
@@ -301,6 +300,12 @@ Stacked.prototype.getAxis = function()
  */
 Stacked.axis1dAdd = function (axisName, axis1dComponent) {
   axes1d[axisName] = axis1dComponent;
+};
+Stacked.axis1dRemove = function (axisName, axis1dComponent) {
+  if (axes1d[axisName] !== axis1dComponent)
+    Ember.assert('axis1dRemove', axes1d, axisName, axis1dComponent);
+  else
+    delete axes1d[axisName];
 };
 Stacked.prototype.getAxis1d = function () {
   let axis1d = this.axis1d || (this.axis1d = axes1d[this.axisName]);
@@ -1890,8 +1895,27 @@ Stack.prototype.redrawAdjacencies = function ()
 /** width of the axis.  either 0 or .extended (current width of extension) */
 Stacked.prototype.extendedWidth = function()
 {
+  let width = this.extended;
+  if (width === true) {
+    let childViews = Ember.get(this.axis1d, 'childViews');
+    /** replace this with a passed parameter enabling axis-2d to report .width back up to axis-1d.  */
+    let axis2d = childViews && childViews.findBy( '_debugContainerKey', 'component:axis-2d');
+    if (axis2d) {
+      width = axis2d.rectWidth();
+      if (trace_stack > 1)
+        dLog('extendedWidth', this, childViews, axis2d, width);
+    } else {
+      /** based on the path translate calculation in draw-map.js : axisShowExtend();
+       * These can be integrated when moved to axis-2d.
+       * Also axis-tracks.js : @see layoutWidth()
+       */
+      let shiftRight = 5;
+      width = shiftRight + stacks.oa.axisApi.getAxisExtendedWidth(this.axisName);
+    }
+  }
+
   // dLog("Stacked extendedWidth()", this, this.extended);
-  return this.extended || 0;
+  return width || 0;
 };
 
 /** @return range of widths, [min, max] of the Axes in this stack */

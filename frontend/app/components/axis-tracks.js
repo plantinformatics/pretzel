@@ -174,6 +174,8 @@ export default InAxis.extend({
 
   didInsertElement() {
     this._super(...arguments);
+
+    console.log("components/axis-tracks didInsertElement()");
     let
       childWidths = this.get('childWidths'),
     axisID = this.get('axisID'),
@@ -181,6 +183,11 @@ export default InAxis.extend({
     dLog('didInsertElement', axisID, width);
     // [min, max] width
     childWidths.set(this.get('className'), [width, width]);
+  },
+
+  willDestroyElement() {
+    this._super(...arguments);
+    console.log("components/axis-tracks willDestroyElement()");
   },
 
   didRender() {
@@ -337,7 +344,7 @@ export default InAxis.extend({
     let axisID = this.get('axisID'),
     aS = selectAxis(axisID);
     let
-    oa = this.get('axis').drawMap.oa, // or pass in this.get('data'),
+      oa = this.get('axis1d.drawMap.oa'),
     axis = oa.axes[axisID];
     /* if parent is un-viewed, this function may be called after axis is removed
      * from stacks. */
@@ -379,8 +386,9 @@ export default InAxis.extend({
       /** if zoomed in, tracks are not filtered by sizeThreshold.
        * The logic is : if the user is zooming in, they are interested in
        * features regardless of size, e.g. smaller than a pixel.
+       * [ sizeThreshold is disabled by setting to undefined, while we prototype how to select a sub-set of features to display ]
        */
-      sizeThreshold = zoomed ? undefined : pxSize * 1/*5*/,
+      sizeThreshold = undefined, // zoomed ? undefined : pxSize * 1/*5*/,
       tracksLayout = regionOfTree(t, yDomain, sizeThreshold),
       data = tracksLayout.intervals;
       if (false)  // actually need to sum the .layoutWidth for all blockId-s, plus the block offsets which are calculated below
@@ -571,6 +579,23 @@ export default InAxis.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  featuresForTrackBlocksRequestEffect : Ember.computed(
+    'trackBlocksR.[]',
+    // either axis1d.domain or yDomain is probably sufficient dependency.
+    'axis1d.domain', 'yDomain',
+    function () {
+      dLog('featuresForTrackBlocksRequestEffect');
+      let trackBlocks = this.get('trackBlocksR'),
+      /** featuresForAxis() uses getBlockFeaturesInterval(), which is also used by 
+       * models/axis-brush.js */
+      blockFeatures = trackBlocks.map(function (b) { return b.get('featuresForAxis'); } );
+      /* no return value - result is displayed by showTrackBlocks() with data
+       * collated by tracksTree(). */
+    }),
+
+  /*--------------------------------------------------------------------------*/
+
+
   /** Not used; can be used in .hbs for trace, for comparison against the result
    * of showTrackBlocks(). */
   blocksFeaturesLengths : Ember.computed(
@@ -641,14 +666,19 @@ export default InAxis.extend({
   }),
   showTrackBlocks: Ember.computed(
     'tracksTree', 'yDomain.0', 'yDomain.1', 'axis1d.zoomed', 'axis1d.extended', 'axis1d.featureLength',
+    'featuresForTrackBlocksRequestEffect',
     function() {
+      this.get('featuresForTrackBlocksRequestEffect');
       let tracks = this.get('tracksTree');
       let axis1d = this.get('axis1d'),
       zoomed = this.get('axis1d.zoomed'),
+      isViewed = axis1d.axis.get('isViewed'),
       extended = this.get('axis1d.extended'),
       featureLength = this.get('axis1d.featureLength'),
       yDomain = this.get('yDomain');
-      console.log('showTrackBlocks', this, tracks, axis1d, yDomain, 'axis1d.zoomed', zoomed, extended, featureLength);
+      console.log('showTrackBlocks', this, tracks, axis1d, isViewed, yDomain, 'axis1d.zoomed', zoomed, extended, featureLength);
+      let featuresLength;
+      if (isViewed) {
     let blockIds = d3.keys(tracks.intervalTree);
     if (false) {
       let blockId = blockIds[0];
@@ -657,10 +687,21 @@ export default InAxis.extend({
     }
     // intersect with axis zoom region;  layer the overlapping tracks; draw tracks.
     this.layoutAndDrawTracks.apply(this, [undefined, tracks]);
-    let featuresLength = blockIds.map((blockId) => [blockId, tracks.intervalTree[blockId].intervals.length]);
+    featuresLength = blockIds.map((blockId) => [blockId, tracks.intervalTree[blockId].intervals.length]);
     console.log('showTrackBlocks() featuresLength', featuresLength);
+      }
     return featuresLength;
   }),
+  resizeEffectHere : Ember.computed('resizeEffect', function () {
+    let result = this.get('resizeEffect');
+    dLog('resizeEffectHere in axis-tracks', this.get('axisID'), result);
+    /** @return true if rc[f] indicates a change of field f.
+     * if the previous size is not recorded, then treat it as a change.
+     */
+    function isChanged(rc, f) { return rc ? rc[f] : true; }
+    this.showResize(isChanged(result.changed, 'viewportWidth'), isChanged(result.changed, 'viewportHeight') /* , yScaleChanged ? */);
+  }),
+
 
   keypress: function(event) {
     console.log("components/axis-tracks keypress", event);

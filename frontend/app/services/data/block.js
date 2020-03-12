@@ -4,6 +4,8 @@ import { task } from 'ember-concurrency';
 
 const { inject: { service } } = Ember;
 
+import { keyBy } from 'lodash/collection';
+
 import { stacks } from '../../utils/stacks';
 
 
@@ -69,19 +71,25 @@ function filterMap(map, mapFilterFn) {
  *  It is possible that later there will be multiple mapviews in one route, in
  *  which case the isViewed state might be split out of this singleton service,
  *  or this may become a per-mapview component.
- * 
+ *
+ * @param params  model.params;  the viewed CPs are based on .mapsToView from the URL.
  */
 export default Service.extend(Ember.Evented, {
   auth: service('auth'),
   store: service(),
   pathsPro : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
+  queryParams: service('query-params'),
+
+  params : Ember.computed.alias('queryParams.params'),
+  /** params.options is the value passed to &options=
+   * parsedOptions is the result of parsing the values from that into attributes.
+   * params.parsedOptions is just the parsed values, and queryParams.urlOptions has defaults added.
+   */
+  parsedOptions : Ember.computed.alias('queryParams.urlOptions'),
 
   summaryTask : {},
 
-  injectParsedOptions(parsedOptions) {
-    this.set('parsedOptions', parsedOptions);
-  },
 
   /** Not required because findRecord() is used;
    * might later want this for other requests or calculation results, but can
@@ -106,8 +114,12 @@ export default Service.extend(Ember.Evented, {
 
   /** Call getData() in a task - yield the block result.
    * Signal that receipt with receivedBlock(id, block).
+   *
+   * taskGet()->getData() is only used if allInitially (i.e. not progressive loading);
+   * so there is no current need for getBlocks(), taskGet() and getData().
    */
   taskGet: task(function * (id) {
+    debugger; // see header comment
     /** if not already loaded and viewed, then trigger receivedBlock */
     let isViewed = this.get('getIsViewed').apply(this, [id]);
     let block = yield this.getData(id);
@@ -120,6 +132,7 @@ export default Service.extend(Ember.Evented, {
     return block;
   }),
   getData: function (id) {
+    debugger; // see header comment in taskGet();
     // console.log("block getData", id);
     let store = this.get('store');
     let allInitially = this.get('parsedOptions.allInitially');
@@ -400,6 +413,7 @@ export default Service.extend(Ember.Evented, {
   /*--------------------------------------------------------------------------*/
 
   /** @return the block record handle if the block is loaded into the store from the backend.
+   * @desc same as controllers/mapview @see blockFromId()
    */
   peekBlock(blockId)
   {
@@ -410,15 +424,44 @@ export default Service.extend(Ember.Evented, {
 
   /*--------------------------------------------------------------------------*/
 
-  /** @return true if the block is loaded into the store from the backend, and has .isViewed==true.
+  /** @return true if the blockId is in the URL mapsToView
    */
   getIsViewed(blockId)
   {
-    let store = this.get('store'),
-    block = store.peekRecord('block', blockId),
-    isViewed = block && block.get('isViewed');
+    let
+      viewedIds = this.get('params.mapsToView'),
+    index = viewedIds.indexOf(blockId),
+    isViewed = (index >= 0);
     return isViewed;
   },
+  /** Set the viewed state of the given blockId.
+   * @param blockId may be an array of blockIds, in which case the function is called for each element blockId
+   */
+  setViewed(blockId, viewed) {
+    if (Ember.isArray(blockId))
+    {
+      blockId.forEach((blockId) => this.setViewed(blockId, viewed));
+    }
+    else {
+      if (typeof blockId !== "string")
+        blockId = blockId.get('id');
+      let viewedIds = this.get('params.mapsToView'),
+      index = viewedIds.indexOf(blockId);
+      dLog('setViewed', blockId, viewed, viewedIds, index, this);
+      if (viewed === (index >= 0)) {
+        // no change
+      }
+      else if (viewed) {
+        viewedIds.pushObject(blockId);
+      }
+      else {
+        let removed = viewedIds.objectAt(index);
+        viewedIds.removeAt(index, 1);
+        dLog('setViewed removed', removed);
+      }
+    }
+  },
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -437,6 +480,7 @@ export default Service.extend(Ember.Evented, {
    * @return define a task
    */
   setViewedTask: task(function * (id, viewed, unviewChildren) {
+    debugger; // only used in viewed-blocks
     console.log("setViewedTask", id, viewed, unviewChildren);
     let getData = this.get('getData');
     /* -  if ! viewed then no need to getData(), just Peek and if not loaded then return.
@@ -488,6 +532,9 @@ export default Service.extend(Ember.Evented, {
 
   /*--------------------------------------------------------------------------*/
 
+  /** Only used if allInitially (i.e. not progressive loading)
+   * @see taskGet()
+   */
   getBlocks(blockIds) {
     let taskGet = this.get('taskGet');
     console.log("getBlocks", blockIds);
@@ -593,36 +640,44 @@ export default Service.extend(Ember.Evented, {
         console.log('selected', records);
       return records;  // .toArray()
     }),
-  viewed: Ember.computed(
+  viewed : Ember.computed(
+    'blocksById', 'params.mapsToView.[]',
     'blockValues.[]',
-    'blockValues.@each.isViewed',
-    function() {
-      let records = this.get('store').peekAll('block') // this.get('blockValues')
-        .filterBy('isViewed', true);
-      if (trace_block)
-        console.log('viewed', records.toArray());
-      // can separate this to an added CP viewedEffect
-      let axes = records.map((block) => this.blockAxis(block));
+    function () {
+    let blocksById = this.get('blocksById'),
+    viewedIds = this.get('params.mapsToView'),
+    /** mapsToView[] is defined from URL, but blocksById[] is defined later from
+     * API response.  So filter out blocks which are not yet loaded.
+     */
+    viewed = viewedIds.map((blockId) => blocksById[blockId])
+      .filter((block) => block);
+    return viewed;
+  }),
+  viewedById : Ember.computed('viewed.[]', function () {
+    let viewed = this.get('viewed'),
+    viewedById = keyBy(viewed, (b) => b.id);
+    return viewedById;
+  }),
+  /** Ensure that there is an axis for each viewed block.
+   */
+  viewedAxisEffect : Ember.computed('viewed.[]', function () {
+    let viewed = this.get('viewed'),
+    axes = viewed.map((block) => this.blockAxis(block));
       console.log('viewed axes', axes);
-      return records;  // .toArray()
-    }),
-  viewedIds: Ember.computed(
-    'blockValues.[]',
-    'blockValues.@each.isViewed',
-    'viewed.[]',
-    function() {
-      let ids = this.get('viewed');
-      if (trace_block > 1)
-        ids.map(function (a) { console.log('viewedIds', a, a.get('id')); } );
-      if (trace_block)
-        console.log('viewedIds', ids);
-      ids = ids.map(function (a) { return a.get('id'); } );
-      if (trace_block)
-        console.log('viewedIds', ids);
+    return axes;
+  }),
 
+  viewedIds: Ember.computed(
+    'params.mapsToView.[]',
+    'blocksById.[]',
+    function() {
+      let
+        ids = this.get('params.mapsToView'),
+      blocksById = this.get('blocksById');
+      if (trace_block > 1)
+        ids.map(function (id) { console.log('viewedIds', id, blocksById[id]); } );
       return ids;
-    })
-  ,
+    }),
   viewedScopes: Ember.computed(
     'viewed.[]',
     function() {
@@ -687,7 +742,7 @@ export default Service.extend(Ember.Evented, {
             return map; },
           new Map());
 
-      if (trace_block)
+      if (trace_block > 1)
         log_Map('blocksByReference', map);
       return map;
     }),
@@ -768,7 +823,13 @@ export default Service.extend(Ember.Evented, {
   /** filter blocksByReferenceAndScope() for viewed blocks,
    * @return Map, which may be empty
    */
-  viewedBlocksByReferenceAndScope : Ember.computed('blocksByReferenceAndScope', 'viewed.[]', function () {
+  viewedBlocksByReferenceAndScope : Ember.computed(
+    /* blocksByReferenceAndScope is a Map, and there is not currently a way to
+     * depend on Map.@each, so depend on blockValues.[] which
+     * blocksByReferenceAndScope depends on, and viewed.[].
+     */
+    'blocksByReferenceAndScope', 'blockValues.[]',
+    'viewed.[]', function () {
     const fnName = 'viewedBlocksByReferenceAndScope';
     let viewed = this.get('viewed');
     let map = this.get('blocksByReferenceAndScope'),
@@ -1014,7 +1075,7 @@ export default Service.extend(Ember.Evented, {
   },
   /** Collate the viewed blocks by their parent block id, or by their own block
    * id if they are not parented.
-   * @return Map : blockId -> [blockId]
+   * @return Map : blockId -> [block]
    * @description
    * Similar to @see axesBlocks().
    */

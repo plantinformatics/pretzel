@@ -4,8 +4,6 @@ import DS from 'ember-data';
 const { computed : { readOnly } } = Ember;
 const { inject: { service } } = Ember;
 
-import ViewedBlocks from '../mixins/viewed-blocks';
-
 /* global d3 */
 
 const dLog = console.debug;
@@ -15,7 +13,7 @@ dLog("controllers/mapview.js");
 let trace_dataflow = 0;
 let trace_select = 0;
 
-export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
+export default Ember.Controller.extend(Ember.Evented, {
   dataset: service('data/dataset'),
   block: service('data/block'),
 
@@ -81,33 +79,45 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
      */
     addMap : function(mapName) {
       let block = this.get('blockFromId')(mapName),
+      blockId = mapName,
+      setViewed = this.get('block.setViewed'),
       referenceBlock = block.get('referenceBlock');
       if (referenceBlock)
-        referenceBlock.get('setViewed').apply(this, [referenceBlock.get('id'), true]);
-      this.get('setViewed').apply(this, [mapName, true]);
+        setViewed(referenceBlock.get('id'), true);
+      setViewed(blockId, true);
     },
 
     updateRoute() {
       let block_viewedIds = this.get('block.viewedIds');
       dLog("controller/mapview", "updateRoute", this.target.currentURL, block_viewedIds);
 
-      let queryParams =
-        {'mapsToView' : block_viewedIds,
-         highlightFeature : this.get('model.params.highlightFeature')
-        };
+      let queryParams = this.get('model.params');
       let me = this;
       Ember.run.later( function () {
         me.transitionToRoute({'queryParams': queryParams }); });
     },
+    /** Un-view a block.
+     * @param block store object; this is only on difference from action removeMap(),
+     * which takes a blockId
+     */
     removeBlock: function(block) {
-      let block_id = block.get('id');
-      this.send('removeMap', block_id);
+      if (typeof block === "string")
+        this.send('removeMap', block);
+      else {
+        block.unViewChildBlocks();
+        block.set('isViewed', false);
+      }
     },
     /** Change the state of the named block to not-viewed.
+     * Equivalent to action removeBlock(), which takes a block record instead of a blockId.
+     * @param mapName blockId
      */
     removeMap : function(mapName) {
-      /* delay to avoid nextSibling of null in insertAfter() */
-      Ember.run.later(() => this.get('setViewed').apply(this, [mapName, false]));
+      let blockId = mapName;
+      let block = this.blockFromId(blockId);
+      block.unViewChildBlocks();
+
+      this.get('block').setViewed(mapName, false);
     },
 
     onDelete : function (modelName, id) {
@@ -131,7 +141,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
     /** also load parent block */
     loadBlock : function loadBlock(block) {
       dLog('loadBlock', block);
-      // also done in useTask() : (mixins/viewed-blocks)setViewed() : (data/block.js)setViewedTask()
+      // previously done in useTask() : (mixins/viewed-blocks)setViewed() : (data/block.js)setViewedTask()
       block.set('isViewed', true);
       let referenceBlock = block.get('referenceBlock');
       if (referenceBlock)
@@ -236,13 +246,11 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   }.observes('target.currentURL'),
 
 
-  blockTasks : readOnly('model.viewedBlocks.blockTasks'),
   /** all available */
   blockValues : readOnly('block.blockValues'),
-  /** currently viewed */
-  blockIds : readOnly('model.viewedBlocks.blockIds'),
 
-
+  /** same as services/data/block @see peekBlock()
+   */
   blockFromId : function(blockId) {
     let store = this.get('store'),
     block = store.peekRecord('block', blockId);
@@ -263,7 +271,7 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   /** Update queryParams and URL.
    */
   queryParamsValue : Ember.computed(
-    'block.viewedIds', 'block.viewedIds.[]', 'block.viewedIds.length',
+    'model.params.mapsToView.[]',
     function() {
       dLog('queryParamsValue');
       this.send('updateRoute');

@@ -112,7 +112,8 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     gS.exit().remove();
     function storeBlockIndex (block, i) {
       blockIndex[block.getId()] = i;
-      dLog('blockIndex', block.getId(), i);
+      if (trace_stack)
+        dLog('blockIndex', block.getId(), i);
     };
     let gA = gS.enter()
       .append('g')
@@ -122,7 +123,8 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     /** data blocks of the axis, for calculating blockIndex i.e. colour.
      * colour assignment includes non-visible blocks . */
     let blocksUnfiltered = extended ? [] : axis.dataBlocks(false);
-    dLog('blockIndex', axisName, axis, axis.blocks);
+    if (trace_stack)
+      dLog('blockIndex', axisName, axis, axis.blocks);
     blocksUnfiltered.forEach(storeBlockIndex);
 
     function featuresOfBlock (block) {
@@ -265,11 +267,18 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
 
   init() {
     this._super(...arguments);
+
     let axisName = this.get('axis.id');
     /* axisS may not exist yet, so give Stacked a reference to this. */
     Stacked.axis1dAdd(axisName, this);
     let axisS = this.get('axisS');
-    if (! axisS || (axisS.axis1d && ! axisS.axis1d.isDestroyed))
+    if (! axisS) {
+      dLog('axis-1d:init', this, axisName, this.get('axis'));
+    }
+    else if (axisS.axis1d === this) {
+      // no change
+    }
+    else if (axisS.axis1d && ! axisS.axis1d.isDestroyed)
     {
       dLog('axis-1d:init', this, axisName, this.get('axis'), axisS, axisS && axisS.axis1d);
     }
@@ -290,7 +299,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     /* useTransition could be passed down to showTickLocations()
      * (also could pass in duration or t from showResize()).
      */
-    dLog("resized in components/axis-1d");
+    if (trace_stack)
+      dLog("resized in components/axis-1d");
     if (heightChanged)
       this.renderTicksDebounce();
   },
@@ -691,23 +701,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     return count;
   }),
 
-  axisObj : Ember.computed('axes2d.[]', function () {
-    let axes2d = this.get('axes2d'),
-    axisID = this.get('axis.id'),
-    axisObj = axes2d.findBy('axisID', axisID);
-    dLog('axes2d', axes2d, axisID, 'axisObj', axisObj, axisObj && axisObj.extended);
-    return axisObj;
-  }),
-  extended : Ember.computed('axisObj', 'axisObj.extended', function () {
-    let axisObj = this.get('axisObj'),
-    /** axes are (currently) added to axes2d when they are first extended, so if
-     * axis.id is not in the list then it is not extended. (Will likely replace
-     * axes2d with a list of sub-components, like axis-2d : subComponents but
-     * with axisID as source array)
-     */
-    extended = (axisObj === undefined) ? false : this.get('axisObj.extended'),
+  extendedEffect : Ember.computed('extended', function () {
+    let
+    extended = this.get('extended'),
     axisID = this.get('axis.id');
-    dLog('extended', extended, axisID, this.get('axisObj'));
+    dLog('extended', extended, axisID);
+    // possibly add this to axisAPi, or pass an action param.
+    this.drawMap.axisWidthResizeEnded();
+
     if (extended)
       this.removeTicks();
     else
@@ -715,8 +716,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       let axisID_t = [axisID, undefined];
       this.renderTicksDebounce(axisID_t);
     }
-    /* .extended has changed, so the centre of the axisTitle is changed. */
-    this.updateAxisTitleSize();
+
+    /* .extended has changed, so the centre of the axisTitle is changed.
+     * this.updateAxisTitleSize() is called in axisWidthResizeEnded()->stacksAdjust()
+     */
 
     return extended;
   }),
@@ -737,6 +740,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       if (axisS.axis1d === this)
         delete axisS.axis1d;
     }
+    let axisName = this.get('axis.id');
+    Stacked.axis1dRemove(axisName, this);
+
     this._super(...arguments);
   },
   removeTicks() {

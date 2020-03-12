@@ -249,7 +249,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .attr('class', datumIdent)
       .each(function (d, i, g) { dLog(this); me.connectFlowControl(d, d3.select(this)); } ),
     pM = pS.merge(pA);
-    dLog('drawGroupContainer', pS.nodes(), pS.node());
+    if (trace_blockAdj)
+      dLog('drawGroupContainer', pS.nodes(), pS.node());
     return pM;
   },
   /** Render the <g.blockAdj> which contains the <g><path>
@@ -399,8 +400,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .selectAll("path." + className)
       // don't call pathU() if axes are gone.
       .filter(function (d) { return d.blocksHaveAxes(); });
-    if (! pS.empty())
-        dLog('updatePathsPosition before update pS', pS.nodes(), pS.node());
+    if (! pS.empty() && trace_blockAdj)
+      dLog('updatePathsPosition before update pS', (trace_blockAdj > 1) ? pS.nodes() : pS.size(), pS.node());
     /* now that paths are within <g.block-adj>, path position can be altered
      * during dragging by updating a skew transform of <g.block-adj>, instead of
      * repeatedly recalculating pathU.
@@ -450,7 +451,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
                       this.get('blockAdj.axes1d.1.scaleChanged')],
       zoomCounter = this.get('blockAdj.zoomCounter'),
       heightChanged = this.get('heightChanged');
-	    dLog('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, flips, zoomCounter, scaleChanges,
+      if (trace_blockAdj)
+	      dLog('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, flips, zoomCounter, scaleChanges,
            stacksWidthChanges,
            this.get('block.stacksCount'));
     this.updatePathsPosition();
@@ -475,7 +477,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     /* useTransition could be passed down to draw()
      * (also could pass in duration or t from showResize()).
      */
-    dLog("resized in components/block-adj");
+    if (trace_blockAdj > 1)
+      dLog("resized in components/block-adj");
     /* In addition to the usual causes of repeated events, block-adj will
      * respond to events relating to 2 axes. */
     if (widthChanged)

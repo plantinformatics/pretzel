@@ -13,7 +13,18 @@ export default Ember.Component.extend({
 
   /** Extract from viewedBlocksByReferenceAndScope(), the viewed blocks, mapped by the id of their reference block.
    */
-  axesBlocks : Ember.computed('block.viewedBlocksByReferenceAndScope.@each', function () {
+  axesBlocks : Ember.computed(
+    /* viewedBlocksByReferenceAndScope is a Map, and there is not currently a way to
+     * depend on Map.@each, so depend on blockValues.[], which
+     * viewedBlocksByReferenceAndScope and blocksByReferenceAndScope depend on,
+     * and viewed.[] which viewedBlocksByReferenceAndScope depends on.
+     * (same applies in @see viewedBlocksByReferenceAndScope()
+     * It is possible that this could be called after a change in viewed, but
+     * before viewedBlocksByReferenceAndScope is updated; if this is a problem
+     * an update counter could be used as a dependency.
+     */
+    'block.viewedBlocksByReferenceAndScope.@each', 'blockValues.[]', 'viewed.[]',
+    function () {
     let mapByDataset = this.get('block.viewedBlocksByReferenceAndScope');
     let mapByReferenceBlock = {};
     if (mapByDataset)
@@ -28,7 +39,10 @@ export default Ember.Component.extend({
     return mapByReferenceBlock;
   }),
 
-  axesP : Ember.computed('axesBlocks.@each', function () {
+  /** Map the keys (blockId) of axesBlocks to the primary or reference block of each axis.
+   * @return  array of blocks (store Object)
+   */
+  axesP : Ember.computed('axesBlocks.@each', 'viewed.[]', function () {
     let axesBlocks = this.get('axesBlocks'),
     axisIDs = Object.keys(axesBlocks),
     axesP = axisIDs.map((axisID) => axesBlocks[axisID][0]);
