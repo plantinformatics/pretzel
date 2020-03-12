@@ -133,6 +133,11 @@ function storeFeature(oa, flowsService, feature, f, axisID) {
       dLog('storeFeature', axisID, oa.z[axisID]);
     }
   }
+  storeFeature2(oa, flowsService, feature, f, axisID);
+}
+/** Same params as storeFeature().
+ */
+function storeFeature2(oa, flowsService, feature, f, axisID) {
   if (axisID && ! oa.z[axisID][feature]) {
     /* when called from paths-progressive, emulate the data structure created by
      * chrData() / receiveChr()
@@ -167,9 +172,25 @@ function storeFeature(oa, flowsService, feature, f, axisID) {
   oa.featureIndex[f.id] = f;
 }
 
+import { stacks, Stacked } from './stacks';
+
+/** called when z[axisID] does not contain [d].
+ * Lookup feature d, and add it to z[axisID].
+ * @param featureName name of feature (ID)
+ */
+function lookupFeature(oa, flowsService, z, axisID, featureName) {
+  let 
+    axis = Stacked.getAxis(axisID),
+  index = axis.blocks.findIndex((b) => b.axisName === axisID),
+  features = axis.blocks[index].block.get('features'),
+  feature = features.find((f) => f.get('name') === featureName);
+  storeFeature2(oa, flowsService, featureName, feature, axisID);
+  return feature;
+}
+
+
 /*----------------------------------------------------------------------------*/
 
-import { stacks } from './stacks';
 /** @param features contains the data attributes of the features.
  */
 function ensureBlockFeatures(blockId, features) {
@@ -189,4 +210,4 @@ function ensureBlockFeatures(blockId, features) {
 
 /*----------------------------------------------------------------------------*/
 
-export { featureChrs,  name2Map,   chrMap, objectSet,  mapsOfFeature, storeFeature, ensureBlockFeatures };
+export { featureChrs,  name2Map,   chrMap, objectSet,  mapsOfFeature, storeFeature, lookupFeature, ensureBlockFeatures };

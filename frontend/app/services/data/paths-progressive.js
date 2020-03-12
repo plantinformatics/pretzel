@@ -36,11 +36,16 @@ function verifyFeatureRecord(fr, f) {
     frdv = [frdv];
   if ((typeof(fv) == "number") || (frdv.length === undefined))
     frdv = [fv];
+  /** @return 1 if end of interval matches forward, -1 if reverse, 0 if not match. */
+  function sameOrReverse(i) { return (frdv[i] === fv[i]) ? 1 : (frdv[i] === fv[1-i]) ? -1 : 0; }
   let
+    /** direction indicated by frdv[0]. */
+    direction = sameOrReverse(0),
+  /** true if not an interval, or other end of interval matches in same direction. */
+  sameDirection = (frdv.length < 2) || (sameOrReverse(1) === direction),
   same = 
     (fr.id === f._id) &&
-    (frdv[0] === fv[0]) &&
-    ((frdv.length < 2) || (frdv[1] === fv[1])) &&
+    direction && sameDirection &&
     (frd.name === f.name);
   return same;
 }

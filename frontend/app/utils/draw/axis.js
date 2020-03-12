@@ -49,6 +49,28 @@ function noDomain(domain) {
 
 /*----------------------------------------------------------------------------*/
 
+/** Check that y axis scale yp.domain() is initialised, and if not,
+ * define it from .featureLimits of first block of axis
+ *
+ * axis-1d : domainChanged()->updateScaleDomain() can handle this, but perhaps
+ * that needs an added dependency.
+ *
+ * @param axis  e.g. oa.axes[brushedAxisID]
+*/
+function ensureYscaleDomain(yp, axis) {
+  if (! yp.domain().length) {
+    let block0 = axis && axis.blocks.length && axis.blocks[0],
+    block0featureLimits = block0 && block0.block && block0.block.featureLimits;
+    if (block0featureLimits) {
+      // for GM, blocks[0] has .featureLimits and not .range
+      dLog('block0featureLimits', block0featureLimits, axis.axisName, block0.longName());
+      yp.domain(block0featureLimits);
+    }
+  }
+}
+
+/*----------------------------------------------------------------------------*/
+
 /** For <text> within a g.axis-outer, counteract the effect of g.axis-outer scale() which
  * is based on axis.portion.
  *
@@ -222,4 +244,7 @@ function axisTitleColour (d, i) {
 
 /*----------------------------------------------------------------------------*/
 
-export {  Axes, maybeFlip, maybeFlipExtent, noDomain, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisEltIdClipPath, highlightId, axisTitleColour } ;
+export {
+  Axes, maybeFlip, maybeFlipExtent, noDomain,
+  ensureYscaleDomain,
+  yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisEltIdClipPath, highlightId, axisTitleColour } ;

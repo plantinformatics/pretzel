@@ -1,6 +1,8 @@
 import Ember from 'ember';
 import UploadBase from './data-base';
 
+import config from '../../../config/environment';
+
 export default UploadBase.extend({
   table: null,
   selectedDataset: 'new',
@@ -57,7 +59,9 @@ export default UploadBase.extend({
         },
         afterRemoveRow: function() {
           that.checkData();
-        }
+        },
+        /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
+        licenseKey: config.handsOnTableLicenseKey
       });
       that.set('table', table);
       $('.nav-tabs a[href="#left-panel-upload"]').on('shown.bs.tab', function() {
@@ -175,7 +179,7 @@ export default UploadBase.extend({
     return new Ember.RSVP.Promise(function(resolve, reject) {
       var selectedMap = that.get('selectDataset');
       // If a selected dataset, can simply return it
-      // If no selectedMap, treat as default, 'new' 
+      // If no selectedMap, treat as default, 'new'
       if (selectedMap && selectedMap !== 'new') {
         resolve(selectedMap);
       } else {
