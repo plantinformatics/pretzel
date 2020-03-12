@@ -29,7 +29,7 @@
     "postinstall" : "ln -s ../frontend/dist backend/client && ln -s ../../../../backend/common/utilities/interval-overlap.js frontend/app/utils/draw/.",
     "go" : "npm run setup:frameworks && npm run build:frontend && npm run run:precheck && npm run run:backend",
     "setup:frameworks": "cd frontend && npm ci && bower install && cd ../backend && npm ci",
-    "build:frontend" : "cd frontend && node_modules/ember-cli/bin/ember build --environment production",
+    "build:frontend" : "cd frontend && handsOnTableLicenseKey=non-commercial-and-evaluation node_modules/ember-cli/bin/ember build --environment production",
     "run:precheck" : "npm run run:checkLink && npm run run:checkMongo",
     "run:checkLink" : "[ -f backend/client/index.html ] || npm run postinstall",
     "run:checkMongo" : "mongo --eval 'hostname();'  admin || echo mongod is required to be running",
