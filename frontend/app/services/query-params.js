@@ -27,12 +27,15 @@ export default Service.extend(Ember.Evented, {
     let options_param = this.get('params.options'), options;
     if (options_param && (options = parseOptions(options_param)))
     {
-      /* splitAxes1 is now enabled by default. */
-      if (! options.splitAxes1)
-        options.splitAxes1 = true;
       // alpha enables new features which are not yet robust.
       options.splitAxes |= options.alpha;
     }
+    else
+      options = {};
+    /* splitAxes1 is now enabled by default. */
+    if (! options.splitAxes1)
+      options.splitAxes1 = true;
+    
     return options;
   }),
   urlOptionsEffect: Ember.computed('urlOptions', function () {

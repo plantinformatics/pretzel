@@ -82,10 +82,14 @@ export default Service.extend(Ember.Evented, {
   queryParams: service('query-params'),
 
   params : Ember.computed.alias('queryParams.params'),
+  /** params.options is the value passed to &options=
+   * parsedOptions is the result of parsing the values from that into attributes.
+   * params.parsedOptions is just the parsed values, and queryParams.urlOptions has defaults added.
+   */
+  parsedOptions : Ember.computed.alias('queryParams.urlOptions'),
 
   summaryTask : {},
 
-  parsedOptions : Ember.computed.alias('queryParamsService.urlOptions'),
 
   /** Not required because findRecord() is used;
    * might later want this for other requests or calculation results, but can
