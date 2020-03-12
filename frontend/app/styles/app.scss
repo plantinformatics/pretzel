@@ -1335,7 +1335,9 @@ body > div.ember-popover {
 /* -------------------------------------------------------------------------- */
 /* JSON editor, in RHS panel */
 
+#right-panel-content.right-panel-dataset
 .dataset-table {
+  width: inherit;
   margin-bottom: 0;
 }
 

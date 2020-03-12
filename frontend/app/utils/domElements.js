@@ -51,7 +51,8 @@ let
   let startX;
   let dragResize = d3.drag()  // d3 v3: was .behavior
     .on('drag', function(d, i, g) {
-      logElementDimensions(g[0], 'on drag');
+      if (trace_dom)
+        logElementDimensions(g[0], 'on drag');
 
       // as for .resize() below,
       // .on() seems to apply a reasonable debounce, but if not, use Ember.run.debounce()

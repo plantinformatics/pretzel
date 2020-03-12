@@ -63,7 +63,8 @@ export default DS.Model.extend(Ember.Evented, {
       /** also check referenceBlocks because clicking on axis selects the reference block */
       let referenceBlocks = this.get('referenceBlocks');
       found = referenceBlocks.indexOf(block) > -1;
-      dLog('adjacentTo', found, referenceBlocks, block);
+      if (trace_blockAdj)
+        dLog('adjacentTo', found, referenceBlocks, block);
     }
     return found;
   },
