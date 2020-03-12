@@ -8,6 +8,7 @@ const { inject: { service } } = Ember;
 import PathData from '../draw/path-data';
 import { pathsResultTypes, pathsApiResultType, pathsResultTypeFor, featureGetFn, featureGetBlock } from '../../utils/paths-api';
 import { eltClassName } from '../../utils/domElements';
+import config from '../../config/environment';
 
 
 const dLog = console.debug;
@@ -46,8 +47,10 @@ if (! d3.selection.prototype.moveToFront) {
     };
 }
 
-/** Switch to select either HandsOnTable or ember-contextual-table. */
-const useHandsOnTable = true;
+/** Switch to select either HandsOnTable or ember-contextual-table.
+ * If licenseKey is given, use HandsOnTable.
+ */
+const useHandsOnTable = !!config.handsOnTableLicenseKey;
 /** id of element which will hold HandsOnTable. */
 const hoTableId = 'paths-table-ho';
 
@@ -664,14 +667,8 @@ export default Ember.Component.extend({
 
         sortIndicator: true,
         multiColumnSorting: true,
-        /* in the latest non-commercial version 6.2.2, multiColumnSorting is
-         * present but didn't work with 'multiColumnSorting: true';
-         * it is fine for all other features used.
-         * The following line enables the app to work with versions after 6.2.2,
-         * refn : https://handsontable.com/blog/articles/2019/3/handsontable-drops-open-source-for-a-non-commercial-license
-         * This app is used for academic research.
-         */
-        licenseKey: 'non-commercial-and-evaluation'
+        /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
+        licenseKey: config.handsOnTableLicenseKey
       });
 
     let $ = Ember.$;

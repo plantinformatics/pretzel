@@ -1,7 +1,7 @@
 import Ember from 'ember';
 import {  eltClassName  } from '../utils/domElements';
 
-// import Handsontable from 'handsontable';
+import config from '../config/environment';
 
 /* global d3 */
 /* global Handsontable */
@@ -108,8 +108,8 @@ export default Ember.Component.extend({
           column: 2,
           sortOrder: true
         },
-        // see comment in paths-table.js
-        licenseKey: 'non-commercial-and-evaluation'
+        /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
+        licenseKey: config.handsOnTableLicenseKey
       });
       that.set('table', table);
       $("#table-brushed").on('mouseleave', function(e) {

@@ -1,6 +1,8 @@
 import Ember from 'ember';
 import UploadBase from './data-base';
 
+import config from '../../../config/environment';
+
 export default UploadBase.extend({
   table: null,
   selectedDataset: 'new',
@@ -58,12 +60,8 @@ export default UploadBase.extend({
         afterRemoveRow: function() {
           that.checkData();
         },
-        /*
-         * The following line enables the app to work with versions after 6.2.2,
-         * refn : https://handsontable.com/blog/articles/2019/3/handsontable-drops-open-source-for-a-non-commercial-license
-         * This app is used for academic research.
-         */
-        licenseKey: 'non-commercial-and-evaluation'
+        /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
+        licenseKey: config.handsOnTableLicenseKey
       });
       that.set('table', table);
       $('.nav-tabs a[href="#left-panel-upload"]').on('shown.bs.tab', function() {
