@@ -1162,6 +1162,16 @@ div#goto-feature > div
 {
     display : inline-block;
 }
+.goto-ensemble > div
+{
+  display : flex;
+  margin : 1em;
+}
+.goto-ensemble > div > a
+{
+  margin-left : auto;
+  margin-right : 1em;
+}
 /* -------------------------------------------------------------------------- */
 .tooltip-inner  /*.ember-popover*/
 {
