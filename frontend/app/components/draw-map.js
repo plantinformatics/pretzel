@@ -3781,6 +3781,12 @@ export default Ember.Component.extend(Ember.Evented, {
       if (brushedDomain) {
         let newBrushSelection = brushedDomain.map(function (r) { return yp(r);});
         console.log('axisBrushShowSelection', brushedAxisID, brushedDomain, gBrush, newBrushSelection);
+        if ((newBrushSelection[0] < -1e3) || (newBrushSelection[1] > 1e4)) {
+          // when zoomedDomain is set by setDomainFromDawn(), the current brush is likely to be way out of scope.
+          dLog('brush selection is large after scale change - removing', p);
+          removeBrushExtent(p);
+          newBrushSelection = null; // clear the brush selection
+        }
         d3.select(gBrush).call(yp.brush.move, newBrushSelection);
       }
     }

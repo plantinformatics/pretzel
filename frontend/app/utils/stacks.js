@@ -406,6 +406,29 @@ Stacked.getAxis = function (axisID)
   ;
   return axis;
 };
+/** From the datasetName and scope extracted from selectedFeatures.Chromosome,
+ * find the corresponding axis.
+ * (static)
+ */
+Stacked.axisOfDatasetAndScope = function axisOfDatasetAndScope(datasetName, scope) {
+  /** blockId is the primary block of the axis (i.e. reference or GM). */
+  let blockId, axis;
+  for (blockId in axesP) {
+    axis = axesP[blockId];
+    if (axis.axisName !== blockId)
+      breakPoint('axisOfDatasetAndScope', blockId, axis, axesP);
+    let referenceBlock = axis.referenceBlock,
+    aScope = referenceBlock.get('scope'),
+    // equivalent to : axis.mapName
+    referenceName = referenceBlock.get('datasetId.id');
+    if ((referenceName === datasetName) && (scope === aScope))
+      break;
+    else
+      axis = undefined;
+  }
+  console.log('axisOfDatasetAndScope', blockId, axis, scope);
+  return axis;
+},
 /** static */
 Stacked.getStack = function (axisID)
 {
