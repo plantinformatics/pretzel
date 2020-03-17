@@ -3956,11 +3956,13 @@ export default Ember.Component.extend(Ember.Evented, {
             let fLocation;
             if (! isOtherField[f] && ((fLocation = blockFeatures[f].location) !== undefined))
             {
+              /** range is from yRange() which incorporates .portion, so use ys rather than axis.y. */
+              let yScale = oa.ys[p];
               let yPx;
             if (block.visible &&
                 (fLocation >= brushedDomain[0]) &&
                 (fLocation <= brushedDomain[1]) &&
-                inRange((yPx = axis.y(fLocation)), range)
+                inRange((yPx = yScale(fLocation)), range)
                ) {
               //selectedFeatures[p].push(f);
               selectedFeaturesSet.add(f);
