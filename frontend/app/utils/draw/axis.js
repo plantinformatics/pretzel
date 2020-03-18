@@ -148,8 +148,10 @@ function yAxisTitleTransform(axisTitleLayout)
     axisName = d, // === gAxis.__data__
     axis = oa.axes[axisName],
     width = axisExtended(gAxis),
+    /** true if axis is at top of its stack. */
+    top = axis.stack.axes[0] === axis,
     /** See also setWidth() which sets the same translate, initially. */
-    translateText = width ? " translate(" + width/2 + ",0)" : '';
+    translateText = top && width ? " translate(" + width/2 + ",0)" : '';
     if (trace_axis)
       console.log('yAxisTitleTransform', arguments, this, gAxis, axisName, axis, width, translateText);
     return yAxisTextScale.apply(this, arguments) + ' ' + axisTitleLayout.transform()

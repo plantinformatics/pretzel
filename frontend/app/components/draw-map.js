@@ -899,7 +899,6 @@ export default Ember.Component.extend(Ember.Evented, {
 
     let
       line = d3.line(),
-      axis = d3.axisLeft(),
       foreground,
       // brushActives = [],
     /** guard against repeated drag event before previous dragged() has returned. */
@@ -2566,7 +2565,9 @@ export default Ember.Component.extend(Ember.Evented, {
       let defG =
     g.append("g")
       .attr("class", "axis")
-      .each(function(d) { d3.select(this).attr("id",axisEltId(d)).call(axis.scale(y[d])); });  
+      .each(function(d) {
+        let axis = Stacked.getAxis(d);
+        d3.select(this).attr("id",axisEltId(d)).call(axis.axisSide()().scale(y[d])); });  
 
     function axisTitle(chrID)
     {
@@ -4162,7 +4163,7 @@ export default Ember.Component.extend(Ember.Evented, {
               oa.y[d].domain(domain);
               oa.ys[d].domain(domain);
               a.setDomain(domain);
-              let yAxis = d3.axisLeft(oa.y[d]).ticks(10);
+              let yAxis = a.axisSide() (oa.y[d]).ticks(10);
               oa.svgContainer.select("#"+idName).transition(t).call(yAxis);
             });
             let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
@@ -4404,7 +4405,7 @@ export default Ember.Component.extend(Ember.Evented, {
       let yp = y[p],
       axis = oa.axes[p];
       if (yp && axis) {
-        let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * axis.portion);
+        let yAxis = axis.axisSide() (y[p]).ticks(axisTicks * axis.portion);
         let idName = axisEltId(p),
         axisS = svgContainer.select("#"+idName);
         if (t)
