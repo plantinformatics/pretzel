@@ -3,7 +3,7 @@ import Ember from 'ember';
 import createIntervalTree from 'npm:interval-tree-1d';
 import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
 import InAxis from './in-axis';
-import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,*/ eltId, axisEltId, eltIdAll, axisEltIdClipPath /*,highlightId*/ , axisTitleColour }  from '../utils/draw/axis';
+import {  eltId, axisEltId, eltIdAll, axisEltIdClipPath, trackBlockEltIdPrefix, axisTitleColour }  from '../utils/draw/axis';
 
 
 /*----------------------------------------------------------------------------*/
@@ -432,7 +432,7 @@ export default InAxis.extend({
       .attr('class', 'tracks'),
     gpM = gp
       .merge(gpS)
-      .attr('id', function (blockId) { console.log('', this, blockId); return blockId; })
+      .attr('id', function (blockId) { console.log('', this, blockId); return trackBlockEltIdPrefix + blockId; })
       .attr('transform', blockTransform);
     gpS.exit().remove();
     /* this is for resizing the width of axis-tracks; may instead scale width of

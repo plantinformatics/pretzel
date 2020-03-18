@@ -160,7 +160,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       width = rect2.attr('width');
     } else {
       let transform = path.attr('transform'),
-      match = transform.match(/translate\(([0-9]+),/);
+      match = transform && transform.match(/translate\(([0-9]+),/);
       width = match && +match[1];
     }
     console.log("rectWidth", this.get('startWidth'), this.currentWidth(), rect2.node(), path.node(), width);

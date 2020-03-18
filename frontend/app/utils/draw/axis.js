@@ -187,6 +187,9 @@ function highlightId(name)
   return "h" + name;
 }
 
+/** prefix for id of a g.tracks.  Used within split axis. see components/axis-tracks.js  */
+const trackBlockEltIdPrefix = 'tb-';
+
 /*----------------------------------------------------------------------------*/
 
 /** Used to colour the blocks within an axis distinctly;
@@ -249,4 +252,7 @@ function axisTitleColour (d, i) {
 export {
   Axes, maybeFlip, maybeFlipExtent, noDomain,
   ensureYscaleDomain,
-  yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisEltIdClipPath, highlightId, axisTitleColour } ;
+  yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisEltIdClipPath, highlightId,
+  trackBlockEltIdPrefix,
+  axisTitleColour
+};
