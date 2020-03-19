@@ -47,6 +47,11 @@ export default Service.extend({
     return this._ajax('Clients/', 'POST', JSON.stringify(data), false)
   },
 
+  runtimeConfig() {
+    console.log('runtimeConfig');
+    return this._ajax('Configurations/runtimeConfig', undefined, 'GET', true);
+  },
+
   uploadData(data, onProgress) {
     return this._ajax('Datasets/upload', 'POST', JSON.stringify(data), true, onProgress);
   },
