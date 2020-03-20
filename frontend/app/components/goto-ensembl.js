@@ -18,7 +18,7 @@ export default Ember.Component.extend({
   classNames : [ 'goto-ensemble'],
 
   website: 'GrainGenes',
-  websites: Ember.String.w('GrainGenes Ensembl Dawn'),
+  websites: Ember.String.w('GrainGenes Ensembl Dawn Apollo'),
   /** user may provide a configuration URL for each website,
    * input via baseUrl. */
   baseUrls : {},
@@ -50,14 +50,18 @@ export default Ember.Component.extend({
         website = path && (
           path.endsWith('crobiad.agwine.adelaide.edu.au/dawn/jbrowse/') ? 'Dawn' :
             path.endsWith('crobiad.agwine.adelaide.edu.au/dawn/jbrowse-prod/') ? 'Dawn' :
+            path.endsWith('/jbrowse/') ? 'Apollo' :
+            path.endsWith('jbrowse/index.html') ? 'Apollo' :
+            path.endsWith('annotator/loadLink') ? 'Apollo' :
             path.endsWith('wheat.pw.usda.gov/cgi-bin/GG3/report.cgi') ? 'GrainGenes' :
             path.endsWith('plants.ensembl.org/Triticum_aestivum/Search/Results') ? 'Ensembl' : undefined
         );
 
-        if (website === 'Dawn') {
+        if ((website === 'Dawn') || (website === 'Apollo')) {
           /**  extract &loc=...&,  */
           let
-            match = value.match(/(.*)\&loc=([^&]*)(.*)/),
+            /** loc= may be preceded by ? or &; the ? should be included in value, but not the & */
+            match = value.match(/(.*\??)&?loc=([^&]*)(.*)/),
           /** e.g. "chr1B%3A321117692..321119204" */
           loc = match && match[2];
           if (loc)
@@ -103,7 +107,7 @@ export default Ember.Component.extend({
     let
       [all, scope, colon, loc0, loc1] = loc.match(/chr(..)(%3A|:)([0-9]+)..([0-9]+)/);
 
-    let interval = [loc0, loc1],
+    let interval = (loc0 <= loc1) ? [loc0, loc1] : [loc0, loc1],
       dawnReferenceName = "Triticum_aestivum_IWGSC_RefSeq_v1.0",
     axis = 
       Stacked.axisOfDatasetAndScope(dawnReferenceName, scope),
@@ -151,12 +155,14 @@ export default Ember.Component.extend({
   /** For each website, a function is defined which maps a featureName to a URL.
    * Now will probably add functions to map location (brushedDomain) to a URL,
    * so may factor the urlGrainGenes, urlEnsembl, urlDawn as classes with
-   * .urlForLocation and .urlForFeatureName.
+   * .urlForLocation and .urlForFeatureName.  partially done - @see ApolloJBrowse.urlLocation
    */
   urlFunctions : {
     'GrainGenes' : 'urlGrainGenes',
     'Ensembl' : 'urlEnsembl',
-    'Dawn' : 'urlDawn'
+    // these sites may not have feature search
+    // 'Dawn' :
+    // 'Apollo' :
   },
   /** Select function to calculate URL of featureName based on website.
    * @param this ember component, which is applied to the urlFunction of the website.
@@ -165,7 +171,7 @@ export default Ember.Component.extend({
     let
     urlFunctionName = this.get('urlFunctions')[website],
     urlFunction = urlFunctionName && this.get(urlFunctionName),
-    url = featureName && urlFunction.apply(this, [featureName]);
+    url = featureName && urlFunction && urlFunction.apply(this, [featureName]);
     if (trace_url)
       console.log('urlOf', this.element, this.parentView.element, website, featureName, url);
     return url;
@@ -195,11 +201,11 @@ export default Ember.Component.extend({
   }),
   /** construct the URL for .website and .brushedDomain
    */
-  urlLocation : Ember.computed('website', 'selectedBlock', 'brushedDomain', function (newValue) {
+  urlLocation : Ember.computed('website', 'selectedBlock', 'brushedDomain.{0,1}', function (newValue) {
     let url,
     website = this.get('website'),
     selectedBlock = this.get('selectedBlock');
-    dLog('urlLocation', selectedBlock);
+    dLog('urlLocation', this.get('selectedBlock.id'));
     if (! selectedBlock) {
       let 
         /** overlap with selectedFeatures0Name() above. */
@@ -214,9 +220,9 @@ export default Ember.Component.extend({
       featureName = this.get('selectedFeatures0Name');
        {
          /* signature of urlOf function is different for urlLocation(). */
-         url = featureName && (website === 'Dawn') ?
-           this.urlDawn(featureName, selectedBlock, brushedDomain) : 
-           this.get('urlOf').apply(this, [website, featureName]);
+         url = (website === 'Dawn') ? dawn.urlLocation(this, selectedBlock, brushedDomain) : 
+           (website === 'Apollo') ? apollo.urlLocation(this, selectedBlock, brushedDomain) : 
+           featureName && this.get('urlOf').apply(this, [website, featureName]);
       }
       if (trace_url)
         console.log('urlLocation', featureName, url);
@@ -298,21 +304,36 @@ export default Ember.Component.extend({
     return url;
   },
 
-  /** Construct the Dawn URL for .selectedBlock and .brushedDomain
-   * @param featureName not used; not clear if Dawn / jbrowse has feature search.
-   * @param selectedBlock and brushedDomain may be undefined, but the result is not very useful without them.
-   */
-  urlDawn : function(featureName, selectedBlock, brushedDomain) {
+
+
+  /*----------------------------------------------------------------------------*/
+
+});
+
+class ApolloJBrowse {
+  constructor (additionalAttr) {
+    this.port = '';
+
+    if (additionalAttr)
+      Object.assign(this, additionalAttr);
+  };
+
+};
+
+/** Construct the Dawn URL for .selectedBlock and .brushedDomain
+ * @param gotoUrl goto-ensembl component
+ * @param selectedBlock and brushedDomain may be undefined, but the result is not very useful without them.
+ */
+ApolloJBrowse.prototype.urlLocation = function urlLocation (gotoUrl, selectedBlock, brushedDomain) {
     let
-      baseUrl = this.get('baseUrl'),
+      baseUrl = gotoUrl.get('baseUrl'),
+    domain = this.domain,
+    port = this.port,
+    path = this.path,
+    args1 = this.args1,
     protocol = "http://",
-    domain = "crobiad.agwine.adelaide.edu.au",
-    port = "",
-    path = "/dawn/jbrowse/?",
-    /** the default tracks are the IWGSCv1 HC genes */
-    args1='tracks=DNA%2CIWGSC_v1.0_HC_genes',
     locationQuery;
-    dLog('urlDawn', selectedBlock);
+    dLog('urlDawn', gotoUrl.get('selectedBlock.id'));
     if (selectedBlock) {
       /** map to name used by Dawn, e.g. 'chr1A' */
       let chrName = 'chr' + selectedBlock.get('name');
@@ -323,22 +344,33 @@ export default Ember.Component.extend({
         locationText = domainBp[0] + '..' + domainBp[1];
         locationQuery = 'loc=' + chrName + '%3A' + locationText;
         // also : probably clear anchorLocationText when ! brushedDomain or ! selectedBlock
-        this.set('anchorLocationText', locationText);
+        gotoUrl.set('anchorLocationText', locationText);
       }
     }
     let
-    // query="q=" + featureName + ";",
     args2='highlight=',
     url = baseUrl || 
       (protocol + domain + port + path) + [args1, args2].join('&');
     if (locationQuery)
       url += '&' + locationQuery;
     if (trace_url)
-      console.log("urlDawn", featureName);
+      console.log("urlDawn", url);
 
     return url;
-  }
+};
 
-  /*----------------------------------------------------------------------------*/
+const dawn = new ApolloJBrowse({
+  domain : "crobiad.agwine.adelaide.edu.au",
 
+  path : "/dawn/jbrowse/?",
+  /** the default tracks are the IWGSCv1 HC genes */
+  args1 : 'tracks=DNA%2CIWGSC_v1.0_HC_genes'
 });
+
+
+const apollo = new ApolloJBrowse({
+  domain : "apollo.tgac.ac.uk",
+  path : "/Wheat_IWGSC_WGA_v1_0_browser/jbrowse/?",
+  args1 : 'tracks=IWGSC_v1.1_genes'
+});
+
