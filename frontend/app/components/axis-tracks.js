@@ -875,11 +875,6 @@ export default InAxis.extend({
   }),
 
 
-  resizeEffectHere : Ember.computed('resizeEffect', function () {
-    dLog('resizeEffectHere in axis-tracks', this.get('axisID'));
-    this.showResize(true, true /* , yScaleChanged ? */);
-  }),
-
   keypress: function(event) {
     console.log("components/axis-tracks keypress", event);
   }
