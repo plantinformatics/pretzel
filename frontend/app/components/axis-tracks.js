@@ -535,7 +535,8 @@ export default InAxis.extend({
       isSubelement = false,
       gSelector = subElements ? '.track' : '[clip-path]',
       elementSelector = isSubelement ? '.element' : ':not(.element)',
-      es = rs.selectAll("g" + gSelector + " > rect.track" + elementSelector),
+      es = subElements ?
+        rs.selectAll("g" + gSelector + " > rect.track" + elementSelector) : rs,
       /** ra._parents is the g[clip-path], whereas es._parents are the g.track.element
        * es.merge(ra) may work, but ra.merge(es) has just 1 elt.
        */
@@ -579,10 +580,19 @@ export default InAxis.extend({
        * [start, end, typeName] :
        * start, end are relative to the feature / interval / track / gene.
        */
-      let geneElementData = [
+      let geneElementData_dev = [
         [0.1, 0.2, 'intron'],
         [0.45,0.35,'exon'],
       ];
+      /** If true then use the development data, otherwise get the real data from the feature .value[]. */
+      const useDevData = false;
+      function elementDataFn (d, i, g) {
+        let featureValue = d;
+        featureValue = featureValue && featureValue[2];
+        if (! Ember.isArray(featureValue))
+          featureValue = [];
+        return featureValue;
+      }
 
       /** true means show a pointed tip on the rectangle, indiciating read direction.
        */
@@ -591,6 +601,7 @@ export default InAxis.extend({
       ega.each(function (d, i, g) {
         let
           a = d3.select(this);
+        let geneElementData = useDevData ? geneElementData_dev : elementDataFn.apply(this, arguments);
         geneElementData.forEach(function(e, j) {
           let [start, end, typeName] = e;
           let intron = typeName === "intron",
@@ -615,14 +626,23 @@ export default InAxis.extend({
           heightD = height.apply(this, [d, i, g]),
         xPosnD = xPosn.apply(this, [d, i, g]),
         yPosnD = yPosn.apply(this, [d, i, g]);
+        let geneElementData = useDevData ? geneElementData_dev : elementDataFn.apply(this, arguments);
         geneElementData.forEach(function(e, j) {
           let [start, end, typeName] = e,
           /** signed vector from start -> end. */
-          heightElt = heightD * (end - start);
+          heightElt;
+          if (useDevData)
+            heightElt = heightD * (end - start);
+          else {
+            start = y(start);
+            end = y(end);
+            heightElt = (end - start);
+          }
           let intron = typeName === "intron",
           width = trackWidth / (intron ? 4 : 2);
-          let x = xPosnD + trackWidth * 2,
-          y = yPosnD + heightD * start;
+          /** x and y position of sub-element */
+          let ex = xPosnD + trackWidth * 2,
+          ey = useDevData ? yPosnD + heightD * start : start;
           let showDimensions = showArrow ? elementDimensions : rectDimensions;
           a.selectAll('g.track.element > ' + tag + '.track.element.' + typeName)
             // .transition().duration(featureTrackTransitionTime)
@@ -632,8 +652,8 @@ export default InAxis.extend({
           ;
           function rectDimensions(d, i, g) {
             d3.select(this)
-              .attr('x', x)
-              .attr('y', y)
+              .attr('x', ex)
+              .attr('y', ey)
               .attr('height' , heightElt);
           }
           function rectArrow(d, i, g) {
@@ -669,7 +689,7 @@ export default InAxis.extend({
 
           function elementDimensions(d, i, g) {
             d3.select(this)
-              .attr('transform', "translate(" + x + ", " + y + ")")
+              .attr('transform', "translate(" + ex + ", " + ey + ")")
               .attr('d', rectArrow);
           }
         });
