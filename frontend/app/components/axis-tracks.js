@@ -330,6 +330,10 @@ export default InAxis.extend({
    */
   layoutAndDrawTracks(resized, tracks)
   {
+    /** this axis-tracks, used for blockIndex, which perhaps should be factored
+     * out to here, if it does not change. */
+    let thisAt = this;
+
     // seems run.throttle() .. .apply() is wrapping args with an extra [] ?
     if (resized && (resized.length == 2) && (tracks === undefined))
     {
@@ -363,6 +367,7 @@ export default InAxis.extend({
     /** relative to the transform of parent g.axis-outer */
     bbox = gAxis.node().getBBox(),
     yrange = [bbox.y, bbox.height];
+    dLog(gAxis.node());
     /** could skip the reference block blockIds[0]. */
     let blockIds = d3.keys(tracks.intervalTree);
     let
@@ -485,31 +490,200 @@ export default InAxis.extend({
     }
     let g = gp.append("g")
       .attr("clip-path", "url(#" + axisEltIdClipPath(axisID) + ")"); // clip the rectangle
+
     function trackKeyFn(featureData) { return featureData.description; }
     /** Add the <rect> within <g clip-path...>  */
     let
-      rs = gAxis.selectAll("g.axis-use > g.tracks > g").selectAll("rect.track")
+      /** block select - datum is blockId. */
+      bs = gAxis.selectAll("g.axis-use > g.tracks > g"),
+    a = bs.each(function(blockId,i,g) {
+      let
+        block = oa.stacks.blocks[blockId],
+      tags = block.block.get('datasetId.tags'),
+      subElements = tags && (tags.indexOf("geneElements") >= 0),
+      eachFn = subElements ? eachGroup : eachRect;
+      eachFn.apply(this, [blockId, i, g]);
+        });
+    function eachRect(blockId, i, g) {
+      let
+        rs = bs.selectAll("rect.track")
       .data(trackBlocksData, trackKeyFn),
     re =  rs.enter(), rx = rs.exit();
+    dLog(rs.size(), re.size(),  'rx', rx.size());
+    rx.remove();
+
+      appendRect.apply(this, [re, rs, trackWidth, false]);
+    }
+    /** - rename re and rs to ge and gs
+     * es could be called rs
+     * @param subElements true if (gene) sub-elements (intro/exon) are displayed for this block.
+     */
+    function appendRect(re, rs, width, subElements) {
     let ra = re
       .append("rect");
     ra
       .attr('class', 'track')
-      .transition().duration(featureTrackTransitionTime)
-      .attr('width', trackWidth)
+      // .transition().duration(featureTrackTransitionTime)
+      .attr('width', width)
       .each(configureTrackHover);
-    let blockIndex = this.get('axis1d.blockIndexes');
-    ra
-      .merge(rs)
-      .transition().duration(featureTrackTransitionTime)
+      let blockIndex = thisAt.get('axis1d.blockIndexes'),
+      /** the structure here depends on subElements:
+       * true : g[clip-path] > g.track.element > rect.track
+       * false : g[clip-path] > rect.track
+       * appendRect() could also be used for geneElementData[], which would pass isSubelement=true.
+       */
+      isSubelement = false,
+      gSelector = subElements ? '.track' : '[clip-path]',
+      elementSelector = isSubelement ? '.element' : ':not(.element)',
+      es = rs.selectAll("g" + gSelector + " > rect.track" + elementSelector),
+      /** ra._parents is the g[clip-path], whereas es._parents are the g.track.element
+       * es.merge(ra) may work, but ra.merge(es) has just 1 elt.
+       */
+      rm = es
+        .merge(ra);
+      dLog('rm', rm.node(), 'es', es.nodes(), es.node());
+      rm
+      // .transition().duration(featureTrackTransitionTime)
       .attr('x', xPosn)
       .attr('y', yPosn)
       .attr('height' , height)
       .attr('stroke', blockTrackColourI)
       .attr('fill', blockTrackColourI)
-    ;
+      ;
+      dLog('ra', ra.size(), ra.node(), 'rm', rm.size(), rm.node());
+      // result is not used yet.
+      return ra;
+    }
+    /** subElements */
+    function eachGroup(blockId, i, g) {
+      let
+        egs = bs.selectAll("g.element")
+      // probably add geneKeyFn showing sub-element details, e.g. typeName, start/end, sequence?
+        .data(trackBlocksData, trackKeyFn),
+      ege =  egs.enter(), egx = egs.exit();
+      dLog('ege', ege.node(), 'egx', egx.nodes());
+      egx.remove();
+    let ega = ege
+      .append("g")
+      .attr('class', 'track element');
+      dLog('ega', ega.node(), ega.size(), egs.size());
+
+      let
+        egm = egs.merge(ega),
+        era = appendRect.apply(this, [ega, egs, trackWidth, true]);
+
+
+        // re =  rs.enter(), rx = rs.exit();
+
+      /** geneElementData will be a function of d (feature / interval).
+       * [start, end, typeName] :
+       * start, end are relative to the feature / interval / track / gene.
+       */
+      let geneElementData = [
+        [0.1, 0.2, 'intron'],
+        [0.45,0.35,'exon'],
+      ];
+
+      /** true means show a pointed tip on the rectangle, indiciating read direction.
+       */
+      const showArrow = true,
+      tag = showArrow ? 'path' : 'rect';
+      ega.each(function (d, i, g) {
+        let
+          a = d3.select(this);
+        geneElementData.forEach(function(e, j) {
+          let [start, end, typeName] = e;
+          let intron = typeName === "intron",
+          width = trackWidth / (intron ? 4 : 2);
+          let ea = a
+            .append(tag);
+          ea
+            .attr('class', 'track element ' + typeName)
+            // .transition().duration(featureTrackTransitionTime)
+            .attr('width', width)
+            .each(configureTrackHover);
+        });
+      });
+      // ega.each is use for .append(), egm.each is used to update size.
+      egm.each(function (d, i, g) {
+        let
+          a = d3.select(this),
+          /** height, xPosn, yPosn don't use `this`, i or g, but they could, so
+           * the standard d3 calling signature is used.
+           * ((d,i,g) => height(d, i, g))(d,i,g) should also work but it compiles to a function without .apply
+           */
+          heightD = height.apply(this, [d, i, g]),
+        xPosnD = xPosn.apply(this, [d, i, g]),
+        yPosnD = yPosn.apply(this, [d, i, g]);
+        geneElementData.forEach(function(e, j) {
+          let [start, end, typeName] = e,
+          /** signed vector from start -> end. */
+          heightElt = heightD * (end - start);
+          let intron = typeName === "intron",
+          width = trackWidth / (intron ? 4 : 2);
+          let x = xPosnD + trackWidth * 2,
+          y = yPosnD + heightD * start;
+          let showDimensions = showArrow ? elementDimensions : rectDimensions;
+          a.selectAll('g.track.element > ' + tag + '.track.element.' + typeName)
+            // .transition().duration(featureTrackTransitionTime)
+            .each(showDimensions)
+            .attr('stroke', blockTrackColourI)
+            .attr('fill', blockTrackColourI)
+          ;
+          function rectDimensions(d, i, g) {
+            d3.select(this)
+              .attr('x', x)
+              .attr('y', y)
+              .attr('height' , heightElt);
+          }
+          function rectArrow(d, i, g) {
+            /** signed, according to direction start -> end. */
+            let arrowLength = heightElt / 3, // 10,
+            tipEndsY = [0, heightElt],
+            endsY = [0, heightElt],
+            direction = start < end,
+            directionFrom = +!direction,
+            directionTo = +direction;
+            endsY[1] -= arrowLength;
+            let
+            tipY = tipEndsY[1],
+            tip = [[width/2, tipY]],
+            append  = direction ? 'push' : 'unshift',
+            /** the arrow tip is added between 2 points with the same y. */
+            pointsLeft = [
+              [0, endsY[directionFrom]],
+              [0, endsY[directionTo]]
+            ],
+            pointsRight = [
+              [width, endsY[directionTo]],
+              [width, endsY[directionFrom]]
+            ],
+            points = direction ?
+              pointsLeft.concat(tip, pointsRight) :
+              pointsLeft.concat(pointsRight, tip);
+            let
+            l =  d3.line()(points);
+            dLog('rectarrow', arrowLength, tipEndsY, endsY, direction, tip, append, points, l);
+            return [l];
+          }
+
+          function elementDimensions(d, i, g) {
+            d3.select(this)
+              .attr('transform', "translate(" + x + ", " + y + ")")
+              .attr('d', rectArrow);
+          }
+        });
+      });
+    }
+
     function blockTrackColourI (b) {
-        let blockId = this.parentElement.__data__,
+      let parent = this.parentElement;
+      if (! parent.getAttribute('clip-path')) {
+        parent = parent.parentElement;
+        // can check that parent has clip-path, and data is string
+      }
+        let blockId = parent.__data__,
+      blockIndex = thisAt.get('axis1d.blockIndexes'),
         /** If blockIndex{} is not collated yet, can scan through blockIds[] to get index.
          * Actually, the number of blocks will be 1-10, so collating a hash is
          * probably not time-effective.
@@ -522,8 +696,6 @@ export default InAxis.extend({
         // index into axis.blocks[] = <g.tracks> index + 1
         return axisTitleColour(blockId, i+1) || 'black';
       }
-    console.log(gAxis.node(), rs.size(), re.size(), 'ra', ra.size(), ra.node(), 'rx', rx.size());
-    rx.remove();
 
     /** not yet used, see also above blockTrackColourI() */
     function blockColour(selector) {
@@ -703,9 +875,15 @@ export default InAxis.extend({
   }),
 
 
+  resizeEffectHere : Ember.computed('resizeEffect', function () {
+    dLog('resizeEffectHere in axis-tracks', this.get('axisID'));
+    this.showResize(true, true /* , yScaleChanged ? */);
+  }),
+
   keypress: function(event) {
     console.log("components/axis-tracks keypress", event);
   }
 
 
 });
+
