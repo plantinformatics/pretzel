@@ -4,7 +4,7 @@ import createIntervalTree from 'npm:interval-tree-1d';
 import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
 import InAxis from './in-axis';
 import {  eltId, axisEltId, eltIdAll, axisEltIdClipPath, trackBlockEltIdPrefix, axisTitleColour }  from '../utils/draw/axis';
-
+import { ensureSvgDefs } from '../utils/draw/d3-svg';
 
 /*----------------------------------------------------------------------------*/
 /* milliseconds duration of transitions in which feature <rect>-s are drawn / changed.
@@ -183,6 +183,9 @@ export default InAxis.extend({
     dLog('didInsertElement', axisID, width);
     // [min, max] width
     childWidths.set(this.get('className'), [width, width]);
+
+    let svg = d3.selectAll('svg.FeatureMapViewer');
+    ensureSvgDefs(svg);
   },
 
   willDestroyElement() {
@@ -582,10 +585,14 @@ export default InAxis.extend({
        */
       let geneElementData_dev = [
         [0.1, 0.2, 'intron'],
+        [0.55,0.8, 'utr'],
         [0.45,0.35,'exon'],
       ];
       /** If true then use the development data, otherwise get the real data from the feature .value[]. */
-      const useDevData = false;
+      const useDevData = true;
+      /** @return the sub-element data extract from a Feature.value.
+       * @param d Feature.value
+       */
       function elementDataFn (d, i, g) {
         let featureValue = d;
         featureValue = featureValue && featureValue[2];
@@ -593,27 +600,59 @@ export default InAxis.extend({
           featureValue = [];
         return featureValue;
       }
-
-      /** true means show a pointed tip on the rectangle, indiciating read direction.
+      /** Map the given typeName to the characteristics of the shape which will
+       * represent that type.  This is a description of the shape, not the
+       * symbol it represents; i.e. the same shape could be used for 2 different
+       * gene sub-element types.
        */
-      const showArrow = true,
-      tag = showArrow ? 'path' : 'rect';
+      class ShapeDescription {
+        /** @param typeName */
+        constructor(typeName) {
+          /** true means show a pointed tip on the rectangle, indiciating read direction.
+           */
+          this.showArrow = true;
+          /* outputs : */
+          /** path / rect */
+          this.tagName = this.showArrow ? 'path' : 'rect';
+          let intron = typeName === "intron";
+          this.useLine = intron || (typeName === 'utr');
+          this.width = trackWidth / 2;
+          if (intron) {
+            /** side-spur for intron */
+            this.sideWedge = true;
+            this.width = 1;
+            this.fill = null;  // set in css. 'none'; // inherits black, so set none.
+          }
+          /** default stroke and fill is blockTrackColourI
+           * if fill===stroke then can use path instead of rect
+           */
+          /** blue fill for utr (dashed thick blue line, maybe arrow head), */
+          if (typeName === 'utr') {
+            this.tagName = 'path';
+            this.width = trackWidth / 3;
+            this.showArrow = true;
+          }
+        }
+      };
+
       ega.each(function (d, i, g) {
         let
           a = d3.select(this);
-        let geneElementData = useDevData ? geneElementData_dev : elementDataFn.apply(this, arguments);
-        geneElementData.forEach(function(e, j) {
-          let [start, end, typeName] = e;
-          let intron = typeName === "intron",
-          width = trackWidth / (intron ? 4 : 2);
-          let ea = a
-            .append(tag);
-          ea
-            .attr('class', 'track element ' + typeName)
+        let heightD = height.apply(this, [d, i, g]);
+        if (true || heightD > 5) {
+          let geneElementData = useDevData ? geneElementData_dev : elementDataFn.apply(this, arguments);
+          geneElementData.forEach(function(e, j) {
+            let [start, end, typeName] = e;
+            let shape = new ShapeDescription(typeName);
+            let ea = a
+              .append(shape.tagName);
+            ea
+              .attr('class', 'track element ' + typeName)
             // .transition().duration(featureTrackTransitionTime)
-            .attr('width', width)
-            .each(configureTrackHover);
-        });
+              .attr(shape.tagName === 'path' ? 'stroke-width' : 'width', shape.width)
+              .each(configureTrackHover);
+          });
+        }
       });
       // ega.each is use for .append(), egm.each is used to update size.
       egm.each(function (d, i, g) {
@@ -623,76 +662,116 @@ export default InAxis.extend({
            * the standard d3 calling signature is used.
            * ((d,i,g) => height(d, i, g))(d,i,g) should also work but it compiles to a function without .apply
            */
-          heightD = height.apply(this, [d, i, g]),
-        xPosnD = xPosn.apply(this, [d, i, g]),
-        yPosnD = yPosn.apply(this, [d, i, g]);
-        let geneElementData = useDevData ? geneElementData_dev : elementDataFn.apply(this, arguments);
-        geneElementData.forEach(function(e, j) {
-          let [start, end, typeName] = e,
-          /** signed vector from start -> end. */
-          heightElt;
-          if (useDevData)
-            heightElt = heightD * (end - start);
-          else {
-            start = y(start);
-            end = y(end);
-            heightElt = (end - start);
-          }
-          let intron = typeName === "intron",
-          width = trackWidth / (intron ? 4 : 2);
-          /** x and y position of sub-element */
-          let ex = xPosnD + trackWidth * 2,
-          ey = useDevData ? yPosnD + heightD * start : start;
-          let showDimensions = showArrow ? elementDimensions : rectDimensions;
-          a.selectAll('g.track.element > ' + tag + '.track.element.' + typeName)
+        heightD = height.apply(this, [d, i, g]);
+        if (heightD > 5) {
+          let
+            xPosnD = xPosn.apply(this, [d, i, g]),
+          yPosnD = yPosn.apply(this, [d, i, g]);
+          let geneElementData = useDevData ? geneElementData_dev : elementDataFn.apply(this, arguments);
+          geneElementData.forEach(function(e, j) {
+            let [start, end, typeName] = e,
+            /** signed vector from start -> end. */
+            heightElt;
+            if (useDevData)
+              heightElt = heightD * (end - start);
+            else {
+              start = y(start);
+              end = y(end);
+              heightElt = (end - start);
+            }
+            let shape = new ShapeDescription(typeName);
+            /** x and y position of sub-element */
+            let ex = xPosnD + trackWidth * 2,
+            ey = useDevData ? yPosnD + heightD * start : start;
+            let showDimensions = shape.useLine ? lineDimensions : shape.showArrow ? elementDimensions : rectDimensions;
+            /** sub-element selection */
+            let ses =
+              a.selectAll('g.track.element > ' + shape.tagName + '.track.element.' + typeName)
             // .transition().duration(featureTrackTransitionTime)
-            .each(showDimensions)
-            .attr('stroke', blockTrackColourI)
-            .attr('fill', blockTrackColourI)
-          ;
-          function rectDimensions(d, i, g) {
-            d3.select(this)
-              .attr('x', ex)
-              .attr('y', ey)
-              .attr('height' , heightElt);
-          }
-          function rectArrow(d, i, g) {
-            /** signed, according to direction start -> end. */
-            let arrowLength = heightElt / 3, // 10,
-            tipEndsY = [0, heightElt],
-            endsY = [0, heightElt],
-            direction = start < end,
-            directionFrom = +!direction,
-            directionTo = +direction;
-            endsY[1] -= arrowLength;
-            let
-            tipY = tipEndsY[1],
-            tip = [[width/2, tipY]],
-            append  = direction ? 'push' : 'unshift',
-            /** the arrow tip is added between 2 points with the same y. */
-            pointsLeft = [
-              [0, endsY[directionFrom]],
-              [0, endsY[directionTo]]
-            ],
-            pointsRight = [
-              [width, endsY[directionTo]],
-              [width, endsY[directionFrom]]
-            ],
-            points = direction ?
-              pointsLeft.concat(tip, pointsRight) :
-              pointsLeft.concat(pointsRight, tip);
-            let
-            l =  d3.line()(points);
-            dLog('rectarrow', arrowLength, tipEndsY, endsY, direction, tip, append, points, l);
-            return [l];
-          }
+              .each(showDimensions);
+            if (shape.stroke !== null)
+              ses.attr('stroke', shape.stroke || blockTrackColourI);
+            if (shape.fill !== null)
+              ses.attr('fill', shape.fill || blockTrackColourI);
 
-          function elementDimensions(d, i, g) {
-            d3.select(this)
-              .attr('transform', "translate(" + ex + ", " + ey + ")")
-              .attr('d', rectArrow);
-          }
-        });
+            function lineDimensions(d, i, g) {
+              let
+                /** cut-down version of rectArrow() - the rectangle centreline
+                 * could be factored out.
+                 */
+                tipEndsY = [0, heightElt],
+              endsY = [0, heightElt],
+              tipY = tipEndsY[1],
+              width = trackWidth / 2,
+              centreX = width/2,
+              wedgeX = width/2,
+              centreLine = [
+                [centreX, 0],
+                [centreX, tipY]
+              ],
+              sideWedge = [
+                [centreX+wedgeX, tipY],
+                [centreX+wedgeX*2, heightElt / 2],
+                [centreX+wedgeX, 0]
+              ],
+              /** put the centreLine last, because marker-end. */
+              points = shape.sideWedge ?
+                sideWedge.concat(centreLine) : centreLine,
+              l =
+                d3.select(this)
+                .attr('d', d3.line()(points))
+                .attr('transform', "translate(" + ex + ", " + ey + ")");
+              dLog('lineDimensions', heightElt, width, points, sideWedge);
+              if (shape.showArrow) {
+                let arrow = (shape.width === 1) ? 'arrow' : 'fat_arrow';
+                l.attr('marker-end', (heightElt < 20) ? "none" : 'url(#marker_' + arrow + ')');
+              }
+            }
+            function rectDimensions(d, i, g) {
+              d3.select(this)
+                .attr('x', ex)
+                .attr('y', ey)
+                .attr('height' , heightElt);
+            }
+            function rectArrow(d, i, g) {
+              /** signed, according to direction start -> end. */
+              let arrowLength = heightElt / 3, // 10,
+              tipEndsY = [0, heightElt],
+              endsY = [0, heightElt],
+              direction = start < end,
+              directionFrom = +!direction,
+              directionTo = +direction;
+              endsY[1] -= arrowLength;
+              let
+                tipY = tipEndsY[1],
+              width = shape.width,
+              tip = [[width/2, tipY]],
+              append  = direction ? 'push' : 'unshift',
+              /** the arrow tip is added between 2 points with the same y. */
+              pointsLeft = [
+                [0, endsY[directionFrom]],
+                [0, endsY[directionTo]]
+              ],
+              pointsRight = [
+                [width, endsY[directionTo]],
+                [width, endsY[directionFrom]]
+              ],
+              points = direction ?
+                pointsLeft.concat(tip, pointsRight) :
+                pointsLeft.concat(pointsRight, tip);
+              let
+                l =  d3.line()(points) + 'Z';
+              dLog('rectarrow', arrowLength, tipEndsY, endsY, direction, tip, append, points, l);
+              return [l];
+            }
+
+            function elementDimensions(d, i, g) {
+              d3.select(this)
+                .attr('transform', "translate(" + ex + ", " + ey + ")")
+                .attr('d', rectArrow);
+            }
+          });
+        }
       });
     }
 

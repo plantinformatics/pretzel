@@ -235,6 +235,14 @@ g.axis-use > g.tracks > g > rect.track {
   /* fill: lightblue; */
   /* stroke: lightblue; */
 }
+path.track.element.utr {
+  stroke-width : 10;
+  stroke-dasharray : 25;
+  stroke : blue;
+}
+path.track.element.intron {
+  fill : none;
+}
 .pasteData {
   overflow: hidden;
   word-wrap: inherit;
