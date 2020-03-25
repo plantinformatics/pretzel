@@ -15,6 +15,8 @@ const featureTrackTransitionTime = 750;
 
 /** width of track <rect>s */
 const trackWidth = 10;
+/** track sub-elements < this height (px) are not rendered. */
+const subElementThresholdHeight = 5;
 
 /** for devel.  ref comment in @see height() */
 let trace_count_NaN = 10;
@@ -589,7 +591,7 @@ export default InAxis.extend({
         [0.45,0.35,'exon'],
       ];
       /** If true then use the development data, otherwise get the real data from the feature .value[]. */
-      const useDevData = true;
+      const useDevData = false;
       /** @return the sub-element data extract from a Feature.value.
        * @param d Feature.value
        */
@@ -635,17 +637,30 @@ export default InAxis.extend({
         }
       };
 
-      ega.each(function (d, i, g) {
+      /* would use ega here, but the sub-element may be added in a separate pass after the parent g.track.element.   */
+      egm.each(function (d, i, g) {
         let
           a = d3.select(this);
         let heightD = height.apply(this, [d, i, g]);
-        if (true || heightD > 5) {
+        if (heightD < subElementThresholdHeight)
+        {
+          let ses = a
+            .selectAll('g.track.element > .track.element');
+          ses.remove();
+        } else {
           let geneElementData = useDevData ? geneElementData_dev : elementDataFn.apply(this, arguments);
           geneElementData.forEach(function(e, j) {
             let [start, end, typeName] = e;
             let shape = new ShapeDescription(typeName);
-            let ea = a
+            let ses = a
+              .selectAll('g.track.element > ' + shape.tagName + '.track.element.' + typeName)
+              .data([d]),
+            ea = ses
+              .enter()
               .append(shape.tagName);
+            ses
+              .exit()
+              .remove();
             ea
               .attr('class', 'track element ' + typeName)
             // .transition().duration(featureTrackTransitionTime)
@@ -654,7 +669,7 @@ export default InAxis.extend({
           });
         }
       });
-      // ega.each is use for .append(), egm.each is used to update size.
+      // ega.each was used for .append();  egm.each is used to update size.
       egm.each(function (d, i, g) {
         let
           a = d3.select(this),
@@ -663,7 +678,7 @@ export default InAxis.extend({
            * ((d,i,g) => height(d, i, g))(d,i,g) should also work but it compiles to a function without .apply
            */
         heightD = height.apply(this, [d, i, g]);
-        if (heightD > 5) {
+        if (heightD > subElementThresholdHeight) {
           let
             xPosnD = xPosn.apply(this, [d, i, g]),
           yPosnD = yPosn.apply(this, [d, i, g]);
