@@ -610,30 +610,50 @@ export default InAxis.extend({
       class ShapeDescription {
         /** @param typeName */
         constructor(typeName) {
-          /** true means show a pointed tip on the rectangle, indiciating read direction.
+          /** true means show a pointed tip on the rectangle, indicating read direction.
            */
-          this.showArrow = true;
-          /* outputs : */
-          /** path / rect */
-          this.tagName = this.showArrow ? 'path' : 'rect';
-          let intron = typeName === "intron";
-          this.useLine = intron || (typeName === 'utr');
+          this.showArrow = false;
           this.width = trackWidth / 2;
-          if (intron) {
+          switch (typeName) {
+          case 'intron' :
+            this.tagName = 'path';
+            this.useLine = true;
             /** side-spur for intron */
             this.sideWedge = true;
             this.width = 1;
             this.fill = null;  // set in css. 'none'; // inherits black, so set none.
+            break;
+
+          case 'mRNA':
+            this.tagName = 'path';
+            this.useLine = true;
+            this.width = 1;
+            break;
+
+          case 'exon':
+          case 'CDS':
+            this.tagName = this.showArrow ? 'path' : 'rect';
+            this.useLine = false;
+            break;
+
+          case 'utr':
+          case 'five_prime_UTR':
+          case 'three_prime_UTR':
+            this.useLine = true;
+            /** blue fill for utr (dashed thick blue line, maybe arrow head), */
+            this.tagName = 'path';
+            this.width = trackWidth / 3;
+            this.showArrow = true;
+            break;
+
+            default :
+            this.tagName = 'path';
+            dLog('ShapeDescription', typeName);
+            break;
           }
           /** default stroke and fill is blockTrackColourI
            * if fill===stroke then can use path instead of rect
            */
-          /** blue fill for utr (dashed thick blue line, maybe arrow head), */
-          if (typeName === 'utr') {
-            this.tagName = 'path';
-            this.width = trackWidth / 3;
-            this.showArrow = true;
-          }
         }
       };
 
@@ -649,27 +669,38 @@ export default InAxis.extend({
           ses.remove();
         } else {
           let geneElementData = useDevData ? geneElementData_dev : elementDataFn.apply(this, arguments);
-          geneElementData.forEach(function(e, j) {
-            let [start, end, typeName] = e;
-            let shape = new ShapeDescription(typeName);
-            let ses = a
-              .selectAll('g.track.element > ' + shape.tagName + '.track.element.' + typeName)
-              .data([d]),
-            ea = ses
+          let ges = a.selectAll('g.track.element > ' + '.track.element')
+            .data(geneElementData);
+          let
+            ea = ges
               .enter()
-              .append(shape.tagName);
-            ses
+            .append((e) => {
+              let typeName = e[2],
+              shape = e.shape || (e.shape = new ShapeDescription(typeName));
+              return document.createElementNS("http://www.w3.org/2000/svg", shape.tagName); });
+            ges
               .exit()
               .remove();
-            ea
-              .attr('class', 'track element ' + typeName)
-            // .transition().duration(featureTrackTransitionTime)
-              .attr(shape.tagName === 'path' ? 'stroke-width' : 'width', shape.width)
-              .each(configureTrackHover);
+          ea.each(function(e, j) {
+            let [start, end, typeName] = e;
+            let shape = e.shape;
+            if (! e.description) {
+              e.description = d.description + ' : ' +
+                start + '-' + end + ' ' + typeName;
+              dLog('e.description', e.description, d.description, d, e);
+            }
           });
+          ea
+            .attr('class', (e) => { let typeName = e[2]; return 'track element ' + typeName; })
+          // .transition().duration(featureTrackTransitionTime)
+            .each(function (e, i, g) {
+              let s = d3.select(this), shape = e.shape;
+              s.attr(shape.tagName === 'path' ? 'stroke-width' : 'width', shape.width); })
+            .each(configureTrackHover);
         }
       });
       // ega.each was used for .append();  egm.each is used to update size.
+      // could now factor these 2 loops together ..
       egm.each(function (d, i, g) {
         let
           a = d3.select(this),
@@ -683,7 +714,9 @@ export default InAxis.extend({
             xPosnD = xPosn.apply(this, [d, i, g]),
           yPosnD = yPosn.apply(this, [d, i, g]);
           let geneElementData = useDevData ? geneElementData_dev : elementDataFn.apply(this, arguments);
-          geneElementData.forEach(function(e, j) {
+          let ges = a.selectAll('g.track.element > ' + '.track.element')
+            .data(geneElementData);
+          ges.each(function(e, j) {
             let [start, end, typeName] = e,
             /** signed vector from start -> end. */
             heightElt;
@@ -694,14 +727,14 @@ export default InAxis.extend({
               end = y(end);
               heightElt = (end - start);
             }
-            let shape = new ShapeDescription(typeName);
+            let shape = e.shape;
             /** x and y position of sub-element */
             let ex = xPosnD + trackWidth * 2,
             ey = useDevData ? yPosnD + heightD * start : start;
             let showDimensions = shape.useLine ? lineDimensions : shape.showArrow ? elementDimensions : rectDimensions;
             /** sub-element selection */
             let ses =
-              a.selectAll('g.track.element > ' + shape.tagName + '.track.element.' + typeName)
+              d3.select(this)
             // .transition().duration(featureTrackTransitionTime)
               .each(showDimensions);
             if (shape.stroke !== null)
@@ -735,7 +768,7 @@ export default InAxis.extend({
               l =
                 d3.select(this)
                 .attr('d', d3.line()(points))
-                .attr('transform', "translate(" + ex + ", " + ey + ")");
+                .attr('transform', (d) => "translate(" + (j*trackWidth + ex) + ", " + ey + ")");
               dLog('lineDimensions', heightElt, width, points, sideWedge);
               if (shape.showArrow) {
                 let arrow = (shape.width === 1) ? 'arrow' : 'fat_arrow';
@@ -744,7 +777,7 @@ export default InAxis.extend({
             }
             function rectDimensions(d, i, g) {
               d3.select(this)
-                .attr('x', ex)
+                .attr('x', ex + j*trackWidth)
                 .attr('y', ey)
                 .attr('height' , heightElt);
             }
@@ -782,7 +815,7 @@ export default InAxis.extend({
 
             function elementDimensions(d, i, g) {
               d3.select(this)
-                .attr('transform', "translate(" + ex + ", " + ey + ")")
+                .attr('transform', "translate(" + (j*trackWidth + ex) + ", " + ey + ")")
                 .attr('d', rectArrow);
             }
           });
