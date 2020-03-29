@@ -66,6 +66,7 @@ my $datasetHeader = <<EOF;
     "name": "myMap",
     "parent": "$datasetParent",
     "namespace": "$datasetNamespace",
+    "type": "linear",
     "tags": [
         "geneElements"
     ],
@@ -140,8 +141,14 @@ else
 my $lastChr;
 my $lastId;
 my $lastParent;
+# These separators are defined on the first row which changes state, and used on subsequent rows until state change clears it.
 my $blockSeparator;
 my $featureSeparator;
+my $subEltSeparator;
+# true for the first row of a ID / Feature; it is expected to be type 'gene' and is not
+# added as a sub-element because the row start,end are recorded as the Feature start,end.
+# Values: 0 or 1 (true).
+my $isFirstAndGene;
 
 #-------------------------------------------------------------------------------
 
@@ -208,8 +215,9 @@ sub subEltLine($)
 	    { $blockSeparator = ",\n"; }
       undef $featureSeparator;
 
+      my $scope = $c; $scope =~ s/^chr//;
 	    my $h = $blockHeader;
-	    $h =~ s/1A/$c/g;
+	    $h =~ s/1A/$scope/g;
 	    print $h;
     }
     else  # print feature separator
@@ -218,17 +226,29 @@ sub subEltLine($)
       print $featureSeparator;
     }
 
-    if ($a[type] ne 'gene') {
+    $isFirstAndGene = $a[type] eq 'gene';
+    if (! $isFirstAndGene) {
 	    print 'Expected ', $a[type], ' to be gene', $_;
     }
     if (! defined($id)) 
     { $id = $parent; }
     printFeatureHeader($id, $c, $a[start], $a[end]);
+    undef $subEltSeparator;
   }
   else # print sub-element separator
-  { print ",\n"; }
+  {
+    if (defined($subEltSeparator))
+    { print $subEltSeparator; }
+    else
+    { $subEltSeparator = ",\n"; }
+  }
 
-  printSubElement(@a);
+  # Omit type 'gene', since the row's start&end are already added as feature.value start and end ([0..1]).
+  # This assumes that only the first row with a new ID is type 'gene'.
+  if (! $isFirstAndGene) {
+    printSubElement(@a);
+  }
+  $isFirstAndGene = 0;
 }
 
 sub printFeatureHeader($$$$)
