@@ -86,9 +86,16 @@ function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
     if ((sizeThreshold === undefined) || (interval[1] - interval[0] > sizeThreshold))
       intervals.push(interval);
   }
-  intervalTree.queryInterval(domain[0], domain[1], visit);
-  // Build another tree with just those intervals which intersect domain.
-  let subTree = createIntervalTree(intervals);
+  let subTree;
+  if (domain) {
+    intervalTree.queryInterval(domain[0], domain[1], visit);
+    // Build another tree with just those intervals which intersect domain.
+    subTree = createIntervalTree(intervals);
+  } else {
+    subTree = intervalTree;
+    result.intervals = intervalTree.intervals;
+  }
+
   /** for each interval, if it does not have a layer,
    * get list of intervals in subTree it intersects,
    * note the layers of those which already have a layer assigned,
@@ -751,7 +758,7 @@ export default InAxis.extend({
             }
           };
           ea
-            .attr('class', (e) => { let typeName = e[2]; return 'track element ' + typeName; })
+            .attr('class', (e) => { let typeName = e.data[2]; return 'track element ' + typeName; })
           // .transition().duration(featureTrackTransitionTime)
             .each(function (e, i, g) {
               let s = d3.select(this), shape = e.shape;
@@ -1052,8 +1059,13 @@ export default InAxis.extend({
        * useful.
        */
       sizeThreshold = undefined,
-    yDomain = this.get('yDomain'),
-    tracksLayout = regionOfTree(subEltTree.intervalTree[blockId], yDomain, sizeThreshold, false),
+    /** passing yDomain to regionOfTree() will hide sub-elements as they move
+     * out of scope during zoom/pan; when they re-enter scope they may be
+     * layered differently than when all sub-elements are added at the same
+     * time, so this is not done (and there is an update issue with rerending in
+     * this case).  */
+    // yDomain = this.get('yDomain'),
+    tracksLayout = regionOfTree(subEltTree.intervalTree[blockId], undefined, sizeThreshold, false),
     data = tracksLayout.intervals;
     return data;
   },
