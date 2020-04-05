@@ -46,9 +46,18 @@ const dLog = console.debug;
     }
 /*----------------------------------------------------------------------------*/
 
+/** Configure hover text for tracks. */
 function  configureTrackHover(interval)
 {
   return configureHorizTickHover.apply(this, [interval.description]);
+}
+/** Same as configureHorizTickHover(), except for sub-elements,
+ * for which the source data, and hence .description, is in interval.data,
+ * because the interval tree takes just the interval as input.
+ */
+function  configureSubTrackHover(interval)
+{
+  return configureHorizTickHover.apply(this, [(interval.data || interval).description]);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -61,10 +70,15 @@ function I(d) { return d; }
 /** filter intervalTree : select those intervals which intersect domain.
  * @param sizeThreshold intervals smaller than sizeThreshold are filtered out;
  * undefined means don't filter.
+ * @param assignOverlapped  true means assign overlapping tracks in sequence;
+ * this is used for Feature tracks, but for sub-elements there is likely to be a
+ * sub-element which overlaps all the others, which would place them all in
+ * separate layers and missing opportunities to pack more closely.
+ *
  * @return {intervals:  array of intervals,
  * layoutWidth : px width allocated for the layered tracks}
  */
-function regionOfTree(intervalTree, domain, sizeThreshold)
+function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
 {
   let intervals = [],
   result = {intervals : intervals};
@@ -88,7 +102,8 @@ function regionOfTree(intervalTree, domain, sizeThreshold)
     let i=i1[j], overlaps = [], layersUsed = [];
     function noteLayers(interval) {
       overlaps.push(interval);
-      if (interval.layer) layersUsed[interval.layer] = true; /* or interval*/
+      if (interval.layer !== undefined)
+        layersUsed[interval.layer] = true; /* or interval*/
     };
     subTree.queryInterval(i[0], i[1], noteLayers);
     function unusedLayers() {
@@ -107,14 +122,24 @@ function regionOfTree(intervalTree, domain, sizeThreshold)
       let next = u.pop() || ++lastUsed;
       return next;
     }
-    function assignRemainder(interval) {
-    };
-    for (let j2 = 0; j2 < overlaps.length; j2++)
-    {
-      let o = overlaps[j2];
-      if (! o.layer)
-        o.layer = chooseNext();
+    /** Assign a layer to one interval.
+     * @param o  interval  */
+    function assignInterval(o) {
+        if (! o.layer)
+          o.layer = chooseNext();
     }
+    /** Assigninterval layers to remaining intervals in overlaps[].
+     */
+    function assignRemainder() {
+      for (let j2 = 0; j2 < overlaps.length; j2++)
+      {
+        let o = overlaps[j2];
+        assignInterval(o);
+      }
+    };
+    assignInterval(i);
+    if (assignOverlapped)
+      assignRemainder();
     if (lastUsed > largestLayer)
       largestLayer = lastUsed;
   }
@@ -430,7 +455,7 @@ export default InAxis.extend({
        * [ sizeThreshold is disabled by setting to undefined, while we prototype how to select a sub-set of features to display ]
        */
       sizeThreshold = undefined, // zoomed ? undefined : pxSize * 1/*5*/,
-      tracksLayout = regionOfTree(t, yDomain, sizeThreshold),
+      tracksLayout = regionOfTree(t, yDomain, sizeThreshold, true),
       data = tracksLayout.intervals;
       if (false)  // actually need to sum the .layoutWidth for all blockId-s, plus the block offsets which are calculated below
       setClipWidth(axisID, tracksLayout.layoutWidth);
@@ -561,7 +586,7 @@ export default InAxis.extend({
       .attr('class', 'track')
       // .transition().duration(featureTrackTransitionTime)
       .attr('width', width)
-      .each(configureTrackHover);
+      .each(subElements ? configureSubTrackHover : configureTrackHover);
       let blockIndex = thisAt.get('axis1d.blockIndexes'),
       /** the structure here depends on subElements:
        * true : g[clip-path] > g.track.element > rect.track
@@ -731,7 +756,7 @@ export default InAxis.extend({
             .each(function (e, i, g) {
               let s = d3.select(this), shape = e.shape;
               s.attr(shape.tagName === 'path' ? 'stroke-width' : 'width', shape.width); })
-            .each(configureTrackHover);
+            .each(configureSubTrackHover);
         }
       });
       // ega.each was used for .append();  egm.each is used to update size.
@@ -1028,7 +1053,7 @@ export default InAxis.extend({
        */
       sizeThreshold = undefined,
     yDomain = this.get('yDomain'),
-    tracksLayout = regionOfTree(subEltTree.intervalTree[blockId], yDomain, sizeThreshold),
+    tracksLayout = regionOfTree(subEltTree.intervalTree[blockId], yDomain, sizeThreshold, false),
     data = tracksLayout.intervals;
     return data;
   },
