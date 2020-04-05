@@ -147,6 +147,31 @@ function setClipWidth(axisID, width)
   console.log('setClipWidth', axisID, width, aS.node(), cp.node(), cp.attr("width"),  gh.node());
 }
 
+/*----------------------------------------------------------------------------*/
+
+class SubElement {
+  constructor(data) {
+    this.data = data;
+  }
+};
+/** static, also  member @see getInterval()  */
+SubElement.getInterval = function(data) {
+  let interval = data.slice(0, 2);
+  // perhaps use a WeakMap instead of this
+  interval.data = data;
+  if (interval[0] > interval[1]) {
+    let swap = interval[0];
+    interval[0] = interval[1];
+    interval[1] = swap;
+  }
+  return interval;
+};
+SubElement.prototype.getInterval = function() {
+  let interval = SubElement.getInterval(this.data);
+  return interval;
+};
+
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -156,7 +181,13 @@ export default InAxis.extend({
 
   className : "tracks",
   
-  /*--------------------------------------------------------------------------*/
+  /** For each viewed block (trackBlocksR), some attributes are kept, until the
+   * axis closes.  This state is likely to move to a axis-tracks-block component.
+   * So far this contains only a WeakMap for the interval trees of Feature sub-elements (.subEltTree).
+   */
+  blocks : {},
+
+ /*--------------------------------------------------------------------------*/
 
   actions: {
 
@@ -669,19 +700,23 @@ export default InAxis.extend({
           ses.remove();
         } else {
           let geneElementData = useDevData ? geneElementData_dev : elementDataFn.apply(this, arguments);
+          geneElementData.forEach(subEltDescription);
+          // layer the geneElementData
+          geneElementData = thisAt.layerSubElements(blockId, d.description, geneElementData);
           let ges = a.selectAll('g.track.element > ' + '.track.element')
             .data(geneElementData);
           let
             ea = ges
               .enter()
             .append((e) => {
-              let typeName = e[2],
+              let typeName = e.data[2],
               shape = e.shape || (e.shape = new ShapeDescription(typeName));
               return document.createElementNS("http://www.w3.org/2000/svg", shape.tagName); });
             ges
               .exit()
               .remove();
-          ea.each(function(e, j) {
+          // ea.each(subEltDescription);
+          function subEltDescription(e, j) {
             let [start, end, typeName] = e;
             let shape = e.shape;
             if (! e.description) {
@@ -689,7 +724,7 @@ export default InAxis.extend({
                 start + '-' + end + ' ' + typeName;
               dLog('e.description', e.description, d.description, d, e);
             }
-          });
+          };
           ea
             .attr('class', (e) => { let typeName = e[2]; return 'track element ' + typeName; })
           // .transition().duration(featureTrackTransitionTime)
@@ -714,10 +749,12 @@ export default InAxis.extend({
             xPosnD = xPosn.apply(this, [d, i, g]),
           yPosnD = yPosn.apply(this, [d, i, g]);
           let geneElementData = useDevData ? geneElementData_dev : elementDataFn.apply(this, arguments);
+          // layer the geneElementData
+          geneElementData = thisAt.layerSubElements(blockId, d.description, geneElementData);
           let ges = a.selectAll('g.track.element > ' + '.track.element')
             .data(geneElementData);
           ges.each(function(e, j) {
-            let [start, end, typeName] = e,
+            let [start, end, typeName] = e.data,
             /** signed vector from start -> end. */
             heightElt;
             if (useDevData)
@@ -727,7 +764,7 @@ export default InAxis.extend({
               end = y(end);
               heightElt = (end - start);
             }
-            let shape = e.shape;
+            let shape = e.shape || (e.shape = new ShapeDescription(typeName));
             /** x and y position of sub-element */
             let ex = xPosnD + trackWidth * 2,
             ey = useDevData ? yPosnD + heightD * start : start;
@@ -768,7 +805,7 @@ export default InAxis.extend({
               l =
                 d3.select(this)
                 .attr('d', d3.line()(points))
-                .attr('transform', (d) => "translate(" + (j*trackWidth + ex) + ", " + ey + ")");
+                .attr('transform', (d) => "translate(" + (d.layer*trackWidth + ex) + ", " + ey + ")");
               dLog('lineDimensions', heightElt, width, points, sideWedge);
               if (shape.showArrow) {
                 let arrow = (shape.width === 1) ? 'arrow' : 'fat_arrow';
@@ -777,7 +814,7 @@ export default InAxis.extend({
             }
             function rectDimensions(d, i, g) {
               d3.select(this)
-                .attr('x', ex + j*trackWidth)
+                .attr('x', ex + d.layer*trackWidth)
                 .attr('y', ey)
                 .attr('height' , heightElt);
             }
@@ -815,7 +852,7 @@ export default InAxis.extend({
 
             function elementDimensions(d, i, g) {
               d3.select(this)
-                .attr('transform', "translate(" + (j*trackWidth + ex) + ", " + ey + ")")
+                .attr('transform', "translate(" + (d.layer*trackWidth + ex) + ", " + ey + ")")
                 .attr('d', rectArrow);
             }
           });
@@ -968,6 +1005,35 @@ export default InAxis.extend({
     this.set('tracks', tracks); // used by axisStackChanged() : passed to layoutAndDrawTracks()
     return tracks;
   }),
+
+  layerSubElements(blockId, featureId, geneElementData) {
+    let blocks = this.get('blocks'),
+    blockState = blocks[blockId] || (blocks[blockId] = {});
+    if (! blockState.subEltTree)
+      blockState.subEltTree = {};
+    if (! blockState.subEltTree[featureId]) {
+      let
+        intervalNames = geneElementData.mapBy('description'),
+      intervals = geneElementData.map(SubElement.getInterval),
+      /** just conforming to the signature of makeTree() - probably no need to index by blockId here. */
+      intervalsByBlockId = {};
+      intervalsByBlockId[blockId] = intervals;
+      blockState.subEltTree[featureId] = this.makeTree(intervalsByBlockId, intervalNames);
+    }
+    let
+    subEltTree = blockState.subEltTree[featureId],
+      /** sizeThreshold would be used if the sub-elements were only displayed when
+       * zoomed so that their pixel represention was large enough to be
+       * useful.
+       */
+      sizeThreshold = undefined,
+    yDomain = this.get('yDomain'),
+    tracksLayout = regionOfTree(subEltTree.intervalTree[blockId], yDomain, sizeThreshold),
+    data = tracksLayout.intervals;
+    return data;
+  },
+
+
   layoutWidth : Ember.computed('trackBlocksR.[]', function () {
     let
     trackBlocksR = this.get('trackBlocksR'),
