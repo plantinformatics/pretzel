@@ -26,7 +26,8 @@ export default Service.extend(Ember.Evented, {
 
   endpoints : Ember.Object.create(),
   endpointsLength : 0,
-  id2Endpoint : new WeakMap(),
+  id2Endpoint : {},
+  obj2Endpoint : new WeakMap(),
   /** Indexed by host url, value is an array of datasets, including blocks, returned from the api host. */
   datasetsBlocks : {},
 
@@ -131,10 +132,19 @@ export default Service.extend(Ember.Evented, {
   },
 
   addId : function(endpoint, id) {
-    let map = this.get('id2Endpoint');
+    let map = this.get('obj2Endpoint');
     map.set(id, endpoint);
     return id;
   },
+  id2Store : function(blockId) {
+    let
+      id2Endpoint = this.get('id2Endpoint'),
+    endpoint = id2Endpoint[blockId],
+    store = endpoint.store;
+    console.log('id2Store', blockId, endpoint, store);
+    return store;
+  },
+
   EndpointLogin: function(url, user, password) {
     let me = this;
     if (url.indexOf('http://') == -1) {

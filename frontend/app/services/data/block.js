@@ -55,8 +55,8 @@ export default Service.extend(Ember.Evented, {
   }),
   getData: function (id) {
     // console.log("block getData", id);
-    let store = this.get('store');
     let endpoint = this.blockEndpoint(id),
+    store = endpoint.store,
     apiEndpoints = this.get('apiEndpoints'),
     adapterOptions =
       {
@@ -80,7 +80,9 @@ export default Service.extend(Ember.Evented, {
    */
   peekBlock(blockId)
   {
-    let store = this.get('store'),
+    let
+      id2Store = this.get('apiEndpoints.id2Store'),
+    store = id2Store(blockId),
     block = store.peekRecord('block', blockId);
     return block;
   },

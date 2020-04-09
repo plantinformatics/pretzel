@@ -3,7 +3,6 @@ import Ember from 'ember';
 const { Component, inject: { service } } = Ember;
 
 export default Ember.Component.extend({
-  store: service(),
   onInit: function() {
     this.set('editing', false)
   }.on('init'),

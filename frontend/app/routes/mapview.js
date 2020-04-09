@@ -101,7 +101,10 @@ let config = {
       let referenceBlocks =
       params.mapsToView.reduce(function (result, blockId) {
         /** same as controllers/mapview.js:blockFromId(), maybe factor to a mixin. */
-        let store = me.get('store'),
+        let
+          id2Endpoint = this.get('apiEndpoints.id2Endpoint'),
+        endpoint = id2Endpoint[blockId],
+        store = endpoint.store,
         block = store.peekRecord('block', blockId);
         let referenceBlock = block && block.get('referenceBlock');
         if (referenceBlock)

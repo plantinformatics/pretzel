@@ -15,6 +15,7 @@ let trace_select = 1;
 export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
   dataset: service('data/dataset'),
   block: service('data/block'),
+  apiEndpoints: service('api-endpoints'),
 
   actions: {
     // layout configuration
@@ -103,7 +104,10 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       t.apply(this, [id]);
     },
     blockFromId : function(blockId) {
-      let store = this.get('store'),
+      let
+        id2Endpoint = this.get('apiEndpoints.id2Endpoint'),
+      endpoint = id2Endpoint[blockId],
+      store = endpoint.store,
       block = store.peekRecord('block', blockId);
       return block;
     },
@@ -121,7 +125,10 @@ export default Ember.Controller.extend(Ember.Evented, ViewedBlocks, {
       // this.send('setTab', 'right', 'block');
     },
     selectBlockById: function(blockId) {
-      let store = this.get('store'),
+      let
+        id2Endpoint = this.get('apiEndpoints.id2Endpoint'),
+      endpoint = id2Endpoint[blockId],
+      store = endpoint.store,
       selectedBlock = store.peekRecord('block', blockId);
       /* Previous version traversed all blocks of selectedMaps to find one
        * matching blockId. */

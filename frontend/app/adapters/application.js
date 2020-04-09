@@ -80,7 +80,7 @@ var config = {
     }
     // this applies when endpointHandle is defined or undefined
     {
-      let map = this.get('apiEndpoints').get('id2Endpoint'),
+      let map = this.get('apiEndpoints.obj2Endpoint'),
       endpoint = map.get(endpointHandle);
       /* if endpoint is undefined or null then this code clears this._endpoint and
        * session.requestEndpoint, which means the default / local / primary

@@ -24,6 +24,7 @@ export default Service.extend(Ember.Evented, {
 
     apiEndpoints = this.get('apiEndpoints'),
     primaryEndpoint = apiEndpoints.get('primaryEndpoint'),
+    id2Endpoint = apiEndpoints.get('id2Endpoint'),
     _unused = console.log('taskGetList', endpoint, primaryEndpoint),
     /** routes/mapview:model() uses primaryEndpoint; possibly it will pass that
      * in or perhaps formalise this to an if (endpoint) structure; sort that in
@@ -71,6 +72,7 @@ export default Service.extend(Ember.Evented, {
       if (blocks) {
         blocks.forEach(function(block) {
           block.set('mapName', datasetName);
+          id2Endpoint[block.get('id')] = endpoint;
         });
       }
     });
