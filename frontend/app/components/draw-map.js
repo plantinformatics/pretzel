@@ -899,7 +899,6 @@ export default Ember.Component.extend(Ember.Evented, {
 
     let
       line = d3.line(),
-      axis = d3.axisLeft(),
       foreground,
       // brushActives = [],
     /** guard against repeated drag event before previous dragged() has returned. */
@@ -2566,7 +2565,9 @@ export default Ember.Component.extend(Ember.Evented, {
       let defG =
     g.append("g")
       .attr("class", "axis")
-      .each(function(d) { d3.select(this).attr("id",axisEltId(d)).call(axis.scale(y[d])); });  
+      .each(function(d) {
+        let axis = Stacked.getAxis(d);
+        d3.select(this).attr("id",axisEltId(d)).call(axis.axisSide()().scale(y[d])); });  
 
     function axisTitle(chrID)
     {
@@ -3781,6 +3782,12 @@ export default Ember.Component.extend(Ember.Evented, {
       if (brushedDomain) {
         let newBrushSelection = brushedDomain.map(function (r) { return yp(r);});
         console.log('axisBrushShowSelection', brushedAxisID, brushedDomain, gBrush, newBrushSelection);
+        if ((newBrushSelection[0] < -1e3) || (newBrushSelection[1] > 1e4)) {
+          // when zoomedDomain is set by setDomainFromDawn(), the current brush is likely to be way out of scope.
+          dLog('brush selection is large after scale change - removing', p);
+          removeBrushExtent(p);
+          newBrushSelection = null; // clear the brush selection
+        }
         d3.select(gBrush).call(yp.brush.move, newBrushSelection);
       }
     }
@@ -3950,11 +3957,13 @@ export default Ember.Component.extend(Ember.Evented, {
             let fLocation;
             if (! isOtherField[f] && ((fLocation = blockFeatures[f].location) !== undefined))
             {
+              /** range is from yRange() which incorporates .portion, so use ys rather than axis.y. */
+              let yScale = oa.ys[p];
               let yPx;
             if (block.visible &&
                 (fLocation >= brushedDomain[0]) &&
                 (fLocation <= brushedDomain[1]) &&
-                inRange((yPx = axis.y(fLocation)), range)
+                inRange((yPx = yScale(fLocation)), range)
                ) {
               //selectedFeatures[p].push(f);
               selectedFeaturesSet.add(f);
@@ -4154,7 +4163,7 @@ export default Ember.Component.extend(Ember.Evented, {
               oa.y[d].domain(domain);
               oa.ys[d].domain(domain);
               a.setDomain(domain);
-              let yAxis = d3.axisLeft(oa.y[d]).ticks(10);
+              let yAxis = a.axisSide() (oa.y[d]).ticks(10);
               oa.svgContainer.select("#"+idName).transition(t).call(yAxis);
             });
             let axisTickS = svgContainer.selectAll("g.axis > g.tick > text");
@@ -4396,7 +4405,7 @@ export default Ember.Component.extend(Ember.Evented, {
       let yp = y[p],
       axis = oa.axes[p];
       if (yp && axis) {
-        let yAxis = d3.axisLeft(y[p]).ticks(axisTicks * axis.portion);
+        let yAxis = axis.axisSide() (y[p]).ticks(axisTicks * axis.portion);
         let idName = axisEltId(p),
         axisS = svgContainer.select("#"+idName);
         if (t)

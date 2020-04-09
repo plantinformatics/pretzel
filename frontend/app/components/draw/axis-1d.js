@@ -17,7 +17,7 @@ import { configureHorizTickHover } from '../../utils/hover';
 import { getAttrOrCP } from '../../utils/ember-devel';
 import { intervalExtent }  from '../../utils/interval-calcs';
 import { updateDomain } from '../../utils/stacksLayout';
-
+import { eltId } from '../../utils/draw/axis';
 
 
 /* global d3 */
@@ -580,6 +580,21 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     }
   },
 
+  /**
+   * Equivalent : this.get('axisS').selectAll(), which does a selection by id
+   * from svgContainer through g.stack to the g.axis-outer.
+   */
+  axisSelect : Ember.computed('axis.id', function () {
+    let 
+      axisId = this.get('axis.id'),
+    /** could narrow this to svgContainer, but probably not a performance
+     * improvement, and if we have multiple draw-maps later, the map id can be
+     * included in eltId() etc. */
+    as = d3.selectAll(".axis-outer#" + eltId(axisId));
+    return as;
+  }),
+
+  /*--------------------------------------------------------------------------*/
 
   /** @param [axisID, t] */
   zoomedAxis : function(axisID_t) { },
@@ -687,6 +702,29 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     let t = stacks.oa.svgContainer.transition().duration(750);
     axisApi.axisScaleChanged(axisID, t, true);
   },
+  drawTicks() {
+    /** based on extract from axisScaleChanged() */
+    let
+      axisTicks = 10,
+    axisId = this.get('axis.id'),
+    axisS = this.get('axisS'),
+    yScale = axisS && axisS.y;
+    if (yScale) {
+      let yAxis = axisS.axisSide() (yScale).ticks(axisTicks * axisS.portion);
+      /** axisSelect is the g.axis-outer.  structure within that is :
+       *                id prefix  prefix function
+       * g.axis-outer   id         eltId()
+       * > g.axis-all   all        eltIdAll()
+       * > g.axis       a          axisEltId()
+       * The d3 axis function is called on the g.axis.
+       */
+      let gAxis = this.get('axisSelect')
+        .select("#" + axisEltId(axisId))
+        /*.transition().duration(750)*/;
+      gAxis.call(yAxis);
+      dLog('drawTicks', axisId, axisS, gAxis.nodes(), gAxis.node());
+    }
+  },
 
   ensureAxis : Ember.computed('viewedBlocks', function () {
     let viewedBlocks = this.get('viewedBlocks');
@@ -709,6 +747,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     // possibly add this to axisAPi, or pass an action param.
     this.drawMap.axisWidthResizeEnded();
 
+    this.showExtendedClass();
+    this.drawTicks();
+
     if (extended)
       this.removeTicks();
     else
@@ -723,6 +764,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
 
     return extended;
   }),
+
+  /*--------------------------------------------------------------------------*/
+
 
   didReceiveAttrs() {
     this._super(...arguments);
@@ -745,6 +789,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
 
     this._super(...arguments);
   },
+  /*--------------------------------------------------------------------------*/
   removeTicks() {
     /** Select all the <path.horizTick> of this axis and remove them.
      * Could use : this.renderTicks() because when ! axis.extended,
@@ -804,8 +849,17 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
      * after the first event in the group.
      */
     Ember.run.throttle(this, this.renderTicks, axisID_t, 500);
-  }
+  },
 
+  /** Give the g.axis-outer a .extended class if the axis is split.
+   * .extended interacts with .rightmost in the CSS rules which place axis ticks on the right side of the rightmost axis.
+   */
+  showExtendedClass()
+  {
+    let
+      as = this.get('axisSelect');
+    as.classed("extended", this.get('extended'));
+  },
 
   
 });

@@ -18,7 +18,7 @@ function valueOrLength(value) { return (trace_block > 1) ? value : value.length;
 /*----------------------------------------------------------------------------*/
 
 /** @return some value identifying the block, suitable for logging. */
-function block_text(block) { return block.view ? block.view.longName() : block.id; }
+function block_text(block) { return block && (block.view ? block.view.longName() : block.id || block); }
 /** log a Map block -> [block].
  * block -> undefined is handled.
   */

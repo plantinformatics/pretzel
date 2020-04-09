@@ -1,0 +1,20 @@
+{
+  "name": "Configuration",
+  "description": "Server run-time configuration, etc",
+  "properties": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "value": {
+      "type": "string",
+      "required": true
+    }
+  },
+  "validations": [],
+  "relations": {
+  },
+  "acls": [
+  ],
+  "methods": {}
+}

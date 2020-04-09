@@ -7,6 +7,7 @@ const { inject: { service } } = Ember;
 import { task } from 'ember-concurrency';
 import EmberObject from '@ember/object';
 
+import ENV from '../config/environment';
 import { parseOptions } from '../utils/common/strings';
 
 const dLog = console.debug;
@@ -15,6 +16,7 @@ let config = {
   dataset: service('data/dataset'),
   block: service('data/block'),
   queryParamsService: service('query-params'),
+  auth: service('auth'),
 
   titleToken: 'MapView',
   queryParams: {
@@ -54,6 +56,16 @@ let config = {
     return value;
   },
 
+  getHoTLicenseKey() {
+    if (! ENV.handsOnTableLicenseKey) {
+      this.get('auth').runtimeConfig().then((config) => {
+        dLog('getHoTLicenseKey', config, ENV);
+        ENV.handsOnTableLicenseKey = config.handsOnTableLicenseKey;
+      });
+    }
+  },
+
+
   /** Ember-concurrency tasks are returned in the model :
    *  availableMapsTask : task -> [ id , ... ]
    *  viewedBlocks : allinitially ? (blockTasks : { id : task, ... }) : single task for getBlocksSummary().
@@ -75,6 +87,8 @@ let config = {
 
     if (params.options)
       params.parsedOptions = parseOptions(params.options);
+
+    this.getHoTLicenseKey();
 
     let datasetService = this.get('dataset');
     let taskGetList = datasetService.get('taskGetList');  // availableMaps

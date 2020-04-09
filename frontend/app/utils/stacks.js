@@ -406,6 +406,29 @@ Stacked.getAxis = function (axisID)
   ;
   return axis;
 };
+/** From the datasetName and scope extracted from selectedFeatures.Chromosome,
+ * find the corresponding axis.
+ * (static)
+ */
+Stacked.axisOfDatasetAndScope = function axisOfDatasetAndScope(datasetName, scope) {
+  /** blockId is the primary block of the axis (i.e. reference or GM). */
+  let blockId, axis;
+  for (blockId in axesP) {
+    axis = axesP[blockId];
+    if (axis.axisName !== blockId)
+      breakPoint('axisOfDatasetAndScope', blockId, axis, axesP);
+    let referenceBlock = axis.referenceBlock,
+    aScope = referenceBlock.get('scope'),
+    // equivalent to : axis.mapName
+    referenceName = referenceBlock.get('datasetId.id');
+    if ((referenceName === datasetName) && (scope === aScope))
+      break;
+    else
+      axis = undefined;
+  }
+  console.log('axisOfDatasetAndScope', blockId, axis, scope);
+  return axis;
+},
 /** static */
 Stacked.getStack = function (axisID)
 {
@@ -1185,6 +1208,19 @@ Stack.prototype.sideClasses = function ()
   let classes = (i == 0) ? "leftmost" : ((i == n-1) ? "rightmost" : "");
   return classes;
 };
+Stacked.prototype.axisSide = function () {
+  let stackClass = this.stack.sideClasses(),
+  extended = Ember.get(this, 'axis1d.extended'),
+  /** use of d3.axisLeft() / axisRight() does not seem to update
+   * text-anchor="start" on the axis group element g.axis, so for now this is
+   * augmented by CSS rules re. .leftmost / .rightmost which ensure the intended
+   * value of text-anchor; can re-evaluate after d3 update. */
+  right = ((stackClass === 'rightmost') && ! extended),
+  axisFn = right ? d3.axisRight : d3.axisLeft;
+  dLog('axisSide', stackClass, extended, right, this);
+  return axisFn;
+};
+
 /** Find stack of axisID and return the index of that stack within stacks.
  * static
  * @param axisID name of axis to find
@@ -1883,6 +1919,8 @@ Stack.prototype.redrawAdjacencies = function ()
       as.classed("leftmost", stackClass == "leftmost");
       as.classed("rightmost", stackClass == "rightmost");
       as.classed("not_top", index > 0);
+      if (a.axis1d)
+        a.axis1d.drawTicks();
     });
 };
 //-    import {} from "../utils/axis.js";
