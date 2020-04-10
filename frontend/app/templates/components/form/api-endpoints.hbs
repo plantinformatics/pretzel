@@ -1,0 +1,26 @@
+{{#elem/panel-container state="primary"}}
+  {{#elem/panel-heading icon="globe"}}
+    Datasources
+  {{/elem/panel-heading}}
+  <ul class="list-group">
+    {{#each-in endpoints as |apiEndpointName apiEndpoint| }}
+      <li class="list-group-item list-group-item-info">
+        {{form/api-endpoint name=apiEndpointName data=apiEndpoint}}
+      </li>
+    {{/each-in}}
+
+    <li 
+      class="list-group-item list-group-item-info">
+      New
+      <span class="pull-right">
+        {{elem/button-base
+          classSize='xs'
+          classColour='success'
+          icon='plus'
+          onClick=(action "addNewDatasource")}}
+      </span>
+    </li>
+  </ul>
+{{/elem/panel-container}}
+
+

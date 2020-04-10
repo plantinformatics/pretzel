@@ -1,4 +1,6 @@
 import Ember from "ember";
+import { inject as service } from '@ember/service';
+
 import DS from 'ember-data';
 
 import { computed } from '@ember/object';
@@ -40,6 +42,7 @@ const selectorExplorer = 'div#left-panel-explorer';
 
 
 export default ManageBase.extend({
+  apiEndpoints: service('api-endpoints'),
 
   init() {
     this._super();
@@ -47,6 +50,10 @@ export default ManageBase.extend({
       debugger;
       window.alert('initRecursionCount : ' + initRecursionCount);
     }
+
+    let store = this.get('store');
+    let me = this;
+    this.get('apiEndpoints').on('receivedDatasets', function (datasets) { console.log('receivedDatasets', datasets); me.send('receivedDatasets', datasets); });
   },
 
   urlOptions : Ember.computed('model.params.options', function () {
@@ -73,7 +80,7 @@ export default ManageBase.extend({
    * MatrixView dataset retrieval should be raised to route model / controller in future
    * At that time, 'mapviewDatasets' can be renamed to 'datasets'
    * and this whole computed element may be removed */
-  datasets : Ember.computed('mapviewDatasets', 'view', function () {
+  x_datasets : Ember.computed('mapviewDatasets', 'view', function () {
     let view = this.get('view');
     if (view === 'mapview') {
       return this.get('mapviewDatasets');
@@ -122,8 +129,50 @@ export default ManageBase.extend({
   /** Filter / Group patterns.  initially 0 elements. */
   filterGroups : Ember.A(), // [{}]
   filterGroupsChangeCounter : 0,
-  dataPre: Ember.computed('datasets', 'datasets.[]', 'filter', function() {
-    let availableMaps = this.get('datasets')
+  //----------------------------------------------------------------------------
+
+  /** Return a list of datasets, with their included blocks, for the currently-selected
+   * API endpoint tab
+   */
+  datasetsBlocks : Ember.computed('datasetsBlocksRefresh', 'endpointTabSelected', 'primaryDatasets', function() {
+    /** e.g. "http___localhost_5000"  */
+    let
+      name = this.get('endpointTabSelected'),
+    endpointSo = name &&
+      this.get('apiEndpoints').lookupEndpoint(name),
+    datasetsBlocks = endpointSo && endpointSo.get("datasetsBlocks");
+    if (datasetsBlocks)
+    {
+      console.log('datasetsBlocks', endpointSo, datasetsBlocks);
+    }
+    let isPrimary = endpointSo && (this.get('apiEndpoints').get('primaryEndpoint') === endpointSo);
+    if (! name || (! datasetsBlocks && isPrimary))
+    {
+      /* this is using the model datasets list for the primary API.
+       * Perhaps instead will change mapview to use apiEndpoints service.
+       */
+      datasetsBlocks = this.get('primaryDatasets');
+      console.log('datasetsBlocks()  using primaryDatasets', datasetsBlocks);
+    }
+
+    return datasetsBlocks;
+  }),
+
+  datasetsBlocksRefresh : 0,
+  // datasets: [],
+
+  endpoints : Ember.computed.alias('apiEndpoints.endpoints'),
+
+  data: Ember.computed('filteredData', function() {
+    let
+    filteredData = this.get('filteredData'),
+    combined = filteredData;
+    console.log('data', filteredData);
+    return combined;
+  }),
+  //----------------------------------------------------------------------------
+  dataPre: Ember.computed('datasetsBlocks', 'datasetsBlocks.[]', 'filter', function() {
+    let availableMaps = this.get('datasetsBlocks');
     let filter = this.get('filter')
     dLog('dataPre', availableMaps, filter);
     // perform filtering according to selectedChr
@@ -1006,7 +1055,18 @@ export default ManageBase.extend({
     return scopes;
   },
 
+  //----------------------------------------------------------------------------
   actions: {
+
+    endpointTabSelected(tabId, apiEndpointName, apiEndpoint) {
+      console.log('endpointTabSelected', tabId, apiEndpointName, apiEndpoint);
+      this.set('endpointTabSelected', apiEndpointName);
+    },
+    receivedDatasets(datasetsHandle, blockValues) {
+      console.log('receivedDatasets', datasetsHandle, blockValues);
+      this.incrementProperty('datasetsBlocksRefresh');
+    },
+
     /** invoked from hbs via {{compute (action "datasetTypeTabId" datasetType ) }}
      * @return string suitable for naming a html tab, based on datasetType name.
      */
@@ -1051,6 +1111,7 @@ export default ManageBase.extend({
       this.sendAction('loadBlock', block);
     }
   },
+  //----------------------------------------------------------------------------
 
   /** If a tab is active (selected), save its id.  */
   willRender () {
@@ -1105,5 +1166,6 @@ export default ManageBase.extend({
     console.log('willDestroyElement', this);
     this._super(...arguments);
   }
+  //----------------------------------------------------------------------------
 
 });

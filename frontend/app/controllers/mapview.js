@@ -16,6 +16,7 @@ let trace_select = 0;
 export default Ember.Controller.extend(Ember.Evented, {
   dataset: service('data/dataset'),
   block: service('data/block'),
+  apiEndpoints: service('api-endpoints'),
 
   /** Array of available datasets populated from model 
    */
@@ -83,7 +84,10 @@ export default Ember.Controller.extend(Ember.Evented, {
       setViewed = this.get('block.setViewed'),
       referenceBlock = block.get('referenceBlock');
       if (referenceBlock)
+      {
+        console.log('addMap referenceBlock', referenceBlock.get('id'));
         setViewed(referenceBlock.get('id'), true);
+      }
       setViewed(blockId, true);
     },
 
@@ -160,6 +164,14 @@ export default Ember.Controller.extend(Ember.Evented, {
         t.apply(this, [id]);
       }
     },
+    blockFromId : function(blockId) {
+      let
+        id2Endpoint = this.get('apiEndpoints.id2Endpoint'),
+      endpoint = id2Endpoint[blockId],
+      store = endpoint.store,
+      block = store.peekRecord('block', blockId);
+      return block;
+    },
 
     selectBlock: function(block) {
       dLog('SELECT BLOCK mapview', block.get('name'), block.get('mapName'), block.id, block);
@@ -174,7 +186,10 @@ export default Ember.Controller.extend(Ember.Evented, {
       // this.send('setTab', 'right', 'block');
     },
     selectBlockById: function(blockId) {
-      let store = this.get('store'),
+      let
+        id2Endpoint = this.get('apiEndpoints.id2Endpoint'),
+      endpoint = id2Endpoint[blockId],
+      store = endpoint.store,
       selectedBlock = store.peekRecord('block', blockId);
       /* Previous version traversed all blocks of selectedMaps to find one
        * matching blockId. */

@@ -26,6 +26,8 @@ function omitUndefined(value) {
 
 /*----------------------------------------------------------------------------*/
 
+const requestEndpointAttr = 'session.requestEndpoint';
+
 export default Service.extend({
   session: service('session'),
 
@@ -61,6 +63,7 @@ export default Service.extend({
   },
 
   getBlocks() {
+    console.log('getBlocks');
     return this._ajax('Datasets', 'GET', {'filter[include]': 'blocks'}, true)
   },
 
@@ -306,6 +309,7 @@ export default Service.extend({
 
     if (data) config.data = data
 
+    console.log('_ajax', arguments, this);
     if (token === true) {
       let accessToken = this._accessToken()
       config.headers.Authorization = accessToken
@@ -347,15 +351,23 @@ export default Service.extend({
   },
 
   _accessToken() {
-    let accessToken;
+    let
+      endpoint = this.get(requestEndpointAttr),
+    accessToken = endpoint && endpoint.token;
+    if (! accessToken)
     this.get('session').authorize('authorizer:application', (headerName, headerValue) => {
       accessToken = headerValue;
     });
+    console.log('_accessToken', endpoint, accessToken);
     return accessToken
   },
   _endpoint(route) {
+    let
+      requestEndpoint = this.get(requestEndpointAttr),
+    apiHost =  requestEndpoint && requestEndpoint.host;
     let config = Ember.getOwner(this).resolveRegistration('config:environment')
-    let endpoint = config.apiHost + '/' + config.apiNamespace + '/' + route
+    let endpoint = (apiHost || config.apiHost) + '/' + config.apiNamespace + '/' + route
+    console.log('_endpoint', requestEndpoint, apiHost, endpoint, config);
     return endpoint
   }
 

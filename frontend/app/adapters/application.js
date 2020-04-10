@@ -1,11 +1,48 @@
+import Ember from 'ember';
 import DS from 'ember-data';
 import DataAdapterMixin from 'ember-simple-auth/mixins/data-adapter-mixin';
 import PartialModelAdapter from 'ember-data-partial-model/mixins/adapter';
 import ENV from '../config/environment';
+const { inject: { service } } = Ember;
+
+import {
+  getConfiguredEnvironment,
+  getSiteOrigin
+} from '../utils/configuration';
+
+import { breakPoint } from '../utils/breakPoint';
+
+/*----------------------------------------------------------------------------*/
 
 var config = {
+  apiEndpoints: service('api-endpoints'),
   authorizer: 'authorizer:application', // required by DataAdapterMixin
-  host: ENV.apiHost,
+  session: service('session'),
+
+  /** host and port part of the url of the API
+   * @see buildURL()
+   */
+  x_host: function () {
+    let endpoint = this._endpoint,
+    /** similar calcs in @see services/api-endpoints.js : init() */
+    config =  getConfiguredEnvironment(this),
+    configApiHost = config.apiHost,
+    /** this gets the site origin. use this if ENV.apiHost is '' (as it is in
+     * production) or undefined. */
+    siteOrigin = getSiteOrigin(this),
+    host = endpoint ? endpoint.host : ENV.apiHost || siteOrigin;
+    if (ENV !== config)
+      breakPoint('ENV !== config', ENV, config, ENV.apiHost, configApiHost);
+    console.log('app/adapters/application.js host', this, arguments, endpoint, config, configApiHost, ENV.apiHost, host);
+    return host;
+  },
+  host: function () {
+    let store = this.store,
+    adapterOptions = store && store.adapterOptions,
+    host = adapterOptions && adapterOptions.host;
+    console.log('app/adapters/application.js host', this, store, adapterOptions, host);
+    return host;
+  }.property().volatile(),
   namespace: ENV.apiNamespace,
   urlForFindRecord(id, type, snapshot) {
     let url = this._super(...arguments);
@@ -15,6 +52,46 @@ var config = {
       return `${url}?${queryParams}`;
     }
     return url;
+  },
+  /** Wrap buildURL(); get endpoint associated with adapterOptions or query and
+   * pass endpoint as this._endpoint through to get('host'), so that it can use endpoint.host
+   * The adapterOptions don't seem to be passed to get('host')
+   */
+  buildURL(modelName, id, snapshot, requestType, query) {
+    let endpointHandle;
+    /** snapshot may be an array of snapshots.
+     *  apparently snapshotRecordArray has the options, as adapterOptionsproperty,
+     *   refn https://github.com/emberjs/data/blob/master/addon/-private/system/snapshot-record-array.js#L53
+     */
+    if (snapshot)
+    {
+      endpointHandle = snapshot.adapterOptions || (snapshot.length && snapshot[0].adapterOptions);
+      console.log('buildURL snapshot.adapterOptions', endpointHandle);
+    }
+    else if (query)
+    {
+      console.log('buildURL query', query);
+      endpointHandle = query;
+    }
+    if (! endpointHandle && id)
+    {
+      endpointHandle = id;
+      console.log('buildURL id', id);
+    }
+    // this applies when endpointHandle is defined or undefined
+    {
+      let map = this.get('apiEndpoints.obj2Endpoint'),
+      endpoint = map.get(endpointHandle);
+      /* if endpoint is undefined or null then this code clears this._endpoint and
+       * session.requestEndpoint, which means the default / local / primary
+       * endpoint is used.
+       */
+      {
+        this._endpoint = endpoint;
+        this.set('session.requestEndpoint', endpoint);
+      }
+    }
+    return this._super(modelName, id, snapshot, requestType, query);
   },
   updateRecord(store, type, snapshot) {
     // updateRecord calls PUT rather than PATCH, which is

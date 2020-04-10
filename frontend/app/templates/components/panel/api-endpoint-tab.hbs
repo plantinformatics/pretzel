@@ -1,0 +1,6 @@
+{{!-- tagName is li --}}
+<a data-toggle="tab" href={{concat "#tab-" apiEndpoint.tabId}}
+   {{action (action endpointTabSelected apiEndpoint.tabId apiEndpointName apiEndpoint) }}
+>
+  {{apiEndpoint.tabText}}
+</a>

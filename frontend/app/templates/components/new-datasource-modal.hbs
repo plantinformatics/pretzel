@@ -1,0 +1,19 @@
+{{#modal-dialog modal-id="new-datasource-modal" title="New Datasource" header-icon='cloud-download'
+   confirm-label="Connect" onConfirm="onConfirm"}}
+  <table class="table">
+      <tbody>
+          <tr>
+              <td>Host : Port</td>
+              <td><input name="host" placeholder="e.g. http://localhost:5000"></td>
+          </tr>
+          <tr>
+              <td>User</td>
+              <td><input name="user" placeholder="Email address"></td>
+          </tr>
+          <tr>
+              <td>Password</td>
+              <td><input name="password" type="password"></td>
+          </tr>
+      </tbody>
+  </table>
+{{/modal-dialog}}

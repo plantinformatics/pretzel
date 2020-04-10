@@ -77,6 +77,7 @@ function filterMap(map, mapFilterFn) {
 export default Service.extend(Ember.Evented, {
   auth: service('auth'),
   store: service(),
+  apiEndpoints: service('api-endpoints'),
   pathsPro : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
   queryParams: service('query-params'),
@@ -134,7 +135,9 @@ export default Service.extend(Ember.Evented, {
   getData: function (id) {
     debugger; // see header comment in taskGet();
     // console.log("block getData", id);
-    let store = this.get('store');
+    let endpoint = this.blockEndpoint(id),
+    store = endpoint.store,
+    apiEndpoints = this.get('apiEndpoints');
     let allInitially = this.get('parsedOptions.allInitially');
     let options = 
       { reload: true};
@@ -143,6 +146,10 @@ export default Service.extend(Ember.Evented, {
         {
           filter: {include: "features"}
         };
+    if (endpoint) {
+      let adapterOptions = options.adapterOptions || (options.adapterOptions = {});
+      adapterOptions = apiEndpoints.addId(endpoint, adapterOptions);
+    }
     let blockP = store.findRecord(
       'block', id,
       options
@@ -417,9 +424,39 @@ export default Service.extend(Ember.Evented, {
    */
   peekBlock(blockId)
   {
-    let store = this.get('store'),
+    let
+      id2Store = this.get('apiEndpoints.id2Store'),
+    store = id2Store(blockId),
     block = store.peekRecord('block', blockId);
     return block;
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Get the API host from which the block was received, from its dataset meta,
+   * and lookup the endpoint from the host.
+   * @return endpoint ApiEndpoint, or undefined.
+   */
+  blockEndpoint(blockId)
+  {
+    let
+    block = this.peekBlock(blockId),
+    datasetId = block && block.get('datasetId'), 
+    dataset = datasetId && datasetId.get('content'),
+    host = dataset && dataset.get('meta.apiHost'),
+    apiEndpoints = this.get('apiEndpoints'),
+    endpoint = apiEndpoints.lookupEndpoint(host);
+    console.log('blockEndpoint', block, dataset, host, endpoint);
+    return endpoint;
+  },
+
+  /** @return true if the 2 blocks are received from the same API host endpoint. */
+  blocksSameEndpoint(blockA, blockB)
+  {
+    /* the object ID of 2 objects from the same mongodb will have a number of leading digits in common.  */
+    let a = this.blockEndpoint(blockA),
+    b = this.blockEndpoint(blockB);
+    return a === b;
   },
 
   /*--------------------------------------------------------------------------*/

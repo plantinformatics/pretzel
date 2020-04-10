@@ -19,6 +19,8 @@
   </div>
 {{/elem/panel-container}}
 
+{{form/api-endpoints}}
+
 {{#elem/panel-container state="primary"}}
   {{#elem/panel-heading icon="folder-open"}}
     Datasets
@@ -148,7 +150,21 @@
       <div id="tab-explorer-datasets" class="tab-pane fade in active">
 
 	<ul class="list-group borderless">
-	  
+
+          <ul class="nav nav-tabs">
+            {{#each-in endpoints as |apiEndpointName apiEndpoint| }}
+              {{panel/api-endpoint-tab apiEndpointName=apiEndpointName apiEndpoint=apiEndpoint endpointTabSelected=(action "endpointTabSelected")}}
+            {{/each-in}}
+          </ul>
+          {{!-- For endpoint-specific content selected by the above tab : add a
+             <div class="tab-content"> with each-in as above, and :
+             <div id={{concat "tab-" apiEndpoint.tabId}} class="tab-pane fade"> ... </div>
+             (e.g. see commit d86e9d6).
+             Instead of maintaining each endpoint's content within a distinct tab-pane within
+             tab-content,  the data content in the following is switched by the above tab.
+             --}}
+
+  
 	  {{#each dataPre as |dataset|}}
 	    {{record/entry-dataset
               filter=filter
