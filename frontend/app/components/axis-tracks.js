@@ -758,7 +758,12 @@ export default InAxis.extend({
             }
           };
           ea
-            .attr('class', (e) => { let typeName = e.data[2]; return 'track element ' + typeName; })
+            .attr('class', (e) => {
+              let typeName = e.data[2];
+              if (typeName.endsWith('_prime_UTR')) 
+                typeName += ' utr';
+              return 'track element ' + typeName;
+            })
           // .transition().duration(featureTrackTransitionTime)
             .each(function (e, i, g) {
               let s = d3.select(this), shape = e.shape;
