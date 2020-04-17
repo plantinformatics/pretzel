@@ -63,6 +63,7 @@ export default Service.extend({
   auth: service('auth'),
   store: service(),
   flowsService: service('data/flows-collate'),
+  blockService : service('data/block'),
 
   /** set up a block-adj object to hold results. */
   ensureBlockAdj(blockAdjId) {
@@ -582,7 +583,7 @@ export default Service.extend({
     let fnName = 'getBlockFeaturesInterval';
     if (trace_pathsP)
       dLog(fnName, blockId);
-    let block = this.get('store').peekRecord('block', blockId);
+    let block = this.get('blockService').peekBlock(blockId);
     let features;
     if (! block) {
       dLog(fnName, ' not found:', blockId);

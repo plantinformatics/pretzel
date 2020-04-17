@@ -14,6 +14,11 @@ import { breakPoint } from '../utils/breakPoint';
 
 /*----------------------------------------------------------------------------*/
 
+let trace = 1;
+const dLog = console.debug;
+
+/*----------------------------------------------------------------------------*/
+
 var config = {
   apiEndpoints: service('api-endpoints'),
   authorizer: 'authorizer:application', // required by DataAdapterMixin
@@ -39,8 +44,8 @@ var config = {
   host: function () {
     let store = this.store,
     adapterOptions = store && store.adapterOptions,
-    host = adapterOptions && adapterOptions.host;
-    console.log('app/adapters/application.js host', this, store, adapterOptions, host);
+    host = (adapterOptions && adapterOptions.host) || Ember.get(this, '_endpoint.host');
+    console.log('app/adapters/application.js host', this, store, adapterOptions, host, this._endpoint);
     return host;
   }.property().volatile(),
   namespace: ENV.apiNamespace,
@@ -80,8 +85,14 @@ var config = {
     }
     // this applies when endpointHandle is defined or undefined
     {
+      /** block getData() is only used if allInitially (i.e. not progressive loading);
+       *  so that addId is not done, so use id2Endpoint. */
+      let
+        id2Endpoint = this.get('apiEndpoints.id2Endpoint');
       let map = this.get('apiEndpoints.obj2Endpoint'),
-      endpoint = map.get(endpointHandle);
+      endpoint = map.get(endpointHandle) || (id && id2Endpoint[id]);
+      if (trace)
+        dLog('buildURL id2Endpoint', id2Endpoint, map, id, endpoint, requestType);
       /* if endpoint is undefined or null then this code clears this._endpoint and
        * session.requestEndpoint, which means the default / local / primary
        * endpoint is used.

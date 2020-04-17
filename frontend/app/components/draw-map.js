@@ -4087,7 +4087,7 @@ export default Ember.Component.extend(Ember.Evented, {
       let axisBrush = me.get('store').peekRecord('axis-brush', brushedAxisID);
       if (!axisBrush) {
         let axis = Stacked.getAxis(brushedAxisID);
-        let block = me.get('store').peekRecord('block', brushedAxisID);
+        let block = me.peekBlock(brushedAxisID);
         axisBrush = me.get('pathsP').ensureAxisBrush(block);
         console.log('axis', axis, axis.block, block, 'axisBrush', axisBrush);
       }

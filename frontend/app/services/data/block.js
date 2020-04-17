@@ -76,7 +76,7 @@ function filterMap(map, mapFilterFn) {
  */
 export default Service.extend(Ember.Evented, {
   auth: service('auth'),
-  store: service(),
+  // store: service(),
   apiEndpoints: service('api-endpoints'),
   pathsPro : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
@@ -88,6 +88,15 @@ export default Service.extend(Ember.Evented, {
    * params.parsedOptions is just the parsed values, and queryParams.urlOptions has defaults added.
    */
   parsedOptions : Ember.computed.alias('queryParams.urlOptions'),
+
+  store : Ember.computed(
+    'apiEndpoints.endpointsLength', // effectively endpoints.@each.
+    'apiEndpoints.primaryEndpoint.store',
+    function () {
+    let store = this.get('apiEndpoints.primaryEndpoint.store');
+    return store;
+  }),
+
 
   summaryTask : {},
 
@@ -425,13 +434,24 @@ export default Service.extend(Ember.Evented, {
   peekBlock(blockId)
   {
     let
-      id2Store = this.get('apiEndpoints.id2Store'),
-    store = id2Store(blockId),
+      apiEndpoints = this.get('apiEndpoints'),
+    store = apiEndpoints.id2Store(blockId),
     block = store.peekRecord('block', blockId);
     return block;
   },
 
   /*--------------------------------------------------------------------------*/
+
+  /** As for blockEndpoint(), but lookup via block.
+   * Similar to @see id2Store().
+   */
+  blockEndpointById(blockId)
+  {
+    let 
+      id2Endpoint = this.get('apiEndpoints.id2Endpoint'),
+    endpoint = id2Endpoint[blockId];
+    return endpoint;
+  },
 
   /** Get the API host from which the block was received, from its dataset meta,
    * and lookup the endpoint from the host.
@@ -591,7 +611,7 @@ export default Service.extend(Ember.Evented, {
      * @param blockId if undefined then check all blocks
      */
   ensureFeatureLimits(blockId) {
-    let store = this.get('store');
+    let store = this.get('apiEndpoints').id2Store(blockId);
     if (true) {
       /** If blockId is undefined then request limits for all blocks. */
       let blocksLimitsTasks = this.getBlocksLimits(blockId);
@@ -652,13 +672,31 @@ export default Service.extend(Ember.Evented, {
   /*--------------------------------------------------------------------------*/
 
 
-  /** @return block records */
-  blockValues: Ember.computed(function() {
-    let records = this.get('store').peekAll('block');
-    if (trace_block)
-      console.log('blockValues', records);
-    return records;
-  }),
+  /** @return promise of block records */
+  blockValues: Ember.computed(
+    'apiEndpoints.endpointsLength',  // effectively endpoints.@each.
+    'apiEndpoints.endpoints.@each.datasetsBlocks',
+    // effectively endpoints.@each.datasetsBlocks, which can't work because endpoints is a hash not an array.
+    'apiEndpoints.datasetsBlocksRefresh',
+    function() {
+      let
+        stores = this.get('apiEndpoints.stores'),
+      records;
+
+      if (stores.length === 1)
+        records = stores[0].peekAll('block');
+      else {
+        let
+          arrays = stores.map((s) => s.peekAll('block').toArray());
+        records = arrays
+          .reduce((acc, a) => acc.concat(a), []);
+        dLog('blockValues', stores, arrays, records);
+      }
+
+      if (trace_block > 3)
+        console.log('blockValues', records);
+      return records;
+    }),
   /** Can be used in place of peekBlock().
    * @return array which maps from blockId to block   
    */

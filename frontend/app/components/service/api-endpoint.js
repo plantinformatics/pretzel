@@ -106,6 +106,7 @@ export default Ember.Object.extend({
         let datasetsBlocks = apiEndpoints.get('datasetsBlocks');
         datasetsBlocks[datasetsHandle] = blockValues;
         endpoint.set("datasetsBlocks", blockValues);
+        apiEndpoints.incrementProperty('datasetsBlocksRefresh');
         // (where me = apiEndpoints)
         // me.sendAction('receivedDatasets', datasetsHandle, blockValues);
         // or via .evented() on task

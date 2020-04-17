@@ -172,7 +172,7 @@ export default ManageBase.extend({
   }),
   //----------------------------------------------------------------------------
   dataPre: Ember.computed('datasetsBlocks', 'datasetsBlocks.[]', 'filter', function() {
-    let availableMaps = this.get('datasetsBlocks');
+    let availableMaps = this.get('datasetsBlocks') || Ember.RSVP.resolve([]);
     let filter = this.get('filter')
     dLog('dataPre', availableMaps, filter);
     // perform filtering according to selectedChr
@@ -271,12 +271,20 @@ export default ManageBase.extend({
     /** the same calculation as withParent -> child1 -> parents, starting from
      * dataPre instead of data
      */
-    let parentsNotFG = this.get('dataPre')
+    let dataPre = this.get('dataPre'),
+    parentsNotFG = dataPre.then ?
+      dataPre.then((a) => uniqParentsByName(a)) :
+      uniqParentsByName(dataPre);
+
+    function uniqParentsByName(array) {
+      return array
     /* withParent : */ .filter(function(dataset, index, array) {
       return dataset.get('parent.content');
     })
     /* child1 :*/ .uniqBy('parent.name')
     /* parents :*/ .mapBy('parent');
+    }
+
     return parentsNotFG;
   }),
   /** meta.types of parents(). */
@@ -300,7 +308,12 @@ export default ManageBase.extend({
       else
         console.log('parentsTypes : parents', parents);
     }
-    let promise = this.get('parentsNotFG').filterBy('meta.type').uniqBy('meta.type').mapBy('meta.type');
+    let
+      parentsNotFG = this.get('parentsNotFG'),
+    promise = parentsNotFG.then ? parentsNotFG.then(parentsByType) :
+      Ember.RSVP.resolve(parentsByType(parentsNotFG));
+   function parentsByType(parents) {
+     return parents.filterBy('meta.type').uniqBy('meta.type').mapBy('meta.type'); }
     if (trace_dataTree > 5) {
       console.log('parents', this.get('parents'), 'parentsTypes', promise);
       console.log('withParent :', this.get('withParent'), this.get('child1'), this.get('parents'));
@@ -445,15 +458,19 @@ export default ManageBase.extend({
   addParentAndScopeLevelsPromise : function (valueName) {
     let datasetGroupsP = this.get(valueName),
     me = this,
-    parentsTypes = me.get('parentsTypes'),
-    promise = datasetGroupsP.then(addParentAndScopeLevels);
+    parentsTypes = me.get('parentsTypes');
+    if (! parentsTypes.then)
+      parentsTypes = Ember.RSVP.resolve(parentsTypes);
+    let
+      promise = Ember.RSVP.all([datasetGroupsP, parentsTypes]).then(
+        (dp) => addParentAndScopeLevels(dp[0], dp[1]));
     dLog('parentsTypes', parentsTypes);
     /** Given datasets grouped into tabs, add a grouping level for the parent of the datasets,
      * and a level for the scope of the blocks of the datasets.
      * (for those tabs for which it is enabled - e.g. children)
      * @param datasetGroups is grouped by dataset.meta.type tabs
      */
-    function addParentAndScopeLevels(datasetGroups) {
+    function addParentAndScopeLevels(datasetGroups, parentsTypes) {
       if (trace_dataTree)
         dLog('datasetGroups', datasetGroups);
       let
@@ -524,7 +541,10 @@ export default ManageBase.extend({
     function() {
       let datasetsP = this.get('dataPre');
       let me = this,
-      promise = datasetsP.then(function (datasets) {
+      promise = datasetsP.then ?
+        datasetsP.then((d) => typeDatasets(d)) :
+        Ember.RSVP.resolve(typeDatasets(datasetsP));
+      function typeDatasets (datasets) {
         datasets = datasets.toArray();
         let dataTyped = {};
         let parents = me.get('parents')
@@ -586,7 +606,8 @@ export default ManageBase.extend({
         setType('unrelated', 'Datasets');
 
         return dataTyped;
-      }),
+      };
+      let
       promiseP = DS.PromiseObject.create({ promise: promise });
       return  promiseP;
     }),

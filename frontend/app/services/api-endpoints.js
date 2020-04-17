@@ -12,6 +12,10 @@ import {
   getSiteOrigin
 } from '../utils/configuration';
 
+/*----------------------------------------------------------------------------*/
+
+let trace = 0;
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
@@ -102,19 +106,29 @@ export default Service.extend(Ember.Evented, {
 
     let options = { adapterOptions : { host : url } },
     storeManager = this.get('storeManager'),
-    store = storeManager.registerStore(nameForIndex, options) &&
-      storeManager.getStore(nameForIndex);
-    endpoint.set('store', store);
-    console.log('registered store', nameForIndex, store, endpoint, url);
+    store;
+    if (existing) {
+      // replacing existing endpoint if same name;  also replace the store.
+      store = storeManager.unregisterStore(nameForIndex);
+      dLog('existing', existing.get('store') === store, store);
+    }
+    if (storeManager.registerStore(nameForIndex, options)) {
+      store = storeManager.getStore(nameForIndex);
+      endpoint.set('store', store);
+      console.log('registered store', nameForIndex, store, endpoint, url);
+    }
 
    /** isPrimary true means this is the API endpoint which serves the app,
     * or which the app connects to when it starts.
     */
     let isPrimary = this.get('endpointsLength') == 0;
-    this.set('primaryEndpoint', endpoint);
-    endpoint.set('firstTab', true);
+    if (isPrimary || ! this.set('primaryEndpoint')) {
+      this.set('primaryEndpoint', endpoint);
+      /* first tab gets the initial .active, via addClassActive() */
+      endpoint.set('firstTab', true);
+    }
 
-    /* not used yet, intended as a dependent value for a computed function, which
+    /* Used as a dependent value for a computed function (stores), which
      * cannot depend on .endpoints since it is a hash not an array. */
     this.incrementProperty('endpointsLength');
     // or equivalent : this.set('endpointsLength', Object.keys(endpoints).length);
@@ -141,9 +155,19 @@ export default Service.extend(Ember.Evented, {
       id2Endpoint = this.get('id2Endpoint'),
     endpoint = id2Endpoint[blockId],
     store = endpoint.store;
-    console.log('id2Store', blockId, endpoint, store);
+    if (trace > 2)
+      dLog('id2Store', blockId, endpoint, store);
     return store;
   },
+  stores : Ember.computed('endpoints.@each.store', 'endpointsLength', function () {
+    let
+	  endpoints = this.get('endpoints'),
+    stores = Object.keys(endpoints).map(
+      (name) => endpoints[name].store);
+    dLog('stores', stores, endpoints);
+    return stores;
+  }),
+
 
   EndpointLogin: function(url, user, password) {
     let me = this;
@@ -164,6 +188,8 @@ export default Service.extend(Ember.Evented, {
       let endpoint =
       me.addEndpoint(url, user, token);
       endpoint.getDatasets();
+    }).catch(function (error) {
+      dLog('EndpointLogin', url, user, error);
     });
   }
 
