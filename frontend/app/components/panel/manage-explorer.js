@@ -141,9 +141,9 @@ export default ManageBase.extend({
     endpointSo = name &&
       this.get('apiEndpoints').lookupEndpoint(name),
     datasetsBlocks = endpointSo && endpointSo.get("datasetsBlocks");
-    if (datasetsBlocks)
+    if (datasetsBlocks && trace_dataTree > 1)
     {
-      console.log('datasetsBlocks', endpointSo, datasetsBlocks);
+      dLog('datasetsBlocks', endpointSo, datasetsBlocks);
     }
     let isPrimary = endpointSo && (this.get('apiEndpoints').get('primaryEndpoint') === endpointSo);
     if (! name || (! datasetsBlocks && isPrimary))
@@ -152,7 +152,7 @@ export default ManageBase.extend({
        * Perhaps instead will change mapview to use apiEndpoints service.
        */
       datasetsBlocks = this.get('primaryDatasets');
-      console.log('datasetsBlocks()  using primaryDatasets', datasetsBlocks);
+      dLog('datasetsBlocks()  using primaryDatasets', datasetsBlocks);
     }
 
     return datasetsBlocks;
@@ -549,7 +549,8 @@ export default ManageBase.extend({
         let dataTyped = {};
         let parents = me.get('parents')
           .map(function (p) { return p.content || p; });
-        dLog('parents', me.get('parents'), parents);
+        if (trace_dataTree > 1)
+          dLog('parents', me.get('parents'), parents);
         for (let i=0; i < datasets.length; i++) {
           let d = datasets[i],
           typeName = d.get('meta.type');
@@ -1002,7 +1003,8 @@ export default ManageBase.extend({
           else {
             blocks = filterBlocks(dataset);
           }
-          dLog(name, levelMeta, 'levelMeta.set(', blocks, 'Blocks');
+          if (trace_dataTree > 1)
+            dLog(name, levelMeta, 'levelMeta.set(', blocks, 'Blocks');
           levelMeta.set(blocks, 'Blocks');
           result2[name] = blocks;
           return result2;

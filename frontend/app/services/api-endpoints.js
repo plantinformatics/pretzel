@@ -122,7 +122,7 @@ export default Service.extend(Ember.Evented, {
     * or which the app connects to when it starts.
     */
     let isPrimary = this.get('endpointsLength') == 0;
-    if (isPrimary || ! this.set('primaryEndpoint')) {
+    if (isPrimary || ! this.get('primaryEndpoint')) {
       this.set('primaryEndpoint', endpoint);
       /* first tab gets the initial .active, via addClassActive() */
       endpoint.set('firstTab', true);
