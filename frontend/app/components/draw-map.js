@@ -1273,7 +1273,17 @@ export default Ember.Component.extend(Ember.Evented, {
             if (! zd)
               zd = oa.z[d];
             let block = oa.z[key],
-            match = (block.scope == zd.scope) && (block.dataset.get('name') == parentName);
+            /** block is a copy of the data attributes, it does not have
+             * block.store; block_ is the ember data store object. */
+            block_ = me.peekBlock(key),
+            /** Match scope, dataset parent name, and store.name.
+             * There may be a copy of the parent in >1 endpoint; for now we'll
+             * put the data block on the axis of the parent from the same
+             * endpoint.  It is not invalid to put it on a different endpoint,
+             * and that functionality can be considered.
+             */
+            match = (block.scope == zd.scope) && (block.dataset.get('name') == parentName) &&
+              (dBlock.store.name === block_.store.name);
             dLog(key, trace_stack ? block : block.dataset.get('name'), match);
             return match;
           }
@@ -1356,7 +1366,8 @@ export default Ember.Component.extend(Ember.Evented, {
             let match = 
               (d != d2) &&  // not self
               ! a.parent && a.parentName && (a.parentName == dataset.get('name')) &&
-              a.z.scope && (a.z.scope == oa.cmName[d].scope);
+              a.z.scope && (a.z.scope == oa.cmName[d].scope) &&
+              (a.block.store.name === dataset.store.name);
             if (! a.parent && trace_stack > 1)
             {
               console.log(d2, a.parentName,  dataset.get('name'),
