@@ -9,7 +9,11 @@ export default ManageBase.extend({
 
   ownedByMe: Ember.computed.alias("dataset.owner"),
   datasetMeta: Ember.computed("dataset.meta", function() {
-    return this.get("dataset.meta") || {};
+    let meta = this.get("dataset.meta") || {},
+    apiHost = this.get("dataset.store.name");
+    if (apiHost)
+      meta.apiHost = apiHost;
+    return meta;
   }),
 
   actions: {

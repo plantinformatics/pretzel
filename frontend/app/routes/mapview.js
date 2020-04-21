@@ -113,7 +113,7 @@ let config = {
     let blocksLimitsTask = this.get('blocksLimitsTask');
     dLog('blocksLimitsTask', blocksLimitsTask);
     if (! blocksLimitsTask || ! blocksLimitsTask.get('isRunning')) {
-      blocksLimitsTask = blockService.getBlocksLimits(undefined);
+      blocksLimitsTask = blockService.getBlocksLimits(undefined, {endpoint: 'primary'});
       this.set('blocksLimitsTask', blocksLimitsTask);
     }
     let allInitially = params.parsedOptions && params.parsedOptions.allInitially;

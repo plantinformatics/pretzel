@@ -50,7 +50,7 @@ export default Service.extend(Ember.Evented, {
     let
     datasets = yield dP;
 
-    if (endpoint && endpoint.host)
+    if (false && endpoint && endpoint.host)
     {
       /* Give each dataset a meta.apiHost attribute, referring to the API endpoint from which it was received.
        * This is for display in the GUI, and can be used to select the endpoint for block contents request.
