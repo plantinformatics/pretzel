@@ -64,6 +64,7 @@ export default Service.extend({
   store: service(),
   flowsService: service('data/flows-collate'),
   blockService : service('data/block'),
+  apiEndpoints : service(),
 
   /** set up a block-adj object to hold results. */
   ensureBlockAdj(blockAdjId) {
@@ -216,7 +217,6 @@ export default Service.extend({
   requestPathsProgressive(blockAdj, blockAdjId, taskInstance) {
     /** just for passing to auth getPathsViaStream, getPathsProgressive, will change signature of those functions. */
     let blockA = blockAdjId[0], blockB = blockAdjId[1];
-    let store = this.get('store');
 
     // based on link-path: request()
     let me = this;
@@ -242,6 +242,8 @@ export default Service.extend({
           for (let i=0; i < res.length; i++) {
             for (let j=0; j < 2; j++) {
               let repeats = res[i].alignment[j].repeats,
+              blockId = res[i].alignment[j].blockId,
+              store = me.get('apiEndpoints').id2Store(blockId),
               // possibly filterPaths() is changing repeats.features[] to repeats[]
               features = repeats.features || repeats;
               me.pushFeatureField(store, features, 0, flowsService);
@@ -444,7 +446,6 @@ export default Service.extend({
     let reqName = 'path alias request';
     if (trace_pathsP > 2)
       dLog(reqName, blockAdjId);
-    let store = this.get('store');
     let me = this;
     let flowsService = this.get('flowsService');
 
@@ -495,6 +496,7 @@ export default Service.extend({
               let f = r[fName];
               if (f._id === undefined)
                 f._id = f.id;
+              let store = me.get('apiEndpoints').id2Store(f.blockId);
               me.pushFeatureField(store, r, fName, flowsService);
             });
           });

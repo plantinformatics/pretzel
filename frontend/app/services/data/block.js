@@ -954,7 +954,6 @@ export default Service.extend(Ember.Evented, {
    */
   pushFeatureSearchResults : function(featureValues) {
     let fnName = 'pushFeatureSearchResults',
-    store = this.get('store'),
     pathsPro = this.get('pathsPro'),
     flowsService = this.get('flowsService');
 
@@ -963,7 +962,9 @@ export default Service.extend(Ember.Evented, {
         /** replace f.block with a reference to the block in store.
          * The blocks and datasets are already loaded.
          */
-        let block = store.peekRecord('block', f.block.id);
+        let
+          store = this.get('apiEndpoints').id2Store(f.block.id),
+        block = store.peekRecord('block', f.block.id);
         if (f.blockId !== f.block.id) {
           dLog(fnName, f.blockId, '!==', f.block.id);
         }
