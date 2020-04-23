@@ -372,7 +372,7 @@ export default Service.extend({
       requestEndpoint = this.get('apiEndpoints.primaryEndpoint');
     } else {
       let
-        blockId = data.block || (data.blocks && data.blocks[0]) || data.blockA || data.blockA,
+        blockId = data.block || (data.blocks && data.blocks[0]) || (data.blockIds && data.blockIds[0]) || data.blockA || data.blockA,
       blockEndpoint = blockId && this.get('apiEndpoints.id2Endpoint')[blockId];
       requestEndpoint = blockEndpoint || this.get(requestEndpointAttr);
       dLog(blockId, 'blockEndpoint', blockEndpoint);
