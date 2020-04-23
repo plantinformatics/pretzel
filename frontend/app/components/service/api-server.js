@@ -15,7 +15,7 @@ function removePunctuation(text) {
 };
 
 
-/** ApiEndpoint (components/service/api-endpoint)
+/** ApiServer (components/service/api-server)
  *
  * It is expected that values for the fields .host and .name are passed as
  * attributes of the create() options.
@@ -28,7 +28,7 @@ function removePunctuation(text) {
  */
 export default Ember.Object.extend({
   dataset: service('data/dataset'),
-  apiEndpoints: service('api-endpoints'),
+  apiServers: service(),
 
 
   init() {
@@ -39,11 +39,11 @@ export default Ember.Object.extend({
   name : Ember.computed('host', function () {
     let host = this.get('host'),
     name = removePunctuation(this.host);
-    console.log('ApiEndpoint', this.host, this.user, this.token);
+    console.log('ApiServer', this.host, this.user, this.token);
     return name;
   }),
 
-  /** Used by panel/api-endpoint-tab.hbs
+  /** Used by panel/api-server-tab.hbs
    * for unique IDs of tab DOM elements.
    */
   tabId : Ember.computed('name',  function() {
@@ -52,7 +52,7 @@ export default Ember.Object.extend({
     console.log('tabId', id, this);
     return id;
   }),
-  /** Return text which is displayed on the API endpoint selector tabs in the
+  /** Return text which is displayed on the API server selector tabs in the
    * data explorer.
    *
    * Trim the leading http:// or https://, referred to as the scheme or
@@ -78,46 +78,46 @@ export default Ember.Object.extend({
   },
 
 
-  /** Get the list of datasets, including their blocks, from this API endpoint.
+  /** Get the list of datasets, including their blocks, from this API server.
    *
    */
   getDatasets : function () {
     let datasetService = this.get('dataset');
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
-    /** endpoint was a param when this function was an attribute of apiEndpoints. */
-    let endpoint = this;
-    let datasetsTask = taskGetList.perform(endpoint);
+    /** server was a param when this function was an attribute of apiServers. */
+    let server = this;
+    let datasetsTask = taskGetList.perform(server);
     let
-    name = endpoint.get('name'),
-    apiEndpoints = this.get('apiEndpoints'),
+    name = server.get('name'),
+    apiServers = this.get('apiServers'),
     /** verification */
-    endpointSo = apiEndpoints.lookupEndpoint(name),
+    serverSo = apiServers.lookupServer(name),
     datasetsBlocks = this.get('datasetsBlocks'),
-    datasetsHandle = endpoint && endpoint.host && endpoint.get('name');
-    console.log('getDatasets', name, endpointSo);
-    if (endpointSo !== endpoint)
-      breakPoint('getDatasets', endpointSo, endpoint);
+    datasetsHandle = server && server.host && server.get('name');
+    console.log('getDatasets', name, serverSo);
+    if (serverSo !== server)
+      breakPoint('getDatasets', serverSo, server);
 
     datasetsTask.then(function (blockValues) {
       console.log(datasetsHandle, 'datasetsTask then', blockValues);
       if (datasetsHandle)
       {
-        /** change to : apiEndpoints can do .on() of .evented() on task  */
-        let datasetsBlocks = apiEndpoints.get('datasetsBlocks');
+        /** change to : apiServers can do .on() of .evented() on task  */
+        let datasetsBlocks = apiServers.get('datasetsBlocks');
         datasetsBlocks[datasetsHandle] = blockValues;
-        endpoint.set("datasetsBlocks", blockValues);
-        apiEndpoints.incrementProperty('datasetsBlocksRefresh');
-        // (where me = apiEndpoints)
+        server.set("datasetsBlocks", blockValues);
+        apiServers.incrementProperty('datasetsBlocksRefresh');
+        // (where me = apiServers)
         // me.sendAction('receivedDatasets', datasetsHandle, blockValues);
         // or via .evented() on task
-        apiEndpoints.trigger('receivedDatasets', blockValues);
+        apiServers.trigger('receivedDatasets', blockValues);
       }
     });
 
     console.log('getDatasets', this);
     return datasetsTask;
   }
-  // wrap in a task, requests to different endpoints OK in parallel, just 1 'getDatasets' per endpoint at once.
+  // wrap in a task, requests to different servers OK in parallel, just 1 'getDatasets' per server at once.
   // .drop()
 
 

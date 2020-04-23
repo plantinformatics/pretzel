@@ -16,8 +16,8 @@ export default BaseAuthorizer.extend({
 
   authorize(data, block) {
     let
-      endpoint = this.get('session.requestEndpoint'),
-    accessToken = endpoint && endpoint.token;
+      server = this.get('session.requestServer'),
+    accessToken = server && server.token;
     let token = accessToken || data.token;
     console.log('authorize', data, token, block);
 

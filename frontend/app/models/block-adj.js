@@ -20,7 +20,6 @@ export default DS.Model.extend(Ember.Evented, {
   pathsPro : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
   blocksService : service('data/block'),
-  apiEndpoints: service('api-endpoints'),
 
 
   /** id is blockAdjId[0] + '_' + blockAdjId[1], as per.  serializers/block-adj.js : extractId()

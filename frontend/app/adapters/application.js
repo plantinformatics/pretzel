@@ -20,7 +20,7 @@ const dLog = console.debug;
 /*----------------------------------------------------------------------------*/
 
 var config = {
-  apiEndpoints: service('api-endpoints'),
+  apiServers: service(),
   authorizer: 'authorizer:application', // required by DataAdapterMixin
   session: service('session'),
 
@@ -28,24 +28,24 @@ var config = {
    * @see buildURL()
    */
   x_host: function () {
-    let endpoint = this._endpoint,
-    /** similar calcs in @see services/api-endpoints.js : init() */
+    let server = this._server,
+    /** similar calcs in @see services/api-servers.js : init() */
     config =  getConfiguredEnvironment(this),
     configApiHost = config.apiHost,
     /** this gets the site origin. use this if ENV.apiHost is '' (as it is in
      * production) or undefined. */
     siteOrigin = getSiteOrigin(this),
-    host = endpoint ? endpoint.host : ENV.apiHost || siteOrigin;
+    host = server ? server.host : ENV.apiHost || siteOrigin;
     if (ENV !== config)
       breakPoint('ENV !== config', ENV, config, ENV.apiHost, configApiHost);
-    console.log('app/adapters/application.js host', this, arguments, endpoint, config, configApiHost, ENV.apiHost, host);
+    console.log('app/adapters/application.js host', this, arguments, server, config, configApiHost, ENV.apiHost, host);
     return host;
   },
   host: function () {
     let store = this.store,
     adapterOptions = store && store.adapterOptions,
-    host = (adapterOptions && adapterOptions.host) || Ember.get(this, '_endpoint.host');
-    console.log('app/adapters/application.js host', this, store, adapterOptions, host, this._endpoint);
+    host = (adapterOptions && adapterOptions.host) || Ember.get(this, '_server.host');
+    console.log('app/adapters/application.js host', this, store, adapterOptions, host, this._server);
     return host;
   }.property().volatile(),
   namespace: ENV.apiNamespace,
@@ -58,48 +58,48 @@ var config = {
     }
     return url;
   },
-  /** Wrap buildURL(); get endpoint associated with adapterOptions or query and
-   * pass endpoint as this._endpoint through to get('host'), so that it can use endpoint.host
+  /** Wrap buildURL(); get server associated with adapterOptions or query and
+   * pass server as this._server through to get('host'), so that it can use server.host
    * The adapterOptions don't seem to be passed to get('host')
    */
   buildURL(modelName, id, snapshot, requestType, query) {
-    let endpointHandle;
+    let serverHandle;
     /** snapshot may be an array of snapshots.
      *  apparently snapshotRecordArray has the options, as adapterOptionsproperty,
      *   refn https://github.com/emberjs/data/blob/master/addon/-private/system/snapshot-record-array.js#L53
      */
     if (snapshot)
     {
-      endpointHandle = snapshot.adapterOptions || (snapshot.length && snapshot[0].adapterOptions);
-      console.log('buildURL snapshot.adapterOptions', endpointHandle);
+      serverHandle = snapshot.adapterOptions || (snapshot.length && snapshot[0].adapterOptions);
+      console.log('buildURL snapshot.adapterOptions', serverHandle);
     }
     else if (query)
     {
       console.log('buildURL query', query);
-      endpointHandle = query;
+      serverHandle = query;
     }
-    if (! endpointHandle && id)
+    if (! serverHandle && id)
     {
-      endpointHandle = id;
+      serverHandle = id;
       console.log('buildURL id', id);
     }
-    // this applies when endpointHandle is defined or undefined
+    // this applies when serverHandle is defined or undefined
     {
       /** block getData() is only used if allInitially (i.e. not progressive loading);
-       *  so that addId is not done, so use id2Endpoint. */
+       *  so that addId is not done, so use id2Server. */
       let
-        id2Endpoint = this.get('apiEndpoints.id2Endpoint');
-      let map = this.get('apiEndpoints.obj2Endpoint'),
-      endpoint = map.get(endpointHandle) || (id && id2Endpoint[id]);
+        id2Server = this.get('apiServers.id2Server');
+      let map = this.get('apiServers.obj2Server'),
+      server = map.get(serverHandle) || (id && id2Server[id]);
       if (trace)
-        dLog('buildURL id2Endpoint', id2Endpoint, map, id, endpoint, requestType);
-      /* if endpoint is undefined or null then this code clears this._endpoint and
-       * session.requestEndpoint, which means the default / local / primary
-       * endpoint is used.
+        dLog('buildURL id2Server', id2Server, map, id, server, requestType);
+      /* if server is undefined or null then this code clears this._server and
+       * session.requestServer, which means the default / local / primary
+       * server is used.
        */
       {
-        this._endpoint = endpoint;
-        this.set('session.requestEndpoint', endpoint);
+        this._server = server;
+        this.set('session.requestServer', server);
       }
     }
     return this._super(modelName, id, snapshot, requestType, query);

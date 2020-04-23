@@ -10,36 +10,36 @@ const dLog = console.debug;
 
 export default Service.extend(Ember.Evented, {
     auth: service('auth'),
-  apiEndpoints: service('api-endpoints'),
-  primaryEndpoint : Ember.computed.alias('apiEndpoints.primaryEndpoint'),
+  apiServers: service(),
+  primaryServer : Ember.computed.alias('apiServers.primaryServer'),
 
   storeManager: Ember.inject.service('multi-store'),
 
   /** Get the list of available datasets, in a task - yield the dataset result.
    * Signal that receipt with receivedDatasets(datasets).
    */
-  taskGetList: task(function * (endpoint) {
+  taskGetList: task(function * (server) {
     /* This replaces controllers/mapview.js : updateChrs(), updateModel(). */
     console.log('dataset taskGetList', this);
     let
       owner = getOwner(this),
     store0 = getOwner(this).lookup("service:store"),
 
-    apiEndpoints = this.get('apiEndpoints'),
-    primaryEndpoint = apiEndpoints.get('primaryEndpoint'),
-    id2Endpoint = apiEndpoints.get('id2Endpoint'),
-    _unused = console.log('taskGetList', endpoint, primaryEndpoint),
-    /** routes/mapview:model() uses primaryEndpoint; possibly it will pass that
-     * in or perhaps formalise this to an if (endpoint) structure; sort that in
+    apiServers = this.get('apiServers'),
+    primaryServer = apiServers.get('primaryServer'),
+    id2Server = apiServers.get('id2Server'),
+    _unused = console.log('taskGetList', server, primaryServer),
+    /** routes/mapview:model() uses primaryServer; possibly it will pass that
+     * in or perhaps formalise this to an if (server) structure; sort that in
      * next commit. */
-    _unused2 = endpoint || (endpoint = primaryEndpoint),
-    store = endpoint.store,
+    _unused2 = server || (server = primaryServer),
+    store = server.store,
     trace_promise = false,
 
     /** looks like store.adapterOptions is overridden by adapterOptions passed
      * to query, so merge them. */
-    adapterOptions = apiEndpoints.addId(
-      endpoint || primaryEndpoint,
+    adapterOptions = apiServers.addId(
+      server || primaryServer,
     /* adapterOptions = store.adapterOptions ||*/ {
     /* adapterOptions */
       filter :  {'include': 'blocks'} }), /*;
@@ -50,10 +50,10 @@ export default Service.extend(Ember.Evented, {
     let
     datasets = yield dP;
 
-    if (false && endpoint && endpoint.host)
+    if (false && server && server.host)
     {
-      /* Give each dataset a meta.apiHost attribute, referring to the API endpoint from which it was received.
-       * This is for display in the GUI, and can be used to select the endpoint for block contents request.
+      /* Give each dataset a meta.apiHost attribute, referring to the API server from which it was received.
+       * This is for display in the GUI, and can be used to select the server for block contents request.
        */
       datasets.forEach(function(dataset) {
         let meta = dataset.get('meta');
@@ -62,7 +62,7 @@ export default Service.extend(Ember.Evented, {
           meta = {};
           dataset.set('meta', meta);
         }
-        meta.apiHost = endpoint.host;
+        meta.apiHost = server.host;
       });
     }
 
@@ -75,7 +75,7 @@ export default Service.extend(Ember.Evented, {
       if (blocks) {
         blocks.forEach(function(block) {
           block.set('mapName', datasetName);
-          id2Endpoint[block.get('id')] = endpoint;
+          id2Server[block.get('id')] = server;
         });
       }
     });
@@ -102,14 +102,14 @@ export default Service.extend(Ember.Evented, {
   getData: function (id) {
     console.log("dataset getData", id);
     let
-    /** This is draft; caller may pass in endpoint .. */
-    endpoint = this.get('primaryEndpoint'),
-    store = endpoint.store,
+    /** This is draft; caller may pass in server .. */
+    server = this.get('primaryServer'),
+    store = server.store,
     adapterOptions = 
       {
           filter: {include: "blocks"}
       };
-    this.get('apiEndpoints').addId(endpoint, adapterOptions);
+    this.get('apiServers').addId(server, adapterOptions);
     let datasetP = store.findRecord(
       'dataset', id,
       { reload: true,
@@ -123,8 +123,8 @@ export default Service.extend(Ember.Evented, {
   /** @return dataset records */
   values: Ember.computed(function() {
     let 
-    endpoint = this.get('primaryEndpoint'),
-    store = endpoint.store,
+    server = this.get('primaryServer'),
+    store = server.store,
     records = store.peekAll('dataset');
     console.log('values', records);
     return records;

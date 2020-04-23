@@ -1,7 +1,7 @@
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
 import { isPresent } from '@ember/utils';
-import { default as ApiEndpoint, removePunctuation } from '../components/service/api-endpoint';
+import { default as ApiServer, removePunctuation } from '../components/service/api-server';
 
 const { Service } = Ember;
 
@@ -28,10 +28,10 @@ export default Service.extend(Ember.Evented, {
   dataset: service('data/dataset'),
   storeManager: Ember.inject.service('multi-store'),
 
-  endpoints : Ember.Object.create(),
-  endpointsLength : 0,
-  id2Endpoint : {},
-  obj2Endpoint : new WeakMap(),
+  servers : Ember.Object.create(),
+  serversLength : 0,
+  id2Server : {},
+  obj2Server : new WeakMap(),
   /** Indexed by host url, value is an array of datasets, including blocks, returned from the api host. */
   datasetsBlocks : {},
 
@@ -61,8 +61,8 @@ export default Service.extend(Ember.Evented, {
        * adapter.host(), so it is not necessary to do apiOrigin || siteOrigin
        * here.
        */
-      let primaryEndpoint = this.addEndpoint(apiOrigin || siteOrigin, undefined, token);
-      console.log('primaryEndpoint', primaryEndpoint);
+      let primaryServer = this.addServer(apiOrigin || siteOrigin, undefined, token);
+      console.log('primaryServer', primaryServer);
     }
 
     if (false)  // useful in setting up development data
@@ -71,105 +71,105 @@ export default Service.extend(Ember.Evented, {
       let protocol='http://', host = 'plantinformatics.io', // ENV.apiHost,
       /** e.g. map :4200 to :4201, (/00$/, '01') */
       host2 = host.replace(/^/, 'dev.');
-      // this.addEndpoint(protocol + host, 'My.Email@gmail.com', undefined);
-      this.addEndpoint(protocol + host2, 'My.Email@gmail.com', undefined);
+      // this.addServer(protocol + host, 'My.Email@gmail.com', undefined);
+      this.addServer(protocol + host2, 'My.Email@gmail.com', undefined);
     }
   },
 
-  // needs: ['component:service/api-endpoint'],
+  // needs: ['component:service/api-server'],
 
-  /** Add a new ApiEndpoint.
-   * Store it in this.endpoints, indexed by .name = .host_safe()
-   * @return endpoint (Ember Object) ApiEndpoint
+  /** Add a new ApiServer.
+   * Store it in this.servers, indexed by .name = .host_safe()
+   * @return server (Ember Object) ApiServer
    */
-  addEndpoint : function (url, user, token) {
-    // const MyComponent = Ember.getOwner(this).factoryFor('component:service/api-endpoint');
-	  let endpointBase = 
+  addServer : function (url, user, token) {
+    // const MyComponent = Ember.getOwner(this).factoryFor('component:service/api-server');
+	  let serverBase = 
       {
         host : url,
         user : user,
         token : token
       },
     ownerInjection = Ember.getOwner(this).ownerInjection(),
-    endpoint = ApiEndpoint.create(
+    server = ApiServer.create(
       ownerInjection,
-      endpointBase),
-	  endpoints = this.get('endpoints'),
+      serverBase),
+	  servers = this.get('servers'),
     /**  .name is result of .host_safe().
      * -	check if any further sanitising of inputs required */
-    nameForIndex = endpoint.get('name');
-    console.log('addEndpoint', endpointBase, endpoint.get('tabId'), endpoint, endpoints, nameForIndex);
-    let existing = endpoints.get(nameForIndex);
+    nameForIndex = server.get('name');
+    console.log('addServer', serverBase, server.get('tabId'), server, servers, nameForIndex);
+    let existing = servers.get(nameForIndex);
     if (existing)
-      console.log('addEndpoint existing=', existing, nameForIndex);
-    endpoints.set(nameForIndex, endpoint);
+      console.log('addServer existing=', existing, nameForIndex);
+    servers.set(nameForIndex, server);
 
     let options = { adapterOptions : { host : url } },
     storeManager = this.get('storeManager'),
     store;
     if (existing) {
-      // replacing existing endpoint if same name;  also replace the store.
+      // replacing existing server if same name;  also replace the store.
       store = storeManager.unregisterStore(nameForIndex);
       dLog('existing', existing.get('store') === store, store);
     }
     if (storeManager.registerStore(nameForIndex, options)) {
       store = storeManager.getStore(nameForIndex);
-      endpoint.set('store', store);
-      console.log('registered store', nameForIndex, store, endpoint, url);
+      server.set('store', store);
+      console.log('registered store', nameForIndex, store, server, url);
     }
 
-   /** isPrimary true means this is the API endpoint which serves the app,
+   /** isPrimary true means this is the API server which serves the app,
     * or which the app connects to when it starts.
     */
-    let isPrimary = this.get('endpointsLength') == 0;
-    if (isPrimary || ! this.get('primaryEndpoint')) {
-      this.set('primaryEndpoint', endpoint);
+    let isPrimary = this.get('serversLength') == 0;
+    if (isPrimary || ! this.get('primaryServer')) {
+      this.set('primaryServer', server);
       /* first tab gets the initial .active, via addClassActive() */
-      endpoint.set('firstTab', true);
+      server.set('firstTab', true);
     }
 
     /* Used as a dependent value for a computed function (stores), which
-     * cannot depend on .endpoints since it is a hash not an array. */
-    this.incrementProperty('endpointsLength');
-    // or equivalent : this.set('endpointsLength', Object.keys(endpoints).length);
-    return endpoint;
+     * cannot depend on .servers since it is a hash not an array. */
+    this.incrementProperty('serversLength');
+    // or equivalent : this.set('serversLength', Object.keys(servers).length);
+    return server;
     },
 
-  /** Lookup an endpoint by its API host URL.
-   * @param host  may be raw URL, or result of ApiEndpoint.host_safe().
+  /** Lookup an server by its API host URL.
+   * @param host  may be raw URL, or result of ApiServer.host_safe().
    * @return undefined if host is undefined
    */
-  lookupEndpoint : function(host) {
+  lookupServer : function(host) {
     let name = host && removePunctuation(host);
-    let endpoint = name && this.get('endpoints').get(name);
-    return endpoint;
+    let server = name && this.get('servers').get(name);
+    return server;
   },
 
-  addId : function(endpoint, id) {
-    let map = this.get('obj2Endpoint');
-    map.set(id, endpoint);
+  addId : function(server, id) {
+    let map = this.get('obj2Server');
+    map.set(id, server);
     return id;
   },
   id2Store : function(blockId) {
     let
-      id2Endpoint = this.get('id2Endpoint'),
-    endpoint = id2Endpoint[blockId],
-    store = endpoint.store;
+      id2Server = this.get('id2Server'),
+    server = id2Server[blockId],
+    store = server.store;
     if (trace > 2)
-      dLog('id2Store', blockId, endpoint, store);
+      dLog('id2Store', blockId, server, store);
     return store;
   },
-  stores : Ember.computed('endpoints.@each.store', 'endpointsLength', function () {
+  stores : Ember.computed('servers.@each.store', 'serversLength', function () {
     let
-	  endpoints = this.get('endpoints'),
-    stores = Object.keys(endpoints).map(
-      (name) => endpoints[name].store);
-    dLog('stores', stores, endpoints);
+	  servers = this.get('servers'),
+    stores = Object.keys(servers).map(
+      (name) => servers[name].store);
+    dLog('stores', stores, servers);
     return stores;
   }),
 
 
-  EndpointLogin: function(url, user, password) {
+  ServerLogin: function(url, user, password) {
     let me = this;
     if (url.indexOf('http://') == -1) {
       url = 'http://' + url;
@@ -185,11 +185,11 @@ export default Service.extend(Ember.Evented, {
       })
     }).then(function(response) {
       let token = response.id;
-      let endpoint =
-      me.addEndpoint(url, user, token);
-      endpoint.getDatasets();
+      let server =
+      me.addServer(url, user, token);
+      server.getDatasets();
     }).catch(function (error) {
-      dLog('EndpointLogin', url, user, error);
+      dLog('ServerLogin', url, user, error);
     });
   }
 

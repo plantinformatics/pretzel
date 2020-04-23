@@ -64,7 +64,7 @@ export default Service.extend({
   store: service(),
   flowsService: service('data/flows-collate'),
   blockService : service('data/block'),
-  apiEndpoints : service(),
+  apiServers : service(),
 
   /** set up a block-adj object to hold results. */
   ensureBlockAdj(blockAdjId) {
@@ -243,7 +243,7 @@ export default Service.extend({
             for (let j=0; j < 2; j++) {
               let repeats = res[i].alignment[j].repeats,
               blockId = res[i].alignment[j].blockId,
-              store = me.get('apiEndpoints').id2Store(blockId),
+              store = me.get('apiServers').id2Store(blockId),
               // possibly filterPaths() is changing repeats.features[] to repeats[]
               features = repeats.features || repeats;
               me.pushFeatureField(store, features, 0, flowsService);
@@ -496,7 +496,7 @@ export default Service.extend({
               let f = r[fName];
               if (f._id === undefined)
                 f._id = f.id;
-              let store = me.get('apiEndpoints').id2Store(f.blockId);
+              let store = me.get('apiServers').id2Store(f.blockId);
               me.pushFeatureField(store, r, fName, flowsService);
             });
           });

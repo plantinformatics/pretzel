@@ -3,9 +3,9 @@
     Datasources
   {{/elem/panel-heading}}
   <ul class="list-group">
-    {{#each-in endpoints as |apiEndpointName apiEndpoint| }}
+    {{#each-in servers as |apiServerName apiServer| }}
       <li class="list-group-item list-group-item-info">
-        {{form/api-endpoint name=apiEndpointName data=apiEndpoint}}
+        {{form/api-server name=apiServerName data=apiServer}}
       </li>
     {{/each-in}}
 

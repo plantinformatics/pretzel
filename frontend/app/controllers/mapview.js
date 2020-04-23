@@ -16,7 +16,7 @@ let trace_select = 0;
 export default Ember.Controller.extend(Ember.Evented, {
   dataset: service('data/dataset'),
   block: service('data/block'),
-  apiEndpoints: service('api-endpoints'),
+  apiServers: service(),
 
   /** Array of available datasets populated from model 
    */
@@ -166,9 +166,9 @@ export default Ember.Controller.extend(Ember.Evented, {
     },
     blockFromId : function(blockId) {
       let
-        id2Endpoint = this.get('apiEndpoints.id2Endpoint'),
-      endpoint = id2Endpoint[blockId],
-      store = endpoint.store,
+        id2Server = this.get('apiServers.id2Server'),
+      server = id2Server[blockId],
+      store = server.store,
       block = store.peekRecord('block', blockId);
       return block;
     },
@@ -187,9 +187,9 @@ export default Ember.Controller.extend(Ember.Evented, {
     },
     selectBlockById: function(blockId) {
       let
-        id2Endpoint = this.get('apiEndpoints.id2Endpoint'),
-      endpoint = id2Endpoint[blockId],
-      store = endpoint.store,
+        id2Server = this.get('apiServers.id2Server'),
+      server = id2Server[blockId],
+      store = server.store,
       selectedBlock = store.peekRecord('block', blockId);
       /* Previous version traversed all blocks of selectedMaps to find one
        * matching blockId. */

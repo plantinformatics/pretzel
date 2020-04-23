@@ -1277,9 +1277,9 @@ export default Ember.Component.extend(Ember.Evented, {
              * block.store; block_ is the ember data store object. */
             block_ = me.peekBlock(key),
             /** Match scope, dataset parent name, and store.name.
-             * There may be a copy of the parent in >1 endpoint; for now we'll
+             * There may be a copy of the parent in >1 server; for now we'll
              * put the data block on the axis of the parent from the same
-             * endpoint.  It is not invalid to put it on a different endpoint,
+             * server.  It is not invalid to put it on a different server,
              * and that functionality can be considered.
              */
             match = (block.scope == zd.scope) && (block.dataset.get('name') == parentName) &&

@@ -3,12 +3,12 @@ import Ember from 'ember';
 const { inject: { service }, Component } = Ember;
 
 export default Component.extend({
-  apiEndpoints: service('api-endpoints'),
+  apiServers: service(),
 
-  /** Lookup the tab <li> element in the data explorer corresponding to this API endpoint.
+  /** Lookup the tab <li> element in the data explorer corresponding to this API server.
    *
    * Not used or required, it was part of addClassActive() which was implemented
-   * here first, but moved to api-endpoint-tab.js.   Possibly commit and then drop it.
+   * here first, but moved to api-server-tab.js.   Possibly commit and then drop it.
    */
   tabElement : function()
   {
@@ -26,17 +26,17 @@ export default Component.extend({
   },
 
   /**
-   * @param endpoint
+   * @param server
    */
-  getDatasets : function (endpoint) {
-    endpoint.getDatasets();
+  getDatasets : function (server) {
+    server.getDatasets();
   },
 
   actions: {
     getDatasets : function () {
-      let endpoint = this.get('data');
-      console.log('action getDatasets', this, endpoint);
-      this.getDatasets(endpoint);
+      let server = this.get('data');
+      console.log('action getDatasets', this, server);
+      this.getDatasets(server);
     }
   }
 

@@ -3,7 +3,7 @@ import Ember from 'ember';
 
 /*----------------------------------------------------------------------------*/
 /** factored out of :
- * @see services/api-endpoints.js : init()
+ * @see services/api-servers.js : init()
  * @see adapters/application.js : host() 
  */
 
@@ -26,7 +26,7 @@ function getConfiguredEnvironment(thisObject)
  */
 function getSiteOrigin(thisObject)
 {
-  /** from services/api-endpoints.js : init() */
+  /** from services/api-servers.js : init() */
   let
   application = Ember.getOwner(thisObject).lookup('controller:application'),
   /** e.g.  'http://localhost:4200' */

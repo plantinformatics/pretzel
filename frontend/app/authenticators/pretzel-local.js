@@ -9,7 +9,7 @@ import {
 
 
 export default Base.extend({
-  apiEndpoints: service('api-endpoints'),
+  apiServers: service(),
 
   restore: function(data) {
     return new Ember.RSVP.Promise(function(resolve, reject){
@@ -30,11 +30,11 @@ export default Base.extend({
     let
 
 
-    /** similar calcs in @see services/api-endpoints.js : init() */
+    /** similar calcs in @see services/api-servers.js : init() */
     /** this gets the site origin. use this if ENV.apiHost is '' (as it is in
      * production) or undefined. */
     siteOrigin = getSiteOrigin(this),
-    apiEndpoints = this.get('apiEndpoints'),
+    apiServers = this.get('apiServers'),
     endpoint = config.apiHost + '/api/Clients/login';
     console.log('authenticate', config, config.apiHost, siteOrigin);
     return new Ember.RSVP.Promise((resolve, reject) => {
@@ -56,8 +56,8 @@ export default Base.extend({
           console.log('resolve', 'host url', host, 'token', response.id, 'clientId', response.userId, siteOrigin);
           if (host == '')
             host = siteOrigin;
-          let apiEndpoint = apiEndpoints.addEndpoint(/*url*/ host, /*user*/ identification, /*token*/ response.id);
-          console.log('primaryEndpoint', apiEndpoint);
+          let apiServer = apiServers.addServer(/*url*/ host, /*user*/ identification, /*token*/ response.id);
+          console.log('primaryServer', apiServer);
           resolve({
             token: response.id,
             clientId: response.userId

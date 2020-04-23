@@ -31,7 +31,7 @@ export default DS.Model.extend({
   pathsP : service('data/paths-progressive'), // for getBlockFeaturesInterval()
   blockService : service('data/block'),
   auth: service('auth'),
-  apiEndpoints: service(),
+  apiServers: service(),
 
 
   datasetId: DS.belongsTo('dataset'),
@@ -322,7 +322,7 @@ export default DS.Model.extend({
       dLog('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent && parent.get('id'));
     if (parent)
     {
-      let store = this.get('apiEndpoints').id2Store(this.get('id'));
+      let store = this.get('apiServers').id2Store(this.get('id'));
       referenceBlock = store.peekAll('block')
         .filter(function (b) {
           let scope2 = b.get('scope'),

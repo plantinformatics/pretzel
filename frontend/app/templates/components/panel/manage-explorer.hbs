@@ -19,7 +19,7 @@
   </div>
 {{/elem/panel-container}}
 
-{{form/api-endpoints}}
+{{form/api-servers}}
 
 {{#elem/panel-container state="primary"}}
   {{#elem/panel-heading icon="folder-open"}}
@@ -152,15 +152,15 @@
 	<ul class="list-group borderless">
 
           <ul class="nav nav-tabs">
-            {{#each-in endpoints as |apiEndpointName apiEndpoint| }}
-              {{panel/api-endpoint-tab apiEndpointName=apiEndpointName apiEndpoint=apiEndpoint endpointTabSelected=(action "endpointTabSelected")}}
+            {{#each-in servers as |apiServerName apiServer| }}
+              {{panel/api-server-tab apiServerName=apiServerName apiServer=apiServer serverTabSelected=(action "serverTabSelected")}}
             {{/each-in}}
           </ul>
-          {{!-- For endpoint-specific content selected by the above tab : add a
+          {{!-- For server-specific content selected by the above tab : add a
              <div class="tab-content"> with each-in as above, and :
-             <div id={{concat "tab-" apiEndpoint.tabId}} class="tab-pane fade"> ... </div>
+             <div id={{concat "tab-" apiServer.tabId}} class="tab-pane fade"> ... </div>
              (e.g. see commit d86e9d6).
-             Instead of maintaining each endpoint's content within a distinct tab-pane within
+             Instead of maintaining each server's content within a distinct tab-pane within
              tab-content,  the data content in the following is switched by the above tab.
              --}}
 

@@ -42,7 +42,7 @@ const selectorExplorer = 'div#left-panel-explorer';
 
 
 export default ManageBase.extend({
-  apiEndpoints: service('api-endpoints'),
+  apiServers: service(),
 
   init() {
     this._super();
@@ -53,7 +53,7 @@ export default ManageBase.extend({
 
     let store = this.get('store');
     let me = this;
-    this.get('apiEndpoints').on('receivedDatasets', function (datasets) { console.log('receivedDatasets', datasets); me.send('receivedDatasets', datasets); });
+    this.get('apiServers').on('receivedDatasets', function (datasets) { console.log('receivedDatasets', datasets); me.send('receivedDatasets', datasets); });
   },
 
   urlOptions : Ember.computed('model.params.options', function () {
@@ -132,24 +132,24 @@ export default ManageBase.extend({
   //----------------------------------------------------------------------------
 
   /** Return a list of datasets, with their included blocks, for the currently-selected
-   * API endpoint tab
+   * API server tab
    */
-  datasetsBlocks : Ember.computed('datasetsBlocksRefresh', 'endpointTabSelected', 'primaryDatasets', function() {
+  datasetsBlocks : Ember.computed('datasetsBlocksRefresh', 'serverTabSelected', 'primaryDatasets', function() {
     /** e.g. "http___localhost_5000"  */
     let
-      name = this.get('endpointTabSelected'),
-    endpointSo = name &&
-      this.get('apiEndpoints').lookupEndpoint(name),
-    datasetsBlocks = endpointSo && endpointSo.get("datasetsBlocks");
+      name = this.get('serverTabSelected'),
+    serverSo = name &&
+      this.get('apiServers').lookupServer(name),
+    datasetsBlocks = serverSo && serverSo.get("datasetsBlocks");
     if (datasetsBlocks && trace_dataTree > 1)
     {
-      dLog('datasetsBlocks', endpointSo, datasetsBlocks);
+      dLog('datasetsBlocks', serverSo, datasetsBlocks);
     }
-    let isPrimary = endpointSo && (this.get('apiEndpoints').get('primaryEndpoint') === endpointSo);
+    let isPrimary = serverSo && (this.get('apiServers').get('primaryServer') === serverSo);
     if (! name || (! datasetsBlocks && isPrimary))
     {
       /* this is using the model datasets list for the primary API.
-       * Perhaps instead will change mapview to use apiEndpoints service.
+       * Perhaps instead will change mapview to use apiServers service.
        */
       datasetsBlocks = this.get('primaryDatasets');
       dLog('datasetsBlocks()  using primaryDatasets', datasetsBlocks);
@@ -161,7 +161,7 @@ export default ManageBase.extend({
   datasetsBlocksRefresh : 0,
   // datasets: [],
 
-  endpoints : Ember.computed.alias('apiEndpoints.endpoints'),
+  servers : Ember.computed.alias('apiServers.servers'),
 
   data: Ember.computed('filteredData', function() {
     let
@@ -1081,9 +1081,9 @@ export default ManageBase.extend({
   //----------------------------------------------------------------------------
   actions: {
 
-    endpointTabSelected(tabId, apiEndpointName, apiEndpoint) {
-      console.log('endpointTabSelected', tabId, apiEndpointName, apiEndpoint);
-      this.set('endpointTabSelected', apiEndpointName);
+    serverTabSelected(tabId, apiServerName, apiServer) {
+      console.log('serverTabSelected', tabId, apiServerName, apiServer);
+      this.set('serverTabSelected', apiServerName);
     },
     receivedDatasets(datasetsHandle, blockValues) {
       console.log('receivedDatasets', datasetsHandle, blockValues);

@@ -77,7 +77,7 @@ function filterMap(map, mapFilterFn) {
 export default Service.extend(Ember.Evented, {
   auth: service('auth'),
   // store: service(),
-  apiEndpoints: service('api-endpoints'),
+  apiServers: service(),
   pathsPro : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
   queryParams: service('query-params'),
@@ -90,10 +90,10 @@ export default Service.extend(Ember.Evented, {
   parsedOptions : Ember.computed.alias('queryParams.urlOptions'),
 
   store : Ember.computed(
-    'apiEndpoints.endpointsLength', // effectively endpoints.@each.
-    'apiEndpoints.primaryEndpoint.store',
+    'apiServers.serversLength', // effectively servers.@each.
+    'apiServers.primaryServer.store',
     function () {
-    let store = this.get('apiEndpoints.primaryEndpoint.store');
+    let store = this.get('apiServers.primaryServer.store');
     return store;
   }),
 
@@ -144,9 +144,9 @@ export default Service.extend(Ember.Evented, {
   getData: function (id) {
     debugger; // see header comment in taskGet();
     // console.log("block getData", id);
-    let endpoint = this.blockEndpoint(id),
-    store = endpoint.store,
-    apiEndpoints = this.get('apiEndpoints');
+    let server = this.blockServer(id),
+    store = server.store,
+    apiServers = this.get('apiServers');
     let allInitially = this.get('parsedOptions.allInitially');
     let options = 
       { reload: true};
@@ -155,9 +155,9 @@ export default Service.extend(Ember.Evented, {
         {
           filter: {include: "features"}
         };
-    if (endpoint) {
+    if (server) {
       let adapterOptions = options.adapterOptions || (options.adapterOptions = {});
-      adapterOptions = apiEndpoints.addId(endpoint, adapterOptions);
+      adapterOptions = apiServers.addId(server, adapterOptions);
     }
     let blockP = store.findRecord(
       'block', id,
@@ -434,48 +434,48 @@ export default Service.extend(Ember.Evented, {
   peekBlock(blockId)
   {
     let
-      apiEndpoints = this.get('apiEndpoints'),
-    store = apiEndpoints.id2Store(blockId),
+      apiServers = this.get('apiServers'),
+    store = apiServers.id2Store(blockId),
     block = store.peekRecord('block', blockId);
     return block;
   },
 
   /*--------------------------------------------------------------------------*/
 
-  /** As for blockEndpoint(), but lookup via block.
+  /** As for blockServer(), but lookup via block.
    * Similar to @see id2Store().
    */
-  blockEndpointById(blockId)
+  blockServerById(blockId)
   {
     let 
-      id2Endpoint = this.get('apiEndpoints.id2Endpoint'),
-    endpoint = id2Endpoint[blockId];
-    return endpoint;
+      id2Server = this.get('apiServers.id2Server'),
+    server = id2Server[blockId];
+    return server;
   },
 
   /** Get the API host from which the block was received, from its dataset meta,
-   * and lookup the endpoint from the host.
-   * @return endpoint ApiEndpoint, or undefined.
+   * and lookup the server from the host.
+   * @return server ApiServer, or undefined.
    */
-  blockEndpoint(blockId)
+  blockServer(blockId)
   {
     let
     block = this.peekBlock(blockId),
     datasetId = block && block.get('datasetId'), 
     dataset = datasetId && datasetId.get('content'),
     host = dataset && dataset.get('meta.apiHost'),
-    apiEndpoints = this.get('apiEndpoints'),
-    endpoint = apiEndpoints.lookupEndpoint(host);
-    console.log('blockEndpoint', block, dataset, host, endpoint);
-    return endpoint;
+    apiServers = this.get('apiServers'),
+    server = apiServers.lookupServer(host);
+    console.log('blockServer', block, dataset, host, server);
+    return server;
   },
 
-  /** @return true if the 2 blocks are received from the same API host endpoint. */
-  blocksSameEndpoint(blockA, blockB)
+  /** @return true if the 2 blocks are received from the same API host server. */
+  blocksSameServer(blockA, blockB)
   {
     /* the object ID of 2 objects from the same mongodb will have a number of leading digits in common.  */
-    let a = this.blockEndpoint(blockA),
-    b = this.blockEndpoint(blockB);
+    let a = this.blockServer(blockA),
+    b = this.blockServer(blockB);
     return a === b;
   },
 
@@ -611,7 +611,7 @@ export default Service.extend(Ember.Evented, {
      * @param blockId if undefined then check all blocks
      */
   ensureFeatureLimits(blockId) {
-    let store = this.get('apiEndpoints').id2Store(blockId);
+    let store = this.get('apiServers').id2Store(blockId);
     if (true) {
       /** If blockId is undefined then request limits for all blocks. */
       let blocksLimitsTasks = this.getBlocksLimits(blockId);
@@ -674,13 +674,13 @@ export default Service.extend(Ember.Evented, {
 
   /** @return promise of block records */
   blockValues: Ember.computed(
-    'apiEndpoints.endpointsLength',  // effectively endpoints.@each.
-    'apiEndpoints.endpoints.@each.datasetsBlocks',
-    // effectively endpoints.@each.datasetsBlocks, which can't work because endpoints is a hash not an array.
-    'apiEndpoints.datasetsBlocksRefresh',
+    'apiServers.serversLength',  // effectively servers.@each.
+    'apiServers.servers.@each.datasetsBlocks',
+    // effectively servers.@each.datasetsBlocks, which can't work because servers is a hash not an array.
+    'apiServers.datasetsBlocksRefresh',
     function() {
       let
-        stores = this.get('apiEndpoints.stores'),
+        stores = this.get('apiServers.stores'),
       records;
 
       if (stores.length === 1)
@@ -963,7 +963,7 @@ export default Service.extend(Ember.Evented, {
          * The blocks and datasets are already loaded.
          */
         let
-          store = this.get('apiEndpoints').id2Store(f.block.id),
+          store = this.get('apiServers').id2Store(f.block.id),
         block = store.peekRecord('block', f.block.id);
         if (f.blockId !== f.block.id) {
           dLog(fnName, f.blockId, '!==', f.block.id);

@@ -1,6 +1,6 @@
 {{!-- tagName is li --}}
-<a data-toggle="tab" href={{concat "#tab-" apiEndpoint.tabId}}
-   {{action (action endpointTabSelected apiEndpoint.tabId apiEndpointName apiEndpoint) }}
+<a data-toggle="tab" href={{concat "#tab-" apiServer.tabId}}
+   {{action (action serverTabSelected apiServer.tabId apiServerName apiServer) }}
 >
-  {{apiEndpoint.tabText}}
+  {{apiServer.tabText}}
 </a>

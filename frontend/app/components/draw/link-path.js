@@ -42,13 +42,13 @@ export default Ember.Component.extend(Ember.Evented, {
     console.log('willInsertElement', options, byReference);
 
     let blockService = this.get('blockService'),
-    blocksSameEndpoint = blockService.get('blocksSameEndpoint');
+    blocksSameServer = blockService.get('blocksSameServer');
     let stackEvents = this.get('stackEvents');
     if (options && options.allInitially)
     stackEvents.on('expose', this, function (blockA, blockB) {
-      if (! blocksSameEndpoint.apply(blockService, [blockA, blockB]))
+      if (! blocksSameServer.apply(blockService, [blockA, blockB]))
       {
-        console.log('blocksSameEndpoint', blockA, blockB);
+        console.log('blocksSameServer', blockA, blockB);
         return;
       }
       if (trace_links > 1)

@@ -6,12 +6,12 @@ export default Component.extend({
   tagName : 'li',
 
   didRender : function() {
-    let endpoint = this.get('apiEndpoint'),
-    firstTab = endpoint.get('firstTab');
+    let server = this.get('apiServer'),
+    firstTab = server.get('firstTab');
     if (firstTab)
     {
-      console.log('didRender', firstTab, this, endpoint.name);
-      endpoint.set('firstTab', false);
+      console.log('didRender', firstTab, this, server.name);
+      server.set('firstTab', false);
       this.addClassActive();
     }
   },

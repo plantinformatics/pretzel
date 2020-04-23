@@ -17,7 +17,7 @@ let config = {
   block: service('data/block'),
   queryParamsService: service('query-params'),
   auth: service('auth'),
-  apiEndpoints: service('api-endpoints'),
+  apiServers: service(),
 
   titleToken: 'MapView',
   queryParams: {
@@ -96,16 +96,16 @@ let config = {
     {
     let datasetService = this.get('dataset');
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
-      /** this will pass endpoint undefined, and
-       * services/data/dataset:taskGetList() will use primaryEndpoint. */
+      /** this will pass server undefined, and
+       * services/data/dataset:taskGetList() will use primaryServer. */
       datasetsTask = taskGetList.perform(); // renamed from 'maps'
     }
     else
     {
-      let apiEndpoints = this.get('apiEndpoints'),
-      primaryEndpoint = apiEndpoints.get('primaryEndpoint');
+      let apiServers = this.get('apiServers'),
+      primaryServer = apiServers.get('primaryServer');
       datasetsTask = 
-        primaryEndpoint.getDatasets();
+        primaryServer.getDatasets();
     }
 
     // this.controllerFor(this.fullRouteName).setViewedOnly(params.mapsToView, true);
@@ -113,7 +113,7 @@ let config = {
     let blocksLimitsTask = this.get('blocksLimitsTask');
     dLog('blocksLimitsTask', blocksLimitsTask);
     if (! blocksLimitsTask || ! blocksLimitsTask.get('isRunning')) {
-      blocksLimitsTask = blockService.getBlocksLimits(undefined, {endpoint: 'primary'});
+      blocksLimitsTask = blockService.getBlocksLimits(undefined, {server: 'primary'});
       this.set('blocksLimitsTask', blocksLimitsTask);
     }
     let allInitially = params.parsedOptions && params.parsedOptions.allInitially;
@@ -140,9 +140,9 @@ let config = {
       params.mapsToView.reduce(function (result, blockId) {
         /** same as controllers/mapview.js:blockFromId(), maybe factor to a mixin. */
         let
-          id2Endpoint = this.get('apiEndpoints.id2Endpoint'),
-        endpoint = id2Endpoint[blockId],
-        store = endpoint.store,
+          id2Server = this.get('apiServers.id2Server'),
+        server = id2Server[blockId],
+        store = server.store,
         block = store.peekRecord('block', blockId);
         let referenceBlock = block && block.get('referenceBlock');
         if (referenceBlock)
