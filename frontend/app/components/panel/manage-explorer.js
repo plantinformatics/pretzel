@@ -76,6 +76,8 @@ export default ManageBase.extend({
     this.get('refreshDatasets')();
   },
 
+  /** used by dataEmpty. */
+  datasets : Ember.computed.readOnly('datasetsBlocks'),
   /** Datasets passed in from MapView, but still need fetching on MatrixView
    * MatrixView dataset retrieval should be raised to route model / controller in future
    * At that time, 'mapviewDatasets' can be renamed to 'datasets'
