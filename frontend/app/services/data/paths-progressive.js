@@ -624,7 +624,7 @@ export default Service.extend({
   requestBlockFeaturesInterval(blockA) {
     /** used in trace */
     const apiName = 'blockFeaturesInterval';
-    let store = this.get('store');
+    let store = this.get('apiServers').id2Store(blockA);
 
     let me = this;
     let flowsService = this.get('flowsService');

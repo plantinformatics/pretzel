@@ -51,7 +51,6 @@ export default ManageBase.extend({
       window.alert('initRecursionCount : ' + initRecursionCount);
     }
 
-    let store = this.get('store');
     let me = this;
     this.get('apiServers').on('receivedDatasets', function (datasets) { console.log('receivedDatasets', datasets); me.send('receivedDatasets', datasets); });
   },
