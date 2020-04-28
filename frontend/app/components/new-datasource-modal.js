@@ -1,3 +1,5 @@
+import Ember from 'ember';
+
 // import ModalDialog from './modal-dialog'
 const { inject: { service }, Component } = Ember;
 

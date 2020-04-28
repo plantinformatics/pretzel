@@ -1421,6 +1421,19 @@ div.metaeditor-panel div.jsoneditor {
 }
 
 /* -------------------------------------------------------------------------- */
+#new-datasource-modal .labelled-inputs {
+  display: grid;
+  /* 2nd column uses remainder. */
+  grid-template-columns: 7em;
+  font-size: larger;
+  row-gap: 2ex;
+}
+.labelled-inputs div.input-label {
+  grid-column : 1;
+}
+.labelled-inputs input {
+  grid-column : 2;
+}
 #new-datasource-modal input {
   width: 100%;
 }
