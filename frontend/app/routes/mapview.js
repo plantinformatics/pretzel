@@ -140,9 +140,7 @@ let config = {
       params.mapsToView.reduce(function (result, blockId) {
         /** same as controllers/mapview.js:blockFromId(), maybe factor to a mixin. */
         let
-          id2Server = this.get('apiServers.id2Server'),
-        server = id2Server[blockId],
-        store = server.store,
+          store = me.get('apiServers').id2Store(blockId),
         block = store.peekRecord('block', blockId);
         let referenceBlock = block && block.get('referenceBlock');
         if (referenceBlock)

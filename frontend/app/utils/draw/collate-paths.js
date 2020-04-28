@@ -14,7 +14,13 @@ import { breakPoint } from '../breakPoint';
 /* global require */
 /*global d3 */
 
+/* as an interim measure, use frontend path collation to join blocks on
+ * different servers, if &options=pathsCheck.
+ */
+const collatePaths4Multi = true;
+
 const dLog = console.debug;
+
 
 /*----------------------------------------------------------------------------*/
 /* created from functions split out of draw-map.js (commit 5db9073). */
@@ -309,6 +315,7 @@ function collateFeatureClasses(featureScaffold)
 
 
 /**             is feature f1  in an alias group of a feature f0  in axis0  ?
+ * (name is from 'marker in Marker Alias Group' - can rename ma(rker) to f(eature)).
  * @return   the matching aliased feature f0  if only 1
  */
 function maInMaAG(axis0, axis1, f1 )
@@ -389,8 +396,14 @@ function collateStacks1()
     // Cross-product of the two adjacent stacks
     for (let a0i=0; a0i < fAxis_s0.length; a0i++) {
       let a0 = fAxis_s0[a0i], za0 = a0.z, a0Name = a0.axisName;
+      let a0Server = flowsService.id2ServerGet(a0Name);
+
       for (let a1i=0; a1i < fAxis_s1.length; a1i++) {
         let a1 = fAxis_s1[a1i], za1 = a1.z || /* mask error in stack.childAxisNames(true) */ oa.z[a1.axisName];
+        let a1Server = flowsService.id2ServerGet(a1.axisName);
+        if (collatePaths4Multi && a0Server === a1Server)
+          dLog(a0Name, a1.axisName, 'both on', a0Server.host);
+        else
         d3.keys(za0).forEach(function(feature0) {
           if (! isOtherField[feature0])
           {
@@ -603,6 +616,20 @@ function collateStacksA()
     {
       let za = oa.z[axisName];
       let adjs = adjAxes[axisName];
+
+      if (collatePaths4Multi && adjs && adjs.length) {
+        let a0Server = flowsService.id2ServerGet(axisName);
+        /* filter out of adjs[] those on the same server as axisName;
+         * that adjacency is handled by backend paths request. */
+        adjs = adjs.filter((blockId) => {
+          let a1Server = flowsService.id2ServerGet(blockId),
+          sameServer = a0Server === a1Server;
+          if (sameServer)
+            dLog(axisName, blockId, 'both on', a0Server.host);
+          return ! sameServer;
+        });
+      }
+
       if (adjs && adjs.length
           &&
           (adjs = adjs.filter(function(axisName1) {

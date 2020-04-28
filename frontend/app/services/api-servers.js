@@ -150,6 +150,12 @@ export default Service.extend(Ember.Evented, {
     map.set(id, server);
     return id;
   },
+  id2ServerGet(blockId) {
+    let
+      id2Server = this.get('id2Server'),
+    server = id2Server[blockId];
+    return server;
+  },
   id2Store : function(blockId) {
     let
       id2Server = this.get('id2Server'),
