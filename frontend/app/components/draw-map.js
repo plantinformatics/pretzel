@@ -2039,7 +2039,8 @@ export default Ember.Component.extend(Ember.Evented, {
         .attr("class", flowName)
         .classed("hidden", flowHidden)
         .each(function (flow, i, g) {
-          flow.g = d3.select(this);
+          /** separate attributes g and .gf, the latter for paths collated in frontend */
+          flow.gf = d3.select(this);
         })
       ;
     }
@@ -4701,8 +4702,9 @@ export default Ember.Component.extend(Ember.Evented, {
       tracedAxisScale = {};  // re-enable trace, @see trace_scale_y
       /** flow.g may not be rendered yet; could use an empty selection in place
        * of flow.g, but flow.g is used several times here. */
-      if (! flow.g) return;
-      let g = flow.g ? flow.g.selectAll("g") :  d3.selectAll();
+      let flow_g = flow.gf;
+      if (! flow_g) return;
+      let g = flow_g ? flow_g.selectAll("g") :  d3.selectAll();
       let gn;
       /* if (unique_1_1_mapping)
        {*/
@@ -4741,9 +4743,9 @@ export default Ember.Component.extend(Ember.Evented, {
         if (trace_path)
           console.log(flow.name, gn.size(), gn);
         // pa = gn.append("path");
-        // log_path_data(flow.g);
-        let p2 = flow.g.selectAll("g").selectAll("path").data(path);
-        // log_path_data(flow.g);
+        // log_path_data(flow_g);
+        let p2 = flow_g.selectAll("g").selectAll("path").data(path);
+        // log_path_data(flow_g);
         // pa = g.selectAll("path").data(path)
         pa = p2.enter().append("path");
         let p2x = p2.exit();
@@ -4821,13 +4823,13 @@ export default Ember.Component.extend(Ember.Evented, {
          * even where the datum is the same, the axes may have moved.
          * So update all paths.
          */
-        let t1= (t === undefined) ? oa.foreground.select(" g." + flow.name)  : flow.g.transition(t),
+        let t1= (t === undefined) ? oa.foreground.select(" g." + flow.name)  : flow_g.transition(t),
         p1 = t1.selectAll("g > path"); // pa
         p1.attr("d", pathDataIsLine ? I : path_);
         if (trace_path > 3)
         {
           console.log(t1.nodes(), t1.node(), p1.nodes(), p1.node());
-          log_path_data(flow.g);
+          log_path_data(flow_g);
         }
         setupMouseHover(pa);
       }
@@ -4836,7 +4838,7 @@ export default Ember.Component.extend(Ember.Evented, {
         if (t === undefined) {t = d3; }
         t.selectAll(".foreground > g." + flow.name + "> g > path").attr("d", function(d) { return d; });
         setupMouseHover(
-          flow.g.selectAll("g > path")
+          flow_g.selectAll("g > path")
         );
       }
       pathColourUpdate(pa, flow);
@@ -5209,7 +5211,7 @@ export default Ember.Component.extend(Ember.Evented, {
       }
       // could limit this to axes for which dataBlocks has changed
       axisShowExtendAll();
-      // pathUpdate() uses flow.g, which is set after oa.foreground.
+      // pathUpdate() uses flow.gf, which is set after oa.foreground.
       if (oa.foreground && ysLength())
       {
         pathUpdate(t);

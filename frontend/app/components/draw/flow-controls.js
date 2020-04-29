@@ -111,9 +111,10 @@ export default Ember.Component.extend({
       console.log(b1.nodes(), b1.node(), flow.visible);
       b1.classed("selected", flow.visible);
     }
-    console.log('showVisible', flow, flow.g.node());
+    console.log('showVisible', flow, flow.g.node(), flow.g.node());
     // updateSelections_flowControls();
     flow.g.classed("hidden", ! flow.visible);
+    flow.gf.classed("hidden", ! flow.visible);
   }
   
 
