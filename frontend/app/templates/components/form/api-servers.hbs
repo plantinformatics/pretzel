@@ -1,7 +1,21 @@
 {{#elem/panel-container state="primary"}}
+
   {{#elem/panel-heading icon="globe"}}
     Datasources
+
+    {{#unless showList }}
+    <span class="pull-right">
+      {{elem/button-base
+        classSize='xs'
+        classColour='success'
+        icon='plus'
+        onClick=(action "addNewDatasource")}}
+    </span>
+    {{/unless}}
+
   {{/elem/panel-heading}}
+
+  {{#if showList}}
   <ul class="list-group">
     {{#each-in servers as |apiServerName apiServer| }}
       <li class="list-group-item list-group-item-info">
@@ -21,6 +35,8 @@
       </span>
     </li>
   </ul>
+  {{/if}}
+
 {{/elem/panel-container}}
 
 
