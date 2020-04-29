@@ -3,15 +3,12 @@
   {{#elem/panel-heading icon="globe"}}
     Datasources
 
-    {{#unless showList }}
     <span class="pull-right">
-      {{elem/button-base
-        classSize='xs'
-        classColour='success'
-        icon='plus'
-        onClick=(action "addNewDatasource")}}
+      {{x-toggle
+        theme='light'
+        value=showList
+        onToggle=(action (mut showList)) }}
     </span>
-    {{/unless}}
 
   {{/elem/panel-heading}}
 

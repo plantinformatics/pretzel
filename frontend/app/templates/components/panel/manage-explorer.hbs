@@ -41,10 +41,17 @@
     </div>
   {{/if}}
   <div>
-    <ul class="nav nav-tabs">
+    <ul class="nav nav-tabs" style="margin-bottom: 1ex;">
       {{#each-in servers as |apiServerName apiServer| }}
         {{panel/api-server-tab apiServerName=apiServerName apiServer=apiServer serverTabSelected=(action "serverTabSelected")}}
       {{/each-in}}
+      <li class="pull-right" style="margin: 9px;">
+        {{elem/button-base
+          classSize='xs'
+          classColour='success'
+          icon='plus'
+          onClick=(action "addNewDatasource")}}
+      </li>
     </ul>
 
     <ul class="nav nav-tabs li-active-extra counts">
