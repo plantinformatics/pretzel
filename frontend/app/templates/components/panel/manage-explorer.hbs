@@ -41,6 +41,12 @@
     </div>
   {{/if}}
   <div>
+    <ul class="nav nav-tabs">
+      {{#each-in servers as |apiServerName apiServer| }}
+        {{panel/api-server-tab apiServerName=apiServerName apiServer=apiServer serverTabSelected=(action "serverTabSelected")}}
+      {{/each-in}}
+    </ul>
+
     <ul class="nav nav-tabs li-active-extra counts">
 
       {{#unless enable_parentBeforeFilter}}
@@ -151,11 +157,6 @@
 
 	<ul class="list-group borderless">
 
-          <ul class="nav nav-tabs">
-            {{#each-in servers as |apiServerName apiServer| }}
-              {{panel/api-server-tab apiServerName=apiServerName apiServer=apiServer serverTabSelected=(action "serverTabSelected")}}
-            {{/each-in}}
-          </ul>
           {{!-- For server-specific content selected by the above tab : add a
              <div class="tab-content"> with each-in as above, and :
              <div id={{concat "tab-" apiServer.tabId}} class="tab-pane fade"> ... </div>
