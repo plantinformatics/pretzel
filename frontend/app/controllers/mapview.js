@@ -267,8 +267,9 @@ export default Ember.Controller.extend(Ember.Evented, {
   /** same as services/data/block @see peekBlock()
    */
   blockFromId : function(blockId) {
-    let store = this.get('store'),
-    block = store.peekRecord('block', blockId);
+    let 
+      store = this.get('apiServers').id2Store(blockId),
+    block = store && store.peekRecord('block', blockId);
     return block;
   },
 
