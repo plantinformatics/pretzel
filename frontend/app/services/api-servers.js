@@ -135,7 +135,7 @@ export default Service.extend(Ember.Evented, {
     return server;
     },
 
-  /** Lookup an server by its API host URL.
+  /** Lookup a server by its API host URL.
    * @param host  may be raw URL, or result of ApiServer.host_safe().
    * @return undefined if host is undefined
    */
@@ -143,6 +143,25 @@ export default Service.extend(Ember.Evented, {
     let name = host && removePunctuation(host);
     let server = name && this.get('servers').get(name);
     return server;
+  },
+  /** Lookup a server by its api-server.name (equiv store.name).
+   * @param name
+   * @return undefined if name is not in .servers
+   */
+  lookupServerName : function(name) {
+    let server = name && this.get('servers').get(name);
+    return server;
+  },
+  /** Lookup a server by its api-server.name (equiv store.name).
+   * and return an integer [0 .. nServers-1]
+   * @param name
+   * @return -1 if name is not in .servers
+   */
+  lookupServerNameIndex : function(name) {
+    let servers = this.get('servers'),
+    nameList = Object.keys(servers),
+    index = nameList.indexOf(name);
+    return index;
   },
 
   addId : function(server, id) {

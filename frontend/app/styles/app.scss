@@ -503,6 +503,11 @@ body.allInitially
   text-anchor: end;
 }
 
+.axis-outer > .axis-all > g.servers > circle /*.server*/ {
+    r : 5;
+    /* stroke : green; */
+    stroke-width : 4;
+}
 
 /* -------------------------------------------------------------------------- */
 #grid {
@@ -853,6 +858,9 @@ li.filter-group > div > span:last-child {
 
 /* dataset explorer : tree browser */
 
+#left-panel-explorer a.apiServer {
+    border : 2.5px solid;
+}
 #tab-explorer-parent  ul {
   /* there is enough indent in the li, so 0 is enough here. */
   -webkit-padding-start: 0px;

@@ -1,5 +1,7 @@
 {{!-- tagName is li --}}
 <a data-toggle="tab" href={{concat "#tab-" apiServer.tabId}}
+   class="apiServer"
+   style={{borderStyle}}
    {{action (action serverTabSelected apiServer.tabId apiServerName apiServer) }}
 >
   {{apiServer.tabText}}

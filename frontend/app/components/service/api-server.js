@@ -5,6 +5,17 @@ import { breakPoint } from '../../utils/breakPoint';
 
 const { Component } = Ember;
 
+/* global d3 */
+
+/*----------------------------------------------------------------------------*/
+
+/* d3.schemeDark2
+*/
+let apiServers_colour_scale =
+  d3.scaleSequential().domain([0,4]).interpolator(d3.interpolateRainbow);
+// or d3.scaleOrdinal().range(d3.schemeCategory10)
+
+
 /*----------------------------------------------------------------------------*/
 
 
@@ -14,6 +25,7 @@ function removePunctuation(text) {
   return text && text.replace(/[^A-Za-z0-9]/g, '_');
 };
 
+/*----------------------------------------------------------------------------*/
 
 /** ApiServer (components/service/api-server)
  *
@@ -69,6 +81,22 @@ export default Ember.Object.extend({
     let host = this.get('host');
     return host && host.replace(/^https?:\/\//, '');
   }),
+
+  /** A consistent colour is used to denote each api-server.
+   * This is used as a border around the api-server tab in manage-explorer,
+   * and for the circle beside the block in the axis title (axisTitleBlocksServers.js).
+   */
+  colour : Ember.computed('name', function () {
+    /** .name is used as the store name (refn : api-servers.js : addServer() : {,un}registerStore())
+     * So it is also possible to use e.g. block.store.name to lookup apiServers_colour_scale();
+     * for scaleOrdinal this.get('name') is used directly;
+     * for scaleSequential, .lookupServerNameIndex() is used to map that to an integer
+     */
+    let index = this.get('apiServers').lookupServerNameIndex(this.get('name'));
+    return apiServers_colour_scale(index);
+  }),
+
+
 
   /** value is an array of datasets, including blocks, returned from the api host. */
   datasetsBlocks : undefined,

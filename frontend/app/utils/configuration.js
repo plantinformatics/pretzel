@@ -22,7 +22,7 @@ function getConfiguredEnvironment(thisObject)
 };
 
 /**
- * @param thisObject  Ember.Object, used to get owner, for registration
+ * @param thisObject  Ember.Object, used to get owner, for .lookup().
  */
 function getSiteOrigin(thisObject)
 {
@@ -36,7 +36,23 @@ function getSiteOrigin(thisObject)
 };
 /*----------------------------------------------------------------------------*/
 
+/**
+ * @param thisObject  Ember.Object, used to get owner, for .lookup().
+ * @param serviceName name to lookup, e.g. "service:store" or "service:api-server"
+ */
+function lookupService(thisObject, serviceName)
+{
+  /** based on getSiteOrigin() */
+  let
+    service = Ember.getOwner(thisObject).lookup(serviceName);
+  return service;
+};
+
+
+/*----------------------------------------------------------------------------*/
+
 export {
   getConfiguredEnvironment,
-  getSiteOrigin
+  getSiteOrigin,
+  lookupService
 };

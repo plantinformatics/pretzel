@@ -25,6 +25,7 @@ import { eltWidthResizable, eltResizeToAvailableWidth, noShiftKeyfilter, eltClas
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
 import { Viewport } from '../utils/draw/viewport';
 import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
+import { AxisTitleBlocksServers } from '../utils/draw/axisTitleBlocksServers';
 import { brushClip } from '../utils/draw/axisBrush';
 
 import {  Axes, maybeFlip, maybeFlipExtent,
@@ -2608,6 +2609,7 @@ export default Ember.Component.extend(Ember.Evented, {
      * Configure a hover menu for each <tspan>, either axis (parent) or subtitle (data block).
      *
      * @param axisTitleS  d3 selection of the <text> within g.axis-all
+     * In usage, axisTitleS is a selection of either a single axis, or all axes.
      */
     function axisTitleFamily(axisTitleS) {
       axisTitleS
@@ -2625,17 +2627,16 @@ export default Ember.Component.extend(Ember.Evented, {
           }
         })
       ;
+
       let subTitleS =
-    axisTitleS.selectAll("tspan")
+    axisTitleS.selectAll("tspan.blockTitle")
       /** @return type Block[]. blocks of axisName.
        * first block is parent, remainder are data (non-reference) */
-        .data(function (axisName) {
-          let axis = Stacked.getAxis(axisName);
-          // equiv : axis.children(true, false)
-          return axis.blocks; }, (block) => block.getId()),
+        .data(axisName2Blocks, (block) => block.getId()),
       subTitleE = subTitleS
       .enter()
-      .append("tspan");
+      .append("tspan")
+      .attr('class', 'blockTitle');
       subTitleS.exit().remove();
       subTitleE.merge(subTitleS)
         .text(function (block) { return block.titleText(); })
@@ -2651,7 +2652,16 @@ export default Ember.Component.extend(Ember.Evented, {
             : configureAxisSubTitleMenu;
           menuFn.apply(this, arguments);
         });
+
+      axisTitleS.call(AxisTitleBlocksServers.prototype.render, oa.svgContainer, oa.axisTitleLayout, me);
     };
+
+    function axisName2Blocks (axisName) {
+      let axis = Stacked.getAxis(axisName);
+      // equiv : axis.children(true, false)
+      return axis.blocks;
+    }
+
 
     function updateAxisTitles()
     {
@@ -2694,7 +2704,6 @@ export default Ember.Component.extend(Ember.Evented, {
       oa.axisTitleLayout.calc(axisSpacing, titlePx);
 
 
-
       // applied to all axes consistently, not just appended axis.
       // Update elements' class and transform when verticalTitle changes value.
 
@@ -2707,10 +2716,13 @@ export default Ember.Component.extend(Ember.Evented, {
         .style("text-anchor", oa.axisTitleLayout.verticalTitle ? "start" : undefined)
         .attr("transform", yAxisTitleTransform(oa.axisTitleLayout));
 
+      let t =
       oa.svgRoot
         .transition().duration(dragTransitionTime)
         .attr("viewBox", oa.vc.viewBox.bind(oa.vc))
       ;
+
+      t.on('end', () => AxisTitleBlocksServers.prototype.position(axisTitleS, oa.svgContainer, oa.axisTitleLayout));
     }
     updateAxisTitleSize(axisG.merge(axisS));
 
