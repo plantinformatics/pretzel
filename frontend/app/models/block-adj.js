@@ -343,12 +343,12 @@ export default DS.Model.extend(Ember.Evented, {
     }
     return pathsFiltered;
   },
-  pathsResultFiltered : Ember.computed('blocks', 'pathsResult.[]', function () {
+  pathsResultFiltered : Ember.computed('blocks', 'pathsResult.[]', 'zoomedDomains.@each.{0,1}', function () {
     let
     pathsFiltered = this.filterPathsResult('pathsResult');
     return pathsFiltered;
   }),
-  pathsAliasesResultFiltered : Ember.computed('pathsAliasesResult.[]', function () {
+  pathsAliasesResultFiltered : Ember.computed('pathsAliasesResult.[]', 'zoomedDomains.@each.{0,1}', function () {
     let
     pathsFiltered = this.filterPathsResult('pathsAliasesResult');
     return pathsFiltered;
