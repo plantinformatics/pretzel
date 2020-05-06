@@ -503,10 +503,11 @@ body.allInitially
   text-anchor: end;
 }
 
-.axis-outer > .axis-all > g.servers > circle /*.server*/ {
-    r : 5;
-    /* stroke : green; */
-    stroke-width : 4;
+body:not(.multipleServers) tspan.blockServer {
+    display : none;
+}
+tspan.blockServer {
+    font-size : 2em;
 }
 
 /* -------------------------------------------------------------------------- */

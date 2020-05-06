@@ -3,6 +3,7 @@ import Ember from 'ember';
 const { inject: { service }, Component } = Ember;
 
 /* global $ */
+/* global d3 */
 
 /*----------------------------------------------------------------------------*/
 
@@ -30,6 +31,14 @@ export default Component.extend({
     }
   },
 
-  servers : Ember.computed.alias('apiServers.servers')
+  servers : Ember.computed.alias('apiServers.servers'),
+
+  /** Provide class .multipleServers on <body> to enable tspan.blockServer to be
+   * hidden when there is only 1 server.
+   */
+  multipleServersEffect : Ember.computed('apiServers.serversLength', function () {
+    d3.select('body')
+      .classed('multipleServers', this.get('apiServers.serversLength') > 1);
+  })
 
 });
