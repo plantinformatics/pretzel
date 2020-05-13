@@ -243,6 +243,12 @@ path.track.element.utr {
 path.track.element.intron {
   fill : none;
 }
+rect.track.element.CDS {
+  fill: yellow;
+}
+rect.track.element.exon {
+  fill: green;
+}
 .pasteData {
   overflow: hidden;
   word-wrap: inherit;
