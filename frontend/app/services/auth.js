@@ -1,6 +1,6 @@
 import Ember from 'ember';
-
 const { inject: { service }, Service, isEmpty } = Ember;
+import config from '../config/environment';
 
 import { isObject, cloneDeepWith, isUndefined } from 'lodash/lang';
 import { omitBy, extendWith } from 'lodash/object';
@@ -31,23 +31,90 @@ const requestServerAttr = 'session.requestServer';
 export default Service.extend({
   session: service('session'),
   apiServers : service(),
+  user: null,
 
-  changePassword(data) {
-    return this._ajax('Clients/change-password', 'POST', JSON.stringify(data), true)
+  /** 
+   * Configure our auth0 instance
+   */
+  auth0: Ember.computed(function() {
+    return new auth0.WebAuth({
+      domain: config.auth0.domain,
+      clientID: config.auth0.clientId, 
+      redirectUri: config.auth0.callbackUrl,
+      responseType: 'token',
+      scope: 'openid email profile', // profile includes username, given_name, etc
+    });
+  }),
+
+  /**
+   * login sends a user over to the hosted auth0 login page
+   */
+  login() {
+    this.get('auth0').authorize();
   },
 
-  resetPassword(data, token) {
-    return this._ajax('Clients/reset-password', 'POST', JSON.stringify(data), token)
+  /**
+   * Get rid of everything in sessionStorage that identifies this user
+   */
+  logout() {
+    this.get('auth0').logout({
+      clientID: config.auth0.clientId,
+      returnTo: config.auth0.logOutUrl,
+    });
+    this.setUser(null);
   },
 
-  resetRequest(data) {
-    console.log('resetRequest')
-    return this._ajax('Clients/reset', 'POST', JSON.stringify(data), false)
+  /**
+   * setUser sets profile info from token to user record
+   */
+  setUser(token) {
+    console.log('auth setuser', token);
+    if (!token) {
+      this.set('user', null);
+    } else {
+      this.get('auth0').client.userInfo(token, (err, profile) => {
+        console.log('auth setuser userInfo', err, profile);
+        if (err || !profile) {
+          this.set('user', null);
+        } else {
+          this.set('user', profile);
+        }
+      });
+    }
   },
 
-  signupRequest(data) {
-    console.log('signupRequest')
-    return this._ajax('Clients/', 'POST', JSON.stringify(data), false)
+  /**
+   * handleAuthentication runs post authentication
+   * to parse the hash and store user info
+   * @return a promise
+   */
+  handleAuthentication() {
+    return new Promise((resolve, reject) => {
+      this.get('auth0').parseHash((err, authResult) => {
+        console.log('auth handleAuthentication', err, authResult);
+        if (!err && authResult && authResult.accessToken) {
+          this.setUser(authResult.accessToken);
+          return resolve();
+        } else {
+          this.setUser(null);
+          return reject(err); // TODO Might need additonal behaviour?
+        }
+      });
+    });
+  },
+
+  /**
+   * checkLogin Checks if authenticated using the auth0 library's checkSession
+   * checkSession returns an access token, if already authed, which is then set to session's user
+   */
+  checkLogin() {
+    this.get('auth0').checkSession({}, (err, authResult) => {
+      console.log('auth checkLogin', err, authResult);
+      if (!err && authResult && authResult.accessToken) {
+        console.log('auth checkLogin', authResult.accessToken);
+        this.setUser(authResult.accessToken);
+      }
+    });
   },
 
   runtimeConfig() {
@@ -406,6 +473,5 @@ export default Service.extend({
       '?access_token=' + this._accessToken(server);
     return url;
   }
-
 
 });

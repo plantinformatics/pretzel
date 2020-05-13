@@ -1,8 +1,17 @@
 import Ember from 'ember';
-import OAuth2ImplicitGrantCallbackRouteMixin from 'ember-simple-auth/mixins/oauth2-implicit-grant-callback-route-mixin';
+const {
+  inject: { service },
+  Route,
+} = Ember;
 
-const { Route } = Ember;
-
-export default Route.extend(OAuth2ImplicitGrantCallbackRouteMixin, {
-  authenticator: 'authenticator:oauth2-implicit-grant'
+export default Route.extend({
+  auth: service('auth'),
+  beforeModel() {
+    // check if we are authenticated
+    // parse the url hash that comes back from auth0
+    // if authenticated on login, redirect to mapview
+    this.get('auth')
+      .handleAuthentication()
+      .then(() => this.transitionTo('/mapview'));
+  },
 });

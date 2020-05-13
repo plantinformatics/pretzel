@@ -1,17 +1,17 @@
 import Ember from 'ember';
-import config from '../config/environment';
-
-const { Controller } = Ember;
+const {
+  inject: { service },
+  Controller,
+} = Ember;
 
 import { parseOptions } from '../utils/common/strings';
 
 const dLog = console.debug;
 
 export default Controller.extend({
-  actions: {
-    transitionToLoginRoute() {
-      this.transitionToRoute('login');
-    }
+  auth: service(),
+  init() {
+    this._super(...arguments);
   },
 
   /** usage e.g. ?appOptions=individual
@@ -24,14 +24,12 @@ export default Controller.extend({
    * "... cannot have more than one controller property map to the same query
    * param key."
    */
-  queryParams: [{options : {as : 'appOptions'}}],
+  queryParams: [{ options: { as: 'appOptions' } }],
 
-  parsedOptions : Ember.computed('options', function () {
+  parsedOptions: Ember.computed('options', function() {
     let options = this.get('options'),
-    parsedOptions = options && parseOptions(options);
+      parsedOptions = options && parseOptions(options);
     dLog('parsedOptions', options);
     return parsedOptions;
-  })
-
+  }),
 });
-

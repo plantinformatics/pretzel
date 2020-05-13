@@ -66,6 +66,7 @@ module.exports = function(defaults) {
   app.import('bower_components/bootstrap/fonts/glyphicons-halflings-regular.woff2', {
     destDir: 'fonts'
   });
+  app.import('node_modules/auth0-js/build/auth0.js');
 
   return app.toTree();
 };

@@ -59,6 +59,7 @@
   },
   "private": true,
   "dependencies": {
+    "auth0-js": "^9.13.2",
     "colresizable": "^1.6.0",
     "ember-array-helper": ">=0",
     "ember-cli-htmlbars": "^2.0.3",

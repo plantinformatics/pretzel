@@ -5,26 +5,19 @@
         <li>
           {{elem/logo-pretzel id="logo"}}
         </li>
-        {{#if auth}}
-          {{#if session.isAuthenticated}}
-            <li>
-              {{#link-to 'mapview' classNames='' tagName='a'}}
-                Map Viewer
+        {{#if auth.user}}
+          <li>
+            {{#link-to 'mapview' classNames='' tagName='a'}}
+              Map Viewer
+            {{/link-to}}
+          </li>
+          <li>
+            {{#if parsedOptions.individual}}
+              {{#link-to 'matrixview' classNames='' tagName='a'}}
+                Individual Viewer
               {{/link-to}}
-            </li>
-            <li>
-              {{#if parsedOptions.individual}}
-                {{#link-to 'matrixview' classNames='' tagName='a'}}
-                  Individual Viewer
-                {{/link-to}}
-              {{/if}}
-            </li>
-            <li>
-              {{#link-to 'change-password' classNames='' tagName='a'}}
-                Change Password {{elem/icon-base name="user"}}
-              {{/link-to}}
-            </li> 
-          {{/if}}
+            {{/if}}
+          </li> 
         {{else}}
           <li>
             {{#link-to 'mapview' classNames='' tagName='a'}}
@@ -39,31 +32,24 @@
             v{{version }} released {{buildDateFormatted}} View on GitHub
           </a>
         </li>
-        {{#if auth}}
-          {{#if session.isAuthenticated}}
-            <li>
-	      {{!-- bootstrap reboot.scss now sets color color: inherit; for an
-		   <a> without attributes href or tabindex, so add a dummy
-		   tabindex to retain the default <a> colour. --}}
-              <a {{action 'logout'}} class="" tabindex>
-                Logout {{elem/icon-base name="log-out"}}
-              </a>
-            </li>
-            {{#if sessionAccount.account}}
-              <p class="navbar-text pull-right">Signed in as {{sessionAccount.account.name}}</p>
-            {{/if}}
-          {{else}}
-            <li>
-              {{#link-to 'signup' classNames='' tagName='a'}}
-                Sign Up {{elem/icon-base name="edit"}}
-              {{/link-to}}
-            </li>
-            <li>
-              {{#link-to 'login' classNames='' tagName='a'}}
-                Log In {{elem/icon-base name="log-in"}}
-              {{/link-to}}
-            </li>
-          {{/if}}
+        {{#if auth.user}}
+          <li>
+        {{!-- bootstrap reboot.scss now sets color color: inherit; for an
+       <a> without attributes href or tabindex, so add a dummy
+       tabindex to retain the default <a> colour. --}}
+            <p class="navbar-text pull-right">Signed in as {{auth.user.name}}</p>
+          </li>
+          <li>
+            <a {{action 'logout'}} class="" tabindex>
+              Logout {{elem/icon-base name="log-out"}}
+            </a>
+          </li>
+        {{else}}
+          <li>
+            <a {{action 'login'}} class="" tabindex>
+              Log In {{elem/icon-base name="log-in"}}
+            </a>
+          </li>
         {{/if}}
       </ul>
     </div>

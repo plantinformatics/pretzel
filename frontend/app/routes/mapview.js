@@ -1,5 +1,4 @@
 import Ember from 'ember';
-import AuthenticatedRouteMixin from 'ember-simple-auth/mixins/authenticated-route-mixin';
 
 const { RSVP: { Promise } } = Ember;
 const { Route } = Ember;
@@ -18,8 +17,20 @@ let config = {
   queryParamsService: service('query-params'),
   auth: service('auth'),
   apiServers: service(),
-
   titleToken: 'MapView',
+
+  /**
+   * Check if authenticated (computed value). If not, redirect off route
+   */
+ beforeModel() {
+    if (!this.get('auth').user) {
+      console.log('auth mapviewBeforeModel user', false);
+      this.transitionTo('/');
+    }else{
+      console.log('auth mapviewBeforeModel user', this.get('auth').user);
+    }
+  },
+
   queryParams: {
     mapsToView: {
       // The initial architecture (up until feature/render-promises) was for changes in the URL mapsToView query parameter to trigger
@@ -177,13 +188,8 @@ let config = {
     Ember.$('body').toggleClass("mapview");
   }
 
-
 };
 
-var args = [config]
-
-if (window['AUTH'] !== 'NONE') {
-  args.unshift(AuthenticatedRouteMixin);
-}
+var args = [config];
 
 export default Ember.Route.extend(...args);

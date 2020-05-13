@@ -21,19 +21,14 @@ module.exports = function(environment) {
       },
       EXTEND_PROTOTYPES: {
         // Prevent Ember Data from overriding Date.parse.
-        Date: false
-      }, 
-    },
-    'ember-simple-auth': {
-        authenticationRoute: 'login',
-        routeAfterAuthentication: 'mapview',
-        routeIfAlreadyAuthenticated: 'mapview'
+        Date: false,
+      },
     },
 
     APP: {
       // Here you can pass flags/options to your application instance
       // when it is created
-    }
+    },
   };
 
   if (environment === 'development') {
@@ -58,6 +53,18 @@ module.exports = function(environment) {
   if (environment === 'production') {
     ENV.apiHost = '';
   }
+
+  /** Auth0 configuration
+   * ClientID and domain are obtained from Auth0 dashboard for application
+   */
+  ENV.auth0 = {
+    clientId: process.env.AUTH0_CLIENTID || 'mpMRCCydvSor9VD1MsxdnoKUSb3Rn1u7',
+    domain: process.env.AUTH0_DOMAIN || 'pretzel-agribio.au.auth0.com',
+    callbackUrl:
+      process.env.AUTH0_CALLBACK_URL || 'http://localhost:4200/callback',
+    logOutUrl: process.env.AUTH0_LOGOUT_URL || 'http://localhost:4200',
+  };
+
   /** If handsOnTableLicenseKey is defined in the environment of npm / ember,
    * HandsOnTable is used for the spreadsheet-style tables in :
    *  components/panel/paths-table.js
@@ -75,7 +82,6 @@ module.exports = function(environment) {
    * https://handsontable.com/docs/7.4.2/tutorial-license-key.html
    */
   ENV.handsOnTableLicenseKey = process.env.handsOnTableLicenseKey;
-
 
   return ENV;
 };
