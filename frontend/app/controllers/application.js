@@ -1,13 +1,14 @@
 import Ember from 'ember';
 import config from '../config/environment';
 
-const { Controller } = Ember;
+const { inject: { service }, Controller } = Ember;
 
 import { parseOptions } from '../utils/common/strings';
 
 const dLog = console.debug;
 
 export default Controller.extend({
+  auth: service(),
   actions: {
     transitionToLoginRoute() {
       this.transitionToRoute('login');

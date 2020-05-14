@@ -5,6 +5,8 @@ import config from './config/environment';
 
 let App;
 
+window.global = window;
+
 App = Ember.Application.extend({
   modulePrefix: config.modulePrefix,
   podModulePrefix: config.podModulePrefix,

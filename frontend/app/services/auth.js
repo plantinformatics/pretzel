@@ -32,6 +32,25 @@ export default Service.extend({
   session: service('session'),
   apiServers : service(),
 
+  login () {
+    // options at auth0.com/docs/libraries/auth0js/v9#webauth-authorize-
+    const authOptions = {
+      responseType: 'token',
+      scope: 'openid email profile',
+    };
+    this.get('session').authenticate(
+      'authenticator:auth0-universal',
+      authOptions,
+      (err, result) => {
+        console.log('auth session.authenticate', err, result);
+      }
+    );
+  },
+
+  logout () {
+    this.get('session').invalidate();
+  },
+
   changePassword(data) {
     return this._ajax('Clients/change-password', 'POST', JSON.stringify(data), true)
   },
