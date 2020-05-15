@@ -509,6 +509,12 @@ body.allInitially
   text-anchor: end;
 }
 
+body:not(.multipleServers) tspan.blockServer {
+    display : none;
+}
+tspan.blockServer {
+    font-size : 2em;
+}
 
 /* -------------------------------------------------------------------------- */
 #grid {
@@ -859,6 +865,9 @@ li.filter-group > div > span:last-child {
 
 /* dataset explorer : tree browser */
 
+#left-panel-explorer a.apiServer {
+    border : 2.5px solid;
+}
 #tab-explorer-parent  ul {
   /* there is enough indent in the li, so 0 is enough here. */
   -webkit-padding-start: 0px;
@@ -1427,3 +1436,41 @@ div.metaeditor-panel div.jsoneditor {
 }
 
 /* -------------------------------------------------------------------------- */
+#new-datasource-modal .labelled-inputs {
+  display: grid;
+  /* 2nd column uses remainder. */
+  grid-template-columns: 7em;
+  font-size: larger;
+  row-gap: 2ex;
+}
+.labelled-inputs div.input-label {
+  grid-column : 1;
+}
+.labelled-inputs input {
+  grid-column : 2;
+}
+#new-datasource-modal input {
+  width: 100%;
+}
+/* Copied from the app's panel colours (bootstrap). */
+.modal-header {
+  background-color: #337ab7;
+  border-color: #337ab7;
+  color: #fff;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+}
+.modal-body {
+  background-color : #d9edf7;
+}
+.modal-footer {
+  background-color : lightblue;
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+/* Currently only applied to .modal-header, but this can be applied to all
+ * span.glyphicon in synchrony with removing &nbsp; after each {{elem/icon-base ... }} */
+.modal-header
+span.glyphicon {
+    margin-right: 1em;
+}

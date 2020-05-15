@@ -32,6 +32,7 @@ export default Ember.Component.extend(Ember.Evented, {
     return options;
   }),
 
+
   willInsertElement() {
     if (trace_links)
       console.log('components/draw/link-path willInsertElement');
@@ -40,9 +41,16 @@ export default Ember.Component.extend(Ember.Evented, {
     byReference = options && options.byReference;
     console.log('willInsertElement', options, byReference);
 
+    let blockService = this.get('blockService'),
+    blocksSameServer = blockService.get('blocksSameServer');
     let stackEvents = this.get('stackEvents');
     if (options && options.allInitially)
     stackEvents.on('expose', this, function (blockA, blockB) {
+      if (! blocksSameServer.apply(blockService, [blockA, blockB]))
+      {
+        console.log('blocksSameServer', blockA, blockB);
+        return;
+      }
       if (trace_links > 1)
         console.log('path expose', blockA, blockB);
       this.request(blockA, blockB);

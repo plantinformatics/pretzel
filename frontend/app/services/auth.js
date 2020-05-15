@@ -26,8 +26,11 @@ function omitUndefined(value) {
 
 /*----------------------------------------------------------------------------*/
 
+const requestServerAttr = 'session.requestServer';
+
 export default Service.extend({
   session: service('session'),
+  apiServers : service(),
 
   changePassword(data) {
     return this._ajax('Clients/change-password', 'POST', JSON.stringify(data), true)
@@ -61,6 +64,7 @@ export default Service.extend({
   },
 
   getBlocks() {
+    console.log('getBlocks');
     return this._ajax('Datasets', 'GET', {'filter[include]': 'blocks'}, true)
   },
 
@@ -84,8 +88,8 @@ export default Service.extend({
     const filteredIntervalParams = omitUndefined(intervals);
     let
       route= 'Blocks/pathsViaStream',
-    url = this._endpoint(route) +
-      '?access_token=' + this._accessToken() + 
+    data = {blockA, blockB},
+    url = this._endpointURLToken(data, route) + 
       '&blockA=' + blockA +
       '&blockB=' + blockB + '&' +
       Ember.$.param({intervals : filteredIntervalParams});
@@ -196,8 +200,8 @@ export default Service.extend({
     const filteredIntervalParams = omitUndefined(intervals);
     let
       route= 'Blocks/pathsAliasesViaStream',
-    url = this._endpoint(route) +
-      '?access_token=' + this._accessToken() + 
+    data = {blockIds},
+    url = this._endpointURLToken(data, route) + 
       '&blockIds[]=' + blockIds[0] +
       '&blockIds[]=' + blockIds[1] + '&' +
       Ember.$.param({intervals : filteredIntervalParams});
@@ -294,10 +298,11 @@ export default Service.extend({
    * onProgress is a callback accepting (percentComplete, data_direction)
    */
   _ajax(route, method, data, token, onProgress) {
-    let endpoint = this._endpoint(route) 
+    let server = this._server(data),
+     url = this._endpoint(server, route);
 
     let config = {
-      url: endpoint,
+      url,
       type: method,
       crossDomain: true,
       headers: {},
@@ -306,8 +311,9 @@ export default Service.extend({
 
     if (data) config.data = data
 
+    console.log('_ajax', arguments, this);
     if (token === true) {
-      let accessToken = this._accessToken()
+      let accessToken = this._accessToken(server);
       config.headers.Authorization = accessToken
     } else if (Ember.typeOf(token) == 'string') {
       config.headers.Authorization = token
@@ -346,17 +352,60 @@ export default Service.extend({
     return Ember.$.ajax(config)
   },
 
-  _accessToken() {
-    let accessToken;
+  _accessToken(server) {
+    let
+    accessToken = server && server.token;
+    if (! accessToken)
     this.get('session').authorize('authorizer:application', (headerName, headerValue) => {
       accessToken = headerValue;
     });
+    console.log('_accessToken', server, accessToken);
     return accessToken
   },
-  _endpoint(route) {
+  /** Determine which server to send the request to.
+   * @param data  params to the API; these guide the server determination;
+   * e.g. if the param is block: <blockId>, use the server from which blockId was loaded.
+   */
+  _server(data) {
+    let requestServer;
+    if (data.server === 'primary') {
+      requestServer = this.get('apiServers.primaryServer');
+    } else {
+      let
+        blockId = data.block || (data.blocks && data.blocks[0]) || (data.blockIds && data.blockIds[0]) || data.blockA || data.blockA,
+      blockServer = blockId && this.get('apiServers.id2Server')[blockId];
+      requestServer = blockServer || this.get(requestServerAttr);
+      dLog(blockId, 'blockServer', blockServer);
+    }
+    return requestServer;
+  },
+  /** construct the URL / URI for the given server and route.
+   * @param requestServer determined by @see _server()
+   * @param route path of the route, i.e the path after /api/
+   */
+  _endpoint(requestServer, route) {
+  let
+    apiHost =  requestServer && requestServer.host;
     let config = Ember.getOwner(this).resolveRegistration('config:environment')
-    let endpoint = config.apiHost + '/' + config.apiNamespace + '/' + route
+    let endpoint = (apiHost || config.apiHost) + '/' + config.apiNamespace + '/' + route
+    dLog('_endpoint', requestServer, apiHost, endpoint, config);
     return endpoint
+  },
+  /** Same as _endpoint() plus append '?access_token=' + access token.
+   * So the following query params are separated with & instead of ?
+   * Used in getPathsViaStream(), getPathsAliasesViaStream() to construct a URL
+   * for listenEvents() ... EventSource().
+   *
+   * Some discussion of how to avoid putting access_token in the URL as a query-param :
+   * https://stackoverflow.com/questions/28176933/http-authorization-header-in-eventsource-server-sent-events
+   * https://github.com/whatwg/html/issues/2177#issuecomment-487194160
+   */
+  _endpointURLToken(data, route) {
+    let server = this._server(data),
+    url = this._endpoint(server, route) +
+      '?access_token=' + this._accessToken(server);
+    return url;
   }
+
 
 });

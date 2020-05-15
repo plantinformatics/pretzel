@@ -1,4 +1,6 @@
 import Ember from "ember";
+import { inject as service } from '@ember/service';
+
 import DS from 'ember-data';
 
 import { computed } from '@ember/object';
@@ -40,6 +42,7 @@ const selectorExplorer = 'div#left-panel-explorer';
 
 
 export default ManageBase.extend({
+  apiServers: service(),
 
   init() {
     this._super();
@@ -47,6 +50,9 @@ export default ManageBase.extend({
       debugger;
       window.alert('initRecursionCount : ' + initRecursionCount);
     }
+
+    let me = this;
+    this.get('apiServers').on('receivedDatasets', function (datasets) { console.log('receivedDatasets', datasets); me.send('receivedDatasets', datasets); });
   },
 
   urlOptions : Ember.computed('model.params.options', function () {
@@ -69,11 +75,13 @@ export default ManageBase.extend({
     this.get('refreshDatasets')();
   },
 
+  /** used by dataEmpty. */
+  datasets : Ember.computed.readOnly('datasetsBlocks'),
   /** Datasets passed in from MapView, but still need fetching on MatrixView
    * MatrixView dataset retrieval should be raised to route model / controller in future
    * At that time, 'mapviewDatasets' can be renamed to 'datasets'
    * and this whole computed element may be removed */
-  datasets : Ember.computed('mapviewDatasets', 'view', function () {
+  x_datasets : Ember.computed('mapviewDatasets', 'view', function () {
     let view = this.get('view');
     if (view === 'mapview') {
       return this.get('mapviewDatasets');
@@ -122,8 +130,50 @@ export default ManageBase.extend({
   /** Filter / Group patterns.  initially 0 elements. */
   filterGroups : Ember.A(), // [{}]
   filterGroupsChangeCounter : 0,
-  dataPre: Ember.computed('datasets', 'datasets.[]', 'filter', function() {
-    let availableMaps = this.get('datasets')
+  //----------------------------------------------------------------------------
+
+  /** Return a list of datasets, with their included blocks, for the currently-selected
+   * API server tab
+   */
+  datasetsBlocks : Ember.computed('datasetsBlocksRefresh', 'serverTabSelected', 'primaryDatasets', function() {
+    /** e.g. "http___localhost_5000"  */
+    let
+      name = this.get('serverTabSelected'),
+    serverSo = name &&
+      this.get('apiServers').lookupServer(name),
+    datasetsBlocks = serverSo && serverSo.get("datasetsBlocks");
+    if (datasetsBlocks && trace_dataTree > 1)
+    {
+      dLog('datasetsBlocks', serverSo, datasetsBlocks);
+    }
+    let isPrimary = serverSo && (this.get('apiServers').get('primaryServer') === serverSo);
+    if (! name || (! datasetsBlocks && isPrimary))
+    {
+      /* this is using the model datasets list for the primary API.
+       * Perhaps instead will change mapview to use apiServers service.
+       */
+      datasetsBlocks = this.get('primaryDatasets');
+      dLog('datasetsBlocks()  using primaryDatasets', datasetsBlocks);
+    }
+
+    return datasetsBlocks;
+  }),
+
+  datasetsBlocksRefresh : 0,
+  // datasets: [],
+
+  servers : Ember.computed.alias('apiServers.servers'),
+
+  data: Ember.computed('filteredData', function() {
+    let
+    filteredData = this.get('filteredData'),
+    combined = filteredData;
+    console.log('data', filteredData);
+    return combined;
+  }),
+  //----------------------------------------------------------------------------
+  dataPre: Ember.computed('datasetsBlocks', 'datasetsBlocks.[]', 'filter', function() {
+    let availableMaps = this.get('datasetsBlocks') || Ember.RSVP.resolve([]);
     let filter = this.get('filter')
     dLog('dataPre', availableMaps, filter);
     // perform filtering according to selectedChr
@@ -222,12 +272,20 @@ export default ManageBase.extend({
     /** the same calculation as withParent -> child1 -> parents, starting from
      * dataPre instead of data
      */
-    let parentsNotFG = this.get('dataPre')
+    let dataPre = this.get('dataPre'),
+    parentsNotFG = dataPre.then ?
+      dataPre.then((a) => uniqParentsByName(a)) :
+      uniqParentsByName(dataPre);
+
+    function uniqParentsByName(array) {
+      return array
     /* withParent : */ .filter(function(dataset, index, array) {
       return dataset.get('parent.content');
     })
     /* child1 :*/ .uniqBy('parent.name')
     /* parents :*/ .mapBy('parent');
+    }
+
     return parentsNotFG;
   }),
   /** meta.types of parents(). */
@@ -251,7 +309,12 @@ export default ManageBase.extend({
       else
         console.log('parentsTypes : parents', parents);
     }
-    let promise = this.get('parentsNotFG').filterBy('meta.type').uniqBy('meta.type').mapBy('meta.type');
+    let
+      parentsNotFG = this.get('parentsNotFG'),
+    promise = parentsNotFG.then ? parentsNotFG.then(parentsByType) :
+      Ember.RSVP.resolve(parentsByType(parentsNotFG));
+   function parentsByType(parents) {
+     return parents.filterBy('meta.type').uniqBy('meta.type').mapBy('meta.type'); }
     if (trace_dataTree > 5) {
       console.log('parents', this.get('parents'), 'parentsTypes', promise);
       console.log('withParent :', this.get('withParent'), this.get('child1'), this.get('parents'));
@@ -396,15 +459,19 @@ export default ManageBase.extend({
   addParentAndScopeLevelsPromise : function (valueName) {
     let datasetGroupsP = this.get(valueName),
     me = this,
-    parentsTypes = me.get('parentsTypes'),
-    promise = datasetGroupsP.then(addParentAndScopeLevels);
+    parentsTypes = me.get('parentsTypes');
+    if (! parentsTypes.then)
+      parentsTypes = Ember.RSVP.resolve(parentsTypes);
+    let
+      promise = Ember.RSVP.all([datasetGroupsP, parentsTypes]).then(
+        (dp) => addParentAndScopeLevels(dp[0], dp[1]));
     dLog('parentsTypes', parentsTypes);
     /** Given datasets grouped into tabs, add a grouping level for the parent of the datasets,
      * and a level for the scope of the blocks of the datasets.
      * (for those tabs for which it is enabled - e.g. children)
      * @param datasetGroups is grouped by dataset.meta.type tabs
      */
-    function addParentAndScopeLevels(datasetGroups) {
+    function addParentAndScopeLevels(datasetGroups, parentsTypes) {
       if (trace_dataTree)
         dLog('datasetGroups', datasetGroups);
       let
@@ -475,12 +542,16 @@ export default ManageBase.extend({
     function() {
       let datasetsP = this.get('dataPre');
       let me = this,
-      promise = datasetsP.then(function (datasets) {
+      promise = datasetsP.then ?
+        datasetsP.then((d) => typeDatasets(d)) :
+        Ember.RSVP.resolve(typeDatasets(datasetsP));
+      function typeDatasets (datasets) {
         datasets = datasets.toArray();
         let dataTyped = {};
         let parents = me.get('parents')
           .map(function (p) { return p.content || p; });
-        dLog('parents', me.get('parents'), parents);
+        if (trace_dataTree > 1)
+          dLog('parents', me.get('parents'), parents);
         for (let i=0; i < datasets.length; i++) {
           let d = datasets[i],
           typeName = d.get('meta.type');
@@ -537,7 +608,8 @@ export default ManageBase.extend({
         setType('unrelated', 'Datasets');
 
         return dataTyped;
-      }),
+      };
+      let
       promiseP = DS.PromiseObject.create({ promise: promise });
       return  promiseP;
     }),
@@ -932,7 +1004,8 @@ export default ManageBase.extend({
           else {
             blocks = filterBlocks(dataset);
           }
-          dLog(name, levelMeta, 'levelMeta.set(', blocks, 'Blocks');
+          if (trace_dataTree > 1)
+            dLog(name, levelMeta, 'levelMeta.set(', blocks, 'Blocks');
           levelMeta.set(blocks, 'Blocks');
           result2[name] = blocks;
           return result2;
@@ -1006,7 +1079,25 @@ export default ManageBase.extend({
     return scopes;
   },
 
+  //----------------------------------------------------------------------------
   actions: {
+
+    /** Show the new-datasource-modal, enabling the user to add a new api server.
+     * This action is also available within form/api-servers.js (addNewDatasource() is identical).
+     */
+    addNewDatasource() {
+      $('#new-datasource-modal').modal('show');
+    },
+
+    serverTabSelected(tabId, apiServerName, apiServer) {
+      console.log('serverTabSelected', tabId, apiServerName, apiServer);
+      this.set('serverTabSelected', apiServerName);
+    },
+    receivedDatasets(datasetsHandle, blockValues) {
+      console.log('receivedDatasets', datasetsHandle, blockValues);
+      this.incrementProperty('datasetsBlocksRefresh');
+    },
+
     /** invoked from hbs via {{compute (action "datasetTypeTabId" datasetType ) }}
      * @return string suitable for naming a html tab, based on datasetType name.
      */
@@ -1051,6 +1142,7 @@ export default ManageBase.extend({
       this.sendAction('loadBlock', block);
     }
   },
+  //----------------------------------------------------------------------------
 
   /** If a tab is active (selected), save its id.  */
   willRender () {
@@ -1105,5 +1197,6 @@ export default ManageBase.extend({
     console.log('willDestroyElement', this);
     this._super(...arguments);
   }
+  //----------------------------------------------------------------------------
 
 });

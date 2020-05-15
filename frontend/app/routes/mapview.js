@@ -17,6 +17,7 @@ let config = {
   block: service('data/block'),
   queryParamsService: service('query-params'),
   auth: service('auth'),
+  apiServers: service(),
 
   titleToken: 'MapView',
   queryParams: {
@@ -90,16 +91,29 @@ let config = {
 
     this.getHoTLicenseKey();
 
+    let datasetsTask;
+    if (true)
+    {
     let datasetService = this.get('dataset');
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
-    let datasetsTask = taskGetList.perform(); // renamed from 'maps'
+      /** this will pass server undefined, and
+       * services/data/dataset:taskGetList() will use primaryServer. */
+      datasetsTask = taskGetList.perform(); // renamed from 'maps'
+    }
+    else
+    {
+      let apiServers = this.get('apiServers'),
+      primaryServer = apiServers.get('primaryServer');
+      datasetsTask = 
+        primaryServer.getDatasets();
+    }
 
     // this.controllerFor(this.fullRouteName).setViewedOnly(params.mapsToView, true);
 
     let blocksLimitsTask = this.get('blocksLimitsTask');
     dLog('blocksLimitsTask', blocksLimitsTask);
     if (! blocksLimitsTask || ! blocksLimitsTask.get('isRunning')) {
-      blocksLimitsTask = blockService.getBlocksLimits(undefined);
+      blocksLimitsTask = blockService.getBlocksLimits(undefined, {server: 'primary'});
       this.set('blocksLimitsTask', blocksLimitsTask);
     }
     let allInitially = params.parsedOptions && params.parsedOptions.allInitially;
@@ -125,7 +139,8 @@ let config = {
       let referenceBlocks =
       params.mapsToView.reduce(function (result, blockId) {
         /** same as controllers/mapview.js:blockFromId(), maybe factor to a mixin. */
-        let store = me.get('store'),
+        let
+          store = me.get('apiServers').id2Store(blockId),
         block = store.peekRecord('block', blockId);
         let referenceBlock = block && block.get('referenceBlock');
         if (referenceBlock)
@@ -133,7 +148,7 @@ let config = {
         return result;}, []),
       referenceBlockIds = referenceBlocks.map(function (block) { return block.get('id'); });
       if (referenceBlockIds.length) {
-        dLog('referenceBlockIds', referenceBlockIds);
+        dLog('referenceBlockIds adding', referenceBlockIds);
         blockService.setViewed(referenceBlockIds, true);
       }
       /* currently getBlocksSummary() just gets the featureCount, which for a

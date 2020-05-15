@@ -835,7 +835,7 @@ Stacked.prototype.keyFunction = function (axisID)
   return axisID;
 };
 /** Text used in axis title, for each of the blocks (parent / reference and child / data blocks).
- * This is the text shown in the <tspan>
+ * This is the text shown in the <tspan.blockTitle>
  */
 Block.prototype.titleText = function ()
 {
@@ -891,7 +891,7 @@ Block.prototype.axisTitleColour = function ()
 /** Use Block:axisTitleColour(), which uses axis.js:axisTitleColour().
  *
  * static; signature matches that required by d3 (this is element, args are (datum,index,group)).
- * @param block (g.axis-all > text > tspan) or blockId (g.axis-use > g.tracks)
+ * @param block (g.axis-all > text > tspan.blockTitle) or blockId (g.axis-use > g.tracks)
  */
 Block.axisTitleColour = function (block)
 {

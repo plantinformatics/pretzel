@@ -20,6 +20,7 @@ export default DS.Model.extend(Ember.Evented, {
   pathsPro : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
   blocksService : service('data/block'),
+  apiServers: service(),
 
 
   /** id is blockAdjId[0] + '_' + blockAdjId[1], as per.  serializers/block-adj.js : extractId()
@@ -47,8 +48,8 @@ export default DS.Model.extend(Ember.Evented, {
    */
   peekBlock(blockId)
   {
-    let store = this.get('store'),
-    block = store.peekRecord('block', blockId);
+    let
+    block = this.get('blocksService').peekBlock(blockId);
     return block;
   },
 
@@ -224,9 +225,22 @@ export default DS.Model.extend(Ember.Evented, {
   pathsRequest : Ember.computed('pathsRequestCount', function () {
     let pathsRequestCount = this.get('pathsRequestCount');
 
-    let blockAdjId = this.get('blockAdjId');
-    dLog('pathsRequestCount', pathsRequestCount, blockAdjId);
-    let p = this.call_taskGetPaths();
+    let blockAdjId = this.get('blockAdjId'),
+      id2Server = this.get('apiServers.id2Server'),
+    servers = blockAdjId.map((blockId) => id2Server[blockId]),
+    sameServer = servers[0] === servers[1];
+    // uncomment these 2 conditions after testing on dev.
+    // if (trace_blockAdj)
+      dLog('pathsRequestCount', pathsRequestCount, blockAdjId, servers.mapBy('host'), sameServer);
+    let p;
+    if (! sameServer) {
+      // if (trace_blockAdj)
+        dLog('pathsRequest() different servers');
+      p = Ember.RSVP.resolve([]); // will replace the promise return anyway.
+    }
+    else {
+      p = this.call_taskGetPaths();
+    }
 
     return p;
   }),
@@ -329,12 +343,12 @@ export default DS.Model.extend(Ember.Evented, {
     }
     return pathsFiltered;
   },
-  pathsResultFiltered : Ember.computed('blocks', 'pathsResult.[]', function () {
+  pathsResultFiltered : Ember.computed('blocks', 'pathsResult.[]', 'zoomedDomains.@each.{0,1}', function () {
     let
     pathsFiltered = this.filterPathsResult('pathsResult');
     return pathsFiltered;
   }),
-  pathsAliasesResultFiltered : Ember.computed('pathsAliasesResult.[]', function () {
+  pathsAliasesResultFiltered : Ember.computed('pathsAliasesResult.[]', 'zoomedDomains.@each.{0,1}', function () {
     let
     pathsFiltered = this.filterPathsResult('pathsAliasesResult');
     return pathsFiltered;

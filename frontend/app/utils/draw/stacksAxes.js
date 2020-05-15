@@ -47,7 +47,7 @@ function stacksAxesDomLog(svgContainer = undefined) {
   ga = go ?
     go.selectAll('g > g.axis-all') :
     d3.selectAll('g.axis-all'),
-  t = ga.selectAll('g > text > tspan'),
+  t = ga.selectAll('g > text > tspan.blockTitle'),
   tg = t._groups.map((g) => Array.from(g));
   dLog('stacksAxesDomLog',  t.data(),   t.nodes(), t.node());
   tg.forEach((tgi) => {

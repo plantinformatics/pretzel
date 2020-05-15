@@ -25,10 +25,14 @@ function valueOrLength(value) { return (trace_block > 1) ? value : value.length;
 
 /*----------------------------------------------------------------------------*/
 
+const trace = 1;
+
 export default DS.Model.extend({
   pathsP : service('data/paths-progressive'), // for getBlockFeaturesInterval()
   blockService : service('data/block'),
   auth: service('auth'),
+  apiServers: service(),
+
 
   datasetId: DS.belongsTo('dataset'),
   annotations: DS.hasMany('annotation', { async: false }),
@@ -318,7 +322,8 @@ export default DS.Model.extend({
       dLog('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent && parent.get('id'));
     if (parent)
     {
-      referenceBlock = this.get('store').peekAll('block')
+      let store = this.get('apiServers').id2Store(this.get('id'));
+      referenceBlock = store.peekAll('block')
         .filter(function (b) {
           let scope2 = b.get('scope'),
           dataset2 = b.get('datasetId'),
@@ -329,8 +334,8 @@ export default DS.Model.extend({
            * by name, although .datasetId may be replaced by name - currently
            * being considered.
            */
-          match = (parentName == dataset2.get('name')) && (scope2 == scope);
-          if ((parentName == dataset2.get('name')) || (dataset2 === parent))
+          match = parentName && (parentName == dataset2.get('name')) && (scope2 == scope);
+          if ((trace > 1) && (parentName == dataset2.get('name')) || (dataset2 === parent))
           {
             if (trace_block)
               dLog(dataset2.get('name'), scope2, match);
