@@ -30,6 +30,8 @@ const requestServerAttr = 'session.requestServer';
 
 export default Service.extend({
   session: service('session'),
+  /** added just for trace - we can drop this. */
+  auth0: service(),
   apiServers : service(),
 
   login () {
@@ -38,13 +40,27 @@ export default Service.extend({
       responseType: 'token',
       scope: 'openid email profile',
     };
+    let auth0 = this.get('auth0');
+    console.log('login auth0', auth0, this);
+    let authenticateP =
     this.get('session').authenticate(
-      'authenticator:auth0-universal',
+      // 'authenticator:auth0-universal',
+      'authenticator:auth0-lock',
       authOptions,
       (err, result) => {
         console.log('auth session.authenticate', err, result);
       }
     );
+    console.log('login auth0 after authenticate', auth0, this, authenticateP);
+    // normally the page will redirect so the .then will not be reached.
+    authenticateP
+      .then((a, b) => {
+        console.log("auth0 login authenticate then", a, b, this);
+      })
+      .catch((a, b) => {
+        console.log("auth0 login authenticate catch", a, b, this);
+      });
+
   },
 
   logout () {

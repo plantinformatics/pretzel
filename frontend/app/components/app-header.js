@@ -5,6 +5,8 @@ import config from '../config/environment';
 const { inject: { service }, Component } = Ember;
 
 export default Component.extend({
+  /** used for session.isAuthenticated in .hbs. */
+  session:        service('session'),
   auth: service('auth'),
   config: config,
 

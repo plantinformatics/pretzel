@@ -11,7 +11,9 @@ const dLog = console.debug;
 export default Service.extend(Ember.Evented, {
     auth: service('auth'),
   apiServers: service(),
-  primaryServer : Ember.computed.alias('apiServers.primaryServer'),
+  primaryServer : Ember.computed('apiServers.primaryServer', 'apiServers.serversLength', function() {
+    return this.get('apiServers.primaryServer');
+  }),
 
   storeManager: Ember.inject.service('multi-store'),
 
@@ -33,6 +35,11 @@ export default Service.extend(Ember.Evented, {
      * in or perhaps formalise this to an if (server) structure; sort that in
      * next commit. */
     _unused2 = server || (server = primaryServer),
+    datasets;
+    if (! server) {
+      datasets = [];
+    } else {
+      let
     store = server.store,
     trace_promise = false,
 
@@ -47,7 +54,6 @@ export default Service.extend(Ember.Evented, {
     dP = store.query('dataset', adapterOptions);
     if (trace_promise)
       dP.then(function (d) { console.log(d, d.toArray()[0].get('blocks').toArray());});
-    let
     datasets = yield dP;
 
     if (false && server && server.host)
@@ -83,6 +89,7 @@ export default Service.extend(Ember.Evented, {
     datasets = datasets.toArray();
     console.log('taskGetList', this, datasets.length);
     this.trigger('receivedDatasets', datasets);
+    }
     return datasets;
   }).drop(),
 
@@ -121,11 +128,11 @@ export default Service.extend(Ember.Evented, {
   ,
 
   /** @return dataset records */
-  values: Ember.computed(function() {
+  values: Ember.computed('primaryServer', 'apiServers.serversLength', function() {
     let 
     server = this.get('primaryServer'),
-    store = server.store,
-    records = store.peekAll('dataset');
+    store = server && server.store,
+    records = store && store.peekAll('dataset');
     console.log('values', records);
     return records;
   })
