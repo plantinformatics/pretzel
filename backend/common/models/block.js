@@ -8,6 +8,7 @@ var blockFeatures = require('../utilities/block-features');
 var pathsAggr = require('../utilities/paths-aggr');
 var pathsFilter = require('../utilities/paths-filter');
 var pathsStream = require('../utilities/paths-stream');
+var { localiseBlocks } = require('../utilities/localise-blocks');
 
 var ObjectId = require('mongodb').ObjectID
 
@@ -26,7 +27,13 @@ const { Writable, pipeline, Readable } = require('stream');
 /** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
 const SSE_EventID_EOF = -1;
 
-const trace_block = 1;
+/** For the paths* functions the params blockA,B may be references to different api servers;
+ * in which case the blockId is augmented with host and token.  To handle this variation,
+ * the remoteMethod() param type is given 'any' instead of 'string' which is used for blockId.
+ */
+const blockRemoteType = 'any';
+
+const trace_block = 2;
 
 class SseWritable extends Writable {
   // this class is based on a comment by Daniel Aprahamian in https://jira.mongodb.org/browse/NODE-1408
@@ -53,6 +60,15 @@ class SseWritable extends Writable {
 
 module.exports = function(Block) {
 
+  /** This is the original paths api, prior to progressive-loading, i.e. it
+   * returns all paths in a single response.
+   *
+   * The alternatives defined later allow narrowing the scope of paths, by
+   * interval and density / count, and the option of sending the response via
+   * SSE - streaming.
+   * @see pathsProgressive(), pathsViaStream(), 
+   * pathsAliasesProgressive(), pathsAliasesViaStream()
+   */
   Block.paths = function(left, right, withDirect = true, options, res, cb) {
     task.paths(this.app.models, left, right, withDirect, options)
     .then(function(data) {
@@ -77,7 +93,9 @@ module.exports = function(Block) {
    * @param blockId1
    */
   Block.pathsProgressive = function(left, right, intervals, options, res, cb) {
-      let db = this.dataSource.connector;
+    localiseBlocks(this.app.models, [left, right], intervals)
+      .then(([left, right]) => {
+    let db = this.dataSource.connector;
     console.log('pathsProgressive', /*db,*/ left, right, intervals /*, options, cb*/);
     let cacheId = left + '_' + right,
     /** If intervals.dbPathFilter, we could append the location filter to cacheId,
@@ -113,6 +131,7 @@ module.exports = function(Block) {
           cb(err);
         });
     }
+      });
   };
 
 
@@ -681,8 +700,8 @@ Block.blockNamespace = async function(blockIds) {
 
   Block.remoteMethod('pathsProgressive', {
     accepts: [
-      {arg: 'blockA', type: 'string', required: true},
-      {arg: 'blockB', type: 'string', required: true},
+      {arg: 'blockA', type: blockRemoteType, required: true},
+      {arg: 'blockB', type: blockRemoteType, required: true},
       {arg: 'intervals', type: 'object', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},
@@ -694,8 +713,8 @@ Block.blockNamespace = async function(blockIds) {
 
   Block.remoteMethod('pathsByReference', {
     accepts: [
-      {arg: 'blockA', type: 'string', required: true},
-      {arg: 'blockB', type: 'string', required: true},
+      {arg: 'blockA', type: blockRemoteType, required: true},
+      {arg: 'blockB', type: blockRemoteType, required: true},
       {arg: 'reference', type: 'string', required: true},
       {arg: 'max_distance', type: 'number', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
@@ -707,8 +726,8 @@ Block.blockNamespace = async function(blockIds) {
 
   Block.remoteMethod('pathsViaStream', {
     accepts: [
-      {arg: 'blockA', type: 'string', required: true},
-      {arg: 'blockB', type: 'string', required: true},
+      {arg: 'blockA', type: blockRemoteType, required: true},
+      {arg: 'blockB', type: blockRemoteType, required: true},
       {arg: 'intervals', type: 'object', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'req', type: 'object', 'http': {source: 'req'}},
@@ -764,6 +783,7 @@ Block.blockNamespace = async function(blockIds) {
 
   Block.remoteMethod('syntenies', {
     accepts: [
+      // blockRemoteType is relevant here also; would require corresponding change in server function.
       {arg: '0', type: 'string', required: true}, // block reference
       {arg: '1', type: 'string', required: true}, // block reference
       {arg: 'threshold-size', type: 'string', required: false}, // block reference

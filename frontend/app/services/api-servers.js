@@ -175,6 +175,15 @@ export default Service.extend(Ember.Evented, {
     server = id2Server[blockId];
     return server;
   },
+  id2RemoteRefn(blockId) {
+    let
+      id2Server = this.get('id2Server'),
+    server = id2Server[blockId],
+    isPrimary = server === this.get('primaryServer'),
+    remote = isPrimary ? blockId : {blockId, host : server.host, token : server.token};
+      // or encode as text ? : blockId + '@' + server.host + '#' + server.token;
+    return remote;
+  },
   id2Store : function(blockId) {
     let
       id2Server = this.get('id2Server'),

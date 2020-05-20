@@ -233,7 +233,7 @@ export default DS.Model.extend(Ember.Evented, {
     // if (trace_blockAdj)
       dLog('pathsRequestCount', pathsRequestCount, blockAdjId, servers.mapBy('host'), sameServer);
     let p;
-    if (! sameServer) {
+    if (false && ! sameServer) {
       // if (trace_blockAdj)
         dLog('pathsRequest() different servers');
       p = Ember.RSVP.resolve([]); // will replace the promise return anyway.
@@ -438,7 +438,7 @@ export default DS.Model.extend(Ember.Evented, {
         paths = this.get('pathsPro').getPathsProgressive(this, blockAdjId, taskInstance);
       paths.then(
         function (result) {
-          dLog('block-adj paths', result.length, me.get('pathsResult' + trace_suffix), id, me);
+          dLog('block-adj paths', result && result.length, me.get('pathsResult' + trace_suffix), id, me);
         }, function (err) {
           dLog('block-adj paths reject', err);
         }
@@ -494,7 +494,7 @@ export default DS.Model.extend(Ember.Evented, {
     }
 
     return result;
-  }).drop() // maxConcurrency(2).restartable() // 
+  })// .drop() // maxConcurrency(2).restartable() // 
 
 
   /*--------------------------------------------------------------------------*/

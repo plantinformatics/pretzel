@@ -90,9 +90,8 @@ export default Service.extend({
       route= 'Blocks/pathsViaStream',
     data = {blockA, blockB},
     url = this._endpointURLToken(data, route) + 
-      '&blockA=' + blockA +
-      '&blockB=' + blockB + '&' +
-      Ember.$.param({intervals : filteredIntervalParams});
+      '&' +
+      Ember.$.param({blockA, blockB, intervals : filteredIntervalParams});
     if (trace_paths)
       dLog(url, blockA, blockB, intervals, filteredIntervalParams, options);
 
@@ -202,9 +201,8 @@ export default Service.extend({
       route= 'Blocks/pathsAliasesViaStream',
     data = {blockIds},
     url = this._endpointURLToken(data, route) + 
-      '&blockIds[]=' + blockIds[0] +
-      '&blockIds[]=' + blockIds[1] + '&' +
-      Ember.$.param({intervals : filteredIntervalParams});
+      '&' +
+      Ember.$.param({blockIds, intervals : filteredIntervalParams});
     if (trace_paths)
       dLog(url, blockIds, intervals, filteredIntervalParams, options);
 
@@ -371,10 +369,34 @@ export default Service.extend({
     if (data.server === 'primary') {
       requestServer = this.get('apiServers.primaryServer');
     } else {
+      /** recognise the various names for blockId params.
+       * lookup the servers for the given blockIds.
+       * if the servers are different :
+       *  If one of the blockId/s is from primaryServer then use primaryServer,
+       *  otherswise choose the first one.
+       */
       let
-        blockId = data.block || (data.blocks && data.blocks[0]) || (data.blockIds && data.blockIds[0]) || data.blockA || data.blockA,
+        blockIds = data.blocks || data.blockIds || [data.blockA, data.blockB],
+      blockServers = blockIds && blockIds.map((blockId) => this.get('apiServers.id2Server')[blockId]),
+      blockId = data.block,
       blockServer = blockId && this.get('apiServers.id2Server')[blockId];
-      requestServer = blockServer || this.get(requestServerAttr);
+      if (blockServer) {
+        if (blockServers) {
+          dLog('_server', 'data has both single and multiple block params - unexpected', 
+               data, blockIds, blockServers, blockId, blockServer);
+        }
+        requestServer = blockServer;
+      } else if (blockServers) {
+        let primaryServer = this.get('apiServers.primaryServer');
+        if (blockServers[0] === blockServers[1]) {
+          requestServer = blockServers[0];
+        } else if (blockServers.indexOf(primaryServer) >= 0)
+          requestServer = primaryServer;
+        else
+          requestServer = blockServers[0];
+      }
+      if (! requestServer)
+        requestServer = this.get(requestServerAttr);
       dLog(blockId, 'blockServer', blockServer);
     }
     return requestServer;

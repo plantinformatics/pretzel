@@ -215,8 +215,11 @@ export default Service.extend({
    * @return  promise yielding paths result
    */
   requestPathsProgressive(blockAdj, blockAdjId, taskInstance) {
-    /** just for passing to auth getPathsViaStream, getPathsProgressive, will change signature of those functions. */
-    let blockA = blockAdjId[0], blockB = blockAdjId[1];
+    let apiServers = this.get('apiServers'),
+    blockAdjIdRemote = blockAdjId.map((blockId) => apiServers.id2RemoteRefn(blockId));
+    /** names 'blockA', 'blockB' are 
+     * just for passing to auth getPathsViaStream, getPathsProgressive, will change signature of those functions. */
+    let blockA = blockAdjIdRemote[0], blockB = blockAdjIdRemote[1];
 
     // based on link-path: request()
     let me = this;
@@ -457,13 +460,15 @@ export default Service.extend({
     let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
 
     let blockA = blockAdjId[0], blockB = blockAdjId[1];
+    let apiServers = this.get('apiServers'),
+    blockAdjIdRemote = blockAdjId.map((blockId) => apiServers.id2RemoteRefn(blockId));
     let auth = this.get('auth');
     let promise = 
       // original API, non-progressive  
       // auth.getPaths(blockA, blockB, /*withDirect*/ false, /*options*/{})
       pathsViaStream ?
-      auth.getPathsAliasesViaStream(blockAdjId, intervalParams, {dataEvent : receivedData, closePromise : taskInstance}) :
-    auth.getPathsAliasesProgressive(blockAdjId, intervalParams, {});
+      auth.getPathsAliasesViaStream(blockAdjIdRemote, intervalParams, {dataEvent : receivedData, closePromise : taskInstance}) :
+    auth.getPathsAliasesProgressive(blockAdjIdRemote, intervalParams, {});
 
         function receivedData(res) {
           if (! res || ! res.length)

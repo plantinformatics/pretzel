@@ -9,6 +9,14 @@ var load = require('../utilities/load');
 
 module.exports = function(Dataset) {
 
+/** Add the given dataset / blocks / features json data to the db.
+ * Uses upload.uploadDataset(), which is also the basis of @see createComplete().
+ * @desc
+ * This function, relative to createComplete(), adds .json.gz support,
+ * and 2 data checks : 
+ * . data has a .name at the top level - Dataset name
+ * . .name does not already exist in models.Dataset
+ */
   Dataset.upload = function(msg, options, req, cb) {
     req.setTimeout(0);
     var models = this.app.models;
@@ -121,6 +129,12 @@ module.exports = function(Dataset) {
     });
   }
 
+  /** Based on uploadDataset(), similar to @see upload().
+   * @desc
+   * createComplete() is used in backend/test/
+   * and in functions_dev.bash : uploadData(),
+   * but not in frontend/
+   */
   Dataset.createComplete = function(data, options, req, cb) {
     req.setTimeout(0);
     var models = this.app.models;
