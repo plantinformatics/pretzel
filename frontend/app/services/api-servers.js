@@ -188,8 +188,8 @@ export default Service.extend(Ember.Evented, {
     let
       id2Server = this.get('id2Server'),
     server = id2Server[blockId],
-    store = server.store;
-    if (trace > 2)
+    store = server && server.store;
+    if (! server || trace > 2)
       dLog('id2Store', blockId, server, store);
     return store;
   },

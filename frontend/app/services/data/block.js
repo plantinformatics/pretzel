@@ -81,6 +81,7 @@ export default Service.extend(Ember.Evented, {
   pathsPro : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
   queryParams: service('query-params'),
+  controls : service(),
 
   params : Ember.computed.alias('queryParams.params'),
   /** params.options is the value passed to &options=
@@ -341,22 +342,8 @@ export default Service.extend(Ember.Evented, {
     this.trigger('receivedBlock', blocksToView);
   },
 
-  /** controls() and pathsDensityParams() are copied from paths-progressive.js
-   * They can be moved into a service control-params, which will be backed by
-   * query params in the URL.
-   */
-  controls : Ember.computed(function () {
-    let oa = stacks.oa,
-    /** This occurs after mapview.js: controls : Ember.Object.create({ view : {  } }),
-     * and draw-map : draw() setup of  oa.drawOptions.
-     * This can be replaced with a controls service.
-     */
-    controls = oa.drawOptions.controls;
-    dLog('controls', controls);
-    return controls;
-  }),
   /** This does have a dependency on the parameter values.  */
-  pathsDensityParams : Ember.computed.alias('controls.view.pathsDensityParams'),
+  pathsDensityParams : Ember.computed.alias('controls.controls.view.pathsDensityParams'),
   /**
    * @param blockId later will use this to lookup axis yRange
    */
@@ -436,7 +423,7 @@ export default Service.extend(Ember.Evented, {
     let
       apiServers = this.get('apiServers'),
     store = apiServers.id2Store(blockId),
-    block = store.peekRecord('block', blockId);
+    block = store && store.peekRecord('block', blockId);
     return block;
   },
 

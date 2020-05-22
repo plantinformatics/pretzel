@@ -271,6 +271,13 @@ export default Ember.Component.extend(Ember.Evented, {
   axes1d : Ember.computed( function () { return stacks.axes1d; }),
   splitAxes: Ember.computed.filterBy('axes1d', 'extended', true),
 
+  /** Enable frontend collation of paths : pathUpdate_() / collate-paths.js
+   * The user sets this via GUI input in panel/view-controls.
+   * Same effect as me.get('urlOptions.pathsCheck'); if pathJoinClient is
+   * available in GUI, then urlOptions.pathsCheck is not required.
+   */
+  pathJoinClient : Ember.computed.alias('controls.view.pathJoinClient'),
+
   /*------------------------------------------------------------------------*/
 
   actions: {
@@ -4876,7 +4883,7 @@ export default Ember.Component.extend(Ember.Evented, {
        * @param t transition, which is likely to be undefined here.
        */
       this.pathUpdateFlow = function(t, flow) {
-        if (me.get('urlOptions.pathsCheck'))
+        if (me.get('pathJoinClient'))
           pathUpdate_(t, flow);
       };
       this.on('pathUpdateFlow', this, this.pathUpdateFlow);
@@ -4885,7 +4892,7 @@ export default Ember.Component.extend(Ember.Evented, {
     /** call pathUpdate(t) for each of the enabled flows. */
     function pathUpdate(t)
     {
-      if (me.get('urlOptions.pathsCheck'))
+      if (me.get('pathJoinClient'))
       d3.keys(flows).forEach(function(flowName) {
         let flow = flows[flowName];
         if (flow.enabled)

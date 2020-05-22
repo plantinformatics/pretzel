@@ -139,7 +139,7 @@ function localiseBlock(models, b, interval)
     /** will add tracking of request completion; also if interval.axes is the same as last request then no point in starting it.
      * If it is different then either use e.g. promise-throttle or follow the previous promise.
      */
-    b = // apiServer.requests[b.blockId] ||
+    b = apiServer.requests[b.blockId] ||
       (apiServer.requests[b.blockId] = localiseBlockGet(models, apiServer, b, interval));
   }
 

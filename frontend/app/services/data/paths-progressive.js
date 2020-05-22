@@ -65,6 +65,7 @@ export default Service.extend({
   flowsService: service('data/flows-collate'),
   blockService : service('data/block'),
   apiServers : service(),
+  controls : service(),
 
   /** set up a block-adj object to hold results. */
   ensureBlockAdj(blockAdjId) {
@@ -154,15 +155,6 @@ export default Service.extend({
       });
     return intervals;
   },
-  controls : Ember.computed(function () {
-    let oa = stacks.oa,
-    /** This occurs after mapview.js: controls : Ember.Object.create({ view : {  } }),
-     * and draw-map : draw() setup of  oa.drawOptions.
-     * This can be replaced with a controls service.
-     */
-    controls = oa.drawOptions.controls;
-    return controls;
-  }),
   pathsDensityParams : Ember.computed.alias('controls.view.pathsDensityParams'),
   /** Determine the parameters for the paths request, - intervals and density.
    * @param intervals domain for each blockAdj

@@ -21,6 +21,7 @@ export default DS.Model.extend(Ember.Evented, {
   flowsService: service('data/flows-collate'),
   blocksService : service('data/block'),
   apiServers: service(),
+  controls : service(),
 
 
   /** id is blockAdjId[0] + '_' + blockAdjId[1], as per.  serializers/block-adj.js : extractId()
@@ -228,12 +229,13 @@ export default DS.Model.extend(Ember.Evented, {
     let blockAdjId = this.get('blockAdjId'),
       id2Server = this.get('apiServers.id2Server'),
     servers = blockAdjId.map((blockId) => id2Server[blockId]),
-    sameServer = servers[0] === servers[1];
+    sameServer = servers[0] === servers[1],
+    pathJoinRemote = this.get('controls.view.pathJoinRemote');
     // uncomment these 2 conditions after testing on dev.
     // if (trace_blockAdj)
-      dLog('pathsRequestCount', pathsRequestCount, blockAdjId, servers.mapBy('host'), sameServer);
+      dLog('pathsRequestCount', pathsRequestCount, blockAdjId, servers.mapBy('host'), sameServer, pathJoinRemote);
     let p;
-    if (false && ! sameServer) {
+    if (! pathJoinRemote && ! sameServer) {
       // if (trace_blockAdj)
         dLog('pathsRequest() different servers');
       p = Ember.RSVP.resolve([]); // will replace the promise return anyway.
