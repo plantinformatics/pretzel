@@ -141,17 +141,20 @@ module.exports = function(Block) {
    * Used for res.flush() and res.setHeader()
    */
   Block.pathsViaStream = function(blockId0, blockId1, intervals, options, req, res, cb) {
-    let db = this.dataSource.connector;
-    function dbLookup() {
-      let cursor =
-        pathsAggr.pathsDirect(db, blockId0, blockId1, intervals);
-      return cursor;
-    };
-    let
-      cacheId = blockId0 + '_' + blockId1,
-    useCache = ! intervals.dbPathFilter,
-    apiOptions = { useCache };
-    reqStream(dbLookup, pathsFilter.filterPaths, cacheId, intervals, req, res, apiOptions);
+    localiseBlocks(this.app.models, [blockId0, blockId1], intervals)
+      .then(([blockId0, blockId1]) => {
+        let db = this.dataSource.connector;
+        function dbLookup() {
+          let cursor =
+            pathsAggr.pathsDirect(db, blockId0, blockId1, intervals);
+          return cursor;
+        };
+        let
+          cacheId = blockId0 + '_' + blockId1,
+        useCache = ! intervals.dbPathFilter,
+        apiOptions = { useCache };
+        reqStream(dbLookup, pathsFilter.filterPaths, cacheId, intervals, req, res, apiOptions);
+      });
   };
 
   /*--------------------------------------------------------------------------*/
