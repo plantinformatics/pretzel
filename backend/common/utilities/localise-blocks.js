@@ -6,7 +6,7 @@ const param = require('jquery-param');
 /* global Promise */
 
 const upload = require('./upload');
-const { ApiServer } = require('./api-server');
+const { ApiServer, apiServers, blockServer } = require('./api-server');
 const { insert_features_recursive } = require('./upload');
 
 const { ObjectID } = require('mongodb');
@@ -16,9 +16,6 @@ const { ObjectID } = require('mongodb');
 const ObjectId = ObjectID;
 
 
-/** [host] -> ApiServer
-*/
-var apiServers = {};
 
 
 /** If any of the blockIds are references to remote blocks, map them to local
@@ -61,7 +58,8 @@ async function localiseDataset(data, models, options) {
         json_block.datasetId = dataset.id;
       });
     }
-  });
+  })
+    .catch((err) => console.log('localiseDataset', err, data));
   return dataset_id;
 };
 exports.localiseDataset = localiseDataset;
@@ -132,10 +130,8 @@ function localiseBlock(models, b, interval)
     // block is already local
   }
   else {
-    /** -  index by session instead, so that 2 sessions for the same host don't share tokens;
-     * but in the first instance (public data);  want to share the cached data.
-     */
-    let apiServer = apiServers[b.host] || (apiServers[b.host] = new ApiServer(b.host, b.token));
+    let apiServer = blockServer(b);
+
     /** will add tracking of request completion; also if interval.axes is the same as last request then no point in starting it.
      * If it is different then either use e.g. promise-throttle or follow the previous promise.
      */
@@ -174,6 +170,7 @@ function remoteBlockGetFeatures(blockRemoteRefn, interval)
  * @return promise, with value blockId
  */
 async function localiseBlockGet(models, apiServer, blockRemoteRefn, interval) {
+  console.log('localiseBlockGet', blockRemoteRefn);
   const fnName = 'localiseBlockGet';
   let b = blockRemoteRefn;
 
@@ -221,14 +218,12 @@ async function localiseBlockGet(models, apiServer, blockRemoteRefn, interval) {
  */
   async function localiseDatasetForBlock (apiServer, models, db, blockId) {
   console.log('localiseDatasetForBlock', blockId);
-  if (! apiServer.datasetsBlocks) {
-    // ApiServer : could combine value with via promise proxy function
-    apiServer.datasetsBlocks = await getDatasetsBlocks(apiServer);
-    apiServer.datasetsBlocksByBlockId = datasetsBlocksByBlockId(apiServer.datasetsBlocks);
-    console.log('datasetsBlocks', apiServer.datasetsBlocks.length, apiServer.datasetsBlocks[0]);
-  }
-
-  let datasetBlock = apiServer.datasetsBlocksByBlockId[blockId],
+    let datasetBlock = await apiServer.datasetAndBlock(blockId);
+    if (! datasetBlock) {
+      console.log('localiseDatasetForBlock', datasetBlock, apiServer, blockId);
+      debugger;
+    }
+    let
   block = datasetBlock.block;
   console.log('localiseDatasetForBlock', block, datasetBlock);
   /** -	make datasetId unique by appending @host  (and possibly later @user)
@@ -236,7 +231,7 @@ async function localiseBlockGet(models, apiServer, blockRemoteRefn, interval) {
    */
   let datasetId = block.datasetId;
 
-  let datasets = await models.Dataset.find({where: {_id: datasetId}, limit: 1}),
+  let datasets = await models.Dataset.find({where: {name: datasetId}, limit: 1}),
   /** true if the block's dataset is cached in local. based on checkDatasetExists(). */
   datasetIdInLocal = datasets.length > 0;
   if (! datasetIdInLocal) {
@@ -341,12 +336,15 @@ function getDatasetsBlocks (apiServer) {
   let promise;
   if (apiServer.requests.datasetsBlocks) {
     promise = apiServer.requests.datasetsBlocks;
+    console.log('getDatasetsBlocks', 'already in progress');
   } else {
+    console.log('getDatasetsBlocks', 'send request');
     const getJSON = bent(apiServer.host, 'json');
     const params = {filter : {'include': 'blocks'}},
     headers = {'Authorization' : apiServer.accessToken};
     promise = getJSON('/api/datasets' + '?' + param(params),  /*body*/undefined, headers);
     apiServer.requests.datasetsBlocks = promise;
+    promise.then((datasetsBlocks) => console.log('datasetsBlocks', datasetsBlocks.length, datasetsBlocks[0]));
   }
   return promise;
 };
@@ -360,6 +358,6 @@ function datasetsBlocksByBlockId(datasetsBlocks) {
     (result, dataset) => dataset.blocks.reduce(function (resultB, block) {
       resultB[block.id] = {block,dataset}; return resultB; }, result), {});
 }
-
+exports.datasetsBlocksByBlockId = datasetsBlocksByBlockId;
 
 /*----------------------------------------------------------------------------*/

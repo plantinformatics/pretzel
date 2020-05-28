@@ -4,11 +4,15 @@
 var acl = require('../utilities/acl')
 var identity = require('../utilities/identity')
 var task = require('../utilities/task')
+const qs = require('qs');
+
 var blockFeatures = require('../utilities/block-features');
 var pathsAggr = require('../utilities/paths-aggr');
 var pathsFilter = require('../utilities/paths-filter');
 var pathsStream = require('../utilities/paths-stream');
 var { localiseBlocks } = require('../utilities/localise-blocks');
+const { blockServer } = require('../utilities/api-server');
+const { getAliases } = require('../utilities/localise-aliases');
 
 var ObjectId = require('mongodb').ObjectID
 
@@ -32,6 +36,13 @@ const SSE_EventID_EOF = -1;
  * the remoteMethod() param type is given 'any' instead of 'string' which is used for blockId.
  */
 const blockRemoteType = 'any';
+
+/** commented in .pathsAliasesProgressive() - use dbLookupAliases() now in place
+ * of apiLookupAliases(), for db query and progressive paths. 
+ * dbLookupAliases() now uses .pathsAliasesRemote() for multiple backends;
+ * initially it used pathsAliases() - defined after 5576c1e.
+ */
+const use_dbLookupAliases = true;
 
 const trace_block = 2;
 
@@ -96,7 +107,7 @@ module.exports = function(Block) {
     localiseBlocks(this.app.models, [left, right], intervals)
       .then(([left, right]) => {
     let db = this.dataSource.connector;
-    console.log('pathsProgressive', /*db,*/ left, right, intervals /*, options, cb*/);
+	  console.log('pathsProgressive', /*db,*/ JSON.stringify(left), JSON.stringify(right), intervals /*, options, cb*/);
     let cacheId = left + '_' + right,
     /** If intervals.dbPathFilter, we could append the location filter to cacheId,
      * but it is not clear yet whether that would perform better.
@@ -181,7 +192,7 @@ module.exports = function(Block) {
     else {
       /** promise yielding data array. */
       let dataP;
-      if (pathsAggr.pathsAliases) { // pathsAliases() is defined after 5576c1e.
+      if (use_dbLookupAliases) {
         let cursorP = this.dbLookupAliases(left, right, intervals);
         dataP = cursorP.then(function (cursor) { return cursor.toArray(); });
       }
@@ -212,6 +223,7 @@ module.exports = function(Block) {
   /** 
    * Results are cached in blockRecords, indexed by blockId;  also see blockRecordsOutdate().
    * also in backend/common/utilities/task.js : @see findBlock(), findBlockPair()
+   * @return promise yielding an array of records
    */
   Block.blockGet = function(blockIds) {
     let models = this.app.models;
@@ -238,43 +250,75 @@ module.exports = function(Block) {
     blockIds.forEach(blockId => delete this.blockRecords[blockId] );
   };
 
-/*----------------------------------------------------------------------------*/
+  /** If local blockId is not loaded, load it.
+   * @param blockId local blockId, i.e. a string
+   * @return block record
+   */
+  Block.blockRecordValue = async function(blockId) {
+    let block = this.blockRecords[blockId] ||
+      this.blockGet([blockId])
+      // expecting just 1 matching document
+      .then((blocks) => blocks[0]);
+    return block;
+  };
 
-/** Lookup .namespace for the given blockIds.  Cached values are used if
- * available, since this is used in the high-use pathsaliases() api, and we
- * don't yet have an api for altering .namespace.
- *
- * @param blockIds  array of blocks for which to get .namespace
- */
-Block.blockNamespace = async function(blockIds) {
-  /** Use cached values if all required values are cached. */
-  let n = blockIds.map(blockId =>  {
-    let block = this.blockRecords[blockId];
-    return block && block.namespace;
-  } );
-  if (n.indexOf(undefined) >= 0) {
-    let
-      p = this.blockGet(blockIds)
-      .map(function (b) { return b.namespace; } )
-      .catch (e => {
-        console.log('blockNamespace err', e);
-      });
-    n = await p;
-  }
-  else { console.log('using cached namespaces'); }
-  console.log('blockNamespace', n);
-  return n;
-};
+  /** @param blockId may be a local (string db id) or remote reference
+   * @desc Lookup the block object.
+   * @return promise yielding a block object
+   */
+  Block.blockRecordLookup = function(blockId) {
+    let block;
+    if (typeof blockId === 'string') {
+      block = this.blockRecordValue(blockId);
+    } else {
+      let apiServer = blockServer(blockId);
+      block = apiServer.datasetAndBlock(blockId.blockId)
+        .then((datasetBlock) => datasetBlock.block);
+    }
+    block.then((blockR) => console.log('blockRecordLookup', blockId, blockR));
+    return block;
+  };
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Lookup .namespace for the given blockIds.  Cached values are used if
+   * available, since this is used in the high-use pathsaliases() api, and we
+   * don't yet have an api for altering .namespace.
+   *
+   * @param blockIds  array of blocks for which to get .namespace
+   * @return promise, yielding an array of namespaces (strings)
+   */
+  Block.blockNamespace = async function(blockIds) {
+    /** Use cached values if all required values are cached. */
+    let n = blockIds.map(blockId =>  {
+      return this.blockRecordLookup(blockId)
+        .then((block) => { if (!block || !block.namespace) { debugger; return undefined; } else { return block.namespace;}; });
+    });
+    n = Promise.all(n);
+    // check for undefined block.namespace
+    n.then((namespaces) => {
+      let i = namespaces.indexOf(undefined);
+      if (i >= 0) {
+        console.log('blockNamespace', blockIds[i]);
+      }
+    });
+    return n;
+  };
 
   Block.dbLookupAliases = async function(blockId0, blockId1, intervals) {
     let namespaces = await this.blockNamespace([blockId0, blockId1]);
 
     let db = this.dataSource.connector,
     cursor =
-      pathsAggr.pathsAliases(db, blockId0, blockId1, namespaces[0],  namespaces[1], intervals);
+      pathsAggr.pathsAliasesRemote(db, this.app.models, blockId0, blockId1, namespaces[0],  namespaces[1], intervals);
     console.log('dbLookupAliases', namespaces);
     return cursor;
   };
+  /** Similar function to dbLookupAliases(), except whereas that uses mongoDb
+   * aggregation queries to collate paths, this function uses a javascript
+   * function internal to the backend node API server.
+   * Support for multiple backends has not been added to this function.
+   */
   Block.apiLookupAliases = function(blockId0, blockId1, intervals) {
     return task.paths(this.app.models, blockId0, blockId1, /*withDirect*/ false, /*options*/ undefined);
   };
@@ -286,11 +330,32 @@ Block.blockNamespace = async function(blockIds) {
    */
   Block.pathsAliasesViaStream = function(blockIds, intervals, options, req, res, cb) {
     // console.log('pathsAliasesViaStream', blockIds, intervals, options, req, res, cb);
+    /* The query param for blockIds may be e.g. (url-decoded) :
+     *  &blockIds[0][blockId]=5b7f8afd43a181430b81394d
+     *  &blockIds[0][host]=https://..
+     *  &blockIds[0][token]=...
+     *  &blockIds[]=5cc69ed7de8ab9393f45052c
+     * which seems reasonable, but this is resulting in blockIds[] :
+     *  0:
+     *   5cc69ed7de8ab9393f45052c: true
+     *   blockId: "5b7f8afd43a181430b81394d"
+     *   host: "https://..."
+     *   token: "..."
+     * Using qs gets the desired result.
+     */
+    if (blockIds.length === 1) {
+      let parsed = qs.parse(req.originalUrl);
+      if (parsed.blockIds.length === 2) {
+        console.log('Block.pathsAliasesViaStream', 'using qs for blockIds', blockIds, parsed.blockIds, req.originalUrl);
+        blockIds = parsed.blockIds;
+      }
+    }
+
     let me = this;
 
     function aliasesCursor() {
       let cursor;
-      if (pathsAggr.pathsAliases) {
+      if (use_dbLookupAliases) {
         // result is a promise yielding a cursor
         cursor = me.dbLookupAliases(blockIds[0], blockIds[1], intervals);
       }
@@ -638,7 +703,7 @@ Block.blockNamespace = async function(blockIds) {
   })
 
   //----------------------------------------------------------------------------
-  // When adding a API .remoteMethod() here, also add the route name to backend/common/utilities/paths-stream.js : genericResolver()
+  // When adding a API .remoteMethod() here, also add the route name to backend/server/boot/access.js : genericResolver()
   //----------------------------------------------------------------------------
 
   Block.remoteMethod('blockFeaturesCount', {

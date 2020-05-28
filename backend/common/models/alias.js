@@ -1,6 +1,11 @@
 'use strict';
 
+/* global require */
+/* global module */
+
 var acl = require('../utilities/acl')
+
+const { getAliases } = require('../utilities/localise-aliases');
 
 module.exports = function(Alias) {
 
@@ -31,6 +36,35 @@ module.exports = function(Alias) {
     returns: {arg: 'count', type: 'int'},
     description: "Creates an array of aliases"
   });
+
+  Alias.namespacesAliases = function(namespaces, options, res, cb) {
+    console.log('namespacesAliases', namespaces);
+    Alias.dataSource.connector.connect(function(err, db) {
+      getAliases(db, namespaces)
+        .toArray()
+        .then(function(result) {
+          cb(null, result);
+        })
+        .catch(function(err) {
+          console.log('namespacesAliases', 'ERROR', err, namespaces);
+          cb(err);
+        });
+
+    });
+  };
+
+  Alias.remoteMethod('namespacesAliases', {
+    accepts: [
+      {arg: 'namespaces', type: 'array', required: true}, // namespace0,1 reference
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'res', type: 'object', http: {source: 'res'}}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Returns aliases between the two namespaces"
+  });
+
+
 
   acl.assignRulesRecord(Alias)
   acl.limitRemoteMethods(Alias)

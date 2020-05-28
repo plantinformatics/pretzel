@@ -75,6 +75,8 @@ export default Service.extend(Ember.Evented, {
       if (blocks) {
         blocks.forEach(function(block) {
           block.set('mapName', datasetName);
+          // if the block is not cached on the server, then note the server as the owner of the block.
+          if (! block.get('isCopy'))
           id2Server[block.get('id')] = server;
         });
       }

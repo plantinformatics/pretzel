@@ -139,6 +139,7 @@ export default ManageBase.extend({
     /** e.g. "http___localhost_5000"  */
     let
       name = this.get('serverTabSelected'),
+    /** server of the selected tab. */
     serverSo = name &&
       this.get('apiServers').lookupServer(name),
     datasetsBlocks = serverSo && serverSo.get("datasetsBlocks");
@@ -155,6 +156,9 @@ export default ManageBase.extend({
       datasetsBlocks = this.get('primaryDatasets');
       dLog('datasetsBlocks()  using primaryDatasets', datasetsBlocks);
     }
+    if (datasetsBlocks)
+      datasetsBlocks =
+      datasetsBlocks.filter((block) => !block.get('isCopy'));
 
     return datasetsBlocks;
   }),

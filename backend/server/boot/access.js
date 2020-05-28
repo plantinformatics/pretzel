@@ -89,6 +89,7 @@ module.exports = function(app) {
       context.property == 'pathsViaStream' ||
       context.property == 'pathsAliasesProgressive' ||
       context.property == 'pathsAliasesViaStream' ||
+      context.property == 'namespacesAliases' ||
       context.property === 'runtimeConfig'
        ) {
       // allow find, create and upload requests

@@ -43,6 +43,8 @@ export default DS.Model.extend({
   scope: attr('string'),
   name: attr('string'),
   namespace: attr('string'),
+  featureType: attr(),
+  meta: attr(),
 
 
   /** true when the block is displayed in the graph.
@@ -112,6 +114,11 @@ export default DS.Model.extend({
     return this.get('featureCount') > 0;
   }),
   isData : and('isLoaded', 'hasFeatures'),
+
+  /** is this block copied from a (secondary) server, cached on the server it was loaded from (normally the primary). */
+  isCopy : Ember.computed('meta.origin', function () {
+    return !! this.get('meta.origin');
+  }),
 
   /*--------------------------------------------------------------------------*/
 
@@ -322,8 +329,9 @@ export default DS.Model.extend({
       dLog('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent && parent.get('id'));
     if (parent)
     {
+      /** it is possible that the block may be a copy from a secondary server which is not currently connected. */
       let store = this.get('apiServers').id2Store(this.get('id'));
-      referenceBlock = store.peekAll('block')
+      referenceBlock = store && store.peekAll('block')
         .filter(function (b) {
           let scope2 = b.get('scope'),
           dataset2 = b.get('datasetId'),

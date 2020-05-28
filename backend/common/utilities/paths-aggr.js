@@ -1,8 +1,11 @@
+const { localiseBlocksAndAliases } = require('./localise-aliases');
+
 var ObjectID = require('mongodb').ObjectID;
 
 /*----------------------------------------------------------------------------*/
 
 /* global exports */
+/* global require */
 
 /* globals defined in mongo shell */
 /* global db ObjectId print */
@@ -476,6 +479,16 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
 
   return result;
 };
+/** Wrap .pathsAliases(), and handle the possibility that one of the blockIds
+ * may be from a secondary / remote server, not the primary.
+ */
+exports.pathsAliasesRemote = function(db, models, blockId0, blockId1, namespace0,  namespace1, intervals) {
+  let promise = 
+    localiseBlocksAndAliases(db, models, blockId0, blockId1, namespace0,  namespace1, intervals).then(() => {
+    return pathsAliases(db, blockId0, blockId1, namespace0,  namespace1, intervals);
+  });
+  return promise;
+};
 /** Match features by name between the 2 given blocks.  The result is the alignment, for drawing paths between blocks.
  *
  * This implements alias1a() above - this function is used in the node server,
@@ -489,9 +502,9 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
  * If intervals.dbPathFilter then intervals.axes[{0,1}].domain[{0,1}] are included in the aggregrate filter.
  * The domain[] is in the same order as the feature.value[], i.e. increasing order : 
  * domain[0] < domain[1] (for all intervals.axes[]).
- * @return cursor	: direct paths
+ * @return promise yielding a cursor	: alias paths
  */
-exports.pathsAliases = function(db, blockId0, blockId1, namespace0,  namespace1, intervals) {
+function pathsAliases(db, blockId0, blockId1, namespace0,  namespace1, intervals) {
   parseIntervalFlags(intervals);
   let featureCollection = db.collection("Feature");
   let blockCollection = db.collection("Block");

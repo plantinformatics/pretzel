@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import DS from 'ember-data';
 import attr from 'ember-data/attr';
 
@@ -11,5 +12,15 @@ export default Record.extend({
   type: attr('string'),
   namespace: attr('string'),
   tags: attr('array'),
-  meta: attr()
+  meta: attr(),
+
+  /*--------------------------------------------------------------------------*/
+
+  /** is this dataset copied from a (secondary) server, cached on the server it was loaded from (normally the primary). */
+  isCopy : Ember.computed('meta.origin', function () {
+    return !! this.get('meta.origin');
+  })
+
+  /*--------------------------------------------------------------------------*/
+
 });

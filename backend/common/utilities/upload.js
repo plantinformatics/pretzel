@@ -8,8 +8,6 @@ const bent = require('bent');
 /* global exports */
 /* global process */
 
-let ApiServer = require('./api-server');
-
 /**
  * Divide array into smaller chunks
  * @param {Array} arr - array of data to be processed
