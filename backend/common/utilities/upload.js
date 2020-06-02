@@ -108,7 +108,7 @@ exports.uploadDataset = (data, models, options, cb) => {
     return models.Block.create(json_blocks, options)
   })
     .then(function(blocks) {
-      uploadDatasetContent(blocks, models, options, cb);
+      uploadDatasetContent(dataset_id, blocks, models, options, cb);
     });
 };
 /**
@@ -159,6 +159,9 @@ exports.uploadDatasetContent = uploadDatasetContent;
 
 /** 
  * @param dataset_id  passed to cb
+ * @param ordered false enables insertMany() to insert later documents after a document
+ * which cannot be inserted because of a duplicate key.
+ * (refn : https://docs.mongodb.com/v3.2/reference/method/db.collection.insertMany/#error-handling )
  * @return promise  (no value)
  */
 function insert_features_recursive(db, dataset_id, features_to_insert, ordered, cb) {
