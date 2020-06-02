@@ -485,6 +485,9 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
 exports.pathsAliasesRemote = function(db, models, blockId0, blockId1, namespace0,  namespace1, intervals) {
   let promise = 
     localiseBlocksAndAliases(db, models, blockId0, blockId1, namespace0,  namespace1, intervals).then(() => {
+      // blocks are now local, and pathsAliases() requires local blockIds to pass to db query.
+      if (blockId0.blockId) blockId0 = blockId0.blockId;
+      if (blockId1.blockId) blockId1 = blockId1.blockId;
     return pathsAliases(db, blockId0, blockId1, namespace0,  namespace1, intervals);
   });
   return promise;

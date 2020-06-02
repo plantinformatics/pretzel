@@ -37,28 +37,38 @@ exports.localiseBlocksAndAliases = function(db, models, blockId0, blockId1, name
     let
       apiServer = servers[0],
     /** call getAliases */
-    aliases = remoteNamespacesAliasesValue(apiServer, [namespace0, namespace1])
-      .then((aliases) => {
-        console.log('aliases', aliases.length);
-        /* aliases[*].namespace0,1 matches params namespace0,1.       */
-        let addP = addAliases(db, aliases, apiServer)
-          .then((insertedCount) => { console.log('after addAliases'); return insertedCount; });
-        // trace the promise outcomes
-        addP.then(
-          /** For those aliases which are already loaded, the result will be a write error
-           */
-          function (result) {
-            console.log(fnName, '() cb', result);
-          })
-          .catch(function (err) {
-            console.log('err', err.message, err.code, err.writeErrors.length, err.writeErrors[0]);
-          });
-        return addP;
-      });
+    aliases = remoteNamespacesAliasesValue(db, apiServer, [namespace0, namespace1]);
     promise = aliases.then(() => localiseBlocks(models, [blockId0, blockId1], intervals));
   }
   return promise;
 };
+
+/** Wrap addAliases(), catch duplicate key and don't treat it as an error.
+ */
+function addAliasesMaybeDup(db, apiServer, aliases) {
+  const fnName = 'addAliasesMaybeDup';
+  console.log('aliases', aliases.length);
+  /* aliases[*].namespace0,1 matches params namespace0,1.       */
+  let addP = addAliases(db, aliases, apiServer)
+    .then((insertedCount) => { console.log('after addAliases', insertedCount); return insertedCount; })
+  // trace the promise outcomes
+    .then(
+      /** For those aliases which are already loaded, the result will be a write error
+       */
+      function (result) {
+        console.log(fnName, '() cb', result);
+      })
+    .catch(function (err) {
+      console.log('err', err.message, err.code);
+      if (err.writeErrors) console.log(err.writeErrors.length, err.writeErrors[0]);
+      if (err.code === 11000) {
+        let dupCount = err.writeErrors && err.writeErrors.length || 0;
+        return Promise.resolve(aliases.length - dupCount);
+      }
+      else return Promise.reject(err);
+    });
+  return addP;
+}
 
 /** Cache the aliases which have been received from a secondary server.
  * Any of these aliases which are already loaded, i.e. if the key fields match
@@ -79,21 +89,24 @@ function addAliases(db, aliases, apiServer) {
       host = apiServer.host,
     imported = Date.now();
     a.origin = {host, imported};
+    return a;
   });
     
+  /** duplicates don't prevent insertion of following documents, because of option ordered : false  */
   let promise =
-  db.collection('Alias').insertMany(augmented)
+    db.collection('Alias').insertMany(augmented, {ordered : false})
     .then((result) => result.insertedCount);
   return promise;
 }
 
 /** call remoteNamespacesGetAliases() if not already requested.
  */
-function remoteNamespacesAliasesValue(apiServer, namespaces) {
+function remoteNamespacesAliasesValue(db, apiServer, namespaces) {
   let requests = apiServer.requests.aliases || (apiServer.requests.aliases = {}),
   requestId = namespaces.join(','),
   promise = requests[requestId] ||
-    (requests[requestId] = remoteNamespacesGetAliases(apiServer, namespaces));
+    (requests[requestId] = remoteNamespacesGetAliases(apiServer, namespaces)
+    .then((aliases) => addAliasesMaybeDup(db, apiServer, aliases)));
   return promise;
 }
 /** from apiServer, get aliases between the given namespaces
@@ -158,7 +171,7 @@ exports.getAliases = function(db, namespaces) {
         },
       }
     }
-    , {$limit : 3}
+    , {$limit : 1000}
   ]);
 
   return b;

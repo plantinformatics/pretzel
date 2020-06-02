@@ -239,7 +239,8 @@ async function localiseBlockGet(models, apiServer, blockRemoteRefn, interval) {
     dataset = datasetBlock.dataset,
     host = apiServer.host,
     imported = Date.now();
-    dataset.meta.origin = {host, imported};
+    let meta = dataset.meta || (dataset.meta = {});
+    meta.origin = {host, imported};
     let datasetId = localiseDataset(dataset, models, /*options*/undefined);
   }
 
