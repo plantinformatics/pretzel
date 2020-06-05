@@ -345,7 +345,7 @@ function getDatasetsBlocks (apiServer) {
     headers = {'Authorization' : apiServer.accessToken};
     promise = getJSON('/api/datasets' + '?' + param(params),  /*body*/undefined, headers);
     apiServer.requests.datasetsBlocks = promise;
-    promise.then((datasetsBlocks) => console.log('datasetsBlocks', datasetsBlocks.length, datasetsBlocks[0]));
+    promise.then((datasetsBlocks) => console.log('datasetsBlocks', datasetsBlocks.length, datasetsBlocks[0].name));
   }
   return promise;
 };

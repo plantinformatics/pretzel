@@ -54,7 +54,7 @@ ApiServer.prototype.datasetAndBlock = async function (blockId) {
   }
   let datasetsBlocks = await this.datasetsBlocksValue(),
   datasetBlock = this.datasetsBlocksByBlockId[blockId];
-  console.log('datasetAndBlock', blockId, datasetBlock);
+  console.log('datasetAndBlock', blockId /*, datasetBlock*/);
   return datasetBlock;
 };
 

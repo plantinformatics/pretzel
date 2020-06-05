@@ -102,6 +102,7 @@ function addAliases(db, aliases, apiServer) {
 /** call remoteNamespacesGetAliases() if not already requested.
  */
 function remoteNamespacesAliasesValue(db, apiServer, namespaces) {
+  console.log('remoteNamespacesAliasesValue', namespaces);
   let requests = apiServer.requests.aliases || (apiServer.requests.aliases = {}),
   requestId = namespaces.join(','),
   promise = requests[requestId] ||
@@ -171,7 +172,7 @@ exports.getAliases = function(db, namespaces) {
         },
       }
     }
-    , {$limit : 1000}
+    , {$limit : 1e4}
   ]);
 
   return b;
