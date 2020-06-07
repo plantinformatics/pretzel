@@ -37,16 +37,16 @@ module.exports = function(Alias) {
     description: "Creates an array of aliases"
   });
 
-  Alias.namespacesAliases = function(namespaces, options, res, cb) {
+  Alias.namespacesAliases = function(namespaces, limit, options, res, cb) {
     console.log('namespacesAliases', namespaces);
     Alias.dataSource.connector.connect(function(err, db) {
-      getAliases(db, namespaces)
+      getAliases(db, namespaces, limit)
         .toArray()
         .then(function(result) {
           cb(null, result);
         })
         .catch(function(err) {
-          console.log('namespacesAliases', 'ERROR', err, namespaces);
+          console.log('namespacesAliases', 'ERROR', err, namespaces, limit);
           cb(err);
         });
 
@@ -56,6 +56,7 @@ module.exports = function(Alias) {
   Alias.remoteMethod('namespacesAliases', {
     accepts: [
       {arg: 'namespaces', type: 'array', required: true}, // namespace0,1 reference
+      {arg: 'limit', type: 'number', required: false},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', http: {source: 'res'}}
     ],

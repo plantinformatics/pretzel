@@ -242,7 +242,8 @@ module.exports = function(Block) {
    */
   Block.blockRecords = {};
   Block.blockRecordsStore = function(blockId, record) {
-    console.log('blockRecordsStore', blockId, record);
+    if (trace_block > 1)
+      console.log('blockRecordsStore', blockId, record);
     this.blockRecords[blockId] = record;
   };
   /** this could be called if an API was added which allowed Block .namespace to change. */
@@ -275,7 +276,8 @@ module.exports = function(Block) {
       block = apiServer.datasetAndBlock(blockId.blockId)
         .then((datasetBlock) => datasetBlock.block);
     }
-    block.then((blockR) => console.log('blockRecordLookup', blockId, blockR));
+    if (trace_block > 1)
+      block.then((blockR) => console.log('blockRecordLookup', blockId, blockR));
     return block;
   };
 

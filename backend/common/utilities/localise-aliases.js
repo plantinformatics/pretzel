@@ -8,6 +8,9 @@ const { ApiServer, apiServers, blockServer } = require('./api-server');
 
 var { localiseBlocks } = require('./localise-blocks');
 
+/** limit the # aliases in the result of /api/namespacesAliases : getAliases(). */
+const namespacesAliasesLimit = 1e4;
+
 const trace = 1;
 
 
@@ -59,7 +62,7 @@ function addAliasesMaybeDup(db, apiServer, aliases) {
         console.log(fnName, '() cb', result);
       })
     .catch(function (err) {
-      console.log('err', err.message, err.code);
+      console.log('addAliasesMaybeDup err', err.message, err.code);
       if (err.writeErrors) console.log(err.writeErrors.length, err.writeErrors[0]);
       if (err.code === 11000) {
         let dupCount = err.writeErrors && err.writeErrors.length || 0;
@@ -85,10 +88,7 @@ function addAliasesMaybeDup(db, apiServer, aliases) {
  */
 function addAliases(db, aliases, apiServer) {
   let augmented = aliases.map((a) => {
-    let
-      host = apiServer.host,
-    imported = Date.now();
-    a.origin = {host, imported};
+    a.origin = apiServer.makeOrigin();
     return a;
   });
     
@@ -107,7 +107,7 @@ function remoteNamespacesAliasesValue(db, apiServer, namespaces) {
   requestId = namespaces.join(','),
   promise = requests[requestId] ||
     (requests[requestId] = remoteNamespacesGetAliases(apiServer, namespaces)
-    .then((aliases) => addAliasesMaybeDup(db, apiServer, aliases)));
+     .then((aliases) => ! aliases.length || addAliasesMaybeDup(db, apiServer, aliases)));
   return promise;
 }
 /** from apiServer, get aliases between the given namespaces
@@ -121,13 +121,14 @@ function remoteNamespacesGetAliases(apiServer, namespaces)
 
   const getJSON = bent(host, 'json');
 
-  let queryParams = param({namespaces, access_token : accessToken}),
+  let queryParams = param({namespaces, namespacesAliasesLimit, access_token : accessToken}),
   headers = {'Authorization' : accessToken},
   endPoint = '/api/Aliases/namespacesAliases';
 
   console.log(host, endPoint, namespaces, accessToken);
   let promise =
     getJSON(endPoint + '?' + queryParams, /*body*/undefined, headers);
+  promise.then((aliases) => console.log('remoteNamespacesGetAliases', aliases.length));
   return promise;
 }
 
@@ -138,19 +139,22 @@ function remoteNamespacesGetAliases(apiServer, namespaces)
  * remoteNamespacesGetAliases(), i.e. this is the server side and the above is
  * the client.
  *
+ * @param namespaces  array[2] of string; aliases whose .namespace{1,2} do not
+ * match (in either order) are filtered out.
+ * @param limit maximum number of aliases in reply
+ * This is expected to be only useful in development; to be able to limit download size in tests.
  * @return promise, yielding a cursor : aliases
  *
  * equivalent in mongo shell :
  *  db.Alias.aggregate ( {$match : {namespace1 : "90k", namespace2 : "90k"}}, {$limit : 1})
  */
-exports.getAliases = function(db, namespaces) {
+exports.getAliases = function(db, namespaces, limit) {
   let aliasCollection = db.collection('Alias');
 
   if (trace)
     console.log('getAliases', namespaces[0],  namespaces[1]);
 
-  var b = aliasCollection.aggregate ( [
-
+  let pipeline = [
     { $match:
       { $expr:
 
@@ -169,11 +173,12 @@ exports.getAliases = function(db, namespaces) {
               ]
             }
           ]
-        },
+        }
       }
-    }
-    , {$limit : 1e4}
-  ]);
+    },
+    {$limit : limit}
+  ];
+  var b = aliasCollection.aggregate (pipeline);
 
   return b;
 };

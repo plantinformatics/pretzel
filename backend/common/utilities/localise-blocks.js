@@ -44,6 +44,7 @@ const blockSplitChar = '@';
  * @param {Object} data - The dataset object to be added
  * @param {Object} models - Loopback database models
  * @desc based on @see uploadDataset()
+ * @return promise not yielding a value
  */
 async function localiseDataset(data, models, options) {
   let dataset_id;
@@ -59,7 +60,13 @@ async function localiseDataset(data, models, options) {
       });
     }
   })
-    .catch((err) => console.log('localiseDataset', err, data));
+    .catch((err) => {
+      console.log('localiseDataset', err.message, data);
+      if (err.code === 11000) {
+        return Promise.resolve();
+      }
+      else return Promise.reject(err);
+    });
   return dataset_id;
 };
 exports.localiseDataset = localiseDataset;
@@ -224,46 +231,59 @@ async function localiseBlockGet(models, apiServer, blockRemoteRefn, interval) {
       debugger;
     }
     let
-  block = datasetBlock.block;
-  console.log('localiseDatasetForBlock', block, datasetBlock);
-  /** -	make datasetId unique by appending @host  (and possibly later @user)
-   * Change dataset.name and block.datasetId
-   */
-  let datasetId = block.datasetId;
-
-  let datasets = await models.Dataset.find({where: {name: datasetId}, limit: 1}),
-  /** true if the block's dataset is cached in local. based on checkDatasetExists(). */
-  datasetIdInLocal = datasets.length > 0;
-  if (! datasetIdInLocal) {
-    let
     dataset = datasetBlock.dataset,
-    host = apiServer.host,
-    imported = Date.now();
-    let meta = dataset.meta || (dataset.meta = {});
-    meta.origin = {host, imported};
-    let datasetId = localiseDataset(dataset, models, /*options*/undefined);
-  }
+  block = datasetBlock.block;
+  // console.log('localiseDatasetForBlock', block, datasetBlock);
+
+    if (datasetBlock.parent)
+      await ensureDataset(apiServer, models, datasetBlock.parent);
+    await ensureDataset(apiServer, models, dataset);
 
   let blocks = await models.Block.find({where: {_id: blockId}, limit: 1}),
   blockIdInLocal = blocks.length > 0,
-  ok = blockIdInLocal || await uploadBlock(db, datasetId, apiServer.host, block);
+  ok = blockIdInLocal || await uploadBlock(db, apiServer.host, block);
   console.log('localiseDatasetForBlock', ok);
   return ok;
 }
 
+/**
+ * @return promise not yielding a value
+ */
+function ensureDataset(apiServer, models, dataset) {
+  /** -	make datasetId unique by appending @host  (and possibly later @user)
+   * Change dataset.name and block.datasetId
+   */
+  let datasetId = dataset.name; // block.datasetId;
+  console.log('ensureDataset', datasetId);
+  let datasetIsLoaded = models.Dataset.exists(datasetId)
+    .then((datasetIdInLocal) => {
+      /** @param datasetIdInLocal true if the block's dataset is cached in local. based on checkDatasetExists(). */
+      console.log('ensureDataset', datasetIdInLocal);
+      let promise;
+      if (datasetIdInLocal) {
+        promise = Promise.resolve();
+      } else {
+        let meta = dataset.meta || (dataset.meta = {});
+        meta.origin = apiServer.makeOrigin();
+        promise = localiseDataset(dataset, models, /*options*/undefined);
+      }
+      return promise;
+    });
+  return datasetIsLoaded;
+}
 /*----------------------------------------------------------------------------*/
 
 /** Cache the block in the db.
  * @param block_json
  * @return promise
  */
-function uploadBlock(db, datasetId, host, block_json) {
+function uploadBlock(db, host, block_json) {
   let meta = block_json.meta || (block_json.meta = {}),
   imported = Date.now();
   meta.origin = {host, imported};
   function cb(err, result) { console.log('uploadBlock() cb', err, result); };
 
-  let promise = datasetAddBlock(db, datasetId, block_json, cb);
+  let promise = datasetAddBlock(db, block_json, cb);
 
   return promise;
 }
@@ -286,9 +306,9 @@ function model2db(model) {
  * @param blockData .id is a string blockId and ._id is undefined
  * @return promise -> true if insert OK.
  */
-function datasetAddBlock(db, datasetId, blockData, cb) {
+function datasetAddBlock(db, blockData, cb) {
     // create block using connector to enable id to be provided by blockData.
-  console.log('datasetAddBlock', datasetId, blockData.id, blockData._id);
+  console.log('datasetAddBlock', blockData.id, blockData._id);
   if (blockData.id && ! blockData._id)
     blockData._id = blockData.id;
   if (typeof blockData._id === "string")
@@ -298,7 +318,7 @@ function datasetAddBlock(db, datasetId, blockData, cb) {
   let
     promise = db.collection('Block').insertOne(blockData)
     .then(function(result) {
-      console.log('datasetAddBlock', datasetId /*,result*/);
+      console.log('datasetAddBlock', blockData.datasetId /*,result*/);
       // maybe change ok -> resolve/reject
       return result.insertedCount === 1;
     })
@@ -351,14 +371,5 @@ function getDatasetsBlocks (apiServer) {
 };
 exports.getDatasetsBlocks = getDatasetsBlocks;
 
-/** Construct a hash of datasetsBlocks (result of getDatasetsBlocks(), by blockId
- * @return [blockId] -> { block, dataset}
- */
-function datasetsBlocksByBlockId(datasetsBlocks) {
-  return datasetsBlocks.reduce(
-    (result, dataset) => dataset.blocks.reduce(function (resultB, block) {
-      resultB[block.id] = {block,dataset}; return resultB; }, result), {});
-}
-exports.datasetsBlocksByBlockId = datasetsBlocksByBlockId;
 
 /*----------------------------------------------------------------------------*/
