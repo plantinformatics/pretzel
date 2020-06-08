@@ -1,3 +1,5 @@
+var _ = require('lodash');
+
 const bent = require('bent');
 const param = require('jquery-param');
 
@@ -9,7 +11,7 @@ const { ApiServer, apiServers, blockServer } = require('./api-server');
 var { localiseBlocks } = require('./localise-blocks');
 
 /** limit the # aliases in the result of /api/namespacesAliases : getAliases(). */
-const namespacesAliasesLimit = 1e4;
+const namespacesAliasesLimit = 1e5;
 
 const trace = 1;
 
@@ -52,7 +54,7 @@ function addAliasesMaybeDup(db, apiServer, aliases) {
   const fnName = 'addAliasesMaybeDup';
   console.log('aliases', aliases.length);
   /* aliases[*].namespace0,1 matches params namespace0,1.       */
-  let addP = addAliases(db, aliases, apiServer)
+  let addP = addAliasesChunks(db, aliases, apiServer)
     .then((insertedCount) => { console.log('after addAliases', insertedCount); return insertedCount; })
   // trace the promise outcomes
     .then(
@@ -73,6 +75,18 @@ function addAliasesMaybeDup(db, apiServer, aliases) {
   return addP;
 }
 
+/** Wrap addAliases() - split aliases[] into chunks if large.
+ * Work-around a limit on inserting many aliases.
+ * Alias.bulkCreate (backend/common/models/alias.js) does not have this problem;
+ * seems the only difference is ordered:false here.
+ * error is : UnhandledPromiseRejectionWarning: MongoError: BSONObj size: 16960202 (0x102CACA) is invalid. Size must be between 0 and 16793600(16MB) First element: insert: "Alias"
+ */
+function addAliasesChunks(db, aliases, apiServer) {
+  console.log('addAliasesChunks', aliases.length /*,aliases[0]*/);
+  let chunks = _.chunk(aliases, 1e4),
+  promises = chunks.map((c) => addAliases(db, c, apiServer));
+  return Promise.all(promises);
+};
 /** Cache the aliases which have been received from a secondary server.
  * Any of these aliases which are already loaded, i.e. if the key fields match
  * an alias already loaded, will not be loaded.
@@ -87,10 +101,13 @@ function addAliasesMaybeDup(db, apiServer, aliases) {
  * similar to models/alias.js : Alias.bulkCreate()
  */
 function addAliases(db, aliases, apiServer) {
+  console.log('addAliases', aliases.length /*,aliases[0]*/);
+  let origin = apiServer.makeOrigin();
   let augmented = aliases.map((a) => {
-    a.origin = apiServer.makeOrigin();
+    a.origin = origin;
     return a;
   });
+  console.log('augmented', augmented.length, augmented[0]);
     
   /** duplicates don't prevent insertion of following documents, because of option ordered : false  */
   let promise =
@@ -121,7 +138,7 @@ function remoteNamespacesGetAliases(apiServer, namespaces)
 
   const getJSON = bent(host, 'json');
 
-  let queryParams = param({namespaces, namespacesAliasesLimit, access_token : accessToken}),
+  let queryParams = param({namespaces, limit : namespacesAliasesLimit, access_token : accessToken}),
   headers = {'Authorization' : accessToken},
   endPoint = '/api/Aliases/namespacesAliases';
 
