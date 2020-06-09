@@ -197,7 +197,19 @@ function insert_features_recursive(db, dataset_id, features_to_insert, ordered, 
       // insert next level
       return insert_features_recursive(db, dataset_id, next_level_features, ordered, cb);
     })
-    .catch((e) => { console.log('insert_features_recursive', e.nInserted); cb(e);});
+    .catch((err) => {
+      console.log('insert_features_recursive', err.message, err.code);
+      if (err.writeErrors) console.log(err.writeErrors.length, err.writeErrors[0]);
+      // if !ordered then duplicates are OK - called from blockAddFeatures().
+      if (err.code === 11000) {
+        let dupCount = err.writeErrors && err.writeErrors.length || 0;
+        return Promise.resolve(features_to_insert.length - dupCount);
+      }
+      else {
+        cb(err);
+        return Promise.reject(err);
+      }
+    });
   return promise;
 };
 exports.insert_features_recursive = insert_features_recursive;

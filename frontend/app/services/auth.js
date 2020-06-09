@@ -369,6 +369,17 @@ export default Service.extend({
     if (data.server === 'primary') {
       requestServer = this.get('apiServers.primaryServer');
     } else {
+      /** Map a blockId which may be a remote reference, to a local blockId;
+       * no change if the value is already local.
+       * This function is copied from backend/common/utilities/localise-blocks.js
+       */
+      function blockLocalId(blockId) {
+        return blockId.blockId || blockId;
+      }
+      const
+      /** @param blockId may be local or remote reference. */
+      blockIdServer = (blockId) => this.get('apiServers.id2Server')[blockLocalId(blockId)];
+
       /** recognise the various names for blockId params.
        * lookup the servers for the given blockIds.
        * if the servers are different :
@@ -377,9 +388,9 @@ export default Service.extend({
        */
       let
         blockIds = data.blocks || data.blockIds || [data.blockA, data.blockB],
-      blockServers = blockIds && blockIds.map((blockId) => this.get('apiServers.id2Server')[blockId]),
+      blockServers = blockIds && blockIds.map((blockId) => blockIdServer(blockId)),
       blockId = data.block,
-      blockServer = blockId && this.get('apiServers.id2Server')[blockId];
+      blockServer = blockId && blockIdServer(blockId);
       if (blockServer) {
         if (blockServers) {
           dLog('_server', 'data has both single and multiple block params - unexpected', 

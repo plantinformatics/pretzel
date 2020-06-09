@@ -387,11 +387,11 @@ module.exports = function(Block) {
     }
 
     let
-      cacheId = blockIds[0] + '_' + blockIds[1],
+     cacheId = blockIds.map((b) => blockLocalId(b)).join('_'),
     /** see comment in pathsProgressive() */
     useCache = ! intervals.dbPathFilter,
     /** pathsAliases() does filter, and filterPathsAliases() is not yet adapted to handle results of pathsAliases() */
-    dbPathFilter = pathsAggr.pathsAliases !== undefined,
+    dbPathFilter = use_dbLookupAliases,
     nullFilter = function (paths, intervals) { return paths; },
     filterFunction = dbPathFilter ? nullFilter : pathsFilter.filterPathsAliases,
     apiOptions = { useCache };

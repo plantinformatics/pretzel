@@ -215,7 +215,7 @@ async function localiseBlockGet(models, apiServer, blockRemoteRefn, interval) {
        */
       function cb(err, result) {
         console.log(fnName, '() cb', result);
-        if (err) console.log('err', err.message, err.code, err.writeErrors.length, err.writeErrors[0]);
+        if (err) console.log('localiseBlockGet() err', err.message, err.code, err.writeErrors.length, err.writeErrors[0]);
       };
       /** insert_features_recursive() does not use dataset_id; it passes it to cb() as result. 
        * datasetId is not handy, so pass b instead.
