@@ -387,7 +387,8 @@ export default Service.extend({
        *  otherswise choose the first one.
        */
       let
-        blockIds = data.blocks || data.blockIds || [data.blockA, data.blockB],
+        blockIds = data.blocks || data.blockIds ||
+        [data.blockA, data.blockB].filter((b) => b),
       blockServers = blockIds && blockIds.map((blockId) => blockIdServer(blockId)),
       blockId = data.block,
       blockServer = blockId && blockIdServer(blockId);
@@ -397,7 +398,7 @@ export default Service.extend({
                data, blockIds, blockServers, blockId, blockServer);
         }
         requestServer = blockServer;
-      } else if (blockServers) {
+      } else if (blockServers.length) {
         let primaryServer = this.get('apiServers.primaryServer');
         if (blockServers[0] === blockServers[1]) {
           requestServer = blockServers[0];
