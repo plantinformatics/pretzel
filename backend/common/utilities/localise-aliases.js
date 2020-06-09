@@ -21,18 +21,19 @@ const trace = 1;
  * The getAliases request is sent to the server of that remote block.
  * @param namespace0,  namespace1,  namespaces of blockId0 and blockId1 (see pathsAliases).
  * @param intervals passed to localiseBlocks()
- * @return promise, with no result value
+ * @return promise yielding localised form of params [blockId0, blockId1]
  */
 exports.localiseBlocksAndAliases = function(db, models, blockId0, blockId1, namespace0,  namespace1, intervals) {
   const fnName = 'localiseBlocksAndAliases';
   let promise;
-  /** Current scope is for <=1 of [blockId0, blockId1] to be a remote reference, and the remainder local. */
-  let servers = [blockId0, blockId1].map((blockId) => blockServer(blockId))
+  let blockIds = [blockId0, blockId1];
+  /** Current scope is for <=1 of blockIds to be a remote reference, and the remainder local. */
+  let servers = blockIds.map((blockId) => blockServer(blockId))
   /** filter out undefined (local reference). */
     .filter((s) => s);
   if (servers.length === 0) {
     // blockIds are local, nothing to do
-    promise = Promise.resolve(0);
+    promise = Promise.resolve(blockIds);
   }
   else if (servers.length > 1) {
     console.warn('localiseBlocksAndAliases', 'expected <= 1 remote blocks', blockId0, blockId1);

@@ -20,7 +20,8 @@ const ObjectId = ObjectID;
 
 /** If any of the blockIds are references to remote blocks, map them to local
  * cached blocks by requesting the blocks and adding them to the db.
- * @return same format as input, except that remote block references are replaced with local block ids.
+ * @return promise yielding local blockIds equivalent to the input params;
+ * remote block references are replaced with local block ids.
  */
 exports.localiseBlocks = function(models, blockIds, intervals) {
   /** use intervals.axes[i], which corresponds to blockIds[i]. */
@@ -70,6 +71,16 @@ async function localiseDataset(data, models, options) {
   return dataset_id;
 };
 exports.localiseDataset = localiseDataset;
+
+/*----------------------------------------------------------------------------*/
+
+/** Extract the blockId out of a block remote reference.
+ * The id is GUID, so the remote id is used locally without clash.
+ */
+exports.blockLocalId = function(blockId) {
+  return blockId.blockId || blockId;
+};
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -351,7 +362,7 @@ function blockAddFeatures(db, datasetId, features, cb) {
 /*----------------------------------------------------------------------------*/
 
 /** Get Datasets and Blocks from the given Pretzel API server.
- * @return promise
+ * @return promise yielding an array of datasets, with their blocks included.
  */
 function getDatasetsBlocks (apiServer) {
   let promise;

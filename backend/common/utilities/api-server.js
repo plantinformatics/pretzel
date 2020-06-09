@@ -93,8 +93,24 @@ ApiServer.prototype.datasetAndBlock = async function (blockId) {
     console.log('datasetAndBlock', blockId);
     debugger;
   }
-  let datasetsBlocks = await this.datasetsBlocksValue(),
-  datasetBlock = this.datasetsBlocksByBlockId[blockId];
+  const datasetAndBlockGet = async (blockId) => {
+    let datasetsBlocks = await this.datasetsBlocksValue(),
+    datasetBlock = this.datasetsBlocksByBlockId[blockId];
+    return datasetBlock;
+  };
+  let datasetBlock = datasetAndBlockGet(blockId);
+  if (! datasetBlock) {
+    /* requests.datasetsBlocks is set by getDatasetsBlocks(), which is called
+     * via datasetsBlocksValue(), so at this point, expect that it is defined;
+     * simply log the retry. */
+    if (this.requests.datasetsBlocks) {
+      console.log('datasetAndBlock replacing previous result', this.datasetsBlocks && this.datasetsBlocks.length);
+      /* clearing this promise enables getDatasetsBlocks() to retry.
+       * Maybe add a time-based throttle. */
+      this.requests.datasetsBlocks = undefined;
+    }
+    datasetBlock = datasetAndBlockGet(blockId);
+  }
   console.log('datasetAndBlock', blockId /*, datasetBlock*/);
   return datasetBlock;
 };

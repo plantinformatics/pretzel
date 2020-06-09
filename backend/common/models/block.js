@@ -10,7 +10,7 @@ var blockFeatures = require('../utilities/block-features');
 var pathsAggr = require('../utilities/paths-aggr');
 var pathsFilter = require('../utilities/paths-filter');
 var pathsStream = require('../utilities/paths-stream');
-var { localiseBlocks } = require('../utilities/localise-blocks');
+var { localiseBlocks, blockLocalId } = require('../utilities/localise-blocks');
 const { blockServer } = require('../utilities/api-server');
 const { getAliases } = require('../utilities/localise-aliases');
 
@@ -40,7 +40,7 @@ const blockRemoteType = 'any';
 /** commented in .pathsAliasesProgressive() - use dbLookupAliases() now in place
  * of apiLookupAliases(), for db query and progressive paths. 
  * dbLookupAliases() now uses .pathsAliasesRemote() for multiple backends;
- * initially it used pathsAliases() - defined after 5576c1e.
+ * it wraps pathsAliases(), which was defined from 9da058e onwards.
  */
 const use_dbLookupAliases = true;
 
@@ -105,6 +105,7 @@ module.exports = function(Block) {
    */
   Block.pathsProgressive = function(left, right, intervals, options, res, cb) {
     localiseBlocks(this.app.models, [left, right], intervals)
+    /** @param left, right are localised - just the ID string */
       .then(([left, right]) => {
     let db = this.dataSource.connector;
 	  console.log('pathsProgressive', /*db,*/ JSON.stringify(left), JSON.stringify(right), intervals /*, options, cb*/);
@@ -112,6 +113,7 @@ module.exports = function(Block) {
     /** If intervals.dbPathFilter, we could append the location filter to cacheId,
      * but it is not clear yet whether that would perform better.
      * e.g. filterId = intervals.dbPathFilter ? '_' + intervals.axes[0].domain[0] + '_' + ... : ''
+     * So cache is not used if dbPathFilter.
      */
     useCache = ! intervals.dbPathFilter,
     cached = cache.get(cacheId);
@@ -162,6 +164,7 @@ module.exports = function(Block) {
         };
         let
           cacheId = blockId0 + '_' + blockId1,
+        /** see comment in pathsProgressive() */
         useCache = ! intervals.dbPathFilter,
         apiOptions = { useCache };
         reqStream(dbLookup, pathsFilter.filterPaths, cacheId, intervals, req, res, apiOptions);
@@ -177,11 +180,12 @@ module.exports = function(Block) {
   Block.pathsAliasesProgressive = function(blockIds, intervals, options, res, cb) {
     let [left, right] = blockIds;
     console.log('pathsAliasesProgressive', left, right, intervals /*, options, cb*/);
-    let cacheId = left + '_' + right,
-    /** if filtering in db query then don't use cache;  that applies now that pathsAliases() is defined. */
-    useCache = ! pathsAggr.pathsAliases || ! intervals.dbPathFilter,
+    let cacheId = [left, right].map((b) => blockLocalId(b)).join('_'),
+    /** if filtering in db query then don't use cache;  that applies now that pathsAliases() is defined.
+     * also refn comment in @see pathsProgressive() */
+    useCache = ! use_dbLookupAliases || ! intervals.dbPathFilter,
     /** filterPathsAliases() is not yet adapted to handle results of pathsAliases() */
-    dbPathFilter = pathsAggr.pathsAliases !== undefined,
+    dbPathFilter = use_dbLookupAliases,
     cached = cache.get(cacheId);
     if (useCache && cached) {
       console.log('pathsAliasesProgressive cache hit', cacheId);
@@ -384,6 +388,7 @@ module.exports = function(Block) {
 
     let
       cacheId = blockIds[0] + '_' + blockIds[1],
+    /** see comment in pathsProgressive() */
     useCache = ! intervals.dbPathFilter,
     /** pathsAliases() does filter, and filterPathsAliases() is not yet adapted to handle results of pathsAliases() */
     dbPathFilter = pathsAggr.pathsAliases !== undefined,
@@ -611,6 +616,7 @@ module.exports = function(Block) {
     /** If intervals.dbPathFilter, we could append the location filter to cacheId,
      * but it is not clear yet whether that would perform better.
      * e.g. filterId = intervals.dbPathFilter ? '_' + intervals.axes[0].domain[0] + '_' + ... : ''
+     * So cache is not used if dbPathFilter.
      */
     useCache = ! intervals.dbPathFilter,
     cached = cache.get(cacheId);
@@ -633,7 +639,7 @@ module.exports = function(Block) {
           else
             filteredData = pathsFilter.filterFeatures(data, intervals);
           if (trace_block > 1)
-            console.log("Num Filtered Paths => ", filteredData.length);
+            console.log("Num Filtered Features => ", filteredData.length);
           cb(null, filteredData);
         })
         .catch(function(err) {
