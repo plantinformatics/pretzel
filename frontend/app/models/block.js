@@ -327,11 +327,15 @@ export default DS.Model.extend({
 
     if (trace_block)
       dLog('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent && parent.get('id'));
-    if (parent)
+    /* parent may be a promise, with content null. parent.get('id') or 'name'
+     * tests if the dataset has a parent, whether dataset is an Ember store
+     * object or a (resolved) promise of one.
+     */
+    if (parentName)
     {
       /** it is possible that the block may be a copy from a secondary server which is not currently connected. */
       let store = this.get('apiServers').id2Store(this.get('id'));
-      referenceBlock = store && store.peekAll('block')
+      referenceBlock = ! store ? [] : store.peekAll('block')
         .filter(function (b) {
           let scope2 = b.get('scope'),
           dataset2 = b.get('datasetId'),
