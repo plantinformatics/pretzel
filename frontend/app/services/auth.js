@@ -88,10 +88,12 @@ export default Service.extend({
     const filteredIntervalParams = omitUndefined(intervals);
     let
       route= 'Blocks/pathsViaStream',
-    data = {blockA, blockB},
-    url = this._endpointURLToken(data, route) + 
+    dataIn = {blockA, blockB},
+    {url, data} = this._endpointURLToken(dataIn, route);
+    data.intervals = filteredIntervalParams;
+      url +=
       '&' +
-      Ember.$.param({blockA, blockB, intervals : filteredIntervalParams});
+      Ember.$.param(data);
     if (trace_paths)
       dLog(url, blockA, blockB, intervals, filteredIntervalParams, options);
 
@@ -199,10 +201,12 @@ export default Service.extend({
     const filteredIntervalParams = omitUndefined(intervals);
     let
       route= 'Blocks/pathsAliasesViaStream',
-    data = {blockIds},
-    url = this._endpointURLToken(data, route) + 
+    dataIn = {blockIds},
+    {url, data} = this._endpointURLToken(dataIn, route);
+    data.intervals = filteredIntervalParams;
+    url +=
       '&' +
-      Ember.$.param({blockIds, intervals : filteredIntervalParams});
+      Ember.$.param(data);
     if (trace_paths)
       dLog(url, blockIds, intervals, filteredIntervalParams, options);
 
@@ -295,8 +299,8 @@ export default Service.extend({
    * token may be actual token string, or equal true to trigger token fetch
    * onProgress is a callback accepting (percentComplete, data_direction)
    */
-  _ajax(route, method, data, token, onProgress) {
-    let server = this._server(data),
+  _ajax(route, method, dataIn, token, onProgress) {
+    let {server, data} = this._server(dataIn),
      url = this._endpoint(server, route);
 
     let config = {
@@ -363,9 +367,16 @@ export default Service.extend({
   /** Determine which server to send the request to.
    * @param data  params to the API; these guide the server determination;
    * e.g. if the param is block: <blockId>, use the server from which blockId was loaded.
+   *
+   * The compound result includes a copy of these params, modified to suit the
+   * server which is chosen : paths request params may be remote references, and
+   * are converted to local if they are being sent to the server they refer to.
+   * @return {server <ApiServer>, data}
+   * The blockIds in input param data may be modified, in which case result
+   * .data is a modified copy of input data.
    */
   _server(data) {
-    let requestServer;
+    let result = {data}, requestServer;
     if (data.server === 'primary') {
       requestServer = this.get('apiServers.primaryServer');
     } else {
@@ -393,25 +404,34 @@ export default Service.extend({
       blockId = data.block,
       blockServer = blockId && blockIdServer(blockId);
       if (blockServer) {
-        if (blockServers) {
+        if (blockServers.length) {
           dLog('_server', 'data has both single and multiple block params - unexpected', 
                data, blockIds, blockServers, blockId, blockServer);
         }
         requestServer = blockServer;
+      } else if (blockServers.length === 1) {
+        requestServer = blockServers[0];
       } else if (blockServers.length) {
         let primaryServer = this.get('apiServers.primaryServer');
+
         if (blockServers[0] === blockServers[1]) {
           requestServer = blockServers[0];
+          // requestServer owns both the input blockId params, so convert them both to local.
+          result.data = blockIdMap(data, [blockLocalId, blockLocalId]);
         } else if (blockServers.indexOf(primaryServer) >= 0)
           requestServer = primaryServer;
-        else
+        else {
           requestServer = blockServers[0];
+          if (blockServers.length > 1)
+            result.data = blockIdMap(data, [blockLocalId, I]);
+        }
       }
       if (! requestServer)
         requestServer = this.get(requestServerAttr);
       dLog(blockId, 'blockServer', blockServer);
     }
-    return requestServer;
+    result.server = requestServer;
+    return result;
   },
   /** construct the URL / URI for the given server and route.
    * @param requestServer determined by @see _server()
@@ -434,12 +454,63 @@ export default Service.extend({
    * https://stackoverflow.com/questions/28176933/http-authorization-header-in-eventsource-server-sent-events
    * https://github.com/whatwg/html/issues/2177#issuecomment-487194160
    */
-  _endpointURLToken(data, route) {
-    let server = this._server(data),
+  _endpointURLToken(dataIn, route) {
+    let {server, data} = this._server(dataIn),
     url = this._endpoint(server, route) +
       '?access_token=' + this._accessToken(server);
-    return url;
+    return {url, data};
   }
 
 
 });
+
+/*----------------------------------------------------------------------------*/
+
+/** Map the input blockId params of data, using mapFns, which contains a
+ * function for the first and second blockId params respectively.
+ */
+function blockIdMap(data, mapFns) {
+  /** blockA, blockB, blockIds are the input blockId params;
+   * d is the result data, and at this point contains the other params.
+   */
+  let 
+    // the version of Babel in use is giving SyntaxError: Unexpected token
+    // {blockA, blockB, blockIds, ...d} = data,
+    // so manually spread the object :
+    blockA = data.blockA,
+  blockB = data.blockB, 
+  blockIds = data.blockIds,
+  restFields = Object.keys(data).filter(
+    (f) => ['blockA', 'blockB', 'blockIds'].indexOf(f) === -1),
+  d = restFields.reduce((result, f) => {result[f] = data[f]; return result;}, {}),
+  /** ab is true if data contains .blockA,B, false if .blockIds */
+  ab = !!blockA;
+  console.log('blockIdMap', data, blockA, blockB, blockIds, restFields, d, ab);
+  if ((!blockA !== !blockB) || (!blockA === !blockIds)) {
+    Ember.assert('param data is expected to contain either .blockA and .blockB, or .blockIds : ' +
+                 JSON.stringify(data), false);
+  }
+  /* if data has .blockA,B, put those params into blockIds[] to be processed in
+   * the same way that .blockIds[] is, then move the results back to .blockA,B
+   *
+   * This would read better if the .map was factored into a function and called
+   * separately for .blockA,B and .blockIds - can do that after commit (already
+   * tested as is).
+   */
+  if (ab) {
+    blockIds = [blockA, blockB];
+  }
+  blockIds = blockIds.map((blockId, i) => mapFns[i](blockId));
+  if (ab)
+    [d.blockA, d.blockB] = blockIds;
+  else
+    d.blockIds = blockIds;
+  console.log('blockIdMap', d);
+  return d;
+}
+
+function I(x) { return x; }
+
+/*----------------------------------------------------------------------------*/
+
+
