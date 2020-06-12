@@ -201,7 +201,8 @@ export default DS.Model.extend({
      * block.get('isData') depends on featureCount, which won't be present for
      * newly uploaded blocks.  Only references have .range (atm).
      */
-    let isData = ! this.get('range');
+    let range = this.get('range'),
+    isData = ! range || ! range.length;
     if (! limits && isData) {
       let blocksLimitsTasks = this.get('taskGetLimits').perform();
     }
