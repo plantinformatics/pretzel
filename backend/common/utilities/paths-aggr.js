@@ -481,6 +481,7 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
 };
 /** Wrap .pathsAliases(), and handle the possibility that one of the blockIds
  * may be from a secondary / remote server, not the primary.
+ * @return promise yielding a cursor
  */
 exports.pathsAliasesRemote = function(db, models, blockId0, blockId1, namespace0,  namespace1, intervals) {
   let promise = 

@@ -157,6 +157,7 @@ module.exports = function(Block) {
     localiseBlocks(this.app.models, [blockId0, blockId1], intervals)
       .then(([blockId0, blockId1]) => {
         let db = this.dataSource.connector;
+        /** @return cursor */
         function dbLookup() {
           let cursor =
             pathsAggr.pathsDirect(db, blockId0, blockId1, intervals);
@@ -298,7 +299,10 @@ module.exports = function(Block) {
     /** Use cached values if all required values are cached. */
     let n = blockIds.map(blockId =>  {
       return this.blockRecordLookup(blockId)
-        .then((block) => { if (!block || !block.namespace) { debugger; return undefined; } else { return block.namespace;}; });
+        .then((block) => { if (!block || !block.namespace) {
+          // block.namespace may be "", and !"" is true.  return undefined for this.
+          console.log('blockNamespace', blockId, block, blockIds); 
+          if (! block) { debugger; }; return undefined; } else { return block.namespace;}; });
     });
     n = Promise.all(n);
     // check for undefined block.namespace
@@ -311,12 +315,41 @@ module.exports = function(Block) {
     return n;
   };
 
+  /**
+   * @return promise yielding a cursor or an empty Readable (in the case of blockId without a namespace);
+   * both have the .pipe() required by pipeStream().
+   */
   Block.dbLookupAliases = async function(blockId0, blockId1, intervals) {
-    let namespaces = await this.blockNamespace([blockId0, blockId1]);
-
-    let db = this.dataSource.connector,
-    cursor =
-      pathsAggr.pathsAliasesRemote(db, this.app.models, blockId0, blockId1, namespaces[0],  namespaces[1], intervals);
+    let namespaces = await this.blockNamespace([blockId0, blockId1]),
+    /** block may be missing a namespace, e.g. if uploaded from CSV, .namespace will be ""
+     */
+    namespacesFiltered = namespaces.filter((n) => (n !== undefined) && (n !== "")),
+    cursor;
+    if (namespacesFiltered.length < 2) {
+      console.log('dbLookupAliases() : block without namespace', namespaces, blockId0, blockId1);
+      /** returning an empty cursor would be reasonable; could construct one
+       * using an empty search - there may not be an easier way.
+       * Returning an empty iterator, e.g. cursor = [][Symbol.iterator]();
+       * is not sufficient because pipeStream() uses cursor.pipe().
+       * Try returning a empty Readable, which has .pipe(), similar to
+       * aliasesCursor() but with an empty array, i.e. :
+       */
+      let readable = new Readable({objectMode:true});
+      readable.push(null);
+      cursor = readable;
+    } else
+    /* Request aliases matching namespaces[] from the secondary, copy them into
+     * the local db, then perform the pathsAliases query and return a cursor of
+     * the result.
+     * If namespacesFiltered.length < 2, the remote request will return [], then
+     * the local query will return [].  Which is not efficient, so the
+     * block.namespace should be checked earlier.
+     */
+    {
+      let db = this.dataSource.connector;
+      cursor =
+        pathsAggr.pathsAliasesRemote(db, this.app.models, blockId0, blockId1, namespaces[0],  namespaces[1], intervals);
+    }
     console.log('dbLookupAliases', namespaces);
     return cursor;
   };
@@ -359,6 +392,10 @@ module.exports = function(Block) {
 
     let me = this;
 
+    /**
+     * @return promise yielding a cursor or Readable (in the case of apiLookupAliases());
+     * both have the .pipe() required by pipeStream().
+     */
     function aliasesCursor() {
       let cursor;
       if (use_dbLookupAliases) {
@@ -405,6 +442,7 @@ module.exports = function(Block) {
    * If apiOptions.useCache, check if the data is in cache, identified by cacheId.
    * Otherwise read data using cursorFunction, storing in cache if enabled.
    * Filter it with filterFunction using intervals, 
+   * @param cursorFunction  function returning a cursor or a promise yielding a cursor
    */
   function reqStream(cursorFunction, filterFunction, cacheId, intervals, req, res, apiOptions) {
     /* The params of reqStream() are largely passed to pipeStream() - starting to look like a class. */
