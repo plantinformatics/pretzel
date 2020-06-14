@@ -1,3 +1,6 @@
+const bent = require('bent');
+const param = require('jquery-param');
+
 /* global exports */
 /* global require */
 
@@ -44,10 +47,6 @@ ApiServer.prototype.makeOrigin = function() {
 
 /*----------------------------------------------------------------------------*/
 
-/** Originally written for localise-blocks, this function could be moved here,
- * and probably made a method of ApiServer. */
-const { getDatasetsBlocks } = require('./localise-blocks');
-
 /** Construct a hash of datasetsBlocks (result of getDatasetsBlocks(), by datasetName
  * @return [datasetName] -> dataset
  */
@@ -74,16 +73,48 @@ ApiServer.prototype.datasetsBlocksByBlockIdCollate = function() {
 
 /*----------------------------------------------------------------------------*/
 
-ApiServer.prototype.datasetsBlocksValue = async function () {
-  let apiServer = this;
-  if (! apiServer.datasetsBlocks) {
-    // ApiServer : could combine value with via promise proxy function
-    apiServer.datasetsBlocks = await getDatasetsBlocks(apiServer);
-    apiServer.datasetsBlocksByDatasetNameCollate();
-    apiServer.datasetsBlocksByBlockIdCollate();
+/** 
+ * @return the list of datasets, including their blocks, from this ApiServer.
+ * @desc
+ * If a request for this value has been sent, return that promise, with the
+ * exception that a new request is sent if refresh.
+ *
+ * @param refresh if true, send a request regardless of presence of existing value .datasetsBlocks
+ */
+ApiServer.prototype.datasetsBlocksValue = async function (refresh) {
+  const fnName = 'datasetsBlocksValue';
+  if (!refresh && this.requests.datasetsBlocks) {
+    console.log(fnName, 'already in progress');
+  } else {
+    console.log(fnName, refresh);
+    this.requests.datasetsBlocks = 
+      this.getDatasetsBlocks().then((datasetsBlocks) => {
+        console.log(fnName, datasetsBlocks.length);
+        this.datasetsBlocks = datasetsBlocks;
+        this.datasetsBlocksByDatasetNameCollate();
+        this.datasetsBlocksByBlockIdCollate();
+      });
   }
-  return apiServer.datasetsBlocks;
+  return this.requests.datasetsBlocks;
 };
+
+/*----------------------------------------------------------------------------*/
+
+/** Get Datasets and Blocks from the given Pretzel API server.
+ * @return promise yielding an array of datasets, with their blocks included.
+ */
+ApiServer.prototype.getDatasetsBlocks = function () {
+  let promise;
+  console.log('getDatasetsBlocks', 'send request');
+  const getJSON = bent(this.host, 'json');
+  const params = {filter : {'include': 'blocks'}},
+  headers = {'Authorization' : this.accessToken};
+  promise = getJSON('/api/datasets' + '?' + param(params),  /*body*/undefined, headers);
+  promise.then((datasetsBlocks) => console.log('datasetsBlocks', datasetsBlocks.length, datasetsBlocks[0].name));
+  return promise;
+};
+
+/*----------------------------------------------------------------------------*/
 
 /**
  * @param blockId string, just the local blockId not a remote reference
@@ -93,25 +124,41 @@ ApiServer.prototype.datasetAndBlock = async function (blockId) {
     console.log('datasetAndBlock', blockId);
     debugger;
   }
-  const datasetAndBlockGet = async (blockId) => {
-    let datasetsBlocks = await this.datasetsBlocksValue(),
+  const datasetAndBlockGet = async (blockId, refresh) => {
+    let datasetsBlocks = await this.datasetsBlocksValue(refresh),
     datasetBlock = this.datasetsBlocksByBlockId[blockId];
+    if (! datasetBlock) {
+      console.log('datasetAndBlockGet', datasetBlock, blockId, refresh);
+    }
     return datasetBlock;
   };
-  let datasetBlock = datasetAndBlockGet(blockId);
+  let datasetBlock = await datasetAndBlockGet(blockId, false);
+  console.log('datasetAndBlockGet', datasetBlock, blockId);
   if (! datasetBlock) {
+    /** If a new block is added / uploaded to the server, this.datasetsBlocks
+     * will need to be refreshed.
+     */
+
+    /** To avoid repeated retries, a retry may be sent for each blockId which is
+     * not found in this.datasetsBlocks.
+     * this.requests.block_retry[blockId] records a refresh sent for blockId.
+     */
+    let block_retry = this.requests.block_retry || (this.requests.block_retry = {}),
+    tried = block_retry[blockId];
+
     /* requests.datasetsBlocks is set by getDatasetsBlocks(), which is called
      * via datasetsBlocksValue(), so at this point, expect that it is defined;
      * simply log the retry. */
-    if (this.requests.datasetsBlocks) {
-      console.log('datasetAndBlock replacing previous result', this.datasetsBlocks && this.datasetsBlocks.length);
-      /* clearing this promise enables getDatasetsBlocks() to retry.
-       * Maybe add a time-based throttle. */
-      this.requests.datasetsBlocks = undefined;
+    if (! tried && this.requests.datasetsBlocks) {
+      console.log('datasetAndBlock replacing previous result', this.datasetsBlocks && this.datasetsBlocks.length, blockId);
     }
-    datasetBlock = datasetAndBlockGet(blockId);
+
+    let
+    datasetBlockP = tried ||
+      (block_retry[blockId] = datasetAndBlockGet(blockId, true));
+    datasetBlock = await datasetBlockP;
   }
-  console.log('datasetAndBlock', blockId /*, datasetBlock*/);
+  console.log('datasetAndBlock', blockId, datasetBlock !== undefined);
   return datasetBlock;
 };
 

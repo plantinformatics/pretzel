@@ -359,28 +359,5 @@ function blockAddFeatures(db, datasetId, features, cb) {
 }
 
 
-/*----------------------------------------------------------------------------*/
-
-/** Get Datasets and Blocks from the given Pretzel API server.
- * @return promise yielding an array of datasets, with their blocks included.
- */
-function getDatasetsBlocks (apiServer) {
-  let promise;
-  if (apiServer.requests.datasetsBlocks) {
-    promise = apiServer.requests.datasetsBlocks;
-    console.log('getDatasetsBlocks', 'already in progress');
-  } else {
-    console.log('getDatasetsBlocks', 'send request');
-    const getJSON = bent(apiServer.host, 'json');
-    const params = {filter : {'include': 'blocks'}},
-    headers = {'Authorization' : apiServer.accessToken};
-    promise = getJSON('/api/datasets' + '?' + param(params),  /*body*/undefined, headers);
-    apiServer.requests.datasetsBlocks = promise;
-    promise.then((datasetsBlocks) => console.log('datasetsBlocks', datasetsBlocks.length, datasetsBlocks[0].name));
-  }
-  return promise;
-};
-exports.getDatasetsBlocks = getDatasetsBlocks;
-
 
 /*----------------------------------------------------------------------------*/
