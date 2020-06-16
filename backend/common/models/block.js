@@ -698,7 +698,7 @@ module.exports = function(Block) {
       cb(err);
     });
   }
-
+  
   /*--------------------------------------------------------------------------*/
 
   Block.observe('before save', function(ctx, next) {
@@ -906,6 +906,8 @@ module.exports = function(Block) {
     returns: {type: 'array', root: true},
     description: "Request syntenic blocks for left and right blocks"
   });
+
+  /*--------------------------------------------------------------------------*/
 
   acl.assignRulesRecord(Block)
   acl.limitRemoteMethods(Block)

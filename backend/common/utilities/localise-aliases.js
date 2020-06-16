@@ -117,6 +117,8 @@ function addAliases(db, aliases, apiServer) {
   return promise;
 }
 
+/*----------------------------------------------------------------------------*/
+
 /** call remoteNamespacesGetAliases() if not already requested.
  */
 function remoteNamespacesAliasesValue(db, apiServer, namespaces) {
@@ -200,3 +202,37 @@ exports.getAliases = function(db, namespaces, limit) {
 
   return b;
 };
+
+/*----------------------------------------------------------------------------*/
+
+/**
+ * This function clears Aliases copied from a secondary if
+ * their copy time and last-use are older than a given time.
+ * Also comment re. last-use time in (localise-blocks.js) @see cacheClearBlocks
+ * @desc
+ *
+ * @param db  database handle
+ * @param time  clear data older than this time.  milliseconds since start of epoch, e.g. 1591779301486
+ */
+exports.cacheClearAliases = function (db, time) {
+  let
+  aliasCollection = db.collection("Alias"),
+  match = {'meta.origin.imported' : {$lte : time}};
+  console.log('cacheClearAliases', time);
+
+  let aliasesRemoved = 
+    aliasCollection.remove({'origin.imported' : {$lte : time}});
+  aliasesRemoved
+    .then(function (aliasesRemoved) {
+      let result = aliasesRemoved.result || aliasesRemoved;
+      console.log('cacheClearAliases aliasesRemoved', result);
+      return result;
+    })
+    .catch((err) => {
+      console.log('cacheClearAliases', err);
+    });
+
+  return aliasesRemoved;
+};
+
+/*----------------------------------------------------------------------------*/

@@ -90,7 +90,8 @@ module.exports = function(app) {
       context.property == 'pathsAliasesProgressive' ||
       context.property == 'pathsAliasesViaStream' ||
       context.property == 'namespacesAliases' ||
-      context.property === 'runtimeConfig'
+      context.property === 'runtimeConfig' ||
+      context.property === 'cacheClear'
        ) {
       // allow find, create and upload requests
       return process.nextTick(() => cb(null, true))

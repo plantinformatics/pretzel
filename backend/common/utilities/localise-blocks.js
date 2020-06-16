@@ -16,6 +16,22 @@ const { ObjectID } = require('mongodb');
 const ObjectId = ObjectID;
 
 
+/*----------------------------------------------------------------------------*/
+
+/** Context : Datasets / Blocks / Features are copied from a secondary Pretzel
+ * API server to enable paths (direct and aliases) to be calculated using db
+ * query.  This is a simple selective on-demand replication; the data is stable
+ * (could be immutable), so update is not required; to balance space / time
+ * efficiency, and to handle updates if required, the copied data is
+ * time-stamped, and cleared periodically.
+ *
+ * The term 'localise' is used to refer to this process of adding a copy of data
+ * from secondary server to this server database.  It means that a ID of a block
+ * on the secondary can be used in db query for paths.
+ * DB IDs are GUID so duplicate IDs are not a problem.
+ */
+
+/*----------------------------------------------------------------------------*/
 
 
 /** If any of the blockIds are references to remote blocks, map them to local
@@ -359,5 +375,59 @@ function blockAddFeatures(db, datasetId, features, cb) {
 }
 
 
+
+/*----------------------------------------------------------------------------*/
+
+/** See also file header comment for context.
+ *
+ * This function clears Datasets / Blocks / Features copied from a secondary if
+ * their copy time and last-use are older than a given time.
+ * The last-use time will probably not be updated in the database - it is
+ * sufficient to record this within the server; if the server is restarted, data
+ * may be cleared which was recently used, but it is OK to simply re-read the
+ * data.
+ *
+ * @param db  database handle
+ * @param time  clear data older than this time.  milliseconds since start of epoch, e.g. 1591779301486
+ */
+exports.cacheClearBlocks = async function (db, models, time) {
+  let
+  datasetCollection = db.collection("Dataset"),
+  blockCollection = db.collection("Block"),
+  featureCollection = db.collection("Feature"),
+  match = {'meta.origin.imported' : {$lte : time}},
+  idsToRemovePipe =  [ {$match : match}, {$project : {'meta.origin.imported' : 1 }} ],
+  blocks = await blockCollection.aggregate(idsToRemovePipe).toArray(),
+  blockIds = blocks.map((block) => block._id),
+  datasets = await datasetCollection.aggregate(idsToRemovePipe).toArray();
+  console.log('cacheClearBlocks', time, blocks.length, datasets.length, blockIds.length);
+  let featuresRemoved = await featureCollection.remove({where : {blockId : {inq : blockIds}}}),
+  blocksRemoved = await blockCollection.remove(match),
+  datasetsRemoved = await models.Dataset.find({include: 'blocks', where: /*match*/ {'meta.origin.imported' : {lte : time}}}, /*options*/{})
+    .then(function(datasets) {
+      return datasets.filter(function(dataset) {
+        console.log('cacheClearBlocks', 'dataset', dataset);
+            return dataset.__data.blocks.length === 0;
+        })
+        .map((dataset) => { return {
+          // '_id' because this is used in mongoDb query
+          _id : dataset.name,
+          'meta.origin.host' : dataset.__data.meta.origin.host
+        };   });
+    })
+    .then(function (datasetsToRemove) {
+      console.log('datasetsToRemove', datasetsToRemove);
+      return Promise.all(
+        datasetsToRemove.map((datasetToRemove) => {
+          console.log('datasetToRemove', datasetToRemove);          
+          return datasetCollection.remove(datasetToRemove);
+        }));
+    })
+    .catch((err) => {
+      console.log('cacheClearBlocks', err);
+    });
+
+  return datasetsRemoved;
+};
 
 /*----------------------------------------------------------------------------*/

@@ -5,7 +5,7 @@
 
 var acl = require('../utilities/acl')
 
-const { getAliases } = require('../utilities/localise-aliases');
+const { getAliases, cacheClearAliases } = require('../utilities/localise-aliases');
 
 module.exports = function(Alias) {
 
@@ -65,6 +65,30 @@ module.exports = function(Alias) {
     description: "Returns aliases between the two namespaces"
   });
 
+  /*--------------------------------------------------------------------------*/
+
+
+  Alias.cacheClear = function(time, options, cb) {
+    let db = this.dataSource.connector;
+    cacheClearAliases(db, time)
+      .then((removed) => cb(null, removed))
+      .catch((err) => cb(err));
+  };
+  
+
+
+  Alias.remoteMethod('cacheClear', {
+    accepts: [
+      {arg: 'time', type: 'number', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'any', root: true},
+   description: "Clear cached copies of aliases from a secondary Pretzel API server."
+  });
+
+
+  /*--------------------------------------------------------------------------*/
 
 
   acl.assignRulesRecord(Alias)
