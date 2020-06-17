@@ -176,6 +176,20 @@ function localiseBlock(models, b, interval)
   return b;
 };
 
+/** After a localised block is cleared from the cache, if it is requested by the
+ * client again then it will need to be localised again.  This function achieves
+ * that by clearing the reference to the localiseBlockGet() request.
+ */
+function forgetBlockRequest(blockId, host) {
+  let apiServer = apiServers[host],
+  requests = Reflect.get(apiServer, 'requests');
+  // using ObjectId in [] e.g. requests[blockId] seems equivalent to blockId.toHexString().
+  console.log('forgetBlockRequest', blockId.toHexString(), host, /*apiServer,*/ requests && requests[blockId]);
+  if (requests) {
+    delete requests[blockId];
+  }
+}
+
 /** get features
  */
 function remoteBlockGetFeatures(blockRemoteRefn, interval)
@@ -396,18 +410,32 @@ exports.cacheClearBlocks = async function (db, models, time) {
   blockCollection = db.collection("Block"),
   featureCollection = db.collection("Feature"),
   match = {'meta.origin.imported' : {$lte : time}},
-  idsToRemovePipe =  [ {$match : match}, {$project : {'meta.origin.imported' : 1 }} ],
-  blocks = await blockCollection.aggregate(idsToRemovePipe).toArray(),
+  idsToRemovePipeline =  [ {$match : match}, {$project : {'meta.origin' : 1 }} ],
+  blocks = await blockCollection.aggregate(idsToRemovePipeline).toArray(),
   blockIds = blocks.map((block) => block._id),
-  datasets = await datasetCollection.aggregate(idsToRemovePipe).toArray();
-  console.log('cacheClearBlocks', time, blocks.length, datasets.length, blockIds.length);
-  let featuresRemoved = await featureCollection.remove({where : {blockId : {inq : blockIds}}}),
-  blocksRemoved = await blockCollection.remove(match),
+  /** result {_id, meta.origin}[], not currently used - just trace.   */
+  datasets = await datasetCollection.aggregate(idsToRemovePipeline).toArray();
+  console.log('cacheClearBlocks', time, blocks.length, datasets.map((d) => d._id),
+              blockIds.map((id) => id.toHexString()));
+  let featuresRemoved = await featureCollection.remove({blockId : {$in : blockIds}})
+    .then(function (removed) {
+      console.log('featuresRemoved', removed.result || removed);
+    }),
+  blocksRemoved = await blockCollection.remove(match)
+    .then(function (removed) {
+      console.log('blocksRemoved', removed.result || removed);
+      /** @param block this is not the loopback object (with .__data), it is
+       * the result of idsToRemovePipeline. */
+      blocks.forEach(function (block) {
+        forgetBlockRequest(block._id, block.meta.origin.host);
+      });
+    }),
   datasetsRemoved = await models.Dataset.find({include: 'blocks', where: /*match*/ {'meta.origin.imported' : {lte : time}}}, /*options*/{})
     .then(function(datasets) {
       return datasets.filter(function(dataset) {
-        console.log('cacheClearBlocks', 'dataset', dataset);
-            return dataset.__data.blocks.length === 0;
+        let d = dataset.__data;
+        console.log('cacheClearBlocks', 'dataset', d.name, d.blocks.length, d.meta.origin);
+        return d.blocks.length === 0;
         })
         .map((dataset) => { return {
           // '_id' because this is used in mongoDb query

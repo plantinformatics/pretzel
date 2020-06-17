@@ -133,7 +133,8 @@ ApiServer.prototype.datasetAndBlock = async function (blockId) {
     return datasetBlock;
   };
   let datasetBlock = await datasetAndBlockGet(blockId, false);
-  console.log('datasetAndBlockGet', datasetBlock, blockId);
+  console.log('datasetAndBlockGet', blockId,
+              datasetBlock && [datasetBlock.block.name, datasetBlock.dataset.name]);
   if (! datasetBlock) {
     /** If a new block is added / uploaded to the server, this.datasetsBlocks
      * will need to be refreshed.
