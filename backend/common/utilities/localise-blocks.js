@@ -237,7 +237,7 @@ async function localiseBlockGet(models, apiServer, blockRemoteRefn, interval) {
   if (! ok) {
     promise = Promise.reject();
   } else {
-    promise = 
+    promise =
     remoteBlockGetFeatures(blockRemoteRefn, interval).then((features) => {
       console.log('features', features.length);
       /* features[*].blockId is the same as block._id, b.blockId.       */
@@ -378,7 +378,7 @@ function datasetAddBlock(db, blockData, cb) {
 function blockAddFeatures(db, datasetId, features, cb) {
   /** convert the ._id and .blockId fields from hex string to ObjectId,
    * and shallow-copy the other fields. */
-  let featuresId = features.map((f) => { 
+  let featuresId = features.map((f) => {
     let {_id, blockId, ...rest} = f;
     rest._id = ObjectId(_id);
     rest.blockId = ObjectId(blockId);
@@ -447,7 +447,7 @@ exports.cacheClearBlocks = async function (db, models, time) {
       console.log('datasetsToRemove', datasetsToRemove);
       return Promise.all(
         datasetsToRemove.map((datasetToRemove) => {
-          console.log('datasetToRemove', datasetToRemove);          
+          console.log('datasetToRemove', datasetToRemove);
           return datasetCollection.remove(datasetToRemove);
         }));
     })

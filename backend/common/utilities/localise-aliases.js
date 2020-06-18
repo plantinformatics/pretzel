@@ -109,7 +109,7 @@ function addAliases(db, aliases, apiServer) {
     return a;
   });
   console.log('augmented', augmented.length, augmented[0]);
-    
+
   /** duplicates don't prevent insertion of following documents, because of option ordered : false  */
   let promise =
     db.collection('Alias').insertMany(augmented, {ordered : false})
@@ -119,15 +119,27 @@ function addAliases(db, aliases, apiServer) {
 
 /*----------------------------------------------------------------------------*/
 
+function aliasesRequestId(namespaces) {
+  /** aliases request for namespaces is symmetric, so sort to make ["n1", "n2"]
+   * share the same request as ["n2", "n1"]. */
+  return namespaces.sort().join(',');
+}
+
 /** call remoteNamespacesGetAliases() if not already requested.
  */
 function remoteNamespacesAliasesValue(db, apiServer, namespaces) {
   console.log('remoteNamespacesAliasesValue', namespaces);
   let requests = apiServer.requests.aliases || (apiServer.requests.aliases = {}),
-  requestId = namespaces.join(','),
-  promise = requests[requestId] ||
-    (requests[requestId] = remoteNamespacesGetAliases(apiServer, namespaces)
-     .then((aliases) => ! aliases.length || addAliasesMaybeDup(db, apiServer, aliases)));
+  requestId = aliasesRequestId(namespaces),
+  request = requests[requestId],
+  promise = request && request.request;
+  if (promise) {
+    request.lastUsed = Date.now();
+  } else {
+    promise = remoteNamespacesGetAliases(apiServer, namespaces)
+      .then((aliases) => ! aliases.length || addAliasesMaybeDup(db, apiServer, aliases));
+    requests[requestId] = new RequestRecord(promise);
+  }
   return promise;
 }
 /** from apiServer, get aliases between the given namespaces
@@ -205,23 +217,76 @@ exports.getAliases = function(db, namespaces, limit) {
 
 /*----------------------------------------------------------------------------*/
 
+class RequestRecord {
+  /**
+   * @param request promise of the request to secondary server to get aliases (remoteNamespacesGetAliases)
+   * @param copyTime  time the request was issued.  if undefined, default value is Date.now()
+   * @param lastUsed  time the copied aliases were last used (i.e. the access
+   * function remoteNamespacesAliasesValue() was last called)
+   */
+  constructor(request, copyTime, lastUsed) {
+    this.request = request;
+    this.copyTime = copyTime || Date.now();
+    this.lastUsed = lastUsed || this.copyTime;
+  }
+}
+
+/** For the servers from which datasets/blocks/features / aliases have been
+ * copied, compare the times of the recorded aliases requests against the given
+ * time.  For those with copyTime < time and lastUsed < time,
+ * cacheClearAliasesNamespaces() is called.
+ * 
+ * @param db  database handle
+ * @param time  clear data older than this time.  milliseconds since start of epoch.
+ */
+exports.cacheClearAliasesRequests = function (db, time) {
+  let promises = [];
+  for (const host of Object.keys(apiServers)) {
+    let apiServer = apiServers[host],
+    requests = apiServer.requests.aliases;
+    // requestId = aliasesRequestId(namespaces), 
+    for (const requestId of Object.keys(requests)) {
+      const rr = requests[requestId];
+      if ((rr.copyTime <= time) && (rr.lastUsed <= time)) {
+        const namespaces = requestId.split(',');
+        /* Could pass host and narrow the match to host, but there doesn't seem
+         * to be a benefit - if there is another request which copied aliases
+         * for the same namespaces and is also <time, then they will be deleted
+         * by the first call with matching namespaces, and later calls will have
+         * no effect.
+         */
+        promises.push(cacheClearAliasesNamespaces(db, time, namespaces));
+        delete requests[requestId];
+      }
+    }
+  }
+  return Promise.all(promises);
+};
 /**
  * This function clears Aliases copied from a secondary if
  * their copy time and last-use are older than a given time.
- * Also comment re. last-use time in (localise-blocks.js) @see cacheClearBlocks
+ * Also see comment re. last-use time in (localise-blocks.js) @see cacheClearBlocks
  * @desc
+ * Alternative to cacheClearAliases{Requests,Namespaces}(), this function uses a single
+ * remove(), but it does not update requests.aliases
+ * That makes it suitable for clearing the cache when the server starts
+ * (called with matchNamespaces===undefined).
+ * The param matchNamespaces enables this function to also act as basis of
+ * cacheClearAliasesNamespaces().
  *
  * @param db  database handle
  * @param time  clear data older than this time.  milliseconds since start of epoch, e.g. 1591779301486
+ * @param matchNamespaces undefined, or an additional mongoDb expression to match namespace{1,2}
  */
-exports.cacheClearAliases = function (db, time) {
+function cacheClearAliases (db, time, matchNamespaces) {
   let
   aliasCollection = db.collection("Alias"),
-  match = {'meta.origin.imported' : {$lte : time}};
-  console.log('cacheClearAliases', time);
+  match = {'origin.imported' : {$lte : time}};
+  if (matchNamespaces)
+    Object.assign(match, matchNamespaces);
+  console.log('cacheClearAliases', time, match);
 
-  let aliasesRemoved = 
-    aliasCollection.remove({'origin.imported' : {$lte : time}});
+  let aliasesRemoved = aliasCollection.remove(match);
   aliasesRemoved
     .then(function (aliasesRemoved) {
       let result = aliasesRemoved.result || aliasesRemoved;
@@ -234,5 +299,30 @@ exports.cacheClearAliases = function (db, time) {
 
   return aliasesRemoved;
 };
+exports.cacheClearAliases = cacheClearAliases;
+
+function matchNamespacesExpr(namespaces) {
+  return {
+    $and :
+    [
+      {$expr : { $eq: [ "$namespace1", namespaces[0] ] }},
+      {$expr : { $eq: [ "$namespace2", namespaces[1] ] }}
+    ]
+  };
+};
+
+function cacheClearAliasesNamespaces (db, time, namespaces) {
+  let
+  matchNamespaces = {
+    $or:
+    [
+      matchNamespacesExpr(namespaces),
+      matchNamespacesExpr([namespaces[1], namespaces[0]])
+    ]
+  };
+  console.log('cacheClearAliasesNamespaces', matchNamespaces);
+  return cacheClearAliases(db, time, matchNamespaces);
+};
+
 
 /*----------------------------------------------------------------------------*/

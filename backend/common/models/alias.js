@@ -5,7 +5,7 @@
 
 var acl = require('../utilities/acl')
 
-const { getAliases, cacheClearAliases } = require('../utilities/localise-aliases');
+const { getAliases, cacheClearAliases, cacheClearAliasesRequests } = require('../utilities/localise-aliases');
 
 module.exports = function(Alias) {
 
@@ -85,6 +85,26 @@ module.exports = function(Alias) {
     http: {verb: 'get'},
     returns: {type: 'any', root: true},
    description: "Clear cached copies of aliases from a secondary Pretzel API server."
+  });
+
+
+  Alias.cacheClearRequests = function(time, options, cb) {
+    let db = this.dataSource.connector;
+    cacheClearAliasesRequests(db, time)
+      .then((removed) => cb(null, removed))
+      .catch((err) => cb(err));
+  };
+  
+
+
+  Alias.remoteMethod('cacheClearRequests', {
+    accepts: [
+      {arg: 'time', type: 'number', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'any', root: true},
+   description: "Clear cached copies of aliases from a secondary Pretzel API server, and clear their request promises."
   });
 
 

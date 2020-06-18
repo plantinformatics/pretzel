@@ -91,7 +91,8 @@ module.exports = function(app) {
       context.property == 'pathsAliasesViaStream' ||
       context.property == 'namespacesAliases' ||
       context.property === 'runtimeConfig' ||
-      context.property === 'cacheClear'
+      context.property === 'cacheClear' ||
+      context.property === 'cacheClearRequests'
        ) {
       // allow find, create and upload requests
       return process.nextTick(() => cb(null, true))
