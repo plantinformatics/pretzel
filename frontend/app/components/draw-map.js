@@ -1290,9 +1290,13 @@ export default Ember.Component.extend(Ember.Evented, {
                * put the data block on the axis of the parent from the same
                * server.  It is not invalid to put it on a different server,
                * and that functionality can be considered.
+               * Now replacing :
+               *  (dBlock.store.name === block_.store.name)
+               * with parentMatch (which probably covers match and could replace it)
                */
+              parentMatch = block_.get('datasetId.content') === dataset.get('parent'),
               match = (block.scope == zd.scope) && (block.dataset.get('name') == parentName) &&
-                (dBlock.store.name === block_.store.name);
+                parentMatch;
               dLog(key, trace_stack ? block : block.dataset.get('name'), match);
               return match;
             }

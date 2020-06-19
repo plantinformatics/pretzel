@@ -581,9 +581,10 @@ function pathsAliases(db, blockId0, blockId1, namespace0,  namespace1, intervals
     ];
 
   pipeline = pipeline.concat(group);
-  if (trace_aggr > 1)
+  if (trace_aggr > 2)
     console.dir('pathsAliases pipeline', pipeline, { depth: null });
-  console.log('pathsAliases pipeline', JSON.stringify(pipeline));
+  if (trace_aggr > 1)
+    console.log('pathsAliases pipeline', JSON.stringify(pipeline));
 
   let result = pipelineLimits(featureCollection, intervals, pipeline);
 

@@ -201,6 +201,17 @@ export default Service.extend(Ember.Evented, {
     dLog('stores', stores, servers);
     return stores;
   }),
+  dataset2stores : function (datasetName) {
+    let
+	  servers = this.get('servers'),
+    nameList = Object.keys(servers),
+    stores = nameList.map(
+      (name) => { let server = servers[name]; return {name, server, store: server.store};})
+      .filter((s) => {let d = s.store.peekRecord('dataset', datasetName); return d && Object.assign(s, {dataset : d });  } );
+    dLog('stores', stores, servers);
+    return stores;
+  },
+
 
 
   ServerLogin: function(url, user, password) {
