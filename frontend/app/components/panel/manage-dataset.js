@@ -3,6 +3,9 @@ import Ember from 'ember';
 
 /** @param: dataset **/
 
+const dLog = console.debug;
+const trace = 0;
+
 export default ManageBase.extend({
   editorVisible: false,
   currentMeta: {},
@@ -21,12 +24,15 @@ export default ManageBase.extend({
       this.toggleProperty('editorVisible');
     },
     mutateJson(json) {
-      console.log('currentMeta => ', this.get("currentMeta"));
+      if (trace > 1)
+        dLog('mutateJson()', 'currentMeta => ', this.get("currentMeta"));
       this.set("currentMeta", json);
-      console.log('currentMeta => ', this.get("currentMeta"));
+      if (trace > 1)
+        dLog('mutateJson()', 'currentMeta => ', this.get("currentMeta"));
       // this.get("dataset").save()
     },
     saveJSONToDB() {
+      dLog('saveJSONToDB()', 'currentMeta', this.get("currentMeta"));
       this.set("dataset.meta", this.get("currentMeta"));
       this.get("dataset").save();
       this.send("toggleEditor");
