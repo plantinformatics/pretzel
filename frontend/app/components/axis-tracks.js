@@ -591,7 +591,7 @@ export default InAxis.extend({
       .append("rect");
     ra
       .attr('class', 'track')
-      // .transition().duration(featureTrackTransitionTime)
+      .transition().duration(featureTrackTransitionTime)
       .attr('width', width)
       .each(subElements ? configureSubTrackHover : configureTrackHover);
       let blockIndex = thisAt.get('axis1d.blockIndexes'),
@@ -612,7 +612,7 @@ export default InAxis.extend({
         .merge(ra);
       dLog('rm', rm.node(), 'es', es.nodes(), es.node());
       rm
-      // .transition().duration(featureTrackTransitionTime)
+      .transition().duration(featureTrackTransitionTime)
       .attr('x', xPosn)
       .attr('y', yPosn)
       .attr('height' , height)
@@ -809,7 +809,7 @@ export default InAxis.extend({
             /** sub-element selection */
             let ses =
               d3.select(this)
-            // .transition().duration(featureTrackTransitionTime)
+              .transition().duration(featureTrackTransitionTime)
               .each(showDimensions);
             if (shape.stroke !== null)
               ses.attr('stroke', shape.stroke || blockTrackColourI);
