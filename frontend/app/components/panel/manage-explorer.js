@@ -1142,10 +1142,39 @@ export default ManageBase.extend({
       this.refreshAvailable();
       this.sendAction('onDelete', modelName, id);
     },
+    /** The user has clicked + to add a block.
+     * If the block's dataset has a .parentName and doesn't have a
+     * referenceBlock on the same server, or a referenceBlock which is viewed,
+     * then show a dialog listing potential reference blocks which the user may add.
+     */
     loadBlock(block) {
-      this.sendAction('loadBlock', block);
+      if (! block.get('datasetId.parentName') || 
+          block.get('referenceBlock') ||
+          block.referenceBlockSameServer()) {
+        // mapview : loadBlock() will view the reference if it is not viewed.
+        this.sendAction('loadBlock', block);
+      }
+      else
+        this.set('blockWithoutParentOnPrimary', block);
+
+      /** If the user is adding a reference then check if
+       * .blockWithoutParentOnPrimary is now able to be added, and add it.
+       */
+      Ember.run.next(() => {
+        if (! block.get('datasetId.parentName')) {
+          let dataBlock = this.get('blockWithoutParentOnPrimary'),
+          referenceBlock = dataBlock && dataBlock.get('referenceBlock');
+          if (referenceBlock) {
+            dLog('loadBlock viewing', dataBlock.id, 'as its referenceBlock', referenceBlock.id, 'is viewed');
+            this.set('blockWithoutParentOnPrimary', null);
+            this.sendAction('loadBlock', dataBlock);
+          }
+        }
+      });
     }
-  },
+
+  },  // actions
+
   //----------------------------------------------------------------------------
 
   /** If a tab is active (selected), save its id.  */

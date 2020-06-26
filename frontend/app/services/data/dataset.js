@@ -179,6 +179,70 @@ export default Service.extend(Ember.Evented, {
     return map;
   }),
  
+  /** Collate the datasets of the servers by the given keyFunction.
+   * The calling ComputedProperty should depend on 'apiServers.datasetsWithServerName.[]'.
+   */
+  datasetsByFunction : function datasetsByFunction (keyFunction) {
+    let
+      datasetsWithServerName = this.get('apiServers.datasetsWithServerName'),
+    datasetsByValue = datasetsWithServerName.reduce(function(result, d) {
+      let serverName = d.serverName;
+      d.datasetsBlocks.forEach(function (dataset) {
+        /** key will be .parentName or .id (name)  */
+        let key = keyFunction(dataset),
+        rp = result[key] || (result[key] = []);
+        rp.push({dataset, serverName});
+      });
+      return result;
+    });
+    dLog('datasetsByFunction', datasetsByValue);
+    return datasetsByValue;
+  },
+
+  /** Similar to datasetsByParent, except that is limited to .primaryServer,
+   * whereas this matches datasets on all stores/servers,
+   * and this maps by .parentName instead of .parent which may be undefined.
+   * @return [parentName] -> {dataset, serverName}
+   */  
+  datasetsByParentName : Ember.computed('apiServers.datasetsWithServerName.[]', function () {
+    function parentNameFn (dataset) { return dataset.get('parentName') || null; }
+    let datasetsByParentName = this.datasetsByFunction(parentNameFn);
+    dLog('datasetsByParentName', datasetsByParentName);
+    return datasetsByParentName;
+  }),
+  /** Similar to datasetsByName, except that is limited to .primaryServer,
+   * whereas this matches datasets on all stores/servers.
+   */
+  datasetsByNameAllServers : Ember.computed('apiServers.datasetsWithServerName.[]', function () {
+    function nameFn (dataset) { return dataset.get('id') || null; }
+    let datasetsByName = this.datasetsByFunction(nameFn);
+    dLog('datasetsByNameAllServers', datasetsByName);
+    return datasetsByName;
+  }),
+  /** Lookup the datasets matching the given parentName, i.e. dataset.parentName === parentName.
+   *
+   * @param parentName  to match
+   * @param original  if true then exclude copied / cached datasets (having .meta.origin)
+   * @return [ {dataset, serverName}, ... ]
+   */
+  datasetsForParentName : function(parentName, original) {
+    let datasetsByParentName = this.get('datasetsByParentName'),
+    childDatasets = datasetsByParentName[parentName];
+    return childDatasets;
+  },
+  /** Lookup the datasets matching the given name.
+   *
+   * @param name  to match, usually a parentName
+   * @param original  if true then exclude copied / cached datasets (having .meta.origin)
+   */
+  datasetsForName : function(name, original) {
+    let
+          apiServers = this.get('apiServers'),
+        datasets = apiServers.dataset2stores(name);
+    if (original)
+      datasets = datasets.filter((d) => ! d.dataset.get('meta.origin'));
+    return datasets;
+  }
   
   
 });

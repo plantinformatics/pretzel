@@ -30,9 +30,13 @@ export default Ember.Component.extend({
     if (mapByDataset)
       for (var [referenceName, mapByScope] of mapByDataset) {
         for (var [scope, blocks] of mapByScope) {
-          mapByReferenceBlock[blocks[0].id] = blocks;
-          if (true /*trace*/ )
-            dLog('axesBlocks', referenceName, scope, blocks.mapBy('_internalModel.__data'));
+          /**  referenceBlock, undefined if the currently connected servers do
+           *  not have a parent matching the child dataset's .parentName */
+          if (blocks[0]) {
+            mapByReferenceBlock[blocks[0].id] = blocks;
+            if (true /*trace*/ )
+              dLog('axesBlocks', referenceName, scope, blocks.mapBy('_internalModel.__data'));
+          }
         }
       }
     dLog('axesBlocks', mapByDataset, mapByReferenceBlock);

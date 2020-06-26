@@ -561,7 +561,7 @@ export default Service.extend(Ember.Evented, {
     let d = block.get('id'), d2 = dataBlock.get('id'), a = dataBlock,
     dataset = block.get('datasetId'), ad = dataBlock.get('datasetId');
     let match = 
-      (d != d2) &&  // not self
+      (d !== d2) &&  // not self
       /* ! a.parent &&*/
       ad && (ad.get('parent').get('id') === dataset.get('id')) &&
       (dataBlock.get('scope') == block.get('scope'));
@@ -822,6 +822,8 @@ export default Service.extend(Ember.Evented, {
    * @desc
    * Blocks without a parent / reference, will be mapped via their datasetId,
    * and will be placed in [0] of the blocks array for their scope.
+   * For Blocks with datasetId.parentName, but no matching parent on the
+   * currently connected servers, blocks[0] will be undefined.
    */
   blocksByReferenceAndScope : Ember.computed(
     'blockValues.[]',
@@ -836,16 +838,29 @@ export default Service.extend(Ember.Evented, {
             /** If block is a promise, block.get('datasetId.parent') will be a
              * promise - non-null regardless of whether the dataset has a
              * .parent, whereas .get of .parent.name will return undefined iff
-             * there is no parent.
+             * there is no parent.  Now that .parent is changed from a relation
+             * managed by ember-data to a CP, this logic has changed :
+             * Now with the addition of cross-server references, .parentName may
+             * be defined but not .parent, e.g. there is no matching parent on
+             * the currently connected servers.  For the uses of this CP, it is
+             * useful to group by .parentName regardless of whether .parent is
+             * defined.
              */
-            parentName = block.get('datasetId.parent.name');
+            parentName = block.get('datasetId.parentName');
 
+            /** For each datasetId:scope:, an array of blocks is recorded.
+             * Lookup the blocks array, and create it if it does not yet exist.
+             * blocks[0] is reserved for the reference block, so a new array is
+             * [undefined], and blocks[0] is set by the caller.
+             */
             function blocksOfDatasetAndScope(datasetId, scope) {
+              /** Lookup the map for datasetId; create it if it does not yet exist. */
               let mapByScope = map.get(datasetId);
               if (! mapByScope) {
                 mapByScope = new Map();
                 map.set(datasetId, mapByScope);
               }
+              /** Lookup the blocks[] for scope; create it if it does not yet exist. */
               let blocks = mapByScope.get(scope);
               if (! blocks)
                 mapByScope.set(scope, blocks = [undefined]); // [0] is reference block
@@ -853,9 +868,15 @@ export default Service.extend(Ember.Evented, {
             }
 
             if (parentName) {
+              /** if block.datasetId.parentName, this is a child/data block so add
+               * it to the blocks of the reference.
+               */
               let blocks = blocksOfDatasetAndScope(parentName, scope);
               blocks.push(block);
             } else {
+              /** block is a reference or GM.  Note it in blocks[0] for the datasetName:scope.
+               * If that blocks[0] is already set, create a unique scope with a new blocks[].
+               */
               let datasetName = block.get('datasetId.name');
               let blocks = blocksOfDatasetAndScope(datasetName, scope);
               if (blocks[0]) {
@@ -871,7 +892,7 @@ export default Service.extend(Ember.Evented, {
                  */
                 blocks = blocksOfDatasetAndScope(datasetName, scope + '_' + datasetName);
               }
-              blocks[0] = block; 
+              blocks[0] = block;
             }
             return map;
           },

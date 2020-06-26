@@ -211,6 +211,27 @@ export default Service.extend(Ember.Evented, {
     dLog('stores', stores, servers);
     return stores;
   },
+  /** Equivalent to this.get('datasetsBlocks') which is [serverName] -> datasetsBlocks.
+   * This form is useful as a ComputedProperty dependency, because dependency
+   * .@each can only be on arrays, not objects (i.e. indexed by integer, not
+   * string).
+   *
+   * @return [ {dataset, serverName}, ... ]
+   */
+  datasetsWithServerName : Ember.computed(
+    // datasetsBlocksRefresh represents 'servers.@each.datasetsBlocks',
+    'datasetsBlocksRefresh', 'serversLength', 
+    function datasetsWithServerName () {
+      let
+        servers = this.get('servers'),
+      nameList = Object.keys(servers),
+      result = nameList.map(function(serverName) {
+        let server = servers.get(serverName),
+        datasetsBlocks = server.get('datasetsBlocks');
+        return {datasetsBlocks, serverName};
+      });
+      return result;
+    }),
 
 
 

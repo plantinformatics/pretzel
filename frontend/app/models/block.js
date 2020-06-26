@@ -32,6 +32,7 @@ export default DS.Model.extend({
   blockService : service('data/block'),
   auth: service('auth'),
   apiServers: service(),
+  datasetService : service('data/dataset'),
 
 
   datasetId: DS.belongsTo('dataset'),
@@ -304,18 +305,43 @@ export default DS.Model.extend({
     reference = dataset && dataset.get('parent'),
     /** reference dataset */
     parent = dataset && dataset.get('parent'),
-    parentName = parent && parent.get('name');  // e.g. "myGenome"
+    parentName = parent ? parent.get('name') : Ember.get('datasetId.parentName');  // e.g. "myGenome"
 
     dLog('referenceDatasetName', dataset, reference, parent, parentName, parent && parent.get('id'));
 
     return parentName;
+
   }),
 
 
   /** If the dataset of this block has a parent, lookup the corresponding reference block in that parent, matching scope.
    * @return the reference block or undefined if none
    */
-  referenceBlock : Ember.computed('datasetId', 'datasetId.parent.name', 'scope', function () {
+  referenceBlock : Ember.computed(
+    'datasetId', 'datasetId.parent.name', 'scope',
+    'blockService.viewed.[]', 
+    function () {
+      let 
+        referenceBlock = this.viewedReferenceBlock();
+      return referenceBlock;
+    }),
+  /**
+   * @see referenceBlocksAllServers()
+   */
+  referenceBlocks : Ember.computed(
+    'datasetId', 'datasetId.parent.name', 'scope',
+    'block.blockValues.[]',
+    'apiServers.datasetsWithServerName.[]', 
+    function () {
+      let 
+        referenceBlocks = this.referenceBlocksAllServers(true);
+      return referenceBlocks;
+    }),
+  /** Look for a reference block on the same server as this block.
+   * caller should depend on :
+   * 'datasetId', 'datasetId.parent.name', 'scope'
+   */
+  referenceBlockSameServer : function () {
     let 
       referenceBlock,
     scope = this.get('scope'),
@@ -362,7 +388,78 @@ export default DS.Model.extend({
         referenceBlock = referenceBlock[0] || undefined;
     }
     return referenceBlock;
-  }),
+  },
+  /** Determine if there is a viewed reference block which matches the .scope
+   * and .parentName of this block.
+   * @return reference block, or undefined
+   */
+  viewedReferenceBlock() {
+    let referenceBlock,
+    parentName = this.get('datasetId.parentName'),
+    scope = this.get('scope');
+
+    if (parentName) {
+      let mapByDataset = this.get('blockService.viewedBlocksByReferenceAndScope');
+      if (mapByDataset) {
+        let mapByScope = mapByDataset.get(parentName);
+        if (! mapByScope) {
+          dLog('viewedReferenceBlock', 'no viewed parent', parentName, scope, mapByDataset);
+        } else {
+          let blocks = mapByScope.get(scope);
+          if (! blocks) {
+            dLog('viewedReferenceBlock', 'no matching scope on parent', parentName, scope, mapByScope);
+          } else {
+            blocks.forEach((block, i) => {
+              if ((block === undefined) && (i === 0))
+                dLog('viewedReferenceBlock', 'reference not viewed', parentName, scope);
+              if (scope !== block.get('scope')) {
+                dLog('viewedReferenceBlock', 'not grouped by scope', block.get('id'), scope, block._internalModel.__data, parentName);
+              } else {
+                if (referenceBlock) {
+                  // prefer original
+                  if (referenceBlock.get('isCopy') && ! block.get('isCopy'))
+                    referenceBlock = block;
+                  else
+                    dLog('viewedReferenceBlock', 'duplicate match', block.get('id'), block._internalModel.__data, parentName, scope);
+                } else
+                  referenceBlock = block;
+              }
+            });
+          }
+        }
+        if (true /*trace*/ )
+          dLog('viewedReferenceBlock', referenceBlock, parentName, scope);
+      }
+    }
+
+    return referenceBlock;
+  },
+  /** Determine reference blocks for this block.
+   * The search is not limited to viewed blocks, and is across all connected servers.
+   * @param original  if true then exclude copied / cached datasets (having .meta.origin)
+   * @return array of blocks,  [] if none matching.
+   */
+  referenceBlocksAllServers(original) {
+    let parentName = this.get('datasetId.parentName'),
+    scope = this.get('scope'),
+    datasetService = this.get('datasetService'),
+    blocks = ! parentName ? [] :
+      datasetService.datasetsForName(parentName, original)
+      .reduce(function (result, d) {
+        d.dataset.get('blocks').forEach(function (block) {
+          /* possibly check (!original || ! block.isCopy()) here instead of
+           * .datasetsForName(, original) above; for now it seems that the
+           * dataset and block will be on the same server, i.e. either both are
+           * copied here or both not.
+           */
+          if (block.get('scope') === scope) 
+            result.push(block);
+        });
+        return result;
+      }, []);
+    dLog('referenceBlocksAllServers', original, parentName, scope, blocks);
+    return blocks;
+  },
   childBlocks : Ember.computed('blockService.blocksByReference', function () {
     let blocksByReference = this.get('blockService.blocksByReference'),
     childBlocks = blocksByReference && blocksByReference.get(this);
