@@ -1,4 +1,6 @@
 import Ember from 'ember';
+import { inject as service } from '@ember/service';
+
 
 import createIntervalTree from 'npm:interval-tree-1d';
 import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
@@ -14,7 +16,7 @@ import { ensureSvgDefs } from '../utils/draw/d3-svg';
 const featureTrackTransitionTime = 750;
 
 /** width of track <rect>s */
-const trackWidth = 10;
+let trackWidth = 10;
 /** track sub-elements < this height (px) are not rendered. */
 const subElementThresholdHeight = 5;
 
@@ -211,6 +213,9 @@ SubElement.prototype.getInterval = function() {
 
 export default InAxis.extend({
 
+  queryParams: service('query-params'),
+  urlOptions : Ember.computed.alias('queryParams.urlOptions'),
+
   className : "tracks",
   
   /** For each viewed block (trackBlocksR), some attributes are kept, until the
@@ -219,7 +224,19 @@ export default InAxis.extend({
    */
   blocks : {},
 
- /*--------------------------------------------------------------------------*/
+  /*--------------------------------------------------------------------------*/
+
+  init() {
+    this._super(...arguments);
+
+    let trackWidthOption = this.get('urlOptions.trackWidth');
+    if (trackWidthOption) {
+      dLog('init', 'from urlOptions, setting trackWidth', trackWidthOption, ', was', trackWidth);
+      trackWidth = trackWidthOption;
+    }
+  },
+
+  /*--------------------------------------------------------------------------*/
 
   actions: {
 
