@@ -1,4 +1,6 @@
 import Ember from 'ember';
+import { inject as service } from '@ember/service';
+
 
 import createIntervalTree from 'npm:interval-tree-1d';
 import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
@@ -14,7 +16,7 @@ import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleT
 const featureTrackTransitionTime = 750;
 
 /** width of track <rect>s */
-const trackWidth = 10;
+let trackWidth = 10;
 
 /** for devel.  ref comment in @see height() */
 let trace_count_NaN = 10;
@@ -152,8 +154,23 @@ function setClipWidth(axisID, width)
 
 export default InAxis.extend({
 
+  queryParams: service('query-params'),
+  urlOptions : Ember.computed.alias('queryParams.urlOptions'),
+
   className : "tracks",
   
+  /*--------------------------------------------------------------------------*/
+
+  init() {
+    this._super(...arguments);
+
+    let trackWidthOption = this.get('urlOptions.trackWidth');
+    if (trackWidthOption) {
+      dLog('init', 'from urlOptions, setting trackWidth', trackWidthOption, ', was', trackWidth);
+      trackWidth = trackWidthOption;
+    }
+  },
+
   /*--------------------------------------------------------------------------*/
 
   actions: {
