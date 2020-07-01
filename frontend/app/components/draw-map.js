@@ -3816,7 +3816,7 @@ export default Ember.Component.extend(Ember.Evented, {
       axisFeatureCircles_selectAll().remove();
       let brushedRegions = oa.brushedRegions;
       let brushRange = d3.event.selection,
-      mouse = d3.mouse(that);
+      mouse = brushRange && d3.mouse(that);
       let brushSelection = d3.brushSelection(d3.select(that));
       let brush_ = that.__brush,
       brushSelection_ = brush_.selection,
