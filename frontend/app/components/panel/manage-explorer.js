@@ -264,7 +264,7 @@ export default ManageBase.extend({
   // parents are reference assemblies
   /** result of uniqBy is a single dataset which refers to each (parent)
    * dataset; just 1 child of each parent is in the result. */
-  child1 : uniqBy('withParent', 'parent.name'),
+  child1 : uniqBy('withParent', 'parentName'), // parent.name
   /** parents of child1(), i.e. all the parent datasets, just once each.  */
   parents : mapBy('child1', 'parent'),
   /** names of parents(). */
@@ -286,7 +286,7 @@ export default ManageBase.extend({
     /* withParent : */ .filter(function(dataset, index, array) {
       return dataset.get('parent.content');
     })
-    /* child1 :*/ .uniqBy('parent.name')
+    /* child1 :*/ .uniqBy('parentName')  // parent.name
     /* parents :*/ .mapBy('parent');
     }
 
@@ -398,7 +398,7 @@ export default ManageBase.extend({
           if (! typeName)
           {
             if (trace_dataTree > 3)
-              console.log('dataset without parent.meta.type', d.get('name'), d.get('parent.name'));
+              console.log('dataset without parent.meta.type', d.get('name'), d.get('parentName'));  // parent.name
           }
           else
           {
@@ -915,7 +915,7 @@ export default ManageBase.extend({
     /** can update this .nest() to d3.group() */
     n = d3.nest()
     /* the key function will return undefined for datasets without parents, which will result in a key of 'undefined'. */
-      .key(function(f) { let p = f.get && f.get('parent'); return p && p.get('name'); })
+      .key(function(f) { let p = f.get && f.get('parent'); return p ? p.get('name') : f.get('parentName'); })
       .entries(withParentOnly ? withParent : datasets);
     /** this reduce is mapping an array  [{key, values}, ..] to a hash {key : value, .. } */
     let grouped =

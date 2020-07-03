@@ -7,6 +7,7 @@ import Record from './record';
 
 
 const dLog = console.debug;
+const trace = 1;
 
 export default Record.extend({
   apiServers : service(),
@@ -64,13 +65,19 @@ export default Record.extend({
             }
           }
         }
-        dLog(this.id, 'parent', parentName, parent);
+        if (trace > 1)
+          dLog(this.id, 'parent', parentName, parent);
       }
       return parent;
     }),
 
   parentName: DS.attr(), // belongsTo('dataset', {inverse: 'children'}),
   // children: DS.hasMany('dataset', {inverse: 'parent'}),
+  children : Ember.computed('parentName', function children () {
+    let c = this.store.peekAll('dataset')
+      .filterBy('parentName', this.get('id'));
+    return c;
+  }),
 
   blocks: DS.hasMany('block', { async: false }),
   type: attr('string'),
