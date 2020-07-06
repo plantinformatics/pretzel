@@ -1023,7 +1023,7 @@ export default ManageBase.extend({
   /** Given a dataset, filter its blocks. */
   datasetFilterBlocks(tabName, dataset) {
     let me = this;
-    let blocks = dataset.get('blocks').toArray();
+    let blocks = dataset.get('blocksOriginal').toArray();
     let filterMatched = me.get('filterMatched');
     let isFiltered = filterMatched[tabName];
     let filterGroup = me.get('blockFilterGroup');

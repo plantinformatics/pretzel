@@ -90,6 +90,14 @@ export default Record.extend({
   /** is this dataset copied from a (secondary) server, cached on the server it was loaded from (normally the primary). */
   isCopy : Ember.computed('meta.origin', function () {
     return !! this.get('meta.origin');
+  }),
+
+  /** same as .blocks, with any blocks copied from a secondary server filtered out.
+   */
+  blocksOriginal : Ember.computed('blocks.[]', function () {
+    let blocks = this.get('blocks')
+      .filter((b) => ! b.get('isCopy'));
+    return blocks;
   })
 
   /*--------------------------------------------------------------------------*/
