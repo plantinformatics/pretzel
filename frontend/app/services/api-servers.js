@@ -208,7 +208,8 @@ export default Service.extend(Ember.Evented, {
     stores = nameList.map(
       (name) => { let server = servers[name]; return {name, server, store: server.store};})
       .filter((s) => {let d = s.store.peekRecord('dataset', datasetName); return d && Object.assign(s, {dataset : d });  } );
-    dLog('stores', stores, servers);
+    if ((trace > 2) || (trace && (stores.length !== 1)))
+      dLog('stores', datasetName, stores, servers);
     return stores;
   },
   /** Equivalent to this.get('datasetsBlocks') which is [serverName] -> datasetsBlocks.

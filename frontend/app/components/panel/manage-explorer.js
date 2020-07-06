@@ -914,7 +914,7 @@ export default ManageBase.extend({
       return p; }) : [],
     /** can update this .nest() to d3.group() */
     n = d3.nest()
-    /* the key function will return undefined for datasets without parents, which will result in a key of 'undefined'. */
+    /* the key function will return undefined or null for datasets without parents, which will result in a key of 'undefined' or 'null'. */
       .key(function(f) { let p = f.get && f.get('parent'); return p ? p.get('name') : f.get('parentName'); })
       .entries(withParentOnly ? withParent : datasets);
     /** this reduce is mapping an array  [{key, values}, ..] to a hash {key : value, .. } */
@@ -927,7 +927,7 @@ export default ManageBase.extend({
           if (trace_dataTree > 1)
             console.log('datasetsByParent', datasetsByParent);
           // as commented in .key() function above.
-          if  (key === 'undefined') {
+          if  ((key === 'undefined') || (key === 'null')) {
             /* datasets without parent - no change atm, just convert the nest to hash.
              * but possibly move the children up to be parallel to the parents.
              * i.e. merge datasetsByParent.values into result.
