@@ -121,6 +121,11 @@ export default DS.Model.extend({
     return !! this.get('meta.origin');
   }),
 
+  axisScope : Ember.computed('scope', 'name', 'datasetId.parentName', function () {
+    let scope = this.get('datasetId.parentName') ? this.get('scope') : this.get('name');
+    return scope;
+  }),
+
   /*--------------------------------------------------------------------------*/
 
 
@@ -323,7 +328,7 @@ export default DS.Model.extend({
     'blockService.viewed.[]', 
     function () {
       let 
-        referenceBlock = this.viewedReferenceBlock();
+        referenceBlock = this.viewedReferenceBlock() || this.referenceBlockSameServer();
       return referenceBlock;
     }),
   /** Collate the potential referenceBlocks for this block, across all servers.
@@ -401,7 +406,9 @@ export default DS.Model.extend({
     parentName = matchParentName ?
       this.get('datasetId.parentName') :
       this.get('datasetId.id'),
-    scope = this.get('scope');
+    scope = this.get('scope'),
+    /** filter out self if parentName is defined */
+    blockId = this.get('datasetId.parentName') && this.get('id');
 
     if (parentName) {
       let mapByDataset = this.get('blockService.viewedBlocksByReferenceAndScope');
@@ -424,8 +431,10 @@ export default DS.Model.extend({
               }
               /* viewedBlocksByReferenceAndScope() does not filter out
                * blocks[0], the reference block, even if it is not viewed, so
-               * filter it out here.  */
-              else if (block.get('isViewed')) {
+               * filter it out here.
+               * Also filter out self if this is a child block.
+               */
+              else if (block.get('isViewed') && (! blockId || (block.get('id') !== blockId))) {
                 referenceBlocks.push(block);
               }
             });
@@ -464,6 +473,7 @@ export default DS.Model.extend({
   /** Mostly the same as viewedReferenceBlock(), but for the purpose of checking
    * if this is a reference and there is already a reference of the same name
    * and scope in the view.
+   *
    * Determine if there is a viewed reference block which matches the .scope
    * and .datasetId.id of this block.
    * @return reference block, or undefined
@@ -472,14 +482,33 @@ export default DS.Model.extend({
     const
     fnName = 'viewedReferenceBlockDup',
     datasetName = this.get('datasetId.id'),
-    scope = this.get('scope');
+    scope = this.get('axisScope');
 
-    let referenceBlocks = this.viewedReferenceBlocks(false);
+    let referenceBlocksScope = this.viewedReferenceBlocks(false);
+
+    /* The block's scope is used for grouping into axes if the block's
+     * dataset has a .parentName.
+     * A genetic map may have multiple blocks with the same scope, and
+     * different names, e.g.  scope 1A, names 1A.1, 1A.2, ...  These
+     * are linkage groups - they are known to be part of the same
+     * scope but there is not sufficient linkage to relate the
+     * markers.  They are displayed on separate axes (which can be
+     * stacked together). So for the result of this function, they are
+     * considered distinct by name (which is expected to be unique within the
+     * dataset) rather than scope.
+     */
+    let referenceBlocks = referenceBlocksScope.filter(
+      (block) => this.get('name') === block.get('name') );
+    let nFiltered = referenceBlocksScope.length - referenceBlocks.length;
+    if (nFiltered > 0) {
+      dLog(fnName, 'omitted', nFiltered, 'distinct viewed block names with same scope; from :',
+           referenceBlocksScope.map(blockInfo), datasetName, scope);
+    }
     if (referenceBlocks.length) {
       dLog(fnName, 'synonomous reference viewed',
-           referenceBlocks.mapBy('id'),
-           referenceBlocks.mapBy('_internalModel.__data'), datasetName, scope);
+           referenceBlocks.map(blockInfo), datasetName, scope);
     }
+    function blockInfo(block) { return [block.id, block.store.name, block.get('_internalModel.__data')]; };
     return referenceBlocks;
   },
 
