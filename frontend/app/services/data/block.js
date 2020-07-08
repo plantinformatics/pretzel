@@ -34,7 +34,7 @@ function log_Map(label, map) {
   */
 function log_Map_Map(label, map) {
   map.forEach(function (value, key) {
-    console.log(label, 'key');
+    console.log(label, 'key', key);
     log_Map('', value);
   });
 }
@@ -879,7 +879,7 @@ export default Service.extend(Ember.Evented, {
                */
               let datasetName = block.get('datasetId.name');
               let blocks = blocksOfDatasetAndScope(datasetName, scope);
-              if (blocks[0]) {
+              if (false && blocks[0]) {
                 // console.log(fnName, '() >1 reference blocks for scope', scope, blocks, block, map);
                 /* Reference chromosome assemblies, i.e. physical maps, define a
                  * unique (reference) block for each scope, whereas Genetic Maps
@@ -892,7 +892,10 @@ export default Service.extend(Ember.Evented, {
                  */
                 blocks = blocksOfDatasetAndScope(datasetName, scope + '_' + datasetName);
               }
-              blocks[0] = block;
+              if (blocks[0])
+                blocks.push(block);
+              else
+                blocks[0] = block;
             }
             return map;
           },
@@ -904,6 +907,8 @@ export default Service.extend(Ember.Evented, {
     }),
 
   /** filter blocksByReferenceAndScope() for viewed blocks,
+   * blocks[0] is not filtered out even if it isn't viewed because it is the referenceBlock
+   *  (this is used in stacks-view.js : axesBlocks()).
    * @return Map, which may be empty
    */
   viewedBlocksByReferenceAndScope : Ember.computed(
@@ -915,14 +920,22 @@ export default Service.extend(Ember.Evented, {
     'viewed.[]', function () {
     const fnName = 'viewedBlocksByReferenceAndScope';
     let viewed = this.get('viewed');
+    /** map is a 2-level nested Map.
+     * It is filtered by referencesMapFilter at the 1st level, and scopesMapFilter at the 2nd level. */
     let map = this.get('blocksByReferenceAndScope'),
      resultMap = filterMap(map, referencesMapFilter);
+    /** used when filtering the 1st level map; apply the 2nd level filter scopesMapFilter(). */
     function referencesMapFilter(mapByScope) {
       let resultMap = filterMap(mapByScope, scopesMapFilter);
       if (trace_block > 2)
         dLog('referencesMapFilter', mapByScope, resultMap);
       return resultMap;
     };
+    /** used when filtering the 2nd level map;
+     * filter the blocks[] which is the map value; filter out blocks which are
+     * not viewed, with the exception that blocks[0], the reference block, is
+     * retained if any of the other blocks are.
+     */
     function scopesMapFilter(blocks) {
       // axis : blocks : [0] is included if any blocks[*] are viewed, ...
       //  && .isLoaded ?

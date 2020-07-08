@@ -1148,7 +1148,17 @@ export default ManageBase.extend({
      * then show a dialog listing potential reference blocks which the user may add.
      */
     loadBlock(block) {
-      if (! block.get('datasetId.parentName') || 
+      /** if block is not a child and there is already a viewed reference with
+       * the same dataset id, then show a dialog.
+       */
+      let duplicates;
+      if (! block.get('datasetId.parentName') &&
+          (duplicates = block.viewedReferenceBlockDup()) &&
+          duplicates.length)
+      {
+        this.set('viewedSynonomousReferenceBlocks', duplicates);
+      }
+      else if (! block.get('datasetId.parentName') || 
           block.get('referenceBlock') ||
           block.referenceBlockSameServer()) {
         // mapview : loadBlock() will view the reference if it is not viewed.

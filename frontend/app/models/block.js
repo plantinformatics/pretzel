@@ -315,6 +315,7 @@ export default DS.Model.extend({
 
 
   /** If the dataset of this block has a parent, lookup the corresponding reference block in that parent, matching scope.
+   * The result is influenced by which of the potential references are currently viewed.
    * @return the reference block or undefined if none
    */
   referenceBlock : Ember.computed(
@@ -325,7 +326,8 @@ export default DS.Model.extend({
         referenceBlock = this.viewedReferenceBlock();
       return referenceBlock;
     }),
-  /**
+  /** Collate the potential referenceBlocks for this block, across all servers.
+   * The result is not influenced by whether the potential references are currently viewed.
    * @see referenceBlocksAllServers()
    */
   referenceBlocks : Ember.computed(
@@ -389,13 +391,16 @@ export default DS.Model.extend({
     }
     return referenceBlock;
   },
-  /** Determine if there is a viewed reference block which matches the .scope
-   * and .parentName of this block.
-   * @return reference block, or undefined
+  /** Collate the viewed reference blocks which match the .scope
+   * and .datasetId or .parentName of this block.
+   * @param matchParentName true means match this.datasetId.parentName, otherwise match this.datasetId.id
+   * @return reference blocks, or []
    */
-  viewedReferenceBlock() {
-    let referenceBlock,
-    parentName = this.get('datasetId.parentName'),
+  viewedReferenceBlocks(matchParentName) {
+    let referenceBlocks = [],
+    parentName = matchParentName ?
+      this.get('datasetId.parentName') :
+      this.get('datasetId.id'),
     scope = this.get('scope');
 
     if (parentName) {
@@ -403,18 +408,48 @@ export default DS.Model.extend({
       if (mapByDataset) {
         let mapByScope = mapByDataset.get(parentName);
         if (! mapByScope) {
-          dLog('viewedReferenceBlock', 'no viewed parent', parentName, scope, mapByDataset);
+          // if (matchParentName)
+            dLog('viewedReferenceBlock', 'no viewed parent', parentName, scope, mapByDataset);
         } else {
           let blocks = mapByScope.get(scope);
           if (! blocks) {
-            dLog('viewedReferenceBlock', 'no matching scope on parent', parentName, scope, mapByScope);
+            //if (matchParentName)
+              dLog('viewedReferenceBlock', 'no matching scope on parent', parentName, scope, mapByScope);
           } else {
             blocks.forEach((block, i) => {
               if ((block === undefined) && (i === 0))
                 dLog('viewedReferenceBlock', 'reference not viewed', parentName, scope);
               if (scope !== block.get('scope')) {
                 dLog('viewedReferenceBlock', 'not grouped by scope', block.get('id'), scope, block._internalModel.__data, parentName);
-              } else {
+              }
+              /* viewedBlocksByReferenceAndScope() does not filter out
+               * blocks[0], the reference block, even if it is not viewed, so
+               * filter it out here.  */
+              else if (block.get('isViewed')) {
+                referenceBlocks.push(block);
+              }
+            });
+          }
+        }
+        if (true /*trace*/ )
+          dLog('viewedReferenceBlock', referenceBlocks, parentName, scope);
+      }
+    }
+
+    return referenceBlocks;
+  },
+  /** Determine if there is a viewed reference block which matches the .scope
+   * and .parentName of this block.
+   * @return reference block, or undefined
+   */
+  viewedReferenceBlock() {
+    let
+    parentName = this.get('datasetId.parentName'),
+    scope = this.get('scope');
+
+    let referenceBlocks = this.viewedReferenceBlocks(true),
+    referenceBlock;
+    referenceBlocks.forEach(function (block) {
                 if (referenceBlock) {
                   // prefer original
                   if (referenceBlock.get('isCopy') && ! block.get('isCopy'))
@@ -423,17 +458,31 @@ export default DS.Model.extend({
                     dLog('viewedReferenceBlock', 'duplicate match', block.get('id'), block._internalModel.__data, parentName, scope);
                 } else
                   referenceBlock = block;
-              }
-            });
-          }
-        }
-        if (true /*trace*/ )
-          dLog('viewedReferenceBlock', referenceBlock, parentName, scope);
-      }
-    }
-
+    });
     return referenceBlock;
   },
+  /** Mostly the same as viewedReferenceBlock(), but for the purpose of checking
+   * if this is a reference and there is already a reference of the same name
+   * and scope in the view.
+   * Determine if there is a viewed reference block which matches the .scope
+   * and .datasetId.id of this block.
+   * @return reference block, or undefined
+   */
+  viewedReferenceBlockDup() {
+    const
+    fnName = 'viewedReferenceBlockDup',
+    datasetName = this.get('datasetId.id'),
+    scope = this.get('scope');
+
+    let referenceBlocks = this.viewedReferenceBlocks(false);
+    if (referenceBlocks.length) {
+      dLog(fnName, 'synonomous reference viewed',
+           referenceBlocks.mapBy('id'),
+           referenceBlocks.mapBy('_internalModel.__data'), datasetName, scope);
+    }
+    return referenceBlocks;
+  },
+
   /** Determine reference blocks for this block.
    * The search is not limited to viewed blocks, and is across all connected servers.
    * @param original  if true then exclude copied / cached datasets (having .meta.origin)
