@@ -11,6 +11,8 @@ const dLog = console.debug;
 export default Service.extend(Ember.Evented, {
     auth: service('auth'),
   apiServers: service(),
+  controls : service(),
+
   primaryServer : Ember.computed.alias('apiServers.primaryServer'),
 
   storeManager: Ember.inject.service('multi-store'),
@@ -27,12 +29,16 @@ export default Service.extend(Ember.Evented, {
 
     apiServers = this.get('apiServers'),
     primaryServer = apiServers.get('primaryServer'),
+    /** the host name of the server tab the user has selected in the dataset (manage-)explorer. */
+    serverTabSelectedName = this.get('controls.serverTabSelected'),
+    serverTabSelected = serverTabSelectedName && this.get('apiServers').lookupServer(serverTabSelectedName),
     id2Server = apiServers.get('id2Server'),
     _unused = console.log('taskGetList', server, primaryServer),
     /** routes/mapview:model() uses primaryServer; possibly it will pass that
      * in or perhaps formalise this to an if (server) structure; sort that in
      * next commit. */
-    _unused2 = server || (server = primaryServer),
+    /** default to the serverTabSelected or primaryServer */
+    _unused2 = server || (server = serverTabSelected || primaryServer),
     store = server.store,
     trace_promise = false,
 

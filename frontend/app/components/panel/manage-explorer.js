@@ -43,6 +43,7 @@ const selectorExplorer = 'div#left-panel-explorer';
 
 export default ManageBase.extend({
   apiServers: service(),
+  controls : service(),
 
   init() {
     this._super();
@@ -1096,6 +1097,8 @@ export default ManageBase.extend({
     serverTabSelected(tabId, apiServerName, apiServer) {
       console.log('serverTabSelected', tabId, apiServerName, apiServer);
       this.set('serverTabSelected', apiServerName);
+      /* 1-way flow: manage-explorer -> controls.serverTabSelected -> other modules */
+      this.set('controls.serverTabSelected', apiServerName);
     },
     receivedDatasets(datasetsHandle, blockValues) {
       console.log('receivedDatasets', datasetsHandle, blockValues);
