@@ -7,6 +7,8 @@ import { /* Block, Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText, ax
 
 const dLog = console.debug;
 
+function blockInfo(block) { return block && [block.id, block.store.name, block.get('_internalModel.__data'), block.get('isCopy'), block.get('meta.origin')]; };
+
 export default Ember.Component.extend({
   block: service('data/block'),
   previous : {},
@@ -49,7 +51,25 @@ export default Ember.Component.extend({
   axesP : Ember.computed('axesBlocks.@each', 'viewed.[]', function () {
     let axesBlocks = this.get('axesBlocks'),
     axisIDs = Object.keys(axesBlocks),
-    axesP = axisIDs.map((axisID) => axesBlocks[axisID][0]);
+    axesP = axisIDs.map((axisID) => {
+      let blocks = axesBlocks[axisID],
+      block;
+      if (blocks.length === 1)
+        block = blocks[0];
+      else if (blocks.length > 1) {
+        let original = blocks.filter((b) => !b.get('isCopy'));
+        if (original.length) {
+          block = original[0];
+          if (original.length > 1)  // not expected to happen
+            dLog('axesP', axisID, 'choosing [0] from', original.map(blockInfo));
+        }
+        else {
+          dLog('axesP', axisID, 'no original, choosing [0] from', blocks.map(blockInfo));
+          block = blocks[0];
+        }
+      }
+      return block;
+    });
     dLog('axesP2', axesP, axisIDs);
     return axesP;
   }),

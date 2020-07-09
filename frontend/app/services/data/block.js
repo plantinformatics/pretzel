@@ -178,10 +178,14 @@ export default Service.extend(Ember.Evented, {
     let blockLimits = yield this.getLimits(blockId);
     if (trace_block)
       dLog('taskGetLimits', this, blockId, valueOrLength(blockLimits));
+    const apiServers = this.get('apiServers');
     blockLimits.forEach((bfc) => {
       let block = this.peekBlock(bfc._id);
-      if (! block)
-        console.log('taskGetLimits', bfc._id);
+      if (! block) {
+        let stores = apiServers.blockId2Stores(bfc._id);
+        if (! stores.length)
+          dLog('taskGetLimits', bfc._id);
+      }
       else {
         // console.log('taskGetLimits', bfc, block);
         block.set('featureLimits', [bfc.min, bfc.max]);

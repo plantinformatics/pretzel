@@ -201,6 +201,33 @@ export default Service.extend(Ember.Evented, {
     dLog('stores', stores, servers);
     return stores;
   }),
+  /** Lookup all connected stores for the given fieldName:id.
+   * @return array of matches [{name, server, store, object }, ...] .
+   */
+  id2Stores : function (fieldName, id) {
+    /** based on dataset2stores(), which could be simplified to :
+     * return this.id2Stores('dataset', datasetName).map(
+     *  (s) => { s.dataset = s.object; delete s.object; return s; })
+     */
+    let
+	  servers = this.get('servers'),
+    nameList = Object.keys(servers),
+    stores = nameList.map(
+      (name) => { let server = servers[name]; return {name, server, store: server.store};})
+      .filter((s) => {let d = s.store.peekRecord(fieldName, id); return d && Object.assign(s, {object : d });  } );
+    if ((trace > 2) || (trace && (stores.length !== 1)))
+      dLog('stores', id, stores, servers);
+    return stores;
+  },
+  /** Similar to id2Store(), but that only finds originals because id2Server
+   * does not contain copies. This function checks all connected stores, and
+   * returns an array of matches.
+   */
+  blockId2Stores : function (blockId) {
+    let stores = this.id2Stores('block', blockId);
+    dLog('blockId2stores', blockId, stores);
+    return stores;
+  },
   dataset2stores : function (datasetName) {
     let
 	  servers = this.get('servers'),
