@@ -209,7 +209,10 @@ function remoteBlockGetFeatures(blockRemoteRefn, interval)
   headers = {'Authorization' : accessToken};
   console.log('/api/Blocks/blockFeaturesInterval', blocks, interval, accessToken);
   let promise =
-    getJSON('/api/Blocks/blockFeaturesInterval' + '?' + queryParams, /*body*/undefined, headers);
+    getJSON('/api/Blocks/blockFeaturesInterval' + '?' + queryParams, /*body*/undefined, headers)
+    .catch(function (err) {
+      console.log('remoteBlockGetFeatures', 'blockFeaturesInterval', b.blockId, queryParams, headers, err);
+   });
   return promise;
 }
 

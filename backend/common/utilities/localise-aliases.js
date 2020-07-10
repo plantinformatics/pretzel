@@ -159,7 +159,10 @@ function remoteNamespacesGetAliases(apiServer, namespaces)
 
   console.log(host, endPoint, namespaces, accessToken);
   let promise =
-    getJSON(endPoint + '?' + queryParams, /*body*/undefined, headers);
+    getJSON(endPoint + '?' + queryParams, /*body*/undefined, headers)
+    .catch(function (err) {
+      console.log('remoteNamespacesGetAliases', endPoint, namespaces, queryParams, headers, err);
+   });
   promise.then((aliases) => console.log('remoteNamespacesGetAliases', aliases.length));
   return promise;
 }

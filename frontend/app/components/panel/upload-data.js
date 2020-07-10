@@ -1,6 +1,12 @@
+import Ember from 'ember';
+const { inject: { service }, getOwner } = Ember;
+
+
 import ManageBase from './manage-base'
 
 export default ManageBase.extend({
+  controls : service(),
+
 
   filterOptions: {
     'cell': {'formal': 'CSV', 'icon': 'th-large'},
@@ -12,5 +18,8 @@ export default ManageBase.extend({
     changeFilter: function(f) {
       this.set('filter', f)
     }
-  }
+  },
+
+  serverTabSelected : Ember.computed.alias('controls.serverTabSelected')
+
 });
