@@ -682,7 +682,10 @@ export default Service.extend({
             me, me.blocksUpdateDomain, 
             requestBlockIds, domainCalc,
             200, false);
+          // res is returned as the promise result
+          return res;
         };
+    promise = 
     promise
       .then(
         receivedData,
@@ -692,6 +695,7 @@ export default Service.extend({
           // else
             dLog(apiName, ' request', blockA, me, err.responseJSON[status] /* .error.message*/, status);
         });
+      return promise;
     });
     let promise = Ember.RSVP.allSettled(promises);
     return promise;

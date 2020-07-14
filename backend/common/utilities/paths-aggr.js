@@ -312,9 +312,15 @@ function keyValue (k,v) { let r = {}; r[k] = v; return r; };
  * @param l limit : 0 for domain[0] and lte, 1 for domain[1] and gte
  */
 function valueBound(intervals, b, l) {
+  /**  value may be [start, end] or [start] or [start, end, values...] or [start, undefined, values...]
+   * If there is no end value, use the start value.
+   * So the index of the end value is 0 or 1 depending on $size:$value and $value[1]
+   * (Support for $value[1]===undefined can be added in a separate commit).
+   */
+  const one = {$cond: { if: { $gt: [ { $size : "$value" }, 1 ] }, then: 1, else: 0 }};
   let r = keyValue(
     l ? '$lte' : '$gte',
-    [ keyValue('$arrayElemAt', ['$value', l ? 1 : 0]),
+    [ keyValue('$arrayElemAt', ['$value', l ? one : 0]),
       +intervals.axes[b].domain[l]]
   );
   return r;
@@ -681,6 +687,9 @@ exports.blockFeaturesInterval = function(db, blockIds, intervals) {
 
   if (trace_aggr)
     console.log('blockFeaturesInterval', pipeline);
+  /* As an alternative to console.dir(), e.g. for tracing in text file can use :
+   *  console.log('pipeline', JSON.stringify(pipeline));
+   */
   if (trace_aggr > 1)
     console.dir(pipeline, { depth: null });
 
