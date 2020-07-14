@@ -56,7 +56,7 @@ export default Base.extend({
           console.log('resolve', 'host url', host, 'token', response.id, 'clientId', response.userId, siteOrigin);
           if (host == '')
             host = siteOrigin;
-          let apiServer = apiServers.addServer(/*url*/ host, /*user*/ identification, /*token*/ response.id);
+          let apiServer = apiServers.addServer(/*url*/ host, /*user*/ identification, /*token*/ response.id, /*clientId*/ response.userId);
           console.log('primaryServer', apiServer);
           resolve({
             token: response.id,

@@ -61,7 +61,7 @@ export default Service.extend(Ember.Evented, {
        * adapter.host(), so it is not necessary to do apiOrigin || siteOrigin
        * here.
        */
-      let primaryServer = this.addServer(apiOrigin || siteOrigin, undefined, token);
+      let primaryServer = this.addServer(apiOrigin || siteOrigin, undefined, token, clientId);
       console.log('primaryServer', primaryServer);
     }
 
@@ -72,7 +72,7 @@ export default Service.extend(Ember.Evented, {
       /** e.g. map :4200 to :4201, (/00$/, '01') */
       host2 = host.replace(/^/, 'dev.');
       // this.addServer(protocol + host, 'My.Email@gmail.com', undefined);
-      this.addServer(protocol + host2, 'My.Email@gmail.com', undefined);
+      this.addServer(protocol + host2, 'My.Email@gmail.com', undefined /* , clientId */ );
     }
   },
 
@@ -82,13 +82,14 @@ export default Service.extend(Ember.Evented, {
    * Store it in this.servers, indexed by .name = .host_safe()
    * @return server (Ember Object) ApiServer
    */
-  addServer : function (url, user, token) {
+  addServer : function (url, user, token, clientId) {
     // const MyComponent = Ember.getOwner(this).factoryFor('component:service/api-server');
 	  let serverBase = 
       {
         host : url,
         user : user,
-        token : token
+        token : token,
+        clientId
       },
     ownerInjection = Ember.getOwner(this).ownerInjection(),
     server = ApiServer.create(
@@ -281,7 +282,7 @@ export default Service.extend(Ember.Evented, {
     }).then(function(response) {
       let token = response.id;
       let server =
-      me.addServer(url, user, token);
+        me.addServer(url, user, token, response.userId);
       server.getDatasets();
     }).catch(function (error) {
       dLog('ServerLogin', url, user, error);

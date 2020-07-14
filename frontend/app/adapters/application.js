@@ -90,9 +90,13 @@ var config = {
       let
         id2Server = this.get('apiServers.id2Server');
       let map = this.get('apiServers.obj2Server'),
-      server = map.get(serverHandle) || (id && id2Server[id]);
+      /** the above works for blocks; for datasets (e.g. delete), can lookup server name from snapshot.record */
+      snapshotServerName = snapshot && Ember.get(snapshot, 'record.store.name'),
+      servers = this.get('apiServers.servers'),
+      snapshotServer = servers && servers[snapshotServerName],
+      server = map.get(serverHandle) || (id && id2Server[id]) || snapshotServer;
       if (trace)
-        dLog('buildURL id2Server', id2Server, map, id, server, requestType);
+        dLog('buildURL id2Server', id2Server, map, id, server, requestType, snapshotServerName);
       /* if server is undefined or null then this code clears this._server and
        * session.requestServer, which means the default / local / primary
        * server is used.
