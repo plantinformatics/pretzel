@@ -403,31 +403,31 @@ export default DS.Model.extend({
    */
   viewedReferenceBlocks(matchParentName) {
     let referenceBlocks = [],
-    parentName = matchParentName ?
+    datasetName = matchParentName ?
       this.get('datasetId.parentName') :
       this.get('datasetId.id'),
     scope = this.get('scope'),
     /** filter out self if parentName is defined */
     blockId = this.get('datasetId.parentName') && this.get('id');
 
-    if (parentName) {
+    if (datasetName) {
       let mapByDataset = this.get('blockService.viewedBlocksByReferenceAndScope');
       if (mapByDataset) {
-        let mapByScope = mapByDataset.get(parentName);
+        let mapByScope = mapByDataset.get(datasetName);
         if (! mapByScope) {
-          // if (matchParentName)
-            dLog('viewedReferenceBlock', 'no viewed parent', parentName, scope, mapByDataset);
+          if (matchParentName)
+            dLog('viewedReferenceBlock', 'no viewed parent', datasetName, scope, mapByDataset);
         } else {
           let blocks = mapByScope.get(scope);
           if (! blocks) {
-            //if (matchParentName)
-              dLog('viewedReferenceBlock', 'no matching scope on parent', parentName, scope, mapByScope);
+            if (matchParentName)
+              dLog('viewedReferenceBlock', 'no matching scope on parent', datasetName, scope, mapByScope);
           } else {
             blocks.forEach((block, i) => {
               if ((block === undefined) && (i === 0))
-                dLog('viewedReferenceBlock', 'reference not viewed', parentName, scope);
+                dLog('viewedReferenceBlock', 'reference not viewed', datasetName, scope);
               if (scope !== block.get('scope')) {
-                dLog('viewedReferenceBlock', 'not grouped by scope', block.get('id'), scope, block._internalModel.__data, parentName);
+                dLog('viewedReferenceBlock', 'not grouped by scope', block.get('id'), scope, block._internalModel.__data, datasetName);
               }
               /* viewedBlocksByReferenceAndScope() does not filter out
                * blocks[0], the reference block, even if it is not viewed, so
@@ -440,8 +440,8 @@ export default DS.Model.extend({
             });
           }
         }
-        if (true /*trace*/ )
-          dLog('viewedReferenceBlock', referenceBlocks, parentName, scope);
+        if (trace_block > 1)
+          dLog('viewedReferenceBlock', referenceBlocks, datasetName, scope);
       }
     }
 
