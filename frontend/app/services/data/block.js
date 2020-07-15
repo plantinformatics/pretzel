@@ -689,12 +689,18 @@ export default Service.extend(Ember.Evented, {
       return records;
     }),
   /** Can be used in place of peekBlock().
+   * Copies are filtered out.
    * @return array which maps from blockId to block   
    */
   blocksById: Ember.computed(
     'blockValues.[]',
     function() {
-      let blocksById = this.get('blockValues').reduce((r, b) => { r[b.get('id')] = b; return r; }, {});
+      let blocksById = this.get('blockValues').reduce((r, b) => {
+        /** Copies are not viewed, the originals are.
+         * Also copies have the same id, so an array would be needed to store them here. */
+        if (! b.get('isCopy'))
+          r[b.get('id')] = b; return r;
+        }, {});
       return blocksById;
     }),
   selected: Ember.computed(
@@ -1103,6 +1109,7 @@ export default Service.extend(Ember.Evented, {
         });
       if (trace_block > 1)
         console.log(
+          'viewed', this.get('viewed'),
           'loadedViewedChildBlocks', records
             .map(function(blockR) { return blockR.view && blockR.view.longName(); })
         );
@@ -1188,8 +1195,9 @@ export default Service.extend(Ember.Evented, {
         function (map, block) {
           let referenceBlock = block.get('referenceBlock'),
            id = referenceBlock ? referenceBlock.get('id') : block.get('id');
-          if (! id)
+          if (! id) {
             console.log('dataBlocks', block.id, referenceBlock);
+          }
           else {
             let blocks = map.get(id);
             if (! blocks)
