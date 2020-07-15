@@ -621,7 +621,8 @@ export default Service.extend({
   requestBlockFeaturesInterval(blockA) {
     /** used in trace */
     const apiName = 'blockFeaturesInterval';
-    let store = this.get('apiServers').id2Store(blockA);
+    /** blockA is the referenceBlock of the axis, so its store is not used to store the features of the dataBlockIds */
+    const apiServers = this.get('apiServers');
 
     let me = this;
     let flowsService = this.get('flowsService');
@@ -669,7 +670,8 @@ export default Service.extend({
             dLog(apiName, ' request then', res.length);
           let firstResult;
           for (let i=0; i < res.length; i++) {
-              me.pushFeatureField(store, res, i, flowsService);
+            let store = apiServers.id2Store(res[i].blockId);
+            me.pushFeatureField(store, res, i, flowsService);
           }
           // possibly accumulate the result into axis-brush in the same way that 
           // requestPathsProgressive() above accumulates paths results into blockAdj
