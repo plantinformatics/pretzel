@@ -35,6 +35,14 @@ export default Ember.Component.extend({
           /**  referenceBlock, undefined if the currently connected servers do
            *  not have a parent matching the child dataset's .parentName */
           if (blocks[0]) {
+            /** as in viewedReferenceBlock(), filter out blocks which are not viewed.
+             * As a more maintainable solution, planning to change the structure
+             * of blocksByReferenceAndScope from blocks[] (with reference block
+             * at block[0]) to {reference : [], data : [], both : []}; this is
+             * driven by multiple servers enabling multiple reference blocks in
+             * a single datasetName/scope/.
+             */
+            blocks = blocks.filter((b) => b.get('isViewed'));
             mapByReferenceBlock[blocks[0].id] = blocks;
             if (true /*trace*/ )
               dLog('axesBlocks', referenceName, scope, blocks.mapBy('_internalModel.__data'));
