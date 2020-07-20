@@ -920,6 +920,10 @@ export default Service.extend(Ember.Evented, {
    * blocks[0] is not filtered out even if it isn't viewed because it is the referenceBlock
    *  (this is used in stacks-view.js : axesBlocks()).
    * @return Map, which may be empty
+   *
+   * Because the result is a Map, which can't be used as an ComputedProperty
+   * dependency, increment .viewedBlocksByReferenceAndScopeUpdateCount, so it
+   * may be used as an equivalent dependency.
    */
   viewedBlocksByReferenceAndScope : Ember.computed(
     /* blocksByReferenceAndScope is a Map, and there is not currently a way to
@@ -967,8 +971,10 @@ export default Service.extend(Ember.Evented, {
 
     if (trace_block && resultMap)
       log_Map_Map(fnName, resultMap);
+    this.incrementProperty('viewedBlocksByReferenceAndScopeUpdateCount');
     return resultMap;
   }),
+  viewedBlocksByReferenceAndScopeUpdateCount: 0,
 
 
   /** Search for the named features, and return also their blocks and datasets.

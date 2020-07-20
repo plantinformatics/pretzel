@@ -13,9 +13,18 @@ export default Ember.Component.extend({
   block: service('data/block'),
   previous : {},
 
+  blockValues : Ember.computed.alias('block.blockValues'),
+  viewed : Ember.computed.alias('block.viewed'),
+
   /** Extract from viewedBlocksByReferenceAndScope(), the viewed blocks, mapped by the id of their reference block.
    */
   axesBlocks : Ember.computed(
+    'block.viewedBlocksByReferenceAndScopeUpdateCount',
+    /* depending on blockValues.[] and .viewed[] seems to cause :
+     * Uncaught TypeError: Cannot read property 'count' of undefined
+     * at ChainNode.unchain (ember-metal.js:1976) ... removeDependentKeys()
+     * So instead, depend on .viewedBlocksByReferenceAndScopeUpdateCount.
+     */
     /* viewedBlocksByReferenceAndScope is a Map, and there is not currently a way to
      * depend on Map.@each, so depend on blockValues.[], which
      * viewedBlocksByReferenceAndScope and blocksByReferenceAndScope depend on,
@@ -25,7 +34,7 @@ export default Ember.Component.extend({
      * before viewedBlocksByReferenceAndScope is updated; if this is a problem
      * an update counter could be used as a dependency.
      */
-    'block.viewedBlocksByReferenceAndScope.@each', 'blockValues.[]', 'viewed.[]',
+    // 'block.viewedBlocksByReferenceAndScope.@each', 'blockValues.[]', 'viewed.[]',
     function () {
     let mapByDataset = this.get('block.viewedBlocksByReferenceAndScope');
     let mapByReferenceBlock = {};
