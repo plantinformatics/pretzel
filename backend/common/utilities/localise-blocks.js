@@ -269,11 +269,13 @@ async function localiseBlockGet(models, apiServer, blockRemoteRefn, interval) {
  */
   async function localiseDatasetForBlock (apiServer, models, db, blockId) {
   console.log('localiseDatasetForBlock', blockId);
+    let ok;
     let datasetBlock = await apiServer.datasetAndBlock(blockId);
     if (! datasetBlock) {
       console.log('localiseDatasetForBlock', datasetBlock, apiServer, blockId);
       debugger;
-    }
+      ok = false;
+    } else {
     let
     dataset = datasetBlock.dataset,
   block = datasetBlock.block;
@@ -284,8 +286,9 @@ async function localiseBlockGet(models, apiServer, blockRemoteRefn, interval) {
     await ensureDataset(apiServer, models, dataset);
 
   let blocks = await models.Block.find({where: {_id: blockId}, limit: 1}),
-  blockIdInLocal = blocks.length > 0,
+  blockIdInLocal = blocks.length > 0;
   ok = blockIdInLocal || await uploadBlock(db, apiServer.host, block);
+    }
   console.log('localiseDatasetForBlock', ok);
   return ok;
 }
