@@ -1293,15 +1293,26 @@ export default Ember.Component.extend(Ember.Evented, {
                * Now replacing :
                *  (dBlock.store.name === block_.store.name)
                * with parentMatch (which probably covers match and could replace it)
+               * And sometimes dataset (z[d].dataset) is the local dataset with
+               * the same name instead of dBlock.get('datasetId').dBlock
+               * So adding parentNameMatch, and using b.get('referenceBlock') as fall-back;
+               * this will be replaced anyway (axesBlocks, which uses block.referenceBlock).
                */
               parentMatch = block_.get('datasetId.content') === dataset.get('parent'),
-              match = (block.scope == zd.scope) && (block.dataset.get('name') == parentName) &&
-                parentMatch;
-              dLog(key, trace_stack ? block : block.dataset.get('name'), match);
+              parentNameMatch = dataset.get('parentName') === Ember.get(block_, 'datasetId.id'),
+              match = (block.scope == zd.scope) && (block.dataset.get('name') == parentName);
+              dLog(key, trace_stack ? block : block.dataset.get('name'), match, parentMatch, parentNameMatch);
+              match = match && (parentMatch || parentNameMatch);
               return match;
             }
             /** undefined if no parent found, otherwise is the id corresponding to parentName */
             let blockName = d3.keys(oa.z).find(matchParentAndScope);
+            if (! blockName) {
+              let b = me.peekBlock(d),
+              r = b && b.get('referenceBlock');
+              blockName = r && r.get('id');
+              dLog(d, b, 'referenceBlock', r);
+            }
             dLog(parentName, blockName);
             if (blockName)
             {
@@ -3873,7 +3884,7 @@ export default Ember.Component.extend(Ember.Evented, {
       axisFeatureCircles_selectAll().remove();
       let brushedRegions = oa.brushedRegions;
       let brushRange = d3.event.selection,
-      mouse = d3.mouse(that);
+      mouse = brushRange && d3.mouse(that);
       let brushSelection = d3.brushSelection(d3.select(that));
       let brush_ = that.__brush,
       brushSelection_ = brush_.selection,
