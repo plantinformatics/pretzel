@@ -1,4 +1,6 @@
 import Ember from 'ember';
+import { inject as service } from '@ember/service';
+
 
 import createIntervalTree from 'npm:interval-tree-1d';
 import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
@@ -14,7 +16,7 @@ import { ensureSvgDefs } from '../utils/draw/d3-svg';
 const featureTrackTransitionTime = 750;
 
 /** width of track <rect>s */
-const trackWidth = 10;
+let trackWidth = 10;
 /** track sub-elements < this height (px) are not rendered. */
 const subElementThresholdHeight = 5;
 
@@ -211,6 +213,9 @@ SubElement.prototype.getInterval = function() {
 
 export default InAxis.extend({
 
+  queryParams: service('query-params'),
+  urlOptions : Ember.computed.alias('queryParams.urlOptions'),
+
   className : "tracks",
   
   /** For each viewed block (trackBlocksR), some attributes are kept, until the
@@ -220,6 +225,18 @@ export default InAxis.extend({
   blocks : {},
 
  /*--------------------------------------------------------------------------*/
+
+  init() {
+    this._super(...arguments);
+
+    let trackWidthOption = this.get('urlOptions.trackWidth');
+    if (trackWidthOption) {
+      dLog('init', 'from urlOptions, setting trackWidth', trackWidthOption, ', was', trackWidth);
+      trackWidth = trackWidthOption;
+    }
+  },
+
+  /*--------------------------------------------------------------------------*/
 
   actions: {
 
@@ -475,6 +492,19 @@ export default InAxis.extend({
     /** datum is interval array : [start, end];   with attribute .description. */
     function xPosn(d) { /*console.log("xPosn", d);*/ return ((d.layer || 0) + 1) *  trackWidth * 2; };
     function yPosn(d) { /*console.log("yPosn", d);*/ return y(d[0]); };
+    /** return the end of the y scale range which d is closest to.
+     * Used when transitioning in and out.
+     */
+    function yEnd(d, i, g) {
+     let 
+       yPosnD = yPosn.apply(this, [d, i, g]),
+      range = y.range(),
+      rangeMid = (range[1] - range[0]) / 2,
+      fromStart = yPosnD - range[0],
+      closerToStart = fromStart < rangeMid,
+      end = range[1-closerToStart];
+      return end;
+    }
     function height(d) {
       /** if axis.zoomed then 0-height intervals are included, not filtered out.
        * In that case, need to give <rect> a height > 0.
@@ -578,7 +608,13 @@ export default InAxis.extend({
       .data(trackBlocksData, trackKeyFn),
     re =  rs.enter(), rx = rs.exit();
     dLog(rs.size(), re.size(),  'rx', rx.size());
-    rx.remove();
+      rx
+      .transition().duration(featureTrackTransitionTime)
+      .attr('x', 0)
+      .attr('y', yEnd)
+        .on('end', () => {
+          rx.remove();
+        });
 
       appendRect.apply(this, [re, rs, trackWidth, false]);
     }
@@ -611,6 +647,8 @@ export default InAxis.extend({
       rm = es
         .merge(ra);
       dLog('rm', rm.node(), 'es', es.nodes(), es.node());
+      ra
+        .attr('y', yEnd);
       rm
       .transition().duration(featureTrackTransitionTime)
       .attr('x', xPosn)
@@ -1017,9 +1055,14 @@ export default InAxis.extend({
           .map(function (feature) {
             let interval = feature.get('range') || feature.get('value');
             /* copy/paste into CSV in upload panel causes feature.value to be a
-             * single-element array, e.g. {name : "my1AGene1", value : [5200] } */
-            if (! interval.length || (interval.length == 1))
-              interval = [interval, interval];
+             * single-element array, e.g. {name : "my1AGene1", value : [5200] }
+             * interval-tree expects an interval to be [start, end].
+             */
+            if (interval.length == 1) {
+              interval.push(interval[0]);
+            } else if (! interval.length) {
+                interval = [interval, interval];
+              }
             /* interval-tree:createIntervalTree() assumes the intervals are positive, and gets stack overflow if not. */
             else if (interval[1] === null) {
               /* undefined / null value[1] indicates 0-length interval.  */
