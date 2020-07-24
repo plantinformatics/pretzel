@@ -265,10 +265,10 @@ export default Service.extend({
 
   /** 
    */
-  featureSearch(featureNames, options) {
+  featureSearch(apiServer, featureNames, options) {
     if (trace_paths)
       dLog('services/auth featureSearch', featureNames, options);
-    return this._ajax('Features/search', 'GET', {filter : featureNames, options}, true);
+    return this._ajax('Features/search', 'GET', {server : apiServer, filter : featureNames, options}, true);
   },
 
   createDataset(name) {
@@ -377,8 +377,13 @@ export default Service.extend({
    */
   _server(data) {
     let result = {data}, requestServer;
-    if (data.server === 'primary') {
-      requestServer = this.get('apiServers.primaryServer');
+    if (data.server) {
+      if (data.server === 'primary')
+        requestServer = this.get('apiServers.primaryServer');
+      else {
+        requestServer = data.server;
+        delete data.server;
+      }
     } else {
       /** Map a blockId which may be a remote reference, to a local blockId;
        * no change if the value is already local.

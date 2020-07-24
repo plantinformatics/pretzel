@@ -980,19 +980,20 @@ export default Service.extend(Ember.Evented, {
   /** Search for the named features, and return also their blocks and datasets.
    * @return  features (store object references)
    */
-  getBlocksOfFeatures : task(function* (featureNames) {
+  getBlocksOfFeatures : task(function* (apiServer, featureNames) {
     let me = this, featureResults =
-      yield this.get('auth').featureSearch(featureNames, /*options*/{});
-    let features = this.pushFeatureSearchResults(featureResults.features);
+      yield this.get('auth').featureSearch(apiServer, featureNames, /*options*/{});
+    let features = this.pushFeatureSearchResults(apiServer, featureResults.features);
     return features;
   }),
 
   /** map the given feature JSON values to store object references.
    */
-  pushFeatureSearchResults : function(featureValues) {
+  pushFeatureSearchResults : function(apiServer, featureValues) {
     let fnName = 'pushFeatureSearchResults',
     pathsPro = this.get('pathsPro'),
     flowsService = this.get('flowsService');
+    let store = apiServer.store;
 
     let features =
       featureValues.map((f) => {
@@ -1000,8 +1001,11 @@ export default Service.extend(Ember.Evented, {
          * The blocks and datasets are already loaded.
          */
         let
-          store = this.get('apiServers').id2Store(f.block.id),
+          storefb = this.get('apiServers').id2Store(f.block.id),
         block = store.peekRecord('block', f.block.id);
+        if (store !== storefb) {
+          dLog('pushFeatureSearchResults', apiServer, store.name, '!==', storefb.name, f.block.id);
+        }
         if (f.blockId !== f.block.id) {
           dLog(fnName, f.blockId, '!==', f.block.id);
         }

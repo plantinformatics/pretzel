@@ -9,8 +9,12 @@ const dLog = console.debug;
 
 export default Ember.Component.extend({
   blockService: service('data/block'),
+  controls : service(),
+  apiServers : service(),
 
   taskGet : Ember.computed.alias('blockService.getBlocksOfFeatures'),
+
+  serverTabSelected : Ember.computed.alias('controls.serverTabSelected'),
 
   /*----------------------------------------------------------------------------*/
   actions : {
@@ -54,8 +58,12 @@ export default Ember.Component.extend({
       let blockService = this.get('blockService');
       function peekBlock(block) {
         return blockService.peekBlock(block.id); };
+      let serverTabSelectedName = this.get('serverTabSelected'),
+      serverTabSelected = serverTabSelectedName && this.get('apiServers').lookupServerName(serverTabSelectedName),
+      apiServer = serverTabSelected || this.get('apiServers.primaryServer');
+
       let taskGet = this.get('taskGet'); // blockService.get('getBlocksOfFeatures');
-      let blockTask = taskGet.perform(selectedFeatureNames)
+      let blockTask = taskGet.perform(apiServer, selectedFeatureNames)
         .then(function (features) {
           dLog("getBlocksOfFeatures", selectedFeatureNames[0], features);
 
