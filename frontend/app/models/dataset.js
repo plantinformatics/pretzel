@@ -45,7 +45,7 @@ export default Record.extend({
           if (! parent) {
             /** prefer to use a dataset from its original source, rather than a copy
              * cached in primary server */
-            let original = datasets.filter((d) => ! d.dataset.get('meta.origin'));
+            let original = datasets.filter((d) => ! d.dataset.get('meta._origin'));
             if (original.length) {
               dLog('parent', 'original count', original.length, original);
               parent = original[0].dataset;
@@ -88,8 +88,8 @@ export default Record.extend({
   /*--------------------------------------------------------------------------*/
 
   /** is this dataset copied from a (secondary) server, cached on the server it was loaded from (normally the primary). */
-  isCopy : Ember.computed('meta.origin', function () {
-    return !! this.get('meta.origin');
+  isCopy : Ember.computed('meta._origin', function () {
+    return !! this.get('meta._origin');
   }),
 
   /** same as .blocks, with any blocks copied from a secondary server filtered out.

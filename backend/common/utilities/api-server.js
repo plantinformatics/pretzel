@@ -35,7 +35,7 @@ exports.blockServer = function(blockId) {
 
 /** Construct an origin value which is added to Dataset / Block / Alias to
  * indicate they are copied / cached / localised from a secondary api server.
- * .origin is added in Dataset.meta / Block.meta / Alias.
+ * ._origin is added in Dataset.meta / Block.meta / Alias.
  */
 ApiServer.prototype.makeOrigin = function() {
   let

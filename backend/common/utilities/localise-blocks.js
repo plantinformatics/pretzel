@@ -4,6 +4,8 @@ const param = require('jquery-param');
 /* global exports */
 /* global require */
 /* global Promise */
+/* global process */
+
 
 const upload = require('./upload');
 const { ApiServer, apiServers, blockServer } = require('./api-server');
@@ -14,6 +16,22 @@ const { ObjectID } = require('mongodb');
  * Using ObjectId here makes it simple to copy/paste mongo calls between here and mongo shell.
  */
 const ObjectId = ObjectID;
+
+/** Number of features of a block to copy from a secondary server when
+ * localising (copying / caching) a block.
+ *
+ * This is something the server administrator may wish to configure; it should
+ * be larger than the expected number of features in the copied blocks.  Copying
+ * less than that is likely to cause the join (paths) result to be incomplete.
+ * Some secondary servers may have very large datasets and the local / primary
+ * server may have limited bandwidth, so a limit will be desirable in some
+ * cases.
+ * The default 1e4 is enough for genetic maps and some physical maps.
+ * for development 400 is enough to confirm the remote join is working.
+ * @see remoteBlockGetFeatures()
+ */
+const nBlockFeaturesCopy = process.env.nBlockFeaturesCopy || 1e4;
+console.log('nBlockFeaturesCopy', nBlockFeaturesCopy);
 
 
 /*----------------------------------------------------------------------------*/
@@ -204,7 +222,7 @@ function remoteBlockGetFeatures(blockRemoteRefn, interval)
   /** interval.axes is passed through for domain limit, whereas nSamples,
    * nFeatures are set to a large number to get "all" the features.  */
   let {nSamples, nFeatures, ...intervals} = interval;
-  intervals.nSamples = intervals.nFeatures = 400; // 1e4 maybe
+  intervals.nSamples = intervals.nFeatures = nBlockFeaturesCopy;
   let queryParams = param({blocks, intervals}),
   headers = {'Authorization' : accessToken};
   console.log('/api/Blocks/blockFeaturesInterval', blocks, interval, accessToken);
@@ -311,7 +329,7 @@ function ensureDataset(apiServer, models, dataset) {
         promise = Promise.resolve();
       } else {
         let meta = dataset.meta || (dataset.meta = {});
-        meta.origin = apiServer.makeOrigin();
+        meta._origin = apiServer.makeOrigin();
         promise = localiseDataset(dataset, models, /*options*/undefined);
       }
       return promise;
@@ -327,7 +345,7 @@ function ensureDataset(apiServer, models, dataset) {
 function uploadBlock(db, host, block_json) {
   let meta = block_json.meta || (block_json.meta = {}),
   imported = Date.now();
-  meta.origin = {host, imported};
+  meta._origin = {host, imported};
   function cb(err, result) { console.log('uploadBlock() cb', err, result); };
 
   let promise = datasetAddBlock(db, block_json, cb);
@@ -415,11 +433,11 @@ exports.cacheClearBlocks = async function (db, models, time) {
   datasetCollection = db.collection("Dataset"),
   blockCollection = db.collection("Block"),
   featureCollection = db.collection("Feature"),
-  match = {'meta.origin.imported' : {$lte : time}},
-  idsToRemovePipeline =  [ {$match : match}, {$project : {'meta.origin' : 1 }} ],
+  match = {'meta._origin.imported' : {$lte : time}},
+  idsToRemovePipeline =  [ {$match : match}, {$project : {'meta._origin' : 1 }} ],
   blocks = await blockCollection.aggregate(idsToRemovePipeline).toArray(),
   blockIds = blocks.map((block) => block._id),
-  /** result {_id, meta.origin}[], not currently used - just trace.   */
+  /** result {_id, meta._origin}[], not currently used - just trace.   */
   datasets = await datasetCollection.aggregate(idsToRemovePipeline).toArray();
   console.log('cacheClearBlocks', time, blocks.length, datasets.map((d) => d._id),
               blockIds.map((id) => id.toHexString()));
@@ -433,20 +451,20 @@ exports.cacheClearBlocks = async function (db, models, time) {
       /** @param block this is not the loopback object (with .__data), it is
        * the result of idsToRemovePipeline. */
       blocks.forEach(function (block) {
-        forgetBlockRequest(block._id, block.meta.origin.host);
+        forgetBlockRequest(block._id, block.meta._origin.host);
       });
     }),
-  datasetsRemoved = await models.Dataset.find({include: 'blocks', where: /*match*/ {'meta.origin.imported' : {lte : time}}}, /*options*/{})
+  datasetsRemoved = await models.Dataset.find({include: 'blocks', where: /*match*/ {'meta._origin.imported' : {lte : time}}}, /*options*/{})
     .then(function(datasets) {
       return datasets.filter(function(dataset) {
         let d = dataset.__data;
-        console.log('cacheClearBlocks', 'dataset', d.name, d.blocks.length, d.meta.origin);
+        console.log('cacheClearBlocks', 'dataset', d.name, d.blocks.length, d.meta._origin);
         return d.blocks.length === 0;
         })
         .map((dataset) => { return {
           // '_id' because this is used in mongoDb query
           _id : dataset.name,
-          'meta.origin.host' : dataset.__data.meta.origin.host
+          'meta._origin.host' : dataset.__data.meta._origin.host
         };   });
     })
     .then(function (datasetsToRemove) {

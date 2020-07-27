@@ -1021,8 +1021,8 @@ export default Service.extend(Ember.Evented, {
           f.block = block;
 
         let feature = store.peekRecord('feature', f.id);
-        if (Ember.get(fBlock, 'meta.origin')) {
-          dLog(fnName, 'result feature is a copy', f, fBlock.meta.origin, fBlock);
+        if (Ember.get(fBlock, 'meta._origin')) {
+          dLog(fnName, 'result feature is a copy', f, fBlock.meta._origin, fBlock);
           // expect that feature is undefined, which is filtered out.
         }
         else if (! feature) {

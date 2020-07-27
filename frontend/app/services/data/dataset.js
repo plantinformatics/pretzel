@@ -228,7 +228,7 @@ export default Service.extend(Ember.Evented, {
   /** Lookup the datasets matching the given parentName, i.e. dataset.parentName === parentName.
    *
    * @param parentName  to match
-   * @param original  if true then exclude copied / cached datasets (having .meta.origin)
+   * @param original  if true then exclude copied / cached datasets (having .meta._origin)
    * @return [ {dataset, serverName}, ... ]
    */
   datasetsForParentName : function(parentName, original) {
@@ -239,14 +239,14 @@ export default Service.extend(Ember.Evented, {
   /** Lookup the datasets matching the given name.
    *
    * @param name  to match, usually a parentName
-   * @param original  if true then exclude copied / cached datasets (having .meta.origin)
+   * @param original  if true then exclude copied / cached datasets (having .meta._origin)
    */
   datasetsForName : function(name, original) {
     let
           apiServers = this.get('apiServers'),
         datasets = apiServers.dataset2stores(name);
     if (original)
-      datasets = datasets.filter((d) => ! d.dataset.get('meta.origin'));
+      datasets = datasets.filter((d) => ! d.dataset.get('meta._origin'));
     return datasets;
   }
   

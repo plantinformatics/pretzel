@@ -27,7 +27,7 @@
         <p>Local copies of parent references : </p>
         <ul>
           {{#each referenceBlocksCopies as |parentBlock|}}
-            <li>{{!-- parentBlock.id --}} {{parentBlock.name}} {{!-- parentBlock.scope --}} {{parentBlock.datasetId.id}} {{parentBlock.meta.origin.host}}</li>
+            <li>{{!-- parentBlock.id --}} {{parentBlock.name}} {{!-- parentBlock.scope --}} {{parentBlock.datasetId.id}} {{parentBlock.meta._origin.host}}</li>
           {{/each}}
         </ul>
       {{/if}}

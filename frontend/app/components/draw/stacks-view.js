@@ -7,7 +7,7 @@ import { /* Block, Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText, ax
 
 const dLog = console.debug;
 
-function blockInfo(block) { return block && [block.id, block.store.name, block.get('_internalModel.__data'), block.get('isCopy'), block.get('meta.origin')]; };
+function blockInfo(block) { return block && [block.id, block.store.name, block.get('_internalModel.__data'), block.get('isCopy'), block.get('meta._origin')]; };
 
 export default Ember.Component.extend({
   block: service('data/block'),

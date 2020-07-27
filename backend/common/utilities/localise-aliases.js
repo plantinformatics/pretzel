@@ -92,11 +92,11 @@ function addAliasesChunks(db, aliases, apiServer) {
  * Any of these aliases which are already loaded, i.e. if the key fields match
  * an alias already loaded, will not be loaded.
  *
- * Augment the alias data with .origin{host and imported (time)} to indicate
+ * Augment the alias data with ._origin{host and imported (time)} to indicate
  * these are cached aliases from a secondary server; this enables them to be
  * removed after their cache expiry time.
  *
- * @param aliases array of alias data received.  This function modifies each alias, adding .origin.
+ * @param aliases array of alias data received.  This function modifies each alias, adding ._origin.
  * @return promise, yielding count of aliases inserted.
  * @desc
  * similar to models/alias.js : Alias.bulkCreate()
@@ -105,7 +105,7 @@ function addAliases(db, aliases, apiServer) {
   console.log('addAliases', aliases.length /*,aliases[0]*/);
   let origin = apiServer.makeOrigin();
   let augmented = aliases.map((a) => {
-    a.origin = origin;
+    a._origin = origin;
     return a;
   });
   console.log('augmented', augmented.length, augmented[0]);
@@ -284,7 +284,7 @@ exports.cacheClearAliasesRequests = function (db, time) {
 function cacheClearAliases (db, time, matchNamespaces) {
   let
   aliasCollection = db.collection("Alias"),
-  match = {'origin.imported' : {$lte : time}};
+  match = {'_origin.imported' : {$lte : time}};
   if (matchNamespaces)
     Object.assign(match, matchNamespaces);
   console.log('cacheClearAliases', time, match);

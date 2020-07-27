@@ -117,8 +117,8 @@ export default DS.Model.extend({
   isData : and('isLoaded', 'hasFeatures'),
 
   /** is this block copied from a (secondary) server, cached on the server it was loaded from (normally the primary). */
-  isCopy : Ember.computed('meta.origin', function () {
-    return !! this.get('meta.origin');
+  isCopy : Ember.computed('meta._origin', function () {
+    return !! this.get('meta._origin');
   }),
 
   axisScope : Ember.computed('scope', 'name', 'datasetId.parentName', function () {
@@ -514,7 +514,7 @@ export default DS.Model.extend({
 
   /** Determine reference blocks for this block.
    * The search is not limited to viewed blocks, and is across all connected servers.
-   * @param original  if true then exclude copied / cached datasets (having .meta.origin)
+   * @param original  if true then exclude copied / cached datasets (having .meta._origin)
    * @return array of blocks,  [] if none matching.
    */
   referenceBlocksAllServers(original) {
