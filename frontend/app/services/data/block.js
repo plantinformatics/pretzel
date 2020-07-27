@@ -1002,20 +1002,30 @@ export default Service.extend(Ember.Evented, {
          */
         let
           storefb = this.get('apiServers').id2Store(f.block.id),
-        block = store.peekRecord('block', f.block.id);
+        block = store.peekRecord('block', f.block.id),
+        fBlock = f.block;
         if (store !== storefb) {
-          dLog('pushFeatureSearchResults', apiServer, store.name, '!==', storefb.name, f.block.id);
+          dLog(fnName, apiServer, store && store.name, '!==', storefb && storefb.name, f.block.id);
         }
         if (f.blockId !== f.block.id) {
           dLog(fnName, f.blockId, '!==', f.block.id);
         }
-        else if (! block)
-          dLog(fnName, f.block, 'not in store');
+        else if (! block && storefb && (block = storefb.peekRecord('block', f.block.id))) {
+          dLog(fnName, f.block, 'not in store of request server', store, 'using', storefb);
+          store = storefb;
+        }
+        else if (! block) {
+          dLog(fnName, f.block, 'not in store', store, storefb);
+        }
         else
           f.block = block;
 
         let feature = store.peekRecord('feature', f.id);
-        if (! feature) {
+        if (Ember.get(fBlock, 'meta.origin')) {
+          dLog(fnName, 'result feature is a copy', f, fBlock.meta.origin, fBlock);
+          // expect that feature is undefined, which is filtered out.
+        }
+        else if (! feature) {
           if (f._id === undefined)
             f._id = f.id;
           feature = 
@@ -1024,7 +1034,9 @@ export default Service.extend(Ember.Evented, {
             dLog(fnName, f, 'push failed');
         }
         return feature;
-      });
+      })
+      // filter out undefined features
+      .filter((f) => f);
     dLog(fnName, featureValues, features);
     return features;
   },
