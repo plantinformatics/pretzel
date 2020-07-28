@@ -17,7 +17,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   needs: ['component:tracks'],
 
-  urlOptions : Ember.computed.alias('queryParamsService.urlOptions'),
+  urlOptions : Ember.computed.alias('queryParams.urlOptions'),
 
   subComponents : undefined,
 

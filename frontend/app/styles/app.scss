@@ -866,7 +866,7 @@ li.filter-group > div > span:last-child {
 /* dataset explorer : tree browser */
 
 #left-panel-explorer a.apiServer {
-    border : 2.5px solid;
+    border : 7.5px solid;
 }
 #tab-explorer-parent  ul {
   /* there is enough indent in the li, so 0 is enough here. */
@@ -1474,3 +1474,11 @@ div.metaeditor-panel div.jsoneditor {
 span.glyphicon {
     margin-right: 1em;
 }
+/* -------------------------------------------------------------------------- */
+
+.select-parent  /* modal */
+{
+  font-size: larger;
+}
+
+/* -------------------------------------------------------------------------- */

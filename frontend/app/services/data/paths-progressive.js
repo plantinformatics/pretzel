@@ -65,6 +65,7 @@ export default Service.extend({
   flowsService: service('data/flows-collate'),
   blockService : service('data/block'),
   apiServers : service(),
+  controls : service(),
 
   /** set up a block-adj object to hold results. */
   ensureBlockAdj(blockAdjId) {
@@ -154,15 +155,6 @@ export default Service.extend({
       });
     return intervals;
   },
-  controls : Ember.computed(function () {
-    let oa = stacks.oa,
-    /** This occurs after mapview.js: controls : Ember.Object.create({ view : {  } }),
-     * and draw-map : draw() setup of  oa.drawOptions.
-     * This can be replaced with a controls service.
-     */
-    controls = oa.drawOptions.controls;
-    return controls;
-  }),
   pathsDensityParams : Ember.computed.alias('controls.view.pathsDensityParams'),
   /** Determine the parameters for the paths request, - intervals and density.
    * @param intervals domain for each blockAdj
@@ -215,8 +207,11 @@ export default Service.extend({
    * @return  promise yielding paths result
    */
   requestPathsProgressive(blockAdj, blockAdjId, taskInstance) {
-    /** just for passing to auth getPathsViaStream, getPathsProgressive, will change signature of those functions. */
-    let blockA = blockAdjId[0], blockB = blockAdjId[1];
+    let apiServers = this.get('apiServers'),
+    blockAdjIdRemote = blockAdjId.map((blockId) => apiServers.id2RemoteRefn(blockId));
+    /** names 'blockA', 'blockB' are 
+     * just for passing to auth getPathsViaStream, getPathsProgressive, will change signature of those functions. */
+    let blockA = blockAdjIdRemote[0], blockB = blockAdjIdRemote[1];
 
     // based on link-path: request()
     let me = this;
@@ -457,13 +452,15 @@ export default Service.extend({
     let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
 
     let blockA = blockAdjId[0], blockB = blockAdjId[1];
+    let apiServers = this.get('apiServers'),
+    blockAdjIdRemote = blockAdjId.map((blockId) => apiServers.id2RemoteRefn(blockId));
     let auth = this.get('auth');
     let promise = 
       // original API, non-progressive  
       // auth.getPaths(blockA, blockB, /*withDirect*/ false, /*options*/{})
       pathsViaStream ?
-      auth.getPathsAliasesViaStream(blockAdjId, intervalParams, {dataEvent : receivedData, closePromise : taskInstance}) :
-    auth.getPathsAliasesProgressive(blockAdjId, intervalParams, {});
+      auth.getPathsAliasesViaStream(blockAdjIdRemote, intervalParams, {dataEvent : receivedData, closePromise : taskInstance}) :
+    auth.getPathsAliasesProgressive(blockAdjIdRemote, intervalParams, {});
 
         function receivedData(res) {
           if (! res || ! res.length)
@@ -624,7 +621,8 @@ export default Service.extend({
   requestBlockFeaturesInterval(blockA) {
     /** used in trace */
     const apiName = 'blockFeaturesInterval';
-    let store = this.get('apiServers').id2Store(blockA);
+    /** blockA is the referenceBlock of the axis, so its store is not used to store the features of the dataBlockIds */
+    const apiServers = this.get('apiServers');
 
     let me = this;
     let flowsService = this.get('flowsService');
@@ -672,7 +670,8 @@ export default Service.extend({
             dLog(apiName, ' request then', res.length);
           let firstResult;
           for (let i=0; i < res.length; i++) {
-              me.pushFeatureField(store, res, i, flowsService);
+            let store = apiServers.id2Store(res[i].blockId);
+            me.pushFeatureField(store, res, i, flowsService);
           }
           // possibly accumulate the result into axis-brush in the same way that 
           // requestPathsProgressive() above accumulates paths results into blockAdj
@@ -685,7 +684,10 @@ export default Service.extend({
             me, me.blocksUpdateDomain, 
             requestBlockIds, domainCalc,
             200, false);
+          // res is returned as the promise result
+          return res;
         };
+    promise = 
     promise
       .then(
         receivedData,
@@ -695,6 +697,7 @@ export default Service.extend({
           // else
             dLog(apiName, ' request', blockA, me, err.responseJSON[status] /* .error.message*/, status);
         });
+      return promise;
     });
     let promise = Ember.RSVP.allSettled(promises);
     return promise;

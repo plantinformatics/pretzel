@@ -61,7 +61,7 @@ export default Service.extend(Ember.Evented, {
        * adapter.host(), so it is not necessary to do apiOrigin || siteOrigin
        * here.
        */
-      let primaryServer = this.addServer(apiOrigin || siteOrigin, undefined, token);
+      let primaryServer = this.addServer(apiOrigin || siteOrigin, undefined, token, clientId);
       console.log('primaryServer', primaryServer);
     }
 
@@ -72,7 +72,7 @@ export default Service.extend(Ember.Evented, {
       /** e.g. map :4200 to :4201, (/00$/, '01') */
       host2 = host.replace(/^/, 'dev.');
       // this.addServer(protocol + host, 'My.Email@gmail.com', undefined);
-      this.addServer(protocol + host2, 'My.Email@gmail.com', undefined);
+      this.addServer(protocol + host2, 'My.Email@gmail.com', undefined /* , clientId */ );
     }
   },
 
@@ -82,13 +82,14 @@ export default Service.extend(Ember.Evented, {
    * Store it in this.servers, indexed by .name = .host_safe()
    * @return server (Ember Object) ApiServer
    */
-  addServer : function (url, user, token) {
+  addServer : function (url, user, token, clientId) {
     // const MyComponent = Ember.getOwner(this).factoryFor('component:service/api-server');
 	  let serverBase = 
       {
         host : url,
         user : user,
-        token : token
+        token : token,
+        clientId
       },
     ownerInjection = Ember.getOwner(this).ownerInjection(),
     server = ApiServer.create(
@@ -175,12 +176,21 @@ export default Service.extend(Ember.Evented, {
     server = id2Server[blockId];
     return server;
   },
+  id2RemoteRefn(blockId) {
+    let
+      id2Server = this.get('id2Server'),
+    server = id2Server[blockId],
+    isPrimary = server === this.get('primaryServer'),
+    remote = isPrimary ? blockId : {blockId, host : server.host, token : server.token};
+      // or encode as text ? : blockId + '@' + server.host + '#' + server.token;
+    return remote;
+  },
   id2Store : function(blockId) {
     let
       id2Server = this.get('id2Server'),
     server = id2Server[blockId],
-    store = server.store;
-    if (trace > 2)
+    store = server && server.store;
+    if (! server || trace > 2)
       dLog('id2Store', blockId, server, store);
     return store;
   },
@@ -192,6 +202,66 @@ export default Service.extend(Ember.Evented, {
     dLog('stores', stores, servers);
     return stores;
   }),
+  /** Lookup all connected stores for the given fieldName:id.
+   * @return array of matches [{name, server, store, object }, ...] .
+   */
+  id2Stores : function (fieldName, id) {
+    /** based on dataset2stores(), which could be simplified to :
+     * return this.id2Stores('dataset', datasetName).map(
+     *  (s) => { s.dataset = s.object; delete s.object; return s; })
+     */
+    let
+	  servers = this.get('servers'),
+    nameList = Object.keys(servers),
+    stores = nameList.map(
+      (name) => { let server = servers[name]; return {name, server, store: server.store};})
+      .filter((s) => {let d = s.store.peekRecord(fieldName, id); return d && Object.assign(s, {object : d });  } );
+    if ((trace > 2) || (trace && (stores.length !== 1)))
+      dLog('stores', id, stores, servers);
+    return stores;
+  },
+  /** Similar to id2Store(), but that only finds originals because id2Server
+   * does not contain copies. This function checks all connected stores, and
+   * returns an array of matches.
+   */
+  blockId2Stores : function (blockId) {
+    let stores = this.id2Stores('block', blockId);
+    dLog('blockId2stores', blockId, stores);
+    return stores;
+  },
+  dataset2stores : function (datasetName) {
+    let
+	  servers = this.get('servers'),
+    nameList = Object.keys(servers),
+    stores = nameList.map(
+      (name) => { let server = servers[name]; return {name, server, store: server.store};})
+      .filter((s) => {let d = s.store.peekRecord('dataset', datasetName); return d && Object.assign(s, {dataset : d });  } );
+    if ((trace > 2) || (trace && (stores.length !== 1)))
+      dLog('stores', datasetName, stores, servers);
+    return stores;
+  },
+  /** Equivalent to this.get('datasetsBlocks') which is [serverName] -> datasetsBlocks.
+   * This form is useful as a ComputedProperty dependency, because dependency
+   * .@each can only be on arrays, not objects (i.e. indexed by integer, not
+   * string).
+   *
+   * @return [ {dataset, serverName}, ... ]
+   */
+  datasetsWithServerName : Ember.computed(
+    // datasetsBlocksRefresh represents 'servers.@each.datasetsBlocks',
+    'datasetsBlocksRefresh', 'serversLength', 
+    function datasetsWithServerName () {
+      let
+        servers = this.get('servers'),
+      nameList = Object.keys(servers),
+      result = nameList.map(function(serverName) {
+        let server = servers.get(serverName),
+        datasetsBlocks = server.get('datasetsBlocks');
+        return {datasetsBlocks, serverName};
+      });
+      return result;
+    }),
+
 
 
   ServerLogin: function(url, user, password) {
@@ -212,7 +282,7 @@ export default Service.extend(Ember.Evented, {
     }).then(function(response) {
       let token = response.id;
       let server =
-      me.addServer(url, user, token);
+        me.addServer(url, user, token, response.userId);
       server.getDatasets();
     }).catch(function (error) {
       dLog('ServerLogin', url, user, error);

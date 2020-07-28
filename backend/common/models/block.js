@@ -4,10 +4,15 @@
 var acl = require('../utilities/acl')
 var identity = require('../utilities/identity')
 var task = require('../utilities/task')
+const qs = require('qs');
+
 var blockFeatures = require('../utilities/block-features');
 var pathsAggr = require('../utilities/paths-aggr');
 var pathsFilter = require('../utilities/paths-filter');
 var pathsStream = require('../utilities/paths-stream');
+var { localiseBlocks, blockLocalId } = require('../utilities/localise-blocks');
+const { blockServer } = require('../utilities/api-server');
+const { getAliases } = require('../utilities/localise-aliases');
 
 var ObjectId = require('mongodb').ObjectID
 
@@ -26,7 +31,20 @@ const { Writable, pipeline, Readable } = require('stream');
 /** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
 const SSE_EventID_EOF = -1;
 
-const trace_block = 1;
+/** For the paths* functions the params blockA,B may be references to different api servers;
+ * in which case the blockId is augmented with host and token.  To handle this variation,
+ * the remoteMethod() param type is given 'any' instead of 'string' which is used for blockId.
+ */
+const blockRemoteType = 'any';
+
+/** commented in .pathsAliasesProgressive() - use dbLookupAliases() now in place
+ * of apiLookupAliases(), for db query and progressive paths. 
+ * dbLookupAliases() now uses .pathsAliasesRemote() for multiple backends;
+ * it wraps pathsAliases(), which was defined from 9da058e onwards.
+ */
+const use_dbLookupAliases = true;
+
+const trace_block = 2;
 
 class SseWritable extends Writable {
   // this class is based on a comment by Daniel Aprahamian in https://jira.mongodb.org/browse/NODE-1408
@@ -53,6 +71,15 @@ class SseWritable extends Writable {
 
 module.exports = function(Block) {
 
+  /** This is the original paths api, prior to progressive-loading, i.e. it
+   * returns all paths in a single response.
+   *
+   * The alternatives defined later allow narrowing the scope of paths, by
+   * interval and density / count, and the option of sending the response via
+   * SSE - streaming.
+   * @see pathsProgressive(), pathsViaStream(), 
+   * pathsAliasesProgressive(), pathsAliasesViaStream()
+   */
   Block.paths = function(left, right, withDirect = true, options, res, cb) {
     task.paths(this.app.models, left, right, withDirect, options)
     .then(function(data) {
@@ -77,12 +104,16 @@ module.exports = function(Block) {
    * @param blockId1
    */
   Block.pathsProgressive = function(left, right, intervals, options, res, cb) {
-      let db = this.dataSource.connector;
-    console.log('pathsProgressive', /*db,*/ left, right, intervals /*, options, cb*/);
+    localiseBlocks(this.app.models, [left, right], intervals)
+    /** @param left, right are localised - just the ID string */
+      .then(([left, right]) => {
+    let db = this.dataSource.connector;
+	  console.log('pathsProgressive', /*db,*/ JSON.stringify(left), JSON.stringify(right), intervals /*, options, cb*/);
     let cacheId = left + '_' + right,
     /** If intervals.dbPathFilter, we could append the location filter to cacheId,
      * but it is not clear yet whether that would perform better.
      * e.g. filterId = intervals.dbPathFilter ? '_' + intervals.axes[0].domain[0] + '_' + ... : ''
+     * So cache is not used if dbPathFilter.
      */
     useCache = ! intervals.dbPathFilter,
     cached = cache.get(cacheId);
@@ -113,6 +144,7 @@ module.exports = function(Block) {
           cb(err);
         });
     }
+      });
   };
 
 
@@ -122,17 +154,22 @@ module.exports = function(Block) {
    * Used for res.flush() and res.setHeader()
    */
   Block.pathsViaStream = function(blockId0, blockId1, intervals, options, req, res, cb) {
-    let db = this.dataSource.connector;
-    function dbLookup() {
-      let cursor =
-        pathsAggr.pathsDirect(db, blockId0, blockId1, intervals);
-      return cursor;
-    };
-    let
-      cacheId = blockId0 + '_' + blockId1,
-    useCache = ! intervals.dbPathFilter,
-    apiOptions = { useCache };
-    reqStream(dbLookup, pathsFilter.filterPaths, cacheId, intervals, req, res, apiOptions);
+    localiseBlocks(this.app.models, [blockId0, blockId1], intervals)
+      .then(([blockId0, blockId1]) => {
+        let db = this.dataSource.connector;
+        /** @return cursor */
+        function dbLookup() {
+          let cursor =
+            pathsAggr.pathsDirect(db, blockId0, blockId1, intervals);
+          return cursor;
+        };
+        let
+          cacheId = blockId0 + '_' + blockId1,
+        /** see comment in pathsProgressive() */
+        useCache = ! intervals.dbPathFilter,
+        apiOptions = { useCache };
+        reqStream(dbLookup, pathsFilter.filterPaths, cacheId, intervals, req, res, apiOptions);
+      });
   };
 
   /*--------------------------------------------------------------------------*/
@@ -144,11 +181,12 @@ module.exports = function(Block) {
   Block.pathsAliasesProgressive = function(blockIds, intervals, options, res, cb) {
     let [left, right] = blockIds;
     console.log('pathsAliasesProgressive', left, right, intervals /*, options, cb*/);
-    let cacheId = left + '_' + right,
-    /** if filtering in db query then don't use cache;  that applies now that pathsAliases() is defined. */
-    useCache = ! pathsAggr.pathsAliases || ! intervals.dbPathFilter,
+    let cacheId = [left, right].map((b) => blockLocalId(b)).join('_'),
+    /** if filtering in db query then don't use cache;  that applies now that pathsAliases() is defined.
+     * also refn comment in @see pathsProgressive() */
+    useCache = ! use_dbLookupAliases || ! intervals.dbPathFilter,
     /** filterPathsAliases() is not yet adapted to handle results of pathsAliases() */
-    dbPathFilter = pathsAggr.pathsAliases !== undefined,
+    dbPathFilter = use_dbLookupAliases,
     cached = cache.get(cacheId);
     if (useCache && cached) {
       console.log('pathsAliasesProgressive cache hit', cacheId);
@@ -159,7 +197,7 @@ module.exports = function(Block) {
     else {
       /** promise yielding data array. */
       let dataP;
-      if (pathsAggr.pathsAliases) { // pathsAliases() is defined after 5576c1e.
+      if (use_dbLookupAliases) {
         let cursorP = this.dbLookupAliases(left, right, intervals);
         dataP = cursorP.then(function (cursor) { return cursor.toArray(); });
       }
@@ -190,6 +228,7 @@ module.exports = function(Block) {
   /** 
    * Results are cached in blockRecords, indexed by blockId;  also see blockRecordsOutdate().
    * also in backend/common/utilities/task.js : @see findBlock(), findBlockPair()
+   * @return promise yielding an array of records
    */
   Block.blockGet = function(blockIds) {
     let models = this.app.models;
@@ -208,7 +247,8 @@ module.exports = function(Block) {
    */
   Block.blockRecords = {};
   Block.blockRecordsStore = function(blockId, record) {
-    console.log('blockRecordsStore', blockId, record);
+    if (trace_block > 1)
+      console.log('blockRecordsStore', blockId, record);
     this.blockRecords[blockId] = record;
   };
   /** this could be called if an API was added which allowed Block .namespace to change. */
@@ -216,43 +256,108 @@ module.exports = function(Block) {
     blockIds.forEach(blockId => delete this.blockRecords[blockId] );
   };
 
-/*----------------------------------------------------------------------------*/
+  /** If local blockId is not loaded, load it.
+   * @param blockId local blockId, i.e. a string
+   * @return block record
+   */
+  Block.blockRecordValue = async function(blockId) {
+    let block = this.blockRecords[blockId] ||
+      this.blockGet([blockId])
+      // expecting just 1 matching document
+      .then((blocks) => blocks[0]);
+    return block;
+  };
 
-/** Lookup .namespace for the given blockIds.  Cached values are used if
- * available, since this is used in the high-use pathsaliases() api, and we
- * don't yet have an api for altering .namespace.
- *
- * @param blockIds  array of blocks for which to get .namespace
- */
-Block.blockNamespace = async function(blockIds) {
-  /** Use cached values if all required values are cached. */
-  let n = blockIds.map(blockId =>  {
-    let block = this.blockRecords[blockId];
-    return block && block.namespace;
-  } );
-  if (n.indexOf(undefined) >= 0) {
-    let
-      p = this.blockGet(blockIds)
-      .map(function (b) { return b.namespace; } )
-      .catch (e => {
-        console.log('blockNamespace err', e);
-      });
-    n = await p;
-  }
-  else { console.log('using cached namespaces'); }
-  console.log('blockNamespace', n);
-  return n;
-};
+  /** @param blockId may be a local (string db id) or remote reference
+   * @desc Lookup the block object.
+   * @return promise yielding a block object
+   */
+  Block.blockRecordLookup = function(blockId) {
+    let block;
+    if (typeof blockId === 'string') {
+      block = this.blockRecordValue(blockId);
+    } else {
+      let apiServer = blockServer(blockId);
+      block = apiServer.datasetAndBlock(blockId.blockId)
+        .then((datasetBlock) => datasetBlock.block);
+    }
+    if (trace_block > 1)
+      block.then((blockR) => console.log('blockRecordLookup', blockId, blockR));
+    return block;
+  };
 
+  /*--------------------------------------------------------------------------*/
+
+  /** Lookup .namespace for the given blockIds.  Cached values are used if
+   * available, since this is used in the high-use pathsaliases() api, and we
+   * don't yet have an api for altering .namespace.
+   *
+   * @param blockIds  array of blocks for which to get .namespace
+   * @return promise, yielding an array of namespaces (strings)
+   */
+  Block.blockNamespace = async function(blockIds) {
+    /** Use cached values if all required values are cached. */
+    let n = blockIds.map(blockId =>  {
+      return this.blockRecordLookup(blockId)
+        .then((block) => { if (!block || !block.namespace) {
+          // block.namespace may be "", and !"" is true.  return undefined for this.
+          console.log('blockNamespace', blockId, block, blockIds); 
+          if (! block) { debugger; }; return undefined; } else { return block.namespace;}; });
+    });
+    n = Promise.all(n);
+    // check for undefined block.namespace
+    n.then((namespaces) => {
+      let i = namespaces.indexOf(undefined);
+      if (i >= 0) {
+        console.log('blockNamespace', blockIds[i]);
+      }
+    });
+    return n;
+  };
+
+  /**
+   * @return promise yielding a cursor or an empty Readable (in the case of blockId without a namespace);
+   * both have the .pipe() required by pipeStream().
+   */
   Block.dbLookupAliases = async function(blockId0, blockId1, intervals) {
-    let namespaces = await this.blockNamespace([blockId0, blockId1]);
-
-    let db = this.dataSource.connector,
-    cursor =
-      pathsAggr.pathsAliases(db, blockId0, blockId1, namespaces[0],  namespaces[1], intervals);
+    let namespaces = await this.blockNamespace([blockId0, blockId1]),
+    /** block may be missing a namespace, e.g. if uploaded from CSV, .namespace will be ""
+     */
+    namespacesFiltered = namespaces.filter((n) => (n !== undefined) && (n !== "")),
+    cursor;
+    if (namespacesFiltered.length < 2) {
+      console.log('dbLookupAliases() : block without namespace', namespaces, blockId0, blockId1);
+      /** returning an empty cursor would be reasonable; could construct one
+       * using an empty search - there may not be an easier way.
+       * Returning an empty iterator, e.g. cursor = [][Symbol.iterator]();
+       * is not sufficient because pipeStream() uses cursor.pipe().
+       * Try returning a empty Readable, which has .pipe(), similar to
+       * aliasesCursor() but with an empty array, i.e. :
+       */
+      let readable = new Readable({objectMode:true});
+      readable.push(null);
+      cursor = readable;
+    } else
+    /* Request aliases matching namespaces[] from the secondary, copy them into
+     * the local db, then perform the pathsAliases query and return a cursor of
+     * the result.
+     * If namespacesFiltered.length < 2, the remote request will return [], then
+     * the local query will return [].  Which is not efficient, so the
+     * block.namespace should be checked earlier.
+     */
+    {
+      let db = this.dataSource.connector;
+      cursor =
+        pathsAggr.pathsAliasesRemote(db, this.app.models, blockId0, blockId1, namespaces[0],  namespaces[1], intervals);
+    }
     console.log('dbLookupAliases', namespaces);
     return cursor;
   };
+  /** Similar function to dbLookupAliases(), except whereas that uses mongoDb
+   * aggregation queries to collate paths, this function uses a javascript
+   * function internal to the backend node API server.
+   * Support for multiple backends has not been added to this function.
+   */
   Block.apiLookupAliases = function(blockId0, blockId1, intervals) {
     return task.paths(this.app.models, blockId0, blockId1, /*withDirect*/ false, /*options*/ undefined);
   };
@@ -264,11 +369,36 @@ Block.blockNamespace = async function(blockIds) {
    */
   Block.pathsAliasesViaStream = function(blockIds, intervals, options, req, res, cb) {
     // console.log('pathsAliasesViaStream', blockIds, intervals, options, req, res, cb);
+    /* The query param for blockIds may be e.g. (url-decoded) :
+     *  &blockIds[0][blockId]=5b7f8afd43a181430b81394d
+     *  &blockIds[0][host]=https://..
+     *  &blockIds[0][token]=...
+     *  &blockIds[]=5cc69ed7de8ab9393f45052c
+     * which seems reasonable, but this is resulting in blockIds[] :
+     *  0:
+     *   5cc69ed7de8ab9393f45052c: true
+     *   blockId: "5b7f8afd43a181430b81394d"
+     *   host: "https://..."
+     *   token: "..."
+     * Using qs gets the desired result.
+     */
+    if (blockIds.length === 1) {
+      let parsed = qs.parse(req.originalUrl);
+      if (parsed.blockIds.length === 2) {
+        console.log('Block.pathsAliasesViaStream', 'using qs for blockIds', blockIds, parsed.blockIds, req.originalUrl);
+        blockIds = parsed.blockIds;
+      }
+    }
+
     let me = this;
 
+    /**
+     * @return promise yielding a cursor or Readable (in the case of apiLookupAliases());
+     * both have the .pipe() required by pipeStream().
+     */
     function aliasesCursor() {
       let cursor;
-      if (pathsAggr.pathsAliases) {
+      if (use_dbLookupAliases) {
         // result is a promise yielding a cursor
         cursor = me.dbLookupAliases(blockIds[0], blockIds[1], intervals);
       }
@@ -294,10 +424,11 @@ Block.blockNamespace = async function(blockIds) {
     }
 
     let
-      cacheId = blockIds[0] + '_' + blockIds[1],
+     cacheId = blockIds.map((b) => blockLocalId(b)).join('_'),
+    /** see comment in pathsProgressive() */
     useCache = ! intervals.dbPathFilter,
     /** pathsAliases() does filter, and filterPathsAliases() is not yet adapted to handle results of pathsAliases() */
-    dbPathFilter = pathsAggr.pathsAliases !== undefined,
+    dbPathFilter = use_dbLookupAliases,
     nullFilter = function (paths, intervals) { return paths; },
     filterFunction = dbPathFilter ? nullFilter : pathsFilter.filterPathsAliases,
     apiOptions = { useCache };
@@ -311,6 +442,7 @@ Block.blockNamespace = async function(blockIds) {
    * If apiOptions.useCache, check if the data is in cache, identified by cacheId.
    * Otherwise read data using cursorFunction, storing in cache if enabled.
    * Filter it with filterFunction using intervals, 
+   * @param cursorFunction  function returning a cursor or a promise yielding a cursor
    */
   function reqStream(cursorFunction, filterFunction, cacheId, intervals, req, res, apiOptions) {
     /* The params of reqStream() are largely passed to pipeStream() - starting to look like a class. */
@@ -522,6 +654,7 @@ Block.blockNamespace = async function(blockIds) {
     /** If intervals.dbPathFilter, we could append the location filter to cacheId,
      * but it is not clear yet whether that would perform better.
      * e.g. filterId = intervals.dbPathFilter ? '_' + intervals.axes[0].domain[0] + '_' + ... : ''
+     * So cache is not used if dbPathFilter.
      */
     useCache = ! intervals.dbPathFilter,
     cached = cache.get(cacheId);
@@ -544,7 +677,7 @@ Block.blockNamespace = async function(blockIds) {
           else
             filteredData = pathsFilter.filterFeatures(data, intervals);
           if (trace_block > 1)
-            console.log("Num Filtered Paths => ", filteredData.length);
+            console.log("Num Filtered Features => ", filteredData.length);
           cb(null, filteredData);
         })
         .catch(function(err) {
@@ -565,7 +698,7 @@ Block.blockNamespace = async function(blockIds) {
       cb(err);
     });
   }
-
+  
   /*--------------------------------------------------------------------------*/
 
   Block.observe('before save', function(ctx, next) {
@@ -616,7 +749,7 @@ Block.blockNamespace = async function(blockIds) {
   })
 
   //----------------------------------------------------------------------------
-  // When adding a API .remoteMethod() here, also add the route name to backend/common/utilities/paths-stream.js : genericResolver()
+  // When adding a API .remoteMethod() here, also add the route name to backend/server/boot/access.js : genericResolver()
   //----------------------------------------------------------------------------
 
   Block.remoteMethod('blockFeaturesCount', {
@@ -681,8 +814,8 @@ Block.blockNamespace = async function(blockIds) {
 
   Block.remoteMethod('pathsProgressive', {
     accepts: [
-      {arg: 'blockA', type: 'string', required: true},
-      {arg: 'blockB', type: 'string', required: true},
+      {arg: 'blockA', type: blockRemoteType, required: true},
+      {arg: 'blockB', type: blockRemoteType, required: true},
       {arg: 'intervals', type: 'object', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},
@@ -694,8 +827,8 @@ Block.blockNamespace = async function(blockIds) {
 
   Block.remoteMethod('pathsByReference', {
     accepts: [
-      {arg: 'blockA', type: 'string', required: true},
-      {arg: 'blockB', type: 'string', required: true},
+      {arg: 'blockA', type: blockRemoteType, required: true},
+      {arg: 'blockB', type: blockRemoteType, required: true},
       {arg: 'reference', type: 'string', required: true},
       {arg: 'max_distance', type: 'number', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
@@ -707,8 +840,8 @@ Block.blockNamespace = async function(blockIds) {
 
   Block.remoteMethod('pathsViaStream', {
     accepts: [
-      {arg: 'blockA', type: 'string', required: true},
-      {arg: 'blockB', type: 'string', required: true},
+      {arg: 'blockA', type: blockRemoteType, required: true},
+      {arg: 'blockB', type: blockRemoteType, required: true},
       {arg: 'intervals', type: 'object', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'req', type: 'object', 'http': {source: 'req'}},
@@ -764,6 +897,7 @@ Block.blockNamespace = async function(blockIds) {
 
   Block.remoteMethod('syntenies', {
     accepts: [
+      // blockRemoteType is relevant here also; would require corresponding change in server function.
       {arg: '0', type: 'string', required: true}, // block reference
       {arg: '1', type: 'string', required: true}, // block reference
       {arg: 'threshold-size', type: 'string', required: false}, // block reference
@@ -772,6 +906,8 @@ Block.blockNamespace = async function(blockIds) {
     returns: {type: 'array', root: true},
     description: "Request syntenic blocks for left and right blocks"
   });
+
+  /*--------------------------------------------------------------------------*/
 
   acl.assignRulesRecord(Block)
   acl.limitRemoteMethods(Block)

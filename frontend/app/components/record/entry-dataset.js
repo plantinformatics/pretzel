@@ -9,6 +9,7 @@ export default EntryBase.extend({
   }.on('init'),
   data: Ember.computed('entry.blocks', 'filter', function() {
     return this.get('entry.blocks')
+      .filter((block) => !block.get('isCopy'));
   }),
   dataEmpty: Ember.computed('data', function() {
     let availableBlocks = this.get('data')

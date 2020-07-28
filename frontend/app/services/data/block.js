@@ -34,7 +34,7 @@ function log_Map(label, map) {
   */
 function log_Map_Map(label, map) {
   map.forEach(function (value, key) {
-    console.log(label, 'key');
+    console.log(label, 'key', key);
     log_Map('', value);
   });
 }
@@ -81,6 +81,7 @@ export default Service.extend(Ember.Evented, {
   pathsPro : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
   queryParams: service('query-params'),
+  controls : service(),
 
   params : Ember.computed.alias('queryParams.params'),
   /** params.options is the value passed to &options=
@@ -177,10 +178,14 @@ export default Service.extend(Ember.Evented, {
     let blockLimits = yield this.getLimits(blockId);
     if (trace_block)
       dLog('taskGetLimits', this, blockId, valueOrLength(blockLimits));
+    const apiServers = this.get('apiServers');
     blockLimits.forEach((bfc) => {
       let block = this.peekBlock(bfc._id);
-      if (! block)
-        console.log('taskGetLimits', bfc._id);
+      if (! block) {
+        let stores = apiServers.blockId2Stores(bfc._id);
+        if (! stores.length)
+          dLog('taskGetLimits', bfc._id);
+      }
       else {
         // console.log('taskGetLimits', bfc, block);
         block.set('featureLimits', [bfc.min, bfc.max]);
@@ -341,22 +346,8 @@ export default Service.extend(Ember.Evented, {
     this.trigger('receivedBlock', blocksToView);
   },
 
-  /** controls() and pathsDensityParams() are copied from paths-progressive.js
-   * They can be moved into a service control-params, which will be backed by
-   * query params in the URL.
-   */
-  controls : Ember.computed(function () {
-    let oa = stacks.oa,
-    /** This occurs after mapview.js: controls : Ember.Object.create({ view : {  } }),
-     * and draw-map : draw() setup of  oa.drawOptions.
-     * This can be replaced with a controls service.
-     */
-    controls = oa.drawOptions.controls;
-    dLog('controls', controls);
-    return controls;
-  }),
   /** This does have a dependency on the parameter values.  */
-  pathsDensityParams : Ember.computed.alias('controls.view.pathsDensityParams'),
+  pathsDensityParams : Ember.computed.alias('controls.controls.view.pathsDensityParams'),
   /**
    * @param blockId later will use this to lookup axis yRange
    */
@@ -436,7 +427,7 @@ export default Service.extend(Ember.Evented, {
     let
       apiServers = this.get('apiServers'),
     store = apiServers.id2Store(blockId),
-    block = store.peekRecord('block', blockId);
+    block = store && store.peekRecord('block', blockId);
     return block;
   },
 
@@ -574,7 +565,7 @@ export default Service.extend(Ember.Evented, {
     let d = block.get('id'), d2 = dataBlock.get('id'), a = dataBlock,
     dataset = block.get('datasetId'), ad = dataBlock.get('datasetId');
     let match = 
-      (d != d2) &&  // not self
+      (d !== d2) &&  // not self
       /* ! a.parent &&*/
       ad && (ad.get('parent').get('id') === dataset.get('id')) &&
       (dataBlock.get('scope') == block.get('scope'));
@@ -698,12 +689,18 @@ export default Service.extend(Ember.Evented, {
       return records;
     }),
   /** Can be used in place of peekBlock().
+   * Copies are filtered out.
    * @return array which maps from blockId to block   
    */
   blocksById: Ember.computed(
     'blockValues.[]',
     function() {
-      let blocksById = this.get('blockValues').reduce((r, b) => { r[b.get('id')] = b; return r; }, {});
+      let blocksById = this.get('blockValues').reduce((r, b) => {
+        /** Copies are not viewed, the originals are.
+         * Also copies have the same id, so an array would be needed to store them here. */
+        if (! b.get('isCopy'))
+          r[b.get('id')] = b; return r;
+        }, {});
       return blocksById;
     }),
   selected: Ember.computed(
@@ -835,6 +832,8 @@ export default Service.extend(Ember.Evented, {
    * @desc
    * Blocks without a parent / reference, will be mapped via their datasetId,
    * and will be placed in [0] of the blocks array for their scope.
+   * For Blocks with datasetId.parentName, but no matching parent on the
+   * currently connected servers, blocks[0] will be undefined.
    */
   blocksByReferenceAndScope : Ember.computed(
     'blockValues.[]',
@@ -849,16 +848,29 @@ export default Service.extend(Ember.Evented, {
             /** If block is a promise, block.get('datasetId.parent') will be a
              * promise - non-null regardless of whether the dataset has a
              * .parent, whereas .get of .parent.name will return undefined iff
-             * there is no parent.
+             * there is no parent.  Now that .parent is changed from a relation
+             * managed by ember-data to a CP, this logic has changed :
+             * Now with the addition of cross-server references, .parentName may
+             * be defined but not .parent, e.g. there is no matching parent on
+             * the currently connected servers.  For the uses of this CP, it is
+             * useful to group by .parentName regardless of whether .parent is
+             * defined.
              */
-            parentName = block.get('datasetId.parent.name');
+            parentName = block.get('datasetId.parentName');
 
+            /** For each datasetId:scope:, an array of blocks is recorded.
+             * Lookup the blocks array, and create it if it does not yet exist.
+             * blocks[0] is reserved for the reference block, so a new array is
+             * [undefined], and blocks[0] is set by the caller.
+             */
             function blocksOfDatasetAndScope(datasetId, scope) {
+              /** Lookup the map for datasetId; create it if it does not yet exist. */
               let mapByScope = map.get(datasetId);
               if (! mapByScope) {
                 mapByScope = new Map();
                 map.set(datasetId, mapByScope);
               }
+              /** Lookup the blocks[] for scope; create it if it does not yet exist. */
               let blocks = mapByScope.get(scope);
               if (! blocks)
                 mapByScope.set(scope, blocks = [undefined]); // [0] is reference block
@@ -866,12 +878,18 @@ export default Service.extend(Ember.Evented, {
             }
 
             if (parentName) {
+              /** if block.datasetId.parentName, this is a child/data block so add
+               * it to the blocks of the reference.
+               */
               let blocks = blocksOfDatasetAndScope(parentName, scope);
               blocks.push(block);
             } else {
+              /** block is a reference or GM.  Note it in blocks[0] for the datasetName:scope.
+               * If that blocks[0] is already set, create a unique scope with a new blocks[].
+               */
               let datasetName = block.get('datasetId.name');
               let blocks = blocksOfDatasetAndScope(datasetName, scope);
-              if (blocks[0]) {
+              if (false && blocks[0]) {
                 // console.log(fnName, '() >1 reference blocks for scope', scope, blocks, block, map);
                 /* Reference chromosome assemblies, i.e. physical maps, define a
                  * unique (reference) block for each scope, whereas Genetic Maps
@@ -884,7 +902,10 @@ export default Service.extend(Ember.Evented, {
                  */
                 blocks = blocksOfDatasetAndScope(datasetName, scope + '_' + datasetName);
               }
-              blocks[0] = block; 
+              if (blocks[0])
+                blocks.push(block);
+              else
+                blocks[0] = block;
             }
             return map;
           },
@@ -896,7 +917,13 @@ export default Service.extend(Ember.Evented, {
     }),
 
   /** filter blocksByReferenceAndScope() for viewed blocks,
+   * blocks[0] is not filtered out even if it isn't viewed because it is the referenceBlock
+   *  (this is used in stacks-view.js : axesBlocks()).
    * @return Map, which may be empty
+   *
+   * Because the result is a Map, which can't be used as an ComputedProperty
+   * dependency, increment .viewedBlocksByReferenceAndScopeUpdateCount, so it
+   * may be used as an equivalent dependency.
    */
   viewedBlocksByReferenceAndScope : Ember.computed(
     /* blocksByReferenceAndScope is a Map, and there is not currently a way to
@@ -907,14 +934,22 @@ export default Service.extend(Ember.Evented, {
     'viewed.[]', function () {
     const fnName = 'viewedBlocksByReferenceAndScope';
     let viewed = this.get('viewed');
+    /** map is a 2-level nested Map.
+     * It is filtered by referencesMapFilter at the 1st level, and scopesMapFilter at the 2nd level. */
     let map = this.get('blocksByReferenceAndScope'),
      resultMap = filterMap(map, referencesMapFilter);
+    /** used when filtering the 1st level map; apply the 2nd level filter scopesMapFilter(). */
     function referencesMapFilter(mapByScope) {
       let resultMap = filterMap(mapByScope, scopesMapFilter);
       if (trace_block > 2)
         dLog('referencesMapFilter', mapByScope, resultMap);
       return resultMap;
     };
+    /** used when filtering the 2nd level map;
+     * filter the blocks[] which is the map value; filter out blocks which are
+     * not viewed, with the exception that blocks[0], the reference block, is
+     * retained if any of the other blocks are.
+     */
     function scopesMapFilter(blocks) {
       // axis : blocks : [0] is included if any blocks[*] are viewed, ...
       //  && .isLoaded ?
@@ -936,26 +971,29 @@ export default Service.extend(Ember.Evented, {
 
     if (trace_block && resultMap)
       log_Map_Map(fnName, resultMap);
+    this.incrementProperty('viewedBlocksByReferenceAndScopeUpdateCount');
     return resultMap;
   }),
+  viewedBlocksByReferenceAndScopeUpdateCount: 0,
 
 
   /** Search for the named features, and return also their blocks and datasets.
    * @return  features (store object references)
    */
-  getBlocksOfFeatures : task(function* (featureNames) {
+  getBlocksOfFeatures : task(function* (apiServer, featureNames) {
     let me = this, featureResults =
-      yield this.get('auth').featureSearch(featureNames, /*options*/{});
-    let features = this.pushFeatureSearchResults(featureResults.features);
+      yield this.get('auth').featureSearch(apiServer, featureNames, /*options*/{});
+    let features = this.pushFeatureSearchResults(apiServer, featureResults.features);
     return features;
   }),
 
   /** map the given feature JSON values to store object references.
    */
-  pushFeatureSearchResults : function(featureValues) {
+  pushFeatureSearchResults : function(apiServer, featureValues) {
     let fnName = 'pushFeatureSearchResults',
     pathsPro = this.get('pathsPro'),
     flowsService = this.get('flowsService');
+    let store = apiServer.store;
 
     let features =
       featureValues.map((f) => {
@@ -963,18 +1001,31 @@ export default Service.extend(Ember.Evented, {
          * The blocks and datasets are already loaded.
          */
         let
-          store = this.get('apiServers').id2Store(f.block.id),
-        block = store.peekRecord('block', f.block.id);
+          storefb = this.get('apiServers').id2Store(f.block.id),
+        block = store.peekRecord('block', f.block.id),
+        fBlock = f.block;
+        if (store !== storefb) {
+          dLog(fnName, apiServer, store && store.name, '!==', storefb && storefb.name, f.block.id);
+        }
         if (f.blockId !== f.block.id) {
           dLog(fnName, f.blockId, '!==', f.block.id);
         }
-        else if (! block)
-          dLog(fnName, f.block, 'not in store');
+        else if (! block && storefb && (block = storefb.peekRecord('block', f.block.id))) {
+          dLog(fnName, f.block, 'not in store of request server', store, 'using', storefb);
+          store = storefb;
+        }
+        else if (! block) {
+          dLog(fnName, f.block, 'not in store', store, storefb);
+        }
         else
           f.block = block;
 
         let feature = store.peekRecord('feature', f.id);
-        if (! feature) {
+        if (Ember.get(fBlock, 'meta._origin')) {
+          dLog(fnName, 'result feature is a copy', f, fBlock.meta._origin, fBlock);
+          // expect that feature is undefined, which is filtered out.
+        }
+        else if (! feature) {
           if (f._id === undefined)
             f._id = f.id;
           feature = 
@@ -983,7 +1034,9 @@ export default Service.extend(Ember.Evented, {
             dLog(fnName, f, 'push failed');
         }
         return feature;
-      });
+      })
+      // filter out undefined features
+      .filter((f) => f);
     dLog(fnName, featureValues, features);
     return features;
   },
@@ -1078,6 +1131,7 @@ export default Service.extend(Ember.Evented, {
         });
       if (trace_block > 1)
         console.log(
+          'viewed', this.get('viewed'),
           'loadedViewedChildBlocks', records
             .map(function(blockR) { return blockR.view && blockR.view.longName(); })
         );
@@ -1163,8 +1217,9 @@ export default Service.extend(Ember.Evented, {
         function (map, block) {
           let referenceBlock = block.get('referenceBlock'),
            id = referenceBlock ? referenceBlock.get('id') : block.get('id');
-          if (! id)
+          if (! id) {
             console.log('dataBlocks', block.id, referenceBlock);
+          }
           else {
             let blocks = map.get(id);
             if (! blocks)

@@ -1,6 +1,11 @@
 'use strict';
 
+/* global require */
+/* global module */
+
 var acl = require('../utilities/acl')
+
+const { getAliases, cacheClearAliases, cacheClearAliasesRequests } = require('../utilities/localise-aliases');
 
 module.exports = function(Alias) {
 
@@ -31,6 +36,80 @@ module.exports = function(Alias) {
     returns: {arg: 'count', type: 'int'},
     description: "Creates an array of aliases"
   });
+
+  Alias.namespacesAliases = function(namespaces, limit, options, res, cb) {
+    console.log('namespacesAliases', namespaces);
+    Alias.dataSource.connector.connect(function(err, db) {
+      getAliases(db, namespaces, limit)
+        .toArray()
+        .then(function(result) {
+          cb(null, result);
+        })
+        .catch(function(err) {
+          console.log('namespacesAliases', 'ERROR', err, namespaces, limit);
+          cb(err);
+        });
+
+    });
+  };
+
+  Alias.remoteMethod('namespacesAliases', {
+    accepts: [
+      {arg: 'namespaces', type: 'array', required: true}, // namespace0,1 reference
+      {arg: 'limit', type: 'number', required: false},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+      {arg: 'res', type: 'object', http: {source: 'res'}}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+    description: "Returns aliases between the two namespaces"
+  });
+
+  /*--------------------------------------------------------------------------*/
+
+
+  Alias.cacheClear = function(time, options, cb) {
+    let db = this.dataSource.connector;
+    cacheClearAliases(db, time)
+      .then((removed) => cb(null, removed))
+      .catch((err) => cb(err));
+  };
+  
+
+
+  Alias.remoteMethod('cacheClear', {
+    accepts: [
+      {arg: 'time', type: 'number', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'any', root: true},
+   description: "Clear cached copies of aliases from a secondary Pretzel API server."
+  });
+
+
+  Alias.cacheClearRequests = function(time, options, cb) {
+    let db = this.dataSource.connector;
+    cacheClearAliasesRequests(db, time)
+      .then((removed) => cb(null, removed))
+      .catch((err) => cb(err));
+  };
+  
+
+
+  Alias.remoteMethod('cacheClearRequests', {
+    accepts: [
+      {arg: 'time', type: 'number', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'any', root: true},
+   description: "Clear cached copies of aliases from a secondary Pretzel API server, and clear their request promises."
+  });
+
+
+  /*--------------------------------------------------------------------------*/
+
 
   acl.assignRulesRecord(Alias)
   acl.limitRemoteMethods(Alias)

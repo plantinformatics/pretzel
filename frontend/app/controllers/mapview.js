@@ -17,6 +17,7 @@ export default Ember.Controller.extend(Ember.Evented, {
   dataset: service('data/dataset'),
   block: service('data/block'),
   apiServers: service(),
+  controlsService : service('controls'),
 
   /** Array of available datasets populated from model 
    */
@@ -204,6 +205,15 @@ export default Ember.Controller.extend(Ember.Evented, {
     updateModel: function() {
       let model = this.get('model');
       dLog('controller/mapview: updateModel()', model);
+
+      let serverTabSelectedName = this.get('controlsService.serverTabSelected'),
+      serverTabSelected = serverTabSelectedName && this.get('apiServers').lookupServerName(serverTabSelectedName);
+      if (serverTabSelected)
+      {
+        let datasetsTask = serverTabSelected.getDatasets();
+      }
+      else
+      {
       let datasetsTaskPerformance = model.get('availableMapsTask'),
       newTaskInstance = datasetsTaskPerformance.task.perform();
       dLog('controller/mapview: updateModel()', newTaskInstance);
@@ -215,6 +225,7 @@ export default Ember.Controller.extend(Ember.Evented, {
       newTaskInstance.then((datasets) => {
         this.get('block').ensureFeatureLimits();
       });
+      }
     }
   },
 

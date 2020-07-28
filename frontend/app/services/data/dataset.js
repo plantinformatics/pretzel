@@ -11,6 +11,8 @@ const dLog = console.debug;
 export default Service.extend(Ember.Evented, {
     auth: service('auth'),
   apiServers: service(),
+  controls : service(),
+
   primaryServer : Ember.computed.alias('apiServers.primaryServer'),
 
   storeManager: Ember.inject.service('multi-store'),
@@ -27,12 +29,16 @@ export default Service.extend(Ember.Evented, {
 
     apiServers = this.get('apiServers'),
     primaryServer = apiServers.get('primaryServer'),
+    /** the host name of the server tab the user has selected in the dataset (manage-)explorer. */
+    serverTabSelectedName = this.get('controls.serverTabSelected'),
+    serverTabSelected = serverTabSelectedName && this.get('apiServers').lookupServer(serverTabSelectedName),
     id2Server = apiServers.get('id2Server'),
     _unused = console.log('taskGetList', server, primaryServer),
     /** routes/mapview:model() uses primaryServer; possibly it will pass that
      * in or perhaps formalise this to an if (server) structure; sort that in
      * next commit. */
-    _unused2 = server || (server = primaryServer),
+    /** default to the serverTabSelected or primaryServer */
+    _unused2 = server || (server = serverTabSelected || primaryServer),
     store = server.store,
     trace_promise = false,
 
@@ -75,6 +81,8 @@ export default Service.extend(Ember.Evented, {
       if (blocks) {
         blocks.forEach(function(block) {
           block.set('mapName', datasetName);
+          // if the block is not cached on the server, then note the server as the owner of the block.
+          if (! block.get('isCopy'))
           id2Server[block.get('id')] = server;
         });
       }
@@ -177,6 +185,70 @@ export default Service.extend(Ember.Evented, {
     return map;
   }),
  
+  /** Collate the datasets of the servers by the given keyFunction.
+   * The calling ComputedProperty should depend on 'apiServers.datasetsWithServerName.[]'.
+   */
+  datasetsByFunction : function datasetsByFunction (keyFunction) {
+    let
+      datasetsWithServerName = this.get('apiServers.datasetsWithServerName'),
+    datasetsByValue = datasetsWithServerName.reduce(function(result, d) {
+      let serverName = d.serverName;
+      d.datasetsBlocks.forEach(function (dataset) {
+        /** key will be .parentName or .id (name)  */
+        let key = keyFunction(dataset),
+        rp = result[key] || (result[key] = []);
+        rp.push({dataset, serverName});
+      });
+      return result;
+    });
+    dLog('datasetsByFunction', datasetsByValue);
+    return datasetsByValue;
+  },
+
+  /** Similar to datasetsByParent, except that is limited to .primaryServer,
+   * whereas this matches datasets on all stores/servers,
+   * and this maps by .parentName instead of .parent which may be undefined.
+   * @return [parentName] -> {dataset, serverName}
+   */  
+  datasetsByParentName : Ember.computed('apiServers.datasetsWithServerName.[]', function () {
+    function parentNameFn (dataset) { return dataset.get('parentName') || null; }
+    let datasetsByParentName = this.datasetsByFunction(parentNameFn);
+    dLog('datasetsByParentName', datasetsByParentName);
+    return datasetsByParentName;
+  }),
+  /** Similar to datasetsByName, except that is limited to .primaryServer,
+   * whereas this matches datasets on all stores/servers.
+   */
+  datasetsByNameAllServers : Ember.computed('apiServers.datasetsWithServerName.[]', function () {
+    function nameFn (dataset) { return dataset.get('id') || null; }
+    let datasetsByName = this.datasetsByFunction(nameFn);
+    dLog('datasetsByNameAllServers', datasetsByName);
+    return datasetsByName;
+  }),
+  /** Lookup the datasets matching the given parentName, i.e. dataset.parentName === parentName.
+   *
+   * @param parentName  to match
+   * @param original  if true then exclude copied / cached datasets (having .meta._origin)
+   * @return [ {dataset, serverName}, ... ]
+   */
+  datasetsForParentName : function(parentName, original) {
+    let datasetsByParentName = this.get('datasetsByParentName'),
+    childDatasets = datasetsByParentName[parentName];
+    return childDatasets;
+  },
+  /** Lookup the datasets matching the given name.
+   *
+   * @param name  to match, usually a parentName
+   * @param original  if true then exclude copied / cached datasets (having .meta._origin)
+   */
+  datasetsForName : function(name, original) {
+    let
+          apiServers = this.get('apiServers'),
+        datasets = apiServers.dataset2stores(name);
+    if (original)
+      datasets = datasets.filter((d) => ! d.dataset.get('meta._origin'));
+    return datasets;
+  }
   
   
 });

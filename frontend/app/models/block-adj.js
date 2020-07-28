@@ -21,6 +21,7 @@ export default DS.Model.extend(Ember.Evented, {
   flowsService: service('data/flows-collate'),
   blocksService : service('data/block'),
   apiServers: service(),
+  controls : service(),
 
 
   /** id is blockAdjId[0] + '_' + blockAdjId[1], as per.  serializers/block-adj.js : extractId()
@@ -228,12 +229,13 @@ export default DS.Model.extend(Ember.Evented, {
     let blockAdjId = this.get('blockAdjId'),
       id2Server = this.get('apiServers.id2Server'),
     servers = blockAdjId.map((blockId) => id2Server[blockId]),
-    sameServer = servers[0] === servers[1];
+    sameServer = servers[0] === servers[1],
+    pathJoinRemote = this.get('controls.view.pathJoinRemote');
     // uncomment these 2 conditions after testing on dev.
     // if (trace_blockAdj)
-      dLog('pathsRequestCount', pathsRequestCount, blockAdjId, servers.mapBy('host'), sameServer);
+      dLog('pathsRequestCount', pathsRequestCount, blockAdjId, servers.mapBy('host'), sameServer, pathJoinRemote);
     let p;
-    if (! sameServer) {
+    if (! pathJoinRemote && ! sameServer) {
       // if (trace_blockAdj)
         dLog('pathsRequest() different servers');
       p = Ember.RSVP.resolve([]); // will replace the promise return anyway.
@@ -438,7 +440,7 @@ export default DS.Model.extend(Ember.Evented, {
         paths = this.get('pathsPro').getPathsProgressive(this, blockAdjId, taskInstance);
       paths.then(
         function (result) {
-          dLog('block-adj paths', result.length, me.get('pathsResult' + trace_suffix), id, me);
+          dLog('block-adj paths', result && result.length, me.get('pathsResult' + trace_suffix), id, me);
         }, function (err) {
           dLog('block-adj paths reject', err);
         }
@@ -494,7 +496,7 @@ export default DS.Model.extend(Ember.Evented, {
     }
 
     return result;
-  }).drop() // maxConcurrency(2).restartable() // 
+  })// .drop() // maxConcurrency(2).restartable() // 
 
 
   /*--------------------------------------------------------------------------*/

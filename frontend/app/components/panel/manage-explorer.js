@@ -43,6 +43,7 @@ const selectorExplorer = 'div#left-panel-explorer';
 
 export default ManageBase.extend({
   apiServers: service(),
+  controls : service(),
 
   init() {
     this._super();
@@ -139,6 +140,7 @@ export default ManageBase.extend({
     /** e.g. "http___localhost_5000"  */
     let
       name = this.get('serverTabSelected'),
+    /** server of the selected tab. */
     serverSo = name &&
       this.get('apiServers').lookupServer(name),
     datasetsBlocks = serverSo && serverSo.get("datasetsBlocks");
@@ -155,6 +157,9 @@ export default ManageBase.extend({
       datasetsBlocks = this.get('primaryDatasets');
       dLog('datasetsBlocks()  using primaryDatasets', datasetsBlocks);
     }
+    if (datasetsBlocks)
+      datasetsBlocks =
+      datasetsBlocks.filter((block) => !block.get('isCopy'));
 
     return datasetsBlocks;
   }),
@@ -260,7 +265,7 @@ export default ManageBase.extend({
   // parents are reference assemblies
   /** result of uniqBy is a single dataset which refers to each (parent)
    * dataset; just 1 child of each parent is in the result. */
-  child1 : uniqBy('withParent', 'parent.name'),
+  child1 : uniqBy('withParent', 'parentName'), // parent.name
   /** parents of child1(), i.e. all the parent datasets, just once each.  */
   parents : mapBy('child1', 'parent'),
   /** names of parents(). */
@@ -282,7 +287,7 @@ export default ManageBase.extend({
     /* withParent : */ .filter(function(dataset, index, array) {
       return dataset.get('parent.content');
     })
-    /* child1 :*/ .uniqBy('parent.name')
+    /* child1 :*/ .uniqBy('parentName')  // parent.name
     /* parents :*/ .mapBy('parent');
     }
 
@@ -394,7 +399,7 @@ export default ManageBase.extend({
           if (! typeName)
           {
             if (trace_dataTree > 3)
-              console.log('dataset without parent.meta.type', d.get('name'), d.get('parent.name'));
+              console.log('dataset without parent.meta.type', d.get('name'), d.get('parentName'));  // parent.name
           }
           else
           {
@@ -910,8 +915,8 @@ export default ManageBase.extend({
       return p; }) : [],
     /** can update this .nest() to d3.group() */
     n = d3.nest()
-    /* the key function will return undefined for datasets without parents, which will result in a key of 'undefined'. */
-      .key(function(f) { let p = f.get && f.get('parent'); return p && p.get('name'); })
+    /* the key function will return undefined or null for datasets without parents, which will result in a key of 'undefined' or 'null'. */
+      .key(function(f) { let p = f.get && f.get('parent'); return p ? p.get('name') : f.get('parentName'); })
       .entries(withParentOnly ? withParent : datasets);
     /** this reduce is mapping an array  [{key, values}, ..] to a hash {key : value, .. } */
     let grouped =
@@ -923,7 +928,7 @@ export default ManageBase.extend({
           if (trace_dataTree > 1)
             console.log('datasetsByParent', datasetsByParent);
           // as commented in .key() function above.
-          if  (key === 'undefined') {
+          if  ((key === 'undefined') || (key === 'null')) {
             /* datasets without parent - no change atm, just convert the nest to hash.
              * but possibly move the children up to be parallel to the parents.
              * i.e. merge datasetsByParent.values into result.
@@ -1019,7 +1024,7 @@ export default ManageBase.extend({
   /** Given a dataset, filter its blocks. */
   datasetFilterBlocks(tabName, dataset) {
     let me = this;
-    let blocks = dataset.get('blocks').toArray();
+    let blocks = dataset.get('blocksOriginal').toArray();
     let filterMatched = me.get('filterMatched');
     let isFiltered = filterMatched[tabName];
     let filterGroup = me.get('blockFilterGroup');
@@ -1092,6 +1097,8 @@ export default ManageBase.extend({
     serverTabSelected(tabId, apiServerName, apiServer) {
       console.log('serverTabSelected', tabId, apiServerName, apiServer);
       this.set('serverTabSelected', apiServerName);
+      /* 1-way flow: manage-explorer -> controls.serverTabSelected -> other modules */
+      this.set('controls.serverTabSelected', apiServerName);
     },
     receivedDatasets(datasetsHandle, blockValues) {
       console.log('receivedDatasets', datasetsHandle, blockValues);
@@ -1138,10 +1145,49 @@ export default ManageBase.extend({
       this.refreshAvailable();
       this.sendAction('onDelete', modelName, id);
     },
+    /** The user has clicked + to add a block.
+     * If the block's dataset has a .parentName and doesn't have a
+     * referenceBlock on the same server, or a referenceBlock which is viewed,
+     * then show a dialog listing potential reference blocks which the user may add.
+     */
     loadBlock(block) {
-      this.sendAction('loadBlock', block);
+      /** if block is not a child and there is already a viewed reference with
+       * the same dataset id, then show a dialog.
+       */
+      let duplicates;
+      if (! block.get('datasetId.parentName') &&
+          (duplicates = block.viewedReferenceBlockDup()) &&
+          duplicates.length)
+      {
+        this.set('viewedSynonomousReferenceBlocks', duplicates);
+      }
+      else if (! block.get('datasetId.parentName') || 
+          block.get('referenceBlock') ||
+          block.referenceBlockSameServer()) {
+        // mapview : loadBlock() will view the reference if it is not viewed.
+        this.sendAction('loadBlock', block);
+      }
+      else
+        this.set('blockWithoutParentOnPrimary', block);
+
+      /** If the user is adding a reference then check if
+       * .blockWithoutParentOnPrimary is now able to be added, and add it.
+       */
+      Ember.run.next(() => {
+        if (! block.get('datasetId.parentName')) {
+          let dataBlock = this.get('blockWithoutParentOnPrimary'),
+          referenceBlock = dataBlock && dataBlock.get('referenceBlock');
+          if (referenceBlock) {
+            dLog('loadBlock viewing', dataBlock.id, 'as its referenceBlock', referenceBlock.id, 'is viewed');
+            this.set('blockWithoutParentOnPrimary', null);
+            this.sendAction('loadBlock', dataBlock);
+          }
+        }
+      });
     }
-  },
+
+  },  // actions
+
   //----------------------------------------------------------------------------
 
   /** If a tab is active (selected), save its id.  */

@@ -271,6 +271,13 @@ export default Ember.Component.extend(Ember.Evented, {
   axes1d : Ember.computed( function () { return stacks.axes1d; }),
   splitAxes: Ember.computed.filterBy('axes1d', 'extended', true),
 
+  /** Enable frontend collation of paths : pathUpdate_() / collate-paths.js
+   * The user sets this via GUI input in panel/view-controls.
+   * Same effect as me.get('urlOptions.pathsCheck'); if pathJoinClient is
+   * available in GUI, then urlOptions.pathsCheck is not required.
+   */
+  pathJoinClient : Ember.computed.alias('controls.view.pathJoinClient'),
+
   /*------------------------------------------------------------------------*/
 
   actions: {
@@ -1283,14 +1290,29 @@ export default Ember.Component.extend(Ember.Evented, {
                * put the data block on the axis of the parent from the same
                * server.  It is not invalid to put it on a different server,
                * and that functionality can be considered.
+               * Now replacing :
+               *  (dBlock.store.name === block_.store.name)
+               * with parentMatch (which probably covers match and could replace it)
+               * And sometimes dataset (z[d].dataset) is the local dataset with
+               * the same name instead of dBlock.get('datasetId').dBlock
+               * So adding parentNameMatch, and using b.get('referenceBlock') as fall-back;
+               * this will be replaced anyway (axesBlocks, which uses block.referenceBlock).
                */
-              match = (block.scope == zd.scope) && (block.dataset.get('name') == parentName) &&
-                (dBlock.store.name === block_.store.name);
-              dLog(key, trace_stack ? block : block.dataset.get('name'), match);
+              parentMatch = block_.get('datasetId.content') === dataset.get('parent'),
+              parentNameMatch = dataset.get('parentName') === Ember.get(block_, 'datasetId.id'),
+              match = (block.scope == zd.scope) && (block.dataset.get('name') == parentName);
+              dLog(key, trace_stack ? block : block.dataset.get('name'), match, parentMatch, parentNameMatch);
+              match = match && (parentMatch || parentNameMatch);
               return match;
             }
             /** undefined if no parent found, otherwise is the id corresponding to parentName */
             let blockName = d3.keys(oa.z).find(matchParentAndScope);
+            if (! blockName) {
+              let b = me.peekBlock(d),
+              r = b && b.get('referenceBlock');
+              blockName = r && r.get('id');
+              dLog(d, b, 'referenceBlock', r);
+            }
             dLog(parentName, blockName);
             if (blockName)
             {
@@ -3862,7 +3884,7 @@ export default Ember.Component.extend(Ember.Evented, {
       axisFeatureCircles_selectAll().remove();
       let brushedRegions = oa.brushedRegions;
       let brushRange = d3.event.selection,
-      mouse = d3.mouse(that);
+      mouse = brushRange && d3.mouse(that);
       let brushSelection = d3.brushSelection(d3.select(that));
       let brush_ = that.__brush,
       brushSelection_ = brush_.selection,
@@ -4876,7 +4898,7 @@ export default Ember.Component.extend(Ember.Evented, {
        * @param t transition, which is likely to be undefined here.
        */
       this.pathUpdateFlow = function(t, flow) {
-        if (me.get('urlOptions.pathsCheck'))
+        if (me.get('pathJoinClient'))
           pathUpdate_(t, flow);
       };
       this.on('pathUpdateFlow', this, this.pathUpdateFlow);
@@ -4885,7 +4907,7 @@ export default Ember.Component.extend(Ember.Evented, {
     /** call pathUpdate(t) for each of the enabled flows. */
     function pathUpdate(t)
     {
-      if (me.get('urlOptions.pathsCheck'))
+      if (me.get('pathJoinClient'))
       d3.keys(flows).forEach(function(flowName) {
         let flow = flows[flowName];
         if (flow.enabled)
