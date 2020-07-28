@@ -1,5 +1,10 @@
 import BaseForm from './base';
 
+/**
+ * These optional parameters can be used to pre-populate the input fields, via URL query-params.  
+ * @param identification
+ * @param password
+ */
 export default BaseForm.extend({
   requirements: {
     'identification': "Please enter an email.",

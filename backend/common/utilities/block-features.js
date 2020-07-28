@@ -203,10 +203,14 @@ exports.blockFeatureLimits = function(db, blockId) {
    * and $match $ne null to ignore to === undefined.
    * The version prior to adding this comment assumed value was just [from, to] (optional to);
    * so we can revert to that code if we separate additional values from the [from,to] location range.
+   *
+   * We currently have data which has just a number or string for value instead of an array;
+   * handle this by checking for $type and applying $slice to the array type only.
    */
   let
     group = [
-      {$project : {_id : 1, name: 1, blockId : 1, value : {$slice : ['$value', 2]} }},
+      {$project : {_id : 1, name: 1, blockId : 1, value : 
+      {$cond: { if: { $isArray: "$value" }, then: {$slice : ['$value', 2]}, else: "$value" } }  }},
       {$unwind : '$value'}, 
       {$match: { $or: [ { value: { $ne: null } } ] } },
       {$group : {

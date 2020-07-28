@@ -1,10 +1,12 @@
 import Ember from 'ember';
+import { inject as service } from '@ember/service';
+
 
 import createIntervalTree from 'npm:interval-tree-1d';
 import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
 import InAxis from './in-axis';
-import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,*/ eltId, axisEltId, eltIdAll, axisEltIdClipPath /*,highlightId*/ , axisTitleColour }  from '../utils/draw/axis';
-
+import {  eltId, axisEltId, eltIdAll, axisEltIdClipPath, trackBlockEltIdPrefix, axisTitleColour }  from '../utils/draw/axis';
+import { ensureSvgDefs } from '../utils/draw/d3-svg';
 
 /*----------------------------------------------------------------------------*/
 /* milliseconds duration of transitions in which feature <rect>-s are drawn / changed.
@@ -14,7 +16,9 @@ import {  /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleT
 const featureTrackTransitionTime = 750;
 
 /** width of track <rect>s */
-const trackWidth = 10;
+let trackWidth = 10;
+/** track sub-elements < this height (px) are not rendered. */
+const subElementThresholdHeight = 5;
 
 /** for devel.  ref comment in @see height() */
 let trace_count_NaN = 10;
@@ -44,9 +48,18 @@ const dLog = console.debug;
     }
 /*----------------------------------------------------------------------------*/
 
+/** Configure hover text for tracks. */
 function  configureTrackHover(interval)
 {
   return configureHorizTickHover.apply(this, [interval.description]);
+}
+/** Same as configureHorizTickHover(), except for sub-elements,
+ * for which the source data, and hence .description, is in interval.data,
+ * because the interval tree takes just the interval as input.
+ */
+function  configureSubTrackHover(interval)
+{
+  return configureHorizTickHover.apply(this, [(interval.data || interval).description]);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -59,10 +72,15 @@ function I(d) { return d; }
 /** filter intervalTree : select those intervals which intersect domain.
  * @param sizeThreshold intervals smaller than sizeThreshold are filtered out;
  * undefined means don't filter.
+ * @param assignOverlapped  true means assign overlapping tracks in sequence;
+ * this is used for Feature tracks, but for sub-elements there is likely to be a
+ * sub-element which overlaps all the others, which would place them all in
+ * separate layers and missing opportunities to pack more closely.
+ *
  * @return {intervals:  array of intervals,
  * layoutWidth : px width allocated for the layered tracks}
  */
-function regionOfTree(intervalTree, domain, sizeThreshold)
+function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
 {
   let intervals = [],
   result = {intervals : intervals};
@@ -70,9 +88,16 @@ function regionOfTree(intervalTree, domain, sizeThreshold)
     if ((sizeThreshold === undefined) || (interval[1] - interval[0] > sizeThreshold))
       intervals.push(interval);
   }
-  intervalTree.queryInterval(domain[0], domain[1], visit);
-  // Build another tree with just those intervals which intersect domain.
-  let subTree = createIntervalTree(intervals);
+  let subTree;
+  if (domain) {
+    intervalTree.queryInterval(domain[0], domain[1], visit);
+    // Build another tree with just those intervals which intersect domain.
+    subTree = createIntervalTree(intervals);
+  } else {
+    subTree = intervalTree;
+    result.intervals = intervalTree.intervals;
+  }
+
   /** for each interval, if it does not have a layer,
    * get list of intervals in subTree it intersects,
    * note the layers of those which already have a layer assigned,
@@ -86,7 +111,8 @@ function regionOfTree(intervalTree, domain, sizeThreshold)
     let i=i1[j], overlaps = [], layersUsed = [];
     function noteLayers(interval) {
       overlaps.push(interval);
-      if (interval.layer) layersUsed[interval.layer] = true; /* or interval*/
+      if (interval.layer !== undefined)
+        layersUsed[interval.layer] = true; /* or interval*/
     };
     subTree.queryInterval(i[0], i[1], noteLayers);
     function unusedLayers() {
@@ -105,14 +131,24 @@ function regionOfTree(intervalTree, domain, sizeThreshold)
       let next = u.pop() || ++lastUsed;
       return next;
     }
-    function assignRemainder(interval) {
-    };
-    for (let j2 = 0; j2 < overlaps.length; j2++)
-    {
-      let o = overlaps[j2];
-      if (! o.layer)
-        o.layer = chooseNext();
+    /** Assign a layer to one interval.
+     * @param o  interval  */
+    function assignInterval(o) {
+        if (! o.layer)
+          o.layer = chooseNext();
     }
+    /** Assigninterval layers to remaining intervals in overlaps[].
+     */
+    function assignRemainder() {
+      for (let j2 = 0; j2 < overlaps.length; j2++)
+      {
+        let o = overlaps[j2];
+        assignInterval(o);
+      }
+    };
+    assignInterval(i);
+    if (assignOverlapped)
+      assignRemainder();
     if (lastUsed > largestLayer)
       largestLayer = lastUsed;
   }
@@ -145,6 +181,31 @@ function setClipWidth(axisID, width)
   console.log('setClipWidth', axisID, width, aS.node(), cp.node(), cp.attr("width"),  gh.node());
 }
 
+/*----------------------------------------------------------------------------*/
+
+class SubElement {
+  constructor(data) {
+    this.data = data;
+  }
+};
+/** static, also  member @see getInterval()  */
+SubElement.getInterval = function(data) {
+  let interval = data.slice(0, 2);
+  // perhaps use a WeakMap instead of this
+  interval.data = data;
+  if (interval[0] > interval[1]) {
+    let swap = interval[0];
+    interval[0] = interval[1];
+    interval[1] = swap;
+  }
+  return interval;
+};
+SubElement.prototype.getInterval = function() {
+  let interval = SubElement.getInterval(this.data);
+  return interval;
+};
+
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -152,8 +213,29 @@ function setClipWidth(axisID, width)
 
 export default InAxis.extend({
 
+  queryParams: service('query-params'),
+  urlOptions : Ember.computed.alias('queryParams.urlOptions'),
+
   className : "tracks",
   
+  /** For each viewed block (trackBlocksR), some attributes are kept, until the
+   * axis closes.  This state is likely to move to a axis-tracks-block component.
+   * So far this contains only a WeakMap for the interval trees of Feature sub-elements (.subEltTree).
+   */
+  blocks : {},
+
+ /*--------------------------------------------------------------------------*/
+
+  init() {
+    this._super(...arguments);
+
+    let trackWidthOption = this.get('urlOptions.trackWidth');
+    if (trackWidthOption) {
+      dLog('init', 'from urlOptions, setting trackWidth', trackWidthOption, ', was', trackWidth);
+      trackWidth = trackWidthOption;
+    }
+  },
+
   /*--------------------------------------------------------------------------*/
 
   actions: {
@@ -183,6 +265,9 @@ export default InAxis.extend({
     dLog('didInsertElement', axisID, width);
     // [min, max] width
     childWidths.set(this.get('className'), [width, width]);
+
+    let svg = d3.selectAll('svg.FeatureMapViewer');
+    ensureSvgDefs(svg);
   },
 
   willDestroyElement() {
@@ -330,6 +415,10 @@ export default InAxis.extend({
    */
   layoutAndDrawTracks(resized, tracks)
   {
+    /** this axis-tracks, used for blockIndex, which perhaps should be factored
+     * out to here, if it does not change. */
+    let thisAt = this;
+
     // seems run.throttle() .. .apply() is wrapping args with an extra [] ?
     if (resized && (resized.length == 2) && (tracks === undefined))
     {
@@ -363,6 +452,7 @@ export default InAxis.extend({
     /** relative to the transform of parent g.axis-outer */
     bbox = gAxis.node().getBBox(),
     yrange = [bbox.y, bbox.height];
+    dLog(gAxis.node());
     /** could skip the reference block blockIds[0]. */
     let blockIds = d3.keys(tracks.intervalTree);
     let
@@ -389,7 +479,7 @@ export default InAxis.extend({
        * [ sizeThreshold is disabled by setting to undefined, while we prototype how to select a sub-set of features to display ]
        */
       sizeThreshold = undefined, // zoomed ? undefined : pxSize * 1/*5*/,
-      tracksLayout = regionOfTree(t, yDomain, sizeThreshold),
+      tracksLayout = regionOfTree(t, yDomain, sizeThreshold, true),
       data = tracksLayout.intervals;
       if (false)  // actually need to sum the .layoutWidth for all blockId-s, plus the block offsets which are calculated below
       setClipWidth(axisID, tracksLayout.layoutWidth);
@@ -402,6 +492,19 @@ export default InAxis.extend({
     /** datum is interval array : [start, end];   with attribute .description. */
     function xPosn(d) { /*console.log("xPosn", d);*/ return ((d.layer || 0) + 1) *  trackWidth * 2; };
     function yPosn(d) { /*console.log("yPosn", d);*/ return y(d[0]); };
+    /** return the end of the y scale range which d is closest to.
+     * Used when transitioning in and out.
+     */
+    function yEnd(d, i, g) {
+     let 
+       yPosnD = yPosn.apply(this, [d, i, g]),
+      range = y.range(),
+      rangeMid = (range[1] - range[0]) / 2,
+      fromStart = yPosnD - range[0],
+      closerToStart = fromStart < rangeMid,
+      end = range[1-closerToStart];
+      return end;
+    }
     function height(d) {
       /** if axis.zoomed then 0-height intervals are included, not filtered out.
        * In that case, need to give <rect> a height > 0.
@@ -432,7 +535,7 @@ export default InAxis.extend({
       .attr('class', 'tracks'),
     gpM = gp
       .merge(gpS)
-      .attr('id', function (blockId) { console.log('', this, blockId); return blockId; })
+      .attr('id', function (blockId) { console.log('', this, blockId); return trackBlockEltIdPrefix + blockId; })
       .attr('transform', blockTransform);
     gpS.exit().remove();
     /* this is for resizing the width of axis-tracks; may instead scale width of
@@ -485,31 +588,361 @@ export default InAxis.extend({
     }
     let g = gp.append("g")
       .attr("clip-path", "url(#" + axisEltIdClipPath(axisID) + ")"); // clip the rectangle
+
     function trackKeyFn(featureData) { return featureData.description; }
     /** Add the <rect> within <g clip-path...>  */
     let
-      rs = gAxis.selectAll("g.axis-use > g.tracks > g").selectAll("rect.track")
+      /** block select - datum is blockId. */
+      bs = gAxis.selectAll("g.axis-use > g.tracks > g"),
+    a = bs.each(function(blockId,i,g) {
+      let
+        block = oa.stacks.blocks[blockId],
+      tags = block.block.get('datasetId.tags'),
+      subElements = tags && (tags.indexOf("geneElements") >= 0),
+      eachFn = subElements ? eachGroup : eachRect;
+      eachFn.apply(this, [blockId, i, g]);
+        });
+    function eachRect(blockId, i, g) {
+      let
+        rs = bs.selectAll("rect.track")
       .data(trackBlocksData, trackKeyFn),
     re =  rs.enter(), rx = rs.exit();
+    dLog(rs.size(), re.size(),  'rx', rx.size());
+      rx
+      .transition().duration(featureTrackTransitionTime)
+      .attr('x', 0)
+      .attr('y', yEnd)
+        .on('end', () => {
+          rx.remove();
+        });
+
+      appendRect.apply(this, [re, rs, trackWidth, false]);
+    }
+    /** - rename re and rs to ge and gs
+     * es could be called rs
+     * @param subElements true if (gene) sub-elements (intro/exon) are displayed for this block.
+     */
+    function appendRect(re, rs, width, subElements) {
     let ra = re
       .append("rect");
     ra
       .attr('class', 'track')
       .transition().duration(featureTrackTransitionTime)
-      .attr('width', trackWidth)
-      .each(configureTrackHover);
-    let blockIndex = this.get('axis1d.blockIndexes');
-    ra
-      .merge(rs)
+      .attr('width', width)
+      .each(subElements ? configureSubTrackHover : configureTrackHover);
+      let blockIndex = thisAt.get('axis1d.blockIndexes'),
+      /** the structure here depends on subElements:
+       * true : g[clip-path] > g.track.element > rect.track
+       * false : g[clip-path] > rect.track
+       * appendRect() could also be used for geneElementData[], which would pass isSubelement=true.
+       */
+      isSubelement = false,
+      gSelector = subElements ? '.track' : '[clip-path]',
+      elementSelector = isSubelement ? '.element' : ':not(.element)',
+      es = subElements ?
+        rs.selectAll("g" + gSelector + " > rect.track" + elementSelector) : rs,
+      /** ra._parents is the g[clip-path], whereas es._parents are the g.track.element
+       * es.merge(ra) may work, but ra.merge(es) has just 1 elt.
+       */
+      rm = es
+        .merge(ra);
+      dLog('rm', rm.node(), 'es', es.nodes(), es.node());
+      ra
+        .attr('y', yEnd);
+      rm
       .transition().duration(featureTrackTransitionTime)
       .attr('x', xPosn)
       .attr('y', yPosn)
       .attr('height' , height)
       .attr('stroke', blockTrackColourI)
       .attr('fill', blockTrackColourI)
-    ;
+      ;
+      dLog('ra', ra.size(), ra.node(), 'rm', rm.size(), rm.node());
+      // result is not used yet.
+      return ra;
+    }
+    /** subElements */
+    function eachGroup(blockId, i, g) {
+      let
+        egs = bs.selectAll("g.element")
+      // probably add geneKeyFn showing sub-element details, e.g. typeName, start/end, sequence?
+        .data(trackBlocksData, trackKeyFn),
+      ege =  egs.enter(), egx = egs.exit();
+      dLog('ege', ege.node(), 'egx', egx.nodes());
+      egx.remove();
+    let ega = ege
+      .append("g")
+      .attr('class', 'track element');
+      dLog('ega', ega.node(), ega.size(), egs.size());
+
+      let
+        egm = egs.merge(ega),
+        era = appendRect.apply(this, [ega, egs, trackWidth, true]);
+
+
+        // re =  rs.enter(), rx = rs.exit();
+
+      /** geneElementData will be a function of d (feature / interval).
+       * [start, end, typeName] :
+       * start, end are relative to the feature / interval / track / gene.
+       */
+      let geneElementData_dev = [
+        [0.1, 0.2, 'intron'],
+        [0.55,0.8, 'utr'],
+        [0.45,0.35,'exon'],
+      ];
+      /** If true then use the development data, otherwise get the real data from the feature .value[]. */
+      const useDevData = false;
+      /** @return the sub-element data extract from a Feature.value.
+       * @param d Feature.value
+       */
+      function elementDataFn (d, i, g) {
+        let featureValue = d;
+        featureValue = featureValue && featureValue[2];
+        if (! Ember.isArray(featureValue))
+          featureValue = [];
+        return featureValue;
+      }
+      /** Map the given typeName to the characteristics of the shape which will
+       * represent that type.  This is a description of the shape, not the
+       * symbol it represents; i.e. the same shape could be used for 2 different
+       * gene sub-element types.
+       */
+      class ShapeDescription {
+        /** @param typeName */
+        constructor(typeName) {
+          /** true means show a pointed tip on the rectangle, indicating read direction.
+           */
+          this.showArrow = false;
+          this.width = trackWidth / 2;
+          switch (typeName) {
+          case 'intron' :
+            this.tagName = 'path';
+            this.useLine = true;
+            /** side-spur for intron */
+            this.sideWedge = true;
+            this.width = 1;
+            this.fill = null;  // set in css. 'none'; // inherits black, so set none.
+            break;
+
+          case 'mRNA':
+            this.tagName = 'path';
+            this.useLine = true;
+            this.width = 1;
+            break;
+
+          case 'exon':
+          case 'CDS':
+            this.tagName = this.showArrow ? 'path' : 'rect';
+            this.useLine = false;
+            break;
+
+          case 'utr':
+          case 'five_prime_UTR':
+          case 'three_prime_UTR':
+            this.useLine = true;
+            /** blue fill for utr (dashed thick blue line, maybe arrow head), */
+            this.tagName = 'path';
+            this.width = trackWidth / 3;
+            this.showArrow = true;
+            break;
+
+            default :
+            this.tagName = 'path';
+            dLog('ShapeDescription', typeName);
+            break;
+          }
+          /** default stroke and fill is blockTrackColourI
+           * if fill===stroke then can use path instead of rect
+           */
+        }
+      };
+
+      /* would use ega here, but the sub-element may be added in a separate pass after the parent g.track.element.   */
+      egm.each(function (d, i, g) {
+        let
+          a = d3.select(this);
+        let heightD = height.apply(this, [d, i, g]);
+        if (heightD < subElementThresholdHeight)
+        {
+          let ses = a
+            .selectAll('g.track.element > .track.element');
+          ses.remove();
+        } else {
+          let geneElementData = useDevData ? geneElementData_dev : elementDataFn.apply(this, arguments);
+          geneElementData.forEach(subEltDescription);
+          // layer the geneElementData
+          geneElementData = thisAt.layerSubElements(blockId, d.description, geneElementData);
+          let ges = a.selectAll('g.track.element > ' + '.track.element')
+            .data(geneElementData);
+          let
+            ea = ges
+              .enter()
+            .append((e) => {
+              let typeName = e.data[2],
+              shape = e.shape || (e.shape = new ShapeDescription(typeName));
+              return document.createElementNS("http://www.w3.org/2000/svg", shape.tagName); });
+            ges
+              .exit()
+              .remove();
+          // ea.each(subEltDescription);
+          function subEltDescription(e, j) {
+            let [start, end, typeName] = e;
+            let shape = e.shape;
+            if (! e.description) {
+              e.description = d.description + ' : ' +
+                start + '-' + end + ' ' + typeName;
+              dLog('e.description', e.description, d.description, d, e);
+            }
+          };
+          ea
+            .attr('class', (e) => {
+              let typeName = e.data[2];
+              if (typeName.endsWith('_prime_UTR')) 
+                typeName += ' utr';
+              return 'track element ' + typeName;
+            })
+          // .transition().duration(featureTrackTransitionTime)
+            .each(function (e, i, g) {
+              let s = d3.select(this), shape = e.shape;
+              s.attr(shape.tagName === 'path' ? 'stroke-width' : 'width', shape.width); })
+            .each(configureSubTrackHover);
+        }
+      });
+      // ega.each was used for .append();  egm.each is used to update size.
+      // could now factor these 2 loops together ..
+      egm.each(function (d, i, g) {
+        let
+          a = d3.select(this),
+          /** height, xPosn, yPosn don't use `this`, i or g, but they could, so
+           * the standard d3 calling signature is used.
+           * ((d,i,g) => height(d, i, g))(d,i,g) should also work but it compiles to a function without .apply
+           */
+        heightD = height.apply(this, [d, i, g]);
+        if (heightD > subElementThresholdHeight) {
+          let
+            xPosnD = xPosn.apply(this, [d, i, g]),
+          yPosnD = yPosn.apply(this, [d, i, g]);
+          let geneElementData = useDevData ? geneElementData_dev : elementDataFn.apply(this, arguments);
+          // layer the geneElementData
+          geneElementData = thisAt.layerSubElements(blockId, d.description, geneElementData);
+          let ges = a.selectAll('g.track.element > ' + '.track.element')
+            .data(geneElementData);
+          ges.each(function(e, j) {
+            let [start, end, typeName] = e.data,
+            /** signed vector from start -> end. */
+            heightElt;
+            if (useDevData)
+              heightElt = heightD * (end - start);
+            else {
+              start = y(start);
+              end = y(end);
+              heightElt = (end - start);
+            }
+            let shape = e.shape || (e.shape = new ShapeDescription(typeName));
+            /** x and y position of sub-element */
+            let ex = xPosnD + trackWidth * 2,
+            ey = useDevData ? yPosnD + heightD * start : start;
+            let showDimensions = shape.useLine ? lineDimensions : shape.showArrow ? elementDimensions : rectDimensions;
+            /** sub-element selection */
+            let ses =
+              d3.select(this)
+              .transition().duration(featureTrackTransitionTime)
+              .each(showDimensions);
+            if (shape.stroke !== null)
+              ses.attr('stroke', shape.stroke || blockTrackColourI);
+            if (shape.fill !== null)
+              ses.attr('fill', shape.fill || blockTrackColourI);
+
+            function lineDimensions(d, i, g) {
+              let
+                /** cut-down version of rectArrow() - the rectangle centreline
+                 * could be factored out.
+                 */
+                tipEndsY = [0, heightElt],
+              endsY = [0, heightElt],
+              tipY = tipEndsY[1],
+              width = trackWidth / 2,
+              centreX = width/2,
+              wedgeX = width/2,
+              centreLine = [
+                [centreX, 0],
+                [centreX, tipY]
+              ],
+              sideWedge = [
+                [centreX+wedgeX, tipY],
+                [centreX+wedgeX*2, heightElt / 2],
+                [centreX+wedgeX, 0]
+              ],
+              /** put the centreLine last, because marker-end. */
+              points = shape.sideWedge ?
+                sideWedge.concat(centreLine) : centreLine,
+              l =
+                d3.select(this)
+                .attr('d', d3.line()(points))
+                .attr('transform', (d) => "translate(" + (d.layer*trackWidth + ex) + ", " + ey + ")");
+              dLog('lineDimensions', heightElt, width, points, sideWedge);
+              if (shape.showArrow) {
+                let arrow = (shape.width === 1) ? 'arrow' : 'fat_arrow';
+                l.attr('marker-end', (heightElt < 20) ? "none" : 'url(#marker_' + arrow + ')');
+              }
+            }
+            function rectDimensions(d, i, g) {
+              d3.select(this)
+                .attr('x', ex + d.layer*trackWidth)
+                .attr('y', ey)
+                .attr('height' , heightElt);
+            }
+            function rectArrow(d, i, g) {
+              /** signed, according to direction start -> end. */
+              let arrowLength = heightElt / 3, // 10,
+              tipEndsY = [0, heightElt],
+              endsY = [0, heightElt],
+              direction = start < end,
+              directionFrom = +!direction,
+              directionTo = +direction;
+              endsY[1] -= arrowLength;
+              let
+                tipY = tipEndsY[1],
+              width = shape.width,
+              tip = [[width/2, tipY]],
+              append  = direction ? 'push' : 'unshift',
+              /** the arrow tip is added between 2 points with the same y. */
+              pointsLeft = [
+                [0, endsY[directionFrom]],
+                [0, endsY[directionTo]]
+              ],
+              pointsRight = [
+                [width, endsY[directionTo]],
+                [width, endsY[directionFrom]]
+              ],
+              points = direction ?
+                pointsLeft.concat(tip, pointsRight) :
+                pointsLeft.concat(pointsRight, tip);
+              let
+                l =  d3.line()(points) + 'Z';
+              dLog('rectarrow', arrowLength, tipEndsY, endsY, direction, tip, append, points, l);
+              return [l];
+            }
+
+            function elementDimensions(d, i, g) {
+              d3.select(this)
+                .attr('transform', "translate(" + (d.layer*trackWidth + ex) + ", " + ey + ")")
+                .attr('d', rectArrow);
+            }
+          });
+        }
+      });
+    }
+
     function blockTrackColourI (b) {
-        let blockId = this.parentElement.__data__,
+      let parent = this.parentElement;
+      if (! parent.getAttribute('clip-path')) {
+        parent = parent.parentElement;
+        // can check that parent has clip-path, and data is string
+      }
+        let blockId = parent.__data__,
+      blockIndex = thisAt.get('axis1d.blockIndexes'),
         /** If blockIndex{} is not collated yet, can scan through blockIds[] to get index.
          * Actually, the number of blocks will be 1-10, so collating a hash is
          * probably not time-effective.
@@ -522,8 +955,6 @@ export default InAxis.extend({
         // index into axis.blocks[] = <g.tracks> index + 1
         return axisTitleColour(blockId, i+1) || 'black';
       }
-    console.log(gAxis.node(), rs.size(), re.size(), 'ra', ra.size(), ra.node(), 'rx', rx.size());
-    rx.remove();
 
     /** not yet used, see also above blockTrackColourI() */
     function blockColour(selector) {
@@ -624,9 +1055,14 @@ export default InAxis.extend({
           .map(function (feature) {
             let interval = feature.get('range') || feature.get('value');
             /* copy/paste into CSV in upload panel causes feature.value to be a
-             * single-element array, e.g. {name : "my1AGene1", value : [5200] } */
-            if (! interval.length || (interval.length == 1))
-              interval = [interval, interval];
+             * single-element array, e.g. {name : "my1AGene1", value : [5200] }
+             * interval-tree expects an interval to be [start, end].
+             */
+            if (interval.length == 1) {
+              interval.push(interval[0]);
+            } else if (! interval.length) {
+                interval = [interval, interval];
+              }
             /* interval-tree:createIntervalTree() assumes the intervals are positive, and gets stack overflow if not. */
             else if (interval[1] === null) {
               /* undefined / null value[1] indicates 0-length interval.  */
@@ -649,6 +1085,40 @@ export default InAxis.extend({
     this.set('tracks', tracks); // used by axisStackChanged() : passed to layoutAndDrawTracks()
     return tracks;
   }),
+
+  layerSubElements(blockId, featureId, geneElementData) {
+    let blocks = this.get('blocks'),
+    blockState = blocks[blockId] || (blocks[blockId] = {});
+    if (! blockState.subEltTree)
+      blockState.subEltTree = {};
+    if (! blockState.subEltTree[featureId]) {
+      let
+        intervalNames = geneElementData.mapBy('description'),
+      intervals = geneElementData.map(SubElement.getInterval),
+      /** just conforming to the signature of makeTree() - probably no need to index by blockId here. */
+      intervalsByBlockId = {};
+      intervalsByBlockId[blockId] = intervals;
+      blockState.subEltTree[featureId] = this.makeTree(intervalsByBlockId, intervalNames);
+    }
+    let
+    subEltTree = blockState.subEltTree[featureId],
+      /** sizeThreshold would be used if the sub-elements were only displayed when
+       * zoomed so that their pixel represention was large enough to be
+       * useful.
+       */
+      sizeThreshold = undefined,
+    /** passing yDomain to regionOfTree() will hide sub-elements as they move
+     * out of scope during zoom/pan; when they re-enter scope they may be
+     * layered differently than when all sub-elements are added at the same
+     * time, so this is not done (and there is an update issue with rerending in
+     * this case).  */
+    // yDomain = this.get('yDomain'),
+    tracksLayout = regionOfTree(subEltTree.intervalTree[blockId], undefined, sizeThreshold, false),
+    data = tracksLayout.intervals;
+    return data;
+  },
+
+
   layoutWidth : Ember.computed('trackBlocksR.[]', function () {
     let
     trackBlocksR = this.get('trackBlocksR'),
@@ -709,3 +1179,4 @@ export default InAxis.extend({
 
 
 });
+

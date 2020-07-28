@@ -26,8 +26,11 @@ function omitUndefined(value) {
 
 /*----------------------------------------------------------------------------*/
 
+const requestServerAttr = 'session.requestServer';
+
 export default Service.extend({
   session: service('session'),
+  apiServers : service(),
 
   changePassword(data) {
     return this._ajax('Clients/change-password', 'POST', JSON.stringify(data), true)
@@ -47,6 +50,11 @@ export default Service.extend({
     return this._ajax('Clients/', 'POST', JSON.stringify(data), false)
   },
 
+  runtimeConfig() {
+    console.log('runtimeConfig');
+    return this._ajax('Configurations/runtimeConfig', undefined, 'GET', true);
+  },
+
   uploadData(data, onProgress) {
     return this._ajax('Datasets/upload', 'POST', JSON.stringify(data), true, onProgress);
   },
@@ -56,6 +64,7 @@ export default Service.extend({
   },
 
   getBlocks() {
+    console.log('getBlocks');
     return this._ajax('Datasets', 'GET', {'filter[include]': 'blocks'}, true)
   },
 
@@ -79,11 +88,12 @@ export default Service.extend({
     const filteredIntervalParams = omitUndefined(intervals);
     let
       route= 'Blocks/pathsViaStream',
-    url = this._endpoint(route) +
-      '?access_token=' + this._accessToken() + 
-      '&blockA=' + blockA +
-      '&blockB=' + blockB + '&' +
-      Ember.$.param({intervals : filteredIntervalParams});
+    dataIn = {blockA, blockB},
+    {url, data} = this._endpointURLToken(dataIn, route);
+    data.intervals = filteredIntervalParams;
+      url +=
+      '&' +
+      Ember.$.param(data);
     if (trace_paths)
       dLog(url, blockA, blockB, intervals, filteredIntervalParams, options);
 
@@ -191,11 +201,12 @@ export default Service.extend({
     const filteredIntervalParams = omitUndefined(intervals);
     let
       route= 'Blocks/pathsAliasesViaStream',
-    url = this._endpoint(route) +
-      '?access_token=' + this._accessToken() + 
-      '&blockIds[]=' + blockIds[0] +
-      '&blockIds[]=' + blockIds[1] + '&' +
-      Ember.$.param({intervals : filteredIntervalParams});
+    dataIn = {blockIds},
+    {url, data} = this._endpointURLToken(dataIn, route);
+    data.intervals = filteredIntervalParams;
+    url +=
+      '&' +
+      Ember.$.param(data);
     if (trace_paths)
       dLog(url, blockIds, intervals, filteredIntervalParams, options);
 
@@ -254,10 +265,10 @@ export default Service.extend({
 
   /** 
    */
-  featureSearch(featureNames, options) {
+  featureSearch(apiServer, featureNames, options) {
     if (trace_paths)
       dLog('services/auth featureSearch', featureNames, options);
-    return this._ajax('Features/search', 'GET', {filter : featureNames, options}, true);
+    return this._ajax('Features/search', 'GET', {server : apiServer, filter : featureNames, options}, true);
   },
 
   createDataset(name) {
@@ -288,11 +299,12 @@ export default Service.extend({
    * token may be actual token string, or equal true to trigger token fetch
    * onProgress is a callback accepting (percentComplete, data_direction)
    */
-  _ajax(route, method, data, token, onProgress) {
-    let endpoint = this._endpoint(route) 
+  _ajax(route, method, dataIn, token, onProgress) {
+    let {server, data} = this._server(dataIn),
+     url = this._endpoint(server, route);
 
     let config = {
-      url: endpoint,
+      url,
       type: method,
       crossDomain: true,
       headers: {},
@@ -301,8 +313,9 @@ export default Service.extend({
 
     if (data) config.data = data
 
+    console.log('_ajax', arguments, this);
     if (token === true) {
-      let accessToken = this._accessToken()
+      let accessToken = this._accessToken(server);
       config.headers.Authorization = accessToken
     } else if (Ember.typeOf(token) == 'string') {
       config.headers.Authorization = token
@@ -341,17 +354,168 @@ export default Service.extend({
     return Ember.$.ajax(config)
   },
 
-  _accessToken() {
-    let accessToken;
+  _accessToken(server) {
+    let
+    accessToken = server && server.token;
+    if (! accessToken)
     this.get('session').authorize('authorizer:application', (headerName, headerValue) => {
       accessToken = headerValue;
     });
+    console.log('_accessToken', server, accessToken);
     return accessToken
   },
-  _endpoint(route) {
+  /** Determine which server to send the request to.
+   * @param data  params to the API; these guide the server determination;
+   * e.g. if the param is block: <blockId>, use the server from which blockId was loaded.
+   *
+   * The compound result includes a copy of these params, modified to suit the
+   * server which is chosen : paths request params may be remote references, and
+   * are converted to local if they are being sent to the server they refer to.
+   * @return {server <ApiServer>, data}
+   * The blockIds in input param data may be modified, in which case result
+   * .data is a modified copy of input data.
+   */
+  _server(data) {
+    let result = {data}, requestServer;
+    if (data.server) {
+      if (data.server === 'primary')
+        requestServer = this.get('apiServers.primaryServer');
+      else {
+        requestServer = data.server;
+        delete data.server;
+      }
+    } else {
+      /** Map a blockId which may be a remote reference, to a local blockId;
+       * no change if the value is already local.
+       * This function is copied from backend/common/utilities/localise-blocks.js
+       */
+      function blockLocalId(blockId) {
+        return blockId.blockId || blockId;
+      }
+      const
+      /** @param blockId may be local or remote reference. */
+      blockIdServer = (blockId) => this.get('apiServers.id2Server')[blockLocalId(blockId)];
+
+      /** recognise the various names for blockId params.
+       * lookup the servers for the given blockIds.
+       * if the servers are different :
+       *  If one of the blockId/s is from primaryServer then use primaryServer,
+       *  otherswise choose the first one.
+       */
+      let
+        blockIds = data.blocks || data.blockIds ||
+        [data.blockA, data.blockB].filter((b) => b),
+      blockServers = blockIds && blockIds.map((blockId) => blockIdServer(blockId)),
+      blockId = data.block,
+      blockServer = blockId && blockIdServer(blockId);
+      if (blockServer) {
+        if (blockServers.length) {
+          dLog('_server', 'data has both single and multiple block params - unexpected', 
+               data, blockIds, blockServers, blockId, blockServer);
+        }
+        requestServer = blockServer;
+      } else if (blockServers.length === 1) {
+        requestServer = blockServers[0];
+      } else if (blockServers.length) {
+        let primaryServer = this.get('apiServers.primaryServer');
+
+        if (blockServers[0] === blockServers[1]) {
+          requestServer = blockServers[0];
+          // requestServer owns both the input blockId params, so convert them both to local.
+          result.data = blockIdMap(data, [blockLocalId, blockLocalId]);
+        } else if (blockServers.indexOf(primaryServer) >= 0)
+          requestServer = primaryServer;
+        else {
+          requestServer = blockServers[0];
+          if (blockServers.length > 1)
+            result.data = blockIdMap(data, [blockLocalId, I]);
+        }
+      }
+      if (! requestServer)
+        requestServer = this.get(requestServerAttr);
+      dLog(blockId, 'blockServer', blockServer);
+    }
+    result.server = requestServer;
+    return result;
+  },
+  /** construct the URL / URI for the given server and route.
+   * @param requestServer determined by @see _server()
+   * @param route path of the route, i.e the path after /api/
+   */
+  _endpoint(requestServer, route) {
+  let
+    apiHost =  requestServer && requestServer.host;
     let config = Ember.getOwner(this).resolveRegistration('config:environment')
-    let endpoint = config.apiHost + '/' + config.apiNamespace + '/' + route
+    let endpoint = (apiHost || config.apiHost) + '/' + config.apiNamespace + '/' + route
+    dLog('_endpoint', requestServer, apiHost, endpoint, config);
     return endpoint
+  },
+  /** Same as _endpoint() plus append '?access_token=' + access token.
+   * So the following query params are separated with & instead of ?
+   * Used in getPathsViaStream(), getPathsAliasesViaStream() to construct a URL
+   * for listenEvents() ... EventSource().
+   *
+   * Some discussion of how to avoid putting access_token in the URL as a query-param :
+   * https://stackoverflow.com/questions/28176933/http-authorization-header-in-eventsource-server-sent-events
+   * https://github.com/whatwg/html/issues/2177#issuecomment-487194160
+   */
+  _endpointURLToken(dataIn, route) {
+    let {server, data} = this._server(dataIn),
+    url = this._endpoint(server, route) +
+      '?access_token=' + this._accessToken(server);
+    return {url, data};
   }
 
+
 });
+
+/*----------------------------------------------------------------------------*/
+
+/** Map the input blockId params of data, using mapFns, which contains a
+ * function for the first and second blockId params respectively.
+ */
+function blockIdMap(data, mapFns) {
+  /** blockA, blockB, blockIds are the input blockId params;
+   * d is the result data, and at this point contains the other params.
+   */
+  let 
+    // the version of Babel in use is giving SyntaxError: Unexpected token
+    // {blockA, blockB, blockIds, ...d} = data,
+    // so manually spread the object :
+    blockA = data.blockA,
+  blockB = data.blockB, 
+  blockIds = data.blockIds,
+  restFields = Object.keys(data).filter(
+    (f) => ['blockA', 'blockB', 'blockIds'].indexOf(f) === -1),
+  d = restFields.reduce((result, f) => {result[f] = data[f]; return result;}, {}),
+  /** ab is true if data contains .blockA,B, false if .blockIds */
+  ab = !!blockA;
+  console.log('blockIdMap', data, blockA, blockB, blockIds, restFields, d, ab);
+  if ((!blockA !== !blockB) || (!blockA === !blockIds)) {
+    Ember.assert('param data is expected to contain either .blockA and .blockB, or .blockIds : ' +
+                 JSON.stringify(data), false);
+  }
+  /* if data has .blockA,B, put those params into blockIds[] to be processed in
+   * the same way that .blockIds[] is, then move the results back to .blockA,B
+   *
+   * This would read better if the .map was factored into a function and called
+   * separately for .blockA,B and .blockIds - can do that after commit (already
+   * tested as is).
+   */
+  if (ab) {
+    blockIds = [blockA, blockB];
+  }
+  blockIds = blockIds.map((blockId, i) => mapFns[i](blockId));
+  if (ab)
+    [d.blockA, d.blockB] = blockIds;
+  else
+    d.blockIds = blockIds;
+  console.log('blockIdMap', d);
+  return d;
+}
+
+function I(x) { return x; }
+
+/*----------------------------------------------------------------------------*/
+
+

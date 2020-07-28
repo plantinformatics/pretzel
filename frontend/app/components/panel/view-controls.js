@@ -19,6 +19,16 @@ export default Ember.Component.extend({
 
   feed: Ember.inject.service(),
 
+  /*--------------------------------------------------------------------------*/
+  /** paths are calculated in the backend if both blocks of block-adj are from
+   * the same server;  otherwise they may be calculated in the frontend (client)
+   * and / or in the backend via localiseBlocks().
+  */
+  pathJoinClient : false,
+  pathJoinRemote : true,
+
+  /*--------------------------------------------------------------------------*/
+
   /** may be set via URL param - @see readParsedOptions(). */
   pathsViaStream : true,
 

@@ -1,9 +1,21 @@
 import Ember from 'ember';
+const { inject: { service } } = Ember;
+
 import UploadBase from './data-base';
 
 import config from '../../../config/environment';
 
+/* global Handsontable */
+/* global FileReader */
+
 export default UploadBase.extend({
+  apiServers: service(),
+  /** If server may be given, then lookup as is done in
+   * services/data/dataset.js using apiServers (this can be factored into
+   * components/service/api-server.js) */
+  store : Ember.computed.alias('apiServers.primaryServer.store'),
+
+
   table: null,
   selectedDataset: 'new',
   newDatasetName: '',

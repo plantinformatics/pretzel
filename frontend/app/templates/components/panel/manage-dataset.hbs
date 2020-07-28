@@ -23,7 +23,7 @@
   </div>
   <div>
     {{#if editorVisible}}
-      {{#modal-dialog
+      {{#ember-modal-dialog
         onClose=(action "toggleEditor")
         targetAttachment="center"
         translucentOverlay=true
@@ -43,7 +43,7 @@
             Cancel
           </button>
         </div>
-      {{/modal-dialog}}
+      {{/ember-modal-dialog}}
     {{/if}}
   </div>
 {{else}}

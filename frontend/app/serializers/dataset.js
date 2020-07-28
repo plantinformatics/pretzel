@@ -27,6 +27,7 @@ export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
   },
 
   attrs: {
-    blocks: { embedded: 'always' }
+    blocks: { embedded: 'always' },
+    parentName : 'parent'
   }
 });

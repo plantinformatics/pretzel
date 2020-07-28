@@ -1,4 +1,4 @@
-FROM node:12-alpine
+FROM node:10-alpine
 
 # node-sass version is selected so that the binary can be downloaded;
 # otherwise, node-gyp will be built, and hence the following dependencies on python, make, c++.

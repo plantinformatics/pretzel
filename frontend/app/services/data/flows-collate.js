@@ -182,6 +182,7 @@ export default Service.extend({
   block: service('data/block'),
   axisBrush: service('data/axis-brush'),
   pathsPro : service('data/paths-progressive'),
+  apiServers : service(),
 
   flows : flows,
 
@@ -216,6 +217,11 @@ export default Service.extend({
     flowsServiceInject_utilsDrawFlowControls(this);
     flowsServiceInject_stacksAdj(this);
   },
+
+  id2ServerGet(blockId) {
+    return this.get('apiServers').id2ServerGet(blockId);
+  },
+
   enabledFlows : Ember.computed('flowConfig.uAlias', function () {
     let uAlias = flowConfig.uAlias,
     flows = this.get('flows');

@@ -3,7 +3,6 @@ import Ember from 'ember';
 const { Component, inject: { service } } = Ember;
 
 export default Component.extend({
-  store: service(),
   style: 'height:100%; width:100%',
   attributeBindings: ['style:style'],
   numericalData: true,
@@ -257,7 +256,7 @@ export default Component.extend({
     },
     loadBlock(block) {
       let data = this.get('displayData');
-      let store = this.get('store');
+      let store = block.store;
       store.findRecord('block', block.id, {
           reload: true,
           adapterOptions: {filter: {'include': 'features'}}

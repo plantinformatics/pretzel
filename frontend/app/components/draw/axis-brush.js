@@ -87,6 +87,16 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     if (features.length === 0)
       return;
 
+    let axisApi = this.get('drawMap.oa.axisApi');
+    dLog('draw', this, features.length, axisApi);
+    if (axisApi) {
+      let
+        /** defined after first brushHelper() call. */
+        axisFeatureCirclesBrushed = axisApi.axisFeatureCirclesBrushed;
+      if (axisFeatureCirclesBrushed)
+        axisFeatureCirclesBrushed();
+    }
+
   },
 
   /** Update the cx and cy attributes of the <circle>-s.  */

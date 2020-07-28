@@ -14,7 +14,9 @@ export default EntryBase.extend({
   /** store is inherited from EntryBase, and also action loadBlock, but
    * otherwise EntryBase is not relevant to entry-scope, ditto for entry-parent. */
 
-  node : Ember.computed('name', function () {
+  /** probably not required - use .data[0] instead for block - @see node()
+   */
+  x_node : Ember.computed('name', function () {
     let store = this.get('store'),
     name = this.get('name');
     /** problem : need dataset to make this unique. can annotate value with node. */
@@ -24,6 +26,13 @@ export default EntryBase.extend({
     // use the first matching block
     return blocks.length && blocks[0];
   }),
+  node : Ember.computed('data.0', function () {
+    let 
+      data = this.get('data'),
+    block = data[0];
+    return block;
+  }),
+
 
   actions: {
     selectDataset(dataset) {

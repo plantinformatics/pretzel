@@ -16,6 +16,8 @@ let trace_select = 0;
 export default Ember.Controller.extend(Ember.Evented, {
   dataset: service('data/dataset'),
   block: service('data/block'),
+  apiServers: service(),
+  controlsService : service('controls'),
 
   /** Array of available datasets populated from model 
    */
@@ -83,7 +85,10 @@ export default Ember.Controller.extend(Ember.Evented, {
       setViewed = this.get('block.setViewed'),
       referenceBlock = block.get('referenceBlock');
       if (referenceBlock)
+      {
+        console.log('addMap referenceBlock', referenceBlock.get('id'));
         setViewed(referenceBlock.get('id'), true);
+      }
       setViewed(blockId, true);
     },
 
@@ -160,6 +165,14 @@ export default Ember.Controller.extend(Ember.Evented, {
         t.apply(this, [id]);
       }
     },
+    blockFromId : function(blockId) {
+      let
+        id2Server = this.get('apiServers.id2Server'),
+      server = id2Server[blockId],
+      store = server.store,
+      block = store.peekRecord('block', blockId);
+      return block;
+    },
 
     selectBlock: function(block) {
       dLog('SELECT BLOCK mapview', block.get('name'), block.get('mapName'), block.id, block);
@@ -174,7 +187,10 @@ export default Ember.Controller.extend(Ember.Evented, {
       // this.send('setTab', 'right', 'block');
     },
     selectBlockById: function(blockId) {
-      let store = this.get('store'),
+      let
+        id2Server = this.get('apiServers.id2Server'),
+      server = id2Server[blockId],
+      store = server.store,
       selectedBlock = store.peekRecord('block', blockId);
       /* Previous version traversed all blocks of selectedMaps to find one
        * matching blockId. */
@@ -189,6 +205,15 @@ export default Ember.Controller.extend(Ember.Evented, {
     updateModel: function() {
       let model = this.get('model');
       dLog('controller/mapview: updateModel()', model);
+
+      let serverTabSelectedName = this.get('controlsService.serverTabSelected'),
+      serverTabSelected = serverTabSelectedName && this.get('apiServers').lookupServerName(serverTabSelectedName);
+      if (serverTabSelected)
+      {
+        let datasetsTask = serverTabSelected.getDatasets();
+      }
+      else
+      {
       let datasetsTaskPerformance = model.get('availableMapsTask'),
       newTaskInstance = datasetsTaskPerformance.task.perform();
       dLog('controller/mapview: updateModel()', newTaskInstance);
@@ -200,6 +225,7 @@ export default Ember.Controller.extend(Ember.Evented, {
       newTaskInstance.then((datasets) => {
         this.get('block').ensureFeatureLimits();
       });
+      }
     }
   },
 
@@ -252,8 +278,9 @@ export default Ember.Controller.extend(Ember.Evented, {
   /** same as services/data/block @see peekBlock()
    */
   blockFromId : function(blockId) {
-    let store = this.get('store'),
-    block = store.peekRecord('block', blockId);
+    let 
+      store = this.get('apiServers').id2Store(blockId),
+    block = store && store.peekRecord('block', blockId);
     return block;
   },
 

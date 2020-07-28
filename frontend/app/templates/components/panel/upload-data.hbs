@@ -7,9 +7,9 @@
       {{#each-in filterOptions as |key value|}}
         <div class="btn-group" role="group">
           <button
-            type="button"
-            class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
-            {{action "changeFilter" key preventDefault=false}}>
+              type="button"
+              class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
+              {{action "changeFilter" key preventDefault=false}}>
             {{elem/icon-base name=value.icon}} &nbsp;{{value.formal}}
 
           </button>
@@ -19,6 +19,9 @@
   </div>
 {{/elem/panel-container}}
 
+{{#if serverTabSelected }}
+  <div>Destination Server: {{ serverTabSelected }} </div>
+{{/if}}
 {{#if errorMessage}}
   <br>
   {{#elem/panel-form

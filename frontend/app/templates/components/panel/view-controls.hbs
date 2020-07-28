@@ -94,6 +94,17 @@
 
 
     <li class="list-group-item">
+      <label>Distributed Join</label>
+      <span class="filter-group-col">
+        {{input type="checkbox" name="pathJoinClient" checked=pathJoinClient }}
+        <label>Client</label>
+      </span>
+      <span class="filter-group-col">
+        {{input type="checkbox" name="pathJoinRemote" checked=pathJoinRemote }}
+        <label>Server</label>
+      </span>
+    </li>
+    <li class="list-group-item">
       <input type="checkbox" 
              id="checkbox-toggleModePathHover" 
              name="toggleCheckbox" 

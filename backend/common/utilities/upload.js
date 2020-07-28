@@ -2,6 +2,11 @@
 
 var fs = require('fs');
 var Promise = require('bluebird')
+const bent = require('bent');
+
+/* global require */
+/* global exports */
+/* global process */
 
 /**
  * Divide array into smaller chunks
@@ -74,6 +79,9 @@ function createChunked (data, model, len) {
   // })
 }
 
+
+
+
 /**
  * Send a json dataset structure to the database
  * @param {Object} data - The dataset object to be processed
@@ -82,9 +90,6 @@ function createChunked (data, model, len) {
 exports.uploadDataset = (data, models, options, cb) => {
   let dataset_id
   let json_blocks = []
-  let json_annotations = []
-  let json_intervals = []
-  let json_features = []
 
   //create dataset
   models.Dataset.create(data, options)
@@ -101,7 +106,19 @@ exports.uploadDataset = (data, models, options, cb) => {
     }
     //create blocks
     return models.Block.create(json_blocks, options)
-  }).then(function(blocks) {
+  })
+    .then(function(blocks) {
+      uploadDatasetContent(dataset_id, blocks, models, options, cb);
+    });
+};
+/**
+ * @return promise
+ */
+function uploadDatasetContent(dataset_id, blocks, models, options, cb) {
+  let json_annotations = [];
+  let json_intervals = [];
+  let json_features = [];
+
     blocks.forEach(function(block) {
       if (block.__cachedRelations.annotations) {
         block.__cachedRelations.annotations.forEach(function(json_annotation) {
@@ -122,57 +139,81 @@ exports.uploadDataset = (data, models, options, cb) => {
           json_features.push(json_feature);
         })
       }
-    })
+    });
+
+  let promise =
     //create annotations
-    return models.Annotation.create(json_annotations, options)
-  }).then(function(annotations) {
+  models.Annotation.create(json_annotations, options)
+  .then(function(annotations) {
     //create intervals
     return models.Interval.create(json_intervals, options)
   }).then(function(intervals) {
     //create features using connector for performance
     models.Feature.dataSource.connector.connect(function(err, db) {
-
-      let insert_features_recursive = function(features_to_insert) {
-        // no more features
-        if (features_to_insert.length == 0) {
-          return process.nextTick(() => cb(null, dataset_id));
-        }
-
-        let next_level_features = [];
-        // collect and prepare next level features
-        features_to_insert.forEach(function(feature, i) {
-          if (feature.features) {
-            feature.features.forEach(function(child_feature) {
-              child_feature.blockId = feature.blockId;
-              // save parent index to link with children after insertion
-              child_feature.parentIndex = i;
-              next_level_features.push(child_feature);
-            });
-            delete feature.features;
-          }
-        })
-
-        // insert current features
-        db.collection('Feature').insertMany(features_to_insert)
-        .then(function(result) {
-          // console.log(result);
-          // link parent ids
-          next_level_features.forEach(function(child_feature) {
-            child_feature.parentId = result.insertedIds[child_feature.parentIndex];
-            delete child_feature.parentIndex;
-          });
-          // insert next level
-          insert_features_recursive(next_level_features);
-        })
-
-      };
-
-      insert_features_recursive(json_features);
+      insert_features_recursive(db, dataset_id, json_features, true, cb);
     });
-  }).catch(function(e){
-    cb(e)
-  });
+  }).catch(cb);
+  return promise;
 }
+exports.uploadDatasetContent = uploadDatasetContent;
+
+/** 
+ * @param dataset_id  passed to cb
+ * @param ordered false enables insertMany() to insert later documents after a document
+ * which cannot be inserted because of a duplicate key.
+ * (refn : https://docs.mongodb.com/v3.2/reference/method/db.collection.insertMany/#error-handling )
+ * @return promise  (no value)
+ */
+function insert_features_recursive(db, dataset_id, features_to_insert, ordered, cb) {
+  // no more features
+  if (features_to_insert.length == 0) {
+    return process.nextTick(() => cb(null, dataset_id));
+  }
+
+  let next_level_features = [];
+  // collect and prepare next level features
+  features_to_insert.forEach(function(feature, i) {
+    if (feature.features) {
+      feature.features.forEach(function(child_feature) {
+        child_feature.blockId = feature.blockId;
+        // save parent index to link with children after insertion
+        child_feature.parentIndex = i;
+        next_level_features.push(child_feature);
+      });
+      delete feature.features;
+    }
+  });
+
+  let promise =
+  // insert current features
+    db.collection('Feature').insertMany(features_to_insert, {ordered})
+    .then(function(result) {
+      console.log('insert_features_recursive', result.insertedCount, features_to_insert.length);
+      // link parent ids
+      next_level_features.forEach(function(child_feature) {
+        child_feature.parentId = result.insertedIds[child_feature.parentIndex];
+        delete child_feature.parentIndex;
+      });
+      // insert next level
+      return insert_features_recursive(db, dataset_id, next_level_features, ordered, cb);
+    })
+    .catch((err) => {
+      console.log('insert_features_recursive', err.message, err.code);
+      if (err.writeErrors) console.log(err.writeErrors.length, err.writeErrors[0]);
+      // if !ordered then duplicates are OK - called from blockAddFeatures().
+      if (err.code === 11000) {
+        let dupCount = err.writeErrors && err.writeErrors.length || 0;
+        return Promise.resolve(features_to_insert.length - dupCount);
+      }
+      else {
+        cb(err);
+        return Promise.reject(err);
+      }
+    });
+  return promise;
+};
+exports.insert_features_recursive = insert_features_recursive;
+
 
 /**
  * Check whether the specified dataset already exists in the db
