@@ -1,14 +1,27 @@
 'use strict';
 
+/* global module */
+/* global require */
+
+
 var _ = require('lodash');
 
 var acl = require('../utilities/acl');
 var identity = require('../utilities/identity');
 var upload = require('../utilities/upload');
 var load = require('../utilities/load');
+const { cacheClearBlocks } = require('../utilities/localise-blocks');
 
 module.exports = function(Dataset) {
 
+/** Add the given dataset / blocks / features json data to the db.
+ * Uses upload.uploadDataset(), which is also the basis of @see createComplete().
+ * @desc
+ * This function, relative to createComplete(), adds .json.gz support,
+ * and 2 data checks : 
+ * . data has a .name at the top level - Dataset name
+ * . .name does not already exist in models.Dataset
+ */
   Dataset.upload = function(msg, options, req, cb) {
     req.setTimeout(0);
     var models = this.app.models;
@@ -121,6 +134,24 @@ module.exports = function(Dataset) {
     });
   }
 
+
+  Dataset.cacheClear = function(time, options, cb) {
+    let db = this.dataSource.connector,
+    models = this.app.models;
+    cacheClearBlocks(db, models, time)
+      .then((removed) => cb(null, removed))
+      .catch((err) => cb(err));
+  };
+  
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Based on uploadDataset(), similar to @see upload().
+   * @desc
+   * createComplete() is used in backend/test/
+   * and in functions_dev.bash : uploadData(),
+   * but not in frontend/
+   */
   Dataset.createComplete = function(data, options, req, cb) {
     req.setTimeout(0);
     var models = this.app.models;
@@ -141,6 +172,9 @@ module.exports = function(Dataset) {
     })
     next()
   })
+
+  /*--------------------------------------------------------------------------*/
+
 
   Dataset.remoteMethod('upload', {
     accepts: [
@@ -168,6 +202,17 @@ module.exports = function(Dataset) {
     returns: {arg: 'id', type: 'string'},
     description: "Creates a dataset and all of its children"
   });
+
+  Dataset.remoteMethod('cacheClear', {
+    accepts: [
+      {arg: 'time', type: 'number', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+   description: "Clear cached copies of datasets / blocks / features from a secondary Pretzel API server."
+  });
+
 
   acl.assignRulesRecord(Dataset);
   acl.limitRemoteMethods(Dataset);

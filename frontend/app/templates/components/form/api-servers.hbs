@@ -1,0 +1,42 @@
+{{!-- enable display of <tspan.blockServer>, when apiServers.serversLength > 1 --}}
+{{multipleServersEffect}}
+
+{{#elem/panel-container state="primary"}}
+
+  {{#elem/panel-heading icon="globe"}}
+    Datasources
+
+    <span class="pull-right">
+      {{x-toggle
+        theme='light'
+        value=showList
+        onToggle=(action (mut showList)) }}
+    </span>
+
+  {{/elem/panel-heading}}
+
+  {{#if showList}}
+  <ul class="list-group">
+    {{#each-in servers as |apiServerName apiServer| }}
+      <li class="list-group-item list-group-item-info">
+        {{form/api-server name=apiServerName data=apiServer}}
+      </li>
+    {{/each-in}}
+
+    <li 
+      class="list-group-item list-group-item-info">
+      New
+      <span class="pull-right">
+        {{elem/button-base
+          classSize='xs'
+          classColour='success'
+          icon='plus'
+          onClick=(action "addNewDatasource")}}
+      </span>
+    </li>
+  </ul>
+  {{/if}}
+
+{{/elem/panel-container}}
+
+

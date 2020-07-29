@@ -2,7 +2,7 @@ import Ember from 'ember';
 import Service from '@ember/service';
 import { task } from 'ember-concurrency';
 
-const { inject: { service } } = Ember;
+const { inject: { service }, getOwner } = Ember;
 
 const dLog = console.debug;
 
@@ -10,24 +10,67 @@ const dLog = console.debug;
 
 export default Service.extend(Ember.Evented, {
     auth: service('auth'),
-    store: service(),
+  apiServers: service(),
+  controls : service(),
+
+  primaryServer : Ember.computed.alias('apiServers.primaryServer'),
+
+  storeManager: Ember.inject.service('multi-store'),
 
   /** Get the list of available datasets, in a task - yield the dataset result.
    * Signal that receipt with receivedDatasets(datasets).
    */
-  taskGetList: task(function * () {
+  taskGetList: task(function * (server) {
     /* This replaces controllers/mapview.js : updateChrs(), updateModel(). */
     console.log('dataset taskGetList', this);
-    let store = this.get('store'),
+    let
+      owner = getOwner(this),
+    store0 = getOwner(this).lookup("service:store"),
+
+    apiServers = this.get('apiServers'),
+    primaryServer = apiServers.get('primaryServer'),
+    /** the host name of the server tab the user has selected in the dataset (manage-)explorer. */
+    serverTabSelectedName = this.get('controls.serverTabSelected'),
+    serverTabSelected = serverTabSelectedName && this.get('apiServers').lookupServer(serverTabSelectedName),
+    id2Server = apiServers.get('id2Server'),
+    _unused = console.log('taskGetList', server, primaryServer),
+    /** routes/mapview:model() uses primaryServer; possibly it will pass that
+     * in or perhaps formalise this to an if (server) structure; sort that in
+     * next commit. */
+    /** default to the serverTabSelected or primaryServer */
+    _unused2 = server || (server = serverTabSelected || primaryServer),
+    store = server.store,
     trace_promise = false,
-    dP = store.query('dataset',
-      {
-        filter: {'include': 'blocks'}
-      });
+
+    /** looks like store.adapterOptions is overridden by adapterOptions passed
+     * to query, so merge them. */
+    adapterOptions = apiServers.addId(
+      server || primaryServer,
+    /* adapterOptions = store.adapterOptions ||*/ {
+    /* adapterOptions */
+      filter :  {'include': 'blocks'} }), /*;
+    let */
+    dP = store.query('dataset', adapterOptions);
     if (trace_promise)
       dP.then(function (d) { console.log(d, d.toArray()[0].get('blocks').toArray());});
     let
     datasets = yield dP;
+
+    if (false && server && server.host)
+    {
+      /* Give each dataset a meta.apiHost attribute, referring to the API server from which it was received.
+       * This is for display in the GUI, and can be used to select the server for block contents request.
+       */
+      datasets.forEach(function(dataset) {
+        let meta = dataset.get('meta');
+        if (! meta)
+        {
+          meta = {};
+          dataset.set('meta', meta);
+        }
+        meta.apiHost = server.host;
+      });
+    }
 
     /* Give each block a .mapName attribute, referring to the dataset which contains it.
      * This is mostly to support existing references to block/chr.mapName; they can be all changed to .get('datasetId').get('id') or 'name'
@@ -38,6 +81,9 @@ export default Service.extend(Ember.Evented, {
       if (blocks) {
         blocks.forEach(function(block) {
           block.set('mapName', datasetName);
+          // if the block is not cached on the server, then note the server as the owner of the block.
+          if (! block.get('isCopy'))
+          id2Server[block.get('id')] = server;
         });
       }
     });
@@ -63,13 +109,19 @@ export default Service.extend(Ember.Evented, {
   }),
   getData: function (id) {
     console.log("dataset getData", id);
-    let store = this.get('store');
+    let
+    /** This is draft; caller may pass in server .. */
+    server = this.get('primaryServer'),
+    store = server.store,
+    adapterOptions = 
+      {
+          filter: {include: "blocks"}
+      };
+    this.get('apiServers').addId(server, adapterOptions);
     let datasetP = store.findRecord(
       'dataset', id,
       { reload: true,
-        adapterOptions:{
-          filter: {include: "blocks"}
-        }}
+        adapterOptions: adapterOptions}
     );
 
     return datasetP;
@@ -78,7 +130,10 @@ export default Service.extend(Ember.Evented, {
 
   /** @return dataset records */
   values: Ember.computed(function() {
-    let records = this.get('store').peekAll('dataset');
+    let 
+    server = this.get('primaryServer'),
+    store = server.store,
+    records = store.peekAll('dataset');
     console.log('values', records);
     return records;
   })
@@ -130,6 +185,70 @@ export default Service.extend(Ember.Evented, {
     return map;
   }),
  
+  /** Collate the datasets of the servers by the given keyFunction.
+   * The calling ComputedProperty should depend on 'apiServers.datasetsWithServerName.[]'.
+   */
+  datasetsByFunction : function datasetsByFunction (keyFunction) {
+    let
+      datasetsWithServerName = this.get('apiServers.datasetsWithServerName'),
+    datasetsByValue = datasetsWithServerName.reduce(function(result, d) {
+      let serverName = d.serverName;
+      d.datasetsBlocks.forEach(function (dataset) {
+        /** key will be .parentName or .id (name)  */
+        let key = keyFunction(dataset),
+        rp = result[key] || (result[key] = []);
+        rp.push({dataset, serverName});
+      });
+      return result;
+    });
+    dLog('datasetsByFunction', datasetsByValue);
+    return datasetsByValue;
+  },
+
+  /** Similar to datasetsByParent, except that is limited to .primaryServer,
+   * whereas this matches datasets on all stores/servers,
+   * and this maps by .parentName instead of .parent which may be undefined.
+   * @return [parentName] -> {dataset, serverName}
+   */  
+  datasetsByParentName : Ember.computed('apiServers.datasetsWithServerName.[]', function () {
+    function parentNameFn (dataset) { return dataset.get('parentName') || null; }
+    let datasetsByParentName = this.datasetsByFunction(parentNameFn);
+    dLog('datasetsByParentName', datasetsByParentName);
+    return datasetsByParentName;
+  }),
+  /** Similar to datasetsByName, except that is limited to .primaryServer,
+   * whereas this matches datasets on all stores/servers.
+   */
+  datasetsByNameAllServers : Ember.computed('apiServers.datasetsWithServerName.[]', function () {
+    function nameFn (dataset) { return dataset.get('id') || null; }
+    let datasetsByName = this.datasetsByFunction(nameFn);
+    dLog('datasetsByNameAllServers', datasetsByName);
+    return datasetsByName;
+  }),
+  /** Lookup the datasets matching the given parentName, i.e. dataset.parentName === parentName.
+   *
+   * @param parentName  to match
+   * @param original  if true then exclude copied / cached datasets (having .meta._origin)
+   * @return [ {dataset, serverName}, ... ]
+   */
+  datasetsForParentName : function(parentName, original) {
+    let datasetsByParentName = this.get('datasetsByParentName'),
+    childDatasets = datasetsByParentName[parentName];
+    return childDatasets;
+  },
+  /** Lookup the datasets matching the given name.
+   *
+   * @param name  to match, usually a parentName
+   * @param original  if true then exclude copied / cached datasets (having .meta._origin)
+   */
+  datasetsForName : function(name, original) {
+    let
+          apiServers = this.get('apiServers'),
+        datasets = apiServers.dataset2stores(name);
+    if (original)
+      datasets = datasets.filter((d) => ! d.dataset.get('meta._origin'));
+    return datasets;
+  }
   
   
 });

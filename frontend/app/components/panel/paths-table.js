@@ -47,10 +47,7 @@ if (! d3.selection.prototype.moveToFront) {
     };
 }
 
-/** Switch to select either HandsOnTable or ember-contextual-table.
- * If licenseKey is given, use HandsOnTable.
- */
-const useHandsOnTable = !!config.handsOnTableLicenseKey;
+
 /** id of element which will hold HandsOnTable. */
 const hoTableId = 'paths-table-ho';
 
@@ -77,7 +74,18 @@ export default Ember.Component.extend({
   pathsPro : service('data/paths-progressive'),
   axisBrush: service('data/axis-brush'),
 
-  useHandsOnTable : useHandsOnTable,
+  config,
+  /** The value useHandsOnTable is a switch to select either HandsOnTable or
+   * ember-contextual-table.   If licenseKey is given, use HandsOnTable.
+   *
+   * handsOnTableLicenseKey may be defined in the environment built into the app,
+   * or it may be received from server runtime environment by getHoTLicenseKey(),
+   * in which case this CP value is updated.
+   * Check if reply to getHoTLicenseKey() is received and contains a key.
+   */
+  useHandsOnTable : Ember.computed('config.handsOnTableLicenseKey', function () {
+    return !!config.handsOnTableLicenseKey;
+  }).volatile(),
   /** true enables display of the 'block' column for each end of the path. */
   blockColumn : true,
   /** true enables checkboxes to enable the following in the GUI  */
@@ -94,7 +102,7 @@ export default Ember.Component.extend({
   didInsertElement() {
     this._super(...arguments);
 
-    if (! useHandsOnTable) {
+    if (! this.get('useHandsOnTable')) {
       this.$(".contextual-data-table").colResizable({
         liveDrag:true,
         draggingClass:"dragging"
@@ -137,6 +145,7 @@ export default Ember.Component.extend({
    * tableData.length for display in the tab via updatePathsCount().
    */
   manageHoTable : function() {
+    let useHandsOnTable = this.get('useHandsOnTable');
     if (useHandsOnTable) {
       let
         visible = this.get('visible'),

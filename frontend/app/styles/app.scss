@@ -235,6 +235,20 @@ g.axis-use > g.tracks > g > rect.track {
   /* fill: lightblue; */
   /* stroke: lightblue; */
 }
+path.track.element.utr {
+  stroke-width : 10;
+  stroke-dasharray : 25;
+  stroke : blue;
+}
+path.track.element.intron {
+  fill : none;
+}
+rect.track.element.CDS {
+  fill: yellow;
+}
+rect.track.element.exon {
+  fill: green;
+}
 .pasteData {
   overflow: hidden;
   word-wrap: inherit;
@@ -471,28 +485,36 @@ body.allInitially
 .axis text {
   text-shadow: 0 1px 0 #fff;
   cursor: move;
-  text-anchor: middle;
+  // text-anchor: middle;
 }
 /* since split axis, now have (g.axis-outer (g.axis-all ( g.axis  (g.tick ...))) (text) ... ) */
-.axis-outer > .axis-all > text,
-.axis-outer .axis > .tick > text {
+.axis-outer:not(.not_top) > .axis-all > text,
+.axis-outer .axis {
   text-anchor: middle;
 }
-.axis-outer.rightmost.not_top > .axis-all > text,
-.axis-outer.rightmost .axis > .tick > text {
+/* for .extended, centre the axis title if top. */
+.axis-outer.extended:not(.not_top) > .axis-all > text {
+  text-anchor: middle;
+}
+/* extended : place the ticks on the left */
+.axis-outer.extended .axis {
+  text-anchor: end;
+}
+.axis-outer.rightmost:not(.extended).not_top > .axis-all > text,
+.axis-outer.rightmost:not(.extended) .axis {
   text-anchor: start;
 }
 .axis-outer.leftmost.not_top > .axis-all > text,
-.axis-outer.leftmost .axis > .tick > text {
+.axis-outer.leftmost .axis {
   text-anchor: end;
 }
-.axis-outer.rightmost .axis > .tick > text {
-  transform: translate(18px, 0px);
-}
-.axis-outer.rightmost .axis > .tick > line {
-  transform: translate(6px, 0px);
-}
 
+body:not(.multipleServers) tspan.blockServer {
+    display : none;
+}
+tspan.blockServer {
+    font-size : 2em;
+}
 
 /* -------------------------------------------------------------------------- */
 #grid {
@@ -843,6 +865,9 @@ li.filter-group > div > span:last-child {
 
 /* dataset explorer : tree browser */
 
+#left-panel-explorer a.apiServer {
+    border : 7.5px solid;
+}
 #tab-explorer-parent  ul {
   /* there is enough indent in the li, so 0 is enough here. */
   -webkit-padding-start: 0px;
@@ -1162,6 +1187,16 @@ div#goto-feature > div
 {
     display : inline-block;
 }
+.goto-ensemble > div
+{
+  display : flex;
+  margin : 1em;
+}
+.goto-ensemble > div > a
+{
+  margin-left : auto;
+  margin-right : 1em;
+}
 /* -------------------------------------------------------------------------- */
 .tooltip-inner  /*.ember-popover*/
 {
@@ -1398,6 +1433,52 @@ div.metaeditor-panel div.jsoneditor {
    * e.g. https://stackoverflow.com/a/5937346, https://stackoverflow.com/a/29924653 */
   text-align: right;
   padding-right: 1em !important;
+}
+
+/* -------------------------------------------------------------------------- */
+#new-datasource-modal .labelled-inputs {
+  display: grid;
+  /* 2nd column uses remainder. */
+  grid-template-columns: 7em;
+  font-size: larger;
+  row-gap: 2ex;
+}
+.labelled-inputs div.input-label {
+  grid-column : 1;
+}
+.labelled-inputs input {
+  grid-column : 2;
+}
+#new-datasource-modal input {
+  width: 100%;
+}
+/* Copied from the app's panel colours (bootstrap). */
+.modal-header {
+  background-color: #337ab7;
+  border-color: #337ab7;
+  color: #fff;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+}
+.modal-body {
+  background-color : #d9edf7;
+}
+.modal-footer {
+  background-color : lightblue;
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+/* Currently only applied to .modal-header, but this can be applied to all
+ * span.glyphicon in synchrony with removing &nbsp; after each {{elem/icon-base ... }} */
+.modal-header
+span.glyphicon {
+    margin-right: 1em;
+}
+/* -------------------------------------------------------------------------- */
+
+.select-parent  /* modal */
+{
+  font-size: larger;
 }
 
 /* -------------------------------------------------------------------------- */

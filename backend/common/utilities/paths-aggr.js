@@ -1,8 +1,11 @@
+const { localiseBlocksAndAliases } = require('./localise-aliases');
+
 var ObjectID = require('mongodb').ObjectID;
 
 /*----------------------------------------------------------------------------*/
 
 /* global exports */
+/* global require */
 
 /* globals defined in mongo shell */
 /* global db ObjectId print */
@@ -309,9 +312,15 @@ function keyValue (k,v) { let r = {}; r[k] = v; return r; };
  * @param l limit : 0 for domain[0] and lte, 1 for domain[1] and gte
  */
 function valueBound(intervals, b, l) {
+  /**  value may be [start, end] or [start] or [start, end, values...] or [start, undefined, values...]
+   * If there is no end value, use the start value.
+   * So the index of the end value is 0 or 1 depending on $size:$value and $value[1]
+   * (Support for $value[1]===undefined can be added in a separate commit).
+   */
+  const one = {$cond: { if: { $gt: [ { $size : "$value" }, 1 ] }, then: 1, else: 0 }};
   let r = keyValue(
     l ? '$lte' : '$gte',
-    [ keyValue('$arrayElemAt', ['$value', l ? 1 : 0]),
+    [ keyValue('$arrayElemAt', ['$value', l ? one : 0]),
       +intervals.axes[b].domain[l]]
   );
   return r;
@@ -476,6 +485,22 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
 
   return result;
 };
+/** Wrap .pathsAliases(), and handle the possibility that one of the blockIds
+ * may be from a secondary / remote server, not the primary.
+ * @return promise yielding a cursor
+ */
+exports.pathsAliasesRemote = function(db, models, blockId0, blockId1, namespace0,  namespace1, intervals) {
+  let promise = 
+    localiseBlocksAndAliases(db, models, blockId0, blockId1, namespace0,  namespace1, intervals).then((blockIds) => {
+      // blocks are now local, and pathsAliases() requires local blockIds to pass to db query.
+      if (blockId0.blockId) blockId0 = blockId0.blockId;
+      if (blockId1.blockId) blockId1 = blockId1.blockId;
+      if ((blockId0 !== blockIds[0]) || (blockId1 !== blockIds[1]))
+        console.log('pathsAliasesRemote', blockId0, blockId1, '!==', blockIds);
+    return pathsAliases(db, blockId0, blockId1, namespace0,  namespace1, intervals);
+  });
+  return promise;
+};
 /** Match features by name between the 2 given blocks.  The result is the alignment, for drawing paths between blocks.
  *
  * This implements alias1a() above - this function is used in the node server,
@@ -489,9 +514,9 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
  * If intervals.dbPathFilter then intervals.axes[{0,1}].domain[{0,1}] are included in the aggregrate filter.
  * The domain[] is in the same order as the feature.value[], i.e. increasing order : 
  * domain[0] < domain[1] (for all intervals.axes[]).
- * @return cursor	: direct paths
+ * @return promise yielding a cursor	: alias paths
  */
-exports.pathsAliases = function(db, blockId0, blockId1, namespace0,  namespace1, intervals) {
+function pathsAliases(db, blockId0, blockId1, namespace0,  namespace1, intervals) {
   parseIntervalFlags(intervals);
   let featureCollection = db.collection("Feature");
   let blockCollection = db.collection("Block");
@@ -562,9 +587,10 @@ exports.pathsAliases = function(db, blockId0, blockId1, namespace0,  namespace1,
     ];
 
   pipeline = pipeline.concat(group);
-  if (trace_aggr > 1)
+  if (trace_aggr > 2)
     console.dir('pathsAliases pipeline', pipeline, { depth: null });
-  console.log('pathsAliases pipeline', JSON.stringify(pipeline));
+  if (trace_aggr > 1)
+    console.log('pathsAliases pipeline', JSON.stringify(pipeline));
 
   let result = pipelineLimits(featureCollection, intervals, pipeline);
 
@@ -661,6 +687,9 @@ exports.blockFeaturesInterval = function(db, blockIds, intervals) {
 
   if (trace_aggr)
     console.log('blockFeaturesInterval', pipeline);
+  /* As an alternative to console.dir(), e.g. for tracing in text file can use :
+   *  console.log('pipeline', JSON.stringify(pipeline));
+   */
   if (trace_aggr > 1)
     console.dir(pipeline, { depth: null });
 

@@ -11,8 +11,9 @@
             {{panel/manage-search
                 view=view
                 loadBlock=(action loadBlock)
-		selectedFeatures=selectedFeatures
-		updateFeaturesInBlocks="updateFeaturesInBlocks"
+                selectedBlock=selectedBlock
+                selectedFeatures=selectedFeatures
+                updateFeaturesInBlocks="updateFeaturesInBlocks"
             }}
 	
         </div>
@@ -20,6 +21,7 @@
             {{panel/manage-explorer
                 view=view
                 model=model
+                primaryDatasets=model.availableMapsTask.value
                 mapviewDatasets=datasets
                 refreshDatasets=refreshDatasets
                 loadBlock="loadBlock"
