@@ -46,6 +46,21 @@ function progressGroupsSelect(flowName) {
   return g;
 }
 
+/** if value is a promise then call fn(value) when the promise resolves, otherwise call it now.
+ * @return a promise, yielding fn(value), if value is a promise, otherwise fn(value)
+ */
+function thenOrNow(value, fn) {
+  let result;
+  if (value.then) {
+    result = value.then(fn);
+  }
+  else {
+    result = fn(value);
+  };
+  return result;
+}
+
+
 /*----------------------------------------------------------------------------*/
 
 /**
@@ -158,25 +173,25 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      * blockAdj.pathsResult is passed to draw() instead.  */
     let pathsP = this.get('blockAdj.paths');
     dLog('blockAdj.paths', pathsP);
-      if (false)
-    pathsP.then(result => {
+    thenOrNow(pathsP, (result) => {
       dLog('blockAdj.paths', result);
-    flowNames.forEach(flowName => {
-      if (result[flowName])
-        result[flowName].then((paths) => {
-          /** pathsApiResultType could be identified as
-           * pathsResultTypes.pathsApi; it is an input format which may be used
-           * in multiple flows, so possibly .flowName should be separate from
-           * pathsResultTypes[].
-           */
-          let pathsResultType = paths.length && paths[0].featureAObj ?
-            pathsApiResultType /*pathsResultTypes.pathsApi*/ : pathsResultTypes[flowName];
-          dLog('blockAdj.paths length', paths && paths.length, pathsResultType);
-          if (paths && paths.length)
-            throttle(this, this.draw, pathsResultType, paths, 200, false);
-        });
+      flowNames.forEach(flowName => {
+        if (result[flowName])
+          thenOrNow(result[flowName], (paths) => {
+            /** pathsApiResultType could be identified as
+             * pathsResultTypes.pathsApi; it is an input format which may be used
+             * in multiple flows, so possibly .flowName should be separate from
+             * pathsResultTypes[].
+             */
+            let pathsResultType = paths.length && paths[0].featureAObj ?
+              pathsApiResultType /*pathsResultTypes.pathsApi*/ : pathsResultTypes[flowName];
+            dLog('blockAdj.paths length', paths && paths.length, pathsResultType);
+            if (paths && paths.length)
+              throttle(this, this.draw, pathsResultType, paths, 200, false);
+          });
+      });
     });
-    });
+
     if (false) {
     /** .direct and.alias are defined by the result of pathsP, not by pathsP, so
      * this would need to change; no purpose for this yet. */
@@ -440,6 +455,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     'drawMap.stacksWidthChanges',
     'blockAdj.axes1d.0.flipRegionCounter',
     'blockAdj.axes1d.1.flipRegionCounter',
+    /* will change scaleChanged to return {range: [from,to], domain : [from, to]}
+     * currently it returns the scale function itself which is not usable as a dependent key.
+     * Then the dependency can be : 'blockAdj.axes1d.{0,1}.scaleChanged.range.{0,1}'
+     * After domain change, the available paths should be filtered again, whereas
+     * after range change, it is sufficient to update the position of those paths already rendered.
+     */
     'blockAdj.axes1d.0.scaleChanged',
     'blockAdj.axes1d.1.scaleChanged',
     function () {
