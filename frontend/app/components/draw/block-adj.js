@@ -154,7 +154,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     return length;
   },
   pathsAliasesResultLength : Ember.computed(
-    'blockAdj.pathsAliasesResult.[]', 'paths', 'pathsDensityParams',
+    'blockAdj.pathsAliasesResult.[]', 'paths.{direct,alias}.[]', 'pathsDensityParams',
+    'blockAdj.zoomCounter',
     function () {
     /* pathsAliasesResult is in a different form to pathsResult; passing it to
      * draw() requires some mapping, which is abstracted in 
