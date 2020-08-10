@@ -119,6 +119,8 @@ export default DS.Model.extend(Ember.Evented, {
    * @desc but that function determines the referenceBlock's domain if the block is not zoomed.
    */
   zoomedDomains :  Ember.computed.mapBy('axes1d', 'zoomedDomain'),
+  /** domain incorporates zoomedDomain and also flipped and blocksDomain */
+  domains :  Ember.computed.mapBy('axes1d', 'domain'),
 
   /** Return the domains (i.e. zoom scope) of the 2 axes of this block-adj.
    * These are equivalent : 
@@ -363,14 +365,14 @@ export default DS.Model.extend(Ember.Evented, {
    * @return .lastResult()
    * //  previous result :  promises of paths array from direct and/or aliases, in a hash {direct : promise, alias: promise}
    */
-  paths : Ember.computed('blockId0', 'blockId1', 'zoomCounter', 'lastResult', function () {
+  paths : Ember.computed('blockId0', 'blockId1', 'domains.{0,1}.{0,1}', /*'lastResult',*/ function () {
     /** This adds a level of indirection between zoomCounter and
      * pathsRequestCount, flattening out the nesting of run-loop calls.
      */
     this.incrementProperty('pathsRequestCount');
     let result = this.get('lastResult');
      // result = this.call_taskGetPaths();
-    dLog('paths', result);
+    dLog('paths', result, this.get('domains'));
 
     // caller expects a hash of promises
     if (result) {

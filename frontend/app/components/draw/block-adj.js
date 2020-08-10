@@ -169,7 +169,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
     return pathsAliasesLength;
   }),
-  paths : Ember.computed('blockAdj', 'blockAdj.zoomCounter', function () {
+  paths : Ember.computed('blockAdj', 'blockAdj.paths.{direct,alias}.[]', function () {
     /** in the case of pathsViaStream, this promise will resolve with [] instead of the result -
      * blockAdj.pathsResult is passed to draw() instead.  */
     let pathsP = this.get('blockAdj.paths');
