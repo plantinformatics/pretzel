@@ -174,6 +174,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      * blockAdj.pathsResult is passed to draw() instead.  */
     let pathsP = this.get('blockAdj.paths');
     dLog('blockAdj.paths', pathsP);
+    if (false)
     thenOrNow(pathsP, (result) => {
       dLog('blockAdj.paths', result);
       flowNames.forEach(flowName => {
