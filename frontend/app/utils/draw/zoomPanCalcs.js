@@ -1,3 +1,7 @@
+/* related : see utils/interval-calcs.js */
+
+/*----------------------------------------------------------------------------*/
+
 import { isEqual } from 'lodash/lang';
 
 import { maybeFlip, noDomain }  from './axis';
@@ -60,7 +64,12 @@ function constrainInterval1(sub, interval, i) {
     /** Add shift to sub[] */
     let shift = interval[i] - sub[i];
     sub[i] = interval[i];
-    sub[j] += shift;
+    let
+      sjs = sub[j] + shift,
+    /** true if it is not possible to shift sub[j] because sjs is outside interval[j].  */
+    outside = j ? sjs > interval[j] : sjs < interval[j];
+    /** if shifted sub[j] would be outside interval[j], then clamp it at interval[j] */
+    sub[j] = outside ? interval[j] : sjs;
   }
 }
 /** Shift sub so that it fits within interval.

@@ -1,9 +1,19 @@
+/* related : see utils/draw/zoomPanCalcs.js
+ * backend/common/utilities/interval-overlap.js
+ */
 
 /*----------------------------------------------------------------------------*/
 
 /* global d3 */
 
 /*----------------------------------------------------------------------------*/
+
+/** Determine the absolute length of the given interval or domain.
+ * @param interval  number[2]
+ */
+function intervalSize(interval) {
+  return Math.abs(interval[1] - interval[0]);
+}
 
 const
 intervalLimit = [d3.min, d3.max],
@@ -47,6 +57,40 @@ function intervalExtent(intervals) {
   return extent;
 }
 
+/** Indexes for the endpoints of an interval or domain. */
+const ends = [0, 1];
+
+/** Calculate the intersection of the given intervals. 
+ * @params intervals  number[2][2]
+ * (intervals[i] !== undefined)
+ * (intervals[i][0] <= intervals[i][1])
+ * @return number[2], or undefined if intervals[i] are disjoint.
+ */
+function intervalOverlap(intervals) {
+  let overlap,
+  i0 = intervalOrdered(intervals[0]),
+  i1 = intervalOrdered(intervals[1]);
+
+  // refn : https://scicomp.stackexchange.com/a/26260 spektr
+  if ((i1[0] < i0[1]) && (i0[0] < i1[1])) {
+    overlap = [Math.max(i0[0], i1[0]), Math.min(i0[1], i1[1])];
+  }
+
+  return overlap;
+}
+
+/** Ensure that the endpoints of the given interval are in increasing order, or equal.
+ * @return a new array if the endpoints need to be swapped
+ */
+function intervalOrdered(interval) {
+  if (interval[0] > interval[1]) {
+    interval = [interval[1], interval[0]];
+  }
+  return interval;
+}
+
+
 /*----------------------------------------------------------------------------*/
 
-export { intervalLimit, intervalOutside, intervalMerge, intervalExtent };
+export { intervalSize, intervalLimit, intervalOutside, intervalMerge, intervalExtent,
+ intervalOverlap };

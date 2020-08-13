@@ -6,7 +6,8 @@ import { throttle } from '@ember/runloop';
 import AxisEvents from '../../utils/draw/axis-events';
 import { stacks, Stacked } from '../../utils/stacks';
 import { selectAxis, blockAdjKeyFn, blockAdjEltId, featureEltIdPrefix, featureNameClass, foregroundSelector, selectBlockAdj } from '../../utils/draw/stacksAxes';
-import { targetNPaths, pathsFilter } from '../../utils/draw/paths-filter';
+import { targetNPaths, pathsFilter, pathsFilterSmooth } from '../../utils/draw/paths-filter';
+import { intervalSize } from  '../../utils/interval-calcs';
 import { pathsResultTypes, pathsApiResultType, flowNames, resultBlockIds, pathsOfFeature, locationPairKeyFn } from '../../utils/paths-api';
 
 /* global d3 */
@@ -139,8 +140,31 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
          * close, and both require a new request. */
         this.incrementProperty('blockAdj.zoomCounter');
       } else if (pathsResult.length > nPaths) {
-        // later may pass prType as a param to pathsFilter().
-        pathsResult = pathsFilter(prType, pathsResult, blockDomains, nPaths);
+        /** Filtering should be smooth, so filtering paths for render keeps the
+         * currently-drawn paths where possible, instead of choosing paths for
+         * each render independently.
+         * When zooming in, retain the paths which are currently drawn and add
+         * more as needed; when zooming out, filter the current paths according
+         * to the reduction of zoomedDomain, and add new paths in the region
+         * (previousDomain - new domain), to meet the desired number.
+         */
+        let
+          scope = this.get('scope' + prType.typeName),
+        currentScope = {blockDomains, pathsDensityParams, nPaths};
+        if (! scope) {
+          /* first call, scope is not yet defined, there are no existing paths,
+           * so use pathsFilter() instead of pathsFilterSmooth() */
+          pathsResult = pathsFilter(prType, pathsResult, blockDomains, nPaths);
+          scope = this.set('scope' + prType.typeName, Ember.A());
+          scope[0] = currentScope;
+          let shown = this.set('shown' + prType.typeName, new Set());
+          pathsResult.forEach((p) => shown.add(p));
+        } else {
+          let shown = this.get('shown' + prType.typeName);
+          scope[1] = currentScope;
+          pathsResult = pathsFilterSmooth(prType, pathsResult, scope, shown);
+          scope.removeAt(0);
+        }
       }
       /* The calling CPs paths{,Aliases}ResultLength() are called before didRender
        * and hence before drawGroup{,Container}().   .draw() uses the <g>-s they

@@ -168,6 +168,7 @@ const pathsApiResultType = {
  */
 const pathsResultTypes = {
   direct : {
+    typeName : 'direct',
     fieldName : 'pathsResult',
     typeCheck : function(resultElt, trace) { let ok = !! resultElt._id; if (! ok && trace) {
       dLog('direct : typeCheck', resultElt); }; return ok; },
@@ -179,6 +180,7 @@ const pathsResultTypes = {
 
   alias :
   {
+    typeName : 'alias',
     fieldName : 'pathsAliasesResult',
     typeCheck : function(resultElt, trace) { let ok = !! resultElt.aliased_features;  if (! ok && trace) {
       dLog('alias : typeCheck', resultElt); }; return ok; },
