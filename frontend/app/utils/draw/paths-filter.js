@@ -200,7 +200,7 @@ function pathsFilterSmooth(prType, pathsResult, scope, shown) {
    */
 
 
-  if (ratio2 < 1) { // drop some paths
+  if ((ratio2 < 1) || (nPaths < scope[indexPrev].nPaths)) { // drop some paths
     /** ratio of total / to-keep */
     let nextSelected = sequenceSelector(shown.size, pathsToKeep2);
     shown.forEach((p) => {
