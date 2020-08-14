@@ -381,7 +381,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     {
       let gS = baS.selectAll("g." + className)
         .data(featurePaths, pathsResultType.featurePathKeyFn);
-      gS.exit().remove();
+      gS.exit()
+        .call(gPathDashAndRemove);
 
       let gA = gS.enter()
         .append('g')
@@ -404,11 +405,21 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .attr("class", className)
       ;
       let pSA = pS.merge(pSE);
+      /* could do a transition on pSE with .call(pathDashTween(false)); pSE would
+       * have to be separated out of following transition to avoid conflict. */
       pSA
         .transition().duration(pathTransitionTime)
         .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
       // setupMouseHover(pSE);
-      pS.exit().remove();
+      /* The same transition is applied on the gS.exit() above, and generally this
+       * remove will not be reached because the parent <g> is removed. */
+      pS.exit()
+        .remove();
+/*
+        .transition().duration(pathTransitionTime * 3)
+        .call(pathDashTween(true))
+        .each("end", function() { d3.select(this).remove(); });
+ */
     }
 
   },
@@ -562,4 +573,48 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   /*--------------------------------------------------------------------------*/
 
   
-});
+}); // end of Component draw/block-adj
+
+
+/*----------------------------------------------------------------------------*/
+
+/** Transition the paths in the given g, to show that they are being removed.
+ * @param g <g.blockAdj> which is to be removed, and contains <path.blockAdj>-s
+ */
+function gPathDashAndRemove(g) {
+  /** selector 'path' is equivalent here to : 'g.blockAdj > path.blockAdj' */
+  let exitPaths = g
+    .transition().duration(pathTransitionTime * 3)
+    .on('end', function() { d3.select(this).remove(); })
+    .selectAll('path')
+    .call(pathDashTween(true));
+}
+
+/* transition the stroke-dasharray, to show paths being added and removed. */
+
+/** Return a function which interpolates stroke-dasharray,
+ * to show a path going from visible to invible (if out is true) or vice versa.
+ */
+function pathDashTween(out) {
+  function tweenDash() {
+    /* based on example https://bl.ocks.org/mbostock/5649592 */
+    /** if length is not yet known, use 20px, otherwise 1/20 of length. */
+    var l = (this.getTotalLength() / 20) || 20,
+    dashStrings = [
+      l + "," + 0,          // visible
+      "0," + l + l/4],      // invisible
+    from = dashStrings[+ !out],
+    to = dashStrings[+ out],
+    i = d3.interpolateString(from, to);
+    return function(t) { return i(t); };
+  }
+
+  return function (path) {
+  path
+      .attrTween("stroke-dasharray", tweenDash);
+  };
+}
+
+
+
+/*----------------------------------------------------------------------------*/
