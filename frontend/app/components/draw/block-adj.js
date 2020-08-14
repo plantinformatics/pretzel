@@ -76,6 +76,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   pathsP : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
   block: service('data/block'),
+  queryParams: service('query-params'),
+
 
   needs: ['component:draw/path-data'],
 
@@ -96,6 +98,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   }),
 */
   axes :  Ember.computed.alias('blockAdj.axes'),
+
+  /** comment in services/data/block.js explains context of urlOptions
+   */
+  parsedOptions : Ember.computed.alias('queryParams.urlOptions'),
 
   pathsDensityParams : Ember.computed.alias('pathsP.pathsDensityParams'),
   pathsResultLength : Ember.computed(
@@ -335,6 +341,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       return;
     pathsResultType.typeCheck(featurePaths[0], true);
     let store = this.get('store');
+    /* Enables (via ?options=pathRemoveTransition), animation of <path> removal
+     * which is useful to verify paths re-filter.
+     * If it was enabled in the general release, the transition can include
+     * d=pathU so that paths removed at the edge, when zooming in, move over the
+     * edge.
+     */
+    let pathRemoveTransition = this.get('parsedOptions.pathRemoveTransition');
 
     /** blockAdjId is also contained in the result featurePaths
      */
@@ -381,8 +394,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     {
       let gS = baS.selectAll("g." + className)
         .data(featurePaths, pathsResultType.featurePathKeyFn);
-      gS.exit()
-        .call(gPathDashAndRemove);
+      if (pathRemoveTransition) {
+        gS.exit()
+          .call(gPathDashAndRemove);
+      } else {
+        gS.exit().remove();
+      }
 
       let gA = gS.enter()
         .append('g')
@@ -405,21 +422,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .attr("class", className)
       ;
       let pSA = pS.merge(pSE);
-      /* could do a transition on pSE with .call(pathDashTween(false)); pSE would
-       * have to be separated out of following transition to avoid conflict. */
       pSA
         .transition().duration(pathTransitionTime)
         .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
       // setupMouseHover(pSE);
-      /* The same transition is applied on the gS.exit() above, and generally this
-       * remove will not be reached because the parent <g> is removed. */
-      pS.exit()
-        .remove();
-/*
-        .transition().duration(pathTransitionTime * 3)
-        .call(pathDashTween(true))
-        .each("end", function() { d3.select(this).remove(); });
- */
+      pS.exit().remove();
     }
 
   },
@@ -591,6 +598,23 @@ function gPathDashAndRemove(g) {
 }
 
 /* transition the stroke-dasharray, to show paths being added and removed. */
+
+/* This could also be used on path exit,   e.g. :
+ * pS.exit()
+ *      .transition().duration(pathTransitionTime)
+ *      .call(pathDashTween(true))
+ *      .each("end", function() { d3.select(this).remove(); });
+ * but generally this remove will not be reached because the parent <g> is
+ * removed, and the transition is already applied on the gS.exit().
+ *
+ * This transition could also be applied on path append :
+ *   pSE
+ *     .transition().duration(pathTransitionTime * 3)
+ *     .attr("d", function(d) { return d.pathU(); })
+ *     .call(pathTween(false))
+ *     .each("end", function() { d3.select(this).attr("stroke-dasharray", 'none'); });
+ * pSE would have to be separated out of transition on pSA, to avoid conflict.
+ */
 
 /** Return a function which interpolates stroke-dasharray,
  * to show a path going from visible to invible (if out is true) or vice versa.
