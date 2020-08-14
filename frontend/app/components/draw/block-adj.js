@@ -2,6 +2,8 @@ import Ember from 'ember';
 
 const { inject: { service } } = Ember;
 import { throttle } from '@ember/runloop';
+import { task } from 'ember-concurrency';
+
 
 import AxisEvents from '../../utils/draw/axis-events';
 import { stacks, Stacked } from '../../utils/stacks';
@@ -422,9 +424,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .attr("class", className)
       ;
       let pSA = pS.merge(pSE);
-      pSA
-        .transition().duration(pathTransitionTime)
-        .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
+      this.get('pathPosition').perform(pSA);
+
       // setupMouseHover(pSE);
       pS.exit().remove();
     }
@@ -461,15 +462,19 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .filter(function (d) { return d.blocksHaveAxes(); });
     if (! pS.empty() && trace_blockAdj)
       dLog('updatePathsPosition before update pS', (trace_blockAdj > 1) ? pS.nodes() : pS.size(), pS.node());
+    this.get('pathPosition').perform(pS);
+  },
+
+  pathPosition: task(function * (pathSelection) {
     /* now that paths are within <g.block-adj>, path position can be altered
      * during dragging by updating a skew transform of <g.block-adj>, instead of
      * repeatedly recalculating pathU.
      */
-    pS
+    pathSelection
       .transition().duration(pathTransitionTime)
       // pathU() is temporarily a function, will revert to a computed function, as commented in path().
       .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
-  },
+  }).drop(),
 
   /** Call updateAxis() for the axes which bound this block-adj.
    * See comment in updatePathsPositionDebounce().
