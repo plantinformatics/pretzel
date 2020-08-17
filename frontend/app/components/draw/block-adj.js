@@ -424,7 +424,16 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .attr("class", className)
       ;
       let pSA = pS.merge(pSE);
-      this.get('pathPosition').perform(pSA);
+
+      /** existing paths (pS) are transitioned from their previous position;
+       * the previous position of added paths is not easily available so they
+       * are drawn without transition at their new position; this is done after
+       * the transition of the paths already shown, so that the transformation
+       * is consistent at any point in time, otherwise the movement is
+       * confusing.
+       */
+      let positionNew = () => this.get('pathPosition').perform(pSE);
+      this.get('pathPosition').perform(pS, positionNew);
 
       // setupMouseHover(pSE);
       pS.exit().remove();
@@ -462,18 +471,42 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .filter(function (d) { return d.blocksHaveAxes(); });
     if (! pS.empty() && trace_blockAdj)
       dLog('updatePathsPosition before update pS', (trace_blockAdj > 1) ? pS.nodes() : pS.size(), pS.node());
-    this.get('pathPosition').perform(pS);
+    this.get('pathPosition').perform(pS, undefined);
   },
 
-  pathPosition: task(function * (pathSelection) {
+  /** Update position of the paths indicated by the selection.
+   * Making this a task with .drop() enables avoiding conflicting transitions.
+   * If thenFn is given, call it after transition is ended.
+   * @param pathSelection
+   * @param thenFn
+   */
+  pathPosition: task(function * (pathSelection, thenFn) {
+    let
     /* now that paths are within <g.block-adj>, path position can be altered
      * during dragging by updating a skew transform of <g.block-adj>, instead of
      * repeatedly recalculating pathU.
      */
+      transition = 
     pathSelection
       .transition().duration(pathTransitionTime)
       // pathU() is temporarily a function, will revert to a computed function, as commented in path().
       .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
+
+    /** in a later version of d3, can use 
+     * transitionEnd = transition.end(); ... return transitionEnd;
+     * instead of new Promise(...) */
+     let transitionEnd =  new Ember.RSVP.Promise(function(resolve, reject){
+       transition
+         .on('end', (result) => resolve(result))
+         .on('interrupt', (error) => reject(error)); });  // also 'cancel', when version update
+    if (trace_blockAdj) {
+      dLog('pathPosition', pathSelection.node());
+      transitionEnd.then(() => dLog('pathPosition end', pathSelection.node()));
+    }
+    /* instead of a callback, it should be possible to yield transitionEnd, and
+     * the caller can .finally() on the task handle. Can retry this after version update. */
+    if (thenFn)
+      transitionEnd.then(thenFn);
   }).drop(),
 
   /** Call updateAxis() for the axes which bound this block-adj.
