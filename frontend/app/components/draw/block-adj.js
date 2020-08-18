@@ -107,13 +107,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   pathsDensityParams : Ember.computed.alias('pathsP.pathsDensityParams'),
   pathsResultLength : Ember.computed(
-    'blockAdj.pathsResult.[]', 'paths', 'pathsAliasesResultLength', 'pathsDensityParams',
+    'blockAdj.pathsResult.[]', 'pathsAliasesResultLength',
+    'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
-    /** Trigger paths request - side-effect. In the streaming case, result when
-     * the stream ends is [], so paths{,Aliases}Result are used instead of the
-     * result of this promise.
-     */
-    let pathsP = this.get('paths'),
+    let
     length = this.drawCurrent(pathsResultTypes.direct),
     pathsAliasesLength = this.get('pathsAliasesResultLength');
     return length;
@@ -144,9 +141,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       axisLengthPx = Math.max.apply(null, axesRanges),
       nPaths = targetNPaths(pathsDensityParams, axisLengthPx);
       if (pathsResult.length < nPaths) {
-        /* a change of path density is not strictly a change of zoom, but is
-         * close, and both require a new request. */
-        this.incrementProperty('blockAdj.zoomCounter');
+        /* to satisfy the required nPaths, trigger a new request. */
+        this.incrementProperty('blockAdj.pathsRequestCount');
       } else if (pathsResult.length > nPaths) {
         /** Filtering should be smooth, so filtering paths for render keeps the
          * currently-drawn paths where possible, instead of choosing paths for
@@ -186,8 +182,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     return length;
   },
   pathsAliasesResultLength : Ember.computed(
-    'blockAdj.pathsAliasesResult.[]', 'paths.{direct,alias}.[]', 'pathsDensityParams',
-    'blockAdj.zoomCounter',
+    'blockAdj.pathsAliasesResult.[]', 'paths.alias.[]',
+    'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
     /* pathsAliasesResult is in a different form to pathsResult; passing it to
      * draw() requires some mapping, which is abstracted in 
@@ -196,17 +192,36 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     pathsApiResultType.flowName = pathsResultTypes.alias.flowName;
     pathsApiResultType.fieldName = pathsResultTypes.alias.fieldName;
 
-    let pathsP = this.get('paths'),
+    let
     pathsAliasesLength = this.drawCurrent(pathsApiResultType /*pathsResultTypes.alias*/);
 
     return pathsAliasesLength;
   }),
-  paths : Ember.computed('blockAdj', 'blockAdj.paths.{direct,alias}.[]', function () {
+  paths : Ember.computed.alias('blockAdj.paths'),
+  /** Trigger paths request - side-effect. In the streaming case, result when
+   * the stream ends is [], so paths{,Aliases}Result are used instead of the
+   * result of this promise.
+   */
+  pathsRequest : Ember.computed('blockAdj.paths', function () {
+    let pathsP = this.get('blockAdj.paths');
+    dLog('blockAdj.paths', pathsP);
+    function thenLength(p) { return ! p ? 0 : thenOrNow(p, (a) => Ember.get(a, 'length')); }
+    let lengthSumP = thenLength(pathsP.direct) + thenLength(pathsP.alias);
+    return lengthSumP;
+  }),
+  /** Draw all new paths received - unfiltered by pathsDensityParams.
+   * The above paths{,Aliases}ResultLength(), which are currently used, ensure
+   * the required renders, so this can be dropped if there is not likely to be a
+   * need for showing unfiltered paths.
+   */
+  pathsEffect : Ember.computed(
+    // the debugger will evaluate this CP if this dependency is enabled.
+    // 'blockAdj.paths.{direct,alias}.[]',
+    function () {
     /** in the case of pathsViaStream, this promise will resolve with [] instead of the result -
      * blockAdj.pathsResult is passed to draw() instead.  */
     let pathsP = this.get('blockAdj.paths');
     dLog('blockAdj.paths', pathsP);
-    if (false)
     thenOrNow(pathsP, (result) => {
       dLog('blockAdj.paths', result);
       flowNames.forEach(flowName => {
@@ -432,7 +447,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
        * is consistent at any point in time, otherwise the movement is
        * confusing.
        */
-      let positionNew = () => this.get('pathPosition').perform(pSE);
+      let positionNew = () => this.get('pathPosition').perform(pSE)
+        .catch((error) => dLog('pathPosition New', error));
       this.get('pathPosition').perform(pS, positionNew);
 
       // setupMouseHover(pSE);
@@ -494,11 +510,17 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
     /** in a later version of d3, can use 
      * transitionEnd = transition.end(); ... return transitionEnd;
-     * instead of new Promise(...) */
+     * instead of new Promise(...)
+     * The caller is interested in avoiding overlapped transitions, so
+     * resolve/reject are treated the same.
+     */
      let transitionEnd =  new Ember.RSVP.Promise(function(resolve, reject){
        transition
-         .on('end', (result) => resolve(result))
-         .on('interrupt', (error) => reject(error)); });  // also 'cancel', when version update
+         .on('end', (d) => resolve(d))
+         .on('interrupt', (d, i, g) => {
+           resolve(d);
+           if (trace_blockAdj > 2) {
+             dLog('interrupt', d, i, g); }; }); });  // also 'cancel', when version update
     if (trace_blockAdj) {
       dLog('pathPosition', pathSelection.node());
       transitionEnd.then(() => dLog('pathPosition end', pathSelection.node()));
