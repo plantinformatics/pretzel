@@ -1,7 +1,12 @@
 
+import { intervalSize, intervalOverlap as intervalOverlap2 } from '../interval-calcs';
+
 /* global require */
+/* global d3 */
 
 var intervalOverlap = require('./interval-overlap');
+
+const dLog = console.debug;
 
 const trace_filter = 1;
 
@@ -77,7 +82,6 @@ function pathInDomain(prType, p, all, blockDomains) {
 
 /*----------------------------------------------------------------------------*/
 
-
 /** Filter the given array of paths to reduce the number of paths to nPaths.
  *
  * Possible future param : prType abstract the different types of path data;
@@ -125,4 +129,170 @@ function pathsFilter(prType, pathsResult, blockDomains, nPaths) {
   return pathsFiltered;
 }
 
-export { targetNPaths, pathsFilter };
+/** Indexes for the endpoints of an interval or domain. */
+const ends = [0,1];
+/** Index for {prev,current} blockDomains and params.  */
+const prevCurrent = [0, 1];
+const indexPrev = 0, indexCurrent = 1;
+
+/** Similar in role to pathsFilter(), this function aims for continuity of the
+ * selected paths.
+ * @param scope = model block-adj .get('scope')
+ * scope[2] : {0,1} are {prev,current};  each element is : {blockDomains, pathsDensityParams, nPaths}
+ * @param shown set of paths which are shown  (Set)
+ */
+function pathsFilterSmooth(prType, pathsResult, scope, shown) {
+  const fnName = 'pathsFilterSmooth';
+  /*
+   calculate new nPaths
+   ratio (overlap of) previous domain to current (new) domain, number of current paths to keep, difference is dp2k
+*/
+  dLog(fnName, prType.typeName, pathsResult.length, scope, shown.size);
+  let
+    /** scope[i].blockDomains is indexed by blockId, so map it to an array indexed by ends[].
+     * so blockDomainsV[i] is equivalent to scope[i].blockDomains[blockIds[i]]
+     * where blockIds = Object.keys(s.blockDomains)
+     */
+    blockDomainsV = scope.map((s, i) => Object.values(s.blockDomains)),
+  overlaps =  ends.map((i) => intervalOverlap2(prevCurrent.map((j) => blockDomainsV[j][i]))),
+  /** ratio of the overlap to the previous zoomedDomain, to determine proportion
+   * of paths to keep when zooming out.
+   * When zooming in, all paths are kept (ignoring the impact of changes to
+   * nPaths; it is expected that this function will see 1 change at a time
+   * either to nPaths or a zoom of one axis).
+   */
+  ratios = overlaps.map((o, i) => intervalSize(o) / intervalSize(blockDomainsV[indexCurrent][i])),
+  /** combining the ratios from the 2 ends into a single number; heuristic : use
+   * geometric mean; could also choose the minimum, because if [.1, .5] then the
+   * .1 will have the more significant impact on the number of paths.
+   *  If zooming in or not zooming then ratio is 1, so the mean is the other value.
+   */
+  ratio2 = Math.sqrt(ratios[0] * ratios[1]),
+  // pathsToKeep = ratios.map((r) => r * scope[indexCurrent].nPaths),
+  /** add new paths :
+   * total nPaths, spread evenly across overlaps and outside it
+   * inside overlaps : ratio2 * nPaths - pathsKept
+   * outside overlaps : (1-ratio2) * nPaths
+   * within overlaps : to make shown.size up to nPaths
+   */
+  nPaths = scope[indexCurrent].nPaths,
+  pathsToKeep2 = ratio2 * nPaths;
+  // deltaPathsToKeep = pathsToKeep.map((n) => n - scope[indexPrev].nPaths),
+  // dp2k = d3.max(deltaPathsToKeep);
+  dLog(fnName, overlaps, ratios, ratio2, pathsToKeep2); // pathsToKeep, , deltaPathsToKeep, dp2k);
+
+  /* Drop shown paths which are outside the new domain. */
+  const all = true;
+  shown.forEach((p) => {
+    let inRange = pathInDomain(prType, p, all, scope[indexCurrent].blockDomains);
+    if (! inRange) {
+      shown.delete(p);
+    }
+  });
+
+/*
+   increase  (dp2k > 0):
+   keep all of current paths within new domain
+   add extra paths, sampled from those within new domain and not in current
+
+   decrease :
+   keep sampled set of current paths within new domain, proportional to interval
+   */
+
+
+  if ((ratio2 < 1) || (nPaths < scope[indexPrev].nPaths)) { // drop some paths
+    /** ratio of total / to-keep */
+    let nextSelected = sequenceSelector(shown.size, pathsToKeep2);
+    shown.forEach((p) => {
+      if (! nextSelected())
+        shown.delete(p);
+    });
+  }
+  let pathsKept = shown.size;
+
+  let blockDomains = scope[indexCurrent].blockDomains;
+  let pathsFiltered = [];
+    shown.forEach((p) => {
+      pathsFiltered.push(p);
+    });
+  if (blockDomains) {
+    pathsResult = pathsResult.filter(function (p) {
+      let inRange = pathInDomain(prType, p, all, blockDomains);
+      return inRange;
+    });
+  }
+  if (pathsResult.length <= nPaths) {
+    pathsFiltered = pathsResult;
+    pathsFiltered.forEach((p) => {
+      shown.add(p);
+    });
+  } else {
+    //   add extra paths, sampled from those within new domain and not in current
+    /** number of paths to add in the interval outside the overlap, i.e. the added interval when zooming out. */
+    let nPathsAdd = ratio2 === 1 ? 0 : (1-ratio2) * nPaths;
+    let nPathsAddIn = ratio2 * nPaths - pathsKept;
+    if (nPathsAddIn < 0)
+      nPathsAddIn = 0;
+    if (nPathsAdd || nPathsAddIn) {
+      /** selectors for new paths to add, outside and inside the overlap,
+       * i.e. the interval of the previous zoom, and the interval(s) added
+       * either side of that when zooming out.  */
+      let selectOutside = sequenceSelector(pathsResult.length, nPathsAdd),
+      selectInside = sequenceSelector(pathsResult.length, nPathsAddIn);
+      /** verify sequenceSelector(). */
+      let counts = [0, 0];
+      pathsFiltered = pathsResult.reduce(function skipSome(result, path, i) {
+        if (! shown.has(path)) {
+          let inside = pathInDomain(prType, path, all, scope[indexCurrent].blockDomains),
+          select = inside ? selectInside : selectOutside;
+          /** using these 2 selectors alternately is only approximate. */
+          if (select()) {
+            result.push(path);
+            shown.add(path);
+            counts[+inside]++;
+          }
+        }
+        return result;
+      }, pathsFiltered);
+      dLog(fnName, pathsResult.length, nPathsAdd, nPathsAddIn, counts);
+    /** trace the (array) value or just the length depending on trace level. */
+    function valueOrLength(value) { return (trace_filter > 1) ? value : value.length; }
+    if (trace_filter)
+      console.log(fnName, valueOrLength(pathsResult), nPaths, valueOrLength(pathsFiltered));
+    }
+  }
+
+  return pathsFiltered;
+}
+
+/** Evenly select a fraction of a sequence.
+ * @param total total number of items in the sequence to select from
+ * @param selection number of items to select.
+ * May be 0, in which case the result will be : function () { return false; }
+ */
+function sequenceSelector(total, selection) {
+  /** Usage / test : 
+   * next = sequenceSelector(shown.size, pathsToKeep2);  selected=0;
+   * for (let i=0; i < 420000; i++) { if (next()) selected++; };
+   * selected;
+   */
+  let fn;
+  if (! selection) {
+    fn = function () { return false; };
+  }
+  else {
+    let ratio = total / selection,
+    count = 0;
+    fn = function next() {
+      let cursor = count++ % ratio,
+      select = cursor < 1;
+      return select;
+    };
+  }
+  return fn;
+};
+
+
+/*----------------------------------------------------------------------------*/
+
+export { targetNPaths, pathsFilter, pathsFilterSmooth };

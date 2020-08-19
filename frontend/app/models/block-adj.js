@@ -3,7 +3,7 @@ import DS from 'ember-data';
 import attr from 'ember-data/attr';
 import { on } from '@ember/object/evented';
 
-import { task, timeout } from 'ember-concurrency';
+import { task, timeout, didCancel } from 'ember-concurrency';
 
 const { inject: { service } } = Ember;
 
@@ -119,6 +119,8 @@ export default DS.Model.extend(Ember.Evented, {
    * @desc but that function determines the referenceBlock's domain if the block is not zoomed.
    */
   zoomedDomains :  Ember.computed.mapBy('axes1d', 'zoomedDomain'),
+  /** domain incorporates zoomedDomain and also flipped and blocksDomain */
+  domains :  Ember.computed.mapBy('axes1d', 'domain'),
 
   /** Return the domains (i.e. zoom scope) of the 2 axes of this block-adj.
    * These are equivalent : 
@@ -342,6 +344,7 @@ export default DS.Model.extend(Ember.Evented, {
             let out = filterOut(resultElt, 0) || filterOut(resultElt, 1);
         return ! out;
       });
+      dLog('filterPathsResult', pathsFiltered.length, pathsResultTypeName, zoomedDomains);
     }
     return pathsFiltered;
   },
@@ -362,13 +365,14 @@ export default DS.Model.extend(Ember.Evented, {
    * @return .lastResult()
    * //  previous result :  promises of paths array from direct and/or aliases, in a hash {direct : promise, alias: promise}
    */
-  paths : Ember.computed('blockId0', 'blockId1', 'zoomCounter', 'lastResult', function () {
+  paths : Ember.computed('blockId0', 'blockId1', 'domains.{0,1}.{0,1}', /*'lastResult',*/ function () {
     /** This adds a level of indirection between zoomCounter and
      * pathsRequestCount, flattening out the nesting of run-loop calls.
      */
     this.incrementProperty('pathsRequestCount');
     let result = this.get('lastResult');
      // result = this.call_taskGetPaths();
+    dLog('paths', result, this.get('domains'));
 
     // caller expects a hash of promises
     if (result) {
@@ -392,7 +396,7 @@ export default DS.Model.extend(Ember.Evented, {
     task = this.get('taskGetPaths');
 
     // expected .drop() to handle this, but get "TaskInstance 'taskGetPaths' was cancelled because it belongs to a 'drop' Task that was already running. "
-    if (! task.get('isIdle')) {
+    if (false && ! task.get('isIdle')) {
       dLog('paths taskGetPaths', task.numRunning, task.numQueued, blockAdjId);
       // result = this.get('lastResult');
       if (task.numRunning > 1) {
@@ -410,12 +414,22 @@ export default DS.Model.extend(Ember.Evented, {
      * auth.js : getPaths{,Aliases}ViaStream() : promise.catch(interruptStream )
      */
     result = task.perform(blockAdjId)
-      .catch(function () {
+      .catch((error) => {
         // arguments are 2 (direct & alias) of : {state: "fulfilled", value: [] }
-        dLog('call_taskGetPaths taskInstance.catch', blockAdjId); });
+        // Recognise if the given task error is a TaskCancelation.
+        if (! didCancel(error)) {
+          dLog('call_taskGetPaths taskInstance.catch', blockAdjId, error);
+          throw error; }
+        let lastResult = task.get('lastSuccessful.value');
+        dLog('call_taskGetPaths', 'using lastSuccessful.value', lastResult, 
+             task.get('state'), task.numRunning, task.numQueued
+            );
+        return lastResult;
+      });
 
     return result;
   },
+
   /** Depending on flows.{direct,alias}.visible, call getPathsProgressive() and
    * getPathsAliasesProgressive().
    * Those functions may make a request to the backend server if a current result is not in hand,
@@ -496,8 +510,7 @@ export default DS.Model.extend(Ember.Evented, {
     }
 
     return result;
-  })// .drop() // maxConcurrency(2).restartable() // 
-
+  }).keepLatest() // .drop() // maxConcurrency(2).restartable() // 
 
   /*--------------------------------------------------------------------------*/
 

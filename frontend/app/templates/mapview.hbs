@@ -64,7 +64,7 @@
   </div>
 
   {{#if layout.right.visible}}
-    <div class="" style="flex-basis:400px; flex-grow:1; display:flex; flex-direction:column">
+    <div class="" style="flex-basis:400px; flex-grow:1; overflow-x:scroll; display:flex; flex-direction:column">
       <ul class="nav nav-tabs">
         {{#if model.params.parsedOptions.blockTab}}
           {{#elem/button-tab
