@@ -2,11 +2,14 @@ import Ember from 'ember';
 
 const { inject: { service } } = Ember;
 import { throttle } from '@ember/runloop';
+import { task } from 'ember-concurrency';
+
 
 import AxisEvents from '../../utils/draw/axis-events';
 import { stacks, Stacked } from '../../utils/stacks';
 import { selectAxis, blockAdjKeyFn, blockAdjEltId, featureEltIdPrefix, featureNameClass, foregroundSelector, selectBlockAdj } from '../../utils/draw/stacksAxes';
-import { targetNPaths, pathsFilter } from '../../utils/draw/paths-filter';
+import { targetNPaths, pathsFilter, pathsFilterSmooth } from '../../utils/draw/paths-filter';
+import { intervalSize } from  '../../utils/interval-calcs';
 import { pathsResultTypes, pathsApiResultType, flowNames, resultBlockIds, pathsOfFeature, locationPairKeyFn } from '../../utils/paths-api';
 
 /* global d3 */
@@ -46,6 +49,21 @@ function progressGroupsSelect(flowName) {
   return g;
 }
 
+/** if value is a promise then call fn(value) when the promise resolves, otherwise call it now.
+ * @return a promise, yielding fn(value), if value is a promise, otherwise fn(value)
+ */
+function thenOrNow(value, fn) {
+  let result;
+  if (value.then) {
+    result = value.then(fn);
+  }
+  else {
+    result = fn(value);
+  };
+  return result;
+}
+
+
 /*----------------------------------------------------------------------------*/
 
 /**
@@ -60,6 +78,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   pathsP : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
   block: service('data/block'),
+  queryParams: service('query-params'),
+
 
   needs: ['component:draw/path-data'],
 
@@ -81,15 +101,16 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 */
   axes :  Ember.computed.alias('blockAdj.axes'),
 
+  /** comment in services/data/block.js explains context of urlOptions
+   */
+  parsedOptions : Ember.computed.alias('queryParams.urlOptions'),
+
   pathsDensityParams : Ember.computed.alias('pathsP.pathsDensityParams'),
   pathsResultLength : Ember.computed(
-    'blockAdj.pathsResult.[]', 'paths', 'pathsAliasesResultLength', 'pathsDensityParams',
+    'blockAdj.pathsResult.[]', 'pathsAliasesResultLength',
+    'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
-    /** Trigger paths request - side-effect. In the streaming case, result when
-     * the stream ends is [], so paths{,Aliases}Result are used instead of the
-     * result of this promise.
-     */
-    let pathsP = this.get('paths'),
+    let
     length = this.drawCurrent(pathsResultTypes.direct),
     pathsAliasesLength = this.get('pathsAliasesResultLength');
     return length;
@@ -120,12 +141,34 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       axisLengthPx = Math.max.apply(null, axesRanges),
       nPaths = targetNPaths(pathsDensityParams, axisLengthPx);
       if (pathsResult.length < nPaths) {
-        /* a change of path density is not strictly a change of zoom, but is
-         * close, and both require a new request. */
-        this.incrementProperty('blockAdj.zoomCounter');
+        /* to satisfy the required nPaths, trigger a new request. */
+        this.incrementProperty('blockAdj.pathsRequestCount');
       } else if (pathsResult.length > nPaths) {
-        // later may pass prType as a param to pathsFilter().
-        pathsResult = pathsFilter(prType, pathsResult, blockDomains, nPaths);
+        /** Filtering should be smooth, so filtering paths for render keeps the
+         * currently-drawn paths where possible, instead of choosing paths for
+         * each render independently.
+         * When zooming in, retain the paths which are currently drawn and add
+         * more as needed; when zooming out, filter the current paths according
+         * to the reduction of zoomedDomain, and add new paths in the region
+         * (previousDomain - new domain), to meet the desired number.
+         */
+        let
+          scope = this.get('scope' + prType.typeName),
+        currentScope = {blockDomains, pathsDensityParams, nPaths};
+        if (! scope) {
+          /* first call, scope is not yet defined, there are no existing paths,
+           * so use pathsFilter() instead of pathsFilterSmooth() */
+          pathsResult = pathsFilter(prType, pathsResult, blockDomains, nPaths);
+          scope = this.set('scope' + prType.typeName, Ember.A());
+          scope[0] = currentScope;
+          let shown = this.set('shown' + prType.typeName, new Set());
+          pathsResult.forEach((p) => shown.add(p));
+        } else {
+          let shown = this.get('shown' + prType.typeName);
+          scope[1] = currentScope;
+          pathsResult = pathsFilterSmooth(prType, pathsResult, scope, shown);
+          scope.removeAt(0);
+        }
       }
       /* The calling CPs paths{,Aliases}ResultLength() are called before didRender
        * and hence before drawGroup{,Container}().   .draw() uses the <g>-s they
@@ -139,7 +182,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     return length;
   },
   pathsAliasesResultLength : Ember.computed(
-    'blockAdj.pathsAliasesResult.[]', 'paths', 'pathsDensityParams',
+    'blockAdj.pathsAliasesResult.[]', 'paths.alias.[]',
+    'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
     /* pathsAliasesResult is in a different form to pathsResult; passing it to
      * draw() requires some mapping, which is abstracted in 
@@ -148,35 +192,55 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     pathsApiResultType.flowName = pathsResultTypes.alias.flowName;
     pathsApiResultType.fieldName = pathsResultTypes.alias.fieldName;
 
-    let pathsP = this.get('paths'),
+    let
     pathsAliasesLength = this.drawCurrent(pathsApiResultType /*pathsResultTypes.alias*/);
 
     return pathsAliasesLength;
   }),
-  paths : Ember.computed('blockAdj', 'blockAdj.zoomCounter', function () {
+  paths : Ember.computed.alias('blockAdj.paths'),
+  /** Trigger paths request - side-effect. In the streaming case, result when
+   * the stream ends is [], so paths{,Aliases}Result are used instead of the
+   * result of this promise.
+   */
+  pathsRequest : Ember.computed('blockAdj.paths', function () {
+    let pathsP = this.get('blockAdj.paths');
+    dLog('blockAdj.paths', pathsP);
+    function thenLength(p) { return ! p ? 0 : thenOrNow(p, (a) => Ember.get(a, 'length')); }
+    let lengthSumP = thenLength(pathsP.direct) + thenLength(pathsP.alias);
+    return lengthSumP;
+  }),
+  /** Draw all new paths received - unfiltered by pathsDensityParams.
+   * The above paths{,Aliases}ResultLength(), which are currently used, ensure
+   * the required renders, so this can be dropped if there is not likely to be a
+   * need for showing unfiltered paths.
+   */
+  pathsEffect : Ember.computed(
+    // the debugger will evaluate this CP if this dependency is enabled.
+    // 'blockAdj.paths.{direct,alias}.[]',
+    function () {
     /** in the case of pathsViaStream, this promise will resolve with [] instead of the result -
      * blockAdj.pathsResult is passed to draw() instead.  */
     let pathsP = this.get('blockAdj.paths');
     dLog('blockAdj.paths', pathsP);
-      if (false)
-    pathsP.then(result => {
+    thenOrNow(pathsP, (result) => {
       dLog('blockAdj.paths', result);
-    flowNames.forEach(flowName => {
-      if (result[flowName])
-        result[flowName].then((paths) => {
-          /** pathsApiResultType could be identified as
-           * pathsResultTypes.pathsApi; it is an input format which may be used
-           * in multiple flows, so possibly .flowName should be separate from
-           * pathsResultTypes[].
-           */
-          let pathsResultType = paths.length && paths[0].featureAObj ?
-            pathsApiResultType /*pathsResultTypes.pathsApi*/ : pathsResultTypes[flowName];
-          dLog('blockAdj.paths length', paths && paths.length, pathsResultType);
-          if (paths && paths.length)
-            throttle(this, this.draw, pathsResultType, paths, 200, false);
-        });
+      flowNames.forEach(flowName => {
+        if (result[flowName])
+          thenOrNow(result[flowName], (paths) => {
+            /** pathsApiResultType could be identified as
+             * pathsResultTypes.pathsApi; it is an input format which may be used
+             * in multiple flows, so possibly .flowName should be separate from
+             * pathsResultTypes[].
+             */
+            let pathsResultType = paths.length && paths[0].featureAObj ?
+              pathsApiResultType /*pathsResultTypes.pathsApi*/ : pathsResultTypes[flowName];
+            dLog('blockAdj.paths length', paths && paths.length, pathsResultType);
+            if (paths && paths.length)
+              throttle(this, this.draw, pathsResultType, paths, 200, false);
+          });
+      });
     });
-    });
+
     if (false) {
     /** .direct and.alias are defined by the result of pathsP, not by pathsP, so
      * this would need to change; no purpose for this yet. */
@@ -294,6 +358,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       return;
     pathsResultType.typeCheck(featurePaths[0], true);
     let store = this.get('store');
+    /* Enables (via ?options=pathRemoveTransition), animation of <path> removal
+     * which is useful to verify paths re-filter.
+     * If it was enabled in the general release, the transition can include
+     * d=pathU so that paths removed at the edge, when zooming in, move over the
+     * edge.
+     */
+    let pathRemoveTransition = this.get('parsedOptions.pathRemoveTransition');
 
     /** blockAdjId is also contained in the result featurePaths
      */
@@ -340,7 +411,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     {
       let gS = baS.selectAll("g." + className)
         .data(featurePaths, pathsResultType.featurePathKeyFn);
-      gS.exit().remove();
+      if (pathRemoveTransition) {
+        gS.exit()
+          .call(gPathDashAndRemove);
+      } else {
+        gS.exit().remove();
+      }
 
       let gA = gS.enter()
         .append('g')
@@ -363,9 +439,18 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .attr("class", className)
       ;
       let pSA = pS.merge(pSE);
-      pSA
-        .transition().duration(pathTransitionTime)
-        .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
+
+      /** existing paths (pS) are transitioned from their previous position;
+       * the previous position of added paths is not easily available so they
+       * are drawn without transition at their new position; this is done after
+       * the transition of the paths already shown, so that the transformation
+       * is consistent at any point in time, otherwise the movement is
+       * confusing.
+       */
+      let positionNew = () => this.get('pathPosition').perform(pSE)
+        .catch((error) => dLog('pathPosition New', error));
+      this.get('pathPosition').perform(pS, positionNew);
+
       // setupMouseHover(pSE);
       pS.exit().remove();
     }
@@ -402,15 +487,49 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .filter(function (d) { return d.blocksHaveAxes(); });
     if (! pS.empty() && trace_blockAdj)
       dLog('updatePathsPosition before update pS', (trace_blockAdj > 1) ? pS.nodes() : pS.size(), pS.node());
+    this.get('pathPosition').perform(pS, undefined);
+  },
+
+  /** Update position of the paths indicated by the selection.
+   * Making this a task with .drop() enables avoiding conflicting transitions.
+   * If thenFn is given, call it after transition is ended.
+   * @param pathSelection
+   * @param thenFn
+   */
+  pathPosition: task(function * (pathSelection, thenFn) {
+    let
     /* now that paths are within <g.block-adj>, path position can be altered
      * during dragging by updating a skew transform of <g.block-adj>, instead of
      * repeatedly recalculating pathU.
      */
-    pS
+      transition = 
+    pathSelection
       .transition().duration(pathTransitionTime)
       // pathU() is temporarily a function, will revert to a computed function, as commented in path().
       .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
-  },
+
+    /** in a later version of d3, can use 
+     * transitionEnd = transition.end(); ... return transitionEnd;
+     * instead of new Promise(...)
+     * The caller is interested in avoiding overlapped transitions, so
+     * resolve/reject are treated the same.
+     */
+     let transitionEnd =  new Ember.RSVP.Promise(function(resolve, reject){
+       transition
+         .on('end', (d) => resolve(d))
+         .on('interrupt', (d, i, g) => {
+           resolve(d);
+           if (trace_blockAdj > 2) {
+             dLog('interrupt', d, i, g); }; }); });  // also 'cancel', when version update
+    if (trace_blockAdj) {
+      dLog('pathPosition', pathSelection.node());
+      transitionEnd.then(() => dLog('pathPosition end', pathSelection.node()));
+    }
+    /* instead of a callback, it should be possible to yield transitionEnd, and
+     * the caller can .finally() on the task handle. Can retry this after version update. */
+    if (thenFn)
+      transitionEnd.then(thenFn);
+  }).drop(),
 
   /** Call updateAxis() for the axes which bound this block-adj.
    * See comment in updatePathsPositionDebounce().
@@ -440,6 +559,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     'drawMap.stacksWidthChanges',
     'blockAdj.axes1d.0.flipRegionCounter',
     'blockAdj.axes1d.1.flipRegionCounter',
+    /* will change scaleChanged to return {range: [from,to], domain : [from, to]}
+     * currently it returns the scale function itself which is not usable as a dependent key.
+     * Then the dependency can be : 'blockAdj.axes1d.{0,1}.scaleChanged.range.{0,1}'
+     * After domain change, the available paths should be filtered again, whereas
+     * after range change, it is sufficient to update the position of those paths already rendered.
+     */
     'blockAdj.axes1d.0.scaleChanged',
     'blockAdj.axes1d.1.scaleChanged',
     function () {
@@ -515,4 +640,65 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   /*--------------------------------------------------------------------------*/
 
   
-});
+}); // end of Component draw/block-adj
+
+
+/*----------------------------------------------------------------------------*/
+
+/** Transition the paths in the given g, to show that they are being removed.
+ * @param g <g.blockAdj> which is to be removed, and contains <path.blockAdj>-s
+ */
+function gPathDashAndRemove(g) {
+  /** selector 'path' is equivalent here to : 'g.blockAdj > path.blockAdj' */
+  let exitPaths = g
+    .transition().duration(pathTransitionTime * 3)
+    .on('end', function() { d3.select(this).remove(); })
+    .selectAll('path')
+    .call(pathDashTween(true));
+}
+
+/* transition the stroke-dasharray, to show paths being added and removed. */
+
+/* This could also be used on path exit,   e.g. :
+ * pS.exit()
+ *      .transition().duration(pathTransitionTime)
+ *      .call(pathDashTween(true))
+ *      .each("end", function() { d3.select(this).remove(); });
+ * but generally this remove will not be reached because the parent <g> is
+ * removed, and the transition is already applied on the gS.exit().
+ *
+ * This transition could also be applied on path append :
+ *   pSE
+ *     .transition().duration(pathTransitionTime * 3)
+ *     .attr("d", function(d) { return d.pathU(); })
+ *     .call(pathTween(false))
+ *     .each("end", function() { d3.select(this).attr("stroke-dasharray", 'none'); });
+ * pSE would have to be separated out of transition on pSA, to avoid conflict.
+ */
+
+/** Return a function which interpolates stroke-dasharray,
+ * to show a path going from visible to invible (if out is true) or vice versa.
+ */
+function pathDashTween(out) {
+  function tweenDash() {
+    /* based on example https://bl.ocks.org/mbostock/5649592 */
+    /** if length is not yet known, use 20px, otherwise 1/20 of length. */
+    var l = (this.getTotalLength() / 20) || 20,
+    dashStrings = [
+      l + "," + 0,          // visible
+      "0," + l + l/4],      // invisible
+    from = dashStrings[+ !out],
+    to = dashStrings[+ out],
+    i = d3.interpolateString(from, to);
+    return function(t) { return i(t); };
+  }
+
+  return function (path) {
+  path
+      .attrTween("stroke-dasharray", tweenDash);
+  };
+}
+
+
+
+/*----------------------------------------------------------------------------*/
