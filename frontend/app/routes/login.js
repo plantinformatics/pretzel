@@ -3,4 +3,13 @@ import UnauthenticatedRouteMixin from 'ember-simple-auth/mixins/unauthenticated-
 
 const { Route } = Ember;
 
-export default Route.extend(UnauthenticatedRouteMixin);
+const dLog = console.debug;
+
+export default Route.extend(UnauthenticatedRouteMixin, {
+  model(paramsIn, transition) {
+    // queryParams may contain user_{identification,password} so only log this in devel
+    // dLog('model() transition.queryParams', transition.queryParams);
+    return transition.queryParams;
+  }
+
+});
