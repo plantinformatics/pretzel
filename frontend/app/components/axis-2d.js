@@ -148,10 +148,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     }
   },
 
+  dualAxis : Ember.computed.alias('urlOptions.dualAxis'),
   rectWidth() {
     let
       axisUse = this.get('axisUse'),
-    dualAxis = false, // options && options.dualAxis
+    dualAxis = this.get('dualAxis'),
     /** <rect> is present iff dualAxis.  Otherwise use the x translation of <path> */
     rect2 = axisUse.select("g.axis-use > rect"),
     path = axisUse.select('g.axis-use > path'),
@@ -289,6 +290,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     function resized(width, dx, eltSelector, resizable, resizer,  resizerElt, d)
     {
       console.log("resized", width, dx, eltSelector, resizable.node(), resizer.node(),  resizerElt, d);
+      // if resizer is in <foreignObject> then resize the <foreignObject>
+      if (resizerElt.classList[1] === 'inFO') {
+      let at = resizable.node(),
+        fo = at.parentElement.parentElement;
+        dLog('resized', fo, at);
+        fo.setAttribute('width', width);
+      }
       setWidth(width, dx);
     }
     function setWidth (width, dx) {
@@ -296,7 +304,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       // narrow to : g.axis-outer#id<axisID> > g.axis-use
       let 
         axisUse = me.get('axisUse'),
-      rect = axisUse.select("g.axis-use > rect"),
+      dualAxis = me.get('dualAxis'),
+      rectSel = 'g.axis-use ' + (dualAxis ? '' : '> clipPath ') + '> rect',
+      rect = axisUse.select(rectSel),
       /** based on axisID. */
       use = me.get('use');
       /** initially data of use is axisID (d), until .data([width]) below */
@@ -338,15 +348,18 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
          */
         let
           axisID = me.get('axisID');
-        console.log('extended', this.get('axis1d.extended'), width);
-        this.set('width', width);
+        console.log('extended', me.get('axis1d.extended'), width);
+        me.set('width', width);
         currentSize = width; // dx ?
 
-        let parentView = me.get('parentView');
+        /** when parentView.send(axisWidthResize ) was added in 22a6af9,
+         * draw-map was parentView of axis-2d;  now its parentView is axis-1d.
+         * Will soon drop this connection. */
+        let drawMap = me.get('drawMap');
         /* Recalculate positions & translations of axes.
          * A possible optimisation : instead, add width change to the x translation of axes to the right of this one.
          */
-        parentView.send('axisWidthResize', axisID, width, dx);
+        drawMap.send('axisWidthResize', axisID, width, dx);
       }
       return ok;
     };
@@ -357,9 +370,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     }
     function resizeEnded()
     {
-      let parentView = me.get('parentView');
+      let drawMap = me.get('drawMap');
       console.log("resizeEnded");
-      parentView.send('axisWidthResizeEnded');
+      drawMap.send('axisWidthResizeEnded');
       me.trigger('resized', prevSize, currentSize);
       prevSize = currentSize;
     }

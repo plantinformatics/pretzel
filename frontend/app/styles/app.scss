@@ -311,6 +311,7 @@ circle.radio.toggle.chartType.pushed
     overflow: scroll;
 }
 
+body:not(.axis2dResizer)
 g.axis-use.hasChart > g.axis-html > .foreignObject {
     display : none;
 }
