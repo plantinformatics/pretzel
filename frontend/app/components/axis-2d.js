@@ -161,7 +161,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       width = rect2.attr('width');
     } else {
       let transform = path.attr('transform'),
-      match = transform && transform.match(/translate\(([0-9]+),/);
+      match = transform && transform.match(/translate\(([0-9.]+),/);
       width = match && +match[1];
     }
     console.log("rectWidth", this.get('startWidth'), this.currentWidth(), rect2.node(), path.node(), width);
@@ -185,7 +185,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * @return [horizontal start offset, width] for each child.
    * The key of the result is the same as the input .childWidths
    */
-  allocatedWidths : Ember.computed('childWidths.@each.1', 'childWidths.chart.1', function () {
+  allocatedWidths : Ember.computed('childWidths.{chart,tracks}.1', 'width', 'adjustedWidth', function () {
+    // if @each were supported for hashes, would depend on : 'childWidths.@each.1', 
     let allocatedWidths,
     childWidths = this.get('childWidths'),
     groupNames = Object.keys(childWidths),
@@ -194,6 +195,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         let cw = childWidths[groupName];
         result[0] += cw[0]; // min
         result[1] += cw[1]; // max
+        return result;
       }, [0, 0]);
     /** Calculate the spare width after each child is assigned its requested
      * minimum width, and apportion the spare width among them.
@@ -201,24 +203,26 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      */
     let
     startWidth = this.get('startWidth'),
-    available = (this.get('axisUse') && this.rectWidth()) || startWidth || 120,
+    width = this.get('width'),
+    available = width || (this.get('axisUse') && this.rectWidth()) || startWidth || 120,
     /** spare and share may be -ve */
-    spare = available - requested[0],
+    spare = available - (requested ? requested[0] : 0),
     share = 0;
     if (groupNames.length > 0) {
       share = spare / groupNames.length;
     }
     /** horizontal offset to the start (left) of the child. */
     let offset = 0;
-    allocatedWidths = groupNames.map((groupName) => {
+    allocatedWidths = groupNames.reduce((result, groupName) => {
       let w = childWidths[groupName][0] + share;
       if (w < 0)
         w = 0;
       let allocated = [offset, w];
       offset += w;
-      return allocated;
-    });
-    dLog('allocatedWidths', allocatedWidths, childWidths);
+      result[groupName] = allocated;
+      return result;
+    }, {});
+    dLog('allocatedWidths', allocatedWidths, childWidths, width, available);
     return allocatedWidths;
   }),
   contentWidth : function (componentName, axisID, width) {
@@ -314,7 +318,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         startWidth = me.get('startWidth');
       let
         delta = width - (startWidth || 0),
-      ok = delta < stacks.axisXRangeMargin;
+      ok = Math.abs(delta) < stacks.axisXRangeMargin;
       console.log(startWidth, width, delta, "axisXRangeMargin", stacks.axisXRangeMargin, ok);
       /* if !ok, maybe some animation to indicate the limit is reached,
        * or can probably apply the above check as a filter :
@@ -350,6 +354,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
           axisID = me.get('axisID');
         console.log('extended', me.get('axis1d.extended'), width);
         me.set('width', width);
+        // When calculated .layoutWidth changes, take into account user adjustment to width.
+        me.set('adjustedWidth', width);
         currentSize = width; // dx ?
 
         /** when parentView.send(axisWidthResize ) was added in 22a6af9,

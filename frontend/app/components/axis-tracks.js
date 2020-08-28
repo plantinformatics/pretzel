@@ -315,6 +315,7 @@ export default InAxis.extend({
     console.log('trackBlocks', trackBlocksR, trackBlocks);
     return trackBlocks;
   }),
+  nTrackBlocks : Ember.computed.alias('trackBlocksR.length'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -500,12 +501,17 @@ export default InAxis.extend({
       if (! blockState.hasOwnProperty('subelement')) {
         blockState.subElements = blockTagSubElements(blockId);
       }
+      /** [min, max] */
+      let allocatedWidth = thisAt.get('allocatedWidth');
       /* don't apply fixedBlockWidth if block subElements - the sub-elements
        * would be too thin to see well, and overlap is less likely.
        */
       blockState.trackWidth = ! fixedBlockWidth || blockState.subElements ?
-        trackWidth : trackWidth * trackWidth / blockState.layoutWidth;
-      dLog('trackBlocksData', blockId, data.length, (data.length == 0) ? '' : y(data[0][0]), blockState);
+        trackWidth : (
+          allocatedWidth ?
+            allocatedWidth[1] / 8 * trackWidth / blockState.layoutWidth :
+            trackWidth * 2        * trackWidth / blockState.layoutWidth);
+      dLog('trackBlocksData', blockId, data.length, (data.length == 0) ? '' : y(data[0][0]), blockState, allocatedWidth);
       return data;
     };
     // a block with 1 feature will have pxSize == 0.  perhaps just skip the filter.
@@ -551,6 +557,7 @@ export default InAxis.extend({
     /** @return the horizontal offset of the left side of this block */
     function blockOffset(blockId, i) {
       let xOffset;
+      // subElements could be mixed with fixed width blocks, so perhaps use .offset for all.
       if (! fixedBlockWidth) {
         /** blockC.offset is the sum of 
          * tracksLayout.layoutWidth for each of the blockId-s to the left of this one. */
@@ -560,7 +567,9 @@ export default InAxis.extend({
         blockC = blocks[blockId];
         xOffset = blockC ? blockC.offset : 0;
       } else {
-        xOffset = (i+1) * 2 * trackWidth;
+        // width/nTrackBlocks is related to 2 * trackWidth;
+        let width = thisAt.get('width') || thisAt.get('layoutWidth');
+        xOffset = width * (i+1) / thisAt.get('nTrackBlocks');
       }
       return xOffset;
     }
@@ -611,7 +620,7 @@ export default InAxis.extend({
      */
     if (clipRect.size() == 0)
     {
-      clipRect = gAxis.selectAll("clipPath > rect");
+      clipRect = gAxis.selectAll("g.axis-use > clipPath > rect");
       console.log('clipRect', clipRect.size(), bbox, clipRect.node());
     }
     if (bbox.x < 0)
@@ -683,8 +692,10 @@ export default InAxis.extend({
     ra
       .attr('class', 'track')
       .transition().duration(featureTrackTransitionTime)
-      .attr('width', width)
       .each(subElements ? configureSubTrackHover : configureTrackHover);
+      rs.merge(ra)
+        .attr('width', width);
+
       let blockIndex = thisAt.get('axis1d.blockIndexes'),
       /** the structure here depends on subElements:
        * true : g[clip-path] > g.track.element > rect.track
@@ -1215,7 +1226,7 @@ export default InAxis.extend({
         let block = blocks[blockId];
         if (block) {
           block.offset = sum;
-          sum += block.layoutWidth || trackWidth;
+          sum += block.layoutWidth || block.trackWidth || trackWidth;
         }
         return sum;
       },  0);
@@ -1233,7 +1244,7 @@ export default InAxis.extend({
     width =
       40 + this.get('blockLayoutWidthSum') + 20 + 50;
     console.log('layoutWidth', blockIds, width);
-    this.get('childWidths').set(this.get('className'), [width, width]);
+    Ember.run.next(() => this.get('childWidths').set(this.get('className'), [width, width]));
 
     return width;
   }),
@@ -1272,14 +1283,25 @@ export default InAxis.extend({
       }
     return featuresLength;
   }),
-  resizeEffectHere : Ember.computed('resizeEffect', function () {
+  adjustedWidth : Ember.computed.alias('parentView.adjustedWidth'),
+  resizeEffectHere : Ember.computed('resizeEffect', 'allocatedWidth.{0,1}', function () {
     let result = this.get('resizeEffect');
-    dLog('resizeEffectHere in axis-tracks', this.get('axisID'), result);
+    let allocatedWidth = this.get('allocatedWidth'),
+    allocatedWidthPrev = this.get('allocatedWidthPrev'),
+    allocatedWidthChange = ! allocatedWidthPrev || (allocatedWidthPrev !== allocatedWidth);
+    if (allocatedWidthChange) {
+      this.get('allocatedWidthPrev', allocatedWidth);
+    }
+    dLog('resizeEffectHere in axis-tracks', this.get('axisID'), result,
+         allocatedWidthPrev, allocatedWidth, allocatedWidthChange,
+        this.get('adjustedWidth'));
     /** @return true if rc[f] indicates a change of field f.
      * if the previous size is not recorded, then treat it as a change.
      */
     function isChanged(rc, f) { return rc ? rc[f] : true; }
-    this.showResize(isChanged(result.changed, 'viewportWidth'), isChanged(result.changed, 'viewportHeight') /* , yScaleChanged ? */);
+    this.showResize(
+      isChanged(result.changed, 'viewportWidth') || allocatedWidthChange,
+      isChanged(result.changed, 'viewportHeight') /* , yScaleChanged ? */);
   }),
 
 
