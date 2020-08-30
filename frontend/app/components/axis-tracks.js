@@ -569,7 +569,7 @@ export default InAxis.extend({
       } else {
         // width/nTrackBlocks is related to 2 * trackWidth;
         let width = thisAt.get('width') || thisAt.get('layoutWidth');
-        xOffset = width * (i+1) / thisAt.get('nTrackBlocks');
+        xOffset = width * i / thisAt.get('nTrackBlocks');
       }
       return xOffset;
     }
@@ -1242,7 +1242,7 @@ export default InAxis.extend({
      * @see blockTransform()
      */
     width =
-      40 + this.get('blockLayoutWidthSum') + 20 + 50;
+      /*40 +*/ this.get('blockLayoutWidthSum') + 20 /*+ 50*/; // same as getAxisExtendedWidth()
     console.log('layoutWidth', blockIds, width);
     Ember.run.next(() => this.get('childWidths').set(this.get('className'), [width, width]));
 
