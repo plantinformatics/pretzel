@@ -204,7 +204,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let
     startWidth = this.get('startWidth'),
     width = this.get('width'),
-    available = width || (this.get('axisUse') && this.rectWidth()) || startWidth || 120,
+    // width || (this.get('axisUse') && this.rectWidth())
+    available = this.get('adjustedWidth') || startWidth || 60,
     /** spare and share may be -ve */
     spare = available - (requested ? requested[0] : 0),
     share = 0;

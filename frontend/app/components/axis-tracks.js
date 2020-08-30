@@ -517,13 +517,18 @@ export default InAxis.extend({
     // a block with 1 feature will have pxSize == 0.  perhaps just skip the filter.
     if (pxSize == 0)
       console.log('pxSize is 0', yrange, yDomain);
+    function xPosnS(subElements) {
+      return xPosn;
     /** datum is interval array : [start, end];   with attribute .description. */
     function xPosn(d) {
-      let blockId = this.parentElement.__data__,
+      let p = this.parentElement,
+      gBlock = subElements ? p.parentElement : p,
+      blockId = gBlock.__data__,
       blockC = thisAt.lookupAxisTracksBlock(blockId),
       trackWidth = blockC.trackWidth;
       /*console.log("xPosn", d);*/
       return ((d.layer || 0) + 1) *  trackWidth * 2;
+    };
     };
     function yPosn(d) { /*console.log("yPosn", d);*/ return y(d[0]); };
     /** return the end of the y scale range which d is closest to.
@@ -569,7 +574,7 @@ export default InAxis.extend({
       } else {
         // width/nTrackBlocks is related to 2 * trackWidth;
         let width = thisAt.get('width') || thisAt.get('layoutWidth');
-        xOffset = width * i / thisAt.get('nTrackBlocks');
+        xOffset = width * (i+0.5) / thisAt.get('nTrackBlocks');
       }
       return xOffset;
     }
@@ -618,20 +623,21 @@ export default InAxis.extend({
      * No longer using bbox.height anyway
      * (resized && (resized.width || resized.height) && )
      */
-    if (clipRect.size() == 0)
-    {
-      clipRect = gAxis.selectAll("g.axis-use > clipPath > rect");
-      console.log('clipRect', clipRect.size(), bbox, clipRect.node());
-    }
+
+    /** Set x only for .append.  Update y, width and height for all. */
+    let clipRectA = clipRect.merge(clipRectS.selectAll("clipPath > rect"));
+
     if (bbox.x < 0)
       bbox.x = 0;
     /* seems like bbox.x is the left edge of the left-most tracks (i.e. bbox
      * contains the children of gAxis), so use 0 instead. */
     bbox.y = yrange[0] ;
-    bbox.width = this.get('layoutWidth');
+    let allocatedWidth = this.get('allocatedWidth');
+    bbox.width = ((allocatedWidth && allocatedWidth[1]) || this.get('layoutWidth')) + 20;
     bbox.height = yrange[1] - yrange[0];
     clipRect
-      .attr("x", 0 /*bbox.x*/)
+      .attr("x", 0 /*bbox.x*/);
+    clipRectA
       .attr("y", bbox.y)
       .attr("width", bbox.width)
       .attr("height", bbox.height)
@@ -717,7 +723,7 @@ export default InAxis.extend({
         .attr('y', yEnd);
       rm
       .transition().duration(featureTrackTransitionTime)
-      .attr('x', xPosn)
+      .attr('x', xPosnS(subElements))
       .attr('y', yPosn)
       .attr('height' , height)
       .attr('stroke', blockTrackColourI)
@@ -880,13 +886,14 @@ export default InAxis.extend({
       egm.each(function (d, i, g) {
         let
           a = d3.select(this),
-          /** height, xPosn, yPosn don't use `this`, i or g, but they could, so
-           * the standard d3 calling signature is used.
+          /** height and yPosn don't yet use `this`, i or g, but they could, so
+           * the standard d3 calling signature is used.  xPosn uses `this`.
            * ((d,i,g) => height(d, i, g))(d,i,g) should also work but it compiles to a function without .apply
            */
         heightD = height.apply(this, [d, i, g]);
         if (heightD > subElementThresholdHeight) {
           let
+            xPosn = xPosnS(/*subElements*/true),
             xPosnD = xPosn.apply(this, [d, i, g]),
           yPosnD = yPosn.apply(this, [d, i, g]);
           let geneElementData = useDevData ? geneElementData_dev : elementDataFn.apply(this, arguments);
@@ -1207,30 +1214,33 @@ export default InAxis.extend({
   }),
 
   /** for all blocks in trackBlocksR, sum .layoutWidth
+   *
    * Side Effect: assigns block.offset which is the progressive value of the sum,
    * if ! fixedBlockWidth.
    */
   blockLayoutWidthSum : Ember.computed('blockComps.@each.layoutWidth', function () {
     let
-      blockIds = this.get('blockIds'),
-    width;
+      blockIds = this.get('blockIds');
 
-    if (fixedBlockWidth) {
-      width = blockIds.length * 2 * trackWidth;
-    } else {
-      /*  sum the .layoutWidth for all blockId-s, (plus the block offsets which are calculated below ?) */
-      let 
+    /*  sum the .layoutWidth for all blockId-s */
+    let 
       blocks = this.get('blocks'),
-      blockIds2 = Object.keys(blocks),
-      width = blockIds.reduce(function (sum, blockId) {
-        let block = blocks[blockId];
-        if (block) {
-          block.offset = sum;
-          sum += block.layoutWidth || block.trackWidth || trackWidth;
+    blockIds2 = Object.keys(blocks),
+    width = blockIds.reduce(function (sum, blockId) {
+      let block = blocks[blockId];
+      if (block) {
+        block.offset = sum;
+        let blockWidth;
+        if (block.subElements || ! fixedBlockWidth) {
+          blockWidth = block.layoutWidth || block.trackWidth || trackWidth;
+        } else {
+          blockWidth = 2 * trackWidth;
         }
-        return sum;
-      },  0);
-    }
+        sum += blockWidth;
+      }
+      return sum;
+    },  0);
+
     return width;
   }),
   layoutWidth : Ember.computed('trackBlocksR.[]', function () {
