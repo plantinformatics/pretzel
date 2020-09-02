@@ -2258,7 +2258,11 @@ export default Ember.Component.extend(Ember.Evented, {
       trackBlocksWidth =
         /*40 +*/ dataBlocksN * /*2 * */ trackWidth + 20 /*+ 50*/,
       initialWidth = /*50*/ trackBlocksWidth,
-      width = axis ? ((axis.extended === true) ? initialWidth : axis.extended) : undefined;
+      allocatedWidth,
+      width = axis ? 
+        ((allocatedWidth = axis.allocatedWidth()) && allocatedWidth[1]) ||
+        ((axis.extended === true) ? initialWidth : axis.extended) :
+      undefined;
       return width;
     }
     function axisShowExtend(axis, axisID, axisG)

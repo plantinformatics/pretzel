@@ -497,7 +497,7 @@ export default InAxis.extend({
       tracksLayout = regionOfTree(t, yDomain, sizeThreshold, true),
       data = tracksLayout.intervals;
       let blockState = thisAt.lookupAxisTracksBlock(blockId);
-      blockState.layoutWidth = tracksLayout.layoutWidth;
+      blockState.set('layoutWidth', tracksLayout.layoutWidth);
       if (! blockState.hasOwnProperty('subelement')) {
         blockState.subElements = blockTagSubElements(blockId);
       }
@@ -563,18 +563,24 @@ export default InAxis.extend({
     function blockOffset(blockId, i) {
       let xOffset;
       // subElements could be mixed with fixed width blocks, so perhaps use .offset for all.
-      if (! fixedBlockWidth) {
-        /** blockC.offset is the sum of 
-         * tracksLayout.layoutWidth for each of the blockId-s to the left of this one. */
-        let blocks = thisAt.get('blocks'),
-        /** this assigns blocks[*].offset */
-        widthSum = thisAt.get('blockLayoutWidthSum'),
-        blockC = blocks[blockId];
-        xOffset = blockC ? blockC.offset : 0;
-      } else {
-        // width/nTrackBlocks is related to 2 * trackWidth;
-        let width = thisAt.get('width') || thisAt.get('layoutWidth');
-        xOffset = width * (i+0.5) / thisAt.get('nTrackBlocks');
+
+      /** blockC.offset is the sum of 
+       * tracksLayout.layoutWidth for each of the blockId-s to the left of this one. */
+      let blocks = thisAt.get('blocks'),
+      /** this assigns blocks[*].offset */
+      widthSum = thisAt.get('blockLayoutWidthSum'),
+      blockC = thisAt.lookupAxisTracksBlock(blockId);
+      xOffset = blockC.offset;
+      if (xOffset === undefined)
+      {
+        if (! fixedBlockWidth) {
+          xOffset = 0;
+        } else {
+          // width/nTrackBlocks is related to 2 * trackWidth;
+          let width = thisAt.get('width') || thisAt.get('layoutWidth');
+          xOffset = width * (i+0.5) / thisAt.get('nTrackBlocks');
+          dLog('blockOffset', blockId, i, width, widthSum, xOffset);
+        }
       }
       return xOffset;
     }
@@ -1161,7 +1167,7 @@ export default InAxis.extend({
 
   lookupAxisTracksBlock(blockId) {
     let blocks = this.get('blocks'),
-    blockState = blocks[blockId] || (blocks[blockId] = {});
+    blockState = blocks[blockId] || (blocks[blockId] = Ember.Object.create());
     return blockState;
   },
   layerSubElements(blockId, featureId, geneElementData) {
@@ -1209,7 +1215,7 @@ export default InAxis.extend({
   blockComps : Ember.computed('blockIds.[]', function () {
     let blocks = this.get('blocks'),
     blockIds = this.get('blockIds'),
-    comps = blockIds.map((blockId) => blocks[blockId]);
+    comps = blockIds.map((blockId) => this.lookupAxisTracksBlock(blockId));
     return comps;
   }),
 
@@ -1226,21 +1232,20 @@ export default InAxis.extend({
     let 
       blocks = this.get('blocks'),
     blockIds2 = Object.keys(blocks),
-    width = blockIds.reduce(function (sum, blockId) {
-      let block = blocks[blockId];
-      if (block) {
-        block.offset = sum;
-        let blockWidth;
-        if (block.subElements || ! fixedBlockWidth) {
-          blockWidth = block.layoutWidth || block.trackWidth || trackWidth;
-        } else {
-          blockWidth = 2 * trackWidth;
-        }
-        sum += blockWidth;
+    width = blockIds.reduce((sum, blockId) => {
+      let block = this.lookupAxisTracksBlock(blockId);
+      block.offset = sum;
+      let blockWidth;
+      if (block.subElements || ! fixedBlockWidth) {
+        blockWidth = block.layoutWidth || block.trackWidth || trackWidth;
+      } else {
+        blockWidth = 2 * trackWidth;
       }
+      sum += blockWidth;
       return sum;
     },  0);
 
+    dLog('blockLayoutWidthSum', width, blockIds.length, blockIds2.length, this.get('blockComps.length'));
     return width;
   }),
   layoutWidth : Ember.computed('trackBlocksR.[]', function () {

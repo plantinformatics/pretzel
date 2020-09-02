@@ -1930,6 +1930,20 @@ Stack.prototype.redrawAdjacencies = function ()
 
 /*------------------------------------------------------------------------*/
 
+/** allocated width of the axis. */
+Stacked.prototype.allocatedWidth = function()
+{
+  let width;
+  let axis2d = this.axis1d && this.axis1d.get('axes2d');
+  if (axis2d) {
+    let
+      allocatedWidths = axis2d.get('allocatedWidths'),
+    allocatedWidthsMax = axis2d.get('allocatedWidthsMax');
+    width = allocatedWidthsMax;
+  }
+  return width;
+};
+
 /** width of the axis.  either 0 or .extended (current width of extension) */
 Stacked.prototype.extendedWidth = function()
 {

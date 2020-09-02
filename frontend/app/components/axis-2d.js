@@ -223,7 +223,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       result[groupName] = allocated;
       return result;
     }, {});
-    dLog('allocatedWidths', allocatedWidths, childWidths, width, available);
+    this.set('allocatedWidthsMax', offset);
+    dLog('allocatedWidths', allocatedWidths, childWidths, width, available, offset);
     return allocatedWidths;
   }),
   contentWidth : function (componentName, axisID, width) {
@@ -250,7 +251,21 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   init() {
     this._super(...arguments);
+    this.set('axis1d.axis2d', this);
     this.set('childWidths', Ember.Object.create());
+  },
+
+  willDestroyElement() {
+    if (this.get('axis1d')) {
+      // expect that axis1d.axis2d === this or undefined.
+      if (this.get('axis1d.axis2d') !== this) {
+        dLog('willDestroyElement', this.get('axis1d'), 'references', this.get('axis1d.axis2d'));
+      } else {
+        this.set('axis1d.axis2d', undefined);
+      }
+    }
+
+    this._super(...arguments);
   },
 
   /*--------------------------------------------------------------------------*/

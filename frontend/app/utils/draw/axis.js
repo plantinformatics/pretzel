@@ -114,8 +114,11 @@ function axisExtended(gAxis)
   axis = oa.axes[axisName],
   extended = axis.extended; // or axis.axis1d.get('extended'),
   /* .extended should be false or width;  if it is just true then return the default initial width. */
-  if (extended === true)
-    extended = 1 * /*2 * */ 10 + 20; // trackWidth===10. orig: 130.  match : getAxisExtendedWidth()
+  if (extended === true) {
+    extended = axis.allocatedWidth() ||
+      1 * /*2 * */ 10 + 10; // trackWidth===10. orig: 130.  match : getAxisExtendedWidth()
+    extended += 10;
+  }
   return extended;
 }
 /** @return transform for the Zoom / Reset button which is currently near the axis title.
