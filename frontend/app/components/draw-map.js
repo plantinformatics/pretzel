@@ -2258,11 +2258,13 @@ export default Ember.Component.extend(Ember.Evented, {
       trackBlocksWidth =
         /*40 +*/ dataBlocksN * /*2 * */ trackWidth + 20 /*+ 50*/,
       initialWidth = /*50*/ trackBlocksWidth,
+      /** this is just the Max value, not [min,max] */
       allocatedWidth,
       width = axis ? 
-        ((allocatedWidth = axis.allocatedWidth()) && allocatedWidth[1]) ||
+        (allocatedWidth = axis.allocatedWidth()) ||
         ((axis.extended === true) ? initialWidth : axis.extended) :
       undefined;
+      dLog('getAxisExtendedWidth', width, allocatedWidth, initialWidth, axis.extended);
       return width;
     }
     function axisShowExtend(axis, axisID, axisG)
@@ -2336,7 +2338,10 @@ export default Ember.Component.extend(Ember.Evented, {
           .append("path"),
         rm = ra.merge(em.selectAll('g.axis-use > path'))
           .transition().duration(1000)
-          .attr("transform",function(d) {return "translate(" + (shiftRight + getAxisExtendedWidth(d)) + ",0)";})
+          .attr("transform",function(d) {
+            let eWidth = shiftRight + getAxisExtendedWidth(d);
+            dLog('axis- path transform', eWidth, d, this);
+                 return "translate(" + (eWidth) + ",0)";})
           .attr("d", sLine);
       }
 

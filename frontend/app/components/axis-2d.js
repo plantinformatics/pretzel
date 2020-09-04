@@ -209,6 +209,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     /** spare and share may be -ve */
     spare = available - (requested ? requested[0] : 0),
     share = 0;
+    if (spare < 0)
+      spare = 0;
     if (groupNames.length > 0) {
       share = spare / groupNames.length;
     }
@@ -223,7 +225,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       result[groupName] = allocated;
       return result;
     }, {});
-    this.set('allocatedWidthsMax', offset);
+    Ember.run.next(() => this.set('allocatedWidthsMax', offset));
     dLog('allocatedWidths', allocatedWidths, childWidths, width, available, offset);
     return allocatedWidths;
   }),
@@ -299,6 +301,23 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   resized : function(prevSize, currentSize) {
     dLog("resized in components/axis-2d", this, prevSize, currentSize);
   },
+
+  /** Position the right edge path (if !dualAxis) for the current width
+   * This is part of axisShowExtend(), which will be moved here;
+   * this is the key part which needs to update.
+   */
+  positionRightEdgeEffect : Ember.computed('allocatedWidthsMax', function () {
+    let axisUse;
+    if (! this.get('dualAxis') && (axisUse = this.get('axisUse'))) {
+      let
+      shiftRight=5,
+      width = this.get('allocatedWidthsMax'),
+      p = axisUse.selectAll('g.axis-use > path')
+        // .transition().duration(1000)
+        .attr("transform",function(d) {return "translate(" + (shiftRight + width) + ",0)";});
+      dLog('positionRightEdgeEffect', axisUse.node(), width, p.node());
+    }
+  }),
 
   didRender() {
     let me = this;
