@@ -306,16 +306,21 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * This is part of axisShowExtend(), which will be moved here;
    * this is the key part which needs to update.
    */
-  positionRightEdgeEffect : Ember.computed('allocatedWidthsMax', function () {
+  positionRightEdgeEffect : Ember.computed('allocatedWidthsMax', 'allocatedWidths', function () {
     let axisUse;
     if (! this.get('dualAxis') && (axisUse = this.get('axisUse'))) {
       let
       shiftRight=5,
-      width = this.get('allocatedWidthsMax'),
-      p = axisUse.selectAll('g.axis-use > path')
+      /** allocatedWidths also calculates allocatedWidthsMax. */
+      allocatedWidths = this.get('allocatedWidths'),
+      width = this.get('allocatedWidthsMax');
+      if (width !== undefined) {
+        let
+          p = axisUse.selectAll('g.axis-use > path')
         // .transition().duration(1000)
-        .attr("transform",function(d) {return "translate(" + (shiftRight + width) + ",0)";});
-      dLog('positionRightEdgeEffect', axisUse.node(), width, p.node());
+          .attr("transform",function(d) {return "translate(" + (shiftRight + width) + ",0)";});
+        dLog('positionRightEdgeEffect', axisUse.node(), width, p.node());
+      }
     }
   }),
 

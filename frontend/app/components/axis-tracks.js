@@ -503,15 +503,18 @@ export default InAxis.extend({
       }
       /** [min, max] */
       let allocatedWidth = thisAt.get('allocatedWidth');
+      /** factor by which blockState.trackWidth must be reduced for layoutWidth to fit in trackWidth. */
+      let compress = blockState.layoutWidth / trackWidth;
       /* don't apply fixedBlockWidth if block subElements - the sub-elements
        * would be too thin to see well, and overlap is less likely.
        */
       blockState.trackWidth = ! fixedBlockWidth || blockState.subElements ?
         trackWidth : (
           allocatedWidth ?
-            allocatedWidth[1] / 8 * trackWidth / blockState.layoutWidth :
-            trackWidth * 2        * trackWidth / blockState.layoutWidth);
-      dLog('trackBlocksData', blockId, data.length, (data.length == 0) ? '' : y(data[0][0]), blockState, allocatedWidth);
+            allocatedWidth[1] / 2 / thisAt.get('nTrackBlocks') / compress :
+            trackWidth * 2        * compress);
+      dLog('trackBlocksData', blockId, data.length, (data.length == 0) ? '' : y(data[0][0]),
+           blockState, allocatedWidth, compress, thisAt.get('nTrackBlocks'));
       return data;
     };
     // a block with 1 feature will have pxSize == 0.  perhaps just skip the filter.
@@ -527,7 +530,7 @@ export default InAxis.extend({
       blockC = thisAt.lookupAxisTracksBlock(blockId),
       trackWidth = blockC.trackWidth;
       /*console.log("xPosn", d);*/
-      return ((d.layer || 0) + 1) *  trackWidth * 2;
+      return ((d.layer || 1) - 1) *  trackWidth * 2;
     };
     };
     function yPosn(d) { /*console.log("yPosn", d);*/ return y(d[0]); };
@@ -1257,7 +1260,7 @@ export default InAxis.extend({
      * @see blockTransform()
      */
     width =
-      /*40 +*/ this.get('blockLayoutWidthSum') + 20 /*+ 50*/; // same as getAxisExtendedWidth()
+      /*40 +*/ this.get('blockLayoutWidthSum') /*+ 20 + 50*/; // same as getAxisExtendedWidth()
     console.log('layoutWidth', blockIds, width);
     Ember.run.next(() => this.get('childWidths').set(this.get('className'), [width, width]));
 

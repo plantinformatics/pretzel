@@ -2253,10 +2253,12 @@ export default Ember.Component.extend(Ember.Evented, {
       let axis = oa.axes[axisID],
       /** duplicates the calculation in axis-tracks.js : layoutWidth() */
       blocks = axis && axis.blocks,
-      dataBlocksN = blocks && blocks.length - 1,
+      /** could also use : axis.axis1d.get('dataBlocks.length');
+       * subtract 1 for the reference block;  for a GM, map 0 -> 1 */
+      dataBlocksN = (blocks && blocks.length - 1) || 1,
       trackWidth = 10,
       trackBlocksWidth =
-        /*40 +*/ dataBlocksN * /*2 * */ trackWidth + 20 /*+ 50*/,
+        /*40 +*/ dataBlocksN * /*2 * */ trackWidth /*+ 20 + 50*/,
       initialWidth = /*50*/ trackBlocksWidth,
       /** this is just the Max value, not [min,max] */
       allocatedWidth,
@@ -2337,7 +2339,7 @@ export default Ember.Component.extend(Ember.Evented, {
         ra = eg
           .append("path"),
         rm = ra.merge(em.selectAll('g.axis-use > path'))
-          .transition().duration(1000)
+          // .transition().duration(1000)
           .attr("transform",function(d) {
             let eWidth = shiftRight + getAxisExtendedWidth(d);
             dLog('axis- path transform', eWidth, d, this);
