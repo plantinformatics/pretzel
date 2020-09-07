@@ -1235,6 +1235,8 @@ export default InAxis.extend({
     let 
       blocks = this.get('blocks'),
     blockIds2 = Object.keys(blocks),
+    /** initial .offset is trackWidth */
+    shiftRight = trackWidth,
     width = blockIds.reduce((sum, blockId) => {
       let block = this.lookupAxisTracksBlock(blockId);
       block.offset = sum;
@@ -1246,7 +1248,7 @@ export default InAxis.extend({
       }
       sum += blockWidth;
       return sum;
-    },  0);
+    },  shiftRight);
 
     dLog('blockLayoutWidthSum', width, blockIds.length, blockIds2.length, this.get('blockComps.length'));
     return width;
