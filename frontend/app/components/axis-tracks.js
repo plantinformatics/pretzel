@@ -680,7 +680,7 @@ export default InAxis.extend({
     };
     function eachRect(blockId, i, g) {
       let
-        rs = bs.selectAll("rect.track")
+        rs = d3.select(this).selectAll("rect.track")
       .data(trackBlocksData, trackKeyFn),
     re =  rs.enter(), rx = rs.exit();
     dLog(rs.size(), re.size(),  'rx', rx.size());
