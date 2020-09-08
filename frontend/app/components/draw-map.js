@@ -2341,7 +2341,7 @@ export default Ember.Component.extend(Ember.Evented, {
         rm = ra.merge(em.selectAll('g.axis-use > path'))
           // .transition().duration(1000)
           .attr("transform",function(d) {
-            let eWidth = shiftRight + getAxisExtendedWidth(d);
+            let eWidth = getAxisExtendedWidth(d);
             dLog('axis- path transform', eWidth, d, this);
                  return "translate(" + (eWidth) + ",0)";})
           .attr("d", sLine);

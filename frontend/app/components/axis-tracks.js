@@ -161,7 +161,8 @@ function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
     if (lastUsed > largestLayer)
       largestLayer = lastUsed;
   }
-  result.layoutWidth = (largestLayer+1) * trackWidth * 2;
+  /* first layer allocated is 1; allocate one layer if 0.  */
+  result.layoutWidth = (largestLayer || 1) * trackWidth * 2;
 
   return result;
 }
@@ -512,7 +513,7 @@ export default InAxis.extend({
         trackWidth : (
           allocatedWidth ?
             allocatedWidth[1] / 2 / thisAt.get('nTrackBlocks') / compress :
-            trackWidth * 2        * compress);
+            trackWidth * 2        / compress);
       dLog('trackBlocksData', blockId, data.length, (data.length == 0) ? '' : y(data[0][0]),
            blockState, allocatedWidth, compress, thisAt.get('nTrackBlocks'));
       return data;
@@ -642,7 +643,8 @@ export default InAxis.extend({
      * contains the children of gAxis), so use 0 instead. */
     bbox.y = yrange[0] ;
     let allocatedWidth = this.get('allocatedWidth');
-    bbox.width = ((allocatedWidth && allocatedWidth[1]) || this.get('layoutWidth')) + 20;
+    /** + trackWidth for spacing. */
+    bbox.width = ((allocatedWidth && allocatedWidth[1]) || this.get('layoutWidth')) + trackWidth;
     bbox.height = yrange[1] - yrange[0];
     clipRect
       .attr("x", 0 /*bbox.x*/);
