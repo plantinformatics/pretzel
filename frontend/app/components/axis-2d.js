@@ -317,7 +317,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       if (width !== undefined) {
         let
           p = axisUse.selectAll('g.axis-use > path')
-        // .transition().duration(1000)
+          .transition().duration(1000)
           .attr("transform",function(d) {return "translate(" + (width) + ",0)";});
         dLog('positionRightEdgeEffect', axisUse.node(), width, p.node());
       }
