@@ -145,7 +145,20 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     remove: function(){
       this.remove();
       console.log("components/axis-2d remove()");
+    },
+
+    axisWidthResize : function(axisID, width, dx) {
+      console.log("axisWidthResize in components/axis-2d", axisID, width, dx);
+      let axisWidthResize = this.get('axisWidthResize');
+      if (axisWidthResize) axisWidthResize(axisID, width, dx);
+    },
+    axisWidthResizeEnded : function() {
+      console.log("axisWidthResizeEnded in components/axis-2d");
+      let axisWidthResizeEnded = this.get('axisWidthResizeEnded');
+      if (axisWidthResizeEnded) axisWidthResizeEnded();
     }
+
+
   },
 
   dualAxis : Ember.computed.alias('urlOptions.dualAxis'),
@@ -301,6 +314,152 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   resized : function(prevSize, currentSize) {
     dLog("resized in components/axis-2d", this, prevSize, currentSize);
   },
+
+  /*--------------------------------------------------------------------------*/
+
+  axisWidthResize(axisID, width, dx)
+  {
+    console.log("axisWidthResize", axisID, width, dx);
+    oa.axes[axisID].extended = width;
+    axisWidthResizeRight(axisID, width, dx);
+  },
+  axisWidthResizeEnded()
+  {
+    console.log("axisWidthResizeEnded");
+
+    updateXScale();
+    stacks.changed = 0x10;
+    /* Number of stacks hasn't changed, but X position needs to be
+     * recalculated, as would be required by a change in the number of stacks. */
+    let t = stacksAdjust(true, undefined);
+  },
+
+
+  getAxisExtendedWidth(axisID)
+  {
+    let axis = oa.axes[axisID],
+    /** duplicates the calculation in axis-tracks.js : layoutWidth() */
+    blocks = axis && axis.blocks,
+    /** could also use : axis.axis1d.get('dataBlocks.length');
+     * subtract 1 for the reference block;  for a GM, map 0 -> 1 */
+    dataBlocksN = (blocks && blocks.length - 1) || 1,
+    trackWidth = 10,
+    trackBlocksWidth =
+      /*40 +*/ dataBlocksN * /*2 * */ trackWidth /*+ 20 + 50*/,
+    initialWidth = /*50*/ trackBlocksWidth,
+    /** this is just the Max value, not [min,max] */
+    allocatedWidth,
+    width = axis ? 
+      (allocatedWidth = axis.allocatedWidth()) ||
+      ((axis.extended === true) ? initialWidth : axis.extended) :
+    undefined;
+    dLog('getAxisExtendedWidth', width, allocatedWidth, initialWidth, axis.extended);
+    return width;
+  },
+  axisShowExtend(axis, axisID, axisG)
+  {
+    /** x translation of right axis */
+    let 
+      initialWidth = /*50*/ getAxisExtendedWidth(axisID),
+    axisData = axis.extended ? [axisID] : [];
+    if (axisG === undefined)
+      axisG = oa.svgContainer.selectAll("g.axis-outer#id" + axisID);
+    let ug = axisG.selectAll("g.axis-use")
+      .data(axisData);
+    let ugx = ug
+      .exit()
+      .transition().duration(500)
+      .remove();
+    ugx
+      .selectAll("use")
+      .attr("transform",function(d) {return "translate(0,0)";});
+    ugx
+      .selectAll("rect")
+      .attr("width", 0);
+    ugx
+      .selectAll(".foreignObject")
+      .attr("width", 0);
+    let eg = ug
+      .enter()
+      .append("g")
+      .attr("class", "axis-use");
+    let em = ug.merge(eg);
+
+    /** If dualAxis, use <use> to show 2 identical axes.
+     * Otherwise show only the left axis, and on the right side a line like an
+     * axis with no ticks, just the top & bottom tick lines, but reflected so
+     * that they point right.
+     */
+    let dualAxis = options && options.dualAxis;
+    if (dualAxis) {
+      let eu = eg
+      /* extra "xlink:" seems required currently to work, refn :  dsummersl -
+       * https://stackoverflow.com/questions/10423933/how-do-i-define-an-svg-doc-under-defs-and-reuse-with-the-use-tag */
+        .append("use").attr("xlink:xlink:href", eltIdGpRef);
+      eu //.transition().duration(1000)
+        .attr("transform",function(d) {return "translate(" + getAxisExtendedWidth(d) + ",0)";});
+
+      let er = eg
+        .append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", 0),
+      rm = er.merge(em.selectAll('g.axis-use > rect'))
+        .attr("height", vc.yRange);
+      rm
+        .transition().duration(1000)
+        .attr("width", initialWidth);
+    }
+    else
+    {
+      /** based on showTickLocations() */
+      const xOffset = 25, shiftRight=5;
+      let 
+        tickWidth = xOffset/5,
+      edgeHeight = axis.yRange(),
+      sLine = line([
+        [+tickWidth, 0],
+        [0, 0],
+        [0, edgeHeight],
+        [+tickWidth, edgeHeight]
+      ]),
+      ra = eg
+        .append("path"),
+      rm = ra.merge(em.selectAll('g.axis-use > path'))
+        .transition().duration(1000)
+        .attr("transform",function(d) {
+          let eWidth = getAxisExtendedWidth(d);
+          dLog('axis- path transform', eWidth, d, this);
+               return "translate(" + (eWidth) + ",0)";})
+        .attr("d", sLine);
+    }
+
+    // foreignObject is case sensitive - refn https://gist.github.com/mbostock/1424037
+    let ef = eg
+      .append("g")
+      .attr("class", "axis-html")
+      .append("foreignObject")
+      .attr("class", "foreignObject")
+    /*.attr("x", 0)
+     .attr("y", 0) */
+      .attr("width", initialWidth /*0*/)
+    // leave 4px unused at the bottom so as not to block sensitivity of chartTypeToggle (axis-chart)
+      .attr("height", vc.yRange-6);
+    let eb = ef
+      .append("xhtml:body")
+      .attr("class", "axis-table");
+    ef
+      .transition().duration(1000)
+      .attr("width", initialWidth);
+    if (eb.node() !== null)	  // .style() uses .node()
+      eb
+      .append("div")
+      .attr("id", "axis2D_" + axisID) // matches axis-2d:targetEltId()
+      .style("border:1px green solid");
+  },
+
+  /*--------------------------------------------------------------------------*/
+
 
   /** Position the right edge path (if !dualAxis) for the current width
    * This is part of axisShowExtend(), which will be moved here;
