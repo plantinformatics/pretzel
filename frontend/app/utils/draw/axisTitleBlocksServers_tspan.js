@@ -9,6 +9,8 @@ import { dragTransitionTime } from '../stacks-drag';
 
 const dLog = console.debug;
 
+const trace = 0;
+
 /*----------------------------------------------------------------------------*/
 
 const tspanBlockServer_local = d3.local('tspanBlockServer');
@@ -131,7 +133,8 @@ AxisTitleBlocksServers.prototype.positionTspan = function(tspanBlockTitle, elt) 
     textAnchor === 'start' ? -15 :
     textAnchor === 'end' ? - 15 - titleLength :
     undefined;
-  dLog('positionTspan', position, textAnchor, titleLength, tspanBlockTitle.__data__, tspanBlockTitle, elt, this);
+  if (trace)
+    dLog('positionTspan', position, textAnchor, titleLength, tspanBlockTitle.__data__, tspanBlockTitle, elt, this);
   return position;
 };
 

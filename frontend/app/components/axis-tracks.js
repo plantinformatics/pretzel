@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 
 
 import createIntervalTree from 'npm:interval-tree-1d';
+
 import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
 import InAxis from './in-axis';
 import {  eltId, axisEltId, eltIdAll, axisEltIdClipPath, trackBlockEltIdPrefix, axisTitleColour }  from '../utils/draw/axis';
@@ -17,8 +18,16 @@ const featureTrackTransitionTime = 750;
 
 /** width of track <rect>s */
 let trackWidth = 10;
+
+/** If false, track <rect>s are trackWidth wide, and layering them to avoid
+ * overlap cause the width allocated to the block to increase.
+ * If true, the <rect>s are made proportionally narrower instead.
+ */
+const fixedBlockWidth = true;
+
 /** track sub-elements < this height (px) are not rendered. */
 const subElementThresholdHeight = 5;
+
 
 /** for devel.  ref comment in @see height() */
 let trace_count_NaN = 10;
@@ -152,7 +161,8 @@ function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
     if (lastUsed > largestLayer)
       largestLayer = lastUsed;
   }
-  result.layoutWidth = (largestLayer+1) * trackWidth * 2;
+  /* first layer allocated is 1; allocate one layer if 0.  */
+  result.layoutWidth = (largestLayer || 1) * trackWidth * 2;
 
   return result;
 }
@@ -172,13 +182,15 @@ function setClipWidth(axisID, width)
   /** If the user has resized to a larger width, don't reduce it.
    * The role of this is to automatically increase the width if layout requires it.
    */
-  if (cp.attr("width") < width)
+  if (! cp.empty() && cp.attr("width") < width)
   cp
     .attr("width", width);
   let gh = aS.select("g.axis-use > g.axis-html");
   gh
     .attr("transform", "translate(" + width + ")");
-  console.log('setClipWidth', axisID, width, aS.node(), cp.node(), cp.attr("width"),  gh.node());
+  dLog(
+    'setClipWidth', axisID, width, aS.node(), cp.node(),
+    ! cp.empty() && cp.attr("width"),  gh.node());
 }
 
 /*----------------------------------------------------------------------------*/
@@ -221,6 +233,7 @@ export default InAxis.extend({
   /** For each viewed block (trackBlocksR), some attributes are kept, until the
    * axis closes.  This state is likely to move to a axis-tracks-block component.
    * So far this contains only a WeakMap for the interval trees of Feature sub-elements (.subEltTree).
+   * and .layoutWidth for the block.
    */
   blocks : {},
 
@@ -303,6 +316,7 @@ export default InAxis.extend({
     console.log('trackBlocks', trackBlocksR, trackBlocks);
     return trackBlocks;
   }),
+  nTrackBlocks : Ember.computed.alias('trackBlocksR.length'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -468,6 +482,8 @@ export default InAxis.extend({
     yrange = y.range();
     let
       pxSize = (yDomain[1] - yDomain[0]) / (yrange[1] - yrange[0]);
+    /** For a given blockId shown in the axis, layout its tracks.
+     */
     function trackBlocksData(blockId) {
       let t = tracks.intervalTree[blockId],
       block = oa.stacks.blocks[blockId],
@@ -481,16 +497,43 @@ export default InAxis.extend({
       sizeThreshold = undefined, // zoomed ? undefined : pxSize * 1/*5*/,
       tracksLayout = regionOfTree(t, yDomain, sizeThreshold, true),
       data = tracksLayout.intervals;
-      if (false)  // actually need to sum the .layoutWidth for all blockId-s, plus the block offsets which are calculated below
-      setClipWidth(axisID, tracksLayout.layoutWidth);
-      console.log('trackBlocksData', blockId, data.length, (data.length == 0) ? '' : y(data[0][0]));
+      let blockState = thisAt.lookupAxisTracksBlock(blockId);
+      blockState.set('layoutWidth', tracksLayout.layoutWidth);
+      if (! blockState.hasOwnProperty('subelement')) {
+        blockState.subElements = blockTagSubElements(blockId);
+      }
+      /** [min, max] */
+      let allocatedWidth = thisAt.get('allocatedWidth');
+      /** factor by which blockState.trackWidth must be reduced for layoutWidth to fit in trackWidth. */
+      let compress = blockState.layoutWidth / trackWidth;
+      /* don't apply fixedBlockWidth if block subElements - the sub-elements
+       * would be too thin to see well, and overlap is less likely.
+       */
+      blockState.trackWidth = ! fixedBlockWidth || blockState.subElements ?
+        trackWidth : (
+          allocatedWidth ?
+            allocatedWidth[1] / 2 / thisAt.get('nTrackBlocks') / compress :
+            trackWidth * 2        / compress);
+      dLog('trackBlocksData', blockId, data.length, (data.length == 0) ? '' : y(data[0][0]),
+           blockState, allocatedWidth, compress, thisAt.get('nTrackBlocks'));
       return data;
     };
     // a block with 1 feature will have pxSize == 0.  perhaps just skip the filter.
     if (pxSize == 0)
       console.log('pxSize is 0', yrange, yDomain);
+    function xPosnS(subElements) {
+      return xPosn;
     /** datum is interval array : [start, end];   with attribute .description. */
-    function xPosn(d) { /*console.log("xPosn", d);*/ return ((d.layer || 0) + 1) *  trackWidth * 2; };
+    function xPosn(d) {
+      let p = this.parentElement,
+      gBlock = subElements ? p.parentElement : p,
+      blockId = gBlock.__data__,
+      blockC = thisAt.lookupAxisTracksBlock(blockId),
+      trackWidth = blockC.trackWidth;
+      /*console.log("xPosn", d);*/
+      return ((d.layer || 1) - 1) *  trackWidth * 2;
+    };
+    };
     function yPosn(d) { /*console.log("yPosn", d);*/ return y(d[0]); };
     /** return the end of the y scale range which d is closest to.
      * Used when transitioning in and out.
@@ -520,9 +563,33 @@ export default InAxis.extend({
       }
       return height;
     };
+    /** @return the horizontal offset of the left side of this block */
+    function blockOffset(blockId, i) {
+      let xOffset;
+      // subElements could be mixed with fixed width blocks, so perhaps use .offset for all.
+
+      /** blockC.offset is the sum of 
+       * tracksLayout.layoutWidth for each of the blockId-s to the left of this one. */
+      let blocks = thisAt.get('blocks'),
+      /** this assigns blocks[*].offset */
+      widthSum = thisAt.get('blockLayoutWidthSum'),
+      blockC = thisAt.lookupAxisTracksBlock(blockId);
+      xOffset = blockC.offset;
+      if (xOffset === undefined)
+      {
+        if (! fixedBlockWidth) {
+          xOffset = 0;
+        } else {
+          // width/nTrackBlocks is related to 2 * trackWidth;
+          let width = thisAt.get('width') || thisAt.get('layoutWidth');
+          xOffset = width * (i+0.5) / thisAt.get('nTrackBlocks');
+          dLog('blockOffset', blockId, i, width, widthSum, xOffset);
+        }
+      }
+      return xOffset;
+    }
     function blockTransform(blockId, i) {
-      /** -	plus tracksLayout.layoutWidth for each of the blockId-s to the left of this one. */
-      let xOffset = (i+1) * 2 * trackWidth;
+      let xOffset = blockOffset(blockId, i);
       return 'translate(' + xOffset + ',0)';
     }
     /** parent; contains g > rect, maybe later a text.resizer.  */
@@ -551,7 +618,7 @@ export default InAxis.extend({
   }
     /** define the clipPath.  1 clipPath per axis. */
     let clipRectS =
-      gAxis.selectAll('clipPath')
+      gAxis.selectAll('g.axis-use > clipPath')
       .data([axisID]),
     clipRect = clipRectS
       .enter()
@@ -566,18 +633,22 @@ export default InAxis.extend({
      * No longer using bbox.height anyway
      * (resized && (resized.width || resized.height) && )
      */
-    if (clipRect.size() == 0)
-    {
-      clipRect = gAxis.selectAll("clipPath > rect");
-      console.log('clipRect', clipRect.size(), bbox, clipRect.node());
-    }
+
+    /** Set x only for .append.  Update y, width and height for all. */
+    let clipRectA = clipRect.merge(clipRectS.selectAll("clipPath > rect"));
+
     if (bbox.x < 0)
       bbox.x = 0;
+    /* seems like bbox.x is the left edge of the left-most tracks (i.e. bbox
+     * contains the children of gAxis), so use 0 instead. */
     bbox.y = yrange[0] ;
-    bbox.width = this.get('layoutWidth');
+    let allocatedWidth = this.get('allocatedWidth');
+    /** + trackWidth for spacing. */
+    bbox.width = ((allocatedWidth && allocatedWidth[1]) || this.get('layoutWidth')) + trackWidth;
     bbox.height = yrange[1] - yrange[0];
     clipRect
-      .attr("x", bbox.x)
+      .attr("x", 0 /*bbox.x*/);
+    clipRectA
       .attr("y", bbox.y)
       .attr("width", bbox.width)
       .attr("height", bbox.height)
@@ -596,15 +667,22 @@ export default InAxis.extend({
       bs = gAxis.selectAll("g.axis-use > g.tracks > g"),
     a = bs.each(function(blockId,i,g) {
       let
-        block = oa.stacks.blocks[blockId],
-      tags = block.block.get('datasetId.tags'),
-      subElements = tags && (tags.indexOf("geneElements") >= 0),
+        subElements = blockTagSubElements(blockId),
       eachFn = subElements ? eachGroup : eachRect;
       eachFn.apply(this, [blockId, i, g]);
         });
+    /** @return true if the given block has the tag geneElements, indicating
+     * sub-elements should be shown. */
+    function blockTagSubElements(blockId) {
+      let
+        block = oa.stacks.blocks[blockId],
+      tags = block.block.get('datasetId.tags'),
+      subElements = tags && (tags.indexOf("geneElements") >= 0);
+      return subElements;
+    };
     function eachRect(blockId, i, g) {
       let
-        rs = bs.selectAll("rect.track")
+        rs = d3.select(this).selectAll("rect.track")
       .data(trackBlocksData, trackKeyFn),
     re =  rs.enter(), rx = rs.exit();
     dLog(rs.size(), re.size(),  'rx', rx.size());
@@ -616,6 +694,9 @@ export default InAxis.extend({
           rx.remove();
         });
 
+      let
+       blockC = thisAt.lookupAxisTracksBlock(blockId),
+      trackWidth = blockC.trackWidth;
       appendRect.apply(this, [re, rs, trackWidth, false]);
     }
     /** - rename re and rs to ge and gs
@@ -628,8 +709,10 @@ export default InAxis.extend({
     ra
       .attr('class', 'track')
       .transition().duration(featureTrackTransitionTime)
-      .attr('width', width)
       .each(subElements ? configureSubTrackHover : configureTrackHover);
+      rs.merge(ra)
+        .attr('width', width);
+
       let blockIndex = thisAt.get('axis1d.blockIndexes'),
       /** the structure here depends on subElements:
        * true : g[clip-path] > g.track.element > rect.track
@@ -651,7 +734,7 @@ export default InAxis.extend({
         .attr('y', yEnd);
       rm
       .transition().duration(featureTrackTransitionTime)
-      .attr('x', xPosn)
+      .attr('x', xPosnS(subElements))
       .attr('y', yPosn)
       .attr('height' , height)
       .attr('stroke', blockTrackColourI)
@@ -814,13 +897,14 @@ export default InAxis.extend({
       egm.each(function (d, i, g) {
         let
           a = d3.select(this),
-          /** height, xPosn, yPosn don't use `this`, i or g, but they could, so
-           * the standard d3 calling signature is used.
+          /** height and yPosn don't yet use `this`, i or g, but they could, so
+           * the standard d3 calling signature is used.  xPosn uses `this`.
            * ((d,i,g) => height(d, i, g))(d,i,g) should also work but it compiles to a function without .apply
            */
         heightD = height.apply(this, [d, i, g]);
         if (heightD > subElementThresholdHeight) {
           let
+            xPosn = xPosnS(/*subElements*/true),
             xPosnD = xPosn.apply(this, [d, i, g]),
           yPosnD = yPosn.apply(this, [d, i, g]);
           let geneElementData = useDevData ? geneElementData_dev : elementDataFn.apply(this, arguments);
@@ -1086,9 +1170,13 @@ export default InAxis.extend({
     return tracks;
   }),
 
-  layerSubElements(blockId, featureId, geneElementData) {
+  lookupAxisTracksBlock(blockId) {
     let blocks = this.get('blocks'),
-    blockState = blocks[blockId] || (blocks[blockId] = {});
+    blockState = blocks[blockId] || (blocks[blockId] = Ember.Object.create());
+    return blockState;
+  },
+  layerSubElements(blockId, featureId, geneElementData) {
+    let blockState = this.lookupAxisTracksBlock(blockId);
     if (! blockState.subEltTree)
       blockState.subEltTree = {};
     if (! blockState.subEltTree[featureId]) {
@@ -1119,20 +1207,75 @@ export default InAxis.extend({
   },
 
 
-  layoutWidth : Ember.computed('trackBlocksR.[]', function () {
+  blockIds : Ember.computed('trackBlocksR.[]', function () {
     let
     trackBlocksR = this.get('trackBlocksR'),
-    blockIds = trackBlocksR.mapBy('id'),
+    blockIds = trackBlocksR.mapBy('id');
+    return blockIds;
+  }),
+  /** Map blocks to an array of values, so that it can be used in a dependency
+   * e.g. 'blockComps.@each.layoutWidth'
+   * The block components are sub-components of axis-track.
+   */
+  blockComps : Ember.computed('blockIds.[]', function () {
+    let blocks = this.get('blocks'),
+    blockIds = this.get('blockIds'),
+    comps = blockIds.map((blockId) => this.lookupAxisTracksBlock(blockId));
+    return comps;
+  }),
+
+  /** for all blocks in trackBlocksR, sum .layoutWidth
+   *
+   * Side Effect: assigns block.offset which is the progressive value of the sum,
+   * if ! fixedBlockWidth.
+   */
+  blockLayoutWidthSum : Ember.computed('blockComps.@each.layoutWidth', function () {
+    let
+      blockIds = this.get('blockIds');
+
+    /*  sum the .layoutWidth for all blockId-s */
+    let 
+      blocks = this.get('blocks'),
+    blockIds2 = Object.keys(blocks),
+    /** initial .offset is trackWidth */
+    shiftRight = trackWidth,
+    width = blockIds.reduce((sum, blockId) => {
+      let block = this.lookupAxisTracksBlock(blockId);
+      block.offset = sum;
+      let blockWidth;
+      if (block.subElements || ! fixedBlockWidth) {
+        blockWidth = block.layoutWidth || block.trackWidth || trackWidth;
+      } else {
+        blockWidth = 2 * trackWidth;
+      }
+      sum += blockWidth;
+      return sum;
+    },  shiftRight);
+
+    dLog('blockLayoutWidthSum', width, blockIds.length, blockIds2.length, this.get('blockComps.length'));
+    return width;
+  }),
+  layoutWidth : Ember.computed('trackBlocksR.[]', function () {
+    let
+      blockIds = this.get('blockIds'),
     /** Add 50 on the right to avoid clashing with the right axis ticks text,
      * which may later be switched off with CSS.
      * this includes xOffset from blockTransform(blockIds.length-1) 
      * @see blockTransform()
      */
     width =
-      40 + blockIds.length * 2 * trackWidth + 20 + 50;
+      /*40 +*/ this.get('blockLayoutWidthSum') /*+ 20 + 50*/; // same as getAxisExtendedWidth()
     console.log('layoutWidth', blockIds, width);
-    this.get('childWidths').set(this.get('className'), [width, width]);
+    Ember.run.next(() => this.get('childWidths').set(this.get('className'), [width, width]));
+
     return width;
+  }),
+  layoutWidthEffect : Ember.computed('layoutWidth', function () {
+    let
+      axisID = this.get('axisID'),
+    layoutWidth = this.get('layoutWidth');
+    setClipWidth(axisID, layoutWidth);
+    return layoutWidth;
   }),
   showTrackBlocks: Ember.computed(
     'tracksTree', 'yDomain.0', 'yDomain.1', 'axis1d.zoomed', 'axis1d.extended', 'axis1d.featureLength',
@@ -1162,14 +1305,25 @@ export default InAxis.extend({
       }
     return featuresLength;
   }),
-  resizeEffectHere : Ember.computed('resizeEffect', function () {
+  adjustedWidth : Ember.computed.alias('parentView.adjustedWidth'),
+  resizeEffectHere : Ember.computed('resizeEffect', 'allocatedWidth.{0,1}', function () {
     let result = this.get('resizeEffect');
-    dLog('resizeEffectHere in axis-tracks', this.get('axisID'), result);
+    let allocatedWidth = this.get('allocatedWidth'),
+    allocatedWidthPrev = this.get('allocatedWidthPrev'),
+    allocatedWidthChange = ! allocatedWidthPrev || (allocatedWidthPrev !== allocatedWidth);
+    if (allocatedWidthChange) {
+      this.get('allocatedWidthPrev', allocatedWidth);
+    }
+    dLog('resizeEffectHere in axis-tracks', this.get('axisID'), result,
+         allocatedWidthPrev, allocatedWidth, allocatedWidthChange,
+        this.get('adjustedWidth'));
     /** @return true if rc[f] indicates a change of field f.
      * if the previous size is not recorded, then treat it as a change.
      */
     function isChanged(rc, f) { return rc ? rc[f] : true; }
-    this.showResize(isChanged(result.changed, 'viewportWidth'), isChanged(result.changed, 'viewportHeight') /* , yScaleChanged ? */);
+    this.showResize(
+      isChanged(result.changed, 'viewportWidth') || allocatedWidthChange,
+      isChanged(result.changed, 'viewportHeight') /* , yScaleChanged ? */);
   }),
 
 
