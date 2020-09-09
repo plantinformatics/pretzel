@@ -140,8 +140,10 @@ let config = {
       params.mapsToView.reduce(function (result, blockId) {
         /** same as controllers/mapview.js:blockFromId(), maybe factor to a mixin. */
         let
+          /** store will be undefined if blockId is invalid or belongs to a
+           * secondary server which is not yet connected. */
           store = me.get('apiServers').id2Store(blockId),
-        block = store.peekRecord('block', blockId);
+        block = store && store.peekRecord('block', blockId);
         let referenceBlock = block && block.get('referenceBlock');
         if (referenceBlock)
           result.push(referenceBlock);

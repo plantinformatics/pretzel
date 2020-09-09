@@ -168,7 +168,7 @@ export default Ember.Component.extend({
     let 
       allocatedWidths = this.get('allocatedWidths'),
       allocatedWidth = this.get('allocatedWidths.' + this.get('className'));
-    dLog('allocatedWidth', allocatedWidth, allocatedWidths);
+    dLog('allocatedWidth', this.className, allocatedWidth, allocatedWidths);
     if (! allocatedWidth)
       allocatedWidth = [12, 113];
     return allocatedWidth; 
@@ -177,13 +177,15 @@ export default Ember.Component.extend({
   width : undefined,
   resized : function(prevSize, currentSize) {
     console.log("resized in components/in-axis", this, prevSize, currentSize);
+    if (prevSize && currentSize) {
     // resize g.chart and clip by * currentSize / prevSize, 
     let width =  this.get('width');
-    width = width
+    width = (width && prevSize)
       ? width * currentSize / prevSize
       : currentSize / 1 /* or number of subComponents */;
     console.log("resized from width", this.get('width'), "to", width);
-    this.set('width', width);
+      this.set('width', width);
+    }
     this.redrawDebounced();
   },
   zoomed : function(axisID_t) {

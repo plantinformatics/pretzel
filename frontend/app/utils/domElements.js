@@ -57,7 +57,9 @@ let
       // as for .resize() below,
       // .on() seems to apply a reasonable debounce, but if not, use Ember.run.debounce()
       // Determine resizer position relative to resizable (parent)
-      let x = d3.mouse(this.parentNode)[0];
+      let relativeParent = (this.parentNode.parentNode.parentNode.tagName === 'foreignObject') ?
+        this.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode : this.parentNode;
+      let x = d3.mouse(relativeParent)[0];
       let dx = d3.event.dx;
       // dLog("eltWidthResizable drag x=", x, dx);
       // Avoid negative or really small widths
