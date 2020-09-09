@@ -2253,12 +2253,20 @@ export default Ember.Component.extend(Ember.Evented, {
       let axis = oa.axes[axisID],
       /** duplicates the calculation in axis-tracks.js : layoutWidth() */
       blocks = axis && axis.blocks,
-      dataBlocksN = blocks && blocks.length - 1,
+      /** could also use : axis.axis1d.get('dataBlocks.length');
+       * subtract 1 for the reference block;  for a GM, map 0 -> 1 */
+      dataBlocksN = (blocks && blocks.length - 1) || 1,
       trackWidth = 10,
       trackBlocksWidth =
-        40 + dataBlocksN * 2 * trackWidth + 20 + 50,
+        /*40 +*/ dataBlocksN * /*2 * */ trackWidth /*+ 20 + 50*/,
       initialWidth = /*50*/ trackBlocksWidth,
-      width = axis ? ((axis.extended === true) ? initialWidth : axis.extended) : undefined;
+      /** this is just the Max value, not [min,max] */
+      allocatedWidth,
+      width = axis ? 
+        (allocatedWidth = axis.allocatedWidth()) ||
+        ((axis.extended === true) ? initialWidth : axis.extended) :
+      undefined;
+      dLog('getAxisExtendedWidth', width, allocatedWidth, initialWidth, axis.extended);
       return width;
     }
     function axisShowExtend(axis, axisID, axisG)
@@ -2332,7 +2340,10 @@ export default Ember.Component.extend(Ember.Evented, {
           .append("path"),
         rm = ra.merge(em.selectAll('g.axis-use > path'))
           .transition().duration(1000)
-          .attr("transform",function(d) {return "translate(" + (shiftRight + getAxisExtendedWidth(d)) + ",0)";})
+          .attr("transform",function(d) {
+            let eWidth = getAxisExtendedWidth(d);
+            dLog('axis- path transform', eWidth, d, this);
+                 return "translate(" + (eWidth) + ",0)";})
           .attr("d", sLine);
       }
 
