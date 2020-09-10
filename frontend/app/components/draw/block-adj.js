@@ -614,7 +614,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   axisStackChanged : function() {
     dLog("axisStackChanged in components/block-adj");
-    this.incrementProperty('axisStackChangedCount');
+    // currently need time for x scale update
+    Ember.run.next(() => this.incrementProperty('axisStackChangedCount'));
   },
 
   /** @param [axisID, t] */

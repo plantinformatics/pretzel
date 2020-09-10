@@ -1949,6 +1949,8 @@ Stacked.prototype.extendedWidth = function()
 {
   let width = this.extended;
   if (width === true) {
+    width = this.allocatedWidth();
+    if (! width) {
     let childViews = Ember.get(this, 'axis1d.childViews');
     /** replace this with a passed parameter enabling axis-2d to report .width back up to axis-1d.  */
     let axis2d = childViews && childViews.findBy( '_debugContainerKey', 'component:axis-2d');
@@ -1962,9 +1964,10 @@ Stacked.prototype.extendedWidth = function()
        * Also axis-tracks.js : @see layoutWidth()
        */
       let shiftRight = 5;
-      width = shiftRight + this.allocatedWidth();
-      // using .allocatedWidth() in place of roughly equivalent : stacks.oa.axisApi.getAxisExtendedWidth(this.axisName);
+      width = shiftRight + this.extended;
+      // using .extended in place of : stacks.oa.axisApi.getAxisExtendedWidth(this.axisName);
     }
+  }
   }
 
   // dLog("Stacked extendedWidth()", this, this.extended);
