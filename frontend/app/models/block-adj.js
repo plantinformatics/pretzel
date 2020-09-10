@@ -369,7 +369,7 @@ export default DS.Model.extend(Ember.Evented, {
     /** This adds a level of indirection between zoomCounter and
      * pathsRequestCount, flattening out the nesting of run-loop calls.
      */
-    this.incrementProperty('pathsRequestCount');
+    Ember.run.next(() => this.incrementProperty('pathsRequestCount'));
     let result = this.get('lastResult');
      // result = this.call_taskGetPaths();
     dLog('paths', result, this.get('domains'));
