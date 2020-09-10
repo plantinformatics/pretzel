@@ -186,6 +186,14 @@ function eltIdAll(d) { return "all" + d; }
 /** id of <g clippath> element, based on axisName, with an "axis-clip" prefix. */
 function axisEltIdClipPath(d) { return "axis-clip" + d; }
 
+function eltIdGpRef(d, i, g)
+{
+  dLog("eltIdGpRef", this, d, i, g);
+  let p2 = this.parentNode.parentElement;
+  return "#a" + p2.__data__;
+}
+
+
 /** id of highlightFeature div element, based on feature name, with an "h" prefix. */
 function highlightId(name)
 {
@@ -257,7 +265,9 @@ function axisTitleColour (d, i) {
 export {
   Axes, maybeFlip, maybeFlipExtent, noDomain,
   ensureYscaleDomain,
-  yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisEltIdClipPath, highlightId,
+  yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisEltIdClipPath,
+  eltIdGpRef,
+  highlightId,
   trackBlockEltIdPrefix,
   axisTitleColour
 };

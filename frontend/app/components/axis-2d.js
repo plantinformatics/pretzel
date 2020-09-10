@@ -2,7 +2,9 @@ import Ember from 'ember';
 const { inject: { service } } = Ember;
 
 import { eltWidthResizable } from '../utils/domElements';
+import { eltIdGpRef }  from '../utils/draw/axis';
 import AxisEvents from '../utils/draw/axis-events';
+import { stacks, xScaleExtend  } from '../utils/stacks';
 
 /* global d3 */
 
@@ -317,26 +319,40 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
+  /** object attributes of the draw-map component; used as a provisional connector. */
+  oa : Ember.computed.alias('data'),
+
   axisWidthResize(axisID, width, dx)
   {
     console.log("axisWidthResize", axisID, width, dx);
+    let oa = this.get('oa');
     oa.axes[axisID].extended = width;
-    axisWidthResizeRight(axisID, width, dx);
+    // axisWidthResizeRight(axisID, width, dx);
   },
   axisWidthResizeEnded()
   {
     console.log("axisWidthResizeEnded");
 
-    updateXScale();
+    this.updateXScale();
     stacks.changed = 0x10;
+    let oa = this.get('oa');
     /* Number of stacks hasn't changed, but X position needs to be
      * recalculated, as would be required by a change in the number of stacks. */
-    let t = stacksAdjust(true, undefined);
+    let t = oa.axisApi.stacksAdjust(true, undefined);
   },
-
+  /** Update the X scale / horizontal layout of stacks
+   * copied from draw-map; the x scale will likely move to stacks-view, and this will likely be dropped.
+   */
+  updateXScale()
+  {
+    let oa = this.get('oa');
+    // xScale() uses stacks.keys().
+    oa.xScaleExtend = xScaleExtend(); // or xScale();
+  },
 
   getAxisExtendedWidth(axisID)
   {
+    let oa = this.get('oa');
     let axis = oa.axes[axisID],
     /** duplicates the calculation in axis-tracks.js : layoutWidth() */
     blocks = axis && axis.blocks,
@@ -360,8 +376,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   {
     /** x translation of right axis */
     let 
-      initialWidth = /*50*/ getAxisExtendedWidth(axisID),
+      initialWidth = /*50*/ this.getAxisExtendedWidth(axisID),
     axisData = axis.extended ? [axisID] : [];
+    let oa = this.get('oa');
     if (axisG === undefined)
       axisG = oa.svgContainer.selectAll("g.axis-outer#id" + axisID);
     let ug = axisG.selectAll("g.axis-use")
@@ -390,14 +407,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      * axis with no ticks, just the top & bottom tick lines, but reflected so
      * that they point right.
      */
-    let dualAxis = options && options.dualAxis;
+    let dualAxis = this.get('dualAxis');
+    let vc = this.get('oa.vc');
     if (dualAxis) {
       let eu = eg
       /* extra "xlink:" seems required currently to work, refn :  dsummersl -
        * https://stackoverflow.com/questions/10423933/how-do-i-define-an-svg-doc-under-defs-and-reuse-with-the-use-tag */
         .append("use").attr("xlink:xlink:href", eltIdGpRef);
       eu //.transition().duration(1000)
-        .attr("transform",function(d) {return "translate(" + getAxisExtendedWidth(d) + ",0)";});
+        .attr("transform", (d) => "translate(" + this.getAxisExtendedWidth(d) + ",0)");
 
       let er = eg
         .append("rect")
@@ -417,6 +435,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       let 
         tickWidth = xOffset/5,
       edgeHeight = axis.yRange(),
+      line = d3.line(),
       sLine = line([
         [+tickWidth, 0],
         [0, 0],
@@ -425,10 +444,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       ]),
       ra = eg
         .append("path"),
+      thisAxis2d = this,
       rm = ra.merge(em.selectAll('g.axis-use > path'))
         .transition().duration(1000)
         .attr("transform",function(d) {
-          let eWidth = getAxisExtendedWidth(d);
+          let eWidth = thisAxis2d.getAxisExtendedWidth(d);
           dLog('axis- path transform', eWidth, d, this);
                return "translate(" + (eWidth) + ",0)";})
         .attr("d", sLine);
@@ -487,6 +507,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let me = this;
     let prevSize,  currentSize;
     let stacks = this.get('data').stacks;
+    console.log("components/axis-2d didRender()");
+
+    /* this could be called from render() - not critical */
+    let     axisS = this.get('axis1d.axisS'),
+    axisID = this.get('axisID');
+    this.axisShowExtend(axisS, axisID, /*axisG*/ undefined);
+
     /** Called when resizer element for split axis resize is dragged.
      * @param d data of the resizer elt, which is axisID of the axis being resized
      */

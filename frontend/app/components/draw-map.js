@@ -5,6 +5,7 @@ const { inject: { service } } = Ember;
 
 import { isEqual } from 'lodash/lang';
 
+/* global require */
 
 
 /* using scheduleIntoAnimationFrame() from github.com/runspired/ember-run-raf
@@ -2210,24 +2211,6 @@ export default Ember.Component.extend(Ember.Evented, {
     axisG = axisGempty;
     if (axisG.size())
       dLog(allG.nodes(), allG.node());
-
-    function eltIdGpRef(d, i, g)
-    {
-      dLog("eltIdGpRef", this, d, i, g);
-      let p2 = this.parentNode.parentElement;
-      return "#a" + p2.__data__;
-    }
-    function axisShowExtendAll() {
-      // based on collateO
-      dLog("axisShowExtendAll", oa.axisIDs.length, oa.axisIDs);
-      oa.stacks.axisIDs().forEach(function(d){
-        let axisID = d,
-        axis = oa.axes[axisID];
-        if (trace_stack > 1)
-          dLog(d, axisId2Name(d), axis);
-        axisShowExtend(axis, axisID, undefined);
-      });
-    }
 
 
     if (trace_stack)
@@ -5117,7 +5100,7 @@ export default Ember.Component.extend(Ember.Evented, {
           oa.stacks.forEach(function (s) { s.redrawAdjacencies(); });
       }
       // could limit this to axes for which dataBlocks has changed
-      axisShowExtendAll();
+      // axisShowExtendAll();
       // pathUpdate() uses flow.gf, which is set after oa.foreground.
       if (oa.foreground && ysLength())
       {
@@ -5142,6 +5125,8 @@ export default Ember.Component.extend(Ember.Evented, {
 
       return t;
     }
+    if (! oa.axisApi.stacksAdjust)
+      oa.axisApi.stacksAdjust = stacksAdjust;
     function dragended(/*d*/) {
       deleteAfterDrag();
       let stacks = oa.stacks;
@@ -5519,7 +5504,7 @@ export default Ember.Component.extend(Ember.Evented, {
               let axis = Stacked.getAxis(axisName), stack = axis && axis.stack;
               // toggle axis.extended, which is initially undefined.
               axis.extended = ! axis.extended;
-              axisShowExtend(axis, axisName, undefined);
+              // axisShowExtend(axis, axisName, undefined);
               me.send('enableAxis2D', axisName, axis.extended);
             });
 
@@ -5718,7 +5703,7 @@ export default Ember.Component.extend(Ember.Evented, {
             } catch (exc) {
               console.log('showResize', 'resized', me, me.resized, widthChanged, heightChanged, useTransition, graphDim, brushedDomains, exc.stack || exc);
             }
-          axisShowExtendAll();
+          // axisShowExtendAll();
           showSynteny(oa.syntenyBlocks, undefined); });
       };
 
