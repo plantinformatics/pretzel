@@ -291,13 +291,23 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
+  willRender() {
+    dLog('axis-2d willRender', this.get('axisID'));
+
+    let     axisS = this.get('axis1d.axisS'),
+    axisID = this.get('axisID');
+    this.axisShowExtend(axisS, axisID, /*axisG*/ undefined);
+  },
+
   didInsertElement() {
     this._super(...arguments);
+    dLog('axis-2d didInsertElement', this.get('axisID'));
 
     this.getUse();
   },
   getUse(backoffTime) {
     let oa = this.get('data'),
+    /** This is g.axis-outer, which contains g.axis-use.  */
     axisUse = oa.svgContainer.selectAll("g.axis-outer#id"+this.get('axisID')),
     /** <use> is present iff dualAxis */
     use = axisUse.selectAll("use");
@@ -374,6 +384,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   },
   axisShowExtend(axis, axisID, axisG)
   {
+    dLog('axisShowExtend', axis, axisID, axisG);
     /** x translation of right axis */
     let 
       initialWidth = /*50*/ this.getAxisExtendedWidth(axisID),
@@ -508,11 +519,6 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let prevSize,  currentSize;
     let stacks = this.get('data').stacks;
     console.log("components/axis-2d didRender()");
-
-    /* this could be called from render() - not critical */
-    let     axisS = this.get('axis1d.axisS'),
-    axisID = this.get('axisID');
-    this.axisShowExtend(axisS, axisID, /*axisG*/ undefined);
 
     /** Called when resizer element for split axis resize is dragged.
      * @param d data of the resizer elt, which is axisID of the axis being resized
