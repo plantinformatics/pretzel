@@ -186,6 +186,17 @@ function eltIdAll(d) { return "all" + d; }
 /** id of <g clippath> element, based on axisName, with an "axis-clip" prefix. */
 function axisEltIdClipPath(d) { return "axis-clip" + d; }
 
+/** @return a d3 selection of the svg group element containing the split axis
+ * components axis-2d etc <g.axis-use>.
+ */
+function selectAxisUse(axisID) {
+  /** factored from chart1.js : AxisCharts.prototype.selectParentContainer(), 
+   * axis-1d.js : axisSelect(), draw-map.js, ...
+   */
+  let gAxis = d3.select("g.axis-outer#" + eltId(axisID) + "> g.axis-use");
+  return gAxis;
+}
+
 function eltIdGpRef(d, i, g)
 {
   dLog("eltIdGpRef", this, d, i, g);
@@ -266,7 +277,7 @@ export {
   Axes, maybeFlip, maybeFlipExtent, noDomain,
   ensureYscaleDomain,
   yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisEltIdClipPath,
-  eltIdGpRef,
+  selectAxisUse, eltIdGpRef,
   highlightId,
   trackBlockEltIdPrefix,
   axisTitleColour
