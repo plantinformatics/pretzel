@@ -1951,23 +1951,23 @@ Stacked.prototype.extendedWidth = function()
   if (width === true) {
     width = this.allocatedWidth();
     if (! width) {
-    let childViews = Ember.get(this, 'axis1d.childViews');
-    /** replace this with a passed parameter enabling axis-2d to report .width back up to axis-1d.  */
-    let axis2d = childViews && childViews.findBy( '_debugContainerKey', 'component:axis-2d');
-    if (axis2d) {
-      width = axis2d.rectWidth();
-      if (trace_stack > 1)
-        dLog('extendedWidth', this, childViews, axis2d, width);
-    } else {
-      /** based on the path translate calculation in draw-map.js : axisShowExtend();
-       * These can be integrated when moved to axis-2d.
-       * Also axis-tracks.js : @see layoutWidth()
-       */
-      let shiftRight = 5;
-      width = shiftRight + this.extended;
-      // using .extended in place of : stacks.oa.axisApi.getAxisExtendedWidth(this.axisName);
+      let childViews = Ember.get(this, 'axis1d.childViews');
+      /** replace this with a passed parameter enabling axis-2d to report .width back up to axis-1d.  */
+      let axis2d = childViews && childViews.findBy( '_debugContainerKey', 'component:axis-2d');
+      if (axis2d) {
+        width = axis2d.rectWidth();
+        if (trace_stack > 1)
+          dLog('extendedWidth', this, childViews, axis2d, width);
+      } else {
+        /** based on the path translate calculation in draw-map.js : axisShowExtend();
+         * These can be integrated when moved to axis-2d.
+         * Also axis-tracks.js : @see layoutWidth()
+         */
+        let shiftRight = 5;
+        width = shiftRight + this.extended;
+        // using .extended in place of : stacks.oa.axisApi.getAxisExtendedWidth(this.axisName);
+      }
     }
-  }
   }
 
   // dLog("Stacked extendedWidth()", this, this.extended);
