@@ -244,6 +244,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
     else if (newInterval < intervalLimit[0]) {
       newInterval = intervalLimit[0];
     }
+    newInterval *= Math.sign(interval);
 
     newDomain = [
       // can use zoom.center() for this.
@@ -251,8 +252,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
       centre + newInterval * (range[0] - rangeYCentre) / rangeSize,
       centre + newInterval * (range[1] - rangeYCentre) / rangeSize
     ];
-    // newDomain is +ve, and newDomain is signed (i.e. in the direction of .flipped).
-    newDomain = maybeFlip(newDomain, flipped);
+    // Both newInterval and newDomain are signed (i.e. in the direction of .flipped).
 
     // detect if domain is becoming flipped during zoom
     if (flipped != ((interval > 0) !== intervalSign(newDomain)))
