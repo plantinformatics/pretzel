@@ -497,6 +497,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * this is the key part which needs to update.
    */
   positionRightEdgeEffect : Ember.computed('allocatedWidthsMax', 'allocatedWidths', function () {
+    this.positionRightEdge();
+  }),
+  positionRightEdge() {
     let axisUse;
     if (! this.get('dualAxis') && (axisUse = this.get('axisUse'))) {
       let
@@ -510,9 +513,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
           .transition().duration(1000)
           .attr("transform",function(d) {return "translate(" + (width) + ",0)";});
         dLog('positionRightEdgeEffect', axisUse.node(), width, p.node());
+        if (width === 0) {
+          p.on('end', () => p.remove());
+          // or : .on('end', function() { d3.select(this).remove(); })
+        }
       }
     }
-  }),
+  },
 
   didRender() {
     let me = this;
@@ -629,6 +636,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     }
     Ember.run.later(dragResizeListen, 1000);
   },
+
+  willDestroyElement() {
+    this.set('allocatedWidthsMax', 0);
+    this.positionRightEdge();
+  }
 
 });
 
