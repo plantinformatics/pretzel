@@ -94,8 +94,9 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     range0 = axis.yRange2();
   let
     axisObj = this.axis1d.get('axisObj'),
-  /** using the computed function extended() would entail recursion. */
-  extended = axisObj && axisObj.extended;
+  // The following call to this.axis1d.get('extended')
+  // replaces directly accessing axisObj.extended
+  extended = this.axis1d.get('extended');
   if (trace_stack)
     dLog('showTickLocations', extended, axisObj, groupName);
 
