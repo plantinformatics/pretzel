@@ -99,7 +99,10 @@ function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
   }
   let subTree;
   if (domain) {
-    intervalTree.queryInterval(domain[0], domain[1], visit);
+    if (domain[0] < domain[1])
+      intervalTree.queryInterval(domain[0], domain[1], visit);
+    else // ie: axis has been flipped
+      intervalTree.queryInterval(domain[1], domain[0], visit);
     // Build another tree with just those intervals which intersect domain.
     subTree = createIntervalTree(intervals);
   } else {
@@ -495,7 +498,7 @@ export default InAxis.extend({
        * [ sizeThreshold is disabled by setting to undefined, while we prototype how to select a sub-set of features to display ]
        */
       sizeThreshold = undefined, // zoomed ? undefined : pxSize * 1/*5*/,
-      tracksLayout = regionOfTree(t, yDomain, sizeThreshold, true),
+      tracksLayout = regionOfTree(t, y.domain(), sizeThreshold, true),
       data = tracksLayout.intervals;
       let blockState = thisAt.lookupAxisTracksBlock(blockId);
       blockState.set('layoutWidth', tracksLayout.layoutWidth);
@@ -561,6 +564,9 @@ export default InAxis.extend({
       {
         console.log('height NaN', d, 'y:', y.domain(), y.range());
       }
+      // When axis is flipped, height will be negative, so make it positive
+      if (height < 0)
+        height = -height;
       return height;
     };
     /** @return the horizontal offset of the left side of this block */
