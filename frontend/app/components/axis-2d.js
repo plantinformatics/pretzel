@@ -2,7 +2,9 @@ import Ember from 'ember';
 const { inject: { service } } = Ember;
 
 import { eltWidthResizable } from '../utils/domElements';
+import { eltIdGpRef }  from '../utils/draw/axis';
 import AxisEvents from '../utils/draw/axis-events';
+import { stacks, xScaleExtend  } from '../utils/stacks';
 
 /* global d3 */
 
@@ -145,7 +147,20 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     remove: function(){
       this.remove();
       console.log("components/axis-2d remove()");
+    },
+
+    axisWidthResize : function(axisID, width, dx) {
+      console.log("axisWidthResize in components/axis-2d", axisID, width, dx);
+      let axisWidthResize = this.get('axisWidthResize');
+      if (axisWidthResize) axisWidthResize(axisID, width, dx);
+    },
+    axisWidthResizeEnded : function() {
+      console.log("axisWidthResizeEnded in components/axis-2d");
+      let axisWidthResizeEnded = this.get('axisWidthResizeEnded');
+      if (axisWidthResizeEnded) axisWidthResizeEnded();
     }
+
+
   },
 
   dualAxis : Ember.computed.alias('urlOptions.dualAxis'),
@@ -258,6 +273,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   },
 
   willDestroyElement() {
+    let extended = this.get('axis1d.extended');
+    if (extended) {
+      dLog('willDestroyElement .extended', extended, this.get('axisID'), this.get('axis1d'));
+    }
+    /* Expect here that .extended is false / 0, and this will cause show() to remove the rendered SVG elements.
+     * including the right edge path (so no need for positionRightEdge() to remove it).
+     */
+    this.show();
+
     if (this.get('axis1d')) {
       // expect that axis1d.axis2d === this or undefined.
       if (this.get('axis1d.axis2d') !== this) {
@@ -276,13 +300,28 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
+  willRender() {
+    dLog('axis-2d willRender', this.get('axisID'));
+    this.show();
+  },
+  /** If .axis1d.extended, render the <g.axis-use> and sub-elements,
+   * otherwise remove them.
+   */
+  show() {
+    let     axisS = this.get('axis1d.axisS'),
+    axisID = this.get('axisID');
+    this.axisShowExtend(axisS, axisID, /*axisG*/ undefined);
+  },
+
   didInsertElement() {
     this._super(...arguments);
+    dLog('axis-2d didInsertElement', this.get('axisID'));
 
     this.getUse();
   },
   getUse(backoffTime) {
     let oa = this.get('data'),
+    /** This is g.axis-outer, which contains g.axis-use.  */
     axisUse = oa.svgContainer.selectAll("g.axis-outer#id"+this.get('axisID')),
     /** <use> is present iff dualAxis */
     use = axisUse.selectAll("use");
@@ -302,11 +341,182 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     dLog("resized in components/axis-2d", this, prevSize, currentSize);
   },
 
+  /*--------------------------------------------------------------------------*/
+
+  /** object attributes of the draw-map component; used as a provisional connector. */
+  oa : Ember.computed.alias('data'),
+
+  axisWidthResize(axisID, width, dx)
+  {
+    console.log("axisWidthResize", axisID, width, dx);
+    let oa = this.get('oa');
+    oa.axes[axisID].extended = width;
+    // axisWidthResizeRight(axisID, width, dx);
+  },
+  axisWidthResizeEnded()
+  {
+    console.log("axisWidthResizeEnded");
+
+    this.updateXScale();
+    stacks.changed = 0x10;
+    let oa = this.get('oa');
+    /* Number of stacks hasn't changed, but X position needs to be
+     * recalculated, as would be required by a change in the number of stacks. */
+    let t = oa.axisApi.stacksAdjust(true, undefined);
+    if (! this.get('axis1d.extended')) {
+      this.show();
+    }
+  },
+  /** Update the X scale / horizontal layout of stacks
+   * copied from draw-map; the x scale will likely move to stacks-view, and this will likely be dropped.
+   */
+  updateXScale()
+  {
+    let oa = this.get('oa');
+    // xScale() uses stacks.keys().
+    oa.xScaleExtend = xScaleExtend(); // or xScale();
+  },
+
+  getAxisExtendedWidth(axisID)
+  {
+    let oa = this.get('oa');
+    let axis = oa.axes[axisID],
+    /** duplicates the calculation in axis-tracks.js : layoutWidth() */
+    blocks = axis && axis.blocks,
+    /** could also use : axis.axis1d.get('dataBlocks.length');
+     * subtract 1 for the reference block;  for a GM, map 0 -> 1 */
+    dataBlocksN = (blocks && blocks.length - 1) || 1,
+    trackWidth = 10,
+    trackBlocksWidth =
+      /*40 +*/ dataBlocksN * /*2 * */ trackWidth /*+ 20 + 50*/,
+    initialWidth = /*50*/ trackBlocksWidth,
+    /** this is just the Max value, not [min,max] */
+    allocatedWidth,
+    width = axis ? 
+      (allocatedWidth = axis.allocatedWidth()) ||
+      ((axis.extended === true) ? initialWidth : axis.extended) :
+    undefined;
+    dLog('getAxisExtendedWidth', width, allocatedWidth, initialWidth, axis.extended);
+    return width;
+  },
+  axisShowExtend(axis, axisID, axisG)
+  {
+    dLog('axisShowExtend', axis, axisID, axisG);
+    /** x translation of right axis */
+    let 
+      initialWidth = /*50*/ this.getAxisExtendedWidth(axisID),
+    axisData = axis.extended ? [axisID] : [];
+    let oa = this.get('oa');
+    if (axisG === undefined)
+      axisG = oa.svgContainer.selectAll("g.axis-outer#id" + axisID);
+    let ug = axisG.selectAll("g.axis-use")
+      .data(axisData);
+    let ugx = ug
+      .exit()
+      .transition().duration(500)
+      .remove();
+    ugx
+      .selectAll("use")
+      .attr("transform",function(d) {return "translate(0,0)";});
+    ugx
+      .selectAll("rect")
+      .attr("width", 0);
+    ugx
+      .selectAll(".foreignObject")
+      .attr("width", 0);
+    let eg = ug
+      .enter()
+      .append("g")
+      .attr("class", "axis-use");
+    let em = ug.merge(eg);
+
+    /** If dualAxis, use <use> to show 2 identical axes.
+     * Otherwise show only the left axis, and on the right side a line like an
+     * axis with no ticks, just the top & bottom tick lines, but reflected so
+     * that they point right.
+     */
+    let dualAxis = this.get('dualAxis');
+    let vc = this.get('oa.vc');
+    if (dualAxis) {
+      let eu = eg
+      /* extra "xlink:" seems required currently to work, refn :  dsummersl -
+       * https://stackoverflow.com/questions/10423933/how-do-i-define-an-svg-doc-under-defs-and-reuse-with-the-use-tag */
+        .append("use").attr("xlink:xlink:href", eltIdGpRef);
+      eu //.transition().duration(1000)
+        .attr("transform", (d) => "translate(" + this.getAxisExtendedWidth(d) + ",0)");
+
+      let er = eg
+        .append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", 0),
+      rm = er.merge(em.selectAll('g.axis-use > rect'))
+        .attr("height", vc.yRange);
+      rm
+        .transition().duration(1000)
+        .attr("width", initialWidth);
+    }
+    else
+    {
+      /** based on showTickLocations() */
+      const xOffset = 25, shiftRight=5;
+      let 
+        tickWidth = xOffset/5,
+      edgeHeight = axis.yRange(),
+      line = d3.line(),
+      sLine = line([
+        [+tickWidth, 0],
+        [0, 0],
+        [0, edgeHeight],
+        [+tickWidth, edgeHeight]
+      ]),
+      ra = eg
+        .append("path"),
+      thisAxis2d = this,
+      rm = ra.merge(em.selectAll('g.axis-use > path'))
+        .transition().duration(1000)
+        .attr("transform",function(d) {
+          let eWidth = thisAxis2d.getAxisExtendedWidth(d);
+          dLog('axis- path transform', eWidth, d, this);
+               return "translate(" + (eWidth) + ",0)";})
+        .attr("d", sLine);
+    }
+
+    // foreignObject is case sensitive - refn https://gist.github.com/mbostock/1424037
+    let ef = eg
+      .append("g")
+      .attr("class", "axis-html")
+      .append("foreignObject")
+      .attr("class", "foreignObject")
+    /*.attr("x", 0)
+     .attr("y", 0) */
+      .attr("width", initialWidth /*0*/)
+    // leave 4px unused at the bottom so as not to block sensitivity of chartTypeToggle (axis-chart)
+      .attr("height", vc.yRange-6);
+    let eb = ef
+      .append("xhtml:body")
+      .attr("class", "axis-table");
+    ef
+      .transition().duration(1000)
+      .attr("width", initialWidth);
+    if (eb.node() !== null)	  // .style() uses .node()
+      eb
+      .append("div")
+      .attr("id", "axis2D_" + axisID) // matches axis-2d:targetEltId()
+      .style("border:1px green solid");
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+
   /** Position the right edge path (if !dualAxis) for the current width
    * This is part of axisShowExtend(), which will be moved here;
    * this is the key part which needs to update.
    */
   positionRightEdgeEffect : Ember.computed('allocatedWidthsMax', 'allocatedWidths', function () {
+    this.positionRightEdge();
+  }),
+  positionRightEdge() {
     let axisUse;
     if (! this.get('dualAxis') && (axisUse = this.get('axisUse'))) {
       let
@@ -322,12 +532,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         dLog('positionRightEdgeEffect', axisUse.node(), width, p.node());
       }
     }
-  }),
+  },
 
   didRender() {
     let me = this;
     let prevSize,  currentSize;
     let stacks = this.get('data').stacks;
+    console.log("components/axis-2d didRender()");
+
     /** Called when resizer element for split axis resize is dragged.
      * @param d data of the resizer elt, which is axisID of the axis being resized
      */
@@ -437,6 +649,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     }
     Ember.run.later(dragResizeListen, 1000);
   },
+
+  willDestroyElement() {
+    this.set('allocatedWidthsMax', 0);
+    this.positionRightEdge();
+  }
 
 });
 

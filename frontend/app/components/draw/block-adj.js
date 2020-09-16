@@ -559,6 +559,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     'drawMap.stacksWidthChanges',
     'blockAdj.axes1d.0.flipRegionCounter',
     'blockAdj.axes1d.1.flipRegionCounter',
+    /* Paths end X position is affected when an adjacent axis opens/closes (split).  */
+    'blockAdj.axes1d.{0,1}.extended',
     /* will change scaleChanged to return {range: [from,to], domain : [from, to]}
      * currently it returns the scale function itself which is not usable as a dependent key.
      * Then the dependency can be : 'blockAdj.axes1d.{0,1}.scaleChanged.range.{0,1}'
@@ -581,6 +583,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
            stacksWidthChanges,
            this.get('block.stacksCount'));
     this.updatePathsPosition();
+    /* redraw after axis extended width has updated. */
+    Ember.run.later(() => this.updatePathsPosition(), 500);
 
       /* this update is an alternative trigger for updating the axes ticks and
        * scale when their domains change, e.g. when loaded features extend a

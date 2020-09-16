@@ -1964,7 +1964,8 @@ Stacked.prototype.extendedWidth = function()
          * Also axis-tracks.js : @see layoutWidth()
          */
         let shiftRight = 5;
-        width = shiftRight + stacks.oa.axisApi.getAxisExtendedWidth(this.axisName);
+        width = shiftRight + this.extended;
+        // using .extended in place of : stacks.oa.axisApi.getAxisExtendedWidth(this.axisName);
       }
     }
   }
