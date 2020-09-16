@@ -273,6 +273,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   },
 
   willDestroyElement() {
+    let extended = this.get('axis1d.extended');
+    if (extended) {
+      dLog('willDestroyElement .extended', extended, this.get('axisID'), this.get('axis1d'));
+    }
+    /* Expect here that .extended is false / 0, and this will cause show() to remove the rendered SVG elements.
+     * including the right edge path (so no need for positionRightEdge() to remove it).
+     */
+    this.show();
+
     if (this.get('axis1d')) {
       // expect that axis1d.axis2d === this or undefined.
       if (this.get('axis1d.axis2d') !== this) {
@@ -293,7 +302,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   willRender() {
     dLog('axis-2d willRender', this.get('axisID'));
-
+    this.show();
+  },
+  /** If .axis1d.extended, render the <g.axis-use> and sub-elements,
+   * otherwise remove them.
+   */
+  show() {
     let     axisS = this.get('axis1d.axisS'),
     axisID = this.get('axisID');
     this.axisShowExtend(axisS, axisID, /*axisG*/ undefined);
@@ -349,6 +363,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     /* Number of stacks hasn't changed, but X position needs to be
      * recalculated, as would be required by a change in the number of stacks. */
     let t = oa.axisApi.stacksAdjust(true, undefined);
+    if (! this.get('axis1d.extended')) {
+      this.show();
+    }
   },
   /** Update the X scale / horizontal layout of stacks
    * copied from draw-map; the x scale will likely move to stacks-view, and this will likely be dropped.
@@ -513,10 +530,6 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
           .transition().duration(1000)
           .attr("transform",function(d) {return "translate(" + (width) + ",0)";});
         dLog('positionRightEdgeEffect', axisUse.node(), width, p.node());
-        if (width === 0) {
-          p.on('end', () => p.remove());
-          // or : .on('end', function() { d3.select(this).remove(); })
-        }
       }
     }
   },
