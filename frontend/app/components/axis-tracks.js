@@ -126,7 +126,16 @@ function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
       if (interval.layer !== undefined)
         layersUsed[interval.layer] = true; /* or interval*/
     };
-    subTree.queryInterval(i[0], i[1], noteLayers);
+    /** Scaffolds normally abut each other and they can be viewed more clearly
+     * if that is treated as an overlap and layered.  This can be applied to
+     * other Features (physical and GM), but perhaps not for
+     * sub-elements. assignOverlapped can be used to differentiate, or we can
+     * pass overlapIfAbut as another parameter.
+     */
+    let overlapIfAbut = assignOverlapped;
+    sizeThreshold = sizeThreshold || 1000;
+    let overlapInterval = overlapIfAbut ? [i[0]-sizeThreshold, i[1]+sizeThreshold] : i;
+    subTree.queryInterval(overlapInterval[0], overlapInterval[1], noteLayers);
     function unusedLayers() {
       let unused = [];
       for (let j3 = 0; j<layersUsed.length; j++)
@@ -146,7 +155,7 @@ function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
     /** Assign a layer to one interval.
      * @param o  interval  */
     function assignInterval(o) {
-      if (! o.layer)
+      if (o.layer === undefined)
         o.layer = chooseNext();
     }
     /** Assigninterval layers to remaining intervals in overlaps[].
@@ -155,6 +164,9 @@ function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
       for (let j2 = 0; j2 < overlaps.length; j2++)
       {
         let o = overlaps[j2];
+	if ((o !== i) && (o.layer === i.layer) && (o.layer !== undefined)) {
+	  o.layer = undefined;
+	}
         assignInterval(o);
       }
     };
