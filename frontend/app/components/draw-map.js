@@ -5,6 +5,7 @@ const { inject: { service } } = Ember;
 
 import { isEqual } from 'lodash/lang';
 
+/* global require */
 
 
 /* using scheduleIntoAnimationFrame() from github.com/runspired/ember-run-raf
@@ -350,17 +351,6 @@ export default Ember.Component.extend(Ember.Evented, {
           () => axis.set('extended', enabled));  // was axis2DEnabled
       console.log("enableAxis2D in components/draw-map", axisID, enabled, axis);
       console.log("splitAxes", this.get('splitAxes'));
-    },
-
-    axisWidthResize : function(axisID, width, dx) {
-      console.log("axisWidthResize in components/draw-map", axisID, width, dx);
-      let axisWidthResize = this.get('axisWidthResize');
-      if (axisWidthResize) axisWidthResize(axisID, width, dx);
-    },
-    axisWidthResizeEnded : function() {
-      console.log("axisWidthResizeEnded in components/draw-map");
-      let axisWidthResizeEnded = this.get('axisWidthResizeEnded');
-      if (axisWidthResizeEnded) axisWidthResizeEnded();
     },
 
     resizeView : function()
@@ -1600,22 +1590,6 @@ export default Ember.Component.extend(Ember.Evented, {
     }
 
     stacksAxesDomVerify(stacks, oa.svgContainer);
-    function axisWidthResize(axisID, width, dx)
-    {
-      console.log("axisWidthResize", axisID, width, dx);
-      oa.axes[axisID].extended = width;
-      axisWidthResizeRight(axisID, width, dx);
-    };
-    function axisWidthResizeEnded()
-    {
-      console.log("axisWidthResizeEnded");
-
-      updateXScale();
-      stacks.changed = 0x10;
-      /* Number of stacks hasn't changed, but X position needs to be
-       * recalculated, as would be required by a change in the number of stacks. */
-      let t = stacksAdjust(true, undefined);
-    };
     /**  add width change to the x translation of axes to the right of this one.
      */
     function axisWidthResizeRight(axisID, width, dx)
@@ -1650,8 +1624,6 @@ export default Ember.Component.extend(Ember.Evented, {
         pathUpdate(undefined);
       }
     };
-    this.set('axisWidthResize', function (axisID, width, dx) { axisWidthResize(axisID, width, dx); });
-    this.set('axisWidthResizeEnded', function () { axisWidthResizeEnded(); });
     function updateXScale()
     {
       // xScale() uses stacks.keys().
@@ -2239,148 +2211,6 @@ export default Ember.Component.extend(Ember.Evented, {
     axisG = axisGempty;
     if (axisG.size())
       dLog(allG.nodes(), allG.node());
-
-    function eltIdGpRef(d, i, g)
-    {
-      dLog("eltIdGpRef", this, d, i, g);
-      let p2 = this.parentNode.parentElement;
-      return "#a" + p2.__data__;
-    }
-    if (! oa.axisApi.getAxisExtendedWidth)
-	    oa.axisApi.getAxisExtendedWidth = getAxisExtendedWidth;
-    function getAxisExtendedWidth(axisID)
-    {
-      let axis = oa.axes[axisID],
-      /** duplicates the calculation in axis-tracks.js : layoutWidth() */
-      blocks = axis && axis.blocks,
-      /** could also use : axis.axis1d.get('dataBlocks.length');
-       * subtract 1 for the reference block;  for a GM, map 0 -> 1 */
-      dataBlocksN = (blocks && blocks.length - 1) || 1,
-      trackWidth = 10,
-      trackBlocksWidth =
-        /*40 +*/ dataBlocksN * /*2 * */ trackWidth /*+ 20 + 50*/,
-      initialWidth = /*50*/ trackBlocksWidth,
-      /** this is just the Max value, not [min,max] */
-      allocatedWidth,
-      width = axis ? 
-        (allocatedWidth = axis.allocatedWidth()) ||
-        ((axis.extended === true) ? initialWidth : axis.extended) :
-      undefined;
-      dLog('getAxisExtendedWidth', width, allocatedWidth, initialWidth, axis.extended);
-      return width;
-    }
-    function axisShowExtend(axis, axisID, axisG)
-    {
-      /** x translation of right axis */
-      let 
-        initialWidth = /*50*/ getAxisExtendedWidth(axisID),
-      axisData = axis.extended ? [axisID] : [];
-      if (axisG === undefined)
-        axisG = oa.svgContainer.selectAll("g.axis-outer#id" + axisID);
-      let ug = axisG.selectAll("g.axis-use")
-        .data(axisData);
-      let ugx = ug
-        .exit()
-        .transition().duration(500)
-        .remove();
-      ugx
-        .selectAll("use")
-        .attr("transform",function(d) {return "translate(0,0)";});
-      ugx
-        .selectAll("rect")
-        .attr("width", 0);
-      ugx
-        .selectAll(".foreignObject")
-        .attr("width", 0);
-      let eg = ug
-        .enter()
-        .append("g")
-        .attr("class", "axis-use");
-      let em = ug.merge(eg);
-
-      /** If dualAxis, use <use> to show 2 identical axes.
-       * Otherwise show only the left axis, and on the right side a line like an
-       * axis with no ticks, just the top & bottom tick lines, but reflected so
-       * that they point right.
-       */
-      let dualAxis = options && options.dualAxis;
-      if (dualAxis) {
-        let eu = eg
-        /* extra "xlink:" seems required currently to work, refn :  dsummersl -
-         * https://stackoverflow.com/questions/10423933/how-do-i-define-an-svg-doc-under-defs-and-reuse-with-the-use-tag */
-          .append("use").attr("xlink:xlink:href", eltIdGpRef);
-        eu //.transition().duration(1000)
-          .attr("transform",function(d) {return "translate(" + getAxisExtendedWidth(d) + ",0)";});
-
-        let er = eg
-          .append("rect")
-          .attr("x", 0)
-          .attr("y", 0)
-          .attr("width", 0),
-        rm = er.merge(em.selectAll('g.axis-use > rect'))
-          .attr("height", vc.yRange);
-        rm
-          .transition().duration(1000)
-          .attr("width", initialWidth);
-      }
-      else
-      {
-        /** based on showTickLocations() */
-        const xOffset = 25, shiftRight=5;
-        let 
-          tickWidth = xOffset/5,
-        edgeHeight = axis.yRange(),
-        sLine = line([
-          [+tickWidth, 0],
-          [0, 0],
-          [0, edgeHeight],
-          [+tickWidth, edgeHeight]
-        ]),
-        ra = eg
-          .append("path"),
-        rm = ra.merge(em.selectAll('g.axis-use > path'))
-          .transition().duration(1000)
-          .attr("transform",function(d) {
-            let eWidth = getAxisExtendedWidth(d);
-            dLog('axis- path transform', eWidth, d, this);
-                 return "translate(" + (eWidth) + ",0)";})
-          .attr("d", sLine);
-      }
-
-      // foreignObject is case sensitive - refn https://gist.github.com/mbostock/1424037
-      let ef = eg
-        .append("g")
-        .attr("class", "axis-html")
-        .append("foreignObject")
-        .attr("class", "foreignObject")
-      /*.attr("x", 0)
-       .attr("y", 0) */
-        .attr("width", initialWidth /*0*/)
-      // leave 4px unused at the bottom so as not to block sensitivity of chartTypeToggle (axis-chart)
-        .attr("height", vc.yRange-6);
-      let eb = ef
-        .append("xhtml:body")
-        .attr("class", "axis-table");
-      ef
-        .transition().duration(1000)
-        .attr("width", initialWidth);
-      if (eb.node() !== null)	  // .style() uses .node()
-        eb
-        .append("div")
-        .attr("id", "axis2D_" + axisID) // matches axis-2d:targetEltId()
-        .style("border:1px green solid");
-    }
-    function axisShowExtendAll() {
-      // based on collateO
-      dLog("axisShowExtendAll", oa.axisIDs.length, oa.axisIDs);
-      oa.stacks.axisIDs().forEach(function(d){
-        let axisID = d,
-        axis = oa.axes[axisID];
-        if (trace_stack > 1)
-          dLog(d, axisId2Name(d), axis);
-        axisShowExtend(axis, axisID, undefined);
-      });
-    }
 
 
     if (trace_stack)
@@ -5270,7 +5100,7 @@ export default Ember.Component.extend(Ember.Evented, {
           oa.stacks.forEach(function (s) { s.redrawAdjacencies(); });
       }
       // could limit this to axes for which dataBlocks has changed
-      axisShowExtendAll();
+      // axisShowExtendAll();
       // pathUpdate() uses flow.gf, which is set after oa.foreground.
       if (oa.foreground && ysLength())
       {
@@ -5295,6 +5125,8 @@ export default Ember.Component.extend(Ember.Evented, {
 
       return t;
     }
+    if (! oa.axisApi.stacksAdjust)
+      oa.axisApi.stacksAdjust = stacksAdjust;
     function dragended(/*d*/) {
       deleteAfterDrag();
       let stacks = oa.stacks;
@@ -5672,7 +5504,7 @@ export default Ember.Component.extend(Ember.Evented, {
               let axis = Stacked.getAxis(axisName), stack = axis && axis.stack;
               // toggle axis.extended, which is initially undefined.
               axis.extended = ! axis.extended;
-              axisShowExtend(axis, axisName, undefined);
+              // axisShowExtend(axis, axisName, undefined);
               me.send('enableAxis2D', axisName, axis.extended);
             });
 
@@ -5871,7 +5703,7 @@ export default Ember.Component.extend(Ember.Evented, {
             } catch (exc) {
               console.log('showResize', 'resized', me, me.resized, widthChanged, heightChanged, useTransition, graphDim, brushedDomains, exc.stack || exc);
             }
-          axisShowExtendAll();
+          // axisShowExtendAll();
           showSynteny(oa.syntenyBlocks, undefined); });
       };
 
