@@ -537,7 +537,12 @@ export default InAxis.extend({
       return ((d.layer || 1) - 1) *  trackWidth * 2;
     };
     };
-    function yPosn(d) { /*console.log("yPosn", d);*/ return y(d[0]); };
+    function yPosn(d) { /*console.log("yPosn", d);*/
+      if (y(d[0]) > y(d[1]))
+        return y(d[1]);
+      else
+        return y(d[0])
+    };
     /** return the end of the y scale range which d is closest to.
      * Used when transitioning in and out.
      */
@@ -738,12 +743,15 @@ export default InAxis.extend({
       dLog('rm', rm.node(), 'es', es.nodes(), es.node());
       ra
         .attr('y', yEnd);
+      dLog('height', height);
       rm
       .transition().duration(featureTrackTransitionTime)
       .attr('x', xPosnS(subElements))
       .attr('y', yPosn)
       .attr('height' , height)
-      .attr('stroke', blockTrackColourI)
+      .attr('stroke', function(d,i,g) {
+        return (height(d) > 1) ? 'black' : blockTrackColourI.apply(this, [d,i,g]);
+      })
       .attr('fill', blockTrackColourI)
       ;
       dLog('ra', ra.size(), ra.node(), 'rm', rm.size(), rm.node());
