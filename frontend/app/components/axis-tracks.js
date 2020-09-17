@@ -81,6 +81,7 @@ function I(d) { return d; }
 /** filter intervalTree : select those intervals which intersect domain.
  * @param sizeThreshold intervals smaller than sizeThreshold are filtered out;
  * undefined means don't filter.
+ * @param abutDistance	if 2 intervals are within this distance, consider them overlapping
  * @param assignOverlapped  true means assign overlapping tracks in sequence;
  * this is used for Feature tracks, but for sub-elements there is likely to be a
  * sub-element which overlaps all the others, which would place them all in
@@ -89,7 +90,7 @@ function I(d) { return d; }
  * @return {intervals:  array of intervals,
  * layoutWidth : px width allocated for the layered tracks}
  */
-function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
+function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignOverlapped)
 {
   let intervals = [],
   result = {intervals : intervals};
@@ -115,16 +116,25 @@ function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
    * note the layers of those which already have a layer assigned,
    * give the remainder (starting with the current interval) layers which are not assigned in that group.
    * (this alg is approx, but probably ok;  seems like a bin-packing problem)
+   *
+   * Added : to get a chequerboard pattern when the intervals mostly abut each
+   * other, sort the intervals and use the .layer of another interval in
+   * overlaps[] for interval o if it does not overlap o, checked with
+   * nonOverlap(oMargin, );   otherwise fall back to assignInterval() which uses
+   * chooseNext().
    */
-  let i1 = subTree.intervals, layers = {}, nextLayer = 0, largestLayer = 0;
+  let i1 = subTree.intervals.sortBy('0'),
+  layers = {}, largestLayer = 0;
   for (let j=0; j<i1.length; j++)
   {
     // could continue if (i1[j].layer)
     let i=i1[j], overlaps = [], layersUsed = [];
     function noteLayers(interval) {
-      overlaps.push(interval);
-      if (interval.layer !== undefined)
-        layersUsed[interval.layer] = true; /* or interval*/
+      if (interval !== i) {
+	overlaps.push(interval);
+	if (interval.layer !== undefined)
+          layersUsed[interval.layer] = true; /* or interval*/
+      }
     };
     /** Scaffolds normally abut each other and they can be viewed more clearly
      * if that is treated as an overlap and layered.  This can be applied to
@@ -132,21 +142,21 @@ function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
      * sub-elements. assignOverlapped can be used to differentiate, or we can
      * pass overlapIfAbut as another parameter.
      */
-    let overlapIfAbut = assignOverlapped;
-    sizeThreshold = sizeThreshold || 1000;
-    let overlapInterval = overlapIfAbut ? [i[0]-sizeThreshold, i[1]+sizeThreshold] : i;
+    let overlapIfAbut = abutDistance !== undefined;
+    let overlapInterval = overlapIfAbut ? penumbra(i, abutDistance) : i;
     subTree.queryInterval(overlapInterval[0], overlapInterval[1], noteLayers);
     function unusedLayers() {
       let unused = [];
-      for (let j3 = 0; j<layersUsed.length; j++)
+      /** Start counting with layer 1 - it simplifies a number of expressions. */
+      for (let j3 = 1; j<layersUsed.length; j++)
       {
         if (! layersUsed[j3])
           unused.push(j3);
       }
       return unused;
     }
-    /** if layersUsed is empty, then ++lastUsed is 0,  */
-    let lastUsed = layersUsed.length-1,
+    /** if layersUsed is empty, then ++lastUsed is 1,  */
+    let lastUsed = layersUsed.length || 0,
     u =  unusedLayers();
     function chooseNext() {
       let next = u.pop() || ++lastUsed;
@@ -155,7 +165,7 @@ function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
     /** Assign a layer to one interval.
      * @param o  interval  */
     function assignInterval(o) {
-      if (o.layer === undefined)
+      if (! o.layer)
         o.layer = chooseNext();
     }
     /** Assigninterval layers to remaining intervals in overlaps[].
@@ -163,11 +173,24 @@ function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
     function assignRemainder() {
       for (let j2 = 0; j2 < overlaps.length; j2++)
       {
+	/** intervals which overlap i */
         let o = overlaps[j2];
-	if ((o !== i) && (o.layer === i.layer) && (o.layer !== undefined)) {
+	/** if o has an assigned .layer which conflicts with i, clear it.  */
+	if ((o !== i) && (o.layer === i.layer) && o.layer) {
 	  o.layer = undefined;
 	}
-        assignInterval(o);
+	if (! o.layer) {
+	  /** Expect that on the opposite side of i there is another abutting
+	   * interval which does not overlap o.  So use its .layer
+	   */
+	  let oMargin = penumbra(o, abutDistance);
+	  let i2 = overlaps.find((i1) => (i1 !== o) && nonOverlap(oMargin, i1));
+	  if (i2) {
+            o.layer = i2.layer;
+	  } else {
+            assignInterval(o);
+	  }
+	}
       }
     };
     assignInterval(i);
@@ -181,6 +204,30 @@ function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
 
   return result;
 }
+
+/*----------------------------------------------------------------------------*/
+
+/** @return an interval larger by abutDistance on each end than the given interval
+ * @desc Used for detecting near-overlap, within distance abutDistance.
+ */
+function penumbra(i, abutDistance) {
+  return [i[0]-abutDistance, i[1]+abutDistance];
+}
+
+/** @return true if i0 and i1 do not overlap.
+ * @desc Used in array.find()
+ * @param i0, i1	interval in the form [from,to], sorted
+ * @desc if not sorted, see also intervalOrdered()
+ */
+function nonOverlap(i0, i1) {
+  /** based on utils/interval-calcs.js : intervalOverlap() */
+  let overlap = 
+      ((i1[0] < i0[1]) && (i0[0] < i1[1]));
+  return ! overlap;
+}
+
+/*----------------------------------------------------------------------------*/
+
 
 /** select the g.axis-outer which contains g.axis-use. */
 function selectAxis(axisID)
@@ -523,7 +570,12 @@ export default InAxis.extend({
        * [ sizeThreshold is disabled by setting to undefined, while we prototype how to select a sub-set of features to display ]
        */
       sizeThreshold = undefined, // zoomed ? undefined : pxSize * 1/*5*/,
-      tracksLayout = regionOfTree(t, y.domain(), sizeThreshold, true),
+      yDomain = y.domain(),
+      /** Testing showed that 150 is the smallest value which works for physical
+       * genomes (600Mb) (use 200 in this case), and domain/1000 works OK for GM (~300 cM).
+       */
+      abutDistance = Math.min((yDomain[1] - yDomain[0]) / 1000, 200),
+      tracksLayout = regionOfTree(t, y.domain(), sizeThreshold, abutDistance, true),
       data = tracksLayout.intervals;
       let blockState = thisAt.lookupAxisTracksBlock(blockId);
       blockState.set('layoutWidth', tracksLayout.layoutWidth);
@@ -1291,7 +1343,7 @@ export default InAxis.extend({
      * time, so this is not done (and there is an update issue with rerending in
      * this case).  */
     // yDomain = this.get('yDomain'),
-    tracksLayout = regionOfTree(subEltTree.intervalTree[blockId], undefined, sizeThreshold, false),
+    tracksLayout = regionOfTree(subEltTree.intervalTree[blockId], undefined, sizeThreshold, undefined, false),
     data = tracksLayout.intervals;
     return data;
   },
