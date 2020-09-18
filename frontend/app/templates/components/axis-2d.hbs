@@ -38,7 +38,9 @@
   <div>subComponents :
     {{axis-charts data=data axis=this axisID=axisID childWidths=childWidths allocatedWidths=allocatedWidths blocks=viewedChartable resizeEffect=resizeEffect}}
     {{log 'blockService' blockService 'viewedChartable' blockService.viewedChartable}}
-    {{axis-tracks axis=this axisID=axisID childWidths=childWidths allocatedWidths=allocatedWidths trackBlocksR=dataBlocks resizeEffect=resizeEffect}}
+    {{axis-tracks axis=this axisID=axisID childWidths=childWidths allocatedWidths=allocatedWidths
+      trackBlocksR=dataBlocks resizeEffect=resizeEffect
+      qtlBlocks=axis1d.qtlBlocks setQtlsPosn=(action setQtlsPosn) }}
     {{#each subComponents as |subComponent|}}
       {{subComponent}}
     {{/each}}

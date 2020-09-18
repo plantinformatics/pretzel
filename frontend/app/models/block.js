@@ -109,6 +109,11 @@ export default DS.Model.extend({
     return paths;
   }),
 
+  isQtl : Ember.computed('datasetId.meta.type', function () {
+    let metaType = dataset.get('datasetId.meta.type');
+    return metaType === "QTL";
+  }),
+
   /*--------------------------------------------------------------------------*/
 
   hasFeatures : Ember.computed('featureCount', function () {

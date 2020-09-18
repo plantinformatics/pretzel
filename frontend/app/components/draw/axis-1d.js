@@ -265,6 +265,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
    */
   flipRegionCounter : 0,
 
+  /*--------------------------------------------------------------------------*/
+  actions : {
+    setQtlsPosn(qtlsPosn) {
+      this.set('qtlsPosn', qtlsPosn);
+    }
+  },
+
+  /*--------------------------------------------------------------------------*/
 
   init() {
     this._super(...arguments);
@@ -362,13 +370,24 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       dLog('viewedBlocks', referenceBlock, axesBlocks, blocks);
     return blocks || [];
   }),
-  dataBlocks : Ember.computed('viewedBlocks.@each.isData', function () {
+  dataBlocksBeforeFilter : Ember.computed('viewedBlocks.@each.isData', function () {
     let
     /** block.isData is similar to the block.hasFeatures filtering which is done in loadedViewedChildBlocks() */
     dataBlocks = this.get('viewedBlocks')
       .filter((block) => block.get('isData'));
     dLog('dataBlocks', dataBlocks);
     return dataBlocks;
+  }),
+  qtlBlocks : Ember.computed('dataBlocksBeforeFilter.[]', function () {
+    let dataBlocks = this.get('dataBlocksBeforeFilter.[]');
+    let qtls = dataBlocks.filterBy('isQtl');
+    return qtls;
+  }),
+  dataBlocks : Ember.computed('dataBlocksBeforeFilter.[]', 'qtlBlocks.[]', function () {
+    let dataBlocks = this.get('dataBlocksBeforeFilter');
+    let notQtls = dataBlocks.filter((b) => ! b.get('isQtl'));
+    let blocks = notQtls.concat(this.get('qtlBlocks'));
+    return blocks;
   }),
 
   /** Reverse map dataBlocks : map from blockId to index position within the dataBlocks[].

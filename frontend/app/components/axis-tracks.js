@@ -301,6 +301,8 @@ export default InAxis.extend({
    */
   blocks : {},
 
+  oa : Ember.computed.alias('axis1d.drawMap.oa'),
+
   /*--------------------------------------------------------------------------*/
 
   init() {
@@ -325,7 +327,10 @@ export default InAxis.extend({
 
     putContent : function(object, event) {
       console.log("putContent in components/axis-tracks", object, event, event.type, event.target.innerText);
-    }
+    },
+    setQtlsPosn(qtlsPosn) {
+      this.sendAction('setQtlsPosn', qtlsPosn);
+    },
 
   },
 
@@ -1424,6 +1429,31 @@ export default InAxis.extend({
     setClipWidth(axisID, layoutWidth);
     return layoutWidth;
   }),
+  /** Calculate <x,y> positions of qtl features relative to the axis
+   */
+  qtlPositions : Ember.computed('qtlBlocks', function () {
+    let
+    axisID = this.get('axisID'),
+    // yScale = this.get('oa').y[axisID],
+    axisApi = this.get('oa.axisApi'),
+    qtlBlocks = this.get('qtlBlocks'),
+    qtlFeatures = qtlBlocks.map((block) => {
+      let
+      block = this.lookupAxisTracksBlock(block.get('id')),
+      xOffset = block.offset,
+      features = block.get('features'),
+      positions = features.map((feature) => {
+	/** this is a simplified form of similar calc in tracksTree() */
+	let yrange = feature.get('value').map(
+	  (v, i) => (i < 2) && axisApi.axisRange2Domain(axisID, v)),
+	    return {feature, xOffset, yRange};
+      });
+      return positions;
+    });
+    this.send('setQtlsPosn', qtlFeatures);
+    return qtlFeatures;
+  }),
+
   /** Render changes driven by changes of block data or scope.
    */
   showTrackBlocks: Ember.computed(
