@@ -94,8 +94,9 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     range0 = axis.yRange2();
   let
     axisObj = this.axis1d.get('axisObj'),
-  /** using the computed function extended() would entail recursion. */
-  extended = axisObj && axisObj.extended;
+  // The following call to this.axis1d.get('extended')
+  // replaces directly accessing axisObj.extended
+  extended = this.axis1d.get('extended');
   if (trace_stack)
     dLog('showTickLocations', extended, axisObj, groupName);
 
@@ -744,8 +745,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     extended = this.get('extended'),
     axisID = this.get('axis.id');
     dLog('extended', extended, axisID);
-    // possibly add this to axisAPi, or pass an action param.
-    this.drawMap.axisWidthResizeEnded();
+    // possibly ... pass an action param.
+    let axis2d = this.get('axis2d');
+    if (axis2d) {
+      Ember.run.next(() => axis2d.axisWidthResizeEnded());
+    }
 
     this.showExtendedClass();
     this.drawTicks();
