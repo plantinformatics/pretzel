@@ -98,12 +98,16 @@ function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignO
     if ((sizeThreshold === undefined) || (interval[1] - interval[0] > sizeThreshold))
       intervals.push(interval);
   }
+  function visitFlip(interval) { // adding this made no difference
+    if ((sizeThreshold === undefined) || (interval[0] - interval[1] > sizeThreshold))
+      intervals.push(interval);
+  }
   let subTree;
   if (domain) {
     if (domain[0] < domain[1])
       intervalTree.queryInterval(domain[0], domain[1], visit);
     else // ie: axis has been flipped
-      intervalTree.queryInterval(domain[1], domain[0], visit);
+      intervalTree.queryInterval(domain[1], domain[0], visitFlip);
     // Build another tree with just those intervals which intersect domain.
     subTree = createIntervalTree(intervals);
   } else {
@@ -130,9 +134,10 @@ function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignO
     // could continue if (i1[j].layer)
     let i=i1[j], overlaps = [], layersUsed = [];
     function noteLayers(interval) {
+      dLog("noteLayers, interval.layer", interval.layer);
       if (interval !== i) {
-	overlaps.push(interval);
-	if (interval.layer !== undefined)
+        overlaps.push(interval);
+        if (interval.layer !== undefined)
           layersUsed[interval.layer] = true; /* or interval*/
       }
     };
@@ -143,7 +148,7 @@ function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignO
      * pass overlapIfAbut as another parameter.
      */
     let overlapIfAbut = abutDistance !== undefined;
-    let overlapInterval = overlapIfAbut ? penumbra(i, abutDistance) : i;
+    let overlapInterval = overlapIfAbut ? penumbra(i, abutDistance) : i; // unaffected by flip
     subTree.queryInterval(overlapInterval[0], overlapInterval[1], noteLayers);
     function unusedLayers() {
       let unused = [];
@@ -173,24 +178,24 @@ function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignO
     function assignRemainder() {
       for (let j2 = 0; j2 < overlaps.length; j2++)
       {
-	/** intervals which overlap i */
+        /** intervals which overlap i */
         let o = overlaps[j2];
-	/** if o has an assigned .layer which conflicts with i, clear it.  */
-	if ((o !== i) && (o.layer === i.layer) && o.layer) {
-	  o.layer = undefined;
-	}
-	if (! o.layer) {
-	  /** Expect that on the opposite side of i there is another abutting
-	   * interval which does not overlap o.  So use its .layer
-	   */
-	  let oMargin = penumbra(o, abutDistance);
-	  let i2 = overlaps.find((i1) => (i1 !== o) && nonOverlap(oMargin, i1));
-	  if (i2) {
-            o.layer = i2.layer;
-	  } else {
-            assignInterval(o);
-	  }
-	}
+        /** if o has an assigned .layer which conflicts with i, clear it.  */
+        if ((o !== i) && (o.layer === i.layer) && o.layer) {
+          o.layer = undefined;
+        }
+        if (! o.layer) {
+          /** Expect that on the opposite side of i there is another abutting
+           * interval which does not overlap o.  So use its .layer
+           */
+          let oMargin = penumbra(o, abutDistance);
+          let i2 = overlaps.find((i1) => (i1 !== o) && nonOverlap(oMargin, i1));
+          if (i2) {
+                  o.layer = i2.layer;
+          } else {
+                  assignInterval(o);
+          }
+        }
       }
     };
     assignInterval(i);
@@ -198,6 +203,7 @@ function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignO
       assignRemainder();
     if (lastUsed > largestLayer)
       largestLayer = lastUsed;
+    dLog("regionOfTree: largestLayer", largestLayer);
   }
   /* first layer allocated is 1; allocate one layer if 0.  */
   result.layoutWidth = (largestLayer || 1) * trackWidth * 2;
@@ -578,13 +584,15 @@ export default InAxis.extend({
       tracksLayout = regionOfTree(t, y.domain(), sizeThreshold, abutDistance, true),
       data = tracksLayout.intervals;
       let blockState = thisAt.lookupAxisTracksBlock(blockId);
-      blockState.set('layoutWidth', tracksLayout.layoutWidth);
+      blockState.set('layoutWidth', tracksLayout.layoutWidth); // changes after flipping
+      dLog("trackBlocksData, layoutWidth", tracksLayout.layoutWidth);
       if (! blockState.hasOwnProperty('subelement')) {
         blockState.subElements = blockTagSubElements(blockId);
       }
       /** [min, max] */
       let allocatedWidth = thisAt.get('allocatedWidth');
       /** factor by which blockState.trackWidth must be reduced for layoutWidth to fit in trackWidth. */
+      dLog("trackBlocksData, blockState.layoutWidth / trackWidth", blockState.layoutWidth, trackWidth);
       let compress = blockState.layoutWidth / trackWidth;
       /* don't apply fixedBlockWidth if block subElements - the sub-elements
        * would be too thin to see well, and overlap is less likely.
@@ -789,7 +797,8 @@ export default InAxis.extend({
 
       let
       blockC = thisAt.lookupAxisTracksBlock(blockId),
-      trackWidth = blockC.trackWidth;
+      trackWidth = blockC.get('trackWidth');
+      dLog("eachRect: trackWidth", trackWidth);
       appendRect.apply(this, [re, rs, trackWidth, false]);
     }
     /** - rename re and rs to ge and gs
@@ -802,10 +811,12 @@ export default InAxis.extend({
         .append("rect");
       ra
         .attr('class', 'track')
-        .transition().duration(featureTrackTransitionTime)
+        //.transition().duration(featureTrackTransitionTime)
         .each(subElements ? configureSubTrackHover : configureTrackHover);
       rs.merge(ra)
         .attr('width', width);
+
+      dLog("appendRect: trackWidth", trackWidth);
 
       let
       blockIndex = thisAt.get('axis1d.blockIndexes'),
@@ -829,7 +840,7 @@ export default InAxis.extend({
         .attr('y', yEnd);
       dLog('height', height);
       rm
-      .transition().duration(featureTrackTransitionTime)
+      //.transition().duration(featureTrackTransitionTime)
       .attr('x', xPosnS(subElements))
       .attr('y', yPosn)
       .attr('height' , height)
