@@ -104,13 +104,16 @@ function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignO
   }
   let subTree;
   if (domain) {
+    dLog("regionOfTree, domain", domain);
     if (domain[0] < domain[1])
       intervalTree.queryInterval(domain[0], domain[1], visit);
     else // ie: axis has been flipped
       intervalTree.queryInterval(domain[1], domain[0], visitFlip);
     // Build another tree with just those intervals which intersect domain.
     subTree = createIntervalTree(intervals);
+    dLog("regionOfTree, intervals", intervals);
   } else {
+    dLog("regionOfTree, subtree");
     subTree = intervalTree;
     result.intervals = intervalTree.intervals;
   }
@@ -148,6 +151,7 @@ function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignO
      * pass overlapIfAbut as another parameter.
      */
     let overlapIfAbut = abutDistance !== undefined;
+    dLog("regionOfTree, abutDistance", abutDistance);
     let overlapInterval = overlapIfAbut ? penumbra(i, abutDistance) : i; // unaffected by flip
     subTree.queryInterval(overlapInterval[0], overlapInterval[1], noteLayers);
     function unusedLayers() {
@@ -217,6 +221,7 @@ function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignO
  * @desc Used for detecting near-overlap, within distance abutDistance.
  */
 function penumbra(i, abutDistance) {
+  dLog("penumbra, i, result", i, i[0]-abutDistance, i[1]+abutDistance);
   return [i[0]-abutDistance, i[1]+abutDistance];
 }
 
@@ -580,7 +585,10 @@ export default InAxis.extend({
       /** Testing showed that 150 is the smallest value which works for physical
        * genomes (600Mb) (use 200 in this case), and domain/1000 works OK for GM (~300 cM).
        */
-      abutDistance = Math.min((yDomain[1] - yDomain[0]) / 1000, 200),
+      domainRange = yDomain[1] - yDomain[0],
+      abutDistance = (domainRange > 0) ?
+        Math.min(domainRange / 1000, 200) : 
+        Math.min(-domainRange / 1000, 200),
       tracksLayout = regionOfTree(t, y.domain(), sizeThreshold, abutDistance, true),
       data = tracksLayout.intervals;
       let blockState = thisAt.lookupAxisTracksBlock(blockId);
