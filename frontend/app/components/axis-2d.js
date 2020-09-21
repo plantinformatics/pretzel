@@ -540,114 +540,115 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let stacks = this.get('data').stacks;
     console.log("components/axis-2d didRender()");
 
-    /** Called when resizer element for split axis resize is dragged.
-     * @param d data of the resizer elt, which is axisID of the axis being resized
-     */
-    function resized(width, dx, eltSelector, resizable, resizer,  resizerElt, d)
-    {
-      console.log("resized", width, dx, eltSelector, resizable.node(), resizer.node(),  resizerElt, d);
-      // if resizer is in <foreignObject> then resize the <foreignObject>
-      if (resizerElt.classList[1] === 'inFO') {
+    Ember.run.later(() => this.dragResizeListen(), 1000);
+  },
+
+  /** Called when resizer element for split axis resize is dragged.
+   * @param d data of the resizer elt, which is axisID of the axis being resized
+   */
+  resizedByDrag(width, dx, eltSelector, resizable, resizer,  resizerElt, d)
+  {
+    console.log("resizedByDrag", width, dx, eltSelector, resizable.node(), resizer.node(),  resizerElt, d);
+    // if resizer is in <foreignObject> then resize the <foreignObject>
+    if (resizerElt.classList[1] === 'inFO') {
       let at = resizable.node(),
-        fo = at.parentElement.parentElement;
-        dLog('resized', fo, at);
-        fo.setAttribute('width', width);
-      }
-      setWidth(width, dx);
+          fo = at.parentElement.parentElement;
+      dLog('resizedByDrag', fo, at);
+      fo.setAttribute('width', width);
     }
-    function setWidth (width, dx) {
-      // constructed in axisShowExtend()
-      // narrow to : g.axis-outer#id<axisID> > g.axis-use
-      let 
-        axisUse = me.get('axisUse'),
-      dualAxis = me.get('dualAxis'),
-      rectSel = 'g.axis-use ' + (dualAxis ? '' : '> clipPath ') + '> rect',
-      rect = axisUse.select(rectSel),
-      /** based on axisID. */
-      use = me.get('use');
-      /** initially data of use is axisID (d), until .data([width]) below */
-      let
-        startWidth = me.get('startWidth');
-      let
-        delta = width - (startWidth || 0),
-      ok = Math.abs(delta) < stacks.axisXRangeMargin;
-      console.log(startWidth, width, delta, "axisXRangeMargin", stacks.axisXRangeMargin, ok);
-      /* if !ok, maybe some animation to indicate the limit is reached,
-       * or can probably apply the above check as a filter :
-       * defaultFilter = dragResize.filter();  dragResize.filter(function () { defaultFilter(...) && ... ok; } );
-       */
-      if (ok)
-      {
-        use
-          .data([width])
-          .transition().duration(axisTransitionTime)
-          .attr("transform", function(d) {return "translate(" + d + ",0)";});
-        if (! use.empty())  // use.data() is not valid if empty
-          console.log('setWidth', use.node(), width, use.data(), use.attr('transform'), use.transition());
-        if (rect.size() == 0)
-          console.log('setWidth rect', rect.node(), axisUse.node(), use.node());
-        else
-        {
-          rect.attr("width", width);
-          console.log(rect.node(), rect.attr('width'));
-        }
-        let axisTitle = axisUse.selectAll('g > g.axis-all > text')
-          .transition().duration(axisTransitionTime)
-          // duplicated in utils/draw/axis.js : yAxisTitleTransform()
-          .attr("transform", "translate(" + width/2 + ",0)");
-        console.log('axisTitle', axisTitle);
-
-        /** Can use param d, same value as me.get('axisID').
-         * axisID is also on the parent of <use> :
-         * useElt = axisUse.node();
-         * (useElt.length > 0) && (axisID = useElt[0].parentElement.__data__);
-         */
-        let
-          axisID = me.get('axisID');
-        console.log('extended', me.get('axis1d.extended'), width);
-        me.set('width', width);
-        // When calculated .layoutWidth changes, take into account user adjustment to width.
-        me.set('adjustedWidth', width);
-        currentSize = width; // dx ?
-
-        /** when parentView.send(axisWidthResize ) was added in 22a6af9,
-         * draw-map was parentView of axis-2d;  now its parentView is axis-1d.
-         * Will soon drop this connection. */
-        let drawMap = me.get('drawMap');
-        /* Recalculate positions & translations of axes.
-         * A possible optimisation : instead, add width change to the x translation of axes to the right of this one.
-         */
-        drawMap.send('axisWidthResize', axisID, width, dx);
-      }
-      return ok;
-    };
-    this.set('setWidth', setWidth);
-    function resizeStarted()
+    this.setWidth(width, dx);
+  },
+  setWidth (width, dx) {
+    // constructed in axisShowExtend()
+    // narrow to : g.axis-outer#id<axisID> > g.axis-use
+    let 
+    axisUse = this.get('axisUse'),
+    dualAxis = this.get('dualAxis'),
+    rectSel = 'g.axis-use ' + (dualAxis ? '' : '> clipPath ') + '> rect',
+    rect = axisUse.select(rectSel),
+    /** based on axisID. */
+    use = this.get('use');
+    /** initially data of use is axisID (d), until .data([width]) below */
+    let
+    startWidth = this.get('startWidth');
+    let
+    delta = width - (startWidth || 0),
+    ok = Math.abs(delta) < stacks.axisXRangeMargin;
+    console.log(startWidth, width, delta, "axisXRangeMargin", stacks.axisXRangeMargin, ok);
+    /* if !ok, maybe some animation to indicate the limit is reached,
+     * or can probably apply the above check as a filter :
+     * defaultFilter = dragResize.filter();  dragResize.filter(function () { defaultFilter(...) && ... ok; } );
+     */
+    if (ok)
     {
-      me.set('startWidth', me.rectWidth());
-    }
-    function resizeEnded()
-    {
-      let drawMap = me.get('drawMap');
-      console.log("resizeEnded");
-      drawMap.send('axisWidthResizeEnded');
-      me.trigger('resized', prevSize, currentSize);
-      prevSize = currentSize;
-    }
-    function dragResizeListen () { 
-      let axisID = me.get('axisID'),
-      /** alternative : 'g.axis-outer#id' + axisID + ' .foreignObject' */
-       axisSel = 'div#axis2D_' + axisID;
-      let dragResize = eltWidthResizable(axisSel, undefined, resized);
-      if (! dragResize)
-        console.log('dragResizeListen', axisID, axisSel);
+      use
+        .data([width])
+        .transition().duration(axisTransitionTime)
+        .attr("transform", function(d) {return "translate(" + d + ",0)";});
+      if (! use.empty())  // use.data() is not valid if empty
+        console.log('setWidth', use.node(), width, use.data(), use.attr('transform'), use.transition());
+      if (rect.size() == 0)
+        console.log('setWidth rect', rect.node(), axisUse.node(), use.node());
       else
       {
-        dragResize.on('start', resizeStarted);
-        dragResize.on('end', resizeEnded);
+        rect.attr("width", width);
+        console.log(rect.node(), rect.attr('width'));
       }
+      let axisTitle = axisUse.selectAll('g > g.axis-all > text')
+          .transition().duration(axisTransitionTime)
+      // duplicated in utils/draw/axis.js : yAxisTitleTransform()
+          .attr("transform", "translate(" + width/2 + ",0)");
+      console.log('axisTitle', axisTitle);
+
+      /** Can use param d, same value as this.get('axisID').
+       * axisID is also on the parent of <use> :
+       * useElt = axisUse.node();
+       * (useElt.length > 0) && (axisID = useElt[0].parentElement.__data__);
+       */
+      let
+      axisID = this.get('axisID');
+      console.log('extended', this.get('axis1d.extended'), width);
+      this.set('width', width);
+      // When calculated .layoutWidth changes, take into account user adjustment to width.
+      this.set('adjustedWidth', width);
+      this.set('currentSize', width); // dx ?
+
+      /** when parentView.send(axisWidthResize ) was added in 22a6af9,
+       * draw-map was parentView of axis-2d;  now its parentView is axis-1d.
+       * Will soon drop this connection. */
+      let drawMap = this.get('drawMap');
+      /* Recalculate positions & translations of axes.
+       * A possible optimisation : instead, add width change to the x translation of axes to the right of this one.
+       */
+      drawMap.send('axisWidthResize', axisID, width, dx);
     }
-    Ember.run.later(dragResizeListen, 1000);
+    return ok;
+  },
+
+  resizeStarted()
+  {
+    this.set('startWidth', this.rectWidth());
+  },
+  resizeEnded()
+  {
+    let drawMap = this.get('drawMap');
+    console.log("resizeEnded");
+    this.axisWidthResizeEnded();
+    this.trigger('resized', this.get('prevSize'), this.get('currentSize'));
+    this.set('prevSize', this.get('currentSize'));
+  },
+  dragResizeListen () { 
+    let axisID = this.get('axisID'),
+        /** alternative : 'g.axis-outer#id' + axisID + ' .foreignObject' */
+        axisSel = 'div#axis2D_' + axisID;
+    let dragResize = eltWidthResizable(axisSel, undefined, Ember.run.bind(this, this.resizedByDrag));
+    if (! dragResize)
+      console.log('dragResizeListen', axisID, axisSel);
+    else
+    {
+      dragResize.on('start', Ember.run.bind(this, this.resizeStarted));
+      dragResize.on('end', Ember.run.bind(this, this.resizeEnded));
+    }
   },
 
   willDestroyElement() {
