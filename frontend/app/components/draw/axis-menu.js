@@ -6,6 +6,7 @@ const FileName = "components/axis-menu";
 
 export default Ember.Component.extend({
 
+  classNames: ['axis-menu'],
 
   actions: {
     deleteMap : function() {
