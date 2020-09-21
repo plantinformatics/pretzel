@@ -5414,7 +5414,7 @@ export default Ember.Component.extend(Ember.Evented, {
         let node_ = this;
         Ember.$(node_)
         .popover({
-            trigger : "hover", // manual", // "click focus",
+            trigger : "manual", // hover", // "click focus",
           sticky: true,
           delay: {show: 200, hide: 1500},
           container: 'div#holder',
