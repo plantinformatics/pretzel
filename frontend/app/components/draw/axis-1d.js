@@ -257,6 +257,8 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
  */
 export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   blockService: service('data/block'),
+  axisBrush: service('data/axis-brush'),
+
 
   stacks : stacks,
   /** oa is used for these connections, which will eventually be
@@ -302,17 +304,33 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
 
   /** @return true if there is a brush on this axis.
    */
-  brushed : Ember.computed('oa.brushedRegions', 'oa.selectedAxes.[]', 'axis.id', function () {
+  brushed : Ember.computed(
+    'axis.id',
+    'axisBrush.brushedAxes.[]',
     /** oa.brushedRegions is a hash, and it is updated not replaced,
      * so as a dependency key it will not signal changes; selectedAxes
      * is an array and is changed when brushedRegions is changed, so
      * it is used as a dependency.
      */
+    'oa.brushedRegions', 'oa.selectedAxes.[]',
+    function () {
     let brushedRegions = this.get('oa.brushedRegions'),
     axisId = this.get('axis.id'),
     brushed = !! brushedRegions[axisId];
     dLog('brushed', axisId, brushedRegions[axisId]);
     return brushed;
+  }),
+
+  zoomed2 : Ember.computed('zoomed', 'domain', 'zoomedDomain', function () {
+    let
+    zoomed = this.get('zoomed'),
+    domain = this.get('domain'),
+    zoomedDomain = this.get('zoomedDomain');
+		if (zoomed) {
+			zoomed &= (domain[0] !== zoomedDomain[0]) ||
+				(domain[1] !== zoomedDomain[1]);
+		}
+    return zoomed;
   }),
 
   /*--------------------------------------------------------------------------*/
@@ -897,7 +915,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     as = this.get('axisSelect'),
     gb = as.selectAll('g.btn');
     gb.attr('class', () => 'btn ' + ['brushed', 'zoomed'].filter((state) => this.get(state)).join(' '));
-    dLog('showZoomResetButtonState', gb.node());
+    dLog('showZoomResetButtonState', gb.node(), this.get('zoomed'), this.get('zoomed2'));
   }
   
 });
