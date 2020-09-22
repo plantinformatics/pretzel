@@ -325,9 +325,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   axisWidthResize(axisID, width, dx)
   {
+<<<<<<< HEAD
     dLog("axisWidthResize", axisID, width, dx);
     let oa = this.get('oa');
     oa.axes[axisID].extended = width;
+=======
+    console.log("axisWidthResize", axisID, width, dx);
+    // this is already done when called from setWidth()
+    this.set('adjustedWidth', width);
+>>>>>>> axis-2d : simplifying after connection changes
     // axisWidthResizeRight(axisID, width, dx);
   },
   axisWidthResizeEnded()
@@ -491,7 +497,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * this is the key part which needs to update.
    */
   positionRightEdgeEffect : Ember.computed('allocatedWidthsMax', 'allocatedWidths', function () {
-    this.positionRightEdge();
+    // this.positionRightEdge();
   }),
   positionRightEdge() {
     let axisUse;
@@ -590,14 +596,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       this.set('adjustedWidth', width);
       this.set('currentSize', width); // dx ?
 
-      /** when parentView.send(axisWidthResize ) was added in 22a6af9,
-       * draw-map was parentView of axis-2d;  now its parentView is axis-1d.
-       * Will soon drop this connection. */
-      let drawMap = this.get('drawMap');
       /* Recalculate positions & translations of axes.
        * A possible optimisation : instead, add width change to the x translation of axes to the right of this one.
        */
-      drawMap.send('axisWidthResize', axisID, width, dx);
+      this.axisWidthResize(axisID, width, dx);
     }
     return ok;
   },
@@ -608,7 +610,6 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   },
   resizeEnded()
   {
-    let drawMap = this.get('drawMap');
     dLog("resizeEnded");
     this.axisWidthResizeEnded();
     this.trigger('resized', this.get('prevSize'), this.get('currentSize'));
