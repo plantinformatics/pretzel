@@ -3927,6 +3927,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
         /** d3 selection of the brushed axis. */
         let axisS = svgContainer.selectAll("#" + eltId(name[0]));
+	let zoomResetNames = ['Zoom', 'Reset'];
         let zoomSwitchS = axisS
           .selectAll('g.btn')
           .data([1]);
@@ -3934,16 +3935,24 @@ export default Ember.Component.extend(Ember.Evented, {
           .enter()
           .append('g')
           .attr('class', 'btn');
-        zoomSwitchE.append('rect');
+        zoomSwitchE
+	  .selectAll('rect')
+	  .data(zoomResetNames)
+	  .enter()
+	  .append('rect')
+	  .attr('class', (d,i) => zoomResetNames[i]);
         zoomSwitch = zoomSwitchS.merge(zoomSwitchE);
         zoomSwitch
           .attr('transform', yAxisBtnScale);
         let zoomResetSwitchTextE =
-          zoomSwitchE.append('text')
-          .attr('x', 30).attr('y', 20);
-        let zoomResetSwitchText =
-        zoomSwitch.selectAll('text')
-          .text('Zoom');
+          zoomSwitchE
+	  .selectAll('text')
+	  .data(zoomResetNames)
+	  .enter()
+	  .append('text')
+	  .attr('class', (d,i) => zoomResetNames[i])
+          .attr('x', (d,i) => i*55).attr('y', 20)
+	  .text(I);
         
         zoomSwitch.on('mousedown', function () {
           d3.event.stopPropagation();
@@ -3961,7 +3970,9 @@ export default Ember.Component.extend(Ember.Evented, {
             .text('Reset');
 
           resetSwitch = zoomSwitch;
-          resetSwitch.on('click',function(){resetZoom(brushedAxisID);
+          resetSwitch
+	    .nodes()[1]
+	    .on('click',function(){resetZoom(brushedAxisID);
           });
         });
 

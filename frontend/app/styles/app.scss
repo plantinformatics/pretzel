@@ -631,6 +631,13 @@ path.syntenyEdge.inverted
 {
   text-anchor: middle;
 }
+g.axis-outer > g.btn > rect.Zoom {
+    x: -30;
+}
+g.axis-outer > g.btn > rect.Reset {
+    x: 25;
+}
+
 
 svg > g.publishMode .btn
 {
