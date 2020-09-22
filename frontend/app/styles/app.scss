@@ -614,6 +614,7 @@ path.syntenyEdge.inverted
 }
 
 
+/*----------------------------------------------------------------------------*/
 /* Button */
 .btn { cursor: pointer; }
 
@@ -631,7 +632,30 @@ path.syntenyEdge.inverted
   text-anchor: middle;
 }
 
+svg > g.publishMode .btn
+{
+  display: none;
+}
 
+g.axis-outer > .btn.brushed > rect,
+g.axis-outer > .btn.zoomed > rect {
+    fill : "grey";
+}
+/* colours matching bootstrap .btn-info, .btn-info:focus */
+g.axis-outer > .btn.brushed > rect,
+g.axis-outer > .btn.zoomed > rect {
+    fill : #5bc0de;	/* blue */
+}
+g.axis-outer > .btn.brushed > rect:focus,
+g.axis-outer > .btn.brushed > rect:hover,
+g.axis-outer > .btn.zoomed > rect:focus,
+g.axis-outer > .btn.zoomed > rect:hover
+{
+    fill : #31b0d5;	/* blue */
+}
+
+
+/*----------------------------------------------------------------------------*/
 /* Tool tip */
 .toolTipChild
 {
@@ -1087,10 +1111,6 @@ input#checkbox-toggleShowAll,
 {
 }
 
-svg > g.publishMode .btn
-{
-  display: none;
-}
 
 /* -------------------------------------------------------------------------- */
 #choose_path_colour_scale

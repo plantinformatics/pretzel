@@ -259,6 +259,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   blockService: service('data/block'),
 
   stacks : stacks,
+  /** oa is used for these connections, which will eventually be
+   * passed as params or replaced : axisApi, eventBus, svgContainer, axes[].
+   * (stacks.oa is equivalent)
+   */
+  oa : Ember.computed.alias('drawMap.oa'),
+  axisApi : Ember.computed.alias('oa.axisApi'),
+
 
   /** flipRegion implies paths' positions should be updated.  The region is
    * defined by brush so it is within the domain, so the domain does not change.
@@ -291,6 +298,24 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     }
   },
 
+  /*--------------------------------------------------------------------------*/
+
+  /** @return true if there is a brush on this axis.
+   */
+  brushed : Ember.computed('oa.brushedRegions', 'oa.selectedAxes.[]', 'axis.id', function () {
+    /** oa.brushedRegions is a hash, and it is updated not replaced,
+     * so as a dependency key it will not signal changes; selectedAxes
+     * is an array and is changed when brushedRegions is changed, so
+     * it is used as a dependency.
+     */
+    let brushedRegions = this.get('oa.brushedRegions'),
+    axisId = this.get('axis.id'),
+    brushed = !! brushedRegions[axisId];
+    dLog('brushed', axisId, brushedRegions[axisId]);
+    return brushed;
+  }),
+
+  /*--------------------------------------------------------------------------*/
 
   /** axis-1d receives axisStackChanged and zoomedAxis from draw-map
    * zoomedAxis is specific to an axisID, so respond to that if it matches this.axis.
@@ -864,7 +889,16 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       as = this.get('axisSelect');
     as.classed("extended", this.get('extended'));
   },
-
+  buttonStateEffect : Ember.computed('brushed', 'zoomed', function () {
+    this.showZoomResetButtonState();
+  }),
+  showZoomResetButtonState() {
+    let
+    as = this.get('axisSelect'),
+    gb = as.selectAll('g.btn');
+    gb.attr('class', () => 'btn ' + ['brushed', 'zoomed'].filter((state) => this.get(state)).join(' '));
+    dLog('showZoomResetButtonState', gb.node());
+  }
   
 });
 
