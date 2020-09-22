@@ -187,6 +187,22 @@ function eltIdAll(d) { return "all" + d; }
 /** id of <g clippath> element, based on axisName, with an "axis-clip" prefix. */
 function axisEltIdClipPath(d) { return "axis-clip" + d; }
 
+/** @return a d3 selection of the svg <g> element which encloses all
+ * elements of an axis; its position is :
+ *  svg > g[transform] > g.stack > g.axis-outer
+ *
+ * It contains : 
+ *  g.axis-all contains the d3 axis components
+ *  g.axis-use contains a <use> of d3 axis (for dualAxis) or simply a
+ *		vertical path, and all the axis-2d (split axis) elements and
+ *		subComponents (g.track for axis-tracks, g.chart for axis-charts)
+ */
+function selectAxisOuter(axisID) {
+  /** based on selectAxisUse().   */
+  let gAxis = d3.select("g.axis-outer#" + eltId(axisID));
+  return gAxis;
+}
+
 /** @return a d3 selection of the svg group element containing the split axis
  * components axis-2d etc <g.axis-use>.
  */
@@ -278,7 +294,7 @@ export {
   Axes, maybeFlip, maybeFlipExtent, noDomain,
   ensureYscaleDomain,
   yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisEltIdClipPath,
-  selectAxisUse, eltIdGpRef,
+  selectAxisOuter, selectAxisUse, eltIdGpRef,
   highlightId,
   trackBlockEltIdPrefix,
   axisTitleColour
