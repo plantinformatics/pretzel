@@ -3927,32 +3927,32 @@ export default Ember.Component.extend(Ember.Evented, {
 
         /** d3 selection of the brushed axis. */
         let axisS = svgContainer.selectAll("#" + eltId(name[0]));
-	let zoomResetNames = ['Zoom', 'Reset'];
+        let zoomResetNames = ['Zoom', 'Reset'];
         let zoomSwitchS = axisS
-          .selectAll('g.btn')
-          .data([1]);
+            .selectAll('g.btn')
+            .data([1]);
         let zoomSwitchE = zoomSwitchS
-          .enter()
-          .append('g')
-          .attr('class', 'btn');
+            .enter()
+            .append('g')
+            .attr('class', 'btn');
         zoomSwitchE
-	  .selectAll('rect')
-	  .data(zoomResetNames)
-	  .enter()
-	  .append('rect')
-	  .attr('class', (d,i) => zoomResetNames[i]);
+          .selectAll('rect')
+          .data(zoomResetNames)
+          .enter()
+          .append('rect')
+          .attr('class', (d,i) => zoomResetNames[i]);
         zoomSwitch = zoomSwitchS.merge(zoomSwitchE);
         zoomSwitch
           .attr('transform', yAxisBtnScale);
         let zoomResetSwitchTextE =
-          zoomSwitchE
-	  .selectAll('text')
-	  .data(zoomResetNames)
-	  .enter()
-	  .append('text')
-	  .attr('class', (d,i) => zoomResetNames[i])
-          .attr('x', (d,i) => i*55).attr('y', 20)
-	  .text(I);
+            zoomSwitchE
+            .selectAll('text')
+            .data(zoomResetNames)
+            .enter()
+            .append('text')
+            .attr('class', (d,i) => zoomResetNames[i])
+            .attr('x', (d,i) => i*55).attr('y', 20)
+            .text(I);
         
         zoomSwitch.on('mousedown', function () {
           d3.event.stopPropagation();
@@ -3971,8 +3971,8 @@ export default Ember.Component.extend(Ember.Evented, {
 
           resetSwitch = zoomSwitch;
           resetSwitch
-	    .nodes()[1]
-	    .on('click',function(){resetZoom(brushedAxisID);
+            .nodes()[1]
+            .on('click',function(){resetZoom(brushedAxisID);
           });
         });
 
