@@ -131,12 +131,13 @@ function axisExtended(gAxis)
 function yAxisBtnScale(d/*, i, g*/)
 {
   let g = this.parentElement,
-  axisName = d, // === g.__data__
+  axisName = g.__data__, // d === 1
+  axis = oa.axes[axisName],
   extended = axisExtended(g),
-  /** If extended, the Zoom button is overlain by the split axis rectangle, so shift it up. */
-  yOffsetText = extended ? ',-40' : '';
+  /** Place the Zoom / Reset button below the axis. */
+  yOffsetText = ',' + (axis.yRange()/axis.portion + 10);
   console.log('yAxisBtnScale', g, axisName, yOffsetText);
-  return 'translate(10'+yOffsetText+') ' + yAxisTextScale.apply(this, arguments);
+  return 'translate(-30'+yOffsetText+') ' + yAxisTextScale.apply(this, arguments);
 }
 /** @return transform for the axis title
  * @description
