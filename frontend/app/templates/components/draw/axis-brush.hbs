@@ -1,1 +1,5 @@
-<div>block : {{blockId}}, {{features.length}}, {{zoomCounter}}</div>
+<div>block : 
+{{!-- block.block.datasetNameAndScope or datasetId.name or .id --}} 
+{{block.block.scope}}
+ Interval : {{block.brushedDomain}}
+ {{blockId}}, {{features.length}}, {{zoomCounter}}</div>

@@ -1,0 +1,4 @@
+{{log 'flowsService.axisBrush' flowsService.axisBrush}}
+{{#each flowsService.axisBrush.brushedAxes as |brushedAxis| }}
+  {{draw/axis-brush block=brushedAxis }}
+{{/each}}

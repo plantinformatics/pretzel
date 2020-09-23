@@ -120,10 +120,7 @@
         {{else if (compare layout.right.tab '===' 'dataset')}}
           {{panel/manage-dataset
             dataset=selectedDataset}}
-          {{log 'flowsService.axisBrush' flowsService.axisBrush}}
-          {{#each flowsService.axisBrush.brushedAxes as |brushedAxis| }}
-            {{draw/axis-brush block=brushedAxis }}
-          {{/each}}
+          {{panel/axis-brushes}}
 
         {{else if (and (compare layout.right.tab '===' 'settings') model.params.parsedOptions.advSettings)}}
           {{panel/manage-settings
