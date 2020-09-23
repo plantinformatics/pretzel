@@ -34,13 +34,31 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   store: service(),
   pathsP : service('data/paths-progressive'),
 
-  zoomCounter : 0,
+  /*--------------------------------------------------------------------------*/
 
 	stacks : stacks,
 	oa : Ember.computed.alias('stacks.oa'),
 	/** .drawMap is used by Evented : utils/draw/axis-events.js */
 	drawMap : Ember.computed.alias('oa.eventBus'),
 	axisApi : Ember.computed.alias('oa.axisApi'),
+
+  /*--------------------------------------------------------------------------*/
+
+  tagName : '',
+
+  zoomCounter : 0,
+
+  /*--------------------------------------------------------------------------*/
+
+	brushedDomainRounded : Ember.computed('block.brushedDomain', function () {
+		let domain = this.get('block.brushedDomain');
+		if (domain) {
+			domain = domain.map((d) => d.toFixed(2));
+		}
+		return domain;
+	}),
+
+  /*--------------------------------------------------------------------------*/
 
   axisBrush : Ember.computed('block', function () {
     let

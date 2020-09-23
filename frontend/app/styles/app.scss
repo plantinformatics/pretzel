@@ -649,14 +649,14 @@ g.axis-outer > .btn.zoomed > rect {
     fill : "grey";
 }
 /* colours matching bootstrap .btn-info, .btn-info:focus */
-g.axis-outer > .btn.brushed > rect,
-g.axis-outer > .btn.zoomed > rect {
+g.axis-outer > .btn.brushed > rect.Zoom,
+g.axis-outer > .btn.zoomed > rect.Reset {
     fill : #5bc0de;	/* blue */
 }
-g.axis-outer > .btn.brushed > rect:focus,
-g.axis-outer > .btn.brushed > rect:hover,
-g.axis-outer > .btn.zoomed > rect:focus,
-g.axis-outer > .btn.zoomed > rect:hover
+g.axis-outer > .btn.brushed > rect.Zoom:focus,
+g.axis-outer > .btn.brushed > rect.Zoom:hover,
+g.axis-outer > .btn.zoomed > rect.Reset:focus,
+g.axis-outer > .btn.zoomed > rect.Reset:hover
 {
     fill : #31b0d5;	/* blue */
 }
@@ -1429,6 +1429,13 @@ div.metaeditor-panel div.jsoneditor-treepath {
 div.metaeditor-panel div.jsoneditor {
   border: 1px solid #d3d3d3
 }
+/* -------------------------------------------------------------------------- */
+/** for components/draw/axis-brushes */
+.axis-brushes table {
+  border-collapse: initial;
+  border-spacing: 1em;
+}
+
 /* -------------------------------------------------------------------------- */
 
 .paths-table .optionControls {

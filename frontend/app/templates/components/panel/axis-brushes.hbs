@@ -1,4 +1,14 @@
 {{log 'flowsService.axisBrush' flowsService.axisBrush}}
+<table>
+  <tr>
+    <th>Scope</th>
+    <th>Interval</th>
+    <th>BlockId</th>
+    <th>zoomCounter</th>
+  </tr>
+
 {{#each flowsService.axisBrush.brushedAxes as |brushedAxis| }}
   {{draw/axis-brush block=brushedAxis }}
 {{/each}}
+
+</table>
