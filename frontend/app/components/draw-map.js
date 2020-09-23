@@ -4277,7 +4277,19 @@ export default Ember.Component.extend(Ember.Evented, {
           }
           if (domain) {
             domainChanged = true;
-            axis.setZoomed(true);
+            /** mousewheel zoom out is limited by javascript
+             * precision, so consider domain equal if first 7 chars
+             * are equal.  */
+            function limitPrecision(x) { return ('' + x).substr(0,7); };
+            let 
+            /** total domain */
+            domainAll = axis.axis1d.get('domain').toArray(),
+            domainAllS = domainAll.map(limitPrecision),
+            domainS = domain.map(limitPrecision),
+            /** true if (mousewheel) zoomed out to the limit of the whole domain. */
+            zoomedOut = isEqual(domainAllS, domainS);
+
+            axis.setZoomed(! zoomedOut);
             y[p].domain(domain);
             oa.ys[p].domain(domain);
             // scale domain is signed. currently .zoomedDomain is not, so maybeFlip().
