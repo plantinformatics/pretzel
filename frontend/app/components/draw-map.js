@@ -3935,17 +3935,12 @@ export default Ember.Component.extend(Ember.Evented, {
             .enter()
             .append('g')
             .attr('class', 'btn');
-        let
-        zoomSwitchRectS =
-          zoomSwitchE
+        zoomSwitchE
           .selectAll('rect')
-          .data(zoomResetNames),
-        zoomSwitchRectE =
-          zoomSwitchRectS
+          .data(zoomResetNames)
           .enter()
           .append('rect')
-          .attr('class', (d,i) => zoomResetNames[i]),
-        zoomSwitchRect = zoomSwitchRectS.merge(zoomSwitchRectE);
+          .attr('class', (d,i) => zoomResetNames[i]);
         zoomSwitch = zoomSwitchS.merge(zoomSwitchE);
         zoomSwitch
           .attr('transform', yAxisBtnScale);
@@ -3958,13 +3953,12 @@ export default Ember.Component.extend(Ember.Evented, {
             .attr('class', (d,i) => zoomResetNames[i])
             .attr('x', (d,i) => i*55).attr('y', 20)
             .text(I);
-        
         zoomSwitch.on('mousedown', function () {
           d3.event.stopPropagation();
         });
         /** parallel with zoomResetNames[], [0] is Zoom and [1] is Reset. */
-        if (! zoomSwitchRect.empty() ) {
-          d3.select(zoomSwitchRect.nodes()[0])
+        zoomSwitch
+          .selectAll('.Zoom')
             .on('click', function () {
               d3.event.stopPropagation();
               let brushExtents = getBrushExtents();
@@ -3975,11 +3969,11 @@ export default Ember.Component.extend(Ember.Evented, {
               //Remove all the existing circles
               axisFeatureCircles_selectAll().remove();
 
-              resetSwitch = d3.select(zoomSwitchRect.nodes()[1]);
+              resetSwitch = zoomSwitch.selectAll('.Reset');
               resetSwitch
                 .on('click',function(){resetZoom(brushedAxisID); });
             });
-        }
+
 
         
       } else {
@@ -4266,7 +4260,7 @@ export default Ember.Component.extend(Ember.Evented, {
           domain,
           brushedDomain;
           ensureYscaleDomain(yp, axis);
-          if (brushExtents) {
+          if (brushExtents && brushExtents[i]) {
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion*/); });
           // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
           console.log("zoom", axisName, p, i, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
