@@ -3935,12 +3935,17 @@ export default Ember.Component.extend(Ember.Evented, {
             .enter()
             .append('g')
             .attr('class', 'btn');
-        zoomSwitchE
+        let
+        zoomSwitchRectS =
+          zoomSwitchE
           .selectAll('rect')
-          .data(zoomResetNames)
+          .data(zoomResetNames),
+        zoomSwitchRectE =
+          zoomSwitchRectS
           .enter()
           .append('rect')
-          .attr('class', (d,i) => zoomResetNames[i]);
+          .attr('class', (d,i) => zoomResetNames[i]),
+        zoomSwitchRect = zoomSwitchRectS.merge(zoomSwitchRectE);
         zoomSwitch = zoomSwitchS.merge(zoomSwitchE);
         zoomSwitch
           .attr('transform', yAxisBtnScale);
@@ -3957,24 +3962,24 @@ export default Ember.Component.extend(Ember.Evented, {
         zoomSwitch.on('mousedown', function () {
           d3.event.stopPropagation();
         });
-        zoomSwitch.on('click', function () {
-          d3.event.stopPropagation();
-          let brushExtents = getBrushExtents();
-          zoom(that,brushExtents);
-          zoomed = true;
+        /** parallel with zoomResetNames[], [0] is Zoom and [1] is Reset. */
+        if (! zoomSwitchRect.empty() ) {
+          d3.select(zoomSwitchRect.nodes()[0])
+            .on('click', function () {
+              d3.event.stopPropagation();
+              let brushExtents = getBrushExtents();
+              zoom(that,brushExtents);
+              zoomed = true;
 
-          //reset function
-          //Remove all the existing circles
-          axisFeatureCircles_selectAll().remove();
-          zoomResetSwitchText
-            .text('Reset');
+              //reset function
+              //Remove all the existing circles
+              axisFeatureCircles_selectAll().remove();
 
-          resetSwitch = zoomSwitch;
-          resetSwitch
-            .nodes()[1]
-            .on('click',function(){resetZoom(brushedAxisID);
-          });
-        });
+              resetSwitch = d3.select(zoomSwitchRect.nodes()[1]);
+              resetSwitch
+                .on('click',function(){resetZoom(brushedAxisID); });
+            });
+        }
 
         
       } else {
