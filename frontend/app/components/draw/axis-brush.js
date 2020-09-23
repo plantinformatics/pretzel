@@ -36,6 +36,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   zoomCounter : 0,
 
+	stacks : stacks,
+	oa : Ember.computed.alias('stacks.oa'),
+	/** .drawMap is used by Evented : utils/draw/axis-events.js */
+	drawMap : Ember.computed.alias('oa.eventBus'),
+	axisApi : Ember.computed.alias('oa.axisApi'),
+
   axisBrush : Ember.computed('block', function () {
     let
       block = this.get('block'),
@@ -87,7 +93,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     if (features.length === 0)
       return;
 
-    let axisApi = this.get('drawMap.oa.axisApi');
+    let axisApi = this.get('axisApi');
     dLog('draw', this, features.length, axisApi);
     if (axisApi) {
       let

@@ -18,6 +18,9 @@ export default Ember.Controller.extend(Ember.Evented, {
   block: service('data/block'),
   apiServers: service(),
   controlsService : service('controls'),
+	/** used for axisBrush.brushedAxes to instantiate axis-brush s. */
+  flowsService: service('data/flows-collate'),
+
 
   /** Array of available datasets populated from model 
    */
