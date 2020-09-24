@@ -50,6 +50,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
+  datasetName : Ember.computed('block', 'id', function () {
+    let
+    axis = this.get('axis'),
+    name = axis && axis.axis1d && axis.axis1d.get('referenceBlock.datasetId.id');
+    dLog('datasetName', name, axis);
+    return name;
+  }),
+
+
   brushedDomainRounded : Ember.computed('block.brushedDomain', function () {
     let domain = this.get('block.brushedDomain');
     if (domain) {
