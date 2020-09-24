@@ -326,10 +326,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     zoomed = this.get('zoomed'),
     domain = this.get('domain'),
     zoomedDomain = this.get('zoomedDomain');
-		if (zoomed) {
-			zoomed &= (domain[0] !== zoomedDomain[0]) ||
-				(domain[1] !== zoomedDomain[1]);
-		}
+    if (zoomed) {
+      zoomed &= (domain[0] !== zoomedDomain[0]) ||
+        (domain[1] !== zoomedDomain[1]);
+    }
     return zoomed;
   }),
 

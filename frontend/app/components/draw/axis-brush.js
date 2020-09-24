@@ -36,11 +36,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
-	stacks : stacks,
-	oa : Ember.computed.alias('stacks.oa'),
-	/** .drawMap is used by Evented : utils/draw/axis-events.js */
-	drawMap : Ember.computed.alias('oa.eventBus'),
-	axisApi : Ember.computed.alias('oa.axisApi'),
+  stacks : stacks,
+  oa : Ember.computed.alias('stacks.oa'),
+  /** .drawMap is used by Evented : utils/draw/axis-events.js */
+  drawMap : Ember.computed.alias('oa.eventBus'),
+  axisApi : Ember.computed.alias('oa.axisApi'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -50,13 +50,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
-	brushedDomainRounded : Ember.computed('block.brushedDomain', function () {
-		let domain = this.get('block.brushedDomain');
-		if (domain) {
-			domain = domain.map((d) => d.toFixed(2));
-		}
-		return domain;
-	}),
+  brushedDomainRounded : Ember.computed('block.brushedDomain', function () {
+    let domain = this.get('block.brushedDomain');
+    if (domain) {
+      domain = domain.map((d) => d.toFixed(2));
+    }
+    return domain;
+  }),
 
   /*--------------------------------------------------------------------------*/
 
