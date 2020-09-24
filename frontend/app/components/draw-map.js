@@ -23,15 +23,18 @@ import config from '../config/environment';
 import { EventedListener } from '../utils/eventedListener';
 import { chrData, cmNameAdd } from '../utils/utility-chromosome';
 import { eltWidthResizable, eltResizeToAvailableWidth, noShiftKeyfilter, eltClassName, tabActive, inputRangeValue, expRange  } from '../utils/domElements';
+import { I } from '../utils/draw/d3-svg';
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
 import { Viewport } from '../utils/draw/viewport';
 import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
 import { AxisTitleBlocksServers } from '../utils/draw/axisTitleBlocksServers_tspan';
-import { brushClip } from '../utils/draw/axisBrush';
+import { brushClip, showAxisZoomResetButtons } from '../utils/draw/axisBrush';
 
 import {  Axes, maybeFlip, maybeFlipExtent,
           ensureYscaleDomain,
-          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll /*, axisTitleColour*/  }  from '../utils/draw/axis';
+          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll,
+          axisFeatureCircles_selectAll
+          /*, axisTitleColour*/  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify  }  from '../utils/draw/stacksAxes';
 import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Name, setCount } from '../utils/stacks';
 import { collateAdjacentAxes, log_adjAxes,  log_adjAxes_a, isAdjacent } from '../utils/stacks-adj';
@@ -654,9 +657,6 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     let showHoverExtraText = true;
 
-    /** Used for d3 attributes whose value is the datum. */
-    function I(d) { /* console.log(this, d); */ return d; };
-
     let svgContainer;
 
     let
@@ -994,11 +994,6 @@ export default Ember.Component.extend(Ember.Evented, {
 
     /*------------------------------------------------------------------------*/
 
-
-    let zoomSwitch,resetSwitch;
-    let zoomed = false;
-    // let reset = false;
-    // console.log("zoomSwitch", zoomSwitch);
 
     let pathFeatures = oa.pathFeatures || (oa.pathFeatures = {}); //For tool tip
 
@@ -3760,8 +3755,9 @@ export default Ember.Component.extend(Ember.Evented, {
       if (selectedAxes.length > 0) {
         axisFeatureCirclesBrushed();
         
-        if (! oa.axisApi.axisFeatureCirclesBrushed)
+        if (! oa.axisApi.axisFeatureCirclesBrushed) {
           oa.axisApi.axisFeatureCirclesBrushed = axisFeatureCirclesBrushed;
+        }
 
         /** For those axes in selectedAxes, if the axis has a brushed region,
          * draw axis circles for features within the brushed region.
@@ -3925,57 +3921,13 @@ export default Ember.Component.extend(Ember.Evented, {
         d3.selectAll(fadedSelector).classed("faded", featureNotSelected2);
       } // axisFeatureCirclesBrushed()
 
-        /** d3 selection of the brushed axis. */
-        let axisS = svgContainer.selectAll("#" + eltId(name[0]));
-        let zoomResetNames = ['Zoom', 'Reset'];
-        let zoomSwitchS = axisS
-            .selectAll('g.btn')
-            .data([1]);
-        let zoomSwitchE = zoomSwitchS
-            .enter()
-            .append('g')
-            .attr('class', 'btn');
-        zoomSwitchE
-          .selectAll('rect')
-          .data(zoomResetNames)
-          .enter()
-          .append('rect')
-          .attr('class', (d,i) => zoomResetNames[i]);
-        zoomSwitch = zoomSwitchS.merge(zoomSwitchE);
-        zoomSwitch
-          .attr('transform', yAxisBtnScale);
-        let zoomResetSwitchTextE =
-            zoomSwitchE
-            .selectAll('text')
-            .data(zoomResetNames)
-            .enter()
-            .append('text')
-            .attr('class', (d,i) => zoomResetNames[i])
-            .attr('x', (d,i) => i*55).attr('y', 20)
-            .text(I);
-        zoomSwitch.on('mousedown', function () {
-          d3.event.stopPropagation();
-        });
-        /** parallel with zoomResetNames[], [0] is Zoom and [1] is Reset. */
-        zoomSwitch
-          .selectAll('.Zoom')
-            .on('click', function () {
-              d3.event.stopPropagation();
-              let brushExtents = getBrushExtents();
-              zoom(that,brushExtents);
-              zoomed = true;
+        showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, resetZoom, brushedAxisID, me);
+        let axis = oa.axes[brushedAxisID],
+            axis1d = axis && axis.axis1d;
+        if (axis1d) {
+          Ember.run.bind(axis1d, axis1d.showZoomResetButtonState)();
+        }
 
-              //reset function
-              //Remove all the existing circles
-              axisFeatureCircles_selectAll().remove();
-
-              resetSwitch = zoomSwitch.selectAll('.Reset');
-              resetSwitch
-                .on('click',function(){resetZoom(brushedAxisID); });
-            });
-
-
-        
       } else {
         // brushHelper() is called from brushended() after zoom, with selectedAxes.length===0
         // At this time it doesn't make sense to remove the resetSwitch button
@@ -4091,16 +4043,7 @@ export default Ember.Component.extend(Ember.Evented, {
               // reset zoom of all axes clears selectedFeatures - check if this was the intention; also should selectedAxes be cleared ?
               selectedFeatures_clear();
             }
-            zoomed = false; // not used
           }
-
-    function axisFeatureCircles_selectAll() {
-      /** see also handleFeatureCircleMouseOver(), which targets a specific feature. */
-      let
-        selector = "g.axis-outer > circle",
-      selection = oa.svgContainer.selectAll(selector);
-      return selection;
-    }
 
 
     let targetIdCount = 0;
@@ -4312,6 +4255,8 @@ export default Ember.Component.extend(Ember.Evented, {
           }
         }
       });
+      showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, resetZoom, axisName, me);
+
       if (domainChanged) {
         // axisStackChanged(t);
         me.throttledZoomedAxis(axisName, t);

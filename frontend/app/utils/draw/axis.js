@@ -233,6 +233,17 @@ const trackBlockEltIdPrefix = 'tb-';
 
 /*----------------------------------------------------------------------------*/
 
+function axisFeatureCircles_selectAll() {
+  /** see also handleFeatureCircleMouseOver(), which targets a specific feature. */
+  let
+  selector = "g.axis-outer > circle",
+  selection = oa.svgContainer.selectAll(selector);
+  return selection;
+}
+
+
+/*----------------------------------------------------------------------------*/
+
 /** Used to colour the blocks within an axis distinctly;
  * Originally was using blockId as index, but now using index within axis.blocks[].
  * The same colours are re-used on each axis.
@@ -297,5 +308,6 @@ export {
   selectAxisOuter, selectAxisUse, eltIdGpRef,
   highlightId,
   trackBlockEltIdPrefix,
+  axisFeatureCircles_selectAll,
   axisTitleColour
 };
