@@ -584,7 +584,7 @@ export default InAxis.extend({
         // Make the description unique in case there are multiple
         // positions for the same feature name.
         let r=Object.assign({}, d);
-        r.description=d.description+"_"+d[0];
+        r.udescription=d.description+"_"+d[0];
         return r;
       });
       let blockState = thisAt.lookupAxisTracksBlock(blockId);
