@@ -580,7 +580,13 @@ export default InAxis.extend({
         Math.min(domainRange / 1000, 200) : 
         Math.min(-domainRange / 1000, 200),
       tracksLayout = regionOfTree(t, y.domain(), sizeThreshold, abutDistance, true),
-      data = tracksLayout.intervals;
+      data = tracksLayout.intervals.map(function(d) {
+        // Make the description unique in case there are multiple
+        // positions for the same feature name.
+        let r=Object.assign({}, d);
+        r.description=d.description+"_"+d[0];
+        return r;
+      });
       let blockState = thisAt.lookupAxisTracksBlock(blockId);
       blockState.set('layoutWidth', tracksLayout.layoutWidth);
       if (! blockState.hasOwnProperty('subelement')) {
@@ -757,7 +763,10 @@ export default InAxis.extend({
     let g = gp.append("g")
       .attr("clip-path", "url(#" + axisEltIdClipPath(axisID) + ")"); // clip the rectangle
 
-    function trackKeyFn(featureData) { return featureData.description; }
+    function trackKeyFn(featureData) {
+      // Make description unique when multiple features with same name.
+      return featureData.description+"_"+featureData[0];
+    }
     /** Add the <rect> within <g clip-path...>  */
     let
     /** block select - datum is blockId. */
