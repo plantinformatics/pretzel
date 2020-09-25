@@ -126,6 +126,7 @@ function axisExtended(gAxis)
 /** @return transform for the Zoom / Reset button which is currently near the axis title.
  * @description
  * Usage : ... .selectAll('g.axis ... g.btn > text').attr("transform", yAxisBtnScale);
+ * The result transform contains both translate(x,y) and scale(...).
  * @param d axisName
  */
 function yAxisBtnScale(d/*, i, g*/)
@@ -134,10 +135,11 @@ function yAxisBtnScale(d/*, i, g*/)
   axisName = g.__data__, // d === 1
   axis = oa.axes[axisName],
   extended = axisExtended(g),
+  xOffset = -30 + (extended ? extended/2 : 0),
   /** Place the Zoom / Reset button below the axis. */
   yOffsetText = ',' + (axis.yRange()/axis.portion + 10);
   console.log('yAxisBtnScale', g, axisName, yOffsetText);
-  return 'translate(-30'+yOffsetText+') ' + yAxisTextScale.apply(this, arguments);
+  return 'translate(' + xOffset + yOffsetText + ') ' + yAxisTextScale.apply(this, arguments);
 }
 /** @return transform for the axis title
  * @description

@@ -182,7 +182,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     // if @each were supported for hashes, would depend on : 'childWidths.@each.1', 
     let allocatedWidths,
     childWidths = this.get('childWidths'),
-    groupNames = Object.keys(childWidths),
+    groupNames = childWidths ? Object.keys(childWidths) : [],
     requested = 
       groupNames.reduce((result, groupName) => {
         let cw = childWidths[groupName];
@@ -343,6 +343,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     if (! this.get('axis1d.extended')) {
       this.show();
     }
+    // may trigger this differently, could be action.
+    Ember.run.next(() => this.get('axis1d').showZoomResetButtonXPosn());
   },
   /** Update the X scale / horizontal layout of stacks
    * copied from draw-map; the x scale will likely move to stacks-view, and this will likely be dropped.

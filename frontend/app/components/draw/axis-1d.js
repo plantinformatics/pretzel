@@ -9,7 +9,7 @@ import { isEqual } from 'lodash/lang';
 import AxisEvents from '../../utils/draw/axis-events';
 import AxisPosition from '../../mixins/axis-position';
 import { /* Block,*/ Stacked, /*Stack,*/ stacks /*, xScaleExtend, axisRedrawText, axisId2Name*/ } from '../../utils/stacks';
-import {  noDomain, /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/ , axisTitleColour  }  from '../../utils/draw/axis';
+import {  noDomain, /* Axes, yAxisTextScale,  yAxisTicksScale,*/  yAxisBtnScale, /* yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/ , axisTitleColour  }  from '../../utils/draw/axis';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../../utils/stacks-drag';
 import { selectAxis } from '../../utils/draw/stacksAxes';
 import { breakPoint } from '../../utils/breakPoint';
@@ -809,7 +809,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
      * this.updateAxisTitleSize() is called in axisWidthResizeEnded()->stacksAdjust()
      */
 
+    this.showZoomResetButtonXPosn();
+
     return extended;
+  }),
+
+  extendedWidthEffect : Ember.computed(/*'extended',*/ 'axis2d.allocatedWidths', function () {
+    this.showZoomResetButtonXPosn();
   }),
 
   /*--------------------------------------------------------------------------*/
@@ -916,6 +922,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     gb = as.selectAll('g.btn');
     gb.attr('class', () => 'btn ' + ['brushed', 'zoomed'].filter((state) => this.get(state)).join(' '));
     dLog('showZoomResetButtonState', gb.node(), this.get('zoomed'), this.get('zoomed2'));
+  },
+  showZoomResetButtonXPosn() {
+    let
+    as = this.get('axisSelect'),
+    gb = as.selectAll('g.btn');
+    gb
+      .attr('transform', yAxisBtnScale);
   }
   
 });
