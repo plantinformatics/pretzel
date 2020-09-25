@@ -6,6 +6,8 @@ const { inject: { service } } = Ember;
 
 const ObjName = 'axis-brush';
 
+const dLog = console.debug;
+
 export default DS.Model.extend({
 
   pathsP : service('data/paths-progressive'),

@@ -1,1 +1,13 @@
-<div>block : {{blockId}}, {{features.length}}, {{zoomCounter}}</div>
+{{!-- block.block.datasetNameAndScope or datasetId.name or .id --}} 
+
+  <tr>
+    <td>{{datasetName}}</td>
+    <td>{{block.block.scope}}</td>
+    <td>{{brushedDomainRounded}}</td>
+    <!-- ----------------------------- -->
+    <td class="devel-visible">{{blockId}}</td>
+    <td class="devel-visible">{{zoomCounter}}</td>
+    <td style="display:none;"> {{features.length}} <!-- for features request. --></td>
+  </tr>
+
+

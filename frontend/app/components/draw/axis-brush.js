@@ -34,7 +34,40 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   store: service(),
   pathsP : service('data/paths-progressive'),
 
+  /*--------------------------------------------------------------------------*/
+
+  stacks : stacks,
+  oa : Ember.computed.alias('stacks.oa'),
+  /** .drawMap is used by Evented : utils/draw/axis-events.js */
+  drawMap : Ember.computed.alias('oa.eventBus'),
+  axisApi : Ember.computed.alias('oa.axisApi'),
+
+  /*--------------------------------------------------------------------------*/
+
+  tagName : '',
+
   zoomCounter : 0,
+
+  /*--------------------------------------------------------------------------*/
+
+  datasetName : Ember.computed('block', 'id', function () {
+    let
+    axis = this.get('axis'),
+    name = axis && axis.axis1d && axis.axis1d.get('referenceBlock.datasetId.id');
+    dLog('datasetName', name, axis);
+    return name;
+  }),
+
+
+  brushedDomainRounded : Ember.computed('block.brushedDomain', function () {
+    let domain = this.get('block.brushedDomain');
+    if (domain) {
+      domain = domain.map((d) => d.toFixed(2));
+    }
+    return domain;
+  }),
+
+  /*--------------------------------------------------------------------------*/
 
   axisBrush : Ember.computed('block', function () {
     let
@@ -87,7 +120,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     if (features.length === 0)
       return;
 
-    let axisApi = this.get('drawMap.oa.axisApi');
+    let axisApi = this.get('axisApi');
     dLog('draw', this, features.length, axisApi);
     if (axisApi) {
       let

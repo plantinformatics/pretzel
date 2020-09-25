@@ -1,3 +1,6 @@
+import { yAxisBtnScale, eltId, axisFeatureCircles_selectAll  }  from './axis';
+import { I } from './d3-svg';
+
 
 /* global d3 */
 
@@ -52,4 +55,70 @@ function brushClip(gp, axisID) {
   return g;
 }
 
-export { brushClip };
+/*--------------------------------------------------------------------------*/
+
+
+function showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, resetZoom, brushedAxisID, drawMap) {
+  /** d3 selection of the brushed axis. */
+  let axisS = svgContainer.selectAll("#" + eltId(brushedAxisID));
+  /** this is the element which is passed when called via
+   * zoomBehavior.on('zoom', zoom)
+   * so pass the same element when calling via g.btn .Zoom .on('click' ).
+   */
+  let that = axisS.selectAll('g.brush > g[clip-path]').node();
+  let zoomResetNames = ['Zoom', 'Reset'];
+  let gS = axisS
+      .selectAll('g.btn')
+      .data([1]);
+  let gE = gS
+      .enter()
+      .append('g')
+      .attr('class', 'btn');
+  gE
+    .selectAll('rect')
+    .data(zoomResetNames)
+    .enter()
+    .append('rect')
+    .attr('class', (d,i) => zoomResetNames[i]);
+  let g = gS.merge(gE);
+  g
+    .attr('transform', yAxisBtnScale);
+  gE
+      .selectAll('text')
+      .data(zoomResetNames)
+      .enter()
+      .append('text')
+      .attr('class', (d,i) => zoomResetNames[i])
+      .attr('x', (d,i) => i*55).attr('y', 20)
+      .text(I);
+  g.on('mousedown', function () {
+    d3.event.stopPropagation();
+  });
+  /** parallel with zoomResetNames[], [0] is Zoom and [1] is Reset. */
+  g
+    .selectAll('.Zoom')
+    .on('click', function () {
+      d3.event.stopPropagation();
+      let brushExtents = getBrushExtents();
+      zoom(that,brushExtents);
+      // zoomed = true; // not used.
+
+      //reset function
+      //Remove all the existing circles
+      axisFeatureCircles_selectAll().remove();
+
+    });
+  let
+  resetSwitch = g.selectAll('.Reset');
+  resetSwitch
+    .on('click',function(){resetZoom(brushedAxisID); });
+ 
+ dLog("showAxisZoomResetButtons g", g.nodes());
+}
+
+
+/*--------------------------------------------------------------------------*/
+
+
+
+export { brushClip, showAxisZoomResetButtons };
