@@ -3018,7 +3018,7 @@ export default Ember.Component.extend(Ember.Evented, {
         console.log("showSynteny", sbS.size(), sbE.size(), sbM.size(), sbM.node());
 
       function sbChrAreAdjacent(sb) {
-        let a0 = sb[0], a1 = sb[1], adj = isAdjacent(a0, a1);
+        let a0 = sb[0], a1 = sb[1], adj = isAdjacent(a0, a1) || isAdjacent(a1, a0);
         return adj;
       }
       function sbSizeFilter(sb) {
@@ -3720,7 +3720,13 @@ export default Ember.Component.extend(Ember.Evented, {
       axisFeatureCircles_selectAll().remove();
       let brushedRegions = oa.brushedRegions;
       let brushRange = d3.event.selection,
-      mouse = brushRange && d3.mouse(that);
+      /** mouse(node) calls point(node, event) with event === d3.event, and point()
+       * evaluates : event.clientX, event.clientY; so don't call mouse() if either is undefined 
+       */
+      mouse =
+          (d3.event.clientX !== undefined) &&
+          (d3.event.clientY !== undefined) &&
+          d3.mouse(that);
       let brushSelection = d3.brushSelection(d3.select(that));
       let brush_ = that.__brush,
       brushSelection_ = brush_.selection,
@@ -4728,10 +4734,21 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function dataOfPath(path)
     {
-      let pa = pathDataInG
+      let da;
+      if (path.__data__.feature0) {
+        let
+        p = path.__data__,
+        feature0 = p.get('feature0.name'),
+        feature1 = p.get('feature1.name'),
+        axis0 = p.get('feature0.blockId.view'),
+        axis1 = p.get('feature1.blockId.view');
+        da = [feature0, feature1, axis0, axis1];
+      } else {
+      pa = pathDataInG
         ? path.parentElement || path._parent /* EnterNode has _parent not parentElement */
         : path,
       da = pa.__data__;
+      }
       return da;
     }
     /** Get the featureName of a path element, from its corresponding data accessed via dataOfPath().
