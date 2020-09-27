@@ -4744,10 +4744,12 @@ export default Ember.Component.extend(Ember.Evented, {
         axis1 = p.get('feature1.blockId.view');
         da = [feature0, feature1, axis0, axis1];
       } else {
-      pa = pathDataInG
-        ? path.parentElement || path._parent /* EnterNode has _parent not parentElement */
-        : path,
-      da = pa.__data__;
+        let
+        /** path, or parent g */
+        pa = pathDataInG
+          ? path.parentElement || path._parent /* EnterNode has _parent not parentElement */
+          : path;
+        da = pa.__data__;
       }
       return da;
     }
