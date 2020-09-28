@@ -3921,7 +3921,7 @@ export default Ember.Component.extend(Ember.Evented, {
         d3.selectAll(fadedSelector).classed("faded", featureNotSelected2);
       } // axisFeatureCirclesBrushed()
 
-        showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, resetZoom, brushedAxisID, me);
+        showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, Ember.run.bind(me, me.get('resetZooms')), brushedAxisID, me);
         let axis = oa.axes[brushedAxisID],
             axis1d = axis && axis.axis1d;
         if (axis1d) {
