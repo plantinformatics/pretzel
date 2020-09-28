@@ -3965,24 +3965,40 @@ export default Ember.Component.extend(Ember.Evented, {
     } // brushHelper
 
 
-          /** Call resetZoom(undefined) - reset the zoom of all zoomed axes (selectedAxes).
+          /** Call resetZoom(axisId) - reset the zoom of one or all zoomed axes (selectedAxes).
+           * Applies to the specified axis, or all brushes if axisId is undefined.
+           * @param  axisId  db id of reference block of axis (i.e. .axisName) or undefined
+           * @desc resetZooms() resets both the brush/es and the
+           * zoom/s, and is callable via feed.trigger(), whereas resetZoom()
+           * clears just the zoom and is local.
            */
         // console.log("me.get('resetZooms')", me.get('resetZooms') !== undefined);
           if (! me.get('resetZooms'))
-          me.set('resetZooms', function() {
-            console.log('resetZooms', oa.selectedAxes, oa.brushedRegions);
-            resetBrushes();
-            resetZoom(undefined);
-            console.log('after resetZoom', oa.selectedAxes, oa.brushedRegions);
+          me.set('resetZooms', function(axisId) {
+            console.log('resetZooms', axisId, oa.selectedAxes, oa.brushedRegions);
+            resetBrushes(axisId);
+            resetZoom(axisId);
+            console.log('after resetZoom', axisId, oa.selectedAxes, oa.brushedRegions);
           });
-        function resetBrushes()
+        /** Clear the brush of the specified axis, or all brushes if axisId is undefined.
+         * @param  axisId  db id of reference block of axis (i.e. .axisName) or undefined
+         */
+        function resetBrushes(axisId)
         {
-          let brushed = d3.selectAll("g.axis-all > g.brush > g[clip-path]");
-          /** brushed[j] may correspond to oa.selectedAxes[j] and hence
-           * brushExtents[j], but it seems possible for their order to not
-           * match.  This is only used in trace anyway.
-           */
-          let brushExtents = getBrushExtents();
+          let
+          axisClipId = axisId ? '="url(#axis-clip-' + axisId + ')"' : '',
+          brushSelector = "g.axis-all > g.brush > g[clip-path" + axisClipId + "]",
+          brushExtents;
+          if (axisId) {
+            brushExtents = [brushedRegions[axisId]];
+          } else {
+            /** brushed[j] may correspond to oa.selectedAxes[j] and hence
+             * brushExtents[j], but it seems possible for their order to not
+             * match.  This is only used in trace anyway.
+             */
+            brushExtents = getBrushExtents();
+          }
+          let brushed = d3.selectAll(brushSelector);
           brushed.each(function (axisName, i, g) {
             /* `this` refers to the brush g element.
              * pass selection==null to clear the brush.
@@ -3990,10 +4006,14 @@ export default Ember.Component.extend(Ember.Evented, {
              * and hence index is 0.
              */
             let j = i;
-            console.log('resetBrushes', this, axisName, oa.selectedAxes[j], oa.brushedRegions[axisName], brushExtents[j]);
+            dLog('resetBrushes', axisId, this, axisName, oa.selectedAxes[j], oa.brushedRegions[axisName], brushExtents[j]);
             if (this.__brush)
               d3.select(this).call(y[axisName].brush.move, null);
             let brushedAxisID = axisName;
+            /* the above call(brush.move, null) causes
+             * brushedRegions[brushedAxisID] to be deleted, via :
+             * brushended() -> brushHelper() -> removeBrushExtent()
+             . */
             if (oa.brushedRegions[brushedAxisID])
               removeBrushExtent(brushedAxisID);
           });
@@ -4255,7 +4275,7 @@ export default Ember.Component.extend(Ember.Evented, {
           }
         }
       });
-      showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, resetZoom, axisName, me);
+      showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, Ember.run.bind(me, me.get('resetZooms')), axisName, me);
 
       if (domainChanged) {
         // axisStackChanged(t);
