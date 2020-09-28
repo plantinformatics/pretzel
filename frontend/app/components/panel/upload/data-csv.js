@@ -209,7 +209,7 @@ export default UploadBase.extend({
           };
           let parentId = that.get('selectedParent');
           if (parentId && parentId.length > 0) {
-            newDetails.parent = datasets.findBy('name', parentId);
+            newDetails.parentName = parentId;
           }
           let newDataset = that.get('store').createRecord('Dataset', newDetails);
           newDataset.save().then(() => {
@@ -301,6 +301,7 @@ export default UploadBase.extend({
           that.getDatasetId().then((map_id) => {
             var data = {
               dataset_id: map_id,
+              parentName: that.get('selectedParent'),
               features: features,
               namespace: that.get('namespace'),
             };
