@@ -239,19 +239,22 @@ function wheelNewDomain(axis, axisApi, inFilter) {
     // similar to subInterval(newInterval, intervalLimit)
     if (domainSize && (newInterval > domainSize)) {
       console.log('limit newInterval', newInterval, domainSize);
-      newInterval = domainSize;
+      newInterval = domainSize * Math.sign(interval);
+      newDomain = axisReferenceDomainF;
     }
-    else if (newInterval < intervalLimit[0]) {
-      newInterval = intervalLimit[0];
-    }
-    newInterval *= Math.sign(interval);
+    else {
+      if (newInterval < intervalLimit[0]) {
+        newInterval = intervalLimit[0];
+      }
+      newInterval *= Math.sign(interval);
 
-    newDomain = [
-      // can use zoom.center() for this.
-      // range[0] < rangeYCentre, so this first offset from centre is -ve
-      centre + newInterval * (range[0] - rangeYCentre) / rangeSize,
-      centre + newInterval * (range[1] - rangeYCentre) / rangeSize
-    ];
+      newDomain = [
+        // can use zoom.center() for this.
+        // range[0] < rangeYCentre, so this first offset from centre is -ve
+        centre + newInterval * (range[0] - rangeYCentre) / rangeSize,
+        centre + newInterval * (range[1] - rangeYCentre) / rangeSize
+      ];
+    }
     // Both newInterval and newDomain are signed (i.e. in the direction of .flipped).
 
     // detect if domain is becoming flipped during zoom

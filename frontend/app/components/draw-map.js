@@ -4247,11 +4247,11 @@ export default Ember.Component.extend(Ember.Evented, {
             function limitPrecision(x) { return ('' + x).substr(0,7); };
             let 
             /** total domain */
-            domainAll = axis.axis1d.get('domain').toArray(),
+            domainAll = axis.axis1d.get('blocksDomain').toArray(),
             domainAllS = domainAll.map(limitPrecision),
-            domainS = domain.map(limitPrecision),
+            domainFS = maybeFlip(domain, axis.flipped).map(limitPrecision),
             /** true if (mousewheel) zoomed out to the limit of the whole domain. */
-            zoomedOut = isEqual(domainAllS, domainS);
+            zoomedOut = isEqual(domainAllS, domainFS);
 
             axis.setZoomed(! zoomedOut);
             y[p].domain(domain);
