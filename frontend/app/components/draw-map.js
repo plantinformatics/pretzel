@@ -3922,11 +3922,6 @@ export default Ember.Component.extend(Ember.Evented, {
       } // axisFeatureCirclesBrushed()
 
         showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, Ember.run.bind(me, me.get('resetZooms')), brushedAxisID, me);
-        let axis = oa.axes[brushedAxisID],
-            axis1d = axis && axis.axis1d;
-        if (axis1d) {
-          Ember.run.bind(axis1d, axis1d.showZoomResetButtonState)();
-        }
 
       } else {
         // brushHelper() is called from brushended() after zoom, with selectedAxes.length===0
@@ -3959,6 +3954,12 @@ export default Ember.Component.extend(Ember.Evented, {
       ensureYscaleDomain(yp, oa.axes[brushedAxisID]);
       let brushedDomain = brushRange ? axisRange2Domain(brushedAxisID, brushRange) : undefined;
       axisBrush.set('brushedDomain', brushedDomain);
+
+      let axis = oa.axes[brushedAxisID],
+          axis1d = axis && axis.axis1d;
+      if (axis1d) {
+        Ember.run.bind(axis1d, axis1d.showZoomResetButtonState)();
+      }
 
       me.send('selectChromById', brushedAxisID);
 

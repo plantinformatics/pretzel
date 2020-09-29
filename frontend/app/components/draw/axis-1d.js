@@ -310,16 +310,17 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     /** oa.brushedRegions is a hash, and it is updated not replaced,
      * so as a dependency key it will not signal changes; selectedAxes
      * is an array and is changed when brushedRegions is changed, so
-     * it is used as a dependency.
+     * it is used as a dependency, but it may not change when the user
+     * brushes because it persists after the brush is cleared.
      */
     'oa.brushedRegions', 'oa.selectedAxes.[]',
     function () {
-    let brushedRegions = this.get('oa.brushedRegions'),
-    axisId = this.get('axis.id'),
-    brushed = !! brushedRegions[axisId];
-    dLog('brushed', axisId, brushedRegions[axisId]);
-    return brushed;
-  }),
+      let brushedRegions = this.get('oa.brushedRegions'),
+      axisId = this.get('axis.id'),
+      brushed = !! brushedRegions[axisId];
+      dLog('brushed', axisId, brushedRegions[axisId], this.get('axisBrush.brushedAxes'));
+      return brushed;
+    }),
 
   zoomed2 : Ember.computed('zoomed', 'domain', 'zoomedDomain', function () {
     let
@@ -921,7 +922,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     as = this.get('axisSelect'),
     gb = as.selectAll('g.btn');
     gb.attr('class', () => 'btn ' + ['brushed', 'zoomed'].filter((state) => this.get(state)).join(' '));
-    dLog('showZoomResetButtonState', gb.node(), this.get('zoomed'), this.get('zoomed2'));
+    dLog('showZoomResetButtonState', gb.node(), this.get('brushed'), this.get('zoomed'), this.get('zoomed2'), this.get('axisBrush.brushedAxes'));
   },
   showZoomResetButtonXPosn() {
     let
