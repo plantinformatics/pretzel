@@ -483,6 +483,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .append("div")
       .attr("id", "axis2D_" + axisID) // matches axis-2d:targetEltId()
       .style("border:1px green solid");
+
+      let axis1d = this.get('axis1d');
+      if (axis1d) {
+	axis1d.showZoomResetButtonXPosn();
+      }
+
   },
 
   /*--------------------------------------------------------------------------*/
@@ -596,6 +602,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
        * A possible optimisation : instead, add width change to the x translation of axes to the right of this one.
        */
       this.axisWidthResize(axisID, width, dx);
+
+      let axis1d = this.get('axis1d');
+      if (axis1d) {
+	axis1d.showZoomResetButtonXPosn();
+      }
     }
     return ok;
   },
