@@ -39,11 +39,11 @@
                also change send(pathTabActive ) in didInsertElement()
              -->
           <li class="active-detail">
-	    <a data-toggle="tab" href="#tab-paths-density" onclick={{action "pathTabActive" "density"}}>Paths - Density</a>
+            <a data-toggle="tab" href="#tab-paths-density" onclick={{action "pathTabActive" "density"}}>Paths - Density</a>
             <div>{{ pathControlActiveDensity }}</div>
           </li>
           <li class="active-detail active">
-	    <a data-toggle="tab" href="#tab-paths-sample" onclick={{action "pathTabActive" "sample"}}>- Sample</a>
+            <a data-toggle="tab" href="#tab-paths-sample" onclick={{action "pathTabActive" "sample"}}>- Sample</a>
             <div>{{ pathControlActiveSample }}</div>
           </li>
 
@@ -53,19 +53,19 @@
 
           <div id="tab-paths-density" class="tab-pane fade">
             <input type="range" 
-	           id="range-pathDensity" 
-	           value={{pathDensity}}
-                   oninput={{action (mut pathDensity) value="target.value"}}
-	           min="-50" max="50"
+              id="range-pathDensity" 
+              value={{pathDensity}}
+              oninput={{action (mut pathDensity) value="target.value"}}
+              min="-50" max="50"
             >
           </div>
 
           <div id="tab-paths-sample" class="tab-pane fade in active">
             <input type="range" 
-	           id="range-pathSample" 
-	           value={{pathSample}}
-                   oninput={{action (mut pathSample) value="target.value"}}
-	           min="0" max="100"
+              id="range-pathSample" 
+              value={{pathSample}}
+              oninput={{action (mut pathSample) value="target.value"}}
+              min="0" max="100"
             >
           </div>
 
@@ -82,10 +82,26 @@
       </div>
       <div>
         <input type="range" 
-	       id="range-pathNFeatures" 
-	       value={{pathNFeatures}} 
+          id="range-pathNFeatures" 
+          value={{pathNFeatures}} 
                oninput={{action (mut pathNFeatures) value="target.value"}}
-	       min="0" max="100"
+          min="0" max="100"
+        />
+      </div>
+
+    </li>
+
+    <li class="list-group-item">
+      <div>
+        <label>Binned Feature Counts</label>
+        <span style="margin-left:2em; vertical-align: bottom;"> Threshold : {{ featuresCountsThreshold }}</span>
+      </div>
+      <div>
+        <input type="range" 
+         id="range-featuresCountsThreshold" 
+         value={{featuresCountsThreshold}} 
+               oninput={{action (mut featuresCountsThreshold) value="target.value"}}
+         min="0" max="100"
         />
       </div>
 
@@ -115,7 +131,7 @@
       <input type="checkbox" 
              id="checkbox-togglePathUpdate"
              name="toggleCheckbox" 
-	     checked="checked"
+       checked="checked"
       />
       <label>Path update during drag</label>
     </li>
@@ -128,17 +144,17 @@
     </li>
     <li class="list-group-item">
       <input type="checkbox" 
-	     id="checkbox-toggleShowAll" 
-	     name="toggleShowAll" 
-	     checked="checked"
+       id="checkbox-toggleShowAll" 
+       name="toggleShowAll" 
+       checked="checked"
       />
       <label>Show All</label>
     </li>
     <li class="list-group-item">
       <input type="checkbox" 
-	     id="checkbox-toggleShowSelectedMarkers" 
-	     name="toggleShowSelectedMarkers" 
-	     checked="checked"
+       id="checkbox-toggleShowSelectedMarkers" 
+       name="toggleShowSelectedMarkers" 
+       checked="checked"
       />
       <label>List Selected Features</label>
     </li>
@@ -146,28 +162,28 @@
     <li class="list-group-item">
       <label>Path Opacity</label>
       <input type="range" 
-	     id="range-pathOpacity" 
-	     name="pathOpacity" 
-	     min="0" max="100"
-	     value="100"
+       id="range-pathOpacity" 
+       name="pathOpacity" 
+       min="0" max="100"
+       value="100"
       />
     </li>
     <li class="list-group-item">
       <label>Path Width</label>
       <input type="range" 
-	     id="range-pathWidth" 
-	     name="pathWidth" 
-	     min="0" max="300"
-	     value="75"
+       id="range-pathWidth" 
+       name="pathWidth" 
+       min="0" max="300"
+       value="75"
       />
     </li>
     <li class="list-group-item ff-alpha">
       <label>Synteny Block Size Threshold</label>
       <input type="range" 
-	     id="range-sbSizeThreshold" 
-	     name="sbSizeThreshold" 
-	     min="0" max="50"
-	     value="22"
+       id="range-sbSizeThreshold" 
+       name="sbSizeThreshold" 
+       min="0" max="50"
+       value="22"
       />
     </li>
   </ul>

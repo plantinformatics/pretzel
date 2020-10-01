@@ -542,6 +542,8 @@ Chart1.prototype.group = function (parentG, groupClassName) {
   // .attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
     .attr("class", (chartLine) => groupClassName)
     .attr('id', (chartLine) => groupClassName + '-' + chartLine.block.id)
+    // also x offset by .allocatedWidths[className][0] as x offset; that is defined after the chart is first rendered.
+    .attr('transform', (d, i) => 'translate(' + (0 + i*10*2) + ')' )	// trackWidth
   // .data((chartLine) => chartLine.currentData)
   ,
   // parentG.selectAll("g > g." + groupClassName); // 

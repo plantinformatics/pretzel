@@ -123,6 +123,8 @@ export default Ember.Component.extend({
       return params;
     }),
 
+  featuresCountsThreshold : expRangeInitial(1000, expRangeBase(100, 10000)),
+
   /*--------------------------------------------------------------------------*/
 
   didInsertElement() {
