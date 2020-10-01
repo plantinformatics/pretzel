@@ -401,6 +401,7 @@ Chart1.prototype.overlap = function(axisCharts) {
 Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, dataConfig, yAxisScale, resizedWidth)
 {
   this.scales.yAxis = yAxisScale;
+  this.allocatedWidth = resizedWidth;
 
   //----------------------------------------------------------------------------
 
@@ -543,7 +544,7 @@ Chart1.prototype.group = function (parentG, groupClassName) {
     .attr("class", (chartLine) => groupClassName)
     .attr('id', (chartLine) => groupClassName + '-' + chartLine.block.id)
     // also x offset by .allocatedWidths[className][0] as x offset; that is defined after the chart is first rendered.
-    .attr('transform', (d, i) => 'translate(' + (0 + i*10*2) + ')' )	// trackWidth
+    .attr('transform', (d, i) => 'translate(' + (0 + 5 + i*10*2) + ')' )	// trackWidth
   // .data((chartLine) => chartLine.currentData)
   ,
   // parentG.selectAll("g > g." + groupClassName); // 
@@ -743,7 +744,12 @@ ChartLine.prototype.bars = function (data)
 {
   let
     dataConfig = this.dataConfig,
-  block = this.block,
+  block = this.block;
+  if (! this.g) {
+    this.g = d3.selectAll("g.chart-line#chart-line-" + this.block.id);
+    dLog('ChartLine.bars', this.g.nodes(), this, data.length);
+  }
+  let
   g = this.g;
   if (dataConfig.barAsHeatmap)
     this.scales.x = this.scales.xColour;

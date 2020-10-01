@@ -489,6 +489,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 	axis1d.showZoomResetButtonXPosn();
       }
 
+    /** this clipPath is created in AxisCharts:frame(), id is axisClipId(). */
+    let axisClipRect = em.selectAll("g.chart > clipPath > rect");
+    axisClipRect
+      .attr("width", initialWidth)
   },
 
   /*--------------------------------------------------------------------------*/
