@@ -304,6 +304,10 @@ export default Service.extend(Ember.Evented, {
    * @return a hash object mapping from blockId to reference limits [from, to].
    */
   blocksReferencesLimits(blockIds) {
+    /** blocksReferencesLimit() is used as the basis of
+     * models/block.js: referenceLimits(), and that can be used here, e.g.
+     * blockIds.map((blockId) => this.peekBlock(blockId).get('referenceLimits') )
+     */
     function blocksReferencesLimit(io) {
       let b=io.obj; return b.get('range') || b.get('featureLimits'); };
     let
