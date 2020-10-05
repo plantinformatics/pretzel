@@ -156,17 +156,21 @@ export default InAxis.extend({
     // probably this function can be factored out as AxisCharts:draw()
     let axisCharts = this.get('axisCharts'),
     charts = this.get('charts'),
-    allocatedWidth = this.get('axisBlocks.allocatedWidth');
+    /** [startOffset, width] */
+    allocatedWidthCharts = this.get('allocatedWidth'),
+    /** array of [startOffset, width]. */
+    blocksWidths = this.get('axisBlocks.allocatedWidth'),
+    axisBlocks=this.get('axisBlocks.blocks');
     axisCharts.setupFrame(
       this.get('axisID'),
-      charts, allocatedWidth);
+      charts, allocatedWidthCharts);
 
     let
       chartTypes = this.get('chartTypes'),
     // equiv : charts && Object.keys(charts).length,
     nCharts = chartTypes && chartTypes.length;
     if (nCharts)
-      allocatedWidth /= nCharts;
+      allocatedWidthCharts[1] = allocatedWidthCharts[1] / nCharts;
     chartTypes.forEach((typeName) => {
       // this function could be factored out as axis-chart:draw()
       let
@@ -177,7 +181,11 @@ export default InAxis.extend({
         data = blocksData.get(typeName),
         dataConfig = chart.dataConfig;
         let blocks = this.get('blocks');
-
+        /** later : bi = axisBlocks.indexOf(blocks[i])
+         *  blocksWidths[bi][1] */
+        let allocatedWidth = (typeName === 'featureCountData') ?
+            blocksWidths[0][1] :
+            allocatedWidthCharts[1];
         chart.setupChart(
           this.get('axisID'), axisCharts, data, blocks,
           dataConfig, this.get('yAxisScale'), allocatedWidth);

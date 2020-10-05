@@ -36,8 +36,7 @@ export default Ember.Component.extend({
 
   allocatedWidth : Ember.computed('blocks.[]', function () {
     let blocks = this.get('blocks'),
-	t2 = 2
-	aw = blocks.map((blockId, i) => [
+	aw = blocks.map((block, i) => [
 	  i * trackWidth * 2,
 	  (i+1) * trackWidth * 2]);
     return aw;
