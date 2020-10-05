@@ -156,7 +156,7 @@ export default InAxis.extend({
     // probably this function can be factored out as AxisCharts:draw()
     let axisCharts = this.get('axisCharts'),
     charts = this.get('charts'),
-    allocatedWidth = this.get('allocatedWidth');
+    allocatedWidth = this.get('axisBlocks.allocatedWidth');
     axisCharts.setupFrame(
       this.get('axisID'),
       charts, allocatedWidth);
