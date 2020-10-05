@@ -572,12 +572,18 @@ export default DS.Model.extend({
   /*--------------------------------------------------------------------------*/
 
   featuresCountsInZoom : Ember.computed(
-    'zoomedDomain', 'referenceBlock.limits', 'featureLimits',
+    'featuresCounts.[]', 'zoomedDomain', 'referenceBlock.limits', 'featureLimits',
     function () {
       let
       domain = this.get('zoomedDomain'),
       limits = this.get('referenceBlock.limits') || this.get('featureLimits'),
-      overlaps = this.featuresCountsOverlappingInterval(domain);
+     overlaps;
+     if (! domain || true /* featuresCountsOverlappingInterval() not ready yet */) {
+       overlaps = this.get('featuresCounts');
+     }
+     else {
+       overlaps = this.featuresCountsOverlappingInterval(domain);
+     }
       dLog('featuresCountsInZoom', domain, limits, overlaps.length);
       return overlaps;
     }),
@@ -615,6 +621,8 @@ export default DS.Model.extend({
   }),
   /** Filter all featuresCounts API results for this block, for those overlapping interval.
    * @return array  [{nBins, domain, result}, ... ]
+   * @param interval	[from, to]
+   * not undefined;  if zoomedDomain is not defined, this function is not called.
    */
   featuresCountsOverlappingInterval(interval) {
     let
@@ -675,7 +683,7 @@ export default DS.Model.extend({
     const fnName = 'featuresForAxis';
     let blockId = this.get('id');
     let
-    count = this.get('featureCountInZoom'),
+    count = 0, // this depends on change to .result :  this.get('featureCountInZoom'),
     featuresCountsThreshold = this.get('featuresCountsThreshold');
     let features;
 
