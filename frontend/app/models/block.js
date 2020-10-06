@@ -571,6 +571,11 @@ export default DS.Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** From the featuresCounts results received, filter to return the bins
+   * overlapping zoomedDomain.
+   * If not zoomed (no zoomedDomain), return featuresCounts.
+   * @return undefined if no results or no overlaps
+   */
   featuresCountsInZoom : Ember.computed(
     'featuresCounts.[]', 'zoomedDomain', 'referenceBlock.limits', 'featureLimits',
     function () {
@@ -584,15 +589,25 @@ export default DS.Model.extend({
      else {
        overlaps = this.featuresCountsOverlappingInterval(domain);
      }
-      dLog('featuresCountsInZoom', domain, limits, overlaps.length);
+      dLog('featuresCountsInZoom', domain, limits, overlaps && overlaps.length);
       return overlaps;
     }),
+  /** From the featuresCounts results received which overlap zoomedDomain (from
+   * featuresCountsInZoom), calculate their bin size and return the smallest bin
+   * size.
+   * @return 0 if no results or no overlaps
+   */
   featuresCountsInZoomSmallestBinSize : Ember.computed('featuresCountsInZoom.[]', function () {
     let overlaps = this.get('featuresCountsInZoom') || [];
     let
     binSize = Math.min(overlaps.map((fcs) => fcs.domain / fcs.nBins));
     return binSize;
   }),
+  /** From the featuresCounts results received, combine the counts in bins
+   * overlapping zoomedDomain to return an approximation of the number of
+   * features in zoomedDomain.
+   * @return undefined if no overlaps
+   */
   featureCountInZoom : Ember.computed('featuresCountsInZoom.[]', function () {
     let overlaps = this.get('featuresCountsInZoom') || [];
     let
@@ -615,8 +630,9 @@ export default DS.Model.extend({
       dLog('featureCountInZoom map', binInterval, overlap, ratio, sum);
       return sum;
     })),
-    average = counts / (overlaps.length || 1);
-    dLog('featureCountInZoom', average, counts, overlaps.length);
+    overlapsLength = overlaps && overlaps.length,
+    average = counts / (overlapsLength || 1);
+    dLog('featureCountInZoom', average, counts, overlapsLength);
     return average;
   }),
   /** Filter all featuresCounts API results for this block, for those overlapping interval.

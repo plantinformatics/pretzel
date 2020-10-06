@@ -217,7 +217,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       result[groupName] = allocated;
       return result;
     }, {});
-    Ember.run.next(() => this.set('allocatedWidthsMax', offset));
+    Ember.run.next(() => !this.isDestroying && this.set('allocatedWidthsMax', offset));
     dLog('allocatedWidths', allocatedWidths, childWidths, width, available, offset);
     return allocatedWidths;
   }),
@@ -383,7 +383,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     dLog('axisShowExtend', axis, axisID, axisG);
     /** x translation of right axis */
     let 
-      initialWidth = /*50*/ this.getAxisExtendedWidth(axisID),
+    /** value of .extended may be false, so || 0.  */
+      initialWidth = /*50*/ this.getAxisExtendedWidth(axisID) || 0,
     axisData = axis.extended ? [axisID] : [];
     let oa = this.get('oa');
     if (axisG === undefined)

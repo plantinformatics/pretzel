@@ -115,9 +115,11 @@ export default InAxis.extend({
       let chart = this.charts[typeName];
       if (! chart) {
         let
-          dataConfig = dataConfigs[typeName],
-        parentG = this.get('axisCharts.dom.g'); // this.get('gAxis'),
-        chart = this.charts[typeName] = new Chart1(parentG, dataConfig);
+        dataConfig = dataConfigs[typeName];
+        /** at this time axisCharts.dom is empty, and chartsArray is not updated because chartTypes is constant.
+            parentG = this.get('axisCharts.dom.g'); // this.get('gAxis'),
+         */
+        chart = this.charts[typeName] = new Chart1(/*parentG*/undefined, dataConfig);
         let axisCharts = this.get('axisCharts');
         chart.overlap(axisCharts);
       }

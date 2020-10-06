@@ -424,7 +424,18 @@ Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, da
     let block = blocksById[blockId];
     this.createLine(blockId, block);
   });
-  this.group(this.dom.gca, 'chart-line');
+  /** devel - verify gca / parentG */
+  let parentGS = this.dom.gc.selectAll('g.' + this.dataConfig.dataTypeName);
+  /** on the first call, this.dom.gca.node() === parentGS.node(); after that, this.dom.gca is empty(). */
+  if (! this.dom.gca.empty()) {
+    if (this.dom.gca.node() !== parentGS.node()) {
+      dLog('setupChart', parentG.node(), parentG.nodes(), this.dom.gca.nodes(), this.parentG);
+    }
+    if (! this.parentG) {
+      this.parentG = this.dom.gca;
+    }
+  }
+  this.group(this.parentG, 'chart-line');
 
   //----------------------------------------------------------------------------
 
