@@ -16,6 +16,8 @@ const className = "chart", classNameSub = "chartRow";
 const showChartAxes = true;
 const useLocalY = false;
 
+const transitionDuration = 1500;
+
 /* global d3 */
 
 /*----------------------------------------------------------------------------*/
@@ -217,7 +219,8 @@ AxisCharts.prototype.getRanges2 =  function ()
     bbox = this.ranges && this.ranges.bbox;
   if (bbox) {
     let
-      margin = showChartAxes ?
+    /** equivalent logic applies in axis-charts:draw() to enable drawAxes().  */
+      margin = showChartAxes && ! this.isFeaturesCounts ?
       {top: 10, right: 20, bottom: 40, left: 20} :
     {top: 0, right: 0, bottom: 0, left: 0},
     // pp=parentG.node().parentElement,
@@ -297,7 +300,7 @@ AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
     gPa.merge(gps.selectAll("g > clipPath > rect"))
     .attr("x", bbox.x)
     .attr("y", bbox.y)
-    .attr("width", bbox.width + 150)
+    .attr("width", bbox.width + 250)
     .attr("height", bbox.height)
   ;
   let [startOffset, width] = allocatedWidth;
@@ -782,7 +785,7 @@ ChartLine.prototype.bars = function (data)
   let r =
   ra
     .merge(rs)
-    .transition().duration(1500)
+    .transition().duration(transitionDuration)
     .attr("x", 0)
     .attr("y", (d) => { let li = dataConfig.datum2LocationScaled(d); return li.length ? li[0] : li; })
   // yBand.bandwidth()
@@ -836,7 +839,7 @@ ChartLine.prototype.linebars = function (data)
     .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); });
   ra
     .merge(rs)
-    .transition().duration(1500)
+    .transition().duration(transitionDuration)
     .attr('d', horizLine)
     .attr("stroke", (d) => this.blockColour())
   ;
@@ -892,7 +895,7 @@ ChartLine.prototype.line = function (data)
     .attr("d", line)
     .merge(ps)
     .datum(data)
-    .transition().duration(1500)
+    .transition().duration(transitionDuration)
     .attr("d", line);
   // data length is constant 1, so .remove() is not needed
   ps.exit().remove();
@@ -954,9 +957,10 @@ DataConfig.prototype.rectWidth = function (scaled, gIsData, d, i, g)
   let d2v = (scaled ? this.datum2ValueScaled : this.datum2Value),
   width = d2v(d);
   if (this.valueIsArea) {
-    let h;
+    /** the last bucket of GM has 0 height : id: {min: 238.2272359, max: 238.2272359}, so treat it as 1. */
+    let h = this.rectHeight(false, gIsData, d, i, g);
     // Factor the width consistently by h, don't sometimes use scaled (i.e. pass scaled==false).
-    width /= (h = this.rectHeight(false, gIsData, d, i, g));
+    width /= (h || 1);
     // dLog('rectWidth', h, width, gIsData);
   }
   return width;

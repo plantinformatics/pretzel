@@ -163,12 +163,24 @@ export default InAxis.extend({
     /** array of [startOffset, width]. */
     blocksWidths = this.get('axisBlocks.allocatedWidth'),
     axisBlocks=this.get('axisBlocks.blocks');
+    let
+    chartTypes = this.get('chartTypes'),
+    /** equivalent logic applies in AxisCharts:getRanges2() to determine margin. */
+    isFeaturesCounts = (chartTypes.length && chartTypes[0] === 'featureCountData'),
+    frameWidth = isFeaturesCounts ?
+      blocksWidths[0] :
+      allocatedWidthCharts;
+    /** this and showChartAxes / drawAxes will likely move into Chart1. */
+    axisCharts.isFeaturesCounts = isFeaturesCounts;
+
+    if (frameWidth < 50) {
+      frameWidth = 50;
+    }
     axisCharts.setupFrame(
       this.get('axisID'),
-      charts, allocatedWidthCharts);
+      charts, frameWidth);
 
     let
-      chartTypes = this.get('chartTypes'),
     // equiv : charts && Object.keys(charts).length,
     nCharts = chartTypes && chartTypes.length;
     if (nCharts)
@@ -198,7 +210,7 @@ export default InAxis.extend({
 
     /** drawAxes() uses the x scale updated in drawChart() -> prepareScales(), called above. */
     const showChartAxes = true;
-    if (showChartAxes)
+    if (showChartAxes && ! isFeaturesCounts)
       axisCharts.drawAxes(charts);
 
     // place controls after the ChartLine-s group, so that the toggle is above the bars and can be accessed.
