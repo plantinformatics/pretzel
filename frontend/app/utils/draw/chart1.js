@@ -297,7 +297,7 @@ AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
     gPa.merge(gps.selectAll("g > clipPath > rect"))
     .attr("x", bbox.x)
     .attr("y", bbox.y)
-    .attr("width", bbox.width)
+    .attr("width", bbox.width + 150)
     .attr("height", bbox.height)
   ;
   let [startOffset, width] = allocatedWidth;
