@@ -164,6 +164,7 @@ exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10) {
       : { $bucket     :
           {
             groupBy: {$arrayElemAt : ['$value', 0]}, boundaries,
+	    'default' : 'outsideBoundaries',
             output: {
               count: { $sum: 1 },
               idWidth : {$addToSet : lengthRounded }
