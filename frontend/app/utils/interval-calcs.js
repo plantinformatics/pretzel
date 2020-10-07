@@ -89,8 +89,35 @@ function intervalOrdered(interval) {
   return interval;
 }
 
+/*----------------------------------------------------------------------------*/
+
+/** Keep the top byte of the mantissa and clear the rest.
+ * Used to granularise an interval, for constructing a taskId (getSummary() in
+ * services/data/block.js), so that a new request (task) is sent when the
+ * interval is zoomed significantly.
+ */
+function truncateMantissa(x)
+{
+  /** based on https://stackoverflow.com/a/17156580 by 'copy'. */
+  var float = new Float64Array(1),
+      bytes = new Uint8Array(float.buffer);
+
+  float[0] = x;
+
+  bytes[0] = 0;
+  bytes[1] = 0;
+  bytes[2] = 0;
+  bytes[3] = 0;
+  bytes[4] = 0;
+  bytes[5] = 0;
+
+  return float[0];
+}
 
 /*----------------------------------------------------------------------------*/
 
-export { intervalSize, intervalLimit, intervalOutside, intervalMerge, intervalExtent,
- intervalOverlap };
+export {
+  intervalSize, intervalLimit, intervalOutside, intervalMerge, intervalExtent,
+  intervalOverlap,
+  truncateMantissa
+};

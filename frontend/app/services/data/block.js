@@ -7,6 +7,7 @@ const { inject: { service } } = Ember;
 import { keyBy } from 'lodash/collection';
 
 import { stacks } from '../../utils/stacks';
+import { intervalSize, truncateMantissa }  from '../../utils/interval-calcs';
 
 
 let trace_block = 1;
@@ -379,8 +380,15 @@ export default Service.extend(Ember.Evented, {
 
   getSummary: function (blockIds) {
     // console.log("block getSummary", id);
-    let blockP =
-      this.get('auth').getBlockFeaturesCount(blockIds, /*options*/{});
+    let
+    /** check if feature count of block is already received.  */
+    blocksWithoutCount = blockIds.filter((blockId) => {
+      let block = this.peekBlock(blockId);
+      return ! block || ! block.get('featureCount');
+    }),
+    blockP = blocksWithoutCount.length ?
+      this.get('auth').getBlockFeaturesCount(blocksWithoutCount, /*options*/{}) :
+      Ember.RSVP.resolve([]);
 
     if (this.get('parsedOptions.featuresCounts')) {
 
@@ -390,15 +398,29 @@ export default Service.extend(Ember.Evented, {
         (blockId) => {
           /** densityFactor requires axis yRange, so for that case this will (in future) lookup axis from blockId. */
           const nBins = this.nBins(blockId);
-          let taskId = blockId + '_' + nBins;
+          let block = this.peekBlock(blockId);
+          let
+          zoomedDomain = block && block.get('zoomedDomain'),
+          /** granularise zoomedDomain to so that request is sent after e.g. 5% zoom change. */
+          zoomedDomainText = zoomedDomain ?
+            '_' + truncateMantissa(zoomedDomain[0]) +
+            '_' + truncateMantissa(zoomedDomain[1]) :
+            '';
+          let taskId = blockId + '_' + nBins + zoomedDomainText;
           let summaryTask = this.get('summaryTask');
           let p = summaryTask[taskId];
           if (! p) {
+            if (zoomedDomain) {
+              dLog('getSummary', zoomedDomainText, zoomedDomain);
+            }
             getCounts.apply(this);
             function getCounts() {
-              let intervals = this.blocksReferencesLimits([blockId]),
-              interval = intervals[blockId];
-            p = summaryTask[taskId] =
+              let interval = zoomedDomain;
+              if (! zoomedDomain) {
+                let intervals = this.blocksReferencesLimits([blockId]);
+                interval = intervals[blockId];
+              }
+              p = summaryTask[taskId] =
               this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, /*options*/{});
             /* this could be structured as a task within models/block.js
              * A task would have .drop() to avoid concurrent request, but
@@ -406,11 +428,21 @@ export default Service.extend(Ember.Evented, {
              * which is provided by summaryTask[taskId] above.
              */
             p.then((featuresCounts) => {
-              let block = this.peekBlock(blockId);
               if (! block)
                 console.log('getSummary featuresCounts', featuresCounts, blockId);
-              else
+              else {
+                let i = featuresCounts.findIndex((fc) => fc._id === 'outsideBoundaries');
+                if (i !== -1) {
+                  dLog('getSummary', featuresCounts[i]);
+                  delete featuresCounts[i];
+                }
+                let binSize = featuresCounts && featuresCounts.length ?
+                    featuresCounts[0].idWidth[0] :
+                    intervalSize(interval) / nBins,
+                    result = {binSize, nBins, domain : interval, result : featuresCounts};
+                block.get('featuresCountsResults').pushObject(result);
                 block.set('featuresCounts', featuresCounts);
+              }
             });
             }
           }
