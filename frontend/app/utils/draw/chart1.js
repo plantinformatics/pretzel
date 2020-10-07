@@ -191,9 +191,13 @@ AxisCharts.prototype.getBBox = function ()
       /** relative to the transform of parent g.axis-outer */
       bbox = gAxisElt.getBBox(),
     yrange = [bbox.y, bbox.height];
-    if (bbox.x < 0)
+    /** bbox.x is 10, probably because the child elements at this point start
+     * from 10 (right-edge path and g.tracks).
+     * Might need to leave 5px space for brushing the axis.
+     */
+    if (bbox.x !== 0)
     {
-      console.log("x < 0", bbox);
+      console.log("x !== 0", bbox);
       bbox.x = 0;
     }
     this.ranges.bbox = bbox;
@@ -304,6 +308,8 @@ AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
     .attr("height", bbox.height)
   ;
   let [startOffset, width] = allocatedWidth;
+  /* allocatedWidth[0] is currently min, so use 0 instead.  */
+  startOffset = 0;
   let gca =
     gpa.append("g")
     .attr("clip-path", (d) => "url(#" + axisClipId(d) + ")") // clip with the rectangle
