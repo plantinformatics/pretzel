@@ -4197,7 +4197,7 @@ export default Ember.Component.extend(Ember.Evented, {
       else
         axis.verify();
 
-      let t = oa.svgContainer.transition().duration(750);
+      let t = oa.svgContainer; // .transition().duration(750);
       /** The response to mousewheel zoom is direct, no transition delay.  requestAnimationFrame() is used. */
       let tRaf = undefined; // or t.duration(10);
       /** true if the axis domain is changed. */

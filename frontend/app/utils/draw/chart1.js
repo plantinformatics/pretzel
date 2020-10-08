@@ -16,7 +16,7 @@ const className = "chart", classNameSub = "chartRow";
 const showChartAxes = true;
 const useLocalY = false;
 
-const transitionDuration = 1500;
+const transitionDuration = 150;
 
 /* global d3 */
 
@@ -791,7 +791,7 @@ ChartLine.prototype.bars = function (data)
   let r =
   ra
     .merge(rs)
-    .transition().duration(transitionDuration)
+    // .transition().duration(transitionDuration)
     .attr("x", 0)
     .attr("y", (d) => { let li = dataConfig.datum2LocationScaled(d); return li.length ? li[0] : li; })
   // yBand.bandwidth()
@@ -845,7 +845,7 @@ ChartLine.prototype.linebars = function (data)
     .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); });
   ra
     .merge(rs)
-    .transition().duration(transitionDuration)
+    // .transition().duration(transitionDuration)
     .attr('d', horizLine)
     .attr("stroke", (d) => this.blockColour())
   ;
@@ -901,7 +901,7 @@ ChartLine.prototype.line = function (data)
     .attr("d", line)
     .merge(ps)
     .datum(data)
-    .transition().duration(transitionDuration)
+    // .transition().duration(transitionDuration)
     .attr("d", line);
   // data length is constant 1, so .remove() is not needed
   ps.exit().remove();

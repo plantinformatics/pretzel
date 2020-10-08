@@ -730,7 +730,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     dLog('notifyChanges', axisID);
 
     let axisApi = stacks.oa.axisApi;
-    let t = stacks.oa.svgContainer.transition().duration(750);
+    let t = stacks.oa.svgContainer; // .transition().duration(750);
 
     let eventBus = stacks.oa.eventBus;
 
@@ -746,7 +746,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     let axisApi = stacks.oa.axisApi;
     let axisID = this.get('axis.id');
     dLog('updateAxis', axisID);
-    let t = stacks.oa.svgContainer.transition().duration(750);
+    let t = stacks.oa.svgContainer; //.transition().duration(750);
     axisApi.axisScaleChanged(axisID, t, true);
   },
   drawTicks() {

@@ -842,7 +842,7 @@ export default InAxis.extend({
         .attr('y', yEnd);
       dLog('height', height);
       rm
-      .transition().duration(featureTrackTransitionTime)
+      // .transition().duration(featureTrackTransitionTime)
       .attr('x', xPosnS(subElements))
       .attr('y', yPosn)
       .attr('height' , height)
