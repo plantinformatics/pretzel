@@ -2207,11 +2207,12 @@ Stacked.prototype.axisDimensions = function ()
  */
 Stacked.prototype.setDomain = function (domain)
 {
-  let axis1d = this.axis1d,
-  axisPosition = axis1d && axis1d.currentPosition;
-  // if (! axisPosition)
-  //  dLog('setDomain', this, 'domain', domain, axis1d, axisPosition);
-  axisPosition.set('yDomain', domain);
+  let axis1d = this.axis1d;
+  // if (! axis1d)
+  //  dLog('setDomain', this, 'domain', domain, axis1d, axis1d && axis1d.currentPosition);
+  if (axis1d) {
+    Ember.run.bind(axis1d, axis1d.setDomain)(domain);
+  }
 };
 /** Set the zoomed of the current position to the given zoomed
  */
@@ -2247,5 +2248,5 @@ Stacked.prototype.unviewBlocks = function ()
 
 export  { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText,
           axisId2Name
-	  , setCount
+          , setCount
         } ;

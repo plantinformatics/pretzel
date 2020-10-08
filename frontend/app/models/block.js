@@ -707,6 +707,8 @@ export default DS.Model.extend({
   }),
 
   zoomedDomain : Ember.computed.alias('axis.axis1d.zoomedDomain'),
+  zoomedDomainDebounced : Ember.computed.alias('axis.axis1d.zoomedDomainDebounced'),
+  zoomedDomainThrottled : Ember.computed.alias('axis.axis1d.zoomedDomainThrottled'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -717,7 +719,7 @@ export default DS.Model.extend({
    * As used in axis-tracks : when axis is open/split, request features in
    * response to, and as defined by, zoom changes.
    */
-  featuresForAxis : Ember.computed('axis', 'zoomedDomain.{0,1}', function () {
+  featuresForAxis : Ember.computed('axis', 'zoomedDomainDebounced.{0,1}', function () {
     /** This could be split out into a separate layer, concerned with reactively
      * requesting data; the layers are : core attributes (of block); derived
      * attributes (these first 2 are the above functions); actions based on

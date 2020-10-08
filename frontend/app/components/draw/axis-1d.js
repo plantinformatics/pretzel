@@ -685,6 +685,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   position : Ember.computed.alias('lastDrawn.yDomain'),
   /** position as of the last zoom. */
   zoomedDomain : Ember.computed.alias('currentPosition.yDomain'),
+  zoomedDomainDebounced : Ember.computed.alias('currentPosition.yDomainDebounced'),
+  zoomedDomainThrottled : Ember.computed.alias('currentPosition.yDomainThrottled'),
 
   /** Updates when the array elements of .domain[] update.
    *  @return undefined; value is unused.
