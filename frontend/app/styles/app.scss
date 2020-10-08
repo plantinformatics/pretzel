@@ -265,6 +265,8 @@ g.axis-use
 */
 rect.chartRow {
   opacity : 0.5;
+}
+g:not(.featureCountData) > g.chart-line > rect.chartRow {
   stroke: blue;
 }
 /* .featureCountData colour is heatmap **/
