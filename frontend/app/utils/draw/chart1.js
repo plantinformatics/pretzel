@@ -784,6 +784,7 @@ ChartLine.prototype.bars = function (data)
   ra
     .attr("class", dataConfig.barClassName)
     .attr("fill", (d) => this.blockColour())
+    .attr("stroke", (d) => this.blockColour())
   /** parent datum is currently 1, but could be this.block;
    * this.parentElement.parentElement.__data__ has the axis id (not the blockId),
    */
