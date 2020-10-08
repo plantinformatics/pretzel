@@ -14,6 +14,10 @@ const axisTransitionTime = 750;
 /** 0 or 1 to disable or enable transitions */
 const transitionEnable = 1;
 
+/** width of track <rect>s */
+let trackWidth = 10;
+
+
 
 
 export default Ember.Component.extend(Ember.Evented, AxisEvents, {
@@ -206,9 +210,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let
     startWidth = this.get('startWidth'),
     width = this.get('width'),
-    available = this.get('adjustedWidth') || startWidth || 60,
+    available = this.get('adjustedWidth') || startWidth || 2 * trackWidth,
     /** spare and share may be -ve */
-    spare = available - (requested ? requested[0] : 0),
+    spare = available ? (available - (requested ? requested[0] : 0)) : 0,
     share = 0;
     if (spare < 0)
       spare = 0;
@@ -254,8 +258,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   init() {
     this._super(...arguments);
+
     this.set('axis1d.axis2d', this);
     this.set('childWidths', Ember.Object.create());
+
+    let trackWidthOption = this.get('urlOptions.trackWidth');
+    if (trackWidthOption) {
+      trackWidth = trackWidthOption;
+    }
   },
 
   willDestroyElement() {
@@ -374,7 +384,6 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     /** could also use : axis.axis1d.get('dataBlocks.length');
      * subtract 1 for the reference block;  for a GM, map 0 -> 1 */
     dataBlocksN = (blocks && blocks.length - 1) || 1,
-    trackWidth = 10,
     trackBlocksWidth =
       /*40 +*/ dataBlocksN * /*2 * */ trackWidth /*+ 20 + 50*/,
     initialWidth = /*50*/ trackBlocksWidth,
