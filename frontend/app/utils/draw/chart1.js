@@ -926,6 +926,8 @@ ChartLine.prototype.drawContent = function(barsLine)
     let isEffectsData = data.length && data[0].name && data[0].value && (data[0].value.length === 3) && (data[0].value[2].length === 6);
     let bars = isEffectsData ? this.linebars : this.bars;
     let chartDraw = barsLine ? bars : this.line;
+    if (! this.block.get('isZoomedOut'))
+      data = [];
     chartDraw.apply(this, [data]);
   }
 };

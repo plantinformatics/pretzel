@@ -173,8 +173,10 @@ export default InAxis.extend({
     /** this and showChartAxes / drawAxes will likely move into Chart1. */
     axisCharts.isFeaturesCounts = isFeaturesCounts;
 
-    if (frameWidth < 50) {
-      frameWidth = 50;
+    // blocksWidths[] is empty when !isZoomedOut().
+    const emptyWidth = [0, 50];
+    if (! frameWidth) {
+      frameWidth = emptyWidth;
     }
     axisCharts.setupFrame(
       this.get('axisID'),
@@ -198,7 +200,7 @@ export default InAxis.extend({
         /** later : bi = axisBlocks.indexOf(blocks[i])
          *  blocksWidths[bi][1] */
         let allocatedWidth = (typeName === 'featureCountData') ?
-            blocksWidths[0][1] :
+            (blocksWidths[0] || emptyWidth)[1] :
             allocatedWidthCharts[1];
         chart.setupChart(
           this.get('axisID'), axisCharts, data, blocks,

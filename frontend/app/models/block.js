@@ -710,6 +710,22 @@ export default DS.Model.extend({
   zoomedDomainDebounced : Ember.computed.alias('axis.axis1d.zoomedDomainDebounced'),
   zoomedDomainThrottled : Ember.computed.alias('axis.axis1d.zoomedDomainThrottled'),
 
+  /** @return true if the axis on which this block is displayed is zoomed out past the point
+   * that the number of features in the block within zoomedDomain is > featuresCountsThreshold.
+   * @desc
+   * This is used to select whether axis-charts featuresCounts or axis-tracks
+   * are displayed for this block.
+   */
+  isZoomedOut : Ember.computed('zoomedDomainDebounced.{0,1}', function () {
+    let
+    count = this.get('featureCountInZoom'),
+    featuresCountsThreshold = this.get('featuresCountsThreshold'),
+    out  = (count > featuresCountsThreshold);
+    dLog('isZoomedOut', out, this.get('id'), count, featuresCountsThreshold);
+    return out;
+  }),
+
+
   /*--------------------------------------------------------------------------*/
 
   featuresCountsThreshold : Ember.computed.alias('controls.view.featuresCountsThreshold'),

@@ -807,13 +807,13 @@ export default Service.extend(Ember.Evented, {
    * These are suited to be rendered by axis-chart.
    */
   viewedChartable: Ember.computed(
-    'viewed.@each.{featuresCounts,isChartable}',
+    'viewed.@each.{featuresCounts,isChartable,isZoomedOut}',
     function() {
       let records =
         this.get('viewed')
         .filter(function (block) {
           let tags = block.get('datasetId.tags'),
-          featuresCounts = block.get('featuresCounts'),
+          featuresCounts = block.get('featuresCounts') && block.get('isZoomedOut'),
           line = block.get('isChartable');
           if (line)
             console.log('viewedChartable', tags, block);

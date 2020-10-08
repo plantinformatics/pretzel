@@ -11,6 +11,9 @@ import { stacks, xScaleExtend  } from '../utils/stacks';
 const dLog = console.debug;
 
 const axisTransitionTime = 750;
+/** 0 or 1 to disable or enable transitions */
+const transitionEnable = 1;
+
 
 
 export default Ember.Component.extend(Ember.Evented, AxisEvents, {
@@ -40,7 +43,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * @return [] if there are no blocks with data in the axis.
    */
   dataBlocks : Ember.computed(
-    'axisID',  'blockService.dataBlocks.@each.{isViewed,hasFeatures}',
+    'axisID',
+    /* Would like to depend on blockService.dataBlocks, and specifically on
+     * blockService.dataBlocks[id], but blockService.dataBlocks is a Map not an array,
+     * so depend on loadedViewedChildBlocks which dataBlocks depends on.
+     */
+    'blockService.loadedViewedChildBlocks.@each.{isViewed,hasFeatures,isZoomedOut}',
     'blockService.viewed.[]',
     function () {
       let
@@ -48,6 +56,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         dataBlocksMap = this.get('blockService.dataBlocks'),
       id = this.get('axisID'),
       dataBlocks = (dataBlocksMap && dataBlocksMap.get(id)) || [];
+      dataBlocks = dataBlocks.filter((block) => ! block.get('isZoomedOut'));
       dLog('dataBlocksMap', id, dataBlocksMap, dataBlocks);
       return dataBlocks;
     }),
@@ -393,7 +402,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .data(axisData);
     let ugx = ug
       .exit()
-      .transition().duration(500)
+      .transition().duration(transitionEnable * 500)
       .remove();
     ugx
       .selectAll("use")
@@ -433,7 +442,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       rm = er.merge(em.selectAll('g.axis-use > rect'))
         .attr("height", vc.yRange);
       rm
-        .transition().duration(1000)
+        .transition().duration(transitionEnable * 1000)
         .attr("width", initialWidth);
     }
     else
@@ -454,7 +463,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .append("path"),
       thisAxis2d = this,
       rm = ra.merge(em.selectAll('g.axis-use > path'))
-        .transition().duration(1000)
+        .transition().duration(transitionEnable * 1000)
         .attr("transform",function(d) {
           let eWidth = thisAxis2d.getAxisExtendedWidth(d);
           dLog('axis- path transform', eWidth, d, this);
@@ -477,7 +486,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .append("xhtml:body")
       .attr("class", "axis-table");
     ef
-      .transition().duration(1000)
+      .transition().duration(transitionEnable * 1000)
       .attr("width", initialWidth);
     if (eb.node() !== null)	  // .style() uses .node()
       eb
@@ -517,7 +526,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       if (width !== undefined) {
         let
           p = axisUse.selectAll('g.axis-use > path')
-          .transition().duration(1000)
+          .transition().duration(transitionEnable * 1000)
           .attr("transform",function(d) {return "translate(" + (width) + ",0)";});
         dLog('positionRightEdgeEffect', axisUse.node(), width, p.node());
       }
@@ -573,7 +582,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     {
       use
         .data([width])
-        .transition().duration(axisTransitionTime)
+        .transition().duration(transitionEnable * axisTransitionTime)
         .attr("transform", function(d) {return "translate(" + d + ",0)";});
       if (! use.empty())  // use.data() is not valid if empty
         dLog('setWidth', use.node(), width, use.data(), use.attr('transform'), use.transition());
@@ -585,7 +594,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         dLog(rect.node(), rect.attr('width'));
       }
       let axisTitle = axisUse.selectAll('g > g.axis-all > text')
-          .transition().duration(axisTransitionTime)
+          .transition().duration(transitionEnable * axisTransitionTime)
       // duplicated in utils/draw/axis.js : yAxisTitleTransform()
           .attr("transform", "translate(" + width/2 + ",0)");
       dLog('axisTitle', axisTitle);

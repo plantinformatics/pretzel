@@ -97,7 +97,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let featuresP = this.get('axisBrush.features');
     featuresP.then((features) => {
     if (features && features.length)
-      throttle(this, this.draw, features, 200, false);
+      throttle(this, () => ! this.isDestroying && this.draw(features), 200, false);
     });
     return featuresP;
   }),
