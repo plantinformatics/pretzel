@@ -170,7 +170,7 @@ export default Ember.Component.extend({
       allocatedWidth = this.get('allocatedWidths.' + this.get('className'));
     dLog('allocatedWidth', this.className, allocatedWidth, allocatedWidths);
     if (! allocatedWidth)
-      allocatedWidth = [12, 113];
+      allocatedWidth = [12, 50];
     return allocatedWidth; 
   }),
 

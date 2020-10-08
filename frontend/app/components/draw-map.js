@@ -2596,6 +2596,15 @@ export default Ember.Component.extend(Ember.Evented, {
 
       let axisTitleBlocksServers = new AxisTitleBlocksServers(oa.svgContainer, oa.axisTitleLayout, me.get('apiServers'));
       t.on('end', () => axisTitleBlocksServers.position(axisTitleS));
+
+      /** showZoomResetButtonXPosn() is called in axis-1d and axis-2d,
+       * ideally the call will be only in axis-1d, but for now this
+       * picks up some cases not covered.  */
+      let 
+      axisIds = axisTitleS.nodes().mapBy('__data__'),
+      axes1 = axisIds.map((axisId) => oa.axes[axisId]);
+      axes1.forEach(
+        (a) => a.axis1d && Ember.run.bind(a.axis1d, a.axis1d.showZoomResetButtonXPosn)());
     }
     updateAxisTitleSize(axisG.merge(axisS));
 

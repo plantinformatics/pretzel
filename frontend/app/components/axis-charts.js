@@ -115,9 +115,11 @@ export default InAxis.extend({
       let chart = this.charts[typeName];
       if (! chart) {
         let
-          dataConfig = dataConfigs[typeName],
-        parentG = this.get('axisCharts.dom.g'); // this.get('gAxis'),
-        chart = this.charts[typeName] = new Chart1(parentG, dataConfig);
+        dataConfig = dataConfigs[typeName];
+        /** at this time axisCharts.dom is empty, and chartsArray is not updated because chartTypes is constant.
+            parentG = this.get('axisCharts.dom.g'); // this.get('gAxis'),
+         */
+        chart = this.charts[typeName] = new Chart1(/*parentG*/undefined, dataConfig);
         let axisCharts = this.get('axisCharts');
         chart.overlap(axisCharts);
       }
@@ -156,17 +158,35 @@ export default InAxis.extend({
     // probably this function can be factored out as AxisCharts:draw()
     let axisCharts = this.get('axisCharts'),
     charts = this.get('charts'),
-    allocatedWidth = this.get('allocatedWidth');
+    /** [startOffset, width] */
+    allocatedWidthCharts = this.get('allocatedWidth'),
+    /** array of [startOffset, width]. */
+    blocksWidths = this.get('axisBlocks.allocatedWidth'),
+    axisBlocks=this.get('axisBlocks.blocks');
+    let
+    chartTypes = this.get('chartTypes'),
+    /** equivalent logic applies in AxisCharts:getRanges2() to determine margin. */
+    isFeaturesCounts = (chartTypes.length && chartTypes[0] === 'featureCountData'),
+    frameWidth = isFeaturesCounts ?
+      blocksWidths[0] :
+      allocatedWidthCharts;
+    /** this and showChartAxes / drawAxes will likely move into Chart1. */
+    axisCharts.isFeaturesCounts = isFeaturesCounts;
+
+    // blocksWidths[] is empty when !isZoomedOut().
+    const emptyWidth = [0, 50];
+    if (! frameWidth) {
+      frameWidth = emptyWidth;
+    }
     axisCharts.setupFrame(
       this.get('axisID'),
-      charts, allocatedWidth);
+      charts, frameWidth);
 
     let
-      chartTypes = this.get('chartTypes'),
     // equiv : charts && Object.keys(charts).length,
     nCharts = chartTypes && chartTypes.length;
     if (nCharts)
-      allocatedWidth /= nCharts;
+      allocatedWidthCharts[1] = allocatedWidthCharts[1] / nCharts;
     chartTypes.forEach((typeName) => {
       // this function could be factored out as axis-chart:draw()
       let
@@ -177,7 +197,11 @@ export default InAxis.extend({
         data = blocksData.get(typeName),
         dataConfig = chart.dataConfig;
         let blocks = this.get('blocks');
-
+        /** later : bi = axisBlocks.indexOf(blocks[i])
+         *  blocksWidths[bi][1] */
+        let allocatedWidth = (typeName === 'featureCountData') ?
+            (blocksWidths[0] || emptyWidth)[1] :
+            allocatedWidthCharts[1];
         chart.setupChart(
           this.get('axisID'), axisCharts, data, blocks,
           dataConfig, this.get('yAxisScale'), allocatedWidth);
@@ -188,7 +212,7 @@ export default InAxis.extend({
 
     /** drawAxes() uses the x scale updated in drawChart() -> prepareScales(), called above. */
     const showChartAxes = true;
-    if (showChartAxes)
+    if (showChartAxes && ! isFeaturesCounts)
       axisCharts.drawAxes(charts);
 
     // place controls after the ChartLine-s group, so that the toggle is above the bars and can be accessed.

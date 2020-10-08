@@ -302,7 +302,7 @@ export default Service.extend({
       c = store.push(fn);
       let blockId = f.blockId;
       if (blockId.get)
-	blockId = blockId.get('id');
+        blockId = blockId.get('id');
       storeFeature(stacks.oa, flowsService, f.name, c, blockId);
       if (trace_pathsP > 2)
         dLog(c.get('id'), c._internalModel.__data);
@@ -643,8 +643,11 @@ export default Service.extend({
      * defines the range then the domain of the block's features is not known,
      * and the axis.domain[] will be [0, 0].
      */
-    if (! brushedDomain  || ((brushedDomain[0] === 0) && (brushedDomain[1] === 0)))
-      delete paramAxis.domain;
+    if (! brushedDomain  || ((brushedDomain[0] === 0) && (brushedDomain[1] === 0))) {
+      if (paramAxis.domain && (paramAxis.domain[0] === 0) && (paramAxis.domain[1] === 0)) {
+        delete paramAxis.domain;
+      }
+    }
     else if (brushedDomain)
       paramAxis.domain = brushedDomain;
     let dataBlockIds = axis.dataBlocks(true)

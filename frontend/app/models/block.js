@@ -9,7 +9,12 @@ import { and } from '@ember/object/computed';
 
 import { task } from 'ember-concurrency';
 
-import { intervalMerge }  from '../utils/interval-calcs';
+import lodashMath from 'lodash/math';
+
+import { intervalSize, intervalMerge, intervalOverlap }  from '../utils/interval-calcs';
+import { inDomain } from '../utils/draw/interval-overlap';
+import { featureCountDataProperties } from '../utils/data-types';
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -33,6 +38,7 @@ export default DS.Model.extend({
   auth: service('auth'),
   apiServers: service(),
   datasetService : service('data/dataset'),
+  controls : service(),
 
 
   datasetId: DS.belongsTo('dataset'),
@@ -47,6 +53,7 @@ export default DS.Model.extend({
   featureType: attr(),
   meta: attr(),
 
+  /*--------------------------------------------------------------------------*/
 
   /** true when the block is displayed in the graph.
    * set by adding the block to the graph (entry-block: get()),
@@ -81,6 +88,15 @@ export default DS.Model.extend({
    * 'selected').
    */
   isSelected: false,
+
+  /*--------------------------------------------------------------------------*/
+
+  /** current view of featuresCountsResults, i.e. filtered for zoomedDomain and
+   * selected for binSize suitable to zoomedDomain / yRange. */
+  /** featuresCounts : undefined, */
+
+  /** [{binSize (optional - derived), nBins, domain, result}, ... ] */
+  featuresCountsResults : Ember.A(),
 
   /*--------------------------------------------------------------------------*/
 
@@ -558,6 +574,126 @@ export default DS.Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** The domain of a reference block is provided by either .range or,
+   * in the case of a genetic map, by the domain of it's features.
+   */
+  limits : Ember.computed('range', 'referenceBlock.limits', 'featureLimits', function () {
+    /** for GM and physical reference, .referenceBlock is undefined, so this recursion is limited to 1 level. */
+    let limits = this.get('range') || this.get('referenceBlock.limits') || this.get('featureLimits');
+    return limits;
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
+  /** From the featuresCounts results received, filter to return the bins
+   * overlapping zoomedDomain.
+   * If not zoomed (no zoomedDomain), return featuresCounts.
+   * @return undefined if no results or no overlaps
+   */
+  featuresCountsInZoom : Ember.computed(
+    'featuresCountsResults.[]', 'zoomedDomain.{0,1}', 'limits',
+    function () {
+      let
+      domain = this.get('zoomedDomain'),
+      limits = this.get('limits'),
+     overlaps;
+     if (! domain) {
+       overlaps = this.get('featuresCountsResults');
+     }
+     else {
+       overlaps = this.featuresCountsOverlappingInterval(domain);
+     }
+      dLog('featuresCountsInZoom', domain, limits, overlaps && overlaps.length);
+      return overlaps;
+    }),
+  /** From the featuresCounts results received which overlap zoomedDomain (from
+   * featuresCountsInZoom), calculate their bin size and return the smallest bin
+   * size.
+   * @return 0 if no results or no overlaps
+   */
+  featuresCountsInZoomSmallestBinSize : Ember.computed('featuresCountsInZoom.[]', function () {
+    let overlaps = this.get('featuresCountsInZoom') || [];
+    let
+    overlapsBinSizes = overlaps.map((fcs) => fcs.binSize || (intervalSize(fcs.domain) / fcs.nBins)),
+    binSize = Math.min.apply(undefined, overlapsBinSizes);
+    return binSize;
+  }),
+  /** From the featuresCounts results received, combine the counts in bins
+   * overlapping zoomedDomain to return an approximation of the number of
+   * features in zoomedDomain.
+   * @return undefined if no overlaps
+   */
+  featureCountInZoom : Ember.computed('featuresCountsInZoom.[]', function () {
+    let overlaps = this.get('featuresCountsInZoom') || [];
+    let
+    domain = this.get('zoomedDomain'),
+    /** assume that the bins in each result are contiguous; use the
+     * result which covers the interval best, and (secondary measure
+     * if >1 cover the interval equally) has the most bins
+     * First draft : sum all the overlapping counts, perhaps divide by
+     * number of overlapping results.
+     *
+     * interval is passed to getBlockFeaturesCounts(), so result type
+     * is featureCountDataProperties.
+     */
+    counts = overlaps.map((fcs) => fcs.result.reduce( (sum, fc, i) => {
+      let
+      binInterval = featureCountDataProperties.datum2Location(fc),
+      /** count within bin */
+      binCount = featureCountDataProperties.datum2Value(fc);
+      if (domain) {
+        let
+        overlap = intervalOverlap([binInterval, domain]);
+        if (overlap) {
+          let
+          binSize = intervalSize(binInterval),
+          ratio = binSize ? intervalSize(overlap) / binSize : 1;
+          sum += ratio * binCount;
+          if (i % 64 === 0)  {
+            dLog('featureCountInZoom map', binInterval, overlap, ratio, binCount, sum, i);
+          }
+        }
+      } else {
+        sum += binCount;
+      }
+      return sum;
+    }, 0)),
+    /** number of results which overlap. */
+    overlapsLength = overlaps && overlaps.length,
+    sum = lodashMath.sum(counts),
+    average = sum / (overlapsLength || 1);
+    dLog('featureCountInZoom', average, sum, counts.length, overlapsLength);
+    return average;
+  }),
+  /** Filter all featuresCounts API results for this block, for those overlapping interval.
+   * @return array  [{nBins, domain, result}, ... ]
+   * @param interval	[from, to]
+   * not undefined;  if zoomedDomain is not defined, this function is not called.
+   */
+  featuresCountsOverlappingInterval(interval) {
+    let
+    featuresCounts = this.get('featuresCountsResults') || [],
+    overlaps = featuresCounts.reduce(
+      (result, fcs) => {
+        if (inDomain(fcs.domain, interval)) {
+          let
+          filtered = Object.assign({}, fcs);
+          filtered.result = fcs.result.filter(
+            (fc) => {
+              let loc = featureCountDataProperties.datum2Location(fc);
+              return inDomain(loc, interval); }),
+          result.push(filtered);
+        }
+        return result;
+      }, []);
+    dLog('featuresCountsOverlappingInterval', featuresCounts, overlaps);
+    return overlaps;
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+
+
   axis : Ember.computed('view.axis', 'referenceBlock', function () {
     let axis = this.get('view.axis');
     let referenceBlock;
@@ -571,15 +707,35 @@ export default DS.Model.extend({
   }),
 
   zoomedDomain : Ember.computed.alias('axis.axis1d.zoomedDomain'),
+  zoomedDomainDebounced : Ember.computed.alias('axis.axis1d.zoomedDomainDebounced'),
+  zoomedDomainThrottled : Ember.computed.alias('axis.axis1d.zoomedDomainThrottled'),
+
+  /** @return true if the axis on which this block is displayed is zoomed out past the point
+   * that the number of features in the block within zoomedDomain is > featuresCountsThreshold.
+   * @desc
+   * This is used to select whether axis-charts featuresCounts or axis-tracks
+   * are displayed for this block.
+   */
+  isZoomedOut : Ember.computed('zoomedDomainDebounced.{0,1}', function () {
+    let
+    count = this.get('featureCountInZoom'),
+    featuresCountsThreshold = this.get('featuresCountsThreshold'),
+    out  = (count > featuresCountsThreshold);
+    dLog('isZoomedOut', out, this.get('id'), count, featuresCountsThreshold);
+    return out;
+  }),
+
 
   /*--------------------------------------------------------------------------*/
+
+  featuresCountsThreshold : Ember.computed.alias('controls.view.featuresCountsThreshold'),
 
   /** When block is added to an axis, request features, scoped by the axis
    * current position.
    * As used in axis-tracks : when axis is open/split, request features in
    * response to, and as defined by, zoom changes.
    */
-  featuresForAxis : Ember.computed('axis', function () {
+  featuresForAxis : Ember.computed('axis', 'zoomedDomainDebounced.{0,1}', function () {
     /** This could be split out into a separate layer, concerned with reactively
      * requesting data; the layers are : core attributes (of block); derived
      * attributes (these first 2 are the above functions); actions based on
@@ -591,17 +747,40 @@ export default DS.Model.extend({
     const fnName = 'featuresForAxis';
     let blockId = this.get('id');
     let
+    count = this.get('featureCountInZoom'),
+    featuresCountsThreshold = this.get('featuresCountsThreshold');
+    let features;
+
+    /** if featuresCounts not yet requested then count is 0 */
+    if ((this.featuresCounts === undefined) || (count > featuresCountsThreshold)) {
+      let
+      minSize = this.get('featuresCountsInZoomSmallestBinSize'),
+      domain = this.get('zoomedDomain') || this.get('limits'),
+      axis = this.get('axis'),
+      yRange = (axis && axis.yRange()) || 800,
+      /** bin size of result with smallest bins, in pixels as currently viewed on screen. */
+      minSizePx = yRange * minSize / intervalSize(domain);
+      /** minSize === 0 indicate no featuresCounts overlapping this zoomedDomain. */
+      if ((minSizePx === 0) || (minSizePx > 20))  /* px */ {
+        /* request summary / featuresCounts if there are none for block,
+         * or if their bins are too big */
+        let blockService = this.get('blockService'),
+        blocksSummaryTasks = blockService.get('getBlocksSummary').apply(blockService, [[blockId]]);
+      }
+      // features is undefined
+    } else {
       features = this.get('pathsP').getBlockFeaturesInterval(blockId);
 
-    features.then(
-      (result) => {
-        if (trace_block)
-          dLog(moduleName, fnName, result.length, blockId, this);
-      },
-      function (err) {
-        dLog(moduleName, fnName, 'reject', err);
-      }
-    );
+      features.then(
+        (result) => {
+          if (trace_block)
+            dLog(moduleName, fnName, result.length, blockId, this);
+        },
+        function (err) {
+          dLog(moduleName, fnName, 'reject', err);
+        }
+      );
+    }
 
     return features;
   })

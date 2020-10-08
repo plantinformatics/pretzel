@@ -16,6 +16,8 @@ const className = "chart", classNameSub = "chartRow";
 const showChartAxes = true;
 const useLocalY = false;
 
+const transitionDuration = 1500;
+
 /* global d3 */
 
 /*----------------------------------------------------------------------------*/
@@ -189,9 +191,13 @@ AxisCharts.prototype.getBBox = function ()
       /** relative to the transform of parent g.axis-outer */
       bbox = gAxisElt.getBBox(),
     yrange = [bbox.y, bbox.height];
-    if (bbox.x < 0)
+    /** bbox.x is 10, probably because the child elements at this point start
+     * from 10 (right-edge path and g.tracks).
+     * Might need to leave 5px space for brushing the axis.
+     */
+    if (bbox.x !== 0)
     {
-      console.log("x < 0", bbox);
+      console.log("x !== 0", bbox);
       bbox.x = 0;
     }
     this.ranges.bbox = bbox;
@@ -217,7 +223,8 @@ AxisCharts.prototype.getRanges2 =  function ()
     bbox = this.ranges && this.ranges.bbox;
   if (bbox) {
     let
-      margin = showChartAxes ?
+    /** equivalent logic applies in axis-charts:draw() to enable drawAxes().  */
+      margin = showChartAxes && ! this.isFeaturesCounts ?
       {top: 10, right: 20, bottom: 40, left: 20} :
     {top: 0, right: 0, bottom: 0, left: 0},
     // pp=parentG.node().parentElement,
@@ -297,10 +304,12 @@ AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
     gPa.merge(gps.selectAll("g > clipPath > rect"))
     .attr("x", bbox.x)
     .attr("y", bbox.y)
-    .attr("width", bbox.width)
+    .attr("width", bbox.width + 250)
     .attr("height", bbox.height)
   ;
   let [startOffset, width] = allocatedWidth;
+  /* allocatedWidth[0] is currently min, so use 0 instead.  */
+  startOffset = 0;
   let gca =
     gpa.append("g")
     .attr("clip-path", (d) => "url(#" + axisClipId(d) + ")") // clip with the rectangle
@@ -401,6 +410,7 @@ Chart1.prototype.overlap = function(axisCharts) {
 Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, dataConfig, yAxisScale, resizedWidth)
 {
   this.scales.yAxis = yAxisScale;
+  this.allocatedWidth = resizedWidth;
 
   //----------------------------------------------------------------------------
 
@@ -423,7 +433,18 @@ Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, da
     let block = blocksById[blockId];
     this.createLine(blockId, block);
   });
-  this.group(this.dom.gca, 'chart-line');
+  /** devel - verify gca / parentG */
+  let parentGS = this.dom.gc.selectAll('g.' + this.dataConfig.dataTypeName);
+  /** on the first call, this.dom.gca.node() === parentGS.node(); after that, this.dom.gca is empty(). */
+  if (! this.dom.gca.empty()) {
+    if (this.dom.gca.node() !== parentGS.node()) {
+      dLog('setupChart', parentG.node(), parentG.nodes(), this.dom.gca.nodes(), this.parentG);
+    }
+    if (! this.parentG) {
+      this.parentG = this.dom.gca;
+    }
+  }
+  this.group(this.parentG, 'chart-line');
 
   //----------------------------------------------------------------------------
 
@@ -542,6 +563,8 @@ Chart1.prototype.group = function (parentG, groupClassName) {
   // .attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
     .attr("class", (chartLine) => groupClassName)
     .attr('id', (chartLine) => groupClassName + '-' + chartLine.block.id)
+    // also x offset by .allocatedWidths[className][0] as x offset; that is defined after the chart is first rendered.
+    .attr('transform', (d, i) => 'translate(' + (0 + 5 + i*10*2) + ')' )	// trackWidth
   // .data((chartLine) => chartLine.currentData)
   ,
   // parentG.selectAll("g > g." + groupClassName); // 
@@ -741,7 +764,12 @@ ChartLine.prototype.bars = function (data)
 {
   let
     dataConfig = this.dataConfig,
-  block = this.block,
+  block = this.block;
+  if (! this.g) {
+    this.g = d3.selectAll("g.chart-line#chart-line-" + this.block.id);
+    dLog('ChartLine.bars', this.g.nodes(), this, data.length);
+  }
+  let
   g = this.g;
   if (dataConfig.barAsHeatmap)
     this.scales.x = this.scales.xColour;
@@ -763,7 +791,7 @@ ChartLine.prototype.bars = function (data)
   let r =
   ra
     .merge(rs)
-    .transition().duration(1500)
+    .transition().duration(transitionDuration)
     .attr("x", 0)
     .attr("y", (d) => { let li = dataConfig.datum2LocationScaled(d); return li.length ? li[0] : li; })
   // yBand.bandwidth()
@@ -817,7 +845,7 @@ ChartLine.prototype.linebars = function (data)
     .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); });
   ra
     .merge(rs)
-    .transition().duration(1500)
+    .transition().duration(transitionDuration)
     .attr('d', horizLine)
     .attr("stroke", (d) => this.blockColour())
   ;
@@ -873,7 +901,7 @@ ChartLine.prototype.line = function (data)
     .attr("d", line)
     .merge(ps)
     .datum(data)
-    .transition().duration(1500)
+    .transition().duration(transitionDuration)
     .attr("d", line);
   // data length is constant 1, so .remove() is not needed
   ps.exit().remove();
@@ -898,6 +926,8 @@ ChartLine.prototype.drawContent = function(barsLine)
     let isEffectsData = data.length && data[0].name && data[0].value && (data[0].value.length === 3) && (data[0].value[2].length === 6);
     let bars = isEffectsData ? this.linebars : this.bars;
     let chartDraw = barsLine ? bars : this.line;
+    if (! this.block.get('isZoomedOut'))
+      data = [];
     chartDraw.apply(this, [data]);
   }
 };
@@ -935,9 +965,10 @@ DataConfig.prototype.rectWidth = function (scaled, gIsData, d, i, g)
   let d2v = (scaled ? this.datum2ValueScaled : this.datum2Value),
   width = d2v(d);
   if (this.valueIsArea) {
-    let h;
+    /** the last bucket of GM has 0 height : id: {min: 238.2272359, max: 238.2272359}, so treat it as 1. */
+    let h = this.rectHeight(false, gIsData, d, i, g);
     // Factor the width consistently by h, don't sometimes use scaled (i.e. pass scaled==false).
-    width /= (h = this.rectHeight(false, gIsData, d, i, g));
+    width /= (h || 1);
     // dLog('rectWidth', h, width, gIsData);
   }
   return width;
