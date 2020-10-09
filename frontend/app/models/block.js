@@ -201,6 +201,11 @@ export default DS.Model.extend({
     isChartable = tags && tags.length && (tags.indexOf('chartable') >= 0);
     return isChartable;
   }),
+  isSubElements : Ember.computed('datasetId.tags', function () {
+    let tags = this.get('datasetId.tags'),
+    isSubElements = tags && tags.length && (tags.indexOf('geneElements') >= 0);
+    return isSubElements;
+  }),
 
   /*--------------------------------------------------------------------------*/
 

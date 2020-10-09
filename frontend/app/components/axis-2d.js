@@ -1,6 +1,8 @@
 import Ember from 'ember';
 const { inject: { service } } = Ember;
 
+import lodashMath from 'lodash/math';
+
 import { eltWidthResizable } from '../utils/domElements';
 import { eltIdGpRef }  from '../utils/draw/axis';
 import AxisEvents from '../utils/draw/axis-events';
@@ -191,7 +193,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * @return [horizontal start offset, width] for each child.
    * The key of the result is the same as the input .childWidths
    */
-  allocatedWidths : Ember.computed('childWidths.{chart,tracks}.1', 'width', 'adjustedWidth', function () {
+  allocatedWidths : Ember.computed('childWidths.{chart,tracks,trackCharts}.1', 'width', 'adjustedWidth', function () {
     // if @each were supported for hashes, would depend on : 'childWidths.@each.1', 
     let allocatedWidths,
     childWidths = this.get('childWidths'),
@@ -531,7 +533,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       shiftRight=5,
       /** allocatedWidths also calculates allocatedWidthsMax. */
       allocatedWidths = this.get('allocatedWidths'),
-      width = this.get('allocatedWidthsMax');
+      sum = this.childWidthsSum(),
+      width = Math.max(sum, this.get('allocatedWidthsMax'));
       if (width !== undefined) {
         let
           p = axisUse.selectAll('g.axis-use > path')
@@ -541,6 +544,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       }
     }
   },
+  childWidthsSum() {
+    let sum = lodashMath.sum(Object.values(this.get('childWidths')).mapBy('1'));
+    return sum;
+  },
+
 
   didRender() {
     let me = this;

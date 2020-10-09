@@ -24,6 +24,13 @@ let trackWidth = 10;
  * If true, the <rect>s are made proportionally narrower instead.
  */
 const fixedBlockWidth = true;
+/** To allow axis-tracks to share the same (fixed-width) horizontal space
+ * allocation as axis-charts featuresCounts, use axisBlocks to allocate the
+ * space, under the label 'trackCharts'.
+ * Other axis-tracks which use variable width (e.g. sub-elements) will continue
+ * to use childWidths['tracks'] for allocatedWidth.
+ */
+const useAxisBlocks = true;
 
 /** track sub-elements < this height (px) are not rendered. */
 const subElementThresholdHeight = 5;
@@ -378,6 +385,7 @@ export default InAxis.extend({
   /** Current Y interval within the total domain of the axis reference block. */
   currentPosition : Ember.computed.alias('axis1d.currentPosition'),
   yDomain : Ember.computed.alias('currentPosition.yDomain'),
+  stackBlocks : Ember.computed.alias('axis1d.drawMap.oa.stacks.blocks'),
 
   /** From the Ember block objects, derive the stack Blocks. */
   trackBlocks : Ember.computed('trackBlocksR.@each.view', function () {
@@ -589,7 +597,7 @@ export default InAxis.extend({
       });
       let blockState = thisAt.lookupAxisTracksBlock(blockId);
       blockState.set('layoutWidth', tracksLayout.layoutWidth);
-      if (! blockState.hasOwnProperty('subelement')) {
+      if (! blockState.hasOwnProperty('subElements')) {
         blockState.subElements = blockTagSubElements(blockId);
       }
       /** [min, max] */
@@ -667,14 +675,24 @@ export default InAxis.extend({
       let xOffset;
       // subElements could be mixed with fixed width blocks, so perhaps use .offset for all.
 
-      /** blockC.offset is the sum of 
-       * tracksLayout.layoutWidth for each of the blockId-s to the left of this one. */
       let
-      blocks = thisAt.get('blocks'),
-      /** this assigns blocks[*].offset */
-      widthSum = thisAt.get('blockLayoutWidthSum'),
       blockC = thisAt.lookupAxisTracksBlock(blockId);
-      xOffset = blockC.offset;
+      if (useAxisBlocks && ! blockC.subElements) {
+        let
+         /** array of [startOffset, width]. */
+        blocksWidths = thisAt.get('axisBlocks.allocatedWidth'),
+        axisBlocks = thisAt.get('axisBlocks.blocks'),
+        blockIndex = axisBlocks.findIndex((block) => block.get('id') === blockId);
+        let allocatedWidth = blocksWidths.length && blocksWidths[blockIndex];
+        xOffset = allocatedWidth ? allocatedWidth[0] : 0;
+      } else {
+        /** blockC.offset is the sum of 
+         * tracksLayout.layoutWidth for each of the blockId-s to the left of this one. */
+        let
+        /** this assigns blocks[*].offset */
+        widthSum = thisAt.get('blockLayoutWidthSum');
+        xOffset = blockC.offset;
+      }
       if (xOffset === undefined)
       {
         if (! fixedBlockWidth) {
@@ -683,9 +701,15 @@ export default InAxis.extend({
           // width/nTrackBlocks is related to 2 * trackWidth;
           let width = thisAt.get('width') || thisAt.get('layoutWidth');
           xOffset = width * (i+0.5) / thisAt.get('nTrackBlocks');
-          dLog('blockOffset', blockId, i, width, widthSum, xOffset);
+          dLog('blockOffset', blockId, i, width, xOffset, blockC);
         }
       }
+      /** Leave 5px left margin to be clear of the axis brush.
+       * This could be factored to axis-blocks : allocatedWidth, since it is
+       * also required for axis-charts, which has an improvised +5 in
+       * Chart1:group().
+       */
+      xOffset += 5;
       return xOffset;
     }
     function blockTransform(blockId, i) {
@@ -745,9 +769,8 @@ export default InAxis.extend({
     /* seems like bbox.x is the left edge of the left-most tracks (i.e. bbox
      * contains the children of gAxis), so use 0 instead. */
     bbox.y = yrange[0] ;
-    let allocatedWidth = this.get('allocatedWidth');
     /** + trackWidth for spacing. */
-    bbox.width = ((allocatedWidth && allocatedWidth[1]) || this.get('layoutWidth')) + trackWidth;
+    bbox.width = this.get('combinedWidth') + trackWidth;
     bbox.height = yrange[1] - yrange[0];
     clipRect
       .attr("x", 0 /*bbox.x*/);
@@ -1325,6 +1348,12 @@ export default InAxis.extend({
   lookupAxisTracksBlock(blockId) {
     let blocks = this.get('blocks'),
     blockState = blocks[blockId] || (blocks[blockId] = Ember.Object.create());
+    if (! blockState.hasOwnProperty('subElements')) {
+      let blockS = this.get('stackBlocks')[blockId];
+      blockState.subElements = blockS.block.get('isSubElements');
+      dLog('lookupAxisTracksBlock', blockId, blockState.subElements);
+    }
+
     return blockState;
   },
   /** Use the interval tree of sub-element data to layer them within
@@ -1404,7 +1433,7 @@ export default InAxis.extend({
       if (block.subElements || ! fixedBlockWidth) {
         blockWidth = block.layoutWidth || block.trackWidth || trackWidth;
       } else {
-        blockWidth = 2 * trackWidth;
+        blockWidth = useAxisBlocks ? 0 : 2 * trackWidth;
       }
       sum += blockWidth;
       return sum;
@@ -1428,14 +1457,26 @@ export default InAxis.extend({
 
     return width;
   }),
+  combinedWidth : Ember.computed('layoutWidth', 'allocatedWidth', 'axisBlocks.allocatedWidth.[]', function() {
+    let
+    axisBlocks = this.get('axisBlocks.allocatedWidth'),
+    rightBlock = axisBlocks.length && axisBlocks[axisBlocks.length-1],
+    axisBlocksEnd = rightBlock ? rightBlock[1] : 0;
+
+    let allocatedWidth = this.get('allocatedWidth');
+
+    let width = ((allocatedWidth && allocatedWidth[1]) || this.get('layoutWidth')) + axisBlocksEnd;
+    return width;
+  }),
   /** Render changes related to a change of .layoutWidth
    */
-  layoutWidthEffect : Ember.computed('layoutWidth', function () {
+  layoutWidthEffect : Ember.computed('combinedWidth', function () {
     let
     axisID = this.get('axisID'),
-    layoutWidth = this.get('layoutWidth');
-    setClipWidth(axisID, layoutWidth);
-    return layoutWidth;
+    width = this.get('combinedWidth');
+
+    setClipWidth(axisID, width);
+    return width;
   }),
   /** Render changes driven by changes of block data or scope.
    */
