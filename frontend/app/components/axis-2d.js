@@ -16,9 +16,6 @@ const axisTransitionTime = 750;
 /** 0 or 1 to disable or enable transitions */
 const transitionEnable = 1;
 
-/** width of track <rect>s */
-let trackWidth = 10;
-
 
 
 
@@ -156,6 +153,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   },
 
+  /** width of track <rect>s */
+  trackWidth : Ember.computed('trackWidth', function () {
+    let trackWidthOption = this.get('urlOptions.trackWidth'),
+    trackWidth = trackWidthOption || 10;
+    dLog('init', 'from urlOptions, trackWidth', trackWidth, trackWidthOption);
+    return trackWidth;
+  }),
+
   dualAxis : Ember.computed.alias('urlOptions.dualAxis'),
   rectWidth() {
     let
@@ -210,6 +215,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      * If spare < 0 then each child will get < min, but not <0.
      */
     let
+    trackWidth = this.get('trackWidth'),
     startWidth = this.get('startWidth'),
     width = this.get('width'),
     available = this.get('adjustedWidth') || startWidth || 2 * trackWidth,
@@ -263,11 +269,6 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
     this.set('axis1d.axis2d', this);
     this.set('childWidths', Ember.Object.create());
-
-    let trackWidthOption = this.get('urlOptions.trackWidth');
-    if (trackWidthOption) {
-      trackWidth = trackWidthOption;
-    }
   },
 
   willDestroyElement() {
@@ -386,6 +387,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     /** could also use : axis.axis1d.get('dataBlocks.length');
      * subtract 1 for the reference block;  for a GM, map 0 -> 1 */
     dataBlocksN = (blocks && blocks.length - 1) || 1,
+    trackWidth = this.get('trackWidth'),
     trackBlocksWidth =
       /*40 +*/ dataBlocksN * /*2 * */ trackWidth /*+ 20 + 50*/,
     initialWidth = /*50*/ trackBlocksWidth,

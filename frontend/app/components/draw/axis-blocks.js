@@ -5,11 +5,6 @@ const { inject: { service } } = Ember;
 const dLog = console.debug;
 
 
-/** width of track <rect>s
- * Copied from axis-tracks.
- */
-let trackWidth = 10;
-
 /** allocate horizontal space for blocks within axis-2d. In the allocated width
  * either axis-track or axis-charts featuresCounts will be positioned.
  *
@@ -27,12 +22,6 @@ export default Ember.Component.extend({
 
   init() {
     this._super(...arguments);
-
-    let trackWidthOption = this.get('urlOptions.trackWidth');
-    if (trackWidthOption) {
-      dLog('init', 'from urlOptions, setting trackWidth', trackWidthOption, ', was', trackWidth);
-      trackWidth = trackWidthOption;
-    }
   },
 
 
@@ -46,6 +35,7 @@ export default Ember.Component.extend({
   allocatedWidth : Ember.computed('blocks.[]', function () {
     let
     blocks = this.get('blocks'),
+    trackWidth = this.get('trackWidth'),
     aw = blocks.map((block, i) => [
       i * trackWidth * 2,
       (i+1) * trackWidth * 2]);

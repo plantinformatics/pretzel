@@ -158,6 +158,7 @@ export default InAxis.extend({
     // probably this function can be factored out as AxisCharts:draw()
     let axisCharts = this.get('axisCharts'),
     charts = this.get('charts'),
+    trackWidth = this.get('trackWidth'),
     /** [startOffset, width] */
     allocatedWidthCharts = this.get('allocatedWidth'),
     /** array of [startOffset, width]. */
@@ -174,7 +175,7 @@ export default InAxis.extend({
     axisCharts.isFeaturesCounts = isFeaturesCounts;
 
     // blocksWidths[] is empty when !isZoomedOut().
-    const emptyWidth = [0, 50];
+    const emptyWidth = [0, trackWidth];
     if (! frameWidth) {
       frameWidth = emptyWidth;
     }

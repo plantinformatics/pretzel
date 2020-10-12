@@ -36,10 +36,21 @@
 {{positionRightEdgeEffect}}
 <div>axis-2d :{{this}}, {{axisID}}, {{targetEltId}},  {{subComponents.length}} :
   <div>subComponents :
-    {{#draw/axis-blocks chartBlocks=viewedChartable trackBlocksR=dataBlocks childWidths=childWidths as |axisBlocks| }}
-      {{axis-charts data=data axis=this axisID=axisID childWidths=childWidths allocatedWidths=allocatedWidths blocks=viewedChartable resizeEffect=resizeEffect axisBlocks=axisBlocks}}
+    {{#draw/axis-blocks chartBlocks=viewedChartable trackBlocksR=dataBlocks
+      childWidths=childWidths trackWidth=trackWidth
+      as |axisBlocks| }}
+      {{axis-charts data=data axis=this axisID=axisID childWidths=childWidths
+        allocatedWidths=allocatedWidths blocks=viewedChartable
+        resizeEffect=resizeEffect axisBlocks=axisBlocks
+        trackWidth=trackWidth
+      }}
       {{log 'blockService' blockService 'viewedChartable' blockService.viewedChartable}}
-      {{axis-tracks axis=this axisID=axisID childWidths=childWidths allocatedWidths=allocatedWidths trackBlocksR=dataBlocks resizeEffect=resizeEffect axisBlocks=axisBlocks}}
+--------------------------------------------------------------------------------
+      {{axis-tracks axis=this axisID=axisID childWidths=childWidths
+        allocatedWidths=allocatedWidths trackBlocksR=dataBlocks
+        resizeEffect=resizeEffect axisBlocks=axisBlocks
+        trackWidth=trackWidth
+      }}
     {{/draw/axis-blocks}}
 
     {{#each subComponents as |subComponent|}}
