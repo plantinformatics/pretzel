@@ -291,6 +291,7 @@ circle.radio.toggle.chartType
       fill-opacity : 0.2;
       stroke : magenta;
       stroke-width : 2;
+      cursor: pointer;
 }
 circle.radio.toggle.chartType.pushed
 {
@@ -641,7 +642,7 @@ g.axis-outer > g.btn > rect.Reset {
 }
 
 
-svg > g.publishMode .btn
+svg > g.publishMode .graph-btn,
 {
   display: none;
 }

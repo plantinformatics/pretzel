@@ -355,7 +355,7 @@ AxisCharts.prototype.controls = function controls()
   /** currently placed at g.chart, could be inside g.chart>g (clip-path=). */
   let chartTypeToggle = append
     .append("circle")
-    .attr("class", "radio toggle chartType")
+    .attr("class", "radio toggle chartType graph-btn")
     .attr("r", 6)
     .on("click", toggleBarsLineClosure);
   chartTypeToggle.merge(select.selectAll("g > circle"))

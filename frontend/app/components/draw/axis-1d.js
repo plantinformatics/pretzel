@@ -923,7 +923,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     let
     as = this.get('axisSelect'),
     gb = as.selectAll('g.btn');
-    gb.attr('class', () => 'btn ' + ['brushed', 'zoomed'].filter((state) => this.get(state)).join(' '));
+    gb.attr('class', () => 'btn graph-btn ' + ['brushed', 'zoomed'].filter((state) => this.get(state)).join(' '));
     dLog('showZoomResetButtonState', gb.node(), this.get('brushed'), this.get('zoomed'), this.get('zoomed2'), this.get('axisBrush.brushedAxes'));
   },
   showZoomResetButtonXPosn() {
