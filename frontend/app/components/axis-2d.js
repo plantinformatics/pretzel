@@ -477,10 +477,6 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       thisAxis2d = this,
       rm = ra.merge(em.selectAll('g.axis-use > path'))
         .transition().duration(transitionEnable * 1000)
-        .attr("transform",function(d) {
-          let eWidth = thisAxis2d.getAxisExtendedWidth(d);
-          dLog('axis- path transform', eWidth, d, this);
-               return "translate(" + (eWidth) + ",0)";})
         .attr("d", sLine);
     }
 
@@ -526,7 +522,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * this is the key part which needs to update.
    */
   positionRightEdgeEffect : Ember.computed('allocatedWidthsMax', 'allocatedWidths', function () {
-    // this.positionRightEdge();
+    this.positionRightEdge();
   }),
   positionRightEdge() {
     let axisUse;
