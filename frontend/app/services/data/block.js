@@ -390,15 +390,18 @@ export default Service.extend(Ember.Evented, {
       this.get('auth').getBlockFeaturesCount(blocksWithoutCount, /*options*/{}) :
       Ember.RSVP.resolve([]);
 
+    /** Request features counts for data blocks (not reference blocks).  */
     if (this.get('parsedOptions.featuresCounts')) {
 
     /** As yet these result promises are not returned, not needed. */
     let blockPs =
-      blockIds.map(
-        (blockId) => {
+	blockIds.map((blockId) => [blockId, this.peekBlock(blockId)])
+	.filter((blockAndId) => blockAndId[1].get('isData'))
+	.map(
+          (blockAndId) => {
+          let [blockId, block] = blockAndId;
           /** densityFactor requires axis yRange, so for that case this will (in future) lookup axis from blockId. */
           const nBins = this.nBins(blockId);
-          let block = this.peekBlock(blockId);
           let
           zoomedDomain = block && block.get('zoomedDomain'),
           /** granularise zoomedDomain to so that request is sent after e.g. 5% zoom change. */

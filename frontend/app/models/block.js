@@ -130,7 +130,16 @@ export default DS.Model.extend({
   hasFeatures : Ember.computed('featureCount', function () {
     return this.get('featureCount') > 0;
   }),
-  isData : and('isLoaded', 'hasFeatures'),
+  /** Similar to isData(), but relies on .featureCount, which may not have been received. */
+  isDataCount : and('isLoaded', 'hasFeatures'),
+  isData : Ember.computed('referenceBlock', 'range', function (){
+    let isData = !! this.get('referenceBlock');
+    if (! isData) {
+      /** reference blocks have range, GMs (and child data blocks) do not. */
+      isData = ! this.get('range');
+    }
+    return isData;
+  }),
 
   /** is this block copied from a (secondary) server, cached on the server it was loaded from (normally the primary). */
   isCopy : Ember.computed('meta._origin', function () {
