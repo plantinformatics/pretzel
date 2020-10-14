@@ -44,9 +44,6 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * blocks, collated based on the ComputedProperty axesBlocks.
    *
    * @return [] if there are no blocks with data in the axis.
-   *
-   * @desc
-   * This is passed as trackBlocksR to axis-tracks and axis-blocks.
    */
   dataBlocks : Ember.computed(
     'axisID',
@@ -54,7 +51,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      * blockService.dataBlocks[id], but blockService.dataBlocks is a Map not an array,
      * so depend on loadedViewedChildBlocks which dataBlocks depends on.
      */
-    'blockService.loadedViewedChildBlocks.@each.{isViewed,hasFeatures,isZoomedOut}',
+    'blockService.loadedViewedChildBlocks.@each.{isViewed,hasFeatures}',
     'blockService.viewed.[]',
     function () {
       let
@@ -62,10 +59,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         dataBlocksMap = this.get('blockService.dataBlocks'),
       id = this.get('axisID'),
       dataBlocks = (dataBlocksMap && dataBlocksMap.get(id)) || [];
-      dataBlocks = dataBlocks.filter((block) => ! block.get('isZoomedOut'));
       dLog('dataBlocksMap', id, dataBlocksMap, dataBlocks);
       return dataBlocks;
     }),
+  /** This is passed as trackBlocksR to axis-tracks and axis-blocks.
+   */
+  trackBlocks : Ember.computed.filter('dataBlocks.@each.isZoomedOut', function(block, index, array) {
+    return ! block.get('isZoomedOut');
+  }),
 
   /** @return blocks which are viewedChartable, and whose axis is this axis.
    */

@@ -235,6 +235,7 @@ export default InAxis.extend({
         let allocatedWidth = (typeName === 'featureCountData') ?
             (blocksWidths[0] || emptyWidth)[1] :
             allocatedWidthCharts[1];
+        /** data is the (typeName) data for all axes; blocksAll are the data blocks on this axis : chart. */
         chart.setupChart(
           this.get('axisID'), axisCharts, data, blocksAll,
           dataConfig, this.get('yAxisScale'), allocatedWidth);

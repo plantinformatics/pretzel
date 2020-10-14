@@ -8,8 +8,7 @@ const dLog = console.debug;
 /** allocate horizontal space for blocks within axis-2d. In the allocated width
  * either axis-track or axis-charts featuresCounts will be positioned.
  *
- * @param chartBlocks=viewedChartable 
- * @param trackBlocksR=dataBlocks
+ * @param dataBlocks=dataBlocks
  */
 export default Ember.Component.extend({
   blockService: service('data/block'),
@@ -25,9 +24,7 @@ export default Ember.Component.extend({
   },
 
 
-  /** Combine chartBlocks and trackBlocksR, i.e. union.
-   */
-  blocks : Ember.computed.union('chartBlocks', 'trackBlocksR'),
+  blocks : Ember.computed.alias('dataBlocks'),
 
   /** Allocate fixed-width horizontal space for each block.
    * @return [[startOffset, endOffset], ...],   parallel to this.blocks[]

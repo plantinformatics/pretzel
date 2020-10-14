@@ -437,7 +437,11 @@ Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, da
   blockIds = Object.keys(chartData);
   blockIds.forEach((blockId) => {
     let block = blocksById[blockId];
-    this.createLine(blockId, block);
+    /** if block then blockId is on this axis / chart. */
+    if (block) {
+      // ensure the chartLine is created.
+      this.createLine(blockId, block);
+    }
   });
   /** devel - verify gcp / parentG */
   let parentGS = this.dom.gc.selectAll('g.' + this.dataConfig.dataTypeName);
