@@ -22,9 +22,10 @@ export default Ember.Component.extend({
 
   setBlockFeaturesData(dataTypeName, featuresData){
     let blocksData = this.get('blocksData'),
-    typeData = blocksData[dataTypeName] || (blocksData[dataTypeName] = {}),
+    typeData = blocksData.get(dataTypeName) || (blocksData.set(dataTypeName, Ember.Object.create())),
     blockId = this.get('block.id');
-    typeData[blockId] = featuresData;
+    typeData.set(blockId, featuresData);
+    this.parentView.incrementProperty('blocksDataCount');
   },
 
   blockFeatures : Ember.computed('block', 'block.features.[]', 'axis.axis1d.domainChanged', function () {

@@ -91,12 +91,20 @@ export default DS.Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  init() {
+    this._super(...arguments);
+
+    this.set('featuresCountsResults', Ember.A());
+  },
+
+  /*--------------------------------------------------------------------------*/
+
   /** current view of featuresCountsResults, i.e. filtered for zoomedDomain and
    * selected for binSize suitable to zoomedDomain / yRange. */
   /** featuresCounts : undefined, */
 
   /** [{binSize (optional - derived), nBins, domain, result}, ... ] */
-  featuresCountsResults : Ember.A(),
+  featuresCountsResults : undefined,
 
   /*--------------------------------------------------------------------------*/
 

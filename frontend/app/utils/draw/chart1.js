@@ -334,9 +334,15 @@ AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
     /* .gc is <g clip-path=​"url(#axis-chart-clip-{{axisID}})​">​</g>​
      * .g (assigned later) is all g.chart-line, i.e. all chart-lines of all Chart1-s of this axis
      * .gca contains a g for each chartType / dataTypeName, i.e. per Chart1.
+     *   It is used to append elements which added once per chart, e.g. controls() and drawAxes()
+     * .gcp is the parentG g.<dataTypeName> (blockData, featureCountData).
+     *   It is a copy of .gca when it was first non-empty.
      */
     this.dom.gc = g;
     this.dom.gca = gca;
+  if (! gca.empty() || ! this.dom.gcp) {
+    this.dom.gcp = gca;
+  }
 };
 
 
@@ -433,15 +439,17 @@ Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, da
     let block = blocksById[blockId];
     this.createLine(blockId, block);
   });
-  /** devel - verify gca / parentG */
+  /** devel - verify gcp / parentG */
   let parentGS = this.dom.gc.selectAll('g.' + this.dataConfig.dataTypeName);
-  /** on the first call, this.dom.gca.node() === parentGS.node(); after that, this.dom.gca is empty(). */
-  if (! this.dom.gca.empty()) {
-    if (this.dom.gca.node() !== parentGS.node()) {
-      dLog('setupChart', parentG.node(), parentG.nodes(), this.dom.gca.nodes(), this.parentG);
+  /** on the first call, this.dom.gca.node() === parentGS.node(); after that, this.dom.gca is empty().
+   * .gcp retains that value.
+   */
+  if (this.dom.gcp && ! this.dom.gcp.empty()) {
+    if (this.dom.gcp.node() !== parentGS.node()) {
+      dLog('setupChart', parentG.node(), parentG.nodes(), this.dom.gcp.nodes(), this.parentG);
     }
     if (! this.parentG) {
-      this.parentG = this.dom.gca;
+      this.parentG = this.dom.gcp;
     }
   }
   this.group(this.parentG, 'chart-line');
@@ -562,7 +570,10 @@ Chart1.prototype.group = function (parentG, groupClassName) {
   // if drawing internal chart axes then move them inside the clip rect
   // .attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
     .attr("class", (chartLine) => groupClassName)
-    .attr('id', (chartLine) => groupClassName + '-' + chartLine.block.id)
+  /* chartLine.block may not be set; could use
+   * chartLine.scales.yAxis.domain().join('_') to get a more unique id.
+   */
+    .attr('id', (chartLine, i) => groupClassName + '-' + (chartLine.block ? chartLine.block.id : i))
     // also x offset by .allocatedWidths[className][0] as x offset; that is defined after the chart is first rendered.
     .attr('transform', (d, i) => 'translate(' + (0 + 10 + i*10*2) + ')' )	// trackWidth
   // .data((chartLine) => chartLine.currentData)
@@ -634,7 +645,7 @@ Chart1.prototype.createLine = function (blockId, block)
   let chartLine = this.chartLines[blockId];
   if (! chartLine) 
     chartLine = this.chartLines[blockId] = new ChartLine(this.dataConfig, this.scales);
-  if (block) {
+  if (block && ! chartLine.block) {
     chartLine.block = block;
     chartLine.setup(blockId);
     // .setup() will copy dataConfig if need for custom config.

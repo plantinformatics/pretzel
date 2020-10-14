@@ -44,6 +44,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * blocks, collated based on the ComputedProperty axesBlocks.
    *
    * @return [] if there are no blocks with data in the axis.
+   *
+   * @desc
+   * This is passed as trackBlocksR to axis-tracks and axis-blocks.
    */
   dataBlocks : Ember.computed(
     'axisID',
@@ -532,7 +535,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       /** allocatedWidths also calculates allocatedWidthsMax. */
       allocatedWidths = this.get('allocatedWidths'),
       sum = this.childWidthsSum(),
-      width = Math.max(sum, this.get('allocatedWidthsMax'));
+      width = Math.max(sum, this.get('allocatedWidthsMax') || 0);
       if (width !== undefined) {
         let
           p = axisUse.selectAll('g.axis-use > path')

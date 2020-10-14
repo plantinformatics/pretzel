@@ -1,6 +1,8 @@
 import Ember from 'ember';
 const { inject: { service } } = Ember;
 
+import { union } from 'lodash/array';
+
 import InAxis from './in-axis';
 import { className, AxisCharts, Chart1 } from '../utils/draw/chart1';
 import { DataConfig, dataConfigs, blockData, parsedData } from '../utils/data-types';
@@ -98,8 +100,31 @@ export default InAxis.extend({
     return yAxis;
   }),
 
+  /** Similar to blockService.viewedChartable, but don't exclude blocks which
+   * are .isZoomedOut.  This means the block-view continues to exist - it is not
+   * destroyed / re-created as the user zooms in / out.
+   */
+  blockViews : Ember.computed( function () {
+    let
+    blocks =
+      this.get('blockService.viewed')
+      .filter(function (block) {
+        let
+        featuresCounts = !!block.get('featuresCounts'),
+        line = block.get('isChartable');
+        return featuresCounts || line;
+      });
+    dLog('blockViews', blocks, blocks.mapBy('datasetId.name'));
+    return blocks;
+  }),
 
-  chartTypes : Ember.computed('blocksData.@each', function () {
+
+  blocksDataCount : 0,
+  chartTypes : Ember.computed(
+    /** from fgrep dataTypeName frontend/app/utils/data-types.js */
+    'blocksData.{parsedData,blockData,featureCountAutoData,featureCountData}',
+    'blocksDataCount',
+    function () {
     let blocksData = this.get('blocksData'),
     chartTypes = Object.keys(blocksData);
     dLog('chartTypes', chartTypes);
@@ -120,6 +145,7 @@ export default InAxis.extend({
             parentG = this.get('axisCharts.dom.g'); // this.get('gAxis'),
          */
         chart = this.charts[typeName] = new Chart1(/*parentG*/undefined, dataConfig);
+        dLog('chartsArray', typeName, chart, this.charts, this);
         let axisCharts = this.get('axisCharts');
         chart.overlap(axisCharts);
       }
@@ -149,7 +175,7 @@ export default InAxis.extend({
   resizeEffectHere : Ember.computed('resizeEffect', function () {
     dLog('resizeEffectHere in axis-charts', this.get('axisID'));
   }),
-  zoomedDomainEffect : Ember.computed('zoomedDomain', function () {
+  zoomedDomainEffect : Ember.computed('zoomedDomain', 'blocks.@each.isZoomedOut', function () {
     dLog('zoomedDomainEffect in axis-charts', this.get('axisID'));
     this.drawContent();
   }),
@@ -166,6 +192,8 @@ export default InAxis.extend({
     axisBlocks=this.get('axisBlocks.blocks');
     let
     chartTypes = this.get('chartTypes'),
+    /** ensure .charts is populated for chartTypes. */
+    chartsArray = this.get('chartsArray'),
     /** equivalent logic applies in AxisCharts:getRanges2() to determine margin. */
     isFeaturesCounts = (chartTypes.length && chartTypes[0] === 'featureCountData'),
     frameWidth = isFeaturesCounts ?
@@ -179,11 +207,16 @@ export default InAxis.extend({
     if (! frameWidth) {
       frameWidth = emptyWidth;
     }
+    dLog('draw', axisCharts, charts, trackWidth, allocatedWidthCharts, blocksWidths, axisBlocks, chartTypes, isFeaturesCounts, frameWidth);
     axisCharts.setupFrame(
       this.get('axisID'),
       charts, frameWidth);
 
     let
+    /** provide a comprehensive list of blocks for setupChart() to lookup by id.
+     * This can include blocks which are ! isZoomedOut.
+     */
+    blocksAll = union(this.get('blocks'), axisBlocks),
     // equiv : charts && Object.keys(charts).length,
     nCharts = chartTypes && chartTypes.length;
     if (nCharts)
@@ -197,14 +230,13 @@ export default InAxis.extend({
           blocksData = this.get('blocksData'),
         data = blocksData.get(typeName),
         dataConfig = chart.dataConfig;
-        let blocks = this.get('blocks');
         /** later : bi = axisBlocks.indexOf(blocks[i])
          *  blocksWidths[bi][1] */
         let allocatedWidth = (typeName === 'featureCountData') ?
             (blocksWidths[0] || emptyWidth)[1] :
             allocatedWidthCharts[1];
         chart.setupChart(
-          this.get('axisID'), axisCharts, data, blocks,
+          this.get('axisID'), axisCharts, data, blocksAll,
           dataConfig, this.get('yAxisScale'), allocatedWidth);
 
         chart.drawChart(axisCharts, data);
@@ -326,6 +358,8 @@ export default InAxis.extend({
       axisID = this.get("axisID"),
     axisCharts = this.get('axisCharts'),
     blocks = this.get('blocks'),
+    axisBlocks=this.get('axisBlocks.blocks'),
+    blocksAll = union(this.get('blocks'), axisBlocks),
     yAxisScale = this.get('yAxisScale'),
     dataConfig = dataConfigs[dataTypeName],
     resizedWidth = this.get('width'),
@@ -337,7 +371,7 @@ export default InAxis.extend({
     /* setupFrame() is now a method of AxisCharts;  setupChart() and drawChart() are now methods of Chart1.
      */
     chart1 = chart1.setupChart(
-      axisID, axisCharts, chartData, blocks, dataConfig, yAxisScale, resizedWidth);
+      axisID, axisCharts, chartData, blocksAll, dataConfig, yAxisScale, resizedWidth);
     chart1.drawChart(axisCharts, chartData);
     if (! this.get('charts') && chart1)
       this.set('charts', chart1);
