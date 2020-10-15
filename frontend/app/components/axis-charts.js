@@ -104,19 +104,21 @@ export default InAxis.extend({
    * are .isZoomedOut.  This means the block-view continues to exist - it is not
    * destroyed / re-created as the user zooms in / out.
    */
-  blockViews : Ember.computed( function () {
-    let
-    blocks =
-      this.get('blockService.viewed')
-      .filter(function (block) {
-        let
-        featuresCounts = !!block.get('featuresCounts'),
-        line = block.get('isChartable');
-        return featuresCounts || line;
-      });
-    dLog('blockViews', blocks, blocks.mapBy('datasetId.name'));
-    return blocks;
-  }),
+  blockViews : Ember.computed(
+    'blockService.viewed.@each.{featuresCounts,isChartable}',
+    function () {
+      let
+      blocks =
+        this.get('blockService.viewed')
+        .filter(function (block) {
+          let
+          featuresCounts = !!block.get('featuresCounts'),
+          line = block.get('isChartable');
+          return featuresCounts || line;
+        });
+      dLog('blockViews', blocks, blocks.mapBy('datasetId.name'));
+      return blocks;
+    }),
 
 
   blocksDataCount : 0,
