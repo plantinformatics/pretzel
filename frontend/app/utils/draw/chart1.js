@@ -658,10 +658,14 @@ Chart1.prototype.createLine = function (blockId, block)
 Chart1.prototype.data = function (blockId, data)
 {
   let chartLine = this.chartLines[blockId];
-
-  function m(d) { return middle(chartLine.dataConfig.datum2Location(d)); }
-  data = data.sort((a,b) => m(a) - m(b));
-  data = chartLine.filterToZoom(data);
+  if (! chartLine) {
+    data = [];
+  } else {
+    function m(d) { return middle(chartLine.dataConfig.datum2Location(d)); }
+    data = data.sort((a,b) => m(a) - m(b));
+    data = chartLine.filterToZoom(data);
+  }
+  return data;
 };
 /** Draw a single ChartLine of this chart.
  * To draw all ChartLine of this chart, @see Chart1:drawContent()
