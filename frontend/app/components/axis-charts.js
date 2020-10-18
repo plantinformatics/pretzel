@@ -1,7 +1,7 @@
 import Ember from 'ember';
 const { inject: { service } } = Ember;
 
-import { union } from 'lodash/array';
+import { union, difference } from 'lodash/array';
 
 import InAxis from './in-axis';
 import { className, AxisCharts, Chart1 } from '../utils/draw/chart1';
@@ -31,8 +31,8 @@ const dLog = console.debug;
  * @param width resizedWidth
  *----------------
  * data attributes created locally, not passed in :
- * @param charts  map of Chart1, indexed by typeName
- * @param blocksData  map of features, indexed by typeName, blockId,
+ * @param charts  map of Chart1, indexed by dataTypeName
+ * @param blocksData  map of features, indexed by dataTypeName, blockId,
  */
 export default InAxis.extend({
   blockService: service('data/block'),
@@ -122,7 +122,7 @@ export default InAxis.extend({
 
 
   blocksDataCount : 0,
-  chartTypes : Ember.computed(
+  chartTypesAll : Ember.computed(
     /** from fgrep dataTypeName frontend/app/utils/data-types.js */
     'blocksData.{parsedData,blockData,featureCountAutoData,featureCountData}',
     'blocksDataCount',
@@ -132,29 +132,86 @@ export default InAxis.extend({
     dLog('chartTypes', chartTypes);
     return chartTypes;
   }),
-  chartsArray : Ember.computed('chartTypes.[]',  function () {
-    /* The result is roughly equivalent to Object.values(this.get('charts')),
-     * but for any chartType which doesn't have an element in .charts, add
-     * it. */
-    let
+  /** filter out {featureCountAutoData,featureCountData} - they are handled via featureCountBlocks and given 1 chart per block.  */
+  chartTypes : Ember.computed.filter('chartTypesAll', (dataTypeName) => ! dataTypeName.startsWith('featureCount')),
+
+  featureCountBlocks : Ember.computed(
+    'blocksData.{featureCountAutoData,featureCountData}',
+    'blocksDataCount',
+    function () {
+      let blocksData = this.get('blocksData'),
+          typeBlockIds = 
+          ['featureCountAutoData', 'featureCountData'].reduce(function (blocks, dataTypeName) {
+            let blocksData1 = blocksData[dataTypeName];
+            if (blocksData1) {
+              blocks[dataTypeName] = Object.keys(blocksData1);
+            }
+            return blocks;
+          }, {});
+      return typeBlockIds;
+    }),
+  /** Number of blocks of type featureCount*Data  */
+  nFeatureCountData : Ember.computed(
+    'featureCountBlocks.{featureCountAutoData,featureCountData}.[]',
+    function () { 
+      let
+      typeBlockIds = this.get('featureCountBlocks'),
+      n = Object.keys(typeBlockIds).reduce(function (nBlocks, dataTypeName) {
+        let blocksData1 = typeBlockIds[dataTypeName];
+        if (blocksData1) {
+          nBlocks += blocksData1.length;
+        }
+        return nBlocks;
+      }, 0);
+      return n;
+    }),
+  /** For each dataTypeName present in .blocksData, construct a Chart1, which
+   * will contain one ChartLine per block.
+   * For featureCount{,Auto}Data dataTypeName, after 327f2bcd, each block is
+   * given its own block; this enables each block to be scaled independently
+   * into a constant width.
+   */
+  chartsArray : Ember.computed(
+    'chartTypes.[]',
+    'featureCountBlocks.{featureCountAutoData,featureCountData}.[]',
+    function () {
+      /* The result is roughly equivalent to Object.values(this.get('charts')),
+       * but for any chartType which doesn't have an element in .charts, add
+       * it. */
+      let
       chartTypes = this.get('chartTypes'),
-    charts = chartTypes.map((typeName) => {
-      let chart = this.charts[typeName];
-      if (! chart) {
-        let
-        dataConfig = dataConfigs[typeName];
-        /** at this time axisCharts.dom is empty, and chartsArray is not updated because chartTypes is constant.
-            parentG = this.get('axisCharts.dom.g'); // this.get('gAxis'),
-         */
-        chart = this.charts[typeName] = new Chart1(/*parentG*/undefined, dataConfig);
-        dLog('chartsArray', typeName, chart, this.charts, this);
-        let axisCharts = this.get('axisCharts');
-        chart.overlap(axisCharts);
-      }
-      return chart;
-    });
-    return charts;
-  }),
+      typeBlockIds =  this.get('featureCountBlocks');
+
+      let
+      chartsAllBlocks = chartTypes
+        .reduce((result, dataTypeName) => { if (! dataTypeName.startsWith('featureCount')) result.push(this.addChart(dataTypeName, dataTypeName)); }, []),
+      charts1Block = Object.keys(typeBlockIds).map((dataTypeName) => {
+        let blockIds = typeBlockIds[dataTypeName];
+        return blockIds.map((blockId) => {
+          let chartName = dataTypeName + '_' + blockId;
+          return this.addChart(dataTypeName, chartName);
+        });
+      }),
+      charts = [chartsAllBlocks, charts1Block].flat(2);
+
+      return charts;
+    }),
+
+  addChart(dataTypeName, chartName) {
+    let chart = this.charts[chartName];
+    if (! chart) {
+      let
+      dataConfig = dataConfigs[dataTypeName];
+      /** at this time axisCharts.dom is empty, and chartsArray is not updated because chartTypes is constant.
+          parentG = this.get('axisCharts.dom.g'); // this.get('gAxis'),
+      */
+      chart = this.charts[chartName] = new Chart1(/*parentG*/undefined, dataConfig);
+      dLog('chartsArray', dataTypeName, chartName, chart, this.charts, this);
+      let axisCharts = this.get('axisCharts');
+      chart.overlap(axisCharts);
+    }
+    return chart;
+  },
 
 
 
@@ -196,8 +253,11 @@ export default InAxis.extend({
     chartTypes = this.get('chartTypes'),
     /** ensure .charts is populated for chartTypes. */
     chartsArray = this.get('chartsArray'),
+    typeBlockIds = this.get('featureCountBlocks'),
+    typeBlockIdsArray = Object.keys(typeBlockIds).map((dataTypeName) => typeBlockIds[dataTypeName]).flat(),
+    nFeatureCountData = this.get('nFeatureCountData'),
     /** equivalent logic applies in AxisCharts:getRanges2() to determine margin. */
-    isFeaturesCounts = (chartTypes.length && chartTypes[0] === 'featureCountData'),
+    isFeaturesCounts = nFeatureCountData > 0, // (chartTypes.length && chartTypes[0] === 'featureCountData'),
     frameWidth = isFeaturesCounts ?
       blocksWidths[0] :
       allocatedWidthCharts;
@@ -219,31 +279,32 @@ export default InAxis.extend({
      * This can include blocks which are ! isZoomedOut.
      */
     blocksAll = union(this.get('blocks'), axisBlocks),
+    /** blocksAll minus featureCount blocks */
+    blocksCharts = blocksAll.filter((block) => typeBlockIdsArray.indexOf(block.id) === -1),
     // equiv : charts && Object.keys(charts).length,
-    nCharts = chartTypes && chartTypes.length;
-    if (nCharts)
+    nCharts = chartsArray && chartsArray.length;
+    if (nCharts) {
       allocatedWidthCharts[1] = allocatedWidthCharts[1] / nCharts;
-    chartTypes.forEach((typeName) => {
-      // this function could be factored out as axis-chart:draw()
-      let
-        chart = charts[typeName];
-      /*if (! chart.ranges)*/ {
-        let
-          blocksData = this.get('blocksData'),
-        data = blocksData.get(typeName),
-        dataConfig = chart.dataConfig;
-        /** later : bi = axisBlocks.indexOf(blocks[i])
-         *  blocksWidths[bi][1] */
-        let allocatedWidth = (typeName === 'featureCountData') ?
-            (blocksWidths[0] || emptyWidth)[1] :
-            allocatedWidthCharts[1];
-        /** data is the (typeName) data for all axes; blocksAll are the data blocks on this axis : chart. */
-        chart.setupChart(
-          this.get('axisID'), axisCharts, data, blocksAll,
-          dataConfig, this.get('yAxisScale'), allocatedWidth);
+    }
+    dLog('draw blocksCharts', blocksCharts, typeBlockIds, typeBlockIdsArray, blocksAll, nCharts);
 
-        chart.drawChart(axisCharts, data);
-      }
+    /** later : bi = axisBlocks.indexOf(blocks[i])
+     *  blocksWidths[bi][1] */
+    let allocatedWidth = allocatedWidthCharts[1];
+
+    chartTypes.forEach(
+    (dataTypeName) => this.drawChart(dataTypeName, dataTypeName, allocatedWidth, blocksCharts));
+
+    // for featureCountData
+    allocatedWidth = (blocksWidths[0] || emptyWidth)[1];
+    Object.keys(typeBlockIds).forEach((dataTypeName) => {
+      let blockIds = typeBlockIds[dataTypeName];
+      blockIds.forEach((blockId) => {
+        if (typeBlockIdsArray.indexOf(blockId) !== -1) {
+          let chartName = dataTypeName + '_' + blockId;
+          this.drawChart(dataTypeName, chartName, allocatedWidth, [this.get('blockService').id2Block(blockId)]);
+        }
+      });
     });
 
     /** drawAxes() uses the x scale updated in drawChart() -> prepareScales(), called above. */
@@ -255,6 +316,31 @@ export default InAxis.extend({
     axisCharts.controls();
 
   },
+
+  drawChart(dataTypeName, chartName, allocatedWidth, blocksAll) {
+    // this function could be factored out as axis-chart:draw()
+    let
+    axisCharts = this.get('axisCharts'),
+    chart = this.get('charts')[chartName];
+    /*if (! chart.ranges)*/ {
+      let
+      blocksData = this.get('blocksData'),
+      /** data is the (dataTypeName) data for all axes; blocksAll are the data blocks on this axis : chart. */
+      data = blocksData.get(dataTypeName),
+      filteredData = blocksAll.reduce((filtered, block) => {
+        if (data[block.id]) { filtered[block.id] = data[block.id]; }
+        return filtered;
+      }, {}),
+      dataConfig = chart.dataConfig;
+
+      chart.setupChart(
+        this.get('axisID'), axisCharts, filteredData, blocksAll,
+        dataConfig, this.get('yAxisScale'), allocatedWidth);
+
+      chart.drawChart(axisCharts, filteredData);
+    }
+  },
+
 
   undraw() {
     this.get('axisCharts').frameRemove();
@@ -376,6 +462,9 @@ export default InAxis.extend({
     chart1 = chart1.setupChart(
       axisID, axisCharts, chartData, blocksAll, dataConfig, yAxisScale, resizedWidth);
     chart1.drawChart(axisCharts, chartData);
+    /* .charts is normally initialised in createAttributes().
+     * This was used when called via : redraw_from_paste() -> layoutAndDrawChart() -> pasteProcess().
+     */
     if (! this.get('charts') && chart1)
       this.set('charts', chart1);
   },

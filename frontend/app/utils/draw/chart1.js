@@ -103,7 +103,10 @@ function addParentClass(g) {
 function Chart1(parentG, dataConfig)
 {
   this.parentG = parentG;
-  this.dataConfig = dataConfig;
+  /* deep copy not required; this enables .scaledConfig() to modify DataConfig
+   * datum2LocationScaled datum2ValueScaled (refactor once this is settled).
+   */
+  this.dataConfig = Object.create(dataConfig);
   this.chartLines = {};
   /* yAxis is imported, x & yLine are calculated locally.
    * y is used for drawing - it refers to yAxis or yLine.
@@ -759,14 +762,13 @@ ChartLine.prototype.filterToZoom = function(chart) {
 ChartLine.prototype.scaledConfig = function ()
 {
   let
-    dataConfig = this.dataConfig,
-  scales = this.scales;
+    dataConfig = this.dataConfig;
 
   /* these can be renamed datum2{abscissa,ordinate}{,Scaled}() */
   /* apply y after scale applied by datum2Location */
-  let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, scales.y);
+  let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, this.scales.y);
   /** related @see rectWidth().  */
-  function datum2ValueScaled(d) { return scales.x(dataConfig.datum2Value(d)); }
+  const datum2ValueScaled = (d) => { return this.scales.x(dataConfig.datum2Value(d)); }
   dataConfig.datum2LocationScaled = datum2LocationScaled;
   dataConfig.datum2ValueScaled = datum2ValueScaled;
 };
