@@ -11,6 +11,7 @@ import { DataConfig, dataConfigs, blockData, parsedData } from '../utils/data-ty
 
 const dLog = console.debug;
 
+const showToggleBarLine = false;
 
 /*----------------------------------------------------------------------------*/
 
@@ -36,6 +37,7 @@ const dLog = console.debug;
  */
 export default InAxis.extend({
   blockService: service('data/block'),
+  controls : service(),
 
   className : className,
 
@@ -206,6 +208,7 @@ export default InAxis.extend({
           parentG = this.get('axisCharts.dom.g'); // this.get('gAxis'),
       */
       chart = this.charts[chartName] = new Chart1(/*parentG*/undefined, dataConfig);
+      chart.barsLine = this.get('chartBarLine');
       dLog('chartsArray', dataTypeName, chartName, chart, this.charts, this);
       let axisCharts = this.get('axisCharts');
       chart.overlap(axisCharts);
@@ -313,7 +316,9 @@ export default InAxis.extend({
       axisCharts.drawAxes(charts);
 
     // place controls after the ChartLine-s group, so that the toggle is above the bars and can be accessed.
-    axisCharts.controls();
+    if (showToggleBarLine) {
+      axisCharts.controls();
+    }
 
   },
 
@@ -345,6 +350,17 @@ export default InAxis.extend({
   undraw() {
     this.get('axisCharts').frameRemove();
   },
+
+  chartBarLine : Ember.computed.alias('controls.view.chartBarLine'),
+  /** when user toggles bar/line mode in view panel, call .toggleBarsLine() for each chart.   */
+  toggleChartTypeEffect : Ember.computed('chartBarLine', function() {
+    /** this could instead use Evented view-controls to listen for this action. */
+    let mode = this.get('chartBarLine');
+    let charts = this.get('chartsArray');
+    if (charts)
+      charts.forEach((chart) => (mode === chart.barsLine) || chart.toggleBarsLine());
+    return mode;
+  }),
 
   drawContent() {
     let charts = this.get('chartsArray');
@@ -456,7 +472,9 @@ export default InAxis.extend({
     /* These have been split out of setupChart() and hence will need to be added as calls here :
      */
     chart1.overlap(axisCharts);
-    axisCharts.controls();
+    if (showToggleBarLine) {
+      axisCharts.controls();
+    }
     /* setupFrame() is now a method of AxisCharts;  setupChart() and drawChart() are now methods of Chart1.
      */
     chart1 = chart1.setupChart(

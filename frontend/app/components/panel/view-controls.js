@@ -29,6 +29,11 @@ export default Ember.Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** Toggle axis-charts / Chart1 between showing the ChartLine-s as <rect> bars or lines   */
+  chartBarLine : true,
+
+  /*--------------------------------------------------------------------------*/
+
   /** may be set via URL param - @see readParsedOptions(). */
   pathsViaStream : true,
 

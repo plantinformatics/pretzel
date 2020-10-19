@@ -358,6 +358,7 @@ AxisCharts.prototype.controls = function controls()
 
   function toggleBarsLineClosure(chart /*, i, g*/)
   {
+    d3.event.stopPropagation();
     chart.toggleBarsLine();
   }
 
@@ -714,10 +715,11 @@ Chart1.prototype.domain = function (valueFn, blocksData)
 Chart1.prototype.toggleBarsLine = function ()
 {
   console.log("toggleBarsLine", this);
-  d3.event.stopPropagation();
   this.barsLine = ! this.barsLine;
-  this.chartTypeToggle
-    .classed("pushed", this.barsLine);
+  if (this.chartTypeToggle) {
+    this.chartTypeToggle
+      .classed("pushed", this.barsLine);
+  }
   Object.keys(this.chartLines).forEach((blockId) => {
     let chartLine = this.chartLines[blockId];
     chartLine.g.selectAll("g > *").remove();
