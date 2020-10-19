@@ -32,10 +32,11 @@ export default Ember.Component.extend({
   allocatedWidth : Ember.computed('blocks.[]', function () {
     let
     blocks = this.get('blocks'),
-    trackWidth = this.get('trackWidth'),
+    /** trackWidth is actually the <rect> width for tracks.  Add trackWidth (10px) for spacing */
+    trackWidth = this.get('trackWidth') * 3,
     aw = blocks.map((block, i) => [
-      i * trackWidth * 2,
-      (i+1) * trackWidth * 2]);
+      i * trackWidth,
+      (i+1) * trackWidth]);
 
     let width = aw.length ? aw[aw.length-1][1] : 0;
     dLog('allocatedWidth', aw, width);
