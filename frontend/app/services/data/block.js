@@ -745,7 +745,7 @@ export default Service.extend(Ember.Evented, {
   id2Block(blockId) {
     let
     blocksById = this.get('blocksById'),
-    block = blocksById[blockId]
+    block = blocksById[blockId];
     return block;
   },
   selected: Ember.computed(

@@ -345,6 +345,7 @@ export default InAxis.extend({
     this._super(...arguments);
 
     console.log("components/axis-tracks didInsertElement()");
+    if (false) {
     let
     childWidths = this.get('childWidths'),
     axisID = this.get('axisID'),
@@ -352,6 +353,7 @@ export default InAxis.extend({
     dLog('didInsertElement', axisID, width);
     // [min, max] width
     childWidths.set(this.get('className'), [width, width]);
+    }
 
     let svg = d3.selectAll('svg.FeatureMapViewer');
     ensureSvgDefs(svg);
@@ -605,16 +607,18 @@ export default InAxis.extend({
       }
       /** [min, max] */
       let allocatedWidth = thisAt.get('allocatedWidth');
-      /** factor by which blockState.trackWidth must be reduced for layoutWidth to fit in trackWidth. */
+      /** factor by which blockState.trackWidth must be reduced for layoutWidth to fit in trackWidth.
+       * This is effectively tracksLayout.nLayers, which could be used here.
+       */
       let compress = blockState.layoutWidth / (trackWidth*2);
       /* don't apply fixedBlockWidth if block subElements - the sub-elements
        * would be too thin to see well, and overlap is less likely.
        */
       blockState.trackWidth = ! fixedBlockWidth || blockState.subElements ?
         trackWidth : (
-          allocatedWidth ?
+          allocatedWidth && allocatedWidth[1] ?
             allocatedWidth[1] / 2 / thisAt.get('nTrackBlocks') / compress :
-            trackWidth * 2        / compress);
+            trackWidth   / compress);
       dLog('trackBlocksData', blockId, data.length, (data.length == 0) ? '' : y(data[0][0]),
            blockState, allocatedWidth, compress, thisAt.get('nTrackBlocks'));
       return data;
@@ -1441,8 +1445,8 @@ export default InAxis.extend({
     blocks = this.get('blocks'),
     blockIds2 = Object.keys(blocks),
     trackWidth = this.get('trackWidth'),
-    /** initial .offset is trackWidth */
-    shiftRight = trackWidth,
+    /** initial .offset not needed; g.axis-use will translate(trackWidth) */
+    shiftRight = 0,
     width = blockIds.reduce((sum, blockId) => {
       let block = this.lookupAxisTracksBlock(blockId);
       block.offset = sum;
@@ -1459,8 +1463,10 @@ export default InAxis.extend({
     dLog('blockLayoutWidthSum', width, blockIds.length, blockIds2.length, this.get('blockComps.length'));
     return width;
   }),
-  layoutWidth : Ember.computed('trackBlocksR.[]', function () {
+  variableWidthBlocks : Ember.computed.filter('trackBlocksR', (block) => block.get('isSubElements')),
+  layoutWidth : Ember.computed('variableWidthBlocks', function () {
     let
+    vwBlocks = this.get('variableWidthBlocks'),
     blockIds = this.get('blockIds'),
     /** Add 50 on the right to avoid clashing with the right axis ticks text,
      * which may later be switched off with CSS.

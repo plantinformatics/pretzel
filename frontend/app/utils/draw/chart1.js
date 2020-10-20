@@ -525,7 +525,8 @@ Chart1.prototype.prepareScales =  function (data, drawSize)
   scales = this.scales,
   width = drawSize.width,
   height = drawSize.height,
-  xRange = [0, width],
+  /** leave 10px space at right side. */
+  xRange = [0, width-10],
   yRange = [0, height],
   // yRange is used as range of yLine by this.scaleLinear().
   /* scaleBand would suit a data set with evenly spaced or ordinal / nominal y values.
@@ -583,7 +584,7 @@ Chart1.prototype.group = function (parentG, groupClassName) {
    */
     .attr('id', (chartLine, i) => groupClassName + '-' + (chartLine.block ? chartLine.block.id : i))
     // also x offset by .allocatedWidths[className][0] as x offset; that is defined after the chart is first rendered.
-    .attr('transform', (d, i) => 'translate(' + (0 + 10 + i*10*2) + ')' )	// trackWidth
+    .attr('transform', (d, i) => 'translate(' + (0 + i*10*2) + ')' )	// trackWidth
   // .data((chartLine) => chartLine.currentData)
   ,
   // parentG.selectAll("g > g." + groupClassName); // 
@@ -595,6 +596,10 @@ Chart1.prototype.group = function (parentG, groupClassName) {
   // set ChartLine .g;   used by ChartLine.{lines,bars}.
   gsa.each(function(chartLine, i) { chartLine.g = d3.select(this) ; } );
   return g;
+};
+
+Chart1.prototype.blockOffset = function (chart, i, g) {
+allocatedWidthForBlock(blockId)
 };
 
 Chart1.prototype.drawAxes = function (chart, i, g) {

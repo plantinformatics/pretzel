@@ -262,16 +262,12 @@ export default InAxis.extend({
     /** equivalent logic applies in AxisCharts:getRanges2() to determine margin. */
     isFeaturesCounts = nFeatureCountData > 0, // (chartTypes.length && chartTypes[0] === 'featureCountData'),
     frameWidth = isFeaturesCounts ?
-      blocksWidths[0] :
+      // blocksWidths[] is empty when !isZoomedOut().
+      (blocksWidths && blocksWidths.length ? blocksWidths[0] : [0,0]) : 
       allocatedWidthCharts;
     /** this and showChartAxes / drawAxes will likely move into Chart1. */
     axisCharts.isFeaturesCounts = isFeaturesCounts;
 
-    // blocksWidths[] is empty when !isZoomedOut().
-    const emptyWidth = [0, trackWidth];
-    if (! frameWidth) {
-      frameWidth = emptyWidth;
-    }
     dLog('draw', axisCharts, charts, trackWidth, allocatedWidthCharts, blocksWidths, axisBlocks, chartTypes, isFeaturesCounts, frameWidth);
     axisCharts.setupFrame(
       this.get('axisID'),
@@ -299,7 +295,7 @@ export default InAxis.extend({
     (dataTypeName) => this.drawChart(dataTypeName, dataTypeName, allocatedWidth, blocksCharts));
 
     // for featureCountData
-    allocatedWidth = (blocksWidths[0] || emptyWidth)[1];
+    allocatedWidth = (blocksWidths && blocksWidths.length ? blocksWidths[0][1] : 0);
     Object.keys(typeBlockIds).forEach((dataTypeName) => {
       let blockIds = typeBlockIds[dataTypeName];
       blockIds.forEach((blockId) => {
@@ -515,4 +511,3 @@ export default InAxis.extend({
 
 
 });
-

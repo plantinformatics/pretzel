@@ -222,7 +222,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     trackWidth = this.get('trackWidth'),
     startWidth = this.get('startWidth'),
     width = this.get('width'),
-    available = this.get('adjustedWidth') || startWidth || 2 * trackWidth,
+    available = this.get('adjustedWidth') || startWidth || 0,
     /** spare and share may be -ve */
     spare = available ? (available - (requested ? requested[0] : 0)) : 0,
     share = 0;
@@ -394,7 +394,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     trackWidth = this.get('trackWidth'),
     trackBlocksWidth =
       /*40 +*/ dataBlocksN * /*2 * */ trackWidth /*+ 20 + 50*/,
-    initialWidth = /*50*/ trackBlocksWidth,
+    initialWidth = 0, // /*50*/ trackBlocksWidth,
     /** this is just the Max value, not [min,max] */
     allocatedWidth,
     width = axis ? 
@@ -433,7 +433,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let eg = ug
       .enter()
       .append("g")
-      .attr("class", "axis-use");
+      .attr("class", "axis-use")
+      // space 10px from the axis, to leave room for brush hover/highlight, to not overlap track hover.
+      .attr('transform', 'translate(10)');
     let em = ug.merge(eg);
 
     /** If dualAxis, use <use> to show 2 identical axes.
