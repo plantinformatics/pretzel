@@ -237,8 +237,14 @@ export default InAxis.extend({
   resizeEffectHere : Ember.computed('resizeEffect', function () {
     dLog('resizeEffectHere in axis-charts', this.get('axisID'));
   }),
-  zoomedDomainEffect : Ember.computed('zoomedDomain', 'blocks.@each.isZoomedOut', function () {
-    dLog('zoomedDomainEffect in axis-charts', this.get('axisID'));
+  drawContentEffect : Ember.computed(
+  'zoomedDomain',
+  'blockViews.@each.isZoomedOut',
+  'blockViews.@each.featuresCounts.[]',
+  'blockViews.@each.featuresCountsResults.[]',
+  // possibly add 'chartsArray.[]', 
+  function () {
+    dLog('drawContentEffect in axis-charts', this.get('axisID'));
     this.drawContent();
   }),
 

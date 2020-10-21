@@ -148,6 +148,18 @@ export default DS.Model.extend({
     }
     return isData;
   }),
+  currentDomain : Ember.computed('referenceBlock', 'range',  function () {
+    let domain = this.get('zoomedDomain');
+    if (! domain)  {
+      let referenceBlock = this.get('referenceBlock');
+      if (referenceBlock) {
+	domain = referenceBlock.get('range');
+      } else {
+	domain = this.get('featuresDomain');
+      }
+    }
+    return domain;
+  }),
 
   /** is this block copied from a (secondary) server, cached on the server it was loaded from (normally the primary). */
   isCopy : Ember.computed('meta._origin', function () {
@@ -738,7 +750,12 @@ export default DS.Model.extend({
    * This is used to select whether axis-charts featuresCounts or axis-tracks
    * are displayed for this block.
    */
-  isZoomedOut : Ember.computed('zoomedDomainDebounced.{0,1}', function () {
+  isZoomedOut : Ember.computed(
+    'zoomedDomainDebounced.{0,1}',
+    'featuresCounts.[]',
+    'featuresCountsResults.[]',
+    'featuresCountsThreshold',
+    function () {
     let
     count = this.get('featureCountInZoom'),
     featuresCountsThreshold = this.get('featuresCountsThreshold'),
