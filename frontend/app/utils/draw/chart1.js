@@ -313,21 +313,25 @@ AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
   let [startOffset, width] = allocatedWidth;
   /* allocatedWidth[0] is currently min, so use 0 instead.  */
   startOffset = 0;
-  let gca =
+  let gcp1 =
     gpa.append("g")
-    .attr("clip-path", (d) => "url(#" + axisClipId(d) + ")") // clip with the rectangle
-    .selectAll("g[clip-path]")
-    .data(Object.values(charts))
+    .attr("clip-path", (d) => "url(#" + axisClipId(d) + ")"), // clip with the rectangle
+   gcp2 = gpa.merge(gps).selectAll("g.chart > g[clip-path]"),
+   dataTypeNames = Object.values(charts).mapBy('dataConfig.dataTypeName'),
+   dataTypeNamesSelector = 'g[clip-path] > g' + (dataTypeNames.length ? '.' : '') + dataTypeNames.join(', g[clip-path] > g.'),
+   gcs = (gpa.size() ? gcp1 : gcp2)
+    .selectAll(dataTypeNamesSelector)
+    .data(Object.values(charts)),
+   gca = gcs
     .enter()
     .append("g")
     .attr('class', (d) => d.dataConfig.dataTypeName)
+  ;
+  gca.merge(gcs)
     .attr("transform", (d, i) => "translate(" + (startOffset + (i * 30)) + ", 0)")
   ;
-  /* to handle removal of chart types, split the above to get a handle for remove :
-   gcs = gpa ... data(...),
-   gca = gcs.enter() ...;
-   gcs.exit().remove();
-   */
+  /* handle removal of chart types   */
+  gcs.exit().remove();
 
   let g = 
     this.dom.gp.selectAll("g." + className+  " > g");
@@ -417,6 +421,21 @@ Chart1.prototype.overlap = function(axisCharts) {
     chart1.dom = axisCharts.dom;
   }
 };
+Chart1.prototype.removeChartLine = function(blockId) {
+  let chartLine = this.chartLines[blockId];
+  if (chartLine) {
+    chartLine.remove();
+    delete this.chartLines[blockId];
+  }
+  let empty = Object.keys(this.chartLines).length === 0;
+  return empty;
+};
+Chart1.prototype.remove = function() {
+  let thisGcp = this.dom.gcp.filter((chart) => chart===this);
+  dLog('remove', this.dom.gcp.nodes(), thisGcp.node(), thisGcp.nodes());
+  thisGcp.remove();
+  this.dom.gcp = this.dom.gcp.filter((elt) => elt.isConnected);
+};
 Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, dataConfig, yAxisScale, resizedWidth)
 {
   this.scales.yAxis = yAxisScale;
@@ -449,17 +468,23 @@ Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, da
   });
   /** devel - verify gcp / parentG */
   let parentGS = this.dom.gc.selectAll('g.' + this.dataConfig.dataTypeName);
+  let parentG = parentGS.filter((chart) => chart === this);
   /** on the first call, this.dom.gca.node() === parentGS.node(); after that, this.dom.gca is empty().
    * .gcp retains that value.
+   * To define this.parentG, fall back to gcp, or parentG.
    */
   if (this.dom.gcp && ! this.dom.gcp.empty()) {
     if (this.dom.gcp.node() !== parentGS.node()) {
-      dLog('setupChart', parentG.node(), parentG.nodes(), this.dom.gcp.nodes(), this.parentG);
+      dLog('setupChart', parentGS.node(), parentGS.nodes(), this.dom.gcp.nodes(), this.parentG);
     }
     if (! this.parentG) {
       this.parentG = this.dom.gcp;
     }
   }
+  if (! this.parentG && ! parentG.empty()) {
+    this.parentG = parentG;
+  }
+
   this.group(this.parentG, 'chart-line');
 
   //----------------------------------------------------------------------------
@@ -469,12 +494,24 @@ Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, da
   return this;
 };
 
+/** draw the chartData.
+ * If the blocks of any of this.chartLines have un-viewed, they will not be in chartData, and are removed.
+ */
 Chart1.prototype.drawChart = function(axisCharts, chartData)
 {
   /** possibly don't (yet) have chartData for each of blocks[],
    * i.e. blocksById may be a subset of blocks.mapBy('id').
    */
   let blockIds = Object.keys(chartData);
+
+  /** Remove un-viewed ChartLines */
+  Object.keys(this.chartLines).forEach((blockId) => {
+    if (blockIds.indexOf(blockId) === -1) {
+      this.removeChartLine(blockId);
+    }
+  });
+
+
   blockIds.forEach((blockId) => {
     this.data(blockId, chartData[blockId]);
   });
@@ -961,6 +998,11 @@ ChartLine.prototype.drawContent = function(barsLine)
   }
 };
 
+/** Remove the g.chart-line added via Chart1.prototype.group */
+ChartLine.prototype.remove = function() {
+  dLog('remove', this.g.node());
+  this.g.remove();
+}
 
 
 

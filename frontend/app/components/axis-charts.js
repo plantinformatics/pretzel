@@ -296,12 +296,17 @@ export default InAxis.extend({
 
     // for featureCountData
     allocatedWidth = (blocksWidths && blocksWidths.length ? blocksWidths[0][1] : 0);
+    let axisBlocksIds = axisBlocks.mapBy('id');
     Object.keys(typeBlockIds).forEach((dataTypeName) => {
       let blockIds = typeBlockIds[dataTypeName];
       blockIds.forEach((blockId) => {
         if (typeBlockIdsArray.indexOf(blockId) !== -1) {
           let chartName = dataTypeName + '_' + blockId;
+          if (axisBlocksIds.indexOf(blockId) === -1) {
+            this.removeChartLine(chartName, blockId);
+          } else {
           this.drawChart(dataTypeName, chartName, allocatedWidth, [this.get('blockService').id2Block(blockId)]);
+          }
         }
       });
     });
@@ -329,7 +334,8 @@ export default InAxis.extend({
       /** data is the (dataTypeName) data for all axes; blocksAll are the data blocks on this axis : chart. */
       data = blocksData.get(dataTypeName),
       filteredData = blocksAll.reduce((filtered, block) => {
-        if (data[block.id]) { filtered[block.id] = data[block.id]; }
+        if (data[block.id] && block.get('isViewed')) {
+          filtered[block.id] = data[block.id]; }
         return filtered;
       }, {}),
       dataConfig = chart.dataConfig;
@@ -339,9 +345,25 @@ export default InAxis.extend({
         dataConfig, this.get('yAxisScale'), allocatedWidth);
 
       chart.drawChart(axisCharts, filteredData);
+      // drawChart() will remove ChartLines which are not in filteredData (i.e. no longer isViewed).
+      let empty = Object.keys(chart.chartLines).length === 0;
+      if (empty) {
+        chart.remove();
+        delete this.get('charts')[chartName];
+      }
     }
   },
 
+  removeChartLine(chartName, blockId) {
+    let chart = this.charts[chartName];
+    if (chart) {
+      let empty = chart.removeChartLine(blockId);
+      if (empty) {
+        chart.remove();
+        delete this.get('charts')[chartName];
+      }
+    }
+  },
 
   undraw() {
     this.get('axisCharts').frameRemove();
