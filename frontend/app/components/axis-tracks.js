@@ -29,6 +29,21 @@ const fixedBlockWidth = true;
  */
 const useAxisBlocks = true;
 
+/** Enable clearing of feature.layer, causing recalculation of layering.
+ * If this is not enabled, the layering is calculated for the features just once.
+ *
+ *   con : causes flickering - e.g. if the layering for tracks F1, F2 is 0, 1, and
+ * zooming in slightly F1 moves outside the view, then F2 will be given layer 0,
+ * and the remainder of the tracks alternate.
+ * This could also be solved by e.g. preserving .layer for just the first feature.
+ *
+ *   pro : for fixed-width tracks, layering determines compress ratio, so zooming
+ * through many orders of magnitude, instead of being limited by layered tracks
+ * which are outside the view, it makes sense to re-calculate the layering for
+ * just the tracks in view, which can reduce layer depth and compression
+ */
+const clearLayers = false;
+
 /** track sub-elements < this height (px) are not rendered. */
 const subElementThresholdHeight = 5;
 
@@ -117,8 +132,10 @@ function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignO
     result.intervals = intervalTree.intervals;
   }
 
-  /* clear layers before layering */
-  subTree.intervals.forEach((f) => {if (f.layer) { f.layer = undefined; } });
+  if (clearLayers) {
+    /* clear layers before layering */
+    subTree.intervals.forEach((f) => {if (f.layer) { f.layer = undefined; } });
+  }
 
   /** for each interval, if it does not have a layer,
    * get list of intervals in subTree it intersects,
@@ -215,8 +232,16 @@ function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignO
   }
   /* first layer allocated is 1; allocate one layer if 0.
    * largestLayer===0 means there were no overlaps.
+   * if (clearLayers) can use .nLayers = (largestLayer || 1).
    */
-  result.nLayers = (largestLayer || 1);
+  let nLayers;
+  if (intervals.length) {
+    let layersAssigned = intervals.mapBy('layer').uniq(),
+    layersExtent = d3.extent(layersAssigned);
+    nLayers = (layersExtent[1] - layersExtent[0]) + 1;
+    dLog('regionOfTree layersAssigned', layersAssigned, layersExtent, nLayers);
+  }
+  result.nLayers = nLayers || 1;
   dLog('regionOfTree', result.nLayers, largestLayer, 'trackBlocksData');
   return result;
 }
@@ -1338,8 +1363,7 @@ export default InAxis.extend({
       }, {}),
     intervalNames = d3.keys(intervals),
     tracks = this.makeTree(intervals, intervalNames);
-    /** may need to limit this to apply only for a significant change of zoomedDomain.  */
-    let clearLayers = true;
+    /** may need to limit this to apply only for a significant change of zoomedDomain, e.g. zoomedDomainDebounced.  */
     if (clearLayers) {
       d3.keys(intervals).forEach(function (axisName) {
         let ifs = intervals[axisName];
