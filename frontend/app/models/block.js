@@ -360,7 +360,9 @@ export default DS.Model.extend({
     reference = dataset && dataset.get('parent'),
     /** reference dataset */
     parent = dataset && dataset.get('parent'),
-    parentName = parent ? parent.get('name') : Ember.get('datasetId.parentName');  // e.g. "myGenome"
+    /** if parent may be undefined because the secondary server with parent is
+     * not connected; in this case this.get('datasetId.parentName') can be used. */
+    parentName = parent ? parent.get('name') : this.get('datasetId.parentName');  // e.g. "myGenome"
 
     dLog('referenceDatasetName', dataset, reference, parent, parentName, parent && parent.get('id'));
 
