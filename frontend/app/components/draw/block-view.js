@@ -50,8 +50,25 @@ export default Ember.Component.extend({
     }
   }),
 
-  featuresCounts : Ember.computed('block', 'block.featuresCounts.[]', 'axis.axis1d.domainChanged', function () {
-    let featuresCounts = this.get('block.featuresCounts');
+  /** Choose a result from block.featuresCountsInZoom and put it in blocksData.featureCount{,Auto}Data
+   * to be read by axis-charts : featureCountBlocks etc and drawn.
+   */
+  featuresCounts : Ember.computed(
+    'block', 'block.featuresCountsInZoom.[]', 'axis.axis1d.domainChanged',
+    function () {
+    let featuresCountsInZoom = this.get('block.featuresCountsInZoom');
+    let featuresCounts;
+    if (featuresCountsInZoom.length === 1) {
+      featuresCounts = featuresCountsInZoom[0].result;
+    } else {
+      /** first draft : concat all results.
+       * later : interval tree to choose the best resolution in each result domain.
+       * i.e. for each result : foreach each result in overlaps : choose result
+       * with smaller bins & add to tree {result, overlap domain [from,to] index};
+       * read from tree | catenate result sections
+       */
+      featuresCounts = [].concat.apply([], featuresCountsInZoom.mapBy('result'));
+    }
     if (featuresCounts && featuresCounts.length) {
       /** recognise the data format : $bucketAuto ._id contains .min and .max, whereas $bucket ._id is a single value.
        * @see featureCountAutoDataExample, featureCountDataExample 

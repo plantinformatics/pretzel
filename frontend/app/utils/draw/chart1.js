@@ -1050,7 +1050,7 @@ DataConfig.prototype.keyFn = function (d, i, g) {
   return key;
 };
 
-/** Calculate the height of rectangle to be used for this data point
+/** Calculate the width of rectangle to be used for this data point
  * @param this  is DataConfig, not DOM element.
  * @param scaled  true means apply scale (x) to the result
  * @param gIsData true means g is __data__, otherwise it is DOM element, and has .__data__ attribute.
