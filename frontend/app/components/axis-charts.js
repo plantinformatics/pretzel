@@ -13,6 +13,8 @@ const dLog = console.debug;
 
 const showToggleBarLine = false;
 
+const CompName = 'components/axis-charts';
+
 /*----------------------------------------------------------------------------*/
 
 
@@ -63,7 +65,7 @@ export default InAxis.extend({
   },
 
   didRender() {
-    console.log("components/axis-chart didRender()", this.get('axisID'));
+    dLog(CompName + " didRender()", this.get('axisID'));
 
     let axisID = this.get('axisID'),
     axisCharts = this.get('axisCharts'),
@@ -74,7 +76,7 @@ export default InAxis.extend({
       Ember.run.later(() => this.draw(), 500);
   },
   willDestroyElement() {
-    console.log("components/axis-chart willDestroyElement()");
+    dLog(CompName + " willDestroyElement()");
     this.undraw();
 
     this._super(...arguments);
@@ -519,7 +521,7 @@ export default InAxis.extend({
    * user to paste data into.  Use in prototype, not used currently.
    */
   pasteProcess: function(textPlain) {
-    console.log("components/axis-chart pasteProcess", textPlain.length);
+    dLog(CompName + " pasteProcess", textPlain.length);
 
     let
       parseTextData = this.get('parseTextData'),

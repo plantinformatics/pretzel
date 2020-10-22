@@ -18,6 +18,8 @@ const useLocalY = false;
 
 const transitionDuration = 150;
 
+const trace = 1;
+
 /* global d3 */
 
 /*----------------------------------------------------------------------------*/
@@ -321,7 +323,8 @@ AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
    dataTypeNamesSelector = 'g[clip-path] > g' + (dataTypeNames.length ? '.' : '') + dataTypeNames.join(', g[clip-path] > g.'),
    gcs = (gpa.size() ? gcp1 : gcp2)
     .selectAll(dataTypeNamesSelector)
-    .data(Object.values(charts)),
+    // g.<dataTypeName> does not have a unique id, so use a key function.
+    .data(Object.values(charts), Chart1.keyFn),
    gca = gcs
     .enter()
     .append("g")
@@ -436,6 +439,10 @@ Chart1.prototype.remove = function() {
   thisGcp.remove();
   this.dom.gcp = this.dom.gcp.filter((elt) => elt.isConnected);
 };
+Chart1.keyFn = function(chart) {
+  return Object.keys(chart.chartLines).join('_');
+};
+
 Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, dataConfig, yAxisScale, resizedWidth)
 {
   this.scales.yAxis = yAxisScale;
@@ -634,6 +641,22 @@ Chart1.prototype.group = function (parentG, groupClassName) {
   gsa.each(function(chartLine, i) { chartLine.g = d3.select(this) ; } );
   return g;
 };
+
+/** useful in checking that unview and re-view have not caused
+ * g.featureCountData and g.chart-line to become out of sync with their .__data__
+ * When debugging this can be called after code which might break sync.
+ * This was useful when checking impact of .remove(); adding keyFn() keeps these in sync.
+ */
+Chart1.verify = function () {
+  let cl = d3.selectAll('g.chart-line');
+  Object.keys(cl.nodes()).forEach(
+    (i) => {
+      if (cl.nodes()[i].id !== 'chart-line-' + cl.data()[i].block.id) {
+        console.log('Chart1 verify', cl.nodes()[i], cl.data()[i].block.id);
+        debugger;
+      }
+    });
+}
 
 Chart1.prototype.blockOffset = function (chart, i, g) {
 allocatedWidthForBlock(blockId)
@@ -870,7 +893,9 @@ ChartLine.prototype.bars = function (data)
     ra
     .attr('fill', barWidth);
   rx.remove();
-  dLog(rs.nodes(), re.nodes());
+  if (trace > 1) {
+    dLog(rs.nodes(), re.nodes());
+  }
 };
 
 /** A single horizontal line for each data point.
@@ -917,7 +942,9 @@ ChartLine.prototype.linebars = function (data)
   ;
 
   rx.remove();
-  console.log(rs.nodes(), re.nodes());
+  if (trace > 1) {
+    dLog(rs.nodes(), re.nodes());
+  }
 };
 
 /** Calculate the domain of some function of the data, which may be the data value or location.
@@ -937,7 +964,9 @@ ChartLine.prototype.domain = function (valueFn, data)
     .map(valueFn)
     .reduce((acc, val) => acc.concat(val), []);
   let domain = d3.extent(yFlat);
-  console.log('ChartLine domain', domain, yFlat);
+  if (trace > 1) {
+    console.log('ChartLine domain', domain, yFlat);
+  }
   return domain;
 };
 

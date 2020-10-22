@@ -685,7 +685,7 @@ export default DS.Model.extend({
           binSize = intervalSize(binInterval),
           ratio = binSize ? intervalSize(overlap) / binSize : 1;
           sum += ratio * binCount;
-          if (i % 64 === 0)  {
+          if ((trace_block > 1) && (i % 64 === 0))  {
             dLog('featureCountInZoom map', binInterval, overlap, ratio, binCount, sum, i);
           }
         }

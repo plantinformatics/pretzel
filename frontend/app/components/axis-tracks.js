@@ -48,6 +48,7 @@ const clearLayers = false;
 const subElementThresholdHeight = 5;
 
 
+const trace = 1;
 /** for devel.  ref comment in @see height() */
 let trace_count_NaN = 10;
 
@@ -893,10 +894,9 @@ export default InAxis.extend({
        */
       rm = es
         .merge(ra);
-      dLog('rm', rm.node(), 'es', es.nodes(), es.node());
+      dLog('rm', rm.node(), 'es', (trace > 1) ? es.nodes() : es.size(), es.node());
       ra
         .attr('y', yEnd);
-      dLog('height', height);
       rm
       // .transition().duration(featureTrackTransitionTime)
       .attr('x', xPosnS(subElements))
