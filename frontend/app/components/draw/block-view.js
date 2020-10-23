@@ -2,6 +2,8 @@ import Ember from 'ember';
 const { inject: { service } } = Ember;
 
 import { ensureBlockFeatures } from '../../utils/feature-lookup';
+import { subInterval } from '../../utils/draw/zoomPanCalcs';
+import { intervalSize }  from '../../utils/interval-calcs';
 
 /*----------------------------------------------------------------------------*/
 
@@ -65,7 +67,9 @@ export default Ember.Component.extend({
     function () {
     let featuresCountsInZoom = this.get('block.featuresCountsInZoom');
     let featuresCounts;
-    if (featuresCountsInZoom.length === 1) {
+    if (featuresCountsInZoom.length === 0) {
+      featuresCounts = [];
+    } else if (featuresCountsInZoom.length === 1) {
       featuresCounts = featuresCountsInZoom[0].result;
     } else {
       /** first draft : concat all results.
@@ -74,7 +78,8 @@ export default Ember.Component.extend({
        * with smaller bins & add to tree {result, overlap domain [from,to] index};
        * read from tree | catenate result sections
        */
-      featuresCounts = [].concat.apply([], featuresCountsInZoom.mapBy('result'));
+      let selectedResults = this.selectFeaturesCountsResults(featuresCountsInZoom);
+      featuresCounts = [].concat.apply([], selectedResults.mapBy('result'));
     }
     if (featuresCounts && featuresCounts.length) {
       /** recognise the data format : $bucketAuto ._id contains .min and .max, whereas $bucket ._id is a single value.
@@ -88,6 +93,44 @@ export default Ember.Component.extend({
 
     return featuresCounts;
   }),
+  /** filter out bins < 1px because there is (e.g. in the HC genes) lots of
+   * space between the non-empty bins (for small bins, e.g. < 20kb),
+   * and when they are <~1px the bin rectangles are visible and not the space,
+   * so many thin bins appear like a solid bar, giving an inflated impression of
+   * the feature density.
+   */
+  selectFeaturesCountsResults(featuresCountsInZoom) {
+    /** based on similar calc in models/block.js:featuresForAxis(), could factor
+     * to a function block.pxSize(interval). */
+    let
+    binSizes = featuresCountsInZoom.mapBy('binSize'),
+    domain = this.get('block.zoomedDomain') || this.get('block.limits'),
+    axis = this.get('block.axis'),
+    yRange = (axis && axis.yRange()) || 800,
+    /** bin size of each result, in pixels as currently viewed on screen. */
+    binSizesPx = binSizes.map((binSize) => yRange * binSize / intervalSize(domain));
+    const pxThreshold = 1;
+    let
+    /** filter out a result which has binSize Px < threshold and is a subset of another domain */
+    betterResults = 
+      binSizesPx.map(
+	(binSizePx, i) => {
+	  let
+	  betterResult =
+	    (binSizesPx[i] < pxThreshold) &&
+	    featuresCountsInZoom.find((fc, j) => {
+	      let found;
+	      if (j !== i) {
+		found = subInterval(featuresCountsInZoom[i].domain, fc.domain);
+	      }
+	      return found;
+	    });
+	  return betterResult;
+	}),
+    selectedResults = featuresCountsInZoom
+      .filter((fc, i) => !betterResults[i]);
+    return selectedResults;
+  },
 
 // -	results -> blocksData
 

@@ -292,4 +292,4 @@ function wheelNewDomain(axis, axisApi, inFilter) {
 
 /*----------------------------------------------------------------------------*/
 
-export {  inRangeEither, wheelNewDomain };
+export {  inRangeEither, subInterval, wheelNewDomain };
