@@ -511,7 +511,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
       let axis1d = this.get('axis1d');
       if (axis1d) {
-	axis1d.showZoomResetButtonXPosn();
+        axis1d.showZoomResetButtonXPosn();
       }
 
     /** this clipPath is created in AxisCharts:frame(), id is axisClipId(). */
@@ -640,7 +640,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
       let axis1d = this.get('axis1d');
       if (axis1d) {
-	axis1d.showZoomResetButtonXPosn();
+        axis1d.showZoomResetButtonXPosn();
       }
     }
     return ok;

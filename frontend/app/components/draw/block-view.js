@@ -10,7 +10,8 @@ const dLog = console.debug;
 /*----------------------------------------------------------------------------*/
 
 
-/**
+/** Collate chartable feature and featuresCounts data for .block, guided by the zoomedDomain.
+ *
  * @param block	a block returned by viewedChartable()
  * @param axis  axisComponent;   parent axis-2d component
  * @param axisID  axisID
@@ -20,6 +21,10 @@ const dLog = console.debug;
 export default Ember.Component.extend({
   blockService: service('data/block'),
 
+  /** Store results of requests in .blocksData
+   * conceptually: .blocksData[dataTypeName] = featuresData
+   * e.g. .blocksData.featureCountData = 
+   */
   setBlockFeaturesData(dataTypeName, featuresData){
     let blocksData = this.get('blocksData'),
     typeData = blocksData.get(dataTypeName) || (blocksData.set(dataTypeName, Ember.Object.create())),
@@ -28,6 +33,8 @@ export default Ember.Component.extend({
     this.parentView.incrementProperty('blocksDataCount');
   },
 
+  /** If the block contains chartable data, collate it into .blocksData.blockData, for axis-charts.
+   */
   blockFeatures : Ember.computed('block', 'block.features.[]', 'axis.axis1d.domainChanged', function () {
     if (this.get('block.isChartable')) {
       let features = this.get('block.features');

@@ -79,7 +79,34 @@ export default Ember.Component.extend({
     blocksWidths = this.get('widthsById'),
     aw = blocksWidths[blockId];
     return aw;
-  }
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Request block featuresForAxis, driven by changes of the data
+   * blocks or the axis view (axis limits or zoomedDomain).
+   */
+  featuresForBlocksRequestEffect : Ember.computed(
+    'blocks.[]',
+    // axis1d.domain also reflects zoomedDomain
+    'axis1d.axis.limits.{0,1}', 'axis1d.zoomedDomainDebounced.{0,1}',
+    function () {
+      let
+      blocks = this.get('blocks');
+      dLog('featuresForBlocksRequestEffect',
+        this.get('blocks').mapBy('id'),
+        this.get('axis1d.axis.limits'),
+        this.get('axis1d.zoomedDomainDebounced')
+      );
+      let
+      /** featuresForAxis() uses getBlockFeaturesInterval(), which is also used by 
+       * models/axis-brush.js */
+      blockFeatures = blocks.map(function (b) { return b.get('featuresForAxis'); } );
+      /* no return value - result is displayed by axis-track : showTrackBlocks() with data
+       * collated by tracksTree(), and axis-charts : featureCountBlocks() and drawChart(). */
+    }),
+
+  /*--------------------------------------------------------------------------*/
 
 });
 

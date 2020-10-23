@@ -802,7 +802,7 @@ export default DS.Model.extend({
       /** bin size of result with smallest bins, in pixels as currently viewed on screen. */
       minSizePx = yRange * minSize / intervalSize(domain);
       /** minSize === 0 indicate no featuresCounts overlapping this zoomedDomain. */
-      if ((minSizePx === 0) || (minSizePx > 20))  /* px */ {
+      if ((minSizePx === 0) || (minSizePx > 5))  /* px */ {
         /* request summary / featuresCounts if there are none for block,
          * or if their bins are too big */
         let blockService = this.get('blockService'),

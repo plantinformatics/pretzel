@@ -1283,25 +1283,6 @@ export default InAxis.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  /** Request block featuresForAxis, driven by changes of the data
-   * blocks (.trackBlocksR) or the scope (y domain).
-   */
-  featuresForTrackBlocksRequestEffect : Ember.computed(
-    'trackBlocksR.[]',
-    // either axis1d.domain or yDomain is probably sufficient dependency.
-    'axis1d.domain', 'yDomain',
-    function () {
-      dLog('featuresForTrackBlocksRequestEffect');
-      let
-      trackBlocks = this.get('trackBlocksR'),
-      /** featuresForAxis() uses getBlockFeaturesInterval(), which is also used by 
-       * models/axis-brush.js */
-      blockFeatures = trackBlocks.map(function (b) { return b.get('featuresForAxis'); } );
-      /* no return value - result is displayed by showTrackBlocks() with data
-       * collated by tracksTree(). */
-    }),
-
-  /*--------------------------------------------------------------------------*/
 
 
   /** Not used; can be used in .hbs for trace, for comparison against the result
@@ -1529,9 +1510,7 @@ export default InAxis.extend({
    */
   showTrackBlocks: Ember.computed(
     'tracksTree', 'yDomain.0', 'yDomain.1', 'axis1d.zoomed', 'axis1d.extended', 'axis1d.featureLength',
-    'featuresForTrackBlocksRequestEffect',
     function() {
-      this.get('featuresForTrackBlocksRequestEffect');
       let tracks = this.get('tracksTree');
       let
       axis1d = this.get('axis1d'),
