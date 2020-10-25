@@ -188,7 +188,7 @@ export default InAxis.extend({
 
       let
       chartsAllBlocks = chartTypes
-        .reduce((result, dataTypeName) => { if (! dataTypeName.startsWith('featureCount')) result.push(this.addChart(dataTypeName, dataTypeName)); }, []),
+        .reduce((result, dataTypeName) => { if (! dataTypeName.startsWith('featureCount')) result.push(this.addChart(dataTypeName, dataTypeName)); return result;}, []),
       charts1Block = Object.keys(typeBlockIds).map((dataTypeName) => {
         let blockIds = typeBlockIds[dataTypeName];
         return blockIds.map((blockId) => {
@@ -287,7 +287,7 @@ export default InAxis.extend({
      */
     blocksAll = union(this.get('blocks'), axisBlocks),
     /** blocksAll minus featureCount blocks */
-    blocksCharts = blocksAll.filter((block) => typeBlockIdsArray.indexOf(block.id) === -1),
+    blocksCharts = blocksAll.filter((block) => block.get('isChartable')),
     // equiv : charts && Object.keys(charts).length,
     nCharts = chartsArray && chartsArray.length;
     if (nCharts) {
@@ -299,8 +299,10 @@ export default InAxis.extend({
      *  blocksWidths[bi][1] */
     let allocatedWidth = allocatedWidthCharts[1];
 
-    chartTypes.forEach(
-    (dataTypeName) => this.drawChart(dataTypeName, dataTypeName, allocatedWidth, blocksCharts));
+    if (blocksCharts.length) {
+      chartTypes.forEach(
+	(dataTypeName) => this.drawChart(dataTypeName, dataTypeName, allocatedWidth, blocksCharts));
+    }
 
     // for featureCountData
     allocatedWidth = (blocksWidths && blocksWidths.length ? blocksWidths[0][1] : 0);
@@ -348,17 +350,30 @@ export default InAxis.extend({
       }, {}),
       dataConfig = chart.dataConfig;
 
-      chart.setupChart(
-        this.get('axisID'), axisCharts, filteredData, blocksAll,
-        dataConfig, this.get('yAxisScale'), allocatedWidth);
+      if (Object.keys(filteredData).length === 0) {
+        if (chart) {
+          this.removeChart(chartName);
+        }
+      } else {
+        chart.setupChart(
+          this.get('axisID'), axisCharts, filteredData, blocksAll,
+          dataConfig, this.get('yAxisScale'), allocatedWidth);
 
-      chart.drawChart(axisCharts, filteredData);
-      // drawChart() will remove ChartLines which are not in filteredData (i.e. no longer isViewed).
-      let empty = Object.keys(chart.chartLines).length === 0;
-      if (empty) {
-        chart.remove();
-        delete this.get('charts')[chartName];
+        chart.drawChart(axisCharts, filteredData);
+        // drawChart() will remove ChartLines which are not in filteredData (i.e. no longer isViewed).
+        let empty = Object.keys(chart.chartLines).length === 0;
+        if (empty) {
+          this.removeChart(chartName);
+        }
       }
+    }
+  },
+
+  removeChart(chartName) {
+    let chart = this.charts[chartName];
+    if (chart) {
+      chart.remove();
+      delete this.get('charts')[chartName];
     }
   },
 
@@ -367,8 +382,7 @@ export default InAxis.extend({
     if (chart) {
       let empty = chart.removeChartLine(blockId);
       if (empty) {
-        chart.remove();
-        delete this.get('charts')[chartName];
+        this.removeChart(chartName);
       }
     }
   },

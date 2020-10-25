@@ -439,8 +439,13 @@ Chart1.prototype.remove = function() {
   thisGcp.remove();
   this.dom.gcp = this.dom.gcp.filter((elt) => elt.isConnected);
 };
+/** @return a unique id for the chart within this split axis (g[clip-path])
+ */
 Chart1.keyFn = function(chart) {
-  return Object.keys(chart.chartLines).join('_');
+  /** keys(chart.chartLines) are the blockIds, which may appear in multiple
+   * charts (chartTypes), so prepend dataTypeName for uniqueness.
+   */
+  return chart.dataConfig.dataTypeName + '_' + Object.keys(chart.chartLines).join('_');
 };
 
 Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, dataConfig, yAxisScale, resizedWidth)
@@ -800,10 +805,13 @@ ChartLine.prototype.setup = function(blockId) {
    * pre-defined config.
    */
   if (! this.dataConfig.datum2Location) {
+    const
+    datum2Location = (d) => datum2LocationWithBlock(d, blockId);
     // copy dataConfig to give a custom value to this ChartLine.
-    let d = new DataConfig(this.dataConfig);
-    d.datum2Location = 
-      (d) => datum2LocationWithBlock(d, blockId);
+    /* this.dataConfig has been constructed by new DataConfig().
+     * i.e. this.dataConfig.constructor === DataConfig 
+     */
+    let d = Object.assign(this.dataConfig, {datum2Location});
     this.dataConfig = d;
   }
 };
@@ -1021,7 +1029,8 @@ ChartLine.prototype.drawContent = function(barsLine)
     let isEffectsData = data.length && data[0].name && data[0].value && (data[0].value.length === 3) && (data[0].value[2].length === 6);
     let bars = isEffectsData ? this.linebars : this.bars;
     let chartDraw = barsLine ? bars : this.line;
-    if (! this.block.get('isZoomedOut'))
+    /** featureCountData is drawn only when block.isZoomedOut, chartable data is always drawn.  */
+    if (! this.block.get('isChartable') && ! this.block.get('isZoomedOut'))
       data = [];
     chartDraw.apply(this, [data]);
   }
@@ -1113,7 +1122,9 @@ DataConfig.prototype.rectHeight = function (scaled, gIsData, d, i, g)
       let y =
         r.map(d2l);
       height = Math.abs(y[y.length-1] - y[0]) * 2 / (y.length-1);
-      dLog('rectHeight', gIsData, d, i, /*g,*/ r, y, height);
+      if (trace > 2) {
+	dLog('rectHeight', gIsData, d, i, /*g,*/ r, y, height);
+      }
       if (! height)
         height = 1;
     }

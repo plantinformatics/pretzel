@@ -792,6 +792,10 @@ export default DS.Model.extend({
     featuresCountsThreshold = this.get('featuresCountsThreshold');
     let features;
 
+    /** if the block has chartable data, get features regardlessdon't request featuresCounts. */
+    if (this.get('isChartable')) {
+      this.getFeatures(blockId);
+    } else 
     /** if featuresCounts not yet requested then count is 0 */
     if ((this.featuresCounts === undefined) || (count > featuresCountsThreshold)) {
       let
@@ -810,21 +814,27 @@ export default DS.Model.extend({
       }
       // features is undefined
     } else {
-      features = this.get('pathsP').getBlockFeaturesInterval(blockId);
-
-      features.then(
-        (result) => {
-          if (trace_block)
-            dLog(moduleName, fnName, result.length, blockId, this);
-        },
-        function (err) {
-          dLog(moduleName, fnName, 'reject', err);
-        }
-      );
+      this.getFeatures(blockId);
     }
 
     return features;
-  })
+  }),
+  getFeatures(blockId) {
+    const fnName = 'getFeatures';
+    let
+    features = this.get('pathsP').getBlockFeaturesInterval(blockId);
+
+    features.then(
+      (result) => {
+        if (trace_block)
+          dLog(moduleName, fnName, result.length, blockId, this);
+      },
+      function (err) {
+        dLog(moduleName, fnName, 'reject', err);
+      }
+    );
+  }
+
 
 
 });
