@@ -139,6 +139,8 @@ export default InAxis.extend({
   /** filter out {featureCountAutoData,featureCountData} - they are handled via featureCountBlocks and given 1 chart per block.  */
   chartTypes : Ember.computed.filter('chartTypesAll', (dataTypeName) => ! dataTypeName.startsWith('featureCount')),
 
+  /** Filter blocksData to just .{featureCountAutoData,featureCountData}
+   */
   featureCountBlocks : Ember.computed(
     'blocksData.{featureCountAutoData,featureCountData}',
     'blocksDataCount',
@@ -206,10 +208,7 @@ export default InAxis.extend({
     if (! chart) {
       let
       dataConfig = dataConfigs[dataTypeName];
-      /** at this time axisCharts.dom is empty, and chartsArray is not updated because chartTypes is constant.
-          parentG = this.get('axisCharts.dom.g'); // this.get('gAxis'),
-      */
-      chart = this.charts[chartName] = new Chart1(/*parentG*/undefined, dataConfig);
+      chart = this.charts[chartName] = new Chart1(dataConfig, chartName);
       chart.barsLine = this.get('chartBarLine');
       dLog('chartsArray', dataTypeName, chartName, chart, this.charts, this);
       let axisCharts = this.get('axisCharts');
@@ -247,6 +246,7 @@ export default InAxis.extend({
   // possibly add 'chartsArray.[]', 
   function () {
     dLog('drawContentEffect in axis-charts', this.get('axisID'));
+    this.checkViewedContent();
     this.drawContent();
   }),
 
@@ -301,7 +301,7 @@ export default InAxis.extend({
 
     if (blocksCharts.length) {
       chartTypes.forEach(
-	(dataTypeName) => this.drawChart(dataTypeName, dataTypeName, allocatedWidth, blocksCharts));
+        (dataTypeName) => this.drawChart(dataTypeName, dataTypeName, allocatedWidth, blocksCharts));
     }
 
     // for featureCountData
@@ -359,6 +359,7 @@ export default InAxis.extend({
           this.get('axisID'), axisCharts, filteredData, blocksAll,
           dataConfig, this.get('yAxisScale'), allocatedWidth);
 
+        // let empty =
         chart.drawChart(axisCharts, filteredData);
         // drawChart() will remove ChartLines which are not in filteredData (i.e. no longer isViewed).
         let empty = Object.keys(chart.chartLines).length === 0;
@@ -403,10 +404,22 @@ export default InAxis.extend({
   }),
 
   drawContent() {
+    /** checkViewedContent() is called before drawContent(). */
     let charts = this.get('chartsArray');
     /* y axis has been updated, so redrawing the content will update y positions. */
     if (charts)
       charts.forEach((chart) => chart.drawContent());
+  },
+  checkViewedContent() {
+    let charts = this.get('chartsArray');
+    if (charts) {
+      charts.forEach((chart) => {
+        let empty = chart.removeUnViewedChartLines();
+        if (empty) {
+          this.removeChart(chart.name);
+        }
+      });
+    }
   },
 
   /** Called via in-axis:{zoomed or resized}() -> redrawDebounced() -> redrawOnce()
@@ -416,6 +429,7 @@ export default InAxis.extend({
    * they will update sizes rather than add new elements).
    */
   redraw   : function(axisID, t) {
+    this.checkViewedContent();
     this.drawContent();
   },
   /** for use with @see pasteProcess() */

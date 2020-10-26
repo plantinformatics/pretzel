@@ -100,15 +100,16 @@ function addParentClass(g) {
 /*  axis
  * x  .value
  * y  .name Location
- */
+ * name chartName, used as index in axis-charts.charts[]
+*/
 /** 1-dimensional chart, within an axis. */
-function Chart1(parentG, dataConfig)
+function Chart1(dataConfig, name)
 {
-  this.parentG = parentG;
   /* deep copy not required; this enables .scaledConfig() to modify DataConfig
    * datum2LocationScaled datum2ValueScaled (refactor once this is settled).
    */
   this.dataConfig = Object.create(dataConfig);
+  this.name = name;
   this.chartLines = {};
   /* yAxis is imported, x & yLine are calculated locally.
    * y is used for drawing - it refers to yAxis or yLine.
@@ -224,7 +225,6 @@ AxisCharts.prototype.getRanges2 =  function ()
 {
   // based on https://bl.ocks.org/mbostock/3885304,  axes x & y swapped.
   let
-    // parentG = this.parentG,
     bbox = this.ranges && this.ranges.bbox;
   if (bbox) {
     let
@@ -447,6 +447,13 @@ Chart1.keyFn = function(chart) {
    */
   return chart.dataConfig.dataTypeName + '_' + Object.keys(chart.chartLines).join('_');
 };
+/** Currently chartsArray() constructs chartName via (dataTypeName + '_' +
+ * blockId) which is equivalent to keyFn, and passes chartName to addChart().
+ * This function might be used for verification, e.g. chart.name === chart.chartName().
+ */
+Chart1.prototype.chartName = function() {
+  return Chart1.constructor.keyFn.apply(this, [this]);
+}
 
 Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, dataConfig, yAxisScale, resizedWidth)
 {
@@ -481,23 +488,13 @@ Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, da
   /** devel - verify gcp / parentG */
   let parentGS = this.dom.gc.selectAll('g.' + this.dataConfig.dataTypeName);
   let parentG = parentGS.filter((chart) => chart === this);
-  /** on the first call, this.dom.gca.node() === parentGS.node(); after that, this.dom.gca is empty().
-   * .gcp retains that value.
-   * To define this.parentG, fall back to gcp, or parentG.
-   */
-  if (this.dom.gcp && ! this.dom.gcp.empty()) {
-    if (this.dom.gcp.node() !== parentGS.node()) {
-      dLog('setupChart', parentGS.node(), parentGS.nodes(), this.dom.gcp.nodes(), this.parentG);
-    }
-    if (! this.parentG) {
-      this.parentG = this.dom.gcp;
-    }
-  }
-  if (! this.parentG && ! parentG.empty()) {
-    this.parentG = parentG;
+  /** passed to group(). */
+  let parentGarg;
+  if (! parentGarg && ! parentG.empty()) {
+    parentGarg = parentG;
   }
 
-  this.group(this.parentG, 'chart-line');
+  this.group(parentGarg, 'chart-line');
 
   //----------------------------------------------------------------------------
 
@@ -516,24 +513,40 @@ Chart1.prototype.drawChart = function(axisCharts, chartData)
    */
   let blockIds = Object.keys(chartData);
 
-  /** Remove un-viewed ChartLines */
+  let empty = this.removeUnViewedChartLines(blockIds);
+  if (! empty) {
+    blockIds.forEach((blockId) => {
+      this.data(blockId, chartData[blockId]);
+    });
+
+    this.prepareScales(chartData, this.ranges.drawSize);
+    blockIds.forEach((blockId) => {
+      this.chartLines[blockId].scaledConfig(); } );
+
+    this.drawContent();
+  }
+  return empty;
+};
+/** Remove un-viewed ChartLines
+ * @param blockIds caller (as in the case of Chart1:drawChart()) may provide an
+ * array of blockIds which are viewed.
+ * if blockIds is undefined then block.get('isViewed') is used.
+ * @return true if this chart the last ChartLine of this chart is removed (the caller will then remove this chart). 
+ */
+Chart1.prototype.removeUnViewedChartLines = function(blockIds)
+{
+  let empty;
   Object.keys(this.chartLines).forEach((blockId) => {
-    if (blockIds.indexOf(blockId) === -1) {
-      this.removeChartLine(blockId);
+    let isViewed = blockIds ?
+      (blockIds.indexOf(blockId) !== -1) :
+      this.chartLines[blockId].block.get('isViewed');
+    if (! isViewed) {
+      empty = this.removeChartLine(blockId);
     }
   });
-
-
-  blockIds.forEach((blockId) => {
-    this.data(blockId, chartData[blockId]);
-  });
-
-  this.prepareScales(chartData, this.ranges.drawSize);
-  blockIds.forEach((blockId) => {
-    this.chartLines[blockId].scaledConfig(); } );
-
-  this.drawContent();
+  return empty;
 };
+
 
 Chart1.prototype.getRanges = function (ranges, chartData) {
   let
@@ -856,15 +869,22 @@ ChartLine.prototype.blockColour = function ()
   return colour;
 };
 
+
+ChartLine.prototype.selectG = function ()
+{
+  if (! this.g || this.g.empty()) {
+    this.g = d3.selectAll("g.chart-line#chart-line-" + this.block.id)
+      .filter((chartLine) => chartLine === this);
+    dLog('ChartLine.selectG', this.g.nodes(), this);
+  }
+};
+
 ChartLine.prototype.bars = function (data)
 {
   let
     dataConfig = this.dataConfig,
   block = this.block;
-  if (! this.g) {
-    this.g = d3.selectAll("g.chart-line#chart-line-" + this.block.id);
-    dLog('ChartLine.bars', this.g.nodes(), this, data.length);
-  }
+  this.selectG(); // devel
   let
   g = this.g;
   if (dataConfig.barAsHeatmap)
@@ -1123,7 +1143,7 @@ DataConfig.prototype.rectHeight = function (scaled, gIsData, d, i, g)
         r.map(d2l);
       height = Math.abs(y[y.length-1] - y[0]) * 2 / (y.length-1);
       if (trace > 2) {
-	dLog('rectHeight', gIsData, d, i, /*g,*/ r, y, height);
+        dLog('rectHeight', gIsData, d, i, /*g,*/ r, y, height);
       }
       if (! height)
         height = 1;
