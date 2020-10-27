@@ -1935,11 +1935,8 @@ Stacked.prototype.allocatedWidth = function()
 {
   let width;
   let axis2d = this.axis1d && this.axis1d.get('axis2d');
-  if (axis2d) {
-    let
-      allocatedWidths = axis2d.get('allocatedWidths'),
-    allocatedWidthsMax = axis2d.get('allocatedWidthsMax');
-    width = allocatedWidthsMax;
+  if (axis2d && ! axis2d.isDestroyed) {
+    width = axis2d.get('allocatedWidthRect');
   }
   return width;
 };

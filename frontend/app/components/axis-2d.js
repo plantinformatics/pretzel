@@ -16,7 +16,10 @@ const axisTransitionTime = 750;
 /** 0 or 1 to disable or enable transitions */
 const transitionEnable = 1;
 
-
+/**
+ * space 10px from the axis, to leave room for brush hover/highlight, to not overlap track hover.
+ */
+const marginLeft = 10;
 
 
 export default Ember.Component.extend(Ember.Evented, AxisEvents, {
@@ -246,6 +249,17 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     dLog('allocatedWidths', allocatedWidths, childWidths, width, available, offset);
     return allocatedWidths;
   }),
+  /** @return width from left axis to right edge <path>
+   * This is marginLeft + allocatedWidthsMax
+   */
+  allocatedWidthRect : Ember.computed('allocatedWidths', 'allocatedWidthsMax', function () {
+    let
+    /** Evaluation of allocatedWidths sets allocatedWidthsMax. */
+    allocatedWidths = this.get('allocatedWidths'),
+    allocatedWidthsMax = this.get('allocatedWidthsMax');
+    return marginLeft + (allocatedWidthsMax || 0);
+  }),
+
   contentWidth : function (componentName, axisID, width) {
     let
       childWidths = this.get('childWidths'),
@@ -280,6 +294,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     if (extended) {
       dLog('willDestroyElement .extended', extended, this.get('axisID'), this.get('axis1d'));
     }
+    this.axisWidthResizeEnded();
     /* Expect here that .extended is false / 0, and this will cause show() to remove the rendered SVG elements.
      * including the right edge path (so no need for positionRightEdge() to remove it).
      */
@@ -404,6 +419,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     dLog('getAxisExtendedWidth', width, allocatedWidth, initialWidth, axis.extended);
     return width;
   },
+  selectAxisUse() {
+    let
+    axisG = this.get('axisUse'),
+    axisUse = axisG.selectAll("g.axis-use");
+    return axisUse;
+  },
+
   axisShowExtend(axis, axisID, axisG)
   {
     dLog('axisShowExtend', axis, axisID, axisG);
@@ -435,7 +457,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .append("g")
       .attr("class", "axis-use")
       // space 10px from the axis, to leave room for brush hover/highlight, to not overlap track hover.
-      .attr('transform', 'translate(10)');
+      .attr('transform', 'translate(' + marginLeft + ')');
     let em = ug.merge(eg);
 
     /** If dualAxis, use <use> to show 2 identical axes.
@@ -531,17 +553,21 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     this.positionRightEdge();
   }),
   positionRightEdge() {
-    let axisUse;
+    let axisUse, width;
     if (! this.get('dualAxis') && (axisUse = this.get('axisUse'))) {
-      let
-      shiftRight=5,
-      /** allocatedWidths also calculates allocatedWidthsMax. */
-      allocatedWidths = this.get('allocatedWidths'),
-      sum = this.childWidthsSum(),
-      width = Math.max(sum, this.get('allocatedWidthsMax') || 0);
+      if (! this.get('axis1d.extended')) {
+        width = 0;
+      } else {
+        let
+        shiftRight=5,
+        /** allocatedWidths also calculates allocatedWidthsMax. */
+        allocatedWidths = this.get('allocatedWidths'),
+        sum = this.childWidthsSum();
+        width = Math.max(sum, this.get('allocatedWidthsMax') || 0);
+      }
       if (width !== undefined) {
         let
-          p = axisUse.selectAll('g.axis-use > path')
+        p = axisUse.selectAll('g.axis-use > path')
           .transition().duration(transitionEnable * 1000)
           .attr("transform",function(d) {return "translate(" + (width) + ",0)";});
         dLog('positionRightEdgeEffect', axisUse.node(), width, p.node());
@@ -674,6 +700,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   willDestroyElement() {
     this.set('allocatedWidthsMax', 0);
     this.positionRightEdge();
+    let axisUse = this.selectAxisUse();
+    Ember.run.later(() => axisUse.remove(), transitionEnable * 1000 + 100);
   }
 
 });

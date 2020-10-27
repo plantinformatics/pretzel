@@ -794,7 +794,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     // possibly ... pass an action param.
     let axis2d = this.get('axis2d');
     if (axis2d) {
-      Ember.run.next(() => axis2d.axisWidthResizeEnded());
+      Ember.run.next(() => ! axis2d.isDestroyed && axis2d.axisWidthResizeEnded());
     }
 
     this.showExtendedClass();

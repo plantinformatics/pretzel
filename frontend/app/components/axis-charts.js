@@ -355,7 +355,7 @@ export default InAxis.extend({
   /** Calculate the sum of chart widths and report it via childWidths to axis-2d. */
   reportWidth() {
     let
-    charts = this.get('chartsFixedWidth'),
+    charts = this.get('chartsVariableWidth'),
     chartWidths = charts.mapBy('allocatedWidth')
       .filter((aw) => aw),
     widthSum = chartWidths.reduce((sum, w) => sum += w, 0);
