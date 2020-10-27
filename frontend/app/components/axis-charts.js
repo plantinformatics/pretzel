@@ -356,7 +356,8 @@ export default InAxis.extend({
   reportWidth() {
     let
     charts = this.get('chartsFixedWidth'),
-    chartWidths = charts.mapBy('allocatedWidth'),
+    chartWidths = charts.mapBy('allocatedWidth')
+      .filter((aw) => aw),
     widthSum = chartWidths.reduce((sum, w) => sum += w, 0);
     // later allocate each chart, for separate offsets : (this.get('className') + '_' + chart.name)
     Ember.run.next(() => {

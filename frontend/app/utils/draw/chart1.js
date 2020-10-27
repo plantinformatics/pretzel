@@ -622,6 +622,15 @@ Chart1.prototype.prepareScales =  function (data, drawSize)
   let
     valueWidthFn = dataConfig.rectWidth.bind(dataConfig, /*scaled*/false, /*gIsData*/true),
   valueCombinedDomain = this.domain(valueWidthFn, data);
+  /** rectWidth() scales the value (e.g. count) before before dividing by
+   * height; so if height is 0.5, a value >0 may be outside the scale domain
+   * (which is calculated with /height) and hence be clamped at 0.
+   * That will require adding scaleX or d2v as an argument to rectWidth();
+   * an intermediate fix is to set valueCombinedDomain[0] = 0.
+   */
+  if (valueCombinedDomain[0] > 0) {
+    valueCombinedDomain[0] = 0;
+  }
   scales.xWidth.domain(valueCombinedDomain);
   if (scales.xColour)
     scales.xColour.domain(valueCombinedDomain);
