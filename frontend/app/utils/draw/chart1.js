@@ -288,6 +288,9 @@ AxisCharts.prototype.frameRemove = function() {
   gp && gp.remove();
 };
 
+/**
+ * @param allocatedWidth  [horizontal start offset, width]
+ */
 AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
 {
   let
@@ -331,7 +334,7 @@ AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
     .attr('class', (d) => d.dataConfig.dataTypeName)
   ;
   gca.merge(gcs)
-    .attr("transform", (d, i) => "translate(" + (startOffset + (i * 30)) + ", 0)")
+    .attr("transform", (chart, i) => chart.transform(i))
   ;
   /* handle removal of chart types   */
   gcs.exit().remove();
@@ -455,6 +458,9 @@ Chart1.prototype.chartName = function() {
   return Chart1.constructor.keyFn.apply(this, [this]);
 }
 
+/**
+ * @param resizedWidth  width
+ */
 Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, dataConfig, yAxisScale, resizedWidth)
 {
   this.scales.yAxis = yAxisScale;
@@ -519,6 +525,9 @@ Chart1.prototype.drawChart = function(axisCharts, chartData)
       this.data(blockId, chartData[blockId]);
     });
 
+    if (this.allocatedWidth === 0) {
+      this.allocatedWidth = axisCharts.ranges.drawSize;
+    }
     this.prepareScales(chartData, this.ranges.drawSize);
     blockIds.forEach((blockId) => {
       this.chartLines[blockId].scaledConfig(); } );
@@ -575,6 +584,9 @@ Chart1.prototype.getRanges = function (ranges, chartData) {
 
 
 
+/**
+ * @param drawSize  {width, height}
+ */
 Chart1.prototype.prepareScales =  function (data, drawSize)
 {
   /** The chart is perpendicular to the usual presentation.
@@ -646,7 +658,11 @@ Chart1.prototype.group = function (parentG, groupClassName) {
    */
     .attr('id', (chartLine, i) => groupClassName + '-' + (chartLine.block ? chartLine.block.id : i))
     // also x offset by .allocatedWidths[className][0] as x offset; that is defined after the chart is first rendered.
-    .attr('transform', (d, i) => 'translate(' + (0 + i*10*2) + ')' )	// trackWidth
+    /* this transform is achieved by Chart1:transform() in frame(), so this
+     * would only be used if the g.chart-line s within a chart were offset
+     * separately
+     * .attr('transform', (chartLine, i) => this.blockTransform(chartLine))	// trackWidth
+     */
   // .data((chartLine) => chartLine.currentData)
   ,
   // parentG.selectAll("g > g." + groupClassName); // 
@@ -674,10 +690,64 @@ Chart1.verify = function () {
         debugger;
       }
     });
-}
+};
 
-Chart1.prototype.blockOffset = function (chart, i, g) {
-allocatedWidthForBlock(blockId)
+/** For positions allocated by axisBlocks, i.e. featureCountData
+ */
+Chart1.prototype.blockOffset = function (chartLine) {
+  let
+  allocatedWidth = 
+  this.axisBlocks.allocatedWidthForBlock(chartLine.block.id),
+  xOffset = allocatedWidth && allocatedWidth[0];
+  return xOffset;
+};
+
+/** Charts of type featureCountData have a separate x translation for each block.
+ * For other chart types return undefined - no transform.
+ */
+Chart1.prototype.blockTransform = function (chartLine) {
+  let transform;
+  if (this.useAllocatedWidth()) {
+    let xOffset = this.blockOffset(chartLine);
+    transform = 'translate(' + xOffset + ')';
+  }
+  return transform;
+};
+
+/** Charts of type featureCountData have a separate x translation for each block.
+ * For other chart types return undefined - no transform.
+ * @param i d3 selection index
+ */
+Chart1.prototype.transform = function (i) {
+  let allocatedWidth, transform;
+  if (this.useAllocatedWidth()) {
+    let blockWidths = this.axisBlocks.get('allocatedWidth'),
+    /** useAllocatedWidth implies just 1 block. */
+    blockId = Object.keys(this.chartLines)[0];
+
+    /** for a new chart .chartLines is populated after .transform is first
+     * called; returning undefined will omit the transform initially;
+     * blockWidths[i] may also be undefined (it is otherwise equivalent).  */
+    allocatedWidth = blockId && this.axisBlocks.allocatedWidthForBlock(blockId);
+    dLog('Chart1:transform', allocatedWidth, blockId, blockWidths[i], i);
+  } else {
+    allocatedWidth = this.getAllocatedWidth();
+  }
+  if (allocatedWidth) {
+    let xOffset = allocatedWidth[0];
+    if (xOffset) {
+      transform = "translate(" + xOffset + ", 0)";
+    }
+  }
+  return transform;
+};
+
+
+/** @return true if horizontal space is allocated for each block / ChartLine of this chart by axisBlocks.
+ */
+Chart1.prototype.useAllocatedWidth = function () {
+  /** match featureCount{,Auto}Data */
+  return this.dataConfig.dataTypeName.startsWith('featureCount');
 };
 
 Chart1.prototype.drawAxes = function (chart, i, g) {
@@ -1045,8 +1115,10 @@ ChartLine.prototype.drawContent = function(barsLine)
      * This uses the data shape to recognise Effects data; this is provisional
      * - we can probably lookup the tag 'EffectsPlus' in dataset tags (refn resources/tools/dev/effects2Dataset.pl).
      * The effects data takes the form of an array of 5 probabilities, in the 3rd element of feature.value.
+     * Generalising this : the array can be any length; each value will be plotted in a separate line.
+     * (currently just the first value is plotted).
      */
-    let isEffectsData = data.length && data[0].name && data[0].value && (data[0].value.length === 3) && (data[0].value[2].length === 6);
+    let isEffectsData = data.length && data[0].name && data[0].value && (data[0].value.length === 3) && (data[0].value[2].length > 0 /*=== 6*/);
     let bars = isEffectsData ? this.linebars : this.bars;
     let chartDraw = barsLine ? bars : this.line;
     /** featureCountData is drawn only when block.isZoomedOut, chartable data is always drawn.  */

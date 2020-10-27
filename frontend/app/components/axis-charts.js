@@ -203,6 +203,9 @@ export default InAxis.extend({
       return charts;
     }),
 
+  /** chartsArray minus those which use space allocated by axisBlocks */
+  chartsVariableWidth : Ember.computed.filter('chartsArray',  (chart) => !chart.useAllocatedWidth()),
+
   addChart(dataTypeName, chartName) {
     let chart = this.charts[chartName];
     if (! chart) {
@@ -210,6 +213,9 @@ export default InAxis.extend({
       dataConfig = dataConfigs[dataTypeName];
       chart = this.charts[chartName] = new Chart1(dataConfig, chartName);
       chart.barsLine = this.get('chartBarLine');
+      // for allocatedWidthForBlock().
+      chart.axisBlocks = this.get('axisBlocks');
+      chart.getAllocatedWidth = Ember.run.bind(this, this.getAllocatedWidth);
       dLog('chartsArray', dataTypeName, chartName, chart, this.charts, this);
       let axisCharts = this.get('axisCharts');
       chart.overlap(axisCharts);
@@ -217,7 +223,11 @@ export default InAxis.extend({
     return chart;
   },
 
-
+  getAllocatedWidth() {
+    let width = this.get('allocatedWidth');
+    dLog('getAllocatedWidth', width);
+    return width;
+  },
 
   /** Retrieve charts handles from the DOM.
    * This could be used as verification - the result should be the same as
@@ -260,6 +270,9 @@ export default InAxis.extend({
     /** array of [startOffset, width]. */
     blocksWidths = this.get('axisBlocks.allocatedWidth'),
     axisBlocks=this.get('axisBlocks.blocks');
+    if (allocatedWidthCharts[1] === 0) {
+      allocatedWidthCharts[1] = trackWidth * (2 + 1);
+    }
     let
     chartTypes = this.get('chartTypes'),
     /** ensure .charts is populated for chartTypes. */
@@ -289,8 +302,10 @@ export default InAxis.extend({
     /** blocksAll minus featureCount blocks */
     blocksCharts = blocksAll.filter((block) => block.get('isChartable')),
     // equiv : charts && Object.keys(charts).length,
-    nCharts = chartsArray && chartsArray.length;
-    if (nCharts) {
+    nCharts = this.get('chartsVariableWidth.length');
+    if (nCharts > 1) {
+      // this is a CP result so copy before modifying.
+      allocatedWidthCharts = allocatedWidthCharts.slice();
       allocatedWidthCharts[1] = allocatedWidthCharts[1] / nCharts;
     }
     dLog('draw blocksCharts', blocksCharts, typeBlockIds, typeBlockIdsArray, blocksAll, nCharts);
@@ -321,6 +336,8 @@ export default InAxis.extend({
       });
     });
 
+    this.reportWidth();
+
     /** drawAxes() uses the x scale updated in drawChart() -> prepareScales(), called above. */
     const showChartAxes = true;
     if (showChartAxes && ! isFeaturesCounts)
@@ -333,6 +350,26 @@ export default InAxis.extend({
 
   },
 
+  /** Calculate the sum of chart widths and report it via childWidths to axis-2d. */
+  reportWidth() {
+    let
+    chartWidths =
+      Object.keys(this.charts).map((k) => this.charts[k].allocatedWidth),
+    widthSum = chartWidths.reduce((sum, w) => sum += w, 0);
+    // later allocate each chart, for separate offsets : (this.get('className') + '_' + chart.name)
+    Ember.run.next(() => {
+      let childWidths = this.get('childWidths'),
+          className = this.get('className'),
+          chartWidth = childWidths.get(className);
+      if (! chartWidth /**|| chartWidth[1] !== widthSum*/) {
+        childWidths.set(className, [widthSum, widthSum]);
+      }
+    });
+  },
+
+  /**
+   * @param allocatedWidth  width
+   */
   drawChart(dataTypeName, chartName, allocatedWidth, blocksAll) {
     // this function could be factored out as axis-chart:draw()
     let
