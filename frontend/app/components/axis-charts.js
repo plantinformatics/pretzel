@@ -205,6 +205,8 @@ export default InAxis.extend({
 
   /** chartsArray minus those which use space allocated by axisBlocks */
   chartsVariableWidth : Ember.computed.filter('chartsArray',  (chart) => !chart.useAllocatedWidth()),
+  /** chartsArray which use space allocated by axisBlocks */
+  chartsFixedWidth : Ember.computed.filter('chartsArray',  (chart) => chart.useAllocatedWidth()),
 
   addChart(dataTypeName, chartName) {
     let chart = this.charts[chartName];
@@ -353,8 +355,8 @@ export default InAxis.extend({
   /** Calculate the sum of chart widths and report it via childWidths to axis-2d. */
   reportWidth() {
     let
-    chartWidths =
-      Object.keys(this.charts).map((k) => this.charts[k].allocatedWidth),
+    charts = this.get('chartsFixedWidth'),
+    chartWidths = charts.mapBy('allocatedWidth'),
     widthSum = chartWidths.reduce((sum, w) => sum += w, 0);
     // later allocate each chart, for separate offsets : (this.get('className') + '_' + chart.name)
     Ember.run.next(() => {
