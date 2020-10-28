@@ -106,7 +106,8 @@ function addParentClass(g) {
 function Chart1(dataConfig, name)
 {
   /* deep copy not required; this enables .scaledConfig() to modify DataConfig
-   * datum2LocationScaled datum2ValueScaled (refactor once this is settled).
+   * datum2LocationScaled (refactor once this is settled).
+   * (could bind / curry optional scaleY arg, as is done with rectWidth for datum2Value.)
    */
   this.dataConfig = Object.create(dataConfig);
   this.name = name;
@@ -599,8 +600,10 @@ Chart1.prototype.prepareScales =  function (data, drawSize)
   scales = this.scales,
   width = drawSize.width,
   height = drawSize.height,
-  /** leave 10px space at right side. */
-  xRange = [0, width-10],
+  /** leave 10px space at right side (trackWidth).
+   * Start xRange from 1px because in the case of featureCountData the data are non-empty bins - the domain starts from > 0.
+   */
+  xRange = [1, width-10],
   yRange = [0, height],
   // yRange is used as range of yLine by this.scaleLinear().
   /* scaleBand would suit a data set with evenly spaced or ordinal / nominal y values.
@@ -608,7 +611,7 @@ Chart1.prototype.prepareScales =  function (data, drawSize)
    */
   y = useLocalY ? this.scaleLinear(yRange, data) : scales.yAxis;
   scales.xWidth = 
-    d3.scaleLinear().rangeRound(xRange);
+    d3.scaleLinear().range(xRange);
   if (dataConfig.barAsHeatmap) {
     scales.xColour = d3.scaleOrdinal().range(d3.schemeCategory20);
   }
@@ -620,17 +623,8 @@ Chart1.prototype.prepareScales =  function (data, drawSize)
   console.log("Chart1", xRange, yRange, dataConfig.dataTypeName);
 
   let
-    valueWidthFn = dataConfig.rectWidth.bind(dataConfig, /*scaled*/false, /*gIsData*/true),
+    valueWidthFn = dataConfig.rectWidth.bind(dataConfig, /*scaleX*/undefined, /*gIsData*/true),
   valueCombinedDomain = this.domain(valueWidthFn, data);
-  /** rectWidth() scales the value (e.g. count) before before dividing by
-   * height; so if height is 0.5, a value >0 may be outside the scale domain
-   * (which is calculated with /height) and hence be clamped at 0.
-   * That will require adding scaleX or d2v as an argument to rectWidth();
-   * an intermediate fix is to set valueCombinedDomain[0] = 0.
-   */
-  if (valueCombinedDomain[0] > 0) {
-    valueCombinedDomain[0] = 0;
-  }
   scales.xWidth.domain(valueCombinedDomain);
   if (scales.xColour)
     scales.xColour.domain(valueCombinedDomain);
@@ -844,7 +838,10 @@ Chart1.prototype.drawLine = function (blockId, block, data)
 
 Chart1.prototype.scaleLinear = function (yRange, data)
 {
-  // based on https://bl.ocks.org/mbostock/3883245
+  /* based on https://bl.ocks.org/mbostock/3883245
+   * now at https://web.archive.org/web/20170711093831/https://bl.ocks.org/mbostock/3885304
+   * It uses rangeRound() but rounding doesn't seem applicable here.
+   */
   if (! this.scales.yLine)
     this.scales.yLine = d3.scaleLinear();
   let y = this.scales.yLine;
@@ -935,9 +932,7 @@ ChartLine.prototype.scaledConfig = function ()
   /* apply y after scale applied by datum2Location */
   let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, this.scales.y);
   /** related @see rectWidth().  */
-  const datum2ValueScaled = (d) => { return this.scales.x(dataConfig.datum2Value(d)); }
   dataConfig.datum2LocationScaled = datum2LocationScaled;
-  dataConfig.datum2ValueScaled = datum2ValueScaled;
 };
 
 ChartLine.prototype.blockColour = function ()
@@ -993,7 +988,7 @@ ChartLine.prototype.bars = function (data)
   // yBand.bandwidth()
     .attr("height", dataConfig.rectHeight.bind(dataConfig, /*scaled*/true, /*gIsData*/false)) // equiv : (d, i, g) => dataConfig.rectHeight(true, false, d, i, g);
   ;
-  let barWidth = dataConfig.rectWidth.bind(dataConfig, /*scaled*/true, /*gIsData*/false);
+  let barWidth = dataConfig.rectWidth.bind(dataConfig, /*scaleX*/this.scales.xWidth, /*gIsData*/false);
   r
     .attr("width", dataConfig.barAsHeatmap ? 20 : barWidth);
   if (dataConfig.barAsHeatmap)
@@ -1027,7 +1022,7 @@ ChartLine.prototype.linebars = function (data)
   let line = d3.line();
 
   function horizLine(d, i, g) {
-    let barWidth = dataConfig.rectWidth(/*scaled*/true, /*gIsData*/false, d, i, g);
+    let barWidth = dataConfig.rectWidth(/*scaleX*/scales.x, /*gIsData*/false, d, i, g);
     let y = middle(datum2LocationScaled(d)),
     l =  line([
       [0, y],
@@ -1084,7 +1079,7 @@ ChartLine.prototype.line = function (data)
 
   let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, y);
   let line = d3.line()
-    .x(dataConfig.rectWidth.bind(dataConfig, /*scaled*/true, /*gIsData*/false))
+    .x(dataConfig.rectWidth.bind(dataConfig, /*scaleX*/this.scales.x, /*gIsData*/false))
     .y((d) => middle(datum2LocationScaled(d)));
 
   console.log("line x domain", this.scales.x.domain(), this.scales.x.range());
@@ -1162,17 +1157,14 @@ DataConfig.prototype.keyFn = function (d, i, g) {
 
 /** Calculate the width of rectangle to be used for this data point
  * @param this  is DataConfig, not DOM element.
- * @param scaled  true means apply scale (x) to the result
+ * @param scaleX  undefined, or apply scaleX (x) to the result
  * @param gIsData true means g is __data__, otherwise it is DOM element, and has .__data__ attribute.
  * gIsData will be true when called from d3.max(), and false for d3 attr functions.
  */
-DataConfig.prototype.rectWidth = function (scaled, gIsData, d, i, g)
+DataConfig.prototype.rectWidth = function (scaleX, gIsData, d, i, g)
 {
   Ember.assert('rectWidth arguments.length === 5', arguments.length === 5);
-  /** The scale is linear, so it is OK to scale before dividing by rectHeight.
-   * Otherwise could use datum2Value() here and apply this.x() before the return.
-   */
-  let d2v = (scaled ? this.datum2ValueScaled : this.datum2Value),
+  let d2v = this.datum2Value,
   width = d2v(d);
   if (this.valueIsArea) {
     /** the last bucket of GM has 0 height : id: {min: 238.2272359, max: 238.2272359}, so treat it as 1. */
@@ -1180,6 +1172,9 @@ DataConfig.prototype.rectWidth = function (scaled, gIsData, d, i, g)
     // Factor the width consistently by h, don't sometimes use scaled (i.e. pass scaled==false).
     width /= (h || 1);
     // dLog('rectWidth', h, width, gIsData);
+  }
+  if (scaleX) {
+    width = scaleX(width);
   }
   return width;
 };
