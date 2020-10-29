@@ -596,12 +596,17 @@ Chart1.prototype.prepareScales =  function (data, drawSize)
    * .name (location) -> .value, which is named y -> x.
    */
   let
+  startFrom0 = this.isFeaturesCounts,
     dataConfig = this.dataConfig,
   scales = this.scales,
   width = drawSize.width,
   height = drawSize.height,
   /** leave 10px space at right side (trackWidth).
-   * Start xRange from 1px because in the case of featureCountData the data are non-empty bins - the domain starts from > 0.
+   *
+   * Start xRange from 1px because <1px is shown as a sub-pixel gradation and is
+   * nearly invisible; < several px is very hard to see anyway.
+   * i.e. if the value is close to domain[0] it should still be clearly visible
+   * - the fact that there is a value there is significant.
    */
   xRange = [1, width-10],
   yRange = [0, height],
@@ -625,6 +630,13 @@ Chart1.prototype.prepareScales =  function (data, drawSize)
   let
     valueWidthFn = dataConfig.rectWidth.bind(dataConfig, /*scaleX*/undefined, /*gIsData*/true),
   valueCombinedDomain = this.domain(valueWidthFn, data);
+  /** in the case of featureCountData the data are non-empty bins - the domain starts from > 0.
+   * Starting the domain from 0 makes the width proportional to count.
+   */
+  if (startFrom0 && (valueCombinedDomain[0] > 0)) {
+    valueCombinedDomain[0] = 0;
+  }
+
   scales.xWidth.domain(valueCombinedDomain);
   if (scales.xColour)
     scales.xColour.domain(valueCombinedDomain);
@@ -1022,7 +1034,7 @@ ChartLine.prototype.linebars = function (data)
   let line = d3.line();
 
   function horizLine(d, i, g) {
-    let barWidth = dataConfig.rectWidth(/*scaleX*/scales.x, /*gIsData*/false, d, i, g);
+    let barWidth = dataConfig.rectWidth(/*scaleX*/scales.xWidth, /*gIsData*/false, d, i, g);
     let y = middle(datum2LocationScaled(d)),
     l =  line([
       [0, y],
@@ -1075,14 +1087,14 @@ ChartLine.prototype.domain = function (valueFn, data)
 ChartLine.prototype.line = function (data)
 {
   let y = this.scales.y, dataConfig = this.dataConfig;
-  this.scales.x = this.scales.xWidth;
+  let x = this.scales.x = this.scales.xWidth;
 
   let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, y);
   let line = d3.line()
-    .x(dataConfig.rectWidth.bind(dataConfig, /*scaleX*/this.scales.x, /*gIsData*/false))
+    .x(dataConfig.rectWidth.bind(dataConfig, /*scaleX*/x, /*gIsData*/false))
     .y((d) => middle(datum2LocationScaled(d)));
 
-  console.log("line x domain", this.scales.x.domain(), this.scales.x.range());
+  console.log("line x domain", x.domain(), x.range());
 
   let
     g = this.g,
