@@ -596,7 +596,6 @@ Chart1.prototype.prepareScales =  function (data, drawSize)
    * .name (location) -> .value, which is named y -> x.
    */
   let
-  startFrom0 = this.isFeaturesCounts,
     dataConfig = this.dataConfig,
   scales = this.scales,
   width = drawSize.width,
@@ -627,8 +626,18 @@ Chart1.prototype.prepareScales =  function (data, drawSize)
   scales.y = y;
   console.log("Chart1", xRange, yRange, dataConfig.dataTypeName);
 
+  this.scaleXDomain(data);
+};
+/**
+ * @param data  {<blockId> : data array, ... }
+ */
+Chart1.prototype.scaleXDomain = function (data)
+{
   let
-    valueWidthFn = dataConfig.rectWidth.bind(dataConfig, /*scaleX*/undefined, /*gIsData*/true),
+  dataConfig = this.dataConfig,
+  scales = this.scales,
+  startFrom0 = this.dataConfig.isFeaturesCounts(),
+  valueWidthFn = dataConfig.rectWidth.bind(dataConfig, /*scaleX*/undefined, /*gIsData*/true),
   valueCombinedDomain = this.domain(valueWidthFn, data);
   /** in the case of featureCountData the data are non-empty bins - the domain starts from > 0.
    * Starting the domain from 0 makes the width proportional to count.
@@ -640,8 +649,8 @@ Chart1.prototype.prepareScales =  function (data, drawSize)
   scales.xWidth.domain(valueCombinedDomain);
   if (scales.xColour)
     scales.xColour.domain(valueCombinedDomain);
-
 };
+
 Chart1.prototype.drawContent = function ()
 {
   Object.keys(this.chartLines).forEach((blockId) => {
@@ -762,7 +771,7 @@ Chart1.prototype.transform = function (i) {
  */
 Chart1.prototype.useAllocatedWidth = function () {
   /** match featureCount{,Auto}Data */
-  return this.dataConfig.dataTypeName.startsWith('featureCount');
+  return this.dataConfig.isFeaturesCounts();
 };
 
 Chart1.prototype.drawAxes = function (chart, i, g) {
@@ -916,17 +925,23 @@ ChartLine.prototype.setup = function(blockId) {
     this.dataConfig = d;
   }
 };
+/** @return a filter function
+ * @desc
+ * this could be a (static) method of either Chart1 or ChartLine.
+ */
+Chart1.withinZoomRegion = function (dataConfig, yDomain) {
+  return (d) => inRangeEither(dataConfig.datum2Location(d), yDomain);
+},
 /** Filter given data according to this.scales.yAxis.domain()
  * and set .currentData
+ * @param chart data array
  */
 ChartLine.prototype.filterToZoom = function(chart) {
   let
   {yAxis} = this.scales,
   yDomain = yAxis.domain(),
-  withinZoomRegion = (d) => {
-    return inRangeEither(this.dataConfig.datum2Location(d), yDomain);
-  },
-  data = chart.filter(withinZoomRegion);
+
+  data = chart.filter(Chart1.withinZoomRegion(this.dataConfig, yDomain));
   this.currentData = data;
 
   dLog(yDomain, data.length, (data.length == 0) || this.dataConfig.datum2Location(data[0]));
@@ -1153,6 +1168,10 @@ ChartLine.prototype.remove = function() {
 
 
 /*----------------------------------------------------------------------------*/
+
+DataConfig.prototype.isFeaturesCounts = function () {
+  return this.dataTypeName.startsWith('featureCount');
+}
 
 DataConfig.prototype.keyFn = function (d, i, g) {
   let key = this.datum2Location(d, i, g);

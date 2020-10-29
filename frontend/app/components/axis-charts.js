@@ -381,11 +381,24 @@ export default InAxis.extend({
     /*if (! chart.ranges)*/ {
       let
       blocksData = this.get('blocksData'),
-      /** data is the (dataTypeName) data for all axes; blocksAll are the data blocks on this axis : chart. */
+      /** data is the (dataTypeName) data for all axes; blocksAll are the data blocks on this axis : chart.
+       * {<blockId> : data array, ... }
+       */
       data = blocksData.get(dataTypeName),
+      yDomain = chart.scales.yAxis && chart.scales.yAxis.domain(),
+      /** filtered by block.isViewed and by y domain of data.
+       * (called y because the chart is displayed rotated 90deg; it is the
+       * domain of the data, not co-domain / range).
+       * Result form is the same as data, i.e. {<blockId> : data array, ... }
+       */
       filteredData = blocksAll.reduce((filtered, block) => {
         if (data[block.id] && block.get('isViewed')) {
-          filtered[block.id] = data[block.id]; }
+          let db = data[block.id];
+          if (yDomain) {
+            db = db.filter(Chart1.withinZoomRegion(chart.dataConfig, yDomain));
+          }
+          filtered[block.id] = db;
+        }
         return filtered;
       }, {}),
       dataConfig = chart.dataConfig;
