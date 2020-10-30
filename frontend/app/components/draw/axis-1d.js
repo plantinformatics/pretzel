@@ -934,11 +934,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     dLog('showZoomResetButtonState', gb.node(), this.get('brushed'), this.get('zoomed'), this.get('zoomed2'), this.get('axisBrush.brushedAxes'));
   },
   showZoomResetButtonXPosn() {
-    let
-    as = this.get('axisSelect'),
-    gb = as.selectAll('g.btn');
-    gb
-      .attr('transform', yAxisBtnScale);
+    if (! (this.isDestroying || this.isDestroyed) && this.axis.get('isViewed')) {
+      let
+      as = this.get('axisSelect'),
+      gb = as.selectAll('g.btn');
+      gb
+        .attr('transform', yAxisBtnScale);
+    }
   }
   
 });

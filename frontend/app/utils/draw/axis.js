@@ -112,7 +112,7 @@ function axisExtended(gAxis)
   let
   axisName = gAxis.__data__,
   axis = oa.axes[axisName],
-  extended = axis.extended; // or axis.axis1d.get('extended'),
+  extended = axis && axis.extended; // or axis.axis1d.get('extended'),
   /* .extended should be false or width;  if it is just true then return the default initial width. */
   if (extended === true) {
     let axis1d = axis.axis1d,

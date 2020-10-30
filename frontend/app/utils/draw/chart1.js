@@ -8,6 +8,7 @@ import { noDomain } from '../draw/axis';
 import { stacks } from '../stacks'; // just for oa.z and .y, don't commit this.
 import { inRangeEither } from './zoomPanCalcs';
 import { featureCountDataProperties, dataConfigs, DataConfig, blockDataConfig, hoverTextFn, middle, scaleMaybeInterval, datum2LocationWithBlock } from '../data-types';
+import { breakPoint } from '../breakPoint';
 
 
 const className = "chart", classNameSub = "chartRow";
@@ -964,7 +965,22 @@ ChartLine.prototype.scaledConfig = function ()
 
 ChartLine.prototype.blockColour = function ()
 {
-  let blockS = this.block && this.block.get('view'),
+  const fnName = 'ChartLine blockColour';
+  let blockS = this.block && this.block.get('view');
+
+  if (! blockS) {
+    breakPoint(fnName, this.block, this);
+  } else  {
+    let 
+    axis = blockS.axis,
+    axis1d = axis && axis.axis1d;
+    if (! (axis && axis1d) || axis1d.isDestroying ) {
+      breakPoint(fnName, blockS, blockS.axisName, axis, axis1d, this.block.get('id'),
+      this.block, this, axis1d && [axis1d.isDestroying, axis1d.isDestroyed]);
+    }
+  }
+
+  let
   /* For axes without a reference, i.e. GMs, there is a single data block with colour===undefined. */
   colour = (blockS && blockS.axisTitleColour()) || 'red';
   return colour;

@@ -417,7 +417,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       (allocatedWidth = axis.allocatedWidth()) ||
       ((axis.extended === true) ? initialWidth : axis.extended) :
     undefined;
-    dLog('getAxisExtendedWidth', width, allocatedWidth, initialWidth, axis.extended);
+    dLog('getAxisExtendedWidth', width, allocatedWidth, initialWidth, axis && axis.extended);
     return width;
   },
   selectAxisUse() {
@@ -434,7 +434,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let 
     /** value of .extended may be false, so || 0.  */
       initialWidth = /*50*/ this.getAxisExtendedWidth(axisID) || 0,
-    axisData = axis.extended ? [axisID] : [];
+    axisData = axis && axis.extended ? [axisID] : [];
     let oa = this.get('oa');
     if (axisG === undefined)
       axisG = oa.svgContainer.selectAll("g.axis-outer#id" + axisID);
@@ -493,7 +493,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       const xOffset = 25, shiftRight=5;
       let 
         tickWidth = xOffset/5,
-      edgeHeight = axis.yRange(),
+      edgeHeight = axis ? axis.yRange() : 0,
       line = d3.line(),
       sLine = line([
         [+tickWidth, 0],
