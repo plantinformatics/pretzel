@@ -290,6 +290,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   },
 
   willDestroyElement() {
+    this.willDestroyElement2();
     let extended = this.get('axis1d.extended');
     if (extended) {
       dLog('willDestroyElement .extended', extended, this.get('axisID'), this.get('axis1d'));
@@ -385,7 +386,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       this.show();
     }
     // may trigger this differently, could be action.
-    Ember.run.next(() => this.get('axis1d').showZoomResetButtonXPosn());
+    Ember.run.next(() => this.get('axis1d').widthEffects());
   },
   /** Update the X scale / horizontal layout of stacks
    * copied from draw-map; the x scale will likely move to stacks-view, and this will likely be dropped.
@@ -697,7 +698,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     }
   },
 
-  willDestroyElement() {
+  willDestroyElement2() {
     this.set('allocatedWidthsMax', 0);
     this.positionRightEdge();
     let axisUse = this.selectAxisUse();

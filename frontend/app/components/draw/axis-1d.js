@@ -808,18 +808,25 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       this.renderTicksDebounce(axisID_t);
     }
 
-    /* .extended has changed, so the centre of the axisTitle is changed.
-     * this.updateAxisTitleSize() is called in axisWidthResizeEnded()->stacksAdjust()
+    /* when split axis is closed,
+     * updateAxisTitleSize() is called in willDestroyElement()->axisWidthResizeEnded()->stacksAdjust()
+     * when split axis is opened or closed, widthEffects()->this.updateAxisTitleSize() -> updateAxisTitleSize()
      */
 
-    this.showZoomResetButtonXPosn();
+    this.widthEffects();
 
     return extended;
   }),
 
   extendedWidthEffect : Ember.computed(/*'extended',*/ 'axis2d.allocatedWidths', function () {
-    this.showZoomResetButtonXPosn();
+    this.widthEffects();
   }),
+  widthEffects() {
+    this.showZoomResetButtonXPosn();
+    /** .extended has changed, so the centre of the axisTitle is changed. */
+    this.axisTitleFamily();
+    this.updateAxisTitleSize();
+  },
 
   /*--------------------------------------------------------------------------*/
 
