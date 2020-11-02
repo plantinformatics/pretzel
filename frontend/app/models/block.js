@@ -621,6 +621,20 @@ export default DS.Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** @return the features count within zoomedDomain, or if there is no zoom,
+   * i.e. zoomedDomain is undefined, then simply return .featureCount
+   */
+  featuresCountIncludingZoom : Ember.computed(
+    'featureCountInZoom', 'zoomedDomain.{0,1}', 'limits',
+    function () {
+      let
+      count = this.get('zoomedDomain') ?
+	(this.featuresCountsResults.length ? this.get('featureCountInZoom') : undefined ) :
+	this.featureCount;
+      dLog('featuresCountIncludingZoom', count);
+      return count;
+    }),
+
   /** From the featuresCounts results received, filter to return the bins
    * overlapping zoomedDomain.
    * If not zoomed (no zoomedDomain), return featuresCounts.
@@ -753,13 +767,14 @@ export default DS.Model.extend({
    * are displayed for this block.
    */
   isZoomedOut : Ember.computed(
+    'featuresCountIncludingZoom',
     'zoomedDomainDebounced.{0,1}',
     'featuresCounts.[]',
     'featuresCountsResults.[]',
     'featuresCountsThreshold',
     function () {
     let
-    count = this.get('featureCountInZoom'),
+    count = this.get('featuresCountIncludingZoom'),
     featuresCountsThreshold = this.get('featuresCountsThreshold'),
     out  = (count > featuresCountsThreshold);
     dLog('isZoomedOut', out, this.get('id'), count, featuresCountsThreshold);
@@ -776,7 +791,14 @@ export default DS.Model.extend({
    * As used in axis-tracks : when axis is open/split, request features in
    * response to, and as defined by, zoom changes.
    */
-  featuresForAxis : Ember.computed('axis', 'zoomedDomainDebounced.{0,1}', function () {
+  featuresForAxis : Ember.computed(
+    'axis', 'zoomedDomainDebounced.{0,1}',
+    'featuresCountIncludingZoom',
+    'featuresCountsThreshold',
+    'featuresCountsInZoomSmallestBinSize',
+    'limits',
+    'featuresCountsResults.[]',
+    function () {
     /** This could be split out into a separate layer, concerned with reactively
      * requesting data; the layers are : core attributes (of block); derived
      * attributes (these first 2 are the above functions); actions based on
@@ -788,15 +810,17 @@ export default DS.Model.extend({
     const fnName = 'featuresForAxis';
     let blockId = this.get('id');
     let
-    count = this.get('featureCountInZoom'),
+    count = this.get('featuresCountIncludingZoom'),
     featuresCountsThreshold = this.get('featuresCountsThreshold');
     let features;
 
-    /** if the block has chartable data, get features regardlessdon't request featuresCounts. */
-    if (this.get('isChartable')) {
+    /** if the block has chartable data, get features regardless; may also request featuresCounts. */
+    if (this.get('isChartable') || (count <= featuresCountsThreshold)) {
       this.getFeatures(blockId);
-    } else 
-    /** if featuresCounts not yet requested then count is 0 */
+    }
+    /** if featuresCounts not yet requested then count is undefined
+     * Equivalent to check if .featuresCountsResults.length === 0.
+     */
     if ((this.featuresCounts === undefined) || (count > featuresCountsThreshold)) {
       let
       minSize = this.get('featuresCountsInZoomSmallestBinSize'),
@@ -813,8 +837,6 @@ export default DS.Model.extend({
         blocksSummaryTasks = blockService.get('getBlocksSummary').apply(blockService, [[blockId]]);
       }
       // features is undefined
-    } else {
-      this.getFeatures(blockId);
     }
 
     return features;
