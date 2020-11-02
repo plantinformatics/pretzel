@@ -227,8 +227,8 @@ export default Service.extend(Ember.Evented, {
     this.viewReferences(blocksToView);
     let dataAndReferences = blocksToView.concat(
       blockIds.map((blockId) => { return {id : blockId, obj : this.peekBlock(blockId)}; }))
-	    // filter out .obj === null, i.e. block not in store yet.
-	    .filter((blockIdObj) => blockIdObj.obj);
+      // filter out .obj === null, i.e. block not in store yet.
+        .filter((blockIdObj) => blockIdObj.obj);
       console.log('taskGetSummary dataAndReferences', dataAndReferences);
     this.receivedBlocks(dataAndReferences);
     
@@ -395,9 +395,9 @@ export default Service.extend(Ember.Evented, {
 
     /** As yet these result promises are not returned, not needed. */
     let blockPs =
-	blockIds.map((blockId) => [blockId, this.peekBlock(blockId)])
-	.filter((blockAndId) => blockAndId[1].get('isData'))
-	.map(
+        blockIds.map((blockId) => [blockId, this.peekBlock(blockId)])
+        .filter((blockAndId) => blockAndId[1].get('isData'))
+        .map(
           (blockAndId) => {
           let [blockId, block] = blockAndId;
           /** densityFactor requires axis yRange, so for that case this will (in future) lookup axis from blockId. */
@@ -419,12 +419,33 @@ export default Service.extend(Ember.Evented, {
             getCounts.apply(this);
             function getCounts() {
               let interval = zoomedDomain;
-              if (! zoomedDomain) {
+              let intervalFromLimits = (blockId) => {
                 let intervals = this.blocksReferencesLimits([blockId]);
-                interval = intervals[blockId];
+                return intervals[blockId];
+              };
+              if (! zoomedDomain) {
+                interval = intervalFromLimits(blockId);
               }
+              let getCountsForInterval = (interval) =>
+                  this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, /*options*/{})
+              if (interval) {
               p = summaryTask[taskId] =
-              this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, /*options*/{});
+                  getCountsForInterval(interval);
+              } else {
+                /** interval is drawn from the result of blockFeatureLimits
+                 * (sent by getBlocksLimits() -> taskGetLimits() ->
+                 * getLimits()). It can happen (seen with GM from secondary
+                 * server) that the limits have not been received at this time,
+                 * so wait for them.
+                 * getBlockFeaturesCounts() with interval === undefined will use
+                 * bucketAuto, which doesn't produce even-size bins.
+                 */
+                p = summaryTask[taskId] =
+                  new Ember.RSVP.Promise((resolve) => { Ember.run.later(() => {
+                    interval = intervalFromLimits(blockId);
+                    resolve(interval); }, 4000); })
+                  .then(getCountsForInterval);
+              }
             /* this could be structured as a task within models/block.js
              * A task would have .drop() to avoid concurrent request, but
              * actually want to bar any subsequent request for the same taskId,
