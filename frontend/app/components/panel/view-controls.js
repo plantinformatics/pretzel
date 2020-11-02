@@ -128,7 +128,7 @@ export default Ember.Component.extend({
       return params;
     }),
 
-  featuresCountsThresholdLinear : expRangeInitial(200, expRangeBase(100, 10000)),
+  featuresCountsThresholdLinear : expRangeInitial(500, expRangeBase(100, 10000)),
 
   featuresCountsThreshold : Ember.computed('featuresCountsThresholdLinear', function () {
     let
