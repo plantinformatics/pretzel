@@ -88,6 +88,7 @@ export default Ember.Component.extend({
    */
   featuresForBlocksRequestEffect : Ember.computed(
     'blocks.[]',
+    'blocks.@each.featuresForAxis',
     // axis1d.domain also reflects zoomedDomain
     'axis1d.axis.limits.{0,1}', 'axis1d.zoomedDomainDebounced.{0,1}',
     function () {

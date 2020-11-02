@@ -153,9 +153,9 @@ export default DS.Model.extend({
     if (! domain)  {
       let referenceBlock = this.get('referenceBlock');
       if (referenceBlock) {
-	domain = referenceBlock.get('range');
+        domain = referenceBlock.get('range');
       } else {
-	domain = this.get('featuresDomain');
+        domain = this.get('featuresDomain');
       }
     }
     return domain;
@@ -625,20 +625,23 @@ export default DS.Model.extend({
    * i.e. zoomedDomain is undefined, then simply return .featureCount
    */
   featuresCountIncludingZoom : Ember.computed(
+    'featuresCountsResults.[]',
     'featureCountInZoom', 'zoomedDomain.{0,1}', 'limits',
     function () {
       let
       count = this.get('zoomedDomain') ?
-	(this.featuresCountsResults.length ? this.get('featureCountInZoom') : undefined ) :
-	this.featureCount;
+        (this.featuresCountsResults.length ? this.get('featureCountInZoom') : undefined ) :
+        this.featureCount;
       dLog('featuresCountIncludingZoom', count);
       return count;
     }),
 
   /** From the featuresCounts results received, filter to return the bins
    * overlapping zoomedDomain.
-   * If not zoomed (no zoomedDomain), return featuresCounts.
+   * If not zoomed (no zoomedDomain), return featuresCountsResults.
    * @return undefined if no results or no overlaps
+   * Result form is the same as featuresCountsResults, i.e.
+   * [ {binSize, nBins, domain: Array(2), result: Array}, ... ]
    */
   featuresCountsInZoom : Ember.computed(
     'featuresCountsResults.[]', 'zoomedDomain.{0,1}', 'limits',
@@ -762,6 +765,8 @@ export default DS.Model.extend({
 
   /** @return true if the axis on which this block is displayed is zoomed out past the point
    * that the number of features in the block within zoomedDomain is > featuresCountsThreshold.
+   * Return undefined if .featuresCountIncludingZoom is undefined,
+   * otherwise true or false.
    * @desc
    * This is used to select whether axis-charts featuresCounts or axis-tracks
    * are displayed for this block.
@@ -776,7 +781,7 @@ export default DS.Model.extend({
     let
     count = this.get('featuresCountIncludingZoom'),
     featuresCountsThreshold = this.get('featuresCountsThreshold'),
-    out  = (count > featuresCountsThreshold);
+    out  = (count === undefined) ? undefined : (count > featuresCountsThreshold);
     dLog('isZoomedOut', out, this.get('id'), count, featuresCountsThreshold);
     return out;
   }),
@@ -798,6 +803,8 @@ export default DS.Model.extend({
     'featuresCountsInZoomSmallestBinSize',
     'limits',
     'featuresCountsResults.[]',
+    'zoomedDomain.{0,1}',
+    'isZoomedOut',
     function () {
     /** This could be split out into a separate layer, concerned with reactively
      * requesting data; the layers are : core attributes (of block); derived
@@ -811,17 +818,20 @@ export default DS.Model.extend({
     let blockId = this.get('id');
     let
     count = this.get('featuresCountIncludingZoom'),
+    isZoomedOut = this.get('isZoomedOut'),
     featuresCountsThreshold = this.get('featuresCountsThreshold');
     let features;
+    dLog('featuresForAxis', isZoomedOut, count, featuresCountsThreshold, this.get('zoomedDomain'), this.get('zoomedDomainDebounced'));
 
     /** if the block has chartable data, get features regardless; may also request featuresCounts. */
-    if (this.get('isChartable') || (count <= featuresCountsThreshold)) {
+    /** can use isZoomedOut here instead, e.g. (isZoomedOut === true)  */
+    if (this.get('isChartable') || ((count !== undefined) && (count <= featuresCountsThreshold))) {
       this.getFeatures(blockId);
     }
     /** if featuresCounts not yet requested then count is undefined
      * Equivalent to check if .featuresCountsResults.length === 0.
      */
-    if ((this.featuresCounts === undefined) || (count > featuresCountsThreshold)) {
+    if ((this.featuresCounts === undefined) || ((count === undefined) || (count > featuresCountsThreshold))) {
       let
       minSize = this.get('featuresCountsInZoomSmallestBinSize'),
       domain = this.get('zoomedDomain') || this.get('limits'),
