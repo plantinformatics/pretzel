@@ -580,7 +580,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         dLog('positionRightEdgeEffect', axisUse.node(), width, p.node());
       }
     }
-  }).drop(),
+  }).keepLatest(),
   childWidthsSum() {
     let sum = lodashMath.sum(Object.values(this.get('childWidths')).mapBy('1'));
     return sum;

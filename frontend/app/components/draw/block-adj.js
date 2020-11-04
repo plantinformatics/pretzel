@@ -529,7 +529,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      * the caller can .finally() on the task handle. Can retry this after version update. */
     if (thenFn)
       transitionEnd.then(thenFn);
-  }).drop(),
+  }).keepLatest(),
 
   /** Call updateAxis() for the axes which bound this block-adj.
    * See comment in updatePathsPositionDebounce().
