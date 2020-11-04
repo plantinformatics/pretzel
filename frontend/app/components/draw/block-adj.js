@@ -136,10 +136,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .reduce(function (bd, bb) {
           // if b.axis.axis1d.get('zoomed') is false, then domain will be undefined.
           // also b.axis.axis1d can be undefined, probably because of new axis, in which case it won't be zoomed yet (except when we add zoom domain to the URL).
-          bb.forEach(function (b) { bd[b.axisName] = b.axis.axis1d && b.axis.axis1d.get('domain'); }); return bd; }, {}),
+	  // if axis is deleted, blocks are un-viewed, i.e. b.block.get('isViewed') is false, and b.axis === undefined
+          bb.forEach(function (b) { bd[b.axisName] = b.axis && b.axis.axis1d && b.axis.axis1d.get('domain'); }); return bd; }, {}),
       axesRanges = axes.map((a) => a.yRange()),
       axisLengthPx = Math.max.apply(null, axesRanges),
       nPaths = targetNPaths(pathsDensityParams, axisLengthPx);
+      // handle b.axis === undefined (block has been un-viewed)
+      if (Object.values(blockDomains).indexOf(undefined) !== -1) {
+	return 0;
+      }
       if (pathsResult.length < nPaths) {
         /* to satisfy the required nPaths, trigger a new request. */
         this.incrementProperty('blockAdj.pathsRequestCount');
@@ -573,14 +578,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     function () {
     let count = this.get('axisStackChangedCount'),
       stacksWidthChanges = this.get('drawMap.stacksWidthChanges'),
-	    flips = [this.get('blockAdj.axes1d.0.flipRegionCounter'),
-		           this.get('blockAdj.axes1d.1.flipRegionCounter')],
+      flips = [this.get('blockAdj.axes1d.0.flipRegionCounter'),
+               this.get('blockAdj.axes1d.1.flipRegionCounter')],
       scaleChanges = [this.get('blockAdj.axes1d.0.scaleChanged'),
                       this.get('blockAdj.axes1d.1.scaleChanged')],
       zoomCounter = this.get('blockAdj.zoomCounter'),
       heightChanged = this.get('heightChanged');
       if (trace_blockAdj)
-	      dLog('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, flips, zoomCounter, scaleChanges,
+        dLog('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, flips, zoomCounter, scaleChanges,
            stacksWidthChanges,
            this.get('block.stacksCount'));
     this.updatePathsPosition();
@@ -620,7 +625,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   axisStackChanged : function() {
     dLog("axisStackChanged in components/block-adj");
     // currently need time for x scale update
-    Ember.run.next(() => this.incrementProperty('axisStackChangedCount'));
+    Ember.run.next(() => ! this.isDestroying && this.incrementProperty('axisStackChangedCount'));
   },
 
   /** @param [axisID, t] */
