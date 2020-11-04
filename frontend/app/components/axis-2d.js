@@ -377,7 +377,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   axisWidthResizeEnded()
   {
     dLog("axisWidthResizeEnded");
-
+    this.widthEffects();
+  },
+  widthEffects() {
     this.updateXScale();
     stacks.changed = 0x10;
     let oa = this.get('oa');
@@ -554,6 +556,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    */
   positionRightEdgeEffect : Ember.computed('allocatedWidthsMax', 'allocatedWidths', function () {
     this.get('positionRightEdge').perform();
+    this.widthEffects();
   }),
 /* Position the right edge path (if !dualAxis) for the current width.
  * Making this a task with .drop() enables avoiding conflicting transitions.
@@ -575,7 +578,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       if (width !== undefined) {
         let
         p = axisUse.selectAll('g.axis-use > path')
-          .transition().duration(transitionEnable * 1000)
+          // .transition().duration(transitionEnable * 1000)
           .attr("transform",function(d) {return "translate(" + (width) + ",0)";});
         dLog('positionRightEdgeEffect', axisUse.node(), width, p.node());
       }

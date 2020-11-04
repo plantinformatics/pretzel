@@ -818,11 +818,16 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     return extended;
   }),
 
-  extendedWidthEffect : Ember.computed(/*'extended',*/ 'axis2d.allocatedWidths', function () {
+  extendedWidthEffect : Ember.computed(/*'extended',*/ 'axis2d.allocatedWidthsMax', function () {
     this.widthEffects();
   }),
   widthEffects() {
     this.showZoomResetButtonXPosn();
+
+    let axisApi = stacks.oa.axisApi;
+    axisApi.updateXScale();
+    axisApi.collateO();
+
     /** .extended has changed, so the centre of the axisTitle is changed. */
     this.axisTitleFamily();
     this.updateAxisTitleSize();

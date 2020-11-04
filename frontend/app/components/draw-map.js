@@ -488,6 +488,8 @@ export default Ember.Component.extend(Ember.Evented, {
                     inRangeI : inRangeI,
                     patham,
                     axisName2MapChr,
+                    collateO,
+                    updateXScale,
                     updateAxisTitleSize,
                     axisStackChanged,
                     axisScaleChanged,
