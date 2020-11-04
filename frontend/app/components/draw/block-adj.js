@@ -136,14 +136,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .reduce(function (bd, bb) {
           // if b.axis.axis1d.get('zoomed') is false, then domain will be undefined.
           // also b.axis.axis1d can be undefined, probably because of new axis, in which case it won't be zoomed yet (except when we add zoom domain to the URL).
-	  // if axis is deleted, blocks are un-viewed, i.e. b.block.get('isViewed') is false, and b.axis === undefined
+          // if axis is deleted, blocks are un-viewed, i.e. b.block.get('isViewed') is false, and b.axis === undefined
           bb.forEach(function (b) { bd[b.axisName] = b.axis && b.axis.axis1d && b.axis.axis1d.get('domain'); }); return bd; }, {}),
       axesRanges = axes.map((a) => a.yRange()),
       axisLengthPx = Math.max.apply(null, axesRanges),
       nPaths = targetNPaths(pathsDensityParams, axisLengthPx);
       // handle b.axis === undefined (block has been un-viewed)
       if (Object.values(blockDomains).indexOf(undefined) !== -1) {
-	return 0;
+        return 0;
       }
       if (pathsResult.length < nPaths) {
         /* to satisfy the required nPaths, trigger a new request. */
