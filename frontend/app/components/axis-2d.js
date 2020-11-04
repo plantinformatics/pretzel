@@ -1,6 +1,8 @@
 import Ember from 'ember';
 const { inject: { service } } = Ember;
 
+import { task } from 'ember-concurrency';
+
 import lodashMath from 'lodash/math';
 
 import { eltWidthResizable } from '../utils/domElements';
@@ -551,9 +553,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * this is the key part which needs to update.
    */
   positionRightEdgeEffect : Ember.computed('allocatedWidthsMax', 'allocatedWidths', function () {
-    this.positionRightEdge();
+    this.get('positionRightEdge').perform();
   }),
-  positionRightEdge() {
+/* Position the right edge path (if !dualAxis) for the current width.
+ * Making this a task with .drop() enables avoiding conflicting transitions.
+ * (as in draw/block-adj.js : pathPosition() )
+ */
+  positionRightEdge: task(function * (pathSelection, thenFn) {
     let axisUse, width;
     if (! this.get('dualAxis') && (axisUse = this.get('axisUse'))) {
       if (! this.get('axis1d.extended')) {
@@ -574,7 +580,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         dLog('positionRightEdgeEffect', axisUse.node(), width, p.node());
       }
     }
-  },
+  }).drop(),
   childWidthsSum() {
     let sum = lodashMath.sum(Object.values(this.get('childWidths')).mapBy('1'));
     return sum;
@@ -700,7 +706,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   willDestroyElement2() {
     this.set('allocatedWidthsMax', 0);
-    this.positionRightEdge();
+    this.get('positionRightEdge').perform();
     let axisUse = this.selectAxisUse();
     Ember.run.later(() => axisUse.remove(), transitionEnable * 1000 + 100);
   }

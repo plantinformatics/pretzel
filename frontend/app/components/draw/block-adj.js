@@ -569,6 +569,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      */
     'blockAdj.axes1d.0.scaleChanged',
     'blockAdj.axes1d.1.scaleChanged',
+    'blockAdj.axes1d.{0,1}.axis2d.allocatedWidthsMax',
     function () {
     let count = this.get('axisStackChangedCount'),
       stacksWidthChanges = this.get('drawMap.stacksWidthChanges'),
