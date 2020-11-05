@@ -22,6 +22,10 @@ const dLog = console.debug;
  */
 export default Ember.Component.extend({
   blockService: service('data/block'),
+  queryParams: service('query-params'),
+
+  urlOptions : Ember.computed.alias('queryParams.urlOptions'),
+
 
   /** Store results of requests in .blocksData
    * conceptually: .blocksData[dataTypeName] = featuresData
@@ -114,21 +118,32 @@ export default Ember.Component.extend({
     /** filter out a result which has binSize Px < threshold and is a subset of another domain */
     betterResults = 
       binSizesPx.map(
-	(binSizePx, i) => {
-	  let
-	  betterResult =
-	    (binSizesPx[i] < pxThreshold) &&
-	    featuresCountsInZoom.find((fc, j) => {
-	      let found;
-	      if (j !== i) {
-		found = subInterval(featuresCountsInZoom[i].domain, fc.domain);
-	      }
-	      return found;
-	    });
-	  return betterResult;
-	}),
+        (binSizePx, i) => {
+          let
+          betterResult =
+            (binSizesPx[i] < pxThreshold) &&
+            featuresCountsInZoom.find((fc, j) => {
+              let found;
+              if (j !== i) {
+                found = subInterval(featuresCountsInZoom[i].domain, fc.domain);
+              }
+              return found;
+            });
+          return betterResult;
+        }),
     selectedResults = featuresCountsInZoom
       .filter((fc, i) => !betterResults[i]);
+    if (! this.get('urlOptions.fcLevels')) {
+      /** show only a single featuresCounts result at a time. */
+      selectedResults = selectedResults
+        // exclude results which do not cover the whole (current zoomed) domain
+        .filter((f) => (f.domain[0] < domain[0]) && (f.domain[1] > domain[1]))
+        // prefer smaller domains for the same binSize (more resolution)
+        .sort((a,b) => (a.domain[1]-a.domain[0]) - (b.domain[1]-b.domain[0]))
+        // choose the result with the smallest binSize
+        .sortBy('binSize')
+        .slice(0,1);
+    }
     return selectedResults;
   },
 
