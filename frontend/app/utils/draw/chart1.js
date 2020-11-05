@@ -980,6 +980,9 @@ ChartLine.prototype.blockColour = function ()
     }
   }
 
+  if (! blockS || ! blockS.axisTitleColour()) {
+    dLog('blockColour', blockS);
+  }
   let
   /* For axes without a reference, i.e. GMs, there is a single data block with colour===undefined. */
   colour = (blockS && blockS.axisTitleColour()) || 'red';
