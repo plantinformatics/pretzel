@@ -839,8 +839,13 @@ export default DS.Model.extend({
       yRange = (axis && axis.yRange()) || 800,
       /** bin size of result with smallest bins, in pixels as currently viewed on screen. */
       minSizePx = yRange * minSize / intervalSize(domain);
+      /** When the smallest bins within the current view
+       * (featuresCountsInZoomSmallestBinSize) are displayed with pixel size >
+       * binPxThreshold, then request finer-resolution bins.
+       */
+      const binPxThreshold = 20;
       /** minSize === 0 indicate no featuresCounts overlapping this zoomedDomain. */
-      if ((minSizePx === 0) || (minSizePx > 5))  /* px */ {
+      if ((minSizePx === 0) || (minSizePx > binPxThreshold))  /* px */ {
         /* request summary / featuresCounts if there are none for block,
          * or if their bins are too big */
         let blockService = this.get('blockService'),
