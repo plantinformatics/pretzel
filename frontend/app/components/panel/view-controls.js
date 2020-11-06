@@ -128,6 +128,19 @@ export default Ember.Component.extend({
       return params;
     }),
 
+  featuresCountsNBinsLinear : expRangeInitial(100, expRangeBase(100, 500)),
+
+  featuresCountsNBins : Ember.computed('featuresCountsNBinsLinear', function () {
+    let
+     thresholdLinear = +this.get('featuresCountsNBinsLinear'),
+     threshold = expRange(thresholdLinear, 100, 500);
+    if (threshold) {
+      threshold = Math.round(threshold);
+    }
+    dLog('featuresCountsNBins', thresholdLinear, threshold);
+    return threshold;
+   }),
+
   featuresCountsThresholdLinear : expRangeInitial(500, expRangeBase(100, 10000)),
 
   featuresCountsThreshold : Ember.computed('featuresCountsThresholdLinear', function () {

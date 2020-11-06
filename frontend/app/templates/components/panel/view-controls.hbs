@@ -94,6 +94,18 @@
     <li class="list-group-item">
       <div>
         <label>Binned Feature Counts</label>
+        <span style="margin-left:2em; vertical-align: bottom;"> Number of Bins : {{ featuresCountsNBins }}</span>
+      </div>
+      <div>
+        <input type="range" 
+         id="range-featuresCountsNBinsLinear" 
+         value={{featuresCountsNBinsLinear}} 
+               oninput={{action (mut featuresCountsNBinsLinear) value="target.value"}}
+         min="0" max="100"
+        />
+      </div>
+
+      <div>
         <span style="margin-left:2em; vertical-align: bottom;"> Threshold : {{ featuresCountsThreshold }}</span>
       </div>
       <div>
@@ -104,7 +116,6 @@
          min="0" max="100"
         />
       </div>
-
     </li>
 
 

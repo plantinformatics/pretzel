@@ -351,12 +351,16 @@ export default Service.extend(Ember.Evented, {
     this.trigger('receivedBlock', blocksToView);
   },
 
+  featuresCountsNBins : Ember.computed.alias('controls.controls.view.featuresCountsNBins'),
   /** This does have a dependency on the parameter values.  */
   pathsDensityParams : Ember.computed.alias('controls.controls.view.pathsDensityParams'),
-  /**
+  /** Calculate nBins for featuresCounts request based on pathsDensityParams.
+   * A separate slider is now added for featuresCountsNBins, so this is not
+   * currently used, and may be dropped; it is possible that density calculation
+   * may be useful in selecting nBins in some cases.
    * @param blockId later will use this to lookup axis yRange
    */
-  nBins(blockId) {
+  nBinsFromPathParams(blockId) {
     let nBins;
     /** based on part of intervalParams(intervals) */
     let vcParams = this.get('pathsDensityParams');
@@ -401,7 +405,7 @@ export default Service.extend(Ember.Evented, {
           (blockAndId) => {
           let [blockId, block] = blockAndId;
           /** densityFactor requires axis yRange, so for that case this will (in future) lookup axis from blockId. */
-          const nBins = this.nBins(blockId);
+          const nBins = this.get('featuresCountsNBins'); // this.nBinsFromPathParams(blockId);
           let
           zoomedDomain = block && block.get('zoomedDomain'),
           /** granularise zoomedDomain to so that request is sent after e.g. 5% zoom change. */
