@@ -113,7 +113,8 @@ export default Ember.Component.extend({
     yRange = (axis && axis.yRange()) || 800,
     /** bin size of each result, in pixels as currently viewed on screen. */
     binSizesPx = binSizes.map((binSize) => yRange * binSize / intervalSize(domain));
-    const pxThreshold = 1;
+    /** results with bins smaller than this are not displayed. */
+    const pxThreshold = 20;
     let
     /** filter out a result which has binSize Px < threshold and is a subset of another domain */
     betterResults = 
