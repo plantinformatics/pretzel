@@ -548,6 +548,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   },
   /** This is the currently viewed domain.
    * @return if zoomed return the zoom yDomain, otherwise blockDomain.
+   * Result .{0,1} are swapped if .flipped.
    */
   domain : Ember.computed('zoomed', 'flipped', 'blocksDomain', 'zoomedDomain', function () {
     /** Actually .zoomedDomain will be == blocksDomain when not zoomed, but

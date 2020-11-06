@@ -1554,7 +1554,10 @@ export default InAxis.extend({
       isChanged(result.changed, 'viewportWidth') || allocatedWidthChange,
       isChanged(result.changed, 'viewportHeight') /* , yScaleChanged ? */);
   }),
-
+  flippedEffect : Ember.computed('axis1d.flipped', function () {
+    /** 'scaleChanged' could be used as an alternate dependency */
+    this.showResize(false, false, true);
+  }),
 
   keypress: function(event) {
     console.log("components/axis-tracks keypress", event);
