@@ -1,0 +1,12 @@
+times of last edits
+
+This commit was a stash, just a work in progress, converted to a branch.
+Times are extracted from progressive backups.
+frontend/app/ :
+  1823d08   23047 2020-11-03 15:09  components/axis-charts.js
+  23bcf29   34047 2020-11-03 22:09  components/draw/#axis-1d.js#
+  f0e52c1   34303 2020-11-03 15:07  models/block.js
+  fbafb5c     802 2020-11-03 22:37  templates/components/axis-charts.hbs
+  c64732d   44895 2020-11-03 14:59  utils/draw/chart1.js
+  87b5aa9    5474 2020-11-03 22:48  components/draw/axis-chart-sub.js
+  0998aeb      53 2020-11-03 18:16  templates/components/draw/axis-chart-sub.hbs
