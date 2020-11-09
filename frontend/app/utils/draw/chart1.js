@@ -6,7 +6,7 @@ import { eltWidthResizable, noShiftKeyfilter } from '../domElements';
 import { logSelectionNodes } from '../log-selection';
 import { noDomain } from '../draw/axis';
 import { stacks } from '../stacks'; // just for oa.z and .y, don't commit this.
-import { inRangeEither } from './zoomPanCalcs';
+import { inRangeEither, overlapInterval } from './zoomPanCalcs';
 import { featureCountDataProperties, dataConfigs, DataConfig, blockDataConfig, hoverTextFn, middle, scaleMaybeInterval, datum2LocationWithBlock } from '../data-types';
 import { breakPoint } from '../breakPoint';
 
@@ -931,7 +931,9 @@ ChartLine.prototype.setup = function(blockId) {
  * this could be a (static) method of either Chart1 or ChartLine.
  */
 Chart1.withinZoomRegion = function (dataConfig, yDomain) {
-  return (d) => inRangeEither(dataConfig.datum2Location(d), yDomain);
+  /* This will accept features which overlap the domain. Use inRangeEither() to
+   * accept only features which are entirely within the domain.  */
+  return (d) => overlapInterval(dataConfig.datum2Location(d), yDomain);
 },
 /** Filter given data according to this.scales.yAxis.domain()
  * and set .currentData

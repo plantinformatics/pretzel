@@ -44,7 +44,7 @@ function inRangeEither(a, range)
 }
 
 
-/** Test if an array of values, which can be a pair defining an interval, is
+/** Test if an array of values, which can be a pair defining an interval, are all
  * contained within another interval.
  * @param values  an array of values to test
  */
@@ -54,6 +54,22 @@ function subInterval(values, interval) {
     ! values.some(function (d) { return ! inRange(d, interval); });
   return ok;
 }
+
+/** Test if any of an array of values, which can be a pair defining an interval, is
+ * contained within another interval.
+ * @param values  an array of values to test
+ */
+function overlapInterval(values, interval) {
+  /* based on subInterval().
+  * Note also : interval-calcs.js : intervalOverlap() which calculates the overlapping interval.
+  * and interval-overlap.js : inInterval() and inDomain(), which are equivalent, but look less efficient.
+  */
+      // use `any` so that search completes as soon as one value is found in range.
+  let ok =
+    values.any(function (d) { return inRange(d, interval); });
+  return ok;
+}
+
 
 /** This handles 1 end of the interval for @see constrainInterval().
  */
@@ -292,4 +308,4 @@ function wheelNewDomain(axis, axisApi, inFilter) {
 
 /*----------------------------------------------------------------------------*/
 
-export {  inRangeEither, subInterval, wheelNewDomain };
+export {  inRangeEither, subInterval, overlapInterval, wheelNewDomain };
