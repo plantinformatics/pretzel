@@ -805,6 +805,8 @@ export default DS.Model.extend({
     'featuresCountsResults.[]',
     'zoomedDomain.{0,1}',
     'isZoomedOut',
+    // used in data/block.js:getSummary()
+    'blockService.featuresCountsNBins',
     function () {
     /** This could be split out into a separate layer, concerned with reactively
      * requesting data; the layers are : core attributes (of block); derived
@@ -844,8 +846,11 @@ export default DS.Model.extend({
        * binPxThreshold, then request finer-resolution bins.
        */
       const binPxThreshold = 20;
+      let nBins = this.get('blockService.featuresCountsNBins'),
+      requestedSize = yRange / nBins,
+      threshold = Math.min(binPxThreshold, requestedSize);
       /** minSize === 0 indicate no featuresCounts overlapping this zoomedDomain. */
-      if ((minSizePx === 0) || (minSizePx > binPxThreshold))  /* px */ {
+      if ((minSizePx === 0) || (minSizePx > threshold))  /* px */ {
         /* request summary / featuresCounts if there are none for block,
          * or if their bins are too big */
         let blockService = this.get('blockService'),

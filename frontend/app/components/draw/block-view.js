@@ -68,6 +68,8 @@ export default Ember.Component.extend({
    */
   featuresCounts : Ember.computed(
     'block', 'block.featuresCountsInZoom.[]', 'axis.axis1d.domainChanged',
+    // featuresCountsNBins is used in selectFeaturesCountsResults()
+    'blockService.featuresCountsNBins',
     function () {
     let featuresCountsInZoom = this.get('block.featuresCountsInZoom');
     let featuresCounts;
@@ -113,8 +115,10 @@ export default Ember.Component.extend({
     yRange = (axis && axis.yRange()) || 800,
     /** bin size of each result, in pixels as currently viewed on screen. */
     binSizesPx = binSizes.map((binSize) => yRange * binSize / intervalSize(domain));
+    let nBins = this.get('blockService.featuresCountsNBins'),
+    requestedSize = yRange / nBins,
     /** results with bins smaller than this are not displayed. */
-    const pxThreshold = 20;
+    pxThreshold = requestedSize;
     let
     /** filter out a result which has binSize Px < threshold and is a subset of another domain */
     betterResults = 
@@ -126,6 +130,7 @@ export default Ember.Component.extend({
             featuresCountsInZoom.find((fc, j) => {
               let found;
               if (j !== i) {
+                // if the domains are equal, that is considered a match.
                 found = subInterval(featuresCountsInZoom[i].domain, fc.domain);
               }
               return found;
@@ -138,7 +143,7 @@ export default Ember.Component.extend({
       /** show only a single featuresCounts result at a time. */
       selectedResults = selectedResults
         // exclude results which do not cover the whole (current zoomed) domain
-        .filter((f) => (f.domain[0] < domain[0]) && (f.domain[1] > domain[1]))
+        .filter((f) => (f.domain[0] <= domain[0]) && (f.domain[1] >= domain[1]))
         // prefer smaller domains for the same binSize (more resolution)
         .sort((a,b) => (a.domain[1]-a.domain[0]) - (b.domain[1]-b.domain[0]))
         // choose the result with the smallest binSize
