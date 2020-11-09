@@ -13,6 +13,9 @@ import lodashMath from 'lodash/math';
 
 import { intervalSize, intervalMerge, intervalOverlap }  from '../utils/interval-calcs';
 import { inDomain } from '../utils/draw/interval-overlap';
+import { binEvenLengthRound } from '../utils/draw/interval-bins';
+import { subInterval } from '../utils/draw/zoomPanCalcs';
+
 import { featureCountDataProperties } from '../utils/data-types';
 
 
@@ -853,8 +856,13 @@ export default DS.Model.extend({
       if ((minSizePx === 0) || (minSizePx > threshold))  /* px */ {
         /* request summary / featuresCounts if there are none for block,
          * or if their bins are too big */
-        let blockService = this.get('blockService'),
-        blocksSummaryTasks = blockService.get('getBlocksSummary').apply(blockService, [[blockId]]);
+        /** Don't request if there is already a result matching these params. */
+        let match = this.featuresCountsResultsSearch(domain, nBins);
+        if (! match)
+        {
+          let blockService = this.get('blockService'),
+          blocksSummaryTasks = blockService.get('getBlocksSummary').apply(blockService, [[blockId]]);
+        }
       }
       // features is undefined
     }
@@ -875,8 +883,33 @@ export default DS.Model.extend({
         dLog(moduleName, fnName, 'reject', err);
       }
     );
+  },
+
+  /** Search in current results for a result which meets the requirements of domain and nBins.
+   * The result domain should cover the current domain.
+   * Matching is done on binSize which is derived from nBins, using the same
+   * function which the backend will use if a request is sent with these
+   * parameters.
+   * @param domain  zoomedDomain || limits
+   * @param nBins from featuresCountsNBins
+   */
+  featuresCountsResultsSearch(domain, nBins) {
+    let 
+    lengthRounded = binEvenLengthRound(domain, nBins),
+    result = this.get('featuresCountsResults')
+    // based on similar block-view.js:selectFeaturesCountsResults(): betterResults
+      .find(
+        (fc) => {
+          let found =
+              // if the domains are equal, that is considered a match.
+              (lengthRounded === fc.binSize) && subInterval(domain, fc.domain);
+          if (found) {
+            dLog('featuresCountsResultsSearch', domain.toArray(), nBins, fc.domain.toArray());
+          }
+          return found;
+        }
+      );
+    return result;
   }
-
-
 
 });
