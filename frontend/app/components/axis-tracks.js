@@ -902,9 +902,7 @@ export default InAxis.extend({
       .attr('x', xPosnS(subElements))
       .attr('y', yPosn)
       .attr('height' , height)
-      .attr('stroke', function(d,i,g) {
-        return ((height(d) > 1) && width > 2) ? 'black' : blockTrackColourI.apply(this, [d,i,g]);
-      })
+      .attr('stroke', blockTrackColourI)
       .attr('fill', blockTrackColourI)
       ;
       dLog('ra', ra.size(), ra.node(), 'rm', rm.size(), rm.node());
