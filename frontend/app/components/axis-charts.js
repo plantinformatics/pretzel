@@ -290,11 +290,10 @@ export default InAxis.extend({
       allocatedWidthCharts;
     /** this and showChartAxes / drawAxes will likely move into Chart1. */
     axisCharts.isFeaturesCounts = isFeaturesCounts;
-
     dLog('draw', axisCharts, charts, trackWidth, allocatedWidthCharts, blocksWidths, axisBlocks, chartTypes, isFeaturesCounts, frameWidth);
     axisCharts.setupFrame(
       this.get('axisID'),
-      charts, frameWidth);
+      charts, frameWidth, this.get('yAxisScale'));
 
     let
     /** provide a comprehensive list of blocks for setupChart() to lookup by id.

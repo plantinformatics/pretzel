@@ -152,8 +152,9 @@ AxisCharts.prototype.setup = function(axisID) {
 
 /**
  * @param allocatedWidth  [horizontal start offset, width]
+ * @param yAxisScale  .range() is used to set clip rect y bounds, if !useLocalY
  */
-AxisCharts.prototype.setupFrame = function(axisID, charts, allocatedWidth)
+AxisCharts.prototype.setupFrame = function(axisID, charts, allocatedWidth, yAxisScale)
 {
   let axisCharts = this;
   axisCharts.setup(axisID);
@@ -168,7 +169,7 @@ AxisCharts.prototype.setupFrame = function(axisID, charts, allocatedWidth)
   // equivalent to addParentClass();
   axisCharts.dom.gAxis.classed('hasChart', true);
 
-  axisCharts.frame(axisCharts.ranges.bbox, charts, allocatedWidth);
+  axisCharts.frame(axisCharts.ranges.bbox, charts, allocatedWidth, yAxisScale);
 
   axisCharts.getRanges2();
 };
@@ -292,12 +293,15 @@ AxisCharts.prototype.frameRemove = function() {
 
 /**
  * @param allocatedWidth  [horizontal start offset, width]
+ * @param yAxisScale  .range() is used to set clip rect y bounds, if !useLocalY
  */
-AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
+AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth, yAxisScale)
 {
   let
     gps = this.dom.gps,
   gpa = this.dom.gpa;
+
+  let clipY = useLocalY ? [ bbox.y, bbox.height ] : yAxisScale.range();
 
   /** datum is axisID, so id and clip-path can be functions.
    * e.g. this.dom.gp.data() is [axisID]
@@ -313,9 +317,9 @@ AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
   gprm = 
     gPa.merge(gps.selectAll("g > clipPath > rect"))
     .attr("x", bbox.x)
-    .attr("y", bbox.y)
+    .attr("y", clipY[0])
     .attr("width", bbox.width + 250)
-    .attr("height", bbox.height)
+    .attr("height", clipY[1])
   ;
   let [startOffset, width] = allocatedWidth;
   /* allocatedWidth[0] is currently min, so use 0 instead.  */
