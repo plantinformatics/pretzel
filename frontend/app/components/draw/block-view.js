@@ -4,6 +4,7 @@ const { inject: { service } } = Ember;
 import { ensureBlockFeatures } from '../../utils/feature-lookup';
 import { subInterval } from '../../utils/draw/zoomPanCalcs';
 import { intervalSize }  from '../../utils/interval-calcs';
+import { binEvenLengthRound } from '../../utils/draw/interval-bins';
 
 /*----------------------------------------------------------------------------*/
 
@@ -117,21 +118,30 @@ export default Ember.Component.extend({
     binSizesPx = binSizes.map((binSize) => yRange * binSize / intervalSize(domain));
     let nBins = this.get('blockService.featuresCountsNBins'),
     requestedSize = yRange / nBins,
+    lengthRounded = binEvenLengthRound(domain, nBins),
+
     /** results with bins smaller than this are not displayed. */
     pxThreshold = requestedSize;
     let
-    /** filter out a result which has binSize Px < threshold and is a subset of another domain */
+    /** filter out a result which has binSize Px < threshold and is a subset of another result domain
+     * and that other result has binSize closer to lengthRounded
+     */
     betterResults = 
       binSizesPx.map(
         (binSizePx, i) => {
           let
+          fcI = featuresCountsInZoom[i],
           betterResult =
             (binSizesPx[i] < pxThreshold) &&
             featuresCountsInZoom.find((fc, j) => {
               let found;
+              // equiv : (fc !== fcI)
               if (j !== i) {
+                let betterBinSize =
+                    ((fc.binSize !== fcI.binSize) &&
+                     (Math.abs(lengthRounded - fc.binSize) <  Math.abs(lengthRounded - fcI.binSize)));
                 // if the domains are equal, that is considered a match.
-                found = subInterval(featuresCountsInZoom[i].domain, fc.domain);
+                found = subInterval(featuresCountsInZoom[i].domain, fc.domain) && betterBinSize;
               }
               return found;
             });
