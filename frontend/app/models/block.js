@@ -684,15 +684,45 @@ export default DS.Model.extend({
     let
     domain = this.get('zoomedDomain'),
     /** assume that the bins in each result are contiguous; use the
-     * result which covers the interval best, and (secondary measure
-     * if >1 cover the interval equally) has the most bins
-     * First draft : sum all the overlapping counts, perhaps divide by
-     * number of overlapping results.
+     * result which covers the interval best, and maybe later : (secondary measure
+     * if >1 cover the interval equally) has the most bins.
      *
-     * interval is passed to getBlockFeaturesCounts(), so result type
-     * is featureCountDataProperties.
+     * The current algorithm determines the 2 results (smallestOver1I,
+     * largestUnder1I) whose coverage most closely brackets 1, i.e. the
+     * preference is for a coverage slightly greater than 1, and if none cover
+     * the whole of the domain, then the result which most nearly covers the
+     * domain.
      */
-    counts = overlaps.map((fcs) => fcs.result.reduce( (sum, fc, i) => {
+    coverage = overlaps.map((fcs) => this.featureCountResultCoverage(fcs, domain)),
+    smallestOver1I = coverage.reduce((index, cov, i) => {
+      if ((cov >= 1) && ((index === -1) || (cov < coverage[index]))) { index = i; } return index; },
+      -1),
+    largestUnder1I = coverage.reduce((index, cov, i) => {
+      if ((cov <= 1) && ((index === -1) || (cov > coverage[index]))) { index = i; } return index; },
+      -1),
+    selectedOverlapI = (smallestOver1I !== -1) ? smallestOver1I : largestUnder1I,
+    selectedOverlap = (selectedOverlapI === -1) ? undefined : overlaps[selectedOverlapI],
+    count = selectedOverlap && this.featureCountResultInZoom(selectedOverlap, domain);
+    dLog('featureCountInZoom', overlaps, domain, coverage, smallestOver1I, largestUnder1I, selectedOverlapI, selectedOverlap, count);
+    return count;
+  }),
+  /** Determine how well this result covers the given domain.
+   * via overlap size / domain size
+   */
+  featureCountResultCoverage(fcs, domain) {
+    let overlap = intervalOverlap([fcs.domain, domain]),
+    coverage = intervalSize(overlap) / intervalSize(domain);
+    return coverage;
+  },
+  /** Sum the counts of bins which overlap the domain
+   * @param domain	[start,end] or if undefined then the whole count of all bins are summed.
+   */
+  featureCountResultInZoom(fcs, domain) {
+    let count = 
+    fcs.result.reduce( (sum, fc, i) => {
+      /** an interval parameter is passed to getBlockFeaturesCounts(), so result
+       * type of the request is featureCountDataProperties.
+       */
       let
       binInterval = featureCountDataProperties.datum2Location(fc),
       /** count within bin */
@@ -713,14 +743,9 @@ export default DS.Model.extend({
         sum += binCount;
       }
       return sum;
-    }, 0)),
-    /** number of results which overlap. */
-    overlapsLength = overlaps && overlaps.length,
-    sum = lodashMath.sum(counts),
-    average = sum / (overlapsLength || 1);
-    dLog('featureCountInZoom', average, sum, counts.length, overlapsLength);
-    return average;
-  }),
+    }, 0);
+    return count;
+  },
   /** Filter all featuresCounts API results for this block, for those overlapping interval.
    * @return array  [{nBins, domain, result}, ... ]
    * @param interval	[from, to]
