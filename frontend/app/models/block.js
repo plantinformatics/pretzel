@@ -514,14 +514,14 @@ export default DS.Model.extend({
     let referenceBlocks = this.viewedReferenceBlocks(true),
     referenceBlock;
     referenceBlocks.forEach(function (block) {
-                if (referenceBlock) {
-                  // prefer original
-                  if (referenceBlock.get('isCopy') && ! block.get('isCopy'))
-                    referenceBlock = block;
-                  else
-                    dLog('viewedReferenceBlock', 'duplicate match', block.get('id'), block._internalModel.__data, parentName, scope);
-                } else
-                  referenceBlock = block;
+      if (referenceBlock) {
+        // prefer original
+        if (referenceBlock.get('isCopy') && ! block.get('isCopy'))
+          referenceBlock = block;
+        else
+          dLog('viewedReferenceBlock', 'duplicate match', block.get('id'), block._internalModel.__data, parentName, scope);
+      } else
+        referenceBlock = block;
     });
     return referenceBlock;
   },
@@ -635,7 +635,8 @@ export default DS.Model.extend({
       count = this.get('zoomedDomain') ?
         (this.featuresCountsResults.length ? this.get('featureCountInZoom') : undefined ) :
         this.featureCount;
-      dLog('featuresCountIncludingZoom', count);
+      if (trace_block > 1)
+        dLog('featuresCountIncludingZoom', count);
       return count;
     }),
 
@@ -659,7 +660,8 @@ export default DS.Model.extend({
      else {
        overlaps = this.featuresCountsOverlappingInterval(domain);
      }
-      dLog('featuresCountsInZoom', domain, limits, overlaps && overlaps.length);
+      if (trace_block > 1)
+        dLog('featuresCountsInZoom', domain, limits, overlaps && overlaps.length);
       return overlaps;
     }),
   /** From the featuresCounts results received which overlap zoomedDomain (from
@@ -685,7 +687,7 @@ export default DS.Model.extend({
     domain = this.get('zoomedDomain'),
     /** assume that the bins in each result are contiguous; use the
      * result which covers the interval best, and maybe later : (secondary measure
-     * if >1 cover the interval equally) has the most bins.
+     * if >1 cover the interval equally) has the smallest binSize.
      *
      * The current algorithm determines the 2 results (smallestOver1I,
      * largestUnder1I) whose coverage most closely brackets 1, i.e. the
@@ -703,15 +705,17 @@ export default DS.Model.extend({
     selectedOverlapI = (smallestOver1I !== -1) ? smallestOver1I : largestUnder1I,
     selectedOverlap = (selectedOverlapI === -1) ? undefined : overlaps[selectedOverlapI],
     count = selectedOverlap && this.featureCountResultInZoom(selectedOverlap, domain);
-    dLog('featureCountInZoom', overlaps, domain, coverage, smallestOver1I, largestUnder1I, selectedOverlapI, selectedOverlap, count);
+    if (trace_block > 1)
+      dLog('featureCountInZoom', overlaps, domain, coverage, smallestOver1I, largestUnder1I, selectedOverlapI, selectedOverlap, count);
     return count;
   }),
   /** Determine how well this result covers the given domain.
    * via overlap size / domain size
+   * @return 0 if there is no overlap
    */
   featureCountResultCoverage(fcs, domain) {
     let overlap = intervalOverlap([fcs.domain, domain]),
-    coverage = intervalSize(overlap) / intervalSize(domain);
+    coverage = overlap ? (intervalSize(overlap) / intervalSize(domain)) : 0;
     return coverage;
   },
   /** Sum the counts of bins which overlap the domain
@@ -767,7 +771,8 @@ export default DS.Model.extend({
         }
         return result;
       }, []);
-    dLog('featuresCountsOverlappingInterval', featuresCounts, overlaps);
+    if (trace_block > 1)
+      dLog('featuresCountsOverlappingInterval', featuresCounts, overlaps);
     return overlaps;
   },
 
@@ -810,7 +815,8 @@ export default DS.Model.extend({
     count = this.get('featuresCountIncludingZoom'),
     featuresCountsThreshold = this.get('featuresCountsThreshold'),
     out  = (count === undefined) ? undefined : (count > featuresCountsThreshold);
-    dLog('isZoomedOut', out, this.get('id'), count, featuresCountsThreshold);
+    if (trace_block > 1)
+      dLog('isZoomedOut', out, this.get('id'), count, featuresCountsThreshold);
     return out;
   }),
 
@@ -929,7 +935,8 @@ export default DS.Model.extend({
               // if the domains are equal, that is considered a match.
               (lengthRounded === fc.binSize) && subInterval(domain, fc.domain);
           if (found) {
-            dLog('featuresCountsResultsSearch', domain.toArray(), nBins, fc.domain.toArray());
+            if (trace_block > 1)
+              dLog('featuresCountsResultsSearch', domain.toArray(), nBins, fc.domain.toArray());
           }
           return found;
         }
