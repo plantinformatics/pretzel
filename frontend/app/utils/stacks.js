@@ -880,9 +880,15 @@ Block.prototype.axisTitleColour = function ()
     /** blockIndex is not used, except to distinguish the reference block.
      * blockIndex could instead be calculated using the index of this in this.axis.blocks[]. */
     blockIndex = blockIndexes[blockId];
+    /** axis1d:blockIndexes contains only the viewed data blocks, not the reference block.
+     * This is logic is analogous to axis-tracks:blockTrackColourI().
+     */
     /* axisTitleColour() blockIndex counts from 1; 0 is for the reference block (may have been undefined in earlier versions),
-     * which gets colour undefined - no need to call axisTitleColour(). */
-    colour = (! blockIndex) ? undefined : axisTitleColour(blockId, blockIndex+1);
+     * which gets colour undefined - no need to call axisTitleColour().
+     * i.e. blockIndex===undefined -> colour === undefined
+     * blockIndex===0 is the first data block; its colour is axisTitleColour(blockId, 0+1)
+     */
+    colour = (blockIndex === undefined) ? undefined : axisTitleColour(blockId, blockIndex+1);
     if (trace_stack)
       dLog('axisTitleColour', this, blockId, blockIndexes, blockIndex, colour);
   }
@@ -1935,11 +1941,8 @@ Stacked.prototype.allocatedWidth = function()
 {
   let width;
   let axis2d = this.axis1d && this.axis1d.get('axis2d');
-  if (axis2d) {
-    let
-      allocatedWidths = axis2d.get('allocatedWidths'),
-    allocatedWidthsMax = axis2d.get('allocatedWidthsMax');
-    width = allocatedWidthsMax;
+  if (axis2d && ! axis2d.isDestroyed) {
+    width = axis2d.get('allocatedWidthRect');
   }
   return width;
 };
@@ -2207,11 +2210,12 @@ Stacked.prototype.axisDimensions = function ()
  */
 Stacked.prototype.setDomain = function (domain)
 {
-  let axis1d = this.axis1d,
-  axisPosition = axis1d && axis1d.currentPosition;
-  // if (! axisPosition)
-  //  dLog('setDomain', this, 'domain', domain, axis1d, axisPosition);
-  axisPosition.set('yDomain', domain);
+  let axis1d = this.axis1d;
+  // if (! axis1d)
+  //  dLog('setDomain', this, 'domain', domain, axis1d, axis1d && axis1d.currentPosition);
+  if (axis1d) {
+    Ember.run.bind(axis1d, axis1d.setDomain)(domain);
+  }
 };
 /** Set the zoomed of the current position to the given zoomed
  */
@@ -2247,5 +2251,5 @@ Stacked.prototype.unviewBlocks = function ()
 
 export  { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText,
           axisId2Name
-	  , setCount
+          , setCount
         } ;

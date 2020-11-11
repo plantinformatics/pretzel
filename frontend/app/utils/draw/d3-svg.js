@@ -1,4 +1,16 @@
+/*----------------------------------------------------------------------------*/
 
+/** Used for d3 attributes whose value is the datum. */
+function I(d) { /* console.log(this, d); */ return d; };
+/* Usage e.g. (d3.selectAll().data(array) ... .text(I)
+ * Moved here from draw-map.js;
+ * The equivalent function is also defined in :
+ *   components/axis-ld.js
+ *   components/axis-tracks.js
+ *   services/auth.js
+ */
+
+/*----------------------------------------------------------------------------*/
 
 /**
  * Based on Dustin Larimer’s  http://bl.ocks.org/dustinlarimer/5888271
@@ -38,4 +50,4 @@ function ensureSvgDefs(svg)
   return defs;
 }
 
-export { ensureSvgDefs };
+export { I, ensureSvgDefs };

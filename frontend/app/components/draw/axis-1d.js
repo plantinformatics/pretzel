@@ -9,7 +9,7 @@ import { isEqual } from 'lodash/lang';
 import AxisEvents from '../../utils/draw/axis-events';
 import AxisPosition from '../../mixins/axis-position';
 import { /* Block,*/ Stacked, /*Stack,*/ stacks /*, xScaleExtend, axisRedrawText, axisId2Name*/ } from '../../utils/stacks';
-import {  noDomain, /* Axes, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/ , axisTitleColour  }  from '../../utils/draw/axis';
+import {  noDomain, /* Axes, yAxisTextScale,  yAxisTicksScale,*/  yAxisBtnScale, /* yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/ , axisTitleColour  }  from '../../utils/draw/axis';
 import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../../utils/stacks-drag';
 import { selectAxis } from '../../utils/draw/stacksAxes';
 import { breakPoint } from '../../utils/breakPoint';
@@ -257,8 +257,17 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
  */
 export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   blockService: service('data/block'),
+  axisBrush: service('data/axis-brush'),
+
 
   stacks : stacks,
+  /** oa is used for these connections, which will eventually be
+   * passed as params or replaced : axisApi, eventBus, svgContainer, axes[].
+   * (stacks.oa is equivalent)
+   */
+  oa : Ember.computed.alias('drawMap.oa'),
+  axisApi : Ember.computed.alias('oa.axisApi'),
+
 
   /** flipRegion implies paths' positions should be updated.  The region is
    * defined by brush so it is within the domain, so the domain does not change.
@@ -291,6 +300,41 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     }
   },
 
+  /*--------------------------------------------------------------------------*/
+
+  /** @return true if there is a brush on this axis.
+   */
+  brushed : Ember.computed(
+    'axis.id',
+    'axisBrush.brushedAxes.[]',
+    /** oa.brushedRegions is a hash, and it is updated not replaced,
+     * so as a dependency key it will not signal changes; selectedAxes
+     * is an array and is changed when brushedRegions is changed, so
+     * it is used as a dependency, but it may not change when the user
+     * brushes because it persists after the brush is cleared.
+     */
+    'oa.brushedRegions', 'oa.selectedAxes.[]',
+    function () {
+      let brushedRegions = this.get('oa.brushedRegions'),
+      axisId = this.get('axis.id'),
+      brushed = !! brushedRegions[axisId];
+      dLog('brushed', axisId, brushedRegions[axisId], this.get('axisBrush.brushedAxes'));
+      return brushed;
+    }),
+
+  zoomed2 : Ember.computed('zoomed', 'domain', 'zoomedDomain', function () {
+    let
+    zoomed = this.get('zoomed'),
+    domain = this.get('domain'),
+    zoomedDomain = this.get('zoomedDomain');
+    if (zoomed) {
+      zoomed &= (domain[0] !== zoomedDomain[0]) ||
+        (domain[1] !== zoomedDomain[1]);
+    }
+    return zoomed;
+  }),
+
+  /*--------------------------------------------------------------------------*/
 
   /** axis-1d receives axisStackChanged and zoomedAxis from draw-map
    * zoomedAxis is specific to an axisID, so respond to that if it matches this.axis.
@@ -504,6 +548,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   },
   /** This is the currently viewed domain.
    * @return if zoomed return the zoom yDomain, otherwise blockDomain.
+   * Result .{0,1} are swapped if .flipped.
    */
   domain : Ember.computed('zoomed', 'flipped', 'blocksDomain', 'zoomedDomain', function () {
     /** Actually .zoomedDomain will be == blocksDomain when not zoomed, but
@@ -641,6 +686,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   position : Ember.computed.alias('lastDrawn.yDomain'),
   /** position as of the last zoom. */
   zoomedDomain : Ember.computed.alias('currentPosition.yDomain'),
+  zoomedDomainDebounced : Ember.computed.alias('currentPosition.yDomainDebounced'),
+  zoomedDomainThrottled : Ember.computed.alias('currentPosition.yDomainThrottled'),
 
   /** Updates when the array elements of .domain[] update.
    *  @return undefined; value is unused.
@@ -684,7 +731,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     dLog('notifyChanges', axisID);
 
     let axisApi = stacks.oa.axisApi;
-    let t = stacks.oa.svgContainer.transition().duration(750);
+    let t = stacks.oa.svgContainer; // .transition().duration(750);
 
     let eventBus = stacks.oa.eventBus;
 
@@ -700,7 +747,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     let axisApi = stacks.oa.axisApi;
     let axisID = this.get('axis.id');
     dLog('updateAxis', axisID);
-    let t = stacks.oa.svgContainer.transition().duration(750);
+    let t = stacks.oa.svgContainer; //.transition().duration(750);
     axisApi.axisScaleChanged(axisID, t, true);
   },
   drawTicks() {
@@ -748,7 +795,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     // possibly ... pass an action param.
     let axis2d = this.get('axis2d');
     if (axis2d) {
-      Ember.run.next(() => axis2d.axisWidthResizeEnded());
+      Ember.run.next(() => ! axis2d.isDestroyed && axis2d.axisWidthResizeEnded());
     }
 
     this.showExtendedClass();
@@ -762,12 +809,30 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       this.renderTicksDebounce(axisID_t);
     }
 
-    /* .extended has changed, so the centre of the axisTitle is changed.
-     * this.updateAxisTitleSize() is called in axisWidthResizeEnded()->stacksAdjust()
+    /* when split axis is closed,
+     * updateAxisTitleSize() is called in willDestroyElement()->axisWidthResizeEnded()->stacksAdjust()
+     * when split axis is opened or closed, widthEffects()->this.updateAxisTitleSize() -> updateAxisTitleSize()
      */
+
+    this.widthEffects();
 
     return extended;
   }),
+
+  extendedWidthEffect : Ember.computed(/*'extended',*/ 'axis2d.allocatedWidthsMax', function () {
+    this.widthEffects();
+  }),
+  widthEffects() {
+    this.showZoomResetButtonXPosn();
+
+    let axisApi = stacks.oa.axisApi;
+    axisApi.updateXScale();
+    axisApi.collateO();
+
+    /** .extended has changed, so the centre of the axisTitle is changed. */
+    this.axisTitleFamily();
+    this.updateAxisTitleSize();
+  },
 
   /*--------------------------------------------------------------------------*/
 
@@ -864,7 +929,25 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       as = this.get('axisSelect');
     as.classed("extended", this.get('extended'));
   },
-
+  buttonStateEffect : Ember.computed('brushed', 'zoomed', function () {
+    this.showZoomResetButtonState();
+  }),
+  showZoomResetButtonState() {
+    let
+    as = this.get('axisSelect'),
+    gb = as.selectAll('g.btn');
+    gb.attr('class', () => 'btn graph-btn ' + ['brushed', 'zoomed'].filter((state) => this.get(state)).join(' '));
+    dLog('showZoomResetButtonState', gb.node(), this.get('brushed'), this.get('zoomed'), this.get('zoomed2'), this.get('axisBrush.brushedAxes'));
+  },
+  showZoomResetButtonXPosn() {
+    if (! (this.isDestroying || this.isDestroyed) && this.axis.get('isViewed')) {
+      let
+      as = this.get('axisSelect'),
+      gb = as.selectAll('g.btn');
+      gb
+        .attr('transform', yAxisBtnScale);
+    }
+  }
   
 });
 

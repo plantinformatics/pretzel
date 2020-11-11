@@ -44,7 +44,7 @@ function inRangeEither(a, range)
 }
 
 
-/** Test if an array of values, which can be a pair defining an interval, is
+/** Test if an array of values, which can be a pair defining an interval, are all
  * contained within another interval.
  * @param values  an array of values to test
  */
@@ -54,6 +54,22 @@ function subInterval(values, interval) {
     ! values.some(function (d) { return ! inRange(d, interval); });
   return ok;
 }
+
+/** Test if any of an array of values, which can be a pair defining an interval, is
+ * contained within another interval.
+ * @param values  an array of values to test
+ */
+function overlapInterval(values, interval) {
+  /* based on subInterval().
+  * Note also : interval-calcs.js : intervalOverlap() which calculates the overlapping interval.
+  * and interval-overlap.js : inInterval() and inDomain(), which are equivalent, but look less efficient.
+  */
+      // use `any` so that search completes as soon as one value is found in range.
+  let ok =
+    values.any(function (d) { return inRange(d, interval); });
+  return ok;
+}
+
 
 /** This handles 1 end of the interval for @see constrainInterval().
  */
@@ -239,19 +255,22 @@ function wheelNewDomain(axis, axisApi, inFilter) {
     // similar to subInterval(newInterval, intervalLimit)
     if (domainSize && (newInterval > domainSize)) {
       console.log('limit newInterval', newInterval, domainSize);
-      newInterval = domainSize;
+      newInterval = domainSize * Math.sign(interval);
+      newDomain = axisReferenceDomainF;
     }
-    else if (newInterval < intervalLimit[0]) {
-      newInterval = intervalLimit[0];
-    }
-    newInterval *= Math.sign(interval);
+    else {
+      if (newInterval < intervalLimit[0]) {
+        newInterval = intervalLimit[0];
+      }
+      newInterval *= Math.sign(interval);
 
-    newDomain = [
-      // can use zoom.center() for this.
-      // range[0] < rangeYCentre, so this first offset from centre is -ve
-      centre + newInterval * (range[0] - rangeYCentre) / rangeSize,
-      centre + newInterval * (range[1] - rangeYCentre) / rangeSize
-    ];
+      newDomain = [
+        // can use zoom.center() for this.
+        // range[0] < rangeYCentre, so this first offset from centre is -ve
+        centre + newInterval * (range[0] - rangeYCentre) / rangeSize,
+        centre + newInterval * (range[1] - rangeYCentre) / rangeSize
+      ];
+    }
     // Both newInterval and newDomain are signed (i.e. in the direction of .flipped).
 
     // detect if domain is becoming flipped during zoom
@@ -289,4 +308,4 @@ function wheelNewDomain(axis, axisApi, inFilter) {
 
 /*----------------------------------------------------------------------------*/
 
-export {  inRangeEither, wheelNewDomain };
+export {  inRangeEither, subInterval, overlapInterval, wheelNewDomain };

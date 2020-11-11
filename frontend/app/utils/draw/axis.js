@@ -112,7 +112,7 @@ function axisExtended(gAxis)
   let
   axisName = gAxis.__data__,
   axis = oa.axes[axisName],
-  extended = axis.extended; // or axis.axis1d.get('extended'),
+  extended = axis && axis.extended; // or axis.axis1d.get('extended'),
   /* .extended should be false or width;  if it is just true then return the default initial width. */
   if (extended === true) {
     let axis1d = axis.axis1d,
@@ -126,17 +126,20 @@ function axisExtended(gAxis)
 /** @return transform for the Zoom / Reset button which is currently near the axis title.
  * @description
  * Usage : ... .selectAll('g.axis ... g.btn > text').attr("transform", yAxisBtnScale);
+ * The result transform contains both translate(x,y) and scale(...).
  * @param d axisName
  */
 function yAxisBtnScale(d/*, i, g*/)
 {
   let g = this.parentElement,
-  axisName = d, // === g.__data__
+  axisName = g.__data__, // d === 1
+  axis = oa.axes[axisName],
   extended = axisExtended(g),
-  /** If extended, the Zoom button is overlain by the split axis rectangle, so shift it up. */
-  yOffsetText = extended ? ',-40' : '';
+  xOffset = -30 + (extended ? extended/2 : 0),
+  /** Place the Zoom / Reset button below the axis. */
+  yOffsetText = ',' + (axis.yRange()/axis.portion + 10);
   console.log('yAxisBtnScale', g, axisName, yOffsetText);
-  return 'translate(10'+yOffsetText+') ' + yAxisTextScale.apply(this, arguments);
+  return 'translate(' + xOffset + yOffsetText + ') ' + yAxisTextScale.apply(this, arguments);
 }
 /** @return transform for the axis title
  * @description
@@ -186,6 +189,22 @@ function eltIdAll(d) { return "all" + d; }
 /** id of <g clippath> element, based on axisName, with an "axis-clip" prefix. */
 function axisEltIdClipPath(d) { return "axis-clip" + d; }
 
+/** @return a d3 selection of the svg <g> element which encloses all
+ * elements of an axis; its position is :
+ *  svg > g[transform] > g.stack > g.axis-outer
+ *
+ * It contains : 
+ *  g.axis-all contains the d3 axis components
+ *  g.axis-use contains a <use> of d3 axis (for dualAxis) or simply a
+ *		vertical path, and all the axis-2d (split axis) elements and
+ *		subComponents (g.track for axis-tracks, g.chart for axis-charts)
+ */
+function selectAxisOuter(axisID) {
+  /** based on selectAxisUse().   */
+  let gAxis = d3.select("g.axis-outer#" + eltId(axisID));
+  return gAxis;
+}
+
 /** @return a d3 selection of the svg group element containing the split axis
  * components axis-2d etc <g.axis-use>.
  */
@@ -213,6 +232,17 @@ function highlightId(name)
 
 /** prefix for id of a g.tracks.  Used within split axis. see components/axis-tracks.js  */
 const trackBlockEltIdPrefix = 'tb-';
+
+/*----------------------------------------------------------------------------*/
+
+function axisFeatureCircles_selectAll() {
+  /** see also handleFeatureCircleMouseOver(), which targets a specific feature. */
+  let
+  selector = "g.axis-outer > circle",
+  selection = oa.svgContainer.selectAll(selector);
+  return selection;
+}
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -277,8 +307,9 @@ export {
   Axes, maybeFlip, maybeFlipExtent, noDomain,
   ensureYscaleDomain,
   yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisEltIdClipPath,
-  selectAxisUse, eltIdGpRef,
+  selectAxisOuter, selectAxisUse, eltIdGpRef,
   highlightId,
   trackBlockEltIdPrefix,
+  axisFeatureCircles_selectAll,
   axisTitleColour
 };

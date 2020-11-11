@@ -67,7 +67,22 @@ function binEvenLengthRound(interval, nBins) {
     mantissa = binLength / eN1,
     /** choose 1 2 or 5 as the first digit of the bin size. */
     m1 = mantissa > 5 ? 5 : (mantissa > 2 ? 2 : 1);
-    lengthRounded = Math.round(m1 * eN1);
+    if (digits >= 0) {
+      lengthRounded = Math.round(m1 * eN1);
+    } else {
+      /** for e.g. digits===-1, eN1 is 0.09999999999999998,
+       * and (m1 * eN1) is 0.4999999999999999 which will round down to 0.
+       * So instead, use string operation to construct eN1, so .round() is not required.
+       * This could probably be used for digits >= 0 also.
+       *
+       * A simpler form would be Math.round(m1 * eN1 * 100000) / 100000, but
+       * that is limited to digits > -5, which would be sufficient for the
+       * datasets used so far, e.g. a genetic map is ~200cM, so digits===-1, and
+       * for a physical map digits==-6.
+       */
+      eN1 = '0.' + ('000000000000000'.substr(0, 1+digits)) + '1';
+      lengthRounded = (m1 * eN1);
+    }
 
     console.log('binEvenLengthRound', interval, nBins, intervalLength, binLength, digits, eN1, mantissa, m1, lengthRounded);
   }
@@ -149,6 +164,7 @@ exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10) {
       : { $bucket     :
           {
             groupBy: {$arrayElemAt : ['$value', 0]}, boundaries,
+	    'default' : 'outsideBoundaries',
             output: {
               count: { $sum: 1 },
               idWidth : {$addToSet : lengthRounded }
