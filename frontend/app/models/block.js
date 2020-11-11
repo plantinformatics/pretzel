@@ -9,7 +9,15 @@ import { and } from '@ember/object/computed';
 
 import { task } from 'ember-concurrency';
 
-import { intervalMerge }  from '../utils/interval-calcs';
+import lodashMath from 'lodash/math';
+
+import { intervalSize, intervalMerge, intervalOverlap }  from '../utils/interval-calcs';
+import { inDomain } from '../utils/draw/interval-overlap';
+import { binEvenLengthRound } from '../utils/draw/interval-bins';
+import { subInterval } from '../utils/draw/zoomPanCalcs';
+
+import { featureCountDataProperties } from '../utils/data-types';
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -33,6 +41,7 @@ export default DS.Model.extend({
   auth: service('auth'),
   apiServers: service(),
   datasetService : service('data/dataset'),
+  controls : service(),
 
 
   datasetId: DS.belongsTo('dataset'),
@@ -47,6 +56,7 @@ export default DS.Model.extend({
   featureType: attr(),
   meta: attr(),
 
+  /*--------------------------------------------------------------------------*/
 
   /** true when the block is displayed in the graph.
    * set by adding the block to the graph (entry-block: get()),
@@ -84,6 +94,23 @@ export default DS.Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  init() {
+    this._super(...arguments);
+
+    this.set('featuresCountsResults', Ember.A());
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+  /** current view of featuresCountsResults, i.e. filtered for zoomedDomain and
+   * selected for binSize suitable to zoomedDomain / yRange. */
+  /** featuresCounts : undefined, */
+
+  /** [{binSize (optional - derived), nBins, domain, result}, ... ] */
+  featuresCountsResults : undefined,
+
+  /*--------------------------------------------------------------------------*/
+
   /** @return true if this block's dataset defined meta.paths and it is true.
    */
   showPaths : Ember.computed('datasetId.meta.paths', 'id', function () {
@@ -114,7 +141,28 @@ export default DS.Model.extend({
   hasFeatures : Ember.computed('featureCount', function () {
     return this.get('featureCount') > 0;
   }),
-  isData : and('isLoaded', 'hasFeatures'),
+  /** Similar to isData(), but relies on .featureCount, which may not have been received. */
+  isDataCount : and('isLoaded', 'hasFeatures'),
+  isData : Ember.computed('referenceBlock', 'range', function (){
+    let isData = !! this.get('referenceBlock');
+    if (! isData) {
+      /** reference blocks have range, GMs (and child data blocks) do not. */
+      isData = ! this.get('range');
+    }
+    return isData;
+  }),
+  currentDomain : Ember.computed('referenceBlock', 'range',  function () {
+    let domain = this.get('zoomedDomain');
+    if (! domain)  {
+      let referenceBlock = this.get('referenceBlock');
+      if (referenceBlock) {
+        domain = referenceBlock.get('range');
+      } else {
+        domain = this.get('featuresDomain');
+      }
+    }
+    return domain;
+  }),
 
   /** is this block copied from a (secondary) server, cached on the server it was loaded from (normally the primary). */
   isCopy : Ember.computed('meta._origin', function () {
@@ -184,6 +232,11 @@ export default DS.Model.extend({
     let tags = this.get('datasetId.tags'),
     isChartable = tags && tags.length && (tags.indexOf('chartable') >= 0);
     return isChartable;
+  }),
+  isSubElements : Ember.computed('datasetId.tags', function () {
+    let tags = this.get('datasetId.tags'),
+    isSubElements = tags && tags.length && (tags.indexOf('geneElements') >= 0);
+    return isSubElements;
   }),
 
   /*--------------------------------------------------------------------------*/
@@ -310,7 +363,9 @@ export default DS.Model.extend({
     reference = dataset && dataset.get('parent'),
     /** reference dataset */
     parent = dataset && dataset.get('parent'),
-    parentName = parent ? parent.get('name') : Ember.get('datasetId.parentName');  // e.g. "myGenome"
+    /** if parent may be undefined because the secondary server with parent is
+     * not connected; in this case this.get('datasetId.parentName') can be used. */
+    parentName = parent ? parent.get('name') : this.get('datasetId.parentName');  // e.g. "myGenome"
 
     dLog('referenceDatasetName', dataset, reference, parent, parentName, parent && parent.get('id'));
 
@@ -459,14 +514,14 @@ export default DS.Model.extend({
     let referenceBlocks = this.viewedReferenceBlocks(true),
     referenceBlock;
     referenceBlocks.forEach(function (block) {
-                if (referenceBlock) {
-                  // prefer original
-                  if (referenceBlock.get('isCopy') && ! block.get('isCopy'))
-                    referenceBlock = block;
-                  else
-                    dLog('viewedReferenceBlock', 'duplicate match', block.get('id'), block._internalModel.__data, parentName, scope);
-                } else
-                  referenceBlock = block;
+      if (referenceBlock) {
+        // prefer original
+        if (referenceBlock.get('isCopy') && ! block.get('isCopy'))
+          referenceBlock = block;
+        else
+          dLog('viewedReferenceBlock', 'duplicate match', block.get('id'), block._internalModel.__data, parentName, scope);
+      } else
+        referenceBlock = block;
     });
     return referenceBlock;
   },
@@ -558,6 +613,173 @@ export default DS.Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** The domain of a reference block is provided by either .range or,
+   * in the case of a genetic map, by the domain of it's features.
+   */
+  limits : Ember.computed('range', 'referenceBlock.limits', 'featureLimits', function () {
+    /** for GM and physical reference, .referenceBlock is undefined, so this recursion is limited to 1 level. */
+    let limits = this.get('range') || this.get('referenceBlock.limits') || this.get('featureLimits');
+    return limits;
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
+  /** @return the features count within zoomedDomain, or if there is no zoom,
+   * i.e. zoomedDomain is undefined, then simply return .featureCount
+   */
+  featuresCountIncludingZoom : Ember.computed(
+    'featuresCountsResults.[]',
+    'featureCountInZoom', 'zoomedDomain.{0,1}', 'limits',
+    function () {
+      let
+      count = this.get('zoomedDomain') ?
+        (this.featuresCountsResults.length ? this.get('featureCountInZoom') : undefined ) :
+        this.featureCount;
+      if (trace_block > 1)
+        dLog('featuresCountIncludingZoom', count);
+      return count;
+    }),
+
+  /** From the featuresCounts results received, filter to return the bins
+   * overlapping zoomedDomain.
+   * If not zoomed (no zoomedDomain), return featuresCountsResults.
+   * @return undefined if no results or no overlaps
+   * Result form is the same as featuresCountsResults, i.e.
+   * [ {binSize, nBins, domain: Array(2), result: Array}, ... ]
+   */
+  featuresCountsInZoom : Ember.computed(
+    'featuresCountsResults.[]', 'zoomedDomain.{0,1}', 'limits',
+    function () {
+      let
+      domain = this.get('zoomedDomain'),
+      limits = this.get('limits'),
+     overlaps;
+     if (! domain) {
+       overlaps = this.get('featuresCountsResults');
+     }
+     else {
+       overlaps = this.featuresCountsOverlappingInterval(domain);
+     }
+      if (trace_block > 1)
+        dLog('featuresCountsInZoom', domain, limits, overlaps && overlaps.length);
+      return overlaps;
+    }),
+  /** From the featuresCounts results received which overlap zoomedDomain (from
+   * featuresCountsInZoom), calculate their bin size and return the smallest bin
+   * size.
+   * @return 0 if no results or no overlaps
+   */
+  featuresCountsInZoomSmallestBinSize : Ember.computed('featuresCountsInZoom.[]', function () {
+    let overlaps = this.get('featuresCountsInZoom') || [];
+    let
+    overlapsBinSizes = overlaps.map((fcs) => fcs.binSize || (intervalSize(fcs.domain) / fcs.nBins)),
+    binSize = Math.min.apply(undefined, overlapsBinSizes);
+    return binSize;
+  }),
+  /** From the featuresCounts results received, combine the counts in bins
+   * overlapping zoomedDomain to return an approximation of the number of
+   * features in zoomedDomain.
+   * @return undefined if no overlaps
+   */
+  featureCountInZoom : Ember.computed('featuresCountsInZoom.[]', function () {
+    let overlaps = this.get('featuresCountsInZoom') || [];
+    let
+    domain = this.get('zoomedDomain'),
+    /** assume that the bins in each result are contiguous; use the
+     * result which covers the interval best, and maybe later : (secondary measure
+     * if >1 cover the interval equally) has the smallest binSize.
+     *
+     * The current algorithm determines the 2 results (smallestOver1I,
+     * largestUnder1I) whose coverage most closely brackets 1, i.e. the
+     * preference is for a coverage slightly greater than 1, and if none cover
+     * the whole of the domain, then the result which most nearly covers the
+     * domain.
+     */
+    coverage = overlaps.map((fcs) => this.featureCountResultCoverage(fcs, domain)),
+    smallestOver1I = coverage.reduce((index, cov, i) => {
+      if ((cov >= 1) && ((index === -1) || (cov < coverage[index]))) { index = i; } return index; },
+      -1),
+    largestUnder1I = coverage.reduce((index, cov, i) => {
+      if ((cov <= 1) && ((index === -1) || (cov > coverage[index]))) { index = i; } return index; },
+      -1),
+    selectedOverlapI = (smallestOver1I !== -1) ? smallestOver1I : largestUnder1I,
+    selectedOverlap = (selectedOverlapI === -1) ? undefined : overlaps[selectedOverlapI],
+    count = selectedOverlap && this.featureCountResultInZoom(selectedOverlap, domain);
+    if (trace_block > 1)
+      dLog('featureCountInZoom', overlaps, domain, coverage, smallestOver1I, largestUnder1I, selectedOverlapI, selectedOverlap, count);
+    return count;
+  }),
+  /** Determine how well this result covers the given domain.
+   * via overlap size / domain size
+   * @return 0 if there is no overlap
+   */
+  featureCountResultCoverage(fcs, domain) {
+    let overlap = intervalOverlap([fcs.domain, domain]),
+    coverage = overlap ? (intervalSize(overlap) / intervalSize(domain)) : 0;
+    return coverage;
+  },
+  /** Sum the counts of bins which overlap the domain
+   * @param domain	[start,end] or if undefined then the whole count of all bins are summed.
+   */
+  featureCountResultInZoom(fcs, domain) {
+    let count = 
+    fcs.result.reduce( (sum, fc, i) => {
+      /** an interval parameter is passed to getBlockFeaturesCounts(), so result
+       * type of the request is featureCountDataProperties.
+       */
+      let
+      binInterval = featureCountDataProperties.datum2Location(fc),
+      /** count within bin */
+      binCount = featureCountDataProperties.datum2Value(fc);
+      if (domain) {
+        let
+        overlap = intervalOverlap([binInterval, domain]);
+        if (overlap) {
+          let
+          binSize = intervalSize(binInterval),
+          ratio = binSize ? intervalSize(overlap) / binSize : 1;
+          sum += ratio * binCount;
+          if ((trace_block > 1) && (i % 64 === 0))  {
+            dLog('featureCountInZoom map', binInterval, overlap, ratio, binCount, sum, i);
+          }
+        }
+      } else {
+        sum += binCount;
+      }
+      return sum;
+    }, 0);
+    return count;
+  },
+  /** Filter all featuresCounts API results for this block, for those overlapping interval.
+   * @return array  [{nBins, domain, result}, ... ]
+   * @param interval	[from, to]
+   * not undefined;  if zoomedDomain is not defined, this function is not called.
+   */
+  featuresCountsOverlappingInterval(interval) {
+    let
+    featuresCounts = this.get('featuresCountsResults') || [],
+    overlaps = featuresCounts.reduce(
+      (result, fcs) => {
+        if (inDomain(fcs.domain, interval)) {
+          let
+          filtered = Object.assign({}, fcs);
+          filtered.result = fcs.result.filter(
+            (fc) => {
+              let loc = featureCountDataProperties.datum2Location(fc);
+              return inDomain(loc, interval); }),
+          result.push(filtered);
+        }
+        return result;
+      }, []);
+    if (trace_block > 1)
+      dLog('featuresCountsOverlappingInterval', featuresCounts, overlaps);
+    return overlaps;
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+
+
   axis : Ember.computed('view.axis', 'referenceBlock', function () {
     let axis = this.get('view.axis');
     let referenceBlock;
@@ -571,15 +793,55 @@ export default DS.Model.extend({
   }),
 
   zoomedDomain : Ember.computed.alias('axis.axis1d.zoomedDomain'),
+  zoomedDomainDebounced : Ember.computed.alias('axis.axis1d.zoomedDomainDebounced'),
+  zoomedDomainThrottled : Ember.computed.alias('axis.axis1d.zoomedDomainThrottled'),
+
+  /** @return true if the axis on which this block is displayed is zoomed out past the point
+   * that the number of features in the block within zoomedDomain is > featuresCountsThreshold.
+   * Return undefined if .featuresCountIncludingZoom is undefined,
+   * otherwise true or false.
+   * @desc
+   * This is used to select whether axis-charts featuresCounts or axis-tracks
+   * are displayed for this block.
+   */
+  isZoomedOut : Ember.computed(
+    'featuresCountIncludingZoom',
+    'zoomedDomainDebounced.{0,1}',
+    'featuresCounts.[]',
+    'featuresCountsResults.[]',
+    'featuresCountsThreshold',
+    function () {
+    let
+    count = this.get('featuresCountIncludingZoom'),
+    featuresCountsThreshold = this.get('featuresCountsThreshold'),
+    out  = (count === undefined) ? undefined : (count > featuresCountsThreshold);
+    if (trace_block > 1)
+      dLog('isZoomedOut', out, this.get('id'), count, featuresCountsThreshold);
+    return out;
+  }),
+
 
   /*--------------------------------------------------------------------------*/
+
+  featuresCountsThreshold : Ember.computed.alias('controls.view.featuresCountsThreshold'),
 
   /** When block is added to an axis, request features, scoped by the axis
    * current position.
    * As used in axis-tracks : when axis is open/split, request features in
    * response to, and as defined by, zoom changes.
    */
-  featuresForAxis : Ember.computed('axis', function () {
+  featuresForAxis : Ember.computed(
+    'axis', 'zoomedDomainDebounced.{0,1}',
+    'featuresCountIncludingZoom',
+    'featuresCountsThreshold',
+    'featuresCountsInZoomSmallestBinSize',
+    'limits',
+    'featuresCountsResults.[]',
+    'zoomedDomain.{0,1}',
+    'isZoomedOut',
+    // used in data/block.js:getSummary()
+    'blockService.featuresCountsNBins',
+    function () {
     /** This could be split out into a separate layer, concerned with reactively
      * requesting data; the layers are : core attributes (of block); derived
      * attributes (these first 2 are the above functions); actions based on
@@ -591,7 +853,57 @@ export default DS.Model.extend({
     const fnName = 'featuresForAxis';
     let blockId = this.get('id');
     let
-      features = this.get('pathsP').getBlockFeaturesInterval(blockId);
+    count = this.get('featuresCountIncludingZoom'),
+    isZoomedOut = this.get('isZoomedOut'),
+    featuresCountsThreshold = this.get('featuresCountsThreshold');
+    let features;
+    dLog('featuresForAxis', isZoomedOut, count, featuresCountsThreshold, this.get('zoomedDomain'), this.get('zoomedDomainDebounced'));
+
+    /** if the block has chartable data, get features regardless; may also request featuresCounts. */
+    /** can use isZoomedOut here instead, e.g. (isZoomedOut === true)  */
+    if (this.get('isChartable') || ((count !== undefined) && (count <= featuresCountsThreshold))) {
+      this.getFeatures(blockId);
+    }
+    /** if featuresCounts not yet requested then count is undefined
+     * Equivalent to check if .featuresCountsResults.length === 0.
+     */
+    if ((this.featuresCounts === undefined) || ((count === undefined) || (count > featuresCountsThreshold))) {
+      let
+      minSize = this.get('featuresCountsInZoomSmallestBinSize'),
+      domain = this.get('zoomedDomain') || this.get('limits'),
+      axis = this.get('axis'),
+      yRange = (axis && axis.yRange()) || 800,
+      /** bin size of result with smallest bins, in pixels as currently viewed on screen. */
+      minSizePx = yRange * minSize / intervalSize(domain);
+      /** When the smallest bins within the current view
+       * (featuresCountsInZoomSmallestBinSize) are displayed with pixel size >
+       * binPxThreshold, then request finer-resolution bins.
+       */
+      const binPxThreshold = 20;
+      let nBins = this.get('blockService.featuresCountsNBins'),
+      requestedSize = yRange / nBins,
+      threshold = Math.min(binPxThreshold, requestedSize);
+      /** minSize === 0 indicate no featuresCounts overlapping this zoomedDomain. */
+      if ((minSizePx === 0) || (minSizePx > threshold))  /* px */ {
+        /* request summary / featuresCounts if there are none for block,
+         * or if their bins are too big */
+        /** Don't request if there is already a result matching these params. */
+        let match = this.featuresCountsResultsSearch(domain, nBins);
+        if (! match)
+        {
+          let blockService = this.get('blockService'),
+          blocksSummaryTasks = blockService.get('getBlocksSummary').apply(blockService, [[blockId]]);
+        }
+      }
+      // features is undefined
+    }
+
+    return features;
+  }),
+  getFeatures(blockId) {
+    const fnName = 'getFeatures';
+    let
+    features = this.get('pathsP').getBlockFeaturesInterval(blockId);
 
     features.then(
       (result) => {
@@ -602,9 +914,34 @@ export default DS.Model.extend({
         dLog(moduleName, fnName, 'reject', err);
       }
     );
+  },
 
-    return features;
-  })
-
+  /** Search in current results for a result which meets the requirements of domain and nBins.
+   * The result domain should cover the current domain.
+   * Matching is done on binSize which is derived from nBins, using the same
+   * function which the backend will use if a request is sent with these
+   * parameters.
+   * @param domain  zoomedDomain || limits
+   * @param nBins from featuresCountsNBins
+   */
+  featuresCountsResultsSearch(domain, nBins) {
+    let 
+    lengthRounded = binEvenLengthRound(domain, nBins),
+    result = this.get('featuresCountsResults')
+    // based on similar block-view.js:selectFeaturesCountsResults(): betterResults
+      .find(
+        (fc) => {
+          let found =
+              // if the domains are equal, that is considered a match.
+              (lengthRounded === fc.binSize) && subInterval(domain, fc.domain);
+          if (found) {
+            if (trace_block > 1)
+              dLog('featuresCountsResultsSearch', domain.toArray(), nBins, fc.domain.toArray());
+          }
+          return found;
+        }
+      );
+    return result;
+  }
 
 });

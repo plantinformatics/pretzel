@@ -1,6 +1,8 @@
 import Ember from 'ember';
 const { inject: { service } } = Ember;
 
+import { union, difference } from 'lodash/array';
+
 import InAxis from './in-axis';
 import { className, AxisCharts, Chart1 } from '../utils/draw/chart1';
 import { DataConfig, dataConfigs, blockData, parsedData } from '../utils/data-types';
@@ -9,6 +11,9 @@ import { DataConfig, dataConfigs, blockData, parsedData } from '../utils/data-ty
 
 const dLog = console.debug;
 
+const showToggleBarLine = false;
+
+const CompName = 'components/axis-charts';
 
 /*----------------------------------------------------------------------------*/
 
@@ -29,11 +34,12 @@ const dLog = console.debug;
  * @param width resizedWidth
  *----------------
  * data attributes created locally, not passed in :
- * @param charts  map of Chart1, indexed by typeName
- * @param blocksData  map of features, indexed by typeName, blockId,
+ * @param charts  map of Chart1, indexed by dataTypeName
+ * @param blocksData  map of features, indexed by dataTypeName, blockId,
  */
 export default InAxis.extend({
   blockService: service('data/block'),
+  controls : service(),
 
   className : className,
 
@@ -59,7 +65,7 @@ export default InAxis.extend({
   },
 
   didRender() {
-    console.log("components/axis-chart didRender()", this.get('axisID'));
+    dLog(CompName + " didRender()", this.get('axisID'));
 
     let axisID = this.get('axisID'),
     axisCharts = this.get('axisCharts'),
@@ -70,7 +76,7 @@ export default InAxis.extend({
       Ember.run.later(() => this.draw(), 500);
   },
   willDestroyElement() {
-    console.log("components/axis-chart willDestroyElement()");
+    dLog(CompName + " willDestroyElement()");
     this.undraw();
 
     this._super(...arguments);
@@ -98,35 +104,132 @@ export default InAxis.extend({
     return yAxis;
   }),
 
+  /** Similar to blockService.viewedChartable, but don't exclude blocks which
+   * are .isZoomedOut.  This means the block-view continues to exist - it is not
+   * destroyed / re-created as the user zooms in / out.
+   */
+  blockViews : Ember.computed(
+    'blockService.viewed.@each.{featuresCounts,isChartable}',
+    function () {
+      let
+      blocks =
+        this.get('blockService.viewed')
+        .filter(function (block) {
+          let
+          featuresCounts = !!block.get('featuresCounts'),
+          line = block.get('isChartable');
+          return featuresCounts || line;
+        });
+      dLog('blockViews', blocks, blocks.mapBy('datasetId.name'));
+      return blocks;
+    }),
 
-  chartTypes : Ember.computed('blocksData.@each', function () {
+
+  blocksDataCount : 0,
+  chartTypesAll : Ember.computed(
+    /** from fgrep dataTypeName frontend/app/utils/data-types.js */
+    'blocksData.{parsedData,blockData,featureCountAutoData,featureCountData}',
+    'blocksDataCount',
+    function () {
     let blocksData = this.get('blocksData'),
     chartTypes = Object.keys(blocksData);
     dLog('chartTypes', chartTypes);
     return chartTypes;
   }),
-  chartsArray : Ember.computed('chartTypes.[]',  function () {
-    /* The result is roughly equivalent to Object.values(this.get('charts')),
-     * but for any chartType which doesn't have an element in .charts, add
-     * it. */
-    let
+  /** filter out {featureCountAutoData,featureCountData} - they are handled via featureCountBlocks and given 1 chart per block.  */
+  chartTypes : Ember.computed.filter('chartTypesAll', (dataTypeName) => ! dataTypeName.startsWith('featureCount')),
+
+  /** Filter blocksData to just .{featureCountAutoData,featureCountData}
+   */
+  featureCountBlocks : Ember.computed(
+    'blocksData.{featureCountAutoData,featureCountData}',
+    'blocksDataCount',
+    function () {
+      let blocksData = this.get('blocksData'),
+          typeBlockIds = 
+          ['featureCountAutoData', 'featureCountData'].reduce(function (blocks, dataTypeName) {
+            let blocksData1 = blocksData[dataTypeName];
+            if (blocksData1) {
+              blocks[dataTypeName] = Object.keys(blocksData1);
+            }
+            return blocks;
+          }, {});
+      return typeBlockIds;
+    }),
+  /** Number of blocks of type featureCount*Data  */
+  nFeatureCountData : Ember.computed(
+    'featureCountBlocks.{featureCountAutoData,featureCountData}.[]',
+    function () { 
+      let
+      typeBlockIds = this.get('featureCountBlocks'),
+      n = Object.keys(typeBlockIds).reduce(function (nBlocks, dataTypeName) {
+        let blocksData1 = typeBlockIds[dataTypeName];
+        if (blocksData1) {
+          nBlocks += blocksData1.length;
+        }
+        return nBlocks;
+      }, 0);
+      return n;
+    }),
+  /** For each dataTypeName present in .blocksData, construct a Chart1, which
+   * will contain one ChartLine per block.
+   * For featureCount{,Auto}Data dataTypeName, after 327f2bcd, each block is
+   * given its own block; this enables each block to be scaled independently
+   * into a constant width.
+   */
+  chartsArray : Ember.computed(
+    'chartTypes.[]',
+    'featureCountBlocks.{featureCountAutoData,featureCountData}.[]',
+    function () {
+      /* The result is roughly equivalent to Object.values(this.get('charts')),
+       * but for any chartType which doesn't have an element in .charts, add
+       * it. */
+      let
       chartTypes = this.get('chartTypes'),
-    charts = chartTypes.map((typeName) => {
-      let chart = this.charts[typeName];
-      if (! chart) {
-        let
-          dataConfig = dataConfigs[typeName],
-        parentG = this.get('axisCharts.dom.g'); // this.get('gAxis'),
-        chart = this.charts[typeName] = new Chart1(parentG, dataConfig);
-        let axisCharts = this.get('axisCharts');
-        chart.overlap(axisCharts);
-      }
-      return chart;
-    });
-    return charts;
-  }),
+      typeBlockIds =  this.get('featureCountBlocks');
 
+      let
+      chartsAllBlocks = chartTypes
+        .reduce((result, dataTypeName) => { if (! dataTypeName.startsWith('featureCount')) result.push(this.addChart(dataTypeName, dataTypeName)); return result;}, []),
+      charts1Block = Object.keys(typeBlockIds).map((dataTypeName) => {
+        let blockIds = typeBlockIds[dataTypeName];
+        return blockIds.map((blockId) => {
+          let chartName = dataTypeName + '_' + blockId;
+          return this.addChart(dataTypeName, chartName);
+        });
+      }),
+      charts = [chartsAllBlocks, charts1Block].flat(2);
 
+      return charts;
+    }),
+
+  /** chartsArray minus those which use space allocated by axisBlocks */
+  chartsVariableWidth : Ember.computed.filter('chartsArray',  (chart) => !chart.useAllocatedWidth()),
+  /** chartsArray which use space allocated by axisBlocks */
+  chartsFixedWidth : Ember.computed.filter('chartsArray',  (chart) => chart.useAllocatedWidth()),
+
+  addChart(dataTypeName, chartName) {
+    let chart = this.charts[chartName];
+    if (! chart) {
+      let
+      dataConfig = dataConfigs[dataTypeName];
+      chart = this.charts[chartName] = new Chart1(dataConfig, chartName);
+      chart.barsLine = this.get('chartBarLine');
+      // for allocatedWidthForBlock().
+      chart.axisBlocks = this.get('axisBlocks');
+      chart.getAllocatedWidth = Ember.run.bind(this, this.getAllocatedWidth);
+      dLog('chartsArray', dataTypeName, chartName, chart, this.charts, this);
+      let axisCharts = this.get('axisCharts');
+      chart.overlap(axisCharts);
+    }
+    return chart;
+  },
+
+  getAllocatedWidth() {
+    let width = this.get('allocatedWidth');
+    dLog('getAllocatedWidth', width);
+    return width;
+  },
 
   /** Retrieve charts handles from the DOM.
    * This could be used as verification - the result should be the same as
@@ -147,8 +250,15 @@ export default InAxis.extend({
   resizeEffectHere : Ember.computed('resizeEffect', function () {
     dLog('resizeEffectHere in axis-charts', this.get('axisID'));
   }),
-  zoomedDomainEffect : Ember.computed('zoomedDomain', function () {
-    dLog('zoomedDomainEffect in axis-charts', this.get('axisID'));
+  drawContentEffect : Ember.computed(
+  'zoomedDomain',
+  'blockViews.@each.isZoomedOut',
+  'blockViews.@each.featuresCounts.[]',
+  'blockViews.@each.featuresCountsResults.[]',
+  // possibly add 'chartsArray.[]', 
+  function () {
+    dLog('drawContentEffect in axis-charts', this.get('axisID'));
+    this.checkViewedContent();
     this.drawContent();
   }),
 
@@ -156,55 +266,212 @@ export default InAxis.extend({
     // probably this function can be factored out as AxisCharts:draw()
     let axisCharts = this.get('axisCharts'),
     charts = this.get('charts'),
-    allocatedWidth = this.get('allocatedWidth');
+    trackWidth = this.get('trackWidth'),
+    /** [startOffset, width] */
+    allocatedWidthCharts = this.get('allocatedWidth'),
+    /** array of [startOffset, width]. */
+    blocksWidths = this.get('axisBlocks.allocatedWidth'),
+    axisBlocks=this.get('axisBlocks.blocks');
+    if (allocatedWidthCharts[1] === 0) {
+      allocatedWidthCharts[1] = trackWidth * (2 + 1);
+    }
+    let
+    chartTypes = this.get('chartTypes'),
+    /** ensure .charts is populated for chartTypes. */
+    chartsArray = this.get('chartsArray'),
+    typeBlockIds = this.get('featureCountBlocks'),
+    typeBlockIdsArray = Object.keys(typeBlockIds).map((dataTypeName) => typeBlockIds[dataTypeName]).flat(),
+    nFeatureCountData = this.get('nFeatureCountData'),
+    /** equivalent logic applies in AxisCharts:getRanges2() to determine margin. */
+    isFeaturesCounts = nFeatureCountData > 0, // (chartTypes.length && chartTypes[0] === 'featureCountData'),
+    frameWidth = isFeaturesCounts ?
+      // blocksWidths[] is empty when !isZoomedOut().
+      (blocksWidths && blocksWidths.length ? blocksWidths[0] : [0,0]) : 
+      allocatedWidthCharts;
+    /** this and showChartAxes / drawAxes will likely move into Chart1. */
+    axisCharts.isFeaturesCounts = isFeaturesCounts;
+    dLog('draw', axisCharts, charts, trackWidth, allocatedWidthCharts, blocksWidths, axisBlocks, chartTypes, isFeaturesCounts, frameWidth);
     axisCharts.setupFrame(
       this.get('axisID'),
-      charts, allocatedWidth);
+      charts, frameWidth, this.get('yAxisScale'));
 
     let
-      chartTypes = this.get('chartTypes'),
+    /** provide a comprehensive list of blocks for setupChart() to lookup by id.
+     * This can include blocks which are ! isZoomedOut.
+     */
+    blocksAll = union(this.get('blocks'), axisBlocks),
+    /** blocksAll minus featureCount blocks */
+    blocksCharts = blocksAll.filter((block) => block.get('isChartable')),
     // equiv : charts && Object.keys(charts).length,
-    nCharts = chartTypes && chartTypes.length;
-    if (nCharts)
-      allocatedWidth /= nCharts;
-    chartTypes.forEach((typeName) => {
-      // this function could be factored out as axis-chart:draw()
-      let
-        chart = charts[typeName];
-      /*if (! chart.ranges)*/ {
-        let
-          blocksData = this.get('blocksData'),
-        data = blocksData.get(typeName),
-        dataConfig = chart.dataConfig;
-        let blocks = this.get('blocks');
+    nCharts = this.get('chartsVariableWidth.length');
+    if (nCharts > 1) {
+      // this is a CP result so copy before modifying.
+      allocatedWidthCharts = allocatedWidthCharts.slice();
+      allocatedWidthCharts[1] = allocatedWidthCharts[1] / nCharts;
+    }
+    dLog('draw blocksCharts', blocksCharts, typeBlockIds, typeBlockIdsArray, blocksAll, nCharts);
 
-        chart.setupChart(
-          this.get('axisID'), axisCharts, data, blocks,
-          dataConfig, this.get('yAxisScale'), allocatedWidth);
+    /** later : bi = axisBlocks.indexOf(blocks[i])
+     *  blocksWidths[bi][1] */
+    let allocatedWidth = allocatedWidthCharts[1];
 
-        chart.drawChart(axisCharts, data);
-      }
+    if (blocksCharts.length) {
+      chartTypes.forEach(
+        (dataTypeName) => this.drawChart(dataTypeName, dataTypeName, allocatedWidth, blocksCharts));
+    }
+
+    // for featureCountData
+    allocatedWidth = (blocksWidths && blocksWidths.length ? blocksWidths[0][1] : 0);
+    let axisBlocksIds = axisBlocks.mapBy('id');
+    Object.keys(typeBlockIds).forEach((dataTypeName) => {
+      let blockIds = typeBlockIds[dataTypeName];
+      blockIds.forEach((blockId) => {
+        if (typeBlockIdsArray.indexOf(blockId) !== -1) {
+          let chartName = dataTypeName + '_' + blockId;
+          if (axisBlocksIds.indexOf(blockId) === -1) {
+            this.removeChartLine(chartName, blockId);
+          } else {
+          this.drawChart(dataTypeName, chartName, allocatedWidth, [this.get('blockService').id2Block(blockId)]);
+          }
+        }
+      });
     });
+
+    this.reportWidth();
 
     /** drawAxes() uses the x scale updated in drawChart() -> prepareScales(), called above. */
     const showChartAxes = true;
-    if (showChartAxes)
+    if (showChartAxes && ! isFeaturesCounts)
       axisCharts.drawAxes(charts);
 
     // place controls after the ChartLine-s group, so that the toggle is above the bars and can be accessed.
-    axisCharts.controls();
+    if (showToggleBarLine) {
+      axisCharts.controls();
+    }
 
+  },
+
+  /** Calculate the sum of chart widths and report it via childWidths to axis-2d. */
+  reportWidth() {
+    let
+    charts = this.get('chartsVariableWidth'),
+    chartWidths = charts.mapBy('allocatedWidth')
+      .filter((aw) => aw),
+    widthSum = chartWidths.reduce((sum, w) => sum += w, 0);
+    // later allocate each chart, for separate offsets : (this.get('className') + '_' + chart.name)
+    Ember.run.next(() => {
+      let childWidths = this.get('childWidths'),
+          className = this.get('className'),
+          chartWidth = childWidths.get(className);
+      if (! chartWidth /**|| chartWidth[1] !== widthSum*/) {
+        childWidths.set(className, [widthSum, widthSum]);
+      }
+    });
+  },
+
+  /**
+   * @param allocatedWidth  width
+   */
+  drawChart(dataTypeName, chartName, allocatedWidth, blocksAll) {
+    // this function could be factored out as axis-chart:draw()
+    let
+    axisCharts = this.get('axisCharts'),
+    chart = this.get('charts')[chartName];
+    /*if (! chart.ranges)*/ {
+      let
+      blocksData = this.get('blocksData'),
+      /** data is the (dataTypeName) data for all axes; blocksAll are the data blocks on this axis : chart.
+       * {<blockId> : data array, ... }
+       */
+      data = blocksData.get(dataTypeName),
+      yDomain = chart.scales.yAxis && chart.scales.yAxis.domain(),
+      /** filtered by block.isViewed and by y domain of data.
+       * (called y because the chart is displayed rotated 90deg; it is the
+       * domain of the data, not co-domain / range).
+       * Result form is the same as data, i.e. {<blockId> : data array, ... }
+       */
+      filteredData = blocksAll.reduce((filtered, block) => {
+        if (data[block.id] && block.get('isViewed')) {
+          let db = data[block.id];
+          if (yDomain) {
+            db = db.filter(Chart1.withinZoomRegion(chart.dataConfig, yDomain));
+          }
+          filtered[block.id] = db;
+        }
+        return filtered;
+      }, {}),
+      dataConfig = chart.dataConfig;
+
+      if (Object.keys(filteredData).length === 0) {
+        if (chart) {
+          this.removeChart(chartName);
+        }
+      } else {
+        chart.setupChart(
+          this.get('axisID'), axisCharts, filteredData, blocksAll,
+          dataConfig, this.get('yAxisScale'), allocatedWidth);
+
+        // let empty =
+        chart.drawChart(axisCharts, filteredData);
+        // drawChart() will remove ChartLines which are not in filteredData (i.e. no longer isViewed).
+        let empty = Object.keys(chart.chartLines).length === 0;
+        if (empty) {
+          this.removeChart(chartName);
+        }
+      }
+    }
+  },
+
+  removeChart(chartName) {
+    let chart = this.charts[chartName];
+    if (chart) {
+      chart.remove();
+      delete this.get('charts')[chartName];
+    }
+  },
+
+  removeChartLine(chartName, blockId) {
+    let chart = this.charts[chartName];
+    if (chart) {
+      let empty = chart.removeChartLine(blockId);
+      if (empty) {
+        this.removeChart(chartName);
+      }
+    }
   },
 
   undraw() {
     this.get('axisCharts').frameRemove();
   },
 
+  chartBarLine : Ember.computed.alias('controls.view.chartBarLine'),
+  /** when user toggles bar/line mode in view panel, call .toggleBarsLine() for each chart.   */
+  toggleChartTypeEffect : Ember.computed('chartBarLine', function() {
+    /** this could instead use Evented view-controls to listen for this action. */
+    let mode = this.get('chartBarLine');
+    let charts = this.get('chartsArray');
+    if (charts)
+      charts.forEach((chart) => (mode === chart.barsLine) || chart.toggleBarsLine());
+    return mode;
+  }),
+
   drawContent() {
+    /** checkViewedContent() is called before drawContent(). */
     let charts = this.get('chartsArray');
     /* y axis has been updated, so redrawing the content will update y positions. */
     if (charts)
       charts.forEach((chart) => chart.drawContent());
+  },
+  checkViewedContent() {
+    let charts = this.get('chartsArray');
+    if (charts) {
+      charts.forEach((chart) => {
+        let empty = chart.removeUnViewedChartLines();
+        if (empty) {
+          this.removeChart(chart.name);
+        }
+      });
+    }
   },
 
   /** Called via in-axis:{zoomed or resized}() -> redrawDebounced() -> redrawOnce()
@@ -214,6 +481,7 @@ export default InAxis.extend({
    * they will update sizes rather than add new elements).
    */
   redraw   : function(axisID, t) {
+    this.checkViewedContent();
     this.drawContent();
   },
   /** for use with @see pasteProcess() */
@@ -301,6 +569,8 @@ export default InAxis.extend({
       axisID = this.get("axisID"),
     axisCharts = this.get('axisCharts'),
     blocks = this.get('blocks'),
+    axisBlocks=this.get('axisBlocks.blocks'),
+    blocksAll = union(this.get('blocks'), axisBlocks),
     yAxisScale = this.get('yAxisScale'),
     dataConfig = dataConfigs[dataTypeName],
     resizedWidth = this.get('width'),
@@ -308,12 +578,17 @@ export default InAxis.extend({
     /* These have been split out of setupChart() and hence will need to be added as calls here :
      */
     chart1.overlap(axisCharts);
-    axisCharts.controls();
+    if (showToggleBarLine) {
+      axisCharts.controls();
+    }
     /* setupFrame() is now a method of AxisCharts;  setupChart() and drawChart() are now methods of Chart1.
      */
     chart1 = chart1.setupChart(
-      axisID, axisCharts, chartData, blocks, dataConfig, yAxisScale, resizedWidth);
+      axisID, axisCharts, chartData, blocksAll, dataConfig, yAxisScale, resizedWidth);
     chart1.drawChart(axisCharts, chartData);
+    /* .charts is normally initialised in createAttributes().
+     * This was used when called via : redraw_from_paste() -> layoutAndDrawChart() -> pasteProcess().
+     */
     if (! this.get('charts') && chart1)
       this.set('charts', chart1);
   },
@@ -326,7 +601,7 @@ export default InAxis.extend({
    * user to paste data into.  Use in prototype, not used currently.
    */
   pasteProcess: function(textPlain) {
-    console.log("components/axis-chart pasteProcess", textPlain.length);
+    dLog(CompName + " pasteProcess", textPlain.length);
 
     let
       parseTextData = this.get('parseTextData'),
@@ -346,4 +621,3 @@ export default InAxis.extend({
 
 
 });
-

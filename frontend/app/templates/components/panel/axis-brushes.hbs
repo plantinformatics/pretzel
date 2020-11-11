@@ -1,0 +1,16 @@
+{{log 'flowsService.axisBrush' flowsService.axisBrush}}
+<table>
+  <tr>
+    <th>Dataset Name</th>
+    <th>Scope</th>
+    <th>Interval</th>
+    <!-- ----------------------------- -->
+    <th class="devel-visible">BlockId</th>
+    <th class="devel-visible">zoomCounter</th>
+  </tr>
+
+{{#each flowsService.axisBrush.brushedAxes as |brushedAxis| }}
+  {{draw/axis-brush block=brushedAxis }}
+{{/each}}
+
+</table>

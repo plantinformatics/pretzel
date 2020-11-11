@@ -16,19 +16,39 @@ import { ensureSvgDefs } from '../utils/draw/d3-svg';
  */
 const featureTrackTransitionTime = 750;
 
-/** width of track <rect>s */
-let trackWidth = 10;
-
 /** If false, track <rect>s are trackWidth wide, and layering them to avoid
  * overlap cause the width allocated to the block to increase.
  * If true, the <rect>s are made proportionally narrower instead.
  */
 const fixedBlockWidth = true;
+/** To allow axis-tracks to share the same (fixed-width) horizontal space
+ * allocation as axis-charts featuresCounts, use axisBlocks to allocate the
+ * space, under the label 'trackCharts'.
+ * Other axis-tracks which use variable width (e.g. sub-elements) will continue
+ * to use childWidths['tracks'] for allocatedWidth.
+ */
+const useAxisBlocks = true;
+
+/** Enable clearing of feature.layer, causing recalculation of layering.
+ * If this is not enabled, the layering is calculated for the features just once.
+ *
+ *   con : causes flickering - e.g. if the layering for tracks F1, F2 is 0, 1, and
+ * zooming in slightly F1 moves outside the view, then F2 will be given layer 0,
+ * and the remainder of the tracks alternate.
+ * This could also be solved by e.g. preserving .layer for just the first feature.
+ *
+ *   pro : for fixed-width tracks, layering determines compress ratio, so zooming
+ * through many orders of magnitude, instead of being limited by layered tracks
+ * which are outside the view, it makes sense to re-calculate the layering for
+ * just the tracks in view, which can reduce layer depth and compression
+ */
+const clearLayers = false;
 
 /** track sub-elements < this height (px) are not rendered. */
 const subElementThresholdHeight = 5;
 
 
+const trace = 1;
 /** for devel.  ref comment in @see height() */
 let trace_count_NaN = 10;
 
@@ -81,15 +101,17 @@ function I(d) { return d; }
 /** filter intervalTree : select those intervals which intersect domain.
  * @param sizeThreshold intervals smaller than sizeThreshold are filtered out;
  * undefined means don't filter.
+ * @param abutDistance	if 2 intervals are within this distance, consider them overlapping
  * @param assignOverlapped  true means assign overlapping tracks in sequence;
  * this is used for Feature tracks, but for sub-elements there is likely to be a
  * sub-element which overlaps all the others, which would place them all in
  * separate layers and missing opportunities to pack more closely.
  *
  * @return {intervals:  array of intervals,
- * layoutWidth : px width allocated for the layered tracks}
+ * nLayers : number of track layers allocated}
+ * (Until d989e8f6, result contained .layoutWidth (px width), i.e. .nLayers multiplied by trackWidth*2.)
  */
-function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
+function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignOverlapped)
 {
   let intervals = [],
   result = {intervals : intervals};
@@ -99,6 +121,7 @@ function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
   }
   let subTree;
   if (domain) {
+    dLog("regionOfTree, domain", domain);
     if (domain[0] < domain[1])
       intervalTree.queryInterval(domain[0], domain[1], visit);
     else // ie: axis has been flipped
@@ -110,37 +133,67 @@ function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
     result.intervals = intervalTree.intervals;
   }
 
+  if (clearLayers) {
+    /* clear layers before layering */
+    subTree.intervals.forEach((f) => {if (f.layer) { f.layer = undefined; } });
+  }
+
   /** for each interval, if it does not have a layer,
    * get list of intervals in subTree it intersects,
    * note the layers of those which already have a layer assigned,
    * give the remainder (starting with the current interval) layers which are not assigned in that group.
    * (this alg is approx, but probably ok;  seems like a bin-packing problem)
+   *
+   * Added : to get a chequerboard pattern when the intervals mostly abut each
+   * other, sort the intervals and use the .layer of another interval in
+   * overlaps[] for interval o if it does not overlap o, checked with
+   * nonOverlap(oMargin, );   otherwise fall back to assignInterval() which uses
+   * chooseNext().
    */
-  let i1 = subTree.intervals, layers = {}, nextLayer = 0, largestLayer = 0;
+  let i1 = subTree.intervals.sortBy('0'),
+  layers = {}, largestLayer = 0;
   for (let j=0; j<i1.length; j++)
   {
     // could continue if (i1[j].layer)
     let i=i1[j], overlaps = [], layersUsed = [];
     function noteLayers(interval) {
-      overlaps.push(interval);
-      if (interval.layer !== undefined)
-        layersUsed[interval.layer] = true; /* or interval*/
+      if (interval !== i) {
+        overlaps.push(interval);
+        if (interval.layer !== undefined)
+          layersUsed[interval.layer] = true; /* or interval*/
+      }
     };
-    subTree.queryInterval(i[0], i[1], noteLayers);
+    /** Scaffolds normally abut each other and they can be viewed more clearly
+     * if that is treated as an overlap and layered.  This can be applied to
+     * other Features (physical and GM), but perhaps not for
+     * sub-elements. assignOverlapped can be used to differentiate, or we can
+     * pass overlapIfAbut as another parameter.
+     */
+    let overlapIfAbut = abutDistance !== undefined;
+    let overlapInterval = overlapIfAbut ? penumbra(i, abutDistance) : i; // unaffected by flip
+    subTree.queryInterval(overlapInterval[0], overlapInterval[1], noteLayers);
     function unusedLayers() {
       let unused = [];
-      for (let j3 = 0; j<layersUsed.length; j++)
+      /** Start counting with layer 1 - it simplifies a number of expressions. */
+      for (let j3 = 1; j3<layersUsed.length; j3++)
       {
-        if (! layersUsed[j3])
+        if (! layersUsed[j3]) {
           unused.push(j3);
+        }
       }
       return unused;
     }
-    /** if layersUsed is empty, then ++lastUsed is 0,  */
-    let lastUsed = layersUsed.length-1,
+    /** if layersUsed is empty, then ++lastUsed is 1,  */
+    let lastUsed = (layersUsed.length - 1) || 0,
     u =  unusedLayers();
     function chooseNext() {
       let next = u.pop() || ++lastUsed;
+      if (next > 2) {
+        dLog('chooseNext', next, u, lastUsed, 'trackBlocksData');
+      }
+      if (next > largestLayer) {
+        largestLayer = next;
+      }
       return next;
     }
     /** Assign a layer to one interval.
@@ -154,21 +207,69 @@ function regionOfTree(intervalTree, domain, sizeThreshold, assignOverlapped)
     function assignRemainder() {
       for (let j2 = 0; j2 < overlaps.length; j2++)
       {
+        /** intervals which overlap i */
         let o = overlaps[j2];
-        assignInterval(o);
+        /** if o has an assigned .layer which conflicts with i, clear it.  */
+        if ((o !== i) && (o.layer === i.layer) && o.layer) {
+          o.layer = undefined;
+        }
+        if (! o.layer) {
+          /** Expect that on the opposite side of i there is another abutting
+           * interval which does not overlap o.  So use its .layer
+           */
+          let oMargin = penumbra(o, abutDistance);
+          let i2 = overlaps.find((i1) => (i1 !== o) && nonOverlap(oMargin, i1));
+          if (i2) {
+                  o.layer = i2.layer;
+          } else {
+                  assignInterval(o);
+          }
+        }
       }
     };
     assignInterval(i);
     if (assignOverlapped)
       assignRemainder();
-    if (lastUsed > largestLayer)
-      largestLayer = lastUsed;
   }
-  /* first layer allocated is 1; allocate one layer if 0.  */
-  result.layoutWidth = (largestLayer || 1) * trackWidth * 2;
-
+  /* first layer allocated is 1; allocate one layer if 0.
+   * largestLayer===0 means there were no overlaps.
+   * if (clearLayers) can use .nLayers = (largestLayer || 1).
+   */
+  let nLayers;
+  if (intervals.length) {
+    let layersAssigned = intervals.mapBy('layer').uniq(),
+    layersExtent = d3.extent(layersAssigned);
+    nLayers = (layersExtent[1] - layersExtent[0]) + 1;
+    dLog('regionOfTree layersAssigned', layersAssigned, layersExtent, nLayers);
+  }
+  result.nLayers = nLayers || 1;
+  dLog('regionOfTree', result.nLayers, largestLayer, 'trackBlocksData');
   return result;
 }
+
+/*----------------------------------------------------------------------------*/
+
+/** @return an interval larger by abutDistance on each end than the given interval
+ * @desc Used for detecting near-overlap, within distance abutDistance.
+ */
+function penumbra(i, abutDistance) {
+  return [i[0]-abutDistance, i[1]+abutDistance];
+}
+
+/** @return true if i0 and i1 do not overlap.
+ * @desc Used in array.find()
+ * @param i0, i1	interval in the form [from,to], sorted
+ * @desc if not sorted, see also intervalOrdered()
+ */
+function nonOverlap(i0, i1) {
+  /** based on utils/interval-calcs.js : intervalOverlap() */
+  let overlap = 
+      ((i1[0] < i0[1]) && (i0[0] < i1[1]));
+  return ! overlap;
+}
+
+/*----------------------------------------------------------------------------*/
+
 
 /** select the g.axis-outer which contains g.axis-use. */
 function selectAxis(axisID)
@@ -246,12 +347,6 @@ export default InAxis.extend({
 
   init() {
     this._super(...arguments);
-
-    let trackWidthOption = this.get('urlOptions.trackWidth');
-    if (trackWidthOption) {
-      dLog('init', 'from urlOptions, setting trackWidth', trackWidthOption, ', was', trackWidth);
-      trackWidth = trackWidthOption;
-    }
   },
 
   /*--------------------------------------------------------------------------*/
@@ -276,6 +371,7 @@ export default InAxis.extend({
     this._super(...arguments);
 
     console.log("components/axis-tracks didInsertElement()");
+    if (false) {
     let
     childWidths = this.get('childWidths'),
     axisID = this.get('axisID'),
@@ -283,6 +379,7 @@ export default InAxis.extend({
     dLog('didInsertElement', axisID, width);
     // [min, max] width
     childWidths.set(this.get('className'), [width, width]);
+    }
 
     let svg = d3.selectAll('svg.FeatureMapViewer');
     ensureSvgDefs(svg);
@@ -318,6 +415,7 @@ export default InAxis.extend({
   /** Current Y interval within the total domain of the axis reference block. */
   currentPosition : Ember.computed.alias('axis1d.currentPosition'),
   yDomain : Ember.computed.alias('currentPosition.yDomain'),
+  stackBlocks : Ember.computed.alias('axis1d.drawMap.oa.stacks.blocks'),
 
   /** From the Ember block objects, derive the stack Blocks. */
   trackBlocks : Ember.computed('trackBlocksR.@each.view', function () {
@@ -447,6 +545,7 @@ export default InAxis.extend({
     /** this axis-tracks, used for blockIndex, which perhaps should be factored
      * out to here, if it does not change. */
     let thisAt = this;
+    let trackWidth = this.get('trackWidth');
 
     // seems run.throttle() .. .apply() is wrapping args with an extra [] ?
     if (resized && (resized.length == 2) && (tracks === undefined))
@@ -511,25 +610,41 @@ export default InAxis.extend({
        * [ sizeThreshold is disabled by setting to undefined, while we prototype how to select a sub-set of features to display ]
        */
       sizeThreshold = undefined, // zoomed ? undefined : pxSize * 1/*5*/,
-      tracksLayout = regionOfTree(t, y.domain(), sizeThreshold, true),
-      data = tracksLayout.intervals;
+      yDomain = y.domain(),
+      /** Testing showed that 150 is the smallest value which works for physical
+       * genomes (600Mb) (use 200 in this case), and domain/1000 works OK for GM (~300 cM).
+       */
+      domainRange = yDomain[1] - yDomain[0],
+      abutDistance = (domainRange > 0) ?
+        Math.min(domainRange / 1000, 200) : 
+        Math.min(-domainRange / 1000, 200),
+      tracksLayout = regionOfTree(t, y.domain(), sizeThreshold, abutDistance, true),
+      data = tracksLayout.intervals.map(function(d) {
+        // Make the description unique in case there are multiple
+        // positions for the same feature name.
+        let r=Object.assign({}, d);
+        r.udescription=d.description+"_"+d[0];
+        return r;
+      });
       let blockState = thisAt.lookupAxisTracksBlock(blockId);
-      blockState.set('layoutWidth', tracksLayout.layoutWidth);
-      if (! blockState.hasOwnProperty('subelement')) {
+      blockState.set('layoutWidth', tracksLayout.nLayers * trackWidth * 2);
+      if (! blockState.hasOwnProperty('subElements')) {
         blockState.subElements = blockTagSubElements(blockId);
       }
       /** [min, max] */
       let allocatedWidth = thisAt.get('allocatedWidth');
-      /** factor by which blockState.trackWidth must be reduced for layoutWidth to fit in trackWidth. */
-      let compress = blockState.layoutWidth / trackWidth;
+      /** factor by which blockState.trackWidth must be reduced for layoutWidth to fit in trackWidth.
+       * This is effectively tracksLayout.nLayers, which could be used here.
+       */
+      let compress = blockState.layoutWidth / (trackWidth*2);
       /* don't apply fixedBlockWidth if block subElements - the sub-elements
        * would be too thin to see well, and overlap is less likely.
        */
       blockState.trackWidth = ! fixedBlockWidth || blockState.subElements ?
         trackWidth : (
-          allocatedWidth ?
+          allocatedWidth && allocatedWidth[1] ?
             allocatedWidth[1] / 2 / thisAt.get('nTrackBlocks') / compress :
-            trackWidth * 2        / compress);
+            trackWidth   / compress);
       dLog('trackBlocksData', blockId, data.length, (data.length == 0) ? '' : y(data[0][0]),
            blockState, allocatedWidth, compress, thisAt.get('nTrackBlocks'));
       return data;
@@ -593,14 +708,24 @@ export default InAxis.extend({
       let xOffset;
       // subElements could be mixed with fixed width blocks, so perhaps use .offset for all.
 
-      /** blockC.offset is the sum of 
-       * tracksLayout.layoutWidth for each of the blockId-s to the left of this one. */
       let
-      blocks = thisAt.get('blocks'),
-      /** this assigns blocks[*].offset */
-      widthSum = thisAt.get('blockLayoutWidthSum'),
       blockC = thisAt.lookupAxisTracksBlock(blockId);
-      xOffset = blockC.offset;
+      if (useAxisBlocks && ! blockC.subElements) {
+        let
+         /** array of [startOffset, width]. */
+        blocksWidths = thisAt.get('axisBlocks.allocatedWidth'),
+        axisBlocks = thisAt.get('axisBlocks.blocks'),
+        blockIndex = axisBlocks.findIndex((block) => block.get('id') === blockId);
+        let allocatedWidth = blocksWidths.length && blocksWidths[blockIndex];
+        xOffset = allocatedWidth ? allocatedWidth[0] : 0;
+      } else {
+        /** blockC.offset is the sum of 
+         * tracksLayout.nLayers*trackWidth*2 for each of the blockId-s to the left of this one. */
+        let
+        /** this assigns blocks[*].offset */
+        widthSum = thisAt.get('blockLayoutWidthSum');
+        xOffset = blockC.offset;
+      }
       if (xOffset === undefined)
       {
         if (! fixedBlockWidth) {
@@ -609,9 +734,16 @@ export default InAxis.extend({
           // width/nTrackBlocks is related to 2 * trackWidth;
           let width = thisAt.get('width') || thisAt.get('layoutWidth');
           xOffset = width * (i+0.5) / thisAt.get('nTrackBlocks');
-          dLog('blockOffset', blockId, i, width, widthSum, xOffset);
+          dLog('blockOffset', blockId, i, width, xOffset, blockC);
         }
       }
+      /** Leave 10px left margin to be clear of the axis brush.
+       * This allows the track to be hovered, and keeps the tracks visually clear of the brush highlight.
+       * This could be factored to axis-blocks : allocatedWidth, since it is
+       * also required for axis-charts, which has an improvised +5 in
+       * Chart1:group().
+       */
+      xOffset += 10;
       return xOffset;
     }
     function blockTransform(blockId, i) {
@@ -671,9 +803,8 @@ export default InAxis.extend({
     /* seems like bbox.x is the left edge of the left-most tracks (i.e. bbox
      * contains the children of gAxis), so use 0 instead. */
     bbox.y = yrange[0] ;
-    let allocatedWidth = this.get('allocatedWidth');
     /** + trackWidth for spacing. */
-    bbox.width = ((allocatedWidth && allocatedWidth[1]) || this.get('layoutWidth')) + trackWidth;
+    bbox.width = this.get('combinedWidth') + trackWidth;
     bbox.height = yrange[1] - yrange[0];
     clipRect
       .attr("x", 0 /*bbox.x*/);
@@ -689,7 +820,10 @@ export default InAxis.extend({
     let g = gp.append("g")
       .attr("clip-path", "url(#" + axisEltIdClipPath(axisID) + ")"); // clip the rectangle
 
-    function trackKeyFn(featureData) { return featureData.description; }
+    function trackKeyFn(featureData) {
+      // Make description unique when multiple features with same name.
+      return featureData.description+"_"+featureData[0];
+    }
     /** Add the <rect> within <g clip-path...>  */
     let
     /** block select - datum is blockId. */
@@ -725,7 +859,7 @@ export default InAxis.extend({
 
       let
       blockC = thisAt.lookupAxisTracksBlock(blockId),
-      trackWidth = blockC.trackWidth;
+      trackWidth = blockC.get('trackWidth');
       appendRect.apply(this, [re, rs, trackWidth, false]);
     }
     /** - rename re and rs to ge and gs
@@ -760,18 +894,15 @@ export default InAxis.extend({
        */
       rm = es
         .merge(ra);
-      dLog('rm', rm.node(), 'es', es.nodes(), es.node());
+      dLog('rm', rm.node(), 'es', (trace > 1) ? es.nodes() : es.size(), es.node());
       ra
         .attr('y', yEnd);
-      dLog('height', height);
       rm
-      .transition().duration(featureTrackTransitionTime)
+      // .transition().duration(featureTrackTransitionTime)
       .attr('x', xPosnS(subElements))
       .attr('y', yPosn)
       .attr('height' , height)
-      .attr('stroke', function(d,i,g) {
-        return (height(d) > 1) ? 'black' : blockTrackColourI.apply(this, [d,i,g]);
-      })
+      .attr('stroke', blockTrackColourI)
       .attr('fill', blockTrackColourI)
       ;
       dLog('ra', ra.size(), ra.node(), 'rm', rm.size(), rm.node());
@@ -1110,7 +1241,7 @@ export default InAxis.extend({
       d3.selectAll('g.tracks')
       .each(blockTrackColour);
 
-  },
+  },  // end of layoutAndDrawTracks()
 
   /*--------------------------------------------------------------------------*/
 
@@ -1150,25 +1281,6 @@ export default InAxis.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  /** Request block featuresForAxis, driven by changes of the data
-   * blocks (.trackBlocksR) or the scope (y domain).
-   */
-  featuresForTrackBlocksRequestEffect : Ember.computed(
-    'trackBlocksR.[]',
-    // either axis1d.domain or yDomain is probably sufficient dependency.
-    'axis1d.domain', 'yDomain',
-    function () {
-      dLog('featuresForTrackBlocksRequestEffect');
-      let
-      trackBlocks = this.get('trackBlocksR'),
-      /** featuresForAxis() uses getBlockFeaturesInterval(), which is also used by 
-       * models/axis-brush.js */
-      blockFeatures = trackBlocks.map(function (b) { return b.get('featuresForAxis'); } );
-      /* no return value - result is displayed by showTrackBlocks() with data
-       * collated by tracksTree(). */
-    }),
-
-  /*--------------------------------------------------------------------------*/
 
 
   /** Not used; can be used in .hbs for trace, for comparison against the result
@@ -1230,6 +1342,16 @@ export default InAxis.extend({
       }, {}),
     intervalNames = d3.keys(intervals),
     tracks = this.makeTree(intervals, intervalNames);
+    /** may need to limit this to apply only for a significant change of zoomedDomain, e.g. zoomedDomainDebounced.  */
+    if (clearLayers) {
+      d3.keys(intervals).forEach(function (axisName) {
+        let ifs = intervals[axisName];
+        // regionOfTree() will assign a layer to features with !f.layer
+        ifs.forEach((f) => {if (f.layer) { f.layer = undefined; } });
+      });
+    }
+
+
     // now that this is a computed function, don't need to store the result.
     this.set('tracks', tracks); // used by axisStackChanged() : passed to layoutAndDrawTracks()
     return tracks;
@@ -1248,6 +1370,12 @@ export default InAxis.extend({
   lookupAxisTracksBlock(blockId) {
     let blocks = this.get('blocks'),
     blockState = blocks[blockId] || (blocks[blockId] = Ember.Object.create());
+    if (! blockState.hasOwnProperty('subElements')) {
+      let blockS = this.get('stackBlocks')[blockId];
+      blockState.subElements = blockS.block.get('isSubElements');
+      dLog('lookupAxisTracksBlock', blockId, blockState.subElements);
+    }
+
     return blockState;
   },
   /** Use the interval tree of sub-element data to layer them within
@@ -1279,8 +1407,9 @@ export default InAxis.extend({
      * time, so this is not done (and there is an update issue with rerending in
      * this case).  */
     // yDomain = this.get('yDomain'),
-    tracksLayout = regionOfTree(subEltTree.intervalTree[blockId], undefined, sizeThreshold, false),
+    tracksLayout = regionOfTree(subEltTree.intervalTree[blockId], undefined, sizeThreshold, undefined, false),
     data = tracksLayout.intervals;
+    blockState.set('layoutWidth', tracksLayout.nLayers * this.get('trackWidth') * 2);
     return data;
   },
 
@@ -1318,8 +1447,9 @@ export default InAxis.extend({
     let 
     blocks = this.get('blocks'),
     blockIds2 = Object.keys(blocks),
-    /** initial .offset is trackWidth */
-    shiftRight = trackWidth,
+    trackWidth = this.get('trackWidth'),
+    /** initial .offset not needed; g.axis-use will translate(trackWidth) */
+    shiftRight = 0,
     width = blockIds.reduce((sum, blockId) => {
       let block = this.lookupAxisTracksBlock(blockId);
       block.offset = sum;
@@ -1327,7 +1457,7 @@ export default InAxis.extend({
       if (block.subElements || ! fixedBlockWidth) {
         blockWidth = block.layoutWidth || block.trackWidth || trackWidth;
       } else {
-        blockWidth = 2 * trackWidth;
+        blockWidth = useAxisBlocks ? 0 : 2 * trackWidth;
       }
       sum += blockWidth;
       return sum;
@@ -1336,8 +1466,10 @@ export default InAxis.extend({
     dLog('blockLayoutWidthSum', width, blockIds.length, blockIds2.length, this.get('blockComps.length'));
     return width;
   }),
-  layoutWidth : Ember.computed('trackBlocksR.[]', function () {
+  variableWidthBlocks : Ember.computed.filter('trackBlocksR', (block) => block.get('isSubElements')),
+  layoutWidth : Ember.computed('variableWidthBlocks', function () {
     let
+    vwBlocks = this.get('variableWidthBlocks'),
     blockIds = this.get('blockIds'),
     /** Add 50 on the right to avoid clashing with the right axis ticks text,
      * which may later be switched off with CSS.
@@ -1351,22 +1483,32 @@ export default InAxis.extend({
 
     return width;
   }),
+  combinedWidth : Ember.computed('layoutWidth', 'allocatedWidth', 'axisBlocks.allocatedWidth.[]', function() {
+    let
+    axisBlocks = this.get('axisBlocks.allocatedWidth'),
+    rightBlock = axisBlocks.length && axisBlocks[axisBlocks.length-1],
+    axisBlocksEnd = rightBlock ? rightBlock[1] : 0;
+
+    let allocatedWidth = this.get('allocatedWidth');
+
+    let width = ((allocatedWidth && allocatedWidth[1]) || this.get('layoutWidth')) + axisBlocksEnd;
+    return width;
+  }),
   /** Render changes related to a change of .layoutWidth
    */
-  layoutWidthEffect : Ember.computed('layoutWidth', function () {
+  layoutWidthEffect : Ember.computed('combinedWidth', function () {
     let
     axisID = this.get('axisID'),
-    layoutWidth = this.get('layoutWidth');
-    setClipWidth(axisID, layoutWidth);
-    return layoutWidth;
+    width = this.get('combinedWidth');
+
+    setClipWidth(axisID, width);
+    return width;
   }),
   /** Render changes driven by changes of block data or scope.
    */
   showTrackBlocks: Ember.computed(
     'tracksTree', 'yDomain.0', 'yDomain.1', 'axis1d.zoomed', 'axis1d.extended', 'axis1d.featureLength',
-    'featuresForTrackBlocksRequestEffect',
     function() {
-      this.get('featuresForTrackBlocksRequestEffect');
       let tracks = this.get('tracksTree');
       let
       axis1d = this.get('axis1d'),
@@ -1410,7 +1552,10 @@ export default InAxis.extend({
       isChanged(result.changed, 'viewportWidth') || allocatedWidthChange,
       isChanged(result.changed, 'viewportHeight') /* , yScaleChanged ? */);
   }),
-
+  flippedEffect : Ember.computed('axis1d.flipped', function () {
+    /** 'scaleChanged' could be used as an alternate dependency */
+    this.showResize(false, false, true);
+  }),
 
   keypress: function(event) {
     console.log("components/axis-tracks keypress", event);

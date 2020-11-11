@@ -265,6 +265,8 @@ g.axis-use
 */
 rect.chartRow {
   opacity : 0.5;
+}
+g:not(.featureCountData) > g.chart-line > rect.chartRow {
   stroke: blue;
 }
 /* .featureCountData colour is heatmap **/
@@ -289,6 +291,7 @@ circle.radio.toggle.chartType
       fill-opacity : 0.2;
       stroke : magenta;
       stroke-width : 2;
+      cursor: pointer;
 }
 circle.radio.toggle.chartType.pushed
 {
@@ -614,6 +617,7 @@ path.syntenyEdge.inverted
 }
 
 
+/*----------------------------------------------------------------------------*/
 /* Button */
 .btn { cursor: pointer; }
 
@@ -630,8 +634,38 @@ path.syntenyEdge.inverted
 {
   text-anchor: middle;
 }
+g.axis-outer > g.btn > rect.Zoom {
+    x: -30px;
+}
+g.axis-outer > g.btn > rect.Reset {
+    x: 25px;
+}
 
 
+svg > g.publishMode .graph-btn,
+{
+  display: none;
+}
+
+g.axis-outer > .btn.brushed > rect,
+g.axis-outer > .btn.zoomed > rect {
+    fill : "grey";
+}
+/* colours matching bootstrap .btn-info, .btn-info:focus */
+g.axis-outer > .btn.brushed > rect.Zoom,
+g.axis-outer > .btn.zoomed > rect.Reset {
+    fill : #5bc0de;	/* blue */
+}
+g.axis-outer > .btn.brushed > rect.Zoom:focus,
+g.axis-outer > .btn.brushed > rect.Zoom:hover,
+g.axis-outer > .btn.zoomed > rect.Reset:focus,
+g.axis-outer > .btn.zoomed > rect.Reset:hover
+{
+    fill : #31b0d5;	/* blue */
+}
+
+
+/*----------------------------------------------------------------------------*/
 /* Tool tip */
 .toolTipChild
 {
@@ -1087,10 +1121,6 @@ input#checkbox-toggleShowAll,
 {
 }
 
-svg > g.publishMode .btn
-{
-  display: none;
-}
 
 /* -------------------------------------------------------------------------- */
 #choose_path_colour_scale
@@ -1402,6 +1432,13 @@ div.metaeditor-panel div.jsoneditor-treepath {
 div.metaeditor-panel div.jsoneditor {
   border: 1px solid #d3d3d3
 }
+/* -------------------------------------------------------------------------- */
+/** for components/draw/axis-brushes */
+.axis-brushes table {
+  border-collapse: initial;
+  border-spacing: 1em;
+}
+
 /* -------------------------------------------------------------------------- */
 
 .paths-table .optionControls {

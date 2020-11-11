@@ -375,19 +375,33 @@ sudo docker container inspect pretz_80 | jq  'map(.Config.Env)'
 
 Pretzel now uses (since branch feature/progressive) aggregation pipeline queries in mongoDb, which are available in mongoDb versions after 4.
 
-Progressive loading of paths via aliases relies on the indices of the Alias collection :
+Progressive loading of paths via aliases relies on the indices of the Alias collection, and indexes are added to the Feature collection also :
 
 ```
 mongo --quiet admin
+db.Feature.getIndexes()
+db.Feature.createIndex({"value.0":1},{ partialFilterExpression: {"value.1": {$type: 'number'}} } )
+db.Feature.createIndex({blockId:1} )
+
 db.Alias.getIndexes()
-[ ]
 db.Alias.createIndex ( {namespace1:1} )
 db.Alias.createIndex ( {namespace2:1} )
 db.Alias.createIndex ( {string1:1} )
 db.Alias.createIndex ( {string2:1} )
+
+db.Alias.createIndex ( {namespace1:1, namespace2:1} )
+db.Alias.createIndex ( {string1:1, string2:1} )
+
 exit
 ```
 This is applicable to any of the build methods.
+This assumes DB_NAME=admin;  substituted e.g. pretzel for admin.
+
+To check if these aliases are already added :
+```
+db.Feature.getIndexes()
+db.Alias.getIndexes()
+```
 
 
 

@@ -7,6 +7,7 @@ const { inject: { service } } = Ember;
 import { keyBy } from 'lodash/collection';
 
 import { stacks } from '../../utils/stacks';
+import { intervalSize, truncateMantissa }  from '../../utils/interval-calcs';
 
 
 let trace_block = 1;
@@ -226,8 +227,8 @@ export default Service.extend(Ember.Evented, {
     this.viewReferences(blocksToView);
     let dataAndReferences = blocksToView.concat(
       blockIds.map((blockId) => { return {id : blockId, obj : this.peekBlock(blockId)}; }))
-	    // filter out .obj === null, i.e. block not in store yet.
-	    .filter((blockIdObj) => blockIdObj.obj);
+      // filter out .obj === null, i.e. block not in store yet.
+        .filter((blockIdObj) => blockIdObj.obj);
       console.log('taskGetSummary dataAndReferences', dataAndReferences);
     this.receivedBlocks(dataAndReferences);
     
@@ -304,6 +305,10 @@ export default Service.extend(Ember.Evented, {
    * @return a hash object mapping from blockId to reference limits [from, to].
    */
   blocksReferencesLimits(blockIds) {
+    /** blocksReferencesLimit() is used as the basis of
+     * models/block.js: referenceLimits(), and that can be used here, e.g.
+     * blockIds.map((blockId) => this.peekBlock(blockId).get('referenceLimits') )
+     */
     function blocksReferencesLimit(io) {
       let b=io.obj; return b.get('range') || b.get('featureLimits'); };
     let
@@ -346,12 +351,16 @@ export default Service.extend(Ember.Evented, {
     this.trigger('receivedBlock', blocksToView);
   },
 
+  featuresCountsNBins : Ember.computed.alias('controls.controls.view.featuresCountsNBins'),
   /** This does have a dependency on the parameter values.  */
   pathsDensityParams : Ember.computed.alias('controls.controls.view.pathsDensityParams'),
-  /**
+  /** Calculate nBins for featuresCounts request based on pathsDensityParams.
+   * A separate slider is now added for featuresCountsNBins, so this is not
+   * currently used, and may be dropped; it is possible that density calculation
+   * may be useful in selecting nBins in some cases.
    * @param blockId later will use this to lookup axis yRange
    */
-  nBins(blockId) {
+  nBinsFromPathParams(blockId) {
     let nBins;
     /** based on part of intervalParams(intervals) */
     let vcParams = this.get('pathsDensityParams');
@@ -375,38 +384,93 @@ export default Service.extend(Ember.Evented, {
 
   getSummary: function (blockIds) {
     // console.log("block getSummary", id);
-    let blockP =
-      this.get('auth').getBlockFeaturesCount(blockIds, /*options*/{});
+    let
+    /** check if feature count of block is already received.  */
+    blocksWithoutCount = blockIds.filter((blockId) => {
+      let block = this.peekBlock(blockId);
+      return ! block || ! block.get('featureCount');
+    }),
+    blockP = blocksWithoutCount.length ?
+      this.get('auth').getBlockFeaturesCount(blocksWithoutCount, /*options*/{}) :
+      Ember.RSVP.resolve([]);
 
+    /** Request features counts for data blocks (not reference blocks).  */
     if (this.get('parsedOptions.featuresCounts')) {
 
     /** As yet these result promises are not returned, not needed. */
     let blockPs =
-      blockIds.map(
-        (blockId) => {
+        blockIds.map((blockId) => [blockId, this.peekBlock(blockId)])
+        .filter((blockAndId) => blockAndId[1].get('isData'))
+        .map(
+          (blockAndId) => {
+          let [blockId, block] = blockAndId;
           /** densityFactor requires axis yRange, so for that case this will (in future) lookup axis from blockId. */
-          const nBins = this.nBins(blockId);
-          let taskId = blockId + '_' + nBins;
+          const nBins = this.get('featuresCountsNBins'); // this.nBinsFromPathParams(blockId);
+          let
+          zoomedDomain = block && block.get('zoomedDomain'),
+          /** granularise zoomedDomain to so that request is sent after e.g. 5% zoom change. */
+          zoomedDomainText = zoomedDomain ?
+            '_' + truncateMantissa(zoomedDomain[0]) +
+            '_' + truncateMantissa(zoomedDomain[1]) :
+            '';
+          let taskId = blockId + '_' + nBins + zoomedDomainText;
           let summaryTask = this.get('summaryTask');
           let p = summaryTask[taskId];
           if (! p) {
+            if (zoomedDomain) {
+              dLog('getSummary', zoomedDomainText, zoomedDomain);
+            }
             getCounts.apply(this);
             function getCounts() {
-              let intervals = this.blocksReferencesLimits([blockId]),
-              interval = intervals[blockId];
-            p = summaryTask[taskId] =
-              this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, /*options*/{});
+              let interval = zoomedDomain;
+              let intervalFromLimits = (blockId) => {
+                let intervals = this.blocksReferencesLimits([blockId]);
+                return intervals[blockId];
+              };
+              if (! zoomedDomain) {
+                interval = intervalFromLimits(blockId);
+              }
+              let getCountsForInterval = (interval) =>
+                  this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, /*options*/{})
+              if (interval) {
+              p = summaryTask[taskId] =
+                  getCountsForInterval(interval);
+              } else {
+                /** interval is drawn from the result of blockFeatureLimits
+                 * (sent by getBlocksLimits() -> taskGetLimits() ->
+                 * getLimits()). It can happen (seen with GM from secondary
+                 * server) that the limits have not been received at this time,
+                 * so wait for them.
+                 * getBlockFeaturesCounts() with interval === undefined will use
+                 * bucketAuto, which doesn't produce even-size bins.
+                 */
+                p = summaryTask[taskId] =
+                  new Ember.RSVP.Promise((resolve) => { Ember.run.later(() => {
+                    interval = intervalFromLimits(blockId);
+                    resolve(interval); }, 4000); })
+                  .then(getCountsForInterval);
+              }
             /* this could be structured as a task within models/block.js
              * A task would have .drop() to avoid concurrent request, but
              * actually want to bar any subsequent request for the same taskId,
              * which is provided by summaryTask[taskId] above.
              */
             p.then((featuresCounts) => {
-              let block = this.peekBlock(blockId);
               if (! block)
                 console.log('getSummary featuresCounts', featuresCounts, blockId);
-              else
+              else {
+                let i = featuresCounts.findIndex((fc) => fc._id === 'outsideBoundaries');
+                if (i !== -1) {
+                  dLog('getSummary', featuresCounts[i]);
+                  delete featuresCounts[i];
+                }
+                let binSize = featuresCounts && featuresCounts.length ?
+                    featuresCounts[0].idWidth[0] :
+                    intervalSize(interval) / nBins,
+                    result = {binSize, nBins, domain : interval, result : featuresCounts};
+                block.get('featuresCountsResults').pushObject(result);
                 block.set('featuresCounts', featuresCounts);
+              }
             });
             }
           }
@@ -703,6 +767,12 @@ export default Service.extend(Ember.Evented, {
         }, {});
       return blocksById;
     }),
+  id2Block(blockId) {
+    let
+    blocksById = this.get('blocksById'),
+    block = blocksById[blockId];
+    return block;
+  },
   selected: Ember.computed(
     'blockValues.@each.isSelected',
     function() {
@@ -771,13 +841,13 @@ export default Service.extend(Ember.Evented, {
    * These are suited to be rendered by axis-chart.
    */
   viewedChartable: Ember.computed(
-    'viewed.@each.{featuresCounts,isChartable}',
+    'viewed.@each.{featuresCounts,isChartable,isZoomedOut}',
     function() {
       let records =
         this.get('viewed')
         .filter(function (block) {
           let tags = block.get('datasetId.tags'),
-          featuresCounts = block.get('featuresCounts'),
+          featuresCounts = block.get('featuresCounts') && block.get('isZoomedOut'),
           line = block.get('isChartable');
           if (line)
             console.log('viewedChartable', tags, block);

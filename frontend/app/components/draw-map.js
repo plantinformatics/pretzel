@@ -23,15 +23,18 @@ import config from '../config/environment';
 import { EventedListener } from '../utils/eventedListener';
 import { chrData, cmNameAdd } from '../utils/utility-chromosome';
 import { eltWidthResizable, eltResizeToAvailableWidth, noShiftKeyfilter, eltClassName, tabActive, inputRangeValue, expRange  } from '../utils/domElements';
+import { I } from '../utils/draw/d3-svg';
 import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
 import { Viewport } from '../utils/draw/viewport';
 import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
 import { AxisTitleBlocksServers } from '../utils/draw/axisTitleBlocksServers_tspan';
-import { brushClip } from '../utils/draw/axisBrush';
+import { brushClip, showAxisZoomResetButtons } from '../utils/draw/axisBrush';
 
 import {  Axes, maybeFlip, maybeFlipExtent,
           ensureYscaleDomain,
-          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll /*, axisTitleColour*/  }  from '../utils/draw/axis';
+          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll,
+          axisFeatureCircles_selectAll
+          /*, axisTitleColour*/  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify  }  from '../utils/draw/stacksAxes';
 import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Name, setCount } from '../utils/stacks';
 import { collateAdjacentAxes, log_adjAxes,  log_adjAxes_a, isAdjacent } from '../utils/stacks-adj';
@@ -485,6 +488,8 @@ export default Ember.Component.extend(Ember.Evented, {
                     inRangeI : inRangeI,
                     patham,
                     axisName2MapChr,
+                    collateO,
+                    updateXScale,
                     updateAxisTitleSize,
                     axisStackChanged,
                     axisScaleChanged,
@@ -653,9 +658,6 @@ export default Ember.Component.extend(Ember.Evented, {
      * Currently a debugging / devel feature, will probably re-purpose to display metadata.
      */
     let showHoverExtraText = true;
-
-    /** Used for d3 attributes whose value is the datum. */
-    function I(d) { /* console.log(this, d); */ return d; };
 
     let svgContainer;
 
@@ -994,11 +996,6 @@ export default Ember.Component.extend(Ember.Evented, {
 
     /*------------------------------------------------------------------------*/
 
-
-    let zoomSwitch,resetSwitch;
-    let zoomed = false;
-    // let reset = false;
-    // console.log("zoomSwitch", zoomSwitch);
 
     let pathFeatures = oa.pathFeatures || (oa.pathFeatures = {}); //For tool tip
 
@@ -2601,6 +2598,15 @@ export default Ember.Component.extend(Ember.Evented, {
 
       let axisTitleBlocksServers = new AxisTitleBlocksServers(oa.svgContainer, oa.axisTitleLayout, me.get('apiServers'));
       t.on('end', () => axisTitleBlocksServers.position(axisTitleS));
+
+      /** showZoomResetButtonXPosn() is called in axis-1d and axis-2d,
+       * ideally the call will be only in axis-1d, but for now this
+       * picks up some cases not covered.  */
+      let 
+      axisIds = axisTitleS.nodes().mapBy('__data__'),
+      axes1 = axisIds.map((axisId) => oa.axes[axisId]);
+      axes1.forEach(
+        (a) => a.axis1d && Ember.run.bind(a.axis1d, a.axis1d.showZoomResetButtonXPosn)());
     }
     updateAxisTitleSize(axisG.merge(axisS));
 
@@ -3760,8 +3766,9 @@ export default Ember.Component.extend(Ember.Evented, {
       if (selectedAxes.length > 0) {
         axisFeatureCirclesBrushed();
         
-        if (! oa.axisApi.axisFeatureCirclesBrushed)
+        if (! oa.axisApi.axisFeatureCirclesBrushed) {
           oa.axisApi.axisFeatureCirclesBrushed = axisFeatureCirclesBrushed;
+        }
 
         /** For those axes in selectedAxes, if the axis has a brushed region,
          * draw axis circles for features within the brushed region.
@@ -3925,47 +3932,8 @@ export default Ember.Component.extend(Ember.Evented, {
         d3.selectAll(fadedSelector).classed("faded", featureNotSelected2);
       } // axisFeatureCirclesBrushed()
 
-        /** d3 selection of the brushed axis. */
-        let axisS = svgContainer.selectAll("#" + eltId(name[0]));
-        let zoomSwitchS = axisS
-          .selectAll('g.btn')
-          .data([1]);
-        let zoomSwitchE = zoomSwitchS
-          .enter()
-          .append('g')
-          .attr('class', 'btn');
-        zoomSwitchE.append('rect');
-        zoomSwitch = zoomSwitchS.merge(zoomSwitchE);
-        zoomSwitch
-          .attr('transform', yAxisBtnScale);
-        let zoomResetSwitchTextE =
-          zoomSwitchE.append('text')
-          .attr('x', 30).attr('y', 20);
-        let zoomResetSwitchText =
-        zoomSwitch.selectAll('text')
-          .text('Zoom');
-        
-        zoomSwitch.on('mousedown', function () {
-          d3.event.stopPropagation();
-        });
-        zoomSwitch.on('click', function () {
-          d3.event.stopPropagation();
-          let brushExtents = getBrushExtents();
-          zoom(that,brushExtents);
-          zoomed = true;
+        showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, Ember.run.bind(me, me.get('resetZooms')), brushedAxisID, me);
 
-          //reset function
-          //Remove all the existing circles
-          axisFeatureCircles_selectAll().remove();
-          zoomResetSwitchText
-            .text('Reset');
-
-          resetSwitch = zoomSwitch;
-          resetSwitch.on('click',function(){resetZoom(brushedAxisID);
-          });
-        });
-
-        
       } else {
         // brushHelper() is called from brushended() after zoom, with selectedAxes.length===0
         // At this time it doesn't make sense to remove the resetSwitch button
@@ -3998,29 +3966,51 @@ export default Ember.Component.extend(Ember.Evented, {
       let brushedDomain = brushRange ? axisRange2Domain(brushedAxisID, brushRange) : undefined;
       axisBrush.set('brushedDomain', brushedDomain);
 
+      let axis = oa.axes[brushedAxisID],
+          axis1d = axis && axis.axis1d;
+      if (axis1d) {
+        Ember.run.bind(axis1d, axis1d.showZoomResetButtonState)();
+      }
+
       me.send('selectChromById', brushedAxisID);
 
     } // brushHelper
 
 
-          /** Call resetZoom(undefined) - reset the zoom of all zoomed axes (selectedAxes).
+          /** Call resetZoom(axisId) - reset the zoom of one or all zoomed axes (selectedAxes).
+           * Applies to the specified axis, or all brushes if axisId is undefined.
+           * @param  axisId  db id of reference block of axis (i.e. .axisName) or undefined
+           * @desc resetZooms() resets both the brush/es and the
+           * zoom/s, and is callable via feed.trigger(), whereas resetZoom()
+           * clears just the zoom and is local.
            */
         // console.log("me.get('resetZooms')", me.get('resetZooms') !== undefined);
           if (! me.get('resetZooms'))
-          me.set('resetZooms', function() {
-            console.log('resetZooms', oa.selectedAxes, oa.brushedRegions);
-            resetBrushes();
-            resetZoom(undefined);
-            console.log('after resetZoom', oa.selectedAxes, oa.brushedRegions);
+          me.set('resetZooms', function(axisId) {
+            console.log('resetZooms', axisId, oa.selectedAxes, oa.brushedRegions);
+            resetBrushes(axisId);
+            resetZoom(axisId);
+            console.log('after resetZoom', axisId, oa.selectedAxes, oa.brushedRegions);
           });
-        function resetBrushes()
+        /** Clear the brush of the specified axis, or all brushes if axisId is undefined.
+         * @param  axisId  db id of reference block of axis (i.e. .axisName) or undefined
+         */
+        function resetBrushes(axisId)
         {
-          let brushed = d3.selectAll("g.axis-all > g.brush > g[clip-path]");
-          /** brushed[j] may correspond to oa.selectedAxes[j] and hence
-           * brushExtents[j], but it seems possible for their order to not
-           * match.  This is only used in trace anyway.
-           */
-          let brushExtents = getBrushExtents();
+          let
+          axisClipId = axisId ? '="url(#axis-clip-' + axisId + ')"' : '',
+          brushSelector = "g.axis-all > g.brush > g[clip-path" + axisClipId + "]",
+          brushExtents;
+          if (axisId) {
+            brushExtents = [brushedRegions[axisId]];
+          } else {
+            /** brushed[j] may correspond to oa.selectedAxes[j] and hence
+             * brushExtents[j], but it seems possible for their order to not
+             * match.  This is only used in trace anyway.
+             */
+            brushExtents = getBrushExtents();
+          }
+          let brushed = d3.selectAll(brushSelector);
           brushed.each(function (axisName, i, g) {
             /* `this` refers to the brush g element.
              * pass selection==null to clear the brush.
@@ -4028,10 +4018,14 @@ export default Ember.Component.extend(Ember.Evented, {
              * and hence index is 0.
              */
             let j = i;
-            console.log('resetBrushes', this, axisName, oa.selectedAxes[j], oa.brushedRegions[axisName], brushExtents[j]);
+            dLog('resetBrushes', axisId, this, axisName, oa.selectedAxes[j], oa.brushedRegions[axisName], brushExtents[j]);
             if (this.__brush)
               d3.select(this).call(y[axisName].brush.move, null);
             let brushedAxisID = axisName;
+            /* the above call(brush.move, null) causes
+             * brushedRegions[brushedAxisID] to be deleted, via :
+             * brushended() -> brushHelper() -> removeBrushExtent()
+             . */
             if (oa.brushedRegions[brushedAxisID])
               removeBrushExtent(brushedAxisID);
           });
@@ -4081,16 +4075,7 @@ export default Ember.Component.extend(Ember.Evented, {
               // reset zoom of all axes clears selectedFeatures - check if this was the intention; also should selectedAxes be cleared ?
               selectedFeatures_clear();
             }
-            zoomed = false; // not used
           }
-
-    function axisFeatureCircles_selectAll() {
-      /** see also handleFeatureCircleMouseOver(), which targets a specific feature. */
-      let
-        selector = "g.axis-outer > circle",
-      selection = oa.svgContainer.selectAll(selector);
-      return selection;
-    }
 
 
     let targetIdCount = 0;
@@ -4214,7 +4199,7 @@ export default Ember.Component.extend(Ember.Evented, {
       else
         axis.verify();
 
-      let t = oa.svgContainer.transition().duration(750);
+      let t = oa.svgContainer; // .transition().duration(750);
       /** The response to mousewheel zoom is direct, no transition delay.  requestAnimationFrame() is used. */
       let tRaf = undefined; // or t.duration(10);
       /** true if the axis domain is changed. */
@@ -4250,7 +4235,7 @@ export default Ember.Component.extend(Ember.Evented, {
           domain,
           brushedDomain;
           ensureYscaleDomain(yp, axis);
-          if (brushExtents) {
+          if (brushExtents && brushExtents[i]) {
           brushedDomain = brushExtents[i].map(function(ypx) { return yp.invert(ypx /* *axis.portion*/); });
           // brushedDomain = [yp.invert(brushExtents[i][0]), yp.invert(brushExtents[i][1])];
           console.log("zoom", axisName, p, i, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
@@ -4267,7 +4252,19 @@ export default Ember.Component.extend(Ember.Evented, {
           }
           if (domain) {
             domainChanged = true;
-            axis.setZoomed(true);
+            /** mousewheel zoom out is limited by javascript
+             * precision, so consider domain equal if first 7 chars
+             * are equal.  */
+            function limitPrecision(x) { return ('' + x).substr(0,7); };
+            let 
+            /** total domain */
+            domainAll = axis.axis1d.get('blocksDomain').toArray(),
+            domainAllS = domainAll.map(limitPrecision),
+            domainFS = maybeFlip(domain, axis.flipped).map(limitPrecision),
+            /** true if (mousewheel) zoomed out to the limit of the whole domain. */
+            zoomedOut = isEqual(domainAllS, domainFS);
+
+            axis.setZoomed(! zoomedOut);
             y[p].domain(domain);
             oa.ys[p].domain(domain);
             // scale domain is signed. currently .zoomedDomain is not, so maybeFlip().
@@ -4290,6 +4287,8 @@ export default Ember.Component.extend(Ember.Evented, {
           }
         }
       });
+      showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, Ember.run.bind(me, me.get('resetZooms')), axisName, me);
+
       if (domainChanged) {
         // axisStackChanged(t);
         me.throttledZoomedAxis(axisName, t);

@@ -4,6 +4,8 @@ import { task } from 'ember-concurrency';
 
 const { Mixin } = Ember;
 
+import { debounce, throttle } from 'lodash/function';
+
 import { Stacked } from '../utils/stacks';
 import { updateDomain } from '../utils/stacksLayout';
 import VLinePosition from '../models/vline-position';
@@ -80,7 +82,16 @@ export default Mixin.create({
       axisPosition = this.get('currentPosition');
     dLog('setDomain', this, 'domain', domain, axisPosition);
     axisPosition.set('yDomain', domain);
+    this.setDomainDebounced(domain);
+    this.setDomainThrottled(domain);
   },
+  setDomainDebounced : debounce(function (domain) {
+    Ember.run.bind(this, this.set)('currentPosition.yDomainDebounced', domain);
+  }, 333, {maxWait : 1000}),
+  setDomainThrottled : throttle(function (domain) {
+    Ember.run.bind(this, this.set)('currentPosition.yDomainThrottled', domain);
+  }, 1000),
+
   /** Set the zoomed of the current position to the given value
    */
   setZoomed(zoomed)

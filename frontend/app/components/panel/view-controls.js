@@ -29,6 +29,11 @@ export default Ember.Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** Toggle axis-charts / Chart1 between showing the ChartLine-s as <rect> bars or lines   */
+  chartBarLine : true,
+
+  /*--------------------------------------------------------------------------*/
+
   /** may be set via URL param - @see readParsedOptions(). */
   pathsViaStream : true,
 
@@ -122,6 +127,32 @@ export default Ember.Component.extend({
       }
       return params;
     }),
+
+  featuresCountsNBinsLinear : expRangeInitial(100, expRangeBase(100, 500)),
+
+  featuresCountsNBins : Ember.computed('featuresCountsNBinsLinear', function () {
+    let
+     thresholdLinear = +this.get('featuresCountsNBinsLinear'),
+     threshold = expRange(thresholdLinear, 100, 500);
+    if (threshold) {
+      threshold = Math.round(threshold);
+    }
+    dLog('featuresCountsNBins', thresholdLinear, threshold);
+    return threshold;
+   }),
+
+  featuresCountsThresholdLinear : expRangeInitial(500, expRangeBase(100, 10000)),
+
+  featuresCountsThreshold : Ember.computed('featuresCountsThresholdLinear', function () {
+    let
+     thresholdLinear = +this.get('featuresCountsThresholdLinear'),
+     threshold = expRange(thresholdLinear, 100, 10000);
+    if (threshold) {
+      threshold = Math.round(threshold);
+    }
+    dLog('featuresCountsThreshold', thresholdLinear, threshold);
+    return threshold;
+   }),
 
   /*--------------------------------------------------------------------------*/
 

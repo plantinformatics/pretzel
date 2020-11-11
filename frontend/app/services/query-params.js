@@ -28,13 +28,20 @@ export default Service.extend(Ember.Evented, {
     if (options_param && (options = parseOptions(options_param)))
     {
       // alpha enables new features which are not yet robust.
+      /* splitAxes (distinct from splitAxes1) enables buttons in axis-2d.hbs for :
+       *  addTracks, addChart, addLd, addTable
+       * axis-tracks and axis-charts are now implemented and enabled by default (splitAxes1).
+       */
       options.splitAxes |= options.alpha;
     }
     else
       options = {};
     /* splitAxes1 is now enabled by default. */
-    if (! options.splitAxes1)
+    if (! options.hasOwnProperty('splitAxes1'))
       options.splitAxes1 = true;
+    /* featuresCounts is now enabled by default. */
+    if (! options.hasOwnProperty('featuresCounts'))
+      options.featuresCounts = true;
     
     return options;
   }),

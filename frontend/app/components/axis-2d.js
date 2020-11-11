@@ -1,6 +1,10 @@
 import Ember from 'ember';
 const { inject: { service } } = Ember;
 
+import { task } from 'ember-concurrency';
+
+import lodashMath from 'lodash/math';
+
 import { eltWidthResizable } from '../utils/domElements';
 import { eltIdGpRef }  from '../utils/draw/axis';
 import AxisEvents from '../utils/draw/axis-events';
@@ -11,6 +15,13 @@ import { stacks, xScaleExtend  } from '../utils/stacks';
 const dLog = console.debug;
 
 const axisTransitionTime = 750;
+/** 0 or 1 to disable or enable transitions */
+const transitionEnable = 1;
+
+/**
+ * space 10px from the axis, to leave room for brush hover/highlight, to not overlap track hover.
+ */
+const marginLeft = 10;
 
 
 export default Ember.Component.extend(Ember.Evented, AxisEvents, {
@@ -25,7 +36,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   targetEltId : Ember.computed('axisID', function() {
     let id = 'axis2D_' + this.axisID;
-    console.log("targetEltId", this, id);
+    dLog("targetEltId", this, id);
     return id;
   }),
 
@@ -40,7 +51,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * @return [] if there are no blocks with data in the axis.
    */
   dataBlocks : Ember.computed(
-    'axisID',  'blockService.dataBlocks.@each.{isViewed,hasFeatures}',
+    'axisID',
+    /* Would like to depend on blockService.dataBlocks, and specifically on
+     * blockService.dataBlocks[id], but blockService.dataBlocks is a Map not an array,
+     * so depend on loadedViewedChildBlocks which dataBlocks depends on.
+     */
+    'blockService.loadedViewedChildBlocks.@each.{isViewed,hasFeatures}',
     'blockService.viewed.[]',
     function () {
       let
@@ -48,9 +64,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         dataBlocksMap = this.get('blockService.dataBlocks'),
       id = this.get('axisID'),
       dataBlocks = (dataBlocksMap && dataBlocksMap.get(id)) || [];
-      console.log('dataBlocksMap', id, dataBlocksMap, dataBlocks);
+      dLog('dataBlocksMap', id, dataBlocksMap, dataBlocks);
       return dataBlocks;
     }),
+  /** This is passed as trackBlocksR to axis-tracks and axis-blocks.
+   */
+  trackBlocks : Ember.computed.filter('dataBlocks.@each.isZoomedOut', function(block, index, array) {
+    return ! block.get('isZoomedOut');
+  }),
 
   /** @return blocks which are viewedChartable, and whose axis is this axis.
    */
@@ -60,7 +81,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       id = this.get('axisID'),
       viewedChartable = this.get('blockService.viewedChartable')
         .filter((b) => { let axis = b.get('axis'); return axis && axis.axisName === id; });
-      console.log('viewedChartable', id, viewedChartable);
+      dLog('viewedChartable', id, viewedChartable);
       return viewedChartable;
   }),
 
@@ -70,40 +91,31 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   listenFeed: function() {
     let f = this.get('feed'); 
-    console.log("listen", f);
+    dLog("listen", f);
     if (f === undefined)
-      console.log('feed service not injected');
+      dLog('feed service not injected');
     else {
     }
   }.on('init'),
-
-  // remove the binding created in listen() above, upon component destruction
-  cleanupFeed: function() {
-    let f = this.get('feed');
-    if (f)
-    {
-    }
-
-  }.on('willDestroyElement'),
 
   /** axis-2d receives axisStackChanged from draw-map and propagates it as zoomed to its children.
    * axisStackChanged() also sends zoomed, so debounce.
    */
   axisStackChanged : function() {
-    console.log("axisStackChanged in components/axis-2d");
+    dLog("axisStackChanged in components/axis-2d");
     Ember.run.throttle(this, this.sendZoomed, [], 500);
   },
 
   /** @param [axisID, t] */
   sendZoomed : function(axisID_t)
   {
-    console.log("sendZoomed", axisID_t);
+    dLog("sendZoomed", axisID_t);
     this.trigger("zoomed", axisID_t);
   },
 
   /** @param [axisID, t] */
   zoomedAxis : function(axisID_t) {
-    console.log("zoomedAxis in components/axis-2d", axisID_t);
+    dLog("zoomedAxis in components/axis-2d", axisID_t);
     Ember.run.throttle(this, this.sendZoomed, axisID_t, 500);
   },
 
@@ -113,55 +125,50 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   actions: {
     addTracks : function()
     {
-      if (false)
-      {
-        // works if axisArea is (string selector and) is not within an existing ember view
-      const tracksComponent = Ember.getOwner(this).factoryFor('component:tracks');
-        // This selector should now be '... #axis2D_' + axisID
-      let axisArea = Ember.$('.foreignObject > body > #axis2D');
-      console.log("components/axis-2d addTracks", axisArea, tracksComponent);
-      let t = tracksComponent.create();
-        t.appendTo(axisArea);
-      }
-      else
-      {
-        this.get('subComponents').pushObject('axis-tracks');
-        console.log("addTracks", this.get('axisID'), this.get('subComponents'));
-      }
+      this.get('subComponents').pushObject('axis-tracks');
+      dLog("addTracks", this.get('axisID'), this.get('subComponents'));
     },
     addTable : function()
     {
         this.get('subComponents').pushObject('axis-table');
-      console.log("addTable", this.get('axisID'), this.get('subComponents'));
+      dLog("addTable", this.get('axisID'), this.get('subComponents'));
     },
     addChart : function()
     {
         this.get('subComponents').pushObject('axis-chart');
-      console.log("addChart", this.get('axisID'), this.get('subComponents'));
+      dLog("addChart", this.get('axisID'), this.get('subComponents'));
     },
     addLd : function()
     {
       this.get('subComponents').pushObject('axis-ld');
-      console.log("addLd", this.get('axisID'), this.get('subComponents'));
+      dLog("addLd", this.get('axisID'), this.get('subComponents'));
     },
     remove: function(){
       this.remove();
-      console.log("components/axis-2d remove()");
+      dLog("components/axis-2d remove()");
     },
 
     axisWidthResize : function(axisID, width, dx) {
-      console.log("axisWidthResize in components/axis-2d", axisID, width, dx);
+      dLog("axisWidthResize in components/axis-2d", axisID, width, dx);
       let axisWidthResize = this.get('axisWidthResize');
       if (axisWidthResize) axisWidthResize(axisID, width, dx);
     },
     axisWidthResizeEnded : function() {
-      console.log("axisWidthResizeEnded in components/axis-2d");
+      dLog("axisWidthResizeEnded in components/axis-2d");
       let axisWidthResizeEnded = this.get('axisWidthResizeEnded');
       if (axisWidthResizeEnded) axisWidthResizeEnded();
     }
 
 
   },
+
+  /** width of track <rect>s */
+  trackWidth : Ember.computed('trackWidth', function () {
+    let trackWidthOption = this.get('urlOptions.trackWidth'),
+    trackWidth = trackWidthOption || 10;
+    dLog('init', 'from urlOptions, trackWidth', trackWidth, trackWidthOption);
+    return trackWidth;
+  }),
 
   dualAxis : Ember.computed.alias('urlOptions.dualAxis'),
   rectWidth() {
@@ -179,7 +186,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       match = transform && transform.match(/translate\(([0-9.]+),/);
       width = match && +match[1];
     }
-    console.log("rectWidth", this.get('startWidth'), this.currentWidth(), rect2.node(), path.node(), width);
+    dLog("rectWidth", this.get('startWidth'), this.currentWidth(), rect2.node(), path.node(), width);
     return width;
   },
   currentWidth() {
@@ -200,11 +207,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * @return [horizontal start offset, width] for each child.
    * The key of the result is the same as the input .childWidths
    */
-  allocatedWidths : Ember.computed('childWidths.{chart,tracks}.1', 'width', 'adjustedWidth', function () {
+  allocatedWidths : Ember.computed('childWidths.{chart,tracks,trackCharts}.1', 'width', 'adjustedWidth', function () {
     // if @each were supported for hashes, would depend on : 'childWidths.@each.1', 
     let allocatedWidths,
     childWidths = this.get('childWidths'),
-    groupNames = Object.keys(childWidths),
+    groupNames = childWidths ? Object.keys(childWidths) : [],
     requested = 
       groupNames.reduce((result, groupName) => {
         let cw = childWidths[groupName];
@@ -217,12 +224,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      * If spare < 0 then each child will get < min, but not <0.
      */
     let
+    trackWidth = this.get('trackWidth'),
     startWidth = this.get('startWidth'),
     width = this.get('width'),
-    // width || (this.get('axisUse') && this.rectWidth())
-    available = this.get('adjustedWidth') || startWidth || 60,
+    available = this.get('adjustedWidth') || startWidth || 0,
     /** spare and share may be -ve */
-    spare = available - (requested ? requested[0] : 0),
+    spare = available ? (available - (requested ? requested[0] : 0)) : 0,
     share = 0;
     if (spare < 0)
       spare = 0;
@@ -240,10 +247,21 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       result[groupName] = allocated;
       return result;
     }, {});
-    Ember.run.next(() => this.set('allocatedWidthsMax', offset));
+    Ember.run.next(() => !this.isDestroying && this.set('allocatedWidthsMax', offset));
     dLog('allocatedWidths', allocatedWidths, childWidths, width, available, offset);
     return allocatedWidths;
   }),
+  /** @return width from left axis to right edge <path>
+   * This is marginLeft + allocatedWidthsMax
+   */
+  allocatedWidthRect : Ember.computed('allocatedWidths', 'allocatedWidthsMax', function () {
+    let
+    /** Evaluation of allocatedWidths sets allocatedWidthsMax. */
+    allocatedWidths = this.get('allocatedWidths'),
+    allocatedWidthsMax = this.get('allocatedWidthsMax');
+    return marginLeft + (allocatedWidthsMax || 0);
+  }),
+
   contentWidth : function (componentName, axisID, width) {
     let
       childWidths = this.get('childWidths'),
@@ -254,7 +272,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     me = this,
     args = [total, deltaWidth]
     ;
-    console.log('contentWidth', componentName, axisID, width, childWidths, previous, deltaWidth, startWidth, total);
+    dLog('contentWidth', componentName, axisID, width, childWidths, previous, deltaWidth, startWidth, total);
      function call_setWidth() {
       childWidths[componentName] = width;
       me.setWidth.apply(me, args);
@@ -268,15 +286,18 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   init() {
     this._super(...arguments);
+
     this.set('axis1d.axis2d', this);
     this.set('childWidths', Ember.Object.create());
   },
 
   willDestroyElement() {
+    this.willDestroyElement2();
     let extended = this.get('axis1d.extended');
     if (extended) {
       dLog('willDestroyElement .extended', extended, this.get('axisID'), this.get('axis1d'));
     }
+    this.axisWidthResizeEnded();
     /* Expect here that .extended is false / 0, and this will cause show() to remove the rendered SVG elements.
      * including the right edge path (so no need for positionRightEdge() to remove it).
      */
@@ -331,7 +352,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     } else {
       this.set('axisUse', axisUse);
       this.set('use', use);
-      console.log("axis-2d didInsertElement", this, this.get('axisID'), axisUse.node(), use.node());
+      dLog("axis-2d didInsertElement", this, this.get('axisID'), axisUse.node(), use.node());
       this.set('subComponents', []);
     }
   },
@@ -348,15 +369,17 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   axisWidthResize(axisID, width, dx)
   {
-    console.log("axisWidthResize", axisID, width, dx);
-    let oa = this.get('oa');
-    oa.axes[axisID].extended = width;
+    dLog("axisWidthResize", axisID, width, dx);
+    // this is already done when called from setWidth()
+    this.set('adjustedWidth', width);
     // axisWidthResizeRight(axisID, width, dx);
   },
   axisWidthResizeEnded()
   {
-    console.log("axisWidthResizeEnded");
-
+    dLog("axisWidthResizeEnded");
+    this.widthEffects();
+  },
+  widthEffects() {
     this.updateXScale();
     stacks.changed = 0x10;
     let oa = this.get('oa');
@@ -366,6 +389,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     if (! this.get('axis1d.extended')) {
       this.show();
     }
+    // may trigger this differently, could be action.
+    Ember.run.next(() => this.get('axis1d').widthEffects());
   },
   /** Update the X scale / horizontal layout of stacks
    * copied from draw-map; the x scale will likely move to stacks-view, and this will likely be dropped.
@@ -386,26 +411,34 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     /** could also use : axis.axis1d.get('dataBlocks.length');
      * subtract 1 for the reference block;  for a GM, map 0 -> 1 */
     dataBlocksN = (blocks && blocks.length - 1) || 1,
-    trackWidth = 10,
+    trackWidth = this.get('trackWidth'),
     trackBlocksWidth =
       /*40 +*/ dataBlocksN * /*2 * */ trackWidth /*+ 20 + 50*/,
-    initialWidth = /*50*/ trackBlocksWidth,
+    initialWidth = 0, // /*50*/ trackBlocksWidth,
     /** this is just the Max value, not [min,max] */
     allocatedWidth,
     width = axis ? 
       (allocatedWidth = axis.allocatedWidth()) ||
       ((axis.extended === true) ? initialWidth : axis.extended) :
     undefined;
-    dLog('getAxisExtendedWidth', width, allocatedWidth, initialWidth, axis.extended);
+    dLog('getAxisExtendedWidth', width, allocatedWidth, initialWidth, axis && axis.extended);
     return width;
   },
+  selectAxisUse() {
+    let
+    axisG = this.get('axisUse'),
+    axisUse = axisG.selectAll("g.axis-use");
+    return axisUse;
+  },
+
   axisShowExtend(axis, axisID, axisG)
   {
     dLog('axisShowExtend', axis, axisID, axisG);
     /** x translation of right axis */
     let 
-      initialWidth = /*50*/ this.getAxisExtendedWidth(axisID),
-    axisData = axis.extended ? [axisID] : [];
+    /** value of .extended may be false, so || 0.  */
+      initialWidth = /*50*/ this.getAxisExtendedWidth(axisID) || 0,
+    axisData = axis && axis.extended ? [axisID] : [];
     let oa = this.get('oa');
     if (axisG === undefined)
       axisG = oa.svgContainer.selectAll("g.axis-outer#id" + axisID);
@@ -413,7 +446,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .data(axisData);
     let ugx = ug
       .exit()
-      .transition().duration(500)
+      .transition().duration(transitionEnable * 500)
       .remove();
     ugx
       .selectAll("use")
@@ -427,7 +460,9 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let eg = ug
       .enter()
       .append("g")
-      .attr("class", "axis-use");
+      .attr("class", "axis-use")
+      // space 10px from the axis, to leave room for brush hover/highlight, to not overlap track hover.
+      .attr('transform', 'translate(' + marginLeft + ')');
     let em = ug.merge(eg);
 
     /** If dualAxis, use <use> to show 2 identical axes.
@@ -453,7 +488,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       rm = er.merge(em.selectAll('g.axis-use > rect'))
         .attr("height", vc.yRange);
       rm
-        .transition().duration(1000)
+        .transition().duration(transitionEnable * 1000)
         .attr("width", initialWidth);
     }
     else
@@ -462,7 +497,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       const xOffset = 25, shiftRight=5;
       let 
         tickWidth = xOffset/5,
-      edgeHeight = axis.yRange(),
+      edgeHeight = axis ? axis.yRange() : 0,
       line = d3.line(),
       sLine = line([
         [+tickWidth, 0],
@@ -474,11 +509,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .append("path"),
       thisAxis2d = this,
       rm = ra.merge(em.selectAll('g.axis-use > path'))
-        .transition().duration(1000)
-        .attr("transform",function(d) {
-          let eWidth = thisAxis2d.getAxisExtendedWidth(d);
-          dLog('axis- path transform', eWidth, d, this);
-               return "translate(" + (eWidth) + ",0)";})
+        .transition().duration(transitionEnable * 1000)
         .attr("d", sLine);
     }
 
@@ -497,13 +528,23 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .append("xhtml:body")
       .attr("class", "axis-table");
     ef
-      .transition().duration(1000)
+      .transition().duration(transitionEnable * 1000)
       .attr("width", initialWidth);
     if (eb.node() !== null)	  // .style() uses .node()
       eb
       .append("div")
       .attr("id", "axis2D_" + axisID) // matches axis-2d:targetEltId()
       .style("border:1px green solid");
+
+      let axis1d = this.get('axis1d');
+      if (axis1d) {
+        axis1d.showZoomResetButtonXPosn();
+      }
+
+    /** this clipPath is created in AxisCharts:frame(), id is axisClipId(). */
+    let axisClipRect = em.selectAll("g.chart > clipPath > rect");
+    axisClipRect
+      .attr("width", initialWidth)
   },
 
   /*--------------------------------------------------------------------------*/
@@ -514,145 +555,163 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * this is the key part which needs to update.
    */
   positionRightEdgeEffect : Ember.computed('allocatedWidthsMax', 'allocatedWidths', function () {
-    this.positionRightEdge();
+    this.get('positionRightEdge').perform();
+    this.widthEffects();
   }),
-  positionRightEdge() {
-    let axisUse;
+/* Position the right edge path (if !dualAxis) for the current width.
+ * Making this a task with .drop() enables avoiding conflicting transitions.
+ * (as in draw/block-adj.js : pathPosition() )
+ */
+  positionRightEdge: task(function * (pathSelection, thenFn) {
+    let axisUse, width;
     if (! this.get('dualAxis') && (axisUse = this.get('axisUse'))) {
-      let
-      shiftRight=5,
-      /** allocatedWidths also calculates allocatedWidthsMax. */
-      allocatedWidths = this.get('allocatedWidths'),
-      width = this.get('allocatedWidthsMax');
+      if (! this.get('axis1d.extended')) {
+        width = 0;
+      } else {
+        let
+        shiftRight=5,
+        /** allocatedWidths also calculates allocatedWidthsMax. */
+        allocatedWidths = this.get('allocatedWidths'),
+        sum = this.childWidthsSum();
+        width = Math.max(sum, this.get('allocatedWidthsMax') || 0);
+      }
       if (width !== undefined) {
         let
-          p = axisUse.selectAll('g.axis-use > path')
-          .transition().duration(1000)
+        p = axisUse.selectAll('g.axis-use > path')
+          // .transition().duration(transitionEnable * 1000)
           .attr("transform",function(d) {return "translate(" + (width) + ",0)";});
         dLog('positionRightEdgeEffect', axisUse.node(), width, p.node());
       }
     }
+  }).keepLatest(),
+  childWidthsSum() {
+    let sum = lodashMath.sum(Object.values(this.get('childWidths')).mapBy('1'));
+    return sum;
   },
+
 
   didRender() {
     let me = this;
     let prevSize,  currentSize;
     let stacks = this.get('data').stacks;
-    console.log("components/axis-2d didRender()");
+    dLog("components/axis-2d didRender()");
 
-    /** Called when resizer element for split axis resize is dragged.
-     * @param d data of the resizer elt, which is axisID of the axis being resized
-     */
-    function resized(width, dx, eltSelector, resizable, resizer,  resizerElt, d)
-    {
-      console.log("resized", width, dx, eltSelector, resizable.node(), resizer.node(),  resizerElt, d);
-      // if resizer is in <foreignObject> then resize the <foreignObject>
-      if (resizerElt.classList[1] === 'inFO') {
-      let at = resizable.node(),
-        fo = at.parentElement.parentElement;
-        dLog('resized', fo, at);
-        fo.setAttribute('width', width);
-      }
-      setWidth(width, dx);
-    }
-    function setWidth (width, dx) {
-      // constructed in axisShowExtend()
-      // narrow to : g.axis-outer#id<axisID> > g.axis-use
-      let 
-        axisUse = me.get('axisUse'),
-      dualAxis = me.get('dualAxis'),
-      rectSel = 'g.axis-use ' + (dualAxis ? '' : '> clipPath ') + '> rect',
-      rect = axisUse.select(rectSel),
-      /** based on axisID. */
-      use = me.get('use');
-      /** initially data of use is axisID (d), until .data([width]) below */
-      let
-        startWidth = me.get('startWidth');
-      let
-        delta = width - (startWidth || 0),
-      ok = Math.abs(delta) < stacks.axisXRangeMargin;
-      console.log(startWidth, width, delta, "axisXRangeMargin", stacks.axisXRangeMargin, ok);
-      /* if !ok, maybe some animation to indicate the limit is reached,
-       * or can probably apply the above check as a filter :
-       * defaultFilter = dragResize.filter();  dragResize.filter(function () { defaultFilter(...) && ... ok; } );
-       */
-      if (ok)
-      {
-        use
-          .data([width])
-          .transition().duration(axisTransitionTime)
-          .attr("transform", function(d) {return "translate(" + d + ",0)";});
-        if (! use.empty())  // use.data() is not valid if empty
-          console.log('setWidth', use.node(), width, use.data(), use.attr('transform'), use.transition());
-        if (rect.size() == 0)
-          console.log('setWidth rect', rect.node(), axisUse.node(), use.node());
-        else
-        {
-          rect.attr("width", width);
-          console.log(rect.node(), rect.attr('width'));
-        }
-        let axisTitle = axisUse.selectAll('g > g.axis-all > text')
-          .transition().duration(axisTransitionTime)
-          // duplicated in utils/draw/axis.js : yAxisTitleTransform()
-          .attr("transform", "translate(" + width/2 + ",0)");
-        console.log('axisTitle', axisTitle);
-
-        /** Can use param d, same value as me.get('axisID').
-         * axisID is also on the parent of <use> :
-         * useElt = axisUse.node();
-         * (useElt.length > 0) && (axisID = useElt[0].parentElement.__data__);
-         */
-        let
-          axisID = me.get('axisID');
-        console.log('extended', me.get('axis1d.extended'), width);
-        me.set('width', width);
-        // When calculated .layoutWidth changes, take into account user adjustment to width.
-        me.set('adjustedWidth', width);
-        currentSize = width; // dx ?
-
-        /** when parentView.send(axisWidthResize ) was added in 22a6af9,
-         * draw-map was parentView of axis-2d;  now its parentView is axis-1d.
-         * Will soon drop this connection. */
-        let drawMap = me.get('drawMap');
-        /* Recalculate positions & translations of axes.
-         * A possible optimisation : instead, add width change to the x translation of axes to the right of this one.
-         */
-        drawMap.send('axisWidthResize', axisID, width, dx);
-      }
-      return ok;
-    };
-    this.set('setWidth', setWidth);
-    function resizeStarted()
-    {
-      me.set('startWidth', me.rectWidth());
-    }
-    function resizeEnded()
-    {
-      let drawMap = me.get('drawMap');
-      console.log("resizeEnded");
-      drawMap.send('axisWidthResizeEnded');
-      me.trigger('resized', prevSize, currentSize);
-      prevSize = currentSize;
-    }
-    function dragResizeListen () { 
-      let axisID = me.get('axisID'),
-      /** alternative : 'g.axis-outer#id' + axisID + ' .foreignObject' */
-       axisSel = 'div#axis2D_' + axisID;
-      let dragResize = eltWidthResizable(axisSel, undefined, resized);
-      if (! dragResize)
-        console.log('dragResizeListen', axisID, axisSel);
-      else
-      {
-        dragResize.on('start', resizeStarted);
-        dragResize.on('end', resizeEnded);
-      }
-    }
-    Ember.run.later(dragResizeListen, 1000);
+    Ember.run.later(() => this.dragResizeListen(), 1000);
   },
 
-  willDestroyElement() {
+  /** Called when resizer element for split axis resize is dragged.
+   * @param d data of the resizer elt, which is axisID of the axis being resized
+   */
+  resizedByDrag(width, dx, eltSelector, resizable, resizer,  resizerElt, d)
+  {
+    dLog("resizedByDrag", width, dx, eltSelector, resizable.node(), resizer.node(),  resizerElt, d);
+    // if resizer is in <foreignObject> then resize the <foreignObject>
+    if (resizerElt.classList[1] === 'inFO') {
+      let at = resizable.node(),
+          fo = at.parentElement.parentElement;
+      dLog('resizedByDrag', fo, at);
+      fo.setAttribute('width', width);
+    }
+    this.setWidth(width, dx);
+  },
+  setWidth (width, dx) {
+    // constructed in axisShowExtend()
+    // narrow to : g.axis-outer#id<axisID> > g.axis-use
+    let 
+    axisUse = this.get('axisUse'),
+    dualAxis = this.get('dualAxis'),
+    rectSel = 'g.axis-use ' + (dualAxis ? '' : '> clipPath ') + '> rect',
+    rect = axisUse.select(rectSel),
+    /** based on axisID. */
+    use = this.get('use');
+    /** initially data of use is axisID (d), until .data([width]) below */
+    let
+    startWidth = this.get('startWidth');
+    let
+    delta = width - (startWidth || 0),
+    ok = Math.abs(delta) < stacks.axisXRangeMargin;
+    dLog(startWidth, width, delta, "axisXRangeMargin", stacks.axisXRangeMargin, ok);
+    /* if !ok, maybe some animation to indicate the limit is reached,
+     * or can probably apply the above check as a filter :
+     * defaultFilter = dragResize.filter();  dragResize.filter(function () { defaultFilter(...) && ... ok; } );
+     */
+    if (ok)
+    {
+      use
+        .data([width])
+        .transition().duration(transitionEnable * axisTransitionTime)
+        .attr("transform", function(d) {return "translate(" + d + ",0)";});
+      if (! use.empty())  // use.data() is not valid if empty
+        dLog('setWidth', use.node(), width, use.data(), use.attr('transform'), use.transition());
+      if (rect.size() == 0)
+        dLog('setWidth rect', rect.node(), axisUse.node(), use.node());
+      else
+      {
+        rect.attr("width", width);
+        dLog(rect.node(), rect.attr('width'));
+      }
+      let axisTitle = axisUse.selectAll('g > g.axis-all > text')
+          .transition().duration(transitionEnable * axisTransitionTime)
+      // duplicated in utils/draw/axis.js : yAxisTitleTransform()
+          .attr("transform", "translate(" + width/2 + ",0)");
+      dLog('axisTitle', axisTitle);
+
+      /** Can use param d, same value as this.get('axisID').
+       * axisID is also on the parent of <use> :
+       * useElt = axisUse.node();
+       * (useElt.length > 0) && (axisID = useElt[0].parentElement.__data__);
+       */
+      let
+      axisID = this.get('axisID');
+      dLog('extended', this.get('axis1d.extended'), width);
+      this.set('width', width);
+      // When calculated .layoutWidth changes, take into account user adjustment to width.
+      this.set('adjustedWidth', width);
+      this.set('currentSize', width); // dx ?
+
+      /* Recalculate positions & translations of axes.
+       * A possible optimisation : instead, add width change to the x translation of axes to the right of this one.
+       */
+      this.axisWidthResize(axisID, width, dx);
+
+      let axis1d = this.get('axis1d');
+      if (axis1d) {
+        axis1d.showZoomResetButtonXPosn();
+      }
+    }
+    return ok;
+  },
+
+  resizeStarted()
+  {
+    this.set('startWidth', this.rectWidth());
+  },
+  resizeEnded()
+  {
+    dLog("resizeEnded");
+    this.axisWidthResizeEnded();
+    this.trigger('resized', this.get('prevSize'), this.get('currentSize'));
+    this.set('prevSize', this.get('currentSize'));
+  },
+  dragResizeListen () { 
+    let axisID = this.get('axisID'),
+        /** alternative : 'g.axis-outer#id' + axisID + ' .foreignObject' */
+        axisSel = 'div#axis2D_' + axisID;
+    let dragResize = eltWidthResizable(axisSel, undefined, Ember.run.bind(this, this.resizedByDrag));
+    if (! dragResize)
+      dLog('dragResizeListen', axisID, axisSel);
+    else
+    {
+      dragResize.on('start', Ember.run.bind(this, this.resizeStarted));
+      dragResize.on('end', Ember.run.bind(this, this.resizeEnded));
+    }
+  },
+
+  willDestroyElement2() {
     this.set('allocatedWidthsMax', 0);
-    this.positionRightEdge();
+    this.get('positionRightEdge').perform();
+    let axisUse = this.selectAxisUse();
+    Ember.run.later(() => axisUse.remove(), transitionEnable * 1000 + 100);
   }
 
 });

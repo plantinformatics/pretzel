@@ -19,6 +19,7 @@ export default Ember.Controller.extend(Ember.Evented, {
   apiServers: service(),
   controlsService : service('controls'),
 
+
   /** Array of available datasets populated from model 
    */
   datasets: Ember.computed('model', 'model.availableMapsTask', 'model.availableMapsTask.value', function () {

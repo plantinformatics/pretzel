@@ -334,6 +334,10 @@ uploadDataList myDataset.json myAnnotation.json myMarkers.json myMarkers2.json m
 URL=$URL_A uploadData aliases.json 
 ```
 
+## Database Indexes
+
+Refer to 'Database configuration' in doc/notes/docker_setup.md for indexes added to the Feature and Alias database collections which are required for reasonable performance as datasets grown beyond 1k documents.
+
 
 # Public genetic map references
 
