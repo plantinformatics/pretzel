@@ -1,5 +1,9 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import { throttle, next, later, bind } from '@ember/runloop';
+import EmberObject, { computed } from '@ember/object';
+import { alias, filter } from '@ember/object/computed';
+import Evented from '@ember/object/evented';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
 import { task } from 'ember-concurrency';
 
@@ -8,7 +12,7 @@ import lodashMath from 'lodash/math';
 import { eltWidthResizable } from '../utils/domElements';
 import { eltIdGpRef }  from '../utils/draw/axis';
 import AxisEvents from '../utils/draw/axis-events';
-import { stacks, xScaleExtend  } from '../utils/stacks';
+import { stacks, xScaleExtend } from '../utils/stacks';
 
 /* global d3 */
 
@@ -24,17 +28,17 @@ const transitionEnable = 1;
 const marginLeft = 10;
 
 
-export default Ember.Component.extend(Ember.Evented, AxisEvents, {
+export default Component.extend(Evented, AxisEvents, {
   blockService: service('data/block'),
   queryParams: service('query-params'),
 
   needs: ['component:tracks'],
 
-  urlOptions : Ember.computed.alias('queryParams.urlOptions'),
+  urlOptions : alias('queryParams.urlOptions'),
 
   subComponents : undefined,
 
-  targetEltId : Ember.computed('axisID', function() {
+  targetEltId : computed('axisID', function() {
     let id = 'axis2D_' + this.axisID;
     dLog("targetEltId", this, id);
     return id;
@@ -50,7 +54,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    *
    * @return [] if there are no blocks with data in the axis.
    */
-  dataBlocks : Ember.computed(
+  dataBlocks : computed(
     'axisID',
     /* Would like to depend on blockService.dataBlocks, and specifically on
      * blockService.dataBlocks[id], but blockService.dataBlocks is a Map not an array,
@@ -69,13 +73,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     }),
   /** This is passed as trackBlocksR to axis-tracks and axis-blocks.
    */
-  trackBlocks : Ember.computed.filter('dataBlocks.@each.isZoomedOut', function(block, index, array) {
+  trackBlocks : filter('dataBlocks.@each.isZoomedOut', function(block, index, array) {
     return ! block.get('isZoomedOut');
   }),
 
   /** @return blocks which are viewedChartable, and whose axis is this axis.
    */
-  viewedChartable : Ember.computed('blockService.viewedChartable.[]', 'axisID',
+  viewedChartable : computed('blockService.viewedChartable.[]', 'axisID',
     function () {
       let
       id = this.get('axisID'),
@@ -87,7 +91,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
-  feed: Ember.inject.service(),
+  feed: service(),
 
   listenFeed: function() {
     let f = this.get('feed'); 
@@ -103,7 +107,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    */
   axisStackChanged : function() {
     dLog("axisStackChanged in components/axis-2d");
-    Ember.run.throttle(this, this.sendZoomed, [], 500);
+    throttle(this, this.sendZoomed, [], 500);
   },
 
   /** @param [axisID, t] */
@@ -116,7 +120,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   /** @param [axisID, t] */
   zoomedAxis : function(axisID_t) {
     dLog("zoomedAxis in components/axis-2d", axisID_t);
-    Ember.run.throttle(this, this.sendZoomed, axisID_t, 500);
+    throttle(this, this.sendZoomed, axisID_t, 500);
   },
 
 
@@ -163,14 +167,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   },
 
   /** width of track <rect>s */
-  trackWidth : Ember.computed('trackWidth', function () {
+  trackWidth : computed('trackWidth', function () {
     let trackWidthOption = this.get('urlOptions.trackWidth'),
     trackWidth = trackWidthOption || 10;
     dLog('init', 'from urlOptions, trackWidth', trackWidth, trackWidthOption);
     return trackWidth;
   }),
 
-  dualAxis : Ember.computed.alias('urlOptions.dualAxis'),
+  dualAxis : alias('urlOptions.dualAxis'),
   rectWidth() {
     let
       axisUse = this.get('axisUse'),
@@ -207,7 +211,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * @return [horizontal start offset, width] for each child.
    * The key of the result is the same as the input .childWidths
    */
-  allocatedWidths : Ember.computed('childWidths.{chart,tracks,trackCharts}.1', 'width', 'adjustedWidth', function () {
+  allocatedWidths : computed('childWidths.{chart,tracks,trackCharts}.1', 'width', 'adjustedWidth', function () {
     // if @each were supported for hashes, would depend on : 'childWidths.@each.1', 
     let allocatedWidths,
     childWidths = this.get('childWidths'),
@@ -247,14 +251,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       result[groupName] = allocated;
       return result;
     }, {});
-    Ember.run.next(() => !this.isDestroying && this.set('allocatedWidthsMax', offset));
+    next(() => !this.isDestroying && this.set('allocatedWidthsMax', offset));
     dLog('allocatedWidths', allocatedWidths, childWidths, width, available, offset);
     return allocatedWidths;
   }),
   /** @return width from left axis to right edge <path>
    * This is marginLeft + allocatedWidthsMax
    */
-  allocatedWidthRect : Ember.computed('allocatedWidths', 'allocatedWidthsMax', function () {
+  allocatedWidthRect : computed('allocatedWidths', 'allocatedWidthsMax', function () {
     let
     /** Evaluation of allocatedWidths sets allocatedWidthsMax. */
     allocatedWidths = this.get('allocatedWidths'),
@@ -281,14 +285,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     if (this.setWidth)
       call_setWidth();
     else
-      Ember.run.later(call_setWidth);
+      later(call_setWidth);
   },
 
   init() {
     this._super(...arguments);
 
     this.set('axis1d.axis2d', this);
-    this.set('childWidths', Ember.Object.create());
+    this.set('childWidths', EmberObject.create());
   },
 
   willDestroyElement() {
@@ -317,7 +321,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
-  resizeEffect : Ember.computed.alias('drawMap.resizeEffect'),
+  resizeEffect : alias('drawMap.resizeEffect'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -348,7 +352,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     use = axisUse.selectAll("use");
     if (axisUse.empty()) {
       dLog('getUse', backoffTime);
-      Ember.run.later(() => this.getUse(backoffTime ? backoffTime * 2 : 1000));
+      later(() => this.getUse(backoffTime ? backoffTime * 2 : 1000));
     } else {
       this.set('axisUse', axisUse);
       this.set('use', use);
@@ -365,7 +369,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   /*--------------------------------------------------------------------------*/
 
   /** object attributes of the draw-map component; used as a provisional connector. */
-  oa : Ember.computed.alias('data'),
+  oa : alias('data'),
 
   axisWidthResize(axisID, width, dx)
   {
@@ -390,7 +394,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       this.show();
     }
     // may trigger this differently, could be action.
-    Ember.run.next(() => this.get('axis1d').widthEffects());
+    next(() => this.get('axis1d').widthEffects());
   },
   /** Update the X scale / horizontal layout of stacks
    * copied from draw-map; the x scale will likely move to stacks-view, and this will likely be dropped.
@@ -554,7 +558,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * This is part of axisShowExtend(), which will be moved here;
    * this is the key part which needs to update.
    */
-  positionRightEdgeEffect : Ember.computed('allocatedWidthsMax', 'allocatedWidths', function () {
+  positionRightEdgeEffect : computed('allocatedWidthsMax', 'allocatedWidths', function () {
     this.get('positionRightEdge').perform();
     this.widthEffects();
   }),
@@ -596,7 +600,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let stacks = this.get('data').stacks;
     dLog("components/axis-2d didRender()");
 
-    Ember.run.later(() => this.dragResizeListen(), 1000);
+    later(() => this.dragResizeListen(), 1000);
   },
 
   /** Called when resizer element for split axis resize is dragged.
@@ -697,13 +701,13 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let axisID = this.get('axisID'),
         /** alternative : 'g.axis-outer#id' + axisID + ' .foreignObject' */
         axisSel = 'div#axis2D_' + axisID;
-    let dragResize = eltWidthResizable(axisSel, undefined, Ember.run.bind(this, this.resizedByDrag));
+    let dragResize = eltWidthResizable(axisSel, undefined, bind(this, this.resizedByDrag));
     if (! dragResize)
       dLog('dragResizeListen', axisID, axisSel);
     else
     {
-      dragResize.on('start', Ember.run.bind(this, this.resizeStarted));
-      dragResize.on('end', Ember.run.bind(this, this.resizeEnded));
+      dragResize.on('start', bind(this, this.resizeStarted));
+      dragResize.on('end', bind(this, this.resizeEnded));
     }
   },
 
@@ -711,7 +715,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     this.set('allocatedWidthsMax', 0);
     this.get('positionRightEdge').perform();
     let axisUse = this.selectAxisUse();
-    Ember.run.later(() => axisUse.remove(), transitionEnable * 1000 + 100);
+    later(() => axisUse.remove(), transitionEnable * 1000 + 100);
   }
 
 });

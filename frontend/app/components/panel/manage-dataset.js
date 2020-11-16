@@ -1,5 +1,6 @@
+import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import ManageBase from './manage-base';
-import Ember from 'ember';
 
 /** @param: dataset **/
 
@@ -10,8 +11,8 @@ export default ManageBase.extend({
   editorVisible: false,
   currentMeta: {},
 
-  ownedByMe: Ember.computed.alias("dataset.owner"),
-  datasetMeta: Ember.computed("dataset.meta", function() {
+  ownedByMe: alias("dataset.owner"),
+  datasetMeta: computed("dataset.meta", function() {
     let meta = this.get("dataset.meta") || {},
     apiHost = this.get("dataset.store.name");
     if (apiHost)

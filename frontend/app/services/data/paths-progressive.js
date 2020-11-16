@@ -1,7 +1,8 @@
-import Ember from 'ember';
+import { allSettled } from 'rsvp';
+import { throttle } from '@ember/runloop';
+import { alias } from '@ember/object/computed';
 
-import Service from '@ember/service';
-const { inject: { service } } = Ember;
+import Service, { inject as service } from '@ember/service';
 
 import { task } from 'ember-concurrency';
 
@@ -155,7 +156,7 @@ export default Service.extend({
       });
     return intervals;
   },
-  pathsDensityParams : Ember.computed.alias('controls.view.pathsDensityParams'),
+  pathsDensityParams : alias('controls.view.pathsDensityParams'),
   /** Determine the parameters for the paths request, - intervals and density.
    * @param intervals domain for each blockAdj
    */
@@ -259,7 +260,7 @@ export default Service.extend({
            * to throttle with the same arguments into a single call.
            */
           if (blocksUpdateDomainEnabled)
-          Ember.run.throttle(
+          throttle(
             me, me.blocksUpdateDomain, 
             blockAdjId, domainCalc,
             200, false);
@@ -506,7 +507,7 @@ export default Service.extend({
           let domainCalc = pathsViaStream || firstResult,
           axisEvents = ! blockAdj;
           if (blocksUpdateDomainEnabled)
-          Ember.run.throttle(
+          throttle(
             me, me.blocksUpdateDomain, 
             blockAdjId, domainCalc,
             200, false);
@@ -683,7 +684,7 @@ export default Service.extend({
           axisEvents = false;
 
           if (blocksUpdateDomainEnabled)
-          Ember.run.throttle(
+          throttle(
             me, me.blocksUpdateDomain, 
             requestBlockIds, domainCalc,
             200, false);
@@ -702,7 +703,7 @@ export default Service.extend({
         });
       return promise;
     });
-    let promise = Ember.RSVP.allSettled(promises);
+    let promise = allSettled(promises);
     return promise;
 
   }

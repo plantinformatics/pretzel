@@ -1,3 +1,4 @@
+import { computed } from '@ember/object';
 import EntryBase from './entry-base';
 
 export default EntryBase.extend({
@@ -7,16 +8,16 @@ export default EntryBase.extend({
     }
     this.set('layout',layout);
   }.on('init'),
-  data: Ember.computed('entry.blocks', 'filter', function() {
+  data: computed('entry.blocks', 'filter', function() {
     return this.get('entry.blocks')
       .filter((block) => !block.get('isCopy'));
   }),
-  dataEmpty: Ember.computed('data', function() {
+  dataEmpty: computed('data', function() {
     let availableBlocks = this.get('data')
     if (availableBlocks && availableBlocks.length > 0) { return false; }
     else { return true; }
   }),
-  expandIcon: Ember.computed('layout.active', function() {
+  expandIcon: computed('layout.active', function() {
     let active = this.get('layout.active')
     return active? 'minus' : 'plus'
   }),

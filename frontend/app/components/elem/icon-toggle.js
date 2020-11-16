@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
 
 import IconBase from './icon-base';
 
@@ -25,7 +25,7 @@ export default IconBase.extend({
   /** name is used by icon-base to construct the icon name.
    * The name is the part after 'glyphicon-'
    */
-  name: Ember.computed('state', function() {
+  name: computed('state', function() {
     let state = this.get('state'),
     name = state ? this.iconTrue : this.iconFalse;
     // console.log('name', state, name);

@@ -1,4 +1,6 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import { later } from '@ember/runloop';
+import Component from '@ember/component';
 
 /* global d3 */
 
@@ -32,7 +34,7 @@ arrow (right) fromSelectedFeatures
 
  */
 
-export default Ember.Component.extend({
+export default Component.extend({
 
   classNames : [className],
   classNameBindings: ['activeInput'],
@@ -42,7 +44,7 @@ export default Ember.Component.extend({
       console.log('paste', event);
       let me = this;
       /** this function is called before jQuery val() is updated. */
-      Ember.run.later(function () {
+      later(function () {
         // featureNameListInput() does inputIsActive();
         me.featureNameListInput();
         // trigger fold
@@ -75,7 +77,7 @@ export default Ember.Component.extend({
    * having the user click '->Blocks' seems the right flow; can add that after
    * trialling.
    */
-  featureNameList  : Ember.computed('featureNameListEnter', function () {
+  featureNameList  : computed('featureNameListEnter', function () {
     let
       featureList = {};
     let text$ = this.$('textarea'),
@@ -99,7 +101,7 @@ export default Ember.Component.extend({
       featureList.empty = ! fl || (fl.length === 0);
       return featureList;
     }),
-  selectedFeatureNames  : Ember.computed('selectedFeatures', function () {
+  selectedFeatureNames  : computed('selectedFeatures', function () {
     let
     featureList = {};
 
@@ -122,7 +124,7 @@ export default Ember.Component.extend({
 
     return featureList;
   }),
-  activeFeatureListBase  : Ember.computed('activeInput', 'featureNameList', 'selectedFeatureNames', function () {
+  activeFeatureListBase  : computed('activeInput', 'featureNameList', 'selectedFeatureNames', function () {
     let featureList,
       activeInput = this.get('activeInput');
     if (activeInput)
@@ -136,7 +138,7 @@ export default Ember.Component.extend({
    *   if activeInput : read any text entered since the last newline / paste / etc.
    *   if ! activeInput, copy selectedFeatureNames to the input textarea
    */
-  activeFeatureList  : Ember.computed('activeFeatureListBase', function () {
+  activeFeatureList  : computed('activeFeatureListBase', function () {
     let activeInput = this.get('activeInput');
     if (activeInput)
     {

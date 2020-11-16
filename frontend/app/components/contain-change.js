@@ -1,6 +1,8 @@
-import Ember from 'ember';
+import $ from 'jquery';
+import { later } from '@ember/runloop';
+import Component from '@ember/component';
 
-export default Ember.Component.extend({
+export default Component.extend({
   listen: function() {
     let drawMap = this.get('drawMap'); 
     console.log("listen", drawMap);
@@ -44,8 +46,8 @@ export default Ember.Component.extend({
     console.log("components/path-hover didInsertElement()", this.element,
                 features, targetId, this._targetObject, this.parentView.element);
 
-    Ember.run.later(function() {
-      let d = Ember.$('.tooltip.ember-popover');  // make-ui-draggable
+    later(function() {
+      let d = $('.tooltip.ember-popover');  // make-ui-draggable
       console.log(d, d.length, d[0], d[1]);
       // d.draggable();
     });

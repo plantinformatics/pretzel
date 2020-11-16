@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import $ from 'jquery';
 
 import  { logElementDimensions2 } from '../domElements';
 
@@ -80,7 +80,7 @@ Viewport.prototype.calc = function(oa)
   let graphDim;
 
   const holderSelector = 'div#holder';
-  divHolder=Ember.$(holderSelector);
+  divHolder=$(holderSelector);
   if (divHolder.length === 0) {
     console.warn('Viewport() : element not found :', holderSelector, this, oa);
     // size calculations depend on holder dimensions, so fail.

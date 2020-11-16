@@ -1,6 +1,6 @@
-import Ember from 'ember';
-
-const { inject: { service }, Component } = Ember;
+import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 
 const dLog = console.debug;
 
@@ -25,7 +25,7 @@ export default Component.extend({
     li.classList.add("active");
   },
 
-  borderStyle : Ember.computed('apiServer.name', function() {
+  borderStyle : computed('apiServer.name', function() {
     let apiServerColour = this.get('apiServer').get('colour'),
     style = 'border-color:' + apiServerColour;
     dLog('borderStyle', apiServerColour, this.apiServerName);

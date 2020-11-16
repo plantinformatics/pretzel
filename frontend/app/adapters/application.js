@@ -1,9 +1,10 @@
-import Ember from 'ember';
-import DS from 'ember-data';
+import $ from 'jquery';
+import { get } from '@ember/object';
+import { inject as service } from '@ember/service';
+import RESTAdapter from '@ember-data/adapter/rest';
 import DataAdapterMixin from 'ember-simple-auth/mixins/data-adapter-mixin';
 import PartialModelAdapter from 'ember-data-partial-model/mixins/adapter';
 import ENV from '../config/environment';
-const { inject: { service } } = Ember;
 
 import {
   getConfiguredEnvironment,
@@ -44,7 +45,7 @@ var config = {
   host: function () {
     let store = this.store,
     adapterOptions = store && store.adapterOptions,
-    host = (adapterOptions && adapterOptions.host) || Ember.get(this, '_server.host');
+    host = (adapterOptions && adapterOptions.host) || get(this, '_server.host');
     console.log('app/adapters/application.js host', this, store, adapterOptions, host, this._server);
     return host;
   }.property().volatile(),
@@ -53,7 +54,7 @@ var config = {
     let url = this._super(...arguments);
     // facilitating loopback filter structure
     if (snapshot.adapterOptions && snapshot.adapterOptions.filter) {
-      let queryParams = Ember.$.param(snapshot.adapterOptions);
+      let queryParams = $.param(snapshot.adapterOptions);
       return `${url}?${queryParams}`;
     }
     return url;
@@ -91,7 +92,7 @@ var config = {
         id2Server = this.get('apiServers.id2Server');
       let map = this.get('apiServers.obj2Server'),
       /** the above works for blocks; for datasets (e.g. delete), can lookup server name from snapshot.record */
-      snapshotServerName = snapshot && Ember.get(snapshot, 'record.store.name'),
+      snapshotServerName = snapshot && get(snapshot, 'record.store.name'),
       servers = this.get('apiServers.servers'),
       snapshotServer = servers && servers[snapshotServerName],
       server = map.get(serverHandle) || (id && id2Server[id]) || snapshotServer;
@@ -144,4 +145,4 @@ if (window['AUTH'] !== 'NONE'){
   args.unshift(DataAdapterMixin);
 }
 
-export default DS.RESTAdapter.extend(...args);
+export default RESTAdapter.extend(...args);

@@ -1,21 +1,20 @@
-import Ember from 'ember';
-import DS from 'ember-data';
-import attr from 'ember-data/attr';
+import { alias } from '@ember/object/computed';
+import Model, { attr, belongsTo } from '@ember-data/model';
 
 const dLog = console.debug;
 
-export default DS.Model.extend({
+export default Model.extend({
 
-	feature0 : DS.belongsTo('feature', { inverse: null }),
-  feature1 : DS.belongsTo('feature', { inverse: null }),
+	feature0 : belongsTo('feature', { inverse: null }),
+  feature1 : belongsTo('feature', { inverse: null }),
 
   /** block{0,1} are currently copies of data values, will become references to
    * store objects, as with feature{0,1}
   block0: DS.belongsTo('block', { inverse: null }),
   block1: DS.belongsTo('block', { inverse: null }),
    */
-  blockId0 : Ember.computed.alias('feature0.blockId.id'),
-  blockId1 : Ember.computed.alias('feature1.blockId.id'),
+  blockId0 : alias('feature0.blockId.id'),
+  blockId1 : alias('feature1.blockId.id'),
 
 
   /*--------------------------------------------------------------------------*/

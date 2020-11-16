@@ -1,4 +1,4 @@
-import {  maybeFlip, maybeFlipExtent }  from '../utils/draw/axis';
+import { maybeFlip, maybeFlipExtent }  from '../utils/draw/axis';
 
 import { Stacked } from './stacks';
 

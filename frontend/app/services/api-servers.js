@@ -1,9 +1,13 @@
-import Ember from 'ember';
-import { inject as service } from '@ember/service';
+import $ from 'jquery';
+import { getOwner } from '@ember/application';
+import EmberObject, { computed } from '@ember/object';
+import Evented from '@ember/object/evented';
+import Service, { inject as service } from '@ember/service';
 import { isPresent } from '@ember/utils';
-import { default as ApiServer, removePunctuation } from '../components/service/api-server';
-
-const { Service } = Ember;
+import {
+  default as ApiServer,
+  removePunctuation
+} from '../components/service/api-server';
 
 // import ENV from '../../config/environment';
 
@@ -22,13 +26,13 @@ const dLog = console.debug;
 /**
  * Sends via Evented : receivedDatasets(datasets)
  */
-export default Service.extend(Ember.Evented, {
+export default Service.extend(Evented, {
   session: service(), 
   store: service(),
   dataset: service('data/dataset'),
-  storeManager: Ember.inject.service('multi-store'),
+  storeManager: service('multi-store'),
 
-  servers : Ember.Object.create(),
+  servers : EmberObject.create(),
   serversLength : 0,
   id2Server : {},
   obj2Server : new WeakMap(),
@@ -91,7 +95,7 @@ export default Service.extend(Ember.Evented, {
         token : token,
         clientId
       },
-    ownerInjection = Ember.getOwner(this).ownerInjection(),
+    ownerInjection = getOwner(this).ownerInjection(),
     server = ApiServer.create(
       ownerInjection,
       serverBase),
@@ -194,7 +198,7 @@ export default Service.extend(Ember.Evented, {
       dLog('id2Store', blockId, server, store);
     return store;
   },
-  stores : Ember.computed('servers.@each.store', 'serversLength', function () {
+  stores : computed('servers.@each.store', 'serversLength', function () {
     let
 	  servers = this.get('servers'),
     stores = Object.keys(servers).map(
@@ -247,7 +251,7 @@ export default Service.extend(Ember.Evented, {
    *
    * @return [ {dataset, serverName}, ... ]
    */
-  datasetsWithServerName : Ember.computed(
+  datasetsWithServerName : computed(
     // datasetsBlocksRefresh represents 'servers.@each.datasetsBlocks',
     'datasetsBlocksRefresh', 'serversLength', 
     function datasetsWithServerName () {
@@ -270,7 +274,7 @@ export default Service.extend(Ember.Evented, {
         (url.indexOf('https://') == -1)) {
       url = 'http://' + url;
     }
-    Ember.$.ajax({
+    $.ajax({
       url: url + '/api/Clients/login',
       type: 'POST',
       crossDomain: true,

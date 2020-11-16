@@ -1,13 +1,25 @@
-import Ember from 'ember';
+import { assert } from '@ember/debug';
 
 import { getAttrOrCP } from '../ember-devel';
 import { configureHorizTickHover } from '../hover';
-import { eltWidthResizable, noShiftKeyfilter } from '../domElements';
+import {
+  eltWidthResizable,
+  noShiftKeyfilter
+} from '../domElements';
 import { logSelectionNodes } from '../log-selection';
 import { noDomain } from '../draw/axis';
 import { stacks } from '../stacks'; // just for oa.z and .y, don't commit this.
 import { inRangeEither, overlapInterval } from './zoomPanCalcs';
-import { featureCountDataProperties, dataConfigs, DataConfig, blockDataConfig, hoverTextFn, middle, scaleMaybeInterval, datum2LocationWithBlock } from '../data-types';
+import {
+  featureCountDataProperties,
+  dataConfigs,
+  DataConfig,
+  blockDataConfig,
+  hoverTextFn,
+  middle,
+  scaleMaybeInterval,
+  datum2LocationWithBlock
+} from '../data-types';
 import { breakPoint } from '../breakPoint';
 
 
@@ -1219,7 +1231,7 @@ DataConfig.prototype.keyFn = function (d, i, g) {
  */
 DataConfig.prototype.rectWidth = function (scaleX, gIsData, d, i, g)
 {
-  Ember.assert('rectWidth arguments.length === 5', arguments.length === 5);
+  assert('rectWidth arguments.length === 5', arguments.length === 5);
   let d2v = this.datum2Value,
   width = d2v(d);
   if (this.valueIsArea) {
@@ -1242,7 +1254,7 @@ DataConfig.prototype.rectWidth = function (scaleX, gIsData, d, i, g)
  */
 DataConfig.prototype.rectHeight = function (scaled, gIsData, d, i, g)
 {
-  Ember.assert('rectHeight arguments.length === 5', arguments.length === 5);
+  assert('rectHeight arguments.length === 5', arguments.length === 5);
   let height,
   d2l = (scaled ? this.datum2LocationScaled : this.datum2Location),
   location;

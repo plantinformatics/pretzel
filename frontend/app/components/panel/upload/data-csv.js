@@ -1,5 +1,8 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import { debounce } from '@ember/runloop';
+import { observer } from '@ember/object';
+import { Promise } from 'rsvp';
+import { alias } from '@ember/object/computed';
+import { inject as service } from '@ember/service';
 
 import UploadBase from './data-base';
 
@@ -13,7 +16,7 @@ export default UploadBase.extend({
   /** If server may be given, then lookup as is done in
    * services/data/dataset.js using apiServers (this can be factored into
    * components/service/api-server.js) */
-  store : Ember.computed.alias('apiServers.primaryServer.store'),
+  store : alias('apiServers.primaryServer.store'),
 
 
   table: null,
@@ -188,7 +191,7 @@ export default UploadBase.extend({
   getDatasetId() {
     var that = this;
     let datasets = that.get('datasets');
-    return new Ember.RSVP.Promise(function(resolve, reject) {
+    return new Promise(function(resolve, reject) {
       var selectedMap = that.get('selectDataset');
       // If a selected dataset, can simply return it
       // If no selectedMap, treat as default, 'new'
@@ -224,7 +227,7 @@ export default UploadBase.extend({
    *  Returns same data, with 'val' cast as numeric */
   validateData() {
     var that = this;
-    return new Ember.RSVP.Promise(function(resolve, reject) {
+    return new Promise(function(resolve, reject) {
       let table = that.get('table');
       if (table === null) {
         resolve([]);
@@ -278,10 +281,10 @@ export default UploadBase.extend({
     this.set('nameWarning', null);
     return false;
   },
-  onNameChange: Ember.observer('newDatasetName', function() {
-    Ember.run.debounce(this, this.isDupName, 500);
+  onNameChange: observer('newDatasetName', function() {
+    debounce(this, this.isDupName, 500);
   }),
-  onSelectChange: Ember.observer('selectedDataset', 'selectedParent', function() {
+  onSelectChange: observer('selectedDataset', 'selectedParent', function() {
     this.clearMsgs();
     this.isDupName();
     this.checkBlocks();

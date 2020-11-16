@@ -1,10 +1,23 @@
-import Ember from "ember";
+import $ from 'jquery';
+import { later, next } from '@ember/runloop';
+import { resolve, all } from 'rsvp';
+import { A } from '@ember/array';
 import { inject as service } from '@ember/service';
 
 import DS from 'ember-data';
 
 import { computed } from '@ember/object';
-import { filter, filterBy, mapBy, setDiff, uniqBy, uniq, union } from '@ember/object/computed';
+import {
+  filter,
+  filterBy,
+  mapBy,
+  setDiff,
+  uniqBy,
+  uniq,
+  union,
+  alias,
+  readOnly
+} from '@ember/object/computed';
 
 import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
 import { parseOptions } from '../../utils/common/strings';
@@ -56,12 +69,12 @@ export default ManageBase.extend({
     this.get('apiServers').on('receivedDatasets', function (datasets) { console.log('receivedDatasets', datasets); me.send('receivedDatasets', datasets); });
   },
 
-  urlOptions : Ember.computed('model.params.options', function () {
+  urlOptions : computed('model.params.options', function () {
     let options_param = this.get('model.params.options'),
     options = options_param && parseOptions(options_param);
     return options;
   }),
-  enable_datatypeFromFamily : Ember.computed.alias('urlOptions.dataTabsFromFamily'),
+  enable_datatypeFromFamily : alias('urlOptions.dataTabsFromFamily'),
   /** If true then use dataParentTypedFGTree in place of dataTypedTreeFG.
    * The former groups the data by parent before filtering; the latter
    * applies FG before grouping into parents.
@@ -69,7 +82,7 @@ export default ManageBase.extend({
    * which should be default;  each approach probably handles some
    * search cases better than the other.
    */
-  enable_parentBeforeFilter : Ember.computed.alias('urlOptions.parentBeforeFilter'),
+  enable_parentBeforeFilter : alias('urlOptions.parentBeforeFilter'),
 
   /** Triggers a rerun of the availableMaps fetching task */
   refreshAvailable: function(){
@@ -77,12 +90,12 @@ export default ManageBase.extend({
   },
 
   /** used by dataEmpty. */
-  datasets : Ember.computed.readOnly('datasetsBlocks'),
+  datasets : readOnly('datasetsBlocks'),
   /** Datasets passed in from MapView, but still need fetching on MatrixView
    * MatrixView dataset retrieval should be raised to route model / controller in future
    * At that time, 'mapviewDatasets' can be renamed to 'datasets'
    * and this whole computed element may be removed */
-  x_datasets : Ember.computed('mapviewDatasets', 'view', function () {
+  x_datasets : computed('mapviewDatasets', 'view', function () {
     let view = this.get('view');
     if (view === 'mapview') {
       return this.get('mapviewDatasets');
@@ -129,14 +142,14 @@ export default ManageBase.extend({
   layout: {
   },
   /** Filter / Group patterns.  initially 0 elements. */
-  filterGroups : Ember.A(), // [{}]
+  filterGroups : A(), // [{}]
   filterGroupsChangeCounter : 0,
   //----------------------------------------------------------------------------
 
   /** Return a list of datasets, with their included blocks, for the currently-selected
    * API server tab
    */
-  datasetsBlocks : Ember.computed('datasetsBlocksRefresh', 'serverTabSelected', 'primaryDatasets', function() {
+  datasetsBlocks : computed('datasetsBlocksRefresh', 'serverTabSelected', 'primaryDatasets', function() {
     /** e.g. "http___localhost_5000"  */
     let
       name = this.get('serverTabSelected'),
@@ -167,9 +180,9 @@ export default ManageBase.extend({
   datasetsBlocksRefresh : 0,
   // datasets: [],
 
-  servers : Ember.computed.alias('apiServers.servers'),
+  servers : alias('apiServers.servers'),
 
-  data: Ember.computed('filteredData', function() {
+  data: computed('filteredData', function() {
     let
     filteredData = this.get('filteredData'),
     combined = filteredData;
@@ -177,8 +190,8 @@ export default ManageBase.extend({
     return combined;
   }),
   //----------------------------------------------------------------------------
-  dataPre: Ember.computed('datasetsBlocks', 'datasetsBlocks.[]', 'filter', function() {
-    let availableMaps = this.get('datasetsBlocks') || Ember.RSVP.resolve([]);
+  dataPre: computed('datasetsBlocks', 'datasetsBlocks.[]', 'filter', function() {
+    let availableMaps = this.get('datasetsBlocks') || resolve([]);
     let filter = this.get('filter')
     dLog('dataPre', availableMaps, filter);
     // perform filtering according to selectedChr
@@ -195,7 +208,7 @@ export default ManageBase.extend({
     }
   }),
   /** @return the filterGroup if there is one, and it has a pattern. */
-  definedFilterGroups : Ember.computed(
+  definedFilterGroups : computed(
     'filterGroups', 'filterGroups.[]',
     'filterGroups.0.@each', 'filterGroupsChangeCounter',
     function () {
@@ -207,14 +220,14 @@ export default ManageBase.extend({
         });
       return filterGroups;
     }),
-  datasetFilterGroup :  Ember.computed(
+  datasetFilterGroup :  computed(
     'definedFilterGroups.@each.applyDataset',
     function () {
       let filterGroups = this.get('definedFilterGroups')
         .filter((filterGroup) => filterGroup.get('applyDataset'));
       return filterGroups[0];
     }),
-  blockFilterGroup :  Ember.computed(
+  blockFilterGroup :  computed(
     'definedFilterGroups.@each.applyBlock',
     function () {
       let filterGroups = this.get('definedFilterGroups')
@@ -222,7 +235,7 @@ export default ManageBase.extend({
       return filterGroups[0];
     }),
   /** @return true if a dataset filterGroup is defined and it is a filter not a grouping. */
-  isDatasetFilter : Ember.computed('datasetFilterGroup', function () {
+  isDatasetFilter : computed('datasetFilterGroup', function () {
     let filterGroup = this.get('datasetFilterGroup'),
     isFilter = filterGroup && (filterGroup.filterOrGroup === 'filter');
     if (trace_dataTree > 2)
@@ -230,7 +243,7 @@ export default ManageBase.extend({
     return isFilter;
   }),
   /** @return result is downstream of filter and filterGroups */
-  data : Ember.computed('dataPre', 'dataPre.[]', 'dataFG', 'isFilter',    function() {
+  data : computed('dataPre', 'dataPre.[]', 'dataFG', 'isFilter',    function() {
     let
       /** The result of a filter is an array of datasets, whereas a grouping results in a hash.
        * The result of data() should be an array, so only use filterGroup if it is a filter.
@@ -242,7 +255,7 @@ export default ManageBase.extend({
       console.log('isFilter', isFilter, 'datasets', datasets);
     return datasets;
   }),
-  dataEmpty: Ember.computed('datasets', 'datasets.length', 'datasets.[]', function() {
+  dataEmpty: computed('datasets', 'datasets.length', 'datasets.[]', function() {
     let length = this.get('datasets.length'),
     nonEmpty = (length > 0);
     return ! nonEmpty;
@@ -317,7 +330,7 @@ export default ManageBase.extend({
     let
       parentsNotFG = this.get('parentsNotFG'),
     promise = parentsNotFG.then ? parentsNotFG.then(parentsByType) :
-      Ember.RSVP.resolve(parentsByType(parentsNotFG));
+      resolve(parentsByType(parentsNotFG));
    function parentsByType(parents) {
      return parents.filterBy('meta.type').uniqBy('meta.type').mapBy('meta.type'); }
     if (trace_dataTree > 5) {
@@ -354,7 +367,7 @@ export default ManageBase.extend({
   dataWithoutParent0Names : mapBy('dataWithoutParent', 'name'),
 
   /** used by dataWithoutParent1 (i.e. the non-setDiff version) */
-  parentsSet : Ember.computed('parentNames', function () {
+  parentsSet : computed('parentNames', function () {
     let parents = this.get('parentNames'),
     set = parents.reduce(function(result, value) { return result.add(value); }, new Set());
     return set;
@@ -383,7 +396,7 @@ export default ManageBase.extend({
    * add tabs for those, FG can apply, so: 
    * -> dataParentTypedFG -> dataParentTypedFGTree
    */
-  dataParentTyped : Ember.computed
+  dataParentTyped : computed
   (
     // based on dataTyped()
     'dataPre',
@@ -421,7 +434,7 @@ export default ManageBase.extend({
 
   /** group the data in : Parent / Scope / Block
    */
-  dataTree : Ember.computed('data', 'dataTypedTreeFG', 'useFilterGroup',    function() {
+  dataTree : computed('data', 'dataTypedTreeFG', 'useFilterGroup',    function() {
     let
       filterGroup = this.get('datasetFilterGroup'),
     me = this,
@@ -450,13 +463,13 @@ export default ManageBase.extend({
     return datasets;
   }),
   /** @return promise of a hash */
-  dataTypedTreeFG : Ember.computed(
+  dataTypedTreeFG : computed(
     'dataTypedFG', 'parentsTypes',
     function() {
       return this.addParentAndScopeLevelsPromise('dataTypedFG');
     }),
   /** @return promise of a hash */
-  dataParentTypedFGTree : Ember.computed(
+  dataParentTypedFGTree : computed(
     'dataParentTypedFG', 'parentsTypes',
     function() {
       return this.addParentAndScopeLevelsPromise('dataParentTypedFG');
@@ -466,9 +479,9 @@ export default ManageBase.extend({
     me = this,
     parentsTypes = me.get('parentsTypes');
     if (! parentsTypes.then)
-      parentsTypes = Ember.RSVP.resolve(parentsTypes);
+      parentsTypes = resolve(parentsTypes);
     let
-      promise = Ember.RSVP.all([datasetGroupsP, parentsTypes]).then(
+      promise = all([datasetGroupsP, parentsTypes]).then(
         (dp) => addParentAndScopeLevels(dp[0], dp[1]));
     dLog('parentsTypes', parentsTypes);
     /** Given datasets grouped into tabs, add a grouping level for the parent of the datasets,
@@ -542,14 +555,14 @@ export default ManageBase.extend({
   /** Split the datasets according to their dataset.meta.type,
    * or otherwise by whether the dataset has a parent or children.
    */
-  dataTyped : Ember.computed(
+  dataTyped : computed(
     'dataPre',
     function() {
       let datasetsP = this.get('dataPre');
       let me = this,
       promise = datasetsP.then ?
         datasetsP.then((d) => typeDatasets(d)) :
-        Ember.RSVP.resolve(typeDatasets(datasetsP));
+        resolve(typeDatasets(datasetsP));
       function typeDatasets (datasets) {
         datasets = datasets.toArray();
         let dataTyped = {};
@@ -623,12 +636,12 @@ export default ManageBase.extend({
    * dataTypedFG CF -> hash by value, of datasets
    * -> dataTypedTreeFG -> plus mapToParentScope
    */
-  dataTypedFG : Ember.computed(
+  dataTypedFG : computed(
     'dataTyped', 'useFilterGroup', 'datasetFilterGroup',
     function() {
       return this.applyFGs('dataTyped');
     }),
-  dataParentTypedFG : Ember.computed(
+  dataParentTypedFG : computed(
     'dataParentTyped', 'useFilterGroup', 'datasetFilterGroup',
     function() {
       return this.applyFGs('dataParentTyped');
@@ -675,7 +688,7 @@ export default ManageBase.extend({
   /**
    * dataFG CF -> hash by value, of datasets
    */
-  dataFG : Ember.computed(
+  dataFG : computed(
     'dataPre', 'datasetFilterGroup',
     function() {
       let datasetsP = this.get('dataPre'),
@@ -1136,7 +1149,7 @@ export default ManageBase.extend({
         dLog('filterGroupsChanged', fg, this.get('filterGroups.0'), this.get('filterGroups.0'), this.get('filterGroups.0.isCaseSensitive'));
       // Wait for update of values of fg which are bound input elements.
       let me = this;
-      Ember.run.later(function () {
+      later(function () {
         dLog('filterGroupsChanged later', fg, me.get('filterGroups.0'), me.get('filterGroups.0'), me.get('filterGroups.0.isCaseSensitive'));
         me.incrementProperty('filterGroupsChangeCounter');
       });
@@ -1173,7 +1186,7 @@ export default ManageBase.extend({
       /** If the user is adding a reference then check if
        * .blockWithoutParentOnPrimary is now able to be added, and add it.
        */
-      Ember.run.next(() => {
+      next(() => {
         if (! block.get('datasetId.parentName')) {
           let dataBlock = this.get('blockWithoutParentOnPrimary'),
           referenceBlock = dataBlock && dataBlock.get('referenceBlock');
@@ -1193,7 +1206,7 @@ export default ManageBase.extend({
   /** If a tab is active (selected), save its id.  */
   willRender () {
     let
-      explorerDiv = Ember.$(selectorExplorer),
+      explorerDiv = $(selectorExplorer),
     /** active tab element.  Its child <a> href is '#'+id, but it is easier to
      * extract id from the content div id. */
     t = explorerDiv.find(' li.active-detail.active'),
@@ -1224,12 +1237,12 @@ export default ManageBase.extend({
          * also .addClass() has no effect, and is probably as quick as checking
          * if they have the class.
          */
-        c = Ember.$(selectorExplorer + ' div.tab-content > #' + id);
+        c = $(selectorExplorer + ' div.tab-content > #' + id);
       c.addClass('active');
 
       let
         /** <a> whose href matches activeId. */
-        a = Ember.$('li.active-detail > a[href="#' + id + '"]'),
+        a = $('li.active-detail > a[href="#' + id + '"]'),
       /** tab element containing a.  Ensure this has .active */
       t = a.parent();
       t.addClass('active');

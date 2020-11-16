@@ -1,9 +1,10 @@
-import Ember from 'ember';
+import { isArray } from '@ember/array';
+import { computed } from '@ember/object';
 import EntryBase from './entry-base';
 
 import DS from 'ember-data';
 
-import { logV  } from '../../utils/value-tree';
+import { logV } from '../../utils/value-tree';
 
 import { parentOfType, elt0 } from '../../utils/ember-devel';
 
@@ -52,18 +53,18 @@ export default EntryBase.extend({
   },
 
   /** type is array, e.g. blocks or datasets */
-  valueIsArray : Ember.computed('values', 'values.[]', function () {
+  valueIsArray : computed('values', 'values.[]', function () {
     let
       values = this.get('values'),
     length = this.get('values.length'),
-    isArray = Ember.isArray(values);
+    isArray = isArray(values);
     if (trace_entryValues)
       console.log('valueIsArray', isArray, length, this.get('name'), values);
     return isArray;
   }),
 
   /** type of values is an array of Dataset-s */
-  valueIsDatasetsArray : Ember.computed('valueIsArray', 'values_dataTypeName', function () {
+  valueIsDatasetsArray : computed('valueIsArray', 'values_dataTypeName', function () {
     let
       isMap = this.get('valueIsArray'),
     dataTypeName = this.get('values_dataTypeName'),
@@ -72,7 +73,7 @@ export default EntryBase.extend({
   }),
 
   /** {{!-- type is blocks array */
-  valueIsBlocksArray : Ember.computed('valueIsArray', 'values_dataTypeName', function () {
+  valueIsBlocksArray : computed('valueIsArray', 'values_dataTypeName', function () {
     let
       isMap = this.get('valueIsArray'),
     dataTypeName = this.get('values_dataTypeName'),
@@ -83,7 +84,7 @@ export default EntryBase.extend({
   /** lookup the levelMeta for values.
    * (if none and values is an array, use modelName of an array element).
    */
-  values_dataTypeName : Ember.computed('values',  function () {
+  values_dataTypeName : computed('values',  function () {
     let
       levelMeta = this.get('levelMeta'),
     values = this.get('values'),  // values.then ...
@@ -92,7 +93,7 @@ export default EntryBase.extend({
       console.log('dataTypeName', dataTypeName, values);
     return dataTypeName;
   }),
-  valuesModelName : Ember.computed('values',  function () {
+  valuesModelName : computed('values',  function () {
     let values = this.get('values'),
     modelName = this.modelName2(values);
     return modelName;
@@ -139,7 +140,7 @@ export default EntryBase.extend({
   },
 
   /** @return true if values is an Object. */
-  valuesIsObject : Ember.computed('values', function () {
+  valuesIsObject : computed('values', function () {
     function isObjectFn (values) { return typeof values === 'object'; };
     let
       isObject =
@@ -148,7 +149,7 @@ export default EntryBase.extend({
   }),
 
   /** @return true if values is a Map. */
-  valuesIsMap : Ember.computed('values', function () {
+  valuesIsMap : computed('values', function () {
     function isMapFn (values) { return values && values.constructor === Map; };
     let
       isMap =
@@ -173,7 +174,7 @@ export default EntryBase.extend({
    * Initially, for Parent and Scope, dataTypeName referred to the type of the collection,
    * but have now added both Dataset and Datasets, so to be consistent Parent and Scope should be Parents and Scopes.
    */
-  values_dataTypeName0 : Ember.computed('levelMeta', 'values', function () {
+  values_dataTypeName0 : computed('levelMeta', 'values', function () {
     let
       values = this.get('values'),
     dataTypeName = this.dataTypeName(values)
@@ -230,7 +231,7 @@ export default EntryBase.extend({
   /** Based on the type of values, as recorded via levelMeta and modelName,
    * @return the name of the component which should be used to render values.
    */
-  values_levelComponent : Ember.computed('values_dataTypeName', 'values', function () {
+  values_levelComponent : computed('values_dataTypeName', 'values', function () {
     let
       values = this.get('values'),
     component = this.levelComponent(values);

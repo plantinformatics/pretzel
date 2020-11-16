@@ -1,12 +1,19 @@
-import Ember from 'ember';
+import $ from 'jquery';
+import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import { debounce, later } from '@ember/runloop';
+import Component from '@ember/component';
 
-import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
+import {
+  eltWidthResizable,
+  noShiftKeyfilter
+} from '../utils/domElements';
 
 /* global d3 */
 
 const dLog = console.debug;
 
-export default Ember.Component.extend({
+export default Component.extend({
 
   className : undefined,
 
@@ -48,18 +55,18 @@ export default Ember.Component.extend({
     }
   },
   redrawDebounced(axisID_t) {
-    Ember.run.debounce(this, this.redrawOnce, axisID_t, 1000);
+    debounce(this, this.redrawOnce, axisID_t, 1000);
   },
 
   /*--------------------------------------------------------------------------*/
 
   /** axis is the axis-2d; this is passed into axis-tracks and axis-charts;
    * can be passed into subComponents also. */
-  axis1d : Ember.computed.alias('axis.axis1d'),
+  axis1d : alias('axis.axis1d'),
   /** y scale of axis has changed */
-  scaleChanged : Ember.computed.alias('axis1d.scaleChanged'),
-  domainChanged : Ember.computed.alias('axis1d.domainChanged'),
-  zoomedDomain :  Ember.computed.alias('axis1d.zoomedDomain'),
+  scaleChanged : alias('axis1d.scaleChanged'),
+  domainChanged : alias('axis1d.domainChanged'),
+  zoomedDomain :  alias('axis1d.zoomedDomain'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -164,7 +171,7 @@ export default Ember.Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  allocatedWidth : Ember.computed('allocatedWidths', function () {
+  allocatedWidth : computed('allocatedWidths', function () {
     let 
       allocatedWidths = this.get('allocatedWidths'),
       allocatedWidth = this.get('allocatedWidths.' + this.get('className'));
@@ -205,7 +212,7 @@ export default Ember.Component.extend({
       };
     let i = cb.types.indexOf("text/plain"), textPlain = cb.getData(cb.types[i]),
     className = this.get('className'),
-    inputElt=Ember.$('.' + className + '.pasteData')
+    inputElt=$('.' + className + '.pasteData')
     // inputElt = event.target
     ;
     /* multiple subcomponents of the same type not supported yet - clashes here in paste selector,
@@ -213,7 +220,7 @@ export default Ember.Component.extend({
      */
     if (inputElt.length !== 1)
       console.log("inputElt", inputElt, className, this);
-    Ember.run.later(function() { inputElt.empty(); } );
+    later(function() { inputElt.empty(); } );
 
     let pasteProcess = this.get('pasteProcess');
     if (pasteProcess)

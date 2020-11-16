@@ -1,17 +1,19 @@
-import Ember from 'ember';
-import DS from 'ember-data';
-import attr from 'ember-data/attr';
-// import { PartialModel, partial } from 'ember-data-partial-model/utils/model';
-const { inject: { service } } = Ember;
+import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
+import Model, { attr, belongsTo, hasMany } from '@ember-data/model';
 // import { computed, set } from '@ember/object';
 import { A } from '@ember/array';
-import { and } from '@ember/object/computed';
+import { and, alias } from '@ember/object/computed';
 
 import { task } from 'ember-concurrency';
 
 import lodashMath from 'lodash/math';
 
-import { intervalSize, intervalMerge, intervalOverlap }  from '../utils/interval-calcs';
+import {
+  intervalSize,
+  intervalMerge,
+  intervalOverlap
+} from '../utils/interval-calcs';
 import { inDomain } from '../utils/draw/interval-overlap';
 import { binEvenLengthRound } from '../utils/draw/interval-bins';
 import { subInterval } from '../utils/draw/zoomPanCalcs';
@@ -35,7 +37,7 @@ function valueOrLength(value) { return (trace_block > 1) ? value : value.length;
 
 const trace = 1;
 
-export default DS.Model.extend({
+export default Model.extend({
   pathsP : service('data/paths-progressive'), // for getBlockFeaturesInterval()
   blockService : service('data/block'),
   auth: service('auth'),
@@ -44,11 +46,11 @@ export default DS.Model.extend({
   controls : service(),
 
 
-  datasetId: DS.belongsTo('dataset'),
-  annotations: DS.hasMany('annotation', { async: false }),
-  intervals: DS.hasMany('interval', { async: false }),
+  datasetId: belongsTo('dataset'),
+  annotations: hasMany('annotation', { async: false }),
+  intervals: hasMany('interval', { async: false }),
   // possibly async:true when !allInitially, if needed.
-  features: DS.hasMany('feature', { async: false }),
+  features: hasMany('feature', { async: false }),
   range: attr('array'),
   scope: attr('string'),
   name: attr('string'),
@@ -62,7 +64,7 @@ export default DS.Model.extend({
    * set by adding the block to the graph (entry-block: get()),
    * and cleared by removing the block from the display.
    */
-  isViewed: Ember.computed('blockService.params.mapsToView.[]', {
+  isViewed: computed('blockService.params.mapsToView.[]', {
     get () {
       // alternate dependency : 'blockService.viewed.[]'
       let isViewed = this.get('blockService').getIsViewed(this.get('id'));
@@ -97,7 +99,7 @@ export default DS.Model.extend({
   init() {
     this._super(...arguments);
 
-    this.set('featuresCountsResults', Ember.A());
+    this.set('featuresCountsResults', A());
   },
 
   /*--------------------------------------------------------------------------*/
@@ -113,7 +115,7 @@ export default DS.Model.extend({
 
   /** @return true if this block's dataset defined meta.paths and it is true.
    */
-  showPaths : Ember.computed('datasetId.meta.paths', 'id', function () {
+  showPaths : computed('datasetId.meta.paths', 'id', function () {
     let
     dataset = this.get('datasetId'),
     paths = dataset.get('meta.paths');
@@ -138,12 +140,12 @@ export default DS.Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  hasFeatures : Ember.computed('featureCount', function () {
+  hasFeatures : computed('featureCount', function () {
     return this.get('featureCount') > 0;
   }),
   /** Similar to isData(), but relies on .featureCount, which may not have been received. */
   isDataCount : and('isLoaded', 'hasFeatures'),
-  isData : Ember.computed('referenceBlock', 'range', function (){
+  isData : computed('referenceBlock', 'range', function (){
     let isData = !! this.get('referenceBlock');
     if (! isData) {
       /** reference blocks have range, GMs (and child data blocks) do not. */
@@ -151,7 +153,7 @@ export default DS.Model.extend({
     }
     return isData;
   }),
-  currentDomain : Ember.computed('referenceBlock', 'range',  function () {
+  currentDomain : computed('referenceBlock', 'range',  function () {
     let domain = this.get('zoomedDomain');
     if (! domain)  {
       let referenceBlock = this.get('referenceBlock');
@@ -165,11 +167,11 @@ export default DS.Model.extend({
   }),
 
   /** is this block copied from a (secondary) server, cached on the server it was loaded from (normally the primary). */
-  isCopy : Ember.computed('meta._origin', function () {
+  isCopy : computed('meta._origin', function () {
     return !! this.get('meta._origin');
   }),
 
-  axisScope : Ember.computed('scope', 'name', 'datasetId.parentName', function () {
+  axisScope : computed('scope', 'name', 'datasetId.parentName', function () {
     let scope = this.get('datasetId.parentName') ? this.get('scope') : this.get('name');
     return scope;
   }),
@@ -177,7 +179,7 @@ export default DS.Model.extend({
   /*--------------------------------------------------------------------------*/
 
 
-  featuresLength : Ember.computed('features.[]', function () {
+  featuresLength : computed('features.[]', function () {
     let featuresLength = this.get('features.length');
     if (trace_block)
       dLog('featuresLength', featuresLength, this.get('id'));
@@ -186,7 +188,7 @@ export default DS.Model.extend({
   /** @return undefined if ! features.length,
    * otherwise [min, max] of block's feature.value
    */
-  featuresDomainUpdate : Ember.computed('features.[]', function () {
+  featuresDomainUpdate : computed('features.[]', function () {
     let featuresDomain, features = this.get('features');
     if (features.length) {
       featuresDomain = features
@@ -226,14 +228,14 @@ export default DS.Model.extend({
    * If there are local changes (features added or feature values changed) then
    * featuresDomainUpdate might be used also.
    */
-  featuresDomain : Ember.computed.alias('featureLimits'),
+  featuresDomain : alias('featureLimits'),
 
-  isChartable : Ember.computed('datasetId.tags', function () {
+  isChartable : computed('datasetId.tags', function () {
     let tags = this.get('datasetId.tags'),
     isChartable = tags && tags.length && (tags.indexOf('chartable') >= 0);
     return isChartable;
   }),
-  isSubElements : Ember.computed('datasetId.tags', function () {
+  isSubElements : computed('datasetId.tags', function () {
     let tags = this.get('datasetId.tags'),
     isSubElements = tags && tags.length && (tags.indexOf('geneElements') >= 0);
     return isSubElements;
@@ -303,7 +305,7 @@ export default DS.Model.extend({
   /** generate a text name for the block, to be displayed - it should be
    * user-readable and uniquely identify the block.
    */
-  datasetNameAndScope : Ember.computed('datasetId.id', 'scope', function () {
+  datasetNameAndScope : computed('datasetId.id', 'scope', function () {
     /** This is currently the name format which is used in
      * selectedFeatures.Chromosome
      * In paths-table.js @see blockDatasetNameAndScope()
@@ -323,7 +325,7 @@ export default DS.Model.extend({
    * selectedFeatures.Chromosome is for identifying the block (and
    * could be changed to blockId).
    */
-  brushName : Ember.computed('name', 'datasetId', 'referenceBlock', function() {
+  brushName : computed('name', 'datasetId', 'referenceBlock', function() {
     /** This calculation replicates the value used by brushHelper(), which draws
      * on axisName2MapChr(), makeMapChrName(), copyChrData().
      * That can be replaced by simply this function, which will then be the
@@ -354,7 +356,7 @@ export default DS.Model.extend({
   /** If the dataset of this block has a parent, return the name of that parent (reference dataset).
    * @return the reference dataset name or undefined if none
    */
-  referenceDatasetName : Ember.computed('datasetId', function () {
+  referenceDatasetName : computed('datasetId', function () {
     // copied out of referenceBlock(); could be factored
     // this function can be simply   : Ember.computed.alias('datasetId.parent.name')
     let 
@@ -378,7 +380,7 @@ export default DS.Model.extend({
    * The result is influenced by which of the potential references are currently viewed.
    * @return the reference block or undefined if none
    */
-  referenceBlock : Ember.computed(
+  referenceBlock : computed(
     'datasetId', 'datasetId.parent.name', 'scope',
     'blockService.viewed.[]', 
     function () {
@@ -390,7 +392,7 @@ export default DS.Model.extend({
    * The result is not influenced by whether the potential references are currently viewed.
    * @see referenceBlocksAllServers()
    */
-  referenceBlocks : Ember.computed(
+  referenceBlocks : computed(
     'datasetId', 'datasetId.parent.name', 'scope',
     'block.blockValues.[]',
     'apiServers.datasetsWithServerName.[]', 
@@ -593,12 +595,12 @@ export default DS.Model.extend({
     dLog('referenceBlocksAllServers', original, parentName, scope, blocks);
     return blocks;
   },
-  childBlocks : Ember.computed('blockService.blocksByReference', function () {
+  childBlocks : computed('blockService.blocksByReference', function () {
     let blocksByReference = this.get('blockService.blocksByReference'),
     childBlocks = blocksByReference && blocksByReference.get(this);
     return childBlocks || [];
   }),
-  viewedChildBlocks : Ember.computed('childBlocks.@each.isViewed', function () {
+  viewedChildBlocks : computed('childBlocks.@each.isViewed', function () {
     let childBlocks = this.get('childBlocks'),
     viewedChildBlocks = childBlocks.filterBy('isViewed');
     dLog('viewedChildBlocks', viewedChildBlocks, childBlocks);
@@ -616,7 +618,7 @@ export default DS.Model.extend({
   /** The domain of a reference block is provided by either .range or,
    * in the case of a genetic map, by the domain of it's features.
    */
-  limits : Ember.computed('range', 'referenceBlock.limits', 'featureLimits', function () {
+  limits : computed('range', 'referenceBlock.limits', 'featureLimits', function () {
     /** for GM and physical reference, .referenceBlock is undefined, so this recursion is limited to 1 level. */
     let limits = this.get('range') || this.get('referenceBlock.limits') || this.get('featureLimits');
     return limits;
@@ -627,7 +629,7 @@ export default DS.Model.extend({
   /** @return the features count within zoomedDomain, or if there is no zoom,
    * i.e. zoomedDomain is undefined, then simply return .featureCount
    */
-  featuresCountIncludingZoom : Ember.computed(
+  featuresCountIncludingZoom : computed(
     'featuresCountsResults.[]',
     'featureCountInZoom', 'zoomedDomain.{0,1}', 'limits',
     function () {
@@ -647,7 +649,7 @@ export default DS.Model.extend({
    * Result form is the same as featuresCountsResults, i.e.
    * [ {binSize, nBins, domain: Array(2), result: Array}, ... ]
    */
-  featuresCountsInZoom : Ember.computed(
+  featuresCountsInZoom : computed(
     'featuresCountsResults.[]', 'zoomedDomain.{0,1}', 'limits',
     function () {
       let
@@ -669,7 +671,7 @@ export default DS.Model.extend({
    * size.
    * @return 0 if no results or no overlaps
    */
-  featuresCountsInZoomSmallestBinSize : Ember.computed('featuresCountsInZoom.[]', function () {
+  featuresCountsInZoomSmallestBinSize : computed('featuresCountsInZoom.[]', function () {
     let overlaps = this.get('featuresCountsInZoom') || [];
     let
     overlapsBinSizes = overlaps.map((fcs) => fcs.binSize || (intervalSize(fcs.domain) / fcs.nBins)),
@@ -681,7 +683,7 @@ export default DS.Model.extend({
    * features in zoomedDomain.
    * @return undefined if no overlaps
    */
-  featureCountInZoom : Ember.computed('featuresCountsInZoom.[]', function () {
+  featureCountInZoom : computed('featuresCountsInZoom.[]', function () {
     let overlaps = this.get('featuresCountsInZoom') || [];
     let
     domain = this.get('zoomedDomain'),
@@ -780,7 +782,7 @@ export default DS.Model.extend({
 
 
 
-  axis : Ember.computed('view.axis', 'referenceBlock', function () {
+  axis : computed('view.axis', 'referenceBlock', function () {
     let axis = this.get('view.axis');
     let referenceBlock;
     if (! axis) {
@@ -792,9 +794,9 @@ export default DS.Model.extend({
       dLog('block axis', this.get('id'), this.get('view'), 'no view.axis for block or referenceBlock', referenceBlock);
   }),
 
-  zoomedDomain : Ember.computed.alias('axis.axis1d.zoomedDomain'),
-  zoomedDomainDebounced : Ember.computed.alias('axis.axis1d.zoomedDomainDebounced'),
-  zoomedDomainThrottled : Ember.computed.alias('axis.axis1d.zoomedDomainThrottled'),
+  zoomedDomain : alias('axis.axis1d.zoomedDomain'),
+  zoomedDomainDebounced : alias('axis.axis1d.zoomedDomainDebounced'),
+  zoomedDomainThrottled : alias('axis.axis1d.zoomedDomainThrottled'),
 
   /** @return true if the axis on which this block is displayed is zoomed out past the point
    * that the number of features in the block within zoomedDomain is > featuresCountsThreshold.
@@ -804,7 +806,7 @@ export default DS.Model.extend({
    * This is used to select whether axis-charts featuresCounts or axis-tracks
    * are displayed for this block.
    */
-  isZoomedOut : Ember.computed(
+  isZoomedOut : computed(
     'featuresCountIncludingZoom',
     'zoomedDomainDebounced.{0,1}',
     'featuresCounts.[]',
@@ -823,14 +825,14 @@ export default DS.Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  featuresCountsThreshold : Ember.computed.alias('controls.view.featuresCountsThreshold'),
+  featuresCountsThreshold : alias('controls.view.featuresCountsThreshold'),
 
   /** When block is added to an axis, request features, scoped by the axis
    * current position.
    * As used in axis-tracks : when axis is open/split, request features in
    * response to, and as defined by, zoom changes.
    */
-  featuresForAxis : Ember.computed(
+  featuresForAxis : computed(
     'axis', 'zoomedDomainDebounced.{0,1}',
     'featuresCountIncludingZoom',
     'featuresCountsThreshold',

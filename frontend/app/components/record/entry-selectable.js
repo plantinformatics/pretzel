@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import Component from '@ember/component';
 
 /**
  * @param node, e.g. block or dataset Ember object reference
@@ -9,7 +9,7 @@ import Ember from 'ember';
 
  * @param extraClasses (optional)  added to the component's root element <li>, e.g. d-inline-block for formatting.
  */
-export default Ember.Component.extend({
+export default Component.extend({
 
   tagName: 'li',
 

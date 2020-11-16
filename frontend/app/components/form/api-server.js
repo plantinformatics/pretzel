@@ -1,6 +1,6 @@
-import Ember from 'ember';
-
-const { inject: { service }, Component } = Ember;
+import $ from 'jquery';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 
 export default Component.extend({
   apiServers: service(),
@@ -16,7 +16,7 @@ export default Component.extend({
     /** e.g. "tab-localhost_5000" */
     let idt = this.name.replace(/https?___/, 'tab-');
     /** reference to the <a>. */
-    let a = Ember.$('[href="#'+idt+'"]'),
+    let a = $('[href="#'+idt+'"]'),
     /** reference to the <li> which contains the <a>. */
     li = a[0].parentElement;
     console.log('tabElement', this.name, a, a[0], li, li.classList);

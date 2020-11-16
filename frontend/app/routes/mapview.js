@@ -1,9 +1,9 @@
-import Ember from 'ember';
+import $ from 'jquery';
+import { inject as service } from '@ember/service';
+import Route from '@ember/routing/route';
+import RSVP, { Promise } from 'rsvp';
 import AuthenticatedRouteMixin from 'ember-simple-auth/mixins/authenticated-route-mixin';
 
-const { RSVP: { Promise } } = Ember;
-const { Route } = Ember;
-const { inject: { service } } = Ember;
 import { task } from 'ember-concurrency';
 import EmberObject from '@ember/object';
 
@@ -119,7 +119,7 @@ let config = {
     let allInitially = params.parsedOptions && params.parsedOptions.allInitially;
     let getBlocks = blockService.get('getBlocks' + (allInitially ? '' : 'Summary'));
     let viewedBlocksTasks = (params.mapsToView && params.mapsToView.length) ?
-      getBlocks.apply(blockService, [params.mapsToView]) : Ember.RSVP.cast([]);
+      getBlocks.apply(blockService, [params.mapsToView]) : RSVP.cast([]);
 
     result = EmberObject.create(
       {
@@ -158,7 +158,7 @@ let config = {
        * but later the summary may contain other information */
       /** could add this task list to result; not required yet. */
       let viewedBlockReferencesTasks = referenceBlockIds.length ?
-        getBlocks.apply(blockService, [referenceBlockIds]) : Ember.RSVP.cast([]);
+        getBlocks.apply(blockService, [referenceBlockIds]) : RSVP.cast([]);
     });
 
     dLog("routes/mapview: model() result", result);
@@ -172,11 +172,11 @@ let config = {
    */
   activate: function() {
     this._super();
-    Ember.$('body').toggleClass("mapview");
+    $('body').toggleClass("mapview");
   },
   deactivate: function() {
     this._super();
-    Ember.$('body').toggleClass("mapview");
+    $('body').toggleClass("mapview");
   }
 
 
@@ -188,4 +188,4 @@ if (window['AUTH'] !== 'NONE') {
   args.unshift(AuthenticatedRouteMixin);
 }
 
-export default Ember.Route.extend(...args);
+export default Route.extend(...args);

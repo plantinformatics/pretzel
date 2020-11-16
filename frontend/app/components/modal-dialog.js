@@ -1,4 +1,6 @@
-export default Ember.Component.extend({
+import { on } from '@ember/object/evented';
+import Component from '@ember/component';
+export default Component.extend({
   actions: {
     confirm: function() {
       this.sendAction('onConfirm');
@@ -9,7 +11,7 @@ export default Ember.Component.extend({
       
     }
   },
-  show: Ember.on('didInsertElement', function() {
+  show: on('didInsertElement', function() {
     let me = this;
     this.$('.modal').on('hidden.bs.modal', function() {
       me.send('resetForm');

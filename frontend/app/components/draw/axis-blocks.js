@@ -1,6 +1,8 @@
-import Ember from 'ember';
-
-const { inject: { service } } = Ember;
+import { next } from '@ember/runloop';
+import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
 const dLog = console.debug;
 
@@ -16,10 +18,10 @@ const Index_block = 0, Index_startOffset = 1, Index_endOffset = 2;
  *
  * @param dataBlocks=dataBlocks
  */
-export default Ember.Component.extend({
+export default Component.extend({
   blockService: service('data/block'),
   queryParams: service('query-params'),
-  urlOptions : Ember.computed.alias('queryParams.urlOptions'),
+  urlOptions : alias('queryParams.urlOptions'),
 
   /** The allocated block space is used for either axis-tracks or axis-charts
    * (featuresCounts). This name is used to identify the allocated space. */
@@ -30,12 +32,12 @@ export default Ember.Component.extend({
   },
 
 
-  blocks : Ember.computed.alias('dataBlocks'),
+  blocks : alias('dataBlocks'),
 
   /** Allocate fixed-width horizontal space for each block.
    * @return [[block, startOffset, endOffset], ...],
    */
-  allocatedWidthBlocks : Ember.computed('blocks.[]', function () {
+  allocatedWidthBlocks : computed('blocks.[]', function () {
     let
     blocks = this.get('blocks'),
     /** trackWidth is actually the <rect> width for tracks.  Add trackWidth (10px) for spacing */
@@ -49,14 +51,14 @@ export default Ember.Component.extend({
     dLog('allocatedWidthBlocks', aw, width);
     let childWidths = this.get('childWidths');
     // [min, max] width
-    Ember.run.next(() => childWidths.set(this.get('className'), [width, width]));
+    next(() => childWidths.set(this.get('className'), [width, width]));
 
     return aw;
   }),
   /** as for allocatedWidthBlocks, without the block.
    * @return [[startOffset, endOffset], ...],   parallel to this.blocks[]
    */
-  allocatedWidth : Ember.computed('allocatedWidthBlocks.[]', function () {
+  allocatedWidth : computed('allocatedWidthBlocks.[]', function () {
     let aw = this.get('allocatedWidthBlocks').map((bi) => bi.slice(Index_startOffset));
     return aw;
   }),
@@ -64,7 +66,7 @@ export default Ember.Component.extend({
    * @return symbolic array (hash) which maps from blockId to allocatedWidth for that block
    * [blockId] -> array of [startOffset, width].
    */
-  widthsById: Ember.computed(
+  widthsById: computed(
     'allocatedWidthBlocks.[]',
     function() {
       let byId = this.get('allocatedWidthBlocks').reduce((r, b) => {
@@ -86,7 +88,7 @@ export default Ember.Component.extend({
   /** Request block featuresForAxis, driven by changes of the data
    * blocks or the axis view (axis limits or zoomedDomain).
    */
-  featuresForBlocksRequestEffect : Ember.computed(
+  featuresForBlocksRequestEffect : computed(
     'blocks.[]',
     'blocks.@each.featuresForAxis',
     // axis1d.domain also reflects zoomedDomain

@@ -1,14 +1,13 @@
-import Ember from 'ember';
-
-// import ModalDialog from './modal-dialog'
-const { inject: { service }, Component } = Ember;
+import { on } from '@ember/object/evented';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 
 const dLog = console.debug;
 
-export default Ember.Component.extend({
+export default Component.extend({
     apiServers: service(),
 
-    didInsertElement: Ember.on('didInsertElement', function() {
+    didInsertElement: on('didInsertElement', function() {
         let confirmButton = this.$('button[name=confirm]');
         this.$('input[name=password]').keyup(function(event) {
             if (event.keyCode == 13) {

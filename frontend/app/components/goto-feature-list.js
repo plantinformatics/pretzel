@@ -1,20 +1,21 @@
-import Ember from 'ember';
-
-const { inject: { service } } = Ember;
+import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
 /* global d3 */
 
 const dLog = console.debug;
 
-export default Ember.Component.extend({
+export default Component.extend({
   blockService: service('data/block'),
   controls : service(),
   apiServers : service(),
 
-  taskGet : Ember.computed.alias('blockService.getBlocksOfFeatures'),
+  taskGet : alias('blockService.getBlocksOfFeatures'),
 
-  serverTabSelected : Ember.computed.alias('controls.serverTabSelected'),
+  serverTabSelected : alias('controls.serverTabSelected'),
 
   /*----------------------------------------------------------------------------*/
   actions : {
@@ -143,11 +144,11 @@ export default Ember.Component.extend({
     console.assert(list === children[0], fnName + '() : list === children[0]');
     this.set('featureList', list);
   },
-  activeFeatureList : Ember.computed.alias('featureList.activeFeatureList'),
+  activeFeatureList : alias('featureList.activeFeatureList'),
 
-  loading : Ember.computed.alias('taskGet.isRunning'),
+  loading : alias('taskGet.isRunning'),
 
-  refreshClassNames : Ember.computed('loading', function () {
+  refreshClassNames : computed('loading', function () {
     let classNames = "btn btn-info pull-right";
     return this.get('loading') ? classNames + ' disabled' : classNames;
   }),

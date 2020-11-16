@@ -1,16 +1,40 @@
-import Ember from 'ember';
-
-const { inject: { service } } = Ember;
-import { throttle } from '@ember/runloop';
+import { getOwner } from '@ember/application';
+import { allSettled, Promise } from 'rsvp';
+import { A } from '@ember/array';
+import { computed, get } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import Evented from '@ember/object/evented';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
+import { throttle, later, next } from '@ember/runloop';
 import { task } from 'ember-concurrency';
 
 
 import AxisEvents from '../../utils/draw/axis-events';
 import { stacks, Stacked } from '../../utils/stacks';
-import { selectAxis, blockAdjKeyFn, blockAdjEltId, featureEltIdPrefix, featureNameClass, foregroundSelector, selectBlockAdj } from '../../utils/draw/stacksAxes';
-import { targetNPaths, pathsFilter, pathsFilterSmooth } from '../../utils/draw/paths-filter';
+import {
+  selectAxis,
+  blockAdjKeyFn,
+  blockAdjEltId,
+  featureEltIdPrefix,
+  featureNameClass,
+  foregroundSelector,
+  selectBlockAdj
+} from '../../utils/draw/stacksAxes';
+import {
+  targetNPaths,
+  pathsFilter,
+  pathsFilterSmooth
+} from '../../utils/draw/paths-filter';
 import { intervalSize } from  '../../utils/interval-calcs';
-import { pathsResultTypes, pathsApiResultType, flowNames, resultBlockIds, pathsOfFeature, locationPairKeyFn } from '../../utils/paths-api';
+import {
+  pathsResultTypes,
+  pathsApiResultType,
+  flowNames,
+  resultBlockIds,
+  pathsOfFeature,
+  locationPairKeyFn
+} from '../../utils/paths-api';
 
 /* global d3 */
 
@@ -70,7 +94,7 @@ function thenOrNow(value, fn) {
  * @param blockAdj  [blockId0, blockId1]
  * @param drawMap for Evented - stack events
  */
-export default Ember.Component.extend(Ember.Evented, AxisEvents, {
+export default Component.extend(Evented, AxisEvents, {
   /** AxisEvents is used to receive axis stacking and resize events.
    *  Evented may be used in future to propagate events to components rendered within block-adj.
    */
@@ -90,7 +114,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   /** The DB IDs of the blocks which this block-adj aligns.
       * array[2] of blockId
       */
-  blockAdjId : Ember.computed.alias('blockAdj.blockAdjId'),
+  blockAdjId : alias('blockAdj.blockAdjId'),
   // blockAdj.id is the same values in a string form, separated by '_'
 /*  ('blockAdj', function () {
     let blockAdj = this.get('blockAdj'),
@@ -99,14 +123,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     return blockAdjId;
   }),
 */
-  axes :  Ember.computed.alias('blockAdj.axes'),
+  axes :  alias('blockAdj.axes'),
 
   /** comment in services/data/block.js explains context of urlOptions
    */
-  parsedOptions : Ember.computed.alias('queryParams.urlOptions'),
+  parsedOptions : alias('queryParams.urlOptions'),
 
-  pathsDensityParams : Ember.computed.alias('pathsP.pathsDensityParams'),
-  pathsResultLength : Ember.computed(
+  pathsDensityParams : alias('pathsP.pathsDensityParams'),
+  pathsResultLength : computed(
     'blockAdj.pathsResult.[]', 'pathsAliasesResultLength',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
@@ -164,7 +188,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
           /* first call, scope is not yet defined, there are no existing paths,
            * so use pathsFilter() instead of pathsFilterSmooth() */
           pathsResult = pathsFilter(prType, pathsResult, blockDomains, nPaths);
-          scope = this.set('scope' + prType.typeName, Ember.A());
+          scope = this.set('scope' + prType.typeName, A());
           scope[0] = currentScope;
           let shown = this.set('shown' + prType.typeName, new Set());
           pathsResult.forEach((p) => shown.add(p));
@@ -179,14 +203,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
        * and hence before drawGroup{,Container}().   .draw() uses the <g>-s they
        * maintain, so defer until end of run loop.
        */
-      Ember.run.later( () => 
+      later( () => 
                        this.draw(/*pathsApiResultType*/ prType, pathsResult)
                      );
     }
 
     return length;
   },
-  pathsAliasesResultLength : Ember.computed(
+  pathsAliasesResultLength : computed(
     'blockAdj.pathsAliasesResult.[]', 'paths.alias.[]',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
@@ -202,15 +226,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
     return pathsAliasesLength;
   }),
-  paths : Ember.computed.alias('blockAdj.paths'),
+  paths : alias('blockAdj.paths'),
   /** Trigger paths request - side-effect. In the streaming case, result when
    * the stream ends is [], so paths{,Aliases}Result are used instead of the
    * result of this promise.
    */
-  pathsRequest : Ember.computed('blockAdj.paths', function () {
+  pathsRequest : computed('blockAdj.paths', function () {
     let pathsP = this.get('blockAdj.paths');
     dLog('blockAdj.paths', pathsP);
-    function thenLength(p) { return ! p ? 0 : thenOrNow(p, (a) => Ember.get(a, 'length')); }
+    function thenLength(p) { return ! p ? 0 : thenOrNow(p, (a) => get(a, 'length')); }
     let lengthSumP = thenLength(pathsP.direct) + thenLength(pathsP.alias);
     return lengthSumP;
   }),
@@ -219,7 +243,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * the required renders, so this can be dropped if there is not likely to be a
    * need for showing unfiltered paths.
    */
-  pathsEffect : Ember.computed(
+  pathsEffect : computed(
     // the debugger will evaluate this CP if this dependency is enabled.
     // 'blockAdj.paths.{direct,alias}.[]',
     function () {
@@ -250,7 +274,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     /** .direct and.alias are defined by the result of pathsP, not by pathsP, so
      * this would need to change; no purpose for this yet. */
     let resultP = (pathsP.direct && pathsP.alias) ?
-    Ember.RSVP.allSettled([pathsP.direct, pathsP.alias])
+    allSettled([pathsP.direct, pathsP.alias])
       : (pathsP.direct || pathsP.alias);
     }
     return pathsP;
@@ -435,7 +459,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
 
       let gSA = gS.merge(gA),
-      owner = Ember.getOwner(this),
+      owner = getOwner(this),
       pS = gSA
         .selectAll("path." + className)
         .data(pathsOfFeature(store, pathsResultType, owner), locationPairKeyFn),
@@ -519,7 +543,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      * The caller is interested in avoiding overlapped transitions, so
      * resolve/reject are treated the same.
      */
-     let transitionEnd =  new Ember.RSVP.Promise(function(resolve, reject){
+     let transitionEnd =  new Promise(function(resolve, reject){
        transition
          .on('end', (d) => resolve(d))
          .on('interrupt', (d, i, g) => {
@@ -552,11 +576,11 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
-  axesDomains : Ember.computed.alias('blockAdj.axesDomains'),
+  axesDomains : alias('blockAdj.axesDomains'),
   /** call updatePathsPosition().
    * filter / debounce the calls to handle multiple events at the same time.
    */
-  updatePathsPositionDebounce : Ember.computed(
+  updatePathsPositionDebounce : computed(
     'widthChanged',
     'heightChanged', 'axisStackChangedCount',
     // stacksWidthChanges depends on stacksCount, so this dependency is implied anyway.
@@ -590,7 +614,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
            this.get('block.stacksCount'));
     this.updatePathsPosition();
     /* redraw after axis extended width has updated. */
-    Ember.run.later(() => this.updatePathsPosition(), 500);
+    later(() => this.updatePathsPosition(), 500);
 
       /* this update is an alternative trigger for updating the axes ticks and
        * scale when their domains change, e.g. when loaded features extend a
@@ -625,7 +649,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   axisStackChanged : function() {
     dLog("axisStackChanged in components/block-adj");
     // currently need time for x scale update
-    Ember.run.next(() => ! this.isDestroying && this.incrementProperty('axisStackChangedCount'));
+    next(() => ! this.isDestroying && this.incrementProperty('axisStackChangedCount'));
   },
 
   /** @param [axisID, t] */

@@ -1,11 +1,12 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 
 /* global d3 */
 
 
-export default Ember.Component.extend({
+export default Component.extend({
 
-  feed: Ember.inject.service(),
+  feed: service(),
 
   colouredFeatures : undefined,
 

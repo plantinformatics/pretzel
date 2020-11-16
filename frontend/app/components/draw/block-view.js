@@ -1,5 +1,7 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import EmberObject, { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
 import { ensureBlockFeatures } from '../../utils/feature-lookup';
 import { subInterval } from '../../utils/draw/zoomPanCalcs';
@@ -21,11 +23,11 @@ const dLog = console.debug;
  * @param featuresByBlock
  * @param blocksData  map to receive feature data
  */
-export default Ember.Component.extend({
+export default Component.extend({
   blockService: service('data/block'),
   queryParams: service('query-params'),
 
-  urlOptions : Ember.computed.alias('queryParams.urlOptions'),
+  urlOptions : alias('queryParams.urlOptions'),
 
 
   /** Store results of requests in .blocksData
@@ -34,7 +36,7 @@ export default Ember.Component.extend({
    */
   setBlockFeaturesData(dataTypeName, featuresData){
     let blocksData = this.get('blocksData'),
-    typeData = blocksData.get(dataTypeName) || (blocksData.set(dataTypeName, Ember.Object.create())),
+    typeData = blocksData.get(dataTypeName) || (blocksData.set(dataTypeName, EmberObject.create())),
     blockId = this.get('block.id');
     typeData.set(blockId, featuresData);
     this.parentView.incrementProperty('blocksDataCount');
@@ -42,7 +44,7 @@ export default Ember.Component.extend({
 
   /** If the block contains chartable data, collate it into .blocksData.blockData, for axis-charts.
    */
-  blockFeatures : Ember.computed('block', 'block.features.[]', 'axis.axis1d.domainChanged', function () {
+  blockFeatures : computed('block', 'block.features.[]', 'axis.axis1d.domainChanged', function () {
     if (this.get('block.isChartable')) {
       let features = this.get('block.features');
       let domain = this.get('axis.axis1d.domainChanged');
@@ -67,7 +69,7 @@ export default Ember.Component.extend({
   /** Choose a result from block.featuresCountsInZoom and put it in blocksData.featureCount{,Auto}Data
    * to be read by axis-charts : featureCountBlocks etc and drawn.
    */
-  featuresCounts : Ember.computed(
+  featuresCounts : computed(
     'block', 'block.featuresCountsInZoom.[]', 'axis.axis1d.domainChanged',
     // featuresCountsNBins is used in selectFeaturesCountsResults()
     'blockService.featuresCountsNBins',

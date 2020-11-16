@@ -1,8 +1,14 @@
-import Ember from 'ember';
+import { assert } from '@ember/debug';
+import { getOwner } from '@ember/application';
+import $ from 'jquery';
+import Service, { inject as service } from '@ember/service';
+import { isEmpty, typeOf } from '@ember/utils';
 
-const { inject: { service }, Service, isEmpty } = Ember;
-
-import { isObject, cloneDeepWith, isUndefined } from 'lodash/lang';
+import {
+  isObject,
+  cloneDeepWith,
+  isUndefined
+} from 'lodash/lang';
 import { omitBy, extendWith } from 'lodash/object';
 import { after } from 'lodash/function';
 
@@ -93,7 +99,7 @@ export default Service.extend({
     data.intervals = filteredIntervalParams;
       url +=
       '&' +
-      Ember.$.param(data);
+      $.param(data);
     if (trace_paths)
       dLog(url, blockA, blockB, intervals, filteredIntervalParams, options);
 
@@ -206,7 +212,7 @@ export default Service.extend({
     data.intervals = filteredIntervalParams;
     url +=
       '&' +
-      Ember.$.param(data);
+      $.param(data);
     if (trace_paths)
       dLog(url, blockIds, intervals, filteredIntervalParams, options);
 
@@ -317,7 +323,7 @@ export default Service.extend({
     if (token === true) {
       let accessToken = this._accessToken(server);
       config.headers.Authorization = accessToken
-    } else if (Ember.typeOf(token) == 'string') {
+    } else if (typeOf(token) == 'string') {
       config.headers.Authorization = token
     }
 
@@ -351,7 +357,7 @@ export default Service.extend({
       };
     }
 
-    return Ember.$.ajax(config)
+    return $.ajax(config);
   },
 
   _accessToken(server) {
@@ -445,7 +451,7 @@ export default Service.extend({
   _endpoint(requestServer, route) {
   let
     apiHost =  requestServer && requestServer.host;
-    let config = Ember.getOwner(this).resolveRegistration('config:environment')
+    let config = getOwner(this).resolveRegistration('config:environment')
     let endpoint = (apiHost || config.apiHost) + '/' + config.apiNamespace + '/' + route
     dLog('_endpoint', requestServer, apiHost, endpoint, config);
     return endpoint
@@ -492,7 +498,7 @@ function blockIdMap(data, mapFns) {
   ab = !!blockA;
   console.log('blockIdMap', data, blockA, blockB, blockIds, restFields, d, ab);
   if ((!blockA !== !blockB) || (!blockA === !blockIds)) {
-    Ember.assert('param data is expected to contain either .blockA and .blockB, or .blockIds : ' +
+    assert('param data is expected to contain either .blockA and .blockB, or .blockIds : ' +
                  JSON.stringify(data), false);
   }
   /* if data has .blockA,B, put those params into blockIds[] to be processed in

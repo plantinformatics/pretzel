@@ -1,8 +1,11 @@
-import Ember from 'ember';
+import { registerDeprecationHandler } from '@ember/debug';
+import { later } from '@ember/runloop';
+import EmberObject, { computed } from '@ember/object';
+import Evented from '@ember/object/evented';
+import Controller from '@ember/controller';
+import { inject as service } from '@ember/service';
+import { readOnly } from '@ember/object/computed';
 import DS from 'ember-data';
-
-const { computed : { readOnly } } = Ember;
-const { inject: { service } } = Ember;
 
 /* global d3 */
 
@@ -13,7 +16,7 @@ dLog("controllers/mapview.js");
 let trace_dataflow = 0;
 let trace_select = 0;
 
-export default Ember.Controller.extend(Ember.Evented, {
+export default Controller.extend(Evented, {
   dataset: service('data/dataset'),
   block: service('data/block'),
   apiServers: service(),
@@ -22,7 +25,7 @@ export default Ember.Controller.extend(Ember.Evented, {
 
   /** Array of available datasets populated from model 
    */
-  datasets: Ember.computed('model', 'model.availableMapsTask', 'model.availableMapsTask.value', function () {
+  datasets: computed('model', 'model.availableMapsTask', 'model.availableMapsTask.value', function () {
     let task = this.get('model.availableMapsTask');
     let promise = task.then(function (value) { dLog('datasets from task', value); return value; });
     let resultP = DS.PromiseArray.create({ promise: promise });
@@ -99,7 +102,7 @@ export default Ember.Controller.extend(Ember.Evented, {
 
       let queryParams = this.get('model.params');
       let me = this;
-      Ember.run.later( function () {
+      later( function () {
         me.transitionToRoute({'queryParams': queryParams }); });
     },
     /** Un-view a block.
@@ -230,7 +233,7 @@ export default Ember.Controller.extend(Ember.Evented, {
     }
   },
 
-  layout: Ember.Object.create({
+  layout: EmberObject.create({
     'left': {
       'visible': true,
       'tab': 'view'
@@ -241,7 +244,7 @@ export default Ember.Controller.extend(Ember.Evented, {
     }
   }),
 
-  controls : Ember.Object.create({ view : {  } }),
+  controls : EmberObject.create({ view : {  } }),
 
   queryParams: ['mapsToView'],
   mapsToView: [],
@@ -259,7 +262,7 @@ export default Ember.Controller.extend(Ember.Evented, {
   init: function() {
     /** refn : https://discuss.emberjs.com/t/is-this-possible-to-turn-off-some-deprecations-warnings/8196 */
     let deprecationIds = ['ember-simple-auth.session.authorize'];
-    Ember.Debug.registerDeprecationHandler((message, options, next) => {
+    registerDeprecationHandler((message, options, next) => {
       if (! deprecationIds.includes(options.id)) {
         next(message, options);
       }
@@ -288,7 +291,7 @@ export default Ember.Controller.extend(Ember.Evented, {
 
   /** Used by the template to indicate when & whether any data is loaded for the graph.
    */
-  hasData: Ember.computed(
+  hasData: computed(
     function() {
       let viewedBlocksLength = this.get('block.viewed.length');
       if (trace_dataflow)
@@ -298,7 +301,7 @@ export default Ember.Controller.extend(Ember.Evented, {
 
   /** Update queryParams and URL.
    */
-  queryParamsValue : Ember.computed(
+  queryParamsValue : computed(
     'model.params.mapsToView.[]',
     function() {
       dLog('queryParamsValue');
@@ -341,7 +344,7 @@ export default Ember.Controller.extend(Ember.Evented, {
    * components div;   the remainder of the template is disabled via {{#if
    * (compare layout.right.tab '===' 'paths')}} which wraps the whole component.
    */
-  rightPanelClass : Ember.computed('layout.right.tab', function () {
+  rightPanelClass : computed('layout.right.tab', function () {
     let tab = this.get('layout.right.tab');
     dLog('rightPanelClass', tab);
     return 'right-panel-' + tab;

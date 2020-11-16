@@ -1,6 +1,5 @@
-import Ember from 'ember';
-
-const { inject: { service } } = Ember;
+import $ from 'jquery';
+import { inject as service } from '@ember/service';
 
 
 /*----------------------------------------------------------------------------*/
@@ -22,7 +21,7 @@ const dLog = console.debug;
 
 // copied from components/draw-map.js
 /** Used for d3 attributes whose value is the datum. */
-function I(d) { /* console.log(this, d); */ return d; };
+function I(d) { /* console.log(this, d); */ return d; }
 
 /*----------------------------------------------------------------------------*/
 
@@ -38,7 +37,7 @@ function configurejQueryTooltip(node) {
     .each(function (flowName) {
       // console.log("configurejQueryTooltip", flowName, this, this.outerHTML);
       let node_ = this;
-      Ember.$(node_)
+      $(node_)
       /*
         .tooltip({
           template: '<div class="tooltip" role="tooltip">'
@@ -90,7 +89,7 @@ function configurejQueryTooltip(node) {
             });
         });
     });
-};
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -166,7 +165,7 @@ function flows_showControls (parentSelector)
     })
   ;
 
-};
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -196,14 +195,14 @@ function updateSelections_flowControls() {
     });
   });
 
-};
+}
 
 
 /*----------------------------------------------------------------------------*/
 
 Flow.prototype.ExportDataToDiv = function (eltSel)
 {
-  let elts = Ember.$(eltSel);
+  let elts = $(eltSel);
   if (! elts.length)
   {
     window.alert("Show the Adv tab in the right panel before Export\n(and scroll down).");

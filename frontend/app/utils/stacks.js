@@ -1,5 +1,8 @@
 // for VLinePosition :
-import Ember from 'ember';
+import { assert } from '@ember/debug';
+
+import { later, bind } from '@ember/runloop';
+import EmberObject, { get } from '@ember/object';
 import { isEqual } from 'lodash/lang';
 
 
@@ -7,9 +10,21 @@ import { isEqual } from 'lodash/lang';
 
 /*----------------------------------------------------------------------------*/
 
-import  { dragTransitionEnd} from '../utils/stacks-drag';
-import { round_2, checkIsNumber} from '../utils/domCalcs';
-import {  Axes, noDomain, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, highlightId, axisTitleColour  }  from './draw/axis';
+import  { dragTransitionEnd } from '../utils/stacks-drag';
+import { round_2, checkIsNumber } from '../utils/domCalcs';
+import {
+  Axes,
+  noDomain,
+  yAxisTextScale,
+  yAxisTicksScale,
+  yAxisBtnScale,
+  yAxisTitleTransform,
+  eltId,
+  axisEltId,
+  eltIdAll,
+  highlightId,
+  axisTitleColour
+} from './draw/axis';
 import { variableBands } from '../utils/variableBands';
 import { isOtherField } from '../utils/field_names';
 import { Object_filter } from '../utils/Object_filter';
@@ -72,11 +87,11 @@ stacks.init = function (oa_)
       stacks.axes = {};
 
     axes1d = stacks.axes1d = {};
-    stacks.axesPCount = Ember.Object.create({ count: 0 });
+    stacks.axesPCount = EmberObject.create({ count: 0 });
     /* Counts which are used as ComputedProperty dependencies, so that stacks.js
      * classes imperative actions can feed into CP data flows.
      * This can merge with axesPCount as .counts.{axesP,stacks} */
-    stacks.stacksCount = Ember.Object.create({ count: 0 });
+    stacks.stacksCount = EmberObject.create({ count: 0 });
 
   }
 };
@@ -110,7 +125,7 @@ function Block(block) {
   /** .visible indicates the features of this block will be included in axis brushes & paths.  */
   this.visible = true;
   dLog("Block()", this, block, axisName);
-};
+}
 /** At some point .axisName will be renamed to .blockId; this function will make
  * that transparent, and avoid confusion with .getAxis().
  * @return blockId of this block, aka .axisName
@@ -132,7 +147,7 @@ Block.prototype.setAxis = function(a)
   }
   this.axis = a;
   if (this.block && this.block.set) {
-    Ember.run.later(() => this.block.set('axis', a) );
+    later(() => this.block.set('axis', a) );
   }
   if (false)
   /* The block-adj CP axes depends on .axislater, setting this field triggers a
@@ -143,7 +158,7 @@ Block.prototype.setAxis = function(a)
    * planning to see the stacks / axes as part of the model and update them
    * before render.
    */
-    Ember.run.later(() => {
+    later(() => {
       if (this.set)
         this.set('axislater', a);
       else
@@ -274,7 +289,7 @@ function Stacked(axisName, portion) {
   axesP[axisName] =
   oa.axes[axisName] = this;
   stacks.axesPCount.incrementProperty('count');
-};
+}
 Stacked.prototype.referenceBlock = undefined;
 Stacked.prototype.axisName = undefined;
 Stacked.prototype.portion = undefined;
@@ -303,7 +318,7 @@ Stacked.axis1dAdd = function (axisName, axis1dComponent) {
 };
 Stacked.axis1dRemove = function (axisName, axis1dComponent) {
   if (axes1d[axisName] !== axis1dComponent)
-    Ember.assert('axis1dRemove', axes1d, axisName, axis1dComponent);
+    assert('axis1dRemove', axes1d, axisName, axis1dComponent);
   else
     delete axes1d[axisName];
 };
@@ -923,7 +938,7 @@ function Stack(stackable) {
   this.add(stackable);
   dLog(this, stackable, ".stack", stackable.stack);
   setCount('Stack() stacksCount');
-};
+}
 /** Update stacks.stacksCount.count */
 function setCount(label) {
   let newCount = stacks.length - (stacks.toDeleteAfterDrag ? 1 : 0);
@@ -935,7 +950,7 @@ function setCount(label) {
    * ... modified "resizeEffect" twice on component:draw-map ... in a single
    * render
    */
-  Ember.run.later(function () {
+  later(function () {
     stacks.stacksCount.set('count', newCount);
   });
 }
@@ -1216,7 +1231,7 @@ Stack.prototype.sideClasses = function ()
 };
 Stacked.prototype.axisSide = function () {
   let stackClass = this.stack.sideClasses(),
-  extended = Ember.get(this, 'axis1d.extended'),
+  extended = get(this, 'axis1d.extended'),
   /** use of d3.axisLeft() / axisRight() does not seem to update
    * text-anchor="start" on the axis group element g.axis, so for now this is
    * augmented by CSS rules re. .leftmost / .rightmost which ensure the intended
@@ -1297,7 +1312,7 @@ function Stack_add (sd)
   dLog("Stack_add", this, sd);
   this.axes.push(sd);
   sd.stack = this;
-};
+}
 /** Insert stacked into axes[] at i, moving i..axes.length up
  * @param i  same as param start of Array.splice()
  * @see {@link https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Array/splice | MDN Array Splice}
@@ -1929,10 +1944,10 @@ Stack.prototype.redrawAdjacencies = function ()
         a.axis1d.drawTicks();
     });
 };
-//-    import {} from "../utils/axis.js";
+//-    import { } from "../utils/axis.js";
 
-//-    import {} from "../components/stacks.js";
-//-    import {} from "../utils/stacks.js";
+//-    import { } from "../components/stacks.js";
+//-    import { } from "../utils/stacks.js";
 
 /*------------------------------------------------------------------------*/
 
@@ -1954,7 +1969,7 @@ Stacked.prototype.extendedWidth = function()
   if (width === true) {
     width = this.allocatedWidth();
     if (! width) {
-      let childViews = Ember.get(this, 'axis1d.childViews');
+      let childViews = get(this, 'axis1d.childViews');
       /** replace this with a passed parameter enabling axis-2d to report .width back up to axis-1d.  */
       let axis2d = childViews && childViews.findBy( '_debugContainerKey', 'component:axis-2d');
       if (axis2d) {
@@ -2214,7 +2229,7 @@ Stacked.prototype.setDomain = function (domain)
   // if (! axis1d)
   //  dLog('setDomain', this, 'domain', domain, axis1d, axis1d && axis1d.currentPosition);
   if (axis1d) {
-    Ember.run.bind(axis1d, axis1d.setDomain)(domain);
+    bind(axis1d, axis1d.setDomain)(domain);
   }
 };
 /** Set the zoomed of the current position to the given zoomed
@@ -2234,7 +2249,7 @@ Stacked.prototype.unviewBlocks = function ()
   /** Ember data objects. */
   let blocks = this.blocks.mapBy('block')
     .filter((b) => b);
-  Ember.run.later(() => {
+  later(() => {
     blocks.forEach((block) => {
       // undefined .block-s are filtered out above
       block.setProperties({

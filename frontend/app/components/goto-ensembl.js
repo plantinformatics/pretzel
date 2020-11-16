@@ -1,5 +1,9 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import { later } from '@ember/runloop';
+import { alias } from '@ember/object/computed';
+import { computed } from '@ember/object';
+import { w } from '@ember/string';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
 import { stacks, Stacked }  from '../utils/stacks';
 import { breakPoint } from '../utils/breakPoint';
@@ -12,13 +16,13 @@ dLog('goto-ensemble');
 
 /*----------------------------------------------------------------------------*/
 
-export default Ember.Component.extend({
+export default Component.extend({
   axisBrush: service('data/axis-brush'),
 
   classNames : [ 'goto-ensemble'],
 
   website: 'GrainGenes',
-  websites: Ember.String.w('GrainGenes Ensembl Dawn Apollo'),
+  websites: w('GrainGenes Ensembl Dawn Apollo'),
   /** user may provide a configuration URL for each website,
    * input via baseUrl. */
   baseUrls : {},
@@ -31,7 +35,7 @@ export default Ember.Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  baseUrl : Ember.computed('website', 'baseUrls.@each', {
+  baseUrl : computed('website', 'baseUrls.@each', {
     get () {
       return this.get('baseUrls')[this.get('website')];
     },
@@ -83,7 +87,7 @@ export default Ember.Component.extend({
 
   /** these can be params to the component. */
   stacks,
-  axes1d : Ember.computed.alias('stacks.axes1d'),
+  axes1d : alias('stacks.axes1d'),
 
   /** Search for axis which is showing selectedFeature.Chromosome.
    *
@@ -139,7 +143,7 @@ export default Ember.Component.extend({
     /* updateScaleDomain() occurs in response to dependency .domain, and
      * axisBrushShowSelection() uses y scale.
      */
-    Ember.run.later(function () {
+    later(function () {
       stacks.oa.showResize(false, true); });
     /* showResize() or :
      // if brush is outside new domain
@@ -179,7 +183,7 @@ export default Ember.Component.extend({
   /** for now just show the first of selectedFeatures.
    * @return  feature name of the first element of selectedFeatures.
    */
-  selectedFeatures0Name : Ember.computed('website', 'selectedFeatures.[]', function (newValue) {
+  selectedFeatures0Name : computed('website', 'selectedFeatures.[]', function (newValue) {
     let
     selectedFeatures = this.get('selectedFeatures'),
     /**   form is e.g. : {Chromosome: "myMap:1A.1", Feature: "myMarkerA", Position: "0"} */
@@ -191,7 +195,7 @@ export default Ember.Component.extend({
   }),
   /** construct the URL for .website and .selectedFeatures0Name
    */
-  urlSelected : Ember.computed('website', 'selectedFeatures0Name', function (newValue) {
+  urlSelected : computed('website', 'selectedFeatures0Name', function (newValue) {
     let website = this.get('website'),
     featureName = this.get('selectedFeatures0Name'),
     url = featureName && this.get('urlOf').apply(this, [website, featureName]);
@@ -201,7 +205,7 @@ export default Ember.Component.extend({
   }),
   /** construct the URL for .website and .brushedDomain
    */
-  urlLocation : Ember.computed('website', 'selectedBlock', 'brushedDomain.{0,1}', function (newValue) {
+  urlLocation : computed('website', 'selectedBlock', 'brushedDomain.{0,1}', function (newValue) {
     let url,
     website = this.get('website'),
     selectedBlock = this.get('selectedBlock');
@@ -231,7 +235,7 @@ export default Ember.Component.extend({
   }),
   /** construct the URL for .website and the input .featureName
    */
-  url : Ember.computed('website', 'featureName', 'baseUrl', function (newValue) {
+  url : computed('website', 'featureName', 'baseUrl', function (newValue) {
     let
       website = this.get('website'),
     featureName = this.get('featureName'),
@@ -239,7 +243,7 @@ export default Ember.Component.extend({
     return url;
   }),
   /** @return the handle of the axisBrush of .selectedBlock. */
-  brush : Ember.computed('selectedBlock', function () {
+  brush : computed('selectedBlock', function () {
     let brush,
     selectedBlock = this.get('selectedBlock');
     dLog('selectedBlock', selectedBlock);
@@ -251,7 +255,7 @@ export default Ember.Component.extend({
   /** Return the domain (selection) of .brush.
    * @return undefined if there is no brushed domain
    */
-  brushedDomain : Ember.computed(
+  brushedDomain : computed(
     // selectedBlock will change when a new brush is started
     'selectedBlock',
     'brush.brushedDomain.0', 'brush.brushedDomain.1', 'brush.zoomCounter',
@@ -318,7 +322,7 @@ class ApolloJBrowse {
       Object.assign(this, additionalAttr);
   };
 
-};
+}
 
 /** Construct the Dawn URL for .selectedBlock and .brushedDomain
  * @param gotoUrl goto-ensembl component

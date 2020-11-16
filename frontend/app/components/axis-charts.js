@@ -1,11 +1,18 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import { alias, filter } from '@ember/object/computed';
+import { later, bind, next } from '@ember/runloop';
+import EmberObject, { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
 
 import { union, difference } from 'lodash/array';
 
 import InAxis from './in-axis';
 import { className, AxisCharts, Chart1 } from '../utils/draw/chart1';
-import { DataConfig, dataConfigs, blockData, parsedData } from '../utils/data-types';
+import {
+  DataConfig,
+  dataConfigs,
+  blockData,
+  parsedData
+} from '../utils/data-types';
 
 /*----------------------------------------------------------------------------*/
 
@@ -57,8 +64,8 @@ export default InAxis.extend({
   createAttributes() {
     /** these objects persist for the life of the object. */
     if (! this.get('blocksData')) {
-      this.set('blocksData', Ember.Object.create());
-      this.set('charts', Ember.Object.create());
+      this.set('blocksData', EmberObject.create());
+      this.set('charts', EmberObject.create());
       // axisID isn't planned to change for this component
       this.set('axisCharts',  new AxisCharts(this.get('axisID')));
     }
@@ -73,7 +80,7 @@ export default InAxis.extend({
     if (! gAxis.empty())
       this.draw();
     else
-      Ember.run.later(() => this.draw(), 500);
+      later(() => this.draw(), 500);
   },
   willDestroyElement() {
     dLog(CompName + " willDestroyElement()");
@@ -83,20 +90,20 @@ export default InAxis.extend({
   },
 
 
-  axisID : Ember.computed.alias('axis.axisID'),
+  axisID : alias('axis.axisID'),
 
-  gAxis : Ember.computed('axisID', function () {
+  gAxis : computed('axisID', function () {
     let axisID = this.get('axisID');
     let axisCharts = this.get('axisCharts');
     let gAxis = axisCharts.selectParentContainer(axisID);
     return gAxis;
   }),
 
-  yAxesScales : Ember.computed('data', function () {
+  yAxesScales : computed('data', function () {
     let oa = this.get('data');
     return oa.y;
   }),
-  yAxisScale : Ember.computed('axisID', 'yAxesScales', function () {
+  yAxisScale : computed('axisID', 'yAxesScales', function () {
     let yAxesScales = this.get('yAxesScales'),
     axisID = this.get('axisID'),
     yAxis = yAxesScales[axisID];
@@ -108,7 +115,7 @@ export default InAxis.extend({
    * are .isZoomedOut.  This means the block-view continues to exist - it is not
    * destroyed / re-created as the user zooms in / out.
    */
-  blockViews : Ember.computed(
+  blockViews : computed(
     'blockService.viewed.@each.{featuresCounts,isChartable}',
     function () {
       let
@@ -126,7 +133,7 @@ export default InAxis.extend({
 
 
   blocksDataCount : 0,
-  chartTypesAll : Ember.computed(
+  chartTypesAll : computed(
     /** from fgrep dataTypeName frontend/app/utils/data-types.js */
     'blocksData.{parsedData,blockData,featureCountAutoData,featureCountData}',
     'blocksDataCount',
@@ -137,11 +144,11 @@ export default InAxis.extend({
     return chartTypes;
   }),
   /** filter out {featureCountAutoData,featureCountData} - they are handled via featureCountBlocks and given 1 chart per block.  */
-  chartTypes : Ember.computed.filter('chartTypesAll', (dataTypeName) => ! dataTypeName.startsWith('featureCount')),
+  chartTypes : filter('chartTypesAll', (dataTypeName) => ! dataTypeName.startsWith('featureCount')),
 
   /** Filter blocksData to just .{featureCountAutoData,featureCountData}
    */
-  featureCountBlocks : Ember.computed(
+  featureCountBlocks : computed(
     'blocksData.{featureCountAutoData,featureCountData}',
     'blocksDataCount',
     function () {
@@ -157,7 +164,7 @@ export default InAxis.extend({
       return typeBlockIds;
     }),
   /** Number of blocks of type featureCount*Data  */
-  nFeatureCountData : Ember.computed(
+  nFeatureCountData : computed(
     'featureCountBlocks.{featureCountAutoData,featureCountData}.[]',
     function () { 
       let
@@ -177,7 +184,7 @@ export default InAxis.extend({
    * given its own block; this enables each block to be scaled independently
    * into a constant width.
    */
-  chartsArray : Ember.computed(
+  chartsArray : computed(
     'chartTypes.[]',
     'featureCountBlocks.{featureCountAutoData,featureCountData}.[]',
     function () {
@@ -204,9 +211,9 @@ export default InAxis.extend({
     }),
 
   /** chartsArray minus those which use space allocated by axisBlocks */
-  chartsVariableWidth : Ember.computed.filter('chartsArray',  (chart) => !chart.useAllocatedWidth()),
+  chartsVariableWidth : filter('chartsArray',  (chart) => !chart.useAllocatedWidth()),
   /** chartsArray which use space allocated by axisBlocks */
-  chartsFixedWidth : Ember.computed.filter('chartsArray',  (chart) => chart.useAllocatedWidth()),
+  chartsFixedWidth : filter('chartsArray',  (chart) => chart.useAllocatedWidth()),
 
   addChart(dataTypeName, chartName) {
     let chart = this.charts[chartName];
@@ -217,7 +224,7 @@ export default InAxis.extend({
       chart.barsLine = this.get('chartBarLine');
       // for allocatedWidthForBlock().
       chart.axisBlocks = this.get('axisBlocks');
-      chart.getAllocatedWidth = Ember.run.bind(this, this.getAllocatedWidth);
+      chart.getAllocatedWidth = bind(this, this.getAllocatedWidth);
       dLog('chartsArray', dataTypeName, chartName, chart, this.charts, this);
       let axisCharts = this.get('axisCharts');
       chart.overlap(axisCharts);
@@ -247,10 +254,10 @@ export default InAxis.extend({
     return charts;
   },
 
-  resizeEffectHere : Ember.computed('resizeEffect', function () {
+  resizeEffectHere : computed('resizeEffect', function () {
     dLog('resizeEffectHere in axis-charts', this.get('axisID'));
   }),
-  drawContentEffect : Ember.computed(
+  drawContentEffect : computed(
   'zoomedDomain',
   'blockViews.@each.isZoomedOut',
   'blockViews.@each.featuresCounts.[]',
@@ -359,7 +366,7 @@ export default InAxis.extend({
       .filter((aw) => aw),
     widthSum = chartWidths.reduce((sum, w) => sum += w, 0);
     // later allocate each chart, for separate offsets : (this.get('className') + '_' + chart.name)
-    Ember.run.next(() => {
+    next(() => {
       let childWidths = this.get('childWidths'),
           className = this.get('className'),
           chartWidth = childWidths.get(className);
@@ -444,9 +451,9 @@ export default InAxis.extend({
     this.get('axisCharts').frameRemove();
   },
 
-  chartBarLine : Ember.computed.alias('controls.view.chartBarLine'),
+  chartBarLine : alias('controls.view.chartBarLine'),
   /** when user toggles bar/line mode in view panel, call .toggleBarsLine() for each chart.   */
-  toggleChartTypeEffect : Ember.computed('chartBarLine', function() {
+  toggleChartTypeEffect : computed('chartBarLine', function() {
     /** this could instead use Evented view-controls to listen for this action. */
     let mode = this.get('chartBarLine');
     let charts = this.get('chartsArray');

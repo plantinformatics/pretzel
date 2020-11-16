@@ -1,4 +1,5 @@
-import Ember from 'ember';
+import Evented from '@ember/object/evented';
+import Component from '@ember/component';
 
 import AxisEvents from '../../utils/draw/axis-events';
 
@@ -10,7 +11,7 @@ const dLog = console.debug;
  * registers for events using AxisEvents, filtering by matching axisID.
  * Planning to use AxisEvents here and propagate to just those matching axes.
  */
-export default Ember.Component.extend(Ember.Evented, /*AxisEvents,*/ {
+export default Component.extend(Evented, /*AxisEvents,*/ {
 
   /** axes-1d receives axisStackChanged from draw-map and
    * (todo) propagates it to its children

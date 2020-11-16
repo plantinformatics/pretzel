@@ -1,9 +1,8 @@
-import Ember from 'ember';
+import EmberObject, { computed } from '@ember/object';
+import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { breakPoint } from '../../utils/breakPoint';
 
-
-const { Component } = Ember;
 
 /* global d3 */
 
@@ -23,7 +22,7 @@ let apiServers_colour_scale =
 function removePunctuation(text) {
   // a normal input will contain e.g. :/@\.
   return text && text.replace(/[^A-Za-z0-9]/g, '_');
-};
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -38,7 +37,7 @@ function removePunctuation(text) {
  *  .token  after login on that host, this is the authorization token;
  *
  */
-export default Ember.Object.extend({
+export default EmberObject.extend({
   dataset: service('data/dataset'),
   apiServers: service(),
 
@@ -48,7 +47,7 @@ export default Ember.Object.extend({
   },
 
   /**  sanitize user input */
-  name : Ember.computed('host', function () {
+  name : computed('host', function () {
     let host = this.get('host'),
     name = removePunctuation(this.host);
     console.log('ApiServer', this.host, this.user, this.token);
@@ -58,7 +57,7 @@ export default Ember.Object.extend({
   /** Used by panel/api-server-tab.hbs
    * for unique IDs of tab DOM elements.
    */
-  tabId : Ember.computed('name',  function() {
+  tabId : computed('name',  function() {
     let name = this.get('name'),
     id = name && name.replace(/^https?_+/, '');
     console.log('tabId', id, this);
@@ -75,7 +74,7 @@ export default Ember.Object.extend({
    *
    * Similar : @see tabId()
    */
-  tabText : Ember.computed('host',  function() {
+  tabText : computed('host',  function() {
     /** .host is actually the URL, i.e. userinfo+host+port (and possibly a path
      * prefix), not including the sub-path for the route, and query params. */
     let host = this.get('host');
@@ -86,7 +85,7 @@ export default Ember.Object.extend({
    * This is used as a border around the api-server tab in manage-explorer,
    * and for the circle beside the block in the axis title (axisTitleBlocksServers.js).
    */
-  colour : Ember.computed('name', function () {
+  colour : computed('name', function () {
     /** .name is used as the store name (refn : api-servers.js : addServer() : {,un}registerStore())
      * So it is also possible to use e.g. block.store.name to lookup apiServers_colour_scale();
      * for scaleOrdinal this.get('name') is used directly;

@@ -1,4 +1,3 @@
-import Ember from 'ember';
 import { inject as service } from '@ember/service';
 
 
@@ -31,7 +30,7 @@ class AxisTitleBlocksServers {
     this.apiServers = apiServers;
   }
 
-};
+}
 
 /** if multiple api-servers, show a colour circle to indicate the server of the block.
  *

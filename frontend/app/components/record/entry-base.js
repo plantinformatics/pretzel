@@ -1,12 +1,12 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
-const { Component, inject: { service } } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   onInit: function() {
     this.set('editing', false);
   }.on('init'),
-  noAuth: Ember.computed(function() {
+  noAuth: computed(function() {
     return window['AUTH'] === 'NONE';
   }),
   actions: {

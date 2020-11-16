@@ -1,7 +1,18 @@
-import Ember from 'ember';
+import $ from 'jquery';
+import {
+  once,
+  later,
+  debounce,
+  bind,
+  throttle
+} from '@ember/runloop';
+import { computed, get } from '@ember/object';
+import { alias, filterBy } from '@ember/object/computed';
+import Evented from '@ember/object/evented';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 import compileSearch from 'npm:binary-search-bounds';
 import createIntervalTree from 'npm:interval-tree-1d';
-const { inject: { service } } = Ember;
 
 import { isEqual } from 'lodash/lang';
 
@@ -22,32 +33,76 @@ scheduleIntoAnimationFrame = scheduleFrame.default;
 import config from '../config/environment';
 import { EventedListener } from '../utils/eventedListener';
 import { chrData, cmNameAdd } from '../utils/utility-chromosome';
-import { eltWidthResizable, eltResizeToAvailableWidth, noShiftKeyfilter, eltClassName, tabActive, inputRangeValue, expRange  } from '../utils/domElements';
+import {
+  eltWidthResizable,
+  eltResizeToAvailableWidth,
+  noShiftKeyfilter,
+  eltClassName,
+  tabActive,
+  inputRangeValue,
+  expRange
+} from '../utils/domElements';
 import { I } from '../utils/draw/d3-svg';
-import { /*fromSelectionArray,*/ logSelectionLevel, logSelection, logSelectionNodes, selectImmediateChildNodes } from '../utils/log-selection';
+import {
+  /*fromSelectionArray,
+  */ logSelectionLevel,
+  logSelection,
+  logSelectionNodes,
+  selectImmediateChildNodes
+} from '../utils/log-selection';
 import { Viewport } from '../utils/draw/viewport';
 import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
 import { AxisTitleBlocksServers } from '../utils/draw/axisTitleBlocksServers_tspan';
-import { brushClip, showAxisZoomResetButtons } from '../utils/draw/axisBrush';
+import {
+  brushClip,
+  showAxisZoomResetButtons
+} from '../utils/draw/axisBrush';
 
 import {  Axes, maybeFlip, maybeFlipExtent,
           ensureYscaleDomain,
           /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll,
           axisFeatureCircles_selectAll
           /*, axisTitleColour*/  }  from '../utils/draw/axis';
-import { stacksAxesDomVerify  }  from '../utils/draw/stacksAxes';
-import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Name, setCount } from '../utils/stacks';
-import { collateAdjacentAxes, log_adjAxes,  log_adjAxes_a, isAdjacent } from '../utils/stacks-adj';
+import { stacksAxesDomVerify }  from '../utils/draw/stacksAxes';
+import {
+  Block,
+  Stacked,
+  Stack,
+  stacks,
+  xScaleExtend,
+  axisRedrawText,
+  axisId2Name,
+  setCount
+} from '../utils/stacks';
+import {
+  collateAdjacentAxes,
+  log_adjAxes,
+  log_adjAxes_a,
+  isAdjacent
+} from '../utils/stacks-adj';
 import { updateRange } from '../utils/stacksLayout';
-import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../utils/stacks-drag';
+import {
+  DragTransition,
+  dragTransitionTime,
+  dragTransitionNew,
+  dragTransition
+} from '../utils/stacks-drag';
 import { wheelNewDomain } from '../utils/draw/zoomPanCalcs';
-import { round_2, checkIsNumber} from '../utils/domCalcs';
+import { round_2, checkIsNumber } from '../utils/domCalcs';
 import { Object_filter, compareFields } from '../utils/Object_filter';
-import { name_chromosome_block, name_position_range, isOtherField } from '../utils/field_names';
+import {
+  name_chromosome_block,
+  name_position_range,
+  isOtherField
+} from '../utils/field_names';
 import { breakPoint, breakPointEnableSet } from '../utils/breakPoint';
 import { highlightFeature_drawFromParams } from './draw/highlight-feature';
 import { Flow } from "../utils/flows";
-import { flowButtonsSel, configurejQueryTooltip, flows_showControls  } from "../utils/draw/flow-controls";
+import {
+  flowButtonsSel,
+  configurejQueryTooltip,
+  flows_showControls
+} from "../utils/draw/flow-controls";
 import { collateStacks, countPaths, /*countPathsWithData,*/
          collateData, collateFeatureClasses, maInMaAG, collateStacks1,
          pathsUnique_log, log_maamm, log_ffaa, mmaa2text,
@@ -99,10 +154,10 @@ Object.filter = Object_filter;
 
 
 
-export default Ember.Component.extend(Ember.Evented, {
+export default Component.extend(Evented, {
   classNames: ['draw-map-container'],
 
-  store: Ember.inject.service('store'),
+  store: service('store'),
   blockService: service('data/block'),
   flowsService: service('data/flows-collate'),
   pathsP : service('data/paths-progressive'),
@@ -110,7 +165,7 @@ export default Ember.Component.extend(Ember.Evented, {
   apiServers : service(),
 
   /*--------------------------------------------------------------------------*/
-  urlOptions : Ember.computed.alias('queryParamsService.urlOptions'),
+  urlOptions : alias('queryParamsService.urlOptions'),
 
   /*------------------------------------------------------------------------*/
 //-  graphData: Ember.inject.service('graph-data'),
@@ -187,7 +242,7 @@ export default Ember.Component.extend(Ember.Evented, {
   /** Used for receiving colouredFeatures from selected-features.js,
    * and flipRegion, ...
    */
-  feedService: (console.log("feedService"), Ember.inject.service('feed')),
+  feedService: (console.log("feedService"), service('feed')),
 
     /** these actions on feedService can be moved to drawActions;
      * feedService is global, whereas drawActions is specific to a single draw-map;
@@ -270,17 +325,17 @@ export default Ember.Component.extend(Ember.Evented, {
 
   /*------------------------------------------------------------------------*/
   
-  scroller: Ember.inject.service(),
+  scroller: service(),
 
-  axes1d : Ember.computed( function () { return stacks.axes1d; }),
-  splitAxes: Ember.computed.filterBy('axes1d', 'extended', true),
+  axes1d : computed( function () { return stacks.axes1d; }),
+  splitAxes: filterBy('axes1d', 'extended', true),
 
   /** Enable frontend collation of paths : pathUpdate_() / collate-paths.js
    * The user sets this via GUI input in panel/view-controls.
    * Same effect as me.get('urlOptions.pathsCheck'); if pathJoinClient is
    * available in GUI, then urlOptions.pathsCheck is not required.
    */
-  pathJoinClient : Ember.computed.alias('controls.view.pathJoinClient'),
+  pathJoinClient : alias('controls.view.pathJoinClient'),
 
   /*------------------------------------------------------------------------*/
 
@@ -290,7 +345,7 @@ export default Ember.Component.extend(Ember.Evented, {
       /* run once to handle multiple settings of selectedFeatures (panel/left-panel and draw/axis-1d)
        * selectedFeatures is good candidate for converting to a model, simplifying this.
        */
-      Ember.run.once(this, selectedFeaturesSendArray, selectedFeatures);
+      once(this, selectedFeaturesSendArray, selectedFeatures);
       function selectedFeaturesSendArray(selectedFeatures) {
       let featuresAsArray = d3.keys(selectedFeatures)
         .map(function (key) {
@@ -350,7 +405,7 @@ export default Ember.Component.extend(Ember.Evented, {
         dLog('enableAxis2D()', enabled, "no", axisID, "in", axes1d);
       }
       else
-        Ember.run.later(
+        later(
           () => axis.set('extended', enabled));  // was axis2DEnabled
       console.log("enableAxis2D in components/draw-map", axisID, enabled, axis);
       console.log("splitAxes", this.get('splitAxes'));
@@ -400,7 +455,7 @@ export default Ember.Component.extend(Ember.Evented, {
       return retHash;
     }, {});
 
-    Ember.run.later( () => {
+    later( () => {
       /* Cause the evaluation of stacks-view:axesP; also evaluates blockAdjIds,
        * and block-adj.hbs evaluates paths{,Aliases}ResultLength and hence
        * requests paths.  This dependency architecture will be made clearer.  */
@@ -927,7 +982,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
     /*------------------------------------------------------------------------*/
     //-    import { inRange } from "../utils/graph-maths.js";
-    //-    import {} from "../utils/elementIds.js";
+    //-    import { } from "../utils/elementIds.js";
 
     function mapChrName2Axis(mapChrName)
     {
@@ -1286,7 +1341,7 @@ export default Ember.Component.extend(Ember.Evented, {
                * this will be replaced anyway (axesBlocks, which uses block.referenceBlock).
                */
               parentMatch = block_.get('datasetId.content') === dataset.get('parent'),
-              parentNameMatch = dataset.get('parentName') === Ember.get(block_, 'datasetId.id'),
+              parentNameMatch = dataset.get('parentName') === get(block_, 'datasetId.id'),
               match = (block.scope == zd.scope) && (block.dataset.get('name') == parentName);
               dLog(key, trace_stack ? block : block.dataset.get('name'), match, parentMatch, parentNameMatch);
               match = match && (parentMatch || parentNameMatch);
@@ -1639,9 +1694,9 @@ export default Ember.Component.extend(Ember.Evented, {
 
     //- moved updateRange() to utils/stacksLayout
 
-    //-    import {} from "../utils/paths.js";
+    //-    import { } from "../utils/paths.js";
 
-    //-    import {} from "../utils/intervals.js";
+    //-    import { } from "../utils/intervals.js";
 
     var path_colour_scale;
     let featureScaffold = oa.featureScaffold || (oa.featureScaffold = {}),
@@ -1923,7 +1978,7 @@ export default Ember.Component.extend(Ember.Evented, {
         function(transition) {
           if (trace_stack)
             dLog("resizeThis", transition);
-          Ember.run.debounce(oa, me.resize, [transition], 500);
+          debounce(oa, me.resize, [transition], 500);
         };
       /** d3 dispatch.on() does not take arguments, and similarly for eltWidthResizable() param resized. */
       function resizeThisWithTransition() { resizeThis(true); }
@@ -1934,11 +1989,11 @@ export default Ember.Component.extend(Ember.Evented, {
         d3.select(window)
         .on('resize', resizeThisWithTransition);
       else  // also works, can drop if further testing doesn't indicate one is better.
-        Ember.$( window )
+        $( window )
         .resize(function(e) {
           console.log("window resize", e);
           // see notes in domElements.js regarding  .resize() debounce
-          Ember.run.debounce(resizeThisWithTransition, 300);
+          debounce(resizeThisWithTransition, 300);
         });
 
       /* 2 callbacks on window resize, register in the (reverse) order that they
@@ -2606,7 +2661,7 @@ export default Ember.Component.extend(Ember.Evented, {
       axisIds = axisTitleS.nodes().mapBy('__data__'),
       axes1 = axisIds.map((axisId) => oa.axes[axisId]);
       axes1.forEach(
-        (a) => a.axis1d && Ember.run.bind(a.axis1d, a.axis1d.showZoomResetButtonXPosn)());
+        (a) => a.axis1d && bind(a.axis1d, a.axis1d.showZoomResetButtonXPosn)());
     }
     updateAxisTitleSize(axisG.merge(axisS));
 
@@ -2719,7 +2774,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }
     function axisStackChanged(t)
     {
-      Ember.run.throttle(this, axisStackChanged_, [t], 500);
+      throttle(this, axisStackChanged_, [t], 500);
     }
 
 //-components/paths
@@ -2788,7 +2843,7 @@ export default Ember.Component.extend(Ember.Evented, {
         .on("mouseover", toolTipMouseOver)
         .on("mouseout", toolTipMouseOut);
 
-      Ember.$("div.toolTip.d3-tip#toolTip button#toolTipClose")
+      $("div.toolTip.d3-tip#toolTip button#toolTipClose")
         .on("click", closeToolTip);
     }
 
@@ -2875,7 +2930,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
       /** If path-hover currently exists in toolTip, avoid insert error by detaching it while updating html of parent toolTip */
       let
-        pt=Ember.$('.toolTip.d3-tip#toolTip'),
+        pt=$('.toolTip.d3-tip#toolTip'),
       ph = pt.find('.pathHover');
       console.log(pt[0], "pathHover:", ph[0] || ph.length);
       if (ph.length)
@@ -2890,21 +2945,21 @@ export default Ember.Component.extend(Ember.Evented, {
 
       toolTip.show(d, i);
       let ph2=ph1.appendTo(pt);
-      Ember.run.once(me, function() {
-        let ph3= Ember.$('.pathHover');
+      once(me, function() {
+        let ph3= $('.pathHover');
         console.log(".pathHover", ph2[0] || ph2.length, ph3[0] || ph3.length);
         me.set("hoverFeatures", hoverFeatures);
         // me.ensureValue("pathHovered", true);
         me.trigger("pathHovered", true, hoverFeatures);
       });
-      Ember.run.later(me, function() {
+      later(me, function() {
         setupToolTipMouseHover();
       }, 1000);
     }
 
     function hidePathHoverToolTip() {
       console.log("hidePathHoverToolTip", me.get('toolTipHovered'));
-      Ember.run.debounce(me, function () {
+      debounce(me, function () {
       if (! me.get('toolTipHovered'))
       {
         toolTip.hide();
@@ -2918,7 +2973,7 @@ export default Ember.Component.extend(Ember.Evented, {
       // stroke attributes of this revert to default, as hover ends
       d3.select(this)
         .classed("hovered", false);
-      Ember.run.debounce(me, hidePathHoverToolTip, 2000);
+      debounce(me, hidePathHoverToolTip, 2000);
     }
 
 //- axis
@@ -2980,7 +3035,7 @@ export default Ember.Component.extend(Ember.Evented, {
       /** typeof location may also be "number" or "object" - array : syntenyBlocks[x] */
       let text = (location == "string") ? location :  "" + location;
       let node_ = this;
-      Ember.$(node_)
+      $(node_)
         .popover({
           trigger : "click hover",
           sticky: true,
@@ -3932,7 +3987,7 @@ export default Ember.Component.extend(Ember.Evented, {
         d3.selectAll(fadedSelector).classed("faded", featureNotSelected2);
       } // axisFeatureCirclesBrushed()
 
-        showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, Ember.run.bind(me, me.get('resetZooms')), brushedAxisID, me);
+        showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, bind(me, me.get('resetZooms')), brushedAxisID, me);
 
       } else {
         // brushHelper() is called from brushended() after zoom, with selectedAxes.length===0
@@ -3969,7 +4024,7 @@ export default Ember.Component.extend(Ember.Evented, {
       let axis = oa.axes[brushedAxisID],
           axis1d = axis && axis.axis1d;
       if (axis1d) {
-        Ember.run.bind(axis1d, axis1d.showZoomResetButtonState)();
+        bind(axis1d, axis1d.showZoomResetButtonState)();
       }
 
       me.send('selectChromById', brushedAxisID);
@@ -4106,7 +4161,7 @@ export default Ember.Component.extend(Ember.Evented, {
         }
       }
       //  me.set("axisFeatureTargetId", targetId);
-      Ember.run.once(function() {
+      once(function() {
         me.set("hoverFeatures", hoverFeatures);
         // me.set("axisFeatureCircleHover", true);
       });
@@ -4114,7 +4169,7 @@ export default Ember.Component.extend(Ember.Evented, {
     function handleFeatureCircleMouseOut(d, i)
     {
       if (false)
-      Ember.run.debounce(
+      debounce(
         function() {
           me.set("axisFeatureCircleHover", false);
         },
@@ -4122,7 +4177,7 @@ export default Ember.Component.extend(Ember.Evented, {
       else
       {
         function hidePathHoverToolTip() { toolTip.hide(d); }
-        Ember.run.debounce(hidePathHoverToolTip, 1000);
+        debounce(hidePathHoverToolTip, 1000);
       }
     }
     function brushEnableFeatureHover(circleSelection)
@@ -4287,7 +4342,7 @@ export default Ember.Component.extend(Ember.Evented, {
           }
         }
       });
-      showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, Ember.run.bind(me, me.get('resetZooms')), axisName, me);
+      showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, bind(me, me.get('resetZooms')), axisName, me);
 
       if (domainChanged) {
         // axisStackChanged(t);
@@ -5115,7 +5170,7 @@ export default Ember.Component.extend(Ember.Evented, {
         console.log("stacksAdjust", "stacks.changed 0x", stacks.changed.toString(16));
         stacks.changed ^= 0x10;
         if (oa.svgContainer === undefined)
-          Ember.run.later(function () {
+          later(function () {
             axisStackChanged(t);
           });
         else
@@ -5411,7 +5466,7 @@ export default Ember.Component.extend(Ember.Evented, {
       if (trace_gui)
       console.log("configureAxisTitleMenu", axisName, this, this.outerHTML);
         let node_ = this;
-        Ember.$(node_)
+        $(node_)
         .popover({
             trigger : "hover", // manual", // "click focus",
           sticky: true,
@@ -5524,7 +5579,7 @@ export default Ember.Component.extend(Ember.Evented, {
       title = blockR
         ? blockR.get('namespace') + ' ' + blockR.get('scope')
         : block.longName();
-        Ember.$(node_)
+        $(node_)
         .popover({
           /* would like to use .axis-menu as a selector in css,
            * but 'class' is not effective; maybe in a later version. refn :
@@ -5612,7 +5667,7 @@ export default Ember.Component.extend(Ember.Evented, {
          * Minimise the impact of this by using debounce, and .toFixed(), since
          * changes < 1 pixel aren't worth a re-render.
          */
-        Ember.run.debounce(
+        debounce(
           me,
           recordViewport,
           viewPort.w.toFixed(),
@@ -5692,7 +5747,7 @@ export default Ember.Component.extend(Ember.Evented, {
             });
           DropTarget.prototype.showResize();
         }
-        Ember.run.later( function () {
+        later( function () {
           /* This does .trigger() within .later(), which seems marginally better than vice versa; it works either way.  (Planning to replace event:resize soon). */
           if (widthChanged || heightChanged)
             try {
@@ -5710,7 +5765,7 @@ export default Ember.Component.extend(Ember.Evented, {
     function setupToggle(checkboxId, onToggle)
     {
       let 
-      checkbox = Ember.$("#" + checkboxId);
+      checkbox = $("#" + checkboxId);
       checkbox.on('click', function (event) {
         let checked = checkbox[0].checked;
         console.log(checkboxId, checked, event.originalEvent);
@@ -5786,14 +5841,14 @@ export default Ember.Component.extend(Ember.Evented, {
      */
     function setupInputRange(inputId, varName, factor)
     {
-      let input = Ember.$("#" + inputId);
+      let input = $("#" + inputId);
       input.on('input', function (event) {
         let value = input[0].value / factor;
         console.log(inputId, value, event.originalEvent, oa.svgRoot._groups[0][0]);
         if (typeof varName == "string")
           setCssVariable(varName, value);
         else
-          Ember.run.later(function () { varName(value); });
+          later(function () { varName(value); });
       });
     }
     function setupPathOpacity()
@@ -5815,7 +5870,7 @@ export default Ember.Component.extend(Ember.Evented, {
        * so : in .hbs : id="range-sbSizeThreshold" :  min="0" max="50" value="22"
        *  min value is 0, so -1 to get 0. */
       oa.sbSizeThreshold=Math.pow(1.148137, value) - 1;
-      Ember.run.later( function () { showSynteny(oa.syntenyBlocks, undefined); });
+      later( function () { showSynteny(oa.syntenyBlocks, undefined); });
     }
     function setupSbSizeThresh()
     {
@@ -5867,7 +5922,7 @@ export default Ember.Component.extend(Ember.Evented, {
     function getUsePatchColour()
     {
       let inputParent = '#choose_path_colour_scale',
-      inputs = Ember.$(inputParent + ' input'), val;
+      inputs = $(inputParent + ' input'), val;
       for (let ii = 0;
            (ii < inputs.length) && (val === undefined);
            ii++)
@@ -5894,7 +5949,7 @@ export default Ember.Component.extend(Ember.Evented, {
     this.trigger("zoomedAxis", args);
   },
   throttledZoomedAxis : function (axisID, t) {
-    Ember.run.throttle(this, this.triggerZoomedAxis, [axisID, t], 400);
+    throttle(this, this.triggerZoomedAxis, [axisID, t], 400);
   },
 
   //----------------------------------------------------------------------------
@@ -5907,16 +5962,16 @@ export default Ember.Component.extend(Ember.Evented, {
     let oa = this.get('oa');
     oa.tracks  = [{start: 10, end : 20, description : "track One"}];
     this.set('toolTipHovered', false);
-    Ember.run.later(() => {
-      Ember.$('.left-panel-shown')
+    later(() => {
+      $('.left-panel-shown')
         .on('toggled', (event) => this.readLeftPanelToggle() );
-      Ember.$('.make-ui-draggable').draggable(); });
+      $('.make-ui-draggable').draggable(); });
   },
 
-  drawEffect : Ember.computed('data.[]', 'resizeEffect', function () {
+  drawEffect : computed('data.[]', 'resizeEffect', function () {
     let me = this;
     let data = this.get('data');
-    Ember.run.throttle(function () {
+    throttle(function () {
       /** viewed[] is equivalent to data[], apart from timing differences.  */
       let viewed = me.get('blockService.viewed'),
       /** create axes for the reference blocks before the data blocks are added. */
@@ -5931,7 +5986,7 @@ export default Ember.Component.extend(Ember.Evented, {
 
     highlightFeature_drawFromParams(this);
   }),
-  resizeEffect : Ember.computed(
+  resizeEffect : computed(
     /* viewportWidth and viewportHeight will change as a result of changes in
      * stacksWidthChanges.{left,right}, so these dependencies could be
      * consolidated (checking that the dependencies change after the element size
@@ -5957,7 +6012,7 @@ export default Ember.Component.extend(Ember.Evented, {
     if (false) // currently the display is probably smoother with the debounce; later after tidying up the resize structure this direct call may be better.
       this.get('resize').apply(this.get('oa'), [/*transition*/true]);
     else
-      Ember.run.debounce(this.get('oa'), this.get('resize'), [/*transition*/true], 500);
+      debounce(this.get('oa'), this.get('resize'), [/*transition*/true], 500);
       return result;
   }),
 
@@ -5965,7 +6020,7 @@ export default Ember.Component.extend(Ember.Evented, {
    * When this CP fires, updates are required to X position of stacks / axes, and hence the paths between them.
    * @return value is for devel trace
    */
-  stacksWidthChanges : Ember.computed(
+  stacksWidthChanges : computed(
     'blockService.stacksCount', 'splitAxes.[]',
     'layout.left.visible', 'layout.right.visible',
     function () {
@@ -5986,7 +6041,7 @@ export default Ember.Component.extend(Ember.Evented, {
     }),
   /** Read the CSS attribute display of left-panel to determine if it is shown / visible.  */
   readLeftPanelToggle() {
-      let leftPanel = Ember.$('#left-panel'),
+      let leftPanel = $('#left-panel'),
       /** leftPanel.hasClass('left-panel-shown') is always true; instead the
        * <div>'s display attribute is toggled between flex and none.
        * using jQuery .toggle() applied to button.left-panel-{shown,hidden},
@@ -6082,7 +6137,7 @@ export default Ember.Component.extend(Ember.Evented, {
                  * reflow will modify viewport width, so the delay helps with
                  * waiting for that.
                  */
-                Ember.run.debounce(resizeDrawing, 300);
+                debounce(resizeDrawing, 300);
             }
         }
 

@@ -1,8 +1,7 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import { bind } from '@ember/runloop';
+import Mixin from '@ember/object/mixin';
+import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
-
-const { Mixin } = Ember;
 
 import { debounce, throttle } from 'lodash/function';
 
@@ -20,7 +19,7 @@ const dLog = console.debug;
  *   zoomed : boolean
  */
 export default Mixin.create({
-  store: Ember.inject.service('store'),
+  store: service('store'),
 
   /** true if currentPosition.yDomain is a subset of the axis domain.  */
   zoomed : false,
@@ -86,10 +85,10 @@ export default Mixin.create({
     this.setDomainThrottled(domain);
   },
   setDomainDebounced : debounce(function (domain) {
-    Ember.run.bind(this, this.set)('currentPosition.yDomainDebounced', domain);
+    bind(this, this.set)('currentPosition.yDomainDebounced', domain);
   }, 333, {maxWait : 1000}),
   setDomainThrottled : throttle(function (domain) {
-    Ember.run.bind(this, this.set)('currentPosition.yDomainThrottled', domain);
+    bind(this, this.set)('currentPosition.yDomainThrottled', domain);
   }, 1000),
 
   /** Set the zoomed of the current position to the given value
