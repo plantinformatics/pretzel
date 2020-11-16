@@ -7,6 +7,12 @@ const dLog = console.debug;
 export default Component.extend({
     apiServers: service(),
 
+  $(selector) {
+    let this$ = jQuery('#'+this.elementId),
+    s$ = /*new?*/jQuery.fn.init(selector,  this$);
+    return s$;
+  },
+
     didInsertElement: on('didInsertElement', function() {
         let confirmButton = this.$('button[name=confirm]');
         this.$('input[name=password]').keyup(function(event) {

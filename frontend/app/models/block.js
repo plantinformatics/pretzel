@@ -272,7 +272,11 @@ export default Model.extend({
   /** Call getLimits() in a task - yield the block limits result.
    */
   taskGetLimits: task(function * () {
-    let blockLimits = yield this.getLimits();
+    let blockLimits = yield this.getLimits()
+        .catch((err) => {
+          dLog('taskGetLimits', err);
+          return [];
+        });
     if (trace_block)
       dLog('taskGetLimits', this, valueOrLength(blockLimits));
     blockLimits.forEach((bfc) => {

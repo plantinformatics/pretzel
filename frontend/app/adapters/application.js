@@ -3,7 +3,7 @@ import { get } from '@ember/object';
 import { inject as service } from '@ember/service';
 import RESTAdapter from '@ember-data/adapter/rest';
 import DataAdapterMixin from 'ember-simple-auth/mixins/data-adapter-mixin';
-import PartialModelAdapter from 'ember-data-partial-model/mixins/adapter';
+// import PartialModelAdapter from 'ember-data-partial-model/mixins/adapter';
 import ENV from '../config/environment';
 
 import {
@@ -139,7 +139,7 @@ var config = {
   }
 }
 
-var args = [PartialModelAdapter, config]
+var args = [/*PartialModelAdapter,*/ config]
 
 if (window['AUTH'] !== 'NONE'){
   args.unshift(DataAdapterMixin);

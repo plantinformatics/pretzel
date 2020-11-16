@@ -51,7 +51,8 @@ export default Service.extend(Evented, {
     /* adapterOptions */
       filter :  {'include': 'blocks'} }), /*;
     let */
-    dP = store.query('dataset', adapterOptions);
+    dP = store.query('dataset', adapterOptions)
+      .catch((err) => { dLog('taskGetList', err, store, adapterOptions, server, primaryServer, serverTabSelectedName, serverTabSelected); debugger; return [];});
     if (trace_promise)
       dP.then(function (d) { console.log(d, d.toArray()[0].get('blocks').toArray());});
     let

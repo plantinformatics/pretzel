@@ -2036,7 +2036,7 @@ function xScaleExtend()
     function(sum, width){ return sum + width;}, 0
   );
 
-  let axisXRange = stacks.vc.axisXRange.copy(false); // shallow copy
+  let axisXRange = stacks.vc.axisXRange.slice(); // shallow copy
   axisXRange[1] -= widthsSum;
   // 40 allows for width of axis ticks / text,  etc and a bit of padding
   stacks.axisXRangeMargin = axisXRange[1] - stacks.length * 40;

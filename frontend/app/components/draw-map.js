@@ -11,22 +11,25 @@ import { alias, filterBy } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
-import compileSearch from 'npm:binary-search-bounds';
-import createIntervalTree from 'npm:interval-tree-1d';
+import compileSearch from 'binary-search-bounds';
+import createIntervalTree from 'interval-tree-1d';
 
 import { isEqual } from 'lodash/lang';
 
 /* global require */
 
 
-/* using scheduleIntoAnimationFrame() from github.com/runspired/ember-run-raf
+/* Originally used scheduleIntoAnimationFrame() from github.com/runspired/ember-run-raf
  * which uses github.com/kof/animation-frame to wrap requestAnimationFrame().
- * Another possibility : github.com/html-next/ember-raf-scheduler
  * Installed via : npm --expose-internals install --save ember-run-raf
  * Tried import, e.g.  import scheduleIntoAnimationFrame from 'npm:ember-run-raf/addons/utils/schedule-frame';
+ * Seems not updated to Ember 3.22
+ *
+ * Now using : github.com/html-next/ember-raf-scheduler
  */
-var scheduleFrame = require('ember-run-raf/utils/schedule-frame'),
-scheduleIntoAnimationFrame = scheduleFrame.default;
+
+import { scheduler } from 'ember-raf-scheduler';
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -4350,7 +4353,8 @@ export default Component.extend(Evented, {
       }
     } // end of zoom()
     function axisScaleChangedRaf(p, t, updatePaths) {
-      scheduleIntoAnimationFrame(this, function () { axisScaleChanged(p, t, updatePaths); });
+      const job = 
+      scheduler.schedule('affect', () => axisScaleChanged(p, t, updatePaths));
     }
     /** @param p  axisName
      * @param updatePaths true : also update foreground paths.
@@ -5965,7 +5969,12 @@ export default Component.extend(Evented, {
     later(() => {
       $('.left-panel-shown')
         .on('toggled', (event) => this.readLeftPanelToggle() );
-      $('.make-ui-draggable').draggable(); });
+      /** .draggable() is provided by jquery-ui. ember-cli-jquery-ui is not
+       * updated, and .make-ui-draggable is not enabled for any elements
+       * currently; As needed, can instead use
+       * e.g. github.com/mharris717/ember-drag-drop for .tooltip.ember-popover.
+       * $('.make-ui-draggable').draggable();  */
+    });
   },
 
   drawEffect : computed('data.[]', 'resizeEffect', function () {

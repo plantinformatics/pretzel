@@ -363,10 +363,11 @@ export default Service.extend({
   _accessToken(server) {
     let
     accessToken = server && server.token;
-    if (! accessToken)
-    this.get('session').authorize('authorizer:application', (headerName, headerValue) => {
-      accessToken = headerValue;
-    });
+    if (! accessToken) {
+      let session = this.get('session');
+      accessToken = this.get('session.data.authenticated.token');
+      dLog('_accessToken', this.get('session'), accessToken, server);
+    }
     console.log('_accessToken', server, accessToken);
     return accessToken
   },

@@ -4,7 +4,7 @@ export default Component.extend({
   actions: {
     confirm: function() {
       this.sendAction('onConfirm');
-      this.$('.modal').modal('hide');
+      this.element.querySelectorAll('.modal').modal('hide');
     },
     resetForm() {
       this.$('input').val('');
@@ -13,9 +13,10 @@ export default Component.extend({
   },
   show: on('didInsertElement', function() {
     let me = this;
-    this.$('.modal').on('hidden.bs.modal', function() {
+    this.element.querySelectorAll('.modal').forEach(
+      el => el.addEventListener('hidden.bs.modal', function() {
       me.send('resetForm');
       me.sendAction('onClose');
-    });
+    }));
   })
 });
