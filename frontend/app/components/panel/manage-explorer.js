@@ -167,8 +167,13 @@ export default ManageBase.extend({
       /* this is using the model datasets list for the primary API.
        * Perhaps instead will change mapview to use apiServers service.
        */
-      datasetsBlocks = this.get('primaryDatasets');
-      dLog('datasetsBlocks()  using primaryDatasets', datasetsBlocks);
+      datasetsBlocks = this.get('primaryDatasets') ||
+	this.get('model.availableMapsTask._result') || 
+	this.get('mapviewDatasets.content');
+      dLog('datasetsBlocks()  using', 
+	   this.get('primaryDatasets.length'),
+	   this.get('model.availableMapsTask._result.length'),
+	   this.get('mapviewDatasets.content.length'));
     }
     if (datasetsBlocks)
       datasetsBlocks =

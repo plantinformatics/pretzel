@@ -92,7 +92,7 @@ let config = {
     this.getHoTLicenseKey();
 
     let datasetsTask;
-    if (true)
+    if (false)
     {
     let datasetService = this.get('dataset');
     let taskGetList = datasetService.get('taskGetList');  // availableMaps

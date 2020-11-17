@@ -21,7 +21,7 @@
             {{panel/manage-explorer
                 view=view
                 model=model
-                primaryDatasets=model.availableMapsTask.value
+                primaryDatasets=@model.availableMapsTask._result
                 mapviewDatasets=datasets
                 refreshDatasets=refreshDatasets
                 loadBlock="loadBlock"
