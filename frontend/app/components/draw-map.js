@@ -1,3 +1,4 @@
+import { on } from '@ember/object/evented';
 import $ from 'jquery';
 import {
   once,
@@ -252,7 +253,7 @@ export default Component.extend(Evented, {
      * currently there is only one draw-map, but having multiple draw-maps in
      * one browser tab would be useful.
      */
-  listen: function() {
+  listen: on('init', function() {
     let f = this.get('feedService');
     console.log("listen", f);
     if (f === undefined)
@@ -271,7 +272,7 @@ export default Component.extend(Evented, {
     this.localBus(true);
     let blockService = this.get('blockService');
     blockService.on('receivedBlock', this, 'receivedBlock');
-  }.on('init'),
+  }),
 
 /** addPathsToCollation() is in draw closure, otherwise would register it here
   willInsertElement : function () {
@@ -282,7 +283,7 @@ export default Component.extend(Evented, {
 */
 
   // remove the binding created in listen() above, upon component destruction
-  cleanup: function() {
+  cleanup: on('willDestroyElement', function() {
     let f = this.get('feedService');
     f.off('colouredFeatures', this, 'updateColouredFeatures');
     f.off('clearScaffoldColours', this, 'clearScaffoldColours');
@@ -297,7 +298,7 @@ export default Component.extend(Evented, {
     let blockService = this.get('blockService');
     blockService.off('receivedBlock', this, 'receivedBlock');
 
-  }.on('willDestroyElement'),
+  }),
 
 //{
   /** undefined, or a function to call when colouredFeatures are received  */

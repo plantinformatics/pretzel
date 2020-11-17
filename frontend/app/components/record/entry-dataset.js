@@ -1,13 +1,14 @@
+import { on } from '@ember/object/evented';
 import { computed } from '@ember/object';
 import EntryBase from './entry-base';
 
 export default EntryBase.extend({
-  initSteps: function() {
+  initSteps: on('init', function() {
     let layout = {
       'active': false
     }
     this.set('layout',layout);
-  }.on('init'),
+  }),
   data: computed('entry.blocks', 'filter', function() {
     return this.get('entry.blocks')
       .filter((block) => !block.get('isCopy'));

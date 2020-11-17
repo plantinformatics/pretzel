@@ -1,3 +1,4 @@
+import { on } from '@ember/object/evented';
 import { computed } from '@ember/object';
 import $ from 'jquery';
 import { later } from '@ember/runloop';
@@ -53,7 +54,7 @@ export default Component.extend({
       ));
   },
 
-  listen: function() {
+  listen: on('init', function() {
     // if oa is not passed in as data then listen for it.
     if (this.get('data') === undefined)
     {
@@ -62,12 +63,12 @@ export default Component.extend({
       if (this.listener)
         this.listener.listen(true);
     }
-  }.on('init'),
+  }),
 
-  cleanup: function() {
+  cleanup: on('willDestroyElement', function() {
     if (this.listener)
       this.listener.listen(false);
-  }.on('willDestroyElement'),
+  }),
 
   drawObjectAttributes : function(oa)
   {

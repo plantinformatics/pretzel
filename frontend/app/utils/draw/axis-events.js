@@ -1,3 +1,4 @@
+import { on } from '@ember/object/evented';
 import Mixin from '@ember/object/mixin';
 
 const dLog = console.debug;
@@ -9,7 +10,7 @@ const dLog = console.debug;
 export default Mixin.create({
 
 
-  listen: function() {
+  listen: on('init', function() {
 
     /** handle of the draw-map */
     let drawMap = this.get('drawMap'); 
@@ -21,16 +22,16 @@ export default Mixin.create({
       drawMap.on('resized', this, 'resized');
       drawMap.on('zoomedAxis', this, 'zoomedAxis');
     }
-  }.on('init'),
+  }),
 
     // remove the binding created in listen() above, upon component destruction
-  cleanup: function() {
+  cleanup: on('willDestroyElement', function() {
 
     let drawMap = this.get('drawMap');
     if (drawMap)
     drawMap.off('axisStackChanged', this, 'axisStackChanged');
     drawMap.off('resized', this, 'resized');
     drawMap.off('zoomedAxis', this, 'zoomedAxis');
-      }.on('willDestroyElement')
+      })
 
 });

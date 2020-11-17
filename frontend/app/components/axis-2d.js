@@ -1,3 +1,4 @@
+import { on } from '@ember/object/evented';
 import { throttle, next, later, bind } from '@ember/runloop';
 import EmberObject, { computed } from '@ember/object';
 import { alias, filter } from '@ember/object/computed';
@@ -93,14 +94,14 @@ export default Component.extend(Evented, AxisEvents, {
 
   feed: service(),
 
-  listenFeed: function() {
+  listenFeed: on('init', function() {
     let f = this.get('feed'); 
     dLog("listen", f);
     if (f === undefined)
       dLog('feed service not injected');
     else {
     }
-  }.on('init'),
+  }),
 
   /** axis-2d receives axisStackChanged from draw-map and propagates it as zoomed to its children.
    * axisStackChanged() also sends zoomed, so debounce.

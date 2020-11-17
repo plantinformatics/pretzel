@@ -1,11 +1,12 @@
+import { on } from '@ember/object/evented';
 import { computed } from '@ember/object';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 
 export default Component.extend({
-  onInit: function() {
+  onInit: on('init', function() {
     this.set('editing', false);
-  }.on('init'),
+  }),
   noAuth: computed(function() {
     return window['AUTH'] === 'NONE';
   }),

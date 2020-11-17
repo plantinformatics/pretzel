@@ -1,9 +1,10 @@
+import { on } from '@ember/object/evented';
 import $ from 'jquery';
 import { later } from '@ember/runloop';
 import Component from '@ember/component';
 
 export default Component.extend({
-  listen: function() {
+  listen: on('init', function() {
     let drawMap = this.get('drawMap'); 
     console.log("listen", drawMap);
     if (drawMap === undefined)
@@ -11,14 +12,14 @@ export default Component.extend({
     else {
       drawMap.on('pathHovered', this, 'pathHovered');
     }
-  }.on('init'),
+  }),
 
   // remove the binding created in listen() above, upon component destruction
-  cleanup: function() {
+  cleanup: on('willDestroyElement', function() {
     let drawMap = this.get('drawMap');
     if (drawMap)
     drawMap.off('pathHovered', this, 'pathHovered');
-  }.on('willDestroyElement'),
+  }),
 
   actions : {
     closeToolTip : function () {
