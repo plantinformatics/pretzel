@@ -1,6 +1,6 @@
 import { registerDeprecationHandler } from '@ember/debug';
 import { later } from '@ember/runloop';
-import EmberObject, { computed } from '@ember/object';
+import EmberObject, { computed, observer } from '@ember/object';
 import Evented from '@ember/object/evented';
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
@@ -271,9 +271,9 @@ export default Controller.extend(Evented, {
     this._super.apply(this, arguments);
   },
 
-  currentURLDidChange: function () {
+  currentURLDidChange: observer('target.currentURL', function () {
     dLog('currentURLDidChange', this.get('target.currentURL'));
-  }.observes('target.currentURL'),
+  }),
 
 
   /** all available */

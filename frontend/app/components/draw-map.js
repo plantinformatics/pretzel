@@ -7,7 +7,7 @@ import {
   bind,
   throttle
 } from '@ember/runloop';
-import { computed, get } from '@ember/object';
+import { computed, get, observer } from '@ember/object';
 import { alias, filterBy } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
@@ -6095,7 +6095,11 @@ export default Component.extend(Evented, {
     return changed;
   },
 
-    resize : function() {
+  resize : observer(
+    'layout.left.visible',
+    'layout.right.visible',
+    'leftPanelShown',
+    function() {
       console.log("resize", this, arguments);
         /** when called via .observes(), 'this' is draw-map object.  When called
          * via  window .on('resize' ... resizeThisWithTransition() ... resizeThis()
@@ -6151,9 +6155,8 @@ export default Component.extend(Evented, {
             }
         }
 
-
-  }
-    .observes('layout.left.visible', 'layout.right.visible', 'leftPanelShown')
+    }
+  )
   /* could include in .observes() : 'layout.left.tab', but the tab name should not affect the width.
    * (currently the value of layout.left.tab seems to not change - it is just 'view').
    * stacksWidthChanges.{left,right} are equivalent to leftPanelShown and layout.right.visible,

@@ -62,12 +62,12 @@ export default Component.extend({
 
   },
 
-    onSelectionChange: function () {
+    onSelectionChange: observer('data', function () {
 	let data = this.get('data');
 	console.log("selected-features.js", "onSelectionChange", data.length);
 	let featureNamesText = data.map(function (d, i, g) { return d.Feature;}).join("\n");
 	this.set('selection', featureNamesText);
-    }.observes('data'),
+    }),
 
 
     /** From the model data, extract the feature name column, and return these as a newline-concatenated string,

@@ -1,5 +1,7 @@
 import $ from 'jquery';
 import Component from '@ember/component';
+import { observer } from '@ember/object';
+
 import { eltClassName } from '../utils/domElements';
 
 import config from '../config/environment';
@@ -131,7 +133,7 @@ export default Component.extend({
   },
 
 
-  onSelectionChange: function () {
+  onSelectionChange: observer('data', function () {
     let data = this.get('data'),
     me = this,
     table = this.get('table');
@@ -142,7 +144,7 @@ export default Component.extend({
       me.send('showData', data);
       table.updateSettings({data:data});
     }
-  }.observes('data'),
+  }),
 
   highlightFeature: function(feature) {
     d3.selection.prototype.moveToFront = function() {

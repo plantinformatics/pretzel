@@ -1,6 +1,6 @@
 import { allSettled } from 'rsvp';
 import { later, throttle } from '@ember/runloop';
-import { computed } from '@ember/object';
+import { computed, observer } from '@ember/object';
 import Component from '@ember/component';
 import $ from 'jquery';
 import { inject as service } from '@ember/service';
@@ -154,7 +154,7 @@ export default Component.extend({
    * The paths-table component exists permanently so that it can provide
    * tableData.length for display in the tab via updatePathsCount().
    */
-  manageHoTable : function() {
+  manageHoTable : observer('visible', function() {
     let useHandsOnTable = this.get('useHandsOnTable');
     if (useHandsOnTable) {
       let
@@ -177,7 +177,7 @@ export default Component.extend({
         this.destroyHoTable();
       }
     }
-  }.observes('visible'),
+  }),
 
   destroyHoTable() {
     let table = this.get('table');
@@ -715,7 +715,7 @@ export default Component.extend({
   },
 
 
-  onDataChange: function () {
+  onDataChange: observer('tableData', function () {
     let data = this.get('tableData'),
     me = this,
     table = this.get('table');
@@ -726,9 +726,9 @@ export default Component.extend({
       // me.send('showData', data);
       throttle(() => table.updateSettings({data:data}), 500);
     }
-  }.observes('tableData'),
+  }),
 
-  onColumnsChange : function ()  {
+  onColumnsChange : observer('columns', 'colHeaders', 'colWidths', function ()  {
     let table = this.get('table');
     if (table) {
       let colSettings = {
@@ -738,7 +738,7 @@ export default Component.extend({
       };
       table.updateSettings(colSettings);
     }
-  }.observes('columns', 'colHeaders', 'colWidths'),
+  }),
 
   highlightFeature: function(feature) {
     d3.selectAll("g.axis-outer > circle")

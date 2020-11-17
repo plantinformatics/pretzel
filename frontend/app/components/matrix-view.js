@@ -1,4 +1,4 @@
-import { computed } from '@ember/object';
+import { computed, observer } from '@ember/object';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 
@@ -220,7 +220,7 @@ export default Component.extend({
     return ranges;        
   }),
 
-  updateTable: function() {
+  updateTable: observer('displayData.[]', 'selectedBlock', function() {
     let t = $("#observational-table");
     let rows = this.get('rows');
     let rowHeaderWidth = this.get('rowHeaderWidth');
@@ -247,7 +247,7 @@ export default Component.extend({
     } else {
       t.hide();
     }
-  }.observes('displayData.[]', 'selectedBlock'),
+  }),
   
   actions: {
     toggleLeftPanel() {
