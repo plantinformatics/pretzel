@@ -1,3 +1,4 @@
+import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 
@@ -73,13 +74,13 @@ export default Component.extend({
     /** From the model data, extract the feature name column, and return these as a newline-concatenated string,
      * for display in content-editable, passed as arg : {{content-editable  value=featureNames ... }}
      */
-    featureNames: function(fnName) {
+    featureNames: computed('data.[]', function(fnName) {
 	let data = this.get('data');
 	console.log("selected-features.js", fnName, data.length);
 	let featureNamesText = data.map(function (d, i, g) { return d.Feature;}).join("\n");
 	// this.set('colouredFeatures', featureNamesText);
 	return featureNamesText;
-    }.property('data.[]')
+    })
 
 
 });

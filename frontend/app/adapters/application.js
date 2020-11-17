@@ -1,3 +1,4 @@
+import { computed } from '@ember/object';
 import $ from 'jquery';
 import { get } from '@ember/object';
 import { inject as service } from '@ember/service';
@@ -42,13 +43,13 @@ var config = {
     console.log('app/adapters/application.js host', this, arguments, server, config, configApiHost, ENV.apiHost, host);
     return host;
   },
-  host: function () {
+  host: computed(function () {
     let store = this.store,
     adapterOptions = store && store.adapterOptions,
     host = (adapterOptions && adapterOptions.host) || get(this, '_server.host');
     console.log('app/adapters/application.js host', this, store, adapterOptions, host, this._server);
     return host;
-  }.property().volatile(),
+  }).volatile(),
   namespace: ENV.apiNamespace,
   urlForFindRecord(id, type, snapshot) {
     let url = this._super(...arguments);
