@@ -59,6 +59,17 @@ var config = {
     }
     return url;
   },
+
+  get headers() {
+    let store = this.store,
+    adapterOptions = store && store.adapterOptions,
+    token = this._server && this._server.token;
+    dLog('headers', store, adapterOptions, this._server, token);
+    return token && {
+      Authorization : token
+    };
+  },
+
   /** Wrap buildURL(); get server associated with adapterOptions or query and
    * pass server as this._server through to get('host'), so that it can use server.host
    * The adapterOptions don't seem to be passed to get('host')

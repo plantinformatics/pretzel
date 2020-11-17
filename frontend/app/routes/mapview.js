@@ -92,12 +92,7 @@ let config = {
     this.getHoTLicenseKey();
 
     let datasetsTask;
-    /** taskGetList is getting 401 Unauthorized which causes re-direct to login
-     * route, so disable it until that is solved. */
-    if (true) {
-      datasetsTask = Ember.RSVP.Promise.resolve([]);
-    }
-    else if (true)
+    if (true)
     {
     let datasetService = this.get('dataset');
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
@@ -110,8 +105,9 @@ let config = {
     {
       let apiServers = this.get('apiServers'),
       primaryServer = apiServers.get('primaryServer');
-      datasetsTask = 
-        primaryServer.getDatasets();
+      datasetsTask =
+        primaryServer.getDatasets()
+        .catch((err) => {dLog('model taskGetList', err, this); debugger; return []; });
     }
 
     // this.controllerFor(this.fullRouteName).setViewedOnly(params.mapsToView, true);
