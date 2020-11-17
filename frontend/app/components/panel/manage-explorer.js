@@ -381,7 +381,11 @@ export default ManageBase.extend({
    * The setDiff version is working OK, after introducing parentsContent,
    * so this equivalent is not required.
    */
-  dataWithoutParent1: filter('withoutParent', function(dataset, index, array) {
+  dataWithoutParent1: computed('withoutParent.[]', 'parentsSet', 'parents', function () {
+    return this.get('withoutParent')
+      .filter((d,i,a) => this.datasetFilter(d,i,a));
+  }),
+  datasetFilter(dataset, index, array) {
     let parentsSet = this.get('parentsSet'),
     name = dataset.get('name'),
     found = parentsSet.has(name);
@@ -391,7 +395,7 @@ export default ManageBase.extend({
     }
     console.log(dataset._internalModel.__data, index, name, found);
     return ! found;
-  }).property('withoutParent.[]', 'parentsSet', 'parents'),
+  },
 
   /* ------------------------------------------------------------------------ */
 
