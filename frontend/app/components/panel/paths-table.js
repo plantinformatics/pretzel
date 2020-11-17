@@ -93,9 +93,9 @@ export default Component.extend({
    * in which case this CP value is updated.
    * Check if reply to getHoTLicenseKey() is received and contains a key.
    */
-  useHandsOnTable : computed('config.handsOnTableLicenseKey', function () {
+  get useHandsOnTable() {
     return !!config.handsOnTableLicenseKey;
-  }).volatile(),
+  },
   /** true enables display of the 'block' column for each end of the path. */
   blockColumn : true,
   /** true enables checkboxes to enable the following in the GUI  */

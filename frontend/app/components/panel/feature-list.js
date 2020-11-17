@@ -138,7 +138,13 @@ export default Component.extend({
    *   if activeInput : read any text entered since the last newline / paste / etc.
    *   if ! activeInput, copy selectedFeatureNames to the input textarea
    */
-  activeFeatureList  : computed('activeFeatureListBase', function () {
+  get activeFeatureList () {
+    /** This function could be : computed('activeFeatureListBase', function ... )
+     * but would have to set up an event listener for input.
+     * activeFeatureList() is called from toSelectedFeatures(), and
+     * goto-feature-list : getBlocksOfFeatures() and lookupFeatureList(); those
+     * don't currently require a CP.
+     */
     let activeInput = this.get('activeInput');
     if (activeInput)
     {
@@ -153,7 +159,7 @@ export default Component.extend({
       text$.val(fl && fl.join('\n'));
     }
     return featureList;
-  }).volatile(),
+  },
 
   /*----------------------------------------------------------------------------*/
 

@@ -23,7 +23,10 @@ const dLog = console.debug;
 
 var config = {
   apiServers: service(),
-  authorizer: 'authorizer:application', // required by DataAdapterMixin
+
+  /** required by DataAdapterMixin */
+  authorizer: 'authorizer:application',
+
   session: service('session'),
 
   /** host and port part of the url of the API
@@ -43,14 +46,17 @@ var config = {
     console.log('app/adapters/application.js host', this, arguments, server, config, configApiHost, ENV.apiHost, host);
     return host;
   },
-  host: computed(function () {
+
+  get host() {
     let store = this.store,
     adapterOptions = store && store.adapterOptions,
     host = (adapterOptions && adapterOptions.host) || get(this, '_server.host');
     console.log('app/adapters/application.js host', this, store, adapterOptions, host, this._server);
     return host;
-  }).volatile(),
+  },
+
   namespace: ENV.apiNamespace,
+
   urlForFindRecord(id, type, snapshot) {
     let url = this._super(...arguments);
     // facilitating loopback filter structure
@@ -121,6 +127,7 @@ var config = {
     }
     return this._super(modelName, id, snapshot, requestType, query);
   },
+
   updateRecord(store, type, snapshot) {
     // updateRecord calls PUT rather than PATCH, which is
     // contrary to the record.save method documentation
@@ -136,6 +143,7 @@ var config = {
 
     return this.ajax(url, "PATCH", { data: data });
   },
+
   deleteRecord(store, type, snapshot) {
     // loopback responds with 200 and a count of deleted entries
     // with the request. ember expects a 204 with an empty payload.
