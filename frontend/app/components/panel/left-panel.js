@@ -1,7 +1,11 @@
 import Component from '@ember/component';
 
+import { htmlSafe } from '@ember/template';
+
+/* global CSS */
+
 export default Component.extend({
-  style: 'height:100%',
+  style: htmlSafe(CSS.escape('height:100%')),
   attributeBindings: ['style:style'],
   view: 'mapview',
 

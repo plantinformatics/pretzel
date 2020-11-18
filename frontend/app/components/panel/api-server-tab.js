@@ -1,6 +1,11 @@
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
+import { htmlSafe } from '@ember/template';
+
+
+
+/* global CSS */
 
 const dLog = console.debug;
 
@@ -27,9 +32,9 @@ export default Component.extend({
 
   borderStyle : computed('apiServer.name', function() {
     let apiServerColour = this.get('apiServer').get('colour'),
-    style = 'border-color:' + apiServerColour;
+    style = 'border-color:' + CSS.escape(apiServerColour);
     dLog('borderStyle', apiServerColour, this.apiServerName);
-    return style;
+    return htmlSafe(style);
   })
   
 });
