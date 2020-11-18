@@ -261,7 +261,7 @@ export default Controller.extend(Evented, {
 
   init: function() {
     /** refn : https://discuss.emberjs.com/t/is-this-possible-to-turn-off-some-deprecations-warnings/8196 */
-    let deprecationIds = ['ember-simple-auth.session.authorize'];
+    let deprecationIds = ['ember-component.send-action'];
     registerDeprecationHandler((message, options, next) => {
       if (! deprecationIds.includes(options.id)) {
         next(message, options);

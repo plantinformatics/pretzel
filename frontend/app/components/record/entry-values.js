@@ -53,14 +53,16 @@ export default EntryBase.extend({
   },
 
   /** type is array, e.g. blocks or datasets */
-  valueIsArray : computed('values', 'values.[]', function () {
+  valueIsArray : computed('values', 'values.[]', function valueIsArray () {
     let
       values = this.get('values'),
     length = this.get('values.length'),
-    isArray = isArray(values);
+    /** RFC #176 (Javascript Modules API) changes Ember.isArray to isArray,
+     * so append _ to variable name to distinguish it. */
+    isArray_ = isArray(values);
     if (trace_entryValues)
-      console.log('valueIsArray', isArray, length, this.get('name'), values);
-    return isArray;
+      console.log('valueIsArray', isArray_, length, this.get('name'), values);
+    return isArray_;
   }),
 
   /** type of values is an array of Dataset-s */
