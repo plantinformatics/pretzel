@@ -41,7 +41,7 @@ let trace_dataTree = 0;
 const dLog = console.debug;
 
 /** If true, use datatypeFromFamily() to intuit a dataset type for datasets
- * which do not define meta.type.
+ * which do not define _meta.type.
  * datatypeFromFamily() uses the dataset parent and children : datasets with
  * neither are considered 'unrelated', datasets with parents are 'children',
  * and datasets with children are 'references'.
@@ -116,7 +116,7 @@ export default ManageBase.extend({
   }),
   datasetType: null,
 
-  /** keys are 'all', and the found values of dataset.meta.type;
+  /** keys are 'all', and the found values of dataset._meta.type;
    * value is true if filterGroup is a filter, and datasetFilter matched at the datasets level.
    *
    * filterGroup may apply at both the dataset level and the blocks level, but
@@ -311,7 +311,7 @@ export default ManageBase.extend({
 
     return parentsNotFG;
   }),
-  /** meta.types of parents(). */
+  /** _meta.types of parents(). */
   parentsTypes : computed('parentsNotFG', 'parentsNotFG.[]', function () {
     if (trace_dataTree > 5) {
       let withParent = this.get('withParent');
@@ -337,7 +337,7 @@ export default ManageBase.extend({
     promise = parentsNotFG.then ? parentsNotFG.then(parentsByType) :
       resolve(parentsByType(parentsNotFG));
    function parentsByType(parents) {
-     return parents.filterBy('meta.type').uniqBy('meta.type').mapBy('meta.type'); }
+     return parents.filterBy('_meta.type').uniqBy('_meta.type').mapBy('_meta.type'); }
     if (trace_dataTree > 5) {
       console.log('parents', this.get('parents'), 'parentsTypes', promise);
       console.log('withParent :', this.get('withParent'), this.get('child1'), this.get('parents'));
@@ -417,11 +417,11 @@ export default ManageBase.extend({
         let dataTyped = {};
         for (let i=0; i < datasets.length; i++) {
           let d = datasets[i],
-          typeName = d.get('parent.meta.type');
+          typeName = d.get('parent._meta.type');
           if (! typeName)
           {
             if (trace_dataTree > 3)
-              console.log('dataset without parent.meta.type', d.get('name'), d.get('parentName'));  // parent.name
+              console.log('dataset without parent._meta.type', d.get('name'), d.get('parentName'));  // parent.name
           }
           else
           {
@@ -496,7 +496,7 @@ export default ManageBase.extend({
     /** Given datasets grouped into tabs, add a grouping level for the parent of the datasets,
      * and a level for the scope of the blocks of the datasets.
      * (for those tabs for which it is enabled - e.g. children)
-     * @param datasetGroups is grouped by dataset.meta.type tabs
+     * @param datasetGroups is grouped by dataset._meta.type tabs
      */
     function addParentAndScopeLevels(datasetGroups, parentsTypes) {
       if (trace_dataTree)
@@ -515,7 +515,7 @@ export default ManageBase.extend({
             let
               /** parents.indexOf(d) (in dataTyped()) also checks if a given value
                * is a parent, but in that case d is the Dataset object, whereas key
-               * is the meta.type (if a parent does not have meta.type it does not have a tab named by type).
+               * is the _meta.type (if a parent does not have _meta.type it does not have a tab named by type).
                */
               valueType = me.levelMeta.get(value),
             isParentType = parentsTypes.indexOf(key) >= 0,  // i.e. !== -1
@@ -561,7 +561,7 @@ export default ManageBase.extend({
       DS.PromiseObject.create({promise : promise });
     return promiseObject;
   },
-  /** Split the datasets according to their dataset.meta.type,
+  /** Split the datasets according to their dataset._meta.type,
    * or otherwise by whether the dataset has a parent or children.
    */
   dataTyped : computed(
@@ -581,11 +581,11 @@ export default ManageBase.extend({
           dLog('parents', me.get('parents'), parents);
         for (let i=0; i < datasets.length; i++) {
           let d = datasets[i],
-          typeName = d.get('meta.type');
-          /** If the dataset's meta.type is the same as its parent's then only
+          typeName = d.get('_meta.type');
+          /** If the dataset's _meta.type is the same as its parent's then only
            * show it under the parent.
            */
-          let parentType = d.get('parent.meta.type');
+          let parentType = d.get('parent._meta.type');
           if (parentType === typeName)
             typeName = undefined;
 
@@ -610,7 +610,7 @@ export default ManageBase.extend({
           if (! typeName)
           {
             if (trace_dataTree > 3)
-              console.log('dataset without typeName', d.get('name'), d.get('meta'));
+              console.log('dataset without typeName', d.get('name'), d.get('_meta'));
           }
           else
           {
@@ -710,7 +710,7 @@ export default ManageBase.extend({
     }),
 
   /** Apply filterGroup to datasets, and return the result.
-   * @param tabName the value of dataset.meta.type which datasets share, or 'all'.
+   * @param tabName the value of dataset._meta.type which datasets share, or 'all'.
    */
   datasetFilter(datasets, filterGroup, tabName) {
     /** argument checking : expect that filterGroup exists and defines a filter / grouping */
@@ -726,10 +726,10 @@ export default ManageBase.extend({
     metaFieldName = 'Created',
     /** used in development */
     metaFilterDev = function(f) {
-      let meta = f.get('meta');
+      let meta = f.get('_meta');
       if (trace_dataTree > 1)
         console.log('metaFilter', f.get('name'), meta);
-      let v = f.get('meta' + '.' + metaFieldName);
+      let v = f.get('_meta' + '.' + metaFieldName);
       if (v) {
         (v = v.split(', ')) && (v = v[0]);
       }
@@ -756,7 +756,7 @@ export default ManageBase.extend({
       if (fg.fieldNamespace && ! isDataset)
         keyFields.push('namespace');
       if (fg.fieldMeta)
-        keyFields.push('meta');
+        keyFields.push('_meta');
 
       if (trace_dataTree > 1)
         console.log('metaFilter', f.get('name'));
@@ -802,7 +802,7 @@ export default ManageBase.extend({
          * @param specificKey true for .name and .scope,  to indicate key implicitly matches.
          */
         function matchField(meta, key1, specificKey) {
-          /** @param obj may be an Ember Object, or the value of e.g. its .meta field. */
+          /** @param obj may be an Ember Object, or the value of e.g. its ._meta field. */
           function getValue(obj, key) {
             return (typeof meta.get === 'function') ?
               meta.get(key)
@@ -814,7 +814,7 @@ export default ManageBase.extend({
             /** The value used for grouping should be a string.
              * The schema indicates that the values of .name and .scope are strings.
              * So we could apply valueToString() only when ! meta.get,
-             * but structured fields in addition to .meta could be added to keyFields[].
+             * but structured fields in addition to ._meta could be added to keyFields[].
              */
             let value1 = valueToString(rawValue),
             matched =
@@ -922,7 +922,7 @@ export default ManageBase.extend({
   },
   /** Given an array of datasets, group them by parent, then within each parent,
    * group by scope the blocks of the datasets of the parent.
-   * @param tabName the value of dataset.meta.type which datasets share, or 'all'.
+   * @param tabName the value of dataset._meta.type which datasets share, or 'all'.
    * @param withParentOnly  false means also show datasets without parents
    * They are (currently) grouped in 'undefined'
    */

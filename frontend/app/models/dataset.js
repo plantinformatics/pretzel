@@ -17,7 +17,7 @@ export default Record.extend({
     'parentName',
     'apiServers.serversLength',
     'apiServers.datasetsBlocksRefresh',
-    'meta.referenceHost',
+    '_meta.referenceHost',
     function () {
       let parentName = this.get('parentName'),
       parent;
@@ -31,8 +31,8 @@ export default Record.extend({
           parent = datasets[0].dataset;
         } else {  // (datasets.length > 1)
           dLog(this.id, 'parent', parentName, 'multiple match', datasets);
-          /** If the user has indicated a preference via 'meta.referenceHost', use that.  */
-          let referenceHost = this.get('meta.referenceHost');
+          /** If the user has indicated a preference via '_meta.referenceHost', use that.  */
+          let referenceHost = this.get('_meta.referenceHost');
           if (referenceHost) {
             /** could use .includes() to treat referenceHost as a fixed string instead of a regexp. */
             let preferred = datasets.filter((d) => d.server.host.match(referenceHost));
@@ -44,7 +44,7 @@ export default Record.extend({
           if (! parent) {
             /** prefer to use a dataset from its original source, rather than a copy
              * cached in primary server */
-            let original = datasets.filter((d) => ! d.dataset.get('meta._origin'));
+            let original = datasets.filter((d) => ! d.dataset.get('_meta._origin'));
             if (original.length) {
               dLog('parent', 'original count', original.length, original);
               parent = original[0].dataset;
@@ -58,7 +58,7 @@ export default Record.extend({
               }
               else
                 /* use the first in the list, this is probably the primary;
-                 * user can be given control of this selection by setting meta.referenceHost
+                 * user can be given control of this selection by setting _meta.referenceHost
                  */
                 parent = datasets[0].dataset;
             }
@@ -82,13 +82,13 @@ export default Record.extend({
   type: attr('string'),
   namespace: attr('string'),
   tags: attr('array'),
-  meta: attr(),
+  _meta: attr(),
 
   /*--------------------------------------------------------------------------*/
 
   /** is this dataset copied from a (secondary) server, cached on the server it was loaded from (normally the primary). */
-  isCopy : computed('meta._origin', function () {
-    return !! this.get('meta._origin');
+  isCopy : computed('_meta._origin', function () {
+    return !! this.get('_meta._origin');
   }),
 
   /** same as .blocks, with any blocks copied from a secondary server filtered out.

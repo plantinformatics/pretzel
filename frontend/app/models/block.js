@@ -56,7 +56,7 @@ export default Model.extend({
   name: attr('string'),
   namespace: attr('string'),
   featureType: attr(),
-  meta: attr(),
+  _meta: attr(),
 
   /*--------------------------------------------------------------------------*/
 
@@ -113,18 +113,18 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  /** @return true if this block's dataset defined meta.paths and it is true.
+  /** @return true if this block's dataset defined _meta.paths and it is true.
    */
-  showPaths : computed('datasetId.meta.paths', 'id', function () {
+  showPaths : computed('datasetId._meta.paths', 'id', function () {
     let
     dataset = this.get('datasetId'),
-    paths = dataset.get('meta.paths');
-    // if no meta.paths, then default to paths : true.
+    paths = dataset.get('_meta.paths');
+    // if no _meta.paths, then default to paths : true.
     if (paths === undefined)
       paths = true;
     else if (paths == "false")
       paths = false;
-    /** for testing, without setting up datasets with meta.paths : true, check
+    /** for testing, without setting up datasets with _meta.paths : true, check
      * the parity of the 2nd last char of the block id, which is evenly even/odd.
      */
     if (false)
@@ -167,8 +167,8 @@ export default Model.extend({
   }),
 
   /** is this block copied from a (secondary) server, cached on the server it was loaded from (normally the primary). */
-  isCopy : computed('meta._origin', function () {
-    return !! this.get('meta._origin');
+  isCopy : computed('_meta._origin', function () {
+    return !! this.get('_meta._origin');
   }),
 
   axisScope : computed('scope', 'name', 'datasetId.parentName', function () {
@@ -314,7 +314,7 @@ export default Model.extend({
      * selectedFeatures.Chromosome
      * In paths-table.js @see blockDatasetNameAndScope()
      */
-    let name = (this.get('datasetId.meta.shortName') || this.get('datasetId.id')) + ':' + this.get('scope');
+    let name = (this.get('datasetId._meta.shortName') || this.get('datasetId.id')) + ':' + this.get('scope');
     return name;
   }),
 
@@ -336,10 +336,10 @@ export default Model.extend({
      * source of the value .Chromosome in selectedFeatures.
      */
     let brushName;
-    /** brushHelper() uses blockR.get('datasetId.meta.shortName') where blockR is the data block,
+    /** brushHelper() uses blockR.get('datasetId._meta.shortName') where blockR is the data block,
      * and axisName2MapChr(p) where p is the axisName (referenceBlock).
      */
-    let shortName = this.get('datasetId.meta.shortName');
+    let shortName = this.get('datasetId._meta.shortName');
     /** brushes are identified by the referenceBlock (axisName). */
     let block = this.get('referenceBlock') || this;
     if (block) {
@@ -575,7 +575,7 @@ export default Model.extend({
 
   /** Determine reference blocks for this block.
    * The search is not limited to viewed blocks, and is across all connected servers.
-   * @param original  if true then exclude copied / cached datasets (having .meta._origin)
+   * @param original  if true then exclude copied / cached datasets (having ._meta._origin)
    * @return array of blocks,  [] if none matching.
    */
   referenceBlocksAllServers(original) {

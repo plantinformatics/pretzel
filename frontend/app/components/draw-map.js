@@ -792,7 +792,7 @@ export default Component.extend(Evented, {
         if (oa.datasets[datasetName] === undefined)
         {
           oa.datasets[datasetName] = dataset;
-          console.log(datasetName, dataset.get('meta.shortName'));
+          console.log(datasetName, dataset.get('_meta.shortName'));
         }
         cmName[axis] = {mapName : c.mapName, chrName : c.chrName
                         , parent: parentName
@@ -3911,7 +3911,7 @@ export default Component.extend(Evented, {
           let
             blockR = block && block.block,
           /** e.g. "IWGSC" */
-          shortName = blockR && blockR.get('datasetId.meta.shortName'),
+          shortName = blockR && blockR.get('datasetId._meta.shortName'),
           /** e.g. "1B" */
           scope = blockR && blockR.get('name'),
           briefName = (shortName && scope) && (shortName + ':' + scope);

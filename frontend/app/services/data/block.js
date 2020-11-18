@@ -522,7 +522,7 @@ export default Service.extend(Evented, {
     block = this.peekBlock(blockId),
     datasetId = block && block.get('datasetId'), 
     dataset = datasetId && datasetId.get('content'),
-    host = dataset && dataset.get('meta.apiHost'),
+    host = dataset && dataset.get('_meta.apiHost'),
     apiServers = this.get('apiServers'),
     server = apiServers.lookupServer(host);
     console.log('blockServer', block, dataset, host, server);
@@ -1095,8 +1095,8 @@ export default Service.extend(Evented, {
           f.block = block;
 
         let feature = store.peekRecord('feature', f.id);
-        if (get(fBlock, 'meta._origin')) {
-          dLog(fnName, 'result feature is a copy', f, fBlock.meta._origin, fBlock);
+        if (get(fBlock, '_meta._origin')) {
+          dLog(fnName, 'result feature is a copy', f, fBlock._meta._origin, fBlock);
           // expect that feature is undefined, which is filtered out.
         }
         else if (! feature) {

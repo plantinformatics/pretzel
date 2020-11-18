@@ -64,11 +64,11 @@ export default Service.extend(Evented, {
        * This is for display in the GUI, and can be used to select the server for block contents request.
        */
       datasets.forEach(function(dataset) {
-        let meta = dataset.get('meta');
+        let meta = dataset.get('_meta');
         if (! meta)
         {
           meta = {};
-          dataset.set('meta', meta);
+          dataset.set('_meta', meta);
         }
         meta.apiHost = server.host;
       });
@@ -230,7 +230,7 @@ export default Service.extend(Evented, {
   /** Lookup the datasets matching the given parentName, i.e. dataset.parentName === parentName.
    *
    * @param parentName  to match
-   * @param original  if true then exclude copied / cached datasets (having .meta._origin)
+   * @param original  if true then exclude copied / cached datasets (having ._meta._origin)
    * @return [ {dataset, serverName}, ... ]
    */
   datasetsForParentName : function(parentName, original) {
@@ -241,14 +241,14 @@ export default Service.extend(Evented, {
   /** Lookup the datasets matching the given name.
    *
    * @param name  to match, usually a parentName
-   * @param original  if true then exclude copied / cached datasets (having .meta._origin)
+   * @param original  if true then exclude copied / cached datasets (having ._meta._origin)
    */
   datasetsForName : function(name, original) {
     let
           apiServers = this.get('apiServers'),
         datasets = apiServers.dataset2stores(name);
     if (original)
-      datasets = datasets.filter((d) => ! d.dataset.get('meta._origin'));
+      datasets = datasets.filter((d) => ! d.dataset.get('_meta._origin'));
     return datasets;
   }
   

@@ -5,7 +5,7 @@
 
 {{record/entry-block-add-button entry=entry loadBlock="loadBlock"}}
 <span title={{entry.datasetId.name}}>
-  {{or entry.datasetId.meta.explorerName entry.datasetId.meta.shortName entry.datasetId.shortName entry.datasetId.name }}
+  {{or entry.datasetId._meta.explorerName entry.datasetId._meta.shortName entry.datasetId.shortName entry.datasetId.name }}
 </span>
 {{#if (compare entry.name '!==' entry.scope) }}
   <span class="blockInScope" title={{entry.name}}>{{entry.name}}</span>

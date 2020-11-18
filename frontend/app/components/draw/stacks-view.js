@@ -18,7 +18,7 @@ import {
 
 const dLog = console.debug;
 
-function blockInfo(block) { return block && [block.id, block.store.name, block.get('_internalModel.__data'), block.get('isCopy'), block.get('meta._origin')]; }
+function blockInfo(block) { return block && [block.id, block.store.name, block.get('_internalModel.__data'), block.get('isCopy'), block.get('_meta._origin')]; }
 
 export default Component.extend({
   block: service('data/block'),

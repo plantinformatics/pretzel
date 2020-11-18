@@ -856,7 +856,7 @@ Block.prototype.titleText = function ()
 {
   let axisName = this.block.get('id'),
   cmName = oa.cmName[axisName],
-  shortName = cmName && cmName.dataset.get('meta.shortName'),
+  shortName = cmName && cmName.dataset.get('_meta.shortName'),
   name = shortName || cmName.mapName,
   featureCount = this.block && this.block.get('featureCount'),
   featureCountLoaded = this.block.get('featuresLength'),

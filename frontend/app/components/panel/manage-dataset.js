@@ -12,8 +12,8 @@ export default ManageBase.extend({
   currentMeta: {},
 
   ownedByMe: alias("dataset.owner"),
-  datasetMeta: computed("dataset.meta", function() {
-    let meta = this.get("dataset.meta") || {},
+  datasetMeta: computed("dataset._meta", function() {
+    let meta = this.get("dataset._meta") || {},
     apiHost = this.get("dataset.store.name");
     if (apiHost)
       meta.apiHost = apiHost;
@@ -34,7 +34,7 @@ export default ManageBase.extend({
     },
     saveJSONToDB() {
       dLog('saveJSONToDB()', 'currentMeta', this.get("currentMeta"));
-      this.set("dataset.meta", this.get("currentMeta"));
+      this.set("dataset._meta", this.get("currentMeta"));
       this.get("dataset").save();
       this.send("toggleEditor");
     }
