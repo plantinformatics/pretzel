@@ -159,10 +159,12 @@ const dataConfigs =
 /* Copied from draw-map.js */
 
 import { stacks } from './stacks'; // just for oa.z and .y;  this will be replaced.
-let blockFeatures = stacks.oa.z;
+function get_blockFeatures() { return stacks.oa && stacks.oa.z; }
+
 
 function featureLocation(blockId, d)
 {
+  let blockFeatures = get_blockFeatures();
   let feature = blockFeatures[blockId][d];
   if (feature === undefined)
   {
