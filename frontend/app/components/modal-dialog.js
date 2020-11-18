@@ -1,13 +1,16 @@
 import { on } from '@ember/object/evented';
 import Component from '@ember/component';
+
+import $ from 'jquery';
+
 export default Component.extend({
   actions: {
     confirm: function() {
       this.sendAction('onConfirm');
-      this.element.querySelectorAll('.modal').modal('hide');
+      $('.modal', this.element).modal('hide');
     },
     resetForm() {
-      this.$('input').val('');
+      $('input', this.element).val('');
       
     }
   },

@@ -113,7 +113,7 @@ export default Component.extend({
     this._super(...arguments);
 
     if (! this.get('useHandsOnTable')) {
-      this.$(".contextual-data-table").colResizable({
+      $(".contextual-data-table", this.element).colResizable({
         liveDrag:true,
         draggingClass:"dragging"
       });

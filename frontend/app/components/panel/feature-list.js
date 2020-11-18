@@ -2,6 +2,8 @@ import { computed } from '@ember/object';
 import { later } from '@ember/runloop';
 import Component from '@ember/component';
 
+import $ from 'jquery';
+
 /* global d3 */
 
 const className = "feature-list";
@@ -80,7 +82,8 @@ export default Component.extend({
   featureNameList  : computed('featureNameListEnter', function () {
     let
       featureList = {};
-    let text$ = this.$('textarea'),
+    /** jQuery handle of this textarea */
+    let text$ = $('textarea', this.element),
       /** before textarea is created, .val() will be undefined. */
       fl = text$.val();
       if (fl)
@@ -155,7 +158,7 @@ export default Component.extend({
     if (! activeInput)
     {
       let fl = featureList.selectedFeatures,
-      text$ = this.$('textarea');
+      text$ = $('textarea', this.element);
       text$.val(fl && fl.join('\n'));
     }
     return featureList;
@@ -205,7 +208,7 @@ export default Component.extend({
     console.log('fromSelectedFeatures');
     if (this.get('activeInput'))
       this.set('activeInput', false);
-    let text$ = this.$('textarea'),
+    let text$ = $('textarea', this.element),
     selectedFeatures = this.get('selectedFeatures'),
     selectedFeaturesNames = selectedFeatures.map(function (sf) {
       return sf.Feature;
