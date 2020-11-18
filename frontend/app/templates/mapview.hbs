@@ -41,10 +41,11 @@
       viewedIds {{ block.viewedIds.length }},
     </p>
     {{!-- {{#if hasData}} --}}
+    {{!-- Ember.Component.layout is reserved, so pass mapview .layout as panelLayout --}}
       {{draw-map
         data=block.viewed
         drawActions=this
-        layout=layout
+        panelLayout=layout
         controls=controls
         isShowUnique=isShowUnique
         pathColourScale=pathColourScale

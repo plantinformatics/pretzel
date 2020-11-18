@@ -139,8 +139,7 @@ export default ManageBase.extend({
     'owner': {'formal': 'Mine', 'icon': 'user'}
   },
   filter: 'all',
-  layout: {
-  },
+
   /** Filter / Group patterns.  initially 0 elements. */
   filterGroups : A(), // [{}]
   filterGroupsChangeCounter : 0,

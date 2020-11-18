@@ -6032,7 +6032,8 @@ export default Component.extend(Evented, {
    */
   stacksWidthChanges : computed(
     'blockService.stacksCount', 'splitAxes.[]',
-    'layout.left.visible', 'layout.right.visible',
+    /** panelLayout is mapview .layout */
+    'panelLayout.left.visible', 'panelLayout.right.visible',
     function () {
       let count = stacks.length;
       // just checking - will retire stacks.stacksCount anyway.
@@ -6042,9 +6043,9 @@ export default Component.extend(Evented, {
       current = {
         stacksCount : count,
         splitAxes : this.get('splitAxes').length,
-        // this.get('layout.left.visible') is true, and does not update
+        // this.get('panelLayout.left.visible') is true, and does not update
         left : leftPanelShown,
-        right : this.get('layout.right.visible')
+        right : this.get('panelLayout.right.visible')
       };
       console.log('stacksWidthChanges', current);
       return current;
@@ -6096,8 +6097,8 @@ export default Component.extend(Evented, {
   },
 
   resize : observer(
-    'layout.left.visible',
-    'layout.right.visible',
+    'panelLayout.left.visible',
+    'panelLayout.right.visible',
     'leftPanelShown',
     function() {
       console.log("resize", this, arguments);
@@ -6147,7 +6148,7 @@ export default Component.extend(Evented, {
                 /* debounce is used to absorb the progressive width changes of
                  * the side panels when they open / close (open is more
                  * progressive).
-                 * After the values layout.{left,right}.visible change, DOM
+                 * After the values panelLayout.{left,right}.visible change, DOM
                  * reflow will modify viewport width, so the delay helps with
                  * waiting for that.
                  */
@@ -6157,9 +6158,9 @@ export default Component.extend(Evented, {
 
     }
   )
-  /* could include in .observes() : 'layout.left.tab', but the tab name should not affect the width.
-   * (currently the value of layout.left.tab seems to not change - it is just 'view').
-   * stacksWidthChanges.{left,right} are equivalent to leftPanelShown and layout.right.visible,
+  /* could include in .observes() : 'panelLayout.left.tab', but the tab name should not affect the width.
+   * (currently the value of panelLayout.left.tab seems to not change - it is just 'view').
+   * stacksWidthChanges.{left,right} are equivalent to leftPanelShown and panelLayout.right.visible,
    * so there is some duplication of dependencies, since resizeEffect() depends on stacksWidthChanges.@each
    */
 

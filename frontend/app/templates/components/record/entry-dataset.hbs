@@ -74,7 +74,7 @@
     {{/if}}
   {{/if}}
 </li>
-{{#if layout.active}}
+{{#if panelLayout.active}}
   {{#each data as |block|}}
     <li 
       class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}} {{nameClass block}}"

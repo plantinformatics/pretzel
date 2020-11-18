@@ -7,7 +7,7 @@ export default EntryBase.extend({
     let layout = {
       'active': false
     }
-    this.set('layout',layout);
+    this.set('entryLayout',layout);
   }),
   data: computed('entry.blocks', 'filter', function() {
     return this.get('entry.blocks')
@@ -18,8 +18,8 @@ export default EntryBase.extend({
     if (availableBlocks && availableBlocks.length > 0) { return false; }
     else { return true; }
   }),
-  expandIcon: computed('layout.active', function() {
-    let active = this.get('layout.active')
+  expandIcon: computed('entryLayout.active', function() {
+    let active = this.get('entryLayout.active')
     return active? 'minus' : 'plus'
   }),
   actions: {
@@ -32,8 +32,8 @@ export default EntryBase.extend({
     },
     switchDataset(dataset) {
       // console.log('switchDataset')
-      let active = this.get('layout.active')
-      this.set('layout.active', !active)
+      let active = this.get('entryLayout.active')
+      this.set('entryLayout.active', !active)
     },
     /** Dataset receives onDelete block, which it forwards up to manage-explorer
      * and thence mapview which translates it to removeMap, and dataset also, as
