@@ -29,9 +29,9 @@ const dLog = console.debug;
 const blocksUpdateDomainEnabled = false;
 
 function verifyFeatureRecord(fr, f) {
-  let frd = fr._internalModel.__data,
+  let frd = fr._internalModel.__data || fr._internalModel .__recordData.__data,
   /** Handle some older data which has .range instead of .value */
-  frdv = frd.value || frd.range,
+  frdv = frd ? frd.value || frd.range : fr.get('value'),
   fv = f.value || f.range;
   if ((typeof(frdv) == "number") || (frdv.length === undefined))
     frdv = [frdv];
@@ -47,7 +47,7 @@ function verifyFeatureRecord(fr, f) {
   same = 
     (fr.id === f._id) &&
     direction && sameDirection &&
-    (frd.name === f.name);
+    ((frd ? frd.name : fr.get('name')) === f.name);
   return same;
 }
 
