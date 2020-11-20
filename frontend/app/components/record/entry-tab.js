@@ -14,9 +14,7 @@ const dLog = console.debug;
  */
 export default Component.extend(Evented, {
 
-  attributeBindings: ['id'],
-  classNames : ['tab-pane', 'fade', 'in'],
-
+  tagName : '',
 
   id : computed('name', function () {
     let name = this.get('name'),

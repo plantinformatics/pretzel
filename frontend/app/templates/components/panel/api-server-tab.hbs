@@ -1,8 +1,11 @@
 {{!-- tagName is li --}}
-<a data-toggle="tab" href={{concat "#tab-" apiServer.tabId}}
+{{#nav.item active=(bs-eq tab.activeId (concat "tab-" apiServer.tabId) ) }}
+  <a href={{concat "#tab-" apiServer.tabId}}
    class="apiServer"
    style={{borderStyle}}
-   {{action (action serverTabSelected apiServer.tabId apiServerName apiServer) }}
->
-  {{apiServer.tabText}}
-</a>
+   onclick={{action serverTabSelected apiServer.tabId apiServerName apiServer}}>
+    {{apiServer.tabText}}
+  </a>
+
+{{/nav.item}}
+
