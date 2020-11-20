@@ -1325,16 +1325,22 @@ div#left-panel > ul
   display : block;
 }
 
-div#left-panel > div.tab-content
+div#left-panel > div,
+div#left-panel > div > div.tab-content
 {
   height: 100%;
   overflow-y: hidden;
 }
 
-div#left-panel > div.tab-content > div.tab-pane
+div#left-panel > div > div.tab-content > div.tab-pane
 {
   height: inherit;
-  overflow-y: scroll;
+  overflow-y: overlay;
+}
+
+#left-panel > div > div.tab-content > div.tab-pane > div {
+  /* this enables the scrollbar to reach the bottom of the div, there is probably a better solution.  */
+  margin-bottom: 70px;
 }
 
 
