@@ -68,17 +68,12 @@
       {{#unless enable_parentBeforeFilter}}
         {{#each-in dataTypedTreeFG as |tabTypeName tabData|}}
           {{!-- log 'tabTypeName' tabTypeName 'tabData' tabData (compute (action 'keysLength' tabData)) --}}
-          {{#let (compute (action "datasetTypeTabId" tabTypeName)) as |tabId|}}
-            <nav.item class="active-detail" @active={{bs-eq tab.activeId tabId}}><a href={{concat "#" tabId}} role="tab" onclick={{action tab.select tabId}}>{{tabTypeName}}</a>
-              <div>{{compute (action 'keysLength' tabData)}}</div>
-            </nav.item>
-          {{/let}}
+          {{!-- tab=tab  activeId=tab.activeId --}}
+          {{panel/explorer-parent-tab nav=nav  tabTypeName=tabTypeName tabData=tabData}}
         {{/each-in}}
       {{else}}
         {{#each-in dataParentTypedFGTree as |tabTypeName tabData|}}
-            <nav.item class="active-detail" @active={{bs-eq tab.activeId (concat "#" (compute (action "datasetTypeTabId" tabTypeName)) '2')}}><a href={{concat "#" (compute (action "datasetTypeTabId" tabTypeName)) '2'}} role="tab" onclick={{action tab.select (concat "#" (compute (action "datasetTypeTabId" tabTypeName)) '2') }}>{{tabTypeName}}</a>
-              <div>{{compute (action 'keysLength' tabData)}}</div>
-            </nav.item>
+          {{panel/explorer-parent-tab tab=tab nav=nav tabTypeName=tabTypeName tabData=tabData nameSuffix='2'}}
         {{/each-in}}
       {{/unless}}
 

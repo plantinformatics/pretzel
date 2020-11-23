@@ -19,7 +19,7 @@ import {
   readOnly
 } from '@ember/object/computed';
 
-import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
+import { tab_explorer_prefix, text2EltId, datasetTypeTabId } from '../../utils/explorer-tabId';
 import { parseOptions } from '../../utils/common/strings';
 
 import { mapHash, justUnmatched, logV } from '../../utils/value-tree';
@@ -1129,16 +1129,7 @@ export default ManageBase.extend({
     /** invoked from hbs via {{compute (action "datasetTypeTabId" datasetType ) }}
      * @return string suitable for naming a html tab, based on datasetType name.
      */
-    datasetTypeTabId(datasetType) {
-      let
-        id = tab_explorer_prefix + text2EltId(datasetType);
-      if (trace_dataTree)
-        dLog('datasetTypeTabId', id, datasetType);
-      return id;
-    },
-    keysLength(object) {
-      return Object.keys(object).length;
-    },
+    datasetTypeTabId : datasetTypeTabId,
 
     /** Triggered by refresh icon on datset list **/
     refreshAvailable() {

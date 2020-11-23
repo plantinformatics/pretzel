@@ -9,6 +9,20 @@ function text2EltId(name) {
   return id;
 }
 
+const trace_dataTree = 0;
+
+    /** invoked from hbs via {{compute (action "datasetTypeTabId" datasetType ) }}
+     * @return string suitable for naming a html tab, based on datasetType name.
+     */
+function datasetTypeTabId(datasetType) {
+  let
+  id = tab_explorer_prefix + text2EltId(datasetType);
+  if (trace_dataTree)
+    dLog('datasetTypeTabId', id, datasetType);
+  return id;
+}
+
+
 /*----------------------------------------------------------------------------*/
 
-export {tab_explorer_prefix, text2EltId };
+export {tab_explorer_prefix, text2EltId, datasetTypeTabId };

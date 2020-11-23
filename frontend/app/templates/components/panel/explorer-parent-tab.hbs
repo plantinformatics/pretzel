@@ -1,0 +1,7 @@
+  {{!-- tagName is li --}}
+  {{#nav.item class="active-detail" active=this.eqActive}}
+    <a href={{concat "#" this.tabId}} role="tab" onclick={{action tab.select this.tabId}}>{{tabTypeName}}</a>
+    <div>{{compute (action 'keysLength' tabData)}}</div>
+  {{/nav.item}}
+
+{{!-- This is similar to panel/api-server-tab. --}}
