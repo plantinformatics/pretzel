@@ -167,12 +167,12 @@ export default ManageBase.extend({
        * Perhaps instead will change mapview to use apiServers service.
        */
       datasetsBlocks = this.get('primaryDatasets') ||
-	this.get('model.availableMapsTask._result') || 
-	this.get('mapviewDatasets.content');
+        this.get('model.availableMapsTask._result') || 
+        this.get('mapviewDatasets.content');
       dLog('datasetsBlocks()  using', 
-	   this.get('primaryDatasets.length'),
-	   this.get('model.availableMapsTask._result.length'),
-	   this.get('mapviewDatasets.content.length'));
+           this.get('primaryDatasets.length'),
+           this.get('model.availableMapsTask._result.length'),
+           this.get('mapviewDatasets.content.length'));
     }
     if (datasetsBlocks)
       datasetsBlocks =
@@ -1212,7 +1212,7 @@ export default ManageBase.extend({
   //----------------------------------------------------------------------------
 
   /** If a tab is active (selected), save its id.  */
-  willRender () {
+  saveActiveId () {
     let
       explorerDiv = $(selectorExplorer),
     /** active tab element.  Its child <a> href is '#'+id, but it is easier to
@@ -1227,11 +1227,33 @@ export default ManageBase.extend({
         console.log('willRender', id, t[0], c[0]);
     }
   },
+    /** This code to preserve active class when component is closed and
+     * re-opened is not currently enabled because the manage-explorer component
+     * is not currently destroyed when the left-panel tab is closed & re-opened,
+     * so it is not currently required.
+     willRender() {
+     this.saveActiveId();
+     },
+  didRender() {
+    if (this.get('activeId') && ! this.tabAndContentActive()) {
+      this.ensureActiveClass();
+    }
+  },
+    */
+  /** @return true if there is an active tab in the navbar and an active panel
+   * element in tab-content.
+   */
+  tabAndContentActive() {
+    let contentActive = $(selectorExplorer + ' div.tab-content > .active'),
+        tabActive = $(selectorExplorer + ' li.active-detail.active');
+    dLog('tabAndContentActive', contentActive.length, tabActive.length);
+    return contentActive.length && tabActive.length;
+  },
   /** For those tabs generated from data, after re-render the active class is lost.
    * So re-add class .active to the tab header and content elements.
    * this.activeId is recorded in willRender().
    */
-  didRender () {
+  ensureActiveClass () {
     let
       id = this.get('activeId');
     if (id) {
