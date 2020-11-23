@@ -1,6 +1,6 @@
 <div id="left-panel" class="left-panel-shown" style="height:100%; width: 400px; border-right:1px solid #ddd; display: flex; flex-direction: column">
 
-  <BsTab @customTabs={{true}} as |tab|>
+  <BsTab @customTabs={{true}} @activeId="left-panel-explorer" as |tab|>
     <BsNav @type="tabs" as |nav|>
       <nav.item @active={{bs-eq tab.activeId "left-panel-explorer"}}><a href="#left-panel-explorer" role="tab" onclick={{action tab.select "left-panel-explorer"}}>{{elem/icon-base name="folder-open"}} Explorer</a></nav.item>
       <nav.item @active={{bs-eq tab.activeId "left-panel-view"}}><a href="#left-panel-view" role="tab" onclick={{action tab.select "left-panel-view"}}>{{elem/icon-base name="picture"}} View</a></nav.item>
