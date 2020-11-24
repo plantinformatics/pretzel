@@ -718,6 +718,8 @@ export default Component.extend(Evented, {
      */
     let showHoverExtraText = true;
 
+    const trace_stack = 0;
+
     let svgContainer;
 
     let
@@ -1023,7 +1025,6 @@ export default Component.extend(Evented, {
      * further increments will trace the whole arrays, i.e. O(N),
      * and trace cross-products of arrays - O(N^2) e.g. trace the whole array for O(N) events.
      */
-    const trace_stack = 0;
     const trace_scale_y = 0;
     const trace_drag = 0;
     //- moved to ../utils/draw/collate-paths.js : trace_alias, trace_adj
