@@ -1198,7 +1198,7 @@ export default Component.extend(Evented, {
          * isChild says that the block is eligible to be a child; (it is possible,
          * but seems very unlikely, that the block may have just been added and
          * would be adopted below.)
-	       * Child blocks have .parent and may have namespace; parent blocks don't have namespace.
+         * Child blocks have .parent and may have namespace; parent blocks don't have namespace.
          */
         isParent = b.axis && (b === b.axis.blocks[0]), // equivalent to b.axis.referenceBlock.view,
         features = b.block.get('features'),
@@ -1427,7 +1427,7 @@ export default Component.extend(Evented, {
               sd.logBlocks();
             }
             // .parent of referenceBlock is undefined.
-        	  sBlock.setAxis(sd);
+            sBlock.setAxis(sd);
             if (sBlock !== sd.referenceBlockS())
               dLog('sBlock', sBlock, ' !== sd.referenceBlockS()',  sd.referenceBlockS());
 
@@ -5473,8 +5473,14 @@ export default Component.extend(Evented, {
       console.log("configureAxisTitleMenu", axisName, this, this.outerHTML);
         let node_ = this;
         $(node_)
+        .on('click', showMenu);
+      function showMenu() {
+        oa.axisApi.menuActions = {axisDelete, axisFlip, axisPerpendicular, axisExtend};
+        me.set('menuAxis', axisName);
+      }
+      if (false) {undefined
         .popover({
-            trigger : "hover", // manual", // "click focus",
+            trigger : "manual", // hover", // "click focus",
           sticky: true,
           delay: {show: 200, hide: 1500},
           container: 'div#holder',
@@ -5497,20 +5503,27 @@ export default Component.extend(Evented, {
             (splitAxes1 ?
              iconButton("ExtendMap", "Extend_" + axisName, "&#x21F2;" /*glyphicon-star*/, "glyphicon-arrow-right", "#")  : "")
         })
+                 }
         // .popover('show');
       
+      /*
         .on("shown.bs.popover", function(event) {
           if (trace_gui)
             console.log("shown.bs.popover", event, event.target);
+        });
+      */
           // button is not found when show.bs.popover, but is when shown.bs.popover.
           // Could select via id from <text> attr aria-describedby="popover800256".
+      /*
           let deleteButtonS = d3.select("button.DeleteMap");
           if (trace_gui)
             console.log(deleteButtonS.empty(), deleteButtonS.node());
           deleteButtonS
-            .on('click', function (buttonElt /*, i, g*/) {
+            .on('click', );
+      */
+      function axisDelete (buttonElt /*, i, g*/) {
               console.log("delete", axisName, this);
-		// this overlaps with the latter part of blockIsUnviewed()
+        // this overlaps with the latter part of blockIsUnviewed()
               // and can be factored with that.
               let axis = oa.axes[axisName], stack = axis && axis.stack;
               // axes[axisName] is deleted by removeStacked1() 
@@ -5526,10 +5539,12 @@ export default Component.extend(Evented, {
               // filter axisName out of selectedFeatures and selectedAxes
               selectedFeatures_removeAxis(axisName);
               sendUpdatedSelectedFeatures();
-            });
+            }
+      /*
           let flipButtonS = d3.select("button.FlipAxis");
           flipButtonS
-            .on('click', function (buttonElt /*, i, g*/) {
+            .on('click', ); */
+      function axisFlip (buttonElt /*, i, g*/) {
               console.log("flip", axisName, this);
               /** Handle the possibility that axisName may have been adopted by
                * another axis after this callback registration. */
@@ -5544,31 +5559,35 @@ export default Component.extend(Evented, {
 
               let t = oa.svgContainer.transition().duration(750);
               axisScaleChanged(axisName, t, true);
-            });
+            }
+      /*
           let perpendicularButtonS = d3.select("button.PerpendicularAxis");
           perpendicularButtonS
-            .on('click', function (buttonElt /*, i, g*/) {
+            .on('click', ); */
+      function axisPerpendicular (buttonElt /*, i, g*/) {
               console.log("perpendicular", axisName, this);
               let axis = Stacked.getAxis(axisName);
               axis.perpendicular = ! axis.perpendicular;
 
               oa.showResize(true, true);
-            });
+            }
 
+      /*
           let extendButtonS = d3.select("button.ExtendMap");
           if (trace_gui)
             console.log(extendButtonS.empty(), extendButtonS.node());
           extendButtonS
-            .on('click', function (buttonElt /*, i, g*/) {
+            .on('click', ); */
+      function axisExtend (buttonElt /*, i, g*/) {
               console.log("extend", axisName, this);
               let axis = Stacked.getAxis(axisName), stack = axis && axis.stack;
               // toggle axis.extended, which is initially undefined.
               axis.extended = ! axis.extended;
               // axisShowExtend(axis, axisName, undefined);
               me.send('enableAxis2D', axisName, axis.extended);
-            });
+            }
 
-        });
+
     }
 
     /*------------------------------------------------------------------------*/
@@ -5585,6 +5604,7 @@ export default Component.extend(Evented, {
       title = blockR
         ? blockR.get('namespace') + ' ' + blockR.get('scope')
         : block.longName();
+      if ($(node_) .popover)
         $(node_)
         .popover({
           /* would like to use .axis-menu as a selector in css,
@@ -5598,7 +5618,7 @@ export default Component.extend(Evented, {
           placement : "auto bottom",
           title : title,
           html: true,
-	
+
           content : ""
             + iconButton("DeleteMap", "Delete_" + block.axisName, "&#x2573;" /*glyphicon-sound-7-1*/, "glyphicon-remove-sign", "#")
             + iconButton("VisibleAxis", "Visible_" + block.axisName, "&#x1F441;" /*Unicode Character 'EYE'*/, "glyphicon-eye-close", "#", true)

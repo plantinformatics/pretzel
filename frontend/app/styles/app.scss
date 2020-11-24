@@ -1148,6 +1148,10 @@ ul#display-blocks > li.selected,
   font-weight: bold;
 }
 
+/* indicate that the axis text can be clicked to show axis-menu. */
+g.axis-outer > g.axis-all > text:hover {
+  opacity: 0.5;
+}
 g.axis-outer.selected /* > g.axis-all > g.axis > */ text {
   font-weight: bold;
 }
@@ -1528,8 +1532,32 @@ span.glyphicon {
 /* -------------------------------------------------------------------------- */
 
 .axis-menu {
-  overflow : hidden;
+  /* overflow : hidden; */
 }
+
+/* for .axis-menu,  sometimes .tooltip  */
+.axis-menu.ember-tooltip
+{
+  padding: 6px;
+  /* from .panel-primary > .panel-heading  */
+  background-color: #337ab7;  /* surrounds inner,  like border-color */
+  max-width : inherit;
+}
+.axis-menu-inner {
+  /* from .list-group-item-info */
+  color: #31708f;
+  background-color: #d9edf7;
+  margin-bottom: 1em;
+  padding : 0.8em;
+}
+.axis-menu-inner .menu-icons {
+  padding: 9px 14px;
+  background: white;
+  width: fit-content;
+  margin : auto;
+  border-radius: 5px;
+}
+
 
 /* -------------------------------------------------------------------------- */
 

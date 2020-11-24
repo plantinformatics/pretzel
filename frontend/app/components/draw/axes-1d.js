@@ -1,5 +1,6 @@
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
+import { computed } from '@ember/object';
 
 import AxisEvents from '../../utils/draw/axis-events';
 
@@ -12,6 +13,10 @@ const dLog = console.debug;
  * Planning to use AxisEvents here and propagate to just those matching axes.
  */
 export default Component.extend(Evented, /*AxisEvents,*/ {
+
+  menuAxis : computed.alias('drawMap.menuAxis'),
+
+  /*--------------------------------------------------------------------------*/
 
   /** axes-1d receives axisStackChanged from draw-map and
    * (todo) propagates it to its children
