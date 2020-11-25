@@ -1,8 +1,9 @@
-{{!-- logo, id0, (concat 'all' axis) .   event='click' --}}
-<EmberTooltip
+{{!-- logo, id0, (concat 'all' axis) .   event='click'  @hideOn='click'  --}}
+<EmberPopover
   @tooltipClass="axis-menu" @innerClass="axis-menu-inner"
   @popperContainer="body" @targetId={{concat 'all' axis}}
-  @isShown={{true}} @event='none' @hideOn='click' >
+  @isShown={{true}} @event='none'
+  as |popover| >
 
 
 <div>
@@ -29,5 +30,6 @@ PBI-14-1406-s005  : 1B
 	<button class="FlipAxis" id="Flip_5f6170ef2d36ffa16a2383e2" href="#">⇅</button>
 	<button class="ExtendMap" id="Extend_5f6170ef2d36ffa16a2383e2" href="#">⇲</button>
     </div>
+  <button onClick={{action "hide" target=popover}} type="button">Close</button>
 
-</EmberTooltip>
+</EmberPopover>
