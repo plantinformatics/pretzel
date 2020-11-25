@@ -64,7 +64,8 @@ import {
 
 import {  Axes, maybeFlip, maybeFlipExtent,
           ensureYscaleDomain,
-          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll,
+          /*yAxisTextScale,*/  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,
+          eltId, axisEltId, eltIdAll, axisEltIdTitle,
           axisFeatureCircles_selectAll
           /*, axisTitleColour*/  }  from '../utils/draw/axis';
 import { stacksAxesDomVerify }  from '../utils/draw/stacksAxes';
@@ -484,6 +485,8 @@ export default Component.extend(Evented, {
    * @param source 'didRender' or 'dataReceived' indicating an added map.
    */
   draw: function(myData, source) {
+    const trace_stack = 0;
+
     let flowsService = this.get('flowsService');
     let myDataKeys;
     if (source === 'didRender')
@@ -718,7 +721,6 @@ export default Component.extend(Evented, {
      */
     let showHoverExtraText = true;
 
-    const trace_stack = 0;
 
     let svgContainer;
 
@@ -2512,6 +2514,8 @@ export default Component.extend(Evented, {
     }
 
     let axisTitleS = g.append("text")
+       /* id is used by axis-menu targetId */
+      .attr('id', axisEltIdTitle)
       .attr("y", -2 * axisFontSize)
       .style("font-size", axisFontSize);
     axisTitleFamily(axisTitleS);

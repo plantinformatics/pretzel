@@ -1,7 +1,7 @@
 {{!-- logo, id0, (concat 'all' axis) .   event='click'  @hideOn='click'  --}}
 <EmberPopover
   @tooltipClass="axis-menu" @innerClass="axis-menu-inner"
-  @popperContainer="body" @targetId={{concat 'all' axis}}
+  @popperContainer="body" @targetId={{concat 't' axis}}
   @isShown={{true}} @event='none'
   @onHide={{action 'onHide'}}
   as |popover| >
