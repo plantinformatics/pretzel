@@ -19,6 +19,7 @@ function configureHorizTickHover(d, block, hoverTextFn) {
   // console.log("configureHorizTickHover", d, this, this.outerHTML);
   let text = hoverTextFn(d, block);
   let node_ = this;
+  if ($(node_).popover)
   $(node_)
     .popover({
       trigger : "click hover",

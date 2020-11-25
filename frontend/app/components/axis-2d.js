@@ -168,7 +168,7 @@ export default Component.extend(Evented, AxisEvents, {
   },
 
   /** width of track <rect>s */
-  trackWidth : computed('trackWidth', function () {
+  trackWidth : computed('urlOptions.trackWidth', function () {
     let trackWidthOption = this.get('urlOptions.trackWidth'),
     trackWidth = trackWidthOption || 10;
     dLog('init', 'from urlOptions, trackWidth', trackWidth, trackWidthOption);

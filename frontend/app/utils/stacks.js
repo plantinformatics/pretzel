@@ -136,8 +136,7 @@ Block.prototype.getId = function()
 };
 /** Set .axis
  *
- * Because .axis is used as a dependent key in a ComputedProperty, Ember adds
- * .set() and then this must be used.
+ * Because .axis is used as a dependent key in a ComputedProperty, treat value as final.
  * @param a axis (Stacked)
  */
 Block.prototype.setAxis = function(a)
@@ -145,10 +144,10 @@ Block.prototype.setAxis = function(a)
   if (trace_stack) {
     dLog('setAxis', !!this.block.set, a);  this.log();
   }
-  this.axis = a;
-  if (this.block && this.block.set) {
-    later(() => this.block.set('axis', a) );
+  if (! this.axis) {
+    this.axis = a;
   }
+
   if (false)
   /* The block-adj CP axes depends on .axislater, setting this field triggers a
    * render, so without run.later the code following the call to setAxis() would
@@ -1822,7 +1821,7 @@ Stack.prototype.axisTransformO = function (axisName)
      */
     a = axes[axisName],
   axis = a.getAxis();
-  return axis.axisTransformO();
+  return axis && axis.axisTransformO();
 };
 /** For each axis in this Stack, redraw axis, brush, foreground paths.
  * @param t transition in which to make changes

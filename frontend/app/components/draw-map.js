@@ -2597,7 +2597,7 @@ export default Component.extend(Evented, {
     function axisName2Blocks (axisName) {
       let axis = Stacked.getAxis(axisName);
       // equiv : axis.children(true, false)
-      return axis.blocks;
+      return axis ? axis.blocks : [];
     }
 
 
@@ -3044,6 +3044,7 @@ export default Component.extend(Evented, {
       /** typeof location may also be "number" or "object" - array : syntenyBlocks[x] */
       let text = (location == "string") ? location :  "" + location;
       let node_ = this;
+      if ($(node_).popover)
       $(node_)
         .popover({
           trigger : "click hover",
@@ -5447,7 +5448,7 @@ export default Component.extend(Evented, {
         collateStacks();
         if (oa.foreground && ysLength())
         {
-          pathUpdate(t);
+          pathUpdate(/*t*/ undefined);
           countPathsWithData(oa.svgRoot);
         }
         pathUpdate(undefined);
@@ -5482,7 +5483,9 @@ export default Component.extend(Evented, {
       function showMenu(e) {
         dLog('showMenu', this, axisName, this.__data__, this.parentElement, this.parentElement.parentElement,
              e, e.originalEvent.path, e.originalEvent.srcElement, e.handleObj.type);
-        oa.axisApi.menuActions = {axisDelete, axisFlip, axisPerpendicular, axisExtend};
+        if (! oa.axisApi.menuActions) {
+          oa.axisApi.menuActions = {axisDelete, axisFlip, axisPerpendicular, axisExtend};
+        }
         me.set('menuAxis', axisName);
         return false; /* for preventDefault(), stopPropagation() */
       }

@@ -1,4 +1,5 @@
 import Ember from 'ember';
+import { computed } from '@ember/object';
 
 import { stacks  } from '../../utils/stacks';
 
@@ -9,6 +10,8 @@ export default Ember.Component.extend({
 
   classNames: ['axis-menu'],
 
+  menuActions : computed.alias('axisApi.menuActions'),
+
   actions: {
     onHide : function () {
       dLog(FileName, ': onHide');
@@ -18,19 +21,19 @@ export default Ember.Component.extend({
 
     deleteMap : function() {
       console.log("deleteMap in ", FileName);
-      this.deleteMap();
+      this.menuActions.axisDelete();
     },
     flipAxis : function() {
       console.log("flipAxis in ", FileName);
-      this.flipAxis();
+      this.menuActions.axisFlip();
     },
     perpendicularAxis : function() {
       console.log("perpendicularAxis in ", FileName);
-      this.perpendicularAxis();
+      this.menuActions.axisPerpendicular();
     },
     extendMap : function() {
       console.log("extendMap in ", FileName);
-      this.extendMap();
+      this.menuActions.axisExtend();
     },
 
 

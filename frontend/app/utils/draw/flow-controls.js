@@ -37,6 +37,7 @@ function configurejQueryTooltip(node) {
     .each(function (flowName) {
       // console.log("configurejQueryTooltip", flowName, this, this.outerHTML);
       let node_ = this;
+      if ($(node_).popover)
       $(node_)
       /*
         .tooltip({

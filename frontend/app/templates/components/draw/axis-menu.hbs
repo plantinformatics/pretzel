@@ -27,9 +27,9 @@ PBI-14-1406-s005  : 1B
 </ul>
 
     <div class="menu-icons">
-	<button class="DeleteMap" id="Delete_5f6170ef2d36ffa16a2383e2" href="#">╳</button>
-	<button class="FlipAxis" id="Flip_5f6170ef2d36ffa16a2383e2" href="#">⇅</button>
-	<button class="ExtendMap" id="Extend_5f6170ef2d36ffa16a2383e2" href="#">⇲</button>
+	<button onClick={{action "deleteMap"}}>╳</button>
+	<button onClick={{action "flipAxis"}}>⇅</button>
+	<button onClick={{action "extendMap"}}>⇲</button>
     </div>
   <button onClick={{action "hide" target=popover}} type="button">Close</button>
 

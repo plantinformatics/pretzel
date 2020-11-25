@@ -6,7 +6,7 @@ import $ from 'jquery';
 import { inject as service } from '@ember/service';
 
 
-import createIntervalTree from 'npm:interval-tree-1d';
+import createIntervalTree from 'interval-tree-1d';
 
 import {
   eltWidthResizable,
@@ -79,6 +79,7 @@ function  configureHorizTickHover(location)
   /** typeof location may also be "number" or "object" - array : syntenyBlocks[x] */
   let text = (location == "string") ? location :  "" + location;
   let node_ = this;
+  if ($(node_).popover)
   $(node_)
     .popover({
       trigger : "click hover",
