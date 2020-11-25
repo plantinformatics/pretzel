@@ -5474,9 +5474,13 @@ export default Component.extend(Evented, {
         let node_ = this;
         $(node_)
         .on('click', showMenu);
-      function showMenu() {
+      /** @param e DOM event */
+      function showMenu(e) {
+        dLog('showMenu', this, axisName, this.__data__, this.parentElement, this.parentElement.parentElement,
+             e, e.originalEvent.path, e.originalEvent.srcElement, e.handleObj.type);
         oa.axisApi.menuActions = {axisDelete, axisFlip, axisPerpendicular, axisExtend};
         me.set('menuAxis', axisName);
+        return false; /* for preventDefault(), stopPropagation() */
       }
       if (false) {undefined
         .popover({

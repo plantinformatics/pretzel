@@ -3,12 +3,19 @@ import Ember from 'ember';
 import { stacks  } from '../../utils/stacks';
 
 const FileName = "components/axis-menu";
+const dLog = console.debug;
 
 export default Ember.Component.extend({
 
   classNames: ['axis-menu'],
 
   actions: {
+    onHide : function () {
+      dLog(FileName, ': onHide');
+      let axes1d = this.parentView;
+      axes1d.set('menuAxis', undefined);
+    },
+
     deleteMap : function() {
       console.log("deleteMap in ", FileName);
       this.deleteMap();
