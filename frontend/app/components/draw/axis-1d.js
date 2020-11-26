@@ -396,7 +396,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * @return data blocks of this axis.
    * These are the Ember records, not the stack Block-s.
    */
-  axisSdataBlocks : computed('axisS', 'blockService.axesBlocks.@each', function () {
+  axisSdataBlocks_unused : computed('axisS', 'blockService.axesBlocks.@each', function () {
     let axis = this.get('axisS'),
     dataBlocks,
     axesBlocks = this.get('blockService.axesBlocks');

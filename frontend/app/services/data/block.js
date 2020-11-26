@@ -1212,8 +1212,8 @@ export default Service.extend(Evented, {
       return records;  // .toArray()
     }),
   /** @return Map of axes to viewed blocks */
-  axesViewedBlocks : computed(
-    'viewed.@each.axis',
+  axesViewedBlocks_unused : computed(
+    // 'viewed.@each.axis',
     function () {
       let records = this.get('viewed'),
       map = records.reduce(
@@ -1232,8 +1232,8 @@ export default Service.extend(Evented, {
       return map;
     }),
   /** @return Map of axes to loaded viewed child blocks */
-  axesBlocks : computed(
-    'loadedViewedChildBlocks.@each.axis',
+  axesBlocks_unused : computed(
+    // 'loadedViewedChildBlocks.@each.axis',
     function () {
       let records = this.get('loadedViewedChildBlocks'),
       map = records.reduce(

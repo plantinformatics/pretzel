@@ -786,7 +786,7 @@ export default Model.extend({
 
 
 
-  axis : computed('view.axis', 'referenceBlock', function () {
+  axis : computed(/*'view.axis'*/'isViewed', 'referenceBlock', function () {
     let axis = this.get('view.axis');
     let referenceBlock;
     if (! axis) {

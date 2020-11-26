@@ -144,9 +144,7 @@ Block.prototype.setAxis = function(a)
   if (trace_stack) {
     dLog('setAxis', !!this.block.set, a);  this.log();
   }
-  if (! this.axis) {
-    this.axis = a;
-  }
+  this.axis = a;
 
   if (false)
   /* The block-adj CP axes depends on .axislater, setting this field triggers a

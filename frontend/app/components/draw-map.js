@@ -2775,7 +2775,7 @@ export default Component.extend(Evented, {
      */
     function axisStackChanged_(t)
     {
-      showTickLocations(scaffoldTicks, t);
+      showTickLocations(oa.scaffoldTicks, t);
       if (oa.syntenyBlocks)
         showSynteny(oa.syntenyBlocks, t);
 
