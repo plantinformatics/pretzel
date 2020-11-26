@@ -20,6 +20,8 @@ import { subInterval } from '../utils/draw/zoomPanCalcs';
 
 import { featureCountDataProperties } from '../utils/data-types';
 
+import { stacks } from '../utils/stacks';
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -787,15 +789,17 @@ export default Model.extend({
 
 
   axis : computed(/*'view.axis'*/'isViewed', 'referenceBlock', function () {
-    let axis = this.get('view.axis');
+    let axesP = stacks.axesP;
+    let axis = this.get('view.axis') || axesP[this.get('id')];
     let referenceBlock;
     if (! axis) {
       referenceBlock = this.get('referenceBlock');
       if (referenceBlock)
-        axis = referenceBlock.get('view.axis');
+        axis = referenceBlock.get('view.axis') || axesP[referenceBlock.get('id')];
     }
     if (! axis)
-      dLog('block axis', this.get('id'), this.get('view'), 'no view.axis for block or referenceBlock', referenceBlock);
+      dLog('block axis', this.get('id'), this.get('view'), 'no view.axis for block or referenceBlock', referenceBlock, axesP);
+    return axis;
   }),
 
   zoomedDomain : alias('axis.axis1d.zoomedDomain'),
