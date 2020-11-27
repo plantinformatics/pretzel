@@ -5532,7 +5532,21 @@ export default Component.extend(Evented, {
           deleteButtonS
             .on('click', );
       */
-      function axisDelete (buttonElt /*, i, g*/) {
+      /** lexical context enclosed by menuActions functions :
+       * functions :
+       *  deleteAxisfromAxisIDs
+       *  removeBrushExtent
+       *  removeAxisMaybeStack
+       *  selectedFeatures_removeAxis
+       *  sendUpdatedSelectedFeatures
+       *  maybeFlip
+       *  axisScaleChanged
+       * variables :
+       *  oa
+       *  Stacked
+       *  me
+       */
+      function axisDelete (axisName  /*buttonElt, i, g*/) {
               console.log("delete", axisName, this);
         // this overlaps with the latter part of blockIsUnviewed()
               // and can be factored with that.
@@ -5555,7 +5569,7 @@ export default Component.extend(Evented, {
           let flipButtonS = d3.select("button.FlipAxis");
           flipButtonS
             .on('click', ); */
-      function axisFlip (buttonElt /*, i, g*/) {
+      function axisFlip (axisName /*buttonElt , i, g*/) {
               console.log("flip", axisName, this);
               /** Handle the possibility that axisName may have been adopted by
                * another axis after this callback registration. */
@@ -5575,7 +5589,7 @@ export default Component.extend(Evented, {
           let perpendicularButtonS = d3.select("button.PerpendicularAxis");
           perpendicularButtonS
             .on('click', ); */
-      function axisPerpendicular (buttonElt /*, i, g*/) {
+      function axisPerpendicular (axisName /*buttonElt , i, g*/) {
               console.log("perpendicular", axisName, this);
               let axis = Stacked.getAxis(axisName);
               axis.perpendicular = ! axis.perpendicular;
@@ -5589,7 +5603,7 @@ export default Component.extend(Evented, {
             console.log(extendButtonS.empty(), extendButtonS.node());
           extendButtonS
             .on('click', ); */
-      function axisExtend (buttonElt /*, i, g*/) {
+      function axisExtend (axisName /*buttonElt , i, g*/) {
               console.log("extend", axisName, this);
               let axis = Stacked.getAxis(axisName), stack = axis && axis.stack;
               // toggle axis.extended, which is initially undefined.

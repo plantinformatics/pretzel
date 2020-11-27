@@ -6,6 +6,10 @@ import { stacks  } from '../../utils/stacks';
 const FileName = "components/axis-menu";
 const dLog = console.debug;
 
+/**
+ * @param axis	blockId of reference block of axis
+ * @param axisApi	axisApi.menuActions defines the actions for the axis menu buttons
+ */
 export default Ember.Component.extend({
 
   classNames: ['axis-menu'],
@@ -21,19 +25,19 @@ export default Ember.Component.extend({
 
     deleteMap : function() {
       console.log("deleteMap in ", FileName);
-      this.menuActions.axisDelete();
+      this.menuActions.axisDelete(this.axis);
     },
     flipAxis : function() {
       console.log("flipAxis in ", FileName);
-      this.menuActions.axisFlip();
+      this.menuActions.axisFlip(this.axis);
     },
     perpendicularAxis : function() {
       console.log("perpendicularAxis in ", FileName);
-      this.menuActions.axisPerpendicular();
+      this.menuActions.axisPerpendicular(this.axis);
     },
     extendMap : function() {
       console.log("extendMap in ", FileName);
-      this.menuActions.axisExtend();
+      this.menuActions.axisExtend(this.axis);
     },
 
 
