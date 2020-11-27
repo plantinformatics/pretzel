@@ -1,29 +1,25 @@
 {{!-- logo, id0, (concat 'all' axis) .   event='click'  @hideOn='click'  --}}
 <EmberPopover
   @tooltipClass="axis-menu" @innerClass="axis-menu-inner"
-  @popperContainer="body" @targetId={{concat 't' axis}}
+  @popperContainer="body" @targetId={{concat 't' axisName}}
   @isShown={{true}} @event='none'
   @onHide={{action 'onHide'}}
   as |popover| >
 
 
 <div>
-PBI-14-1406-s005  : 1B
+{{block.datasetId.name}} : {{block.name}}
 </div>
 
 
 
 
-<ul>
+<ul class="list-unstyled">
+  {{#each dataBlockTexts as |text|}}
   <li>
-    IWGSC_MIPSv2.2_HC : 1B
+    {{text}}
   </li>
-   <li>
-    IWGSC_genes_HCv1.1 : 1B
-  </li>
-   <li>
-    IWGSC_DArT : 1B
-  </li>
+  {{/each}}
 </ul>
 
     <div class="menu-icons">

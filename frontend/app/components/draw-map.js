@@ -5486,7 +5486,7 @@ export default Component.extend(Evented, {
         if (! oa.axisApi.menuActions) {
           oa.axisApi.menuActions = {axisDelete, axisFlip, axisPerpendicular, axisExtend};
         }
-        me.set('menuAxis', axisName);
+        me.set('menuAxis', block);
         return false; /* for preventDefault(), stopPropagation() */
       }
       if (false) {undefined

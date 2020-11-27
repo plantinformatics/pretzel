@@ -7,13 +7,17 @@ const FileName = "components/axis-menu";
 const dLog = console.debug;
 
 /**
- * @param axis	blockId of reference block of axis
+ * @param blockS	reference block of axis, from axes1d.menuAxis
  * @param axisApi	axisApi.menuActions defines the actions for the axis menu buttons
  */
 export default Ember.Component.extend({
 
   classNames: ['axis-menu'],
 
+  /** the parameter will likely change from blockS (stacks) to block. */
+  block : computed.alias('blockS.block'),
+  /** blockId of blockS */
+  axisName : computed.alias('blockS.axisName'),
   menuActions : computed.alias('axisApi.menuActions'),
 
   actions: {
@@ -25,19 +29,19 @@ export default Ember.Component.extend({
 
     deleteMap : function() {
       console.log("deleteMap in ", FileName);
-      this.menuActions.axisDelete(this.axis);
+      this.menuActions.axisDelete(this.axisName);
     },
     flipAxis : function() {
       console.log("flipAxis in ", FileName);
-      this.menuActions.axisFlip(this.axis);
+      this.menuActions.axisFlip(this.axisName);
     },
     perpendicularAxis : function() {
       console.log("perpendicularAxis in ", FileName);
-      this.menuActions.axisPerpendicular(this.axis);
+      this.menuActions.axisPerpendicular(this.axisName);
     },
     extendMap : function() {
       console.log("extendMap in ", FileName);
-      this.menuActions.axisExtend(this.axis);
+      this.menuActions.axisExtend(this.axisName);
     },
 
 
@@ -48,10 +52,24 @@ export default Ember.Component.extend({
 
   },
 
-  x() {
-    /** blockId of reference block of axis, from axes1d.menuAxis */
-    let axis = this.get('axis')
-  }
+  dataBlockTexts : computed('block', function () {
+    let
+    /** skip the reference block, which is shown above the data block list.  */
+    dataBlocks = this.block.axis.blocks.slice(1),
+    texts = dataBlocks.map((blockS) => {
+      let
+      block = blockS.block,
+      /** block.name is generally just .scope, which is the same for all blocks
+       * in the axis, so it is displayed just on the first line (reference
+       * block).
+       */
+      title = block
+        ? (block.get('namespace') || block.get('datasetId.name')) // + ' : ' + block.get('name')
+        : blockS.longName();
+      return title;
+    });
+    return texts;
+  })
 
 });
 
