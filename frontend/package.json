@@ -19,7 +19,6 @@
     "test:ember": "ember test"
   },
   "devDependencies": {
-    "@ember/jquery": "^1.1.0",
     "@ember/optional-features": "^2.0.0",
     "@glimmer/component": "^1.0.2",
     "@glimmer/tracking": "^1.0.2",
@@ -81,7 +80,7 @@
   },
   "private": true,
   "dependencies": {
-    "colresizable": "^1.6.0",
+    "colresizable": "github:felipedgarcia/colresizable",
     "ember-array-helper": ">=5",
     "ember-cli-htmlbars": "^5.3.1",
     "ember-cli-multi-store-service": "git+https://git@github.com/plantinformatics/ember-cli-multi-store-service.git",
@@ -93,11 +92,11 @@
     "ember-promise-helpers": "^1.0.9",
     "ember-radio-button": "^2.0.1",
     "ember-raf-scheduler": "",
+    "ember-sortable": "",
     "ember-source": "^3.22.1",
     "ember-toggle": "^7.0.0",
     "ember-tooltips": "^3.4.5",
     "ember-truth-helpers": "^3.0.0",
-    "ember-sortable": "",
     "ember-wormhole": "^0.6.0",
     "interval-tree-1d": "github:mikolalysenko/interval-tree-1d",
     "moment": "^2.29.1",
