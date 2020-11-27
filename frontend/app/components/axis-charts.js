@@ -139,7 +139,15 @@ export default InAxis.extend({
     'blocksDataCount',
     function () {
     let blocksData = this.get('blocksData'),
-    chartTypes = Object.keys(blocksData);
+    /** during operation, blocksData is acquiring these extra fields, since
+     * upgrade to Ember3; may change Ember.Object.create() to {}, in conjunction
+     * with changing .get accesses. */
+    ignoreFields = ["_oldWillDestroy", "_super", "willDestroy"],
+    chartTypes = Object.keys(blocksData)
+      .filter((fieldName) => ignoreFields.indexOf(fieldName) === -1);
+      if (Object.keys(blocksData).length > chartTypes.length) {
+        dLog('chartTypes blocksData keys', Object.keys(blocksData));
+      }
     dLog('chartTypes', chartTypes);
     return chartTypes;
   }),
