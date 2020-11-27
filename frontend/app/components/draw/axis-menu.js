@@ -54,7 +54,9 @@ export default Ember.Component.extend({
 
   dataBlockTexts : computed('block', function () {
     let
-    /** skip the reference block, which is shown above the data block list.  */
+    /** skip the reference block, which is shown above the data block list.
+     * This can change to use stacks-view:axesBlocks().
+     */
     dataBlocks = this.block.axis.blocks.slice(1),
     texts = dataBlocks.map((blockS) => {
       let
@@ -64,7 +66,7 @@ export default Ember.Component.extend({
        * block).
        */
       title = block
-        ? (block.get('namespace') || block.get('datasetId.name')) // + ' : ' + block.get('name')
+        ? (block.get('datasetId.name') || block.get('namespace')) // + ' : ' + block.get('name')
         : blockS.longName();
       return title;
     });
