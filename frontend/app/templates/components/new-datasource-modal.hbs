@@ -1,7 +1,6 @@
 
-<BsModalSimple
+<BsModal
   @open={{true}}
-  @title="New Datasource"
   @closeTitle="Cancel"
   @submitTitle="Connect"
   @size=""
@@ -13,15 +12,20 @@
   @onHidden={{action @closeNewDatasourceModal}}
   @renderInPlace={{true}}
   class="new-datasource-modal"
-  >
+   as |modal|>
 
- <span id="ember409" class="modal-title glyphicon glyphicon-cloud-download"></span>
+   <modal.header>
+     <h4 class="modal-title">
+       <span id="ember409" class="glyphicon glyphicon-cloud-download"></span>
+      New Datasource
+    </h4>
+  </modal.header>
 
-
+  <modal.body>
   <div class="table labelled-inputs">
 
       <div class="input-label">Host : Port</div>
-      <input name="host" placeholder="e.g. http://localhost:5000">
+      <input name="host" placeholder="e.g. http://localhost:5000"  autofocus="autofocus">
 
       <div class="input-label">User</div>
       <input name="user" placeholder="Email address">
@@ -30,7 +34,13 @@
       <input name="password" type="password">
 
   </div>
+  </modal.body>
+
+  <modal.footer>
+    <BsButton @onClick={{action modal.close}}>Cancel</BsButton>
+    <BsButton @type="success" @onClick={{action modal.submit}}>Connect</BsButton>
+  </modal.footer>
 
 
-</BsModalSimple>>
+</BsModal>>
 
