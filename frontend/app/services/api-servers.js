@@ -274,6 +274,7 @@ export default Service.extend(Evented, {
         (url.indexOf('https://') == -1)) {
       url = 'http://' + url;
     }
+    let promise = 
     $.ajax({
       url: url + '/api/Clients/login',
       type: 'POST',
@@ -289,8 +290,14 @@ export default Service.extend(Evented, {
         me.addServer(url, user, token, response.userId);
       server.getDatasets();
     }).catch(function (error) {
-      dLog('ServerLogin', url, user, error);
+      let
+      re = error && error.responseJSON && error.responseJSON.error,
+      reTexts = re && 
+	['statusCode', 'name', 'message'].reduce((texts, fN) => (texts[fN] = re[fN]) && texts, {});
+      dLog('ServerLogin', url, user, error, error.statusText, reTexts);
+      throw reTexts || error.statusText;
     });
+    return promise;
   }
 
 

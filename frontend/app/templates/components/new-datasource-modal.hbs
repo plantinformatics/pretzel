@@ -34,6 +34,14 @@
       <input name="password" type="password">
 
   </div>
+
+  {{#if this.errorText}}
+    <div>
+      <h4>Login Failed</h4>
+      {{errorText}}
+    </div>
+  {{/if}}
+
   </modal.body>
 
   <modal.footer>

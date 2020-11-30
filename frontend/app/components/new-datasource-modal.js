@@ -35,13 +35,24 @@ export default Component.extend({
          */
         dLog('onConfirm', 'empty input', host, user, password.length);
       }
-      else
-        this.get('apiServers').ServerLogin(host, user, password);
-    },
-    close : function() {
-      dLog('close');
-      this.set('enableShow', null);
+      else {
+        this.set('errorText', null);
+        let promise = this.get('apiServers').ServerLogin(host, user, password);
+        promise
+          .then(() => { this.close(); })
+          .catch((error) => {
+            let
+            errorText = error ?
+              (typeof error === "object") && 
+              (Object.entries(error).map((kv) => kv.join(' : ')).join(', '))
+              || '' + error : '' + error;
+            this.set('errorText', '' + errorText); });
+      }
     }
+  },
 
+  close : function() {
+    dLog('close');
+    this.closeNewDatasourceModal();
   }
 });
