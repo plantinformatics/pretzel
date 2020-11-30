@@ -1,5 +1,23 @@
-{{#modal-dialog modal-id="new-datasource-modal" title="New Datasource" header-icon='cloud-download'
-   confirm-label="Connect" onConfirm="onConfirm"}}
+
+<BsModalSimple
+  @open={{true}}
+  @title="New Datasource"
+  @closeTitle="Cancel"
+  @submitTitle="Connect"
+  @size=""
+  @closeButton={{true}}
+  @fade={{true}}
+  @backdrop={{true}}
+  @backdropClose={{true}}
+  @onSubmit={{action "onConfirm"}}
+  @onHidden={{action @closeNewDatasourceModal}}
+  @renderInPlace={{true}}
+  class="new-datasource-modal"
+  >
+
+ <span id="ember409" class="modal-title glyphicon glyphicon-cloud-download"></span>
+
+
   <div class="table labelled-inputs">
 
       <div class="input-label">Host : Port</div>
@@ -12,4 +30,7 @@
       <input name="password" type="password">
 
   </div>
-{{/modal-dialog}}
+
+
+</BsModalSimple>>
+

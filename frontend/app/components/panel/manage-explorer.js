@@ -1112,7 +1112,12 @@ export default ManageBase.extend({
      * This action is also available within form/api-servers.js (addNewDatasource() is identical).
      */
     addNewDatasource() {
-      $('#new-datasource-modal').modal('show');
+      // $('#new-datasource-modal').modal('show');
+      this.set('enableShow', true);
+    },
+    closeNewDatasourceModal() {
+      dLog('closeNewDatasourceModal');
+      this.set('enableShow', false);
     },
 
     serverTabSelected(tabId, apiServerName, apiServer) {

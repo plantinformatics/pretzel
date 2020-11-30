@@ -19,7 +19,8 @@
   </div>
 {{/elem/panel-container}}
 
-{{form/api-servers}}
+{{form/api-servers
+  addNewDatasource=(action 'addNewDatasource')}}
 
 {{#elem/panel-container state="primary"}}
   {{#elem/panel-heading icon="folder-open"}}
@@ -218,3 +219,7 @@
 {{panel/select-parent block=blockWithoutParentOnPrimary loadBlock="loadBlock"}}
 
 {{panel/synonomous-parents blocks=viewedSynonomousReferenceBlocks}}
+
+{{#if enableShow}}
+  {{new-datasource-modal closeNewDatasourceModal=(action 'closeNewDatasourceModal')}} 
+{{/if}}

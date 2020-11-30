@@ -37,6 +37,11 @@ export default Component.extend({
       }
       else
         this.get('apiServers').ServerLogin(host, user, password);
+    },
+    close : function() {
+      dLog('close');
+      this.set('enableShow', null);
     }
+
   }
 });

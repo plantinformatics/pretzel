@@ -27,9 +27,6 @@ export default Component.extend({
    * but not needed so dropped. */
 
   actions: {
-    addNewDatasource() {
-      $('#new-datasource-modal').modal('show');
-    }
   },
 
   servers : alias('apiServers.servers'),

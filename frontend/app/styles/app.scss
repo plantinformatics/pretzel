@@ -1484,7 +1484,7 @@ div.metaeditor-panel div.jsoneditor {
 }
 
 /* -------------------------------------------------------------------------- */
-#new-datasource-modal .labelled-inputs {
+.new-datasource-modal .labelled-inputs {
   display: grid;
   /* 2nd column uses remainder. */
   grid-template-columns: 7em;
@@ -1497,7 +1497,7 @@ div.metaeditor-panel div.jsoneditor {
 .labelled-inputs input {
   grid-column : 2;
 }
-#new-datasource-modal input {
+.new-datasource-modal input {
   width: 100%;
 }
 /* Copied from the app's panel colours (bootstrap). */
@@ -1563,6 +1563,9 @@ span.glyphicon {
 /* -------------------------------------------------------------------------- */
 
 @import "ember-bootstrap/bootstrap";
+
+@import "ember-modal-dialog/ember-modal-structure";
+@import "ember-modal-dialog/ember-modal-appearance";
 
 
 /* -------------------------------------------------------------------------- */
