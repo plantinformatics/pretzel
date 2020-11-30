@@ -261,7 +261,10 @@ export default Controller.extend(Evented, {
 
   init: function() {
     /** refn : https://discuss.emberjs.com/t/is-this-possible-to-turn-off-some-deprecations-warnings/8196 */
-    let deprecationIds = ['ember-component.send-action'];
+    let deprecationIds = [
+      'ember-component.send-action',
+      /** ember-bootstrap/utils/cp/listen-to.js uses Ember.getWithDefault() */
+      'ember-metal.get-with-default'];
     registerDeprecationHandler((message, options, next) => {
       if (! deprecationIds.includes(options.id)) {
         next(message, options);
