@@ -20,34 +20,42 @@ export default Ember.Component.extend({
   axisName : computed.alias('blockS.axisName'),
   menuActions : computed.alias('axisApi.menuActions'),
 
+  hide() {
+      let axes1d = this.parentView;
+      axes1d.set('menuAxis', undefined);
+  },
   actions: {
     onHide : function () {
       dLog(FileName, ': onHide');
-      let axes1d = this.parentView;
-      axes1d.set('menuAxis', undefined);
+      this.hide();
     },
 
     deleteMap : function() {
       console.log("deleteMap in ", FileName);
       this.menuActions.axisDelete(this.axisName);
+      this.hide();
     },
     flipAxis : function() {
       console.log("flipAxis in ", FileName);
       this.menuActions.axisFlip(this.axisName);
+      this.hide();
     },
     perpendicularAxis : function() {
       console.log("perpendicularAxis in ", FileName);
       this.menuActions.axisPerpendicular(this.axisName);
+      this.hide();
     },
     extendMap : function() {
       console.log("extendMap in ", FileName);
       this.menuActions.axisExtend(this.axisName);
+      this.hide();
     },
 
 
     blockVisible : function() {
       console.log("blockVisible in ", FileName);
       this.blockVisible();
+      this.hide();
     },
 
   },
