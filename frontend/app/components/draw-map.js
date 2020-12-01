@@ -1129,7 +1129,7 @@ export default Component.extend(Evented, {
       blocksToDraw = blocksToDraw.concat(blocksToAdd);
     let duplicates = blocksToDraw.filter(function (v, i) { return blocksToDraw.indexOf(v, i+1) != -1; });
     if (duplicates.length)
-      breakPoint('duplicates', duplicates, blocksToDraw, blocksToAdd, oa.axisIDs);
+      dLog/*breakPoint*/('duplicates', duplicates, blocksToDraw, blocksToAdd, oa.axisIDs);
 
     if (oa.zoomBehavior === undefined)
     {
