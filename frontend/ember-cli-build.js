@@ -56,6 +56,8 @@ module.exports = function(defaults) {
   app.import('bower_components/handsontable/dist/handsontable.full.min.css');
   app.import('vendor/js/divgrid/divgrid.js');
   app.import('node_modules/colresizable/colResizable-1.6.min.js');
+  app.import('node_modules/bootstrap/js/tooltip.js');
+  app.import('node_modules/bootstrap/js/popover.js');
 
   return app.toTree();
 };

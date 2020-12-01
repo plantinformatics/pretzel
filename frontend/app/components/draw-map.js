@@ -2096,6 +2096,10 @@ export default Component.extend(Evented, {
         .each(function (flow, i, g) {
           /** separate attributes g and .gf, the latter for paths collated in frontend */
           flow.gf = d3.select(this);
+          /* related : drawGroupContainer() and updateSelections_flowControls() */
+          if (! flow.g) {
+            flow.g = d3.select();
+          }
         })
       ;
     }
@@ -6007,6 +6011,11 @@ export default Component.extend(Evented, {
 
   didInsertElement() {
     this._super(...arguments);
+
+    if (! $.popover && $.fn.popover) {
+      dLog('didInsertElement initialise $.popover from .fn');
+      $.popover = $.fn.popover;
+    }
     // eltWidthResizable('.resizable');
 
     // initial test data for axis-tracks - will discard this.
