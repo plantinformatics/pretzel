@@ -5491,6 +5491,10 @@ export default Component.extend(Evented, {
         if (! menuActions) {
           oa.axisApi.menuActions = {axisDelete, axisFlip, axisPerpendicular, axisExtend};
         } else if (! menuActions.axisDelete) {
+          /** menuActions is assigned to only here and in
+           * configureAxisSubTitleMenu(), and these 2 sets of actions don't
+           * overlap, so '=' would be equivalent to '||='.
+           */
           menuActions.axisDelete        ||= axisDelete;
           menuActions.axisFlip          ||= axisFlip;
           menuActions.axisPerpendicular ||= axisPerpendicular;
@@ -5640,6 +5644,7 @@ export default Component.extend(Evented, {
         ? blockR.get('namespace') + ' ' + blockR.get('scope')
         : block.longName();
       if (true /* use axis-menu.hbs, not $.popover*/) {
+        /** see also comment in configureAxisTitleMenu() */
         let menuActions = oa.axisApi.menuActions;
         if (! menuActions) {
           oa.axisApi.menuActions = {blockUnview, blockVisible}

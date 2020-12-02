@@ -461,6 +461,7 @@ export default Model.extend({
   },
   /** Collate the viewed reference blocks which match the .scope
    * and .datasetId or .parentName of this block.
+   * This function may be called when !this.isViewed - see referenceBlock().
    * @param matchParentName true means match this.datasetId.parentName, otherwise match this.datasetId.id
    * @return reference blocks, or []
    */
@@ -478,13 +479,15 @@ export default Model.extend({
       if (mapByDataset) {
         let mapByScope = mapByDataset.get(datasetName);
         if (! mapByScope) {
-          if (matchParentName)
+          if (matchParentName && (this.isViewed || trace_block > 1)) {
             dLog('viewedReferenceBlock', 'no viewed parent', datasetName, scope, mapByDataset);
+          }
         } else {
           let blocks = mapByScope.get(scope);
           if (! blocks) {
-            if (matchParentName)
+            if (matchParentName && (this.isViewed || trace_block > 1)) {
               dLog('viewedReferenceBlock', 'no matching scope on parent', datasetName, scope, mapByScope);
+            }
           } else {
             blocks.forEach((block, i) => {
               if ((block === undefined) && (i === 0))
@@ -526,8 +529,9 @@ export default Model.extend({
         // prefer original
         if (referenceBlock.get('isCopy') && ! block.get('isCopy'))
           referenceBlock = block;
-        else
+        else {
           dLog('viewedReferenceBlock', 'duplicate match', block.get('id'), block._internalModel.__data, parentName, scope);
+        }
       } else
         referenceBlock = block;
     });

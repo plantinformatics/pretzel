@@ -6,6 +6,9 @@ import { stacks  } from '../../utils/stacks';
 const FileName = "components/axis-menu";
 const dLog = console.debug;
 
+/** if true, close menu after action buttons are clicked. */
+const closeAfterAction = false;
+
 /**
  * @param blockS	reference block of axis, from axes1d.menuAxis
  * @param axisApi	axisApi.menuActions defines the actions for the axis menu buttons
@@ -41,17 +44,20 @@ export default Ember.Component.extend({
     flipAxis : function() {
       console.log("flipAxis in ", FileName);
       this.menuActions.axisFlip(this.axisName);
-      this.hide();
+      if (closeAfterAction)
+        this.hide();
     },
     perpendicularAxis : function() {
       console.log("perpendicularAxis in ", FileName);
       this.menuActions.axisPerpendicular(this.axisName);
-      this.hide();
+      if (closeAfterAction)
+        this.hide();
     },
     extendMap : function() {
       console.log("extendMap in ", FileName);
       this.menuActions.axisExtend(this.axisName);
-      this.hide();
+      if (closeAfterAction)
+        this.hide();
     },
   },
 
@@ -60,19 +66,25 @@ export default Ember.Component.extend({
   blockUnview : function(blockS) {
     console.log("blockUnview in ", FileName);
     this.menuActions.blockUnview(blockS);
-    this.hide();
+    if (closeAfterAction)
+        this.hide();
   },
 
   blockVisible : function(blockS) {
     console.log("blockVisible in ", FileName);
     this.menuActions.blockVisible(blockS);
-    this.hide();
+    if (closeAfterAction)
+        this.hide();
   },
 
 
   /** @return array of Blocks (i.e. stacks.js references)
    */
-  dataBlocks : computed('block', function () {
+  dataBlocks : computed(
+    'block',
+    'block.viewedChildBlocks.[]',
+    'block.blockService.viewedBlocksByReferenceAndScopeUpdateCount',
+    function () {
     let
     /** skip the reference block, which is shown above the data block list.
      * This can change to use stacks-view:axesBlocks().
