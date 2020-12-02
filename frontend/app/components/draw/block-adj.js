@@ -490,7 +490,7 @@ export default Component.extend(Evented, AxisEvents, {
   updatePathsPosition() {
     // based on draw().
     let dpS = progressGroupsSelect(undefined);
-    let blockAdjId = this.get('blockAdjId');
+    let blockAdjId = this.get('blockAdjId') || this.blockAdj.blockAdjId;
     if (trace_blockAdj > 1)
       blockAdjId.forEach(function (blockId) {
         let axis = Stacked.getAxis(blockId);
