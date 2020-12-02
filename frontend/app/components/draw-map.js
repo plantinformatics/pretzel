@@ -3553,8 +3553,14 @@ export default Component.extend(Evented, {
        * [0, vc.yRange];
        */
       let
-        a0_ = Stacked.getAxis(a0),  range0 = a0_.yRange2(),
-      a1_ = Stacked.getAxis(a1),  range1 = a1_.yRange2();     
+      a0_ = Stacked.getAxis(a0);
+      /** If the block containing one end of the path is un-viewed, block.axis
+       * may be undefined if render occurs before block-adj is destroyed . */
+      if (!a0_) return undefined;
+      let  range0 = a0_.yRange2(),
+      a1_ = Stacked.getAxis(a1);
+      if (!a1_) return undefined;
+      let  range1 = a1_.yRange2();
 
       /** if d1 is undefined, then its value is d0 : direct connection, not alias. */
       let d1_ = d1 || d0;
