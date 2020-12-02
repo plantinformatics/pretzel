@@ -1536,18 +1536,21 @@ span.glyphicon {
 }
 
 /* for .axis-menu,  sometimes .tooltip  */
-.axis-menu.ember-tooltip
+.axis-menu.ember-popover
 {
   padding: 6px;
   /* from .panel-primary > .panel-heading  */
   background-color: #337ab7;  /* surrounds inner,  like border-color */
   max-width : inherit;
+  margin-bottom : 0px;
+}
+.axis-menu-inner > div > button.close {
+  float : right;
 }
 .axis-menu-inner {
   /* from .list-group-item-info */
   color: #31708f;
   background-color: #d9edf7;
-  margin-bottom: 1em;
   padding : 0.8em;
 }
 .axis-menu-inner .menu-icons {
@@ -1557,6 +1560,16 @@ span.glyphicon {
   margin : auto;
   border-radius: 5px;
   margin-bottom: 1em;
+}
+.axis-menu-inner .dataBlocks {
+  margin-top : 1em;
+}
+.axis-menu-inner .menu-icons > button:not(:first-child) {
+  margin-left: 5px;
+}
+
+div.axis-menu-inner > div > ul.dataBlocks > li > button {
+  font-size: x-small;
 }
 
 

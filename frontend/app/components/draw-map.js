@@ -5487,8 +5487,14 @@ export default Component.extend(Evented, {
       function showMenu(e) {
         dLog('showMenu', this, axisName, this.__data__, this.parentElement, this.parentElement.parentElement,
              e, e.originalEvent.path, e.originalEvent.srcElement, e.handleObj.type);
-        if (! oa.axisApi.menuActions) {
+        let menuActions = oa.axisApi.menuActions;
+        if (! menuActions) {
           oa.axisApi.menuActions = {axisDelete, axisFlip, axisPerpendicular, axisExtend};
+        } else if (! menuActions.axisDelete) {
+          menuActions.axisDelete        ||= axisDelete;
+          menuActions.axisFlip          ||= axisFlip;
+          menuActions.axisPerpendicular ||= axisPerpendicular;
+          menuActions.axisExtend        ||= axisExtend;
         }
         me.set('menuAxis', block);
         return false; /* for preventDefault(), stopPropagation() */
@@ -5633,6 +5639,15 @@ export default Component.extend(Evented, {
       title = blockR
         ? blockR.get('namespace') + ' ' + blockR.get('scope')
         : block.longName();
+      if (true /* use axis-menu.hbs, not $.popover*/) {
+        let menuActions = oa.axisApi.menuActions;
+        if (! menuActions) {
+          oa.axisApi.menuActions = {blockUnview, blockVisible}
+        } else if (! menuActions.blockUnview) {
+          menuActions.blockUnview  ||= blockUnview;
+          menuActions.blockVisible ||= blockVisible;
+        }
+      } else
       if ($(node_) .popover)
         $(node_)
         .popover({
@@ -5655,6 +5670,7 @@ export default Component.extend(Evented, {
         })
         // .popover('show');
       
+      /*
         .on("shown.bs.popover", function(event) {
           if (trace_gui)
             console.log("shown.bs.popover", event, event.target);
@@ -5663,19 +5679,21 @@ export default Component.extend(Evented, {
           if (trace_gui)
             console.log(deleteButtonS.empty(), deleteButtonS.node());
           deleteButtonS
-            .on('click', function (buttonElt /*, i, g*/) {
-              console.log("delete", block.axisName, this);
+            .on('click',*/
+      function blockUnview (block /*buttonElt , i, g*/) {
+              console.log("blockUnview (deleteMap / removeBlock)", block.axisName, this);
               // this will do : block.block.setViewed(false);
               me.send('removeBlock', block.block);
-            });
+            }/*);
 
           let visibleButtonS = d3.select("button.VisibleAxis");
           if (trace_gui)
             console.log(visibleButtonS.empty(), visibleButtonS.node());
 
           visibleButtonS
-            .on('click', function (buttonElt /*, i, g*/) {
-              console.log("visible", block.visible, block.longName(), this);
+            .on('click', */
+    function blockVisible (block /*buttonElt , i, g*/) {
+              console.log("blockVisible (VisibleAxis), visible", block.visible, block.longName(), this);
               block.visible = ! block.visible;
 
               updateAxisTitles();
@@ -5686,9 +5704,9 @@ export default Component.extend(Evented, {
               sendUpdatedSelectedFeatures();
 
               pathUpdate(undefined);
-            });
+            } /*);
 
-        });
+        });*/
     }
 
 

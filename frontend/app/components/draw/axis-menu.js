@@ -30,6 +30,9 @@ export default Ember.Component.extend({
       this.hide();
     },
 
+    /** button actions : axis / block : */
+    /** axis actions */
+
     deleteMap : function() {
       console.log("deleteMap in ", FileName);
       this.menuActions.axisDelete(this.axisName);
@@ -50,23 +53,34 @@ export default Ember.Component.extend({
       this.menuActions.axisExtend(this.axisName);
       this.hide();
     },
-
-
-    blockVisible : function() {
-      console.log("blockVisible in ", FileName);
-      this.blockVisible();
-      this.hide();
-    },
-
   },
 
-  dataBlockTexts : computed('block', function () {
+  /** block actions */
+
+  blockUnview : function(blockS) {
+    console.log("blockUnview in ", FileName);
+    this.menuActions.blockUnview(blockS);
+    this.hide();
+  },
+
+  blockVisible : function(blockS) {
+    console.log("blockVisible in ", FileName);
+    this.menuActions.blockVisible(blockS);
+    this.hide();
+  },
+
+
+  /** @return array of Blocks (i.e. stacks.js references)
+   */
+  dataBlocks : computed('block', function () {
     let
     /** skip the reference block, which is shown above the data block list.
      * This can change to use stacks-view:axesBlocks().
      */
-    dataBlocks = this.block.axis.blocks.slice(1),
-    texts = dataBlocks.map((blockS) => {
+    dataBlocks = this.block.axis.blocks.slice(1);
+    return dataBlocks;
+  }),
+  dataBlockText(blockS) {
       let
       block = blockS.block,
       /** block.name is generally just .scope, which is the same for all blocks
@@ -77,9 +91,7 @@ export default Ember.Component.extend({
         ? (block.get('datasetId.name') || block.get('namespace')) // + ' : ' + block.get('name')
         : blockS.longName();
       return title;
-    });
-    return texts;
-  })
+    }
 
 });
 
