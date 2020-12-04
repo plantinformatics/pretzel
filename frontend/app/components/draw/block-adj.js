@@ -7,7 +7,7 @@ import Evented from '@ember/object/evented';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { throttle, later, next } from '@ember/runloop';
-import { task } from 'ember-concurrency';
+import { task, timeout, didCancel } from 'ember-concurrency';
 
 
 import AxisEvents from '../../utils/draw/axis-events';
@@ -151,6 +151,23 @@ export default Component.extend(Evented, AxisEvents, {
     length = pathsResult && pathsResult.length;
     dLog(fnName, this, length);
     if (length) {
+      this.get('drawCurrentTask').perform(prType, pathsResult)
+        .catch((error) => {
+          // Recognise if the given task error is a TaskCancelation.
+          if (! didCancel(error)) {
+            dLog('drawCurrentTask taskInstance.catch', this.blockAdjId, error);
+            throw error;
+          }
+        });
+    }
+    // length returned by paths{,Aliases}ResultLength is currently just used in logging, not functional.
+    return length;
+  },
+  /**
+   * @return promise of completion of rendering and transitions
+   */
+  drawCurrentTask : task(function * (prType, pathsResult) {
+      let promise;
       let pathsDensityParams = this.get('pathsDensityParams'),
       axes = this.get('axes'),
       // axesDomains = this.get('blockAdj.axesDomains'),
@@ -167,7 +184,7 @@ export default Component.extend(Evented, AxisEvents, {
       nPaths = targetNPaths(pathsDensityParams, axisLengthPx);
       // handle b.axis === undefined (block has been un-viewed)
       if (Object.values(blockDomains).indexOf(undefined) !== -1) {
-        return 0;
+        return Promise.resolve();
       }
       if (pathsResult.length < nPaths) {
         /* to satisfy the required nPaths, trigger a new request. */
@@ -201,15 +218,13 @@ export default Component.extend(Evented, AxisEvents, {
       }
       /* The calling CPs paths{,Aliases}ResultLength() are called before didRender
        * and hence before drawGroup{,Container}().   .draw() uses the <g>-s they
-       * maintain, so defer until end of run loop.
+       * maintain; so may need defer until end of run loop, but it is likely a
+       * later call to this function will be after those are created.
        */
-      later( () => 
-                       this.draw(/*pathsApiResultType*/ prType, pathsResult)
-                     );
-    }
+    promise = this.draw(/*pathsApiResultType*/ prType, pathsResult);
+    return promise;
+  }).keepLatest(),
 
-    return length;
-  },
   pathsAliasesResultLength : computed(
     'blockAdj.pathsAliasesResult.[]', 'paths.alias.[]',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
@@ -381,10 +396,12 @@ export default Component.extend(Evented, AxisEvents, {
   /**
    * @param pathsResultType e.g. pathsResultTypes.{Direct,Aliases}
    * @param paths grouped by features
+   * @return promise of completion of rendering and transitions
    */
   draw (pathsResultType, featurePaths) {
+    let promise;
     if (featurePaths.length === 0)
-      return;
+      return Promise.resolve();
     pathsResultType.typeCheck(featurePaths[0], true);
     let store = this.get('store');
     /* Enables (via ?options=pathRemoveTransition), animation of <path> removal
@@ -434,8 +451,10 @@ export default Component.extend(Evented, AxisEvents, {
     let baS = selectBlockAdj(dpS, blockAdjId);
     dLog(baS.nodes(), baS.node());
     
-    if (baS.empty())
+    if (baS.empty()) {
       dLog('draw', blockAdjId);
+      promise = Promise.resolve();
+    }
     else
     {
       let gS = baS.selectAll("g." + className)
@@ -469,6 +488,8 @@ export default Component.extend(Evented, AxisEvents, {
       ;
       let pSA = pS.merge(pSE);
 
+      let pathPosition = this.get('pathPosition');
+      promise =
       /** existing paths (pS) are transitioned from their previous position;
        * the previous position of added paths is not easily available so they
        * are drawn without transition at their new position; this is done after
@@ -476,14 +497,21 @@ export default Component.extend(Evented, AxisEvents, {
        * is consistent at any point in time, otherwise the movement is
        * confusing.
        */
-      let positionNew = () => this.get('pathPosition').perform(pSE)
-        .catch((error) => dLog('pathPosition New', error));
-      this.get('pathPosition').perform(pS, positionNew);
+      pathPosition.perform(pS)
+        .then(pathPosition.perform(pSE))
+        .catch((error) => {
+          // Recognise if the given task error is a TaskCancelation.
+          if (! didCancel(error)) {
+            dLog('draw pathPosition New taskInstance.catch', this.blockAdjId, error);
+            throw error;
+          }
+        })
+        .then(() => { dLog('draw pathPosition then', pS.size(), pSE.size());  });
 
       // setupMouseHover(pSE);
       pS.exit().remove();
     }
-
+    return promise;
   },
 
   /** Update the "d" attribute of the <path>-s.  */
@@ -516,16 +544,31 @@ export default Component.extend(Evented, AxisEvents, {
       .filter(function (d) { return d.blocksHaveAxes(); });
     if (! pS.empty() && trace_blockAdj)
       dLog('updatePathsPosition before update pS', (trace_blockAdj > 1) ? pS.nodes() : pS.size(), pS.node());
-    this.get('pathPosition').perform(pS, undefined);
+    this.get('pathPosition').perform(pS)
+        .catch((error) => {
+          // Recognise if the given task error is a TaskCancelation.
+          if (! didCancel(error)) {
+            dLog('updatePathsPosition (pathPosition) New taskInstance.catch', this.blockAdjId, error);
+            throw error;
+          }
+        })
+        .then(() => { dLog('updatePathsPosition (pathPosition) then'); });
   },
 
   /** Update position of the paths indicated by the selection.
    * Making this a task with .drop() enables avoiding conflicting transitions.
-   * If thenFn is given, call it after transition is ended.
    * @param pathSelection
-   * @param thenFn
+   * @return transitionEnd  promise of completion of render transition
    */
-  pathPosition: task(function * (pathSelection, thenFn) {
+  pathPosition: task(function * (pathSelection) {
+    dLog('pathPosition',  pathSelection.size());
+    /** if the selection is empty, there's no point in waiting for the
+     * transition, and also it looks like transition .on('end') doesn't trigger
+     * when the selection is empty.
+     */
+    if (! pathSelection.size()) {
+      return Promise.resolve();
+    }
     let
     /* now that paths are within <g.block-adj>, path position can be altered
      * during dragging by updating a skew transform of <g.block-adj>, instead of
@@ -554,10 +597,8 @@ export default Component.extend(Evented, AxisEvents, {
       dLog('pathPosition', pathSelection.node());
       transitionEnd.then(() => dLog('pathPosition end', pathSelection.node()));
     }
-    /* instead of a callback, it should be possible to yield transitionEnd, and
-     * the caller can .finally() on the task handle. Can retry this after version update. */
-    if (thenFn)
-      transitionEnd.then(thenFn);
+
+    return transitionEnd;
   }).keepLatest(),
 
   /** Call updateAxis() for the axes which bound this block-adj.
