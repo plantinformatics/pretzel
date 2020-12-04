@@ -6,7 +6,7 @@ import { alias } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
-import { throttle, later, next } from '@ember/runloop';
+import { debounce, throttle, later, next } from '@ember/runloop';
 import { task, timeout, didCancel } from 'ember-concurrency';
 
 
@@ -641,7 +641,12 @@ export default Component.extend(Evented, AxisEvents, {
     'blockAdj.axes1d.1.scaleChanged',
     'blockAdj.axes1d.{0,1}.axis2d.allocatedWidthsMax',
     function () {
-    let count = this.get('axisStackChangedCount'),
+      let count = this.get('axisStackChangedCount');
+      debounce(this, this.updatePathsPositionDebounced, 300, true);
+      return count;
+    }),
+    updatePathsPositionDebounced : function () {
+      let count = this.get('axisStackChangedCount'),
       stacksWidthChanges = this.get('drawMap.stacksWidthChanges'),
       flips = [this.get('blockAdj.axes1d.0.flipRegionCounter'),
                this.get('blockAdj.axes1d.1.flipRegionCounter')],
@@ -665,7 +670,7 @@ export default Component.extend(Evented, AxisEvents, {
        * duplicate updates.  */
     // this.updateAxesScale();
     return count;
-  }),
+  },
 
 
   /*--------------------------------------------------------------------------*/
