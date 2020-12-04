@@ -2,8 +2,10 @@ import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Model, { attr, belongsTo, hasMany } from '@ember-data/model';
 // import { computed, set } from '@ember/object';
+import { observer } from '@ember/object';
 import { A } from '@ember/array';
 import { and, alias } from '@ember/object/computed';
+import { debounce } from '@ember/runloop';
 
 import { task } from 'ember-concurrency';
 
@@ -187,10 +189,24 @@ export default Model.extend({
       dLog('featuresLength', featuresLength, this.get('id'));
     return featuresLength;
   }),
+  featuresLengthUpdate() {
+    let featuresLength = this.get('features.length');
+    // if (trace_block)
+      dLog('featuresLengthUpdate', featuresLength, this.get('id'));
+    this.set('featuresLengthDebounced', featuresLength);
+  },
+  featuresLengthObserver : observer('features', function () {
+    debounce(this, this.featuresLengthUpdate, 200);
+    let featuresLength = this.get('features.length');
+    // if (trace_block)
+      dLog('featuresLengthObserver', featuresLength, this.get('id'));
+    return featuresLength;
+  }),
+
   /** @return undefined if ! features.length,
    * otherwise [min, max] of block's feature.value
    */
-  featuresDomainUpdate : computed('features.[]', function () {
+  featuresDomainUpdate : computed('featuresLengthDebounced', function () {
     let featuresDomain, features = this.get('features');
     if (features.length) {
       featuresDomain = features
