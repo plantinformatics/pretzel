@@ -12,7 +12,7 @@ import { alias, filterBy } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
-import compileSearch from 'binary-search-bounds';
+
 import createIntervalTree from 'interval-tree-1d';
 
 import { isEqual } from 'lodash/lang';
