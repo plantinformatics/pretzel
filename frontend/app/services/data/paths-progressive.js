@@ -348,6 +348,8 @@ export default Service.extend({
       pathsResult = res;
     if (res.length || ! pathsViaStream) {
       exists.set(resultFieldName, pathsResult);
+      // update the paths{,Aliases}ResultLength -Debounced and -Throttled values
+      exists.updatePathsResult(resultFieldName, pathsResult);
       if (trace_pathsP > 1 + pathsViaStream)
         dLog(resultFieldName, pathsResult, exists, exists._internalModel.__attributes, exists._internalModel.__data);
     }

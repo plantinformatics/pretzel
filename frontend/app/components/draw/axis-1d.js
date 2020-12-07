@@ -591,7 +591,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * Maybe : Also depend on block.featuresForAxis, to trigger a request for features of
    * a block when it is added to an axis.
    */
-  featureLength : computed('dataBlocks.@each.{featuresLengthDebounced,featuresForAxis}', function () {
+  featureLength : computed('dataBlocks.@each.{featuresLengthThrottled,featuresForAxis}', function () {
     let dataBlocks = this.get('dataBlocks'),
     featureLengths = dataBlocks.map(function (b) { return b.get('featuresLength'); } ),
     featureLength = sum(featureLengths);

@@ -131,7 +131,7 @@ export default Component.extend(Evented, AxisEvents, {
 
   pathsDensityParams : alias('pathsP.pathsDensityParams'),
   pathsResultLength : computed(
-    'blockAdj.pathsResult.[]', 'pathsAliasesResultLength',
+    'blockAdj.pathsResultLengthThrottled', 'pathsAliasesResultLength',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
     let
@@ -226,7 +226,7 @@ export default Component.extend(Evented, AxisEvents, {
   }).keepLatest(),
 
   pathsAliasesResultLength : computed(
-    'blockAdj.pathsAliasesResult.[]', 'paths.alias.[]',
+    'blockAdj.pathsAliasesResultLengthThrottled', 'paths.alias.[]',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
     /* pathsAliasesResult is in a different form to pathsResult; passing it to
@@ -506,7 +506,7 @@ export default Component.extend(Evented, AxisEvents, {
             throw error;
           }
         })
-        .then(() => { dLog('draw pathPosition then', pS.size(), pSE.size());  });
+        ;//.then(() => { dLog('draw pathPosition then', pS.size(), pSE.size());  });
 
       // setupMouseHover(pSE);
       pS.exit().remove();

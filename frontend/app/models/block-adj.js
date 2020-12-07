@@ -1,4 +1,4 @@
-import { next } from '@ember/runloop';
+import { next, debounce, throttle } from '@ember/runloop';
 import { resolve, allSettled } from 'rsvp';
 import { mapBy, alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
@@ -20,6 +20,12 @@ import { inRangeEither } from '../utils/draw/zoomPanCalcs';
 const dLog = console.debug;
 const trace_blockAdj = 0;
 
+/**
+ * @param	blockId0
+ * @param	blockId1
+ * @param	pathsResult
+ * @param	pathsAliasesResult
+ */
 export default Model.extend(Evented, {
 
   pathsPro : service('data/paths-progressive'),
@@ -123,7 +129,7 @@ export default Model.extend(Evented, {
    * Similar to following @see axesDomains()
    * @desc but that function determines the referenceBlock's domain if the block is not zoomed.
    */
-  zoomedDomains :  mapBy('axes1d', 'zoomedDomain'),
+  zoomedDomains :  mapBy('axes1d', 'zoomedDomainDebounced'),
   /** domain incorporates zoomedDomain and also flipped and blocksDomain */
   domains :  mapBy('axes1d', 'domain'),
 
@@ -298,6 +304,30 @@ export default Model.extend(Evented, {
       result.alias = p;
     return result;
   }),
+  /*--------------------------------------------------------------------------*/
+  pathsResultLengthUpdateDebounce(resultFieldName, length) {
+    // if (trace_blockAdj)
+    dLog('pathsResultLengthUpdateDebounce', length, resultFieldName);
+    this.set(resultFieldName + 'LengthDebounced', length);
+  },
+  pathsResultLengthUpdateThrottle(resultFieldName, length) {
+    // if (trace_blockAdj)
+    dLog('pathsResultLengthUpdateThrottle', length, resultFieldName);
+    this.set(resultFieldName + 'LengthThrottled', length);
+  },
+  /** update the paths{,Aliases}ResultLength -Debounced and -Throttled values */
+  updatePathsResult(resultFieldName, pathsResult) {
+    let length = pathsResult.length;
+    /** may implement separate functions based on resultFieldName, but generally
+     * receipt of direct and alias paths won't overlap in time for a block-adj.
+     */
+    debounce(this, this.pathsResultLengthUpdateDebounce, resultFieldName, length, 200);
+      throttle(this, this.pathsResultLengthUpdateThrottle, resultFieldName, length, 300, false);
+    if (trace_blockAdj > 1)
+      dLog('updatePathsResult', length, this.get('id'));
+    return length;
+  },
+  /*--------------------------------------------------------------------------*/
   /** @return a Map from a block of the block-adj to its position in blockAdjId.  */
   blockIndex : computed('blocks', function () {
     let blocks = this.get('blocks'),
@@ -353,12 +383,12 @@ export default Model.extend(Evented, {
     }
     return pathsFiltered;
   },
-  pathsResultFiltered : computed('blocks', 'pathsResult.[]', 'zoomedDomains.@each.{0,1}', function () {
+  pathsResultFiltered : computed('blocks', 'pathsResultLengthThrottled', 'zoomedDomains.@each.{0,1}', function () {
     let
     pathsFiltered = this.filterPathsResult('pathsResult');
     return pathsFiltered;
   }),
-  pathsAliasesResultFiltered : computed('pathsAliasesResult.[]', 'zoomedDomains.@each.{0,1}', function () {
+  pathsAliasesResultFiltered : computed('pathsAliasesResultLengthThrottled', 'zoomedDomains.@each.{0,1}', function () {
     let
     pathsFiltered = this.filterPathsResult('pathsAliasesResult');
     return pathsFiltered;

@@ -44,7 +44,7 @@ export default Component.extend({
 
   /** If the block contains chartable data, collate it into .blocksData.blockData, for axis-charts.
    */
-  blockFeatures : computed('block', 'block.featuresLengthDebounced', 'axis.axis1d.domainChanged', function () {
+  blockFeatures : computed('block', 'block.featuresLengthThrottled', 'axis.axis1d.domainChanged', function () {
     if (this.get('block.isChartable')) {
       let features = this.get('block.features');
       let domain = this.get('axis.axis1d.domainChanged');

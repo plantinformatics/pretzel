@@ -5,7 +5,7 @@ import Model, { attr, belongsTo, hasMany } from '@ember-data/model';
 import { observer } from '@ember/object';
 import { A } from '@ember/array';
 import { and, alias } from '@ember/object/computed';
-import { debounce } from '@ember/runloop';
+import { debounce, throttle } from '@ember/runloop';
 
 import { task } from 'ember-concurrency';
 
@@ -191,14 +191,21 @@ export default Model.extend({
   }),
   featuresLengthUpdate() {
     let featuresLength = this.get('features.length');
-    // if (trace_block)
+    if (trace_block)
       dLog('featuresLengthUpdate', featuresLength, this.get('id'));
     this.set('featuresLengthDebounced', featuresLength);
   },
+  featuresLengthUpdateThrottle() {
+    let featuresLength = this.get('features.length');
+    if (trace_block)
+      dLog('featuresLengthUpdateThrottle', featuresLength, this.get('id'));
+    this.set('featuresLengthThrottled', featuresLength);
+  },
   featuresLengthObserver : observer('features', function () {
     debounce(this, this.featuresLengthUpdate, 200);
+    throttle(this, this.featuresLengthUpdateThrottle, 1000, true);
     let featuresLength = this.get('features.length');
-    // if (trace_block)
+    if (trace_block > 1)
       dLog('featuresLengthObserver', featuresLength, this.get('id'));
     return featuresLength;
   }),
