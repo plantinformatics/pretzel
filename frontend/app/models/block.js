@@ -146,6 +146,10 @@ export default Model.extend({
 
   hasFeatures : computed('featureCount', function () {
     return this.get('featureCount') > 0;
+    /** featureValueCount > 0 implies featureCount > 0.
+     * Could also use .featuresCountsResults - if any non-zero counts then block has features.  */
+    let count = this.get('featureCount') || this.get('featureValueCount');
+    return count > 0;
   }),
   /** Similar to isData(), but relies on .featureCount, which may not have been received. */
   isDataCount : and('isLoaded', 'hasFeatures'),
@@ -310,8 +314,8 @@ export default Model.extend({
       else {
         dLog('taskGetLimits', bfc, this);
         this.set('featureLimits', [bfc.min, bfc.max]);
-        if (! this.get('featureCount'))
-          this.set('featureCount', bfc.featureCount);
+        if (! this.get('featureValueCount'))
+          this.set('featureValueCount', bfc.featureCount);
       }
     });
 

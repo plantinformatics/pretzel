@@ -194,8 +194,8 @@ export default Service.extend(Evented, {
       else {
         // console.log('taskGetLimits', bfc, block);
         block.set('featureLimits', [bfc.min, bfc.max]);
-        if (! block.get('featureCount'))
-          block.set('featureCount', bfc.featureCount);
+        if (! block.get('featureValueCount'))
+          block.set('featureValueCount', bfc.featureCount);
       }
     });
     
