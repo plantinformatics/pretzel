@@ -6033,7 +6033,11 @@ export default Component.extend(Evented, {
     this.trigger("zoomedAxis", args);
   },
   throttledZoomedAxis : function (axisID, t) {
-    throttle(this, this.triggerZoomedAxis, [axisID, t], 400);
+    /* this delivers zoomed() via 
+     * axis-2d : zoomedAxis() throttle-> sendZoomed() -> zoomed (in-axis.js)
+     * used by axis-ld and axis-charts (which can use drawContentEffect instead).
+     */
+     throttle(this, this.triggerZoomedAxis, [axisID, t], 400);
   },
 
   //----------------------------------------------------------------------------

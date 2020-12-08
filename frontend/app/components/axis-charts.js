@@ -266,10 +266,14 @@ export default InAxis.extend({
     dLog('resizeEffectHere in axis-charts', this.get('axisID'));
   }),
   drawContentEffect : computed(
-  'zoomedDomain',
+    /** .zoomedDomain is (via InAxis) axis1d.zoomedDomain; for this dependency use the -Debounced */
+  'axis1d.currentPosition.yDomainDebounced',
   'blockViews.@each.isZoomedOut',
-  'blockViews.@each.featuresCounts.[]',
-  'blockViews.@each.featuresCountsResults.[]',
+    /** .@each.x.y is no longer supported; if these dependencies are needed, can
+     * define block.featuresCounts{,Results}Length
+     */
+  'blockViews.@each.featuresCounts',
+  'blockViews.@each.featuresCountsResults',
   // possibly add 'chartsArray.[]', 
   function () {
     dLog('drawContentEffect in axis-charts', this.get('axisID'));

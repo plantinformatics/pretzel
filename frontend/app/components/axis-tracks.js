@@ -1522,7 +1522,10 @@ export default InAxis.extend({
   /** Render changes driven by changes of block data or scope.
    */
   showTrackBlocks: computed(
-    'tracksTree', 'yDomain.0', 'yDomain.1', 'axis1d.zoomed', 'axis1d.extended', 'axis1d.featureLength',
+    'tracksTree',
+    /** .yDomain is available; for the dependency -Throttled is used */
+    'axis1d.currentPosition.yDomainThrottled.{0,1}',
+    'axis1d.zoomed', 'axis1d.extended', 'axis1d.featureLength',
     function() {
       let tracks = this.get('tracksTree');
       let

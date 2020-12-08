@@ -39,11 +39,14 @@ function verifyFeatureRecord(fr, f) {
     frdv = [fv];
   /** @return 1 if end of interval matches forward, -1 if reverse, 0 if not match. */
   function sameOrReverse(i) { return (frdv[i] === fv[i]) ? 1 : (frdv[i] === fv[1-i]) ? -1 : 0; }
+  /** if sameValue is true then sameDirection is implied, so not tested. */
+  let sameValue = (fv.length === 1) && (frdv[0] === fv[0]) &&
+      ((frdv.length === 1) || (frdv[0] === frdv[1])) ;
   let
     /** direction indicated by frdv[0]. */
     direction = sameOrReverse(0),
   /** true if not an interval, or other end of interval matches in same direction. */
-  sameDirection = (frdv.length < 2) || (sameOrReverse(1) === direction),
+  sameDirection = sameValue || (frdv.length < 2) || (sameOrReverse(1) === direction),
   same = 
     (fr.id === f._id) &&
     direction && sameDirection &&

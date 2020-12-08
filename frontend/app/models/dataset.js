@@ -30,7 +30,9 @@ export default Record.extend({
         } else if (datasets.length === 1) {
           parent = datasets[0].dataset;
         } else {  // (datasets.length > 1)
-          dLog(this.id, 'parent', parentName, 'multiple match', datasets);
+	  // normally this will be a remote and a local copy of that remote.
+	  if (datasets.length !== 2 || (datasets[0].isCopy === datasets[1].isCopy))
+            dLog(this.id, 'parent', parentName, 'multiple match', datasets);
           /** If the user has indicated a preference via '_meta.referenceHost', use that.  */
           let referenceHost = this.get('_meta.referenceHost');
           if (referenceHost) {
@@ -45,7 +47,7 @@ export default Record.extend({
             /** prefer to use a dataset from its original source, rather than a copy
              * cached in primary server */
             let original = datasets.filter((d) => ! d.dataset.get('_meta._origin'));
-            if (original.length) {
+            if (original.length !== 1) {
               dLog('parent', 'original count', original.length, original);
               parent = original[0].dataset;
             }

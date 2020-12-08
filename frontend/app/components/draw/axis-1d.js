@@ -573,7 +573,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * @return if zoomed return the zoom yDomain, otherwise blockDomain.
    * Result .{0,1} are swapped if .flipped.
    */
-  domain : computed('zoomed', 'flipped', 'blocksDomain', 'zoomedDomain', function () {
+  domain : computed('zoomed', 'flipped', 'blocksDomain', 'zoomedDomainDebounced', function () {
     /** Actually .zoomedDomain will be == blocksDomain when not zoomed, but
      * using it as a CP dependency causes problems, whereas blocksDomain has a
      * more direct dependency on axis' blocks' features' locations.

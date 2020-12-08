@@ -668,7 +668,7 @@ export default Model.extend({
    */
   featuresCountIncludingZoom : computed(
     'featuresCountsResults.[]',
-    'featureCountInZoom', 'zoomedDomain.{0,1}', 'limits',
+    'featureCountInZoom', 'zoomedDomainDebounced.{0,1}', 'limits',
     function () {
       let
       count = this.get('zoomedDomain') ?
@@ -687,7 +687,7 @@ export default Model.extend({
    * [ {binSize, nBins, domain: Array(2), result: Array}, ... ]
    */
   featuresCountsInZoom : computed(
-    'featuresCountsResults.[]', 'zoomedDomain.{0,1}', 'limits',
+    'featuresCountsResults.[]', 'zoomedDomainDebounced.{0,1}', 'limits',
     function () {
       let
       domain = this.get('zoomedDomain'),
@@ -878,7 +878,6 @@ export default Model.extend({
     'featuresCountsInZoomSmallestBinSize',
     'limits',
     'featuresCountsResults.[]',
-    'zoomedDomain.{0,1}',
     'isZoomedOut',
     // used in data/block.js:getSummary()
     'blockService.featuresCountsNBins',
