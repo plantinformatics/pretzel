@@ -1350,6 +1350,13 @@ export default InAxis.extend({
               interval[1] = swap;
             }
             interval.description = feature.get('name');
+            /* for datasets with tag 'SNP', feature value[2] is reference / alternate,
+             * e.g. "A/G", "T/C" etc */
+            let tags = feature.get('blockId.datasetId.tags');
+            if (tags && tags.length && (tags.indexOf("SNP") !== -1) && 
+                (typeof interval[2] === 'string')) {
+              interval.description += ('\n' + interval[2]);
+            }
             return interval;
           });
         blockFeatures[blockId] = features;
