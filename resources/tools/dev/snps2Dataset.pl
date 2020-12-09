@@ -209,7 +209,7 @@ sub printFeature($)
                     "name": "$label",
                     "value": [
                         $pos,
-                        null,
+                        $pos,
                         \"$ref_alt\"
                     ]
                 }
