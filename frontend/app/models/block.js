@@ -882,6 +882,32 @@ export default Model.extend({
     return out;
   }),
 
+  /*--------------------------------------------------------------------------*/
+
+  /** @return current .zoomedDomain, or .limits
+   * @desc related : currentDomain()
+   */
+  getDomain() {
+    let
+    domain = this.get('zoomedDomain') || this.get('limits');
+    return domain;
+  },
+  /** @return current yRange of .axis
+   */
+  getRange() {
+    let
+    axis = this.get('axis'),
+    yRange = (axis && axis.yRange()) || 800;
+    return yRange;
+  },
+
+  /** Express a binSize relative to screen pixels, looking up current domain, yRange. */
+  pxSize2(binSize) {
+    return this.pxSize(binSize, this.getRange(), this.getDomain());
+  },
+  /** Express a binSize relative to screen pixels, using yRange and domain. */
+  pxSize(binSize, yRange, domain) { return yRange * binSize / intervalSize(domain); },
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -931,11 +957,10 @@ export default Model.extend({
     if ((this.featuresCounts === undefined) || ((count === undefined) || (count > featuresCountsThreshold))) {
       let
       minSize = this.get('featuresCountsInZoomSmallestBinSize'),
-      domain = this.get('zoomedDomain') || this.get('limits'),
-      axis = this.get('axis'),
-      yRange = (axis && axis.yRange()) || 800,
+      domain = this.getDomain(),
+      yRange = this.getRange(),
       /** bin size of result with smallest bins, in pixels as currently viewed on screen. */
-      minSizePx = yRange * minSize / intervalSize(domain);
+      minSizePx = this.pxSize(minSize, yRange, domain);
       /** When the smallest bins within the current view
        * (featuresCountsInZoomSmallestBinSize) are displayed with pixel size >
        * binPxThreshold, then request finer-resolution bins.

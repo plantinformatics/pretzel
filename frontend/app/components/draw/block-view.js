@@ -5,7 +5,7 @@ import { inject as service } from '@ember/service';
 
 import { ensureBlockFeatures } from '../../utils/feature-lookup';
 import { subInterval } from '../../utils/draw/zoomPanCalcs';
-import { intervalSize }  from '../../utils/interval-calcs';
+import { intervalSize, intervalOverlapCoverage }  from '../../utils/interval-calcs';
 import { binEvenLengthRound } from '../../utils/draw/interval-bins';
 
 /*----------------------------------------------------------------------------*/
@@ -90,7 +90,9 @@ export default Component.extend({
       let selectedResults = this.selectFeaturesCountsResults(featuresCountsInZoom);
       featuresCounts = [].concat.apply([], selectedResults.mapBy('result'));
     }
-    if (featuresCounts && featuresCounts.length) {
+    // If the only result has binSize too large, don't display it.
+    if (featuresCounts && featuresCounts.length &&
+        (this.get('block').pxSize2(featuresCounts[0].binSize || featuresCounts[0].idWidth[0]) < 200)) {
       /** recognise the data format : $bucketAuto ._id contains .min and .max, whereas $bucket ._id is a single value.
        * @see featureCountAutoDataExample, featureCountDataExample 
        */
@@ -102,6 +104,7 @@ export default Component.extend({
 
     return featuresCounts;
   }),
+
   /** filter out bins < 1px because there is (e.g. in the HC genes) lots of
    * space between the non-empty bins (for small bins, e.g. < 20kb),
    * and when they are <~1px the bin rectangles are visible and not the space,
@@ -109,15 +112,14 @@ export default Component.extend({
    * the feature density.
    */
   selectFeaturesCountsResults(featuresCountsInZoom) {
-    /** based on similar calc in models/block.js:featuresForAxis(), could factor
-     * to a function block.pxSize(interval). */
+    /** based on similar calc in models/block.js:featuresForAxis(), factored
+     * to a block.pxSize(interval). */
     let
     binSizes = featuresCountsInZoom.mapBy('binSize'),
-    domain = this.get('block.zoomedDomain') || this.get('block.limits'),
-    axis = this.get('block.axis'),
-    yRange = (axis && axis.yRange()) || 800,
+    domain = this.get('block').getDomain(),
+    yRange = this.get('block').getRange(),
     /** bin size of each result, in pixels as currently viewed on screen. */
-    binSizesPx = binSizes.map((binSize) => yRange * binSize / intervalSize(domain));
+    binSizesPx = binSizes.map((binSize) => this.get('block').pxSize(binSize, yRange, domain));
     let nBins = this.get('blockService.featuresCountsNBins'),
     requestedSize = yRange / nBins,
     lengthRounded = binEvenLengthRound(domain, nBins),
@@ -154,13 +156,16 @@ export default Component.extend({
     if (! this.get('urlOptions.fcLevels')) {
       /** show only a single featuresCounts result at a time. */
       selectedResults = selectedResults
+        /** augment with .coverage for sort. This value depends on current domain.  */
+        .map((fc) => { fc.coverage = intervalOverlapCoverage(fc.domain, domain) ; return fc; })
+        /** filter out bins > 100px. */
+        .filter((f) => { return this.get('block').pxSize(f.binSize, yRange, domain) < 100; })
         // prefer results which cover more of the (current zoomed) domain
-        /* this is a first approx; actually want the smaller featureCountResultCoverage() which is > 1
-	 * as in smallestOver1I / largestUnder1I in featureCountInZoom().
-	 */
-        .sort((a,b) => (intervalSize(a.domain) - intervalSize(b.domain)))
-        // prefer smaller domains for the same binSize (more resolution)
-        .sort((a,b) => (a.domain[1]-a.domain[0]) - (b.domain[1]-b.domain[0]))
+        /* want any coverage which is > 1, prefering larger coverage.
+         * Related : featureCountResultCoverage(), smallestOver1I / largestUnder1I in featureCountInZoom().
+         * sort in decreasing order of .coverage
+         */
+        .sort((a,b) => (a.coverage >= 1 && b.coverage >= 1) ? 0 : b.coverage - a.coverage)
         // choose the result with the smallest binSize
         .sortBy('binSize')
         .slice(0,1);
