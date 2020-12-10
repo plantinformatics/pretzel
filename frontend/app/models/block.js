@@ -14,11 +14,12 @@ import lodashMath from 'lodash/math';
 import {
   intervalSize,
   intervalMerge,
-  intervalOverlap
+  intervalOverlap,
+  intervalOverlapCoverage
 } from '../utils/interval-calcs';
 import { inDomain } from '../utils/draw/interval-overlap';
 import { binEvenLengthRound } from '../utils/draw/interval-bins';
-import { subInterval } from '../utils/draw/zoomPanCalcs';
+import { subInterval, overlapInterval } from '../utils/draw/zoomPanCalcs';
 
 import { featureCountDataProperties } from '../utils/data-types';
 
@@ -48,6 +49,9 @@ export default Model.extend({
   apiServers: service(),
   datasetService : service('data/dataset'),
   controls : service(),
+  queryParams: service('query-params'),
+
+  urlOptions : alias('queryParams.urlOptions'),
 
 
   datasetId: belongsTo('dataset'),
@@ -753,8 +757,7 @@ export default Model.extend({
    * @return 0 if there is no overlap
    */
   featureCountResultCoverage(fcs, domain) {
-    let overlap = intervalOverlap([fcs.domain, domain]),
-    coverage = overlap ? (intervalSize(overlap) / intervalSize(domain)) : 0;
+    let coverage = intervalOverlapCoverage(fcs.domain, domain);
     return coverage;
   },
   /** Sum the counts of bins which overlap the domain
@@ -789,23 +792,41 @@ export default Model.extend({
     }, 0);
     return count;
   },
-  /** Filter all featuresCounts API results for this block, for those overlapping interval.
+  /** Used to decide if a featuresCounts result covers enough of the
+   * zoomedDomain to be chosen for display.
+   * @return true if the fcs_domain spans interval, or at least most of it (featuresCountsCover)
+   * @param interval	[from, to]  zoomedDomain
+   * @param fcs_domain  domain of the featuresCounts api request/result
+   */
+  almostSubInterval(interval, fcs_domain) {
+    const featuresCountsCoverage = 0.3;
+    let enough = subInterval(interval, fcs_domain);
+    if (! enough) {
+      let coverage = intervalOverlapCoverage(fcs_domain, interval);
+      enough = coverage > featuresCountsCoverage;
+    }
+    return enough;
+  },
+  /** Filter all featuresCounts API results for this block, for those overlapping interval,
+   * or completely spanning the interval, depending on fcLevels.
    * @return array  [{nBins, domain, result}, ... ]
    * @param interval	[from, to]
    * not undefined;  if zoomedDomain is not defined, this function is not called.
    */
   featuresCountsOverlappingInterval(interval) {
     let
+    fcLevels = this.get('urlOptions.fcLevels'),
+    overlapFn = fcLevels ? overlapInterval : this.almostSubInterval,
     featuresCounts = this.get('featuresCountsResults') || [],
     overlaps = featuresCounts.reduce(
       (result, fcs) => {
-        if (inDomain(fcs.domain, interval)) {
+        if (overlapFn(interval, fcs.domain)) {
           let
           filtered = Object.assign({}, fcs);
           filtered.result = fcs.result.filter(
             (fc) => {
               let loc = featureCountDataProperties.datum2Location(fc);
-              return inDomain(loc, interval); }),
+              return overlapInterval(loc, interval); }),
           result.push(filtered);
         }
         return result;

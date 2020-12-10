@@ -60,11 +60,23 @@ function intervalExtent(intervals) {
 /** Indexes for the endpoints of an interval or domain. */
 const ends = [0, 1];
 
+/** Calculate the overlap (intersection) of domain1, domain2, and the size of
+ * that overlap relative to the size of domain2.
+ * @return 0 if there is no overlap
+ * @params domain1, domain2	
+ */
+function intervalOverlapCoverage(domain1, domain2) {
+  let overlap = intervalOverlap([domain1, domain2]),
+  coverage = overlap ? (intervalSize(overlap) / intervalSize(domain2)) : 0;
+  return coverage;
+}
+
 /** Calculate the intersection of the given intervals. 
  * @params intervals  number[2][2]
  * (intervals[i] !== undefined)
  * (intervals[i][0] <= intervals[i][1])
  * @return number[2], or undefined if intervals[i] are disjoint.
+ * @desc For testing if there is an overlap, in zoomPanCalcs.js, @see overlapInterval()
  */
 function intervalOverlap(intervals) {
   let overlap,
@@ -118,6 +130,7 @@ function truncateMantissa(x)
 
 export {
   intervalSize, intervalLimit, intervalOutside, intervalMerge, intervalExtent,
+  intervalOverlapCoverage,
   intervalOverlap,
   truncateMantissa
 };

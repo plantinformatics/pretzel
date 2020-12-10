@@ -154,8 +154,11 @@ export default Component.extend({
     if (! this.get('urlOptions.fcLevels')) {
       /** show only a single featuresCounts result at a time. */
       selectedResults = selectedResults
-        // exclude results which do not cover the whole (current zoomed) domain
-        .filter((f) => (f.domain[0] <= domain[0]) && (f.domain[1] >= domain[1]))
+        // prefer results which cover more of the (current zoomed) domain
+        /* this is a first approx; actually want the smaller featureCountResultCoverage() which is > 1
+	 * as in smallestOver1I / largestUnder1I in featureCountInZoom().
+	 */
+        .sort((a,b) => (intervalSize(a.domain) - intervalSize(b.domain)))
         // prefer smaller domains for the same binSize (more resolution)
         .sort((a,b) => (a.domain[1]-a.domain[0]) - (b.domain[1]-b.domain[0]))
         // choose the result with the smallest binSize

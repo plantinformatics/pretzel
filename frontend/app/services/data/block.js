@@ -411,13 +411,20 @@ export default Service.extend(Evented, {
           /** densityFactor requires axis yRange, so for that case this will (in future) lookup axis from blockId. */
           const nBins = this.get('featuresCountsNBins'); // this.nBinsFromPathParams(blockId);
           let
-          zoomedDomain = block && block.get('zoomedDomain'),
-          /** granularise zoomedDomain to so that request is sent after e.g. 5% zoom change. */
-          zoomedDomainText = zoomedDomain ?
-            '_' + truncateMantissa(zoomedDomain[0]) +
-            '_' + truncateMantissa(zoomedDomain[1]) :
-            '';
-          let taskId = blockId + '_' + nBins + zoomedDomainText;
+            zoomedDomain = block && block.get('zoomedDomain'),
+            zoomedDomainText;
+          if (zoomedDomain) {
+            let
+            domainSize = intervalSize(zoomedDomain),
+            relativeDomain = zoomedDomain.map((y) => y / domainSize);
+          /** granularise zoomedDomain to so that request is sent after e.g. 5% zoom change.
+           * Perhaps 
+           */
+          zoomedDomainText =
+            '_' + truncateMantissa(relativeDomain[0]) +
+            '_' + truncateMantissa(relativeDomain[1]);
+          }
+            let taskId = blockId + '_' + nBins + (zoomedDomainText || '');
           let summaryTask = this.get('summaryTask');
           let p = summaryTask[taskId];
           if (! p) {
