@@ -58,6 +58,9 @@ module.exports = function(defaults) {
   app.import('node_modules/colresizable/colResizable-1.6.min.js');
   app.import('node_modules/bootstrap/js/tooltip.js');
   app.import('node_modules/bootstrap/js/popover.js');
+  app.import('node_modules/bootstrap/js/button.js');
+  app.import('node_modules/bootstrap/js/tab.js');
+  app.import('node_modules/bootstrap/js/dropdown.js');
 
   return app.toTree();
 };

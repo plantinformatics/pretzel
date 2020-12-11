@@ -6048,6 +6048,8 @@ export default Component.extend(Evented, {
     if (! $.popover && $.fn.popover) {
       dLog('didInsertElement initialise $.popover from .fn');
       $.popover = $.fn.popover;
+      $.button = $.fn.button;	// maybe not used.
+      $.tab = $.fn.tab;
     }
     // eltWidthResizable('.resizable');
 
