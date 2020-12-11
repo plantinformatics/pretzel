@@ -218,8 +218,9 @@ export default Controller.extend(Evented, {
       }
       else
       {
-      let datasetsTaskPerformance = model.get('availableMapsTask'),
-      newTaskInstance = datasetsTaskPerformance.task.perform();
+      let
+      taskGetList = this.get('dataset.taskGetList'),
+      newTaskInstance = taskGetList.perform();
       dLog('controller/mapview: updateModel()', newTaskInstance);
       model.set('availableMapsTask', newTaskInstance);
 
