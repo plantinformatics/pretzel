@@ -34,6 +34,8 @@ export default Model.extend(Evented, {
   apiServers: service(),
   controls : service(),
 
+  controlsView : alias('controls.controls.view'),
+
 
   /** id is blockAdjId[0] + '_' + blockAdjId[1], as per.  serializers/block-adj.js : extractId()
    * and utils/draw/stacksAxes : blockAdjKeyFn()
@@ -129,7 +131,7 @@ export default Model.extend(Evented, {
    * Similar to following @see axesDomains()
    * @desc but that function determines the referenceBlock's domain if the block is not zoomed.
    */
-  zoomedDomains :  mapBy('axes1d', 'zoomedDomainDebounced'),
+  zoomedDomains :  mapBy('axes1d', 'zoomedDomainThrottled'),
   /** domain incorporates zoomedDomain and also flipped and blocksDomain */
   domains :  mapBy('axes1d', 'domain'),
 
@@ -321,8 +323,8 @@ export default Model.extend(Evented, {
     /** may implement separate functions based on resultFieldName, but generally
      * receipt of direct and alias paths won't overlap in time for a block-adj.
      */
-    debounce(this, this.pathsResultLengthUpdateDebounce, resultFieldName, length, 200);
-      throttle(this, this.pathsResultLengthUpdateThrottle, resultFieldName, length, 300, false);
+    debounce(this, this.pathsResultLengthUpdateDebounce, resultFieldName, length, this.get('controlsView.debounceTime'));
+    throttle(this, this.pathsResultLengthUpdateThrottle, resultFieldName, length, this.get('controlsView.throttleTime'), false);
     if (trace_blockAdj > 1)
       dLog('updatePathsResult', length, this.get('id'));
     return length;

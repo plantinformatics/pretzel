@@ -329,6 +329,22 @@ export default Component.extend(Evented, {
 //}
 
   /*------------------------------------------------------------------------*/
+
+  functionHandles : {},
+  /** @return a constant value for the function
+   * @desc for use with debounce / throttle
+   */
+  functionHandle(name, fn) {
+    let functions = this.get('functionHandles');
+    if (functions[name] && (functions[name] !== fn)) {
+      dLog('functionHandle', name, functions[name], fn);
+    }      
+    let
+    fnStored = functions[name] || (functions[name] = fn);
+    return fnStored;
+  },
+
+  /*------------------------------------------------------------------------*/
   
   scroller: service(),
 
@@ -4348,7 +4364,12 @@ export default Component.extend(Evented, {
             /* was updatePaths true, but pathUpdate() is too long for RAF.
              * No transition required for RAF.
              */
-            axisScaleChangedRaf(p, tRaf, false);
+            debounce(
+              undefined,
+              me.functionHandle('axisScaleChangedRaf', axisScaleChangedRaf),
+              p, tRaf, false,  // args
+              me.get('controls.view.debounceTime')
+            );
             let brushExtent = oa.brushedRegions[p];
             if (brushExtents)
               // `that` refers to the brush g element, i.e. <g clip-path> within <g.brush>
@@ -4362,7 +4383,12 @@ export default Component.extend(Evented, {
           }
         }
       });
-      showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, bind(me, me.get('resetZooms')), axisName, me);
+      debounce(
+        undefined,
+        me.functionHandle('showAxisZoomResetButtons', showAxisZoomResetButtons),
+        svgContainer, getBrushExtents, zoom, bind(me, me.get('resetZooms')), axisName, me,  // args
+        me.get('controls.view.debounceTime')
+      );
 
       if (domainChanged) {
         // axisStackChanged(t);
@@ -6036,8 +6062,8 @@ export default Component.extend(Evented, {
     /* this delivers zoomed() via 
      * axis-2d : zoomedAxis() throttle-> sendZoomed() -> zoomed (in-axis.js)
      * used by axis-ld and axis-charts (which can use drawContentEffect instead).
-     */
      throttle(this, this.triggerZoomedAxis, [axisID, t], 400);
+     */
   },
 
   //----------------------------------------------------------------------------

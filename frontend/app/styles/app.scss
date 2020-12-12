@@ -1200,6 +1200,7 @@ div.popover/*.axis-menu*/ div.popover-content {
 /* -------------------------------------------------------------------------- */
 /* When the feature flag (ff) alpha is not defined, don't display the elements with class ff-alpha.  */
 body div > ul > li > div > div.btn-group.ff-alpha,
+ul.list-group > li.list-group-item.ff-alpha,
 .ff-alpha
 {
     display : none;
@@ -1348,15 +1349,28 @@ div#left-panel > div > div.tab-content > div.tab-pane
 }
 
 
-div#left-panel-view > div > div > div > ul > li > div
+/*------------------------------------*/
+/* in featureSearch results, wrap block names  */
+div#left-panel-feature-search > div > div > div > ul > li > div
 {
   overflow-wrap: break-word;
   text-indent: 1em;
 }
-div#left-panel-view > div > div > div > ul > li > div > button
+div#left-panel-feature-search > div > div > div > ul > li > div > button
 {
     float : left;
 }
+/*------------------------------------*/
+/* view-controls : text sub-label (div or span)  */
+ul.view-controls > li > div > .sub-label  {
+  margin-left:2em;
+  vertical-align: bottom;
+}
+ul.view-controls > li > div > .sub-label > span {
+  margin-left:1.2em;
+}
+/*------------------------------------*/
+
 
 div#left-panel-upload select
 {

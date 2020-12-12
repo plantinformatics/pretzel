@@ -103,9 +103,12 @@ export default Component.extend(Evented, AxisEvents, {
   flowsService: service('data/flows-collate'),
   block: service('data/block'),
   queryParams: service('query-params'),
+  controls : service(),
 
 
   needs: ['component:draw/path-data'],
+
+  controlsView : alias('controls.controls.view'),
 
   /** counters to debounce CFs */
   heightChanged : 0,
@@ -149,7 +152,7 @@ export default Component.extend(Evented, AxisEvents, {
     pathsResult = this.get('blockAdj.' + prType.fieldName + 'Filtered'),
     fnName = prType.fieldName + 'Length',
     length = pathsResult && pathsResult.length;
-    dLog(fnName, this, length);
+    dLog('drawCurrent', fnName, this, length);
     if (length) {
       this.get('drawCurrentTask').perform(prType, pathsResult)
         .catch((error) => {
@@ -246,7 +249,7 @@ export default Component.extend(Evented, AxisEvents, {
    * the stream ends is [], so paths{,Aliases}Result are used instead of the
    * result of this promise.
    */
-  pathsRequest : computed('blockAdj.paths', function () {
+  pathsRequest : computed('blockAdj.pathsResultLengthDebounced', function () {
     let pathsP = this.get('blockAdj.paths');
     dLog('blockAdj.paths', pathsP);
     function thenLength(p) { return ! p ? 0 : thenOrNow(p, (a) => get(a, 'length')); }
@@ -280,7 +283,7 @@ export default Component.extend(Evented, AxisEvents, {
               pathsApiResultType /*pathsResultTypes.pathsApi*/ : pathsResultTypes[flowName];
             dLog('blockAdj.paths length', paths && paths.length, pathsResultType);
             if (paths && paths.length)
-              throttle(this, this.draw, pathsResultType, paths, 200, false);
+              throttle(this, this.draw, pathsResultType, paths, this.get('controlsView.throttleTime'), false);
           });
       });
     });
@@ -580,6 +583,7 @@ export default Component.extend(Evented, AxisEvents, {
       // pathU() is temporarily a function, will revert to a computed function, as commented in path().
       .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
 
+    if (false) {
     /** in a later version of d3, can use 
      * transitionEnd = transition.end(); ... return transitionEnd;
      * instead of new Promise(...)
@@ -597,6 +601,9 @@ export default Component.extend(Evented, AxisEvents, {
       dLog('pathPosition', pathSelection.node());
       transitionEnd.then(() => dLog('pathPosition end', pathSelection.node()));
     }
+    }
+    // try not waiting for completion of transition, combined with throttle on the caller.
+    let transitionEnd = Promise.resolve();
 
     return transitionEnd;
   }).keepLatest(),
@@ -642,7 +649,7 @@ export default Component.extend(Evented, AxisEvents, {
     'blockAdj.axes1d.{0,1}.axis2d.allocatedWidthsMax',
     function () {
       let count = this.get('axisStackChangedCount');
-      debounce(this, this.updatePathsPositionDebounced, 300, true);
+      throttle(this, this.updatePathsPositionDebounced, this.get('controlsView.throttleTime'), true);
       return count;
     }),
     updatePathsPositionDebounced : function () {
@@ -660,7 +667,7 @@ export default Component.extend(Evented, AxisEvents, {
            this.get('block.stacksCount'));
     this.updatePathsPosition();
     /* redraw after axis extended width has updated. */
-    later(() => this.updatePathsPosition(), 500);
+    // later(() => this.updatePathsPosition(), 500);
 
       /* this update is an alternative trigger for updating the axes ticks and
        * scale when their domains change, e.g. when loaded features extend a

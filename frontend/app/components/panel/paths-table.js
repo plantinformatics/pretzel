@@ -1,5 +1,5 @@
 import { allSettled } from 'rsvp';
-import { later, throttle } from '@ember/runloop';
+import { later, debounce, throttle } from '@ember/runloop';
 import { computed, observer } from '@ember/object';
 import Component from '@ember/component';
 import $ from 'jquery';
@@ -724,7 +724,7 @@ export default Component.extend({
       if (trace)
         dLog(fileName, "onDataChange", table, data.length);
       // me.send('showData', data);
-      throttle(() => table.updateSettings({data:data}), 500);
+      debounce(() => table.updateSettings({data:data}), 500);
     }
   }),
 

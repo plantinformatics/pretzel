@@ -37,6 +37,11 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  debounceTime : 200,
+  throttleTime : 300,
+
+  /*--------------------------------------------------------------------------*/
+
   /** may be set via URL param - @see readParsedOptions(). */
   pathsViaStream : true,
 

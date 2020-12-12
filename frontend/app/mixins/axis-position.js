@@ -2,6 +2,9 @@ import { on } from '@ember/object/evented';
 import { bind } from '@ember/runloop';
 import Mixin from '@ember/object/mixin';
 import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
+
+
 import { task } from 'ember-concurrency';
 
 import { debounce, throttle } from 'lodash/function';
@@ -11,6 +14,7 @@ import { updateDomain } from '../utils/stacksLayout';
 import VLinePosition from '../models/vline-position';
 
 const dLog = console.debug;
+const trace = 0;
 
 /** Mixed-into axis-1d to describe the axis position.
  *
@@ -21,6 +25,9 @@ const dLog = console.debug;
  */
 export default Mixin.create({
   store: service('store'),
+  controls : service(),
+
+  controlsView : alias('controls.controls.view'),
 
   /** true if currentPosition.yDomain is a subset of the axis domain.  */
   zoomed : false,
@@ -80,17 +87,18 @@ export default Mixin.create({
      */
     let
       axisPosition = this.get('currentPosition');
-    dLog('setDomain', this, 'domain', domain, axisPosition);
+    if (trace > 2) 
+      dLog('setDomain', this, 'domain', domain, axisPosition);
     axisPosition.set('yDomain', domain);
     this.setDomainDebounced(domain);
     this.setDomainThrottled(domain);
   },
   setDomainDebounced : debounce(function (domain) {
     bind(this, this.set)('currentPosition.yDomainDebounced', domain);
-  }, 333, {maxWait : 1000}),
+  }, 333 /*this.get('controlsView.debounceTime')*/, {maxWait : 1000}),
   setDomainThrottled : throttle(function (domain) {
     bind(this, this.set)('currentPosition.yDomainThrottled', domain);
-  }, 1000),
+  }, 100 /*this.get('controlsView.throttleTime')*/),
 
   /** Set the zoomed of the current position to the given value
    */

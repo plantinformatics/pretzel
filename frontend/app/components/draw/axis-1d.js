@@ -281,7 +281,9 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 export default Component.extend(Evented, AxisEvents, AxisPosition, {
   blockService: service('data/block'),
   axisBrush: service('data/axis-brush'),
+  controls : service(),
 
+  controlsView : alias('controls.controls.view'),
 
   stacks : stacks,
   /** oa is used for these connections, which will eventually be
@@ -573,7 +575,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * @return if zoomed return the zoom yDomain, otherwise blockDomain.
    * Result .{0,1} are swapped if .flipped.
    */
-  domain : computed('zoomed', 'flipped', 'blocksDomain', 'zoomedDomainDebounced', function () {
+  domain : computed('zoomed', 'flipped', 'blocksDomain', 'zoomedDomainThrottled', function () {
     /** Actually .zoomedDomain will be == blocksDomain when not zoomed, but
      * using it as a CP dependency causes problems, whereas blocksDomain has a
      * more direct dependency on axis' blocks' features' locations.
@@ -730,7 +732,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
           dLog('domainChanged() no axisS yet', domain, this.get('axis.id'));
         else {
           this.updateScaleDomain();
-          this.updateAxis();
+          throttle(this, this.updateAxis, this.get('controlsView.throttleTime'));
         }
       }
       return domainDefined && domain;
