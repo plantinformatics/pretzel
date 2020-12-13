@@ -1,20 +1,11 @@
 import numeric from 'numeric';
 
 
-// from https://gist.github.com/fta2012/bd63f7fd9f385870efc0
+/* from https://gist.github.com/fta2012/bd63f7fd9f385870efc0
+ * https://franklinta.com/2014/09/08/computing-css-matrix3d-transforms/
+ */
 
-/*
-var selector = 'img' // Replace this with the selector for the element you want to make transformable
 
-
-jQuery.getScript('//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js', function() {
-jQuery.getScript('//cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.min.js', function() {
-  
-(function() {
-  var $, applyTransform, getTransform, makeTransformable;
-
-  $ = jQuery;
-*/
 
   function  getTransform(from, to) {
     var A, H, b, h, i, k_i, lhs, rhs, _i, _j, _k, _ref;
@@ -40,53 +31,6 @@ jQuery.getScript('//cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.min.js'
     return H;
   };
 
-  function applyTransform(element, originalPos, targetPos, callback) {
-    var H, from, i, j, p, to;
-    from = (function() {
-      var _i, _len, _results;
-      _results = [];
-      for (_i = 0, _len = originalPos.length; _i < _len; _i++) {
-        p = originalPos[_i];
-        _results.push({
-          x: p[0] - originalPos[0][0],
-          y: p[1] - originalPos[0][1]
-        });
-      }
-      return _results;
-    })();
-    to = (function() {
-      var _i, _len, _results;
-      _results = [];
-      for (_i = 0, _len = targetPos.length; _i < _len; _i++) {
-        p = targetPos[_i];
-        _results.push({
-          x: p[0] - originalPos[0][0],
-          y: p[1] - originalPos[0][1]
-        });
-      }
-      return _results;
-    })();
-    H = getTransform(from, to);
-    $(element).css({
-      'transform': "matrix3d(" + (((function() {
-        var _i, _results;
-        _results = [];
-        for (i = _i = 0; _i < 4; i = ++_i) {
-          _results.push((function() {
-            var _j, _results1;
-            _results1 = [];
-            for (j = _j = 0; _j < 4; j = ++_j) {
-              _results1.push(H[j][i].toFixed(20));
-            }
-            return _results1;
-          })());
-        }
-        return _results;
-      })()).join(',')) + ")",
-      'transform-origin': '0 0'
-    });
-    return typeof callback === "function" ? callback(element, H) : void 0;
-  };
   function transform2Css(H) {
     return {
       'transform': "matrix3d(" + (((function() {
@@ -110,86 +54,4 @@ jQuery.getScript('//cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.min.js'
   };
 
 
-  function makeTransformable(selector, callback) {
-    return $(selector).each(function(i, element) {
-      var controlPoints, originalPos, p, position;
-      $(element).css('transform', '');
-      controlPoints = (function() {
-        var _i, _len, _ref, _results;
-        _ref = ['left top', 'left bottom', 'right top', 'right bottom'];
-        _results = [];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          position = _ref[_i];
-          _results.push($('<div>').css({
-            border: '3px solid black',
-            borderRadius: '3px',
-            cursor: 'move',
-            position: 'absolute',
-            zIndex: 100000
-          }).appendTo('body').position({
-            at: position,
-            of: element,
-            collision: 'none'
-          }));
-        }
-        return _results;
-      })();
-      originalPos = (function() {
-        var _i, _len, _results;
-        _results = [];
-        for (_i = 0, _len = controlPoints.length; _i < _len; _i++) {
-          p = controlPoints[_i];
-          _results.push([p.offset().left, p.offset().top]);
-        }
-        return _results;
-      })();
-      $(controlPoints).draggable({
-        start: (function(_this) {
-          return function() {
-            return $(element).css('pointer-events', 'none');
-          };
-        })(this),
-        drag: (function(_this) {
-          return function() {
-            return applyTransform(element, originalPos, (function() {
-              var _i, _len, _results;
-              _results = [];
-              for (_i = 0, _len = controlPoints.length; _i < _len; _i++) {
-                p = controlPoints[_i];
-                _results.push([p.offset().left, p.offset().top]);
-              }
-              return _results;
-            })(), callback);
-          };
-        })(this),
-        stop: (function(_this) {
-          return function() {
-            applyTransform(element, originalPos, (function() {
-              var _i, _len, _results;
-              _results = [];
-              for (_i = 0, _len = controlPoints.length; _i < _len; _i++) {
-                p = controlPoints[_i];
-                _results.push([p.offset().left, p.offset().top]);
-              }
-              return _results;
-            })(), callback);
-            return $(element).css('pointer-events', 'auto');
-          };
-        })(this)
-      });
-      return element;
-    });
-  };
-/*
-
-  window.makeTransformable = makeTransformable
-
-}).call(this);
-
-makeTransformable(selector);
-
-});
-});
-*/
-
-export { getTransform, applyTransform, transform2Css, makeTransformable };
+export { getTransform, transform2Css };
