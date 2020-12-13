@@ -61,6 +61,7 @@ module.exports = function(defaults) {
   app.import('node_modules/bootstrap/js/button.js');
   app.import('node_modules/bootstrap/js/tab.js');
   app.import('node_modules/bootstrap/js/dropdown.js');
+  app.import('node_modules/numeric/lib/numeric.latest.js');
 
   return app.toTree();
 };

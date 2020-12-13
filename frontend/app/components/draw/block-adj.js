@@ -9,6 +9,7 @@ import { inject as service } from '@ember/service';
 import { debounce, throttle, later, next } from '@ember/runloop';
 import { task, timeout, didCancel } from 'ember-concurrency';
 
+import { isEqual } from 'lodash/lang';
 
 import AxisEvents from '../../utils/draw/axis-events';
 import { stacks, Stacked } from '../../utils/stacks';
@@ -35,6 +36,8 @@ import {
   pathsOfFeature,
   locationPairKeyFn
 } from '../../utils/paths-api';
+
+import { getTransform, transform2Css } from '../../utils/draw/direct-linear-transform';
 
 /* global d3 */
 
@@ -297,6 +300,86 @@ export default Component.extend(Evented, AxisEvents, {
     }
     return pathsP;
   }),
+
+  /*--------------------------------------------------------------------------*/
+
+  zoomedDomainsEffect : computed(
+    'blockAdj.axes1d.{0,1}.zoomedDomain.{0,1}',
+    'blockAdj.zoomedDomains.{0,1}',
+    function () {
+      /** currently depend on 'blockAdj.zoomedDomains.{0,1}', and clear the
+       * transform when isEqual(domains, throttled); could instead do that in updatePathsPosition().
+       */
+      /** if no zoomedDomain then use axis1d .blocksDomain, as in 
+       * axis-1d:domain(), but that depends on -Throttled
+       */
+      let
+      axes1d = this.get('blockAdj.axes1d'),
+      domains = axes1d.map(
+        (axis1d) => axis1d.get('zoomedDomain') || axis1d.get('blocksDomain')),
+      throttled = axes1d.mapBy('domain');
+      dLog('zoomedDomainsEffect', domains[0], domains[1], throttled[0], throttled[1]);
+      let css, vc;
+      if (! isEqual(domains, throttled)) {
+        let
+        axesP = stacks.axesP,
+        axes = this.get('blockAdj.blocks').map((block) => axesP[block.get('id')]),
+        /** this is equivalent to the above lookup via axesP, but this is causing delay - slows down to throttled time. */
+        // axes = this.get('axes'),
+
+        /** also need to take into account axes[*].{flipped, position, portion} */
+        /** whole range */
+        from = axes.map((a) => a.y.range().map((r) => a.yRange() - r)),
+        /** current pixel range of throttled  */
+        to = throttled.map((d, i) => d.map((y) => (axes[i].yRange() - axes[i].y(y))) );
+        dLog('zoomedDomainsEffect', from[0], from[1], to[0], to[1]);
+
+        let
+        oa = this.get('drawMap.oa'),
+        /** scaled x value of each axis, indexed by axisIDs */
+        o = oa.o,
+        blockIds = axes1d.mapBy('referenceBlock.id'),
+        x = blockIds.map((id) => o[id]),
+        fromXY = this.yIntervals2XY(from, x),
+        toXY = this.yIntervals2XY(to, x),
+        H = getTransform(fromXY, toXY);
+        css = transform2Css(H);
+        dLog('zoomedDomainsEffect', x, fromXY, toXY, H, css, o);
+
+        vc = oa.vc;
+      }
+
+      let blockAdjId = this.get('blockAdjId');
+      let dpS = progressGroupsSelect(undefined);
+      let baS = selectBlockAdj(dpS, blockAdjId);
+      // baS.attr('transform', css.transform);
+      let n = baS.node();
+      if (n) {
+        n.setAttribute('style', css ? ('transform:' + css.transform) : '');
+      }
+      /** 
+       * css['transform-origin'] is just '0 0'
+       */
+      let transformOrigin = css && css['transform-origin'];
+      /* position of top-left corner of svg, which is within div#holder
+       * Seems not needed for transform-origin; may need yRange.
+       let holder = d3.select('#holder').node();
+       if (holder) {
+       // e.g. '400 23'
+       transformOrigin = '' + holder.offsetLeft + ' ' + holder.offsetTop;
+       }
+      */
+      transformOrigin = '' + (30 + 5) + ' ' + (5 + (vc ? vc.axisTitleLayout.height : 0));
+      baS.attr('transform-origin', transformOrigin);
+
+    }),
+  /** convert 2 y intervals to an array of 4 {x, y}
+   * @param intervals[i][j]	i is axis index [0..1], j is interval end index [0..1]
+   * @param x[i]	i is axis index [0..1]
+   */
+  yIntervals2XY(intervals, x) {
+    return intervals.map((yrange, i) => yrange.map((y) => ({y, x: x[i]}))).flat();
+  },
 
   /*--------------------------------------------------------------------------*/
 
