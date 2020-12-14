@@ -49,8 +49,9 @@ import { getTransform, transform2Css } from '../../utils/draw/direct-linear-tran
 const className = "blockAdj";
 const CompName = 'components/axis-ticks-selected';
 
-const trace_blockAdj = 0;
 const dLog = console.debug;
+const trace_blockAdj = 0;
+const trace_pathTransform = 2;
 
 /*----------------------------------------------------------------------------*/
 /* milliseconds duration of transitions in which alignment <path>-s between
@@ -303,6 +304,29 @@ export default Component.extend(Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
+  getAxes() {
+    let
+    /* factor getAxes() out of blockAdj.axes,  getAxis() out of block, separating
+     * from .referenceBlock. */
+    axesP = stacks.axesP,
+    axes = this.get('blockAdj.blocks').map((block) => axesP[block.get('id')]);
+    /** this is equivalent to the above lookup via axesP, but this is causing delay - slows down to throttled time. */
+    // axes = this.get('axes');
+    return axes;
+  },
+
+  /** @return scales of blocks's axes, parallel to .blocks[]
+   */
+  previousScales: computed(function () {
+    /** no dependencies, called once when first used. */ 
+    return {};
+  }),
+  scaleInvert(y) {
+    let r = y.range();
+    y.range([r[1], r[0]]);
+    return y;
+  },
+
   zoomedDomainsEffect : computed(
     'blockAdj.axes1d.{0,1}.zoomedDomain.{0,1}',
     'blockAdj.zoomedDomains.{0,1}',
@@ -318,33 +342,56 @@ export default Component.extend(Evented, AxisEvents, {
       domains = axes1d.map(
         (axis1d) => axis1d.get('zoomedDomain') || axis1d.get('blocksDomain')),
       throttled = axes1d.mapBy('domain');
-      dLog('zoomedDomainsEffect', domains[0], domains[1], throttled[0], throttled[1]);
-      let css, vc;
-      if (! isEqual(domains, throttled)) {
+      if (trace_pathTransform > 1)
+        dLog('zoomedDomainsEffect', domains[0], domains[1], throttled[0], throttled[1]);
+      let css, vc, transformX;
+      let axes = this.getAxes();
+      if (isEqual(domains, throttled)) {
         let
-        axesP = stacks.axesP,
-        axes = this.get('blockAdj.blocks').map((block) => axesP[block.get('id')]),
-        /** this is equivalent to the above lookup via axesP, but this is causing delay - slows down to throttled time. */
-        // axes = this.get('axes'),
+        previousScales = this.get('previousScales');
+        axes.forEach((a) => previousScales[a.axisName] = /*this.scaleInvert()*/a.y.copy());
+      } else {
+        let
+        /** previous scales of the axes, parallel to blocks[] and axes[].  */
+        scales = axes.map((a) => this.get('previousScales')[a.axisName]),
 
-        /** also need to take into account axes[*].{flipped, position, portion} */
+        /** 2 ways to calculate from & to, which should be equivalent :
+         * 1. from = whole range; to = the range of the old domain at the new scale
+         * 2. to = whole range; from = the range of the new domain at the old scale
+         */
+        /** also need to take into account stacking and flipped : axes[*].{flipped, position, portion} */
+        /* method 1. */
         /** whole range */
         from = axes.map((a) => a.y.range().map((r) => a.yRange() - r)),
         /** current pixel range of throttled  */
-        to = throttled.map((d, i) => d.map((y) => (axes[i].yRange() - axes[i].y(y))) );
-        dLog('zoomedDomainsEffect', from[0], from[1], to[0], to[1]);
+        to = /*from; from =*/ throttled.map((d, i) => d.map((y) => (axes[i].yRange() - axes[i].y(y))) );
+        
+        if (/* method 2. */ true) {
+          to = from;
+          from = domains.map((d, i) => d.map((y) => (axes[i].yRange() - scales[i](y))) );
+        }
+        if (trace_pathTransform > 1)
+          dLog('zoomedDomainsEffect', from[0], from[1], to[0], to[1]);
+
 
         let
         oa = this.get('drawMap.oa'),
         /** scaled x value of each axis, indexed by axisIDs */
         o = oa.o,
         blockIds = axes1d.mapBy('referenceBlock.id'),
+        /**  index of the axis which has zoomed since throttled time.  */
+        zoomedIndex = domains.findIndex((d, i) => ! isEqual(d, throttled[i])),
+        /** horizontal position of each axis. */
         x = blockIds.map((id) => o[id]),
-        fromXY = this.yIntervals2XY(from, x),
-        toXY = this.yIntervals2XY(to, x),
+        /** from, to are just the y values.  fromXY, toXY have the x added, in {x, y} format. */
+        fromXY = this.yIntervals2XY(from, x, zoomedIndex),
+        toXY = this.yIntervals2XY(to, x, zoomedIndex),
         H = getTransform(fromXY, toXY);
         css = transform2Css(H);
-        dLog('zoomedDomainsEffect', x, fromXY, toXY, H, css, o);
+        if (trace_pathTransform > 1)
+          dLog('zoomedDomainsEffect', x, fromXY, toXY, H, css, o);
+
+        transformX = x[zoomedIndex];
 
         vc = oa.vc;
       }
@@ -352,10 +399,16 @@ export default Component.extend(Evented, AxisEvents, {
       let blockAdjId = this.get('blockAdjId');
       let dpS = progressGroupsSelect(undefined);
       let baS = selectBlockAdj(dpS, blockAdjId);
+      /** d3 v3 doesn't recognise matrix3d(), only matrix(); can use d3 .attr when update d3 to v4. */
       // baS.attr('transform', css.transform);
-      let n = baS.node();
-      if (n) {
-        n.setAttribute('style', css ? ('transform:' + css.transform) : '');
+      if (! baS.empty()) {
+        let nodes = baS.nodes();
+        if (! css) {
+          if (trace_pathTransform)
+            dLog('zoomedDomainsEffect', nodes[0], nodes);
+        }
+        let styleTransform = css ? ('transform:' + css.transform) : '';
+        nodes.forEach((n) => n.setAttribute('style', styleTransform));
       }
       /** 
        * css['transform-origin'] is just '0 0'
@@ -369,16 +422,24 @@ export default Component.extend(Evented, AxisEvents, {
        transformOrigin = '' + holder.offsetLeft + ' ' + holder.offsetTop;
        }
       */
-      transformOrigin = '' + (30 + 5) + ' ' + (5 + (vc ? vc.axisTitleLayout.height : 0));
+      let
+      transformY = (vc ? vc.axisTitleLayout.height : 0),
+      verticalTitle = vc && vc.axisTitleLayout && vc.axisTitleLayout.verticalTitle,
+      yRange = (vc ? vc.yRange : 0),
+      shiftLeft = verticalTitle ? 20 : 0,
+      margin = {x : 0/*30 + 5*/, y : 0/*5*/};
+      transformOrigin = '' + (shiftLeft + margin.x + (transformX||0)) + ' ' + (margin.y + transformY /*+ yRange*/);
       baS.attr('transform-origin', transformOrigin);
 
     }),
   /** convert 2 y intervals to an array of 4 {x, y}
+   * Express x relative to the axis which is zoomed.
    * @param intervals[i][j]	i is axis index [0..1], j is interval end index [0..1]
    * @param x[i]	i is axis index [0..1]
+   * @param zoomedIndex index of the axis which has zoomed since throttled time.
    */
-  yIntervals2XY(intervals, x) {
-    return intervals.map((yrange, i) => yrange.map((y) => ({y, x: x[i]}))).flat();
+  yIntervals2XY(intervals, x, zoomedIndex) {
+    return intervals.map((yrange, i) => yrange.map((y, j) => ({y, x: (i === zoomedIndex)? 0 : x[i] - x[zoomedIndex]}))).flat();
   },
 
   /*--------------------------------------------------------------------------*/

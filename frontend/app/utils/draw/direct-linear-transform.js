@@ -42,7 +42,7 @@ import numeric from 'numeric';
             var _j, _results1;
             _results1 = [];
             for (j = _j = 0; _j < 4; j = ++_j) {
-              _results1.push(H[j][i].toFixed(20));
+              _results1.push(H[j][i]/*.toFixed(20)*/);
             }
             return _results1;
           })());
