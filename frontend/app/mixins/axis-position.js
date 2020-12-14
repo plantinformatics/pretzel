@@ -7,7 +7,8 @@ import { alias } from '@ember/object/computed';
 
 import { task } from 'ember-concurrency';
 
-import { debounce, throttle } from 'lodash/function';
+// import these from @ember/runloop instead of lodash
+import { debounce, throttle } from '@ember/runloop'; // 'lodash/function';
 
 import { Stacked } from '../utils/stacks';
 import { updateDomain } from '../utils/stacksLayout';
@@ -90,15 +91,16 @@ export default Mixin.create({
     if (trace > 2) 
       dLog('setDomain', this, 'domain', domain, axisPosition);
     axisPosition.set('yDomain', domain);
-    this.setDomainDebounced(domain);
-    this.setDomainThrottled(domain);
+    debounce(this, this.setDomainDebounced, domain, this.get('controlsView.debounceTime'));
+    // lodash-specific arg : {maxWait : 1000})
+    throttle(this, this.setDomainThrottled, domain, this.get('controlsView.throttleTime'));
   },
-  setDomainDebounced : debounce(function (domain) {
-    bind(this, this.set)('currentPosition.yDomainDebounced', domain);
-  }, 333 /*this.get('controlsView.debounceTime')*/, {maxWait : 1000}),
-  setDomainThrottled : throttle(function (domain) {
-    bind(this, this.set)('currentPosition.yDomainThrottled', domain);
-  }, 100 /*this.get('controlsView.throttleTime')*/),
+  setDomainDebounced(domain) {
+    this.set('currentPosition.yDomainDebounced', domain);
+  },
+  setDomainThrottled(domain) {
+    this.set('currentPosition.yDomainThrottled', domain);
+  },
 
   /** Set the zoomed of the current position to the given value
    */
