@@ -58,6 +58,13 @@ export default Model.extend(Evented, {
 
   /*--------------------------------------------------------------------------*/
 
+  init() {
+    this.set('receivedAll', {});
+    this._super.apply(this, arguments);
+  },
+
+  /*--------------------------------------------------------------------------*/
+
   /** @return the block record handle if the block is loaded into the store from the backend.
    */
   peekBlock(blockId)
@@ -405,8 +412,8 @@ export default Model.extend(Evented, {
   paths : computed('blockId0', 'blockId1', 'domains.{0,1}.{0,1}', /*'lastResult',*/ function () {
     /** This adds a level of indirection between zoomCounter and
      * pathsRequestCount, flattening out the nesting of run-loop calls.
-     */
     next(() => this.incrementProperty('pathsRequestCount'));
+     */
     let result = this.get('lastResult');
      // result = this.call_taskGetPaths();
     dLog('paths', result, this.get('domains'));
@@ -467,6 +474,20 @@ export default Model.extend(Evented, {
     return result;
   },
 
+  receivedAllCheck(resultLength, flow) {
+    if (resultLength === 0) {
+      let anyZoomed = this.get('axes1d').any((a) => a.zoomed);
+      if (! anyZoomed) {
+        /** getting empty result after receiving paths - may be the end of streamed paths, so distinguish this case. */
+        let resultLengthName = 'paths' + (flow.name === 'alias' ? 'Aliases' : '') +  'Result';
+        // this.get(resultLengthName) will be undefined or > 0
+        if (! this.get(resultLengthName)) {
+          this.set('receivedAll.' + flow.name, true);
+        }
+      }
+    }
+  },
+
   /** Depending on flows.{direct,alias}.visible, call getPathsProgressive() and
    * getPathsAliasesProgressive().
    * Those functions may make a request to the backend server if a current result is not in hand,
@@ -486,12 +507,13 @@ export default Model.extend(Evented, {
     /** if ! trace_blockAdj then just trace .length. */
     let trace_suffix = trace_blockAdj ? '' : '.length';
 
-    if (flows.direct.visible) {
+    if (flows.direct.visible && ! this.get('receivedAll.' + flows.direct.name)) {
       let
         paths = this.get('pathsPro').getPathsProgressive(this, blockAdjId, taskInstance);
       paths.then(
         function (result) {
           dLog('block-adj paths', result && result.length, me.get('pathsResult' + trace_suffix), id, me);
+          me.receivedAllCheck(result.length, flows.direct);
         }, function (err) {
           dLog('block-adj paths reject', err);
         }
@@ -499,12 +521,13 @@ export default Model.extend(Evented, {
       result.direct = paths;
     }
 
-    if (flows.alias.visible) {
+    if (flows.alias.visible && ! this.get('receivedAll.' + flows.alias.name)) {
       let
         pathsAliases = this.get('pathsPro').getPathsAliasesProgressive(this, blockAdjId, taskInstance);
       pathsAliases.then(
         function (result) {
           dLog('block-adj pathsAliases', result && result.length, me.get('pathsAliasesResult' + trace_suffix), id, me);
+          me.receivedAllCheck(result.length, flows.alias);
         }, function (err) {
           dLog('block-adj pathsResult reject', err);
         }
@@ -529,7 +552,8 @@ export default Model.extend(Evented, {
       result =
         yield this.getPaths(blockAdjId, lastPerformed);
       result = yield this.flowsAllSettled(result);
-      dLog('taskGetPaths result', result);
+      let r0 = result && result[0];
+      dLog('taskGetPaths result', r0 && [r0.state, r0.value.length]);
 
     }
     finally {
