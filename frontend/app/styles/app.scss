@@ -1150,7 +1150,10 @@ ul#display-blocks > li.selected,
 
 /* indicate that the axis text can be clicked to show axis-menu. */
 g.axis-outer > g.axis-all > text:hover {
-  opacity: 0.5;
+  color: orange;
+  font-style : italic;
+  font-weight : bolder;
+  transform : translate(-1px, -1px);
 }
 g.axis-outer.selected /* > g.axis-all > g.axis > */ text {
   font-weight: bold;
