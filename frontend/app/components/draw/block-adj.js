@@ -716,6 +716,8 @@ export default Component.extend(Evented, AxisEvents, {
     if (! pathSelection.size()) {
       return Promise.resolve();
     }
+    let throttleTime = this.get('controlsView.throttleTime'),
+	pathTransitionTimeVar = throttleTime ? throttleTime * 0.8 : pathTransitionTime;
     let
     /* now that paths are within <g.block-adj>, path position can be altered
      * during dragging by updating a skew transform of <g.block-adj>, instead of
@@ -723,7 +725,7 @@ export default Component.extend(Evented, AxisEvents, {
      */
       transition = 
     pathSelection
-      .transition().duration(pathTransitionTime)
+      .transition().duration(pathTransitionTimeVar)
       // pathU() is temporarily a function, will revert to a computed function, as commented in path().
       .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
 
