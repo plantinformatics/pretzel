@@ -1166,7 +1166,7 @@ export default Component.extend(Evented, {
         let isMouseWheel = (d3.event instanceof WheelEvent) && ! d3.event.button;
         if (isMouseWheel) {
 
-          if (e.shiftKey) {
+          if (e.shiftKey && trace_stack > 1) {
             dLog('zoom.filter shiftKey', this, arguments, d3.event, d);
           }
 

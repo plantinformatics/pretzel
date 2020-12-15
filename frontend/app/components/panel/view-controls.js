@@ -37,6 +37,10 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** time in milliseconds;   group events into discrete times.
+   * Applies to various high-bandwidth events, e.g. axis-position : zoom,
+   * axis-1d : updateAxis, draw/block-adj updatePathsPositionDebounced
+   */
   debounceTime : 200,
   throttleTime : 300,
 

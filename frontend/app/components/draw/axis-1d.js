@@ -165,7 +165,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
       })(blockR),
       features = featuresAll
         .filter(inRange);
-      dLog(blockId, features.length);
+      dLog(blockId, features.length, 'showTickLocations featuresOfBlock');
       return features;
     };
 
