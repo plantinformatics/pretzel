@@ -164,10 +164,11 @@ export default Component.extend({
         /* want any coverage which is > 1, prefering larger coverage.
          * Related : featureCountResultCoverage(), smallestOver1I / largestUnder1I in featureCountInZoom().
          * sort in decreasing order of .coverage
+         * If .coverage is equal, sort in increasing order of .binSize
          */
-        .sort((a,b) => (a.coverage >= 1 && b.coverage >= 1) ? 0 : b.coverage - a.coverage)
-        // choose the result with the smallest binSize
-        .sortBy('binSize')
+        .sort((a,b) => (a.coverage >= 1 && b.coverage >= 1) ? (a.binSize - b.binSize) : b.coverage - a.coverage)
+        // choose the result with the smallest binSize  (this is now incorporated into the above sort)
+        // .sortBy('binSize')
         .slice(0,1);
     }
     return selectedResults;
