@@ -1153,7 +1153,7 @@ g.axis-outer > g.axis-all > text:hover {
   color: orange;
   font-style : italic;
   font-weight : bolder;
-  /* transform : translate(-1px, -1px); */ /* causes text-anchor to change also */
+  /* transform : translate(-1px, -1px); */ /* causes text-anchor to change also, when split axis */
 }
 g.axis-outer.selected /* > g.axis-all > g.axis > */ text {
   font-weight: bold;

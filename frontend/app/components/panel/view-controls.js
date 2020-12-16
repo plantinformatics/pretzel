@@ -41,8 +41,8 @@ export default Component.extend({
    * Applies to various high-bandwidth events, e.g. axis-position : zoom,
    * axis-1d : updateAxis, draw/block-adj updatePathsPositionDebounced
    */
-  debounceTime : 200,
-  throttleTime : 300,
+  debounceTime : 400,
+  throttleTime : 40,
 
   /*--------------------------------------------------------------------------*/
 
