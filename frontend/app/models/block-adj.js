@@ -269,6 +269,10 @@ export default Model.extend(Evented, {
     return p;
   }),
   pathsRequestLength : computed('pathsRequest', 'pathsRequestCount', function () {
+    if (this.get('axes.length') < 2) {
+      dLog('pathsRequestLength one end unviewed', this.blockAdjId, this.axes.mapBy('axisName'));
+      return 0;
+    }
     let pathsRequest = this.get('pathsRequest');
     let r = this.flowsAllSettled(pathsRequest);
     return r;
