@@ -6089,6 +6089,7 @@ export default Component.extend(Evented, {
     throttled = lodash_throttle(
       function axis_setDomain (domain, axis) {
         axis.setDomain(maybeFlip(domain, axis.flipped));
+        debounce(() => axis.setDomain(maybeFlip(domain, axis.flipped)), 1000);
       }, this.get('controls.view.throttleTime'));
     dLog('axis_setDomain', this.get('controls.view.throttleTime'));
     return throttled;
