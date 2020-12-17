@@ -338,7 +338,7 @@ export default Component.extend(Evented, {
    */
   functionHandle(name, fn) {
     let functions = this.get('functionHandles');
-    if (functions[name] && (functions[name] !== fn)) {
+    if (functions[name] && (functions[name] !== fn) && (trace_dataflow > 2)) {
       dLog('functionHandle', name, functions[name], fn);
     }      
     let
@@ -2607,7 +2607,12 @@ export default Component.extend(Evented, {
         .style('fill', Block.axisTitleColour)
         .style('opacity', function (block, i) { return (i > 0) && ! block.visible ? 0.5 : undefined; } )
         .each(function (block, i) {
-          let menuFn = (i == 0)
+          /** until ae114cf5, distinct menus were offered for the reference
+           * block (first line of title) and the data blocks (subsequent lines).
+           * Now each line has onclick for the same menu (showMenu -> axis-menu).
+           * So this could be changed to use a single listener, on the parent <text>.
+           */
+          let menuFn = true // (i == 0)
             ? configureAxisTitleMenu
             : configureAxisSubTitleMenu;
           menuFn.apply(this, arguments);
@@ -5516,12 +5521,26 @@ export default Component.extend(Evented, {
       if (trace_gui)
       console.log("configureAxisTitleMenu", axisName, this, this.outerHTML);
         let node_ = this;
+        let showMenuFn = me.functionHandle('showMenu', showMenu);
+      node_.onclick = showMenuFn;
+      /** Even though showMenuFn is constant, jQuery.on does : handlers.push(handleObj)
+       * each call, perhaps it avoids duplicate registrations only when selector
+       * is passed.
+       * So node_.onclick is used instead of :
         $(node_)
-        .on('click', showMenu);
+        .on('click', showMenuFn);
+        */
       /** @param e DOM event */
       function showMenu(e) {
+        let block = this.__data__;
+        if (block.axis.blocks[0] !== block) {
+          dLog('showMenu', 'data block', block, block.axis.blocks);
+          block = block.axis.blocks[0];
+        }
+        /** defined when called via jQuery.on(click) */
+        let jQueryEventInfo = e.originalEvent && [e.originalEvent.path, e.originalEvent.srcElement, e.handleObj.type];
         dLog('showMenu', this, axisName, this.__data__, this.parentElement, this.parentElement.parentElement,
-             e, e.originalEvent.path, e.originalEvent.srcElement, e.handleObj.type);
+             e, jQueryEventInfo);
         let menuActions = oa.axisApi.menuActions;
         if (! menuActions) {
           oa.axisApi.menuActions = {axisDelete, axisFlip, axisPerpendicular, axisExtend};
@@ -5535,7 +5554,15 @@ export default Component.extend(Evented, {
           menuActions.axisPerpendicular ||= axisPerpendicular;
           menuActions.axisExtend        ||= axisExtend;
         }
-        me.set('menuAxis', block);
+        /** If the axis-menu is already displayed on a different axis,
+         * reposition it to align with the axis of the clicked block title.
+         */
+        if (me.get('menuAxis') && (me.get('menuAxis') !== block)) {
+          me.set('menuAxis', undefined);
+          later(() => me.set('menuAxis', block), 500);
+        } else {
+          me.set('menuAxis', block);
+        }
         return false; /* for preventDefault(), stopPropagation() */
       }
       if (false) {undefined
