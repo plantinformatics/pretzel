@@ -2616,6 +2616,8 @@ export default Component.extend(Evented, {
             ? configureAxisTitleMenu
             : configureAxisSubTitleMenu;
           menuFn.apply(this, arguments);
+          /* register blockUnview() and blockVisible() in menuActions.  */
+          menuActions_block();
         });
 
       axisTitleS.call(AxisTitleBlocksServers.prototype.render.bind(axisTitleBlocksServers));
@@ -5692,6 +5694,19 @@ export default Component.extend(Evented, {
 
     /*------------------------------------------------------------------------*/
 
+    /** Register functions for block actions in axis-menu (menuActions).
+     */
+    function menuActions_block() {
+        /** see also comment in configureAxisTitleMenu() */
+        let menuActions = oa.axisApi.menuActions;
+        if (! menuActions) {
+          oa.axisApi.menuActions = {blockUnview, blockVisible}
+        } else if (! menuActions.blockUnview) {
+          menuActions.blockUnview  ||= blockUnview;
+          menuActions.blockVisible ||= blockVisible;
+        }
+    };
+
     /** Setup hover menus over axis child data block sub-titles.
      * Based on similar @see configureAxisTitleMenu()
      * @param block (Block) is the __data__ of the <tspan>-s
@@ -5705,14 +5720,7 @@ export default Component.extend(Evented, {
         ? blockR.get('namespace') + ' ' + blockR.get('scope')
         : block.longName();
       if (true /* use axis-menu.hbs, not $.popover*/) {
-        /** see also comment in configureAxisTitleMenu() */
-        let menuActions = oa.axisApi.menuActions;
-        if (! menuActions) {
-          oa.axisApi.menuActions = {blockUnview, blockVisible}
-        } else if (! menuActions.blockUnview) {
-          menuActions.blockUnview  ||= blockUnview;
-          menuActions.blockVisible ||= blockVisible;
-        }
+        menuActions_block();
       } else
       if ($(node_) .popover)
         $(node_)
@@ -5746,11 +5754,7 @@ export default Component.extend(Evented, {
             console.log(deleteButtonS.empty(), deleteButtonS.node());
           deleteButtonS
             .on('click',*/
-      function blockUnview (block /*buttonElt , i, g*/) {
-              console.log("blockUnview (deleteMap / removeBlock)", block.axisName, this);
-              // this will do : block.block.setViewed(false);
-              me.send('removeBlock', block.block);
-            }/*);
+      /*buttonElt , i, g*/ /*);
 
           let visibleButtonS = d3.select("button.VisibleAxis");
           if (trace_gui)
@@ -5758,7 +5762,21 @@ export default Component.extend(Evented, {
 
           visibleButtonS
             .on('click', */
-    function blockVisible (block /*buttonElt , i, g*/) {
+     /*buttonElt , i, g*/ /*);
+
+        });*/
+    }
+
+    /** un-view the block.  (axis-menu : block) */
+    function blockUnview (block) {
+              console.log("blockUnview (deleteMap / removeBlock)", block.axisName, this);
+              // this will do : block.block.setViewed(false);
+              me.send('removeBlock', block.block);
+    }
+    /** Toggle the visibility of the block.  (axis-menu : block)
+     * Call functions to make corresponding update to display of axis title, selected features, paths.
+     */  
+    function blockVisible (block) {
               console.log("blockVisible (VisibleAxis), visible", block.visible, block.longName(), this);
               block.visible = ! block.visible;
 
@@ -5770,11 +5788,8 @@ export default Component.extend(Evented, {
               sendUpdatedSelectedFeatures();
 
               pathUpdate(undefined);
-            } /*);
-
-        });*/
     }
-
+    
 
     /*------------------------------------------------------------------------*/
 
