@@ -1570,6 +1570,9 @@ span.glyphicon {
   background-color: #d9edf7;
   padding : 0.8em;
 }
+.axis-menu-inner > div {
+  min-width : 30em;
+}
 .axis-menu-inner .menu-icons {
   padding: 9px 14px;
   background: white;
@@ -1578,7 +1581,12 @@ span.glyphicon {
   border-radius: 5px;
   margin-bottom: 1em;
 }
-.axis-menu-inner .dataBlocks {
+.axis-menu-inner > div > div,
+.axis-menu-inner > div > ul {
+    margin: auto;
+    width: fit-content;
+}
+.axis-menu-inner > div > ul.dataBlocks > li:first-child {
   margin-top : 1em;
 }
 .axis-menu-inner .menu-icons > button:not(:first-child) {
