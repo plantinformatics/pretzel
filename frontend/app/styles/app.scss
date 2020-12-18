@@ -131,19 +131,25 @@ div.app-logo {
   font-weight: 900;
   font-size: larger;
   float: right;
-  margin-right: -6px;
+  /* align the icon above the border it moves */
+  margin-right: -6px  !important;
+  margin : 1px;
+  padding : 2px 2px;
 }
 .resizer:hover
 {
   border: 1px #337ab7 dashed;
   border-radius :  6px;
-  padding : 2px 2px;
+  margin-right: -7px  !important;	/* -6px - 1px to balance the border 1px */
+  margin : 0px;
 
-  font-size: x-large;
+  /* font-size: x-large; */
   color: #337ab7;  // brand blue;
 }
-/* This doesn't work within <foreignObject>, so :not(.inFO) is used. */
-.resizer:not(.inFO)::after {
+/* This doesn't work within <foreignObject>, so :not(.inFO) is used.
+ * draw-map resizer has an icon, doesn't need this one.
+ */
+.resizer:not(.inFO):not(.no-resizer-icon)::after {
 /*	⇹	8697	21F9	 	LEFT RIGHT ARROW WITH VERTICAL STROKE	*/
   content: "\21F9";
   right: -20px;
@@ -161,7 +167,6 @@ div.app-logo {
 .resizer:hover
 {
   opacity : 0.7;
-  font-weight: 900;
   color: hsl(208, 95%, 52%);	// #337ab7 with increased saturation and luminosity
 }
 /* The resizer icon is wrapped in div.menuHead : width: 100%, so that it remains
