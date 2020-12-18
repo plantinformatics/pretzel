@@ -4366,8 +4366,7 @@ export default Component.extend(Evented, {
             y[p].domain(domain);
             oa.ys[p].domain(domain);
             // scale domain is signed. currently .zoomedDomain is not, so maybeFlip().
-            let asd  = me.axis_setDomain;
-            asd(domain, axis);
+            axis.setDomain(maybeFlip(domain, axis.flipped));
 
             /* was updatePaths true, but pathUpdate() is too long for RAF.
              * No transition required for RAF.
@@ -6083,17 +6082,6 @@ export default Component.extend(Evented, {
   },   // draw()
 
   //----------------------------------------------------------------------------
-
-  axis_setDomain : computed('controls.view.throttleTime', function () {
-    let
-    throttled = lodash_throttle(
-      function axis_setDomain (domain, axis) {
-        axis.setDomain(maybeFlip(domain, axis.flipped));
-        // debounce(() => axis.setDomain(maybeFlip(domain, axis.flipped)), 1000);
-      }, this.get('controls.view.throttleTime'));
-    dLog('axis_setDomain', this.get('controls.view.throttleTime'));
-    return throttled;
-  }),
 
   /** Provide a constant function value for use in .debounce(). */
   triggerZoomedAxis : function (args) {
