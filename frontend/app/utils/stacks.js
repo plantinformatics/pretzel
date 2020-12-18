@@ -2040,6 +2040,8 @@ function xScaleExtend()
   let stackDomain = Array.from(stacks.keys()); // was axisIDs
 
   dLog("xScaleExtend", widthRanges, widths, widthsSum, stacks.vc.axisXRange, axisXRange, stackDomain);
+  // used as dependency by draw/block-adj
+  stacks.stacksCount.set('widthsSum', widthsSum);
   let v = variableBands,  CombinedScale = v();
   // let gapScale = // d3.scaleOrdinal()
   CombinedScale

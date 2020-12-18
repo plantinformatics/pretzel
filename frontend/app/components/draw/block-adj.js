@@ -779,6 +779,8 @@ export default Component.extend(Evented, AxisEvents, {
     'heightChanged', 'axisStackChangedCount',
     // stacksWidthChanges depends on stacksCount, so this dependency is implied anyway.
     'block.stacksCount',
+    // widthsSum includes changes to .extended, which impacts width of all block-adjs
+    'block.stacksWidthsSum',
     'drawMap.stacksWidthChanges',
     'blockAdj.axes1d.0.flipRegionCounter',
     'blockAdj.axes1d.1.flipRegionCounter',
