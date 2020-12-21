@@ -1196,6 +1196,7 @@ export default Service.extend(Evented, {
   }),
   stacksCount : alias('stacksCountObj.count'),
   stacksWidthsSum : alias('stacksCountObj.widthsSum'),
+  axesExtendedCount : alias('stacksCountObj.extendedCount'),
 
   /** From the list of viewed loaded blocks, filter out those which are not data
    * blocks.

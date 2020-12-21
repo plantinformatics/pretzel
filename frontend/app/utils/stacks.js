@@ -2039,9 +2039,12 @@ function xScaleExtend()
   stacks.axisXRangeMargin = axisXRange[1] - stacks.length * 40;
   let stackDomain = Array.from(stacks.keys()); // was axisIDs
 
-  dLog("xScaleExtend", widthRanges, widths, widthsSum, stacks.vc.axisXRange, axisXRange, stackDomain);
+  /** equivalent : can use stacks.axes1d here in place of axesP. */
+  let extendedCount = Object.values(axesP).filterBy('extended').length;
+  dLog("xScaleExtend", widthRanges, widths, widthsSum, stacks.vc.axisXRange, axisXRange, stackDomain, extendedCount);
   // used as dependency by draw/block-adj
   stacks.stacksCount.set('widthsSum', widthsSum);
+  stacks.stacksCount.set('extendedCount', extendedCount);
   let v = variableBands,  CombinedScale = v();
   // let gapScale = // d3.scaleOrdinal()
   CombinedScale
