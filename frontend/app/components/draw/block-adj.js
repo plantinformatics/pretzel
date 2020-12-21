@@ -141,10 +141,12 @@ export default Component.extend(Evented, AxisEvents, {
     'blockAdj.pathsResultLengthThrottled', 'pathsAliasesResultLength',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
+      next(() => {
     let
     length = this.drawCurrent(pathsResultTypes.direct),
     pathsAliasesLength = this.get('pathsAliasesResultLength');
     return length;
+      });
   }),
   /** Used in paths{,Aliases}ResultLength().
    */
@@ -236,6 +238,7 @@ export default Component.extend(Evented, AxisEvents, {
     'blockAdj.pathsAliasesResultLengthThrottled', 'paths.alias.[]',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
+      next(() => {
     /* pathsAliasesResult is in a different form to pathsResult; passing it to
      * draw() requires some mapping, which is abstracted in 
      * pathsResultType e.g. pathsResultTypes.{direct,alias}
@@ -247,6 +250,7 @@ export default Component.extend(Evented, AxisEvents, {
     pathsAliasesLength = this.drawCurrent(pathsApiResultType /*pathsResultTypes.alias*/);
 
     return pathsAliasesLength;
+      });
   }),
   paths : alias('blockAdj.paths'),
   /** Trigger paths request - side-effect. In the streaming case, result when
