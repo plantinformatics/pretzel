@@ -782,6 +782,8 @@ export default Component.extend(Evented, AxisEvents, {
     // widthsSum includes changes to .extended, which impacts width of all block-adjs
     'block.stacksWidthsSum',
     'block.axesExtendedCount',
+    // width of split axes effects the path endpoint x values, even if not adjacent.
+    'block.axes2d.@each.allocatedWidthsMax',
     'drawMap.stacksWidthChanges',
     'blockAdj.axes1d.0.flipRegionCounter',
     'blockAdj.axes1d.1.flipRegionCounter',

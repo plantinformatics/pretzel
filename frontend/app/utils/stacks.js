@@ -2041,10 +2041,13 @@ function xScaleExtend()
 
   /** equivalent : can use stacks.axes1d here in place of axesP. */
   let extendedCount = Object.values(axesP).filterBy('extended').length;
-  dLog("xScaleExtend", widthRanges, widths, widthsSum, stacks.vc.axisXRange, axisXRange, stackDomain, extendedCount);
+  let axes2d = Object.values(axesP).map((s) => s.axis1d && s.axis1d.axis2d).filter((a2) => a2);
+  dLog("xScaleExtend", widthRanges, widths, widthsSum, stacks.vc.axisXRange, axisXRange, stackDomain, extendedCount, axes2d.length);
   // used as dependency by draw/block-adj
   stacks.stacksCount.set('widthsSum', widthsSum);
   stacks.stacksCount.set('extendedCount', extendedCount);
+  stacks.stacksCount.set('axes2d', axes2d);  // can replace oa.axes2d
+
   let v = variableBands,  CombinedScale = v();
   // let gapScale = // d3.scaleOrdinal()
   CombinedScale
