@@ -404,7 +404,9 @@ export default Service.extend(Evented, {
     /** As yet these result promises are not returned, not needed. */
     let blockPs =
         blockIds.map((blockId) => [blockId, this.peekBlock(blockId)])
-        .filter((blockAndId) => blockAndId[1].get('isData'))
+        /** URL mapsToView may contain blockId of another server which is not
+         * currently connected, and hence blockAndId[1] is undefined. */
+        .filter((blockAndId) => blockAndId[1] && blockAndId[1].get('isData'))
         .map(
           (blockAndId) => {
           let [blockId, block] = blockAndId;
