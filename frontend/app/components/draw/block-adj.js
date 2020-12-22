@@ -808,6 +808,7 @@ export default Component.extend(Evented, AxisEvents, {
     'block.axesExtendedCount',
     // width of split axes effects the path endpoint x values, even if not adjacent.
     'block.axes2d.@each.allocatedWidthsMax',
+    'xOffsets.@each',
     'drawMap.stacksWidthChanges',
     'blockAdj.axes1d.0.flipRegionCounter',
     'blockAdj.axes1d.1.flipRegionCounter',
@@ -839,6 +840,7 @@ export default Component.extend(Evented, AxisEvents, {
       if (trace_blockAdj)
         dLog('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, flips, zoomCounter, scaleChanges,
            stacksWidthChanges,
+           this.get('xOffsets'),
            this.get('block.stacksCount'));
     this.updatePathsPosition();
     /* redraw after axis extended width has updated. */

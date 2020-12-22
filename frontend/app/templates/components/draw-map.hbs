@@ -37,7 +37,7 @@
   <div>{{blockService.viewedIds.length}},  blockAdjs : {{flowsService.blockAdjIds.length}}  {{flowsService.blockAdjsCP.length}}</div>
   <div>
     {{#each flowsService.blockAdjs as |blockAdj| }}
-      {{draw/block-adj blockAdj=blockAdj drawMap=this }}
+      {{draw/block-adj blockAdj=blockAdj drawMap=this  xOffsets=xOffsets }}
     {{/each}}
   </div>
 </div>

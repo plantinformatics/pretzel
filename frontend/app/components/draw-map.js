@@ -1125,6 +1125,9 @@ export default Component.extend(Evented, {
         checkIsNumber(oa.o[d]);
         if (o[d] === undefined) { breakPoint("collateO"); }
       });
+      /** scaled x value of each axis, with its axisID. */
+      let offsetArray = oa.stacks.axisIDs().map((d) => ({axisId : d, xOffset : o[d]}));
+      me.set('xOffsets', offsetArray);
     }
     /** Map an Array of Block-s to their longNames(), useful in log trace. */
     function Block_list_longName(blocks) {
