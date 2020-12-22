@@ -137,15 +137,32 @@ export default Component.extend(Evented, AxisEvents, {
   parsedOptions : alias('queryParams.urlOptions'),
 
   pathsDensityParams : alias('pathsP.pathsDensityParams'),
+  /** @return true if both the blocks of this block-adj are viewed.
+   */
+  isComplete() {
+    let v = this.blockAdj.blocks.mapBy('isViewed'),
+        ok = v[0] && v[1];
+    return ok;
+  },
   pathsResultLength : computed(
     'blockAdj.pathsResultLengthThrottled', 'pathsAliasesResultLength',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
+      /** this CP may be evaluated before the first didRender(), which does
+       * drawGroup{Container,}(); waiting for next render so that drawCurrent()
+       * has <g> to render into.
+       */
       next(() => {
-    let
-    length = this.drawCurrent(pathsResultTypes.direct),
-    pathsAliasesLength = this.get('pathsAliasesResultLength');
-    return length;
+        /** it is possible (currently) for this CP to be evaluated after one end
+         * (block) of a block-adj to become un-viewed and before the block-adj
+         * is destroyed.  This check detects and handles that case.
+         */
+        if (this.isComplete()) {
+          let
+          length = this.drawCurrent(pathsResultTypes.direct),
+          pathsAliasesLength = this.get('pathsAliasesResultLength');
+          // return length;
+        }
       });
   }),
   /** Used in paths{,Aliases}ResultLength().
@@ -238,18 +255,21 @@ export default Component.extend(Evented, AxisEvents, {
     'blockAdj.pathsAliasesResultLengthThrottled', 'paths.alias.[]',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
+      /** the comments in pathsResultLength re. next and isComplete apply here also. */
       next(() => {
-    /* pathsAliasesResult is in a different form to pathsResult; passing it to
-     * draw() requires some mapping, which is abstracted in 
-     * pathsResultType e.g. pathsResultTypes.{direct,alias}
-     */
-    pathsApiResultType.flowName = pathsResultTypes.alias.flowName;
-    pathsApiResultType.fieldName = pathsResultTypes.alias.fieldName;
+        if (this.isComplete()) {
+          /* pathsAliasesResult is in a different form to pathsResult; passing it to
+           * draw() requires some mapping, which is abstracted in 
+           * pathsResultType e.g. pathsResultTypes.{direct,alias}
+           */
+          pathsApiResultType.flowName = pathsResultTypes.alias.flowName;
+          pathsApiResultType.fieldName = pathsResultTypes.alias.fieldName;
 
-    let
-    pathsAliasesLength = this.drawCurrent(pathsApiResultType /*pathsResultTypes.alias*/);
+          let
+          pathsAliasesLength = this.drawCurrent(pathsApiResultType /*pathsResultTypes.alias*/);
 
-    return pathsAliasesLength;
+          // return pathsAliasesLength;
+        }
       });
   }),
   paths : alias('blockAdj.paths'),
