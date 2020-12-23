@@ -1,5 +1,6 @@
 import Ember from 'ember';
 import { computed } from '@ember/object';
+import { next as run_next } from '@ember/runloop';
 
 import { stacks  } from '../../utils/stacks';
 
@@ -24,8 +25,9 @@ export default Ember.Component.extend({
   menuActions : computed.alias('axisApi.menuActions'),
 
   hide() {
-      let axes1d = this.parentView;
-      axes1d.set('menuAxis', undefined);
+    let axes1d = this.parentView;
+    dLog('hide', axes1d.menuAxis);
+    axes1d.set('menuAxis', undefined);
   },
   actions: {
     onHide : function () {
@@ -85,13 +87,23 @@ export default Ember.Component.extend({
     'block.viewedChildBlocks.[]',
     'block.blockService.viewedBlocksByReferenceAndScopeUpdateCount',
     function () {
-    let
-    /** skip the reference block, which is shown above the data block list.
-     * This can change to use stacks-view:axesBlocks().
-     */
-    dataBlocks = this.block.axis.blocks.slice(1);
-    return dataBlocks;
-  }),
+      let
+      dataBlocks;
+      /** close menu when axis is removed, i.e. this.block is un-viewed. */
+      if (! this.block.isViewed || ! this.block.axis) {
+        dLog('dataBlocks', this.block.isViewed, this.block.axis, this.block);
+        /** wait until next cycle of run loop because this CP is called during render. */
+        run_next(() => this.hide());
+        /* returning undefined is also OK, result is used in axis-menu.hbs : #each dataBlocks */
+        dataBlocks = [];
+      } else {
+        /** skip the reference block, which is shown above the data block list.
+         * This can change to use stacks-view:axesBlocks().
+         */
+        dataBlocks = this.block.axis.blocks.slice(1);
+      }
+      return dataBlocks;
+    }),
   dataBlockText(blockS) {
       let
       block = blockS.block,
