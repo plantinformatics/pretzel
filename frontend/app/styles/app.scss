@@ -1338,7 +1338,10 @@ div#left-panel > ul
   display : block;
 }
 
-div#left-panel > div,
+div#left-panel > div
+{
+  height: 100%;
+}
 div#left-panel > div > div.tab-content
 {
   height: 100%;
