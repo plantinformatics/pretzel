@@ -1,5 +1,5 @@
 import { allSettled } from 'rsvp';
-import { later, debounce, throttle } from '@ember/runloop';
+import { once, later, debounce, throttle } from '@ember/runloop';
 import { computed, observer } from '@ember/object';
 import Component from '@ember/component';
 import $ from 'jquery';
@@ -128,6 +128,9 @@ export default Component.extend({
   },
 
   willDestroyElement() {
+    /*  clear display of paths count so that if it changes while right panel is
+     *  closed, tab doesn't display old count when re-opened.  (possibly the count display
+     *  would be refreshed anyway, so this may not be essential).  */
     this.sendUpdatePathsCount('');
     this.destroyHoTable();
 
@@ -212,7 +215,11 @@ export default Component.extend({
   },
 
   sendUpdatePathsCount(pathsCount) {
-    later(() => this.send('updatePathsCount', pathsCount));
+    once(() => {
+      if (! this.isDestroying) {
+        this.send('updatePathsCount', pathsCount);
+      }
+    });
   },
 
 
