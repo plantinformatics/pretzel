@@ -116,11 +116,12 @@ export default InAxis.extend({
    * destroyed / re-created as the user zooms in / out.
    */
   blockViews : computed(
-    'blockService.viewed.@each.{featuresCounts,isChartable}',
+    /** to get just the chartable blocks on this axis, using axis1d.dataBlocks instead of blockService.viewed */
+    'axis1d.dataBlocks.@each.{featuresCounts,isChartable}',
     function () {
       let
       blocks =
-        this.get('blockService.viewed')
+        this.get('axis1d.dataBlocks')
         .filter(function (block) {
           let
           featuresCounts = !!block.get('featuresCounts'),
