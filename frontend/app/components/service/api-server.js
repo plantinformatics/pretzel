@@ -39,6 +39,7 @@ function removePunctuation(text) {
  */
 export default EmberObject.extend({
   dataset: service('data/dataset'),
+  block: service('data/block'),
   apiServers: service(),
 
 
@@ -147,6 +148,16 @@ export default EmberObject.extend({
   // wrap in a task, requests to different servers OK in parallel, just 1 'getDatasets' per server at once.
   // .drop()
 
+  ,
+  blocksByReferenceAndScope : computed(
+    'datasetsBlocks.[]',
+    function() {
+      let
+      /** use .blocksOriginal, which filters out by .isCopy */
+      blocks = this.datasetsBlocks && this.datasetsBlocks.flatMap((d) => d.blocksOriginal.map((b) => b)),
+      map = this.get('block').mapBlocksByReferenceAndScope(blocks);
+      return map;
+    })
 
 
 });

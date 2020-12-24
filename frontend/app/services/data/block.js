@@ -904,10 +904,6 @@ export default Service.extend(Evented, {
 
   /** collate the blocks by the parent block they refer to, and by scope.
    *
-   * Uses datasetsByParent(); this is more direct than blocksByReference()
-   * which uses Block.referenceBlock(), which does peekAll on blocks and filters
-   * on datasetId and scope.
-   *
    * @return a Map, indexed by dataset name, each value being a further map
    * indexed by block scope, and the value of that being an array of blocks,
    * with the [0] position of the array reserved for the reference block.
@@ -921,8 +917,11 @@ export default Service.extend(Evented, {
   blocksByReferenceAndScope : computed(
     'blockValues.[]',
     function() {
+      return this.mapBlocksByReferenceAndScope(this.get('blockValues'));
+    }),
+  mapBlocksByReferenceAndScope(blockValues) {
       const fnName = 'blocksByReferenceAndScope';
-      let map = this.get('blockValues')
+      let map = blockValues
         .reduce(
           (map, block) => {
             // related : manage-explorer : datasetsToBlocksByScope() but that applies a filter.
@@ -997,7 +996,7 @@ export default Service.extend(Evented, {
       if (trace_block > 1)
         log_Map_Map(fnName, map);
       return map;
-    }),
+  },
 
   /** filter blocksByReferenceAndScope() for viewed blocks,
    * blocks[0] is not filtered out even if it isn't viewed because it is the referenceBlock
@@ -1052,7 +1051,7 @@ export default Service.extend(Evented, {
       return blocksOut;
     };
 
-    if (trace_block && resultMap)
+    if (trace_block > 1 && resultMap)
       log_Map_Map(fnName, resultMap);
     this.incrementProperty('viewedBlocksByReferenceAndScopeUpdateCount');
     return resultMap;

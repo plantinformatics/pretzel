@@ -462,8 +462,41 @@ export default Model.extend({
     if (parentName)
     {
       /** it is possible that the block may be a copy from a secondary server which is not currently connected. */
-      let store = this.get('apiServers').id2Store(this.get('id'));
-      referenceBlock = ! store ? [] : store.peekAll('block')
+      let referenceBlock;
+      /** server which this block was received from. */
+      let server = this.get('apiServers').id2Server[this.id];
+
+      /** this function is called for each block, e.g. when view / un-view a
+       * block. Scanning all blocks is becoming too slow, so an alternate
+       * algorithm based on blocksByReferenceAndScope() is used.
+       */
+      if (true) {
+        let 
+        /** if server is not connected then `server` is undefined. */
+        map = server && server.get('blocksByReferenceAndScope'),
+        scopes = map && map.get(parentName),
+        blocks = scopes && scopes.get(scope);
+        /** b.isData uses .referenceBlock, which may recurse to here, so use
+         * direct attributes of block to indicate whether it is reference / data
+         * block. */
+        referenceBlock = blocks && blocks.filter((b) => !!b.range || ! (b.featureValueCount || b.featureLimits));
+        if (referenceBlock && referenceBlock.length) {
+          referenceBlock = referenceBlock[0];
+        }
+      } else {
+        let blocks;
+        if (false) {
+      let
+      /** Alternative method of getting the array of blocks.  performance seems the same.
+      */
+      store = this.get('apiServers').id2Store(this.get('id')),
+      blocks = ! store ? [] : store.peekAll('block')
+        } else {
+          let
+      /** all blocks from the same server as `this`. */
+      blocks = server && server.datasetsBlocks && server.datasetsBlocks.flatMap((d) => d.blocks.map((b) => b));
+        }
+      referenceBlock = blocks && blocks
         .filter(function (b) {
           let scope2 = b.get('scope'),
           dataset2 = b.get('datasetId'),
@@ -482,10 +515,11 @@ export default Model.extend({
           }
           return match;})
       ;
+      }
       if (trace_block)
         dLog('referenceBlock', referenceBlock);
       // expect referenceBlock.length == 0 or 1
-      if (referenceBlock.length !== undefined)
+      if (referenceBlock && referenceBlock.length !== undefined)
         referenceBlock = referenceBlock[0] || undefined;
     }
     return referenceBlock;
