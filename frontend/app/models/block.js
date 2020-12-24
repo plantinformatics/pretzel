@@ -474,14 +474,12 @@ export default Model.extend({
         /** if server is not connected then `server` is undefined. */
         map = server && server.get('blocksByReferenceAndScope'),
         scopes = map && map.get(parentName),
+        /** blocks[0] may be undefined, e.g. when the reference is on another server which is not connected. */
         blocks = scopes && scopes.get(scope);
         /** b.isData uses .referenceBlock, which may recurse to here, so use
          * direct attributes of block to indicate whether it is reference / data
          * block. */
-        referenceBlock = blocks && blocks.filter((b) => !!b.range || ! (b.featureValueCount || b.featureLimits));
-        if (referenceBlock && referenceBlock.length) {
-          referenceBlock = referenceBlock[0];
-        }
+        referenceBlock = blocks && blocks.filter((b) => b && (!!b.range || ! (b.featureValueCount || b.featureLimits)));
       } else {
         let blocks;
         if (false) {
