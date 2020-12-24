@@ -873,6 +873,16 @@ export default Model.extend({
   /*--------------------------------------------------------------------------*/
 
 
+  axis1d : computed('blockService.axes1d.axis1dArray.@each.viewedBlocks.length', function () {
+    let axis1d;
+    if (this.isViewed) {
+      let
+      axes1d = this.get('blockService.axes1d.axis1dArray');
+      axis1d = axes1d.find((a1) => a1.viewedBlocks.find((b) => b === this));
+      dLog('axis1d', axis1d, axes1d, this.id, this.get('axis.axis1d'));
+    }
+    return axis1d;
+  }),
 
   axis : computed(/*'view.axis'*/'isViewed', 'referenceBlock', function () {
     let axesP = stacks.axesP;
@@ -888,9 +898,9 @@ export default Model.extend({
     return axis;
   }),
 
-  zoomedDomain : alias('axis.axis1d.zoomedDomain'),
-  zoomedDomainDebounced : alias('axis.axis1d.zoomedDomainDebounced'),
-  zoomedDomainThrottled : alias('axis.axis1d.zoomedDomainThrottled'),
+  zoomedDomain : alias('axis1d.zoomedDomain'),
+  zoomedDomainDebounced : alias('axis1d.zoomedDomainDebounced'),
+  zoomedDomainThrottled : alias('axis1d.zoomedDomainThrottled'),
 
   /** @return true if the axis on which this block is displayed is zoomed out past the point
    * that the number of features in the block within zoomedDomain is > featuresCountsThreshold.
