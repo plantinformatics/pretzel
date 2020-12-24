@@ -462,7 +462,6 @@ export default Model.extend({
     if (parentName)
     {
       /** it is possible that the block may be a copy from a secondary server which is not currently connected. */
-      let referenceBlock;
       /** server which this block was received from. */
       let server = this.get('apiServers').id2Server[this.id];
 
