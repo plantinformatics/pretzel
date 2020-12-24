@@ -216,7 +216,10 @@ export default Component.extend(Evented, AxisEvents, {
     // if @each were supported for hashes, would depend on : 'childWidths.@each.1', 
     let allocatedWidths,
     childWidths = this.get('childWidths'),
-    groupNames = childWidths ? Object.keys(childWidths) : [],
+    groupNames = childWidths ?
+        // Object.keys(childWidths) gets other (Ember) properties; can probably change childWidths to {}.
+        ['chart','tracks','trackCharts'].filter((k) => childWidths.hasOwnProperty(k))
+        : [],
     requested = 
       groupNames.reduce((result, groupName) => {
         let cw = childWidths[groupName];
