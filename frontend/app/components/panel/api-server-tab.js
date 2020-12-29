@@ -32,7 +32,7 @@ export default Component.extend({
 
   borderStyle : computed('apiServer.name', function() {
     let apiServerColour = this.get('apiServer').get('colour'),
-    style = 'border-color:' + CSS.escape(apiServerColour);
+    style = 'border-color:' + apiServerColour;
     dLog('borderStyle', apiServerColour, this.apiServerName);
     return htmlSafe(style);
   })
