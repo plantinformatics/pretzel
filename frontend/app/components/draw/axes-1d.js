@@ -30,7 +30,7 @@ export default Component.extend(Evented, /*AxisEvents,*/ {
 
   /** @return the axis-1d components, which are child components of this
    * component, distinguished by having a .axis attribute.  */
-  axis1dArray : computed('childViews.@each.isDestroying', function () {
+  axis1dArray : computed('axesP.[]', function () {
     let axes1d = this.get('childViews')
         .filter((a1) => ! a1.isDestroying && a1.axis);
     dLog('axis1dArray', axes1d);

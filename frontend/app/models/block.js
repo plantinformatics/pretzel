@@ -869,8 +869,35 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /**  @return undefined if this block is not the referenceBlock of an axis1d
+   */
+  referencedAxis1d : computed(
+    'blockService.axis1dReferenceBlocks.[]',
+    function () {
+      let
+      axisBlocks = this.get('blockService.axis1dReferenceBlocks'),
+      /** could calculate a hash in axis1dReferenceBlocks and lookup via that,
+       * but this is a small array to scan. */
+      axis1d = axisBlocks.find((ab) => ab[1] === this);
+      axis1d = axis1d && axis1d[0];
+      return axis1d;
+    }),
 
-  axis1d : computed('blockService.axes1d.axis1dArray.@each.viewedBlocks.length', function () {
+  axis1d : computed(
+    'referencedAxis1d', 'referenceBlock.referencedAxis1d',
+    function () {
+      let axis1d = this.get('referencedAxis1d') || this.get('referenceBlock.referencedAxis1d');
+      let a1Check = this.verify_axis1d();
+      if (axis1d !== a1Check) {
+        dLog('axis1d', axis1d, a1Check);
+      }
+      return axis1d;
+    }),
+  /** Check result of axis1d().
+   * This can't be used as a CP because it would need to depend on 
+   * blockService.axes1d.axis1dArray.@each.viewedBlocks.length.
+   */
+  verify_axis1d() {
     let axis1d;
     if (this.isViewed) {
       let
@@ -879,7 +906,7 @@ export default Model.extend({
       dLog('axis1d', axis1d, axes1d, this.id, this.get('axis.axis1d'));
     }
     return axis1d;
-  }),
+  },
 
   axis : computed(/*'view.axis'*/'isViewed', 'referenceBlock', function () {
     let axesP = stacks.axesP;

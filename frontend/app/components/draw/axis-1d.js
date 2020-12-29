@@ -506,7 +506,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       .filter(d => d !== undefined);
     return dataBlockDomains;
   }),
-  referenceBlock : alias('axisS.referenceBlock'),
+  referenceBlock : alias('axis'),
   /** @return the domains of all the blocks of this axis, including the reference block if any.
    * @description related @see axesDomains() (draw/block-adj)
    */
