@@ -34,7 +34,7 @@ import numeric from 'numeric';
   function transform2Css(H) {
     return {
       'transform': "matrix3d(" + (((function() {
-	let i, j;
+        let i, j;
         var _i, _results;
         _results = [];
         for (i = _i = 0; _i < 4; i = ++_i) {

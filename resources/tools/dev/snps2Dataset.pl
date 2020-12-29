@@ -97,28 +97,28 @@ my $datasetName = $options{d};
 my $parentName = $options{p};
 
 if ($options{v}) {
-	print versionMsg;
+    print versionMsg;
 }
 elsif ($options{h})
 {
-	print usageMsg;
+    print usageMsg;
 }
 elsif (!defined ($datasetName))
 {
-	print usageMsg, <<EOF;
-	Required option : -d dataset name
+    print usageMsg, <<EOF;
+    Required option : -d dataset name
 EOF
 }
 elsif (!defined ($parentName))
 {
-	print usageMsg, <<EOF;
-	Required option : -p parent (reference dataset) name
+    print usageMsg, <<EOF;
+    Required option : -p parent (reference dataset) name
 EOF
 }
 else
 {
 	
-	convertInput();
+    convertInput();
 }
 
 #-------------------------------------------------------------------------------
@@ -131,62 +131,62 @@ my $blockSeparator;
 
 sub convertInput()
 {
-	$datasetHeader =~ s/myMap/$datasetName/;
-	$datasetHeader =~ s/Triticum_aestivum_IWGSC_RefSeq_v1.0/$parentName/g;
-	$datasetHeader =~ s/_Exome_SNPs/_$datasetName/;
+    $datasetHeader =~ s/myMap/$datasetName/;
+    $datasetHeader =~ s/Triticum_aestivum_IWGSC_RefSeq_v1.0/$parentName/g;
+    $datasetHeader =~ s/_Exome_SNPs/_$datasetName/;
 	
 
-	print $datasetHeader;
-	while (<>)
-	{
-		chomp;
-		# commenting out this condition will output the column headers in the JSON,
-		# which is a useful check of column alignment with the ColumnsEnum.
-		if (! m/^label	chr	pos/)
-		{ snpLine($_); }
-	}
-	optionalBlockFooter();
-	print $datasetFooter;
+    print $datasetHeader;
+    while (<>)
+    {
+        chomp;
+        # commenting out this condition will output the column headers in the JSON,
+        # which is a useful check of column alignment with the ColumnsEnum.
+        if (! m/^label	chr	pos/)
+        { snpLine($_); }
+    }
+    optionalBlockFooter();
+    print $datasetFooter;
 }
 
 sub optionalBlockFooter()
 {
-	if (defined($lastChr))
-	{ print $blockFooter; }
+    if (defined($lastChr))
+    { print $blockFooter; }
 }
 
 # read 1 line, which defines a SNP and associated reference/alternate data
 sub snpLine($)
 {
-	my ($line) = @_;
-	# input line e.g.
-	#c_chr c_pos c_scaffold_pos c_ref_alt
-	#chr1A	22298	scaffold38755_22298	T/C
+    my ($line) = @_;
+    # input line e.g.
+    #c_chr c_pos c_scaffold_pos c_ref_alt
+    #chr1A	22298	scaffold38755_22298	T/C
 
-	my @a =  split( '\t', $line);
-	# tsv datasets often follow the naming convention 'chr1A';  Pretzel data omits 'chr' for block scope & name : '1A'.
-	$a[c_chr] =~ s/^chr//;
-	my $c = $a[c_chr];
-	if (! defined($lastChr) || ($lastChr ne $c))
-	{
-		optionalBlockFooter();
+    my @a =  split( '\t', $line);
+    # tsv datasets often follow the naming convention 'chr1A';  Pretzel data omits 'chr' for block scope & name : '1A'.
+    $a[c_chr] =~ s/^chr//;
+    my $c = $a[c_chr];
+    if (! defined($lastChr) || ($lastChr ne $c))
+    {
+        optionalBlockFooter();
 
-		# print $c;
-		$lastChr = $c;
+        # print $c;
+        $lastChr = $c;
 
-		if (defined($blockSeparator))
-		{ print $blockSeparator; }
-		else
-		{ $blockSeparator = ",\n"; }
+        if (defined($blockSeparator))
+        { print $blockSeparator; }
+        else
+        { $blockSeparator = ",\n"; }
 
-		my $h = $blockHeader;
-		# replace '1A' in the $blockHeader template with the actual chromosome name $c.
-		$h =~ s/1A/$c/g;
-		print $h;
-	}
-	else # print feature separator
-	{ print ","; }
-	printFeature(@a);
+        my $h = $blockHeader;
+        # replace '1A' in the $blockHeader template with the actual chromosome name $c.
+        $h =~ s/1A/$c/g;
+        print $h;
+    }
+    else # print feature separator
+    { print ","; }
+    printFeature(@a);
 }
 
 # For printing array as comma-separated list.
@@ -198,13 +198,13 @@ sub snpLine($)
 
 sub printFeature($)
 {
-	my (@a) = @_;
+    my (@a) = @_;
 
-	my $chr = shift @a;
-	my $pos = shift @a;
-	my $label = shift @a;	# c_scaffold_pos
-	my $ref_alt = shift @a;
-	print <<EOF;
+    my $chr = shift @a;
+    my $pos = shift @a;
+    my $label = shift @a;	# c_scaffold_pos
+    my $ref_alt = shift @a;
+    print <<EOF;
                {
                     "name": "$label",
                     "value": [

@@ -88,7 +88,7 @@ export default Service.extend(Evented, {
    */
   addServer : function (url, user, token, clientId) {
     // const MyComponent = Ember.getOwner(this).factoryFor('component:service/api-server');
-	  let serverBase = 
+    let serverBase = 
       {
         host : url,
         user : user,
@@ -99,7 +99,7 @@ export default Service.extend(Evented, {
     server = ApiServer.create(
       ownerInjection,
       serverBase),
-	  servers = this.get('servers'),
+    servers = this.get('servers'),
     /**  .name is result of .host_safe().
      * -	check if any further sanitising of inputs required */
     nameForIndex = server.get('name');
@@ -200,7 +200,7 @@ export default Service.extend(Evented, {
   },
   stores : computed('servers.@each.store', 'serversLength', function () {
     let
-	  servers = this.get('servers'),
+    servers = this.get('servers'),
     stores = Object.keys(servers).map(
       (name) => servers[name].store);
     dLog('stores', stores, servers);
@@ -215,7 +215,7 @@ export default Service.extend(Evented, {
      *  (s) => { s.dataset = s.object; delete s.object; return s; })
      */
     let
-	  servers = this.get('servers'),
+    servers = this.get('servers'),
     nameList = Object.keys(servers),
     stores = nameList.map(
       (name) => { let server = servers[name]; return {name, server, store: server.store};})
@@ -235,7 +235,7 @@ export default Service.extend(Evented, {
   },
   dataset2stores : function (datasetName) {
     let
-	  servers = this.get('servers'),
+    servers = this.get('servers'),
     nameList = Object.keys(servers),
     stores = nameList.map(
       (name) => { let server = servers[name]; return {name, server, store: server.store};})
@@ -293,7 +293,7 @@ export default Service.extend(Evented, {
       let
       re = error && error.responseJSON && error.responseJSON.error,
       reTexts = re && 
-	['statusCode', 'name', 'message'].reduce((texts, fN) => (texts[fN] = re[fN]) && texts, {});
+        ['statusCode', 'name', 'message'].reduce((texts, fN) => (texts[fN] = re[fN]) && texts, {});
       dLog('ServerLogin', url, user, error, error.statusText, reTexts);
       throw reTexts || error.statusText;
     });

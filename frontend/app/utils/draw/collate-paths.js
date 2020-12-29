@@ -850,9 +850,9 @@ function addPathsToCollation(blockA, blockB, paths)
  */
 function filterAndPathUpdateThrottled(isStream) {
   if (! isStream)
-	  filterAndPathUpdate();
+    filterAndPathUpdate();
   else
-	  throttle(filterAndPathUpdate, 200, false);
+    throttle(filterAndPathUpdate, 200, false);
 }
 function filterAndPathUpdate() {
   filterPaths();
