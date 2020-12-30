@@ -102,6 +102,13 @@ export default Model.extend(Evented, {
     blocks = blockAdjId.map((blockId) => { return this.peekBlock(blockId); } );
     return blocks;
   }),
+  /** @return true if both the blocks of this block-adj are viewed.
+   */
+  isComplete() {
+    let v = this.blocks.mapBy('isViewed'),
+        ok = v[0] && v[1];
+    return ok;
+  },
   referenceBlocks : mapBy('blocks', 'referenceBlock'),
   /** Stacked Blocks - should be able to retire this. */
   sBlocks : computed('blockAdjId', function () {
@@ -204,6 +211,22 @@ export default Model.extend(Evented, {
    * since intervalParams was noted.
    */
   domainChange :  computed('axisDimensions', 'intervalParams', function () {
+    /** when block-adj is created it has 2 viewed blocks, but when one block is
+     * un-viewed, some block-adj CPs may be called from render before the
+     * block-adj is destroyed, i.e. when it has only 1 viewed block.  This can
+     * probably be addressed by removing the later() in flows-collate.js :
+     * blockAdjsCP : later(() => this.set('blockAdjs', ...)) - see comments
+     * there also.
+     * It would be possible to calculate domainChange() for just the remaining
+     * block, using this.blocks.map((b, i) => i) in place of [0, 1] in :
+     * domainChanges = [0, 1].map.  But intervalParams.axes[] will have length
+     * 2 which complicates the comparison, and the result is moot because the
+     * block-adj is about to be destroyed, so simply return false.
+     */
+    if (! this.isComplete()) {
+      return false;
+    }
+
       let intervals = this.get('intervalParams'),
     /** interim measure to include pathsDensityParams in comparison; planning to
      * restructure using CP. */

@@ -137,13 +137,7 @@ export default Component.extend(Evented, AxisEvents, {
   parsedOptions : alias('queryParams.urlOptions'),
 
   pathsDensityParams : alias('pathsP.pathsDensityParams'),
-  /** @return true if both the blocks of this block-adj are viewed.
-   */
-  isComplete() {
-    let v = this.blockAdj.blocks.mapBy('isViewed'),
-        ok = v[0] && v[1];
-    return ok;
-  },
+  isComplete() { return this.blockAdj.isComplete(); },
   pathsResultLength : computed(
     'blockAdj.pathsResultLengthThrottled', 'pathsAliasesResultLength',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
