@@ -1116,7 +1116,7 @@ export default Component.extend(Evented, {
 
     /** For all Axes, store the x value of its axis, according to the current scale. */
     function collateO() {
-      dLog("collateO", oa.axisIDs.length, oa.axisIDs);
+      dLog("collateO", oa.axisIDs.length, oa.stacks.axisIDs());
       oa.stacks.axisIDs().forEach(function(d){
         let o = oa.o;
         if (trace_stack > 1)
@@ -1144,7 +1144,7 @@ export default Component.extend(Evented, {
       // axisName passes filter if it is not already in a stack
       return ! Stacked.getAxis(axisName) && (blocksToDraw.indexOf(axisName) == -1) ; });
     dLog(
-      blocksToDraw, 'viewedBlocks', viewedBlocks,
+      oa.stacks.axisIDs(), blocksToDraw.length, 'viewedBlocks', viewedBlocks,
       'blocksUnviewed', blocksUnviewed, 'blocksToAdd', blocksToAdd);
     if (blocksToAdd.length)
       blocksToDraw = blocksToDraw.concat(blocksToAdd);

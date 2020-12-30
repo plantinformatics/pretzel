@@ -435,7 +435,7 @@ export default Component.extend(Evented, AxisEvents, {
   selectAxisUse() {
     let
     axisG = this.get('axisUse'),
-    axisUse = axisG.selectAll("g.axis-use");
+    axisUse = axisG && axisG.selectAll("g.axis-use");
     return axisUse;
   },
 
@@ -719,7 +719,9 @@ export default Component.extend(Evented, AxisEvents, {
     this.set('allocatedWidthsMax', 0);
     this.get('positionRightEdge').perform();
     let axisUse = this.selectAxisUse();
-    later(() => axisUse.remove(), transitionEnable * 1000 + 100);
+    if (axisUse) {
+      later(() => axisUse.remove(), transitionEnable * 1000 + 100);
+    }
   }
 
 });

@@ -884,7 +884,7 @@ Block.titleTextMax = function (axisName)
 Block.prototype.axisTitleColour = function ()
 {
   let colour,
-  axis1d = this.axis.axis1d;
+  axis1d = this.block.axis1d || this.axis.axis1d;
   if (axis1d && ! axis1d.isDestroyed) {
     let
     blockId = this.getId(),

@@ -462,8 +462,17 @@ export default Model.extend({
     if (parentName)
     {
       /** it is possible that the block may be a copy from a secondary server which is not currently connected. */
-      /** server which this block was received from. */
-      let server = this.get('apiServers').id2Server[this.id];
+      let
+      apiServers = this.get('apiServers'),
+      /** server which this block was received from.
+       *
+       * block id is generally unique across servers, but a reference block may
+       * be copied from another server for use as test data, which would cause
+       * id2Server[] to return the most-recently-connected server with that
+       * block id, whereas servers[this.store.name] will handle that OK.
+       * Otherwise these 2 expressions are equivalent.
+       */
+      server = apiServers.servers[this.store.name] || apiServers.id2Server[this.id];
 
       /** this function is called for each block, e.g. when view / un-view a
        * block. Scanning all blocks is becoming too slow, so an alternate
