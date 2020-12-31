@@ -10,7 +10,8 @@ import { htmlSafe } from '@ember/template';
 const dLog = console.debug;
 
 export default Component.extend({
-  tagName : 'li',
+  /** nav.item now provides <li> */
+  tagName : '',
 
   didRender : function() {
     let server = this.get('apiServer'),
@@ -25,7 +26,10 @@ export default Component.extend({
 
   addClassActive : function()
   {
-    let li = this.element;
+    /** in earlier version <li> was provided by this component
+     * (i.e. this.element), now by the <BsNav> which is the sole child. */
+    let navItem = this.childViews[0];
+    let li = navItem.element;
     console.log('addClassActive', this.apiServerName, li, li && li.classList);
     li.classList.add("active");
   },

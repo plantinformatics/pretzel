@@ -27,11 +27,12 @@ body.mapview div#Page-Body
   bottom: 0;
 }
 
-.nav-tabs > li.active > a,
-.nav-tabs > li.active > a:hover,
-.nav-tabs > li.active > a:focus{
+/* this rule is duplicated in ember-bootstrap/bootstrap/_navs.scss, so get higher specificity by prefixing with body.mapview */
+body.mapview .nav-tabs > li.active > a,
+body.mapview .nav-tabs > li.active > a:hover,
+body.mapview .nav-tabs > li.active > a:focus{
     color: #555555;
-    background-color: lightblue;  
+    background-color: lightblue;
 } 
 
 /* -------------------------------------------------------------------------- */
@@ -907,6 +908,10 @@ li.filter-group > div > span:last-child {
 
 #left-panel-explorer a.apiServer {
     border : 7.5px solid;
+}
+#left-panel-explorer ul.nav-tabs.api-server-tabs > li {
+    margin-top: 2ex;
+    margin-bottom: 1ex;
 }
 #tab-explorer-parent  ul {
   /* there is enough indent in the li, so 0 is enough here. */

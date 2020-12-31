@@ -45,8 +45,7 @@
   <div> {{!-- start of tabs and tree  --}}
 
   <BsTab @customTabs={{true}} as |tab|>
-    <BsNav @type="tabs" as |nav|>
-    <ul class="nav nav-tabs" style="margin-bottom: 1ex;">
+    <BsNav class="api-server-tabs"  @type="tabs" as |nav|>
       {{#each-in servers as |apiServerName apiServer| }}
         {{panel/api-server-tab tab=tab nav=nav apiServerName=apiServerName apiServer=apiServer serverTabSelected=(action "serverTabSelected")}}
       {{/each-in}}
@@ -57,7 +56,6 @@
           icon='plus'
           onClick=(action "addNewDatasource")}}
       </li>
-    </ul>
     </BsNav>
   </BsTab>
 
