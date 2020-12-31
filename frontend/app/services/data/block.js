@@ -1232,47 +1232,7 @@ export default Service.extend(Evented, {
         );
       return records;  // .toArray()
     }),
-  /** @return Map of axes to viewed blocks */
-  axesViewedBlocks_unused : computed(
-    // 'viewed.@each.axis',
-    function () {
-      let records = this.get('viewed'),
-      map = records.reduce(
-        (map, block) => {
-          let axis = this.blockAxis(block);
-          if (axis) {
-            let blocks = map.get(axis);
-            if (! blocks)
-              map.set(axis, blocks = []);
-            blocks.push(block);
-          }
-          return map; },
-        new Map()
-      );
-      console.log('axesViewedBlocks', map, records);
-      return map;
-    }),
-  /** @return Map of axes to loaded viewed child blocks */
-  axesBlocks_unused : computed(
-    // 'loadedViewedChildBlocks.@each.axis',
-    function () {
-      let records = this.get('loadedViewedChildBlocks'),
-      map = records.reduce(
-        (map, block) => {
-          let axis = this.blockAxis(block);
-          if (axis) {
-            let blocks = map.get(axis);
-            if (! blocks)
-              map.set(axis, blocks = []);
-            blocks.push(block);
-          }
-          return map; },
-        new Map()
-      );
 
-      console.log('axesBlocks', map, records);
-      return map;
-    }),
   /** Lookup the axis of block, and if none then use ensureAxis().
    */
   blockAxis(block) {
@@ -1301,8 +1261,6 @@ export default Service.extend(Evented, {
   /** Collate the viewed blocks by their parent block id, or by their own block
    * id if they are not parented.
    * @return Map : blockId -> [block]
-   * @description
-   * Similar to @see axesBlocks().
    */
   dataBlocks : computed(
     'loadedViewedChildBlocks.@each.hasFeatures',

@@ -54,30 +54,6 @@ export default Mixin.create({
    * originally attributes of Stacked.prototype.
    */
 
-  /** Set the domain of the current position using domainCalc() of Block / Axis (Stacked).
-   */
-  updateDomain_unused()
-  {
-    let axisS=this.get('axisS');
-    if (! axisS) {
-      /** This replicates the role of axis-1d.js:axisS();  this will be solved
-       * when Stacked is created and owned by axis-1d.
-       * (also : now using ensureAxis() in data/block.js : axesBlocks())
-       */
-      let axisName = this.get('axis.id');
-      axisS = Stacked.getAxis(axisName);
-      if (axisS) {
-        this.set('axisS', axisS);
-        dLog('axis-1d:updateDomain', this, axisName, axisS);
-      }
-    }
-    if (axisS) {
-      let y = axisS.getY(), ys = axisS.ys;
-      updateDomain(axisS.y, axisS.ys, axisS);
-      let domain = axisS.y.domain();
-      this.setDomain(domain);
-    }
-  },
   /** Set the domain of the current position to the given domain
    */
   setDomain(domain)

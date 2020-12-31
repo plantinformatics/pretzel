@@ -119,20 +119,5 @@ export default Component.extend({
     return count;
   }),
 
-  /** @return blocks which correspond to axes, i.e. are not child blocks.  */
-  axesP_unused : computed('block.viewed', function () {
-    let blockService = this.get('block');
-    let viewedBlocks = blockService.get('viewed');
-    // dLog('viewedBlocks', viewedBlocks);
-    let axesP = viewedBlocks.filter(function (block) {
-      let blockId = block.get('id'),
-      referenceBlock = block.get('referenceBlock');
-      dLog('axesP', block, blockId, referenceBlock && referenceBlock.get('id'));
-      return referenceBlock === undefined;
-    });
-    dLog('axesP', axesP, axesP.mapBy('_internalModel.__data'));
-    return axesP;
-  })
-
 });
 

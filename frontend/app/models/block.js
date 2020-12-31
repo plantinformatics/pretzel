@@ -233,29 +233,6 @@ export default Model.extend({
     }
     return featuresDomain;
   }),
-  setDomain_unused : function (domain) {
-    if (domain) {
-      let featuresDomain = this.get('featuresDomainValue');
-      function trace (i) { if (trace_block) dLog('setDomain', featuresDomain, domain, i); }
-      if (! featuresDomain) {
-        trace('initialise');
-        featuresDomain = A(domain);
-      }
-      else {
-        /* if domain is outside current value then update;
-         * possibly update if !=, i.e. change < and > to !=
-         */
-        if (featuresDomain[0] > domain[0]) {
-          trace(0);
-          featuresDomain[0] = domain[0];
-        }
-        if (featuresDomain[1] < domain[1]) {
-          trace(1);
-          featuresDomain[1] = domain[1];
-        }
-      }
-    }
-  },
   /** featureLimits is returned from API for all blocks initially.
    * featuresDomainUpdate is essentially equivalent.
    * If there are local changes (features added or feature values changed) then

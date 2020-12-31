@@ -51,7 +51,7 @@ export default Component.extend(Evented, AxisEvents, {
    */
 
   /** @return the list of data blocks of this axis. These are the Ember Data store
-   * blocks, collated based on the ComputedProperty axesBlocks.
+   * blocks, collated based on the ComputedProperty loadedViewedChildBlocks.
    *
    * @return [] if there are no blocks with data in the axis.
    */
@@ -65,7 +65,7 @@ export default Component.extend(Evented, AxisEvents, {
     'blockService.viewed.[]',
     function () {
       let
-        /** related : blockService.axesBlocks, axis1d.dataBlocks */
+        /** related : axis1d.dataBlocks */
         dataBlocksMap = this.get('blockService.dataBlocks'),
       id = this.get('axisID'),
       dataBlocks = (dataBlocksMap && dataBlocksMap.get(id)) || [];

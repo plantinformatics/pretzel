@@ -394,31 +394,6 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }
     return axisS;
   }),
-  /** new dataBlocks() is replacing this version, renamed as axisSdataBlocks().
-   * @return data blocks of this axis.
-   * These are the Ember records, not the stack Block-s.
-   */
-  axisSdataBlocks_unused : computed('axisS', 'blockService.axesBlocks.@each', function () {
-    let axis = this.get('axisS'),
-    dataBlocks,
-    axesBlocks = this.get('blockService.axesBlocks');
-    if (! axis) {
-      /* We can add a ComputedProperty for axes - allocate a Stack and Stacked
-       * (axis) for newly viewed non-child blocks. */
-      dataBlocks = [];
-      let
-        axisName = this.get('axis.id');
-      dLog('dataBlocks', axesBlocks, axisName, dataBlocks);
-    }
-    else {
-    let
-    /** stack Block-s. */
-      dataBlocksS = axis.dataBlocks();
-      dataBlocks = dataBlocksS.map(function (b) { return b.block; });
-    dLog(dataBlocksS, 'axesBlocks', axesBlocks, axis.axisName);
-    }
-    return dataBlocks;
-  }),
   /** viewed blocks on this axis.
    * For just the data blocks (depends on .hasFeatures), @see dataBlocks()
    */
@@ -543,18 +518,6 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     defined = ! noDomain(domain);
     return defined;
   }),
-  blocksDomainEffect_unused : computed('blocksDomain', function () {
-    let domain = this.get('blocksDomain'),
-    domainDefined = this.get('domainDefined');
-    if (domainDefined && ! this.get('zoomed'))
-      /* defer setting yDomain to the end of this render, to avoid assert fail
-       * re. change of domainChanged, refn issues/13948;
-       * that also breaks progressive loading and axis & path updates from zoom.
-       */
-      later(() => {
-        this.setDomain(domain);
-      });
-  }),
   /** Update the domain of the Y scales. */
   updateScaleDomain() {
     if (this.isDestroyed) return undefined;
@@ -669,44 +632,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
   /** @param [axisID, t] */
   zoomedAxis : function(axisID_t) { },
-  zoomedAxis_unused : function(axisID_t) {
-    let axisID = axisID_t[0],
-    axisName = this.get('axis.id');
-    dLog("zoomedAxis in components/axis-1d", axisID_t, axisName);
-    if (axisID == axisName)
-    {
-      dLog('zoomedAxis matched', axisID, this.get('axis'));
-      // Not currently needed because axisStackChanged() already received.
-      // this.renderTicksDebounce.apply(this, axisID_t);
-      let axisS = this.get('axisS'),
-      dimensions = axisS.axisDimensions();
-      dLog('zoomedAxis setDomain', this.get('domain'), this.get('currentPosition'), this.get('currentPosition.yDomain'), dimensions.domain);
-      this.setDomain(dimensions.domain);
-      // this.set('zoomed', dimensions.zoomed);
-      dLog('zoomedAxis', axisS, dimensions);
-    }
-  },
-  setDomain_unused(domain) {
-    let
-      attr = this.get('domain');
-    let cpDomain = this.get('currentPosition.yDomain');
-    /* verification - this confirms that if zoomedAxis() -> setDomain() then
-     * .currentPosition.yDomain has already been set to domain.
-     * So zoomedAxis() and setDomain() are disabled by appending _unused to their names.
-     */
-    if (! isEqual(cpDomain, domain)) {
-      dLog('setDomain', cpDomain, domain, attr);
-    }
-    if (! attr)
-      this.set('domain', A(domain));
-    else
-    {
-      domain.forEach((d, i) => {
-        this.set('domain.' + i, d);
-      });
-    }
-    dLog('setDomain', domain, attr /*, this.attrs*/);
-  },
+
   /** position when last pathUpdate() drawn. */
   position : alias('lastDrawn.yDomain'),
   /** position as of the last zoom. */
