@@ -5563,7 +5563,7 @@ export default Component.extend(Evented, {
          */
         if (me.get('menuAxis') && (me.get('menuAxis') !== block)) {
           me.set('menuAxis', undefined);
-          later(() => me.set('menuAxis', block), 500);
+          later(() => me.set('menuAxis', block));
         } else {
           me.set('menuAxis', block);
         }
