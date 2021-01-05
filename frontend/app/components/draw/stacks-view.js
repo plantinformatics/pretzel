@@ -76,7 +76,10 @@ export default Component.extend({
   /** Map the keys (blockId) of axesBlocks to the primary or reference block of each axis.
    * @return  array of blocks (store Object)
    */
-  axesP : computed('axesBlocks.@each', 'viewed.[]', function () {
+  axesP : computed('axesBlocks', 'stacks.axesPCount', 'viewed.[]', function () {
+    /* dependency on axesBlocks.@each would be preferred if possible, but it is a hash not an array.
+     * in lieu of that, use stacks.axesPCount
+     */
     let axesBlocks = this.get('axesBlocks'),
     axisIDs = Object.keys(axesBlocks),
     axesP = axisIDs.map((axisID) => {

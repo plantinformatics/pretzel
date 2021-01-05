@@ -24,13 +24,31 @@ export default Component.extend(Evented, /*AxisEvents,*/ {
     this._super(...arguments);
 
     this.get('block').set('axes1d', this);
+    this.set('axis1dArray', Ember.A());
   },
 
   /*--------------------------------------------------------------------------*/
 
+  /** Maintain a list of child axis-1d components, .axis1dArray
+   */
+  axis1dExists(axis1d, exists) {
+    let axis1dArray = this.get('axis1dArray');
+    dLog('axis1dExists', axis1d, axis1dArray);
+    let i = axis1dArray.indexOf(axis1d);
+    if (exists && (i === -1)) {
+      /** since (i === -1) here we can use pushObject(); addObject() can be
+       * used without checking indexOf().  */
+      axis1dArray.pushObject(axis1d);
+      dLog('axis1dExists pushed', axis1d, axis1dArray);
+    } else if (! exists && (i !== -1)) {
+      axis1dArray.removeAt(i, 1);
+      dLog('axis1dExists removed', axis1d, i, axis1dArray);
+    }
+  },
+
   /** @return the axis-1d components, which are child components of this
    * component, distinguished by having a .axis attribute.  */
-  axis1dArray : computed('axesP.[]', function () {
+  axis1dArrayCP : computed('axesP.[]', function () {
     let axes1d = this.get('childViews')
         .filter((a1) => ! a1.isDestroying && a1.axis);
     dLog('axis1dArray', axes1d);
