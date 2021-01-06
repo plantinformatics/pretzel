@@ -153,15 +153,16 @@ export default ManageBase.extend({
     let
       name = this.get('serverTabSelected'),
     /** server of the selected tab. */
-    serverSo = name &&
-      this.get('apiServers').lookupServer(name),
+    serverSo = name ?
+      this.get('apiServers').lookupServer(name) :
+      this.apiServers.primaryServer,
     datasetsBlocks = serverSo && serverSo.get("datasetsBlocks");
     if (datasetsBlocks && trace_dataTree > 1)
     {
       dLog('datasetsBlocks', serverSo, datasetsBlocks);
     }
     let isPrimary = serverSo && (this.get('apiServers').get('primaryServer') === serverSo);
-    if (! name || (! datasetsBlocks && isPrimary))
+    if (! datasetsBlocks && (! name || isPrimary))
     {
       /* this is using the model datasets list for the primary API.
        * Perhaps instead will change mapview to use apiServers service.
