@@ -188,7 +188,7 @@ export default Model.extend(Evented, {
    * @see axes()
    * @see axesDomains()
    */
-  axisDimensions :  computed('axes', 'zoomCounter', function () {
+  axisDimensions :  computed('axes', 'zoomCounter', 'domains.{0,1}.{0,1}', function () {
     let 
       axes = this.get('axes'),
       intervals =
@@ -210,7 +210,10 @@ export default Model.extend(Evented, {
   /** Result is true if the domains of the axes of this blockAdj have changed
    * since intervalParams was noted.
    */
-  domainChange :  computed('axisDimensions', 'intervalParams', function () {
+  domainChange :  computed(
+    'axisDimensions',
+    'intervalParams',
+    function () {
     /** when block-adj is created it has 2 viewed blocks, but when one block is
      * un-viewed, some block-adj CPs may be called from render before the
      * block-adj is destroyed, i.e. when it has only 1 viewed block.  This can
