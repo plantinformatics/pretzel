@@ -2222,7 +2222,7 @@ Stacked.prototype.axisDimensions = function ()
   dim = { domain, range : this.yRange(), zoomed};
   let
   currentPosition = axis1d && axis1d.get('currentPosition');
-  if (! isEqual(domain, currentPosition.yDomain))
+  if (! currentPosition || ! isEqual(domain, currentPosition.yDomain))
     dLog('axisDimensions', domain, currentPosition.yDomain, zoomed, currentPosition);
   return dim;
 };

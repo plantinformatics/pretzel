@@ -324,11 +324,11 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       }
     }
 
-    this.axis1dExists(this, true);
+    next(() => this.axis1dExists(this, true));
   },
 
   willDestroyElement() {
-    this.axis1dExists(this, false);
+    next(() => this.axis1dExists(this, false));
     this._super(...arguments);
   },
 
