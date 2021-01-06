@@ -75,20 +75,35 @@ const dLog = console.debug;
  */
 function  configureHorizTickHover(location)
 {
+  d3.select(this).on('mouseover', showHorizTickHover.bind(this, location));
+  d3.select(this).on('mouseout', hideHorizTickHover.bind(this));
+}
+function showHorizTickHover (location) {
   // console.log("configureHorizTickHover", location, this, this.outerHTML);
   /** typeof location may also be "number" or "object" - array : syntenyBlocks[x] */
   let text = (location == "string") ? location :  "" + location;
+  let $this=$(this);
   let node_ = this;
-  if ($(node_).popover)
+  if ($(node_).popover) {
+    /** refn : node_modules/bootstrap/js/popover.js */
+    let data    = $this.data('bs.popover');
+    if (! data) {
+      /** https://getbootstrap.com/docs/3.4/javascript/#popovers */
   $(node_)
     .popover({
-      trigger : "click hover",
+      trigger : "manual",	// was : click hover
       sticky: true,
       delay: {show: 200, hide: 3000},
       container: 'div#holder',
       placement : "auto right",
       content : text
     });
+    }
+    $this.popover('show');
+  }
+}
+function hideHorizTickHover() {
+  $(this).popover('hide');
 }
 /*----------------------------------------------------------------------------*/
 
