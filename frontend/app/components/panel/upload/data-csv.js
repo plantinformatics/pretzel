@@ -1,8 +1,10 @@
-import { debounce } from '@ember/runloop';
-import { observer } from '@ember/object';
+import { debounce, later as run_later } from '@ember/runloop';
+import { observer, computed } from '@ember/object';
 import { Promise } from 'rsvp';
 import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
+
+const dLog = console.debug;
 
 import UploadBase from './data-base';
 
@@ -29,6 +31,44 @@ export default UploadBase.extend({
 
   didInsertElement() {
     this._super(...arguments);
+  },
+
+  activeEffect : computed('active', function () {
+    let active = this.get('active');
+    if (active) {
+      this.shownBsTab();
+    }
+  }),
+  /** Called when user clicks on nav tab of Upload panel.
+   * action is now used in instead of listening for .on('shown.bs.tab'); the
+   * bs.tab events are probably no longer available since using ember-bootstrap
+   * because .active is set by ember when the route matches the <a href>, refn :
+   * https://guides.emberjs.com/release/routing/linking-between-routes/#toc_active-css-class
+   *
+   * bootstrap/js/tab.js : show() will return without doing
+   * $this.trigger(showEvent) if li.hasClass('active'); also note show() is only
+   * called if <nav.item> <a> has data-toggle="tab".
+   */
+  shownBsTab() {
+    /** Both .createTable() and .updateSettings() require a delay.
+     * Without this delay the table is not displayed because this element has
+     * 0px height & width :
+     *  div#hotable > div.ht_master.handsontable > div.wtHolder */
+    run_later(() => this.showTable(), 500);
+  },
+  showTable() {
+    // Ensure table is created when tab is shown
+    let table = this.get('table');
+    if (! table) {
+      this.createTable();
+    } else {
+      // trigger rerender when tab is shown
+      table.updateSettings({});
+    }
+  },
+
+  createTable() {
+    dLog('createTable');
     var that = this;
     $(function() {
       let hotable = $("#hotable")[0];
@@ -79,10 +119,7 @@ export default UploadBase.extend({
         licenseKey: config.handsOnTableLicenseKey
       });
       that.set('table', table);
-      $('.nav-tabs a[href="#left-panel-upload"]').on('shown.bs.tab', function() {
-        // trigger rerender when tab is shown
-        table.updateSettings({});
-      });
+
     });
   },
 
