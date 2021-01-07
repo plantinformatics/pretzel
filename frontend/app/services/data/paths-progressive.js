@@ -305,8 +305,12 @@ export default Service.extend({
       let fn = store.normalize('feature', f);
       c = store.push(fn);
       let blockId = f.blockId;
-      if (blockId.get)
+      // equivalent : (typeof blockId !== "string")
+      if (blockId.get) {
         blockId = blockId.get('id');
+      }
+      if (trace_pathsP > 3)
+	dLog('pushFeature', f.blockId, c.get('blockId.features.length'), c.get('blockId.featuresLength'), f, 'featuresLength');
       storeFeature(stacks.oa, flowsService, f.name, c, blockId);
       if (trace_pathsP > 2)
         dLog(c.get('id'), c._internalModel.__data);

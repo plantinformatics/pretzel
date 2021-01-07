@@ -209,7 +209,7 @@ export default Model.extend({
       dLog('featuresLengthUpdateThrottle', featuresLength, this.get('id'));
     this.set('featuresLengthThrottled', featuresLength);
   },
-  featuresLengthObserver : observer('features', function () {
+  featuresLengthObserver : observer('features.length', function () {
     debounce(this, this.featuresLengthUpdate, 200);
     throttle(this, this.featuresLengthUpdateThrottle, 1000, true);
     let featuresLength = this.get('features.length');
@@ -237,6 +237,7 @@ export default Model.extend({
    * featuresDomainUpdate is essentially equivalent.
    * If there are local changes (features added or feature values changed) then
    * featuresDomainUpdate might be used also.
+   * Used in axis-1d : @see dataBlocksDomains().
    */
   featuresDomain : alias('featureLimits'),
 

@@ -480,6 +480,9 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   },
   /** @return the domains of the data blocks of this axis.
    * The result does not contain a domain for data blocks with no features loaded.
+   *
+   * These events are input to the chain dataBlocksDomains -> blocksDomains ->
+   *   blocksDomain -> domain -> domainChanged -> scaleChanged
    */
   dataBlocksDomains : computed('dataBlocks.@each.featuresDomain', function () {
     let dataBlocks = this.get('dataBlocks'),
@@ -563,7 +566,15 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * Maybe : Also depend on block.featuresForAxis, to trigger a request for features of
    * a block when it is added to an axis.
    */
-  featureLength : computed('dataBlocks.@each.{featuresLengthThrottled,featuresForAxis}', function () {
+  featureLength : computed(
+    /** depend on both featuresLength{Debounced,Throttled} because we want a
+     * steady flow of updates (throttled) and the trailing edge / final value
+     * update (debounced).  In practice, Features are received in bursts (API
+     * responses) so the throttled events may not occur.
+     * lodash has options to combine these features into a single function.
+     */
+    'dataBlocks.@each.{featuresLengthDebounced,featuresLengthThrottled,featuresForAxis}', 
+    function () {
     let dataBlocks = this.get('dataBlocks'),
     featureLengths = dataBlocks.map(function (b) { return b.get('featuresLength'); } ),
     featureLength = sum(featureLengths);
