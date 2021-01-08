@@ -193,7 +193,9 @@
               selectDataset="selectDataset"}}
           {{/each}}
           <li 
-              class="list-group-item list-group-item-info">
+              class="list-group-item list-group-item-info"
+	      style="margin-top: 4ex;" >
+	      {{!-- margin-top provides room for the pull-down of the last dataset above. --}}
             {{elem/icon-base name='cloud-upload'}} &nbsp;Upload new data
             <span class="pull-right">
               {{elem/button-base
