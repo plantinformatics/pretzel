@@ -148,11 +148,18 @@ export default ManageBase.extend({
   /** Return a list of datasets, with their included blocks, for the currently-selected
    * API server tab
    */
-  datasetsBlocks : computed('datasetsBlocksRefresh', 'serverTabSelected', 'primaryDatasets', function() {
+  datasetsBlocks : computed(
+    'datasetsBlocksRefresh',
+    'serverTabSelected',
+    'primaryDatasets',
+    'apiServers.serverSelected.datasetsBlocks.[]',
+    function() {
     /** e.g. "http___localhost_5000"  */
     let
       name = this.get('serverTabSelected'),
-    /** server of the selected tab. */
+    /** server of the selected tab.
+     * This is equivalent to this.apiServers.serverSelected
+     */
     serverSo = name ?
       this.get('apiServers').lookupServer(name) :
       this.apiServers.primaryServer,

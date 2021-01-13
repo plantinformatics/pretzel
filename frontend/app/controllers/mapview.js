@@ -211,24 +211,23 @@ export default Controller.extend(Evented, {
       dLog('controller/mapview: updateModel()', model);
 
       let serverTabSelectedName = this.get('controlsService.serverTabSelected'),
-      serverTabSelected = serverTabSelectedName && this.get('apiServers').lookupServerName(serverTabSelectedName);
-      if (serverTabSelected)
-      {
-        let datasetsTask = serverTabSelected.getDatasets();
-      }
-      else
+      serverTabSelected = this.get('apiServers.serverSelected'),
+      datasetsTask = serverTabSelected && serverTabSelected.getDatasets();
       {
       let
-      taskGetList = this.get('dataset.taskGetList'),
-      newTaskInstance = taskGetList.perform();
+      /** expect that both serverTabSelected and datasetsTask are defined, regardless of serverTabSelectedName.  */
+      newTaskInstance = datasetsTask || Promise.resolve([]);
       dLog('controller/mapview: updateModel()', newTaskInstance);
       model.set('availableMapsTask', newTaskInstance);
 
       /** If this is called as refreshDatasets from data-csv then we want to get
        * blockFeatureLimits for the added block.
+       * Perhaps can pass (undefined, {server : serverTabSelected}), and also
+       * check if blocksLimitsTask.get('isRunning') (factor out of
+       * mapview:model() )
        */
       newTaskInstance.then((datasets) => {
-        this.get('block').ensureFeatureLimits();
+        this.get('block').getBlocksLimits();
       });
       }
     }
@@ -322,7 +321,7 @@ export default Controller.extend(Evented, {
     let getBlocks = blockService.get('getBlocksSummary');
     let blocksSummaryTasks = getBlocks.apply(blockService, [[id]]);
     /* get featureLimits if not already received.
-     * Also adding a similar request to updateModal (refreshDatasets) so by this
+     * Also adding a similar request to updateModel (refreshDatasets) so by this
      * time that result should have been received.
      */
     let block = this.blockFromId(id);

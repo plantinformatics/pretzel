@@ -31,6 +31,7 @@ export default Service.extend(Evented, {
   store: service(),
   dataset: service('data/dataset'),
   storeManager: service('multi-store'),
+  controls : service(),
 
   servers : EmberObject.create(),
   serversLength : 0,
@@ -168,6 +169,28 @@ export default Service.extend(Evented, {
     index = nameList.indexOf(name);
     return index;
   },
+  /*--------------------------------------------------------------------------*/
+  /** The user selection of one of the server tabs in the data explorer
+   * indicates which server should be the request target for upload, datasets
+   * refresh and display in explorer.
+   * @return the selected api-server, or default to primaryServer if none selected.
+   */
+  serverSelected : computed('controls.serverTabSelected', function () {
+    /** As this function depends on controls.serverTabSelected, it could be
+     * split out of this service into a service object with a constructor param
+     * serverName, to enable different components to utilise different servers.
+     */
+    let
+    serverTabSelectedName = this.get('controls.serverTabSelected'),
+    serverTabSelected = serverTabSelectedName ?
+      this.lookupServerName(serverTabSelectedName) :
+      this.primaryServer;
+    dLog('serverSelected', serverTabSelectedName, serverTabSelected);
+    return serverTabSelected;
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
 
   addId : function(server, id) {
     let map = this.get('obj2Server');
