@@ -1,17 +1,16 @@
 import { computed } from '@ember/object';
-import DS from 'ember-data';
-import attr from 'ember-data/attr';
+import Model, { attr, belongsTo, hasMany } from '@ember-data/model';
 //import Fragment from 'model-fragments/fragment';
 
-export default DS.Model.extend({
-  blockId: DS.belongsTo('block'),
+export default Model.extend({
+  blockId: belongsTo('block'),
   name: attr('string'),
   /* currently have a mix of .range and .value in pretzel-data [develop];
    * handle both for now;  chrData() also handles either.  */
   value: attr(),
   range: attr(),
-  parentId: DS.belongsTo('feature', {inverse: 'features'}),
-  features: DS.hasMany('feature', {inverse: 'parentId'}),
+  parentId: belongsTo('feature', {inverse: 'features'}),
+  features: hasMany('feature', {inverse: 'parentId'}),
 
   /*--------------------------------------------------------------------------*/
 

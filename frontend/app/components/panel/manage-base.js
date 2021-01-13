@@ -1,8 +1,7 @@
-import Ember from 'ember';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
-const { Component, inject: { service } } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   store: service(),
   tagName: 'div',
   // attributes

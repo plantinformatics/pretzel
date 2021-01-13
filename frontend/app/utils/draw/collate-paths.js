@@ -1,11 +1,23 @@
-import Ember from 'ember';
-
-const { inject: { service } } = Ember;
+import { throttle } from '@ember/runloop';
+import $ from 'jquery';
+import { inject as service } from '@ember/service';
 
 import { isEqual } from 'lodash/lang';
 
-import { Block, /*Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText*/, axisId2Name } from '../stacks';
-import { collateAdjacentAxes, log_adjAxes, log_adjAxes_a } from '../stacks-adj';
+import {
+  Block,
+  /*Stacked,
+  Stack,
+  */ stacks /*,
+  xScaleExtend,
+  axisRedrawText*/,
+  axisId2Name
+} from '../stacks';
+import {
+  collateAdjacentAxes,
+  log_adjAxes,
+  log_adjAxes_a
+} from '../stacks-adj';
 
 import { isOtherField } from '../field_names';
 import { breakPoint } from '../breakPoint';
@@ -98,7 +110,7 @@ function countPathsWithData(svgRoot)
     console.log("countPathsWithData", svgRoot);
   if (svgRoot)
   {
-    let paths = Ember.$("path[d!=''][d]"),
+    let paths = $("path[d!=''][d]"),
     nPaths = paths.length;
     svgRoot.classed("manyPaths", nPaths > 200);
     if (trace_path)
@@ -154,7 +166,7 @@ function ensureFeatureIndex(featureId, featureName, blockId)
       oa.featureIndex[featureId] = f;
     }
   }
-};
+}
 /** Lookup the featureName and blockId of featureId,
  * and call @see ensureFeatureIndex().
  * @param featureId
@@ -179,7 +191,7 @@ function featureLookupName(featureId)
     ensureFeatureIndex(featureId, featureName, blockId);
   }
   return featureName;
-};
+}
 
 
 
@@ -838,9 +850,9 @@ function addPathsToCollation(blockA, blockB, paths)
  */
 function filterAndPathUpdateThrottled(isStream) {
   if (! isStream)
-	  filterAndPathUpdate();
+    filterAndPathUpdate();
   else
-	  Ember.run.throttle(filterAndPathUpdate, 200, false);
+    throttle(filterAndPathUpdate, 200, false);
 }
 function filterAndPathUpdate() {
   filterPaths();

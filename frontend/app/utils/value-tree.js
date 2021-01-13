@@ -1,6 +1,8 @@
 
 /* global Ember */
 
+import { isArray } from '@ember/array';
+
 const trace_values = 0;
 const dLog = console.debug;
 
@@ -82,7 +84,7 @@ function logV(levelMeta, v) {
   /** may have Ember.isArray(v) and (typeof v === 'object') (e.g. result of
    * computed property / promise array proxy), so test for array first.
    */
-  else if (Ember.isArray(v)) {
+  else if (isArray(v)) {
     v.forEach(function (value) {
       console.log(levelMeta.get(value));
       logV(levelMeta, value);

@@ -1,5 +1,6 @@
+import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import ManageBase from './manage-base';
-import Ember from 'ember';
 
 /** @param: dataset **/
 
@@ -10,9 +11,9 @@ export default ManageBase.extend({
   editorVisible: false,
   currentMeta: {},
 
-  ownedByMe: Ember.computed.alias("dataset.owner"),
-  datasetMeta: Ember.computed("dataset.meta", function() {
-    let meta = this.get("dataset.meta") || {},
+  ownedByMe: alias("dataset.owner"),
+  datasetMeta: computed("dataset._meta", function() {
+    let meta = this.get("dataset._meta") || {},
     apiHost = this.get("dataset.store.name");
     if (apiHost)
       meta.apiHost = apiHost;
@@ -33,7 +34,7 @@ export default ManageBase.extend({
     },
     saveJSONToDB() {
       dLog('saveJSONToDB()', 'currentMeta', this.get("currentMeta"));
-      this.set("dataset.meta", this.get("currentMeta"));
+      this.set("dataset._meta", this.get("currentMeta"));
       this.get("dataset").save();
       this.send("toggleEditor");
     }

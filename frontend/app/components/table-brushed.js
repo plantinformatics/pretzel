@@ -1,5 +1,8 @@
-import Ember from 'ember';
-import {  eltClassName  } from '../utils/domElements';
+import $ from 'jquery';
+import Component from '@ember/component';
+import { observer } from '@ember/object';
+
+import { eltClassName } from '../utils/domElements';
 
 import config from '../config/environment';
 
@@ -9,7 +12,7 @@ import config from '../config/environment';
 const trace = 0;
 const dLog = console.debug;
 
-export default Ember.Component.extend({
+export default Component.extend({
 
   actions : {
 
@@ -63,7 +66,7 @@ export default Ember.Component.extend({
     var that = this;
     dLog("createTable", this);
 
-    let tableDiv = Ember.$("#table-brushed")[0];
+    let tableDiv = $("#table-brushed")[0];
     dLog("tableDiv", tableDiv);
       var table = new Handsontable(tableDiv, {
         data: this.get('data') || [['', '', '']],
@@ -130,7 +133,7 @@ export default Ember.Component.extend({
   },
 
 
-  onSelectionChange: function () {
+  onSelectionChange: observer('data', function () {
     let data = this.get('data'),
     me = this,
     table = this.get('table');
@@ -141,7 +144,7 @@ export default Ember.Component.extend({
       me.send('showData', data);
       table.updateSettings({data:data});
     }
-  }.observes('data'),
+  }),
 
   highlightFeature: function(feature) {
     d3.selection.prototype.moveToFront = function() {

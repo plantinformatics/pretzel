@@ -1,11 +1,17 @@
-import Ember from 'ember';
-
-const { inject: { service } } = Ember;
+import { computed } from '@ember/object';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
 
 import AxisEvents from '../../utils/draw/axis-events';
 import { stacks, Stacked } from '../../utils/stacks';
-import { selectAxis, blockAdjKeyFn, blockAdjEltId, foregroundSelector, selectBlockAdj } from '../../utils/draw/stacksAxes';
+import {
+  selectAxis,
+  blockAdjKeyFn,
+  blockAdjEltId,
+  foregroundSelector,
+  selectBlockAdj
+} from '../../utils/draw/stacksAxes';
 
 /* global d3 */
 
@@ -35,7 +41,7 @@ let trace_path = 1;
  *
  * @param ffaa  i.e. feature0, feature1, block0, block1
  */
-export default Ember.Component.extend({
+export default Component.extend({
   /** 
    * Related : unique_1_1_mapping, pathDataInG
    */
@@ -50,8 +56,8 @@ export default Ember.Component.extend({
   /** currently feature{0,1} are in this component, and they reference their respective blocks.
    * May instead use models/draw/path-data for the data attributes, or a non-store object.
    */
-  blockId0 : Ember.computed('feature0.blockId.id', function () { return this.feature2BlockId(0); }),
-  blockId1 : Ember.computed('feature1.blockId.id', function () { return this.feature2BlockId(1); }),
+  blockId0 : computed('feature0.blockId.id', function () { return this.feature2BlockId(0); }),
+  blockId1 : computed('feature1.blockId.id', function () { return this.feature2BlockId(1); }),
 
 
     /** Determine the svg <path> data attribute for this component.

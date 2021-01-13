@@ -1,5 +1,8 @@
 // for VLinePosition :
-import Ember from 'ember';
+import { assert } from '@ember/debug';
+
+import { later, bind } from '@ember/runloop';
+import EmberObject, { get } from '@ember/object';
 import { isEqual } from 'lodash/lang';
 
 
@@ -7,9 +10,21 @@ import { isEqual } from 'lodash/lang';
 
 /*----------------------------------------------------------------------------*/
 
-import  { dragTransitionEnd} from '../utils/stacks-drag';
-import { round_2, checkIsNumber} from '../utils/domCalcs';
-import {  Axes, noDomain, yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, highlightId, axisTitleColour  }  from './draw/axis';
+import  { dragTransitionEnd } from '../utils/stacks-drag';
+import { round_2, checkIsNumber } from '../utils/domCalcs';
+import {
+  Axes,
+  noDomain,
+  yAxisTextScale,
+  yAxisTicksScale,
+  yAxisBtnScale,
+  yAxisTitleTransform,
+  eltId,
+  axisEltId,
+  eltIdAll,
+  highlightId,
+  axisTitleColour
+} from './draw/axis';
 import { variableBands } from '../utils/variableBands';
 import { isOtherField } from '../utils/field_names';
 import { Object_filter } from '../utils/Object_filter';
@@ -72,11 +87,11 @@ stacks.init = function (oa_)
       stacks.axes = {};
 
     axes1d = stacks.axes1d = {};
-    stacks.axesPCount = Ember.Object.create({ count: 0 });
+    stacks.axesPCount = EmberObject.create({ count: 0 });
     /* Counts which are used as ComputedProperty dependencies, so that stacks.js
      * classes imperative actions can feed into CP data flows.
      * This can merge with axesPCount as .counts.{axesP,stacks} */
-    stacks.stacksCount = Ember.Object.create({ count: 0 });
+    stacks.stacksCount = EmberObject.create({ count: 0 });
 
   }
 };
@@ -110,7 +125,7 @@ function Block(block) {
   /** .visible indicates the features of this block will be included in axis brushes & paths.  */
   this.visible = true;
   dLog("Block()", this, block, axisName);
-};
+}
 /** At some point .axisName will be renamed to .blockId; this function will make
  * that transparent, and avoid confusion with .getAxis().
  * @return blockId of this block, aka .axisName
@@ -121,8 +136,7 @@ Block.prototype.getId = function()
 };
 /** Set .axis
  *
- * Because .axis is used as a dependent key in a ComputedProperty, Ember adds
- * .set() and then this must be used.
+ * Because .axis is used as a dependent key in a ComputedProperty, treat value as final.
  * @param a axis (Stacked)
  */
 Block.prototype.setAxis = function(a)
@@ -131,9 +145,7 @@ Block.prototype.setAxis = function(a)
     dLog('setAxis', !!this.block.set, a);  this.log();
   }
   this.axis = a;
-  if (this.block && this.block.set) {
-    Ember.run.later(() => this.block.set('axis', a) );
-  }
+
   if (false)
   /* The block-adj CP axes depends on .axislater, setting this field triggers a
    * render, so without run.later the code following the call to setAxis() would
@@ -143,7 +155,7 @@ Block.prototype.setAxis = function(a)
    * planning to see the stacks / axes as part of the model and update them
    * before render.
    */
-    Ember.run.later(() => {
+    later(() => {
       if (this.set)
         this.set('axislater', a);
       else
@@ -274,7 +286,7 @@ function Stacked(axisName, portion) {
   axesP[axisName] =
   oa.axes[axisName] = this;
   stacks.axesPCount.incrementProperty('count');
-};
+}
 Stacked.prototype.referenceBlock = undefined;
 Stacked.prototype.axisName = undefined;
 Stacked.prototype.portion = undefined;
@@ -303,7 +315,7 @@ Stacked.axis1dAdd = function (axisName, axis1dComponent) {
 };
 Stacked.axis1dRemove = function (axisName, axis1dComponent) {
   if (axes1d[axisName] !== axis1dComponent)
-    Ember.assert('axis1dRemove', axes1d, axisName, axis1dComponent);
+    assert('axis1dRemove', axes1d, axisName, axis1dComponent);
   else
     delete axes1d[axisName];
 };
@@ -841,7 +853,7 @@ Block.prototype.titleText = function ()
 {
   let axisName = this.block.get('id'),
   cmName = oa.cmName[axisName],
-  shortName = cmName && cmName.dataset.get('meta.shortName'),
+  shortName = cmName && cmName.dataset.get('_meta.shortName'),
   name = shortName || cmName.mapName,
   featureCount = this.block && this.block.get('featureCount'),
   featureCountLoaded = this.block.get('featuresLength'),
@@ -872,7 +884,7 @@ Block.titleTextMax = function (axisName)
 Block.prototype.axisTitleColour = function ()
 {
   let colour,
-  axis1d = this.axis.axis1d;
+  axis1d = this.block.axis1d || this.axis.axis1d;
   if (axis1d && ! axis1d.isDestroyed) {
     let
     blockId = this.getId(),
@@ -923,7 +935,7 @@ function Stack(stackable) {
   this.add(stackable);
   dLog(this, stackable, ".stack", stackable.stack);
   setCount('Stack() stacksCount');
-};
+}
 /** Update stacks.stacksCount.count */
 function setCount(label) {
   let newCount = stacks.length - (stacks.toDeleteAfterDrag ? 1 : 0);
@@ -935,7 +947,7 @@ function setCount(label) {
    * ... modified "resizeEffect" twice on component:draw-map ... in a single
    * render
    */
-  Ember.run.later(function () {
+  later(function () {
     stacks.stacksCount.set('count', newCount);
   });
 }
@@ -1216,7 +1228,7 @@ Stack.prototype.sideClasses = function ()
 };
 Stacked.prototype.axisSide = function () {
   let stackClass = this.stack.sideClasses(),
-  extended = Ember.get(this, 'axis1d.extended'),
+  extended = get(this, 'axis1d.extended'),
   /** use of d3.axisLeft() / axisRight() does not seem to update
    * text-anchor="start" on the axis group element g.axis, so for now this is
    * augmented by CSS rules re. .leftmost / .rightmost which ensure the intended
@@ -1297,7 +1309,7 @@ function Stack_add (sd)
   dLog("Stack_add", this, sd);
   this.axes.push(sd);
   sd.stack = this;
-};
+}
 /** Insert stacked into axes[] at i, moving i..axes.length up
  * @param i  same as param start of Array.splice()
  * @see {@link https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Array/splice | MDN Array Splice}
@@ -1807,7 +1819,7 @@ Stack.prototype.axisTransformO = function (axisName)
      */
     a = axes[axisName],
   axis = a.getAxis();
-  return axis.axisTransformO();
+  return axis && axis.axisTransformO();
 };
 /** For each axis in this Stack, redraw axis, brush, foreground paths.
  * @param t transition in which to make changes
@@ -1929,10 +1941,10 @@ Stack.prototype.redrawAdjacencies = function ()
         a.axis1d.drawTicks();
     });
 };
-//-    import {} from "../utils/axis.js";
+//-    import { } from "../utils/axis.js";
 
-//-    import {} from "../components/stacks.js";
-//-    import {} from "../utils/stacks.js";
+//-    import { } from "../components/stacks.js";
+//-    import { } from "../utils/stacks.js";
 
 /*------------------------------------------------------------------------*/
 
@@ -1954,7 +1966,7 @@ Stacked.prototype.extendedWidth = function()
   if (width === true) {
     width = this.allocatedWidth();
     if (! width) {
-      let childViews = Ember.get(this, 'axis1d.childViews');
+      let childViews = get(this, 'axis1d.childViews');
       /** replace this with a passed parameter enabling axis-2d to report .width back up to axis-1d.  */
       let axis2d = childViews && childViews.findBy( '_debugContainerKey', 'component:axis-2d');
       if (axis2d) {
@@ -2021,13 +2033,21 @@ function xScaleExtend()
     function(sum, width){ return sum + width;}, 0
   );
 
-  let axisXRange = stacks.vc.axisXRange.copy(false); // shallow copy
+  let axisXRange = stacks.vc.axisXRange.slice(); // shallow copy
   axisXRange[1] -= widthsSum;
   // 40 allows for width of axis ticks / text,  etc and a bit of padding
   stacks.axisXRangeMargin = axisXRange[1] - stacks.length * 40;
   let stackDomain = Array.from(stacks.keys()); // was axisIDs
 
-  dLog("xScaleExtend", widthRanges, widths, widthsSum, stacks.vc.axisXRange, axisXRange, stackDomain);
+  /** equivalent : can use stacks.axes1d here in place of axesP. */
+  let extendedCount = Object.values(axesP).filterBy('extended').length;
+  let axes2d = Object.values(axesP).map((s) => s.axis1d && s.axis1d.axis2d).filter((a2) => a2);
+  dLog("xScaleExtend", widthRanges, widths, widthsSum, stacks.vc.axisXRange, axisXRange, stackDomain, extendedCount, axes2d.length);
+  // used as dependency by draw/block-adj
+  stacks.stacksCount.set('widthsSum', widthsSum);
+  stacks.stacksCount.set('extendedCount', extendedCount);
+  stacks.stacksCount.set('axes2d', axes2d);  // can replace oa.axes2d
+
   let v = variableBands,  CombinedScale = v();
   // let gapScale = // d3.scaleOrdinal()
   CombinedScale
@@ -2202,7 +2222,7 @@ Stacked.prototype.axisDimensions = function ()
   dim = { domain, range : this.yRange(), zoomed};
   let
   currentPosition = axis1d && axis1d.get('currentPosition');
-  if (! isEqual(domain, currentPosition.yDomain))
+  if (! currentPosition || ! isEqual(domain, currentPosition.yDomain))
     dLog('axisDimensions', domain, currentPosition.yDomain, zoomed, currentPosition);
   return dim;
 };
@@ -2214,7 +2234,7 @@ Stacked.prototype.setDomain = function (domain)
   // if (! axis1d)
   //  dLog('setDomain', this, 'domain', domain, axis1d, axis1d && axis1d.currentPosition);
   if (axis1d) {
-    Ember.run.bind(axis1d, axis1d.setDomain)(domain);
+    bind(axis1d, axis1d.setDomain)(domain);
   }
 };
 /** Set the zoomed of the current position to the given zoomed
@@ -2234,7 +2254,7 @@ Stacked.prototype.unviewBlocks = function ()
   /** Ember data objects. */
   let blocks = this.blocks.mapBy('block')
     .filter((b) => b);
-  Ember.run.later(() => {
+  later(() => {
     blocks.forEach((block) => {
       // undefined .block-s are filtered out above
       block.setProperties({

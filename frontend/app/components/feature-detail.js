@@ -1,10 +1,12 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
+import { observer } from '@ember/object';
 
 /* global d3 */
 
-export default Ember.Component.extend({
+export default Component.extend({
 
-  feed: Ember.inject.service(),
+  feed: service(),
 
   colouredFeatures : undefined,
 
@@ -27,12 +29,12 @@ export default Ember.Component.extend({
 
   },
 
-  onSelectionChange: function () {
+  onSelectionChange: observer('data', function () {
     let data = this.get('data');
     console.log("selected-features.js", "onSelectionChange", data.length);
     let featureNamesText = data.map(function (d, i, g) { return d.Feature;}).join("\n");
     this.set('selection', featureNamesText);
-  }.observes('data'),
+  }),
 
 
 });

@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import { run, later } from '@ember/runloop';
+import { computed } from '@ember/object';
 
-import Service from '@ember/service';
-const { inject: { service } } = Ember;
+import Service, { inject as service } from '@ember/service';
 
 /*----------------------------------------------------------------------------*/
 
@@ -24,8 +24,12 @@ import {
   collateMagm
 } from "../../utils/draw/collate-paths";
 
-import { flowsServiceInject as flowsServiceInject_utilsDrawFlowControls } from "../../utils/draw/flow-controls";
-import { flowsServiceInject as flowsServiceInject_stacksAdj } from "../../utils/stacks-adj";
+import {
+  flowsServiceInject as flowsServiceInject_utilsDrawFlowControls
+} from "../../utils/draw/flow-controls";
+import {
+  flowsServiceInject as flowsServiceInject_stacksAdj
+} from "../../utils/stacks-adj";
 
 /*----------------------------------------------------------------------------*/
 const dLog = console.debug;
@@ -222,7 +226,7 @@ export default Service.extend({
     return this.get('apiServers').id2ServerGet(blockId);
   },
 
-  enabledFlows : Ember.computed('flowConfig.uAlias', function () {
+  enabledFlows : computed('flowConfig.uAlias', function () {
     let uAlias = flowConfig.uAlias,
     flows = this.get('flows');
     if (flows.U_alias.enabled != uAlias)
@@ -242,11 +246,11 @@ export default Service.extend({
    * dragging which changes left-to-right order and stacking.
    * The values b0, b1 are block IDs.
    */
-  blockAdjIds : Ember.computed('block.viewedIds.[]', 'adjAxesArr.[]', function () {
+  blockAdjIds : computed('block.viewedIds.[]', 'adjAxesArr.[]', function () {
     let viewedIds = this.get('block.viewedIds');
     let axesP = this.get('oa.axesP');
     dLog('blockAdjIds', viewedIds, axesP);
-    let blockAdjIds = Ember.run(this, convert);
+    let blockAdjIds = run(this, convert);
     /** Convert the hash adjAxes, e.g. adjAxes[b0] === b1, to an array of ordered pairs [b0, b1]
      */
     function convert () {
@@ -270,7 +274,7 @@ export default Service.extend({
     dLog('blockAdjIds', blockAdjIds);
     return blockAdjIds;
   }),
-  blockAdjsCP : Ember.computed('blockAdjIds.[]', function () {
+  blockAdjsCP : computed('blockAdjIds.[]', function () {
     let pathsPro = this.get('pathsPro'),
     blockAdjIds = this.get('blockAdjIds'),
     records = blockAdjIds.map(function (blockAdjId) {
@@ -285,7 +289,7 @@ export default Service.extend({
      * seems to fix this.  We can revisit this after getting the versions up to
      * date across the board.
      */
-    Ember.run.later(() => this.set('blockAdjs', records));
+    later(() => this.set('blockAdjs', records));
     return records;
   })
 

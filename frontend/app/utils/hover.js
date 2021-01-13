@@ -13,12 +13,14 @@
 /** Setup hover info text over scaffold horizTick-s.
  * @see based on similar configureAxisTitleMenu()
  */
-function  configureHorizTickHover(d, block, hoverTextFn)
-{
+import $ from 'jquery';
+
+function configureHorizTickHover(d, block, hoverTextFn) {
   // console.log("configureHorizTickHover", d, this, this.outerHTML);
   let text = hoverTextFn(d, block);
   let node_ = this;
-  Ember.$(node_)
+  if ($(node_).popover)
+  $(node_)
     .popover({
       trigger : "click hover",
       sticky: true,

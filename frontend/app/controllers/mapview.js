@@ -1,8 +1,11 @@
-import Ember from 'ember';
+import { registerDeprecationHandler } from '@ember/debug';
+import { later } from '@ember/runloop';
+import EmberObject, { computed, observer } from '@ember/object';
+import Evented from '@ember/object/evented';
+import Controller from '@ember/controller';
+import { inject as service } from '@ember/service';
+import { readOnly } from '@ember/object/computed';
 import DS from 'ember-data';
-
-const { computed : { readOnly } } = Ember;
-const { inject: { service } } = Ember;
 
 /* global d3 */
 
@@ -13,7 +16,7 @@ dLog("controllers/mapview.js");
 let trace_dataflow = 0;
 let trace_select = 0;
 
-export default Ember.Controller.extend(Ember.Evented, {
+export default Controller.extend(Evented, {
   dataset: service('data/dataset'),
   block: service('data/block'),
   apiServers: service(),
@@ -22,7 +25,7 @@ export default Ember.Controller.extend(Ember.Evented, {
 
   /** Array of available datasets populated from model 
    */
-  datasets: Ember.computed('model', 'model.availableMapsTask', 'model.availableMapsTask.value', function () {
+  datasets: computed('model', 'model.availableMapsTask', 'model.availableMapsTask.value', function () {
     let task = this.get('model.availableMapsTask');
     let promise = task.then(function (value) { dLog('datasets from task', value); return value; });
     let resultP = DS.PromiseArray.create({ promise: promise });
@@ -99,7 +102,7 @@ export default Ember.Controller.extend(Ember.Evented, {
 
       let queryParams = this.get('model.params');
       let me = this;
-      Ember.run.later( function () {
+      later( function () {
         me.transitionToRoute({'queryParams': queryParams }); });
     },
     /** Un-view a block.
@@ -208,29 +211,29 @@ export default Ember.Controller.extend(Ember.Evented, {
       dLog('controller/mapview: updateModel()', model);
 
       let serverTabSelectedName = this.get('controlsService.serverTabSelected'),
-      serverTabSelected = serverTabSelectedName && this.get('apiServers').lookupServerName(serverTabSelectedName);
-      if (serverTabSelected)
+      serverTabSelected = this.get('apiServers.serverSelected'),
+      datasetsTask = serverTabSelected && serverTabSelected.getDatasets();
       {
-        let datasetsTask = serverTabSelected.getDatasets();
-      }
-      else
-      {
-      let datasetsTaskPerformance = model.get('availableMapsTask'),
-      newTaskInstance = datasetsTaskPerformance.task.perform();
+      let
+      /** expect that both serverTabSelected and datasetsTask are defined, regardless of serverTabSelectedName.  */
+      newTaskInstance = datasetsTask || Promise.resolve([]);
       dLog('controller/mapview: updateModel()', newTaskInstance);
       model.set('availableMapsTask', newTaskInstance);
 
       /** If this is called as refreshDatasets from data-csv then we want to get
        * blockFeatureLimits for the added block.
+       * Perhaps can pass (undefined, {server : serverTabSelected}), and also
+       * check if blocksLimitsTask.get('isRunning') (factor out of
+       * mapview:model() )
        */
       newTaskInstance.then((datasets) => {
-        this.get('block').ensureFeatureLimits();
+        this.get('block').getBlocksLimits();
       });
       }
     }
   },
 
-  layout: Ember.Object.create({
+  layout: EmberObject.create({
     'left': {
       'visible': true,
       'tab': 'view'
@@ -241,7 +244,7 @@ export default Ember.Controller.extend(Ember.Evented, {
     }
   }),
 
-  controls : Ember.Object.create({ view : {  } }),
+  controls : EmberObject.create({ view : {  } }),
 
   queryParams: ['mapsToView'],
   mapsToView: [],
@@ -258,8 +261,11 @@ export default Ember.Controller.extend(Ember.Evented, {
 
   init: function() {
     /** refn : https://discuss.emberjs.com/t/is-this-possible-to-turn-off-some-deprecations-warnings/8196 */
-    let deprecationIds = ['ember-simple-auth.session.authorize'];
-    Ember.Debug.registerDeprecationHandler((message, options, next) => {
+    let deprecationIds = [
+      'ember-component.send-action',
+      /** ember-bootstrap/utils/cp/listen-to.js uses Ember.getWithDefault() */
+      'ember-metal.get-with-default'];
+    registerDeprecationHandler((message, options, next) => {
       if (! deprecationIds.includes(options.id)) {
         next(message, options);
       }
@@ -268,9 +274,9 @@ export default Ember.Controller.extend(Ember.Evented, {
     this._super.apply(this, arguments);
   },
 
-  currentURLDidChange: function () {
+  currentURLDidChange: observer('target.currentURL', function () {
     dLog('currentURLDidChange', this.get('target.currentURL'));
-  }.observes('target.currentURL'),
+  }),
 
 
   /** all available */
@@ -288,7 +294,7 @@ export default Ember.Controller.extend(Ember.Evented, {
 
   /** Used by the template to indicate when & whether any data is loaded for the graph.
    */
-  hasData: Ember.computed(
+  hasData: computed(
     function() {
       let viewedBlocksLength = this.get('block.viewed.length');
       if (trace_dataflow)
@@ -298,7 +304,7 @@ export default Ember.Controller.extend(Ember.Evented, {
 
   /** Update queryParams and URL.
    */
-  queryParamsValue : Ember.computed(
+  queryParamsValue : computed(
     'model.params.mapsToView.[]',
     function() {
       dLog('queryParamsValue');
@@ -315,7 +321,7 @@ export default Ember.Controller.extend(Ember.Evented, {
     let getBlocks = blockService.get('getBlocksSummary');
     let blocksSummaryTasks = getBlocks.apply(blockService, [[id]]);
     /* get featureLimits if not already received.
-     * Also adding a similar request to updateModal (refreshDatasets) so by this
+     * Also adding a similar request to updateModel (refreshDatasets) so by this
      * time that result should have been received.
      */
     let block = this.blockFromId(id);
@@ -341,7 +347,7 @@ export default Ember.Controller.extend(Ember.Evented, {
    * components div;   the remainder of the template is disabled via {{#if
    * (compare layout.right.tab '===' 'paths')}} which wraps the whole component.
    */
-  rightPanelClass : Ember.computed('layout.right.tab', function () {
+  rightPanelClass : computed('layout.right.tab', function () {
     let tab = this.get('layout.right.tab');
     dLog('rightPanelClass', tab);
     return 'right-panel-' + tab;

@@ -1,8 +1,7 @@
-import Ember from 'ember';
-import DS from 'ember-data';
+import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
 import ApplicationSerializer from './application';
 
-export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
+export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
   primaryKey: 'name',
   normalize(model, hash, prop) {
     var ret = this._super(...arguments);
@@ -28,6 +27,11 @@ export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
 
   attrs: {
     blocks: { embedded: 'always' },
-    parentName : 'parent'
+    parentName : 'parent',
+    /** The Pretzel data format defines Dataset and Block to have a .meta field;
+     * since Ember3 this clashes with the ember-data object .meta field, so it is
+     * renamed to ._meta.  This rename could be done also in the Pretzel data
+     * format (pretzel-data). */
+    _meta : 'meta'
   }
 });

@@ -186,6 +186,8 @@ function axisEltId(name)
 }
 /** id of g.axis-all element, based on axisName, with an "all" prefix. */
 function eltIdAll(d) { return "all" + d; }
+/** id of 'g.axis-all > text' element, based on axisName (id of reference block of axis), with a 't' prefix. */
+function axisEltIdTitle(d) { return 't' + d; }
 /** id of <g clippath> element, based on axisName, with an "axis-clip" prefix. */
 function axisEltIdClipPath(d) { return "axis-clip" + d; }
 
@@ -306,7 +308,8 @@ function axisTitleColour (d, i) {
 export {
   Axes, maybeFlip, maybeFlipExtent, noDomain,
   ensureYscaleDomain,
-  yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisEltIdClipPath,
+  yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,
+  eltId, axisEltId, eltIdAll, axisEltIdTitle, axisEltIdClipPath,
   selectAxisOuter, selectAxisUse, eltIdGpRef,
   highlightId,
   trackBlockEltIdPrefix,

@@ -90,7 +90,7 @@ function cmNameAdd(oa, block) {
   if (oa.datasets[datasetName] === undefined)
   {
     oa.datasets[datasetName] = dataset;
-    dLog(datasetName, dataset.get('meta.shortName'));
+    dLog(datasetName, dataset.get('_meta.shortName'));
   }
 
   cmName[axis] = {mapName : c.mapName, chrName : c.chrName

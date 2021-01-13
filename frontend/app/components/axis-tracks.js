@@ -1,12 +1,26 @@
-import Ember from 'ember';
+import { isArray } from '@ember/array';
+import { throttle, next } from '@ember/runloop';
+import EmberObject, { computed } from '@ember/object';
+import { alias, filter } from '@ember/object/computed';
+import $ from 'jquery';
 import { inject as service } from '@ember/service';
 
 
-import createIntervalTree from 'npm:interval-tree-1d';
+import createIntervalTree from 'interval-tree-1d';
 
-import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
+import {
+  eltWidthResizable,
+  noShiftKeyfilter
+} from '../utils/domElements';
 import InAxis from './in-axis';
-import {  eltId, axisEltId, eltIdAll, axisEltIdClipPath, trackBlockEltIdPrefix, axisTitleColour }  from '../utils/draw/axis';
+import {
+  eltId,
+  axisEltId,
+  eltIdAll,
+  axisEltIdClipPath,
+  trackBlockEltIdPrefix,
+  axisTitleColour
+} from '../utils/draw/axis';
 import { ensureSvgDefs } from '../utils/draw/d3-svg';
 
 /*----------------------------------------------------------------------------*/
@@ -61,19 +75,35 @@ const dLog = console.debug;
  */
 function  configureHorizTickHover(location)
 {
+  d3.select(this).on('mouseover', showHorizTickHover.bind(this, location));
+  d3.select(this).on('mouseout', hideHorizTickHover.bind(this));
+}
+function showHorizTickHover (location) {
   // console.log("configureHorizTickHover", location, this, this.outerHTML);
   /** typeof location may also be "number" or "object" - array : syntenyBlocks[x] */
   let text = (location == "string") ? location :  "" + location;
+  let $this=$(this);
   let node_ = this;
-  Ember.$(node_)
+  if ($(node_).popover) {
+    /** refn : node_modules/bootstrap/js/popover.js */
+    let data    = $this.data('bs.popover');
+    if (! data) {
+      /** https://getbootstrap.com/docs/3.4/javascript/#popovers */
+  $(node_)
     .popover({
-      trigger : "click hover",
+      trigger : "manual",	// was : click hover
       sticky: true,
       delay: {show: 200, hide: 3000},
       container: 'div#holder',
       placement : "auto right",
       content : text
     });
+    }
+    $this.popover('show');
+  }
+}
+function hideHorizTickHover() {
+  $(this).popover('hide');
 }
 /*----------------------------------------------------------------------------*/
 
@@ -305,7 +335,7 @@ class SubElement {
   constructor(data) {
     this.data = data;
   }
-};
+}
 /** static, also  member @see getInterval()  */
 SubElement.getInterval = function(data) {
   let interval = data.slice(0, 2);
@@ -332,7 +362,7 @@ SubElement.prototype.getInterval = function() {
 export default InAxis.extend({
 
   queryParams: service('query-params'),
-  urlOptions : Ember.computed.alias('queryParams.urlOptions'),
+  urlOptions : alias('queryParams.urlOptions'),
 
   className : "tracks",
   
@@ -399,7 +429,7 @@ export default InAxis.extend({
   /** @return the axis-1d which contains the axis-2d which contains this axis-tracks.
    * @desc Currently uses lookup via .axis; this can instead be passed in as a parameter.
    */
-  axis1d : Ember.computed('axis.axis1d', 'axis.axis1d.isDestroying', function () {
+  axis1d : computed('axis.axis1d', 'axis.axis1d.isDestroying', function () {
     /** this CP could be simply a .alias, but it can get a reference to a axis1d
      * which is being destroyed; probably need a small design change in the
      * component relations. */
@@ -411,21 +441,21 @@ export default InAxis.extend({
     return axis1d;
   }),
   /** @return the corresponding stacks.js axis / Stacked object. */
-  axisS : Ember.computed.alias('axis.axis'),
+  axisS : alias('axis.axis'),
   /** Current Y interval within the total domain of the axis reference block. */
-  currentPosition : Ember.computed.alias('axis1d.currentPosition'),
-  yDomain : Ember.computed.alias('currentPosition.yDomain'),
-  stackBlocks : Ember.computed.alias('axis1d.drawMap.oa.stacks.blocks'),
+  currentPosition : alias('axis1d.currentPosition'),
+  yDomain : alias('currentPosition.yDomain'),
+  stackBlocks : alias('axis1d.drawMap.oa.stacks.blocks'),
 
   /** From the Ember block objects, derive the stack Blocks. */
-  trackBlocks : Ember.computed('trackBlocksR.@each.view', function () {
+  trackBlocks : computed('trackBlocksR.@each.view', function () {
     let trackBlocksR = this.get('trackBlocksR'),
     trackBlocks = trackBlocksR.mapBy('view');
     console.log('trackBlocks', trackBlocksR, trackBlocks);
     return trackBlocks;
   }),
   /** Number of data blocks shown by this axis-tracks. */
-  nTrackBlocks : Ember.computed.alias('trackBlocksR.length'),
+  nTrackBlocks : alias('trackBlocksR.length'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -455,7 +485,7 @@ export default InAxis.extend({
     let args = [resized, tracks];
     console.log('showResize args', args);
     if (tracks)
-      Ember.run.throttle(this, this.layoutAndDrawTracks, args, 500, true);
+      throttle(this, this.layoutAndDrawTracks, args, 500, true);
   },
 
   /*--------------------------------------------------------------------------*/
@@ -946,7 +976,7 @@ export default InAxis.extend({
       function elementDataFn (d, i, g) {
         let featureValue = d;
         featureValue = featureValue && featureValue[2];
-        if (! Ember.isArray(featureValue))
+        if (! isArray(featureValue))
           featureValue = [];
         return featureValue;
       }
@@ -1285,7 +1315,7 @@ export default InAxis.extend({
 
   /** Not used; can be used in .hbs for trace, for comparison against the result
    * of showTrackBlocks(). */
-  blocksFeaturesLengths : Ember.computed(
+  blocksFeaturesLengths : computed(
     'trackBlocksR.@each.featuresLength',
     'trackBlocks.[]', 'trackBlocksR.0.featuresLength', 'trackBlocksR.0.features.[]',
     function () {
@@ -1298,7 +1328,7 @@ export default InAxis.extend({
   /** Construct a interval tree from the track data.
    * This is used for filtering and for layering.
    */
-  tracksTree : Ember.computed('trackBlocksR.@each.featuresLength', function () {
+  tracksTree : computed('trackBlocksR.@each.featuresLength', function () {
     let
     axisID = this.get('axisID'),
     trackBlocksR = this.get('trackBlocksR'),
@@ -1335,6 +1365,13 @@ export default InAxis.extend({
               interval[1] = swap;
             }
             interval.description = feature.get('name');
+            /* for datasets with tag 'SNP', feature value[2] is reference / alternate,
+             * e.g. "A/G", "T/C" etc */
+            let tags = feature.get('blockId.datasetId.tags');
+            if (tags && tags.length && (tags.indexOf("SNP") !== -1) && 
+                (typeof interval[2] === 'string')) {
+              interval.description += ('\n' + interval[2]);
+            }
             return interval;
           });
         blockFeatures[blockId] = features;
@@ -1369,7 +1406,7 @@ export default InAxis.extend({
    */
   lookupAxisTracksBlock(blockId) {
     let blocks = this.get('blocks'),
-    blockState = blocks[blockId] || (blocks[blockId] = Ember.Object.create());
+    blockState = blocks[blockId] || (blocks[blockId] = EmberObject.create());
     if (! blockState.hasOwnProperty('subElements')) {
       let blockS = this.get('stackBlocks')[blockId];
       blockState.subElements = blockS.block.get('isSubElements');
@@ -1416,7 +1453,7 @@ export default InAxis.extend({
 
   /** Map .trackBlocksR to the IDs of the track blocks.
    */
-  blockIds : Ember.computed('trackBlocksR.[]', function () {
+  blockIds : computed('trackBlocksR.[]', function () {
     let
     trackBlocksR = this.get('trackBlocksR'),
     blockIds = trackBlocksR.mapBy('id');
@@ -1426,7 +1463,7 @@ export default InAxis.extend({
    * e.g. 'blockComps.@each.layoutWidth'
    * The block components are sub-components of axis-track.
    */
-  blockComps : Ember.computed('blockIds.[]', function () {
+  blockComps : computed('blockIds.[]', function () {
     let
     blocks = this.get('blocks'),
     blockIds = this.get('blockIds'),
@@ -1439,7 +1476,7 @@ export default InAxis.extend({
    * Side Effect: assigns block.offset which is the progressive value of the sum,
    * if ! fixedBlockWidth.
    */
-  blockLayoutWidthSum : Ember.computed('blockComps.@each.layoutWidth', function () {
+  blockLayoutWidthSum : computed('blockComps.@each.layoutWidth', function () {
     let
     blockIds = this.get('blockIds');
 
@@ -1466,8 +1503,8 @@ export default InAxis.extend({
     dLog('blockLayoutWidthSum', width, blockIds.length, blockIds2.length, this.get('blockComps.length'));
     return width;
   }),
-  variableWidthBlocks : Ember.computed.filter('trackBlocksR', (block) => block.get('isSubElements')),
-  layoutWidth : Ember.computed('variableWidthBlocks', function () {
+  variableWidthBlocks : filter('trackBlocksR', (block) => block.get('isSubElements')),
+  layoutWidth : computed('variableWidthBlocks', function () {
     let
     vwBlocks = this.get('variableWidthBlocks'),
     blockIds = this.get('blockIds'),
@@ -1479,11 +1516,11 @@ export default InAxis.extend({
     width =
       /*40 +*/ this.get('blockLayoutWidthSum') /*+ 20 + 50*/; // same as getAxisExtendedWidth()
     console.log('layoutWidth', blockIds, width);
-    Ember.run.next(() => this.get('childWidths').set(this.get('className'), [width, width]));
+    next(() => this.get('childWidths').set(this.get('className'), [width, width]));
 
     return width;
   }),
-  combinedWidth : Ember.computed('layoutWidth', 'allocatedWidth', 'axisBlocks.allocatedWidth.[]', function() {
+  combinedWidth : computed('layoutWidth', 'allocatedWidth', 'axisBlocks.allocatedWidth.[]', function() {
     let
     axisBlocks = this.get('axisBlocks.allocatedWidth'),
     rightBlock = axisBlocks.length && axisBlocks[axisBlocks.length-1],
@@ -1496,7 +1533,7 @@ export default InAxis.extend({
   }),
   /** Render changes related to a change of .layoutWidth
    */
-  layoutWidthEffect : Ember.computed('combinedWidth', function () {
+  layoutWidthEffect : computed('combinedWidth', function () {
     let
     axisID = this.get('axisID'),
     width = this.get('combinedWidth');
@@ -1506,8 +1543,11 @@ export default InAxis.extend({
   }),
   /** Render changes driven by changes of block data or scope.
    */
-  showTrackBlocks: Ember.computed(
-    'tracksTree', 'yDomain.0', 'yDomain.1', 'axis1d.zoomed', 'axis1d.extended', 'axis1d.featureLength',
+  showTrackBlocks: computed(
+    'tracksTree',
+    /** .yDomain is available; for the dependency -Throttled is used */
+    'axis1d.currentPosition.yDomainThrottled.{0,1}',
+    'axis1d.zoomed', 'axis1d.extended', 'axis1d.featureLength',
     function() {
       let tracks = this.get('tracksTree');
       let
@@ -1529,10 +1569,10 @@ export default InAxis.extend({
       }
       return featuresLength;
     }),
-  adjustedWidth : Ember.computed.alias('parentView.adjustedWidth'),
+  adjustedWidth : alias('parentView.adjustedWidth'),
   /** Render changes related to component / window resize.
    */
-  resizeEffectHere : Ember.computed('resizeEffect', 'allocatedWidth.{0,1}', function () {
+  resizeEffectHere : computed('resizeEffect', 'allocatedWidth.{0,1}', function () {
     let result = this.get('resizeEffect');
     let
     allocatedWidth = this.get('allocatedWidth'),
@@ -1552,7 +1592,7 @@ export default InAxis.extend({
       isChanged(result.changed, 'viewportWidth') || allocatedWidthChange,
       isChanged(result.changed, 'viewportHeight') /* , yScaleChanged ? */);
   }),
-  flippedEffect : Ember.computed('axis1d.flipped', function () {
+  flippedEffect : computed('axis1d.flipped', function () {
     /** 'scaleChanged' could be used as an alternate dependency */
     this.showResize(false, false, true);
   }),

@@ -1,4 +1,8 @@
-import { yAxisBtnScale, eltId, axisFeatureCircles_selectAll  }  from './axis';
+import {
+  yAxisBtnScale,
+  eltId,
+  axisFeatureCircles_selectAll
+} from './axis';
 import { I } from './d3-svg';
 
 

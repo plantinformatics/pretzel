@@ -1,9 +1,31 @@
-{{#modal-dialog modal-id="new-datasource-modal" title="New Datasource" header-icon='cloud-download'
-   confirm-label="Connect" onConfirm="onConfirm"}}
+
+<BsModal
+  @open={{true}}
+  @closeTitle="Cancel"
+  @submitTitle="Connect"
+  @size=""
+  @closeButton={{true}}
+  @fade={{true}}
+  @backdrop={{true}}
+  @backdropClose={{true}}
+  @onSubmit={{action "onConfirm"}}
+  @onHidden={{action @closeNewDatasourceModal}}
+  @renderInPlace={{true}}
+  class="new-datasource-modal"
+   as |modal|>
+
+   <modal.header>
+     <h3 class="modal-title">
+       <span id="ember409" class="glyphicon glyphicon-cloud-download"></span>
+      New Datasource
+    </h3>
+  </modal.header>
+
+  <modal.body>
   <div class="table labelled-inputs">
 
       <div class="input-label">Host : Port</div>
-      <input name="host" placeholder="e.g. http://localhost:5000">
+      <input name="host" placeholder="e.g. http://localhost:5000"  autofocus="autofocus">
 
       <div class="input-label">User</div>
       <input name="user" placeholder="Email address">
@@ -12,4 +34,21 @@
       <input name="password" type="password">
 
   </div>
-{{/modal-dialog}}
+
+  {{#if this.errorText}}
+    <div>
+      <h4>Login Failed</h4>
+      {{errorText}}
+    </div>
+  {{/if}}
+
+  </modal.body>
+
+  <modal.footer>
+    <BsButton @onClick={{action modal.close}}>Cancel</BsButton>
+    <BsButton @type="success" @onClick={{action modal.submit}}>Connect</BsButton>
+  </modal.footer>
+
+
+</BsModal>>
+

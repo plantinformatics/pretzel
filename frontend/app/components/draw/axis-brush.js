@@ -1,13 +1,23 @@
-import Ember from 'ember';
-
-const { inject: { service } } = Ember;
-import { throttle } from '@ember/runloop';
+import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import Evented from '@ember/object/evented';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
+import { throttle, debounce } from '@ember/runloop';
 
 import PathData from './path-data';
 
 import AxisEvents from '../../utils/draw/axis-events';
 import { stacks, Stacked } from '../../utils/stacks';
-import { selectAxis, blockAdjKeyFn, blockAdjEltId, featureEltIdPrefix, featureNameClass, foregroundSelector, selectBlockAdj } from '../../utils/draw/stacksAxes';
+import {
+  selectAxis,
+  blockAdjKeyFn,
+  blockAdjEltId,
+  featureEltIdPrefix,
+  featureNameClass,
+  foregroundSelector,
+  selectBlockAdj
+} from '../../utils/draw/stacksAxes';
 
 /* global d3 */
 
@@ -27,7 +37,7 @@ const dLog = console.debug;
  * @param blockId
  * @param drawMap for Evented - stack events
  */
-export default Ember.Component.extend(Ember.Evented, AxisEvents, {
+export default Component.extend(Evented, AxisEvents, {
   /** AxisEvents is used to receive axis stacking and resize events.
    *  Evented may be used in future to propagate events to components rendered within axis-brush.
    */
@@ -37,10 +47,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   /*--------------------------------------------------------------------------*/
 
   stacks : stacks,
-  oa : Ember.computed.alias('stacks.oa'),
+  oa : alias('stacks.oa'),
   /** .drawMap is used by Evented : utils/draw/axis-events.js */
-  drawMap : Ember.computed.alias('oa.eventBus'),
-  axisApi : Ember.computed.alias('oa.axisApi'),
+  drawMap : alias('oa.eventBus'),
+  axisApi : alias('oa.axisApi'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -50,7 +60,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
-  datasetName : Ember.computed('block', 'id', function () {
+  datasetName : computed('block', 'id', function () {
     let
     axis = this.get('axis'),
     name = axis && axis.axis1d && axis.axis1d.get('referenceBlock.datasetId.id');
@@ -59,7 +69,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   }),
 
 
-  brushedDomainRounded : Ember.computed('block.brushedDomain', function () {
+  brushedDomainRounded : computed('block.brushedDomain', function () {
     let domain = this.get('block.brushedDomain');
     if (domain) {
       domain = domain.map((d) => d.toFixed(2));
@@ -69,7 +79,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
-  axisBrush : Ember.computed('block', function () {
+  axisBrush : computed('block', function () {
     let
       block = this.get('block'),
     /** axis-brush object in store */
@@ -79,12 +89,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     return record;
   }),
 
-  blockId : Ember.computed.alias('block.id'),
+  blockId : alias('block.id'),
 
   /** Result is, for blockID,  the axis on which the block is displayed.
    * Will need to add dependency on stacks component, because block can be un-viewed then re-viewed.
    */
-  axis :  Ember.computed('blockId', function () {
+  axis :  computed('blockId', function () {
     let
       blockId = this.get('blockId'),
     axis = Stacked.getAxis(blockId);
@@ -92,7 +102,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     return axis;
   }),
 
-  features : Ember.computed('axisBrush.features.[]', 'zoomCounter', function () {
+  features : computed('axisBrush.features.[]', 'zoomCounter', function () {
     console.log('features', this);
     let featuresP = this.get('axisBrush.features');
     featuresP.then((features) => {
@@ -140,7 +150,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   updateFeaturesPositionDebounce(axisID_t) {
     // console.log('updateFeaturesPositionDebounce', axisID_t);
-    Ember.run.debounce(this, this.updateFeaturesPosition, axisID_t, 500);
+    debounce(this, this.updateFeaturesPosition, axisID_t, 500);
   },
 
   /*--------------------------------------------------------------------------*/

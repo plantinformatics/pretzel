@@ -1,13 +1,24 @@
-import Ember from 'ember';
+import { on } from '@ember/object/evented';
+import { computed } from '@ember/object';
+import $ from 'jquery';
+import { later } from '@ember/runloop';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 
 import { EventedListener } from '../utils/eventedListener';
-import { featureChrs,  name2Map,   chrMap, objectSet,  mapsOfFeature } from '../utils/feature-lookup';
+import {
+  featureChrs,
+  name2Map,
+  chrMap,
+  objectSet,
+  mapsOfFeature
+} from '../utils/feature-lookup';
 
 
-export default Ember.Component.extend({
+export default Component.extend({
   // classNames: ['goto-feature-whole'],
 
-  store: Ember.inject.service('store'),
+  store: service('store'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -15,8 +26,8 @@ export default Ember.Component.extend({
   didInsertElement() {
     this._super(...arguments);
     console.log("components/goto-feature didInsertElement()", this.drawActions);
-    Ember.run.later(function() {
-      let d = Ember.$('.tooltip.ember-popover');  // make-ui-draggable
+    later(function() {
+      let d = $('.tooltip.ember-popover');  // make-ui-draggable
     });
     if (this.drawActions)
     this.drawActions.trigger("gotoFeatureLife", true);
@@ -43,7 +54,7 @@ export default Ember.Component.extend({
       ));
   },
 
-  listen: function() {
+  listen: on('init', function() {
     // if oa is not passed in as data then listen for it.
     if (this.get('data') === undefined)
     {
@@ -52,12 +63,12 @@ export default Ember.Component.extend({
       if (this.listener)
         this.listener.listen(true);
     }
-  }.on('init'),
+  }),
 
-  cleanup: function() {
+  cleanup: on('willDestroyElement', function() {
     if (this.listener)
       this.listener.listen(false);
-  }.on('willDestroyElement'),
+  }),
 
   drawObjectAttributes : function(oa)
   {
@@ -95,7 +106,7 @@ Apollo : link; new window or re-use, later axis-iframe.
 
 
 /*----------------------------------------------------------------------------*/
-  mapsOfFeature : Ember.computed('feature1', 'data', 'oa', function (newValue) {
+  mapsOfFeature : computed('feature1', 'data', 'oa', function (newValue) {
     console.log("mapsOfFeature", newValue);
     let store = this.get('store');
     let oa = this.get('data') || this.get('oa');

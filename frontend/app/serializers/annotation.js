@@ -1,11 +1,8 @@
-import Ember from 'ember';
-import DS from 'ember-data';
+import Mixin from '@ember/object/mixin';
+import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
 import ApplicationSerializer from './application';
 
-const { EmbeddedRecordsMixin } = DS;
-const { Mixin } = Ember;
-
-export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
+export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
   // normalize(model, hash, prop) {
   //   console.log('NORMALIZE', model, hash, prop)
   //   delete hash.count

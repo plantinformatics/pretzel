@@ -1,20 +1,20 @@
-import Ember from 'ember';
-import Service from '@ember/service';
-const { inject: { service } } = Ember;
+import { computed } from '@ember/object';
+import Evented from '@ember/object/evented';
+import Service, { inject as service } from '@ember/service';
 
 let trace_axisBrush = 0;
 const dLog = console.debug;
 
 const typeName = 'axis-brush';
 
-export default Service.extend(Ember.Evented, {
+export default Service.extend(Evented, {
   blockService: service('data/block'),
   store: service(),
 
   /** look up axis-brush object instances in the store.
    * @return all instances.
    */
-  all: Ember.computed(function() {
+  all: computed(function() {
     let records = this.get('store').peekAll(typeName);
     if (trace_axisBrush)
       dLog('all', records);
@@ -24,7 +24,7 @@ export default Service.extend(Ember.Evented, {
   /** Collate a list of the axes which are brushed.
    * @return reference blocks of the brushed axes.
    */
-  brushedAxes: Ember.computed(
+  brushedAxes: computed(
     'blockService.viewed',
     'all.[]',
     'all.@each.brushedDomain',
@@ -46,7 +46,7 @@ export default Service.extend(Ember.Evented, {
 
       return blocks;
     }),
-  brushesByBlock : Ember.computed('brushedAxes.[]', function () {
+  brushesByBlock : computed('brushedAxes.[]', function () {
     let brushesByBlock = this.get('brushedAxes').reduce(function (result, ab) {
       result[ab.get('block.id')] = ab;
       return result; }, {} );
