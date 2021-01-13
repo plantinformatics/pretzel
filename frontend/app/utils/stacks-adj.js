@@ -4,7 +4,15 @@ import { inject as service } from '@ember/service';
 import { isEqual } from 'lodash/lang';
 
 
-import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Name } from '../utils/stacks';
+import {
+  Block,
+  Stacked,
+  Stack,
+  stacks,
+  xScaleExtend,
+  axisRedrawText,
+  axisId2Name
+} from '../utils/stacks';
 
 /*----------------------------------------------------------------------------*/
 

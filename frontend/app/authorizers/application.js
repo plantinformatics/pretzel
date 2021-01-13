@@ -2,10 +2,9 @@
 
 // export default OAuth2Bearer.extend();
 
-import BaseAuthorizer from 'ember-simple-auth/authorizers/base'
+import { inject as service } from '@ember/service';
 
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import BaseAuthorizer from 'ember-simple-auth/authorizers/base';
 
 
 export default BaseAuthorizer.extend({

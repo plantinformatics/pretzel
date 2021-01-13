@@ -1,6 +1,5 @@
-import Ember from 'ember';
-
-const { Component } = Ember;
+import { computed } from '@ember/object';
+import Component from '@ember/component';
 
 export default Component.extend({
   tagName: 'button',
@@ -12,7 +11,7 @@ export default Component.extend({
   // classes
   classNames: ['btn'],
   classNameBindings: ['sizeClass', 'colourClass'],
-  sizeClass: Ember.computed('classSize', function() {
+  sizeClass: computed('classSize', function() {
     let prop = this.get('classSize')
     if (prop) {
       return 'btn-' + prop
@@ -20,7 +19,7 @@ export default Component.extend({
       return ''
     }
   }),
-  colourClass: Ember.computed('classColour', function() {
+  colourClass: computed('classColour', function() {
     let prop = this.get('classColour')
     if (prop) {
       return 'btn-' + prop

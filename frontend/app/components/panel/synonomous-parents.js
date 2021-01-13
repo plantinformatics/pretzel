@@ -1,11 +1,11 @@
-import Ember from 'ember';
+import Component from '@ember/component';
 
 const dLog = console.debug;
 
 /**
  * @param blocks viewedSynonomousReferenceBlocks
  */
-export default Ember.Component.extend({
+export default Component.extend({
   classNames : ['synonomous-parents'],
 
   actions : {

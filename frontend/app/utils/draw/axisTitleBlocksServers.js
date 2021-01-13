@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { later } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 
 
@@ -90,7 +90,7 @@ AxisTitleBlocksServers.prototype.render = function (axisTitleS, svgContainer, ax
    * .duration(dragTransitionTime), so probably bbox updates after that, so
    * recalc after a delay.
    */
-  Ember.run.later(() => cM.each(positionToTextBBox), dragTransitionTime + 100);
+  later(() => cM.each(positionToTextBBox), dragTransitionTime + 100);
 
 };
 

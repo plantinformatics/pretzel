@@ -1,4 +1,6 @@
-import Ember from 'ember';
+import { debounce, throttle } from '@ember/runloop';
+import { computed } from '@ember/object';
+import Component from '@ember/component';
 
 import AxisEvents from '../../utils/draw/axis-events';
 
@@ -13,7 +15,7 @@ const CompName = 'components/axis-ticks-selected';
  * @param featuresInBlocks results of Feature Search; a lookup function for these
  * is passed to showTickLocations()
  */
-export default Ember.Component.extend(AxisEvents, {
+export default Component.extend(AxisEvents, {
 
   
   resized : function(widthChanged, heightChanged, useTransition) {
@@ -45,7 +47,7 @@ export default Ember.Component.extend(AxisEvents, {
 
   /** Render elements which are dependent on axis scale - i.e. the axis ticks.
    */
-  axisScaleEffect : Ember.computed('axis1d.domainChanged', function () {
+  axisScaleEffect : computed('axis1d.domainChanged', function () {
     let axisScaleChanged = this.get('axis1d.domainChanged');
     let axisID = this.get('axisID');
     if (trace)
@@ -56,7 +58,7 @@ export default Ember.Component.extend(AxisEvents, {
      * scale in render to confirm that.
      */
     const reRenderLater = () => { this.renderTicksThrottle(axisID); };
-    Ember.run.debounce(reRenderLater, 750);
+    debounce(reRenderLater, 750);
 
     return true;
   }),
@@ -96,7 +98,7 @@ export default Ember.Component.extend(AxisEvents, {
       dLog('renderTicksThrottle', axisID);
 
     /* see comments in axis-1d.js : renderTicksThrottle() re. throttle versus debounce */    
-    Ember.run.throttle(this, this.renderTicks, axisID, 500);
+    throttle(this, this.renderTicks, axisID, 500);
   },
 
   /** Lookup the given block in featuresInBlocks, and return its features which

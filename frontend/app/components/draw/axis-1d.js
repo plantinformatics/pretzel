@@ -1,5 +1,10 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import { later, next, throttle } from '@ember/runloop';
+import { A } from '@ember/array';
+import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import Evented from '@ember/object/evented';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
 
 import { sum } from 'lodash/math';
@@ -8,16 +13,34 @@ import { isEqual } from 'lodash/lang';
 
 import AxisEvents from '../../utils/draw/axis-events';
 import AxisPosition from '../../mixins/axis-position';
-import { /* Block,*/ Stacked, /*Stack,*/ stacks /*, xScaleExtend, axisRedrawText, axisId2Name*/ } from '../../utils/stacks';
-import {  noDomain, /* Axes, yAxisTextScale,  yAxisTicksScale,*/  yAxisBtnScale, /* yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/ , axisTitleColour  }  from '../../utils/draw/axis';
-import {DragTransition, dragTransitionTime, dragTransitionNew, dragTransition } from '../../utils/stacks-drag';
+import {
+  /* Block,
+  */ Stacked,
+  /*Stack,
+  */ stacks /*,
+  xScaleExtend,
+  axisRedrawText,
+  axisId2Name*/
+} from '../../utils/stacks';
+import {
+  noDomain,
+  /* Axes, yAxisTextScale,  yAxisTicksScale,*/  yAxisBtnScale,
+  /* yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/,
+  axisTitleColour,
+  eltId,
+} from '../../utils/draw/axis';
+import {
+  DragTransition,
+  dragTransitionTime,
+  dragTransitionNew,
+  dragTransition
+} from '../../utils/stacks-drag';
 import { selectAxis } from '../../utils/draw/stacksAxes';
 import { breakPoint } from '../../utils/breakPoint';
 import { configureHorizTickHover } from '../../utils/hover';
 import { getAttrOrCP } from '../../utils/ember-devel';
 import { intervalExtent }  from '../../utils/interval-calcs';
 import { updateDomain } from '../../utils/stacksLayout';
-import { eltId } from '../../utils/draw/axis';
 
 
 /* global d3 */
@@ -142,7 +165,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
       })(blockR),
       features = featuresAll
         .filter(inRange);
-      dLog(blockId, features.length);
+      dLog(blockId, features.length, 'showTickLocations featuresOfBlock');
       return features;
     };
 
@@ -255,18 +278,20 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
  * @property zoomed   selects either .zoomedDomain or .blocksDomain.  initially undefined (false).
  * @property flipped  if true then the domain is flipped in the view.  initially undefined (false).
  */
-export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
+export default Component.extend(Evented, AxisEvents, AxisPosition, {
   blockService: service('data/block'),
   axisBrush: service('data/axis-brush'),
+  controls : service(),
 
+  controlsView : alias('controls.controls.view'),
 
   stacks : stacks,
   /** oa is used for these connections, which will eventually be
    * passed as params or replaced : axisApi, eventBus, svgContainer, axes[].
    * (stacks.oa is equivalent)
    */
-  oa : Ember.computed.alias('drawMap.oa'),
-  axisApi : Ember.computed.alias('oa.axisApi'),
+  oa : alias('drawMap.oa'),
+  axisApi : alias('oa.axisApi'),
 
 
   /** flipRegion implies paths' positions should be updated.  The region is
@@ -298,13 +323,20 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
         dLog('axis-1d:init', this, this.get('axis.id'), axisS); axisS.log();
       }
     }
+
+    next(() => this.axis1dExists(this, true));
+  },
+
+  willDestroyElement() {
+    next(() => this.axis1dExists(this, false));
+    this._super(...arguments);
   },
 
   /*--------------------------------------------------------------------------*/
 
   /** @return true if there is a brush on this axis.
    */
-  brushed : Ember.computed(
+  brushed : computed(
     'axis.id',
     'axisBrush.brushedAxes.[]',
     /** oa.brushedRegions is a hash, and it is updated not replaced,
@@ -322,7 +354,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       return brushed;
     }),
 
-  zoomed2 : Ember.computed('zoomed', 'domain', 'zoomedDomain', function () {
+  zoomed2 : computed('zoomed', 'domain', 'zoomedDomain', function () {
     let
     zoomed = this.get('zoomed'),
     domain = this.get('domain'),
@@ -356,7 +388,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   },
 
   /** @return the Stacked object corresponding to this axis. */
-  axisS : Ember.computed('axis.id', 'stacks.axesPCount', function () {
+  axisS : computed('axis.id', 'stacks.axesPCount', function () {
     let
       axisName = this.get('axis.id'),
     axisS = Stacked.getAxis(axisName);
@@ -369,35 +401,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     }
     return axisS;
   }),
-  /** new dataBlocks() is replacing this version, renamed as axisSdataBlocks().
-   * @return data blocks of this axis.
-   * These are the Ember records, not the stack Block-s.
-   */
-  axisSdataBlocks : Ember.computed('axisS', 'blockService.axesBlocks.@each', function () {
-    let axis = this.get('axisS'),
-    dataBlocks,
-    axesBlocks = this.get('blockService.axesBlocks');
-    if (! axis) {
-      /* We can add a ComputedProperty for axes - allocate a Stack and Stacked
-       * (axis) for newly viewed non-child blocks. */
-      dataBlocks = [];
-      let
-        axisName = this.get('axis.id');
-      dLog('dataBlocks', axesBlocks, axisName, dataBlocks);
-    }
-    else {
-    let
-    /** stack Block-s. */
-      dataBlocksS = axis.dataBlocks();
-      dataBlocks = dataBlocksS.map(function (b) { return b.block; });
-    dLog(dataBlocksS, 'axesBlocks', axesBlocks, axis.axisName);
-    }
-    return dataBlocks;
-  }),
   /** viewed blocks on this axis.
    * For just the data blocks (depends on .hasFeatures), @see dataBlocks()
    */
-  viewedBlocks : Ember.computed('axis', 'blockService.axesViewedBlocks2.[]', function () {
+  viewedBlocks : computed('axis', 'blockService.axesViewedBlocks2.[]', function () {
     let
     blocks,
     axesBlocks = this.get('blockService.axesViewedBlocks2'),
@@ -406,7 +413,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       dLog('viewedBlocks', referenceBlock, axesBlocks, blocks);
     return blocks || [];
   }),
-  dataBlocks : Ember.computed('viewedBlocks.@each.isData', function () {
+  dataBlocks : computed('viewedBlocks.@each.isData', function () {
     let
     /** block.isData is similar to the block.hasFeatures filtering which is done in loadedViewedChildBlocks() */
     dataBlocks = this.get('viewedBlocks')
@@ -421,7 +428,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
    * showTickLocations(); that is calculated at render time, whereas this is
    * dependent on the base data.
    */
-  blockIndexes : Ember.computed('viewedBlocks.[]', function () {
+  blockIndexes : computed('viewedBlocks.[]', function () {
     // based on axis-tracks.js : blockIndexes(), translated to .reduce.
     let dataBlocks = this.get('viewedBlocks');
     let blockIndexes =
@@ -432,12 +439,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     dLog('blockIndexes', blockIndexes, dataBlocks);
     return blockIndexes;
   }),
-  colourSlotsUsed : Ember.A([]),
+  colourSlotsUsed : A([]),
   /** assign colour slots to viewed blocks of an axis
    * e.g. slots 0-10 for schemeCategory10
    * @return array mapping colour slots to blocks, or perhaps blocks to slots
    */
-  colourSlots : Ember.computed('dataBlocks.[]', function () {
+  colourSlots : computed('dataBlocks.[]', function () {
     /* 
      * when .viewed blocks changes : for each viewed block
      * if it is viewed and does not have a colour slot assigned
@@ -473,19 +480,22 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   },
   /** @return the domains of the data blocks of this axis.
    * The result does not contain a domain for data blocks with no features loaded.
+   *
+   * These events are input to the chain dataBlocksDomains -> blocksDomains ->
+   *   blocksDomain -> domain -> domainChanged -> scaleChanged
    */
-  dataBlocksDomains : Ember.computed('dataBlocks.@each.featuresDomain', function () {
+  dataBlocksDomains : computed('dataBlocks.@each.featuresDomain', function () {
     let dataBlocks = this.get('dataBlocks'),
     dataBlockDomains = dataBlocks.map(function (b) { return b.get('featuresDomain'); } )
     /* featuresDomain() will return undefined when block has no features loaded. */
       .filter(d => d !== undefined);
     return dataBlockDomains;
   }),
-  referenceBlock : Ember.computed.alias('axisS.referenceBlock'),
+  referenceBlock : alias('axis'),
   /** @return the domains of all the blocks of this axis, including the reference block if any.
    * @description related @see axesDomains() (draw/block-adj)
    */
-  blocksDomains : Ember.computed('dataBlocksDomains.[]', 'referenceBlock.range', function () {
+  blocksDomains : computed('dataBlocksDomains.[]', 'referenceBlock.range', function () {
     let
       /* alternative :
        * dataBlocksMap = this.get('blockService.dataBlocks'),
@@ -505,7 +515,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   /** @return the union of blocksDomains[], i.e. the interval which contains all
    * the blocksDomains intervals.
    */
-  blocksDomain : Ember.computed('blocksDomains.[]', function () {
+  blocksDomain : computed('blocksDomains.[]', function () {
     let 
       blocksDomains = this.get('blocksDomains'),
     domain = intervalExtent(blocksDomains);
@@ -513,22 +523,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     return domain;
   }),
   /** if domain is [0,0] or [false, false] then consider that undefined. */
-  domainDefined : Ember.computed('domain.0', 'domain.1', function () {
+  domainDefined : computed('domain.0', 'domain.1', function () {
     let domain = this.get('domain'),
     defined = ! noDomain(domain);
     return defined;
-  }),
-  blocksDomainEffect_unused : Ember.computed('blocksDomain', function () {
-    let domain = this.get('blocksDomain'),
-    domainDefined = this.get('domainDefined');
-    if (domainDefined && ! this.get('zoomed'))
-      /* defer setting yDomain to the end of this render, to avoid assert fail
-       * re. change of domainChanged, refn issues/13948;
-       * that also breaks progressive loading and axis & path updates from zoom.
-       */
-      Ember.run.later(() => {
-        this.setDomain(domain);
-      });
   }),
   /** Update the domain of the Y scales. */
   updateScaleDomain() {
@@ -550,7 +548,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
    * @return if zoomed return the zoom yDomain, otherwise blockDomain.
    * Result .{0,1} are swapped if .flipped.
    */
-  domain : Ember.computed('zoomed', 'flipped', 'blocksDomain', 'zoomedDomain', function () {
+  domain : computed('zoomed', 'flipped', 'blocksDomain', 'zoomedDomainThrottled', function () {
     /** Actually .zoomedDomain will be == blocksDomain when not zoomed, but
      * using it as a CP dependency causes problems, whereas blocksDomain has a
      * more direct dependency on axis' blocks' features' locations.
@@ -568,7 +566,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
    * Maybe : Also depend on block.featuresForAxis, to trigger a request for features of
    * a block when it is added to an axis.
    */
-  featureLength : Ember.computed('dataBlocks.@each.{featuresLength,featuresForAxis}', function () {
+  featureLength : computed(
+    /** depend on both featuresLength{Debounced,Throttled} because we want a
+     * steady flow of updates (throttled) and the trailing edge / final value
+     * update (debounced).  In practice, Features are received in bursts (API
+     * responses) so the throttled events may not occur.
+     * lodash has options to combine these features into a single function.
+     */
+    'dataBlocks.@each.{featuresLengthDebounced,featuresLengthThrottled,featuresForAxis}', 
+    function () {
     let dataBlocks = this.get('dataBlocks'),
     featureLengths = dataBlocks.map(function (b) { return b.get('featuresLength'); } ),
     featureLength = sum(featureLengths);
@@ -586,7 +592,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
   /** When featureLength changes, render.
    * The suffix Effect is used to denote a Side Effect triggered by a CF.
    */
-  featureLengthEffect : Ember.computed('featureLength', 'flipRegionCounter', 'axisS', function () {
+  featureLengthEffect : computed('featureLength', 'flipRegionCounter', 'axisS', function () {
     let featureLength = this.get('featureLength');
 
     this.renderTicksDebounce();
@@ -630,7 +636,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
    * Equivalent : this.get('axisS').selectAll(), which does a selection by id
    * from svgContainer through g.stack to the g.axis-outer.
    */
-  axisSelect : Ember.computed('axis.id', function () {
+  axisSelect : computed('axis.id', function () {
     let 
       axisId = this.get('axis.id'),
     /** could narrow this to svgContainer, but probably not a performance
@@ -644,55 +650,18 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
 
   /** @param [axisID, t] */
   zoomedAxis : function(axisID_t) { },
-  zoomedAxis_unused : function(axisID_t) {
-    let axisID = axisID_t[0],
-    axisName = this.get('axis.id');
-    dLog("zoomedAxis in components/axis-1d", axisID_t, axisName);
-    if (axisID == axisName)
-    {
-      dLog('zoomedAxis matched', axisID, this.get('axis'));
-      // Not currently needed because axisStackChanged() already received.
-      // this.renderTicksDebounce.apply(this, axisID_t);
-      let axisS = this.get('axisS'),
-      dimensions = axisS.axisDimensions();
-      dLog('zoomedAxis setDomain', this.get('domain'), this.get('currentPosition'), this.get('currentPosition.yDomain'), dimensions.domain);
-      this.setDomain(dimensions.domain);
-      // this.set('zoomed', dimensions.zoomed);
-      dLog('zoomedAxis', axisS, dimensions);
-    }
-  },
-  setDomain_unused(domain) {
-    let
-      attr = this.get('domain');
-    let cpDomain = this.get('currentPosition.yDomain');
-    /* verification - this confirms that if zoomedAxis() -> setDomain() then
-     * .currentPosition.yDomain has already been set to domain.
-     * So zoomedAxis() and setDomain() are disabled by appending _unused to their names.
-     */
-    if (! isEqual(cpDomain, domain)) {
-      dLog('setDomain', cpDomain, domain, attr);
-    }
-    if (! attr)
-      this.set('domain', Ember.A(domain));
-    else
-    {
-      domain.forEach((d, i) => {
-        this.set('domain.' + i, d);
-      });
-    }
-    dLog('setDomain', domain, attr /*, this.attrs*/);
-  },
+
   /** position when last pathUpdate() drawn. */
-  position : Ember.computed.alias('lastDrawn.yDomain'),
+  position : alias('lastDrawn.yDomain'),
   /** position as of the last zoom. */
-  zoomedDomain : Ember.computed.alias('currentPosition.yDomain'),
-  zoomedDomainDebounced : Ember.computed.alias('currentPosition.yDomainDebounced'),
-  zoomedDomainThrottled : Ember.computed.alias('currentPosition.yDomainThrottled'),
+  zoomedDomain : alias('currentPosition.yDomain'),
+  zoomedDomainDebounced : alias('currentPosition.yDomainDebounced'),
+  zoomedDomainThrottled : alias('currentPosition.yDomainThrottled'),
 
   /** Updates when the array elements of .domain[] update.
    *  @return undefined; value is unused.
    */
-  domainChanged : Ember.computed(
+  domainChanged : computed(
     'domain.0', 'domain.1',
     function () {
       if (this.isDestroyed) return undefined;
@@ -707,14 +676,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
           dLog('domainChanged() no axisS yet', domain, this.get('axis.id'));
         else {
           this.updateScaleDomain();
-          this.updateAxis();
+          throttle(this, this.updateAxis, this.get('controlsView.throttleTime'));
         }
       }
       return domainDefined && domain;
     }),
   /** Update when the domain has changed and the scale has been updated.
    */
-  scaleChanged : Ember.computed('domainChanged', function () {
+  scaleChanged : computed('domainChanged', function () {
     let scale, domainDefined = this.get('domainChanged');
     dLog('scaleChanged', domainDefined);
     if (domainDefined) {
@@ -774,7 +743,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     }
   },
 
-  ensureAxis : Ember.computed('viewedBlocks', function () {
+  ensureAxis : computed('viewedBlocks', function () {
     let viewedBlocks = this.get('viewedBlocks');
     let axisApi = stacks.oa.axisApi;
     let count = viewedBlocks.length;
@@ -787,7 +756,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     return count;
   }),
 
-  extendedEffect : Ember.computed('extended', function () {
+  extendedEffect : computed('extended', function () {
     let
     extended = this.get('extended'),
     axisID = this.get('axis.id');
@@ -795,7 +764,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     // possibly ... pass an action param.
     let axis2d = this.get('axis2d');
     if (axis2d) {
-      Ember.run.next(() => ! axis2d.isDestroyed && axis2d.axisWidthResizeEnded());
+      next(() => ! axis2d.isDestroyed && axis2d.axisWidthResizeEnded());
     }
 
     this.showExtendedClass();
@@ -819,7 +788,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
     return extended;
   }),
 
-  extendedWidthEffect : Ember.computed(/*'extended',*/ 'axis2d.allocatedWidthsMax', function () {
+  extendedWidthEffect : computed(/*'extended',*/ 'axis2d.allocatedWidthsMax', function () {
     this.widthEffects();
   }),
   widthEffects() {
@@ -917,7 +886,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
      * should be rendered, but in this case it is likely there is no change
      * after the first event in the group.
      */
-    Ember.run.throttle(this, this.renderTicks, axisID_t, 500);
+    throttle(this, this.renderTicks, axisID_t, 500);
   },
 
   /** Give the g.axis-outer a .extended class if the axis is split.
@@ -929,7 +898,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, AxisPosition, {
       as = this.get('axisSelect');
     as.classed("extended", this.get('extended'));
   },
-  buttonStateEffect : Ember.computed('brushed', 'zoomed', function () {
+  buttonStateEffect : computed('brushed', 'zoomed', function () {
     this.showZoomResetButtonState();
   }),
   showZoomResetButtonState() {

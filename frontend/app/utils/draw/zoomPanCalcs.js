@@ -57,9 +57,12 @@ function subInterval(values, interval) {
 
 /** Test if any of an array of values, which can be a pair defining an interval, is
  * contained within another interval.
+ * This does not treat interval completely contained within values as an overlap,
+ * so use overlapInterval() which handles that case.
+ * For calculation of the overlap, in interval-calcs.js, @see intervalOverlap()
  * @param values  an array of values to test
  */
-function overlapInterval(values, interval) {
+function overlapInterval1(values, interval) {
   /* based on subInterval().
   * Note also : interval-calcs.js : intervalOverlap() which calculates the overlapping interval.
   * and interval-overlap.js : inInterval() and inDomain(), which are equivalent, but look less efficient.
@@ -68,6 +71,10 @@ function overlapInterval(values, interval) {
   let ok =
     values.any(function (d) { return inRange(d, interval); });
   return ok;
+}
+function overlapInterval(values, interval) {
+  return overlapInterval1(values, interval) ||
+    overlapInterval1(interval, values);
 }
 
 

@@ -1,14 +1,16 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 
-export default Ember.Component.extend({
-  store: Ember.inject.service('store'),
+export default Component.extend({
+  store: service('store'),
 
   classNames : ["filter-groups"],
 
   /** only the first dataset fg and the first block fg are currently used,
    * so limit data.length to 2.
    */
-  maxFilterGroups : Ember.computed('data.length', function () {
+  maxFilterGroups : computed('data.length', function () {
     return this.get('data.length') > 1;
   }),
 

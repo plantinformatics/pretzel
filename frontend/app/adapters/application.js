@@ -1,9 +1,11 @@
-import Ember from 'ember';
-import DS from 'ember-data';
+import { computed } from '@ember/object';
+import $ from 'jquery';
+import { get } from '@ember/object';
+import { inject as service } from '@ember/service';
+import RESTAdapter from '@ember-data/adapter/rest';
 import DataAdapterMixin from 'ember-simple-auth/mixins/data-adapter-mixin';
-import PartialModelAdapter from 'ember-data-partial-model/mixins/adapter';
+// import PartialModelAdapter from 'ember-data-partial-model/mixins/adapter';
 import ENV from '../config/environment';
-const { inject: { service } } = Ember;
 
 import {
   getConfiguredEnvironment,
@@ -21,7 +23,10 @@ const dLog = console.debug;
 
 var config = {
   apiServers: service(),
-  authorizer: 'authorizer:application', // required by DataAdapterMixin
+
+  /** required by DataAdapterMixin */
+  authorizer: 'authorizer:application',
+
   session: service('session'),
 
   /** host and port part of the url of the API
@@ -41,23 +46,37 @@ var config = {
     console.log('app/adapters/application.js host', this, arguments, server, config, configApiHost, ENV.apiHost, host);
     return host;
   },
-  host: function () {
+
+  get host() {
     let store = this.store,
     adapterOptions = store && store.adapterOptions,
-    host = (adapterOptions && adapterOptions.host) || Ember.get(this, '_server.host');
+    host = (adapterOptions && adapterOptions.host) || get(this, '_server.host');
     console.log('app/adapters/application.js host', this, store, adapterOptions, host, this._server);
     return host;
-  }.property().volatile(),
+  },
+
   namespace: ENV.apiNamespace,
+
   urlForFindRecord(id, type, snapshot) {
     let url = this._super(...arguments);
     // facilitating loopback filter structure
     if (snapshot.adapterOptions && snapshot.adapterOptions.filter) {
-      let queryParams = Ember.$.param(snapshot.adapterOptions);
+      let queryParams = $.param(snapshot.adapterOptions);
       return `${url}?${queryParams}`;
     }
     return url;
   },
+
+  get headers() {
+    let store = this.store,
+    adapterOptions = store && store.adapterOptions,
+    token = this._server && this._server.token;
+    dLog('headers', store, adapterOptions, this._server, token);
+    return token && {
+      Authorization : token
+    };
+  },
+
   /** Wrap buildURL(); get server associated with adapterOptions or query and
    * pass server as this._server through to get('host'), so that it can use server.host
    * The adapterOptions don't seem to be passed to get('host')
@@ -91,7 +110,7 @@ var config = {
         id2Server = this.get('apiServers.id2Server');
       let map = this.get('apiServers.obj2Server'),
       /** the above works for blocks; for datasets (e.g. delete), can lookup server name from snapshot.record */
-      snapshotServerName = snapshot && Ember.get(snapshot, 'record.store.name'),
+      snapshotServerName = snapshot && get(snapshot, 'record.store.name'),
       servers = this.get('apiServers.servers'),
       snapshotServer = servers && servers[snapshotServerName],
       server = map.get(serverHandle) || (id && id2Server[id]) || snapshotServer;
@@ -108,6 +127,7 @@ var config = {
     }
     return this._super(modelName, id, snapshot, requestType, query);
   },
+
   updateRecord(store, type, snapshot) {
     // updateRecord calls PUT rather than PATCH, which is
     // contrary to the record.save method documentation
@@ -123,6 +143,7 @@ var config = {
 
     return this.ajax(url, "PATCH", { data: data });
   },
+
   deleteRecord(store, type, snapshot) {
     // loopback responds with 200 and a count of deleted entries
     // with the request. ember expects a 204 with an empty payload.
@@ -138,10 +159,10 @@ var config = {
   }
 }
 
-var args = [PartialModelAdapter, config]
+var args = [/*PartialModelAdapter,*/ config]
 
 if (window['AUTH'] !== 'NONE'){
   args.unshift(DataAdapterMixin);
 }
 
-export default DS.RESTAdapter.extend(...args);
+export default RESTAdapter.extend(...args);

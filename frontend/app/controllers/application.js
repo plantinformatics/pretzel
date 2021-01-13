@@ -1,7 +1,6 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import Controller from '@ember/controller';
 import config from '../config/environment';
-
-const { Controller } = Ember;
 
 import { parseOptions } from '../utils/common/strings';
 
@@ -26,7 +25,7 @@ export default Controller.extend({
    */
   queryParams: [{options : {as : 'appOptions'}}],
 
-  parsedOptions : Ember.computed('options', function () {
+  parsedOptions : computed('options', function () {
     let options = this.get('options'),
     parsedOptions = options && parseOptions(options);
     dLog('parsedOptions', options);

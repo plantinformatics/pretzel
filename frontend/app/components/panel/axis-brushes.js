@@ -1,10 +1,9 @@
-import Ember from 'ember';
-
-const { inject: { service } } = Ember;
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
 /**
  */
-export default Ember.Component.extend({
+export default Component.extend({
 
   /** used for axisBrush.brushedAxes to instantiate axis-brush s. */
   flowsService: service('data/flows-collate'),

@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import Component from '@ember/component';
 
 /** axis-accordion could be absorbed into axis-2d,
  * but this separation of concerns seems useful : axis-2d connects external
@@ -6,7 +6,7 @@ import Ember from 'ember';
  * axis-accordion is inward-facing : managing the sharing of horizontal space between its
  * children, within the axis space.
 */
-export default Ember.Component.extend({
+export default Component.extend({
   classNames: ['axis-accordion-container']
 
 });

@@ -1,8 +1,8 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 
 import config from '../config/environment';
-
-const { inject: { service }, Component } = Ember;
 
 export default Component.extend({
   session:        service('session'),
@@ -12,7 +12,7 @@ export default Component.extend({
   buildDate: config.APP.buildDate,
   version: config.APP.version,
 
-  buildDateFormatted: Ember.computed('buildDate', function() {
+  buildDateFormatted: computed('buildDate', function() {
     let value = this.get('buildDate')
     return value.substring(0, 10)
   }),

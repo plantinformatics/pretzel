@@ -31,7 +31,7 @@
       <li href="#" class="list-group-item list-group-item-info">
         <div class="input-group">
           {{input
-            enter="addAnnotation"
+            enter=(action "addAnnotation")
             type="text"
             value=newAnnotation
             class="form-control"
@@ -75,7 +75,7 @@
         <li href="#" class="list-group-item list-group-item-info">
           <div class="input-group">
             {{input
-              enter="addInterval"
+              enter=(action "addInterval")
               type="text"
               value=newInterval
               class="form-control"

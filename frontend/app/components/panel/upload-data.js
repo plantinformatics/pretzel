@@ -1,5 +1,6 @@
-import Ember from 'ember';
-const { inject: { service }, getOwner } = Ember;
+import { alias } from '@ember/object/computed';
+import { inject as service } from '@ember/service';
+import { getOwner } from '@ember/application';
 
 
 import ManageBase from './manage-base'
@@ -20,6 +21,6 @@ export default ManageBase.extend({
     }
   },
 
-  serverTabSelected : Ember.computed.alias('controls.serverTabSelected')
+  serverTabSelected : alias('controls.serverTabSelected')
 
 });

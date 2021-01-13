@@ -1,5 +1,5 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
 
 import EntryBase from './entry-base';
 
@@ -9,7 +9,7 @@ export default EntryBase.extend({
 
   tagName: '',
 
-  node : Ember.computed('name', function () {
+  node : computed('name', function () {
     let store = this.get('store');
     return store.peekRecord('Dataset', this.get('name'));
   }),

@@ -4,6 +4,8 @@
 /* Various utility functions for development / debugging of Ember objects. */
 
 /** Find a parent with the nominated type. */
+import $ from 'jquery';
+
 function parentOfType(typeName) {
   let parent = this.parentView;
   while (parent && (parent._debugContainerKey !== typeName))
@@ -18,7 +20,7 @@ function parentOfType(typeName) {
  */
 function elt0(id) {
   /* first added in entry-expander.js, then entry-values.js */
-  return Ember.$("#"+id)[0];
+  return $("#"+id)[0];
 }
 
 /*----------------------------------------------------------------------------*/

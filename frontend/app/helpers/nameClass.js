@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
 
 import Helper from "@ember/component/helper";
 
@@ -11,7 +11,7 @@ import Helper from "@ember/component/helper";
  */
 export default Helper.extend({
 
-  store: Ember.inject.service('store'),
+  store: service('store'),
 
   compute(params) {
     let

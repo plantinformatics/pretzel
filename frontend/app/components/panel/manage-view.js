@@ -1,8 +1,9 @@
+import { computed } from '@ember/object';
 import ManageBase from './manage-base'
 
 export default ManageBase.extend({
 
-  isMapview: Ember.computed('view', function() {
+  isMapview: computed('view', function() {
     let view = this.get('view');
     if (view == 'mapview') {
       return true;
@@ -10,7 +11,7 @@ export default ManageBase.extend({
     return false;
   }),
 
-  hasDisplayData: Ember.computed('displayData.[]', function() {
+  hasDisplayData: computed('displayData.[]', function() {
     let displayData = this.get('displayData');
     if (displayData && displayData.length > 0) {
       return true;
