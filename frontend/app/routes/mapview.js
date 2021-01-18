@@ -19,6 +19,8 @@ let config = {
   auth: service('auth'),
   apiServers: service(),
 
+  authenticationRoute: 'login',
+
   titleToken: 'MapView',
   queryParams: {
     mapsToView: {

@@ -5,6 +5,9 @@ import ApplicationRouteMixin from 'ember-simple-auth/mixins/application-route-mi
 export default Route.extend(ApplicationRouteMixin, {
   sessionAccount: service('session-account'),
 
+  /** configuration for ember-simple-auth. */
+  routeAfterAuthentication : 'mapview',
+
   beforeModel() {
     return this._loadCurrentUser();
   },
