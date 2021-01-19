@@ -9,10 +9,12 @@
     {{auth-input
       type='text'
       value=this.identification
+      autocomplete="username"
       placeholder='Email Address'}}
     {{auth-input
       type='password'
       value=this.password
+      autocomplete="current-password"
       placeholder='Password'}}
     {{suggest-link
       suggest-text="Forgotten your password?"

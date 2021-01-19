@@ -689,7 +689,11 @@ export default InAxis.extend({
         let
         p = this.parentElement,
         gBlock = subElements ? p.parentElement : p,
-        blockId = gBlock.__data__,
+        blockId = gBlock.__data__;
+	if (! subElements && (typeof blockId !== "string") && blockId.description && (typeof p.parentElement.__data__ === "string")) {
+	    blockId = p.parentElement.__data__;
+	}
+	let
         blockC = thisAt.lookupAxisTracksBlock(blockId),
         trackWidth = blockC.trackWidth;
         /*console.log("xPosn", d);*/

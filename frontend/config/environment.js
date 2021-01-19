@@ -29,9 +29,10 @@ module.exports = function(environment) {
       }, 
     },
     'ember-simple-auth': {
-        authenticationRoute: 'login',
-        routeAfterAuthentication: 'mapview',
-        routeIfAlreadyAuthenticated: 'mapview'
+      /* these configuration values are moved to the routes :
+       *  authenticationRoute, routeAfterAuthentication, routeIfAlreadyAuthenticated
+       * as per : https://github.com/simplabs/ember-simple-auth/blob/master/guides/upgrade-to-v3.md
+       */
     },
 
     APP: {
