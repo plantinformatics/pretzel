@@ -17,7 +17,6 @@ COPY ./backend /app
 
 # add frontend to image
 COPY ./frontend /frontend
-COPY ./backend/common/utilities/interval-overlap.js /frontend/app/utils/draw/.
 
 RUN node --version
 RUN cd /frontend && (npm ci || npm install)  && bower install --allow-root
