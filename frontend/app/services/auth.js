@@ -438,9 +438,18 @@ export default Service.extend({
             result.data = blockIdMap(data, [blockLocalId, I]);
         }
       }
-      if (! requestServer)
-        requestServer = this.get(requestServerAttr);
-      dLog(blockId, 'blockServer', blockServer);
+      if (! requestServer) {
+	/** For requests without blockIds to determine blockServer from.
+	 * requestServerAttr (.session.requestServer) is set by buildURL(),
+	 * called via adapters/application.js: updateRecord().  Prior to that
+	 * being called, fall back to primaryServer, e.g. for runtimeConfig
+	 * which is used by getHoTLicenseKey() when the key is not defined in
+	 * the build environment.
+	 */
+        requestServer = this.get(requestServerAttr)
+	  || this.get('apiServers.primaryServer');
+      }
+      dLog(blockId, 'blockServer', blockServer, requestServer, this.get(requestServerAttr));
     }
     result.server = requestServer;
     return result;
