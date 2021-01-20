@@ -480,7 +480,7 @@ export default Service.extend({
     if (requestServer) {
       let url = new URL(apiHost);
       dLog('_endpoint', url.hostname, this.session.store.cookieDomain);
-      this.session.store.cookieDomain = url.hostname;
+      this.session.store.cookieDomain = '.' + url.hostname;
     }
     dLog('_endpoint', requestServer, apiHost, endpoint, config);
     return endpoint
