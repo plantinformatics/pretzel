@@ -478,9 +478,15 @@ export default Service.extend({
      *  session was authenticated on."
      */
     if (requestServer) {
-      let url = new URL(apiHost);
-      dLog('_endpoint', url.hostname, this.session.store.cookieDomain);
-      this.session.store.cookieDomain = '.' + url.hostname;
+      let
+      url = new URL(apiHost),
+      sessionStore = this.session.store,
+      baseName = 'ember_simple_auth-session',
+      suffix = url.hostname.replaceAll('.', '_'),
+      cookieName = baseName + '-' + suffix;
+      dLog('_endpoint', url.hostname, cookieName, sessionStore);
+      sessionStore.cookieDomain = '.' + url.hostname;
+      sessionStore.cookieName = cookieName;
     }
     dLog('_endpoint', requestServer, apiHost, endpoint, config);
     return endpoint
