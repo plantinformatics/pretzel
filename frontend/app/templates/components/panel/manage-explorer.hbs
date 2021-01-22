@@ -28,13 +28,6 @@
       {{#each-in servers as |apiServerName apiServer| }}
         {{panel/api-server-tab tab=tab nav=nav apiServerName=apiServerName apiServer=apiServer serverTabSelected=(action "serverTabSelected")}}
       {{/each-in}}
-      <li class="pull-right" style="margin: 9px;">
-        {{elem/button-base
-          classSize='xs'
-          classColour='success'
-          icon='plus'
-          onClick=(action "addNewDatasource")}}
-      </li>
     </BsNav>
   </BsTab>
 
