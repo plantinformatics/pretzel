@@ -467,27 +467,13 @@ export default Service.extend({
      * different species (e.g. *.plantinformatics.io) and they have separate
      * logins, so the authentication cookie token is not shared between
      * subdomains which is the default configuration of ember-simple-auth.
-     * Setting .cookieDomain to the (sub)domain of the server prevents
-     * interference from cookies from other subdomains.  Secondary servers have
-     * separate login and authentication, so .cookieDomain is set dynamically
-     * per-request, for the particular requestServer.  If Pretzel did not
-     * support multiple stores, a static configuration could be made in
-     * session-stores/application.js :  .cookieDomain : document.domain.
+     * Not setting .cookieDomain prevents interference from cookies from
+     * other subdomains and the parent domain.  Secondary servers have
+     * separate login and authentication.
      * refn: https://ember-simple-auth.com/api/classes/CookieStore.html
      *  "If not explicitly set, the cookie domain defaults to the domain the
      *  session was authenticated on."
      */
-    if (requestServer) {
-      let
-      url = new URL(apiHost),
-      sessionStore = this.session.store,
-      baseName = 'ember_simple_auth-session',
-      suffix = url.hostname.replaceAll('.', '_'),
-      cookieName = baseName + '-' + suffix;
-      dLog('_endpoint', url.hostname, cookieName, sessionStore);
-      sessionStore.cookieDomain = '.' + url.hostname;
-      sessionStore.cookieName = cookieName;
-    }
     dLog('_endpoint', requestServer, apiHost, endpoint, config);
     return endpoint
   },
