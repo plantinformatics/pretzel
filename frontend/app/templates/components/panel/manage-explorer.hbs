@@ -158,19 +158,6 @@
              tab-content,  the data content in the following is switched by the above tab.
              --}}
 
-  
-          {{#each dataPre as |dataset|}}
-            {{record/entry-dataset
-              filter=filter
-              entry=dataset
-              selectedBlock=selectedBlock
-              selectBlock="selectBlock"
-              deleteBlock="deleteBlock"
-              onDelete="onDelete"
-              loadBlock="loadBlock"
-              selectedDataset=selectedDataset
-              selectDataset="selectDataset"}}
-          {{/each}}
           <li 
               class="list-group-item list-group-item-info"
 	      style="margin-top: 4ex;" >
@@ -184,6 +171,19 @@
                 onClick=(action "changeTab" "upload")}}
             </span>
           </li>
+  
+          {{#each dataPre as |dataset|}}
+            {{record/entry-dataset
+              filter=filter
+              entry=dataset
+              selectedBlock=selectedBlock
+              selectBlock="selectBlock"
+              deleteBlock="deleteBlock"
+              onDelete="onDelete"
+              loadBlock="loadBlock"
+              selectedDataset=selectedDataset
+              selectDataset="selectDataset"}}
+          {{/each}}
         </ul>
 
       </tab.pane>
