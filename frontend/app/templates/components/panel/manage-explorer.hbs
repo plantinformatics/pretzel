@@ -9,8 +9,9 @@
   {{/elem/panel-heading}}
 
   <div class="textInput">
-    {{input id="nameFilter" type="text" value=nameFilter placeholder="Dataset Name Filter" }}
     <i class="glyphicon glyphicon-filter"></i>
+    {{!-- there is no suitable autocomplete, so may change to  =off --}}
+    {{input id="nameFilter" type="text" value=nameFilter placeholder="Search" autocomplete="dataset-name" }}
   </div>
 
   {{#if model.availableMapsTask.isRunning}}

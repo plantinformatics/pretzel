@@ -839,17 +839,23 @@ li.dropdown-submenu > ul.dropdown-menu {
 #left-panel-explorer > div > div.panel.panel-primary > .textInput {
   margin : 0px;
   margin-top: 2ex;
+  margin-right: 1em;
+  display: flex;
 }
 .textInput #nameFilter
 {
   margin-left: 10px;
   /* margin-right: 1em; */
   width: 85%;
+  font-size: xx-large;
+
+  flex-grow: 1;
+  overflow-x: auto;
 }
 .textInput > i.glyphicon
 {
-  float: right;
   margin: 0.8ex;
+  font-size : large;
 }
 
 /* dataset explorer : filter-group */
