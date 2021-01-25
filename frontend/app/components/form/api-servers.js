@@ -21,7 +21,7 @@ const showList = false;
 export default Component.extend({
   apiServers: service(),
 
-  showList,
+  showList : true,
 
   /* Early prototypes, up until commit fa0c40e, had action&function addEmpty(),
    * but not needed so dropped. */
