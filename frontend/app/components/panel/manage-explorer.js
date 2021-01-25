@@ -202,7 +202,7 @@ export default ManageBase.extend({
     return combined;
   }),
   //----------------------------------------------------------------------------
-  dataPre: computed('datasetsBlocks', 'datasetsBlocks.[]', 'filter', function() {
+  dataPre1: computed('datasetsBlocks', 'datasetsBlocks.[]', 'filter', function() {
     let availableMaps = this.get('datasetsBlocks') || resolve([]);
     let filter = this.get('filter')
     dLog('dataPre', availableMaps, filter);
@@ -218,6 +218,18 @@ export default ManageBase.extend({
         availableMaps.then(function (value) { console.log('dataPre availableMaps ->', value); });
       return availableMaps;
     }
+  }),
+  dataPre2 : computed('dataPre1.[]', 'nameFilter', function () {
+    return this.get('dataPre1');
+  }),
+  dataPre: filter('dataPre2', function(dataset, index, array) {
+    let
+    nameFilter = this.get('nameFilter'),
+    match = (nameFilter === "") || dataset.name.includes(nameFilter);
+    if (match && (nameFilter !== "")) {
+      dLog('dataPre', nameFilter, dataset.name);
+    }
+    return match;
   }),
   /** @return the filterGroup if there is one, and it has a pattern. */
   definedFilterGroups : computed(

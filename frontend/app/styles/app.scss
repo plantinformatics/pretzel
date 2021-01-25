@@ -834,6 +834,24 @@ li.dropdown-submenu > ul.dropdown-menu {
     border-radius: 6px 0 6px 6px;
 }
 /* -------------------------------------------------------------------------- */
+/* dataset explorer : .textInput  #nameFilter */
+
+#left-panel-explorer > div > div.panel.panel-primary > .textInput {
+  margin : 0px;
+  margin-top: 2ex;
+}
+.textInput #nameFilter
+{
+  margin-left: 10px;
+  /* margin-right: 1em; */
+  width: 85%;
+}
+.textInput > i.glyphicon
+{
+  float: right;
+  margin: 0.8ex;
+}
+
 /* dataset explorer : filter-group */
 
 .filter-groups {

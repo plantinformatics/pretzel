@@ -7,6 +7,12 @@
     {{elem/button-refresh
       onClick=(action 'refreshAvailable')}}
   {{/elem/panel-heading}}
+
+  <div class="textInput">
+    {{input id="nameFilter" type="text" value=nameFilter placeholder="Dataset Name Filter" }}
+    <i class="glyphicon glyphicon-filter"></i>
+  </div>
+
   {{#if model.availableMapsTask.isRunning}}
     <div class="panel-body">
       <div class="well">
