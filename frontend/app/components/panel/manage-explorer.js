@@ -219,13 +219,21 @@ export default ManageBase.extend({
       return availableMaps;
     }
   }),
-  dataPre2 : computed('dataPre1.[]', 'nameFilter', function () {
+  nameFilterArray : computed('nameFilter', function () {
+    let
+    nameFilter = this.get('nameFilter'),
+    array = !nameFilter || (nameFilter === '') ? [] :
+      nameFilter.split(/[ \t]/);
+    return array;
+  }),
+  dataPre2 : computed('dataPre1.[]', 'nameFilterArray', function () {
     return this.get('dataPre1');
   }),
   dataPre: filter('dataPre2', function(dataset, index, array) {
     let
-    nameFilter = this.get('nameFilter'),
-    match = (nameFilter === "") || dataset.name.includes(nameFilter);
+    nameFilters = this.get('nameFilterArray'),
+    match = ! nameFilters.length || 
+      nameFilters.every((nameFilter) => dataset.name.includes(nameFilter));
     if (match && (nameFilter !== "")) {
       dLog('dataPre', nameFilter, dataset.name);
     }
