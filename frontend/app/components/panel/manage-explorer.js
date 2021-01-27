@@ -233,12 +233,28 @@ export default ManageBase.extend({
     let
     nameFilters = this.get('nameFilterArray'),
     match = ! nameFilters.length || 
-      nameFilters.every((nameFilter) => dataset.name.includes(nameFilter));
+      this.datasetOrBlockMatch(dataset, nameFilters);
     if (match && (nameFilter !== "")) {
       dLog('dataPre', nameFilter, dataset.name);
     }
     return match;
   }),
+  /**
+   * @return true if each of the name keys matches either the dataset or one of its blocks
+   * @param dataset
+   * @param nameFilters array of text to match against names of datasets / blocks
+   */
+  datasetOrBlockMatch(dataset, nameFilters) {
+    let matchAll = nameFilters.every((nameFilter) => {
+      let match = dataset.name.includes(nameFilter);
+      if (! match) {
+        /** depending on the cost of get('blocks'), it may be worthwhile to reverse the order of these loops : nameFilters / blocks */
+        match = dataset.get('blocks').any((block) => block.name.includes(nameFilter));
+      }
+      return match;
+    })
+    return matchAll;
+  },
   /** @return the filterGroup if there is one, and it has a pattern. */
   definedFilterGroups : computed(
     'filterGroups', 'filterGroups.[]',
