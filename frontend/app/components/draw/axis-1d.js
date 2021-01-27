@@ -250,8 +250,32 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     let ak = axisName,
     range = getAttrOrCP(feature, 'range') || getAttrOrCP(feature, 'value'),
     tickY = range && (range.length ? range[0] : range),
-    sLine = axisApi.lineHoriz(ak, tickY, xOffset, shiftRight);
+    // sLine = axisApi.lineHoriz(ak, tickY, xOffset, shiftRight);
+    // instead of lineHoriz(), use horizTrianglePath().
+    /** scaled to axis.
+     * could instead use featureY_(ak, feature.id);     */
+    akYs = stacks.oa.y[ak](tickY),
+    sLine = horizTrianglePath(akYs, 10, xOffset, shiftRight);
     return sLine;
+  };
+
+  /** Construct a <path> which draws a horizontal isosceles triangle, pointing right.
+   * This is used to indicate on an axis the position of features search results.
+   * @param akYs	scaled y position of feature
+   * @param yLength	length of triangle base
+   * @param xLength	length of triangle x axis
+   * @param shiftLeft	offset of vertex from y axis
+   */
+  function horizTrianglePath(akYs, yLength, xLength, shiftLeft) {
+    /** related : axisApi.lineHoriz(), featureLineS()  */
+    let
+    baseX = -xLength + shiftLeft,
+    y2 = yLength / 2;
+    let path = d3.line()(
+      [[baseX, akYs - y2],
+       [-shiftLeft, akYs],
+       [baseX, akYs + y2]]) + 'Z';
+    return path;
   };
 
   /** eg: "scaffold23432:1A:1-534243" */
