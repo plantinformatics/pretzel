@@ -21,6 +21,7 @@ import {
 
 import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
 import { parseOptions } from '../../utils/common/strings';
+import { thenOrNow } from '../../utils/common/promises';
 
 import { mapHash, justUnmatched, logV } from '../../utils/value-tree';
 
@@ -291,12 +292,12 @@ export default ManageBase.extend({
     return isFilter;
   }),
   /** @return result is downstream of filter and filterGroups */
-  data : computed('dataPre', 'dataPre.[]', 'dataFG', 'isFilter',    function() {
+  data : computed('dataPre', 'dataPre.[]', 'dataFG', 'isDatasetFilter',    function() {
     let
       /** The result of a filter is an array of datasets, whereas a grouping results in a hash.
        * The result of data() should be an array, so only use filterGroup if it is a filter.
        */
-      isFilter = this.get('isFilter'),
+      isFilter = this.get('isDatasetFilter'),
     datasets = isFilter ? this.get('dataFG') : this.get('dataPre');
     // this.parentAndScope()
     if (trace_dataTree > 2)
@@ -746,7 +747,7 @@ export default ManageBase.extend({
       let datasetsP = this.get('dataPre'),
       filterGroup = this.get('datasetFilterGroup'),
       me = this;
-      return datasetsP.then(function (datasets) {
+      return thenOrNow(datasetsP, function (datasets) {
         datasets = datasets.toArray();
         return me.datasetFilter(datasets, filterGroup, 'all');
       });
