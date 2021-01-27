@@ -93,13 +93,16 @@ export default Component.extend({
       // If string has leading or following white-space, then result of split will have leading / trailing ""
       if (fl.length && (fl[0] === ""))
         fl.shift();
-      if (fl.length && (fl[fl.length-1] === ""))
-        fl.pop();
       }
     else  // e.g. if fl===""
       fl = [];
 
       text$.val(fl && fl.join('\n'));
+      /** If the user has appended a \n, it is not removed from the textarea,
+       * allowing them to type text on a new line;  instead the "" at the end
+       * of fl[] is popped. */
+      if (fl.length && (fl[fl.length-1] === ""))
+        fl.pop();
       featureList.featureNameList = fl;
       featureList.empty = ! fl || (fl.length === 0);
       return featureList;
