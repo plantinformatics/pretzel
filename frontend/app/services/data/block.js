@@ -1086,34 +1086,42 @@ export default Service.extend(Evented, {
           storefb = this.get('apiServers').id2Store(f.block.id),
         block = store.peekRecord('block', f.block.id),
         fBlock = f.block;
-        if (store !== storefb) {
-          dLog(fnName, apiServer, store && store.name, '!==', storefb && storefb.name, f.block.id);
+        let feature;
+        /** filter out result features whose blocks are copies. */
+        if (! storefb && block.isCopy) {
+          feature = undefined;
+          dLog(fnName, 'result feature is a copy', f, block._meta._origin, store && store.name);
         }
-        if (f.blockId !== f.block.id) {
-          dLog(fnName, f.blockId, '!==', f.block.id);
-        }
-        else if (! block && storefb && (block = storefb.peekRecord('block', f.block.id))) {
-          dLog(fnName, f.block, 'not in store of request server', store, 'using', storefb);
-          store = storefb;
-        }
-        else if (! block) {
-          dLog(fnName, f.block, 'not in store', store, storefb);
-        }
-        else
-          f.block = block;
+        else {
+          if (store !== storefb) {
+            dLog(fnName, apiServer, store && store.name, '!==', storefb && storefb.name, f.block.id);
+          }
+          if (f.blockId !== f.block.id) {
+            dLog(fnName, f.blockId, '!==', f.block.id);
+          }
+          else if (! block && storefb && (block = storefb.peekRecord('block', f.block.id))) {
+            dLog(fnName, f.block, 'not in store of request server', store, 'using', storefb);
+            store = storefb;
+          }
+          else if (! block) {
+            dLog(fnName, f.block, 'not in store', store, storefb);
+          }
+          else
+            f.block = block;
 
-        let feature = store.peekRecord('feature', f.id);
-        if (get(fBlock, '_meta._origin')) {
-          dLog(fnName, 'result feature is a copy', f, fBlock._meta._origin, fBlock);
-          // expect that feature is undefined, which is filtered out.
-        }
-        else if (! feature) {
-          if (f._id === undefined)
-            f._id = f.id;
-          feature = 
-            pathsPro.pushFeature(store, f, flowsService);
-          if (! feature)
-            dLog(fnName, f, 'push failed');
+          feature = store.peekRecord('feature', f.id);
+          if (get(fBlock, '_meta._origin')) {
+            dLog(fnName, 'result feature is a copy', f, fBlock._meta._origin, fBlock);
+            // expect that feature is undefined, which is filtered out.
+          }
+          else if (! feature) {
+            if (f._id === undefined)
+              f._id = f.id;
+            feature = 
+              pathsPro.pushFeature(store, f, flowsService);
+            if (! feature)
+              dLog(fnName, f, 'push failed');
+          }
         }
         return feature;
       })
