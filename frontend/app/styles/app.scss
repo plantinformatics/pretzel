@@ -480,8 +480,8 @@ body.allInitially
 }
 
 
-.axis line, .axis path,
-.axis-use > path
+.axis line, .axis path:not(.horizTick),
+.axis-use > path:not(.horizTick)
 {
   fill: none;
   shape-rendering: crispEdges;
@@ -606,7 +606,6 @@ path.horizTick.fromInput
 g.foundFeatures > path.horizTick
 {
   stroke-width : 1px;
-  shape-rendering : auto;
 }
 
 path.syntenyEdge

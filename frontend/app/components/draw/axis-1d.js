@@ -213,6 +213,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 
       p1.attr("d", pathFn)
       .attr('stroke', featurePathStroke)
+      .attr('fill', featurePathStroke)
     ;
 
 
