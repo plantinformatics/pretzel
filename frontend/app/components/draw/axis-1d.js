@@ -256,7 +256,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     /** scaled to axis.
      * could instead use featureY_(ak, feature.id);     */
     akYs = stacks.oa.y[ak](tickY),
-    sLine = horizTrianglePath(akYs, 10, xOffset, shiftRight);
+    sLine = horizTrianglePath(akYs, 10, xOffset / 2, 1);
     return sLine;
   };
 

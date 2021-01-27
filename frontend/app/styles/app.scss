@@ -606,6 +606,7 @@ path.horizTick.fromInput
 g.foundFeatures > path.horizTick
 {
   stroke-width : 1px;
+  shape-rendering : auto;
 }
 
 path.syntenyEdge
