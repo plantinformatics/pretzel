@@ -130,7 +130,8 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
   if (!aS.empty())
   {
     /** show no ticks if axis is extended. */
-    let blocks = (extended ? [] : blockFilter ? axis.blocks.filter(blockWithTicks) : axis.blocks);
+    const notWhenExtended = false;
+    let blocks = (notWhenExtended && extended ? [] : blockFilter ? axis.blocks.filter(blockWithTicks) : axis.blocks);
     let gS = aS.selectAll("g." + className + '.' + groupName)
       .data(blocks, blockKeyFn);
     gS.exit().remove();
