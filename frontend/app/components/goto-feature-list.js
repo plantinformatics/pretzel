@@ -101,7 +101,12 @@ export default Component.extend({
             /** this peekBlock() is also done in the above n1.map(), and they
              * could be integrated.  */
             let block = blockService.peekBlock(d.key);
-            block.set('count', d.values.length);
+	    /** if the block is a copy from another server, then block here will be undefined.
+	     * There doesn't seem to be much value in including them in features search results;  the other server may not be connected.
+	     */
+	    if (block) {
+              block.set('count', d.values.length);
+	    }
           });
 
           me.set('blocksOfFeatures', blocksUnique);
