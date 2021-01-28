@@ -14,7 +14,9 @@
     {{input id="nameFilter" type="text" value=nameFilter placeholder="Search All Datasets" autocomplete="dataset-name" }}
   </div>
 
-  {{panel/filter-groups data=filterGroups changed=(action 'filterGroupsChanged') }}
+  {{#if urlOptions.filterGroups}}
+    {{panel/filter-groups data=filterGroups changed=(action 'filterGroupsChanged') }}
+  {{/if}}
 
 
   {{#if model.availableMapsTask.isRunning}}
