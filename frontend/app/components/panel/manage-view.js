@@ -3,6 +3,8 @@ import ManageBase from './manage-base'
 
 export default ManageBase.extend({
 
+  showChartOptions : false,
+
   isMapview: computed('view', function() {
     let view = this.get('view');
     if (view == 'mapview') {
