@@ -14,14 +14,14 @@ import Component from '@ember/component';
  * users have to go hunting through web inspector : Application : Storage :
  * cookies : ember_simple_auth-session : token.
  */
-const showList = false;
+const showList = true;
 
 /*----------------------------------------------------------------------------*/
 
 export default Component.extend({
   apiServers: service(),
 
-  showList : true,
+  showList,
 
   /* Early prototypes, up until commit fa0c40e, had action&function addEmpty(),
    * but not needed so dropped. */
