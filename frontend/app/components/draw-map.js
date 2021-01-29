@@ -3993,7 +3993,7 @@ export default Component.extend(Evented, {
               dot = axisS.selectAll('circle#' + combinedId);
               if (! dot.empty()) {
                 dot
-                  .transition().duration(2000)
+                  .transition().duration(200)
                   .attr("cy", yp(fLocation));
               }
               else {
