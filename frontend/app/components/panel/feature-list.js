@@ -4,6 +4,9 @@ import Component from '@ember/component';
 
 import $ from 'jquery';
 
+import { uniq, concat } from 'lodash/array';
+
+
 /* global d3 */
 
 const className = "feature-list";
@@ -209,20 +212,41 @@ export default Component.extend({
   },
   fromSelectedFeatures() {
     console.log('fromSelectedFeatures');
-    if (this.get('activeInput'))
-      this.set('activeInput', false);
+    /** Append to selectedFeatures to text$, therefore set activeInput true.
+     * (originally : replace instead of append, so activeInput was set false) */
+    this.set('activeInput', true);
     let text$ = $('textarea', this.element),
-    currentVal = text$.val(),
-    selectedFeatures = this.get('selectedFeatures'),
-    selectedFeaturesNames = selectedFeatures.map(function (sf) {
-      return sf.Feature;
-    });
-    let newValue = selectedFeaturesNames.join('\n');
-    if (currentVal !== "") {
-      newValue = currentVal + '\n' + newValue;
+    current = this.currentInputFeatures(),
+    selectedFeatures = this.get('selectedFeatures');
+    let selectedFeaturesEmpty = (selectedFeatures.length <= 1) && (selectedFeatures[0].Feature === undefined);
+    if (! selectedFeaturesEmpty) {
+      let
+      selectedFeaturesNames = selectedFeatures.map(function (sf) {
+        return sf.Feature;
+      });
+      function logArray(a) { return a.length > 4 ? a.length : a; }
+      let
+      combined = current.length ? 
+        this.combine(current, selectedFeaturesNames) :
+        selectedFeaturesNames,
+      newValue = combined.join('\n');
+      console.log(logArray(current), 'selectedFeatures', logArray(selectedFeatures), logArray(selectedFeaturesNames), logArray(combined));
+      text$.val(newValue);
     }
-    console.log('selectedFeatures', selectedFeatures, selectedFeaturesNames);
-    text$.val(newValue);
+  },
+  currentInputFeatures () {
+    let
+    text$ = $('textarea', this.element),
+    currentVal = text$.val(),
+    array = (currentVal === "") ? [] : currentVal.split('\n');
+    return array;
+  },
+  /** Combine the current input feature names and the brushed
+   * selectedFeaturesNames to be appended. */
+  combine(a, b) {
+    let c = concat(a, b)
+      .uniq();
+    return c;
   }
 
 
