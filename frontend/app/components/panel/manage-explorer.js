@@ -19,6 +19,10 @@ import {
   readOnly
 } from '@ember/object/computed';
 
+import { task } from 'ember-concurrency';
+
+
+
 import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
 import { parseOptions } from '../../utils/common/strings';
 import { thenOrNow } from '../../utils/common/promises';
@@ -145,6 +149,20 @@ export default ManageBase.extend({
   filterGroups : A(), // [{}]
   filterGroupsChangeCounter : 0,
   //----------------------------------------------------------------------------
+
+  promiseToTask : task(function * (promise) {
+    // dLog('promiseToTask', promise, 'mapsTask');
+    let result = yield promise;
+    // dLog('promiseToTask', result, 'mapsTask');
+    return result;
+  }),
+  /** model.availableMapsTask was a task, and now is a promise; this CP wraps it
+   * in a task so that the template can continue to use .isRunning */
+  availableMapsTask : computed('model.availableMapsTask', function() {
+    let task = this.model.availableMapsTask && this.promiseToTask.perform(this.model.availableMapsTask);
+    // dLog('availableMapsTask', this.model.availableMapsTask._state, this.model.availableMapsTask, task.isRunning, task);
+    return task;
+  }),
 
   /** Return a list of datasets, with their included blocks, for the currently-selected
    * API server tab
