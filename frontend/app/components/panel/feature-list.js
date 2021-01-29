@@ -212,12 +212,17 @@ export default Component.extend({
     if (this.get('activeInput'))
       this.set('activeInput', false);
     let text$ = $('textarea', this.element),
+    currentVal = text$.val(),
     selectedFeatures = this.get('selectedFeatures'),
     selectedFeaturesNames = selectedFeatures.map(function (sf) {
       return sf.Feature;
     });
+    let newValue = selectedFeaturesNames.join('\n');
+    if (currentVal !== "") {
+      newValue = currentVal + '\n' + newValue;
+    }
     console.log('selectedFeatures', selectedFeatures, selectedFeaturesNames);
-    text$.val(selectedFeaturesNames.join('\n'));
+    text$.val(newValue);
   }
 
 
