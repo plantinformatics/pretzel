@@ -61,8 +61,23 @@ function brushClip(gp, axisID) {
 
 /*--------------------------------------------------------------------------*/
 
+/** Select the brush of brushedAxisID.
+ * @return d3 selection of the brushed axis.
+ */
+function axisBrushSelect(svgContainer, brushedAxisID) {
+  // copied from showAxisZoomResetButtons()
+  let axisS = svgContainer.selectAll("#" + eltId(brushedAxisID));
+  /** this is the element which is passed when called via
+   * zoomBehavior.on('zoom', zoom)
+   * so pass the same element when calling via g.btn .Zoom .on('click' ).
+   */
+  let gBrush = axisS.selectAll('g.brush > g[clip-path]').node();
+  return gBrush;
+}
+
 
 function showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, resetZoom, brushedAxisID, drawMap) {
+  // `used as the basis of axisBrushSelect
   /** d3 selection of the brushed axis. */
   let axisS = svgContainer.selectAll("#" + eltId(brushedAxisID));
   /** this is the element which is passed when called via
@@ -125,4 +140,4 @@ function showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, resetZoom
 
 
 
-export { brushClip, showAxisZoomResetButtons };
+export { brushClip, axisBrushSelect, showAxisZoomResetButtons };
