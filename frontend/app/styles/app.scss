@@ -1501,6 +1501,16 @@ div.metaeditor-panel div.jsoneditor-treepath {
 div.metaeditor-panel div.jsoneditor {
   border: 1px solid #d3d3d3
 }
+
+/* ember-content-editable/addon/styles/addon.css does  [contenteditable] { ...  -webkit-user-modify: read-write-plaintext-only; }
+ * which should probably be   [contenteditable=true] ...
+ */
+.jsoneditor-field[contenteditable=false],
+.jsoneditor-value[contenteditable=false] {
+    -webkit-user-modify: read-only;
+}
+
+
 /* -------------------------------------------------------------------------- */
 /** for components/draw/axis-brushes */
 .axis-brushes table {

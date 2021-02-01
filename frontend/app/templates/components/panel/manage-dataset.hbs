@@ -19,7 +19,8 @@
       disabled=(not ownedByMe)}}
       Edit
     {{/elem/button-base}}
-    {{json-editor json=datasetMeta name='Metadata' disabled=true search=false}}
+    {{!-- earlier versions of json-editor supported a param disabled=true. This is now achieved via options=jsoneditorOptions, with onEditable returning false.   --}}
+    {{json-editor json=datasetMeta name='Metadata' options=jsoneditorOptions search=false}}
   </div>
   <div>
     {{#if editorVisible}}
@@ -28,7 +29,7 @@
         targetAttachment="center"
         translucentOverlay=true
       }}
-        <div class="metaeditor-modal">{{json-editor json=datasetMeta onChange=(action "mutateJson")}}</div>
+        <div class="metaeditor-modal">{{json-editor json=currentMeta onChange=(action "mutateJson")}}</div>
         <div>
           <button
             type="button"
