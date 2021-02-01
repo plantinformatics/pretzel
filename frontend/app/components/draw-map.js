@@ -5664,16 +5664,18 @@ export default Component.extend(Evented, {
                * axisBrush.brushedDomain (as commented in showResize)
                */
               let range = oa.brushedRegions[axisName];
-              if (range) {
-                dLog('axisFlip', axisName, range);
-                let gBrush = axisBrushSelect(oa.svgContainer, axisName);
-                axisBrushShowSelection(axisName, gBrush);
-              }
 
               if (axis.axis1d)
                 axis.axis1d.toggleProperty('flipped');
               ya.domain(domain);
               ysa.domain(domain);
+
+              /* after y domain update, map brushed domain to new position.  */
+              if (range) {
+                dLog('axisFlip', axisName, range);
+                let gBrush = axisBrushSelect(oa.svgContainer, axisName);
+                axisBrushShowSelection(axisName, gBrush);
+              }
 
               let t = oa.svgContainer.transition().duration(750);
               axisScaleChanged(axisName, t, true);
