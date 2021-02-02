@@ -44,7 +44,8 @@
     {{#unless editorVisible}}
       {{!-- see comment toggleShowJsonViewer() --}}
       {{#if toggleShowJsonViewer}}
-        {{!-- earlier versions of json-editor supported a param disabled=true. This is now achieved via onEditable which returns false.   --}}
+        {{!-- earlier versions of json-editor supported a param disabled=true. This is now achieved via onEditable which returns false.
+              mode='view' also works.   --}}
         {{json-editor json=datasetMeta name='Metadata'  onEditable=(action this.onEditable) search=false}}
       {{/if}}
     {{/unless}}
