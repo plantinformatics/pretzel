@@ -11,16 +11,44 @@
       <tr><td>Read Only</td><td>{{dataset.readOnly}}</td></tr>
     </tbody>
   </table>
+
   <div class="metaeditor-panel">
-    {{#elem/button-base
-      icon="pencil"
-      classColour="info"
-      onClick=(action "toggleEditor")
-      disabled=(not ownedByMe)}}
-      Edit
-    {{/elem/button-base}}
-    {{!-- earlier versions of json-editor supported a param disabled=true. This is now achieved via options=jsoneditorOptions, with onEditable returning false.   --}}
-    {{json-editor json=datasetMeta name='Metadata' options=jsoneditorOptions search=false}}
+
+    <div style="margin-top:0.8ex"><div class="col-md-5">apiHost</div><div class="col-md-6">{{apiHost}}</div></div>
+
+
+    <div class="meta-row" style="z-index:10; padding-top: 4ex;">
+      <div class="col-md-5">
+        <label>Meta</label>
+      </div>
+      <div class="col-md-7" style="display: inline-block;">
+        <span>View</span>
+        {{x-toggle
+        theme='light'
+        value=toggleShowJsonViewer
+        style="display: inline-block;"
+        onToggle=(action (mut toggleShowJsonViewer)) }}
+
+        {{#elem/button-base
+          icon="pencil"
+          classColour="info"
+          onClick=(action "toggleEditor")
+          disabled=(not ownedByMe)}}
+          Edit
+        {{/elem/button-base}}
+
+      </div>
+    </div>
+
+
+    {{#unless editorVisible}}
+      {{!-- see comment toggleShowJsonViewer() --}}
+      {{#if toggleShowJsonViewer}}
+        {{!-- earlier versions of json-editor supported a param disabled=true. This is now achieved via onEditable which returns false.   --}}
+        {{json-editor json=datasetMeta name='Metadata'  onEditable=(action this.onEditable) search=false}}
+      {{/if}}
+    {{/unless}}
+
   </div>
   <div>
     {{#if editorVisible}}
@@ -29,7 +57,8 @@
         targetAttachment="center"
         translucentOverlay=true
       }}
-        <div class="metaeditor-modal">{{json-editor json=currentMeta onChange=(action "mutateJson")}}</div>
+      {{!-- Glavin001/ember-jsoneditor does not use attrs.onChange --}}
+        <div class="metaeditor-modal">{{json-editor json=currentMeta onChange=(action this.mutateJson)}}</div>
         <div>
           <button
             type="button"

@@ -1502,6 +1502,15 @@ div.metaeditor-panel div.jsoneditor {
   border: 1px solid #d3d3d3
 }
 
+div.meta-row > div > div {
+  display : inline-block;
+}
+div.meta-row > div > button {
+  display : inline-block;
+  margin-left : 2em;
+}
+
+
 /* ember-content-editable/addon/styles/addon.css does  [contenteditable] { ...  -webkit-user-modify: read-write-plaintext-only; }
  * which should probably be   [contenteditable=true] ...
  */
@@ -1510,6 +1519,10 @@ div.metaeditor-panel div.jsoneditor {
     -webkit-user-modify: read-only;
 }
 
+/* in the read-only json-editor, disable the buttons */
+div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
+    visibility: hidden;
+}
 
 /* -------------------------------------------------------------------------- */
 /** for components/draw/axis-brushes */
