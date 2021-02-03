@@ -69,6 +69,30 @@ let trace_count_NaN = 10;
 const dLog = console.debug;
 
 /*------------------------------------------------------------------------*/
+
+/**
+ * @param tagName name of SVG element to create
+ */
+function createElementSvg(tagName) {
+  return document.createElementNS('http://www.w3.org/2000/svg', tagName);
+}
+
+/** If the selected element has the alternate tag, replace it.
+ * @param fromTag, toTag, 
+ * @param element
+ * @return original element, or new element
+ */
+function swapTag(fromTag, toTag, element) {
+  if (element.tagName === fromTag) {
+    let from = element;
+    element = element.replaceWith(createElementSvg(toTag));
+    dLog('swapTag', fromTag, toTag, from, element);
+  }
+  return element;
+}
+
+
+/*------------------------------------------------------------------------*/
 /* copied from draw-map.js - will import when that is split */
 /** Setup hover info text over scaffold horizTick-s.
  * @see based on similar configureAxisTitleMenu()
@@ -354,6 +378,85 @@ SubElement.prototype.getInterval = function() {
 };
 
 
+/*----------------------------------------------------------------------------*/
+
+/** @return true if the feature track interval is > MinimumIntervalWithArrow
+ * @param y y scale of axis containing block of feature
+ * @param featureData feature element data : feature.value[] plus layer and {,u}description 
+ */
+function showTriangleP(y, featureData) {
+  let
+  yS = featureData,
+  yLength = y(yS[1]) - y(yS[0]),
+  yLengthAbs = Math.abs(yLength),
+  show = (yLengthAbs >= MinimumIntervalWithArrow);
+  return show;
+}
+
+/** Construct a <path> which covers the end of an axis track with background
+ * colour, leaving a vertical isosceles triangle, pointing in the positive
+ * direction of the track interval.
+ *
+ * This is used to indicate direction of features / axis track rectangles.
+ * @param y y scale of axis containing block of feature
+ * @param yInterval	unscaled y position (interval) of feature
+ * @param xWidth	width in px of track
+ */
+function rectTrianglePath(y, yInterval, xWidth) {
+  /** related : axisApi.lineHoriz(), featureLineS(), horizTrianglePath().  */
+  /**
+   *   ^	- yS[1]		-
+   *  / \	^		triangleLength
+   *  + +	|		-
+   *  | |
+   *  | |	|
+   *  | |	v
+   *  +-+	_ yS[0]
+   *
+   *  | xOffset
+   *  | |	xWidth
+   *
+   * triangleLength :
+   * . 0 if length(yS) < MinimumIntervalWithArrow
+   * . MaxArrowLength if length(yS) > MaximumIntervalWithArrow
+   * . proportionate in between
+   */
+  let
+	/* scaled y position (interval) of feature */
+  yS = [y(yInterval[0]), y(yInterval[1])],
+  yLength = yS[1] - yS[0],
+  yDirection = Math.sign(yLength),
+  yLengthAbs = Math.abs(yLength),
+  triangleLength =
+    (yLengthAbs < MinimumIntervalWithArrow) ? 0 :
+    (yLengthAbs > MaximumIntervalWithArrow) ? MaxArrowLength : 
+    (
+      MaxArrowLength * (yLengthAbs - MinimumIntervalWithArrow) / 
+        (MaximumIntervalWithArrow - MinimumIntervalWithArrow)
+    ),
+  yShoulder = yS[0] + yDirection * (yLengthAbs - triangleLength);
+  
+  let xOffset = 0;
+  let path = d3.line()([
+    // base
+    [xOffset, yS[0]],
+    [xOffset + xWidth, yS[0]],
+
+    // triangle
+    [xOffset + xWidth, yShoulder],
+    [xOffset + xWidth/2, yS[1]],
+    [xOffset, yShoulder]
+
+  ]) + 'Z';
+  return path;
+};
+
+/** px */
+/** interval < this size : no arrow is shown (<rect> instead of <path>). */
+const MinimumIntervalWithArrow	= 10,
+/** interval > this size : the arrow length does not increase. */
+      MaximumIntervalWithArrow = 100,
+      MaxArrowLength = 20;
 
 /*----------------------------------------------------------------------------*/
 
@@ -690,10 +793,10 @@ export default InAxis.extend({
         p = this.parentElement,
         gBlock = subElements ? p.parentElement : p,
         blockId = gBlock.__data__;
-	if (! subElements && (typeof blockId !== "string") && blockId.description && (typeof p.parentElement.__data__ === "string")) {
-	    blockId = p.parentElement.__data__;
-	}
-	let
+  if (! subElements && (typeof blockId !== "string") && blockId.description && (typeof p.parentElement.__data__ === "string")) {
+      blockId = p.parentElement.__data__;
+  }
+  let
         blockC = thisAt.lookupAxisTracksBlock(blockId),
         trackWidth = blockC.trackWidth;
         /*console.log("xPosn", d);*/
@@ -879,7 +982,8 @@ export default InAxis.extend({
     };
     function eachRect(blockId, i, g) {
       let
-      rs = d3.select(this).selectAll("rect.track")
+      /** match either rect or path */
+      rs = d3.select(this).selectAll(".track")
         .data(trackBlocksData, trackKeyFn),
       re =  rs.enter(), rx = rs.exit();
       dLog(rs.size(), re.size(),  'rx', rx.size());
@@ -903,13 +1007,13 @@ export default InAxis.extend({
     function appendRect(re, rs, width, subElements) {
       let
       ra = re
-        .append("rect");
+        .append((d) => createElementSvg(showTriangleP(y, d) ? 'path' : 'rect'));
       ra
         .attr('class', 'track')
         .transition().duration(featureTrackTransitionTime)
         .each(subElements ? configureSubTrackHover : configureTrackHover);
       rs.merge(ra)
-        .attr('width', width);
+        .attr('width', (d) => showTriangleP(y, d) ? undefined : width);
 
       let
       blockIndex = thisAt.get('axis1d.blockIndexes'),
@@ -921,8 +1025,9 @@ export default InAxis.extend({
       isSubelement = false,
       gSelector = subElements ? '.track' : '[clip-path]',
       elementSelector = isSubelement ? '.element' : ':not(.element)',
+      /** match either {rect,path}.track */
       es = subElements ?
-        rs.selectAll("g" + gSelector + " > rect.track" + elementSelector) : rs,
+        rs.selectAll("g" + gSelector + " > .track" + elementSelector) : rs,
       /** ra._parents is the g[clip-path], whereas es._parents are the g.track.element
        * es.merge(ra) may work, but ra.merge(es) has just 1 elt.
        */
@@ -930,12 +1035,24 @@ export default InAxis.extend({
         .merge(ra);
       dLog('rm', rm.node(), 'es', (trace > 1) ? es.nodes() : es.size(), es.node());
       ra
-        .attr('y', yEnd);
+        .attr('y', (d,i,g) => showTriangleP(y, d) ? undefined : yEnd.apply(this, [d, i, g]));
       rm
       // .transition().duration(featureTrackTransitionTime)
-      .attr('x', xPosnS(subElements))
-      .attr('y', yPosn)
-      .attr('height' , height)
+        .each(
+          (d,i,g) => showTriangleP(y, d) ?
+            function (d, i, g) {
+              g[i] = swapTag('rect', 'path', g[i]);
+              d3.select(g[i])
+                .attr('d', rectTrianglePath(y, d, width))
+            }.apply(this, [d, i, g]) :
+          function (d, i, g) {
+            g[i] = swapTag('path', 'rect', g[i]);
+            d3.select(g[i])
+              .attr('x', xPosnS(subElements))
+              .attr('y', yPosn)
+              .attr('height' , height)
+          }.apply(this, [d, i, g])
+        )
       .attr('stroke', blockTrackColourI)
       .attr('fill', blockTrackColourI)
       ;
