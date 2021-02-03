@@ -111,6 +111,9 @@ function FeatureTicks(axis, axisApi, axis1d)
  */
 FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setupHover, groupName, blockFilter)
 {
+  /** Called from axis-ticks-selected : renderTicks(), and originally also
+   * called from axis-1d : renderTicks() to represent the edges of scaffolds.
+ */
   let axis = this.axis, axisApi = this.axisApi;
   let axisName = axis.axisName;
   let
@@ -896,8 +899,13 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }
     if (! featureTicks)
       dLog('renderTicks', featureTicks);
+    /* originally used to show the edges of scaffolds, which are now shown
+     * within the split axis, so this is not required atm; there might be a case
+     * for marking scaffold edges with a horizontal line (not a triangle) when
+     * the axis is not open, viewing paths.
     else
       featureTicks.showTickLocations(undefined, true, 'notPaths', true);
+      */
   },
   /** call renderTicks().
    * filter / debounce the calls to handle multiple events at the same time.
