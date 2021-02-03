@@ -5546,6 +5546,8 @@ export default Component.extend(Evented, {
         let jQueryEventInfo = e.originalEvent && [e.originalEvent.path, e.originalEvent.srcElement, e.handleObj.type];
         dLog('showMenu', this, axisName, this.__data__, this.parentElement, this.parentElement.parentElement,
              e, jQueryEventInfo);
+        me.sendAction('selectBlock', block.block);
+
         let menuActions = oa.axisApi.menuActions;
         if (! menuActions) {
           oa.axisApi.menuActions = {axisDelete, axisFlip, axisPerpendicular, axisExtend};
