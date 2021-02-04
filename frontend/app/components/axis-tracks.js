@@ -1000,7 +1000,7 @@ export default InAxis.extend({
       re =  rs.enter(), rx = rs.exit();
       dLog(rs.size(), re.size(),  'rx', rx.size());
       rx
-        .transition().duration(featureTrackTransitionTime)
+        .transition().duration(featureTrackTransitionTime / 10)
         .attr('x', 0)
         .attr('y', yEnd)
         .on('end', () => {
