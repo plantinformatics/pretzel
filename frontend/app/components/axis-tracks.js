@@ -80,13 +80,24 @@ function createElementSvg(tagName) {
 /** If the selected element has the alternate tag, replace it.
  * @param fromTag, toTag, 
  * @param element
+ * @param attributesForReplace  d3 each function which applies attributes and configuration for a new element
  * @return original element, or new element
  */
-function swapTag(fromTag, toTag, element) {
+function swapTag(fromTag, toTag, element, attributesForReplace) {
   if (element.tagName === fromTag) {
-    let from = element;
-    element = element.replaceWith(createElementSvg(toTag));
-    dLog('swapTag', fromTag, toTag, from, element);
+    let to = createElementSvg(toTag);
+    element.replaceWith(to);
+    dLog('swapTag', fromTag, toTag, element, to, element.__data__);
+    // copy d3 attributes to new element.
+    if (element.__data__) {
+      to.__data__ = element.__data__;
+    }
+    /* set width and configure to.__on */
+    d3.select(to)
+      .each(attributesForReplace);
+
+    element.remove();
+    element = to;
   }
   return element;
 }
@@ -401,8 +412,9 @@ function showTriangleP(y, featureData) {
  * @param y y scale of axis containing block of feature
  * @param yInterval	unscaled y position (interval) of feature
  * @param xWidth	width in px of track
+ * @param xPosn xOffset, incorporates layer offset
  */
-function rectTrianglePath(y, yInterval, xWidth) {
+function rectTrianglePath(y, yInterval, xWidth, xPosn) {
   /** related : axisApi.lineHoriz(), featureLineS(), horizTrianglePath().  */
   /**
    *   ^	- yS[1]		-
@@ -436,7 +448,7 @@ function rectTrianglePath(y, yInterval, xWidth) {
     ),
   yShoulder = yS[0] + yDirection * (yLengthAbs - triangleLength);
   
-  let xOffset = 0;
+  let xOffset = xPosn;
   let path = d3.line()([
     // base
     [xOffset, yS[0]],
@@ -1015,6 +1027,12 @@ export default InAxis.extend({
       rs.merge(ra)
         .attr('width', (d) => showTriangleP(y, d) ? undefined : width);
 
+      function attributesForReplace(d, i, g) {
+        d3.select(g[i])
+        .each(subElements ? configureSubTrackHover : configureTrackHover)
+        .attr('width', (d) => showTriangleP(y, d) ? undefined : width);
+      }
+
       let
       blockIndex = thisAt.get('axis1d.blockIndexes'),
       /** the structure here depends on subElements:
@@ -1041,12 +1059,13 @@ export default InAxis.extend({
         .each(
           (d,i,g) => showTriangleP(y, d) ?
             function (d, i, g) {
-              g[i] = swapTag('rect', 'path', g[i]);
+              g[i] = swapTag('rect', 'path', g[i], attributesForReplace);
+              let x = xPosnS(subElements).apply(this, [d, i, g]);
               d3.select(g[i])
-                .attr('d', rectTrianglePath(y, d, width))
+                .attr('d', (d,i,g) => rectTrianglePath(y, d, width, x))
             }.apply(this, [d, i, g]) :
           function (d, i, g) {
-            g[i] = swapTag('path', 'rect', g[i]);
+            g[i] = swapTag('path', 'rect', g[i], attributesForReplace);
             d3.select(g[i])
               .attr('x', xPosnS(subElements))
               .attr('y', yPosn)
