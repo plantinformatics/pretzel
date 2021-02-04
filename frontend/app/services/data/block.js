@@ -477,7 +477,10 @@ export default Service.extend(Evented, {
                   dLog('getSummary', featuresCounts[i]);
                   delete featuresCounts[i];
                 }
-                let binSize = featuresCounts && featuresCounts.length ?
+                /** featuresCounts[0] may be undefined because of delete
+                 * featuresCounts[i] ~ outsideBoundaries
+                 */
+                let binSize = featuresCounts && featuresCounts.length && featuresCounts[0] ?
                     featuresCounts[0].idWidth[0] :
                     intervalSize(interval) / nBins,
                     result = {binSize, nBins, domain : interval, result : featuresCounts};
