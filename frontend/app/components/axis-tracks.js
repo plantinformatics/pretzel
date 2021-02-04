@@ -1017,21 +1017,27 @@ export default InAxis.extend({
      * @param subElements true if (gene) sub-elements (intro/exon) are displayed for this block.
      */
     function appendRect(re, rs, width, subElements) {
+      /** true to enable use of 5-point <path> (rectangle+triangle) as an
+       * alternate representation, with the triangle vertex indicating
+       * direction. */
+      const useTriangle = false;
+      /** true means <rect> will not be used - only <path> (rectangle+triangle).
+       */
       const alwaysTri = true;
       let
       ra = re
-        .append((d) => createElementSvg(alwaysTri || showTriangleP(y, d) ? 'path' : 'rect'));
+        .append((d) => createElementSvg(useTriangle && (alwaysTri || showTriangleP(y, d)) ? 'path' : 'rect'));
       ra
         .attr('class', 'track')
         .transition().duration(featureTrackTransitionTime)
         .each(subElements ? configureSubTrackHover : configureTrackHover);
       rs.merge(ra)
-        .attr('width', (d) => alwaysTri || showTriangleP(y, d) ? undefined : width);
+        .attr('width', useTriangle ? ((d) => alwaysTri || showTriangleP(y, d) ? undefined : width) : width);
 
       function attributesForReplace(d, i, g) {
         d3.select(g[i])
         .each(subElements ? configureSubTrackHover : configureTrackHover)
-        .attr('width', (d) => alwaysTri || showTriangleP(y, d) ? undefined : width);
+        .attr('width', useTriangle ? ((d) => alwaysTri || showTriangleP(y, d) ? undefined : width) : width);
       }
 
       let
@@ -1054,13 +1060,17 @@ export default InAxis.extend({
         .merge(ra);
       dLog('rm', rm.node(), 'es', (trace > 1) ? es.nodes() : es.size(), es.node());
       ra
-        .attr('y', (d,i,g) => alwaysTri || showTriangleP(y, d) ? undefined : yEnd.apply(this, [d, i, g]));
-      if (alwaysTri) {
+        .attr('y', (d,i,g) => useTriangle && (alwaysTri || showTriangleP(y, d)) ? undefined : yEnd.apply(this, [d, i, g]));
+      if (! useTriangle) {
+        rm
+          .call(rectUpdate);
+      }
+      else if (alwaysTri) {
         let xPosnFn = xPosnS(subElements);
         rm
           .attr('d', (d,i,g) => rectTrianglePath(y, d, width, xPosnFn.apply(this, [d, i, g])))
       }
-      else
+      else {
       rm
       // .transition().duration(featureTrackTransitionTime)
         .each(
@@ -1074,11 +1084,16 @@ export default InAxis.extend({
           function (d, i, g) {
             g[i] = swapTag('path', 'rect', g[i], attributesForReplace);
             d3.select(g[i])
-              .attr('x', xPosnS(subElements))
-              .attr('y', yPosn)
-              .attr('height' , height)
+              .call(rectUpdate);
           }.apply(this, [d, i, g])
         );
+      }
+      function rectUpdate(selection) {
+        selection
+          .attr('x', xPosnS(subElements))
+          .attr('y', yPosn)
+          .attr('height' , height);
+      }
       rm
       .attr('stroke', blockTrackColourI)
       .attr('fill', blockTrackColourI)
