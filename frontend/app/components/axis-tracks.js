@@ -1017,20 +1017,21 @@ export default InAxis.extend({
      * @param subElements true if (gene) sub-elements (intro/exon) are displayed for this block.
      */
     function appendRect(re, rs, width, subElements) {
+      const alwaysTri = true;
       let
       ra = re
-        .append((d) => createElementSvg(showTriangleP(y, d) ? 'path' : 'rect'));
+        .append((d) => createElementSvg(alwaysTri || showTriangleP(y, d) ? 'path' : 'rect'));
       ra
         .attr('class', 'track')
         .transition().duration(featureTrackTransitionTime)
         .each(subElements ? configureSubTrackHover : configureTrackHover);
       rs.merge(ra)
-        .attr('width', (d) => showTriangleP(y, d) ? undefined : width);
+        .attr('width', (d) => alwaysTri || showTriangleP(y, d) ? undefined : width);
 
       function attributesForReplace(d, i, g) {
         d3.select(g[i])
         .each(subElements ? configureSubTrackHover : configureTrackHover)
-        .attr('width', (d) => showTriangleP(y, d) ? undefined : width);
+        .attr('width', (d) => alwaysTri || showTriangleP(y, d) ? undefined : width);
       }
 
       let
@@ -1053,11 +1054,11 @@ export default InAxis.extend({
         .merge(ra);
       dLog('rm', rm.node(), 'es', (trace > 1) ? es.nodes() : es.size(), es.node());
       ra
-        .attr('y', (d,i,g) => showTriangleP(y, d) ? undefined : yEnd.apply(this, [d, i, g]));
+        .attr('y', (d,i,g) => alwaysTri || showTriangleP(y, d) ? undefined : yEnd.apply(this, [d, i, g]));
       rm
       // .transition().duration(featureTrackTransitionTime)
         .each(
-          (d,i,g) => showTriangleP(y, d) ?
+          (d,i,g) => alwaysTri || showTriangleP(y, d) ?
             function (d, i, g) {
               g[i] = swapTag('rect', 'path', g[i], attributesForReplace);
               let x = xPosnS(subElements).apply(this, [d, i, g]);
