@@ -1055,10 +1055,16 @@ export default InAxis.extend({
       dLog('rm', rm.node(), 'es', (trace > 1) ? es.nodes() : es.size(), es.node());
       ra
         .attr('y', (d,i,g) => alwaysTri || showTriangleP(y, d) ? undefined : yEnd.apply(this, [d, i, g]));
+      if (alwaysTri) {
+        let xPosnFn = xPosnS(subElements);
+        rm
+          .attr('d', (d,i,g) => rectTrianglePath(y, d, width, xPosnFn.apply(this, [d, i, g])))
+      }
+      else
       rm
       // .transition().duration(featureTrackTransitionTime)
         .each(
-          (d,i,g) => alwaysTri || showTriangleP(y, d) ?
+          (d,i,g) => showTriangleP(y, d) ?
             function (d, i, g) {
               g[i] = swapTag('rect', 'path', g[i], attributesForReplace);
               let x = xPosnS(subElements).apply(this, [d, i, g]);
@@ -1072,7 +1078,8 @@ export default InAxis.extend({
               .attr('y', yPosn)
               .attr('height' , height)
           }.apply(this, [d, i, g])
-        )
+        );
+      rm
       .attr('stroke', blockTrackColourI)
       .attr('fill', blockTrackColourI)
       ;
