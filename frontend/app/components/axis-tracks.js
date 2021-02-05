@@ -1020,7 +1020,7 @@ export default InAxis.extend({
       /** true to enable use of 5-point <path> (rectangle+triangle) as an
        * alternate representation, with the triangle vertex indicating
        * direction. */
-      const useTriangle = false;
+      const useTriangle = thisAt.get('urlOptions.trackTriangles');
       /** true means <rect> will not be used - only <path> (rectangle+triangle).
        */
       const alwaysTri = true;
