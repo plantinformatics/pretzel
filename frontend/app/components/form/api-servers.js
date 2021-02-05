@@ -14,7 +14,7 @@ import Component from '@ember/component';
  * users have to go hunting through web inspector : Application : Storage :
  * cookies : ember_simple_auth-session : token.
  */
-const showList = false;
+const showList = true;
 
 /*----------------------------------------------------------------------------*/
 

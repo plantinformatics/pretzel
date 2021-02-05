@@ -61,6 +61,7 @@ import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
 import { AxisTitleBlocksServers } from '../utils/draw/axisTitleBlocksServers_tspan';
 import {
   brushClip,
+  axisBrushSelect,
   showAxisZoomResetButtons
 } from '../utils/draw/axisBrush';
 
@@ -386,10 +387,6 @@ export default Component.extend(Evented, {
                   selectedFeatures, featuresAsArray.length);
       this.sendAction('updatedSelectedFeatures', featuresAsArray);
       }
-    },
-
-    selectChromById : function (brushedAxisID) {
-      this.sendAction('selectChromById', brushedAxisID);
     },
 
     updatedStacks: function(stacks) {
@@ -3799,6 +3796,10 @@ export default Component.extend(Evented, {
           removeBrushExtent(p);
           newBrushSelection = null; // clear the brush selection
         }
+        if (newBrushSelection) {
+          /* brush extent is required to be +ve interval. */
+          newBrushSelection = maybeFlip(newBrushSelection, newBrushSelection[0] > newBrushSelection[1]);
+        }
         d3.select(gBrush).call(yp.brush.move, newBrushSelection);
       }
     }
@@ -3993,7 +3994,7 @@ export default Component.extend(Evented, {
               dot = axisS.selectAll('circle#' + combinedId);
               if (! dot.empty()) {
                 dot
-                  .transition().duration(2000)
+                  .transition().duration(200)
                   .attr("cy", yp(fLocation));
               }
               else {
@@ -4075,7 +4076,7 @@ export default Component.extend(Evented, {
         bind(axis1d, axis1d.showZoomResetButtonState)();
       }
 
-      me.send('selectChromById', brushedAxisID);
+      me.attrs.selectChromById(brushedAxisID);
 
     } // brushHelper
 
@@ -5545,6 +5546,8 @@ export default Component.extend(Evented, {
         let jQueryEventInfo = e.originalEvent && [e.originalEvent.path, e.originalEvent.srcElement, e.handleObj.type];
         dLog('showMenu', this, axisName, this.__data__, this.parentElement, this.parentElement.parentElement,
              e, jQueryEventInfo);
+        me.sendAction('selectBlock', block.block);
+
         let menuActions = oa.axisApi.menuActions;
         if (! menuActions) {
           oa.axisApi.menuActions = {axisDelete, axisFlip, axisPerpendicular, axisExtend};
@@ -5657,10 +5660,24 @@ export default Component.extend(Evented, {
               ya = oa.y[axisName = axis.axisName], ysa=oa.ys[axisName],
               domain = maybeFlip(ya.domain(), true);
               axis.flipped = ! axis.flipped;
+              /** if the axis is brushed, show the brush position updated by flip.
+               * Instead of using range (inverted to domain via
+               * axisRange2Domain); axisBrushShowSelection() uses
+               * axisBrush.brushedDomain (as commented in showResize)
+               */
+              let range = oa.brushedRegions[axisName];
+
               if (axis.axis1d)
                 axis.axis1d.toggleProperty('flipped');
               ya.domain(domain);
               ysa.domain(domain);
+
+              /* after y domain update, map brushed domain to new position.  */
+              if (range) {
+                dLog('axisFlip', axisName, range);
+                let gBrush = axisBrushSelect(oa.svgContainer, axisName);
+                axisBrushShowSelection(axisName, gBrush);
+              }
 
               let t = oa.svgContainer.transition().duration(750);
               axisScaleChanged(axisName, t, true);

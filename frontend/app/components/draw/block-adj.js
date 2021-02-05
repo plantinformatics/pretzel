@@ -38,6 +38,7 @@ import {
 } from '../../utils/paths-api';
 
 import { getTransform, transform2Css } from '../../utils/draw/direct-linear-transform';
+import { thenOrNow } from '../../utils/common/promises';
 
 /* global d3 */
 
@@ -77,19 +78,6 @@ function progressGroupsSelect(flowName) {
   return g;
 }
 
-/** if value is a promise then call fn(value) when the promise resolves, otherwise call it now.
- * @return a promise, yielding fn(value), if value is a promise, otherwise fn(value)
- */
-function thenOrNow(value, fn) {
-  let result;
-  if (value.then) {
-    result = value.then(fn);
-  }
-  else {
-    result = fn(value);
-  };
-  return result;
-}
 
 
 /*----------------------------------------------------------------------------*/

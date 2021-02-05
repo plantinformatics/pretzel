@@ -480,8 +480,8 @@ body.allInitially
 }
 
 
-.axis line, .axis path,
-.axis-use > path
+.axis line, .axis path:not(.horizTick),
+.axis-use > path:not(.horizTick)
 {
   fill: none;
   shape-rendering: crispEdges;
@@ -605,7 +605,7 @@ path.horizTick.fromInput
 }
 g.foundFeatures > path.horizTick
 {
-  stroke-width : 3px;
+  stroke-width : 1px;
 }
 
 path.syntenyEdge
@@ -834,6 +834,31 @@ li.dropdown-submenu > ul.dropdown-menu {
     border-radius: 6px 0 6px 6px;
 }
 /* -------------------------------------------------------------------------- */
+/* dataset explorer : .textInput  #nameFilter */
+
+#left-panel-explorer > div > div.panel.panel-primary > .textInput {
+  margin : 0px;
+  margin-top: 2ex;
+  margin-right: 1em;
+  display: flex;
+}
+.textInput #nameFilter
+{
+  margin-left: 10px;
+  /* margin-right: 1em; */
+  width: 85%;
+  font-size: xx-large;
+
+  flex-grow: 1;
+  overflow-x: auto;
+}
+.textInput > i.glyphicon
+{
+  display: none;
+  margin: 0.8ex;
+  font-size : large;
+}
+
 /* dataset explorer : filter-group */
 
 .filter-groups {
@@ -905,6 +930,10 @@ li.filter-group > div > span:last-child {
 }
 
 /* dataset explorer : tree browser */
+
+#left-panel-explorer .api-server {
+  margin-bottom: 2ex;
+}
 
 #left-panel-explorer a.apiServer {
     border : 7.5px solid;
@@ -1472,6 +1501,29 @@ div.metaeditor-panel div.jsoneditor-treepath {
 div.metaeditor-panel div.jsoneditor {
   border: 1px solid #d3d3d3
 }
+
+div.meta-row > div > div {
+  display : inline-block;
+}
+div.meta-row > div > button {
+  display : inline-block;
+  margin-left : 2em;
+}
+
+
+/* ember-content-editable/addon/styles/addon.css does  [contenteditable] { ...  -webkit-user-modify: read-write-plaintext-only; }
+ * which should probably be   [contenteditable=true] ...
+ */
+.jsoneditor-field[contenteditable=false],
+.jsoneditor-value[contenteditable=false] {
+    -webkit-user-modify: read-only;
+}
+
+/* in the read-only json-editor, disable the buttons */
+div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
+    visibility: hidden;
+}
+
 /* -------------------------------------------------------------------------- */
 /** for components/draw/axis-brushes */
 .axis-brushes table {

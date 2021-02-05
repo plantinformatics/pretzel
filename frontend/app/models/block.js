@@ -128,6 +128,8 @@ export default Model.extend({
     dataset = this.get('datasetId'),
     paths = dataset.get('_meta.paths');
     // if no _meta.paths, then default to paths : true.
+    /** if paths === false, this value is returned.  This is the usual case,
+     * i.e. value in db is Boolean not string. */
     if (paths === undefined)
       paths = true;
     else if (paths == "false")
