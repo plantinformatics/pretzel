@@ -504,7 +504,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   }),
   colourSlotsEffect : computed('colourSlots.[]', 'dataBlocks.[]', function () {
     let colourSlots = this.get('colourSlots');
-    dLog('colourSlotsEffect', colourSlots, 'colourSlots', 'dataBlocks');
+    if (trace_stack)
+      dLog('colourSlotsEffect', colourSlots, 'colourSlots', 'dataBlocks');
     /** Update the block titles text colour. */
     this.axisTitleFamily();
   }),
