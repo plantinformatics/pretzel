@@ -189,6 +189,12 @@ export default Controller.extend(Evented, {
       if (trace_select)
       d3.selectAll("g.axis-outer").each(function(d, i, g) { dLog(this); });
       // this.send('setTab', 'right', 'block');
+
+      let queryParams = this.get('model.params');
+      /* if the block tab in right panel is not displayed then select the block's dataset. */
+      if (! (queryParams.options && queryParams.parsedOptions.blockTab)) {
+        this.send('selectDataset', block.datasetId);
+      }
     },
     selectBlockById: function(blockId) {
       let

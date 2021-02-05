@@ -19,8 +19,13 @@ import {
   readOnly
 } from '@ember/object/computed';
 
+import { task } from 'ember-concurrency';
+
+
+
 import { tab_explorer_prefix, text2EltId } from '../../utils/explorer-tabId';
 import { parseOptions } from '../../utils/common/strings';
+import { thenOrNow } from '../../utils/common/promises';
 
 import { mapHash, justUnmatched, logV } from '../../utils/value-tree';
 
@@ -145,6 +150,20 @@ export default ManageBase.extend({
   filterGroupsChangeCounter : 0,
   //----------------------------------------------------------------------------
 
+  promiseToTask : task(function * (promise) {
+    // dLog('promiseToTask', promise, 'mapsTask');
+    let result = yield promise;
+    // dLog('promiseToTask', result, 'mapsTask');
+    return result;
+  }),
+  /** model.availableMapsTask was a task, and now is a promise; this CP wraps it
+   * in a task so that the template can continue to use .isRunning */
+  availableMapsTask : computed('model.availableMapsTask', function() {
+    let task = this.model.availableMapsTask && this.promiseToTask.perform(this.model.availableMapsTask);
+    // dLog('availableMapsTask', this.model.availableMapsTask._state, this.model.availableMapsTask, task.isRunning, task);
+    return task;
+  }),
+
   /** Return a list of datasets, with their included blocks, for the currently-selected
    * API server tab
    */
@@ -202,7 +221,7 @@ export default ManageBase.extend({
     return combined;
   }),
   //----------------------------------------------------------------------------
-  dataPre: computed('datasetsBlocks', 'datasetsBlocks.[]', 'filter', function() {
+  dataPre1: computed('datasetsBlocks', 'datasetsBlocks.[]', 'filter', function() {
     let availableMaps = this.get('datasetsBlocks') || resolve([]);
     let filter = this.get('filter')
     dLog('dataPre', availableMaps, filter);
@@ -219,6 +238,42 @@ export default ManageBase.extend({
       return availableMaps;
     }
   }),
+  nameFilterArray : computed('nameFilter', function () {
+    let
+    nameFilter = this.get('nameFilter'),
+    array = !nameFilter || (nameFilter === '') ? [] :
+      nameFilter.split(/[ \t]/);
+    return array;
+  }),
+  dataPre2 : computed('dataPre1.[]', 'nameFilterArray', function () {
+    return this.get('dataPre1');
+  }),
+  dataPre: filter('dataPre2', function(dataset, index, array) {
+    let
+    nameFilters = this.get('nameFilterArray'),
+    match = ! nameFilters.length || 
+      this.datasetOrBlockMatch(dataset, nameFilters);
+    if (match && (nameFilter !== "")) {
+      dLog('dataPre', nameFilter, dataset.name);
+    }
+    return match;
+  }),
+  /**
+   * @return true if each of the name keys matches either the dataset or one of its blocks
+   * @param dataset
+   * @param nameFilters array of text to match against names of datasets / blocks
+   */
+  datasetOrBlockMatch(dataset, nameFilters) {
+    let matchAll = nameFilters.every((nameFilter) => {
+      let match = dataset.name.includes(nameFilter);
+      if (! match) {
+        /** depending on the cost of get('blocks'), it may be worthwhile to reverse the order of these loops : nameFilters / blocks */
+        match = dataset.get('blocks').any((block) => block.name.includes(nameFilter));
+      }
+      return match;
+    })
+    return matchAll;
+  },
   /** @return the filterGroup if there is one, and it has a pattern. */
   definedFilterGroups : computed(
     'filterGroups', 'filterGroups.[]',
@@ -255,12 +310,12 @@ export default ManageBase.extend({
     return isFilter;
   }),
   /** @return result is downstream of filter and filterGroups */
-  data : computed('dataPre', 'dataPre.[]', 'dataFG', 'isFilter',    function() {
+  data : computed('dataPre', 'dataPre.[]', 'dataFG', 'isDatasetFilter',    function() {
     let
       /** The result of a filter is an array of datasets, whereas a grouping results in a hash.
        * The result of data() should be an array, so only use filterGroup if it is a filter.
        */
-      isFilter = this.get('isFilter'),
+      isFilter = this.get('isDatasetFilter'),
     datasets = isFilter ? this.get('dataFG') : this.get('dataPre');
     // this.parentAndScope()
     if (trace_dataTree > 2)
@@ -710,7 +765,7 @@ export default ManageBase.extend({
       let datasetsP = this.get('dataPre'),
       filterGroup = this.get('datasetFilterGroup'),
       me = this;
-      return datasetsP.then(function (datasets) {
+      return thenOrNow(datasetsP, function (datasets) {
         datasets = datasets.toArray();
         return me.datasetFilter(datasets, filterGroup, 'all');
       });

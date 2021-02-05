@@ -4,6 +4,9 @@ import Component from '@ember/component';
 
 import $ from 'jquery';
 
+import { uniq, concat } from 'lodash/array';
+
+
 /* global d3 */
 
 const className = "feature-list";
@@ -93,13 +96,16 @@ export default Component.extend({
       // If string has leading or following white-space, then result of split will have leading / trailing ""
       if (fl.length && (fl[0] === ""))
         fl.shift();
-      if (fl.length && (fl[fl.length-1] === ""))
-        fl.pop();
       }
     else  // e.g. if fl===""
       fl = [];
 
       text$.val(fl && fl.join('\n'));
+      /** If the user has appended a \n, it is not removed from the textarea,
+       * allowing them to type text on a new line;  instead the "" at the end
+       * of fl[] is popped. */
+      if (fl.length && (fl[fl.length-1] === ""))
+        fl.pop();
       featureList.featureNameList = fl;
       featureList.empty = ! fl || (fl.length === 0);
       return featureList;
@@ -206,15 +212,41 @@ export default Component.extend({
   },
   fromSelectedFeatures() {
     console.log('fromSelectedFeatures');
-    if (this.get('activeInput'))
-      this.set('activeInput', false);
+    /** Append to selectedFeatures to text$, therefore set activeInput true.
+     * (originally : replace instead of append, so activeInput was set false) */
+    this.set('activeInput', true);
     let text$ = $('textarea', this.element),
-    selectedFeatures = this.get('selectedFeatures'),
-    selectedFeaturesNames = selectedFeatures.map(function (sf) {
-      return sf.Feature;
-    });
-    console.log('selectedFeatures', selectedFeatures, selectedFeaturesNames);
-    text$.val(selectedFeaturesNames.join('\n'));
+    current = this.currentInputFeatures(),
+    selectedFeatures = this.get('selectedFeatures');
+    let selectedFeaturesEmpty = (selectedFeatures.length <= 1) && (selectedFeatures[0].Feature === undefined);
+    if (! selectedFeaturesEmpty) {
+      let
+      selectedFeaturesNames = selectedFeatures.map(function (sf) {
+        return sf.Feature;
+      });
+      function logArray(a) { return a.length > 4 ? a.length : a; }
+      let
+      combined = current.length ? 
+        this.combine(current, selectedFeaturesNames) :
+        selectedFeaturesNames,
+      newValue = combined.join('\n');
+      console.log(logArray(current), 'selectedFeatures', logArray(selectedFeatures), logArray(selectedFeaturesNames), logArray(combined));
+      text$.val(newValue);
+    }
+  },
+  currentInputFeatures () {
+    let
+    text$ = $('textarea', this.element),
+    currentVal = text$.val(),
+    array = (currentVal === "") ? [] : currentVal.split('\n');
+    return array;
+  },
+  /** Combine the current input feature names and the brushed
+   * selectedFeaturesNames to be appended. */
+  combine(a, b) {
+    let c = concat(a, b)
+      .uniq();
+    return c;
   }
 
 

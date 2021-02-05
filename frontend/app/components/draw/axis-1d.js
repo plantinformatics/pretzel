@@ -1,6 +1,6 @@
 import { later, next, throttle } from '@ember/runloop';
 import { A } from '@ember/array';
-import { computed } from '@ember/object';
+import { computed, observer } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
@@ -111,6 +111,9 @@ function FeatureTicks(axis, axisApi, axis1d)
  */
 FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setupHover, groupName, blockFilter)
 {
+  /** Called from axis-ticks-selected : renderTicks(), and originally also
+   * called from axis-1d : renderTicks() to represent the edges of scaffolds.
+ */
   let axis = this.axis, axisApi = this.axisApi;
   let axisName = axis.axisName;
   let
@@ -130,7 +133,8 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
   if (!aS.empty())
   {
     /** show no ticks if axis is extended. */
-    let blocks = (extended ? [] : blockFilter ? axis.blocks.filter(blockWithTicks) : axis.blocks);
+    const notWhenExtended = false;
+    let blocks = (notWhenExtended && extended ? [] : blockFilter ? axis.blocks.filter(blockWithTicks) : axis.blocks);
     let gS = aS.selectAll("g." + className + '.' + groupName)
       .data(blocks, blockKeyFn);
     gS.exit().remove();
@@ -212,6 +216,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 
       p1.attr("d", pathFn)
       .attr('stroke', featurePathStroke)
+      .attr('fill', featurePathStroke)
     ;
 
 
@@ -250,8 +255,32 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     let ak = axisName,
     range = getAttrOrCP(feature, 'range') || getAttrOrCP(feature, 'value'),
     tickY = range && (range.length ? range[0] : range),
-    sLine = axisApi.lineHoriz(ak, tickY, xOffset, shiftRight);
+    // sLine = axisApi.lineHoriz(ak, tickY, xOffset, shiftRight);
+    // instead of lineHoriz(), use horizTrianglePath().
+    /** scaled to axis.
+     * could instead use featureY_(ak, feature.id);     */
+    akYs = stacks.oa.y[ak](tickY),
+    sLine = horizTrianglePath(akYs, 10, xOffset / 2, 1);
     return sLine;
+  };
+
+  /** Construct a <path> which draws a horizontal isosceles triangle, pointing right.
+   * This is used to indicate on an axis the position of features search results.
+   * @param akYs	scaled y position of feature
+   * @param yLength	length of triangle base
+   * @param xLength	length of triangle x axis
+   * @param shiftLeft	offset of vertex from y axis
+   */
+  function horizTrianglePath(akYs, yLength, xLength, shiftLeft) {
+    /** related : axisApi.lineHoriz(), featureLineS()  */
+    let
+    baseX = -xLength + shiftLeft,
+    y2 = yLength / 2;
+    let path = d3.line()(
+      [[baseX, akYs - y2],
+       [-shiftLeft, akYs],
+       [baseX, akYs + y2]]) + 'Z';
+    return path;
   };
 
   /** eg: "scaffold23432:1A:1-534243" */
@@ -456,7 +485,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     used = this.get('colourSlotsUsed');
     let dataBlocks = this.get('dataBlocks');
     if (trace_stack > 1)
-      dLog('colourSlots', used, dataBlocks);
+      dLog('colourSlots', used, 'dataBlocks', dataBlocks);
     dataBlocks.forEach((b) => {
       if (b.get('isViewed') && (this.blockColour(b) < 0)) {
         let free = used.findIndex(function (bi, i) {
@@ -473,9 +502,20 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       dLog('colourSlots', colourSlots);
     return colourSlots;
   }),
+  colourSlotsEffect : computed('colourSlots.[]', 'dataBlocks.[]', function () {
+    let colourSlots = this.get('colourSlots');
+    if (trace_stack)
+      dLog('colourSlotsEffect', colourSlots, 'colourSlots', 'dataBlocks');
+    /** Update the block titles text colour. */
+    this.axisTitleFamily();
+  }),
   blockColour(block) {
     let used = this.get('colourSlotsUsed'),
     i = used.indexOf(block);
+    if ((trace_stack > 1) && (i === -1) && block.isData) {
+      dLog('blockColour', i, block.mapName, block, used, this,
+           this.viewedBlocks, this.viewedBlocks.map((b) => [b.mapName, b.isData, b.id]));
+    }
     return i;
   },
   /** @return the domains of the data blocks of this axis.
@@ -870,8 +910,13 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }
     if (! featureTicks)
       dLog('renderTicks', featureTicks);
+    /* originally used to show the edges of scaffolds, which are now shown
+     * within the split axis, so this is not required atm; there might be a case
+     * for marking scaffold edges with a horizontal line (not a triangle) when
+     * the axis is not open, viewing paths.
     else
       featureTicks.showTickLocations(undefined, true, 'notPaths', true);
+      */
   },
   /** call renderTicks().
    * filter / debounce the calls to handle multiple events at the same time.

@@ -5,6 +5,8 @@ import Component from '@ember/component';
 export default Component.extend({
   apiServers: service(),
 
+  classNames : ['api-server' ],
+
   /** Lookup the tab <li> element in the data explorer corresponding to this API server.
    *
    * Not used or required, it was part of addClassActive() which was implemented

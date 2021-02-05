@@ -1,24 +1,3 @@
-{{#elem/panel-container state="primary"}}
-  {{#elem/panel-heading icon="filter"}}
-    Filters
-  {{/elem/panel-heading}}
-  <div class="panel-body">
-    <div class="btn-group btn-group-justified" role="group" aria-label="...">
-      {{#each-in filterOptions as |key value|}}
-        <div class="btn-group" role="group">
-          <button
-              type="button"
-              class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
-              {{action "changeFilter" key preventDefault=false}}>
-            {{elem/icon-base name=value.icon}} &nbsp;{{value.formal}}
-          </button>
-        </div>
-      {{/each-in}}
-    </div>
-    {{panel/filter-groups data=filterGroups changed=(action 'filterGroupsChanged') }}
-  </div>
-{{/elem/panel-container}}
-
 {{form/api-servers
   addNewDatasource=(action 'addNewDatasource')}}
 
@@ -28,7 +7,19 @@
     {{elem/button-refresh
       onClick=(action 'refreshAvailable')}}
   {{/elem/panel-heading}}
-  {{#if model.availableMapsTask.isRunning}}
+
+  <div class="textInput">
+    <i class="glyphicon glyphicon-filter"></i>
+    {{!-- there is no suitable autocomplete, so may change to  =off --}}
+    {{input id="nameFilter" type="text" value=nameFilter placeholder="Search All Datasets" autocomplete="dataset-name" }}
+  </div>
+
+  {{#if urlOptions.filterGroups}}
+    {{panel/filter-groups data=filterGroups changed=(action 'filterGroupsChanged') }}
+  {{/if}}
+
+
+  {{#if availableMapsTask.isRunning}}
     <div class="panel-body">
       <div class="well">
         Loading resources. 
@@ -49,13 +40,6 @@
       {{#each-in servers as |apiServerName apiServer| }}
         {{panel/api-server-tab tab=tab nav=nav apiServerName=apiServerName apiServer=apiServer serverTabSelected=(action "serverTabSelected")}}
       {{/each-in}}
-      <li class="pull-right" style="margin: 9px;">
-        {{elem/button-base
-          classSize='xs'
-          classColour='success'
-          icon='plus'
-          onClick=(action "addNewDatasource")}}
-      </li>
     </BsNav>
   </BsTab>
 
@@ -179,19 +163,6 @@
              tab-content,  the data content in the following is switched by the above tab.
              --}}
 
-  
-          {{#each dataPre as |dataset|}}
-            {{record/entry-dataset
-              filter=filter
-              entry=dataset
-              selectedBlock=selectedBlock
-              selectBlock="selectBlock"
-              deleteBlock="deleteBlock"
-              onDelete="onDelete"
-              loadBlock="loadBlock"
-              selectedDataset=selectedDataset
-              selectDataset="selectDataset"}}
-          {{/each}}
           <li 
               class="list-group-item list-group-item-info"
 	      style="margin-top: 4ex;" >
@@ -205,6 +176,19 @@
                 onClick=(action "changeTab" "upload")}}
             </span>
           </li>
+  
+          {{#each dataPre as |dataset|}}
+            {{record/entry-dataset
+              filter=filter
+              entry=dataset
+              selectedBlock=selectedBlock
+              selectBlock="selectBlock"
+              deleteBlock="deleteBlock"
+              onDelete="onDelete"
+              loadBlock="loadBlock"
+              selectedDataset=selectedDataset
+              selectDataset="selectDataset"}}
+          {{/each}}
         </ul>
 
       </tab.pane>
