@@ -1,6 +1,6 @@
 import { later, next, throttle } from '@ember/runloop';
 import { A } from '@ember/array';
-import { computed } from '@ember/object';
+import { computed, observer } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
@@ -485,7 +485,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     used = this.get('colourSlotsUsed');
     let dataBlocks = this.get('dataBlocks');
     if (trace_stack > 1)
-      dLog('colourSlots', used, dataBlocks);
+      dLog('colourSlots', used, 'dataBlocks', dataBlocks);
     dataBlocks.forEach((b) => {
       if (b.get('isViewed') && (this.blockColour(b) < 0)) {
         let free = used.findIndex(function (bi, i) {
@@ -502,9 +502,19 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       dLog('colourSlots', colourSlots);
     return colourSlots;
   }),
+  colourSlotsEffect : computed('colourSlots.[]', 'dataBlocks.[]', function () {
+    let colourSlots = this.get('colourSlots');
+    dLog('colourSlotsEffect', colourSlots, 'colourSlots', 'dataBlocks');
+    /** Update the block titles text colour. */
+    this.axisTitleFamily();
+  }),
   blockColour(block) {
     let used = this.get('colourSlotsUsed'),
     i = used.indexOf(block);
+    if ((trace_stack > 1) && (i === -1) && block.isData) {
+      dLog('blockColour', i, block.mapName, block, used, this,
+           this.viewedBlocks, this.viewedBlocks.map((b) => [b.mapName, b.isData, b.id]));
+    }
     return i;
   },
   /** @return the domains of the data blocks of this axis.
