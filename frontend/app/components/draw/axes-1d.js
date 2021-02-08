@@ -15,6 +15,7 @@ const dLog = console.debug;
  */
 export default Component.extend(Evented, /*AxisEvents,*/ {
   block : service('data/block'),
+  selected : service('data/selected'),
 
   menuAxis : computed.alias('drawMap.menuAxis'),
 
