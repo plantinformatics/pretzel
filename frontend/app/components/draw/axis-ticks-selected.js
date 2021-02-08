@@ -1,6 +1,7 @@
 import { debounce, throttle } from '@ember/runloop';
 import { computed } from '@ember/object';
 import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
 import AxisEvents from '../../utils/draw/axis-events';
 
@@ -16,6 +17,7 @@ const CompName = 'components/axis-ticks-selected';
  * is passed to showTickLocations()
  */
 export default Component.extend(AxisEvents, {
+  selected : service('data/selected'),
 
   
   resized : function(widthChanged, heightChanged, useTransition) {
@@ -75,7 +77,10 @@ export default Component.extend(AxisEvents, {
     if (trace)
       dLog("renderTicks in ", CompName, axisID);
     let featureTicks = this.get('axis1d.featureTicks');
-    if (featureTicks) {
+    let block = this.axis1d.axis,
+    /** clickedFeatures will be undefined or an array with .length > 1 */
+    clickedFeatures = this.get('selected.clickedFeaturesByAxis').get(block);
+    if (featureTicks || clickedFeatures) {
       featureTicks.showTickLocations(
       this.featuresOfBlockLookup.bind(this),
       true,  /* undefined or false after text featureExtra is added */
@@ -111,10 +116,15 @@ export default Component.extend(AxisEvents, {
     let blockId = block.get('id');
     /** return [] for blocks which don't have features in the search result. */
     let features = featuresInBlocks ? (featuresInBlocks[blockId] || []) : [];
+    let clickedFeatures = this.get('selected.clickedFeaturesByBlock').get(block);
+    if (clickedFeatures && clickedFeatures.length) {
+      features = features.concat(clickedFeatures);
+    }
     if (trace)
       dLog('featuresOfBlockLookup', featuresInBlocks, block, blockId, features);
     return features;
-  }
+  },
   
+
 });
 

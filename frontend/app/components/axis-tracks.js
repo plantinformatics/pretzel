@@ -158,8 +158,30 @@ function  configureSubTrackHover(interval)
 
 /*----------------------------------------------------------------------------*/
 
+function configureClick(selected, featureData2Feature) {
+  return function (selection) {
+    selection.on('click', function (d, i, g) { clickTrack.apply(this, [selected, featureData2Feature, d])});
+  }
+}
+function clickTrack(selected, featureData2Feature, featureData) {
+  let feature = featureData2Feature.get(featureData);
+  dLog('clickTrack', featureData, feature.id, feature);
+  selected.clickFeature(feature);
+}
+
+/*----------------------------------------------------------------------------*/
+
 /** For d3 .data() key function */
 function I(d) { return d; }
+
+/*----------------------------------------------------------------------------*/
+
+/** Make the description unique in case there are multiple
+ * positions for the same feature name.
+ */
+function intervalUniqueName(description, interval) {
+  return description + "_" + interval[0];
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -434,7 +456,7 @@ function rectTrianglePath(y, yInterval, xWidth, xPosn) {
    * . proportionate in between
    */
   let
-	/* scaled y position (interval) of feature */
+  /* scaled y position (interval) of feature */
   yS = [y(yInterval[0]), y(yInterval[1])],
   yLength = yS[1] - yS[0],
   yDirection = Math.sign(yLength),
@@ -478,6 +500,7 @@ export default InAxis.extend({
 
   queryParams: service('query-params'),
   urlOptions : alias('queryParams.urlOptions'),
+  selected : service('data/selected'),
 
   className : "tracks",
   
@@ -487,6 +510,9 @@ export default InAxis.extend({
    * and .layoutWidth for the block.
    */
   blocks : {},
+
+  featureData2Feature : new WeakMap(),
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -645,6 +671,8 @@ export default InAxis.extend({
           }
         }
         interval.description = description;
+        interval.udescription = intervalUniqueName(description, interval);
+
         // let axisName = mapChrName2Axis(mapChrName);
         if (intervals[axisName] === undefined)
           intervals[axisName] = [];
@@ -764,13 +792,7 @@ export default InAxis.extend({
         Math.min(domainRange / 1000, 200) : 
         Math.min(-domainRange / 1000, 200),
       tracksLayout = regionOfTree(t, y.domain(), sizeThreshold, abutDistance, true),
-      data = tracksLayout.intervals.map(function(d) {
-        // Make the description unique in case there are multiple
-        // positions for the same feature name.
-        let r=Object.assign({}, d);
-        r.udescription=d.description+"_"+d[0];
-        return r;
-      });
+      data = tracksLayout.intervals;
       let blockState = thisAt.lookupAxisTracksBlock(blockId);
       blockState.set('layoutWidth', tracksLayout.nLayers * trackWidth * 2);
       if (! blockState.hasOwnProperty('subElements')) {
@@ -1029,15 +1051,23 @@ export default InAxis.extend({
         .append((d) => createElementSvg(useTriangle && (alwaysTri || showTriangleP(y, d)) ? 'path' : 'rect'));
       ra
         .attr('class', 'track')
-        .transition().duration(featureTrackTransitionTime)
         .each(subElements ? configureSubTrackHover : configureTrackHover);
+      if (! subElements) {
+        ra.call(configureClick(thisAt.selected, thisAt.featureData2Feature));
+      }
       rs.merge(ra)
+        .transition().duration(featureTrackTransitionTime)
         .attr('width', useTriangle ? ((d) => alwaysTri || showTriangleP(y, d) ? undefined : width) : width);
 
       function attributesForReplace(d, i, g) {
+        let s =
         d3.select(g[i])
         .each(subElements ? configureSubTrackHover : configureTrackHover)
+        .transition().duration(featureTrackTransitionTime)
         .attr('width', useTriangle ? ((d) => alwaysTri || showTriangleP(y, d) ? undefined : width) : width);
+        if (! subElements) {
+          s.call(configureClick(thisAt.selected, thisAt.featureData2Feature));
+        }
       }
 
       let
@@ -1498,6 +1528,7 @@ export default InAxis.extend({
     featuresLengths = this.get('trackBlocksR').mapBy('featuresLength');
     console.log('tracksTree', axisID, this, trackBlocksR, featuresLengths);
     let
+    featureData2Feature = this.featureData2Feature,
     /** similar to : axis-1d.js : showTickLocations(), which also does .filter(inRange)
      */
     intervals = trackBlocksR.reduce(
@@ -1508,6 +1539,12 @@ export default InAxis.extend({
           .toArray()  //  or ...
           .map(function (feature) {
             let interval = feature.get('range') || feature.get('value');
+            /* extra attributes will be added to interval : .description,
+               * .udescription, .feature.   Can copy .value to avoid modifying
+               * store object with attributes which are local and ephemeral. */
+            interval = interval.slice();
+            featureData2Feature.set(interval, feature);
+
             /* copy/paste into CSV in upload panel causes feature.value to be a
              * single-element array, e.g. {name : "my1AGene1", value : [5200] }
              * interval-tree expects an interval to be [start, end].
@@ -1528,6 +1565,7 @@ export default InAxis.extend({
               interval[1] = swap;
             }
             interval.description = feature.get('name');
+            interval.udescription = intervalUniqueName(interval.description, interval);
             /* for datasets with tag 'SNP', feature value[2] is reference / alternate,
              * e.g. "A/G", "T/C" etc */
             let tags = feature.get('blockId.datasetId.tags');
