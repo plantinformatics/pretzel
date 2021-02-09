@@ -608,6 +608,11 @@ g.foundFeatures > path.horizTick
   stroke-width : 1px;
 }
 
+g.horizTick.labelledFeatures > text.horizTick {
+    stroke: blue;
+    stroke-width: initial;
+}
+
 path.syntenyEdge
 {
   fill-opacity: 0.05;

@@ -45,12 +45,12 @@ export default Service.extend({
   /*--------------------------------------------------------------------------*/
   /* Show triangles for the features in the array : clicked features   */
 
-  /** Group the clicked features so they can be looked up by axis reference block
+  /** Group the clicked or labelled features so they can be looked up by axis reference block
    * or by data block.
    */
-  groupClickedFeatures(callerName, groupFn) {
+  groupFeatures(callerName, fieldName, groupFn) {
     let
-    features = this.features.reduce(
+    features = this.get(fieldName).reduce(
       function (map, feature)
       {
         let key = groupFn(feature),
@@ -69,16 +69,33 @@ export default Service.extend({
   clickedFeaturesByBlock : computed('features.[]', function () {
     let
     features = 
-      this.groupClickedFeatures(
-        'clickedFeaturesOfBlock',
+      this.groupFeatures(
+        'clickedFeaturesByBlock', 'features',
         (feature) => feature.get('blockId.content') || feature.get('blockId'));
     return features;
   }),
   clickedFeaturesByAxis : computed('features.[]', function () {
     let
     features = 
-      this.groupClickedFeatures(
-        'clickedFeaturesOfBlock',
+      this.groupFeatures(
+        'clickedFeaturesByAxis', 'features',
+        (feature) => feature.get('blockId.referenceBlock'));
+    return features;
+  }),
+
+  labelledFeaturesByBlock : computed('labelledFeatures.[]', function () {
+    let
+    features = 
+      this.groupFeatures(
+        'labelledFeaturesByBlock', 'labelledFeatures',
+        (feature) => feature.get('blockId.content') || feature.get('blockId'));
+    return features;
+  }),
+  labelledFeaturesByAxis : computed('labelledFeatures.[]', function () {
+    let
+    features = 
+      this.groupFeatures(
+        'labelledFeaturesByAxis', 'labelledFeatures',
         (feature) => feature.get('blockId.referenceBlock'));
     return features;
   }),

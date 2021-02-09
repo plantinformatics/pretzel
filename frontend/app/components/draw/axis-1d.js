@@ -88,6 +88,18 @@ function blockWithTicks(block)
   return ! showPaths;
 }
 
+/** Return a filter to select features which are within the current zoomedDomain
+ * of the given block.
+ * @param block stacks Block
+ */
+function inRangeBlock(axisApi, range0, block) {
+  return function (feature) {
+    /** comment in @see keyFn() */
+    let featureName = getAttrOrCP(feature, 'name');
+    return axisApi.inRangeI(block.axisName, featureName, range0);
+  };
+}
+
 /** Draw horizontal ticks on the axes, at feature locations.
  * This is used for 2 cases so far :
  * . all features of blocks which have !showPaths, when axis is ! extended
@@ -104,20 +116,39 @@ function FeatureTicks(axis, axisApi, axis1d)
   this.axis1d = axis1d;
 }
 
+/** @return a function to lookup from block to an array of features.
+ * Used as a d3 .data() function with block as data.
+ */
+FeatureTicks.prototype.featuresOfBlock = function (featuresOfBlockLookup) {
+  let
+  range0 = this.axis.yRange2();
+
+    return (block) => {
+      let inRange = inRangeBlock(this.axisApi, range0, block);
+
+      let blockR = block.block,
+      blockId = blockR.get('id'),
+      featuresAll = featuresOfBlockLookup(blockR),
+      features = ! featuresAll ? [] : featuresAll
+        .filter(inRange);
+      dLog(blockId, features.length, 'showTickLocations featuresOfBlock');
+      return features;
+    };
+};
+
 /** Draw horizontal ticks on the axes, at feature locations.
  *
+ * @param featuresOfBlockLookup map from block to array of features; its param is :
  * @param axis  block (Ember object), result of stacks-view:axesP
  * If the axis has multiple (data) blocks, this is the reference block.
  */
-FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setupHover, groupName, blockFilter)
+FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setupHover, groupName, blockFilter, clickFn)
 {
   /** Called from axis-ticks-selected : renderTicks(), and originally also
    * called from axis-1d : renderTicks() to represent the edges of scaffolds.
  */
   let axis = this.axis, axisApi = this.axisApi;
   let axisName = axis.axisName;
-  let
-    range0 = axis.yRange2();
   let
     axisObj = this.axis1d.get('axisObj'),
   // The following call to this.axis1d.get('extended')
@@ -155,23 +186,10 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
       dLog('blockIndex', axisName, axis, axis.blocks);
     blocksUnfiltered.forEach(storeBlockIndex);
 
-    function featuresOfBlock (block) {
-      function inRange(feature) {
-        /** comment in @see keyFn() */
-        let featureName = getAttrOrCP(feature, 'name');
-        return axisApi.inRangeI(block.axisName, featureName, range0);
-      }
-
-      let blockR = block.block,
-      blockId = blockR.get('id'),
-      featuresAll = (featuresOfBlockLookup || function (blockR) {
+    featuresOfBlockLookup ||= function (blockR) {
         return blockR.get('features').toArray();
-      })(blockR),
-      features = featuresAll
-        .filter(inRange);
-      dLog(blockId, features.length, 'showTickLocations featuresOfBlock');
-      return features;
     };
+    let featuresOfBlock = this.featuresOfBlock(featuresOfBlockLookup);
 
     let gSA = gS.merge(gA),
     pS = gSA
@@ -204,6 +222,8 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
       pSE
         .each(setupHover);
     }
+    pSE.on('click', clickFn);
+
       pS.exit()
         .remove();
       let pSM = pSE.merge(pS);
@@ -302,6 +322,83 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 
 };
 
+/** Draw text feature labels left of the axes, at location of features selected
+ * by clicking on the feature triangle, recorded in selected.labelledFeatures.
+ *
+ */
+FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover, groupName, blockFilter)
+{
+
+  function textFn(feature) {
+    let
+    featureName = getAttrOrCP(feature, 'name');
+    return featureName;
+  }
+
+  // copied from .showTickLocations(); can probably factor the keyFn and <g> setup
+
+  function keyFn (feature) {
+    // here `this` is the parent of the <path>-s, e.g. g.axis
+    let featureName = getAttrOrCP(feature, 'name');
+    // dLog('keyFn', feature, featureName); 
+    return featureName;
+  };
+
+  let axis = this.axis, axisApi = this.axisApi;
+  let axisName = axis.axisName;
+
+  function blockTickEltId(block) { return className + '_' + groupName + '_' + block.axisName; }
+
+  let aS = selectAxis(axis);
+  if (!aS.empty())
+  {
+    /** show no ticks if axis is extended. */
+    const notWhenExtended = false;
+    let blocks = (notWhenExtended && extended ? [] : blockFilter ? axis.blocks.filter(blockWithTicks) : axis.blocks);
+    let gS = aS.selectAll("g." + className + '.' + groupName)
+      .data(blocks, blockKeyFn);
+    gS.exit().remove();
+
+    let gA = gS.enter()
+      .append('g')
+      .attr('id', blockTickEltId)
+      .attr('class', className + ' ' + groupName)
+    ;
+
+    let featuresOfBlock = this.featuresOfBlock(featuresOfBlockLookup);
+
+    const tagName = 'text';
+    /**  p* (i.e. pS, pSE, pSM, p1) are selections of the <path> in .showTickLocations or <text> in .showLabels
+     * S : the whole selection, SE : the .enter().append(), SM : the SE merged back with S, 1 : SM with a transition.
+     */
+    let gSA = gS.merge(gA),
+    pS = gSA
+      .selectAll(tagName + "." + className)
+      .data(featuresOfBlock, keyFn),
+    pSE = pS.enter()
+        .append(tagName)
+        .attr("class", className)
+    ;
+
+    /* pSE
+      .each(setupHover); */
+
+  pS.exit()
+    .remove();
+  let pSM = pSE.merge(pS);
+
+  /** For <text> the d is constant, so use pSE.
+   * For showTickLocations / <path>, the d updates, so pSM is used
+   */
+  pSE
+    .text(textFn)
+    .attr('x', '-100px');
+  pSM
+    .attr('y',  (feature) => this.axis1d.featureY(feature));
+
+  }
+
+};
 
 /**
  * @property zoomed   selects either .zoomedDomain or .blocksDomain.  initially undefined (false).
@@ -685,6 +782,29 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     as = d3.selectAll(".axis-outer#" + eltId(axisId));
     return as;
   }),
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Calculate current scaled position of the given feature on this axis.
+   */
+  featureY(feature) {
+    let
+    /* alternative :
+    axisName = this.get('axis.id'),
+    ak = axisName,
+    y = stacks.oa.y[ak],
+    */
+    axisS = this.get('axisS'),
+    y = axisS && axisS.getY(),
+    ys = axisS && axisS.ys,
+
+    range = getAttrOrCP(feature, 'range') || getAttrOrCP(feature, 'value'),
+    tickY = range && (range.length ? range[0] : range),
+    /** scaled to axis.
+     * Similar : draw-map : featureY_(ak, feature.id);     */
+    akYs = y(tickY);
+    return akYs;
+  },
 
   /*--------------------------------------------------------------------------*/
 

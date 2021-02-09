@@ -84,7 +84,23 @@ export default Component.extend(AxisEvents, {
       featureTicks.showTickLocations(
       this.featuresOfBlockLookup.bind(this),
       true,  /* undefined or false after text featureExtra is added */
-      'foundFeatures', false
+      'foundFeatures', false,
+      this.clickTriangle.bind(this)        
+      );
+    }
+    // currently called via didRender(), so ticks and labels are both updated.
+    this.renderLabels(axisID);
+  },
+  renderLabels(axisID) {
+    let featureTicks = this.get('axis1d.featureTicks');
+    let
+    block = this.axis1d.axis,
+    labelledFeatures = this.get('selected.labelledFeaturesByAxis').get(block);
+    if (labelledFeatures) {
+      featureTicks.showLabels(
+        this.labelledFeaturesOfBlockLookup.bind(this),
+        true,
+        'labelledFeatures', false
       );
     }
   },
@@ -108,7 +124,7 @@ export default Component.extend(AxisEvents, {
 
   /** Lookup the given block in featuresInBlocks, and return its features which
    * were in the featureSearch result.
-   * @param block Stacks Block
+   * @param block Ember object
    */
   featuresOfBlockLookup(block) {
     /** features found by goto-feature-list, indexed by block id. */
@@ -125,6 +141,22 @@ export default Component.extend(AxisEvents, {
     return features;
   },
   
+  /** Lookup selected.labelledFeatures for the given block.
+   * @param block Ember object
+   */
+  labelledFeaturesOfBlockLookup(block) {
+    let labelledFeatures = this.get('selected.labelledFeaturesByBlock').get(block);
+    if (trace)
+      dLog('labelledFeaturesOfBlockLookup', featuresInBlocks, block, block.id, labelledFeatures);
+    return labelledFeatures;
+  },
+
+  clickTriangle(feature, i, g) {
+    dLog('clickTriangle', feature, i, g.length, g[i], this);
+    this.selected.clickLabel(feature);
+    let labelledFeatures = this.selected.labelledFeatures;
+    dLog(labelledFeatures.mapBy('blockId.mapName'), labelledFeatures.map((f) => [f.name, f.value]));
+  }
 
 });
 
