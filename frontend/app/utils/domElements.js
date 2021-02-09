@@ -217,6 +217,11 @@ function noShiftKeyfilter() {
   return ! ev.shiftKey;
 }
 
+function ctrlKeyfilter() {
+  let ev = d3.event.sourceEvent || d3.event; 
+  return ev.ctrlKey;
+}
+
 /*----------------------------------------------------------------------------*/
 
 /** 
@@ -353,7 +358,7 @@ export {
   eltWidthResizable,
   eltResizeToAvailableWidth,
   logWindowDimensions, logElementDimensions, logElementDimensions2,
-  shiftKeyfilter, noShiftKeyfilter ,
+  shiftKeyfilter, noShiftKeyfilter, ctrlKeyfilter, 
   htmlHexEncode, cssHexEncode,
   eltClassName,
   tabActive,

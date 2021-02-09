@@ -42,7 +42,7 @@ import { chrData, cmNameAdd } from '../utils/utility-chromosome';
 import {
   eltWidthResizable,
   eltResizeToAvailableWidth,
-  noShiftKeyfilter,
+  ctrlKeyfilter,
   eltClassName,
   tabActive,
   inputRangeValue,
@@ -2336,7 +2336,7 @@ export default Component.extend(Evented, {
       .call(
         d3.drag()
           .subject(function(d) { return {x: oa.stacks.x(d)}; }) //origin replaced by subject
-          .filter(noShiftKeyfilter)
+          .filter(ctrlKeyfilter)
           .on("start", dragstarted) //start instead of dragstart in v4. 
           .on("drag", dragged)
           .on("end", dragended));//function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
