@@ -37,7 +37,7 @@ import {
 } from '../../utils/stacks-drag';
 import { selectAxis } from '../../utils/draw/stacksAxes';
 import { breakPoint } from '../../utils/breakPoint';
-import { configureHorizTickHover } from '../../utils/hover';
+import { configureHover } from '../../utils/hover';
 import { getAttrOrCP } from '../../utils/ember-devel';
 import { intervalExtent }  from '../../utils/interval-calcs';
 import { updateDomain } from '../../utils/stacksLayout';
@@ -69,7 +69,7 @@ function blockKeyFn(block) { return block.axisName; }
 /*------------------------------------------------------------------------*/
 
 
-/* showTickLocations() and configureHorizTickHover() are based on the
+/* showTickLocations() and configureHover() are based on the
  * corresponding functions in draw-map.js
  * There is a lot of variation at all levels between this application and the
  * original - draft factoring (axisDomData.js) showed a blow-out of abstraction
@@ -216,7 +216,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     function setupHover (feature) 
     {
       let block = this.parentElement.__data__;
-      return configureHorizTickHover.apply(this, [feature, block, hoverTextFn]);
+      return configureHover.apply(this, [{feature, block}, hoverTextFn]);
     };
 
       pSE
@@ -304,7 +304,8 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
   };
 
   /** eg: "scaffold23432:1A:1-534243" */
-  function hoverTextFn (feature, block) {
+  function hoverTextFn(context) {
+    let {feature, block} = context;
     let
       /** value is now renamed to range, this handles some older data. */
       range = getAttrOrCP(feature, 'range') || getAttrOrCP(feature, 'value'),
