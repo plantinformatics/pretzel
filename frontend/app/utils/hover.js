@@ -40,12 +40,20 @@ function showHover(context, textFn, d) {
   // console.log("configureHover", location, this, this.outerHTML);
   let text = textFn(context, d);
 
-  let node_ = hoverNearElement ? this : $('#popoverTarget');
-  let $this = hoverNearElement ? $(this) : node_;
-  if ($(node_).popover) {
+  /** jQuery selection of target element to display popover near.
+   * if hoverNearElement then node_ is also the source element which originates the hover.
+   */
+  let node_ = hoverNearElement ? $(this) : $('#popoverTarget');
+  if (node_.popover) {
     /** refn : node_modules/bootstrap/js/popover.js */
-    let data    = $this.data('bs.popover');
-    if (! hoverNearElement || ! data) {
+    let data    = node_.data('bs.popover');
+    if (data) {
+      /* this seems to follow the doc, but doesn't change .content
+      node_
+        .popover('show')
+        .popover({content : text}); */
+      node_.data('bs.popover').options .content = text;
+    } else {
       /** https://getbootstrap.com/docs/3.4/javascript/#popovers */
       let options = {
         trigger : "manual",	// was : click hover
@@ -60,14 +68,16 @@ function showHover(context, textFn, d) {
         options.template = '<div class="popover" role="tooltip"> <h3 class="popover-title"></h3><div class="popover-content"></div></div>';
         // ? options.modifiers = { arrow : {enabled : false}};
       }
-      $(node_)
+      node_
         .popover(options);
     }
-    $this.popover('show');
+    node_.popover('show');
   }
 }
 function hideHover() {
-  $(this).popover('hide');
+  /** jQuery selection of target element to display popover near. */
+  let node_ = hoverNearElement ? $(this) : $('#popoverTarget');
+  node_.popover('hide');
 }
 
 
