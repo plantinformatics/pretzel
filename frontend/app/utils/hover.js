@@ -1,5 +1,7 @@
+import { stacks } from './stacks';
 
 /* global Ember */
+
 
 /*------------------------------------------------------------------------*/
 /* copied from draw-map.js - will import when that is split */
@@ -16,17 +18,23 @@
  */
 import $ from 'jquery';
 
+
+let urlOptions = stacks.oa.eventBus.get('urlOptions');
+
 /** If true, show the popover over the element which is hovered.
  * If false, show the popover at the top-right corner of the graph area.
  */
-const hoverNearElement = false;
+const hoverNearElement = urlOptions && urlOptions.hoverNearElement;
 
-/**
-
- * usage e.g. (from axis-tracks)
+/** Set up an element hover (mouseover) event to display text.
+ * @param context client data
+ * @param textFn  given the context and hovered element datum, create text to show in the hover popover.
+ * called with d3 signature : textFn.apply(this, [context, d, i, g])
+ *
+ * Usage e.g. (from axis-tracks)
  * function  configureTrackHover(interval)
  * {
- *   return configureHover.apply(this, [interval.description]);
+ *   return configureHover.apply(this, [interval.description, hoverTextFn]);
  * }
  * ... d3.each(configureTrackHover);
  */
@@ -36,9 +44,9 @@ function configureHover(context, textFn)
   d3.select(this).on('mouseout', hideHover.bind(this));
 }
 
-function showHover(context, textFn, d) {
+function showHover(context, textFn, d, i, g) {
   // console.log("configureHover", location, this, this.outerHTML);
-  let text = textFn(context, d);
+  let text = textFn.apply(this, [context, d, i, g]);
 
   /** jQuery selection of target element to display popover near.
    * if hoverNearElement then node_ is also the source element which originates the hover.

@@ -12,6 +12,7 @@ import {
   eltWidthResizable,
   noShiftKeyfilter
 } from '../utils/domElements';
+import { configureHover } from '../utils/hover';
 import InAxis from './in-axis';
 import {
   eltId,
@@ -104,56 +105,33 @@ function swapTag(fromTag, toTag, element, attributesForReplace) {
 
 
 /*------------------------------------------------------------------------*/
-/* copied from draw-map.js - will import when that is split */
-/** Setup hover info text over scaffold horizTick-s.
- * @see based on similar configureAxisTitleMenu()
+
+/** @return the given location as string for display as hover text.
+ * @param d featureData, i.e. interval, based on feature.value
+ * called via text = textFn(context, d);
  */
-function  configureHorizTickHover(location)
-{
-  d3.select(this).on('mouseover', showHorizTickHover.bind(this, location));
-  d3.select(this).on('mouseout', hideHorizTickHover.bind(this));
-}
-function showHorizTickHover (location) {
-  // console.log("configureHorizTickHover", location, this, this.outerHTML);
+function hoverTextFn(location, d, i, g) {
+  /** location is d.description */
   /** typeof location may also be "number" or "object" - array : syntenyBlocks[x] */
   let text = (location == "string") ? location :  "" + location;
-  let $this=$(this);
-  let node_ = this;
-  if ($(node_).popover) {
-    /** refn : node_modules/bootstrap/js/popover.js */
-    let data    = $this.data('bs.popover');
-    if (! data) {
-      /** https://getbootstrap.com/docs/3.4/javascript/#popovers */
-  $(node_)
-    .popover({
-      trigger : "manual",	// was : click hover
-      sticky: true,
-      delay: {show: 200, hide: 3000},
-      container: 'div#holder',
-      placement : "auto right",
-      content : text
-    });
-    }
-    $this.popover('show');
-  }
+  dLog('hoverTextFn', location, d, this, g[i]);
+  return text;
 }
-function hideHorizTickHover() {
-  $(this).popover('hide');
-}
+
 /*----------------------------------------------------------------------------*/
 
 /** Configure hover text for tracks. */
 function  configureTrackHover(interval)
 {
-  return configureHorizTickHover.apply(this, [interval.description]);
+  return configureHover.apply(this, [interval.description, hoverTextFn]);
 }
-/** Same as configureHorizTickHover(), except for sub-elements,
+/** Same as configureTrackHover(), except for sub-elements,
  * for which the source data, and hence .description, is in interval.data,
  * because the interval tree takes just the interval as input.
  */
 function  configureSubTrackHover(interval)
 {
-  return configureHorizTickHover.apply(this, [(interval.data || interval).description]);
+  return configureHover.apply(this, [(interval.data || interval).description, hoverTextFn]);
 }
 
 /*----------------------------------------------------------------------------*/
