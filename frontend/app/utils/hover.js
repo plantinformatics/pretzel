@@ -73,7 +73,7 @@ function showHover(context, textFn, d, i, g) {
       };
       if (! hoverNearElement) {
         // same as default, with arrow removed : <div class="arrow"></div>
-        options.template = '<div class="popover" role="tooltip"> <h3 class="popover-title"></h3><div class="popover-content"></div></div>';
+        options.template = '<div class="popover no-border" role="tooltip"> <h3 class="popover-title"></h3><div class="popover-content"></div></div>';
         // ? options.modifiers = { arrow : {enabled : false}};
       }
       node_

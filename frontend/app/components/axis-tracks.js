@@ -114,7 +114,9 @@ function hoverTextFn(location, d, i, g) {
   /** location is d.description */
   /** typeof location may also be "number" or "object" - array : syntenyBlocks[x] */
   let text = (location == "string") ? location :  "" + location;
-  dLog('hoverTextFn', location, d, this, g[i]);
+  if (trace > 1) {
+    dLog('hoverTextFn', location, d, this, g[i]);
+  }
   return text;
 }
 

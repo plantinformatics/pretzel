@@ -627,6 +627,19 @@ path.syntenyEdge.inverted
   stroke-dasharray: 16 8 16 40;
 }
 
+/*----------------------------------------------------------------------------*/
+/* no border for popover when displayed in top-right of graph, i.e. ! hoverNearElement */
+#holder > div.popover.no-border
+{
+  border : none;
+  box-shadow : none;
+
+  /* avoid overlapping the top border of the graph area */
+  margin-top: 20px;
+  .popover-content {
+      padding-top : 0;
+  }
+}
 
 /*----------------------------------------------------------------------------*/
 /* Button */
