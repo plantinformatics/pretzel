@@ -83,7 +83,7 @@ export default Component.extend(AxisEvents, {
     if (featureTicks || clickedFeatures) {
       featureTicks.showTickLocations(
       this.featuresOfBlockLookup.bind(this),
-      true,  /* undefined or false after text featureExtra is added */
+      false,  /* hover text not required on axis feature triangles. */
       'foundFeatures', false,
       this.clickTriangle.bind(this)        
       );
