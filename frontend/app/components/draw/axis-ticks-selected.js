@@ -127,8 +127,13 @@ export default Component.extend(AxisEvents, {
    * @param block Ember object
    */
   featuresOfBlockLookup(block) {
+    /** now that feature search result is copied to selected.features, it is not
+     * required to display ticks (triangles) for the feature search result
+     * (featuresInBlocks).
+     */
+    const showSearchResult = false;
     /** features found by goto-feature-list, indexed by block id. */
-    let featuresInBlocks = this.get('featuresInBlocks');
+    let featuresInBlocks = showSearchResult && this.get('featuresInBlocks');
     let blockId = block.get('id');
     /** return [] for blocks which don't have features in the search result. */
     let features = featuresInBlocks ? (featuresInBlocks[blockId] || []) : [];

@@ -1,5 +1,6 @@
 import { computed } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
+import Evented from '@ember/object/evented';
 
 
 const dLog = console.debug;
@@ -7,7 +8,7 @@ const dLog = console.debug;
 /**
  * for #223 : Selections and defining intervals 
  */
-export default Service.extend({
+export default Service.extend(Evented, {
 
   /** clicked features, not all the feature search results (which are shown as
    * triangles also).
@@ -29,11 +30,13 @@ export default Service.extend({
     features = this.get(listName),
     i = features.indexOf(feature);
     dLog('clickFeature', listName, i, feature, features);
-    if (i === -1) {
+    let added = i === -1;
+    if (added) {
       features.pushObject(feature);
     } else {
       features.removeAt(i, 1);
     }
+    this.trigger('toggleFeature', feature, added);
   },
   clickFeature(feature) {
     this.toggle('features', feature);
