@@ -11,6 +11,7 @@ import { sum } from 'lodash/math';
 import { isEqual } from 'lodash/lang';
 
 
+import { contentOf } from '../../utils/common/promises';
 import AxisEvents from '../../utils/draw/axis-events';
 import AxisPosition from '../../mixins/axis-position';
 import {
@@ -199,6 +200,10 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
         .append("path")
         .attr("class", className)
     ;
+
+   /** @return rgb() colour for feature <path> stroke (feature ticks / triangles)
+    * @desc Calling signature : `this` is the DOM element to be coloured,  from d3 .attr() `this`
+    */
     function featurePathStroke (feature, i2) {
         let block = this.parentElement.__data__,
         blockId = block.getId(),
@@ -379,6 +384,7 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
     pSE = pS.enter()
         .append(tagName)
         .attr("class", className)
+        .attr('stroke', (feature) => this.axis1d.blockColourValue(contentOf(feature.get('blockId'))))
     ;
 
     /* pSE
@@ -608,6 +614,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     /** Update the block titles text colour. */
     this.axisTitleFamily();
   }),
+  /** @return the colour index of this block
+   */
   blockColour(block) {
     let used = this.get('colourSlotsUsed'),
     i = used.indexOf(block);
@@ -617,6 +625,20 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }
     return i;
   },
+  /** @return a colour value for .attr 'color'
+   * @desc uses axisTitleColour(), which uses this.blockColour()
+   */
+  blockColourValue(block) {
+    let
+    blockId = block.get('id'),
+    /** Could set up param i as is done in showTickLocations() :
+     * featurePathStroke(), but i is only used when axisTitleColourBy is .index,
+     * and currently it is configured as .slot.
+     */
+    colour = axisTitleColour(blockId, /*i*/undefined) || 'black';
+    return colour;
+    },
+
   /** @return the domains of the data blocks of this axis.
    * The result does not contain a domain for data blocks with no features loaded.
    *

@@ -2,6 +2,8 @@ import { computed } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
 import Evented from '@ember/object/evented';
 
+import { contentOf } from '../../utils/common/promises';
+
 
 const dLog = console.debug;
 
@@ -79,7 +81,7 @@ export default Service.extend(Evented, {
     features = 
       this.groupFeatures(
         'clickedFeaturesByBlock', 'features',
-        (feature) => feature.get('blockId.content') || feature.get('blockId'));
+        (feature) => contentOf(feature.get('blockId')));
     return features;
   }),
   clickedFeaturesByAxis : computed('features.[]', function () {
@@ -96,7 +98,7 @@ export default Service.extend(Evented, {
     features = 
       this.groupFeatures(
         'labelledFeaturesByBlock', 'labelledFeatures',
-        (feature) => feature.get('blockId.content') || feature.get('blockId'));
+        (feature) => contentOf(feature.get('blockId')));
     return features;
   }),
   labelledFeaturesByAxis : computed('labelledFeatures.[]', function () {

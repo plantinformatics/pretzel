@@ -14,5 +14,10 @@ function thenOrNow(value, fn) {
   return result;
 }
 
+/** @return	p.content if p is a promise, otherwise p.
+ */
+function contentOf(p) {
+  return p.content || p;
+}
 
-export { thenOrNow };
+export { thenOrNow, contentOf };
