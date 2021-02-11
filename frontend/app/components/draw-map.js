@@ -169,6 +169,7 @@ export default Component.extend(Evented, {
   blockService: service('data/block'),
   flowsService: service('data/flows-collate'),
   pathsP : service('data/paths-progressive'),
+  axisZoom : service('data/axis-zoom'),
   queryParamsService: service('query-params'),
   apiServers : service(),
 
@@ -4251,6 +4252,8 @@ export default Component.extend(Evented, {
       /** can be undefined in some cases. it is defined for WheelEvent - mousewheel zoom. */
       let e = d3.event.sourceEvent;
       let isWheelEvent = d3.event.sourceEvent instanceof WheelEvent;
+      let timeStamp = e && e.timeStamp;
+      me.set('axisZoom.zoomPan', {isWheelEvent, timeStamp});
       if (trace_zoom > 0 + isWheelEvent)
       console.log('zoom', that, brushExtents, arguments, this);
       let axisName;
@@ -4425,7 +4428,8 @@ export default Component.extend(Evented, {
         let idName = axisEltId(p),
         axisS = svgContainer.select("#"+idName);
         if (t)
-          axisS = axisS.transition(t);
+          axisS = axisS.transition(t)
+	  .duration(me.get('axisZoom.axisTransitionTime'));
         axisS.call(yAxis);
         if (updatePaths)
           pathUpdate(t);

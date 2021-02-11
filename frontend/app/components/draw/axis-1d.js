@@ -115,7 +115,16 @@ function FeatureTicks(axis, axisApi, axis1d)
   this.axis = axis;
   this.axisApi = axisApi;
   this.axis1d = axis1d;
+
+  this.getTransitionTime = () => this.axis1d.get('transitionTime');
 }
+
+FeatureTicks.prototype.selectionToTransition = function (selection) {
+  return selection
+    .transition()
+    .duration(this.getTransitionTime())
+    .ease(d3.easeCubic);
+};
 
 /** @return a function to lookup from block to an array of features.
  * Used as a d3 .data() function with block as data.
@@ -235,10 +244,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 
       /* update attr d in a transition if one was given.  */
       let p1 = // (t === undefined) ? pSM :
-         pSM.transition()
-         .duration(axisTickTransitionTime)
-         .ease(d3.easeCubic);
-
+          this.selectionToTransition(pSM)
       p1.attr("d", pathFn)
       .attr('stroke', featurePathStroke)
       .attr('fill', featurePathStroke)
@@ -401,7 +407,11 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
     .text(textFn)
     // positioned just left of the base of the triangles.  inherits text-anchor from axis;
     .attr('x', '-30px');
-  pSM
+
+  pSE
+    .attr('y',  (feature) => this.axis1d.featureY(feature));
+
+  this.selectionToTransition(pSM)
     .attr('y',  (feature) => this.axis1d.featureY(feature));
 
   }
@@ -415,6 +425,7 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
 export default Component.extend(Evented, AxisEvents, AxisPosition, {
   blockService: service('data/block'),
   axisBrush: service('data/axis-brush'),
+  axisZoom: service('data/axis-zoom'),
   controls : service(),
 
   controlsView : alias('controls.controls.view'),
@@ -806,6 +817,10 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     as = d3.selectAll(".axis-outer#" + eltId(axisId));
     return as;
   }),
+
+  get transitionTime() {
+    return this.get('axisZoom.axisTransitionTime');
+  },
 
   /*--------------------------------------------------------------------------*/
 
