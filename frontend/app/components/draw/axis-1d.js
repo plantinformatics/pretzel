@@ -393,7 +393,8 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
    */
   pSE
     .text(textFn)
-    .attr('x', '-100px');
+    // positioned just left of the base of the triangles.  inherits text-anchor from axis;
+    .attr('x', '-30px');
   pSM
     .attr('y',  (feature) => this.axis1d.featureY(feature));
 

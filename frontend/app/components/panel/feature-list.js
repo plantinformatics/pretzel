@@ -265,9 +265,12 @@ export default Component.extend({
       let text$ = $('textarea', this.element);
       text$.val(newValue);
   },
-  toggleFeature(feature, added) {
-    dLog('toggleFeature', feature, added);
-    this.appendSelectedFeatures([feature.name], !added);
+  toggleFeature(feature, added, listName) {
+    // not interested in listName === 'labelledFeatures'.
+    if (listName === 'features') {
+      dLog('toggleFeature', feature, added);
+      this.appendSelectedFeatures([feature.name], !added);
+    }
   },
   currentInputFeatures () {
     let

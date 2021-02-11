@@ -94,9 +94,13 @@ export default Component.extend(AxisEvents, {
   renderLabels(axisID) {
     let featureTicks = this.get('axis1d.featureTicks');
     let
-    block = this.axis1d.axis,
-    labelledFeatures = this.get('selected.labelledFeaturesByAxis').get(block);
-    if (labelledFeatures) {
+    block = this.axis1d.axis;
+    /** if this block had labelledFeatures, and in this update they (1) are
+     * toggled off, then labelledFeatures is undefined, but we still want to
+     * call showLabels() to .remove() the existing <text>-s.
+     */
+    // labelledFeatures = this.get('selected.labelledFeaturesByAxis').get(block);
+    /* if (labelledFeatures) */ {
       featureTicks.showLabels(
         this.labelledFeaturesOfBlockLookup.bind(this),
         true,

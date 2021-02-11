@@ -611,6 +611,7 @@ g.foundFeatures > path.horizTick
 g.horizTick.labelledFeatures > text.horizTick {
     stroke: blue;
     stroke-width: initial;
+    text-anchor: end;
 }
 
 path.syntenyEdge

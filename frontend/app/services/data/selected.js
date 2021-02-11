@@ -24,6 +24,11 @@ export default Service.extend(Evented, {
 
   /** Called when an axis feature track or feature triangle is clicked.
    * Toggle membership of the feature in one of the arrays : .features or .labelledFeatures
+   *
+   * Signal event toggleFeature(feature, added, listName)
+   * This event is published here rather than in the component which receives
+   * the click (axis-tracks : clickTrack) because the feature 'clicked' status
+   * resides here.
    */
   toggle(listName, feature) {
     let
@@ -36,7 +41,7 @@ export default Service.extend(Evented, {
     } else {
       features.removeAt(i, 1);
     }
-    this.trigger('toggleFeature', feature, added);
+    this.trigger('toggleFeature', feature, added, listName);
   },
   clickFeature(feature) {
     this.toggle('features', feature);
@@ -82,7 +87,7 @@ export default Service.extend(Evented, {
     features = 
       this.groupFeatures(
         'clickedFeaturesByAxis', 'features',
-        (feature) => feature.get('blockId.referenceBlock'));
+        (feature) => feature.get('blockId.referenceBlockOrSelf'));
     return features;
   }),
 
@@ -99,7 +104,7 @@ export default Service.extend(Evented, {
     features = 
       this.groupFeatures(
         'labelledFeaturesByAxis', 'labelledFeatures',
-        (feature) => feature.get('blockId.referenceBlock'));
+        (feature) => feature.get('blockId.referenceBlockOrSelf'));
     return features;
   }),
 
