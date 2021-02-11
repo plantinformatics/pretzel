@@ -47,6 +47,7 @@ const CompName = 'components/axis-charts';
 export default InAxis.extend({
   blockService: service('data/block'),
   controls : service(),
+  axisZoom: service('data/axis-zoom'),
 
   className : className,
 
@@ -110,6 +111,10 @@ export default InAxis.extend({
     dLog('yAxisScale', axisID, yAxis && yAxis.domain());
     return yAxis;
   }),
+
+  get transitionTime() {
+    return this.get('axisZoom.axisTransitionTime');
+  },
 
   /** Similar to blockService.viewedChartable, but don't exclude blocks which
    * are .isZoomedOut.  This means the block-view continues to exist - it is not
@@ -229,6 +234,7 @@ export default InAxis.extend({
     if (! chart) {
       let
       dataConfig = dataConfigs[dataTypeName];
+      dataConfig.getTransitionTime ||= () => this.get('transitionTime');
       chart = this.charts[chartName] = new Chart1(dataConfig, chartName);
       chart.barsLine = this.get('chartBarLine');
       // for allocatedWidthForBlock().

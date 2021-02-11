@@ -29,7 +29,7 @@ import { ensureSvgDefs } from '../utils/draw/d3-svg';
  * Match with time used by draw-map.js : zoom() and resetZoom() : 750.
  * also @see   dragTransitionTime and axisTickTransitionTime.
  */
-const featureTrackTransitionTime = 750;
+let featureTrackTransitionTime = 750;
 
 /** If false, track <rect>s are trackWidth wide, and layering them to avoid
  * overlap cause the width allocated to the block to increase.
@@ -481,6 +481,8 @@ export default InAxis.extend({
   queryParams: service('query-params'),
   urlOptions : alias('queryParams.urlOptions'),
   selected : service('data/selected'),
+  axisZoom: service('data/axis-zoom'),
+
 
   className : "tracks",
   
@@ -700,6 +702,7 @@ export default InAxis.extend({
     let thisAt = this;
     let trackWidth = this.get('trackWidth');
 
+    featureTrackTransitionTime = this.get('axisZoom.axisTransitionTime');
     // seems run.throttle() .. .apply() is wrapping args with an extra [] ?
     if (resized && (resized.length == 2) && (tracks === undefined))
     {
@@ -1002,7 +1005,7 @@ export default InAxis.extend({
       re =  rs.enter(), rx = rs.exit();
       dLog(rs.size(), re.size(),  'rx', rx.size());
       rx
-        .transition().duration(featureTrackTransitionTime / 10)
+        .transition().duration(featureTrackTransitionTime)
         .attr('x', 0)
         .attr('y', yEnd)
         .on('end', () => {
@@ -1072,7 +1075,10 @@ export default InAxis.extend({
       ra
         .attr('y', (d,i,g) => useTriangle && (alwaysTri || showTriangleP(y, d)) ? undefined : yEnd.apply(this, [d, i, g]));
       if (! useTriangle) {
+        ra
+          .call(rectUpdate);
         rm
+          .transition().duration(featureTrackTransitionTime)
           .call(rectUpdate);
       }
       else if (alwaysTri) {
