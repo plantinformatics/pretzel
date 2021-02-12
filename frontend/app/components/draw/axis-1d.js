@@ -118,6 +118,7 @@ function FeatureTicks(axis, axisApi, axis1d)
 
   this.getTransitionTime = () => this.axis1d.get('transitionTime');
   this.featureY = (feature) => this.axis1d.featureY(feature);
+  this.blockColourValue = (feature) => this.axis1d.blockColourValue(feature);
 }
 
 FeatureTicks.prototype.selectionToTransition = function (selection) {
@@ -146,6 +147,11 @@ FeatureTicks.prototype.featuresOfBlock = function (featuresOfBlockLookup) {
       return features;
     };
 };
+
+FeatureTicks.prototype.featureColour = function (feature) {
+  return this.blockColourValue(contentOf(feature.get('blockId')));
+};
+
 
 /** Draw horizontal ticks on the axes, at feature locations.
  *
@@ -370,10 +376,20 @@ FeatureTicks.prototype.showSpanningLine = function (featuresOfBlockLookup) {
       let
       blockR = blockS.block,
       features = featuresOfBlockLookup(blockR),
-      featureIntervals = features && features
-        .map((f) => this.featureY(f)),
-      extent = featureIntervals ? [d3.extent(featureIntervals.flat())] : [];
-      return extent;
+      outermostFeatures = features && features
+        .reduce((result, f) => {
+          let y = this.featureY(f);
+          if (! result[0] || (y < result.minY)) {
+            result[0] = f;
+            result.minY = y;
+          }
+          if (! result[1] || (y > result.maxY)) {
+            result[1] = f;
+            result.maxY = y;
+          }
+          return result; }, []);
+      // .minY and .maxY are used in spanPathFn(), but could be deleted here and re-calculated.
+      return outermostFeatures ? [outermostFeatures] : [];
     };
 
     const tagName = 'path';
@@ -397,7 +413,7 @@ FeatureTicks.prototype.showSpanningLine = function (featuresOfBlockLookup) {
 
     this.selectionToTransition(pSM)
       .attr("d", pathFn)
-      .attr('stroke', 'blue' /*featurePathStroke*/)
+      .attr('stroke', (limitFeatures) => this.featureColour(limitFeatures[0]))
     ;
 
   }
@@ -411,7 +427,10 @@ FeatureTicks.prototype.spanPathFn = function (limitFeatures) {
 
   /** features y extent / interval scaled to px. */
   let 
-  yIntS = limitFeatures, // .map((f) => this.featureY(featureY));
+  /** only called if there is >=1 feature, so .minY and .maxY are defined.
+   * equivalent to : limitFeatures.map((f) => this.featureY(featureY));
+   */
+  yIntS = [limitFeatures.minY, limitFeatures.maxY],
   padding = 0;
   if (yIntS[0] === yIntS[1]) {
     /** @param yLength	length of triangle base */
@@ -496,7 +515,7 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
     pSE = pS.enter()
         .append(tagName)
         .attr("class", className)
-        .attr('stroke', (feature) => this.axis1d.blockColourValue(contentOf(feature.get('blockId'))))
+        .attr('stroke', this.featureColour)
     ;
 
     /* pSE
