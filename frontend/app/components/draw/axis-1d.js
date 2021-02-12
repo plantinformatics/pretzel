@@ -515,7 +515,7 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
     pSE = pS.enter()
         .append(tagName)
         .attr("class", className)
-        .attr('stroke', this.featureColour)
+        .attr('stroke', this.featureColour.bind(this))
     ;
 
     /* pSE
