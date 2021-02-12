@@ -88,6 +88,7 @@ export default Component.extend(AxisEvents, {
       this.clickTriangle.bind(this)        
       );
     }
+    featureTicks.showSpanningLine(this.selectedFeaturesOfBlockLookup.bind(this, 'shiftClickedFeatures'));
     // currently called via didRender(), so ticks and labels are both updated.
     this.renderLabels(axisID);
   },
@@ -102,7 +103,7 @@ export default Component.extend(AxisEvents, {
     // labelledFeatures = this.get('selected.labelledFeaturesByAxis').get(block);
     /* if (labelledFeatures) */ {
       featureTicks.showLabels(
-        this.labelledFeaturesOfBlockLookup.bind(this),
+        this.selectedFeaturesOfBlockLookup.bind(this, 'labelledFeatures'),
         true,
         'labelledFeatures', false
       );
@@ -151,21 +152,32 @@ export default Component.extend(AxisEvents, {
   },
   
   /** Lookup selected.labelledFeatures for the given block.
+   * @param listName name of set / selection / group of features :
+   *   'clickedFeatures', 'labelledFeatures', or 'shiftClickedFeatures'
    * @param block Ember object
    */
-  labelledFeaturesOfBlockLookup(block) {
-    let labelledFeatures = this.get('selected.labelledFeaturesByBlock').get(block);
+  selectedFeaturesOfBlockLookup(listName, block) {
+    let features = this.get('selected.' + listName + 'ByBlock').get(block);
     if (trace)
-      dLog('labelledFeaturesOfBlockLookup', featuresInBlocks, block, block.id, labelledFeatures);
-    return labelledFeatures;
+      dLog('selectedFeaturesOfBlockLookup', listName, featuresInBlocks, block, block.id, features);
+    return features;
   },
 
   clickTriangle(feature, i, g) {
     dLog('clickTriangle', feature, i, g.length, g[i], this);
-    this.selected.clickLabel(feature);
-    let labelledFeatures = this.selected.labelledFeatures;
-    dLog(labelledFeatures.mapBy('blockId.mapName'), labelledFeatures.map((f) => [f.name, f.value]));
-  }
+    let features, listName;
+    if (! d3.event.shiftKey) {
+      this.selected.clickLabel(feature);
+      features = this.selected.labelledFeatures;
+      listName = 'labelled';
+    } else {
+      this.selected.shiftClickFeature(feature);
+      features = this.selected.shiftClickedFeatures;
+      listName = 'shiftClicked';
+    }
+    dLog(features.mapBy('blockId.mapName'), features && features.map((f) => [f.name, f.value]));
+  },
+
 
 });
 

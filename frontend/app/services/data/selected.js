@@ -12,12 +12,19 @@ const dLog = console.debug;
  */
 export default Service.extend(Evented, {
 
-  /** clicked features, not all the feature search results (which are shown as
-   * triangles also).
+  /** clicked features or the feature search results;  shown as
+   * triangles.
    * features not feature names.  
-   * After feature search, .features will be intersected with the feature search result.
+   * After feature search, the feature search result is copied to .features.
    */
   features : Ember.A(),
+
+  /** shift-clicked features, i.e. triangles (.features) which have been shift-clicked on.
+   * features not feature names.  
+   * After feature search, .shiftClickedFeatures will be intersected with the feature search result.
+   * subset of .features.
+   */
+  shiftClickedFeatures : Ember.A(),
 
   /** triangles which were clicked
    * After feature search, labelledFeatures will be intersected with the feature search result.
@@ -48,6 +55,10 @@ export default Service.extend(Evented, {
   clickFeature(feature) {
     this.toggle('features', feature);
   },
+  shiftClickFeature(feature) {
+    this.toggle('shiftClickedFeatures', feature);
+  },
+  /** user has clicked on the triangle, so draw a text label. */
   clickLabel(feature) {
     this.toggle('labelledFeatures', feature);
   },
@@ -92,6 +103,24 @@ export default Service.extend(Evented, {
         (feature) => feature.get('blockId.referenceBlockOrSelf'));
     return features;
   }),
+
+  shiftClickedFeaturesByBlock : computed('shiftClickedFeatures.[]', function () {
+    let
+    features = 
+      this.groupFeatures(
+        'shiftClickedFeaturesByBlock', 'shiftClickedFeatures',
+        (feature) => contentOf(feature.get('blockId')));
+    return features;
+  }),
+  shiftClickedFeaturesByAxis : computed('shiftClickedFeatures.[]', function () {
+    let
+    features = 
+      this.groupFeatures(
+        'shiftClickedFeaturesByAxis', 'shiftClickedFeatures',
+        (feature) => feature.get('blockId.referenceBlockOrSelf'));
+    return features;
+  }),
+
 
   labelledFeaturesByBlock : computed('labelledFeatures.[]', function () {
     let

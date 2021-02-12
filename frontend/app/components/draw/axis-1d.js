@@ -117,6 +117,7 @@ function FeatureTicks(axis, axisApi, axis1d)
   this.axis1d = axis1d;
 
   this.getTransitionTime = () => this.axis1d.get('transitionTime');
+  this.featureY = (feature) => this.axis1d.featureY(feature);
 }
 
 FeatureTicks.prototype.selectionToTransition = function (selection) {
@@ -334,6 +335,111 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 
 };
 
+/**
+ * Specification : #223.  
+ * 3.     Shift+ left click triangles on an axis draws a line across the top of the outermost triangles
+ *   a.  determine extent of clicked features
+ *   b. draw path across extent, near the base of the triangles
+ */
+FeatureTicks.prototype.showSpanningLine = function (featuresOfBlockLookup) {
+  const groupName = 'spanFeatures';
+
+  let axis = this.axis, axisApi = this.axisApi;
+  let axisName = axis.axisName;
+
+  function blockTickEltId(block) { return className + '_' + groupName + '_' + block.axisName; }
+
+  let aS = selectAxis(axis);
+  if (!aS.empty())
+  {
+
+    let blocks = axis.blocks;
+    // .filter((b) => axis1d.selected.shiftClickedFeaturesByBlock(block.block)
+
+    let gS = aS.selectAll("g." + className + '.' + groupName)
+      .data(blocks, blockKeyFn);
+    gS.exit().remove();
+
+    let gA = gS.enter()
+      .append('g')
+      .attr('id', blockTickEltId)
+      .attr('class', className + ' ' + groupName)
+    ;
+
+    const spanFeaturesOfBlock = (blockS) => {
+      let
+      blockR = blockS.block,
+      features = featuresOfBlockLookup(blockR),
+      featureIntervals = features && features
+        .map((f) => this.featureY(f)),
+      extent = featureIntervals ? [d3.extent(featureIntervals.flat())] : [];
+      return extent;
+    };
+
+    const tagName = 'path';
+
+    let gSA = gS.merge(gA),
+    pS = gSA
+      .selectAll(tagName + "." + className)
+        .data(spanFeaturesOfBlock /*, keyFn*/),
+      pSE = pS.enter()
+        .append(tagName)
+        .attr("class", className)
+    ;
+
+    pS.exit()
+      .remove();
+    let pSM = pSE.merge(pS);
+
+    const pathFn = (d,i,g) => this.spanPathFn(d,i,g);
+    pSE
+      .attr("d", pathFn)
+
+    this.selectionToTransition(pSM)
+      .attr("d", pathFn)
+      .attr('stroke', 'blue' /*featurePathStroke*/)
+    ;
+
+  }
+}
+
+/** Construct a <path> which draws a line slightly left of the bases of the
+ * triangles which represent the given outermost limitFeatures
+ */
+FeatureTicks.prototype.spanPathFn = function (limitFeatures) {
+  // based on showTickLocations():pathFn(), horizTrianglePath(); related : axisFeatureTick(ai, d)
+
+  /** features y extent / interval scaled to px. */
+  let 
+  yIntS = limitFeatures, // .map((f) => this.featureY(featureY));
+  padding = 0;
+  if (yIntS[0] === yIntS[1]) {
+    /** @param yLength	length of triangle base */
+    const yLength = 10,
+    y2 = yLength / 2;
+    /** if padding is to be added when !==, use Math.sign(yIntS[1] - yIntS[0]) * y2 */
+    padding = y2;
+  }
+
+  /**
+   * @param yLength	length of triangle base
+   * @param xLength	length of triangle x axis
+   * @param shiftLeft	offset of line from base of triangles
+   */
+  const xLength = 35 / 2;
+  const shiftLeft = 3;
+
+  let
+  baseX = -xLength - shiftLeft;
+  let path = d3.line()(
+    [[baseX, yIntS[0] - padding],
+     [baseX, yIntS[1] + padding]]);
+
+  return path;
+};
+
+
+
 /** Draw text feature labels left of the axes, at location of features selected
  * by clicking on the feature triangle, recorded in selected.labelledFeatures.
  *
@@ -424,6 +530,7 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
  */
 export default Component.extend(Evented, AxisEvents, AxisPosition, {
   blockService: service('data/block'),
+  selected : service('data/selected'),
   axisBrush: service('data/axis-brush'),
   axisZoom: service('data/axis-zoom'),
   controls : service(),
