@@ -157,7 +157,9 @@ Viewport.prototype.calc = function(oa)
    * digits with 2 commas).
    */
   let outsideMargin = Math.max(90, this.axisHeaderTextLen/2);
-  this.axisXRange = [0 + outsideMargin, graphDim.w - outsideMargin];
+  /** add some extra space on left to allow for long text selected.labelledFeatures (axis-1d : showLabels() ) */
+  let extraLeftMargin = 50;
+  this.axisXRange = [0 + outsideMargin + extraLeftMargin, graphDim.w - outsideMargin];
   // -  some other results of Viewport().calc() are currently accessed within a previous draw() closure  (yRange, xDropOutDistance, dragLimit)
   if (trace_resize)
     console.log("Viewport.calc()", this);
