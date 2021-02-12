@@ -418,7 +418,7 @@ FeatureTicks.prototype.spanPathFn = function (limitFeatures) {
     const yLength = 10,
     y2 = yLength / 2;
     /** if padding is to be added when !==, use Math.sign(yIntS[1] - yIntS[0]) * y2 */
-    padding = y2;
+    padding = yLength;
   }
 
   /**
@@ -427,7 +427,7 @@ FeatureTicks.prototype.spanPathFn = function (limitFeatures) {
    * @param shiftLeft	offset of line from base of triangles
    */
   const xLength = 35 / 2;
-  const shiftLeft = 3;
+  const shiftLeft = -1;
 
   let
   baseX = -xLength - shiftLeft;
