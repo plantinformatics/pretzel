@@ -446,7 +446,7 @@ FeatureTicks.prototype.spanPathFn = function (limitFeatures) {
    * @param shiftLeft	offset of line from base of triangles
    */
   const xLength = 35 / 2;
-  const shiftLeft = -1.25;
+  const shiftLeft = -1.5;
 
   let
   baseX = -xLength - shiftLeft;
