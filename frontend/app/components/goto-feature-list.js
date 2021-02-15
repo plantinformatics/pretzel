@@ -71,6 +71,7 @@ export default Component.extend({
           /** copy feature search results to the list of clicked features,
            * for which triangles are displayed.  */
           this.set('selected.features', features);
+          this.get('selected').featureSearchResult(features);
 
           let blockIds = new Set(),
           blockCounts = {},

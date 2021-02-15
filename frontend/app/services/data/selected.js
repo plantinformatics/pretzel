@@ -2,6 +2,8 @@ import { computed } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
 import Evented from '@ember/object/evented';
 
+import { intersection } from 'lodash/array';
+
 import { contentOf } from '../../utils/common/promises';
 
 
@@ -62,6 +64,18 @@ export default Service.extend(Evented, {
   clickLabel(feature) {
     this.toggle('labelledFeatures', feature);
   },
+
+  /*--------------------------------------------------------------------------*/
+  /** Receive the results of Feature Search.
+   * This effects .features, (.labelledFeatures?), .shiftClickedFeatures.
+   */
+  featureSearchResult(features) {
+    dLog('featureSearchResult', features.length, this.shiftClickedFeatures.length);
+    let filteredFeatures = intersection(this.shiftClickedFeatures, features);
+    dLog('featureSearchResult', filteredFeatures.length);
+    this.set('shiftClickedFeatures', filteredFeatures);
+  },
+
 
   /*--------------------------------------------------------------------------*/
   /* Show triangles for the features in the array : clicked features   */
