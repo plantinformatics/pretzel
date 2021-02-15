@@ -174,6 +174,7 @@ export default Component.extend(AxisEvents, {
       this.selected.shiftClickFeature(feature);
       features = this.selected.shiftClickedFeatures;
       listName = 'shiftClicked';
+      document.getSelection().removeAllRanges();
     }
     dLog(features.mapBy('blockId.mapName'), features && features.map((f) => [f.name, f.value]));
   },
