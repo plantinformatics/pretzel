@@ -67,13 +67,15 @@ export default Service.extend(Evented, {
 
   /*--------------------------------------------------------------------------*/
   /** Receive the results of Feature Search.
-   * This effects .features, (.labelledFeatures?), .shiftClickedFeatures.
+   * This effects .features, .labelledFeatures, .shiftClickedFeatures.
    */
   featureSearchResult(features) {
     dLog('featureSearchResult', features.length, this.shiftClickedFeatures.length);
     let filteredFeatures = intersection(this.shiftClickedFeatures, features);
     dLog('featureSearchResult', filteredFeatures.length);
     this.set('shiftClickedFeatures', filteredFeatures);
+    // similarly for .labelledFeatures
+    this.set('labelledFeatures', intersection(this.labelledFeatures, features));
   },
 
 
