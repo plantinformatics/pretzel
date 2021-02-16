@@ -448,7 +448,12 @@ function collateStacks1()
               aliasedM0,
             aliasedM1 = maInMaAG(a1, a0, feature0),
             directWithAliases = flowsService.flowConfig.directWithAliases,
-            showAsymmetricAliases = flowsService.flowConfig.viewOptions.showAsymmetricAliases,
+            /** showChartOptions defaults to false, so draw/flow-controls
+             * didRender() may not have been called and hence viewOptions not
+             * initialised.  In this case default showAsymmetricAliases is false.
+             */
+            viewOptions = flowsService.flowConfig.viewOptions,
+            showAsymmetricAliases = viewOptions && viewOptions.showAsymmetricAliases,
             isDirect = directWithAliases && oa.z[a1.axisName][feature0] !== undefined;
             let differentAlias;
             if (aliasedM1 || showAsymmetricAliases)
