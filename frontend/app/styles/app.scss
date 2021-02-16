@@ -494,8 +494,10 @@ body.allInitially
 
 .axis text {
   text-shadow: 0 1px 0 #fff;
-  cursor: move;
   // text-anchor: middle;
+}
+body.ctrl-modifier .axis text {
+  cursor: move;
 }
 /* since split axis, now have (g.axis-outer (g.axis-all ( g.axis  (g.tick ...))) (text) ... ) */
 .axis-outer:not(.not_top) > .axis-all > text,

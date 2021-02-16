@@ -2,6 +2,8 @@ import { debounce, throttle } from '@ember/runloop';
 import { computed } from '@ember/object';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
+import { on } from '@ember/object/evented';
+
 
 import AxisEvents from '../../utils/draw/axis-events';
 
@@ -176,8 +178,26 @@ export default Component.extend(AxisEvents, {
       listName = 'shiftClicked';
       document.getSelection().removeAllRanges();
     }
-    dLog(features.mapBy('blockId.mapName'), features && features.map((f) => [f.name, f.value]));
+    dLog(listName, features.mapBy('blockId.mapName'), features && features.map((f) => [f.name, f.value]));
   },
+
+  addRemoveKeyEventListener(listen) {
+    const register = listen ? window.addEventListener : window.removeEventListener;
+    ["keydown", "keypress", "keyup"].forEach(
+      (eventName) => register(eventName, this.ctrlHandler, false));
+  },
+  listenCtrl : on('init', function () {
+    this.addRemoveKeyEventListener(true);
+  }),
+  unListenCtrl: on('willDestroyElement', function() {
+    this.addRemoveKeyEventListener(false);
+  }),
+  /** listener function registered by listenCtrl() */
+  ctrlHandler(event) {
+    // as in : query-params.js : optionsToDom()
+    d3.select('body')
+      .classed("ctrl-modifier", event.ctrlKey)
+  }
 
 
 });
