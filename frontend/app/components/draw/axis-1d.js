@@ -357,7 +357,7 @@ FeatureTicks.prototype.showSpanningLine = function (featuresOfBlockLookup) {
 
     let gSA = this.selectGroup(groupName);
     gSA
-      .attr("clip-path", (block) => "url(#" + axisEltIdClipPath(block.axisName) + ")");
+      .attr("clip-path", (block) => "url(#" + axisEltIdClipPath(block.block.get('referenceBlockOrSelf.id')) + ")");
 
     if (!gSA.empty()) {
 
