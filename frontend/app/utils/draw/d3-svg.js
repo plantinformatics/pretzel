@@ -12,6 +12,43 @@ function I(d) { /* console.log(this, d); */ return d; };
 
 /*----------------------------------------------------------------------------*/
 
+/** Ensure that g.groupName exists within parentG, and return a d3 selection of it.
+ *
+ * @param parentG d3 selection of <g> to contain added g.groupName
+ * @param data for the created g(s). if undefined, inherit parentG.data()
+ *
+ * similar / related : 
+ *   components/in-axis.js : group()
+ *   components/draw/block-adj.js : drawGroup()
+ *   utils/draw/chart1.js : Chart1.prototype.group()
+ */
+function selectGroup(parentG, groupName, data, keyFn, idFn, extraClassNames) {
+  data ||= parentG.data();
+  let classSelector = groupName,
+      classNames = groupName;
+  if (extraClassNames && extraClassNames.length) {
+    classSelector += '.' + extraClassNames.join('.');
+    classNames += ' ' + extraClassNames.join(' ');
+  }
+  /** based on in-axis.js : group() and axis-1d : showTickLocations(). */
+  let
+  gS = parentG
+    .selectAll('g > g.' + classSelector)
+    .data(data, keyFn),
+  gSE = gS
+    .enter()
+    .append('g')
+    .attr('class', classNames),
+  resultG = gSE.merge(gS);
+  if (idFn) {
+    gSE.attr('id', idFn);
+  }
+  gS.exit().remove();
+  return resultG;
+};
+
+/*----------------------------------------------------------------------------*/
+
 /**
  * Based on Dustin Larimer’s  http://bl.ocks.org/dustinlarimer/5888271
  */
@@ -50,4 +87,6 @@ function ensureSvgDefs(svg)
   return defs;
 }
 
-export { I, ensureSvgDefs };
+/*----------------------------------------------------------------------------*/
+
+export { I, selectGroup, ensureSvgDefs };
