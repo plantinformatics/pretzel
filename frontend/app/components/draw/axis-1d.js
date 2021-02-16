@@ -27,6 +27,7 @@ import {
   noDomain,
   /* Axes, yAxisTextScale,  yAxisTicksScale,*/  yAxisBtnScale,
   /* yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/,
+  axisEltIdClipPath,
   axisTitleColour,
   eltId,
 } from '../../utils/draw/axis';
@@ -361,6 +362,9 @@ FeatureTicks.prototype.showSpanningLine = function (featuresOfBlockLookup) {
     // .filter((b) => axis1d.selected.shiftClickedFeaturesByBlock(block.block)
 
     let gSA = this.selectGroup(groupName);
+    gSA
+      .attr("clip-path", (block) => "url(#" + axisEltIdClipPath(block.axisName) + ")");
+
     if (!gSA.empty()) {
 
       const spanFeaturesOfBlock = (blockS) => {
