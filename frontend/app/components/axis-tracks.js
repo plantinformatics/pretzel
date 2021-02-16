@@ -18,7 +18,7 @@ import {
   eltId,
   axisEltId,
   eltIdAll,
-  axisEltIdClipPath,
+  axisEltIdClipPath2d,
   trackBlockEltIdPrefix,
   axisTitleColour
 } from '../utils/draw/axis';
@@ -938,7 +938,7 @@ export default InAxis.extend({
     clipRect = clipRectS
       .enter()
       .append("clipPath")       // define a clip path
-      .attr("id", axisEltIdClipPath) // give the clipPath an ID
+      .attr("id", axisEltIdClipPath2d) // give the clipPath an ID
       .append("rect")          // shape it as a rect
     ;
     clipRectS
@@ -972,7 +972,7 @@ export default InAxis.extend({
       console.log('clipRect', bbox.width, clipRect.node());
     }
     let g = gp.append("g")
-      .attr("clip-path", "url(#" + axisEltIdClipPath(axisID) + ")"); // clip the rectangle
+      .attr("clip-path", "url(#" + axisEltIdClipPath2d(axisID) + ")"); // clip the rectangle
 
     function trackKeyFn(featureData) {
       // Make description unique when multiple features with same name.
