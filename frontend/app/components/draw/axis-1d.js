@@ -961,7 +961,9 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   get transitionTime() {
     return this.get('axisZoom.axisTransitionTime');
   },
-  selectionToTransition : alias('axisZoom.selectionToTransition'),
+  selectionToTransition(selection) {
+    return this.get('axisZoom').selectionToTransition(selection);
+  },
 
   /*--------------------------------------------------------------------------*/
 

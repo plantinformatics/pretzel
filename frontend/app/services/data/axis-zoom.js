@@ -2,6 +2,8 @@ import Service from '@ember/service';
 
 /* global d3 */
 
+const dLog = console.debug;
+
 const axisTransitionTime = 750;
 
 export default Service.extend({
@@ -39,6 +41,7 @@ export default Service.extend({
    * simply update directly using the selection.
    */
   selectionToTransition(selection) {
+    // dLog('selectionToTransition', this.currentZoomPanIsWheel, selection.node());
     return this.currentZoomPanIsWheel ? selection :
       selection
       .transition()
