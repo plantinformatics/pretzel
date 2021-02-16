@@ -1,5 +1,8 @@
 import Service from '@ember/service';
 
+/* global d3 */
+
+const axisTransitionTime = 750;
 
 export default Service.extend({
 
@@ -20,11 +23,27 @@ export default Service.extend({
     }
     return isCurrent;
   },
+  /** @return a shorter transition time while currentZoomPanIsWheel.
+   * @desc Trialling selectionToTransition() instead of this.
+   */
   get axisTransitionTime() {
-    const axisTransitionTime = 750;
     let time = this.currentZoomPanIsWheel ? axisTransitionTime / 10 : axisTransitionTime;
     // dLog('axisTransitionTime', time);
     return time;
+  },
+  /** @return selection as-is if currentZoomPanIsWheel, otherwise return
+   * selection.transition()...
+   *
+   * @desc When the user is using the mouse-wheel to zoom/pan, d3 will provide
+   * events as fast as requestAnimationFrame so instead of using transitions,
+   * simply update directly using the selection.
+   */
+  selectionToTransition(selection) {
+    return this.currentZoomPanIsWheel ? selection :
+      selection
+      .transition()
+      .duration(axisTransitionTime)
+      .ease(d3.easeCubic);
   }
   
 

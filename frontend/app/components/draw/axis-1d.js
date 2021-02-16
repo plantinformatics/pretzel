@@ -120,17 +120,11 @@ function FeatureTicks(axis, axisApi, axis1d)
   this.axis1d = axis1d;
 
   this.getTransitionTime = () => this.axis1d.get('transitionTime');
+  this.selectionToTransition = (selection) => this.axis1d.selectionToTransition(selection);
   this.featureY = (feature) => this.axis1d.featureY(feature);
   this.blockColourValue = (feature) => this.axis1d.blockColourValue(feature);
   this.selectGroup = (groupName) => this.axis1d.selectGroup(groupName);
 }
-
-FeatureTicks.prototype.selectionToTransition = function (selection) {
-  return selection
-    .transition()
-    .duration(this.getTransitionTime())
-    .ease(d3.easeCubic);
-};
 
 /** @return a function to lookup from block to an array of features.
  * Used as a d3 .data() function with block as data.
@@ -967,6 +961,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   get transitionTime() {
     return this.get('axisZoom.axisTransitionTime');
   },
+  selectionToTransition : alias('axisZoom.selectionToTransition'),
 
   /*--------------------------------------------------------------------------*/
 
