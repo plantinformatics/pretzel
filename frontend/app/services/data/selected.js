@@ -51,6 +51,17 @@ export default Service.extend(Evented, {
       features.pushObject(feature);
     } else {
       features.removeAt(i, 1);
+      if (listName === 'features') {
+	/** clearing from .features is required to clear from the other 2 lists;
+	 * it is starting to look like using a single list .features and flags
+	 * feature.{isShiftClicked,isLabelled} would be neater.  (then also have
+	 * to clear the flags when removed from .features so that they don't
+	 * appear to be labelled or shiftClicked when re-added to .features
+	 * later)
+	 */
+	this.labelledFeatures.removeObject(feature);
+	this.shiftClickedFeatures.removeObject(feature);
+      }
     }
     this.trigger('toggleFeature', feature, added, listName);
   },
