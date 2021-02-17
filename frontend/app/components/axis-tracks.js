@@ -250,8 +250,12 @@ function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignO
       }
       return unused;
     }
-    /** if layersUsed is empty, then ++lastUsed is 1,  */
-    let lastUsed = (layersUsed.length - 1) || 0,
+    /** if layersUsed is empty, then ++lastUsed is 1,
+     * if layersUsed is not empty, layersUsed[0] is empty, and
+     * layersUsed[layersUsed.length - 1] is true and layersUsed.length - 1 is
+     * the largest layer used.  e.g. if the only element is [1], lastUsed is 1.
+     */
+    let lastUsed = layersUsed.length ? (layersUsed.length - 1) : 0,
     u =  unusedLayers();
     function chooseNext() {
       let next = u.pop() || ++lastUsed;
