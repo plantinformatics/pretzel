@@ -237,6 +237,10 @@ g.axis-use > rect {
   fill: none;
   /* stroke: blue; */
 }
+rect.track:hover {
+  /** single-pixel-high <rect>s are difficult to click (to toggle selected.features), so increase width when hover.  */
+  stroke-width: 3;
+}
 g.axis-use > g.tracks > g > rect.track {
   /* fill: lightblue; */
   /* stroke: lightblue; */
