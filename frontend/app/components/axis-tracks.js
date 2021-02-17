@@ -259,7 +259,7 @@ function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignO
     u =  unusedLayers();
     function chooseNext() {
       let next = u.pop() || ++lastUsed;
-      if (next > 2) {
+      if (trace > 2 && next > 2) {
         dLog('chooseNext', next, u, lastUsed, 'trackBlocksData');
       }
       if (next > largestLayer) {

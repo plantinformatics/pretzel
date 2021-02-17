@@ -4348,7 +4348,7 @@ export default Component.extend(Evented, {
           console.log("zoom", axisName, p, i, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
             domain = brushedDomain;
           }
-          else
+          else if (d3.event.sourceEvent)  // if there is a mousewheel event
           {
             /** note the brushedDomain before the scale change, for updating the brush position */
             let brushExtent = oa.brushedRegions[p];
