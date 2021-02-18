@@ -5,6 +5,7 @@ import { alias, filter } from '@ember/object/computed';
 import $ from 'jquery';
 import { inject as service } from '@ember/service';
 
+import { isEqual } from 'lodash/lang';
 
 import createIntervalTree from 'interval-tree-1d';
 
@@ -1735,10 +1736,10 @@ export default InAxis.extend({
   /** Render changes driven by changes of block data or scope.
    */
   showTrackBlocks: computed(
-    'tracksTree',
+    // 'tracksTree',
     /** .yDomain is available; for the dependency -Throttled is used */
-    'axis1d.currentPosition.yDomainThrottled.{0,1}',
-    'axis1d.zoomed', 'axis1d.extended', 'axis1d.featureLength',
+    'axis1d.currentPosition.yDomain.{0,1}',	// Throttled
+    'axis1d.zoomed', 'axis1d.extended', // 'axis1d.featureLength',
     function() {
       let tracks = this.get('tracksTree');
       let
@@ -1768,9 +1769,9 @@ export default InAxis.extend({
     let
     allocatedWidth = this.get('allocatedWidth'),
     allocatedWidthPrev = this.get('allocatedWidthPrev'),
-    allocatedWidthChange = ! allocatedWidthPrev || (allocatedWidthPrev !== allocatedWidth);
+    allocatedWidthChange = ! allocatedWidthPrev || ! isEqual(allocatedWidthPrev, allocatedWidth);
     if (allocatedWidthChange) {
-      this.get('allocatedWidthPrev', allocatedWidth);
+      this.set('allocatedWidthPrev', allocatedWidth);
     }
     dLog('resizeEffectHere in axis-tracks', this.get('axisID'), result,
          allocatedWidthPrev, allocatedWidth, allocatedWidthChange,
@@ -1779,9 +1780,16 @@ export default InAxis.extend({
      * if the previous size is not recorded, then treat it as a change.
      */
     function isChanged(rc, f) { return rc ? rc[f] : true; }
+result.changed.viewportWidth = false;
+    let
+    widthChanged = isChanged(result.changed, 'viewportWidth') || allocatedWidthChange,
+    heightChanged = isChanged(result.changed, 'viewportHeight'),
+    anyChange = widthChanged || heightChanged;
+    if (anyChange) {
     this.showResize(
-      isChanged(result.changed, 'viewportWidth') || allocatedWidthChange,
-      isChanged(result.changed, 'viewportHeight') /* , yScaleChanged ? */);
+      widthChanged, heightChanged, 
+      /* , yScaleChanged ? */);
+    }
   }),
   flippedEffect : computed('axis1d.flipped', function () {
     /** 'scaleChanged' could be used as an alternate dependency */
