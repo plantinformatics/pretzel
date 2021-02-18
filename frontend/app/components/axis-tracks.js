@@ -1780,7 +1780,11 @@ export default InAxis.extend({
      * if the previous size is not recorded, then treat it as a change.
      */
     function isChanged(rc, f) { return rc ? rc[f] : true; }
+    /* these 2 prevent 2-step transition of axis track y update.
+     * after confirming this fix, the calculation of changed.viewport{Width,Height} can be sorted out.
+     */
 result.changed.viewportWidth = false;
+result.changed.viewportHeight = false;
     let
     widthChanged = isChanged(result.changed, 'viewportWidth') || allocatedWidthChange,
     heightChanged = isChanged(result.changed, 'viewportHeight'),
