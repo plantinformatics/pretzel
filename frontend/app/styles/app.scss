@@ -124,8 +124,11 @@ div.app-logo {
 }
 
 #headsUp {
-  margin-left : 2em;
-  margin-top : 1ex;
+  position : absolute;
+  /* left : 70px; */
+  /* top : 50px; */
+  margin-left : -20px;
+  margin-top : 15px;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -596,10 +599,10 @@ g.brush:hover > g > rect.overlay {
 g.tick:hover {
   /* indicate that g.axis > g.tick > text can be dragged with ctrl-click. */
   outline: 1px dashed orange; 
-  > text {
+}
+g.axis > g.tick > text:hover {
   font-size: larger;
   font-weight: bolder;
-  }
 }
 
 /* This (stroke colour) was applied for selector .horizTick until 655bfe3
