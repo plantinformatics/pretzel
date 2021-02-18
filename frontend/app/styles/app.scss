@@ -123,6 +123,10 @@ div.app-logo {
   }
 }
 
+#headsUp {
+  margin-left : 2em;
+  margin-top : 1ex;
+}
 
 /* -------------------------------------------------------------------------- */
 /* Handle to resize a panel width. 
@@ -1224,7 +1228,7 @@ ul#display-blocks > li.selected,
   font-weight: bold;
 }
 
-/* indicate that the axis text can be clicked to show axis-menu. */
+/* indicate that the axis title text can be clicked to show axis-menu. */
 g.axis-outer > g.axis-all > text:hover {
   color: orange;
   font-style : italic;
