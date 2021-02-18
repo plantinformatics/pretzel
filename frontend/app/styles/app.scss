@@ -590,7 +590,12 @@ g.brush:hover > g > rect.overlay {
     -webkit-tap-highlight-color: rgba(70, 30, 50, 0);
 }
 g.tick:hover {
-    outline: 1px dashed orange; 
+  /* indicate that g.axis > g.tick > text can be dragged with ctrl-click. */
+  outline: 1px dashed orange; 
+  > text {
+  font-size: larger;
+  font-weight: bolder;
+  }
 }
 
 /* This (stroke colour) was applied for selector .horizTick until 655bfe3

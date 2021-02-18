@@ -170,6 +170,7 @@ export default Component.extend(Evented, {
   flowsService: service('data/flows-collate'),
   pathsP : service('data/paths-progressive'),
   axisZoom : service('data/axis-zoom'),
+  headsUp : service('data/heads-up'),
   queryParamsService: service('query-params'),
   apiServers : service(),
 

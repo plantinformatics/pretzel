@@ -544,6 +544,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   selected : service('data/selected'),
   axisBrush: service('data/axis-brush'),
   axisZoom: service('data/axis-zoom'),
+  headsUp : service('data/heads-up'),
   controls : service(),
 
   controlsView : alias('controls.controls.view'),
@@ -1097,6 +1098,14 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
         /*.transition().duration(750)*/;
       gAxis.call(yAxis);
       dLog('drawTicks', axisId, axisS, gAxis.nodes(), gAxis.node());
+
+      
+      function showText(text) {
+        this.set('headsUp.tipText', text);
+      }
+      gAxis.selectAll('text')
+        .on('mouseover', showText.bind(this, 'Ctrl-click to drag axis'))
+        .on('mouseout', showText.bind(this, ''));
     }
   },
 
