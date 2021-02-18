@@ -1,5 +1,5 @@
 import { isArray } from '@ember/array';
-import { throttle, next } from '@ember/runloop';
+import { throttle, next, later } from '@ember/runloop';
 import EmberObject, { computed } from '@ember/object';
 import { alias, filter } from '@ember/object/computed';
 import $ from 'jquery';
@@ -1733,9 +1733,28 @@ export default InAxis.extend({
     setClipWidth(axisID, width);
     return width;
   }),
+  slowDependenciesChanged : 0,
+  /** These dependencies will change during the transition started by
+   * showTrackBlocks(), so defer them until the transition is settled.
+   *
+   * featureLength and tracksTree (which depends on @each.featuresLength) are
+   * likely triggered by result of feature request API which is also triggered
+   * by the zoomedDomain change.
+   *
+   * Using a task to wrap the transition will probably be a more maintainable
+   * alternative (as in axis-ticks-selected.js : labelsTransitionPerform).
+   */
+  slowDependenciesEffect : computed(
+    'tracksTree',
+    'axis1d.featureLength',
+    function() {
+      const axisTransitionTime = 750;
+      later(() => this.incrementProperty('slowDependenciesChanged'), axisTransitionTime + 250);
+    }),
   /** Render changes driven by changes of block data or scope.
    */
   showTrackBlocks: computed(
+    'slowDependenciesChanged',
     // 'tracksTree',
     /** .yDomain is available; for the dependency -Throttled is used */
     'axis1d.currentPosition.yDomain.{0,1}',	// Throttled
