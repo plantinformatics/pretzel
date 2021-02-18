@@ -1748,7 +1748,7 @@ export default InAxis.extend({
       extended = this.get('axis1d.extended'),
       featureLength = this.get('axis1d.featureLength'),
       yDomain = this.get('yDomain');
-      console.log('showTrackBlocks', this, tracks, axis1d, isViewed, yDomain, 'axis1d.zoomed', zoomed, extended, featureLength);
+      console.log('showTrackBlocks', this, tracks, axis1d, isViewed, /*yDomain*/ this.get('axis1d.currentPosition.yDomainThrottled'), 'axis1d.zoomed', zoomed, extended, featureLength);
       let featuresLength;
       if (isViewed) {
         let blockIds = d3.keys(tracks.intervalTree);

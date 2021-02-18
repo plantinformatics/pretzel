@@ -1,11 +1,13 @@
-import { debounce, throttle } from '@ember/runloop';
+import { debounce, throttle, bind as run_bind } from '@ember/runloop';
 import { computed } from '@ember/object';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { on } from '@ember/object/evented';
 
+import { task, timeout, didCancel } from 'ember-concurrency';
 
 import AxisEvents from '../../utils/draw/axis-events';
+import { transitionEndPromise } from '../../utils/draw/d3-svg';
 
 const trace = 0;
 const dLog = console.debug;
@@ -39,10 +41,12 @@ export default Component.extend(AxisEvents, {
 
   /** draw-map:axisStackChanged_(t) sends transition t. */
   axisStackChanged : function() {
+    if (false) {
     if (trace)
       dLog("axisStackChanged in ", CompName);
     /* draw-map : axisStackChanged() / axisStackChanged_() already does throttle. */
     this.renderTicks();
+    }
   },
 
   /** @param [axisID, t] */
@@ -53,9 +57,9 @@ export default Component.extend(AxisEvents, {
    */
   axisScaleEffect : computed('axis1d.domainChanged', function () {
     let axisScaleChanged = this.get('axis1d.domainChanged');
-    let axisID = this.get('axisID');
-    if (trace)
-      dLog('axisScaleChanged', axisID, this.get('axis.id'));
+    let axisID = this.get('axisId');
+    // if (trace)
+    dLog('axisScaleChanged', axisID, this.get('axis.id'), axisScaleChanged, this.axis1d.scaleChanged && this.axis1d.scaleChanged.domain());
     this.renderTicks/*Throttle*/(axisID);
     /** somehow renderTicks() is missing the latest scale.  redrawing after a
      * delay gets the correct scale, so the next step would be to trace the axis
@@ -107,13 +111,42 @@ export default Component.extend(AxisEvents, {
       featureTicks.showLabels(
         this.selectedFeaturesOfBlockLookup.bind(this, 'labelledFeatures'),
         true,
-        'labelledFeatures', false
+        'labelledFeatures', false,
+        run_bind(this, this.labelsTransitionPerform),
       );
+    }
+  },
+  labelsTransitionPerform(transition, callFn) {
+    if (true) {
+      transition.call(callFn);
+    } else {
+    this.labelsTransitionTask.perform(transition, callFn)
+      .catch(run_bind(this, this.ignoreCancellation))
+      .finally(() => dLog('labelsTransitionTask', 'finally'));
+    }
+  },
+  labelsTransitionTask : task(function * (transition, callFn) {
+    let promise;
+    if (! transition.size()) {
+      promise = Promise.resolve();
+    } else {
+      transition.call(callFn);
+      promise = transitionEndPromise(transition);
+    }
+    return promise;
+  }).drop(),
+  /** Recognise if the given task error is a TaskCancelation.
+   */
+  ignoreCancellation(error) {
+    // based on similar in drawCurrentTask() (draw/block-adj.js) etc
+    if (! didCancel(error)) {
+      dLog('axis-ticks-selected', 'taskInstance.catch', this.axisId, error);
+      throw error;
     }
   },
   /** call renderTicks().
    * filter / throttle the calls to handle multiple events at the same time.
-   * @param axisID  undefined, or this.get('axisID') (not required or used);
+   * @param axisID  undefined, or this.get('axisId') (not required or used);
    * undefined when called from axisStackChanged().
    *
    * (earlier versions called this from zoomedAxis(), which passed [axisID,

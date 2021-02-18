@@ -613,6 +613,11 @@ g.foundFeatures > path.horizTick
 {
   stroke-width : 1px;
 }
+g.foundFeatures.horizTick > path.horizTick:hover {
+  /* indicate this element is clickable, and make it easier to click.  */
+  stroke-width: 5px;
+}
+
 
 g.horizTick.labelledFeatures > text.horizTick {
     stroke-width: initial;

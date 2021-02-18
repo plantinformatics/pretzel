@@ -1,4 +1,4 @@
-import { later, next, throttle } from '@ember/runloop';
+import { later, next, once as run_once, throttle } from '@ember/runloop';
 import { A } from '@ember/array';
 import { computed, observer } from '@ember/object';
 import { alias } from '@ember/object/computed';
@@ -453,7 +453,7 @@ FeatureTicks.prototype.spanPathFn = function (limitFeatures) {
  * by clicking on the feature triangle, recorded in selected.labelledFeatures.
  *
  */
-FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover, groupName, blockFilter)
+FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover, groupName, blockFilter, transitionFn)
 {
 
   function textFn(feature) {
@@ -511,16 +511,29 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
       // positioned just left of the base of the triangles.  inherits text-anchor from axis;
         .attr('x', '-30px');
 
-      pSE
-        .attr('y',  (feature) => this.axis1d.featureY(feature));
+      let attrY_featureY = this.attrY_featureY.bind(this);
+      pSE.call(attrY_featureY);
 
-      this.selectionToTransition(pSM)
-        .attr('y',  (feature) => this.axis1d.featureY(feature));
-
+      if (false) {
+        pSM.call(attrY_featureY);
+      } else {
+      let transition = this.selectionToTransition(pSM);
+      if (transition === pSM) {
+        pSM.call(attrY_featureY);
+      } else {
+        transitionFn(transition, attrY_featureY);
+      }
+      }
     }
   }
 
 };
+
+FeatureTicks.prototype.attrY_featureY = function(selection) {
+  console.log('attrY_featureY', selection.node(), this.axis1d.zoomedDomain)
+  selection
+    .attr('y',  (feature) => this.axis1d.featureY(feature))
+}
 
 /**
  * @property zoomed   selects either .zoomedDomain or .blocksDomain.  initially undefined (false).
@@ -633,8 +646,10 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   },
 
   axisStackChanged : function() {
+/*
     dLog("axisStackChanged in components/axis-1d");
     this.renderTicksDebounce();
+*/
   },
 
   /** @return the Stacked object corresponding to this axis. */
@@ -825,7 +840,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * @return if zoomed return the zoom yDomain, otherwise blockDomain.
    * Result .{0,1} are swapped if .flipped.
    */
-  domain : computed('zoomed', 'flipped', 'blocksDomain', 'zoomedDomainThrottled', function () {
+  domain : computed('zoomed', 'flipped', 'blocksDomain', 'zoomedDomain'/*Throttled*/, function () {
     /** Actually .zoomedDomain will be == blocksDomain when not zoomed, but
      * using it as a CP dependency causes problems, whereas blocksDomain has a
      * more direct dependency on axis' blocks' features' locations.
@@ -1233,7 +1248,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
      * should be rendered, but in this case it is likely there is no change
      * after the first event in the group.
      */
-    throttle(this, this.renderTicks, axisID_t, 500);
+    // throttle(this, this.renderTicks, axisID_t, 500);
+    run_once(() => this.renderTicks(axisID_t))
   },
 
   /** Give the g.axis-outer a .extended class if the axis is split.

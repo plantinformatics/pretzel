@@ -1,5 +1,9 @@
 /*----------------------------------------------------------------------------*/
 
+const trace = 0;
+
+/*----------------------------------------------------------------------------*/
+
 /** Used for d3 attributes whose value is the datum. */
 function I(d) { /* console.log(this, d); */ return d; };
 /* Usage e.g. (d3.selectAll().data(array) ... .text(I)
@@ -49,6 +53,29 @@ function selectGroup(parentG, groupName, data, keyFn, idFn, extraClassNames) {
 
 /*----------------------------------------------------------------------------*/
 
+/** based on draw/block-adj.js : pathPosition() 
+ * Note comments there re. upgrade to d3 v4.
+ */
+function transitionEndPromise(transition) {
+  let
+  transitionEnd =
+    new Promise(function(resolve, reject){
+      transition
+        .on('end', (d) => resolve(d))
+        .on('interrupt', (d, i, g) => {
+          resolve(d);
+          if (trace > 2) {
+            dLog('interrupt', d, i, g);
+          };
+        });
+      // also handle 'cancel', when version update
+    });
+  return transitionEnd;
+}
+
+
+/*----------------------------------------------------------------------------*/
+
 /**
  * Based on Dustin Larimer’s  http://bl.ocks.org/dustinlarimer/5888271
  */
@@ -89,4 +116,4 @@ function ensureSvgDefs(svg)
 
 /*----------------------------------------------------------------------------*/
 
-export { I, selectGroup, ensureSvgDefs };
+export { I, selectGroup, transitionEndPromise, ensureSvgDefs };
