@@ -1043,12 +1043,21 @@ ChartLine.prototype.bars = function (data)
    * this.parentElement.parentElement.__data__ has the axis id (not the blockId),
    */
     .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); });
+
+  function attrY(selection) {
+    selection.attr("y", (d) => { let li = dataConfig.datum2LocationScaled(d); return li.length ? li[0] : li; });
+  }
+  /** start new elements with final y position and width 0, and transition to final width. */
+  ra
+    .attr("width", 0)
+    .call(attrY);
+
   let r =
   ra
     .merge(rs)
     .transition().duration(dataConfig.getTransitionTime())
     .attr("x", 0)
-    .attr("y", (d) => { let li = dataConfig.datum2LocationScaled(d); return li.length ? li[0] : li; })
+    .call(attrY)
   // yBand.bandwidth()
     .attr("height", dataConfig.rectHeight.bind(dataConfig, /*scaled*/true, /*gIsData*/false)) // equiv : (d, i, g) => dataConfig.rectHeight(true, false, d, i, g);
   ;
@@ -1158,6 +1167,10 @@ ChartLine.prototype.line = function (data)
     .append("path")
     .attr("class", dataConfig.barClassName + " line")
     .attr("stroke", (d) => this.blockColour())
+    /* line is a single path for all data points; .datum() doesn't receive a keyFn.
+     * d3 does some tweening in the transition, but it is not closely connected
+     * to the insertion / deletion of data points.
+     */
     .datum(data)
     .attr("d", line)
     .merge(ps)

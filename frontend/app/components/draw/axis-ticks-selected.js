@@ -41,6 +41,12 @@ export default Component.extend(AxisEvents, {
 
   /** draw-map:axisStackChanged_(t) sends transition t. */
   axisStackChanged : function() {
+    /** when zoom & reset button, axisStackChanged arrives after other
+     * dependency changes (zoomedDomain), and interrupts the transition they
+     * started.
+     * The role of axisStackChanged is probably supplanted by other, more
+     * direct, dependencies added since.  Testing hasn't yet shown missing updates.
+     */
     if (false) {
     if (trace)
       dLog("axisStackChanged in ", CompName);
