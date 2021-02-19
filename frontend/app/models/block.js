@@ -393,6 +393,14 @@ export default Model.extend({
   }),
 
 
+  /** @return the block of the axis on which this block will be displayed.
+   * @desc GMs have referenceBlock === undefined, and they are the block of their axis-1d.
+   */
+  referenceBlockOrSelf : computed('referenceBlock',
+    function () {
+      return this.get('referenceBlock') || this;
+    }),
+  
   /** If the dataset of this block has a parent, lookup the corresponding reference block in that parent, matching scope.
    * The result is influenced by which of the potential references are currently viewed.
    * @return the reference block or undefined if none

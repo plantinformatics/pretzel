@@ -1,15 +1,21 @@
 import { computed } from '@ember/object';
 import { later } from '@ember/runloop';
 import Component from '@ember/component';
+import { on } from '@ember/object/evented';
+import { inject as service } from '@ember/service';
 
 import $ from 'jquery';
 
-import { uniq, concat } from 'lodash/array';
+import { uniq, concat, difference } from 'lodash/array';
 
 
 /* global d3 */
+const dLog = console.debug;
 
 const className = "feature-list";
+
+function logArray(a) { return a.length > 4 ? a.length : a; }
+
 
 /**  data/event flow :
 
@@ -40,6 +46,7 @@ arrow (right) fromSelectedFeatures
  */
 
 export default Component.extend({
+  selected : service('data/selected'),
 
   classNames : [className],
   classNameBindings: ['activeInput'],
@@ -69,6 +76,15 @@ export default Component.extend({
       this.fromSelectedFeatures();
     }
   },
+
+  listen: on('init', function() {
+    this.get('selected').on('toggleFeature', this, 'toggleFeature');
+  }),
+  /** remove the binding created in listen() above, upon component destruction */
+  unListen: on('willDestroyElement', function() {
+    this.get('selected').off('toggleFeature', this, 'toggleFeature');
+  }),
+
 
 
   activeInput : true,
@@ -212,26 +228,48 @@ export default Component.extend({
   },
   fromSelectedFeatures() {
     console.log('fromSelectedFeatures');
+
     /** Append to selectedFeatures to text$, therefore set activeInput true.
      * (originally : replace instead of append, so activeInput was set false) */
     this.set('activeInput', true);
+
     let text$ = $('textarea', this.element),
-    current = this.currentInputFeatures(),
     selectedFeatures = this.get('selectedFeatures');
-    let selectedFeaturesEmpty = (selectedFeatures.length <= 1) && (selectedFeatures[0].Feature === undefined);
+    let selectedFeaturesEmpty = ! selectedFeatures.length ||
+        ((selectedFeatures.length === 1) && (selectedFeatures[0].Feature === undefined));
     if (! selectedFeaturesEmpty) {
       let
       selectedFeaturesNames = selectedFeatures.map(function (sf) {
         return sf.Feature;
       });
-      function logArray(a) { return a.length > 4 ? a.length : a; }
+      dLog('fromSelectedFeatures', logArray(selectedFeatures));
+      this.appendSelectedFeatures(selectedFeaturesNames);
+    }
+  },
+  /** Append the given selectedFeaturesNames to textarea, or filter them out if
+   * remove is true.
+   */
+  appendSelectedFeatures(selectedFeaturesNames, remove) {
+    console.log('appendSelectedFeatures', selectedFeaturesNames);
+    /** Append to selectedFeatures to text$, therefore set activeInput true.
+     * (originally : replace instead of append, so activeInput was set false) */
+    this.set('activeInput', true);
+
       let
+      current = this.currentInputFeatures(),
       combined = current.length ? 
-        this.combine(current, selectedFeaturesNames) :
-        selectedFeaturesNames,
+        (remove ? this.subtract : this.combine)(current, selectedFeaturesNames) :
+        (remove ? [] : selectedFeaturesNames),
       newValue = combined.join('\n');
-      console.log(logArray(current), 'selectedFeatures', logArray(selectedFeatures), logArray(selectedFeaturesNames), logArray(combined));
+      console.log(logArray(current), 'selectedFeaturesNames', logArray(selectedFeaturesNames), logArray(combined));
+      let text$ = $('textarea', this.element);
       text$.val(newValue);
+  },
+  toggleFeature(feature, added, listName) {
+    // not interested in listName === 'labelledFeatures'.
+    if (listName === 'features') {
+      dLog('toggleFeature', feature, added);
+      this.appendSelectedFeatures([feature.name], !added);
     }
   },
   currentInputFeatures () {
@@ -242,9 +280,17 @@ export default Component.extend({
     return array;
   },
   /** Combine the current input feature names and the brushed
-   * selectedFeaturesNames to be appended. */
+   * selectedFeaturesNames to be appended.
+   */
   combine(a, b) {
     let c = concat(a, b)
+      .uniq();
+    return c;
+  },
+  /** remove b from a
+  */
+  subtract(a, b) {
+    let c = difference(a, b)
       .uniq();
     return c;
   }

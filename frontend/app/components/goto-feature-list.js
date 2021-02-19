@@ -12,6 +12,7 @@ export default Component.extend({
   blockService: service('data/block'),
   controls : service(),
   apiServers : service(),
+  selected : service('data/selected'),
 
   taskGet : alias('blockService.getBlocksOfFeatures'),
 
@@ -55,7 +56,6 @@ export default Component.extend({
    * @return undefined
    */
   blocksUnique : function (selectedFeatureNames) {
-      let me = this;
       let blockService = this.get('blockService');
       function peekBlock(block) {
         return blockService.peekBlock(block.id); };
@@ -65,8 +65,13 @@ export default Component.extend({
 
       let taskGet = this.get('taskGet'); // blockService.get('getBlocksOfFeatures');
       let blockTask = taskGet.perform(apiServer, selectedFeatureNames)
-        .then(function (features) {
+        .then((features) => {
           dLog("getBlocksOfFeatures", selectedFeatureNames[0], features);
+
+          /** copy feature search results to the list of clicked features,
+           * for which triangles are displayed.  */
+          this.set('selected.features', features);
+          this.get('selected').featureSearchResult(features);
 
           let blockIds = new Set(),
           blockCounts = {},
@@ -101,15 +106,15 @@ export default Component.extend({
             /** this peekBlock() is also done in the above n1.map(), and they
              * could be integrated.  */
             let block = blockService.peekBlock(d.key);
-	    /** if the block is a copy from another server, then block here will be undefined.
-	     * There doesn't seem to be much value in including them in features search results;  the other server may not be connected.
-	     */
-	    if (block) {
+            /** if the block is a copy from another server, then block here will be undefined.
+             * There doesn't seem to be much value in including them in features search results;  the other server may not be connected.
+             */
+            if (block) {
               block.set('count', d.values.length);
-	    }
+            }
           });
 
-          me.set('blocksOfFeatures', blocksUnique);
+          this.set('blocksOfFeatures', blocksUnique);
 
           /** convert nest [{key, values}..] to hash [key] : values,
            * used in e.g. axis-ticks-selected */
@@ -117,7 +122,7 @@ export default Component.extend({
             function (result, value) { result[value.key] = value.values; return result; },
             {} );
           console.log('featuresInBlocks', featuresInBlocks);
-          me.send('updateFeaturesInBlocks', featuresInBlocks);
+          this.send('updateFeaturesInBlocks', featuresInBlocks);
 
         });
   },

@@ -1,10 +1,11 @@
 import { isArray } from '@ember/array';
-import { throttle, next } from '@ember/runloop';
+import { throttle, next, later } from '@ember/runloop';
 import EmberObject, { computed } from '@ember/object';
 import { alias, filter } from '@ember/object/computed';
 import $ from 'jquery';
 import { inject as service } from '@ember/service';
 
+import { isEqual } from 'lodash/lang';
 
 import createIntervalTree from 'interval-tree-1d';
 
@@ -12,12 +13,13 @@ import {
   eltWidthResizable,
   noShiftKeyfilter
 } from '../utils/domElements';
+import { configureHover } from '../utils/hover';
 import InAxis from './in-axis';
 import {
   eltId,
   axisEltId,
   eltIdAll,
-  axisEltIdClipPath,
+  axisEltIdClipPath2d,
   trackBlockEltIdPrefix,
   axisTitleColour
 } from '../utils/draw/axis';
@@ -28,7 +30,7 @@ import { ensureSvgDefs } from '../utils/draw/d3-svg';
  * Match with time used by draw-map.js : zoom() and resetZoom() : 750.
  * also @see   dragTransitionTime and axisTickTransitionTime.
  */
-const featureTrackTransitionTime = 750;
+let featureTrackTransitionTime = 750;
 
 /** If false, track <rect>s are trackWidth wide, and layering them to avoid
  * overlap cause the width allocated to the block to increase.
@@ -104,62 +106,63 @@ function swapTag(fromTag, toTag, element, attributesForReplace) {
 
 
 /*------------------------------------------------------------------------*/
-/* copied from draw-map.js - will import when that is split */
-/** Setup hover info text over scaffold horizTick-s.
- * @see based on similar configureAxisTitleMenu()
+
+/** @return the given location as string for display as hover text.
+ * @param d featureData, i.e. interval, based on feature.value
+ * called via text = textFn(context, d);
  */
-function  configureHorizTickHover(location)
-{
-  d3.select(this).on('mouseover', showHorizTickHover.bind(this, location));
-  d3.select(this).on('mouseout', hideHorizTickHover.bind(this));
-}
-function showHorizTickHover (location) {
-  // console.log("configureHorizTickHover", location, this, this.outerHTML);
+function hoverTextFn(location, d, i, g) {
+  /** location is d.description */
   /** typeof location may also be "number" or "object" - array : syntenyBlocks[x] */
   let text = (location == "string") ? location :  "" + location;
-  let $this=$(this);
-  let node_ = this;
-  if ($(node_).popover) {
-    /** refn : node_modules/bootstrap/js/popover.js */
-    let data    = $this.data('bs.popover');
-    if (! data) {
-      /** https://getbootstrap.com/docs/3.4/javascript/#popovers */
-  $(node_)
-    .popover({
-      trigger : "manual",	// was : click hover
-      sticky: true,
-      delay: {show: 200, hide: 3000},
-      container: 'div#holder',
-      placement : "auto right",
-      content : text
-    });
-    }
-    $this.popover('show');
+  if (trace > 1) {
+    dLog('hoverTextFn', location, d, this, g[i]);
   }
+  return text;
 }
-function hideHorizTickHover() {
-  $(this).popover('hide');
-}
+
 /*----------------------------------------------------------------------------*/
 
 /** Configure hover text for tracks. */
 function  configureTrackHover(interval)
 {
-  return configureHorizTickHover.apply(this, [interval.description]);
+  return configureHover.apply(this, [interval.description, hoverTextFn]);
 }
-/** Same as configureHorizTickHover(), except for sub-elements,
+/** Same as configureTrackHover(), except for sub-elements,
  * for which the source data, and hence .description, is in interval.data,
  * because the interval tree takes just the interval as input.
  */
 function  configureSubTrackHover(interval)
 {
-  return configureHorizTickHover.apply(this, [(interval.data || interval).description]);
+  return configureHover.apply(this, [(interval.data || interval).description, hoverTextFn]);
+}
+
+/*----------------------------------------------------------------------------*/
+
+function configureClick(selected, featureData2Feature) {
+  return function (selection) {
+    selection.on('click', function (d, i, g) { clickTrack.apply(this, [selected, featureData2Feature, d])});
+  }
+}
+function clickTrack(selected, featureData2Feature, featureData) {
+  let feature = featureData2Feature.get(featureData);
+  dLog('clickTrack', featureData, feature.id, feature);
+  selected.clickFeature(feature);
 }
 
 /*----------------------------------------------------------------------------*/
 
 /** For d3 .data() key function */
 function I(d) { return d; }
+
+/*----------------------------------------------------------------------------*/
+
+/** Make the description unique in case there are multiple
+ * positions for the same feature name.
+ */
+function intervalUniqueName(description, interval) {
+  return description + "_" + interval[0];
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -248,12 +251,16 @@ function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignO
       }
       return unused;
     }
-    /** if layersUsed is empty, then ++lastUsed is 1,  */
-    let lastUsed = (layersUsed.length - 1) || 0,
+    /** if layersUsed is empty, then ++lastUsed is 1,
+     * if layersUsed is not empty, layersUsed[0] is empty, and
+     * layersUsed[layersUsed.length - 1] is true and layersUsed.length - 1 is
+     * the largest layer used.  e.g. if the only element is [1], lastUsed is 1.
+     */
+    let lastUsed = layersUsed.length ? (layersUsed.length - 1) : 0,
     u =  unusedLayers();
     function chooseNext() {
       let next = u.pop() || ++lastUsed;
-      if (next > 2) {
+      if (trace > 2 && next > 2) {
         dLog('chooseNext', next, u, lastUsed, 'trackBlocksData');
       }
       if (next > largestLayer) {
@@ -434,7 +441,7 @@ function rectTrianglePath(y, yInterval, xWidth, xPosn) {
    * . proportionate in between
    */
   let
-	/* scaled y position (interval) of feature */
+  /* scaled y position (interval) of feature */
   yS = [y(yInterval[0]), y(yInterval[1])],
   yLength = yS[1] - yS[0],
   yDirection = Math.sign(yLength),
@@ -478,6 +485,9 @@ export default InAxis.extend({
 
   queryParams: service('query-params'),
   urlOptions : alias('queryParams.urlOptions'),
+  selected : service('data/selected'),
+  axisZoom: service('data/axis-zoom'),
+
 
   className : "tracks",
   
@@ -487,6 +497,9 @@ export default InAxis.extend({
    * and .layoutWidth for the block.
    */
   blocks : {},
+
+  featureData2Feature : new WeakMap(),
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -645,6 +658,8 @@ export default InAxis.extend({
           }
         }
         interval.description = description;
+        interval.udescription = intervalUniqueName(description, interval);
+
         // let axisName = mapChrName2Axis(mapChrName);
         if (intervals[axisName] === undefined)
           intervals[axisName] = [];
@@ -692,6 +707,7 @@ export default InAxis.extend({
     let thisAt = this;
     let trackWidth = this.get('trackWidth');
 
+    featureTrackTransitionTime = this.get('axisZoom.axisTransitionTime');
     // seems run.throttle() .. .apply() is wrapping args with an extra [] ?
     if (resized && (resized.length == 2) && (tracks === undefined))
     {
@@ -764,13 +780,7 @@ export default InAxis.extend({
         Math.min(domainRange / 1000, 200) : 
         Math.min(-domainRange / 1000, 200),
       tracksLayout = regionOfTree(t, y.domain(), sizeThreshold, abutDistance, true),
-      data = tracksLayout.intervals.map(function(d) {
-        // Make the description unique in case there are multiple
-        // positions for the same feature name.
-        let r=Object.assign({}, d);
-        r.udescription=d.description+"_"+d[0];
-        return r;
-      });
+      data = tracksLayout.intervals;
       let blockState = thisAt.lookupAxisTracksBlock(blockId);
       blockState.set('layoutWidth', tracksLayout.nLayers * trackWidth * 2);
       if (! blockState.hasOwnProperty('subElements')) {
@@ -933,7 +943,7 @@ export default InAxis.extend({
     clipRect = clipRectS
       .enter()
       .append("clipPath")       // define a clip path
-      .attr("id", axisEltIdClipPath) // give the clipPath an ID
+      .attr("id", axisEltIdClipPath2d) // give the clipPath an ID
       .append("rect")          // shape it as a rect
     ;
     clipRectS
@@ -967,7 +977,7 @@ export default InAxis.extend({
       console.log('clipRect', bbox.width, clipRect.node());
     }
     let g = gp.append("g")
-      .attr("clip-path", "url(#" + axisEltIdClipPath(axisID) + ")"); // clip the rectangle
+      .attr("clip-path", "url(#" + axisEltIdClipPath2d(axisID) + ")"); // clip the rectangle
 
     function trackKeyFn(featureData) {
       // Make description unique when multiple features with same name.
@@ -1000,7 +1010,7 @@ export default InAxis.extend({
       re =  rs.enter(), rx = rs.exit();
       dLog(rs.size(), re.size(),  'rx', rx.size());
       rx
-        .transition().duration(featureTrackTransitionTime / 10)
+        .transition().duration(featureTrackTransitionTime)
         .attr('x', 0)
         .attr('y', yEnd)
         .on('end', () => {
@@ -1029,15 +1039,23 @@ export default InAxis.extend({
         .append((d) => createElementSvg(useTriangle && (alwaysTri || showTriangleP(y, d)) ? 'path' : 'rect'));
       ra
         .attr('class', 'track')
-        .transition().duration(featureTrackTransitionTime)
         .each(subElements ? configureSubTrackHover : configureTrackHover);
+      if (! subElements) {
+        ra.call(configureClick(thisAt.selected, thisAt.featureData2Feature));
+      }
       rs.merge(ra)
+        .transition().duration(featureTrackTransitionTime)
         .attr('width', useTriangle ? ((d) => alwaysTri || showTriangleP(y, d) ? undefined : width) : width);
 
       function attributesForReplace(d, i, g) {
+        let s =
         d3.select(g[i])
         .each(subElements ? configureSubTrackHover : configureTrackHover)
+        .transition().duration(featureTrackTransitionTime)
         .attr('width', useTriangle ? ((d) => alwaysTri || showTriangleP(y, d) ? undefined : width) : width);
+        if (! subElements) {
+          s.call(configureClick(thisAt.selected, thisAt.featureData2Feature));
+        }
       }
 
       let
@@ -1062,7 +1080,10 @@ export default InAxis.extend({
       ra
         .attr('y', (d,i,g) => useTriangle && (alwaysTri || showTriangleP(y, d)) ? undefined : yEnd.apply(this, [d, i, g]));
       if (! useTriangle) {
+        ra
+          .call(rectUpdate);
         rm
+          .transition().duration(featureTrackTransitionTime)
           .call(rectUpdate);
       }
       else if (alwaysTri) {
@@ -1498,6 +1519,7 @@ export default InAxis.extend({
     featuresLengths = this.get('trackBlocksR').mapBy('featuresLength');
     console.log('tracksTree', axisID, this, trackBlocksR, featuresLengths);
     let
+    featureData2Feature = this.featureData2Feature,
     /** similar to : axis-1d.js : showTickLocations(), which also does .filter(inRange)
      */
     intervals = trackBlocksR.reduce(
@@ -1508,6 +1530,12 @@ export default InAxis.extend({
           .toArray()  //  or ...
           .map(function (feature) {
             let interval = feature.get('range') || feature.get('value');
+            /* extra attributes will be added to interval : .description,
+               * .udescription, .feature.   Can copy .value to avoid modifying
+               * store object with attributes which are local and ephemeral. */
+            interval = interval.slice();
+            featureData2Feature.set(interval, feature);
+
             /* copy/paste into CSV in upload panel causes feature.value to be a
              * single-element array, e.g. {name : "my1AGene1", value : [5200] }
              * interval-tree expects an interval to be [start, end].
@@ -1528,6 +1556,7 @@ export default InAxis.extend({
               interval[1] = swap;
             }
             interval.description = feature.get('name');
+            interval.udescription = intervalUniqueName(interval.description, interval);
             /* for datasets with tag 'SNP', feature value[2] is reference / alternate,
              * e.g. "A/G", "T/C" etc */
             let tags = feature.get('blockId.datasetId.tags');
@@ -1704,13 +1733,32 @@ export default InAxis.extend({
     setClipWidth(axisID, width);
     return width;
   }),
+  slowDependenciesChanged : 0,
+  /** These dependencies will change during the transition started by
+   * showTrackBlocks(), so defer them until the transition is settled.
+   *
+   * featureLength and tracksTree (which depends on @each.featuresLength) are
+   * likely triggered by result of feature request API which is also triggered
+   * by the zoomedDomain change.
+   *
+   * Using a task to wrap the transition will probably be a more maintainable
+   * alternative (as in axis-ticks-selected.js : labelsTransitionPerform).
+   */
+  slowDependenciesEffect : computed(
+    'tracksTree',
+    'axis1d.featureLength',
+    function() {
+      const axisTransitionTime = 750;
+      later(() => this.incrementProperty('slowDependenciesChanged'), axisTransitionTime + 250);
+    }),
   /** Render changes driven by changes of block data or scope.
    */
   showTrackBlocks: computed(
-    'tracksTree',
+    'slowDependenciesChanged',
+    // 'tracksTree',
     /** .yDomain is available; for the dependency -Throttled is used */
-    'axis1d.currentPosition.yDomainThrottled.{0,1}',
-    'axis1d.zoomed', 'axis1d.extended', 'axis1d.featureLength',
+    'axis1d.currentPosition.yDomain.{0,1}',	// Throttled
+    'axis1d.zoomed', 'axis1d.extended', // 'axis1d.featureLength',
     function() {
       let tracks = this.get('tracksTree');
       let
@@ -1720,7 +1768,7 @@ export default InAxis.extend({
       extended = this.get('axis1d.extended'),
       featureLength = this.get('axis1d.featureLength'),
       yDomain = this.get('yDomain');
-      console.log('showTrackBlocks', this, tracks, axis1d, isViewed, yDomain, 'axis1d.zoomed', zoomed, extended, featureLength);
+      console.log('showTrackBlocks', this, tracks, axis1d, isViewed, /*yDomain*/ this.get('axis1d.currentPosition.yDomainThrottled'), 'axis1d.zoomed', zoomed, extended, featureLength);
       let featuresLength;
       if (isViewed) {
         let blockIds = d3.keys(tracks.intervalTree);
@@ -1740,9 +1788,9 @@ export default InAxis.extend({
     let
     allocatedWidth = this.get('allocatedWidth'),
     allocatedWidthPrev = this.get('allocatedWidthPrev'),
-    allocatedWidthChange = ! allocatedWidthPrev || (allocatedWidthPrev !== allocatedWidth);
+    allocatedWidthChange = ! allocatedWidthPrev || ! isEqual(allocatedWidthPrev, allocatedWidth);
     if (allocatedWidthChange) {
-      this.get('allocatedWidthPrev', allocatedWidth);
+      this.set('allocatedWidthPrev', allocatedWidth);
     }
     dLog('resizeEffectHere in axis-tracks', this.get('axisID'), result,
          allocatedWidthPrev, allocatedWidth, allocatedWidthChange,
@@ -1751,9 +1799,20 @@ export default InAxis.extend({
      * if the previous size is not recorded, then treat it as a change.
      */
     function isChanged(rc, f) { return rc ? rc[f] : true; }
+    /* these 2 prevent 2-step transition of axis track y update.
+     * after confirming this fix, the calculation of changed.viewport{Width,Height} can be sorted out.
+     */
+result.changed.viewportWidth = false;
+result.changed.viewportHeight = false;
+    let
+    widthChanged = isChanged(result.changed, 'viewportWidth') || allocatedWidthChange,
+    heightChanged = isChanged(result.changed, 'viewportHeight'),
+    anyChange = widthChanged || heightChanged;
+    if (anyChange) {
     this.showResize(
-      isChanged(result.changed, 'viewportWidth') || allocatedWidthChange,
-      isChanged(result.changed, 'viewportHeight') /* , yScaleChanged ? */);
+      widthChanged, heightChanged, 
+      /* , yScaleChanged ? */);
+    }
   }),
   flippedEffect : computed('axis1d.flipped', function () {
     /** 'scaleChanged' could be used as an alternate dependency */

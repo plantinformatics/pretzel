@@ -42,7 +42,7 @@ import { chrData, cmNameAdd } from '../utils/utility-chromosome';
 import {
   eltWidthResizable,
   eltResizeToAvailableWidth,
-  noShiftKeyfilter,
+  ctrlKeyfilter,
   eltClassName,
   tabActive,
   inputRangeValue,
@@ -169,6 +169,8 @@ export default Component.extend(Evented, {
   blockService: service('data/block'),
   flowsService: service('data/flows-collate'),
   pathsP : service('data/paths-progressive'),
+  axisZoom : service('data/axis-zoom'),
+  headsUp : service('data/heads-up'),
   queryParamsService: service('query-params'),
   apiServers : service(),
 
@@ -2336,7 +2338,7 @@ export default Component.extend(Evented, {
       .call(
         d3.drag()
           .subject(function(d) { return {x: oa.stacks.x(d)}; }) //origin replaced by subject
-          .filter(noShiftKeyfilter)
+          .filter(ctrlKeyfilter)
           .on("start", dragstarted) //start instead of dragstart in v4. 
           .on("drag", dragged)
           .on("end", dragended));//function(d) { dragend(d); d3.event.sourceEvent.stopPropagation(); }))
@@ -4251,6 +4253,8 @@ export default Component.extend(Evented, {
       /** can be undefined in some cases. it is defined for WheelEvent - mousewheel zoom. */
       let e = d3.event.sourceEvent;
       let isWheelEvent = d3.event.sourceEvent instanceof WheelEvent;
+      let timeStamp = e && e.timeStamp;
+      me.set('axisZoom.zoomPan', {isWheelEvent, timeStamp});
       if (trace_zoom > 0 + isWheelEvent)
       console.log('zoom', that, brushExtents, arguments, this);
       let axisName;
@@ -4345,7 +4349,7 @@ export default Component.extend(Evented, {
           console.log("zoom", axisName, p, i, yp.domain(), yp.range(), brushExtents[i], axis.portion, brushedDomain);
             domain = brushedDomain;
           }
-          else
+          else if (d3.event.sourceEvent)  // if there is a mousewheel event
           {
             /** note the brushedDomain before the scale change, for updating the brush position */
             let brushExtent = oa.brushedRegions[p];
@@ -4425,7 +4429,8 @@ export default Component.extend(Evented, {
         let idName = axisEltId(p),
         axisS = svgContainer.select("#"+idName);
         if (t)
-          axisS = axisS.transition(t);
+          axisS = axisS.transition(t)
+	  .duration(me.get('axisZoom.axisTransitionTime'));
         axisS.call(yAxis);
         if (updatePaths)
           pathUpdate(t);
