@@ -10,6 +10,7 @@ import { logSelectionNodes } from '../log-selection';
 import { noDomain } from '../draw/axis';
 import { stacks } from '../stacks'; // just for oa.z and .y, don't commit this.
 import { inRangeEither, overlapInterval } from './zoomPanCalcs';
+import { intervalSize } from '../interval-calcs';
 import {
   featureCountDataProperties,
   dataConfigs,
@@ -1042,7 +1043,9 @@ ChartLine.prototype.bars = function (data)
   /** parent datum is currently 1, but could be this.block;
    * this.parentElement.parentElement.__data__ has the axis id (not the blockId),
    */
-    .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); });
+    .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); })
+    .attr("x", 0)
+  ;
 
   function attrY(selection) {
     selection.attr("y", (d) => { let li = dataConfig.datum2LocationScaled(d); return li.length ? li[0] : li; });
@@ -1050,24 +1053,50 @@ ChartLine.prototype.bars = function (data)
   /** start new elements with final y position and width 0, and transition to final width. */
   ra
     .attr("width", 0)
-    .call(attrY);
-
-  let r =
-  ra
-    .merge(rs)
-    .transition().duration(dataConfig.getTransitionTime())
-    .attr("x", 0)
+    .attr('stroke-opacity', 0.25)
+    .attr('fill-opacity', 0.25)
     .call(attrY)
+    .call(attrHeight);
+
+  /** The transition from length 0 looks noisy when zooming in, but smooth when zooming out.
+   * default to false when prevDomain initially not defined.
+   */
+  let idWidth = data[0] && dataConfig.rectHeight(/*scaled*/false, /*gIsData*/false, data[0], 0, []),
+      idWidthChanged = this.prev_idWidth !== idWidth;
+  this.prev_idWidth = idWidth;
+  let zoomingIn = ! this.prevDomain || (intervalSize(this.block.zoomedDomain) <= intervalSize(this.prevDomain));
+  this.prevDomain = this.block.zoomedDomain;
+
+  let
+  rm =
+    ra
+    .merge(rs),
+  r = dataConfig.selectionToTransition(rm)
+    .attr('stroke-opacity', 1)
+    .attr('fill-opacity', 1)
+    .call(attrY)
+    .call(attrHeight);
+  function attrHeight(selection) {
+    selection
   // yBand.bandwidth()
     .attr("height", dataConfig.rectHeight.bind(dataConfig, /*scaled*/true, /*gIsData*/false)) // equiv : (d, i, g) => dataConfig.rectHeight(true, false, d, i, g);
-  ;
+    ;
+  }
+
   let barWidth = dataConfig.rectWidth.bind(dataConfig, /*scaleX*/this.scales.xWidth, /*gIsData*/false);
-  r
+  /** Use transition from width 0 when zooming out */
+  (zoomingIn || idWidthChanged ? rm : r)
     .attr("width", dataConfig.barAsHeatmap ? 20 : barWidth);
   if (dataConfig.barAsHeatmap)
     ra
     .attr('fill', barWidth);
-  rx.remove();
+  rx
+    /* quick fade out */
+    .transition().duration(dataConfig.getTransitionTime() / 5)
+    .attr('stroke-opacity', 0.25)
+    .attr('fill-opacity', 0.25)
+    .remove()
+  ;
   if (trace > 1) {
     dLog(rs.nodes(), re.nodes());
   }

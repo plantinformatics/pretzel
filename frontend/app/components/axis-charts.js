@@ -235,6 +235,7 @@ export default InAxis.extend({
       let
       dataConfig = dataConfigs[dataTypeName];
       dataConfig.getTransitionTime ||= () => this.get('transitionTime');
+      dataConfig.selectionToTransition ||= (selection) => this.get('axisZoom').selectionToTransition(selection);
       chart = this.charts[chartName] = new Chart1(dataConfig, chartName);
       chart.barsLine = this.get('chartBarLine');
       // for allocatedWidthForBlock().
