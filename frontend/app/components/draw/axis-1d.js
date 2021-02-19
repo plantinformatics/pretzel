@@ -1,4 +1,4 @@
-import { later, next, throttle } from '@ember/runloop';
+import { later, next, once as run_once, throttle } from '@ember/runloop';
 import { A } from '@ember/array';
 import { computed, observer } from '@ember/object';
 import { alias } from '@ember/object/computed';
@@ -11,6 +11,7 @@ import { sum } from 'lodash/math';
 import { isEqual } from 'lodash/lang';
 
 
+import { contentOf } from '../../utils/common/promises';
 import AxisEvents from '../../utils/draw/axis-events';
 import AxisPosition from '../../mixins/axis-position';
 import {
@@ -26,6 +27,7 @@ import {
   noDomain,
   /* Axes, yAxisTextScale,  yAxisTicksScale,*/  yAxisBtnScale,
   /* yAxisTitleTransform, eltId,*/ axisEltId /*, eltIdAll, highlightId*/,
+  axisEltIdClipPath,
   axisTitleColour,
   eltId,
 } from '../../utils/draw/axis';
@@ -36,8 +38,9 @@ import {
   dragTransition
 } from '../../utils/stacks-drag';
 import { selectAxis } from '../../utils/draw/stacksAxes';
+import { selectGroup } from '../../utils/draw/d3-svg';
 import { breakPoint } from '../../utils/breakPoint';
-import { configureHorizTickHover } from '../../utils/hover';
+import { configureHover } from '../../utils/hover';
 import { getAttrOrCP } from '../../utils/ember-devel';
 import { intervalExtent }  from '../../utils/interval-calcs';
 import { updateDomain } from '../../utils/stacksLayout';
@@ -69,13 +72,14 @@ function blockKeyFn(block) { return block.axisName; }
 /*------------------------------------------------------------------------*/
 
 
-/* showTickLocations() and configureHorizTickHover() are based on the
+/* showTickLocations() and configureHover() are based on the
  * corresponding functions in draw-map.js
  * There is a lot of variation at all levels between this application and the
  * original - draft factoring (axisDomData.js) showed a blow-out of abstraction
  * and complexity even before all the differences were handled.
  */
 
+const componentName = 'axis-1d';
 const className = "horizTick";
 
 /** filter : @return true if the given Block is configured to display ticks.
@@ -86,6 +90,18 @@ function blockWithTicks(block)
   let showPaths = block.block.get('showPaths');
   // dLog('blockWithTicks', block.axisName, showPaths);
   return ! showPaths;
+}
+
+/** Return a filter to select features which are within the current zoomedDomain
+ * of the given block.
+ * @param block stacks Block
+ */
+function inRangeBlock(axisApi, range0, block) {
+  return function (feature) {
+    /** comment in @see keyFn() */
+    let featureName = getAttrOrCP(feature, 'name');
+    return axisApi.inRangeI(block.axisName, featureName, range0);
+  };
 }
 
 /** Draw horizontal ticks on the axes, at feature locations.
@@ -102,22 +118,56 @@ function FeatureTicks(axis, axisApi, axis1d)
   this.axis = axis;
   this.axisApi = axisApi;
   this.axis1d = axis1d;
+
+  this.getTransitionTime = () => this.axis1d.get('transitionTime');
+  this.selectionToTransition = (selection) => this.axis1d.selectionToTransition(selection);
+  this.featureY = (feature) => this.axis1d.featureY(feature);
+  this.blockColourValue = (feature) => this.axis1d.blockColourValue(feature);
+  this.selectGroup = (groupName) => this.axis1d.selectGroup(groupName);
 }
+
+/** @return a function to lookup from block to an array of features.
+ * Used as a d3 .data() function with block as data.
+ */
+FeatureTicks.prototype.featuresOfBlock = function (featuresOfBlockLookup) {
+  let
+  range0 = this.axis.yRange2();
+
+    return (block) => {
+      let inRange = inRangeBlock(this.axisApi, range0, block);
+
+      let blockR = block.block,
+      blockId = blockR.get('id'),
+      featuresAll = featuresOfBlockLookup(blockR),
+      features = ! featuresAll ? [] : featuresAll
+        .filter(inRange);
+      dLog(blockId, features.length, 'showTickLocations featuresOfBlock');
+      return features;
+    };
+};
+
+FeatureTicks.prototype.featureColour = function (feature) {
+  return this.blockColourValue(contentOf(feature.get('blockId')));
+};
+
+function blockTickEltId(groupName) {
+  return function (block) { return className + '_' + groupName + '_' + block.axisName; }
+}
+
 
 /** Draw horizontal ticks on the axes, at feature locations.
  *
+ * @param featuresOfBlockLookup map from block to array of features; its param is :
  * @param axis  block (Ember object), result of stacks-view:axesP
  * If the axis has multiple (data) blocks, this is the reference block.
  */
-FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setupHover, groupName, blockFilter)
+FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setupHover, groupName, blockFilter, clickFn)
 {
   /** Called from axis-ticks-selected : renderTicks(), and originally also
    * called from axis-1d : renderTicks() to represent the edges of scaffolds.
  */
   let axis = this.axis, axisApi = this.axisApi;
   let axisName = axis.axisName;
-  let
-    range0 = axis.yRange2();
   let
     axisObj = this.axis1d.get('axisObj'),
   // The following call to this.axis1d.get('extended')
@@ -126,8 +176,6 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
   if (trace_stack)
     dLog('showTickLocations', extended, axisObj, groupName);
 
-  function blockTickEltId(block) { return className + '_' + groupName + '_' + block.axisName; }
-
   let blockIndex = {};
   let aS = selectAxis(axis);
   if (!aS.empty())
@@ -135,91 +183,77 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
     /** show no ticks if axis is extended. */
     const notWhenExtended = false;
     let blocks = (notWhenExtended && extended ? [] : blockFilter ? axis.blocks.filter(blockWithTicks) : axis.blocks);
-    let gS = aS.selectAll("g." + className + '.' + groupName)
-      .data(blocks, blockKeyFn);
-    gS.exit().remove();
-    function storeBlockIndex (block, i) {
-      blockIndex[block.getId()] = i;
+    let gSA = this.selectGroup(groupName);
+    if (!gSA.empty()) {
+
+      function storeBlockIndex (block, i) {
+        blockIndex[block.getId()] = i;
+        if (trace_stack)
+          dLog('blockIndex', block.getId(), i);
+      };
+
+      /** data blocks of the axis, for calculating blockIndex i.e. colour.
+       * colour assignment includes non-visible blocks . */
+      let blocksUnfiltered = extended ? [] : axis.dataBlocks(false);
       if (trace_stack)
-        dLog('blockIndex', block.getId(), i);
-    };
-    let gA = gS.enter()
-      .append('g')
-      .attr('id', blockTickEltId)
-      .attr('class', className + ' ' + groupName)
-    ;
-    /** data blocks of the axis, for calculating blockIndex i.e. colour.
-     * colour assignment includes non-visible blocks . */
-    let blocksUnfiltered = extended ? [] : axis.dataBlocks(false);
-    if (trace_stack)
-      dLog('blockIndex', axisName, axis, axis.blocks);
-    blocksUnfiltered.forEach(storeBlockIndex);
+        dLog('blockIndex', axisName, axis, axis.blocks);
+      blocksUnfiltered.forEach(storeBlockIndex);
 
-    function featuresOfBlock (block) {
-      function inRange(feature) {
-        /** comment in @see keyFn() */
-        let featureName = getAttrOrCP(feature, 'name');
-        return axisApi.inRangeI(block.axisName, featureName, range0);
-      }
-
-      let blockR = block.block,
-      blockId = blockR.get('id'),
-      featuresAll = (featuresOfBlockLookup || function (blockR) {
+      featuresOfBlockLookup ||= function (blockR) {
         return blockR.get('features').toArray();
-      })(blockR),
-      features = featuresAll
-        .filter(inRange);
-      dLog(blockId, features.length, 'showTickLocations featuresOfBlock');
-      return features;
-    };
+      };
+      let featuresOfBlock = this.featuresOfBlock(featuresOfBlockLookup);
 
-    let gSA = gS.merge(gA),
-    pS = gSA
-      .selectAll("path." + className)
+      let
+      pS = gSA
+        .selectAll("path." + className)
         .data(featuresOfBlock, keyFn),
       pSE = pS.enter()
         .append("path")
         .attr("class", className)
-    ;
-    function featurePathStroke (feature, i2) {
+      ;
+
+      /** @return rgb() colour for feature <path> stroke (feature ticks / triangles)
+       * @desc Calling signature : `this` is the DOM element to be coloured,  from d3 .attr() `this`
+       */
+      function featurePathStroke (feature, i2) {
         let block = this.parentElement.__data__,
-        blockId = block.getId(),
-        /** Add 1 to i because it is the elt index, not the
-         * index within axis.blocks[], i.e. the reference block is not included. */
-        i = blockIndex[blockId];
-      if (i2 < 2)
-         dLog(this, 'stroke', blockId, i);
+            blockId = block.getId(),
+            /** Add 1 to i because it is the elt index, not the
+             * index within axis.blocks[], i.e. the reference block is not included. */
+            i = blockIndex[blockId];
+        if (i2 < 2)
+          dLog(this, 'stroke', blockId, i);
         return axisTitleColour(blockId, i+1) || 'black';
       }
 
-    if (setupHover === true)
-    {
-    setupHover = 
-    function setupHover (feature) 
-    {
-      let block = this.parentElement.__data__;
-      return configureHorizTickHover.apply(this, [feature, block, hoverTextFn]);
-    };
+      if (setupHover === true)
+      {
+        setupHover = 
+          function setupHover (feature) 
+        {
+          let block = this.parentElement.__data__;
+          return configureHover.apply(this, [{feature, block}, hoverTextFn]);
+        };
 
-      pSE
-        .each(setupHover);
-    }
+        pSE
+          .each(setupHover);
+      }
+      pSE.on('click', clickFn);
+
       pS.exit()
         .remove();
       let pSM = pSE.merge(pS);
 
       /* update attr d in a transition if one was given.  */
       let p1 = // (t === undefined) ? pSM :
-         pSM.transition()
-         .duration(axisTickTransitionTime)
-         .ease(d3.easeCubic);
-
+          this.selectionToTransition(pSM)
       p1.attr("d", pathFn)
-      .attr('stroke', featurePathStroke)
-      .attr('fill', featurePathStroke)
-    ;
+        .attr('stroke', featurePathStroke)
+        .attr('fill', featurePathStroke)
+      ;
 
-
+    }
   }
 
   function keyFn (feature) {
@@ -284,7 +318,8 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
   };
 
   /** eg: "scaffold23432:1A:1-534243" */
-  function hoverTextFn (feature, block) {
+  function hoverTextFn(context) {
+    let {feature, block} = context;
     let
       /** value is now renamed to range, this handles some older data. */
       range = getAttrOrCP(feature, 'range') || getAttrOrCP(feature, 'value'),
@@ -302,6 +337,203 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 
 };
 
+/**
+ * Specification : #223.  
+ * 3.     Shift+ left click triangles on an axis draws a line across the top of the outermost triangles
+ *   a.  determine extent of clicked features
+ *   b. draw path across extent, near the base of the triangles
+ */
+FeatureTicks.prototype.showSpanningLine = function (featuresOfBlockLookup) {
+  const groupName = 'spanFeatures';
+
+  let axis = this.axis, axisApi = this.axisApi;
+  let axisName = axis.axisName;
+
+  let aS = selectAxis(axis);
+  if (!aS.empty())
+  {
+
+    // .filter((b) => axis1d.selected.shiftClickedFeaturesByBlock(block.block)
+
+    let gSA = this.selectGroup(groupName);
+    gSA
+      .attr("clip-path", (block) => "url(#" + axisEltIdClipPath(block.block.get('referenceBlockOrSelf.id')) + ")");
+
+    if (!gSA.empty()) {
+
+      const spanFeaturesOfBlock = (blockS) => {
+        let
+        blockR = blockS.block,
+        features = featuresOfBlockLookup(blockR),
+        outermostFeatures = features && features
+          .reduce((result, f) => {
+            let y = this.featureY(f);
+            if (! result[0] || (y < result.minY)) {
+              result[0] = f;
+              result.minY = y;
+            }
+            if (! result[1] || (y > result.maxY)) {
+              result[1] = f;
+              result.maxY = y;
+            }
+            return result; }, []);
+        // .minY and .maxY are used in spanPathFn(), but could be deleted here and re-calculated.
+        return outermostFeatures ? [outermostFeatures] : [];
+      };
+
+      const tagName = 'path';
+
+      let
+      pS = gSA
+        .selectAll(tagName + "." + className)
+        .data(spanFeaturesOfBlock /*, keyFn*/),
+      pSE = pS.enter()
+        .append(tagName)
+        .attr("class", className)
+      ;
+
+      pS.exit()
+        .remove();
+      let pSM = pSE.merge(pS);
+
+      const pathFn = (d,i,g) => this.spanPathFn(d,i,g);
+      pSE
+        .attr("d", pathFn)
+
+      this.selectionToTransition(pSM)
+        .attr("d", pathFn)
+        .attr('stroke', (limitFeatures) => this.featureColour(limitFeatures[0]))
+      ;
+
+    }
+  }
+}
+
+/** Construct a <path> which draws a line slightly left of the bases of the
+ * triangles which represent the given outermost limitFeatures
+ */
+FeatureTicks.prototype.spanPathFn = function (limitFeatures) {
+  // based on showTickLocations():pathFn(), horizTrianglePath(); related : axisFeatureTick(ai, d)
+
+  /** features y extent / interval scaled to px. */
+  let 
+  /** only called if there is >=1 feature, so .minY and .maxY are defined.
+   * equivalent to : limitFeatures.map((f) => this.featureY(featureY));
+   */
+  yIntS = [limitFeatures.minY, limitFeatures.maxY],
+  padding = 0;
+  if (yIntS[0] === yIntS[1]) {
+    /** @param yLength	length of triangle base */
+    const yLength = 10,
+    y2 = yLength / 2;
+    /** if padding is to be added when !==, use Math.sign(yIntS[1] - yIntS[0]) * y2 */
+    padding = yLength;
+  }
+
+  /**
+   * @param yLength	length of triangle base
+   * @param xLength	length of triangle x axis
+   * @param shiftLeft	offset of line from base of triangles
+   */
+  const xLength = 35 / 2;
+  const shiftLeft = -1.5;
+
+  let
+  baseX = -xLength - shiftLeft;
+  let path = d3.line()(
+    [[baseX, yIntS[0] - padding],
+     [baseX, yIntS[1] + padding]]);
+
+  return path;
+};
+
+
+
+/** Draw text feature labels left of the axes, at location of features selected
+ * by clicking on the feature triangle, recorded in selected.labelledFeatures.
+ *
+ */
+FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover, groupName, blockFilter, transitionFn)
+{
+
+  function textFn(feature) {
+    let
+    featureName = getAttrOrCP(feature, 'name');
+    return featureName;
+  }
+
+  // copied from .showTickLocations(); can probably factor the keyFn and <g> setup
+
+  function keyFn (feature) {
+    // here `this` is the parent of the <path>-s, e.g. g.axis
+    let featureName = getAttrOrCP(feature, 'name');
+    // dLog('keyFn', feature, featureName); 
+    return featureName;
+  };
+
+  let axis = this.axis, axisApi = this.axisApi;
+  let axisName = axis.axisName;
+
+  let aS = selectAxis(axis);
+  if (!aS.empty())
+  {
+    let gSA = this.selectGroup(groupName);
+    if (!gSA.empty()) {
+
+      let featuresOfBlock = this.featuresOfBlock(featuresOfBlockLookup);
+
+      const tagName = 'text';
+      /**  p* (i.e. pS, pSE, pSM, p1) are selections of the <path> in .showTickLocations or <text> in .showLabels
+       * S : the whole selection, SE : the .enter().append(), SM : the SE merged back with S, 1 : SM with a transition.
+       */
+      let
+      pS = gSA
+        .selectAll(tagName + "." + className)
+        .data(featuresOfBlock, keyFn),
+      pSE = pS.enter()
+        .append(tagName)
+        .attr("class", className)
+        .attr('stroke', this.featureColour.bind(this))
+      ;
+
+      /* pSE
+         .each(setupHover); */
+
+      pS.exit()
+        .remove();
+      let pSM = pSE.merge(pS);
+
+      /** For <text> the d is constant, so use pSE.
+       * For showTickLocations / <path>, the d updates, so pSM is used
+       */
+      pSE
+        .text(textFn)
+      // positioned just left of the base of the triangles.  inherits text-anchor from axis;
+        .attr('x', '-30px');
+
+      let attrY_featureY = this.attrY_featureY.bind(this);
+      pSE.call(attrY_featureY);
+
+      if (false) {
+        pSM.call(attrY_featureY);
+      } else {
+      let transition = this.selectionToTransition(pSM);
+      if (transition === pSM) {
+        pSM.call(attrY_featureY);
+      } else {
+        transitionFn(transition, attrY_featureY);
+      }
+      }
+    }
+  }
+
+};
+
+FeatureTicks.prototype.attrY_featureY = function(selection) {
+  console.log('attrY_featureY', selection.node(), this.axis1d.zoomedDomain)
+  selection
+    .attr('y',  (feature) => this.axis1d.featureY(feature))
+}
 
 /**
  * @property zoomed   selects either .zoomedDomain or .blocksDomain.  initially undefined (false).
@@ -309,7 +541,10 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
  */
 export default Component.extend(Evented, AxisEvents, AxisPosition, {
   blockService: service('data/block'),
+  selected : service('data/selected'),
   axisBrush: service('data/axis-brush'),
+  axisZoom: service('data/axis-zoom'),
+  headsUp : service('data/heads-up'),
   controls : service(),
 
   controlsView : alias('controls.controls.view'),
@@ -412,8 +647,10 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   },
 
   axisStackChanged : function() {
+/*
     dLog("axisStackChanged in components/axis-1d");
     this.renderTicksDebounce();
+*/
   },
 
   /** @return the Stacked object corresponding to this axis. */
@@ -509,6 +746,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     /** Update the block titles text colour. */
     this.axisTitleFamily();
   }),
+  /** @return the colour index of this block
+   */
   blockColour(block) {
     let used = this.get('colourSlotsUsed'),
     i = used.indexOf(block);
@@ -518,6 +757,20 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }
     return i;
   },
+  /** @return a colour value for .attr 'color'
+   * @desc uses axisTitleColour(), which uses this.blockColour()
+   */
+  blockColourValue(block) {
+    let
+    blockId = block.get('id'),
+    /** Could set up param i as is done in showTickLocations() :
+     * featurePathStroke(), but i is only used when axisTitleColourBy is .index,
+     * and currently it is configured as .slot.
+     */
+    colour = axisTitleColour(blockId, /*i*/undefined) || 'black';
+    return colour;
+    },
+
   /** @return the domains of the data blocks of this axis.
    * The result does not contain a domain for data blocks with no features loaded.
    *
@@ -588,7 +841,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    * @return if zoomed return the zoom yDomain, otherwise blockDomain.
    * Result .{0,1} are swapped if .flipped.
    */
-  domain : computed('zoomed', 'flipped', 'blocksDomain', 'zoomedDomainThrottled', function () {
+  domain : computed('zoomed', 'flipped', 'blocksDomain', 'zoomedDomain'/*Throttled*/, function () {
     /** Actually .zoomedDomain will be == blocksDomain when not zoomed, but
      * using it as a CP dependency causes problems, whereas blocksDomain has a
      * more direct dependency on axis' blocks' features' locations.
@@ -686,6 +939,71 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return as;
   }),
 
+  /** d3.select g.groupName within g.axis-all > g.axis-1d
+   * Create g.axis-1d and g.groupName if needed.
+   */
+  selectGroup(groupName) {
+    let resultG;
+    let axisS = this.get('axisS');
+
+    if (! axisS) {
+      resultG = d3.select();
+    } else {
+      let
+      /** this selects g.axis-outer.  It matches axisS .stack.stackID also.  equivalent : this.axisSelect(). */
+      gAxis = axisS.selectAll(),
+      /** compare : selectAxis(axisS) selects g.axis-outer > g.axis-all > g.axis. 
+       * This is similar to axisTitleFamily(), could be factored. */
+      aS = gAxis.selectAll('g.axis-outer > g.axis-all'),
+      /** select/create the component g.axis-1d */
+      gcA = selectGroup(aS, componentName, undefined, undefined, undefined, undefined),
+      /** In earlier versions, horizTick <path> was used to show scaffolds,
+       * which were distinguished by blockWithTicks() (i.e. .showPaths===false),
+       * and were only shown when not split axis (notWhenExtended, i.e.
+       * ! .extended).
+       * scaffolds are now represented using split axis tracks, so that use case
+       * is no longer required.
+       * All the axis-1d elements (triangles, labels, spanning line) are shown regardless of .extended.
+       */
+      blocks = axisS.blocks,
+      gA = selectGroup(gcA, groupName, blocks, blockKeyFn, blockTickEltId(groupName), [className]);
+      resultG = gA;
+
+    }
+    return resultG;
+  },
+    
+
+  get transitionTime() {
+    return this.get('axisZoom.axisTransitionTime');
+  },
+  selectionToTransition(selection) {
+    return this.get('axisZoom').selectionToTransition(selection);
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Calculate current scaled position of the given feature on this axis.
+   */
+  featureY(feature) {
+    let
+    /* alternative :
+    axisName = this.get('axis.id'),
+    ak = axisName,
+    y = stacks.oa.y[ak],
+    */
+    axisS = this.get('axisS'),
+    y = axisS && axisS.getY(),
+    ys = axisS && axisS.ys,
+
+    range = getAttrOrCP(feature, 'range') || getAttrOrCP(feature, 'value'),
+    tickY = range && (range.length ? range[0] : range),
+    /** scaled to axis.
+     * Similar : draw-map : featureY_(ak, feature.id);     */
+    akYs = y(tickY);
+    return akYs;
+  },
+
   /*--------------------------------------------------------------------------*/
 
   /** @param [axisID, t] */
@@ -780,6 +1098,14 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
         /*.transition().duration(750)*/;
       gAxis.call(yAxis);
       dLog('drawTicks', axisId, axisS, gAxis.nodes(), gAxis.node());
+
+      
+      function showText(text) {
+        this.set('headsUp.tipText', text);
+      }
+      gAxis.selectAll('text')
+        .on('mouseover', showText.bind(this, 'Ctrl-click to drag axis'))
+        .on('mouseout', showText.bind(this, ''));
     }
   },
 
@@ -931,7 +1257,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
      * should be rendered, but in this case it is likely there is no change
      * after the first event in the group.
      */
-    throttle(this, this.renderTicks, axisID_t, 500);
+    // throttle(this, this.renderTicks, axisID_t, 500);
+    run_once(() => this.renderTicks(axisID_t))
   },
 
   /** Give the g.axis-outer a .extended class if the axis is split.

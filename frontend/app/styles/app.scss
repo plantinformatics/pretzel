@@ -123,6 +123,13 @@ div.app-logo {
   }
 }
 
+#headsUp {
+  position : absolute;
+  /* left : 70px; */
+  /* top : 50px; */
+  margin-left : -20px;
+  margin-top : 15px;
+}
 
 /* -------------------------------------------------------------------------- */
 /* Handle to resize a panel width. 
@@ -236,6 +243,10 @@ svg {
 g.axis-use > rect {
   fill: none;
   /* stroke: blue; */
+}
+rect.track:hover {
+  /** single-pixel-high <rect>s are difficult to click (to toggle selected.features), so increase width when hover.  */
+  stroke-width: 3;
 }
 g.axis-use > g.tracks > g > rect.track {
   /* fill: lightblue; */
@@ -494,8 +505,10 @@ body.allInitially
 
 .axis text {
   text-shadow: 0 1px 0 #fff;
-  cursor: move;
   // text-anchor: middle;
+}
+body.ctrl-modifier .axis text {
+  cursor: move;
 }
 /* since split axis, now have (g.axis-outer (g.axis-all ( g.axis  (g.tick ...))) (text) ... ) */
 .axis-outer:not(.not_top) > .axis-all > text,
@@ -584,8 +597,15 @@ g.brush:hover > g > rect.overlay {
     -webkit-tap-highlight-color: rgba(70, 30, 50, 0);
 }
 g.tick:hover {
-    outline: 1px dashed orange; 
+  /* indicate that g.axis > g.tick > text can be dragged with ctrl-click. */
+  outline: 1px dashed orange; 
 }
+/* feedback : no need to increase font size on hover.
+g.axis > g.tick > text:hover {
+  font-size: larger;
+  font-weight: bolder;
+}
+*/
 
 /* This (stroke colour) was applied for selector .horizTick until 655bfe3
  * introduced axisTitleColour().
@@ -607,6 +627,19 @@ g.foundFeatures > path.horizTick
 {
   stroke-width : 1px;
 }
+g.foundFeatures.horizTick > path.horizTick:hover {
+  /* indicate this element is clickable, and make it easier to click.  */
+  stroke-width: 5px;
+}
+
+
+g.horizTick.labelledFeatures > text.horizTick {
+    stroke-width: initial;
+    text-anchor: end;
+    // or alignment-baseline: middle, mathematical;
+    dominant-baseline : central;
+    text-shadow: initial
+}
 
 path.syntenyEdge
 {
@@ -622,6 +655,19 @@ path.syntenyEdge.inverted
   stroke-dasharray: 16 8 16 40;
 }
 
+/*----------------------------------------------------------------------------*/
+/* no border for popover when displayed in top-right of graph, i.e. ! hoverNearElement */
+#holder > div.popover.no-border
+{
+  border : none;
+  box-shadow : none;
+
+  /* avoid overlapping the top border of the graph area */
+  margin-top: 20px;
+  .popover-content {
+      padding-top : 0;
+  }
+}
 
 /*----------------------------------------------------------------------------*/
 /* Button */
@@ -1187,7 +1233,7 @@ ul#display-blocks > li.selected,
   font-weight: bold;
 }
 
-/* indicate that the axis text can be clicked to show axis-menu. */
+/* indicate that the axis title text can be clicked to show axis-menu. */
 g.axis-outer > g.axis-all > text:hover {
   color: orange;
   font-style : italic;

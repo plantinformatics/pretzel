@@ -6,7 +6,7 @@ import { alias } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
-import { debounce, throttle, later, next } from '@ember/runloop';
+import { debounce, throttle, later, next, once as run_once } from '@ember/runloop';
 import { task, timeout, didCancel } from 'ember-concurrency';
 
 import { isEqual } from 'lodash/lang';
@@ -94,6 +94,7 @@ export default Component.extend(Evented, AxisEvents, {
   pathsP : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
   block: service('data/block'),
+  axisZoom : service('data/axis-zoom'),
   queryParams: service('query-params'),
   controls : service(),
 
@@ -651,7 +652,7 @@ export default Component.extend(Evented, AxisEvents, {
        * confusing.
        */
       pathPosition.perform(pS)
-        .then(pathPosition.perform(pSE))
+        .then(/*pathPosition.perform(pSE)*/ () => pSE.call(this.attrD_pathU))
         .catch((error) => {
           // Recognise if the given task error is a TaskCancelation.
           if (! didCancel(error)) {
@@ -708,6 +709,14 @@ export default Component.extend(Evented, AxisEvents, {
         .then(() => { dLog('updatePathsPosition (pathPosition) then'); });
   },
 
+  /** Calculate the path value.
+   * @usage d3.selection ... .call(this.attrD_pathU)
+   * @param pathSelection	d3 selection or transition of <path>
+   */
+  attrD_pathU(pathSelection) {
+      // pathU() is temporarily a function, will revert to a computed function, as commented in path().
+      pathSelection.attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
+  },
   /** Update position of the paths indicated by the selection.
    * Making this a task with .drop() enables avoiding conflicting transitions.
    * @param pathSelection
@@ -722,27 +731,30 @@ export default Component.extend(Evented, AxisEvents, {
     if (! pathSelection.size()) {
       return Promise.resolve();
     }
+    /* Try selectionToTransition() instead.
     let throttleTime = this.get('controlsView.throttleTime'),
         pathTransitionTimeVar = throttleTime ? throttleTime * 1 : pathTransitionTime;
+	*/
     let
     /* now that paths are within <g.block-adj>, path position can be altered
      * during dragging by updating a skew transform of <g.block-adj>, instead of
      * repeatedly recalculating pathU.
      */
       transition = 
-    pathSelection
-      .transition().duration(pathTransitionTimeVar)
-      // pathU() is temporarily a function, will revert to a computed function, as commented in path().
-      .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
+      this.get('axisZoom').selectionToTransition(pathSelection)
+      // .transition().duration(pathTransitionTimeVar)
+      .call(this.attrD_pathU)
+    ;
 
-    if (false) {
+    let transitionEnd;
+    if (transition !== pathSelection) {
     /** in a later version of d3, can use 
      * transitionEnd = transition.end(); ... return transitionEnd;
      * instead of new Promise(...)
      * The caller is interested in avoiding overlapped transitions, so
      * resolve/reject are treated the same.
      */
-     let transitionEnd =  new Promise(function(resolve, reject){
+     transitionEnd =  new Promise(function(resolve, reject){
        transition
          .on('end', (d) => resolve(d))
          .on('interrupt', (d, i, g) => {
@@ -754,8 +766,10 @@ export default Component.extend(Evented, AxisEvents, {
       transitionEnd.then(() => dLog('pathPosition end', pathSelection.node()));
     }
     }
+    else
+      /* no transition to wait for. */
     // try not waiting for completion of transition, combined with throttle on the caller.
-    let transitionEnd = Promise.resolve();
+    transitionEnd = Promise.resolve();
 
     return transitionEnd;
   }).keepLatest(),
@@ -807,7 +821,8 @@ export default Component.extend(Evented, AxisEvents, {
     'blockAdj.axes1d.{0,1}.axis2d.allocatedWidthsMax',
     function () {
       let count = this.get('axisStackChangedCount');
-      throttle(this, this.updatePathsPositionDebounced, this.get('controlsView.throttleTime'), true);
+      // throttle(this, this.updatePathsPositionDebounced, this.get('controlsView.throttleTime'), true);
+      run_once(() => this.updatePathsPosition());
       return count;
     }),
     updatePathsPositionDebounced : function () {
@@ -917,7 +932,7 @@ function gPathDashAndRemove(g) {
  * This transition could also be applied on path append :
  *   pSE
  *     .transition().duration(pathTransitionTime * 3)
- *     .attr("d", function(d) { return d.pathU(); })
+ *     .call(this.attrD_pathU)
  *     .call(pathTween(false))
  *     .each("end", function() { d3.select(this).attr("stroke-dasharray", 'none'); });
  * pSE would have to be separated out of transition on pSA, to avoid conflict.
