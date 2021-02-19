@@ -600,10 +600,12 @@ g.tick:hover {
   /* indicate that g.axis > g.tick > text can be dragged with ctrl-click. */
   outline: 1px dashed orange; 
 }
+/* feedback : no need to increase font size on hover.
 g.axis > g.tick > text:hover {
   font-size: larger;
   font-weight: bolder;
 }
+*/
 
 /* This (stroke colour) was applied for selector .horizTick until 655bfe3
  * introduced axisTitleColour().
