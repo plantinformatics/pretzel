@@ -934,10 +934,14 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
    */
   axisTitleTextBlockCount() {
     let subTitleS = this.get('axisSelectTextBlock');
-    dLog('axisTitleTextBlockCount', subTitleS.nodes(), subTitleS.node());
+    // dLog('axisTitleTextBlockCount', subTitleS.nodes(), subTitleS.node());
     subTitleS
       .text(function (block) { return block.titleText(); });
-    dLog('axisTitleTextBlockCount after update', subTitleS.nodes(), subTitleS.node());
+    if (true || trace_stack) {
+      let nodes = subTitleS.nodes(),
+          lastNode = nodes.length ? nodes[nodes.length - 1] : null;
+      dLog('axisTitleTextBlockCount', nodes, lastNode);
+    }
   },
 
   /**
