@@ -1462,6 +1462,14 @@ ul.view-controls > li > div > .sub-label > span {
 }
 /*------------------------------------*/
 
+/* used for #left-panel-upload > div > .panel
+ * Space is tight and the upload table has no side margin.
+ */
+.panel.no-side-border {
+  border-left: none;
+  border-right: none;
+  padding-bottom: 10px;
+}
 
 div#left-panel-upload select
 {

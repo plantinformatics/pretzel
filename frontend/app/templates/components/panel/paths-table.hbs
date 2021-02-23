@@ -1,9 +1,11 @@
 {{#if visible}}
 
-{{#elem/panel-container state="primary"}}
-  {{#elem/panel-heading icon="filter"}}
+{{#elem/panel-container state="primary" as |panelContainer|}}
+  {{#elem/panel-heading icon="filter" panelContainer=panelContainer}}
     Actions
   {{/elem/panel-heading}}
+  {{#if panelContainer.showComponent}}
+
   <div class="panel-body">
     <div class="btn-group btn-group-justified" role="group" aria-label="...">
 
@@ -17,6 +19,8 @@
 
     </div>
   </div>
+
+  {{/if}} {{!-- showComponent --}}
 {{/elem/panel-container}}
 
 <div class="optionControls">

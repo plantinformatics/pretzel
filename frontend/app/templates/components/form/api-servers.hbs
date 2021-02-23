@@ -1,21 +1,14 @@
 {{!-- enable display of <tspan.blockServer>, when apiServers.serversLength > 1 --}}
 {{multipleServersEffect}}
 
-{{#elem/panel-container state="primary"}}
+{{#elem/panel-container state="primary" showComponent=showList as |panelContainer|}}
 
-  {{#elem/panel-heading icon="globe"}}
+  {{#elem/panel-heading icon="globe" panelContainer=panelContainer}}
     Datasources
-
-    <span class="pull-right">
-      {{x-toggle
-        theme='light'
-        value=showList
-        onToggle=(action (mut showList)) }}
-    </span>
 
   {{/elem/panel-heading}}
 
-  {{#if showList}}
+  {{#if panelContainer.showComponent}}
   <ul class="list-group">
     {{#each-in servers as |apiServerName apiServer| }}
       <li class="list-group-item list-group-item-info">
@@ -37,7 +30,8 @@
       </span>
     </li>
   </ul>
-  {{/if}}
+  {{/if}} {{!-- showComponent --}}
+
 
 {{/elem/panel-container}}
 
