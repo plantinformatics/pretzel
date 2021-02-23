@@ -141,7 +141,9 @@ FeatureTicks.prototype.featuresOfBlock = function (featuresOfBlockLookup) {
       featuresAll = featuresOfBlockLookup(blockR),
       features = ! featuresAll ? [] : featuresAll
         .filter(inRange);
-      dLog(blockId, features.length, 'showTickLocations featuresOfBlock');
+      if (trace_stack > 1) {
+        dLog(blockId, features.length, 'showTickLocations featuresOfBlock');
+      }
       return features;
     };
 };
@@ -151,7 +153,7 @@ FeatureTicks.prototype.featureColour = function (feature) {
 };
 
 function blockTickEltId(groupName) {
-  return function (block) { return className + '_' + groupName + '_' + block.axisName; }
+  return function (block) { return className + '_' + groupName + '_' + block.axisName; };
 }
 
 
@@ -514,15 +516,11 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
       let attrY_featureY = this.attrY_featureY.bind(this);
       pSE.call(attrY_featureY);
 
-      if (false) {
-        pSM.call(attrY_featureY);
-      } else {
       let transition = this.selectionToTransition(pSM);
       if (transition === pSM) {
         pSM.call(attrY_featureY);
       } else {
         transitionFn(transition, attrY_featureY);
-      }
       }
     }
   }
@@ -530,10 +528,10 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
 };
 
 FeatureTicks.prototype.attrY_featureY = function(selection) {
-  console.log('attrY_featureY', selection.node(), this.axis1d.zoomedDomain)
+  console.log('attrY_featureY', selection.node(), this.axis1d.zoomedDomain);
   selection
-    .attr('y',  (feature) => this.axis1d.featureY(feature))
-}
+    .attr('y',  (feature) => this.axis1d.featureY(feature));
+};
 
 /**
  * @property zoomed   selects either .zoomedDomain or .blocksDomain.  initially undefined (false).
@@ -896,7 +894,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       axisFeatureCirclesBrushed();
 
     /** Update the featureCount shown in the axis block title */
-    this.axisTitleFamily();
+    this.axisTitleTextBlockCount();
     if (featureLength)
       dLog('featureLengthEffect', this.get('axis.id'), featureLength);
 
@@ -925,6 +923,23 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }
   },
 
+  /** Update the display of the feature (loaded / total) count in the
+   * axis title text for the data blocks.
+   *
+   * This is a small part of draw-map.js : axisTitleFamily(), and it
+   * is used in response to receipt of features (possibly via paths),
+   * which may be via zoomedDomain change.  So the usage is high
+   * frequency, and the remainder of axisTitleFamily() is not needed
+   * for these updates.
+   */
+  axisTitleTextBlockCount() {
+    let subTitleS = this.get('axisSelectTextBlock');
+    dLog('axisTitleTextBlockCount', subTitleS.nodes(), subTitleS.node());
+    subTitleS
+      .text(function (block) { return block.titleText(); });
+    dLog('axisTitleTextBlockCount after update', subTitleS.nodes(), subTitleS.node());
+  },
+
   /**
    * Equivalent : this.get('axisS').selectAll(), which does a selection by id
    * from svgContainer through g.stack to the g.axis-outer.
@@ -937,6 +952,14 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
      * included in eltId() etc. */
     as = d3.selectAll(".axis-outer#" + eltId(axisId));
     return as;
+  }),
+
+  axisSelectTextBlock : computed('axisSelect', function () {
+    let
+    gAxis = this.get('axisSelect'),
+    axisTitleS = gAxis.selectAll("g.axis-all > text"),
+    subTitleS = axisTitleS.selectAll("tspan.blockTitle");
+    return subTitleS;
   }),
 
   /** d3.select g.groupName within g.axis-all > g.axis-1d

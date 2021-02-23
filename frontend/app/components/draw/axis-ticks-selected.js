@@ -9,6 +9,8 @@ import { task, timeout, didCancel } from 'ember-concurrency';
 import AxisEvents from '../../utils/draw/axis-events';
 import { transitionEndPromise } from '../../utils/draw/d3-svg';
 
+/* global d3 */
+
 const trace = 0;
 const dLog = console.debug;
 
@@ -235,7 +237,7 @@ export default Component.extend(AxisEvents, {
   ctrlHandler(event) {
     // as in : query-params.js : optionsToDom()
     d3.select('body')
-      .classed("ctrl-modifier", event.ctrlKey)
+      .classed("ctrl-modifier", event.ctrlKey);
   }
 
 

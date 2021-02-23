@@ -900,7 +900,9 @@ export default Model.extend({
       let
       axes1d = this.get('blockService.axes1d.axis1dArray');
       axis1d = axes1d.find((a1) => !a1.isDestroying && a1.viewedBlocks.find((b) => b === this));
-      dLog('axis1d', axis1d, axes1d, this.id, this.get('axis.axis1d'));
+      if (trace_block > 1) {
+        dLog('axis1d', axis1d, axes1d, this.id, this.get('axis.axis1d'));
+      }
     }
     return axis1d;
   },
