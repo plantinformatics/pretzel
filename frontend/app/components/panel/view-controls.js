@@ -155,6 +155,10 @@ export default Component.extend({
 
   featuresCountsThresholdLinear : expRangeInitial(500, expRangeBase(100, 10000)),
 
+  /** Threshold between showing featuresCounts charts and features tracks :
+   *  - if (count <= featuresCountsThreshold) show features (axis-tracks)
+   *  - if  (count > featuresCountsThreshold) show featuresCounts (axis-charts)
+   */
   featuresCountsThreshold : computed('featuresCountsThresholdLinear', function () {
     let
      thresholdLinear = +this.get('featuresCountsThresholdLinear'),

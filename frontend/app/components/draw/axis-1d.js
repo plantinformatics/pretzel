@@ -555,6 +555,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   oa : alias('drawMap.oa'),
   axisApi : alias('oa.axisApi'),
 
+  featuresCountsThreshold : alias('controls.view.featuresCountsThreshold'),
 
   /** flipRegion implies paths' positions should be updated.  The region is
    * defined by brush so it is within the domain, so the domain does not change.
@@ -627,6 +628,23 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }
     return zoomed;
   }),
+
+  /** similar to isZoomedOut, this is quicker to evaluate because it
+   * only considers the fully-zoomed out case, which means that the
+   * total .featureCount for each block can be used instead of
+   * calculating .featuresCountIncludingZoom.
+   * i.e. if all .dataBlocks[] have block.featureCount < featuresCountsThreshold
+   */
+  isZoomedRightOut() {
+    let out = ! this.zoomed;
+    if (out) {
+      let
+      featuresCountsThreshold = this.get('featuresCountsThreshold');
+      out = ! this.dataBlocks.any((b) => b.featureCount <= featuresCountsThreshold);
+      dLog('isZoomedRightOut', out, featuresCountsThreshold, this.dataBlocks);
+    }
+    return out;
+  },
 
   /*--------------------------------------------------------------------------*/
 

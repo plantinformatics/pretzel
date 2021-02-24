@@ -484,7 +484,7 @@ export default Model.extend({
       /** Alternative method of getting the array of blocks.  performance seems the same.
       */
       store = this.get('apiServers').id2Store(this.get('id')),
-      blocks = ! store ? [] : store.peekAll('block')
+      blocks = ! store ? [] : store.peekAll('block');
         } else {
           let
       /** all blocks from the same server as `this`. */
@@ -948,6 +948,16 @@ export default Model.extend({
       dLog('isZoomedOut', out, this.get('id'), count, featuresCountsThreshold);
     return out;
   }),
+
+  /** Same as axis-1d .isZoomedRightOut, except this evaluates just this block.
+   * Refer to the comment in axis-1d : @see isZoomedRightOut()
+   */
+  isZoomedRightOut() {
+    let out = ! this.axis1d.zoomed &&
+        ! (this.featureCount <= this.get('featuresCountsThreshold'));
+    dLog('isZoomedRightOut', out, this.featureCount, this.get('featuresCountsThreshold'));
+    return out;
+  },
 
   /*--------------------------------------------------------------------------*/
 
