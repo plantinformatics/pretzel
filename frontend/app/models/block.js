@@ -122,6 +122,7 @@ export default Model.extend({
   /*--------------------------------------------------------------------------*/
 
   /** @return true if this block's dataset defined _meta.paths and it is true.
+   * and ! .isSNP
    */
   showPaths : computed('datasetId._meta.paths', 'id', function () {
     let
@@ -144,6 +145,7 @@ export default Model.extend({
       paths |= odd;
       dLog(id, odd);
     }
+    paths &&= ! this.get('isSNP');
     // dLog('showPaths', dataset, paths);
     return paths;
   }),
@@ -243,6 +245,22 @@ export default Model.extend({
    */
   featuresDomain : alias('featureLimits'),
 
+  /** @return true if the parent dataset of this block has the given tag.
+   * @desc This can be extended to provided inheritance : first lookup
+   * this.get('tags'), and if tag is not found, then lookup
+   * .datasetId.tags
+   */
+  hasTag : function (tag) {
+    let tags = this.get('datasetId.tags'),
+    has = tags && tags.length && (tags.indexOf(tag) >= 0);
+    return has;
+  },
+  isSNP : computed('datasetId.tags', function () {
+    let isSNP = this.hasTag('SNP');
+    return isSNP;
+  }),
+  /** hasTag() can now be used in isChartable() and isSubElements() also.
+   */
   isChartable : computed('datasetId.tags', function () {
     let tags = this.get('datasetId.tags'),
     isChartable = tags && tags.length && (tags.indexOf('chartable') >= 0);
@@ -272,8 +290,9 @@ export default Model.extend({
   ensureFeatureLimits() {
     let limits = this.get('featureLimits');
     /** Reference blocks don't have .featureLimits so don't request it.
-     * block.get('isData') depends on featureCount, which won't be present for
+     * block.get('isDataCount') depends on featureCount, which won't be present for
      * newly uploaded blocks.  Only references have .range (atm).
+     * Could use block.get('isData') here;  this (!range) seems equivalent.
      */
     let range = this.get('range'),
     isData = ! range || ! range.length;

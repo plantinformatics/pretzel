@@ -96,6 +96,8 @@ EOF
 my $datasetName = $options{d};
 my $parentName = $options{p};
 
+my $refAltSlash = 0;
+
 if ($options{v}) {
     print versionMsg;
 }
@@ -203,14 +205,18 @@ sub printFeature($)
     my $chr = shift @a;
     my $pos = shift @a;
     my $label = shift @a;	# c_scaffold_pos
-    my $ref_alt = shift @a;
+    my $rest = "";
+    if ($refAltSlash)
+    { my $ref_alt = shift @a; $rest .= "\"$ref_alt\""; }
+    else
+    { $rest .= "\"$a[0]\"" . "," . "\"$a[1]\""; };
     print <<EOF;
                {
                     "name": "$label",
                     "value": [
                         $pos,
                         $pos,
-                        \"$ref_alt\"
+                        $rest
                     ]
                 }
 EOF

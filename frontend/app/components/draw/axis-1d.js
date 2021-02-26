@@ -83,13 +83,16 @@ const componentName = 'axis-1d';
 const className = "horizTick";
 
 /** filter : @return true if the given Block is configured to display ticks.
- * i.e. ! block.block.get('dataset').get('showPaths')
+ *
+ * Previously : ! block.block.get('dataset').get('showPaths') to select
+ * the scaffolds, but that is no longer relevant since ticks are no
+ * longer used for scaffolds.  So now return block ... .isData
  */
 function blockWithTicks(block)
 {
-  let showPaths = block.block.get('showPaths');
+  let isData = block.block.get('isData');  // was .showPaths
   // dLog('blockWithTicks', block.axisName, showPaths);
-  return ! showPaths;
+  return isData;
 }
 
 /** Return a filter to select features which are within the current zoomedDomain
@@ -196,7 +199,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 
       /** data blocks of the axis, for calculating blockIndex i.e. colour.
        * colour assignment includes non-visible blocks . */
-      let blocksUnfiltered = extended ? [] : axis.dataBlocks(false);
+      let blocksUnfiltered = extended ? [] : axis.dataBlocks(false, false);
       if (trace_stack)
         dLog('blockIndex', axisName, axis, axis.blocks);
       blocksUnfiltered.forEach(storeBlockIndex);

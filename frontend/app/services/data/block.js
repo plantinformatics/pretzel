@@ -877,6 +877,20 @@ export default Service.extend(Evented, {
       return records;  // .toArray()
     }),
 
+  /** @return blocks which are viewed and are configured for display
+   * of paths, i.e.  are data blocks not reference, have
+   * datasetId._meta.paths === true, and datasetId.tags[] does not
+   * contain 'SNP'
+   */
+  viewedForPaths: computed(
+    'viewed.@each.{isData,showPaths}',
+    function() {
+      let blocks = this.get('viewed'),
+          filtered = blocks.filter((block) => block.get('isData') && block.get('showPaths'));
+      dLog('viewedForPaths', blocks.length, filtered);
+      return filtered;
+    }),
+
   /*----------------------------------------------------------------------------*/
 
   /** collate the blocks by the parent they refer to.

@@ -1229,7 +1229,7 @@ export default Component.extend(Evented, {
           breakPoint(b.longName(), isParent, 'should be !=', isChild, b.axis, features);
         if (filterChildren && isParent)
         {
-          let add = b.axis.dataBlocks().filter(function (b) { return b.block.get('isViewed'); });
+          let add = b.axis.dataBlocks(false, false).filter(function (b) { return b.block.get('isViewed'); });
           if (add.length)
             console.log(b.longName(), 'add to orphaned :', Block_list_longName(add));
           orphaned = orphaned.concat(add);
@@ -3941,7 +3941,8 @@ export default Component.extend(Evented, {
            * features so don't brush them. */
           /* can pass visible=true here - a slight optimisation; it depends on the
            * expression in dataBlocks() which distinguishes data blocks. */
-          let childBlocks = axis.dataBlocks();
+          let childBlocks = axis.dataBlocks(true, false)
+              .filter((blockS) => ! blockS.block.get('isZoomedOut'));
           let range = [0, axis.yRange()];
           console.log(axis, 'childBlocks', childBlocks, range);
           /*
