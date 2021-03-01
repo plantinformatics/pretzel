@@ -1,6 +1,7 @@
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
+import { on } from '@ember/object/evented';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { throttle, debounce } from '@ember/runloop';
@@ -116,6 +117,12 @@ export default Component.extend(Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
+  featuresReceived : undefined,
+
+  initData : on('init', function () {
+    this.set('featuresReceived', {});
+  }),
+
   /** Augment axis1d.brushedBlocks with features.length and block
    * .featuresCountIncludingZoom (later : featuresCountInBrush)
    */
@@ -133,6 +140,9 @@ export default Component.extend(Evented, AxisEvents, {
         featuresLengthP = featuresP.then((results) => {
           let featuresLengthResult = results[i],
               length =  featuresLengthResult && featuresLengthResult.value.length;
+          if (featuresLengthResult) {
+            this.featuresReceived[block.id] = length;
+          }
           return length;
         }),
         featuresLengthPO = DS.PromiseObject.create({ promise: featuresLengthP });

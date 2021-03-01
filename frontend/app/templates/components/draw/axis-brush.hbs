@@ -11,10 +11,23 @@
   </tr>
 
 
-{{#each brushedBlocks as |brushedBlock| }}
-  <div>
-    {{brushedBlock.featuresLengthPO.content}} /
-    {{brushedBlock.featuresCount}}
-    {{brushedBlock.block.datasetId.shortNameOrName}}
-  </div>
-{{/each}}
+<table>
+  <tr>
+    <th>Loaded in Brush</th>
+    <th class="devel-visible">Loaded in Brush P</th>
+    <th>Total in Zoom</th>
+    <th class="devel-visible">BlockId</th>
+    <th>Dataset</th>
+  </tr>
+
+  {{#each brushedBlocks as |brushedBlock| }}
+    <tr>
+      <td>{{get featuresReceived brushedBlock.block.id}}</td>
+      <td class="devel-visible">{{brushedBlock.featuresLengthPO.content}}</td>
+      <td>{{brushedBlock.featuresCount}}</td>
+      <td class="devel-visible">{{blockId}}</td>
+      <td>{{brushedBlock.block.datasetId.shortNameOrName}}</td>
+    </tr>
+  {{/each}}
+
+</table>
