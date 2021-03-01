@@ -87,6 +87,12 @@ export default Component.extend(Evented, AxisEvents, {
       block = this.get('block'),
     /** axis-brush object in store */
     record = this.get('pathsP').ensureAxisBrush(block);
+
+    let axis1d = block.get('block.axis.axis1d');
+    if (axis1d && ! axis1d.axisBrushComp) {
+      axis1d.axisBrushComp = this;
+    }
+
     if (trace_axisBrush)
       dLog('block', block.id, block, record);
     return record;
@@ -125,6 +131,13 @@ export default Component.extend(Evented, AxisEvents, {
     this.set('featuresReceived', {});
   }),
 
+  /** round to 1 decimal place.
+   * @param featuresCount  undefined or number
+   */
+  round1(featuresCount) {
+    return featuresCount && Math.round(featuresCount * 10) / 10;
+  },
+
   /** Augment axis1d.brushedBlocks with features.length and block
    * .featuresCountIncludingZoom (later : featuresCountInBrush)
    */
@@ -136,13 +149,9 @@ export default Component.extend(Evented, AxisEvents, {
       blocks = this.get('axis.axis1d.brushedBlocks') || [],
       brushedBlocks = blocks.map((block, i) => {
         let 
-        featuresCount = block.get('featuresCountIncludingZoom');
-
-        // 1 decimal place.
-        if (featuresCount) {
-          featuresCount = Math.round(featuresCount * 10) / 10;
-        }
-        return {block, featuresCount};
+        featureCountInBrush = this.round1(block.get('featuresCountIncludingBrush')),
+        featuresCount = this.round1(block.get('featuresCountIncludingZoom'));
+        return {block, featuresCount, featureCountInBrush};
       });
       dLog('brushedBlocks', brushedBlocks);
       return brushedBlocks;

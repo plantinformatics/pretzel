@@ -80,9 +80,10 @@ export default Mixin.create({
   setDomainDebounced(domain) {
     this.set('currentPosition.yDomainDebounced', domain);
   },
-  setDomainThrottled(domain) {
-    this.set('currentPosition.yDomainThrottled', domain);
-  },
+  /** @return a function wrapped with lodash_throttle().
+   * @desc this updates (generates a new function) when .throttleTime
+   * changes
+   */
   setDomainThrottled : computed('controls.view.throttleTime', function () {
     let
     throttled = lodash_throttle(

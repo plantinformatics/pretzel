@@ -715,6 +715,25 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  brushedDomain : computed('axis1d.axisBrushComp.block.brushedDomain.{0,1}', function() {
+    let brushedDomain = this.get('axis1d.axisBrushComp.block.brushedDomain') ||
+        this.axis1d.axisBrushComp.block.brushedDomain;
+    return brushedDomain;
+  }),
+
+  featuresCountIncludingBrush : computed(
+    'featuresCountsResults.[]',
+    'featureCountInBrush', 'brushedDomain.{0,1}' /* -Debounced */, 'limits',
+    function () {
+      let
+      count = this.get('axis1d.brushed') ?
+        (this.featuresCountsResults.length ? this.get('featureCountInBrush') : undefined ) :
+        this.featureCount;
+      if (trace_block > 1)
+        dLog('featuresCountIncludingBrush', count);
+      return count;
+    }),
+
   /** @return the features count within zoomedDomain, or if there is no zoom,
    * i.e. zoomedDomain is undefined, then simply return .featureCount
    */
@@ -731,6 +750,24 @@ export default Model.extend({
       return count;
     }),
 
+  /** Same as featuresCountsInZoom(), but for the brushedDomain instead of the zoomedDomain
+   */
+  featuresCountsInBrush : computed(
+    'featuresCountsResults.[]', 'brushedDomain.{0,1}' /* -Debounced */, 'limits',
+    function () {
+      let
+      domain = this.get('brushedDomain'),
+      overlaps;
+      if (! domain) {
+        overlaps = this.get('featuresCountsResults');
+      }
+      else {
+        overlaps = this.featuresCountsOverlappingInterval(domain);
+      }
+      if (trace_block > 1)
+        dLog('featuresCountsInBrush', domain, this.limits, overlaps && overlaps.length);
+      return overlaps;
+    }),
   /** From the featuresCounts results received, filter to return the bins
    * overlapping zoomedDomain.
    * If not zoomed (no zoomedDomain), return featuresCountsResults.
@@ -776,6 +813,23 @@ export default Model.extend({
     let overlaps = this.get('featuresCountsInZoom') || [];
     let
     domain = this.get('zoomedDomain'),
+    count = this.featureCountInInterval(overlaps, domain, 'Zoom');
+    return count;
+  }),
+  featureCountInBrush : computed('featuresCountsInBrush.[]', function () {
+    let overlaps = this.get('featuresCountsInBrush') || [];
+    let
+    domain = this.get('brushedDomain'),
+    count = this.featureCountInInterval(overlaps, domain, 'Brush');
+    return count;
+  }),
+  /** Use featuresCounts results to calculate featureCount in the given interval.
+   * @param overlaps  featuresCounts results which overlap the domain
+   * @param domain	[start,end] or if undefined then the whole count of all bins are summed.
+   * @param intervalName  used only in log message
+   */
+  featureCountInInterval(overlaps, domain, intervalName) {
+    let
     /** assume that the bins in each result are contiguous; use the
      * result which covers the interval best, and maybe later : (secondary measure
      * if >1 cover the interval equally) has the smallest binSize.
@@ -797,9 +851,9 @@ export default Model.extend({
     selectedOverlap = (selectedOverlapI === -1) ? undefined : overlaps[selectedOverlapI],
     count = selectedOverlap && this.featureCountResultInZoom(selectedOverlap, domain);
     if (trace_block > 1)
-      dLog('featureCountInZoom', overlaps, domain, coverage, smallestOver1I, largestUnder1I, selectedOverlapI, selectedOverlap, count);
+      dLog('featureCountInZoom', intervalName, overlaps, domain, coverage, smallestOver1I, largestUnder1I, selectedOverlapI, selectedOverlap, count);
     return count;
-  }),
+  },
   /** Determine how well this result covers the given domain.
    * via overlap size / domain size
    * @return 0 if there is no overlap
@@ -809,6 +863,7 @@ export default Model.extend({
     return coverage;
   },
   /** Sum the counts of bins which overlap the domain
+   * Used for both zoomedDomain and brushedDomain.
    * @param domain	[start,end] or if undefined then the whole count of all bins are summed.
    */
   featureCountResultInZoom(fcs, domain) {

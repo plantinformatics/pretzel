@@ -15,6 +15,7 @@
 <table>
   <tr>
     <th class="devel-visible">Loaded in Brush</th>
+    <th>Total in Brush</th>
     <th>Total in Zoom</th>
     <th class="devel-visible">BlockId</th>
     <th>Dataset</th>
@@ -23,6 +24,7 @@
   {{#each brushedBlocks as |brushedBlock| }}
     <tr>
       <td class="devel-visible">{{get featuresReceived brushedBlock.block.id}}</td>
+      <td>{{brushedBlock.featureCountInBrush}}</td>
       <td>{{brushedBlock.featuresCount}}</td>
       <td class="devel-visible">{{brushedBlock.block.id}}</td>
       <td>{{brushedBlock.block.datasetId.shortNameOrName}}</td>
