@@ -106,9 +106,11 @@ export default Component.extend(Evented, AxisEvents, {
   }),
 
   features : computed('axisBrush.features.[]', 'zoomCounter', function () {
-    console.log('features', this);
+    console.log('features', this.zoomCounter, this);
     let featuresP = this.get('axisBrush.features');
     featuresP.then((features) => {
+    this.receivedLengths(features);
+    /** features is now an array of results, 1 per block, so .length is the number of data blocks. */
     if (features && features.length)
       throttle(this, () => ! this.isDestroying && this.draw(features), 200, false);
     });
@@ -129,34 +131,38 @@ export default Component.extend(Evented, AxisEvents, {
   brushedBlocks : computed(
     'axis.axis1d.brushedBlocks.[]',
     'block.brushedDomain.{0,1}',
-    'axisBrush.features.{isFinished,value}',
     function () {
       let
       blocks = this.get('axis.axis1d.brushedBlocks') || [],
-      featuresP = this.get('axisBrush.features'),
       brushedBlocks = blocks.map((block, i) => {
         let 
-        featuresCount = block.get('featuresCountIncludingZoom'),
-        featuresLengthP = featuresP.then((results) => {
-          let featuresLengthResult = results[i],
-              length =  featuresLengthResult && featuresLengthResult.value.length;
-          if (featuresLengthResult) {
-            this.featuresReceived[block.id] = length;
-          }
-          return length;
-        }),
-        featuresLengthPO = DS.PromiseObject.create({ promise: featuresLengthP });
+        featuresCount = block.get('featuresCountIncludingZoom');
 
         // 1 decimal place.
         if (featuresCount) {
           featuresCount = Math.round(featuresCount * 10) / 10;
         }
-        return {featuresLengthPO, block, featuresCount};
+        return {block, featuresCount};
       });
-      featuresP.then((results) => dLog('brushedBlocks results', results));
       dLog('brushedBlocks', brushedBlocks);
       return brushedBlocks;
     }),
+
+  receivedLengths(featuresResults) {
+    /** could use an immutable structure, then template get would depend on it.  */
+    featuresResults.forEach((featuresLengthResult) => {
+      if (featuresLengthResult) {
+        let length = featuresLengthResult.value.length;
+        /** if length, get blockId from value[0], otherwise not
+         * straightforward to use this result.  */
+        if (length) {
+          let blockId = length && featuresLengthResult.value[0].blockId;
+          this.featuresReceived[blockId] = length;
+        }
+      }
+    });
+  },
+
 
   /*--------------------------------------------------------------------------*/
 
