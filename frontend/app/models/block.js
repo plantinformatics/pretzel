@@ -338,6 +338,7 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+
   /** generate a text name for the block, to be displayed - it should be
    * user-readable and uniquely identify the block.
    */
@@ -346,7 +347,7 @@ export default Model.extend({
      * selectedFeatures.Chromosome
      * In paths-table.js @see blockDatasetNameAndScope()
      */
-    let name = (this.get('datasetId._meta.shortName') || this.get('datasetId.id')) + ':' + this.get('scope');
+    let name = this.get('datasetId.shortNameOrName') + ':' + this.get('scope');
     return name;
   }),
 

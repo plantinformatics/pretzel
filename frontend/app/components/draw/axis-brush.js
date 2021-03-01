@@ -4,6 +4,8 @@ import Evented from '@ember/object/evented';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { throttle, debounce } from '@ember/runloop';
+import DS from 'ember-data';
+
 
 import PathData from './path-data';
 
@@ -111,6 +113,40 @@ export default Component.extend(Evented, AxisEvents, {
     });
     return featuresP;
   }),
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Augment axis1d.brushedBlocks with features.length and block
+   * .featuresCountIncludingZoom (later : featuresCountInBrush)
+   */
+  brushedBlocks : computed(
+    'axis.axis1d.brushedBlocks.[]',
+    'block.brushedDomain.{0,1}',
+    'axisBrush.features.{isFinished,value}',
+    function () {
+      let
+      blocks = this.get('axis.axis1d.brushedBlocks') || [],
+      featuresP = this.get('axisBrush.features'),
+      brushedBlocks = blocks.map((block, i) => {
+        let 
+        featuresCount = block.get('featuresCountIncludingZoom'),
+        featuresLengthP = featuresP.then((results) => {
+          let featuresLengthResult = results[i],
+              length =  featuresLengthResult && featuresLengthResult.value.length;
+          return length;
+        }),
+        featuresLengthPO = DS.PromiseObject.create({ promise: featuresLengthP });
+
+        // 1 decimal place.
+        if (featuresCount) {
+          featuresCount = Math.round(featuresCount * 10) / 10;
+        }
+        return {featuresLengthPO, block, featuresCount};
+      });
+      featuresP.then((results) => dLog('brushedBlocks results', results));
+      dLog('brushedBlocks', brushedBlocks);
+      return brushedBlocks;
+    }),
 
   /*--------------------------------------------------------------------------*/
 

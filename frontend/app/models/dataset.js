@@ -88,6 +88,14 @@ export default Record.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** @return shortName if defined, otherwise name
+   */
+  shortNameOrName : computed('datasetId._meta.shortName', function () {
+    return this.get('_meta.shortName') || this.get('id');
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
   /** is this dataset copied from a (secondary) server, cached on the server it was loaded from (normally the primary). */
   isCopy : computed('_meta._origin', function () {
     return !! this.get('_meta._origin');

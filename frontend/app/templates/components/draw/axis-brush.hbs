@@ -11,3 +11,10 @@
   </tr>
 
 
+{{#each brushedBlocks as |brushedBlock| }}
+  <div>
+    {{brushedBlock.featuresLengthPO.content}} /
+    {{brushedBlock.featuresCount}}
+    {{brushedBlock.block.datasetId.shortNameOrName}}
+  </div>
+{{/each}}

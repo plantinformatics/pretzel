@@ -620,6 +620,16 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       return brushed;
     }),
 
+  brushedBlocks : computed('brushed', 'block', 'zoomedDomain.{0,1}', function () {
+    let blocks;
+    if (this.brushed) {
+      blocks = this.get('dataBlocks');
+      dLog('brushedBlocks', blocks, this);
+    }
+    return blocks || [];
+  }),
+
+
   zoomed2 : computed('zoomed', 'domain', 'zoomedDomain', function () {
     let
     zoomed = this.get('zoomed'),
