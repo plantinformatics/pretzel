@@ -30,7 +30,7 @@
                 selectedBlock=selectedBlock
                 selectedDataset=selectedDataset
                 selectDataset="selectDataset"
-                changeTab="changeTab"
+                changeTab=(action 'changeTab' tab.select )
             }}
       </tab.pane>
 
@@ -39,7 +39,7 @@
                 displayData=displayData
                 selectedBlock=selectedBlock
                 view=view
-                changeTab="changeTab"
+                changeTab=(action 'changeTab' tab.select )
                 loadBlock="loadBlock"
                 removeBlock="removeBlock"
                 selectBlock="selectBlock"
