@@ -259,6 +259,10 @@ export default Model.extend({
     let isSNP = this.hasTag('SNP');
     return isSNP;
   }),
+  isHighDensity : computed('datasetId.tags', function () {
+    let isHighDensity = this.hasTag('highDensity');
+    return isHighDensity;
+  }),
   /** hasTag() can now be used in isChartable() and isSubElements() also.
    */
   isChartable : computed('datasetId.tags', function () {
@@ -715,11 +719,14 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  brushedDomain : computed('axis1d.axisBrushComp.block.brushedDomain.{0,1}', function() {
-    let brushedDomain = this.get('axis1d.axisBrushComp.block.brushedDomain') ||
-        this.axis1d.axisBrushComp.block.brushedDomain;
-    return brushedDomain;
-  }),
+  brushedDomain : computed(
+    'axis1d.axisBrushComp.block.brushedDomain.{0,1}',
+    'axis1d.brushedDomain.{0,1}',
+    function() {
+      let brushedDomain = this.get('axis1d.axisBrushComp.block.brushedDomain') ||
+          this.get('axis1d.brushedDomain');
+      return brushedDomain;
+    }),
 
   featuresCountIncludingBrush : computed(
     'featuresCountsResults.[]',
@@ -1033,6 +1040,17 @@ export default Model.extend({
     dLog('isZoomedRightOut', out, this.featureCount, this.get('featuresCountsThreshold'));
     return out;
   },
+
+  /** @return true if features should be requested in response to axis brush,
+   * and displayed in features table as axis red circles.
+   */
+  isBrushableFeatures : computed(
+    'isZoomedOut', 'featuresCountIncludingBrush', 'featuresCountsThreshold',
+    function () {
+      let brushable = ! this.get('isZoomedOut') ||
+          (! this.get('isHighDensity') && (this.get('featuresCountIncludingBrush') <= this.get('featuresCountsThreshold')));
+      return brushable;
+    }),
 
   /*--------------------------------------------------------------------------*/
 

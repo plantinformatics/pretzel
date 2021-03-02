@@ -602,7 +602,11 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
   /** @return true if there is a brush on this axis.
    */
-  brushed : computed(
+  brushed : computed('brushedRegion', function () {
+    let brushed = !! this.get('brushedRegion');
+    return brushed;
+  }),
+  brushedRegion : computed(
     'axis.id',
     'axisBrush.brushedAxes.[]',
     /** oa.brushedRegions is a hash, and it is updated not replaced,
@@ -615,10 +619,18 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     function () {
       let brushedRegions = this.get('oa.brushedRegions'),
       axisId = this.get('axis.id'),
-      brushed = !! brushedRegions[axisId];
+      brushed = brushedRegions[axisId];
       dLog('brushed', axisId, brushedRegions[axisId], this.get('axisBrush.brushedAxes'));
       return brushed;
     }),
+  brushedDomain : computed('brushedRegion', function () {
+    let
+    brushedRegion = this.get('brushedRegion'),
+    /** refBlockId */
+    axisId = this.get('axis.id'),
+    brushedDomain = this.get('axisApi').axisRange2Domain(axisId, brushedRegion);
+    return brushedDomain;
+  }),
 
   brushedBlocks : computed('brushed', 'block', 'zoomedDomain.{0,1}', function () {
     let blocks;

@@ -661,7 +661,7 @@ export default Service.extend({
     else if (brushedDomain)
       paramAxis.domain = brushedDomain;
     let dataBlockIds = axis.dataBlocks(true, false)
-        .filter((blockS) => ! blockS.block.get('isZoomedOut'))
+        .filter((blockS) => blockS.block.get('isBrushableFeatures'))
      // equiv : blockS.block.get('id')
       .map(function (blockS) { return blockS.axisName; });
     /** The result of passing multiple blockIds to getBlockFeaturesInterval()

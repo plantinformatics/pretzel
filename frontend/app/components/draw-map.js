@@ -3942,7 +3942,7 @@ export default Component.extend(Evented, {
           /* can pass visible=true here - a slight optimisation; it depends on the
            * expression in dataBlocks() which distinguishes data blocks. */
           let childBlocks = axis.dataBlocks(true, false)
-              .filter((blockS) => ! blockS.block.get('isZoomedOut'));
+              .filter((blockS) => blockS.block.get('isBrushableFeatures'));
           let range = [0, axis.yRange()];
           console.log(axis, 'childBlocks', childBlocks, range);
           /*
