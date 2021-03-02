@@ -1,3 +1,6 @@
+/* global process */
+/* global module */
+
 module.exports = function(app) {
   var Role = app.models.Role;
 
@@ -81,6 +84,7 @@ module.exports = function(app) {
       context.property == 'bulkCreate' ||
       context.property == 'paths' ||
       context.property == 'pathsProgressive' ||
+      context.property == 'blockFeaturesAdd' ||
       context.property == 'blockFeaturesCount' ||
       context.property == 'blockFeaturesCounts' ||
       context.property == 'blockFeatureLimits' ||

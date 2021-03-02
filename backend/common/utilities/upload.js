@@ -4,6 +4,10 @@ var fs = require('fs');
 var Promise = require('bluebird')
 const bent = require('bent');
 
+
+const load = require('./load');
+
+
 /* global require */
 /* global exports */
 /* global process */
@@ -226,3 +230,42 @@ function checkDatasetExists(name, models) {
     return results.length > 0;
   });
 }
+
+
+/*----------------------------------------------------------------------------*/
+
+/** Handle POST-ed JSON data, either plain file or gzip-ed,
+ * parse the JSON and apply the given function uploadParsed to it.
+ * Call cb().
+ * @param msg received API request message
+ * @param uploadParsed  function to pass parsed JSON object to
+ * @param cb  node callback
+ */
+exports.handleJson = function(msg, uploadParsed, cb) {
+  // factored from dataset.js : Dataset.upload(), which can be changed to use this.
+
+  // Parse as either .json or .gz
+  if (msg.fileName.endsWith('.json')) {
+    try {
+      let jsonMap = JSON.parse(msg.data);
+      uploadParsed(jsonMap);
+    } catch (e) {
+      console.log(e);
+      cb(Error("Failed to parse JSON"));
+    }
+  } else if (msg.fileName.endsWith('.gz')) {
+    var buffer = new Buffer(msg.data, 'binary');
+    load.gzip(buffer).then(function(json) {
+      let jsonMap = json;
+      uploadParsed(jsonMap);
+    })
+      .catch(function(err) {
+        console.log(err);
+        cb(Error("Failed to read gz file"));
+      });
+  } else {
+    cb(Error('Unsupported file type'));
+  }
+};
+
+/*----------------------------------------------------------------------------*/

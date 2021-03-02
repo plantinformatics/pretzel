@@ -6,6 +6,8 @@ var identity = require('../utilities/identity')
 var task = require('../utilities/task')
 const qs = require('qs');
 
+var upload = require('../utilities/upload');
+const { insert_features_recursive } = require('../utilities/upload');
 var blockFeatures = require('../utilities/block-features');
 var pathsAggr = require('../utilities/paths-aggr');
 var pathsFilter = require('../utilities/paths-filter');
@@ -70,6 +72,57 @@ class SseWritable extends Writable {
 /* global module require */
 
 module.exports = function(Block) {
+
+
+  /*--------------------------------------------------------------------------*/
+
+// copied from localise-blocks.js - may be able to factor, if no changes
+
+/** Add features.
+ * @param features  array of features to add.
+ *  each feature defines .blockId
+ * @return promise (no value)
+ */
+function blockAddFeatures(db, datasetId, blockId, features, cb) {
+  /** convert the ._id and .blockId fields from hex string to ObjectId,
+   * and shallow-copy the other fields. */
+  let featuresId = features.map((f) => {
+    let {/*_id, */...rest} = f;
+    // rest._id = ObjectId(_id);
+    rest.blockId = ObjectId(blockId);
+    return rest;
+  });
+
+  return insert_features_recursive(db, datasetId, featuresId, false, cb);
+}
+
+
+  /** Send a database request to append the features in data to the given block.
+   *
+   * @param data  blockId and features
+   */
+  Block.blockFeaturesAdd = function(data, options, cb) {
+    let db = this.dataSource.connector;
+
+    if (data.filename) {
+      upload.handleJson(data, processJson, cb);
+    } else {
+      processJson(data);
+    }
+
+    function processJson(json) {
+      let
+      blockId = json.blockId,
+      b = {blockId},
+      features = json.features;
+      return blockAddFeatures(db, /*datasetId*/b, blockId, features, cb)
+        .then(() => { console.log('after blockAddFeatures', b); return b.blockId; });
+    }
+
+  };
+
+
+
 
   /** This is the original paths api, prior to progressive-loading, i.e. it
    * returns all paths in a single response.
@@ -751,6 +804,15 @@ module.exports = function(Block) {
   //----------------------------------------------------------------------------
   // When adding a API .remoteMethod() here, also add the route name to backend/server/boot/access.js : genericResolver()
   //----------------------------------------------------------------------------
+
+  Block.remoteMethod('blockFeaturesAdd', {
+    accepts: [
+      {arg: 'data', type: 'object', required: true, http: {source: 'body'}},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+    ],
+    returns: {arg: 'status', type: 'string'},
+    description: "Append the features in data to the given block"
+  });
 
   Block.remoteMethod('blockFeaturesCount', {
     accepts: [
