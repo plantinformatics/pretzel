@@ -35,7 +35,11 @@ BEGIN
     eval "use constant (ColumnsEnum)[$_] => $_;" foreach 0..(ColumnsEnum)-1;
 }
 
+# Forward declarations
 sub convertInput();
+sub createDataset();
+sub appendToBlock();
+
 
 #-------------------------------------------------------------------------------
 
@@ -89,16 +93,18 @@ EOF
 
 ## Get options from ARGV
 my %options;
-getopts("vhd:p:", \%options);
+getopts("vhd:p:b:", \%options);
 
 ## Version and help options display
 use constant versionMsg => "2020 Dec 07 (Don Isdale).\n";
 use constant usageMsg => <<EOF;
-	Usage e.g. : $0 -d Exome_SNPs_1A -p Triticum_aestivum_IWGSC_RefSeq_v1.0 < IWGSC_RefSeq_v1.0.EXOME_SNPs.chr1A.tsv > Exome_SNPs_1A.json
+	Usage e.g. : $0 [-d Exome_SNPs_1A -p Triticum_aestivum_IWGSC_RefSeq_v1.0 ] _or_ -b blockId  < IWGSC_RefSeq_v1.0.EXOME_SNPs.chr1A.tsv > Exome_SNPs_1A.json
 EOF
 
 my $datasetName = $options{d};
 my $parentName = $options{p};
+my $blockId = $options{b};
+
 
 my $refAltSlash = 0;	# option, default 0
 
@@ -109,22 +115,28 @@ elsif ($options{h})
 {
     print usageMsg;
 }
-elsif (!defined ($datasetName))
+elsif (defined ($datasetName) == defined ($blockId))
 {
     print usageMsg, <<EOF;
-    Required option : -d dataset name
+    Required option : -d dataset name or -b block name (not both)
 EOF
 }
-elsif (!defined ($parentName))
+elsif (defined ($parentName) == defined ($blockId))
 {
     print usageMsg, <<EOF;
-    Required option : -p parent (reference dataset) name
+    Required option : -p parent (reference dataset) name or -b block name (not both)
 EOF
 }
 else
 {
-	
-    convertInput();
+    if (! defined ($blockId))
+    { 
+	createDataset();
+    }
+    else
+    {
+	appendToBlock();
+    }
 }
 
 #-------------------------------------------------------------------------------
@@ -135,14 +147,32 @@ my $blockSeparator;
 
 #-------------------------------------------------------------------------------
 
-sub convertInput()
+sub createDataset()
 {
+
     $datasetHeader =~ s/myMap/$datasetName/;
     $datasetHeader =~ s/Triticum_aestivum_IWGSC_RefSeq_v1.0/$parentName/g;
     $datasetHeader =~ s/_Exome_SNPs/_$datasetName/;
 	
-
     print $datasetHeader;
+
+    convertInput();
+
+    optionalBlockFooter();
+    print $datasetFooter;
+}
+sub appendToBlock()
+{
+    # related : $blockHeader
+    print "{\n  \"blockId\" : \"$blockId\",\n",
+	"  \"features\": [\n";
+
+    convertInput();
+
+    print $blockFooter;
+}
+sub convertInput()
+{
     while (<>)
     {
         chomp;
@@ -151,8 +181,6 @@ sub convertInput()
         if (! m/^label	chr	pos/)
         { snpLine($_); }
     }
-    optionalBlockFooter();
-    print $datasetFooter;
 }
 
 sub optionalBlockFooter()
@@ -175,6 +203,12 @@ sub snpLine($)
     my $c = $a[c_chr];
     if (! defined($lastChr) || ($lastChr ne $c))
     {
+	if (defined($blockId))
+	{
+        $lastChr = $c;
+	}
+	else
+	{
         optionalBlockFooter();
 
         # print $c;
@@ -189,6 +223,7 @@ sub snpLine($)
         # replace '1A' in the $blockHeader template with the actual chromosome name $c.
         $h =~ s/1A/$c/g;
         print $h;
+	}
     }
     else # print feature separator
     { print ","; }
