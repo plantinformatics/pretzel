@@ -376,9 +376,21 @@ export default Component.extend(Evented, {
       let featuresAsArray = d3.keys(selectedFeatures)
         .map(function (key) {
           return selectedFeatures[key].map(function(feature) {
-            //feature contains feature name and position, separated by " ".
-            var info = feature.split(" ");
-            return {Chromosome:key,Feature:info[0],Position:info[1]};
+            /** feature is now the Ember object models/feature 
+             * Until 0eeda0a7, feature contained feature name and position, separated by " ".
+             */
+            let selectedFeature = {
+              Chromosome : key,
+              Feature : feature.name,
+              Position : feature.location, /* i.e. .value[0]*/
+              /** Chromosome, Feature and Position can be derived from
+               * feature, so after the various uses of this are
+               * changed to use .feature, the structure can be
+               * replaced by simply feature.
+               */
+              feature
+            };
+            return selectedFeature;
           });
         })
         .reduce(function(a, b) { 
@@ -3970,6 +3982,7 @@ export default Component.extend(Evented, {
 
             let blockFeatures = oa.z[block.axisName]; // or block.get('features')
           d3.keys(blockFeatures).forEach(function(f) {
+            let feature = blockFeatures[f];
             let fLocation;
             if (! isOtherField[f] && ((fLocation = blockFeatures[f].location) !== undefined))
             {
@@ -3983,7 +3996,8 @@ export default Component.extend(Evented, {
                ) {
               //selectedFeatures[p].push(f);
               selectedFeaturesSet.add(f);
-              selectedFeatures[mapChrName].push(f + " " + fLocation);
+              // previously pushed : f + " " + fLocation
+              selectedFeatures[mapChrName].push(feature);
               /** Highlight the features in the brushed regions
                * o[p] : the axis location;  now use 0 because the translation of parent g.axis-outer does x offset of stack.
                * fLocation :  actual feature position in the axis, 
