@@ -260,7 +260,7 @@ export default Model.extend({
     return isSNP;
   }),
   isHighDensity : computed('datasetId.tags', function () {
-    let isHighDensity = this.hasTag('highDensity');
+    let isHighDensity = this.hasTag('HighDensity');
     return isHighDensity;
   }),
   /** hasTag() can now be used in isChartable() and isSubElements() also.
