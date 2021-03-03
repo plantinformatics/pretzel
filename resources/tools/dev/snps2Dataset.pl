@@ -39,6 +39,10 @@ sub convertInput();
 
 #-------------------------------------------------------------------------------
 
+my $shortName = "WGS";	# option, default : Exome
+my $extraTags = ", \"HighDensity\"";	# option, default ''
+
+
 # Used to form the JSON structure of datasets and blocks.
 # Text extracted from pretzel-data/myMap.json
 # These are indented with 4 spaces, whereas the remainder of the file is indented with 2-column tabs.
@@ -47,11 +51,11 @@ my $datasetHeader = <<EOF;
     "name": "myMap",
     "type": "linear",
     "tags": [
-        "SNP"
+        "SNP"$extraTags
     ],
     "parent" : "Triticum_aestivum_IWGSC_RefSeq_v1.0",
     "namespace" : "Triticum_aestivum_IWGSC_RefSeq_v1.0:Triticum_aestivum_IWGSC_RefSeq_v1.0_Exome_SNPs",
-    "meta" : { "type" : "Genome", "shortName" : "Exome" },
+    "meta" : { "type" : "Genome", "shortName" : "$shortName" },
     "blocks": [
 EOF
 
@@ -96,7 +100,7 @@ EOF
 my $datasetName = $options{d};
 my $parentName = $options{p};
 
-my $refAltSlash = 0;
+my $refAltSlash = 0;	# option, default 0
 
 if ($options{v}) {
     print versionMsg;
@@ -205,19 +209,21 @@ sub printFeature($)
     my $chr = shift @a;
     my $pos = shift @a;
     my $label = shift @a;	# c_scaffold_pos
-    my $rest = "";
+    my $values = "";
+    my $ref_alt;
     if ($refAltSlash)
-    { my $ref_alt = shift @a; $rest .= "\"$ref_alt\""; }
+    { $ref_alt = "\"ref\" : \"" . (shift @a) . "\""; }
     else
-    { $rest .= "\"$a[0]\"" . "," . "\"$a[1]\""; };
+    { $ref_alt = "\"ref\" : \"$a[0]\"" . ", " . "\"alt\": \"$a[1]\""; };
+    my $indent = "                    ";
+    if ($ref_alt) { $values .=  ",\n" . $indent . "\"values\" : {" . $ref_alt . "}\n"; }
     print <<EOF;
                {
                     "name": "$label",
                     "value": [
                         $pos,
-                        $pos,
-                        $rest
-                    ]
+                        $pos
+                    ]$values
                 }
 EOF
 }

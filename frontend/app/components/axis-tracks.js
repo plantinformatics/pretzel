@@ -1597,12 +1597,12 @@ export default InAxis.extend({
             }
             interval.description = feature.get('name');
             interval.udescription = intervalUniqueName(interval.description, interval);
-            /* for datasets with tag 'SNP', feature value[2] is reference / alternate,
+            /* for datasets with tag 'SNP', feature .values.{ref,alt} is reference / alternate,
              * e.g. "A/G", "T/C" etc */
-            let tags = feature.get('blockId.datasetId.tags');
-            if (tags && tags.length && (tags.indexOf("SNP") !== -1) && 
-                (typeof interval[2] === 'string')) {
-              interval.description += ('\n' + interval[2]);
+            let values = feature.get('blockId.isSNP') && feature.get('values');
+            if (values && (values.ref || values.alt)) {
+              let refAlt = (values.ref || '') + '/' + (values.alt || '');
+              interval.description += ('\n' + refAlt);
             }
             return interval;
           });
