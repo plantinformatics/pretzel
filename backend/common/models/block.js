@@ -641,15 +641,30 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    * @param blockIds  blocks
    */
   Block.blockFeaturesCount = function(blockIds, options, res, cb) {
+  let
+    fnName = 'blockFeaturesCount',
+    cacheId = fnName + '_' + blockIds.join('_'),
+    result = cache.get(cacheId);
+    if (result) {
+      if (trace_block > 1) {
+        console.log(fnName, cacheId, 'get', result[0] || result);
+      }
+      cb(null, result);
+    } else {
     let db = this.dataSource.connector;
     let cursor =
       blockFeatures.blockFeaturesCount(db, blockIds);
     cursor.toArray()
     .then(function(featureCounts) {
+      if (trace_block > 1) {
+        console.log(fnName, cacheId, 'get', featureCounts[0] || featureCounts);
+      }
+      cache.put(cacheId, featureCounts);
       cb(null, featureCounts);
     }).catch(function(err) {
       cb(err);
     });
+    }
   };
 
   /*--------------------------------------------------------------------------*/
@@ -693,15 +708,31 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    * @param blockId  undefined (meaning all blocks) or id of 1 block to find min/max for
    */
   Block.blockFeatureLimits = function(blockId, options, res, cb) {
+  let
+    fnName = 'blockFeatureLimits',
+    cacheId = fnName + '_' + blockId,
+    result = cache.get(cacheId);
+    if (result) {
+      if (trace_block > 1) {
+        console.log(fnName, cacheId, 'get', result[0] || result);
+      }
+      cb(null, result);
+    } else {
+
     let db = this.dataSource.connector;
     let cursor =
       blockFeatures.blockFeatureLimits(db, blockId);
     cursor.toArray()
     .then(function(limits) {
+      if (trace_block > 1) {
+        console.log(fnName, cacheId, 'put', limits[0] || limits);
+      }
+      cache.put(cacheId, limits);
       cb(null, limits);
     }).catch(function(err) {
       cb(err);
     });
+    }
   };
 
   /*--------------------------------------------------------------------------*/
