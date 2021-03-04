@@ -660,15 +660,31 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    * @param nBins number of bins to partition the block's features into
    */
   Block.blockFeaturesCounts = function(blockId, interval, nBins, options, res, cb) {
+
+  let
+    fnName = 'blockFeaturesCounts',
+    cacheId = fnName + '_' + blockId + '_' + nBins +  '_' + interval.join('_'),
+    result = cache.get(cacheId);
+    if (result) {
+      if (trace_block > 1) {
+        console.log(fnName, cacheId, 'get', result);
+      }
+      cb(null, result);
+    } else {
     let db = this.dataSource.connector;
     let cursor =
       blockFeatures.blockFeaturesCounts(db, blockId, interval, nBins);
     cursor.toArray()
     .then(function(featureCounts) {
+      if (trace_block > 1) {
+        console.log(fnName, cacheId, 'put', featureCounts);
+      }
+      cache.put(cacheId, featureCounts);
       cb(null, featureCounts);
     }).catch(function(err) {
       cb(err);
     });
+    }
   };
 
   /*--------------------------------------------------------------------------*/
