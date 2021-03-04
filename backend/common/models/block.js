@@ -667,7 +667,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     result = cache.get(cacheId);
     if (result) {
       if (trace_block > 1) {
-        console.log(fnName, cacheId, 'get', result);
+        console.log(fnName, cacheId, 'get', result[0]);
       }
       cb(null, result);
     } else {
@@ -677,7 +677,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     cursor.toArray()
     .then(function(featureCounts) {
       if (trace_block > 1) {
-        console.log(fnName, cacheId, 'put', featureCounts);
+        console.log(fnName, cacheId, 'put', featureCounts[0]);
       }
       cache.put(cacheId, featureCounts);
       cb(null, featureCounts);

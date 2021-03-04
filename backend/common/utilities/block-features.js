@@ -159,7 +159,6 @@ exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10) {
     matchBlock =
     [
       {$match : {blockId :  ObjectId(blockId)}},
-      {$sample: { size : 100000}},
       useBucketAuto ? 
         { $bucketAuto : { groupBy: {$arrayElemAt : ['$value', 0]}, buckets: Number(nBins)}  } // , granularity : 'R5'
       : { $bucket     :
