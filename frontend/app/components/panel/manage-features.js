@@ -72,9 +72,9 @@ export default ManageBase.extend({
    */
   showRefAlt(filtered) {
     filtered = filtered.map((f) => {
-      /** remove .feature from structure because it causes Handsontable to give errors. */
-      let {Feature, feature, ...rest} = f;
+      let {Feature, ...rest} = f;
       if (Feature.startsWith('chr')) {
+        let feature = rest.feature;
         // copied from axis-tracks.js : tracksTree, maybe factor depending on format changes
         let values = feature.get('blockId.isSNP') && feature.get('values');
         if (values && (values.ref || values.alt)) {
