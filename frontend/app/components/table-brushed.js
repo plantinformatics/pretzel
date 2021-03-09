@@ -20,6 +20,13 @@ const dLog = console.debug;
 const featureValuesTypes = {
   location : 'number'
 };
+/** Provide default widths for feature .values fields
+ */
+const featureValuesWidths = {
+  ref : 40,
+  alt : 40,
+};
+
 
 export default Component.extend({
 
@@ -100,8 +107,9 @@ export default Component.extend({
     return this.get('extraColumnsNames').map((name) => name.capitalize());
   }),
   extraColumnsWidths : computed('extraColumnsNames.[]', function () {
-    // 40 will suffice for ref, alt;  add defaults for these, as with featureValuesTypes.
-    return this.get('extraColumnsNames').map(() => 40);
+    /** ref, alt are configured in featureValuesWidths; default value
+     * for other columns, which may be user-defined. */
+    return this.get('extraColumnsNames').map((columnName) => featureValuesWidths[columnName] || 120);
   }),
 
   dataForHoTable : computed('data', function () {
