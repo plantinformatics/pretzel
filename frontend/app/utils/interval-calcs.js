@@ -1,3 +1,8 @@
+import { intervalSign } from './draw/zoomPanCalcs';
+import { inInterval } from './draw/interval-overlap';
+
+/*----------------------------------------------------------------------------*/
+
 /* related : see utils/draw/zoomPanCalcs.js
  * backend/common/utilities/interval-overlap.js
  */
@@ -5,6 +10,8 @@
 /*----------------------------------------------------------------------------*/
 
 /* global d3 */
+
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
@@ -101,6 +108,50 @@ function intervalOrdered(interval) {
   return interval;
 }
 
+/** @return i1 - i2, i.e. the part of i1 outside of i2
+ * Result direction is the same as the direction of i1.
+ * @param operation 'intersect', 'union', 'subtract'
+ * @param i1, i2 are intervals, i.e. [start, end]
+ * (i1 and i2 have the same direction)
+ * i1 and i2 overlap, and neither is a sub-interval of the other.
+ * @see subInterval(), featuresCountsResultsMerge().
+ */
+function intervalJoin(operation, i1, i2) {
+  /**
+
+  |----------------|           i1
+          |-----------------|  i2
+  |-------|--------|--------|
+   outside  inside  outside
+          |--------|           intersect
+  |-------|--------|--------|  union
+  |-------|                    subtract
+
+  */
+  const inside = 1, outside = 0;
+  let
+  cmp1 = i1.map((i) => inInterval(i2, i)),
+  /** i1[indexes1[outside]] is outside i2, and
+   * i1[indexes1[inside]] is inside i2.
+   */
+  indexes1 = cmp1.map((i) => (+(i === 0))),
+  /** could calculate cmp2, indexes2, but for current use
+   * (featureCountsResults) can assume that direction of i1 and i2 is
+   * the same, so i2[indexes1[outside]] is inside i1.
+   */
+  interval =
+    (operation === 'intersect') ? [i1[indexes1[inside]],  i2[indexes1[outside]]] :
+    (operation === 'union')     ? [i1[indexes1[outside]], i2[indexes1[inside]]] :
+    (operation === 'subtract')  ? [i1[indexes1[outside]], i2[indexes1[outside]]] :
+    undefined;
+  if (intervalSign(interval) !== intervalSign(i1)) {
+    interval = [interval[1], interval[0]];
+  }
+
+  dLog('intervalJoin', operation, interval, i1, i2, cmp1, indexes1);
+  return interval;
+}
+
 /*----------------------------------------------------------------------------*/
 
 /** Keep the top byte of the mantissa and clear the rest.
@@ -132,5 +183,7 @@ export {
   intervalSize, intervalLimit, intervalOutside, intervalMerge, intervalExtent,
   intervalOverlapCoverage,
   intervalOverlap,
+  intervalOrdered,
+  intervalJoin,
   truncateMantissa
 };

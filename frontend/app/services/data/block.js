@@ -484,7 +484,7 @@ export default Service.extend(Evented, {
                     featuresCounts[0].idWidth[0] :
                     intervalSize(interval) / nBins,
                     result = {binSize, nBins, domain : interval, result : featuresCounts};
-                block.get('featuresCountsResults').pushObject(result);
+                block.featuresCountsResultsMergeOrAppend(result);
                 block.set('featuresCounts', featuresCounts);
               }
             });

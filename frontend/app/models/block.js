@@ -17,9 +17,14 @@ import {
   intervalOverlap,
   intervalOverlapCoverage
 } from '../utils/interval-calcs';
-import { inDomain } from '../utils/draw/interval-overlap';
 import { binEvenLengthRound } from '../utils/draw/interval-bins';
 import { subInterval, overlapInterval } from '../utils/draw/zoomPanCalcs';
+import {
+  featuresCountsResultsCheckOverlap,
+  featuresCountsResultsMerge,
+  featuresCountsResultsFilter,
+  featuresCountsResultsTidy,
+ } from '../utils/draw/featuresCountsResults';
 
 import { featureCountDataProperties } from '../utils/data-types';
 
@@ -1198,6 +1203,51 @@ export default Model.extend({
         }
       );
     return result;
-  }
+  },
+  /** Add the received featuresCountsResult to .featuresCountsResults,
+   * either merging it with an existing result which overlaps the
+   * domain and has the same binSize, or otherwise append.
+   * @param fcResult
+   */
+  featuresCountsResultsMergeOrAppend(fcResult) {
+    featuresCountsResultsTidy(fcResult);
+    // based on featuresCountsResultsSearch()
+    let 
+    featuresCountsResults = this.get('featuresCountsResults'),
+    combined = featuresCountsResults
+      .find(
+        (fcr) => {
+          let found =
+              // if the domains are equal, that is considered a match.
+              (fcResult !== fcr) && (fcResult.binSize === fcr.binSize) && overlapInterval(fcResult.domain, fcr.domain);
+          /* If the received result bridges the gap between two
+           * existing results, then merge all three (later).
+           */
+          if (found) {
+            /*if (trace_block > 1)*/ {
+              dLog('featuresCountsResultsSearch', fcResult.domain.toArray(), fcResult.nBins, fcResult.binSize, fcr.domain.toArray());
+            }
+            /* Since these are counts within the same block, the
+             * domain direction of the results will be the same. */
+            if (featuresCountsResultsCheckOverlap(fcr, fcResult)) {
+              /** if one of fcr or fcResult is a sub-interval then the
+               * result is the other value, otherwise the result is in fcr.
+               */
+              let fcrM = featuresCountsResultsMerge(fcr, fcResult);
+              if (fcrM === fcResult) { // probably ignore this condition, to get update for CP dependency.
+                /** replace fcr with fcrM */
+                featuresCountsResults.removeObject(fcr);
+                featuresCountsResults.pushObject(fcrM);
+                // to bridge a gap, use instead : featuresCountsResultsMergeOrAppend(fcrM)
+              }
+            }
+          }
+          return found;
+        }
+      );
+    if (! combined) {
+      featuresCountsResults.pushObject(fcResult);
+    }
+  },
 
 });
