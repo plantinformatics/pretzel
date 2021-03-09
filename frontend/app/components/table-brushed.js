@@ -20,6 +20,12 @@ const dLog = console.debug;
 const featureValuesTypes = {
   location : 'number'
 };
+/** Provide additional column attributes for feature .values fields
+ */
+const featureValuesColumnsAttributes = {
+  ref : { className: "htCenter"},
+  alt : { className: "htCenter"},
+};
 /** Provide default widths for feature .values fields
  */
 const featureValuesWidths = {
@@ -96,11 +102,17 @@ export default Component.extend({
   }),
   extraColumns : computed('extraColumnsNames.[]', function () {
     return this.get('extraColumnsNames').map(
-      (name) => ({
-        data: name,
-        type: featureValuesTypes[name] || 'text'
-      }),
-    );
+      (name) => {
+        let c = {
+          data: name,
+          type: featureValuesTypes[name] || 'text'
+        };
+        let a = featureValuesColumnsAttributes[name];
+        if (a) {
+          Object.keys(a).forEach((k) => c[k] = a[k]);
+        }
+        return c;
+      });
   }),
 
   extraColumnsHeaders : computed('extraColumnsNames.[]', function () {
