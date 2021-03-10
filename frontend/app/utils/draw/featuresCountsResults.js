@@ -37,7 +37,7 @@ function featuresCountsResultsMerge(fcr1, fcr2) {
     addInterval = intervalJoin('subtract', fcr2.domain, fcr1.domain),
     add = featuresCountsResultsFilter(fcr2, addInterval);
     fcr = fcr1;
-    fcr.result = fcr.result.concat(add.result);
+    fcr.result = featuresCountsResultsConcat(fcr.result, add.result);
     // this doesn't count the empty bins in fcr2 / add
     fcr.nBins += add.result.length;
     fcr.domain = intervalJoin('union', fcr1.domain, fcr2.domain);
@@ -45,6 +45,22 @@ function featuresCountsResultsMerge(fcr1, fcr2) {
   dLog('featuresCountsResultsMerge', fcr, fcr1, fcr2);
   return fcr;
 }
+/** concat() two featuresCountsResult .result[] arrays, preserving ._id order.
+ */
+function featuresCountsResultsConcat(r1, r2) {
+  let r;
+  if (r1[r1.length-1]._id < r2[0]._id) {
+    r = r1.concat(r2);
+  } else if (r2[r2.length-1]._id < r1[0]._id) {
+    r = r2.concat(r1);
+  } else {
+    // ignore order - just concat.
+    dLog('featuresCountsResultsConcat', r1[0], r1[r1.length-1], r2[0], r2[r2.length-1], r1, r2);
+    r = r1.concat(r2);
+  }
+  return r;
+}
+
 
 /** Copy a featuresCountsResult, within the given domain.
  * @return a copy of fcResult, with results outside of domain filtered out.
