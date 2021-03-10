@@ -1,5 +1,5 @@
 import { debounce, throttle, bind as run_bind } from '@ember/runloop';
-import { computed } from '@ember/object';
+import { computed, observer } from '@ember/object';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { on } from '@ember/object/evented';
@@ -63,7 +63,7 @@ export default Component.extend(AxisEvents, {
 
   /** Render elements which are dependent on axis scale - i.e. the axis ticks.
    */
-  axisScaleEffect : computed('axis1d.domainChanged', function () {
+  axisScaleEffect : observer('axis1d.domainChanged', function () {
     let axisScaleChanged = this.get('axis1d.domainChanged');
     let axisID = this.get('axisId');
     // if (trace)

@@ -92,7 +92,8 @@ export default Component.extend({
     'blocks.[]',
     'blocks.@each.featuresForAxis',
     // axis1d.domain also reflects zoomedDomain
-    'axis1d.axis.limits.{0,1}', 'axis1d.zoomedDomainDebounced.{0,1}',
+    'axis1d.axis.limits.{0,1}',
+    'axis1d.{zoomedDomainDebounced,zoomedDomainThrottled}.{0,1}',
     function () {
       let
       blocks = this.get('blocks');
