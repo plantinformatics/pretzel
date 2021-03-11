@@ -163,7 +163,7 @@ exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10) {
         { $bucketAuto : { groupBy: {$arrayElemAt : ['$value', 0]}, buckets: Number(nBins)}  } // , granularity : 'R5'
       : { $bucket     :
           {
-            groupBy: {$arrayElemAt : ['$value', 0]}, boundaries,
+            groupBy: '$value_0' /* was : {$arrayElemAt : ['$value', 0]}*/, boundaries,
 	    'default' : 'outsideBoundaries',
             output: {
               count: { $sum: 1 },
