@@ -678,8 +678,17 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
 
   let
     fnName = 'blockFeaturesCounts',
+    /** when a block is viewed, it is not zoomed (the interval is the
+     * whole domain); this request recurs often is is worth caching,
+     * but when zoomed in there is no repeatability so result is not
+     * cached.  Zoomed results could be collated in an interval tree,
+     * and used when they satisfied one end of a requested interval,
+     * i.e. just the new part would be queried.
+     * GMs generally start at 0, and physical maps at 0.
+     */
+    useCache = ! interval || (interval[0] <= 1),
     cacheId = fnName + '_' + blockId + '_' + nBins +  '_' + interval.join('_'),
-    result = cache.get(cacheId);
+    result = useCache && cache.get(cacheId);
     if (result) {
       if (trace_block > 1) {
         console.log(fnName, cacheId, 'get', result[0]);
@@ -691,10 +700,12 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       blockFeatures.blockFeaturesCounts(db, blockId, interval, nBins);
     cursor.toArray()
     .then(function(featureCounts) {
-      if (trace_block > 1) {
-        console.log(fnName, cacheId, 'put', featureCounts[0]);
+      if (useCache) {
+        if (trace_block > 1) {
+          console.log(fnName, cacheId, 'put', featureCounts[0]);
+        }
+        cache.put(cacheId, featureCounts);
       }
-      cache.put(cacheId, featureCounts);
       cb(null, featureCounts);
     }).catch(function(err) {
       cb(err);
