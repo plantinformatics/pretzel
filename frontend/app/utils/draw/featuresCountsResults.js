@@ -7,6 +7,7 @@ import {
   intervalOverlap,
   intervalJoin,
   intervalSubtract2,
+  intervalsAbut,
 } from '../interval-calcs';
 import { inInterval } from './interval-overlap';
 import { inRange, subInterval, overlapInterval, intervalSign } from './zoomPanCalcs';
@@ -159,7 +160,7 @@ Rough design notes
 
 function featuresCountsResultsSansOverlap (selectedResults) {
   if (! selectedResults || ! selectedResults.length)
-    return;
+    return selectedResults;
 
   /** group into layers by binSize */
   let binSize2fcrs = groupBy(selectedResults, 'binSize');
@@ -184,7 +185,7 @@ function featuresCountsResultsSansOverlap (selectedResults) {
    * accept all of these; set .join = .domain; add them to interval tree
    */
   let 
-  binSizes = Object.keys(binSize2fcrs).sort(),
+  binSizes = Object.keys(binSize2fcrs).sort((a,b) => a - b),
   smallestBinSize = binSizes.shift(),
   firstLayer = binSize2fcrs[smallestBinSize],
   intervalTree = createIntervalTree(firstLayer.mapBy('domain'));
@@ -208,11 +209,17 @@ function featuresCountsResultsSansOverlap (selectedResults) {
     let addedFcrLocal = [];
         let [lo, hi] = fcr.domain;
         intervalTree.queryInterval(lo, hi, function(interval) {
+          let fcrI = domain2Fcr.get(interval);
+          let abut = intervalsAbut(interval, fcr.domain, false);
+          if (fcrI.binSize === fcr.binSize) {
+            // ignore - no overlap, and no rounding required.
+          } else
           /* fcr.domain may be cut by multiple matching intervals.
            */
           if (subInterval(fcr.domain, interval)) {
             // fcr is already covered by interval
-          } else if (subInterval(interval, fcr.domain)) {
+          } else if (subInterval(interval, fcr.domain) &&
+                     ! abut) {
             let
             outer = intervalSubtract2(fcr.domain, interval);
             fcr.domain = outer[0];
@@ -228,7 +235,11 @@ function featuresCountsResultsSansOverlap (selectedResults) {
             addedFcr.push(fcr2);
             cutEdge(fcr, interval, 1);
             cutEdge(fcr2, interval, 0);
-          } else {
+          } else
+            /* fcr.domain may have reduced since start of .queryInterval() so re-check if overlap. */
+          if (abut || !!intervalOverlap([fcr.domain, interval]) ) {
+            /** interval overlaps fcr.domain, or they
+             * abut, so subtract produces just 1 interval. */
             fcr.domain = intervalJoin('subtract', fcr.domain, interval);
             domain2Fcr.set(fcr.domain, fcr);
 
@@ -328,17 +339,24 @@ function featuresCountsResultsRound(fcr, edge, outwards, binSize) {
 
 
 
-  if (fcr.rounded[edge] !== undefined) {
-    dLog(fnName, fcr, edge, outwards, binSize);
-  } else {
+  {
     // if edge is 1 and direction is positive and outwards then round up
     let
     edgeLocn = fcr.domain[edge],
     direction = intervalSign(fcr.domain),
-    up = (edge === 1) ^ !direction ^ !outwards;
-    fcr.rounded[edge] = Math.trunc(edgeLocn / binSize + (up ? 1 : 0)) * binSize;
-    if (Math.abs(fcr.rounded[edge] - fcr.domain[edge]) > binSize) {
-      dLog(fnName, fcr, edge, outwards, binSize, edgeLocn, direction, up, fcr.rounded, fcr.domain, );
+    up = (edge === 1) ^ !direction ^ !outwards,
+    r = Math.trunc(edgeLocn / binSize + (up ? 1 : 0)) * binSize;
+    /** The fcr to be added can be shadowed by multiple accepted fcrs,
+     * which should reduce its size. i.e. if .rounded[edge] is already
+     * defined, then it should be further from .domain[+!edge] than r.
+     */
+    if ((fcr.rounded[edge] !== undefined) && (r !== fcr.rounded[edge])
+        && (intervalSign([fcr.domain[+!edge], r]) !== intervalSign([r, fcr.rounded[edge]]))) {
+      dLog(fnName, r, fcr, edge, outwards, binSize, edgeLocn, direction, up, fcr.rounded, fcr.domain);
+    } else if (Math.abs(fcr.rounded[edge] - fcr.domain[edge]) > binSize) {
+      dLog(fnName, r, fcr, edge, outwards, binSize, edgeLocn, direction, up, fcr.rounded, fcr.domain);
+    } else {
+      fcr.rounded[edge] = r;
     }
   }
 }

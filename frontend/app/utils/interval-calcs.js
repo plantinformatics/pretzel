@@ -178,8 +178,24 @@ function intervalSubtract2(i1, i2) {
   end2 = 1 - start2,
   interval = [[i1[start1], i2[start2]], [i2[end2], i1[end1]]];
 
+  interval.forEach((i3, i) => { if (! intervalSign(i3)) { console.log('intervalSubtract2', i3, i); } });
   dLog('intervalSubtract2', interval, i1, i2);
   return interval;
+}
+
+/** @return true if the 2 intervals have a common endpoint.
+ * Form of i1 and i2 is : [number, number].
+ * The implementation will handle other vector lengths; if sameDir
+ * then i2.length is expected to be >= i1.length
+ * @param sameDir if true then assume i1 and i2 have the same direction.
+ */
+function intervalsAbut(i1, i2, sameDir) {
+  let
+  matchFn = sameDir ?
+    (x1, i) => x1 === i2[i] :
+    (x1, i) => i2.find((x2, j) => (x1 === x2)),
+    match = i1.find(matchFn);
+  return match;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -216,5 +232,6 @@ export {
   intervalOrdered,
   intervalJoin,
   intervalSubtract2,
+  intervalsAbut,
   truncateMantissa
 };
