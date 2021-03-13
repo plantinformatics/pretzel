@@ -1,5 +1,6 @@
 import { intervalSign } from './draw/zoomPanCalcs';
 import { inInterval } from './draw/interval-overlap';
+import { maybeFlip }  from './draw/axis';
 
 /*----------------------------------------------------------------------------*/
 
@@ -110,7 +111,8 @@ function intervalOrdered(interval) {
 
 /** @return i1 - i2, i.e. the part of i1 outside of i2
  * Result direction is the same as the direction of i1.
- * @param operation 'intersect', 'union', 'subtract'
+ * @param operation 'intersect', 'union', 'subtract'.
+ *
  * @param i1, i2 are intervals, i.e. [start, end]
  * (i1 and i2 have the same direction)
  * i1 and i2 overlap, and neither is a sub-interval of the other.
@@ -140,15 +142,43 @@ function intervalJoin(operation, i1, i2) {
    * the same, so i2[indexes1[outside]] is inside i1.
    */
   interval =
-    (operation === 'intersect') ? [i1[indexes1[inside]],  i2[indexes1[outside]]] :
-    (operation === 'union')     ? [i1[indexes1[outside]], i2[indexes1[inside]]] :
-    (operation === 'subtract')  ? [i1[indexes1[outside]], i2[indexes1[outside]]] :
+    (operation === 'intersect') ?  [i1[indexes1[inside]],  i2[indexes1[outside]]] :
+    (operation === 'union')     ?  [i1[indexes1[outside]], i2[indexes1[inside]]] :
+    (operation === 'subtract')  ?  [i1[indexes1[outside]], i2[indexes1[outside]]] :
     undefined;
-  if (intervalSign(interval) !== intervalSign(i1)) {
-    interval = [interval[1], interval[0]];
-  }
+
+  let flip = intervalSign(interval) !== intervalSign(i1);
+  interval = maybeFlip(interval, flip);
 
   dLog('intervalJoin', operation, interval, i1, i2, cmp1, indexes1);
+  return interval;
+}
+
+/** Subtract i2 from i1, where i2 is a sub-interval of i1.
+ * If i2 overlaps i1 but is not a sub-interval of it, then use intervalJoin('subtract', i1, i2).
+ *
+ * This is applicable
+ * when i2 is a subInterval of i1, and hence the result is 2 intervals
+ * in an array; (used by featuresCountsResultsSansOverlap()).
+ */
+function intervalSubtract2(i1, i2) {
+  /**
+
+  |-------------------------|  i1
+          |--------|           i2
+  |-------|        |--------|  subtract2
+
+  */
+
+  let
+  sameDir = intervalSign(i1) === intervalSign(i2),
+  start1 = 0,
+  end1 = 1 - start1,
+  start2 = sameDir ? start1 : end1,
+  end2 = 1 - start2,
+  interval = [[i1[start1], i2[start2]], [i2[end2], i1[end1]]];
+
+  dLog('intervalSubtract2', interval, i1, i2);
   return interval;
 }
 
@@ -185,5 +215,6 @@ export {
   intervalOverlap,
   intervalOrdered,
   intervalJoin,
+  intervalSubtract2,
   truncateMantissa
 };

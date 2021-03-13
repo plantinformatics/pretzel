@@ -7,6 +7,7 @@ import { ensureBlockFeatures } from '../../utils/feature-lookup';
 import { subInterval } from '../../utils/draw/zoomPanCalcs';
 import { intervalSize, intervalOverlapCoverage }  from '../../utils/interval-calcs';
 import { binEvenLengthRound } from '../../utils/draw/interval-bins';
+import { featuresCountsResultsSansOverlap } from '../../utils/draw/featuresCountsResults';
 
 /*----------------------------------------------------------------------------*/
 
@@ -180,6 +181,8 @@ export default Component.extend({
         // choose the result with the smallest binSize  (this is now incorporated into the above sort)
         // .sortBy('binSize')
         .slice(0,1);
+    } else {
+      selectedResults = featuresCountsResultsSansOverlap(selectedResults);
     }
     return selectedResults;
   },
