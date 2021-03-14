@@ -5,6 +5,7 @@ import createIntervalTree from 'interval-tree-1d';
 
 import {
   intervalOverlap,
+  intervalOrdered,
   intervalJoin,
   intervalSubtract2,
   intervalsAbut,
@@ -82,10 +83,27 @@ function resultFilter(out, domain) {
   /* if needed could also support featureCountAutoDataProperties   */
   let datum2Location = featureCountDataProperties.datum2Location;
   out.result = out.result.filter(
-    (fc) => !!intervalOverlap([datum2Location(fc), domain]));
-      // overlapInterval() allows ===
+    (fc) => binInRange(datum2Location(fc), domain));
   out.nBins = out.result.length;
 }
+/** Similar to intervalOverlap().
+ * Regard a bin interval as [closed, open)    
+ */
+function binInRange(binInt, domain) {
+  // related : intervalOverlap([]) ( open)
+  // overlapInterval() allows === (closed)
+  // inRange()  (closed)
+
+  let
+  i0 = intervalOrdered(binInt),
+  i1 = intervalOrdered(domain);
+
+  let within =
+      (i1[0] <= i0[0]) && (i0[1] <= i1[1]);
+
+  return within;
+}
+
 
 
 /** Truncate excess decimal places in fcResult.result[*]._id
@@ -172,6 +190,12 @@ function featuresCountsResultsSansOverlap (selectedResults, preferredBinSize) {
   let
   /** createIntervalTree() handles just the interval, so map from that to the FCR */
   domain2Fcr = new WeakMap();
+  // map .domain before assigning in domain2Fcr .
+  selectedResults.forEach((fcr) => {
+    let direction = intervalSign(fcr.domain);
+    /** round outwards by binSize. if i===0 and direction then up is false */
+    fcr.domain = fcr.domain.map((d, i) => roundToBinSize(d, fcr.binSize, /*up*/ ((i===0) ^ direction )));
+  });
   selectedResults.forEach((fcr) => domain2Fcr.set(fcr.domain, fcr));
 
   /** .join[] and .rounded[] are parallel to .domain[], i.e. [start, end].
@@ -180,8 +204,10 @@ function featuresCountsResultsSansOverlap (selectedResults, preferredBinSize) {
    * fcr.
    * Dropping .join because it is not needed, and it introduces
    * the complication of using  .join[i] || .domain[i] 
+   * Dropping .rounded - use .domain instead
    */
-  selectedResults.forEach((fcr) => { fcr.rounded = []; /*fcr.join = [];*/ });
+  // selectedResults.forEach((fcr) => { fcr.rounded = []; /*fcr.join = [];*/ });
+
 
 
   /** start with the layer with binSize closest to preferredBinSize (only those large
@@ -191,16 +217,30 @@ function featuresCountsResultsSansOverlap (selectedResults, preferredBinSize) {
   let 
   /** sorted in order of closeness to preferredBinSize (lengthRounded).
    * similar calc in selectFeaturesCountsResults().   */
-  closeToPreferred = function(binSize) { return Math.abs(Math.log2(binSize / preferredBinSize) - 1); },
+  closeToPreferred = function(binSize) { return Math.abs(Math.log2(binSize / preferredBinSize)); },
   binSizes = Object.keys(binSize2fcrs).sort((a,b) => closeToPreferred(a) - closeToPreferred(b)),
   firstBinSize = binSizes.shift(),
   firstLayer = binSize2fcrs[firstBinSize],
   intervalTree = createIntervalTree(firstLayer.mapBy('domain'));
+  /** can't intervalTree.remove during queryInterval(), so collate for .remove after query. */
+  let intervalTreeChanges = [];
+
   // firstLayer.forEach((fcr) => fcr.join = fcr.domain);
   /** a subset of selectedResults, containing those which are not entirely shadowed and hence not used. */
   let selectedUsed = firstLayer.slice();
   /** fcr-s created by subtracting a sub-interval */
   let addedFcr = [];
+
+  function setDomain(fcr, domain, inTree) {
+    if (inTree) {
+      intervalTree.remove(fcr.domain);
+    }
+    fcr.domain = domain;
+    domain2Fcr.set(fcr.domain, fcr);
+    if (inTree) {
+      intervalTree.insert(fcr.domain);
+    }
+  }
 
 /*
 . for each subsequent layer :
@@ -235,12 +275,11 @@ function featuresCountsResultsSansOverlap (selectedResults, preferredBinSize) {
                      ! abut) {
             let
             outer = intervalSubtract2(fcr.domain, interval);
-            fcr.domain = outer[0];
-            domain2Fcr.set(fcr.domain, fcr);
+            setDomain(fcr, outer[0], false);
             let {...fcr2} = fcr;
             fcr2.domain = outer[1];
             // copy because it will have different values to fcr.
-            fcr2.rounded = fcr2.rounded.slice();
+            // fcr2.rounded = fcr2.rounded.slice();
             // copy because it may be used to lookup domain2Fcr.
             fcr2.domain = fcr2.domain.slice();
             domain2Fcr.set(fcr2.domain, fcr2);
@@ -262,6 +301,10 @@ function featuresCountsResultsSansOverlap (selectedResults, preferredBinSize) {
             cutEdge(fcr, interval, ci);
           }
         });
+
+      let fromTo;
+      while ((fromTo = intervalTreeChanges.shift())) { let [from, to] = fromTo; intervalTree.remove(from); intervalTree.insert(to); };
+
       /* for edges which are not cut, set .join = .domain
       fcr.domain.forEach((d, i) => {
         if (fcr.join[i] === undefined) { fcr.join[i] = d; }});
@@ -277,6 +320,9 @@ function featuresCountsResultsSansOverlap (selectedResults, preferredBinSize) {
   /** fcr (i1) is cut by i2 at i2[+!edge].
    * Round the edge.
    *
+   * @param fcr not yet accepted (not in intervalTree)
+   *
+   * @desc
    * For featuresCountsResults, direction is true (positive) because
    * it is determined by the block domain, which is positive; some of
    * this code handles direction variation, but there seems no point
@@ -289,6 +335,7 @@ function featuresCountsResultsSansOverlap (selectedResults, preferredBinSize) {
    . on the result already accepted (smaller binSize) : round inwards by .binSize of the result being added.
 */
     let
+    /** i2 is from intervalTree. */
     fcr2 = domain2Fcr.get(i2),
     /** in the original design the binSize2fcrs[smallestBinSize] was
      * accepted first, so here fcr.binSize was always the larger.  */
@@ -299,6 +346,10 @@ function featuresCountsResultsSansOverlap (selectedResults, preferredBinSize) {
       // fcr.domain[edge] has been limited at i2[+!edge]
       featuresCountsResultsRound(fcr, edge, true, binSize);
       featuresCountsResultsRound(fcr2, +!edge, false, binSize);
+      // fcr2 is already in tree, so if .domain changed, update tree.
+      if (i2[+!edge] !== fcr2.domain[+!edge]) {
+        intervalTreeChanges.push([i2, fcr2.domain]);
+      }
     }
   }
 
@@ -308,6 +359,7 @@ function featuresCountsResultsSansOverlap (selectedResults, preferredBinSize) {
   . all results have .rounded and are non-overlapping
   */
   let withAdded = selectedUsed.concat(addedFcr);
+  if (false)
   withAdded.forEach((fcr) => {
     fcr.domain.forEach((r, i) => (fcr.rounded[i] ||= fcr.domain[i])); 
   });
@@ -316,7 +368,7 @@ function featuresCountsResultsSansOverlap (selectedResults, preferredBinSize) {
   . slice each result : removing bins at each end which are outside .rounded
   */
   withAdded.forEach((fcr) => {
-    resultFilter(fcr, fcr.rounded);
+    resultFilter(fcr, fcr.domain/*rounded*/);
   });
 
   /* Result is single-layer - no overlapping featuresCountsResults. */
@@ -365,7 +417,11 @@ function featuresCountsResultsRound(fcr, edge, outwards, binSize) {
     edgeLocn = fcr.domain[edge],
     direction = intervalSign(fcr.domain),
     up = (edge === 1) ^ !direction ^ !outwards,
-    r = Math.trunc(edgeLocn / binSize + (up ? 1 : 0)) * binSize;
+    r = roundToBinSize(edgeLocn, binSize, up);
+    if (true) {
+      // doesn't affect domain2Fcr.
+      fcr.domain[edge] = r;
+    } else {
     /** The fcr to be added can be shadowed by multiple accepted fcrs,
      * which should reduce its size. i.e. if .rounded[edge] is already
      * defined, then it should be further from .domain[+!edge] than r.
@@ -378,9 +434,22 @@ function featuresCountsResultsRound(fcr, edge, outwards, binSize) {
     } else {
       fcr.rounded[edge] = r;
     }
+    }
   }
 }
 
+function  roundToBinSize(edgeLocn, binSize, up) {
+  let r = Math.trunc(edgeLocn / binSize + (up ? 1 : 0)) * binSize;
+  return r;
+}
+
+/*----------------------------------------------------------------------------*/
+
+/** trace an array of FCR-s.  formatted for pasting into web inspector console.
+ */
+const
+fcrsShow = function (fcrs)  { fcrs.forEach((fcr) => console.log('featuresCountsResults show', fcr, fcr.domain, fcr.rounded, fcr.result[0], fcr.result[fcr.result.length-1])); }
+;
 
 /*----------------------------------------------------------------------------*/
 
