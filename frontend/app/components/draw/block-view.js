@@ -182,7 +182,7 @@ export default Component.extend({
         // .sortBy('binSize')
         .slice(0,1);
     } else {
-      selectedResults = featuresCountsResultsSansOverlap(selectedResults);
+      selectedResults = featuresCountsResultsSansOverlap(selectedResults, lengthRounded);
     }
     return selectedResults;
   },

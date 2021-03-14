@@ -156,9 +156,13 @@ Rough design notes
  * This assumes the result type is featureCountDataProperties, not featureCountAutoDataProperties.
  * It would be easy to add an _id lookup function to featureCount{,Auto}DataProperties,
  * but bucketauto would not suit the current requirements, and using defined boundaries does.
+ *
+ * @param preferredBinSize the binSize the user has configured as
+ * preferred, calculated from axis size in pixels and zoomedDomain and
+ * featuresCountsNBins; see lengthRounded in @see selectFeaturesCountsResults()
  */
 
-function featuresCountsResultsSansOverlap (selectedResults) {
+function featuresCountsResultsSansOverlap (selectedResults, preferredBinSize) {
   if (! selectedResults || ! selectedResults.length)
     return selectedResults;
 
@@ -180,16 +184,21 @@ function featuresCountsResultsSansOverlap (selectedResults) {
   selectedResults.forEach((fcr) => { fcr.rounded = []; /*fcr.join = [];*/ });
 
 
-  /** start with the layer with smallest binSize (only those large
+  /** start with the layer with binSize closest to preferredBinSize (only those large
    * enough to display are chosen by selectFeaturesCountsResults())
    * accept all of these; set .join = .domain; add them to interval tree
    */
   let 
-  binSizes = Object.keys(binSize2fcrs).sort((a,b) => a - b),
-  smallestBinSize = binSizes.shift(),
-  firstLayer = binSize2fcrs[smallestBinSize],
+  /** sorted in order of closeness to preferredBinSize (lengthRounded).
+   * similar calc in selectFeaturesCountsResults().   */
+  closeToPreferred = function(binSize) { return Math.abs(Math.log2(binSize / preferredBinSize) - 1); },
+  binSizes = Object.keys(binSize2fcrs).sort((a,b) => closeToPreferred(a) - closeToPreferred(b)),
+  firstBinSize = binSizes.shift(),
+  firstLayer = binSize2fcrs[firstBinSize],
   intervalTree = createIntervalTree(firstLayer.mapBy('domain'));
   // firstLayer.forEach((fcr) => fcr.join = fcr.domain);
+  /** a subset of selectedResults, containing those which are not entirely shadowed and hence not used. */
+  let selectedUsed = firstLayer.slice();
   /** fcr-s created by subtracting a sub-interval */
   let addedFcr = [];
 
@@ -202,10 +211,13 @@ function featuresCountsResultsSansOverlap (selectedResults) {
     */
   binSizes.forEach((binSize) => {
     let fcrs = binSize2fcrs[binSize];
-    fcrs.forEach(subtractAccepted);
+    fcrs.forEach((fcr) => subtractAccepted(fcr) && selectedUsed.push(fcr));
   });
 
+  /** @return true if fcr is not completely shadowed by a previously-accepted result.
+   */
   function subtractAccepted(fcr) {
+    let used = true;
     let addedFcrLocal = [];
         let [lo, hi] = fcr.domain;
         intervalTree.queryInterval(lo, hi, function(interval) {
@@ -218,6 +230,7 @@ function featuresCountsResultsSansOverlap (selectedResults) {
            */
           if (subInterval(fcr.domain, interval)) {
             // fcr is already covered by interval
+            used = false;
           } else if (subInterval(interval, fcr.domain) &&
                      ! abut) {
             let
@@ -237,7 +250,8 @@ function featuresCountsResultsSansOverlap (selectedResults) {
             cutEdge(fcr2, interval, 0);
           } else
             /* fcr.domain may have reduced since start of .queryInterval() so re-check if overlap. */
-          if (abut || !!intervalOverlap([fcr.domain, interval]) ) {
+          if (!!intervalOverlap([fcr.domain, interval]) ) {
+            /** this case includes (subInterval && abut). */
             /** interval overlaps fcr.domain, or they
              * abut, so subtract produces just 1 interval. */
             fcr.domain = intervalJoin('subtract', fcr.domain, interval);
@@ -252,8 +266,11 @@ function featuresCountsResultsSansOverlap (selectedResults) {
       fcr.domain.forEach((d, i) => {
         if (fcr.join[i] === undefined) { fcr.join[i] = d; }});
         */
-      intervalTree.insert(fcr.domain);
+      if (used) {
+        intervalTree.insert(fcr.domain);
+      }
       addedFcrLocal.forEach((fcr) => subtractAccepted(fcr));
+      return used;
     }
 
 
@@ -272,13 +289,16 @@ function featuresCountsResultsSansOverlap (selectedResults) {
    . on the result already accepted (smaller binSize) : round inwards by .binSize of the result being added.
 */
     let
-    fcr2 = domain2Fcr.get(i2);
+    fcr2 = domain2Fcr.get(i2),
+    /** in the original design the binSize2fcrs[smallestBinSize] was
+     * accepted first, so here fcr.binSize was always the larger.  */
+    binSize = Math.max(fcr2.binSize, fcr.binSize);
     /*if ((fcr.rounded[+!edge] !== undefined) || (fcr2.rounded[edge] !== undefined)) {
       dLog('cutEdge', fcr, i2, edge);
     } else*/ {
       // fcr.domain[edge] has been limited at i2[+!edge]
-      featuresCountsResultsRound(fcr, edge, true, fcr.binSize);
-      featuresCountsResultsRound(fcr2, +!edge, false, fcr.binSize);
+      featuresCountsResultsRound(fcr, edge, true, binSize);
+      featuresCountsResultsRound(fcr2, +!edge, false, binSize);
     }
   }
 
@@ -287,7 +307,7 @@ function featuresCountsResultsSansOverlap (selectedResults) {
     . where .rounded is not set, set it to .join
   . all results have .rounded and are non-overlapping
   */
-  let withAdded = selectedResults.concat(addedFcr);
+  let withAdded = selectedUsed.concat(addedFcr);
   withAdded.forEach((fcr) => {
     fcr.domain.forEach((r, i) => (fcr.rounded[i] ||= fcr.domain[i])); 
   });
@@ -302,7 +322,7 @@ function featuresCountsResultsSansOverlap (selectedResults) {
   /* Result is single-layer - no overlapping featuresCountsResults. */
   let single = withAdded;
 
-  dLog('featuresCountsResultsSansOverlap', single, selectedResults, binSizes);
+  dLog('featuresCountsResultsSansOverlap', single, selectedUsed, addedFcr, selectedResults, firstBinSize, binSizes);
   return single;
 }
 
