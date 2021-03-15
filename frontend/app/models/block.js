@@ -578,9 +578,11 @@ export default Model.extend({
             }
           } else {
             blocks.forEach((block, i) => {
-              if ((block === undefined) && (i === 0))
+              if ((block === undefined) && (i === 0)) {
                 dLog('viewedReferenceBlock', 'reference not viewed', datasetName, scope);
-              if (scope !== block.get('scope')) {
+              } else if ((block === undefined)) {
+                dLog('viewedReferenceBlock', 'block undefined', datasetName, scope);
+              } else if (scope !== block.get('scope')) {
                 dLog('viewedReferenceBlock', 'not grouped by scope', block.get('id'), scope, block._internalModel.__data, datasetName);
               }
               /* viewedBlocksByReferenceAndScope() does not filter out
