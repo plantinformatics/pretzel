@@ -251,14 +251,15 @@ sub printFeature($)
     else
     { $ref_alt = "\"ref\" : \"$a[0]\"" . ", " . "\"alt\": \"$a[1]\""; };
     my $indent = "                    ";
-    if ($ref_alt) { $values .=  ",\n" . $indent . "\"values\" : {" . $ref_alt . "}\n"; }
+    if ($ref_alt) { $values .=  ",\n" . $indent . "\"values\" : {" . $ref_alt . "}"; }
     print <<EOF;
                {
                     "name": "$label",
                     "value": [
                         $pos,
                         $pos
-                    ]$values
+                    ],
+                    "value_0": $pos$values
                 }
 EOF
 }
