@@ -9,6 +9,7 @@ export default Model.extend({
    * handle both for now;  chrData() also handles either.  */
   value: attr(),
   range: attr(),
+  values: attr(),
   parentId: belongsTo('feature', {inverse: 'features'}),
   features: hasMany('feature', {inverse: 'parentId'}),
 

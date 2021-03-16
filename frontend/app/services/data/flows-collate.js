@@ -246,10 +246,11 @@ export default Service.extend({
    * dragging which changes left-to-right order and stacking.
    * The values b0, b1 are block IDs.
    */
-  blockAdjIds : computed('block.viewedIds.[]', 'adjAxesArr.[]', function () {
-    let viewedIds = this.get('block.viewedIds');
+  blockAdjIds : computed('block.viewedForPaths.[]', 'adjAxesArr.[]', function () {
+    /** this could be used as the basis for adjAxes */
+    let blockForPaths = this.get('blockForPaths');
     let axesP = this.get('oa.axesP');
-    dLog('blockAdjIds', viewedIds, axesP);
+    dLog('blockAdjIds', blockForPaths, axesP);
     let blockAdjIds = run(this, convert);
     /** Convert the hash adjAxes, e.g. adjAxes[b0] === b1, to an array of ordered pairs [b0, b1]
      */

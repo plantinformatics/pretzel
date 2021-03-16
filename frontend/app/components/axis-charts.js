@@ -274,8 +274,11 @@ export default InAxis.extend({
     dLog('resizeEffectHere in axis-charts', this.get('axisID'));
   }),
   drawContentEffect : computed(
-    /** .zoomedDomain is (via InAxis) axis1d.zoomedDomain; for this dependency use the -Debounced */
-  'axis1d.currentPosition.yDomainDebounced',
+    /** .zoomedDomain is (via InAxis) axis1d.zoomedDomain; for this dependency use the -Debounced
+     * and -Throttled so that it maintains a steady update and catches the last update.
+     * equiv : this.axis1d.{zoomedDomainThrottled,zoomedDomainDebounced}
+     */
+  'axis1d.currentPosition.{yDomainDebounced,yDomainThrottled}',
   'blockViews.@each.isZoomedOut',
     /** .@each.x.y is no longer supported; if these dependencies are needed, can
      * define block.featuresCounts{,Results}Length
@@ -384,7 +387,9 @@ export default InAxis.extend({
     charts = this.get('chartsVariableWidth'),
     chartWidths = charts.mapBy('allocatedWidth')
       .filter((aw) => aw),
-    widthSum = chartWidths.reduce((sum, w) => sum += w, 0);
+    widthSum = chartWidths.reduce((sum, w) => sum += w, 0),
+    chartWidth = this.childWidths.get(className);
+    if (chartWidth && chartWidth[1] !== widthSum) {
     // later allocate each chart, for separate offsets : (this.get('className') + '_' + chart.name)
     next(() => {
       let childWidths = this.get('childWidths'),
@@ -394,6 +399,7 @@ export default InAxis.extend({
         childWidths.set(className, [widthSum, widthSum]);
       }
     });
+    }
   },
 
   /**

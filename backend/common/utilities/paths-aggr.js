@@ -6,6 +6,7 @@ var ObjectID = require('mongodb').ObjectID;
 
 /* global exports */
 /* global require */
+/* global process */
 
 /* globals defined in mongo shell */
 /* global db ObjectId print */
@@ -17,6 +18,11 @@ const trace_aggr = 1;
 
 /** ObjectId is used in mongo shell; the equivalent defined by the node js client library is ObjectID; */
 const ObjectId = ObjectID;
+
+/** blockFeaturesInterval() can use a query which is covered by the index
+ * if .value[0] has been copied as .value_0
+ */
+const use_value_0 = process.env.use_value_0 || false;
 
 /*----------------------------------------------------------------------------*/
 
@@ -325,6 +331,22 @@ function valueBound(intervals, b, l) {
   );
   return r;
 };
+/** Similar to valueBound, but use value_0 instead of value[0].
+ * This is applicable when blockIds.length is 1, i.e. b === 0.
+ * For length 2 it could match either domain for both blocks, later
+ * $match would filter out the extra, and it would get the performance
+ * benefit from the index (narrow the docsExamined).
+ * @param b 0 for blockId0, axes[0]
+ */
+function valueBounds_0(intervals, b) {
+  let r = {
+    $gte : +intervals.axes[b].domain[0],
+    $lte : +intervals.axes[b].domain[1]
+  };
+  return r;
+}
+
+
 /** If axis b is zoomed, append conditions on location (value[]) to the given array eq.
  *
  * If the axis has not been zoomed then Stacked : zoomed will be undefined,
@@ -348,6 +370,23 @@ function blockFilter(intervals, eq, b) {
     eq;
   return r;
 };
+/** Similar to blockFilter(); uses .value_0 (a copy of .value[0]),
+ * which enables a $match without $expr and hence is able to narrow the
+ * document pipeline using the index {blockId, value_0}.
+ * This can be inserted before a $match constructed using blockFilter();
+ * the index use of the first match determines performance.
+ */
+function blockFilterValue0(intervals, blockId) {
+  let
+  b = 0,
+  l = 0,
+  matchBlock =
+      {$match : {
+        blockId : ObjectId(blockId),
+        value_0 : valueBounds_0(intervals, 0)
+      } };
+  return matchBlock;
+}
 /*----------------------------------------------------------------------------*/
 
 /** The interval params passed to .pathsDirect() and .blockFeaturesInterval()
@@ -669,6 +708,10 @@ exports.blockFeaturesInterval = function(db, blockIds, intervals) {
         blockFilters
       } }},
     ];
+  if (use_value_0 && (blockIds.length === 1)) {
+    let useIndex = blockFilterValue0(intervals, blockIds[0]);
+    filterValue.unshift(useIndex);
+  }
 
 
   let pipeline;

@@ -223,7 +223,7 @@ Block.prototype.datasetHasParent = function() {
 };
 /** @return true if this Block is a data block, not the reference block.
  */
-Block.prototype.isData = function() {
+Block.prototype.isData = function(showPaths) {
   let axis = this.getAxis(),
   blockR = this.block,
   /** The most significant check here is blockR.get('featureCount'); now that we
@@ -239,8 +239,11 @@ Block.prototype.isData = function() {
    * in populating the blocks parameter of getBlockFeaturesInterval().
    * (checking if features is defined and features.length > 0)
    */
-  isData =
-    (blockR.get('namespace') || blockR.get('isChartable') || blockR.get('features.length') || blockR.get('featureCount') || ! this.isReference());
+  isData = blockR.get('isData');
+    // (blockR.get('namespace') || blockR.get('isChartable') || blockR.get('features.length') || blockR.get('featureCount') || ! this.isReference());
+  if (showPaths) {
+    isData &&= blockR.get('showPaths');
+  }
   return isData;
 };
 
@@ -783,16 +786,17 @@ Stack.prototype.childBlocks = function (names)
 /** @return all the blocks in this axis which are data blocks, not reference blocks.
  * Data blocks are recognised by having a .namespace;
  * @param visible if true then exclude blocks which are not visible
+ * @param showPaths if true then exclude blocks which are not for paths alignment
  */
-Stacked.prototype.dataBlocks = function (visible)
+Stacked.prototype.dataBlocks = function (visible, showPaths)
 {
   let db = this.blocks
     .filter(function (block) {
       return (! visible || block.visible)
-        && block.isData(); });
+        && block.isData(showPaths); });
   if (trace_stack > 1)
     dLog(
-      'Stacked', 'blocks', visible, this.blocks.map(function (block) { return block.longName(); }),
+      'Stacked', 'blocks', visible, showPaths, this.blocks.map(function (block) { return block.longName(); }),
       this.axisName, this.mapName, 'dataBlocks',
       db.map(function (block) { return block.longName(); }));
   return db;
@@ -800,13 +804,14 @@ Stacked.prototype.dataBlocks = function (visible)
 /** @return all the blocks in this Stack which are data blocks, not reference blocks.
  * Data blocks are recognised by having a .namespace;
  * this is a different criteria to @see Stack.prototype.dataBlocks0().
+ * @param showPaths if true then exclude blocks which are not for paths alignment
  */
-Stack.prototype.dataBlocks = function ()
+Stack.prototype.dataBlocks = function (showPaths)
 {
   /** Currently only visible == true is used, but could make this a param.  */
   let visible = true;
   let axesDataBlocks = this.axes
-    .map(function (stacked) { return stacked.dataBlocks(visible); } ),
+    .map(function (stacked) { return stacked.dataBlocks(visible, showPaths); } ),
   db = Array.prototype.concat.apply([], axesDataBlocks)
   ;
   // Stacked.longName() handles blocks also.

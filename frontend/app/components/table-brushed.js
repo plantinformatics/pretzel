@@ -1,6 +1,9 @@
 import $ from 'jquery';
+
 import Component from '@ember/component';
 import { observer } from '@ember/object';
+import { computed } from '@ember/object';
+
 
 import { eltClassName } from '../utils/domElements';
 
@@ -11,6 +14,25 @@ import config from '../config/environment';
 
 const trace = 0;
 const dLog = console.debug;
+
+/** Provide default types for feature .values fields
+ */
+const featureValuesTypes = {
+  location : 'number'
+};
+/** Provide additional column attributes for feature .values fields
+ */
+const featureValuesColumnsAttributes = {
+  ref : { className: "htCenter"},
+  alt : { className: "htCenter"},
+};
+/** Provide default widths for feature .values fields
+ */
+const featureValuesWidths = {
+  ref : 40,
+  alt : 40,
+};
+
 
 export default Component.extend({
 
@@ -62,17 +84,66 @@ export default Component.extend({
       this.get('createTable').apply(this);
   },
 
+  extraColumnsNames : computed('data.[]', function () {
+    let
+    data = this.get('data'),
+    nameSet = data.reduce(
+      (result, datum) => {
+        let feature = datum.feature;
+        if (feature.values) {
+          Object.keys(feature.values).forEach((n) => result.add(n));
+        }
+        return result;
+      },
+      new Set()),
+    names = Array.from(nameSet.values());
+    dLog('extraColumnsNames', names, data);
+    return names;
+  }),
+  extraColumns : computed('extraColumnsNames.[]', function () {
+    return this.get('extraColumnsNames').map(
+      (name) => {
+        let c = {
+          data: name,
+          type: featureValuesTypes[name] || 'text'
+        };
+        let a = featureValuesColumnsAttributes[name];
+        if (a) {
+          Object.keys(a).forEach((k) => c[k] = a[k]);
+        }
+        return c;
+      });
+  }),
+
+  extraColumnsHeaders : computed('extraColumnsNames.[]', function () {
+    return this.get('extraColumnsNames').map((name) => name.capitalize());
+  }),
+  extraColumnsWidths : computed('extraColumnsNames.[]', function () {
+    /** ref, alt are configured in featureValuesWidths; default value
+     * for other columns, which may be user-defined. */
+    return this.get('extraColumnsNames').map((columnName) => featureValuesWidths[columnName] || 120);
+  }),
+
+  dataForHoTable : computed('data', function () {
+    let data = this.get('data').map((f) => {
+      /** remove .feature from structure because it causes Handsontable to give errors. */
+      let {feature, ...rest} = f,
+          values = feature.values;
+      if (values) {
+        Object.keys(values).forEach((valueName) => rest[valueName] = values[valueName]);
+      }
+      return rest;
+    });
+    return data;
+  }),
   createTable: function() {
     var that = this;
     dLog("createTable", this);
 
     let tableDiv = $("#table-brushed")[0];
     dLog("tableDiv", tableDiv);
-      var table = new Handsontable(tableDiv, {
-        data: this.get('data') || [['', '', '']],
-        minRows: 1,
-        rowHeaders: true,
-        columns: [
+    let
+    columns = [
           {
             data: 'Chromosome',
             type: 'text'
@@ -88,14 +159,23 @@ export default Component.extend({
               pattern: '0,0.*'
             }
           }
-        ],
-        colHeaders: [
+    ].concat(this.get('extraColumns')),
+    colHeaders = [
           '<span title = "e.g. chromosome or linkage group">Block</span>',
           '<span title = "e.g. marker / gene">Feature</span>',
           'Position'
-        ],
+    ].concat(this.get('extraColumnsHeaders')),
+    colWidths = [100, 135, 60]
+      .concat(this.get('extraColumnsWidths'));
+
+      var table = new Handsontable(tableDiv, {
+        data: this.get('dataForHoTable') || [['', '', '']],
+        minRows: 1,
+        rowHeaders: true,
+        columns,
+        colHeaders,
         headerTooltips: true,
-        colWidths: [100, 135, 60],
+        colWidths,
         height: 600,
         manualRowResize: true,
         manualColumnResize: true,
@@ -133,8 +213,8 @@ export default Component.extend({
   },
 
 
-  onSelectionChange: observer('data', function () {
-    let data = this.get('data'),
+  onSelectionChange: observer('dataForHoTable', function () {
+    let data = this.get('dataForHoTable'),
     me = this,
     table = this.get('table');
     if (table)

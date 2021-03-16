@@ -484,7 +484,7 @@ export default Service.extend(Evented, {
                     featuresCounts[0].idWidth[0] :
                     intervalSize(interval) / nBins,
                     result = {binSize, nBins, domain : interval, result : featuresCounts};
-                block.get('featuresCountsResults').pushObject(result);
+                block.featuresCountsResultsMergeOrAppend(result);
                 block.set('featuresCounts', featuresCounts);
               }
             });
@@ -875,6 +875,20 @@ export default Service.extend(Evented, {
             .map(function(blockR) { return blockR.view.longName(); })
         );
       return records;  // .toArray()
+    }),
+
+  /** @return blocks which are viewed and are configured for display
+   * of paths, i.e.  are data blocks not reference, have
+   * datasetId._meta.paths === true, and datasetId.tags[] does not
+   * contain 'SNP'
+   */
+  viewedForPaths: computed(
+    'viewed.@each.{isData,showPaths}',
+    function() {
+      let blocks = this.get('viewed'),
+          filtered = blocks.filter((block) => block.get('isData') && block.get('showPaths'));
+      dLog('viewedForPaths', blocks.length, filtered);
+      return filtered;
     }),
 
   /*----------------------------------------------------------------------------*/

@@ -310,7 +310,7 @@ export default Service.extend({
         blockId = blockId.get('id');
       }
       if (trace_pathsP > 3)
-	dLog('pushFeature', f.blockId, c.get('blockId.features.length'), c.get('blockId.featuresLength'), f, 'featuresLength');
+        dLog('pushFeature', f.blockId, c.get('blockId.features.length'), c.get('blockId.featuresLength'), f, 'featuresLength');
       storeFeature(stacks.oa, flowsService, f.name, c, blockId);
       if (trace_pathsP > 2)
         dLog(c.get('id'), c._internalModel.__data);
@@ -660,7 +660,8 @@ export default Service.extend({
     }
     else if (brushedDomain)
       paramAxis.domain = brushedDomain;
-    let dataBlockIds = axis.dataBlocks(true)
+    let dataBlockIds = axis.dataBlocks(true, false)
+        .filter((blockS) => blockS.block.get('isBrushableFeatures'))
      // equiv : blockS.block.get('id')
       .map(function (blockS) { return blockS.axisName; });
     /** The result of passing multiple blockIds to getBlockFeaturesInterval()

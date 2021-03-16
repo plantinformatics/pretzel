@@ -1,5 +1,5 @@
 import { debounce, throttle, bind as run_bind } from '@ember/runloop';
-import { computed } from '@ember/object';
+import { computed, observer } from '@ember/object';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { on } from '@ember/object/evented';
@@ -8,6 +8,8 @@ import { task, timeout, didCancel } from 'ember-concurrency';
 
 import AxisEvents from '../../utils/draw/axis-events';
 import { transitionEndPromise } from '../../utils/draw/d3-svg';
+
+/* global d3 */
 
 const trace = 0;
 const dLog = console.debug;
@@ -61,7 +63,7 @@ export default Component.extend(AxisEvents, {
 
   /** Render elements which are dependent on axis scale - i.e. the axis ticks.
    */
-  axisScaleEffect : computed('axis1d.domainChanged', function () {
+  axisScaleEffect : observer('axis1d.domainChanged', function () {
     let axisScaleChanged = this.get('axis1d.domainChanged');
     let axisID = this.get('axisId');
     // if (trace)
@@ -96,7 +98,7 @@ export default Component.extend(AxisEvents, {
       featureTicks.showTickLocations(
       this.featuresOfBlockLookup.bind(this),
       false,  /* hover text not required on axis feature triangles. */
-      'foundFeatures', false,
+      'foundFeatures', true,
       this.clickTriangle.bind(this)        
       );
     }
@@ -235,7 +237,7 @@ export default Component.extend(AxisEvents, {
   ctrlHandler(event) {
     // as in : query-params.js : optionsToDom()
     d3.select('body')
-      .classed("ctrl-modifier", event.ctrlKey)
+      .classed("ctrl-modifier", event.ctrlKey);
   }
 
 

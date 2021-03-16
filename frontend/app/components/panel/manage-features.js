@@ -64,8 +64,29 @@ export default ManageBase.extend({
         return include
       })
     }
+    filtered = this.showRefAlt(filtered);
     return filtered
   }),
+  /** if .Feature is just "chr"* and .feature.blockId.isSNP and it has
+   * .values{ref,alt} then show ref/alt in place of .Feature.
+   */
+  showRefAlt(filtered) {
+    filtered = filtered.map((f) => {
+      let {Feature, ...rest} = f;
+      if (Feature.startsWith('chr')) {
+        let feature = rest.feature;
+        // copied from axis-tracks.js : tracksTree, maybe factor depending on format changes
+        let values = feature.get('blockId.isSNP') && feature.get('values');
+        if (values && (values.ref || values.alt)) {
+          let refAlt = (values.ref || '') + '/' + (values.alt || '');
+          Feature = refAlt;
+        }
+      }
+      rest.Feature = Feature;
+      return rest;
+    });
+    return filtered;
+  },
   actions: {
     changeFilter: function(f) {
       this.set('filter', f)

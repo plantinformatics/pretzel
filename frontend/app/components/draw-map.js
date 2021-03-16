@@ -376,9 +376,21 @@ export default Component.extend(Evented, {
       let featuresAsArray = d3.keys(selectedFeatures)
         .map(function (key) {
           return selectedFeatures[key].map(function(feature) {
-            //feature contains feature name and position, separated by " ".
-            var info = feature.split(" ");
-            return {Chromosome:key,Feature:info[0],Position:info[1]};
+            /** feature is now the Ember object models/feature 
+             * Until 0eeda0a7, feature contained feature name and position, separated by " ".
+             */
+            let selectedFeature = {
+              Chromosome : key,
+              Feature : feature.name,
+              Position : feature.location, /* i.e. .value[0]*/
+              /** Chromosome, Feature and Position can be derived from
+               * feature, so after the various uses of this are
+               * changed to use .feature, the structure can be
+               * replaced by simply feature.
+               */
+              feature
+            };
+            return selectedFeature;
           });
         })
         .reduce(function(a, b) { 
@@ -1229,7 +1241,7 @@ export default Component.extend(Evented, {
           breakPoint(b.longName(), isParent, 'should be !=', isChild, b.axis, features);
         if (filterChildren && isParent)
         {
-          let add = b.axis.dataBlocks().filter(function (b) { return b.block.get('isViewed'); });
+          let add = b.axis.dataBlocks(false, false).filter(function (b) { return b.block.get('isViewed'); });
           if (add.length)
             console.log(b.longName(), 'add to orphaned :', Block_list_longName(add));
           orphaned = orphaned.concat(add);
@@ -3941,7 +3953,8 @@ export default Component.extend(Evented, {
            * features so don't brush them. */
           /* can pass visible=true here - a slight optimisation; it depends on the
            * expression in dataBlocks() which distinguishes data blocks. */
-          let childBlocks = axis.dataBlocks();
+          let childBlocks = axis.dataBlocks(true, false)
+              .filter((blockS) => blockS.block.get('isBrushableFeatures'));
           let range = [0, axis.yRange()];
           console.log(axis, 'childBlocks', childBlocks, range);
           /*
@@ -3969,6 +3982,7 @@ export default Component.extend(Evented, {
 
             let blockFeatures = oa.z[block.axisName]; // or block.get('features')
           d3.keys(blockFeatures).forEach(function(f) {
+            let feature = blockFeatures[f];
             let fLocation;
             if (! isOtherField[f] && ((fLocation = blockFeatures[f].location) !== undefined))
             {
@@ -3982,7 +3996,8 @@ export default Component.extend(Evented, {
                ) {
               //selectedFeatures[p].push(f);
               selectedFeaturesSet.add(f);
-              selectedFeatures[mapChrName].push(f + " " + fLocation);
+              // previously pushed : f + " " + fLocation
+              selectedFeatures[mapChrName].push(feature);
               /** Highlight the features in the brushed regions
                * o[p] : the axis location;  now use 0 because the translation of parent g.axis-outer does x offset of stack.
                * fLocation :  actual feature position in the axis, 

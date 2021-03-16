@@ -24,8 +24,9 @@ export default Model.extend({
   features : computed('blockId', 'zoomCounter', 'brushedDomain.[0]', 'brushedDomain.[1]', function () {
     let blockId = this.get('blockId'),
     id = this.get('id');
-    if (blockId === undefined)
+    if (blockId === undefined) {
       blockId = this.id;
+    }
     let
       features = this.get('pathsP').getBlockFeaturesInterval(blockId);
     let me = this;

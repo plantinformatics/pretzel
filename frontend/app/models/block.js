@@ -17,9 +17,14 @@ import {
   intervalOverlap,
   intervalOverlapCoverage
 } from '../utils/interval-calcs';
-import { inDomain } from '../utils/draw/interval-overlap';
 import { binEvenLengthRound } from '../utils/draw/interval-bins';
 import { subInterval, overlapInterval } from '../utils/draw/zoomPanCalcs';
+import {
+  featuresCountsResultsCheckOverlap,
+  featuresCountsResultsMerge,
+  featuresCountsResultsFilter,
+  featuresCountsResultsTidy,
+ } from '../utils/draw/featuresCountsResults';
 
 import { featureCountDataProperties } from '../utils/data-types';
 
@@ -122,6 +127,7 @@ export default Model.extend({
   /*--------------------------------------------------------------------------*/
 
   /** @return true if this block's dataset defined _meta.paths and it is true.
+   * and ! .isSNP
    */
   showPaths : computed('datasetId._meta.paths', 'id', function () {
     let
@@ -144,6 +150,7 @@ export default Model.extend({
       paths |= odd;
       dLog(id, odd);
     }
+    paths &&= ! this.get('isSNP');
     // dLog('showPaths', dataset, paths);
     return paths;
   }),
@@ -243,6 +250,26 @@ export default Model.extend({
    */
   featuresDomain : alias('featureLimits'),
 
+  /** @return true if the parent dataset of this block has the given tag.
+   * @desc This can be extended to provided inheritance : first lookup
+   * this.get('tags'), and if tag is not found, then lookup
+   * .datasetId.tags
+   */
+  hasTag : function (tag) {
+    let tags = this.get('datasetId.tags'),
+    has = tags && tags.length && (tags.indexOf(tag) >= 0);
+    return has;
+  },
+  isSNP : computed('datasetId.tags', function () {
+    let isSNP = this.hasTag('SNP');
+    return isSNP;
+  }),
+  isHighDensity : computed('datasetId.tags', function () {
+    let isHighDensity = this.hasTag('HighDensity');
+    return isHighDensity;
+  }),
+  /** hasTag() can now be used in isChartable() and isSubElements() also.
+   */
   isChartable : computed('datasetId.tags', function () {
     let tags = this.get('datasetId.tags'),
     isChartable = tags && tags.length && (tags.indexOf('chartable') >= 0);
@@ -272,8 +299,9 @@ export default Model.extend({
   ensureFeatureLimits() {
     let limits = this.get('featureLimits');
     /** Reference blocks don't have .featureLimits so don't request it.
-     * block.get('isData') depends on featureCount, which won't be present for
+     * block.get('isDataCount') depends on featureCount, which won't be present for
      * newly uploaded blocks.  Only references have .range (atm).
+     * Could use block.get('isData') here;  this (!range) seems equivalent.
      */
     let range = this.get('range'),
     isData = ! range || ! range.length;
@@ -319,6 +347,7 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+
   /** generate a text name for the block, to be displayed - it should be
    * user-readable and uniquely identify the block.
    */
@@ -327,7 +356,7 @@ export default Model.extend({
      * selectedFeatures.Chromosome
      * In paths-table.js @see blockDatasetNameAndScope()
      */
-    let name = (this.get('datasetId._meta.shortName') || this.get('datasetId.id')) + ':' + this.get('scope');
+    let name = this.get('datasetId.shortNameOrName') + ':' + this.get('scope');
     return name;
   }),
 
@@ -484,7 +513,7 @@ export default Model.extend({
       /** Alternative method of getting the array of blocks.  performance seems the same.
       */
       store = this.get('apiServers').id2Store(this.get('id')),
-      blocks = ! store ? [] : store.peekAll('block')
+      blocks = ! store ? [] : store.peekAll('block');
         } else {
           let
       /** all blocks from the same server as `this`. */
@@ -549,9 +578,11 @@ export default Model.extend({
             }
           } else {
             blocks.forEach((block, i) => {
-              if ((block === undefined) && (i === 0))
+              if ((block === undefined) && (i === 0)) {
                 dLog('viewedReferenceBlock', 'reference not viewed', datasetName, scope);
-              if (scope !== block.get('scope')) {
+              } else if ((block === undefined)) {
+                dLog('viewedReferenceBlock', 'block undefined', datasetName, scope);
+              } else if (scope !== block.get('scope')) {
                 dLog('viewedReferenceBlock', 'not grouped by scope', block.get('id'), scope, block._internalModel.__data, datasetName);
               }
               /* viewedBlocksByReferenceAndScope() does not filter out
@@ -695,12 +726,36 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  brushedDomain : computed(
+    'axis1d.axisBrushComp.block.brushedDomain.{0,1}',
+    'axis1d.brushedDomain.{0,1}',
+    function() {
+      let brushedDomain = this.get('axis1d.axisBrushComp.block.brushedDomain') ||
+          this.get('axis1d.brushedDomain');
+      return brushedDomain;
+    }),
+
+  featuresCountIncludingBrush : computed(
+    'featuresCountsResults.[]',
+    'featureCountInBrush', 'brushedDomain.{0,1}' /* -Debounced */, 'limits',
+    function () {
+      let
+      count = this.get('axis1d.brushed') ?
+        (this.featuresCountsResults.length ? this.get('featureCountInBrush') : undefined ) :
+        this.featureCount;
+      if (trace_block > 1)
+        dLog('featuresCountIncludingBrush', count);
+      return count;
+    }),
+
   /** @return the features count within zoomedDomain, or if there is no zoom,
    * i.e. zoomedDomain is undefined, then simply return .featureCount
    */
   featuresCountIncludingZoom : computed(
     'featuresCountsResults.[]',
-    'featureCountInZoom', 'zoomedDomainDebounced.{0,1}', 'limits',
+    'featureCountInZoom',
+    '{zoomedDomainDebounced,zoomedDomainThrottled}.{0,1}',
+    'limits',
     function () {
       let
       count = this.get('zoomedDomain') ?
@@ -711,6 +766,24 @@ export default Model.extend({
       return count;
     }),
 
+  /** Same as featuresCountsInZoom(), but for the brushedDomain instead of the zoomedDomain
+   */
+  featuresCountsInBrush : computed(
+    'featuresCountsResults.[]', 'brushedDomain.{0,1}' /* -Debounced */, 'limits',
+    function () {
+      let
+      domain = this.get('brushedDomain'),
+      overlaps;
+      if (! domain) {
+        overlaps = this.get('featuresCountsResults');
+      }
+      else {
+        overlaps = this.featuresCountsOverlappingInterval(domain);
+      }
+      if (trace_block > 1)
+        dLog('featuresCountsInBrush', domain, this.limits, overlaps && overlaps.length);
+      return overlaps;
+    }),
   /** From the featuresCounts results received, filter to return the bins
    * overlapping zoomedDomain.
    * If not zoomed (no zoomedDomain), return featuresCountsResults.
@@ -719,7 +792,9 @@ export default Model.extend({
    * [ {binSize, nBins, domain: Array(2), result: Array}, ... ]
    */
   featuresCountsInZoom : computed(
-    'featuresCountsResults.[]', 'zoomedDomainDebounced.{0,1}', 'limits',
+    'featuresCountsResults.[]',
+    '{zoomedDomainDebounced,zoomedDomainThrottled}.{0,1}',
+    'limits',
     function () {
       let
       domain = this.get('zoomedDomain'),
@@ -756,6 +831,23 @@ export default Model.extend({
     let overlaps = this.get('featuresCountsInZoom') || [];
     let
     domain = this.get('zoomedDomain'),
+    count = this.featureCountInInterval(overlaps, domain, 'Zoom');
+    return count;
+  }),
+  featureCountInBrush : computed('featuresCountsInBrush.[]', function () {
+    let overlaps = this.get('featuresCountsInBrush') || [];
+    let
+    domain = this.get('brushedDomain'),
+    count = this.featureCountInInterval(overlaps, domain, 'Brush');
+    return count;
+  }),
+  /** Use featuresCounts results to calculate featureCount in the given interval.
+   * @param overlaps  featuresCounts results which overlap the domain
+   * @param domain	[start,end] or if undefined then the whole count of all bins are summed.
+   * @param intervalName  used only in log message
+   */
+  featureCountInInterval(overlaps, domain, intervalName) {
+    let
     /** assume that the bins in each result are contiguous; use the
      * result which covers the interval best, and maybe later : (secondary measure
      * if >1 cover the interval equally) has the smallest binSize.
@@ -777,9 +869,9 @@ export default Model.extend({
     selectedOverlap = (selectedOverlapI === -1) ? undefined : overlaps[selectedOverlapI],
     count = selectedOverlap && this.featureCountResultInZoom(selectedOverlap, domain);
     if (trace_block > 1)
-      dLog('featureCountInZoom', overlaps, domain, coverage, smallestOver1I, largestUnder1I, selectedOverlapI, selectedOverlap, count);
+      dLog('featureCountInZoom', intervalName, overlaps, domain, coverage, smallestOver1I, largestUnder1I, selectedOverlapI, selectedOverlap, count);
     return count;
-  }),
+  },
   /** Determine how well this result covers the given domain.
    * via overlap size / domain size
    * @return 0 if there is no overlap
@@ -789,6 +881,7 @@ export default Model.extend({
     return coverage;
   },
   /** Sum the counts of bins which overlap the domain
+   * Used for both zoomedDomain and brushedDomain.
    * @param domain	[start,end] or if undefined then the whole count of all bins are summed.
    */
   featureCountResultInZoom(fcs, domain) {
@@ -900,7 +993,9 @@ export default Model.extend({
       let
       axes1d = this.get('blockService.axes1d.axis1dArray');
       axis1d = axes1d.find((a1) => !a1.isDestroying && a1.viewedBlocks.find((b) => b === this));
-      dLog('axis1d', axis1d, axes1d, this.id, this.get('axis.axis1d'));
+      if (trace_block > 1) {
+        dLog('axis1d', axis1d, axes1d, this.id, this.get('axis.axis1d'));
+      }
     }
     return axis1d;
   },
@@ -946,6 +1041,27 @@ export default Model.extend({
       dLog('isZoomedOut', out, this.get('id'), count, featuresCountsThreshold);
     return out;
   }),
+
+  /** Same as axis-1d .isZoomedRightOut, except this evaluates just this block.
+   * Refer to the comment in axis-1d : @see isZoomedRightOut()
+   */
+  isZoomedRightOut() {
+    let out = ! this.axis1d.zoomed &&
+        ! (this.featureCount <= this.get('featuresCountsThreshold'));
+    dLog('isZoomedRightOut', out, this.featureCount, this.get('featuresCountsThreshold'));
+    return out;
+  },
+
+  /** @return true if features should be requested in response to axis brush,
+   * and displayed in features table as axis red circles.
+   */
+  isBrushableFeatures : computed(
+    'isZoomedOut', 'featuresCountIncludingBrush', 'featuresCountsThreshold',
+    function () {
+      let brushable = ! this.get('isZoomedOut') ||
+          (! this.get('isHighDensity') && (this.get('featuresCountIncludingBrush') <= this.get('featuresCountsThreshold')));
+      return brushable;
+    }),
 
   /*--------------------------------------------------------------------------*/
 
@@ -1093,6 +1209,51 @@ export default Model.extend({
         }
       );
     return result;
-  }
+  },
+  /** Add the received featuresCountsResult to .featuresCountsResults,
+   * either merging it with an existing result which overlaps the
+   * domain and has the same binSize, or otherwise append.
+   * @param fcResult
+   */
+  featuresCountsResultsMergeOrAppend(fcResult) {
+    featuresCountsResultsTidy(fcResult);
+    // based on featuresCountsResultsSearch()
+    let 
+    featuresCountsResults = this.get('featuresCountsResults'),
+    combined = featuresCountsResults
+      .find(
+        (fcr) => {
+          let found =
+              // if the domains are equal, that is considered a match.
+              (fcResult !== fcr) && (fcResult.binSize === fcr.binSize) && overlapInterval(fcResult.domain, fcr.domain);
+          /* If the received result bridges the gap between two
+           * existing results, then merge all three (later).
+           */
+          if (found) {
+            /*if (trace_block > 1)*/ {
+              dLog('featuresCountsResultsSearch', fcResult.domain.toArray(), fcResult.nBins, fcResult.binSize, fcr.domain.toArray());
+            }
+            /* Since these are counts within the same block, the
+             * domain direction of the results will be the same. */
+            if (featuresCountsResultsCheckOverlap(fcr, fcResult)) {
+              /** if one of fcr or fcResult is a sub-interval then the
+               * result is the other value, otherwise the result is in fcr.
+               */
+              let fcrM = featuresCountsResultsMerge(fcr, fcResult);
+              if (fcrM === fcResult) { // probably ignore this condition, to get update for CP dependency.
+                /** replace fcr with fcrM */
+                featuresCountsResults.removeObject(fcr);
+                featuresCountsResults.pushObject(fcrM);
+                // to bridge a gap, use instead : featuresCountsResultsMergeOrAppend(fcrM)
+              }
+            }
+          }
+          return found;
+        }
+      );
+    if (! combined) {
+      featuresCountsResults.pushObject(fcResult);
+    }
+  },
 
 });

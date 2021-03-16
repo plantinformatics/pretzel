@@ -21,6 +21,7 @@ var trace_filter = 1;
  * The result is analogous to the comparator function (cmp) result.
  * Assume i[0] < i[1].
  * @return 0 if v is in i, -1 if v < i, +1 if v > i
+ * The argument order is opposite to the similar function @see inRange()
  */
 function inInterval(i, v) {
   let

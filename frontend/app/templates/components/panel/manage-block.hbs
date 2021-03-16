@@ -7,13 +7,14 @@
 
   <label>Features</label><p>{{block.features.length}}</p>
 
-  {{#elem/panel-container state="primary"}}
-    {{#elem/panel-heading icon="tags"}}
+  {{#elem/panel-container state="primary" as |panelContainer|}}
+    {{#elem/panel-heading icon="tags" panelContainer=panelContainer}}
       Annotations
       <span class="badge">{{block.annotations.length}}</span>
       {{elem/button-refresh}}
     {{/elem/panel-heading}}
 
+    {{#if panelContainer.showComponent}}
     <ul class="list-group">
       {{!-- existing annotations --}}
       {{#if block.annotations}}
@@ -47,15 +48,17 @@
         </div>
       </li>
     </ul>
+    {{/if}} {{!-- showComponent --}}
   {{/elem/panel-container}}
 
-  {{#elem/panel-container state="primary"}}
-    {{#elem/panel-heading icon="resize-vertical"}}
+  {{#elem/panel-container state="primary" as |panelContainer|}}
+    {{#elem/panel-heading icon="resize-vertical" panelContainer=panelContainer}}
       Intervals
       <span class="badge">{{block.intervals.length}}</span>
       {{elem/button-refresh}}
     {{/elem/panel-heading}}
 
+    {{#if panelContainer.showComponent}}
     <ul class="list-group">
       {{#if block.intervals}}
         {{#each block.intervals as |entry index|}}
@@ -108,6 +111,7 @@
         </li>
       {{/if}}
     </ul>
+    {{/if}} {{!-- showComponent --}}
   {{/elem/panel-container}}
 {{else}}
   <h4>No Map Selected</h4>
