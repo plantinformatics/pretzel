@@ -42,7 +42,8 @@ import { selectGroup } from '../../utils/draw/d3-svg';
 import { breakPoint } from '../../utils/breakPoint';
 import { configureHover } from '../../utils/hover';
 import { getAttrOrCP } from '../../utils/ember-devel';
-import { intervalExtent }  from '../../utils/interval-calcs';
+import { intervalExtent, intervalOverlap }  from '../../utils/interval-calcs';
+import { inRange } from '../../utils/draw/zoomPanCalcs';
 import { updateDomain } from '../../utils/stacksLayout';
 
 
@@ -99,11 +100,11 @@ function blockWithTicks(block)
  * of the given block.
  * @param block stacks Block
  */
-function inRangeBlock(axisApi, range0, block) {
+function inRangeBlock(range0, block) {
   return function (feature) {
-    /** comment in @see keyFn() */
-    let featureName = getAttrOrCP(feature, 'name');
-    return axisApi.inRangeI(block.axisName, featureName, range0);
+    let
+    axis1d = block.axis.axis1d;
+    return axis1d.inRangeR(feature, range0);
   };
 }
 
@@ -137,7 +138,7 @@ FeatureTicks.prototype.featuresOfBlock = function (featuresOfBlockLookup) {
   range0 = this.axis.yRange2();
 
     return (block) => {
-      let inRange = inRangeBlock(this.axisApi, range0, block);
+      let inRange = inRangeBlock(range0, block);
 
       let blockR = block.block,
       blockId = blockR.get('id'),
@@ -1072,6 +1073,35 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
      * Similar : draw-map : featureY_(ak, feature.id);     */
     akYs = y(tickY);
     return akYs;
+  },
+
+  inDomain(feature) {
+    let
+    /** comment re. getAttrOrCP() in @see keyFn() */
+    value = getAttrOrCP(feature, 'value'), // feature.get('value'),
+    domain = this.currentDomain,
+    overlap = intervalOverlap([value, domain]);
+    return overlap;
+  },
+  inRange(feature) {
+    let
+    axisS = this.get('axisS'),
+    range0 = axisS.yRange2(),
+    overlap = this.inRangeR(feature);
+    return overlap;
+  },
+  inRangeR(feature, range0) {
+    let
+    axisS = this.get('axisS'),
+    y = this.featureY(feature),
+    yScale = axisS.getY(),
+    value = getAttrOrCP(feature, 'value'), // feature.value,
+    yInterval = value.length ? value.map(yScale) : yScale(value),
+    overlap = value.length === 1 ?
+      inRange(yInterval[0], range0) :
+      value.length ? intervalOverlap([yInterval, range0]) :
+      inRange(yInterval, range0);
+    return overlap;
   },
 
   /*--------------------------------------------------------------------------*/
