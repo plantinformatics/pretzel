@@ -1,7 +1,8 @@
-{{#elem/panel-container state="primary"}}
-  {{#elem/panel-heading icon="option-vertical"}}
+{{#elem/panel-container state="primary" as |panelContainer|}}
+  {{#elem/panel-heading icon="option-vertical" panelContainer=panelContainer}}
     Selected Axis Options
   {{/elem/panel-heading}}
+  {{#if panelContainer.showComponent}}
   <ul class="list-group view-controls">
     <li class="list-group-item">
       <div class="btn-group btn-group-sm btn-group-justified">
@@ -238,4 +239,5 @@
     </li>
 
   </ul>
+  {{/if}} {{!-- showComponent --}}
 {{/elem/panel-container}}

@@ -141,8 +141,8 @@ function  configureSubTrackHover(interval)
 
 function configureClick(selected, featureData2Feature) {
   return function (selection) {
-    selection.on('click', function (d, i, g) { clickTrack.apply(this, [selected, featureData2Feature, d])});
-  }
+    selection.on('click', function (d, i, g) { clickTrack.apply(this, [selected, featureData2Feature, d]);});
+  };
 }
 function clickTrack(selected, featureData2Feature, featureData) {
   let feature = featureData2Feature.get(featureData);
@@ -696,6 +696,23 @@ export default InAxis.extend({
     return result;
   },
 
+  remove () {
+    /** Based on layoutAndDrawTracks() : gp .remove()
+     * related : axis-1d.js : selectGroup()
+     */
+    let
+    axisID = this.get('axisID'),
+    aS = selectAxis(axisID),
+    gp = aS.select("g.axis-use")
+      .selectAll("g.tracks");
+    if (! gp.empty()) {
+      console.log('removing', gp.nodes(), gp.node());
+      gp
+        .remove();
+    }
+  },
+
+
   /** Layout the feature rectangles and render them.
    * @param resized	undefined or {width, height}, which are true if the caller is a resize event.
    * @param tracks	result of tracksTree
@@ -829,7 +846,7 @@ export default InAxis.extend({
       if (y(d[0]) > y(d[1]))
         return y(d[1]);
       else
-        return y(d[0])
+        return y(d[0]);
     };
     /** return the end of the y scale range which d is closest to.
      * Used when transitioning in and out.
@@ -1084,12 +1101,13 @@ export default InAxis.extend({
           .call(rectUpdate);
         rm
           .transition().duration(featureTrackTransitionTime)
+          .call(fadeOutIfZoomedOut)
           .call(rectUpdate);
       }
       else if (alwaysTri) {
         let xPosnFn = xPosnS(subElements);
         rm
-          .attr('d', (d,i,g) => rectTrianglePath(y, d, width, xPosnFn.apply(this, [d, i, g])))
+          .attr('d', (d,i,g) => rectTrianglePath(y, d, width, xPosnFn.apply(this, [d, i, g])));
       }
       else {
       rm
@@ -1100,7 +1118,7 @@ export default InAxis.extend({
               g[i] = swapTag('rect', 'path', g[i], attributesForReplace);
               let x = xPosnS(subElements).apply(this, [d, i, g]);
               d3.select(g[i])
-                .attr('d', (d,i,g) => rectTrianglePath(y, d, width, x))
+                .attr('d', (d,i,g) => rectTrianglePath(y, d, width, x));
             }.apply(this, [d, i, g]) :
           function (d, i, g) {
             g[i] = swapTag('path', 'rect', g[i], attributesForReplace);
@@ -1114,6 +1132,28 @@ export default InAxis.extend({
           .attr('x', xPosnS(subElements))
           .attr('y', yPosn)
           .attr('height' , height);
+      }
+      function fadeOutIfZoomedOut(selection) {
+        let t0 = selection.node();
+        if (t0) {
+          /** may not be blockId, e.g subElements, so default to false. */
+          let blockId = t0.parentElement.__data__,
+              block = blockId && oa.stacks.blocks[blockId],
+              out = block && block.block.isZoomedRightOut();
+          /** if selection is a transition */
+          if (out && selection.selection) {
+            /* if called again before transition is complete,
+             * don't restart the attribute values. */
+            if (! t0.hasAttribute('stroke-opacity')) {
+              selection.selection()
+                .attr('stroke-opacity', 1)
+                .attr('fill-opacity', 1);
+            }
+            selection
+              .attr('stroke-opacity', 0)
+              .attr('fill-opacity', 0);
+          }
+        }
       }
       rm
       .attr('stroke', blockTrackColourI)
@@ -1557,12 +1597,12 @@ export default InAxis.extend({
             }
             interval.description = feature.get('name');
             interval.udescription = intervalUniqueName(interval.description, interval);
-            /* for datasets with tag 'SNP', feature value[2] is reference / alternate,
+            /* for datasets with tag 'SNP', feature .values.{ref,alt} is reference / alternate,
              * e.g. "A/G", "T/C" etc */
-            let tags = feature.get('blockId.datasetId.tags');
-            if (tags && tags.length && (tags.indexOf("SNP") !== -1) && 
-                (typeof interval[2] === 'string')) {
-              interval.description += ('\n' + interval[2]);
+            let values = feature.get('blockId.isSNP') && feature.get('values');
+            if (values && (values.ref || values.alt)) {
+              let refAlt = (values.ref || '') + '/' + (values.alt || '');
+              interval.description += ('\n' + refAlt);
             }
             return interval;
           });
@@ -1770,6 +1810,11 @@ export default InAxis.extend({
       yDomain = this.get('yDomain');
       console.log('showTrackBlocks', this, tracks, axis1d, isViewed, /*yDomain*/ this.get('axis1d.currentPosition.yDomainThrottled'), 'axis1d.zoomed', zoomed, extended, featureLength);
       let featuresLength;
+      /* This works but doesn't give a transition from tracks to charts
+         if (! this.get('trackBlocksR.length') || axis1d.isZoomedRightOut()) {
+         this.remove();
+         } else
+      */
       if (isViewed) {
         let blockIds = d3.keys(tracks.intervalTree);
 

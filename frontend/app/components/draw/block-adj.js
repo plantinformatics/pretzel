@@ -168,7 +168,12 @@ export default Component.extend(Evented, AxisEvents, {
             throw error;
           }
         });
+    } else if (! this.get('blockAdj.receivedAll')[prType.typeName]) {
+      /** drawCurrent() will do this if more paths required.
+       *  If 0 paths then request paths.  */
+      this.incrementProperty('blockAdj.pathsRequestCount');
     }
+
     // length returned by paths{,Aliases}ResultLength is currently just used in logging, not functional.
     return length;
   },

@@ -1,5 +1,5 @@
-{{#elem/panel-container state="primary"}}
-    {{#elem/panel-heading icon="globe"}}
+{{#elem/panel-container state="primary" as |panelContainer|}}
+    {{#elem/panel-heading icon="globe" panelContainer=panelContainer}}
         Displayed Data
         {{#if hasDisplayData}}
         <span class="pull-right">
@@ -11,6 +11,8 @@
         </span>
         {{/if}}
     {{/elem/panel-heading}}
+    {{#if panelContainer.showComponent}}
+
     <ul id="display-blocks" class="list-group">
         {{#each displayData as |block|}}
         <li 
@@ -44,24 +46,20 @@
         </li>
         {{/each}}
     </ul>
+
+  {{/if}} {{!-- showComponent --}}
 {{/elem/panel-container}}
 
 
 {{#if isMapview}}
-{{#elem/panel-container state="primary"}}
-  {{#elem/panel-heading icon="wrench"}}
+{{#elem/panel-container state="primary" showComponent=showChartOptions as |panelContainer|}}
+  {{#elem/panel-heading icon="wrench" panelContainer=panelContainer}}
     Chart Options
-
-    <span class="pull-right">
-      {{x-toggle
-        theme='light'
-        value=showChartOptions
-        onToggle=(action (mut showChartOptions)) }}
-    </span>
 
   {{/elem/panel-heading}}
 
-  {{#if showChartOptions}}
+  {{#if panelContainer.showComponent}}
+
     {{!-- .chart-options is enabled by options=chartOptions -> body.chartOptions .chart-options CSS  --}}
     <ul class="list-group chart-options">
       <li class="list-group-item">
@@ -87,8 +85,8 @@
         {{draw/flow-controls viewOptions=(hash isShowUnique pathColourScale showScaffoldMarkers showAsymmetricAliases) modelParamOptions=model.params.options }}
       </div>
     </div>
-  {{/if}}
 
+  {{/if}} {{!-- showComponent --}}
 
 {{/elem/panel-container}}
 

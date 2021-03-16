@@ -1,4 +1,4 @@
-import EmberObject, { computed } from '@ember/object';
+import EmberObject, { computed, observer } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
@@ -7,6 +7,7 @@ import { ensureBlockFeatures } from '../../utils/feature-lookup';
 import { subInterval } from '../../utils/draw/zoomPanCalcs';
 import { intervalSize, intervalOverlapCoverage }  from '../../utils/interval-calcs';
 import { binEvenLengthRound } from '../../utils/draw/interval-bins';
+import { featuresCountsResultsSansOverlap } from '../../utils/draw/featuresCountsResults';
 
 /*----------------------------------------------------------------------------*/
 
@@ -43,8 +44,14 @@ export default Component.extend({
   },
 
   /** If the block contains chartable data, collate it into .blocksData.blockData, for axis-charts.
+   * @return undefined
    */
-  blockFeatures : computed('block', 'block.featuresLengthThrottled', 'axis.axis1d.domainChanged', function () {
+  blockFeaturesEffect : observer(
+    'block', 'block.featuresLengthThrottled',
+    // 'axis.axis1d.domainChanged',
+    'axis.axis1d.blocksDomain',
+    'axis.axis1d.{zoomedDomainThrottled,zoomedDomainDebounced}.{0,1}',
+    function () {
     if (this.get('block.isChartable')) {
       let features = this.get('block.features');
       let domain = this.get('axis.axis1d.domainChanged');
@@ -70,7 +77,10 @@ export default Component.extend({
    * to be read by axis-charts : featureCountBlocks etc and drawn.
    */
   featuresCounts : computed(
-    'block', 'block.featuresCountsInZoom.[]', 'axis.axis1d.domainChanged',
+    'block', 'block.featuresCountsInZoom.[]',
+    // 'axis.axis1d.domainChanged',
+    'axis.axis1d.blocksDomain',
+    'axis.axis1d.{zoomedDomainThrottled,zoomedDomainDebounced}.{0,1}',
     // featuresCountsNBins is used in selectFeaturesCountsResults()
     'blockService.featuresCountsNBins',
     function () {
@@ -100,6 +110,7 @@ export default Component.extend({
       /** id.min may be 0 */
       dataTypeName = (id.min !== undefined) ? 'featureCountAutoData' : 'featureCountData';
       this.setBlockFeaturesData(dataTypeName, featuresCounts);
+      dLog('featuresCounts', featuresCounts.length, this.axis.axis1d.zoomedDomainThrottled);
     }
 
     return featuresCounts;
@@ -170,6 +181,8 @@ export default Component.extend({
         // choose the result with the smallest binSize  (this is now incorporated into the above sort)
         // .sortBy('binSize')
         .slice(0,1);
+    } else {
+      selectedResults = featuresCountsResultsSansOverlap(selectedResults, lengthRounded);
     }
     return selectedResults;
   },

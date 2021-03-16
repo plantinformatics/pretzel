@@ -3,11 +3,23 @@ var ObjectID = require('mongodb').ObjectID;
 /*----------------------------------------------------------------------------*/
 
 /* global exports */
+/* global process */
 
 const trace_block = 1;
 
 /** ObjectId is used in mongo shell; the equivalent defined by the node js client library is ObjectID; */
 const ObjectId = ObjectID;
+
+/** blockFeaturesCounts() can use a query which is covered by the index
+ * if .value[0] has been copied as .value_0
+ *
+ * Using '$value_0' in place of {$arrayElemAt : ['$value', 0]} is functionally
+ * equivalent, and enables the combined index {blockId, value_0} to cover
+ * the query;
+ * this can be dropped if a way is found to access value[0] without $expr,
+ * which seems to not enable PROJECTION_COVERED.
+ */
+const use_value_0 = process.env.use_value_0 || false;
 
 /*----------------------------------------------------------------------------*/
 
@@ -163,7 +175,8 @@ exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10) {
         { $bucketAuto : { groupBy: {$arrayElemAt : ['$value', 0]}, buckets: Number(nBins)}  } // , granularity : 'R5'
       : { $bucket     :
           {
-            groupBy: {$arrayElemAt : ['$value', 0]}, boundaries,
+            /** faster query if .value_0 is available  @see use_value_0 */
+            groupBy: (use_value_0 ? '$value_0' : {$arrayElemAt : ['$value', 0]}), boundaries,
 	    'default' : 'outsideBoundaries',
             output: {
               count: { $sum: 1 },

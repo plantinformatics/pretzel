@@ -20,10 +20,12 @@ export default ManageBase.extend({
   apiHost : alias("dataset.store.name"),
 
   datasetMeta: Ember.computed("dataset._meta", function() {
-    return this.get("dataset._meta") || {}
+    return this.get("dataset._meta") || {};
   }),
   copyToCurrentMeta : observer('dataset', function () {
-    dLog('copyToCurrentMeta', this.get('currentMeta'), this.get('dataset._meta'));
+    if (trace > 2) {
+      dLog('copyToCurrentMeta', this.get('currentMeta'), this.get('dataset._meta'));
+    }
     this.set('currentMeta', this.get('dataset._meta'));
     this.updateViewer();
   }),

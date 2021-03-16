@@ -6,6 +6,8 @@ var identity = require('../utilities/identity')
 var task = require('../utilities/task')
 const qs = require('qs');
 
+var upload = require('../utilities/upload');
+const { insert_features_recursive } = require('../utilities/upload');
 var blockFeatures = require('../utilities/block-features');
 var pathsAggr = require('../utilities/paths-aggr');
 var pathsFilter = require('../utilities/paths-filter');
@@ -70,6 +72,57 @@ class SseWritable extends Writable {
 /* global module require */
 
 module.exports = function(Block) {
+
+
+  /*--------------------------------------------------------------------------*/
+
+// copied from localise-blocks.js - may be able to factor, if no changes
+
+/** Add features.
+ * @param features  array of features to add.
+ *  each feature defines .blockId
+ * @return promise (no value)
+ */
+function blockAddFeatures(db, datasetId, blockId, features, cb) {
+  /** convert the ._id and .blockId fields from hex string to ObjectId,
+   * and shallow-copy the other fields. */
+  let featuresId = features.map((f) => {
+    let {/*_id, */...rest} = f;
+    // rest._id = ObjectId(_id);
+    rest.blockId = ObjectId(blockId);
+    return rest;
+  });
+
+  return insert_features_recursive(db, datasetId, featuresId, false, cb);
+}
+
+
+  /** Send a database request to append the features in data to the given block.
+   *
+   * @param data  blockId and features
+   */
+  Block.blockFeaturesAdd = function(data, options, cb) {
+    let db = this.dataSource.connector;
+
+    if (data.filename) {
+      upload.handleJson(data, processJson, cb);
+    } else {
+      processJson(data);
+    }
+
+    function processJson(json) {
+      let
+      blockId = json.blockId,
+      b = {blockId},
+      features = json.features;
+      return blockAddFeatures(db, /*datasetId*/b, blockId, features, cb)
+        .then(() => { console.log('after blockAddFeatures', b); return b.blockId; });
+    }
+
+  };
+
+
+
 
   /** This is the original paths api, prior to progressive-loading, i.e. it
    * returns all paths in a single response.
@@ -588,15 +641,30 @@ module.exports = function(Block) {
    * @param blockIds  blocks
    */
   Block.blockFeaturesCount = function(blockIds, options, res, cb) {
+  let
+    fnName = 'blockFeaturesCount',
+    cacheId = fnName + '_' + blockIds.join('_'),
+    result = cache.get(cacheId);
+    if (result) {
+      if (trace_block > 1) {
+        console.log(fnName, cacheId, 'get', result[0] || result);
+      }
+      cb(null, result);
+    } else {
     let db = this.dataSource.connector;
     let cursor =
       blockFeatures.blockFeaturesCount(db, blockIds);
     cursor.toArray()
     .then(function(featureCounts) {
+      if (trace_block > 1) {
+        console.log(fnName, cacheId, 'get', featureCounts[0] || featureCounts);
+      }
+      cache.put(cacheId, featureCounts);
       cb(null, featureCounts);
     }).catch(function(err) {
       cb(err);
     });
+    }
   };
 
   /*--------------------------------------------------------------------------*/
@@ -607,15 +675,42 @@ module.exports = function(Block) {
    * @param nBins number of bins to partition the block's features into
    */
   Block.blockFeaturesCounts = function(blockId, interval, nBins, options, res, cb) {
+
+  let
+    fnName = 'blockFeaturesCounts',
+    /** when a block is viewed, it is not zoomed (the interval is the
+     * whole domain); this request recurs often is is worth caching,
+     * but when zoomed in there is no repeatability so result is not
+     * cached.  Zoomed results could be collated in an interval tree,
+     * and used when they satisfied one end of a requested interval,
+     * i.e. just the new part would be queried.
+     * GMs generally start at 0, and physical maps at 0.
+     */
+    useCache = ! interval || (interval[0] <= 1),
+    cacheId = fnName + '_' + blockId + '_' + nBins +  '_' + interval.join('_'),
+    result = useCache && cache.get(cacheId);
+    if (result) {
+      if (trace_block > 1) {
+        console.log(fnName, cacheId, 'get', result[0]);
+      }
+      cb(null, result);
+    } else {
     let db = this.dataSource.connector;
     let cursor =
       blockFeatures.blockFeaturesCounts(db, blockId, interval, nBins);
     cursor.toArray()
     .then(function(featureCounts) {
+      if (useCache) {
+        if (trace_block > 1) {
+          console.log(fnName, cacheId, 'put', featureCounts[0]);
+        }
+        cache.put(cacheId, featureCounts);
+      }
       cb(null, featureCounts);
     }).catch(function(err) {
       cb(err);
     });
+    }
   };
 
   /*--------------------------------------------------------------------------*/
@@ -624,15 +719,31 @@ module.exports = function(Block) {
    * @param blockId  undefined (meaning all blocks) or id of 1 block to find min/max for
    */
   Block.blockFeatureLimits = function(blockId, options, res, cb) {
+  let
+    fnName = 'blockFeatureLimits',
+    cacheId = fnName + '_' + blockId,
+    result = cache.get(cacheId);
+    if (result) {
+      if (trace_block > 1) {
+        console.log(fnName, cacheId, 'get', result[0] || result);
+      }
+      cb(null, result);
+    } else {
+
     let db = this.dataSource.connector;
     let cursor =
       blockFeatures.blockFeatureLimits(db, blockId);
     cursor.toArray()
     .then(function(limits) {
+      if (trace_block > 1) {
+        console.log(fnName, cacheId, 'put', limits[0] || limits);
+      }
+      cache.put(cacheId, limits);
       cb(null, limits);
     }).catch(function(err) {
       cb(err);
     });
+    }
   };
 
   /*--------------------------------------------------------------------------*/
@@ -751,6 +862,15 @@ module.exports = function(Block) {
   //----------------------------------------------------------------------------
   // When adding a API .remoteMethod() here, also add the route name to backend/server/boot/access.js : genericResolver()
   //----------------------------------------------------------------------------
+
+  Block.remoteMethod('blockFeaturesAdd', {
+    accepts: [
+      {arg: 'data', type: 'object', required: true, http: {source: 'body'}},
+      {arg: "options", type: "object", http: "optionsFromRequest"},
+    ],
+    returns: {arg: 'status', type: 'string'},
+    description: "Append the features in data to the given block"
+  });
 
   Block.remoteMethod('blockFeaturesCount', {
     accepts: [

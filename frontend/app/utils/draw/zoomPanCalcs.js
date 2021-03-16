@@ -20,6 +20,9 @@ const dLog = console.debug;
 /* copied from draw-map.js; this has already been split out of draw-map.js into
  * utils/graph-maths.js in an unpushed branch (8fccbd3).
  * Added : this version handles range[] being in -ve order, i.e. range[0] > range[1].
+ * @param a point value
+ * @param range interval [start, end]
+ * The argument order is opposite to the similar function @see inInterval()
  */
 function inRange(a, range)
 {
@@ -315,4 +318,8 @@ function wheelNewDomain(axis, axisApi, inFilter) {
 
 /*----------------------------------------------------------------------------*/
 
-export {  inRangeEither, subInterval, overlapInterval, wheelNewDomain };
+export {
+  inRange, inRangeEither, subInterval, overlapInterval,
+  intervalSign,
+  wheelNewDomain
+};

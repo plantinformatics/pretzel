@@ -7,8 +7,12 @@
 ;; The path of this directory.
 ;; Used to calculate the git work-tree root dir.
 (setq mmv_Dav127
+    (replace-regexp-in-string "^~/" "$HOME/" 
       (replace-regexp-in-string "/resources/$" ""  (file-name-directory load-file-name) )
-      )
+      ))
+;; same as $MMv
+(setq MMv
+  (replace-regexp-in-string "/pretzel.*" "" mmv_Dav127))
 
 
 ;;------------------------------------------------------------------------------
@@ -58,7 +62,9 @@
 
 (setq safe-local-variable-values
       `((create-lockfiles . nil)
+	(js2-basic-offset . 2)
 	(js2-bounce-indent-p . t)  
+	(js2-pretty-multiline-declarations . nil)
 	)
 )
 
@@ -70,7 +76,7 @@
 ;; To make this code flexible wrt directory path, the path of the git work-tree
 ;; is calculated and the settings are configured to apply for that tree.
 (dir-locals-set-directory-class
- mmv_Dav127
+ MMv	;; was mmv_Dav127
  'project-root-directory)
 
 
