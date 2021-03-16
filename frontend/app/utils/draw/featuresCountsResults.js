@@ -17,6 +17,14 @@ import { featureCountDataProperties } from '../data-types';
 const dLog = console.debug;
 
 
+/** Check that the bins which are in the overlap of the 2 given FCRs match.
+ *
+ * This is used in featuresCountsResultsMergeOrAppend() before
+ * discarding the overlap section from one of the FCRs using
+ * featuresCountsResultsMerge().
+ * @param fcr1, fcr2  featuresCountsResults
+ * @return true if the bins in the overlap match between the 2 FCRs
+ */
 function featuresCountsResultsCheckOverlap(fcr1, fcr2) {
   let o = intervalOverlap([fcr1.domain, fcr2.domain]),
       fcr1O = featuresCountsResultsFilter(fcr1, o),
@@ -259,62 +267,62 @@ function featuresCountsResultsSansOverlap (selectedResults, preferredBinSize) {
   function subtractAccepted(fcr) {
     let used = true;
     let addedFcrLocal = [];
-        let [lo, hi] = fcr.domain;
-        intervalTree.queryInterval(lo, hi, function(interval) {
-          let fcrI = domain2Fcr.get(interval);
-          let abut = intervalsAbut(interval, fcr.domain, false);
-          if (fcrI.binSize === fcr.binSize) {
-            // ignore - no overlap, and no rounding required.
-          } else
-          /* fcr.domain may be cut by multiple matching intervals.
-           */
-          if (subInterval(fcr.domain, interval)) {
-            // fcr is already covered by interval
-            used = false;
-          } else if (subInterval(interval, fcr.domain) &&
-                     ! abut) {
-            let
-            outer = intervalSubtract2(fcr.domain, interval);
-            setDomain(fcr, outer[0], false);
-            let {...fcr2} = fcr;
-            fcr2.domain = outer[1];
-            // copy because it will have different values to fcr.
-            // fcr2.rounded = fcr2.rounded.slice();
-            // copy because it may be used to lookup domain2Fcr.
-            fcr2.domain = fcr2.domain.slice();
-            domain2Fcr.set(fcr2.domain, fcr2);
-            addedFcrLocal.push(fcr2);
-            addedFcr.push(fcr2);
-            cutEdge(fcr, interval, 1);
-            cutEdge(fcr2, interval, 0);
-          } else
-            /* fcr.domain may have reduced since start of .queryInterval() so re-check if overlap. */
-          if (!!intervalOverlap([fcr.domain, interval]) ) {
-            /** this case includes (subInterval && abut). */
-            /** interval overlaps fcr.domain, or they
-             * abut, so subtract produces just 1 interval. */
-            fcr.domain = intervalJoin('subtract', fcr.domain, interval);
-            domain2Fcr.set(fcr.domain, fcr);
+    let [lo, hi] = fcr.domain;
+    intervalTree.queryInterval(lo, hi, function(interval) {
+      let fcrI = domain2Fcr.get(interval);
+      let abut = intervalsAbut(interval, fcr.domain, false);
+      if (fcrI.binSize === fcr.binSize) {
+        // ignore - no overlap, and no rounding required.
+      } else
+      /* fcr.domain may be cut by multiple matching intervals.
+       */
+      if (subInterval(fcr.domain, interval)) {
+        // fcr is already covered by interval
+        used = false;
+      } else if (subInterval(interval, fcr.domain) &&
+                 ! abut) {
+        let
+        outer = intervalSubtract2(fcr.domain, interval);
+        setDomain(fcr, outer[0], false);
+        let {...fcr2} = fcr;
+        fcr2.domain = outer[1];
+        // copy because it will have different values to fcr.
+        // fcr2.rounded = fcr2.rounded.slice();
+        // copy because it may be used to lookup domain2Fcr.
+        fcr2.domain = fcr2.domain.slice();
+        domain2Fcr.set(fcr2.domain, fcr2);
+        addedFcrLocal.push(fcr2);
+        addedFcr.push(fcr2);
+        cutEdge(fcr, interval, 1);
+        cutEdge(fcr2, interval, 0);
+      } else
+        /* fcr.domain may have reduced since start of .queryInterval() so re-check if overlap. */
+      if (!!intervalOverlap([fcr.domain, interval]) ) {
+        /** this case includes (subInterval && abut). */
+        /** interval overlaps fcr.domain, or they
+         * abut, so subtract produces just 1 interval. */
+        fcr.domain = intervalJoin('subtract', fcr.domain, interval);
+        domain2Fcr.set(fcr.domain, fcr);
 
-            /**  edge of fcr cut by interval is fcr.domain[ci] */
-            let ci = fcr.domain.findIndex((d) => inRange(d, interval));
-            cutEdge(fcr, interval, ci);
-          }
-        });
-
-      let fromTo;
-      while ((fromTo = intervalTreeChanges.shift())) { let [from, to] = fromTo; intervalTree.remove(from); intervalTree.insert(to); };
-
-      /* for edges which are not cut, set .join = .domain
-      fcr.domain.forEach((d, i) => {
-        if (fcr.join[i] === undefined) { fcr.join[i] = d; }});
-        */
-      if (used) {
-        intervalTree.insert(fcr.domain);
+        /**  edge of fcr cut by interval is fcr.domain[ci] */
+        let ci = fcr.domain.findIndex((d) => inRange(d, interval));
+        cutEdge(fcr, interval, ci);
       }
-      addedFcrLocal.forEach((fcr) => subtractAccepted(fcr));
-      return used;
+    });
+
+    let fromTo;
+    while ((fromTo = intervalTreeChanges.shift())) { let [from, to] = fromTo; intervalTree.remove(from); intervalTree.insert(to); };
+
+    /* for edges which are not cut, set .join = .domain
+       fcr.domain.forEach((d, i) => {
+       if (fcr.join[i] === undefined) { fcr.join[i] = d; }});
+    */
+    if (used) {
+      intervalTree.insert(fcr.domain);
     }
+    addedFcrLocal.forEach((fcr) => subtractAccepted(fcr));
+    return used;
+  }
 
 
   /** fcr (i1) is cut by i2 at i2[+!edge].
