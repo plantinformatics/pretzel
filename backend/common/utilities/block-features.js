@@ -1,3 +1,6 @@
+const { blockFilterValue0 } = require('./paths-aggr');
+
+
 var ObjectID = require('mongodb').ObjectID;
 
 /*----------------------------------------------------------------------------*/
@@ -170,6 +173,7 @@ exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10) {
   let
     matchBlock =
     [
+      use_value_0 ? blockFilterValue0(interval, blockId) :
       {$match : {blockId :  ObjectId(blockId)}},
       useBucketAuto ? 
         { $bucketAuto : { groupBy: {$arrayElemAt : ['$value', 0]}, buckets: Number(nBins)}  } // , granularity : 'R5'
