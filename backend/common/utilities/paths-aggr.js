@@ -336,12 +336,13 @@ function valueBound(intervals, b, l) {
  * For length 2 it could match either domain for both blocks, later
  * $match would filter out the extra, and it would get the performance
  * benefit from the index (narrow the docsExamined).
- * @param b 0 for blockId0, axes[0]
+ *
+ * @param domain  from the intervals or interval param, e.g. intervals.axes[b]
  */
-function valueBounds_0(intervals, b) {
+function valueBounds_0(domain) {
   let r = {
-    $gte : +intervals.axes[b].domain[0],
-    $lte : +intervals.axes[b].domain[1]
+    $gte : +domain[0],
+    $lte : +domain[1]
   };
   return r;
 }
@@ -375,18 +376,21 @@ function blockFilter(intervals, eq, b) {
  * document pipeline using the index {blockId, value_0}.
  * This can be inserted before a $match constructed using blockFilter();
  * the index use of the first match determines performance.
+ *
+ * @param domain  from the intervals or interval param, e.g. intervals.axes[b].domain
  */
-function blockFilterValue0(intervals, blockId) {
+function blockFilterValue0(domain, blockId) {
   let
-  b = 0,
   l = 0,
   matchBlock =
       {$match : {
         blockId : ObjectId(blockId),
-        value_0 : valueBounds_0(intervals, 0)
+        value_0 : valueBounds_0(domain)
       } };
   return matchBlock;
 }
+exports.blockFilterValue0 = blockFilterValue0;
+
 /*----------------------------------------------------------------------------*/
 
 /** The interval params passed to .pathsDirect() and .blockFeaturesInterval()
@@ -709,7 +713,8 @@ exports.blockFeaturesInterval = function(db, blockIds, intervals) {
       } }},
     ];
   if (use_value_0 && (blockIds.length === 1)) {
-    let useIndex = blockFilterValue0(intervals, blockIds[0]);
+    const b = 0;
+    let useIndex = blockFilterValue0(intervals.axes[b].domain, blockIds[b]);
     filterValue.unshift(useIndex);
   }
 
