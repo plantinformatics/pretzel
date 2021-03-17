@@ -118,8 +118,24 @@ module.exports = function(Client) {
       if (process.env.EMAIL_ACTIVE == 'true') {
         Client.findById(context.args.uid).then(function(userInstance) {
           var template = loopback.template(path.resolve(__dirname, '../../server/views/access_granted.ejs'));
-          let login_url = 
-            context.req.protocol + '://' + context.req.host +
+          let
+          /** if node app server is behind a proxy (e.g. nginx, for
+           * https) then the req.host will be simply localhost;
+           * in that case use API_HOST.
+           */
+          apiHost = 
+            process.env.API_PORT_PROXY ? process.env.API_HOST : context.req.host,
+          /** If behind a proxy then the port will be default (80)
+           * expressed as ''.  Otherwise API_PORT_EXT is used.
+           *
+           * (If running node app server within docker then the API
+           * port external to docker is API_PORT_EXT, and hence the
+           * name suffix _EXT; the internal port is generally the same
+           * and the same env var is used.)
+           * Related : reset_href, verifyHref.
+           */
+          login_url = 
+            context.req.protocol + '://' + apiHost +
             (process.env.API_PORT_PROXY ? '' : ':' + process.env.API_PORT_EXT) +
             '/login';
           var html = template({
