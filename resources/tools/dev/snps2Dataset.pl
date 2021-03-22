@@ -18,6 +18,91 @@ use warnings;
 
 use Getopt::Std;	# for getopt()
 
+#-------------------------------------------------------------------------------
+
+# Forward declarations
+sub convertInput();
+sub createDataset();
+sub appendToBlock();
+sub makeTemplates();
+
+#-------------------------------------------------------------------------------
+# main
+
+
+## Get options from ARGV
+my %options;
+getopts("vhd:p:b:n:c:s:", \%options);
+
+## Version and help options display
+use constant versionMsg => "2020 Dec 07 (Don Isdale).\n";
+use constant usageMsg => <<EOF;
+	Usage e.g. : $0 [-d Exome_SNPs_1A -p Triticum_aestivum_IWGSC_RefSeq_v1.0 ] _or_ -b blockId  < IWGSC_RefSeq_v1.0.EXOME_SNPs.chr1A.tsv > Exome_SNPs_1A.json
+	Optional params : -n namespace [empty | 90k | ... ]  -c "common name"
+EOF
+
+my $datasetName = $options{d};
+my $parentName = $options{p};
+my $blockId = $options{b};
+my $namespace = $options{n} || "$parentName:$datasetName";
+my $commonName = $options{c};
+my $shortName = $options{s} || "Exome";	# option, default : Exome. WGS
+
+
+my $fieldSeparator = ',';	# '\t'
+
+
+my $refAltSlash = 0;	# option, default 0
+my $addValues = 0;	# option : add values : { other columns, }
+# option : if  $namespace =~ m/90k/ etc,  use  $datasetHeaderGM
+my $isGM = 0; # 1;
+
+
+my $extraTags = ""; # ", \"HighDensity\"";	# option, default ''
+
+#-------------------------------------------------------------------------------
+
+# initialised by makeTemplates()
+my $datasetHeader;
+my $blockHeader;
+my $blockFooter;
+my $datasetFooter;
+my $datasetHeaderGM;
+
+#-------------------------------------------------------------------------------
+
+if ($options{v}) {
+  print versionMsg;
+}
+elsif ($options{h})
+{
+  print usageMsg;
+}
+elsif (defined ($datasetName) == defined ($blockId))
+{
+  print usageMsg, <<EOF;
+  Required option : -d dataset name or -b block name (not both)
+EOF
+}
+elsif (defined ($parentName) == defined ($blockId))
+{
+  print usageMsg, <<EOF;
+  Required option : -p parent (reference dataset) name or -b block name (not both)
+EOF
+}
+else
+{
+  makeTemplates();
+
+  if (! defined ($blockId))
+    { 
+      createDataset();
+    }
+  else
+    {
+      appendToBlock();
+    }
+}
 
 #-------------------------------------------------------------------------------
 
@@ -64,10 +149,7 @@ BEGIN
   eval "use constant c_start => c_pos;";
 }
 
-# Forward declarations
-sub convertInput();
-sub createDataset();
-sub appendToBlock();
+#-------------------------------------------------------------------------------
 
 # @return true if the given line is a column header row
 sub headerLine($$) {
@@ -80,84 +162,29 @@ sub headerLine($$) {
     );
   return $isHeader;
 }
+
 #-------------------------------------------------------------------------------
 
-my $shortName = "WGS";	# option, default : Exome
-my $extraTags = ""; # ", \"HighDensity\"";	# option, default ''
-
+sub makeTemplates()
+{
 
 # Used to form the JSON structure of datasets and blocks.
 # Text extracted from pretzel-data/myMap.json
 # These are indented with 4 spaces, whereas the remainder of the file is indented with 2-column tab positions.
-my $datasetHeader = <<EOF;
+$datasetHeader = <<EOF;
 {
-    "name": "myMap",
+    "name": "$datasetName",
     "type": "linear",
     "tags": [
         "SNP"$extraTags
     ],
-    "parent" : "Triticum_aestivum_IWGSC_RefSeq_v1.0",
-    "namespace" : "Triticum_aestivum_IWGSC_RefSeq_v1.0:Triticum_aestivum_IWGSC_RefSeq_v1.0_Exome_SNPs",
+    "parent" : "$parentName",
+    "namespace" : "$namespace",
     "meta" : { "type" : "Genome", "shortName" : "$shortName" },
     "blocks": [
 EOF
 
-
-
-# omitted :
-#            "namespace": "90k",
-my $blockHeader = <<EOF;
-        {
-            "name": "1A",
-            "scope": "1A",
-            "features": [
-
-EOF
-
-my $blockFooter = <<EOF;
-            ]
-        }
-EOF
-
-my $datasetFooter = <<EOF;
-
-    ]
-}
-EOF
-
-
-#-------------------------------------------------------------------------------
-# main
-
-
-## Get options from ARGV
-my %options;
-getopts("vhd:p:b:n:c:", \%options);
-
-## Version and help options display
-use constant versionMsg => "2020 Dec 07 (Don Isdale).\n";
-use constant usageMsg => <<EOF;
-	Usage e.g. : $0 [-d Exome_SNPs_1A -p Triticum_aestivum_IWGSC_RefSeq_v1.0 ] _or_ -b blockId  < IWGSC_RefSeq_v1.0.EXOME_SNPs.chr1A.tsv > Exome_SNPs_1A.json
-	Optional params : -n namespace [empty | 90k | ... ]  -c "common name"
-EOF
-
-my $datasetName = $options{d};
-my $parentName = $options{p};
-my $blockId = $options{b};
-my $namespace = $options{n};
-my $commonName = $options{c};
-
-my $fieldSeparator = ',';	# '\t'
-
-
-my $refAltSlash = 0;	# option, default 0
-my $addValues = 0;	# option : add values : { other columns, }
-# option : if  $namespace =~ m/90k/ etc,  use  $datasetHeaderGM
-my $isGM = 0; # 1;
-
-#-------------------------------------------------------------------------------
-
-my $datasetHeaderGM = <<EOF;
+$datasetHeaderGM = <<EOF;
 {
     "name": "myMap",
     "namespace" : "$namespace",
@@ -165,39 +192,29 @@ my $datasetHeaderGM = <<EOF;
     "blocks": [
 EOF
 
-#-------------------------------------------------------------------------------
 
 
+# omitted :
+#            "namespace": "90k",
+$blockHeader = <<EOF;
+        {
+            "name": "1A",
+            "scope": "1A",
+            "features": [
 
-if ($options{v}) {
-  print versionMsg;
-}
-elsif ($options{h})
-{
-  print usageMsg;
-}
-elsif (defined ($datasetName) == defined ($blockId))
-{
-  print usageMsg, <<EOF;
-  Required option : -d dataset name or -b block name (not both)
 EOF
-}
-elsif (defined ($parentName) == defined ($blockId))
-{
-  print usageMsg, <<EOF;
-  Required option : -p parent (reference dataset) name or -b block name (not both)
+
+$blockFooter = <<EOF;
+            ]
+        }
 EOF
+
+$datasetFooter = <<EOF;
+
+    ]
 }
-else
-{
-  if (! defined ($blockId))
-    { 
-      createDataset();
-    }
-  else
-    {
-      appendToBlock();
-    }
+EOF
+
 }
 
 #-------------------------------------------------------------------------------
@@ -213,10 +230,6 @@ sub createDataset()
   if ($isGM) {
     $datasetHeader = $datasetHeaderGM;
   }
-
-  $datasetHeader =~ s/myMap/$datasetName/;
-  $datasetHeader =~ s/Triticum_aestivum_IWGSC_RefSeq_v1.0/$parentName/g;
-  $datasetHeader =~ s/_Exome_SNPs/_$datasetName/;
 
   print $datasetHeader;
 
