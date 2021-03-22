@@ -65,6 +65,10 @@
 	(js2-basic-offset . 2)
 	(js2-bounce-indent-p . t)  
 	(js2-pretty-multiline-declarations . nil)
+	;; GNU style
+	(perl-indent-level . 2)
+	(perl-continued-statement-offset . 2)
+	(perl-continued-brace-offset . 0)
 	)
 )
 

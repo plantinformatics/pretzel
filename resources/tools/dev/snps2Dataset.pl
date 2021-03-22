@@ -12,9 +12,6 @@
 # initial version based on effects2Dataset.pl (a6e96c6)
 
 #-------------------------------------------------------------------------------
-# -*- tab-width 2; perl-indent-level : 2; perl-continued-statement-offset : 2; perl-continued-brace-offset : -2; -*- (emacs)
-# vim: set tabstop=2 shiftwidth=2 noexpandtab: 
-#-------------------------------------------------------------------------------
 
 use strict;
 use warnings;
@@ -52,10 +49,10 @@ $columnsKeyString = "chr pos name ref_alt";
 my $columnsKeyPrefixed;
 BEGIN
 {
-    $columnsKeyString = "name chr pos";
-    $columnsKeyString = "name chr pos end";
-    # $columnsKeyString = "chr name pos";
-    $columnsKeyPrefixed = $columnsKeyString
+  $columnsKeyString = "name chr pos";
+  $columnsKeyString = "name chr pos end";
+  # $columnsKeyString = "chr name pos";
+  $columnsKeyPrefixed = $columnsKeyString
     =~ s/,/ /rg
     =~ s/^/c_/r
     =~ s/ / c_/rg;
@@ -63,8 +60,8 @@ BEGIN
 use constant ColumnsEnum => split(' ', $columnsKeyPrefixed);
 BEGIN
 {
-    eval "use constant (ColumnsEnum)[$_] => $_;" foreach 0..(ColumnsEnum)-1;
-    eval "use constant c_start => c_pos;";
+  eval "use constant (ColumnsEnum)[$_] => $_;" foreach 0..(ColumnsEnum)-1;
+  eval "use constant c_start => c_pos;";
 }
 
 # Forward declarations
@@ -74,14 +71,14 @@ sub appendToBlock();
 
 # @return true if the given line is a column header row
 sub headerLine($$) {
-    my ($line, $lineNumber) = @_;
-    my $isHeader = ($lineNumber == 1) && 
-	(
-	 ($line =~ m/^label	chr	pos/)
-	 || ($line =~ m/Marker.*Chromosome/i)
-	 || ($line =~ m/Contig,Position/i)
-	);
-    return $isHeader;
+  my ($line, $lineNumber) = @_;
+  my $isHeader = ($lineNumber == 1) && 
+    (
+     ($line =~ m/^label	chr	pos/)
+     || ($line =~ m/Marker.*Chromosome/i)
+     || ($line =~ m/Contig,Position/i)
+    );
+  return $isHeader;
 }
 #-------------------------------------------------------------------------------
 
@@ -91,7 +88,7 @@ my $extraTags = ""; # ", \"HighDensity\"";	# option, default ''
 
 # Used to form the JSON structure of datasets and blocks.
 # Text extracted from pretzel-data/myMap.json
-# These are indented with 4 spaces, whereas the remainder of the file is indented with 2-column tabs.
+# These are indented with 4 spaces, whereas the remainder of the file is indented with 2-column tab positions.
 my $datasetHeader = <<EOF;
 {
     "name": "myMap",
@@ -173,33 +170,33 @@ EOF
 
 
 if ($options{v}) {
-    print versionMsg;
+  print versionMsg;
 }
 elsif ($options{h})
 {
-    print usageMsg;
+  print usageMsg;
 }
 elsif (defined ($datasetName) == defined ($blockId))
 {
-    print usageMsg, <<EOF;
-    Required option : -d dataset name or -b block name (not both)
+  print usageMsg, <<EOF;
+  Required option : -d dataset name or -b block name (not both)
 EOF
 }
 elsif (defined ($parentName) == defined ($blockId))
 {
-    print usageMsg, <<EOF;
-    Required option : -p parent (reference dataset) name or -b block name (not both)
+  print usageMsg, <<EOF;
+  Required option : -p parent (reference dataset) name or -b block name (not both)
 EOF
 }
 else
 {
-    if (! defined ($blockId))
+  if (! defined ($blockId))
     { 
-	createDataset();
+      createDataset();
     }
-    else
+  else
     {
-	appendToBlock();
+      appendToBlock();
     }
 }
 
@@ -213,91 +210,91 @@ my $blockSeparator;
 
 sub createDataset()
 {
-    if ($isGM) {
-	$datasetHeader = $datasetHeaderGM;
-    }
+  if ($isGM) {
+    $datasetHeader = $datasetHeaderGM;
+  }
 
-    $datasetHeader =~ s/myMap/$datasetName/;
-    $datasetHeader =~ s/Triticum_aestivum_IWGSC_RefSeq_v1.0/$parentName/g;
-    $datasetHeader =~ s/_Exome_SNPs/_$datasetName/;
-	
-    print $datasetHeader;
+  $datasetHeader =~ s/myMap/$datasetName/;
+  $datasetHeader =~ s/Triticum_aestivum_IWGSC_RefSeq_v1.0/$parentName/g;
+  $datasetHeader =~ s/_Exome_SNPs/_$datasetName/;
 
-    convertInput();
+  print $datasetHeader;
 
-    optionalBlockFooter();
-    print $datasetFooter;
+  convertInput();
+
+  optionalBlockFooter();
+  print $datasetFooter;
 }
 sub appendToBlock()
 {
-    # related : $blockHeader
-    print "{\n  \"blockId\" : \"$blockId\",\n",
-	"  \"features\": [\n";
+  # related : $blockHeader
+  print "{\n  \"blockId\" : \"$blockId\",\n",
+    "  \"features\": [\n";
 
-    convertInput();
+  convertInput();
 
-    print $blockFooter;
+  print $blockFooter;
 }
 sub convertInput()
 {
-    while (<>)
+  while (<>)
     {
-        chomp;
-        # commenting out this condition will output the column headers in the JSON,
-        # which is a useful check of column alignment with the ColumnsEnum.
-        if (! headerLine($_, $.))
+      chomp;
+      # commenting out this condition will output the column headers in the JSON,
+      # which is a useful check of column alignment with the ColumnsEnum.
+      if (! headerLine($_, $.))
         { snpLine($_); }
     }
 }
 
 sub optionalBlockFooter()
 {
-    if (defined($lastChr))
+  if (defined($lastChr))
     { print $blockFooter; }
 }
 
 # read 1 line, which defines a SNP and associated reference/alternate data
 sub snpLine($)
 {
-    my ($line) = @_;
-    # input line e.g.
-    #c_chr c_pos c_name c_ref_alt
-    #chr1A	22298	scaffold38755_22298	T/C
+  my ($line) = @_;
+  # input line e.g.
+  #c_chr c_pos c_name c_ref_alt
+  #chr1A	22298	scaffold38755_22298	T/C
 
-    my @a =  split($fieldSeparator, $line);
-    # tsv datasets often follow the naming convention 'chr1A';  Pretzel data omits 'chr' for block scope & name : '1A'.
-    $a[c_chr] =~ s/^chr//;
-    $a[c_chr] = trimOutsideQuotesAndSpaces($a[c_chr]);
-    $a[c_name] = trimOutsideQuotesAndSpaces($a[c_name]);
+  my @a =  split($fieldSeparator, $line);
+  # tsv datasets often follow the naming convention 'chr1A';  Pretzel data omits 'chr' for block scope & name : '1A'.
+  $a[c_chr] =~ s/^chr//;
+  $a[c_chr] = trimOutsideQuotesAndSpaces($a[c_chr]);
+  $a[c_name] = trimOutsideQuotesAndSpaces($a[c_name]);
 
-    my $c = $a[c_chr];
-    if (! defined($lastChr) || ($lastChr ne $c))
+  my $c = $a[c_chr];
+  if (! defined($lastChr) || ($lastChr ne $c))
     {
-	if (defined($blockId))
-	{
-        $lastChr = $c;
-	}
-	else
-	{
-        optionalBlockFooter();
+      if (defined($blockId))
+        {
+          $lastChr = $c;
+        }
+      else
+        {
+          optionalBlockFooter();
 
-        # print $c;
-        $lastChr = $c;
+          # print $c;
+          $lastChr = $c;
 
-        if (defined($blockSeparator))
-        { print $blockSeparator; }
-        else
-        { $blockSeparator = ",\n"; }
+          if (defined($blockSeparator))
+            { print $blockSeparator; }
+          else
+            { $blockSeparator = ",\n"; }
 
-        my $h = $blockHeader;
-        # replace '1A' in the $blockHeader template with the actual chromosome name $c.
-        $h =~ s/1A/$c/g;
-        print $h;
-	}
+          my $h = $blockHeader;
+          # replace '1A' in the $blockHeader template with the actual chromosome name $c.
+          $h =~ s/1A/$c/g;
+          print $h;
+        }
     }
-    else # print feature separator
+  else # print feature separator
     { print ","; }
-    printFeature(@a);
+  printFeature(@a);
 }
 
 # Strip off outside " and spaces, to handle e.g.
@@ -305,16 +302,16 @@ sub snpLine($)
 #   Ps_ILL_03447,"LG 2",0
 # Used for name (label) and chr (chromosome / block) name columns.
 sub trimOutsideQuotesAndSpaces($) {
-    my ($label) = @_;
-    if ($label =~ m/"/) {
-	$label =~ s/^"//;
-	$label =~ s/"$//;
+  my ($label) = @_;
+  if ($label =~ m/"/) {
+    $label =~ s/^"//;
+    $label =~ s/"$//;
     }
-    if ($label =~ m/ /) {
-	$label =~ s/^ //;
-	$label =~ s/ $//;
+  if ($label =~ m/ /) {
+    $label =~ s/^ //;
+    $label =~ s/ $//;
     }
-    return $label;
+  return $label;
 }
 
 # Recognise decimal fraction aliasing and round the number. 
@@ -334,11 +331,11 @@ sub trimOutsideQuotesAndSpaces($) {
 # The SNP / marker name may also contain 4 0-s, but that is a different column and they are unlikely to have 8.
 sub roundPosition($)
 {
-    my ($pos) = @_;
-    if ($pos =~ m/000000|999999/) {
-	$pos = (sprintf('%.8f', $pos) =~ s/0+$//r =~ s/\.$//r);
+  my ($pos) = @_;
+  if ($pos =~ m/000000|999999/) {
+    $pos = (sprintf('%.8f', $pos) =~ s/0+$//r =~ s/\.$//r);
     }
-    return $pos;
+  return $pos;
 }
 
 
@@ -351,54 +348,54 @@ sub roundPosition($)
 
 sub printFeature($)
 {
-    my (@a) = @_;
+  my (@a) = @_;
 
-    # Copy the essential / key columns; remainder may go in .values.
-    my (@ak) = ();
+  # Copy the essential / key columns; remainder may go in .values.
+  my (@ak) = ();
 
-    my $c;
-    for $c (c_name, c_chr, c_pos, c_start, c_end)
+  my $c;
+  for $c (c_name, c_chr, c_pos, c_start, c_end)
     {
-	$ak[$c] = $a[$c];
+      $ak[$c] = $a[$c];
     }
-    # Splice (delete) after copy because column indexes are affected.
-    for $c (c_end, c_start, c_chr, c_name)  # c_pos,
+  # Splice (delete) after copy because column indexes are affected.
+  for $c (c_end, c_start, c_chr, c_name)  # c_pos,
     {
-	if (defined($a[$c]))
-	{
-	    splice(@a, $c, 1);
-	}
-    }
-
-    # Round the numeric (position) columns.
-    for $c (c_pos, c_start, c_end)
-    {
-	if (defined($ak[$c]))
-	{
-	    $ak[$c] = roundPosition($ak[$c]);
-	}
-    }
-    # Either pos or (start & end) may be provided.
-    # Copy pos to start & end if they are not defined.
-    for $c (c_start, c_end)
-    {
-	if (defined($ak[c_pos]) && ! defined($ak[$c]))
-	{
-	    $ak[$c] = $ak[c_pos];
-	}
+      if (defined($a[$c]))
+        {
+          splice(@a, $c, 1);
+        }
     }
 
+  # Round the numeric (position) columns.
+  for $c (c_pos, c_start, c_end)
+    {
+      if (defined($ak[$c]))
+        {
+          $ak[$c] = roundPosition($ak[$c]);
+        }
+    }
+  # Either pos or (start & end) may be provided.
+  # Copy pos to start & end if they are not defined.
+  for $c (c_start, c_end)
+    {
+      if (defined($ak[c_pos]) && ! defined($ak[$c]))
+        {
+          $ak[$c] = $ak[c_pos];
+        }
+    }
 
-    my $values = "";
-    my $ref_alt;
-    if ($refAltSlash)
+
+  my $values = "";
+  my $ref_alt;
+  if ($refAltSlash)
     { $ref_alt = "\"ref\" : \"" . (shift @a) . "\""; }
-    elsif ($addValues)
+  elsif ($addValues)
     { $ref_alt = "\"ref\" : \"$a[0]\"" . ", " . "\"alt\": \"$a[1]\""; };
-    my $indent = "                    ";
-    if ($ref_alt) { $values .=  ",\n" . $indent . "\"values\" : {" . $ref_alt . "}"; }
+  my $indent = "                    ";
+  if ($ref_alt) { $values .=  ",\n" . $indent . "\"values\" : {" . $ref_alt . "}"; }
 
-    print <<EOF;
+  print <<EOF;
                {
                     "name": "$ak[c_name]",
                     "value": [
@@ -410,4 +407,16 @@ sub printFeature($)
 EOF
 }
 
+#-------------------------------------------------------------------------------
+# Indentation.
+#
+# emacs (GNU style) :
+# Local Variables:
+# perl-indent-level: 2
+# perl-continued-statement-offset: 2
+# perl-continued-brace-offset: 0
+# End:
+#
+# Now indented using spaces not TAB characters, previously tab-width 2, or
+# vim: set tabstop=2 shiftwidth=2 noexpandtab: 
 #-------------------------------------------------------------------------------
