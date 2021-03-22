@@ -53,7 +53,8 @@ my $columnsKeyPrefixed;
 BEGIN
 {
     $columnsKeyString = "name chr pos";
-    $columnsKeyString = "chr name pos";
+    $columnsKeyString = "name chr pos end";
+    # $columnsKeyString = "chr name pos";
     $columnsKeyPrefixed = $columnsKeyString
     =~ s/,/ /rg
     =~ s/^/c_/r
@@ -63,6 +64,7 @@ use constant ColumnsEnum => split(' ', $columnsKeyPrefixed);
 BEGIN
 {
     eval "use constant (ColumnsEnum)[$_] => $_;" foreach 0..(ColumnsEnum)-1;
+    eval "use constant c_start => c_pos;";
 }
 
 # Forward declarations
@@ -73,14 +75,18 @@ sub appendToBlock();
 # @return true if the given line is a column header row
 sub headerLine($$) {
     my ($line, $lineNumber) = @_;
-    my $isHeader = ($line =~ m/^label	chr	pos/)
-	|| (($lineNumber == 1) && ($line =~ m/Marker.*Chromosome/i));
+    my $isHeader = ($lineNumber == 1) && 
+	(
+	 ($line =~ m/^label	chr	pos/)
+	 || ($line =~ m/Marker.*Chromosome/i)
+	 || ($line =~ m/Contig,Position/i)
+	);
     return $isHeader;
 }
 #-------------------------------------------------------------------------------
 
 my $shortName = "WGS";	# option, default : Exome
-my $extraTags = ", \"HighDensity\"";	# option, default ''
+my $extraTags = ""; # ", \"HighDensity\"";	# option, default ''
 
 
 # Used to form the JSON structure of datasets and blocks.
@@ -150,7 +156,7 @@ my $fieldSeparator = ',';	# '\t'
 my $refAltSlash = 0;	# option, default 0
 my $addValues = 0;	# option : add values : { other columns, }
 # option : if  $namespace =~ m/90k/ etc,  use  $datasetHeaderGM
-my $isGM = 1;
+my $isGM = 0; # 1;
 
 #-------------------------------------------------------------------------------
 
@@ -297,6 +303,7 @@ sub snpLine($)
 # Strip off outside " and spaces, to handle e.g.
 #   "LG4 ",Ca_2289,0
 #   Ps_ILL_03447,"LG 2",0
+# Used for name (label) and chr (chromosome / block) name columns.
 sub trimOutsideQuotesAndSpaces($) {
     my ($label) = @_;
     if ($label =~ m/"/) {
@@ -310,6 +317,31 @@ sub trimOutsideQuotesAndSpaces($) {
     return $label;
 }
 
+# Recognise decimal fraction aliasing and round the number. 
+#
+# ssconvert apparently has different rounding to libreoffice, as the former
+# expresses some decimal fractions with recurring 0 or 9.
+# e.g comparing output from libreoffice and ssconvert respectively 
+#   < SNP_40002085,LG1,1.3
+#   > SNP_40002085,LG1,1.2999999999999998
+#   < SNP_40001996,LG1,7.6
+#   > SNP_40001996,LG1,7.6000000000000005
+#
+# ssconvert handles multiple work-sheets within the .xslx, but libreoffice does not.
+#
+# If the number has a few decimal digits in the source spreadsheet, then
+# the number of 0-s or 9-s to match here may be as few as 11. match a minimum of 6.
+# The SNP / marker name may also contain 4 0-s, but that is a different column and they are unlikely to have 8.
+sub roundPosition($)
+{
+    my ($pos) = @_;
+    if ($pos =~ m/000000|999999/) {
+	$pos = (sprintf('%.8f', $pos) =~ s/0+$//r =~ s/\.$//r);
+    }
+    return $pos;
+}
+
+
 # For printing array as comma-separated list.
 # Could make this local if it clashed with any other print.
 # As an alternative to using join to construct $aCsv in printFeature(), can do :
@@ -321,28 +353,41 @@ sub printFeature($)
 {
     my (@a) = @_;
 
-    my $chr = $a[c_chr];
-    my $pos = $a[c_pos];
-    my $label = $a[c_name];
-    splice(@a, c_chr, 1);
-    splice(@a, c_pos, 1);
-    splice(@a, c_name, 1);
+    # Copy the essential / key columns; remainder may go in .values.
+    my (@ak) = ();
 
-    # Recognise decimal fraction aliasing and round the number. 
-    # ssconvert apparently has different rounding to libreoffice, as the former
-    # expresses some decimal fractions with recurring 0 or 9.
-    # e.g comparing output from libreoffice and ssconvert respectively 
-    #   < SNP_40002085,LG1,1.3
-    #   > SNP_40002085,LG1,1.2999999999999998
-    #   < SNP_40001996,LG1,7.6
-    #   > SNP_40001996,LG1,7.6000000000000005
-    # ssconvert handles multiple work-sheets within the .xslx, but libreoffice does not.
-    # If the number has a few decimal digits in the source spreadsheet, then
-    # the number of 0-s or 9-s to match here may be as few as 11. match a minimum of 6.
-    # The SNP / marker name may also contain 4 0-s, but that is a different column and they are unlikely to have 8.
-    if ($pos =~ m/000000|999999/) {
-	$pos = (sprintf('%.8f', $pos) =~ s/0+$//r =~ s/\.$//r);
+    my $c;
+    for $c (c_name, c_chr, c_pos, c_start, c_end)
+    {
+	$ak[$c] = $a[$c];
     }
+    # Splice (delete) after copy because column indexes are affected.
+    for $c (c_end, c_start, c_chr, c_name)  # c_pos,
+    {
+	if (defined($a[$c]))
+	{
+	    splice(@a, $c, 1);
+	}
+    }
+
+    # Round the numeric (position) columns.
+    for $c (c_pos, c_start, c_end)
+    {
+	if (defined($ak[$c]))
+	{
+	    $ak[$c] = roundPosition($ak[$c]);
+	}
+    }
+    # Either pos or (start & end) may be provided.
+    # Copy pos to start & end if they are not defined.
+    for $c (c_start, c_end)
+    {
+	if (defined($ak[c_pos]) && ! defined($ak[$c]))
+	{
+	    $ak[$c] = $ak[c_pos];
+	}
+    }
+
 
     my $values = "";
     my $ref_alt;
@@ -355,12 +400,12 @@ sub printFeature($)
 
     print <<EOF;
                {
-                    "name": "$label",
+                    "name": "$ak[c_name]",
                     "value": [
-                        $pos,
-                        $pos
+                        $ak[c_start],
+                        $ak[c_end]
                     ],
-                    "value_0": $pos$values
+                    "value_0": $ak[c_start]$values
                 }
 EOF
 }
