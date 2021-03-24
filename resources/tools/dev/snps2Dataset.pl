@@ -32,7 +32,7 @@ sub makeTemplates();
 
 ## Get options from ARGV
 my %options;
-getopts("vhd:p:b:n:c:s:C:F:P:", \%options);
+getopts("vhd:p:b:n:c:s:C:F:P:g", \%options);
 
 ## Version and help options display
 use constant versionMsg => "2020 Dec 07 (Don Isdale).\n";
@@ -47,9 +47,10 @@ EOF
 my $datasetName = $options{d};
 my $parentName = $options{p};
 my $blockId = $options{b};
-my $namespace = $options{n} || "$parentName:$datasetName";
+# may be '', which is false-y
+my $namespace = defined($options{n}) ? $options{n} : "$parentName:$datasetName";
 my $commonName = $options{c};
-my $shortName = $options{s} || "Exome";	# option, default : Exome. WGS
+my $shortName = $options{s};	# option, Exome. WGS
 my $columnsKeyString = $options{C} || "chr pos name ref_alt";
 
 my $fieldSeparator = $options{F} || ',';	# '\t'
@@ -61,13 +62,16 @@ my $chrOutputPrefix = $options{P} || '';
 #my $refAltSlash = 0;	# option, default 0
 my $addValues = 0;	# option : add values : { other columns, }
 # option : if  $namespace =~ m/90k/ etc,  use  $datasetHeaderGM
-my $isGM = 0; # 1;
+my $isGM = $options{g}; # default 0, 1 for physical data blocks
 
 
-my $extraTags = '"SNP"';  #  . ", \"HighDensity\"";	# option, default ''
+my $extraTags = ''; # '"SNP"';  #  . ", \"HighDensity\"";	# option, default ''
 
 # For loading Genome Reference / Parent :
 my $extraMeta = ''; # '"paths" : "false",'; # '"type" : "Genome",';
+if (defined($shortName) && $shortName) {
+  $extraMeta .= '"shortName" : "' . $shortName . '" ';
+}
 
 #-------------------------------------------------------------------------------
 
@@ -194,13 +198,13 @@ $datasetHeader = <<EOF;
     ],
     "parent" : "$parentName",
     "namespace" : "$namespace",
-    "meta" : { $extraMeta "shortName" : "$shortName" },
+    "meta" : { $extraMeta },
     "blocks": [
 EOF
 
 $datasetHeaderGM = <<EOF;
 {
-    "name": "myMap",
+    "name": "$datasetName",
     "namespace" : "$namespace",
     "meta" : { "type" : "Genetic Map", "commonName" : "$commonName" },
     "blocks": [
@@ -212,8 +216,8 @@ EOF
 #            "namespace": "90k",
 $blockHeader = <<EOF;
         {
-            "name": "1A",
-            "scope": "1A",
+            "name": "blockName",
+            "scope": "blockScope",
             "features": [
 
 EOF
@@ -314,8 +318,11 @@ sub snpLine($)
             { $blockSeparator = ",\n"; }
 
           my $h = $blockHeader;
-          # replace '1A' in the $blockHeader template with the actual chromosome name $c.
-          $h =~ s/1A/$c/g;
+          # replace 'blockName' in the $blockHeader template with the actual chromosome name $c.
+	  # and blockScope with the scope with is $c with .[1-9] trimmed off
+	  my $scope = ($c =~ s/\.[1-9]$//r);
+          $h =~ s/blockName/$c/g;
+          $h =~ s/blockScope/$scope/g;
           print $h;
         }
     }
