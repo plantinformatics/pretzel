@@ -129,7 +129,10 @@ export default Model.extend({
   /** @return true if this block's dataset defined _meta.paths and it is true.
    * and ! .isSNP
    */
-  showPaths : computed('datasetId._meta.paths', 'id', function () {
+  showPaths : computed(
+    'datasetId._meta.paths', 'id',
+    'featuresCountIncludingZoom', 'featuresCount',
+    function () {
     let
     dataset = this.get('datasetId'),
     paths = dataset.get('_meta.paths');
@@ -150,7 +153,12 @@ export default Model.extend({
       paths |= odd;
       dLog(id, odd);
     }
-    paths &&= ! this.get('isSNP');
+    /* don't request paths for HighDensity SNPs until zoomed in to small scale.
+     * The comparison < 5e4 will be false until .featureCount or
+     * .featuresCountsResults are received, i.e. while
+     * featuresCountIncludingZoom is undefined.
+     */
+    paths &&= ! this.get('isSNP') || (this.get('featuresCountIncludingZoom') < 5e4);
     // dLog('showPaths', dataset, paths);
     return paths;
   }),
