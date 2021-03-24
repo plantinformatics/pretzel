@@ -67,7 +67,7 @@ my $isGM = 0; # 1;
 my $extraTags = '"SNP"';  #  . ", \"HighDensity\"";	# option, default ''
 
 # For loading Genome Reference / Parent :
-my $extraMeta = '"paths" : "false",'; # '"type" : "Genome",';
+my $extraMeta = ''; # '"paths" : "false",'; # '"type" : "Genome",';
 
 #-------------------------------------------------------------------------------
 
@@ -156,8 +156,10 @@ BEGIN
 {
   eval "use constant (ColumnsEnum)[$_] => $_;" foreach 0..(ColumnsEnum)-1;
   eval "use constant c_start => c_pos;";
-  use constant c_end => undef;
+  use constant c_endPos => undef;
   use constant c_ref_alt => undef;
+  use constant c_ref => undef;
+  use constant c_alt => undef;
 }
 
 #-------------------------------------------------------------------------------
@@ -390,14 +392,14 @@ sub printFeature($)
   my (@ak) = ();
 
   my $c;
-  for $c (c_name, c_chr, c_pos, c_start, c_end, c_ref, c_alt, c_ref_alt)
+  for $c (c_name, c_chr, c_pos, c_start, c_endPos, c_ref, c_alt, c_ref_alt)
     {
       if (defined($c)) {
 	$ak[$c] = $a[$c];
       }
     }
   # Splice (delete) after copy because column indexes are affected.
-  for $c (c_end, c_start, c_chr, c_name, c_ref, c_alt, c_ref_alt)  # c_pos,
+  for $c (c_endPos, c_start, c_chr, c_name, c_ref, c_alt, c_ref_alt)  # c_pos,
     {
       if (defined($c) && defined($a[$c]))
         {
@@ -406,7 +408,7 @@ sub printFeature($)
     }
 
   # Round the numeric (position) columns.
-  for $c (c_pos, c_start, c_end)
+  for $c (c_pos, c_start, c_endPos)
     {
       if (defined($c) && defined($ak[$c]))
         {
@@ -419,14 +421,14 @@ sub printFeature($)
   # Wrapping use of index which may be undefined with eval; otherwise
   # it gets an error on initial program parse even though it is not
   # evaluated
-  my $end = defined(c_pos) ? $ak[c_pos] : eval '$ak[c_end]';
+  my $end = defined(c_pos) ? $ak[c_pos] : eval '$ak[c_endPos]';
 
   my $values = "";
   my $ref_alt;
   if (defined(c_ref_alt))
     { $ref_alt = '"ref" : "' . eval('$ak[c_ref_alt]') . '"'; }
   elsif (defined(c_ref))
-    { $ref_alt = "\"ref\" : \"$ak[c_ref]\"" . ", " . "\"alt\": \"$ak[c_alt]\""; };
+    { $ref_alt = '"ref" : "' . eval('$ak[c_ref]') . '"' . ", " . '"alt": "' . eval('$ak[c_alt]') . '"'; };
   my $indent = "                    ";
   # $addValues
   if ($ref_alt) { $values .=  ",\n" . $indent . "\"values\" : {" . $ref_alt . "}"; }
