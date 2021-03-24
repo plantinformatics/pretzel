@@ -32,13 +32,16 @@ sub makeTemplates();
 
 ## Get options from ARGV
 my %options;
-getopts("vhd:p:b:n:c:s:", \%options);
+getopts("vhd:p:b:n:c:s:C:F:P:", \%options);
 
 ## Version and help options display
 use constant versionMsg => "2020 Dec 07 (Don Isdale).\n";
 use constant usageMsg => <<EOF;
 	Usage e.g. : $0 [-d Exome_SNPs_1A -p Triticum_aestivum_IWGSC_RefSeq_v1.0 ] _or_ -b blockId  < IWGSC_RefSeq_v1.0.EXOME_SNPs.chr1A.tsv > Exome_SNPs_1A.json
 	Optional params : -n namespace [empty | 90k | ... ]  -c "common name"
+	-C columnsKeyString e.g. "chr pos name ref_alt"
+	-F field separator, e.g. '\t', default ','
+	-P species prefix for chr number, e.g. Ca
 EOF
 
 my $datasetName = $options{d};
@@ -47,18 +50,24 @@ my $blockId = $options{b};
 my $namespace = $options{n} || "$parentName:$datasetName";
 my $commonName = $options{c};
 my $shortName = $options{s} || "Exome";	# option, default : Exome. WGS
+my $columnsKeyString = $options{C} || "chr pos name ref_alt";
+
+my $fieldSeparator = $options{F} || ',';	# '\t'
+# Prefix the chr with e.g. 2-letter abbreviation of latin name (e.g. 'Ca')
+# The chr input may be just a number, or it may have some other prefix which is trimmed off (see $chrPrefix).
+my $chrOutputPrefix = $options{P} || '';
 
 
-my $fieldSeparator = ',';	# '\t'
-
-
-my $refAltSlash = 0;	# option, default 0
+#my $refAltSlash = 0;	# option, default 0
 my $addValues = 0;	# option : add values : { other columns, }
 # option : if  $namespace =~ m/90k/ etc,  use  $datasetHeaderGM
 my $isGM = 0; # 1;
 
 
-my $extraTags = ""; # ", \"HighDensity\"";	# option, default ''
+my $extraTags = '"SNP"';  #  . ", \"HighDensity\"";	# option, default ''
+
+# For loading Genome Reference / Parent :
+my $extraMeta = '"paths" : "false",'; # '"type" : "Genome",';
 
 #-------------------------------------------------------------------------------
 
@@ -106,7 +115,6 @@ else
 
 #-------------------------------------------------------------------------------
 
-my $columnsKeyString;
 
 # Define enum-like constants for the indexes of the input columns.
 # Not fully used, c_char is used in snpLine(), but printFeature() unpacks the input fields directly using shift @a.
@@ -114,7 +122,7 @@ my $columnsKeyString;
 # Prefix some of the enum names with c_ (column) to avoid namespace clash with e.g. perl chr().
 # data example : chr1A	22298	scaffold38755_22298	T/C
 # scaffold_pos -> name
-$columnsKeyString = "chr pos name ref_alt";
+# $columnsKeyString = "chr pos name ref_alt";
 
 #SNP_20002403,LG7.2,40.5
 #PBA_LC_0373,LG7.3,0
@@ -132,11 +140,12 @@ $columnsKeyString = "chr pos name ref_alt";
 # equivalent to e.g : qw(c_chr c_pos c_name c_ref_alt)
 # /r for non-destructive, allows chaining.
 my $columnsKeyPrefixed;
+
 BEGIN
 {
-  $columnsKeyString = "name chr pos";
-  $columnsKeyString = "name chr pos end";
-  # $columnsKeyString = "chr name pos";
+  # $columnsKeyString indicates which columns contain the key values
+  # e.g. "chr name pos" or "name chr pos end" or "chr pos name ref_alt"
+  $columnsKeyString  = $ENV{columnsKeyString} || "chr name pos";
   $columnsKeyPrefixed = $columnsKeyString
     =~ s/,/ /rg
     =~ s/^/c_/r
@@ -147,6 +156,8 @@ BEGIN
 {
   eval "use constant (ColumnsEnum)[$_] => $_;" foreach 0..(ColumnsEnum)-1;
   eval "use constant c_start => c_pos;";
+  use constant c_end => undef;
+  use constant c_ref_alt => undef;
 }
 
 #-------------------------------------------------------------------------------
@@ -165,6 +176,7 @@ sub headerLine($$) {
 
 #-------------------------------------------------------------------------------
 
+
 sub makeTemplates()
 {
 
@@ -176,11 +188,11 @@ $datasetHeader = <<EOF;
     "name": "$datasetName",
     "type": "linear",
     "tags": [
-        "SNP"$extraTags
+        $extraTags
     ],
     "parent" : "$parentName",
     "namespace" : "$namespace",
-    "meta" : { "type" : "Genome", "shortName" : "$shortName" },
+    "meta" : { $extraMeta "shortName" : "$shortName" },
     "blocks": [
 EOF
 
@@ -277,8 +289,8 @@ sub snpLine($)
   my @a =  split($fieldSeparator, $line);
   # tsv datasets often follow the naming convention 'chr1A';  Pretzel data omits 'chr' for block scope & name : '1A'.
   $a[c_chr] =~ s/^chr//;
-  $a[c_chr] = trimOutsideQuotesAndSpaces($a[c_chr]);
-  $a[c_name] = trimOutsideQuotesAndSpaces($a[c_name]);
+  $a[c_chr] = $chrOutputPrefix . trimOutsideQuotesAndSpaces($a[c_chr]);
+  $a[c_name] = markerPrefix(trimOutsideQuotesAndSpaces($a[c_name]));
 
   my $c = $a[c_chr];
   if (! defined($lastChr) || ($lastChr ne $c))
@@ -327,6 +339,17 @@ sub trimOutsideQuotesAndSpaces($) {
   return $label;
 }
 
+# Illumina OPA SNP names are [123]000 or SNP_[123]000.
+# Prefix with SNP_ if not present, to make all consistent.
+sub markerPrefix($) {
+  my ($name) = @_;
+  if ($name =~ m/^[123]000/)
+  {
+    $name = "SNP_" . $name;
+  }
+  return $name
+}
+
 # Recognise decimal fraction aliasing and round the number. 
 #
 # ssconvert apparently has different rounding to libreoffice, as the former
@@ -367,14 +390,16 @@ sub printFeature($)
   my (@ak) = ();
 
   my $c;
-  for $c (c_name, c_chr, c_pos, c_start, c_end)
+  for $c (c_name, c_chr, c_pos, c_start, c_end, c_ref, c_alt, c_ref_alt)
     {
-      $ak[$c] = $a[$c];
+      if (defined($c)) {
+	$ak[$c] = $a[$c];
+      }
     }
   # Splice (delete) after copy because column indexes are affected.
-  for $c (c_end, c_start, c_chr, c_name)  # c_pos,
+  for $c (c_end, c_start, c_chr, c_name, c_ref, c_alt, c_ref_alt)  # c_pos,
     {
-      if (defined($a[$c]))
+      if (defined($c) && defined($a[$c]))
         {
           splice(@a, $c, 1);
         }
@@ -383,41 +408,41 @@ sub printFeature($)
   # Round the numeric (position) columns.
   for $c (c_pos, c_start, c_end)
     {
-      if (defined($ak[$c]))
+      if (defined($c) && defined($ak[$c]))
         {
           $ak[$c] = roundPosition($ak[$c]);
         }
     }
   # Either pos or (start & end) may be provided.
   # Copy pos to start & end if they are not defined.
-  for $c (c_start, c_end)
-    {
-      if (defined($ak[c_pos]) && ! defined($ak[$c]))
-        {
-          $ak[$c] = $ak[c_pos];
-        }
-    }
-
+  my $start = defined(c_pos) ? $ak[c_pos] : $ak[c_start];
+  # Wrapping use of index which may be undefined with eval; otherwise
+  # it gets an error on initial program parse even though it is not
+  # evaluated
+  my $end = defined(c_pos) ? $ak[c_pos] : eval '$ak[c_end]';
 
   my $values = "";
   my $ref_alt;
-  if ($refAltSlash)
-    { $ref_alt = "\"ref\" : \"" . (shift @a) . "\""; }
-  elsif ($addValues)
-    { $ref_alt = "\"ref\" : \"$a[0]\"" . ", " . "\"alt\": \"$a[1]\""; };
+  if (defined(c_ref_alt))
+    { $ref_alt = '"ref" : "' . eval('$ak[c_ref_alt]') . '"'; }
+  elsif (defined(c_ref))
+    { $ref_alt = "\"ref\" : \"$ak[c_ref]\"" . ", " . "\"alt\": \"$ak[c_alt]\""; };
   my $indent = "                    ";
+  # $addValues
   if ($ref_alt) { $values .=  ",\n" . $indent . "\"values\" : {" . $ref_alt . "}"; }
+  my $name = eval '$ak[c_name]';
 
   print <<EOF;
                {
-                    "name": "$ak[c_name]",
+                    "name": "$name",
                     "value": [
-                        $ak[c_start],
-                        $ak[c_end]
+                        $start,
+                        $end
                     ],
-                    "value_0": $ak[c_start]$values
+                    "value_0": $start$values
                 }
 EOF
+
 }
 
 #-------------------------------------------------------------------------------
