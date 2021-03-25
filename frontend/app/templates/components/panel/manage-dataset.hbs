@@ -9,6 +9,14 @@
       <tr><td>Last Updated</td><td>{{formatDate dataset.updatedAt}}</td></tr>
       <tr><td>Public</td><td>{{dataset.public}}</td></tr>
       <tr><td>Read Only</td><td>{{dataset.readOnly}}</td></tr>
+      {{#if dataset.tags.length}}
+        <tr><td>tags</td><td>
+          {{#each dataset.tags as |tag index|}}
+              {{#if index}}<nbsp/>{{/if}}
+	      {{tag}}
+          {{/each}}
+        </td></tr>
+      {{/if}}
     </tbody>
   </table>
 
