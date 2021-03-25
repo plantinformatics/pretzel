@@ -158,7 +158,7 @@ export default Model.extend({
      * .featuresCountsResults are received, i.e. while
      * featuresCountIncludingZoom is undefined.
      */
-    paths &&= ! this.get('isSNP') || (this.get('featuresCountIncludingZoom') < 5e4);
+    paths &&= ! this.get('isHighDensity') || (this.get('featuresCountIncludingZoom') < 5e4);
     // dLog('showPaths', dataset, paths);
     return paths;
   }),
