@@ -29,13 +29,15 @@ function datasetName2shortName() {
 function fileName2DatasetName() {
   sed -n 's/\.csv$//;s/[ _]*Linkage[ _]*map[_ ]*//ig;s/Pretzel_submission_//ig;s/ $//;s/ map$//i;s/\([^ ls]\)[xX]\([^ ls]\)/\1 x \2/g;s/ x / x /ig;s/.*\.xlsx\.//p;'; }
 
-
+# env var $snpFile is the name of the file which contains SNPs which associate the markers in this map file with chromosome names
+# See also mapChrsCN()
+# usage e.g. snpFile=*mission*CP_EST_SNP-OPA*
 function mapChrs() {
   lm_c=$( awk -F, ' { print $2; }'  "$i" | uniq)
   datasetName=$( echo "$i" | fileName2DatasetName );  echo "$datasetName	$i"; 
   mkdir chrSnps/"$datasetName"
   for j in $lm_c; do echo $j; awk -F, "/,$j,/ {print \$1;}" "$i" >chrSnps/"$datasetName"/$j; done
-  for j in $(cd chrSnps/"$datasetName"; ls LG*); do suffix=$(echo $j | sed -n "s/.*\(\..*\)/\1/p"); fgrep -f "chrSnps/$datasetName/$j" *mission*CP_EST_SNP-OPA* |  sed -f $genBankRename | awk -F, '{a[$2]++;} END {for (i in a) print a[i], i;}' | sort -n -r | head -1 | awk ' {printf("s/,%s,/,%s%s,/\n", "'$j'", $2, "'$suffix'"); }' ; done > chrSnps/"$datasetName".chrRename.sed
+  for j in $(cd chrSnps/"$datasetName"; ls LG*); do suffix=$(echo $j | sed -n "s/.*\(\..*\)/\1/p"); fgrep -f "chrSnps/$datasetName/$j" $snpFile |  sed -f $genBankRename | awk -F, '{a[$2]++;} END {for (i in a) print a[i], i;}' | sort -n -r | head -1 | awk ' {printf("s/,%s,/,%s%s,/\n", "'$j'", $2, "'$suffix'"); }' ; done > chrSnps/"$datasetName".chrRename.sed
 }
 
 function map1() {
@@ -45,7 +47,12 @@ function map1() {
 }
 
 
-# chr is in $1
+# Convert a linkage / genetic map from csv to Pretzel json.
+# Similar to mapChrs() except the column order here is assumed to be 
+# columnsKeyString="chr name pos"
+# i.e. chr is in $1, name is in $2 (awk)
+# This also impacts the regexp /^$j
+#
 # snpFile=*mission*CP_EST_SNP-OPA*
 # snpFile=*CP_GBS-TC*
 function mapChrsCN() {

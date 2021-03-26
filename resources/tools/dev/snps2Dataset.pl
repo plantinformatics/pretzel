@@ -428,7 +428,13 @@ sub printFeature($)
   # Wrapping use of index which may be undefined with eval; otherwise
   # it gets an error on initial program parse even though it is not
   # evaluated
-  my $end = defined(c_pos) ? $ak[c_pos] : eval '$ak[c_endPos]';
+  my $end = (defined(c_endPos) &&  eval '$ak[c_endPos]') ||
+    (defined(c_pos) && $ak[c_pos]);
+  # In Pretzel the end position is optional but the start position is required.
+  if ((! $start || ($start eq "n/a")) && $end)
+  {
+    $start = $end;
+  }
 
   my $values = "";
   my $ref_alt;
