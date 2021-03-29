@@ -36,8 +36,12 @@ function mapChrs() {
   lm_c=$( awk -F, ' { print $2; }'  "$i" | uniq)
   datasetName=$( echo "$i" | fileName2DatasetName );  echo "$datasetName	$i"; 
   mkdir chrSnps/"$datasetName"
+  if [ -f chrSnps/"$datasetName".chrCount ]
+  then
+      rm chrSnps/"$datasetName".chrCount
+  fi
   for j in $lm_c; do echo $j; awk -F, "/,$j,/ {print \$1;}" "$i" >chrSnps/"$datasetName"/$j; done
-  for j in $(cd chrSnps/"$datasetName"; ls LG*); do suffix=$(echo $j | sed -n "s/.*\(\..*\)/\1/p"); fgrep -f "chrSnps/$datasetName/$j" $snpFile |  sed -f $genBankRename | awk -F, '{a[$2]++;} END {for (i in a) print a[i], i;}' | sort -n -r | head -1 | awk ' {printf("s/,%s,/,%s%s,/\n", "'$j'", $2, "'$suffix'"); }' ; done > chrSnps/"$datasetName".chrRename.sed
+  for j in $(cd chrSnps/"$datasetName"; ls ); do suffix=$(echo $j | sed -n "s/.*\(\..*\)/\1/p"); fgrep -f "chrSnps/$datasetName/$j" $snpFile |  sed -f $genBankRename | awk -F, '{a[$2]++;} END {for (i in a) print a[i], i;}' | sort -n -r | head -1 | tee -a chrSnps/"$datasetName".chrCount | awk ' {printf("s/,%s,/,%s%s,/\n", "'$j'", $2, "'$suffix'"); }' ; done > chrSnps/"$datasetName".chrRename.sed
 }
 
 function map1() {
@@ -60,7 +64,7 @@ function mapChrsCN() {
   datasetName=$( echo "$i" | fileName2DatasetName );  echo "$datasetName	$i"; 
   mkdir chrSnps/"$datasetName"
   for j in $lm_c; do echo $j; awk -F, "/^$j,/ {print \$2;}" "$i" >chrSnps/"$datasetName"/$j; done
-  for j in $(cd chrSnps/"$datasetName"; ls LG*); do suffix=$(echo $j | sed -n "s/.*\(\..*\)/\1/p"); fgrep -f "chrSnps/$datasetName/$j" $snpFile |  sed -f $genBankRename | awk -F, '{a[$2]++;} END {for (i in a) print a[i], i;}' | sort -n -r | head -1 | awk ' {printf("s/^%s,/%s%s,/\n", "'$j'", $2, "'$suffix'"); }' ; done > chrSnps/"$datasetName".chrRename.sed
+  for j in $(cd chrSnps/"$datasetName"; ls L*); do suffix=$(echo $j | sed -n "s/.*\(\..*\)/\1/p"); fgrep -f "chrSnps/$datasetName/$j" $snpFile |  sed -f $genBankRename | awk -F, '{a[$2]++;} END {for (i in a) print a[i], i;}' | sort -n -r | head -1 | awk ' {printf("s/^%s,/%s%s,/\n", "'$j'", $2, "'$suffix'"); }' ; done > chrSnps/"$datasetName".chrRename.sed
 }
 
 function CP_GM() {

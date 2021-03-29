@@ -348,11 +348,11 @@ sub trimOutsideQuotesAndSpaces($) {
   return $label;
 }
 
-# Illumina OPA SNP names are [123]000 or SNP_[123]000.
+# Illumina OPA SNP names are [1234]000 or SNP_[1234]000.
 # Prefix with SNP_ if not present, to make all consistent.
 sub markerPrefix($) {
   my ($name) = @_;
-  if ($name =~ m/^[123]000/)
+  if ($name =~ m/^[1234]000/)
   {
     $name = "SNP_" . $name;
   }
