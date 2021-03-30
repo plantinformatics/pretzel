@@ -1,24 +1,24 @@
-{{#if errorMessage}}
+{{#if @errorMessage}}
   <br>
   {{#elem/panel-form
     name="danger"
     heading="Error"}}
-    {{errorMessage}}
+    {{@errorMessage}}
   {{/elem/panel-form}}
 {{/if}}
-{{#if successMessage}}
+{{#if @successMessage}}
   <br>
   {{#elem/panel-form
     name="success"
     heading="Success"}}
-    {{successMessage}}
+    {{@successMessage}}
   {{/elem/panel-form}}
 {{/if}}
-{{#if warningMessage}}
+{{#if @warningMessage}}
   <br>
   {{#elem/panel-form
     name="warning"
     heading="Warning"}}
-    {{warningMessage}}
+    {{@warningMessage}}
   {{/elem/panel-form}}
 {{/if}}

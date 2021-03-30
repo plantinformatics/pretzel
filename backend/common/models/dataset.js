@@ -52,8 +52,10 @@ module.exports = function(Dataset) {
         let jsonMap = JSON.parse(msg.data);
         uploadParsed(jsonMap);
       } catch (e) {
-        console.log(e);
-        cb(Error("Failed to parse JSON"));
+        let message = e.toString ? e.toString() : e.message || e.name;
+        // logging e logs e.stack, which is also logged by cb(Error() )
+        console.log(message || e);
+        cb(Error("Failed to parse JSON" + (message ? ':\n' + message : '')));
       }
     } else if (msg.fileName.endsWith('.gz')) {
       var buffer = new Buffer(msg.data, 'binary');
