@@ -2,9 +2,15 @@
 
 /* global module */
 /* global require */
+/* global Buffer */
+/* global process */
 
+
+const { spawn } = require('child_process');
+var fs = require('fs');
 
 var _ = require('lodash');
+
 
 var acl = require('../utilities/acl');
 var identity = require('../utilities/identity');
@@ -67,6 +73,54 @@ module.exports = function(Dataset) {
         console.log(err);
         cb(Error("Failed to read gz file"));
       })
+    } else if (msg.fileName.endsWith('.xlsx')) {
+      /** msg.fileName : remove punctuation other than .-_, retain alphanumeric */
+      const fileName = msg.fileName;
+      const useFile = true;
+      if (useFile) {
+        const data = new Uint8Array(Buffer.from(msg.data, 'binary'));
+        fs.writeFile(fileName, data, (err) => {
+          if (err) {
+            cb(err);
+          } else {
+            console.log('Written', msg.data.length, data.length, 'to', fileName);
+          }
+        });
+      }
+
+      const
+      // process.execPath is /usr/bin/node,  need /usr/bin/ for mv, mkdir, perl
+      PATH = process.env.PATH + ':' + 'scripts',
+      options = {env : {PATH},  stdio: ['pipe', 'pipe', process.stderr] };
+      const child = spawn('uploadSpreadsheet.bash', [msg.fileName, useFile], options);
+      child.on('error', (err) => {
+        console.error('Failed to start subprocess.', 'uploadSpreadsheet', msg.fileName, err.toString());
+        // const error = Error("Failed to start subprocess to upload xlsx file " + msg.fileName + '\n' + err.toString());
+        cb(err/*or*/);
+      });
+      console.log('uploadSpreadsheet', /*child,*/ msg.fileName, msg.data.length);
+      if (! useFile) {
+      child.stdin.write(msg.data);
+      child.stdin.end();
+      }
+      // use child.stdout.setEncoding('utf8'); if you want text chunks
+      child.stdout.on('data', (chunk) => {
+        // data from the standard output is here as buffers
+        console.log('uploadSpreadsheet stdout data', chunk.toString());
+      });
+      // since these are streams, you can pipe them elsewhere
+      // child.stderr.pipe(dest);
+      child.on('close', (code) => {
+        console.log('child process exited with code',  code);
+        if (code) {
+          const error = Error("Failed to read xlsx file " + msg.fileName);
+          cb(error);
+        } else {
+          // process each tmp/out_json/"$datasetName".json
+          const message = 'Uploaded xlsx file ' + msg.fileName;
+          cb(null, message);
+        }
+      });
     } else {
       cb(Error('Unsupported file type'));
     }

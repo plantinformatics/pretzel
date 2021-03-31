@@ -174,6 +174,7 @@ sub headerLine($$) {
   my $isHeader = ($lineNumber == 1) && 
     (
      ($line =~ m/^label	chr	pos/)
+     || ($line =~ m/^name,chr,pos/)
      || ($line =~ m/Marker.*Chromosome/i)
      || ($line =~ m/Contig,Position/i)
     );
