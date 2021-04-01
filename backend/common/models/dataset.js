@@ -121,6 +121,9 @@ module.exports = function(Dataset) {
       }
 
       const
+      /** msg.replaceDataset is defined by uploadSpreadsheet(), but not by data-json.js : submitFile()
+       */
+      replaceDataset = !!msg.replaceDataset, 
       // process.execPath is /usr/bin/node,  need /usr/bin/ for mv, mkdir, perl
       PATH = process.env.PATH + ':' + 'scripts',
       options = {env : {PATH},  stdio: ['pipe', 'pipe', process.stderr] };
@@ -142,7 +145,8 @@ module.exports = function(Dataset) {
         textLine = chunk.toString().trim(),
         [fileName, datasetName] = textLine.split(';');
         console.log('uploadSpreadsheet stdout data', fileName, datasetName);
-        this.removeExisting(datasetName, cb, loadAfterDelete);
+
+        this.removeExisting(datasetName, replaceDataset, cb, loadAfterDelete);
         function loadAfterDelete(err) {
           if (err) {
             cb(err);
@@ -184,13 +188,17 @@ module.exports = function(Dataset) {
   /** If Dataset with given id exists, remove it.
    * If id doesn't exist, or it is removed OK, then call okCallback,
    * otherwise pass the error to the (API request) replyCb.
+   * @param if false and dataset id exists, then fail - call replyCb() with Error.
    */
-  Dataset.removeExisting = function(id, replyCb, okCallback) {
+  Dataset.removeExisting = function(id, replaceDataset, replyCb, okCallback) {
     var models = this.app.models;
 
     models.Dataset.exists(id, { unfiltered: true }).then((exists) => {
       console.log('removeExisting', id, exists);
       if (exists) {
+        if (! replaceDataset) {
+          replyCb(Error('Dataset "' + id + '" exists'));
+        } else {
         /* without {unfiltered: true}, the dataset was not found by destroyAll.
          * destroyAllById(id ) also did not found the dataset (callback gets info.count === 0).
          * .exists() finds it OK.
@@ -203,6 +211,7 @@ module.exports = function(Dataset) {
             okCallback();
           }
         });
+        }
       } else {
         okCallback();
       }

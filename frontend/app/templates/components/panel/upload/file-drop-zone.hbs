@@ -1,3 +1,16 @@
+  <ul class="list-group upload-configuration">
+
+    <li class="list-group-item">
+      <span class="filter-group-col">
+        {{input type="checkbox" name="replaceDataset" checked=replaceDataset }}
+        <label>Replace Dataset with upload.</label>
+      </span>
+    </li>
+
+  </ul>
+
+
+
 {{!--
 <FileUpload ... @accept= values are from :
 https://developers.google.com/drive/api/v3/mime-types
@@ -18,6 +31,7 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Comm
 .zip 	ZIP archive 	application/zip
 
 --}}
+
 <FileDropzone @name="files" class="border border-primary" as |dropzone queue|>
   {{#if dropzone.active}}
     {{#if dropzone.valid}}
