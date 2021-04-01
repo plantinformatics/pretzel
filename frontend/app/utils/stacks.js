@@ -323,7 +323,11 @@ Stacked.axis1dRemove = function (axisName, axis1dComponent) {
     delete axes1d[axisName];
 };
 Stacked.prototype.getAxis1d = function () {
-  let axis1d = this.axis1d || (this.axis1d = axes1d[this.axisName]);
+  let axis1d = this.axis1d,
+      a1;
+  if (! axis1d && (a1 = axes1d[this.axisName])) {
+    Ember.set(this, 'axis1d', a1);
+  }
   if (axis1d && (axis1d.isDestroying || axis1d.isDestroying)) {
     dLog('getAxis1d() isDestroying', axis1d, this);
     axis1d = this.axis1d = undefined;
@@ -2228,7 +2232,7 @@ Stacked.prototype.axisDimensions = function ()
   let
   currentPosition = axis1d && axis1d.get('currentPosition');
   if (! currentPosition || ! isEqual(domain, currentPosition.yDomain))
-    dLog('axisDimensions', domain, currentPosition.yDomain, zoomed, currentPosition);
+    dLog('axisDimensions', domain, currentPosition && currentPosition.yDomain, zoomed, currentPosition);
   return dim;
 };
 /** Set the domain of the current position to the given domain

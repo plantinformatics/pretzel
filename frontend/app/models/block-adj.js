@@ -145,9 +145,9 @@ export default Model.extend(Evented, {
    * Similar to following @see axesDomains()
    * @desc but that function determines the referenceBlock's domain if the block is not zoomed.
    */
-  zoomedDomains :  mapBy('axes1d', 'zoomedDomainThrottled'),
+  zoomedDomains :  computed.map('axes1d', (axis1d) => axis1d && axis1d.zoomedDomainThrottled),
   /** domain incorporates zoomedDomain and also flipped and blocksDomain */
-  domains :  mapBy('axes1d', 'domain'),
+  domains :  computed.map('axes1d', (axis1d) => axis1d && axis1d.domain),
 
   /** Return the domains (i.e. zoom scope) of the 2 axes of this block-adj.
    * These are equivalent : 
@@ -506,7 +506,7 @@ export default Model.extend(Evented, {
 
   receivedAllCheck(resultLength, flow) {
     if (resultLength === 0) {
-      let anyZoomed = this.get('axes1d').any((a) => a.zoomed);
+      let anyZoomed = this.get('axes1d').any((a) => a && a.zoomed);
       if (! anyZoomed) {
         /** getting empty result after receiving paths - may be the end of streamed paths, so distinguish this case. */
         let resultLengthName = 'paths' + (flow.name === 'alias' ? 'Aliases' : '') +  'Result';

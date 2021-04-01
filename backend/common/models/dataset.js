@@ -52,10 +52,11 @@ module.exports = function(Dataset) {
         });
       }
     };
-    // Parse as either .json or .gz
-    if (msg.fileName.endsWith('.json')) {
+    /** Wrap uploadParsed with try { } and pass error to cb().
+     */
+    function uploadParsedTry(jsonData) {
       try {
-        let jsonMap = JSON.parse(msg.data);
+        let jsonMap = JSON.parse(jsonData);
         uploadParsed(jsonMap);
       } catch (e) {
         let message = e.toString ? e.toString() : e.message || e.name;
@@ -63,6 +64,10 @@ module.exports = function(Dataset) {
         console.log(message || e);
         cb(Error("Failed to parse JSON" + (message ? ':\n' + message : '')));
       }
+    };
+    // Parse as either .json or .gz
+    if (msg.fileName.endsWith('.json')) {
+      uploadParsedTry(msg.data);
     } else if (msg.fileName.endsWith('.gz')) {
       var buffer = new Buffer(msg.data, 'binary');
       load.gzip(buffer).then(function(json) {
@@ -74,6 +79,29 @@ module.exports = function(Dataset) {
         cb(Error("Failed to read gz file"));
       })
     } else if (msg.fileName.endsWith('.xlsx')) {
+      /** Each worksheet in the .xslx will result in a dataset passed
+       * to upload.uploadDataset() which call cb(), so it is necessary
+       * to limit this to a single call-back, using cbWrap and cbCalled.
+       * It would be better to assemble an array of datasetId-s from
+       * insert_features_recursive(), and pass that to cb when complete.
+       * The client does not use this result value.
+       *
+       * Refn : async/dist/async.js : onlyOnce(fn)
+       */
+      let cbOrig = cb,
+          cbCalled = 0;
+      function cbWrap(err, message, last) {
+        console.log('cbWrap', err && err.toString(), message, last);
+        /* insert_features_recursive() "passes" last === undefined,
+         * and when !err, message is datasetId (i.e. datasetName)
+         */
+        if (last || (last === undefined) || err) {
+          if (cbCalled++ === 0) {
+            cbOrig(err, message);
+          }
+        }
+      }
+      cb = cbWrap;
       /** msg.fileName : remove punctuation other than .-_, retain alphanumeric */
       const fileName = msg.fileName;
       const useFile = true;
@@ -100,13 +128,34 @@ module.exports = function(Dataset) {
       });
       console.log('uploadSpreadsheet', /*child,*/ msg.fileName, msg.data.length);
       if (! useFile) {
-      child.stdin.write(msg.data);
-      child.stdin.end();
+        child.stdin.write(msg.data);
+        child.stdin.end();
       }
-      // use child.stdout.setEncoding('utf8'); if you want text chunks
       child.stdout.on('data', (chunk) => {
         // data from the standard output is here as buffers
-        console.log('uploadSpreadsheet stdout data', chunk.toString());
+        // completed by \n.   Trim the trailing \n from chunk.
+        const
+        textLine = chunk.toString().trim(),
+        [fileName, datasetName] = textLine.split(';');
+        console.log('uploadSpreadsheet stdout data', fileName, datasetName);
+        this.removeExisting(datasetName, cb, loadAfterDelete);
+        function loadAfterDelete(err) {
+          if (err) {
+            cb(err);
+          }
+          else {
+            fs.readFile(fileName, (err, jsonData) => {
+              if (err) {
+                cb(err);
+              } else {
+                console.log('readFile', fileName, jsonData.length);
+                // jsonData is a Buffer;  JSON.parse() handles this OK.
+                uploadParsedTry(jsonData);
+              }
+            });
+          }
+        };
+
       });
       // since these are streams, you can pipe them elsewhere
       // child.stderr.pipe(dest);
@@ -118,13 +167,43 @@ module.exports = function(Dataset) {
         } else {
           // process each tmp/out_json/"$datasetName".json
           const message = 'Uploaded xlsx file ' + msg.fileName;
-          cb(null, message);
+          if (child.killed) {
+            cb(null, message, true);
+          } // else check again after timeout
         }
       });
     } else {
       cb(Error('Unsupported file type'));
     }
   }
+
+  /** If Dataset with given id exists, remove it.
+   * If id doesn't exist, or it is removed OK, then call okCallback,
+   * otherwise pass the error to the (API request) replyCb.
+   */
+  Dataset.removeExisting = function(id, replyCb, okCallback) {
+    var models = this.app.models;
+
+    models.Dataset.exists(id, { unfiltered: true }).then((exists) => {
+      console.log('removeExisting', id, exists);
+      if (exists) {
+        /* without {unfiltered: true}, the dataset was not found by destroyAll.
+         * destroyAllById(id ) also did not found the dataset (callback gets info.count === 0).
+         * .exists() finds it OK.
+         */
+        models.Dataset.destroyAll/*ById(id*/ ({_id : id}, {unfiltered: true}, (err) => {
+          if (err) {
+            replyCb(err);
+          } else {
+            console.log('removeExisting removed', id);
+            okCallback();
+          }
+        });
+      } else {
+        okCallback();
+      }
+    });
+  };
 
   Dataset.tableUpload = function(data, options, cb) {
     var models = this.app.models;
@@ -216,9 +295,19 @@ module.exports = function(Dataset) {
 
   Dataset.observe('before delete', function(ctx, next) {
     var Block = ctx.Model.app.models.Block
+    /** ctx.where contains the datasetId, but differently depending on the call which requested delete of the dataset :
+     * - deletes done via URL (as in curl -X DELETE api/Datasets/) place the datasetId in ctx.where.and[1].name
+     * - removeExisting() does Dataset.destroyAll({_id : id}, ) and that condition is copied to ctx.where, so where._id is the datasetId.
+     */
+    let
+    where = ctx.where,
+    datasetId = where.and ? where.and[1].name : where._id;
+    if (where.and) {
+      console.log('Dataset.observe(before delete', ctx);
+    }
     Block.find({
       where: {
-        datasetId: ctx.where.and[1].name
+        datasetId
       }
     }, ctx.options).then(function(blocks) {
       blocks.forEach(function(block) {

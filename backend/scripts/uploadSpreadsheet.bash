@@ -27,6 +27,7 @@ function readMetadata()
 # echo PATH=$PATH
 mv "$fileName" tmp/.
 cd tmp
+# out/ was for .csv, maybe not needed
 [ -d out ] || mkdir out out_json
 #[ -d chrSnps ] || mkdir chrSnps
 
@@ -44,17 +45,21 @@ function linkageMap()
   for i in "$fileName".*' x '*csv
   do
     datasetName=$(echo "$i" | fileName2DatasetName);
-    echo "$datasetName"
     echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
     # option before $sp : sed -f chrSnps/"$datasetName".chrRename.sed |
     # ../ because of cd tmp
-    <"$i"     ../$sp -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  out_json/"$i".json ; ls -gG out_json/"$i".json 
+    out=out_json/"$i".json
+    <"$i"     ../$sp -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
+    ls -gG "$out"  >> uploadSpreadsheet.log;
+    # upload() will read these files
+    echo "tmp/$out;$datasetName"
   done
 }
 
 
 case $fileName in
     *.xlsx|*.xls|*.ods)
+	ls -gGd "$fileName" >> uploadSpreadsheet.log
 	echo ssconvert >> uploadSpreadsheet.log
 	# for streaming input : if [ "$useFile" != true ] ; then cat >"$fileName"; fi
 	ssconvert -S "$fileName" "$fileName.%s.csv"

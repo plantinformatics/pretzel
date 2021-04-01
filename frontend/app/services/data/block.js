@@ -443,8 +443,17 @@ export default Service.extend(Evented, {
               if (! zoomedDomain) {
                 interval = intervalFromLimits(blockId);
               }
-              let getCountsForInterval = (interval) =>
-                  this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, /*options*/{})
+              let getCountsForInterval = (interval) => {
+                let countsP;
+                if (interval[0] === interval[1]) {
+                  dLog('getCountsForInterval', interval);
+                  countsP = Promise.resolve([]);
+                } else {
+                  countsP =
+                  this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, /*options*/{});
+                }
+                return countsP;
+              };
               if (interval) {
               p = summaryTask[taskId] =
                   getCountsForInterval(interval);

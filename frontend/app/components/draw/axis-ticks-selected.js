@@ -90,10 +90,13 @@ export default Component.extend(AxisEvents, {
   renderTicks(axisID) {
     if (trace)
       dLog("renderTicks in ", CompName, axisID);
-    let featureTicks = this.get('axis1d.featureTicks');
-    let block = this.axis1d.axis,
+    let
+    axis1d = this.get('axis1d'),
+    featureTicks = axis1d.get('featureTicks');
+    let block = axis1d.axis,
+    clickedFeaturesMap = this.get('selected.clickedFeaturesByAxis'),
     /** clickedFeatures will be undefined or an array with .length > 1 */
-    clickedFeatures = this.get('selected.clickedFeaturesByAxis').get(block);
+    clickedFeatures = clickedFeaturesMap && clickedFeaturesMap.get(block);
     if (featureTicks || clickedFeatures) {
       featureTicks.showTickLocations(
       this.featuresOfBlockLookup.bind(this),
@@ -107,9 +110,11 @@ export default Component.extend(AxisEvents, {
     this.renderLabels(axisID);
   },
   renderLabels(axisID) {
-    let featureTicks = this.get('axis1d.featureTicks');
     let
-    block = this.axis1d.axis;
+    axis1d = this.get('axis1d'),
+    featureTicks = axis1d.get('featureTicks');
+    let
+    block = axis1d.axis;
     /** if this block had labelledFeatures, and in this update they (1) are
      * toggled off, then labelledFeatures is undefined, but we still want to
      * call showLabels() to .remove() the existing <text>-s.
@@ -185,7 +190,8 @@ export default Component.extend(AxisEvents, {
     let blockId = block.get('id');
     /** return [] for blocks which don't have features in the search result. */
     let features = featuresInBlocks ? (featuresInBlocks[blockId] || []) : [];
-    let clickedFeatures = this.get('selected.clickedFeaturesByBlock').get(block);
+    let clickedFeaturesByBlock = this.get('selected.clickedFeaturesByBlock'),
+        clickedFeatures = clickedFeaturesByBlock && clickedFeaturesByBlock.get(block);
     if (clickedFeatures && clickedFeatures.length) {
       features = features.concat(clickedFeatures);
     }
@@ -200,9 +206,11 @@ export default Component.extend(AxisEvents, {
    * @param block Ember object
    */
   selectedFeaturesOfBlockLookup(listName, block) {
-    let features = this.get('selected.' + listName + 'ByBlock').get(block);
+    let
+    map = this.get('selected.' + listName + 'ByBlock'),
+    features = map && map.get(block);
     if (trace)
-      dLog('selectedFeaturesOfBlockLookup', listName, featuresInBlocks, block, block.id, features);
+      dLog('selectedFeaturesOfBlockLookup', listName, this.featuresInBlocks, block, block.id, features);
     return features;
   },
 

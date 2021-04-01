@@ -320,8 +320,9 @@ sub snpLine($)
 
           my $h = $blockHeader;
           # replace 'blockName' in the $blockHeader template with the actual chromosome name $c.
-	  # and blockScope with the scope with is $c with .[1-9] trimmed off
-	  my $scope = ($c =~ s/\.[1-9]$//r);
+	  # and blockScope with : the scope which is the chr $c with .[1-9] trimmed off
+	  # or scope might be just the chr name $c so that each GM block gets its own axis.
+	  my $scope = $c;   #  ($c =~ s/\.[1-9]$//r);
           $h =~ s/blockName/$c/g;
           $h =~ s/blockScope/$scope/g;
           print $h;
