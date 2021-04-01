@@ -66,6 +66,7 @@ module.exports = function(Dataset) {
       }
     };
     // Parse as either .json or .gz
+    // factored as handleJson()
     if (msg.fileName.endsWith('.json')) {
       uploadParsedTry(msg.data);
     } else if (msg.fileName.endsWith('.gz')) {
@@ -78,7 +79,10 @@ module.exports = function(Dataset) {
         console.log(err);
         cb(Error("Failed to read gz file"));
       })
-    } else if (msg.fileName.endsWith('.xlsx')) {
+    } else if (
+      msg.fileName.endsWith('.xlsx') || msg.fileName.endsWith('.xls') || 
+        msg.fileName.endsWith('.ods')
+    ) {
       /** Each worksheet in the .xslx will result in a dataset passed
        * to upload.uploadDataset() which call cb(), so it is necessary
        * to limit this to a single call-back, using cbWrap and cbCalled.
