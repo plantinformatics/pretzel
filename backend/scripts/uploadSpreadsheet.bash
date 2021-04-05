@@ -32,7 +32,7 @@ cd tmp
 #[ -d chrSnps ] || mkdir chrSnps
 
 function fileName2DatasetName() {
-  sed -n 's/\.csv$//;s/Linkage_Map_//ig;s/ X / x /g;s/.*\.\(xlsx\|xls\|ods\)\.//p;';
+  sed -n 's/\.csv$//;s/Linkage_Map_//ig;s/SNP_List_//ig;s/ X / x /g;s/SNP //g;s/.*\.\(xlsx\|xls\|ods\)\.//p;';
 }
 
 # Used in snps2Dataset.pl
@@ -56,35 +56,60 @@ function linkageMap()
   done
 }
 
+function snpList()
+{
+  # fileName=$1
+  echo "snpList fileName=$fileName" >> uploadSpreadsheet.log;
+  for i in "$fileName".*SNP' '*csv
+  do
+    datasetName=$(echo "$i" | fileName2DatasetName);
+    echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
+    out=out_json/"$i".json
+    # remove header before sort.  (note also headerLine()).
+    # before sort : | sed -f $genBankRename (can get this from chrRename worksheet)
+    # from metadata : parentName platform shortName commonName
+    <"$i" tail -n +2  |  sort -t, -k 2  |  \
+      ../$sp -d "$parentName.$datasetName" -s "$shortName" -p $parentName -n"$parentName:$platform" -c "$commonName"  	\
+      >  "$out"
+    ls -gG "$out"  >> uploadSpreadsheet.log;
+    # upload() will read these files
+    echo "tmp/$out;$datasetName"
+  done
+}
+
 
 case $fileName in
-    *.xlsx|*.xls|*.ods)
-	ls -gGd "$fileName" >> uploadSpreadsheet.log
-	echo ssconvert >> uploadSpreadsheet.log
-	# for streaming input : if [ "$useFile" != true ] ; then cat >"$fileName"; fi
-	ssconvert -S "$fileName" "$fileName.%s.csv"
-	status=$?
-	echo ssconvert status $status >> uploadSpreadsheet.log
-	if [ $status -eq 0 ]
-	then
-	    readMetadata
-	    case $fileName in
-		Linkage_Map*)
-		    linkageMap
-		    status=$?
-		;;
-		# Later : SNP, QTL etc
-		*)
-		echo "$fileName : expected Linkage_Map*" >> uploadSpreadsheet.log
-		;;
-	    esac
+  *.xlsx|*.xls|*.ods)
+    ls -gGd "$fileName" >> uploadSpreadsheet.log
+    echo ssconvert >> uploadSpreadsheet.log
+    # for streaming input : if [ "$useFile" != true ] ; then cat >"$fileName"; fi
+    ssconvert -S "$fileName" "$fileName.%s.csv"
+    status=$?
+    echo ssconvert status $status >> uploadSpreadsheet.log
+    if [ $status -eq 0 ]
+    then
+      readMetadata
+      case $fileName in
+        Linkage_Map*)
+          linkageMap
+          status=$?
+          ;;
+        SNP_List*)
+          snpList
+          status=$?
+          ;;
+        # Later : QTL etc
+        *)
+          echo "$fileName : expected Linkage_Map*" >> uploadSpreadsheet.log
+          ;;
+      esac
 
-	fi
-	;;
-    *)
-	echo $*	.xlsx, .xls, or .ods expected >>uploadSpreadsheet.log
-	status=$?
-	;;
+    fi
+    ;;
+  *)
+    echo $*  .xlsx, .xls, or .ods expected >>uploadSpreadsheet.log
+    status=$?
+    ;;
 esac
 
 
