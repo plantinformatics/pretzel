@@ -46,10 +46,9 @@ function linkageMap()
   do
     datasetName=$(echo "$i" | fileName2DatasetName);
     echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
-    # option before $sp : sed -f chrSnps/"$datasetName".chrRename.sed |
     # ../ because of cd tmp
     out=out_json/"$i".json
-    <"$i"     ../$sp -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
+    <"$i"  chrRename |  ../$sp -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
     ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     echo "tmp/$out;$datasetName"
@@ -66,17 +65,42 @@ function snpList()
     echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
     out=out_json/"$i".json
     # remove header before sort.  (note also headerLine()).
-    # before sort : | sed -f $genBankRename (can get this from chrRename worksheet)
     # from metadata : parentName platform shortName commonName
-    <"$i" tail -n +2  |  sort -t, -k 2  |  \
+    <"$i" tail -n +2  | chrRename |  sort -t, -k 2  |  \
       ../$sp -d "$parentName.$datasetName" -s "$shortName" -p $parentName -n"$parentName:$platform" -c "$commonName"  	\
       >  "$out"
     ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
-    echo "tmp/$out;$datasetName"
+    echo "tmp/$out;$parentName.$datasetName"
   done
 }
 
+# If the spreadsheet contains a 'Chromosome Renaming' worksheet,
+# then create a .sed script to rename the chromosome column.
+function chrRenamePrepare()
+{
+  # related in functions_convert.bash : sed -f chrSnps/"$datasetName".chrRename.sed |
+  # and : sed -f $genBankRename |
+  chrRenameCSV=$(echo "$fileName".*'Chromosome Renaming'*csv)
+  if [ -f "$chrRenameCSV" ]
+  then
+    chrRenameSed=out/"$fileName".chrRename.sed
+    # Can change this to generate awk which can target only the chromosome column.
+    < "$chrRenameCSV" awk -F, '{ printf("s/,%s,/,%s,/\n", $1, $2); }' > $chrRenameSed
+  fi
+}
+
+# If the spreadsheet contains a 'Chromosome Renaming' worksheet, (i.e. $chrRenameSed is defined)
+# then map the chromosome column as indicated.
+function chrRename()
+{
+  if [ -n "$chrRenameSed" ]
+  then
+    sed -f "$chrRenameSed"
+  else
+    cat
+  fi
+}
 
 case $fileName in
   *.xlsx|*.xls|*.ods)
@@ -89,6 +113,7 @@ case $fileName in
     if [ $status -eq 0 ]
     then
       readMetadata
+      chrRenamePrepare
       case $fileName in
         Linkage_Map*)
           linkageMap

@@ -133,7 +133,7 @@ module.exports = function(Dataset) {
         // const error = Error("Failed to start subprocess to upload xlsx file " + msg.fileName + '\n' + err.toString());
         cb(err/*or*/);
       });
-      console.log('uploadSpreadsheet', /*child,*/ msg.fileName, msg.data.length);
+      console.log('uploadSpreadsheet', /*child,*/ msg.fileName, msg.data.length, replaceDataset);
       if (! useFile) {
         child.stdin.write(msg.data);
         child.stdin.end();
