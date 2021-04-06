@@ -1,6 +1,6 @@
 #!/bin/bash
 
-toolsDev=../resources/tools/dev
+toolsDev=resources/tools/dev
 sp=$toolsDev/snps2Dataset.pl
 source $toolsDev/functions_convert.bash
 
@@ -102,12 +102,53 @@ function chrRename()
   fi
 }
 
+# Spaces in $fileName are not handled when running ssconvert via docker, so
+# rename the file into a directory
+function renameIfSpaces()
+{
+  case $fileName in
+    *' '*)
+      # [ -d renamed ] || mkdir renamed
+      fileNameTo=$(echo "$fileName" | sed "s/ /_/g")
+      renamed="$fileNameTo"
+      # renamed/; mkdir $renamed
+      suffix=$(echo $fileName | sed -n "s/.*\.//p")
+      newName="$fileNameTo" # $renamed/1."$suffix"
+      mv -i "$fileName" $newName
+      fileName="$newName"
+      ;;
+    *)
+      ;;
+  esac
+}
+
+function spreadsheetConvert()
+{
+  # installation of ssconvert (gnumeric) on centos had dependency problems, so using docker
+  if [ -f /etc/system-release-cpe ]
+  then
+    renameIfSpaces
+    # if renameIfSpaces has changed $fileName, then "$2" and "$3" need to change also
+    # Perhaps switch from centos and install ssconvert directly; but if renameIfSpaces
+    # is needed, can refactor this to pass in $fileName perhaps.
+    docker run \
+	   -u $(id -u):$(id -g) \
+	   -v /home/ec2-user/pretzel/tmp:/home/user \
+	   -e PARAMS="$1" \
+	   -e FILETOREAD="$fileName" \
+	   -e FILETOWRITE="$fileName.%s.csv" \
+	   nalscher/ssconvert:latest
+  else
+    ssconvert "$1" "$2" "$3"
+  fi
+}
+
 case $fileName in
   *.xlsx|*.xls|*.ods)
     ls -gGd "$fileName" >> uploadSpreadsheet.log
     echo ssconvert >> uploadSpreadsheet.log
     # for streaming input : if [ "$useFile" != true ] ; then cat >"$fileName"; fi
-    ssconvert -S "$fileName" "$fileName.%s.csv"
+    spreadsheetConvert -S "$fileName" "$fileName.%s.csv"
     status=$?
     echo ssconvert status $status >> uploadSpreadsheet.log
     if [ $status -eq 0 ]
@@ -115,7 +156,7 @@ case $fileName in
       readMetadata
       chrRenamePrepare
       case $fileName in
-        Linkage_Map*)
+        Linkage_Map*|*[Ll]inkage*[mM]ap*)
           linkageMap
           status=$?
           ;;

@@ -125,7 +125,7 @@ module.exports = function(Dataset) {
        */
       replaceDataset = !!msg.replaceDataset, 
       // process.execPath is /usr/bin/node,  need /usr/bin/ for mv, mkdir, perl
-      PATH = process.env.PATH + ':' + 'scripts',
+      PATH = process.env.PATH + ':' + 'backend/scripts',
       options = {env : {PATH},  stdio: ['pipe', 'pipe', process.stderr] };
       const child = spawn('uploadSpreadsheet.bash', [msg.fileName, useFile], options);
       child.on('error', (err) => {
