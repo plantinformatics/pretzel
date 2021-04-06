@@ -50,7 +50,9 @@
 {{/if}}
 
 {{#if (compare filter '===' 'fileDrop')}}
-  {{panel/upload/file-drop-zone}}
+  {{panel/upload/file-drop-zone
+    refreshDatasets=refreshDatasets
+    }}
 {{else if (compare filter '===' 'cell')}}
   {{panel/upload/data-csv
     datasets=datasets

@@ -1,6 +1,14 @@
 #!/bin/bash
 
-toolsDev=resources/tools/dev
+case $PWD in
+  *backend)
+    resourcesDir=../resources
+    ;;
+  *)
+    resourcesDir=resources
+    ;;
+esac
+toolsDev=$resourcesDir/tools/dev
 sp=$toolsDev/snps2Dataset.pl
 source $toolsDev/functions_convert.bash
 

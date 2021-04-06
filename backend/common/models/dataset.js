@@ -124,8 +124,10 @@ module.exports = function(Dataset) {
       /** msg.replaceDataset is defined by uploadSpreadsheet(), but not by data-json.js : submitFile()
        */
       replaceDataset = !!msg.replaceDataset, 
+      currentDir = process.cwd(),
+      scriptsDir = currentDir.endsWith("/backend") ? 'scripts' : 'backend/scripts',
       // process.execPath is /usr/bin/node,  need /usr/bin/ for mv, mkdir, perl
-      PATH = process.env.PATH + ':' + 'backend/scripts',
+      PATH = process.env.PATH + ':' + scriptsDir,
       options = {env : {PATH},  stdio: ['pipe', 'pipe', process.stderr] };
       const child = spawn('uploadSpreadsheet.bash', [msg.fileName, useFile], options);
       child.on('error', (err) => {
@@ -133,7 +135,7 @@ module.exports = function(Dataset) {
         // const error = Error("Failed to start subprocess to upload xlsx file " + msg.fileName + '\n' + err.toString());
         cb(err/*or*/);
       });
-      console.log('uploadSpreadsheet', /*child,*/ msg.fileName, msg.data.length, replaceDataset);
+      console.log('uploadSpreadsheet', /*child,*/ msg.fileName, msg.data.length, replaceDataset, scriptsDir, currentDir);
       if (! useFile) {
         child.stdin.write(msg.data);
         child.stdin.end();
