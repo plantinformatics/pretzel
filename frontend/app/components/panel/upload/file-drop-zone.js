@@ -30,7 +30,10 @@ export default UploadBase.extend({
       replaceDataset = this.replaceDataset,
       /** corresponds to the param msg in backend/common/models/dataset.js : upload(). */
       message = {fileName, data, replaceDataset};
+      /** a jQuery promise (jqXHR) */
+      let promise =
       this.uploadData(message);
+      promise.always(() => file.queue.remove(file));
     });
 
   }

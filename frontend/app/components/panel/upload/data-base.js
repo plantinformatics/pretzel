@@ -86,9 +86,16 @@ export default Component.extend({
 
   /**
    * @param data {fileName, data}
+   * @return promise of completion of ajax API operation.
+   * This is a jQuery promise, jqXHR. refn https://api.jquery.com/jquery.ajax/.
+   *
+   * This promise does not include the refreshDatasets API request
+   * which this function performs after this promise completes.
    */
   uploadData(data) {
-    this.get('auth').uploadData(data, this.updateProgress.bind(this))
+    let promise = 
+    this.get('auth').uploadData(data, this.updateProgress.bind(this));
+    promise
       .then((res) => {
         this.setSuccess();
         this.scrollToTop();
@@ -109,6 +116,7 @@ export default Component.extend({
         this.setError(errmsg);
         this.scrollToTop();
       });
+    return promise;
   }
 
 });
