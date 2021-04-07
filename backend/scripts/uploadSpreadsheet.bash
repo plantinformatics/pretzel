@@ -44,6 +44,15 @@ function fileName2DatasetName() {
   sed -n 's/\.csv$//;s/Linkage_Map_//ig;s/SNP_List_//ig;s/ X / x /g;s/SNP //g;s/.*\.\(xlsx\|xls\|ods\)\.//p;';
 }
 
+set +x
+# Long names for column headers
+declare -A columnFullName
+columnFullName['name']=Name
+columnFullName['chr']=Chromosome
+columnFullName['pos']=Position
+columnFullName['end']=Position_End
+set -x
+
 # Handle some variation in the recognised column header names.
 # Prepate columnsKeyString, which is used in snps2Dataset.pl
 # @param worksheetFileName	name of .csv output for 1 worksheet
@@ -53,6 +62,20 @@ columnsKeyStringPrepare()
   head -1 "$worksheetFileName" >> uploadSpreadsheet.log
   export columnsKeyString=$(head -1 "$worksheetFileName" | sed "s/Marker,/name,/i;s/Name,/name,/;s/Chromosome,/chr,/;s/,Qs,/,pos,/;s/,Qe,/,end,/;s/,/ /g")
   echo columnsKeyString="$columnsKeyString"  >> uploadSpreadsheet.log
+
+  # Check that the required columns are present
+  errorMessages=
+  for columnName in name chr pos
+  do
+    echo "$columnsKeyString" | fgrep -q "$columnName" || errorMessages+="${columnFullName[$columnName]} column is required. "
+  done
+  if [ -n "$errorMessages" ]
+  then
+    # maybe to stderr
+    echo "Error: '$worksheetFileName' : $errorMessages;$datasetName"
+  fi
+  # return true (0) if there are no errors
+  [ -z "$errorMessages" ]
 }
 
 function linkageMap()
@@ -61,9 +84,11 @@ function linkageMap()
   echo "linkageMap fileName=$fileName" >> uploadSpreadsheet.log;
   for i in "$fileName".*' x '*csv
   do
+    # if no files match the regexp, then i will be the un-expanded regexp.
+    if [ \! -f "$i" ] ; then continue; fi;
     datasetName=$(echo "$i" | fileName2DatasetName);
     echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
-    columnsKeyStringPrepare "$i"
+    columnsKeyStringPrepare "$i" || return $?
     # ../ because of cd tmp
     out=out_json/"$i".json
     <"$i"  chrOmit | chrRename |  ../$sp -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
@@ -79,14 +104,26 @@ function snpList()
   echo "snpList fileName=$fileName" >> uploadSpreadsheet.log;
   for i in "$fileName".*SNP' '*csv
   do
+    if [ \! -f "$i" ] ; then continue; fi;
     datasetName=$(echo "$i" | fileName2DatasetName);
     echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
-    columnsKeyStringPrepare "$i"
+    # or continue/break. whether to check later worksheets in the file for errors ?
+    columnsKeyStringPrepare "$i" || return $?
     out=out_json/"$i".json
     # remove header before sort.  (note also headerLine()).
     # from metadata : parentName platform shortName commonName
+    if [ -n "$parentName" ]
+    then
+      nameArgs=(-d "$parentName.$datasetName" -p $parentName -n"$parentName:$platform")
+    else
+      nameArgs=(-d "$datasetName"  -n"$platform")
+    fi
+    if [ -n "$shortName" ]
+    then
+      nameArgs+=(-s "$shortName")
+    fi
     <"$i" tail -n +2  | chrOmit | chrRename |  sort -t, -k 2  |  \
-      ../$sp -d "$parentName.$datasetName" -s "$shortName" -p $parentName -n"$parentName:$platform" -c "$commonName"  	\
+      ../$sp "${nameArgs[@]}" -c "$commonName"  	\
       >  "$out"
     ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
@@ -197,6 +234,8 @@ case $fileName in
   *.xlsx|*.xls|*.ods)
     ls -gGd "$fileName" >> uploadSpreadsheet.log
     echo ssconvert >> uploadSpreadsheet.log
+    # Remove outputs from previous upload of $fileName
+    rm -f "$fileName".*.csv
     # for streaming input : if [ "$useFile" != true ] ; then cat >"$fileName"; fi
     spreadsheetConvert -S "$fileName" "$fileName.%s.csv"
     status=$?
@@ -220,6 +259,11 @@ case $fileName in
           echo "$fileName : expected Linkage_Map*" >> uploadSpreadsheet.log
           ;;
       esac
+      if [ -z "$datasetName" ]
+      then
+	echo "Error: '$fileName' : no worksheets defined datasets. ;"
+	ls -gG "$fileName".*csv  >> uploadSpreadsheet.log
+      fi
 
     fi
     ;;

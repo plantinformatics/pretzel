@@ -140,6 +140,7 @@ module.exports = function(Dataset) {
         child.stdin.write(msg.data);
         child.stdin.end();
       }
+
       child.stdout.on('data', (chunk) => {
         // data from the standard output is here as buffers
         // completed by \n.   Trim the trailing \n from chunk.
@@ -147,8 +148,11 @@ module.exports = function(Dataset) {
         textLine = chunk.toString().trim(),
         [fileName, datasetName] = textLine.split(';');
         console.log('uploadSpreadsheet stdout data', fileName, datasetName);
-
-        this.removeExisting(datasetName, replaceDataset, cb, loadAfterDelete);
+        if (fileName.startsWith('Error:')) {
+          cb(new Error(fileName + " Dataset '" + datasetName + "'"));
+        } else {
+          this.removeExisting(datasetName, replaceDataset, cb, loadAfterDelete);
+        }
         function loadAfterDelete(err) {
           if (err) {
             cb(err);
@@ -165,8 +169,8 @@ module.exports = function(Dataset) {
             });
           }
         };
-
       });
+
       // since these are streams, you can pipe them elsewhere
       // child.stderr.pipe(dest);
       child.on('close', (code) => {
@@ -199,7 +203,7 @@ module.exports = function(Dataset) {
       console.log('removeExisting', id, exists);
       if (exists) {
         if (! replaceDataset) {
-          replyCb(Error('Dataset "' + id + '" exists'));
+          replyCb(Error("Dataset '" + id + "' exists"));
         } else {
         /* without {unfiltered: true}, the dataset was not found by destroyAll.
          * destroyAllById(id ) also did not found the dataset (callback gets info.count === 0).
