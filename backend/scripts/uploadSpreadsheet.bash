@@ -20,10 +20,11 @@ set -x
 fileName=$1
 useFile=$2
 
-# Sanitize input by removing punctuation other than comma
+# Sanitize input by removing punctuation other than comma, _, ., \n
+# Commonly _ and . are present in parentName.
 function deletePunctuation()
 {
-    tr -d  -c '[,\n][:alnum:]'
+    tr -d  -c '[,\n_.][:alnum:]'
 }
 # get namespace and commonName from metadata :
 function readMetadata()
@@ -43,8 +44,16 @@ function fileName2DatasetName() {
   sed -n 's/\.csv$//;s/Linkage_Map_//ig;s/SNP_List_//ig;s/ X / x /g;s/SNP //g;s/.*\.\(xlsx\|xls\|ods\)\.//p;';
 }
 
-# Used in snps2Dataset.pl
-export columnsKeyString="name chr pos"
+# Handle some variation in the recognised column header names.
+# Prepate columnsKeyString, which is used in snps2Dataset.pl
+# @param worksheetFileName	name of .csv output for 1 worksheet
+columnsKeyStringPrepare()
+{
+  worksheetFileName=$1
+  head -1 "$worksheetFileName" >> uploadSpreadsheet.log
+  export columnsKeyString=$(head -1 "$worksheetFileName" | sed "s/Marker,/name,/i;s/Name,/name,/;s/Chromosome,/chr,/;s/,Qs,/,pos,/;s/,Qe,/,end,/;s/,/ /g")
+  echo columnsKeyString="$columnsKeyString"  >> uploadSpreadsheet.log
+}
 
 function linkageMap()
 {
@@ -54,9 +63,10 @@ function linkageMap()
   do
     datasetName=$(echo "$i" | fileName2DatasetName);
     echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
+    columnsKeyStringPrepare "$i"
     # ../ because of cd tmp
     out=out_json/"$i".json
-    <"$i"  chrRename |  ../$sp -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
+    <"$i"  chrOmit | chrRename |  ../$sp -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
     ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     echo "tmp/$out;$datasetName"
@@ -71,10 +81,11 @@ function snpList()
   do
     datasetName=$(echo "$i" | fileName2DatasetName);
     echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
+    columnsKeyStringPrepare "$i"
     out=out_json/"$i".json
     # remove header before sort.  (note also headerLine()).
     # from metadata : parentName platform shortName commonName
-    <"$i" tail -n +2  | chrRename |  sort -t, -k 2  |  \
+    <"$i" tail -n +2  | chrOmit | chrRename |  sort -t, -k 2  |  \
       ../$sp -d "$parentName.$datasetName" -s "$shortName" -p $parentName -n"$parentName:$platform" -c "$commonName"  	\
       >  "$out"
     ls -gG "$out"  >> uploadSpreadsheet.log;
@@ -109,6 +120,37 @@ function chrRename()
     cat
   fi
 }
+
+# If the spreadsheet contains a 'Chromosomes to Omit' worksheet,
+# then create a .sed script to filter out SNPs with those values in chromosome column.
+function chrOmitPrepare()
+{
+  chrOmitCSV=$(echo "$fileName".*[Cc]hromosomes' to '[Oo]mit*csv)
+  if [ -f "$chrOmitCSV" ]
+  then
+    chrOmitSed=out/"$fileName".chrOmit.sed
+    # Can change this to generate awk which can target only the chromosome column.
+    #
+    # Match the leading comma and not the following comma because the
+    # data case in hand has a fixed part followed by an id; perhaps
+    # change to regexp.
+    < "$chrOmitCSV" awk -F, '{ printf("/,%s/d\n", $1); }' > $chrOmitSed
+  fi
+}
+
+# If the spreadsheet contains a 'Chromosome Renaming' worksheet, (i.e. $chrOmitSed is defined)
+# then map the chromosome column as indicated.
+function chrOmit()
+{
+  if [ -n "$chrOmitSed" ]
+  then
+    sed -f "$chrOmitSed"
+  else
+    cat
+  fi
+}
+
+
 
 # Spaces in $fileName are not handled when running ssconvert via docker, so
 # rename the file into a directory
@@ -163,6 +205,7 @@ case $fileName in
     then
       readMetadata
       chrRenamePrepare
+      chrOmitPrepare
       case $fileName in
         Linkage_Map*|*[Ll]inkage*[mM]ap*)
           linkageMap
