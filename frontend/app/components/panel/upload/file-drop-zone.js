@@ -20,6 +20,9 @@ export default UploadBase.extend({
       queue
     );
 
+    this.setProcessing();
+    this.scrollToTop();
+
     var bufferPromise = blob.arrayBuffer();
     blob.arrayBuffer().then((buffer) => {
       /* process the ArrayBuffer */
@@ -34,6 +37,13 @@ export default UploadBase.extend({
       let promise =
       this.uploadData(message);
       promise.always(() => file.queue.remove(file));
+      /** data-base:uploadData() calls setSuccess() (i.e. 'Uploaded successfully')
+       * Prepend the datasetName to that message.
+       */
+      promise.then((res) => {
+        let datasetName = res.status;
+        this.setSuccess("Dataset '" + datasetName + "' " +  this.successMessage);
+      });
     });
 
   }
