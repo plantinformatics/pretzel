@@ -19,6 +19,8 @@ export default Record.extend({
     'apiServers.datasetsBlocksRefresh',
     '_meta.referenceHost',
     function () {
+      if (this.isDestroyed || this.isDestroying || this.isDeleted)
+        return undefined;
       let parentName = this.get('parentName'),
       parent;
       if (parentName) {

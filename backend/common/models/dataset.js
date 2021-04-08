@@ -322,7 +322,7 @@ module.exports = function(Dataset) {
     where = ctx.where,
     datasetId = where.and ? where.and[1].name : where._id;
     if (where.and) {
-      console.log('Dataset.observe(before delete', ctx);
+      console.log('Dataset.observe(before delete', where.and[0], where.and[1]);
     }
     Block.find({
       where: {
