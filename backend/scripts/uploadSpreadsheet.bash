@@ -201,7 +201,7 @@ function renameIfSpaces()
       # renamed/; mkdir $renamed
       suffix=$(echo $fileName | sed -n "s/.*\.//p")
       newName="$fileNameTo" # $renamed/1."$suffix"
-      mv -i "$fileName" $newName
+      mv "$fileName" $newName
       fileName="$newName"
       ;;
     *)
