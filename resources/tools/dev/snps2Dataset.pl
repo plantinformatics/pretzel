@@ -38,11 +38,11 @@ getopts("vhd:p:b:n:c:s:C:F:P:gM:", \%options);
 ## Version and help options display
 use constant versionMsg => "2020 Dec 07 (Don Isdale).\n";
 use constant usageMsg => <<EOF;
-	Usage e.g. : $0 [-d Exome_SNPs_1A -p Triticum_aestivum_IWGSC_RefSeq_v1.0 ] _or_ -b blockId  < IWGSC_RefSeq_v1.0.EXOME_SNPs.chr1A.tsv > Exome_SNPs_1A.json
-	Optional params : -n namespace [empty | 90k | ... ]  -c "common name"
-	-C columnsKeyString e.g. "chr pos name ref_alt"
-	-F field separator, e.g. '\t', default ','
-	-P species prefix for chr number, e.g. Ca
+  Usage e.g. : $0 [-d Exome_SNPs_1A -p Triticum_aestivum_IWGSC_RefSeq_v1.0 ] _or_ -b blockId  < IWGSC_RefSeq_v1.0.EXOME_SNPs.chr1A.tsv > Exome_SNPs_1A.json
+  Optional params : -n namespace [empty | 90k | ... ]  -c "common name"
+  -C columnsKeyString e.g. "chr pos name ref_alt"
+  -F field separator, e.g. '\t', default ','
+  -P species prefix for chr number, e.g. Ca
   -M column for dataset from Metadata worksheet csv
 EOF
 
@@ -377,9 +377,9 @@ sub snpLine($)
 
           my $h = $blockHeader;
           # replace 'blockName' in the $blockHeader template with the actual chromosome name $c.
-	  # and blockScope with : the scope which is the chr $c with .[1-9] trimmed off
-	  # or scope might be just the chr name $c so that each GM block gets its own axis.
-	  my $scope = $c;   #  ($c =~ s/\.[1-9]$//r);
+          # and blockScope with : the scope which is the chr $c with .[1-9] trimmed off
+          # or scope might be just the chr name $c so that each GM block gets its own axis.
+          my $scope = $c;   #  ($c =~ s/\.[1-9]$//r);
           $h =~ s/blockName/$c/g;
           $h =~ s/blockScope/$scope/g;
           print $h;
@@ -461,7 +461,7 @@ sub printFeature($)
   for $c (c_name, c_chr, c_pos, c_start, c_endPos, c_ref, c_alt, c_ref_alt)
     {
       if (defined($c)) {
-	$ak[$c] = $a[$c];
+        $ak[$c] = $a[$c];
       }
     }
   # Splice (delete) after copy because column indexes are affected.

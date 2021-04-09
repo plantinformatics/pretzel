@@ -289,40 +289,40 @@ case $fileName in
       # i is worksheetFileName
       for i in "$fileName".*'|'*csv
       do
-	echo "i=$i" >> uploadSpreadsheet.log;
+        echo "i=$i" >> uploadSpreadsheet.log;
 
-	readMetadata
+        readMetadata
 
-  optionalArgs=()
-  if [ -f "$datasetMeta" ]
-  then
-    optionalArgs=(-M "$datasetMeta")
-  fi
+        optionalArgs=()
+        if [ -f "$datasetMeta" ]
+        then
+          optionalArgs=(-M "$datasetMeta")
+        fi
 
-	# (until f556a24e, the fileName prefix guided which of these
-	# functions was called, but now the fileName is arbitrary and
-	# only the worksheet name indicates the type of dataset)
-	case $i in
-	  "$fileName".*Map'|'*csv)
-	    linkageMap
-	    status=$?
-	    ;;
-	  "$fileName".*Alignment'|'*csv)
+        # (until f556a24e, the fileName prefix guided which of these
+        # functions was called, but now the fileName is arbitrary and
+        # only the worksheet name indicates the type of dataset)
+        case $i in
+          "$fileName".*Map'|'*csv)
+            linkageMap
+            status=$?
+            ;;
+          "$fileName".*Alignment'|'*csv)
             snpList
-	    status=$?
-	    ;;
-	  # Later : QTL, Genome, etc
+            status=$?
+            ;;
+          # Later : QTL, Genome, etc
           *)
             echo "$i : expected Map|, Alignment| *" >> uploadSpreadsheet.log
             ;;
 
-	esac
+        esac
       done
 
       if [ -z "$datasetName" ]
       then
-	echo "Error: '$fileName' : no worksheets defined datasets. ;"
-	ls -gG "$fileName".*csv  >> uploadSpreadsheet.log
+        echo "Error: '$fileName' : no worksheets defined datasets. ;"
+        ls -gG "$fileName".*csv  >> uploadSpreadsheet.log
       fi
 
     fi
