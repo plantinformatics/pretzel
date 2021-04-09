@@ -151,7 +151,11 @@ function snpList()
     then
       nameArgs=(-d "$parentName.$datasetName" -p $parentName -n"$parentName:$platform")
     else
-      nameArgs=(-d "$datasetName"  -n"$platform")
+      nameArgs=(-d "$datasetName" )
+      if [ -n "$platform" ]
+      then
+        nameArgs+=(-n "$platform")
+      fi
     fi
     if [ -n "$shortName" ]
     then

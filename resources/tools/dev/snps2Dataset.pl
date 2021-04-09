@@ -63,7 +63,8 @@ my $chrOutputPrefix = $options{P} || '';
 my $datasetMetaFile = $options{M};
 
 #my $refAltSlash = 0;	# option, default 0
-my $addValues = 0;	# option : add values : { other columns, }
+# true means add other columns to Feature.values { }
+my $addValues = 1;	# option : add values : { other columns, }
 # option : if  $namespace =~ m/90k/ etc,  use  $datasetHeaderGM
 my $isGM = $options{g}; # default 0, 1 for physical data blocks
 
@@ -168,6 +169,8 @@ BEGIN
 
 #-------------------------------------------------------------------------------
 
+my @columnHeaders;
+
 # @return true if the given line is a column header row
 sub headerLine($$) {
   my ($line, $lineNumber) = @_;
@@ -178,6 +181,9 @@ sub headerLine($$) {
      || ($line =~ m/Marker.*Chromosome/i)
      || ($line =~ m/Contig,Position/i)
     );
+  if ($isHeader) {
+    @columnHeaders = split(',');
+  }
   return $isHeader;
 }
 
@@ -331,7 +337,7 @@ sub convertInput()
       chomp;
       # commenting out this condition will output the column headers in the JSON,
       # which is a useful check of column alignment with the ColumnsEnum.
-      if (! headerLine($_, $.))
+      if (@columnHeaders || ! headerLine($_, $.))
         { snpLine($_); }
     }
 }
@@ -454,24 +460,30 @@ sub printFeature($)
 {
   my (@a) = @_;
 
+  # No longer removing key values from @a, so $ak can be simply $a.
   # Copy the essential / key columns; remainder may go in .values.
   my (@ak) = ();
 
   my $c;
-  for $c (c_name, c_chr, c_pos, c_start, c_endPos, c_ref, c_alt, c_ref_alt)
+  for $c (c_name, c_chr, c_pos, c_start, c_endPos)
     {
       if (defined($c)) {
         $ak[$c] = $a[$c];
       }
     }
-  # Splice (delete) after copy because column indexes are affected.
-  for $c (c_endPos, c_start, c_chr, c_name, c_ref, c_alt, c_ref_alt)  # c_pos,
+
+  my %values = ();
+  if ($addValues)
+  {
+    # could also match @columnHeaders
+    for (my $ci=0; $ci <= $#a; $ci++)
     {
-      if (defined($c) && defined($a[$c]))
-        {
-          splice(@a, $c, 1);
-        }
+      if (($ci != c_name) && ($ci != c_chr) && ($ci != c_pos) && ($ci != c_start) && ($ci != c_endPos))
+      {
+        $values{$columnHeaders[$ci]} = $a[$ci];
+      }
     }
+  }
 
   # Round the numeric (position) columns.
   for $c (c_pos, c_start, c_endPos)
@@ -495,15 +507,21 @@ sub printFeature($)
     $start = $end;
   }
 
-  my $values = "";
+
+  if (0) # replaced by valuesString
+  {
   my $ref_alt;
   if (defined(c_ref_alt))
     { $ref_alt = '"ref" : "' . eval('$ak[c_ref_alt]') . '"'; }
   elsif (defined(c_ref))
     { $ref_alt = '"ref" : "' . eval('$ak[c_ref]') . '"' . ", " . '"alt": "' . eval('$ak[c_alt]') . '"'; };
+  }
   my $indent = "                    ";
-  # $addValues
-  if ($ref_alt) { $values .=  ",\n" . $indent . "\"values\" : {" . $ref_alt . "}"; }
+  my $valuesString = $addValues && %values ?
+    ",\n" . $indent . "\"values\" : {"
+    . join(",\n        ", simple_encode_json(\%values)) .
+    "}"
+    : '';
   my $name = eval '$ak[c_name]';
 
   print <<EOF;
@@ -513,7 +531,7 @@ sub printFeature($)
                         $start,
                         $end
                     ],
-                    "value_0": $start$values
+                    "value_0": $start$valuesString
                 }
 EOF
 
