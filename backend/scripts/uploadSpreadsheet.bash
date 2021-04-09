@@ -41,7 +41,7 @@ function splitMetadata()
   < "$fileName".Metadata.csv sed  '/^#/d;/^"#/d' > "$fileDir"/Metadata.csv
   # Select the first line. Trim off Field,. Trim spaces around , and |. Convert , to " ", prepend and append ".
   # Result is the headings of the dataset columns, e.g. Alignment|EST_SNP, Map|Red x Blue
-  eval datasetNames=( $(< "$fileDir"/Metadata.csv head -1 |  sed 's/^Field,//;s/ *, */,/g;s/ *| */|/g;s/,/" "/g;s/^/"/;s/$/"/') )
+  eval datasetNames=( $(< "$fileDir"/Metadata.csv head -1 |  sed 's/^Field,//;s/ *, */,/g;s/ *| */|/g;s/,/" "/g;s/^\([^"]\)/"\1/;s/\([^"]\)$/\1"/') )
   # 
   datasetMeta="$fileDir"/${datasetNames[$di]}.Metadata.csv
   for di in ${!datasetNames[*]};
@@ -130,7 +130,7 @@ function linkageMap()
     columnsKeyStringPrepare "$i" || return $?
     # ../ because of cd tmp
     out=out_json/"$i".json
-    <"$i"  chrOmit | chrRename |  ../$sp -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
+    <"$i"  chrOmit | chrRename |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
     ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     echo "tmp/$out;$datasetName"
@@ -143,6 +143,7 @@ function snpList()
     echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
     # or continue/break. whether to check later worksheets in the file for errors ?
     columnsKeyStringPrepare "$i" || return $?
+
     out=out_json/"$i".json
     # remove header before sort.  (note also headerLine()).
     # from metadata : parentName platform shortName commonName
@@ -156,8 +157,13 @@ function snpList()
     then
       nameArgs+=(-s "$shortName")
     fi
+    if [ -n "$commonName" ]
+    then
+      nameArgs+=(-c "$commonName")
+    fi
+
     <"$i" tail -n +2  | chrOmit | chrRename |  sort -t, -k 2  |  \
-      ../$sp "${nameArgs[@]}" -c "$commonName"  	\
+      ../$sp "${nameArgs[@]}" "${optionalArgs[@]}" 	\
       >  "$out"
     ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
@@ -286,6 +292,12 @@ case $fileName in
 	echo "i=$i" >> uploadSpreadsheet.log;
 
 	readMetadata
+
+  optionalArgs=()
+  if [ -f "$datasetMeta" ]
+  then
+    optionalArgs=(-M "$datasetMeta")
+  fi
 
 	# (until f556a24e, the fileName prefix guided which of these
 	# functions was called, but now the fileName is arbitrary and

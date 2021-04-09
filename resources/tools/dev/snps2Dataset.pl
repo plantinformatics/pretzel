@@ -18,6 +18,7 @@ use warnings;
 
 use Getopt::Std;	# for getopt()
 
+
 #-------------------------------------------------------------------------------
 
 # Forward declarations
@@ -32,7 +33,7 @@ sub makeTemplates();
 
 ## Get options from ARGV
 my %options;
-getopts("vhd:p:b:n:c:s:C:F:P:g", \%options);
+getopts("vhd:p:b:n:c:s:C:F:P:gM:", \%options);
 
 ## Version and help options display
 use constant versionMsg => "2020 Dec 07 (Don Isdale).\n";
@@ -42,6 +43,7 @@ use constant usageMsg => <<EOF;
 	-C columnsKeyString e.g. "chr pos name ref_alt"
 	-F field separator, e.g. '\t', default ','
 	-P species prefix for chr number, e.g. Ca
+  -M column for dataset from Metadata worksheet csv
 EOF
 
 my $datasetName = $options{d};
@@ -58,6 +60,7 @@ my $fieldSeparator = $options{F} || ',';	# '\t'
 # The chr input may be just a number, or it may have some other prefix which is trimmed off (see $chrPrefix).
 my $chrOutputPrefix = $options{P} || '';
 
+my $datasetMetaFile = $options{M};
 
 #my $refAltSlash = 0;	# option, default 0
 my $addValues = 0;	# option : add values : { other columns, }
@@ -68,10 +71,7 @@ my $isGM = $options{g}; # default 0, 1 for physical data blocks
 my $extraTags = ''; # '"SNP"';  #  . ", \"HighDensity\"";	# option, default ''
 
 # For loading Genome Reference / Parent :
-my $extraMeta = ''; # '"paths" : "false",'; # '"type" : "Genome",';
-if (defined($shortName) && $shortName) {
-  $extraMeta .= '"shortName" : "' . $shortName . '" ';
-}
+# my $extraMeta = ''; # '"paths" : "false",'; # '"type" : "Genome",';
 
 #-------------------------------------------------------------------------------
 
@@ -183,9 +183,66 @@ sub headerLine($$) {
 
 #-------------------------------------------------------------------------------
 
+# hash -> json
+# Only need simple 1-level json output, so implement it here to avoid installing JSON.pm.
+sub simple_encode_json($)
+{
+  my ($data) = @_;
+  my @fields = ();
+  for my $key (keys %$data) {
+    push @fields, '"' . $key . '" : "' . $data->{$key} . '"';
+  }
+  return @fields;
+}
+
+# Populate Dataset .meta from command-line options and
+# column for dataset from Metadata worksheet.
+sub setupMeta()
+{
+  my %meta = ();
+
+  if (defined($shortName) && $shortName)
+  {
+    $meta{'shortName'} = $shortName;
+  }
+  if (defined($commonName) && $commonName)
+  {
+    $meta{'commonName'} = $commonName;
+  }
+  # When called from uploadSpreadsheet.bash, meta.type can now be set from the Metadata worksheet.
+  if ($isGM) {
+    $meta{'type'} = "Genetic Map";
+  }
+
+  #-----------------------------------------------------------------------------
+  # Read additional meta from file.
+  if (defined($datasetMetaFile) && $datasetMetaFile)
+  {
+    if (! open(FH, '<', $datasetMetaFile))
+    { warn $!; }
+    else
+    {
+      while(<FH>){
+        chomp;
+        my ($fieldName, $value) = split(/,/, $_);
+        if (! ($fieldName =~ m/commonName|parentName|platform|shortName/)) {
+          $meta{$fieldName} = $value;
+        }
+      }
+      close(FH);
+    }
+  }
+
+  # use JSON;
+  # my $metaJson = encode_json \%meta;
+  my $metaJson = '{' . join(",\n        ", simple_encode_json(\%meta)) . '}';
+
+  return $metaJson;
+}
 
 sub makeTemplates()
 {
+  my $metaJson = setupMeta();
 
 # Used to form the JSON structure of datasets and blocks.
 # Text extracted from pretzel-data/myMap.json
@@ -199,7 +256,7 @@ $datasetHeader = <<EOF;
     ],
     "parent" : "$parentName",
     "namespace" : "$namespace",
-    "meta" : { $extraMeta },
+    "meta" : $metaJson,
     "blocks": [
 EOF
 
@@ -207,7 +264,7 @@ $datasetHeaderGM = <<EOF;
 {
     "name": "$datasetName",
     "namespace" : "$namespace",
-    "meta" : { "type" : "Genetic Map", "commonName" : "$commonName" },
+    "meta" : $metaJson,
     "blocks": [
 EOF
 
