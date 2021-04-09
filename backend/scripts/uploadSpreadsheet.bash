@@ -26,10 +26,40 @@ function deletePunctuation()
 {
     tr -d  -c '[,\n_.][:alnum:]'
 }
+# Split the Metadata table into 1 file per dataset, with the left
+# column (Field names) and the dataset column.
+# Name the file out/"$fileName"/$datasetName.Metadata.csv
+function splitMetadata()
+{
+  fileDir=out/"$fileName"
+  # Remove any tmp files from previous upload.
+  [ -d "$fileDir" ] && rm -r "$fileDir"
+  mkdir "$fileDir"
+  meta4dataset="$fileDir"/"$datasetName".Metadata.csv
+
+  # Filter out comments.
+  < "$fileName".Metadata.csv sed  '/^#/d;/^"#/d' > "$fileDir"/Metadata.csv
+  # Select the first line. Trim off Field,. Trim spaces around , and |. Convert , to " ", prepend and append ".
+  # Result is the headings of the dataset columns, e.g. Alignment|EST_SNP, Map|Red x Blue
+  eval datasetNames=( $(< "$fileDir"/Metadata.csv head -1 |  sed 's/^Field,//;s/ *, */,/g;s/ *| */|/g;s/,/" "/g;s/^/"/;s/$/"/') )
+  # 
+  datasetMeta="$fileDir"/${datasetNames[$di]}.Metadata.csv
+  for di in ${!datasetNames[*]};
+  do
+    echo $di ${datasetNames[$di]} >>  uploadSpreadsheet.log;
+    < "$fileDir"/Metadata.csv sed '/^#/d;/^"#/d' | cut -d, -f 1,$(($di+2)) | tail -n +2  > "$datasetMeta" ;
+  done
+}
+
+
 # get namespace and commonName from metadata :
 function readMetadata()
 {
-  eval $( < "$fileName".Metadata.csv deletePunctuation | awk -F, '/[^#]/ { printf("%s=%s;\n", $1, $2); }' )
+  worksheetName=$(echo "$i" | fileName2worksheetName)
+  datasetMeta="$fileDir"/"$worksheetName".Metadata.csv
+
+  eval $( < "$datasetMeta" egrep  '^\(commonName|parentName|platform|shortName\),' | deletePunctuation \
+   | awk -F, '{ printf("%s=%s;\n", $1, $2); }' )
   echo namespace=$namespace, commonName=$commonName >> uploadSpreadsheet.log
 }
 
@@ -39,6 +69,11 @@ cd tmp
 # out/ was for .csv, maybe not needed
 [ -d out ] || mkdir out out_json
 #[ -d chrSnps ] || mkdir chrSnps
+
+# Extract datasetName from filename of the worksheet csv
+function fileName2worksheetName() {
+  sed  's/\.csv$//;s/.*\.\([A-Za-z ]*\)|/\1|/;s/^  *//;s/  *$//;s/ *| */|/g;';
+}
 
 # Extract datasetName from filename of the worksheet csv
 function fileName2DatasetName() {
@@ -86,14 +121,10 @@ s/,/ /g;
   [ -z "$errorMessages" ]
 }
 
+# @param env $i worksheetFileName 
 function linkageMap()
 {
-  # fileName=$1
-  echo "linkageMap fileName=$fileName" >> uploadSpreadsheet.log;
-  for i in "$fileName".*'Map|'*csv
-  do
-    # if no files match the regexp, then i will be the un-expanded regexp.
-    if [ \! -f "$i" ] ; then continue; fi;
+
     datasetName=$(echo "$i" | fileName2DatasetName);
     echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
     columnsKeyStringPrepare "$i" || return $?
@@ -103,16 +134,11 @@ function linkageMap()
     ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     echo "tmp/$out;$datasetName"
-  done
 }
 
+# @param env $i worksheetFileName 
 function snpList()
 {
-  # fileName=$1
-  echo "snpList fileName=$fileName" >> uploadSpreadsheet.log;
-  for i in "$fileName".*Alignment'|'*csv
-  do
-    if [ \! -f "$i" ] ; then continue; fi;
     datasetName=$(echo "$i" | fileName2DatasetName);
     echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
     # or continue/break. whether to check later worksheets in the file for errors ?
@@ -136,7 +162,6 @@ function snpList()
     ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     echo "tmp/$out;$parentName.$datasetName"
-  done
 }
 
 # If the spreadsheet contains a 'Chromosome Renaming' worksheet,
@@ -251,18 +276,36 @@ case $fileName in
     echo ssconvert status $status >> uploadSpreadsheet.log
     if [ $status -eq 0 ]
     then
-      readMetadata
       chrRenamePrepare
       chrOmitPrepare
+      splitMetadata
 
-      # Could factor the loops out of these 2 to make a single loop here.
-      # (until f556a24e, the fileName prefix guided which of these
-      # functions was called, but now the fileName is arbitrary and
-      # only the worksheet name indicates the type of dataset)
-      linkageMap &&
-        snpList
-      status=$?
-      # Later : QTL, Genome, etc
+      # i is worksheetFileName
+      for i in "$fileName".*'|'*csv
+      do
+	echo "i=$i" >> uploadSpreadsheet.log;
+
+	readMetadata
+
+	# (until f556a24e, the fileName prefix guided which of these
+	# functions was called, but now the fileName is arbitrary and
+	# only the worksheet name indicates the type of dataset)
+	case $i in
+	  "$fileName".*Map'|'*csv)
+	    linkageMap
+	    status=$?
+	    ;;
+	  "$fileName".*Alignment'|'*csv)
+            snpList
+	    status=$?
+	    ;;
+	  # Later : QTL, Genome, etc
+          *)
+            echo "$i : expected Map|, Alignment| *" >> uploadSpreadsheet.log
+            ;;
+
+	esac
+      done
 
       if [ -z "$datasetName" ]
       then
