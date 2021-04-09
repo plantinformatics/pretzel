@@ -29,7 +29,7 @@ function deletePunctuation()
 # get namespace and commonName from metadata :
 function readMetadata()
 {
-  eval $( < $fileName.Metadata.csv deletePunctuation | awk -F, ' { printf("%s=%s;\n", $1, $2); }' )
+  eval $( < "$fileName".Metadata.csv deletePunctuation | awk -F, '/[^#]/ { printf("%s=%s;\n", $1, $2); }' )
   echo namespace=$namespace, commonName=$commonName >> uploadSpreadsheet.log
 }
 
@@ -40,8 +40,12 @@ cd tmp
 [ -d out ] || mkdir out out_json
 #[ -d chrSnps ] || mkdir chrSnps
 
+# Extract datasetName from filename of the worksheet csv
 function fileName2DatasetName() {
-  sed -n 's/\.csv$//;s/Linkage_Map_//ig;s/SNP_List_//ig;s/ X / x /g;s/SNP //g;s/.*\.\(xlsx\|xls\|ods\)\.//p;';
+  # Trim off trailing .csv and fileName and worksheet label up to |
+  # Trim off outside spaces.
+  # input : $worksheetFileName, output: $datasetName
+  sed  's/\.csv$//;s/.*|//;s/^  *//;s/  *$//;';
 }
 
 set +x
@@ -60,7 +64,11 @@ columnsKeyStringPrepare()
 {
   worksheetFileName=$1
   head -1 "$worksheetFileName" >> uploadSpreadsheet.log
-  export columnsKeyString=$(head -1 "$worksheetFileName" | sed "s/Marker,/name,/i;s/Name,/name,/;s/Chromosome,/chr,/;s/,Qs,/,pos,/;s/,Qe,/,end,/;s/,/ /g")
+  export columnsKeyString=$(head -1 "$worksheetFileName" | sed "s/Marker,/name,/i;s/Name,/name,/;s/Chromosome,/chr,/;
+s/,Qs,/,pos,/;s/,Qe,/,end,/;
+;s/,Start,/,pos,/i;s/,End,/,end,/i;
+s/,/ /g;
+")
   echo columnsKeyString="$columnsKeyString"  >> uploadSpreadsheet.log
 
   # Check that the required columns are present
@@ -82,7 +90,7 @@ function linkageMap()
 {
   # fileName=$1
   echo "linkageMap fileName=$fileName" >> uploadSpreadsheet.log;
-  for i in "$fileName".*' x '*csv
+  for i in "$fileName".*'Map|'*csv
   do
     # if no files match the regexp, then i will be the un-expanded regexp.
     if [ \! -f "$i" ] ; then continue; fi;
@@ -102,7 +110,7 @@ function snpList()
 {
   # fileName=$1
   echo "snpList fileName=$fileName" >> uploadSpreadsheet.log;
-  for i in "$fileName".*SNP' '*csv
+  for i in "$fileName".*Alignment'|'*csv
   do
     if [ \! -f "$i" ] ; then continue; fi;
     datasetName=$(echo "$i" | fileName2DatasetName);
@@ -142,7 +150,7 @@ function chrRenamePrepare()
   then
     chrRenameSed=out/"$fileName".chrRename.sed
     # Can change this to generate awk which can target only the chromosome column.
-    < "$chrRenameCSV" awk -F, '{ printf("s/,%s,/,%s,/\n", $1, $2); }' > $chrRenameSed
+    < "$chrRenameCSV" awk -F, '{ printf("s/,%s,/,%s,/\n", $1, $2); }' > "$chrRenameSed"
   fi
 }
 
@@ -193,6 +201,7 @@ function chrOmit()
 # rename the file into a directory
 function renameIfSpaces()
 {
+  # "" around $fileName not required here - bash does not split the var value at white-space
   case $fileName in
     *' '*)
       # [ -d renamed ] || mkdir renamed
@@ -245,20 +254,16 @@ case $fileName in
       readMetadata
       chrRenamePrepare
       chrOmitPrepare
-      case $fileName in
-        Linkage_Map*|*[Ll]inkage*[mM]ap*)
-          linkageMap
-          status=$?
-          ;;
-        SNP_List*)
-          snpList
-          status=$?
-          ;;
-        # Later : QTL etc
-        *)
-          echo "$fileName : expected Linkage_Map*" >> uploadSpreadsheet.log
-          ;;
-      esac
+
+      # Could factor the loops out of these 2 to make a single loop here.
+      # (until f556a24e, the fileName prefix guided which of these
+      # functions was called, but now the fileName is arbitrary and
+      # only the worksheet name indicates the type of dataset)
+      linkageMap &&
+        snpList
+      status=$?
+      # Later : QTL, Genome, etc
+
       if [ -z "$datasetName" ]
       then
 	echo "Error: '$fileName' : no worksheets defined datasets. ;"
