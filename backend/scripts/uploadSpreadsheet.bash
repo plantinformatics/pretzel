@@ -58,7 +58,7 @@ function readMetadata()
   worksheetName=$(echo "$i" | fileName2worksheetName)
   datasetMeta="$fileDir"/"$worksheetName".Metadata.csv
 
-  eval $( < "$datasetMeta" egrep  '^\(commonName|parentName|platform|shortName\),' | deletePunctuation \
+  eval $( < "$datasetMeta" egrep  '^(commonName|parentName|platform|shortName),' | deletePunctuation \
    | awk -F, '{ printf("%s=%s;\n", $1, $2); }' )
   echo namespace=$namespace, commonName=$commonName >> uploadSpreadsheet.log
 }
@@ -145,12 +145,20 @@ function snpList()
     columnsKeyStringPrepare "$i" || return $?
 
     out=out_json/"$i".json
-    # remove header before sort.  (note also headerLine()).
+    # 'tail -n +2' to remove header before sort.  (note also headerLine()).
+
     # from metadata : parentName platform shortName commonName
+
+    # $datasetNameFull is $datasetName, with $parentName. prefixed, if it is
+    # defined; this is the actual dataset name created, and the value
+    # used by removeExisting().
+
     if [ -n "$parentName" ]
     then
-      nameArgs=(-d "$parentName.$datasetName" -p $parentName -n"$parentName:$platform")
+      datasetNameFull="$parentName.$datasetName"
+      nameArgs=(-d "$datasetNameFull" -p $parentName -n"$parentName:$platform")
     else
+      datasetNameFull="$datasetName"
       nameArgs=(-d "$datasetName" )
       if [ -n "$platform" ]
       then
@@ -171,7 +179,7 @@ function snpList()
       >  "$out"
     ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
-    echo "tmp/$out;$parentName.$datasetName"
+    echo "tmp/$out;$datasetNameFull"
 }
 
 # If the spreadsheet contains a 'Chromosome Renaming' worksheet,

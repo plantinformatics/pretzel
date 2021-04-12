@@ -50,7 +50,7 @@ my $datasetName = $options{d};
 my $parentName = $options{p};
 my $blockId = $options{b};
 # may be '', which is false-y
-my $namespace = defined($options{n}) ? $options{n} : "$parentName:$datasetName";
+my $namespace = defined($options{n}) ? $options{n} : (defined($parentName) ? "$parentName:$datasetName" : $datasetName);
 my $commonName = $options{c};
 my $shortName = $options{s};	# option, Exome. WGS
 my $columnsKeyString = $options{C} || "chr pos name ref_alt";
@@ -98,7 +98,8 @@ elsif (defined ($datasetName) == defined ($blockId))
   Required option : -d dataset name or -b block name (not both)
 EOF
 }
-elsif (defined ($parentName) == defined ($blockId))
+# Maybe drop this test - allow parentName to be optional.
+elsif (0 && (defined ($parentName) == defined ($blockId)))
 {
   print usageMsg, <<EOF;
   Required option : -p parent (reference dataset) name or -b block name (not both)
@@ -250,6 +251,13 @@ sub makeTemplates()
 {
   my $metaJson = setupMeta();
 
+  # Could include . "\n" in this expression, but OTOH there is some
+  # value in leaving blank lines when parent and namespace are not defined.
+  # (the template does contain the indent spaces so the line is blank but not empty).
+  my $parentJson = defined($parentName) ? '"parent" : "' . $parentName . '",' : '';
+  my $namespaceJson = defined($namespace) ? '"namespace" : "' . $namespace . '",' : '';
+
+
 # Used to form the JSON structure of datasets and blocks.
 # Text extracted from pretzel-data/myMap.json
 # These are indented with 4 spaces, whereas the remainder of the file is indented with 2-column tab positions.
@@ -260,8 +268,8 @@ $datasetHeader = <<EOF;
     "tags": [
         $extraTags
     ],
-    "parent" : "$parentName",
-    "namespace" : "$namespace",
+    $parentJson
+    $namespaceJson
     "meta" : $metaJson,
     "blocks": [
 EOF
@@ -269,7 +277,7 @@ EOF
 $datasetHeaderGM = <<EOF;
 {
     "name": "$datasetName",
-    "namespace" : "$namespace",
+    $namespaceJson
     "meta" : $metaJson,
     "blocks": [
 EOF
@@ -478,7 +486,11 @@ sub printFeature($)
     # could also match @columnHeaders
     for (my $ci=0; $ci <= $#a; $ci++)
     {
-      if (($ci != c_name) && ($ci != c_chr) && ($ci != c_pos) && ($ci != c_start) && ($ci != c_endPos))
+      # if the column is not already used (one of the essential/"key"
+      # columns), and the value is non-empty, and it has a column heading,
+      # then add it to .values
+      if (($ci != c_name) && ($ci != c_chr) && ($ci != c_pos) && ($ci != c_start) && (!defined(c_endPos) || ($ci != c_endPos))
+          && $a[$ci] && ($ci <= $#columnHeaders) && $columnHeaders[$ci])
       {
         $values{$columnHeaders[$ci]} = $a[$ci];
       }
