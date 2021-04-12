@@ -20,6 +20,14 @@ set -x
 fileName=$1
 useFile=$2
 
+#-------------------------------------------------------------------------------
+
+function filterOutComments
+{
+  sed '/^#/d;/^"#/d'
+  # or egrep -v '^#|^"#' | 
+}
+
 # Sanitize input by removing punctuation other than comma, _, ., \n
 # Commonly _ and . are present in parentName.
 function deletePunctuation()
@@ -41,16 +49,32 @@ function splitMetadata()
   < "$fileName".Metadata.csv sed  '/^#/d;/^"#/d' > "$fileDir"/Metadata.csv
   # Select the first line. Trim off Field,. Trim spaces around , and |. Convert , to " ", prepend and append ".
   # Result is the headings of the dataset columns, e.g. Alignment|EST_SNP, Map|Red x Blue
-  eval datasetNames=( $(< "$fileDir"/Metadata.csv head -1 |  sed 's/^Field,//;s/ *, */,/g;s/ *| */|/g;s/,/" "/g;s/^\([^"]\)/"\1/;s/\([^"]\)$/\1"/') )
+  eval datasetNames=( $(< "$fileDir"/Metadata.csv head -1 | quotedHeadings) )
   # 
-  datasetMeta="$fileDir"/${datasetNames[$di]}.Metadata.csv
   for di in ${!datasetNames[*]};
   do
     echo $di ${datasetNames[$di]} >>  uploadSpreadsheet.log;
+    datasetMeta="$fileDir"/${datasetNames[$di]}.Metadata.csv
     < "$fileDir"/Metadata.csv sed '/^#/d;/^"#/d' | cut -d, -f 1,$(($di+2)) | tail -n +2  > "$datasetMeta" ;
   done
 }
 
+# Given the headings line (first non-comment line), convert to quoted column header strings.
+# These are the dataset names, with the prefix 'Map|', 'Alignment|' etc.
+# i.e.
+# . discard col1 (Field,)
+# . trim spaces around , and |
+# . ensure " at ^ and $
+# . ensure " before and after comma
+# . convert comma to space
+function quotedHeadings()
+{
+  sed 's/^Field,//;
+s/ *, */,/g;s/ *| */|/g;
+s/^\([^"]\)/"\1/;s/\([^"]\)$/\1"/;
+s/,\([^"]\)/,"\1/;s/\([^"]\),/\1",/g;
+s/,/ /g;'
+  }
 
 # get namespace and commonName from metadata :
 function readMetadata()
@@ -99,9 +123,11 @@ columnsKeyStringPrepare()
 {
   worksheetFileName=$1
   head -1 "$worksheetFileName" >> uploadSpreadsheet.log
+  # There may not be a comma after Position and End.
   export columnsKeyString=$(head -1 "$worksheetFileName" | sed "s/Marker,/name,/i;s/Name,/name,/;s/Chromosome,/chr,/;
 s/,Qs,/,pos,/;s/,Qe,/,end,/;
-;s/,Start,/,pos,/i;s/,End,/,end,/i;
+s/,Start,/,pos,/i;s/,End/,end/i;
+s/,Position/,pos/i;
 s/,/ /g;
 ")
   echo columnsKeyString="$columnsKeyString"  >> uploadSpreadsheet.log
@@ -174,7 +200,10 @@ function snpList()
       nameArgs+=(-c "$commonName")
     fi
 
-    <"$i" tail -n +2  | chrOmit | chrRename |  sort -t, -k 2  |  \
+    columnHeaderFile=out/columnHeaders.csv
+    <"$i" filterOutComments | head -1 > $columnHeaderFile
+    (cat $columnHeaderFile; \
+     <"$i" filterOutComments | tail -n +2  | chrOmit | chrRename |  sort -t, -k 2 ) |  \
       ../$sp "${nameArgs[@]}" "${optionalArgs[@]}" 	\
       >  "$out"
     ls -gG "$out"  >> uploadSpreadsheet.log;

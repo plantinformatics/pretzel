@@ -146,6 +146,7 @@ else
 # equivalent to e.g : qw(c_chr c_pos c_name c_ref_alt)
 # /r for non-destructive, allows chaining.
 my $columnsKeyPrefixed;
+my $c_endPos;
 
 BEGIN
 {
@@ -156,17 +157,35 @@ BEGIN
     =~ s/,/ /rg
     =~ s/^/c_/r
     =~ s/ / c_/rg;
+
+  # Define a variable $c_endPos, because the enum c_endPos can't have a conditional value.
+  # Using an enum made sense in the initial version which had fixed columns,
+  # but now %columnsKeyLookup is more suitable.
+  #
+  # $columnsKeyString is space-separated, not comma.
+  my @columnsKeyValues = split(' ', $columnsKeyString);
+  my %columnsKeyLookup;
+  for (my $ki=0; $ki <= $#columnsKeyValues; $ki++)
+  {
+    $columnsKeyLookup{$columnsKeyValues[$ki]} = $ki;
+  }
+  $c_endPos = defined($columnsKeyLookup{'end'}) && $columnsKeyLookup{'end'};
+
 }
 use constant ColumnsEnum => split(' ', $columnsKeyPrefixed);
 BEGIN
 {
   eval "use constant (ColumnsEnum)[$_] => $_;" foreach 0..(ColumnsEnum)-1;
   eval "use constant c_start => c_pos;";
-  use constant c_endPos => undef;
+  if (! $columnsKeyString =~ m/\bend\b/i)
+  {
+    eval "use constant c_endPos => undef;";
+  }
   use constant c_ref_alt => undef;
   use constant c_ref => undef;
   use constant c_alt => undef;
 }
+
 
 #-------------------------------------------------------------------------------
 
@@ -175,11 +194,11 @@ my @columnHeaders;
 # @return true if the given line is a column header row
 sub headerLine($$) {
   my ($line, $lineNumber) = @_;
-  my $isHeader = ($lineNumber == 1) && 
+  my $isHeader = ($lineNumber == 1) &&
     (
      ($line =~ m/^label	chr	pos/)
      || ($line =~ m/^name,chr,pos/)
-     || ($line =~ m/Marker.*Chromosome/i)
+     || ($line =~ m/(Marker|Name).*Chromosome/i)
      || ($line =~ m/Contig,Position/i)
     );
   if ($isHeader) {
@@ -473,7 +492,7 @@ sub printFeature($)
   my (@ak) = ();
 
   my $c;
-  for $c (c_name, c_chr, c_pos, c_start, c_endPos)
+  for $c (c_name, c_chr, c_pos, c_start, $c_endPos)
     {
       if (defined($c)) {
         $ak[$c] = $a[$c];
@@ -489,7 +508,7 @@ sub printFeature($)
       # if the column is not already used (one of the essential/"key"
       # columns), and the value is non-empty, and it has a column heading,
       # then add it to .values
-      if (($ci != c_name) && ($ci != c_chr) && ($ci != c_pos) && ($ci != c_start) && (!defined(c_endPos) || ($ci != c_endPos))
+      if (($ci != c_name) && ($ci != c_chr) && ($ci != c_pos) && ($ci != c_start) && (! defined($c_endPos) || ($ci != $c_endPos))
           && $a[$ci] && ($ci <= $#columnHeaders) && $columnHeaders[$ci])
       {
         $values{$columnHeaders[$ci]} = $a[$ci];
@@ -498,7 +517,7 @@ sub printFeature($)
   }
 
   # Round the numeric (position) columns.
-  for $c (c_pos, c_start, c_endPos)
+  for $c (c_pos, c_start, $c_endPos)
     {
       if (defined($c) && defined($ak[$c]))
         {
@@ -511,7 +530,7 @@ sub printFeature($)
   # Wrapping use of index which may be undefined with eval; otherwise
   # it gets an error on initial program parse even though it is not
   # evaluated
-  my $end = (defined(c_endPos) &&  eval '$ak[c_endPos]') ||
+  my $end = (defined($c_endPos) && $ak[$c_endPos]) ||
     (defined(c_pos) && $ak[c_pos]);
   # In Pretzel the end position is optional but the start position is required.
   if ((! $start || ($start eq "n/a")) && $end)
