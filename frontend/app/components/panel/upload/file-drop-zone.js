@@ -3,6 +3,48 @@ const dLog = console.debug;
 
 import UploadBase from './data-base';
 
+/*----------------------------------------------------------------------------*/
+
+/** Convert ArrayBuffer to String, using single-char operations.
+ */
+function arrayBufferToString1Char(buffer) {
+  /* Based on https://stackoverflow.com/a/60782610 Anthony O.
+   * Similar using reduce() : https://stackoverflow.com/a/60301316
+   */
+  let binary = '';
+  let bytes = new Uint8Array(buffer);
+  let len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return binary;
+}
+
+
+/** Convert ArrayBuffer to String, using 2^16 Byte chunks.
+ * from : https://stackoverflow.com/a/20604561 Ryan Weinstein
+ * "... about 20 times faster than using blob. It also works for large strings of over 100mb."
+ */
+function arrayBufferToString(buffer){
+  var bufView = new Uint8Array(buffer);
+  var length = bufView.length;
+  var result = '';
+  var addition = Math.pow(2,16)-1;
+
+  for (var i = 0; i < length; i += addition) {
+    if (i + addition > length) {
+      addition = length - i;
+    }
+    result += String.fromCharCode.apply(null, bufView.subarray(i, i + addition));
+  }
+
+  return result;
+}
+
+
+/*----------------------------------------------------------------------------*/
+
+
 export default UploadBase.extend({
 
   replaceDataset : true,
@@ -29,7 +71,7 @@ export default UploadBase.extend({
       dLog('arrayBuffer', buffer, buffer.byteLength);
       const
       fileName = file.name,
-      data = String.fromCharCode.apply(null, new Uint8Array(buffer)),
+      data = arrayBufferToString(buffer),
       replaceDataset = this.replaceDataset,
       /** corresponds to the param msg in backend/common/models/dataset.js : upload(). */
       message = {fileName, data, replaceDataset};
