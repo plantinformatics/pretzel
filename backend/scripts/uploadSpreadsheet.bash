@@ -222,7 +222,8 @@ function chrRenamePrepare()
   then
     chrRenameSed=out/"$fileName".chrRename.sed
     # Can change this to generate awk which can target only the chromosome column.
-    < "$chrRenameCSV" awk -F, '{ printf("s/,%s,/,%s,/\n", $1, $2); }' > "$chrRenameSed"
+    # Chromosome column may be left-most, so match either ',' or ^.
+    < "$chrRenameCSV" awk -F, '{ printf("s/,%s,/,%s,/\n", $1, $2); printf("s/^%s,/%s,/\n", $1, $2); }' > "$chrRenameSed"
   fi
 }
 

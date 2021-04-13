@@ -190,7 +190,7 @@ sub headerLine($$) {
     (
      ($line =~ m/^label	chr	pos/)
      || ($line =~ m/^name,chr,pos/)
-     || ($line =~ m/(Marker|Name).*Chromosome/i)
+     || (($line =~ m/Marker|Name/i) && ($line =~ m/Chromosome/i))
      || ($line =~ m/Contig,Position/i)
     );
   if ($isHeader) {
