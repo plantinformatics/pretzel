@@ -125,7 +125,7 @@ columnsKeyStringPrepare()
   head -1 "$worksheetFileName" >> uploadSpreadsheet.log
   # There may not be a comma after Position and End.
   export columnsKeyString=$(head -1 "$worksheetFileName" | sed "s/Marker,/name,/i;s/Name,/name,/;s/Chromosome,/chr,/;
-s/,Qs,/,pos,/;s/,Qe,/,end,/;
+s/,Qs,/,pos,/;s/,Qe/,end/;
 s/,Start,/,pos,/i;s/,End/,end/i;
 s/,Position/,pos/i;
 s/,/ /g;

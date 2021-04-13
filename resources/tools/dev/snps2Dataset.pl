@@ -169,21 +169,13 @@ BEGIN
   {
     $columnsKeyLookup{$columnsKeyValues[$ki]} = $ki;
   }
-  $c_endPos = defined($columnsKeyLookup{'end'}) && $columnsKeyLookup{'end'};
-
+  $c_endPos = defined($columnsKeyLookup{'end'}) ? $columnsKeyLookup{'end'} : undef;
 }
 use constant ColumnsEnum => split(' ', $columnsKeyPrefixed);
 BEGIN
 {
   eval "use constant (ColumnsEnum)[$_] => $_;" foreach 0..(ColumnsEnum)-1;
   eval "use constant c_start => c_pos;";
-  if (! $columnsKeyString =~ m/\bend\b/i)
-  {
-    eval "use constant c_endPos => undef;";
-  }
-  use constant c_ref_alt => undef;
-  use constant c_ref => undef;
-  use constant c_alt => undef;
 }
 
 
@@ -451,6 +443,15 @@ sub markerPrefix($) {
   return $name
 }
 
+# @return true if the given string has a leading # or "#
+# i.e. is a comment.
+# related : filterOutComments() (backend/scripts/uploadSpreadsheet.bash)
+sub isComment($)
+{
+  my ($columnHeader) = @_;
+  return $columnHeader =~ m/^#|^"#/;
+}
+
 # Recognise decimal fraction aliasing and round the number. 
 #
 # ssconvert apparently has different rounding to libreoffice, as the former
@@ -509,7 +510,7 @@ sub printFeature($)
       # columns), and the value is non-empty, and it has a column heading,
       # then add it to .values
       if (($ci != c_name) && ($ci != c_chr) && ($ci != c_pos) && ($ci != c_start) && (! defined($c_endPos) || ($ci != $c_endPos))
-          && $a[$ci] && ($ci <= $#columnHeaders) && $columnHeaders[$ci])
+          && $a[$ci] && ($ci <= $#columnHeaders) && $columnHeaders[$ci] && ! isComment($columnHeaders[$ci]))
       {
         $values{$columnHeaders[$ci]} = $a[$ci];
       }
@@ -539,14 +540,6 @@ sub printFeature($)
   }
 
 
-  if (0) # replaced by valuesString
-  {
-  my $ref_alt;
-  if (defined(c_ref_alt))
-    { $ref_alt = '"ref" : "' . eval('$ak[c_ref_alt]') . '"'; }
-  elsif (defined(c_ref))
-    { $ref_alt = '"ref" : "' . eval('$ak[c_ref]') . '"' . ", " . '"alt": "' . eval('$ak[c_alt]') . '"'; };
-  }
   my $indent = "                    ";
   my $valuesString = $addValues && %values ?
     ",\n" . $indent . "\"values\" : {"
