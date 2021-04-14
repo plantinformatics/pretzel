@@ -33,7 +33,7 @@ sub makeTemplates();
 
 ## Get options from ARGV
 my %options;
-getopts("vhd:p:b:n:c:s:C:F:P:gM:", \%options);
+getopts("vhd:p:b:n:c:s:C:F:P:gM:R:", \%options);
 
 ## Version and help options display
 use constant versionMsg => "2020 Dec 07 (Don Isdale).\n";
@@ -44,6 +44,7 @@ use constant usageMsg => <<EOF;
   -F field separator, e.g. '\t', default ','
   -P species prefix for chr number, e.g. Ca
   -M column for dataset from Metadata worksheet csv
+  -R Chromosome Renaming worksheet csv
 EOF
 
 my $datasetName = $options{d};
@@ -61,6 +62,7 @@ my $fieldSeparator = $options{F} || ',';	# '\t'
 my $chrOutputPrefix = $options{P} || '';
 
 my $datasetMetaFile = $options{M};
+my $chromosomeRenamingFile = $options{R};
 
 #my $refAltSlash = 0;	# option, default 0
 # true means add other columns to Feature.values { }
@@ -201,6 +203,18 @@ sub headerLine($$) {
 
 #-------------------------------------------------------------------------------
 
+# Sanitize input by removing punctuation other than comma, _, ., /, \n
+# Commonly _ and . are present in parentName.
+# , is used for splitting csv lines, and / appears in some chr names e.g. 'LG5/LG7'
+# Related : deletePunctuation() in uploadSpreadsheet.bash
+sub deletePunctuation($)
+{
+  my ($text) = @_;
+  $text =~ tr/_.,\/\n0-9A-Za-z//cd;
+  return $text;
+}
+
+
 # hash -> json
 # Only need simple 1-level json output, so implement it here to avoid installing JSON.pm.
 sub simple_encode_json($)
@@ -261,6 +275,8 @@ sub setupMeta()
 sub makeTemplates()
 {
   my $metaJson = setupMeta();
+  # Result %chromosomeRenames is used in snpLine().
+  chromosomeRenamePrepare();
 
   # Could include . "\n" in this expression, but OTOH there is some
   # value in leaving blank lines when parent and namespace are not defined.
@@ -297,13 +313,24 @@ EOF
 
 # omitted :
 #            "namespace": "90k",
-$blockHeader = <<EOF;
+sub blockHeader($)
+{
+  my ($chromosomeRenamedFrom) = @_;
+  my $indent = '            ';
+  # blockMeta is '', or json meta containing chromosomeRenamedFrom.
+  # Use of simple_encode_json() in setupMeta() is related;  factor if more fields added.
+  my $blockMeta = (defined($chromosomeRenamedFrom) && $chromosomeRenamedFrom) ?
+"\n" . $indent . '"meta" : { "chromosomeRenamedFrom" : "' . $chromosomeRenamedFrom . '" },'
+    : '';
+  my $text = <<EOF;
         {
             "name": "blockName",
-            "scope": "blockScope",
+            "scope": "blockScope",$blockMeta
             "features": [
 
 EOF
+  return $text;
+}
 
 $blockFooter = <<EOF;
             ]
@@ -367,6 +394,35 @@ sub optionalBlockFooter()
     { print $blockFooter; }
 }
 
+#-------------------------------------------------------------------------------
+
+my %chromosomeRenames;
+# Read $chromosomeRenamingFile 
+sub chromosomeRenamePrepare($)
+{
+  if (defined($chromosomeRenamingFile) && $chromosomeRenamingFile)
+  {
+    if (! open(FH, '<', $chromosomeRenamingFile))
+    { warn $!; }
+    else
+    {
+      while(<FH>){
+        chomp;
+        # deletePunctuation() is applied to both $fromName and $toName.
+        # $fromName is used as an array index, whereas $toName is
+        # simply inserted into the json output, so is perhaps lower risk.
+        my ($fromName, $toName) = split(/,/, deletePunctuation($_));
+        $chromosomeRenames{$fromName} = $toName;
+      }
+      close(FH);
+    }
+  }
+}
+
+
+#-------------------------------------------------------------------------------
+
+my $chromosomeRenamedFrom;
 # read 1 line, which defines a SNP and associated reference/alternate data
 sub snpLine($)
 {
@@ -376,9 +432,28 @@ sub snpLine($)
   #chr1A	22298	scaffold38755_22298	T/C
 
   my @a =  split($fieldSeparator, $line);
+
+  $a[c_chr] = trimOutsideQuotesAndSpaces($a[c_chr]);
   # tsv datasets often follow the naming convention 'chr1A';  Pretzel data omits 'chr' for block scope & name : '1A'.
-  $a[c_chr] =~ s/^chr//;
-  $a[c_chr] = $chrOutputPrefix . trimOutsideQuotesAndSpaces($a[c_chr]);
+  if (! %chromosomeRenames)
+  {
+    $a[c_chr] =~ s/^chr//;
+    $a[c_chr] = $chrOutputPrefix . $a[c_chr];
+  }
+  else
+  # Apply %chromosomeRenames
+  {
+    # deletePunctuation() is applied to $fromName in chromosomeRenamePrepare(),
+    # so applying it equally here to $a[c_chr] enables fromName containing punctuation to match,
+    # e.g. genbank ids contain '|'.
+    my $toName = $chromosomeRenames{deletePunctuation($a[c_chr])};
+    if (defined($toName))
+    {
+      $chromosomeRenamedFrom = $a[c_chr];
+      $a[c_chr] = $toName;
+    }
+  }
+
   $a[c_name] = markerPrefix(trimOutsideQuotesAndSpaces($a[c_name]));
 
   my $c = $a[c_chr];
@@ -400,7 +475,7 @@ sub snpLine($)
           else
             { $blockSeparator = ",\n"; }
 
-          my $h = $blockHeader;
+          my $h = blockHeader($chromosomeRenamedFrom);
           # replace 'blockName' in the $blockHeader template with the actual chromosome name $c.
           # and blockScope with : the scope which is the chr $c with .[1-9] trimmed off
           # or scope might be just the chr name $c so that each GM block gets its own axis.

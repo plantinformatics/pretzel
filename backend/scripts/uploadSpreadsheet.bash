@@ -156,7 +156,7 @@ function linkageMap()
     columnsKeyStringPrepare "$i" || return $?
     # ../ because of cd tmp
     out=out_json/"$i".json
-    <"$i"  chrOmit | chrRename |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
+    <"$i"  chrOmit |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
     ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     echo "tmp/$out;$datasetName"
@@ -203,7 +203,7 @@ function snpList()
     columnHeaderFile=out/columnHeaders.csv
     <"$i" filterOutComments | head -1 > $columnHeaderFile
     (cat $columnHeaderFile; \
-     <"$i" filterOutComments | tail -n +2  | chrOmit | chrRename |  sort -t, -k 2 ) |  \
+     <"$i" filterOutComments | tail -n +2  | chrOmit |  sort -t, -k 2 ) |  \
       ../$sp "${nameArgs[@]}" "${optionalArgs[@]}" 	\
       >  "$out"
     ls -gG "$out"  >> uploadSpreadsheet.log;
@@ -211,33 +211,13 @@ function snpList()
     echo "tmp/$out;$datasetNameFull"
 }
 
-# If the spreadsheet contains a 'Chromosome Renaming' worksheet,
-# then create a .sed script to rename the chromosome column.
-function chrRenamePrepare()
-{
-  # related in functions_convert.bash : sed -f chrSnps/"$datasetName".chrRename.sed |
-  # and : sed -f $genBankRename |
-  chrRenameCSV=$(echo "$fileName".*'Chromosome Renaming'*csv)
-  if [ -f "$chrRenameCSV" ]
-  then
-    chrRenameSed=out/"$fileName".chrRename.sed
-    # Can change this to generate awk which can target only the chromosome column.
-    # Chromosome column may be left-most, so match either ',' or ^.
-    < "$chrRenameCSV" awk -F, '{ printf("s/,%s,/,%s,/\n", $1, $2); printf("s/^%s,/%s,/\n", $1, $2); }' > "$chrRenameSed"
-  fi
-}
+# The 'Chromosome Renaming' worksheet was handled here by chrRenamePrepare() and chrRename() up until 7b0bbf20,
+# by creating a .sed script from the 'Chromosome Renaming' worksheet and applying it to rename the chromosome column.
+# Now this is done by passing $chrRenameCSV via optionalArgs to $sp.
+#
+# related in functions_convert.bash : sed -f chrSnps/"$datasetName".chrRename.sed |
+# and : sed -f $genBankRename |
 
-# If the spreadsheet contains a 'Chromosome Renaming' worksheet, (i.e. $chrRenameSed is defined)
-# then map the chromosome column as indicated.
-function chrRename()
-{
-  if [ -n "$chrRenameSed" ]
-  then
-    sed -f "$chrRenameSed"
-  else
-    cat
-  fi
-}
 
 # If the spreadsheet contains a 'Chromosomes to Omit' worksheet,
 # then create a .sed script to filter out SNPs with those values in chromosome column.
@@ -256,7 +236,7 @@ function chrOmitPrepare()
   fi
 }
 
-# If the spreadsheet contains a 'Chromosome Renaming' worksheet, (i.e. $chrOmitSed is defined)
+# If the spreadsheet contains a 'Chromosomes to Omit' worksheet, (i.e. $chrOmitSed is defined)
 # then map the chromosome column as indicated.
 function chrOmit()
 {
@@ -324,7 +304,6 @@ case $fileName in
     echo ssconvert status $status >> uploadSpreadsheet.log
     if [ $status -eq 0 ]
     then
-      chrRenamePrepare
       chrOmitPrepare
       splitMetadata
 
@@ -339,6 +318,12 @@ case $fileName in
         if [ -f "$datasetMeta" ]
         then
           optionalArgs=(-M "$datasetMeta")
+        fi
+
+        chrRenameCSV=$(echo "$fileName".*'Chromosome Renaming'*csv)
+        if [ -f "$chrRenameCSV" ]
+        then
+          optionalArgs+=(-R "$chrRenameCSV")
         fi
 
         # (until f556a24e, the fileName prefix guided which of these
