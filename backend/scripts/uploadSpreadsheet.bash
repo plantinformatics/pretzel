@@ -28,11 +28,12 @@ function filterOutComments
   # or egrep -v '^#|^"#' | 
 }
 
-# Sanitize input by removing punctuation other than comma, _, ., \n
+# Sanitize input by removing punctuation other than comma, _, ., \n, space.
 # Commonly _ and . are present in parentName.
+# Space appears in commonName.
 function deletePunctuation()
 {
-    tr -d  -c '[,\n_.][:alnum:]'
+    tr -d  -c '[,\n_. ][:alnum:]'
 }
 # Split the Metadata table into 1 file per dataset, with the left
 # column (Field names) and the dataset column.
@@ -53,8 +54,11 @@ function splitMetadata()
   # 
   for di in ${!datasetNames[*]};
   do
-    echo $di ${datasetNames[$di]} >>  uploadSpreadsheet.log;
-    datasetMeta="$fileDir"/${datasetNames[$di]}.Metadata.csv
+    diN="${datasetNames[$di]}"
+    echo $di $diN >>  uploadSpreadsheet.log;
+    # Skip columns with empty dataset name.
+    [ "$diN" = 'empty_datasetName' ] && continue;
+    datasetMeta="$fileDir"/"$diN".Metadata.csv
     < "$fileDir"/Metadata.csv sed '/^#/d;/^"#/d' | cut -d, -f 1,$(($di+2)) | tail -n +2  > "$datasetMeta" ;
   done
 }
@@ -67,12 +71,16 @@ function splitMetadata()
 # . ensure " at ^ and $
 # . ensure " before and after comma
 # . convert comma to space
+# If the dataset name field is empty, flag it with 'empty_datasetName'
 function quotedHeadings()
 {
   sed 's/^Field,//;
 s/ *, */,/g;s/ *| */|/g;
+s/,,/,empty_datasetName,/g;
+s/,,/,empty_datasetName,/g;
+s/,$/,empty_datasetName/;
 s/^\([^"]\)/"\1/;s/\([^"]\)$/\1"/;
-s/,\([^"]\)/,"\1/;s/\([^"]\),/\1",/g;
+s/,\([^"]\)/,"\1/g;s/\([^"]\),/\1",/g;
 s/,/ /g;'
   }
 
@@ -83,7 +91,7 @@ function readMetadata()
   datasetMeta="$fileDir"/"$worksheetName".Metadata.csv
 
   eval $( < "$datasetMeta" egrep  '^(commonName|parentName|platform|shortName),' | deletePunctuation \
-   | awk -F, '{ printf("%s=%s;\n", $1, $2); }' )
+   | awk -F, '{ printf("%s=\"%s\";\n", $1, $2); }' )
   echo namespace=$namespace, commonName=$commonName >> uploadSpreadsheet.log
 }
 
@@ -270,6 +278,33 @@ function renameIfSpaces()
       ;;
   esac
 }
+
+# These warnings output by ssconvert do not seem to be significant :
+# Undefined number format id '43'
+# Undefined number format id '41'
+# Undefined number format id '44'
+# Undefined number format id '42'
+# Unexpected element 'workbookProtection' in state : 
+#	workbook
+#
+# from unzip of the .xlsx : ./xl/styles.xml : 
+# ...
+#  <cellStyleXfs count="20">
+#  ...
+#     <xf numFmtId="43" fontId="1" fillId="0" borderId="0" applyFont="true" applyBorder="false" applyAlignment="false" applyProtection="false">
+#     </xf>
+# ... ditto for 41, 44, 42
+# These 4 numFmtId are not defined; see the list here : https://stackoverflow.com/a/4655716
+# ...
+# 40 = '#,##0.00;[Red](#,##0.00)';
+# 
+# 44 = '_("$"* #,##0.00_);_("$"* \(#,##0.00\);_("$"* "-"??_);_(@_)';
+# 45 = 'mm:ss';
+# ...
+# from https://stackoverflow.com/questions/4655565/reading-dates-from-openxml-excel-files
+# which also links :
+# https://docs.microsoft.com/en-us/previous-versions/office/developer/office-2010/ee857658(v=office.14)
+# which also does not define those 4 Numfmtid-s
 
 function spreadsheetConvert()
 {
