@@ -342,6 +342,7 @@ case $fileName in
     then
       chrOmitPrepare
       splitMetadata
+      warningsFile="$fileDir"/warnings
 
       # i is worksheetFileName
       for i in "$fileName".*'|'*csv
@@ -366,6 +367,12 @@ case $fileName in
         # functions was called, but now the fileName is arbitrary and
         # only the worksheet name indicates the type of dataset)
         case $i in
+          "$fileName".*'| Template'*csv)
+            msg="$i : worksheet name is Template"
+            echo "$msg" >> uploadSpreadsheet.log
+            echo "$msg" >> $warningsFile
+            ;;
+
           "$fileName".*Map'|'*csv)
             linkageMap
             status=$?
@@ -384,7 +391,13 @@ case $fileName in
 
       if [ -z "$datasetName" ]
       then
-        echo "Error: '$fileName' : no worksheets defined datasets. ;"
+        if [ -f "$warningsFile" ]
+        then
+          warningsText="      Warnings: "$(cat $warningsFile)
+        else
+          warningsText=
+        fi
+        echo "Error: '$fileName' : no worksheets defined datasets. $warningsText;"
         ls -gG "$fileName".*csv  >> uploadSpreadsheet.log
       fi
 

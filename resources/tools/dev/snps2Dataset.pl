@@ -409,6 +409,8 @@ sub chromosomeRenamePrepare($)
     {
       while(<FH>){
         chomp;
+        # Skip empty lines.
+        ! $_ && continue;
         # deletePunctuation() is applied to both $fromName and $toName.
         # $fromName is used as an array index, whereas $toName is
         # simply inserted into the json output, so is perhaps lower risk.
@@ -432,7 +434,15 @@ sub snpLine($)
   #c_chr c_pos c_name c_ref_alt
   #chr1A	22298	scaffold38755_22298	T/C
 
+
   my @a =  split($fieldSeparator, $line);
+
+  # Skip blank lines
+  if (! $a[c_name] && ! $a[c_chr])
+  {
+    # Could output a warning if the line is not blank, i.e. not /^,,,/, or $a[c_pos]
+    return;
+  }
 
   $a[c_chr] = trimOutsideQuotesAndSpaces($a[c_chr]);
   # tsv datasets often follow the naming convention 'chr1A';  Pretzel data omits 'chr' for block scope & name : '1A'.
@@ -456,13 +466,6 @@ sub snpLine($)
   }
 
   $a[c_name] = markerPrefix(trimOutsideQuotesAndSpaces($a[c_name]));
-
-  # Skip blank lines
-  if (! $a[c_name] && ! $a[c_chr])
-  {
-    # Could output a warning if the line is not blank, i.e. not /^,,,/, or $a[c_pos]
-    return;
-  }
 
 
   my $c = $a[c_chr];
