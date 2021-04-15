@@ -1,3 +1,4 @@
+import { inject as service } from '@ember/service';
 
 const dLog = console.debug;
 
@@ -46,6 +47,8 @@ function arrayBufferToString(buffer){
 
 
 export default UploadBase.extend({
+  apiServers : service(),
+  blockService : service('data/block'),
 
   replaceDataset : true,
 
@@ -84,10 +87,24 @@ export default UploadBase.extend({
        */
       promise.then((res) => {
         let datasetName = res.status;
+        this.unviewDataset(datasetName);
         this.setSuccess("Dataset '" + datasetName + "' " +  this.successMessage);
       });
     });
 
+  },
+
+  /** Unview the blocks of the dataset which has been replaced by successful upload.
+   */
+  unviewDataset(datasetName) {
+    let
+    store = this.get('apiServers').get('primaryServer').get('store'),
+    replacedDataset = store.peekRecord('dataset', datasetName),
+    viewedBlocks = replacedDataset.get('blocks').toArray().filterBy('isViewed'),
+    blockService = this.get('blockService'),
+    blockIds = viewedBlocks.map((b) => b.id);
+    dLog('unviewDataset', datasetName, blockIds);
+    blockService.setViewed(blockIds, false);
   }
 
 });

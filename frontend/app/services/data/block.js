@@ -188,8 +188,9 @@ export default Service.extend(Evented, {
       let block = this.peekBlock(bfc._id);
       if (! block) {
         let stores = apiServers.blockId2Stores(bfc._id);
-        if (! stores.length)
+        if (! stores.length) {
           dLog('taskGetLimits', bfc._id);
+        }
       }
       else {
         // console.log('taskGetLimits', bfc, block);

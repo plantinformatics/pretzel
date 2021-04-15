@@ -253,7 +253,9 @@ export default Service.extend(Evented, {
    */
   blockId2Stores : function (blockId) {
     let stores = this.id2Stores('block', blockId);
-    dLog('blockId2stores', blockId, stores);
+    if (trace > 1) {
+      dLog('blockId2stores', blockId, stores);
+    }
     return stores;
   },
   dataset2stores : function (datasetName) {
