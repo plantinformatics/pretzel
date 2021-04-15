@@ -237,10 +237,11 @@ function chrOmitPrepare()
     chrOmitSed=out/"$fileName".chrOmit.sed
     # Can change this to generate awk which can target only the chromosome column.
     #
+    # Skip empty lines, because they would generate /,/d which filters out everything.
     # Match the leading comma and not the following comma because the
     # data case in hand has a fixed part followed by an id; perhaps
     # change to regexp.
-    < "$chrOmitCSV" awk -F, '{ printf("/,%s/d\n", $1); }' > $chrOmitSed
+    < "$chrOmitCSV" awk -F, '/./ { printf("/,%s/d\n", $1); }' > $chrOmitSed
   fi
 }
 

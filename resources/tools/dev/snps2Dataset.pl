@@ -457,6 +457,14 @@ sub snpLine($)
 
   $a[c_name] = markerPrefix(trimOutsideQuotesAndSpaces($a[c_name]));
 
+  # Skip blank lines
+  if (! $a[c_name] && ! $a[c_chr])
+  {
+    # Could output a warning if the line is not blank, i.e. not /^,,,/, or $a[c_pos]
+    return;
+  }
+
+
   my $c = $a[c_chr];
   if (! defined($lastChr) || ($lastChr ne $c))
     {
