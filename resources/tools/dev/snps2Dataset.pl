@@ -17,7 +17,7 @@ use strict;
 use warnings;
 
 use Getopt::Std;	# for getopt()
-
+use Scalar::Util qw/reftype/;
 
 #-------------------------------------------------------------------------------
 
@@ -26,6 +26,14 @@ sub convertInput();
 sub createDataset();
 sub appendToBlock();
 sub makeTemplates();
+sub encode_json_2($$);
+sub columnConfig();
+
+#-------------------------------------------------------------------------------
+
+# Handles dynamic / optional columns, in place of ColumnsEnum.
+my %columnsKeyLookup = ();
+my $c_arrayColumnName;
 
 #-------------------------------------------------------------------------------
 # main
@@ -33,10 +41,10 @@ sub makeTemplates();
 
 ## Get options from ARGV
 my %options;
-getopts("vhd:p:b:n:c:s:C:F:P:gM:R:", \%options);
+getopts("vhd:p:b:n:c:s:C:F:P:gM:R:A:t:", \%options);
 
 ## Version and help options display
-use constant versionMsg => "2020 Dec 07 (Don Isdale).\n";
+use constant versionMsg => "2021 Apr.\n";
 use constant usageMsg => <<EOF;
   Usage e.g. : $0 [-d Exome_SNPs_1A -p Triticum_aestivum_IWGSC_RefSeq_v1.0 ] _or_ -b blockId  < IWGSC_RefSeq_v1.0.EXOME_SNPs.chr1A.tsv > Exome_SNPs_1A.json
   Optional params : -n namespace [empty | 90k | ... ]  -c "common name"
@@ -45,6 +53,8 @@ use constant usageMsg => <<EOF;
   -P species prefix for chr number, e.g. Ca
   -M column for dataset from Metadata worksheet csv
   -R Chromosome Renaming worksheet csv
+  -A array column name
+  -t tags
 EOF
 
 my $datasetName = $options{d};
@@ -54,7 +64,11 @@ my $blockId = $options{b};
 my $namespace = defined($options{n}) ? $options{n} : (defined($parentName) ? "$parentName:$datasetName" : $datasetName);
 my $commonName = $options{c};
 my $shortName = $options{s};	# option, Exome. WGS
-my $columnsKeyString = $options{C} || "chr pos name ref_alt";
+my $columnsKeyString = "chr pos name ref_alt";
+if (defined($options{C}))
+{
+  $columnsKeyString = $options{C};
+}
 
 my $fieldSeparator = $options{F} || ',';	# '\t'
 # Prefix the chr with e.g. 2-letter abbreviation of latin name (e.g. 'Ca')
@@ -63,6 +77,10 @@ my $chrOutputPrefix = $options{P} || '';
 
 my $datasetMetaFile = $options{M};
 my $chromosomeRenamingFile = $options{R};
+# An array which is accumulated from preceding lines.
+my $arrayColumnName = $options{A};
+# Accumulate values from column $arrayColumnName since last Feature.
+my $arrayRef = [];
 
 #my $refAltSlash = 0;	# option, default 0
 # true means add other columns to Feature.values { }
@@ -71,10 +89,28 @@ my $addValues = 1;	# option : add values : { other columns, }
 my $isGM = $options{g}; # default 0, 1 for physical data blocks
 
 
-my $extraTags = ''; # '"SNP"';  #  . ", \"HighDensity\"";	# option, default ''
+my $extraTags = $options{t}; # '"SNP"';  #  . ", \"HighDensity\"";	# option, default ''
+if ($extraTags)
+{
+  # the tags are comma-separated, express them as a comma-separated list of strings wrapped with "".
+  $extraTags = '"' . join('", "', split(',', $extraTags)) . '"';
+}
+else
+{
+  $extraTags = '';
+}
 
 # For loading Genome Reference / Parent :
 # my $extraMeta = ''; # '"paths" : "false",'; # '"type" : "Genome",';
+
+#-------------------------------------------------------------------------------
+
+if ($arrayColumnName)
+{
+  columnConfig();
+  $c_arrayColumnName = defined($columnsKeyLookup{$arrayColumnName}) ? $columnsKeyLookup{$arrayColumnName} : undef;
+  # print join(';', keys(%columnsKeyLookup)), ',',  $columnsKeyLookup{'end'}, ',', $arrayColumnName, ', ', $c_arrayColumnName || 'undef', "\n";
+}
 
 #-------------------------------------------------------------------------------
 
@@ -150,27 +186,35 @@ else
 my $columnsKeyPrefixed;
 my $c_endPos;
 
-BEGIN
-{
+sub columnConfig() {
   # $columnsKeyString indicates which columns contain the key values
   # e.g. "chr name pos" or "name chr pos end" or "chr pos name ref_alt"
   $columnsKeyString  = $ENV{columnsKeyString} || "chr name pos";
-  $columnsKeyPrefixed = $columnsKeyString
-    =~ s/,/ /rg
-    =~ s/^/c_/r
-    =~ s/ / c_/rg;
+  # print "columnsKeyString", $columnsKeyString, "\n";
 
   # Define a variable $c_endPos, because the enum c_endPos can't have a conditional value.
   # Using an enum made sense in the initial version which had fixed columns,
   # but now %columnsKeyLookup is more suitable.
   #
   # $columnsKeyString is space-separated, not comma.
-  my @columnsKeyValues = split(' ', $columnsKeyString);
-  my %columnsKeyLookup;
+  # column header names which contain spaces are wrapped with "".
+  my @a1 = split(/"([^\"]*)"|  */, $columnsKeyString );
+  my @columnsKeyValues = grep { $_  } @a1;
+
   for (my $ki=0; $ki <= $#columnsKeyValues; $ki++)
   {
     $columnsKeyLookup{$columnsKeyValues[$ki]} = $ki;
   }
+}
+
+BEGIN
+{
+  columnConfig();
+  $columnsKeyPrefixed = $columnsKeyString
+    =~ s/,/ /rg
+    =~ s/^/c_/r
+    =~ s/ / c_/rg;
+
   $c_endPos = defined($columnsKeyLookup{'end'}) ? $columnsKeyLookup{'end'} : undef;
 }
 use constant ColumnsEnum => split(' ', $columnsKeyPrefixed);
@@ -196,7 +240,7 @@ sub headerLine($$) {
      || ($line =~ m/Contig,Position/i)
     );
   if ($isHeader) {
-    @columnHeaders = split(',');
+    @columnHeaders = map { trimOutsideQuotesAndSpaces($_); } split(',');
   }
   return $isHeader;
 }
@@ -226,6 +270,40 @@ sub simple_encode_json($)
     push @fields, '"' . $key . '" : "' . $data->{$key} . '"';
   }
   return @fields;
+}
+
+# slightly more complete - handle hash or array, or a hash with an array value
+# @param $indent
+# @param $data
+sub encode_json_2($$)
+{
+  my ($indent, $data) = @_;
+
+  my $json;
+  if (reftype $data eq 'ARRAY')
+  {
+    my $quote = $#$data ? '"' : '';
+    $json = '[' . $quote . join('"' . ",\n" . $indent . '"' , @$data) . $quote . ']';
+
+  }
+  elsif (reftype $data eq 'HASH')
+  {
+    my @fields = ();
+    for my $key (keys %$data) {
+      my $value = $data->{$key};
+      my $valueString = (reftype \$value eq 'SCALAR') ?
+        '"' . $value . '"'
+        : encode_json_2($indent . '  ', $value);
+      push @fields, '"' . $key . '" : ' . $valueString;
+    }
+    $json = '{' . join(",\n" . $indent, @fields) . '}';
+  }
+  else
+  {
+    $json = '"' . $data . '"';
+  }
+
+  return $json;
 }
 
 # Populate Dataset .meta from command-line options and
@@ -436,6 +514,12 @@ sub snpLine($)
 
 
   my @a =  split($fieldSeparator, $line);
+  @a = map { trimOutsideQuotesAndSpaces($_) } @a;
+
+  if ($a[$c_arrayColumnName])
+  {
+    push @$arrayRef, $a[$c_arrayColumnName];
+  }
 
   # Skip blank lines
   if (! $a[c_name] && ! $a[c_chr])
@@ -444,7 +528,7 @@ sub snpLine($)
     return;
   }
 
-  $a[c_chr] = trimOutsideQuotesAndSpaces($a[c_chr]);
+  # $a[c_chr] = trimOutsideQuotesAndSpaces($a[c_chr]);
   # tsv datasets often follow the naming convention 'chr1A';  Pretzel data omits 'chr' for block scope & name : '1A'.
   if (! %chromosomeRenames)
   {
@@ -465,7 +549,7 @@ sub snpLine($)
     }
   }
 
-  $a[c_name] = markerPrefix(trimOutsideQuotesAndSpaces($a[c_name]));
+  $a[c_name] = markerPrefix($a[c_name]);
 
 
   my $c = $a[c_chr];
@@ -590,16 +674,29 @@ sub printFeature($)
   my %values = ();
   if ($addValues)
   {
+    # print "enums", join(';', (c_name, c_chr, c_pos, c_start, $c_endPos)), "\n";
     # could also match @columnHeaders
     for (my $ci=0; $ci <= $#a; $ci++)
     {
+      my $columnHeader = $columnHeaders[$ci];
+
       # if the column is not already used (one of the essential/"key"
       # columns), and the value is non-empty, and it has a column heading,
       # then add it to .values
+      # print $ci, ', columnHeader:', $columnHeader, ",", $a[$ci], "\n";
       if (($ci != c_name) && ($ci != c_chr) && ($ci != c_pos) && ($ci != c_start) && (! defined($c_endPos) || ($ci != $c_endPos))
-          && $a[$ci] && ($ci <= $#columnHeaders) && $columnHeaders[$ci] && ! isComment($columnHeaders[$ci]))
+          && $a[$ci] && ($ci <= $#columnHeaders) && $columnHeader && ! isComment($columnHeader))
       {
-        $values{$columnHeaders[$ci]} = $a[$ci];
+        # equivalent : ($ci == $c_arrayColumnName)
+        if ($columnHeader eq $arrayColumnName)
+        {
+          $values{$columnHeader} = $arrayRef;
+          $arrayRef = [];
+        }
+        else
+        {
+          $values{$columnHeader} = $a[$ci];
+        }
       }
     }
   }
@@ -629,9 +726,8 @@ sub printFeature($)
 
   my $indent = "                    ";
   my $valuesString = $addValues && %values ?
-    ",\n" . $indent . "\"values\" : {"
-    . join(",\n        ", simple_encode_json(\%values)) .
-    "}"
+    ",\n" . $indent . "\"values\" : " .
+    encode_json_2("        ", \%values)
     : '';
   my $name = eval '$ak[c_name]';
 

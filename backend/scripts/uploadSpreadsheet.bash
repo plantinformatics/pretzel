@@ -158,13 +158,12 @@ s/,/ /g;
 # @param env $i worksheetFileName 
 function linkageMap()
 {
-
     datasetName=$(echo "$i" | fileName2DatasetName);
     echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
     columnsKeyStringPrepare "$i" || return $?
     # ../ because of cd tmp
     out=out_json/"$i".json
-    <"$i"  chrOmit |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
+    <"$i"  chrOmit |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g -t QTL  >  "$out" ;
     ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     echo "tmp/$out;$datasetName"
@@ -217,6 +216,20 @@ function snpList()
     ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     echo "tmp/$out;$datasetNameFull"
+}
+
+qtlList()
+{
+    datasetName=$(echo "$i" | fileName2DatasetName);
+    echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
+    columnsKeyStringPrepare "$i" || return $?
+    out=out_json/"$i".json
+    metaTypeFile="$fileDir"/metaType.csv
+    echo "type,QTL" > "$metaTypeFile"
+    <"$i"  filterOutComments | chrOmit |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g -A 'Flanking Markers' -M "$metaTypeFile"  >  "$out" ;
+    ls -gG "$out"  >> uploadSpreadsheet.log;
+    # upload() will read these files
+    echo "tmp/$out;$datasetName"
 }
 
 # The 'Chromosome Renaming' worksheet was handled here by chrRenamePrepare() and chrRename() up until 7b0bbf20,
@@ -381,9 +394,13 @@ case $fileName in
             snpList
             status=$?
             ;;
-          # Later : QTL, Genome, etc
+          "$fileName".*QTL'|'*csv)
+            qtlList
+            status=$?
+            ;;
+          # Later : Genome, etc
           *)
-            echo "$i : expected Map|, Alignment| *" >> uploadSpreadsheet.log
+            echo "$i : expected Map|, Alignment|, QTL| *" >> uploadSpreadsheet.log
             ;;
 
         esac
