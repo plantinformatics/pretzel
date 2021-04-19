@@ -163,7 +163,7 @@ function linkageMap()
     columnsKeyStringPrepare "$i" || return $?
     # ../ because of cd tmp
     out=out_json/"$i".json
-    <"$i"  chrOmit |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g -t QTL  >  "$out" ;
+    <"$i"  chrOmit |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
     ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     echo "tmp/$out;$datasetName"
@@ -226,7 +226,7 @@ qtlList()
     out=out_json/"$i".json
     metaTypeFile="$fileDir"/metaType.csv
     echo "type,QTL" > "$metaTypeFile"
-    <"$i"  filterOutComments | chrOmit |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g -A 'Flanking Markers' -M "$metaTypeFile"  >  "$out" ;
+    <"$i"  filterOutComments | chrOmit |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g -A 'Flanking Markers' -M "$metaTypeFile" -t QTL  >  "$out" ;
     ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     echo "tmp/$out;$datasetName"
