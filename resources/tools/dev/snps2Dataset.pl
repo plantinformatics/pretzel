@@ -135,22 +135,22 @@ my $startedDataset = 0;
 sub main()
 {
 if ($options{v}) {
-  print versionMsg;
+  print STDERR versionMsg;
 }
 elsif ($options{h})
 {
-  print usageMsg;
+  print STDERR usageMsg;
 }
 elsif (defined ($datasetName) == defined ($blockId))
 {
-  print usageMsg, <<EOF;
+  print STDERR usageMsg, <<EOF;
   Required option : -d dataset name or -b block name (not both)
 EOF
 }
 # Maybe drop this test - allow parentName to be optional.
 elsif (0 && (defined ($parentName) == defined ($blockId)))
 {
-  print usageMsg, <<EOF;
+  print STDERR usageMsg, <<EOF;
   Required option : -p parent (reference dataset) name or -b block name (not both)
 EOF
 }
@@ -464,7 +464,10 @@ sub createDataset()
     $datasetHeader = $datasetHeaderGM;
   }
 
-  print $datasetHeader;
+  if (! $outputDir)
+  {
+    print $datasetHeader;
+  }
 
   convertInput();
 
@@ -518,7 +521,7 @@ sub chromosomeRenamePrepare()
   if (defined($chromosomeRenamingFile) && $chromosomeRenamingFile)
   {
     if (! open(FH, '<', $chromosomeRenamingFile))
-    { warn $!; }
+    { warn $!, "'$chromosomeRenamingFile'\n"; }
     else
     {
       while(<FH>){
@@ -597,11 +600,14 @@ sub snpLine($)
     # deletePunctuation() is applied to $fromName in chromosomeRenamePrepare(),
     # so applying it equally here to $a[c_chr] enables fromName containing punctuation to match,
     # e.g. genbank ids contain '|'.
-    my $toName = $chromosomeRenames{deletePunctuation($a[c_chr])};
+    # Apply to Scope column, or Chromosome.
+    my $c_scope = $columnsKeyLookup{'Scope'};
+    my $col = defined($c_scope) ? $c_scope : c_chr;
+    my $toName = $chromosomeRenames{deletePunctuation($a[$col])};
     if (defined($toName))
     {
-      $chromosomeRenamedFrom = $a[c_chr];
-      $a[c_chr] = $toName;
+      $chromosomeRenamedFrom = $a[$col];
+      $a[$col] = $toName;
     }
   }
 

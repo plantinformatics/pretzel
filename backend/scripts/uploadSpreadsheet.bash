@@ -218,7 +218,7 @@ function snpList()
     echo "tmp/$out;$datasetNameFull"
 }
 
-qtlList()
+function qtlList()
 {
     datasetName=$(echo "$i" | fileName2DatasetName);
     echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
@@ -228,9 +228,18 @@ qtlList()
     outDir=tmp/"$fileDir"/out_json
     #  or && rm -r "$outDir"
     [ -d "$outDir" ] || mkdir "$outDir"
-    metaTypeFile=tmp/"$fileDir"/metaType.csv
+    # If the dataset worksheet has a column in Metadata, append to that file, otherwise /metaType.csv
+    if [ -f "$datasetMeta" ]
+    then
+      metaTypeFile="$datasetMeta"
+      # $datasetMeta is already listed in $prefixedArgs
+    else
+      metaTypeFile=tmp/"$fileDir"/metaType.csv
+      localArgs=(-M "$metaTypeFile")
+    fi
     echo "type,QTL" > "$metaTypeFile"
-    <tmp/"$i"  filterOutComments | chrOmit |  $sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g -A 'Flanking Markers' -M "$metaTypeFile" -t QTL -D "$outDir" ;
+    prefixTmpToArgs
+    <tmp/"$i"  filterOutComments | chrOmit |  $sp "${prefixedArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g -A 'Flanking Markers' "${localArgs[@]}" -t QTL -D "$outDir" ;
     # ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     # echo "tmp/$out;$datasetName"
@@ -240,6 +249,14 @@ qtlList()
       datasetName=$(echo "$datasetFile" | sed 's/.json$//')
       echo "$outDir/$datasetFile;$datasetName"
     done
+}
+
+# Prefix tmp/ to the paths in $optionalArgs
+# Put the result in $prefixedArgs.
+function prefixTmpToArgs()
+{
+  prefixedArgs=(); for arg in "${optionalArgs[@]}"; do case "$arg" in  out/*|*csv) prefixedArgs+=("tmp/$arg");; *) prefixedArgs+=("$arg");; esac; done;
+  echo "${prefixedArgs[@]}" >> uploadSpreadsheet.log;
 }
 
 # The 'Chromosome Renaming' worksheet was handled here by chrRenamePrepare() and chrRename() up until 7b0bbf20,

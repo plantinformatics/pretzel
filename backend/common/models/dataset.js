@@ -107,15 +107,14 @@ module.exports = function(Dataset) {
       }
       cb = cbWrap;
       /** msg.fileName : remove punctuation other than .-_, retain alphanumeric */
-      const fileName = msg.fileName;
       const useFile = true;
       if (useFile) {
         const data = new Uint8Array(Buffer.from(msg.data, 'binary'));
-        fs.writeFile(fileName, data, (err) => {
+        fs.writeFile(msg.fileName, data, (err) => {
           if (err) {
             cb(err);
           } else {
-            console.log('Written', msg.data.length, data.length, 'to', fileName);
+            console.log('Written', msg.data.length, data.length, 'to', msg.fileName);
           }
         });
       }
@@ -143,32 +142,38 @@ module.exports = function(Dataset) {
 
       child.stdout.on('data', (chunk) => {
         // data from the standard output is here as buffers
-        // completed by \n.   Trim the trailing \n from chunk.
+        // Possibly multiple lines, separated by \n,
+        // completed by \n.
         const
-        textLine = chunk.toString().trim(),
-        [fileName, datasetName] = textLine.split(';');
-        console.log('uploadSpreadsheet stdout data', fileName, datasetName);
-        if (fileName.startsWith('Error:')) {
-          cb(new Error(fileName + " Dataset '" + datasetName + "'"));
-        } else {
-          this.removeExisting(datasetName, replaceDataset, cb, loadAfterDelete);
-        }
-        function loadAfterDelete(err) {
-          if (err) {
-            cb(err);
-          }
-          else {
-            fs.readFile(fileName, (err, jsonData) => {
+        textLines = chunk.toString().split('\n');
+        textLines.forEach((textLine) => {
+          if (textLine !== "") {
+            let [fileName, datasetName] = textLine.split(';');
+            console.log('uploadSpreadsheet stdout data',  "'", fileName,  "', '", datasetName, "'");
+            if (fileName.startsWith('Error:') || ! datasetName) {
+              cb(new Error(fileName + " Dataset '" + datasetName + "'"));
+            } else {
+              console.log('before removeExisting "', datasetName, '"');
+              this.removeExisting(datasetName, replaceDataset, cb, loadAfterDelete);
+            }
+            function loadAfterDelete(err) {
               if (err) {
                 cb(err);
-              } else {
-                console.log('readFile', fileName, jsonData.length);
-                // jsonData is a Buffer;  JSON.parse() handles this OK.
-                uploadParsedTry(jsonData);
               }
-            });
+              else {
+                fs.readFile(fileName, (err, jsonData) => {
+                  if (err) {
+                    cb(err);
+                  } else {
+                    console.log('readFile', fileName, jsonData.length);
+                    // jsonData is a Buffer;  JSON.parse() handles this OK.
+                    uploadParsedTry(jsonData);
+                  }
+                });
+              }
+            };
           }
-        };
+        });
       });
 
       // since these are streams, you can pipe them elsewhere
@@ -200,7 +205,7 @@ module.exports = function(Dataset) {
     var models = this.app.models;
 
     models.Dataset.exists(id, { unfiltered: true }).then((exists) => {
-      console.log('removeExisting', id, exists);
+      console.log('removeExisting', "'", id, "'", exists);
       if (exists) {
         if (! replaceDataset) {
           replyCb(Error("Dataset '" + id + "' exists"));
