@@ -132,7 +132,7 @@ columnsKeyStringPrepare()
   worksheetFileName=$1
   head -1 "$worksheetFileName" >> uploadSpreadsheet.log
   # There may not be a comma after Position and End.
-  export columnsKeyString=$(head -1 "$worksheetFileName" | sed "s/Marker,/name,/i;s/Name,/name,/;s/Chromosome,/chr,/;
+  export columnsKeyString=$(head -1 "$worksheetFileName" | sed "s/Marker,/name,/i;s/Name,/name,/g;s/Chromosome,/chr,/;
 s/,Qs,/,pos,/;s/,Qe/,end/;
 s/,Start,/,pos,/i;s/,End/,end/i;
 s/,Position/,pos/i;
@@ -223,13 +223,23 @@ qtlList()
     datasetName=$(echo "$i" | fileName2DatasetName);
     echo "fileName=$fileName, datasetName=$datasetName" >> uploadSpreadsheet.log;
     columnsKeyStringPrepare "$i" || return $?
-    out=out_json/"$i".json
-    metaTypeFile="$fileDir"/metaType.csv
+    cd ..
+    # out=out_json/"$i".json
+    outDir=tmp/"$fileDir"/out_json
+    #  or && rm -r "$outDir"
+    [ -d "$outDir" ] || mkdir "$outDir"
+    metaTypeFile=tmp/"$fileDir"/metaType.csv
     echo "type,QTL" > "$metaTypeFile"
-    <"$i"  filterOutComments | chrOmit |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g -A 'Flanking Markers' -M "$metaTypeFile" -t QTL  >  "$out" ;
-    ls -gG "$out"  >> uploadSpreadsheet.log;
+    <tmp/"$i"  filterOutComments | chrOmit |  $sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g -A 'Flanking Markers' -M "$metaTypeFile" -t QTL -D "$outDir" ;
+    # ls -gG "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
-    echo "tmp/$out;$datasetName"
+    # echo "tmp/$out;$datasetName"
+    cd "$outDir";
+    for datasetFile in *.json
+    do
+      datasetName=$(echo "$datasetFile" | sed 's/.json$//')
+      echo "$outDir/$datasetFile;$datasetName"
+    done
 }
 
 # The 'Chromosome Renaming' worksheet was handled here by chrRenamePrepare() and chrRename() up until 7b0bbf20,

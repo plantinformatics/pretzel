@@ -28,6 +28,7 @@ sub appendToBlock();
 sub makeTemplates();
 sub encode_json_2($$);
 sub columnConfig();
+sub chromosomeRenamePrepare();
 
 #-------------------------------------------------------------------------------
 
@@ -41,7 +42,7 @@ my $c_arrayColumnName;
 
 ## Get options from ARGV
 my %options;
-getopts("vhd:p:b:n:c:s:C:F:P:gM:R:A:t:", \%options);
+getopts("vhd:p:b:n:c:s:C:F:P:gM:R:A:t:D:", \%options);
 
 ## Version and help options display
 use constant versionMsg => "2021 Apr.\n";
@@ -55,6 +56,7 @@ use constant usageMsg => <<EOF;
   -R Chromosome Renaming worksheet csv
   -A array column name
   -t tags
+  -D output directory
 EOF
 
 my $datasetName = $options{d};
@@ -88,6 +90,9 @@ my $addValues = 1;	# option : add values : { other columns, }
 # option : if  $namespace =~ m/90k/ etc,  use  $datasetHeaderGM
 my $isGM = $options{g}; # default 0, 1 for physical data blocks
 
+# QTL worksheet may output multiple datasets.
+# If undefined, output is to stdout, otherwise create a file named $dataset.json in $outputDir for each dataset.
+my $outputDir = $options{D};
 
 my $extraTags = $options{t}; # '"SNP"';  #  . ", \"HighDensity\"";	# option, default ''
 if ($extraTags)
@@ -112,6 +117,8 @@ if ($arrayColumnName)
   # print join(';', keys(%columnsKeyLookup)), ',',  $columnsKeyLookup{'end'}, ',', $arrayColumnName, ', ', $c_arrayColumnName || 'undef', "\n";
 }
 
+my $c_Trait = defined($columnsKeyLookup{'Trait'}) ? $columnsKeyLookup{'Trait'} : undef;
+
 #-------------------------------------------------------------------------------
 
 # initialised by makeTemplates()
@@ -120,9 +127,13 @@ my $blockHeader;
 my $blockFooter;
 my $datasetFooter;
 my $datasetHeaderGM;
+# true after startDataset()
+my $startedDataset = 0;
 
 #-------------------------------------------------------------------------------
 
+sub main()
+{
 if ($options{v}) {
   print versionMsg;
 }
@@ -146,6 +157,8 @@ EOF
 else
 {
   makeTemplates();
+  # Result %chromosomeRenames is used in snpLine().
+  chromosomeRenamePrepare();
 
   if (! defined ($blockId))
     { 
@@ -155,6 +168,7 @@ else
     {
       appendToBlock();
     }
+}
 }
 
 #-------------------------------------------------------------------------------
@@ -184,6 +198,7 @@ else
 # equivalent to e.g : qw(c_chr c_pos c_name c_ref_alt)
 # /r for non-destructive, allows chaining.
 my $columnsKeyPrefixed;
+# End position, optional column.
 my $c_endPos;
 
 sub columnConfig() {
@@ -192,7 +207,8 @@ sub columnConfig() {
   $columnsKeyString  = $ENV{columnsKeyString} || "chr name pos";
   # print "columnsKeyString", $columnsKeyString, "\n";
 
-  # Define a variable $c_endPos, because the enum c_endPos can't have a conditional value.
+  # data flow : $columnsKeyString -> $columnsKeyPrefixed -> ColumnsEnum
+  # which defines the enums, c_name, c_chr, c_pos etc.
   # Using an enum made sense in the initial version which had fixed columns,
   # but now %columnsKeyLookup is more suitable.
   #
@@ -200,6 +216,7 @@ sub columnConfig() {
   # column header names which contain spaces are wrapped with "".
   my @a1 = split(/"([^\"]*)"|  */, $columnsKeyString );
   my @columnsKeyValues = grep { $_  } @a1;
+  # print 'columnsKeyValues : ', join(':', @columnsKeyValues), "\n";
 
   for (my $ki=0; $ki <= $#columnsKeyValues; $ki++)
   {
@@ -214,7 +231,12 @@ BEGIN
     =~ s/,/ /rg
     =~ s/^/c_/r
     =~ s/ / c_/rg;
+  # print 'columnsKeyPrefixed : ', $columnsKeyPrefixed, "\n";
+  # my @a2 = split(' ', $columnsKeyPrefixed);
+  # print 'a2 : ', join(':', @a2), "\n";
 
+  # These columns are identified using variables, (e.g. $c_endPos),
+  # because the corresponding enum (e.g. c_endPos) can't have a conditional value.
   $c_endPos = defined($columnsKeyLookup{'end'}) ? $columnsKeyLookup{'end'} : undef;
 }
 use constant ColumnsEnum => split(' ', $columnsKeyPrefixed);
@@ -354,8 +376,6 @@ sub setupMeta()
 sub makeTemplates()
 {
   my $metaJson = setupMeta();
-  # Result %chromosomeRenames is used in snpLine().
-  chromosomeRenamePrepare();
 
   # Could include . "\n" in this expression, but OTOH there is some
   # value in leaving blank lines when parent and namespace are not defined.
@@ -388,6 +408,7 @@ $datasetHeaderGM = <<EOF;
     "blocks": [
 EOF
 
+}
 
 
 # omitted :
@@ -422,13 +443,18 @@ $datasetFooter = <<EOF;
 }
 EOF
 
-}
 
 #-------------------------------------------------------------------------------
 
 # Value of chr (chromosome) on the previous line, or undefined on the first line
 my $lastChr;
+# Non-empty value of Trait from a previous line, or undefined on the first line
+my $currentTrait;
 my $blockSeparator;
+
+#-------------------------------------------------------------------------------
+
+main();
 
 #-------------------------------------------------------------------------------
 
@@ -442,6 +468,16 @@ sub createDataset()
 
   convertInput();
 
+  optionalBlockFooter();
+  print $datasetFooter;
+}
+sub startDataset()
+{
+  print $datasetHeader;
+  $startedDataset = 1;
+}
+sub endDataset()
+{
   optionalBlockFooter();
   print $datasetFooter;
 }
@@ -477,7 +513,7 @@ sub optionalBlockFooter()
 
 my %chromosomeRenames;
 # Read $chromosomeRenamingFile 
-sub chromosomeRenamePrepare($)
+sub chromosomeRenamePrepare()
 {
   if (defined($chromosomeRenamingFile) && $chromosomeRenamingFile)
   {
@@ -516,7 +552,7 @@ sub snpLine($)
   my @a =  split($fieldSeparator, $line);
   @a = map { trimOutsideQuotesAndSpaces($_) } @a;
 
-  if ($a[$c_arrayColumnName])
+  if (defined($c_arrayColumnName) && $a[$c_arrayColumnName])
   {
     push @$arrayRef, $a[$c_arrayColumnName];
   }
@@ -526,6 +562,26 @@ sub snpLine($)
   {
     # Could output a warning if the line is not blank, i.e. not /^,,,/, or $a[c_pos]
     return;
+  }
+  # For QTL : Flanking Marker by itself in a row is added as a feature
+  # to current block / QTL
+  elsif ($a[c_name] && ! $a[c_chr] && ! $a[c_pos] &&
+         defined($c_Trait) && $columnsKeyLookup{'parentname'})
+  {
+    $a[c_pos] = 'null';
+    $a[c_end] = '';
+  }
+  elsif (defined($c_Trait))
+  {
+    # If trait is blank / empty, use current.
+    if ($a[$c_Trait])
+    {
+      $currentTrait = $a[$c_Trait];
+    }
+    else
+    {
+      $a[$c_Trait] = $currentTrait;
+    }
   }
 
   # $a[c_chr] = trimOutsideQuotesAndSpaces($a[c_chr]);
@@ -551,9 +607,37 @@ sub snpLine($)
 
   $a[c_name] = markerPrefix($a[c_name]);
 
+  # start new Dataset when change in parentName 
+  my $c_parentName = $columnsKeyLookup{'parentname'};
+  if (defined($c_parentName))
+  {
+    $parentName = $a[$c_parentName];
+    if ($parentName)
+    {
+      $datasetName = $currentTrait;
+      makeTemplates();
+      if ($startedDataset)
+      {
+        endDataset();
+      }
+      $lastChr = undef;
+      $blockSeparator = undef;
+      if ($outputDir)
+      {
+        my $datasetOutFile = "$outputDir/$datasetName.json";
+        # re-open stdout
+        open(my $oldStdout, ">&STDOUT")     or die "Can't dup STDOUT: $!";
+        open(STDOUT, '>', $datasetOutFile) or die "Can't redirect STDOUT to '$datasetOutFile': $!";
+      }
+      startDataset();
+    }
+  }
 
+
+  # If Chromosome has changed, end the block and start a new block.
+  # If Chromosome is empty / blank, use current ($lastChr).
   my $c = $a[c_chr];
-  if (! defined($lastChr) || ($lastChr ne $c))
+  if (! defined($lastChr) || ($c && ($lastChr ne $c)))
     {
       if (defined($blockId))
         {
@@ -575,14 +659,35 @@ sub snpLine($)
           # replace 'blockName' in the $blockHeader template with the actual chromosome name $c.
           # and blockScope with : the scope which is the chr $c with .[1-9] trimmed off
           # or scope might be just the chr name $c so that each GM block gets its own axis.
-          my $scope = $c;   #  ($c =~ s/\.[1-9]$//r);
+          # Use Scope column if given.
+          my $c_scope = $columnsKeyLookup{'Scope'};
+          my $scope = defined($c_scope) ? $a[$c_scope] : $c;   #  ($c =~ s/\.[1-9]$//r);
           $h =~ s/blockName/$c/g;
           $h =~ s/blockScope/$scope/g;
           print $h;
+
+          # create block (and nominal feature) and feature.  use scope and parentName,
+          # Start/End are block range, or create a nominal feature for the block
+          # (could put extra columns values in this, or in block.meta)
+
+          # Output nominal feature of block
+          # printFeature(@a); # done below
+          my $c_featureName = c_name; # $columnsKeyLookup{'name'};
+          if (defined($c_featureName))
+          {
+            my @f = ();
+            $f[c_name] = $a[$c_featureName];
+            $f[c_pos] = 'null';
+            $f[c_end] = '';
+            printFeature(@f);
+            # print feature separator
+            print ",";
+          }
         }
     }
   else # print feature separator
     { print ","; }
+
   printFeature(@a);
 }
 
@@ -743,6 +848,7 @@ sub printFeature($)
 EOF
 
 }
+
 
 #-------------------------------------------------------------------------------
 # Indentation.
