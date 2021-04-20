@@ -83,6 +83,12 @@ module.exports = function(Dataset) {
       msg.fileName.endsWith('.xlsx') || msg.fileName.endsWith('.xls') || 
         msg.fileName.endsWith('.ods')
     ) {
+      /** messages from child via file descriptors 3 and 4 are
+       * collated in these arrays and can be sent back to provide
+       * detail for / explain an error.
+       */
+      let errors = [], warnings = [];
+
       /** Each worksheet in the .xslx will result in a dataset passed
        * to upload.uploadDataset() which call cb(), so it is necessary
        * to limit this to a single call-back, using cbWrap and cbCalled.
@@ -101,6 +107,10 @@ module.exports = function(Dataset) {
          */
         if (last || (last === undefined) || err) {
           if (cbCalled++ === 0) {
+            if (err && (errors.length || warnings.length)) {
+              err = [err].concat(errors).concat(warnings).join("\n");
+              errors = []; warnings = [];
+            }
             cbOrig(err, message);
           }
         }
@@ -127,7 +137,8 @@ module.exports = function(Dataset) {
       scriptsDir = currentDir.endsWith("/backend") ? 'scripts' : 'backend/scripts',
       // process.execPath is /usr/bin/node,  need /usr/bin/ for mv, mkdir, perl
       PATH = process.env.PATH + ':' + scriptsDir,
-      options = {env : {PATH},  stdio: ['pipe', 'pipe', process.stderr] };
+      /** file handles : stdin, stdout, stderr, output errors, output warnings. */
+      options = {env : {PATH},  stdio: ['pipe', 'pipe', process.stderr, 'pipe', 'pipe'] };
       const child = spawn('uploadSpreadsheet.bash', [msg.fileName, useFile], options);
       child.on('error', (err) => {
         console.error('Failed to start subprocess.', 'uploadSpreadsheet', msg.fileName, err.toString());
@@ -139,6 +150,18 @@ module.exports = function(Dataset) {
         child.stdin.write(msg.data);
         child.stdin.end();
       }
+
+      // On MS Windows these handles may not be 3 and 4.
+      child.stdio[3].on('data', (chunk) => {
+        let message = chunk.toString();
+        console.log('uploadSpreadsheet errors :', message);
+        errors.push(message);
+      });
+      child.stdio[4].on('data', (chunk) => {
+        let message = chunk.toString();
+        console.log('uploadSpreadsheet warnings :', message);
+        warnings.push(message);
+      });
 
       child.stdout.on('data', (chunk) => {
         // data from the standard output is here as buffers

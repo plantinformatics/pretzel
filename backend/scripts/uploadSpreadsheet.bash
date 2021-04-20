@@ -148,8 +148,8 @@ s/,/ /g;
   done
   if [ -n "$errorMessages" ]
   then
-    # maybe to stderr
-    echo "Error: '$worksheetFileName' : $errorMessages;$datasetName"
+    # Output to Error channel back to server. (maybe also to stderr?)
+    echo 1>&3 "Error: '$worksheetFileName' : $errorMessages;$datasetName"
   fi
   # return true (0) if there are no errors
   [ -z "$errorMessages" ]
@@ -410,7 +410,7 @@ case $fileName in
           "$fileName".*'| Template'*csv)
             msg="$i : worksheet name is Template"
             echo "$msg" >> uploadSpreadsheet.log
-            echo "$msg" >> $warningsFile
+            echo "$msg" >> "$warningsFile"
             ;;
 
           "$fileName".*Map'|'*csv)
@@ -437,12 +437,17 @@ case $fileName in
       then
         if [ -f "$warningsFile" ]
         then
-          warningsText="      Warnings: "$(cat $warningsFile)
+          warningsText="      Warnings: "$(cat "$warningsFile")
         else
           warningsText=
         fi
         echo "Error: '$fileName' : no worksheets defined datasets. $warningsText;"
         ls -gG "$fileName".*csv  >> uploadSpreadsheet.log
+      else
+        if [ -f "$warningsFile" ]
+        then
+          cat "$warningsFile" 1>&4
+        fi
       fi
 
     fi
