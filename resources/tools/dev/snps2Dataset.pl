@@ -572,7 +572,7 @@ sub snpLine($)
          defined($c_Trait) && $columnsKeyLookup{'parentname'})
   {
     $a[c_pos] = 'null';
-    $a[c_end] = '';
+    $a[$c_endPos] = '';
   }
   elsif (defined($c_Trait))
   {
@@ -684,7 +684,8 @@ sub snpLine($)
             my @f = ();
             $f[c_name] = $a[$c_featureName];
             $f[c_pos] = 'null';
-            $f[c_end] = '';
+            if (defined($c_endPos))
+            { $f[$c_endPos] = ''; }
             printFeature(@f);
             # print feature separator
             print ",";
