@@ -10,12 +10,9 @@
 # About Pretzel <!-- omit in toc -->
 A Loopback/Ember/D3 framework to display and interactively navigate complex datasets.
 
-Developed by
-- AgriBio, Department of Economic Development, Jobs, Transport and Resources (DEDJTR), Victoria,
-  Australia;
-- CSIRO, Canberra, Australia.
+Currently (2020-) funded and developed by Agriculture Victoria, Department of Jobs, Precincts and Regions (DJPR), Victoria, Australia.
 
-Funded by the Grains Research Development Corporation (GRDC).
+Previously (2016-2020) funded by the Grains Research Development Corporation (GRDC) and co-developed by Agriculture Victoria and CSIRO, Canberra, Australia.
 
 # Table of Contents <!-- omit in toc -->
 - [Features](#features)
