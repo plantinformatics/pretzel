@@ -241,9 +241,18 @@ exports.blockFeatureLimits = function(db, blockId) {
    * handle this by checking for $type and applying $slice to the array type only.
    */
   let
+  /** Project .value_0 if use_value_0, otherwise .value[0 and 1]
+   * or .value if it is not an array.
+   * Using .value_0 will probably be faster than array access; it misses the end
+   * of the feature interval, but for knowing the limits of the block it will be
+   * sufficient.
+   */
     group = [
-      {$project : {_id : 1, name: 1, blockId : 1, value : 
-      {$cond: { if: { $isArray: "$value" }, then: {$slice : ['$value', 2]}, else: "$value" } }  }},
+      {$project : {
+        _id : 1, name: 1, blockId : 1, value : 
+        use_value_0 ? "$value_0" : 
+          {$cond: { if: { $isArray: "$value" }, then: {$slice : ['$value', 2]}, else: "$value" } }
+      }},
       {$unwind : '$value'}, 
       {$match: { $or: [ { value: { $ne: null } } ] } },
       {$group : {
