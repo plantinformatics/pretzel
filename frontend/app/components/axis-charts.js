@@ -410,6 +410,7 @@ export default InAxis.extend({
     let
     axisCharts = this.get('axisCharts'),
     chart = this.get('charts')[chartName];
+    if (chart)
     /*if (! chart.ranges)*/ {
       let
       blocksData = this.get('blocksData'),
