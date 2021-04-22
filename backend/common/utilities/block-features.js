@@ -43,7 +43,7 @@ exports.blockFeaturesCount = function(db, blockIds) {
 
   let
     /** may be faster to use simple string match for .length === 1, instead of $in array. */
-    blockIdMatch = blockIds.length === 1 ? blockIds[0] :
+    blockIdMatch = blockIds.length === 1 ? ObjectId(blockIds[0]) :
       {$in : blockIds.map(function (blockId) { return ObjectId(blockId); }) },
     matchBlock =
     [
