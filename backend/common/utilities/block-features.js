@@ -26,6 +26,23 @@ const use_value_0 = process.env.use_value_0 || false;
 
 /*----------------------------------------------------------------------------*/
 
+/** Show whether a aggregation pipeline is covered by an index.
+ */
+function showExplain(label, aggregationCursor) {
+  /* Usage e.g. showExplain('blockFeaturesCounts', featureCollection.aggregate ( pipeline, {allowDiskUse: true} ))
+   */
+  aggregationCursor
+    .explain()
+    .then((a, b) => {
+      let stage; try { stage = a.stages[0].$cursor.queryPlanner.winningPlan.stage; } catch (e) {};
+      if (stage !== 'PROJECTION_COVERED') {
+        console.log(label, ' explain then', a, stage /*, b, arguments, this*/);
+      }
+    });
+}
+
+/*----------------------------------------------------------------------------*/
+
 
 /** Count features of the given blocks.
  *
@@ -250,7 +267,7 @@ exports.blockFeatureLimits = function(db, blockId) {
    * of the feature interval, but for knowing the limits of the block it will be
    * sufficient.
    */
-    group = [
+    group_array = [
       {$project : {
         _id : 1, name: 1, blockId : 1, value : 
         use_value_0 ? "$value_0" : 
@@ -265,6 +282,16 @@ exports.blockFeatureLimits = function(db, blockId) {
         min : { "$min": "$value" }
       }}
     ],
+    /** using .value_0 enables this simpler form, which is faster in tests so far. */
+    group_0 = [
+      {$group : {
+        _id : '$blockId' ,
+        featureCount : { $sum: 1 },
+        max : { "$max": "$value_0" }, 
+        min : { "$min": "$value_0" }
+      }}
+    ],
+  group = use_value_0 ? group_0 : group_array,
   pipeline = blockId ?
     [
       {$match : {blockId :  ObjectId(blockId)}}
@@ -277,6 +304,7 @@ exports.blockFeatureLimits = function(db, blockId) {
   if (trace_block > 1)
     console.dir(pipeline, { depth: null });
 
+  showExplain('blockFeatureLimits', featureCollection.aggregate ( pipeline, {allowDiskUse: true} ));
   let result =
     featureCollection.aggregate ( pipeline, {allowDiskUse: true} );
 
