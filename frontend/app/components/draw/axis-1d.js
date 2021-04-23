@@ -629,7 +629,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     brushedRegion = this.get('brushedRegion'),
     /** refBlockId */
     axisId = this.get('axis.id'),
-    brushedDomain = this.get('axisApi').axisRange2Domain(axisId, brushedRegion);
+    brushedDomain = brushedRegion && this.get('axisApi').axisRange2Domain(axisId, brushedRegion);
     return brushedDomain;
   }),
 

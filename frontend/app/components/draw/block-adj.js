@@ -251,6 +251,7 @@ export default Component.extend(Evented, AxisEvents, {
            * pathsResultType e.g. pathsResultTypes.{direct,alias}
            */
           pathsApiResultType.flowName = pathsResultTypes.alias.flowName;
+          pathsApiResultType.typeName ||= pathsResultTypes.alias.flowName;
           pathsApiResultType.fieldName = pathsResultTypes.alias.fieldName;
 
           let
