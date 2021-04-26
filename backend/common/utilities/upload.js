@@ -12,6 +12,12 @@ const load = require('./load');
 /* global exports */
 /* global process */
 
+/*----------------------------------------------------------------------------*/
+
+function notDefined(value) { return value === undefined || value === null; }
+
+/*----------------------------------------------------------------------------*/
+
 /**
  * Divide array into smaller chunks
  * @param {Array} arr - array of data to be processed
@@ -185,6 +191,9 @@ function insert_features_recursive(db, dataset_id, features_to_insert, ordered, 
         next_level_features.push(child_feature);
       });
       delete feature.features;
+    }
+    if (! notDefined(feature.value) && notDefined(feature.value_0)) {
+      feature.value_0 = feature.value.length ? feature.value[0] : feature.value;
     }
   });
 

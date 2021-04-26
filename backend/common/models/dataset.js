@@ -305,6 +305,7 @@ module.exports = function(Dataset) {
         array_features.push({
           name: feature.name,
           value: [feature.val],
+          value_0: feature.val,
           blockId: blocks_by_name[feature.block]
         });
       });
