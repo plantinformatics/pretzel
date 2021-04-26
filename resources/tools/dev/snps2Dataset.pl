@@ -678,11 +678,11 @@ sub snpLine($)
 
           # Output nominal feature of block
           # printFeature(@a); # done below
-          my $c_featureName = c_name; # $columnsKeyLookup{'name'};
-          if (defined($c_featureName))
+          my $c_parentName = $columnsKeyLookup{'parentName'};
+          if (defined($c_parentName))
           {
             my @f = ();
-            $f[c_name] = $a[$c_featureName];
+            $f[c_name] = $a[c_name];
             $f[c_pos] = 'null';
             if (defined($c_endPos))
             { $f[$c_endPos] = ''; }
