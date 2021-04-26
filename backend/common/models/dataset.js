@@ -134,7 +134,9 @@ module.exports = function(Dataset) {
        */
       replaceDataset = !!msg.replaceDataset, 
       currentDir = process.cwd(),
-      scriptsDir = currentDir.endsWith("/backend") ? 'scripts' : 'backend/scripts',
+      /** In the Docker container, server cwd is /, and uploadSpreadsheet.bash is in /app/scripts/ */
+      scriptsDir = (currentDir === "/") ? "/app/scripts" : 
+        currentDir.endsWith("/backend") ? 'scripts' : 'backend/scripts',
       // process.execPath is /usr/bin/node,  need /usr/bin/ for mv, mkdir, perl
       PATH = process.env.PATH + ':' + scriptsDir,
       /** file handles : stdin, stdout, stderr, output errors, output warnings. */

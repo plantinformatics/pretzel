@@ -5,11 +5,16 @@ FROM node:10-alpine
 # from : https://github.com/nodejs/docker-node/issues/610 :
 #  node-sass is built using node-gyp, which is built using python.
 # required for an NPM repo
+#
+# bash is now used by /backend/scripts/uploadSpreadsheet.bash
+# and perl by /resources/tools/dev/snps2Dataset.pl
 RUN apk add --no-cache git \
      --virtual .gyp \
      python \
      make \
      g++ \
+     bash	\
+     perl	\
   && npm install bower -g
 
 # add backend to image
@@ -17,6 +22,9 @@ COPY ./backend /app
 
 # add frontend to image
 COPY ./frontend /frontend
+COPY ./backend/scripts/uploadSpreadsheet.bash /app/scripts/.
+COPY ./resources/tools/dev/snps2Dataset.pl /app/scripts/.
+
 
 RUN node --version
 RUN cd /frontend && (npm ci || npm install)  && bower install --allow-root
