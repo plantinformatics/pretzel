@@ -429,8 +429,12 @@ export default Service.extend(Evented, {
           }
             let taskId = blockId + '_' + nBins + (zoomedDomainText || '');
           let summaryTask = this.get('summaryTask');
-          let p = summaryTask[taskId];
-          if (! p) {
+          let p;
+            if ((p = summaryTask[blockId]) && (p.state() === "pending")) {
+              dLog('getSummary current', blockId, p, p.readyState);
+            } else if ((p = summaryTask[taskId])) {
+              dLog('getSummary re-use', taskId, p, p.state(), p.readyState, p.statusText);
+            } else {
             if (zoomedDomain) {
               dLog('getSummary', zoomedDomainText, zoomedDomain);
             }
@@ -473,6 +477,7 @@ export default Service.extend(Evented, {
                     resolve(interval); }, 4000); })
                   .then(getCountsForInterval);
               }
+              summaryTask[blockId] = p;
             /* this could be structured as a task within models/block.js
              * A task would have .drop() to avoid concurrent request, but
              * actually want to bar any subsequent request for the same taskId,
