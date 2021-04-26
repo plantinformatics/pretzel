@@ -431,8 +431,10 @@ export default Service.extend(Evented, {
           let summaryTask = this.get('summaryTask');
           let p;
             if ((p = summaryTask[blockId]) && (p.state() === "pending")) {
+              // state() : pending   ~   readyState : 1
               dLog('getSummary current', blockId, p, p.readyState);
             } else if ((p = summaryTask[taskId])) {
+              // .state() : resolved   ~   .readyState : 4   ~  .statusText : OK
               dLog('getSummary re-use', taskId, p, p.state(), p.readyState, p.statusText);
             } else {
             if (zoomedDomain) {
