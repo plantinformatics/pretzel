@@ -22,6 +22,8 @@ export default Component.extend({
   blockService: service('data/block'),
   queryParams: service('query-params'),
   urlOptions : alias('queryParams.urlOptions'),
+  axisZoom: service('data/axis-zoom'),
+
 
   /** The allocated block space is used for either axis-tracks or axis-charts
    * (featuresCounts). This name is used to identify the allocated space. */
@@ -105,10 +107,32 @@ export default Component.extend({
       let
       /** featuresForAxis() uses getBlockFeaturesInterval(), which is also used by 
        * models/axis-brush.js */
-      blockFeatures = blocks.map(function (b) { return b.get('featuresForAxis'); } );
+      blockFeatures = blocks.forEach((b) => this.block_get_featuresForAxis(b) );
       /* no return value - result is displayed by axis-track : showTrackBlocks() with data
        * collated by tracksTree(), and axis-charts : featureCountBlocks() and drawChart(). */
     }),
+  /** For most blocks - simply request featuresForAxis.
+   * For HighDensity blocks, i.e. featuresCountIncludingZoom is large,
+   * and currentZoomPanIsWheel, delay the request until the zoom/pan is finished.
+   */
+  block_get_featuresForAxis (b) {
+    if (this.get('axisZoom.currentZoomPanIsWheel') &&
+        (b.get('featuresCountIncludingZoom') > 1e4)) {
+      dLog('featuresCountIncludingZoom', b.id, b.get('featuresCountIncludingZoom'), 'featuresFor');
+      let
+      axis1d = this.get('axis1d'),
+      endOfZoom = axis1d.get('nextEndOfDomainDebounced');
+      if (! endOfZoom) {
+        b.get('featuresForAxis');
+      } else {
+        endOfZoom.then(() => {
+          console.log('featuresForBlocksRequestEffect endOfZoom', b.id);
+          b.get('featuresForAxis');
+        });
+      } } else {
+        b.get('featuresForAxis');
+      }
+  }
 
   /*--------------------------------------------------------------------------*/
 
