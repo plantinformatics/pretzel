@@ -6,8 +6,11 @@ FROM node:10-alpine
 #  node-sass is built using node-gyp, which is built using python.
 # required for an NPM repo
 #
+# These packages are for importing spreadsheets (xlsx etc) :
 # bash is now used by /backend/scripts/uploadSpreadsheet.bash
 # and perl by /resources/tools/dev/snps2Dataset.pl
+# gnumeric provides ssconvert, used by uploadSpreadsheet.bash
+# terminus-font is required by ssconvert.
 RUN apk add --no-cache git \
      --virtual .gyp \
      python \
@@ -15,6 +18,8 @@ RUN apk add --no-cache git \
      g++ \
      bash	\
      perl	\
+     gnumeric	\
+     terminus-font	\
   && npm install bower -g
 
 # add backend to image
