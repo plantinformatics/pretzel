@@ -1431,7 +1431,7 @@ div#left-panel > div > div.tab-content
 div#left-panel > div > div.tab-content > div.tab-pane
 {
   height: inherit;
-  overflow-y: overlay;
+  overflow-y: auto;	/* possibly scrollbar-gutter in future. */
 }
 
 #left-panel > div > div.tab-content > div.tab-pane > div {
