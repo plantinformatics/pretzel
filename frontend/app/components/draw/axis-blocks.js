@@ -116,9 +116,20 @@ export default Component.extend({
    * and currentZoomPanIsWheel, delay the request until the zoom/pan is finished.
    */
   block_get_featuresForAxis (b) {
-    if (this.get('axisZoom.currentZoomPanIsWheel') &&
-        (b.get('featuresCountIncludingZoom') > 1e4)) {
-      dLog('featuresCountIncludingZoom', b.id, b.get('featuresCountIncludingZoom'), 'featuresFor');
+    let featuresInScope = b.get('featuresCountIncludingZoom');
+    /** blockFeaturesCounts for 10M features is currently about 1min,
+     * which is not very useful because the bins from the initial
+     * (zoomed-out) request are still an appropriate size, so there is
+     * no benefit from a large-scale request, only delay, and the user
+     * will likely have zoomed somewhere else by the time of the
+     * response, so delay the request until featuresInScope < 5e5
+     * which will give ~3sec response.
+     */
+    if (featuresInScope > 5e5) {
+      dLog('featuresCountIncludingZoom', b.id, featuresInScope, 'featuresFor', 'skip');
+    } else if (this.get('axisZoom.currentZoomPanIsWheel') &&
+        (featuresInScope > 1e4)) {
+      dLog('featuresCountIncludingZoom', b.id, featuresInScope, 'featuresFor');
       let
       axis1d = this.get('axis1d'),
       endOfZoom = axis1d.get('nextEndOfDomainDebounced');
