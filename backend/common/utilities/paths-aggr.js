@@ -378,15 +378,18 @@ function blockFilter(intervals, eq, b) {
  * the index use of the first match determines performance.
  *
  * @param domain  from the intervals or interval param, e.g. intervals.axes[b].domain
+ * If undefined, no condition is added for feature .value_0, just .blockId.
  */
 function blockFilterValue0(domain, blockId) {
   let
   l = 0,
   matchBlock =
       {$match : {
-        blockId : ObjectId(blockId),
-        value_0 : valueBounds_0(domain)
+        blockId : ObjectId(blockId)
       } };
+  if (domain) {
+    matchBlock.$match.value_0 = valueBounds_0(domain);
+  }
   return matchBlock;
 }
 exports.blockFilterValue0 = blockFilterValue0;
@@ -714,6 +717,7 @@ exports.blockFeaturesInterval = function(db, blockIds, intervals) {
     ];
   if (use_value_0 && (blockIds.length === 1)) {
     const b = 0;
+    // could pass undefined for domain if ! .isZoomed
     let useIndex = blockFilterValue0(intervals.axes[b].domain, blockIds[b]);
     filterValue.unshift(useIndex);
   }

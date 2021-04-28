@@ -673,21 +673,25 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    *
    * @param blockId  block
    * @param nBins number of bins to partition the block's features into
+   * @param interval  undefined or range of locations of features to count
+   * @param isZoomed  true means interval should be used to constrain the location of counted features.
+   * @param useBucketAuto default false, which means $bucket with
+   * boundaries calculated from interval and nBins; otherwise use
+   * $bucketAuto.
    */
-  Block.blockFeaturesCounts = function(blockId, interval, nBins, options, res, cb) {
+  Block.blockFeaturesCounts = function(blockId, interval, nBins, isZoomed, useBucketAuto, options, res, cb) {
 
   let
     fnName = 'blockFeaturesCounts',
     /** when a block is viewed, it is not zoomed (the interval is the
-     * whole domain); this request recurs often is is worth caching,
+     * whole domain); this request recurs often and is worth caching,
      * but when zoomed in there is no repeatability so result is not
      * cached.  Zoomed results could be collated in an interval tree,
      * and used when they satisfied one end of a requested interval,
      * i.e. just the new part would be queried.
-     * GMs generally start at 0, and physical maps at 0.
      */
-    useCache = ! interval || (interval[0] <= 1),
-    cacheId = fnName + '_' + blockId + '_' + nBins +  '_' + interval.join('_'),
+    useCache = ! isZoomed || ! interval,
+    cacheId = fnName + '_' + blockId + '_' + nBins +  '_' + useBucketAuto,
     result = useCache && cache.get(cacheId);
     if (result) {
       if (trace_block > 1) {
@@ -697,7 +701,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     } else {
     let db = this.dataSource.connector;
     let cursor =
-      blockFeatures.blockFeaturesCounts(db, blockId, interval, nBins);
+        blockFeatures.blockFeaturesCounts(db, blockId, interval, nBins, isZoomed, useBucketAuto);
     cursor.toArray()
     .then(function(featureCounts) {
       if (useCache) {
@@ -888,6 +892,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       {arg: 'block', type: 'string', required: true},
       {arg: 'interval', type: 'array', required: false},
       {arg: 'nBins', type: 'number', required: false},
+      {arg: 'isZoomed', type: 'boolean', required: false, default : 'false'},
+      {arg: 'useBucketAuto', type: 'boolean', required: false, default : 'false'},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},
     ],

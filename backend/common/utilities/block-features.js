@@ -164,7 +164,7 @@ function binBoundaries(interval, lengthRounded) {
  * { "_id" : { "min" : 4000000, "max" : 160000000 }, "count" : 22 }
  * { "_id" : { "min" : 160000000, "max" : 400000000 }, "count" : 21 }
  */
-exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10) {
+exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10, isZoomed, useBucketAuto) {
   // initial draft based on blockFeaturesCount()
   let featureCollection = db.collection("Feature");
   /** The requirement (so far) is for even-size boundaries on even numbers,
@@ -180,9 +180,9 @@ exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10) {
    * So $bucket is used instead, and the boundaries are given explicitly.
    * This requires interval; if it is not passed, $bucketAuto is used, without granularity.
    */
-  const useBucketAuto = ! (interval && interval.length === 2);
+  useBucketAuto = useBucketAuto || ! (interval && interval.length === 2);
   if (trace_block)
-    console.log('blockFeaturesCounts', blockId, interval, nBins);
+    console.log('blockFeaturesCounts', blockId, interval, nBins, isZoomed, useBucketAuto);
   let ObjectId = ObjectID;
   let lengthRounded, boundaries;
   if (! useBucketAuto) {
@@ -193,7 +193,7 @@ exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10) {
   let
     matchBlock =
     [
-      use_value_0 ? blockFilterValue0(interval, blockId) :
+      use_value_0 ? blockFilterValue0(isZoomed ? interval : undefined, blockId) :
       {$match : {blockId :  ObjectId(blockId)}},
       useBucketAuto ? 
         { $bucketAuto : { groupBy: {$arrayElemAt : ['$value', 0]}, buckets: Number(nBins)}  } // , granularity : 'R5'

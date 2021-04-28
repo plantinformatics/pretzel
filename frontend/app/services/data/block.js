@@ -390,6 +390,12 @@ export default Service.extend(Evented, {
   getSummary: function (blockIds) {
     // console.log("block getSummary", id);
     let
+    /** true enables $bucketAuto as an alternative to $bucket using
+     * boundaries calculated from nBins and interval.  This option
+     * will enable comparison of performance in operation.
+     */
+    useBucketAuto = this.get('parsedOptions.useBucketAuto'),
+
     /** check if feature count of block is already received.  */
     blocksWithoutCount = blockIds.filter((blockId) => {
       let block = this.peekBlock(blockId);
@@ -457,7 +463,7 @@ export default Service.extend(Evented, {
                   countsP = Promise.resolve([]);
                 } else {
                   countsP =
-                  this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, /*options*/{});
+                  this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, !!zoomedDomain, useBucketAuto, /*options*/{});
                 }
                 return countsP;
               };

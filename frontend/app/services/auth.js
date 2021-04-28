@@ -245,10 +245,10 @@ export default Service.extend({
     return this._ajax('Blocks/pathsByReference', 'GET', {blockA : blockA, blockB : blockB, reference, max_distance, options : options}, true);
   },
 
-  getBlockFeaturesCounts(block, interval, nBins, options) {
+  getBlockFeaturesCounts(block, interval, nBins, isZoomed, useBucketAuto, options) {
     if (trace_paths)
-      dLog('services/auth getBlockFeaturesCounts', block, interval, nBins, options);
-    return this._ajax('Blocks/blockFeaturesCounts', 'GET', {block, interval, nBins, options}, true);
+      dLog('services/auth getBlockFeaturesCounts', block, interval, nBins, isZoomed, useBucketAuto, options);
+    return this._ajax('Blocks/blockFeaturesCounts', 'GET', {block, interval, nBins, isZoomed, useBucketAuto, options}, true);
   },
 
   getBlockFeaturesCount(blocks, options) {
