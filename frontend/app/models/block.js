@@ -157,8 +157,15 @@ export default Model.extend({
      * The comparison < 5e4 will be false until .featureCount or
      * .featuresCountsResults are received, i.e. while
      * featuresCountIncludingZoom is undefined.
+     *
+     * 
+     * Currently the high density data does not have symbolic names
+     * (just chr:location) so paths via direct and aliases are not
+     * applicable.  It is tagged HighDensity, but we should add a
+     * separate tag to indicate the lack of a feature name.
+     * So disable paths if tagged HighDensity.
      */
-    paths &&= ! this.get('isHighDensity') || (this.get('featuresCountIncludingZoom') < 5e4);
+    paths &&= ! this.get('isHighDensity') && (this.get('featuresCountIncludingZoom') < 5e4);
     // dLog('showPaths', dataset, paths);
     return paths;
   }),
