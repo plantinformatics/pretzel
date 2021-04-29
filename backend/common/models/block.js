@@ -28,6 +28,7 @@ const { Writable, pipeline, Readable } = require('stream');
  * and also : var streamify = require('stream-array');
  */
 
+/* global process */
 
 
 /** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
@@ -68,6 +69,19 @@ class SseWritable extends Writable {
   }
 }
 
+/*----------------------------------------------------------------------------*/
+
+/** Given a start time, return elapsed milliseconds as a string.
+ * @param startTime result of process.hrtime();
+ * @param decimalPlaces number of decimal places to show in the result string.
+ */
+function elapsedMs(startTime, decimalPlaces) {
+  let elapsedTime = process.hrtime(startTime);
+  var ms = elapsedTime[0] * 1e3 + elapsedTime[1] * 1e-6;
+  return ms.toFixed(decimalPlaces);
+}
+
+/*----------------------------------------------------------------------------*/
 
 /* global module require */
 
@@ -500,6 +514,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   function reqStream(cursorFunction, filterFunction, cacheId, intervals, req, res, apiOptions) {
     /* The params of reqStream() are largely passed to pipeStream() - starting to look like a class. */
 
+    let startTime = process.hrtime();
+
     /** trial also performance of : isSerialized: true */
     let sse = new SSE(undefined, {isCompressed : false});
     if (! res.setHeader) {
@@ -537,7 +553,12 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     }
 
     req.on('close', () => {
-      console.log('req.on(close)');
+      /* absolute time : new Date().toISOString() */
+      console.log(
+        'req.on(close)', 'reqStream', 
+        'The request processing time is', elapsedMs(startTime, 3), 'ms.', 'for', req.path, cacheId);
+
+      // console.log('req.on(close)');
       if (cursor) {
         // ! cursor.isExhausted() && cursor.hasNext()
         if (cursor.isClosed && ! cursor.isClosed())
@@ -572,7 +593,11 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
           else
             closeCursor(cursor);
           function closeCursor(cursor) {
-            cursor.close(function () { console.log('cursor closed'); });
+            cursor.close(function () {
+              console.log(
+                'cursor closed',
+                'reqStream', 
+                'The request processing time is', elapsedMs(startTime, 3), 'ms.', 'for', req.path, cacheId); });
           }
         }
       }

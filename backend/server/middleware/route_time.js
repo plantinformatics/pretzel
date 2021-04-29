@@ -1,6 +1,6 @@
 module.exports = function() {
   return function tracker(req, res, next) {
-    // console.log('Request tracking middleware triggered on %s', req.url);
+    // console.log('Request tracking middleware triggered on %s', req.url, new Date().toISOString());
     var start = process.hrtime();
     res.once('finish', function() {
       var diff = process.hrtime(start);
