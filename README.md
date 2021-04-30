@@ -10,6 +10,8 @@
 # About Pretzel <!-- omit in toc -->
 A Loopback/Ember/D3 framework to display and interactively navigate complex datasets.
 
+<img src="https://user-images.githubusercontent.com/20571319/116690793-4129a380-a9fd-11eb-85ed-6b9d91f51458.png" align="center">
+
 Currently (2020-) funded and developed by Agriculture Victoria, Department of Jobs, Precincts and Regions (DJPR), Victoria, Australia.
 
 Previously (2016-2020) funded by the Grains Research Development Corporation (GRDC) and co-developed by Agriculture Victoria and CSIRO, Canberra, Australia.
