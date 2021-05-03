@@ -1044,10 +1044,15 @@ export default InAxis.extend({
      * @param subElements true if (gene) sub-elements (intro/exon) are displayed for this block.
      */
     function appendRect(re, rs, width, subElements) {
+      const
+      // this.parentElement.__data__ is also the blockId
+      blockId = this.__data__,
+      block = thisAt.lookupBlock(blockId),
+      isPhased = block && (block.hasTag('phased') || block.get('datasetId._meta.phased')),
       /** true to enable use of 5-point <path> (rectangle+triangle) as an
        * alternate representation, with the triangle vertex indicating
        * direction. */
-      const useTriangle = thisAt.get('urlOptions.trackTriangles');
+      useTriangle = isPhased;
       /** true means <rect> will not be used - only <path> (rectangle+triangle).
        */
       const alwaysTri = true;
@@ -1625,6 +1630,13 @@ export default InAxis.extend({
     this.set('tracks', tracks); // used by axisStackChanged() : passed to layoutAndDrawTracks()
     return tracks;
   }),
+
+  lookupBlock(blockId) {
+    let
+    blockS = this.get('stackBlocks')[blockId],
+    block = blockS && blockS.block;
+    return block;
+  },
 
   /** The blocks within axis-tracks have collected some attributes,
    * so will likely be split out as a sub-component.
