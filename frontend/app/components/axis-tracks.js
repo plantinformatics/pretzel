@@ -1196,12 +1196,20 @@ export default InAxis.extend({
       xPosnD = xPosnS(/*subElements*/false).apply(this, [d, i, g]),
       yPosnD = yPosn.apply(this, [d, i, g]),
       heightD = height.apply(this, [d, i, g]),
+      /** either a horizontal arrow pointing left, or a vertical arrow pointing in the direction of the feature interval. */
+      vertical = true,
       /** based on lineDimensions() : sideWedge -> triangle,  tipY -> heightD, wedgeX -> tWidth,  */
-      triangle = [
-        [tWidth, heightD],
-        [0, heightD / 2],
-        [tWidth, 0]
-      ],
+      triangle = vertical ?
+        [
+          [width, heightD],
+          [0, heightD],
+          [tWidth, 0]
+        ] :
+        [
+          [tWidth, heightD],
+          [0, heightD / 2],
+          [tWidth, 0]
+        ],
       points = triangle,
       l =
         d3.select(this)
