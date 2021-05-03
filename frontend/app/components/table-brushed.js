@@ -132,6 +132,11 @@ export default Component.extend({
       if (values) {
         Object.keys(values).forEach((valueName) => rest[valueName] = values[valueName]);
       }
+      if (feature.value.length > 1) {
+        /* Position is numeric, so feature.value.join(',') just displays .value[0]
+         * stringify() works.  */
+        rest.Position = JSON.stringify(feature.value);
+      }
       return rest;
     });
     return data;
