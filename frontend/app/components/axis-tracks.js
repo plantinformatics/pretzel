@@ -1000,7 +1000,7 @@ export default InAxis.extend({
       // Make description unique when multiple features with same name.
       return featureData.description+"_"+featureData[0];
     }
-    /** Add the <rect> within <g clip-path...>  */
+    /** Add the <rect>s and/or <path>s, or sub-elements, within <g clip-path...>  */
     let
     /** block select - datum is blockId. */
     bs = gAxis.selectAll("g.axis-use > g.tracks > g"),
@@ -1052,13 +1052,15 @@ export default InAxis.extend({
       /** true to enable use of 5-point <path> (rectangle+triangle) as an
        * alternate representation, with the triangle vertex indicating
        * direction. */
-      useTriangle = isPhased;
+      useTriangle = false && isPhased;
       /** true means <rect> will not be used - only <path> (rectangle+triangle).
        */
       const alwaysTri = true;
       let
+      useTriangle3 = isPhased && ! subElements,
+      tagName = ['rect', 'path'][+useTriangle3],
       ra = re
-        .append((d) => createElementSvg(useTriangle && (alwaysTri || showTriangleP(y, d)) ? 'path' : 'rect'));
+        .append(useTriangle3 ? tagName : (d) => createElementSvg(useTriangle && (alwaysTri || showTriangleP(y, d)) ? 'path' : 'rect'));
       ra
         .attr('class', 'track')
         .each(subElements ? configureSubTrackHover : configureTrackHover);
@@ -1092,6 +1094,8 @@ export default InAxis.extend({
       elementSelector = isSubelement ? '.element' : ':not(.element)',
       /** match either {rect,path}.track */
       es = subElements ?
+        /** .track here will match rect.track, path.track; not just tagName + '.track' 	 */
+      // if tagName is required here, would need to repeat the whole selector for rect,path - better to make class more specific
         rs.selectAll("g" + gSelector + " > .track" + elementSelector) : rs,
       /** ra._parents is the g[clip-path], whereas es._parents are the g.track.element
        * es.merge(ra) may work, but ra.merge(es) has just 1 elt.
@@ -1164,10 +1168,57 @@ export default InAxis.extend({
       .attr('stroke', blockTrackColourI)
       .attr('fill', blockTrackColourI)
       ;
+      if (useTriangle3) {
+        rm
+          .attr('transform', featureTransform)
+          .each(triangleDimensions);
+      }
       dLog('ra', ra.size(), ra.node(), 'rm', rm.size(), rm.node());
       // result is not used yet.
       return ra;
     }
+    function featureTransform(d, i, g) {
+      let
+      xPosnD = xPosnS(/*subElements*/false).apply(this, [d, i, g]),
+      yPosnD = yPosn.apply(this, [d, i, g]),
+      heightD = height.apply(this, [d, i, g]),
+      transform = "translate(" + (xPosnD + d.layer*trackWidth) + ", " + (yPosnD + heightD) + ")";
+      return transform;
+    }
+    /** triangle with tip facing toward the axis.
+     * Used to make features obvious when small (height) and sparse / useTriangle3.
+     * (could use a line segment with an arrow, see lineDimensions() : showArrow).
+     */
+    function triangleDimensions(d, i, g) {
+      let
+      width = trackWidth / 2,
+      tWidth = width/2,
+      xPosnD = xPosnS(/*subElements*/false).apply(this, [d, i, g]),
+      yPosnD = yPosn.apply(this, [d, i, g]),
+      heightD = height.apply(this, [d, i, g]),
+      /** either a horizontal arrow pointing left, or a vertical arrow pointing in the direction of the feature interval. */
+      vertical = true,
+      /** based on lineDimensions() : sideWedge -> triangle,  tipY -> heightD, wedgeX -> tWidth,  */
+      triangle = vertical ?
+        [
+          [width, heightD],
+          [0, heightD],
+          [tWidth, 0]
+        ] :
+        [
+          [tWidth, heightD],
+          [0, heightD / 2],
+          [tWidth, 0]
+        ],
+      points = triangle,
+      l =
+        d3.select(this)
+        .attr('d', d3.line()(points))
+        // .attr('transform', (d) => "translate(" + (xPosnD + d.layer*trackWidth) + ", " + yPosnD + ")")
+      ;
+      dLog('triangleDimensions', width, tWidth, xPosnD, yPosnD, heightD, points);
+    }
+
     /** subElements */
     function eachGroup(blockId, i, g) {
       let
@@ -1494,7 +1545,7 @@ export default InAxis.extend({
       return blockTrackColour;
     }
     /** note of how blockColour() would be used. */
-    let blockTrackColour = blockColour('rect.track');
+    let blockTrackColour = blockColour('rect.track, path.track');
     if (false)
       // gp
       d3.selectAll('g.tracks')
