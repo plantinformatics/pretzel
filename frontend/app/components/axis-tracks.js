@@ -862,6 +862,15 @@ export default InAxis.extend({
       return end;
     }
     function height(d) {
+      /** createIntervalTree() requires positive intervals, so the
+       * .value [start,end] are reversed if negative (start > end) by
+       * tracksTree() and SubElement.getInterval().
+       * height() is used to determine the direction of triangles so
+       * use feature.value[] here
+       */
+      let feature = thisAt.featureData2Feature.get(d),
+          value = feature.get('value');
+      d = value;
       /** if axis.zoomed then 0-height intervals are included, not filtered out.
        * In that case, need to give <rect> a height > 0.
        */
@@ -875,8 +884,10 @@ export default InAxis.extend({
         console.log('height NaN', d, 'y:', y.domain(), y.range());
       }
       // When axis is flipped, height will be negative, so make it positive
+      /*
       if (height < 0)
         height = -height;
+      */
       return height;
     };
     /** @return the horizontal offset of the left side of this block */
@@ -1201,9 +1212,9 @@ export default InAxis.extend({
       /** based on lineDimensions() : sideWedge -> triangle,  tipY -> heightD, wedgeX -> tWidth,  */
       triangle = vertical ?
         [
-          [width, heightD],
-          [0, heightD],
-          [tWidth, 0]
+          [width, 0],
+          [0, 0],
+          [tWidth, heightD]
         ] :
         [
           [tWidth, heightD],
