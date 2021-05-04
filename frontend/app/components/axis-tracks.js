@@ -1170,11 +1170,10 @@ export default InAxis.extend({
       if (usePath) {
         const
         xPosnD = 0,
-        yPosn = yEnd,
-        heightD = 0;
+        yPosn = yEnd;
         rx
           .transition().duration(featureTrackTransitionTime)
-          .attr('transform', (d,i,g) => "translate(" + xPosnD + ", " + (yPosn.apply(this, [d, i, g]) + heightD) + ")")
+          .attr('transform', (d,i,g) => "translate(" + xPosnD + ", " + yPosn.apply(this, [d, i, g]) + ")")
           .on('end', () => {
             rx.remove();
           });
@@ -1252,9 +1251,8 @@ export default InAxis.extend({
       let
       xPosnD = xPosnS(/*subElements*/false).apply(this, [d, i, g]),
       yPosnD = yPosn.apply(this, [d, i, g]),
-      heightD = height.apply(this, [d, i, g]),
       /** xPosnS() offsets by  + d.layer*trackWidth  */
-      transform = "translate(" + xPosnD + ", " + (yPosnD + heightD) + ")";
+      transform = "translate(" + xPosnD + ", " + yPosnD + ")";
       return transform;
     }
     /** triangle with tip facing toward the axis.
