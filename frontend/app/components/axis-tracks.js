@@ -1233,7 +1233,8 @@ export default InAxis.extend({
       xPosnD = xPosnS(/*subElements*/false).apply(this, [d, i, g]),
       yPosnD = yPosn.apply(this, [d, i, g]),
       heightD = height.apply(this, [d, i, g]),
-      transform = "translate(" + (xPosnD + d.layer*trackWidth) + ", " + (yPosnD + heightD) + ")";
+      /** xPosnS() offsets by  + d.layer*trackWidth  */
+      transform = "translate(" + xPosnD + ", " + (yPosnD + heightD) + ")";
       return transform;
     }
     /** triangle with tip facing toward the axis.
@@ -1244,8 +1245,6 @@ export default InAxis.extend({
       let
       width = trackWidth / 2,
       tWidth = width/2,
-      xPosnD = xPosnS(/*subElements*/false).apply(this, [d, i, g]),
-      yPosnD = yPosn.apply(this, [d, i, g]),
       heightD = height.apply(this, [d, i, g]),
       /** either a horizontal arrow pointing left, or a vertical arrow pointing in the direction of the feature interval. */
       vertical = true,
@@ -1265,9 +1264,8 @@ export default InAxis.extend({
       l =
         d3.select(this)
         .attr('d', d3.line()(points))
-        // .attr('transform', (d) => "translate(" + (xPosnD + d.layer*trackWidth) + ", " + yPosnD + ")")
       ;
-      dLog('triangleDimensions', width, tWidth, xPosnD, yPosnD, heightD, points);
+      dLog('triangleDimensions', width, tWidth, heightD, points);
     }
 
     /** subElements */
