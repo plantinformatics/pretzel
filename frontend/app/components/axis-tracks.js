@@ -1037,13 +1037,6 @@ export default InAxis.extend({
         .data(trackBlocksData, trackKeyFn),
       re =  rs.enter(), rx = rs.exit();
       dLog(rs.size(), re.size(),  'rx', rx.size());
-      rx
-        .transition().duration(featureTrackTransitionTime)
-        .attr('x', 0)
-        .attr('y', yEnd)
-        .on('end', () => {
-          rx.remove();
-        });
 
       let
       blockC = thisAt.lookupAxisTracksBlock(blockId),
@@ -1168,6 +1161,33 @@ export default InAxis.extend({
           }.apply(this, [d, i, g])
         );
       }
+
+      /** Transition the exiting <rect>s and <paths> to the end of the
+       * y scale range which d is closest to, using yEnd.
+       * Then remove them after that transition.
+       */
+      let rx = rs.exit();
+      if (usePath) {
+        const
+        xPosnD = 0,
+        yPosn = yEnd,
+        heightD = 0;
+        rx
+          .transition().duration(featureTrackTransitionTime)
+          .attr('transform', (d,i,g) => "translate(" + xPosnD + ", " + (yPosn.apply(this, [d, i, g]) + heightD) + ")")
+          .on('end', () => {
+            rx.remove();
+          });
+      } else {
+        rx
+          .transition().duration(featureTrackTransitionTime)
+          .attr('x', 0)
+          .attr('y', yEnd)
+          .on('end', () => {
+            rx.remove();
+          });
+      }
+
 
       function positionUpdate(selection) {
         if (usePath) {
