@@ -1050,7 +1050,14 @@ export default InAxis.extend({
       trackWidth = blockC.get('trackWidth');
       appendRect.apply(this, [re, rs, trackWidth, false]);
     }
-    /** - rename re and rs to ge and gs
+    /** Within a single block, render the features or sub-features of
+     * the selection as a <rect> or <path>
+     * 
+     * @param re  .entry() selection
+     * @param rs  selection
+     * @param width
+     * @param subElements true if features are sub-features
+     * - rename re and rs to ge and gs
      * es could be called rs
      * @param subElements true if (gene) sub-elements (intro/exon) are displayed for this block.
      */
@@ -1068,10 +1075,16 @@ export default InAxis.extend({
        */
       const alwaysTri = true;
       let
+      /** true for the 3-point <path>. This is not alternated with <rect>, i.e. useBoth is false */
       useTriangle3 = isPhased && ! subElements,
-      tagName = ['rect', 'path'][+useTriangle3],
+      /** true when using <path> */
+      usePath = useTriangle3 || useTriangle,
+      /** true when using either <rect> or <path> depending on zoom
+       * (triangle point is only visible when zoomed in).  */
+      useBoth = useTriangle && ! alwaysTri,
+      tagName = ['rect', 'path'][+usePath],
       ra = re
-        .append(useTriangle3 ? tagName : (d) => createElementSvg(useTriangle && (alwaysTri || showTriangleP(y, d)) ? 'path' : 'rect'));
+        .append(! useBoth ? tagName : (d) => createElementSvg(useTriangle && (alwaysTri || showTriangleP(y, d)) ? 'path' : 'rect'));
       ra
         .attr('class', 'track')
         .each(subElements ? configureSubTrackHover : configureTrackHover);
@@ -1118,15 +1131,23 @@ export default InAxis.extend({
         .attr('y', (d,i,g) => useTriangle && (alwaysTri || showTriangleP(y, d)) ? undefined : yEnd.apply(this, [d, i, g]));
       if (! useTriangle) {
         ra
-          .call(rectUpdate);
+          .call(positionUpdate);
+        let rmt =
         rm
           .transition().duration(featureTrackTransitionTime)
           .call(fadeOutIfZoomedOut)
-          .call(rectUpdate);
+          .call(positionUpdate);
+        if (useTriangle3) {
+          ra
+            .each(triangleDimensions);
+          rmt
+            .each(triangleDimensions);
+        }
       }
       else if (alwaysTri) {
         let xPosnFn = xPosnS(subElements);
         rm
+          // maybe transition
           .attr('d', (d,i,g) => rectTrianglePath(y, d, width, xPosnFn.apply(this, [d, i, g])));
       }
       else {
@@ -1147,13 +1168,32 @@ export default InAxis.extend({
           }.apply(this, [d, i, g])
         );
       }
+
+      function positionUpdate(selection) {
+        if (usePath) {
+          selection
+            .attr('transform', featureTransform);
+        } else {
+          rectUpdate(selection);
+        }
+      }
       function rectUpdate(selection) {
         selection
           .attr('x', xPosnS(subElements))
           .attr('y', yPosn)
           .attr('height' , height);
       }
+      /** zoom:Reset will generally replace feature tracks with
+       * features counts charts (axis-charts.js), depending on
+       * featuresCountsThreshold.
+       * To make this less abrupt, transition the tracks out by
+       * reducing opacity.
+       */
       function fadeOutIfZoomedOut(selection) {
+        /** If block.isZoomedRightOut and selection is a transition,
+         * and opacity is not set, set it to 1 immediately, and
+         * transition to 0.
+         */
         let t0 = selection.node();
         if (t0) {
           /** may not be blockId, e.g subElements, so default to false. */
@@ -1179,15 +1219,15 @@ export default InAxis.extend({
       .attr('stroke', blockTrackColourI)
       .attr('fill', blockTrackColourI)
       ;
-      if (useTriangle3) {
-        rm
-          .attr('transform', featureTransform)
-          .each(triangleDimensions);
-      }
+
       dLog('ra', ra.size(), ra.node(), 'rm', rm.size(), rm.node());
       // result is not used yet.
       return ra;
     }
+    /** Position the feature representation (<path>) with a transform.
+     * This plays an analogous role to rectUpdate(), which does not
+     * apply to path because it sets x,y,height.
+     */
     function featureTransform(d, i, g) {
       let
       xPosnD = xPosnS(/*subElements*/false).apply(this, [d, i, g]),
