@@ -50,7 +50,7 @@ function verifyFeatureRecord(fr, f) {
   same = 
     (fr.id === f._id) &&
     direction && sameDirection &&
-    ((frd ? frd.name : fr.get('name')) === f.name);
+    ((frd ? frd._name : fr.get('name')) === f.name);
   return same;
 }
 
@@ -311,7 +311,7 @@ export default Service.extend({
       }
       if (trace_pathsP > 3)
         dLog('pushFeature', f.blockId, c.get('blockId.features.length'), c.get('blockId.featuresLength'), f, 'featuresLength');
-      storeFeature(stacks.oa, flowsService, f.name, c, blockId);
+      storeFeature(stacks.oa, flowsService, f._name, c, blockId);
       if (trace_pathsP > 2)
         dLog(c.get('id'), c._internalModel.__data);
     }
