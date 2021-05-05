@@ -3079,7 +3079,9 @@ export default Component.extend(Evented, {
     }
 
     /** Setup hover info text over scaffold horizTick-s.
-     * @see based on similar configureAxisTitleMenu()
+     * Based on similar @see configureAxisTitleMenu()
+     * @desc These are being factored to utils/hover.js :
+     * @see configureHover, configureHorizTickHover
      */
     function  configureHorizTickHover(location)
     {
