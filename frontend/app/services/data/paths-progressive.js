@@ -311,7 +311,11 @@ export default Service.extend({
       }
       if (trace_pathsP > 3)
         dLog('pushFeature', f.blockId, c.get('blockId.features.length'), c.get('blockId.featuresLength'), f, 'featuresLength');
-      storeFeature(stacks.oa, flowsService, f._name, c, blockId);
+      /** if feature has no ._name, i.e. datasetId.tags[] contains "AnonFeatures",
+       * then use e.g. "1H:" + value[0]
+       */
+      let fName = f._name || (c.get('blockId.name') + ':' + f.value[0]);
+      storeFeature(stacks.oa, flowsService, fName, c, blockId);
       if (trace_pathsP > 2)
         dLog(c.get('id'), c._internalModel.__data);
     }

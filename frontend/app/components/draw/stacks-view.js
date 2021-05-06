@@ -14,11 +14,13 @@ import {
   axisId2Name*/
 } from '../../utils/stacks';
 
+import { _internalModel_data } from '../../utils/ember-devel';
+
 /* global d3 */
 
 const dLog = console.debug;
 
-function blockInfo(block) { return block && [block.id, block.store.name, block.get('_internalModel.__data'), block.get('isCopy'), block.get('_meta._origin')]; }
+function blockInfo(block) { return block && [block.id, block.store.name, block.get(_internalModel_data), block.get('isCopy'), block.get('_meta._origin')]; }
 
 export default Component.extend({
   block: service('data/block'),
@@ -65,7 +67,7 @@ export default Component.extend({
             blocks = blocks.filter((b) => b.get('isViewed'));
             mapByReferenceBlock[blocks[0].id] = blocks;
             if (true /*trace*/ )
-              dLog('axesBlocks', referenceName, scope, blocks.mapBy('_internalModel.__data'));
+              dLog('axesBlocks', referenceName, scope, blocks.mapBy(_internalModel_data));
           }
         }
       }
@@ -91,8 +93,16 @@ export default Component.extend({
         let original = blocks.filter((b) => !b.get('isCopy'));
         if (original.length) {
           block = original[0];
-          if (original.length > 1)  // not expected to happen
-            dLog('axesP', axisID, 'choosing [0] from', original.map(blockInfo));
+          if (original.length > 1) {
+            let originalReferences = original.filter((b) => !b.get('isData'));
+            if (originalReferences.length == 1) {
+              block = originalReferences[0];
+            } else if (originalReferences.length > 1) {  // not expected to happen
+              dLog('axesP', axisID, 'choosing [0] from', originalReferences.map(blockInfo));
+            } else {
+              dLog('axesP', axisID, 'no original reference, choosing [0] from', original.map(blockInfo));
+            }
+          }
         }
         else {
           dLog('axesP', axisID, 'no original, choosing [0] from', blocks.map(blockInfo));

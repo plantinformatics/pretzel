@@ -594,10 +594,6 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     next(() => this.axis1dExists(this, true));
   },
 
-  willDestroyElement() {
-    next(() => this.axis1dExists(this, false));
-    this._super(...arguments);
-  },
 
   /*--------------------------------------------------------------------------*/
 
@@ -1201,7 +1197,9 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
       
       function showText(text) {
-        this.set('headsUp.tipText', text);
+        if (! this.get('headsUp.isDestroying')) {
+          this.set('headsUp.tipText', text);
+        }
       }
       gAxis.selectAll('text')
         .on('mouseover', showText.bind(this, 'Ctrl-click to drag axis'))
@@ -1290,6 +1288,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }
     let axisName = this.get('axis.id');
     Stacked.axis1dRemove(axisName, this);
+    next(() => this.axis1dExists(this, false));
 
     this._super(...arguments);
   },

@@ -2713,7 +2713,7 @@ export default Component.extend(Evented, {
       axisIds = axisTitleS.nodes().mapBy('__data__'),
       axes1 = axisIds.map((axisId) => oa.axes[axisId]);
       axes1.forEach(
-        (a) => a.axis1d && bind(a.axis1d, a.axis1d.showZoomResetButtonXPosn)());
+        (a) => a && a.axis1d && bind(a.axis1d, a.axis1d.showZoomResetButtonXPosn)());
     }
     updateAxisTitleSize(axisG.merge(axisS));
 

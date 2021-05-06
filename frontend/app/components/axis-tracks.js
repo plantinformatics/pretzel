@@ -871,10 +871,11 @@ export default InAxis.extend({
       let feature = thisAt.featureData2Feature.get(d),
           value = feature.get('value');
       d = value;
+      let nonZeroInterval = Ember.isArray(d) && (d.length > 1) && (d[1] !== d[0]);
       /** if axis.zoomed then 0-height intervals are included, not filtered out.
        * In that case, need to give <rect> a height > 0.
        */
-      let height = (d[1] == d[0]) ? 0.01 : y(d[1]) - y(d[0]);
+      let height = ! nonZeroInterval ? 0.01 : y(d[1]) - y(d[0]);
       /* There was an issue causing NaN here, likely caused by 1-element array
        * .value, which is now handled.   Here that was causing d[1] undefined,
        * and hence y(d[1]) NaN.
