@@ -277,6 +277,25 @@ export default Service.extend({
     return this._ajax('Features/search', 'GET', {server : apiServer, filter : featureNames, options}, true);
   },
 
+  /** Request DNA sequence search (Blast).
+   * @param dnaSequence string "actg..."
+   * @param parent  datasetId of parent / reference of the blast db which is to be searched
+   * @param searchType 'blast'
+   */
+  dnaSequenceSearch(apiServer, dnaSequence, parent, searchType, options) {
+    if (trace_paths)
+      dLog('services/auth featureSearch', dnaSequence, parent, searchType, options);
+    /** Attach .server to JSON string, instead of using
+     * requestServerAttr (.session.requestServer)
+     * (this can be unwound after adding apiServer as param to ._ajax(),
+     *  dropping the new String() ).
+     */
+    let data = {dnaSequence, parent, searchType, options},
+        dataS = JSON.stringify(data); // new String();
+    // dataS.server = apiServer;
+    return this._ajax('Features/dnaSequenceSearch', 'POST', dataS, true);
+  },
+
   createDataset(name) {
     return this._ajax('Datasets', 'POST', JSON.stringify({name: name}), true)
   },
@@ -375,6 +394,12 @@ export default Service.extend({
    * @param data  params to the API; these guide the server determination;
    * e.g. if the param is block: <blockId>, use the server from which blockId was loaded.
    *
+   * For POST, data is a JSON string, so data.server is not defined (except by dnaSequenceSearch);
+   * this is handled by the 'if (! requestServer) {' case.
+   * This will be simplified by adding apiServer as an (optional)
+   * param to _ajax(), _server(), _endpointURLToken().
+   *
+   * @desc
    * The compound result includes a copy of these params, modified to suit the
    * server which is chosen : paths request params may be remote references, and
    * are converted to local if they are being sent to the server they refer to.

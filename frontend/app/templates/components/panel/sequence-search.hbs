@@ -1,0 +1,55 @@
+
+{{#elem/panel-container state="primary" as |panelContainer|}}
+  {{!--  https://fontawesome.com/icons/dna   Unicode  f471  <i class="fas fa-dna"></i> --}}
+  {{#elem/panel-heading icon="search" panelContainer=panelContainer}}
+    DNA Sequence Blast Search
+  {{/elem/panel-heading}}
+
+  {{#if panelContainer.showComponent}}
+
+  <div>
+    <BsTab @customTabs={{true}} @activeId="sequence-search-input" as |tab|>
+
+      <BsNav @type="tabs" as |nav|>
+        <nav.item @active={{bs-eq tab.activeId "sequence-search-input"}}><a href="#sequence-search-input" role="tab" onclick={{action tab.select "sequence-search-input"}}>{{elem/icon-base name="edit"}} Sequence Input</a></nav.item>
+
+        <nav.item @active={{bs-eq tab.activeId "sequence-search-output"}}><a href="#sequence-search-output" role="tab" onclick={{action tab.select "sequence-search-output"}}>{{elem/icon-base name="arrow-right"}} Blast Output</a></nav.item>
+      </BsNav>
+
+      <div class="tab-content">
+
+        <tab.pane @id="sequence-search-input" @title="Input : DNA Sequence">
+
+          <span>DNA Sequence Input</span>
+
+          {{textarea
+            class="form-control"
+            maxLength=15
+            input=(action 'inputIsActive')
+            enter=(action 'dnaSequenceInput')
+            insert-newline=(action 'dnaSequenceInput')
+            escape-press=(action 'dnaSequenceInput')
+            paste=(action 'paste')
+            placeholder="DNA Sequence
+            (case insensitive; whitespace is filtered out)" }}
+
+        </tab.pane>
+
+        <tab.pane @id="sequence-search-output" @title="Output : Blast Matches">
+
+          {{panel/upload/blast-results data=data 
+              active=(bs-eq tab.activeId "sequence-search-output") }}
+
+        </tab.pane>
+
+      </div>
+    </BsTab>
+
+  </div>
+
+
+  {{/if}} {{!-- showComponent --}}
+{{/elem/panel-container}}
+
+
+

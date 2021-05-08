@@ -1,6 +1,11 @@
 'use strict';
 
+/* global require */
+/* global process */
+
 var acl = require('../utilities/acl')
+const { childProcess } = require('../utilities/child-process');
+
 
 module.exports = function(Feature) {
   Feature.search = function(filter, options, cb) {
@@ -44,6 +49,47 @@ module.exports = function(Feature) {
     });
   };
 
+  /**
+   * @param dnaSequence string "actg..."
+   * @param parent  datasetId of parent / reference of the blast db which is to be searched
+   * @param searchType 'blast'
+   */
+  Feature.dnaSequenceSearch = function(data, cb) {
+    let {dnaSequence, parent, searchType, options} = data;
+    const fnName = 'dnaSequenceSearch';
+    console.log(fnName, dnaSequence.length, parent, searchType);
+
+    /** Receive the results from the Blast.
+     * @param chunk is a Buffer
+     * @param cb is cbWrap of cb passed to dnaSequenceSearch().
+     */
+    let searchDataOut = (chunk, cb) => {
+      if (chunk.asciiSlice(0,6) === 'Error:') {
+        cb(new Error(chunk.toString()));
+      } else {
+        const
+        textLines = chunk.toString().split('\n');
+        textLines.forEach((textLine) => {
+          if (textLine !== "") {
+            console.log(fnName, 'stdout data',  "'", textLine,  "'");
+          }
+        });
+
+        cb(null, textLines);
+      }
+    };
+
+    if (true) {
+    let child = childProcess(
+      'dnaSequenceSearch.bash',
+      dnaSequence, true, 'dnaSequence', searchDataOut, cb);
+    } else {
+      let features = dev_blastResult;
+      cb(null, features);
+    }
+  };
+
+
   Feature.remoteMethod('search', {
     accepts: [
       {arg: 'filter', type: 'array', required: true},
@@ -64,9 +110,32 @@ module.exports = function(Feature) {
     returns: {arg: 'features', type: 'array'},
     description: "Returns features by their level in the feature hierarchy"
   });
-  
+ 
+  Feature.remoteMethod('dnaSequenceSearch', {
+    accepts: [
+      {arg: 'data', type: 'object', required: true, http: {source: 'body'}},
+      /* Within data : .dnaSequence, and :
+      {arg: 'parent', type: 'string', required: true},
+      {arg: 'searchType', type: 'string', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+      */
+    ],
+    // http: {verb: 'post'},
+    returns: {arg: 'features', type: 'array'},
+    description: "Returns features by their level in the feature hierarchy"
+  });
+ 
   acl.assignRulesRecord(Feature)
   acl.limitRemoteMethods(Feature)
   acl.limitRemoteMethodsSubrecord(Feature)
   acl.limitRemoteMethodsRelated(Feature)
 };
+
+/*----------------------------------------------------------------------------*/
+
+const dev_blastResult = [
+  "BobWhite_c10015_641     chr2A   100.000 50      0       0       1       50      154414057       154414008       2.36e-17        93.5    50      780798557",
+  "BobWhite_c10015_641     chr2B   98.000  50      1       0       1       50      207600007       207600056       1.10e-15        87.9    50      801256715"
+];
+/*----------------------------------------------------------------------------*/
+
