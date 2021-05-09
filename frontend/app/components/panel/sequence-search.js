@@ -48,9 +48,11 @@ export default Component.extend({
       if (rawText)
       {
         let
-        seq = rawText
+        seq = rawText;
+	/*
           .replaceAll(/[ \n\t]+/g, "")
           .toLowerCase();
+	*/
         dLog("dnaSequenceInput", seq);
         let
         /** based on serverTabSelected or primary */

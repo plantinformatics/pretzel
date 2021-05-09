@@ -25,7 +25,7 @@ export default Component.extend({
   progressMsg: '',
 
   dataMatrix : computed('data.[]', function () {
-    let cells = this.get('data').map((r) => r.split(/  */));
+    let cells = this.get('data').map((r) => r.split('\t'));
     return cells;
   }),
   dataMatrixEffect : computed('dataMatrix.[]', function () {

@@ -17,6 +17,7 @@ unused_var=${toolsDev=$resourcesDir/tools/dev}
 sp=$toolsDev/snps2Dataset.pl
 
 logFile=dnaSequenceSearch.log
+(pwd; date; ) >> $logFile
 echo $* >> $logFile
 
 [ -d tmp ] || mkdir tmp
@@ -43,7 +44,23 @@ EOF
 )
 
 #-------------------------------------------------------------------------------
+datasetId=Triticum_aestivum_IWGSC_RefSeq_v1.0
 
-echo $dev_blastResult
+#echo ">BobWhite_c10015_641
+# AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" | 
+
+fileName=/home/ec2-user/pretzel/"$fileName"
+
+# For dev / loopback test, when blast is not installed.
+if false
+then
+  echo $dev_blastResult
+else 
+  # fastafile.fa
+  cd /mnt/data_blast/blast/datasetId
+  time blastn  -query $fileName  -db "$datasetId".dir/$(cat "$datasetId".dbName) -outfmt '6 std qlen slen'
+  #  >> $logFile
+fi
+
 
 #-------------------------------------------------------------------------------
