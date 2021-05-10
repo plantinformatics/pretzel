@@ -20,7 +20,9 @@
 
         <tab.pane @id="sequence-search-input" @title="Input : DNA Sequence">
 
-          <span>DNA Sequence Input</span>
+          <div style="margin: 0.5em;">DNA Sequence Input :
+            <a target="_blank" href="https://en.wikipedia.org/wiki/FASTA_format">FASTA</a>
+          </div>
 
           {{textarea
             class="form-control"
@@ -30,8 +32,67 @@
             insert-newline=(action 'dnaSequenceInput')
             escape-press=(action 'dnaSequenceInput')
             paste=(action 'paste')
-            placeholder="DNA Sequence
-            (case insensitive; whitespace is filtered out)" }}
+            placeholder="e.g. >BobWhite_c10015_641
+AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
+
+
+          <ul class="config-list">
+
+            <li class="list-group-item">
+              <label>Reference to search : </label>
+              <select 
+                id="parent" 
+                onchange={{action (mut selectedParent) value="target.value"}} 
+                disabled={{isProcessing}}
+                style="width: 100%"
+              >
+                <option value='' selected>None</option>
+                {{#each datasetsToSearch key="name" as |ds|}}
+                  <option value={{ds.name}}>{{ds.name}}</option>
+                {{/each}}
+              </select>
+            </li>
+
+
+
+            <li class="list-group-item">
+              <div>
+                <label style="float:right">Table Result Limit</label>
+                <span class="sub-label"> Rows : <span>{{ resultRows }}</span></span>
+              </div>
+              <div>
+                <input type="range" 
+                 id="range-resultRows" 
+                 name="resultRows" 
+                 min="0" max="2000"
+                 value={{this.resultRows}} 
+                 oninput={{action (mut this.resultRows) value="target.value"}}
+                />
+              </div>
+            </li>
+
+            <li class="list-group-item">
+              {{input type="checkbox" name="addDataset" checked=addDataset }}
+              <label>Add as Dataset</label>
+
+              {{!-- copied from data-csv.hbs --}}
+              {{#if this.addDataset}}
+                <div id="new_dataset_options">
+                {{input 
+                  id="dataset_new" 
+                  type="text" 
+                  value=newDatasetName 
+                  class="form-control" 
+                  placeholder="New dataset name..." 
+                  disabled=isProcessing
+                }}
+                </div>
+              {{/if}}
+            </li>
+
+          </ul>
+
+
 
         </tab.pane>
 
@@ -44,6 +105,23 @@
 
       </div>
     </BsTab>
+
+    {{elem/panel-message
+      successMessage=successMessage
+      warningMessage=warningMessage
+      errorMessage=errorMessage}}
+    {{#if nameWarning}}
+    {{elem/panel-message
+      warningMessage=nameWarning}}
+    {{/if}}
+
+    {{#if isProcessing}}
+      {{#elem/panel-form
+        name="info"
+        heading="Processing..." }}
+          {{progressMsg}}
+      {{/elem/panel-form}}
+    {{/if}}
 
   </div>
 

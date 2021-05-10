@@ -88,7 +88,7 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
       */
       var table = new Handsontable(hotable, {
         data: [['', '', '', '', '', '', '', '', '', '', '', '', '', '']],
-        minRows: 20,
+        // minRows: 20,
         rowHeaders: true,
         /*
         columns: [

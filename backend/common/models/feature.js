@@ -50,12 +50,12 @@ module.exports = function(Feature) {
   };
 
   /**
-   * @param dnaSequence string "actg..."
+   * @param dnaSequence FASTA format for Blast; text string input for other searchType-s, e.g. string "actg..."
    * @param parent  datasetId of parent / reference of the blast db which is to be searched
    * @param searchType 'blast'
    */
   Feature.dnaSequenceSearch = function(data, cb) {
-    let {dnaSequence, parent, searchType, options} = data;
+    let {dnaSequence, parent, searchType, resultRows, addDataset, options} = data;
     const fnName = 'dnaSequenceSearch';
     console.log(fnName, dnaSequence.length, parent, searchType);
 
@@ -82,7 +82,7 @@ module.exports = function(Feature) {
     if (true) {
     let child = childProcess(
       'dnaSequenceSearch.bash',
-      dnaSequence, true, 'dnaSequence', searchDataOut, cb);
+      dnaSequence, true, 'dnaSequence', [parent, searchType, resultRows, addDataset], searchDataOut, cb);
     } else {
       let features = dev_blastResult;
       cb(null, features);
@@ -118,11 +118,12 @@ module.exports = function(Feature) {
       {arg: 'parent', type: 'string', required: true},
       {arg: 'searchType', type: 'string', required: true},
       {arg: "options", type: "object", http: "optionsFromRequest"}
+      resultRows, addDataset
       */
     ],
     // http: {verb: 'post'},
     returns: {arg: 'features', type: 'array'},
-    description: "Returns features by their level in the feature hierarchy"
+    description: "DNA Sequence Search e.g. Blast, returns TSV output as text array"
   });
  
   acl.assignRulesRecord(Feature)

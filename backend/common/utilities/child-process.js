@@ -14,11 +14,13 @@ var fs = require('fs');
  * @param postdata
  * @param useFile
  * @param fileName
+ * @param moreParams array of params to pass as command-line params to
+ * child process, after [fileName, useFile]
  * @param dataOutCb (Buffer chunk, cb) {}
  * @param cb  response node callback
  * @return child
  */
-exports.childProcess = (scriptName, postData, useFile, fileName, dataOutCb, cb) => {
+exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dataOutCb, cb) => {
   const fnName = 'childProcess';
   /** messages from child via file descriptors 3 and 4 are
    * collated in these arrays and can be sent back to provide
@@ -77,7 +79,11 @@ exports.childProcess = (scriptName, postData, useFile, fileName, dataOutCb, cb) 
   PATH = process.env.PATH + ':' + scriptsDir,
   /** file handles : stdin, stdout, stderr, output errors, output warnings. */
   options = {env : {PATH},  stdio: ['pipe', 'pipe', process.stderr, 'pipe', 'pipe'] };
-  const child = spawn(scriptName, [fileName, useFile], options);
+  let params = [fileName, useFile];
+  if (moreParams && moreParams.length) {
+    params = params.concat(moreParams);
+  }
+  const child = spawn(scriptName, params, options);
   child.on('error', (err) => {
     console.error(fnName, 'Failed to start subprocess.', scriptName, fileName, err.toString());
     // const error = Error("Failed to start subprocess to upload xlsx file " + fileName + '\n' + err.toString());
@@ -108,8 +114,13 @@ exports.childProcess = (scriptName, postData, useFile, fileName, dataOutCb, cb) 
   child.on('close', (code) => {
     console.log('child process exited with code',  code);
     if (code) {
-      const error = Error("Failed to read file " + fileName);
+      const error = Error("Failed processing file '" + fileName + "'.");
       cb(error);
+    } else if (errors.length || warnings.length) {
+      let
+      errors_warnings = errors.concat(warnings).join("\n");
+      errors = []; warnings = [];
+      cb(errors_warnings);
     } else {
       // process each tmp/out_json/"$datasetName".json
       const message = 'Processed file ' + fileName;

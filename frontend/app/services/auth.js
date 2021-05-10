@@ -281,16 +281,17 @@ export default Service.extend({
    * @param dnaSequence string "actg..."
    * @param parent  datasetId of parent / reference of the blast db which is to be searched
    * @param searchType 'blast'
+   * @param resultRows  limit rows in result 
+   * @param addDataset  true means add / upload result to db as a Dataset
    */
-  dnaSequenceSearch(apiServer, dnaSequence, parent, searchType, options) {
-    if (trace_paths)
-      dLog('services/auth featureSearch', dnaSequence, parent, searchType, options);
+  dnaSequenceSearch(apiServer, dnaSequence, parent, searchType, resultRows, addDataset, options) {
+    dLog('services/auth featureSearch', dnaSequence.length, parent, searchType, resultRows, addDataset, options);
     /** Attach .server to JSON string, instead of using
      * requestServerAttr (.session.requestServer)
      * (this can be unwound after adding apiServer as param to ._ajax(),
      *  dropping the new String() ).
      */
-    let data = {dnaSequence, parent, searchType, options},
+    let data = {dnaSequence, parent, searchType, resultRows, addDataset, options},
         dataS = JSON.stringify(data); // new String();
     // dataS.server = apiServer;
     return this._ajax('Features/dnaSequenceSearch', 'POST', dataS, true);
