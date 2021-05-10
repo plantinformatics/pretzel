@@ -1,0 +1,12 @@
+backend/ :
+ b3f809e  4581 May 10 12:37  common/models/feature.js
+ e7d7fb7  6387 May 10 19:40  common/utilities/child-process.js
+ 6b06a6f  2577 May 10 20:04  scripts/dnaSequenceSearch.bash
+frontend/app/ :
+ b59c349  4838 May 10 19:43  components/panel/sequence-search.js
+ 794b67d  3880 May 10 12:37  components/panel/upload/blast-results.js
+ 95798a0  4626 May 10 18:27  models/dataset.js
+ c02fa18 21570 May 10 12:57  services/auth.js
+ 1a21ccb 40123 May 10 18:57  styles/app.scss
+ 3bfe8e9  4204 May 10 18:17  templates/components/panel/left-panel.hbs
+ 82a44d7  4237 May 10 18:57  templates/components/panel/sequence-search.hbs
