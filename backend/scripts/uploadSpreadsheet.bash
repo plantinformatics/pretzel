@@ -30,9 +30,9 @@ useFile=$2
 
 if ls -l /bin/ls | fgrep -q /bin/busybox
 then
-    function ll() { ls -l $*; }
+    function ll() { ls -l "$@"; }
 else
-    function ll() { ls -gG $*; }
+    function ll() { ls -gG "$@"; }
 fi
 
 #-------------------------------------------------------------------------------

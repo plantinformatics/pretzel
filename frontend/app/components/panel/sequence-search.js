@@ -130,6 +130,7 @@ export default Component.extend({
           seq, parent, searchType,
           this.get('resultRows'),
           this.get('addDataset'),
+          this.get('newDatasetName'),
           /*options*/{/*dataEvent : receivedData, closePromise : taskInstance*/});
 
         promise.then(
