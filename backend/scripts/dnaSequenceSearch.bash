@@ -1,5 +1,6 @@
 #!/bin/bash
 
+serverDir=$PWD
 case $PWD in
   /)
     resourcesDir=/app/scripts
@@ -60,6 +61,7 @@ columnHeaders=$(echo "query ID, subject ID, % identity, length of HSP (hit), n m
 
 function convertSearchResults2Json()
 {
+  cd $serverDir
   tsv=tmp/"$datasetName".tsv
   out=tmp/"$datasetName".json
 
