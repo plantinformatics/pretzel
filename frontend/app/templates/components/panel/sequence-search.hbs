@@ -35,6 +35,18 @@
             placeholder="e.g. >BobWhite_c10015_641
 AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
 
+          <div style="margin: 1em; overflow-y: auto;">
+            {{#elem/button-base
+               click=(action "search")
+               classNames=refreshClassNames
+               disabled=searchButtonDisabled
+               icon='refresh'
+               classColour="primary"
+            }}
+              <span>&nbsp; Search</span>
+            {{/elem/button-base}}
+          </div>
+
 
           <ul class="config-list">
 
@@ -77,6 +89,11 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
 
               {{!-- copied from data-csv.hbs --}}
               {{#if this.addDataset}}
+                <span class="filter-group-col">
+                  {{input type="checkbox" name="replaceDataset" checked=replaceDataset }}
+                  <label>Replace Dataset</label>
+                </span>
+
                 <div id="new_dataset_options">
                 {{input 
                   id="dataset_new" 
@@ -87,6 +104,7 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
                   disabled=isProcessing
                 }}
                 </div>
+
               {{/if}}
             </li>
 
