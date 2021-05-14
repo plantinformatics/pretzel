@@ -52,7 +52,10 @@ function setupMonitor() {
 
 # run regularly, e.g. from cron
 function accessDiffPost() {
-  if sudo diff  /var/log/nginx/access.log $logDir/access.log > $logDir/access.log.diff;
+  # To handle nginx log rolling, show only the added lines of the diff, not the removed lines.
+  # refn http://www.gnu.org/software/diffutils/manual/html_node/Line-Group-Formats.html
+  # and https://stackoverflow.com/a/15385080
+  if sudo diff --changed-group-format='%>' --unchanged-group-format='' /var/log/nginx/access.log $logDir/access.log > $logDir/access.log.diff;
   then 
     : # same
   else
