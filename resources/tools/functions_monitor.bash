@@ -9,6 +9,12 @@
 #  regular / cron :
 #   accessDiffPost
 
+# Environment vars used :
+#  $SERVER_NAME
+#  $DB_NAME	in signupReport() in mongo_admin.bash (defaults to admin)
+#  $DIM		in signupReport()
+#  $slack_postEventsAPP_URL	in postInput()
+
 #-------------------------------------------------------------------------------
 
 # slack_postEventsAPP_URL is the POST URL for a slack app which is configured to post a message to a channel
@@ -32,7 +38,8 @@ function postInput() {
   then
     (date; cat >> $logDir/test.log)
   else
-    tr -d \'\"\''[]<()-' |  curl -X POST -H 'Content-type: application/json' --data '{"text":"'"$(cat)"'"}' $slack_postEventsAPP_URL
+    tr -d \'\"\''[]<()-' |  curl -X POST -H 'Content-type: application/json' --data '{"text":"'"$SERVER_NAME"'
+'"$(cat)"'"}' $slack_postEventsAPP_URL
   fi
 }
 
@@ -55,7 +62,7 @@ function accessDiffPost() {
   # To handle nginx log rolling, show only the added lines of the diff, not the removed lines.
   # refn http://www.gnu.org/software/diffutils/manual/html_node/Line-Group-Formats.html
   # and https://stackoverflow.com/a/15385080
-  if sudo diff --changed-group-format='%>' --unchanged-group-format='' /var/log/nginx/access.log $logDir/access.log > $logDir/access.log.diff;
+  if sudo diff --changed-group-format='%>' --unchanged-group-format='' $logDir/access.log /var/log/nginx/access.log  > $logDir/access.log.diff;
   then 
     : # same
   else
