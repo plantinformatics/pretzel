@@ -81,22 +81,36 @@ function monitorSignup() {
   signupReport > notVerified.tsv
 }
 
+
+# Compare the current and previous versions of a file.
+# Used for showing additions to a log file.
+# Output diff to stdout, with diffLabel appended if not empty.
+#
 # @return same as diff :
 # diff returns : 0 (true) if files are identical, otherwise 1 (false)  
-function signupDiffBoth() {
-  if diff {,$newSignup/}verified.tsv
-  then
-    status1=$?
-  else
-    status1=$?; echo verified; echo ---; echo
-  fi
+#
+# @param newDir dir containing the new version. previous is in ./
+# @param fileName name of pair of files to diff
+# @param diffLabel text to label the diff output with, if not empty
+function diffPrevious() {
+  newDir="$1"
+  fileName="$2"
+  diffLabel="$3"
+  statusDP=0
+  diff {,"$newDir"/}"$fileName" || { statusDP=$?; echo "$diffLabel" ;  }
+  return $statusDP
+}
 
-  if diff {,$newSignup/}notVerified.tsv
-  then
-    status2=$?
-  else
-    status2=$?; echo notVerified
-  fi
+
+# @return same as diff :
+# diff returns : 0 (true) if each pair of files is identical, otherwise 1 or 2 (both values are false)  
+function signupDiffBoth() {
+  diffPrevious "$newSignup" verified.tsv 'verified
+---'
+  status1=$?
+
+  diffPrevious "$newSignup" notVerified.tsv 'notVerified'
+  status2=$?
 
   return $(expr $status1 + $status2)
 }
@@ -115,6 +129,35 @@ function signupDiffPost() {
   fi
 }
 
+# Diff notVerified / unapproved since last call
+# @param periodName text name for directory - e.g. "daily"
+# The directory caches the previous value which is the reference for diff
+#
+# Usage, e.g. cron : bash -c "source ~/pretzel/resources/tools/mongo_admin.bash; source ~/pretzel/resources/tools/functions_hosted.bash; DIM=... ; slack_postEventsAPP_URL=...;  signupDiffUnapprovedPost daily 2>&1" >> $HOME/log/monitor/cron.log 2>&1
+function signupDiffUnapprovedPost() {
+  if [ $# -ne 1 ]
+  then
+    echo "Usage : $0 periodName" 1>&2;
+  else
+    periodName="$1"
+    cd $logDir/ || return
+    [ -d "$periodName" ] || mkdir "$periodName" || return
+    cd "$periodName"
+    [ -d $newSignup ] || mkdir $newSignup || return
+    [ -f "notVerified.tsv" ] || { signupReport > notVerified.tsv; return; }
 
+    signupReport > $newSignup/notVerified.tsv
+    
+    diffPrevious "$newSignup" notVerified.tsv 'notVerified'  > signupUnapproved.diff
+    statusPeriod=$?
+
+    if [ "$statusPeriod" -ne 0 ]
+    then 
+      postInput < signupUnapproved.diff
+      ls -l {,$newSignup/}notVerified.tsv signupUnapproved.diff
+      cp -p $newSignup/notVerified.tsv .
+    fi
+  fi
+}
 
 # ------------------------------------------------------------------------------
