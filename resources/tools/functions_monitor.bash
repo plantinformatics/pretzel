@@ -55,6 +55,9 @@ function setupMonitor() {
   [ -d ~/log ] || mkdir ~/log || return
   [ -d $logDir ] || mkdir $logDir || return
   if [ ! -f $logDir/access.log ]  ; then sudo cp -ip /var/log/nginx/access.log $logDir/access.log ; fi;
+
+  cd $logDir || return 
+  [ -f server.log ] || touch server.log || return
 }
 
 # run regularly, e.g. from cron
@@ -74,6 +77,30 @@ function accessDiffPost() {
   fi
 }
 
+# ------------------------------------------------------------------------------
+
+function currentLog() { echo -n ~/log/nohup_out/; ls -rt ~/log/nohup_out/ | tail -1; }
+
+# Similar to accessDiffPost, but monitor the node server log
+# run regularly, e.g. from cron
+function serverDiffPost() {
+  l1=$( currentLog )
+  [ -z "$l1" -o  \! -f "$l1"  ] && return
+  cd $logDir || return 
+  logPrev=server.log
+  # To handle server log rolling (when server is restarted), show only the added lines of the diff, not the removed lines.
+  if sudo diff --changed-group-format='%>' --unchanged-group-format='' $logPrev "$l1"  > $logPrev.diff;
+  then 
+    : # same
+  else
+    # /api/Clients| is already logged from nginx log
+    if egrep 'Error: Invalid token|ValidationError' $logPrev.diff | fgrep -v /api/Clients/login > $logPrev.diff.report;
+    then 
+      postInput < $logPrev.diff.report
+    fi
+    sudo cp -p "$l1" $logPrev
+  fi
+}
 
 # ------------------------------------------------------------------------------
 
