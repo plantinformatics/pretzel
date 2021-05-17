@@ -84,10 +84,12 @@ export default Component.extend({
       this.get('createTable').apply(this);
   },
 
+  /** @return true if any of the features in data have an end position : .value[1]
+   */
   positionEnd : computed('data.[]', function () {
     let
     data = this.get('data'),
-    positionEnd = data.any((datum) => datum.feature.value.length > 1);
+    positionEnd = data.any((datum) => datum.feature.value && (datum.feature.value.length > 1));
     return positionEnd;
   }),
   extraColumnsNames : computed('data.[]', function () {
