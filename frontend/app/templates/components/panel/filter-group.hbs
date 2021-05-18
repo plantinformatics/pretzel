@@ -1,104 +1,174 @@
 <div>
-  {{elem/icon-toggle state=detailed iconTrue='arrow-up' iconFalse='arrow-down' }}
-  {{elem/button-base
+  {{#elem/icon-toggle state=detailed iconTrue='collapse-down' iconFalse='expand' }}
+    {{#ember-tooltip side="right" delay=500}}
+      Toggle the detailed display of the filter / grouping.
+    {{/ember-tooltip}}
+  {{/elem/icon-toggle}}
+
+  {{#elem/button-base
+     click=(action "filterByCurrentScopes")
+     icon='import'
+     classColour="info"
+  }}
+    <span>Copy current view
+      {{#ember-tooltip side="bottom" delay=500}}
+        Copy the scopes (chromosome names) of the currently displayed references and maps to the filter pattern, to filter the datasets displayed in the explorer.
+      {{/ember-tooltip}}
+    </span>
+  {{/elem/button-base}}
+
+  {{#elem/button-base
     click=(action "deleteFilterOrGroup")
     icon='remove'
     classColour="info"
     class='delete'
   }}
-
-  {{#if detailed}}
-    <div class="line-input-label">
-      {{radio-button value='filter' groupValue=filterOrGroup
-        changed=(action changed this preventDefault=false)
-      }}
-      <label>Filter</label>
-      {{radio-button value='group' groupValue=filterOrGroup
-        changed=(action changed this preventDefault=false)
-      }}
-      <label>Group</label>
-    </div>
-  {{/if}}
-
-  {{#elem/button-base
-     click=(action "filterByCurrentScopes")
-     icon='arrow-left'
-     classColour="info"
-  }}
-    <span>Current Scopes</span>
+    {{#ember-tooltip side="left" delay=500}}
+      Delete this filter / grouping;  all datasets will be displayed.
+    {{/ember-tooltip}}
   {{/elem/button-base}}
-
 </div>
 
-{{input
-  value=pattern
-  class="form-control"
-  enter=(action changed this)
-  placeholder="string or regular expression" }}
+<div class="filter-group-row">
+  {{input
+    value=data.pattern
+    class="form-control"
+    enter=(action changed this)
+    placeholder="string or regular expression" }}
+  {{#elem/button-base
+    click=(action changed this)
+    icon='ok'
+    classColour="info"
+    class='submit'
+  }}
+    {{#ember-tooltip side="left" delay=500}}
+      Apply filter/group
+    {{/ember-tooltip}}
+  {{/elem/button-base}}
+</div>
 
 {{#if detailed}}
 
-  {{!-- scope of search can be : .name .scope .meta --}}
-  <div class="line-input-label">
-    <label style="margin-right:1em">Fields :</label>
-    {{input type="checkbox" name="fieldName" checked=fieldName
-      click=(action changed this preventDefault=false)
-    }}
-    <span>name</span>
-    {{input type="checkbox" name="fieldMeta" checked=fieldMeta
-      click=(action changed this preventDefault=false)
-    }}
-    <span>meta</span>
-    <br/>
-    <span style="margin-left:2em">Block : </span>
-    {{input type="checkbox" name="fieldScope" checked=fieldScope
-      click=(action changed this preventDefault=false)
-    }}
-    <span>scope</span>
-    {{input type="checkbox" name="fieldNamespace" checked=fieldNamespace
-      click=(action changed this preventDefault=false)
-    }}
-    <span>namespace</span>
-
+  {{!-- Filter or Grouping --}}
+  <div class="filter-group-row" style="margin-top:1em">
+    <label class="filter-group-col">Apply...</label>
+    <span class="filter-group-2cols">
+      {{radio-button value='filter' groupValue=data.filterOrGroup
+        changed=(action changed this preventDefault=false)
+      }}
+      Filter &nbsp;&nbsp;
+      {{radio-button value='group' groupValue=data.filterOrGroup
+        changed=(action changed this preventDefault=false)
+      }}
+      Grouping
+    </span>
   </div>
+
+  {{!-- scope of search can be : .name .scope ._meta --}}
+  <div class="filter-group-row">
+    <label class="filter-group-col">Search...</label>
+    <span class="filter-group-col">
+      {{input type="checkbox" name="fieldName" checked=data.fieldName
+        click=(action changed this preventDefault=false)
+      }}
+      Names
+    </span>
+    <span class="filter-group-col">
+      {{input type="checkbox" name="fieldMeta" checked=data.fieldMeta
+        click=(action changed this preventDefault=false)
+      }}
+      Metadata
+    </span>
+  </div>
+
   {{!-- match string / pattern again key and/or value --}}
-  <div class="line-input-label">
-    <label>Match against :</label>
-    {{input type="checkbox" name="matchKey" checked=matchKey
-      click=(action changed this preventDefault=false)
-    }}
-    <span>Key</span>
-    {{input type="checkbox" name="matchValue" checked=matchValue
-      click=(action changed this preventDefault=false)
-    }}
-    <span>Value</span>
+  <div class="filter-group-row">
+    <label class="filter-group-col">Matching...</label>
+    <span class="filter-group-col">
+      {{input type="checkbox" name="matchKey" checked=data.matchKey
+        click=(action changed this preventDefault=false)
+      }}
+      Keys
+    </span>
+    <span class="filter-group-col">
+      {{input type="checkbox" name="matchValue" checked=data.matchValue
+        click=(action changed this preventDefault=false)
+      }}
+      Values
+    </span>
   </div>
 
-  <div style="display:flex">
-  {{!-- caseSensitive string / pattern --}}
-  <span>
-    {{input type="checkbox" name="isCaseSensitive" checked=isCaseSensitive
-      click=(action changed this preventDefault=false)
-    }}
-    <label>Case Sensitive</label>
-  </span>
-
-  {{!-- negate string / pattern --}}
-  <span>
-    {{input type="checkbox" name="isNegated" checked=isNegated
-      click=(action changed this preventDefault=false)
-    }}
-    <label>Negate</label>
-  </span>
-
-  {{!-- pattern isRegExp --}}
-  <span>
-    {{input type="checkbox" name="isRegExp" checked=isRegExp
-      click=(action changed this preventDefault=false)
-    }}
-    <label>RegExp</label>
-  </span>
+  {{!-- Datasets --}}
+  <div class="filter-group-row">
+    <label class="filter-group-col">Include...</label>
+    <span class="filter-group-2cols">
+      {{input type="checkbox" name="applyDataset" checked=data.applyDataset
+        click=(action changed this preventDefault=false)
+      }}
+      Datasets
+    </span>
   </div>
 
+  {{!-- Blocks --}}
+  <div class="filter-group-row">
+    <div class="filter-group-col" />
+    <span class="filter-group-col">
+      {{input type="checkbox" name="applyBlock" checked=data.applyBlock
+        click=(action changed this preventDefault=false)
+      }}
+      Blocks
+    </span>
+    <span class="filter-group-col">
+      {{#elem/icon-toggle state=blockssubs iconTrue='collapse-down' iconFalse='expand' }}
+        {{#ember-tooltip side="bottom" delay=500}}
+          Toggle Block sub-options
+        {{/ember-tooltip}}
+      {{/elem/icon-toggle}}
+    </span>
+  </div>
+  {{#if blockssubs}}
+    <div class="filter-group-row">
+      <div class="filter-group-col" />
+      <span class="filter-group-col">
+        {{input type="checkbox" name="fieldScope" checked=data.fieldScope
+          click=(action changed this preventDefault=false)
+          disabled=(not data.applyBlock)
+        }}
+        Scope
+      </span>
+      <span class="filter-group-col">
+        {{input type="checkbox" name="fieldNamespace" checked=data.fieldNamespace
+          click=(action changed this preventDefault=false)
+          disabled=(not data.applyBlock)
+        }}
+        Namespace
+      </span>
+    </div>
+  {{/if}}
+
+  {{!-- Regex negation and case sensitivity --}}
+  <div class="filter-group-row">
+    {{!-- pattern isRegExp --}}
+    <span>
+      {{input type="checkbox" name="isRegExp" checked=data.isRegExp
+        click=(action changed this preventDefault=false)
+      }}
+      RegExp
+    </span>
+    {{!-- negate string / pattern --}}
+    <span>
+      {{input type="checkbox" name="isNegated" checked=data.isNegated
+        click=(action changed this preventDefault=false)
+      }}
+      Negated
+    </span>
+    {{!-- caseSensitive string / pattern --}}
+    <span>
+      {{input type="checkbox" name="isCaseSensitive" checked=data.isCaseSensitive
+        click=(action changed this preventDefault=false)
+      }}
+      Case Sensitive
+    </span>
+  </div>
 {{/if}}
 

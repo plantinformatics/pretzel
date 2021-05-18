@@ -1,1 +1,38 @@
-<div>block : {{blockId}}, {{features.length}}, {{zoomCounter}}</div>
+{{!-- block.block.datasetNameAndScope or datasetId.name or .id --}} 
+
+  <tr>
+    <td>{{datasetName}}</td>
+    <td>{{block.block.scope}}</td>
+    <td>{{brushedDomainRounded}}</td>
+    <!-- ----------------------------- -->
+    <td class="devel-visible">{{blockId}}</td>
+    <td class="devel-visible">{{zoomCounter}}</td>
+    <td style="display:none;"> {{features.length}} <!-- for features request. --></td>
+  </tr>
+
+
+
+<table>
+  <tr>
+    <th colspan="2">Estimated Features in</th>
+    <th></th>
+  </tr>
+  <tr>
+    <th class="devel-visible">Loaded in Brush</th>
+    <th>Brush</th>
+    <th>Zoom</th>
+    <th class="devel-visible">BlockId</th>
+    <th>Dataset</th>
+  </tr>
+
+  {{#each brushedBlocks as |brushedBlock| }}
+    <tr>
+      <td class="devel-visible">{{get featuresReceived brushedBlock.block.id}}</td>
+      <td>{{brushedBlock.featureCountInBrush}}</td>
+      <td>{{brushedBlock.featuresCount}}</td>
+      <td class="devel-visible">{{brushedBlock.block.id}}</td>
+      <td>{{brushedBlock.block.datasetId.shortNameOrName}}</td>
+    </tr>
+  {{/each}}
+
+</table>

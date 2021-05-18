@@ -1,5 +1,11 @@
-/* jshint node: true */
 
+//------------------------------------------------------------------------------
+// Added
+/* global module */
+/* global process */
+//------------------------------------------------------------------------------
+
+'use strict';
 
 module.exports = function(environment) {
   var ENV = {
@@ -10,10 +16,12 @@ module.exports = function(environment) {
     apiNamespace: 'api', // adding to the host for API calls
     rootURL: '/', // used with Ember local routing
     locationType: 'auto',
+    handsOnTableLicenseKey: null,
+
     EmberENV: {
       FEATURES: {
         // Here you can enable experimental features on an ember canary build
-        // e.g. 'with-controller': tru
+        // e.g. EMBER_NATIVE_DECORATOR_SUPPORT: true
       },
       EXTEND_PROTOTYPES: {
         // Prevent Ember Data from overriding Date.parse.
@@ -21,9 +29,10 @@ module.exports = function(environment) {
       }, 
     },
     'ember-simple-auth': {
-        authenticationRoute: 'login',
-        routeAfterAuthentication: 'mapview',
-        routeIfAlreadyAuthenticated: 'mapview'
+      /* these configuration values are moved to the routes :
+       *  authenticationRoute, routeAfterAuthentication, routeIfAlreadyAuthenticated
+       * as per : https://github.com/simplabs/ember-simple-auth/blob/master/guides/upgrade-to-v3.md
+       */
     },
 
     APP: {
@@ -49,11 +58,33 @@ module.exports = function(environment) {
     ENV.APP.LOG_VIEW_LOOKUPS = false;
 
     ENV.APP.rootElement = '#ember-testing';
+    ENV.APP.autoboot = false;
   }
 
   if (environment === 'production') {
+    // here you can enable a production-specific feature
+    //--------------------------------------------------------------------------
+    // Added for Pretzel :
     ENV.apiHost = '';
   }
+  /** If handsOnTableLicenseKey is defined in the environment of npm / ember,
+   * HandsOnTable is used for the spreadsheet-style tables in :
+   *  components/panel/paths-table.js
+   *  components/panel/upload/data-csv.js
+   *  components/table-brushed.js
+   * otherwise ember-contextual-table is used.
+   *
+   * In the last non-commercial HandsOnTable version 6.2.2, multiColumnSorting
+   * is present but didn't work with 'multiColumnSorting:true'; it is fine for
+   * all other features used.  To use this version, change "handsontable"
+   * version dependency in frontend/bower.json (later this will be in
+   * package.json)
+   *
+   * Also see : https://handsontable.com/blog/articles/2019/3/handsontable-drops-open-source-for-a-non-commercial-license
+   * https://handsontable.com/docs/7.4.2/tutorial-license-key.html
+   */
+  ENV.handsOnTableLicenseKey = process.env.handsOnTableLicenseKey;
+
 
   return ENV;
 };

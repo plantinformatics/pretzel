@@ -1,8 +1,11 @@
-import { breakPoint } from '../utils/breakPoint';
+
+import { chrData, cmNameAdd } from './utility-chromosome';
+import { breakPoint } from './breakPoint';
 
 /*----------------------------------------------------------------------------*/
 
 const trace_feature = 1;
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
@@ -118,6 +121,23 @@ function mapsOfFeature(store, oa, featureName) {
  * but not when called from paths-progressive.
  */
 function storeFeature(oa, flowsService, feature, f, axisID) {
+  /* Populate the draw-map data structures, which will mostly be progressively
+   * replaced by CPs based on store data.
+   */
+  if (! oa.z[axisID]) {
+    let block = f.get('blockId.content');
+    cmNameAdd(oa, block);
+    if (! oa.z[axisID] ) {
+      // this covers the required part of receivedBlock2()
+      oa.z[axisID] = chrData(block);
+      dLog('storeFeature', axisID, oa.z[axisID]);
+    }
+  }
+  storeFeature2(oa, flowsService, feature, f, axisID);
+}
+/** Same params as storeFeature().
+ */
+function storeFeature2(oa, flowsService, feature, f, axisID) {
   if (axisID && ! oa.z[axisID][feature]) {
     /* when called from paths-progressive, emulate the data structure created by
      * chrData() / receiveChr()
@@ -152,6 +172,42 @@ function storeFeature(oa, flowsService, feature, f, axisID) {
   oa.featureIndex[f.id] = f;
 }
 
+import { stacks, Stacked } from './stacks';
+
+/** called when z[axisID] does not contain [d].
+ * Lookup feature d, and add it to z[axisID].
+ * @param featureName name of feature (ID)
+ */
+function lookupFeature(oa, flowsService, z, axisID, featureName) {
+  let 
+    axis = Stacked.getAxis(axisID),
+  index = axis.blocks.findIndex((b) => b.axisName === axisID),
+  features = axis.blocks[index].block.get('features'),
+  feature = features.find((f) => f.get('name') === featureName);
+  storeFeature2(oa, flowsService, featureName, feature, axisID);
+  return feature;
+}
+
+
 /*----------------------------------------------------------------------------*/
 
-export { featureChrs,  name2Map,   chrMap, objectSet,  mapsOfFeature, storeFeature };
+/** @param features contains the data attributes of the features.
+ */
+function ensureBlockFeatures(blockId, features) {
+  // may also need ensureFeatureIndex().
+  let
+    /** oa.z could be passed in as a parameter, but this will be replaced anyway.  */
+    oa = stacks.oa,
+  za = oa.z[blockId];
+  /* if za has not been populated with features, it will have just .dataset
+   * and .scope, i.e. .length === 2 */
+  if (Object.keys(za).length == 2) {
+    dLog('ensureBlockFeatures()', blockId, za, features);
+    // add features to za.
+    features.forEach((f) => za[f.name] = f.value);
+  }
+}
+
+/*----------------------------------------------------------------------------*/
+
+export { featureChrs,  name2Map,   chrMap, objectSet,  mapsOfFeature, storeFeature, lookupFeature, ensureBlockFeatures };

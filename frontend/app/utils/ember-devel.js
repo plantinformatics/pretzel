@@ -4,6 +4,8 @@
 /* Various utility functions for development / debugging of Ember objects. */
 
 /** Find a parent with the nominated type. */
+import $ from 'jquery';
+
 function parentOfType(typeName) {
   let parent = this.parentView;
   while (parent && (parent._debugContainerKey !== typeName))
@@ -18,7 +20,7 @@ function parentOfType(typeName) {
  */
 function elt0(id) {
   /* first added in entry-expander.js, then entry-values.js */
-  return Ember.$("#"+id)[0];
+  return $("#"+id)[0];
 }
 
 /*----------------------------------------------------------------------------*/
@@ -34,4 +36,13 @@ function getAttrOrCP(object, attrName) {
 
 /*----------------------------------------------------------------------------*/
 
-export { parentOfType, elt0, getAttrOrCP };
+/** Display Ember Data store Object field values.  for devel debug - this is not a public API.
+ *  Before Ember V3 this was '_internalModel.__data'
+ */
+const _internalModel_data = '_internalModel._recordData.__data';
+
+
+
+/*----------------------------------------------------------------------------*/
+
+export { parentOfType, elt0, getAttrOrCP, _internalModel_data };

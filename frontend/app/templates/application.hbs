@@ -1,9 +1,10 @@
 {{!-- <div class="container"> --}}
 <div id="Page-Outer" class="" style="width:100%;">
   <div id="Page-Nav" style="width:100%">
-    {{app-header onLogin='transitionToLoginRoute'}}
+    {{app-header onLogin='transitionToLoginRoute' parsedOptions=parsedOptions}}
   </div>
   <div id="Page-Body" class="body" style="width:100%;">
     {{outlet}}
   </div>
 </div>
+

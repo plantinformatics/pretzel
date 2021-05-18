@@ -1,0 +1,24 @@
+<span id='axis-charts-span'>Axis-Charts</span>
+{{#each blockViews as |chartBlock|}}
+  {{draw/block-view axis=axis axisID=axisID block=chartBlock blocksData=blocksData}}
+{{/each}}
+
+{{#if blocks}}
+  Blocks {{blocks.length}} {{chartsArray.length}}
+  {{#each chartsArray as |chart|}}
+    {{axis-chart axis=axis axisID=axisID blocks=blocks blocksData=blocksData axisCharts=this chart=chart }}
+  {{/each}}
+  {{ resizeEffectHere }}
+  {{ drawContentEffect }}
+
+{{else}}
+<div class="Chart">
+  {{content-editable
+    value=selection
+    placeholder="Paste Chart Here"
+    class="chart pasteData"
+    type="text"}}
+
+</div>
+{{/if}}
+{{toggleChartTypeEffect}}

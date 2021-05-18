@@ -1,5 +1,3 @@
-import Ember from 'ember';
-
 import InAxis from './in-axis';
 
 const className = "ld", classNameSub = "ldRow";
@@ -32,7 +30,7 @@ function  groups(g, groupClassNames)
         .attr("class", I),
       resultG = gsa.merge(gs);
     return resultG;
-};
+}
 
 function ldOfFeature(featureName, i, g)
 {

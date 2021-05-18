@@ -1,8 +1,6 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import Mixin from '@ember/object/mixin';
+import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
-
-const { Mixin } = Ember;
 
 export default Mixin.create({
   // already injected in controllers/mapview
@@ -55,6 +53,16 @@ export default Mixin.create({
     let blockService = this.get('block');
     let setViewedTask = blockService.get('setViewedTask');
     let blockTask = setViewedTask.perform(id, viewed, /*unviewChildren*/true);
+  },
+  /** Set the .isViewed flag of blocks of the given blockIds */
+  setViewedOnly(blockIds, viewed) {
+    let store = this.get('store'),
+    blocks = blockIds.map((blockId) => store.peekRecord('block', blockId))
+      .filter((block) => block);
+    console.log("setViewed", blockIds, viewed, blocks);
+    this.beginPropertyChanges();
+    blocks.forEach((block) => block.set('isViewed', viewed));
+    this.endPropertyChanges();
   },
 
   getInitialBlocks() {

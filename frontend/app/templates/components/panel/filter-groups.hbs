@@ -1,20 +1,25 @@
-<span class="input-group-btn">
-  {{elem/button-base
-    icon="plus"
-    classColour="success"
-    onClick=(action "addFilterOrGroup")
-    disabled=data.length
-  }}
-</span>
-
 <ul>
   {{#each data as |filterGroup|}}
-    {{log 'filterGroup' filterGroup}}
+    {{!-- log 'filterGroup' filterGroup --}}
     {{panel/filter-group
       data=filterGroup
       changed=(action changed filterGroup)
       deleteFilterOrGroup=(action deleteFilterOrGroup filterGroup) }}
   {{/each}}
-
-
 </ul>
+
+<div>
+  {{#elem/button-base
+    icon="plus"
+    classColour="success"
+    onClick=(action "addFilterOrGroup")
+    disabled=maxFilterGroups
+    class='add'
+  }}
+    {{#ember-tooltip side="left" delay=500}}
+      Add a filter / grouping, to focus the dataset 
+      <a href="https://github.com/plantinformatics/pretzel-user-guide#selecting-a-dataset-and-block">explorer</a>
+      on your domain of interest.
+    {{/ember-tooltip}}
+  {{/elem/button-base}}
+</div>

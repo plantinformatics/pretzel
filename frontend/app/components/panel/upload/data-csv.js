@@ -1,64 +1,76 @@
-import UploadBase from './data-base'
+import { debounce, later as run_later } from '@ember/runloop';
+import { observer, computed } from '@ember/object';
+import { Promise } from 'rsvp';
+import { alias } from '@ember/object/computed';
+import { inject as service } from '@ember/service';
+
+const dLog = console.debug;
+
+import UploadBase from './data-base';
+
+import config from '../../../config/environment';
+
+/* global Handsontable */
+/* global FileReader */
 
 export default UploadBase.extend({
-  loadDatasets: function(id) {
-    var that = this;
-    let datasets = that.get('store').peekAll('Dataset').toArray();
-    if (datasets.length == 0) {
-      // in case datasets haven't been loaded in yet, load them and refresh the list of datasets
-      that.get('store').query('Dataset', {filter: {'include': 'blocks'}}).then(function(data) {
-        if (data.toArray().length > 0) {
-          that.loadDatasets();
-        }
-      });
-    }
+  apiServers: service(),
+  /** If server may be given, then lookup as is done in
+   * services/data/dataset.js using apiServers (this can be factored into
+   * components/service/api-server.js) */
+  store : alias('apiServers.primaryServer.store'),
 
-    //build dataset select
-    $("#dataset").html('');
-    $("#dataset").append($('<option>', {
-      text: 'new'
-    }));
-    $.each(datasets, function (i, item) {
-      $('#dataset').append($('<option>', {
-          text : item.get('name')
-      }));
-    });
-    if (id) {
-      $("#dataset").val(id);
-    }
-    $("#dataset").trigger('change');
 
-    //build parent select
-    $("#parent").html('');
-    $("#parent").append($('<option>', {
-      value: '',
-      text: 'None'
-    }));
-    $.each(datasets, function (i, item) {
-      $('#parent').append($('<option>', {
-          text : item.get('name')
-      }));
-    });
+  table: null,
+  selectedDataset: 'new',
+  newDatasetName: '',
+  nameWarning: null,
+  selectedParent: '',
+  dataType: 'linear',
+  namespace: '',
+
+  didInsertElement() {
+    this._super(...arguments);
   },
 
-  buildView: function() {
+  activeEffect : computed('active', function () {
+    let active = this.get('active');
+    if (active) {
+      this.shownBsTab();
+    }
+  }),
+  /** Called when user clicks on nav tab of Upload panel.
+   * action is now used in instead of listening for .on('shown.bs.tab'); the
+   * bs.tab events are probably no longer available since using ember-bootstrap
+   * because .active is set by ember when the route matches the <a href>, refn :
+   * https://guides.emberjs.com/release/routing/linking-between-routes/#toc_active-css-class
+   *
+   * bootstrap/js/tab.js : show() will return without doing
+   * $this.trigger(showEvent) if li.hasClass('active'); also note show() is only
+   * called if <nav.item> <a> has data-toggle="tab".
+   */
+  shownBsTab() {
+    /** Both .createTable() and .updateSettings() require a delay.
+     * Without this delay the table is not displayed because this element has
+     * 0px height & width :
+     *  div#hotable > div.ht_master.handsontable > div.wtHolder */
+    run_later(() => this.showTable(), 500);
+  },
+  showTable() {
+    // Ensure table is created when tab is shown
+    let table = this.get('table');
+    if (! table) {
+      this.createTable();
+    } else {
+      // trigger rerender when tab is shown
+      table.updateSettings({});
+    }
+  },
+
+  createTable() {
+    dLog('createTable');
     var that = this;
-
-    that.loadDatasets();
     $(function() {
-      $("#dataset").on('change', function() {
-        var selectedMap = $("#dataset").val();
-        if (selectedMap == 'new') {
-          $("#new_dataset_options").show();
-        } else {
-          $("#new_dataset_options").hide();
-        }
-        that.checkBlocks();
-      });
-      $('#parent').on('change', function() {
-        that.checkBlocks();
-      });
-
       let hotable = $("#hotable")[0];
       if (! hotable) {
         console.warn('upload/data-csv : #hotable not found', that);
@@ -68,7 +80,6 @@ export default UploadBase.extend({
         data: [['', '', '']],
         minRows: 20,
         rowHeaders: true,
-        colHeaders: true,
         columns: [
           {
             data: 'name',
@@ -99,234 +110,274 @@ export default UploadBase.extend({
         manualColumnMove: true,
         contextMenu: true,
         afterChange: function() {
-          that.checkBlocks();
+          that.checkData();
         },
         afterRemoveRow: function() {
-          that.checkBlocks();
-        }
+          that.checkData();
+        },
+        /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
+        licenseKey: config.handsOnTableLicenseKey
       });
       that.set('table', table);
 
-      $('.nav-tabs a[href="#left-panel-upload"]').on('shown.bs.tab', function(e) {
-        // trigger rerender when tab is shown
-        table.updateSettings({});
-      });
     });
-  }.on('didInsertElement'),
+  },
 
+  /** After file upload or table change, check for issues and display */
+  checkData() {
+    this.setError(null);
+    this.isDupName();
+    this.validateData().then(() => {
+      this.checkBlocks();
+    }, (err) => {
+      let table = this.get('table');
+      if(table) {
+        table.selectCell(err.r, err.c);
+      }
+      this.setError(err.msg);
+      this.scrollToTop();
+    });
+  },
+
+  /** If dataset or parent selected, compares blocks of data to those of parent
+   *  for duplicate or missing keys */
   checkBlocks() {
-    var that = this;
+    let that = this;
     let table = that.get('table');
-    var warning = null;
-    if (table != null) {
-      var maps = that.get('store').peekAll('Dataset').toArray();
-      if (maps) {
-        // find selected dataset
-        var selectedMap = $("#dataset").val();
-        var map = null;
+    let warning = null;
+    if (table !== null) {
+      let datasets = that.get('datasets');
+      if (datasets) {
+        let data = table.getSourceData();
+        let map = null;
         let parent = null;
-        maps.forEach(function(m) {
-          if (m.get('name') == selectedMap) {
-            map = m;
-          }
-        });
-        if (map) {
-          // find duplicate blocks
-          let blocks = {};
-          map.get('blocks').forEach(function(block) {
-            blocks[block.get('name')] = false;
-          });
-          let data = table.getSourceData();
-          var found = false;
-          data.forEach(function(row) {
-            if (row.block && row.block in blocks) {
-              blocks[row.block] = true;
-              found = true;
-            }
-          });
-          if (found) {
-            //build warning msg
-            var duplicates = [];
-            Object.keys(blocks).forEach(function(block) {
-              if (blocks[block]) {
-                duplicates.push(block);
-              }
-            });
-            warning = "The blocks "
-            + " (" + duplicates.join(', ') + ") already exist in the selected dataset and will be overwritten by the new data";
-          }
-
-          if (map.get('parent').get('name')) {
-            parent = map.get('parent');
-          }
-        } else if (selectedMap == 'new') {
-          let parent_id = $("#parent").val();
+        let selectedMap = that.get('selectedDataset');
+        if (selectedMap === 'new') {
+          // Find parent dataset
+          let parent_id = that.get('selectedParent');
           if (parent_id.length > 0) {
-            maps.forEach(function(m) {
-              if (m.get('name') == parent_id) {
-                parent = m;
+            parent = datasets.findBy('name', parent_id);
+          }
+        } else {
+          // Find selected dataset
+          map = datasets.findBy('name', selectedMap);
+          if (map) {
+            // Find duplicate blocks
+            // 1. Fetch mapped dataset blocks keyed by name
+            let blocks = map.get('blocks').reduce((result, block) => {
+              result[block.get('name')] = true;
+              return result;
+            }, {});
+            // 2. Find blocks duplicated in table data
+            let duplicates = data.reduce((result, row) => {
+              if (row.block) {
+                if (row.block in blocks) {
+                  result[row.block] = true;
+                }
               }
-            });
+              return result;
+            }, {});
+            if (Object.keys(duplicates).length > 0) {
+              warning =
+                'The blocks (' +
+                Object.keys(duplicates).join(', ') +
+                ') already exist in the selected dataset and will be overwritten by the new data';
+            }
+            // find parent dataset
+            if (map.get('parent').get('name')) {
+              parent = map.get('parent');
+            }
           }
         }
-
         // check if each block exists in the parent dataset
         if (parent) {
-          let blocks = {};
-          parent.get('blocks').forEach(function(b) {
-            blocks[b.get('name')] = true;
-          });
-          let data = table.getSourceData();
-          let missing = [];
-          data.forEach(function(row) {
+          // 1. Fetch parent blocks keyed by name
+          let parentBlocks = parent.get('blocks').reduce((result, block) => {
+            result[block.get('name')] = true;
+            return result;
+          }, {});
+          // 2. Find table data blocks missing from parent blocks
+          let missing = data.reduce((result, row) => {
             if (row.block) {
-              if (!blocks[row.block]) {
-                missing.push(row.block);
+              if (!(row.block in parentBlocks)) {
+                result[row.block] = true;
               }
             }
-          });
-          if (missing.length > 0) {
-            if (warning) {
-              warning += '\n\n\n';
-            } else {
-              warning = '';
-            }
-            warning += "The blocks"
-            + " (" + missing.join(', ') + ") do not exist in the parent dataset (" + parent.get('name') + ')';
+            return result;
+          }, {});
+          if (Object.keys(missing).length > 0) {
+            warning = warning ? warning + '\n\n\n' : '';
+            warning +=
+              'The blocks (' +
+              Object.keys(missing).join(', ') +
+              ') do not exist in the parent dataset (' +
+              parent.get('name') +
+              ')';
           }
         }
       }
     }
-    that.setProperties({
-      warningMessage: warning,
-      successMessage: null,
-      errorMessage: null
+    if (warning) {
+      that.setWarning(warning);
+      that.scrollToTop();
+    }
+  },
+
+  /** Returns a selected dataset name OR
+   *  Attempts to create a new dataset with entered name */
+  getDatasetId() {
+    var that = this;
+    let datasets = that.get('datasets');
+    return new Promise(function(resolve, reject) {
+      var selectedMap = that.get('selectDataset');
+      // If a selected dataset, can simply return it
+      // If no selectedMap, treat as default, 'new'
+      if (selectedMap && selectedMap !== 'new') {
+        resolve(selectedMap);
+      } else {
+        var newMap = that.get('newDatasetName');
+        // Check if duplicate name
+        let matched = datasets.findBy('name', newMap);
+        if(matched){
+          reject({ msg: `Dataset name '${newMap}' is already in use` });
+        } else {
+          let newDetails = {
+            name: newMap,
+            type: that.get('dataType'),
+            namespace: that.get('namespace'),
+            blocks: []
+          };
+          let parentId = that.get('selectedParent');
+          if (parentId && parentId.length > 0) {
+            newDetails.parentName = parentId;
+          }
+          let newDataset = that.get('store').createRecord('Dataset', newDetails);
+          newDataset.save().then(() => {
+            resolve(newDataset.id);
+          });
+        }
+      }
     });
   },
 
-  getDatasetId() {
+  /** Checks uploaded table data for any missing or invalid elements.
+   *  Returns same data, with 'val' cast as numeric */
+  validateData() {
     var that = this;
-    let datasets = that.get('store').peekAll('Dataset').toArray();
-    return new Ember.RSVP.Promise(function(resolve, reject) {
-      var selectedMap = $("#dataset").val();
-      if (selectedMap != 'new') {
-        resolve(selectedMap);
-      } else {
-        var newMap = $("#dataset_new").val();
-        //check if duplicate
-        datasets.forEach(function(dataset) {
-          if (dataset.get('name') == newMap) {
-            selectedMap = dataset.id;
-            resolve(selectedMap);
-          }
-        });
-        if (selectedMap == 'new') {
-          let parentId = $("#parent").val();
-          let parent = null;
-          if (parentId.length > 0) {
-            datasets.forEach(function(dataset) {
-              if (dataset.get('name') == parentId) {
-                parent = dataset;
-              }
-            });
-          }
-          let newDataset = that.get('store').createRecord('Dataset', {
-            name: newMap,
-            type: $("#type").val(),
-            blocks: []
-          });
-          if (parent != null) {
-            newDataset.set('parent', parent);
-          }
-          newDataset.save().then(function() {
-            that.loadDatasets(newDataset.id)
-            resolve(newDataset.id)
-          })
-        }
+    return new Promise(function(resolve, reject) {
+      let table = that.get('table');
+      if (table === null) {
+        resolve([]);
       }
-    })
-  },
-
-  validateData(sourceData) {
-    var that = this;
-    return new Ember.RSVP.Promise(function(resolve, reject) {
+      let sourceData = table.getSourceData();
       var validatedData = [];
-      var cols = {};
-      var table = that.get('table');
-      for (var i=0; i<table.countCols(); i++) {
-        var prop = table.colToProp(i);
-        cols[prop] = i;
-      }
-      for (var i=0; i<sourceData.length; i++) {
-        var row = sourceData[i];
-        if (row[cols['val']] || row[cols['name']] || row[cols['block']]) {
-          if (!row[cols['val']] && row[cols['val']] != 0) {
-            reject({r: i, c: cols['val'], msg: 'Position required'});
-            break;
+      sourceData.every((row, i) => {
+        if (row.val || row.name || row.block) {
+          if (!row.val && row.val !== 0) {
+            reject({r: i, c: 'val', msg: `Position required on row ${i+1}`});
+            return false;
           }
-          if (isNaN(row[cols['val']])) {
-            reject({r: i, c: cols['val'], msg: 'Position must be numeric'});
-            break;
+          if (isNaN(row.val)) {
+            reject({r: i, c: 'val', msg: `Position must be numeric on row ${i+1}`});
+            return false;
           }
-          if (!row[cols['name']]) {
-            reject({r: i, c: cols['name'], msg: 'Feature name required'});
-            break;
+          if (!row.name) {
+            reject({r: i, c: 'name', msg: `Feature name required on row ${i+1}`});
+            return false;
           }
-          if (!row[cols['block']]) {
-            reject({r: i, c: cols['block'], msg: 'Block required'});
-            break;
+          if (!row.block) {
+            reject({r: i, c: 'block', msg: `Block required on row ${i+1}`});
+            return false;
           }
           validatedData.push({
-            name: row[cols['name']],
-            block: row[cols['block']],
+            name: row.name,
+            block: row.block,
             // Make sure val is a number, not a string.
-            val: Number(row[cols['val']])
+            val: Number(row.val)
           });
+          return true;
         }
-      }
+      });
       resolve(validatedData);
     });
   },
 
+  /** Checks if entered dataset name is already taken in dataset list
+   *  Debounced call through observer */
+  isDupName: function() {
+    let selectedMap = this.get('selectedDataset');
+    if (selectedMap === 'new') {
+      let newMap = this.get('newDatasetName');
+      let datasets = this.get('datasets');
+      let matched = datasets.findBy('name', newMap);
+      if(matched){
+        this.set('nameWarning', `Dataset name '${newMap}' is already in use`);
+        return true;
+      }
+    }
+    this.set('nameWarning', null);
+    return false;
+  },
+  onNameChange: observer('newDatasetName', function() {
+    debounce(this, this.isDupName, 500);
+  }),
+  onSelectChange: observer('selectedDataset', 'selectedParent', function() {
+    this.clearMsgs();
+    this.isDupName();
+    this.checkBlocks();
+  }),
+
   actions: {
-    changeFilter: function(f) {
-      this.set('filter', f)
-    },
-    uploadBlocks() {
+    submitFile() {
       var that = this;
+      that.clearMsgs();
+      that.set('nameWarning', null);
       var table = that.get('table');
-      var dataset_id = null;
-      that.validateData(table.getData())
-      .then(function(features) {
+      // 1. Check data and get cleaned copy
+      that.validateData()
+      .then((features) => {
         if (features.length > 0) {
-          that.getDatasetId().then(function(map_id) {
-            var data = {dataset_id: map_id, features: features, namespace: $("#namespace").val()};
-            that.set('isProcessing', true);
-            that.get('auth').tableUpload(data)
-            .then(function(res){
-              that.setProperties({
-                isProcessing: false,
-                successMessage: res.status,
-                errorMessage: null,
-                warningMessage: null
-              })
-              $("body").animate({ scrollTop: 0 }, "slow");
-            }, function(err, status) {
-              that.setProperties({
-                isProcessing: false,
-                successMessage: null,
-                errorMessage: err.responseJSON.error.message,
-                warningMessage: null
-              })
-              console.log(err);
-              $("body").animate({ scrollTop: 0 }, "slow");
+          // 2. Get new or selected dataset name
+          that.getDatasetId().then((map_id) => {
+            var data = {
+              dataset_id: map_id,
+              parentName: that.get('selectedParent'),
+              features: features,
+              namespace: that.get('namespace'),
+            };
+            that.setProcessing();
+            that.scrollToTop();
+            // 3. Submit upload to api
+            that.get('auth').tableUpload(data, that.updateProgress.bind(that))
+            .then((res) => {
+              that.setSuccess(res.status);
+              that.scrollToTop();
+              // On complete, trigger dataset list reload
+              // through controller-level function
+              that.get('refreshDatasets')();
+            }, (err, status) => {
+              console.log(err, status);
+              that.setError(err.responseJSON.error.message);
+              that.scrollToTop();
+              if(that.get('selectedDataset') === 'new'){
+                // If upload failed and here, a new record for new dataset name
+                // has been created by getDatasetId() and this should be undone
+                that.get('store')
+                  .findRecord('Dataset', map_id, { reload: true })
+                  .then((rec) => rec.destroyRecord()
+                    .then(() => rec.unloadRecord())
+                  );
+              }
             });
+          }, (err) => {
+            that.setError(err.msg);
+            that.scrollToTop();
           });
         }
-      }, function(err) {
+      }, (err) => {
         table.selectCell(err.r, err.c);
-        that.set('errorMessage', err.msg);
-        $("body").animate({ scrollTop: 0 }, "slow");
+        that.setError(err.msg);
+        that.scrollToTop();
       });
     },
     clearTable() {
@@ -334,7 +385,11 @@ export default UploadBase.extend({
       var table = this.get('table');
       table.updateSettings({data:[]});
     },
-    uploadToTable(e) {
+    setFile(e) {
+      // First call base version of this overidden function
+      // which sets file property
+      this._super(e);
+      // Then proceed to populate display table from file parse
       let file = e.target.files[0];
       var table = this.get('table');
       if (file) {
@@ -346,26 +401,26 @@ export default UploadBase.extend({
           // csv or tsv?
           var csv = false;
           if (rows[0]) {
-            if (rows[0].split(',').length > 0) {
+            if (rows[0].split(',').length > 1) {
               csv = true;
             }
           }
           var cols = [];
-          for (var i=0; i<table.countCols(); i++) {
+          for (var i = 0; i < table.countCols(); i++) {
             var prop = table.colToProp(i);
             cols[i] = prop;
           }
           var data = [];
-          rows.forEach(function(row) {
-            var row_array = row.split(csv? ',': '\t');
+          rows.forEach((row) => {
+            var row_array = row.split(csv ? ',' : '\t');
             var row_obj = {};
-            for (var i=0; i<row_array.length; i++) {
+            for (var i = 0; i < row_array.length; i++) {
               row_obj[cols[i] || i] = row_array[i].trim();
             }
             data.push(row_obj);
           });
           table.loadData(data);
-        }
+        };
         reader.readAsText(file);
       }
     }

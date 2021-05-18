@@ -1,11 +1,23 @@
-import Ember from 'ember';
-
-const { inject: { service } } = Ember;
+import { throttle } from '@ember/runloop';
+import $ from 'jquery';
+import { inject as service } from '@ember/service';
 
 import { isEqual } from 'lodash/lang';
 
-import { Block, /*Stacked, Stack,*/ stacks /*, xScaleExtend, axisRedrawText*/, axisId2Name } from '../stacks';
-import { collateAdjacentAxes, log_adjAxes, log_adjAxes_a } from '../stacks-adj';
+import {
+  Block,
+  /*Stacked,
+  Stack,
+  */ stacks /*,
+  xScaleExtend,
+  axisRedrawText*/,
+  axisId2Name
+} from '../stacks';
+import {
+  collateAdjacentAxes,
+  log_adjAxes,
+  log_adjAxes_a
+} from '../stacks-adj';
 
 import { isOtherField } from '../field_names';
 import { breakPoint } from '../breakPoint';
@@ -13,6 +25,14 @@ import { breakPoint } from '../breakPoint';
 
 /* global require */
 /*global d3 */
+
+/* as an interim measure, use frontend path collation to join blocks on
+ * different servers, if &options=pathsCheck.
+ */
+const collatePaths4Multi = true;
+
+const dLog = console.debug;
+
 
 /*----------------------------------------------------------------------------*/
 /* created from functions split out of draw-map.js (commit 5db9073). */
@@ -34,10 +54,10 @@ let oa__;
 function oa_() { return oa__ || (oa__ = flowsService.get('oa')); }
 
 
-const trace_alias = 1;  // currently no trace at level 1.
+const trace_alias = 0;  // currently no trace at level 1.
 const trace_path = 0;
 /** enable trace of adjacency between axes, and stacks. */
-const trace_adj = 1;
+const trace_adj = 0;
 
 
 
@@ -45,7 +65,8 @@ const trace_adj = 1;
 
 function collateStacks()
 {
-  console.log('collateStacks', flowsService, flows);
+  if (trace_adj)
+    console.log('collateStacks', flowsService, flows);
   d3.keys(flows).forEach(function(flowName) {
     let flow = flows[flowName];
     if (flow.enabled && flow.collate)
@@ -64,7 +85,8 @@ function collateStacks()
  */
 function countPaths(svgRoot)
 {
-  console.log("countPaths", svgRoot);
+  if (trace_path)
+    console.log("countPaths", svgRoot);
   if (svgRoot)
   {
     let nPaths = 0;
@@ -73,7 +95,8 @@ function countPaths(svgRoot)
       if (flow.enabled && flow.collate)
       {
         nPaths += flow.pathData.length;
-        console.log("countPaths", flow.name, flow.pathData.length, nPaths);
+        if (trace_path)
+          console.log("countPaths", flow.name, flow.pathData.length, nPaths);
       }
     });
     svgRoot.classed("manyPaths", nPaths > 200);
@@ -87,7 +110,7 @@ function countPathsWithData(svgRoot)
     console.log("countPathsWithData", svgRoot);
   if (svgRoot)
   {
-    let paths = Ember.$("path[d!=''][d]"),
+    let paths = $("path[d!=''][d]"),
     nPaths = paths.length;
     svgRoot.classed("manyPaths", nPaths > 200);
     if (trace_path)
@@ -143,7 +166,7 @@ function ensureFeatureIndex(featureId, featureName, blockId)
       oa.featureIndex[featureId] = f;
     }
   }
-};
+}
 /** Lookup the featureName and blockId of featureId,
  * and call @see ensureFeatureIndex().
  * @param featureId
@@ -168,7 +191,7 @@ function featureLookupName(featureId)
     ensureFeatureIndex(featureId, featureName, blockId);
   }
   return featureName;
-};
+}
 
 
 
@@ -304,6 +327,7 @@ function collateFeatureClasses(featureScaffold)
 
 
 /**             is feature f1  in an alias group of a feature f0  in axis0  ?
+ * (name is from 'marker in Marker Alias Group' - can rename ma(rker) to f(eature)).
  * @return   the matching aliased feature f0  if only 1
  */
 function maInMaAG(axis0, axis1, f1 )
@@ -384,8 +408,14 @@ function collateStacks1()
     // Cross-product of the two adjacent stacks
     for (let a0i=0; a0i < fAxis_s0.length; a0i++) {
       let a0 = fAxis_s0[a0i], za0 = a0.z, a0Name = a0.axisName;
+      let a0Server = flowsService.id2ServerGet(a0Name);
+
       for (let a1i=0; a1i < fAxis_s1.length; a1i++) {
         let a1 = fAxis_s1[a1i], za1 = a1.z || /* mask error in stack.childAxisNames(true) */ oa.z[a1.axisName];
+        let a1Server = flowsService.id2ServerGet(a1.axisName);
+        if (collatePaths4Multi && a0Server === a1Server)
+          dLog(a0Name, a1.axisName, 'both on', a0Server.host);
+        else
         d3.keys(za0).forEach(function(feature0) {
           if (! isOtherField[feature0])
           {
@@ -418,7 +448,12 @@ function collateStacks1()
               aliasedM0,
             aliasedM1 = maInMaAG(a1, a0, feature0),
             directWithAliases = flowsService.flowConfig.directWithAliases,
-            showAsymmetricAliases = flowsService.flowConfig.viewOptions.showAsymmetricAliases,
+            /** showChartOptions defaults to false, so draw/flow-controls
+             * didRender() may not have been called and hence viewOptions not
+             * initialised.  In this case default showAsymmetricAliases is false.
+             */
+            viewOptions = flowsService.flowConfig.viewOptions,
+            showAsymmetricAliases = viewOptions && viewOptions.showAsymmetricAliases,
             isDirect = directWithAliases && oa.z[a1.axisName][feature0] !== undefined;
             let differentAlias;
             if (aliasedM1 || showAsymmetricAliases)
@@ -460,7 +495,7 @@ function collateStacks1()
       }
     }
   }
-  if (pathsUnique)
+  if (pathsUnique && trace_path)
     console.log("collateStacks", " featureAxes", d3.keys(featureAxes).length, ", pathsUnique", pathsUnique.length);
   if (trace_path > 4)
   {
@@ -598,6 +633,20 @@ function collateStacksA()
     {
       let za = oa.z[axisName];
       let adjs = adjAxes[axisName];
+
+      if (collatePaths4Multi && adjs && adjs.length) {
+        let a0Server = flowsService.id2ServerGet(axisName);
+        /* filter out of adjs[] those on the same server as axisName;
+         * that adjacency is handled by backend paths request. */
+        adjs = adjs.filter((blockId) => {
+          let a1Server = flowsService.id2ServerGet(blockId),
+          sameServer = a0Server === a1Server;
+          if (sameServer)
+            dLog(axisName, blockId, 'both on', a0Server.host);
+          return ! sameServer;
+        });
+      }
+
       if (adjs && adjs.length
           &&
           (adjs = adjs.filter(function(axisName1) {
@@ -744,8 +793,19 @@ function addPathsToCollation(blockA, blockB, paths)
      * featureIndex[], as current data structure is based on feature (feature)
      * names - that will change probably. */
     let
-      /** the order of p.featureA, p.featureB matches the alias order. */
-      aliasDirection = p.featureAObj.blockId === blockA,
+      getBlockId = p.featureAObj.get ?
+      ((o) => o.get('blockId.id'))
+      : ((o) => o.blockId),
+    aBlockId = getBlockId(p.featureAObj),
+    /** the order of p.featureA, p.featureB matches the alias order. */
+    aliasDirection = aBlockId === blockA;
+    if (! aliasDirection && (aBlockId !== blockB)) {
+      dLog('aliasDirection no match', aliasDirection, 
+           aBlockId, getBlockId(p.featureBObj),
+           blockA, blockB, p);
+    }
+      
+    let
     aliasFeatures = [p.featureA, p.featureB],
     /** the order of featureA and featureB matches the order of blockA and blockB,
      * i.e.  featureA is in blockA, and featureB is in blockB
@@ -795,9 +855,9 @@ function addPathsToCollation(blockA, blockB, paths)
  */
 function filterAndPathUpdateThrottled(isStream) {
   if (! isStream)
-	  filterAndPathUpdate();
+    filterAndPathUpdate();
   else
-	  Ember.run.throttle(filterAndPathUpdate, 200, false);
+    throttle(filterAndPathUpdate, 200, false);
 }
 function filterAndPathUpdate() {
   filterPaths();
@@ -826,7 +886,7 @@ function addPathsByReferenceToCollation(blockA, blockB, referenceGenome, maxDist
     if (! p.aliases.length)
     {
       // this API result should not contain directs, only aliases.
-      console.log('addPathsByReferenceToCollation empty aliases', p);
+      dLog('addPathsByReferenceToCollation empty aliases', p);
     }
     else
       storePath(blockA, blockB, featureName, fi, aliasGroupName);
@@ -943,7 +1003,7 @@ function filterPaths()
  */
 function collateFeatureMap()
 {
-  console.log("collateFeatureMap()");
+  dLog("collateFeatureMap()");
   let
     featureToAxis = flowsService.featureToAxis,
   featureAliasToAxis = flowsService.featureAliasToAxis;
