@@ -1,14 +1,44 @@
-import Ember from 'ember';
+import { getOwner } from '@ember/application';
+import { allSettled, Promise } from 'rsvp';
+import { A } from '@ember/array';
+import { computed, get } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import Evented from '@ember/object/evented';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
+import { debounce, throttle, later, next, once as run_once } from '@ember/runloop';
+import { task, timeout, didCancel } from 'ember-concurrency';
 
-const { inject: { service } } = Ember;
-import { throttle } from '@ember/runloop';
-
-import PathData from './path-data';
+import { isEqual } from 'lodash/lang';
 
 import AxisEvents from '../../utils/draw/axis-events';
 import { stacks, Stacked } from '../../utils/stacks';
-import { selectAxis, blockAdjKeyFn, blockAdjEltId, featureEltIdPrefix, featureNameClass, foregroundSelector, selectBlockAdj } from '../../utils/draw/stacksAxes';
-import { targetNPaths, pathsFilter } from '../../utils/draw/paths-filter';
+import {
+  selectAxis,
+  blockAdjKeyFn,
+  blockAdjEltId,
+  featureEltIdPrefix,
+  featureNameClass,
+  foregroundSelector,
+  selectBlockAdj
+} from '../../utils/draw/stacksAxes';
+import {
+  targetNPaths,
+  pathsFilter,
+  pathsFilterSmooth
+} from '../../utils/draw/paths-filter';
+import { intervalSize } from  '../../utils/interval-calcs';
+import {
+  pathsResultTypes,
+  pathsApiResultType,
+  flowNames,
+  resultBlockIds,
+  pathsOfFeature,
+  locationPairKeyFn
+} from '../../utils/paths-api';
+
+import { getTransform, transform2Css } from '../../utils/draw/direct-linear-transform';
+import { thenOrNow } from '../../utils/common/promises';
 
 /* global d3 */
 
@@ -20,7 +50,9 @@ import { targetNPaths, pathsFilter } from '../../utils/draw/paths-filter';
 const className = "blockAdj";
 const CompName = 'components/axis-ticks-selected';
 
-const trace_blockAdj = 1;
+const dLog = console.debug;
+const trace_blockAdj = 0;
+const trace_pathTransform = 2;
 
 /*----------------------------------------------------------------------------*/
 /* milliseconds duration of transitions in which alignment <path>-s between
@@ -46,59 +78,110 @@ function progressGroupsSelect(flowName) {
   return g;
 }
 
+
+
 /*----------------------------------------------------------------------------*/
 
 /**
  * @param blockAdj  [blockId0, blockId1]
  * @param drawMap for Evented - stack events
  */
-export default Ember.Component.extend(Ember.Evented, AxisEvents, {
+export default Component.extend(Evented, AxisEvents, {
   /** AxisEvents is used to receive axis stacking and resize events.
    *  Evented may be used in future to propagate events to components rendered within block-adj.
    */
   store: service(),
   pathsP : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
+  block: service('data/block'),
+  axisZoom : service('data/axis-zoom'),
+  queryParams: service('query-params'),
+  controls : service(),
+
 
   needs: ['component:draw/path-data'],
+
+  controlsView : alias('controls.controls.view'),
 
   /** counters to debounce CFs */
   heightChanged : 0,
   axisStackChangedCount : 0,
 
-  blockAdjId : Ember.computed.alias('blockAdj.blockAdjId'),
+  /** The DB IDs of the blocks which this block-adj aligns.
+      * array[2] of blockId
+      */
+  blockAdjId : alias('blockAdj.blockAdjId'),
+  // blockAdj.id is the same values in a string form, separated by '_'
 /*  ('blockAdj', function () {
     let blockAdj = this.get('blockAdj'),
     blockAdjId = blockAdj.get('blockAdjId');
-    console.log(blockAdj, 'blockAdjId', blockAdjId);
+    dLog(blockAdj, 'blockAdjId', blockAdjId);
     return blockAdjId;
   }),
 */
-  axes :  Ember.computed.alias('blockAdj.axes'),
+  axes :  alias('blockAdj.axes'),
 
-  pathsDensityParams : Ember.computed.alias('pathsP.pathsDensityParams'),
-  pathsResultLength : Ember.computed(
-    'blockAdj.pathsResult.[]', 'paths', 'pathsAliasesResultLength', 'pathsDensityParams',
+  /** comment in services/data/block.js explains context of urlOptions
+   */
+  parsedOptions : alias('queryParams.urlOptions'),
+
+  pathsDensityParams : alias('pathsP.pathsDensityParams'),
+  isComplete() { return this.blockAdj.isComplete(); },
+  pathsResultLength : computed(
+    'blockAdj.pathsResultLengthThrottled', 'pathsAliasesResultLength',
+    'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
-    /** Trigger paths request - side-effect. In the streaming case, result when
-     * the stream ends is [], so paths{,Aliases}Result are used instead of the
-     * result of this promise.
-     */
-    let pathsP = this.get('paths'),
-    length = this.drawCurrent(pathsResultTypes.direct),
-    pathsAliasesLength = this.get('pathsAliasesResultLength');
-    return length;
+      /** this CP may be evaluated before the first didRender(), which does
+       * drawGroup{Container,}(); waiting for next render so that drawCurrent()
+       * has <g> to render into.
+       */
+      next(() => {
+        /** it is possible (currently) for this CP to be evaluated after one end
+         * (block) of a block-adj to become un-viewed and before the block-adj
+         * is destroyed.  This check detects and handles that case.
+         */
+        if (this.isComplete()) {
+          let
+          length = this.drawCurrent(pathsResultTypes.direct),
+          pathsAliasesLength = this.get('pathsAliasesResultLength');
+          // return length;
+        }
+      });
   }),
   /** Used in paths{,Aliases}ResultLength().
    */
   drawCurrent : function(prType) {
     let
-    /** e.g. 'pathsResult' or 'pathsAliasesResult' */
-    pathsResult = this.get('blockAdj.' + prType.fieldName),
+    /** e.g. 'pathsResult' or 'pathsAliasesResult'
+     * Use the filtered form of the API result.
+     */
+    pathsResult = this.get('blockAdj.' + prType.fieldName + 'Filtered'),
     fnName = prType.fieldName + 'Length',
     length = pathsResult && pathsResult.length;
-    console.log(fnName, this, length);
+    dLog('drawCurrent', fnName, this, length);
     if (length) {
+      this.get('drawCurrentTask').perform(prType, pathsResult)
+        .catch((error) => {
+          // Recognise if the given task error is a TaskCancelation.
+          if (! didCancel(error)) {
+            dLog('drawCurrentTask taskInstance.catch', this.blockAdjId, error);
+            throw error;
+          }
+        });
+    } else if (! this.get('blockAdj.receivedAll')[prType.typeName]) {
+      /** drawCurrent() will do this if more paths required.
+       *  If 0 paths then request paths.  */
+      this.incrementProperty('blockAdj.pathsRequestCount');
+    }
+
+    // length returned by paths{,Aliases}ResultLength is currently just used in logging, not functional.
+    return length;
+  },
+  /**
+   * @return promise of completion of rendering and transitions
+   */
+  drawCurrentTask : task(function * (prType, pathsResult) {
+      let promise;
       let pathsDensityParams = this.get('pathsDensityParams'),
       axes = this.get('axes'),
       // axesDomains = this.get('blockAdj.axesDomains'),
@@ -108,75 +191,269 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .reduce(function (bd, bb) {
           // if b.axis.axis1d.get('zoomed') is false, then domain will be undefined.
           // also b.axis.axis1d can be undefined, probably because of new axis, in which case it won't be zoomed yet (except when we add zoom domain to the URL).
-          bb.forEach(function (b) { bd[b.axisName] = b.axis.axis1d && b.axis.axis1d.get('domain'); }); return bd; }, {}),
+          // if axis is deleted, blocks are un-viewed, i.e. b.block.get('isViewed') is false, and b.axis === undefined
+          bb.forEach(function (b) { bd[b.axisName] = b.axis && b.axis.axis1d && b.axis.axis1d.get('domain'); }); return bd; }, {}),
       axesRanges = axes.map((a) => a.yRange()),
       axisLengthPx = Math.max.apply(null, axesRanges),
       nPaths = targetNPaths(pathsDensityParams, axisLengthPx);
+      // handle b.axis === undefined (block has been un-viewed)
+      if (Object.values(blockDomains).indexOf(undefined) !== -1) {
+        return Promise.resolve();
+      }
       if (pathsResult.length < nPaths) {
-        /* a change of path density is not strictly a change of zoom, but is
-         * close, and both require a new request. */
-        this.incrementProperty('blockAdj.zoomCounter');
+        /* to satisfy the required nPaths, trigger a new request. */
+        this.incrementProperty('blockAdj.pathsRequestCount');
       } else if (pathsResult.length > nPaths) {
-        // later may pass prType as a param to pathsFilter().
-        pathsResult = pathsFilter(prType, pathsResult, blockDomains, nPaths);
+        /** Filtering should be smooth, so filtering paths for render keeps the
+         * currently-drawn paths where possible, instead of choosing paths for
+         * each render independently.
+         * When zooming in, retain the paths which are currently drawn and add
+         * more as needed; when zooming out, filter the current paths according
+         * to the reduction of zoomedDomain, and add new paths in the region
+         * (previousDomain - new domain), to meet the desired number.
+         */
+        let
+          scope = this.get('scope' + prType.typeName),
+        currentScope = {blockDomains, pathsDensityParams, nPaths};
+        if (! scope) {
+          /* first call, scope is not yet defined, there are no existing paths,
+           * so use pathsFilter() instead of pathsFilterSmooth() */
+          pathsResult = pathsFilter(prType, pathsResult, blockDomains, nPaths);
+          scope = this.set('scope' + prType.typeName, A());
+          scope[0] = currentScope;
+          let shown = this.set('shown' + prType.typeName, new Set());
+          pathsResult.forEach((p) => shown.add(p));
+        } else {
+          let shown = this.get('shown' + prType.typeName);
+          scope[1] = currentScope;
+          pathsResult = pathsFilterSmooth(prType, pathsResult, scope, shown);
+          scope.removeAt(0);
+        }
       }
       /* The calling CPs paths{,Aliases}ResultLength() are called before didRender
        * and hence before drawGroup{,Container}().   .draw() uses the <g>-s they
-       * maintain, so defer until end of run loop.
+       * maintain; so may need defer until end of run loop, but it is likely a
+       * later call to this function will be after those are created.
        */
-      Ember.run.later( () => 
-                       this.draw(/*pathsApiResultType*/ prType, pathsResult)
-                     );
-    }
+    promise = this.draw(/*pathsApiResultType*/ prType, pathsResult);
+    return promise;
+  }).keepLatest(),
 
-    return length;
-  },
-  pathsAliasesResultLength : Ember.computed(
-    'blockAdj.pathsAliasesResult.[]', 'paths', 'pathsDensityParams',
+  pathsAliasesResultLength : computed(
+    'blockAdj.pathsAliasesResultLengthThrottled', 'paths.alias.[]',
+    'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
-    /* pathsAliasesResult is in a different form to pathsResult; passing it to
-     * draw() requires some mapping, which is abstracted in 
-     * pathsResultType e.g. pathsResultTypes.{direct,alias}
-     */
-    pathsApiResultType.flowName = pathsResultTypes.alias.flowName;
-    pathsApiResultType.fieldName = pathsResultTypes.alias.fieldName;
+      /** the comments in pathsResultLength re. next and isComplete apply here also. */
+      next(() => {
+        if (this.isComplete()) {
+          /* pathsAliasesResult is in a different form to pathsResult; passing it to
+           * draw() requires some mapping, which is abstracted in 
+           * pathsResultType e.g. pathsResultTypes.{direct,alias}
+           */
+          pathsApiResultType.flowName = pathsResultTypes.alias.flowName;
+          pathsApiResultType.typeName ||= pathsResultTypes.alias.flowName;
+          pathsApiResultType.fieldName = pathsResultTypes.alias.fieldName;
 
-    let pathsP = this.get('paths'),
-    pathsAliasesLength = this.drawCurrent(pathsApiResultType /*pathsResultTypes.alias*/);
+          let
+          pathsAliasesLength = this.drawCurrent(pathsApiResultType /*pathsResultTypes.alias*/);
 
-    return pathsAliasesLength;
+          // return pathsAliasesLength;
+        }
+      });
   }),
-  paths : Ember.computed('blockAdj', 'blockAdj.zoomCounter', function () {
+  paths : alias('blockAdj.paths'),
+  /** Trigger paths request - side-effect. In the streaming case, result when
+   * the stream ends is [], so paths{,Aliases}Result are used instead of the
+   * result of this promise.
+   */
+  pathsRequest : computed('blockAdj.pathsResultLengthDebounced', function () {
+    let pathsP = this.get('blockAdj.paths');
+    dLog('blockAdj.paths', pathsP);
+    function thenLength(p) { return ! p ? 0 : thenOrNow(p, (a) => get(a, 'length')); }
+    let lengthSumP = thenLength(pathsP.direct) + thenLength(pathsP.alias);
+    return lengthSumP;
+  }),
+  /** Draw all new paths received - unfiltered by pathsDensityParams.
+   * The above paths{,Aliases}ResultLength(), which are currently used, ensure
+   * the required renders, so this can be dropped if there is not likely to be a
+   * need for showing unfiltered paths.
+   */
+  pathsEffect : computed(
+    // the debugger will evaluate this CP if this dependency is enabled.
+    // 'blockAdj.paths.{direct,alias}.[]',
+    function () {
     /** in the case of pathsViaStream, this promise will resolve with [] instead of the result -
      * blockAdj.pathsResult is passed to draw() instead.  */
     let pathsP = this.get('blockAdj.paths');
-    console.log('blockAdj.paths', pathsP);
-      if (false)
-    pathsP.then(result => {
-      console.log('blockAdj.paths', result);
-    flowNames.forEach(flowName => {
-      if (result[flowName])
-        result[flowName].then((paths) => {
-          /** pathsApiResultType could be identified as
-           * pathsResultTypes.pathsApi; it is an input format which may be used
-           * in multiple flows, so possibly .flowName should be separate from
-           * pathsResultTypes[].
-           */
-          let pathsResultType = paths.length && paths[0].featureAObj ?
-            pathsApiResultType /*pathsResultTypes.pathsApi*/ : pathsResultTypes[flowName];
-          console.log('blockAdj.paths length', paths && paths.length, pathsResultType);
-          if (paths && paths.length)
-            throttle(this, this.draw, pathsResultType, paths, 200, false);
-        });
+    dLog('blockAdj.paths', pathsP);
+    thenOrNow(pathsP, (result) => {
+      dLog('blockAdj.paths', result);
+      flowNames.forEach(flowName => {
+        if (result[flowName])
+          thenOrNow(result[flowName], (paths) => {
+            /** pathsApiResultType could be identified as
+             * pathsResultTypes.pathsApi; it is an input format which may be used
+             * in multiple flows, so possibly .flowName should be separate from
+             * pathsResultTypes[].
+             */
+            let pathsResultType = paths.length && paths[0].featureAObj ?
+              pathsApiResultType /*pathsResultTypes.pathsApi*/ : pathsResultTypes[flowName];
+            dLog('blockAdj.paths length', paths && paths.length, pathsResultType);
+            if (paths && paths.length)
+              throttle(this, this.draw, pathsResultType, paths, this.get('controlsView.throttleTime'), false);
+          });
+      });
     });
-    });
+
+    if (false) {
     /** .direct and.alias are defined by the result of pathsP, not by pathsP, so
      * this would need to change; no purpose for this yet. */
     let resultP = (pathsP.direct && pathsP.alias) ?
-    Ember.RSVP.allSettled([pathsP.direct, pathsP.alias])
+    allSettled([pathsP.direct, pathsP.alias])
       : (pathsP.direct || pathsP.alias);
+    }
     return pathsP;
   }),
+
+  /*--------------------------------------------------------------------------*/
+
+  getAxes() {
+    let
+    /* factor getAxes() out of blockAdj.axes,  getAxis() out of block, separating
+     * from .referenceBlock. */
+    axesP = stacks.axesP,
+    axes = this.get('blockAdj.blocks').map((block) => axesP[block.get('id')]);
+    /** this is equivalent to the above lookup via axesP, but this is causing delay - slows down to throttled time. */
+    // axes = this.get('axes');
+    return axes;
+  },
+
+  /** @return scales of blocks's axes, parallel to .blocks[]
+   */
+  previousScales: computed(function () {
+    /** no dependencies, called once when first used. */ 
+    return {};
+  }),
+  scaleInvert(y) {
+    let r = y.range();
+    y.range([r[1], r[0]]);
+    return y;
+  },
+
+  zoomedDomainsEffect : computed(
+    'blockAdj.axes1d.{0,1}.zoomedDomain.{0,1}',
+    'blockAdj.zoomedDomains.{0,1}',
+    function () {
+      /** currently depend on 'blockAdj.zoomedDomains.{0,1}', and clear the
+       * transform when isEqual(domains, throttled); could instead do that in updatePathsPosition().
+       */
+      /** if no zoomedDomain then use axis1d .blocksDomain, as in 
+       * axis-1d:domain(), but that depends on -Throttled
+       */
+      let
+      axes1d = this.get('blockAdj.axes1d'),
+      domains = axes1d.map(
+        (axis1d) => axis1d.get('zoomedDomain') || axis1d.get('blocksDomain')),
+      throttled = axes1d.mapBy('domain');
+      if (trace_pathTransform > 1)
+        dLog('zoomedDomainsEffect', domains[0], domains[1], throttled[0], throttled[1]);
+      let css, vc, transformX;
+      let axes = this.getAxes();
+      if (isEqual(domains, throttled)) {
+        let
+        previousScales = this.get('previousScales');
+        axes.forEach((a) => previousScales[a.axisName] = /*this.scaleInvert()*/a.y.copy());
+      } else {
+        let
+        /** previous scales of the axes, parallel to blocks[] and axes[].  */
+        scales = axes.map((a) => this.get('previousScales')[a.axisName]),
+
+        /** 2 ways to calculate from & to, which should be equivalent :
+         * 1. from = whole range; to = the range of the old domain at the new scale
+         * 2. to = whole range; from = the range of the new domain at the old scale
+         */
+        /** also need to take into account stacking and flipped : axes[*].{flipped, position, portion} */
+        /* method 1. */
+        /** whole range */
+        from = axes.map((a) => a.y.range().map((r) => a.yRange() - r)),
+        /** current pixel range of throttled  */
+        to = /*from; from =*/ throttled.map((d, i) => d.map((y) => (axes[i].yRange() - axes[i].y(y))) );
+        
+        if (/* method 2. */ true) {
+          to = from;
+          from = domains.map((d, i) => d.map((y) => (axes[i].yRange() - scales[i](y))) );
+        }
+        if (trace_pathTransform > 1)
+          dLog('zoomedDomainsEffect', from[0], from[1], to[0], to[1]);
+
+
+        let
+        oa = this.get('drawMap.oa'),
+        /** scaled x value of each axis, indexed by axisIDs */
+        o = oa.o,
+        blockIds = axes1d.mapBy('referenceBlock.id'),
+        /**  index of the axis which has zoomed since throttled time.  */
+        zoomedIndex = domains.findIndex((d, i) => ! isEqual(d, throttled[i])),
+        /** horizontal position of each axis. */
+        x = blockIds.map((id) => o[id]),
+        /** from, to are just the y values.  fromXY, toXY have the x added, in {x, y} format. */
+        fromXY = this.yIntervals2XY(from, x, zoomedIndex),
+        toXY = this.yIntervals2XY(to, x, zoomedIndex),
+        H = getTransform(fromXY, toXY);
+        css = transform2Css(H);
+        if (trace_pathTransform > 1)
+          dLog('zoomedDomainsEffect', x, fromXY, toXY, H, css, o);
+
+        transformX = x[zoomedIndex];
+
+        vc = oa.vc;
+      }
+
+      let blockAdjId = this.get('blockAdjId');
+      let dpS = progressGroupsSelect(undefined);
+      let baS = selectBlockAdj(dpS, blockAdjId);
+      /** d3 v3 doesn't recognise matrix3d(), only matrix(); can use d3 .attr when update d3 to v4. */
+      // baS.attr('transform', css.transform);
+      if (! baS.empty()) {
+        let nodes = baS.nodes();
+        if (! css) {
+          if (trace_pathTransform)
+            dLog('zoomedDomainsEffect', nodes[0], nodes);
+        }
+        let styleTransform = css ? ('transform:' + css.transform) : '';
+        nodes.forEach((n) => n.setAttribute('style', styleTransform));
+      }
+      /** 
+       * css['transform-origin'] is just '0 0'
+       */
+      let transformOrigin = css && css['transform-origin'];
+      /* position of top-left corner of svg, which is within div#holder
+       * Seems not needed for transform-origin; may need yRange.
+       let holder = d3.select('#holder').node();
+       if (holder) {
+       // e.g. '400 23'
+       transformOrigin = '' + holder.offsetLeft + ' ' + holder.offsetTop;
+       }
+      */
+      let
+      transformY = (vc ? vc.axisTitleLayout.height : 0),
+      verticalTitle = vc && vc.axisTitleLayout && vc.axisTitleLayout.verticalTitle,
+      yRange = (vc ? vc.yRange : 0),
+      shiftLeft = verticalTitle ? 20 : 0,
+      margin = {x : 0/*30 + 5*/, y : 0/*5*/};
+      transformOrigin = '' + (shiftLeft + margin.x + (transformX||0)) + ' ' + (margin.y + transformY /*+ yRange*/);
+      baS.attr('transform-origin', transformOrigin);
+
+    }),
+  /** convert 2 y intervals to an array of 4 {x, y}
+   * Express x relative to the axis which is zoomed.
+   * @param intervals[i][j]	i is axis index [0..1], j is interval end index [0..1]
+   * @param x[i]	i is axis index [0..1]
+   * @param zoomedIndex index of the axis which has zoomed since throttled time.
+   */
+  yIntervals2XY(intervals, x, zoomedIndex) {
+    return intervals.map((yrange, i) => yrange.map((y, j) => ({y, x: (i === zoomedIndex)? 0 : x[i] - x[zoomedIndex]}))).flat();
+  },
 
   /*--------------------------------------------------------------------------*/
 
@@ -196,7 +473,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   willDestroyElement() {
     // didDestroyElement() would also be OK
-    console.log('willDestroyElement', this.get('blockAdjId'));
+    dLog('willDestroyElement', this.get('blockAdjId'));
     let foreground = d3.selectAll(foregroundSelector);
     let pS = foreground
       // delete both g.direct and g.alias
@@ -213,7 +490,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   connectFlowControl(flowName, g) {
     let flowsService = this.get('flowsService'),
     flows = flowsService.get('flows');
-    console.log('connectFlowControl', flows, flows[flowName].g, g);
+    dLog('connectFlowControl', flows, flows[flowName].g, g);
     flows[flowName].g = g;
   },
 
@@ -238,9 +515,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .enter()
       .append('g')
       .attr('class', datumIdent)
-      .each(function (d, i, g) { console.log(this); me.connectFlowControl(d, d3.select(this)); } ),
+      .each(function (d, i, g) { dLog(this); me.connectFlowControl(d, d3.select(this)); } ),
     pM = pS.merge(pA);
-    console.log('drawGroupContainer', pS.nodes(), pS.node());
+    if (trace_blockAdj)
+      dLog('drawGroupContainer', pS.nodes(), pS.node());
     return pM;
   },
   /** Render the <g.blockAdj> which contains the <g><path>
@@ -265,10 +543,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .attr('id', blockAdjEltId)
         .attr('class', className + ' ' + groupAddedClass)
       ;
-      console.log(gA.nodes(), gA.node(), this);
+      dLog(gA.nodes(), gA.node(), this);
     }
     else if (! add && ! gS.empty()) {
-      console.log('drawGroup remove', gS.nodes(), gS.node(), this);
+      dLog('drawGroup remove', gS.nodes(), gS.node(), this);
       gS.remove();
     }
       
@@ -278,11 +556,21 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   /**
    * @param pathsResultType e.g. pathsResultTypes.{Direct,Aliases}
    * @param paths grouped by features
+   * @return promise of completion of rendering and transitions
    */
   draw (pathsResultType, featurePaths) {
+    let promise;
     if (featurePaths.length === 0)
-      return;
-    pathsResultType.typeCheck(featurePaths[0]);
+      return Promise.resolve();
+    pathsResultType.typeCheck(featurePaths[0], true);
+    let store = this.get('store');
+    /* Enables (via ?options=pathRemoveTransition), animation of <path> removal
+     * which is useful to verify paths re-filter.
+     * If it was enabled in the general release, the transition can include
+     * d=pathU so that paths removed at the edge, when zooming in, move over the
+     * edge.
+     */
+    let pathRemoveTransition = this.get('parsedOptions.pathRemoveTransition');
 
     /** blockAdjId is also contained in the result featurePaths
      */
@@ -306,7 +594,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       }
       let ok = match(false) || match(true);
       if (! ok)
-        console.log('draw verify', blockAdjId, blockIds);
+        dLog('draw verify', blockAdjId, blockIds);
     }
 
     // let axisApi = this.get('drawMap.oa.axisApi');
@@ -314,22 +602,29 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       blockAdjId.forEach(function (blockId) {
         let axis = Stacked.getAxis(blockId);
         let aS = selectAxis(axis);
-        console.log(blockId, aS.node());
+        dLog(blockId, aS.node());
       });
     }
 
     let dpS = progressGroupsSelect(pathsResultType.flowName);
 
     let baS = selectBlockAdj(dpS, blockAdjId);
-    console.log(baS.nodes(), baS.node());
+    dLog(baS.nodes(), baS.node());
     
-    if (baS.empty())
-      console.log('draw', blockAdjId);
+    if (baS.empty()) {
+      dLog('draw', blockAdjId);
+      promise = Promise.resolve();
+    }
     else
     {
       let gS = baS.selectAll("g." + className)
         .data(featurePaths, pathsResultType.featurePathKeyFn);
-      gS.exit().remove();
+      if (pathRemoveTransition) {
+        gS.exit()
+          .call(gPathDashAndRemove);
+      } else {
+        gS.exit().remove();
+      }
 
       let gA = gS.enter()
         .append('g')
@@ -343,34 +638,52 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
 
       let gSA = gS.merge(gA),
-      owner = Ember.getOwner(this),
+      owner = getOwner(this),
       pS = gSA
         .selectAll("path." + className)
-        .data(pathsOfFeature(pathsResultType, owner), locationPairKeyFn),
+        .data(pathsOfFeature(store, pathsResultType, owner), locationPairKeyFn),
       pSE = pS.enter()
         .append("path")
         .attr("class", className)
       ;
       let pSA = pS.merge(pSE);
-      pSA
-        .transition().duration(pathTransitionTime)
-        .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
+
+      let pathPosition = this.get('pathPosition');
+      promise =
+      /** existing paths (pS) are transitioned from their previous position;
+       * the previous position of added paths is not easily available so they
+       * are drawn without transition at their new position; this is done after
+       * the transition of the paths already shown, so that the transformation
+       * is consistent at any point in time, otherwise the movement is
+       * confusing.
+       */
+      pathPosition.perform(pS)
+        .then(/*pathPosition.perform(pSE)*/ () => pSE.call(this.attrD_pathU))
+        .catch((error) => {
+          // Recognise if the given task error is a TaskCancelation.
+          if (! didCancel(error)) {
+            dLog('draw pathPosition New taskInstance.catch', this.blockAdjId, error);
+            throw error;
+          }
+        })
+        ;//.then(() => { dLog('draw pathPosition then', pS.size(), pSE.size());  });
+
       // setupMouseHover(pSE);
       pS.exit().remove();
     }
-
+    return promise;
   },
 
   /** Update the "d" attribute of the <path>-s.  */
   updatePathsPosition() {
     // based on draw().
     let dpS = progressGroupsSelect(undefined);
-    let blockAdjId = this.get('blockAdjId');
+    let blockAdjId = this.get('blockAdjId') || this.blockAdj.blockAdjId;
     if (trace_blockAdj > 1)
       blockAdjId.forEach(function (blockId) {
         let axis = Stacked.getAxis(blockId);
         let y = stacks.oa.y[axis.axisName];
-        console.log('updatePathsPosition axis', axis.axisName, y.domain(), axis, y.domain());
+        dLog('updatePathsPosition axis', axis.axisName, y.domain(), axis, y.domain());
       });
     let baS = selectBlockAdj(dpS, blockAdjId);
     // let groupAddedClass = featurePaths[0]._id.name;
@@ -380,47 +693,171 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .selectAll("path." + className);
     // Remove <path>s whose data refers to a block which has been removed from its axis.
     // later the block-adj will be removed, which will remove all contents.
-    let removed = pS
+   let removed = pS
       .filter(function (d) { return ! d.blocksHaveAxes(); });
     if (! removed.empty())
-        console.log('updatePathsPosition removed', removed.nodes(), removed.node());
+        dLog('updatePathsPosition removed', removed.nodes(), removed.node());
     removed.remove();
     pS = gS
       .selectAll("path." + className)
       // don't call pathU() if axes are gone.
       .filter(function (d) { return d.blocksHaveAxes(); });
-    if (! pS.empty())
-        console.log('updatePathsPosition before update pS', pS.nodes(), pS.node());
+    if (! pS.empty() && trace_blockAdj)
+      dLog('updatePathsPosition before update pS', (trace_blockAdj > 1) ? pS.nodes() : pS.size(), pS.node());
+    this.get('pathPosition').perform(pS)
+        .catch((error) => {
+          // Recognise if the given task error is a TaskCancelation.
+          if (! didCancel(error)) {
+            dLog('updatePathsPosition (pathPosition) New taskInstance.catch', this.blockAdjId, error);
+            throw error;
+          }
+        })
+        .then(() => { dLog('updatePathsPosition (pathPosition) then'); });
+  },
+
+  /** Calculate the path value.
+   * @usage d3.selection ... .call(this.attrD_pathU)
+   * @param pathSelection	d3 selection or transition of <path>
+   */
+  attrD_pathU(pathSelection) {
+      // pathU() is temporarily a function, will revert to a computed function, as commented in path().
+      pathSelection.attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
+  },
+  /** Update position of the paths indicated by the selection.
+   * Making this a task with .drop() enables avoiding conflicting transitions.
+   * @param pathSelection
+   * @return transitionEnd  promise of completion of render transition
+   */
+  pathPosition: task(function * (pathSelection) {
+    dLog('pathPosition',  pathSelection.size());
+    /** if the selection is empty, there's no point in waiting for the
+     * transition, and also it looks like transition .on('end') doesn't trigger
+     * when the selection is empty.
+     */
+    if (! pathSelection.size()) {
+      return Promise.resolve();
+    }
+    /* Try selectionToTransition() instead.
+    let throttleTime = this.get('controlsView.throttleTime'),
+        pathTransitionTimeVar = throttleTime ? throttleTime * 1 : pathTransitionTime;
+	*/
+    let
     /* now that paths are within <g.block-adj>, path position can be altered
      * during dragging by updating a skew transform of <g.block-adj>, instead of
      * repeatedly recalculating pathU.
      */
-    pS
-      .transition().duration(pathTransitionTime)
-      // pathU() is temporarily a function, will revert to a computed function, as commented in path().
-      .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
+      transition = 
+      this.get('axisZoom').selectionToTransition(pathSelection)
+      // .transition().duration(pathTransitionTimeVar)
+      .call(this.attrD_pathU)
+    ;
+
+    let transitionEnd;
+    if (transition !== pathSelection) {
+    /** in a later version of d3, can use 
+     * transitionEnd = transition.end(); ... return transitionEnd;
+     * instead of new Promise(...)
+     * The caller is interested in avoiding overlapped transitions, so
+     * resolve/reject are treated the same.
+     */
+     transitionEnd =  new Promise(function(resolve, reject){
+       transition
+         .on('end', (d) => resolve(d))
+         .on('interrupt', (d, i, g) => {
+           resolve(d);
+           if (trace_blockAdj > 2) {
+             dLog('interrupt', d, i, g); }; }); });  // also 'cancel', when version update
+    if (trace_blockAdj) {
+      dLog('pathPosition', pathSelection.node());
+      transitionEnd.then(() => dLog('pathPosition end', pathSelection.node()));
+    }
+    }
+    else
+      /* no transition to wait for. */
+    // try not waiting for completion of transition, combined with throttle on the caller.
+    transitionEnd = Promise.resolve();
+
+    return transitionEnd;
+  }).keepLatest(),
+
+  /** Call updateAxis() for the axes which bound this block-adj.
+   * See comment in updatePathsPositionDebounce().
+   */
+  updateAxesScale() {
+    let
+      axes = this.get('axes'),
+    /** reference blocks */
+    axesBlocks = axes.mapBy('blocks');
+    dLog('updateAxesScale', axesBlocks.map((blocks) => blocks.mapBy('axisName')));
+    axesBlocks.forEach(function (blocks) {
+      blocks[0].axis.axis1d.updateAxis();
+    });
   },
 
   /*--------------------------------------------------------------------------*/
 
-  axesDomains : Ember.computed.alias('blockAdj.axesDomains'),
+  axesDomains : alias('blockAdj.axesDomains'),
   /** call updatePathsPosition().
    * filter / debounce the calls to handle multiple events at the same time.
    */
-  updatePathsPositionDebounce : Ember.computed(
+  updatePathsPositionDebounce : computed(
+    'widthChanged',
     'heightChanged', 'axisStackChangedCount',
-    'axesDomains.0.0',
-    'axesDomains.0.1',
-    'axesDomains.1.0',
-    'axesDomains.1.1',
+    // stacksWidthChanges depends on stacksCount, so this dependency is implied anyway.
+    'block.stacksCount',
+    // widthsSum includes changes to .extended, which impacts width of all block-adjs
+    'block.stacksWidthsSum',
+    'block.axesExtendedCount',
+    // width of split axes effects the path endpoint x values, even if not adjacent.
+    'block.axes2d.@each.allocatedWidthsMax',
+    'xOffsets.@each',
+    'drawMap.stacksWidthChanges',
+    'blockAdj.axes1d.0.flipRegionCounter',
+    'blockAdj.axes1d.1.flipRegionCounter',
+    /* Paths end X position is affected when an adjacent axis opens/closes (split).  */
+    'blockAdj.axes1d.{0,1}.extended',
+    /* will change scaleChanged to return {range: [from,to], domain : [from, to]}
+     * currently it returns the scale function itself which is not usable as a dependent key.
+     * Then the dependency can be : 'blockAdj.axes1d.{0,1}.scaleChanged.range.{0,1}'
+     * After domain change, the available paths should be filtered again, whereas
+     * after range change, it is sufficient to update the position of those paths already rendered.
+     */
+    'blockAdj.axes1d.0.scaleChanged',
+    'blockAdj.axes1d.1.scaleChanged',
+    'blockAdj.axes1d.{0,1}.axis2d.allocatedWidthsMax',
     function () {
-    let count = this.get('axisStackChangedCount'),
-      heightChanged = this.get('heightChanged'),
-      domainsChanged = this.get('axesDomains');
-      console.log('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, domainsChanged);
+      let count = this.get('axisStackChangedCount');
+      // throttle(this, this.updatePathsPositionDebounced, this.get('controlsView.throttleTime'), true);
+      run_once(() => this.updatePathsPosition());
+      return count;
+    }),
+    updatePathsPositionDebounced : function () {
+      let count = this.get('axisStackChangedCount'),
+      stacksWidthChanges = this.get('drawMap.stacksWidthChanges'),
+      flips = [this.get('blockAdj.axes1d.0.flipRegionCounter'),
+               this.get('blockAdj.axes1d.1.flipRegionCounter')],
+      scaleChanges = [this.get('blockAdj.axes1d.0.scaleChanged'),
+                      this.get('blockAdj.axes1d.1.scaleChanged')],
+      zoomCounter = this.get('blockAdj.zoomCounter'),
+      heightChanged = this.get('heightChanged');
+      if (trace_blockAdj)
+        dLog('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, flips, zoomCounter, scaleChanges,
+           stacksWidthChanges,
+           this.get('xOffsets'),
+           this.get('block.stacksCount'));
     this.updatePathsPosition();
+    /* redraw after axis extended width has updated. */
+    // later(() => this.updatePathsPosition(), 500);
+
+      /* this update is an alternative trigger for updating the axes ticks and
+       * scale when their domains change, e.g. when loaded features extend a
+       * block's domain.  The solution used instead is the ComputedProperty
+       * side-effect axis-1d : domainChanged(), which is a similar approach, but
+       * it localises the dependencies to a single axis whereas this would
+       * duplicate updates.  */
+    // this.updateAxesScale();
     return count;
-  }),
+  },
 
 
   /*--------------------------------------------------------------------------*/
@@ -432,16 +869,20 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     /* useTransition could be passed down to draw()
      * (also could pass in duration or t from showResize()).
      */
-    console.log("resized in components/block-adj");
+    if (trace_blockAdj > 1)
+      dLog("resized in components/block-adj");
     /* In addition to the usual causes of repeated events, block-adj will
      * respond to events relating to 2 axes. */
+    if (widthChanged)
+      this.incrementProperty('widthChanged');
     if (heightChanged)
       this.incrementProperty('heightChanged');
   },
 
   axisStackChanged : function() {
-    console.log("axisStackChanged in components/block-adj");
-    this.incrementProperty('axisStackChangedCount');
+    dLog("axisStackChanged in components/block-adj");
+    // currently need time for x scale update
+    next(() => ! this.isDestroying && this.incrementProperty('axisStackChangedCount'));
   },
 
   /** @param [axisID, t] */
@@ -450,7 +891,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     blockAdjId = this.get('blockAdjId'),
     axes = this.get('axes');
     if (trace_blockAdj > 1)
-      console.log("zoomedAxis in ", CompName, axisID_t, blockAdjId, axes);
+      dLog("zoomedAxis in ", CompName, axisID_t, blockAdjId, axes);
     /* zoomedAxis is specific to an axisID, so respond to that if
      * blockAdjId[0] or blockAdjId[1] are on this.axis.
      * resetZooms() does resetZoom(undefined) meaning un-zoom all axes, so match
@@ -458,7 +899,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      */
     if (!axisID || this.isAdjacentToAxis(axisID))
     {
-      console.log('zoomedAxis matched', axisID, blockAdjId, axes);
+      dLog('zoomedAxis matched', axisID, blockAdjId, axes);
       // paths positions are updated by event axisStackChanged() already received.
       // With zoom, the densityCount() result changes so request paths again
       this.incrementProperty('blockAdj.zoomCounter');
@@ -467,152 +908,65 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   /*--------------------------------------------------------------------------*/
 
   
-});
-
-if (false) {
-  /** Example of param paths passed to draw() above. */
-  const examplePaths = 
-[{"_id":{"name":"myMarkerC"},
-  "alignment":[
-      {"blockId":"5c75d4f8792ccb326827daa2","repeats":{
-	  "_id":{"name":"myMarkerC","blockId":"5c75d4f8792ccb326827daa2"},
-	  "features":[{"_id":"5c75d4f8792ccb326827daa6","name":"myMarkerC","value":[3.1,3.1],"blockId":"5c75d4f8792ccb326827daa2","parentId":null}],"count":1}},
-      {"blockId":"5c75d4f8792ccb326827daa1","repeats":{
-	  "_id":{"name":"myMarkerC","blockId":"5c75d4f8792ccb326827daa1"},
-	      "features":[{"_id":"5c75d4f8792ccb326827daa5","name":"myMarkerC","value":[0,0],"blockId":"5c75d4f8792ccb326827daa1","parentId":null}],"count":1}}]}];
-}
+}); // end of Component draw/block-adj
 
 
 /*----------------------------------------------------------------------------*/
 
-function featureEltId(featureBlock)
-{
-  let id = featurePathKeyFn(featureBlock);
-  id = featureNameClass(id);
-  return id;
+/** Transition the paths in the given g, to show that they are being removed.
+ * @param g <g.blockAdj> which is to be removed, and contains <path.blockAdj>-s
+ */
+function gPathDashAndRemove(g) {
+  /** selector 'path' is equivalent here to : 'g.blockAdj > path.blockAdj' */
+  let exitPaths = g
+    .transition().duration(pathTransitionTime * 3)
+    .on('end', function() { d3.select(this).remove(); })
+    .selectAll('path')
+    .call(pathDashTween(true));
 }
 
-function featurePathKeyFn (featureBlock)
-{ return featureBlock._id.name; }
+/* transition the stroke-dasharray, to show paths being added and removed. */
 
-/** Given the grouped data for a feature, from the pathsDirect() result,
- * generate the cross-product feature.alignment[0].repeats X feature.alignment[1].repeats.
- * The result is an array of pairs of features;  each pair defines a path and is of type PathData.
- * for each pair an element of pairs[] :
- *   pair.feature0 is in block pair.block0
- *   pair.feature1 is in block pair.block1
- *    (for the case of pathsResultTypes.direct) :
- *   pair.block0 === feature.alignment[0].blockId
- *   pair.block1 === feature.alignment[1].blockId
- * i.e. the path goes from the first block in the request params to the 2nd block
- * @param pathsResultType e.g. pathsResultTypes.{Direct,Aliases}
- * @param feature 1 element of the result array passed to draw()
- * @return [PathData, ...]
+/* This could also be used on path exit,   e.g. :
+ * pS.exit()
+ *      .transition().duration(pathTransitionTime)
+ *      .call(pathDashTween(true))
+ *      .each("end", function() { d3.select(this).remove(); });
+ * but generally this remove will not be reached because the parent <g> is
+ * removed, and the transition is already applied on the gS.exit().
+ *
+ * This transition could also be applied on path append :
+ *   pSE
+ *     .transition().duration(pathTransitionTime * 3)
+ *     .call(this.attrD_pathU)
+ *     .call(pathTween(false))
+ *     .each("end", function() { d3.select(this).attr("stroke-dasharray", 'none'); });
+ * pSE would have to be separated out of transition on pSA, to avoid conflict.
  */
-function pathsOfFeature(pathsResultType, owner) {
-  const PathData = owner.factoryFor('component:draw/path-data');
-  return function (feature) {
-    let blocksFeatures =
-      [0, 1].map(function (blockIndex) { return pathsResultType.blocksFeatures(feature, blockIndex); }),
-    blocks = resultBlockIds(pathsResultType, feature),
-    pairs = 
-      blocksFeatures[0].reduce(function (result, f0) {
-        let result1 = blocksFeatures[1].reduce(function (result, f1) {
-          let pair =
-            PathData.create({
-              feature0 : f0,
-              feature1 : f1,
-              block0 : blocks[0],
-              block1 : blocks[1]
-            });
-          if (trace_blockAdj > 2)
-            console.log('PathData.create()', PathData, pair);
 
-          result.push(pair);
-          return result;
-        }, result);
-        return result1;
-      }, []);
-    return pairs;
+/** Return a function which interpolates stroke-dasharray,
+ * to show a path going from visible to invible (if out is true) or vice versa.
+ */
+function pathDashTween(out) {
+  function tweenDash() {
+    /* based on example https://bl.ocks.org/mbostock/5649592 */
+    /** if length is not yet known, use 20px, otherwise 1/20 of length. */
+    var l = (this.getTotalLength() / 20) || 20,
+    dashStrings = [
+      l + "," + 0,          // visible
+      "0," + l + l/4],      // invisible
+    from = dashStrings[+ !out],
+    to = dashStrings[+ out],
+    i = d3.interpolateString(from, to);
+    return function(t) { return i(t); };
+  }
+
+  return function (path) {
+  path
+      .attrTween("stroke-dasharray", tweenDash);
   };
 }
 
-function locationPairKeyFn(locationPair)
-{
-  return locationPair.feature0._id + '_' + locationPair.feature1._id;
-}
+
 
 /*----------------------------------------------------------------------------*/
-
-const pathsApiFields = ['featureAObj', 'featureBObj'];
-/** This type is created by paths-progressive.js : requestAliases() : receivedData() */
-const pathsApiResultType = {
-  // fieldName may be pathsResult or pathsAliasesResult
-  typeCheck : function(resultElt) { if (! resultElt.featureAObj) {
-    console.log('pathsApiResultType : typeCheck', resultElt); } },
-  pathBlock :  function (resultElt, blockIndex) { return resultElt[pathsApiFields[blockIndex]].blockId; },
-  /** direct.blocksFeatures() returns an array of features, so match that. See
-   * similar commment in alias.blocksFeatures. */
-  blocksFeatures : function (resultElt, blockIndex) { return [ resultElt[pathsApiFields[blockIndex]] ]; },
-  featureEltId :
-    function (resultElt)
-    {
-      let id = pathsApiResultType.featurePathKeyFn(resultElt);
-      id = featureNameClass(id);
-      return id;
-    },
-  featurePathKeyFn : function (resultElt) { return resultElt.featureA + '_' + resultElt.featureB; }
-
-};
-
-/** This is provision for using the API result type as <path> data type; not used currently because
- * the various forms of result data are converted to path-data.
- * These are the result types from :
- * Block/paths -> apiLookupAliases() ->  task.paths() 
- * Blocks/pathsViaStream  -> pathsAggr.pathsDirect() 
- * getPathsAliasesViaStream() / getPathsAliasesProgressive() -> Blocks/pathsAliasesProgressive -> dbLookupAliases() -> pathsAggr.pathsAliases()
- */
-const pathsResultTypes = {
-  direct : {
-    fieldName : 'pathsResult',
-    typeCheck : function(resultElt) { if (! resultElt._id) {
-    console.log('direct : typeCheck', resultElt); } },
-    pathBlock :  function (resultElt, blockIndex) { return resultElt.alignment[blockIndex].blockId; },
-    blocksFeatures : function (resultElt, blockIndex) { return resultElt.alignment[blockIndex].repeats.features; },
-    featureEltId : featureEltId,
-    featurePathKeyFn : featurePathKeyFn
-  },
-
-  alias :
-  {
-    fieldName : 'pathsAliasesResult',
-    typeCheck : function(resultElt) { if (! resultElt.aliased_features) {
-    console.log('alias : typeCheck', resultElt); } },
-    pathBlock :  function (resultElt, blockIndex) { return resultElt.aliased_features[blockIndex].blockId; },
-    /** There is currently only 1 element in .aliased_features[blockIndex], but
-     * pathsOfFeature() handles an array an produces a cross-product, so return
-     * this 1 element as an array. */
-    blocksFeatures : function (resultElt, blockIndex) { return [resultElt.aliased_features[blockIndex]]; },
-    featureEltId :
-    function (resultElt)
-    {
-      let id = pathsResultTypes.alias.featurePathKeyFn(resultElt);
-      id = featureNameClass(id);
-      return id;
-    },
-    featurePathKeyFn : function (resultElt) {
-      return resultElt.aliased_features.map(function (f) { return f.name; } ).join('_');
-    }
-  }
-},
-/** This matches the index values of services/data/flows-collate.js : flows */
-flowNames = Object.keys(pathsResultTypes);
-// add .flowName to each of pathsResultTypes, which could later require non-const declaration.
-flowNames.forEach(function (flowName) { pathsResultTypes[flowName].flowName = flowName; } );
-
-
-function resultBlockIds(pathsResultType, featurePath) {
-  let blockIds =
-    [0, 1].map(function (blockIndex) { return pathsResultType.pathBlock(featurePath, blockIndex); });
-  return blockIds;
-}

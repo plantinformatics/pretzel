@@ -1,0 +1,16 @@
+{{dataMatrixEffect}}
+{{activeEffect}}
+
+
+{{!-- --------------------------------------------------------------------- --}}
+
+{{#if isProcessing}}
+  {{#elem/panel-form
+    name="info"
+    heading="Processing..." }}
+      {{progressMsg}}
+  {{/elem/panel-form}}
+{{/if}}
+
+<div id="blast-results-hotable" class="actual-row">
+</div>

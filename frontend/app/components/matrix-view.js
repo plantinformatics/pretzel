@@ -1,9 +1,8 @@
-import Ember from 'ember';
-
-const { Component, inject: { service } } = Ember;
+import { computed, observer } from '@ember/object';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
 export default Component.extend({
-  store: service(),
   style: 'height:100%; width:100%',
   attributeBindings: ['style:style'],
   numericalData: true,
@@ -94,11 +93,11 @@ export default Component.extend({
   },
 
   displayData: [],
-  noData: Ember.computed('displayData.[]', function() {
+  noData: computed('displayData.[]', function() {
     let d = this.get('displayData');
     return d.length == 0;
   }),
-  columns: Ember.computed('displayData.[]', function() {
+  columns: computed('displayData.[]', function() {
     let data = this.get('displayData');
     let cols = {};
     data.forEach(function(d) {
@@ -107,7 +106,7 @@ export default Component.extend({
     });
     return cols;
   }),
-  rowHeaderWidth: Ember.computed('rows', function() {
+  rowHeaderWidth: computed('rows', function() {
     let rows = this.get('rows');
     let longest_row = 0;
     let length_checker = $("#length_checker");
@@ -119,7 +118,7 @@ export default Component.extend({
     })
     return longest_row + 10;
   }),
-  colHeaderHeight: Ember.computed('columns', function() {
+  colHeaderHeight: computed('columns', function() {
     let cols = this.get('columns');
     let longest_row = 0;
     let length_checker = $("#length_checker");
@@ -132,7 +131,7 @@ export default Component.extend({
     });
     return longest_row + 20;
   }),
-  dataByRow: Ember.computed('displayData.[]', function() {
+  dataByRow: computed('displayData.[]', function() {
     let nonNumerical = false;
     let rows = {}
     let cols = this.get('columns');
@@ -153,11 +152,11 @@ export default Component.extend({
     this.set('numericalData', !nonNumerical);
     return rows;
   }),
-  rows: Ember.computed('dataByRow', function() {
+  rows: computed('dataByRow', function() {
     let data = this.get('dataByRow');
     return Object.keys(data);
   }),
-  abValues: Ember.computed('dataByRow', 'selectedBlock', function() {
+  abValues: computed('dataByRow', 'selectedBlock', function() {
     let data = this.get('dataByRow');
     let selectedBlock = this.get('selectedBlock');
     let values = [];
@@ -170,7 +169,7 @@ export default Component.extend({
     }
     return values;
   }),
-  data: Ember.computed('displayData.[]', function() {
+  data: computed('displayData.[]', function() {
     let cols = this.get('columns');
     let rows = this.get('rows');
     let dataByRow = this.get('dataByRow');
@@ -185,7 +184,7 @@ export default Component.extend({
     });
     return data;
   }),
-  rowRanges: Ember.computed('dataByRow', function() {
+  rowRanges: computed('dataByRow', function() {
     let data = this.get('dataByRow');
 
     let all_values = {};
@@ -221,7 +220,7 @@ export default Component.extend({
     return ranges;        
   }),
 
-  updateTable: function() {
+  updateTable: observer('displayData.[]', 'selectedBlock', function() {
     let t = $("#observational-table");
     let rows = this.get('rows');
     let rowHeaderWidth = this.get('rowHeaderWidth');
@@ -248,7 +247,7 @@ export default Component.extend({
     } else {
       t.hide();
     }
-  }.observes('displayData.[]', 'selectedBlock'),
+  }),
   
   actions: {
     toggleLeftPanel() {
@@ -257,7 +256,7 @@ export default Component.extend({
     },
     loadBlock(block) {
       let data = this.get('displayData');
-      let store = this.get('store');
+      let store = block.store;
       store.findRecord('block', block.id, {
           reload: true,
           adapterOptions: {filter: {'include': 'features'}}

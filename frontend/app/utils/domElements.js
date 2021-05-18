@@ -1,6 +1,11 @@
-import Ember from 'ember';
+import { debounce } from '@ember/runloop';
+import $ from 'jquery';
 
 /*global d3 */
+/* global CSS */
+
+const trace_dom = 0;
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
@@ -35,7 +40,7 @@ function eltWidthResizable(eltSelector, filter, resized)
 
   if ((resizable.node() === null) || (resizer.node() === null))
     {
-    console.log("eltWidthResizable() resizer=", resizer, eltSelector, resizable.node(), resizer.node());
+    dLog("eltWidthResizable() resizer=", resizer, eltSelector, resizable.node(), resizer.node());
       return undefined;
   }
     /* instead of return: else { ...  } */
@@ -47,14 +52,17 @@ let
   let startX;
   let dragResize = d3.drag()  // d3 v3: was .behavior
     .on('drag', function(d, i, g) {
-      logElementDimensions(g[0], 'on drag');
+      if (trace_dom)
+        logElementDimensions(g[0], 'on drag');
 
       // as for .resize() below,
       // .on() seems to apply a reasonable debounce, but if not, use Ember.run.debounce()
       // Determine resizer position relative to resizable (parent)
-      let x = d3.mouse(this.parentNode)[0];
+      let relativeParent = (this.parentNode.parentNode.parentNode.tagName === 'foreignObject') ?
+        this.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode : this.parentNode;
+      let x = d3.mouse(relativeParent)[0];
       let dx = d3.event.dx;
-      // console.log("eltWidthResizable drag x=", x, dx);
+      // dLog("eltWidthResizable drag x=", x, dx);
       // Avoid negative or really small widths
       // (perhaps if x < 50, don't call resized() or set width.)
       x = Math.max(50, x);
@@ -84,19 +92,23 @@ let
    * automatically absorb the increased width.
    */
   let w =
-    Ember.$( window );
-  console.log(w);
+    $( window );
+  if (trace_dom)
+    dLog(w);
     w.resize(function(e) {
-        console.log("w.resize", e); // 'this' is Window
+        if (trace_dom)
+          dLog("w.resize", e); // 'this' is Window
     /*  .resize() may apply some debounce also - refn https://api.jquery.com/resize/.
      * Seems that the version used is frontend/bower_components/jquery/dist/jquery.js
      * (noting also bower_components/jquery-ui/ui/widgets/resizable.js).
      */
-      Ember.run.debounce(resizeEnd, 300);
+      debounce(resizeEnd, 300);
   });
   function resizeEnd() { 
-      console.log("eltWidthResizable window resize", eltSelector, resizable_flex_grow);
-    logWindowDimensions(window, 'drag');
+    if (trace_dom) {
+      dLog("eltWidthResizable window resize", eltSelector, resizable_flex_grow);
+      logWindowDimensions(window, 'drag');
+    }
     resizable.style('flex-grow', resizable_flex_grow);
   };
 
@@ -104,7 +116,8 @@ let
   if (resizer.size())
     resizer.call(dragResize);
   else
-    console.log("eltWidthResizable() resizer=", resizer, eltSelector, dragResize);
+    if (trace_dom)
+      dLog("eltWidthResizable() resizer=", resizer, eltSelector, dragResize);
     return dragResize;
 }
 
@@ -121,14 +134,16 @@ let
 function eltResizeToAvailableWidth(bodySel, centreSel)
 {
   let
-  a1=Ember.$(bodySel),
+  a1=$(bodySel),
   body =  a1,
   bodyWidth = a1.innerWidth(),
   siblingWidth = 0,
-  siblings = Ember.$(bodySel + ' > *')
-    .each(function (i, elt) { siblingWidth += elt.clientWidth; } )
-    .each(function (i, elt) { console.log(i, elt, elt.clientWidth); } )
-  ,
+  siblings = $(bodySel + ' > *')
+    .each(function (i, elt) { siblingWidth += elt.clientWidth; } );
+  if (trace_dom)
+    siblings
+    .each(function (i, elt) { dLog(i, elt, elt.clientWidth); } );
+  let
   a = siblings,
   ar=a.filter(centreSel),
   centreDiv = ar,
@@ -136,7 +151,8 @@ function eltResizeToAvailableWidth(bodySel, centreSel)
   sidePanelWidth = siblingWidth - centreDiv.width(),
   spareWidth = bodyWidth - sidePanelWidth;
 
-  console.log('eltResizeToAvailableWidth', bodyWidth, centreDiv, a.length, bodyWidth, sidePanelWidth, spareWidth);
+  if (trace_dom)
+    dLog('eltResizeToAvailableWidth', bodyWidth, centreDiv, a.length, bodyWidth, sidePanelWidth, spareWidth);
   ar.innerWidth(spareWidth);
 }
 
@@ -148,7 +164,7 @@ function logWindowDimensions(w, text)
    * https://developer.mozilla.org/en-US/docs/Web/API/VisualViewport#Browser_compatibility
    */
   let s = w.screen, v = w.visualViewport;
-  console.log
+  dLog
   (
     text, 'inner', w.innerWidth, "x", w.innerHeight, 
     'avail', s.availWidth, 'x',  s.availHeight,
@@ -159,7 +175,7 @@ function logWindowDimensions(w, text)
 
 function logElementDimensions(e, text)
 {
-  console.log
+  dLog
   (
     text,
     'client', e.clientWidth, 'x', e.clientHeight, e.clientLeft, ',', e.clientTop,
@@ -170,7 +186,7 @@ function logElementDimensions(e, text)
 
 function logElementDimensions2(jq) {
   let e = jq[0];
-  console.log(
+  dLog(
     'client',
     e.clientHeight, e.clientWidth, e.clientLeft, e.clientTop,
     e.getBoundingClientRect(),
@@ -201,6 +217,11 @@ function noShiftKeyfilter() {
   return ! ev.shiftKey;
 }
 
+function ctrlKeyfilter() {
+  let ev = d3.event.sourceEvent || d3.event; 
+  return ev.ctrlKey;
+}
+
 /*----------------------------------------------------------------------------*/
 
 /** 
@@ -216,6 +237,7 @@ function htmlHexEncode(text)
 }
 
 /** Encode a text feature name which may contain punctuation into a form suitable for use a CSS class name. 
+ * Use CSS.escape() instead of this function.
  * @param text  e.g. feature name
  */
 function cssHexEncode(text)
@@ -239,14 +261,16 @@ function cssHexEncode(text)
 /** recognise any punctuation in f which is not allowed for a selector matching an element class name,
  * and replace with _
  * Specifically :
- *   replace non-alphanumeric characters with their hex encoding @see cssHexEncode(),
+ *   use CSS.escape() to escape punctuation which is not accepted in CSS selectors
  *   prefix leading digit with _
  *
  * HTML5 class names allow these forms, so eltClassName() is only required
  * where the class name will be the target of a selector.
  * CSS selectors can use \ escaping e.g. to prefix '.', and that works for
- * d3.select() and Ember.$() selectors (using \\);  for now at least
- * the simpler solution of replacing '.' with '_' is used.
+ * d3.select() and Ember.$() selectors (using \\);
+ * This is now done, using CSS.escape().
+ * Earlier versions replaced '.' with '_', and 
+ * replaced non-alphanumeric characters with their hex encoding @see cssHexEncode(),
  *
  * A class with a numeric prefix is accepted by HTML5, but not for selectors (CSS, d3 or $),
  * so eltClassName() is required at least for that.
@@ -258,7 +282,12 @@ function eltClassName(f)
    * elsewhere, but handle it here by converting f to a string.
    */
   let fString = (typeof(f) == 'string') ? f : '' + f,
-  fPrefixed = cssHexEncode(fString.replace(/^([\d])/, "_$1"));
+  /** d3.selectAll() is not matching the result of CSS.escape() on marker names
+   * starting with a digit. Prefixing with _ first works.  Then CSS.escape() can
+   * handle any following punctuation.
+   */
+  fPrefixNumber = fString.replace(/^([\d])/, "_$1"),
+  fPrefixed = CSS.escape(fPrefixNumber); // cssHexEncode();
   return fPrefixed;
 }
 
@@ -266,9 +295,10 @@ function eltClassName(f)
 
 function tabActive(jqSelector)
 {
-  let elt$ = Ember.$(jqSelector),
+  let elt$ = $(jqSelector),
   active = elt$.hasClass('active');
-  console.log('tabActive', jqSelector, active, elt$[0], elt$.length);
+  if (trace_dom)
+    dLog('tabActive', jqSelector, active, elt$[0], elt$.length);
   return active;
 }
 
@@ -279,9 +309,9 @@ function tabActive(jqSelector)
 function inputRangeValue(inputId)
 {
   // based on part of setupInputRange()
-  let input = Ember.$("#" + inputId);
+  let input = $("#" + inputId);
   if (input.length !== 1)
-    console.log('inputRangeValue', inputId, input.length, input.length && input[0]);
+    dLog('inputRangeValue', inputId, input.length, input.length && input[0]);
   // .value is a string, so convert to number.
   return (input.length === 1) ? +input[0].value : undefined;
 }
@@ -309,12 +339,12 @@ function expRange(value, steps, rangeMax /*, domainMax*/)
   return exp;
 }
 
-  /**	initial/default value of slider : y
-   *
-   * x^y = 20 => y log(x) = log(20) => y = Math.log(20) / Math.log(1.148137) = 21.6861056
-   *
-   rangeStart = e.g. 20
-   */
+/**	initial/default value of slider : y
+ *
+ * x^y = 20 => y log(x) = log(20) => y = Math.log(20) / Math.log(1.148137) = 21.6861056
+ *
+ rangeStart = e.g. 20
+ */
 function expRangeInitial(rangeStart, base) {
   let
   y = Math.log(rangeStart) / Math.log(base);
@@ -328,7 +358,7 @@ export {
   eltWidthResizable,
   eltResizeToAvailableWidth,
   logWindowDimensions, logElementDimensions, logElementDimensions2,
-  shiftKeyfilter, noShiftKeyfilter ,
+  shiftKeyfilter, noShiftKeyfilter, ctrlKeyfilter, 
   htmlHexEncode, cssHexEncode,
   eltClassName,
   tabActive,

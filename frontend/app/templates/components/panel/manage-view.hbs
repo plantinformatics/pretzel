@@ -1,5 +1,5 @@
-{{#elem/panel-container state="primary"}}
-    {{#elem/panel-heading icon="globe"}}
+{{#elem/panel-container state="primary" as |panelContainer|}}
+    {{#elem/panel-heading icon="globe" panelContainer=panelContainer}}
         Displayed Data
         {{#if hasDisplayData}}
         <span class="pull-right">
@@ -11,6 +11,8 @@
         </span>
         {{/if}}
     {{/elem/panel-heading}}
+    {{#if panelContainer.showComponent}}
+
     <ul id="display-blocks" class="list-group">
         {{#each displayData as |block|}}
         <li 
@@ -43,50 +45,49 @@
             </p>
         </li>
         {{/each}}
-        <li 
-        class="list-group-item list-group-item-info">
-        Add data from the {{elem/icon-base name='folder-open'}} &nbsp;Explorer tab
-        <span class="pull-right">
-            {{elem/button-base
-            classSize='xs'
-            classColour='success'
-            icon='plus'
-            onClick=(action "changeTab" "explorer")}}
-        </span>
-        </li>
     </ul>
+
+  {{/if}} {{!-- showComponent --}}
 {{/elem/panel-container}}
 
 
 {{#if isMapview}}
-{{#elem/panel-container state="primary"}}
-  {{#elem/panel-heading icon="wrench"}}
+{{#elem/panel-container state="primary" showComponent=showChartOptions as |panelContainer|}}
+  {{#elem/panel-heading icon="wrench" panelContainer=panelContainer}}
     Chart Options
-  {{/elem/panel-heading}}
-  <ul class="list-group chart-options">
-    <li class="list-group-item">
-      {{input type="checkbox" checked=isShowUnique class="toggle"}}
-      <label {{action "toggleShowUnique" on="click"}}>Show Unique</label>
-    </li>
-    <li class="list-group-item">
-      {{input type="checkbox" checked=pathColourScale class="toggle"}}
-      <label {{action "togglePathColourScale" on="click"}}>Path Colour Scale</label>
-    </li>
-    <li class="list-group-item">
-      {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
-      <label>Show Scaffold Features</label>
-    </li>
-    <li class="list-group-item">
-      {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
-      <label>Show Asymmetric Aliases</label>
-    </li>
-  </ul>
 
-  <div class="panel-body">
-    <div class="drawing-controls flowButtons vspace1">
-      {{draw/flow-controls viewOptions=(hash isShowUnique pathColourScale showScaffoldMarkers showAsymmetricAliases) modelParamOptions=model.params.options }}
+  {{/elem/panel-heading}}
+
+  {{#if panelContainer.showComponent}}
+
+    {{!-- .chart-options is enabled by options=chartOptions -> body.chartOptions .chart-options CSS  --}}
+    <ul class="list-group chart-options">
+      <li class="list-group-item">
+        {{input type="checkbox" checked=isShowUnique class="toggle"}}
+        <label {{action "toggleShowUnique" on="click"}}>Show Unique</label>
+      </li>
+      <li class="list-group-item">
+        {{input type="checkbox" checked=pathColourScale class="toggle"}}
+        <label {{action "togglePathColourScale" on="click"}}>Path Colour Scale</label>
+      </li>
+      <li class="list-group-item">
+        {{input type="checkbox" checked=showScaffoldMarkers class="toggle"}}
+        <label>Show Scaffold Features</label>
+      </li>
+      <li class="list-group-item">
+        {{input type="checkbox" checked=showAsymmetricAliases class="toggle"}}
+        <label>Show Asymmetric Aliases</label>
+      </li>
+    </ul>
+
+    <div class="panel-body">
+      <div class="drawing-controls flowButtons vspace1">
+        {{draw/flow-controls viewOptions=(hash isShowUnique pathColourScale showScaffoldMarkers showAsymmetricAliases) modelParamOptions=model.params.options }}
+      </div>
     </div>
-  </div>
+
+  {{/if}} {{!-- showComponent --}}
+
 {{/elem/panel-container}}
 
 {{panel/view-controls controls=controls drawActions=this}}

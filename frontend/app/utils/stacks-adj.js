@@ -4,7 +4,15 @@ import { inject as service } from '@ember/service';
 import { isEqual } from 'lodash/lang';
 
 
-import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText, axisId2Name } from '../utils/stacks';
+import {
+  Block,
+  Stacked,
+  Stack,
+  stacks,
+  xScaleExtend,
+  axisRedrawText,
+  axisId2Name
+} from '../utils/stacks';
 
 /*----------------------------------------------------------------------------*/
 
@@ -17,8 +25,8 @@ let flowsService; // = service('data/flows-collate');
 function flowsServiceInject(flowsService_) { flowsService = flowsService_; }
 
 
-const trace_adj = 1;
-
+const trace_adj = 0;
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
@@ -28,7 +36,7 @@ const trace_adj = 1;
  */
 function collateAdjacentAxes()
 {
-  console.log('collateAdjacentAxes', flowsService);
+  dLog('collateAdjacentAxes', flowsService);
   let previous = flowsService.get ? flowsService.get('adjAxes') : flowsService.adjAxes;
   let adjAxes = {};
   if (flowsService.set)
@@ -47,8 +55,8 @@ function collateAdjacentAxes()
   let dataBlocks = [];
   for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
     let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
-    fAxis_s0 = dataBlocks[stackIndex] || (dataBlocks[stackIndex] = s0.dataBlocks()),
-    fAxis_s1 = dataBlocks[stackIndex+1] || (dataBlocks[stackIndex+1] = s1.dataBlocks());
+    fAxis_s0 = dataBlocks[stackIndex] || (dataBlocks[stackIndex] = s0.dataBlocks(true)),
+    fAxis_s1 = dataBlocks[stackIndex+1] || (dataBlocks[stackIndex+1] = s1.dataBlocks(true));
     if (trace_adj > 2)
     {
       console.log('collateAdjacentAxes', stackIndex, fAxis_s0, stackIndex+1, fAxis_s1);
@@ -110,7 +118,7 @@ function collateAdjacentAxes()
       let adjAxesKeys = d3.keys(adjAxes);
       let current = flowsService.get('adjAxesArr');
       
-      console.log(current, 'adjAxesKeys', adjAxesKeys);
+      dLog(current, 'adjAxesKeys', adjAxesKeys);
       flowsService.set('adjAxesArr', adjAxesKeys);
     }
   }
@@ -163,7 +171,7 @@ function isAdjacent(a0, a1)
     for (let a1i=0; (a1i < adjs0.length) && !result; a1i++) {
       result = a1 == adjs0[a1i];
       if (result)
-        console.log("isAdjacent", a0, axisId2Name(a0), a1, axisId2Name(a1));
+        dLog("isAdjacent", a0, axisId2Name(a0), a1, axisId2Name(a1));
     }
   return result;
 }

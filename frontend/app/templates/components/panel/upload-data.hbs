@@ -1,15 +1,17 @@
-{{#elem/panel-container state="primary"}}
-  {{#elem/panel-heading icon="edit"}}
+{{#elem/panel-container state="primary" class="no-side-border" as |panelContainer|}}
+  {{#elem/panel-heading icon="edit" panelContainer=panelContainer}}
     Data Specification
   {{/elem/panel-heading}}
+  {{#if panelContainer.showComponent}}
+
   <div class="panel-body">
     <div class="btn-group btn-group-justified" role="group" aria-label="...">
       {{#each-in filterOptions as |key value|}}
         <div class="btn-group" role="group">
           <button
-            type="button"
-            class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
-            {{action "changeFilter" key preventDefault=false}}>
+              type="button"
+              class="btn {{if (compare key '===' filter) 'btn-info' 'btn-default'}}"
+              {{action "changeFilter" key preventDefault=false}}>
             {{elem/icon-base name=value.icon}} &nbsp;{{value.formal}}
 
           </button>
@@ -17,8 +19,11 @@
       {{/each-in}}
     </div>
   </div>
-{{/elem/panel-container}}
 
+
+{{#if serverTabSelected }}
+  <div>Destination Server: {{ serverTabSelected }} </div>
+{{/if}}
 {{#if errorMessage}}
   <br>
   {{#elem/panel-form
@@ -44,8 +49,21 @@
   {{/elem/panel-form}}
 {{/if}}
 
-{{#if (compare filter '===' 'cell')}}
-  {{panel/upload/data-csv}}
+{{#if (compare filter '===' 'fileDrop')}}
+  {{panel/upload/file-drop-zone
+    refreshDatasets=refreshDatasets
+    }}
+{{else if (compare filter '===' 'cell')}}
+  {{panel/upload/data-csv
+    datasets=datasets
+    refreshDatasets=refreshDatasets
+    active=active
+  }}
 {{else if (compare filter '===' 'json')}}
-  {{panel/upload/data-json}} 
+  {{panel/upload/data-json
+    refreshDatasets=refreshDatasets
+  }} 
 {{/if}}
+
+  {{/if}} {{!-- showComponent --}}
+{{/elem/panel-container}}

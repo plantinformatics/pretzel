@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 export function toJson([obj]) {
   if (!obj) {
@@ -7,4 +7,4 @@ export function toJson([obj]) {
   return JSON.stringify(obj);
 }
 
-export default Ember.Helper.helper(toJson);
+export default buildHelper(toJson);

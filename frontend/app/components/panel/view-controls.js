@@ -1,4 +1,7 @@
-import Ember from 'ember';
+import { next } from '@ember/runloop';
+import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 
 import {
   tabActive, inputRangeValue,
@@ -9,12 +12,39 @@ import { toBool } from '../../utils/common/strings';
 
 /* global d3 */
 
-export default Ember.Component.extend({
+const dLog = console.debug;
+
+
+export default Component.extend({
   tagName: 'div',
   // attributes
   // classes
 
-  feed: Ember.inject.service(),
+  feed: service(),
+
+  /*--------------------------------------------------------------------------*/
+  /** paths are calculated in the backend if both blocks of block-adj are from
+   * the same server;  otherwise they may be calculated in the frontend (client)
+   * and / or in the backend via localiseBlocks().
+  */
+  pathJoinClient : false,
+  pathJoinRemote : true,
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Toggle axis-charts / Chart1 between showing the ChartLine-s as <rect> bars or lines   */
+  chartBarLine : true,
+
+  /*--------------------------------------------------------------------------*/
+
+  /** time in milliseconds;   group events into discrete times.
+   * Applies to various high-bandwidth events, e.g. axis-position : zoom,
+   * axis-1d : updateAxis, draw/block-adj updatePathsPositionDebounced
+   */
+  debounceTime : 400,
+  throttleTime : 40,
+
+  /*--------------------------------------------------------------------------*/
 
   /** may be set via URL param - @see readParsedOptions(). */
   pathsViaStream : true,
@@ -31,9 +61,9 @@ export default Ember.Component.extend({
   /** ditto, 
    * controls.view.pathControlActiveSample
    */
-  pathSample : expRangeInitial(1000, expRangeBase(100, 10000)),
+  pathSample : expRangeInitial(400, expRangeBase(100, 10000)),
 
-  pathControlActiveDensity : Ember.computed('pathDensityActive', 'pathDensity', function () {
+  pathControlActiveDensity : computed('pathDensityActive', 'pathDensity', function () {
     let active = this.get('pathDensityActive'),
      pathDensity = +this.get('pathDensity'),
       density = active && expRange(pathDensity, 100/2, 1000);
@@ -43,17 +73,17 @@ export default Ember.Component.extend({
       density = +density.toFixed(decimals);
     }
     let value = inputRangeValue('range-pathDensity');
-    Ember.run.next(function () {
+    next(function () {
       let value2 = inputRangeValue('range-pathDensity');
       if (value !== value2)
-        console.log('range-pathDensity',  value, value2);
+        dLog('range-pathDensity',  value, value2);
     });
 
-    console.log('pathControlActiveDensity', pathDensity, density);
+    dLog('pathControlActiveDensity', pathDensity, density);
     return density;
    }),
 
-  pathControlActiveSample : Ember.computed('pathSampleActive', 'pathSample', function () {
+  pathControlActiveSample : computed('pathSampleActive', 'pathSample', function () {
     let active = this.get('pathSampleActive'),
      pathSample = +this.get('pathSample'),
      sample = active && expRange(pathSample, 100, 10000);
@@ -61,12 +91,12 @@ export default Ember.Component.extend({
       sample = Math.round(sample);
     }
     let value = inputRangeValue('range-pathSample');
-    Ember.run.next(function () {
+    next(function () {
       let value2 = inputRangeValue('range-pathSample');
       if (value !== value2)
-        console.log('range-pathSample',  value, value2);
+        dLog('range-pathSample',  value, value2);
     });
-    console.log('pathControlActiveSample', pathSample, sample);
+    dLog('pathControlActiveSample', pathSample, sample);
     return sample;
    }),
 
@@ -75,7 +105,7 @@ export default Ember.Component.extend({
    */
   pathNFeatures : expRangeInitial(1000, expRangeBase(100, 10000)),
 
-  pathControlNFeatures : Ember.computed('pathNFeatures', 'pathNFeatures', function () {
+  pathControlNFeatures : computed('pathNFeatures', 'pathNFeatures', function () {
     /** May make nFeatures display and range slider sensitive only when
      * pathsViaStream, or perhaps it will be a limit applicable also to other
      * (non-streaming) request modes.
@@ -86,11 +116,11 @@ export default Ember.Component.extend({
     if (nFeatures) {
       nFeatures = Math.round(nFeatures);
     }
-    console.log('pathControlNFeatures', pathNFeatures, nFeatures);
+    dLog('pathControlNFeatures', pathNFeatures, nFeatures);
     return nFeatures;
    }),
 
-  pathsDensityParams : Ember.computed(
+  pathsDensityParams : computed(
     'pathControlActiveSample', 'pathControlActiveDensity', 'pathControlNFeatures',
     function () {
       let params = {};
@@ -110,10 +140,40 @@ export default Ember.Component.extend({
       return params;
     }),
 
+  featuresCountsNBinsLinear : expRangeInitial(100, expRangeBase(100, 500)),
+
+  featuresCountsNBins : computed('featuresCountsNBinsLinear', function () {
+    let
+     thresholdLinear = +this.get('featuresCountsNBinsLinear'),
+     threshold = expRange(thresholdLinear, 100, 500);
+    if (threshold) {
+      threshold = Math.round(threshold);
+    }
+    dLog('featuresCountsNBins', thresholdLinear, threshold);
+    return threshold;
+   }),
+
+  featuresCountsThresholdLinear : expRangeInitial(500, expRangeBase(100, 10000)),
+
+  /** Threshold between showing featuresCounts charts and features tracks :
+   *  - if (count <= featuresCountsThreshold) show features (axis-tracks)
+   *  - if  (count > featuresCountsThreshold) show featuresCounts (axis-charts)
+   */
+  featuresCountsThreshold : computed('featuresCountsThresholdLinear', function () {
+    let
+     thresholdLinear = +this.get('featuresCountsThresholdLinear'),
+     threshold = expRange(thresholdLinear, 100, 10000);
+    if (threshold) {
+      threshold = Math.round(threshold);
+    }
+    dLog('featuresCountsThreshold', thresholdLinear, threshold);
+    return threshold;
+   }),
+
   /*--------------------------------------------------------------------------*/
 
   didInsertElement() {
-    console.log("components/draw-controls didInsertElement()", this.drawActions);
+    dLog("components/draw-controls didInsertElement()", this.drawActions);
     this._super(...arguments);
 
     this.drawActions.trigger("drawControlsLife", true);
@@ -137,7 +197,7 @@ export default Ember.Component.extend({
       this.set('pathsViaStream', toBool(pathsViaStream));
   },
   willDestroyElement() {
-    console.log("components/draw-controls willDestroyElement()");
+    dLog("components/draw-controls willDestroyElement()");
     this.drawActions.trigger("drawControlsLife", false);
   },
 
@@ -145,11 +205,11 @@ export default Ember.Component.extend({
     pathTabActive : function(tabName) {
       let active;
       active = tabName === 'density';
-      console.log('pathDensityActive', active, tabName);
+      dLog('pathDensityActive', active, tabName);
       this.set('pathDensityActive', active);
 
       active = tabName === 'sample';
-      console.log('pathSampleActive', active);
+      dLog('pathSampleActive', active);
       this.set('pathSampleActive', active);
     },
 
@@ -158,7 +218,7 @@ export default Ember.Component.extend({
     },
 
     clearScaffoldColours  : function () {
-      console.log("clearScaffoldColours", "selected-markers.js");
+      dLog("clearScaffoldColours", "selected-markers.js");
       this.get('feed').trigger('clearScaffoldColours');
     },
 

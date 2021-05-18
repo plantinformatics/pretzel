@@ -1,6 +1,5 @@
-import Ember from 'ember';
-
-const { Component } = Ember;
+import { computed } from '@ember/object';
+import Component from '@ember/component';
 
 export default Component.extend({
   tagName: 'li',
@@ -9,7 +8,7 @@ export default Component.extend({
   role: 'presentation',
   // classes
   classNameBindings: ['tabActive'],
-  tabActive: Ember.computed('state', function() {
+  tabActive: computed('state', function() {
     if (this.key && this.state === this.key) return 'active'
     else return ''
   }),

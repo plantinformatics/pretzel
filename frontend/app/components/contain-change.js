@@ -1,7 +1,10 @@
-import Ember from 'ember';
+import { on } from '@ember/object/evented';
+import $ from 'jquery';
+import { later } from '@ember/runloop';
+import Component from '@ember/component';
 
-export default Ember.Component.extend({
-  listen: function() {
+export default Component.extend({
+  listen: on('init', function() {
     let drawMap = this.get('drawMap'); 
     console.log("listen", drawMap);
     if (drawMap === undefined)
@@ -9,14 +12,14 @@ export default Ember.Component.extend({
     else {
       drawMap.on('pathHovered', this, 'pathHovered');
     }
-  }.on('init'),
+  }),
 
   // remove the binding created in listen() above, upon component destruction
-  cleanup: function() {
+  cleanup: on('willDestroyElement', function() {
     let drawMap = this.get('drawMap');
     if (drawMap)
     drawMap.off('pathHovered', this, 'pathHovered');
-  }.on('willDestroyElement'),
+  }),
 
   actions : {
     closeToolTip : function () {
@@ -44,8 +47,8 @@ export default Ember.Component.extend({
     console.log("components/path-hover didInsertElement()", this.element,
                 features, targetId, this._targetObject, this.parentView.element);
 
-    Ember.run.later(function() {
-      let d = Ember.$('.tooltip.ember-popover');  // make-ui-draggable
+    later(function() {
+      let d = $('.tooltip.ember-popover');  // make-ui-draggable
       console.log(d, d.length, d[0], d[1]);
       // d.draggable();
     });

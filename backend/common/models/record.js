@@ -1,22 +1,27 @@
 'use strict';
 
-var _ = require('lodash')
+var _ = require('lodash');
 
-var acl = require('../utilities/acl')
-var identity = require('../utilities/identity')
-var upload = require('../utilities/upload')
-var load = require('../utilities/load')
+var acl = require('../utilities/acl');
+var identity = require('../utilities/identity');
+var upload = require('../utilities/upload');
+var load = require('../utilities/load');
 
 module.exports = function(Record) {
 
   Record.observe('access', function(ctx, next) {
-    identity.queryFilterAccessible(ctx)
-    next()
-  })
+    // Unless option set of 'unfiltered: true'
+    // Apply filter to query based on user access
+    let unfiltered = _.get(ctx, 'options.unfiltered', false);
+    if(!unfiltered) {
+      identity.queryFilterAccessible(ctx);
+    }
+    next();
+  });
 
   Record.afterRemote('find', function(ctx, modelInstance, next) {
-    next()
-  })
+    next();
+  });
 
   Record.observe('before save', function(ctx, next) {
     var newDate = Date.now();
@@ -25,15 +30,15 @@ module.exports = function(Record) {
       ctx.currentInstance.updatedAt = newDate;
     } else if (ctx.isNewInstance) {
       // create
-      let clientId = identity.gatherClientId(ctx)
+      let clientId = identity.gatherClientId(ctx);
       if (clientId) {
-        ctx.instance.clientId = clientId
+        ctx.instance.clientId = clientId;
       } else {
-        ctx.instance.public = true
-        ctx.instance.readOnly = false
+        ctx.instance.public = true;
+        ctx.instance.readOnly = false;
       }
-      ctx.instance.createdAt = newDate
-      ctx.instance.updatedAt = newDate
+      ctx.instance.createdAt = newDate;
+      ctx.instance.updatedAt = newDate;
     }
     next();
   });

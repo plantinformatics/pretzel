@@ -1,12 +1,19 @@
-import UploadBase from './data-base'
+import UploadBase from './data-base';
 
 export default UploadBase.extend({
   actions: {
-    upload(e) {
-      let files = e.target.files;
-      this.set('file', null);
-      if (files.length > 0) {
-        this.set('file', files[0]);
+    submitFile() {
+      let f = this.get('file');
+      if (f && !this.get('isProcessing')) {
+        let reader = new FileReader();
+        var that = this;
+        reader.onload = function(e) {
+          let data = {data: reader.result, fileName: f.name};
+          that.uploadData(data);
+        };
+        reader.readAsBinaryString(f);
+        this.setProcessing();
+        this.scrollToTop();
       }
     }
   }

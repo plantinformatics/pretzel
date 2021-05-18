@@ -2,6 +2,21 @@
 
 var fs = require('fs');
 var Promise = require('bluebird')
+const bent = require('bent');
+
+
+const load = require('./load');
+
+
+/* global require */
+/* global exports */
+/* global process */
+
+/*----------------------------------------------------------------------------*/
+
+function notDefined(value) { return value === undefined || value === null; }
+
+/*----------------------------------------------------------------------------*/
 
 /**
  * Divide array into smaller chunks
@@ -74,6 +89,9 @@ function createChunked (data, model, len) {
   // })
 }
 
+
+
+
 /**
  * Send a json dataset structure to the database
  * @param {Object} data - The dataset object to be processed
@@ -82,9 +100,6 @@ function createChunked (data, model, len) {
 exports.uploadDataset = (data, models, options, cb) => {
   let dataset_id
   let json_blocks = []
-  let json_annotations = []
-  let json_intervals = []
-  let json_features = []
 
   //create dataset
   models.Dataset.create(data, options)
@@ -101,7 +116,19 @@ exports.uploadDataset = (data, models, options, cb) => {
     }
     //create blocks
     return models.Block.create(json_blocks, options)
-  }).then(function(blocks) {
+  })
+    .then(function(blocks) {
+      uploadDatasetContent(dataset_id, blocks, models, options, cb);
+    });
+};
+/**
+ * @return promise
+ */
+function uploadDatasetContent(dataset_id, blocks, models, options, cb) {
+  let json_annotations = [];
+  let json_intervals = [];
+  let json_features = [];
+
     blocks.forEach(function(block) {
       if (block.__cachedRelations.annotations) {
         block.__cachedRelations.annotations.forEach(function(json_annotation) {
@@ -122,57 +149,84 @@ exports.uploadDataset = (data, models, options, cb) => {
           json_features.push(json_feature);
         })
       }
-    })
+    });
+
+  let promise =
     //create annotations
-    return models.Annotation.create(json_annotations, options)
-  }).then(function(annotations) {
+  models.Annotation.create(json_annotations, options)
+  .then(function(annotations) {
     //create intervals
     return models.Interval.create(json_intervals, options)
   }).then(function(intervals) {
     //create features using connector for performance
     models.Feature.dataSource.connector.connect(function(err, db) {
-
-      let insert_features_recursive = function(features_to_insert) {
-        // no more features
-        if (features_to_insert.length == 0) {
-          return process.nextTick(() => cb(null, dataset_id));
-        }
-
-        let next_level_features = [];
-        // collect and prepare next level features
-        features_to_insert.forEach(function(feature, i) {
-          if (feature.features) {
-            feature.features.forEach(function(child_feature) {
-              child_feature.blockId = feature.blockId;
-              // save parent index to link with children after insertion
-              child_feature.parentIndex = i;
-              next_level_features.push(child_feature);
-            });
-            delete feature.features;
-          }
-        })
-
-        // insert current features
-        db.collection('Feature').insertMany(features_to_insert)
-        .then(function(result) {
-          // console.log(result);
-          // link parent ids
-          next_level_features.forEach(function(child_feature) {
-            child_feature.parentId = result.insertedIds[child_feature.parentIndex];
-            delete child_feature.parentIndex;
-          });
-          // insert next level
-          insert_features_recursive(next_level_features);
-        })
-
-      };
-
-      insert_features_recursive(json_features);
+      insert_features_recursive(db, dataset_id, json_features, true, cb);
     });
-  }).catch(function(e){
-    cb(e)
-  });
+  }).catch(cb);
+  return promise;
 }
+exports.uploadDatasetContent = uploadDatasetContent;
+
+/** 
+ * @param dataset_id  passed to cb
+ * @param ordered false enables insertMany() to insert later documents after a document
+ * which cannot be inserted because of a duplicate key.
+ * (refn : https://docs.mongodb.com/v3.2/reference/method/db.collection.insertMany/#error-handling )
+ * @return promise  (no value)
+ */
+function insert_features_recursive(db, dataset_id, features_to_insert, ordered, cb) {
+  // no more features
+  if (features_to_insert.length == 0) {
+    return process.nextTick(() => cb(null, dataset_id));
+  }
+
+  let next_level_features = [];
+  // collect and prepare next level features
+  features_to_insert.forEach(function(feature, i) {
+    if (feature.features) {
+      feature.features.forEach(function(child_feature) {
+        child_feature.blockId = feature.blockId;
+        // save parent index to link with children after insertion
+        child_feature.parentIndex = i;
+        next_level_features.push(child_feature);
+      });
+      delete feature.features;
+    }
+    if (! notDefined(feature.value) && notDefined(feature.value_0)) {
+      feature.value_0 = feature.value.length ? feature.value[0] : feature.value;
+    }
+  });
+
+  let promise =
+  // insert current features
+    db.collection('Feature').insertMany(features_to_insert, {ordered})
+    .then(function(result) {
+      console.log('insert_features_recursive', result.insertedCount, features_to_insert.length);
+      // link parent ids
+      next_level_features.forEach(function(child_feature) {
+        child_feature.parentId = result.insertedIds[child_feature.parentIndex];
+        delete child_feature.parentIndex;
+      });
+      // insert next level
+      return insert_features_recursive(db, dataset_id, next_level_features, ordered, cb);
+    })
+    .catch((err) => {
+      console.log('insert_features_recursive', err.message, err.code);
+      if (err.writeErrors) console.log(err.writeErrors.length, err.writeErrors[0]);
+      // if !ordered then duplicates are OK - called from blockAddFeatures().
+      if (err.code === 11000) {
+        let dupCount = err.writeErrors && err.writeErrors.length || 0;
+        return Promise.resolve(features_to_insert.length - dupCount);
+      }
+      else {
+        cb(err);
+        return Promise.reject(err);
+      }
+    });
+  return promise;
+};
+exports.insert_features_recursive = insert_features_recursive;
+
 
 /**
  * Check whether the specified dataset already exists in the db
@@ -185,3 +239,138 @@ function checkDatasetExists(name, models) {
     return results.length > 0;
   });
 }
+
+
+/*----------------------------------------------------------------------------*/
+
+/** Handle POST-ed JSON data, either plain file or gzip-ed,
+ * parse the JSON and apply the given function uploadParsed to it.
+ * Call cb().
+ * @param msg received API request message
+ * @param uploadParsed  function to pass parsed JSON object to
+ * @param cb  node callback
+ */
+exports.handleJson = function(msg, uploadParsed, cb) {
+  // factored from dataset.js : Dataset.upload(), which can be changed to use this.
+
+  // Parse as either .json or .gz
+  if (msg.fileName.endsWith('.json')) {
+    try {
+      let jsonMap = JSON.parse(msg.data);
+      uploadParsed(jsonMap);
+    } catch (e) {
+      console.log(e);
+      cb(Error("Failed to parse JSON"));
+    }
+  } else if (msg.fileName.endsWith('.gz')) {
+    var buffer = new Buffer(msg.data, 'binary');
+    load.gzip(buffer).then(function(json) {
+      let jsonMap = json;
+      uploadParsed(jsonMap);
+    })
+      .catch(function(err) {
+        console.log(err);
+        cb(Error("Failed to read gz file"));
+      });
+  } else {
+    cb(Error('Unsupported file type'));
+  }
+};
+
+/*----------------------------------------------------------------------------*/
+
+  exports.uploadParsedCb = 
+    // Common steps for both .json and .gz files after parsing
+  (models, jsonMap, options, cb) => {
+      if(!jsonMap.name){
+        cb(Error('Dataset JSON has no "name" field (required)'));
+      } else {
+        // Check if dataset name already exists
+        // Passing option of 'unfiltered: true' overrides filter for public/personal-only
+        models.Dataset.exists(jsonMap.name, { unfiltered: true }).then((exists) => {
+          if (exists) {
+            cb(Error(`Dataset name "${jsonMap.name}" is already in use`));
+          } else {
+            // Should be good to process saving of data
+            exports.uploadDataset(jsonMap, models, options, cb);
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          cb(Error('Error checking dataset existence'));
+        });
+      }
+    };
+
+  exports.uploadParsedTryCb = 
+    /** Wrap uploadParsed with try { } and pass error to cb().
+     */
+    function uploadParsedTryCb(models, jsonData, options, cb) {
+      try {
+        let jsonMap = JSON.parse(jsonData);
+        exports.uploadParsedCb(models, jsonMap, options, cb);
+      } catch (e) {
+        let message = e.toString ? e.toString() : e.message || e.name;
+        // logging e logs e.stack, which is also logged by cb(Error() )
+        console.log(message || e);
+        cb(Error("Failed to parse JSON" + (message ? ':\n' + message : '')));
+      }
+    };
+
+  /**
+   * @param uploadFn  uploadParsedTry(jsonData)
+   */
+  exports.loadAfterDeleteCb =
+    function loadAfterDeleteCb(fileName, uploadFn, err, cb) {
+              if (err) {
+                cb(err);
+              }
+              else {
+                fs.readFile(fileName, (err, jsonData) => {
+                  if (err) {
+                    cb(err);
+                  } else {
+                    console.log('readFile', fileName, jsonData.length);
+                    // jsonData is a Buffer;  JSON.parse() handles this OK.
+                    uploadFn(jsonData);
+                  }
+                });
+              }
+            };
+
+
+  /** If Dataset with given id exists, remove it.
+   * If id doesn't exist, or it is removed OK, then call okCallback,
+   * otherwise pass the error to the (API request) replyCb.
+   * @param if false and dataset id exists, then fail - call replyCb() with Error.
+   */
+  exports.removeExisting = function(models, id, replaceDataset, replyCb, okCallback) {
+    models.Dataset.exists(id, { unfiltered: true }).then((exists) => {
+      console.log('removeExisting', "'", id, "'", exists);
+      if (exists) {
+        if (! replaceDataset) {
+          replyCb(Error("Dataset '" + id + "' exists"));
+        } else {
+        /* without {unfiltered: true}, the dataset was not found by destroyAll.
+         * destroyAllById(id ) also did not found the dataset (callback gets info.count === 0).
+         * .exists() finds it OK.
+         */
+        models.Dataset.destroyAll/*ById(id*/ ({_id : id}, {unfiltered: true}, (err) => {
+          if (err) {
+            replyCb(err);
+          } else {
+            console.log('removeExisting removed', id);
+            okCallback();
+          }
+        });
+        }
+      } else {
+        okCallback();
+      }
+    });
+  };
+
+
+
+
+/*----------------------------------------------------------------------------*/

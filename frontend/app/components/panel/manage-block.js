@@ -1,3 +1,4 @@
+import { computed } from '@ember/object';
 import ManageBase from './manage-base';
 
 export default ManageBase.extend({
@@ -43,14 +44,14 @@ export default ManageBase.extend({
       this.sendAction('loadBlock', block);
     }
   },
-  dataset: Ember.computed('block', function() {
+  dataset: computed('block', function() {
     let block = this.get('block')
     // console.log('BLOCK', block)
     // let datasetId = block.get('datasetId')
     let dataset = block.get('map')
     return dataset
   }),
-  disableCreateTag: Ember.computed('newAnnotation', 'block.annotations', function() {
+  disableCreateTag: computed('newAnnotation', 'block.annotations', function() {
     let block = this.get('block')
     let tags = block.get('tags')
     // console.log('newAnnotation', this.newAnnotation, this.newAnnotation.length)
@@ -63,7 +64,7 @@ export default ManageBase.extend({
     }
   }),
   // determine if interval can be created according to conditions
-  disableCreateInterval: Ember.computed('newInterval', 'block.intervals', function() {
+  disableCreateInterval: computed('newInterval', 'block.intervals', function() {
     let block = this.get('block')
     let newInterval = block.get('newInterval')
     // console.log('newInterval', this.newInterval, this.newInterval.length)
@@ -76,7 +77,7 @@ export default ManageBase.extend({
     }
   }),
   // display potential interval from selectedFeatures, if valid
-  intervalSelected: Ember.computed('block', 'selectedFeatures', function() {
+  intervalSelected: computed('block', 'selectedFeatures', function() {
     let block = this.get('block')
     let selectedFeatures = this.get('selectedFeatures')
     if (selectedFeatures) {

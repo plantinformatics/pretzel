@@ -2,20 +2,19 @@
 
 
 [![Docker pulls](https://img.shields.io/docker/pulls/plantinformaticscollaboration/pretzel.svg?logo=docker&style=for-the-badge)](https://hub.docker.com/r/plantinformaticscollaboration/pretzel)
-[![Docker pulls](https://img.shields.io/docker/automated/plantinformaticscollaboration/pretzel.svg?logo=docker&style=for-the-badge)](https://hub.docker.com/r/plantinformaticscollaboration/pretzel)
-[![Docker pulls](https://img.shields.io/docker/build/plantinformaticscollaboration/pretzel.svg?logo=docker&style=for-the-badge)](https://hub.docker.com/r/plantinformaticscollaboration/pretzel)
+[![Docker automated](https://img.shields.io/docker/automated/plantinformaticscollaboration/pretzel.svg?logo=docker&style=for-the-badge)](https://hub.docker.com/r/plantinformaticscollaboration/pretzel)
+[![Docker build](https://img.shields.io/docker/cloud/build/plantinformaticscollaboration/pretzel.svg?logo=docker&style=for-the-badge)](https://hub.docker.com/r/plantinformaticscollaboration/pretzel)
 
 [![Website](https://img.shields.io/website-up-down-green-red/http/plantinformatics.io.svg?label=plantinformatics.io&style=for-the-badge)](http://plantinformatics.io)
 
 # About Pretzel <!-- omit in toc -->
 A Loopback/Ember/D3 framework to display and interactively navigate complex datasets.
 
-Developed by
-- AgriBio, Department of Economic Development, Jobs, Transport and Resources (DEDJTR), Victoria,
-  Australia;
-- CSIRO, Canberra, Australia.
+<img src="https://user-images.githubusercontent.com/20571319/116690793-4129a380-a9fd-11eb-85ed-6b9d91f51458.png" align="center">
 
-Funded by the Grains Research Development Corporation (GRDC).
+Currently (2020-) funded and developed by Agriculture Victoria, Department of Jobs, Precincts and Regions (DJPR), Victoria, Australia.
+
+Previously (2016-2020) funded by the Grains Research Development Corporation (GRDC) and co-developed by Agriculture Victoria and CSIRO, Canberra, Australia.
 
 # Table of Contents <!-- omit in toc -->
 - [Features](#features)
@@ -27,6 +26,7 @@ Funded by the Grains Research Development Corporation (GRDC).
     - [Using pretzel web interface](#using-pretzel-web-interface)
     - [Using command line](#using-command-line)
 - [Setting up your own instance (without docker)](#setting-up-your-own-instance-without-docker)
+  - [Note for installation on MS Windows](#note-for-installation-on-ms-windows)
   - [Dependencies](#dependencies)
     - [Database](#database)
     - [Node.js, NPM and Bower](#nodejs-npm-and-bower)
@@ -37,6 +37,7 @@ Funded by the Grains Research Development Corporation (GRDC).
   - [Running](#running)
     - [Starting the app](#starting-the-app)
     - [Checking things are running](#checking-things-are-running-1)
+    - [Starting for development](#starting-for-development)
     - [Adding user verification](#adding-user-verification)
   - [Inserting data](#inserting-data)
     - [Loading data via the command line](#loading-data-via-the-command-line)
@@ -73,9 +74,11 @@ For a quick start without installing any of the dependencies you will need docke
 ```
 mkdir -p ~/mongodata \
  && docker run --name mongo --detach --volume ~/mongodata:/data/db --net=host mongo \
- && until $(curl --silent --fail --output /dev/null localhost:27017); do printf '.'; sleep 1; done \
+ && until $(curl --silent --output /dev/null localhost:27017 || \
+    [ $(docker inspect -f '{{.State.Running}}' mongo) = "false" ]); do printf '.'; sleep 1; done \
  && docker run --name pretzel --detach --net=host plantinformaticscollaboration/pretzel:stable  \
- && until $(curl --silent --fail --output /dev/null localhost:3000); do printf '.'; sleep 1; done \
+ && until $(curl --silent --output /dev/null localhost:3000 || \
+    [ $(docker inspect -f '{{.State.Running}}' pretzel) = "false" ] ); do printf '.'; sleep 1; done \
  && docker logs pretzel
 ```
 
@@ -117,6 +120,15 @@ To upload multiple genomes along with feature definitions and aliases defining s
 3. Follow the [upload instructions](https://github.com/plantinformatics/pretzel-input-generator/blob/v1.0/doc/upload.md)
 
 # Setting up your own instance (without docker)
+
+## Note for installation on MS Windows
+
+The easiest way to set up a local instance on Windows is to first install the Windows Subsystem for Linux, as documented
+* [here for version 1](https://docs.microsoft.com/en-us/windows/wsl/install-win10) or
+* [here for version 2](https://docs.microsoft.com/en-us/windows/wsl/wsl2-install).
+
+Once the WSL is installed and you are within a Linux subsystem -powered command-line shell,
+all steps below may be followed as specified.
 
 ## Dependencies
 
@@ -223,6 +235,7 @@ The Loopback backend expects the compiled client in its client/ sub-directory. Y
 
 ```
 ln -s ../frontend/dist backend/client
+ln -s ../../../../backend/common/utilities/interval-overlap.js frontend/app/utils/draw/.
 ```
 
 ## Running
@@ -240,6 +253,22 @@ Note that this runs the app without any authentication or security and is only s
 ### Checking things are running
 
 If everything has worked so far, you should be able to open [http://localhost:3000](http://localhost:3000) in a browser and see a landing page. If you started the backend with the above command, you can create a user by signing up, then logging in with these details (with `EMAIL_VERIFY=NONE`, the user is created immediately without any extra verification).
+
+### Starting for development
+
+To start the app for code development with live reloads on changes  
+1. Ensure the Ember-CLI tool is installed  globally  
+```
+npm install -g ember-cli
+```  
+2. Run the backend independently, with an assigned port  
+```
+EMAIL_VERIFY=NONE AUTH=ALL API_PORT_EXT=5000 npm run run:backend
+```  
+3. Run the frontend independently, using Ember CLI  
+```
+cd frontend && ember serve
+```  
 
 ### Adding user verification
 
@@ -266,25 +295,47 @@ You may also have to supply your credential by specifying `EMAIL_USER` and `EMAI
 
 ## Inserting data
 
-There are five example maps in the `resources/` folder with simple dummy data. You can upload these by navigating to the Upload tab on the left panel, selecting JSON and browsing to the `resources/` folder to select a map. Once submitted, the maps should be visible in the Explorer tab.
+There are example datasets in the [pretzel-data](https://github.com/plantinformatics/pretzel-data) repository with simple dummy data. You can get the data with
+```
+git clone https://github.com/plantinformatics/pretzel-data
+```
+and upload these files by navigating to the Upload tab on the left panel, selecting JSON and browsing to pretzel-data/ to select a map. Once submitted, the maps should be visible in the Explorer tab.
+The file myDataset.json defines the reference myGenome, and hence should be uploaded before the files which refer to that reference : myAnnotation.json myMarkers.json  myMarkers2.json mySample.json aliases.json 
+
 
 ### Loading data via the command line
 
 An alternative to the Upload tab is to use the command-line, e.g. for larger files :
-
+```
 export APIHOST=http://localhost:3000
 source ~/Applications/Pretzel/pretzel/resources/tools/functions_prod.bash
+```
+
+Logging in to the web application authorises a token, which is required by the API.
 
 While logged into Pretzel via the browser, use the Web Inspector to get the authentication token :
+```
 From Ctrl-click : Inspect ...
 >> Application : Storage : Cookies : http://localhost:3000 :  Name : ember_simple_auth-session
+```
 Copy/Paste the Value into a url decoder such as e.g. https://urldecode.org which will display the decoded parameters as e.g. :
+```
 {"authenticated":{"authenticator":"authenticator:pretzel-local","token":"0uOnWyy08OGcDJbC9eRx5Ki73z2OYkqvrZqQTJmoAklmysU5CxtrYmrXUpcX8MOe","clientId":"5ba9c0870612bf19a6afed01"}}
+```
 Copy/paste the token value and set it in the command-line environment using :
 ```
 setToken  "authentication-token-goes-here"
-uploadData ~/Applications/Pretzel/pretzel-data/myMap.json
 ```
+Then in the same shell you can use the API to upload dataset files :
+```
+uploadData ~/Applications/Pretzel/pretzel-data/myMap.json
+uploadDataList myDataset.json myAnnotation.json myMarkers.json myMarkers2.json mySample.json
+URL=$URL_A uploadData aliases.json 
+```
+
+## Database Indexes
+
+Refer to 'Database configuration' in doc/notes/docker_setup.md for indexes added to the Feature and Alias database collections which are required for reasonable performance as datasets grown beyond 1k documents.
 
 
 # Public genetic map references

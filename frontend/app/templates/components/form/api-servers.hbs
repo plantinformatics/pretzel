@@ -1,0 +1,38 @@
+{{!-- enable display of <tspan.blockServer>, when apiServers.serversLength > 1 --}}
+{{multipleServersEffect}}
+
+{{#elem/panel-container state="primary" showComponent=showList as |panelContainer|}}
+
+  {{#elem/panel-heading icon="globe" panelContainer=panelContainer}}
+    Datasources
+
+  {{/elem/panel-heading}}
+
+  {{#if panelContainer.showComponent}}
+  <ul class="list-group">
+    {{#each-in servers as |apiServerName apiServer| }}
+      <li class="list-group-item list-group-item-info">
+        {{form/api-server name=apiServerName data=apiServer}}
+      </li>
+    {{/each-in}}
+
+    <li 
+      class="list-group-item list-group-item-info" >
+      <i class="glyphicon glyphicon-cloud-download"></i>
+      Connect new datasource
+      <span class="pull-right"
+        style="margin-right: 4em;">
+        {{elem/button-base
+          classSize='xs'
+          classColour='success'
+          icon='plus'
+          onClick=@addNewDatasource}}
+      </span>
+    </li>
+  </ul>
+  {{/if}} {{!-- showComponent --}}
+
+
+{{/elem/panel-container}}
+
+

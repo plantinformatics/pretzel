@@ -1,7 +1,8 @@
-/*jshint node:true*/
-/* global require, module */
-var EmberApp = require('ember-cli/lib/broccoli/ember-app');
+'use strict';
+
 var nodeSass = require('node-sass');
+
+const EmberApp = require('ember-cli/lib/broccoli/ember-app');
 
 module.exports = function(defaults) {
   var app = new EmberApp(defaults, {
@@ -22,7 +23,7 @@ module.exports = function(defaults) {
     },
 
     babel: {
-      compact: false
+      corejs : {compact: false}
     },
 
     sassOptions: {
@@ -30,9 +31,9 @@ module.exports = function(defaults) {
     },
 
     'ember-bootstrap': {
-      'bootstrapVersion': 4,
-      'importBootstrapFont': true,
-      'importBootstrapCSS': true
+      'bootstrapVersion': 3,
+      'importBootstrapFont': false,
+      'importBootstrapCSS': false
     }
   });
 
@@ -49,22 +50,18 @@ module.exports = function(defaults) {
   // please specify an object with the list of modules as keys
   // along with the exports of each module as its value.
   //
-  app.import('bower_components/bootstrap/dist/css/bootstrap.css');
-  app.import('bower_components/bootstrap/dist/js/bootstrap.min.js');
   app.import('bower_components/d3/d3.js');
   app.import('bower_components/d3-tip/d3-tip.js');
   app.import('bower_components/handsontable/dist/handsontable.full.min.js');
   app.import('bower_components/handsontable/dist/handsontable.full.min.css');
   app.import('vendor/js/divgrid/divgrid.js');
-  app.import('node_modules/popper.js/dist/umd/popper.js');
-  app.import('node_modules/tooltip.js/dist/umd/tooltip.js');
-
-  app.import('bower_components/bootstrap/fonts/glyphicons-halflings-regular.woff', {
-    destDir: 'fonts'
-  });
-  app.import('bower_components/bootstrap/fonts/glyphicons-halflings-regular.woff2', {
-    destDir: 'fonts'
-  });
+  app.import('node_modules/colresizable/colResizable-1.6.min.js');
+  app.import('node_modules/bootstrap/js/tooltip.js');
+  app.import('node_modules/bootstrap/js/popover.js');
+  app.import('node_modules/bootstrap/js/button.js');
+  app.import('node_modules/bootstrap/js/tab.js');
+  app.import('node_modules/bootstrap/js/dropdown.js');
+  app.import('node_modules/numeric/lib/numeric.latest.js');
 
   return app.toTree();
 };
