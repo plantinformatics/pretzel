@@ -1,5 +1,6 @@
-import Ember from 'ember';
-const { inject: { service }, getOwner } = Ember;
+import { alias } from '@ember/object/computed';
+import { inject as service } from '@ember/service';
+import { getOwner } from '@ember/application';
 
 
 import ManageBase from './manage-base'
@@ -9,10 +10,11 @@ export default ManageBase.extend({
 
 
   filterOptions: {
+    'fileDrop': {'formal': 'fileDrop', 'icon': 'cloud-upload'}, // or upload
     'cell': {'formal': 'CSV', 'icon': 'th-large'},
     'json': {'formal': 'JSON', 'icon': 'list-alt'},
   },
-  filter: 'cell',
+  filter: 'fileDrop',
 
   actions: {
     changeFilter: function(f) {
@@ -20,6 +22,6 @@ export default ManageBase.extend({
     }
   },
 
-  serverTabSelected : Ember.computed.alias('controls.serverTabSelected')
+  serverTabSelected : alias('controls.serverTabSelected')
 
 });

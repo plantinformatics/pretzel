@@ -1,17 +1,17 @@
-import Ember from 'ember';
-import DS from 'ember-data';
-import attr from 'ember-data/attr';
-
-const { inject: { service } } = Ember;
+import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
+import Model, { attr, belongsTo } from '@ember-data/model';
 
 const ObjName = 'axis-brush';
 
-export default DS.Model.extend({
+const dLog = console.debug;
+
+export default Model.extend({
 
   pathsP : service('data/paths-progressive'),
 
-  block: DS.belongsTo('block', { inverse: null }),
-  blockId: DS.attr('string'),
+  block: belongsTo('block', { inverse: null }),
+  blockId: attr('string'),
   // brushedDomain : DS.attr(),
   // featuresResult : DS.attr(),
 
@@ -21,11 +21,12 @@ export default DS.Model.extend({
    * Depending on zoomCounter is just a stand-in for depending on the domain of block,
    * which is part of changing the axes (Stacked) to Ember components, and the dependent keys can be e.g. block.axis.domain.
    */
-  features : Ember.computed('blockId', 'zoomCounter', 'brushedDomain.[0]', 'brushedDomain.[1]', function () {
+  features : computed('blockId', 'zoomCounter', 'brushedDomain.[0]', 'brushedDomain.[1]', function () {
     let blockId = this.get('blockId'),
     id = this.get('id');
-    if (blockId === undefined)
+    if (blockId === undefined) {
       blockId = this.id;
+    }
     let
       features = this.get('pathsP').getBlockFeaturesInterval(blockId);
     let me = this;

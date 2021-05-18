@@ -13,7 +13,21 @@ function parseOptions(options_param)
        * split on any non-alphanumeric, so all punctuation is discarded. (allow '_')
        */
       let [name, val] = opt.split(/[^A-Za-z0-9_]/);
-      result[name] = val || true;
+      let val_lower;
+      /** treat options=name as options=name:true.
+       * Recognise true and false, which will appear as strings 'true' and 'false'.
+       * Convert a numeric argument from string to number.
+       */
+      if (val === undefined) {
+        val = true;
+      } else if ((val_lower = val.toLowerCase()) === 'false') {
+        val = false;
+      } else if (val_lower === 'true') {
+        val = true;
+      } else if (val.match(/[0-9.]/)) {
+        val = +val;
+      }
+      result[name] = val;
       return result;
     }, options);
   }

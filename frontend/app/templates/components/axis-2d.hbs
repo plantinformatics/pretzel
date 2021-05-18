@@ -33,11 +33,25 @@
 
 {{/ember-wormhole}}
 
-<div>axis-2d :{{this}}, {{axisID}}, {{targetEltId}},  {{subComponents.length}} :
+{{positionRightEdgeEffect}}
+<div>axis-2d : {{axisID}}, {{targetEltId}},  {{subComponents.length}} :
   <div>subComponents :
-    {{axis-charts data=data axis=this axisID=axisID childWidths=childWidths allocatedWidths=allocatedWidths blocks=viewedChartable resizeEffect=resizeEffect}}
-    {{log 'blockService' blockService 'viewedChartable' blockService.viewedChartable}}
-    {{axis-tracks axis=this axisID=axisID childWidths=childWidths allocatedWidths=allocatedWidths trackBlocksR=dataBlocks resizeEffect=resizeEffect}}
+    {{#draw/axis-blocks axis1d=axis1d dataBlocks=dataBlocks
+      childWidths=childWidths trackWidth=trackWidth
+      as |axisBlocks| }}
+      {{axis-charts data=data axis=this axisID=axisID childWidths=childWidths
+        allocatedWidths=allocatedWidths blocks=viewedChartable
+        resizeEffect=resizeEffect axisBlocks=axisBlocks
+        trackWidth=trackWidth
+      }}
+      {{log 'blockService' blockService 'viewedChartable' blockService.viewedChartable}}
+      {{axis-tracks axis=this axisID=axisID childWidths=childWidths
+        allocatedWidths=allocatedWidths trackBlocksR=trackBlocks
+        resizeEffect=resizeEffect axisBlocks=axisBlocks
+        trackWidth=trackWidth
+      }}
+    {{/draw/axis-blocks}}
+
     {{#each subComponents as |subComponent|}}
       {{subComponent}}
     {{/each}}

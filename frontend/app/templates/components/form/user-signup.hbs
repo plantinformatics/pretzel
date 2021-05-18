@@ -10,13 +10,15 @@
       {{auth-input
         type='text'
         value=email
+        autocomplete="email"
         placeholder='Your Email Address'}}
       {{auth-input
         type='password'
         value=password
+        autocomplete="new-password"
         placeholder='Enter a New Password'}}
       {{suggest-link
-        suggest-text="Already a member?"
+        suggest-text="Already have an account?"
         link-name="login"
         link-pretty="Log In"}}
       {{elem/button-submit loading=isProcessing}}

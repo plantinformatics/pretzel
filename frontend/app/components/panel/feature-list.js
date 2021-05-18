@@ -1,8 +1,21 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import { later } from '@ember/runloop';
+import Component from '@ember/component';
+import { on } from '@ember/object/evented';
+import { inject as service } from '@ember/service';
+
+import $ from 'jquery';
+
+import { uniq, concat, difference } from 'lodash/array';
+
 
 /* global d3 */
+const dLog = console.debug;
 
 const className = "feature-list";
+
+function logArray(a) { return a.length > 4 ? a.length : a; }
+
 
 /**  data/event flow :
 
@@ -32,7 +45,8 @@ arrow (right) fromSelectedFeatures
 
  */
 
-export default Ember.Component.extend({
+export default Component.extend({
+  selected : service('data/selected'),
 
   classNames : [className],
   classNameBindings: ['activeInput'],
@@ -42,7 +56,7 @@ export default Ember.Component.extend({
       console.log('paste', event);
       let me = this;
       /** this function is called before jQuery val() is updated. */
-      Ember.run.later(function () {
+      later(function () {
         // featureNameListInput() does inputIsActive();
         me.featureNameListInput();
         // trigger fold
@@ -63,6 +77,15 @@ export default Ember.Component.extend({
     }
   },
 
+  listen: on('init', function() {
+    this.get('selected').on('toggleFeature', this, 'toggleFeature');
+  }),
+  /** remove the binding created in listen() above, upon component destruction */
+  unListen: on('willDestroyElement', function() {
+    this.get('selected').off('toggleFeature', this, 'toggleFeature');
+  }),
+
+
 
   activeInput : true,
   featureNameListEnter : 0,
@@ -75,10 +98,11 @@ export default Ember.Component.extend({
    * having the user click '->Blocks' seems the right flow; can add that after
    * trialling.
    */
-  featureNameList  : Ember.computed('featureNameListEnter', function () {
+  featureNameList  : computed('featureNameListEnter', function () {
     let
       featureList = {};
-    let text$ = this.$('textarea'),
+    /** jQuery handle of this textarea */
+    let text$ = $('textarea', this.element),
       /** before textarea is created, .val() will be undefined. */
       fl = text$.val();
       if (fl)
@@ -88,18 +112,21 @@ export default Ember.Component.extend({
       // If string has leading or following white-space, then result of split will have leading / trailing ""
       if (fl.length && (fl[0] === ""))
         fl.shift();
-      if (fl.length && (fl[fl.length-1] === ""))
-        fl.pop();
       }
     else  // e.g. if fl===""
       fl = [];
 
       text$.val(fl && fl.join('\n'));
+      /** If the user has appended a \n, it is not removed from the textarea,
+       * allowing them to type text on a new line;  instead the "" at the end
+       * of fl[] is popped. */
+      if (fl.length && (fl[fl.length-1] === ""))
+        fl.pop();
       featureList.featureNameList = fl;
       featureList.empty = ! fl || (fl.length === 0);
       return featureList;
     }),
-  selectedFeatureNames  : Ember.computed('selectedFeatures', function () {
+  selectedFeatureNames  : computed('selectedFeatures', function () {
     let
     featureList = {};
 
@@ -122,7 +149,7 @@ export default Ember.Component.extend({
 
     return featureList;
   }),
-  activeFeatureListBase  : Ember.computed('activeInput', 'featureNameList', 'selectedFeatureNames', function () {
+  activeFeatureListBase  : computed('activeInput', 'featureNameList', 'selectedFeatureNames', function () {
     let featureList,
       activeInput = this.get('activeInput');
     if (activeInput)
@@ -136,7 +163,13 @@ export default Ember.Component.extend({
    *   if activeInput : read any text entered since the last newline / paste / etc.
    *   if ! activeInput, copy selectedFeatureNames to the input textarea
    */
-  activeFeatureList  : Ember.computed('activeFeatureListBase', function () {
+  get activeFeatureList () {
+    /** This function could be : computed('activeFeatureListBase', function ... )
+     * but would have to set up an event listener for input.
+     * activeFeatureList() is called from toSelectedFeatures(), and
+     * goto-feature-list : getBlocksOfFeatures() and lookupFeatureList(); those
+     * don't currently require a CP.
+     */
     let activeInput = this.get('activeInput');
     if (activeInput)
     {
@@ -147,11 +180,11 @@ export default Ember.Component.extend({
     if (! activeInput)
     {
       let fl = featureList.selectedFeatures,
-      text$ = this.$('textarea');
+      text$ = $('textarea', this.element);
       text$.val(fl && fl.join('\n'));
     }
     return featureList;
-  }).volatile(),
+  },
 
   /*----------------------------------------------------------------------------*/
 
@@ -195,15 +228,71 @@ export default Ember.Component.extend({
   },
   fromSelectedFeatures() {
     console.log('fromSelectedFeatures');
-    if (this.get('activeInput'))
-      this.set('activeInput', false);
-    let text$ = this.$('textarea'),
-    selectedFeatures = this.get('selectedFeatures'),
-    selectedFeaturesNames = selectedFeatures.map(function (sf) {
-      return sf.Feature;
-    });
-    console.log('selectedFeatures', selectedFeatures, selectedFeaturesNames);
-    text$.val(selectedFeaturesNames.join('\n'));
+
+    /** Append to selectedFeatures to text$, therefore set activeInput true.
+     * (originally : replace instead of append, so activeInput was set false) */
+    this.set('activeInput', true);
+
+    let text$ = $('textarea', this.element),
+    selectedFeatures = this.get('selectedFeatures');
+    let selectedFeaturesEmpty = ! selectedFeatures.length ||
+        ((selectedFeatures.length === 1) && (selectedFeatures[0].Feature === undefined));
+    if (! selectedFeaturesEmpty) {
+      let
+      selectedFeaturesNames = selectedFeatures.map(function (sf) {
+        return sf.Feature;
+      });
+      dLog('fromSelectedFeatures', logArray(selectedFeatures));
+      this.appendSelectedFeatures(selectedFeaturesNames);
+    }
+  },
+  /** Append the given selectedFeaturesNames to textarea, or filter them out if
+   * remove is true.
+   */
+  appendSelectedFeatures(selectedFeaturesNames, remove) {
+    console.log('appendSelectedFeatures', selectedFeaturesNames);
+    /** Append to selectedFeatures to text$, therefore set activeInput true.
+     * (originally : replace instead of append, so activeInput was set false) */
+    this.set('activeInput', true);
+
+      let
+      current = this.currentInputFeatures(),
+      combined = current.length ? 
+        (remove ? this.subtract : this.combine)(current, selectedFeaturesNames) :
+        (remove ? [] : selectedFeaturesNames),
+      newValue = combined.join('\n');
+      console.log(logArray(current), 'selectedFeaturesNames', logArray(selectedFeaturesNames), logArray(combined));
+      let text$ = $('textarea', this.element);
+      text$.val(newValue);
+  },
+  toggleFeature(feature, added, listName) {
+    // not interested in listName === 'labelledFeatures'.
+    if (listName === 'features') {
+      dLog('toggleFeature', feature, added);
+      this.appendSelectedFeatures([feature.name], !added);
+    }
+  },
+  currentInputFeatures () {
+    let
+    text$ = $('textarea', this.element),
+    currentVal = text$.val(),
+    array = (currentVal === "") ? [] : currentVal.split('\n');
+    return array;
+  },
+  /** Combine the current input feature names and the brushed
+   * selectedFeaturesNames to be appended.
+   */
+  combine(a, b) {
+    let c = concat(a, b)
+      .uniq();
+    return c;
+  },
+  /** remove b from a
+  */
+  subtract(a, b) {
+    let c = difference(a, b)
+      .uniq();
+    return c;
   }
 
 

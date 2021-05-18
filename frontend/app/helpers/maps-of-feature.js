@@ -1,15 +1,19 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
 
-import { helper } from "@ember/component/helper";
+import Helper, { helper } from "@ember/component/helper";
 // or Ember.Helper.helper
 
-import { featureChrs,  name2Map,   chrMap, objectSet,  mapsOfFeature } from '../utils/feature-lookup';
-
-import Helper from "@ember/component/helper";
+import {
+  featureChrs,
+  name2Map,
+  chrMap,
+  objectSet,
+  mapsOfFeature
+} from '../utils/feature-lookup';
 
 export default Helper.extend({
 
-  store: Ember.inject.service('store'),
+  store: service('store'),
 
   compute(params) {
     let

@@ -1,4 +1,5 @@
-import Ember from 'ember';
+import EmberObject, { computed } from '@ember/object';
+import Evented from '@ember/object/evented';
 import Service from '@ember/service';
 
 // const { inject: { service } } = Ember;
@@ -11,16 +12,16 @@ import { parseOptions } from '../utils/common/strings';
 
 
 
-export default Service.extend(Ember.Evented, {
+export default Service.extend(Evented, {
   // block: service('data/block'),
 
-  params : Ember.Object.create({}),
+  params : EmberObject.create({}),
 
   /*--------------------------------------------------------------------------*/
 
   /** Parse params.options.
    */
-  urlOptions : Ember.computed(function () {
+  urlOptions : computed(function () {
     /** No dependency is given because params will change, but these options aren't
      * changeable at runtime by user action (although such could be added later).
      */
@@ -28,17 +29,24 @@ export default Service.extend(Ember.Evented, {
     if (options_param && (options = parseOptions(options_param)))
     {
       // alpha enables new features which are not yet robust.
+      /* splitAxes (distinct from splitAxes1) enables buttons in axis-2d.hbs for :
+       *  addTracks, addChart, addLd, addTable
+       * axis-tracks and axis-charts are now implemented and enabled by default (splitAxes1).
+       */
       options.splitAxes |= options.alpha;
     }
     else
       options = {};
     /* splitAxes1 is now enabled by default. */
-    if (! options.splitAxes1)
+    if (! options.hasOwnProperty('splitAxes1'))
       options.splitAxes1 = true;
+    /* featuresCounts is now enabled by default. */
+    if (! options.hasOwnProperty('featuresCounts'))
+      options.featuresCounts = true;
     
     return options;
   }),
-  urlOptionsEffect: Ember.computed('urlOptions', function () {
+  urlOptionsEffect: computed('urlOptions', function () {
     let options = this.get('urlOptions');
     if (options)
       this.optionsToDom(options);

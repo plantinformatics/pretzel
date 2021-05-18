@@ -1,6 +1,5 @@
-import Ember from 'ember';
-
-const { Component } = Ember;
+import { computed } from '@ember/object';
+import Component from '@ember/component';
 
 export default Component.extend({
   tagName: 'span',
@@ -11,7 +10,7 @@ export default Component.extend({
   // classes
   // classNames: ['btn'],
   classNameBindings: ['pullRight'],
-  pullRight: Ember.computed('right', function() {
+  pullRight: computed('right', function() {
     let prop = this.get('right')
     if (prop === true) {
       return 'pull-right'
@@ -19,7 +18,7 @@ export default Component.extend({
       return ''
     }
   }),
-  menuRight: Ember.computed('right', function() {
+  menuRight: computed('right', function() {
     let prop = this.get('right')
     if (prop === true) {
       return 'dropdown-menu dropdown-menu-right'

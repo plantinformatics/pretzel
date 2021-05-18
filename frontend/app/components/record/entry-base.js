@@ -1,12 +1,14 @@
-import Ember from 'ember';
+import { on } from '@ember/object/evented';
+import { computed } from '@ember/object';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
+import { run } from '@ember/runloop';
 
-const { Component, inject: { service } } = Ember;
-
-export default Ember.Component.extend({
-  onInit: function() {
+export default Component.extend({
+  onInit: on('init', function() {
     this.set('editing', false);
-  }.on('init'),
-  noAuth: Ember.computed(function() {
+  }),
+  noAuth: computed(function() {
     return window['AUTH'] === 'NONE';
   }),
   actions: {
@@ -48,7 +50,9 @@ export default Ember.Component.extend({
       /** equiv : record._internalModel.modelName */
       let modelName = record.get('constructor.modelName');
       // destroyRecord() is equivalent to deleteRecord() and immediate save()
-      record.destroyRecord().then(function() {
+      record.destroyRecord()
+        .then(() => run(() => record.unloadRecord()))
+        .then(function() {
         // Don't trigger downstream effects until complete
         that.sendAction('onDelete', modelName, id);
       });

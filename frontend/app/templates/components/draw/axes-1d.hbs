@@ -1,7 +1,10 @@
 <div>axesP : {{axesP.length}}</div>
+{{block.axis1dReferenceBlocks}} {{ axis1dArray }}
 {{#each axesP as |axis axisIndex|}}
   {{!-- axis is the primary / reference block of the axis --}}
-  {{#draw/axis-1d drawMap=drawMap axis=axis axes2d=axes2d as |axis1d|}}
+  {{#draw/axis-1d drawMap=drawMap axis=axis axes2d=axes2d
+     axis1dExists=(action this.axis1dExists)
+     as |axis1d|}}
     <div>axis : {{axis1d.axis.id}}, {{axis1d.extended}}</div>
     {{#if axis1d.extended}}
       {{axis-2d drawMap=drawMap data=drawMap.oa axis1d=axis1d axisID=axis1d.axis.id axisObj=(hash axisID=axis1d.axis.id extended=axis1d.extended) }}
@@ -10,6 +13,13 @@
     {{draw/axis-ticks-selected axis1d=axis1d axisId=axis.id
       drawMap=drawMap
       featuresInBlocks=featuresInBlocks
+      clickedFeaturesByAxis=selected.clickedFeaturesByAxis
+      shiftClickedFeaturesByAxis=selected.shiftClickedFeaturesByAxis
+      labelledFeaturesByAxis=selected.labelledFeaturesByAxis
     }}
   {{/draw/axis-1d}}
 {{/each}}
+
+{{#if menuAxis }}
+  {{draw/axis-menu blockS=menuAxis axisApi=drawMap.oa.axisApi}}
+{{/if}}

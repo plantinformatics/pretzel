@@ -1,9 +1,10 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import Component from '@ember/component';
 
-export default Ember.Component.extend({
+export default Component.extend({
   classNames: ['tabbed-table-container', 'bordered', 'control-panel'],
   filter: 'all',
-  data: Ember.computed('selectedBlock', 'selectedFeatures', 'filter', function() {
+  data: computed('selectedBlock', 'selectedFeatures', 'filter', function() {
     let selectedBlock = this.get('selectedBlock')
     let selectedFeatures = this.get('selectedFeatures')
     let filter = this.get('filter')

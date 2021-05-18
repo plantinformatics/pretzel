@@ -2,9 +2,15 @@
 
 /* global module */
 /* global require */
+/* global Buffer */
+/* global process */
 
+
+const { spawn } = require('child_process');
+var fs = require('fs');
 
 var _ = require('lodash');
+
 
 var acl = require('../utilities/acl');
 var identity = require('../utilities/identity');
@@ -25,36 +31,15 @@ module.exports = function(Dataset) {
   Dataset.upload = function(msg, options, req, cb) {
     req.setTimeout(0);
     var models = this.app.models;
-    // Common steps for both .json and .gz files after parsing
-    const uploadParsed = (jsonMap) => {
-      if(!jsonMap.name){
-        cb(Error('Dataset JSON has no "name" field (required)'));
-      } else {
-        // Check if dataset name already exists
-        // Passing option of 'unfiltered: true' overrides filter for public/personal-only
-        models.Dataset.exists(jsonMap.name, { unfiltered: true }).then((exists) => {
-          if (exists) {
-            cb(Error(`Dataset name "${jsonMap.name}" is already in use`));
-          } else {
-            // Should be good to process saving of data
-            upload.uploadDataset(jsonMap, models, options, cb);
-          }
-        })
-        .catch((err) => {
-          console.log(err);
-          cb(Error('Error checking dataset existence'));
-        });
-      }
-    };
+    const uploadParsed = (jsonMap) => upload.uploadParsedCb(models, jsonMap, options, cb);
+    function uploadParsedTry(jsonData) {
+      upload.uploadParsedTryCb(models, jsonData, options, cb);
+    }
+
     // Parse as either .json or .gz
+    // factored as handleJson()
     if (msg.fileName.endsWith('.json')) {
-      try {
-        let jsonMap = JSON.parse(msg.data);
-        uploadParsed(jsonMap);
-      } catch (e) {
-        console.log(e);
-        cb(Error("Failed to parse JSON"));
-      }
+      uploadParsedTry(msg.data);
     } else if (msg.fileName.endsWith('.gz')) {
       var buffer = new Buffer(msg.data, 'binary');
       load.gzip(buffer).then(function(json) {
@@ -65,10 +50,137 @@ module.exports = function(Dataset) {
         console.log(err);
         cb(Error("Failed to read gz file"));
       })
+    } else if (
+      msg.fileName.endsWith('.xlsx') || msg.fileName.endsWith('.xls') || 
+        msg.fileName.endsWith('.ods')
+    ) {
+      /** messages from child via file descriptors 3 and 4 are
+       * collated in these arrays and can be sent back to provide
+       * detail for / explain an error.
+       */
+      let errors = [], warnings = [];
+
+      /** Each worksheet in the .xslx will result in a dataset passed
+       * to upload.uploadDataset() which call cb(), so it is necessary
+       * to limit this to a single call-back, using cbWrap and cbCalled.
+       * It would be better to assemble an array of datasetId-s from
+       * insert_features_recursive(), and pass that to cb when complete.
+       * The client does not use this result value.
+       *
+       * Refn : async/dist/async.js : onlyOnce(fn)
+       */
+      let cbOrig = cb,
+          cbCalled = 0;
+      function cbWrap(err, message, last) {
+        console.log('cbWrap', err && err.toString(), message, last);
+        /* insert_features_recursive() "passes" last === undefined,
+         * and when !err, message is datasetId (i.e. datasetName)
+         */
+        if (last || (last === undefined) || err) {
+          if (cbCalled++ === 0) {
+            if (err && (errors.length || warnings.length)) {
+              err = [err].concat(errors).concat(warnings).join("\n");
+              errors = []; warnings = [];
+            }
+            cbOrig(err, message);
+          }
+        }
+      }
+      cb = cbWrap;
+      /** msg.fileName : remove punctuation other than .-_, retain alphanumeric */
+      const useFile = true;
+      if (useFile) {
+        const data = new Uint8Array(Buffer.from(msg.data, 'binary'));
+        fs.writeFile(msg.fileName, data, (err) => {
+          if (err) {
+            cb(err);
+          } else {
+            console.log('Written', msg.data.length, data.length, 'to', msg.fileName);
+          }
+        });
+      }
+
+      const
+      /** msg.replaceDataset is defined by uploadSpreadsheet(), but not by data-json.js : submitFile()
+       */
+      replaceDataset = !!msg.replaceDataset, 
+      currentDir = process.cwd(),
+      /** In the Docker container, server cwd is /, and uploadSpreadsheet.bash is in /app/scripts/ */
+      scriptsDir = (currentDir === "/") ? "/app/scripts" : 
+        currentDir.endsWith("/backend") ? 'scripts' : 'backend/scripts',
+      // process.execPath is /usr/bin/node,  need /usr/bin/ for mv, mkdir, perl
+      PATH = process.env.PATH + ':' + scriptsDir,
+      /** file handles : stdin, stdout, stderr, output errors, output warnings. */
+      options = {env : {PATH},  stdio: ['pipe', 'pipe', process.stderr, 'pipe', 'pipe'] };
+      const child = spawn('uploadSpreadsheet.bash', [msg.fileName, useFile], options);
+      child.on('error', (err) => {
+        console.error('Failed to start subprocess.', 'uploadSpreadsheet', msg.fileName, err.toString());
+        // const error = Error("Failed to start subprocess to upload xlsx file " + msg.fileName + '\n' + err.toString());
+        cb(err/*or*/);
+      });
+      console.log('uploadSpreadsheet', /*child,*/ msg.fileName, msg.data.length, replaceDataset, scriptsDir, currentDir);
+      if (! useFile) {
+        child.stdin.write(msg.data);
+        child.stdin.end();
+      }
+
+      // On MS Windows these handles may not be 3 and 4.
+      child.stdio[3].on('data', (chunk) => {
+        let message = chunk.toString();
+        console.log('uploadSpreadsheet errors :', message);
+        errors.push(message);
+      });
+      child.stdio[4].on('data', (chunk) => {
+        let message = chunk.toString();
+        console.log('uploadSpreadsheet warnings :', message);
+        warnings.push(message);
+      });
+
+      child.stdout.on('data', (chunk) => {
+        // data from the standard output is here as buffers
+        // Possibly multiple lines, separated by \n,
+        // completed by \n.
+        const
+        textLines = chunk.toString().split('\n');
+        textLines.forEach((textLine) => {
+          if (textLine !== "") {
+            let [fileName, datasetName] = textLine.split(';');
+            console.log('uploadSpreadsheet stdout data',  "'", fileName,  "', '", datasetName, "'");
+            if (fileName.startsWith('Error:') || ! datasetName) {
+              cb(new Error(fileName + " Dataset '" + datasetName + "'"));
+            } else {
+              console.log('before removeExisting "', datasetName, '"');
+              upload.removeExisting(models, datasetName, replaceDataset, cb, loadAfterDelete);
+            }
+            function loadAfterDelete(err) {
+              upload.loadAfterDeleteCb(
+                fileName, 
+                (jsonData) => uploadParsedTry(jsonData), 
+                err, cb);
+            }
+          }
+        });
+      });
+
+      // since these are streams, you can pipe them elsewhere
+      // child.stderr.pipe(dest);
+      child.on('close', (code) => {
+        console.log('child process exited with code',  code);
+        if (code) {
+          const error = Error("Failed to read xlsx file " + msg.fileName);
+          cb(error);
+        } else {
+          // process each tmp/out_json/"$datasetName".json
+          const message = 'Uploaded xlsx file ' + msg.fileName;
+          if (child.killed) {
+            cb(null, message, true);
+          } // else check again after timeout
+        }
+      });
     } else {
       cb(Error('Unsupported file type'));
     }
-  }
+  };
 
   Dataset.tableUpload = function(data, options, cb) {
     var models = this.app.models;
@@ -123,6 +235,7 @@ module.exports = function(Dataset) {
         array_features.push({
           name: feature.name,
           value: [feature.val],
+          value_0: feature.val,
           blockId: blocks_by_name[feature.block]
         });
       });
@@ -160,9 +273,19 @@ module.exports = function(Dataset) {
 
   Dataset.observe('before delete', function(ctx, next) {
     var Block = ctx.Model.app.models.Block
+    /** ctx.where contains the datasetId, but differently depending on the call which requested delete of the dataset :
+     * - deletes done via URL (as in curl -X DELETE api/Datasets/) place the datasetId in ctx.where.and[1].name
+     * - removeExisting() does Dataset.destroyAll({_id : id}, ) and that condition is copied to ctx.where, so where._id is the datasetId.
+     */
+    let
+    where = ctx.where,
+    datasetId = where.and ? where.and[1].name : where._id;
+    if (where.and) {
+      console.log('Dataset.observe(before delete', where.and[0], where.and[1]);
+    }
     Block.find({
       where: {
-        datasetId: ctx.where.and[1].name
+        datasetId
       }
     }, ctx.options).then(function(blocks) {
       blocks.forEach(function(block) {

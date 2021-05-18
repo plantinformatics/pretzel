@@ -1,9 +1,13 @@
-import Ember from 'ember';
-import { inject as service } from '@ember/service';
+import $ from 'jquery';
+import { getOwner } from '@ember/application';
+import EmberObject, { computed } from '@ember/object';
+import Evented from '@ember/object/evented';
+import Service, { inject as service } from '@ember/service';
 import { isPresent } from '@ember/utils';
-import { default as ApiServer, removePunctuation } from '../components/service/api-server';
-
-const { Service } = Ember;
+import {
+  default as ApiServer,
+  removePunctuation
+} from '../components/service/api-server';
 
 // import ENV from '../../config/environment';
 
@@ -22,13 +26,14 @@ const dLog = console.debug;
 /**
  * Sends via Evented : receivedDatasets(datasets)
  */
-export default Service.extend(Ember.Evented, {
+export default Service.extend(Evented, {
   session: service(), 
   store: service(),
   dataset: service('data/dataset'),
-  storeManager: Ember.inject.service('multi-store'),
+  storeManager: service('multi-store'),
+  controls : service(),
 
-  servers : Ember.Object.create(),
+  servers : EmberObject.create(),
   serversLength : 0,
   id2Server : {},
   obj2Server : new WeakMap(),
@@ -84,18 +89,18 @@ export default Service.extend(Ember.Evented, {
    */
   addServer : function (url, user, token, clientId) {
     // const MyComponent = Ember.getOwner(this).factoryFor('component:service/api-server');
-	  let serverBase = 
+    let serverBase = 
       {
         host : url,
         user : user,
         token : token,
         clientId
       },
-    ownerInjection = Ember.getOwner(this).ownerInjection(),
+    ownerInjection = getOwner(this).ownerInjection(),
     server = ApiServer.create(
       ownerInjection,
       serverBase),
-	  servers = this.get('servers'),
+    servers = this.get('servers'),
     /**  .name is result of .host_safe().
      * -	check if any further sanitising of inputs required */
     nameForIndex = server.get('name');
@@ -164,6 +169,28 @@ export default Service.extend(Ember.Evented, {
     index = nameList.indexOf(name);
     return index;
   },
+  /*--------------------------------------------------------------------------*/
+  /** The user selection of one of the server tabs in the data explorer
+   * indicates which server should be the request target for upload, datasets
+   * refresh and display in explorer.
+   * @return the selected api-server, or default to primaryServer if none selected.
+   */
+  serverSelected : computed('controls.serverTabSelected', function () {
+    /** As this function depends on controls.serverTabSelected, it could be
+     * split out of this service into a service object with a constructor param
+     * serverName, to enable different components to utilise different servers.
+     */
+    let
+    serverTabSelectedName = this.get('controls.serverTabSelected'),
+    serverTabSelected = serverTabSelectedName ?
+      this.lookupServerName(serverTabSelectedName) :
+      this.primaryServer;
+    dLog('serverSelected', serverTabSelectedName, serverTabSelected);
+    return serverTabSelected;
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
 
   addId : function(server, id) {
     let map = this.get('obj2Server');
@@ -190,13 +217,13 @@ export default Service.extend(Ember.Evented, {
       id2Server = this.get('id2Server'),
     server = id2Server[blockId],
     store = server && server.store;
-    if (! server || trace > 2)
+    if ((trace && ! server) || trace > 2)
       dLog('id2Store', blockId, server, store);
     return store;
   },
-  stores : Ember.computed('servers.@each.store', 'serversLength', function () {
+  stores : computed('servers.@each.store', 'serversLength', function () {
     let
-	  servers = this.get('servers'),
+    servers = this.get('servers'),
     stores = Object.keys(servers).map(
       (name) => servers[name].store);
     dLog('stores', stores, servers);
@@ -211,7 +238,7 @@ export default Service.extend(Ember.Evented, {
      *  (s) => { s.dataset = s.object; delete s.object; return s; })
      */
     let
-	  servers = this.get('servers'),
+    servers = this.get('servers'),
     nameList = Object.keys(servers),
     stores = nameList.map(
       (name) => { let server = servers[name]; return {name, server, store: server.store};})
@@ -226,12 +253,14 @@ export default Service.extend(Ember.Evented, {
    */
   blockId2Stores : function (blockId) {
     let stores = this.id2Stores('block', blockId);
-    dLog('blockId2stores', blockId, stores);
+    if (trace > 1) {
+      dLog('blockId2stores', blockId, stores);
+    }
     return stores;
   },
   dataset2stores : function (datasetName) {
     let
-	  servers = this.get('servers'),
+    servers = this.get('servers'),
     nameList = Object.keys(servers),
     stores = nameList.map(
       (name) => { let server = servers[name]; return {name, server, store: server.store};})
@@ -247,7 +276,7 @@ export default Service.extend(Ember.Evented, {
    *
    * @return [ {dataset, serverName}, ... ]
    */
-  datasetsWithServerName : Ember.computed(
+  datasetsWithServerName : computed(
     // datasetsBlocksRefresh represents 'servers.@each.datasetsBlocks',
     'datasetsBlocksRefresh', 'serversLength', 
     function datasetsWithServerName () {
@@ -270,7 +299,8 @@ export default Service.extend(Ember.Evented, {
         (url.indexOf('https://') == -1)) {
       url = 'http://' + url;
     }
-    Ember.$.ajax({
+    let promise = 
+    $.ajax({
       url: url + '/api/Clients/login',
       type: 'POST',
       crossDomain: true,
@@ -285,8 +315,14 @@ export default Service.extend(Ember.Evented, {
         me.addServer(url, user, token, response.userId);
       server.getDatasets();
     }).catch(function (error) {
-      dLog('ServerLogin', url, user, error);
+      let
+      re = error && error.responseJSON && error.responseJSON.error,
+      reTexts = re && 
+        ['statusCode', 'name', 'message'].reduce((texts, fN) => (texts[fN] = re[fN]) && texts, {});
+      dLog('ServerLogin', url, user, error, error.statusText, reTexts);
+      throw reTexts || error.statusText;
     });
+    return promise;
   }
 
 

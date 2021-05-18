@@ -1,8 +1,9 @@
-{{#elem/panel-container state="primary"}}
-  {{#elem/panel-heading icon="option-vertical"}}
+{{#elem/panel-container state="primary" as |panelContainer|}}
+  {{#elem/panel-heading icon="option-vertical" panelContainer=panelContainer}}
     Selected Axis Options
   {{/elem/panel-heading}}
-  <ul class="list-group">
+  {{#if panelContainer.showComponent}}
+  <ul class="list-group view-controls">
     <li class="list-group-item">
       <div class="btn-group btn-group-sm btn-group-justified">
         <div class="btn-group ff-alpha">
@@ -39,11 +40,11 @@
                also change send(pathTabActive ) in didInsertElement()
              -->
           <li class="active-detail">
-	    <a data-toggle="tab" href="#tab-paths-density" onclick={{action "pathTabActive" "density"}}>Paths - Density</a>
+            <a data-toggle="tab" href="#tab-paths-density" onclick={{action "pathTabActive" "density"}}>Paths - Density</a>
             <div>{{ pathControlActiveDensity }}</div>
           </li>
           <li class="active-detail active">
-	    <a data-toggle="tab" href="#tab-paths-sample" onclick={{action "pathTabActive" "sample"}}>- Sample</a>
+            <a data-toggle="tab" href="#tab-paths-sample" onclick={{action "pathTabActive" "sample"}}>- Sample</a>
             <div>{{ pathControlActiveSample }}</div>
           </li>
 
@@ -53,19 +54,19 @@
 
           <div id="tab-paths-density" class="tab-pane fade">
             <input type="range" 
-	           id="range-pathDensity" 
-	           value={{pathDensity}}
-                   oninput={{action (mut pathDensity) value="target.value"}}
-	           min="-50" max="50"
+              id="range-pathDensity" 
+              value={{pathDensity}}
+              oninput={{action (mut pathDensity) value="target.value"}}
+              min="-50" max="50"
             >
           </div>
 
           <div id="tab-paths-sample" class="tab-pane fade in active">
             <input type="range" 
-	           id="range-pathSample" 
-	           value={{pathSample}}
-                   oninput={{action (mut pathSample) value="target.value"}}
-	           min="0" max="100"
+              id="range-pathSample" 
+              value={{pathSample}}
+              oninput={{action (mut pathSample) value="target.value"}}
+              min="0" max="100"
             >
           </div>
 
@@ -78,17 +79,44 @@
       <div>
         {{input type="checkbox" checked=pathsViaStream class="toggle"}}
         <label>Path Stream</label>
-        <span style="margin-left:2em; vertical-align: bottom;">Limit : {{ pathControlNFeatures }}</span>
+        <span class="sub-label"> Limit : <span>{{ pathControlNFeatures }}</span></span>
       </div>
       <div>
         <input type="range" 
-	       id="range-pathNFeatures" 
-	       value={{pathNFeatures}} 
+          id="range-pathNFeatures" 
+          value={{pathNFeatures}} 
                oninput={{action (mut pathNFeatures) value="target.value"}}
-	       min="0" max="100"
+          min="0" max="100"
         />
       </div>
 
+    </li>
+
+    <li class="list-group-item">
+      <div>
+        <label>Binned Feature Counts</label>
+        <div class="sub-label"> Number of Bins : <span>{{ featuresCountsNBins }}</span></div>
+      </div>
+      <div>
+        <input type="range" 
+         id="range-featuresCountsNBinsLinear" 
+         value={{featuresCountsNBinsLinear}} 
+               oninput={{action (mut featuresCountsNBinsLinear) value="target.value"}}
+         min="0" max="100"
+        />
+      </div>
+
+      <div>
+        <span class="sub-label"> Threshold : <span>{{ featuresCountsThreshold }}</span></span>
+      </div>
+      <div>
+        <input type="range" 
+         id="range-featuresCountsThresholdLinear" 
+         value={{featuresCountsThresholdLinear}} 
+               oninput={{action (mut featuresCountsThresholdLinear) value="target.value"}}
+         min="0" max="100"
+        />
+      </div>
     </li>
 
 
@@ -104,6 +132,14 @@
         <label>Server</label>
       </span>
     </li>
+
+    <li class="list-group-item">
+      <span class="filter-group-col">
+        {{input type="checkbox" name="modeBarLine" checked=chartBarLine }}
+        <label>Chart Bar / Line</label>
+      </span>
+    </li>
+
     <li class="list-group-item">
       <input type="checkbox" 
              id="checkbox-toggleModePathHover" 
@@ -115,30 +151,31 @@
       <input type="checkbox" 
              id="checkbox-togglePathUpdate"
              name="toggleCheckbox" 
-	     checked="checked"
+       checked="checked"
       />
       <label>Path update during drag</label>
     </li>
+
     <li class="list-group-item">
       <input type="checkbox" 
              id="checkbox-toggleModePublish" 
              name="toggleCheckbox" 
       />
-      <label>Publish Mode</label>
+      <label>Show Zoom/Reset buttons</label>
     </li>
     <li class="list-group-item">
       <input type="checkbox" 
-	     id="checkbox-toggleShowAll" 
-	     name="toggleShowAll" 
-	     checked="checked"
+       id="checkbox-toggleShowAll" 
+       name="toggleShowAll" 
+       checked="checked"
       />
       <label>Show All</label>
     </li>
     <li class="list-group-item">
       <input type="checkbox" 
-	     id="checkbox-toggleShowSelectedMarkers" 
-	     name="toggleShowSelectedMarkers" 
-	     checked="checked"
+       id="checkbox-toggleShowSelectedMarkers" 
+       name="toggleShowSelectedMarkers" 
+       checked="checked"
       />
       <label>List Selected Features</label>
     </li>
@@ -146,29 +183,61 @@
     <li class="list-group-item">
       <label>Path Opacity</label>
       <input type="range" 
-	     id="range-pathOpacity" 
-	     name="pathOpacity" 
-	     min="0" max="100"
-	     value="12.5"
+       id="range-pathOpacity" 
+       name="pathOpacity" 
+       min="0" max="100"
+       value="100"
       />
     </li>
     <li class="list-group-item">
       <label>Path Width</label>
       <input type="range" 
-	     id="range-pathWidth" 
-	     name="pathWidth" 
-	     min="0" max="300"
-	     value="75"
+       id="range-pathWidth" 
+       name="pathWidth" 
+       min="0" max="300"
+       value="75"
       />
     </li>
+
     <li class="list-group-item ff-alpha">
       <label>Synteny Block Size Threshold</label>
       <input type="range" 
-	     id="range-sbSizeThreshold" 
-	     name="sbSizeThreshold" 
-	     min="0" max="50"
-	     value="22"
+       id="range-sbSizeThreshold" 
+       name="sbSizeThreshold" 
+       min="0" max="50"
+       value="22"
       />
     </li>
+
+    <li class="list-group-item">
+      <div>
+        <label style="float:right">Times (ms)</label>
+        <span class="sub-label"> Debounce : <span>{{ debounceTime }}</span></span>
+      </div>
+      <div>
+        <input type="range" 
+         id="range-debounceTime" 
+         name="debounceTime" 
+         min="0" max="2000"
+         value={{this.debounceTime}} 
+         oninput={{action (mut this.debounceTime) value="target.value"}}
+        />
+      </div>
+      <div>
+        <span class="sub-label"> Throttle : <span>{{ throttleTime }}</span></span>
+      </div>
+      <div>
+        <input type="range" 
+         id="range-throttleTime" 
+         name="throttleTime" 
+         min="0" max="2000"
+         value={{this.throttleTime}} 
+         oninput={{action (mut this.throttleTime) value="target.value"}}
+        />
+      </div>
+
+    </li>
+
   </ul>
+  {{/if}} {{!-- showComponent --}}
 {{/elem/panel-container}}

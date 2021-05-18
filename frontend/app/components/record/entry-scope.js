@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
 import EntryBase from './entry-base';
 
 const trace = 0;
@@ -16,7 +16,7 @@ export default EntryBase.extend({
 
   /** probably not required - use .data[0] instead for block - @see node()
    */
-  x_node : Ember.computed('name', function () {
+  x_node : computed('name', function () {
     let store = this.get('store'),
     name = this.get('name');
     /** problem : need dataset to make this unique. can annotate value with node. */
@@ -26,7 +26,7 @@ export default EntryBase.extend({
     // use the first matching block
     return blocks.length && blocks[0];
   }),
-  node : Ember.computed('data.0', function () {
+  node : computed('data.0', function () {
     let 
       data = this.get('data'),
     block = data[0];

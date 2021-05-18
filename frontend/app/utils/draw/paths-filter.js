@@ -1,5 +1,8 @@
 
-import { intervalSize, intervalOverlap as intervalOverlap2 } from '../interval-calcs';
+import {
+  intervalSize,
+  intervalOverlap as intervalOverlap2
+} from '../interval-calcs';
 
 /* global require */
 /* global d3 */

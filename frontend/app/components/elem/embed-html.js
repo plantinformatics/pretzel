@@ -1,5 +1,10 @@
-import Ember from 'ember';
-import DS from 'ember-data';
+import { later } from '@ember/runloop';
+import { getOwner } from '@ember/application';
+import $ from 'jquery';
+import { alias } from '@ember/object/computed';
+import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 
 /*----------------------------------------------------------------------------*/
 /* Dev notes : 
@@ -45,8 +50,8 @@ it will be in this path : frontend/public/ ";
 /**
  * @param path  e.g. "landingPageContent/"
 */
-export default Ember.Component.extend({
-  ajax: Ember.inject.service(),
+export default Component.extend({
+  ajax: service(),
 
   classNames: ['embedHtml'],
 
@@ -55,7 +60,7 @@ export default Ember.Component.extend({
    * The attribute name of the promise and the file base name need not be the same.
    * Loopback will map this to a directory by appending /, and load index.html from that directory.
    */
-  siteSpecificHtmlUrl : Ember.computed('path', function () {
+  siteSpecificHtmlUrl : computed('path', function () {
     let index = 'index.html',
     path = this.get('path');
     if (path)
@@ -63,7 +68,7 @@ export default Ember.Component.extend({
     return index;
   }),
 
-  landingPageContentFileName : Ember.computed.alias('siteSpecificHtmlUrl'),
+  landingPageContentFileName : alias('siteSpecificHtmlUrl'),
 
   willRender : function () {
     console.log('willRender', this.get('landingPageContentFileName'));
@@ -79,12 +84,12 @@ export default Ember.Component.extend({
      * functionality out of index.js to base.js which index.js,
      * signup, login can inherit.
      */
-    let previousContent = Ember.$('div.landingPageContent');
+    let previousContent = $('div.landingPageContent');
     console.log('willRender', previousContent.length, previousContent.length && previousContent[0]);
     // previousContent.remove();
   },
   
-  promise: Ember.computed('landingPageContentFileName', function () {
+  promise: computed('landingPageContentFileName', function () {
     let me = this;
     let fileUrl = this.get('landingPageContentFileName');
     /** If origin port is different to API port, then prefix fileUrl with apiHost.
@@ -92,7 +97,7 @@ export default Ember.Component.extend({
      * This may work in all cases, but it is not required when the app is served from the API port.
      * This is similar to @see services/auth.js:._endpoint().
      */
-    let config = Ember.getOwner(this).resolveRegistration('config:environment');
+    let config = getOwner(this).resolveRegistration('config:environment');
     // e.g. "http://localhost:4200" !== "http://localhost:5000"
     if (document.location.origin !== config.apiHost)
       fileUrl = config.apiHost + '/' + fileUrl;
@@ -117,8 +122,8 @@ export default Ember.Component.extend({
        * to the port of the ember server, not the API, so imgs won't load.
        */
       if (false)
-      Ember.run.later(function () {
-        let imgs = Ember.$('#Page-Body > .ember-view.embedHtml img');
+      later(function () {
+        let imgs = $('#Page-Body > .ember-view.embedHtml img');
         imgs.attr('src', function (index, val) { return val.replace(/^/, path + '/'); });
       });
     });

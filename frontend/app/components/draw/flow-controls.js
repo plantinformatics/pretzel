@@ -1,14 +1,21 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import { computed } from '@ember/object';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
-import { flowsServiceInject, flowButtonsSel, configurejQueryTooltip, flows_showControls, updateSelections_flowControls  } from "../../utils/draw/flow-controls";
+import {
+  flowsServiceInject,
+  flowButtonsSel,
+  configurejQueryTooltip,
+  flows_showControls,
+  updateSelections_flowControls
+} from "../../utils/draw/flow-controls";
 import { Flow } from "../../utils/flows";
 import { parseOptions } from '../../utils/common/strings';
 
 
 /* global d3 */
 
-export default Ember.Component.extend({
+export default Component.extend({
   flowsService: service('data/flows-collate'),
 
   tagName : '',
@@ -93,7 +100,7 @@ export default Ember.Component.extend({
       if (options && options.flowExport)
         configurejQueryTooltip(flowButtonsSel);
   },
-  parsedOptions : Ember.computed('modelParamOptions', function () {
+  parsedOptions : computed('modelParamOptions', function () {
     let options, //  = this.get('parsedOptions'),
     options_param;
     if (/*! options

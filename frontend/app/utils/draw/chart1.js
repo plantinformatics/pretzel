@@ -1,13 +1,27 @@
-import Ember from 'ember';
+import { assert } from '@ember/debug';
 
 import { getAttrOrCP } from '../ember-devel';
 import { configureHorizTickHover } from '../hover';
-import { eltWidthResizable, noShiftKeyfilter } from '../domElements';
+import {
+  eltWidthResizable,
+  noShiftKeyfilter
+} from '../domElements';
 import { logSelectionNodes } from '../log-selection';
 import { noDomain } from '../draw/axis';
 import { stacks } from '../stacks'; // just for oa.z and .y, don't commit this.
-import { inRangeEither } from './zoomPanCalcs';
-import { featureCountDataProperties, dataConfigs, DataConfig, blockDataConfig, hoverTextFn, middle, scaleMaybeInterval, datum2LocationWithBlock } from '../data-types';
+import { inRangeEither, overlapInterval } from './zoomPanCalcs';
+import { intervalSize } from '../interval-calcs';
+import {
+  featureCountDataProperties,
+  dataConfigs,
+  DataConfig,
+  blockDataConfig,
+  hoverTextFn,
+  middle,
+  scaleMaybeInterval,
+  datum2LocationWithBlock
+} from '../data-types';
+import { breakPoint } from '../breakPoint';
 
 
 const className = "chart", classNameSub = "chartRow";
@@ -15,6 +29,10 @@ const className = "chart", classNameSub = "chartRow";
  * zooming into different regions of an axis.  */
 const showChartAxes = true;
 const useLocalY = false;
+
+// const transitionDuration = 150;
+
+const trace = 1;
 
 /* global d3 */
 
@@ -96,12 +114,17 @@ function addParentClass(g) {
 /*  axis
  * x  .value
  * y  .name Location
- */
+ * name chartName, used as index in axis-charts.charts[]
+*/
 /** 1-dimensional chart, within an axis. */
-function Chart1(parentG, dataConfig)
+function Chart1(dataConfig, name)
 {
-  this.parentG = parentG;
-  this.dataConfig = dataConfig;
+  /* deep copy not required; this enables .scaledConfig() to modify DataConfig
+   * datum2LocationScaled (refactor once this is settled).
+   * (could bind / curry optional scaleY arg, as is done with rectWidth for datum2Value.)
+   */
+  this.dataConfig = Object.create(dataConfig);
+  this.name = name;
   this.chartLines = {};
   /* yAxis is imported, x & yLine are calculated locally.
    * y is used for drawing - it refers to yAxis or yLine.
@@ -142,8 +165,9 @@ AxisCharts.prototype.setup = function(axisID) {
 
 /**
  * @param allocatedWidth  [horizontal start offset, width]
+ * @param yAxisScale  .range() is used to set clip rect y bounds, if !useLocalY
  */
-AxisCharts.prototype.setupFrame = function(axisID, charts, allocatedWidth)
+AxisCharts.prototype.setupFrame = function(axisID, charts, allocatedWidth, yAxisScale)
 {
   let axisCharts = this;
   axisCharts.setup(axisID);
@@ -158,7 +182,7 @@ AxisCharts.prototype.setupFrame = function(axisID, charts, allocatedWidth)
   // equivalent to addParentClass();
   axisCharts.dom.gAxis.classed('hasChart', true);
 
-  axisCharts.frame(axisCharts.ranges.bbox, charts, allocatedWidth);
+  axisCharts.frame(axisCharts.ranges.bbox, charts, allocatedWidth, yAxisScale);
 
   axisCharts.getRanges2();
 };
@@ -189,9 +213,13 @@ AxisCharts.prototype.getBBox = function ()
       /** relative to the transform of parent g.axis-outer */
       bbox = gAxisElt.getBBox(),
     yrange = [bbox.y, bbox.height];
-    if (bbox.x < 0)
+    /** bbox.x is 10, probably because the child elements at this point start
+     * from 10 (right-edge path and g.tracks).
+     * Might need to leave 5px space for brushing the axis.
+     */
+    if (bbox.x !== 0)
     {
-      console.log("x < 0", bbox);
+      console.log("x !== 0", bbox);
       bbox.x = 0;
     }
     this.ranges.bbox = bbox;
@@ -213,11 +241,11 @@ AxisCharts.prototype.getRanges2 =  function ()
 {
   // based on https://bl.ocks.org/mbostock/3885304,  axes x & y swapped.
   let
-    // parentG = this.parentG,
     bbox = this.ranges && this.ranges.bbox;
   if (bbox) {
     let
-      margin = showChartAxes ?
+    /** equivalent logic applies in axis-charts:draw() to enable drawAxes().  */
+      margin = showChartAxes && ! this.isFeaturesCounts ?
       {top: 10, right: 20, bottom: 40, left: 20} :
     {top: 0, right: 0, bottom: 0, left: 0},
     // pp=parentG.node().parentElement,
@@ -276,11 +304,17 @@ AxisCharts.prototype.frameRemove = function() {
   gp && gp.remove();
 };
 
-AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
+/**
+ * @param allocatedWidth  [horizontal start offset, width]
+ * @param yAxisScale  .range() is used to set clip rect y bounds, if !useLocalY
+ */
+AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth, yAxisScale)
 {
   let
     gps = this.dom.gps,
   gpa = this.dom.gpa;
+
+  let clipY = useLocalY ? [ bbox.y, bbox.height ] : yAxisScale.range();
 
   /** datum is axisID, so id and clip-path can be functions.
    * e.g. this.dom.gp.data() is [axisID]
@@ -296,26 +330,33 @@ AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
   gprm = 
     gPa.merge(gps.selectAll("g > clipPath > rect"))
     .attr("x", bbox.x)
-    .attr("y", bbox.y)
-    .attr("width", bbox.width)
-    .attr("height", bbox.height)
+    .attr("y", clipY[0])
+    .attr("width", bbox.width + 250)
+    .attr("height", clipY[1])
   ;
   let [startOffset, width] = allocatedWidth;
-  let gca =
+  /* allocatedWidth[0] is currently min, so use 0 instead.  */
+  startOffset = 0;
+  let gcp1 =
     gpa.append("g")
-    .attr("clip-path", (d) => "url(#" + axisClipId(d) + ")") // clip with the rectangle
-    .selectAll("g[clip-path]")
-    .data(Object.values(charts))
+    .attr("clip-path", (d) => "url(#" + axisClipId(d) + ")"), // clip with the rectangle
+   gcp2 = gpa.merge(gps).selectAll("g.chart > g[clip-path]"),
+   dataTypeNames = Object.values(charts).mapBy('dataConfig.dataTypeName'),
+   dataTypeNamesSelector = 'g[clip-path] > g' + (dataTypeNames.length ? '.' : '') + dataTypeNames.join(', g[clip-path] > g.'),
+   gcs = (gpa.size() ? gcp1 : gcp2)
+    .selectAll(dataTypeNamesSelector)
+    // g.<dataTypeName> does not have a unique id, so use a key function.
+    .data(Object.values(charts), Chart1.keyFn),
+   gca = gcs
     .enter()
     .append("g")
     .attr('class', (d) => d.dataConfig.dataTypeName)
-    .attr("transform", (d, i) => "translate(" + (startOffset + (i * 30)) + ", 0)")
   ;
-  /* to handle removal of chart types, split the above to get a handle for remove :
-   gcs = gpa ... data(...),
-   gca = gcs.enter() ...;
-   gcs.exit().remove();
-   */
+  gca.merge(gcs)
+    .attr("transform", (chart, i) => chart.transform(i))
+  ;
+  /* handle removal of chart types   */
+  gcs.exit().remove();
 
   let g = 
     this.dom.gp.selectAll("g." + className+  " > g");
@@ -325,9 +366,15 @@ AxisCharts.prototype.frame = function(bbox, charts, allocatedWidth)
     /* .gc is <g clip-path=​"url(#axis-chart-clip-{{axisID}})​">​</g>​
      * .g (assigned later) is all g.chart-line, i.e. all chart-lines of all Chart1-s of this axis
      * .gca contains a g for each chartType / dataTypeName, i.e. per Chart1.
+     *   It is used to append elements which added once per chart, e.g. controls() and drawAxes()
+     * .gcp is the parentG g.<dataTypeName> (blockData, featureCountData).
+     *   It is a copy of .gca when it was first non-empty.
      */
     this.dom.gc = g;
     this.dom.gca = gca;
+  if (! gca.empty() || ! this.dom.gcp) {
+    this.dom.gcp = gca;
+  }
 };
 
 
@@ -340,13 +387,14 @@ AxisCharts.prototype.controls = function controls()
 
   function toggleBarsLineClosure(chart /*, i, g*/)
   {
+    d3.event.stopPropagation();
     chart.toggleBarsLine();
   }
 
   /** currently placed at g.chart, could be inside g.chart>g (clip-path=). */
   let chartTypeToggle = append
     .append("circle")
-    .attr("class", "radio toggle chartType")
+    .attr("class", "radio toggle chartType graph-btn")
     .attr("r", 6)
     .on("click", toggleBarsLineClosure);
   chartTypeToggle.merge(select.selectAll("g > circle"))
@@ -398,9 +446,44 @@ Chart1.prototype.overlap = function(axisCharts) {
     chart1.dom = axisCharts.dom;
   }
 };
+Chart1.prototype.removeChartLine = function(blockId) {
+  let chartLine = this.chartLines[blockId];
+  if (chartLine) {
+    chartLine.remove();
+    delete this.chartLines[blockId];
+  }
+  let empty = Object.keys(this.chartLines).length === 0;
+  return empty;
+};
+Chart1.prototype.remove = function() {
+  let thisGcp = this.dom.gcp.filter((chart) => chart===this);
+  dLog('remove', this.dom.gcp.nodes(), thisGcp.node(), thisGcp.nodes());
+  thisGcp.remove();
+  this.dom.gcp = this.dom.gcp.filter((elt) => elt.isConnected);
+};
+/** @return a unique id for the chart within this split axis (g[clip-path])
+ */
+Chart1.keyFn = function(chart) {
+  /** keys(chart.chartLines) are the blockIds, which may appear in multiple
+   * charts (chartTypes), so prepend dataTypeName for uniqueness.
+   */
+  return chart.dataConfig.dataTypeName + '_' + Object.keys(chart.chartLines).join('_');
+};
+/** Currently chartsArray() constructs chartName via (dataTypeName + '_' +
+ * blockId) which is equivalent to keyFn, and passes chartName to addChart().
+ * This function might be used for verification, e.g. chart.name === chart.chartName().
+ */
+Chart1.prototype.chartName = function() {
+  return Chart1.constructor.keyFn.apply(this, [this]);
+}
+
+/**
+ * @param resizedWidth  width
+ */
 Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, dataConfig, yAxisScale, resizedWidth)
 {
   this.scales.yAxis = yAxisScale;
+  this.allocatedWidth = resizedWidth;
 
   //----------------------------------------------------------------------------
 
@@ -421,9 +504,22 @@ Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, da
   blockIds = Object.keys(chartData);
   blockIds.forEach((blockId) => {
     let block = blocksById[blockId];
-    this.createLine(blockId, block);
+    /** if block then blockId is on this axis / chart. */
+    if (block) {
+      // ensure the chartLine is created.
+      this.createLine(blockId, block);
+    }
   });
-  this.group(this.dom.gca, 'chart-line');
+  /** devel - verify gcp / parentG */
+  let parentGS = this.dom.gc.selectAll('g.' + this.dataConfig.dataTypeName);
+  let parentG = parentGS.filter((chart) => chart === this);
+  /** passed to group(). */
+  let parentGarg;
+  if (! parentGarg && ! parentG.empty()) {
+    parentGarg = parentG;
+  }
+
+  this.group(parentGarg, 'chart-line');
 
   //----------------------------------------------------------------------------
 
@@ -432,22 +528,53 @@ Chart1.prototype.setupChart = function(axisID, axisCharts, chartData, blocks, da
   return this;
 };
 
+/** draw the chartData.
+ * If the blocks of any of this.chartLines have un-viewed, they will not be in chartData, and are removed.
+ */
 Chart1.prototype.drawChart = function(axisCharts, chartData)
 {
   /** possibly don't (yet) have chartData for each of blocks[],
    * i.e. blocksById may be a subset of blocks.mapBy('id').
    */
   let blockIds = Object.keys(chartData);
-  blockIds.forEach((blockId) => {
-    this.data(blockId, chartData[blockId]);
-  });
 
-  this.prepareScales(chartData, this.ranges.drawSize);
-  blockIds.forEach((blockId) => {
-    this.chartLines[blockId].scaledConfig(); } );
+  let empty = this.removeUnViewedChartLines(blockIds);
+  if (! empty) {
+    blockIds.forEach((blockId) => {
+      this.data(blockId, chartData[blockId]);
+    });
 
-  this.drawContent();
+    if (this.allocatedWidth === 0) {
+      this.allocatedWidth = axisCharts.ranges.drawSize;
+    }
+    this.prepareScales(chartData, this.ranges.drawSize);
+    blockIds.forEach((blockId) => {
+      this.chartLines[blockId].scaledConfig(); } );
+
+    this.drawContent();
+  }
+  return empty;
 };
+/** Remove un-viewed ChartLines
+ * @param blockIds caller (as in the case of Chart1:drawChart()) may provide an
+ * array of blockIds which are viewed.
+ * if blockIds is undefined then block.get('isViewed') is used.
+ * @return true if this chart the last ChartLine of this chart is removed (the caller will then remove this chart). 
+ */
+Chart1.prototype.removeUnViewedChartLines = function(blockIds)
+{
+  let empty;
+  Object.keys(this.chartLines).forEach((blockId) => {
+    let isViewed = blockIds ?
+      (blockIds.indexOf(blockId) !== -1) :
+      this.chartLines[blockId].block.get('isViewed');
+    if (! isViewed) {
+      empty = this.removeChartLine(blockId);
+    }
+  });
+  return empty;
+};
+
 
 Chart1.prototype.getRanges = function (ranges, chartData) {
   let
@@ -476,6 +603,9 @@ Chart1.prototype.getRanges = function (ranges, chartData) {
 
 
 
+/**
+ * @param drawSize  {width, height}
+ */
 Chart1.prototype.prepareScales =  function (data, drawSize)
 {
   /** The chart is perpendicular to the usual presentation.
@@ -488,7 +618,14 @@ Chart1.prototype.prepareScales =  function (data, drawSize)
   scales = this.scales,
   width = drawSize.width,
   height = drawSize.height,
-  xRange = [0, width],
+  /** leave 10px space at right side (trackWidth).
+   *
+   * Start xRange from 1px because <1px is shown as a sub-pixel gradation and is
+   * nearly invisible; < several px is very hard to see anyway.
+   * i.e. if the value is close to domain[0] it should still be clearly visible
+   * - the fact that there is a value there is significant.
+   */
+  xRange = [1, width-10],
   yRange = [0, height],
   // yRange is used as range of yLine by this.scaleLinear().
   /* scaleBand would suit a data set with evenly spaced or ordinal / nominal y values.
@@ -496,7 +633,7 @@ Chart1.prototype.prepareScales =  function (data, drawSize)
    */
   y = useLocalY ? this.scaleLinear(yRange, data) : scales.yAxis;
   scales.xWidth = 
-    d3.scaleLinear().rangeRound(xRange);
+    d3.scaleLinear().range(xRange);
   if (dataConfig.barAsHeatmap) {
     scales.xColour = d3.scaleOrdinal().range(d3.schemeCategory20);
   }
@@ -507,14 +644,31 @@ Chart1.prototype.prepareScales =  function (data, drawSize)
   scales.y = y;
   console.log("Chart1", xRange, yRange, dataConfig.dataTypeName);
 
+  this.scaleXDomain(data);
+};
+/**
+ * @param data  {<blockId> : data array, ... }
+ */
+Chart1.prototype.scaleXDomain = function (data)
+{
   let
-    valueWidthFn = dataConfig.rectWidth.bind(dataConfig, /*scaled*/false, /*gIsData*/true),
+  dataConfig = this.dataConfig,
+  scales = this.scales,
+  startFrom0 = this.dataConfig.isFeaturesCounts(),
+  valueWidthFn = dataConfig.rectWidth.bind(dataConfig, /*scaleX*/undefined, /*gIsData*/true),
   valueCombinedDomain = this.domain(valueWidthFn, data);
+  /** in the case of featureCountData the data are non-empty bins - the domain starts from > 0.
+   * Starting the domain from 0 makes the width proportional to count.
+   */
+  if (startFrom0 && (valueCombinedDomain[0] > 0)) {
+    valueCombinedDomain[0] = 0;
+  }
+
   scales.xWidth.domain(valueCombinedDomain);
   if (scales.xColour)
     scales.xColour.domain(valueCombinedDomain);
-
 };
+
 Chart1.prototype.drawContent = function ()
 {
   Object.keys(this.chartLines).forEach((blockId) => {
@@ -541,7 +695,16 @@ Chart1.prototype.group = function (parentG, groupClassName) {
   // if drawing internal chart axes then move them inside the clip rect
   // .attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
     .attr("class", (chartLine) => groupClassName)
-    .attr('id', (chartLine) => groupClassName + '-' + chartLine.block.id)
+  /* chartLine.block may not be set; could use
+   * chartLine.scales.yAxis.domain().join('_') to get a more unique id.
+   */
+    .attr('id', (chartLine, i) => groupClassName + '-' + (chartLine.block ? chartLine.block.id : i))
+    // also x offset by .allocatedWidths[className][0] as x offset; that is defined after the chart is first rendered.
+    /* this transform is achieved by Chart1:transform() in frame(), so this
+     * would only be used if the g.chart-line s within a chart were offset
+     * separately
+     * .attr('transform', (chartLine, i) => this.blockTransform(chartLine))	// trackWidth
+     */
   // .data((chartLine) => chartLine.currentData)
   ,
   // parentG.selectAll("g > g." + groupClassName); // 
@@ -553,6 +716,80 @@ Chart1.prototype.group = function (parentG, groupClassName) {
   // set ChartLine .g;   used by ChartLine.{lines,bars}.
   gsa.each(function(chartLine, i) { chartLine.g = d3.select(this) ; } );
   return g;
+};
+
+/** useful in checking that unview and re-view have not caused
+ * g.featureCountData and g.chart-line to become out of sync with their .__data__
+ * When debugging this can be called after code which might break sync.
+ * This was useful when checking impact of .remove(); adding keyFn() keeps these in sync.
+ */
+Chart1.verify = function () {
+  let cl = d3.selectAll('g.chart-line');
+  Object.keys(cl.nodes()).forEach(
+    (i) => {
+      if (cl.nodes()[i].id !== 'chart-line-' + cl.data()[i].block.id) {
+        console.log('Chart1 verify', cl.nodes()[i], cl.data()[i].block.id);
+        debugger;
+      }
+    });
+};
+
+/** For positions allocated by axisBlocks, i.e. featureCountData
+ */
+Chart1.prototype.blockOffset = function (chartLine) {
+  let
+  allocatedWidth = 
+  this.axisBlocks.allocatedWidthForBlock(chartLine.block.id),
+  xOffset = allocatedWidth && allocatedWidth[0];
+  return xOffset;
+};
+
+/** Charts of type featureCountData have a separate x translation for each block.
+ * For other chart types return undefined - no transform.
+ */
+Chart1.prototype.blockTransform = function (chartLine) {
+  let transform;
+  if (this.useAllocatedWidth()) {
+    let xOffset = this.blockOffset(chartLine);
+    transform = 'translate(' + xOffset + ')';
+  }
+  return transform;
+};
+
+/** Charts of type featureCountData have a separate x translation for each block.
+ * For other chart types return undefined - no transform.
+ * @param i d3 selection index
+ */
+Chart1.prototype.transform = function (i) {
+  let allocatedWidth, transform;
+  if (this.useAllocatedWidth()) {
+    let blockWidths = this.axisBlocks.get('allocatedWidth'),
+    /** useAllocatedWidth implies just 1 block. */
+    blockId = Object.keys(this.chartLines)[0];
+
+    /** for a new chart .chartLines is populated after .transform is first
+     * called; returning undefined will omit the transform initially;
+     * blockWidths[i] may also be undefined (it is otherwise equivalent).  */
+    allocatedWidth = blockId && this.axisBlocks.allocatedWidthForBlock(blockId);
+    dLog('Chart1:transform', allocatedWidth, blockId, blockWidths[i], i);
+  } else {
+    allocatedWidth = this.getAllocatedWidth();
+  }
+  if (allocatedWidth) {
+    let xOffset = allocatedWidth[0];
+    if (xOffset) {
+      transform = "translate(" + xOffset + ", 0)";
+    }
+  }
+  return transform;
+};
+
+
+/** @return true if horizontal space is allocated for each block / ChartLine of this chart by axisBlocks.
+ */
+Chart1.prototype.useAllocatedWidth = function () {
+  /** match featureCount{,Auto}Data */
+  return this.dataConfig.isFeaturesCounts();
 };
 
 Chart1.prototype.drawAxes = function (chart, i, g) {
@@ -611,7 +848,7 @@ Chart1.prototype.createLine = function (blockId, block)
   let chartLine = this.chartLines[blockId];
   if (! chartLine) 
     chartLine = this.chartLines[blockId] = new ChartLine(this.dataConfig, this.scales);
-  if (block) {
+  if (block && ! chartLine.block) {
     chartLine.block = block;
     chartLine.setup(blockId);
     // .setup() will copy dataConfig if need for custom config.
@@ -620,10 +857,14 @@ Chart1.prototype.createLine = function (blockId, block)
 Chart1.prototype.data = function (blockId, data)
 {
   let chartLine = this.chartLines[blockId];
-
-  function m(d) { return middle(chartLine.dataConfig.datum2Location(d)); }
-  data = data.sort((a,b) => m(a) - m(b));
-  data = chartLine.filterToZoom(data);
+  if (! chartLine) {
+    data = [];
+  } else {
+    function m(d) { return middle(chartLine.dataConfig.datum2Location(d)); }
+    data = data.sort((a,b) => m(a) - m(b));
+    data = chartLine.filterToZoom(data);
+  }
+  return data;
 };
 /** Draw a single ChartLine of this chart.
  * To draw all ChartLine of this chart, @see Chart1:drawContent()
@@ -636,7 +877,10 @@ Chart1.prototype.drawLine = function (blockId, block, data)
 
 Chart1.prototype.scaleLinear = function (yRange, data)
 {
-  // based on https://bl.ocks.org/mbostock/3883245
+  /* based on https://bl.ocks.org/mbostock/3883245
+   * now at https://web.archive.org/web/20170711093831/https://bl.ocks.org/mbostock/3885304
+   * It uses rangeRound() but rounding doesn't seem applicable here.
+   */
   if (! this.scales.yLine)
     this.scales.yLine = d3.scaleLinear();
   let y = this.scales.yLine;
@@ -669,10 +913,11 @@ Chart1.prototype.domain = function (valueFn, blocksData)
 Chart1.prototype.toggleBarsLine = function ()
 {
   console.log("toggleBarsLine", this);
-  d3.event.stopPropagation();
   this.barsLine = ! this.barsLine;
-  this.chartTypeToggle
-    .classed("pushed", this.barsLine);
+  if (this.chartTypeToggle) {
+    this.chartTypeToggle
+      .classed("pushed", this.barsLine);
+  }
   Object.keys(this.chartLines).forEach((blockId) => {
     let chartLine = this.chartLines[blockId];
     chartLine.g.selectAll("g > *").remove();
@@ -688,24 +933,35 @@ ChartLine.prototype.setup = function(blockId) {
    * pre-defined config.
    */
   if (! this.dataConfig.datum2Location) {
+    const
+    datum2Location = (d) => datum2LocationWithBlock(d, blockId);
     // copy dataConfig to give a custom value to this ChartLine.
-    let d = new DataConfig(this.dataConfig);
-    d.datum2Location = 
-      (d) => datum2LocationWithBlock(d, blockId);
+    /* this.dataConfig has been constructed by new DataConfig().
+     * i.e. this.dataConfig.constructor === DataConfig 
+     */
+    let d = Object.assign(this.dataConfig, {datum2Location});
     this.dataConfig = d;
   }
 };
+/** @return a filter function
+ * @desc
+ * this could be a (static) method of either Chart1 or ChartLine.
+ */
+Chart1.withinZoomRegion = function (dataConfig, yDomain) {
+  /* This will accept features which overlap the domain. Use inRangeEither() to
+   * accept only features which are entirely within the domain.  */
+  return (d) => overlapInterval(dataConfig.datum2Location(d), yDomain);
+},
 /** Filter given data according to this.scales.yAxis.domain()
  * and set .currentData
+ * @param chart data array
  */
 ChartLine.prototype.filterToZoom = function(chart) {
   let
   {yAxis} = this.scales,
   yDomain = yAxis.domain(),
-  withinZoomRegion = (d) => {
-    return inRangeEither(this.dataConfig.datum2Location(d), yDomain);
-  },
-  data = chart.filter(withinZoomRegion);
+
+  data = chart.filter(Chart1.withinZoomRegion(this.dataConfig, yDomain));
   this.currentData = data;
 
   dLog(yDomain, data.length, (data.length == 0) || this.dataConfig.datum2Location(data[0]));
@@ -717,31 +973,58 @@ ChartLine.prototype.filterToZoom = function(chart) {
 ChartLine.prototype.scaledConfig = function ()
 {
   let
-    dataConfig = this.dataConfig,
-  scales = this.scales;
+    dataConfig = this.dataConfig;
 
   /* these can be renamed datum2{abscissa,ordinate}{,Scaled}() */
   /* apply y after scale applied by datum2Location */
-  let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, scales.y);
+  let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, this.scales.y);
   /** related @see rectWidth().  */
-  function datum2ValueScaled(d) { return scales.x(dataConfig.datum2Value(d)); }
   dataConfig.datum2LocationScaled = datum2LocationScaled;
-  dataConfig.datum2ValueScaled = datum2ValueScaled;
 };
 
 ChartLine.prototype.blockColour = function ()
 {
-  let blockS = this.block && this.block.get('view'),
+  const fnName = 'ChartLine blockColour';
+  let blockS = this.block && this.block.get('view');
+
+  if (! blockS) {
+    breakPoint(fnName, this.block, this);
+  } else  {
+    let 
+    axis = blockS.axis,
+    axis1d = axis && axis.axis1d;
+    if (! (axis && axis1d) || axis1d.isDestroying ) {
+      breakPoint(fnName, blockS, blockS.axisName, axis, axis1d, this.block.get('id'),
+      this.block, this, axis1d && [axis1d.isDestroying, axis1d.isDestroyed]);
+    }
+  }
+
+  if (! blockS || ! blockS.axisTitleColour()) {
+    dLog('blockColour', blockS);
+  }
+  let
   /* For axes without a reference, i.e. GMs, there is a single data block with colour===undefined. */
   colour = (blockS && blockS.axisTitleColour()) || 'red';
   return colour;
+};
+
+
+ChartLine.prototype.selectG = function ()
+{
+  if (! this.g || this.g.empty()) {
+    this.g = d3.selectAll("g.chart-line#chart-line-" + this.block.id)
+      .filter((chartLine) => chartLine === this);
+    dLog('ChartLine.selectG', this.g.nodes(), this);
+  }
 };
 
 ChartLine.prototype.bars = function (data)
 {
   let
     dataConfig = this.dataConfig,
-  block = this.block,
+  block = this.block;
+  this.selectG(); // devel
+  let
   g = this.g;
   if (dataConfig.barAsHeatmap)
     this.scales.x = this.scales.xColour;
@@ -756,27 +1039,67 @@ ChartLine.prototype.bars = function (data)
   ra
     .attr("class", dataConfig.barClassName)
     .attr("fill", (d) => this.blockColour())
+    .attr("stroke", (d) => this.blockColour())
   /** parent datum is currently 1, but could be this.block;
    * this.parentElement.parentElement.__data__ has the axis id (not the blockId),
    */
-    .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); });
-  let r =
-  ra
-    .merge(rs)
-    .transition().duration(1500)
+    .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); })
     .attr("x", 0)
-    .attr("y", (d) => { let li = dataConfig.datum2LocationScaled(d); return li.length ? li[0] : li; })
+  ;
+
+  function attrY(selection) {
+    selection.attr("y", (d) => { let li = dataConfig.datum2LocationScaled(d); return li.length ? li[0] : li; });
+  }
+  /** start new elements with final y position and width 0, and transition to final width. */
+  ra
+    .attr("width", 0)
+    .attr('stroke-opacity', 0.25)
+    .attr('fill-opacity', 0.25)
+    .call(attrY)
+    .call(attrHeight);
+
+  /** The transition from length 0 looks noisy when zooming in, but smooth when zooming out.
+   * default to false when prevDomain initially not defined.
+   */
+  let idWidth = data[0] && dataConfig.rectHeight(/*scaled*/false, /*gIsData*/false, data[0], 0, []),
+      idWidthChanged = this.prev_idWidth !== idWidth;
+  this.prev_idWidth = idWidth;
+  let zoomingIn = ! this.prevDomain || (intervalSize(this.block.zoomedDomain) <= intervalSize(this.prevDomain));
+  this.prevDomain = this.block.zoomedDomain;
+
+  let
+  rm =
+    ra
+    .merge(rs),
+  r = dataConfig.selectionToTransition(rm)
+    .attr('stroke-opacity', 1)
+    .attr('fill-opacity', 1)
+    .call(attrY)
+    .call(attrHeight);
+  function attrHeight(selection) {
+    selection
   // yBand.bandwidth()
     .attr("height", dataConfig.rectHeight.bind(dataConfig, /*scaled*/true, /*gIsData*/false)) // equiv : (d, i, g) => dataConfig.rectHeight(true, false, d, i, g);
-  ;
-  let barWidth = dataConfig.rectWidth.bind(dataConfig, /*scaled*/true, /*gIsData*/false);
-  r
+    ;
+  }
+
+  let barWidth = dataConfig.rectWidth.bind(dataConfig, /*scaleX*/this.scales.xWidth, /*gIsData*/false);
+  /** Use transition from width 0 when zooming out */
+  (zoomingIn || idWidthChanged ? rm : r)
     .attr("width", dataConfig.barAsHeatmap ? 20 : barWidth);
   if (dataConfig.barAsHeatmap)
     ra
     .attr('fill', barWidth);
-  rx.remove();
-  dLog(rs.nodes(), re.nodes());
+  rx
+    /* quick fade out */
+    .transition().duration(dataConfig.getTransitionTime() / 5)
+    .attr('stroke-opacity', 0.25)
+    .attr('fill-opacity', 0.25)
+    .remove()
+  ;
+  if (trace > 1) {
+    dLog(rs.nodes(), re.nodes());
+  }
 };
 
 /** A single horizontal line for each data point.
@@ -801,7 +1124,7 @@ ChartLine.prototype.linebars = function (data)
   let line = d3.line();
 
   function horizLine(d, i, g) {
-    let barWidth = dataConfig.rectWidth(/*scaled*/true, /*gIsData*/false, d, i, g);
+    let barWidth = dataConfig.rectWidth(/*scaleX*/scales.xWidth, /*gIsData*/false, d, i, g);
     let y = middle(datum2LocationScaled(d)),
     l =  line([
       [0, y],
@@ -817,13 +1140,15 @@ ChartLine.prototype.linebars = function (data)
     .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); });
   ra
     .merge(rs)
-    .transition().duration(1500)
+    .transition().duration(dataConfig.getTransitionTime())
     .attr('d', horizLine)
     .attr("stroke", (d) => this.blockColour())
   ;
 
   rx.remove();
-  console.log(rs.nodes(), re.nodes());
+  if (trace > 1) {
+    dLog(rs.nodes(), re.nodes());
+  }
 };
 
 /** Calculate the domain of some function of the data, which may be the data value or location.
@@ -843,21 +1168,23 @@ ChartLine.prototype.domain = function (valueFn, data)
     .map(valueFn)
     .reduce((acc, val) => acc.concat(val), []);
   let domain = d3.extent(yFlat);
-  console.log('ChartLine domain', domain, yFlat);
+  if (trace > 1) {
+    console.log('ChartLine domain', domain, yFlat);
+  }
   return domain;
 };
 
 ChartLine.prototype.line = function (data)
 {
   let y = this.scales.y, dataConfig = this.dataConfig;
-  this.scales.x = this.scales.xWidth;
+  let x = this.scales.x = this.scales.xWidth;
 
   let datum2LocationScaled = scaleMaybeInterval(dataConfig.datum2Location, y);
   let line = d3.line()
-    .x(dataConfig.rectWidth.bind(dataConfig, /*scaled*/true, /*gIsData*/false))
+    .x(dataConfig.rectWidth.bind(dataConfig, /*scaleX*/x, /*gIsData*/false))
     .y((d) => middle(datum2LocationScaled(d)));
 
-  console.log("line x domain", this.scales.x.domain(), this.scales.x.range());
+  console.log("line x domain", x.domain(), x.range());
 
   let
     g = this.g,
@@ -869,11 +1196,15 @@ ChartLine.prototype.line = function (data)
     .append("path")
     .attr("class", dataConfig.barClassName + " line")
     .attr("stroke", (d) => this.blockColour())
+    /* line is a single path for all data points; .datum() doesn't receive a keyFn.
+     * d3 does some tweening in the transition, but it is not closely connected
+     * to the insertion / deletion of data points.
+     */
     .datum(data)
     .attr("d", line)
     .merge(ps)
     .datum(data)
-    .transition().duration(1500)
+    .transition().duration(dataConfig.getTransitionTime())
     .attr("d", line);
   // data length is constant 1, so .remove() is not needed
   ps.exit().remove();
@@ -894,18 +1225,32 @@ ChartLine.prototype.drawContent = function(barsLine)
      * This uses the data shape to recognise Effects data; this is provisional
      * - we can probably lookup the tag 'EffectsPlus' in dataset tags (refn resources/tools/dev/effects2Dataset.pl).
      * The effects data takes the form of an array of 5 probabilities, in the 3rd element of feature.value.
+     * Generalising this : the array can be any length; each value will be plotted in a separate line.
+     * (currently just the first value is plotted).
      */
-    let isEffectsData = data.length && data[0].name && data[0].value && (data[0].value.length === 3) && (data[0].value[2].length === 6);
+    let isEffectsData = data.length && data[0].name && data[0].value && (data[0].value.length === 3) && (data[0].value[2].length > 0 /*=== 6*/);
     let bars = isEffectsData ? this.linebars : this.bars;
     let chartDraw = barsLine ? bars : this.line;
+    /** featureCountData is drawn only when block.isZoomedOut, chartable data is always drawn.  */
+    if (! this.block.get('isChartable') && ! this.block.get('isZoomedOut'))
+      data = [];
     chartDraw.apply(this, [data]);
   }
 };
 
+/** Remove the g.chart-line added via Chart1.prototype.group */
+ChartLine.prototype.remove = function() {
+  dLog('remove', this.g.node());
+  this.g.remove();
+}
 
 
 
 /*----------------------------------------------------------------------------*/
+
+DataConfig.prototype.isFeaturesCounts = function () {
+  return this.dataTypeName.startsWith('featureCount');
+}
 
 DataConfig.prototype.keyFn = function (d, i, g) {
   let key = this.datum2Location(d, i, g);
@@ -920,25 +1265,26 @@ DataConfig.prototype.keyFn = function (d, i, g) {
   return key;
 };
 
-/** Calculate the height of rectangle to be used for this data point
+/** Calculate the width of rectangle to be used for this data point
  * @param this  is DataConfig, not DOM element.
- * @param scaled  true means apply scale (x) to the result
+ * @param scaleX  undefined, or apply scaleX (x) to the result
  * @param gIsData true means g is __data__, otherwise it is DOM element, and has .__data__ attribute.
  * gIsData will be true when called from d3.max(), and false for d3 attr functions.
  */
-DataConfig.prototype.rectWidth = function (scaled, gIsData, d, i, g)
+DataConfig.prototype.rectWidth = function (scaleX, gIsData, d, i, g)
 {
-  Ember.assert('rectWidth arguments.length === 5', arguments.length === 5);
-  /** The scale is linear, so it is OK to scale before dividing by rectHeight.
-   * Otherwise could use datum2Value() here and apply this.x() before the return.
-   */
-  let d2v = (scaled ? this.datum2ValueScaled : this.datum2Value),
+  assert('rectWidth arguments.length === 5', arguments.length === 5);
+  let d2v = this.datum2Value,
   width = d2v(d);
   if (this.valueIsArea) {
-    let h;
+    /** the last bucket of GM has 0 height : id: {min: 238.2272359, max: 238.2272359}, so treat it as 1. */
+    let h = this.rectHeight(false, gIsData, d, i, g);
     // Factor the width consistently by h, don't sometimes use scaled (i.e. pass scaled==false).
-    width /= (h = this.rectHeight(false, gIsData, d, i, g));
+    width /= (h || 1);
     // dLog('rectWidth', h, width, gIsData);
+  }
+  if (scaleX) {
+    width = scaleX(width);
   }
   return width;
 };
@@ -950,7 +1296,7 @@ DataConfig.prototype.rectWidth = function (scaled, gIsData, d, i, g)
  */
 DataConfig.prototype.rectHeight = function (scaled, gIsData, d, i, g)
 {
-  Ember.assert('rectHeight arguments.length === 5', arguments.length === 5);
+  assert('rectHeight arguments.length === 5', arguments.length === 5);
   let height,
   d2l = (scaled ? this.datum2LocationScaled : this.datum2Location),
   location;
@@ -982,7 +1328,9 @@ DataConfig.prototype.rectHeight = function (scaled, gIsData, d, i, g)
       let y =
         r.map(d2l);
       height = Math.abs(y[y.length-1] - y[0]) * 2 / (y.length-1);
-      dLog('rectHeight', gIsData, d, i, /*g,*/ r, y, height);
+      if (trace > 2) {
+        dLog('rectHeight', gIsData, d, i, /*g,*/ r, y, height);
+      }
       if (! height)
         height = 1;
     }

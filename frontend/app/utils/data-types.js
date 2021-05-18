@@ -23,6 +23,9 @@ This can be integrated into models/feature.js
 
 const dLog = console.debug;
 
+/** Enable appended display of blockIds in hoverTextFn.  */
+const options_devel = false;
+
 /*----------------------------------------------------------------------------*/
 
 class DataConfig {
@@ -104,7 +107,10 @@ const featureCountAutoDataProperties = {
   datum2Description : function(d) { return JSON.stringify(d._id); },
   hoverTextFn : function (d, block) {
     let valueText = '[' + d._id.min + ',' + d._id.max + '] : ' + d.count,
-    blockName = block.view && block.view.longName();
+    blockName = blockHoverName(block);
+    if (options_devel) {
+      blockName += '\n' + (block.view && block.view.longName());
+    }
     return valueText + '\n' + blockName;
   },
   valueIsArea : true
@@ -121,7 +127,10 @@ const featureCountDataProperties = Object.assign(
     datum2Location : function datum2Location(d) { return [d._id, d._id + d.idWidth[0]]; },
     hoverTextFn : function (d, block) {
       let valueText = '' + d._id + ' +' + d.idWidth[0] + ' : ' + d.count,
-      blockName = block.view && block.view.longName();
+      blockName = blockHoverName(block);
+      if (options_devel) {
+        blockName += '\n' + (block.view && block.view.longName());
+      }
       return valueText + '\n' + blockName;
     }
   }
@@ -150,10 +159,12 @@ const dataConfigs =
 /* Copied from draw-map.js */
 
 import { stacks } from './stacks'; // just for oa.z and .y;  this will be replaced.
-let blockFeatures = stacks.oa.z;
+function get_blockFeatures() { return stacks.oa && stacks.oa.z; }
+
 
 function featureLocation(blockId, d)
 {
+  let blockFeatures = get_blockFeatures();
   let feature = blockFeatures[blockId][d];
   if (feature === undefined)
   {
@@ -211,9 +222,18 @@ function hoverTextFn (feature, block) {
   return text;
 };
 
-
-
-
+/** Provided name text to identify the block, for use in chart/track hover dialogs.
+ * In featureCount{,Auto}DataProperties @see hoverTextFn
+ */
+function blockHoverName(block) {
+  /** This could be moved to models/block.js as a CP, although the text format is
+   * intended to be specific to the needs of a small hover dialog.
+   */
+  let text = 
+      block.get('datasetNameAndScope') + '\n' +
+      (block.get('referenceDatasetName') || block.get('namespace'));
+  return text;
+}
 
 /*----------------------------------------------------------------------------*/
 
