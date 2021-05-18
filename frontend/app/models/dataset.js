@@ -98,6 +98,7 @@ export default Record.extend({
 
   /*--------------------------------------------------------------------------*/
 
+
   /** is this dataset copied from a (secondary) server, cached on the server it was loaded from (normally the primary). */
   isCopy : computed('_meta._origin', function () {
     return !! this.get('_meta._origin');
@@ -109,7 +110,17 @@ export default Record.extend({
     let blocks = this.get('blocks')
       .filter((b) => ! b.get('isCopy'));
     return blocks;
-  })
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
+  /** @return true if this dataset has the given tag.
+   */
+  hasTag : function (tag) {
+    let tags = this.get('tags'),
+    has = tags && tags.length && (tags.indexOf(tag) >= 0);
+    return has;
+  },
 
   /*--------------------------------------------------------------------------*/
 
