@@ -1,8 +1,9 @@
-import Ember from 'ember';
+import $ from 'jquery';
 
 import  { logElementDimensions2 } from '../domElements';
 
 const trace_resize = 0;
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
@@ -54,20 +55,11 @@ Viewport.prototype.calc = function(oa)
   w,
   h,
 
-  /** approx height of map / chromosome selection buttons above graph */
-  axisSelectionHeight = 30,
-  /** Axes which have a reference block and multiple data blocks show each block
-   * name on a separate line in the axis title.  Other axes have just 1 line of
-   * text in the title, so the minimum value of axisNameRows is 1.
-   * This can be made a configurable option, and adjusted for the actual max #
-   * of rows in axis titles.
+  /** approx height of text block below graph which says 'n selected features'
+   * also
+   * @see axisTitleFontHeight
+   * @see axisFontSize
    */
-  axisNameRows = 5,
-  /** approx height of text name of map+chromosome displayed above axis.
-   *   *axisNameRows for parent/child; later can make that dependent on whether there are any parent/child axes.
-   */
-  axisNameHeight = 14 * axisNameRows,
-  /** approx height of text block below graph which says 'n selected features' */
   selectedFeaturesTextHeight = 14,
 
 
@@ -87,10 +79,8 @@ Viewport.prototype.calc = function(oa)
   /** dimensions of the graph border */
   let graphDim;
 
-  this.axisTopOffset = /*axisSelectionHeight +*/ axisNameHeight;
-
   const holderSelector = 'div#holder';
-  divHolder=Ember.$(holderSelector);
+  divHolder=$(holderSelector);
   if (divHolder.length === 0) {
     console.warn('Viewport() : element not found :', holderSelector, this, oa);
     // size calculations depend on holder dimensions, so fail.
@@ -118,10 +108,11 @@ Viewport.prototype.calc = function(oa)
   /** 	margins : top right bottom left */
   this.margins =
     // 14 was maybe for axisNameHeight, not needed
-    margins = [20/*+14*/+1, 0, 10, 0] // 10, 10, 10],
+    margins = [/*20+14*/+1, 0, 10, 0] // 10, 10, 10],
     .map(function (m, i) { return m + holderPadding[i]; });
 
-  logElementDimensions2(divHolder);
+  if (trace_resize)
+    logElementDimensions2(divHolder);
 
   this.viewPortPrev = this.viewPort;
   /** use width of div#holder, not document.documentElement.clientWidth because of margins L & R. */
@@ -138,8 +129,8 @@ Viewport.prototype.calc = function(oa)
         {
             w: w,
             h: h - 2 * this.dropTargetYMargin
-            - this.axisTopOffset
-            - topPanelHeight - bottomPanelHeight
+            // - this.axisTopOffset
+            - topPanelHeight // - bottomPanelHeight
         };
   // layout has changed, no value in this :  - selectedFeaturesTextHeight
 
@@ -166,7 +157,9 @@ Viewport.prototype.calc = function(oa)
    * digits with 2 commas).
    */
   let outsideMargin = Math.max(90, this.axisHeaderTextLen/2);
-  this.axisXRange = [0 + outsideMargin, graphDim.w - outsideMargin];
+  /** add some extra space on left to allow for long text selected.labelledFeatures (axis-1d : showLabels() ) */
+  let extraLeftMargin = 50;
+  this.axisXRange = [0 + outsideMargin + extraLeftMargin, graphDim.w - outsideMargin];
   // -  some other results of Viewport().calc() are currently accessed within a previous draw() closure  (yRange, xDropOutDistance, dragLimit)
   if (trace_resize)
     console.log("Viewport.calc()", this);
@@ -189,8 +182,17 @@ Viewport.prototype.viewBox = function()
    */
   increaseWidth = verticalTitle ?
     ((this.axisTitleLayout && (this.axisTitleLayout.increaseRightMargin() / 2 - shiftLeft)) || 0) : 0;
-  return "" + (0 + shiftLeft) + " " + -this.axisTopOffset + " " +
-    (this.graphDim.w + increaseWidth) + " " + (this.graphDim.h + this.axisTopOffset);
+
+  let axisTitleHeight = ((this.axisTitleLayout && this.axisTitleLayout.height !== undefined) ? this.axisTitleLayout.height : 0);
+  let viewBox = {
+    min_x : (0 + shiftLeft),
+    min_y : - axisTitleHeight,
+    width : (this.graphDim.w + increaseWidth),
+    height : (this.graphDim.h + axisTitleHeight)},
+  viewBoxText = "" + viewBox.min_x + " " + viewBox.min_y + " " +
+    viewBox.width + " " + viewBox.height;
+  dLog('viewBox', viewBox, viewBoxText, this, shiftLeft, increaseWidth);
+  return viewBoxText;
 };
 
 /** Based on drawing width and the number of stacks,

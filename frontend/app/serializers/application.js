@@ -1,9 +1,8 @@
-import Ember from 'ember'
-import DS from 'ember-data';
+import RESTSerializer from '@ember-data/serializer/rest';
 
-import PartialModelRESTSerializer from 'ember-data-partial-model/mixins/rest-serializer';
+// import PartialModelRESTSerializer from 'ember-data-partial-model/mixins/rest-serializer';
 
-export default DS.RESTSerializer.extend(PartialModelRESTSerializer, {
+export default RESTSerializer.extend(/*PartialModelRESTSerializer,*/ {
   //primaryKey: '_id'
 
   // handling generically for loopback response structure

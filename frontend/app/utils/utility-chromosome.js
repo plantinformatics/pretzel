@@ -2,13 +2,14 @@ import { breakPoint } from '../utils/breakPoint';
 
 /*----------------------------------------------------------------------------*/
 
-/** bundle chr data (incl features) for draw-map:draw().
- * copy of Ember.RSVP.hash(promises).then(); factor these together.
- * @param c aka chrs[chr]
- */
-function chrData(c) {
-  /* factored from controllers/mapview.js, where it was originally developed. */
+const dLog = console.debug;
 
+/*----------------------------------------------------------------------------*/
+
+/** Copy fields from a chromosome (block) Ember DS object.
+ * @param c chromosome (block) object in the Ember data store
+ */
+function copyChrData(c) {
   let 
     map = c.get('datasetId'),  // replaces c.get('map'),
   /* rc aka retHash[chr] */
@@ -20,6 +21,19 @@ function chrData(c) {
   if (c.get(fieldName))
     rc[fieldName] = c.get(fieldName);
   });
+
+  return rc;
+}
+
+/** bundle chr data (incl features) for draw-map:draw().
+ * copy of Ember.RSVP.hash(promises).then(); factor these together.
+ * @param c aka chrs[chr]
+ */
+function chrData(c) {
+  /* factored from controllers/mapview.js, where it was originally developed. */
+
+  let rc = copyChrData(c),
+  map = rc.map;
 
   let f = c.get('features');
   f.forEach(function(feature) {
@@ -44,10 +58,53 @@ function chrData(c) {
     rc[featureName] = {location: featurePosition, aliases: featureAliases, id: featureId};
     // if (!range) console.log("chrData range", featureName, rc[featureName]);
   });
-  console.log("chrData", rc);
+  dLog("chrData", rc);
   return rc;
 }
 
 /*----------------------------------------------------------------------------*/
 
-export { chrData };
+/** Support some data structures which are wrappers around Ember store data :
+ * cmName and mapChr2Axis.
+ *
+ * There is some value in being framework-independent, which these data
+ * structures (and z etc) offer, but the advantages of integrating more fully with
+ * Ember, e.g. ComputedProperty-s, make it worthwhile.
+ * So these data structures can be progressively replaced via the strangler fig
+ * model (as described by Martin Fowler, https://www.martinfowler.com/bliki/StranglerApplication.html).
+ */
+function cmNameAdd(oa, block) {
+  let
+    axis = block.get('id'),
+    cmName = oa.cmName,
+  mapChr2Axis = oa.mapChr2Axis,
+  c = copyChrData(block);
+  /* Based on draw-map.js:receiveChr() */
+
+  let dataset = c.dataset,
+  datasetName = dataset && dataset.get('name'),
+  parent = dataset && dataset.get('parent'),
+  parentName = parent  && parent.get('name')
+  ;
+  // oa.datasets[] seems unused.
+  if (oa.datasets[datasetName] === undefined)
+  {
+    oa.datasets[datasetName] = dataset;
+    dLog(datasetName, dataset.get('_meta.shortName'));
+  }
+
+  cmName[axis] = {mapName : c.mapName, chrName : c.chrName
+                  , parent: parentName
+                  , name : c.name, range : c.range
+                  , scope: c.scope, featureType: c.featureType
+                  , dataset : dataset
+                 };
+
+  let mapChrName = oa.axisApi.makeMapChrName(c.mapName, c.chrName);
+  mapChr2Axis[mapChrName] = axis;
+
+  oa.axisApi.axisIDAdd(axis);
+}
+/*----------------------------------------------------------------------------*/
+
+export { chrData, cmNameAdd };

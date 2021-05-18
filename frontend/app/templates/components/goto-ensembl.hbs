@@ -1,4 +1,4 @@
-<div style="display: flex; margin: 1em;">
+<div>
   {{input
     value=featureName
     class="form-control"
@@ -10,7 +10,12 @@
         "Feature name e.g. GrainGenes : Xgwm382.1-2A;  Ensembl : TRIAE_CS42_3DL_TGACv1_249024_AA0834820">?</span>
 </div>
 
-<div style="display: flex;">
+<div style="flex-wrap: wrap;">
+  {{input
+    value=baseUrl
+    class="form-control"
+    placeholder="Url to configure website" }}
+
   <select onchange={{action (mut website) value="target.value"}}>
     {{#each websites as |websiteChoice|}}
       <option value={{websiteChoice}} selected={{eq website websiteChoice}}>{{websiteChoice}}</option>
@@ -19,14 +24,20 @@
 
 
   <a target="_blank"
-     href={{url}}  style="margin-left: auto; margin-right: 1em;" >
+     href={{url}} >
     {{featureName}}
   </a>
 
   <a target="_blank"
-     href={{urlSelected}}  style="margin-left: auto; margin-right: 1em;" >
+     href={{urlSelected}} >
     {{selectedFeatures0Name}}
   </a>
+  {{#if brushedDomain }}
+    <a target="_blank"
+       href={{urlLocation}} >
+      {{anchorLocationText}}
+    </a>
+  {{/if}}
 
 
 </div>

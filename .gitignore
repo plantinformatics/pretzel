@@ -2,7 +2,7 @@
 
 # compiled output
 /dist
-/backend/client/*
+/backend/client
 /tmp
 /log
 *.log

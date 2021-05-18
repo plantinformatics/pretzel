@@ -268,3 +268,173 @@ http://localhost:5000/Geneticmaps
 /usr/local/bin/docker-compose -f docker-compose.yaml down
 
 ```
+
+### various
+
+Centos packages required :
+`sudo yum install docker-client.x86_64 docker-distribution.x86_64 docker-compose.noarch`
+
+Building with nvm and sudo and specifying DB_NAME=admin :
+```
+MONGO_DATA_DIR=/local_mongoDb_data_for_docker
+sudo DATA_DIR=$MONGO_DATA_DIR DB_NAME=admin EMAIL_VERIFY=NONE AUTH=ALL API_PORT_EXT=80 \
+PATH=$( sudo sh -c 'echo $PATH'):$NVM_DIR/versions/node/$(nvm version )/bin nohup sh -c 'docker-compose -f backend/docker-compose.yaml up' > ../log/be
+```
+
+Check container contents :
+`sudo docker container export  backend_api_1 | tar tvf - > /tmp/$USER/pretzel.compose.list`
+Filter that output with e.g.
+```
+grep ' app/'
+egrep -v 'node_modules/|/.npm/| -> |/.cache/bower|ca-certificates|tmp/root/if-you-need-to-delete-this-| link to |tmp/npm-'
+ | less
+```
+
+Graceful shutdown of database container :
+`sudo docker exec -it backend_database_1 mongo admin --eval 'db.shutdownServer()'`
+
+
+
+## Using docker build (pretzel/Dockerfile) 
+
+Either docker build or docker compose can be used; the pretzel project contains a top-level Dockerfile (for use with `docker build`, and used by dockerhub), and docker-compose.yaml for use with `docker compose`.
+This section describes the `docker build`.
+
+
+If the node-sass version is not available as a binary package, the build with depend on :
+```
+sudo yum install python.x86_64 python3.x86_64
+npm install -g node-gyp
+```
+
+If there is already a database container running from using `docker compose` above, shut it down:
+`sudo docker exec -it backend_database_1 mongo admin --eval 'db.shutdownServer()'`
+and start a database container which is required by the pretzel container :
+```
+MONGO_DATA_DIR=/local_mongoDb_data_for_docker
+sudo docker run -d -p 27017:27017 -v $MONGO_DATA_DIR:/data/db mongo
+```
+
+Build and run container
+```
+cd pretzel
+sudo docker build -t pretzel .
+
+DB_NAME=admin
+sudo docker run --name pretz_80 --detach -e DB_NAME=$DB_NAME -e API_PORT_EXT=80  --publish 3000:3000 --net=host pretzel
+```
+
+Clean up previous builds :
+
+```
+b1=$(sudo docker image ls --all | fgrep '<none>' | awk ' {print $3; } ')
+b2=$(sudo docker ps --all | fgrep 'Exited (1) 3 hours ago' | awk ' {print $1; }')
+sudo docker container rm $b2
+sudo docker image rm $b1
+```
+
+If package.json is changed then npm ci in build will depend on updated package-lock.json :
+`npm install`
+
+View logs
+`sudo docker logs pretz_80`
+
+
+Check network ports status :
+```
+netstat -a | fgrep 27017
+sudo lsof -i tcp:http
+nodePid=$(pgrep -fd, "ember|node")
+ps -fp $nodePid
+sudo lsof  -p  $nodePid
+sudo sh -c 'ps -fp $(pgrep -fd, "ember|node")'
+```
+
+Check the http port is served :
+`curl http://localhost:80 | head -5`
+
+
+Inspect the port and DB_NAME configuration of a container :
+```
+sudo yum install jq.x86_64
+sudo docker container inspect pretz_80 | jq  'map(.Config.Env)'
+[
+  [
+    "DB_NAME=admin",
+    "API_PORT_EXT=80",
+    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "NODE_VERSION=12.12.0",
+    "YARN_VERSION=1.19.1",
+    "EMAIL_VERIFY=NONE",
+    "AUTH=ALL"
+  ]
+]
+```
+
+## Database configuration
+
+Pretzel now uses (since branch feature/progressive) aggregation pipeline queries in mongoDb, which are available in mongoDb versions after 4.
+
+Progressive loading of paths via aliases relies on the indices of the Alias collection, and indexes are added to the Feature collection also :
+
+```
+mongo --quiet admin
+db.Feature.getIndexes()
+db.Feature.createIndex({"value.0":1},{ partialFilterExpression: {"value.1": {$type: 'number'}} } )
+db.Feature.createIndex({blockId:1} )
+
+db.Alias.getIndexes()
+db.Alias.createIndex ( {namespace1:1} )
+db.Alias.createIndex ( {namespace2:1} )
+db.Alias.createIndex ( {string1:1} )
+db.Alias.createIndex ( {string2:1} )
+
+db.Alias.createIndex ( {namespace1:1, namespace2:1} )
+db.Alias.createIndex ( {string1:1, string2:1} )
+
+exit
+```
+This is applicable to any of the build methods.
+This assumes DB_NAME=admin;  substituted e.g. pretzel for admin.
+
+To check if these aliases are already added :
+```
+db.Feature.getIndexes()
+db.Alias.getIndexes()
+```
+
+
+
+
+## Some script functions for building and running without docker
+
+These can be added to a .bashrc
+```
+export MONGO_DATA_DIR=/local_mongoDb_data_for_docker
+export pretzelDir=.../pretzel
+# Enable this for web inspector access to node server.
+# export NODE_INSPECT=--inspect
+
+# Use the 2nd form to override AUTH=
+run_backend='npm run run:backend'
+run_backend='cd backend && EMAIL_VERIFY=NONE AUTH=NONE node $NODE_INSPECT server/server.js'
+DB_NAME=admin
+function sudoBE() { cd $pretzelDir && sudo DB_NAME=$DB_NAME API_PORT_EXT=80 PATH=$( sudo sh -c 'echo $PATH'):$NVM_DIR/versions/node/$(nvm version )/bin sh -c $run_backend  > ../log/be ; }
+
+#-------------------------------------------------------------------------------
+
+function mongoStart() {
+    mongod --dbpath $MONGO_DATA_DIR   --logpath $MONGO_DATA_DIR.log &
+}
+
+function mongoShutdown() {
+  mongod --dbpath $MONGO_DATA_DIR  --shutdown
+}
+
+
+# Skip remainder of .bashrc file if this shell is not interactive (the nvm message is not handled by scp).
+[[ $- != *i* ]] && return
+
+. .bashrc.nvm
+nvm use node 10.16.3
+```

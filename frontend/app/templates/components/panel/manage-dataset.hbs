@@ -1,40 +1,73 @@
 {{#if dataset}}
   <h4 class="truncate" style="max-width:300px" title={{dataset.name}}>{{dataset.name}}</h4>
 
-  <table class="table table-striped">
+  <table class="table table-striped dataset-table">
     <tbody>
-      <tr><td>Type</td><td>{{dataset.type}}</td></tr>
+      <tr><td>Namespace</td><td style="overflow-wrap : break-word; max-width : 20em;">{{dataset.namespace}}</td></tr>
+      <tr><td>Parent</td><td>{{dataset.parentName}}</td></tr>
       <tr><td>Created</td><td>{{formatDate dataset.createdAt}}</td></tr>
       <tr><td>Last Updated</td><td>{{formatDate dataset.updatedAt}}</td></tr>
       <tr><td>Public</td><td>{{dataset.public}}</td></tr>
       <tr><td>Read Only</td><td>{{dataset.readOnly}}</td></tr>
-      <tr><td>Parent</td><td>{{dataset.parent.id}}</td></tr>
-      {{#each-in dataset.meta as |key value|}}
-      <tr><td>{{key}}</td><td>{{value}}</td></tr>
-      {{/each-in}}
-
+      {{#if dataset.tags.length}}
+        <tr><td>tags</td><td>
+          {{#each dataset.tags as |tag index|}}
+              {{#if index}}<nbsp/>{{/if}}
+	      {{tag}}
+          {{/each}}
+        </td></tr>
+      {{/if}}
     </tbody>
   </table>
-  <div style="padding-bottom:10px">
-    {{#elem/button-base
-      icon="pencil"
-      classColour="info"
-      onClick=(action "toggleEditor")
-      disabled=(not ownedByMe)}}
-      Edit Metadata
-    {{/elem/button-base}}
-  </div>
+
   <div class="metaeditor-panel">
-    {{json-editor json=datasetMeta name='Metadata' disabled=true search=false}}
+
+    <div style="margin-top:0.8ex"><div class="col-md-5">apiHost</div><div class="col-md-6">{{apiHost}}</div></div>
+
+
+    <div class="meta-row" style="z-index:10; padding-top: 4ex;">
+      <div class="col-md-5">
+        <label>Meta</label>
+      </div>
+      <div class="col-md-7" style="display: inline-block;">
+        <span>View</span>
+        {{x-toggle
+        theme='light'
+        value=toggleShowJsonViewer
+        style="display: inline-block;"
+        onToggle=(action (mut toggleShowJsonViewer)) }}
+
+        {{#elem/button-base
+          icon="pencil"
+          classColour="info"
+          onClick=(action "toggleEditor")
+          disabled=(not ownedByMe)}}
+          Edit
+        {{/elem/button-base}}
+
+      </div>
+    </div>
+
+
+    {{#unless editorVisible}}
+      {{!-- see comment toggleShowJsonViewer() --}}
+      {{#if toggleShowJsonViewer}}
+        {{!-- earlier versions of json-editor supported a param disabled=true. This is now achieved via onEditable which returns false.
+              mode='view' also works.   --}}
+        {{json-editor json=datasetMeta name='Metadata'  onEditable=(action this.onEditable) search=false}}
+      {{/if}}
+    {{/unless}}
+
   </div>
   <div>
     {{#if editorVisible}}
-      {{#modal-dialog
+      {{#ember-modal-dialog
         onClose=(action "toggleEditor")
         targetAttachment="center"
         translucentOverlay=true
       }}
-        <div class="metaeditor-modal">{{json-editor json=datasetMeta onChange=(action "mutateJson")}}</div>
+      {{!-- Glavin001/ember-jsoneditor does not use attrs.onChange --}}
+        <div class="metaeditor-modal">{{json-editor json=currentMeta onChange=(action this.mutateJson)}}</div>
         <div>
           <button
             type="button"
@@ -49,7 +82,7 @@
             Cancel
           </button>
         </div>
-      {{/modal-dialog}}
+      {{/ember-modal-dialog}}
     {{/if}}
   </div>
 {{else}}

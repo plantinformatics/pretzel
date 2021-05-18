@@ -1,7 +1,8 @@
-import Ember from 'ember';
+import { allSettled } from 'rsvp';
+import { throttle } from '@ember/runloop';
+import { alias } from '@ember/object/computed';
 
-import Service from '@ember/service';
-const { inject: { service } } = Ember;
+import Service, { inject as service } from '@ember/service';
 
 import { task } from 'ember-concurrency';
 
@@ -14,24 +15,42 @@ import {
          storePath
        } from "../../utils/draw/collate-paths";
 
-let trace_pathsP = 1;
+let trace_pathsP = 0;
 
 import { blockAdjKeyFn } from '../../utils/draw/stacksAxes';
 
 /* global Promise */
 
+const dLog = console.debug;
+
 //------------------------------------------------------------------------------
 
+/** transitioning to driving this calc from the Ember runloop instead of from the API response. */
+const blocksUpdateDomainEnabled = false;
+
 function verifyFeatureRecord(fr, f) {
-  let frd = fr._internalModel.__data,
+  let frd = fr._internalModel.__data || fr._internalModel .__recordData.__data,
   /** Handle some older data which has .range instead of .value */
-  frdv = frd.value || frd.range,
-  fv = f.value || f.range,
+  frdv = frd ? frd.value || frd.range : fr.get('value'),
+  fv = f.value || f.range;
+  if ((typeof(frdv) == "number") || (frdv.length === undefined))
+    frdv = [frdv];
+  if ((typeof(fv) == "number") || (frdv.length === undefined))
+    frdv = [fv];
+  /** @return 1 if end of interval matches forward, -1 if reverse, 0 if not match. */
+  function sameOrReverse(i) { return (frdv[i] === fv[i]) ? 1 : (frdv[i] === fv[1-i]) ? -1 : 0; }
+  /** if sameValue is true then sameDirection is implied, so not tested. */
+  let sameValue = (fv.length === 1) && (frdv[0] === fv[0]) &&
+      ((frdv.length === 1) || (frdv[0] === frdv[1])) ;
+  let
+    /** direction indicated by frdv[0]. */
+    direction = sameOrReverse(0),
+  /** true if not an interval, or other end of interval matches in same direction. */
+  sameDirection = sameValue || (frdv.length < 2) || (sameOrReverse(1) === direction),
   same = 
     (fr.id === f._id) &&
-    (frdv[0] === fv[0]) &&
-    ((frdv.length < 2) || (frdv[1] === fv[1])) &&
-    (frd.name === f.name);
+    direction && sameDirection &&
+    ((frd ? frd._name : fr.get('name')) === f.name);
   return same;
 }
 
@@ -48,6 +67,9 @@ export default Service.extend({
   auth: service('auth'),
   store: service(),
   flowsService: service('data/flows-collate'),
+  blockService : service('data/block'),
+  apiServers : service(),
+  controls : service(),
 
   /** set up a block-adj object to hold results. */
   ensureBlockAdj(blockAdjId) {
@@ -55,7 +77,7 @@ export default Service.extend({
     blockAdjIdText = blockAdjKeyFn(blockAdjId),
     r = store.peekRecord('blockAdj', blockAdjIdText);
     if (r)
-      console.log('ensureBlockAdj', blockAdjId, r._internalModel.__attributes, r._internalModel.__data);
+      dLog('ensureBlockAdj', blockAdjId, r._internalModel.__attributes, r._internalModel.__data);
     if (! r) {
       let ba = {
         type : 'block-adj',
@@ -69,15 +91,16 @@ export default Service.extend({
           'block-id1' : blockAdjId[1]
         }
       };
+      if (false)
+      r = store.push({data: ba});
+      else {
       let
       ban = store.normalize('blockAdj', ba);
       r = store.push(ban);
-      if (! r.get('blockId0')) {
-        debugger;
-        r.set('blockId0', blockAdjId[0]);
-      }
-      if (! r.get('blockId1'))
-        r.set('blockId1', blockAdjId[1]);
+        dLog('ensureBlockAdj', ban);
+    }
+      if (trace_pathsP)
+        dLog('ensureBlockAdj', r, r.get('blockAdjId'), r._internalModel, r._internalModel.__data, store, ba);
     }
     return r;
   },
@@ -89,7 +112,7 @@ export default Service.extend({
     if (! blockAdj)
     {
       /** this is now done in ensureBlockAdj(), before the request. */
-      console.log('blockAdj not found', blockAdj, blockAdjId);
+      dLog('blockAdj not found', blockAdj, blockAdjId);
     }
     return blockAdj;
   },
@@ -98,14 +121,20 @@ export default Service.extend({
    * are stored in ember data store, as block-adj.
    * Initially just a single result for each blockID pair,
    * but will later hold results for sub-ranges of each block, at different resolutions.
+   *
+   * @param blockAdj  block-adj which owns the request and the result.
+   * If undefined then the value is looked up from blockAdjId
+   * @param blockAdjId  an array of 2 (string) blockIds.
+   * Used when blockAdj===undefined, and also passed to blocksUpdateDomain().
    */
   getPathsProgressive(blockAdj, blockAdjId, taskInstance) {
-    console.log('getPathsProgressive', blockAdj, blockAdjId);
+    if (trace_pathsP)
+      dLog('getPathsProgressive', blockAdj, blockAdjId);
     let paths;
     if (! blockAdj)
       blockAdj = this.findBlockAdj(blockAdjId);
     if (! blockAdj) {
-      console.log('getPathsProgressive not found:', blockAdjId);
+      dLog('getPathsProgressive not found:', blockAdjId);
     }
     else {  // this can move to models/block-adj
       let domainChange = blockAdj.get('domainChange');
@@ -115,7 +144,8 @@ export default Service.extend({
       }
       else
         paths = this.requestPathsProgressive(blockAdj, blockAdjId, taskInstance);
-      console.log('getPathsProgressive', blockAdj, blockAdjId, result || promiseText(paths));
+      if (trace_pathsP)
+        dLog('getPathsProgressive', blockAdj, blockAdjId, result || promiseText(paths));
     }
     return paths;
   },
@@ -129,16 +159,7 @@ export default Service.extend({
       });
     return intervals;
   },
-  controls : Ember.computed(function () {
-    let oa = stacks.oa,
-    /** This occurs after mapview.js: controls : Ember.Object.create({ view : {  } }),
-     * and draw-map : draw() setup of  oa.drawOptions.
-     * This can be replaced with a controls service.
-     */
-    controls = oa.drawOptions.controls;
-    return controls;
-  }),
-  pathsDensityParams : Ember.computed.alias('controls.view.pathsDensityParams'),
+  pathsDensityParams : alias('controls.view.pathsDensityParams'),
   /** Determine the parameters for the paths request, - intervals and density.
    * @param intervals domain for each blockAdj
    */
@@ -150,38 +171,51 @@ export default Service.extend({
     dbPathFilter = ! noDbPathFilter,
     params = {axes : intervals, page,  dbPathFilter };
     intervals.forEach(function (i) {
-      // console.log(i.domain);
+      if (i.domain && ! i.domain.length)
+        i.domain = undefined;
+      // dLog(i.domain);
       // Block : domain may be [false, false] before Block features are known. ?
       if (i.domain && (i.domain[0] === false) && (i.domain[1] === false)) {
-        console.log('intervalParams, empty Block ?', i.domain);
+        dLog('intervalParams, empty Block ?', i.domain);
       }
       if (i.domain && (i.domain[0] === 0) && (i.domain[1] === 0))
         i.domain = undefined;
     } );
 
-    let vcParams = this.get('pathsDensityParams');
-    if (vcParams.nSamples) {
-      params.nSamples = vcParams.nSamples;
+    if (this.get('fullDensity')) {
+        params.nSamples = 1e6;
+        page.densityFactor = 1e6;
+        page.thresholdFactor = 1e6;
+        params.nFeatures = 1e6;
     }
-    if (vcParams.densityFactor) {
-      page.densityFactor = vcParams.densityFactor;
-      page.thresholdFactor = vcParams.densityFactor; // retire the name .thresholdFactor
-    }
-    if (vcParams.nFeatures) {
-      params.nFeatures = vcParams.nFeatures;
+    else {
+      let vcParams = this.get('pathsDensityParams');
+      if (vcParams.nSamples) {
+        params.nSamples = vcParams.nSamples;
+      }
+      if (vcParams.densityFactor) {
+        page.densityFactor = vcParams.densityFactor;
+        page.thresholdFactor = vcParams.densityFactor; // retire the name .thresholdFactor
+      }
+      if (vcParams.nFeatures) {
+        params.nFeatures = vcParams.nFeatures;
+      }
     }
 
     return params;
   },
   /**
    * @param blockAdj  defines the scope of the request; result is stored here.
-   * @param blockAdjId  array of 2 blockIDs which identify blockAdj
+   * @param blockAdjId  array of 2 blockIDs which identify blockAdj,
+   * also used as param to blocksUpdateDomain().
    * @return  promise yielding paths result
    */
   requestPathsProgressive(blockAdj, blockAdjId, taskInstance) {
-    /** just for passing to auth getPathsViaStream, getPathsProgressive, will change signature of those functions. */
-    let blockA = blockAdjId[0], blockB = blockAdjId[1];
-    let store = this.get('store');
+    let apiServers = this.get('apiServers'),
+    blockAdjIdRemote = blockAdjId.map((blockId) => apiServers.id2RemoteRefn(blockId));
+    /** names 'blockA', 'blockB' are 
+     * just for passing to auth getPathsViaStream, getPathsProgressive, will change signature of those functions. */
+    let blockA = blockAdjIdRemote[0], blockB = blockAdjIdRemote[1];
 
     // based on link-path: request()
     let me = this;
@@ -203,14 +237,15 @@ export default Service.extend({
           if (! res || ! res.length)
             return;
           if (trace_pathsP > 1)
-            console.log('path request then', res.length);
+            dLog('path request then', res.length);
           for (let i=0; i < res.length; i++) {
             for (let j=0; j < 2; j++) {
               let repeats = res[i].alignment[j].repeats,
+              blockId = res[i].alignment[j].blockId,
+              store = me.get('apiServers').id2Store(blockId),
               // possibly filterPaths() is changing repeats.features[] to repeats[]
-              features = repeats.features || repeats,
-              f = features[0];
-              me.pushFeature(store, f, flowsService);
+              features = repeats.features || repeats;
+              me.pushFeatureField(store, features, 0, flowsService);
             }
           }
           /** Return unique result identifier */
@@ -222,15 +257,15 @@ export default Service.extend({
            * event, and no need for domainCalc() except when there was no
            * previous pathsResult, or if streaming and receiving results for the first request.
            */
-          let domainCalc = pathsViaStream || firstResult,
-          axisEvents = ! exists;
+          let domainCalc = pathsViaStream || firstResult;
 
           /* check if passing blockAdjId prevents the merging of multiple calls
            * to throttle with the same arguments into a single call.
            */
-          Ember.run.throttle(
+          if (blocksUpdateDomainEnabled)
+          throttle(
             me, me.blocksUpdateDomain, 
-            blockAdjId, domainCalc, axisEvents,
+            blockAdjId, domainCalc,
             200, false);
         };
 
@@ -239,30 +274,61 @@ export default Service.extend({
         receivedData,
         function(err, status) {
           if (pathsViaStream)
-            console.log('path request', 'pathsViaStream', blockA, blockB, me, err, status);
+            dLog('path request', 'pathsViaStream', blockA, blockB, me, err, status);
           else
-          console.log('path request', blockA, blockB, me, err.responseJSON[status] /* .error.message*/, status);
+          dLog('path request', blockA, blockB, me, err.responseJSON[status] /* .error.message*/, status);
         });
     return promise;
   },
 
   pushFeature(store, f, flowsService) {
+    let c;
     let fr = store.peekRecord('feature', f._id);
     if (fr) {
       let verifyOK = verifyFeatureRecord(fr, f);
       if (! verifyOK)
-        console.log('peekRecord feature', f._id, f, fr._internalModel.__data, fr);
+        dLog('peekRecord feature', f._id, f, fr._internalModel.__data, fr);
     }
     else
     {
       f.id = f._id;
+      /** If f.value is not an array, replace it with an array.  This is a data
+       * error, and this code is not intended to handle data errors, it just
+       * works around an error in the current dev db.
+       * Could do the same for .range, but not expecting any .range in new user data.
+       */
+      const valueF = 'value', fv = f[valueF];
+      if ((typeof(fv) == "number") || (fv.length === undefined)) {
+        dLog('Feature.value is expected to be an array, value is :', typeof(fv), f);
+        f[valueF] = [fv];
+      }
       let fn = store.normalize('feature', f);
-      let c = store.push(fn);
-      storeFeature(stacks.oa, flowsService, f.name, c, f.blockId);
+      c = store.push(fn);
+      let blockId = f.blockId;
+      // equivalent : (typeof blockId !== "string")
+      if (blockId.get) {
+        blockId = blockId.get('id');
+      }
+      if (trace_pathsP > 3)
+        dLog('pushFeature', f.blockId, c.get('blockId.features.length'), c.get('blockId.featuresLength'), f, 'featuresLength');
+      /** if feature has no ._name, i.e. datasetId.tags[] contains "AnonFeatures",
+       * then use e.g. "1H:" + value[0]
+       */
+      let fName = f._name || (c.get('blockId.name') + ':' + f.value[0]);
+      storeFeature(stacks.oa, flowsService, fName, c, blockId);
       if (trace_pathsP > 2)
-        console.log(c.get('id'), c._internalModel.__data);
+        dLog(c.get('id'), c._internalModel.__data);
     }
-
+    return c;
+  },
+  /** wrapper around pushFeature() : push a feature value and replace the value with a record reference. */
+  pushFeatureField(store, res, fieldName, flowsService) {
+    let f = res[fieldName];
+    let fr = this.pushFeature(store, f, flowsService);
+    if (fr)
+      res[fieldName] = fr;
+    else if (trace_pathsP > 2)
+      dLog('pushFeatureField', fieldName, f);
   },
 
   /**
@@ -277,14 +343,15 @@ export default Service.extend({
     if (pathsViaStream) {
       if (res.length) {
         let pathsAccumulated = pathsResult || [];
-        // console.log('exists ', resultFieldName, exists.get(resultFieldName), pathsAccumulated.length, res.length);
+        // dLog('exists ', resultFieldName, exists.get(resultFieldName), pathsAccumulated.length, res.length);
         /** Currently the API result may overlap previous results. */
         let resIdName = resultIdName(res[0]);
         let i = pathsAccumulated.findIndex(function (r) { return resultIdName(r) === resIdName; } );
         if (i === -1) {
           pathsResult = pathsAccumulated.concat(res);
           if (pathsAccumulated.length < 3)
-            console.log('pathsAccumulated', pathsAccumulated, res);
+            if (trace_pathsP)
+              dLog('pathsAccumulated', pathsAccumulated, res);
         }
       }
     }
@@ -292,8 +359,10 @@ export default Service.extend({
       pathsResult = res;
     if (res.length || ! pathsViaStream) {
       exists.set(resultFieldName, pathsResult);
+      // update the paths{,Aliases}ResultLength -Debounced and -Throttled values
+      exists.updatePathsResult(resultFieldName, pathsResult);
       if (trace_pathsP > 1 + pathsViaStream)
-        console.log(resultFieldName, pathsResult, exists, exists._internalModel.__attributes, exists._internalModel.__data);
+        dLog(resultFieldName, pathsResult, exists, exists._internalModel.__attributes, exists._internalModel.__data);
     }
 
     return firstResult;
@@ -302,22 +371,22 @@ export default Service.extend({
   /** Update the domain of the named blocks.
    * @param blocks  array of blockId
    * @param domainCalc  if false, do nothing (useful because this function is called via throttle().
-   * @param axisEvents  not used - axisEvents is factored to axis-1d : notifyChanges()
    */
-  blocksUpdateDomain : function(blocks, domainCalc, axisEvents) {
+  blocksUpdateDomain : function(blocks, domainCalc) {
 
           if (domainCalc)
             blocks.map(function (blockId) {
               let
                 block = stacks.blocks[blockId];
-              console.log(blockId, 'before domainCalc, block.z', block.z); let
+              if (trace_pathsP)
+                dLog(blockId, 'before domainCalc, block.z', block.z); let
               /** updateDomain() uses axis domainCalc() but that does not recalculate block domain. */
               blockDomain = block.domain = block.domainCalc(),
               axis = Stacked.getAxis(blockId);
               if (! axis) {
                 // This can occur when axis is being deleted by the time the result arrives.
                 if ((axis = stacks.axesP [blockId])) {
-                  console.log('blocksUpdateDomain', blocks, blockId, axis);
+                  dLog('blocksUpdateDomain', blocks, blockId, axis);
                   block.log(); axis.log();
                 }
               }
@@ -325,7 +394,8 @@ export default Service.extend({
               /** axis domainCalc() also does not re-read the block's domains if axis.domain is already defined. */
                 let
               axisDomain = axis.domain = axis.domainCalc();
-              console.log(blockId, 'blockDomain', blockDomain, axisDomain, block.z);
+                if (trace_pathsP)
+                  dLog(blockId, 'blockDomain', blockDomain, axisDomain, block.z);
 
               // if zoomed in, then extension to the block's domain does not alter the viewed domain.
               if (! axis.axis1d.zoomed) {
@@ -340,13 +410,21 @@ export default Service.extend({
   /*--------------------------------------------------------------------------*/
   /* aliases */
 
+  /** 
+   * @param blockAdj  block-adj which owns the request and the result.
+   * If undefined then the value is looked up from blockAdjId
+   * @param blockAdjId  an array of 2 (string) blockIds.
+   * Used when blockAdj===undefined,
+   * and may be passed to blocksUpdateDomain() when that call is added.
+   */
   getPathsAliasesProgressive(blockAdj, blockAdjId, taskInstance) {
-    console.log('getPathsAliasesProgressive', blockAdj, blockAdjId);
+    if (trace_pathsP)
+      dLog('getPathsAliasesProgressive', blockAdj, blockAdjId);
     let pathsAliases;
     if (! blockAdj)
       blockAdj = this.findBlockAdj(blockAdjId);
     if (! blockAdj) {
-      console.log('getPathsAliasesProgressive not found:', blockAdjId);
+      dLog('getPathsAliasesProgressive not found:', blockAdjId);
     }
     else {
       let flowsService = this.get('flowsService'),
@@ -367,7 +445,8 @@ export default Service.extend({
       }
       else
         pathsAliases = this.requestAliases(blockAdj, blockAdjId, taskInstance);
-      console.log('getPathsAliasesProgressive', blockAdj, blockAdjId, result || promiseText(pathsAliases));
+      if (trace_pathsP)
+        dLog('getPathsAliasesProgressive', blockAdj, blockAdjId, result || promiseText(pathsAliases));
     }
     return pathsAliases;
   },
@@ -375,8 +454,7 @@ export default Service.extend({
   requestAliases : function (blockAdj, blockAdjId, taskInstance) {
     let reqName = 'path alias request';
     if (trace_pathsP > 2)
-      console.log(reqName, blockAdjId);
-    let store = this.get('store');
+      dLog(reqName, blockAdjId);
     let me = this;
     let flowsService = this.get('flowsService');
 
@@ -388,24 +466,26 @@ export default Service.extend({
     let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
 
     let blockA = blockAdjId[0], blockB = blockAdjId[1];
+    let apiServers = this.get('apiServers'),
+    blockAdjIdRemote = blockAdjId.map((blockId) => apiServers.id2RemoteRefn(blockId));
     let auth = this.get('auth');
     let promise = 
       // original API, non-progressive  
       // auth.getPaths(blockA, blockB, /*withDirect*/ false, /*options*/{})
       pathsViaStream ?
-      auth.getPathsAliasesViaStream(blockAdjId, intervalParams, {dataEvent : receivedData, closePromise : taskInstance}) :
-    auth.getPathsAliasesProgressive(blockAdjId, intervalParams, {});
+      auth.getPathsAliasesViaStream(blockAdjIdRemote, intervalParams, {dataEvent : receivedData, closePromise : taskInstance}) :
+    auth.getPathsAliasesProgressive(blockAdjIdRemote, intervalParams, {});
 
         function receivedData(res) {
           if (! res || ! res.length)
             return;
           if (trace_pathsP > 1)
-            console.log('path request then', res.length);
+            dLog('path request then', res.length);
           if (false)
             me.pushAlias(res);
 
           if (trace_pathsP > 2 - (res.length > 1))
-            console.log('featureAObj', res[0].featureAObj, res[0].featureBObj, res[0], res);
+            dLog('featureAObj', res[0].featureAObj, res[0].featureBObj, res[0], res);
           /** true if result is from pathsAliases() (via dbLookupAliases()), otherwise from apiLookupAliases(). */
           let fromMongoQuery = (res.length && res[0].aliased_features) !== undefined;
           if (fromMongoQuery) {
@@ -423,10 +503,12 @@ export default Service.extend({
           }
 
           res.forEach(function (r) {
-            [r.featureAObj, r.featureBObj].forEach(function (f) {
+            ['featureAObj', 'featureBObj'].forEach(function (fName) {
+              let f = r[fName];
               if (f._id === undefined)
                 f._id = f.id;
-              me.pushFeature(store, f, flowsService);
+              let store = me.get('apiServers').id2Store(f.blockId);
+              me.pushFeatureField(store, r, fName, flowsService);
             });
           });
           addPathsToCollation(blockA, blockB, res);
@@ -435,10 +517,19 @@ export default Service.extend({
           let firstResult =
             me.appendResult(blockAdj, 'pathsAliasesResult', pathsViaStream, res, resultIdName);
 
+          let domainCalc = pathsViaStream || firstResult,
+          axisEvents = ! blockAdj;
+          if (blocksUpdateDomainEnabled)
+          throttle(
+            me, me.blocksUpdateDomain, 
+            blockAdjId, domainCalc,
+            200, false);
+
         }
 
     promise.catch(function (err, status) {
-      console.log(reqName, 'pathsAliasesViaStream', blockAdjId, 'catch', me, err, status);
+      if (trace_pathsP)
+        dLog(reqName, 'pathsAliasesViaStream', blockAdjId, 'catch', me, err, status);
     });
 
     promise
@@ -446,16 +537,16 @@ export default Service.extend({
         receivedData,
         function(err, status) {
           if (pathsViaStream)
-            console.log(reqName, 'pathsAliasesViaStream', blockAdjId, me, err, status);
+            dLog(reqName, 'pathsAliasesViaStream', blockAdjId, me, err, status);
           else
-          console.log(reqName, blockAdjId, me, err.responseJSON[status] /* .error.message*/, status);
+          dLog(reqName, blockAdjId, me, err.responseJSON[status] /* .error.message*/, status);
         });
     return promise;
   },
 
   pushAlias : function (pathsAliases) {
-    // if (trace_pathsP > 2)
-      console.log('path push', pathsAliases.length);
+    if (trace_pathsP > 2)
+      dLog('path push', pathsAliases.length);
     let pushData = 
       {
         data: {
@@ -478,8 +569,8 @@ export default Service.extend({
     typeName = 'axis-brush',
     axisBrushId = block.id,
     r = store.peekRecord(typeName, axisBrushId);
-    if (r)
-      console.log('ensureAxisBrush', block.id, r._internalModel.__attributes, r._internalModel.__data);
+    if (r && trace_pathsP)
+      dLog('ensureAxisBrush', block.id, r._internalModel.__attributes, r._internalModel.__data);
     if (! r) {
       let ba = {
         // type : typeName,
@@ -503,17 +594,19 @@ export default Service.extend({
    */
   getBlockFeaturesInterval(blockId) {
     let fnName = 'getBlockFeaturesInterval';
-    console.log(fnName, blockId);
-    let block = this.get('store').peekRecord('block', blockId);
+    if (trace_pathsP)
+      dLog(fnName, blockId);
+    let block = this.get('blockService').peekBlock(blockId);
     let features;
     if (! block) {
-      console.log(fnName, ' not found:', blockId);
+      dLog(fnName, ' not found:', blockId);
     }
     else {
         features = this.get('getBlockFeaturesIntervalTask').perform(blockId);
       features
         .then(function (features) {
-          console.log("getBlockFeaturesIntervalTask", blockId, features);
+          if (trace_pathsP)
+            dLog("getBlockFeaturesIntervalTask", blockId, features);
         });
     }
     return features;
@@ -523,7 +616,8 @@ export default Service.extend({
     let
       fnName = 'getBlockFeaturesIntervalTask',
         features = yield this.requestBlockFeaturesInterval(blockId);
-      console.log(fnName, blockId, promiseText(features));
+      if (trace_pathsP)
+        dLog(fnName, blockId, promiseText(features));
     return features;
     /* tried .enqueue().maxConcurrency(3), but got 2 identical requests, so .drop() instead;
      * Perhaps later: split requestBlockFeaturesInterval() into parameter gathering and request;
@@ -541,7 +635,8 @@ export default Service.extend({
   requestBlockFeaturesInterval(blockA) {
     /** used in trace */
     const apiName = 'blockFeaturesInterval';
-    let store = this.get('store');
+    /** blockA is the referenceBlock of the axis, so its store is not used to store the features of the dataBlockIds */
+    const apiServers = this.get('apiServers');
 
     let me = this;
     let flowsService = this.get('flowsService');
@@ -551,32 +646,50 @@ export default Service.extend({
     let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
     let axis = Stacked.getAxis(blockA),
     axisBrush = me.get('store').peekRecord('axis-brush', blockA),
-    brushedDomain = axisBrush.brushedDomain,
+    /** There may not be an axis brush, e.g. when triggered by
+     * featuresForAxis(); in this case : axisBrush is null; don't set
+     * paramAxis.domain. */
+    brushedDomain = axisBrush && axisBrush.brushedDomain,
     paramAxis = intervalParams.axes[0];
-    console.log('domain', paramAxis.domain, '-> brushedDomain', brushedDomain);
+    if (trace_pathsP)
+      dLog('domain', paramAxis.domain, '-> brushedDomain', brushedDomain);
     /* When the block is first viewed, if it does not have a reference which
      * defines the range then the domain of the block's features is not known,
      * and the axis.domain[] will be [0, 0].
      */
-    if ((brushedDomain[0] === 0) && (brushedDomain[1] === 0))
-      delete paramAxis.domain;
-    else
+    if (! brushedDomain  || ((brushedDomain[0] === 0) && (brushedDomain[1] === 0))) {
+      if (paramAxis.domain && (paramAxis.domain[0] === 0) && (paramAxis.domain[1] === 0)) {
+        delete paramAxis.domain;
+      }
+    }
+    else if (brushedDomain)
       paramAxis.domain = brushedDomain;
-    let dataBlockIds = axis.dataBlocks(true)
+    let dataBlockIds = axis.dataBlocks(true, false)
+        .filter((blockS) => blockS.block.get('isBrushableFeatures'))
      // equiv : blockS.block.get('id')
       .map(function (blockS) { return blockS.axisName; });
+    /** The result of passing multiple blockIds to getBlockFeaturesInterval()
+     * has an unevenly distributed result : all the results come from just 1 of
+     * the blockIds.  This is because of the implementation of $sample
+     * (https://stackoverflow.com/a/46881483).
+     * So instead getBlockFeaturesInterval() is called once for each blockId;
+     * requestBlockIds is used in place of dataBlockIds.
+     */
+    let promises =
+    dataBlockIds.map(function (blockId) {
+      let requestBlockIds = [blockId];
     let promise = 
       // streaming version not added yet
       // pathsViaStream ?
       // this.get('auth').getPathsViaStream(blockA, blockB, intervalParams, /*options*/{dataEvent : receivedData}) :
-      this.get('auth').getBlockFeaturesInterval(dataBlockIds, intervalParams, /*options*/{});
+      me.get('auth').getBlockFeaturesInterval(requestBlockIds, intervalParams, /*options*/{});
         function receivedData(res){
           if (trace_pathsP > 1)
-            console.log(apiName, ' request then', res.length);
+            dLog(apiName, ' request then', res.length);
           let firstResult;
           for (let i=0; i < res.length; i++) {
-              let f = res[i];
-              me.pushFeature(store, f, flowsService);
+            let store = apiServers.id2Store(res[i].blockId);
+            me.pushFeatureField(store, res, i, flowsService);
           }
           // possibly accumulate the result into axis-brush in the same way that 
           // requestPathsProgressive() above accumulates paths results into blockAdj
@@ -584,20 +697,27 @@ export default Service.extend({
           let domainCalc = true,
           axisEvents = false;
 
-          Ember.run.throttle(
+          if (blocksUpdateDomainEnabled)
+          throttle(
             me, me.blocksUpdateDomain, 
-            dataBlockIds, domainCalc, axisEvents,
+            requestBlockIds, domainCalc,
             200, false);
+          // res is returned as the promise result
+          return res;
         };
+    promise = 
     promise
       .then(
         receivedData,
         function(err, status) {
           // if (pathsViaStream)
-          //  console.log(apiName, ' request', 'pathsViaStream', blockA, me, err, status);
+          //  dLog(apiName, ' request', 'pathsViaStream', blockA, me, err, status);
           // else
-            console.log(apiName, ' request', blockA, me, err.responseJSON[status] /* .error.message*/, status);
+            dLog(apiName, ' request', blockA, me, err.responseJSON[status] /* .error.message*/, status);
         });
+      return promise;
+    });
+    let promise = allSettled(promises);
     return promise;
 
   }

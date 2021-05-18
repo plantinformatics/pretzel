@@ -89,7 +89,12 @@ var config = {
   },
   "Email": {
     "dataSource": "email"
+  },
+  "Configuration": {
+    "dataSource": null,
+    "public": true
   }
+
 }
 
 if (process.env.EMAIL_VERIFY != 'NONE') {

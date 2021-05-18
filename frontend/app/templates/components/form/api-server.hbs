@@ -1,0 +1,22 @@
+
+{{input
+  value=data.host
+  class="form-control"
+  autocomplete="url"
+  placeholder="URL[:port] of API Host" }}
+
+{{input
+  value=data.user
+  class="form-control"
+  autocomplete="username"
+  placeholder="User (email)"}}
+{{input
+  value=data.token
+  class="form-control"
+  autocomplete="current-password"
+  placeholder="Authentication Token"}}
+
+<span class="pull-right">
+  {{elem/button-refresh
+    onClick=(action 'getDatasets')}}
+</span>

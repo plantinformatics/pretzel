@@ -1,6 +1,8 @@
-import {  maybeFlip, maybeFlipExtent }  from '../utils/draw/axis';
+import { maybeFlip, maybeFlipExtent }  from '../utils/draw/axis';
 
 import { Stacked } from './stacks';
+
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
@@ -10,8 +12,11 @@ import { Stacked } from './stacks';
  * @param y  axes yscale to update
  * @param ys  foreground yscale to update
  * @param axis  Stacked (i.e. axes[axis.axisName] == axis)
+ * @param domain (optional) : value to set as domain. If undefined then the
+ * domain is determined from axis .getDomain() and maybeFlip().
+ * If defined then axis.flipped will not be applied - the caller should do that.
  */
-function updateDomain(y, ys, axis)
+function updateDomain(y, ys, axis, domain)
 {
   /* This is now called from Stacked.prototype.updateDomain(), and can be merged
    * with that function. */
@@ -22,10 +27,12 @@ function updateDomain(y, ys, axis)
   
   let
     axisName = axis.axisName,
-  a = axis,
-  domain = a.parent ? a.parent.getDomain() : a.getDomain();
-  console.log('updateDomain', axisName, domain, a, a.blocks[0] && a.blocks[0].z);
-  domain = maybeFlip(domain, a.flipped);
+  a = axis;
+  if (domain === undefined) {
+    domain = a.parent ? a.parent.getDomain() : a.getDomain();
+    dLog('updateDomain', axisName, domain, a, a.blocks[0] && a.blocks[0].z);
+    domain = maybeFlip(domain, a.flipped);
+  }
   y.domain(domain);
   ys.domain(domain);
 }
@@ -45,18 +52,18 @@ function updateRange(y, ys, vc, a)
 {
   // factored out of draw-map.js
 
-  // console.log("updateRange", a, a.axisName, ys.length, ys[a.axisName]);
+  // dLog("updateRange", a, a.axisName, ys.length, ys[a.axisName]);
   // if called before ys is set up, do nothing.
   if (ys && ys[a.axisName])
   {
     let myRange = a.yRange();
     let axisName = a.axisName;
-    console.log("updateRange", a.axisName, a.position, a.portion, myRange, vc.yRange);
+    dLog("updateRange", a.axisName, a.position, a.portion, myRange, vc.yRange);
     ys[a.axisName].range([0, myRange]);
     y[a.axisName].range([0, vc.yRange]);
 
     y[axisName].brush
-      .extent(maybeFlipExtent([[-8,0],[8, vc.yRange /* not myRange */]], a.flipped));
+      .extent([[-8,0],[8, vc.yRange /* not myRange */]]);
   }
 }
 

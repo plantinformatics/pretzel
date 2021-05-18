@@ -48,10 +48,14 @@
     }
   },
   "files": {
-		"loopback#static": {
+		"loopback#static": [{
 			"paths": ["/landingPageContent"],
-			"params": "$!../client/landingPageContent.html" 
-		}
+			"params": "$!../client/landingPageContent" 
+		},
+		{
+			"paths": ["/signupPageContent"],
+			"params": "$!../client/signupContent" 
+		}]
 	},
   "final": {
     "loopback#urlNotFound": {}

@@ -1,3 +1,5 @@
+{{#elem/embed-html path="landingPageContent" as |landingPageContent|}}
+
 {{!-- This is useful for experimenting with path of static landingPageContent files, without having to rebuild.  --}}
 {{#if false}}
 <div>
@@ -5,26 +7,30 @@
 </div> 
 {{/if}}
 
-{{#if (is-rejected landingPageContent)}}
+{{!-- log landingPageContent.promise --}}
+{{#if (is-rejected landingPageContent.promise)}}
   <div class="jumbotron">
     <h1>Pretzel</h1>
     <p>An Express/Ember/D3 framework to display and interactively navigate complex datasets.</p>
-    <p>Developed by
-      - AgriBio, Department of Economic Development, Jobs, Transport and Resources (DEDJTR), Victoria,
-      Australia;
-      - CSIRO, Canberra, Australia.
 
-      Funded by the Grains Research Development Corporation (GRDC).
+    <p>
+Currently (2020-) funded and developed by Agriculture Victoria, Department of Jobs, Precincts and Regions (DJPR), Victoria, Australia.
     </p>
+    <p>
+Previously (2016-2020) funded by the Grains Research Development Corporation (GRDC) and co-developed by Agriculture Victoria and CSIRO, Canberra, Australia.
+    </p>
+
   </div>
 
   <div style="display:none;">
     <hr>
-    {{ landingPageContent.reason }}
+    {{ landingPageContent.promise.reason }}
   </div> 
 
 {{else}}
   <div class="landingPageContent">
-    {{{await landingPageContent}}}
+    {{{await landingPageContent.promise}}}
   </div>
 {{/if}}
+
+{{/elem/embed-html}}

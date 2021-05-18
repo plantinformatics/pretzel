@@ -1,6 +1,8 @@
-import resolver from './helpers/resolver';
-import {
-  setResolver
-} from 'ember-qunit';
+import Application from 'pretzel-frontend/app';
+import config from 'pretzel-frontend/config/environment';
+import { setApplication } from '@ember/test-helpers';
+import { start } from 'ember-qunit';
 
-setResolver(resolver);
+setApplication(Application.create(config.APP));
+
+start();
