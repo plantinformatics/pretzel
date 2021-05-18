@@ -1,15 +1,25 @@
-import Ember from 'ember';
+import $ from 'jquery';
+import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import { debounce, later } from '@ember/runloop';
+import Component from '@ember/component';
 
-import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
+import {
+  eltWidthResizable,
+  noShiftKeyfilter
+} from '../utils/domElements';
 
 /* global d3 */
 
-export default Ember.Component.extend({
+const dLog = console.debug;
+
+export default Component.extend({
 
   className : undefined,
 
   didInsertElement : function() {
     this._super(...arguments);
+
     /* grandparent component - listen for resize and zoom events.
      * possibly these events will move from axis-2d to axis-accordion.
      * This event handling will move to in-axis, since it is shared by all children of axis-2d/axis-accordion.
@@ -36,15 +46,27 @@ export default Ember.Component.extend({
   /** @param [axisID, t] */
   redrawOnce(axisID_t) {
     console.log("redrawOnce", axisID_t);
-    // -  redraw if axisID matches this axis
-    // possibly use transition t for redraw 
-    let redraw = this.get('redraw');
-    if (redraw)
-      redraw.apply(this, axisID_t);
+    if (! this.isDestroying) {
+      // -  redraw if axisID matches this axis
+      // possibly use transition t for redraw 
+      let redraw = this.get('redraw');
+      if (redraw)
+        redraw.apply(this, axisID_t);
+    }
   },
   redrawDebounced(axisID_t) {
-    Ember.run.debounce(this, this.redrawOnce, axisID_t, 1000);
+    debounce(this, this.redrawOnce, axisID_t, 1000);
   },
+
+  /*--------------------------------------------------------------------------*/
+
+  /** axis is the axis-2d; this is passed into axis-tracks and axis-charts;
+   * can be passed into subComponents also. */
+  axis1d : alias('axis.axis1d'),
+  /** y scale of axis has changed */
+  scaleChanged : alias('axis1d.scaleChanged'),
+  domainChanged : alias('axis1d.domainChanged'),
+  zoomedDomain :  alias('axis1d.zoomedDomain'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -122,12 +144,13 @@ export default Ember.Component.extend({
       .attr("clip-path", "url(#axis-clip)"); // clip the rectangle
 
     let
+      allocatedWidth = this.get('allocatedWidth'),
       margin  = ranges.margin;
 
     let g = 
       gps.merge(gp).selectAll("g." + className+  " > g");
     g
-      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+      .attr("transform", "translate(" + (allocatedWidth[0] + margin.left) + "," + margin.top + ")");
 
     return g;
   },
@@ -148,17 +171,28 @@ export default Ember.Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  allocatedWidth : computed('allocatedWidths', function () {
+    let 
+      allocatedWidths = this.get('allocatedWidths'),
+      allocatedWidth = this.get('allocatedWidths.' + this.get('className'));
+    dLog('allocatedWidth', this.className, allocatedWidth, allocatedWidths);
+    if (! allocatedWidth)
+      allocatedWidth = [0, 0]; // [12, (this.get('trackWidth')||10) * 2];
+    return allocatedWidth; 
+  }),
 
   width : undefined,
   resized : function(prevSize, currentSize) {
     console.log("resized in components/in-axis", this, prevSize, currentSize);
+    if (prevSize && currentSize) {
     // resize g.chart and clip by * currentSize / prevSize, 
     let width =  this.get('width');
-    width = width
+    width = (width && prevSize)
       ? width * currentSize / prevSize
       : currentSize / 1 /* or number of subComponents */;
     console.log("resized from width", this.get('width'), "to", width);
-    this.set('width', width);
+      this.set('width', width);
+    }
     this.redrawDebounced();
   },
   zoomed : function(axisID_t) {
@@ -178,7 +212,7 @@ export default Ember.Component.extend({
       };
     let i = cb.types.indexOf("text/plain"), textPlain = cb.getData(cb.types[i]),
     className = this.get('className'),
-    inputElt=Ember.$('.' + className + '.pasteData')
+    inputElt=$('.' + className + '.pasteData')
     // inputElt = event.target
     ;
     /* multiple subcomponents of the same type not supported yet - clashes here in paste selector,
@@ -186,7 +220,7 @@ export default Ember.Component.extend({
      */
     if (inputElt.length !== 1)
       console.log("inputElt", inputElt, className, this);
-    Ember.run.later(function() { inputElt.empty(); } );
+    later(function() { inputElt.empty(); } );
 
     let pasteProcess = this.get('pasteProcess');
     if (pasteProcess)

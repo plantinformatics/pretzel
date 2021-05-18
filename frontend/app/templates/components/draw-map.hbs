@@ -1,27 +1,26 @@
-<div class="resizer" style="float:right;">
-</div>
+{{queryParamsService.urlOptionsEffect}}
+
+{{!-- <div class="resizer" style="float:right;">
+</div> The resizer in mapview adjacent this works so this is probably not needed. --}}
 
 <div id='holder' class="bordered">
   <!--<ul>
        <li>{{selectedMapset.name}}</li>
        </ul> -->
+  <div id="headsUp">{{headsUp.tipText}}</div>
 
 
+  <div id="popoverTarget" style="float:right"></div>
 </div>
 
 {{yield}}
 
 <div class="devel-visible">
+  {{resizeEffect}} {{drawEffect}} 
   {{draw/stacks-view stacks=oa.stacks oa=oa drawMap=this axes2d=axes2d
     featuresInBlocks=featuresInBlocks
   }}
   {{!-- This info will be thinned or removed as axes development progresses. --}}
-  <div>splitAxes : {{splitAxes}}</div>
-  <div>axes2d : {{axes2d.length}}</div>
-  {{#each axes2d as |axisS|}}
-    <div>axis : {{axisS}}, {{axisS.axisID}}, {{axisS.extended}}</div>
-    {{axis-2d drawMap=this data=oa axisID=axisS.axisID tableData=axisData urlOptions=urlOptions}}
-  {{/each}}
 
   {{!-- wait until targetId="toolTip" will resolve --}}
   {{#if toolTipCreated }}
@@ -36,18 +35,12 @@
 
 <div class="devel-visible">
   <div>brushedAxes : {{flowsService.axisBrush.brushedAxes.length}}</div>
-  {{log 'flowsService.axisBrush' flowsService.axisBrush}}
-  {{#each flowsService.axisBrush.brushedAxes as |brushedAxis| }}
-    {{draw/axis-brush block=brushedAxis drawMap=this }}
-  {{/each}}
 
-  <div>{{blockService.viewedIds.length}},  blockAdjs : {{flowsService.blockAdjIds.length}}  {{flowsService.blockAdjs.length}}</div>
+  <div>{{blockService.viewedIds.length}},  blockAdjs : {{flowsService.blockAdjIds.length}}  {{flowsService.blockAdjsCP.length}}</div>
   <div>
-    <!-- flowsService.blockAdjs. (this comment fixes : Cannot read property 'nextSibling' of null) -->
     {{#each flowsService.blockAdjs as |blockAdj| }}
-      {{draw/block-adj blockAdj=blockAdj drawMap=this }}
+      {{draw/block-adj blockAdj=blockAdj drawMap=this  xOffsets=xOffsets }}
     {{/each}}
-    <!-- end of flowsService.blockAdjs. -->
   </div>
 </div>
 

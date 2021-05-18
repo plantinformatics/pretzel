@@ -1,15 +1,22 @@
-import Ember from 'ember';
-
-const { inject: { service } } = Ember;
+import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
 /* global d3 */
 
+const dLog = console.debug;
 
-export default Ember.Component.extend({
+export default Component.extend({
   blockService: service('data/block'),
+  controls : service(),
+  apiServers : service(),
+  selected : service('data/selected'),
 
-  taskGet : Ember.computed.alias('blockService.getBlocksOfFeatures'),
+  taskGet : alias('blockService.getBlocksOfFeatures'),
+
+  serverTabSelected : alias('controls.serverTabSelected'),
 
   /*----------------------------------------------------------------------------*/
   actions : {
@@ -42,35 +49,52 @@ export default Ember.Component.extend({
     }
   }, // actions
 
-  /** The result is expressed in 2 forms, for different presentations :
+  /** From the result of feature search, group by block.
+   * The result is expressed in 2 forms, for different presentations :
    * . set in .blocksOfFeatures for display in goto-feature-list.hbs
    * . via action updateFeaturesInBlocks, for display in axis-ticks-selected
    * @return undefined
    */
   blocksUnique : function (selectedFeatureNames) {
-      let me = this;
       let blockService = this.get('blockService');
       function peekBlock(block) {
         return blockService.peekBlock(block.id); };
+      let serverTabSelectedName = this.get('serverTabSelected'),
+      serverTabSelected = serverTabSelectedName && this.get('apiServers').lookupServerName(serverTabSelectedName),
+      apiServer = serverTabSelected || this.get('apiServers.primaryServer');
+
       let taskGet = this.get('taskGet'); // blockService.get('getBlocksOfFeatures');
-      let blockTask = taskGet.perform(selectedFeatureNames)
-        .then(function (features) {
-          console.log("getBlocksOfFeatures", selectedFeatureNames[0], features);
+      let blockTask = taskGet.perform(apiServer, selectedFeatureNames)
+        .then((features) => {
+          dLog("getBlocksOfFeatures", selectedFeatureNames[0], features);
+
+          /** copy feature search results to the list of clicked features,
+           * for which triangles are displayed.  */
+          this.set('selected.features', features);
+          this.get('selected').featureSearchResult(features);
 
           let blockIds = new Set(),
           blockCounts = {},
 
           n = d3.nest()
-            .key(function(f) { return f.blockId; })
-            .entries(features.features),
+            .key(function(f) { return f.get('blockId.id'); /* was f.blockId */ })
+            .entries(features),
           n1=n.sort(function (a,b) { return b.values.length - a.values.length; }),
           // n1.map(function (d) { return d.key; }),
-          /** augment d.key : add references to the (block) data and record. */
+          /** augment d.key : add references to the (block) record. */
           blocksUnique = n1.map(function (d) {
-            /** data is not an ember object, just the attribute data;  a POJO. */
-            let data = d.values[0].block,
-            key = {id: d.key, data : data, record : peekBlock(data)},
+            /** in initial implementation data was just the attribute data - a POJO 
+             * (i.e. data = dv.block, block = peekBlock(data) );
+             * it is now an ember object and the JSON data is not retained.
+             * The features in d.values[] have the same .blockId - use [0] to the block.
+             */
+            let dv = d.values[0],
+            block = dv.get('blockId'),
+            /** .id and .record are the id and record of the block. */
+            key = {id: d.key, record : block},
+            /** .values are the features within the block */
             result = {key : key, values : d.values};
+            dLog('blocksUnique', d, dv, 'result', result);
             return result; });
 
           /* entry-block-add.hbs is displaying {{entry.count}}.
@@ -82,10 +106,15 @@ export default Ember.Component.extend({
             /** this peekBlock() is also done in the above n1.map(), and they
              * could be integrated.  */
             let block = blockService.peekBlock(d.key);
-            block.set('count', d.values.length);
+            /** if the block is a copy from another server, then block here will be undefined.
+             * There doesn't seem to be much value in including them in features search results;  the other server may not be connected.
+             */
+            if (block) {
+              block.set('count', d.values.length);
+            }
           });
 
-          me.set('blocksOfFeatures', blocksUnique);
+          this.set('blocksOfFeatures', blocksUnique);
 
           /** convert nest [{key, values}..] to hash [key] : values,
            * used in e.g. axis-ticks-selected */
@@ -93,7 +122,7 @@ export default Ember.Component.extend({
             function (result, value) { result[value.key] = value.values; return result; },
             {} );
           console.log('featuresInBlocks', featuresInBlocks);
-          me.send('updateFeaturesInBlocks', featuresInBlocks);
+          this.send('updateFeaturesInBlocks', featuresInBlocks);
 
         });
   },
@@ -125,11 +154,11 @@ export default Ember.Component.extend({
     console.assert(list === children[0], fnName + '() : list === children[0]');
     this.set('featureList', list);
   },
-  activeFeatureList : Ember.computed.alias('featureList.activeFeatureList'),
+  activeFeatureList : alias('featureList.activeFeatureList'),
 
-  loading : Ember.computed.alias('taskGet.isRunning'),
+  loading : alias('taskGet.isRunning'),
 
-  refreshClassNames : Ember.computed('loading', function () {
+  refreshClassNames : computed('loading', function () {
     let classNames = "btn btn-info pull-right";
     return this.get('loading') ? classNames + ' disabled' : classNames;
   }),

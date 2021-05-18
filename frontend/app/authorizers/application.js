@@ -2,15 +2,24 @@
 
 // export default OAuth2Bearer.extend();
 
-import BaseAuthorizer from 'ember-simple-auth/authorizers/base'
+import { inject as service } from '@ember/service';
+
+import BaseAuthorizer from 'ember-simple-auth/authorizers/base';
+
 
 export default BaseAuthorizer.extend({
+  session: service('session'),
+
   // serverTokenEndpoint: `${config.apiHost}/Users/login`,
   // serverTokenRevocationEndpoint: `${config.apiHost}/Users/logout`
 
   authorize(data, block) {
-    // console.log('authorize', data, block)
+    let
+      server = this.get('session.requestServer'),
+    accessToken = server && server.token;
+    let token = accessToken || data.token;
+    console.log('authorize', data, token, block);
 
-    block('Authorization', data.token)
+    block('Authorization', token);
   }
 });

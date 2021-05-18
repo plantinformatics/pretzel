@@ -1,0 +1,68 @@
+{{#if visible}}
+
+{{#elem/panel-container state="primary" as |panelContainer|}}
+  {{#elem/panel-heading icon="filter" panelContainer=panelContainer}}
+    Actions
+  {{/elem/panel-heading}}
+  {{#if panelContainer.showComponent}}
+
+  <div class="panel-body">
+    <div class="btn-group btn-group-justified" role="group" aria-label="...">
+
+      {{!-- based on elem/button-submit.hbs, could be factored --}}
+      <div class="">
+        <button type="submit" {{action "requestAllPaths"}} class="btn btn-info {{if loading 'disabled'}}">Get all brushed paths</button>
+        <button class="btn btn-info">{{#component "ember-csv@file-anchor" data=csvExportData}} CSV Download{{/component}} </button>
+        <br>
+        <br>
+      </div>
+
+    </div>
+  </div>
+
+  {{/if}} {{!-- showComponent --}}
+{{/elem/panel-container}}
+
+<div class="optionControls">
+  <div>Selected block : {{selectedBlock.datasetNameAndScope}}</div>
+
+  <div>{{input type="checkbox" name="blockColumn" checked=blockColumn }} Show block columns</div>
+  <div>{{input type="checkbox" name="showInterval" checked=showInterval }} Show Interval</div>
+  {{#if devControls}}
+    <div>{{input type="checkbox" name="showDomains" checked=showDomains }} Show Brushed Regions</div>
+    <div>{{input type="checkbox" name="showCounts" checked=showCounts }} Show Counts</div>
+    <div>{{input type="checkbox" name="onlyBrushedAxes" checked=onlyBrushedAxes }} Filter out unbrushed paths</div>
+  {{/if}}
+</div>
+
+{{#if useHandsOnTable}}
+  <div id="paths-table-ho"  ></div>
+
+{{else}}
+
+  {{#data-filterer data=tableData as |df|}}
+    {{#data-sorter data=df.data as |ds|}}
+      {{#data-table data=ds.data
+         classNames=tableClassNames as |t|}}
+        {{#if blockColumn}}
+          {{t.filterableColumn propertyName='block0'  name='Block'        sortinformationupdated=(action ds.onsortfieldupdated) filterinformationupdated=(action df.onfilterfieldupdated) }}
+        {{/if}}
+        {{t.sortableColumn propertyName='feature0'  name='From Feature' sortinformationupdated=(action ds.onsortfieldupdated)}}
+        {{t.sortableColumn propertyName='position0' name='Position'     sortinformationupdated=(action ds.onsortfieldupdated) class="numeric" }}
+        {{#if showInterval}}
+          {{t.sortableColumn propertyName='positionEnd0' name='Position End'     sortinformationupdated=(action ds.onsortfieldupdated) class="numeric" }}
+        {{/if}}
+        {{#if blockColumn}}
+          {{t.filterableColumn propertyName='block1'  name='Block'        sortinformationupdated=(action ds.onsortfieldupdated) filterinformationupdated=(action df.onfilterfieldupdated) }}
+        {{/if}}
+        {{t.sortableColumn propertyName='feature1'  name='To Feature'   sortinformationupdated=(action ds.onsortfieldupdated)}}
+        {{t.sortableColumn propertyName='position1' name='Position'     sortinformationupdated=(action ds.onsortfieldupdated) class="numeric" }}
+        {{#if showInterval}}
+          {{t.sortableColumn propertyName='positionEnd1' name='Position End'     sortinformationupdated=(action ds.onsortfieldupdated) class="numeric" }}
+        {{/if}}
+      {{/data-table}}
+    {{/data-sorter}}
+  {{/data-filterer}}
+{{/if}}
+
+{{/if}} {{!-- visible --}}

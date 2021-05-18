@@ -1,39 +1,186 @@
 'use strict';
 
-var _ = require('lodash')
+/* global module */
+/* global require */
+/* global Buffer */
+/* global process */
 
-var acl = require('../utilities/acl')
-var identity = require('../utilities/identity')
-var upload = require('../utilities/upload')
-var load = require('../utilities/load')
+
+const { spawn } = require('child_process');
+var fs = require('fs');
+
+var _ = require('lodash');
+
+
+var acl = require('../utilities/acl');
+var identity = require('../utilities/identity');
+var upload = require('../utilities/upload');
+var load = require('../utilities/load');
+const { cacheClearBlocks } = require('../utilities/localise-blocks');
 
 module.exports = function(Dataset) {
 
+/** Add the given dataset / blocks / features json data to the db.
+ * Uses upload.uploadDataset(), which is also the basis of @see createComplete().
+ * @desc
+ * This function, relative to createComplete(), adds .json.gz support,
+ * and 2 data checks : 
+ * . data has a .name at the top level - Dataset name
+ * . .name does not already exist in models.Dataset
+ */
   Dataset.upload = function(msg, options, req, cb) {
     req.setTimeout(0);
     var models = this.app.models;
+    const uploadParsed = (jsonMap) => upload.uploadParsedCb(models, jsonMap, options, cb);
+    function uploadParsedTry(jsonData) {
+      upload.uploadParsedTryCb(models, jsonData, options, cb);
+    }
+
+    // Parse as either .json or .gz
+    // factored as handleJson()
     if (msg.fileName.endsWith('.json')) {
-      try {
-        var jsonMap = JSON.parse(msg.data);
-      } catch (e) {
-        console.log(e);
-        cb(Error("Failed to parse JSON"));
-      }
-      upload.uploadDataset(jsonMap, models, options, cb)
+      uploadParsedTry(msg.data);
     } else if (msg.fileName.endsWith('.gz')) {
       var buffer = new Buffer(msg.data, 'binary');
       load.gzip(buffer).then(function(json) {
-        jsonMap = json;
-        upload.uploadDataset(jsonMap, models, options, cb)
+        let jsonMap = json;
+        uploadParsed(jsonMap);
       })
       .catch(function(err) {
         console.log(err);
         cb(Error("Failed to read gz file"));
       })
+    } else if (
+      msg.fileName.endsWith('.xlsx') || msg.fileName.endsWith('.xls') || 
+        msg.fileName.endsWith('.ods')
+    ) {
+      /** messages from child via file descriptors 3 and 4 are
+       * collated in these arrays and can be sent back to provide
+       * detail for / explain an error.
+       */
+      let errors = [], warnings = [];
+
+      /** Each worksheet in the .xslx will result in a dataset passed
+       * to upload.uploadDataset() which call cb(), so it is necessary
+       * to limit this to a single call-back, using cbWrap and cbCalled.
+       * It would be better to assemble an array of datasetId-s from
+       * insert_features_recursive(), and pass that to cb when complete.
+       * The client does not use this result value.
+       *
+       * Refn : async/dist/async.js : onlyOnce(fn)
+       */
+      let cbOrig = cb,
+          cbCalled = 0;
+      function cbWrap(err, message, last) {
+        console.log('cbWrap', err && err.toString(), message, last);
+        /* insert_features_recursive() "passes" last === undefined,
+         * and when !err, message is datasetId (i.e. datasetName)
+         */
+        if (last || (last === undefined) || err) {
+          if (cbCalled++ === 0) {
+            if (err && (errors.length || warnings.length)) {
+              err = [err].concat(errors).concat(warnings).join("\n");
+              errors = []; warnings = [];
+            }
+            cbOrig(err, message);
+          }
+        }
+      }
+      cb = cbWrap;
+      /** msg.fileName : remove punctuation other than .-_, retain alphanumeric */
+      const useFile = true;
+      if (useFile) {
+        const data = new Uint8Array(Buffer.from(msg.data, 'binary'));
+        fs.writeFile(msg.fileName, data, (err) => {
+          if (err) {
+            cb(err);
+          } else {
+            console.log('Written', msg.data.length, data.length, 'to', msg.fileName);
+          }
+        });
+      }
+
+      const
+      /** msg.replaceDataset is defined by uploadSpreadsheet(), but not by data-json.js : submitFile()
+       */
+      replaceDataset = !!msg.replaceDataset, 
+      currentDir = process.cwd(),
+      /** In the Docker container, server cwd is /, and uploadSpreadsheet.bash is in /app/scripts/ */
+      scriptsDir = (currentDir === "/") ? "/app/scripts" : 
+        currentDir.endsWith("/backend") ? 'scripts' : 'backend/scripts',
+      // process.execPath is /usr/bin/node,  need /usr/bin/ for mv, mkdir, perl
+      PATH = process.env.PATH + ':' + scriptsDir,
+      /** file handles : stdin, stdout, stderr, output errors, output warnings. */
+      options = {env : {PATH},  stdio: ['pipe', 'pipe', process.stderr, 'pipe', 'pipe'] };
+      const child = spawn('uploadSpreadsheet.bash', [msg.fileName, useFile], options);
+      child.on('error', (err) => {
+        console.error('Failed to start subprocess.', 'uploadSpreadsheet', msg.fileName, err.toString());
+        // const error = Error("Failed to start subprocess to upload xlsx file " + msg.fileName + '\n' + err.toString());
+        cb(err/*or*/);
+      });
+      console.log('uploadSpreadsheet', /*child,*/ msg.fileName, msg.data.length, replaceDataset, scriptsDir, currentDir);
+      if (! useFile) {
+        child.stdin.write(msg.data);
+        child.stdin.end();
+      }
+
+      // On MS Windows these handles may not be 3 and 4.
+      child.stdio[3].on('data', (chunk) => {
+        let message = chunk.toString();
+        console.log('uploadSpreadsheet errors :', message);
+        errors.push(message);
+      });
+      child.stdio[4].on('data', (chunk) => {
+        let message = chunk.toString();
+        console.log('uploadSpreadsheet warnings :', message);
+        warnings.push(message);
+      });
+
+      child.stdout.on('data', (chunk) => {
+        // data from the standard output is here as buffers
+        // Possibly multiple lines, separated by \n,
+        // completed by \n.
+        const
+        textLines = chunk.toString().split('\n');
+        textLines.forEach((textLine) => {
+          if (textLine !== "") {
+            let [fileName, datasetName] = textLine.split(';');
+            console.log('uploadSpreadsheet stdout data',  "'", fileName,  "', '", datasetName, "'");
+            if (fileName.startsWith('Error:') || ! datasetName) {
+              cb(new Error(fileName + " Dataset '" + datasetName + "'"));
+            } else {
+              console.log('before removeExisting "', datasetName, '"');
+              upload.removeExisting(models, datasetName, replaceDataset, cb, loadAfterDelete);
+            }
+            function loadAfterDelete(err) {
+              upload.loadAfterDeleteCb(
+                fileName, 
+                (jsonData) => uploadParsedTry(jsonData), 
+                err, cb);
+            }
+          }
+        });
+      });
+
+      // since these are streams, you can pipe them elsewhere
+      // child.stderr.pipe(dest);
+      child.on('close', (code) => {
+        console.log('child process exited with code',  code);
+        if (code) {
+          const error = Error("Failed to read xlsx file " + msg.fileName);
+          cb(error);
+        } else {
+          // process each tmp/out_json/"$datasetName".json
+          const message = 'Uploaded xlsx file ' + msg.fileName;
+          if (child.killed) {
+            cb(null, message, true);
+          } // else check again after timeout
+        }
+      });
     } else {
       cb(Error('Unsupported file type'));
     }
-  }
+  };
 
   Dataset.tableUpload = function(data, options, cb) {
     var models = this.app.models;
@@ -88,6 +235,7 @@ module.exports = function(Dataset) {
         array_features.push({
           name: feature.name,
           value: [feature.val],
+          value_0: feature.val,
           blockId: blocks_by_name[feature.block]
         });
       });
@@ -99,6 +247,24 @@ module.exports = function(Dataset) {
     });
   }
 
+
+  Dataset.cacheClear = function(time, options, cb) {
+    let db = this.dataSource.connector,
+    models = this.app.models;
+    cacheClearBlocks(db, models, time)
+      .then((removed) => cb(null, removed))
+      .catch((err) => cb(err));
+  };
+  
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Based on uploadDataset(), similar to @see upload().
+   * @desc
+   * createComplete() is used in backend/test/
+   * and in functions_dev.bash : uploadData(),
+   * but not in frontend/
+   */
   Dataset.createComplete = function(data, options, req, cb) {
     req.setTimeout(0);
     var models = this.app.models;
@@ -107,9 +273,19 @@ module.exports = function(Dataset) {
 
   Dataset.observe('before delete', function(ctx, next) {
     var Block = ctx.Model.app.models.Block
+    /** ctx.where contains the datasetId, but differently depending on the call which requested delete of the dataset :
+     * - deletes done via URL (as in curl -X DELETE api/Datasets/) place the datasetId in ctx.where.and[1].name
+     * - removeExisting() does Dataset.destroyAll({_id : id}, ) and that condition is copied to ctx.where, so where._id is the datasetId.
+     */
+    let
+    where = ctx.where,
+    datasetId = where.and ? where.and[1].name : where._id;
+    if (where.and) {
+      console.log('Dataset.observe(before delete', where.and[0], where.and[1]);
+    }
     Block.find({
       where: {
-        datasetId: ctx.where.and[1].name
+        datasetId
       }
     }, ctx.options).then(function(blocks) {
       blocks.forEach(function(block) {
@@ -119,6 +295,9 @@ module.exports = function(Dataset) {
     })
     next()
   })
+
+  /*--------------------------------------------------------------------------*/
+
 
   Dataset.remoteMethod('upload', {
     accepts: [
@@ -147,7 +326,18 @@ module.exports = function(Dataset) {
     description: "Creates a dataset and all of its children"
   });
 
-  acl.assignRulesRecord(Dataset)
-  acl.limitRemoteMethods(Dataset)
-  acl.limitRemoteMethodsRelated(Dataset)
+  Dataset.remoteMethod('cacheClear', {
+    accepts: [
+      {arg: 'time', type: 'number', required: true},
+      {arg: "options", type: "object", http: "optionsFromRequest"}
+    ],
+    http: {verb: 'get'},
+    returns: {type: 'array', root: true},
+   description: "Clear cached copies of datasets / blocks / features from a secondary Pretzel API server."
+  });
+
+
+  acl.assignRulesRecord(Dataset);
+  acl.limitRemoteMethods(Dataset);
+  acl.limitRemoteMethodsRelated(Dataset);
 };

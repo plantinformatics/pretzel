@@ -8,6 +8,9 @@ services:
     environment:
       - "MONGO_INITDB_ROOT_USERNAME=${DB_USER}"
       - "MONGO_INITDB_ROOT_PASSWORD=${DB_PASS}"
+    volumes:
+      - ${DATA_DIR}:/data/db
+    command: --quiet
   api: # node environment
     build:
       context: .
@@ -34,5 +37,6 @@ services:
       # volume is mounted for development
       # will shift to embedded version for deployment
       - .:/app
+      - ./client:/app/client
     links:
      - database

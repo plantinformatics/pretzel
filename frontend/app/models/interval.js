@@ -1,11 +1,10 @@
-import attr from 'ember-data/attr';
-import DS from 'ember-data';
+import { attr, belongsTo } from '@ember-data/model';
 
 import Record from './record';
 
 export default Record.extend({
   name: attr('string'),
-  blockId: DS.belongsTo('block'),
+  blockId: belongsTo('block'),
   features: attr('array'),
   positions: attr('array')
 });

@@ -1,6 +1,7 @@
-import Ember from 'ember';
-
-const { inject: { service } } = Ember;
+import { computed } from '@ember/object';
+import Evented from '@ember/object/evented';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
 import { parseOptions } from '../../utils/common/strings';
 
@@ -14,14 +15,14 @@ let trace_links = 1;
  * Future design is for rendering to be moved out to sub-components; this
  * component can render the paths.
 */
-export default Ember.Component.extend(Ember.Evented, {
+export default Component.extend(Evented, {
 
   auth: service('auth'),
   store: service(), // not used - can remove
   blockService: service('data/block'),
 
   /** based on similar in flow-controls.js */
-  parsedOptions : Ember.computed('modelParamOptions', function () {
+  parsedOptions : computed('modelParamOptions', function () {
     let options,
     options_param;
     if ((options_param = this.get('modelParamOptions'))
@@ -32,6 +33,7 @@ export default Ember.Component.extend(Ember.Evented, {
     return options;
   }),
 
+
   willInsertElement() {
     if (trace_links)
       console.log('components/draw/link-path willInsertElement');
@@ -40,9 +42,16 @@ export default Ember.Component.extend(Ember.Evented, {
     byReference = options && options.byReference;
     console.log('willInsertElement', options, byReference);
 
+    let blockService = this.get('blockService'),
+    blocksSameServer = blockService.get('blocksSameServer');
     let stackEvents = this.get('stackEvents');
     if (options && options.allInitially)
     stackEvents.on('expose', this, function (blockA, blockB) {
+      if (! blocksSameServer.apply(blockService, [blockA, blockB]))
+      {
+        console.log('blocksSameServer', blockA, blockB);
+        return;
+      }
       if (trace_links > 1)
         console.log('path expose', blockA, blockB);
       this.request(blockA, blockB);

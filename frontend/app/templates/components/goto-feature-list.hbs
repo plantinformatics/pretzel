@@ -19,6 +19,10 @@
   {{/if}}
 
 
+  {{#if serverTabSelected }}
+    <div>Search Server: {{ serverTabSelected }} </div>
+  {{/if}}
+
 
   {{!-- same icon as button-refresh, but override colour.
    Use .list-group to get some margin-bottom; when upgrading bootstrap from 3
@@ -33,7 +37,7 @@
      icon='refresh'
      classColour="primary"
   }}
-    <span>&nbsp; &rarr; Blocks</span>
+    <span>&nbsp; Search</span>
   {{/elem/button-base}}
 
   {{!-- The above (if loading 'disabled') is not effective, so display

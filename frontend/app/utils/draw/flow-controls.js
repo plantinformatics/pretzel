@@ -1,6 +1,5 @@
-import Ember from 'ember';
-
-const { inject: { service } } = Ember;
+import $ from 'jquery';
+import { inject as service } from '@ember/service';
 
 
 /*----------------------------------------------------------------------------*/
@@ -16,12 +15,13 @@ function flowsServiceInject(flowsService_) { flowsService = flowsService_; }
 
 /*global d3 */
 
+const dLog = console.debug;
+
 /*----------------------------------------------------------------------------*/
 
 // copied from components/draw-map.js
 /** Used for d3 attributes whose value is the datum. */
-function I(d) { /* console.log(this, d); */ return d; };
-
+function I(d) { /* console.log(this, d); */ return d; }
 
 /*----------------------------------------------------------------------------*/
 
@@ -37,7 +37,8 @@ function configurejQueryTooltip(node) {
     .each(function (flowName) {
       // console.log("configurejQueryTooltip", flowName, this, this.outerHTML);
       let node_ = this;
-      Ember.$(node_)
+      if ($(node_).popover)
+      $(node_)
       /*
         .tooltip({
           template: '<div class="tooltip" role="tooltip">'
@@ -89,7 +90,7 @@ function configurejQueryTooltip(node) {
             });
         });
     });
-};
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -151,7 +152,8 @@ function flows_showControls (parentSelector)
       b1.classed("selected", flow.visible);
       // updateSelections_flowControls();
       flow.g.classed("hidden", ! flow.visible);
-      console.log(flow.g.node());
+      flow.gf.classed("hidden", ! flow.visible);
+      console.log(flow.g.node(), flow.gf.node());
     })
   /* To get the hover text, it is sufficient to add attr title.
    * jQuery doc (https://jqueryui.com/tooltip/) indicates .tooltip() need
@@ -164,7 +166,7 @@ function flows_showControls (parentSelector)
     })
   ;
 
-};
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -177,22 +179,31 @@ function updateSelections_flowControls() {
   let flows = flowsService.get('enabledFlows');
   // let parent = d3.select(flowButtonsSel);
   let foreground = d3.select('#holder svg > g > g.foreground');
+  /** parent of flow <g>s, for [frontend, progress] */
+  let flowPg = [foreground, foreground.select('g > g.progress')];
   d3.keys(flows).forEach(function (flowName) {
     let flow = flows[flowName];
-    if (flow.g)
-      console.log(flowName, " flow.g", flow.g.node());
-    flow.g = foreground.select("g." + flow.name);
-    console.log(flowName, " flow.g", flow.g.node());
+    [false, true].forEach((progress) => {
+      /** separate <g> for paths loaded via paths-progressive from backend API (g).
+       * or via collate-paths (frontend) (gf).
+       */
+      let gName = progress ? 'g' : 'gf',
+      flow_g = flow[gName];
+      if (flow_g)
+        console.log(flowName, " flow_g", flow_g.node());
+      flow[gName] = flowPg.select("g:not(.progress) > g." + flow.name);
+      dLog(flowName, progress, gName, " flow_g", flow_g.node());
+    });
   });
 
-};
+}
 
 
 /*----------------------------------------------------------------------------*/
 
 Flow.prototype.ExportDataToDiv = function (eltSel)
 {
-  let elts = Ember.$(eltSel);
+  let elts = $(eltSel);
   if (! elts.length)
   {
     window.alert("Show the Adv tab in the right panel before Export\n(and scroll down).");

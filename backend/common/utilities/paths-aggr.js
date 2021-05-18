@@ -1,8 +1,12 @@
+const { localiseBlocksAndAliases } = require('./localise-aliases');
+
 var ObjectID = require('mongodb').ObjectID;
 
 /*----------------------------------------------------------------------------*/
 
 /* global exports */
+/* global require */
+/* global process */
 
 /* globals defined in mongo shell */
 /* global db ObjectId print */
@@ -14,6 +18,11 @@ const trace_aggr = 1;
 
 /** ObjectId is used in mongo shell; the equivalent defined by the node js client library is ObjectID; */
 const ObjectId = ObjectID;
+
+/** blockFeaturesInterval() can use a query which is covered by the index
+ * if .value[0] has been copied as .value_0
+ */
+const use_value_0 = process.env.use_value_0 || false;
 
 /*----------------------------------------------------------------------------*/
 
@@ -309,13 +318,51 @@ function keyValue (k,v) { let r = {}; r[k] = v; return r; };
  * @param l limit : 0 for domain[0] and lte, 1 for domain[1] and gte
  */
 function valueBound(intervals, b, l) {
+  /**  value may be [start, end] or [start] or [start, end, values...] or [start, undefined, values...]
+   * If there is no end value, use the start value.
+   * So the index of the end value is 0 or 1 depending on $size:$value and $value[1]
+   * (Support for $value[1]===undefined can be added in a separate commit).
+   */
+  const one = {$cond: { if: { $gt: [ { $size : "$value" }, 1 ] }, then: 1, else: 0 }};
   let r = keyValue(
     l ? '$lte' : '$gte',
-    [ keyValue('$arrayElemAt', ['$value', l ? -1 : 0]),
+    [ keyValue('$arrayElemAt', ['$value', l ? one : 0]),
       +intervals.axes[b].domain[l]]
   );
   return r;
 };
+/** Similar to valueBound, but use value_0 instead of value[0].
+ * Just 1 end (limit l), whereas valueBounds_0 constructs an expression for both ends.
+ * @param intervals domains for both ends (axes)
+ * @param b 0 for blockId0, axes[0]
+ * @param l limit : 0 for domain[0] and lte, 1 for domain[1] and gte
+ */
+function valueBound_0(intervals, b, l) {
+  let r = keyValue(
+    l ? '$lte' : '$gte',
+    [ "$value_0",
+      +intervals.axes[b].domain[l]]
+  );
+  return r;
+}
+
+/** Similar to valueBound, but use value_0 instead of value[0].
+ * This is applicable when blockIds.length is 1, i.e. b === 0.
+ * For length 2 it could match either domain for both blocks, later
+ * $match would filter out the extra, and it would get the performance
+ * benefit from the index (narrow the docsExamined).
+ *
+ * @param domain  from the intervals or interval param, e.g. intervals.axes[b]
+ */
+function valueBounds_0(domain) {
+  let r = {
+    $gte : +domain[0],
+    $lte : +domain[1]
+  };
+  return r;
+}
+
+
 /** If axis b is zoomed, append conditions on location (value[]) to the given array eq.
  *
  * If the axis has not been zoomed then Stacked : zoomed will be undefined,
@@ -334,11 +381,35 @@ function blockFilter(intervals, eq, b) {
   let a = intervals.axes[b],
   /** if axisBrush, then zoom is not required. */
   axisBrush = intervals.axes.length === 1,
+  vB = use_value_0 ? valueBound_0 : valueBound,
   r = (axisBrush || a.zoomed) && a.domain ?
-    eq.concat([valueBound(intervals, b, 0), valueBound(intervals, b, 1)]) :
+    eq.concat([vB(intervals, b, 0), vB(intervals, b, 1)]) :
     eq;
   return r;
 };
+/** Similar to blockFilter(); uses .value_0 (a copy of .value[0]),
+ * which enables a $match without $expr and hence is able to narrow the
+ * document pipeline using the index {blockId, value_0}.
+ * This can be inserted before a $match constructed using blockFilter();
+ * the index use of the first match determines performance.
+ *
+ * @param domain  from the intervals or interval param, e.g. intervals.axes[b].domain
+ * If undefined, no condition is added for feature .value_0, just .blockId.
+ */
+function blockFilterValue0(domain, blockId) {
+  let
+  l = 0,
+  matchBlock =
+      {$match : {
+        blockId : ObjectId(blockId)
+      } };
+  if (domain) {
+    matchBlock.$match.value_0 = valueBounds_0(domain);
+  }
+  return matchBlock;
+}
+exports.blockFilterValue0 = blockFilterValue0;
+
 /*----------------------------------------------------------------------------*/
 
 /** The interval params passed to .pathsDirect() and .blockFeaturesInterval()
@@ -476,6 +547,22 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
 
   return result;
 };
+/** Wrap .pathsAliases(), and handle the possibility that one of the blockIds
+ * may be from a secondary / remote server, not the primary.
+ * @return promise yielding a cursor
+ */
+exports.pathsAliasesRemote = function(db, models, blockId0, blockId1, namespace0,  namespace1, intervals) {
+  let promise = 
+    localiseBlocksAndAliases(db, models, blockId0, blockId1, namespace0,  namespace1, intervals).then((blockIds) => {
+      // blocks are now local, and pathsAliases() requires local blockIds to pass to db query.
+      if (blockId0.blockId) blockId0 = blockId0.blockId;
+      if (blockId1.blockId) blockId1 = blockId1.blockId;
+      if ((blockId0 !== blockIds[0]) || (blockId1 !== blockIds[1]))
+        console.log('pathsAliasesRemote', blockId0, blockId1, '!==', blockIds);
+    return pathsAliases(db, blockId0, blockId1, namespace0,  namespace1, intervals);
+  });
+  return promise;
+};
 /** Match features by name between the 2 given blocks.  The result is the alignment, for drawing paths between blocks.
  *
  * This implements alias1a() above - this function is used in the node server,
@@ -489,9 +576,9 @@ exports.pathsDirect = function(db, blockId0, blockId1, intervals) {
  * If intervals.dbPathFilter then intervals.axes[{0,1}].domain[{0,1}] are included in the aggregrate filter.
  * The domain[] is in the same order as the feature.value[], i.e. increasing order : 
  * domain[0] < domain[1] (for all intervals.axes[]).
- * @return cursor	: direct paths
+ * @return promise yielding a cursor	: alias paths
  */
-exports.pathsAliases = function(db, blockId0, blockId1, namespace0,  namespace1, intervals) {
+function pathsAliases(db, blockId0, blockId1, namespace0,  namespace1, intervals) {
   parseIntervalFlags(intervals);
   let featureCollection = db.collection("Feature");
   let blockCollection = db.collection("Block");
@@ -556,11 +643,16 @@ exports.pathsAliases = function(db, blockId0, blockId1, namespace0,  namespace1,
 
       { $group: { _id: "$feature_aliases._id", aliased_features :  {$push : '$$ROOT'} }   },
       {$match : {$expr: {$gt: [{$size: "$aliased_features"}, 1]}}},
+      // filter out direct paths, i.e. aliased_features[0].name === aliased_features[1].name
+      // this could be incorporated into the above $match; probably similar performance.
+      {"$match": {$expr :  {$let : {vars : { n0 : {"$arrayElemAt":["$aliased_features",0]}, n1 : {"$arrayElemAt":["$aliased_features",-1]} }, in : {"$ne":["$$n0.name","$$n1.name"]}  } } } }
     ];
 
   pipeline = pipeline.concat(group);
+  if (trace_aggr > 2)
+    console.dir('pathsAliases pipeline', pipeline, { depth: null });
   if (trace_aggr > 1)
-    console.dir(pipeline, { depth: null });
+    console.log('pathsAliases pipeline', JSON.stringify(pipeline));
 
   let result = pipelineLimits(featureCollection, intervals, pipeline);
 
@@ -570,6 +662,7 @@ exports.pathsAliases = function(db, blockId0, blockId1, namespace0,  namespace1,
 /** log the given filterValue, (which is derived from) intervals */
 function log_filterValue_intervals(filterValue, intervals) {
     let l = ['filterValue', filterValue];
+  l.push(JSON.stringify(filterValue));
     intervals.axes.map(function (a) {
       /** log a.{zoomed,domain}  .domain may be undefined or [start,end]. */
       l.push(a.zoomed);
@@ -601,6 +694,11 @@ function pipelineLimits(featureCollection, intervals, pipeline) {
  *
  * @param blockCollection dataSource collection
  * @param blockIds  ids of data blocks
+ *
+ * As commented in requestBlockFeaturesInterval(), using $sample will result in
+ * only 1 blockId in the result, so this function is called once for each
+ * blockId.
+ *
  * @param intervals  domain and range of axis of block, to limit the number of features in result.
 
  * @return cursor	: features
@@ -612,6 +710,13 @@ exports.blockFeaturesInterval = function(db, blockIds, intervals) {
     console.log('blockFeaturesInterval', /*featureCollection,*/ blockIds, intervals);
   let ObjectId = ObjectID;
 
+  /** When called from axis-brush:features(), the blocks being looked up are
+   * on the same axis, and hence interval domain is the same;    blockFilters will
+   * repeat the domain constraint for each block, but instead matchBlock could
+   * be used, in combination with a single domain constraint;  but this is a
+   * moot point because blockIds[] is only called with a single element - see
+   * comment above.
+   */
   let
     matchBlock =
     [
@@ -627,6 +732,12 @@ exports.blockFeaturesInterval = function(db, blockIds, intervals) {
         blockFilters
       } }},
     ];
+  if (use_value_0 && (blockIds.length === 1)) {
+    const b = 0;
+    // could pass undefined for domain if ! .isZoomed
+    let useIndex = blockFilterValue0(intervals.axes[b].domain, blockIds[b]);
+    filterValue.unshift(useIndex);
+  }
 
 
   let pipeline;
@@ -645,6 +756,9 @@ exports.blockFeaturesInterval = function(db, blockIds, intervals) {
 
   if (trace_aggr)
     console.log('blockFeaturesInterval', pipeline);
+  /* As an alternative to console.dir(), e.g. for tracing in text file can use :
+   *  console.log('pipeline', JSON.stringify(pipeline));
+   */
   if (trace_aggr > 1)
     console.dir(pipeline, { depth: null });
 

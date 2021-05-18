@@ -3,12 +3,20 @@
   warningMessage=warningMessage
   errorMessage=errorMessage}}
 
-  <h5>Upload Datasets (JSON / gzip)</h5>
-  <form {{action 'submitForm' on='submit'}}>
+{{#if isProcessing}}
+  {{#elem/panel-form
+    name="info"
+    heading="Processing..." }}
+      {{progressMsg}}
+  {{/elem/panel-form}}
+{{/if}}
+
+  <h5>Upload Datasets (JSON / gzip, xlsx, ods)</h5>
+  <form {{action 'submitFile' on='submit'}}>
     <input
       type='file'
-      accept=".json,.gz"
-      onchange={{action 'upload'}}>
+      accept=".json,.gz,.xlsx,.xls,.ods"
+      onchange={{action 'setFile'}}>
     <br>
     <input
       type="submit"
