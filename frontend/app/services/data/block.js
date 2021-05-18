@@ -390,6 +390,12 @@ export default Service.extend(Evented, {
   getSummary: function (blockIds) {
     // console.log("block getSummary", id);
     let
+    /** true enables $bucketAuto as an alternative to $bucket using
+     * boundaries calculated from nBins and interval.  This option
+     * will enable comparison of performance in operation.
+     */
+    useBucketAuto = this.get('parsedOptions.useBucketAuto'),
+
     /** check if feature count of block is already received.  */
     blocksWithoutCount = blockIds.filter((blockId) => {
       let block = this.peekBlock(blockId);
@@ -429,8 +435,14 @@ export default Service.extend(Evented, {
           }
             let taskId = blockId + '_' + nBins + (zoomedDomainText || '');
           let summaryTask = this.get('summaryTask');
-          let p = summaryTask[taskId];
-          if (! p) {
+          let p;
+            if ((p = summaryTask[blockId]) && (p.state() === "pending")) {
+              // state() : pending   ~   readyState : 1
+              dLog('getSummary current', blockId, p, p.readyState);
+            } else if ((p = summaryTask[taskId])) {
+              // .state() : resolved   ~   .readyState : 4   ~  .statusText : OK
+              dLog('getSummary re-use', taskId, p, p.state(), p.readyState, p.statusText);
+            } else {
             if (zoomedDomain) {
               dLog('getSummary', zoomedDomainText, zoomedDomain);
             }
@@ -451,7 +463,7 @@ export default Service.extend(Evented, {
                   countsP = Promise.resolve([]);
                 } else {
                   countsP =
-                  this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, /*options*/{});
+                  this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, !!zoomedDomain, useBucketAuto, /*options*/{});
                 }
                 return countsP;
               };
@@ -473,6 +485,7 @@ export default Service.extend(Evented, {
                     resolve(interval); }, 4000); })
                   .then(getCountsForInterval);
               }
+              summaryTask[blockId] = p;
             /* this could be structured as a task within models/block.js
              * A task would have .drop() to avoid concurrent request, but
              * actually want to bar any subsequent request for the same taskId,

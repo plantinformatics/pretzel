@@ -93,21 +93,27 @@ export default Component.extend(AxisEvents, {
     let
     axis1d = this.get('axis1d'),
     featureTicks = axis1d.get('featureTicks');
+    if (featureTicks) {
     let block = axis1d.axis,
     clickedFeaturesMap = this.get('selected.clickedFeaturesByAxis'),
-    /** clickedFeatures will be undefined or an array with .length > 1 */
+    /** clickedFeatures will be undefined or an array with .length > 1
+     *
+     * clickedFeaturesByBlock are included by featuresOfBlockLookup();
+     * call that for data blocks if clickedFeaturesByAxis is not empty .
+     */
     clickedFeatures = clickedFeaturesMap && clickedFeaturesMap.get(block);
-    if (featureTicks || clickedFeatures) {
+    // if ((featuresInBlocks[blockId] for any of the axis' data blocks) || clickedFeatures) {
       featureTicks.showTickLocations(
       this.featuresOfBlockLookup.bind(this),
       false,  /* hover text not required on axis feature triangles. */
       'foundFeatures', true,
       this.clickTriangle.bind(this)        
       );
-    }
+
     featureTicks.showSpanningLine(this.selectedFeaturesOfBlockLookup.bind(this, 'shiftClickedFeatures'));
     // currently called via didRender(), so ticks and labels are both updated.
     this.renderLabels(axisID);
+    }
   },
   renderLabels(axisID) {
     let

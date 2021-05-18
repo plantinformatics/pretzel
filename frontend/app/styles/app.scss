@@ -1431,7 +1431,7 @@ div#left-panel > div > div.tab-content
 div#left-panel > div > div.tab-content > div.tab-pane
 {
   height: inherit;
-  overflow-y: overlay;
+  overflow-y: auto;	/* possibly scrollbar-gutter in future. */
 }
 
 #left-panel > div > div.tab-content > div.tab-pane > div {
@@ -1439,6 +1439,14 @@ div#left-panel > div > div.tab-content > div.tab-pane
   margin-bottom: 70px;
 }
 
+/*------------------------------------*/
+
+/** e.g. sequence-search */
+ul.config-list {
+  padding-left: 0px;
+  margin: 1em;
+  margin-right: 0px;
+}
 
 /*------------------------------------*/
 /* in featureSearch results, wrap block names  */

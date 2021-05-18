@@ -84,6 +84,14 @@ export default Component.extend({
       this.get('createTable').apply(this);
   },
 
+  /** @return true if any of the features in data have an end position : .value[1]
+   */
+  positionEnd : computed('data.[]', function () {
+    let
+    data = this.get('data'),
+    positionEnd = data.any((datum) => datum.feature.value && (datum.feature.value.length > 1));
+    return positionEnd;
+  }),
   extraColumnsNames : computed('data.[]', function () {
     let
     data = this.get('data'),
@@ -132,6 +140,10 @@ export default Component.extend({
       if (values) {
         Object.keys(values).forEach((valueName) => rest[valueName] = values[valueName]);
       }
+      if (feature.value.length > 1) {
+        // .Position is .value[0]
+        rest.PositionEnd = feature.value[1];
+      }
       return rest;
     });
     return data;
@@ -159,14 +171,32 @@ export default Component.extend({
               pattern: '0,0.*'
             }
           }
-    ].concat(this.get('extraColumns')),
+    ],
     colHeaders = [
           '<span title = "e.g. chromosome or linkage group">Block</span>',
           '<span title = "e.g. marker / gene">Feature</span>',
           'Position'
-    ].concat(this.get('extraColumnsHeaders')),
-    colWidths = [100, 135, 60]
-      .concat(this.get('extraColumnsWidths'));
+    ],
+    colWidths = [100, 135, 60];
+    function addColumns(cols, headers, widths) {
+      columns = columns.concat(cols);
+      colHeaders = colHeaders.concat(headers);
+      colWidths = colWidths.concat(widths);
+    }
+    if (this.get('positionEnd')) {
+      addColumns(
+        [{
+            data: 'PositionEnd',
+            type: 'numeric',
+            numericFormat: {
+              pattern: '0,0.*'
+            }
+        }],
+        ['End'],
+        [60]
+      );
+    }
+    addColumns(this.get('extraColumns'), this.get('extraColumnsHeaders'), this.get('extraColumnsWidths'));
 
       var table = new Handsontable(tableDiv, {
         data: this.get('dataForHoTable') || [['', '', '']],

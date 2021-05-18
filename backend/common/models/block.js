@@ -28,6 +28,7 @@ const { Writable, pipeline, Readable } = require('stream');
  * and also : var streamify = require('stream-array');
  */
 
+/* global process */
 
 
 /** This value is used in SSE packet event id to signify the end of the cursor in pathsViaStream. */
@@ -68,6 +69,19 @@ class SseWritable extends Writable {
   }
 }
 
+/*----------------------------------------------------------------------------*/
+
+/** Given a start time, return elapsed milliseconds as a string.
+ * @param startTime result of process.hrtime();
+ * @param decimalPlaces number of decimal places to show in the result string.
+ */
+function elapsedMs(startTime, decimalPlaces) {
+  let elapsedTime = process.hrtime(startTime);
+  var ms = elapsedTime[0] * 1e3 + elapsedTime[1] * 1e-6;
+  return ms.toFixed(decimalPlaces);
+}
+
+/*----------------------------------------------------------------------------*/
 
 /* global module require */
 
@@ -500,6 +514,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   function reqStream(cursorFunction, filterFunction, cacheId, intervals, req, res, apiOptions) {
     /* The params of reqStream() are largely passed to pipeStream() - starting to look like a class. */
 
+    let startTime = process.hrtime();
+
     /** trial also performance of : isSerialized: true */
     let sse = new SSE(undefined, {isCompressed : false});
     if (! res.setHeader) {
@@ -537,7 +553,12 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     }
 
     req.on('close', () => {
-      console.log('req.on(close)');
+      /* absolute time : new Date().toISOString() */
+      console.log(
+        'req.on(close)', 'reqStream', 
+        'The request processing time is', elapsedMs(startTime, 3), 'ms.', 'for', req.path, cacheId);
+
+      // console.log('req.on(close)');
       if (cursor) {
         // ! cursor.isExhausted() && cursor.hasNext()
         if (cursor.isClosed && ! cursor.isClosed())
@@ -572,7 +593,11 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
           else
             closeCursor(cursor);
           function closeCursor(cursor) {
-            cursor.close(function () { console.log('cursor closed'); });
+            cursor.close(function () {
+              console.log(
+                'cursor closed',
+                'reqStream', 
+                'The request processing time is', elapsedMs(startTime, 3), 'ms.', 'for', req.path, cacheId); });
           }
         }
       }
@@ -673,21 +698,25 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
    *
    * @param blockId  block
    * @param nBins number of bins to partition the block's features into
+   * @param interval  undefined or range of locations of features to count
+   * @param isZoomed  true means interval should be used to constrain the location of counted features.
+   * @param useBucketAuto default false, which means $bucket with
+   * boundaries calculated from interval and nBins; otherwise use
+   * $bucketAuto.
    */
-  Block.blockFeaturesCounts = function(blockId, interval, nBins, options, res, cb) {
+  Block.blockFeaturesCounts = function(blockId, interval, nBins, isZoomed, useBucketAuto, options, res, cb) {
 
   let
     fnName = 'blockFeaturesCounts',
     /** when a block is viewed, it is not zoomed (the interval is the
-     * whole domain); this request recurs often is is worth caching,
+     * whole domain); this request recurs often and is worth caching,
      * but when zoomed in there is no repeatability so result is not
      * cached.  Zoomed results could be collated in an interval tree,
      * and used when they satisfied one end of a requested interval,
      * i.e. just the new part would be queried.
-     * GMs generally start at 0, and physical maps at 0.
      */
-    useCache = ! interval || (interval[0] <= 1),
-    cacheId = fnName + '_' + blockId + '_' + nBins +  '_' + interval.join('_'),
+    useCache = ! isZoomed || ! interval,
+    cacheId = fnName + '_' + blockId + '_' + nBins +  '_' + useBucketAuto,
     result = useCache && cache.get(cacheId);
     if (result) {
       if (trace_block > 1) {
@@ -697,7 +726,7 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
     } else {
     let db = this.dataSource.connector;
     let cursor =
-      blockFeatures.blockFeaturesCounts(db, blockId, interval, nBins);
+        blockFeatures.blockFeaturesCounts(db, blockId, interval, nBins, isZoomed, useBucketAuto);
     cursor.toArray()
     .then(function(featureCounts) {
       if (useCache) {
@@ -888,6 +917,8 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
       {arg: 'block', type: 'string', required: true},
       {arg: 'interval', type: 'array', required: false},
       {arg: 'nBins', type: 'number', required: false},
+      {arg: 'isZoomed', type: 'boolean', required: false, default : 'false'},
+      {arg: 'useBucketAuto', type: 'boolean', required: false, default : 'false'},
       {arg: "options", type: "object", http: "optionsFromRequest"},
       {arg: 'res', type: 'object', 'http': {source: 'res'}},
     ],

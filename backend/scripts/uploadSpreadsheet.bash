@@ -1,6 +1,10 @@
 #!/bin/bash
 
 case $PWD in
+  /)
+    resourcesDir=/app/scripts
+    toolsDev=$resourcesDir
+    ;;
   *backend)
     resourcesDir=../resources
     ;;
@@ -8,9 +12,11 @@ case $PWD in
     resourcesDir=resources
     ;;
 esac
-toolsDev=$resourcesDir/tools/dev
+# Default value of toolsDev, if not set above.
+unused_var=${toolsDev=$resourcesDir/tools/dev}
 sp=$toolsDev/snps2Dataset.pl
-source $toolsDev/functions_convert.bash
+# functions_convert.bash is related, but not a current dependency
+# source $toolsDev/functions_convert.bash
 
 echo $* >> uploadSpreadsheet.log
 
@@ -19,6 +25,15 @@ echo $* >> uploadSpreadsheet.log
 set -x
 fileName=$1
 useFile=$2
+
+#-------------------------------------------------------------------------------
+
+if ls -l /bin/ls | fgrep -q /bin/busybox
+then
+    function ll() { ls -l "$@"; }
+else
+    function ll() { ls -gG "$@"; }
+fi
 
 #-------------------------------------------------------------------------------
 
@@ -164,7 +179,7 @@ function linkageMap()
     # ../ because of cd tmp
     out=out_json/"$i".json
     <"$i"  chrOmit |  ../$sp "${optionalArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  >  "$out" ;
-    ls -gG "$out"  >> uploadSpreadsheet.log;
+    ll "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     echo "tmp/$out;$datasetName"
 }
@@ -213,7 +228,7 @@ function snpList()
      <"$i" filterOutComments | tail -n +2  | chrOmit |  sort -t, -k 2 ) |  \
       ../$sp "${nameArgs[@]}" "${optionalArgs[@]}" 	\
       >  "$out"
-    ls -gG "$out"  >> uploadSpreadsheet.log;
+    ll "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     echo "tmp/$out;$datasetNameFull"
 }
@@ -240,7 +255,7 @@ function qtlList()
     echo "type,QTL" > "$metaTypeFile"
     prefixTmpToArgs
     <tmp/"$i"  filterOutComments | chrOmit |  $sp "${prefixedArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g -A 'Flanking Markers' "${localArgs[@]}" -t QTL -D "$outDir" ;
-    # ls -gG "$out"  >> uploadSpreadsheet.log;
+    # ll "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     # echo "tmp/$out;$datasetName"
     cd "$outDir";
@@ -370,7 +385,7 @@ function spreadsheetConvert()
 
 case $fileName in
   *.xlsx|*.xls|*.ods)
-    ls -gGd "$fileName" >> uploadSpreadsheet.log
+    ll -d "$fileName" >> uploadSpreadsheet.log
     echo ssconvert >> uploadSpreadsheet.log
     # Remove outputs from previous upload of $fileName
     rm -f "$fileName".*.csv
@@ -442,7 +457,7 @@ case $fileName in
           warningsText=
         fi
         echo "Error: '$fileName' : no worksheets defined datasets. $warningsText;"
-        ls -gG "$fileName".*csv  >> uploadSpreadsheet.log
+        ll "$fileName".*csv  >> uploadSpreadsheet.log
       else
         if [ -f "$warningsFile" ]
         then

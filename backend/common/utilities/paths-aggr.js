@@ -332,6 +332,21 @@ function valueBound(intervals, b, l) {
   return r;
 };
 /** Similar to valueBound, but use value_0 instead of value[0].
+ * Just 1 end (limit l), whereas valueBounds_0 constructs an expression for both ends.
+ * @param intervals domains for both ends (axes)
+ * @param b 0 for blockId0, axes[0]
+ * @param l limit : 0 for domain[0] and lte, 1 for domain[1] and gte
+ */
+function valueBound_0(intervals, b, l) {
+  let r = keyValue(
+    l ? '$lte' : '$gte',
+    [ "$value_0",
+      +intervals.axes[b].domain[l]]
+  );
+  return r;
+}
+
+/** Similar to valueBound, but use value_0 instead of value[0].
  * This is applicable when blockIds.length is 1, i.e. b === 0.
  * For length 2 it could match either domain for both blocks, later
  * $match would filter out the extra, and it would get the performance
@@ -366,8 +381,9 @@ function blockFilter(intervals, eq, b) {
   let a = intervals.axes[b],
   /** if axisBrush, then zoom is not required. */
   axisBrush = intervals.axes.length === 1,
+  vB = use_value_0 ? valueBound_0 : valueBound,
   r = (axisBrush || a.zoomed) && a.domain ?
-    eq.concat([valueBound(intervals, b, 0), valueBound(intervals, b, 1)]) :
+    eq.concat([vB(intervals, b, 0), vB(intervals, b, 1)]) :
     eq;
   return r;
 };
@@ -378,15 +394,18 @@ function blockFilter(intervals, eq, b) {
  * the index use of the first match determines performance.
  *
  * @param domain  from the intervals or interval param, e.g. intervals.axes[b].domain
+ * If undefined, no condition is added for feature .value_0, just .blockId.
  */
 function blockFilterValue0(domain, blockId) {
   let
   l = 0,
   matchBlock =
       {$match : {
-        blockId : ObjectId(blockId),
-        value_0 : valueBounds_0(domain)
+        blockId : ObjectId(blockId)
       } };
+  if (domain) {
+    matchBlock.$match.value_0 = valueBounds_0(domain);
+  }
   return matchBlock;
 }
 exports.blockFilterValue0 = blockFilterValue0;
@@ -643,6 +662,7 @@ function pathsAliases(db, blockId0, blockId1, namespace0,  namespace1, intervals
 /** log the given filterValue, (which is derived from) intervals */
 function log_filterValue_intervals(filterValue, intervals) {
     let l = ['filterValue', filterValue];
+  l.push(JSON.stringify(filterValue));
     intervals.axes.map(function (a) {
       /** log a.{zoomed,domain}  .domain may be undefined or [start,end]. */
       l.push(a.zoomed);
@@ -714,6 +734,7 @@ exports.blockFeaturesInterval = function(db, blockIds, intervals) {
     ];
   if (use_value_0 && (blockIds.length === 1)) {
     const b = 0;
+    // could pass undefined for domain if ! .isZoomed
     let useIndex = blockFilterValue0(intervals.axes[b].domain, blockIds[b]);
     filterValue.unshift(useIndex);
   }

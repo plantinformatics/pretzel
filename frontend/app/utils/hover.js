@@ -69,6 +69,7 @@ function showHover(context, textFn, d, i, g) {
         delay: {show: 200, hide: 3000},
         container: 'div#holder',
         placement : hoverNearElement ? "auto right" : "left",
+        // comment re. title versus content in @see draw-map.js: configureHorizTickHover() 
         content : text
       };
       if (! hoverNearElement) {
@@ -89,25 +90,23 @@ function hideHover() {
 }
 
 
-
+/** Wrapper for configureHover(), supporting existing uses in
+ * utils/draw/chart1.js : ChartLine.prototype.{bars,linebars}
+ */
 function configureHorizTickHover(d, block, hoverTextFn) {
   // console.log("configureHorizTickHover", d, this, this.outerHTML);
-  let text = hoverTextFn(d, block);
-  let node_ = this;
-  if ($(node_).popover)
-  $(node_)
-    .popover({
-      trigger : "click hover",
-      sticky: true,
-      delay: {show: 200, hide: 3000},
-      container: 'div#holder',
-      placement : "auto right",
-      positionFixed : true,
-      // comment re. title versus content in @see draw-map.js: configureHorizTickHover() 
-      content : text,
-      html: false
-    });
+  /** client data : block for hoverTextFn() */
+  let context = {block};
+  configureHover.apply(this, [context, (context_, d) => hoverTextFn(d, context_.block)]);
 }
-/*------------------------------------------------------------------------*/
+/* The original of this function configureHorizTickHover (up to 3e674205) is
+ * very similar to draw-map : configureHorizTickHover() which was factored from.
+ * Using configureHover() is equivalent, minor differences :
+ * this version had positionFixed : true, and html: false,
+ * and configureHover() adds hoverNearElement ... "left".
+   */
+
+/*----------------------------------------------------------------------------*/
+
 
 export { configureHover, configureHorizTickHover };
