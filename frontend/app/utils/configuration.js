@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { getOwner } from '@ember/application';
 
 
 /*----------------------------------------------------------------------------*/
@@ -17,7 +17,7 @@ function getConfiguredEnvironment(thisObject)
 {
   /** from pretzel-local.js : authenticate() */
   let
-    config = Ember.getOwner(thisObject).resolveRegistration('config:environment');
+    config = getOwner(thisObject).resolveRegistration('config:environment');
   return config;
 };
 
@@ -28,7 +28,7 @@ function getSiteOrigin(thisObject)
 {
   /** from services/api-servers.js : init() */
   let
-  application = Ember.getOwner(thisObject).lookup('controller:application'),
+  application = getOwner(thisObject).lookup('controller:application'),
   /** e.g.  'http://localhost:4200' */
   siteOrigin = application.target.location.concreteImplementation.location.origin;
   
@@ -44,7 +44,7 @@ function lookupService(thisObject, serviceName)
 {
   /** based on getSiteOrigin() */
   let
-    service = Ember.getOwner(thisObject).lookup(serviceName);
+    service = getOwner(thisObject).lookup(serviceName);
   return service;
 };
 

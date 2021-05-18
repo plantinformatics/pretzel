@@ -1,14 +1,16 @@
 {{queryParamsService.urlOptionsEffect}}
 
-<div class="resizer" style="float:right;">
-</div>
+{{!-- <div class="resizer" style="float:right;">
+</div> The resizer in mapview adjacent this works so this is probably not needed. --}}
 
 <div id='holder' class="bordered">
   <!--<ul>
        <li>{{selectedMapset.name}}</li>
        </ul> -->
+  <div id="headsUp">{{headsUp.tipText}}</div>
 
 
+  <div id="popoverTarget" style="float:right"></div>
 </div>
 
 {{yield}}
@@ -37,7 +39,7 @@
   <div>{{blockService.viewedIds.length}},  blockAdjs : {{flowsService.blockAdjIds.length}}  {{flowsService.blockAdjsCP.length}}</div>
   <div>
     {{#each flowsService.blockAdjs as |blockAdj| }}
-      {{draw/block-adj blockAdj=blockAdj drawMap=this }}
+      {{draw/block-adj blockAdj=blockAdj drawMap=this  xOffsets=xOffsets }}
     {{/each}}
   </div>
 </div>

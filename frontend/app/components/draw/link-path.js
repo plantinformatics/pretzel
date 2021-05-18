@@ -1,6 +1,7 @@
-import Ember from 'ember';
-
-const { inject: { service } } = Ember;
+import { computed } from '@ember/object';
+import Evented from '@ember/object/evented';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
 import { parseOptions } from '../../utils/common/strings';
 
@@ -14,14 +15,14 @@ let trace_links = 1;
  * Future design is for rendering to be moved out to sub-components; this
  * component can render the paths.
 */
-export default Ember.Component.extend(Ember.Evented, {
+export default Component.extend(Evented, {
 
   auth: service('auth'),
   store: service(), // not used - can remove
   blockService: service('data/block'),
 
   /** based on similar in flow-controls.js */
-  parsedOptions : Ember.computed('modelParamOptions', function () {
+  parsedOptions : computed('modelParamOptions', function () {
     let options,
     options_param;
     if ((options_param = this.get('modelParamOptions'))

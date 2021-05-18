@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 export function compare(params) {
   if(params[3]){  //handle case insensitive conditions if 4 param is passed.
@@ -32,4 +32,4 @@ export function compare(params) {
   }
 }
 
-export default Ember.Helper.helper(compare);
+export default buildHelper(compare);

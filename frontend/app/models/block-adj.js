@@ -1,21 +1,32 @@
-import Ember from 'ember';
-import DS from 'ember-data';
-import attr from 'ember-data/attr';
-import { on } from '@ember/object/evented';
+import { next, debounce, throttle } from '@ember/runloop';
+import { resolve, allSettled } from 'rsvp';
+import { mapBy, alias } from '@ember/object/computed';
+import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
+import Model, { attr, belongsTo } from '@ember-data/model';
+import Evented, { on } from '@ember/object/evented';
 
 import { task, timeout, didCancel } from 'ember-concurrency';
 
-const { inject: { service } } = Ember;
-
 import { stacks, Stacked } from '../utils/stacks';
-import { pathsResultTypeFor, featureGetFn, featureGetBlock } from '../utils/paths-api';
+import {
+  pathsResultTypeFor,
+  featureGetFn,
+  featureGetBlock
+} from '../utils/paths-api';
 import { inRangeEither } from '../utils/draw/zoomPanCalcs';
 
 
 const dLog = console.debug;
 const trace_blockAdj = 0;
 
-export default DS.Model.extend(Ember.Evented, {
+/**
+ * @param	blockId0
+ * @param	blockId1
+ * @param	pathsResult
+ * @param	pathsAliasesResult
+ */
+export default Model.extend(Evented, {
 
   pathsPro : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
@@ -23,25 +34,34 @@ export default DS.Model.extend(Ember.Evented, {
   apiServers: service(),
   controls : service(),
 
+  controlsView : alias('controls.controls.view'),
+
 
   /** id is blockAdjId[0] + '_' + blockAdjId[1], as per.  serializers/block-adj.js : extractId()
    * and utils/draw/stacksAxes : blockAdjKeyFn()
    */
 
-  block0: DS.belongsTo('block', { inverse: null }),
-  block1: DS.belongsTo('block', { inverse: null }),
-  blockId0: DS.attr('string'),
-  blockId1: DS.attr('string'),
+  block0: belongsTo('block', { inverse: null }),
+  block1: belongsTo('block', { inverse: null }),
+  blockId0: attr('string'),
+  blockId1: attr('string'),
   // pathsResult : undefined,
 
   zoomCounter : 0,
   // range: attr(),
 
-  blockAdjId : Ember.computed('blockId0', 'blockId1', function () {
+  blockAdjId : computed('blockId0', 'blockId1', function () {
     let
     blockAdjId = [this.get('blockId0'), this.get('blockId1')];
     return blockAdjId;
   }),
+
+  /*--------------------------------------------------------------------------*/
+
+  init() {
+    this.set('receivedAll', {});
+    this._super.apply(this, arguments);
+  },
 
   /*--------------------------------------------------------------------------*/
 
@@ -76,15 +96,22 @@ export default DS.Model.extend(Ember.Evented, {
 
   /** @return an array of block-s, for blockId-s in blockAdjId
    */
-  blocks : Ember.computed('blockAdjId', function () {
+  blocks : computed('blockAdjId', function () {
     let
       blockAdjId = this.get('blockAdjId'),
     blocks = blockAdjId.map((blockId) => { return this.peekBlock(blockId); } );
     return blocks;
   }),
-  referenceBlocks : Ember.computed.mapBy('blocks', 'referenceBlock'),
+  /** @return true if both the blocks of this block-adj are viewed.
+   */
+  isComplete() {
+    let v = this.blocks.mapBy('isViewed'),
+        ok = v[0] && v[1];
+    return ok;
+  },
+  referenceBlocks : mapBy('blocks', 'referenceBlock'),
   /** Stacked Blocks - should be able to retire this. */
-  sBlocks : Ember.computed('blockAdjId', function () {
+  sBlocks : computed('blockAdjId', function () {
     let
       blockAdjId = this.get('blockAdjId'),
     blocks = blockAdjId.map(function (blockId) { return stacks.blocks[blockId]; } );
@@ -93,7 +120,7 @@ export default DS.Model.extend(Ember.Evented, {
   /** Result is, for each blockID in blockAdjId,  the axis on which the block is displayed.
    * May need to add dependency on stacks component, because block can be un-viewed then re-viewed.
    */
-  axes : Ember.computed('blocks', 'blocks.@each.axis', function () {
+  axes : computed('blocks', 'blocks.@each.axis', function () {
     let blocks = this.get('blocks'),
     axes = blocks.map(function (b) { return b.get('axis'); })
     /* When an axis is deleted, block.axis can become undefined before the
@@ -102,7 +129,7 @@ export default DS.Model.extend(Ember.Evented, {
     dLog('axes', blocks, axes);
     return axes;
   }),
-  axes1d : Ember.computed('axes', 'axes.@each', function () {
+  axes1d : computed('axes', 'axes.@each', function () {
     let axes = this.get('axes'),
     axes1d = axes.mapBy('axis1d');
     return axes1d;
@@ -118,16 +145,21 @@ export default DS.Model.extend(Ember.Evented, {
    * Similar to following @see axesDomains()
    * @desc but that function determines the referenceBlock's domain if the block is not zoomed.
    */
-  zoomedDomains :  Ember.computed.mapBy('axes1d', 'zoomedDomain'),
+  zoomedDomains : computed('axes1d', 'axes1d.@each.zoomedDomainThrottled', 'axes', function () {
+    let axes1d = this.get('axes1d'),
+        zoomedDomains = axes1d
+        .map((axis1d) => axis1d && axis1d.zoomedDomainThrottled);
+    return zoomedDomains;
+  }),
   /** domain incorporates zoomedDomain and also flipped and blocksDomain */
-  domains :  Ember.computed.mapBy('axes1d', 'domain'),
+  domains : computed.alias('axesDomains'),  // .map('axes1d', (axis1d) => axis1d && axis1d.domain),
 
   /** Return the domains (i.e. zoom scope) of the 2 axes of this block-adj.
    * These are equivalent : 
    * * this.get('axes').mapBy('domain')
    * * this.get('axes1d'), then either .mapBy('axisS.domain') or .mapBy('axis.view.axis.domain')
    */
-  axesDomains : Ember.computed('axes1d', 'axes1d.@each.domain', 'axes', function () {
+  axesDomains : computed('axes1d', 'axes1d.@each.domain', 'axes', function () {
     let axes1d = this.get('axes1d')
     /* axes1d may contain undefined while an axis is being removed; the
      * block-adj will also be removed, so that state is transitory. */
@@ -161,7 +193,7 @@ export default DS.Model.extend(Ember.Evented, {
    * @see axes()
    * @see axesDomains()
    */
-  axisDimensions :  Ember.computed('axes', 'zoomCounter', function () {
+  axisDimensions :  computed('axes', 'zoomCounter', 'domains.{0,1}.{0,1}', function () {
     let 
       axes = this.get('axes'),
       intervals =
@@ -183,7 +215,26 @@ export default DS.Model.extend(Ember.Evented, {
   /** Result is true if the domains of the axes of this blockAdj have changed
    * since intervalParams was noted.
    */
-  domainChange :  Ember.computed('axisDimensions', 'intervalParams', function () {
+  domainChange :  computed(
+    'axisDimensions',
+    'intervalParams',
+    function () {
+    /** when block-adj is created it has 2 viewed blocks, but when one block is
+     * un-viewed, some block-adj CPs may be called from render before the
+     * block-adj is destroyed, i.e. when it has only 1 viewed block.  This can
+     * probably be addressed by removing the later() in flows-collate.js :
+     * blockAdjsCP : later(() => this.set('blockAdjs', ...)) - see comments
+     * there also.
+     * It would be possible to calculate domainChange() for just the remaining
+     * block, using this.blocks.map((b, i) => i) in place of [0, 1] in :
+     * domainChanges = [0, 1].map.  But intervalParams.axes[] will have length
+     * 2 which complicates the comparison, and the result is moot because the
+     * block-adj is about to be destroyed, so simply return false.
+     */
+    if (! this.isComplete()) {
+      return false;
+    }
+
       let intervals = this.get('intervalParams'),
     /** interim measure to include pathsDensityParams in comparison; planning to
      * restructure using CP. */
@@ -225,7 +276,7 @@ export default DS.Model.extend(Ember.Evented, {
 
 
 
-  pathsRequest : Ember.computed('pathsRequestCount', function () {
+  pathsRequest : computed('pathsRequestCount', function () {
     let pathsRequestCount = this.get('pathsRequestCount');
 
     let blockAdjId = this.get('blockAdjId'),
@@ -240,7 +291,7 @@ export default DS.Model.extend(Ember.Evented, {
     if (! pathJoinRemote && ! sameServer) {
       // if (trace_blockAdj)
         dLog('pathsRequest() different servers');
-      p = Ember.RSVP.resolve([]); // will replace the promise return anyway.
+      p = resolve([]); // will replace the promise return anyway.
     }
     else {
       p = this.call_taskGetPaths();
@@ -248,7 +299,11 @@ export default DS.Model.extend(Ember.Evented, {
 
     return p;
   }),
-  pathsRequestLength : Ember.computed('pathsRequest', 'pathsRequestCount', function () {
+  pathsRequestLength : computed('pathsRequest', 'pathsRequestCount', function () {
+    if (this.get('axes.length') < 2) {
+      dLog('pathsRequestLength one end unviewed', this.blockAdjId, this.axes.mapBy('axisName'));
+      return 0;
+    }
     let pathsRequest = this.get('pathsRequest');
     let r = this.flowsAllSettled(pathsRequest);
     return r;
@@ -259,12 +314,12 @@ export default DS.Model.extend(Ember.Evented, {
       r.push(pathsRequest.direct);
     if (pathsRequest.alias)
       r.push(pathsRequest.alias);
-    r = Ember.RSVP.allSettled(r);
+    r = allSettled(r);
     return r;
   },
 
-  lastPerformed : Ember.computed.alias('taskGetPaths._scheduler.lastPerformed'),
-  lastResult : Ember.computed('lastPerformed', 'currentResult.direct.[]', 'currentResult.alias.[]', function () {
+  lastPerformed : alias('taskGetPaths._scheduler.lastPerformed'),
+  lastResult : computed('lastPerformed', 'currentResult.direct.[]', 'currentResult.alias.[]', function () {
     let
       result = this.get('lastPerformed');
     if (result && (result = result.value))
@@ -285,7 +340,7 @@ export default DS.Model.extend(Ember.Evented, {
     }
     return result;
   }),
-  currentResult : Ember.computed('pathsResult.[]', 'pathsAliasesResult.[]', function () {
+  currentResult : computed('pathsResult.[]', 'pathsAliasesResult.[]', function () {
     let result = {}, p;
     if ((p = this.get('pathsResult')))
       result.direct = p;
@@ -293,8 +348,32 @@ export default DS.Model.extend(Ember.Evented, {
       result.alias = p;
     return result;
   }),
+  /*--------------------------------------------------------------------------*/
+  pathsResultLengthUpdateDebounce(resultFieldName, length) {
+    // if (trace_blockAdj)
+    dLog('pathsResultLengthUpdateDebounce', length, resultFieldName);
+    this.set(resultFieldName + 'LengthDebounced', length);
+  },
+  pathsResultLengthUpdateThrottle(resultFieldName, length) {
+    // if (trace_blockAdj)
+    dLog('pathsResultLengthUpdateThrottle', length, resultFieldName);
+    this.set(resultFieldName + 'LengthThrottled', length);
+  },
+  /** update the paths{,Aliases}ResultLength -Debounced and -Throttled values */
+  updatePathsResult(resultFieldName, pathsResult) {
+    let length = pathsResult.length;
+    /** may implement separate functions based on resultFieldName, but generally
+     * receipt of direct and alias paths won't overlap in time for a block-adj.
+     */
+    debounce(this, this.pathsResultLengthUpdateDebounce, resultFieldName, length, this.get('controlsView.debounceTime'));
+    throttle(this, this.pathsResultLengthUpdateThrottle, resultFieldName, length, this.get('controlsView.throttleTime'), false);
+    if (trace_blockAdj > 1)
+      dLog('updatePathsResult', length, this.get('id'));
+    return length;
+  },
+  /*--------------------------------------------------------------------------*/
   /** @return a Map from a block of the block-adj to its position in blockAdjId.  */
-  blockIndex : Ember.computed('blocks', function () {
+  blockIndex : computed('blocks', function () {
     let blocks = this.get('blocks'),
     blockIndex = blocks.reduce(function (index, block, i) {
       index.set(block, i);
@@ -348,12 +427,12 @@ export default DS.Model.extend(Ember.Evented, {
     }
     return pathsFiltered;
   },
-  pathsResultFiltered : Ember.computed('blocks', 'pathsResult.[]', 'zoomedDomains.@each.{0,1}', function () {
+  pathsResultFiltered : computed('blocks', 'pathsResultLengthThrottled', 'zoomedDomains.@each.{0,1}', function () {
     let
     pathsFiltered = this.filterPathsResult('pathsResult');
     return pathsFiltered;
   }),
-  pathsAliasesResultFiltered : Ember.computed('pathsAliasesResult.[]', 'zoomedDomains.@each.{0,1}', function () {
+  pathsAliasesResultFiltered : computed('pathsAliasesResultLengthThrottled', 'zoomedDomains.@each.{0,1}', function () {
     let
     pathsFiltered = this.filterPathsResult('pathsAliasesResult');
     return pathsFiltered;
@@ -365,11 +444,11 @@ export default DS.Model.extend(Ember.Evented, {
    * @return .lastResult()
    * //  previous result :  promises of paths array from direct and/or aliases, in a hash {direct : promise, alias: promise}
    */
-  paths : Ember.computed('blockId0', 'blockId1', 'domains.{0,1}.{0,1}', /*'lastResult',*/ function () {
+  paths : computed('blockId0', 'blockId1', 'domains.{0,1}.{0,1}', /*'lastResult',*/ function () {
     /** This adds a level of indirection between zoomCounter and
      * pathsRequestCount, flattening out the nesting of run-loop calls.
+    next(() => this.incrementProperty('pathsRequestCount'));
      */
-    Ember.run.next(() => this.incrementProperty('pathsRequestCount'));
     let result = this.get('lastResult');
      // result = this.call_taskGetPaths();
     dLog('paths', result, this.get('domains'));
@@ -377,7 +456,7 @@ export default DS.Model.extend(Ember.Evented, {
     // caller expects a hash of promises
     if (result) {
       let rp = Object.keys(result).reduce((r, fieldName) => {
-        r[fieldName] = Ember.RSVP.resolve(result[fieldName]);
+        r[fieldName] = resolve(result[fieldName]);
         return r;
       }, {});
     }
@@ -430,6 +509,20 @@ export default DS.Model.extend(Ember.Evented, {
     return result;
   },
 
+  receivedAllCheck(resultLength, flow) {
+    if (resultLength === 0) {
+      let anyZoomed = this.get('axes1d').any((a) => a && a.zoomed);
+      if (! anyZoomed) {
+        /** getting empty result after receiving paths - may be the end of streamed paths, so distinguish this case. */
+        let resultLengthName = 'paths' + (flow.name === 'alias' ? 'Aliases' : '') +  'Result';
+        // this.get(resultLengthName) will be undefined or > 0
+        if (! this.get(resultLengthName)) {
+          this.set('receivedAll.' + flow.name, true);
+        }
+      }
+    }
+  },
+
   /** Depending on flows.{direct,alias}.visible, call getPathsProgressive() and
    * getPathsAliasesProgressive().
    * Those functions may make a request to the backend server if a current result is not in hand,
@@ -449,12 +542,13 @@ export default DS.Model.extend(Ember.Evented, {
     /** if ! trace_blockAdj then just trace .length. */
     let trace_suffix = trace_blockAdj ? '' : '.length';
 
-    if (flows.direct.visible) {
+    if (flows.direct.visible && ! this.get('receivedAll.' + flows.direct.name)) {
       let
         paths = this.get('pathsPro').getPathsProgressive(this, blockAdjId, taskInstance);
       paths.then(
         function (result) {
           dLog('block-adj paths', result && result.length, me.get('pathsResult' + trace_suffix), id, me);
+          me.receivedAllCheck(result.length, flows.direct);
         }, function (err) {
           dLog('block-adj paths reject', err);
         }
@@ -462,12 +556,13 @@ export default DS.Model.extend(Ember.Evented, {
       result.direct = paths;
     }
 
-    if (flows.alias.visible) {
+    if (flows.alias.visible && ! this.get('receivedAll.' + flows.alias.name)) {
       let
         pathsAliases = this.get('pathsPro').getPathsAliasesProgressive(this, blockAdjId, taskInstance);
       pathsAliases.then(
         function (result) {
           dLog('block-adj pathsAliases', result && result.length, me.get('pathsAliasesResult' + trace_suffix), id, me);
+          me.receivedAllCheck(result.length, flows.alias);
         }, function (err) {
           dLog('block-adj pathsResult reject', err);
         }
@@ -492,7 +587,8 @@ export default DS.Model.extend(Ember.Evented, {
       result =
         yield this.getPaths(blockAdjId, lastPerformed);
       result = yield this.flowsAllSettled(result);
-      dLog('taskGetPaths result', result);
+      let r0 = result && result[0];
+      dLog('taskGetPaths result', r0 && [r0.state, r0.value.length]);
 
     }
     finally {

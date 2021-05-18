@@ -1,8 +1,12 @@
+import { isArray } from '@ember/array';
+import { later } from '@ember/runloop';
+import { resolve, Promise } from 'rsvp';
+import { computed, get } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import Evented from '@ember/object/evented';
 import Ember from 'ember';
-import Service from '@ember/service';
+import Service, { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
-
-const { inject: { service } } = Ember;
 
 import { keyBy } from 'lodash/collection';
 
@@ -62,7 +66,7 @@ function filterMap(map, mapFilterFn) {
 }
 
 /*----------------------------------------------------------------------------*/
- 
+
 
 
 /** Augment the store blocks with features to support mapview.
@@ -75,7 +79,7 @@ function filterMap(map, mapFilterFn) {
  *
  * @param params  model.params;  the viewed CPs are based on .mapsToView from the URL.
  */
-export default Service.extend(Ember.Evented, {
+export default Service.extend(Evented, {
   auth: service('auth'),
   // store: service(),
   apiServers: service(),
@@ -84,14 +88,14 @@ export default Service.extend(Ember.Evented, {
   queryParams: service('query-params'),
   controls : service(),
 
-  params : Ember.computed.alias('queryParams.params'),
+  params : alias('queryParams.params'),
   /** params.options is the value passed to &options=
    * parsedOptions is the result of parsing the values from that into attributes.
    * params.parsedOptions is just the parsed values, and queryParams.urlOptions has defaults added.
    */
-  parsedOptions : Ember.computed.alias('queryParams.urlOptions'),
+  parsedOptions : alias('queryParams.urlOptions'),
 
-  store : Ember.computed(
+  store : computed(
     'apiServers.serversLength', // effectively servers.@each.
     'apiServers.primaryServer.store',
     function () {
@@ -184,8 +188,9 @@ export default Service.extend(Ember.Evented, {
       let block = this.peekBlock(bfc._id);
       if (! block) {
         let stores = apiServers.blockId2Stores(bfc._id);
-        if (! stores.length)
+        if (! stores.length) {
           dLog('taskGetLimits', bfc._id);
+        }
       }
       else {
         // console.log('taskGetLimits', bfc, block);
@@ -351,9 +356,9 @@ export default Service.extend(Ember.Evented, {
     this.trigger('receivedBlock', blocksToView);
   },
 
-  featuresCountsNBins : Ember.computed.alias('controls.controls.view.featuresCountsNBins'),
+  featuresCountsNBins : alias('controls.controls.view.featuresCountsNBins'),
   /** This does have a dependency on the parameter values.  */
-  pathsDensityParams : Ember.computed.alias('controls.controls.view.pathsDensityParams'),
+  pathsDensityParams : alias('controls.controls.view.pathsDensityParams'),
   /** Calculate nBins for featuresCounts request based on pathsDensityParams.
    * A separate slider is now added for featuresCountsNBins, so this is not
    * currently used, and may be dropped; it is possible that density calculation
@@ -385,6 +390,12 @@ export default Service.extend(Ember.Evented, {
   getSummary: function (blockIds) {
     // console.log("block getSummary", id);
     let
+    /** true enables $bucketAuto as an alternative to $bucket using
+     * boundaries calculated from nBins and interval.  This option
+     * will enable comparison of performance in operation.
+     */
+    useBucketAuto = this.get('parsedOptions.useBucketAuto'),
+
     /** check if feature count of block is already received.  */
     blocksWithoutCount = blockIds.filter((blockId) => {
       let block = this.peekBlock(blockId);
@@ -392,7 +403,7 @@ export default Service.extend(Ember.Evented, {
     }),
     blockP = blocksWithoutCount.length ?
       this.get('auth').getBlockFeaturesCount(blocksWithoutCount, /*options*/{}) :
-      Ember.RSVP.resolve([]);
+      resolve([]);
 
     /** Request features counts for data blocks (not reference blocks).  */
     if (this.get('parsedOptions.featuresCounts')) {
@@ -400,23 +411,38 @@ export default Service.extend(Ember.Evented, {
     /** As yet these result promises are not returned, not needed. */
     let blockPs =
         blockIds.map((blockId) => [blockId, this.peekBlock(blockId)])
-        .filter((blockAndId) => blockAndId[1].get('isData'))
+        /** URL mapsToView may contain blockId of another server which is not
+         * currently connected, and hence blockAndId[1] is undefined. */
+        .filter((blockAndId) => blockAndId[1] && blockAndId[1].get('isData'))
         .map(
           (blockAndId) => {
           let [blockId, block] = blockAndId;
           /** densityFactor requires axis yRange, so for that case this will (in future) lookup axis from blockId. */
           const nBins = this.get('featuresCountsNBins'); // this.nBinsFromPathParams(blockId);
           let
-          zoomedDomain = block && block.get('zoomedDomain'),
-          /** granularise zoomedDomain to so that request is sent after e.g. 5% zoom change. */
-          zoomedDomainText = zoomedDomain ?
-            '_' + truncateMantissa(zoomedDomain[0]) +
-            '_' + truncateMantissa(zoomedDomain[1]) :
-            '';
-          let taskId = blockId + '_' + nBins + zoomedDomainText;
+            zoomedDomain = block && block.get('zoomedDomain'),
+            zoomedDomainText;
+          if (zoomedDomain) {
+            let
+            domainSize = intervalSize(zoomedDomain),
+            relativeDomain = zoomedDomain.map((y) => y / domainSize);
+          /** granularise zoomedDomain to so that request is sent after e.g. 5% zoom change.
+           * Perhaps 
+           */
+          zoomedDomainText =
+            '_' + truncateMantissa(relativeDomain[0]) +
+            '_' + truncateMantissa(relativeDomain[1]);
+          }
+            let taskId = blockId + '_' + nBins + (zoomedDomainText || '');
           let summaryTask = this.get('summaryTask');
-          let p = summaryTask[taskId];
-          if (! p) {
+          let p;
+            if ((p = summaryTask[blockId]) && (p.state() === "pending")) {
+              // state() : pending   ~   readyState : 1
+              dLog('getSummary current', blockId, p, p.readyState);
+            } else if ((p = summaryTask[taskId])) {
+              // .state() : resolved   ~   .readyState : 4   ~  .statusText : OK
+              dLog('getSummary re-use', taskId, p, p.state(), p.readyState, p.statusText);
+            } else {
             if (zoomedDomain) {
               dLog('getSummary', zoomedDomainText, zoomedDomain);
             }
@@ -430,8 +456,17 @@ export default Service.extend(Ember.Evented, {
               if (! zoomedDomain) {
                 interval = intervalFromLimits(blockId);
               }
-              let getCountsForInterval = (interval) =>
-                  this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, /*options*/{})
+              let getCountsForInterval = (interval) => {
+                let countsP;
+                if (interval[0] === interval[1]) {
+                  dLog('getCountsForInterval', interval);
+                  countsP = Promise.resolve([]);
+                } else {
+                  countsP =
+                  this.get('auth').getBlockFeaturesCounts(blockId, interval, nBins, !!zoomedDomain, useBucketAuto, /*options*/{});
+                }
+                return countsP;
+              };
               if (interval) {
               p = summaryTask[taskId] =
                   getCountsForInterval(interval);
@@ -445,11 +480,12 @@ export default Service.extend(Ember.Evented, {
                  * bucketAuto, which doesn't produce even-size bins.
                  */
                 p = summaryTask[taskId] =
-                  new Ember.RSVP.Promise((resolve) => { Ember.run.later(() => {
+                  new Promise((resolve) => { later(() => {
                     interval = intervalFromLimits(blockId);
                     resolve(interval); }, 4000); })
                   .then(getCountsForInterval);
               }
+              summaryTask[blockId] = p;
             /* this could be structured as a task within models/block.js
              * A task would have .drop() to avoid concurrent request, but
              * actually want to bar any subsequent request for the same taskId,
@@ -464,11 +500,14 @@ export default Service.extend(Ember.Evented, {
                   dLog('getSummary', featuresCounts[i]);
                   delete featuresCounts[i];
                 }
-                let binSize = featuresCounts && featuresCounts.length ?
+                /** featuresCounts[0] may be undefined because of delete
+                 * featuresCounts[i] ~ outsideBoundaries
+                 */
+                let binSize = featuresCounts && featuresCounts.length && featuresCounts[0] ?
                     featuresCounts[0].idWidth[0] :
                     intervalSize(interval) / nBins,
                     result = {binSize, nBins, domain : interval, result : featuresCounts};
-                block.get('featuresCountsResults').pushObject(result);
+                block.featuresCountsResultsMergeOrAppend(result);
                 block.set('featuresCounts', featuresCounts);
               }
             });
@@ -518,7 +557,7 @@ export default Service.extend(Ember.Evented, {
     block = this.peekBlock(blockId),
     datasetId = block && block.get('datasetId'), 
     dataset = datasetId && datasetId.get('content'),
-    host = dataset && dataset.get('meta.apiHost'),
+    host = dataset && dataset.get('_meta.apiHost'),
     apiServers = this.get('apiServers'),
     server = apiServers.lookupServer(host);
     console.log('blockServer', block, dataset, host, server);
@@ -550,7 +589,7 @@ export default Service.extend(Ember.Evented, {
    * @param blockId may be an array of blockIds, in which case the function is called for each element blockId
    */
   setViewed(blockId, viewed) {
-    if (Ember.isArray(blockId))
+    if (isArray(blockId))
     {
       blockId.forEach((blockId) => this.setViewed(blockId, viewed));
     }
@@ -695,8 +734,8 @@ export default Service.extend(Ember.Evented, {
   getBlocksLimits(blockId) {
     let taskGet = this.get('taskGetLimits');
     console.log("getBlocksLimits", blockId);
-      let p =  new Ember.RSVP.Promise(function(resolve, reject){
-        Ember.run.later(() => {
+      let p =  new Promise(function(resolve, reject){
+        later(() => {
           let blocksTask = taskGet.perform(blockId);
           blocksTask.then((result) => resolve(result));
           blocksTask.catch((error) => reject(error));
@@ -711,8 +750,8 @@ export default Service.extend(Ember.Evented, {
   getBlocksSummary(blockIds) {
     let taskGet = this.get('taskGetSummary');
     console.log("getBlocksSummary", blockIds);
-      let p =  new Ember.RSVP.Promise(function(resolve, reject){
-        Ember.run.later(() => {
+      let p =  new Promise(function(resolve, reject){
+        later(() => {
           let blocksTask = taskGet.perform(blockIds);
           blocksTask.then((result) => resolve(result));
           blocksTask.catch((error) => reject(error));
@@ -728,7 +767,7 @@ export default Service.extend(Ember.Evented, {
 
 
   /** @return promise of block records */
-  blockValues: Ember.computed(
+  blockValues: computed(
     'apiServers.serversLength',  // effectively servers.@each.
     'apiServers.servers.@each.datasetsBlocks',
     // effectively servers.@each.datasetsBlocks, which can't work because servers is a hash not an array.
@@ -756,7 +795,7 @@ export default Service.extend(Ember.Evented, {
    * Copies are filtered out.
    * @return array which maps from blockId to block   
    */
-  blocksById: Ember.computed(
+  blocksById: computed(
     'blockValues.[]',
     function() {
       let blocksById = this.get('blockValues').reduce((r, b) => {
@@ -773,7 +812,7 @@ export default Service.extend(Ember.Evented, {
     block = blocksById[blockId];
     return block;
   },
-  selected: Ember.computed(
+  selected: computed(
     'blockValues.@each.isSelected',
     function() {
       let records = this.get('blockValues')
@@ -782,7 +821,7 @@ export default Service.extend(Ember.Evented, {
         console.log('selected', records);
       return records;  // .toArray()
     }),
-  viewed : Ember.computed(
+  viewed : computed(
     'blocksById', 'params.mapsToView.[]',
     'blockValues.[]',
     function () {
@@ -795,21 +834,21 @@ export default Service.extend(Ember.Evented, {
       .filter((block) => block);
     return viewed;
   }),
-  viewedById : Ember.computed('viewed.[]', function () {
+  viewedById : computed('viewed.[]', function () {
     let viewed = this.get('viewed'),
     viewedById = keyBy(viewed, (b) => b.id);
     return viewedById;
   }),
   /** Ensure that there is an axis for each viewed block.
    */
-  viewedAxisEffect : Ember.computed('viewed.[]', function () {
+  viewedAxisEffect : computed('viewed.[]', function () {
     let viewed = this.get('viewed'),
     axes = viewed.map((block) => this.blockAxis(block));
       console.log('viewed axes', axes);
     return axes;
   }),
 
-  viewedIds: Ember.computed(
+  viewedIds: computed(
     'params.mapsToView.[]',
     'blocksById.[]',
     function() {
@@ -820,7 +859,7 @@ export default Service.extend(Ember.Evented, {
         ids.map(function (id) { console.log('viewedIds', id, blocksById[id]); } );
       return ids;
     }),
-  viewedScopes: Ember.computed(
+  viewedScopes: computed(
     'viewed.[]',
     function() {
       let records = this.get('viewed');
@@ -840,7 +879,7 @@ export default Service.extend(Ember.Evented, {
    * each feature, in addition to the feature position.
    * These are suited to be rendered by axis-chart.
    */
-  viewedChartable: Ember.computed(
+  viewedChartable: computed(
     'viewed.@each.{featuresCounts,isChartable,isZoomedOut}',
     function() {
       let records =
@@ -861,13 +900,27 @@ export default Service.extend(Ember.Evented, {
       return records;  // .toArray()
     }),
 
+  /** @return blocks which are viewed and are configured for display
+   * of paths, i.e.  are data blocks not reference, have
+   * datasetId._meta.paths === true, and datasetId.tags[] does not
+   * contain 'SNP'
+   */
+  viewedForPaths: computed(
+    'viewed.@each.{isData,showPaths}',
+    function() {
+      let blocks = this.get('viewed'),
+          filtered = blocks.filter((block) => block.get('isData') && block.get('showPaths'));
+      dLog('viewedForPaths', blocks.length, filtered);
+      return filtered;
+    }),
+
   /*----------------------------------------------------------------------------*/
 
   /** collate the blocks by the parent they refer to.
    * Based on Block.referenceBlock(), so the result does not include blocks
    * which do not have a reference and are not referenced.
    */
-  blocksByReference: Ember.computed(
+  blocksByReference: computed(
     'blockValues.@each.referenceBlock',
     function() {
       let map = this.get('blockValues')
@@ -891,10 +944,6 @@ export default Service.extend(Ember.Evented, {
 
   /** collate the blocks by the parent block they refer to, and by scope.
    *
-   * Uses datasetsByParent(); this is more direct than blocksByReference()
-   * which uses Block.referenceBlock(), which does peekAll on blocks and filters
-   * on datasetId and scope.
-   *
    * @return a Map, indexed by dataset name, each value being a further map
    * indexed by block scope, and the value of that being an array of blocks,
    * with the [0] position of the array reserved for the reference block.
@@ -905,11 +954,14 @@ export default Service.extend(Ember.Evented, {
    * For Blocks with datasetId.parentName, but no matching parent on the
    * currently connected servers, blocks[0] will be undefined.
    */
-  blocksByReferenceAndScope : Ember.computed(
+  blocksByReferenceAndScope : computed(
     'blockValues.[]',
     function() {
+      return this.mapBlocksByReferenceAndScope(this.get('blockValues'));
+    }),
+  mapBlocksByReferenceAndScope(blockValues) {
       const fnName = 'blocksByReferenceAndScope';
-      let map = this.get('blockValues')
+      let map = blockValues
         .reduce(
           (map, block) => {
             // related : manage-explorer : datasetsToBlocksByScope() but that applies a filter.
@@ -984,7 +1036,7 @@ export default Service.extend(Ember.Evented, {
       if (trace_block > 1)
         log_Map_Map(fnName, map);
       return map;
-    }),
+  },
 
   /** filter blocksByReferenceAndScope() for viewed blocks,
    * blocks[0] is not filtered out even if it isn't viewed because it is the referenceBlock
@@ -995,7 +1047,7 @@ export default Service.extend(Ember.Evented, {
    * dependency, increment .viewedBlocksByReferenceAndScopeUpdateCount, so it
    * may be used as an equivalent dependency.
    */
-  viewedBlocksByReferenceAndScope : Ember.computed(
+  viewedBlocksByReferenceAndScope : computed(
     /* blocksByReferenceAndScope is a Map, and there is not currently a way to
      * depend on Map.@each, so depend on blockValues.[] which
      * blocksByReferenceAndScope depends on, and viewed.[].
@@ -1039,7 +1091,7 @@ export default Service.extend(Ember.Evented, {
       return blocksOut;
     };
 
-    if (trace_block && resultMap)
+    if (trace_block > 1 && resultMap)
       log_Map_Map(fnName, resultMap);
     this.incrementProperty('viewedBlocksByReferenceAndScopeUpdateCount');
     return resultMap;
@@ -1074,34 +1126,42 @@ export default Service.extend(Ember.Evented, {
           storefb = this.get('apiServers').id2Store(f.block.id),
         block = store.peekRecord('block', f.block.id),
         fBlock = f.block;
-        if (store !== storefb) {
-          dLog(fnName, apiServer, store && store.name, '!==', storefb && storefb.name, f.block.id);
+        let feature;
+        /** filter out result features whose blocks are copies. */
+        if (! storefb && block.isCopy) {
+          feature = undefined;
+          dLog(fnName, 'result feature is a copy', f, block._meta._origin, store && store.name);
         }
-        if (f.blockId !== f.block.id) {
-          dLog(fnName, f.blockId, '!==', f.block.id);
-        }
-        else if (! block && storefb && (block = storefb.peekRecord('block', f.block.id))) {
-          dLog(fnName, f.block, 'not in store of request server', store, 'using', storefb);
-          store = storefb;
-        }
-        else if (! block) {
-          dLog(fnName, f.block, 'not in store', store, storefb);
-        }
-        else
-          f.block = block;
+        else {
+          if (store !== storefb) {
+            dLog(fnName, apiServer, store && store.name, '!==', storefb && storefb.name, f.block.id);
+          }
+          if (f.blockId !== f.block.id) {
+            dLog(fnName, f.blockId, '!==', f.block.id);
+          }
+          else if (! block && storefb && (block = storefb.peekRecord('block', f.block.id))) {
+            dLog(fnName, f.block, 'not in store of request server', store, 'using', storefb);
+            store = storefb;
+          }
+          else if (! block) {
+            dLog(fnName, f.block, 'not in store', store, storefb);
+          }
+          else
+            f.block = block;
 
-        let feature = store.peekRecord('feature', f.id);
-        if (Ember.get(fBlock, 'meta._origin')) {
-          dLog(fnName, 'result feature is a copy', f, fBlock.meta._origin, fBlock);
-          // expect that feature is undefined, which is filtered out.
-        }
-        else if (! feature) {
-          if (f._id === undefined)
-            f._id = f.id;
-          feature = 
-            pathsPro.pushFeature(store, f, flowsService);
-          if (! feature)
-            dLog(fnName, f, 'push failed');
+          feature = store.peekRecord('feature', f.id);
+          if (get(fBlock, '_meta._origin')) {
+            dLog(fnName, 'result feature is a copy', f, fBlock._meta._origin, fBlock);
+            // expect that feature is undefined, which is filtered out.
+          }
+          else if (! feature) {
+            if (f._id === undefined)
+              f._id = f.id;
+            feature = 
+              pathsPro.pushFeature(store, f, flowsService);
+            if (! feature)
+              dLog(fnName, f, 'push failed');
+          }
         }
         return feature;
       })
@@ -1113,7 +1173,7 @@ export default Service.extend(Ember.Evented, {
 
 
   /** @return list of references (blocks) of viewed blocks */
-  viewedBlocksReferences : Ember.computed(
+  viewedBlocksReferences : computed(
     'viewed.[]',
     function () {
       let viewed = this.get('viewed'),
@@ -1127,10 +1187,20 @@ export default Service.extend(Ember.Evented, {
       return blocksReferences;
   }),
 
+  /** @return an array of pairs [axis1d, axis1d.referenceBlock]
+   */
+  axis1dReferenceBlocks : computed(
+    'axes1d.axis1dArray.[]',
+    function() {
+      let blocks = this.get('axes1d.axis1dArray')
+          .map((axis1d) => [axis1d, axis1d.get('referenceBlock')]);
+      dLog('axis1dReferenceBlocks', blocks);
+      return blocks;
+    }),
   /** collate references (blocks) of viewed blocks
    * @return map from reference (block object) to [block object]
    */
-  axesViewedBlocks2 : Ember.computed(
+  axesViewedBlocks2 : computed(
     'viewedBlocksReferences.[]',
     function () {
       let br = this.get('viewedBlocksReferences'),
@@ -1152,7 +1222,7 @@ export default Service.extend(Ember.Evented, {
   }),
 
   /** @return Map of stacks to axes (ie. of viewed blocks). */
-  stacksAxes : Ember.computed(
+  stacksAxes : computed(
     'viewedBlocksReferences.@each.axis',
     function () {
       let viewedBlocksReferences = this.get('viewedBlocksReferences'),
@@ -1175,21 +1245,24 @@ export default Service.extend(Ember.Evented, {
   /** This does not have a dependency on stacks.length, so it does not update.
    * Replaced by stacksCount, following.
    */
-  stacksCount_unused : Ember.computed.alias('stacksAxes.size'),
-  stacksCountObj : Ember.computed(function () {
+  stacksCount_unused : alias('stacksAxes.size'),
+  stacksCountObj : computed(function () {
     /** lazy evaluation - hopefully .stacksCount is  */
     let obj = stacks.stacksCount;
     if (! obj)
       dLog('stacksCountObj', obj, stacks);
     return obj;
   }),
-  stacksCount : Ember.computed.alias('stacksCountObj.count'),
+  stacksCount : alias('stacksCountObj.count'),
+  stacksWidthsSum : alias('stacksCountObj.widthsSum'),
+  axesExtendedCount : alias('stacksCountObj.extendedCount'),
+  axes2d : alias('stacksCountObj.axes2d'),
 
   /** From the list of viewed loaded blocks, filter out those which are not data
    * blocks.
    * @return array of blocks
    */
-  loadedViewedChildBlocks: Ember.computed(
+  loadedViewedChildBlocks: computed(
     'viewed.@each.{isViewed,isLoaded,hasFeatures}',
     function() {
       let records =
@@ -1207,47 +1280,7 @@ export default Service.extend(Ember.Evented, {
         );
       return records;  // .toArray()
     }),
-  /** @return Map of axes to viewed blocks */
-  axesViewedBlocks : Ember.computed(
-    'viewed.@each.axis',
-    function () {
-      let records = this.get('viewed'),
-      map = records.reduce(
-        (map, block) => {
-          let axis = this.blockAxis(block);
-          if (axis) {
-            let blocks = map.get(axis);
-            if (! blocks)
-              map.set(axis, blocks = []);
-            blocks.push(block);
-          }
-          return map; },
-        new Map()
-      );
-      console.log('axesViewedBlocks', map, records);
-      return map;
-    }),
-  /** @return Map of axes to loaded viewed child blocks */
-  axesBlocks : Ember.computed(
-    'loadedViewedChildBlocks.@each.axis',
-    function () {
-      let records = this.get('loadedViewedChildBlocks'),
-      map = records.reduce(
-        (map, block) => {
-          let axis = this.blockAxis(block);
-          if (axis) {
-            let blocks = map.get(axis);
-            if (! blocks)
-              map.set(axis, blocks = []);
-            blocks.push(block);
-          }
-          return map; },
-        new Map()
-      );
 
-      console.log('axesBlocks', map, records);
-      return map;
-    }),
   /** Lookup the axis of block, and if none then use ensureAxis().
    */
   blockAxis(block) {
@@ -1276,10 +1309,8 @@ export default Service.extend(Ember.Evented, {
   /** Collate the viewed blocks by their parent block id, or by their own block
    * id if they are not parented.
    * @return Map : blockId -> [block]
-   * @description
-   * Similar to @see axesBlocks().
    */
-  dataBlocks : Ember.computed(
+  dataBlocks : computed(
     'loadedViewedChildBlocks.@each.hasFeatures',
     function () {
       let records = this.get('loadedViewedChildBlocks'),

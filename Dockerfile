@@ -5,11 +5,21 @@ FROM node:10-alpine
 # from : https://github.com/nodejs/docker-node/issues/610 :
 #  node-sass is built using node-gyp, which is built using python.
 # required for an NPM repo
+#
+# These packages are for importing spreadsheets (xlsx etc) :
+# bash is now used by /backend/scripts/uploadSpreadsheet.bash
+# and perl by /resources/tools/dev/snps2Dataset.pl
+# gnumeric provides ssconvert, used by uploadSpreadsheet.bash
+# terminus-font is required by ssconvert.
 RUN apk add --no-cache git \
      --virtual .gyp \
      python \
      make \
      g++ \
+     bash	\
+     perl	\
+     gnumeric	\
+     terminus-font	\
   && npm install bower -g
 
 # add backend to image
@@ -17,7 +27,9 @@ COPY ./backend /app
 
 # add frontend to image
 COPY ./frontend /frontend
-COPY ./backend/common/utilities/interval-overlap.js /frontend/app/utils/draw/.
+COPY ./backend/scripts/uploadSpreadsheet.bash /app/scripts/.
+COPY ./resources/tools/dev/snps2Dataset.pl /app/scripts/.
+
 
 RUN node --version
 RUN cd /frontend && (npm ci || npm install)  && bower install --allow-root

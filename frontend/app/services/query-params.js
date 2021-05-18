@@ -1,4 +1,5 @@
-import Ember from 'ember';
+import EmberObject, { computed } from '@ember/object';
+import Evented from '@ember/object/evented';
 import Service from '@ember/service';
 
 // const { inject: { service } } = Ember;
@@ -11,16 +12,16 @@ import { parseOptions } from '../utils/common/strings';
 
 
 
-export default Service.extend(Ember.Evented, {
+export default Service.extend(Evented, {
   // block: service('data/block'),
 
-  params : Ember.Object.create({}),
+  params : EmberObject.create({}),
 
   /*--------------------------------------------------------------------------*/
 
   /** Parse params.options.
    */
-  urlOptions : Ember.computed(function () {
+  urlOptions : computed(function () {
     /** No dependency is given because params will change, but these options aren't
      * changeable at runtime by user action (although such could be added later).
      */
@@ -45,7 +46,7 @@ export default Service.extend(Ember.Evented, {
     
     return options;
   }),
-  urlOptionsEffect: Ember.computed('urlOptions', function () {
+  urlOptionsEffect: computed('urlOptions', function () {
     let options = this.get('urlOptions');
     if (options)
       this.optionsToDom(options);

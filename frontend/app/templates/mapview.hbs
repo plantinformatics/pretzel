@@ -25,7 +25,7 @@
   }}
   
   <div class="resizable" style="flex-grow:20; resize:both">
-    <div class="resizer">
+    <div class="resizer no-resizer-icon">
       <span class="glyphicon glyphicon-resize-horizontal"></span>
     </div>
 
@@ -41,10 +41,11 @@
       viewedIds {{ block.viewedIds.length }},
     </p>
     {{!-- {{#if hasData}} --}}
+    {{!-- Ember.Component.layout is reserved, so pass mapview .layout as panelLayout --}}
       {{draw-map
         data=block.viewed
         drawActions=this
-        layout=layout
+        panelLayout=layout
         controls=controls
         isShowUnique=isShowUnique
         pathColourScale=pathColourScale
@@ -56,10 +57,11 @@
         params=model.params
         selectedBlock=selectedBlock
         addMap='addMap'
+        selectBlock="selectBlock"
         removeBlock=(action 'removeBlock')
         updatedSelectedFeatures='updateSelectedFeatures'
         featuresInBlocks=featuresInBlocks
-        selectChromById='selectBlockById'}}
+        selectChromById=(action 'selectBlockById')}}
     {{!-- {{/if}} --}}
   </div>
 

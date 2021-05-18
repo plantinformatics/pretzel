@@ -1,12 +1,22 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import { allSettled } from 'rsvp';
+import { once, later, debounce, throttle } from '@ember/runloop';
+import { computed, observer } from '@ember/object';
+import Component from '@ember/component';
+import $ from 'jquery';
+import { inject as service } from '@ember/service';
 
 /* global d3 */
 /* global Handsontable */
 
 
 import PathData from '../draw/path-data';
-import { pathsResultTypes, pathsApiResultType, pathsResultTypeFor, featureGetFn, featureGetBlock } from '../../utils/paths-api';
+import {
+  pathsResultTypes,
+  pathsApiResultType,
+  pathsResultTypeFor,
+  featureGetFn,
+  featureGetBlock
+} from '../../utils/paths-api';
 import { eltClassName } from '../../utils/domElements';
 import config from '../../config/environment';
 
@@ -69,7 +79,7 @@ const hoTableId = 'paths-table-ho';
  * @desc attributes
  * @param loading true indicates the requestAllPaths() API request is in progress.
  */
-export default Ember.Component.extend({
+export default Component.extend({
   flowsService: service('data/flows-collate'),
   pathsPro : service('data/paths-progressive'),
   axisBrush: service('data/axis-brush'),
@@ -83,9 +93,9 @@ export default Ember.Component.extend({
    * in which case this CP value is updated.
    * Check if reply to getHoTLicenseKey() is received and contains a key.
    */
-  useHandsOnTable : Ember.computed('config.handsOnTableLicenseKey', function () {
+  get useHandsOnTable() {
     return !!config.handsOnTableLicenseKey;
-  }).volatile(),
+  },
   /** true enables display of the 'block' column for each end of the path. */
   blockColumn : true,
   /** true enables checkboxes to enable the following in the GUI  */
@@ -103,7 +113,7 @@ export default Ember.Component.extend({
     this._super(...arguments);
 
     if (! this.get('useHandsOnTable')) {
-      this.$(".contextual-data-table").colResizable({
+      $(".contextual-data-table", this.element).colResizable({
         liveDrag:true,
         draggingClass:"dragging"
       });
@@ -114,10 +124,13 @@ export default Ember.Component.extend({
      * mapview.hbs ember-wormhole the count into span.badge (in button-tab paths
      * Paths).
      */
-    Ember.run.later(() => this.get('tableData.length'), 2000);
+    later(() => this.get('tableData.length'), 2000);
   },
 
   willDestroyElement() {
+    /*  clear display of paths count so that if it changes while right panel is
+     *  closed, tab doesn't display old count when re-opened.  (possibly the count display
+     *  would be refreshed anyway, so this may not be essential).  */
     this.sendUpdatePathsCount('');
     this.destroyHoTable();
 
@@ -144,7 +157,7 @@ export default Ember.Component.extend({
    * The paths-table component exists permanently so that it can provide
    * tableData.length for display in the tab via updatePathsCount().
    */
-  manageHoTable : function() {
+  manageHoTable : observer('visible', function() {
     let useHandsOnTable = this.get('useHandsOnTable');
     if (useHandsOnTable) {
       let
@@ -161,13 +174,13 @@ export default Ember.Component.extend({
          * HandsOnTable-s of Features and Paths tables, when switching from
          * Features to Paths.
          */
-        Ember.run.later(() => this.set('table', this.createHoTable(this.get('tableData'))));
+        later(() => this.set('table', this.createHoTable(this.get('tableData'))));
       }
       if (! visible && table) {
         this.destroyHoTable();
       }
     }
-  }.observes('visible'),
+  }),
 
   destroyHoTable() {
     let table = this.get('table');
@@ -202,7 +215,11 @@ export default Ember.Component.extend({
   },
 
   sendUpdatePathsCount(pathsCount) {
-    Ember.run.later(() => this.send('updatePathsCount', pathsCount));
+    once(() => {
+      if (! this.isDestroying) {
+        this.send('updatePathsCount', pathsCount);
+      }
+    });
   },
 
 
@@ -213,7 +230,7 @@ export default Ember.Component.extend({
    * The form of the input selectedFeatures is an array of :
    * e.g. : {Chromosome: "myMap:1A.1", Feature: "myMarkerA", Position: "12.3"}
    */
-  selectedFeaturesByBlock : Ember.computed(
+  selectedFeaturesByBlock : computed(
     'selectedFeatures.[]',
     function () {
 
@@ -406,7 +423,7 @@ export default Ember.Component.extend({
    * selectedBlock into an array formatted for display in the table (either
    * ember-contextual-table or HandsOnTable).
    */
-  tableData : Ember.computed(
+  tableData : computed(
     'pathsResultFiltered.[]',
     'pathsAliasesResultFiltered.[]',
     'selectedBlock',
@@ -431,14 +448,14 @@ export default Ember.Component.extend({
   /** From columnFields, select those columns which are enabled.
    * The blockColumn flag enables the 'block' column.
    */
-  activeFields :  Ember.computed('blockColumn', 'showInterval', function () {
+  activeFields :  computed('blockColumn', 'showInterval', function () {
     let activeFields = columnFields.slice(this.get('blockColumn') ? 0 : 1);
     if (! this.get('showInterval'))
       activeFields.pop(); // pop off : positionEnd
     return activeFields;
   }),
   /** Generate the names of values in a row.  */
-  rowValues : Ember.computed('activeFields', function () {
+  rowValues : computed('activeFields', function () {
     let activeFields = this.get('activeFields');
     let rowValues =
     [0, 1].reduce(function (result, end) {
@@ -452,14 +469,14 @@ export default Ember.Component.extend({
   }),
   /** Generate the column headings row.
    */
-  headerRow : Ember.computed('rowValues', function () {
+  headerRow : computed('rowValues', function () {
     let headerRow = this.get('rowValues').map((fieldName) => capitalize(fieldName));
     dLog('headerRow', headerRow);
     return headerRow;
   }),
   /** Map from tableData to the data form used by the csv export / download.
    */
-  csvExportData : Ember.computed('tableData', 'blockColumn', function () {
+  csvExportData : computed('tableData', 'blockColumn', function () {
     let activeFields = this.get('activeFields');
     /** column header text does not contain punctuation, but wrapping with
      * quotes may help clarify to Xl that it is text.
@@ -516,7 +533,7 @@ export default Ember.Component.extend({
    * Added for hoTable, but not required as HO also accepts a name:value hash,
    * as an alternative to an array per row.
    */
-  tableDataArray : Ember.computed('tableData.[]', function () {
+  tableDataArray : computed('tableData.[]', function () {
     let activeFields = this.get('activeFields');
     /** this could be used in csvExportData() - it also uses an array for each row. */
     let data = this.get('tableData').map(function (d, i) {
@@ -567,7 +584,7 @@ export default Ember.Component.extend({
 
     /* set .loading true while API requests are in progress. */
     if (loadingPromises.length) {
-      let all = Ember.RSVP.allSettled(loadingPromises);
+      let all = allSettled(loadingPromises);
       this.set('loading', true);
       all.then(() => this.set('loading', false));
     }
@@ -591,7 +608,7 @@ export default Ember.Component.extend({
   },
 
   /** for HO table configuration.   */
-  columns : Ember.computed('rowValues', function () {
+  columns : computed('rowValues', function () {
     let columns = this.get('rowValues').map((name) => {
       let options = { data : name};
       if (name.match(/^position/)) {
@@ -620,14 +637,14 @@ export default Ember.Component.extend({
    * filterableColumn / sortableColumn in the template, although for the current
    * number of columns it probably would not reduce the code size.
    */
-  colTypeNames : Ember.computed('rowValues', function () {
+  colTypeNames : computed('rowValues', function () {
     let colTypeNames = this.get('rowValues').map((name) => {
       return name.replace(/[01]$/, '');
     });
     return colTypeNames;
   }),
   /** for HO table configuration. */
-  colHeaders : Ember.computed('colTypeNames', function () {
+  colHeaders : computed('colTypeNames', function () {
     let colTypes = this.get('colTypes'),
     colHeaders = this.get('colTypeNames').map((name) => colTypes[name].header);
    return colHeaders;
@@ -637,7 +654,7 @@ export default Ember.Component.extend({
    * a single CP, but the widths will change depending on window resize,
    * independent of columns changing.
    */
-  colWidths : Ember.computed('colTypeNames', function () {
+  colWidths : computed('colTypeNames', function () {
     let colTypes = this.get('colTypes'),
      colWidths =  this.get('colTypeNames').map((name) => colTypes[name].width);
     return colWidths;
@@ -648,65 +665,64 @@ export default Ember.Component.extend({
     var that = this;
     dLog("createHoTable", this);
 
-    let tableDiv = Ember.$('#' + hoTableId)[0];
+    let tableDiv = $('#' + hoTableId)[0];
 
 
     dLog("tableDiv", tableDiv);
-      var table = new Handsontable(tableDiv, {
-        data: data || [['', '', '']],
-        minRows: 1,
-        rowHeaders: true,
-        columns: this.get('columns'),
-        colHeaders: this.get('colHeaders'),
-        headerTooltips: true,
-        colWidths: this.get('colWidths'),
-        height: 600,
-        manualRowResize: true,
-        manualColumnResize: true,
-        manualRowMove: true,
-        // manualColumnMove: true,
-        copyPaste: {
-          /** increase the limit on copy/paste.  default is 1000 rows. */
-          rowsLimit: 10000
-        },
-        // disable editing, refn: https://stackoverflow.com/a/40801002
-        readOnly: true, // make table cells read-only
-        contextMenu: false, // disable context menu to change things
-        comments: false, // prevent editing of comments
+    var table = new Handsontable(tableDiv, {
+      data: data || [['', '', '']],
+      minRows: 1,
+      rowHeaders: true,
+      columns: this.get('columns'),
+      colHeaders: this.get('colHeaders'),
+      headerTooltips: true,
+      colWidths: this.get('colWidths'),
+      height: 600,
+      manualRowResize: true,
+      manualColumnResize: true,
+      manualRowMove: true,
+      // manualColumnMove: true,
+      copyPaste: {
+        /** increase the limit on copy/paste.  default is 1000 rows. */
+        rowsLimit: 10000
+      },
+      // disable editing, refn: https://stackoverflow.com/a/40801002
+      readOnly: true, // make table cells read-only
+      contextMenu: false, // disable context menu to change things
+      comments: false, // prevent editing of comments
 
-        sortIndicator: true,
-        multiColumnSorting: true,
-        /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
-        licenseKey: config.handsOnTableLicenseKey
-      });
+      sortIndicator: true,
+      multiColumnSorting: true,
+      /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
+      licenseKey: config.handsOnTableLicenseKey
+    });
 
-    let $ = Ember.$;
-      $('#' + hoTableId).on('mouseleave', function(e) {
-        that.highlightFeature();
-      }).on("mouseover", function(e) {
-        if (e.target.tagName == "TD") {
-          var tr = e.target.parentNode;
-          /** determine which half of the table the hovered cell is in, the left or right,
-           * and identify the feature cell in this row, in that half of the table. */
-          let row = Array.from(e.target.parentElement.childNodes),
-          colIndex = row.indexOf(e.target),
-          featureIndex = (colIndex > (1 + 2)) * (1 + 2) + (1 + 1),
-          featureNode = tr.childNodes[featureIndex];
-          if (featureNode) {
-            var feature_name = $(featureNode).text();
-            if (feature_name && feature_name.length && (feature_name.indexOf(" ") == -1)) {
-              that.highlightFeature(feature_name);
-              return;
-            }
+    $('#' + hoTableId).on('mouseleave', function(e) {
+      that.highlightFeature();
+    }).on("mouseover", function(e) {
+      if (e.target.tagName == "TD") {
+        var tr = e.target.parentNode;
+        /** determine which half of the table the hovered cell is in, the left or right,
+         * and identify the feature cell in this row, in that half of the table. */
+        let row = Array.from(e.target.parentElement.childNodes),
+        colIndex = row.indexOf(e.target),
+        featureIndex = (colIndex > (1 + 2)) * (1 + 2) + (1 + 1),
+        featureNode = tr.childNodes[featureIndex];
+        if (featureNode) {
+          var feature_name = $(featureNode).text();
+          if (feature_name && feature_name.length && (feature_name.indexOf(" ") == -1)) {
+            that.highlightFeature(feature_name);
+            return;
           }
         }
-        // that.highlightFeature();
-      });
+      }
+      // that.highlightFeature();
+    });
     return table;
   },
 
 
-  onDataChange: function () {
+  onDataChange: observer('tableData', function () {
     let data = this.get('tableData'),
     me = this,
     table = this.get('table');
@@ -715,11 +731,11 @@ export default Ember.Component.extend({
       if (trace)
         dLog(fileName, "onDataChange", table, data.length);
       // me.send('showData', data);
-      Ember.run.throttle(() => table.updateSettings({data:data}), 500);
+      debounce(() => table.updateSettings({data:data}), 500);
     }
-  }.observes('tableData'),
+  }),
 
-  onColumnsChange : function ()  {
+  onColumnsChange : observer('columns', 'colHeaders', 'colWidths', function ()  {
     let table = this.get('table');
     if (table) {
       let colSettings = {
@@ -729,7 +745,7 @@ export default Ember.Component.extend({
       };
       table.updateSettings(colSettings);
     }
-  }.observes('columns', 'colHeaders', 'colWidths'),
+  }),
 
   highlightFeature: function(feature) {
     d3.selectAll("g.axis-outer > circle")

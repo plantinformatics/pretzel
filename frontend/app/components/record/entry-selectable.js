@@ -1,4 +1,5 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import Component from '@ember/component';
 
 /**
  * @param node, e.g. block or dataset Ember object reference
@@ -9,16 +10,16 @@ import Ember from 'ember';
 
  * @param extraClasses (optional)  added to the component's root element <li>, e.g. d-inline-block for formatting.
  */
-export default Ember.Component.extend({
+export default Component.extend({
 
   tagName: 'li',
 
   classNames : ['list-group-item'],
   classNameBindings: ['selected:list-group-item-success:list-group-item-info', 'extraClasses'],
-  selected: function() {
+  selected: computed('node', 'selectedNode', function() {
     // console.log('selected', this.get('node.id'), this.get('selectedNode.id'));
     return this.get('node.id') === this.get('selectedNode.id');
-  }.property('node', 'selectedNode'),
+  }),
 
   click() {
     // console.log('entry-selectable click', this, this.get('node'), this.get('element'), this.get('parentView'));

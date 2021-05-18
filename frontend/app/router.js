@@ -1,10 +1,10 @@
-import Ember from 'ember';
-import config from './config/environment';
+import EmberRouter from '@ember/routing/router';
+import config from 'pretzel-frontend/config/environment';
 
-const Router = Ember.Router.extend({
-  location: config.locationType,
-  rootURL: config.rootURL
-});
+export default class Router extends EmberRouter {
+  location = config.locationType;
+  rootURL = config.rootURL;
+}
 
 Router.map(function() {
   // auth routes
@@ -27,5 +27,3 @@ Router.map(function() {
   // landing page if not handled previously
   this.route('404', { path: '/*wildcard' });
 });
-
-export default Router;

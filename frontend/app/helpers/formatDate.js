@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 export function formatDate(date) {
   return date.toLocaleString();
 }
 
-export default Ember.Helper.helper(formatDate);
+export default buildHelper(formatDate);

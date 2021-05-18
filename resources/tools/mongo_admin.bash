@@ -9,6 +9,8 @@
 #-------------------------------------------------------------------------------
 
 unused=${SERVER_NAME=main}
+# Using pretzel in place of admin in new instances.
+unused=${DB_NAME=admin}
 
 #-------------------------------------------------------------------------------
 
@@ -26,7 +28,7 @@ checkDIM()
 dbCollections()
 {
     checkDIM &&
-	docker exec -it $DIM mongo --quiet admin --eval "db.getCollectionNames()" | tr -d '[\[\]",\t ]' | tr '\r' ' '
+	docker exec -it $DIM mongo --quiet $DB_NAME --eval "db.getCollectionNames()" | tr -d '[\[\]",\t ]' | tr '\r' ' '
 }
 
 
@@ -35,13 +37,13 @@ function mongodump2S3()
   logDate=`date +%Y%b%d`
   echo $logDate
   # 2018Sep26
-  export S3_MON="s3://shared-data-4pretzel/mongodb/$SERVER_NAME.admin/$logDate"
+  export S3_MON="s3://shared-data-4pretzel/mongodb/$SERVER_NAME.$DB_NAME/$logDate"
   echo $S3_MON
   collections=$(dbCollections )
   echo $collections
   sleep 5
 
-  docker exec -i $DIM mongodump  --archive --gzip --db admin  | aws s3 cp -  $S3_MON.gz	\
+  docker exec -i $DIM mongodump  --archive --gzip --db $DB_NAME  | aws s3 cp -  $S3_MON.gz	\
   && aws s3 ls $S3_MON.tar.gz
 }
 
@@ -64,7 +66,7 @@ function signupList()
     unused=${emailVerified=false}
 
     checkDIM &&
-	docker exec -i $DIM mongo --quiet admin <<EOF
+	docker exec -i $DIM mongo --quiet $DB_NAME <<EOF
 db.Client.aggregate( [
   { \$match : { emailVerified: { \$exists: $emailVerified }} },
   { \$project: { _id: 0, signUp : {\$dateToString:{date:{\$toDate:"\$_id"}, format:"%Y-%m-%d %H:%M:%S %z", timezone : 'Australia/Melbourne'}}, email : 1, name : 1, institution : 1, project : 1, emailVerified : 1 } }

@@ -1,20 +1,20 @@
-import Ember from 'ember';
-import DS from 'ember-data';
+import { isArray, A } from '@ember/array';
+import Transform from '@ember-data/serializer/transform';
 
-export default DS.Transform.extend({
+export default Transform.extend({
 	deserialize: function(serialized) {
-		if (Ember.isArray(serialized)) {
-			return Ember.A(serialized);
+		if (isArray(serialized)) {
+			return A(serialized);
 		} else {
-			return Ember.A();
+			return A();
 		}
 	},
 
 	serialize: function(deserialized) {
-		if (Ember.isArray(deserialized)) {
-			return Ember.A(deserialized);
+		if (isArray(deserialized)) {
+			return A(deserialized);
 		} else {
-			return Ember.A();
+			return A();
 		}
 	}
 });

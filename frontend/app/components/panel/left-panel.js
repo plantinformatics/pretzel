@@ -1,9 +1,11 @@
-import Ember from 'ember';
+import Component from '@ember/component';
 
-const { Component } = Ember;
+import { htmlSafe } from '@ember/template';
+
+/* global CSS */
 
 export default Component.extend({
-  style: 'height:100%',
+  style: htmlSafe(CSS.escape('height:100%')),
   attributeBindings: ['style:style'],
   view: 'mapview',
 
@@ -16,8 +18,15 @@ export default Component.extend({
     loadBlock(block) {
       this.sendAction('loadBlock', block);
     },
-    changeTab(tab) {
-      $('.nav-tabs a[href="#left-panel-' + tab + '"]').tab('show');
+    /** Change to the named tab.
+     * @param select  this is @action select() defined in ember-bootstrap/addon/components/base/bs-tab.js
+     * @param tab name of tab to go to; without the prefix 'left-panel-'
+     * @desc Usage :
+     *   left-panel.hbs : changeTab=(action 'changeTab' tab.select )
+     *   manage-explorer.hbs : onClick=(action "changeTab" "upload")
+     */
+    changeTab(select, tab) {
+      select('left-panel-' + tab);
     },
     selectBlock(block) {
       this.sendAction('selectBlock', block);

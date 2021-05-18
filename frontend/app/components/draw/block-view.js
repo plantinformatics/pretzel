@@ -1,10 +1,13 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import EmberObject, { computed, observer } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
 import { ensureBlockFeatures } from '../../utils/feature-lookup';
 import { subInterval } from '../../utils/draw/zoomPanCalcs';
-import { intervalSize }  from '../../utils/interval-calcs';
+import { intervalSize, intervalOverlapCoverage }  from '../../utils/interval-calcs';
 import { binEvenLengthRound } from '../../utils/draw/interval-bins';
+import { featuresCountsResultsSansOverlap } from '../../utils/draw/featuresCountsResults';
 
 /*----------------------------------------------------------------------------*/
 
@@ -21,11 +24,11 @@ const dLog = console.debug;
  * @param featuresByBlock
  * @param blocksData  map to receive feature data
  */
-export default Ember.Component.extend({
+export default Component.extend({
   blockService: service('data/block'),
   queryParams: service('query-params'),
 
-  urlOptions : Ember.computed.alias('queryParams.urlOptions'),
+  urlOptions : alias('queryParams.urlOptions'),
 
 
   /** Store results of requests in .blocksData
@@ -34,15 +37,21 @@ export default Ember.Component.extend({
    */
   setBlockFeaturesData(dataTypeName, featuresData){
     let blocksData = this.get('blocksData'),
-    typeData = blocksData.get(dataTypeName) || (blocksData.set(dataTypeName, Ember.Object.create())),
+    typeData = blocksData.get(dataTypeName) || (blocksData.set(dataTypeName, EmberObject.create())),
     blockId = this.get('block.id');
     typeData.set(blockId, featuresData);
     this.parentView.incrementProperty('blocksDataCount');
   },
 
   /** If the block contains chartable data, collate it into .blocksData.blockData, for axis-charts.
+   * @return undefined
    */
-  blockFeatures : Ember.computed('block', 'block.features.[]', 'axis.axis1d.domainChanged', function () {
+  blockFeaturesEffect : observer(
+    'block', 'block.featuresLengthThrottled',
+    // 'axis.axis1d.domainChanged',
+    'axis.axis1d.blocksDomain',
+    'axis.axis1d.{zoomedDomainThrottled,zoomedDomainDebounced}.{0,1}',
+    function () {
     if (this.get('block.isChartable')) {
       let features = this.get('block.features');
       let domain = this.get('axis.axis1d.domainChanged');
@@ -67,8 +76,11 @@ export default Ember.Component.extend({
   /** Choose a result from block.featuresCountsInZoom and put it in blocksData.featureCount{,Auto}Data
    * to be read by axis-charts : featureCountBlocks etc and drawn.
    */
-  featuresCounts : Ember.computed(
-    'block', 'block.featuresCountsInZoom.[]', 'axis.axis1d.domainChanged',
+  featuresCounts : computed(
+    'block', 'block.featuresCountsInZoom.[]',
+    // 'axis.axis1d.domainChanged',
+    'axis.axis1d.blocksDomain',
+    'axis.axis1d.{zoomedDomainThrottled,zoomedDomainDebounced}.{0,1}',
     // featuresCountsNBins is used in selectFeaturesCountsResults()
     'blockService.featuresCountsNBins',
     function () {
@@ -88,7 +100,9 @@ export default Ember.Component.extend({
       let selectedResults = this.selectFeaturesCountsResults(featuresCountsInZoom);
       featuresCounts = [].concat.apply([], selectedResults.mapBy('result'));
     }
-    if (featuresCounts && featuresCounts.length) {
+    // If the only result has binSize too large, don't display it.
+    if (featuresCounts && featuresCounts.length &&
+        (this.get('block').pxSize2(featuresCounts[0].binSize || featuresCounts[0].idWidth[0]) < 200)) {
       /** recognise the data format : $bucketAuto ._id contains .min and .max, whereas $bucket ._id is a single value.
        * @see featureCountAutoDataExample, featureCountDataExample 
        */
@@ -96,10 +110,12 @@ export default Ember.Component.extend({
       /** id.min may be 0 */
       dataTypeName = (id.min !== undefined) ? 'featureCountAutoData' : 'featureCountData';
       this.setBlockFeaturesData(dataTypeName, featuresCounts);
+      dLog('featuresCounts', featuresCounts.length, this.axis.axis1d.zoomedDomainThrottled);
     }
 
     return featuresCounts;
   }),
+
   /** filter out bins < 1px because there is (e.g. in the HC genes) lots of
    * space between the non-empty bins (for small bins, e.g. < 20kb),
    * and when they are <~1px the bin rectangles are visible and not the space,
@@ -107,15 +123,14 @@ export default Ember.Component.extend({
    * the feature density.
    */
   selectFeaturesCountsResults(featuresCountsInZoom) {
-    /** based on similar calc in models/block.js:featuresForAxis(), could factor
-     * to a function block.pxSize(interval). */
+    /** based on similar calc in models/block.js:featuresForAxis(), factored
+     * to a block.pxSize(interval). */
     let
     binSizes = featuresCountsInZoom.mapBy('binSize'),
-    domain = this.get('block.zoomedDomain') || this.get('block.limits'),
-    axis = this.get('block.axis'),
-    yRange = (axis && axis.yRange()) || 800,
+    domain = this.get('block').getDomain(),
+    yRange = this.get('block').getRange(),
     /** bin size of each result, in pixels as currently viewed on screen. */
-    binSizesPx = binSizes.map((binSize) => yRange * binSize / intervalSize(domain));
+    binSizesPx = binSizes.map((binSize) => this.get('block').pxSize(binSize, yRange, domain));
     let nBins = this.get('blockService.featuresCountsNBins'),
     requestedSize = yRange / nBins,
     lengthRounded = binEvenLengthRound(domain, nBins),
@@ -152,13 +167,22 @@ export default Ember.Component.extend({
     if (! this.get('urlOptions.fcLevels')) {
       /** show only a single featuresCounts result at a time. */
       selectedResults = selectedResults
-        // exclude results which do not cover the whole (current zoomed) domain
-        .filter((f) => (f.domain[0] <= domain[0]) && (f.domain[1] >= domain[1]))
-        // prefer smaller domains for the same binSize (more resolution)
-        .sort((a,b) => (a.domain[1]-a.domain[0]) - (b.domain[1]-b.domain[0]))
-        // choose the result with the smallest binSize
-        .sortBy('binSize')
+        /** augment with .coverage for sort. This value depends on current domain.  */
+        .map((fc) => { fc.coverage = intervalOverlapCoverage(fc.domain, domain) ; return fc; })
+        /** filter out bins > 100px. */
+        .filter((f) => { return this.get('block').pxSize(f.binSize, yRange, domain) < 100; })
+        // prefer results which cover more of the (current zoomed) domain
+        /* want any coverage which is > 1, prefering larger coverage.
+         * Related : featureCountResultCoverage(), smallestOver1I / largestUnder1I in featureCountInZoom().
+         * sort in decreasing order of .coverage
+         * If .coverage is equal, sort in increasing order of .binSize
+         */
+        .sort((a,b) => (a.coverage >= 1 && b.coverage >= 1) ? (a.binSize - b.binSize) : b.coverage - a.coverage)
+        // choose the result with the smallest binSize  (this is now incorporated into the above sort)
+        // .sortBy('binSize')
         .slice(0,1);
+    } else {
+      selectedResults = featuresCountsResultsSansOverlap(selectedResults, lengthRounded);
     }
     return selectedResults;
   },

@@ -1,5 +1,11 @@
-import { yAxisBtnScale, eltId, axisFeatureCircles_selectAll  }  from './axis';
+import {
+  yAxisBtnScale,
+  eltId,
+  axisEltIdClipPath,
+  axisFeatureCircles_selectAll
+} from './axis';
 import { I } from './d3-svg';
+
 
 
 /* global d3 */
@@ -24,16 +30,13 @@ function brushClip(gp, axisID) {
 
   let bbox = gpp.getBBox();
 
-  /** datum is axisID, so id and clip-path could be functions. */
-  let axisClipId = "axis-clip-" + axisID;
-
   let
     gc = gp.selectAll("g > clipPath")
     .data([axisID]),
   gr = gc.enter()
   // define the clipPath
     .append("clipPath")       // define a clip path
-    .attr("id", axisClipId) // give the clipPath an ID
+    .attr("id", axisEltIdClipPath) // give the clipPath an ID
     .append("rect"),          // shape it as a rect
   gprm = gp.selectAll("clipPath > rect")
     .attr("x", bbox.x)
@@ -47,7 +50,7 @@ function brushClip(gp, axisID) {
     .data([axisID])
     .enter()
     .append("g")
-    .attr("clip-path", "url(#" + axisClipId + ")") // clip with the rectangle
+    .attr("clip-path", (axisID) => "url(#" + axisEltIdClipPath(axisID) + ")") // clip with the rectangle
     .merge(gg);
 
   dLog(axisID, bbox, 'brushClip', gp.node(), gprm.node(), gg.node(), g.node());
@@ -57,8 +60,23 @@ function brushClip(gp, axisID) {
 
 /*--------------------------------------------------------------------------*/
 
+/** Select the brush of brushedAxisID.
+ * @return d3 selection of the brushed axis.
+ */
+function axisBrushSelect(svgContainer, brushedAxisID) {
+  // copied from showAxisZoomResetButtons()
+  let axisS = svgContainer.selectAll("#" + eltId(brushedAxisID));
+  /** this is the element which is passed when called via
+   * zoomBehavior.on('zoom', zoom)
+   * so pass the same element when calling via g.btn .Zoom .on('click' ).
+   */
+  let gBrush = axisS.selectAll('g.brush > g[clip-path]').node();
+  return gBrush;
+}
+
 
 function showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, resetZoom, brushedAxisID, drawMap) {
+  // `used as the basis of axisBrushSelect
   /** d3 selection of the brushed axis. */
   let axisS = svgContainer.selectAll("#" + eltId(brushedAxisID));
   /** this is the element which is passed when called via
@@ -121,4 +139,4 @@ function showAxisZoomResetButtons(svgContainer, getBrushExtents, zoom, resetZoom
 
 
 
-export { brushClip, showAxisZoomResetButtons };
+export { brushClip, axisBrushSelect, showAxisZoomResetButtons };

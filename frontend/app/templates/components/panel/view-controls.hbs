@@ -1,8 +1,9 @@
-{{#elem/panel-container state="primary"}}
-  {{#elem/panel-heading icon="option-vertical"}}
+{{#elem/panel-container state="primary" as |panelContainer|}}
+  {{#elem/panel-heading icon="option-vertical" panelContainer=panelContainer}}
     Selected Axis Options
   {{/elem/panel-heading}}
-  <ul class="list-group">
+  {{#if panelContainer.showComponent}}
+  <ul class="list-group view-controls">
     <li class="list-group-item">
       <div class="btn-group btn-group-sm btn-group-justified">
         <div class="btn-group ff-alpha">
@@ -78,7 +79,7 @@
       <div>
         {{input type="checkbox" checked=pathsViaStream class="toggle"}}
         <label>Path Stream</label>
-        <span style="margin-left:2em; vertical-align: bottom;">Limit : {{ pathControlNFeatures }}</span>
+        <span class="sub-label"> Limit : <span>{{ pathControlNFeatures }}</span></span>
       </div>
       <div>
         <input type="range" 
@@ -94,7 +95,7 @@
     <li class="list-group-item">
       <div>
         <label>Binned Feature Counts</label>
-        <span style="margin-left:2em; vertical-align: bottom;"> Number of Bins : {{ featuresCountsNBins }}</span>
+        <div class="sub-label"> Number of Bins : <span>{{ featuresCountsNBins }}</span></div>
       </div>
       <div>
         <input type="range" 
@@ -106,7 +107,7 @@
       </div>
 
       <div>
-        <span style="margin-left:2em; vertical-align: bottom;"> Threshold : {{ featuresCountsThreshold }}</span>
+        <span class="sub-label"> Threshold : <span>{{ featuresCountsThreshold }}</span></span>
       </div>
       <div>
         <input type="range" 
@@ -160,7 +161,7 @@
              id="checkbox-toggleModePublish" 
              name="toggleCheckbox" 
       />
-      <label>Publish Mode</label>
+      <label>Show Zoom/Reset buttons</label>
     </li>
     <li class="list-group-item">
       <input type="checkbox" 
@@ -197,6 +198,7 @@
        value="75"
       />
     </li>
+
     <li class="list-group-item ff-alpha">
       <label>Synteny Block Size Threshold</label>
       <input type="range" 
@@ -206,5 +208,36 @@
        value="22"
       />
     </li>
+
+    <li class="list-group-item">
+      <div>
+        <label style="float:right">Times (ms)</label>
+        <span class="sub-label"> Debounce : <span>{{ debounceTime }}</span></span>
+      </div>
+      <div>
+        <input type="range" 
+         id="range-debounceTime" 
+         name="debounceTime" 
+         min="0" max="2000"
+         value={{this.debounceTime}} 
+         oninput={{action (mut this.debounceTime) value="target.value"}}
+        />
+      </div>
+      <div>
+        <span class="sub-label"> Throttle : <span>{{ throttleTime }}</span></span>
+      </div>
+      <div>
+        <input type="range" 
+         id="range-throttleTime" 
+         name="throttleTime" 
+         min="0" max="2000"
+         value={{this.throttleTime}} 
+         oninput={{action (mut this.throttleTime) value="target.value"}}
+        />
+      </div>
+
+    </li>
+
   </ul>
+  {{/if}} {{!-- showComponent --}}
 {{/elem/panel-container}}

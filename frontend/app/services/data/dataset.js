@@ -1,21 +1,22 @@
-import Ember from 'ember';
-import Service from '@ember/service';
+import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import Evented from '@ember/object/evented';
+import { getOwner } from '@ember/application';
+import Service, { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
-
-const { inject: { service }, getOwner } = Ember;
 
 const dLog = console.debug;
 
 // based on ./block.js
 
-export default Service.extend(Ember.Evented, {
+export default Service.extend(Evented, {
     auth: service('auth'),
   apiServers: service(),
   controls : service(),
 
-  primaryServer : Ember.computed.alias('apiServers.primaryServer'),
+  primaryServer : alias('apiServers.primaryServer'),
 
-  storeManager: Ember.inject.service('multi-store'),
+  storeManager: service('multi-store'),
 
   /** Get the list of available datasets, in a task - yield the dataset result.
    * Signal that receipt with receivedDatasets(datasets).
@@ -50,7 +51,8 @@ export default Service.extend(Ember.Evented, {
     /* adapterOptions */
       filter :  {'include': 'blocks'} }), /*;
     let */
-    dP = store.query('dataset', adapterOptions);
+    dP = store.query('dataset', adapterOptions)
+      .catch((err) => { dLog('taskGetList', err, store, adapterOptions, server, primaryServer, serverTabSelectedName, serverTabSelected); debugger; return [];});
     if (trace_promise)
       dP.then(function (d) { console.log(d, d.toArray()[0].get('blocks').toArray());});
     let
@@ -62,11 +64,11 @@ export default Service.extend(Ember.Evented, {
        * This is for display in the GUI, and can be used to select the server for block contents request.
        */
       datasets.forEach(function(dataset) {
-        let meta = dataset.get('meta');
+        let meta = dataset.get('_meta');
         if (! meta)
         {
           meta = {};
-          dataset.set('meta', meta);
+          dataset.set('_meta', meta);
         }
         meta.apiHost = server.host;
       });
@@ -129,7 +131,7 @@ export default Service.extend(Ember.Evented, {
   ,
 
   /** @return dataset records */
-  values: Ember.computed(function() {
+  values: computed(function() {
     let 
     server = this.get('primaryServer'),
     store = server.store,
@@ -169,13 +171,13 @@ export default Service.extend(Ember.Evented, {
    * database, but again that is not expected to be frequent, and it is
    * likely that this user will not need them in this session.
    */
-  datasetsByParent : Ember.computed('values.[]', function () {
+  datasetsByParent : computed('values.[]', function () {
     let values = this.get('values'),
     map = this.objectsMap(values, (d) => d.get('parent'));
     dLog('datasetsByParent', map);
     return map;
   }),
-  datasetsByName : Ember.computed('values.[]', function () {
+  datasetsByName : computed('values.[]', function () {
     /** currently dataset.name is used as DB ID, so name lookup of datasets can
      * also be done via peekRecord('dataset', name).
      */
@@ -210,7 +212,7 @@ export default Service.extend(Ember.Evented, {
    * and this maps by .parentName instead of .parent which may be undefined.
    * @return [parentName] -> {dataset, serverName}
    */  
-  datasetsByParentName : Ember.computed('apiServers.datasetsWithServerName.[]', function () {
+  datasetsByParentName : computed('apiServers.datasetsWithServerName.[]', function () {
     function parentNameFn (dataset) { return dataset.get('parentName') || null; }
     let datasetsByParentName = this.datasetsByFunction(parentNameFn);
     dLog('datasetsByParentName', datasetsByParentName);
@@ -219,7 +221,7 @@ export default Service.extend(Ember.Evented, {
   /** Similar to datasetsByName, except that is limited to .primaryServer,
    * whereas this matches datasets on all stores/servers.
    */
-  datasetsByNameAllServers : Ember.computed('apiServers.datasetsWithServerName.[]', function () {
+  datasetsByNameAllServers : computed('apiServers.datasetsWithServerName.[]', function () {
     function nameFn (dataset) { return dataset.get('id') || null; }
     let datasetsByName = this.datasetsByFunction(nameFn);
     dLog('datasetsByNameAllServers', datasetsByName);
@@ -228,7 +230,7 @@ export default Service.extend(Ember.Evented, {
   /** Lookup the datasets matching the given parentName, i.e. dataset.parentName === parentName.
    *
    * @param parentName  to match
-   * @param original  if true then exclude copied / cached datasets (having .meta._origin)
+   * @param original  if true then exclude copied / cached datasets (having ._meta._origin)
    * @return [ {dataset, serverName}, ... ]
    */
   datasetsForParentName : function(parentName, original) {
@@ -239,14 +241,14 @@ export default Service.extend(Ember.Evented, {
   /** Lookup the datasets matching the given name.
    *
    * @param name  to match, usually a parentName
-   * @param original  if true then exclude copied / cached datasets (having .meta._origin)
+   * @param original  if true then exclude copied / cached datasets (having ._meta._origin)
    */
   datasetsForName : function(name, original) {
     let
           apiServers = this.get('apiServers'),
         datasets = apiServers.dataset2stores(name);
     if (original)
-      datasets = datasets.filter((d) => ! d.dataset.get('meta._origin'));
+      datasets = datasets.filter((d) => ! d.dataset.get('_meta._origin'));
     return datasets;
   }
   

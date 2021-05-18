@@ -1,21 +1,14 @@
 {{!-- enable display of <tspan.blockServer>, when apiServers.serversLength > 1 --}}
 {{multipleServersEffect}}
 
-{{#elem/panel-container state="primary"}}
+{{#elem/panel-container state="primary" showComponent=showList as |panelContainer|}}
 
-  {{#elem/panel-heading icon="globe"}}
+  {{#elem/panel-heading icon="globe" panelContainer=panelContainer}}
     Datasources
-
-    <span class="pull-right">
-      {{x-toggle
-        theme='light'
-        value=showList
-        onToggle=(action (mut showList)) }}
-    </span>
 
   {{/elem/panel-heading}}
 
-  {{#if showList}}
+  {{#if panelContainer.showComponent}}
   <ul class="list-group">
     {{#each-in servers as |apiServerName apiServer| }}
       <li class="list-group-item list-group-item-info">
@@ -24,18 +17,21 @@
     {{/each-in}}
 
     <li 
-      class="list-group-item list-group-item-info">
-      New
-      <span class="pull-right">
+      class="list-group-item list-group-item-info" >
+      <i class="glyphicon glyphicon-cloud-download"></i>
+      Connect new datasource
+      <span class="pull-right"
+        style="margin-right: 4em;">
         {{elem/button-base
           classSize='xs'
           classColour='success'
           icon='plus'
-          onClick=(action "addNewDatasource")}}
+          onClick=@addNewDatasource}}
       </span>
     </li>
   </ul>
-  {{/if}}
+  {{/if}} {{!-- showComponent --}}
+
 
 {{/elem/panel-container}}
 

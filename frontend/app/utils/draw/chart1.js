@@ -1,13 +1,26 @@
-import Ember from 'ember';
+import { assert } from '@ember/debug';
 
 import { getAttrOrCP } from '../ember-devel';
 import { configureHorizTickHover } from '../hover';
-import { eltWidthResizable, noShiftKeyfilter } from '../domElements';
+import {
+  eltWidthResizable,
+  noShiftKeyfilter
+} from '../domElements';
 import { logSelectionNodes } from '../log-selection';
 import { noDomain } from '../draw/axis';
 import { stacks } from '../stacks'; // just for oa.z and .y, don't commit this.
 import { inRangeEither, overlapInterval } from './zoomPanCalcs';
-import { featureCountDataProperties, dataConfigs, DataConfig, blockDataConfig, hoverTextFn, middle, scaleMaybeInterval, datum2LocationWithBlock } from '../data-types';
+import { intervalSize } from '../interval-calcs';
+import {
+  featureCountDataProperties,
+  dataConfigs,
+  DataConfig,
+  blockDataConfig,
+  hoverTextFn,
+  middle,
+  scaleMaybeInterval,
+  datum2LocationWithBlock
+} from '../data-types';
 import { breakPoint } from '../breakPoint';
 
 
@@ -17,7 +30,7 @@ const className = "chart", classNameSub = "chartRow";
 const showChartAxes = true;
 const useLocalY = false;
 
-const transitionDuration = 150;
+// const transitionDuration = 150;
 
 const trace = 1;
 
@@ -1030,23 +1043,60 @@ ChartLine.prototype.bars = function (data)
   /** parent datum is currently 1, but could be this.block;
    * this.parentElement.parentElement.__data__ has the axis id (not the blockId),
    */
-    .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); });
-  let r =
-  ra
-    .merge(rs)
-    // .transition().duration(transitionDuration)
+    .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); })
     .attr("x", 0)
-    .attr("y", (d) => { let li = dataConfig.datum2LocationScaled(d); return li.length ? li[0] : li; })
+  ;
+
+  function attrY(selection) {
+    selection.attr("y", (d) => { let li = dataConfig.datum2LocationScaled(d); return li.length ? li[0] : li; });
+  }
+  /** start new elements with final y position and width 0, and transition to final width. */
+  ra
+    .attr("width", 0)
+    .attr('stroke-opacity', 0.25)
+    .attr('fill-opacity', 0.25)
+    .call(attrY)
+    .call(attrHeight);
+
+  /** The transition from length 0 looks noisy when zooming in, but smooth when zooming out.
+   * default to false when prevDomain initially not defined.
+   */
+  let idWidth = data[0] && dataConfig.rectHeight(/*scaled*/false, /*gIsData*/false, data[0], 0, []),
+      idWidthChanged = this.prev_idWidth !== idWidth;
+  this.prev_idWidth = idWidth;
+  let zoomingIn = ! this.prevDomain || (intervalSize(this.block.zoomedDomain) <= intervalSize(this.prevDomain));
+  this.prevDomain = this.block.zoomedDomain;
+
+  let
+  rm =
+    ra
+    .merge(rs),
+  r = dataConfig.selectionToTransition(rm)
+    .attr('stroke-opacity', 1)
+    .attr('fill-opacity', 1)
+    .call(attrY)
+    .call(attrHeight);
+  function attrHeight(selection) {
+    selection
   // yBand.bandwidth()
     .attr("height", dataConfig.rectHeight.bind(dataConfig, /*scaled*/true, /*gIsData*/false)) // equiv : (d, i, g) => dataConfig.rectHeight(true, false, d, i, g);
-  ;
+    ;
+  }
+
   let barWidth = dataConfig.rectWidth.bind(dataConfig, /*scaleX*/this.scales.xWidth, /*gIsData*/false);
-  r
+  /** Use transition from width 0 when zooming out */
+  (zoomingIn || idWidthChanged ? rm : r)
     .attr("width", dataConfig.barAsHeatmap ? 20 : barWidth);
   if (dataConfig.barAsHeatmap)
     ra
     .attr('fill', barWidth);
-  rx.remove();
+  rx
+    /* quick fade out */
+    .transition().duration(dataConfig.getTransitionTime() / 5)
+    .attr('stroke-opacity', 0.25)
+    .attr('fill-opacity', 0.25)
+    .remove()
+  ;
   if (trace > 1) {
     dLog(rs.nodes(), re.nodes());
   }
@@ -1090,7 +1140,7 @@ ChartLine.prototype.linebars = function (data)
     .each(function (d) { configureHorizTickHover.apply(this, [d, block, dataConfig.hoverTextFn]); });
   ra
     .merge(rs)
-    // .transition().duration(transitionDuration)
+    .transition().duration(dataConfig.getTransitionTime())
     .attr('d', horizLine)
     .attr("stroke", (d) => this.blockColour())
   ;
@@ -1146,11 +1196,15 @@ ChartLine.prototype.line = function (data)
     .append("path")
     .attr("class", dataConfig.barClassName + " line")
     .attr("stroke", (d) => this.blockColour())
+    /* line is a single path for all data points; .datum() doesn't receive a keyFn.
+     * d3 does some tweening in the transition, but it is not closely connected
+     * to the insertion / deletion of data points.
+     */
     .datum(data)
     .attr("d", line)
     .merge(ps)
     .datum(data)
-    // .transition().duration(transitionDuration)
+    .transition().duration(dataConfig.getTransitionTime())
     .attr("d", line);
   // data length is constant 1, so .remove() is not needed
   ps.exit().remove();
@@ -1219,7 +1273,7 @@ DataConfig.prototype.keyFn = function (d, i, g) {
  */
 DataConfig.prototype.rectWidth = function (scaleX, gIsData, d, i, g)
 {
-  Ember.assert('rectWidth arguments.length === 5', arguments.length === 5);
+  assert('rectWidth arguments.length === 5', arguments.length === 5);
   let d2v = this.datum2Value,
   width = d2v(d);
   if (this.valueIsArea) {
@@ -1242,7 +1296,7 @@ DataConfig.prototype.rectWidth = function (scaleX, gIsData, d, i, g)
  */
 DataConfig.prototype.rectHeight = function (scaled, gIsData, d, i, g)
 {
-  Ember.assert('rectHeight arguments.length === 5', arguments.length === 5);
+  assert('rectHeight arguments.length === 5', arguments.length === 5);
   let height,
   d2l = (scaled ? this.datum2LocationScaled : this.datum2Location),
   location;

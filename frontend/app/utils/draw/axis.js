@@ -186,8 +186,11 @@ function axisEltId(name)
 }
 /** id of g.axis-all element, based on axisName, with an "all" prefix. */
 function eltIdAll(d) { return "all" + d; }
+/** id of 'g.axis-all > text' element, based on axisName (id of reference block of axis), with a 't' prefix. */
+function axisEltIdTitle(d) { return 't' + d; }
 /** id of <g clippath> element, based on axisName, with an "axis-clip" prefix. */
-function axisEltIdClipPath(d) { return "axis-clip" + d; }
+function axisEltIdClipPath(d) { return "axis-clip-" + d; }
+function axisEltIdClipPath2d(d) { return "axis-clip-2d-" + d; }
 
 /** @return a d3 selection of the svg <g> element which encloses all
  * elements of an axis; its position is :
@@ -306,7 +309,8 @@ function axisTitleColour (d, i) {
 export {
   Axes, maybeFlip, maybeFlipExtent, noDomain,
   ensureYscaleDomain,
-  yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform, eltId, axisEltId, eltIdAll, axisEltIdClipPath,
+  yAxisTextScale,  yAxisTicksScale,  yAxisBtnScale, yAxisTitleTransform,
+  eltId, axisEltId, eltIdAll, axisEltIdTitle, axisEltIdClipPath, axisEltIdClipPath2d,
   selectAxisOuter, selectAxisUse, eltIdGpRef,
   highlightId,
   trackBlockEltIdPrefix,

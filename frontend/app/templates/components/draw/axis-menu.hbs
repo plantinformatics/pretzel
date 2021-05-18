@@ -1,0 +1,42 @@
+
+<EmberPopover
+  @tooltipClass="axis-menu" @innerClass="axis-menu-inner"
+  @popperContainer="body" @targetId={{concat 't' axisName}}
+  @isShown={{true}} @event='none'
+  @onHide={{action 'onHide'}}
+  as |popover| >
+
+  <button class="close" onClick={{action "hide" target=popover}} type="button">╳</button>
+
+  <div class="menu-icons">
+      <button onClick={{action "deleteMap"}}>╳</button>
+      <button onClick={{action "flipAxis"}}>⇅</button>
+      <button onClick={{action "extendMap"}}>⇲</button>
+  </div>
+
+
+  <div>
+    {{block.datasetId.name}} : {{block.name}}
+  </div>
+
+
+  <ul class="list-unstyled dataBlocks">
+    {{#each dataBlocks as |blockS|}}
+    <li>
+      <button onClick={{action this.blockUnview blockS}}>
+       {{!--  "&#x2573;", glyphicon-sound-7-1, glyphicon-remove-sign --}}
+       ╳
+      </button>
+      <button onClick={{action this.blockVisible blockS}}>
+        {{!-- "&#x1F441;", Unicode Character 'EYE', glyphicon-eye-close --}}
+        <span class="glyphicon glyphicon-eye-close"></span>
+      </button>
+
+      {{!-- result is text title --}}
+      {{compute (action this.dataBlockText blockS)}}
+    </li>
+    {{/each}}
+  </ul>
+
+
+</EmberPopover>

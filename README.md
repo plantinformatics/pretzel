@@ -2,20 +2,19 @@
 
 
 [![Docker pulls](https://img.shields.io/docker/pulls/plantinformaticscollaboration/pretzel.svg?logo=docker&style=for-the-badge)](https://hub.docker.com/r/plantinformaticscollaboration/pretzel)
-[![Docker pulls](https://img.shields.io/docker/automated/plantinformaticscollaboration/pretzel.svg?logo=docker&style=for-the-badge)](https://hub.docker.com/r/plantinformaticscollaboration/pretzel)
-[![Docker pulls](https://img.shields.io/docker/build/plantinformaticscollaboration/pretzel.svg?logo=docker&style=for-the-badge)](https://hub.docker.com/r/plantinformaticscollaboration/pretzel)
+[![Docker automated](https://img.shields.io/docker/automated/plantinformaticscollaboration/pretzel.svg?logo=docker&style=for-the-badge)](https://hub.docker.com/r/plantinformaticscollaboration/pretzel)
+[![Docker build](https://img.shields.io/docker/cloud/build/plantinformaticscollaboration/pretzel.svg?logo=docker&style=for-the-badge)](https://hub.docker.com/r/plantinformaticscollaboration/pretzel)
 
 [![Website](https://img.shields.io/website-up-down-green-red/http/plantinformatics.io.svg?label=plantinformatics.io&style=for-the-badge)](http://plantinformatics.io)
 
 # About Pretzel <!-- omit in toc -->
 A Loopback/Ember/D3 framework to display and interactively navigate complex datasets.
 
-Developed by
-- AgriBio, Department of Economic Development, Jobs, Transport and Resources (DEDJTR), Victoria,
-  Australia;
-- CSIRO, Canberra, Australia.
+<img src="https://user-images.githubusercontent.com/20571319/116690793-4129a380-a9fd-11eb-85ed-6b9d91f51458.png" align="center">
 
-Funded by the Grains Research Development Corporation (GRDC).
+Currently (2020-) funded and developed by Agriculture Victoria, Department of Jobs, Precincts and Regions (DJPR), Victoria, Australia.
+
+Previously (2016-2020) funded by the Grains Research Development Corporation (GRDC) and co-developed by Agriculture Victoria and CSIRO, Canberra, Australia.
 
 # Table of Contents <!-- omit in toc -->
 - [Features](#features)

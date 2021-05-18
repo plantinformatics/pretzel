@@ -1,16 +1,23 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import { on } from '@ember/object/evented';
+import { bind } from '@ember/runloop';
+import Mixin from '@ember/object/mixin';
+import { inject as service } from '@ember/service';
+import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
+
 import { task } from 'ember-concurrency';
 
-const { Mixin } = Ember;
+// import these from @ember/runloop instead of lodash
+import { debounce, throttle } from '@ember/runloop'; // 'lodash/function';
 
-import { debounce, throttle } from 'lodash/function';
+import { debounce as lodash_debounce, throttle as lodash_throttle } from 'lodash/function';
 
 import { Stacked } from '../utils/stacks';
 import { updateDomain } from '../utils/stacksLayout';
 import VLinePosition from '../models/vline-position';
 
 const dLog = console.debug;
+const trace = 0;
 
 /** Mixed-into axis-1d to describe the axis position.
  *
@@ -20,7 +27,10 @@ const dLog = console.debug;
  *   zoomed : boolean
  */
 export default Mixin.create({
-  store: Ember.inject.service('store'),
+  store: service('store'),
+  controls : service(),
+
+  controlsView : alias('controls.controls.view'),
 
   /** true if currentPosition.yDomain is a subset of the axis domain.  */
   zoomed : false,
@@ -32,42 +42,18 @@ export default Mixin.create({
   currentPosition : undefined,
   lastDrawn : undefined,
 
-  init_1 : function() {
+  init_1 : on('init', function() {
     let store = this.get('store');
     this.set('currentPosition', store.createRecord('vline-position'));
     this.set('lastDrawn', store.createRecord('vline-position'));
     this._super(...arguments);
-  }.on('init'),
+  }),
 
 
   /* updateDomain() and setDomain() moved here from utils/stacks.js
    * originally attributes of Stacked.prototype.
    */
 
-  /** Set the domain of the current position using domainCalc() of Block / Axis (Stacked).
-   */
-  updateDomain_unused()
-  {
-    let axisS=this.get('axisS');
-    if (! axisS) {
-      /** This replicates the role of axis-1d.js:axisS();  this will be solved
-       * when Stacked is created and owned by axis-1d.
-       * (also : now using ensureAxis() in data/block.js : axesBlocks())
-       */
-      let axisName = this.get('axis.id');
-      axisS = Stacked.getAxis(axisName);
-      if (axisS) {
-        this.set('axisS', axisS);
-        dLog('axis-1d:updateDomain', this, axisName, axisS);
-      }
-    }
-    if (axisS) {
-      let y = axisS.getY(), ys = axisS.ys;
-      updateDomain(axisS.y, axisS.ys, axisS);
-      let domain = axisS.y.domain();
-      this.setDomain(domain);
-    }
-  },
   /** Set the domain of the current position to the given domain
    */
   setDomain(domain)
@@ -80,17 +66,43 @@ export default Mixin.create({
      */
     let
       axisPosition = this.get('currentPosition');
-    dLog('setDomain', this, 'domain', domain, axisPosition);
+    if (trace > 2) 
+      dLog('setDomain', this, 'domain', domain, axisPosition);
     axisPosition.set('yDomain', domain);
-    this.setDomainDebounced(domain);
+    debounce(this, this.setDomainDebounced, domain, this.get('controlsView.debounceTime'));
+    // lodash-specific arg : {maxWait : 1000})
+    /* use lodash_throttle() because it has a trailing edge option (default true).
+     * Without this, the last (few) zoom events may be dropped, and e.g. if
+     * zooming out, paths which should come into view won't.
+     */
     this.setDomainThrottled(domain);
   },
-  setDomainDebounced : debounce(function (domain) {
-    Ember.run.bind(this, this.set)('currentPosition.yDomainDebounced', domain);
-  }, 333, {maxWait : 1000}),
-  setDomainThrottled : throttle(function (domain) {
-    Ember.run.bind(this, this.set)('currentPosition.yDomainThrottled', domain);
-  }, 1000),
+  setDomainDebounced(domain) {
+    this.set('currentPosition.yDomainDebounced', domain);
+    dLog('setDomainDebounced', domain, !!this.resolveDebounce, 'featuresFor');
+    if (this.resolveDebounce) {
+      this.resolveDebounce();
+    }
+    this.nextEndOfDomainDebounced = new Promise((resolve, reject) => {
+      this.resolveDebounce = resolve;
+    });
+  },
+  /** a promise which resolves at the end of a domain debounce phase.  */
+  nextEndOfDomainDebounced : undefined,
+  /** @return a function wrapped with lodash_throttle().
+   * @desc this updates (generates a new function) when .throttleTime
+   * changes
+   */
+  setDomainThrottled : computed('controls.view.throttleTime', function () {
+    let
+    throttled = lodash_throttle(
+      function currentPosition_setDomain (domain) {
+        this.set('currentPosition.yDomainThrottled', domain);
+      }, this.get('controls.view.throttleTime'));
+    dLog('currentPosition_setDomain', this.get('controls.view.throttleTime'));
+    return throttled;
+  }),
+
 
   /** Set the zoomed of the current position to the given value
    */

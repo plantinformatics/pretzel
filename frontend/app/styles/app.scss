@@ -27,11 +27,12 @@ body.mapview div#Page-Body
   bottom: 0;
 }
 
-.nav-tabs > li.active > a,
-.nav-tabs > li.active > a:hover,
-.nav-tabs > li.active > a:focus{
+/* this rule is duplicated in ember-bootstrap/bootstrap/_navs.scss, so get higher specificity by prefixing with body.mapview */
+body.mapview .nav-tabs > li.active > a,
+body.mapview .nav-tabs > li.active > a:hover,
+body.mapview .nav-tabs > li.active > a:focus{
     color: #555555;
-    background-color: lightblue;  
+    background-color: lightblue;
 } 
 
 /* -------------------------------------------------------------------------- */
@@ -40,7 +41,7 @@ div#Page-Nav > div > div.navbar > div > div.navbar > ul.nav {
   display: flex;
 }
 
-div#logo {
+div.app-logo {
   padding: 10px 15px;
 }
 
@@ -122,6 +123,13 @@ div#logo {
   }
 }
 
+#headsUp {
+  position : absolute;
+  /* left : 70px; */
+  /* top : 50px; */
+  margin-left : -20px;
+  margin-top : 15px;
+}
 
 /* -------------------------------------------------------------------------- */
 /* Handle to resize a panel width. 
@@ -131,19 +139,25 @@ div#logo {
   font-weight: 900;
   font-size: larger;
   float: right;
-  margin-right: -6px;
+  /* align the icon above the border it moves */
+  margin-right: -6px  !important;
+  margin : 1px;
+  padding : 2px 2px;
 }
 .resizer:hover
 {
   border: 1px #337ab7 dashed;
   border-radius :  6px;
-  padding : 2px 2px;
+  margin-right: -7px  !important;	/* -6px - 1px to balance the border 1px */
+  margin : 0px;
 
-  font-size: x-large;
+  /* font-size: x-large; */
   color: #337ab7;  // brand blue;
 }
-/* This doesn't work within <foreignObject>, so :not(.inFO) is used. */
-.resizer:not(.inFO)::after {
+/* This doesn't work within <foreignObject>, so :not(.inFO) is used.
+ * draw-map resizer has an icon, doesn't need this one.
+ */
+.resizer:not(.inFO):not(.no-resizer-icon)::after {
 /*	⇹	8697	21F9	 	LEFT RIGHT ARROW WITH VERTICAL STROKE	*/
   content: "\21F9";
   right: -20px;
@@ -161,7 +175,6 @@ div#logo {
 .resizer:hover
 {
   opacity : 0.7;
-  font-weight: 900;
   color: hsl(208, 95%, 52%);	// #337ab7 with increased saturation and luminosity
 }
 /* The resizer icon is wrapped in div.menuHead : width: 100%, so that it remains
@@ -230,6 +243,10 @@ svg {
 g.axis-use > rect {
   fill: none;
   /* stroke: blue; */
+}
+rect.track:hover {
+  /** single-pixel-high <rect>s are difficult to click (to toggle selected.features), so increase width when hover.  */
+  stroke-width: 3;
 }
 g.axis-use > g.tracks > g > rect.track {
   /* fill: lightblue; */
@@ -474,8 +491,8 @@ body.allInitially
 }
 
 
-.axis line, .axis path,
-.axis-use > path
+.axis line, .axis path:not(.horizTick),
+.axis-use > path:not(.horizTick)
 {
   fill: none;
   shape-rendering: crispEdges;
@@ -488,8 +505,10 @@ body.allInitially
 
 .axis text {
   text-shadow: 0 1px 0 #fff;
-  cursor: move;
   // text-anchor: middle;
+}
+body.ctrl-modifier .axis text {
+  cursor: move;
 }
 /* since split axis, now have (g.axis-outer (g.axis-all ( g.axis  (g.tick ...))) (text) ... ) */
 .axis-outer:not(.not_top) > .axis-all > text,
@@ -578,8 +597,15 @@ g.brush:hover > g > rect.overlay {
     -webkit-tap-highlight-color: rgba(70, 30, 50, 0);
 }
 g.tick:hover {
-    outline: 1px dashed orange; 
+  /* indicate that g.axis > g.tick > text can be dragged with ctrl-click. */
+  outline: 1px dashed orange; 
 }
+/* feedback : no need to increase font size on hover.
+g.axis > g.tick > text:hover {
+  font-size: larger;
+  font-weight: bolder;
+}
+*/
 
 /* This (stroke colour) was applied for selector .horizTick until 655bfe3
  * introduced axisTitleColour().
@@ -599,7 +625,20 @@ path.horizTick.fromInput
 }
 g.foundFeatures > path.horizTick
 {
-  stroke-width : 3px;
+  stroke-width : 1px;
+}
+g.foundFeatures.horizTick > path.horizTick:hover {
+  /* indicate this element is clickable, and make it easier to click.  */
+  stroke-width: 5px;
+}
+
+
+g.horizTick.labelledFeatures > text.horizTick {
+    stroke-width: initial;
+    text-anchor: end;
+    // or alignment-baseline: middle, mathematical;
+    dominant-baseline : central;
+    text-shadow: initial
 }
 
 path.syntenyEdge
@@ -616,6 +655,19 @@ path.syntenyEdge.inverted
   stroke-dasharray: 16 8 16 40;
 }
 
+/*----------------------------------------------------------------------------*/
+/* no border for popover when displayed in top-right of graph, i.e. ! hoverNearElement */
+#holder > div.popover.no-border
+{
+  border : none;
+  box-shadow : none;
+
+  /* avoid overlapping the top border of the graph area */
+  margin-top: 20px;
+  .popover-content {
+      padding-top : 0;
+  }
+}
 
 /*----------------------------------------------------------------------------*/
 /* Button */
@@ -828,6 +880,31 @@ li.dropdown-submenu > ul.dropdown-menu {
     border-radius: 6px 0 6px 6px;
 }
 /* -------------------------------------------------------------------------- */
+/* dataset explorer : .textInput  #nameFilter */
+
+#left-panel-explorer > div > div.panel.panel-primary > .textInput {
+  margin : 0px;
+  margin-top: 2ex;
+  margin-right: 1em;
+  display: flex;
+}
+.textInput #nameFilter
+{
+  margin-left: 10px;
+  /* margin-right: 1em; */
+  width: 85%;
+  font-size: xx-large;
+
+  flex-grow: 1;
+  overflow-x: auto;
+}
+.textInput > i.glyphicon
+{
+  display: none;
+  margin: 0.8ex;
+  font-size : large;
+}
+
 /* dataset explorer : filter-group */
 
 .filter-groups {
@@ -900,8 +977,16 @@ li.filter-group > div > span:last-child {
 
 /* dataset explorer : tree browser */
 
+#left-panel-explorer .api-server {
+  margin-bottom: 2ex;
+}
+
 #left-panel-explorer a.apiServer {
     border : 7.5px solid;
+}
+#left-panel-explorer ul.nav-tabs.api-server-tabs > li {
+    margin-top: 2ex;
+    margin-bottom: 1ex;
 }
 #tab-explorer-parent  ul {
   /* there is enough indent in the li, so 0 is enough here. */
@@ -1148,6 +1233,13 @@ ul#display-blocks > li.selected,
   font-weight: bold;
 }
 
+/* indicate that the axis title text can be clicked to show axis-menu. */
+g.axis-outer > g.axis-all > text:hover {
+  color: orange;
+  font-style : italic;
+  font-weight : bolder;
+  /* transform : translate(-1px, -1px); */ /* causes text-anchor to change also, when split axis */
+}
 g.axis-outer.selected /* > g.axis-all > g.axis > */ text {
   font-weight: bold;
 }
@@ -1196,6 +1288,7 @@ div.popover/*.axis-menu*/ div.popover-content {
 /* -------------------------------------------------------------------------- */
 /* When the feature flag (ff) alpha is not defined, don't display the elements with class ff-alpha.  */
 body div > ul > li > div > div.btn-group.ff-alpha,
+ul.list-group > li.list-group-item.ff-alpha,
 .ff-alpha
 {
     display : none;
@@ -1325,27 +1418,65 @@ div#left-panel > ul
   display : block;
 }
 
-div#left-panel > div.tab-content
+div#left-panel > div
+{
+  height: 100%;
+}
+div#left-panel > div > div.tab-content
 {
   height: 100%;
   overflow-y: hidden;
 }
 
-div#left-panel > div.tab-content > div.tab-pane
+div#left-panel > div > div.tab-content > div.tab-pane
 {
   height: inherit;
-  overflow-y: scroll;
+  overflow-y: auto;	/* possibly scrollbar-gutter in future. */
 }
 
+#left-panel > div > div.tab-content > div.tab-pane > div {
+  /* this enables the scrollbar to reach the bottom of the div, there is probably a better solution.  */
+  margin-bottom: 70px;
+}
 
-div#left-panel-view > div > div > div > ul > li > div
+/*------------------------------------*/
+
+/** e.g. sequence-search */
+ul.config-list {
+  padding-left: 0px;
+  margin: 1em;
+  margin-right: 0px;
+}
+
+/*------------------------------------*/
+/* in featureSearch results, wrap block names  */
+div#left-panel-feature-search > div > div > div > ul > li > div
 {
   overflow-wrap: break-word;
   text-indent: 1em;
 }
-div#left-panel-view > div > div > div > ul > li > div > button
+div#left-panel-feature-search > div > div > div > ul > li > div > button
 {
     float : left;
+}
+/*------------------------------------*/
+/* view-controls : text sub-label (div or span)  */
+ul.view-controls > li > div > .sub-label  {
+  margin-left:2em;
+  vertical-align: bottom;
+}
+ul.view-controls > li > div > .sub-label > span {
+  margin-left:1.2em;
+}
+/*------------------------------------*/
+
+/* used for #left-panel-upload > div > .panel
+ * Space is tight and the upload table has no side margin.
+ */
+.panel.no-side-border {
+  border-left: none;
+  border-right: none;
+  padding-bottom: 10px;
 }
 
 div#left-panel-upload select
@@ -1432,6 +1563,29 @@ div.metaeditor-panel div.jsoneditor-treepath {
 div.metaeditor-panel div.jsoneditor {
   border: 1px solid #d3d3d3
 }
+
+div.meta-row > div > div {
+  display : inline-block;
+}
+div.meta-row > div > button {
+  display : inline-block;
+  margin-left : 2em;
+}
+
+
+/* ember-content-editable/addon/styles/addon.css does  [contenteditable] { ...  -webkit-user-modify: read-write-plaintext-only; }
+ * which should probably be   [contenteditable=true] ...
+ */
+.jsoneditor-field[contenteditable=false],
+.jsoneditor-value[contenteditable=false] {
+    -webkit-user-modify: read-only;
+}
+
+/* in the read-only json-editor, disable the buttons */
+div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
+    visibility: hidden;
+}
+
 /* -------------------------------------------------------------------------- */
 /** for components/draw/axis-brushes */
 .axis-brushes table {
@@ -1474,7 +1628,7 @@ div.metaeditor-panel div.jsoneditor {
 }
 
 /* -------------------------------------------------------------------------- */
-#new-datasource-modal .labelled-inputs {
+.new-datasource-modal .labelled-inputs {
   display: grid;
   /* 2nd column uses remainder. */
   grid-template-columns: 7em;
@@ -1487,7 +1641,7 @@ div.metaeditor-panel div.jsoneditor {
 .labelled-inputs input {
   grid-column : 2;
 }
-#new-datasource-modal input {
+.new-datasource-modal input {
   width: 100%;
 }
 /* Copied from the app's panel colours (bootstrap). */
@@ -1518,5 +1672,65 @@ span.glyphicon {
 {
   font-size: larger;
 }
+
+/* -------------------------------------------------------------------------- */
+
+.axis-menu {
+  /* overflow : hidden; */
+}
+
+/* for .axis-menu,  sometimes .tooltip  */
+.axis-menu.ember-popover
+{
+  padding: 6px;
+  /* from .panel-primary > .panel-heading  */
+  background-color: #337ab7;  /* surrounds inner,  like border-color */
+  max-width : inherit;
+  margin-bottom : 0px;
+}
+.axis-menu-inner > div > button.close {
+  float : right;
+}
+.axis-menu-inner {
+  /* from .list-group-item-info */
+  color: #31708f;
+  background-color: #d9edf7;
+  padding : 0.8em;
+}
+.axis-menu-inner > div {
+  min-width : 30em;
+}
+.axis-menu-inner .menu-icons {
+  padding: 9px 14px;
+  background: white;
+  width: fit-content;
+  margin : auto;
+  border-radius: 5px;
+  margin-bottom: 1em;
+}
+.axis-menu-inner > div > div,
+.axis-menu-inner > div > ul {
+    margin: auto;
+    width: fit-content;
+}
+.axis-menu-inner > div > ul.dataBlocks > li:first-child {
+  margin-top : 1em;
+}
+.axis-menu-inner .menu-icons > button:not(:first-child) {
+  margin-left: 5px;
+}
+
+div.axis-menu-inner > div > ul.dataBlocks > li > button {
+  font-size: x-small;
+}
+
+
+/* -------------------------------------------------------------------------- */
+
+@import "ember-bootstrap/bootstrap";
+
+@import "ember-modal-dialog/ember-modal-structure";
+@import "ember-modal-dialog/ember-modal-appearance";
+
 
 /* -------------------------------------------------------------------------- */

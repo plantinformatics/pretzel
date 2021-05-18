@@ -1,12 +1,28 @@
-import Ember from 'ember';
+import { isArray } from '@ember/array';
+import { throttle, next, later } from '@ember/runloop';
+import EmberObject, { computed } from '@ember/object';
+import { alias, filter } from '@ember/object/computed';
+import $ from 'jquery';
 import { inject as service } from '@ember/service';
 
+import { isEqual } from 'lodash/lang';
 
-import createIntervalTree from 'npm:interval-tree-1d';
+import createIntervalTree from 'interval-tree-1d';
 
-import { eltWidthResizable, noShiftKeyfilter } from '../utils/domElements';
+import {
+  eltWidthResizable,
+  noShiftKeyfilter
+} from '../utils/domElements';
+import { configureHover } from '../utils/hover';
 import InAxis from './in-axis';
-import {  eltId, axisEltId, eltIdAll, axisEltIdClipPath, trackBlockEltIdPrefix, axisTitleColour }  from '../utils/draw/axis';
+import {
+  eltId,
+  axisEltId,
+  eltIdAll,
+  axisEltIdClipPath2d,
+  trackBlockEltIdPrefix,
+  axisTitleColour
+} from '../utils/draw/axis';
 import { ensureSvgDefs } from '../utils/draw/d3-svg';
 
 /*----------------------------------------------------------------------------*/
@@ -14,7 +30,7 @@ import { ensureSvgDefs } from '../utils/draw/d3-svg';
  * Match with time used by draw-map.js : zoom() and resetZoom() : 750.
  * also @see   dragTransitionTime and axisTickTransitionTime.
  */
-const featureTrackTransitionTime = 750;
+let featureTrackTransitionTime = 750;
 
 /** If false, track <rect>s are trackWidth wide, and layering them to avoid
  * overlap cause the width allocated to the block to increase.
@@ -55,46 +71,98 @@ let trace_count_NaN = 10;
 const dLog = console.debug;
 
 /*------------------------------------------------------------------------*/
-/* copied from draw-map.js - will import when that is split */
-/** Setup hover info text over scaffold horizTick-s.
- * @see based on similar configureAxisTitleMenu()
+
+/**
+ * @param tagName name of SVG element to create
  */
-function  configureHorizTickHover(location)
-{
-  // console.log("configureHorizTickHover", location, this, this.outerHTML);
+function createElementSvg(tagName) {
+  return document.createElementNS('http://www.w3.org/2000/svg', tagName);
+}
+
+/** If the selected element has the alternate tag, replace it.
+ * @param fromTag, toTag, 
+ * @param element
+ * @param attributesForReplace  d3 each function which applies attributes and configuration for a new element
+ * @return original element, or new element
+ */
+function swapTag(fromTag, toTag, element, attributesForReplace) {
+  if (element.tagName === fromTag) {
+    let to = createElementSvg(toTag);
+    element.replaceWith(to);
+    dLog('swapTag', fromTag, toTag, element, to, element.__data__);
+    // copy d3 attributes to new element.
+    if (element.__data__) {
+      to.__data__ = element.__data__;
+    }
+    /* set width and configure to.__on */
+    d3.select(to)
+      .each(attributesForReplace);
+
+    element.remove();
+    element = to;
+  }
+  return element;
+}
+
+
+/*------------------------------------------------------------------------*/
+
+/** @return the given location as string for display as hover text.
+ * @param d featureData, i.e. interval, based on feature.value
+ * called via text = textFn(context, d);
+ */
+function hoverTextFn(location, d, i, g) {
+  /** location is d.description */
   /** typeof location may also be "number" or "object" - array : syntenyBlocks[x] */
   let text = (location == "string") ? location :  "" + location;
-  let node_ = this;
-  Ember.$(node_)
-    .popover({
-      trigger : "click hover",
-      sticky: true,
-      delay: {show: 200, hide: 3000},
-      container: 'div#holder',
-      placement : "auto right",
-      content : text
-    });
+  if (trace > 1) {
+    dLog('hoverTextFn', location, d, this, g[i]);
+  }
+  return text;
 }
+
 /*----------------------------------------------------------------------------*/
 
 /** Configure hover text for tracks. */
 function  configureTrackHover(interval)
 {
-  return configureHorizTickHover.apply(this, [interval.description]);
+  return configureHover.apply(this, [interval.description, hoverTextFn]);
 }
-/** Same as configureHorizTickHover(), except for sub-elements,
+/** Same as configureTrackHover(), except for sub-elements,
  * for which the source data, and hence .description, is in interval.data,
  * because the interval tree takes just the interval as input.
  */
 function  configureSubTrackHover(interval)
 {
-  return configureHorizTickHover.apply(this, [(interval.data || interval).description]);
+  return configureHover.apply(this, [(interval.data || interval).description, hoverTextFn]);
+}
+
+/*----------------------------------------------------------------------------*/
+
+function configureClick(selected, featureData2Feature) {
+  return function (selection) {
+    selection.on('click', function (d, i, g) { clickTrack.apply(this, [selected, featureData2Feature, d]);});
+  };
+}
+function clickTrack(selected, featureData2Feature, featureData) {
+  let feature = featureData2Feature.get(featureData);
+  dLog('clickTrack', featureData, feature.id, feature);
+  selected.clickFeature(feature);
 }
 
 /*----------------------------------------------------------------------------*/
 
 /** For d3 .data() key function */
 function I(d) { return d; }
+
+/*----------------------------------------------------------------------------*/
+
+/** Make the description unique in case there are multiple
+ * positions for the same feature name.
+ */
+function intervalUniqueName(description, interval) {
+  return description + "_" + interval[0];
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -183,12 +251,16 @@ function regionOfTree(intervalTree, domain, sizeThreshold, abutDistance, assignO
       }
       return unused;
     }
-    /** if layersUsed is empty, then ++lastUsed is 1,  */
-    let lastUsed = (layersUsed.length - 1) || 0,
+    /** if layersUsed is empty, then ++lastUsed is 1,
+     * if layersUsed is not empty, layersUsed[0] is empty, and
+     * layersUsed[layersUsed.length - 1] is true and layersUsed.length - 1 is
+     * the largest layer used.  e.g. if the only element is [1], lastUsed is 1.
+     */
+    let lastUsed = layersUsed.length ? (layersUsed.length - 1) : 0,
     u =  unusedLayers();
     function chooseNext() {
       let next = u.pop() || ++lastUsed;
-      if (next > 2) {
+      if (trace > 2 && next > 2) {
         dLog('chooseNext', next, u, lastUsed, 'trackBlocksData');
       }
       if (next > largestLayer) {
@@ -305,7 +377,7 @@ class SubElement {
   constructor(data) {
     this.data = data;
   }
-};
+}
 /** static, also  member @see getInterval()  */
 SubElement.getInterval = function(data) {
   let interval = data.slice(0, 2);
@@ -324,6 +396,86 @@ SubElement.prototype.getInterval = function() {
 };
 
 
+/*----------------------------------------------------------------------------*/
+
+/** @return true if the feature track interval is > MinimumIntervalWithArrow
+ * @param y y scale of axis containing block of feature
+ * @param featureData feature element data : feature.value[] plus layer and {,u}description 
+ */
+function showTriangleP(y, featureData) {
+  let
+  yS = featureData,
+  yLength = y(yS[1]) - y(yS[0]),
+  yLengthAbs = Math.abs(yLength),
+  show = (yLengthAbs >= MinimumIntervalWithArrow);
+  return show;
+}
+
+/** Construct a <path> which covers the end of an axis track with background
+ * colour, leaving a vertical isosceles triangle, pointing in the positive
+ * direction of the track interval.
+ *
+ * This is used to indicate direction of features / axis track rectangles.
+ * @param y y scale of axis containing block of feature
+ * @param yInterval	unscaled y position (interval) of feature
+ * @param xWidth	width in px of track
+ * @param xPosn xOffset, incorporates layer offset
+ */
+function rectTrianglePath(y, yInterval, xWidth, xPosn) {
+  /** related : axisApi.lineHoriz(), featureLineS(), horizTrianglePath().  */
+  /**
+   *   ^	- yS[1]		-
+   *  / \	^		triangleLength
+   *  + +	|		-
+   *  | |
+   *  | |	|
+   *  | |	v
+   *  +-+	_ yS[0]
+   *
+   *  | xOffset
+   *  | |	xWidth
+   *
+   * triangleLength :
+   * . 0 if length(yS) < MinimumIntervalWithArrow
+   * . MaxArrowLength if length(yS) > MaximumIntervalWithArrow
+   * . proportionate in between
+   */
+  let
+  /* scaled y position (interval) of feature */
+  yS = [y(yInterval[0]), y(yInterval[1])],
+  yLength = yS[1] - yS[0],
+  yDirection = Math.sign(yLength),
+  yLengthAbs = Math.abs(yLength),
+  triangleLength =
+    (yLengthAbs < MinimumIntervalWithArrow) ? 0 :
+    (yLengthAbs > MaximumIntervalWithArrow) ? MaxArrowLength : 
+    (
+      MaxArrowLength * (yLengthAbs - MinimumIntervalWithArrow) / 
+        (MaximumIntervalWithArrow - MinimumIntervalWithArrow)
+    ),
+  yShoulder = yS[0] + yDirection * (yLengthAbs - triangleLength);
+  
+  let xOffset = xPosn;
+  let path = d3.line()([
+    // base
+    [xOffset, yS[0]],
+    [xOffset + xWidth, yS[0]],
+
+    // triangle
+    [xOffset + xWidth, yShoulder],
+    [xOffset + xWidth/2, yS[1]],
+    [xOffset, yShoulder]
+
+  ]) + 'Z';
+  return path;
+};
+
+/** px */
+/** interval < this size : no arrow is shown (<rect> instead of <path>). */
+const MinimumIntervalWithArrow	= 10,
+/** interval > this size : the arrow length does not increase. */
+      MaximumIntervalWithArrow = 100,
+      MaxArrowLength = 20;
 
 /*----------------------------------------------------------------------------*/
 
@@ -332,7 +484,10 @@ SubElement.prototype.getInterval = function() {
 export default InAxis.extend({
 
   queryParams: service('query-params'),
-  urlOptions : Ember.computed.alias('queryParams.urlOptions'),
+  urlOptions : alias('queryParams.urlOptions'),
+  selected : service('data/selected'),
+  axisZoom: service('data/axis-zoom'),
+
 
   className : "tracks",
   
@@ -342,6 +497,9 @@ export default InAxis.extend({
    * and .layoutWidth for the block.
    */
   blocks : {},
+
+  featureData2Feature : new WeakMap(),
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -399,7 +557,7 @@ export default InAxis.extend({
   /** @return the axis-1d which contains the axis-2d which contains this axis-tracks.
    * @desc Currently uses lookup via .axis; this can instead be passed in as a parameter.
    */
-  axis1d : Ember.computed('axis.axis1d', 'axis.axis1d.isDestroying', function () {
+  axis1d : computed('axis.axis1d', 'axis.axis1d.isDestroying', function () {
     /** this CP could be simply a .alias, but it can get a reference to a axis1d
      * which is being destroyed; probably need a small design change in the
      * component relations. */
@@ -411,21 +569,21 @@ export default InAxis.extend({
     return axis1d;
   }),
   /** @return the corresponding stacks.js axis / Stacked object. */
-  axisS : Ember.computed.alias('axis.axis'),
+  axisS : alias('axis.axis'),
   /** Current Y interval within the total domain of the axis reference block. */
-  currentPosition : Ember.computed.alias('axis1d.currentPosition'),
-  yDomain : Ember.computed.alias('currentPosition.yDomain'),
-  stackBlocks : Ember.computed.alias('axis1d.drawMap.oa.stacks.blocks'),
+  currentPosition : alias('axis1d.currentPosition'),
+  yDomain : alias('currentPosition.yDomain'),
+  stackBlocks : alias('axis1d.drawMap.oa.stacks.blocks'),
 
   /** From the Ember block objects, derive the stack Blocks. */
-  trackBlocks : Ember.computed('trackBlocksR.@each.view', function () {
+  trackBlocks : computed('trackBlocksR.@each.view', function () {
     let trackBlocksR = this.get('trackBlocksR'),
     trackBlocks = trackBlocksR.mapBy('view');
     console.log('trackBlocks', trackBlocksR, trackBlocks);
     return trackBlocks;
   }),
   /** Number of data blocks shown by this axis-tracks. */
-  nTrackBlocks : Ember.computed.alias('trackBlocksR.length'),
+  nTrackBlocks : alias('trackBlocksR.length'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -455,7 +613,7 @@ export default InAxis.extend({
     let args = [resized, tracks];
     console.log('showResize args', args);
     if (tracks)
-      Ember.run.throttle(this, this.layoutAndDrawTracks, args, 500, true);
+      throttle(this, this.layoutAndDrawTracks, args, 500, true);
   },
 
   /*--------------------------------------------------------------------------*/
@@ -500,6 +658,8 @@ export default InAxis.extend({
           }
         }
         interval.description = description;
+        interval.udescription = intervalUniqueName(description, interval);
+
         // let axisName = mapChrName2Axis(mapChrName);
         if (intervals[axisName] === undefined)
           intervals[axisName] = [];
@@ -536,6 +696,23 @@ export default InAxis.extend({
     return result;
   },
 
+  remove () {
+    /** Based on layoutAndDrawTracks() : gp .remove()
+     * related : axis-1d.js : selectGroup()
+     */
+    let
+    axisID = this.get('axisID'),
+    aS = selectAxis(axisID),
+    gp = aS.select("g.axis-use")
+      .selectAll("g.tracks");
+    if (! gp.empty()) {
+      console.log('removing', gp.nodes(), gp.node());
+      gp
+        .remove();
+    }
+  },
+
+
   /** Layout the feature rectangles and render them.
    * @param resized	undefined or {width, height}, which are true if the caller is a resize event.
    * @param tracks	result of tracksTree
@@ -547,6 +724,7 @@ export default InAxis.extend({
     let thisAt = this;
     let trackWidth = this.get('trackWidth');
 
+    featureTrackTransitionTime = this.get('axisZoom.axisTransitionTime');
     // seems run.throttle() .. .apply() is wrapping args with an extra [] ?
     if (resized && (resized.length == 2) && (tracks === undefined))
     {
@@ -619,13 +797,7 @@ export default InAxis.extend({
         Math.min(domainRange / 1000, 200) : 
         Math.min(-domainRange / 1000, 200),
       tracksLayout = regionOfTree(t, y.domain(), sizeThreshold, abutDistance, true),
-      data = tracksLayout.intervals.map(function(d) {
-        // Make the description unique in case there are multiple
-        // positions for the same feature name.
-        let r=Object.assign({}, d);
-        r.udescription=d.description+"_"+d[0];
-        return r;
-      });
+      data = tracksLayout.intervals;
       let blockState = thisAt.lookupAxisTracksBlock(blockId);
       blockState.set('layoutWidth', tracksLayout.nLayers * trackWidth * 2);
       if (! blockState.hasOwnProperty('subElements')) {
@@ -659,18 +831,31 @@ export default InAxis.extend({
         let
         p = this.parentElement,
         gBlock = subElements ? p.parentElement : p,
-        blockId = gBlock.__data__,
+        blockId = gBlock.__data__;
+  if (! subElements && (typeof blockId !== "string") && blockId.description && (typeof p.parentElement.__data__ === "string")) {
+      blockId = p.parentElement.__data__;
+  }
+  let
         blockC = thisAt.lookupAxisTracksBlock(blockId),
         trackWidth = blockC.trackWidth;
         /*console.log("xPosn", d);*/
         return ((d.layer || 1) - 1) *  trackWidth * 2;
       };
     };
+    /** @return the position of the start of the feature interval.
+     * @desc This is used in combination with heightDir().
+     */
+    function yPosnDir(d) {
+      return y(d[0]);
+    };
+    /** @return the position of the start or end of the feature interval, whichever is smaller.
+     * This is used in combination with height(), which returns a positive value.
+     */
     function yPosn(d) { /*console.log("yPosn", d);*/
       if (y(d[0]) > y(d[1]))
         return y(d[1]);
       else
-        return y(d[0])
+        return y(d[0]);
     };
     /** return the end of the y scale range which d is closest to.
      * Used when transitioning in and out.
@@ -685,11 +870,25 @@ export default InAxis.extend({
       end = range[1-closerToStart];
       return end;
     }
-    function height(d) {
+    /** @return height of feature in pixels at current scale,
+     * including the direction of the feature interval, i.e. start - end,
+     * i.e. .value[1] - .value[0],
+     */
+    function heightDir(d) {
+      /** createIntervalTree() requires positive intervals, so the
+       * .value [start,end] are reversed if negative (start > end) by
+       * tracksTree() and SubElement.getInterval().
+       * height() is used to determine the direction of triangles so
+       * use feature.value[] here
+       */
+      let feature = thisAt.featureData2Feature.get(d),
+          value = feature.get('value');
+      d = value;
+      let nonZeroInterval = Ember.isArray(d) && (d.length > 1) && (d[1] !== d[0]);
       /** if axis.zoomed then 0-height intervals are included, not filtered out.
        * In that case, need to give <rect> a height > 0.
        */
-      let height = (d[1] == d[0]) ? 0.01 : y(d[1]) - y(d[0]);
+      let height = ! nonZeroInterval ? 0.01 : y(d[1]) - y(d[0]);
       /* There was an issue causing NaN here, likely caused by 1-element array
        * .value, which is now handled.   Here that was causing d[1] undefined,
        * and hence y(d[1]) NaN.
@@ -698,7 +897,16 @@ export default InAxis.extend({
       {
         console.log('height NaN', d, 'y:', y.domain(), y.range());
       }
-      // When axis is flipped, height will be negative, so make it positive
+      return height;
+    }
+    /** Same as heightDir() but return the absolute value, used for
+     * drawing <rect> which requires a positive height.
+     */
+    function height(d) {
+      let height = heightDir(d);
+      /* When axis is flipped or feature direction is negative, height
+       * will be negative, so make it positive
+       */
       if (height < 0)
         height = -height;
       return height;
@@ -784,7 +992,7 @@ export default InAxis.extend({
     clipRect = clipRectS
       .enter()
       .append("clipPath")       // define a clip path
-      .attr("id", axisEltIdClipPath) // give the clipPath an ID
+      .attr("id", axisEltIdClipPath2d) // give the clipPath an ID
       .append("rect")          // shape it as a rect
     ;
     clipRectS
@@ -818,13 +1026,13 @@ export default InAxis.extend({
       console.log('clipRect', bbox.width, clipRect.node());
     }
     let g = gp.append("g")
-      .attr("clip-path", "url(#" + axisEltIdClipPath(axisID) + ")"); // clip the rectangle
+      .attr("clip-path", "url(#" + axisEltIdClipPath2d(axisID) + ")"); // clip the rectangle
 
     function trackKeyFn(featureData) {
       // Make description unique when multiple features with same name.
       return featureData.description+"_"+featureData[0];
     }
-    /** Add the <rect> within <g clip-path...>  */
+    /** Add the <rect>s and/or <path>s, or sub-elements, within <g clip-path...>  */
     let
     /** block select - datum is blockId. */
     bs = gAxis.selectAll("g.axis-use > g.tracks > g"),
@@ -845,37 +1053,72 @@ export default InAxis.extend({
     };
     function eachRect(blockId, i, g) {
       let
-      rs = d3.select(this).selectAll("rect.track")
+      /** match either rect or path */
+      rs = d3.select(this).selectAll(".track")
         .data(trackBlocksData, trackKeyFn),
       re =  rs.enter(), rx = rs.exit();
       dLog(rs.size(), re.size(),  'rx', rx.size());
-      rx
-        .transition().duration(featureTrackTransitionTime)
-        .attr('x', 0)
-        .attr('y', yEnd)
-        .on('end', () => {
-          rx.remove();
-        });
 
       let
       blockC = thisAt.lookupAxisTracksBlock(blockId),
       trackWidth = blockC.get('trackWidth');
       appendRect.apply(this, [re, rs, trackWidth, false]);
     }
-    /** - rename re and rs to ge and gs
+    /** Within a single block, render the features or sub-features of
+     * the selection as a <rect> or <path>
+     * 
+     * @param re  .entry() selection
+     * @param rs  selection
+     * @param width
+     * @param subElements true if features are sub-features
+     * - rename re and rs to ge and gs
      * es could be called rs
      * @param subElements true if (gene) sub-elements (intro/exon) are displayed for this block.
      */
     function appendRect(re, rs, width, subElements) {
+      const
+      // this.parentElement.__data__ is also the blockId
+      blockId = this.__data__,
+      block = thisAt.lookupBlock(blockId),
+      isPhased = block && (block.hasTag('phased') || block.get('datasetId._meta.phased')),
+      /** true to enable use of 5-point <path> (rectangle+triangle) as an
+       * alternate representation, with the triangle vertex indicating
+       * direction. */
+      useTriangle = false && isPhased;
+      /** true means <rect> will not be used - only <path> (rectangle+triangle).
+       */
+      const alwaysTri = true;
       let
+      /** true for the 3-point <path>. This is not alternated with <rect>, i.e. useBoth is false */
+      useTriangle3 = isPhased && ! subElements,
+      /** true when using <path> */
+      usePath = useTriangle3 || useTriangle,
+      /** true when using either <rect> or <path> depending on zoom
+       * (triangle point is only visible when zoomed in).  */
+      useBoth = useTriangle && ! alwaysTri,
+      tagName = ['rect', 'path'][+usePath],
       ra = re
-        .append("rect");
+        .append(! useBoth ? tagName : (d) => createElementSvg(useTriangle && (alwaysTri || showTriangleP(y, d)) ? 'path' : 'rect'));
       ra
         .attr('class', 'track')
-        .transition().duration(featureTrackTransitionTime)
         .each(subElements ? configureSubTrackHover : configureTrackHover);
+      if (! subElements) {
+        ra.call(configureClick(thisAt.selected, thisAt.featureData2Feature));
+      }
       rs.merge(ra)
-        .attr('width', width);
+        .transition().duration(featureTrackTransitionTime)
+        .attr('width', useTriangle ? ((d) => alwaysTri || showTriangleP(y, d) ? undefined : width) : width);
+
+      function attributesForReplace(d, i, g) {
+        let s =
+        d3.select(g[i])
+        .each(subElements ? configureSubTrackHover : configureTrackHover)
+        .transition().duration(featureTrackTransitionTime)
+        .attr('width', useTriangle ? ((d) => alwaysTri || showTriangleP(y, d) ? undefined : width) : width);
+        if (! subElements) {
+          s.call(configureClick(thisAt.selected, thisAt.featureData2Feature));
+        }
+      }
 
       let
       blockIndex = thisAt.get('axis1d.blockIndexes'),
@@ -887,8 +1130,11 @@ export default InAxis.extend({
       isSubelement = false,
       gSelector = subElements ? '.track' : '[clip-path]',
       elementSelector = isSubelement ? '.element' : ':not(.element)',
+      /** match either {rect,path}.track */
       es = subElements ?
-        rs.selectAll("g" + gSelector + " > rect.track" + elementSelector) : rs,
+        /** .track here will match rect.track, path.track; not just tagName + '.track' 	 */
+      // if tagName is required here, would need to repeat the whole selector for rect,path - better to make class more specific
+        rs.selectAll("g" + gSelector + " > .track" + elementSelector) : rs,
       /** ra._parents is the g[clip-path], whereas es._parents are the g.track.element
        * es.merge(ra) may work, but ra.merge(es) has just 1 elt.
        */
@@ -896,19 +1142,171 @@ export default InAxis.extend({
         .merge(ra);
       dLog('rm', rm.node(), 'es', (trace > 1) ? es.nodes() : es.size(), es.node());
       ra
-        .attr('y', yEnd);
+        .attr('y', (d,i,g) => useTriangle && (alwaysTri || showTriangleP(y, d)) ? undefined : yEnd.apply(this, [d, i, g]));
+      if (! useTriangle) {
+        ra
+          .call(positionUpdate);
+        let rmt =
+        rm
+          .transition().duration(featureTrackTransitionTime)
+          .call(fadeOutIfZoomedOut)
+          .call(positionUpdate);
+        if (useTriangle3) {
+          ra
+            .each(triangleDimensions);
+          rmt
+            .each(triangleDimensions);
+        }
+      }
+      else if (alwaysTri) {
+        let xPosnFn = xPosnS(subElements);
+        rm
+          // maybe transition
+          .attr('d', (d,i,g) => rectTrianglePath(y, d, width, xPosnFn.apply(this, [d, i, g])));
+      }
+      else {
       rm
       // .transition().duration(featureTrackTransitionTime)
-      .attr('x', xPosnS(subElements))
-      .attr('y', yPosn)
-      .attr('height' , height)
+        .each(
+          (d,i,g) => showTriangleP(y, d) ?
+            function (d, i, g) {
+              g[i] = swapTag('rect', 'path', g[i], attributesForReplace);
+              let x = xPosnS(subElements).apply(this, [d, i, g]);
+              d3.select(g[i])
+                .attr('d', (d,i,g) => rectTrianglePath(y, d, width, x));
+            }.apply(this, [d, i, g]) :
+          function (d, i, g) {
+            g[i] = swapTag('path', 'rect', g[i], attributesForReplace);
+            d3.select(g[i])
+              .call(rectUpdate);
+          }.apply(this, [d, i, g])
+        );
+      }
+
+      /** Transition the exiting <rect>s and <paths> to the end of the
+       * y scale range which d is closest to, using yEnd.
+       * Then remove them after that transition.
+       */
+      let rx = rs.exit();
+      if (usePath) {
+        const
+        xPosnD = 0,
+        yPosn = yEnd;
+        rx
+          .transition().duration(featureTrackTransitionTime)
+          .attr('transform', (d,i,g) => "translate(" + xPosnD + ", " + yPosn.apply(this, [d, i, g]) + ")")
+          .on('end', () => {
+            rx.remove();
+          });
+      } else {
+        rx
+          .transition().duration(featureTrackTransitionTime)
+          .attr('x', 0)
+          .attr('y', yEnd)
+          .on('end', () => {
+            rx.remove();
+          });
+      }
+
+
+      function positionUpdate(selection) {
+        if (usePath) {
+          selection
+            .attr('transform', featureTransform);
+        } else {
+          rectUpdate(selection);
+        }
+      }
+      function rectUpdate(selection) {
+        selection
+          .attr('x', xPosnS(subElements))
+          .attr('y', yPosn)
+          .attr('height' , height);
+      }
+      /** zoom:Reset will generally replace feature tracks with
+       * features counts charts (axis-charts.js), depending on
+       * featuresCountsThreshold.
+       * To make this less abrupt, transition the tracks out by
+       * reducing opacity.
+       */
+      function fadeOutIfZoomedOut(selection) {
+        /** If block.isZoomedRightOut and selection is a transition,
+         * and opacity is not set, set it to 1 immediately, and
+         * transition to 0.
+         */
+        let t0 = selection.node();
+        if (t0) {
+          /** may not be blockId, e.g subElements, so default to false. */
+          let blockId = t0.parentElement.__data__,
+              block = blockId && oa.stacks.blocks[blockId],
+              out = block && block.block.isZoomedRightOut();
+          /** if selection is a transition */
+          if (out && selection.selection) {
+            /* if called again before transition is complete,
+             * don't restart the attribute values. */
+            if (! t0.hasAttribute('stroke-opacity')) {
+              selection.selection()
+                .attr('stroke-opacity', 1)
+                .attr('fill-opacity', 1);
+            }
+            selection
+              .attr('stroke-opacity', 0)
+              .attr('fill-opacity', 0);
+          }
+        }
+      }
+      rm
       .attr('stroke', blockTrackColourI)
       .attr('fill', blockTrackColourI)
       ;
+
       dLog('ra', ra.size(), ra.node(), 'rm', rm.size(), rm.node());
       // result is not used yet.
       return ra;
     }
+    /** Position the feature representation (<path>) with a transform.
+     * This plays an analogous role to rectUpdate(), which does not
+     * apply to path because it sets x,y,height.
+     */
+    function featureTransform(d, i, g) {
+      let
+      xPosnD = xPosnS(/*subElements*/false).apply(this, [d, i, g]),
+      yPosnD = yPosnDir.apply(this, [d, i, g]),
+      /** xPosnS() offsets by  + d.layer*trackWidth  */
+      transform = "translate(" + xPosnD + ", " + yPosnD + ")";
+      return transform;
+    }
+    /** triangle with tip facing toward the axis.
+     * Used to make features obvious when small (height) and sparse / useTriangle3.
+     * (could use a line segment with an arrow, see lineDimensions() : showArrow).
+     */
+    function triangleDimensions(d, i, g) {
+      let
+      width = trackWidth / 2,
+      tWidth = width/2,
+      heightD = heightDir.apply(this, [d, i, g]),
+      /** either a horizontal arrow pointing left, or a vertical arrow pointing in the direction of the feature interval. */
+      vertical = true,
+      /** based on lineDimensions() : sideWedge -> triangle,  tipY -> heightD, wedgeX -> tWidth,  */
+      triangle = vertical ?
+        [
+          [width, 0],
+          [0, 0],
+          [tWidth, heightD]
+        ] :
+        [
+          [tWidth, heightD],
+          [0, heightD / 2],
+          [tWidth, 0]
+        ],
+      points = triangle,
+      l =
+        d3.select(this)
+        .attr('d', d3.line()(points))
+      ;
+      dLog('triangleDimensions', width, tWidth, heightD, points);
+    }
+
     /** subElements */
     function eachGroup(blockId, i, g) {
       let
@@ -946,7 +1344,7 @@ export default InAxis.extend({
       function elementDataFn (d, i, g) {
         let featureValue = d;
         featureValue = featureValue && featureValue[2];
-        if (! Ember.isArray(featureValue))
+        if (! isArray(featureValue))
           featureValue = [];
         return featureValue;
       }
@@ -1235,7 +1633,7 @@ export default InAxis.extend({
       return blockTrackColour;
     }
     /** note of how blockColour() would be used. */
-    let blockTrackColour = blockColour('rect.track');
+    let blockTrackColour = blockColour('rect.track, path.track');
     if (false)
       // gp
       d3.selectAll('g.tracks')
@@ -1285,7 +1683,7 @@ export default InAxis.extend({
 
   /** Not used; can be used in .hbs for trace, for comparison against the result
    * of showTrackBlocks(). */
-  blocksFeaturesLengths : Ember.computed(
+  blocksFeaturesLengths : computed(
     'trackBlocksR.@each.featuresLength',
     'trackBlocks.[]', 'trackBlocksR.0.featuresLength', 'trackBlocksR.0.features.[]',
     function () {
@@ -1298,13 +1696,14 @@ export default InAxis.extend({
   /** Construct a interval tree from the track data.
    * This is used for filtering and for layering.
    */
-  tracksTree : Ember.computed('trackBlocksR.@each.featuresLength', function () {
+  tracksTree : computed('trackBlocksR.@each.featuresLength', function () {
     let
     axisID = this.get('axisID'),
     trackBlocksR = this.get('trackBlocksR'),
     featuresLengths = this.get('trackBlocksR').mapBy('featuresLength');
     console.log('tracksTree', axisID, this, trackBlocksR, featuresLengths);
     let
+    featureData2Feature = this.featureData2Feature,
     /** similar to : axis-1d.js : showTickLocations(), which also does .filter(inRange)
      */
     intervals = trackBlocksR.reduce(
@@ -1315,6 +1714,12 @@ export default InAxis.extend({
           .toArray()  //  or ...
           .map(function (feature) {
             let interval = feature.get('range') || feature.get('value');
+            /* extra attributes will be added to interval : .description,
+               * .udescription, .feature.   Can copy .value to avoid modifying
+               * store object with attributes which are local and ephemeral. */
+            interval = interval.slice();
+            featureData2Feature.set(interval, feature);
+
             /* copy/paste into CSV in upload panel causes feature.value to be a
              * single-element array, e.g. {name : "my1AGene1", value : [5200] }
              * interval-tree expects an interval to be [start, end].
@@ -1335,6 +1740,14 @@ export default InAxis.extend({
               interval[1] = swap;
             }
             interval.description = feature.get('name');
+            interval.udescription = intervalUniqueName(interval.description, interval);
+            /* for datasets with tag 'SNP', feature .values.{ref,alt} is reference / alternate,
+             * e.g. "A/G", "T/C" etc */
+            let values = feature.get('blockId.isSNP') && feature.get('values');
+            if (values && (values.ref || values.alt)) {
+              let refAlt = (values.ref || '') + '/' + (values.alt || '');
+              interval.description += ('\n' + refAlt);
+            }
             return interval;
           });
         blockFeatures[blockId] = features;
@@ -1357,6 +1770,13 @@ export default InAxis.extend({
     return tracks;
   }),
 
+  lookupBlock(blockId) {
+    let
+    blockS = this.get('stackBlocks')[blockId],
+    block = blockS && blockS.block;
+    return block;
+  },
+
   /** The blocks within axis-tracks have collected some attributes,
    * so will likely be split out as a sub-component.
    * As an interim step, this function maps blockId to an object
@@ -1369,7 +1789,7 @@ export default InAxis.extend({
    */
   lookupAxisTracksBlock(blockId) {
     let blocks = this.get('blocks'),
-    blockState = blocks[blockId] || (blocks[blockId] = Ember.Object.create());
+    blockState = blocks[blockId] || (blocks[blockId] = EmberObject.create());
     if (! blockState.hasOwnProperty('subElements')) {
       let blockS = this.get('stackBlocks')[blockId];
       blockState.subElements = blockS.block.get('isSubElements');
@@ -1416,7 +1836,7 @@ export default InAxis.extend({
 
   /** Map .trackBlocksR to the IDs of the track blocks.
    */
-  blockIds : Ember.computed('trackBlocksR.[]', function () {
+  blockIds : computed('trackBlocksR.[]', function () {
     let
     trackBlocksR = this.get('trackBlocksR'),
     blockIds = trackBlocksR.mapBy('id');
@@ -1426,7 +1846,7 @@ export default InAxis.extend({
    * e.g. 'blockComps.@each.layoutWidth'
    * The block components are sub-components of axis-track.
    */
-  blockComps : Ember.computed('blockIds.[]', function () {
+  blockComps : computed('blockIds.[]', function () {
     let
     blocks = this.get('blocks'),
     blockIds = this.get('blockIds'),
@@ -1439,7 +1859,7 @@ export default InAxis.extend({
    * Side Effect: assigns block.offset which is the progressive value of the sum,
    * if ! fixedBlockWidth.
    */
-  blockLayoutWidthSum : Ember.computed('blockComps.@each.layoutWidth', function () {
+  blockLayoutWidthSum : computed('blockComps.@each.layoutWidth', function () {
     let
     blockIds = this.get('blockIds');
 
@@ -1466,8 +1886,8 @@ export default InAxis.extend({
     dLog('blockLayoutWidthSum', width, blockIds.length, blockIds2.length, this.get('blockComps.length'));
     return width;
   }),
-  variableWidthBlocks : Ember.computed.filter('trackBlocksR', (block) => block.get('isSubElements')),
-  layoutWidth : Ember.computed('variableWidthBlocks', function () {
+  variableWidthBlocks : filter('trackBlocksR', (block) => block.get('isSubElements')),
+  layoutWidth : computed('variableWidthBlocks', function () {
     let
     vwBlocks = this.get('variableWidthBlocks'),
     blockIds = this.get('blockIds'),
@@ -1479,11 +1899,11 @@ export default InAxis.extend({
     width =
       /*40 +*/ this.get('blockLayoutWidthSum') /*+ 20 + 50*/; // same as getAxisExtendedWidth()
     console.log('layoutWidth', blockIds, width);
-    Ember.run.next(() => this.get('childWidths').set(this.get('className'), [width, width]));
+    next(() => this.get('childWidths').set(this.get('className'), [width, width]));
 
     return width;
   }),
-  combinedWidth : Ember.computed('layoutWidth', 'allocatedWidth', 'axisBlocks.allocatedWidth.[]', function() {
+  combinedWidth : computed('layoutWidth', 'allocatedWidth', 'axisBlocks.allocatedWidth.[]', function() {
     let
     axisBlocks = this.get('axisBlocks.allocatedWidth'),
     rightBlock = axisBlocks.length && axisBlocks[axisBlocks.length-1],
@@ -1496,7 +1916,7 @@ export default InAxis.extend({
   }),
   /** Render changes related to a change of .layoutWidth
    */
-  layoutWidthEffect : Ember.computed('combinedWidth', function () {
+  layoutWidthEffect : computed('combinedWidth', function () {
     let
     axisID = this.get('axisID'),
     width = this.get('combinedWidth');
@@ -1504,10 +1924,32 @@ export default InAxis.extend({
     setClipWidth(axisID, width);
     return width;
   }),
+  slowDependenciesChanged : 0,
+  /** These dependencies will change during the transition started by
+   * showTrackBlocks(), so defer them until the transition is settled.
+   *
+   * featureLength and tracksTree (which depends on @each.featuresLength) are
+   * likely triggered by result of feature request API which is also triggered
+   * by the zoomedDomain change.
+   *
+   * Using a task to wrap the transition will probably be a more maintainable
+   * alternative (as in axis-ticks-selected.js : labelsTransitionPerform).
+   */
+  slowDependenciesEffect : computed(
+    'tracksTree',
+    'axis1d.featureLength',
+    function() {
+      const axisTransitionTime = 750;
+      later(() => this.incrementProperty('slowDependenciesChanged'), axisTransitionTime + 250);
+    }),
   /** Render changes driven by changes of block data or scope.
    */
-  showTrackBlocks: Ember.computed(
-    'tracksTree', 'yDomain.0', 'yDomain.1', 'axis1d.zoomed', 'axis1d.extended', 'axis1d.featureLength',
+  showTrackBlocks: computed(
+    'slowDependenciesChanged',
+    // 'tracksTree',
+    /** .yDomain is available; for the dependency -Throttled is used */
+    'axis1d.currentPosition.yDomain.{0,1}',	// Throttled
+    'axis1d.zoomed', 'axis1d.extended', // 'axis1d.featureLength',
     function() {
       let tracks = this.get('tracksTree');
       let
@@ -1517,8 +1959,13 @@ export default InAxis.extend({
       extended = this.get('axis1d.extended'),
       featureLength = this.get('axis1d.featureLength'),
       yDomain = this.get('yDomain');
-      console.log('showTrackBlocks', this, tracks, axis1d, isViewed, yDomain, 'axis1d.zoomed', zoomed, extended, featureLength);
+      console.log('showTrackBlocks', this, tracks, axis1d, isViewed, /*yDomain*/ this.get('axis1d.currentPosition.yDomainThrottled'), 'axis1d.zoomed', zoomed, extended, featureLength);
       let featuresLength;
+      /* This works but doesn't give a transition from tracks to charts
+         if (! this.get('trackBlocksR.length') || axis1d.isZoomedRightOut()) {
+         this.remove();
+         } else
+      */
       if (isViewed) {
         let blockIds = d3.keys(tracks.intervalTree);
 
@@ -1529,17 +1976,17 @@ export default InAxis.extend({
       }
       return featuresLength;
     }),
-  adjustedWidth : Ember.computed.alias('parentView.adjustedWidth'),
+  adjustedWidth : alias('parentView.adjustedWidth'),
   /** Render changes related to component / window resize.
    */
-  resizeEffectHere : Ember.computed('resizeEffect', 'allocatedWidth.{0,1}', function () {
+  resizeEffectHere : computed('resizeEffect', 'allocatedWidth.{0,1}', function () {
     let result = this.get('resizeEffect');
     let
     allocatedWidth = this.get('allocatedWidth'),
     allocatedWidthPrev = this.get('allocatedWidthPrev'),
-    allocatedWidthChange = ! allocatedWidthPrev || (allocatedWidthPrev !== allocatedWidth);
+    allocatedWidthChange = ! allocatedWidthPrev || ! isEqual(allocatedWidthPrev, allocatedWidth);
     if (allocatedWidthChange) {
-      this.get('allocatedWidthPrev', allocatedWidth);
+      this.set('allocatedWidthPrev', allocatedWidth);
     }
     dLog('resizeEffectHere in axis-tracks', this.get('axisID'), result,
          allocatedWidthPrev, allocatedWidth, allocatedWidthChange,
@@ -1548,11 +1995,22 @@ export default InAxis.extend({
      * if the previous size is not recorded, then treat it as a change.
      */
     function isChanged(rc, f) { return rc ? rc[f] : true; }
+    /* these 2 prevent 2-step transition of axis track y update.
+     * after confirming this fix, the calculation of changed.viewport{Width,Height} can be sorted out.
+     */
+result.changed.viewportWidth = false;
+result.changed.viewportHeight = false;
+    let
+    widthChanged = isChanged(result.changed, 'viewportWidth') || allocatedWidthChange,
+    heightChanged = isChanged(result.changed, 'viewportHeight'),
+    anyChange = widthChanged || heightChanged;
+    if (anyChange) {
     this.showResize(
-      isChanged(result.changed, 'viewportWidth') || allocatedWidthChange,
-      isChanged(result.changed, 'viewportHeight') /* , yScaleChanged ? */);
+      widthChanged, heightChanged, 
+      /* , yScaleChanged ? */);
+    }
   }),
-  flippedEffect : Ember.computed('axis1d.flipped', function () {
+  flippedEffect : computed('axis1d.flipped', function () {
     /** 'scaleChanged' could be used as an alternate dependency */
     this.showResize(false, false, true);
   }),

@@ -1,8 +1,6 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import Mixin from '@ember/object/mixin';
+import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
-
-const { Mixin } = Ember;
 
 export default Mixin.create({
   // already injected in controllers/mapview

@@ -1,6 +1,10 @@
-import Ember from 'ember';
+import { run } from '@ember/runloop';
+import $ from 'jquery';
+import { getOwner } from '@ember/application';
+import { isEmpty } from '@ember/utils';
+import { Promise, resolve } from 'rsvp';
+import { inject as service } from '@ember/service';
 import Base from 'ember-simple-auth/authenticators/base';
-const { inject: { service } } = Ember;
 
 import {
   getConfiguredEnvironment,
@@ -12,8 +16,8 @@ export default Base.extend({
   apiServers: service(),
 
   restore: function(data) {
-    return new Ember.RSVP.Promise(function(resolve, reject){
-      if(!Ember.isEmpty(data.token)) {
+    return new Promise(function(resolve, reject){
+      if(!isEmpty(data.token)) {
         resolve(data);
       } else {
         reject();
@@ -26,7 +30,7 @@ export default Base.extend({
      * equivalent to ENV, which can be imported here from
      * ../config/environment.js
      */
-    let config = Ember.getOwner(this).resolveRegistration('config:environment')
+    let config = getOwner(this).resolveRegistration('config:environment')
     let
 
 
@@ -37,8 +41,8 @@ export default Base.extend({
     apiServers = this.get('apiServers'),
     endpoint = config.apiHost + '/api/Clients/login';
     console.log('authenticate', config, config.apiHost, siteOrigin);
-    return new Ember.RSVP.Promise((resolve, reject) => {
-      Ember.$.ajax({
+    return new Promise((resolve, reject) => {
+      $.ajax({
         url: endpoint,
         type: 'POST',
         crossDomain: true,
@@ -50,7 +54,7 @@ export default Base.extend({
         contentType: 'application/json'
       }).then(function(response){
         // console.log(response)
-        Ember.run(function(){
+        run(function(){
           /** i.e. config.apiHost */
           let host = endpoint.replace(/\/api\/Clients\/login/, '');
           console.log('resolve', 'host url', host, 'token', response.id, 'clientId', response.userId, siteOrigin);
@@ -65,7 +69,7 @@ export default Base.extend({
         });
       }, function(xhr, status, error) {
         var response = xhr.responseText;
-        Ember.run(function(){
+        run(function(){
           reject(response);
         });
       });
@@ -73,7 +77,7 @@ export default Base.extend({
   },
 
   invalidate: function() {
-    return Ember.RSVP.resolve();
+    return resolve();
   }
 
 });
