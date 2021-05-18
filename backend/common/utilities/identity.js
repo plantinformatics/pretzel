@@ -2,7 +2,7 @@
 
 /**
  * Find the client id from loopback context, if exists
- * @param {Object} ctx - loopback method context
+ * @param {Object} data - ctx - loopback method context
  * @returns clientId
  */
 exports.gatherClientId = (data) => {

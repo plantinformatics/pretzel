@@ -842,6 +842,15 @@ export default InAxis.extend({
         return ((d.layer || 1) - 1) *  trackWidth * 2;
       };
     };
+    /** @return the position of the start of the feature interval.
+     * @desc This is used in combination with heightDir().
+     */
+    function yPosnDir(d) {
+      return y(d[0]);
+    };
+    /** @return the position of the start or end of the feature interval, whichever is smaller.
+     * This is used in combination with height(), which returns a positive value.
+     */
     function yPosn(d) { /*console.log("yPosn", d);*/
       if (y(d[0]) > y(d[1]))
         return y(d[1]);
@@ -861,7 +870,11 @@ export default InAxis.extend({
       end = range[1-closerToStart];
       return end;
     }
-    function height(d) {
+    /** @return height of feature in pixels at current scale,
+     * including the direction of the feature interval, i.e. start - end,
+     * i.e. .value[1] - .value[0],
+     */
+    function heightDir(d) {
       /** createIntervalTree() requires positive intervals, so the
        * .value [start,end] are reversed if negative (start > end) by
        * tracksTree() and SubElement.getInterval().
@@ -871,10 +884,11 @@ export default InAxis.extend({
       let feature = thisAt.featureData2Feature.get(d),
           value = feature.get('value');
       d = value;
+      let nonZeroInterval = Ember.isArray(d) && (d.length > 1) && (d[1] !== d[0]);
       /** if axis.zoomed then 0-height intervals are included, not filtered out.
        * In that case, need to give <rect> a height > 0.
        */
-      let height = (d[1] == d[0]) ? 0.01 : y(d[1]) - y(d[0]);
+      let height = ! nonZeroInterval ? 0.01 : y(d[1]) - y(d[0]);
       /* There was an issue causing NaN here, likely caused by 1-element array
        * .value, which is now handled.   Here that was causing d[1] undefined,
        * and hence y(d[1]) NaN.
@@ -883,11 +897,18 @@ export default InAxis.extend({
       {
         console.log('height NaN', d, 'y:', y.domain(), y.range());
       }
-      // When axis is flipped, height will be negative, so make it positive
-      /*
+      return height;
+    }
+    /** Same as heightDir() but return the absolute value, used for
+     * drawing <rect> which requires a positive height.
+     */
+    function height(d) {
+      let height = heightDir(d);
+      /* When axis is flipped or feature direction is negative, height
+       * will be negative, so make it positive
+       */
       if (height < 0)
         height = -height;
-      */
       return height;
     };
     /** @return the horizontal offset of the left side of this block */
@@ -1250,7 +1271,7 @@ export default InAxis.extend({
     function featureTransform(d, i, g) {
       let
       xPosnD = xPosnS(/*subElements*/false).apply(this, [d, i, g]),
-      yPosnD = yPosn.apply(this, [d, i, g]),
+      yPosnD = yPosnDir.apply(this, [d, i, g]),
       /** xPosnS() offsets by  + d.layer*trackWidth  */
       transform = "translate(" + xPosnD + ", " + yPosnD + ")";
       return transform;
@@ -1263,7 +1284,7 @@ export default InAxis.extend({
       let
       width = trackWidth / 2,
       tWidth = width/2,
-      heightD = height.apply(this, [d, i, g]),
+      heightD = heightDir.apply(this, [d, i, g]),
       /** either a horizontal arrow pointing left, or a vertical arrow pointing in the direction of the feature interval. */
       vertical = true,
       /** based on lineDimensions() : sideWedge -> triangle,  tipY -> heightD, wedgeX -> tWidth,  */
