@@ -42,7 +42,7 @@ my $c_arrayColumnName;
 
 ## Get options from ARGV
 my %options;
-getopts("vhd:p:b:n:c:s:C:F:P:gM:R:A:t:D:", \%options);
+getopts("vhd:p:b:n:c:s:C:F:P:gM:R:A:t:D:H", \%options);
 
 ## Version and help options display
 use constant versionMsg => "2021 Apr.\n";
@@ -57,6 +57,7 @@ use constant usageMsg => <<EOF;
   -A array column name
   -t tags
   -D output directory
+  -H first line is header line
 EOF
 
 my $datasetName = $options{d};
@@ -107,6 +108,8 @@ else
 
 # For loading Genome Reference / Parent :
 # my $extraMeta = ''; # '"paths" : "false",'; # '"type" : "Genome",';
+
+my $line1IsHeader = $options{H};
 
 #-------------------------------------------------------------------------------
 
@@ -204,6 +207,7 @@ my $c_endPos;
 sub columnConfig() {
   # $columnsKeyString indicates which columns contain the key values
   # e.g. "chr name pos" or "name chr pos end" or "chr pos name ref_alt"
+  # Words are separated by single spaces (multiple spaces can be used to indicate columns which are not keys).
   $columnsKeyString  = $ENV{columnsKeyString} || "chr name pos";
   # print "columnsKeyString", $columnsKeyString, "\n";
 
@@ -256,13 +260,14 @@ sub headerLine($$) {
   my ($line, $lineNumber) = @_;
   my $isHeader = ($lineNumber == 1) &&
     (
+     $line1IsHeader ||
      ($line =~ m/^label	chr	pos/)
      || ($line =~ m/^name,chr,pos/)
      || (($line =~ m/Marker|Name/i) && ($line =~ m/Chromosome/i))
      || ($line =~ m/Contig,Position/i)
     );
   if ($isHeader) {
-    @columnHeaders = map { trimOutsideQuotesAndSpaces($_); } split(',');
+    @columnHeaders = map { trimOutsideQuotesAndSpaces($_); } split($fieldSeparator);
   }
   return $isHeader;
 }
@@ -800,7 +805,7 @@ sub printFeature($)
           && $a[$ci] && ($ci <= $#columnHeaders) && $columnHeader && ! isComment($columnHeader))
       {
         # equivalent : ($ci == $c_arrayColumnName)
-        if ($columnHeader eq $arrayColumnName)
+        if ($arrayColumnName && ($columnHeader eq $arrayColumnName))
         {
           $values{$columnHeader} = $arrayRef;
           $arrayRef = [];

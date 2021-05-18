@@ -634,7 +634,7 @@ export default Model.extend({
         if (referenceBlock.get('isCopy') && ! block.get('isCopy'))
           referenceBlock = block;
         else {
-          dLog('viewedReferenceBlock', 'duplicate match', block.get('id'), block._internalModel.__data, parentName, scope);
+          console.warn('viewedReferenceBlock', 'duplicate match', block.get('id'), block._internalModel.__data, parentName, scope);
         }
       } else
         referenceBlock = block;
