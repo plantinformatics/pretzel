@@ -25,7 +25,7 @@
     "loopback-boot": "^2.6.5",
     "loopback-component-explorer": "^4.0.0",
     "loopback-component-passport": "~3.4.0",
-    "loopback-connector-mongodb": "^1.18.1",
+    "loopback-connector-mongodb": "^3.6.0",
     "loopback-datasource-juggler": "^3.23.0",
     "memory-cache": "^0.2.0",
     "mongoose": "^5.7.5",
