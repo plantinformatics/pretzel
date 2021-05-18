@@ -2713,7 +2713,7 @@ export default Component.extend(Evented, {
       axisIds = axisTitleS.nodes().mapBy('__data__'),
       axes1 = axisIds.map((axisId) => oa.axes[axisId]);
       axes1.forEach(
-        (a) => a.axis1d && bind(a.axis1d, a.axis1d.showZoomResetButtonXPosn)());
+        (a) => a && a.axis1d && bind(a.axis1d, a.axis1d.showZoomResetButtonXPosn)());
     }
     updateAxisTitleSize(axisG.merge(axisS));
 
@@ -3079,7 +3079,9 @@ export default Component.extend(Evented, {
     }
 
     /** Setup hover info text over scaffold horizTick-s.
-     * @see based on similar configureAxisTitleMenu()
+     * Based on similar @see configureAxisTitleMenu()
+     * @desc These are being factored to utils/hover.js :
+     * @see configureHover, configureHorizTickHover
      */
     function  configureHorizTickHover(location)
     {
@@ -3737,6 +3739,10 @@ export default Component.extend(Evented, {
     {
       let brushExtents = getBrushExtents();
 
+      if (! brushExtents[i]) {
+        dLog('axisBrushedDomain no brush for', p, i, brushExtents);
+        return undefined;
+      }
       let brushedDomain = axisRange2Domain(p, brushExtents[i]);
       console.log('axisBrushedDomain', p, i, brushExtents, brushedDomain);
       return brushedDomain;
@@ -3759,7 +3765,8 @@ export default Component.extend(Evented, {
     /** Convert the given brush extent (range) to a brushDomain.
      * @param p axisID
      * @param range a value or an interval in the axis range.  This may be e.g. a brush extent
-     * @return domain the (reverse) mapping of range into the axis domain
+     * @return domain the (reverse) mapping of range into the axis domain.
+     * undefined if range is undefined.
      */
     function axisRange2Domain(p, range)
     {
@@ -3768,6 +3775,9 @@ export default Component.extend(Evented, {
         r2dFn = axisRange2DomainFn(p);
       if (! r2dFn) {
         dLog('axisRange2Domain', p, range, 'scale has no domain', oa.y[p].domain());
+        return undefined;
+      }
+      if (! range) {
         return undefined;
       }
       let

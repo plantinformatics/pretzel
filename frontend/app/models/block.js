@@ -157,8 +157,15 @@ export default Model.extend({
      * The comparison < 5e4 will be false until .featureCount or
      * .featuresCountsResults are received, i.e. while
      * featuresCountIncludingZoom is undefined.
+     *
+     * 
+     * Currently the high density data does not have symbolic names
+     * (just chr:location) so paths via direct and aliases are not
+     * applicable.  It is tagged HighDensity, but we should add a
+     * separate tag to indicate the lack of a feature name.
+     * So disable paths if tagged HighDensity.
      */
-    paths &&= ! this.get('isHighDensity') || (this.get('featuresCountIncludingZoom') < 5e4);
+    paths &&= ! this.get('isHighDensity') && (this.get('featuresCountIncludingZoom') < 5e4);
     // dLog('showPaths', dataset, paths);
     return paths;
   }),
@@ -166,7 +173,6 @@ export default Model.extend({
   /*--------------------------------------------------------------------------*/
 
   hasFeatures : computed('featureCount', function () {
-    return this.get('featureCount') > 0;
     /** featureValueCount > 0 implies featureCount > 0.
      * Could also use .featuresCountsResults - if any non-zero counts then block has features.  */
     let count = this.get('featureCount') || this.get('featureValueCount');
@@ -628,7 +634,7 @@ export default Model.extend({
         if (referenceBlock.get('isCopy') && ! block.get('isCopy'))
           referenceBlock = block;
         else {
-          dLog('viewedReferenceBlock', 'duplicate match', block.get('id'), block._internalModel.__data, parentName, scope);
+          console.warn('viewedReferenceBlock', 'duplicate match', block.get('id'), block._internalModel.__data, parentName, scope);
         }
       } else
         referenceBlock = block;
