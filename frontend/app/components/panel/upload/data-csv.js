@@ -1,5 +1,10 @@
-import Ember from 'ember';
-const { inject: { service } } = Ember;
+import { debounce, later as run_later } from '@ember/runloop';
+import { observer, computed } from '@ember/object';
+import { Promise } from 'rsvp';
+import { alias } from '@ember/object/computed';
+import { inject as service } from '@ember/service';
+
+const dLog = console.debug;
 
 import UploadBase from './data-base';
 
@@ -13,7 +18,7 @@ export default UploadBase.extend({
   /** If server may be given, then lookup as is done in
    * services/data/dataset.js using apiServers (this can be factored into
    * components/service/api-server.js) */
-  store : Ember.computed.alias('apiServers.primaryServer.store'),
+  store : alias('apiServers.primaryServer.store'),
 
 
   table: null,
@@ -26,6 +31,44 @@ export default UploadBase.extend({
 
   didInsertElement() {
     this._super(...arguments);
+  },
+
+  activeEffect : computed('active', function () {
+    let active = this.get('active');
+    if (active) {
+      this.shownBsTab();
+    }
+  }),
+  /** Called when user clicks on nav tab of Upload panel.
+   * action is now used in instead of listening for .on('shown.bs.tab'); the
+   * bs.tab events are probably no longer available since using ember-bootstrap
+   * because .active is set by ember when the route matches the <a href>, refn :
+   * https://guides.emberjs.com/release/routing/linking-between-routes/#toc_active-css-class
+   *
+   * bootstrap/js/tab.js : show() will return without doing
+   * $this.trigger(showEvent) if li.hasClass('active'); also note show() is only
+   * called if <nav.item> <a> has data-toggle="tab".
+   */
+  shownBsTab() {
+    /** Both .createTable() and .updateSettings() require a delay.
+     * Without this delay the table is not displayed because this element has
+     * 0px height & width :
+     *  div#hotable > div.ht_master.handsontable > div.wtHolder */
+    run_later(() => this.showTable(), 500);
+  },
+  showTable() {
+    // Ensure table is created when tab is shown
+    let table = this.get('table');
+    if (! table) {
+      this.createTable();
+    } else {
+      // trigger rerender when tab is shown
+      table.updateSettings({});
+    }
+  },
+
+  createTable() {
+    dLog('createTable');
     var that = this;
     $(function() {
       let hotable = $("#hotable")[0];
@@ -76,10 +119,7 @@ export default UploadBase.extend({
         licenseKey: config.handsOnTableLicenseKey
       });
       that.set('table', table);
-      $('.nav-tabs a[href="#left-panel-upload"]').on('shown.bs.tab', function() {
-        // trigger rerender when tab is shown
-        table.updateSettings({});
-      });
+
     });
   },
 
@@ -188,7 +228,7 @@ export default UploadBase.extend({
   getDatasetId() {
     var that = this;
     let datasets = that.get('datasets');
-    return new Ember.RSVP.Promise(function(resolve, reject) {
+    return new Promise(function(resolve, reject) {
       var selectedMap = that.get('selectDataset');
       // If a selected dataset, can simply return it
       // If no selectedMap, treat as default, 'new'
@@ -209,7 +249,7 @@ export default UploadBase.extend({
           };
           let parentId = that.get('selectedParent');
           if (parentId && parentId.length > 0) {
-            newDetails.parent = datasets.findBy('name', parentId);
+            newDetails.parentName = parentId;
           }
           let newDataset = that.get('store').createRecord('Dataset', newDetails);
           newDataset.save().then(() => {
@@ -224,7 +264,7 @@ export default UploadBase.extend({
    *  Returns same data, with 'val' cast as numeric */
   validateData() {
     var that = this;
-    return new Ember.RSVP.Promise(function(resolve, reject) {
+    return new Promise(function(resolve, reject) {
       let table = that.get('table');
       if (table === null) {
         resolve([]);
@@ -278,10 +318,10 @@ export default UploadBase.extend({
     this.set('nameWarning', null);
     return false;
   },
-  onNameChange: Ember.observer('newDatasetName', function() {
-    Ember.run.debounce(this, this.isDupName, 500);
+  onNameChange: observer('newDatasetName', function() {
+    debounce(this, this.isDupName, 500);
   }),
-  onSelectChange: Ember.observer('selectedDataset', 'selectedParent', function() {
+  onSelectChange: observer('selectedDataset', 'selectedParent', function() {
     this.clearMsgs();
     this.isDupName();
     this.checkBlocks();
@@ -301,6 +341,7 @@ export default UploadBase.extend({
           that.getDatasetId().then((map_id) => {
             var data = {
               dataset_id: map_id,
+              parentName: that.get('selectedParent'),
               features: features,
               namespace: that.get('namespace'),
             };

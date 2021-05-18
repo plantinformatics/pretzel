@@ -1,19 +1,25 @@
-export default Ember.Component.extend({
+import { on } from '@ember/object/evented';
+import Component from '@ember/component';
+
+import $ from 'jquery';
+
+export default Component.extend({
   actions: {
     confirm: function() {
       this.sendAction('onConfirm');
-      this.$('.modal').modal('hide');
+      $('.modal', this.element).modal('hide');
     },
     resetForm() {
-      this.$('input').val('');
+      $('input', this.element).val('');
       
     }
   },
-  show: Ember.on('didInsertElement', function() {
+  show: on('didInsertElement', function() {
     let me = this;
-    this.$('.modal').on('hidden.bs.modal', function() {
+    this.element.querySelectorAll('.modal').forEach(
+      el => el.addEventListener('hidden.bs.modal', function() {
       me.send('resetForm');
       me.sendAction('onClose');
-    });
+    }));
   })
 });

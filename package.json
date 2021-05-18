@@ -1,7 +1,7 @@
 {
   "name": "pretzel",
   "private": true,
-  "version": "2.2.1",
+  "version": "2.6.1",
   "dependencies": {
   },
   "repository" :
@@ -26,7 +26,7 @@
   "//": "in backend directory : Install dependencies",
 	"//": "The message 'Entering directory' is common to e.g. make -w, and recognised by emacs compilation-mode to set default-directory",
   "scripts": {
-    "postinstall" : "ln -s ../frontend/dist backend/client && ln -s ../../../../backend/common/utilities/interval-overlap.js frontend/app/utils/draw/.",
+    "postinstall" : "ln -s ../frontend/dist backend/client",
     "go" : "npm run setup:frameworks && npm run build:frontend && npm run run:precheck && npm run run:backend",
     "setup:frameworks": "cd frontend && npm ci && bower install && cd ../backend && npm ci",
     "build:frontend" : "cd frontend && node_modules/ember-cli/bin/ember build --environment production",

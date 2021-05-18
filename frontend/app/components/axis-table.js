@@ -1,8 +1,8 @@
-import Ember from 'ember';
+import Component from '@ember/component';
 
 /* global d3 */
 
-export default Ember.Component.extend({
+export default Component.extend({
 
   actions: {
 

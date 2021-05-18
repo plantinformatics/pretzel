@@ -1,5 +1,5 @@
-import Ember from 'ember';
-import DS from 'ember-data';
+import { computed } from '@ember/object';
+import Model from '@ember-data/model';
 
 const trace_FG = 0;
 
@@ -23,7 +23,7 @@ const fieldNames=[
  * @param applyDataset  true means apply this FilterGroup to the Dataset level
  * @param applyBlock  true means apply this FilterGroup to the Block level
  */
-export default DS.Model.extend({
+export default Model.extend({
 
   /** value is 'filter' or 'group' */
   filterOrGroup: 'filter',
@@ -45,14 +45,14 @@ export default DS.Model.extend({
   },
 
   /** @return true if this filterGroup is defined and it is a filter not a grouping. */
-  isFilter : Ember.computed('defined', 'filterOrGroup', function () {
+  isFilter : computed('defined', 'filterOrGroup', function () {
     let
       defined = this.get('defined'),
     isFilter = this.get('filterOrGroup') === 'filter';
     return isFilter;
   }),
 
-  patterns : Ember.computed('pattern', function () {
+  patterns : computed('pattern', function () {
     let
       pattern = this.get('pattern'),
     patterns;
@@ -62,7 +62,7 @@ export default DS.Model.extend({
     console.log('patterns', pattern, patterns);
     return patterns;
   }),
-  patternsRE : Ember.computed('patterns', 'patterns.[]', function () {
+  patternsRE : computed('patterns', 'patterns.[]', function () {
     let patterns = this.get('patterns'),
     patternsRE = this.get('isRegExp') ?
       patterns.map(function (p) { return new RegExp(p); })
@@ -72,7 +72,7 @@ export default DS.Model.extend({
   }),
   /** @return true if the user has entered information which defines filter / grouping.
    */
-  defined : Ember.computed('pattern', 'pattern.[]', 'filterOrGroup', function () {
+  defined : computed('pattern', 'pattern.[]', 'filterOrGroup', function () {
     let pattern = this.get('pattern'),
     /** possibly grouping does not need a pattern - can group on fieldName,fieldScope,fieldMeta */
     isFilter = this.get('filterOrGroup') === 'filter',

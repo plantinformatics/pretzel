@@ -1,15 +1,19 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import Component from '@ember/component';
 
-const { Component } = Ember;
-
+/** Use .name to add to the element's classes
+ */
 export default Component.extend({
   tagName: 'span',
   // attributes
   // classes
   classNameBindings: ['iconClass'],
-  iconClass: Ember.computed('name', function() {
+  /**
+   * @return undefined if name is undefined.
+   */
+  iconClass: computed('name', function() {
     let name = this.get('name')
-    return 'glyphicon glyphicon-' + name
+    return name && 'glyphicon glyphicon-' + name;
   }),
   // actions
 });

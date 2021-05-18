@@ -144,7 +144,14 @@ const pathsApiResultType = {
   // fieldName may be pathsResult or pathsAliasesResult
   typeCheck : function(resultElt, trace) { let ok = !! resultElt.featureAObj; if (! ok && trace) {
     dLog('pathsApiResultType : typeCheck', resultElt); };  return ok;  },
-  pathBlock :  function (resultElt, blockIndex) { return resultElt[pathsApiFields[blockIndex]].blockId; },
+  pathBlock :  function (resultElt, blockIndex) {
+    let blockId = resultElt[pathsApiFields[blockIndex]].blockId;
+    /** at this point blockId may be a fulfilled Promise Proxy; if so get the .id  */
+    if (blockId.content) {
+      blockId = blockId.get('id');
+    }
+    return blockId;
+  },
   /** direct.blocksFeatures() returns an array of features, so match that. See
    * similar commment in alias.blocksFeatures. */
   blocksFeatures : function (resultElt, blockIndex) { return [ resultElt[pathsApiFields[blockIndex]] ]; },

@@ -8,11 +8,13 @@
   <form {{action 'submitForm' on='submit'}}>
     {{auth-input
       type='text'
-      value=identification
+      value=this.identification
+      autocomplete="username"
       placeholder='Email Address'}}
     {{auth-input
       type='password'
-      value=password
+      value=this.password
+      autocomplete="current-password"
       placeholder='Password'}}
     {{suggest-link
       suggest-text="Forgotten your password?"

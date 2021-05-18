@@ -1,20 +1,22 @@
-import Ember from 'ember';
-
-const { inject: { service } } = Ember;
+import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
 /* global d3 */
 
 const dLog = console.debug;
 
-export default Ember.Component.extend({
+export default Component.extend({
   blockService: service('data/block'),
   controls : service(),
   apiServers : service(),
+  selected : service('data/selected'),
 
-  taskGet : Ember.computed.alias('blockService.getBlocksOfFeatures'),
+  taskGet : alias('blockService.getBlocksOfFeatures'),
 
-  serverTabSelected : Ember.computed.alias('controls.serverTabSelected'),
+  serverTabSelected : alias('controls.serverTabSelected'),
 
   /*----------------------------------------------------------------------------*/
   actions : {
@@ -54,7 +56,6 @@ export default Ember.Component.extend({
    * @return undefined
    */
   blocksUnique : function (selectedFeatureNames) {
-      let me = this;
       let blockService = this.get('blockService');
       function peekBlock(block) {
         return blockService.peekBlock(block.id); };
@@ -64,8 +65,13 @@ export default Ember.Component.extend({
 
       let taskGet = this.get('taskGet'); // blockService.get('getBlocksOfFeatures');
       let blockTask = taskGet.perform(apiServer, selectedFeatureNames)
-        .then(function (features) {
+        .then((features) => {
           dLog("getBlocksOfFeatures", selectedFeatureNames[0], features);
+
+          /** copy feature search results to the list of clicked features,
+           * for which triangles are displayed.  */
+          this.set('selected.features', features);
+          this.get('selected').featureSearchResult(features);
 
           let blockIds = new Set(),
           blockCounts = {},
@@ -100,10 +106,15 @@ export default Ember.Component.extend({
             /** this peekBlock() is also done in the above n1.map(), and they
              * could be integrated.  */
             let block = blockService.peekBlock(d.key);
-            block.set('count', d.values.length);
+            /** if the block is a copy from another server, then block here will be undefined.
+             * There doesn't seem to be much value in including them in features search results;  the other server may not be connected.
+             */
+            if (block) {
+              block.set('count', d.values.length);
+            }
           });
 
-          me.set('blocksOfFeatures', blocksUnique);
+          this.set('blocksOfFeatures', blocksUnique);
 
           /** convert nest [{key, values}..] to hash [key] : values,
            * used in e.g. axis-ticks-selected */
@@ -111,7 +122,7 @@ export default Ember.Component.extend({
             function (result, value) { result[value.key] = value.values; return result; },
             {} );
           console.log('featuresInBlocks', featuresInBlocks);
-          me.send('updateFeaturesInBlocks', featuresInBlocks);
+          this.send('updateFeaturesInBlocks', featuresInBlocks);
 
         });
   },
@@ -143,11 +154,11 @@ export default Ember.Component.extend({
     console.assert(list === children[0], fnName + '() : list === children[0]');
     this.set('featureList', list);
   },
-  activeFeatureList : Ember.computed.alias('featureList.activeFeatureList'),
+  activeFeatureList : alias('featureList.activeFeatureList'),
 
-  loading : Ember.computed.alias('taskGet.isRunning'),
+  loading : alias('taskGet.isRunning'),
 
-  refreshClassNames : Ember.computed('loading', function () {
+  refreshClassNames : computed('loading', function () {
     let classNames = "btn btn-info pull-right";
     return this.get('loading') ? classNames + ' disabled' : classNames;
   }),

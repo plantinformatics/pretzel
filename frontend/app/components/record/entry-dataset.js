@@ -1,23 +1,25 @@
+import { on } from '@ember/object/evented';
+import { computed } from '@ember/object';
 import EntryBase from './entry-base';
 
 export default EntryBase.extend({
-  initSteps: function() {
+  initSteps: on('init', function() {
     let layout = {
       'active': false
     }
-    this.set('layout',layout);
-  }.on('init'),
-  data: Ember.computed('entry.blocks', 'filter', function() {
+    this.set('entryLayout',layout);
+  }),
+  data: computed('entry.blocks', 'filter', function() {
     return this.get('entry.blocks')
       .filter((block) => !block.get('isCopy'));
   }),
-  dataEmpty: Ember.computed('data', function() {
+  dataEmpty: computed('data', function() {
     let availableBlocks = this.get('data')
     if (availableBlocks && availableBlocks.length > 0) { return false; }
     else { return true; }
   }),
-  expandIcon: Ember.computed('layout.active', function() {
-    let active = this.get('layout.active')
+  expandIcon: computed('entryLayout.active', function() {
+    let active = this.get('entryLayout.active')
     return active? 'minus' : 'plus'
   }),
   actions: {
@@ -30,8 +32,8 @@ export default EntryBase.extend({
     },
     switchDataset(dataset) {
       // console.log('switchDataset')
-      let active = this.get('layout.active')
-      this.set('layout.active', !active)
+      let active = this.get('entryLayout.active')
+      this.set('entryLayout.active', !active)
     },
     /** Dataset receives onDelete block, which it forwards up to manage-explorer
      * and thence mapview which translates it to removeMap, and dataset also, as

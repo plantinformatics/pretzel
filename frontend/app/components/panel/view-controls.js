@@ -1,4 +1,7 @@
-import Ember from 'ember';
+import { next } from '@ember/runloop';
+import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 
 import {
   tabActive, inputRangeValue,
@@ -12,12 +15,12 @@ import { toBool } from '../../utils/common/strings';
 const dLog = console.debug;
 
 
-export default Ember.Component.extend({
+export default Component.extend({
   tagName: 'div',
   // attributes
   // classes
 
-  feed: Ember.inject.service(),
+  feed: service(),
 
   /*--------------------------------------------------------------------------*/
   /** paths are calculated in the backend if both blocks of block-adj are from
@@ -26,6 +29,20 @@ export default Ember.Component.extend({
   */
   pathJoinClient : false,
   pathJoinRemote : true,
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Toggle axis-charts / Chart1 between showing the ChartLine-s as <rect> bars or lines   */
+  chartBarLine : true,
+
+  /*--------------------------------------------------------------------------*/
+
+  /** time in milliseconds;   group events into discrete times.
+   * Applies to various high-bandwidth events, e.g. axis-position : zoom,
+   * axis-1d : updateAxis, draw/block-adj updatePathsPositionDebounced
+   */
+  debounceTime : 400,
+  throttleTime : 40,
 
   /*--------------------------------------------------------------------------*/
 
@@ -46,7 +63,7 @@ export default Ember.Component.extend({
    */
   pathSample : expRangeInitial(400, expRangeBase(100, 10000)),
 
-  pathControlActiveDensity : Ember.computed('pathDensityActive', 'pathDensity', function () {
+  pathControlActiveDensity : computed('pathDensityActive', 'pathDensity', function () {
     let active = this.get('pathDensityActive'),
      pathDensity = +this.get('pathDensity'),
       density = active && expRange(pathDensity, 100/2, 1000);
@@ -56,7 +73,7 @@ export default Ember.Component.extend({
       density = +density.toFixed(decimals);
     }
     let value = inputRangeValue('range-pathDensity');
-    Ember.run.next(function () {
+    next(function () {
       let value2 = inputRangeValue('range-pathDensity');
       if (value !== value2)
         dLog('range-pathDensity',  value, value2);
@@ -66,7 +83,7 @@ export default Ember.Component.extend({
     return density;
    }),
 
-  pathControlActiveSample : Ember.computed('pathSampleActive', 'pathSample', function () {
+  pathControlActiveSample : computed('pathSampleActive', 'pathSample', function () {
     let active = this.get('pathSampleActive'),
      pathSample = +this.get('pathSample'),
      sample = active && expRange(pathSample, 100, 10000);
@@ -74,7 +91,7 @@ export default Ember.Component.extend({
       sample = Math.round(sample);
     }
     let value = inputRangeValue('range-pathSample');
-    Ember.run.next(function () {
+    next(function () {
       let value2 = inputRangeValue('range-pathSample');
       if (value !== value2)
         dLog('range-pathSample',  value, value2);
@@ -88,7 +105,7 @@ export default Ember.Component.extend({
    */
   pathNFeatures : expRangeInitial(1000, expRangeBase(100, 10000)),
 
-  pathControlNFeatures : Ember.computed('pathNFeatures', 'pathNFeatures', function () {
+  pathControlNFeatures : computed('pathNFeatures', 'pathNFeatures', function () {
     /** May make nFeatures display and range slider sensitive only when
      * pathsViaStream, or perhaps it will be a limit applicable also to other
      * (non-streaming) request modes.
@@ -103,7 +120,7 @@ export default Ember.Component.extend({
     return nFeatures;
    }),
 
-  pathsDensityParams : Ember.computed(
+  pathsDensityParams : computed(
     'pathControlActiveSample', 'pathControlActiveDensity', 'pathControlNFeatures',
     function () {
       let params = {};
@@ -122,6 +139,36 @@ export default Ember.Component.extend({
       }
       return params;
     }),
+
+  featuresCountsNBinsLinear : expRangeInitial(100, expRangeBase(100, 500)),
+
+  featuresCountsNBins : computed('featuresCountsNBinsLinear', function () {
+    let
+     thresholdLinear = +this.get('featuresCountsNBinsLinear'),
+     threshold = expRange(thresholdLinear, 100, 500);
+    if (threshold) {
+      threshold = Math.round(threshold);
+    }
+    dLog('featuresCountsNBins', thresholdLinear, threshold);
+    return threshold;
+   }),
+
+  featuresCountsThresholdLinear : expRangeInitial(500, expRangeBase(100, 10000)),
+
+  /** Threshold between showing featuresCounts charts and features tracks :
+   *  - if (count <= featuresCountsThreshold) show features (axis-tracks)
+   *  - if  (count > featuresCountsThreshold) show featuresCounts (axis-charts)
+   */
+  featuresCountsThreshold : computed('featuresCountsThresholdLinear', function () {
+    let
+     thresholdLinear = +this.get('featuresCountsThresholdLinear'),
+     threshold = expRange(thresholdLinear, 100, 10000);
+    if (threshold) {
+      threshold = Math.round(threshold);
+    }
+    dLog('featuresCountsThreshold', thresholdLinear, threshold);
+    return threshold;
+   }),
 
   /*--------------------------------------------------------------------------*/
 

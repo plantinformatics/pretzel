@@ -1,4 +1,3 @@
-import Ember from 'ember';
 import { inject as service } from '@ember/service';
 
 
@@ -8,6 +7,8 @@ import { dragTransitionTime } from '../stacks-drag';
 /* global d3 */
 
 const dLog = console.debug;
+
+const trace = 0;
 
 /*----------------------------------------------------------------------------*/
 
@@ -29,7 +30,7 @@ class AxisTitleBlocksServers {
     this.apiServers = apiServers;
   }
 
-};
+}
 
 /** if multiple api-servers, show a colour circle to indicate the server of the block.
  *
@@ -114,7 +115,14 @@ AxisTitleBlocksServers.prototype.prependTspan = function(block, i) {
 
 AxisTitleBlocksServers.prototype.positionTspan = function(tspanBlockTitle, elt) {
   let
-    blockS = tspanBlockTitle .__data__,
+  blockS = tspanBlockTitle .__data__;
+  /* if block is unviewed, and this function is called before blockS is
+   * destroyed (planning to change so blockS only exists while block.isViewed),
+   * then blockS.axis can be undefined. */
+  if (! blockS.axis) {
+    return undefined;
+  }
+  let
   /** stackIndex > 0 corresponds to class .not_top on g.axis-outer */
   not_top = blockS.axis.stack.findIndex(blockS.axis.axisName) > 0,
   /** many cases, specified in app.scss, e.g .axis-outer.rightmost:not(.extended).not_top
@@ -131,7 +139,8 @@ AxisTitleBlocksServers.prototype.positionTspan = function(tspanBlockTitle, elt) 
     textAnchor === 'start' ? -15 :
     textAnchor === 'end' ? - 15 - titleLength :
     undefined;
-  dLog('positionTspan', position, textAnchor, titleLength, tspanBlockTitle.__data__, tspanBlockTitle, elt, this);
+  if (trace)
+    dLog('positionTspan', position, textAnchor, titleLength, tspanBlockTitle.__data__, tspanBlockTitle, elt, this);
   return position;
 };
 

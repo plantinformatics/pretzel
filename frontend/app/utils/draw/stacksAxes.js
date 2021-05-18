@@ -1,5 +1,12 @@
 
-import { Block, Stacked, Stack, stacks, xScaleExtend, axisRedrawText } from '../stacks';
+import {
+  Block,
+  Stacked,
+  Stack,
+  stacks,
+  xScaleExtend,
+  axisRedrawText
+} from '../stacks';
 import { axisEltId }  from './axis';
 import { breakPoint } from '../breakPoint';
 

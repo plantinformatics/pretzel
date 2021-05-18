@@ -20,6 +20,9 @@ const dLog = console.debug;
 /* copied from draw-map.js; this has already been split out of draw-map.js into
  * utils/graph-maths.js in an unpushed branch (8fccbd3).
  * Added : this version handles range[] being in -ve order, i.e. range[0] > range[1].
+ * @param a point value
+ * @param range interval [start, end]
+ * The argument order is opposite to the similar function @see inInterval()
  */
 function inRange(a, range)
 {
@@ -44,7 +47,7 @@ function inRangeEither(a, range)
 }
 
 
-/** Test if an array of values, which can be a pair defining an interval, is
+/** Test if an array of values, which can be a pair defining an interval, are all
  * contained within another interval.
  * @param values  an array of values to test
  */
@@ -54,6 +57,29 @@ function subInterval(values, interval) {
     ! values.some(function (d) { return ! inRange(d, interval); });
   return ok;
 }
+
+/** Test if any of an array of values, which can be a pair defining an interval, is
+ * contained within another interval.
+ * This does not treat interval completely contained within values as an overlap,
+ * so use overlapInterval() which handles that case.
+ * For calculation of the overlap, in interval-calcs.js, @see intervalOverlap()
+ * @param values  an array of values to test
+ */
+function overlapInterval1(values, interval) {
+  /* based on subInterval().
+  * Note also : interval-calcs.js : intervalOverlap() which calculates the overlapping interval.
+  * and interval-overlap.js : inInterval() and inDomain(), which are equivalent, but look less efficient.
+  */
+      // use `any` so that search completes as soon as one value is found in range.
+  let ok =
+    values.any(function (d) { return inRange(d, interval); });
+  return ok;
+}
+function overlapInterval(values, interval) {
+  return overlapInterval1(values, interval) ||
+    overlapInterval1(interval, values);
+}
+
 
 /** This handles 1 end of the interval for @see constrainInterval().
  */
@@ -115,6 +141,9 @@ function intervalSign(interval) {
  * @param inFilter  true when called from zoomFilter() (d3.zoom().filter()),
  * false when called from zoom() (d3.zoom().on('zoom')); this indicates
  * variation of the event information structure.
+ * @return inFilter ? include : newDomain
+ * include is a flag for which true means don't filter out this event.
+ * newDomain is the new domain resulting from the zoom change.
  */
 function wheelNewDomain(axis, axisApi, inFilter) {
   let yp = axis.y;
@@ -123,7 +152,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
    * wheel, but if this can happen if there is an error in requesting block
    * features.
    */
-  if (! yp) return;
+  if (! yp) return inFilter ? false : undefined;
   /** Access these fields from the DOM event : .shiftKey, .deltaY, .currentTarget.
    * When called from zoom(), d3.event is the d3 wrapper around the event, and
    * the DOM event is referenced by .sourceEvent,  whereas in zoomFilter()
@@ -224,7 +253,12 @@ function wheelNewDomain(axis, axisApi, inFilter) {
       console.log('mousePosition', mousePosition);
     let
       range = yp.range(),
-    rangeYCentre = mousePosition[1],
+    rangeYCentre = mousePosition[1];
+    if (rangeYCentre === undefined) {
+      dLog('mousePosition has no [1]', mousePosition);
+      return false;
+    }
+    let
     /** This is the centre of zoom, i.e. the mouse position, not the centre of the axis.  */
     centre = axisApi.axisRange2Domain(axis.axisName, rangeYCentre),
 
@@ -239,20 +273,23 @@ function wheelNewDomain(axis, axisApi, inFilter) {
     // similar to subInterval(newInterval, intervalLimit)
     if (domainSize && (newInterval > domainSize)) {
       console.log('limit newInterval', newInterval, domainSize);
-      newInterval = domainSize;
+      newInterval = domainSize * Math.sign(interval);
+      newDomain = axisReferenceDomainF;
     }
-    else if (newInterval < intervalLimit[0]) {
-      newInterval = intervalLimit[0];
-    }
+    else {
+      if (newInterval < intervalLimit[0]) {
+        newInterval = intervalLimit[0];
+      }
+      newInterval *= Math.sign(interval);
 
-    newDomain = [
-      // can use zoom.center() for this.
-      // range[0] < rangeYCentre, so this first offset from centre is -ve
-      centre + newInterval * (range[0] - rangeYCentre) / rangeSize,
-      centre + newInterval * (range[1] - rangeYCentre) / rangeSize
-    ];
-    // newDomain is +ve, and newDomain is signed (i.e. in the direction of .flipped).
-    newDomain = maybeFlip(newDomain, flipped);
+      newDomain = [
+        // can use zoom.center() for this.
+        // range[0] < rangeYCentre, so this first offset from centre is -ve
+        centre + newInterval * (range[0] - rangeYCentre) / rangeSize,
+        centre + newInterval * (range[1] - rangeYCentre) / rangeSize
+      ];
+    }
+    // Both newInterval and newDomain are signed (i.e. in the direction of .flipped).
 
     // detect if domain is becoming flipped during zoom
     if (flipped != ((interval > 0) !== intervalSign(newDomain)))
@@ -289,4 +326,8 @@ function wheelNewDomain(axis, axisApi, inFilter) {
 
 /*----------------------------------------------------------------------------*/
 
-export {  inRangeEither, wheelNewDomain };
+export {
+  inRange, inRangeEither, subInterval, overlapInterval,
+  intervalSign,
+  wheelNewDomain
+};

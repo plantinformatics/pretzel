@@ -1,3 +1,9 @@
+import { intervalSign } from './draw/zoomPanCalcs';
+import { inInterval } from './draw/interval-overlap';
+import { maybeFlip }  from './draw/axis';
+
+/*----------------------------------------------------------------------------*/
+
 /* related : see utils/draw/zoomPanCalcs.js
  * backend/common/utilities/interval-overlap.js
  */
@@ -5,6 +11,8 @@
 /*----------------------------------------------------------------------------*/
 
 /* global d3 */
+
+const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
@@ -60,11 +68,23 @@ function intervalExtent(intervals) {
 /** Indexes for the endpoints of an interval or domain. */
 const ends = [0, 1];
 
+/** Calculate the overlap (intersection) of domain1, domain2, and the size of
+ * that overlap relative to the size of domain2.
+ * @return 0 if there is no overlap
+ * @params domain1, domain2	
+ */
+function intervalOverlapCoverage(domain1, domain2) {
+  let overlap = intervalOverlap([domain1, domain2]),
+  coverage = overlap ? (intervalSize(overlap) / intervalSize(domain2)) : 0;
+  return coverage;
+}
+
 /** Calculate the intersection of the given intervals. 
  * @params intervals  number[2][2]
  * (intervals[i] !== undefined)
  * (intervals[i][0] <= intervals[i][1])
  * @return number[2], or undefined if intervals[i] are disjoint.
+ * @desc For testing if there is an overlap, in zoomPanCalcs.js, @see overlapInterval()
  */
 function intervalOverlap(intervals) {
   let overlap,
@@ -89,8 +109,129 @@ function intervalOrdered(interval) {
   return interval;
 }
 
+/** @return i1 - i2, i.e. the part of i1 outside of i2
+ * Result direction is the same as the direction of i1.
+ * @param operation 'intersect', 'union', 'subtract'.
+ *
+ * @param i1, i2 are intervals, i.e. [start, end]
+ * (i1 and i2 have the same direction)
+ * i1 and i2 overlap, and neither is a sub-interval of the other.
+ * @see subInterval(), featuresCountsResultsMerge().
+ */
+function intervalJoin(operation, i1, i2) {
+  /**
+
+  |----------------|           i1
+          |-----------------|  i2
+  |-------|--------|--------|
+   outside  inside  outside
+          |--------|           intersect
+  |-------|--------|--------|  union
+  |-------|                    subtract
+
+  */
+  const inside = 1, outside = 0;
+  let
+  cmp1 = i1.map((i) => inInterval(i2, i)),
+  /** i1[indexes1[outside]] is outside i2, and
+   * i1[indexes1[inside]] is inside i2.
+   */
+  indexes1 = cmp1.map((i) => (+(i === 0))),
+  /** could calculate cmp2, indexes2, but for current use
+   * (featureCountsResults) can assume that direction of i1 and i2 is
+   * the same, so i2[indexes1[outside]] is inside i1.
+   */
+  interval =
+    (operation === 'intersect') ?  [i1[indexes1[inside]],  i2[indexes1[outside]]] :
+    (operation === 'union')     ?  [i1[indexes1[outside]], i2[indexes1[inside]]] :
+    (operation === 'subtract')  ?  [i1[indexes1[outside]], i2[indexes1[outside]]] :
+    undefined;
+
+  let flip = intervalSign(interval) !== intervalSign(i1);
+  interval = maybeFlip(interval, flip);
+
+  dLog('intervalJoin', operation, interval, i1, i2, cmp1, indexes1);
+  return interval;
+}
+
+/** Subtract i2 from i1, where i2 is a sub-interval of i1.
+ * If i2 overlaps i1 but is not a sub-interval of it, then use intervalJoin('subtract', i1, i2).
+ *
+ * This is applicable
+ * when i2 is a subInterval of i1, and hence the result is 2 intervals
+ * in an array; (used by featuresCountsResultsSansOverlap()).
+ */
+function intervalSubtract2(i1, i2) {
+  /**
+
+  |-------------------------|  i1
+          |--------|           i2
+  |-------|        |--------|  subtract2
+
+  */
+
+  let
+  sameDir = intervalSign(i1) === intervalSign(i2),
+  start1 = 0,
+  end1 = 1 - start1,
+  start2 = sameDir ? start1 : end1,
+  end2 = 1 - start2,
+  interval = [[i1[start1], i2[start2]], [i2[end2], i1[end1]]];
+
+  interval.forEach((i3, i) => { if (! intervalSign(i3)) { console.log('intervalSubtract2', i3, i); } });
+  dLog('intervalSubtract2', interval, i1, i2);
+  return interval;
+}
+
+/** @return true if the 2 intervals have a common endpoint.
+ * Form of i1 and i2 is : [number, number].
+ * The implementation will handle other vector lengths; if sameDir
+ * then i2.length is expected to be >= i1.length
+ * @param sameDir if true then assume i1 and i2 have the same direction.
+ */
+function intervalsAbut(i1, i2, sameDir) {
+  let
+  matchFn = sameDir ?
+    (x1, i) => x1 === i2[i] :
+    (x1, i) => i2.find((x2, j) => (x1 === x2)),
+    match = i1.find(matchFn);
+  return match;
+}
 
 /*----------------------------------------------------------------------------*/
 
-export { intervalSize, intervalLimit, intervalOutside, intervalMerge, intervalExtent,
- intervalOverlap };
+/** Keep the top byte of the mantissa and clear the rest.
+ * Used to granularise an interval, for constructing a taskId (getSummary() in
+ * services/data/block.js), so that a new request (task) is sent when the
+ * interval is zoomed significantly.
+ */
+function truncateMantissa(x)
+{
+  /** based on https://stackoverflow.com/a/17156580 by 'copy'. */
+  var float = new Float64Array(1),
+      bytes = new Uint8Array(float.buffer);
+
+  float[0] = x;
+
+  bytes[0] = 0;
+  bytes[1] = 0;
+  bytes[2] = 0;
+  bytes[3] = 0;
+  bytes[4] = 0;
+  bytes[5] = 0;
+
+  return float[0];
+}
+
+/*----------------------------------------------------------------------------*/
+
+export {
+  intervalSize, intervalLimit, intervalOutside, intervalMerge, intervalExtent,
+  intervalOverlapCoverage,
+  intervalOverlap,
+  intervalOrdered,
+  intervalJoin,
+  intervalSubtract2,
+  intervalsAbut,
+  truncateMantissa
+};

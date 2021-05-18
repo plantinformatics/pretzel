@@ -1,9 +1,9 @@
-import DS from 'ember-data';
+import JSONAPISerializer from '@ember-data/serializer/json-api';
 
 const trace_extract = 0;
 const dLog = console.debug;
 
-export default DS.JSONAPISerializer.extend({
+export default JSONAPISerializer.extend({
   compositeKeys: ['block-id0', 'block-id1'],
 
   extractId(modelClass, resourceHash) {

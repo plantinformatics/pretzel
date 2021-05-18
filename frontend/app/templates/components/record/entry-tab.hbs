@@ -1,3 +1,5 @@
+{{#tab.pane id=this.id title=this.name}}
+
 {{#elem/icon-toggle state=allActive
   changed=(action 'allActiveChanged')
   iconTrue='arrow-down' iconFalse='arrow-right' }}
@@ -12,3 +14,5 @@
     selectedBlock=selectedBlock
     selectDataset="selectDataset"}}
 </ul>
+
+{{/tab.pane}}

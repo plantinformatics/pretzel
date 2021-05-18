@@ -1,8 +1,14 @@
-import Ember from 'ember';
+import { assert } from '@ember/debug';
+import { getOwner } from '@ember/application';
+import $ from 'jquery';
+import Service, { inject as service } from '@ember/service';
+import { isEmpty, typeOf } from '@ember/utils';
 
-const { inject: { service }, Service, isEmpty } = Ember;
-
-import { isObject, cloneDeepWith, isUndefined } from 'lodash/lang';
+import {
+  isObject,
+  cloneDeepWith,
+  isUndefined
+} from 'lodash/lang';
 import { omitBy, extendWith } from 'lodash/object';
 import { after } from 'lodash/function';
 
@@ -93,7 +99,7 @@ export default Service.extend({
     data.intervals = filteredIntervalParams;
       url +=
       '&' +
-      Ember.$.param(data);
+      $.param(data);
     if (trace_paths)
       dLog(url, blockA, blockB, intervals, filteredIntervalParams, options);
 
@@ -206,7 +212,7 @@ export default Service.extend({
     data.intervals = filteredIntervalParams;
     url +=
       '&' +
-      Ember.$.param(data);
+      $.param(data);
     if (trace_paths)
       dLog(url, blockIds, intervals, filteredIntervalParams, options);
 
@@ -239,10 +245,10 @@ export default Service.extend({
     return this._ajax('Blocks/pathsByReference', 'GET', {blockA : blockA, blockB : blockB, reference, max_distance, options : options}, true);
   },
 
-  getBlockFeaturesCounts(block, interval, nBins, options) {
+  getBlockFeaturesCounts(block, interval, nBins, isZoomed, useBucketAuto, options) {
     if (trace_paths)
-      dLog('services/auth getBlockFeaturesCounts', block, interval, nBins, options);
-    return this._ajax('Blocks/blockFeaturesCounts', 'GET', {block, interval, nBins, options}, true);
+      dLog('services/auth getBlockFeaturesCounts', block, interval, nBins, isZoomed, useBucketAuto, options);
+    return this._ajax('Blocks/blockFeaturesCounts', 'GET', {block, interval, nBins, isZoomed, useBucketAuto, options}, true);
   },
 
   getBlockFeaturesCount(blocks, options) {
@@ -269,6 +275,27 @@ export default Service.extend({
     if (trace_paths)
       dLog('services/auth featureSearch', featureNames, options);
     return this._ajax('Features/search', 'GET', {server : apiServer, filter : featureNames, options}, true);
+  },
+
+  /** Request DNA sequence search (Blast).
+   * @param dnaSequence string "actg..."
+   * @param parent  datasetId of parent / reference of the blast db which is to be searched
+   * @param searchType 'blast'
+   * @param resultRows  limit rows in result 
+   * @param addDataset  true means add / upload result to db as a Dataset
+   * @param datasetName if addDataset, this value is used to name the added dataset.
+   */
+  dnaSequenceSearch(apiServer, dnaSequence, parent, searchType, resultRows, addDataset, datasetName, options) {
+    dLog('services/auth featureSearch', dnaSequence.length, parent, searchType, resultRows, addDataset, datasetName, options);
+    /** Attach .server to JSON string, instead of using
+     * requestServerAttr (.session.requestServer)
+     * (this can be unwound after adding apiServer as param to ._ajax(),
+     *  dropping the new String() ).
+     */
+    let data = {dnaSequence, parent, searchType, resultRows, addDataset, datasetName, options},
+        dataS = JSON.stringify(data); // new String();
+    // dataS.server = apiServer;
+    return this._ajax('Features/dnaSequenceSearch', 'POST', dataS, true);
   },
 
   createDataset(name) {
@@ -317,7 +344,7 @@ export default Service.extend({
     if (token === true) {
       let accessToken = this._accessToken(server);
       config.headers.Authorization = accessToken
-    } else if (Ember.typeOf(token) == 'string') {
+    } else if (typeOf(token) == 'string') {
       config.headers.Authorization = token
     }
 
@@ -351,16 +378,17 @@ export default Service.extend({
       };
     }
 
-    return Ember.$.ajax(config)
+    return $.ajax(config);
   },
 
   _accessToken(server) {
     let
     accessToken = server && server.token;
-    if (! accessToken)
-    this.get('session').authorize('authorizer:application', (headerName, headerValue) => {
-      accessToken = headerValue;
-    });
+    if (! accessToken) {
+      let session = this.get('session');
+      accessToken = this.get('session.data.authenticated.token');
+      dLog('_accessToken', this.get('session'), accessToken, server);
+    }
     console.log('_accessToken', server, accessToken);
     return accessToken
   },
@@ -368,6 +396,12 @@ export default Service.extend({
    * @param data  params to the API; these guide the server determination;
    * e.g. if the param is block: <blockId>, use the server from which blockId was loaded.
    *
+   * For POST, data is a JSON string, so data.server is not defined (except by dnaSequenceSearch);
+   * this is handled by the 'if (! requestServer) {' case.
+   * This will be simplified by adding apiServer as an (optional)
+   * param to _ajax(), _server(), _endpointURLToken().
+   *
+   * @desc
    * The compound result includes a copy of these params, modified to suit the
    * server which is chosen : paths request params may be remote references, and
    * are converted to local if they are being sent to the server they refer to.
@@ -431,9 +465,18 @@ export default Service.extend({
             result.data = blockIdMap(data, [blockLocalId, I]);
         }
       }
-      if (! requestServer)
-        requestServer = this.get(requestServerAttr);
-      dLog(blockId, 'blockServer', blockServer);
+      if (! requestServer) {
+	/** For requests without blockIds to determine blockServer from.
+	 * requestServerAttr (.session.requestServer) is set by buildURL(),
+	 * called via adapters/application.js: updateRecord().  Prior to that
+	 * being called, fall back to primaryServer, e.g. for runtimeConfig
+	 * which is used by getHoTLicenseKey() when the key is not defined in
+	 * the build environment.
+	 */
+        requestServer = this.get(requestServerAttr)
+	  || this.get('apiServers.primaryServer');
+      }
+      dLog(blockId, 'blockServer', blockServer, requestServer, this.get(requestServerAttr));
     }
     result.server = requestServer;
     return result;
@@ -445,8 +488,19 @@ export default Service.extend({
   _endpoint(requestServer, route) {
   let
     apiHost =  requestServer && requestServer.host;
-    let config = Ember.getOwner(this).resolveRegistration('config:environment')
+    let config = getOwner(this).resolveRegistration('config:environment')
     let endpoint = (apiHost || config.apiHost) + '/' + config.apiNamespace + '/' + route
+    /** Pretzel is designed to support multiple servers sub-domains for
+     * different species (e.g. *.plantinformatics.io) and they have separate
+     * logins, so the authentication cookie token is not shared between
+     * subdomains which is the default configuration of ember-simple-auth.
+     * Not setting .cookieDomain prevents interference from cookies from
+     * other subdomains and the parent domain.  Secondary servers have
+     * separate login and authentication.
+     * refn: https://ember-simple-auth.com/api/classes/CookieStore.html
+     *  "If not explicitly set, the cookie domain defaults to the domain the
+     *  session was authenticated on."
+     */
     dLog('_endpoint', requestServer, apiHost, endpoint, config);
     return endpoint
   },
@@ -492,7 +546,7 @@ function blockIdMap(data, mapFns) {
   ab = !!blockA;
   console.log('blockIdMap', data, blockA, blockB, blockIds, restFields, d, ab);
   if ((!blockA !== !blockB) || (!blockA === !blockIds)) {
-    Ember.assert('param data is expected to contain either .blockA and .blockB, or .blockIds : ' +
+    assert('param data is expected to contain either .blockA and .blockB, or .blockIds : ' +
                  JSON.stringify(data), false);
   }
   /* if data has .blockA,B, put those params into blockIds[] to be processed in

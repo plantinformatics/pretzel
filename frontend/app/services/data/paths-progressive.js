@@ -1,7 +1,8 @@
-import Ember from 'ember';
+import { allSettled } from 'rsvp';
+import { throttle } from '@ember/runloop';
+import { alias } from '@ember/object/computed';
 
-import Service from '@ember/service';
-const { inject: { service } } = Ember;
+import Service, { inject as service } from '@ember/service';
 
 import { task } from 'ember-concurrency';
 
@@ -28,9 +29,9 @@ const dLog = console.debug;
 const blocksUpdateDomainEnabled = false;
 
 function verifyFeatureRecord(fr, f) {
-  let frd = fr._internalModel.__data,
+  let frd = fr._internalModel.__data || fr._internalModel .__recordData.__data,
   /** Handle some older data which has .range instead of .value */
-  frdv = frd.value || frd.range,
+  frdv = frd ? frd.value || frd.range : fr.get('value'),
   fv = f.value || f.range;
   if ((typeof(frdv) == "number") || (frdv.length === undefined))
     frdv = [frdv];
@@ -38,15 +39,18 @@ function verifyFeatureRecord(fr, f) {
     frdv = [fv];
   /** @return 1 if end of interval matches forward, -1 if reverse, 0 if not match. */
   function sameOrReverse(i) { return (frdv[i] === fv[i]) ? 1 : (frdv[i] === fv[1-i]) ? -1 : 0; }
+  /** if sameValue is true then sameDirection is implied, so not tested. */
+  let sameValue = (fv.length === 1) && (frdv[0] === fv[0]) &&
+      ((frdv.length === 1) || (frdv[0] === frdv[1])) ;
   let
     /** direction indicated by frdv[0]. */
     direction = sameOrReverse(0),
   /** true if not an interval, or other end of interval matches in same direction. */
-  sameDirection = (frdv.length < 2) || (sameOrReverse(1) === direction),
+  sameDirection = sameValue || (frdv.length < 2) || (sameOrReverse(1) === direction),
   same = 
     (fr.id === f._id) &&
     direction && sameDirection &&
-    (frd.name === f.name);
+    ((frd ? frd._name : fr.get('name')) === f.name);
   return same;
 }
 
@@ -155,7 +159,7 @@ export default Service.extend({
       });
     return intervals;
   },
-  pathsDensityParams : Ember.computed.alias('controls.view.pathsDensityParams'),
+  pathsDensityParams : alias('controls.view.pathsDensityParams'),
   /** Determine the parameters for the paths request, - intervals and density.
    * @param intervals domain for each blockAdj
    */
@@ -259,7 +263,7 @@ export default Service.extend({
            * to throttle with the same arguments into a single call.
            */
           if (blocksUpdateDomainEnabled)
-          Ember.run.throttle(
+          throttle(
             me, me.blocksUpdateDomain, 
             blockAdjId, domainCalc,
             200, false);
@@ -301,9 +305,17 @@ export default Service.extend({
       let fn = store.normalize('feature', f);
       c = store.push(fn);
       let blockId = f.blockId;
-      if (blockId.get)
-	blockId = blockId.get('id');
-      storeFeature(stacks.oa, flowsService, f.name, c, blockId);
+      // equivalent : (typeof blockId !== "string")
+      if (blockId.get) {
+        blockId = blockId.get('id');
+      }
+      if (trace_pathsP > 3)
+        dLog('pushFeature', f.blockId, c.get('blockId.features.length'), c.get('blockId.featuresLength'), f, 'featuresLength');
+      /** if feature has no ._name, i.e. datasetId.tags[] contains "AnonFeatures",
+       * then use e.g. "1H:" + value[0]
+       */
+      let fName = f._name || (c.get('blockId.name') + ':' + f.value[0]);
+      storeFeature(stacks.oa, flowsService, fName, c, blockId);
       if (trace_pathsP > 2)
         dLog(c.get('id'), c._internalModel.__data);
     }
@@ -347,6 +359,8 @@ export default Service.extend({
       pathsResult = res;
     if (res.length || ! pathsViaStream) {
       exists.set(resultFieldName, pathsResult);
+      // update the paths{,Aliases}ResultLength -Debounced and -Throttled values
+      exists.updatePathsResult(resultFieldName, pathsResult);
       if (trace_pathsP > 1 + pathsViaStream)
         dLog(resultFieldName, pathsResult, exists, exists._internalModel.__attributes, exists._internalModel.__data);
     }
@@ -506,7 +520,7 @@ export default Service.extend({
           let domainCalc = pathsViaStream || firstResult,
           axisEvents = ! blockAdj;
           if (blocksUpdateDomainEnabled)
-          Ember.run.throttle(
+          throttle(
             me, me.blocksUpdateDomain, 
             blockAdjId, domainCalc,
             200, false);
@@ -643,11 +657,15 @@ export default Service.extend({
      * defines the range then the domain of the block's features is not known,
      * and the axis.domain[] will be [0, 0].
      */
-    if (! brushedDomain  || ((brushedDomain[0] === 0) && (brushedDomain[1] === 0)))
-      delete paramAxis.domain;
+    if (! brushedDomain  || ((brushedDomain[0] === 0) && (brushedDomain[1] === 0))) {
+      if (paramAxis.domain && (paramAxis.domain[0] === 0) && (paramAxis.domain[1] === 0)) {
+        delete paramAxis.domain;
+      }
+    }
     else if (brushedDomain)
       paramAxis.domain = brushedDomain;
-    let dataBlockIds = axis.dataBlocks(true)
+    let dataBlockIds = axis.dataBlocks(true, false)
+        .filter((blockS) => blockS.block.get('isBrushableFeatures'))
      // equiv : blockS.block.get('id')
       .map(function (blockS) { return blockS.axisName; });
     /** The result of passing multiple blockIds to getBlockFeaturesInterval()
@@ -680,7 +698,7 @@ export default Service.extend({
           axisEvents = false;
 
           if (blocksUpdateDomainEnabled)
-          Ember.run.throttle(
+          throttle(
             me, me.blocksUpdateDomain, 
             requestBlockIds, domainCalc,
             200, false);
@@ -699,7 +717,7 @@ export default Service.extend({
         });
       return promise;
     });
-    let promise = Ember.RSVP.allSettled(promises);
+    let promise = allSettled(promises);
     return promise;
 
   }

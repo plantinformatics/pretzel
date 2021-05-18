@@ -1,4 +1,5 @@
-import Ember from 'ember';
+import { debounce } from '@ember/runloop';
+import $ from 'jquery';
 
 /*global d3 */
 /* global CSS */
@@ -57,7 +58,9 @@ let
       // as for .resize() below,
       // .on() seems to apply a reasonable debounce, but if not, use Ember.run.debounce()
       // Determine resizer position relative to resizable (parent)
-      let x = d3.mouse(this.parentNode)[0];
+      let relativeParent = (this.parentNode.parentNode.parentNode.tagName === 'foreignObject') ?
+        this.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode : this.parentNode;
+      let x = d3.mouse(relativeParent)[0];
       let dx = d3.event.dx;
       // dLog("eltWidthResizable drag x=", x, dx);
       // Avoid negative or really small widths
@@ -89,7 +92,7 @@ let
    * automatically absorb the increased width.
    */
   let w =
-    Ember.$( window );
+    $( window );
   if (trace_dom)
     dLog(w);
     w.resize(function(e) {
@@ -99,7 +102,7 @@ let
      * Seems that the version used is frontend/bower_components/jquery/dist/jquery.js
      * (noting also bower_components/jquery-ui/ui/widgets/resizable.js).
      */
-      Ember.run.debounce(resizeEnd, 300);
+      debounce(resizeEnd, 300);
   });
   function resizeEnd() { 
     if (trace_dom) {
@@ -131,11 +134,11 @@ let
 function eltResizeToAvailableWidth(bodySel, centreSel)
 {
   let
-  a1=Ember.$(bodySel),
+  a1=$(bodySel),
   body =  a1,
   bodyWidth = a1.innerWidth(),
   siblingWidth = 0,
-  siblings = Ember.$(bodySel + ' > *')
+  siblings = $(bodySel + ' > *')
     .each(function (i, elt) { siblingWidth += elt.clientWidth; } );
   if (trace_dom)
     siblings
@@ -214,6 +217,11 @@ function noShiftKeyfilter() {
   return ! ev.shiftKey;
 }
 
+function ctrlKeyfilter() {
+  let ev = d3.event.sourceEvent || d3.event; 
+  return ev.ctrlKey;
+}
+
 /*----------------------------------------------------------------------------*/
 
 /** 
@@ -287,7 +295,7 @@ function eltClassName(f)
 
 function tabActive(jqSelector)
 {
-  let elt$ = Ember.$(jqSelector),
+  let elt$ = $(jqSelector),
   active = elt$.hasClass('active');
   if (trace_dom)
     dLog('tabActive', jqSelector, active, elt$[0], elt$.length);
@@ -301,7 +309,7 @@ function tabActive(jqSelector)
 function inputRangeValue(inputId)
 {
   // based on part of setupInputRange()
-  let input = Ember.$("#" + inputId);
+  let input = $("#" + inputId);
   if (input.length !== 1)
     dLog('inputRangeValue', inputId, input.length, input.length && input[0]);
   // .value is a string, so convert to number.
@@ -331,12 +339,12 @@ function expRange(value, steps, rangeMax /*, domainMax*/)
   return exp;
 }
 
-  /**	initial/default value of slider : y
-   *
-   * x^y = 20 => y log(x) = log(20) => y = Math.log(20) / Math.log(1.148137) = 21.6861056
-   *
-   rangeStart = e.g. 20
-   */
+/**	initial/default value of slider : y
+ *
+ * x^y = 20 => y log(x) = log(20) => y = Math.log(20) / Math.log(1.148137) = 21.6861056
+ *
+ rangeStart = e.g. 20
+ */
 function expRangeInitial(rangeStart, base) {
   let
   y = Math.log(rangeStart) / Math.log(base);
@@ -350,7 +358,7 @@ export {
   eltWidthResizable,
   eltResizeToAvailableWidth,
   logWindowDimensions, logElementDimensions, logElementDimensions2,
-  shiftKeyfilter, noShiftKeyfilter ,
+  shiftKeyfilter, noShiftKeyfilter, ctrlKeyfilter, 
   htmlHexEncode, cssHexEncode,
   eltClassName,
   tabActive,

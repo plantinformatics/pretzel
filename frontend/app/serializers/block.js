@@ -1,11 +1,8 @@
-import Ember from 'ember';
-import DS from 'ember-data';
+import Mixin from '@ember/object/mixin';
+import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
 import ApplicationSerializer from './application';
 
-const { EmbeddedRecordsMixin } = DS;
-const { Mixin } = Ember;
-
-export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
+export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
   normalize(model, hash, prop) {
     var ret = this._super(...arguments);
     return ret;
@@ -42,7 +39,11 @@ export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
   attrs: {
     annotations: { embedded: 'always' },
     intervals: { embedded: 'always' },
-    features: { embedded: 'always' }
+    features: { embedded: 'always' },
+    /** Rename Pretzel Block .meta to ._meta to avoid clash with ember-data object
+     * .meta, as commented in ./dataset.js : attrs : _meta
+     */
+    _meta : 'meta'
   }
 
 });

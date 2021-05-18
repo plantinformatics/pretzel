@@ -1,3 +1,6 @@
+/* global process */
+/* global module */
+
 module.exports = function(app) {
   var Role = app.models.Role;
 
@@ -73,14 +76,20 @@ module.exports = function(app) {
     }
     if (context.property == 'find' ||
       context.property ==  'create' ||
+        // Dataset
       context.property == 'upload' ||
       context.property == 'tableUpload' ||
       context.property == 'createComplete' ||
+        // Feature
       context.property == 'search' ||
       context.property == 'depthSearch' ||
+      context.property == 'dnaSequenceSearch' ||
+        // Alias
       context.property == 'bulkCreate' ||
+        // Block
       context.property == 'paths' ||
       context.property == 'pathsProgressive' ||
+      context.property == 'blockFeaturesAdd' ||
       context.property == 'blockFeaturesCount' ||
       context.property == 'blockFeaturesCounts' ||
       context.property == 'blockFeatureLimits' ||
@@ -90,7 +99,9 @@ module.exports = function(app) {
       context.property == 'pathsAliasesProgressive' ||
       context.property == 'pathsAliasesViaStream' ||
       context.property == 'namespacesAliases' ||
+        // Configuration
       context.property === 'runtimeConfig' ||
+        // Dataset
       context.property === 'cacheClear' ||
       context.property === 'cacheClearRequests'
        ) {

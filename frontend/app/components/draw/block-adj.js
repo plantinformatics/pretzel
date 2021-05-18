@@ -1,16 +1,44 @@
-import Ember from 'ember';
+import { getOwner } from '@ember/application';
+import { allSettled, Promise } from 'rsvp';
+import { A } from '@ember/array';
+import { computed, get } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import Evented from '@ember/object/evented';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
+import { debounce, throttle, later, next, once as run_once } from '@ember/runloop';
+import { task, timeout, didCancel } from 'ember-concurrency';
 
-const { inject: { service } } = Ember;
-import { throttle } from '@ember/runloop';
-import { task } from 'ember-concurrency';
-
+import { isEqual } from 'lodash/lang';
 
 import AxisEvents from '../../utils/draw/axis-events';
 import { stacks, Stacked } from '../../utils/stacks';
-import { selectAxis, blockAdjKeyFn, blockAdjEltId, featureEltIdPrefix, featureNameClass, foregroundSelector, selectBlockAdj } from '../../utils/draw/stacksAxes';
-import { targetNPaths, pathsFilter, pathsFilterSmooth } from '../../utils/draw/paths-filter';
+import {
+  selectAxis,
+  blockAdjKeyFn,
+  blockAdjEltId,
+  featureEltIdPrefix,
+  featureNameClass,
+  foregroundSelector,
+  selectBlockAdj
+} from '../../utils/draw/stacksAxes';
+import {
+  targetNPaths,
+  pathsFilter,
+  pathsFilterSmooth
+} from '../../utils/draw/paths-filter';
 import { intervalSize } from  '../../utils/interval-calcs';
-import { pathsResultTypes, pathsApiResultType, flowNames, resultBlockIds, pathsOfFeature, locationPairKeyFn } from '../../utils/paths-api';
+import {
+  pathsResultTypes,
+  pathsApiResultType,
+  flowNames,
+  resultBlockIds,
+  pathsOfFeature,
+  locationPairKeyFn
+} from '../../utils/paths-api';
+
+import { getTransform, transform2Css } from '../../utils/draw/direct-linear-transform';
+import { thenOrNow } from '../../utils/common/promises';
 
 /* global d3 */
 
@@ -22,8 +50,9 @@ import { pathsResultTypes, pathsApiResultType, flowNames, resultBlockIds, pathsO
 const className = "blockAdj";
 const CompName = 'components/axis-ticks-selected';
 
-const trace_blockAdj = 0;
 const dLog = console.debug;
+const trace_blockAdj = 0;
+const trace_pathTransform = 2;
 
 /*----------------------------------------------------------------------------*/
 /* milliseconds duration of transitions in which alignment <path>-s between
@@ -49,19 +78,6 @@ function progressGroupsSelect(flowName) {
   return g;
 }
 
-/** if value is a promise then call fn(value) when the promise resolves, otherwise call it now.
- * @return a promise, yielding fn(value), if value is a promise, otherwise fn(value)
- */
-function thenOrNow(value, fn) {
-  let result;
-  if (value.then) {
-    result = value.then(fn);
-  }
-  else {
-    result = fn(value);
-  };
-  return result;
-}
 
 
 /*----------------------------------------------------------------------------*/
@@ -70,7 +86,7 @@ function thenOrNow(value, fn) {
  * @param blockAdj  [blockId0, blockId1]
  * @param drawMap for Evented - stack events
  */
-export default Ember.Component.extend(Ember.Evented, AxisEvents, {
+export default Component.extend(Evented, AxisEvents, {
   /** AxisEvents is used to receive axis stacking and resize events.
    *  Evented may be used in future to propagate events to components rendered within block-adj.
    */
@@ -78,10 +94,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   pathsP : service('data/paths-progressive'),
   flowsService: service('data/flows-collate'),
   block: service('data/block'),
+  axisZoom : service('data/axis-zoom'),
   queryParams: service('query-params'),
+  controls : service(),
 
 
   needs: ['component:draw/path-data'],
+
+  controlsView : alias('controls.controls.view'),
 
   /** counters to debounce CFs */
   heightChanged : 0,
@@ -90,7 +110,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   /** The DB IDs of the blocks which this block-adj aligns.
       * array[2] of blockId
       */
-  blockAdjId : Ember.computed.alias('blockAdj.blockAdjId'),
+  blockAdjId : alias('blockAdj.blockAdjId'),
   // blockAdj.id is the same values in a string form, separated by '_'
 /*  ('blockAdj', function () {
     let blockAdj = this.get('blockAdj'),
@@ -99,21 +119,34 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     return blockAdjId;
   }),
 */
-  axes :  Ember.computed.alias('blockAdj.axes'),
+  axes :  alias('blockAdj.axes'),
 
   /** comment in services/data/block.js explains context of urlOptions
    */
-  parsedOptions : Ember.computed.alias('queryParams.urlOptions'),
+  parsedOptions : alias('queryParams.urlOptions'),
 
-  pathsDensityParams : Ember.computed.alias('pathsP.pathsDensityParams'),
-  pathsResultLength : Ember.computed(
-    'blockAdj.pathsResult.[]', 'pathsAliasesResultLength',
+  pathsDensityParams : alias('pathsP.pathsDensityParams'),
+  isComplete() { return this.blockAdj.isComplete(); },
+  pathsResultLength : computed(
+    'blockAdj.pathsResultLengthThrottled', 'pathsAliasesResultLength',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
-    let
-    length = this.drawCurrent(pathsResultTypes.direct),
-    pathsAliasesLength = this.get('pathsAliasesResultLength');
-    return length;
+      /** this CP may be evaluated before the first didRender(), which does
+       * drawGroup{Container,}(); waiting for next render so that drawCurrent()
+       * has <g> to render into.
+       */
+      next(() => {
+        /** it is possible (currently) for this CP to be evaluated after one end
+         * (block) of a block-adj to become un-viewed and before the block-adj
+         * is destroyed.  This check detects and handles that case.
+         */
+        if (this.isComplete()) {
+          let
+          length = this.drawCurrent(pathsResultTypes.direct),
+          pathsAliasesLength = this.get('pathsAliasesResultLength');
+          // return length;
+        }
+      });
   }),
   /** Used in paths{,Aliases}ResultLength().
    */
@@ -125,8 +158,30 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     pathsResult = this.get('blockAdj.' + prType.fieldName + 'Filtered'),
     fnName = prType.fieldName + 'Length',
     length = pathsResult && pathsResult.length;
-    dLog(fnName, this, length);
+    dLog('drawCurrent', fnName, this, length);
     if (length) {
+      this.get('drawCurrentTask').perform(prType, pathsResult)
+        .catch((error) => {
+          // Recognise if the given task error is a TaskCancelation.
+          if (! didCancel(error)) {
+            dLog('drawCurrentTask taskInstance.catch', this.blockAdjId, error);
+            throw error;
+          }
+        });
+    } else if (! this.get('blockAdj.receivedAll')[prType.typeName]) {
+      /** drawCurrent() will do this if more paths required.
+       *  If 0 paths then request paths.  */
+      this.incrementProperty('blockAdj.pathsRequestCount');
+    }
+
+    // length returned by paths{,Aliases}ResultLength is currently just used in logging, not functional.
+    return length;
+  },
+  /**
+   * @return promise of completion of rendering and transitions
+   */
+  drawCurrentTask : task(function * (prType, pathsResult) {
+      let promise;
       let pathsDensityParams = this.get('pathsDensityParams'),
       axes = this.get('axes'),
       // axesDomains = this.get('blockAdj.axesDomains'),
@@ -136,10 +191,15 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
         .reduce(function (bd, bb) {
           // if b.axis.axis1d.get('zoomed') is false, then domain will be undefined.
           // also b.axis.axis1d can be undefined, probably because of new axis, in which case it won't be zoomed yet (except when we add zoom domain to the URL).
-          bb.forEach(function (b) { bd[b.axisName] = b.axis.axis1d && b.axis.axis1d.get('domain'); }); return bd; }, {}),
+          // if axis is deleted, blocks are un-viewed, i.e. b.block.get('isViewed') is false, and b.axis === undefined
+          bb.forEach(function (b) { bd[b.axisName] = b.axis && b.axis.axis1d && b.axis.axis1d.get('domain'); }); return bd; }, {}),
       axesRanges = axes.map((a) => a.yRange()),
       axisLengthPx = Math.max.apply(null, axesRanges),
       nPaths = targetNPaths(pathsDensityParams, axisLengthPx);
+      // handle b.axis === undefined (block has been un-viewed)
+      if (Object.values(blockDomains).indexOf(undefined) !== -1) {
+        return Promise.resolve();
+      }
       if (pathsResult.length < nPaths) {
         /* to satisfy the required nPaths, trigger a new request. */
         this.incrementProperty('blockAdj.pathsRequestCount');
@@ -159,7 +219,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
           /* first call, scope is not yet defined, there are no existing paths,
            * so use pathsFilter() instead of pathsFilterSmooth() */
           pathsResult = pathsFilter(prType, pathsResult, blockDomains, nPaths);
-          scope = this.set('scope' + prType.typeName, Ember.A());
+          scope = this.set('scope' + prType.typeName, A());
           scope[0] = currentScope;
           let shown = this.set('shown' + prType.typeName, new Set());
           pathsResult.forEach((p) => shown.add(p));
@@ -172,40 +232,44 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       }
       /* The calling CPs paths{,Aliases}ResultLength() are called before didRender
        * and hence before drawGroup{,Container}().   .draw() uses the <g>-s they
-       * maintain, so defer until end of run loop.
+       * maintain; so may need defer until end of run loop, but it is likely a
+       * later call to this function will be after those are created.
        */
-      Ember.run.later( () => 
-                       this.draw(/*pathsApiResultType*/ prType, pathsResult)
-                     );
-    }
+    promise = this.draw(/*pathsApiResultType*/ prType, pathsResult);
+    return promise;
+  }).keepLatest(),
 
-    return length;
-  },
-  pathsAliasesResultLength : Ember.computed(
-    'blockAdj.pathsAliasesResult.[]', 'paths.alias.[]',
+  pathsAliasesResultLength : computed(
+    'blockAdj.pathsAliasesResultLengthThrottled', 'paths.alias.[]',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
     function () {
-    /* pathsAliasesResult is in a different form to pathsResult; passing it to
-     * draw() requires some mapping, which is abstracted in 
-     * pathsResultType e.g. pathsResultTypes.{direct,alias}
-     */
-    pathsApiResultType.flowName = pathsResultTypes.alias.flowName;
-    pathsApiResultType.fieldName = pathsResultTypes.alias.fieldName;
+      /** the comments in pathsResultLength re. next and isComplete apply here also. */
+      next(() => {
+        if (this.isComplete()) {
+          /* pathsAliasesResult is in a different form to pathsResult; passing it to
+           * draw() requires some mapping, which is abstracted in 
+           * pathsResultType e.g. pathsResultTypes.{direct,alias}
+           */
+          pathsApiResultType.flowName = pathsResultTypes.alias.flowName;
+          pathsApiResultType.typeName ||= pathsResultTypes.alias.flowName;
+          pathsApiResultType.fieldName = pathsResultTypes.alias.fieldName;
 
-    let
-    pathsAliasesLength = this.drawCurrent(pathsApiResultType /*pathsResultTypes.alias*/);
+          let
+          pathsAliasesLength = this.drawCurrent(pathsApiResultType /*pathsResultTypes.alias*/);
 
-    return pathsAliasesLength;
+          // return pathsAliasesLength;
+        }
+      });
   }),
-  paths : Ember.computed.alias('blockAdj.paths'),
+  paths : alias('blockAdj.paths'),
   /** Trigger paths request - side-effect. In the streaming case, result when
    * the stream ends is [], so paths{,Aliases}Result are used instead of the
    * result of this promise.
    */
-  pathsRequest : Ember.computed('blockAdj.paths', function () {
+  pathsRequest : computed('blockAdj.pathsResultLengthDebounced', function () {
     let pathsP = this.get('blockAdj.paths');
     dLog('blockAdj.paths', pathsP);
-    function thenLength(p) { return ! p ? 0 : thenOrNow(p, (a) => Ember.get(a, 'length')); }
+    function thenLength(p) { return ! p ? 0 : thenOrNow(p, (a) => get(a, 'length')); }
     let lengthSumP = thenLength(pathsP.direct) + thenLength(pathsP.alias);
     return lengthSumP;
   }),
@@ -214,7 +278,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
    * the required renders, so this can be dropped if there is not likely to be a
    * need for showing unfiltered paths.
    */
-  pathsEffect : Ember.computed(
+  pathsEffect : computed(
     // the debugger will evaluate this CP if this dependency is enabled.
     // 'blockAdj.paths.{direct,alias}.[]',
     function () {
@@ -236,7 +300,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
               pathsApiResultType /*pathsResultTypes.pathsApi*/ : pathsResultTypes[flowName];
             dLog('blockAdj.paths length', paths && paths.length, pathsResultType);
             if (paths && paths.length)
-              throttle(this, this.draw, pathsResultType, paths, 200, false);
+              throttle(this, this.draw, pathsResultType, paths, this.get('controlsView.throttleTime'), false);
           });
       });
     });
@@ -245,11 +309,151 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     /** .direct and.alias are defined by the result of pathsP, not by pathsP, so
      * this would need to change; no purpose for this yet. */
     let resultP = (pathsP.direct && pathsP.alias) ?
-    Ember.RSVP.allSettled([pathsP.direct, pathsP.alias])
+    allSettled([pathsP.direct, pathsP.alias])
       : (pathsP.direct || pathsP.alias);
     }
     return pathsP;
   }),
+
+  /*--------------------------------------------------------------------------*/
+
+  getAxes() {
+    let
+    /* factor getAxes() out of blockAdj.axes,  getAxis() out of block, separating
+     * from .referenceBlock. */
+    axesP = stacks.axesP,
+    axes = this.get('blockAdj.blocks').map((block) => axesP[block.get('id')]);
+    /** this is equivalent to the above lookup via axesP, but this is causing delay - slows down to throttled time. */
+    // axes = this.get('axes');
+    return axes;
+  },
+
+  /** @return scales of blocks's axes, parallel to .blocks[]
+   */
+  previousScales: computed(function () {
+    /** no dependencies, called once when first used. */ 
+    return {};
+  }),
+  scaleInvert(y) {
+    let r = y.range();
+    y.range([r[1], r[0]]);
+    return y;
+  },
+
+  zoomedDomainsEffect : computed(
+    'blockAdj.axes1d.{0,1}.zoomedDomain.{0,1}',
+    'blockAdj.zoomedDomains.{0,1}',
+    function () {
+      /** currently depend on 'blockAdj.zoomedDomains.{0,1}', and clear the
+       * transform when isEqual(domains, throttled); could instead do that in updatePathsPosition().
+       */
+      /** if no zoomedDomain then use axis1d .blocksDomain, as in 
+       * axis-1d:domain(), but that depends on -Throttled
+       */
+      let
+      axes1d = this.get('blockAdj.axes1d'),
+      domains = axes1d.map(
+        (axis1d) => axis1d.get('zoomedDomain') || axis1d.get('blocksDomain')),
+      throttled = axes1d.mapBy('domain');
+      if (trace_pathTransform > 1)
+        dLog('zoomedDomainsEffect', domains[0], domains[1], throttled[0], throttled[1]);
+      let css, vc, transformX;
+      let axes = this.getAxes();
+      if (isEqual(domains, throttled)) {
+        let
+        previousScales = this.get('previousScales');
+        axes.forEach((a) => previousScales[a.axisName] = /*this.scaleInvert()*/a.y.copy());
+      } else {
+        let
+        /** previous scales of the axes, parallel to blocks[] and axes[].  */
+        scales = axes.map((a) => this.get('previousScales')[a.axisName]),
+
+        /** 2 ways to calculate from & to, which should be equivalent :
+         * 1. from = whole range; to = the range of the old domain at the new scale
+         * 2. to = whole range; from = the range of the new domain at the old scale
+         */
+        /** also need to take into account stacking and flipped : axes[*].{flipped, position, portion} */
+        /* method 1. */
+        /** whole range */
+        from = axes.map((a) => a.y.range().map((r) => a.yRange() - r)),
+        /** current pixel range of throttled  */
+        to = /*from; from =*/ throttled.map((d, i) => d.map((y) => (axes[i].yRange() - axes[i].y(y))) );
+        
+        if (/* method 2. */ true) {
+          to = from;
+          from = domains.map((d, i) => d.map((y) => (axes[i].yRange() - scales[i](y))) );
+        }
+        if (trace_pathTransform > 1)
+          dLog('zoomedDomainsEffect', from[0], from[1], to[0], to[1]);
+
+
+        let
+        oa = this.get('drawMap.oa'),
+        /** scaled x value of each axis, indexed by axisIDs */
+        o = oa.o,
+        blockIds = axes1d.mapBy('referenceBlock.id'),
+        /**  index of the axis which has zoomed since throttled time.  */
+        zoomedIndex = domains.findIndex((d, i) => ! isEqual(d, throttled[i])),
+        /** horizontal position of each axis. */
+        x = blockIds.map((id) => o[id]),
+        /** from, to are just the y values.  fromXY, toXY have the x added, in {x, y} format. */
+        fromXY = this.yIntervals2XY(from, x, zoomedIndex),
+        toXY = this.yIntervals2XY(to, x, zoomedIndex),
+        H = getTransform(fromXY, toXY);
+        css = transform2Css(H);
+        if (trace_pathTransform > 1)
+          dLog('zoomedDomainsEffect', x, fromXY, toXY, H, css, o);
+
+        transformX = x[zoomedIndex];
+
+        vc = oa.vc;
+      }
+
+      let blockAdjId = this.get('blockAdjId');
+      let dpS = progressGroupsSelect(undefined);
+      let baS = selectBlockAdj(dpS, blockAdjId);
+      /** d3 v3 doesn't recognise matrix3d(), only matrix(); can use d3 .attr when update d3 to v4. */
+      // baS.attr('transform', css.transform);
+      if (! baS.empty()) {
+        let nodes = baS.nodes();
+        if (! css) {
+          if (trace_pathTransform)
+            dLog('zoomedDomainsEffect', nodes[0], nodes);
+        }
+        let styleTransform = css ? ('transform:' + css.transform) : '';
+        nodes.forEach((n) => n.setAttribute('style', styleTransform));
+      }
+      /** 
+       * css['transform-origin'] is just '0 0'
+       */
+      let transformOrigin = css && css['transform-origin'];
+      /* position of top-left corner of svg, which is within div#holder
+       * Seems not needed for transform-origin; may need yRange.
+       let holder = d3.select('#holder').node();
+       if (holder) {
+       // e.g. '400 23'
+       transformOrigin = '' + holder.offsetLeft + ' ' + holder.offsetTop;
+       }
+      */
+      let
+      transformY = (vc ? vc.axisTitleLayout.height : 0),
+      verticalTitle = vc && vc.axisTitleLayout && vc.axisTitleLayout.verticalTitle,
+      yRange = (vc ? vc.yRange : 0),
+      shiftLeft = verticalTitle ? 20 : 0,
+      margin = {x : 0/*30 + 5*/, y : 0/*5*/};
+      transformOrigin = '' + (shiftLeft + margin.x + (transformX||0)) + ' ' + (margin.y + transformY /*+ yRange*/);
+      baS.attr('transform-origin', transformOrigin);
+
+    }),
+  /** convert 2 y intervals to an array of 4 {x, y}
+   * Express x relative to the axis which is zoomed.
+   * @param intervals[i][j]	i is axis index [0..1], j is interval end index [0..1]
+   * @param x[i]	i is axis index [0..1]
+   * @param zoomedIndex index of the axis which has zoomed since throttled time.
+   */
+  yIntervals2XY(intervals, x, zoomedIndex) {
+    return intervals.map((yrange, i) => yrange.map((y, j) => ({y, x: (i === zoomedIndex)? 0 : x[i] - x[zoomedIndex]}))).flat();
+  },
 
   /*--------------------------------------------------------------------------*/
 
@@ -352,10 +556,12 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
   /**
    * @param pathsResultType e.g. pathsResultTypes.{Direct,Aliases}
    * @param paths grouped by features
+   * @return promise of completion of rendering and transitions
    */
   draw (pathsResultType, featurePaths) {
+    let promise;
     if (featurePaths.length === 0)
-      return;
+      return Promise.resolve();
     pathsResultType.typeCheck(featurePaths[0], true);
     let store = this.get('store');
     /* Enables (via ?options=pathRemoveTransition), animation of <path> removal
@@ -405,8 +611,10 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
     let baS = selectBlockAdj(dpS, blockAdjId);
     dLog(baS.nodes(), baS.node());
     
-    if (baS.empty())
+    if (baS.empty()) {
       dLog('draw', blockAdjId);
+      promise = Promise.resolve();
+    }
     else
     {
       let gS = baS.selectAll("g." + className)
@@ -430,7 +638,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
 
       let gSA = gS.merge(gA),
-      owner = Ember.getOwner(this),
+      owner = getOwner(this),
       pS = gSA
         .selectAll("path." + className)
         .data(pathsOfFeature(store, pathsResultType, owner), locationPairKeyFn),
@@ -440,6 +648,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       ;
       let pSA = pS.merge(pSE);
 
+      let pathPosition = this.get('pathPosition');
+      promise =
       /** existing paths (pS) are transitioned from their previous position;
        * the previous position of added paths is not easily available so they
        * are drawn without transition at their new position; this is done after
@@ -447,21 +657,28 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
        * is consistent at any point in time, otherwise the movement is
        * confusing.
        */
-      let positionNew = () => this.get('pathPosition').perform(pSE)
-        .catch((error) => dLog('pathPosition New', error));
-      this.get('pathPosition').perform(pS, positionNew);
+      pathPosition.perform(pS)
+        .then(/*pathPosition.perform(pSE)*/ () => pSE.call(this.attrD_pathU))
+        .catch((error) => {
+          // Recognise if the given task error is a TaskCancelation.
+          if (! didCancel(error)) {
+            dLog('draw pathPosition New taskInstance.catch', this.blockAdjId, error);
+            throw error;
+          }
+        })
+        ;//.then(() => { dLog('draw pathPosition then', pS.size(), pSE.size());  });
 
       // setupMouseHover(pSE);
       pS.exit().remove();
     }
-
+    return promise;
   },
 
   /** Update the "d" attribute of the <path>-s.  */
   updatePathsPosition() {
     // based on draw().
     let dpS = progressGroupsSelect(undefined);
-    let blockAdjId = this.get('blockAdjId');
+    let blockAdjId = this.get('blockAdjId') || this.blockAdj.blockAdjId;
     if (trace_blockAdj > 1)
       blockAdjId.forEach(function (blockId) {
         let axis = Stacked.getAxis(blockId);
@@ -487,34 +704,63 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       .filter(function (d) { return d.blocksHaveAxes(); });
     if (! pS.empty() && trace_blockAdj)
       dLog('updatePathsPosition before update pS', (trace_blockAdj > 1) ? pS.nodes() : pS.size(), pS.node());
-    this.get('pathPosition').perform(pS, undefined);
+    this.get('pathPosition').perform(pS)
+        .catch((error) => {
+          // Recognise if the given task error is a TaskCancelation.
+          if (! didCancel(error)) {
+            dLog('updatePathsPosition (pathPosition) New taskInstance.catch', this.blockAdjId, error);
+            throw error;
+          }
+        })
+        .then(() => { dLog('updatePathsPosition (pathPosition) then'); });
   },
 
+  /** Calculate the path value.
+   * @usage d3.selection ... .call(this.attrD_pathU)
+   * @param pathSelection	d3 selection or transition of <path>
+   */
+  attrD_pathU(pathSelection) {
+      // pathU() is temporarily a function, will revert to a computed function, as commented in path().
+      pathSelection.attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
+  },
   /** Update position of the paths indicated by the selection.
    * Making this a task with .drop() enables avoiding conflicting transitions.
-   * If thenFn is given, call it after transition is ended.
    * @param pathSelection
-   * @param thenFn
+   * @return transitionEnd  promise of completion of render transition
    */
-  pathPosition: task(function * (pathSelection, thenFn) {
+  pathPosition: task(function * (pathSelection) {
+    dLog('pathPosition',  pathSelection.size());
+    /** if the selection is empty, there's no point in waiting for the
+     * transition, and also it looks like transition .on('end') doesn't trigger
+     * when the selection is empty.
+     */
+    if (! pathSelection.size()) {
+      return Promise.resolve();
+    }
+    /* Try selectionToTransition() instead.
+    let throttleTime = this.get('controlsView.throttleTime'),
+        pathTransitionTimeVar = throttleTime ? throttleTime * 1 : pathTransitionTime;
+	*/
     let
     /* now that paths are within <g.block-adj>, path position can be altered
      * during dragging by updating a skew transform of <g.block-adj>, instead of
      * repeatedly recalculating pathU.
      */
       transition = 
-    pathSelection
-      .transition().duration(pathTransitionTime)
-      // pathU() is temporarily a function, will revert to a computed function, as commented in path().
-      .attr("d", function(d) { return d.pathU() /*get('pathU')*/; });
+      this.get('axisZoom').selectionToTransition(pathSelection)
+      // .transition().duration(pathTransitionTimeVar)
+      .call(this.attrD_pathU)
+    ;
 
+    let transitionEnd;
+    if (transition !== pathSelection) {
     /** in a later version of d3, can use 
      * transitionEnd = transition.end(); ... return transitionEnd;
      * instead of new Promise(...)
      * The caller is interested in avoiding overlapped transitions, so
      * resolve/reject are treated the same.
      */
-     let transitionEnd =  new Ember.RSVP.Promise(function(resolve, reject){
+     transitionEnd =  new Promise(function(resolve, reject){
        transition
          .on('end', (d) => resolve(d))
          .on('interrupt', (d, i, g) => {
@@ -525,11 +771,14 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
       dLog('pathPosition', pathSelection.node());
       transitionEnd.then(() => dLog('pathPosition end', pathSelection.node()));
     }
-    /* instead of a callback, it should be possible to yield transitionEnd, and
-     * the caller can .finally() on the task handle. Can retry this after version update. */
-    if (thenFn)
-      transitionEnd.then(thenFn);
-  }).drop(),
+    }
+    else
+      /* no transition to wait for. */
+    // try not waiting for completion of transition, combined with throttle on the caller.
+    transitionEnd = Promise.resolve();
+
+    return transitionEnd;
+  }).keepLatest(),
 
   /** Call updateAxis() for the axes which bound this block-adj.
    * See comment in updatePathsPositionDebounce().
@@ -547,18 +796,26 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   /*--------------------------------------------------------------------------*/
 
-  axesDomains : Ember.computed.alias('blockAdj.axesDomains'),
+  axesDomains : alias('blockAdj.axesDomains'),
   /** call updatePathsPosition().
    * filter / debounce the calls to handle multiple events at the same time.
    */
-  updatePathsPositionDebounce : Ember.computed(
+  updatePathsPositionDebounce : computed(
     'widthChanged',
     'heightChanged', 'axisStackChangedCount',
     // stacksWidthChanges depends on stacksCount, so this dependency is implied anyway.
     'block.stacksCount',
+    // widthsSum includes changes to .extended, which impacts width of all block-adjs
+    'block.stacksWidthsSum',
+    'block.axesExtendedCount',
+    // width of split axes effects the path endpoint x values, even if not adjacent.
+    'block.axes2d.@each.allocatedWidthsMax',
+    'xOffsets.@each',
     'drawMap.stacksWidthChanges',
     'blockAdj.axes1d.0.flipRegionCounter',
     'blockAdj.axes1d.1.flipRegionCounter',
+    /* Paths end X position is affected when an adjacent axis opens/closes (split).  */
+    'blockAdj.axes1d.{0,1}.extended',
     /* will change scaleChanged to return {range: [from,to], domain : [from, to]}
      * currently it returns the scale function itself which is not usable as a dependent key.
      * Then the dependency can be : 'blockAdj.axes1d.{0,1}.scaleChanged.range.{0,1}'
@@ -567,20 +824,30 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
      */
     'blockAdj.axes1d.0.scaleChanged',
     'blockAdj.axes1d.1.scaleChanged',
+    'blockAdj.axes1d.{0,1}.axis2d.allocatedWidthsMax',
     function () {
-    let count = this.get('axisStackChangedCount'),
+      let count = this.get('axisStackChangedCount');
+      // throttle(this, this.updatePathsPositionDebounced, this.get('controlsView.throttleTime'), true);
+      run_once(() => this.updatePathsPosition());
+      return count;
+    }),
+    updatePathsPositionDebounced : function () {
+      let count = this.get('axisStackChangedCount'),
       stacksWidthChanges = this.get('drawMap.stacksWidthChanges'),
-	    flips = [this.get('blockAdj.axes1d.0.flipRegionCounter'),
-		           this.get('blockAdj.axes1d.1.flipRegionCounter')],
+      flips = [this.get('blockAdj.axes1d.0.flipRegionCounter'),
+               this.get('blockAdj.axes1d.1.flipRegionCounter')],
       scaleChanges = [this.get('blockAdj.axes1d.0.scaleChanged'),
                       this.get('blockAdj.axes1d.1.scaleChanged')],
       zoomCounter = this.get('blockAdj.zoomCounter'),
       heightChanged = this.get('heightChanged');
       if (trace_blockAdj)
-	      dLog('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, flips, zoomCounter, scaleChanges,
+        dLog('updatePathsPositionDebounce', this.get('blockAdjId'), heightChanged, count, flips, zoomCounter, scaleChanges,
            stacksWidthChanges,
+           this.get('xOffsets'),
            this.get('block.stacksCount'));
     this.updatePathsPosition();
+    /* redraw after axis extended width has updated. */
+    // later(() => this.updatePathsPosition(), 500);
 
       /* this update is an alternative trigger for updating the axes ticks and
        * scale when their domains change, e.g. when loaded features extend a
@@ -590,7 +857,7 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
        * duplicate updates.  */
     // this.updateAxesScale();
     return count;
-  }),
+  },
 
 
   /*--------------------------------------------------------------------------*/
@@ -614,7 +881,8 @@ export default Ember.Component.extend(Ember.Evented, AxisEvents, {
 
   axisStackChanged : function() {
     dLog("axisStackChanged in components/block-adj");
-    this.incrementProperty('axisStackChangedCount');
+    // currently need time for x scale update
+    next(() => ! this.isDestroying && this.incrementProperty('axisStackChangedCount'));
   },
 
   /** @param [axisID, t] */
@@ -670,7 +938,7 @@ function gPathDashAndRemove(g) {
  * This transition could also be applied on path append :
  *   pSE
  *     .transition().duration(pathTransitionTime * 3)
- *     .attr("d", function(d) { return d.pathU(); })
+ *     .call(this.attrD_pathU)
  *     .call(pathTween(false))
  *     .each("end", function() { d3.select(this).attr("stroke-dasharray", 'none'); });
  * pSE would have to be separated out of transition on pSA, to avoid conflict.
