@@ -1,13 +1,45 @@
+const { blockFilterValue0 } = require('./paths-aggr');
+
+
 var ObjectID = require('mongodb').ObjectID;
 
 /*----------------------------------------------------------------------------*/
 
 /* global exports */
+/* global process */
 
 const trace_block = 1;
 
 /** ObjectId is used in mongo shell; the equivalent defined by the node js client library is ObjectID; */
 const ObjectId = ObjectID;
+
+/** blockFeaturesCounts() can use a query which is covered by the index
+ * if .value[0] has been copied as .value_0
+ *
+ * Using '$value_0' in place of {$arrayElemAt : ['$value', 0]} is functionally
+ * equivalent, and enables the combined index {blockId, value_0} to cover
+ * the query;
+ * this can be dropped if a way is found to access value[0] without $expr,
+ * which seems to not enable PROJECTION_COVERED.
+ */
+const use_value_0 = process.env.use_value_0 || false;
+
+/*----------------------------------------------------------------------------*/
+
+/** Show whether a aggregation pipeline is covered by an index.
+ */
+function showExplain(label, aggregationCursor) {
+  /* Usage e.g. showExplain('blockFeaturesCounts', featureCollection.aggregate ( pipeline, {allowDiskUse: true} ))
+   */
+  aggregationCursor
+    .explain()
+    .then((a, b) => {
+      let stage; try { stage = a.stages[0].$cursor.queryPlanner.winningPlan.stage; } catch (e) {};
+      if (stage !== 'PROJECTION_COVERED') {
+        console.log(label, ' explain then', a, stage /*, b, arguments, this*/);
+      }
+    });
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -27,9 +59,12 @@ exports.blockFeaturesCount = function(db, blockIds) {
   let ObjectId = ObjectID;
 
   let
+    /** may be faster to use simple string match for .length === 1, instead of $in array. */
+    blockIdMatch = blockIds.length === 1 ? ObjectId(blockIds[0]) :
+      {$in : blockIds.map(function (blockId) { return ObjectId(blockId); }) },
     matchBlock =
     [
-	    { $match :  { "blockId" : {$in : blockIds.map(function (blockId) { return ObjectId(blockId); }) }}},
+	    { $match :  { "blockId" : blockIdMatch}},
       { $group: { _id: '$blockId', featureCount: { $sum: 1 } } }
     ],
 
@@ -129,7 +164,7 @@ function binBoundaries(interval, lengthRounded) {
  * { "_id" : { "min" : 4000000, "max" : 160000000 }, "count" : 22 }
  * { "_id" : { "min" : 160000000, "max" : 400000000 }, "count" : 21 }
  */
-exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10) {
+exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10, isZoomed, useBucketAuto) {
   // initial draft based on blockFeaturesCount()
   let featureCollection = db.collection("Feature");
   /** The requirement (so far) is for even-size boundaries on even numbers,
@@ -145,9 +180,9 @@ exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10) {
    * So $bucket is used instead, and the boundaries are given explicitly.
    * This requires interval; if it is not passed, $bucketAuto is used, without granularity.
    */
-  const useBucketAuto = ! (interval && interval.length === 2);
+  useBucketAuto = useBucketAuto || ! (interval && interval.length === 2);
   if (trace_block)
-    console.log('blockFeaturesCounts', blockId, interval, nBins);
+    console.log('blockFeaturesCounts', blockId, interval, nBins, isZoomed, useBucketAuto);
   let ObjectId = ObjectID;
   let lengthRounded, boundaries;
   if (! useBucketAuto) {
@@ -158,12 +193,14 @@ exports.blockFeaturesCounts = function(db, blockId, interval, nBins = 10) {
   let
     matchBlock =
     [
+      use_value_0 ? blockFilterValue0(isZoomed ? interval : undefined, blockId) :
       {$match : {blockId :  ObjectId(blockId)}},
       useBucketAuto ? 
         { $bucketAuto : { groupBy: {$arrayElemAt : ['$value', 0]}, buckets: Number(nBins)}  } // , granularity : 'R5'
       : { $bucket     :
           {
-            groupBy: {$arrayElemAt : ['$value', 0]}, boundaries,
+            /** faster query if .value_0 is available  @see use_value_0 */
+            groupBy: (use_value_0 ? '$value_0' : {$arrayElemAt : ['$value', 0]}), boundaries,
 	    'default' : 'outsideBoundaries',
             output: {
               count: { $sum: 1 },
@@ -224,9 +261,18 @@ exports.blockFeatureLimits = function(db, blockId) {
    * handle this by checking for $type and applying $slice to the array type only.
    */
   let
-    group = [
-      {$project : {_id : 1, name: 1, blockId : 1, value : 
-      {$cond: { if: { $isArray: "$value" }, then: {$slice : ['$value', 2]}, else: "$value" } }  }},
+  /** Project .value_0 if use_value_0, otherwise .value[0 and 1]
+   * or .value if it is not an array.
+   * Using .value_0 will probably be faster than array access; it misses the end
+   * of the feature interval, but for knowing the limits of the block it will be
+   * sufficient.
+   */
+    group_array = [
+      {$project : {
+        _id : 1, name: 1, blockId : 1, value : 
+        use_value_0 ? "$value_0" : 
+          {$cond: { if: { $isArray: "$value" }, then: {$slice : ['$value', 2]}, else: "$value" } }
+      }},
       {$unwind : '$value'}, 
       {$match: { $or: [ { value: { $ne: null } } ] } },
       {$group : {
@@ -236,6 +282,16 @@ exports.blockFeatureLimits = function(db, blockId) {
         min : { "$min": "$value" }
       }}
     ],
+    /** using .value_0 enables this simpler form, which is faster in tests so far. */
+    group_0 = [
+      {$group : {
+        _id : '$blockId' ,
+        featureCount : { $sum: 1 },
+        max : { "$max": "$value_0" }, 
+        min : { "$min": "$value_0" }
+      }}
+    ],
+  group = use_value_0 ? group_0 : group_array,
   pipeline = blockId ?
     [
       {$match : {blockId :  ObjectId(blockId)}}
@@ -248,6 +304,7 @@ exports.blockFeatureLimits = function(db, blockId) {
   if (trace_block > 1)
     console.dir(pipeline, { depth: null });
 
+  showExplain('blockFeatureLimits', featureCollection.aggregate ( pipeline, {allowDiskUse: true} ));
   let result =
     featureCollection.aggregate ( pipeline, {allowDiskUse: true} );
 

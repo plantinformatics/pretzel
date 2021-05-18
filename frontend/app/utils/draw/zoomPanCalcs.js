@@ -20,6 +20,9 @@ const dLog = console.debug;
 /* copied from draw-map.js; this has already been split out of draw-map.js into
  * utils/graph-maths.js in an unpushed branch (8fccbd3).
  * Added : this version handles range[] being in -ve order, i.e. range[0] > range[1].
+ * @param a point value
+ * @param range interval [start, end]
+ * The argument order is opposite to the similar function @see inInterval()
  */
 function inRange(a, range)
 {
@@ -138,6 +141,9 @@ function intervalSign(interval) {
  * @param inFilter  true when called from zoomFilter() (d3.zoom().filter()),
  * false when called from zoom() (d3.zoom().on('zoom')); this indicates
  * variation of the event information structure.
+ * @return inFilter ? include : newDomain
+ * include is a flag for which true means don't filter out this event.
+ * newDomain is the new domain resulting from the zoom change.
  */
 function wheelNewDomain(axis, axisApi, inFilter) {
   let yp = axis.y;
@@ -146,7 +152,7 @@ function wheelNewDomain(axis, axisApi, inFilter) {
    * wheel, but if this can happen if there is an error in requesting block
    * features.
    */
-  if (! yp) return;
+  if (! yp) return inFilter ? false : undefined;
   /** Access these fields from the DOM event : .shiftKey, .deltaY, .currentTarget.
    * When called from zoom(), d3.event is the d3 wrapper around the event, and
    * the DOM event is referenced by .sourceEvent,  whereas in zoomFilter()
@@ -247,7 +253,12 @@ function wheelNewDomain(axis, axisApi, inFilter) {
       console.log('mousePosition', mousePosition);
     let
       range = yp.range(),
-    rangeYCentre = mousePosition[1],
+    rangeYCentre = mousePosition[1];
+    if (rangeYCentre === undefined) {
+      dLog('mousePosition has no [1]', mousePosition);
+      return false;
+    }
+    let
     /** This is the centre of zoom, i.e. the mouse position, not the centre of the axis.  */
     centre = axisApi.axisRange2Domain(axis.axisName, rangeYCentre),
 
@@ -315,4 +326,8 @@ function wheelNewDomain(axis, axisApi, inFilter) {
 
 /*----------------------------------------------------------------------------*/
 
-export {  inRangeEither, subInterval, overlapInterval, wheelNewDomain };
+export {
+  inRange, inRangeEither, subInterval, overlapInterval,
+  intervalSign,
+  wheelNewDomain
+};

@@ -50,7 +50,7 @@ function verifyFeatureRecord(fr, f) {
   same = 
     (fr.id === f._id) &&
     direction && sameDirection &&
-    ((frd ? frd.name : fr.get('name')) === f.name);
+    ((frd ? frd._name : fr.get('name')) === f.name);
   return same;
 }
 
@@ -310,8 +310,12 @@ export default Service.extend({
         blockId = blockId.get('id');
       }
       if (trace_pathsP > 3)
-	dLog('pushFeature', f.blockId, c.get('blockId.features.length'), c.get('blockId.featuresLength'), f, 'featuresLength');
-      storeFeature(stacks.oa, flowsService, f.name, c, blockId);
+        dLog('pushFeature', f.blockId, c.get('blockId.features.length'), c.get('blockId.featuresLength'), f, 'featuresLength');
+      /** if feature has no ._name, i.e. datasetId.tags[] contains "AnonFeatures",
+       * then use e.g. "1H:" + value[0]
+       */
+      let fName = f._name || (c.get('blockId.name') + ':' + f.value[0]);
+      storeFeature(stacks.oa, flowsService, fName, c, blockId);
       if (trace_pathsP > 2)
         dLog(c.get('id'), c._internalModel.__data);
     }
@@ -660,7 +664,8 @@ export default Service.extend({
     }
     else if (brushedDomain)
       paramAxis.domain = brushedDomain;
-    let dataBlockIds = axis.dataBlocks(true)
+    let dataBlockIds = axis.dataBlocks(true, false)
+        .filter((blockS) => blockS.block.get('isBrushableFeatures'))
      // equiv : blockS.block.get('id')
       .map(function (blockS) { return blockS.axisName; });
     /** The result of passing multiple blockIds to getBlockFeaturesInterval()

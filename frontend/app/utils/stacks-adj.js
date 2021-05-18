@@ -55,8 +55,8 @@ function collateAdjacentAxes()
   let dataBlocks = [];
   for (let stackIndex=0; stackIndex<stacks.length-1; stackIndex++) {
     let s0 = stacks[stackIndex], s1 = stacks[stackIndex+1],
-    fAxis_s0 = dataBlocks[stackIndex] || (dataBlocks[stackIndex] = s0.dataBlocks()),
-    fAxis_s1 = dataBlocks[stackIndex+1] || (dataBlocks[stackIndex+1] = s1.dataBlocks());
+    fAxis_s0 = dataBlocks[stackIndex] || (dataBlocks[stackIndex] = s0.dataBlocks(true)),
+    fAxis_s1 = dataBlocks[stackIndex+1] || (dataBlocks[stackIndex+1] = s1.dataBlocks(true));
     if (trace_adj > 2)
     {
       console.log('collateAdjacentAxes', stackIndex, fAxis_s0, stackIndex+1, fAxis_s1);

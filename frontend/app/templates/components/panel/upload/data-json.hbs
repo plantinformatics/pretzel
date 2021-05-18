@@ -11,11 +11,11 @@
   {{/elem/panel-form}}
 {{/if}}
 
-  <h5>Upload Datasets (JSON / gzip)</h5>
+  <h5>Upload Datasets (JSON / gzip, xlsx, ods)</h5>
   <form {{action 'submitFile' on='submit'}}>
     <input
       type='file'
-      accept=".json,.gz"
+      accept=".json,.gz,.xlsx,.xls,.ods"
       onchange={{action 'setFile'}}>
     <br>
     <input

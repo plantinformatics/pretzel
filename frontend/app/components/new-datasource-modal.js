@@ -36,6 +36,15 @@ export default Component.extend({
         dLog('onConfirm', 'empty input', host, user, password.length);
       }
       else {
+        if (host.match(/\/mapview\/.*/)) {
+          host = host.replace(/\/mapview\/.*/, '');
+          $('input[name=host]', this.element).val(host);
+        }
+        if (! host.match(/^https?:\/\//)) {
+          host = "https://" + host;
+          $('input[name=host]', this.element).val(host);
+        }
+
         this.set('errorText', null);
         let promise = this.get('apiServers').ServerLogin(host, user, password);
         promise

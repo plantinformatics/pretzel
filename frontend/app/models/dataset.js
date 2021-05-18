@@ -19,6 +19,8 @@ export default Record.extend({
     'apiServers.datasetsBlocksRefresh',
     '_meta.referenceHost',
     function () {
+      if (this.isDestroyed || this.isDestroying || this.isDeleted)
+        return undefined;
       let parentName = this.get('parentName'),
       parent;
       if (parentName) {
@@ -88,6 +90,15 @@ export default Record.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** @return shortName if defined, otherwise name
+   */
+  shortNameOrName : computed('datasetId._meta.shortName', function () {
+    return this.get('_meta.shortName') || this.get('id');
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
+
   /** is this dataset copied from a (secondary) server, cached on the server it was loaded from (normally the primary). */
   isCopy : computed('_meta._origin', function () {
     return !! this.get('_meta._origin');
@@ -99,7 +110,17 @@ export default Record.extend({
     let blocks = this.get('blocks')
       .filter((b) => ! b.get('isCopy'));
     return blocks;
-  })
+  }),
+
+  /*--------------------------------------------------------------------------*/
+
+  /** @return true if this dataset has the given tag.
+   */
+  hasTag : function (tag) {
+    let tags = this.get('tags'),
+    has = tags && tags.length && (tags.indexOf(tag) >= 0);
+    return has;
+  },
 
   /*--------------------------------------------------------------------------*/
 

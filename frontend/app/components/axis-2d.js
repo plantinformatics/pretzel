@@ -347,6 +347,8 @@ export default Component.extend(Evented, AxisEvents, {
     dLog('axis-2d didInsertElement', this.get('axisID'));
 
     this.getUse();
+
+    later(() => this.dragResizeListen(), 1000);
   },
   getUse(backoffTime) {
     let oa = this.get('data'),
@@ -360,7 +362,7 @@ export default Component.extend(Evented, AxisEvents, {
     } else {
       this.set('axisUse', axisUse);
       this.set('use', use);
-      dLog("axis-2d didInsertElement", this, this.get('axisID'), axisUse.node(), use.node());
+      dLog("axis-2d didInsertElement getUse", this, this.get('axisID'), axisUse.node(), use.node());
       this.set('subComponents', []);
     }
   },
@@ -603,8 +605,6 @@ export default Component.extend(Evented, AxisEvents, {
     let prevSize,  currentSize;
     let stacks = this.get('data').stacks;
     dLog("components/axis-2d didRender()");
-
-    later(() => this.dragResizeListen(), 1000);
   },
 
   /** Called when resizer element for split axis resize is dragged.

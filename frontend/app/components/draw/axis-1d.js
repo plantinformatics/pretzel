@@ -42,7 +42,8 @@ import { selectGroup } from '../../utils/draw/d3-svg';
 import { breakPoint } from '../../utils/breakPoint';
 import { configureHover } from '../../utils/hover';
 import { getAttrOrCP } from '../../utils/ember-devel';
-import { intervalExtent }  from '../../utils/interval-calcs';
+import { intervalExtent, intervalOverlap }  from '../../utils/interval-calcs';
+import { inRange } from '../../utils/draw/zoomPanCalcs';
 import { updateDomain } from '../../utils/stacksLayout';
 
 
@@ -83,24 +84,27 @@ const componentName = 'axis-1d';
 const className = "horizTick";
 
 /** filter : @return true if the given Block is configured to display ticks.
- * i.e. ! block.block.get('dataset').get('showPaths')
+ *
+ * Previously : ! block.block.get('dataset').get('showPaths') to select
+ * the scaffolds, but that is no longer relevant since ticks are no
+ * longer used for scaffolds.  So now return block ... .isData
  */
 function blockWithTicks(block)
 {
-  let showPaths = block.block.get('showPaths');
+  let isData = block.block.get('isData');  // was .showPaths
   // dLog('blockWithTicks', block.axisName, showPaths);
-  return ! showPaths;
+  return isData;
 }
 
 /** Return a filter to select features which are within the current zoomedDomain
  * of the given block.
  * @param block stacks Block
  */
-function inRangeBlock(axisApi, range0, block) {
+function inRangeBlock(range0, block) {
   return function (feature) {
-    /** comment in @see keyFn() */
-    let featureName = getAttrOrCP(feature, 'name');
-    return axisApi.inRangeI(block.axisName, featureName, range0);
+    let
+    axis1d = block.axis.axis1d;
+    return axis1d.inRangeR(feature, range0);
   };
 }
 
@@ -134,14 +138,16 @@ FeatureTicks.prototype.featuresOfBlock = function (featuresOfBlockLookup) {
   range0 = this.axis.yRange2();
 
     return (block) => {
-      let inRange = inRangeBlock(this.axisApi, range0, block);
+      let inRange = inRangeBlock(range0, block);
 
       let blockR = block.block,
       blockId = blockR.get('id'),
       featuresAll = featuresOfBlockLookup(blockR),
       features = ! featuresAll ? [] : featuresAll
         .filter(inRange);
-      dLog(blockId, features.length, 'showTickLocations featuresOfBlock');
+      if (trace_stack > 1) {
+        dLog(blockId, features.length, 'showTickLocations featuresOfBlock');
+      }
       return features;
     };
 };
@@ -151,7 +157,7 @@ FeatureTicks.prototype.featureColour = function (feature) {
 };
 
 function blockTickEltId(groupName) {
-  return function (block) { return className + '_' + groupName + '_' + block.axisName; }
+  return function (block) { return className + '_' + groupName + '_' + block.axisName; };
 }
 
 
@@ -194,7 +200,7 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 
       /** data blocks of the axis, for calculating blockIndex i.e. colour.
        * colour assignment includes non-visible blocks . */
-      let blocksUnfiltered = extended ? [] : axis.dataBlocks(false);
+      let blocksUnfiltered = extended ? [] : axis.dataBlocks(false, false);
       if (trace_stack)
         dLog('blockIndex', axisName, axis, axis.blocks);
       blocksUnfiltered.forEach(storeBlockIndex);
@@ -514,15 +520,11 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
       let attrY_featureY = this.attrY_featureY.bind(this);
       pSE.call(attrY_featureY);
 
-      if (false) {
-        pSM.call(attrY_featureY);
-      } else {
       let transition = this.selectionToTransition(pSM);
       if (transition === pSM) {
         pSM.call(attrY_featureY);
       } else {
         transitionFn(transition, attrY_featureY);
-      }
       }
     }
   }
@@ -530,10 +532,10 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
 };
 
 FeatureTicks.prototype.attrY_featureY = function(selection) {
-  console.log('attrY_featureY', selection.node(), this.axis1d.zoomedDomain)
+  console.log('attrY_featureY', selection.node(), this.axis1d.zoomedDomain);
   selection
-    .attr('y',  (feature) => this.axis1d.featureY(feature))
-}
+    .attr('y',  (feature) => this.axis1d.featureY(feature));
+};
 
 /**
  * @property zoomed   selects either .zoomedDomain or .blocksDomain.  initially undefined (false).
@@ -557,6 +559,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   oa : alias('drawMap.oa'),
   axisApi : alias('oa.axisApi'),
 
+  featuresCountsThreshold : alias('controls.view.featuresCountsThreshold'),
 
   /** flipRegion implies paths' positions should be updated.  The region is
    * defined by brush so it is within the domain, so the domain does not change.
@@ -591,16 +594,16 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     next(() => this.axis1dExists(this, true));
   },
 
-  willDestroyElement() {
-    next(() => this.axis1dExists(this, false));
-    this._super(...arguments);
-  },
 
   /*--------------------------------------------------------------------------*/
 
   /** @return true if there is a brush on this axis.
    */
-  brushed : computed(
+  brushed : computed('brushedRegion', function () {
+    let brushed = !! this.get('brushedRegion');
+    return brushed;
+  }),
+  brushedRegion : computed(
     'axis.id',
     'axisBrush.brushedAxes.[]',
     /** oa.brushedRegions is a hash, and it is updated not replaced,
@@ -613,10 +616,28 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     function () {
       let brushedRegions = this.get('oa.brushedRegions'),
       axisId = this.get('axis.id'),
-      brushed = !! brushedRegions[axisId];
+      brushed = brushedRegions[axisId];
       dLog('brushed', axisId, brushedRegions[axisId], this.get('axisBrush.brushedAxes'));
       return brushed;
     }),
+  brushedDomain : computed('brushedRegion', function () {
+    let
+    brushedRegion = this.get('brushedRegion'),
+    /** refBlockId */
+    axisId = this.get('axis.id'),
+    brushedDomain = brushedRegion && this.get('axisApi').axisRange2Domain(axisId, brushedRegion);
+    return brushedDomain;
+  }),
+
+  brushedBlocks : computed('brushed', 'block', 'zoomedDomain.{0,1}', function () {
+    let blocks;
+    if (this.brushed) {
+      blocks = this.get('dataBlocks');
+      dLog('brushedBlocks', blocks, this);
+    }
+    return blocks || [];
+  }),
+
 
   zoomed2 : computed('zoomed', 'domain', 'zoomedDomain', function () {
     let
@@ -629,6 +650,23 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }
     return zoomed;
   }),
+
+  /** similar to isZoomedOut, this is quicker to evaluate because it
+   * only considers the fully-zoomed out case, which means that the
+   * total .featureCount for each block can be used instead of
+   * calculating .featuresCountIncludingZoom.
+   * i.e. if all .dataBlocks[] have block.featureCount < featuresCountsThreshold
+   */
+  isZoomedRightOut() {
+    let out = ! this.zoomed;
+    if (out) {
+      let
+      featuresCountsThreshold = this.get('featuresCountsThreshold');
+      out = ! this.dataBlocks.any((b) => b.featureCount <= featuresCountsThreshold);
+      dLog('isZoomedRightOut', out, featuresCountsThreshold, this.dataBlocks);
+    }
+    return out;
+  },
 
   /*--------------------------------------------------------------------------*/
 
@@ -896,7 +934,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       axisFeatureCirclesBrushed();
 
     /** Update the featureCount shown in the axis block title */
-    this.axisTitleFamily();
+    this.axisTitleTextBlockCount();
     if (featureLength)
       dLog('featureLengthEffect', this.get('axis.id'), featureLength);
 
@@ -925,6 +963,27 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }
   },
 
+  /** Update the display of the feature (loaded / total) count in the
+   * axis title text for the data blocks.
+   *
+   * This is a small part of draw-map.js : axisTitleFamily(), and it
+   * is used in response to receipt of features (possibly via paths),
+   * which may be via zoomedDomain change.  So the usage is high
+   * frequency, and the remainder of axisTitleFamily() is not needed
+   * for these updates.
+   */
+  axisTitleTextBlockCount() {
+    let subTitleS = this.get('axisSelectTextBlock');
+    // dLog('axisTitleTextBlockCount', subTitleS.nodes(), subTitleS.node());
+    subTitleS
+      .text(function (block) { return block.titleText(); });
+    if (true || trace_stack) {
+      let nodes = subTitleS.nodes(),
+          lastNode = nodes.length ? nodes[nodes.length - 1] : null;
+      dLog('axisTitleTextBlockCount', nodes, lastNode);
+    }
+  },
+
   /**
    * Equivalent : this.get('axisS').selectAll(), which does a selection by id
    * from svgContainer through g.stack to the g.axis-outer.
@@ -937,6 +996,14 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
      * included in eltId() etc. */
     as = d3.selectAll(".axis-outer#" + eltId(axisId));
     return as;
+  }),
+
+  axisSelectTextBlock : computed('axisSelect', function () {
+    let
+    gAxis = this.get('axisSelect'),
+    axisTitleS = gAxis.selectAll("g.axis-all > text"),
+    subTitleS = axisTitleS.selectAll("tspan.blockTitle");
+    return subTitleS;
   }),
 
   /** d3.select g.groupName within g.axis-all > g.axis-1d
@@ -1002,6 +1069,35 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
      * Similar : draw-map : featureY_(ak, feature.id);     */
     akYs = y(tickY);
     return akYs;
+  },
+
+  inDomain(feature) {
+    let
+    /** comment re. getAttrOrCP() in @see keyFn() */
+    value = getAttrOrCP(feature, 'value'), // feature.get('value'),
+    domain = this.currentDomain,
+    overlap = intervalOverlap([value, domain]);
+    return overlap;
+  },
+  inRange(feature) {
+    let
+    axisS = this.get('axisS'),
+    range0 = axisS.yRange2(),
+    overlap = this.inRangeR(feature);
+    return overlap;
+  },
+  inRangeR(feature, range0) {
+    let
+    axisS = this.get('axisS'),
+    y = this.featureY(feature),
+    yScale = axisS.getY(),
+    value = getAttrOrCP(feature, 'value'), // feature.value,
+    yInterval = value.length ? value.map(yScale) : yScale(value),
+    overlap = value.length === 1 ?
+      inRange(yInterval[0], range0) :
+      value.length ? intervalOverlap([yInterval, range0]) :
+      inRange(yInterval, range0);
+    return overlap;
   },
 
   /*--------------------------------------------------------------------------*/
@@ -1101,7 +1197,9 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
       
       function showText(text) {
-        this.set('headsUp.tipText', text);
+        if (! this.get('headsUp.isDestroying')) {
+          this.set('headsUp.tipText', text);
+        }
       }
       gAxis.selectAll('text')
         .on('mouseover', showText.bind(this, 'Ctrl-click to drag axis'))
@@ -1190,6 +1288,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }
     let axisName = this.get('axis.id');
     Stacked.axis1dRemove(axisName, this);
+    next(() => this.axis1dExists(this, false));
 
     this._super(...arguments);
   },

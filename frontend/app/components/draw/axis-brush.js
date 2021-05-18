@@ -1,9 +1,12 @@
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
+import { on } from '@ember/object/evented';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { throttle, debounce } from '@ember/runloop';
+import DS from 'ember-data';
+
 
 import PathData from './path-data';
 
@@ -84,6 +87,12 @@ export default Component.extend(Evented, AxisEvents, {
       block = this.get('block'),
     /** axis-brush object in store */
     record = this.get('pathsP').ensureAxisBrush(block);
+
+    let axis1d = block.get('block.axis.axis1d');
+    if (axis1d && ! axis1d.axisBrushComp) {
+      axis1d.axisBrushComp = this;
+    }
+
     if (trace_axisBrush)
       dLog('block', block.id, block, record);
     return record;
@@ -103,14 +112,66 @@ export default Component.extend(Evented, AxisEvents, {
   }),
 
   features : computed('axisBrush.features.[]', 'zoomCounter', function () {
-    console.log('features', this);
+    console.log('features', this.zoomCounter, this);
     let featuresP = this.get('axisBrush.features');
     featuresP.then((features) => {
+    this.receivedLengths(features);
+    /** features is now an array of results, 1 per block, so .length is the number of data blocks. */
     if (features && features.length)
       throttle(this, () => ! this.isDestroying && this.draw(features), 200, false);
     });
     return featuresP;
   }),
+
+  /*--------------------------------------------------------------------------*/
+
+  featuresReceived : undefined,
+
+  initData : on('init', function () {
+    this.set('featuresReceived', {});
+  }),
+
+  /** round to 1 decimal place.
+   * @param featuresCount  undefined or number
+   */
+  round1(featuresCount) {
+    return featuresCount && Math.round(featuresCount * 10) / 10;
+  },
+
+  /** Augment axis1d.brushedBlocks with features.length and block
+   * .featuresCountIncludingZoom (later : featuresCountInBrush)
+   */
+  brushedBlocks : computed(
+    'axis.axis1d.brushedBlocks.[]',
+    'block.brushedDomain.{0,1}',
+    function () {
+      let
+      blocks = this.get('axis.axis1d.brushedBlocks') || [],
+      brushedBlocks = blocks.map((block, i) => {
+        let 
+        featureCountInBrush = this.round1(block.get('featuresCountIncludingBrush')),
+        featuresCount = this.round1(block.get('featuresCountIncludingZoom'));
+        return {block, featuresCount, featureCountInBrush};
+      });
+      dLog('brushedBlocks', brushedBlocks);
+      return brushedBlocks;
+    }),
+
+  receivedLengths(featuresResults) {
+    /** could use an immutable structure, then template get would depend on it.  */
+    featuresResults.forEach((featuresLengthResult) => {
+      if (featuresLengthResult) {
+        let length = featuresLengthResult.value.length;
+        /** if length, get blockId from value[0], otherwise not
+         * straightforward to use this result.  */
+        if (length) {
+          let blockId = length && featuresLengthResult.value[0].blockId;
+          this.featuresReceived[blockId] = length;
+        }
+      }
+    });
+  },
+
 
   /*--------------------------------------------------------------------------*/
 

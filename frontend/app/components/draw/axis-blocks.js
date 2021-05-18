@@ -22,6 +22,8 @@ export default Component.extend({
   blockService: service('data/block'),
   queryParams: service('query-params'),
   urlOptions : alias('queryParams.urlOptions'),
+  axisZoom: service('data/axis-zoom'),
+
 
   /** The allocated block space is used for either axis-tracks or axis-charts
    * (featuresCounts). This name is used to identify the allocated space. */
@@ -92,7 +94,8 @@ export default Component.extend({
     'blocks.[]',
     'blocks.@each.featuresForAxis',
     // axis1d.domain also reflects zoomedDomain
-    'axis1d.axis.limits.{0,1}', 'axis1d.zoomedDomainDebounced.{0,1}',
+    'axis1d.axis.limits.{0,1}',
+    'axis1d.{zoomedDomainDebounced,zoomedDomainThrottled}.{0,1}',
     function () {
       let
       blocks = this.get('blocks');
@@ -104,10 +107,43 @@ export default Component.extend({
       let
       /** featuresForAxis() uses getBlockFeaturesInterval(), which is also used by 
        * models/axis-brush.js */
-      blockFeatures = blocks.map(function (b) { return b.get('featuresForAxis'); } );
+      blockFeatures = blocks.forEach((b) => this.block_get_featuresForAxis(b) );
       /* no return value - result is displayed by axis-track : showTrackBlocks() with data
        * collated by tracksTree(), and axis-charts : featureCountBlocks() and drawChart(). */
     }),
+  /** For most blocks - simply request featuresForAxis.
+   * For HighDensity blocks, i.e. featuresCountIncludingZoom is large,
+   * and currentZoomPanIsWheel, delay the request until the zoom/pan is finished.
+   */
+  block_get_featuresForAxis (b) {
+    let featuresInScope = b.get('featuresCountIncludingZoom');
+    /** blockFeaturesCounts for 10M features is currently about 1min,
+     * which is not very useful because the bins from the initial
+     * (zoomed-out) request are still an appropriate size, so there is
+     * no benefit from a large-scale request, only delay, and the user
+     * will likely have zoomed somewhere else by the time of the
+     * response, so delay the request until featuresInScope < 5e5
+     * which will give ~3sec response.
+     */
+    if (featuresInScope > 5e5) {
+      dLog('featuresCountIncludingZoom', b.id, featuresInScope, 'featuresFor', 'skip');
+    } else if (this.get('axisZoom.currentZoomPanIsWheel') &&
+        (featuresInScope > 1e4)) {
+      dLog('featuresCountIncludingZoom', b.id, featuresInScope, 'featuresFor');
+      let
+      axis1d = this.get('axis1d'),
+      endOfZoom = axis1d.get('nextEndOfDomainDebounced');
+      if (! endOfZoom) {
+        b.get('featuresForAxis');
+      } else {
+        endOfZoom.then(() => {
+          console.log('featuresForBlocksRequestEffect endOfZoom', b.id);
+          b.get('featuresForAxis');
+        });
+      } } else {
+        b.get('featuresForAxis');
+      }
+  }
 
   /*--------------------------------------------------------------------------*/
 

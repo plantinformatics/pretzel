@@ -2,6 +2,7 @@ import { on } from '@ember/object/evented';
 import { computed } from '@ember/object';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
+import { run } from '@ember/runloop';
 
 export default Component.extend({
   onInit: on('init', function() {
@@ -49,7 +50,9 @@ export default Component.extend({
       /** equiv : record._internalModel.modelName */
       let modelName = record.get('constructor.modelName');
       // destroyRecord() is equivalent to deleteRecord() and immediate save()
-      record.destroyRecord().then(function() {
+      record.destroyRecord()
+        .then(() => run(() => record.unloadRecord()))
+        .then(function() {
         // Don't trigger downstream effects until complete
         that.sendAction('onDelete', modelName, id);
       });
