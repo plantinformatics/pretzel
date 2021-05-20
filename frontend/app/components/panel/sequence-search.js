@@ -175,7 +175,7 @@ export default Component.extend({
         /** based on serverTabSelected or primary */
         apiServer = this.get('controls.apiServerSelectedOrPrimary'),
         auth = this.get('auth'),
-        parent = "Triticum_aestivum_IWGSC_RefSeq_v1.0",
+        parent = this.get('selectedParent'),
         searchType = 'blast',
         promise = auth.dnaSequenceSearch(
           apiServer,
