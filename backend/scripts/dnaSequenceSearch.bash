@@ -1,10 +1,15 @@
 #!/bin/bash
 
 serverDir=$PWD
+# $inContainer is true (0) if running in a container.
+[ "$PWD" = / ]; inContainer=$?
 case $PWD in
   /)
+    # container configuration
     resourcesDir=/app/scripts
     toolsDev=$resourcesDir
+    blastn=$resourcesDir/blastn_request.bash
+    datasetIdDir=$resourcesDir/blast/datasetId
     ;;
   *backend)
     resourcesDir=../resources
@@ -15,6 +20,10 @@ case $PWD in
 esac
 # Default value of toolsDev, if not set above.
 unused_var=${toolsDev=$resourcesDir/tools/dev}
+unused_var=${blastn=blastn}
+unused_var=${datasetIdDir=/mnt/data_blast/blast/datasetId}
+
+
 sp=$toolsDev/snps2Dataset.pl
 
 logFile=dnaSequenceSearch.log
@@ -94,9 +103,22 @@ datasetId=$parent
 #echo ">BobWhite_c10015_641
 # AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" | 
 
-fileName=/home/ec2-user/pretzel/"$fileName"
+if [ $inContainer -ne 0 ]
+then
+  fileName=/home/ec2-user/pretzel/"$fileName"
+fi
 
-datasetIdDir=/mnt/data_blast/blast/datasetId
+function datasetId2dbName()
+{
+  if [ $inContainer -eq 0 ]
+  then
+    dbName=$(cat "$datasetId".dbName)
+  else
+    dbName="$datasetId".dir/$(cat "$datasetId".dbName)
+  fi
+  echo "$dbName"
+  cd $serverDir
+}
 
 # Enable this to use dev_blastResult() for dev / loopback test, when blast is not installed.
 if false
@@ -113,10 +135,10 @@ else
   if ! cd "$datasetIdDir"
   then
     echo 1>&3 'Error:' "Blast Database is not configured"
-  elif ! dbName="$datasetId".dir/$(cat "$datasetId".dbName)
+  elif ! dbName=$(datasetId2dbName "$datasetId")
   then
     echo 1>&3 'Error:' "Blast datasetId is not configured", "$datasetId"
-  elif ! time blastn  -query "$fileName"  -db "$dbName" -outfmt '6 std qlen slen' |	\
+  elif ! time $blastn  -query "$fileName"  -db "$dbName" -outfmt '6 std qlen slen' |	\
       ( [ "$addDataset" = true ] && convertSearchResults2Json || cat) |	\
       ( [ -n "$resultRows" ] && head -n $resultRows || cat)
   then
