@@ -247,6 +247,10 @@ export default Service.extend({
    * The values b0, b1 are block IDs.
    */
   blockAdjIds : computed('block.viewedForPaths.[]', 'adjAxesArr.[]', function () {
+    /** adjAxesArr.[] probably provides the same update information as stacksCount.count.
+    'oa.stacks.stacksCount.count',
+     */
+
     /** this could be used as the basis for adjAxes */
     let blockForPaths = this.get('blockForPaths');
     let axesP = this.get('oa.axesP');

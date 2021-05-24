@@ -36,4 +36,13 @@ function getAttrOrCP(object, attrName) {
 
 /*----------------------------------------------------------------------------*/
 
-export { parentOfType, elt0, getAttrOrCP };
+/** Display Ember Data store Object field values.  for devel debug - this is not a public API.
+ *  Before Ember V3 this was '_internalModel.__data'
+ */
+const _internalModel_data = '_internalModel._recordData.__data';
+
+
+
+/*----------------------------------------------------------------------------*/
+
+export { parentOfType, elt0, getAttrOrCP, _internalModel_data };

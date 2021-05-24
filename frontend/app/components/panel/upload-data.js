@@ -10,10 +10,11 @@ export default ManageBase.extend({
 
 
   filterOptions: {
+    'fileDrop': {'formal': 'fileDrop', 'icon': 'cloud-upload'}, // or upload
     'cell': {'formal': 'CSV', 'icon': 'th-large'},
     'json': {'formal': 'JSON', 'icon': 'list-alt'},
   },
-  filter: 'cell',
+  filter: 'fileDrop',
 
   actions: {
     changeFilter: function(f) {

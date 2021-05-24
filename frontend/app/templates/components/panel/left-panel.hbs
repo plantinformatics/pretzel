@@ -5,6 +5,9 @@
       <nav.item @active={{bs-eq tab.activeId "left-panel-explorer"}}><a href="#left-panel-explorer" role="tab" onclick={{action tab.select "left-panel-explorer"}}>{{elem/icon-base name="folder-open"}} Explorer</a></nav.item>
       <nav.item @active={{bs-eq tab.activeId "left-panel-view"}}><a href="#left-panel-view" role="tab" onclick={{action tab.select "left-panel-view"}}>{{elem/icon-base name="picture"}} View</a></nav.item>
       <nav.item @active={{bs-eq tab.activeId "left-panel-feature-search"}}><a href="#left-panel-feature-search" role="tab" onclick={{action tab.select "left-panel-feature-search"}}>{{elem/icon-base name="search"}} Feature Search</a></nav.item>
+      {{#if this.model.params.parsedOptions.sequenceSearch}}
+      <nav.item @active={{bs-eq tab.activeId "left-panel-sequence-search"}}><a href="#left-panel-sequence-search" role="tab" onclick={{action tab.select "left-panel-sequence-search"}}>{{elem/icon-base name="search"}} Sequence Search</a></nav.item>
+      {{/if}}
       <nav.item @active={{bs-eq tab.activeId "left-panel-upload"}}><a href="#left-panel-upload" role="tab" onclick={{action tab.select "left-panel-upload"}}>{{elem/icon-base name="cloud-upload"}} Upload</a></nav.item>
     </BsNav>
     <div class="tab-content">
@@ -17,6 +20,15 @@
                 updateFeaturesInBlocks="updateFeaturesInBlocks"
             }}
       </tab.pane>
+
+      {{#if this.model.params.parsedOptions.sequenceSearch}}
+      <tab.pane @id="left-panel-sequence-search" @title="Sequence Search">
+            {{panel/sequence-search
+                datasets=datasets
+                view=view
+            }}
+      </tab.pane>
+      {{/if}}
 
       <tab.pane @id="left-panel-explorer" @title="Explorer">
             {{panel/manage-explorer

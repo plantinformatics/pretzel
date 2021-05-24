@@ -1,0 +1,82 @@
+  <ul class="list-group upload-configuration">
+
+    <li class="list-group-item">
+      <span class="filter-group-col">
+        {{input type="checkbox" name="replaceDataset" checked=replaceDataset }}
+        <label>Replace Dataset with upload</label>
+      </span>
+    </li>
+
+  </ul>
+
+
+
+{{!--
+<FileUpload ... @accept= values are from :
+https://developers.google.com/drive/api/v3/mime-types
+...
+application/vnd.google-apps.spreadsheet 	Google Sheets
+
+https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
+...
+.gz 	GZip Compressed Archive 	application/gzip
+
+.json 	JSON format 	application/json
+
+.ods 	OpenDocument spreadsheet document 	application/vnd.oasis.opendocument.spreadsheet
+
+.xls 	Microsoft Excel 	application/vnd.ms-excel
+.xlsx 	Microsoft Excel (OpenXML) 	application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+
+.zip 	ZIP archive 	application/zip
+
+--}}
+
+<FileDropzone @name="files" class="border border-primary" style="min-height: 15ex;" as |dropzone queue|>
+  {{#if dropzone.active}}
+    {{#if dropzone.valid}}
+      Drop to upload
+    {{else}}
+      Invalid
+    {{/if}}
+  {{else if queue.files.length}}
+    Uploading {{queue.files.length}} files. ({{queue.progress}}%)
+  {{else}}
+    <h4>Upload Spreadsheets</h4>
+    <p>
+      {{#if dropzone.supported}}
+        Drag and drop Spreadsheets and JSON files onto this area to upload them or
+      {{/if}}
+      <FileUpload
+        @name="files"
+        @for="upload-file"
+        @accept="
+	  application/json,
+	  application/vnd.google-apps.spreadsheet,
+	  application/vnd.oasis.opendocument.spreadsheet,
+	  application/vnd.ms-excel,
+	  application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,
+	  application/gzip,
+	  application/zip
+        "
+        @multiple={{true}}
+        @onfileadd={{action this.uploadSpreadsheet}}>
+        <a tabindex=0>Add a Spreadsheet.</a>
+      </FileUpload>
+    </p>
+  {{/if}}
+</FileDropzone>
+
+<div class="panel panel-primary"></div>
+{{elem/panel-message
+  successMessage=successMessage
+  warningMessage=warningMessage
+  errorMessage=errorMessage}}
+
+{{#if isProcessing}}
+  {{#elem/panel-form
+    name="info"
+    heading="Processing..." }}
+      {{progressMsg}}
+  {{/elem/panel-form}}
+{{/if}}

@@ -129,7 +129,10 @@ export default Model.extend({
   /** @return true if this block's dataset defined _meta.paths and it is true.
    * and ! .isSNP
    */
-  showPaths : computed('datasetId._meta.paths', 'id', function () {
+  showPaths : computed(
+    'datasetId._meta.paths', 'id',
+    'featuresCountIncludingZoom', 'featuresCount',
+    function () {
     let
     dataset = this.get('datasetId'),
     paths = dataset.get('_meta.paths');
@@ -150,15 +153,32 @@ export default Model.extend({
       paths |= odd;
       dLog(id, odd);
     }
-    paths &&= ! this.get('isSNP');
-    // dLog('showPaths', dataset, paths);
+    /* don't request paths for HighDensity SNPs until zoomed in to small scale.
+     * The comparison < 5e4 will be false until .featureCount or
+     * .featuresCountsResults are received, i.e. while
+     * featuresCountIncludingZoom is undefined.
+     *
+     * 
+     * Currently the high density data does not have symbolic names
+     * (just chr:location) so paths via direct and aliases are not
+     * applicable.  It is tagged HighDensity, but we should add a
+     * separate tag to indicate the lack of a feature name.
+     * So disable paths if tagged HighDensity.
+     *
+     * this expression uses the fact that (undefined < 5e4) is false.
+     * .featureValueCount is approx 2 * .featuresCount because it sums feature.value.length which is often 2.
+     */
+      paths &&= ! this.get('isHighDensity') && (
+        (this.get('featuresCount') < 5e4) ||
+          (this.get('featureValueCount') < 5e4 * 2) ||
+          (this.get('featuresCountIncludingZoom') < 5e4));
+      // dLog('showPaths', dataset, paths);
     return paths;
   }),
 
   /*--------------------------------------------------------------------------*/
 
   hasFeatures : computed('featureCount', function () {
-    return this.get('featureCount') > 0;
     /** featureValueCount > 0 implies featureCount > 0.
      * Could also use .featuresCountsResults - if any non-zero counts then block has features.  */
     let count = this.get('featureCount') || this.get('featureValueCount');
@@ -620,7 +640,7 @@ export default Model.extend({
         if (referenceBlock.get('isCopy') && ! block.get('isCopy'))
           referenceBlock = block;
         else {
-          dLog('viewedReferenceBlock', 'duplicate match', block.get('id'), block._internalModel.__data, parentName, scope);
+          console.warn('viewedReferenceBlock', 'duplicate match', block.get('id'), block._internalModel.__data, parentName, scope);
         }
       } else
         referenceBlock = block;

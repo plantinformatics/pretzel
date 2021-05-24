@@ -8,6 +8,10 @@ import { breakPoint } from '../../utils/breakPoint';
 
 /*----------------------------------------------------------------------------*/
 
+const dLog = console.debug;
+
+/*----------------------------------------------------------------------------*/
+
 /* d3.schemeDark2
 */
 let apiServers_colour_scale =
@@ -41,6 +45,7 @@ export default EmberObject.extend({
   dataset: service('data/dataset'),
   block: service('data/block'),
   apiServers: service(),
+  queryParamsService: service('query-params'),
 
 
   init() {
@@ -126,7 +131,7 @@ export default EmberObject.extend({
     if (serverSo !== server)
       breakPoint('getDatasets', serverSo, server);
 
-    datasetsTask.then(function (blockValues) {
+    datasetsTask.then((blockValues) => {
       console.log(datasetsHandle, 'datasetsTask then', blockValues);
       if (datasetsHandle)
       {
@@ -139,6 +144,11 @@ export default EmberObject.extend({
         // me.sendAction('receivedDatasets', datasetsHandle, blockValues);
         // or via .evented() on task
         apiServers.trigger('receivedDatasets', blockValues);
+        // mapview : model() has already done getBlocksLimits() for primaryServer
+        if (this.get('apiServers.primaryServer') !== this) {
+          let ti = this.get('featuresCountAllTaskInstance');
+          dLog('getDatasets', 'evaluated featuresCountAllTaskInstance', ti);
+        }
       }
     });
 
@@ -149,6 +159,24 @@ export default EmberObject.extend({
   // .drop()
 
   ,
+
+  /** Request block.featuresCount for all blocks.
+   */
+  featuresCountAllTaskInstance : computed('name', function () {
+    dLog('featuresCountAllTaskInstance', this.name, this);
+    let params = this.get('queryParamsService').get('params');
+    // copied from routes/mapview.js:model()
+    let allInitially = params.parsedOptions && params.parsedOptions.allInitially;
+    const blockService = this.get('block');
+    // (allInitially ? '' : 'Summary')
+    let getBlocksTask = blockService.get('getBlocksLimits');
+
+    /** Task Instance.  param blockIds is [] */
+    let getBlocksTI = getBlocksTask.apply(blockService, [[]]);
+
+    return getBlocksTI;
+  }),
+
   blocksByReferenceAndScope : computed(
     'datasetsBlocks.[]',
     function() {
