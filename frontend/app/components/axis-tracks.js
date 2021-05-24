@@ -1997,9 +1997,13 @@ export default InAxis.extend({
     function isChanged(rc, f) { return rc ? rc[f] : true; }
     /* these 2 prevent 2-step transition of axis track y update.
      * after confirming this fix, the calculation of changed.viewport{Width,Height} can be sorted out.
+
+     * Side effect : setting viewportHeight = false is ignoring window
+     * height resize - feature y position is not updated.
+     * So commented out the clearing of changed.viewportHeight - not seeing any 2-step transition (yet) ...
      */
 result.changed.viewportWidth = false;
-result.changed.viewportHeight = false;
+// result.changed.viewportHeight = false;
     let
     widthChanged = isChanged(result.changed, 'viewportWidth') || allocatedWidthChange,
     heightChanged = isChanged(result.changed, 'viewportHeight'),

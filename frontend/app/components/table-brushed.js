@@ -140,7 +140,7 @@ export default Component.extend({
       if (values) {
         Object.keys(values).forEach((valueName) => rest[valueName] = values[valueName]);
       }
-      if (feature.value.length > 1) {
+      if (feature.value && (feature.value.length > 1)) {
         // .Position is .value[0]
         rest.PositionEnd = feature.value[1];
       }

@@ -2,6 +2,9 @@ import { computed, observer } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { later as run_later } from '@ember/runloop';
 
+import $ from 'jquery';
+
+
 import ManageBase from './manage-base';
 
 /** @param: dataset **/
@@ -65,7 +68,10 @@ export default ManageBase.extend({
    */
   updateViewer() {
     this.toggleProperty('toggleShowJsonViewer');
-    run_later(() => this.toggleProperty('toggleShowJsonViewer'));
+    run_later(() => {
+      this.toggleProperty('toggleShowJsonViewer');
+      run_later(() => $('a.jsoneditor-value').attr('target', '_blank'));
+    });
   }
 
 });

@@ -164,9 +164,15 @@ export default Model.extend({
      * applicable.  It is tagged HighDensity, but we should add a
      * separate tag to indicate the lack of a feature name.
      * So disable paths if tagged HighDensity.
+     *
+     * this expression uses the fact that (undefined < 5e4) is false.
+     * .featureValueCount is approx 2 * .featuresCount because it sums feature.value.length which is often 2.
      */
-    paths &&= ! this.get('isHighDensity') && (this.get('featuresCountIncludingZoom') < 5e4);
-    // dLog('showPaths', dataset, paths);
+      paths &&= ! this.get('isHighDensity') && (
+        (this.get('featuresCount') < 5e4) ||
+          (this.get('featureValueCount') < 5e4 * 2) ||
+          (this.get('featuresCountIncludingZoom') < 5e4));
+      // dLog('showPaths', dataset, paths);
     return paths;
   }),
 
