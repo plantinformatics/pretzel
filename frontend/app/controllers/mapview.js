@@ -152,10 +152,10 @@ export default Controller.extend(Evented, {
       dLog('loadBlock', block);
       // previously done in useTask() : (mixins/viewed-blocks)setViewed() : (data/block.js)setViewedTask()
       if (! block.get('isViewed')) {
-        block.set('isViewed', true);
+        later(() => block.set('isViewed', true));
       }
       let referenceBlock = block.get('referenceBlock');
-      if (referenceBlock)
+      if (referenceBlock && (referenceBlock !== block))
         loadBlock.apply(this, [referenceBlock]);
 
       /* Before progressive loading this would load the data (features) of the block.

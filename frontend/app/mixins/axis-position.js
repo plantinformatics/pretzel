@@ -79,7 +79,16 @@ export default Mixin.create({
   },
   setDomainDebounced(domain) {
     this.set('currentPosition.yDomainDebounced', domain);
+    dLog('setDomainDebounced', domain, !!this.resolveDebounce, 'featuresFor');
+    if (this.resolveDebounce) {
+      this.resolveDebounce();
+    }
+    this.nextEndOfDomainDebounced = new Promise((resolve, reject) => {
+      this.resolveDebounce = resolve;
+    });
   },
+  /** a promise which resolves at the end of a domain debounce phase.  */
+  nextEndOfDomainDebounced : undefined,
   /** @return a function wrapped with lodash_throttle().
    * @desc this updates (generates a new function) when .throttleTime
    * changes

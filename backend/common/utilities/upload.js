@@ -12,6 +12,12 @@ const load = require('./load');
 /* global exports */
 /* global process */
 
+/*----------------------------------------------------------------------------*/
+
+function notDefined(value) { return value === undefined || value === null; }
+
+/*----------------------------------------------------------------------------*/
+
 /**
  * Divide array into smaller chunks
  * @param {Array} arr - array of data to be processed
@@ -186,6 +192,9 @@ function insert_features_recursive(db, dataset_id, features_to_insert, ordered, 
       });
       delete feature.features;
     }
+    if (! notDefined(feature.value) && notDefined(feature.value_0)) {
+      feature.value_0 = feature.value.length ? feature.value[0] : feature.value;
+    }
   });
 
   let promise =
@@ -267,5 +276,101 @@ exports.handleJson = function(msg, uploadParsed, cb) {
     cb(Error('Unsupported file type'));
   }
 };
+
+/*----------------------------------------------------------------------------*/
+
+  exports.uploadParsedCb = 
+    // Common steps for both .json and .gz files after parsing
+  (models, jsonMap, options, cb) => {
+      if(!jsonMap.name){
+        cb(Error('Dataset JSON has no "name" field (required)'));
+      } else {
+        // Check if dataset name already exists
+        // Passing option of 'unfiltered: true' overrides filter for public/personal-only
+        models.Dataset.exists(jsonMap.name, { unfiltered: true }).then((exists) => {
+          if (exists) {
+            cb(Error(`Dataset name "${jsonMap.name}" is already in use`));
+          } else {
+            // Should be good to process saving of data
+            exports.uploadDataset(jsonMap, models, options, cb);
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          cb(Error('Error checking dataset existence'));
+        });
+      }
+    };
+
+  exports.uploadParsedTryCb = 
+    /** Wrap uploadParsed with try { } and pass error to cb().
+     */
+    function uploadParsedTryCb(models, jsonData, options, cb) {
+      try {
+        let jsonMap = JSON.parse(jsonData);
+        exports.uploadParsedCb(models, jsonMap, options, cb);
+      } catch (e) {
+        let message = e.toString ? e.toString() : e.message || e.name;
+        // logging e logs e.stack, which is also logged by cb(Error() )
+        console.log(message || e);
+        cb(Error("Failed to parse JSON" + (message ? ':\n' + message : '')));
+      }
+    };
+
+  /**
+   * @param uploadFn  uploadParsedTry(jsonData)
+   */
+  exports.loadAfterDeleteCb =
+    function loadAfterDeleteCb(fileName, uploadFn, err, cb) {
+              if (err) {
+                cb(err);
+              }
+              else {
+                fs.readFile(fileName, (err, jsonData) => {
+                  if (err) {
+                    cb(err);
+                  } else {
+                    console.log('readFile', fileName, jsonData.length);
+                    // jsonData is a Buffer;  JSON.parse() handles this OK.
+                    uploadFn(jsonData);
+                  }
+                });
+              }
+            };
+
+
+  /** If Dataset with given id exists, remove it.
+   * If id doesn't exist, or it is removed OK, then call okCallback,
+   * otherwise pass the error to the (API request) replyCb.
+   * @param if false and dataset id exists, then fail - call replyCb() with Error.
+   */
+  exports.removeExisting = function(models, id, replaceDataset, replyCb, okCallback) {
+    models.Dataset.exists(id, { unfiltered: true }).then((exists) => {
+      console.log('removeExisting', "'", id, "'", exists);
+      if (exists) {
+        if (! replaceDataset) {
+          replyCb(Error("Dataset '" + id + "' exists"));
+        } else {
+        /* without {unfiltered: true}, the dataset was not found by destroyAll.
+         * destroyAllById(id ) also did not found the dataset (callback gets info.count === 0).
+         * .exists() finds it OK.
+         */
+        models.Dataset.destroyAll/*ById(id*/ ({_id : id}, {unfiltered: true}, (err) => {
+          if (err) {
+            replyCb(err);
+          } else {
+            console.log('removeExisting removed', id);
+            okCallback();
+          }
+        });
+        }
+      } else {
+        okCallback();
+      }
+    });
+  };
+
+
+
 
 /*----------------------------------------------------------------------------*/

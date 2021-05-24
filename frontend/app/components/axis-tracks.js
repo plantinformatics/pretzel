@@ -842,6 +842,15 @@ export default InAxis.extend({
         return ((d.layer || 1) - 1) *  trackWidth * 2;
       };
     };
+    /** @return the position of the start of the feature interval.
+     * @desc This is used in combination with heightDir().
+     */
+    function yPosnDir(d) {
+      return y(d[0]);
+    };
+    /** @return the position of the start or end of the feature interval, whichever is smaller.
+     * This is used in combination with height(), which returns a positive value.
+     */
     function yPosn(d) { /*console.log("yPosn", d);*/
       if (y(d[0]) > y(d[1]))
         return y(d[1]);
@@ -861,11 +870,25 @@ export default InAxis.extend({
       end = range[1-closerToStart];
       return end;
     }
-    function height(d) {
+    /** @return height of feature in pixels at current scale,
+     * including the direction of the feature interval, i.e. start - end,
+     * i.e. .value[1] - .value[0],
+     */
+    function heightDir(d) {
+      /** createIntervalTree() requires positive intervals, so the
+       * .value [start,end] are reversed if negative (start > end) by
+       * tracksTree() and SubElement.getInterval().
+       * height() is used to determine the direction of triangles so
+       * use feature.value[] here
+       */
+      let feature = thisAt.featureData2Feature.get(d),
+          value = feature.get('value');
+      d = value;
+      let nonZeroInterval = Ember.isArray(d) && (d.length > 1) && (d[1] !== d[0]);
       /** if axis.zoomed then 0-height intervals are included, not filtered out.
        * In that case, need to give <rect> a height > 0.
        */
-      let height = (d[1] == d[0]) ? 0.01 : y(d[1]) - y(d[0]);
+      let height = ! nonZeroInterval ? 0.01 : y(d[1]) - y(d[0]);
       /* There was an issue causing NaN here, likely caused by 1-element array
        * .value, which is now handled.   Here that was causing d[1] undefined,
        * and hence y(d[1]) NaN.
@@ -874,7 +897,16 @@ export default InAxis.extend({
       {
         console.log('height NaN', d, 'y:', y.domain(), y.range());
       }
-      // When axis is flipped, height will be negative, so make it positive
+      return height;
+    }
+    /** Same as heightDir() but return the absolute value, used for
+     * drawing <rect> which requires a positive height.
+     */
+    function height(d) {
+      let height = heightDir(d);
+      /* When axis is flipped or feature direction is negative, height
+       * will be negative, so make it positive
+       */
       if (height < 0)
         height = -height;
       return height;
@@ -1000,7 +1032,7 @@ export default InAxis.extend({
       // Make description unique when multiple features with same name.
       return featureData.description+"_"+featureData[0];
     }
-    /** Add the <rect> within <g clip-path...>  */
+    /** Add the <rect>s and/or <path>s, or sub-elements, within <g clip-path...>  */
     let
     /** block select - datum is blockId. */
     bs = gAxis.selectAll("g.axis-use > g.tracks > g"),
@@ -1026,34 +1058,47 @@ export default InAxis.extend({
         .data(trackBlocksData, trackKeyFn),
       re =  rs.enter(), rx = rs.exit();
       dLog(rs.size(), re.size(),  'rx', rx.size());
-      rx
-        .transition().duration(featureTrackTransitionTime)
-        .attr('x', 0)
-        .attr('y', yEnd)
-        .on('end', () => {
-          rx.remove();
-        });
 
       let
       blockC = thisAt.lookupAxisTracksBlock(blockId),
       trackWidth = blockC.get('trackWidth');
       appendRect.apply(this, [re, rs, trackWidth, false]);
     }
-    /** - rename re and rs to ge and gs
+    /** Within a single block, render the features or sub-features of
+     * the selection as a <rect> or <path>
+     * 
+     * @param re  .entry() selection
+     * @param rs  selection
+     * @param width
+     * @param subElements true if features are sub-features
+     * - rename re and rs to ge and gs
      * es could be called rs
      * @param subElements true if (gene) sub-elements (intro/exon) are displayed for this block.
      */
     function appendRect(re, rs, width, subElements) {
+      const
+      // this.parentElement.__data__ is also the blockId
+      blockId = this.__data__,
+      block = thisAt.lookupBlock(blockId),
+      isPhased = block && (block.hasTag('phased') || block.get('datasetId._meta.phased')),
       /** true to enable use of 5-point <path> (rectangle+triangle) as an
        * alternate representation, with the triangle vertex indicating
        * direction. */
-      const useTriangle = thisAt.get('urlOptions.trackTriangles');
+      useTriangle = false && isPhased;
       /** true means <rect> will not be used - only <path> (rectangle+triangle).
        */
       const alwaysTri = true;
       let
+      /** true for the 3-point <path>. This is not alternated with <rect>, i.e. useBoth is false */
+      useTriangle3 = isPhased && ! subElements,
+      /** true when using <path> */
+      usePath = useTriangle3 || useTriangle,
+      /** true when using either <rect> or <path> depending on zoom
+       * (triangle point is only visible when zoomed in).  */
+      useBoth = useTriangle && ! alwaysTri,
+      tagName = ['rect', 'path'][+usePath],
       ra = re
-        .append((d) => createElementSvg(useTriangle && (alwaysTri || showTriangleP(y, d)) ? 'path' : 'rect'));
+        .append(! useBoth ? tagName : (d) => createElementSvg(useTriangle && (alwaysTri || showTriangleP(y, d)) ? 'path' : 'rect'));
       ra
         .attr('class', 'track')
         .each(subElements ? configureSubTrackHover : configureTrackHover);
@@ -1087,6 +1132,8 @@ export default InAxis.extend({
       elementSelector = isSubelement ? '.element' : ':not(.element)',
       /** match either {rect,path}.track */
       es = subElements ?
+        /** .track here will match rect.track, path.track; not just tagName + '.track' 	 */
+      // if tagName is required here, would need to repeat the whole selector for rect,path - better to make class more specific
         rs.selectAll("g" + gSelector + " > .track" + elementSelector) : rs,
       /** ra._parents is the g[clip-path], whereas es._parents are the g.track.element
        * es.merge(ra) may work, but ra.merge(es) has just 1 elt.
@@ -1098,15 +1145,23 @@ export default InAxis.extend({
         .attr('y', (d,i,g) => useTriangle && (alwaysTri || showTriangleP(y, d)) ? undefined : yEnd.apply(this, [d, i, g]));
       if (! useTriangle) {
         ra
-          .call(rectUpdate);
+          .call(positionUpdate);
+        let rmt =
         rm
           .transition().duration(featureTrackTransitionTime)
           .call(fadeOutIfZoomedOut)
-          .call(rectUpdate);
+          .call(positionUpdate);
+        if (useTriangle3) {
+          ra
+            .each(triangleDimensions);
+          rmt
+            .each(triangleDimensions);
+        }
       }
       else if (alwaysTri) {
         let xPosnFn = xPosnS(subElements);
         rm
+          // maybe transition
           .attr('d', (d,i,g) => rectTrianglePath(y, d, width, xPosnFn.apply(this, [d, i, g])));
       }
       else {
@@ -1127,13 +1182,58 @@ export default InAxis.extend({
           }.apply(this, [d, i, g])
         );
       }
+
+      /** Transition the exiting <rect>s and <paths> to the end of the
+       * y scale range which d is closest to, using yEnd.
+       * Then remove them after that transition.
+       */
+      let rx = rs.exit();
+      if (usePath) {
+        const
+        xPosnD = 0,
+        yPosn = yEnd;
+        rx
+          .transition().duration(featureTrackTransitionTime)
+          .attr('transform', (d,i,g) => "translate(" + xPosnD + ", " + yPosn.apply(this, [d, i, g]) + ")")
+          .on('end', () => {
+            rx.remove();
+          });
+      } else {
+        rx
+          .transition().duration(featureTrackTransitionTime)
+          .attr('x', 0)
+          .attr('y', yEnd)
+          .on('end', () => {
+            rx.remove();
+          });
+      }
+
+
+      function positionUpdate(selection) {
+        if (usePath) {
+          selection
+            .attr('transform', featureTransform);
+        } else {
+          rectUpdate(selection);
+        }
+      }
       function rectUpdate(selection) {
         selection
           .attr('x', xPosnS(subElements))
           .attr('y', yPosn)
           .attr('height' , height);
       }
+      /** zoom:Reset will generally replace feature tracks with
+       * features counts charts (axis-charts.js), depending on
+       * featuresCountsThreshold.
+       * To make this less abrupt, transition the tracks out by
+       * reducing opacity.
+       */
       function fadeOutIfZoomedOut(selection) {
+        /** If block.isZoomedRightOut and selection is a transition,
+         * and opacity is not set, set it to 1 immediately, and
+         * transition to 0.
+         */
         let t0 = selection.node();
         if (t0) {
           /** may not be blockId, e.g subElements, so default to false. */
@@ -1159,10 +1259,54 @@ export default InAxis.extend({
       .attr('stroke', blockTrackColourI)
       .attr('fill', blockTrackColourI)
       ;
+
       dLog('ra', ra.size(), ra.node(), 'rm', rm.size(), rm.node());
       // result is not used yet.
       return ra;
     }
+    /** Position the feature representation (<path>) with a transform.
+     * This plays an analogous role to rectUpdate(), which does not
+     * apply to path because it sets x,y,height.
+     */
+    function featureTransform(d, i, g) {
+      let
+      xPosnD = xPosnS(/*subElements*/false).apply(this, [d, i, g]),
+      yPosnD = yPosnDir.apply(this, [d, i, g]),
+      /** xPosnS() offsets by  + d.layer*trackWidth  */
+      transform = "translate(" + xPosnD + ", " + yPosnD + ")";
+      return transform;
+    }
+    /** triangle with tip facing toward the axis.
+     * Used to make features obvious when small (height) and sparse / useTriangle3.
+     * (could use a line segment with an arrow, see lineDimensions() : showArrow).
+     */
+    function triangleDimensions(d, i, g) {
+      let
+      width = trackWidth / 2,
+      tWidth = width/2,
+      heightD = heightDir.apply(this, [d, i, g]),
+      /** either a horizontal arrow pointing left, or a vertical arrow pointing in the direction of the feature interval. */
+      vertical = true,
+      /** based on lineDimensions() : sideWedge -> triangle,  tipY -> heightD, wedgeX -> tWidth,  */
+      triangle = vertical ?
+        [
+          [width, 0],
+          [0, 0],
+          [tWidth, heightD]
+        ] :
+        [
+          [tWidth, heightD],
+          [0, heightD / 2],
+          [tWidth, 0]
+        ],
+      points = triangle,
+      l =
+        d3.select(this)
+        .attr('d', d3.line()(points))
+      ;
+      dLog('triangleDimensions', width, tWidth, heightD, points);
+    }
+
     /** subElements */
     function eachGroup(blockId, i, g) {
       let
@@ -1489,7 +1633,7 @@ export default InAxis.extend({
       return blockTrackColour;
     }
     /** note of how blockColour() would be used. */
-    let blockTrackColour = blockColour('rect.track');
+    let blockTrackColour = blockColour('rect.track, path.track');
     if (false)
       // gp
       d3.selectAll('g.tracks')
@@ -1625,6 +1769,13 @@ export default InAxis.extend({
     this.set('tracks', tracks); // used by axisStackChanged() : passed to layoutAndDrawTracks()
     return tracks;
   }),
+
+  lookupBlock(blockId) {
+    let
+    blockS = this.get('stackBlocks')[blockId],
+    block = blockS && blockS.block;
+    return block;
+  },
 
   /** The blocks within axis-tracks have collected some attributes,
    * so will likely be split out as a sub-component.
@@ -1846,9 +1997,13 @@ export default InAxis.extend({
     function isChanged(rc, f) { return rc ? rc[f] : true; }
     /* these 2 prevent 2-step transition of axis track y update.
      * after confirming this fix, the calculation of changed.viewport{Width,Height} can be sorted out.
+
+     * Side effect : setting viewportHeight = false is ignoring window
+     * height resize - feature y position is not updated.
+     * So commented out the clearing of changed.viewportHeight - not seeing any 2-step transition (yet) ...
      */
 result.changed.viewportWidth = false;
-result.changed.viewportHeight = false;
+// result.changed.viewportHeight = false;
     let
     widthChanged = isChanged(result.changed, 'viewportWidth') || allocatedWidthChange,
     heightChanged = isChanged(result.changed, 'viewportHeight'),
