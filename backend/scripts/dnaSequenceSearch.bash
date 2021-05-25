@@ -120,8 +120,8 @@ function datasetId2dbName()
   cd $serverDir
 }
 
-# Enable this to use dev_blastResult() for dev / loopback test, when blast is not installed.
-if false
+# This directory check enables dev_blastResult() for dev / loopback test, when blast is not installed.
+if [ -d ../../pretzel.A1 ]
 then
   dev_blastResult |	\
       ( [ "$addDataset" = true ] && convertSearchResults2Json || cat) |	\

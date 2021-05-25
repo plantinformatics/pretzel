@@ -106,7 +106,7 @@ module.exports = function(Feature) {
     if (true) {
     let child = childProcess(
       'dnaSequenceSearch.bash',
-      dnaSequence, true, 'dnaSequence', [parent, searchType, resultRows, addDataset, datasetName], searchDataOut, cb);
+      dnaSequence, true, 'dnaSequence', [parent, searchType, resultRows, addDataset, datasetName], searchDataOut, cb, /*progressive*/ false);
     } else {
       let features = dev_blastResult;
       cb(null, features);

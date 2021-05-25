@@ -18,9 +18,12 @@ var fs = require('fs');
  * child process, after [fileName, useFile]
  * @param dataOutCb (Buffer chunk, cb) {}
  * @param cb  response node callback
+ * @param progressive true means pass received data back directly to
+ * dataOutCb, otherwise catenate it and call dataOutCb just once when
+ * child closes
  * @return child
  */
-exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dataOutCb, cb) => {
+exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dataOutCb, cb, progressive) => {
   const fnName = 'childProcess';
   /** messages from child via file descriptors 3 and 4 are
    * collated in these arrays and can be sent back to provide
@@ -107,12 +110,21 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
     warnings.push(message);
   });
 
-  child.stdout.on('data', (chunk) => dataOutCb(chunk, cb));
+  /** output chunks received from child, if progressive. */
+  let outputs = [];
+  let outCb = progressive ?
+      (chunk) => dataOutCb(chunk, cb) :
+      (chunk) => outputs.push(chunk);
+  child.stdout.on('data', outCb);
 
   // since these are streams, you can pipe them elsewhere
   // child.stderr.pipe(dest);
   child.on('close', (code) => {
     console.log('child process exited with code',  code);
+    if (! progressive && outputs.length) {
+      let combined = Buffer.concat(outputs);
+      dataOutCb(combined, cb);
+    }
     if (code) {
       const error = Error("Failed processing file '" + fileName + "'.");
       cb(error);
@@ -135,9 +147,15 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
 
 /*----------------------------------------------------------------------------*/
 
+/* 
+ * childProcess() was factored out of Dataset.upload() in models/dataset.js
+ * The following is the remainder which was not used in childProcess(),
+ * i.e. not common, and can replace the use of spawn() there.
+ */
+
 /* dataset upload */
 function factored(msg, cb) {
-  exports.childProcess('uploadSpreadsheet.bash', msg.data, true, msg.fileName, dataOutUpload, cb);
+  exports.childProcess('uploadSpreadsheet.bash', msg.data, true, msg.fileName, dataOutUpload, cb, /*progressive*/ false);
 }
 
 // msg file param from API request  {fileName, data, replaceDataset}
@@ -178,3 +196,5 @@ let dataOutUpload = (chunk, cb) => {
       }
     });
 };
+
+/*----------------------------------------------------------------------------*/
