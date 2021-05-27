@@ -1,6 +1,8 @@
 import EmberObject, { computed } from '@ember/object';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
+import { task, timeout, didCancel } from 'ember-concurrency';
+
 import { breakPoint } from '../../utils/breakPoint';
 
 
@@ -115,11 +117,20 @@ export default EmberObject.extend({
    *
    */
   getDatasets : function () {
+    const fnName = 'getDatasets';
     let datasetService = this.get('dataset');
     let taskGetList = datasetService.get('taskGetList');  // availableMaps
     /** server was a param when this function was an attribute of apiServers. */
     let server = this;
-    let datasetsTask = taskGetList.perform(server);
+    let datasetsTask = taskGetList.perform(server)
+        .catch((error) => {
+          // Recognise if the given task error is a TaskCancelation.
+          if (! didCancel(error)) {
+            dLog(fnName, ' taskInstance.catch', this.name, error);
+            throw error;
+          }
+        });
+
     let
     name = server.get('name'),
     apiServers = this.get('apiServers'),
@@ -137,6 +148,11 @@ export default EmberObject.extend({
       {
         /** change to : apiServers can do .on() of .evented() on task  */
         let datasetsBlocks = apiServers.get('datasetsBlocks');
+        /** if TaskCancelation, no result, so don't replace previous result.  */
+        if ((! blockValues || ! blockValues.length) &&
+            (datasetsBlocks[datasetsHandle] && datasetsBlocks[datasetsHandle].length)) {
+          dLog(fnName, 'TaskCancelation datasetsTask.then', blockValues);
+        } else {
         datasetsBlocks[datasetsHandle] = blockValues;
         server.set("datasetsBlocks", blockValues);
         apiServers.incrementProperty('datasetsBlocksRefresh');
@@ -148,6 +164,7 @@ export default EmberObject.extend({
         if (this.get('apiServers.primaryServer') !== this) {
           let ti = this.get('featuresCountAllTaskInstance');
           dLog('getDatasets', 'evaluated featuresCountAllTaskInstance', ti);
+        }
         }
       }
     });

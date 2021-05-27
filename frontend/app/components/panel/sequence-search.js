@@ -9,6 +9,7 @@ const dLog = console.debug;
 
 export default Component.extend({
   auth: service(),
+  apiServers: service(),
 
   /** limit rows in result */
   resultRows : 50,
@@ -153,6 +154,7 @@ export default Component.extend({
   }),
 
   dnaSequenceInput(rawText) {
+    const fnName = 'dnaSequenceInput';
     // dLog("dnaSequenceInput", rawText && rawText.length);
     /** if the user has use paste or newline then .text is defined,
      * otherwise use jQuery to get it from the textarea.
@@ -185,6 +187,10 @@ export default Component.extend({
           this.get('newDatasetName'),
           /*options*/{/*dataEvent : receivedData, closePromise : taskInstance*/});
 
+        promise.catch(
+          (error) => {
+            dLog('dnaSequenceInput catch', error, arguments);
+          });
         promise.then(
           (data) => {
             dLog('dnaSequenceInput', data.features.length);
@@ -195,6 +201,7 @@ export default Component.extend({
           },
           // copied from data-base.js - could be factored.
           (err, status) => {
+            dLog(fnName, 'dnaSequenceSearch reject', err, status);
             let errobj = err.responseJSON.error;
             console.log(errobj);
             let errmsg = null;
@@ -206,7 +213,7 @@ export default Component.extend({
               errmsg = errobj.name;
             }
             this.setError(errmsg);
-            this.scrollToTop();
+            // upload tabs do .scrollToTop(), doesn't seem applicable here.
           }
 
         );
@@ -221,12 +228,15 @@ export default Component.extend({
   unviewDataset(datasetName) {
     let
     store = this.get('apiServers').get('primaryServer').get('store'),
-    replacedDataset = store.peekRecord('dataset', datasetName),
-    viewedBlocks = replacedDataset.get('blocks').toArray().filterBy('isViewed'),
-    blockService = this.get('blockService'),
-    blockIds = viewedBlocks.map((b) => b.id);
-    dLog('unviewDataset', datasetName, blockIds);
-    blockService.setViewed(blockIds, false);
+    replacedDataset = store.peekRecord('dataset', datasetName);
+    if (replacedDataset) {
+      let
+      viewedBlocks = replacedDataset.get('blocks').toArray().filterBy('isViewed'),
+      blockService = this.get('blockService'),
+      blockIds = viewedBlocks.map((b) => b.id);
+      dLog('unviewDataset', datasetName, blockIds);
+      blockService.setViewed(blockIds, false);
+    }
   }
 
   /*--------------------------------------------------------------------------*/

@@ -62,10 +62,10 @@ module.exports = function(Feature) {
    *
    * @param cb node response callback
    */
-  Feature.dnaSequenceSearch = function(data, cb) {
+  Feature.dnaSequenceSearch = function(data, options, cb) {
     const models = this.app.models;
 
-    let {dnaSequence, parent, searchType, resultRows, addDataset, datasetName, options} = data;
+    let {dnaSequence, parent, searchType, resultRows, addDataset, datasetName} = data;
     const fnName = 'dnaSequenceSearch';
     console.log(fnName, dnaSequence.length, parent, searchType);
 
@@ -86,8 +86,10 @@ module.exports = function(Feature) {
         });
         if (addDataset) {
           let jsonFile='tmp/' + datasetName + '.json';
-          console.log('before removeExisting "', datasetName, '"', '"', jsonFile, '"');
-          upload.removeExisting(models, datasetName, /*replaceDataset*/true, cb, loadAfterDelete);
+          /** same as convertSearchResults2Json() in dnaSequenceSearch.bash */
+          let datasetNameFull=`${parent}.${datasetName}`;
+          console.log('before removeExisting "', datasetNameFull, '"', '"', jsonFile, '"');
+          upload.removeExisting(models, datasetNameFull, /*replaceDataset*/true, cb, loadAfterDelete);
 
           function loadAfterDelete(err) {
             upload.loadAfterDeleteCb(
@@ -141,9 +143,9 @@ module.exports = function(Feature) {
       /* Within data : .dnaSequence, and :
       {arg: 'parent', type: 'string', required: true},
       {arg: 'searchType', type: 'string', required: true},
-      {arg: "options", type: "object", http: "optionsFromRequest"}
       resultRows, addDataset, datasetName
       */
+      {arg: "options", type: "object", http: "optionsFromRequest"}
     ],
     // http: {verb: 'post'},
     returns: {arg: 'features', type: 'array'},
