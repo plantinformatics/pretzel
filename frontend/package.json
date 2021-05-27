@@ -80,6 +80,7 @@
   },
   "private": true,
   "dependencies": {
+    "caniuse-lite": "^1.0.30001230",
     "colresizable": "github:felipedgarcia/colresizable",
     "ember-array-helper": ">=5",
     "ember-cli-htmlbars": "^5.3.1",
