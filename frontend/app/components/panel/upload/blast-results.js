@@ -16,6 +16,12 @@ const dLog = console.debug;
  * /Feature/dnaSequenceSearch
  */
 export default Component.extend({
+  apiServers: service(),
+  blockService : service('data/block'),
+
+  /** true enables display of the search inputs. */
+  showSearch : false,
+
 
   /** copied from data-base.js, not used yet */
   isProcessing: false,
@@ -37,6 +43,67 @@ export default Component.extend({
 
   didRender() {
     // this.showTable();
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Outcomes of the API search request.
+   */
+  resultEffect : computed('search.promise', function () {
+    const fnName = 'resultEffect';
+    /** auth.dnaSequenceSearch request */
+    let promise = this.search.promise;
+
+    promise.catch(
+      (error) => {
+        dLog(fnName, 'catch', error, arguments);
+      });
+    promise.then(
+      (data) => {
+        dLog(fnName, data.features.length);
+        this.set('data', data.features);
+        if (this.get('addDataset') && this.get('replaceDataset')) {
+          this.unviewDataset(this.get('newDatasetName'));
+        }
+      },
+      // copied from data-base.js - could be factored.
+      (err, status) => {
+        dLog(fnName, 'dnaSequenceSearch reject', err, status);
+        let errobj = err.responseJSON.error;
+        console.log(errobj);
+        let errmsg = null;
+        if (errobj.message) {
+          errmsg = errobj.message;
+        } else if (errobj.errmsg) {
+          errmsg = errobj.errmsg;
+        } else if (errobj.name) {
+          errmsg = errobj.name;
+        }
+        this.setError(errmsg);
+        // upload tabs do .scrollToTop(), doesn't seem applicable here.
+      }
+
+    );
+    
+  }),
+
+  /*--------------------------------------------------------------------------*/
+  /* copied from file-drop-zone.js, can factor if this is retained.  */
+
+  /** Unview the blocks of the dataset which has been replaced by successful upload.
+   */
+  unviewDataset(datasetName) {
+    let
+    store = this.get('apiServers').get('primaryServer').get('store'),
+    replacedDataset = store.peekRecord('dataset', datasetName);
+    if (replacedDataset) {
+      let
+      viewedBlocks = replacedDataset.get('blocks').toArray().filterBy('isViewed'),
+      blockService = this.get('blockService'),
+      blockIds = viewedBlocks.map((b) => b.id);
+      dLog('unviewDataset', datasetName, blockIds);
+      blockService.setViewed(blockIds, false);
+    }
   },
 
   /*--------------------------------------------------------------------------*/
@@ -74,12 +141,11 @@ export default Component.extend({
     const cName = 'upload/blast-results';
     const fnName = 'createTable';
     dLog('createTable');
-    var that = this;
-    $(function() {
-      let eltId = 'blast-results-hotable';
+    $(() => {
+      let eltId = this.search.tableId;
       let hotable = $('#' + eltId)[0];
       if (! hotable) {
-        console.warn(cName, fnName, ' : #', eltId, ' not found', that);
+        console.warn(cName, fnName, ' : #', eltId, ' not found', this);
         return;  // fail
       }
       /**
@@ -128,7 +194,7 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
         /* see comment re. handsOnTableLicenseKey in frontend/config/environment.js */
         licenseKey: config.handsOnTableLicenseKey
       });
-      that.set('table', table);
+      this.set('table', table);
 
     });
   },

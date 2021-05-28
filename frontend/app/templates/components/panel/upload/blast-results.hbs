@@ -1,6 +1,30 @@
 {{dataMatrixEffect}}
+{{resultEffect}}
 {{activeEffect}}
 
+{{!-- --------------------------------------------------------------------- --}}
+
+{{!-- x-toggle uses flex, so wrap it. --}}
+<div style="padding : 1em">
+  <div style="float:left; margin-right:1em">
+    {{#x-toggle
+      theme='light'
+      value=showSearch
+      onToggle=(action (mut showSearch))
+      as |toggle|
+      }}
+      {{toggle.switch}}
+    {{/x-toggle}}
+  </div>
+  Show Search Inputs
+
+  <div style="clear:both"></div>
+
+  {{#if showSearch}}
+    <div>Parent : {{search.parent}}</div>
+    <div>FASTA Sequence Search : {{search.seq}}</div>
+  {{/if}}
+</div>
 
 {{!-- --------------------------------------------------------------------- --}}
 
@@ -12,5 +36,5 @@
   {{/elem/panel-form}}
 {{/if}}
 
-<div id="blast-results-hotable" class="actual-row">
+<div id={{search.tableId}} class="actual-row">
 </div>

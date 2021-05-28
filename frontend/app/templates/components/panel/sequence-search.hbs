@@ -13,7 +13,10 @@
       <BsNav @type="tabs" as |nav|>
         <nav.item @active={{bs-eq tab.activeId "sequence-search-input"}}><a href="#sequence-search-input" role="tab" onclick={{action tab.select "sequence-search-input"}}>{{elem/icon-base name="edit"}} Sequence Input</a></nav.item>
 
-        <nav.item @active={{bs-eq tab.activeId "sequence-search-output"}}><a href="#sequence-search-output" role="tab" onclick={{action tab.select "sequence-search-output"}}>{{elem/icon-base name="arrow-right"}} Blast Output</a></nav.item>
+        {{#each this.searches as |search|}}
+        <nav.item @active={{bs-eq tab.activeId search.tabId}}><a href={{search.tabHref}} role="tab" onclick={{action tab.select search.tabId}}>{{elem/icon-base name="arrow-right"}} Blast Output</a></nav.item>
+        {{/each}}
+
       </BsNav>
 
       <div class="tab-content">
@@ -114,12 +117,14 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
 
         </tab.pane>
 
-        <tab.pane @id="sequence-search-output" @title="Output : Blast Matches">
+        {{#each this.searches as |search|}}
+        <tab.pane @id={{search.tabId}} @title="Output : Blast Matches">
 
-          {{panel/upload/blast-results data=data 
-              active=(bs-eq tab.activeId "sequence-search-output") }}
+          {{panel/upload/blast-results search=search
+              active=(bs-eq tab.activeId search.tabId ) }}
 
         </tab.pane>
+        {{/each}}
 
       </div>
     </BsTab>

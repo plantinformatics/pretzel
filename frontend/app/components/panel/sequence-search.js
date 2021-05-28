@@ -3,13 +3,15 @@ import { bind, once, later, throttle, debounce } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { observer, computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
+import { A as array_A } from '@ember/array';
+
+import sequenceSearchData from '../../utils/data/sequence-search-data';
 
 
 const dLog = console.debug;
 
 export default Component.extend({
   auth: service(),
-  apiServers: service(),
 
   /** limit rows in result */
   resultRows : 50,
@@ -17,6 +19,17 @@ export default Component.extend({
   addDataset : false,
 
   classNames: ['col-xs-12'],
+
+  /** array of current searches.  each one is data for blast-result component. */
+  searches : undefined,
+
+  /*--------------------------------------------------------------------------*/
+
+  init() {
+    this._super(...arguments);
+
+    this.set('searches', array_A());
+  },
 
   /*--------------------------------------------------------------------------*/
   /** copied from data-base.js; may factor or change the approach. */
@@ -96,10 +109,11 @@ export default Component.extend({
       dLog('inputIsActive');
     },
     paste: function(event) {
-      let text = event && (event.target.value || event.originalEvent.target.value);
-      console.log('paste', event, text.length);
+      /** text is "" at this time. */
       /** this action function is called before jQuery val() is updated. */
       later(() => {
+        let text = event && (event.target.value || event.originalEvent.target.value);
+        console.log('paste', event, text.length);
         this.set('text', text);
         // this.dnaSequenceInput(/*text*/);
       }, 500);
@@ -187,57 +201,12 @@ export default Component.extend({
           this.get('newDatasetName'),
           /*options*/{/*dataEvent : receivedData, closePromise : taskInstance*/});
 
-        promise.catch(
-          (error) => {
-            dLog('dnaSequenceInput catch', error, arguments);
-          });
-        promise.then(
-          (data) => {
-            dLog('dnaSequenceInput', data.features.length);
-            this.set('data', data.features);
-            if (this.get('addDataset') && this.get('replaceDataset')) {
-              this.unviewDataset(this.get('newDatasetName'));
-            }
-          },
-          // copied from data-base.js - could be factored.
-          (err, status) => {
-            dLog(fnName, 'dnaSequenceSearch reject', err, status);
-            let errobj = err.responseJSON.error;
-            console.log(errobj);
-            let errmsg = null;
-            if (errobj.message) {
-              errmsg = errobj.message;
-            } else if (errobj.errmsg) {
-              errmsg = errobj.errmsg;
-            } else if (errobj.name) {
-              errmsg = errobj.name;
-            }
-            this.setError(errmsg);
-            // upload tabs do .scrollToTop(), doesn't seem applicable here.
-          }
+        let searchData = sequenceSearchData.create({promise, seq, parent, searchType});
+        this.get('searches').pushObject(searchData);
 
-        );
-    }
+     }
   },
 
-  /*--------------------------------------------------------------------------*/
-  /* copied from file-drop-zone.js, can factor if this is retained.  */
-
-  /** Unview the blocks of the dataset which has been replaced by successful upload.
-   */
-  unviewDataset(datasetName) {
-    let
-    store = this.get('apiServers').get('primaryServer').get('store'),
-    replacedDataset = store.peekRecord('dataset', datasetName);
-    if (replacedDataset) {
-      let
-      viewedBlocks = replacedDataset.get('blocks').toArray().filterBy('isViewed'),
-      blockService = this.get('blockService'),
-      blockIds = viewedBlocks.map((b) => b.id);
-      dLog('unviewDataset', datasetName, blockIds);
-      blockService.setViewed(blockIds, false);
-    }
-  }
 
   /*--------------------------------------------------------------------------*/
 
