@@ -23,7 +23,11 @@ exports.get = (key) => {
 
 exports.put = (key, body) => {
   cache.setKey(key, body);
-  cache.save();
+  /** https://github.com/royriojas/flat-cache#readme : "Non visited
+   * keys are removed when cache.save() is called" if noPrune is not
+   * true
+   */
+  cache.save(/*noPrune*/ true);
 };
 
 /*----------------------------------------------------------------------------*/
