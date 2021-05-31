@@ -6,7 +6,7 @@ import { alias } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Ember from 'ember';
 import Service, { inject as service } from '@ember/service';
-import { task } from 'ember-concurrency';
+import { task, didCancel } from 'ember-concurrency';
 
 import { keyBy } from 'lodash/collection';
 
@@ -732,13 +732,22 @@ export default Service.extend(Evented, {
    * undefined and limits are requested for all blocks.
    */
   getBlocksLimits(blockId) {
+    const fnName = 'getBlocksLimits';
     let taskGet = this.get('taskGetLimits');
     console.log("getBlocksLimits", blockId);
       let p =  new Promise(function(resolve, reject){
         later(() => {
-          let blocksTask = taskGet.perform(blockId);
-          blocksTask.then((result) => resolve(result));
-          blocksTask.catch((error) => reject(error));
+          let
+          blocksTask = taskGet.perform(blockId)
+            .then((result) => resolve(result))
+            .catch((error) => {
+              // Recognise if the given task error is a TaskCancelation.
+              if (! didCancel(error)) {
+                dLog(fnName, ' taskInstance.catch', this.name, error);
+                // throw error;
+                reject(error);
+              }
+            });
         });
       });
     let blocksTask = p;
