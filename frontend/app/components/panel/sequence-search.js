@@ -201,6 +201,13 @@ export default Component.extend({
           this.get('newDatasetName'),
           /*options*/{/*dataEvent : receivedData, closePromise : taskInstance*/});
 
+        if (this.get('addDataset')) {
+          /* On complete, trigger dataset list reload.
+           * refreshDatasets is passed from controllers/mapview (updateModel ).
+           */
+          promise.then(() => this.get('refreshDatasets')());
+        }
+
         let searchData = sequenceSearchData.create({promise, seq, parent, searchType});
         this.get('searches').pushObject(searchData);
 
