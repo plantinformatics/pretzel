@@ -458,7 +458,7 @@ export default Service.extend(Evented, {
               }
               let getCountsForInterval = (interval) => {
                 let countsP;
-                if (interval[0] === interval[1]) {
+                if (interval && (interval[0] === interval[1])) {
                   dLog('getCountsForInterval', interval);
                   countsP = Promise.resolve([]);
                 } else {

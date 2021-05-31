@@ -205,7 +205,22 @@ export default Component.extend({
           /* On complete, trigger dataset list reload.
            * refreshDatasets is passed from controllers/mapview (updateModel ).
            */
-          promise.then(() => this.get('refreshDatasets')());
+          promise.then(() => {
+            const viewDataset = this.get('viewDatasetFlag');
+            let refreshed = this.get('refreshDatasets')();
+            if (viewDataset) {
+              refreshed
+                .then(() => {
+                  /** same as convertSearchResults2Json() in dnaSequenceSearch.bash and
+                   * backend/common/models/feature.js :  Feature.dnaSequenceSearch() */
+                  let
+                  datasetName = this.get('newDatasetName'),
+                  datasetNameFull=`${parent}.${datasetName}`;
+                  dLog(fnName, 'viewDataset', datasetNameFull);
+                  this.get('viewDataset')(datasetNameFull, viewDataset);
+                });
+            }
+          });
         }
 
         let searchData = sequenceSearchData.create({promise, seq, parent, searchType});
