@@ -22,7 +22,9 @@
 
   {{#if showSearch}}
     <div>Parent : {{search.parent}}</div>
-    <div>FASTA Sequence Search : {{search.seq}}</div>
+    <div style="contain: content;overflow: auto;">FASTA Sequence Search :
+      <div style="display: inline-block">{{search.seq}}</div>
+    </div>
   {{/if}}
 </div>
 
