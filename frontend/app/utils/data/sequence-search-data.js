@@ -29,7 +29,13 @@ export default EmberObject.extend({
      * would expect.
      */
     this.set('tableId', "blast-results-hotable-" + id);
- }
+
+    let startTime = new Date();
+    // maybe : this.set('startTime', startTime);
+    this.set('timeId', startTime.toTimeString().split(' ')[0]);
+  },
+
+  
 
 
 });

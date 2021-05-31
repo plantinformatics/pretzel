@@ -14,7 +14,7 @@
         <nav.item @active={{bs-eq tab.activeId "sequence-search-input"}}><a href="#sequence-search-input" role="tab" onclick={{action tab.select "sequence-search-input"}}>{{elem/icon-base name="edit"}} Sequence Input</a></nav.item>
 
         {{#each this.searches as |search|}}
-        <nav.item @active={{bs-eq tab.activeId search.tabId}}><a href={{search.tabHref}} role="tab" onclick={{action tab.select search.tabId}}>{{elem/icon-base name="arrow-right"}} Blast Output</a></nav.item>
+        <nav.item @active={{bs-eq tab.activeId search.tabId}}><a href={{search.tabHref}} role="tab" onclick={{action tab.select search.tabId}}>{{elem/icon-base name="arrow-right"}} Blast Output ({{search.timeId}})</a></nav.item>
         {{/each}}
 
       </BsNav>
