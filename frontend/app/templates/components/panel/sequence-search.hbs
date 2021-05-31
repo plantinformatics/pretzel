@@ -123,9 +123,12 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
         </tab.pane>
 
         {{#each this.searches as |search|}}
-        <tab.pane @id={{search.tabId}} @title="Output : Blast Matches">
+        <tab.pane @id={{search.tabId}} @title="Output : Blast Matches" style="overflow: auto;">
 
           {{panel/upload/blast-results search=search
+              datasets=datasets
+              refreshDatasets=refreshDatasets
+              viewDataset=viewDataset
               active=(bs-eq tab.activeId search.tabId ) }}
 
         </tab.pane>

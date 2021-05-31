@@ -17,6 +17,8 @@ export default Component.extend({
   resultRows : 50,
   /** true means add / upload result to db as a Dataset */
   addDataset : false,
+  /** true means view the blocks of the dataset after it is added. */
+  viewDatasetFlag : false,
 
   classNames: ['col-xs-12'],
 

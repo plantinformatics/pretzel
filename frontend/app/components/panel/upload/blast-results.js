@@ -1,10 +1,13 @@
 import Component from '@ember/component';
 import { observer, computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import { later as run_later } from '@ember/runloop';
 
-
 import config from '../../../config/environment';
+
+import uploadBase from '../../../utils/panel/upload-base';
+import uploadTable from '../../../utils/panel/upload-table';
 
 
 const dLog = console.debug;
@@ -12,23 +15,87 @@ const dLog = console.debug;
 /* global Handsontable */
 /* global $ */
 
+/*----------------------------------------------------------------------------*/
+
+/**
+ * based on backend/scripts/dnaSequenceSearch.bash : columnsKeyString
+ * This also aligns with createTable() : colHeaders below.
+ */
+const columnsKeyString = [
+  'name', 'chr', 'pcIdentity', 'lengthOfHspHit', 'numMismatches', 'numGaps', 'queryStart', 'queryEnd', 'pos', 'end'
+];
+const c_name = 0, c_chr = 1, c_pos = 8;
+
+/*----------------------------------------------------------------------------*/
+
+
 /** Display a table of results from sequence-search API request
  * /Feature/dnaSequenceSearch
  */
 export default Component.extend({
   apiServers: service(),
   blockService : service('data/block'),
+  /** Similar comment to data-csv.js applies re. store (user could select server via GUI).
+   * store is used by upload-table.js : getDatasetId() and submitFile()
+   */
+  store : alias('apiServers.primaryServer.store'),
+  auth: service('auth'),
+
+
+  classNames: ['blast-results'],
 
   /** true enables display of the search inputs. */
   showSearch : false,
 
+  /** true means view the blocks of the dataset after it is added. */
+  viewDatasetFlag : false,
 
-  /** copied from data-base.js, not used yet */
+  /*--------------------------------------------------------------------------*/
+
+  /** copied from data-base.js. for uploadBase*/
   isProcessing: false,
   successMessage: null,
   errorMessage: null,
   warningMessage: null,
   progressMsg: '',
+
+
+  setProcessing : uploadBase.setProcessing,
+  setSuccess : uploadBase.setSuccess,
+  setError : uploadBase.setError,
+  setWarning : uploadBase.setWarning,
+  clearMsgs : uploadBase.clearMsgs,
+
+  /** data-csv.js : scrollToTop() scrolls up #left-panel-upload, but that is not required here. */
+  scrollToTop() {
+  },
+
+  updateProgress : uploadBase.updateProgress,
+
+
+  /*--------------------------------------------------------------------------*/
+
+  /** copied from data-base.js, for uploadTable */
+
+  selectedDataset: 'new',
+  newDatasetName: '',
+  nameWarning: null,
+  selectedParent: '',
+  dataType: 'linear',
+  namespace: '',
+
+  getDatasetId : uploadTable.getDatasetId,
+  isDupName : uploadTable.isDupName,
+  onNameChange : observer('newDatasetName', uploadTable.onNameChange),
+  onSelectChange : observer('selectedDataset', 'selectedParent', uploadTable.onSelectChange),
+
+  /*--------------------------------------------------------------------------*/
+
+  actions : {
+    submitFile : uploadTable.submitFile
+  },
+
+  /*--------------------------------------------------------------------------*/
 
   dataMatrix : computed('data.[]', function () {
     let cells = this.get('data').map((r) => r.split('\t'));
@@ -43,6 +110,12 @@ export default Component.extend({
 
   didRender() {
     // this.showTable();
+  },
+
+  didReceiveAttrs() {
+    this._super(...arguments);
+    this.set('selectedParent', this.get('search.parent'));
+    this.set('namespace',  this.get('search.parent') + ':blast');
   },
 
   /*--------------------------------------------------------------------------*/
@@ -205,5 +278,44 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
     table.updateSettings({data:[]});
   },
 
+  /*--------------------------------------------------------------------------*/
+
+  /** called by upload-table.js : onSelectChange()
+   * No validation of user input is required because table content is output from blast process.
+   */
+  checkBlocks() {
+  },
+
+
+  /** upload-table.js : submitFile() expects this function.
+   * In blast-results, the data is not user input so validation is not required.
+   */
+  validateData() {
+    /** based on data-csv.js : validateData(), which uses table.getSourceData();
+     * in this case sourceData is based on .dataMatrix instead
+     * of going via the table.
+     */
+    return new Promise((resolve, reject) => {
+      let table = this.get('table');
+      if (table === null) {
+        resolve([]);
+      }
+      let sourceData = this.get('dataMatrix');
+      /** the last row is empty. */
+      let validatedData = sourceData
+          .filter((row) => (row[c_name] !== '') && (row[c_chr]))
+          .map((row) => 
+          ({
+            name: row[c_name],
+            // blast output chromosome is e.g. 'chr2A'; Pretzel uses simply '2A'.
+            block: row[c_chr].replace(/^chr/,''),
+            // Make sure val is a number, not a string.
+            val: Number(row[c_pos])
+          }) );
+      resolve(validatedData);
+    });
+  }
+
+  /*--------------------------------------------------------------------------*/
 
 });

@@ -29,6 +29,16 @@
 </div>
 
 {{!-- --------------------------------------------------------------------- --}}
+{{!-- from data-csv --}}
+
+{{elem/panel-message
+  successMessage=successMessage
+  warningMessage=warningMessage
+  errorMessage=errorMessage}}
+{{#if nameWarning}}
+{{elem/panel-message
+  warningMessage=nameWarning}}
+{{/if}}
 
 {{#if isProcessing}}
   {{#elem/panel-form
@@ -37,6 +47,81 @@
       {{progressMsg}}
   {{/elem/panel-form}}
 {{/if}}
+
+<label>Dataset: </label>
+<select 
+  id="dataset" 
+  onchange={{action (mut selectedDataset) value="target.value"}} 
+  disabled={{isProcessing}}
+>
+  <option selected>new</option>
+  {{#each datasets key="name" as |ds|}}
+    <option value={{ds.name}}>{{ds.name}}</option>
+  {{/each}}
+</select>
+<br>
+{{#if (eq selectedDataset 'new')}}
+  <div id="new_dataset_options">
+  {{input 
+    id="dataset_new" 
+    type="text" 
+    value=newDatasetName 
+    class="form-control" 
+    placeholder="New dataset name..." 
+    disabled=isProcessing
+  }}
+
+  <br>
+  <label>Parent: </label>
+  {{selectedParent}}
+  {{!--
+  <select 
+    id="parent" 
+    onchange={{action (mut selectedParent) value="target.value"}} 
+    disabled={{isProcessing}}
+  >
+    <option value='' selected>None</option>
+    {{#each datasets key="name" as |ds|}}
+      <option value={{ds.name}}>{{ds.name}}</option>
+    {{/each}}
+  </select>
+  --}}
+
+  <br>
+  <label>Type: </label>
+  <select 
+    id="type" 
+    onchange={{action (mut dataType) value="target.value"}} 
+    disabled={{isProcessing}}
+  >
+    <option>linear</option>
+    <option>observational</option>
+  </select>
+  <br>
+  <label>Namespace: </label>
+  {{input id="namespace" type="text" value=namespace disabled=isProcessing }}
+  </div>
+{{/if}}
+
+{{!-- --------------------------------------------------------------------- --}}
+
+<span class="filter-group-col">
+  {{input type="checkbox" name="viewDatasetFlag" checked=viewDatasetFlag }}
+  <label>View</label>
+</span>
+
+
+<hr>
+
+<input
+  type="submit"
+  value="Add Dataset"
+  class="btn btn-primary {{if isProcessing 'disabled'}}"
+  onclick={{action 'submitFile'}}>
+
+<hr>
+
+{{!-- --------------------------------------------------------------------- --}}
 
 <div id={{search.tableId}} class="actual-row">
 </div>
