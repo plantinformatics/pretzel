@@ -44,6 +44,8 @@ export default Component.extend({
 
   classNames: ['blast-results'],
 
+  /** true enables display of the table. */
+  tableVisible : true,
   /** true enables display of the search inputs. */
   showSearch : false,
 
@@ -186,10 +188,14 @@ export default Component.extend({
    * @desc
    * active is passed in from parent component sequence-search to indicate if
    * the tab containing this sub component is active.
+   *
+   * @param tableVisible x-toggle value which enables display of the table.
+   * The user may hide the table for easier viewing of the input
+   * parameters and button for adding the result as a dataset.
    */
-  activeEffect : computed('active', function () {
+  activeEffect : computed('active', 'tableVisible', function () {
     let active = this.get('active');
-    if (active) {
+    if (active && this.get('tableVisible')) {
       this.shownBsTab();
     }
   }),
@@ -202,7 +208,7 @@ export default Component.extend({
   showTable() {
     // Ensure table is created when tab is shown
     let table = this.get('table');
-    if (! table) {
+    if (! table || ! table.rootElement.parentElement) {
       this.createTable();
     } else {
       // trigger rerender when tab is shown

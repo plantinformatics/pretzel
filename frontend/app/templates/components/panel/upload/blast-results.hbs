@@ -4,18 +4,31 @@
 
 {{!-- --------------------------------------------------------------------- --}}
 
-{{!-- x-toggle uses flex, so wrap it. --}}
-<div style="padding : 1em">
-  <div style="float:left; margin-right:1em">
-    {{#x-toggle
-      theme='light'
+
+<div>
+  {{elem/x-toggle value=tableVisible }}
+  {{#unless tableVisible}}
+    Show Table
+  {{/unless}}
+
+  <div style="clear:both"></div>
+
+  {{#if tableVisible}}
+    <div id={{search.tableId}} class="actual-row">
+    </div>
+  {{/if}}
+</div>
+
+
+
+
+<hr>
+{{!-- --------------------------------------------------------------------- --}}
+
+<div>
+    {{elem/x-toggle
       value=showSearch
-      onToggle=(action (mut showSearch))
-      as |toggle|
       }}
-      {{toggle.switch}}
-    {{/x-toggle}}
-  </div>
   Show Search Inputs
 
   <div style="clear:both"></div>
@@ -28,6 +41,7 @@
   {{/if}}
 </div>
 
+<hr>
 {{!-- --------------------------------------------------------------------- --}}
 {{!-- from data-csv --}}
 
@@ -122,5 +136,3 @@
 
 {{!-- --------------------------------------------------------------------- --}}
 
-<div id={{search.tableId}} class="actual-row">
-</div>

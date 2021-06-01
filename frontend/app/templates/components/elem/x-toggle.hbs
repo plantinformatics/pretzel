@@ -1,0 +1,12 @@
+{{!-- x-toggle uses flex, so wrap it. --}}
+
+<div style="float:left; margin-right:1em">
+  {{#x-toggle
+  theme='light'
+  value=@value
+  onToggle=(action (mut @value))
+  as |toggle|
+  }}
+  {{toggle.switch}}
+  {{/x-toggle}}
+</div>
