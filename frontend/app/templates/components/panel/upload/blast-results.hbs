@@ -6,7 +6,11 @@
 
 
 <div>
-  {{elem/x-toggle value=tableVisible }}
+  {{#elem/x-toggle value=tableVisible }}
+    {{#ember-tooltip side="right" delay=500}}
+      Show/hide the table.
+    {{/ember-tooltip}}
+  {{/elem/x-toggle}}
   {{#unless tableVisible}}
     Show Table
   {{/unless}}
@@ -27,11 +31,17 @@
       {{/ember-modal-dialog}}
     {{else}}
       <span style="float:right;">
-        {{elem/button-base
+        {{#elem/button-base
         classSize='xs'
         classColour='default'
         click=(action (mut this.tableModal)  true )
         icon='new-window'}}
+
+          {{#ember-tooltip side="left" delay=500}}
+            Show the table in a modal dialog.
+          {{/ember-tooltip}}
+
+        {{/elem/button-base}}
       </span>
 
       <div style="clear:both"></div>
