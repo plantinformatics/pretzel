@@ -32,7 +32,6 @@
 {{#if (eq selectedDataset 'new')}}
   <div id="new_dataset_options">
   {{input 
-    id="dataset_new" 
     type="text" 
     value=newDatasetName 
     class="form-control" 
@@ -63,7 +62,7 @@
   </select>
   <br>
   <label>Namespace: </label>
-  {{input id="namespace" type="text" value=namespace disabled=isProcessing }}
+  {{input type="text" value=namespace disabled=isProcessing }}
   </div>
 {{/if}}
 <br><label>Load from file: </label>
