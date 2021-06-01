@@ -11,12 +11,38 @@
     Show Table
   {{/unless}}
 
-  <div style="clear:both"></div>
+  {{#if this.active}}
 
   {{#if tableVisible}}
-    <div id={{search.tableId}} class="actual-row">
-    </div>
+
+    {{#if this.tableModal}}
+      {{#ember-modal-dialog  title="Blast Results" header-icon='list'}}
+        <button
+         onclick={{action (mut this.tableModal)  false}}
+         style="float: right; position: relative; top: -12px;" class="close"
+         type="button">x
+        </button>
+
+      <div id={{search.tableId}} class="actual-row"  style="overflow-x:hidden; width:70vw"></div>
+      {{/ember-modal-dialog}}
+    {{else}}
+      <span style="float:right;">
+        {{elem/button-base
+        classSize='xs'
+        classColour='default'
+        click=(action (mut this.tableModal)  true )
+        icon='new-window'}}
+      </span>
+
+      <div style="clear:both"></div>
+      <div id={{search.tableId}} class="actual-row"></div>
+    {{/if}}
+    <div style="clear:both"></div>
+
+
   {{/if}}
+  {{/if}}
+
 </div>
 
 

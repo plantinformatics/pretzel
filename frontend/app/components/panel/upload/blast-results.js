@@ -46,6 +46,8 @@ export default Component.extend({
 
   /** true enables display of the table. */
   tableVisible : true,
+  /** true enables display of the table in a modal dialog. */
+  tableModal : true,
   /** true enables display of the search inputs. */
   showSearch : false,
 
@@ -114,6 +116,7 @@ export default Component.extend({
 
   didRender() {
     // this.showTable();
+    dLog('didRender', this.get('active'), this.get('tableVisible'), this.get('tableModal'));
   },
 
   didReceiveAttrs() {
@@ -193,7 +196,7 @@ export default Component.extend({
    * The user may hide the table for easier viewing of the input
    * parameters and button for adding the result as a dataset.
    */
-  activeEffect : computed('active', 'tableVisible', function () {
+  activeEffect : computed('active', 'tableVisible', 'tableModal', function () {
     let active = this.get('active');
     if (active && this.get('tableVisible')) {
       this.shownBsTab();
@@ -208,7 +211,7 @@ export default Component.extend({
   showTable() {
     // Ensure table is created when tab is shown
     let table = this.get('table');
-    if (! table || ! table.rootElement.parentElement) {
+    if (! table || ! table.rootElement || ! table.rootElement.isConnected) {
       this.createTable();
     } else {
       // trigger rerender when tab is shown
