@@ -231,6 +231,17 @@ export default Component.extend({
      }
   },
 
+  closeResultTab(tabId) {
+    dLog('closeResultTab', tabId);
+    let searches = this.get('searches'),
+        tab = searches.find((s) => s.tabId === tabId);
+    if (tab) {
+      searches.removeObject(tab);
+    } else {
+      dLog('closeResultTab', tabId, tab);      
+    }
+    
+  }
 
   /*--------------------------------------------------------------------------*/
 
