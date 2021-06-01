@@ -101,7 +101,7 @@ export default Component.extend({
     let cells = this.get('data').map((r) => r.split('\t'));
     return cells;
   }),
-  dataMatrixEffect : computed('dataMatrix.[]', function () {
+  dataMatrixEffect : computed('table', 'dataMatrix.[]', function () {
     let table = this.get('table');
     if (table) {
       table.loadData(this.get('dataMatrix'));
