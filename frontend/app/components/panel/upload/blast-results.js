@@ -24,7 +24,7 @@ const dLog = console.debug;
 const columnsKeyString = [
   'name', 'chr', 'pcIdentity', 'lengthOfHspHit', 'numMismatches', 'numGaps', 'queryStart', 'queryEnd', 'pos', 'end'
 ];
-const c_name = 0, c_chr = 1, c_pos = 8;
+const c_name = 0, c_chr = 1, c_pos = 8, c_end = 9;
 
 /*----------------------------------------------------------------------------*/
 
@@ -303,17 +303,23 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
         resolve([]);
       }
       let sourceData = this.get('dataMatrix');
-      /** the last row is empty. */
-      let validatedData = sourceData
-          .filter((row) => (row[c_name] !== '') && (row[c_chr]))
-          .map((row) => 
-          ({
+      /** the last row is empty, so it is filtered out. */
+      let
+      validatedData = sourceData
+        .filter((row) => (row[c_name] !== '') && (row[c_chr]))
+        .map((row) => {
+          let feature = {
             name: row[c_name],
-            // blast output chromosome is e.g. 'chr2A'; Pretzel uses simply '2A'.
-            block: row[c_chr].replace(/^chr/,''),
+            // blast output chromosome has prefix 'chr' e.g. 'chr2A'; Pretzel uses simply '2A'.
+            block: row[c_chr].replace(/^chr/, ''),
             // Make sure val is a number, not a string.
             val: Number(row[c_pos])
-          }) );
+          };
+          if (row[c_end] !== undefined) {
+            feature.end = Number(row[c_end]);
+          }
+          return feature;
+        });
       resolve(validatedData);
     });
   }

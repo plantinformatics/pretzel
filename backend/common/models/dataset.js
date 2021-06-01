@@ -182,6 +182,10 @@ module.exports = function(Dataset) {
     }
   };
 
+  /**
+   * @param data  dataset, with .features with attributes :
+   *   feature.name, .block (blockId), .val, .end (start, end position).
+   */
   Dataset.tableUpload = function(data, options, cb) {
     var models = this.app.models;
     var blocks = {};
@@ -232,9 +236,13 @@ module.exports = function(Dataset) {
       });
       var array_features = [];
       data.features.forEach(function(feature) {
+        let value = [feature.val];
+        if (feature.end !== undefined) {
+          value.push(feature.end);
+        }
         array_features.push({
           name: feature.name,
-          value: [feature.val],
+          value,
           value_0: feature.val,
           blockId: blocks_by_name[feature.block]
         });
