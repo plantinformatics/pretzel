@@ -16,6 +16,24 @@ const dLog = console.debug;
 
 const CompName = 'components/axis-ticks-selected';
 
+/*----------------------------------------------------------------------------*/
+/** @return true if feature's block is not viewed and its dataset
+ * has tag transient.
+ */
+function featureIsTransient(f) {
+  let isTransient = ! f.get('blockId.isViewed');
+  if (isTransient) {
+    let d = f.get('blockId.datasetId');
+    d = d.get('content') || d;
+    isTransient = d.hasTag('transient');
+  }
+  return isTransient;
+}
+
+/*----------------------------------------------------------------------------*/
+
+
+
 /** Display horizontal ticks on the axis to highlight the position of features
  * found using Feature Search.
  *
@@ -201,6 +219,21 @@ export default Component.extend(AxisEvents, {
     if (clickedFeatures && clickedFeatures.length) {
       features = features.concat(clickedFeatures);
     }
+    /** not yet clear whether blast-results transient blocks should be
+     * viewed - that would introduce complications requiring API
+     * requests to be blocked when .datasetId.hasTag('transient')
+     * For the MVP, return the features of un-viewed blocks, when block is reference.
+     */
+    if (! block.get('isData')) {
+      let clickedFeaturesByAxis = this.get('selected.clickedFeaturesByAxis'),
+          axisFeatures = clickedFeaturesByAxis && clickedFeaturesByAxis.get(block),
+          transientFeatures = axisFeatures && axisFeatures
+          .filter(featureIsTransient);
+      if (transientFeatures && transientFeatures.length) {
+        features = features.concat(transientFeatures);
+      }
+    }
+
     if (trace)
       dLog('featuresOfBlockLookup', featuresInBlocks, block, blockId, features);
     return features;

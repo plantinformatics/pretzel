@@ -40,6 +40,7 @@ export default Component.extend({
    */
   store : alias('apiServers.primaryServer.store'),
   auth: service('auth'),
+  transient : service('data/transient'),
 
 
   classNames: ['blast-results'],
@@ -47,12 +48,17 @@ export default Component.extend({
   /** true enables display of the table. */
   tableVisible : true,
   /** true enables display of the table in a modal dialog. */
-  tableModal : true,
+  tableModal : false,
   /** true enables display of the search inputs. */
   showSearch : false,
 
-  /** true means view the blocks of the dataset after it is added. */
+  /** true means view the blocks of the dataset after it is added.
+   * Used in upload-table.js : submitFile().
+   */
   viewDatasetFlag : false,
+  /** true means display the result rows as triangles - clickedFeatures. */
+  viewFeaturesFlag : true,
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -106,6 +112,38 @@ export default Component.extend({
     data = this.get('data'),
     cells = data ? data.map((r) => r.split('\t')) : [];
     return cells;
+  }),
+  dataFeatures : computed('dataMatrix.[]', function () {
+    let data = this.get('dataMatrix');
+    /** the last row is empty, so it is filtered out. */
+    let features =
+    data
+      .filter((row) => (row[c_name] !== '') && (row[c_chr]))
+      .map((row) => {
+        let feature = {
+          name: row[c_name],
+          // blast output chromosome has prefix 'chr' e.g. 'chr2A'; Pretzel uses simply '2A'.
+          block: row[c_chr].replace(/^chr/, ''),
+          // Make sure val is a number, not a string.
+          val: Number(row[c_pos])
+        };
+        if (row[c_end] !== undefined) {
+          feature.end = Number(row[c_end]);
+        }
+        return feature;
+      });
+    dLog('dataFeatures', features.length, features[0]);
+    return features;
+  }),
+  blockNames : computed('dataMatrix.[]', function () {
+    let data = this.get('dataMatrix');
+    /** based on dataFeatures - see comments there. */
+    let names =
+    data
+      .filter((row) => (row[c_name] !== '') && (row[c_chr]))
+      .map((row) =>  row[c_chr].replace(/^chr/, ''));
+    dLog('blockNames', names.length, names[0]);
+    return names;
   }),
   dataMatrixEffect : computed('table', 'dataMatrix.[]', function () {
     let table = this.get('table');
@@ -185,6 +223,40 @@ export default Component.extend({
       blockService.setViewed(blockIds, false);
     }
   },
+
+  /*--------------------------------------------------------------------------*/
+
+  viewFeaturesEffect : computed('dataFeatures.[]', 'viewFeaturesFlag', function () {
+    /** construct feature id from name + val (start position) because
+     * name is not unique, and in a blast search result, a feature
+     * name is associated with the sequence string to search for, and
+     * all features matching that sequence have the same name.
+     * We may use UUID (e.g. thaume/ember-cli-uuid or ivanvanderbyl/ember-uuid).
+     */
+    let
+    features = this.get('dataFeatures')
+      .map((f) => ({
+        _id : f.name + '-' + f.val, name : f.name, blockId : f.block,
+        value : [f.val, f.end]}));
+    if (features && features.length) {
+      let viewFeaturesFlag = this.get('viewFeaturesFlag');
+      let
+      transient = this.get('transient'),
+      datasetName = this.get('newDatasetName') || 'blastResults',
+      namespace = this.get('namespace'),
+      dataset = transient.pushDatasetArgs(
+        datasetName,
+        this.get('search.parent'),
+        namespace
+      );
+      let blocks = transient.blocksForSearch(
+        datasetName,
+        this.get('blockNames'),
+        namespace
+      );
+      transient.showFeatures(dataset, blocks, features, viewFeaturesFlag);
+    }
+  }),
 
   /*--------------------------------------------------------------------------*/
   /** comments for activeEffect() and shownBsTab() in @see data-csv.js
@@ -311,24 +383,8 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
       if (table === null) {
         resolve([]);
       }
-      let sourceData = this.get('dataMatrix');
-      /** the last row is empty, so it is filtered out. */
       let
-      validatedData = sourceData
-        .filter((row) => (row[c_name] !== '') && (row[c_chr]))
-        .map((row) => {
-          let feature = {
-            name: row[c_name],
-            // blast output chromosome has prefix 'chr' e.g. 'chr2A'; Pretzel uses simply '2A'.
-            block: row[c_chr].replace(/^chr/, ''),
-            // Make sure val is a number, not a string.
-            val: Number(row[c_pos])
-          };
-          if (row[c_end] !== undefined) {
-            feature.end = Number(row[c_end]);
-          }
-          return feature;
-        });
+      validatedData = this.get('dataFeatures');
       resolve(validatedData);
     });
   }

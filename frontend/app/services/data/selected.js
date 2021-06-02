@@ -9,6 +9,8 @@ import { contentOf } from '../../utils/common/promises';
 
 const dLog = console.debug;
 
+const trace = 1;
+
 /**
  * for #223 : Selections and defining intervals 
  */
@@ -40,16 +42,26 @@ export default Service.extend(Evented, {
    * This event is published here rather than in the component which receives
    * the click (axis-tracks : clickTrack) because the feature 'clicked' status
    * resides here.
+   *
+   * @param add undefined or boolean : if true then add, if false then remove
    */
-  toggle(listName, feature) {
+  toggle(listName, feature, add) {
     let
     features = this.get(listName),
-    i = features.indexOf(feature);
-    dLog('clickFeature', listName, i, feature, features);
-    let added = i === -1;
-    if (added) {
+    i = features && features.indexOf(feature);
+    if (! features || trace /*> 1*/) {
+      dLog('clickFeature', listName, i, feature, features);
+    }
+    /** indicates that the feature was initially not in the list. */
+    let absent = i === -1;
+    /** true / false indicates that the feature was added/removed to/from the list.
+     * undefined indicates no change.
+     */
+    let added;
+    if (absent && (add !== false)) {
       features.pushObject(feature);
-    } else {
+      added = true;
+    } else if (! absent && (add !== true)) {
       features.removeAt(i, 1);
       if (listName === 'features') {
 	/** clearing from .features is required to clear from the other 2 lists;
@@ -62,8 +74,11 @@ export default Service.extend(Evented, {
 	this.labelledFeatures.removeObject(feature);
 	this.shiftClickedFeatures.removeObject(feature);
       }
+      added = false;
     }
-    this.trigger('toggleFeature', feature, added, listName);
+    if (added !== undefined) {
+      this.trigger('toggleFeature', feature, added, listName);
+    }
   },
   clickFeature(feature) {
     this.toggle('features', feature);

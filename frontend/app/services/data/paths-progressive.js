@@ -281,13 +281,19 @@ export default Service.extend({
     return promise;
   },
 
+  /** Push the feature into the store if it is not already there.
+   * @return the record handle of the existing or added feature record.
+   * @param flowsService  optional, defaults to this.get('flowsService').
+   */
   pushFeature(store, f, flowsService) {
+    flowsService ||= this.get('flowsService');
     let c;
     let fr = store.peekRecord('feature', f._id);
     if (fr) {
       let verifyOK = verifyFeatureRecord(fr, f);
       if (! verifyOK)
         dLog('peekRecord feature', f._id, f, fr._internalModel.__data, fr);
+      c = fr;
     }
     else
     {
