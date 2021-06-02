@@ -227,6 +227,7 @@ export default Component.extend({
   /*--------------------------------------------------------------------------*/
 
   viewFeaturesEffect : computed('dataFeatures.[]', 'viewFeaturesFlag', function () {
+    const fnName = 'viewFeaturesEffect';
     /** construct feature id from name + val (start position) because
      * name is not unique, and in a blast search result, a feature
      * name is associated with the sequence string to search for, and
@@ -240,6 +241,11 @@ export default Component.extend({
         value : [f.val, f.end]}));
     if (features && features.length) {
       let viewFeaturesFlag = this.get('viewFeaturesFlag');
+      if (viewFeaturesFlag) {
+        let parentName = this.get('search.parent');
+        dLog(fnName, 'viewDataset', parentName);
+        this.get('viewDataset')(parentName, true);
+      }
       let
       transient = this.get('transient'),
       datasetName = this.get('newDatasetName') || 'blastResults',
