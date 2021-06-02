@@ -244,7 +244,7 @@ export default Component.extend({
       if (viewFeaturesFlag) {
         let parentName = this.get('search.parent');
         dLog(fnName, 'viewDataset', parentName);
-        this.get('viewDataset')(parentName, true);
+        this.get('viewDataset')(parentName, true, this.get('blockNames'));
       }
       let
       transient = this.get('transient'),
