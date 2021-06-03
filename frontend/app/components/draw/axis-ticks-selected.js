@@ -8,6 +8,7 @@ import { task, timeout, didCancel } from 'ember-concurrency';
 
 import AxisEvents from '../../utils/draw/axis-events';
 import { transitionEndPromise } from '../../utils/draw/d3-svg';
+import { arraysConcat } from '../../utils/common/arrays';
 
 /* global d3 */
 
@@ -29,6 +30,7 @@ function featureIsTransient(f) {
   }
   return isTransient;
 }
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -223,26 +225,43 @@ export default Component.extend(AxisEvents, {
     if (clickedFeatures && clickedFeatures.length) {
       features = features.concat(clickedFeatures);
     }
+    let transientFeatures = this.transientFeaturesLookup(block, 'clickedFeatures');
+    features = arraysConcat(features, transientFeatures);
+
+    if (trace)
+      dLog('featuresOfBlockLookup', featuresInBlocks, block, blockId, features);
+    return features;
+  },
+  /** If block is a reference block, lookup features of the axis.
+   * The results of sequence-search : blast-results are currently
+   * added to selected.features (i.e. clickedFeatures) and
+   * selected.labelledFeatures and their block is not viewed, so
+   * associate them with the reference block / axis.
+   * @return undefined if transientFeatures.length is 0,
+   * so the caller can do :
+   *  if (transientFeatures) {
+   *      features = features.concat(transientFeatures);
+   *  }
+   */
+  transientFeaturesLookup(block, listName) {
+    let transientFeatures;
     /** not yet clear whether blast-results transient blocks should be
      * viewed - that would introduce complications requiring API
      * requests to be blocked when .datasetId.hasTag('transient')
      * For the MVP, return the features of un-viewed blocks, when block is reference.
      */
     if (! block.get('isData')) {
-      let clickedFeaturesByAxis = this.get('selected.clickedFeaturesByAxis'),
-          axisFeatures = clickedFeaturesByAxis && clickedFeaturesByAxis.get(block),
-          transientFeatures = axisFeatures && axisFeatures
-          .filter(featureIsTransient);
-      if (transientFeatures && transientFeatures.length) {
-        features = features.concat(transientFeatures);
+      let featuresByAxis = this.get('selected.' + listName + 'ByAxis'),
+          axisFeatures = featuresByAxis && featuresByAxis.get(block);
+      transientFeatures = axisFeatures && axisFeatures
+        .filter(featureIsTransient);
+      if (transientFeatures && ! transientFeatures.length) {
+        transientFeatures = undefined;
       }
     }
-
-    if (trace)
-      dLog('featuresOfBlockLookup', featuresInBlocks, block, blockId, features);
-    return features;
+    return transientFeatures;
   },
-  
+
   /** Lookup selected.labelledFeatures for the given block.
    * @param listName name of set / selection / group of features :
    *   'clickedFeatures', 'labelledFeatures', or 'shiftClickedFeatures'
@@ -252,6 +271,9 @@ export default Component.extend(AxisEvents, {
     let
     map = this.get('selected.' + listName + 'ByBlock'),
     features = map && map.get(block);
+    let transientFeatures = this.transientFeaturesLookup(block, listName);
+    features = arraysConcat(features, transientFeatures);
+
     if (trace)
       dLog('selectedFeaturesOfBlockLookup', listName, this.featuresInBlocks, block, block.id, features);
     return features;
