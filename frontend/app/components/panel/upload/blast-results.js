@@ -9,11 +9,13 @@ import config from '../../../config/environment';
 import uploadBase from '../../../utils/panel/upload-base';
 import uploadTable from '../../../utils/panel/upload-table';
 
+import { nowOrLater } from '../../../utils/ember-devel';
 
 const dLog = console.debug;
 
 /* global Handsontable */
 /* global $ */
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -226,7 +228,7 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  viewFeaturesEffect : computed('dataFeatures.[]', 'viewFeaturesFlag', function () {
+  viewFeaturesEffect : computed('dataFeatures.[]', 'viewFeaturesFlag', 'active', function () {
     const fnName = 'viewFeaturesEffect';
     /** construct feature id from name + val (start position) because
      * name is not unique, and in a blast search result, a feature
@@ -240,10 +242,11 @@ export default Component.extend({
         _id : f.name + '-' + f.val, name : f.name, blockId : f.block,
         value : [f.val, f.end]}));
     if (features && features.length) {
-      let viewFeaturesFlag = this.get('viewFeaturesFlag');
+      /** Only view features of the active tab. */
+      let viewFeaturesFlag = this.get('viewFeaturesFlag') && this.get('active');
       if (viewFeaturesFlag) {
         let parentName = this.get('search.parent');
-        dLog(fnName, 'viewDataset', parentName);
+        dLog(fnName, 'viewDataset', parentName, this.get('search.timeId'));
         this.get('viewDataset')(parentName, true, this.get('blockNames'));
       }
       let
@@ -260,7 +263,24 @@ export default Component.extend({
         this.get('blockNames'),
         namespace
       );
-      transient.showFeatures(dataset, blocks, features, viewFeaturesFlag);
+      /** When changing between 2 blast-results tabs, this function will be
+       * called for both.
+       *
+       * Ensure that for the tab which is becoming active,
+       * showFeatures is called after the call for the tab becoming in-active,
+       * so that the inactive tab's features are removed from selected features
+       * before the active tab's features are added, so that in the case of
+       * overlap, the features remain displayed.  Perhaps formalise the sequence
+       * of this transition, as the functionality evolves.
+       *
+       * Modifies selected.features, and hence updates clickedFeaturesByAxis,
+       * which is used by axis-ticks-selected.js : featuresOfBlockLookup();
+       * renderTicksThrottle() uses throttle( immediate=false ) to allow time
+       * for this update.
+       */
+      nowOrLater(
+        viewFeaturesFlag,
+        () => transient.showFeatures(dataset, blocks, features, viewFeaturesFlag));
     }
   }),
 

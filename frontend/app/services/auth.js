@@ -538,11 +538,11 @@ function blockIdMap(data, mapFns) {
     // so manually spread the object :
     blockA = data.blockA,
   blockB = data.blockB, 
-  blockIds = data.blockIds,
+  blockIds = data.blockIds || data.blocks,
   restFields = Object.keys(data).filter(
-    (f) => ['blockA', 'blockB', 'blockIds'].indexOf(f) === -1),
+    (f) => ['blockA', 'blockB', 'blockIds', 'blocks'].indexOf(f) === -1),
   d = restFields.reduce((result, f) => {result[f] = data[f]; return result;}, {}),
-  /** ab is true if data contains .blockA,B, false if .blockIds */
+  /** ab is true if data contains .blockA,B, false if .blockIds or .blocks */
   ab = !!blockA;
   console.log('blockIdMap', data, blockA, blockB, blockIds, restFields, d, ab);
   if ((!blockA !== !blockB) || (!blockA === !blockIds)) {
@@ -559,7 +559,8 @@ function blockIdMap(data, mapFns) {
   if (ab) {
     blockIds = [blockA, blockB];
   }
-  blockIds = blockIds.map((blockId, i) => mapFns[i](blockId));
+  /** if blockIds.length > mapFns.length, then mapFns[0] === mapFns[1], so just use mapFns[0]. */
+  blockIds = blockIds.map((blockId, i) => (mapFns[i] || mapFns[0])(blockId));
   if (ab)
     [d.blockA, d.blockB] = blockIds;
   else

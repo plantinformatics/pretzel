@@ -50,6 +50,7 @@ export default Service.extend({
         dLog('peekRecord', modelName, d._id, d, r.get(_internalModel_data), r);
         dLog(r.parent,  d.parent,  r.namespace,  d.namespace);
       }
+      c = r;
     }
     else
     {

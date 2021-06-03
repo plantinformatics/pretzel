@@ -195,8 +195,12 @@ export default Component.extend(AxisEvents, {
     if (trace)
       dLog('renderTicksThrottle', axisID);
 
-    /* see comments in axis-1d.js : renderTicksThrottle() re. throttle versus debounce */    
-    throttle(this, this.renderTicks, axisID, 500);
+    /* see comments in axis-1d.js : renderTicksDebounce() re. throttle versus debounce */
+    /* pass immediate=false - gives time for clickedFeaturesByAxis to
+     * be changed by transient.showFeatures().  Could address this with
+     * a dependency on selected.clickedFeaturesByAxis
+     */
+    throttle(this, this.renderTicks, axisID, 500, false);
   },
 
   /** Lookup the given block in featuresInBlocks, and return its features which

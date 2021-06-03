@@ -1,3 +1,5 @@
+import { later as run_later } from '@ember/runloop';
+
 /* global Ember */
 
 /*----------------------------------------------------------------------------*/
@@ -42,7 +44,19 @@ function getAttrOrCP(object, attrName) {
 const _internalModel_data = '_internalModel._recordData.__data';
 
 
+/*----------------------------------------------------------------------------*/
+
+/** Run the function now or later.
+ * @param later if true, then run fn in Ember.run.later()
+ */
+function nowOrLater(later, fn) {
+  if (later) {
+    run_later(fn);
+  } else {
+    fn();
+  }
+}
 
 /*----------------------------------------------------------------------------*/
 
-export { parentOfType, elt0, getAttrOrCP, _internalModel_data };
+export { parentOfType, elt0, getAttrOrCP, _internalModel_data, nowOrLater };

@@ -436,7 +436,7 @@ export default Service.extend(Evented, {
             let taskId = blockId + '_' + nBins + (zoomedDomainText || '');
           let summaryTask = this.get('summaryTask');
           let p;
-            if ((p = summaryTask[blockId]) && (p.state() === "pending")) {
+            if ((p = summaryTask[blockId]) && (! p.state || p.state() === "pending")) {
               // state() : pending   ~   readyState : 1
               dLog('getSummary current', blockId, p, p.readyState);
             } else if ((p = summaryTask[taskId])) {
@@ -503,10 +503,12 @@ export default Service.extend(Evented, {
                 /** featuresCounts[0] may be undefined because of delete
                  * featuresCounts[i] ~ outsideBoundaries
                  */
-                let binSize = featuresCounts && featuresCounts.length && featuresCounts[0] ?
-                    featuresCounts[0].idWidth[0] :
-                    intervalSize(interval) / nBins,
-                    result = {binSize, nBins, domain : interval, result : featuresCounts};
+                let
+                f0 = featuresCounts && featuresCounts.length && featuresCounts[0],
+                binSize = f0 ?
+                  (f0.idWidth ? f0.idWidth[0] : ((f0.max - f0.min) || 1)) :
+                  (interval ? (0, intervalSize)(interval) / nBins : 1),
+                result = {binSize, nBins, domain : interval, result : featuresCounts};
                 block.featuresCountsResultsMergeOrAppend(result);
                 block.set('featuresCounts', featuresCounts);
               }
