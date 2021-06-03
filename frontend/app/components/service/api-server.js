@@ -148,10 +148,14 @@ export default EmberObject.extend({
       {
         /** change to : apiServers can do .on() of .evented() on task  */
         let datasetsBlocks = apiServers.get('datasetsBlocks');
-        /** if TaskCancelation, no result, so don't replace previous result.  */
+        /** if TaskCancelation, no result, so don't replace previous result.
+         * If request failed because of e.g. comms, don't want to repeat so accept the undefined result.
+         * Can look at separating these 2 cases.
+         */
+        let blockValuesCurrent;
         if ((! blockValues || ! blockValues.length) &&
-            (datasetsBlocks[datasetsHandle] && datasetsBlocks[datasetsHandle].length)) {
-          dLog(fnName, 'TaskCancelation datasetsTask.then', blockValues);
+            ((blockValuesCurrent = datasetsBlocks[datasetsHandle]) && blockValuesCurrent.length)) {
+          dLog(fnName, 'TaskCancelation datasetsTask.then', blockValues, blockValuesCurrent.length);
         } else {
         datasetsBlocks[datasetsHandle] = blockValues;
         server.set("datasetsBlocks", blockValues);
