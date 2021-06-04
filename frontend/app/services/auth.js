@@ -539,6 +539,7 @@ function blockIdMap(data, mapFns) {
     blockA = data.blockA,
   blockB = data.blockB, 
   blockIds = data.blockIds || data.blocks,
+  arrayName = (data.blockIds && 'blockIds') || (data.blocks && 'blocks'),
   restFields = Object.keys(data).filter(
     (f) => ['blockA', 'blockB', 'blockIds', 'blocks'].indexOf(f) === -1),
   d = restFields.reduce((result, f) => {result[f] = data[f]; return result;}, {}),
@@ -563,9 +564,10 @@ function blockIdMap(data, mapFns) {
   blockIds = blockIds.map((blockId, i) => (mapFns[i] || mapFns[0])(blockId));
   if (ab)
     [d.blockA, d.blockB] = blockIds;
-  else
-    d.blockIds = blockIds;
-  console.log('blockIdMap', d);
+  else {
+    d[arrayName] = blockIds;
+  }
+  console.log('blockIdMap', d, ab, arrayName);
   return d;
 }
 
