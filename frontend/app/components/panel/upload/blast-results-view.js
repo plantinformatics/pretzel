@@ -111,25 +111,41 @@ export default Component.extend({
     dLog('didRender', this.get('active'), this.get('tableVisible'), this.get('tableModal'));
   },
 
+  willDestroyElement() {
+    this.viewFeatures(false);
+    this._super(...arguments);
+  },
+
   /*--------------------------------------------------------------------------*/
 
-
-  viewFeaturesEffect : computed('dataFeatures.[]', 'viewFeaturesFlag', 'active', function () {
-    const fnName = 'viewFeaturesEffect';
-    /** construct feature id from name + val (start position) because
+    /** Map from .dataFeatures to the format required for store.normalize and .push().
+     *
+     * construct feature id from name + val (start position) because
      * name is not unique, and in a blast search result, a feature
      * name is associated with the sequence string to search for, and
      * all features matching that sequence have the same name.
      * We may use UUID (e.g. thaume/ember-cli-uuid or ivanvanderbyl/ember-uuid).
      */
+    dataFeaturesForStore : computed('dataFeatures.[]', function () {
     let
     features = this.get('dataFeatures')
       .map((f) => ({
         _id : f.name + '-' + f.val, name : f.name, blockId : f.block,
         value : [f.val, f.end]}));
-    if (features && features.length) {
+      return features;
+  }),
+
+
+  viewFeaturesEffect : computed('dataFeaturesForStore.[]', 'viewFeaturesFlag', 'active', function () {
       /** Only view features of the active tab. */
       let viewFeaturesFlag = this.get('viewFeaturesFlag') && this.get('active');
+    this.viewFeatures(viewFeaturesFlag);
+  }),
+  viewFeatures(viewFeaturesFlag) {
+    const fnName = 'viewFeaturesEffect';
+    let
+    features = this.get('dataFeaturesForStore');
+    if (features && features.length) {
       if (viewFeaturesFlag) {
         let parentName = this.get('search.parent');
         dLog(fnName, 'viewDataset', parentName, this.get('search.timeId'));
@@ -168,7 +184,7 @@ export default Component.extend({
         viewFeaturesFlag,
         () => transient.showFeatures(dataset, blocks, features, viewFeaturesFlag));
     }
-  }),
+  },
 
   /*--------------------------------------------------------------------------*/
   /** comments for activeEffect() and shownBsTab() in @see data-csv.js
