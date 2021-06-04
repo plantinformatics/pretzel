@@ -1,7 +1,4 @@
-{{dataMatrixEffect}}
 {{resultEffect}}
-{{activeEffect}}
-{{viewFeaturesEffect}}
 
 {{!-- --------------------------------------------------------------------- --}}
 
@@ -28,7 +25,10 @@
          type="button">x
         </button>
 
-      <div id={{search.tableId}} class="actual-row"  style="overflow-x:hidden; width:70vw"></div>
+      {{panel/upload/blast-results-view
+        viewDataset=viewDataset
+        search=search data=data active=active tableVisible=true tableModal=true
+        }}
       {{/ember-modal-dialog}}
     {{else}}
       <span style="float:right;">
@@ -46,7 +46,10 @@
       </span>
 
       <div style="clear:both"></div>
-      <div id={{search.tableId}} class="actual-row"></div>
+      {{panel/upload/blast-results-view
+        viewDataset=viewDataset
+        search=search data=data active=active tableVisible=tableVisible tableModal=false
+        }}
     {{/if}}
     <div style="clear:both"></div>
 
@@ -158,11 +161,6 @@
 <span class="filter-group-col">
   {{input type="checkbox" name="viewDatasetFlag" checked=viewDatasetFlag }}
   <label>View</label>
-</span>
-
-<span class="filter-group-col">
-  {{input type="checkbox" name="viewFeaturesFlag" checked=viewFeaturesFlag }}
-  <label>Show Features (triangles)</label>
 </span>
 
 <hr>
