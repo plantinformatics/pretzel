@@ -1,7 +1,7 @@
 import Component from '@ember/component';
 import { observer, computed } from '@ember/object';
 import { inject as service } from '@ember/service';
-import { later as run_later } from '@ember/runloop';
+import { later as run_later, bind } from '@ember/runloop';
 
 import { alias } from '@ember/object/computed';
 
@@ -59,18 +59,24 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** Result data, split into columns
+   */
   dataMatrix : computed('data.[]', function () {
     let
     data = this.get('data'),
-    cells = data ? data.map((r) => r.split('\t')) : [];
+    cells = data ? data
+      /** the last row is empty, so it is filtered out. */
+      .filter((row) => (row !== ''))
+      .map((r) => r.split('\t')) :
+      [];
     return cells;
   }),
+  /** Result data formatted for upload-table.js : submitFile()
+   */
   dataFeatures : computed('dataMatrix.[]', function () {
     let data = this.get('dataMatrix');
-    /** the last row is empty, so it is filtered out. */
     let features =
     data
-      .filter((row) => (row[c_name] !== '') && (row[c_chr]))
       .map((row) => {
         let feature = {
           name: row[c_name],
@@ -92,15 +98,24 @@ export default Component.extend({
     /** based on dataFeatures - see comments there. */
     let names =
     data
-      .filter((row) => (row[c_name] !== '') && (row[c_chr]))
       .map((row) =>  row[c_chr].replace(/^chr/, ''));
     dLog('blockNames', names.length, names[0]);
     return names;
   }),
-  dataMatrixEffect : computed('table', 'dataMatrix.[]', function () {
+  /** Result data formatted for handsontable : loadData()
+   * Prepend a checkbox column.
+   */
+  dataForTable : computed('dataMatrix.[]', function () {
+    let
+    data = this.get('dataMatrix'),
+    /** prepend with view flag = true. This copies row array. */
+    rows = data.map((row) => [true].concat(row) );
+    return rows;
+  }),
+  dataMatrixEffect : computed('table', 'dataForTable.[]', function () {
     let table = this.get('table');
     if (table) {
-      table.loadData(this.get('dataMatrix'));
+      table.loadData(this.get('dataForTable'));
     }
   }),
 
@@ -135,6 +150,12 @@ export default Component.extend({
       return features;
   }),
 
+  viewAllResultAxesChange(proxy) {
+    let checked = proxy.target.checked;
+    /** this value seems to be delayed */
+    let viewAll = this.get('viewAllResultAxesFlag');
+    dLog('viewAllResultAxesChange', checked, viewAll);
+  },
 
   viewFeaturesEffect : computed('dataFeaturesForStore.[]', 'viewFeaturesFlag', 'active', function () {
       /** Only view features of the active tab. */
@@ -237,11 +258,32 @@ blast output columns are
 query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, query start, query end, subject start, subject end, e-value, score, query length, subject length
       */
       var table = new Handsontable(hotable, {
-        data: [['', '', '', '', '', '', '', '', '', '', '', '', '', '']],
+        data: [[false, '', '', '', '', '', '', '', '', '', '', '', '', '', '']],
         // minRows: 20,
         rowHeaders: true,
-        /*
+
+        /** column field data name is default - array index.  */
         columns: [
+          {
+            type: 'checkbox',
+            className: "htCenter"
+          },
+          // remaining columns use default type
+          { },
+          { },
+          { },
+          { },
+          { },
+          { },
+          { },
+          { },
+          { },
+          { },
+          { },
+          { },
+          { },
+          { },
+          /*
           {
             data: 'name',
             type: 'text'
@@ -257,10 +299,11 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
               pattern: '0,0.*'
             }
           }
+          */
         ],
-        */
+
         colHeaders: [
-          'query ID', 'subject ID', '% identity', 'length of HSP (hit)', '# mismatches', '# gaps', 'query start', 'query end', 'subject start', 'subject end', 'e-value', 'score', 'query length', 'subject length'
+          'view', 'query ID', 'subject ID', '% identity', 'length of HSP (hit)', '# mismatches', '# gaps', 'query start', 'query end', 'subject start', 'subject end', 'e-value', 'score', 'query length', 'subject length'
         ],
         height: 500,
         // colWidths: [100, 100, 100],
@@ -269,9 +312,8 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
         manualRowMove: true,
         manualColumnMove: true,
         contextMenu: true,
+        afterChange: bind(this, this.afterChange),
         /*
-        afterChange: function() {
-        },
         afterRemoveRow: function() {
         },
         */
@@ -287,6 +329,26 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
   clearTable() {
     var table = this.get('table');
     table.updateSettings({data:[]});
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+  afterChange(changes, source) {
+    let 
+    transient = this.get('transient'),
+    features = this.get('dataFeaturesForStore');
+
+    if (changes) {
+      changes.forEach(([row, prop, oldValue, newValue]) => {
+        dLog('afterChange', row, prop, oldValue, newValue);
+        /** column 0 is the view checkbox. */
+        if (prop === 0) {
+          let feature = transient.pushFeature(features[row]),
+              viewFeaturesFlag = newValue;
+          transient.showFeature(feature, viewFeaturesFlag);
+        }
+      });
+    }
   },
 
   /*--------------------------------------------------------------------------*/

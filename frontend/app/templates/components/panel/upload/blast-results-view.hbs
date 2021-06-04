@@ -9,6 +9,13 @@
 {{!-- --------------------------------------------------------------------- --}}
 
 <span class="filter-group-col">
+  {{input type="checkbox" name="viewAllResultAxesFlag" checked=viewAllResultAxesFlag
+  input=(action viewAllResultAxesChange)
+ }}
+  <label>View all axes with results</label>
+</span>
+
+<span class="filter-group-col">
   {{input type="checkbox" name="viewFeaturesFlag" checked=viewFeaturesFlag }}
   <label>Show Features (triangles)</label>
 </span>

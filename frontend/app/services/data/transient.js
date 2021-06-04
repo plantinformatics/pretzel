@@ -107,10 +107,13 @@ export default Service.extend({
     selected = this.get('selected'),
     // may pass dataset, blocks to pushFeature()
     stored = features.map((f) => this.pushFeature(f));
-    stored.forEach((feature) => {
-      selected.toggle('features', feature, viewFeaturesFlag);
-      selected.toggle('labelledFeatures', feature, viewFeaturesFlag);
-    });
-  }
+    stored.forEach((feature) => this.showFeature(feature, viewFeaturesFlag));
+  },
+  showFeature(feature, viewFeaturesFlag) {
+    let
+    selected = this.get('selected');
+    selected.toggle('features', feature, viewFeaturesFlag);
+    selected.toggle('labelledFeatures', feature, viewFeaturesFlag);
+    }
 
 });
