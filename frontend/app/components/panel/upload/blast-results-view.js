@@ -71,6 +71,14 @@ export default Component.extend({
       [];
     return cells;
   }),
+  viewRow : computed('dataMatrix', 'viewFeaturesFlag', function () {
+    let
+    data = this.get('dataMatrix'),
+    viewFeaturesFlag = this.get('viewFeaturesFlag'),
+    viewRow  = data.map((row) => viewFeaturesFlag);
+    return viewRow;
+  }),
+
   /** Result data formatted for upload-table.js : submitFile()
    */
   dataFeatures : computed('dataMatrix.[]', function () {
@@ -105,14 +113,15 @@ export default Component.extend({
   /** Result data formatted for handsontable : loadData()
    * Prepend a checkbox column.
    */
-  dataForTable : computed('dataMatrix.[]', function () {
+  dataForTable : computed('dataMatrix.[]', 'viewRow', function () {
     let
     data = this.get('dataMatrix'),
-    /** prepend with view flag = true. This copies row array. */
-    rows = data.map((row) => [true].concat(row) );
+    viewRow = this.get('viewRow'),
+    /** prepend with view flag (initially true). Use of [].concat() copies row array (not mutate). */
+    rows = data.map((row, i) => [viewRow[i]].concat(row) );
     return rows;
   }),
-  dataMatrixEffect : computed('table', 'dataForTable.[]', function () {
+  dataForTableEffect : computed('table', 'dataForTable.[]', function () {
     let table = this.get('table');
     if (table) {
       table.loadData(this.get('dataForTable'));
@@ -151,10 +160,13 @@ export default Component.extend({
   }),
 
   viewAllResultAxesChange(proxy) {
+    const fnName = 'viewAllResultAxesChange';
     let checked = proxy.target.checked;
     /** this value seems to be delayed */
     let viewAll = this.get('viewAllResultAxesFlag');
-    dLog('viewAllResultAxesChange', checked, viewAll);
+    dLog(fnName, checked, viewAll);
+
+    
   },
 
   viewFeaturesEffect : computed('dataFeaturesForStore.[]', 'viewFeaturesFlag', 'active', function () {

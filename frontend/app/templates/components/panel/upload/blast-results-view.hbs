@@ -1,4 +1,4 @@
-{{dataMatrixEffect}}
+{{dataForTableEffect}}
 {{activeEffect}}
 {{viewFeaturesEffect}}
 
@@ -8,16 +8,16 @@
 
 {{!-- --------------------------------------------------------------------- --}}
 
-<span class="filter-group-col">
+<div>
   {{input type="checkbox" name="viewAllResultAxesFlag" checked=viewAllResultAxesFlag
   input=(action viewAllResultAxesChange)
  }}
   <label>View all axes with results</label>
-</span>
+</div>
 
-<span class="filter-group-col">
+<div>
   {{input type="checkbox" name="viewFeaturesFlag" checked=viewFeaturesFlag }}
-  <label>Show Features (triangles)</label>
-</span>
+  <label>Show / Hide all Features (triangles)</label>
+</div>
 
 {{!-- --------------------------------------------------------------------- --}}
