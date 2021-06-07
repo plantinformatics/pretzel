@@ -12,6 +12,11 @@ const dLog = console.debug;
 
 export default Component.extend({
   auth: service(),
+  queryParams: service('query-params'),
+
+  urlOptions : alias('queryParams.urlOptions'),
+
+  /*--------------------------------------------------------------------------*/
 
   /** limit rows in result */
   resultRows : 50,

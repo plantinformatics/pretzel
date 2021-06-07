@@ -89,6 +89,7 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
               </div>
             </li>
 
+            {{#if urlOptions.searchAddDataset}}
             <li class="list-group-item">
               {{input type="checkbox" name="addDataset" checked=addDataset }}
               <label>Add as Dataset</label>
@@ -117,6 +118,8 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
 
               {{/if}}
             </li>
+            {{/if}} {{!!-- urlOptions.searchAddDataset --}}
+
 
           </ul>
 

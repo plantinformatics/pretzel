@@ -1,6 +1,7 @@
 import Component from '@ember/component';
 import { observer, computed } from '@ember/object';
 import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
 
 import uploadBase from '../../../utils/panel/upload-base';
 import uploadTable from '../../../utils/panel/upload-table';
@@ -19,7 +20,11 @@ const dLog = console.debug;
 export default Component.extend({
   apiServers: service(),
   blockService : service('data/block'),
+  queryParams: service('query-params'),
 
+  urlOptions : alias('queryParams.urlOptions'),
+
+  /*--------------------------------------------------------------------------*/
 
   classNames: ['blast-results'],
 
