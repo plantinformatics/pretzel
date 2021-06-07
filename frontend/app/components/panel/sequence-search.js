@@ -7,8 +7,13 @@ import { A as array_A } from '@ember/array';
 
 import sequenceSearchData from '../../utils/data/sequence-search-data';
 
+/*----------------------------------------------------------------------------*/
 
 const dLog = console.debug;
+
+const searchStringMaxLength = 2000;
+
+/*----------------------------------------------------------------------------*/
 
 export default Component.extend({
   auth: service(),
@@ -112,8 +117,12 @@ export default Component.extend({
   // actions
   actions: {
     // copied from feature-list, may not be required
-    inputIsActive() {
-      dLog('inputIsActive');
+    inputIsActive(event) {
+      dLog('inputIsActive', event?.target);
+      let text = event?.target?.value;
+      if (text) {
+        this.set('text', text);
+      }
     },
     paste: function(event) {
       /** text is "" at this time. */
@@ -143,6 +152,15 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** Check GUI inputs which are parameters for addDataset :
+   *  - datasetName (newDatasetName)
+   *  - parent name (selectedParent)
+   * Both are required - check that they have been entered.
+   * Check that newDatasetName is not a duplicate of an existing dataset.
+   * Display messages if any checks fail.
+   *
+   * @return true if all checks pass.
+   */
   checkInputs() {
     let ok;
     this.clearMsgs();
@@ -174,9 +192,49 @@ export default Component.extend({
     return bind(this, this.dnaSequenceInput);
   }),
 
+  /** @return a warningMessage if rawText does not meet input requirements, otherwise falsy.
+   */
+  checkTextInput(rawText) {
+    let warningMessages = [];
+    let
+    lines = rawText.split('\n'),
+    notBases = lines
+      .filter((l) => ! l.match(/^[ACTGactg]+$/)),
+    keys = notBases
+      .filter((maybeKey) => maybeKey.match(/^>[^\n]+$/)),
+    other = notBases
+      .filter((maybeKey) => ! maybeKey.match(/^>[^\n]+$/))
+      .filter((maybeEmpty) => ! maybeEmpty.match(/^[ \t\n]*$/));
+    switch (keys.length) {
+    case 0:
+      warningMessages.push('Key line is required : >MarkerName ...');
+      break;
+    case 1:
+      break;
+    default:
+      warningMessages.push('Limit is 1 FASTA search');
+      break;
+    }
+    let regexpIterator = rawText.matchAll(/\n[ACTGactg]+/g),
+        sequenceLinesLength = Array.from(regexpIterator).length;
+    if (sequenceLinesLength === 0) {
+      warningMessages.push('DNA text is required : e.g. ATCGatcg...');
+    }
+    if (other.length) {
+      warningMessages.push('Input should be either >MarkerName or DNA text e.g. ATCGatcg...; this input not valid :' + other[0]);
+    }
+
+    if (rawText.length > searchStringMaxLength) {
+      warningMessages.push('FASTA search string is limited to ' + searchStringMaxLength);
+    }
+
+    let warningMessage = warningMessages.length && warningMessages.join('\n');
+    return warningMessage;
+  },
   dnaSequenceInput(rawText) {
     const fnName = 'dnaSequenceInput';
     // dLog("dnaSequenceInput", rawText && rawText.length);
+    let warningMessage;
     /** if the user has use paste or newline then .text is defined,
      * otherwise use jQuery to get it from the textarea.
      */
@@ -185,7 +243,11 @@ export default Component.extend({
       /** before textarea is created, .val() will be undefined. */
       rawText = text$.val();
     }
-      if (rawText)
+    if (! rawText) {
+      this.set('warningMessage', "Please enter search text in the field 'DNA Sequence Input'");
+    } else if ((warningMessage = this.checkTextInput(rawText))) {
+      this.set('warningMessage', warningMessage);
+    } else
       {
         let
         seq = rawText;
