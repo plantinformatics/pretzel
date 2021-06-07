@@ -19,7 +19,7 @@ export default Component.extend({
   /*--------------------------------------------------------------------------*/
 
   /** limit rows in result */
-  resultRows : 50,
+  resultRows : 500,
   /** true means add / upload result to db as a Dataset */
   addDataset : false,
   /** true means view the blocks of the dataset after it is added. */
