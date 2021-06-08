@@ -82,6 +82,8 @@
 </div>
 
 <hr>
+{{/if}} {{!-- urlOptions.searchAddDataset --}}
+
 {{!-- --------------------------------------------------------------------- --}}
 {{!-- from data-csv --}}
 
@@ -89,6 +91,9 @@
   successMessage=successMessage
   warningMessage=warningMessage
   errorMessage=errorMessage}}
+
+{{#if urlOptions.searchAddDataset}}
+
 {{#if nameWarning}}
 {{elem/panel-message
   warningMessage=nameWarning}}

@@ -118,8 +118,8 @@ export default Component.extend({
       // copied from data-base.js - could be factored.
       (err, status) => {
         dLog(fnName, 'dnaSequenceSearch reject', err, status);
-        let errobj = err.responseJSON.error;
-        console.log(errobj);
+        let errobj = err?.responseJSON?.error || err.statusText;
+        console.log(fnName, errobj, status, err.status);
         let errmsg = null;
         if (errobj.message) {
           errmsg = errobj.message;
@@ -127,7 +127,9 @@ export default Component.extend({
           errmsg = errobj.errmsg;
         } else if (errobj.name) {
           errmsg = errobj.name;
-        }
+        } else if (err.status !== 200) {
+	  errmsg = errobj + ',' + err.status + ',' + status;
+	}
         this.setError(errmsg);
         // upload tabs do .scrollToTop(), doesn't seem applicable here.
       }

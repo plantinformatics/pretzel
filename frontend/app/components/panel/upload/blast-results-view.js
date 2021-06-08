@@ -57,6 +57,18 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  didReceiveAttrs() {
+    this._super(...arguments);
+    let promise = this.get('search.promise');
+    if (promise) {
+      promise.catch(() => {
+	this.set('statusMessage', 'The search did not complete');
+      });
+    }
+  },
+
+  /*--------------------------------------------------------------------------*/
+
   /** style of the div which contains the table.
    * If this component is in a modal dialog, use most of screen width.
    */
