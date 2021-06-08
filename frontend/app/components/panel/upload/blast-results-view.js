@@ -24,8 +24,13 @@ const dLog = console.debug;
 const columnsKeyString = [
   'name', 'chr', 'pcIdentity', 'lengthOfHspHit', 'numMismatches', 'numGaps', 'queryStart', 'queryEnd', 'pos', 'end'
 ];
+/** Identify the columns of dataFeatures and dataMatrix.
+ */
 const c_name = 0, c_chr = 1, c_pos = 8, c_end = 9;
-
+/** Identify the columns of dataForTable, which has an additional 'View' column inserted on the left.
+ * so e.g. t_name would be c_name + 1.
+ */
+const t_view = 0;
 
 /** Display a table of results from sequence-search API request
  * /Feature/dnaSequenceSearch
@@ -273,6 +278,7 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
         data: [[false, '', '', '', '', '', '', '', '', '', '', '', '', '', '']],
         // minRows: 20,
         rowHeaders: true,
+        headerTooltips: true,
 
         /** column field data name is default - array index.  */
         columns: [
@@ -323,7 +329,15 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
         manualColumnResize: true,
         manualRowMove: true,
         manualColumnMove: true,
-        contextMenu: true,
+        contextMenu: ['undo', 'redo', 'readonly', 'alignment', 'copy'], // true
+
+        // prevent insert / append rows / cols
+        minSpareRows: 0,
+        minSpareCols: 0,
+
+        sortIndicator: true,
+        columnSorting: true,
+
         afterChange: bind(this, this.afterChange),
         /*
         afterRemoveRow: function() {
@@ -353,8 +367,13 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
     if (changes) {
       changes.forEach(([row, prop, oldValue, newValue]) => {
         dLog('afterChange', row, prop, oldValue, newValue);
+        /** prop is the property / column index. */
         /** column 0 is the view checkbox. */
-        if (prop === 0) {
+        if (prop !== t_view) {
+          // no action for other columns
+        } else if (row >= features.length) {
+          this.set('warningMessage', 'Display of added features not yet supported');
+        } else {       
           let feature = transient.pushFeature(features[row]),
               viewFeaturesFlag = newValue;
           transient.showFeature(feature, viewFeaturesFlag);
