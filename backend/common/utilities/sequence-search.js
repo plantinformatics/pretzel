@@ -43,7 +43,7 @@ exports.filterBlastResults = (
     if (cols && cols.length > c_end) {
       ok = (+cols[c_pcIdentity] >= +minPercentIdentity) &&
         (+cols[c_lengthOfHspHit] >= +minLengthOfHit) && 
-        (cols[c_queryLength] && (100 * +cols[c_lengthOfHspHit] / +cols[c_queryLength] >= +minPercentCoverage));
+        (+cols[c_queryLength] && (100 * +cols[c_lengthOfHspHit] / +cols[c_queryLength] >= +minPercentCoverage));
     }
     console.log('filterBlastResults', ok, minLengthOfHit, minPercentIdentity, minPercentCoverage, line, cols);
   return ok;
