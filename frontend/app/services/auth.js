@@ -284,15 +284,24 @@ export default Service.extend({
    * @param resultRows  limit rows in result 
    * @param addDataset  true means add / upload result to db as a Dataset
    * @param datasetName if addDataset, this value is used to name the added dataset.
+   * @param minLengthOfHit, minPercentIdentity, minPercentCoverage : minimum values to filter results
+   * @param options not used yet, probably will be for streaming result
    */
-  dnaSequenceSearch(apiServer, dnaSequence, parent, searchType, resultRows, addDataset, datasetName, options) {
+  dnaSequenceSearch(
+    apiServer, dnaSequence, parent, searchType, resultRows, addDataset, datasetName,
+    minLengthOfHit, minPercentIdentity, minPercentCoverage,
+    options
+  ) {
     dLog('services/auth featureSearch', dnaSequence.length, parent, searchType, resultRows, addDataset, datasetName, options);
     /** Attach .server to JSON string, instead of using
      * requestServerAttr (.session.requestServer)
      * (this can be unwound after adding apiServer as param to ._ajax(),
      *  dropping the new String() ).
      */
-    let data = {dnaSequence, parent, searchType, resultRows, addDataset, datasetName, options},
+    let data = {
+      dnaSequence, parent, searchType, resultRows, addDataset, datasetName,
+      minLengthOfHit, minPercentIdentity, minPercentCoverage,
+      options},
         dataS = JSON.stringify(data); // new String();
     // dataS.server = apiServer;
     return this._ajax('Features/dnaSequenceSearch', 'POST', dataS, true);

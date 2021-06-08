@@ -6,6 +6,7 @@
 var acl = require('../utilities/acl')
 const { childProcess } = require('../utilities/child-process');
 var upload = require('../utilities/upload');
+var { filterBlastResults } = require('../utilities/sequence-search');
 
 
 module.exports = function(Feature) {
@@ -58,6 +59,7 @@ module.exports = function(Feature) {
    * @param resultRows
    * @param addDataset
    * @param datasetName
+   * @param minLengthOfHit, minPercentIdentity, minPercentCoverage : minimum values to filter results
    * @param options
    *
    * @param cb node response callback
@@ -65,7 +67,10 @@ module.exports = function(Feature) {
   Feature.dnaSequenceSearch = function(data, options, cb) {
     const models = this.app.models;
 
-    let {dnaSequence, parent, searchType, resultRows, addDataset, datasetName} = data;
+    let {dnaSequence, parent, searchType, resultRows, addDataset, datasetName,
+         minLengthOfHit, minPercentIdentity, minPercentCoverage
+        } = data;
+    // data.options : params for streaming result, used later.
     const fnName = 'dnaSequenceSearch';
     console.log(fnName, dnaSequence.length, parent, searchType);
 
@@ -78,7 +83,9 @@ module.exports = function(Feature) {
         cb(new Error(chunk.toString()));
       } else {
         const
-        textLines = chunk.toString().split('\n');
+        textLines = chunk.toString().split('\n')
+          .filter((textLine) => filterBlastResults(
+            minLengthOfHit, minPercentIdentity, minPercentCoverage, textLine));
         textLines.forEach((textLine) => {
           if (textLine !== "") {
             console.log(fnName, 'stdout data',  "'", textLine,  "'");

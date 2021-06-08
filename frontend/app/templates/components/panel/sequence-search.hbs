@@ -90,6 +90,53 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
               </div>
             </li>
 
+            {{!-- --------------------------------------------------------- --}}
+
+            <li class="list-group-item">
+              <div>
+                <label style="float:right">Length of Hit</label>
+                <span class="sub-label"><span>{{ minLengthOfHit }}</span></span>
+              </div>
+              <div>
+                <input type="range" 
+                 min="0" max="100"
+                 value={{this.minLengthOfHit}}
+                 oninput={{action (mut this.minLengthOfHit) value="target.value"}}
+                />
+              </div>
+            </li>
+
+            <li class="list-group-item">
+              <div>
+                <label style="float:right">% Identity</label>
+                <span class="sub-label"><span>{{ minPercentIdentity }}</span></span>
+              </div>
+              <div>
+                <input type="range" 
+                 min="0" max="100"
+                 value={{this.minPercentIdentity}}
+                 oninput={{action (mut this.minPercentIdentity) value="target.value"}}
+                />
+              </div>
+            </li>
+
+            <li class="list-group-item">
+              <div>
+                <label style="float:right">% Coverage</label>
+                <span class="sub-label"><span>{{ minPercentCoverage }}</span></span>
+              </div>
+              <div>
+                <input type="range" 
+                 min="0" max="100"
+                 value={{this.minPercentCoverage}}
+                 oninput={{action (mut this.minPercentCoverage) value="target.value"}}
+                />
+              </div>
+            </li>
+
+            {{!-- --------------------------------------------------------- --}}
+
+
             {{#if urlOptions.searchAddDataset}}
             <li class="list-group-item">
               {{input type="checkbox" name="addDataset" checked=addDataset }}

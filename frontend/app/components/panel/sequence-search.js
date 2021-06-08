@@ -25,6 +25,12 @@ export default Component.extend({
   searchStringMaxLength : 10000,
   /** limit rows in result */
   resultRows : 500,
+
+  /** minimum values for 3 columns, to filter blast output. */
+  minLengthOfHit : 0,
+  minPercentIdentity : 75,
+  minPercentCoverage : 50,
+
   /** true means add / upload result to db as a Dataset */
   addDataset : false,
   /** true means view the blocks of the dataset after it is added. */
@@ -273,6 +279,9 @@ export default Component.extend({
           this.get('resultRows'),
           this.get('addDataset'),
           this.get('newDatasetName'),
+          this.get('minLengthOfHit'),
+          this.get('minPercentIdentity'),
+          this.get('minPercentCoverage'),
           /*options*/{/*dataEvent : receivedData, closePromise : taskInstance*/});
 
         if (this.get('addDataset')) {
