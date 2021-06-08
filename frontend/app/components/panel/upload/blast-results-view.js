@@ -53,6 +53,8 @@ export default Component.extend({
   /** true means display the result rows as triangles - clickedFeatures. */
   viewFeaturesFlag : true,
 
+  statusMessage : 'Searching ...',
+
   /*--------------------------------------------------------------------------*/
 
   /** style of the div which contains the table.
@@ -74,6 +76,10 @@ export default Component.extend({
       .filter((row) => (row !== ''))
       .map((r) => r.split('\t')) :
       [];
+
+    if (data) {
+      this.set('statusMessage', (cells.length ? undefined : 'The search completed and returned 0 hits') );
+    }
     return cells;
   }),
   viewRow : computed('dataMatrix', 'viewFeaturesFlag', function () {
