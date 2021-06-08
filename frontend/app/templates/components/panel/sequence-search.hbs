@@ -33,7 +33,7 @@
           {{textarea
             class="form-control"
             rows=16
-            maxlength=2000
+            maxlength=this.searchStringMaxLength
             input=(action 'inputIsActive')
             enter=(action 'dnaSequenceInput')
             insert-newline=(action 'dnaSequenceInput')

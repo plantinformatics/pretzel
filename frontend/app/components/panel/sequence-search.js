@@ -11,8 +11,6 @@ import sequenceSearchData from '../../utils/data/sequence-search-data';
 
 const dLog = console.debug;
 
-const searchStringMaxLength = 2000;
-
 /*----------------------------------------------------------------------------*/
 
 export default Component.extend({
@@ -23,6 +21,8 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** length limit for FASTA DNA text search string input. */
+  searchStringMaxLength : 10000,
   /** limit rows in result */
   resultRows : 500,
   /** true means add / upload result to db as a Dataset */
@@ -41,6 +41,11 @@ export default Component.extend({
     this._super(...arguments);
 
     this.set('searches', array_A());
+
+    let searchStringMaxLength = this.get('urlOptions.searchStringMaxLength');
+    if (searchStringMaxLength) {
+      this.set('searchStringMaxLength', searchStringMaxLength);
+    }
   },
 
   /*--------------------------------------------------------------------------*/
@@ -224,8 +229,8 @@ export default Component.extend({
       warningMessages.push('Input should be either >MarkerName or DNA text e.g. ATCGatcg...; this input not valid :' + other[0]);
     }
 
-    if (rawText.length > searchStringMaxLength) {
-      warningMessages.push('FASTA search string is limited to ' + searchStringMaxLength);
+    if (rawText.length > this.searchStringMaxLength) {
+      warningMessages.push('FASTA search string is limited to ' + this.searchStringMaxLength);
     }
 
     let warningMessage = warningMessages.length && warningMessages.join('\n');
