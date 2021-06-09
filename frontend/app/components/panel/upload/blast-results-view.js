@@ -62,7 +62,7 @@ export default Component.extend({
     let promise = this.get('search.promise');
     if (promise) {
       promise.catch(() => {
-	this.set('statusMessage', 'The search did not complete');
+        this.set('statusMessage', 'The search did not complete');
       });
     }
   },
@@ -154,7 +154,10 @@ export default Component.extend({
   /*--------------------------------------------------------------------------*/
 
   didRender() {
-    // this.showTable();
+    // probably not required - renders OK without this.
+    if (false && this.get('table')) {
+      this.shownBsTab();
+    }
     dLog('didRender', this.get('active'), this.get('tableVisible'), this.get('tableModal'));
   },
 
@@ -255,6 +258,16 @@ export default Component.extend({
   activeEffect : computed('active', 'tableVisible', 'tableModal', function () {
     let active = this.get('active');
     if (active && this.get('tableVisible')) {
+      /** table.suspendExecution() after tableModal changes, and
+       * .resumeExecution() it again in showTable(); this protects
+       * handsontable from being confused during move between the two
+       * div#blast-results-table-{modal,panel};   without this the table
+       * moves to modal ok, but is not shown when moved back.
+       */
+      let table = this.get('table');
+      if (table) {
+        table.suspendExecution();
+      }
       this.shownBsTab();
     }
   }),
@@ -270,10 +283,12 @@ export default Component.extend({
     if (! table || ! table.rootElement || ! table.rootElement.isConnected) {
       this.createTable();
     } else {
+      table.resumeExecution();
       // trigger rerender when tab is shown
-      table.updateSettings({});
+      // table.updateSettings({});
       // or .updateSettings({ data : ... })
       table.loadData(this.get('dataMatrix'));
+      table.refreshDimensions();
     }
   },
 

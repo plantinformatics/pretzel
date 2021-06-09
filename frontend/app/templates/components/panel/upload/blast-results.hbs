@@ -25,10 +25,7 @@
          type="button">x
         </button>
 
-      {{panel/upload/blast-results-view
-        viewDataset=viewDataset
-        search=search data=data active=active tableVisible=true tableModal=true
-        }}
+      <div id="blast-results-table-modal"></div>
       {{/ember-modal-dialog}}
     {{else}}
       <span style="float:right;">
@@ -46,11 +43,16 @@
       </span>
 
       <div style="clear:both"></div>
+      <div id="blast-results-table-panel"></div>
+    {{/if}}
+    {{#ember-wormhole to=tableModalTargetId }}
       {{panel/upload/blast-results-view
         viewDataset=viewDataset
-        search=search data=data active=active tableVisible=tableVisible tableModal=false
+        search=search data=data active=active tableVisible=tableVisible tableModal=tableModal
         }}
-    {{/if}}
+      <div>Testing</div>
+    {{/ember-wormhole}}
+
     <div style="clear:both"></div>
 
 

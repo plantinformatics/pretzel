@@ -40,6 +40,11 @@ export default Component.extend({
    */
   viewDatasetFlag : false,
 
+  /*--------------------------------------------------------------------------*/
+
+  tableModalTargetId : computed('tableModal', function () {
+    return this.get('tableModal') ? 'blast-results-table-modal' : 'blast-results-table-panel';
+  }),
 
   /*--------------------------------------------------------------------------*/
 
@@ -128,8 +133,8 @@ export default Component.extend({
         } else if (errobj.name) {
           errmsg = errobj.name;
         } else if (err.status !== 200) {
-	  errmsg = errobj + ',' + err.status + ',' + status;
-	}
+          errmsg = errobj + ',' + err.status + ',' + status;
+        }
         this.setError(errmsg);
         // upload tabs do .scrollToTop(), doesn't seem applicable here.
       }
