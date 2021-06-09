@@ -15,6 +15,8 @@ import { nowOrLater } from '../../../utils/ember-devel';
 
 const dLog = console.debug;
 
+const tableHeight = 500;  // pixels
+
 /*----------------------------------------------------------------------------*/
 
 /**
@@ -263,10 +265,21 @@ export default Component.extend({
        * handsontable from being confused during move between the two
        * div#blast-results-table-{modal,panel};   without this the table
        * moves to modal ok, but is not shown when moved back.
+       *
+       * Update : updateSettings({ height : ... } ) is required, and possibly sufficient -
+       * it may not be necessary to suspend/resume Execution/Render.
        */
       let table = this.get('table');
       if (table) {
+        dLog('activeEffect', 'suspendExecution');
         table.suspendExecution();
+        table.suspendRender();
+        run_later(() => {
+          dLog('activeEffect', 'showTable', 'resumeExecution', this.get('tableModal'));
+          table.updateSettings({ height : tableHeight });
+          table.refreshDimensions(); table.resumeExecution(); table.resumeRender();
+        }, 400);
+        // this runs before showTable() from following shownBsTab().
       }
       this.shownBsTab();
     }
@@ -283,11 +296,17 @@ export default Component.extend({
     if (! table || ! table.rootElement || ! table.rootElement.isConnected) {
       this.createTable();
     } else {
+      dLog('showTable', table.renderSuspendedCounter);
+      /*
       table.resumeExecution();
+      table.resumeRender();
+      table.render();
+      */
+
       // trigger rerender when tab is shown
       // table.updateSettings({});
       // or .updateSettings({ data : ... })
-      table.loadData(this.get('dataMatrix'));
+      table.loadData(this.get('dataForTable'));
       table.refreshDimensions();
     }
   },
@@ -356,7 +375,7 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
         colHeaders: [
           'view', 'query ID', 'subject ID', '% identity', 'length of HSP (hit)', '# mismatches', '# gaps', 'query start', 'query end', 'subject start', 'subject end', 'e-value', 'score', 'query length', 'subject length'
         ],
-        height: 500,
+        height: tableHeight,
         // colWidths: [100, 100, 100],
         manualRowResize: true,
         manualColumnResize: true,
