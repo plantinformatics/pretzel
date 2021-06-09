@@ -291,9 +291,21 @@ export default Component.extend({
 
 
   showTable() {
+    let table;
+    // delay creation of table until data is received
+    let data = this.get('data');
+    if (! data || ! data.length) {
+      let p = this.get('search.promise');
+      dLog('showTable', p.state && p.state());
+      p.then(() => {
+        dLog('showTable then', this.get('data')?.length);
+        // alternative : dataForTableEffect() could do this if ! table.
+        this.shownBsTab(); });
+    } else
     // Ensure table is created when tab is shown
-    let table = this.get('table');
-    if (! table || ! table.rootElement || ! table.rootElement.isConnected) {
+    if (! (table = this.get('table')) ||
+        ! table.rootElement ||
+        ! table.rootElement.isConnected) {
       this.createTable();
     } else {
       dLog('showTable', table.renderSuspendedCounter);
