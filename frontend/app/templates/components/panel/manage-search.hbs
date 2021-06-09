@@ -1,5 +1,5 @@
 
-{{#elem/panel-container state="primary" as |panelContainer|}}
+{{#elem/panel-container state="primary" showComponent=false as |panelContainer|}}
   {{#elem/panel-heading icon="search" panelContainer=panelContainer}}
     Feature Search
   {{/elem/panel-heading}}
@@ -15,7 +15,7 @@
   {{/if}} {{!-- showComponent --}}
 {{/elem/panel-container}}
 
-{{#elem/panel-container state="primary" as |panelContainer|}}
+{{#elem/panel-container state="primary" showComponent=false as |panelContainer|}}
   {{#elem/panel-heading icon="plane" panelContainer=panelContainer}}
     External Lookup
   {{/elem/panel-heading}}

@@ -1434,7 +1434,7 @@ div#left-panel > div > div.tab-content > div.tab-pane
   overflow-y: auto;	/* possibly scrollbar-gutter in future. */
 }
 
-#left-panel > div > div.tab-content > div.tab-pane > div {
+#left-panel > div > div.tab-content > div.tab-pane > div:last-child {
   /* this enables the scrollbar to reach the bottom of the div, there is probably a better solution.  */
   margin-bottom: 70px;
 }
