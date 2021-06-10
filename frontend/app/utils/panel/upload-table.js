@@ -99,7 +99,9 @@ export default {
       that.set('nameWarning', null);
       var table = that.get('table');
       // 1. Check data and get cleaned copy
-      that.validateData()
+      let validateData = (that.validateData && (() => that.validateData())) ||
+          (that.dataPipe.validateData && (() => that.dataPipe.validateData()));
+      validateData()
       .then((features) => {
         if (features.length > 0) {
           // 2. Get new or selected dataset name

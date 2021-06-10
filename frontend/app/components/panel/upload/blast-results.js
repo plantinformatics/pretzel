@@ -18,6 +18,17 @@ const dLog = console.debug;
  * /Feature/dnaSequenceSearch
  */
 export default Component.extend({
+  /*--------------------------------------------------------------------------*/
+  // support for upload-table
+
+  /** Similar comment to data-csv.js applies re. store (user could select server via GUI).
+   * store is used by upload-table.js : getDatasetId() and submitFile()
+   */
+  store : alias('apiServers.primaryServer.store'),
+  auth: service('auth'),  // used by upload-table.js : submitFile()
+
+  /*--------------------------------------------------------------------------*/
+
   apiServers: service(),
   blockService : service('data/block'),
   queryParams: service('query-params'),
@@ -150,7 +161,7 @@ export default Component.extend({
    */
   unviewDataset(datasetName) {
     let
-    store = this.get('apiServers').get('primaryServer').get('store'),
+    store = this.get('store'),
     replacedDataset = store.peekRecord('dataset', datasetName);
     if (replacedDataset) {
       let

@@ -24,7 +24,20 @@ const tableHeight = 500;  // pixels
  * This also aligns with createTable() : colHeaders below.
  */
 const columnsKeyString = [
-  'name', 'chr', 'pcIdentity', 'lengthOfHspHit', 'numMismatches', 'numGaps', 'queryStart', 'queryEnd', 'pos', 'end'
+  'name',           // query ID
+  'chr',            // subject ID
+  'pcIdentity',     // % identity
+  'lengthOfHspHit', // length of HSP (hit)
+  'numMismatches',  // # mismatches
+  'numGaps',        // # gaps
+  'queryStart',     // query start
+  'queryEnd',       // query end
+  'pos',            // subject start
+  'end',            // subject end
+  'eValue',         // e-value
+  'score',          // score
+  'queryLength',    // query length
+  'subjectLength',  // subject length
 ];
 /** Identify the columns of dataFeatures and dataMatrix.
  */
@@ -43,11 +56,6 @@ const t_view = 0;
  */
 export default Component.extend({
 
-  /** Similar comment to data-csv.js applies re. store (user could select server via GUI).
-   * store is used by upload-table.js : getDatasetId() and submitFile()
-   */
-  store : alias('apiServers.primaryServer.store'),
-  auth: service('auth'),
   transient : service('data/transient'),
 
   /*--------------------------------------------------------------------------*/
@@ -61,12 +69,18 @@ export default Component.extend({
 
   didReceiveAttrs() {
     this._super(...arguments);
+
     let promise = this.get('search.promise');
     if (promise) {
       promise.catch(() => {
         this.set('statusMessage', 'The search did not complete');
       });
     }
+
+    /** not clear yet where addDataset functionality will end up, so wire this up for now. */
+    this.registerDataPipe({
+      validateData: () => this.validateData()
+    });
   },
 
   /*--------------------------------------------------------------------------*/
@@ -121,6 +135,21 @@ export default Component.extend({
         if (row[c_end] !== undefined) {
           feature.end = Number(row[c_end]);
         }
+        // place the remainder of the columns into feature.values
+        feature.values = row.reduce((v, c, i) => {
+          switch (i) {
+          case c_name:
+          case c_chr:
+          case c_pos:
+          case c_end:
+            break;
+          default:
+            v[columnsKeyString[i]] = c;
+            break;
+          }
+          return v;
+        }, {});
+
         return feature;
       });
     dLog('dataFeatures', features.length, features[0]);

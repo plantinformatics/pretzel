@@ -240,12 +240,16 @@ module.exports = function(Dataset) {
         if (feature.end !== undefined) {
           value.push(feature.end);
         }
-        array_features.push({
+        let f = {
           name: feature.name,
           value,
           value_0: feature.val,
           blockId: blocks_by_name[feature.block]
-        });
+        };
+        if (feature.values) {
+          f.values = feature.values;
+        }
+        array_features.push(f);
       });
       // create new features
       return models.Feature.create(array_features);
