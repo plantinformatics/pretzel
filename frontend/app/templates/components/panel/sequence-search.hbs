@@ -54,6 +54,10 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
             {{/elem/button-base}}
           </div>
 
+          {{#if nameWarning}}
+          {{elem/panel-message
+            warningMessage=nameWarning}}
+          {{/if}}
 
           <ul class="config-list">
 
@@ -194,10 +198,6 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
       successMessage=successMessage
       warningMessage=warningMessage
       errorMessage=errorMessage}}
-    {{#if nameWarning}}
-    {{elem/panel-message
-      warningMessage=nameWarning}}
-    {{/if}}
 
     {{#if isProcessing}}
       {{#elem/panel-form
