@@ -54,6 +54,11 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
             {{/elem/button-base}}
           </div>
 
+          {{elem/panel-message
+            successMessage=successMessage
+            warningMessage=warningMessage
+            errorMessage=errorMessage}}
+
           {{#if nameWarning}}
           {{elem/panel-message
             warningMessage=nameWarning}}
@@ -193,11 +198,6 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
 
       </div>
     </BsTab>
-
-    {{elem/panel-message
-      successMessage=successMessage
-      warningMessage=warningMessage
-      errorMessage=errorMessage}}
 
     {{#if isProcessing}}
       {{#elem/panel-form
