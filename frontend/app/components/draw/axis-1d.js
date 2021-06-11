@@ -707,6 +707,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   }),
   /** viewed blocks on this axis.
    * For just the data blocks (depends on .hasFeatures), @see dataBlocks()
+   * @desc
+   * Related : block : viewedChildBlocks().
    */
   viewedBlocks : computed('axis', 'blockService.axesViewedBlocks2.[]', function () {
     let

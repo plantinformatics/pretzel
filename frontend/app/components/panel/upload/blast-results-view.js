@@ -55,7 +55,7 @@ const t_view = 0;
  * This enables the full width of the table to be visible.
  */
 export default Component.extend({
-
+  block : service('data/block'),
   transient : service('data/transient'),
 
   /*--------------------------------------------------------------------------*/
@@ -222,8 +222,11 @@ export default Component.extend({
     /** this value seems to be delayed */
     let viewAll = this.get('viewAllResultAxesFlag');
     dLog(fnName, checked, viewAll);
-
-    
+    viewAll = checked;
+    this.viewFeatures(viewAll);
+    if (! viewAll) {
+      this.viewParent(viewAll);
+    }
   },
 
   viewFeaturesEffect : computed('dataFeaturesForStore.[]', 'viewFeaturesFlag', 'active', function () {
@@ -231,15 +234,33 @@ export default Component.extend({
       let viewFeaturesFlag = this.get('viewFeaturesFlag') && this.get('active');
     this.viewFeatures(viewFeaturesFlag);
   }),
+  viewParent(viewFlag) {
+    const fnName = 'viewParent';
+    let parentName = this.get('search.parent');
+    dLog(fnName, 'viewDataset', parentName, this.get('search.timeId'));
+    this.get('viewDataset')(parentName, viewFlag, this.get('blockNames'));
+  },
+  /** User may un-view some of the parent axes viewed via viewParent();
+   * if so, clear viewAllResultAxesFlag so that they may re-view all
+   * of them by clicking the toggle.
+   */
+  parentIsViewedEffect : computed('block.viewed.[]', 'blockNames.length', function () {
+    let parentName = this.get('search.parent');
+    /** blocks of parent which are viewed */
+    let
+    viewedBlocks = this.get('block.viewed')
+      .filter((block) => (block.get('datasetId.id') === parentName)),
+    allViewed = viewedBlocks.length === this.get('blockNames.length');
+    dLog('parentIsViewed', viewedBlocks.length, this.get('blockNames.length'));
+    this.set('viewAllResultAxesFlag', allViewed);
+  }),
   viewFeatures(viewFeaturesFlag) {
     const fnName = 'viewFeaturesEffect';
     let
     features = this.get('dataFeaturesForStore');
     if (features && features.length) {
       if (viewFeaturesFlag) {
-        let parentName = this.get('search.parent');
-        dLog(fnName, 'viewDataset', parentName, this.get('search.timeId'));
-        this.get('viewDataset')(parentName, true, this.get('blockNames'));
+        this.viewParent(viewFeaturesFlag);
       }
       let
       transient = this.get('transient'),

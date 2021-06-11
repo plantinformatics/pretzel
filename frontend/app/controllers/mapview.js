@@ -372,9 +372,14 @@ export default Controller.extend(Evented, {
       blockService = this.get('block'),
       blockIds = blocksToChange.map((b) => b.id);
       dLog('viewDataset', datasetName, view, blockIds);
-      // blockService.setViewed(blockIds, view);
-      let loadBlock = this.actions.loadBlock.bind(this);
-      blocksToChange.forEach((b) => loadBlock(b));
+      if (! view) {
+        // unview the data blocks before the axis / reference block.
+        blocksToChange.forEach((b) => b.unViewChildBlocks());
+        blockService.setViewed(blockIds, view);
+      } else {
+        let loadBlock = this.actions.loadBlock.bind(this);
+        blocksToChange.forEach((b) => loadBlock(b));
+      }
     } else {
       dLog('viewDataset', datasetName, 'not found', view);
     }
