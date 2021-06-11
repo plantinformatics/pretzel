@@ -17,6 +17,8 @@ var fs = require('fs');
  * @param moreParams array of params to pass as command-line params to
  * child process, after [fileName, useFile]
  * @param dataOutCb (Buffer chunk, cb) {}
+ * If child process closes with status 0 (OK) and sent no output, then
+ * dataOutCb will be called with chunk === null
  * @param cb  response node callback
  * @param progressive true means pass received data back directly to
  * dataOutCb, otherwise catenate it and call dataOutCb just once when
@@ -138,7 +140,12 @@ exports.childProcess = (scriptName, postData, useFile, fileName, moreParams, dat
       const message = 'Processed file ' + fileName;
       if (child.killed) {
         cb(null, message, true);
-      } // else check again after timeout
+      } else { //  return empty data result
+        dataOutCb(null, cb);
+        /* it would be equivalent to do : cb(null, [], true);
+         * dataOutCb() may have completion actions.
+         */
+      }
     }
   });
 

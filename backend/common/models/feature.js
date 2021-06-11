@@ -76,9 +76,13 @@ module.exports = function(Feature) {
 
     /** Receive the results from the Blast.
      * @param chunk is a Buffer
+     * null / undefined indicates child process closed with status 0 (OK) and sent no output.
      * @param cb is cbWrap of cb passed to dnaSequenceSearch().
      */
     let searchDataOut = (chunk, cb) => {
+      if (! chunk) {
+        cb(null, []);
+      } else
       if (chunk.asciiSlice(0,6) === 'Error:') {
         cb(new Error(chunk.toString()));
       } else {
