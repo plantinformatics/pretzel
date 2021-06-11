@@ -21,6 +21,8 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** required minimum length for FASTA DNA text search string input. */
+  searchStringMinLength : 25,
   /** length limit for FASTA DNA text search string input. */
   searchStringMaxLength : 10000,
   /** limit rows in result */
@@ -191,8 +193,13 @@ export default Component.extend({
     }
     return ok;
   },
-  inputsOK : computed('selectedParent', 'addDataset', 'newDatasetName', 'datasets.[]', function() {
-    return this.checkInputs();
+  inputsOK : computed('text', 'selectedParent', 'addDataset', 'newDatasetName', 'datasets.[]', function() {
+    let warningMessage = this.checkTextInput(this.get('text'));
+    if (warningMessage) {
+      this.set('warningMessage', warningMessage);
+    }
+    /** checkInputs() sets .nameWarning */
+    return ! warningMessage && this.checkInputs();
   }),
   searchButtonDisabled : computed('inputsOK', 'isProcessing', function() {
     return ! this.get('inputsOK') || this.get('isProcessing');
@@ -207,6 +214,9 @@ export default Component.extend({
    */
   checkTextInput(rawText) {
     let warningMessages = [];
+    if (! rawText) {
+      warningMessages.push("Please enter search text in the field 'DNA Sequence Input'");
+    } else {
     let
     lines = rawText.split('\n'),
     notBases = lines
@@ -237,6 +247,9 @@ export default Component.extend({
 
     if (rawText.length > this.searchStringMaxLength) {
       warningMessages.push('FASTA search string is limited to ' + this.searchStringMaxLength);
+    } else if (rawText.length <  this.searchStringMinLength) {
+      warningMessages.push('FASTA search string should have minimum length ' + this.searchStringMinLength);
+    } 
     }
 
     let warningMessage = warningMessages.length && warningMessages.join('\n');
@@ -254,9 +267,7 @@ export default Component.extend({
       /** before textarea is created, .val() will be undefined. */
       rawText = text$.val();
     }
-    if (! rawText) {
-      this.set('warningMessage', "Please enter search text in the field 'DNA Sequence Input'");
-    } else if ((warningMessage = this.checkTextInput(rawText))) {
+    if ((warningMessage = this.checkTextInput(rawText))) {
       this.set('warningMessage', warningMessage);
     } else
       {
