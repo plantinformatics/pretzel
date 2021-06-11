@@ -480,6 +480,7 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
 
   /** upload-table.js : submitFile() expects this function.
    * In blast-results, the data is not user input so validation is not required.
+   * Add just those features for which the 'viewed' checkbox is clicked.
    */
   validateData() {
     /** based on data-csv.js : validateData(), which uses table.getSourceData();
@@ -492,8 +493,11 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
         resolve([]);
       }
       let
-      validatedData = this.get('dataFeatures');
-      resolve(validatedData);
+      validatedData = this.get('dataFeatures'),
+      viewRow = this.get('viewRow'),
+      view = table.getDataAtCol(t_view),
+      viewed = validatedData.filter((r,i) => view[i]);
+      resolve(viewed);
     });
   }
 
