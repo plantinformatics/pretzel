@@ -50,7 +50,7 @@ function verifyFeatureRecord(fr, f) {
   same = 
     (fr.id === f._id) &&
     direction && sameDirection &&
-    ((frd ? frd._name : fr.get('name')) === f.name);
+    ((frd ? frd._name : fr.get('name')) === (f.name || f._name));
   return same;
 }
 
