@@ -7,8 +7,22 @@ import { inject as service } from '@ember/service';
 const dLog = console.debug;
 
 import UploadBase from './data-base';
+import uploadTable from '../../../utils/panel/upload-table';
+
 
 import config from '../../../config/environment';
+
+/*----------------------------------------------------------------------------*/
+
+/** Identify the columns of getData().
+ *
+ * Prior to update from handsontable 7 -> 8, the row data was presented as {name, block, val}.
+ * These column indexes are used as row[c_name], so to use handsontable 7, 
+ * c_name = 'name', c_block = 'block', c_val = 'block';
+ */
+const c_name = 0, c_block = 1, c_val = 2, c_end = 3;
+
+/*----------------------------------------------------------------------------*/
 
 /* global Handsontable */
 /* global FileReader */
@@ -20,6 +34,14 @@ export default UploadBase.extend({
    * components/service/api-server.js) */
   store : alias('apiServers.primaryServer.store'),
 
+  /*--------------------------------------------------------------------------*/
+
+  /** true means view the blocks of the dataset after it is added.
+   * Used in upload-table.js : submitFile().
+   */
+  viewDatasetFlag : false,
+
+  /*--------------------------------------------------------------------------*/
 
   table: null,
   selectedDataset: 'new',
@@ -28,6 +50,16 @@ export default UploadBase.extend({
   selectedParent: '',
   dataType: 'linear',
   namespace: '',
+
+  /*--------------------------------------------------------------------------*/
+
+  /** these functions were factored to form upload-table.js */
+  getDatasetId : uploadTable.getDatasetId,
+  isDupName : uploadTable.isDupName,
+  onNameChange : observer('newDatasetName', uploadTable.onNameChange),
+  onSelectChange : observer('selectedDataset', 'selectedParent', uploadTable.onSelectChange),
+
+  /*--------------------------------------------------------------------------*/
 
   didInsertElement() {
     this._super(...arguments);
@@ -77,7 +109,7 @@ export default UploadBase.extend({
         return;  // fail
       }
       var table = new Handsontable(hotable, {
-        data: [['', '', '']],
+        data: [['', '', '', '']],
         minRows: 20,
         rowHeaders: true,
         columns: [
@@ -95,15 +127,23 @@ export default UploadBase.extend({
             numericFormat: {
               pattern: '0,0.*'
             }
+          },
+          {
+            data: 'end',
+            type: 'numeric',
+            numericFormat: {
+              pattern: '0,0.*'
+            }
           }
         ],
         colHeaders: [
           'Feature',
           'Block',
-          'Position'
+          'Position',
+          'End'
         ],
         height: 500,
-        colWidths: [100, 100, 100],
+        colWidths: [100, 100, 100, 100],
         manualRowResize: true,
         manualColumnResize: true,
         manualRowMove: true,
@@ -148,7 +188,13 @@ export default UploadBase.extend({
     if (table !== null) {
       let datasets = that.get('datasets');
       if (datasets) {
-        let data = table.getSourceData();
+        /** Previously getSourceData() was used, but that is now
+         * returning the (empty) initial data.  Not sure how it worked
+         * before (probably change is related to recent update of
+         * handsOnTable from 7 to 8 (7.4.2 -> 8.2.0).
+         * getData() seems like the logical function to use, and it works.
+         */
+        let data = table.getData();
         let map = null;
         let parent = null;
         let selectedMap = that.get('selectedDataset');
@@ -170,9 +216,9 @@ export default UploadBase.extend({
             }, {});
             // 2. Find blocks duplicated in table data
             let duplicates = data.reduce((result, row) => {
-              if (row.block) {
-                if (row.block in blocks) {
-                  result[row.block] = true;
+              if (row[c_block]) {
+                if (row[c_block] in blocks) {
+                  result[row[c_block]] = true;
                 }
               }
               return result;
@@ -198,9 +244,9 @@ export default UploadBase.extend({
           }, {});
           // 2. Find table data blocks missing from parent blocks
           let missing = data.reduce((result, row) => {
-            if (row.block) {
-              if (!(row.block in parentBlocks)) {
-                result[row.block] = true;
+            if (row[c_block]) {
+              if (!(row[c_block] in parentBlocks)) {
+                result[row[c_block]] = true;
               }
             }
             return result;
@@ -223,42 +269,6 @@ export default UploadBase.extend({
     }
   },
 
-  /** Returns a selected dataset name OR
-   *  Attempts to create a new dataset with entered name */
-  getDatasetId() {
-    var that = this;
-    let datasets = that.get('datasets');
-    return new Promise(function(resolve, reject) {
-      var selectedMap = that.get('selectDataset');
-      // If a selected dataset, can simply return it
-      // If no selectedMap, treat as default, 'new'
-      if (selectedMap && selectedMap !== 'new') {
-        resolve(selectedMap);
-      } else {
-        var newMap = that.get('newDatasetName');
-        // Check if duplicate name
-        let matched = datasets.findBy('name', newMap);
-        if(matched){
-          reject({ msg: `Dataset name '${newMap}' is already in use` });
-        } else {
-          let newDetails = {
-            name: newMap,
-            type: that.get('dataType'),
-            namespace: that.get('namespace'),
-            blocks: []
-          };
-          let parentId = that.get('selectedParent');
-          if (parentId && parentId.length > 0) {
-            newDetails.parentName = parentId;
-          }
-          let newDataset = that.get('store').createRecord('Dataset', newDetails);
-          newDataset.save().then(() => {
-            resolve(newDataset.id);
-          });
-        }
-      }
-    });
-  },
 
   /** Checks uploaded table data for any missing or invalid elements.
    *  Returns same data, with 'val' cast as numeric */
@@ -269,32 +279,41 @@ export default UploadBase.extend({
       if (table === null) {
         resolve([]);
       }
-      let sourceData = table.getSourceData();
+      /** was getSourceData() - see comment in checkBlocks(). */
+      let sourceData = table.getData();
       var validatedData = [];
       sourceData.every((row, i) => {
-        if (row.val || row.name || row.block) {
-          if (!row.val && row.val !== 0) {
+        if (row[c_val] || row[c_name] || row[c_block]) {
+          if (!row[c_val] && row[c_val] !== 0) {
             reject({r: i, c: 'val', msg: `Position required on row ${i+1}`});
             return false;
           }
-          if (isNaN(row.val)) {
+          if (isNaN(row[c_val])) {
             reject({r: i, c: 'val', msg: `Position must be numeric on row ${i+1}`});
             return false;
           }
-          if (!row.name) {
+          if ((row[c_end] !== undefined) && isNaN(row[c_end])) {
+            reject({r: i, c: 'end', msg: `End Position must be numeric on row ${i+1}`});
+            return false;
+          }
+          if (!row[c_name]) {
             reject({r: i, c: 'name', msg: `Feature name required on row ${i+1}`});
             return false;
           }
-          if (!row.block) {
+          if (!row[c_block]) {
             reject({r: i, c: 'block', msg: `Block required on row ${i+1}`});
             return false;
           }
-          validatedData.push({
-            name: row.name,
-            block: row.block,
-            // Make sure val is a number, not a string.
-            val: Number(row.val)
-          });
+          let r = {
+             name: row[c_name],
+             block: row[c_block],
+             // Make sure val is a number, not a string.
+             val: Number(row[c_val])
+          };
+          if (row[c_end] !== undefined) {
+            r.end = +row[c_end];
+          }
+          validatedData.push(r);
           return true;
         }
       });
@@ -302,84 +321,10 @@ export default UploadBase.extend({
     });
   },
 
-  /** Checks if entered dataset name is already taken in dataset list
-   *  Debounced call through observer */
-  isDupName: function() {
-    let selectedMap = this.get('selectedDataset');
-    if (selectedMap === 'new') {
-      let newMap = this.get('newDatasetName');
-      let datasets = this.get('datasets');
-      let matched = datasets.findBy('name', newMap);
-      if(matched){
-        this.set('nameWarning', `Dataset name '${newMap}' is already in use`);
-        return true;
-      }
-    }
-    this.set('nameWarning', null);
-    return false;
-  },
-  onNameChange: observer('newDatasetName', function() {
-    debounce(this, this.isDupName, 500);
-  }),
-  onSelectChange: observer('selectedDataset', 'selectedParent', function() {
-    this.clearMsgs();
-    this.isDupName();
-    this.checkBlocks();
-  }),
+  /*--------------------------------------------------------------------------*/
 
   actions: {
-    submitFile() {
-      var that = this;
-      that.clearMsgs();
-      that.set('nameWarning', null);
-      var table = that.get('table');
-      // 1. Check data and get cleaned copy
-      that.validateData()
-      .then((features) => {
-        if (features.length > 0) {
-          // 2. Get new or selected dataset name
-          that.getDatasetId().then((map_id) => {
-            var data = {
-              dataset_id: map_id,
-              parentName: that.get('selectedParent'),
-              features: features,
-              namespace: that.get('namespace'),
-            };
-            that.setProcessing();
-            that.scrollToTop();
-            // 3. Submit upload to api
-            that.get('auth').tableUpload(data, that.updateProgress.bind(that))
-            .then((res) => {
-              that.setSuccess(res.status);
-              that.scrollToTop();
-              // On complete, trigger dataset list reload
-              // through controller-level function
-              that.get('refreshDatasets')();
-            }, (err, status) => {
-              console.log(err, status);
-              that.setError(err.responseJSON.error.message);
-              that.scrollToTop();
-              if(that.get('selectedDataset') === 'new'){
-                // If upload failed and here, a new record for new dataset name
-                // has been created by getDatasetId() and this should be undone
-                that.get('store')
-                  .findRecord('Dataset', map_id, { reload: true })
-                  .then((rec) => rec.destroyRecord()
-                    .then(() => rec.unloadRecord())
-                  );
-              }
-            });
-          }, (err) => {
-            that.setError(err.msg);
-            that.scrollToTop();
-          });
-        }
-      }, (err) => {
-        table.selectCell(err.r, err.c);
-        that.setError(err.msg);
-        that.scrollToTop();
-      });
-    },
+    submitFile : uploadTable.submitFile,
     clearTable() {
       $("#tableFile").val('');
       var table = this.get('table');
@@ -425,4 +370,6 @@ export default UploadBase.extend({
       }
     }
   }
+  /*--------------------------------------------------------------------------*/
+
 });
