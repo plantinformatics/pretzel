@@ -4,6 +4,8 @@ import { inject as service } from '@ember/service';
 import { observer, computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { A as array_A } from '@ember/array';
+import { task, didCancel } from 'ember-concurrency';
+
 
 import sequenceSearchData from '../../utils/data/sequence-search-data';
 
@@ -108,7 +110,7 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  loading : alias('taskGet.isRunning'),
+  searching : alias('sendRequest.isRunning'),
 
   refreshClassNames : computed('loading', function () {
     let classNames = "btn btn-info pull-right";
@@ -201,8 +203,8 @@ export default Component.extend({
     /** checkInputs() sets .nameWarning */
     return ! warningMessage && this.checkInputs();
   }),
-  searchButtonDisabled : computed('inputsOK', 'isProcessing', function() {
-    return ! this.get('inputsOK') || this.get('isProcessing');
+  searchButtonDisabled : computed('searching', 'inputsOK', 'isProcessing', function() {
+    return this.get('searching') || ! this.get('inputsOK') || this.get('isProcessing');
   }),
 
   /** throttle depends on constant function  */
@@ -269,8 +271,11 @@ export default Component.extend({
     }
     if ((warningMessage = this.checkTextInput(rawText))) {
       this.set('warningMessage', warningMessage);
-    } else
-      {
+    } else {
+      let taskInstance = this.get('sendRequest').perform(rawText);
+    }
+  },
+  sendRequest : task(function* (rawText) {
         let
         seq = rawText;
 	/*
@@ -299,6 +304,7 @@ export default Component.extend({
           /* On complete, trigger dataset list reload.
            * refreshDatasets is passed from controllers/mapview (updateModel ).
            */
+          promise =
           promise.then(() => {
             const viewDataset = this.get('viewDatasetFlag');
             let refreshed = this.get('refreshDatasets')();
@@ -320,8 +326,9 @@ export default Component.extend({
         let searchData = sequenceSearchData.create({promise, seq, parent, searchType});
         this.get('searches').pushObject(searchData);
 
-     }
-  },
+    return promise;
+  }).drop(),
+
 
   closeResultTab(tabId) {
     dLog('closeResultTab', tabId);

@@ -43,6 +43,9 @@
 AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
 
           <div style="margin: 1em; overflow-y: auto;">
+            {{#if this.searching}}
+              Searching ...
+            {{/if}}
             {{#elem/button-base
                click=(action "search")
                classNames=refreshClassNames
