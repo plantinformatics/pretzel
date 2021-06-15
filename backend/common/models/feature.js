@@ -8,6 +8,23 @@ const { childProcess } = require('../utilities/child-process');
 var upload = require('../utilities/upload');
 var { filterBlastResults } = require('../utilities/sequence-search');
 
+/*----------------------------------------------------------------------------*/
+
+/** ids of sessions which have sent request : dnaSequenceSearch */
+var sessionIds=[];
+
+/** Map session ID (accessToken.id) to a small integer index.
+ */
+function sessionIndex(sessionId) {
+  let index = sessionIds.indexOf(sessionId);
+  if (index === -1) {
+    sessionIds.push(sessionId);
+    index = sessionIds.length - 1;
+  }
+  return index;
+}
+
+/*----------------------------------------------------------------------------*/
 
 module.exports = function(Feature) {
   Feature.search = function(filter, options, cb) {
@@ -72,7 +89,11 @@ module.exports = function(Feature) {
         } = data;
     // data.options : params for streaming result, used later.
     const fnName = 'dnaSequenceSearch';
-    console.log(fnName, dnaSequence.length, parent, searchType);
+    /** each user session may have 1 concurrent dnaSequenceSearch.
+     * Use session id for a unique index for dnaSequence fileName.  */
+    let index = sessionIndex(options.accessToken.id),
+        queryStringFileName = 'dnaSequence.' + index + '.fasta';
+    console.log(fnName, dnaSequence.length, parent, searchType, index, queryStringFileName);
 
     /** Receive the results from the Blast.
      * @param chunk is a Buffer
@@ -119,7 +140,7 @@ module.exports = function(Feature) {
     if (true) {
     let child = childProcess(
       'dnaSequenceSearch.bash',
-      dnaSequence, true, 'dnaSequence', [parent, searchType, resultRows, addDataset, datasetName], searchDataOut, cb, /*progressive*/ false);
+      dnaSequence, true, queryStringFileName, [parent, searchType, resultRows, addDataset, datasetName], searchDataOut, cb, /*progressive*/ false);
     } else {
       let features = dev_blastResult;
       cb(null, features);
