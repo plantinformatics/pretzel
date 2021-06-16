@@ -32,8 +32,8 @@ export default Component.extend({
 
   /** minimum values for 3 columns, to filter blast output. */
   minLengthOfHit : 0,
-  minPercentIdentity : 75,
-  minPercentCoverage : 50,
+  minPercentIdentity : 0, // 75,
+  minPercentCoverage : 0, // 50,
 
   /** true means add / upload result to db as a Dataset */
   addDataset : false,
