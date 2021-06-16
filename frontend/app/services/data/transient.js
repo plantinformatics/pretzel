@@ -102,12 +102,16 @@ export default Service.extend({
     return blocks;
   },
 
-  showFeatures(dataset, blocks, features, viewFeaturesFlag) {
+  /**
+   * @param view a flag per-feature to enable display of the feature row;
+   * from values of the View checkbox column of the results features table.
+   */
+  showFeatures(dataset, blocks, features, viewFeaturesFlag, view) {
     let
     selected = this.get('selected'),
     // may pass dataset, blocks to pushFeature()
     stored = features.map((f) => this.pushFeature(f));
-    stored.forEach((feature) => this.showFeature(feature, viewFeaturesFlag));
+    stored.forEach((feature, i) => this.showFeature(feature, viewFeaturesFlag && view[i]));
   },
   showFeature(feature, viewFeaturesFlag) {
     let

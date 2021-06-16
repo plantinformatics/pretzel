@@ -131,8 +131,12 @@ export default Component.extend({
 
   // actions
   actions: {
-    // copied from feature-list, may not be required
+    /** called for single-character input to textarea; similar to
+     * actions.dnaSequenceInput() but that is only called for defined events
+     * (enter / escape), and actions.paste() (paste).
+     */
     inputIsActive(event) {
+      // function name and use is copied from feature-list.
       dLog('inputIsActive', event?.target);
       let text = event?.target?.value;
       if (text) {

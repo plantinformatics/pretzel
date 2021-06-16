@@ -77,6 +77,13 @@ export default Component.extend({
       });
     }
 
+    /** search.viewRow will be undefined when this is the first
+     * blast-results-view instance to display this search result.
+     */
+    if (! this.get('viewRow')) {
+      this.viewRowInit();
+    }
+
     /** not clear yet where addDataset functionality will end up, so wire this up for now. */
     this.registerDataPipe({
       validateData: () => this.validateData()
@@ -110,13 +117,15 @@ export default Component.extend({
     }
     return cells;
   }),
-  viewRow : computed('dataMatrix', 'viewFeaturesFlag', function () {
+  viewRowInit() {
     let
     data = this.get('dataMatrix'),
+    /** viewFeaturesFlag is initially true */
     viewFeaturesFlag = this.get('viewFeaturesFlag'),
     viewRow  = data.map((row) => viewFeaturesFlag);
-    return viewRow;
-  }),
+    this.set('search.viewRow', viewRow);
+  },
+  viewRow : alias('search.viewRow'),
 
   /** Result data formatted for upload-table.js : submitFile()
    */
@@ -293,7 +302,7 @@ export default Component.extend({
        */
       nowOrLater(
         viewFeaturesFlag,
-        () => transient.showFeatures(dataset, blocks, features, viewFeaturesFlag));
+        () => transient.showFeatures(dataset, blocks, features, viewFeaturesFlag, this.get('viewRow')));
     }
   },
 
@@ -491,6 +500,8 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
           let feature = transient.pushFeature(features[row]),
               viewFeaturesFlag = newValue;
           transient.showFeature(feature, viewFeaturesFlag);
+          let viewRow = this.get('viewRow');
+          viewRow[row] = newValue;
         }
       });
     }
@@ -515,7 +526,7 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
       }
       let
       validatedData = this.get('dataFeatures'),
-      viewRow = this.get('viewRow'),
+      // or view = this.get('viewRow'),
       view = table.getDataAtCol(t_view),
       viewed = validatedData.filter((r,i) => view[i]);
       resolve(viewed);
