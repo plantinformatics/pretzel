@@ -55,6 +55,7 @@ const t_view = 0;
  * This enables the full width of the table to be visible.
  */
 export default Component.extend({
+  apiServers: service(),
   block : service('data/block'),
   transient : service('data/transient'),
 
@@ -62,6 +63,11 @@ export default Component.extend({
 
   /** true means display the result rows as triangles - clickedFeatures. */
   viewFeaturesFlag : true,
+
+  /** Control of viewing the axes of the parent blocks corresponding to the result features.
+   * Originally a toggle to view all / none;  now constant true, and narrowAxesToViewed() is used.
+   */
+  viewAllResultAxesFlag : true,
 
   statusMessage : 'Searching ...',
 
@@ -82,6 +88,11 @@ export default Component.extend({
      */
     if (! this.get('viewRow')) {
       this.viewRowInit();
+    } else {
+      /** set viewFeaturesFlag false if any of viewRow[*] are false,
+       * enabling the user to toggle them all on.
+       */
+      this.set('viewFeaturesFlag',  ! this.get('viewRow').any((v) => !v));
     }
 
     /** not clear yet where addDataset functionality will end up, so wire this up for now. */
@@ -238,10 +249,89 @@ export default Component.extend({
     }
   },
 
+  viewFeaturesChange(proxy) {
+    const fnName = 'viewFeaturesChange';
+    let viewFeaturesFlag = proxy.target.checked;
+    dLog(fnName, viewFeaturesFlag);
+    // wait for this.viewFeaturesFlag to change, because viewRowInit() reads it.
+    run_later(() => this.viewRowInit());
+  },
   viewFeaturesEffect : computed('dataFeaturesForStore.[]', 'viewFeaturesFlag', 'active', function () {
       /** Only view features of the active tab. */
       let viewFeaturesFlag = this.get('viewFeaturesFlag') && this.get('active');
     this.viewFeatures(viewFeaturesFlag);
+  }),
+  /** if .viewAllResultAxesFlag, narrowAxesToViewed()
+   */
+  narrowAxesToViewedEffect : computed(
+    'viewAllResultAxesFlag', 'dataFeatures', 'blockNames', 'viewRow',
+    'resultParentBlocks',
+    function () {
+      const fnName = 'narrowAxesToViewedEffect';
+      if (this.get('viewAllResultAxesFlag'))  {
+        this.narrowAxesToViewed();
+      }
+    }),
+  /** unview parent blocks of result features which are de-selected / un-viewed.
+   * If parent block has other viewed data blocks on it, don't unview it.
+   */
+  narrowAxesToViewed () {
+    const fnName = 'narrowAxesToViewed';
+    let
+    blockNames = this.get('blockNames'),
+    /** could use dataFeaturesForStore, or feature record handles from transient.pushFeature() */
+    features = this.get('dataFeatures'),
+    viewRow = this.get('viewRow'),
+
+    /** indexed by block name, true if there are viewed / selected
+     * features within this parent block in the result.
+     */
+    hasViewedFeatures = features.reduce((result, feature, i) => {
+      dLog(feature, feature.block, feature.blockId, viewRow[i]);
+      if (viewRow[i]) {
+        result[feature.block] = true;
+      }
+      return result; }, {});
+
+    let
+    blocks = this.get('resultParentBlocks'),
+    /** split resultParentBlocks() into parentBlocks and resultParentBlocksByName(); array result is not required. */
+    blocksByName = blocks.reduce((result, block) => {result[block.get('name')] = block; return result; }, {});
+    blocks = blocksByName;
+
+    /** toView[<Boolean>] is an array of blockNames to view / unview (depending on <Boolean> flag). */
+    let
+    toView = blockNames.reduce((result, name) => {
+      let
+      block = blocks[name],
+      /** may be undefined, which is equivalent to false. */
+      viewedFeatures = hasViewedFeatures[name] ?? false,
+      change = block.get('isViewed') !== viewedFeatures;
+      if (change && (viewedFeatures || ! block.get('viewedChildBlocks.length'))) {
+        (result[viewedFeatures] ||= []).push(name);
+      }
+      return result; }, {});
+
+    let
+    parentName = this.get('search.parent');
+    dLog(fnName, 'viewDataset', parentName, this.get('search.timeId'));
+    [true, false].forEach(
+      (viewFlag) => toView[viewFlag] && this.get('viewDataset')(parentName, viewFlag, toView[viewFlag]));
+  },
+
+  resultParentBlocks : computed('search.parent', 'blockNames.[]', function () {
+    const fnName = 'resultParentBlocks';
+    let parentName = this.get('search.parent');
+    let blockNames = this.get('blockNames');
+    let
+    store = this.get('apiServers').get('primaryServer').get('store'),
+    dataset = store.peekRecord('dataset', parentName);
+    let
+    blocks = dataset && dataset.get('blocks').toArray()
+      .filter((b) => (blockNames.indexOf(b.get('name')) !== -1) );
+
+    dLog('resultParentBlocks', parentName, blockNames, blocks);
+    return blocks;
   }),
   viewParent(viewFlag) {
     const fnName = 'viewParent';
@@ -252,6 +342,7 @@ export default Component.extend({
   /** User may un-view some of the parent axes viewed via viewParent();
    * if so, clear viewAllResultAxesFlag so that they may re-view all
    * of them by clicking the toggle.
+   * Probably will be replaced by narrowAxesToViewedEffect
    */
   parentIsViewedEffect : computed('block.viewed.[]', 'blockNames.length', function () {
     let parentName = this.get('search.parent');
@@ -264,12 +355,17 @@ export default Component.extend({
     this.set('viewAllResultAxesFlag', allViewed);
   }),
   viewFeatures(viewFeaturesFlag) {
-    const fnName = 'viewFeaturesEffect';
+    const fnName = 'viewFeatures';
     let
     features = this.get('dataFeaturesForStore');
     if (features && features.length) {
       if (viewFeaturesFlag) {
-        this.viewParent(viewFeaturesFlag);
+        /* viewParent() could be used initially.
+         * viewParent() views all of .blockNames in the parent,
+         * whereas narrowAxesToViewed() takes into account .viewRow
+         */
+        this.narrowAxesToViewed();
+        // this.viewParent(viewFeaturesFlag);
       }
       let
       transient = this.get('transient'),
@@ -497,14 +593,24 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
         } else if (row >= features.length) {
           this.set('warningMessage', 'Display of added features not yet supported');
         } else {       
-          let feature = transient.pushFeature(features[row]),
-              viewFeaturesFlag = newValue;
-          transient.showFeature(feature, viewFeaturesFlag);
           let viewRow = this.get('viewRow');
           viewRow[row] = newValue;
+
+          let feature = transient.pushFeature(features[row]),
+              viewFeaturesFlag = newValue;
+          if (newValue) {
+            this.narrowAxesToViewed();
+          }
+          // wait until axis is shown before showing features
+          nowOrLater(
+            newValue,
+            () => transient.showFeature(feature, viewFeaturesFlag));
+          if (! newValue) {
+            this.narrowAxesToViewed();
+          }
         }
       });
-    }
+   }
   },
 
   /*--------------------------------------------------------------------------*/

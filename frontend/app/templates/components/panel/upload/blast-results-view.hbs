@@ -1,7 +1,7 @@
 {{dataForTableEffect}}
 {{activeEffect}}
 {{viewFeaturesEffect}}
-{{parentIsViewedEffect}}
+{{narrowAxesToViewedEffect}}
 
 {{!-- --------------------------------------------------------------------- --}}
 
@@ -15,15 +15,19 @@
 
 {{!-- --------------------------------------------------------------------- --}}
 
+{{#if 0}}
 <div>
   {{input type="checkbox" name="viewAllResultAxesFlag" checked=viewAllResultAxesFlag
   input=(action viewAllResultAxesChange)
  }}
   <label>View all axes with results</label>
 </div>
+{{/if}}
 
 <div>
-  {{input type="checkbox" name="viewFeaturesFlag" checked=viewFeaturesFlag }}
+  {{input type="checkbox" name="viewFeaturesFlag" checked=viewFeaturesFlag
+  input=(action viewFeaturesChange)
+ }}
   <label>Select / Deselect all</label>
 </div>
 
