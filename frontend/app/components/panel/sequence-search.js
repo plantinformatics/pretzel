@@ -137,7 +137,7 @@ export default Component.extend({
      */
     inputIsActive(event) {
       // function name and use is copied from feature-list.
-      dLog('inputIsActive', event?.target);
+      // dLog('inputIsActive', event?.target);
       let text = event?.target?.value;
       if (text) {
         this.set('text', text);

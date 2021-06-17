@@ -86,9 +86,10 @@ export default Component.extend({
     /** search.viewRow will be undefined when this is the first
      * blast-results-view instance to display this search result.
      */
-    if (! this.get('viewRow')) {
+    if (! this.get('viewRow.length')) {
       this.viewRowInit();
     } else {
+      dLog('viewRow', this.viewRow, 'viewFeaturesFlag', this.viewFeaturesFlag);
       /** set viewFeaturesFlag false if any of viewRow[*] are false,
        * enabling the user to toggle them all on.
        */
@@ -135,6 +136,7 @@ export default Component.extend({
     viewFeaturesFlag = this.get('viewFeaturesFlag'),
     viewRow  = data.map((row) => viewFeaturesFlag);
     this.set('search.viewRow', viewRow);
+    dLog('viewRowInit', data.length, viewRow);
   },
   viewRow : alias('search.viewRow'),
 
