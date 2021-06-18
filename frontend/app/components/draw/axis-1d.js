@@ -472,7 +472,9 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
 
   function keyFn (feature) {
     // here `this` is the parent of the <path>-s, e.g. g.axis
-    let featureName = getAttrOrCP(feature, 'name');
+    let
+    value = getAttrOrCP(feature, 'value'),
+    featureName = getAttrOrCP(feature, 'name') + '-' + value.[0];
     // dLog('keyFn', feature, featureName); 
     return featureName;
   };
