@@ -4,7 +4,7 @@ import { alias } from '@ember/object/computed';
 
 import Service, { inject as service } from '@ember/service';
 
-import { task } from 'ember-concurrency';
+import { task, didCancel } from 'ember-concurrency';
 
 import { stacks, Stacked } from '../../utils/stacks';
 import { storeFeature } from '../../utils/feature-lookup';
@@ -599,7 +599,7 @@ export default Service.extend({
    * are stored in ember data store, as an attribute of block.
    */
   getBlockFeaturesInterval(blockId) {
-    let fnName = 'getBlockFeaturesInterval';
+    const fnName = 'getBlockFeaturesInterval';
     if (trace_pathsP)
       dLog(fnName, blockId);
     let block = this.get('blockService').peekBlock(blockId);
@@ -608,7 +608,25 @@ export default Service.extend({
       dLog(fnName, ' not found:', blockId);
     }
     else {
-        features = this.get('getBlockFeaturesIntervalTask').perform(blockId);
+      let t = this.get('getBlockFeaturesIntervalTask');
+      features = t.perform(blockId)
+        .catch((error) => {
+          let lastResult;
+          // Recognise if the given task error is a TaskCancelation.
+          if (! didCancel(error)) {
+            dLog(fnName, 'taskInstance.catch', blockId, error);
+            throw error;
+          } else {
+            lastResult = t.get('lastSuccessful.value');
+            // .lastRunning seems to be always null.
+            dLog(
+              fnName, 'using lastSuccessful.value', lastResult || t.lastSuccessful, 
+              t.get('state'), t.numRunning, t.numQueued, t.lastRunning
+            );
+          }
+          return lastResult;
+        });
+
       features
         .then(function (features) {
           if (trace_pathsP)
