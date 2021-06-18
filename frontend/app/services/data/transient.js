@@ -103,15 +103,18 @@ export default Service.extend({
   },
 
   /**
+   * @param active  true if the tab containing these results is (becoming) active
+   * Features are displayed only while the tab is active, to separate
+   * viewing of distinct result sets.
    * @param view a flag per-feature to enable display of the feature row;
    * from values of the View checkbox column of the results features table.
    */
-  showFeatures(dataset, blocks, features, viewFeaturesFlag, view) {
+  showFeatures(dataset, blocks, features, active, view) {
     let
     selected = this.get('selected'),
     // may pass dataset, blocks to pushFeature()
     stored = features.map((f) => this.pushFeature(f));
-    stored.forEach((feature, i) => this.showFeature(feature, viewFeaturesFlag && view[i]));
+    stored.forEach((feature, i) => this.showFeature(feature, active && view[i]));
   },
   showFeature(feature, viewFeaturesFlag) {
     let

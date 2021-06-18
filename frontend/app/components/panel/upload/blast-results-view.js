@@ -87,19 +87,31 @@ export default Component.extend({
      * blast-results-view instance to display this search result.
      */
     if (! this.get('viewRow.length')) {
-      this.viewRowInit();
+      /** viewFeaturesFlag is initially true, so this will set all viewRow[*] to true. */
+      this.viewRowInit(this.get('viewFeaturesFlag'));
     } else {
-      dLog('viewRow', this.viewRow, 'viewFeaturesFlag', this.viewFeaturesFlag);
-      /** set viewFeaturesFlag false if any of viewRow[*] are false,
-       * enabling the user to toggle them all on.
-       */
-      this.set('viewFeaturesFlag',  ! this.get('viewRow').any((v) => !v));
+      this.viewFeaturesFlagIntegrate();
     }
 
     /** not clear yet where addDataset functionality will end up, so wire this up for now. */
     this.registerDataPipe({
       validateData: () => this.validateData()
     });
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+  /** set viewFeaturesFlag false if any of viewRow[*] are false,
+   * enabling the user to toggle them all on.
+   * The user is able to change the view flag for individual features,
+   * and to change all with the viewFeaturesFlag toggle;  these changes are
+   * propagated both ways :
+   * viewRow  --[viewFeaturesFlagIntegrate()]--> viewFeaturesFlag
+   *                <--[viewRowInit()]--
+   */
+  viewFeaturesFlagIntegrate() {
+    dLog('viewRow', this.viewRow, 'viewFeaturesFlag', this.viewFeaturesFlag);
+    this.set('viewFeaturesFlag',  ! this.get('viewRow').any((v) => !v));
   },
 
   /*--------------------------------------------------------------------------*/
@@ -129,11 +141,9 @@ export default Component.extend({
     }
     return cells;
   }),
-  viewRowInit() {
+  viewRowInit(viewFeaturesFlag) {
     let
     data = this.get('dataMatrix'),
-    /** viewFeaturesFlag is initially true */
-    viewFeaturesFlag = this.get('viewFeaturesFlag'),
     viewRow  = data.map((row) => viewFeaturesFlag);
     this.set('search.viewRow', viewRow);
     dLog('viewRowInit', data.length, viewRow);
@@ -241,27 +251,40 @@ export default Component.extend({
   viewAllResultAxesChange(proxy) {
     const fnName = 'viewAllResultAxesChange';
     let checked = proxy.target.checked;
-    /** this value seems to be delayed */
+    /** this action function is called before .viewAllResultAxesFlag is changed. */
     let viewAll = this.get('viewAllResultAxesFlag');
     dLog(fnName, checked, viewAll);
     viewAll = checked;
+    // narrowAxesToViewedEffect() will call narrowAxesToViewed() if checked
+    /* Potentially viewAllResultAxesFlag===false could mean that axes are not
+     * automatically viewed/unviewed in response to user viewing/unviewing features.
+     * From user / stakeholder feedback it seems viewAllResultAxesFlag===true will
+     * be suitable, and hence viewAllResultAxesFlag===false is not required,
+     * so these can be dropped :
+     *  viewAllResultAxesChange(), viewAllResultAxesFlag, parentIsViewedEffect().
+     *  hbs : checkbox name="viewAllResultAxesFlag"
+     *
     this.viewFeatures(viewAll);
     if (! viewAll) {
       this.viewParent(viewAll);
     }
+    */
   },
-
+  /** View/Unview all features in the result set.
+   */
+  viewFeaturesAll(viewAll) {
+    this.viewRowInit(viewAll);
+    this.viewFeatures();
+  },
   viewFeaturesChange(proxy) {
     const fnName = 'viewFeaturesChange';
     let viewFeaturesFlag = proxy.target.checked;
     dLog(fnName, viewFeaturesFlag);
-    // wait for this.viewFeaturesFlag to change, because viewRowInit() reads it.
-    run_later(() => this.viewRowInit());
+    this.viewFeaturesAll(viewFeaturesFlag);
   },
-  viewFeaturesEffect : computed('dataFeaturesForStore.[]', 'viewFeaturesFlag', 'active', function () {
-      /** Only view features of the active tab. */
-      let viewFeaturesFlag = this.get('viewFeaturesFlag') && this.get('active');
-    this.viewFeatures(viewFeaturesFlag);
+  viewFeaturesEffect : computed('dataFeaturesForStore.[]', 'viewRow', 'active', function () {
+    // viewFeatures() uses the dependencies : dataFeaturesForStore, viewRow, active.
+    this.viewFeatures();
   }),
   /** if .viewAllResultAxesFlag, narrowAxesToViewed()
    */
@@ -339,6 +362,9 @@ export default Component.extend({
     }
     return blocks;
   }),
+  /** View the blocks of the parent which are identifeid by .blockNames.
+   * @param viewFlag true/false for view/unview
+   */
   viewParent(viewFlag) {
     const fnName = 'viewParent';
     let parentName = this.get('search.parent');
@@ -360,12 +386,19 @@ export default Component.extend({
     dLog('parentIsViewed', viewedBlocks.length, this.get('blockNames.length'));
     this.set('viewAllResultAxesFlag', allViewed);
   }),
-  viewFeatures(viewFeaturesFlag) {
+  /**
+   * @param active  willDestroyElement passes false, otherwise default to this.active.
+   */
+  viewFeatures(active) {
     const fnName = 'viewFeatures';
+    /** Only view features of the active tab. */
+    if (active === undefined) {
+      active = this.get('active');
+    }
     let
     features = this.get('dataFeaturesForStore');
     if (features && features.length) {
-      if (viewFeaturesFlag) {
+      if (active) {
         /* viewParent() could be used initially.
          * viewParent() views all of .blockNames in the parent,
          * whereas narrowAxesToViewed() takes into account .viewRow
@@ -403,8 +436,10 @@ export default Component.extend({
        * for this update.
        */
       nowOrLater(
-        viewFeaturesFlag,
-        () => transient.showFeatures(dataset, blocks, features, viewFeaturesFlag, this.get('viewRow')));
+        active,
+        /* when switching tabs got : this.isDestroyed===true, this.viewRow and this.get('viewRow') undefined
+         * but this.search.viewRow OK */
+        () => transient.showFeatures(dataset, blocks, features, active, this.get('viewRow') || this.search.viewRow));
     }
   },
 
@@ -589,6 +624,7 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
     let 
     transient = this.get('transient'),
     features = this.get('dataFeaturesForStore');
+    let viewChangeCount = 0;
 
     if (changes) {
       changes.forEach(([row, prop, oldValue, newValue]) => {
@@ -600,6 +636,7 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
         } else if (row >= features.length) {
           this.set('warningMessage', 'Display of added features not yet supported');
         } else {       
+          viewChangeCount++;
           let viewRow = this.get('viewRow');
           viewRow[row] = newValue;
 
@@ -617,6 +654,9 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
           }
         }
       });
+      if (viewChangeCount) {
+        this.viewFeaturesFlagIntegrate();
+      }
    }
   },
 
