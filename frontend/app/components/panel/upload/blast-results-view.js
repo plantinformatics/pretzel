@@ -296,6 +296,7 @@ export default Component.extend({
       return result; }, {});
 
     let
+    /** it is possible that the parent reference does not have blocks with name matching the results (blockNames) */
     blocks = this.get('resultParentBlocks'),
     /** split resultParentBlocks() into parentBlocks and resultParentBlocksByName(); array result is not required. */
     blocksByName = blocks.reduce((result, block) => {result[block.get('name')] = block; return result; }, {});
@@ -305,10 +306,11 @@ export default Component.extend({
     let
     toView = blockNames.reduce((result, name) => {
       let
+      /** undefined if parent does not have block with name matching result; don't display an axis. */
       block = blocks[name],
       /** may be undefined, which is equivalent to false. */
       viewedFeatures = hasViewedFeatures[name] ?? false,
-      change = block.get('isViewed') !== viewedFeatures;
+      change = block && (block.get('isViewed') !== viewedFeatures);
       if (change && (viewedFeatures || ! block.get('viewedChildBlocks.length'))) {
         (result[viewedFeatures] ||= []).push(name);
       }
@@ -332,7 +334,9 @@ export default Component.extend({
     blocks = dataset && dataset.get('blocks').toArray()
       .filter((b) => (blockNames.indexOf(b.get('name')) !== -1) );
 
-    dLog('resultParentBlocks', parentName, blockNames, blocks);
+    if (! blocks.length && blockNames.length) {
+      dLog('resultParentBlocks', parentName, dataset, blockNames, blocks);
+    }
     return blocks;
   }),
   viewParent(viewFlag) {
@@ -508,20 +512,21 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
             className: "htCenter"
           },
           // remaining columns use default type
-          { },
-          { },
-          { },
-          { },
-          { },
-          { },
-          { },
-          { },
-          { },
-          { },
-          { },
-          { },
-          { },
-          { },
+          // disable editor
+          { editor: false },
+          { editor: false },
+          { editor: false },
+          { editor: false },
+          { editor: false },
+          { editor: false },
+          { editor: false },
+          { editor: false },
+          { editor: false },
+          { editor: false },
+          { editor: false },
+          { editor: false },
+          { editor: false },
+          { editor: false },
           /*
           {
             data: 'name',
