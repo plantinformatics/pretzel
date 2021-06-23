@@ -120,7 +120,13 @@ export default Component.extend({
    * If this component is in a modal dialog, use most of screen width.
    */
   containerStyle : computed('tableModal', function () {
-    return this.get('tableModal') ? 'overflow-x:hidden; width:70vw' : undefined;
+    /** 80vw is wide enough to expose all columns; otherwise get 
+     * 'The provided element is not a child of the top overlay' in getRelativeCellPosition()
+     * from setupHandlePosition().
+     * If the table is wider than the screen, it could be scrolled right then
+     * left initially to expose all columns so they get initialised.
+     */
+    return this.get('tableModal') ? 'overflow-x:hidden; width:90vw' : undefined;
   }),
 
   /*--------------------------------------------------------------------------*/
@@ -492,8 +498,8 @@ export default Component.extend({
     let data = this.get('data');
     if (! data || ! data.length) {
       let p = this.get('search.promise');
-      dLog('showTable', p.state && p.state());
-      p.then(() => {
+      dLog('showTable', p && p.state && p.state());
+      p && p.then(() => {
         dLog('showTable then', this.get('data')?.length);
         // alternative : dataForTableEffect() could do this if ! table.
         this.shownBsTab(); });
@@ -502,7 +508,11 @@ export default Component.extend({
     if (! (table = this.get('table')) ||
         ! table.rootElement ||
         ! table.rootElement.isConnected) {
-      this.createTable();
+      if (table) {
+        dLog('showTable', table, table.rootElement);
+        debugger;
+      }
+      this.createTable(this.get('dataForTable'));
     } else {
       dLog('showTable', table.renderSuspendedCounter);
       /*
@@ -519,11 +529,11 @@ export default Component.extend({
     }
   },
 
-  createTable() {
+  createTable(data) {
     const cName = 'upload/blast-results';
     const fnName = 'createTable';
     dLog('createTable');
-    $(() => {
+    {
       let eltId = this.search.tableId;
       let hotable = $('#' + eltId)[0];
       if (! hotable) {
@@ -535,7 +545,7 @@ blast output columns are
 query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, query start, query end, subject start, subject end, e-value, score, query length, subject length
       */
       var table = new Handsontable(hotable, {
-        data: [[false, '', '', '', '', '', '', '', '', '', '', '', '', '', '']],
+        data,
         // minRows: 20,
         rowHeaders: true,
         headerTooltips: true,
@@ -609,7 +619,8 @@ query ID, subject ID, % identity, length of HSP (hit), # mismatches, # gaps, que
       });
       this.set('table', table);
 
-    });
+    }
+
   },
 
 
