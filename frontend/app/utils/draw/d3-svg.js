@@ -1,3 +1,5 @@
+import { later as run_later } from '@ember/runloop';
+
 /*----------------------------------------------------------------------------*/
 
 const trace = 0;
@@ -73,6 +75,22 @@ function transitionEndPromise(transition) {
   return transitionEnd;
 }
 
+/** If selection is a d3 transition, run fn after transitionTime or the transition.duration(),
+ * otherwise run it now.
+ */
+function nowOrAfterTransition(selection, fn, transitionTime) {
+  let isTransition = !!selection.duration;
+  if (isTransition) {
+    /** if selection is empty then selection.node() is null, and
+     * transition_duration() uses get$1(this.node() ) which will get an
+     * exception on node.__transition;
+     */
+    transitionTime ??= ! selection.empty() && selection.duration();
+    run_later(fn, transitionTime);
+  } else {
+    fn();
+  }
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -116,4 +134,4 @@ function ensureSvgDefs(svg)
 
 /*----------------------------------------------------------------------------*/
 
-export { I, selectGroup, transitionEndPromise, ensureSvgDefs };
+export { I, selectGroup, transitionEndPromise, nowOrAfterTransition, ensureSvgDefs };

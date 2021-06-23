@@ -38,7 +38,7 @@ import {
   dragTransition
 } from '../../utils/stacks-drag';
 import { selectAxis } from '../../utils/draw/stacksAxes';
-import { selectGroup } from '../../utils/draw/d3-svg';
+import { selectGroup, nowOrAfterTransition } from '../../utils/draw/d3-svg';
 import { breakPoint } from '../../utils/breakPoint';
 import { configureHover } from '../../utils/hover';
 import { getAttrOrCP } from '../../utils/ember-devel';
@@ -520,14 +520,20 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
        * For showTickLocations / <path>, the d updates, so pSM is used
        */
       pSE
-        .text(textFn)
       // positioned just left of the base of the triangles.  inherits text-anchor from axis;
         .attr('x', '-30px');
 
       let attrY_featureY = this.attrY_featureY.bind(this);
-      pSE.call(attrY_featureY);
 
       let transition = this.selectionToTransition(pS);
+      /** pass in the delay time, because transition has no duration if empty(). */
+      nowOrAfterTransition(
+        transition, () => {
+          return pSE.call(attrY_featureY)
+        .text(textFn);
+        },
+        this.axis1d.transitionTime);
+
       if (transition === pS) {
         pS.call(attrY_featureY);
       } else {
