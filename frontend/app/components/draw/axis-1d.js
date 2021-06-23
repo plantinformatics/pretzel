@@ -274,8 +274,13 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
      * The function getAttrOrCP() will use .get if defined, otherwise .name (via ['name']).
      * This comment applies to use of 'feature.'{name,range,value} in
      * inRange() (above), and keyFn(), pathFn(), hoverTextFn() below.
+     *
+     * The features created from blast search results will all have the same name,
+     * so for better d3 join, append location to the key.
      */
-    let featureName = getAttrOrCP(feature, 'name');
+    let
+    value = getAttrOrCP(feature, 'value'),
+    featureName = getAttrOrCP(feature, 'name') + '-' + value[0];
     // dLog('keyFn', feature, featureName); 
     return featureName;
   };
@@ -474,7 +479,7 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
     // here `this` is the parent of the <path>-s, e.g. g.axis
     let
     value = getAttrOrCP(feature, 'value'),
-    featureName = getAttrOrCP(feature, 'name') + '-' + value.[0];
+    featureName = getAttrOrCP(feature, 'name') + '-' + value[0];
     // dLog('keyFn', feature, featureName); 
     return featureName;
   };
