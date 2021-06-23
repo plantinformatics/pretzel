@@ -527,11 +527,12 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
       let attrY_featureY = this.attrY_featureY.bind(this);
       pSE.call(attrY_featureY);
 
-      let transition = this.selectionToTransition(pSM);
-      if (transition === pSM) {
-        pSM.call(attrY_featureY);
+      let transition = this.selectionToTransition(pS);
+      if (transition === pS) {
+        pS.call(attrY_featureY);
       } else {
-        transitionFn(transition, attrY_featureY);
+        transition.call(attrY_featureY);
+        // transitionFn(transition, attrY_featureY);
       }
     }
   }
