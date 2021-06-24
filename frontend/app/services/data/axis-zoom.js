@@ -18,7 +18,9 @@ export default Service.extend({
     let isCurrent;
     if (this.zoomPan && this.zoomPan.isWheelEvent) {
       let
-      documentTimeline = new window.DocumentTimeline(),
+      /** DocumentTimeline is now available without window., refn
+       * https://developer.mozilla.org/en-US/docs/Web/API/DocumentTimeline/DocumentTimeline */
+      documentTimeline = new (DocumentTimeline || window.DocumentTimeline)(),
       timeSince = documentTimeline.currentTime - this.zoomPan.timeStamp;
       isCurrent = timeSince < 1000;
       // dLog('currentZoomPanIsWheel', timeSince, isCurrent);

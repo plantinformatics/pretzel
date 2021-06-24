@@ -6,7 +6,25 @@
 var acl = require('../utilities/acl')
 const { childProcess } = require('../utilities/child-process');
 var upload = require('../utilities/upload');
+var { filterBlastResults } = require('../utilities/sequence-search');
 
+/*----------------------------------------------------------------------------*/
+
+/** ids of sessions which have sent request : dnaSequenceSearch */
+var sessionIds=[];
+
+/** Map session ID (accessToken.id) to a small integer index.
+ */
+function sessionIndex(sessionId) {
+  let index = sessionIds.indexOf(sessionId);
+  if (index === -1) {
+    sessionIds.push(sessionId);
+    index = sessionIds.length - 1;
+  }
+  return index;
+}
+
+/*----------------------------------------------------------------------------*/
 
 module.exports = function(Feature) {
   Feature.search = function(filter, options, cb) {
@@ -58,27 +76,41 @@ module.exports = function(Feature) {
    * @param resultRows
    * @param addDataset
    * @param datasetName
+   * @param minLengthOfHit, minPercentIdentity, minPercentCoverage : minimum values to filter results
    * @param options
    *
    * @param cb node response callback
    */
-  Feature.dnaSequenceSearch = function(data, cb) {
+  Feature.dnaSequenceSearch = function(data, options, cb) {
     const models = this.app.models;
 
-    let {dnaSequence, parent, searchType, resultRows, addDataset, datasetName, options} = data;
+    let {dnaSequence, parent, searchType, resultRows, addDataset, datasetName,
+         minLengthOfHit, minPercentIdentity, minPercentCoverage
+        } = data;
+    // data.options : params for streaming result, used later.
     const fnName = 'dnaSequenceSearch';
-    console.log(fnName, dnaSequence.length, parent, searchType);
+    /** each user session may have 1 concurrent dnaSequenceSearch.
+     * Use session id for a unique index for dnaSequence fileName.  */
+    let index = sessionIndex(options.accessToken.id),
+        queryStringFileName = 'dnaSequence.' + index + '.fasta';
+    console.log(fnName, dnaSequence.length, parent, searchType, index, queryStringFileName);
 
     /** Receive the results from the Blast.
      * @param chunk is a Buffer
+     * null / undefined indicates child process closed with status 0 (OK) and sent no output.
      * @param cb is cbWrap of cb passed to dnaSequenceSearch().
      */
     let searchDataOut = (chunk, cb) => {
+      if (! chunk) {
+        cb(null, []);
+      } else
       if (chunk.asciiSlice(0,6) === 'Error:') {
         cb(new Error(chunk.toString()));
       } else {
         const
-        textLines = chunk.toString().split('\n');
+        textLines = chunk.toString().split('\n')
+          .filter((textLine) => filterBlastResults(
+            minLengthOfHit, minPercentIdentity, minPercentCoverage, textLine));
         textLines.forEach((textLine) => {
           if (textLine !== "") {
             console.log(fnName, 'stdout data',  "'", textLine,  "'");
@@ -86,8 +118,10 @@ module.exports = function(Feature) {
         });
         if (addDataset) {
           let jsonFile='tmp/' + datasetName + '.json';
-          console.log('before removeExisting "', datasetName, '"', '"', jsonFile, '"');
-          upload.removeExisting(models, datasetName, /*replaceDataset*/true, cb, loadAfterDelete);
+          /** same as convertSearchResults2Json() in dnaSequenceSearch.bash */
+          let datasetNameFull=`${parent}.${datasetName}`;
+          console.log('before removeExisting "', datasetNameFull, '"', '"', jsonFile, '"');
+          upload.removeExisting(models, datasetNameFull, /*replaceDataset*/true, cb, loadAfterDelete);
 
           function loadAfterDelete(err) {
             upload.loadAfterDeleteCb(
@@ -106,7 +140,7 @@ module.exports = function(Feature) {
     if (true) {
     let child = childProcess(
       'dnaSequenceSearch.bash',
-      dnaSequence, true, 'dnaSequence', [parent, searchType, resultRows, addDataset, datasetName], searchDataOut, cb);
+      dnaSequence, true, queryStringFileName, [parent, searchType, resultRows, addDataset, datasetName], searchDataOut, cb, /*progressive*/ false);
     } else {
       let features = dev_blastResult;
       cb(null, features);
@@ -141,9 +175,9 @@ module.exports = function(Feature) {
       /* Within data : .dnaSequence, and :
       {arg: 'parent', type: 'string', required: true},
       {arg: 'searchType', type: 'string', required: true},
-      {arg: "options", type: "object", http: "optionsFromRequest"}
       resultRows, addDataset, datasetName
       */
+      {arg: "options", type: "object", http: "optionsFromRequest"}
     ],
     // http: {verb: 'post'},
     returns: {arg: 'features', type: 'array'},

@@ -1,0 +1,42 @@
+{{dataForTableEffect}}
+{{activeEffect}}
+{{viewFeaturesEffect}}
+{{narrowAxesToViewedEffect}}
+
+{{!-- --------------------------------------------------------------------- --}}
+
+{{#if statusMessage}}
+  <div>{{statusMessage}}</div>
+{{/if}}
+
+{{!-- --------------------------------------------------------------------- --}}
+
+<div id={{search.tableId}} class="actual-row"  style={{this.containerStyle}}></div>
+
+{{!-- --------------------------------------------------------------------- --}}
+
+{{#if 0}}
+<div>
+  {{input type="checkbox" name="viewAllResultAxesFlag" checked=viewAllResultAxesFlag
+  input=(action viewAllResultAxesChange)
+ }}
+  <label>View all axes with results</label>
+</div>
+{{/if}}
+
+<div>
+  {{input type="checkbox" name="viewFeaturesFlag" checked=viewFeaturesFlag
+  input=(action viewFeaturesChange)
+ }}
+  <label>Select / Deselect all</label>
+</div>
+
+{{!-- --------------------------------------------------------------------- --}}
+<hr>
+
+    {{elem/panel-message
+      successMessage=successMessage
+      warningMessage=warningMessage
+      errorMessage=errorMessage}}
+
+{{!-- --------------------------------------------------------------------- --}}

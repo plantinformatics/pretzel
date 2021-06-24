@@ -9,7 +9,7 @@
     "d3-tip": "VACLab/d3-tip",
     "d3": "^4.10.2",
     "animation-frame": "^0.2.5",
-    "handsontable": "^7"
+    "handsontable": "^8"
   },
   "devDependencies": {},
   "resolutions": {

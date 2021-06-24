@@ -4,7 +4,7 @@ import { alias } from '@ember/object/computed';
 
 import Service, { inject as service } from '@ember/service';
 
-import { task } from 'ember-concurrency';
+import { task, didCancel } from 'ember-concurrency';
 
 import { stacks, Stacked } from '../../utils/stacks';
 import { storeFeature } from '../../utils/feature-lookup';
@@ -50,7 +50,7 @@ function verifyFeatureRecord(fr, f) {
   same = 
     (fr.id === f._id) &&
     direction && sameDirection &&
-    ((frd ? frd._name : fr.get('name')) === f.name);
+    ((frd ? frd._name : fr.get('name')) === (f.name || f._name));
   return same;
 }
 
@@ -281,13 +281,19 @@ export default Service.extend({
     return promise;
   },
 
+  /** Push the feature into the store if it is not already there.
+   * @return the record handle of the existing or added feature record.
+   * @param flowsService  optional, defaults to this.get('flowsService').
+   */
   pushFeature(store, f, flowsService) {
+    flowsService ||= this.get('flowsService');
     let c;
     let fr = store.peekRecord('feature', f._id);
     if (fr) {
       let verifyOK = verifyFeatureRecord(fr, f);
       if (! verifyOK)
         dLog('peekRecord feature', f._id, f, fr._internalModel.__data, fr);
+      c = fr;
     }
     else
     {
@@ -593,7 +599,7 @@ export default Service.extend({
    * are stored in ember data store, as an attribute of block.
    */
   getBlockFeaturesInterval(blockId) {
-    let fnName = 'getBlockFeaturesInterval';
+    const fnName = 'getBlockFeaturesInterval';
     if (trace_pathsP)
       dLog(fnName, blockId);
     let block = this.get('blockService').peekBlock(blockId);
@@ -602,7 +608,25 @@ export default Service.extend({
       dLog(fnName, ' not found:', blockId);
     }
     else {
-        features = this.get('getBlockFeaturesIntervalTask').perform(blockId);
+      let t = this.get('getBlockFeaturesIntervalTask');
+      features = t.perform(blockId)
+        .catch((error) => {
+          let lastResult;
+          // Recognise if the given task error is a TaskCancelation.
+          if (! didCancel(error)) {
+            dLog(fnName, 'taskInstance.catch', blockId, error);
+            throw error;
+          } else {
+            lastResult = t.get('lastSuccessful.value');
+            // .lastRunning seems to be always null.
+            dLog(
+              fnName, 'using lastSuccessful.value', lastResult || t.lastSuccessful, 
+              t.get('state'), t.numRunning, t.numQueued, t.lastRunning
+            );
+          }
+          return lastResult;
+        });
+
       features
         .then(function (features) {
           if (trace_pathsP)
