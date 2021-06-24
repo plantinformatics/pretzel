@@ -249,15 +249,29 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 
       pS.exit()
         .remove();
-      let pSM = pSE.merge(pS);
+      /** Instead of using .merge(), show .enter() elements (at their
+       * final posiiton) after the pS elements have transitioned to
+       * their final position.
+       let pSM = pSE.merge(pS);
+      */
 
       /* update attr d in a transition if one was given.  */
       let p1 = // (t === undefined) ? pSM :
-          this.selectionToTransition(pSM)
-      p1.attr("d", pathFn)
+          this.selectionToTransition(pS);
+
+      /** similar comment re. transitionTime as in showLabels() */
+      nowOrAfterTransition(
+        p1, () => pSE.call(pathAndColour),
+        this.axis1d.transitionTime);
+
+      p1.call(pathAndColour);
+      function pathAndColour(selection) {
+        selection
+        .attr("d", pathFn)
         .attr('stroke', featurePathStroke)
         .attr('fill', featurePathStroke)
       ;
+      }
 
     }
   }
