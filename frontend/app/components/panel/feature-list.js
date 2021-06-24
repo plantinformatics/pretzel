@@ -250,7 +250,7 @@ export default Component.extend({
    * remove is true.
    */
   appendSelectedFeatures(selectedFeaturesNames, remove) {
-    console.log('appendSelectedFeatures', selectedFeaturesNames);
+    dLog('appendSelectedFeatures', selectedFeaturesNames, remove);
     /** Append to selectedFeatures to text$, therefore set activeInput true.
      * (originally : replace instead of append, so activeInput was set false) */
     this.set('activeInput', true);

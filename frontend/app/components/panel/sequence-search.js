@@ -3,19 +3,60 @@ import { bind, once, later, throttle, debounce } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { observer, computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
+import { A as array_A } from '@ember/array';
+import { task, didCancel } from 'ember-concurrency';
 
+
+import sequenceSearchData from '../../utils/data/sequence-search-data';
+
+/*----------------------------------------------------------------------------*/
 
 const dLog = console.debug;
 
+/*----------------------------------------------------------------------------*/
+
 export default Component.extend({
   auth: service(),
+  queryParams: service('query-params'),
 
+  urlOptions : alias('queryParams.urlOptions'),
+
+  /*--------------------------------------------------------------------------*/
+
+  /** required minimum length for FASTA DNA text search string input. */
+  searchStringMinLength : 25,
+  /** length limit for FASTA DNA text search string input. */
+  searchStringMaxLength : 10000,
   /** limit rows in result */
-  resultRows : 50,
+  resultRows : 500,
+
+  /** minimum values for 3 columns, to filter blast output. */
+  minLengthOfHit : 0,
+  minPercentIdentity : 0, // 75,
+  minPercentCoverage : 0, // 50,
+
   /** true means add / upload result to db as a Dataset */
   addDataset : false,
+  /** true means view the blocks of the dataset after it is added. */
+  viewDatasetFlag : false,
 
   classNames: ['col-xs-12'],
+
+  /** array of current searches.  each one is data for blast-result component. */
+  searches : undefined,
+
+  /*--------------------------------------------------------------------------*/
+
+  init() {
+    this._super(...arguments);
+
+    this.set('searches', array_A());
+
+    let searchStringMaxLength = this.get('urlOptions.searchStringMaxLength');
+    if (searchStringMaxLength) {
+      this.set('searchStringMaxLength', searchStringMaxLength);
+    }
+  },
 
   /*--------------------------------------------------------------------------*/
   /** copied from data-base.js; may factor or change the approach. */
@@ -69,7 +110,7 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  loading : alias('taskGet.isRunning'),
+  searching : alias('sendRequest.isRunning'),
 
   refreshClassNames : computed('loading', function () {
     let classNames = "btn btn-info pull-right";
@@ -90,15 +131,24 @@ export default Component.extend({
 
   // actions
   actions: {
-    // copied from feature-list, may not be required
-    inputIsActive() {
-      dLog('inputIsActive');
+    /** called for single-character input to textarea; similar to
+     * actions.dnaSequenceInput() but that is only called for defined events
+     * (enter / escape), and actions.paste() (paste).
+     */
+    inputIsActive(event) {
+      // function name and use is copied from feature-list.
+      // dLog('inputIsActive', event?.target);
+      let text = event?.target?.value;
+      if (text) {
+        this.set('text', text);
+      }
     },
     paste: function(event) {
-      let text = event && (event.target.value || event.originalEvent.target.value);
-      console.log('paste', event, text.length);
+      /** text is "" at this time. */
       /** this action function is called before jQuery val() is updated. */
       later(() => {
+        let text = event && (event.target.value || event.originalEvent.target.value);
+        console.log('paste', event, text.length);
         this.set('text', text);
         // this.dnaSequenceInput(/*text*/);
       }, 500);
@@ -121,6 +171,15 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** Check GUI inputs which are parameters for addDataset :
+   *  - datasetName (newDatasetName)
+   *  - parent name (selectedParent)
+   * Both are required - check that they have been entered.
+   * Check that newDatasetName is not a duplicate of an existing dataset.
+   * Display messages if any checks fail.
+   *
+   * @return true if all checks pass.
+   */
   checkInputs() {
     let ok;
     this.clearMsgs();
@@ -140,11 +199,16 @@ export default Component.extend({
     }
     return ok;
   },
-  inputsOK : computed('selectedParent', 'addDataset', 'newDatasetName', 'datasets.[]', function() {
-    return this.checkInputs();
+  inputsOK : computed('text', 'selectedParent', 'addDataset', 'newDatasetName', 'datasets.[]', function() {
+    let warningMessage = this.checkTextInput(this.get('text'));
+    if (warningMessage) {
+      this.set('warningMessage', warningMessage);
+    }
+    /** checkInputs() sets .nameWarning */
+    return ! warningMessage && this.checkInputs();
   }),
-  searchButtonDisabled : computed('inputsOK', 'isProcessing', function() {
-    return ! this.get('inputsOK') || this.get('isProcessing');
+  searchButtonDisabled : computed('searching', 'inputsOK', 'isProcessing', function() {
+    return this.get('searching') || ! this.get('inputsOK') || this.get('isProcessing');
   }),
 
   /** throttle depends on constant function  */
@@ -152,8 +216,55 @@ export default Component.extend({
     return bind(this, this.dnaSequenceInput);
   }),
 
+  /** @return a warningMessage if rawText does not meet input requirements, otherwise falsy.
+   */
+  checkTextInput(rawText) {
+    let warningMessages = [];
+    if (! rawText) {
+      warningMessages.push("Please enter search text in the field 'DNA Sequence Input'");
+    } else {
+    let
+    lines = rawText.split('\n'),
+    notBases = lines
+      .filter((l) => ! l.match(/^[ACTGactg]+$/)),
+    keys = notBases
+      .filter((maybeKey) => maybeKey.match(/^>[^\n]+$/)),
+    other = notBases
+      .filter((maybeKey) => ! maybeKey.match(/^>[^\n]+$/))
+      .filter((maybeEmpty) => ! maybeEmpty.match(/^[ \t\n]*$/));
+    switch (keys.length) {
+    case 0:
+      warningMessages.push('Key line is required : >MarkerName ...');
+      break;
+    case 1:
+      break;
+    default:
+      warningMessages.push('Limit is 1 FASTA search');
+      break;
+    }
+    let regexpIterator = rawText.matchAll(/\n[ACTGactg]+/g),
+        sequenceLinesLength = Array.from(regexpIterator).length;
+    if (sequenceLinesLength === 0) {
+      warningMessages.push('DNA text is required : e.g. ATCGatcg...');
+    }
+    if (other.length) {
+      warningMessages.push('Input should be either >MarkerName or DNA text e.g. ATCGatcg...; this input not valid :' + other[0]);
+    }
+
+    if (rawText.length > this.searchStringMaxLength) {
+      warningMessages.push('FASTA search string is limited to ' + this.searchStringMaxLength);
+    } else if (rawText.length <  this.searchStringMinLength) {
+      warningMessages.push('FASTA search string should have minimum length ' + this.searchStringMinLength);
+    } 
+    }
+
+    let warningMessage = warningMessages.length && warningMessages.join('\n');
+    return warningMessage;
+  },
   dnaSequenceInput(rawText) {
+    const fnName = 'dnaSequenceInput';
     // dLog("dnaSequenceInput", rawText && rawText.length);
+    let warningMessage;
     /** if the user has use paste or newline then .text is defined,
      * otherwise use jQuery to get it from the textarea.
      */
@@ -162,8 +273,13 @@ export default Component.extend({
       /** before textarea is created, .val() will be undefined. */
       rawText = text$.val();
     }
-      if (rawText)
-      {
+    if ((warningMessage = this.checkTextInput(rawText))) {
+      this.set('warningMessage', warningMessage);
+    } else {
+      let taskInstance = this.get('sendRequest').perform(rawText);
+    }
+  },
+  sendRequest : task(function* (rawText) {
         let
         seq = rawText;
 	/*
@@ -183,50 +299,51 @@ export default Component.extend({
           this.get('resultRows'),
           this.get('addDataset'),
           this.get('newDatasetName'),
+          this.get('minLengthOfHit'),
+          this.get('minPercentIdentity'),
+          this.get('minPercentCoverage'),
           /*options*/{/*dataEvent : receivedData, closePromise : taskInstance*/});
 
-        promise.then(
-          (data) => {
-            dLog('dnaSequenceInput', data.features.length);
-            this.set('data', data.features);
-            if (this.get('addDataset') && this.get('replaceDataset')) {
-              this.unviewDataset(this.get('newDatasetName'));
+        if (this.get('addDataset')) {
+          /* On complete, trigger dataset list reload.
+           * refreshDatasets is passed from controllers/mapview (updateModel ).
+           */
+          promise =
+          promise.then(() => {
+            const viewDataset = this.get('viewDatasetFlag');
+            let refreshed = this.get('refreshDatasets')();
+            if (viewDataset) {
+              refreshed
+                .then(() => {
+                  /** same as convertSearchResults2Json() in dnaSequenceSearch.bash and
+                   * backend/common/models/feature.js :  Feature.dnaSequenceSearch() */
+                  let
+                  datasetName = this.get('newDatasetName'),
+                  datasetNameFull=`${parent}.${datasetName}`;
+                  dLog(fnName, 'viewDataset', datasetNameFull);
+                  this.get('viewDataset')(datasetNameFull, viewDataset);
+                });
             }
-          },
-          // copied from data-base.js - could be factored.
-          (err, status) => {
-            let errobj = err.responseJSON.error;
-            console.log(errobj);
-            let errmsg = null;
-            if (errobj.message) {
-              errmsg = errobj.message;
-            } else if (errobj.errmsg) {
-              errmsg = errobj.errmsg;
-            } else if (errobj.name) {
-              errmsg = errobj.name;
-            }
-            this.setError(errmsg);
-            this.scrollToTop();
-          }
+          });
+        }
 
-        );
+        let searchData = sequenceSearchData.create({promise, seq, parent, searchType});
+        this.get('searches').pushObject(searchData);
+
+    return promise;
+  }).drop(),
+
+
+  closeResultTab(tabId) {
+    dLog('closeResultTab', tabId);
+    let searches = this.get('searches'),
+        tab = searches.find((s) => s.tabId === tabId);
+    if (tab) {
+      searches.removeObject(tab);
+    } else {
+      dLog('closeResultTab', tabId, tab);      
     }
-  },
-
-  /*--------------------------------------------------------------------------*/
-  /* copied from file-drop-zone.js, can factor if this is retained.  */
-
-  /** Unview the blocks of the dataset which has been replaced by successful upload.
-   */
-  unviewDataset(datasetName) {
-    let
-    store = this.get('apiServers').get('primaryServer').get('store'),
-    replacedDataset = store.peekRecord('dataset', datasetName),
-    viewedBlocks = replacedDataset.get('blocks').toArray().filterBy('isViewed'),
-    blockService = this.get('blockService'),
-    blockIds = viewedBlocks.map((b) => b.id);
-    dLog('unviewDataset', datasetName, blockIds);
-    blockService.setViewed(blockIds, false);
+    
   }
 
   /*--------------------------------------------------------------------------*/

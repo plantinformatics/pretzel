@@ -15,16 +15,3 @@
   {{/if}} {{!-- showComponent --}}
 {{/elem/panel-container}}
 
-{{#elem/panel-container state="primary" as |panelContainer|}}
-  {{#elem/panel-heading icon="plane" panelContainer=panelContainer}}
-    External Lookup
-  {{/elem/panel-heading}}
-  {{#if panelContainer.showComponent}}
-
-  {{goto-feature  drawActions=this class="panel panel-primary"
-    selectedFeatures=selectedFeatures
-    selectedBlock=selectedBlock
-  }}
-
-  {{/if}} {{!-- showComponent --}}
-{{/elem/panel-container}}

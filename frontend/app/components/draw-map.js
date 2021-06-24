@@ -1379,8 +1379,8 @@ export default Component.extend(Evented, {
                * So adding parentNameMatch, and using b.get('referenceBlock') as fall-back;
                * this will be replaced anyway (axesBlocks, which uses block.referenceBlock).
                */
-              parentMatch = block_.get('datasetId.content') === dataset.get('parent'),
-              parentNameMatch = dataset.get('parentName') === get(block_, 'datasetId.id'),
+              parentMatch = block_ && (block_.get('datasetId.content') === dataset.get('parent')),
+              parentNameMatch = block_ && (dataset.get('parentName') === get(block_, 'datasetId.id')),
               match = (block.scope == zd.scope) && (block.dataset.get('name') == parentName);
               dLog(key, trace_stack ? block : block.dataset.get('name'), match, parentMatch, parentNameMatch);
               match = match && (parentMatch || parentNameMatch);

@@ -13,7 +13,13 @@
       <BsNav @type="tabs" as |nav|>
         <nav.item @active={{bs-eq tab.activeId "sequence-search-input"}}><a href="#sequence-search-input" role="tab" onclick={{action tab.select "sequence-search-input"}}>{{elem/icon-base name="edit"}} Sequence Input</a></nav.item>
 
-        <nav.item @active={{bs-eq tab.activeId "sequence-search-output"}}><a href="#sequence-search-output" role="tab" onclick={{action tab.select "sequence-search-output"}}>{{elem/icon-base name="arrow-right"}} Blast Output</a></nav.item>
+        {{#each this.searches as |search|}}
+        <nav.item @active={{bs-eq tab.activeId search.tabId}}><a href={{search.tabHref}} role="tab" onclick={{action tab.select search.tabId}}>
+          <button onclick={{action this.closeResultTab search.tabId}} style="float: right; position: relative; top: -12px; right: -14px; margin-left: -8px;" class="close" type="button">x</button>
+          {{elem/icon-base name="arrow-right"}} Blast Output ({{search.timeId}})
+          </a></nav.item>
+        {{/each}}
+
       </BsNav>
 
       <div class="tab-content">
@@ -26,7 +32,8 @@
 
           {{textarea
             class="form-control"
-            maxLength=15
+            rows=16
+            maxlength=this.searchStringMaxLength
             input=(action 'inputIsActive')
             enter=(action 'dnaSequenceInput')
             insert-newline=(action 'dnaSequenceInput')
@@ -36,6 +43,9 @@
 AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
 
           <div style="margin: 1em; overflow-y: auto;">
+            {{#if this.searching}}
+              Searching ...
+            {{/if}}
             {{#elem/button-base
                click=(action "search")
                classNames=refreshClassNames
@@ -47,6 +57,15 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
             {{/elem/button-base}}
           </div>
 
+          {{elem/panel-message
+            successMessage=successMessage
+            warningMessage=warningMessage
+            errorMessage=errorMessage}}
+
+          {{#if nameWarning}}
+          {{elem/panel-message
+            warningMessage=nameWarning}}
+          {{/if}}
 
           <ul class="config-list">
 
@@ -83,6 +102,54 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
               </div>
             </li>
 
+            {{!-- --------------------------------------------------------- --}}
+
+            <li class="list-group-item">
+              <div>
+                <label style="float:right">Length of Hit</label>
+                <span class="sub-label"><span>{{ minLengthOfHit }}</span></span>
+              </div>
+              <div>
+                <input type="range" 
+                 min="0" max="{{this.searchStringMaxLength}}"
+                 value={{this.minLengthOfHit}}
+                 oninput={{action (mut this.minLengthOfHit) value="target.value"}}
+                />
+              </div>
+            </li>
+
+            <li class="list-group-item">
+              <div>
+                <label style="float:right">% Identity</label>
+                <span class="sub-label"><span>{{ minPercentIdentity }}</span></span>
+              </div>
+              <div>
+                <input type="range" 
+                 min="0" max="100"
+                 value={{this.minPercentIdentity}}
+                 oninput={{action (mut this.minPercentIdentity) value="target.value"}}
+                />
+              </div>
+            </li>
+
+            <li class="list-group-item">
+              <div>
+                <label style="float:right">% Coverage</label>
+                <span class="sub-label"><span>{{ minPercentCoverage }}</span></span>
+              </div>
+              <div>
+                <input type="range" 
+                 min="0" max="100"
+                 value={{this.minPercentCoverage}}
+                 oninput={{action (mut this.minPercentCoverage) value="target.value"}}
+                />
+              </div>
+            </li>
+
+            {{!-- --------------------------------------------------------- --}}
+
+
+            {{#if urlOptions.searchAddDataset}}
             <li class="list-group-item">
               {{input type="checkbox" name="addDataset" checked=addDataset }}
               <label>Add as Dataset</label>
@@ -94,9 +161,13 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
                   <label>Replace Dataset</label>
                 </span>
 
+                <span class="filter-group-col">
+                  {{input type="checkbox" name="viewDatasetFlag" checked=viewDatasetFlag }}
+                  <label>View</label>
+                </span>
+
                 <div id="new_dataset_options">
                 {{input 
-                  id="dataset_new" 
                   type="text" 
                   value=newDatasetName 
                   class="form-control" 
@@ -107,6 +178,8 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
 
               {{/if}}
             </li>
+            {{/if}} {{!!-- urlOptions.searchAddDataset --}}
+
 
           </ul>
 
@@ -114,24 +187,20 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
 
         </tab.pane>
 
-        <tab.pane @id="sequence-search-output" @title="Output : Blast Matches">
+        {{#each this.searches as |search|}}
+        <tab.pane @id={{search.tabId}} @title="Output : Blast Matches" style="overflow: auto;">
 
-          {{panel/upload/blast-results data=data 
-              active=(bs-eq tab.activeId "sequence-search-output") }}
+          {{panel/upload/blast-results search=search
+              datasets=datasets
+              refreshDatasets=refreshDatasets
+              viewDataset=viewDataset
+              active=(bs-eq tab.activeId search.tabId ) }}
 
         </tab.pane>
+        {{/each}}
 
       </div>
     </BsTab>
-
-    {{elem/panel-message
-      successMessage=successMessage
-      warningMessage=warningMessage
-      errorMessage=errorMessage}}
-    {{#if nameWarning}}
-    {{elem/panel-message
-      warningMessage=nameWarning}}
-    {{/if}}
 
     {{#if isProcessing}}
       {{#elem/panel-form

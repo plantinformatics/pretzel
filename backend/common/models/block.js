@@ -18,7 +18,13 @@ const { getAliases } = require('../utilities/localise-aliases');
 
 var ObjectId = require('mongodb').ObjectID
 
-var cache = require('memory-cache');
+
+/** results-cache has the same API as 'memory-cache', so that can be
+ * used instead to avoid the need to setup a cache directory, and
+ * manage cache accumulation.
+ */
+const cacheLibraryName = '../utilities/results-cache'; // 'memory-cache';
+var cache = require(cacheLibraryName);
 
 var SSE = require('express-sse');
 
@@ -608,9 +614,10 @@ function blockAddFeatures(db, datasetId, blockId, features, cb) {
   /** Logically part of reqStream(), but split out so that it can be called
    * directly or via a promise. */
   function pipeStream(sse, intervals, useCache, cacheId, filterFunction, res, cursor) {
+    console.log('pipeStream', sse, intervals, useCache, cacheId);
       if (useCache)
         cursor.
-        pipe(new pathsStream.CacheWritable(cacheId));
+        pipe(new pathsStream.CacheWritable(/*cache,*/ cacheId));
 
       let pipeLine = [cursor];
 

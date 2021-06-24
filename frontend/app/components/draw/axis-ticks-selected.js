@@ -8,6 +8,7 @@ import { task, timeout, didCancel } from 'ember-concurrency';
 
 import AxisEvents from '../../utils/draw/axis-events';
 import { transitionEndPromise } from '../../utils/draw/d3-svg';
+import { arraysConcat } from '../../utils/common/arrays';
 
 /* global d3 */
 
@@ -15,6 +16,25 @@ const trace = 0;
 const dLog = console.debug;
 
 const CompName = 'components/axis-ticks-selected';
+
+/*----------------------------------------------------------------------------*/
+/** @return true if feature's block is not viewed and its dataset
+ * has tag transient.
+ */
+function featureIsTransient(f) {
+  let isTransient = ! f.get('blockId.isViewed');
+  if (isTransient) {
+    let d = f.get('blockId.datasetId');
+    d = d.get('content') || d;
+    isTransient = d.hasTag('transient');
+  }
+  return isTransient;
+}
+
+
+/*----------------------------------------------------------------------------*/
+
+
 
 /** Display horizontal ticks on the axis to highlight the position of features
  * found using Feature Search.
@@ -177,8 +197,12 @@ export default Component.extend(AxisEvents, {
     if (trace)
       dLog('renderTicksThrottle', axisID);
 
-    /* see comments in axis-1d.js : renderTicksThrottle() re. throttle versus debounce */    
-    throttle(this, this.renderTicks, axisID, 500);
+    /* see comments in axis-1d.js : renderTicksDebounce() re. throttle versus debounce */
+    /* pass immediate=false - gives time for clickedFeaturesByAxis to
+     * be changed by transient.showFeatures().  Could address this with
+     * a dependency on selected.clickedFeaturesByAxis
+     */
+    throttle(this, this.renderTicks, axisID, 500, false);
   },
 
   /** Lookup the given block in featuresInBlocks, and return its features which
@@ -201,11 +225,43 @@ export default Component.extend(AxisEvents, {
     if (clickedFeatures && clickedFeatures.length) {
       features = features.concat(clickedFeatures);
     }
+    let transientFeatures = this.transientFeaturesLookup(block, 'clickedFeatures');
+    features = arraysConcat(features, transientFeatures);
+
     if (trace)
       dLog('featuresOfBlockLookup', featuresInBlocks, block, blockId, features);
     return features;
   },
-  
+  /** If block is a reference block, lookup features of the axis.
+   * The results of sequence-search : blast-results are currently
+   * added to selected.features (i.e. clickedFeatures) and
+   * selected.labelledFeatures and their block is not viewed, so
+   * associate them with the reference block / axis.
+   * @return undefined if transientFeatures.length is 0,
+   * so the caller can do :
+   *  if (transientFeatures) {
+   *      features = features.concat(transientFeatures);
+   *  }
+   */
+  transientFeaturesLookup(block, listName) {
+    let transientFeatures;
+    /** not yet clear whether blast-results transient blocks should be
+     * viewed - that would introduce complications requiring API
+     * requests to be blocked when .datasetId.hasTag('transient')
+     * For the MVP, return the features of un-viewed blocks, when block is reference.
+     */
+    if (! block.get('isData')) {
+      let featuresByAxis = this.get('selected.' + listName + 'ByAxis'),
+          axisFeatures = featuresByAxis && featuresByAxis.get(block);
+      transientFeatures = axisFeatures && axisFeatures
+        .filter(featureIsTransient);
+      if (transientFeatures && ! transientFeatures.length) {
+        transientFeatures = undefined;
+      }
+    }
+    return transientFeatures;
+  },
+
   /** Lookup selected.labelledFeatures for the given block.
    * @param listName name of set / selection / group of features :
    *   'clickedFeatures', 'labelledFeatures', or 'shiftClickedFeatures'
@@ -215,6 +271,9 @@ export default Component.extend(AxisEvents, {
     let
     map = this.get('selected.' + listName + 'ByBlock'),
     features = map && map.get(block);
+    let transientFeatures = this.transientFeaturesLookup(block, listName);
+    features = arraysConcat(features, transientFeatures);
+
     if (trace)
       dLog('selectedFeaturesOfBlockLookup', listName, this.featuresInBlocks, block, block.id, features);
     return features;

@@ -38,7 +38,7 @@ import {
   dragTransition
 } from '../../utils/stacks-drag';
 import { selectAxis } from '../../utils/draw/stacksAxes';
-import { selectGroup } from '../../utils/draw/d3-svg';
+import { selectGroup, nowOrAfterTransition } from '../../utils/draw/d3-svg';
 import { breakPoint } from '../../utils/breakPoint';
 import { configureHover } from '../../utils/hover';
 import { getAttrOrCP } from '../../utils/ember-devel';
@@ -249,15 +249,29 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
 
       pS.exit()
         .remove();
-      let pSM = pSE.merge(pS);
+      /** Instead of using .merge(), show .enter() elements (at their
+       * final posiiton) after the pS elements have transitioned to
+       * their final position.
+       let pSM = pSE.merge(pS);
+      */
 
       /* update attr d in a transition if one was given.  */
       let p1 = // (t === undefined) ? pSM :
-          this.selectionToTransition(pSM)
-      p1.attr("d", pathFn)
+          this.selectionToTransition(pS);
+
+      /** similar comment re. transitionTime as in showLabels() */
+      nowOrAfterTransition(
+        p1, () => pSE.call(pathAndColour),
+        this.axis1d.transitionTime);
+
+      p1.call(pathAndColour);
+      function pathAndColour(selection) {
+        selection
+        .attr("d", pathFn)
         .attr('stroke', featurePathStroke)
         .attr('fill', featurePathStroke)
       ;
+      }
 
     }
   }
@@ -274,8 +288,13 @@ FeatureTicks.prototype.showTickLocations = function (featuresOfBlockLookup, setu
      * The function getAttrOrCP() will use .get if defined, otherwise .name (via ['name']).
      * This comment applies to use of 'feature.'{name,range,value} in
      * inRange() (above), and keyFn(), pathFn(), hoverTextFn() below.
+     *
+     * The features created from blast search results will all have the same name,
+     * so for better d3 join, append location to the key.
      */
-    let featureName = getAttrOrCP(feature, 'name');
+    let
+    value = getAttrOrCP(feature, 'value'),
+    featureName = getAttrOrCP(feature, 'name') + '-' + value[0];
     // dLog('keyFn', feature, featureName); 
     return featureName;
   };
@@ -472,7 +491,9 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
 
   function keyFn (feature) {
     // here `this` is the parent of the <path>-s, e.g. g.axis
-    let featureName = getAttrOrCP(feature, 'name');
+    let
+    value = getAttrOrCP(feature, 'value'),
+    featureName = getAttrOrCP(feature, 'name') + '-' + value[0];
     // dLog('keyFn', feature, featureName); 
     return featureName;
   };
@@ -513,18 +534,25 @@ FeatureTicks.prototype.showLabels = function (featuresOfBlockLookup, setupHover,
        * For showTickLocations / <path>, the d updates, so pSM is used
        */
       pSE
-        .text(textFn)
       // positioned just left of the base of the triangles.  inherits text-anchor from axis;
         .attr('x', '-30px');
 
       let attrY_featureY = this.attrY_featureY.bind(this);
-      pSE.call(attrY_featureY);
 
-      let transition = this.selectionToTransition(pSM);
-      if (transition === pSM) {
-        pSM.call(attrY_featureY);
+      let transition = this.selectionToTransition(pS);
+      /** pass in the delay time, because transition has no duration if empty(). */
+      nowOrAfterTransition(
+        transition, () => {
+          return pSE.call(attrY_featureY)
+        .text(textFn);
+        },
+        this.axis1d.transitionTime);
+
+      if (transition === pS) {
+        pS.call(attrY_featureY);
       } else {
-        transitionFn(transition, attrY_featureY);
+        transition.call(attrY_featureY);
+        // transitionFn(transition, attrY_featureY);
       }
     }
   }
@@ -707,6 +735,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
   }),
   /** viewed blocks on this axis.
    * For just the data blocks (depends on .hasFeatures), @see dataBlocks()
+   * @desc
+   * Related : block : viewedChildBlocks().
    */
   viewedBlocks : computed('axis', 'blockService.axesViewedBlocks2.[]', function () {
     let

@@ -720,6 +720,11 @@ export default Model.extend({
     childBlocks = blocksByReference && blocksByReference.get(this);
     return childBlocks || [];
   }),
+  /** @return child blocks of this block which are viewed.
+   * [] if none.  If this block is not a reference then it has no child blocks.
+   * @desc
+   * Related : axis-1d:viewedBlocks(), which can be used to verify - should be equivalent.
+   */
   viewedChildBlocks : computed('childBlocks.@each.isViewed', function () {
     let childBlocks = this.get('childBlocks'),
     viewedChildBlocks = childBlocks.filterBy('isViewed');

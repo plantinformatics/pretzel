@@ -79,6 +79,7 @@ export default Controller.extend(Evented, {
 
     /** Change the state of the named block to viewed.
      * If this block has a parent block, also add the parent.
+     * This is replaced by loadBlock().
      * @param mapName
      * (named map for consistency, but mapsToView really means block, and "name" is db ID)
      * Also @see components/record/entry-block.js : action get
@@ -238,6 +239,7 @@ export default Controller.extend(Evented, {
         this.get('block').getBlocksLimits();
       });
       }
+      return datasetsTask;
     }
   },
 
@@ -347,6 +349,45 @@ export default Controller.extend(Evented, {
       // block.set('isViewed', true);
     }
   },
+
+  /*--------------------------------------------------------------------------*/
+
+  /* copied from file-drop-zone.js, can factor if this is retained.  */
+  /** View/Unview the blocks of the given dataset.
+   * View is used to view a dataset added by sequence-sequence.
+   * Unview is used when the datasets has been replaced by successful upload.
+   * @param datasetName id
+   * @param view  true for view, false for unview
+   * @param blockNames  undefined or an array of names of blocks to affect.
+   */
+  viewDataset(datasetName, view, blockNames) {
+    let
+    store = this.get('apiServers').get('primaryServer').get('store'),
+    dataset = store.peekRecord('dataset', datasetName);
+    if (dataset) {
+      let
+      blocksToChange = dataset.get('blocks').toArray()
+        .filter((b) => (b.get('isViewed') !== view) &&
+           (! blockNames || blockNames.indexOf(b.get('name')) !== -1) ),
+      blockService = this.get('block'),
+      blockIds = blocksToChange.map((b) => b.id);
+      dLog('viewDataset', datasetName, view, blockIds);
+      if (! view) {
+        // unview the data blocks before the axis / reference block.
+        blocksToChange.forEach((b) => b.unViewChildBlocks());
+        blockService.setViewed(blockIds, view);
+      } else {
+        let loadBlock = this.actions.loadBlock.bind(this);
+        blocksToChange.forEach((b) => loadBlock(b));
+      }
+    } else {
+      dLog('viewDataset', datasetName, 'not found', view);
+    }
+  },
+
+
+  /*--------------------------------------------------------------------------*/
+
 
   /** Provide a class for the div which wraps the right panel.
    *
