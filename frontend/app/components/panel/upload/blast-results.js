@@ -2,6 +2,7 @@ import Component from '@ember/component';
 import { observer, computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
+import { later as run_later } from '@ember/runloop';
 
 import uploadBase from '../../../utils/panel/upload-base';
 import uploadTable from '../../../utils/panel/upload-table';
@@ -53,6 +54,9 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  setTableModal(isModal) {
+    run_later(() => this.set('tableModal', isModal));
+  },
   tableModalTargetId : computed('tableModal', function () {
     return this.get('tableModal') ? 'blast-results-table-modal' : 'blast-results-table-panel';
   }),

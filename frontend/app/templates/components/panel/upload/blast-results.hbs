@@ -22,7 +22,7 @@
     {{#if this.tableModal}}
       {{#ember-modal-dialog  title="Blast Results" header-icon='list'}}
         <button
-         onclick={{action (mut this.tableModal)  false}}
+         onclick={{action this.setTableModal false}}
          style="float: right; position: relative; top: -12px;" class="close"
          type="button">x
         </button>
@@ -34,7 +34,7 @@
         {{#elem/button-base
         classSize='xs'
         classColour='default'
-        click=(action (mut this.tableModal)  true )
+        click=(action this.setTableModal  true )
         icon='new-window'}}
 
           {{#ember-tooltip side="left" delay=500}}
