@@ -48,7 +48,7 @@ blastnUrl=http://$hostIp:4000/commands/blastn
 # and https://flask.palletsprojects.com/en/1.1.x/api/#flask.Request.files
 # , \"'"$dbName"'\"
 cd "$queryDir"
-result_url=$(curl -s -F "$queryFile"=@"$queryFile" -F request_json='{"args": ["'@"$queryFile"'"]}' $blastnUrl | tee -a $logFile | jq ".error // .result_url")
+result_url=$(curl -s -F "$queryFile"=@"$queryFile" -F request_json='{"args": ["'@"$queryFile"'", "'"$dbName"'"]}' $blastnUrl | tee -a $logFile | jq ".error // .result_url")
 case $result_url in
   *' already exists'*)
     # 2nd line is "null"
@@ -68,7 +68,9 @@ esac
 resultDir=$logBlastDir/results
 [ -d "$resultDir" ] || mkdir "$resultDir" || exit
 resultFile="$resultDir/$fileName"
-for i in 1 2
+# timeout after 40sec (8  * 5sec)
+# blast can take minutes - may increase this (have used 40; it delays failure which can slow devel)
+for i in $(yes ' ' | head -8 | cat -n)
 do
   # Without  --raw-output, the .report string is wrapped with "" and has \t
   # First result may be : {"key":"60a3ec3c","status":"running"}. length of "running\n" is 8
@@ -76,6 +78,8 @@ do
   then
     sleep 5
   else
+    # Trace time steps while waiting.
+    expr 5 \* $i 1>&2
     sed '/^running$/d' "$resultFile"
     exit $?
   fi
