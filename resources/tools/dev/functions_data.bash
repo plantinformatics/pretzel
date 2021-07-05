@@ -66,10 +66,11 @@ function loadChr()
   parentName="$4"
   echo chr=$chr, vcfGz="$vcfGz", datasetName="$datasetName",  parentName="$parentName"
 
-  checkSpace "$vcfGz"
+  # checkSpace "$vcfGz"
 
   mkdir ${chr}
-  gzip -d < "$vcfGz" | grep "^chr${chr}" | awk -F'\t' ' { printf("%s\t%s\t%s:%s\t%s\t%s\t\n", $1, $2, $1,$2, $4, $5); } '  |   split -l 100000 - ${chr}/
+  # gzip -d ... |
+  < "$vcfGz"  grep "^chr${chr}" | awk -F'\t' ' { printf("%s\t%s\t%s:%s\t%s\t%s\t\n", $1, $2, $1,$2, $4, $5); } '  |   split -l 100000 - ${chr}/
 
   # cd ${chr}
 
