@@ -166,7 +166,7 @@ export default Component.extend({
         let feature = {
           name: row[c_name],
           // blast output chromosome has prefix 'chr' e.g. 'chr2A'; Pretzel uses simply '2A'.
-          block: row[c_chr].replace(/^chr/, ''),
+          block: row[c_chr].replace(/^chr/i, ''),
           // Make sure val is a number, not a string.
           val: Number(row[c_pos])
         };
