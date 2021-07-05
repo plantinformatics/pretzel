@@ -91,8 +91,9 @@ export default Service.extend({
 
   pushBlockArgs(datasetId, name, namespace) {
     let
+    /** may need to pass search ID also; depends on whether distinct blocks should be used for each search result. */
     /** prefix _id with datasetId to make it unique enough.  May use UUID. */
-    data = {_id : /*datasetId + '-' +*/ name, scope : name, name, namespace, datasetId},
+    data = {_id : datasetId + '-' + name, scope : name, name, namespace, datasetId},
     store = this.get('store'),
     record = this.pushData(store, 'block', data);
     return record;

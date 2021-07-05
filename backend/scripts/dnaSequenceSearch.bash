@@ -134,7 +134,7 @@ if [ -d ../../pretzel.A1 ]
 then
   # sleep 10
   # FJ039903.1, DQ146423.1
-  dev_blastResult |	\
+  dev_blastResult "$datasetId" |	\
       ( [ "$addDataset" = true ] && convertSearchResults2Json || cat) |	\
       ( [ -n "$resultRows" ] && head -n $resultRows || cat)
   status=$?

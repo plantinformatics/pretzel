@@ -414,7 +414,9 @@ export default Component.extend({
       }
       let
       transient = this.get('transient'),
-      datasetName = this.get('newDatasetName') || 'blastResults',
+      parentName = this.get('search.parent'),
+      /** append parentName to make transient datasets distinct by parent */
+      datasetName = this.get('newDatasetName') || ('blastResults_' + parentName),
       namespace = this.get('namespace'),
       dataset = transient.pushDatasetArgs(
         datasetName,
@@ -426,6 +428,8 @@ export default Component.extend({
         this.get('blockNames'),
         namespace
       );
+      /** change features[].blockId to match blocks[], which has dataset.id prefixed to make them distinct.  */
+      let featuresU = features.map((f) => { let {blockId, ...rest} = f; rest.blockId = dataset.id + '-' + blockId; return rest; });
       /** When changing between 2 blast-results tabs, this function will be
        * called for both.
        *
@@ -445,7 +449,7 @@ export default Component.extend({
         active,
         /* when switching tabs got : this.isDestroyed===true, this.viewRow and this.get('viewRow') undefined
          * but this.search.viewRow OK */
-        () => transient.showFeatures(dataset, blocks, features, active, this.get('viewRow') || this.search.viewRow));
+        () => transient.showFeatures(dataset, blocks, featuresU, active, this.get('viewRow') || this.search.viewRow));
     }
   },
 
