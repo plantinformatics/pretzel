@@ -47,6 +47,20 @@ const c_name = 0, c_chr = 1, c_pos = 8, c_end = 9;
  */
 const t_view = 0;
 
+/*----------------------------------------------------------------------------*/
+
+/** Blast databases usually have chr or Chr prefixed to the sub-genome name,
+ * e.g. chr7A
+ * In the Pretzel database the 'chr' is omitted.
+ * This function strips the leading chr / Chr off, so that the chr
+ * name can be matched with the block name / scope.
+ */
+function chrName2Pretzel(chrName) {
+  return chrName.replace(/^chr/i, '');
+}
+
+/*----------------------------------------------------------------------------*/
+
 /** Display a table of results from sequence-search API request
  * /Feature/dnaSequenceSearch
  * @param search  search inputs and status
@@ -166,7 +180,7 @@ export default Component.extend({
         let feature = {
           name: row[c_name],
           // blast output chromosome has prefix 'chr' e.g. 'chr2A'; Pretzel uses simply '2A'.
-          block: row[c_chr].replace(/^chr/i, ''),
+          block: chrName2Pretzel(row[c_chr]),
           // Make sure val is a number, not a string.
           val: Number(row[c_pos])
         };
@@ -198,7 +212,7 @@ export default Component.extend({
     /** based on dataFeatures - see comments there. */
     let names =
     data
-      .map((row) =>  row[c_chr].replace(/^chr/, ''));
+      .map((row) => chrName2Pretzel(row[c_chr]));
     dLog('blockNames', names.length, names[0]);
     return names;
   }),
