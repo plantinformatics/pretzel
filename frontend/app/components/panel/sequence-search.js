@@ -149,7 +149,14 @@ export default Component.extend({
       later(() => {
         let text = event && (event.target.value || event.originalEvent.target.value);
         console.log('paste', event, text.length);
+        /** Join the subsequent lines. */
+        let lines = text.split('\n');
+        if (lines[0].startsWith('>') && (lines.length > 1)) {
+          let marker = lines.shift();
+          text = marker + '\n' + lines.join('');
+        }
         this.set('text', text);
+        this.text2Area();
         // this.dnaSequenceInput(/*text*/);
       }, 500);
     },
@@ -162,8 +169,7 @@ export default Component.extend({
 
     clear() {
       this.set('text', '');
-      let text$ = $('textarea', this.element);
-      text$.val('');
+      this.text2Area();
     },
 
     search() {
@@ -173,6 +179,15 @@ export default Component.extend({
       }
     }
 
+  },
+
+  text$ : computed(function () {
+    return $('textarea', this.element);
+  }),
+
+  /** Copy .text to the textarea. */
+  text2Area() {
+    this.get('text$').val(this.get('text'));
   },
 
   /*--------------------------------------------------------------------------*/
