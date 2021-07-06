@@ -12,7 +12,18 @@
 
 snps2Dataset=~/tmp/snps2Dataset.value_0.pl
 
+function z_cat() {
+  case $1 in
+	  *.gz) gzip -d < $1
+	        ;;
+	  *) cat $1
+	     ;;
+  esac
+}
+
 # check to warn if size of $vcfGz is <  $bytesAvailable / 10
+# ATM this simply reports on stdout : bytesAvailable gzSize
+# and does not calculate / 10 for .gz input, and does not warn on stderr.
 function checkSpace() {
   vcfGz=$1
   bytesAvailable=$(df -k . | tail -n +2  | awk ' { print $4;}')
@@ -66,11 +77,10 @@ function loadChr()
   parentName="$4"
   echo chr=$chr, vcfGz="$vcfGz", datasetName="$datasetName",  parentName="$parentName"
 
-  # checkSpace "$vcfGz"
+  checkSpace "$vcfGz"
 
   mkdir ${chr}
-  # gzip -d ... |
-  < "$vcfGz"  grep "^chr${chr}" | awk -F'\t' ' { printf("%s\t%s\t%s:%s\t%s\t%s\t\n", $1, $2, $1,$2, $4, $5); } '  |   split -l 100000 - ${chr}/
+  z_cat "$vcfGz" |  grep "^chr${chr}" | awk -F'\t' ' { printf("%s\t%s\t%s:%s\t%s\t%s\t\n", $1, $2, $1,$2, $4, $5); } '  |   split -l 100000 - ${chr}/
 
   # cd ${chr}
 
