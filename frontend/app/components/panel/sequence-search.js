@@ -160,6 +160,12 @@ export default Component.extend({
       // throttle(this.get('dnaSequenceInputBound'), 2000);
     },
 
+    clear() {
+      this.set('text', '');
+      let text$ = $('textarea', this.element);
+      text$.val('');
+    },
+
     search() {
       if (this.checkInputs()) {
       let text = this.get('text');

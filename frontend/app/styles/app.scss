@@ -1448,6 +1448,11 @@ ul.config-list {
   margin-right: 0px;
 }
 
+/** spacing between floated buttons */
+.div-float-button > button.pull-right {
+  margin-left : 1em;
+}
+
 /*------------------------------------*/
 /* in featureSearch results, wrap block names  */
 div#left-panel-feature-search > div > div > div > ul > li > div
