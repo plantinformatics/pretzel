@@ -130,6 +130,7 @@ export default Component.extend(Evented, AxisEvents, {
   pathsResultLength : computed(
     'blockAdj.pathsResultLengthThrottled', 'pathsAliasesResultLength',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
+    'controlsView.{pathGradientEnable,pathGradient}',
     function () {
       /** this CP may be evaluated before the first didRender(), which does
        * drawGroup{Container,}(); waiting for next render so that drawCurrent()
@@ -177,6 +178,37 @@ export default Component.extend(Evented, AxisEvents, {
     // length returned by paths{,Aliases}ResultLength is currently just used in logging, not functional.
     return length;
   },
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Scale positions of features within their respective axis
+   * to the interval [0,1],
+   * to 3 decimal places (more or less decimal places would determine the level of "binning" happening implicitly)
+   * @param yRange  limits of block containing feature (absolute, not zoomed).
+   *
+   * @desc  Context :
+   * From : #250 : Slider to control co-linearity of paths to display 
+   * When aligning chromosomes it is common for paths to cross-over, sometimes from one end of the chromosome to the other. For example:
+   *   image : https://user-images.githubusercontent.com/20571319/124571237-f445cb80-de8a-11eb-9562-4de45654ce4d.png
+   * A small number of paths here stand out as outliers - their position in the left-side axis is very different, relatively, to that in the right-side axis.
+   * These could be filtered out with a slider between 0 and 1 which defines the maximum variance allowed in the alignment.
+   * A brief sketch of how this will work:
+   * -  The slider is set to value S
+   * -  Only feature pairs x, y are displayed when scaled_pos(x) - S <= scaled_pos(y) <= scaled_pos(x) + S
+   * -  S = 1 displays all paths, S = 0 would show only those paths in the exact same relative position
+   * -  Setting S = 0.1 or so would remove the cross-over paths in the example above.
+   *
+   * A small extension would be to also control whether S defines a maximum (as in the above) or a minimum. The latter case would allow the immediate display of non-co-linear paths only - ie: for example, if the features are genes, only those genes that have moved a relatively large amount.
+   */
+  scaled_pos(featureLimits, y) {
+    let
+    range = featureLimits[1] - featureLimits[0],
+    yScaled = (y - featureLimits[0]) / range;
+    return yScaled;
+  },
+
+  /*--------------------------------------------------------------------------*/
+
   /**
    * @return promise of completion of rendering and transitions
    */
@@ -200,6 +232,28 @@ export default Component.extend(Evented, AxisEvents, {
       if (Object.values(blockDomains).indexOf(undefined) !== -1) {
         return Promise.resolve();
       }
+      if (pathsResult.length && this.get('controlsView.pathGradientEnable')) {
+        let pathGradient = this.get('controlsView.pathGradient');
+        dLog('pathGradient', pathGradient);
+        pathsResult = pathsResult.filter((p) => {
+          let
+          /** each alignment[].repeats may have multiple features;  only the first is considered here. */
+          limits = p.alignment.map((a) => a.repeats.features[0].get('blockId.featureLimits')),
+          /** if any of the limits are undefined (not yet known), don't filter. */
+          ok = limits.any((l) => !l);
+          if (! ok) {
+            let
+            /** feature .value may be an interval;  only value[0] is used here. */
+            y = p.alignment.map((a) => a.repeats.features[0].get('value')),
+            /** values identified in the spec as [scaled_pos(x), scaled_pos(y)]  */
+            sp = y.map((yi, i) => this.scaled_pos(limits[i], yi)),
+            S = pathGradient;
+            ok = (sp[0] - S) <= sp[1] && (sp[1] <= sp[0] + S);
+          }
+          return ok;
+        });
+      }
+
       if (pathsResult.length < nPaths) {
         /* to satisfy the required nPaths, trigger a new request. */
         this.incrementProperty('blockAdj.pathsRequestCount');
