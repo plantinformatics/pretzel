@@ -179,6 +179,19 @@
       />
       <label>List Selected Features</label>
     </li>
+    <li class="list-group-item">
+      <span class="filter-group-col">
+        {{input type="checkbox" name="pathGradientEnable" checked=pathGradientEnable }}
+      </span>
+      <label>Path Gradient Threshold : {{pathGradient}}</label>
+      <input type="range" 
+       id="range-pathGradient" 
+       name="pathGradient" 
+       min="0" max="100"
+       value={{pathGradientInt}}
+       oninput={{action (mut pathGradientInt) value="target.value"}}
+      />
+    </li>
 
     <li class="list-group-item">
       <label>Path Opacity</label>

@@ -46,6 +46,19 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  pathGradientInt : 50,
+  pathGradientEnable : true, // false
+  pathGradient : computed('pathGradientEnable', 'pathGradientInt', function () {
+    let enabled = this.get('pathGradientEnable'),
+     pathGradient = +this.get('pathGradientInt'),
+        gradient = enabled && (pathGradient / 100);
+    // dLog('pathControlGradient', pathGradient, gradient);
+    return gradient;
+   }),
+
+
+  /*--------------------------------------------------------------------------*/
+
   /** may be set via URL param - @see readParsedOptions(). */
   pathsViaStream : true,
 
