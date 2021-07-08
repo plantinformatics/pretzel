@@ -46,12 +46,14 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  pathGradientInt : 50,
-  pathGradientEnable : true, // false
-  pathGradient : computed('pathGradientEnable', 'pathGradientInt', function () {
-    let enabled = this.get('pathGradientEnable'),
+  /** The input slider has an integer value, so pathGradientInt / 100 is the real value. */
+  pathGradientInt : 100,
+  /** true means use pathGradient threshold as an upper limit. */
+  pathGradientUpper : true,
+  pathGradient : computed('pathGradientInt', function () {
+    let
      pathGradient = +this.get('pathGradientInt'),
-        gradient = enabled && (pathGradient / 100);
+        gradient = (pathGradient / 100);
     // dLog('pathControlGradient', pathGradient, gradient);
     return gradient;
    }),

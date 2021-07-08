@@ -181,9 +181,11 @@
     </li>
     <li class="list-group-item">
       <span class="filter-group-col">
-        {{input type="checkbox" name="pathGradientEnable" checked=pathGradientEnable }}
+        {{!-- tooltip : Use pathGradient threshold as an upper limit --}}
+        {{input type="checkbox" name="pathGradientUpper" checked=pathGradientUpper }}
       </span>
       <label>Path Colinearity Threshold : {{pathGradient}}</label>
+      <div>(Applies to direct alignments)</div>
       <input type="range" 
        id="range-pathGradient" 
        name="pathGradient" 
