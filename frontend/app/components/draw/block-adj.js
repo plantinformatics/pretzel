@@ -232,29 +232,41 @@ export default Component.extend(Evented, AxisEvents, {
       if (Object.values(blockDomains).indexOf(undefined) !== -1) {
         return Promise.resolve();
       }
+    /** this is the number of paths in scope, which is relevant to the
+     * check for incrementing pathsRequestCount. */
+    let pathsResult_length = pathsResult.length;
       if (pathsResult.length && this.get('controlsView.pathGradientEnable')) {
         let pathGradient = this.get('controlsView.pathGradient');
-        dLog('pathGradient', pathGradient);
-        pathsResult = pathsResult.filter((p) => {
+        dLog('pathGradient', pathGradient, pathsResult.length);
+        pathsResult = pathsResult.filter((p) => /*this.*/pathIsColinear(p, pathGradient, this.scaled_pos));
+        function pathIsColinear(p, pathGradient, scaled_pos) {
           let
-          /** each alignment[].repeats may have multiple features;  only the first is considered here. */
-          limits = p.alignment.map((a) => a.repeats.features[0].get('blockId.featureLimits')),
+          /** result format is different for direct and aliases requests;
+           * for either case, collate as an array the endpoint features of the path.
+           * Can use : [0,1].map((i) => prType.blocksFeatures(e, i)[0])
+           * Each alignment[].repeats may have multiple features;  only the first is considered here.
+           */
+          features = p.alignment ? p.alignment.map((a) => a.repeats.features[0]) :
+            [p.featureAObj, p.featureBObj],
+          limits = features.map((f) => f.get('blockId.featureLimits')),
           /** if any of the limits are undefined (not yet known), don't filter. */
           ok = limits.any((l) => !l);
           if (! ok) {
             let
             /** feature .value may be an interval;  only value[0] is used here. */
-            y = p.alignment.map((a) => a.repeats.features[0].get('value')),
+            y = features.map((f) => f.get('value.0')),
             /** values identified in the spec as [scaled_pos(x), scaled_pos(y)]  */
-            sp = y.map((yi, i) => this.scaled_pos(limits[i], yi)),
+            sp = y.map((yi, i) => /*this.*/scaled_pos(limits[i], yi)),
             S = pathGradient;
             ok = (sp[0] - S) <= sp[1] && (sp[1] <= sp[0] + S);
           }
           return ok;
-        });
+        };
+        dLog('drawCurrentTask after pathGradient pathsResult.length', pathsResult.length);
       }
+      const s_p = this.scaled_pos;
 
-      if (pathsResult.length < nPaths) {
+      if (pathsResult_length < nPaths) {
         /* to satisfy the required nPaths, trigger a new request. */
         this.incrementProperty('blockAdj.pathsRequestCount');
       } else if (pathsResult.length > nPaths) {
@@ -280,6 +292,10 @@ export default Component.extend(Evented, AxisEvents, {
         } else {
           let shown = this.get('shown' + prType.typeName);
           scope[1] = currentScope;
+          if (shown.length && this.get('controlsView.pathGradientEnable')) {
+            let pathGradient = this.get('controlsView.pathGradient');
+            shown = shown.filter((p) => /*this.*/pathIsColinear(p, pathGradient, this.scaled_pos));
+          }
           pathsResult = pathsFilterSmooth(prType, pathsResult, scope, shown);
           scope.removeAt(0);
         }
@@ -296,6 +312,7 @@ export default Component.extend(Evented, AxisEvents, {
   pathsAliasesResultLength : computed(
     'blockAdj.pathsAliasesResultLengthThrottled', 'paths.alias.[]',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
+    'controlsView.{pathGradientEnable,pathGradient}',
     function () {
       /** the comments in pathsResultLength re. next and isComplete apply here also. */
       next(() => {
@@ -794,7 +811,7 @@ export default Component.extend(Evented, AxisEvents, {
     /* Try selectionToTransition() instead.
     let throttleTime = this.get('controlsView.throttleTime'),
         pathTransitionTimeVar = throttleTime ? throttleTime * 1 : pathTransitionTime;
-	*/
+    */
     let
     /* now that paths are within <g.block-adj>, path position can be altered
      * during dragging by updating a skew transform of <g.block-adj>, instead of
