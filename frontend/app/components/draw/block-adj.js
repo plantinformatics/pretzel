@@ -130,7 +130,7 @@ export default Component.extend(Evented, AxisEvents, {
   pathsResultLength : computed(
     'blockAdj.pathsResultLengthThrottled', 'pathsAliasesResultLength',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
-    'controlsView.{pathGradientEnable,pathGradient}',
+    'controlsView.{pathGradientUpper,pathGradient}',
     function () {
       /** this CP may be evaluated before the first didRender(), which does
        * drawGroup{Container,}(); waiting for next render so that drawCurrent()
@@ -235,11 +235,19 @@ export default Component.extend(Evented, AxisEvents, {
     /** this is the number of paths in scope, which is relevant to the
      * check for incrementing pathsRequestCount. */
     let pathsResult_length = pathsResult.length;
-      if (pathsResult.length && this.get('controlsView.pathGradientEnable')) {
-        let pathGradient = this.get('controlsView.pathGradient');
-        dLog('pathGradient', pathGradient, pathsResult.length);
-        pathsResult = pathsResult.filter((p) => /*this.*/pathIsColinear(p, pathGradient, this.scaled_pos));
-        function pathIsColinear(p, pathGradient, scaled_pos) {
+      if (pathsResult.length) {
+        let pathGradient = this.get('controlsView.pathGradient'),
+            pathGradientUpper = this.get('controlsView.pathGradientUpper');
+        dLog('pathGradient', pathGradient, pathGradientUpper, pathsResult.length);
+        pathsResult = pathsResult.filter(
+          (p) => /*this.*/pathIsColinear(
+            p, pathGradient, pathGradientUpper, this.scaled_pos));
+        /**
+         * @param p path-data - API result for paths request
+         * @param pathGradient  threshold
+         * @param pathGradientUpper true means use pathGradient threshold as an upper limit.
+         */
+        function pathIsColinear(p, pathGradient, pathGradientUpper, scaled_pos) {
           let
           /** result format is different for direct and aliases requests;
            * for either case, collate as an array the endpoint features of the path.
@@ -259,6 +267,9 @@ export default Component.extend(Evented, AxisEvents, {
             sp = y.map((yi, i) => /*this.*/scaled_pos(limits[i], yi)),
             S = pathGradient;
             ok = (sp[0] - S) <= sp[1] && (sp[1] <= sp[0] + S);
+            if (! pathGradientUpper) {
+              ok = ! ok;
+            }
           }
           return ok;
         };
@@ -292,9 +303,11 @@ export default Component.extend(Evented, AxisEvents, {
         } else {
           let shown = this.get('shown' + prType.typeName);
           scope[1] = currentScope;
-          if (shown.length && this.get('controlsView.pathGradientEnable')) {
+          if (shown.length) {
             let pathGradient = this.get('controlsView.pathGradient');
-            shown = shown.filter((p) => /*this.*/pathIsColinear(p, pathGradient, this.scaled_pos));
+            shown = shown.filter(
+              (p) => /*this.*/pathIsColinear(
+                p, pathGradient, this.get('controlsView.pathGradientUpper'), this.scaled_pos));
           }
           pathsResult = pathsFilterSmooth(prType, pathsResult, scope, shown);
           scope.removeAt(0);
@@ -312,7 +325,7 @@ export default Component.extend(Evented, AxisEvents, {
   pathsAliasesResultLength : computed(
     'blockAdj.pathsAliasesResultLengthThrottled', 'paths.alias.[]',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
-    'controlsView.{pathGradientEnable,pathGradient}',
+    'controlsView.{pathGradientUpper,pathGradient}',
     function () {
       /** the comments in pathsResultLength re. next and isComplete apply here also. */
       next(() => {
