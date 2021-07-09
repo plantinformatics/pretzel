@@ -230,13 +230,21 @@ export default Model.extend({
     let featuresLength = this.get('features.length');
     if (trace_block)
       dLog('featuresLengthUpdate', featuresLength, this.get('id'));
-    this.set('featuresLengthDebounced', featuresLength);
+    /** featuresLengthUpdate() is called from debounce()
+     * so check if the component is still current. */
+    if (! this.isDestroying && ! this.isDestroyed) {
+      this.set('featuresLengthDebounced', featuresLength);
+    }
   },
   featuresLengthUpdateThrottle() {
     let featuresLength = this.get('features.length');
     if (trace_block)
       dLog('featuresLengthUpdateThrottle', featuresLength, this.get('id'));
-    this.set('featuresLengthThrottled', featuresLength);
+    /** featuresLengthUpdateThrottle() is called from throttle()
+     * so check if the component is still current. */
+    if (! this.isDestroying && ! this.isDestroyed) {
+      this.set('featuresLengthThrottled', featuresLength);
+    }
   },
   featuresLengthObserver : observer('features.length', function () {
     debounce(this, this.featuresLengthUpdate, 200);
