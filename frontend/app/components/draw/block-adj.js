@@ -292,7 +292,10 @@ export default Component.extend(Evented, AxisEvents, {
         let
           scope = this.get('scope' + prType.typeName),
         currentScope = {blockDomains, pathsDensityParams, nPaths};
-        if (! scope) {
+        /** pathsFilterSmooth() tends to suppress the effect of pathGradient filter, so use one or the other. */
+        let pathGradient = this.get('controlsView.pathGradient'),
+            pathGradientFilterEnabled = (pathGradient !== 0) && (pathGradient !== 1);
+        if (! scope || pathGradientFilterEnabled) {
           /* first call, scope is not yet defined, there are no existing paths,
            * so use pathsFilter() instead of pathsFilterSmooth() */
           pathsResult = pathsFilter(prType, pathsResult, blockDomains, nPaths);
