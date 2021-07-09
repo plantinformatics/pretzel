@@ -173,19 +173,23 @@
     </li>
     <li class="list-group-item">
       <input type="checkbox" 
-       id="checkbox-toggleShowSelectedMarkers" 
-       name="toggleShowSelectedMarkers" 
+       id="checkbox-toggleShowSelectedFeatures" 
+       name="toggleShowSelectedFeatures" 
        checked="checked"
       />
       <label>List Selected Features</label>
+      {{#ember-tooltip side="bottom-start"  delay=500}}
+        List Selected Features in the Feature table in right panel.
+      {{/ember-tooltip}}
     </li>
     <li class="list-group-item">
       <span class="filter-group-col">
-        {{!-- tooltip : Use pathGradient threshold as an upper limit --}}
         {{input type="checkbox" name="pathGradientUpper" checked=pathGradientUpper }}
+        {{#ember-tooltip side="right" delay=500}}
+          Use pathGradient threshold as an upper / lower limit.
+        {{/ember-tooltip}}
       </span>
       <label>Path Colinearity Threshold : {{pathGradient}}</label>
-      <div>(Applies to direct alignments)</div>
       <input type="range" 
        id="range-pathGradient" 
        name="pathGradient" 
