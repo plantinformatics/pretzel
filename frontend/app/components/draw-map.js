@@ -3964,7 +3964,11 @@ export default Component.extend(Evented, {
           /* can pass visible=true here - a slight optimisation; it depends on the
            * expression in dataBlocks() which distinguishes data blocks. */
           let childBlocks = axis.dataBlocks(true, false)
-              .filter((blockS) => blockS.block.get('isBrushableFeatures'));
+              /** Until d398e98e, this was filtered by .isBrushableFeatures; changed because
+               * if there are paths (& hence features) loaded, then it makes sense to brush those.
+               * (isBrushableFeatures() is concerned with whether more features should be requested, which is different).
+               */
+              ; // .filter((blockS) => blockS.block.get('isBrushableFeatures'));
           let range = [0, axis.yRange()];
           console.log(axis, 'childBlocks', childBlocks, range);
           /*
