@@ -1162,26 +1162,28 @@ export default Model.extend({
    * @param parentFeatures features of the parent / reference block
    */
   valueCompute(features, parentFeatures) {
-    dLog('valueCompute', features.length, parentFeatures.length);
-    let featuresExtents =
-    features.map((f) => {
-      let value;
-      if (f.value[0] === null) {
-        let
-        flankingNames = f.get('values.flankingMarkers'),
-        flanking = flankingNames.map((fmName) => parentFeatures.findBy('name', fmName)),
-        locations = flanking.map((fm) => fm.value).flat(),
-        extent = d3.extent(locations);
-        f.set('value', extent);
-        value = extent;
-      } else {
-        value = f.value;
-      }
-      return value;
-    });
-    let blockExtent = d3.extent(featuresExtents.flat());
-    dLog('valueCompute', this.id, this.name, blockExtent, featuresExtents);
-    this.set('featureLimits', blockExtent);
+    dLog('valueCompute', features?.length, parentFeatures?.length);
+    if (features?.length && parentFeatures?.length) {
+      let featuresExtents =
+          features.map((f) => {
+            let value;
+            if (f.value[0] === null) {
+              let
+              flankingNames = f.get('values.flankingMarkers'),
+              flanking = flankingNames.map((fmName) => parentFeatures.findBy('name', fmName)),
+              locations = flanking.map((fm) => fm.value).flat(),
+              extent = d3.extent(locations);
+              f.set('value', extent);
+              value = extent;
+            } else {
+              value = f.value;
+            }
+            return value;
+          });
+      let blockExtent = d3.extent(featuresExtents.flat());
+      dLog('valueCompute', this.id, this.name, blockExtent, featuresExtents);
+      this.set('featureLimits', blockExtent);
+    }
   },
 
   /*--------------------------------------------------------------------------*/
