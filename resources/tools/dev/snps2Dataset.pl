@@ -132,6 +132,8 @@ my $datasetFooter;
 my $datasetHeaderGM;
 # true after startDataset()
 my $startedDataset = 0;
+# string to close the current Feature
+my $endFeature;
 
 #-------------------------------------------------------------------------------
 
@@ -513,6 +515,10 @@ sub convertInput()
 
 sub optionalBlockFooter()
 {
+  if (defined($endFeature) && ($endFeature ne ''))
+    {
+      print $endFeature;   $endFeature = '';
+    }
   if (defined($lastChr))
     { print $blockFooter; }
 }
@@ -571,8 +577,8 @@ sub snpLine($)
     # Could output a warning if the line is not blank, i.e. not /^,,,/, or $a[c_pos]
     return;
   }
-  # For QTL : Flanking Marker by itself in a row is added as a feature
-  # to current block / QTL
+  # For QTL : Flanking Marker by itself in a row is added to .values { "flankingMarkers" : [] }
+  # of the current feature (QTL)
   elsif ($a[c_name] && ! $a[c_chr] && ! $a[c_pos] &&
          defined($c_Trait) && $columnsKeyLookup{'parentname'})
   {
@@ -608,12 +614,16 @@ sub snpLine($)
     # Apply to Scope column, or Chromosome.
     my $c_scope = $columnsKeyLookup{'Scope'};
     my $col = defined($c_scope) ? $c_scope : c_chr;
-    my $toName = $chromosomeRenames{deletePunctuation($a[$col])};
-    if (defined($toName))
-    {
-      $chromosomeRenamedFrom = $a[$col];
-      $a[$col] = $toName;
-    }
+    my $chrName = $a[$col];
+    if (defined($chrName) && ($chrName ne ''))
+      {
+        my $toName = $chromosomeRenames{deletePunctuation($a[$col])};
+        if (defined($toName))
+          {
+            $chromosomeRenamedFrom = $a[$col];
+            $a[$col] = $toName;
+          }
+      }
   }
 
   $a[c_name] = markerPrefix($a[c_name]);
@@ -629,6 +639,8 @@ sub snpLine($)
       makeTemplates();
       if ($startedDataset)
       {
+        # end of Feature .values.flankingMarkers[]
+        print $endFeature;   $endFeature = '';
         endDataset();
       }
       $lastChr = undef;
@@ -683,7 +695,8 @@ sub snpLine($)
 
           # Output nominal feature of block
           # printFeature(@a); # done below
-          my $c_parentName = $columnsKeyLookup{'parentName'};
+          # uploadSpreadsheet.bash will pass lowercase : parentname.
+          my $c_parentName = $columnsKeyLookup{'parentname'} || $columnsKeyLookup{'parentname'};
           if (defined($c_parentName))
           {
             my @f = ();
@@ -691,16 +704,28 @@ sub snpLine($)
             $f[c_pos] = 'null';
             if (defined($c_endPos))
             { $f[$c_endPos] = ''; }
-            printFeature(@f);
-            # print feature separator
-            print ",";
+            my $haveValues = printFeature(1, @f);
+            # print start of .values.flankingMarkers[]
+            if ($haveValues)
+              {
+                print ',';
+              }
+            print ' "flankingMarkers" : [';
+            $endFeature = "] } }\n";
           }
         }
     }
   else # print feature separator
     { print ","; }
 
-  printFeature(@a);
+  if (defined($c_Trait))
+    {
+      print "\"$a[c_name]\"";
+    }
+  else
+    {
+      printFeature(0, @a);
+    }
 }
 
 # Strip off outside " and spaces, to handle e.g.
@@ -771,10 +796,11 @@ sub roundPosition($)
 # $,=",";
 # then print @a; but it doesn't work within <<EOF.
 # $"=",";	# applies to print "@a"
-
-sub printFeature($)
+#
+# @param valuesOpen true means leave .values (which is last) open, to be appended to
+sub printFeature($@)
 {
-  my (@a) = @_;
+  my ($valuesOpen, @a) = @_;
 
   # No longer removing key values from @a, so $ak can be simply $a.
   # Copy the essential / key columns; remainder may go in .values.
@@ -842,11 +868,16 @@ sub printFeature($)
 
 
   my $indent = "                    ";
-  my $valuesString = $addValues && %values ?
+  my $valuesString = $addValues && (%values || $valuesOpen) ?
     ",\n" . $indent . "\"values\" : " .
     encode_json_2("        ", \%values)
     : '';
   my $name = eval '$ak[c_name]';
+  if ($valuesOpen)
+    {
+      $valuesString =~ s/}//;
+    }
+  my $closingBrace = $valuesOpen ? '' : '}';
 
   print <<EOF;
                {
@@ -856,9 +887,10 @@ sub printFeature($)
                         $end
                     ],
                     "value_0": $start$valuesString
-                }
+                $closingBrace
 EOF
 
+  return !!%values;
 }
 
 

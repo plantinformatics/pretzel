@@ -6,6 +6,7 @@ import { observer } from '@ember/object';
 import { A } from '@ember/array';
 import { and, alias } from '@ember/object/computed';
 import { debounce, throttle } from '@ember/runloop';
+import { allSettled } from 'rsvp';
 
 import { task } from 'ember-concurrency';
 
@@ -30,6 +31,7 @@ import { featureCountDataProperties } from '../utils/data-types';
 
 import { stacks } from '../utils/stacks';
 
+/* global d3 */
 
 /*----------------------------------------------------------------------------*/
 
@@ -974,7 +976,7 @@ export default Model.extend({
     featuresCounts = this.get('featuresCountsResults') || [],
     overlaps = featuresCounts.reduce(
       (result, fcs) => {
-        if (overlapFn(interval, fcs.domain)) {
+        if (fcs.domain && overlapFn(interval, fcs.domain)) {
           let
           filtered = Object.assign({}, fcs);
           filtered.result = fcs.result.filter(
@@ -1122,6 +1124,65 @@ export default Model.extend({
   /** Express a binSize relative to screen pixels, using yRange and domain. */
   pxSize(binSize, yRange, domain) { return yRange * binSize / intervalSize(domain); },
 
+
+  /*--------------------------------------------------------------------------*/
+
+  /** If this block contains QTLs, request all features of this block and its parent block.
+   * This enables calculation of the .value[] of the QTL features.
+   */
+  loadRequiredData : computed(function () {
+    // possibly generalise the tag to : 'valueComputed'
+    if (this.hasTag('QTL')) {
+      let
+      /** make the 2 requests in serial because of .drop() on getBlockFeaturesIntervalTask()
+       */
+      features = this.get('allFeatures')
+        .then((f) => [f, this.get('referenceBlock.allFeatures')])
+      // parentBlockFeatures = ;
+      // parentBlockFeatures // allSettled([features, parentBlockFeatures])
+        .then((ps) => {
+          return ps[1].then((pf) => {
+            // requestBlockFeaturesInterval() returns an array of promises, one per blockId
+            return this.valueCompute(ps[0][0].value, pf[0].value);
+          });
+        });
+    }
+  }),
+  /** Request all features of this block.
+   */
+  allFeatures : computed(function () {
+    let
+    pathsP = this.get('pathsP'),
+    features = pathsP.getBlockFeaturesInterval(this.id, /*all*/true);
+    return features;
+  }),
+
+  /** Calculate the value / location of the 
+   * @param features of this block
+   * @param parentFeatures features of the parent / reference block
+   */
+  valueCompute(features, parentFeatures) {
+    dLog('valueCompute', features.length, parentFeatures.length);
+    let featuresExtents =
+    features.map((f) => {
+      let value;
+      if (f.value[0] === null) {
+        let
+        flankingNames = f.get('values.flankingMarkers'),
+        flanking = flankingNames.map((fmName) => parentFeatures.findBy('name', fmName)),
+        locations = flanking.map((fm) => fm.value).flat(),
+        extent = d3.extent(locations);
+        f.set('value', extent);
+        value = extent;
+      } else {
+        value = f.value;
+      }
+      return value;
+    });
+    let blockExtent = d3.extent(featuresExtents.flat());
+    dLog('valueCompute', this.id, this.name, blockExtent, featuresExtents);
+    this.set('featureLimits', blockExtent);
+  },
 
   /*--------------------------------------------------------------------------*/
 
