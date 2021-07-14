@@ -1940,7 +1940,10 @@ export default InAxis.extend({
     'axis1d.featureLength',
     function() {
       const axisTransitionTime = 750;
-      later(() => this.incrementProperty('slowDependenciesChanged'), axisTransitionTime + 250);
+      later(() => (
+        !this.isDestroyed && ! this.isDestroying &&
+        this.incrementProperty('slowDependenciesChanged')),
+            axisTransitionTime + 250);
     }),
   /** Render changes driven by changes of block data or scope.
    */
