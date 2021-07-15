@@ -3992,6 +3992,14 @@ export default Component.extend(Evented, {
 
           /** compound name dataset:block (i.e. map:chr) for the selected axis p.  */
           let mapChrName = briefName || axisName2MapChr(p);
+          /** in the case of QTL, i.e. block.block.hasTag('QTL'),
+           * the parent reference block also has data - features which can be brushed,
+           * and hence mapChrName would clash and overwrite that selection.
+           * So give the child block a unique suffix.
+           */
+          if (block.block.get('referenceBlock.isData')) {
+            mapChrName += ':' + block.block.get('name');
+          }
           selectedFeatures[mapChrName] = [];
 
             let blockFeatures = oa.z[block.axisName]; // or block.get('features')
