@@ -3993,17 +3993,17 @@ export default Component.extend(Evented, {
           /** e.g. "1B" */
           scope = blockR && blockR.get('name'),
           briefName = (shortName && scope) && (shortName + ':' + scope);
+          /** using axisName2MapChr(p) could mean that selection from
+           * 1 block overwrites another, so use dataset.id instead.
+           *
+           * In the case of QTL, i.e. block.block.hasTag('QTL'),
+           * the parent reference block also has data - features which can be brushed,
+           * and hence axisName2MapChr(p) would clash and overwrite that selection.
+           */
+          let dataBlockName = blockR.get('datasetId.id') + (scope ? ':' + scope : '');
 
           /** compound name dataset:block (i.e. map:chr) for the selected axis p.  */
-          let mapChrName = briefName || axisName2MapChr(p);
-          /** in the case of QTL, i.e. block.block.hasTag('QTL'),
-           * the parent reference block also has data - features which can be brushed,
-           * and hence mapChrName would clash and overwrite that selection.
-           * So give the child block a unique suffix.
-           */
-          if (block.block.get('referenceBlock.isData')) {
-            mapChrName += ':' + block.block.get('name');
-          }
+          let mapChrName = briefName || dataBlockName || axisName2MapChr(p);
           selectedFeatures[mapChrName] = [];
 
             let blockFeatures = oa.z[block.axisName]; // or block.get('features')

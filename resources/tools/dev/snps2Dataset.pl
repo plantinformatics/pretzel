@@ -33,7 +33,7 @@ sub chromosomeRenamePrepare();
 #-------------------------------------------------------------------------------
 
 # Handles dynamic / optional columns, in place of ColumnsEnum.
-my %columnsKeyLookup = ();
+my %columnsKeyLookup;
 my $c_arrayColumnName;
 
 #-------------------------------------------------------------------------------
@@ -67,10 +67,14 @@ my $blockId = $options{b};
 my $namespace = defined($options{n}) ? $options{n} : (defined($parentName) ? "$parentName:$datasetName" : $datasetName);
 my $commonName = $options{c};
 my $shortName = $options{s};	# option, Exome. WGS
-my $columnsKeyString = "chr pos name ref_alt";
+my $columnsKeyString;
 if (defined($options{C}))
 {
   $columnsKeyString = $options{C};
+}
+elsif (! defined($columnsKeyString))
+{
+  $columnsKeyString = "chr pos name ref_alt";
 }
 
 my $fieldSeparator = $options{F} || ',';	# '\t'
@@ -81,6 +85,10 @@ my $chrOutputPrefix = $options{P} || '';
 my $datasetMetaFile = $options{M};
 my $chromosomeRenamingFile = $options{R};
 # An array which is accumulated from preceding lines.
+# i.e. the value in the Feature line is the last value in the array.
+# In the given user data the Feature line contained the first array element, and
+# the remainder are on following lines, so to use this the input could piped
+# through tac; which would also reverse the feature order.
 my $arrayColumnName = $options{A};
 # Accumulate values from column $arrayColumnName since last Feature.
 my $arrayRef = [];
@@ -203,6 +211,8 @@ else
 # equivalent to e.g : qw(c_chr c_pos c_name c_ref_alt)
 # /r for non-destructive, allows chaining.
 my $columnsKeyPrefixed;
+# start position, replaces c_pos and c_start.
+my $c_pos;
 # End position, optional column.
 my $c_endPos;
 
@@ -217,6 +227,8 @@ sub columnConfig() {
   # which defines the enums, c_name, c_chr, c_pos etc.
   # Using an enum made sense in the initial version which had fixed columns,
   # but now %columnsKeyLookup is more suitable.
+  # Also the following split | grep does not handle column header
+  # names containing spaces, e.g. 'Flanking Marker'.
   #
   # $columnsKeyString is space-separated, not comma.
   # column header names which contain spaces are wrapped with "".
@@ -224,6 +236,7 @@ sub columnConfig() {
   my @columnsKeyValues = grep { $_  } @a1;
   # print 'columnsKeyValues : ', join(':', @columnsKeyValues), "\n";
 
+  %columnsKeyLookup = ();
   for (my $ki=0; $ki <= $#columnsKeyValues; $ki++)
   {
     $columnsKeyLookup{$columnsKeyValues[$ki]} = $ki;
@@ -244,12 +257,14 @@ BEGIN
   # These columns are identified using variables, (e.g. $c_endPos),
   # because the corresponding enum (e.g. c_endPos) can't have a conditional value.
   $c_endPos = defined($columnsKeyLookup{'end'}) ? $columnsKeyLookup{'end'} : undef;
+  # After column headers containing spaces, the c_ enum numbers are offset by the number of spaces,
+  # so define $c_pos.
+  $c_pos = defined($columnsKeyLookup{'pos'}) ? $columnsKeyLookup{'pos'} : $columnsKeyLookup{'start'};
 }
 use constant ColumnsEnum => split(' ', $columnsKeyPrefixed);
 BEGIN
 {
   eval "use constant (ColumnsEnum)[$_] => $_;" foreach 0..(ColumnsEnum)-1;
-  eval "use constant c_start => c_pos;";
 }
 
 
@@ -572,17 +587,19 @@ sub snpLine($)
   }
 
   # Skip blank lines
-  if (! $a[c_name] && ! $a[c_chr])
+  if (! $a[c_name] && ! $a[c_chr]
+      && ! (defined($columnsKeyLookup{'Flanking Markers'}) && $a[$columnsKeyLookup{'Flanking Markers'}])
+)
   {
     # Could output a warning if the line is not blank, i.e. not /^,,,/, or $a[c_pos]
     return;
   }
   # For QTL : Flanking Marker by itself in a row is added to .values { "flankingMarkers" : [] }
   # of the current feature (QTL)
-  elsif ($a[c_name] && ! $a[c_chr] && ! $a[c_pos] &&
+  elsif ($a[c_name] && ! $a[c_chr] && ! $a[$c_pos] &&
          defined($c_Trait) && $columnsKeyLookup{'parentname'})
   {
-    $a[c_pos] = 'null';
+    $a[$c_pos] = 'null';
     $a[$c_endPos] = '';
   }
   elsif (defined($c_Trait))
@@ -701,7 +718,7 @@ sub snpLine($)
           {
             my @f = ();
             $f[c_name] = $a[c_name];
-            $f[c_pos] = 'null';
+            $f[$c_pos] = 'null';
             if (defined($c_endPos))
             { $f[$c_endPos] = ''; }
             my $haveValues = printFeature(1, @f);
@@ -718,14 +735,15 @@ sub snpLine($)
   else # print feature separator
     { print ","; }
 
+  my $valuesOpen = defined($columnsKeyLookup{'Flanking Markers'});
   # also $c_Trait
   if (! $a[c_name] && defined($columnsKeyLookup{'Flanking Markers'}) && $a[$columnsKeyLookup{'Flanking Markers'}])
     {
-      print "\"$a[$columnsKeyLookup{'Flanking Markers'}]\"";
+       print "\"$a[$columnsKeyLookup{'Flanking Markers'}]\"";
     }
   else
     {
-      printFeature(0, @a);
+      printFeature($valuesOpen, @a);
     }
 }
 
@@ -808,7 +826,7 @@ sub printFeature($@)
   my (@ak) = ();
 
   my $c;
-  for $c (c_name, c_chr, c_pos, c_start, $c_endPos)
+  for $c (c_name, c_chr, $c_pos, $c_endPos)
     {
       if (defined($c)) {
         $ak[$c] = $a[$c];
@@ -818,7 +836,7 @@ sub printFeature($@)
   my %values = ();
   if ($addValues)
   {
-    # print "enums", join(';', (c_name, c_chr, c_pos, c_start, $c_endPos)), "\n";
+    # print "enums", join(';', (c_name, c_chr, $c_pos, $c_endPos)), "\n";
     # could also match @columnHeaders
     for (my $ci=0; $ci <= $#a; $ci++)
     {
@@ -828,8 +846,9 @@ sub printFeature($@)
       # columns), and the value is non-empty, and it has a column heading,
       # then add it to .values
       # print $ci, ', columnHeader:', $columnHeader, ",", $a[$ci], "\n";
-      if (($ci != c_name) && ($ci != c_chr) && ($ci != c_pos) && ($ci != c_start)
+      if (($ci != c_name) && ($ci != c_chr) && ($ci != $c_pos)
           && (! defined($c_endPos) || ($ci != $c_endPos))
+          && (! defined($columnsKeyLookup{'Flanking Markers'}) || ($ci != $columnsKeyLookup{'Flanking Markers'}))
           && $a[$ci] && ($ci <= $#columnHeaders) && $columnHeader && ! isComment($columnHeader))
       {
         # equivalent : ($ci == $c_arrayColumnName)
@@ -848,7 +867,7 @@ sub printFeature($@)
   }
 
   # Round the numeric (position) columns.
-  for $c (c_pos, c_start, $c_endPos)
+  for $c ($c_pos, $c_endPos)
     {
       if (defined($c) && defined($ak[$c]))
         {
@@ -857,12 +876,12 @@ sub printFeature($@)
     }
   # Either pos or (start & end) may be provided.
   # Copy pos to start & end if they are not defined.
-  my $start = defined(c_pos) ? $ak[c_pos] : $ak[c_start];
+  my $start = defined($c_pos) ? $ak[$c_pos] : undef;
   # Wrapping use of index which may be undefined with eval; otherwise
   # it gets an error on initial program parse even though it is not
   # evaluated
   my $end = (defined($c_endPos) && $ak[$c_endPos]) ||
-    (defined(c_pos) && $ak[c_pos]);
+    (defined($c_pos) && $ak[$c_pos]);
   # In Pretzel the end position is optional but the start position is required.
   if ((! $start || ($start eq "n/a")) && $end)
   {
@@ -871,14 +890,19 @@ sub printFeature($@)
 
 
   my $indent = "                    ";
+  my $valueIndent = "        ";
   my $valuesString = $addValues && (%values || $valuesOpen) ?
     ",\n" . $indent . "\"values\" : " .
-    encode_json_2("        ", \%values)
+    encode_json_2($valueIndent, \%values)
     : '';
   my $name = eval '$ak[c_name]';
+  my $haveValues = !!%values;
   if ($valuesOpen)
     {
       $valuesString =~ s/}//;
+      $valuesString .= ($haveValues ? ",\n$valueIndent" : '')
+        . '"flankingMarkers" : ["' . $a[$columnsKeyLookup{'Flanking Markers'}] . '"';
+      $endFeature = "] } }\n";
     }
   my $closingBrace = $valuesOpen ? '' : '}';
 
@@ -893,7 +917,7 @@ sub printFeature($@)
                 $closingBrace
 EOF
 
-  return !!%values;
+  return $haveValues;
 }
 
 
