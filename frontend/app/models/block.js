@@ -1167,10 +1167,17 @@ export default Model.extend({
       let featuresExtents =
           features.map((f) => {
             let value;
-            if (f.value[0] === null) {
+            /** currently the spreadsheet may define value start&end, could verify by checking this against calculated value. */
+            if (true) /*(f.value[0] === null)*/ {
               let
               flankingNames = f.get('values.flankingMarkers'),
-              flanking = flankingNames.map((fmName) => parentFeatures.findBy('name', fmName)),
+              flanking = flankingNames.map((fmName) => {
+                let fm = parentFeatures.findBy('name', fmName);
+                if (! fm) {
+                  dLog('valueCompute', fmName, parentFeatures);
+                }
+                return fm;
+              }).filter((f) => f),
               locations = flanking.map((fm) => fm.value).flat(),
               extent = d3.extent(locations);
               f.set('value', extent);

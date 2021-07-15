@@ -635,7 +635,7 @@ sub snpLine($)
     $parentName = $a[$c_parentName];
     if ($parentName)
     {
-      $datasetName = $currentTrait;
+      $datasetName = "$currentTrait-$parentName";
       makeTemplates();
       if ($startedDataset)
       {
@@ -697,7 +697,7 @@ sub snpLine($)
           # printFeature(@a); # done below
           # uploadSpreadsheet.bash will pass lowercase : parentname.
           my $c_parentName = $columnsKeyLookup{'parentname'} || $columnsKeyLookup{'parentname'};
-          if (defined($c_parentName))
+          if (0 && defined($c_parentName))
           {
             my @f = ();
             $f[c_name] = $a[c_name];
@@ -718,9 +718,10 @@ sub snpLine($)
   else # print feature separator
     { print ","; }
 
-  if (defined($c_Trait))
+  # also $c_Trait
+  if (! $a[c_name] && defined($columnsKeyLookup{'Flanking Markers'}) && $a[$columnsKeyLookup{'Flanking Markers'}])
     {
-      print "\"$a[c_name]\"";
+      print "\"$a[$columnsKeyLookup{'Flanking Markers'}]\"";
     }
   else
     {
@@ -827,12 +828,14 @@ sub printFeature($@)
       # columns), and the value is non-empty, and it has a column heading,
       # then add it to .values
       # print $ci, ', columnHeader:', $columnHeader, ",", $a[$ci], "\n";
-      if (($ci != c_name) && ($ci != c_chr) && ($ci != c_pos) && ($ci != c_start) && (! defined($c_endPos) || ($ci != $c_endPos))
+      if (($ci != c_name) && ($ci != c_chr) && ($ci != c_pos) && ($ci != c_start)
+          && (! defined($c_endPos) || ($ci != $c_endPos))
           && $a[$ci] && ($ci <= $#columnHeaders) && $columnHeader && ! isComment($columnHeader))
       {
         # equivalent : ($ci == $c_arrayColumnName)
         if ($arrayColumnName && ($columnHeader eq $arrayColumnName))
         {
+          $columnHeader =~ s/Flanking Markers/flankingMarkers/;
           $values{$columnHeader} = $arrayRef;
           $arrayRef = [];
         }

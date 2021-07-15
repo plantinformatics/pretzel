@@ -1399,7 +1399,11 @@ export default Component.extend(Evented, {
             {
               let block = oa.z[blockName];
               parentAxis = oa.axesP[blockName];
-              dLog(block.scope, block.featureType, block.dataset.get('name'), block.dataset.get('namespace'), "parentAxis", parentAxis);
+              if (! block) {
+                dLog('ensureAxis', blockName, oa.z, oa.axesP);
+              } else {
+                dLog(block.scope, block.featureType, block.dataset.get('name'), block.dataset.get('namespace'), "parentAxis", parentAxis);
+              }
             }
           }
 
