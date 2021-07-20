@@ -39,7 +39,7 @@
     {{#draw/axis-blocks axis1d=axis1d dataBlocks=dataBlocks
       childWidths=childWidths trackWidth=trackWidth
       as |axisBlocks| }}
-      {{axis-charts data=data axis=this axisID=axisID childWidths=childWidths
+      {{axis-charts data=data axis=this axisID=axisID childWidths=childWidths.centre
         allocatedWidths=allocatedWidths blocks=viewedChartable
         resizeEffect=resizeEffect axisBlocks=axisBlocks
         trackWidth=trackWidth

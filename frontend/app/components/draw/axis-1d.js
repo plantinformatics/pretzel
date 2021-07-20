@@ -1282,7 +1282,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return extended;
   }),
 
-  extendedWidthEffect : computed(/*'extended',*/ 'axis2d.allocatedWidthsMax', function () {
+  extendedWidthEffect : computed(/*'extended',*/ 'axis2d.allocatedWidthsMax.centre', function () {
     this.widthEffects();
   }),
   widthEffects() {

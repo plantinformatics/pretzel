@@ -25,7 +25,10 @@ import {
 } from '../utils/draw/axis';
 import { ensureSvgDefs } from '../utils/draw/d3-svg';
 
+import { axisRegionNames } from './axis-2d';
+
 /*----------------------------------------------------------------------------*/
+
 /* milliseconds duration of transitions in which feature <rect>-s are drawn / changed.
  * Match with time used by draw-map.js : zoom() and resetZoom() : 750.
  * also @see   dragTransitionTime and axisTickTransitionTime.
@@ -42,6 +45,8 @@ const fixedBlockWidth = true;
  * space, under the label 'trackCharts'.
  * Other axis-tracks which use variable width (e.g. sub-elements) will continue
  * to use childWidths['tracks'] for allocatedWidth.
+ * QTLs are placed in the region outside the axis, on the right, and use fixed width
+ * rectangles, i.e. variable width tracks.
  */
 const useAxisBlocks = true;
 
@@ -529,6 +534,7 @@ export default InAxis.extend({
     this._super(...arguments);
 
     console.log("components/axis-tracks didInsertElement()");
+    /* if used, generalise for regions : axisRegionNames.forEach((g) => ... childWidths[g] ... width[g] */
     if (false) {
     let
     childWidths = this.get('childWidths'),
@@ -918,7 +924,7 @@ export default InAxis.extend({
 
       let
       blockC = thisAt.lookupAxisTracksBlock(blockId);
-      if (useAxisBlocks && ! blockC.subElements) {
+      if (blockC.useAxisBlocks && ! blockC.subElements) {
         let
          /** array of [startOffset, width]. */
         blocksWidths = thisAt.get('axisBlocks.allocatedWidth'),
@@ -933,6 +939,15 @@ export default InAxis.extend({
         /** this assigns blocks[*].offset */
         widthSum = thisAt.get('blockLayoutWidthSum');
         xOffset = blockC.offset;
+        if (blockC.region === 'right') {
+          /** position right of axis-2d RightEdge
+           * equivalent, but maybe not updated : thisAt.get('allocatedWidths.centre.1')
+           */
+          let rightEdge = thisAt.axis1d.get('axis2d.allocatedWidthsMax.centre');
+          if (rightEdge !== undefined) {
+            xOffset += rightEdge;
+          }
+        }
       }
       if (xOffset === undefined)
       {
@@ -1789,13 +1804,20 @@ export default InAxis.extend({
    */
   lookupAxisTracksBlock(blockId) {
     let blocks = this.get('blocks'),
-    blockState = blocks[blockId] || (blocks[blockId] = EmberObject.create());
+    blockState = blocks[blockId] || (blocks[blockId] = this.constructAxisTracksBlock(blockId));
     if (! blockState.hasOwnProperty('subElements')) {
-      let blockS = this.get('stackBlocks')[blockId];
-      blockState.subElements = blockS.block.get('isSubElements');
-      dLog('lookupAxisTracksBlock', blockId, blockState.subElements);
+      dLog('lookupAxisTracksBlock', blockId);
     }
 
+    return blockState;
+  },
+  constructAxisTracksBlock(blockId) {
+    let blockState = EmberObject.create();
+    let blockS = this.get('stackBlocks')[blockId];
+    blockState.subElements = blockS.block.get('isSubElements');
+    blockState.region = (blockS.block.get('datasetId._meta.type') === 'QTL') ? 'right' : 'centre';
+    blockState.useAxisBlocks = (blockState.region === 'centre') ? useAxisBlocks : false;
+    dLog('constructAxisTracksBlock', blockId, blockState);
     return blockState;
   },
   /** Use the interval tree of sub-element data to layer them within
@@ -1858,6 +1880,7 @@ export default InAxis.extend({
    *
    * Side Effect: assigns block.offset which is the progressive value of the sum,
    * if ! fixedBlockWidth.
+   * @return .{centre,right} width
    */
   blockLayoutWidthSum : computed('blockComps.@each.layoutWidth', function () {
     let
@@ -1870,23 +1893,29 @@ export default InAxis.extend({
     trackWidth = this.get('trackWidth'),
     /** initial .offset not needed; g.axis-use will translate(trackWidth) */
     shiftRight = 0,
-    width = blockIds.reduce((sum, blockId) => {
+    initial = axisRegionNames.reduce((o, g) => { o[g] = shiftRight; return o; }, {}),
+    widths = blockIds.reduce((sums, blockId) => {
       let block = this.lookupAxisTracksBlock(blockId);
-      block.offset = sum;
+      /** region name is e.g. 'centre', 'right' */
+      let region = block.get('region');
+      block.offset = sums[region];
       let blockWidth;
       if (block.subElements || ! fixedBlockWidth) {
         blockWidth = block.layoutWidth || block.trackWidth || trackWidth;
       } else {
-        blockWidth = useAxisBlocks ? 0 : 2 * trackWidth;
+        blockWidth = block.useAxisBlocks ? 0 : 2 * trackWidth;
       }
-      sum += blockWidth;
-      return sum;
-    },  shiftRight);
+      sums[region] += blockWidth;
+      return sums;
+    },  initial);
 
-    dLog('blockLayoutWidthSum', width, blockIds.length, blockIds2.length, this.get('blockComps.length'));
-    return width;
+    dLog('blockLayoutWidthSum', widths, blockIds.length, blockIds2.length, this.get('blockComps.length'));
+    return widths;
   }),
   variableWidthBlocks : filter('trackBlocksR', (block) => block.get('isSubElements')),
+  /**
+   * @return (region){centre,right} width
+   */
   layoutWidth : computed('variableWidthBlocks', function () {
     let
     vwBlocks = this.get('variableWidthBlocks'),
@@ -1896,14 +1925,19 @@ export default InAxis.extend({
      * this includes xOffset from blockTransform(blockIds.length-1) 
      * @see blockTransform()
      */
-    width =
+    widths =
       /*40 +*/ this.get('blockLayoutWidthSum') /*+ 20 + 50*/; // same as getAxisExtendedWidth()
-    console.log('layoutWidth', blockIds, width);
-    next(() => this.get('childWidths').set(this.get('className'), [width, width]));
+    console.log('layoutWidth', blockIds, widths);
+    next(() => {
+      Object.keys(widths).forEach((region) => {
+        let width = widths[region];
+        this.get('childWidths')[region].set(this.get('className'), [width, width]);
+      });
+    });
 
-    return width;
+    return widths;
   }),
-  combinedWidth : computed('layoutWidth', 'allocatedWidth', 'axisBlocks.allocatedWidth.[]', function() {
+  combinedWidth : computed('layoutWidth.centre', 'allocatedWidth', 'axisBlocks.allocatedWidth.[]', function() {
     let
     axisBlocks = this.get('axisBlocks.allocatedWidth'),
     rightBlock = axisBlocks.length && axisBlocks[axisBlocks.length-1],
@@ -1911,7 +1945,7 @@ export default InAxis.extend({
 
     let allocatedWidth = this.get('allocatedWidth');
 
-    let width = ((allocatedWidth && allocatedWidth[1]) || this.get('layoutWidth')) + axisBlocksEnd;
+    let width = ((allocatedWidth && allocatedWidth[1]) ??  this.get('layoutWidth')) + axisBlocksEnd;
     return width;
   }),
   /** Render changes related to a change of .layoutWidth

@@ -895,8 +895,8 @@ export default Component.extend(Evented, AxisEvents, {
     // widthsSum includes changes to .extended, which impacts width of all block-adjs
     'block.stacksWidthsSum',
     'block.axesExtendedCount',
-    // width of split axes effects the path endpoint x values, even if not adjacent.
-    'block.axes2d.@each.allocatedWidthsMax',
+    // width of split axes affects the path endpoint x values, even if not adjacent.
+    'block.axes2d.@each.allocatedWidthsMax.centre',
     'xOffsets.@each',
     'drawMap.stacksWidthChanges',
     'blockAdj.axes1d.0.flipRegionCounter',
@@ -911,7 +911,7 @@ export default Component.extend(Evented, AxisEvents, {
      */
     'blockAdj.axes1d.0.scaleChanged',
     'blockAdj.axes1d.1.scaleChanged',
-    'blockAdj.axes1d.{0,1}.axis2d.allocatedWidthsMax',
+    'blockAdj.axes1d.{0,1}.axis2d.allocatedWidthsMax.centre',
     function () {
       let count = this.get('axisStackChangedCount');
       // throttle(this, this.updatePathsPositionDebounced, this.get('controlsView.throttleTime'), true);
