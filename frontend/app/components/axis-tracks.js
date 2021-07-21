@@ -21,7 +21,8 @@ import {
   eltIdAll,
   axisEltIdClipPath2d,
   trackBlockEltIdPrefix,
-  axisTitleColour
+  axisTitleColour,
+  traitColour
 } from '../utils/draw/axis';
 import { ensureSvgDefs } from '../utils/draw/d3-svg';
 
@@ -1270,9 +1271,16 @@ export default InAxis.extend({
           }
         }
       }
+      let featureColour =
+          (block.get('datasetId._meta.type') === 'QTL') ?
+          (interval) => {
+            let feature = thisAt.featureData2Feature.get(interval);
+            return traitColour(feature.get('values.Trait')); } :
+          blockTrackColourI;
+
       rm
       .attr('stroke', blockTrackColourI)
-      .attr('fill', blockTrackColourI)
+      .attr('fill', featureColour)
       ;
 
       dLog('ra', ra.size(), ra.node(), 'rm', rm.size(), rm.node());
