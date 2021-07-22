@@ -750,7 +750,7 @@ export default InAxis.extend({
     axis = oa.axes[axisID];
     /* if parent is un-viewed, this function may be called after axis is removed
      * from stacks. */
-    if (! axis || ! axis.extended)
+    if (! axis || ! Ember.get(axis, 'axis1d.is2d'))
     {
       let gp = 
         // <g.axis-use> may already be gone.
@@ -1255,7 +1255,7 @@ export default InAxis.extend({
           /** may not be blockId, e.g subElements, so default to false. */
           let blockId = t0.parentElement.__data__,
               block = blockId && oa.stacks.blocks[blockId],
-              out = block && block.block.isZoomedRightOut();
+              out = block && ! block.block.get('isQTL') && block.block.isZoomedRightOut();
           /** if selection is a transition */
           if (out && selection.selection) {
             /* if called again before transition is complete,
@@ -1924,7 +1924,7 @@ export default InAxis.extend({
   /**
    * @return (region){centre,right} width
    */
-  layoutWidth : computed('variableWidthBlocks', function () {
+  layoutWidth : computed('variableWidthBlocks.[]', function () {
     let
     vwBlocks = this.get('variableWidthBlocks'),
     blockIds = this.get('blockIds'),
@@ -1958,7 +1958,11 @@ export default InAxis.extend({
   }),
   /** Render changes related to a change of .layoutWidth
    */
-  layoutWidthEffect : computed('combinedWidth', function () {
+  layoutWidthEffect : computed('combinedWidth', 'layoutWidth', function () {
+    /** There is a dependency chain : layoutWidth.centre -> combinedWidth -> layoutWidthEffect
+     * but it also seems necessary to add an explicit dependency on layoutWidth;
+     * without this layoutWidth does update and the rightEdge path position of axis-2d does not update.
+     */
     let
     axisID = this.get('axisID'),
     width = this.get('combinedWidth');
@@ -2036,6 +2040,8 @@ export default InAxis.extend({
     dLog('resizeEffectHere in axis-tracks', this.get('axisID'), result,
          allocatedWidthPrev, allocatedWidth, allocatedWidthChange,
          this.get('adjustedWidth'));
+    /** The first value of result does not have .changed. */
+    if (result.changed) {
     /** @return true if rc[f] indicates a change of field f.
      * if the previous size is not recorded, then treat it as a change.
      */
@@ -2057,6 +2063,7 @@ result.changed.viewportWidth = false;
     this.showResize(
       widthChanged, heightChanged, 
       /* , yScaleChanged ? */);
+    }
     }
   }),
   flippedEffect : computed('axis1d.flipped', function () {

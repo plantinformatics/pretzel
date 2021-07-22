@@ -1,6 +1,6 @@
 import { on } from '@ember/object/evented';
 import { throttle, next, later, bind } from '@ember/runloop';
-import EmberObject, { computed } from '@ember/object';
+import EmberObject, { computed, get as Ember_get } from '@ember/object';
 import { alias, filter } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
@@ -76,12 +76,17 @@ export default Component.extend(Evented, AxisEvents, {
      */
     'blockService.loadedViewedChildBlocks.@each.{isViewed,hasFeatures}',
     'blockService.viewed.[]',
+    'axis1d.extended',
     function () {
       let
         /** related : axis1d.dataBlocks */
         dataBlocksMap = this.get('blockService.dataBlocks'),
       id = this.get('axisID'),
       dataBlocks = (dataBlocksMap && dataBlocksMap.get(id)) || [];
+      // may be .is2d and not .extended
+      if (! this.get('axis1d.extended')) {
+        dataBlocks = dataBlocks.filter((block) => block.get('isQTL'));
+      }
       dLog('dataBlocksMap', id, dataBlocksMap, dataBlocks);
       return dataBlocks;
     }),
@@ -483,7 +488,7 @@ export default Component.extend(Evented, AxisEvents, {
     let 
     /** value of .extended may be false, so || 0.  */
       initialWidth = /*50*/ this.getAxisExtendedWidth(axisID) || 0,
-    axisData = axis && axis.extended ? [axisID] : [];
+    axisData = axis && Ember_get(axis, 'axis1d.is2d') ? [axisID] : [];
     let oa = this.get('oa');
     if (axisG === undefined)
       axisG = oa.svgContainer.selectAll("g.axis-outer#id" + axisID);
@@ -510,6 +515,21 @@ export default Component.extend(Evented, AxisEvents, {
       .attr('transform', 'translate(' + marginLeft + ')');
     let em = ug.merge(eg);
 
+    if (this.get('axis1d.extended')) {
+      this.axisShowExtended(axis, axisID, em, initialWidth);
+    }
+  },
+  /** Show the split axis.
+   * Originally part of axisShowExtend(), this is split out to enable QTLs to be
+   * shown using axis-tracks without necessarily showing the split axis, which
+   * is enabled by axis1d.extended.  axis-tracks creates elements within the
+   * g-axis-use created by axis-2d;  axisShowExtend() creates the framework of
+   * the axis-2d.
+   */
+  axisShowExtended(axis, axisID, em, initialWidth)
+  {
+    dLog('axisShowExtended', axis, axisID);
+
     /** If dualAxis, use <use> to show 2 identical axes.
      * Otherwise show only the left axis, and on the right side a line like an
      * axis with no ticks, just the top & bottom tick lines, but reflected so
@@ -518,14 +538,20 @@ export default Component.extend(Evented, AxisEvents, {
     let dualAxis = this.get('dualAxis');
     let vc = this.get('oa.vc');
     if (dualAxis) {
-      let eu = eg
+      let eu = em
+        .selectAll('g.axis-use > use')
+        .data(em.data)
+        .enter()
       /* extra "xlink:" seems required currently to work, refn :  dsummersl -
        * https://stackoverflow.com/questions/10423933/how-do-i-define-an-svg-doc-under-defs-and-reuse-with-the-use-tag */
         .append("use").attr("xlink:xlink:href", eltIdGpRef);
       eu //.transition().duration(1000)
         .attr("transform", (d) => "translate(" + this.getAxisExtendedWidth(d) + ",0)");
 
-      let er = eg
+      let er = em
+        .selectAll('g.axis-use > rect')
+        .data(em.data)
+        .enter()
         .append("rect")
         .attr("x", 0)
         .attr("y", 0)
@@ -550,7 +576,10 @@ export default Component.extend(Evented, AxisEvents, {
         [0, edgeHeight],
         [+tickWidth, edgeHeight]
       ]),
-      ra = eg
+      ra = em
+        .selectAll('g.axis-use > path')
+        .data(em.data())
+        .enter()
         .append("path"),
       thisAxis2d = this,
       rm = ra.merge(em.selectAll('g.axis-use > path'))
@@ -559,7 +588,10 @@ export default Component.extend(Evented, AxisEvents, {
     }
 
     // foreignObject is case sensitive - refn https://gist.github.com/mbostock/1424037
-    let ef = eg
+    let ef = em
+      .selectAll('g.axis-use > g.axis-html')
+      .data(em.data())
+      .enter()
       .append("g")
       .attr("class", "axis-html")
       .append("foreignObject")
@@ -589,7 +621,7 @@ export default Component.extend(Evented, AxisEvents, {
     /** this clipPath is created in AxisCharts:frame(), id is axisClipId(). */
     let axisClipRect = em.selectAll("g.chart > clipPath > rect");
     axisClipRect
-      .attr("width", initialWidth)
+      .attr("width", initialWidth);
   },
 
   /*--------------------------------------------------------------------------*/
@@ -599,7 +631,7 @@ export default Component.extend(Evented, AxisEvents, {
    * This is part of axisShowExtend(), which will be moved here;
    * this is the key part which needs to update.
    */
-  positionRightEdgeEffect : computed('allocatedWidthsMax.centre', 'allocatedWidths', function () {
+  positionRightEdgeEffect : computed('allocatedWidthsMax.centre', 'allocatedWidths', 'axis1d.extended', function () {
     this.get('positionRightEdge').perform();
     this.widthEffects();
   }),

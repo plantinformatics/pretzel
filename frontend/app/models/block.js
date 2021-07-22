@@ -294,6 +294,10 @@ export default Model.extend({
     let isSNP = this.hasTag('SNP');
     return isSNP;
   }),
+  isQTL : computed('datasetId.tags', function () {
+    let isQTL = this.get('datasetId._meta.type') === 'QTL';
+    return isQTL;
+  }),
   isHighDensity : computed('datasetId.tags', function () {
     let isHighDensity = this.hasTag('HighDensity');
     return isHighDensity;

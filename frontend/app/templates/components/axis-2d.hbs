@@ -1,6 +1,7 @@
 {{!-- axis-2d is used within a <foreignObject> within a g.axis, created by axisShowExtend()
      It is rendered into div#axis2D (will add axisID) using ember-wormhole.
      --}}
+{{#if axis1d.extended}}
 {{#ember-wormhole to=targetEltId }}
   <div class="resizer inFO" style="float:right;">
     {{!-- Being within <foreignObject>, this alternative is used to create and position the resizer arrow;
@@ -32,6 +33,7 @@
 
 
 {{/ember-wormhole}}
+{{/if}}
 
 {{positionRightEdgeEffect}}
 <div>axis-2d : {{axisID}}, {{targetEltId}},  {{subComponents.length}} :

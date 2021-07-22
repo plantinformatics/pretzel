@@ -733,6 +733,14 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }
     return axisS;
   }),
+  /** @return true if an axis-2d child component is required for this
+   * axis, i.e. the axis is split or has data blocks which are QTLs
+   * (which are shown as axis-tracks outside-right of the axis, and
+   * hence axis-2d and axis-tracks are required.
+   */
+  is2d : computed('extended', 'dataBlocksQtl.[]', function () {
+    return !! this.get('extended') || this.get('dataBlocksQtl.length');
+  }),
   /** viewed blocks on this axis.
    * For just the data blocks (depends on .hasFeatures), @see dataBlocks()
    * @desc
@@ -754,6 +762,14 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
       .filter((block) => block.get('isData'));
     dLog('dataBlocks', dataBlocks);
     return dataBlocks;
+  }),
+  dataBlocksQtl : computed('dataBlocks.[]', function () {
+    let
+    /** isSNP is constant for a block. */
+    qtlBlocks = this.get('dataBlocks')
+      .filter((block) => block.get('isQTL'));
+    dLog('qtlBlocks', qtlBlocks);
+    return qtlBlocks;
   }),
 
   /** Reverse map dataBlocks : map from blockId to index position within the dataBlocks[].
@@ -1014,7 +1030,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     }
   },
 
-  /**
+  /** d3 selection of .axis-outer of this axis.
    * Equivalent : this.get('axisS').selectAll(), which does a selection by id
    * from svgContainer through g.stack to the g.axis-outer.
    */
@@ -1028,6 +1044,8 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     return as;
   }),
 
+  /** d3 selection of tspan.blockTitle of this axis.
+   */
   axisSelectTextBlock : computed('axisSelect', function () {
     let
     gAxis = this.get('axisSelect'),
