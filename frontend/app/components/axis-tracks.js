@@ -1920,6 +1920,9 @@ export default InAxis.extend({
     dLog('blockLayoutWidthSum', widths, blockIds.length, blockIds2.length, this.get('blockComps.length'));
     return widths;
   }),
+  /** trackBlocksR are shown using fixed-width space allocated by axis-blocks,
+   * except for isSubElements, which use variable width.
+   */
   variableWidthBlocks : filter('trackBlocksR', (block) => block.get('isSubElements')),
   /**
    * @return (region){centre,right} width

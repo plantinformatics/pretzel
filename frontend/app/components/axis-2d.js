@@ -90,7 +90,7 @@ export default Component.extend(Evented, AxisEvents, {
       dLog('dataBlocksMap', id, dataBlocksMap, dataBlocks);
       return dataBlocks;
     }),
-  /** This is passed as trackBlocksR to axis-tracks and axis-blocks.
+  /** This is passed as trackBlocksR to axis-tracks.
    */
   trackBlocks : filter('dataBlocks.@each.isZoomedOut', function(block, index, array) {
     return ! block.get('isZoomedOut');
