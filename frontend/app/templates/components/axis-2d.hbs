@@ -39,7 +39,7 @@
 <div>axis-2d : {{axisID}}, {{targetEltId}},  {{subComponents.length}} :
   <div>subComponents :
     {{#draw/axis-blocks axis1d=axis1d dataBlocks=dataBlocks
-      childWidths=childWidths trackWidth=trackWidth
+      childWidths=childWidths.centre trackWidth=trackWidth
       as |axisBlocks| }}
       {{axis-charts data=data axis=this axisID=axisID childWidths=childWidths.centre
         allocatedWidths=allocatedWidths blocks=viewedChartable
