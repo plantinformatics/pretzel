@@ -52,6 +52,7 @@ const trace = 1;
 export default Model.extend({
   pathsP : service('data/paths-progressive'), // for getBlockFeaturesInterval()
   blockService : service('data/block'),
+  trait : service('data/trait'),
   auth: service('auth'),
   apiServers: service(),
   datasetService : service('data/dataset'),
@@ -1141,7 +1142,9 @@ export default Model.extend({
       /** make the 2 requests in serial because of .drop() on getBlockFeaturesIntervalTask()
        */
       features = this.get('allFeatures')
-        .then((f) => [f, this.get('referenceBlock.allFeatures')])
+        .then((f) => {
+          f.forEach((fi) => this.get('trait').traitAddQtl(fi.value[0]));
+          return [f, this.get('referenceBlock.allFeatures')];})
       // parentBlockFeatures = ;
       // parentBlockFeatures // allSettled([features, parentBlockFeatures])
         .then((ps) => {
@@ -1166,33 +1169,46 @@ export default Model.extend({
    * @param parentFeatures features of the parent / reference block
    */
   valueCompute(features, parentFeatures) {
-    dLog('valueCompute', features?.length, parentFeatures?.length);
+    const fnName = 'valueCompute';
+    dLog(fnName, features?.length, parentFeatures?.length);
     if (features?.length && parentFeatures?.length) {
-      let featuresExtents =
-          features.map((f) => {
-            let value;
-            /** currently the spreadsheet may define value start&end, could verify by checking this against calculated value. */
-            if (true) /*(f.value[0] === null)*/ {
+      let
+      featuresExtents =
+        features.map((f) => {
+          let value;
+          /** currently the spreadsheet may define value start&end, could verify by checking this against calculated value. */
+          let f_value = f.get('value')
+              .filter((v) => (v !== undefined) && (v !== null));
+          /** Flanking Markers take precedence, if defined. */
+          if (true) /*(f.value[0] === null)*/ {
+            let
+            flankingNames = f.get('values.flankingMarkers'),
+            flanking = flankingNames.map((fmName) => {
+              let fm = parentFeatures.findBy('name', fmName);
+              if (! fm) {
+                dLog(fnName, fmName, parentFeatures);
+              }
+              return fm;
+            }).filter((f) => f);
+            if (flanking.length) {
               let
-              flankingNames = f.get('values.flankingMarkers'),
-              flanking = flankingNames.map((fmName) => {
-                let fm = parentFeatures.findBy('name', fmName);
-                if (! fm) {
-                  dLog('valueCompute', fmName, parentFeatures);
-                }
-                return fm;
-              }).filter((f) => f),
               locations = flanking.map((fm) => fm.value).flat(),
               extent = d3.extent(locations);
               f.set('value', extent);
               value = extent;
             } else {
-              value = f.value;
+              value = f_value;
             }
-            return value;
-          });
+          } else {
+            value = f_value;
+          }
+          if (! value.length) {
+            dLog(fnName, 'no value', f.value, f.values);
+          }
+          return value;
+        });
       let blockExtent = d3.extent(featuresExtents.flat());
-      dLog('valueCompute', this.id, this.name, blockExtent, featuresExtents);
+      dLog(fnName, this.id, this.name, blockExtent, featuresExtents);
       this.set('featureLimits', blockExtent);
     }
   },

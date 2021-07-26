@@ -1,7 +1,11 @@
 import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
+
 import ManageBase from './manage-base'
 
 export default ManageBase.extend({
+  trait : service('data/trait'),
+
 
   showChartOptions : false,
 
