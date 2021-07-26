@@ -1143,7 +1143,12 @@ export default Model.extend({
        */
       features = this.get('allFeatures')
         .then((f) => {
-          f.forEach((fi) => this.get('trait').traitAddQtl(fi.value[0]));
+	  if (! f) {
+	    dLog('loadRequiredData', this.id, this.get('datasetId.id'),
+		 this.get('datasetId.parent.id'), this.get('referenceBlock.datasetId.id'));
+	  } else {
+            f.forEach((fi) => this.get('trait').traitAddQtl(fi.value[0]));
+	  }
           return [f, this.get('referenceBlock.allFeatures')];})
       // parentBlockFeatures = ;
       // parentBlockFeatures // allSettled([features, parentBlockFeatures])
@@ -1182,7 +1187,7 @@ export default Model.extend({
           /** Flanking Markers take precedence, if defined. */
           if (true) /*(f.value[0] === null)*/ {
             let
-            flankingNames = f.get('values.flankingMarkers'),
+            flankingNames = f.get('values.flankingMarkers') || [],
             flanking = flankingNames.map((fmName) => {
               let fm = parentFeatures.findBy('name', fmName);
               if (! fm) {
@@ -1255,13 +1260,17 @@ export default Model.extend({
     if (this.get('isChartable') || ((count !== undefined) && (count <= featuresCountsThreshold))) {
       this.getFeatures(blockId);
     }
+    const
+      domain = this.getDomain();
+    if (! domain) {
+      dLog(fnName, 'no domain yet', this.zoomedDomain, this.limits);
+    } else
     /** if featuresCounts not yet requested then count is undefined
      * Equivalent to check if .featuresCountsResults.length === 0.
      */
     if ((this.featuresCounts === undefined) || ((count === undefined) || (count > featuresCountsThreshold))) {
       let
       minSize = this.get('featuresCountsInZoomSmallestBinSize'),
-      domain = this.getDomain(),
       yRange = this.getRange(),
       /** bin size of result with smallest bins, in pixels as currently viewed on screen. */
       minSizePx = this.pxSize(minSize, yRange, domain);
