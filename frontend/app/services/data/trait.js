@@ -12,7 +12,7 @@ const groupName = 'traits';
 /** QTLs, which are Features, have an attribute values.Trait.
 
  * QTLs are displayed in the View panel grouped by Trait, with a
- * toggle on Trait to
+ * toggle on Trait to enable visibility of QTLs of that trait.
  *
  * This can be seen as a grouping of Features, and there may be other,
  * similar groupings in addition to Trait.
@@ -36,8 +36,33 @@ export default Service.extend({
       trait.features.addObject(feature);
     }
   },
+  /** Set visibility of the given trait.
+   * @param traitName
+   * @param visible
+   */
+  traitVisible(traitName, visible) {
+    const
+    fnName = 'traitVisible',
+    group = this.get(groupName),
+    trait = group.findBy('name', traitName);
+    if (! trait) {
+      dLog(fnName, traitName, 'not found');
+    } else {
+      trait.set('visible', visible);
+    }
+  },
+  /** If the feature has values.Trait (i.e. is a QTL), then return trait.visible, otherwise true.
+   * Features which are not QTLs, are not filtered out.
+   */
   featureFilter(groupName = 'traits', feature) {
-    let group = this.get(groupName);
+    const
+    fnName = 'traitVisible',
+    group = this.get(groupName),
+    traitName = feature.get('values.Trait'),
+    trait = traitName && group && group.findBy('name', traitName),
+    ok = trait ? trait.get('visible') : true;
+    dLog(fnName, traitName, ok);
+    return ok;
   },
 
 });

@@ -2,7 +2,7 @@
     {{#elem/panel-heading icon="globe" panelContainer=panelContainer}}
         Traits : QTLs
         {{#if displayData.length}}
-        <span class="pull-right">
+        <span class="pull-right" style="margin-right: 0.8em;" >
           {{input type="checkbox" name="viewAllFlag" checked=viewAllFlag }}
         </span>
         {{/if}}
@@ -20,7 +20,7 @@
             </span>
 
             <span class="pull-right">
-              {{input type="checkbox" name="viewTraitFlag" checked=viewTraitFlag }}
+              {{input type="checkbox" name="viewTraitFlag" checked=trait.visible }}
             </span>
 
             <p class="list-group-item-text">

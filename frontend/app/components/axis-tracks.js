@@ -493,6 +493,8 @@ export default InAxis.extend({
   urlOptions : alias('queryParams.urlOptions'),
   selected : service('data/selected'),
   axisZoom: service('data/axis-zoom'),
+  trait : service('data/trait'),
+
 
 
   className : "tracks",
@@ -1719,8 +1721,9 @@ export default InAxis.extend({
   /** Construct a interval tree from the track data.
    * This is used for filtering and for layering.
    */
-  tracksTree : computed('trackBlocksR.@each.featuresLength', function () {
+  tracksTree : computed('trackBlocksR.@each.featuresLength', 'trait.traits.@each.visible', function () {
     let
+    trait = this.get('trait'),
     axisID = this.get('axisID'),
     trackBlocksR = this.get('trackBlocksR'),
     featuresLengths = this.get('trackBlocksR').mapBy('featuresLength');
@@ -1735,6 +1738,7 @@ export default InAxis.extend({
         blockId = blockR.get('id'),
         features = blockR.get('features')
           .toArray()  //  or ...
+          .filter((feature) => trait.featureFilter('traits', feature))
           .map(function (feature) {
             let interval = feature.get('range') || feature.get('value');
             /* extra attributes will be added to interval : .description,
