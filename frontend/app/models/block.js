@@ -504,6 +504,8 @@ export default Model.extend({
     /** reference dataset */
     parent = dataset && dataset.get('parent'),
     parentName = parent && parent.get('name');  // e.g. "myGenome"
+    /** filter out self if parentName is defined, as in viewedReferenceBlocks() */
+    let blockId = this.get('datasetId.parentName') && this.get('id');
 
     if (trace_block)
       dLog('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent && parent.get('id'));
@@ -539,8 +541,17 @@ export default Model.extend({
         blocks = scopes && scopes.get(scope);
         /** b.isData uses .referenceBlock, which may recurse to here, so use
          * direct attributes of block to indicate whether it is reference / data
-         * block. */
-        referenceBlock = blocks && blocks.filter((b) => b && (!!b.range || ! (b.featureValueCount || b.featureLimits)));
+         * block.
+         * Also filter out self if this is a child block.
+         * Accept block as a reference if it doesn't have a range or features or a parent;
+         * the possibility of references having parents has been floated, this does not support it.
+         */
+        referenceBlock = blocks && blocks.filter(
+          (b) => b &&
+            (!!b.range || ! (b.featureValueCount || b.featureLimits) ||
+             ! b.get('datasetId.parent')) &&
+            (! blockId || (b.get('id') !== blockId))
+        );
       } else {
         let blocks;
         if (false) {
@@ -622,10 +633,13 @@ export default Model.extend({
               }
               /* viewedBlocksByReferenceAndScope() does not filter out
                * blocks[0], the reference block, even if it is not viewed, so
-               * filter it out here.
+               * filter it out here if it is not viewed.
                * Also filter out self if this is a child block.
                */
-              else if (block.get('isViewed') && (! blockId || (block.get('id') !== blockId))) {
+              else if (
+                block.get('isViewed') &&
+                  (! block.get('datasetId.parent')) &&
+                  (! blockId || (block.get('id') !== blockId))) {
                 referenceBlocks.push(block);
               }
             });
@@ -711,6 +725,8 @@ export default Model.extend({
    */
   referenceBlocksAllServers(original) {
     let parentName = this.get('datasetId.parentName'),
+    /** filter out self if parentName is defined, as in viewedReferenceBlocks() */
+    blockId = parentName && this.get('id'),
     scope = this.get('scope'),
     datasetService = this.get('datasetService'),
     blocks = ! parentName ? [] :
@@ -721,8 +737,10 @@ export default Model.extend({
            * .datasetsForName(, original) above; for now it seems that the
            * dataset and block will be on the same server, i.e. either both are
            * copied here or both not.
+           * Also filter out self if this is a child block.
            */
-          if (block.get('scope') === scope) 
+          if ((block.get('scope') === scope) &&
+              (! blockId || (block.get('id') !== blockId)))
             result.push(block);
         });
         return result;
