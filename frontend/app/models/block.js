@@ -600,6 +600,7 @@ export default Model.extend({
    * @return reference blocks, or []
    */
   viewedReferenceBlocks(matchParentName) {
+    const fnName = 'viewedReferenceBlocks';
     let referenceBlocks = [],
     datasetName = matchParentName ?
       this.get('datasetId.parentName') :
@@ -614,22 +615,22 @@ export default Model.extend({
         let mapByScope = mapByDataset.get(datasetName);
         if (! mapByScope) {
           if (matchParentName && (this.isViewed || trace_block > 1)) {
-            dLog('viewedReferenceBlock', 'no viewed parent', datasetName, scope, mapByDataset);
+            dLog(fnName, 'no viewed parent', datasetName, scope, mapByDataset);
           }
         } else {
           let blocks = mapByScope.get(scope);
           if (! blocks) {
             if (matchParentName && (this.isViewed || trace_block > 1)) {
-              dLog('viewedReferenceBlock', 'no matching scope on parent', datasetName, scope, mapByScope);
+              dLog(fnName, 'no matching scope on parent', datasetName, scope, mapByScope);
             }
           } else {
             blocks.forEach((block, i) => {
               if ((block === undefined) && (i === 0)) {
-                dLog('viewedReferenceBlock', 'reference not viewed', datasetName, scope);
+                dLog(fnName, 'reference not viewed', datasetName, scope);
               } else if ((block === undefined)) {
-                dLog('viewedReferenceBlock', 'block undefined', datasetName, scope);
+                dLog(fnName, 'block undefined', datasetName, scope);
               } else if (scope !== block.get('scope')) {
-                dLog('viewedReferenceBlock', 'not grouped by scope', block.get('id'), scope, block._internalModel.__data, datasetName);
+                dLog(fnName, 'not grouped by scope', block.get('id'), scope, block._internalModel.__data, datasetName);
               }
               /* viewedBlocksByReferenceAndScope() does not filter out
                * blocks[0], the reference block, even if it is not viewed, so
@@ -646,7 +647,7 @@ export default Model.extend({
           }
         }
         if (trace_block > 1)
-          dLog('viewedReferenceBlock', referenceBlocks, datasetName, scope);
+          dLog(fnName, referenceBlocks, datasetName, scope);
       }
     }
 
