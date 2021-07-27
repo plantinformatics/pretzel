@@ -817,6 +817,14 @@ sub roundPosition($)
   return $pos;
 }
 
+# Given a string (e.g. flanking marker cell value),
+# split at comma or space, wrap each word (marker name) with "",
+# and join with comma space
+sub splitAndQuote($)
+{
+ return   join(', ', map { '"' . $_ . '"' } split(/[, ]/, $_[0]));
+}
+
 
 # For printing array as comma-separated list.
 # Could make this local if it clashed with any other print.
@@ -910,7 +918,7 @@ sub printFeature($@)
     {
       $valuesString =~ s/}//;
       $valuesString .= ($haveValues ? ",\n$valueIndent" : '')
-        . '"flankingMarkers" : ["' . $a[$columnsKeyLookup{'Flanking Markers'}] . '"';
+        . '"flankingMarkers" : [' . splitAndQuote($a[$columnsKeyLookup{'Flanking Markers'}]);
       $endFeature = "] } }\n";
     }
   my $closingBrace = $valuesOpen ? '' : '}';
