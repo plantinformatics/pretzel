@@ -141,6 +141,7 @@ my $datasetHeaderGM;
 # true after startDataset()
 my $startedDataset = 0;
 # string to close the current Feature
+# When within Feature.values.flankingMarkers, this is "] } }\n"
 my $endFeature;
 
 #-------------------------------------------------------------------------------
@@ -432,6 +433,9 @@ EOF
 
 }
 
+# becomes ',' within a block after the first feature, and is prepended to subsequent features.
+my $featureSeparator;
+
 
 # omitted :
 #            "namespace": "90k",
@@ -451,6 +455,7 @@ sub blockHeader($)
             "features": [
 
 EOF
+  $featureSeparator = '';
   return $text;
 }
 
@@ -528,12 +533,16 @@ sub convertInput()
     }
 }
 
-sub optionalBlockFooter()
+sub optionalEndFeature()
 {
   if (defined($endFeature) && ($endFeature ne ''))
     {
       print $endFeature;   $endFeature = '';
     }
+}
+sub optionalBlockFooter()
+{
+  optionalEndFeature();
   if (defined($lastChr))
     { print $blockFooter; }
 }
@@ -657,7 +666,7 @@ sub snpLine($)
       if ($startedDataset)
       {
         # end of Feature .values.flankingMarkers[]
-        print $endFeature;   $endFeature = '';
+        optionalEndFeature();
         endDataset();
       }
       $lastChr = undef;
@@ -732,17 +741,17 @@ sub snpLine($)
           }
         }
     }
-  else # print feature separator
-    { print ","; }
 
   my $valuesOpen = defined($columnsKeyLookup{'Flanking Markers'});
   # also $c_Trait
   if (! $a[c_name] && defined($columnsKeyLookup{'Flanking Markers'}) && $a[$columnsKeyLookup{'Flanking Markers'}])
     {
-       print "\"$a[$columnsKeyLookup{'Flanking Markers'}]\"";
+      # The first flanking marker is output by printFeature(); prepend this one with ','
+       print ", \"$a[$columnsKeyLookup{'Flanking Markers'}]\"";
     }
   else
     {
+      optionalEndFeature();
       printFeature($valuesOpen, @a);
     }
 }
@@ -907,6 +916,7 @@ sub printFeature($@)
   my $closingBrace = $valuesOpen ? '' : '}';
 
   print <<EOF;
+$featureSeparator
                {
                     "name": "$name",
                     "value": [
@@ -917,6 +927,7 @@ sub printFeature($@)
                 $closingBrace
 EOF
 
+  $featureSeparator = ',';
   return $haveValues;
 }
 
