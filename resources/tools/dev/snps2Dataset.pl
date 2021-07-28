@@ -478,6 +478,8 @@ my $lastChr;
 # Non-empty value of Trait from a previous line, or undefined on the first line
 my $currentTrait;
 my $blockSeparator;
+# Used to detect a change in parentName field.
+my $currentParentName;
 
 #-------------------------------------------------------------------------------
 
@@ -659,8 +661,9 @@ sub snpLine($)
   if (defined($c_parentName))
   {
     $parentName = $a[$c_parentName];
-    if ($parentName)
+    if ($parentName && (!defined($currentParentName) || ($parentName ne $currentParentName)))
     {
+      $currentParentName = $parentName;
       $datasetName = "$currentTrait-$parentName";
       makeTemplates();
       if ($startedDataset)
