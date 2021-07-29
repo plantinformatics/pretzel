@@ -1162,12 +1162,12 @@ export default Model.extend({
        */
       features = this.get('allFeatures')
         .then((f) => {
-	  if (! f) {
-	    dLog('loadRequiredData', this.id, this.get('datasetId.id'),
-		 this.get('datasetId.parent.id'), this.get('referenceBlock.datasetId.id'));
-	  } else {
-            f.forEach((fi) => this.get('trait').traitAddQtl(fi.value[0]));
-	  }
+          if (! f) {
+            dLog('loadRequiredData', this.id, this.get('datasetId.id'),
+                 this.get('datasetId.parent.id'), this.get('referenceBlock.datasetId.id'));
+          } else {
+            f.forEach((fi) => fi.value.forEach((fii) => this.get('trait').traitAddQtl(fii)));
+          }
           return [f, this.get('referenceBlock.allFeatures')];})
       // parentBlockFeatures = ;
       // parentBlockFeatures // allSettled([features, parentBlockFeatures])
