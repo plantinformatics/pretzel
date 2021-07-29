@@ -47,6 +47,23 @@ DB_NAME=pretzel
 # dockerExec=
 # DB_NAME=admin
 
+# mongoShell runs mongo shell, either using docker if $DIM, otherwise directly.
+# @param 1 execArgs args to docker exec
+# @param 2 splitArgs  args to mongo; these are split
+# @param 3* remaining args are wrapped in "", not split
+# Usage e.g. :
+#   mongoShell ''   '--quiet admin --eval' "$MON_JS"  | ... (as in @see blockExport)
+# or :
+#   mongoShell '-it'   --quiet admin
+
+if [ -n "$DIM" ] ;
+then
+  function mongoShell() { execArgs=$1; shift; splitArgs=$1; shift; docker exec $execArgs $DIM mongo ${splitArgs[@]} "$*"; }
+else
+  function mongoShell() { execArgs=$1; shift; splitArgs=$1; shift; mongo ${splitArgs[@]} "$*"; }
+fi
+
+
 
 #-------------------------------------------------------------------------------
 
@@ -128,3 +145,37 @@ function loadChr()
   done
   # cd ..
 }
+
+#-------------------------------------------------------------------------------
+
+tmpDir=/tmp
+# Export a dataset / block complete with features, in Pretzel JSON format, ready for upload.
+# Uses : $DIM, mongoShell
+# Usage eg.  blockExport Triticum_aestivum_IWGSC_RefSeq_v1.0_90k_markers 1B >  90k_markers_1B.json
+function blockExport()
+{
+  [ $# -eq 2 ] || (echo "Usage : blockExport datasetId blockId" 1>&2 ; exit 1)
+  datasetId=$1
+  blockId=$2
+  # use sed to inject variable values because mongo script has many $.
+  sed "s/__datasetId__/$datasetId/;s/__blockId__/$blockId/"  >  $tmpDir/blockExport.js <<\EOF
+db.Dataset.aggregate ( [
+ { $match : { "_id" : /__datasetId__/ } },
+ {$lookup: { from: 'Block', localField: '_id', foreignField: 'datasetId', as: 'blocks' }},
+ {$unwind : '$blocks'},
+ { $match : { "blocks.name" : "__blockId__" } },
+ {$lookup: { from: 'Feature', localField: 'blocks._id', foreignField: 'blockId', as: 'blocks.features' }},
+ {$group : { _id : "$_id", "tags" : { $first: "$tags"},
+ "public" : { $first: "$public"},
+ "readOnly" : { $first: "$readOnly"},
+ "namespace" : { $first: "$namespace"},
+ blocks: {$push : "$blocks" } }}
+])
+EOF
+  MON_JS=$(cat $tmpDir/blockExport.js)
+  # uses $DIM if defined
+  mongoShell ''   '--quiet admin --eval' "$MON_JS"  | sed 's/"[_blockiI]*d" : ObjectId("[0-9a-f][0-9a-f]*"),//g'
+}
+
+
+#-------------------------------------------------------------------------------
