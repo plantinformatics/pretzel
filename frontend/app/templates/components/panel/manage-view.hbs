@@ -1,19 +1,23 @@
 {{#elem/panel-container state="primary" as |panelContainer|}}
     {{#elem/panel-heading icon="globe" panelContainer=panelContainer}}
         Displayed Data
-        {{#if hasDisplayData}}
-        <span class="pull-right">
-          {{elem/button-base
-            classSize='xs'
-            classColour='danger'
-            icon='minus'
-            onClick=(action 'removeDisplayData')}}
-        </span>
-        {{/if}}
     {{/elem/panel-heading}}
     {{#if panelContainer.showComponent}}
 
     <ul id="display-blocks" class="list-group">
+        {{#if hasDisplayData}}
+        <li class="list-group-item" style="min-height: 55px;" >
+          <span class="pull-right">
+            {{elem/button-base
+              classSize='xs'
+              classColour='danger'
+              icon='minus'
+              onClick=(action 'removeDisplayData')}}
+          </span>
+          <label class="pull-right" style="margin: 0.5em; margin-right: 1.5em;">Close all axes</label>
+        </li>
+        {{/if}}
+
         {{#each displayData as |block|}}
         <li 
             class="list-group-item {{if (compare block.id '===' selectedBlock.id) 'list-group-item-warning'}}"
@@ -50,6 +54,7 @@
   {{/if}} {{!-- showComponent --}}
 {{/elem/panel-container}}
 
+{{panel/trait-qtl data=trait.traits}}
 
 {{#if isMapview}}
 {{#elem/panel-container state="primary" showComponent=showChartOptions as |panelContainer|}}

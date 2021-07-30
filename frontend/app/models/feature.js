@@ -2,6 +2,9 @@ import { computed } from '@ember/object';
 import Model, { attr, belongsTo, hasMany } from '@ember-data/model';
 //import Fragment from 'model-fragments/fragment';
 
+const dLog = console.debug;
+
+
 export default Model.extend({
   blockId: belongsTo('block'),
   _name: attr('string'),
@@ -20,6 +23,17 @@ export default Model.extend({
         (this.get('isAnon') && (this.get('blockId.name') + ':' + this.get('value.0')));
     return name;
   }),
+
+  get location() {
+    return this.get('value.0') ?? this.get('value_0');
+  },
+  set location(v) {
+    if (this.location !== v) {
+      dLog('location set', v);
+      this.set('value.0', v);
+      this.get('value_0', v);
+    }
+  },
 
   isAnon : computed('blockId.datasetId.tags', function () {
     let block = this.get('blockId.content') || this.get('blockId'),

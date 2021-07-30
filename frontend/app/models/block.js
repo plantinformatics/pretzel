@@ -6,6 +6,7 @@ import { observer } from '@ember/object';
 import { A } from '@ember/array';
 import { and, alias } from '@ember/object/computed';
 import { debounce, throttle } from '@ember/runloop';
+import { allSettled } from 'rsvp';
 
 import { task } from 'ember-concurrency';
 
@@ -30,6 +31,7 @@ import { featureCountDataProperties } from '../utils/data-types';
 
 import { stacks } from '../utils/stacks';
 
+/* global d3 */
 
 /*----------------------------------------------------------------------------*/
 
@@ -50,6 +52,7 @@ const trace = 1;
 export default Model.extend({
   pathsP : service('data/paths-progressive'), // for getBlockFeaturesInterval()
   blockService : service('data/block'),
+  trait : service('data/trait'),
   auth: service('auth'),
   apiServers: service(),
   datasetService : service('data/dataset'),
@@ -230,13 +233,21 @@ export default Model.extend({
     let featuresLength = this.get('features.length');
     if (trace_block)
       dLog('featuresLengthUpdate', featuresLength, this.get('id'));
-    this.set('featuresLengthDebounced', featuresLength);
+    /** featuresLengthUpdate() is called from debounce()
+     * so check if the component is still current. */
+    if (! this.isDestroying && ! this.isDestroyed) {
+      this.set('featuresLengthDebounced', featuresLength);
+    }
   },
   featuresLengthUpdateThrottle() {
     let featuresLength = this.get('features.length');
     if (trace_block)
       dLog('featuresLengthUpdateThrottle', featuresLength, this.get('id'));
-    this.set('featuresLengthThrottled', featuresLength);
+    /** featuresLengthUpdateThrottle() is called from throttle()
+     * so check if the component is still current. */
+    if (! this.isDestroying && ! this.isDestroyed) {
+      this.set('featuresLengthThrottled', featuresLength);
+    }
   },
   featuresLengthObserver : observer('features.length', function () {
     debounce(this, this.featuresLengthUpdate, 200);
@@ -283,6 +294,10 @@ export default Model.extend({
   isSNP : computed('datasetId.tags', function () {
     let isSNP = this.hasTag('SNP');
     return isSNP;
+  }),
+  isQTL : computed('datasetId.tags', function () {
+    let isQTL = this.get('datasetId._meta.type') === 'QTL';
+    return isQTL;
   }),
   isHighDensity : computed('datasetId.tags', function () {
     let isHighDensity = this.hasTag('HighDensity');
@@ -489,6 +504,8 @@ export default Model.extend({
     /** reference dataset */
     parent = dataset && dataset.get('parent'),
     parentName = parent && parent.get('name');  // e.g. "myGenome"
+    /** filter out self if parentName is defined, as in viewedReferenceBlocks() */
+    let blockId = this.get('datasetId.parentName') && this.get('id');
 
     if (trace_block)
       dLog('referenceBlock', scope, dataset, reference, namespace, parent, parentName, parent && parent.get('id'));
@@ -524,8 +541,17 @@ export default Model.extend({
         blocks = scopes && scopes.get(scope);
         /** b.isData uses .referenceBlock, which may recurse to here, so use
          * direct attributes of block to indicate whether it is reference / data
-         * block. */
-        referenceBlock = blocks && blocks.filter((b) => b && (!!b.range || ! (b.featureValueCount || b.featureLimits)));
+         * block.
+         * Also filter out self if this is a child block.
+         * Accept block as a reference if it doesn't have a range or features or a parent;
+         * the possibility of references having parents has been floated, this does not support it.
+         */
+        referenceBlock = blocks && blocks.filter(
+          (b) => b &&
+            (!!b.range || ! (b.featureValueCount || b.featureLimits) ||
+             ! b.get('datasetId.parent')) &&
+            (! blockId || (b.get('id') !== blockId))
+        );
       } else {
         let blocks;
         if (false) {
@@ -574,6 +600,7 @@ export default Model.extend({
    * @return reference blocks, or []
    */
   viewedReferenceBlocks(matchParentName) {
+    const fnName = 'viewedReferenceBlocks';
     let referenceBlocks = [],
     datasetName = matchParentName ?
       this.get('datasetId.parentName') :
@@ -588,36 +615,39 @@ export default Model.extend({
         let mapByScope = mapByDataset.get(datasetName);
         if (! mapByScope) {
           if (matchParentName && (this.isViewed || trace_block > 1)) {
-            dLog('viewedReferenceBlock', 'no viewed parent', datasetName, scope, mapByDataset);
+            dLog(fnName, 'no viewed parent', datasetName, scope, mapByDataset);
           }
         } else {
           let blocks = mapByScope.get(scope);
           if (! blocks) {
             if (matchParentName && (this.isViewed || trace_block > 1)) {
-              dLog('viewedReferenceBlock', 'no matching scope on parent', datasetName, scope, mapByScope);
+              dLog(fnName, 'no matching scope on parent', datasetName, scope, mapByScope);
             }
           } else {
             blocks.forEach((block, i) => {
               if ((block === undefined) && (i === 0)) {
-                dLog('viewedReferenceBlock', 'reference not viewed', datasetName, scope);
+                dLog(fnName, 'reference not viewed', datasetName, scope);
               } else if ((block === undefined)) {
-                dLog('viewedReferenceBlock', 'block undefined', datasetName, scope);
+                dLog(fnName, 'block undefined', datasetName, scope);
               } else if (scope !== block.get('scope')) {
-                dLog('viewedReferenceBlock', 'not grouped by scope', block.get('id'), scope, block._internalModel.__data, datasetName);
+                dLog(fnName, 'not grouped by scope', block.get('id'), scope, block._internalModel.__data, datasetName);
               }
               /* viewedBlocksByReferenceAndScope() does not filter out
                * blocks[0], the reference block, even if it is not viewed, so
-               * filter it out here.
+               * filter it out here if it is not viewed.
                * Also filter out self if this is a child block.
                */
-              else if (block.get('isViewed') && (! blockId || (block.get('id') !== blockId))) {
+              else if (
+                block.get('isViewed') &&
+                  (! block.get('datasetId.parent')) &&
+                  (! blockId || (block.get('id') !== blockId))) {
                 referenceBlocks.push(block);
               }
             });
           }
         }
         if (trace_block > 1)
-          dLog('viewedReferenceBlock', referenceBlocks, datasetName, scope);
+          dLog(fnName, referenceBlocks, datasetName, scope);
       }
     }
 
@@ -696,6 +726,8 @@ export default Model.extend({
    */
   referenceBlocksAllServers(original) {
     let parentName = this.get('datasetId.parentName'),
+    /** filter out self if parentName is defined, as in viewedReferenceBlocks() */
+    blockId = parentName && this.get('id'),
     scope = this.get('scope'),
     datasetService = this.get('datasetService'),
     blocks = ! parentName ? [] :
@@ -706,8 +738,10 @@ export default Model.extend({
            * .datasetsForName(, original) above; for now it seems that the
            * dataset and block will be on the same server, i.e. either both are
            * copied here or both not.
+           * Also filter out self if this is a child block.
            */
-          if (block.get('scope') === scope) 
+          if ((block.get('scope') === scope) &&
+              (! blockId || (block.get('id') !== blockId)))
             result.push(block);
         });
         return result;
@@ -966,7 +1000,7 @@ export default Model.extend({
     featuresCounts = this.get('featuresCountsResults') || [],
     overlaps = featuresCounts.reduce(
       (result, fcs) => {
-        if (overlapFn(interval, fcs.domain)) {
+        if (fcs.domain && overlapFn(interval, fcs.domain)) {
           let
           filtered = Object.assign({}, fcs);
           filtered.result = fcs.result.filter(
@@ -1117,6 +1151,94 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** If this block contains QTLs, request all features of this block and its parent block.
+   * This enables calculation of the .value[] of the QTL features.
+   */
+  loadRequiredData : computed(function () {
+    // possibly generalise the tag to : 'valueComputed'
+    if (this.hasTag('QTL')) {
+      let
+      /** make the 2 requests in serial because of .drop() on getBlockFeaturesIntervalTask()
+       */
+      features = this.get('allFeatures')
+        .then((f) => {
+          if (! f) {
+            dLog('loadRequiredData', this.id, this.get('datasetId.id'),
+                 this.get('datasetId.parent.id'), this.get('referenceBlock.datasetId.id'));
+          } else {
+            f.forEach((fi) => fi.value.forEach((fii) => this.get('trait').traitAddQtl(fii)));
+          }
+          return [f, this.get('referenceBlock.allFeatures')];})
+      // parentBlockFeatures = ;
+      // parentBlockFeatures // allSettled([features, parentBlockFeatures])
+        .then((ps) => {
+          return ps[1].then((pf) => {
+            // requestBlockFeaturesInterval() returns an array of promises, one per blockId
+            return this.valueCompute(ps[0][0].value, pf[0].value);
+          });
+        });
+    }
+  }),
+  /** Request all features of this block.
+   */
+  allFeatures : computed(function () {
+    let
+    pathsP = this.get('pathsP'),
+    features = pathsP.getBlockFeaturesInterval(this.id, /*all*/true);
+    return features;
+  }),
+
+  /** Calculate the value / location of the 
+   * @param features of this block
+   * @param parentFeatures features of the parent / reference block
+   */
+  valueCompute(features, parentFeatures) {
+    const fnName = 'valueCompute';
+    dLog(fnName, features?.length, parentFeatures?.length);
+    if (features?.length && parentFeatures?.length) {
+      let
+      featuresExtents =
+        features.map((f) => {
+          let value;
+          /** currently the spreadsheet may define value start&end, could verify by checking this against calculated value. */
+          let f_value = f.get('value')
+              .filter((v) => (v !== undefined) && (v !== null));
+          /** Flanking Markers take precedence, if defined. */
+          if (true) /*(f.value[0] === null)*/ {
+            let
+            flankingNames = f.get('values.flankingMarkers') || [],
+            flanking = flankingNames.map((fmName) => {
+              let fm = parentFeatures.findBy('name', fmName);
+              if (! fm) {
+                dLog(fnName, fmName, parentFeatures);
+              }
+              return fm;
+            }).filter((f) => f);
+            if (flanking.length) {
+              let
+              locations = flanking.map((fm) => fm.value).flat(),
+              extent = d3.extent(locations);
+              f.set('value', extent);
+              value = extent;
+            } else {
+              value = f_value;
+            }
+          } else {
+            value = f_value;
+          }
+          if (! value.length) {
+            dLog(fnName, 'no value', f.value, f.values);
+          }
+          return value;
+        });
+      let blockExtent = d3.extent(featuresExtents.flat());
+      dLog(fnName, this.id, this.name, blockExtent, featuresExtents);
+      this.set('featureLimits', blockExtent);
+    }
+  },
+
+  /*--------------------------------------------------------------------------*/
+
   featuresCountsThreshold : alias('controls.view.featuresCountsThreshold'),
 
   /** When block is added to an axis, request features, scoped by the axis
@@ -1157,13 +1279,17 @@ export default Model.extend({
     if (this.get('isChartable') || ((count !== undefined) && (count <= featuresCountsThreshold))) {
       this.getFeatures(blockId);
     }
+    const
+      domain = this.getDomain();
+    if (! domain) {
+      dLog(fnName, 'no domain yet', this.zoomedDomain, this.limits);
+    } else
     /** if featuresCounts not yet requested then count is undefined
      * Equivalent to check if .featuresCountsResults.length === 0.
      */
     if ((this.featuresCounts === undefined) || ((count === undefined) || (count > featuresCountsThreshold))) {
       let
       minSize = this.get('featuresCountsInZoomSmallestBinSize'),
-      domain = this.getDomain(),
       yRange = this.getRange(),
       /** bin size of result with smallest bins, in pixels as currently viewed on screen. */
       minSizePx = this.pxSize(minSize, yRange, domain);
