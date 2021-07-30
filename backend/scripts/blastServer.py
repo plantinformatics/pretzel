@@ -31,5 +31,6 @@ def my_callback_fn(context, future):
   print(context, future.result())
 
 # callback_fn=my_callback_fn, 
-shell2http.register_command(endpoint="blastn", command_name="/home/ec2-user/scripts/blastn_cont.bash", callback_fn=my_callback_fn, decorators=[])
+# was : scripts/
+shell2http.register_command(endpoint="blastn", command_name="/home/ec2-user/pretzel/backend/scripts/blastn_cont.bash", callback_fn=my_callback_fn, decorators=[])
 

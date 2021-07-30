@@ -1,6 +1,6 @@
 import { on } from '@ember/object/evented';
 import { throttle, next, later, bind } from '@ember/runloop';
-import EmberObject, { computed } from '@ember/object';
+import EmberObject, { computed, get as Ember_get } from '@ember/object';
 import { alias, filter } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
@@ -17,7 +17,11 @@ import { stacks, xScaleExtend } from '../utils/stacks';
 
 /* global d3 */
 
+/*----------------------------------------------------------------------------*/
+
 const dLog = console.debug;
+
+/*----------------------------------------------------------------------------*/
 
 const axisTransitionTime = 750;
 /** 0 or 1 to disable or enable transitions */
@@ -27,6 +31,15 @@ const transitionEnable = 1;
  * space 10px from the axis, to leave room for brush hover/highlight, to not overlap track hover.
  */
 const marginLeft = 10;
+
+/*----------------------------------------------------------------------------*/
+
+/** blocks are presented via axis-tracks and axis-charts, which are
+ * divided into regions : centre (inside the split axis), and right
+ * (outside, right).  */
+const axisRegionNames = ['centre', 'right'];
+
+/*----------------------------------------------------------------------------*/
 
 
 export default Component.extend(Evented, AxisEvents, {
@@ -63,16 +76,21 @@ export default Component.extend(Evented, AxisEvents, {
      */
     'blockService.loadedViewedChildBlocks.@each.{isViewed,hasFeatures}',
     'blockService.viewed.[]',
+    'axis1d.extended',
     function () {
       let
         /** related : axis1d.dataBlocks */
         dataBlocksMap = this.get('blockService.dataBlocks'),
       id = this.get('axisID'),
       dataBlocks = (dataBlocksMap && dataBlocksMap.get(id)) || [];
+      // may be .is2d and not .extended
+      if (! this.get('axis1d.extended')) {
+        dataBlocks = dataBlocks.filter((block) => block.get('isQTL'));
+      }
       dLog('dataBlocksMap', id, dataBlocksMap, dataBlocks);
       return dataBlocks;
     }),
-  /** This is passed as trackBlocksR to axis-tracks and axis-blocks.
+  /** This is passed as trackBlocksR to axis-tracks.
    */
   trackBlocks : filter('dataBlocks.@each.isZoomedOut', function(block, index, array) {
     return ! block.get('isZoomedOut');
@@ -201,21 +219,36 @@ export default Component.extend(Evented, AxisEvents, {
       && (currentWidth = use_data[0]);
     return currentWidth;
   },
-  /** width of sub-components within this axis-2d.  Indexed by componentName.
+  /** width of sub-components within this axis-2d.
+   * Indexed by region name (centre, right) and componentName.
    * For each sub-component, [min, max] : the minimum required width, and the
    * maximum useful width, i.e. the maximum width that the component can fill
    * with content.
    * Measured nominally in pixels, but space may be allocated proportional to the width allocated to this axis-2d.
+   * childWidths.{centre,right}.* : region child components into centre (inside the split axis) and right : to the right of RightEdge of the axis
    */
   childWidths : undefined,
+
   /** Allocate the available width among the children listed in .childWidths
    * @return [horizontal start offset, width] for each child.
    * The key of the result is the same as the input .childWidths
    */
-  allocatedWidths : computed('childWidths.{chart,tracks,trackCharts}.1', 'width', 'adjustedWidth', function () {
+  allocatedWidths : computed(
+    'childWidths.{centre,right}.{chart,tracks,trackCharts}.1', 'width', 'adjustedWidth',
     // if @each were supported for hashes, would depend on : 'childWidths.@each.1', 
-    let allocatedWidths,
-    childWidths = this.get('childWidths'),
+    function () {
+      let
+      childWidths = this.get('childWidths'),
+      regionNames = Object.keys(childWidths),
+      allocatedWidths =
+        regionNames.reduce((aw, region) => {
+          aw[region] = this.allocatedWidthsForRegion(region, childWidths[region]);
+          return aw;
+        }, {});
+      return allocatedWidths;
+    }),
+  allocatedWidthsForRegion (region, childWidths) {
+    let
     groupNames = childWidths ?
         // Object.keys(childWidths) gets other (Ember) properties; can probably change childWidths to {}.
         ['chart','tracks','trackCharts'].filter((k) => childWidths.hasOwnProperty(k))
@@ -235,6 +268,7 @@ export default Component.extend(Evented, AxisEvents, {
     trackWidth = this.get('trackWidth'),
     startWidth = this.get('startWidth'),
     width = this.get('width'),
+    /** adjustedWidth and startWidth pertain to .centre; value for .right tbd  */
     available = this.get('adjustedWidth') || startWidth || 0,
     /** spare and share may be -ve */
     spare = available ? (available - (requested ? requested[0] : 0)) : 0,
@@ -246,6 +280,7 @@ export default Component.extend(Evented, AxisEvents, {
     }
     /** horizontal offset to the start (left) of the child. */
     let offset = 0;
+    let
     allocatedWidths = groupNames.reduce((result, groupName) => {
       let w = childWidths[groupName][0] + share;
       if (w < 0)
@@ -255,18 +290,18 @@ export default Component.extend(Evented, AxisEvents, {
       result[groupName] = allocated;
       return result;
     }, {});
-    next(() => !this.isDestroying && this.set('allocatedWidthsMax', offset));
+    next(() => !this.isDestroying && this.set('allocatedWidthsMax.' + region, offset));
     dLog('allocatedWidths', allocatedWidths, childWidths, width, available, offset);
     return allocatedWidths;
-  }),
+  },
   /** @return width from left axis to right edge <path>
    * This is marginLeft + allocatedWidthsMax
    */
-  allocatedWidthRect : computed('allocatedWidths', 'allocatedWidthsMax', function () {
+  allocatedWidthRect : computed('allocatedWidths', 'allocatedWidthsMax.centre', function () {
     let
     /** Evaluation of allocatedWidths sets allocatedWidthsMax. */
     allocatedWidths = this.get('allocatedWidths'),
-    allocatedWidthsMax = this.get('allocatedWidthsMax');
+    allocatedWidthsMax = this.get('allocatedWidthsMax.centre');
     return marginLeft + (allocatedWidthsMax || 0);
   }),
 
@@ -296,7 +331,12 @@ export default Component.extend(Evented, AxisEvents, {
     this._super(...arguments);
 
     this.set('axis1d.axis2d', this);
-    this.set('childWidths', EmberObject.create());
+    let childWidths = axisRegionNames.reduce((cw, region) => {
+      cw.set(region, EmberObject.create());
+      return cw;
+    }, EmberObject.create());
+    this.set('childWidths', childWidths);
+    this.set('allocatedWidthsMax', EmberObject.create());
   },
 
   willDestroyElement() {
@@ -448,7 +488,7 @@ export default Component.extend(Evented, AxisEvents, {
     let 
     /** value of .extended may be false, so || 0.  */
       initialWidth = /*50*/ this.getAxisExtendedWidth(axisID) || 0,
-    axisData = axis && axis.extended ? [axisID] : [];
+    axisData = axis && Ember_get(axis, 'axis1d.is2d') ? [axisID] : [];
     let oa = this.get('oa');
     if (axisG === undefined)
       axisG = oa.svgContainer.selectAll("g.axis-outer#id" + axisID);
@@ -475,6 +515,21 @@ export default Component.extend(Evented, AxisEvents, {
       .attr('transform', 'translate(' + marginLeft + ')');
     let em = ug.merge(eg);
 
+    if (this.get('axis1d.extended')) {
+      this.axisShowExtended(axis, axisID, em, initialWidth);
+    }
+  },
+  /** Show the split axis.
+   * Originally part of axisShowExtend(), this is split out to enable QTLs to be
+   * shown using axis-tracks without necessarily showing the split axis, which
+   * is enabled by axis1d.extended.  axis-tracks creates elements within the
+   * g-axis-use created by axis-2d;  axisShowExtend() creates the framework of
+   * the axis-2d.
+   */
+  axisShowExtended(axis, axisID, em, initialWidth)
+  {
+    dLog('axisShowExtended', axis, axisID);
+
     /** If dualAxis, use <use> to show 2 identical axes.
      * Otherwise show only the left axis, and on the right side a line like an
      * axis with no ticks, just the top & bottom tick lines, but reflected so
@@ -483,14 +538,20 @@ export default Component.extend(Evented, AxisEvents, {
     let dualAxis = this.get('dualAxis');
     let vc = this.get('oa.vc');
     if (dualAxis) {
-      let eu = eg
+      let eu = em
+        .selectAll('g.axis-use > use')
+        .data(em.data)
+        .enter()
       /* extra "xlink:" seems required currently to work, refn :  dsummersl -
        * https://stackoverflow.com/questions/10423933/how-do-i-define-an-svg-doc-under-defs-and-reuse-with-the-use-tag */
         .append("use").attr("xlink:xlink:href", eltIdGpRef);
       eu //.transition().duration(1000)
         .attr("transform", (d) => "translate(" + this.getAxisExtendedWidth(d) + ",0)");
 
-      let er = eg
+      let er = em
+        .selectAll('g.axis-use > rect')
+        .data(em.data)
+        .enter()
         .append("rect")
         .attr("x", 0)
         .attr("y", 0)
@@ -515,7 +576,10 @@ export default Component.extend(Evented, AxisEvents, {
         [0, edgeHeight],
         [+tickWidth, edgeHeight]
       ]),
-      ra = eg
+      ra = em
+        .selectAll('g.axis-use > path')
+        .data(em.data())
+        .enter()
         .append("path"),
       thisAxis2d = this,
       rm = ra.merge(em.selectAll('g.axis-use > path'))
@@ -524,7 +588,10 @@ export default Component.extend(Evented, AxisEvents, {
     }
 
     // foreignObject is case sensitive - refn https://gist.github.com/mbostock/1424037
-    let ef = eg
+    let ef = em
+      .selectAll('g.axis-use > g.axis-html')
+      .data(em.data())
+      .enter()
       .append("g")
       .attr("class", "axis-html")
       .append("foreignObject")
@@ -554,7 +621,7 @@ export default Component.extend(Evented, AxisEvents, {
     /** this clipPath is created in AxisCharts:frame(), id is axisClipId(). */
     let axisClipRect = em.selectAll("g.chart > clipPath > rect");
     axisClipRect
-      .attr("width", initialWidth)
+      .attr("width", initialWidth);
   },
 
   /*--------------------------------------------------------------------------*/
@@ -564,7 +631,7 @@ export default Component.extend(Evented, AxisEvents, {
    * This is part of axisShowExtend(), which will be moved here;
    * this is the key part which needs to update.
    */
-  positionRightEdgeEffect : computed('allocatedWidthsMax', 'allocatedWidths', function () {
+  positionRightEdgeEffect : computed('allocatedWidthsMax.centre', 'allocatedWidths', 'axis1d.extended', function () {
     this.get('positionRightEdge').perform();
     this.widthEffects();
   }),
@@ -583,7 +650,7 @@ export default Component.extend(Evented, AxisEvents, {
         /** allocatedWidths also calculates allocatedWidthsMax. */
         allocatedWidths = this.get('allocatedWidths'),
         sum = this.childWidthsSum();
-        width = Math.max(sum, this.get('allocatedWidthsMax') || 0);
+        width = Math.max(sum, this.get('allocatedWidthsMax.centre') || 0);
       }
       if (width !== undefined) {
         let
@@ -594,8 +661,9 @@ export default Component.extend(Evented, AxisEvents, {
       }
     }
   }).keepLatest(),
+  /** sum of childWidths.centre[1] */
   childWidthsSum() {
-    let sum = lodashMath.sum(Object.values(this.get('childWidths')).mapBy('1'));
+    let sum = lodashMath.sum(Object.values(this.get('childWidths.centre')).mapBy('1'));
     return sum;
   },
 
@@ -716,7 +784,7 @@ export default Component.extend(Evented, AxisEvents, {
   },
 
   willDestroyElement2() {
-    this.set('allocatedWidthsMax', 0);
+    this.set('allocatedWidthsMax.centre', 0);
     this.get('positionRightEdge').perform();
     let axisUse = this.selectAxisUse();
     if (axisUse) {
@@ -726,3 +794,6 @@ export default Component.extend(Evented, AxisEvents, {
 
 });
 
+/*----------------------------------------------------------------------------*/
+
+export { axisRegionNames };

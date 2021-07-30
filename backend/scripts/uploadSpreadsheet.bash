@@ -254,7 +254,8 @@ function qtlList()
     fi
     echo "type,QTL" > "$metaTypeFile"
     prefixTmpToArgs
-    <tmp/"$i"  filterOutComments | chrOmit |  $sp "${prefixedArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g -A 'Flanking Markers' "${localArgs[@]}" -t QTL -D "$outDir" ;
+    # Could use tac | ... -A 'Flanking Markers', as in comment re. $arrayColumnName in snps2Dataset.pl 
+    <tmp/"$i"  filterOutComments | chrOmit |  $sp "${prefixedArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  "${localArgs[@]}" -t QTL -D "$outDir" ;
     # ll "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     # echo "tmp/$out;$datasetName"

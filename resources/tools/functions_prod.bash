@@ -31,7 +31,7 @@ function dockerContainer() {
   image=$1;
   if pgrep docker > /dev/null
   then
-    docker ps --format "{{.ID}}\t{{.Image}}" | sed -n "s/	$image//p"
+    docker ps --format "{{.ID}}\t{{.Image}}" | sed -n "s/	$image.*//p"
   fi
 }
 DIM=$(dockerContainer mongo)

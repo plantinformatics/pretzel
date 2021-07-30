@@ -597,8 +597,9 @@ export default Service.extend({
 
   /** Features returned from API, for the block,
    * are stored in ember data store, as an attribute of block.
+   * @param all true means request all features of the block
    */
-  getBlockFeaturesInterval(blockId) {
+  getBlockFeaturesInterval(blockId, all) {
     const fnName = 'getBlockFeaturesInterval';
     if (trace_pathsP)
       dLog(fnName, blockId);
@@ -609,7 +610,7 @@ export default Service.extend({
     }
     else {
       let t = this.get('getBlockFeaturesIntervalTask');
-      features = t.perform(blockId)
+      features = t.perform(blockId, all)
         .catch((error) => {
           let lastResult;
           // Recognise if the given task error is a TaskCancelation.
@@ -630,18 +631,18 @@ export default Service.extend({
       features
         .then(function (features) {
           if (trace_pathsP)
-            dLog("getBlockFeaturesIntervalTask", blockId, features);
+            dLog("getBlockFeaturesIntervalTask", blockId, all, features);
         });
     }
     return features;
   },
 
-  getBlockFeaturesIntervalTask : task(function* (blockId) {
+  getBlockFeaturesIntervalTask : task(function* (blockId, all) {
     let
       fnName = 'getBlockFeaturesIntervalTask',
-        features = yield this.requestBlockFeaturesInterval(blockId);
+      features = yield this.requestBlockFeaturesInterval(blockId, all);
       if (trace_pathsP)
-        dLog(fnName, blockId, promiseText(features));
+        dLog(fnName, blockId, all, promiseText(features));
     return features;
     /* tried .enqueue().maxConcurrency(3), but got 2 identical requests, so .drop() instead;
      * Perhaps later: split requestBlockFeaturesInterval() into parameter gathering and request;
@@ -654,9 +655,10 @@ export default Service.extend({
 
   /**
    * @param blockA  blockID
+   * @param all true means request all features of the block
    * @return  promise yielding paths result
    */
-  requestBlockFeaturesInterval(blockA) {
+  requestBlockFeaturesInterval(blockA, all) {
     /** used in trace */
     const apiName = 'blockFeaturesInterval';
     /** blockA is the referenceBlock of the axis, so its store is not used to store the features of the dataBlockIds */
@@ -664,8 +666,15 @@ export default Service.extend({
 
     let me = this;
     let flowsService = this.get('flowsService');
-    let interval = this.axisDimensions([blockA]),
-    intervalParams = this.intervalParams(interval);
+    let intervalParams;
+    if (all) {
+      intervalParams = {
+        axes : [{range: 878, zoomed: false}],
+        nSamples : null};
+    } else {
+      let interval = this.axisDimensions([blockA]);
+      intervalParams = this.intervalParams(interval);
+    }
     let drawMap = stacks.oa.eventBus;
     let pathsViaStream = drawMap.get('controls').view.pathsViaStream;
     let axis = Stacked.getAxis(blockA),
@@ -688,7 +697,9 @@ export default Service.extend({
     }
     else if (brushedDomain)
       paramAxis.domain = brushedDomain;
-    let dataBlockIds = axis.dataBlocks(true, false)
+    let dataBlockIds =
+        all ? [blockA] :
+        axis.dataBlocks(true, false)
         .filter((blockS) => blockS.block.get('isBrushableFeatures'))
      // equiv : blockS.block.get('id')
       .map(function (blockS) { return blockS.axisName; });

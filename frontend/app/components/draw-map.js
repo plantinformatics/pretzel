@@ -1399,7 +1399,11 @@ export default Component.extend(Evented, {
             {
               let block = oa.z[blockName];
               parentAxis = oa.axesP[blockName];
-              dLog(block.scope, block.featureType, block.dataset.get('name'), block.dataset.get('namespace'), "parentAxis", parentAxis);
+              if (! block) {
+                dLog('ensureAxis', blockName, oa.z, oa.axesP);
+              } else {
+                dLog(block.scope, block.featureType, block.dataset.get('name'), block.dataset.get('namespace'), "parentAxis", parentAxis);
+              }
             }
           }
 
@@ -3964,7 +3968,11 @@ export default Component.extend(Evented, {
           /* can pass visible=true here - a slight optimisation; it depends on the
            * expression in dataBlocks() which distinguishes data blocks. */
           let childBlocks = axis.dataBlocks(true, false)
-              .filter((blockS) => blockS.block.get('isBrushableFeatures'));
+              /** Until d398e98e, this was filtered by .isBrushableFeatures; changed because
+               * if there are paths (& hence features) loaded, then it makes sense to brush those.
+               * (isBrushableFeatures() is concerned with whether more features should be requested, which is different).
+               */
+              ; // .filter((blockS) => blockS.block.get('isBrushableFeatures'));
           let range = [0, axis.yRange()];
           console.log(axis, 'childBlocks', childBlocks, range);
           /*
@@ -3985,9 +3993,17 @@ export default Component.extend(Evented, {
           /** e.g. "1B" */
           scope = blockR && blockR.get('name'),
           briefName = (shortName && scope) && (shortName + ':' + scope);
+          /** using axisName2MapChr(p) could mean that selection from
+           * 1 block overwrites another, so use dataset.id instead.
+           *
+           * In the case of QTL, i.e. block.block.hasTag('QTL'),
+           * the parent reference block also has data - features which can be brushed,
+           * and hence axisName2MapChr(p) would clash and overwrite that selection.
+           */
+          let dataBlockName = blockR.get('datasetId.id') + (scope ? ':' + scope : '');
 
           /** compound name dataset:block (i.e. map:chr) for the selected axis p.  */
-          let mapChrName = briefName || axisName2MapChr(p);
+          let mapChrName = briefName || dataBlockName || axisName2MapChr(p);
           selectedFeatures[mapChrName] = [];
 
             let blockFeatures = oa.z[block.axisName]; // or block.get('features')

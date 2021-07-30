@@ -171,6 +171,13 @@ export default Controller.extend(Evented, {
         let t = this.get('useTask');
         t.apply(this, [id]);
       }
+      /** For QTL / valueComputed, load all features of the QTL block,
+       * and the reference block which enables calculation of the QTL
+       * feature.value location
+       */
+      if (block.get) {
+        block.get('loadRequiredData');
+      }
     },
     blockFromId : function(blockId) {
       let

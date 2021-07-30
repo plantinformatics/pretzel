@@ -47,6 +47,20 @@ const c_name = 0, c_chr = 1, c_pos = 8, c_end = 9;
  */
 const t_view = 0;
 
+/*----------------------------------------------------------------------------*/
+
+/** Blast databases usually have chr or Chr prefixed to the sub-genome name,
+ * e.g. chr7A
+ * In the Pretzel database the 'chr' is omitted.
+ * This function strips the leading chr / Chr off, so that the chr
+ * name can be matched with the block name / scope.
+ */
+function chrName2Pretzel(chrName) {
+  return chrName.replace(/^chr/i, '');
+}
+
+/*----------------------------------------------------------------------------*/
+
 /** Display a table of results from sequence-search API request
  * /Feature/dnaSequenceSearch
  * @param search  search inputs and status
@@ -166,7 +180,7 @@ export default Component.extend({
         let feature = {
           name: row[c_name],
           // blast output chromosome has prefix 'chr' e.g. 'chr2A'; Pretzel uses simply '2A'.
-          block: row[c_chr].replace(/^chr/, ''),
+          block: chrName2Pretzel(row[c_chr]),
           // Make sure val is a number, not a string.
           val: Number(row[c_pos])
         };
@@ -198,7 +212,7 @@ export default Component.extend({
     /** based on dataFeatures - see comments there. */
     let names =
     data
-      .map((row) =>  row[c_chr].replace(/^chr/, ''));
+      .map((row) => chrName2Pretzel(row[c_chr]));
     dLog('blockNames', names.length, names[0]);
     return names;
   }),
@@ -414,7 +428,9 @@ export default Component.extend({
       }
       let
       transient = this.get('transient'),
-      datasetName = this.get('newDatasetName') || 'blastResults',
+      parentName = this.get('search.parent'),
+      /** append parentName to make transient datasets distinct by parent */
+      datasetName = this.get('newDatasetName') || ('blastResults_' + parentName),
       namespace = this.get('namespace'),
       dataset = transient.pushDatasetArgs(
         datasetName,
@@ -426,6 +442,8 @@ export default Component.extend({
         this.get('blockNames'),
         namespace
       );
+      /** change features[].blockId to match blocks[], which has dataset.id prefixed to make them distinct.  */
+      let featuresU = features.map((f) => { let {blockId, ...rest} = f; rest.blockId = dataset.id + '-' + blockId; return rest; });
       /** When changing between 2 blast-results tabs, this function will be
        * called for both.
        *
@@ -445,7 +463,7 @@ export default Component.extend({
         active,
         /* when switching tabs got : this.isDestroyed===true, this.viewRow and this.get('viewRow') undefined
          * but this.search.viewRow OK */
-        () => transient.showFeatures(dataset, blocks, features, active, this.get('viewRow') || this.search.viewRow));
+        () => transient.showFeatures(dataset, blocks, featuresU, active, this.get('viewRow') || this.search.viewRow));
     }
   },
 

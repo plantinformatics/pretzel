@@ -130,6 +130,7 @@ export default Component.extend(Evented, AxisEvents, {
   pathsResultLength : computed(
     'blockAdj.pathsResultLengthThrottled', 'pathsAliasesResultLength',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
+    'controlsView.{pathGradientUpper,pathGradient}',
     function () {
       /** this CP may be evaluated before the first didRender(), which does
        * drawGroup{Container,}(); waiting for next render so that drawCurrent()
@@ -177,6 +178,37 @@ export default Component.extend(Evented, AxisEvents, {
     // length returned by paths{,Aliases}ResultLength is currently just used in logging, not functional.
     return length;
   },
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Scale positions of features within their respective axis
+   * to the interval [0,1],
+   * to 3 decimal places (more or less decimal places would determine the level of "binning" happening implicitly)
+   * @param yRange  limits of block containing feature (absolute, not zoomed).
+   *
+   * @desc  Context :
+   * From : #250 : Slider to control co-linearity of paths to display 
+   * When aligning chromosomes it is common for paths to cross-over, sometimes from one end of the chromosome to the other. For example:
+   *   image : https://user-images.githubusercontent.com/20571319/124571237-f445cb80-de8a-11eb-9562-4de45654ce4d.png
+   * A small number of paths here stand out as outliers - their position in the left-side axis is very different, relatively, to that in the right-side axis.
+   * These could be filtered out with a slider between 0 and 1 which defines the maximum variance allowed in the alignment.
+   * A brief sketch of how this will work:
+   * -  The slider is set to value S
+   * -  Only feature pairs x, y are displayed when scaled_pos(x) - S <= scaled_pos(y) <= scaled_pos(x) + S
+   * -  S = 1 displays all paths, S = 0 would show only those paths in the exact same relative position
+   * -  Setting S = 0.1 or so would remove the cross-over paths in the example above.
+   *
+   * A small extension would be to also control whether S defines a maximum (as in the above) or a minimum. The latter case would allow the immediate display of non-co-linear paths only - ie: for example, if the features are genes, only those genes that have moved a relatively large amount.
+   */
+  scaled_pos(featureLimits, y) {
+    let
+    range = featureLimits[1] - featureLimits[0],
+    yScaled = (y - featureLimits[0]) / range;
+    return yScaled;
+  },
+
+  /*--------------------------------------------------------------------------*/
+
   /**
    * @return promise of completion of rendering and transitions
    */
@@ -200,7 +232,52 @@ export default Component.extend(Evented, AxisEvents, {
       if (Object.values(blockDomains).indexOf(undefined) !== -1) {
         return Promise.resolve();
       }
-      if (pathsResult.length < nPaths) {
+    /** this is the number of paths in scope, which is relevant to the
+     * check for incrementing pathsRequestCount. */
+    let pathsResult_length = pathsResult.length;
+      if (pathsResult.length) {
+        let pathGradient = this.get('controlsView.pathGradient'),
+            pathGradientUpper = this.get('controlsView.pathGradientUpper');
+        dLog('pathGradient', pathGradient, pathGradientUpper, pathsResult.length);
+        pathsResult = pathsResult.filter(
+          (p) => /*this.*/pathIsColinear(
+            p, pathGradient, pathGradientUpper, this.scaled_pos));
+        /**
+         * @param p path-data - API result for paths request
+         * @param pathGradient  threshold
+         * @param pathGradientUpper true means use pathGradient threshold as an upper limit.
+         */
+        function pathIsColinear(p, pathGradient, pathGradientUpper, scaled_pos) {
+          let
+          /** result format is different for direct and aliases requests;
+           * for either case, collate as an array the endpoint features of the path.
+           * Can use : [0,1].map((i) => prType.blocksFeatures(e, i)[0])
+           * Each alignment[].repeats may have multiple features;  only the first is considered here.
+           */
+          features = p.alignment ? p.alignment.map((a) => a.repeats.features[0]) :
+            [p.featureAObj, p.featureBObj],
+          limits = features.map((f) => f.get('blockId.featureLimits')),
+          /** if any of the limits are undefined (not yet known), don't filter. */
+          ok = limits.any((l) => !l);
+          if (! ok) {
+            let
+            /** feature .value may be an interval;  only value[0] is used here. */
+            y = features.map((f) => f.get('value.0')),
+            /** values identified in the spec as [scaled_pos(x), scaled_pos(y)]  */
+            sp = y.map((yi, i) => /*this.*/scaled_pos(limits[i], yi)),
+            S = pathGradient;
+            ok = (sp[0] - S) <= sp[1] && (sp[1] <= sp[0] + S);
+            if (! pathGradientUpper) {
+              ok = ! ok;
+            }
+          }
+          return ok;
+        };
+        dLog('drawCurrentTask after pathGradient pathsResult.length', pathsResult.length);
+      }
+      const s_p = this.scaled_pos;
+
+      if (pathsResult_length < nPaths) {
         /* to satisfy the required nPaths, trigger a new request. */
         this.incrementProperty('blockAdj.pathsRequestCount');
       } else if (pathsResult.length > nPaths) {
@@ -215,7 +292,10 @@ export default Component.extend(Evented, AxisEvents, {
         let
           scope = this.get('scope' + prType.typeName),
         currentScope = {blockDomains, pathsDensityParams, nPaths};
-        if (! scope) {
+        /** pathsFilterSmooth() tends to suppress the effect of pathGradient filter, so use one or the other. */
+        let pathGradient = this.get('controlsView.pathGradient'),
+            pathGradientFilterEnabled = (pathGradient !== 0) && (pathGradient !== 1);
+        if (! scope || pathGradientFilterEnabled) {
           /* first call, scope is not yet defined, there are no existing paths,
            * so use pathsFilter() instead of pathsFilterSmooth() */
           pathsResult = pathsFilter(prType, pathsResult, blockDomains, nPaths);
@@ -226,6 +306,12 @@ export default Component.extend(Evented, AxisEvents, {
         } else {
           let shown = this.get('shown' + prType.typeName);
           scope[1] = currentScope;
+          if (shown.length) {
+            let pathGradient = this.get('controlsView.pathGradient');
+            shown = shown.filter(
+              (p) => /*this.*/pathIsColinear(
+                p, pathGradient, this.get('controlsView.pathGradientUpper'), this.scaled_pos));
+          }
           pathsResult = pathsFilterSmooth(prType, pathsResult, scope, shown);
           scope.removeAt(0);
         }
@@ -242,6 +328,7 @@ export default Component.extend(Evented, AxisEvents, {
   pathsAliasesResultLength : computed(
     'blockAdj.pathsAliasesResultLengthThrottled', 'paths.alias.[]',
     'pathsDensityParams.{densityFactor,nSamples,nFeatures}',
+    'controlsView.{pathGradientUpper,pathGradient}',
     function () {
       /** the comments in pathsResultLength re. next and isComplete apply here also. */
       next(() => {
@@ -740,7 +827,7 @@ export default Component.extend(Evented, AxisEvents, {
     /* Try selectionToTransition() instead.
     let throttleTime = this.get('controlsView.throttleTime'),
         pathTransitionTimeVar = throttleTime ? throttleTime * 1 : pathTransitionTime;
-	*/
+    */
     let
     /* now that paths are within <g.block-adj>, path position can be altered
      * during dragging by updating a skew transform of <g.block-adj>, instead of
@@ -808,8 +895,8 @@ export default Component.extend(Evented, AxisEvents, {
     // widthsSum includes changes to .extended, which impacts width of all block-adjs
     'block.stacksWidthsSum',
     'block.axesExtendedCount',
-    // width of split axes effects the path endpoint x values, even if not adjacent.
-    'block.axes2d.@each.allocatedWidthsMax',
+    // width of split axes affects the path endpoint x values, even if not adjacent.
+    'block.axes2d.@each.allocatedWidthsMax.centre',
     'xOffsets.@each',
     'drawMap.stacksWidthChanges',
     'blockAdj.axes1d.0.flipRegionCounter',
@@ -824,7 +911,7 @@ export default Component.extend(Evented, AxisEvents, {
      */
     'blockAdj.axes1d.0.scaleChanged',
     'blockAdj.axes1d.1.scaleChanged',
-    'blockAdj.axes1d.{0,1}.axis2d.allocatedWidthsMax',
+    'blockAdj.axes1d.{0,1}.axis2d.allocatedWidthsMax.centre',
     function () {
       let count = this.get('axisStackChangedCount');
       // throttle(this, this.updatePathsPositionDebounced, this.get('controlsView.throttleTime'), true);

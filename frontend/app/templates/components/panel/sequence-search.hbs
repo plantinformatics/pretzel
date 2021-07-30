@@ -42,10 +42,11 @@
             placeholder="e.g. >BobWhite_c10015_641
 AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
 
-          <div style="margin: 1em; overflow-y: auto;">
+          <div style="margin: 1em; overflow-y: auto;" class="div-float-button">
             {{#if this.searching}}
               Searching ...
             {{/if}}
+
             {{#elem/button-base
                click=(action "search")
                classNames=refreshClassNames
@@ -55,6 +56,16 @@ AGCTGGGTGTCGTTGATCTTCAGGTCCTTCTGGATGTACAGCGACGCTCC" }}
             }}
               <span>&nbsp; Search</span>
             {{/elem/button-base}}
+
+            {{#elem/button-base
+               click=(action "clear")
+               classNames=refreshClassNames
+               icon='erase'
+               classColour="primary"
+            }}
+              <span>Clear</span>
+            {{/elem/button-base}}
+
           </div>
 
           {{elem/panel-message

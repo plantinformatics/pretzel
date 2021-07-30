@@ -1,0 +1,44 @@
+{{#elem/panel-container state="primary" as |panelContainer|}}
+    {{#elem/panel-heading icon="globe" panelContainer=panelContainer}}
+        Traits : QTLs
+    {{/elem/panel-heading}}
+    {{#if panelContainer.showComponent}}
+
+    <ul id="display-traits" class="list-group">
+        {{#if displayData.length}}
+        {{!-- use min-height because currently only elements are <li> are float. --}}
+        <li class="list-group-item" style="min-height: 55px;" >
+          <span class="pull-right" >
+            {{input type="checkbox" name="viewAllFlag" checked=viewAllFlag  class="toggle-checkbox"
+              input=(action this.viewAll value='target.checked') }}
+          </span>
+          <label class="pull-right" style="margin: 0.7em;">Show / Hide QTLs of all Traits</label>
+        </li>
+        {{/if}}
+
+        {{#each displayData as |trait|}}
+        <li 
+            class="list-group-item {{if (compare trait.id '===' selectedTrait.id) 'list-group-item-warning'}}"
+            data-trait-id={{trait.id}}
+            {{!-- action "selectTrait" trait on="click" --}}>
+            <span style="background-color:{{trait.colour}}; height:2ex; width:3em; display: inline-block;"></span>
+            <span title="{{trait.name}}" class="truncate" style="max-width:260px">
+              {{trait.datasetId.name}} {{trait.name}}
+            </span>
+
+            <span class="pull-right">
+              {{input type="checkbox" name="viewTraitFlag" checked=trait.visible class="toggle-checkbox" }}
+            </span>
+
+            <p class="list-group-item-text">
+            <span class="label label-info">
+                {{elem/icon-base name="asterisk"}} &nbsp;{{trait.features.length}}
+            </span> &nbsp;
+            </p>
+        </li>
+        {{/each}}
+    </ul>
+
+  {{/if}} {{!-- showComponent --}}
+{{/elem/panel-container}}
+
