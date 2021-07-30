@@ -171,10 +171,10 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  allocatedWidth : computed('allocatedWidths', function () {
+  allocatedWidth : computed('allocatedWidths.centre', function () {
     let 
-      allocatedWidths = this.get('allocatedWidths'),
-      allocatedWidth = this.get('allocatedWidths.' + this.get('className'));
+      allocatedWidths = this.get('allocatedWidths.centre'),
+      allocatedWidth = this.get('allocatedWidths.centre.' + this.get('className'));
     dLog('allocatedWidth', this.className, allocatedWidth, allocatedWidths);
     if (! allocatedWidth)
       allocatedWidth = [0, 0]; // [12, (this.get('trackWidth')||10) * 2];

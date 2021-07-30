@@ -46,6 +46,21 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** The input slider has an integer value, so pathGradientInt / 100 is the real value. */
+  pathGradientInt : 100,
+  /** true means use pathGradient threshold as an upper limit. */
+  pathGradientUpper : true,
+  pathGradient : computed('pathGradientInt', function () {
+    let
+     pathGradient = +this.get('pathGradientInt'),
+        gradient = (pathGradient / 100);
+    // dLog('pathControlGradient', pathGradient, gradient);
+    return gradient;
+   }),
+
+
+  /*--------------------------------------------------------------------------*/
+
   /** may be set via URL param - @see readParsedOptions(). */
   pathsViaStream : true,
 

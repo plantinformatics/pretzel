@@ -53,19 +53,20 @@ fi
     npm run build:frontend )
 
 # ember build replaces dist/ so restore frontend/dist/landingPageContent
-if [  \! -d  ~/pretzel/backend/client/landingPageContent 
+contentDir=pretzel/backend/client/landingPageContent
+if [  \! -d  ~/$contentDir 
      -a  $HOSTNAME \!= 'ip-172-31-26-153'   # don't install landingPageContent on dev.
    ]
 then
     if [ -d ~/content/landingPageContent ]
     then
 	ln -s ../../../content/landingPageContent ~/pretzel/backend/client/.
-	ls -LdF ~/pretzel/backend/client/landingPageContent
+	ls -LdF ~/$contentDir
     else
 	cd
-	[ -d pretzel/backend/client/landingPageContent ] || \
-	    aws s3 cp  s3://shared-data-4pretzel/mongodb/landingPageContent/2018Aug22.tar.gz - | tar zxf -
-	du -k pretzel/backend/client/landingPageContent
+	[ -d $contentDir ] || \
+	    echo "$contentDir is not present" 1>&2 
+	# du -k $contentDir
     fi
 fi
 

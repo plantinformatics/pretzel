@@ -260,6 +260,10 @@ let
   axisTitle_colour_scale = (axisTitleColourBy === axisTitleColourKey.value) ?
   d3.scaleOrdinal().range(d3.schemeCategory10) :
   d3.scaleSequential().domain([1,11]).interpolator(d3.interpolateRainbow);
+let
+  /** axisTitle is not currently using schemeCategory10, so can use it here. */
+  trait_colour_scale =
+  d3.scaleOrdinal().range(d3.schemeCategory10);
 
 
 /** for the stroke and fill of axis title menu
@@ -304,6 +308,10 @@ function axisTitleColour (d, i) {
   return colour;
 };
 
+function traitColour(traitName) {
+  return trait_colour_scale(traitName);
+}
+
 /*----------------------------------------------------------------------------*/
 
 export {
@@ -315,5 +323,6 @@ export {
   highlightId,
   trackBlockEltIdPrefix,
   axisFeatureCircles_selectAll,
-  axisTitleColour
+  axisTitleColour,
+  traitColour
 };

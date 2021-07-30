@@ -53,7 +53,9 @@ function chrData(c) {
     featurePosition = (value0 !== undefined) ? value0 : range && range[0];
     let featureAliases = feature.get('aliases');  // feature.aliases field is removed from db
     let featureId = feature.get('id');
-    if (featurePosition === undefined)
+    let block;
+    if ((featurePosition === undefined) && 
+        ! ((block = feature.get('blockId'))?.content || block).hasTag('QTL'))
       breakPoint('chrData', c, map, rc, f, feature, range, featurePosition, featureAliases, featureId);
     rc[featureName] = {location: featurePosition, aliases: featureAliases, id: featureId};
     // if (!range) console.log("chrData range", featureName, rc[featureName]);
