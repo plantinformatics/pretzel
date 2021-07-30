@@ -1058,6 +1058,12 @@ div#tab-explorer-datasets > ul.list-group > div.ember-view > li.list-group-item
   min-width: 7.48em;
 }
 
+/* size the column of input checkboxes in Trait Table to match Displayed Data red-minus.  */
+.toggle-checkbox {
+  width: 25px;
+  height: 25px;
+}
+
 .entryClass0 {
   background-color : #9bc2e433;
 }

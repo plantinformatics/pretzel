@@ -1,15 +1,20 @@
 {{#elem/panel-container state="primary" as |panelContainer|}}
     {{#elem/panel-heading icon="globe" panelContainer=panelContainer}}
         Traits : QTLs
-        {{#if displayData.length}}
-        <span class="pull-right" style="margin-right: 0.8em;" >
-          {{input type="checkbox" name="viewAllFlag" checked=viewAllFlag }}
-        </span>
-        {{/if}}
     {{/elem/panel-heading}}
     {{#if panelContainer.showComponent}}
 
     <ul id="display-traits" class="list-group">
+        {{#if displayData.length}}
+        {{!-- use min-height because currently only elements are <li> are float. --}}
+        <li class="list-group-item" style="min-height: 55px;" >
+          <span class="pull-right" >
+            {{input type="checkbox" name="viewAllFlag" checked=viewAllFlag  class="toggle-checkbox" }}
+          </span>
+          <label class="pull-right" style="margin: 0.7em;">Show / Hide QTLs of all Traits</label>
+        </li>
+        {{/if}}
+
         {{#each displayData as |trait|}}
         <li 
             class="list-group-item {{if (compare trait.id '===' selectedTrait.id) 'list-group-item-warning'}}"
@@ -21,7 +26,7 @@
             </span>
 
             <span class="pull-right">
-              {{input type="checkbox" name="viewTraitFlag" checked=trait.visible }}
+              {{input type="checkbox" name="viewTraitFlag" checked=trait.visible class="toggle-checkbox" }}
             </span>
 
             <p class="list-group-item-text">
