@@ -23,4 +23,16 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  viewAllFlag : true,
+
+  viewAll(checked) {
+    /** at this point, .viewAllFlag has not been updated from the current click;
+     * the passed in value is target.checked, which has been updated.
+     */
+    dLog('viewAll', checked, this, this.viewAllFlag);
+    this.get('data').forEach((d) => d.set('visible', checked));
+  }
+
+  /*--------------------------------------------------------------------------*/
+
 });
