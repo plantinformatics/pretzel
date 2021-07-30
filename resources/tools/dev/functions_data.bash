@@ -14,10 +14,10 @@ snps2Dataset=~/tmp/snps2Dataset.value_0.pl
 
 function z_cat() {
   case $1 in
-	  *.gz) gzip -d < $1
-	        ;;
-	  *) cat $1
-	     ;;
+          *.gz) gzip -d < $1
+                ;;
+          *) cat $1
+             ;;
   esac
 }
 
@@ -124,7 +124,7 @@ function loadChr()
           echo 1>&2 Exit due to error. "$splitChunk".json not loaded.;
           return $status
         fi
-	# rm "$splitChunk".json
+        # rm "$splitChunk".json
 
         blockId=$(datasetAndName2BlockId "$datasetName" ${chr} )
         echo blockId=$blockId
@@ -132,7 +132,7 @@ function loadChr()
         echo URL="$URL"
         ;;
       *)
-	   # > $splitChunk.json &&   time
+           # > $splitChunk.json &&   time
         < $splitChunk "$snps2Dataset" -b $blockId | uploadData - 2>&1 | cut -c-200 | head -100
         status=$?
         if [ $status -ne 0 ]

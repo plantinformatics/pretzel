@@ -7,13 +7,13 @@
     <ul id="display-blocks" class="list-group">
         {{#if hasDisplayData}}
         <li class="list-group-item" style="min-height: 55px;" >
-	  <span class="pull-right">
-	    {{elem/button-base
-	      classSize='xs'
-	      classColour='danger'
-	      icon='minus'
-	      onClick=(action 'removeDisplayData')}}
-	  </span>
+          <span class="pull-right">
+            {{elem/button-base
+              classSize='xs'
+              classColour='danger'
+              icon='minus'
+              onClick=(action 'removeDisplayData')}}
+          </span>
           <label class="pull-right" style="margin: 0.5em; margin-right: 1.5em;">Close all axes</label>
         </li>
         {{/if}}
