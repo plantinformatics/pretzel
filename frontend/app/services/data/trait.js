@@ -2,12 +2,41 @@ import EmberObject, { computed } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
 import { A } from '@ember/array';
 
+import {
+  traitColour
+} from '../../utils/draw/axis';
+
+
+/*----------------------------------------------------------------------------*/
+
 const dLog = console.debug;
 
 const trace = 1;
 
 /** This can be a parameter, when additional groupings are added. */
 const groupName = 'traits';
+
+/*----------------------------------------------------------------------------*/
+
+/**
+ * @param name
+ */
+const Trait = EmberObject.extend({
+  visible : true,
+  init() {
+    this._super(...arguments);
+    this.set('features',  A());
+  },
+
+  get colour() {
+    const colour = traitColour(this.name);
+    return colour;
+  }
+
+});
+
+/*----------------------------------------------------------------------------*/
+
 
 /** QTLs, which are Features, have an attribute values.Trait.
 
@@ -30,7 +59,7 @@ export default Service.extend({
       group = this.get(groupName),
       trait = group.findBy('name', name);
       if (! trait) {
-        trait = EmberObject.create({name, visible : true, features : A()});
+        trait = Trait.create({name});
         group.pushObject(trait);
       }
       trait.features.addObject(feature);

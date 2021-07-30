@@ -5,10 +5,6 @@ import { alias } from '@ember/object/computed';
 
 import { A as array_A } from '@ember/array';
 
-import {
-  traitColour
-} from '../../utils/draw/axis';
-
 /*----------------------------------------------------------------------------*/
 
 const dLog = console.debug;
@@ -23,15 +19,7 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  displayData : computed('data.[]', function () {
-    let data = this.get('data')
-        .map((t) => ({
-          colour : traitColour(t.name),
-          ... t
-        }));
-    return data;
-  }),
-
+  displayData : alias('data'),
 
   /*--------------------------------------------------------------------------*/
 
