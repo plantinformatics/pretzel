@@ -33,6 +33,7 @@ import {
   pathsApiResultType,
   flowNames,
   resultBlockIds,
+  syntenyBlocksOfFeature,
   pathsOfFeature,
   locationPairKeyFn
 } from '../../utils/paths-api';
@@ -647,6 +648,42 @@ export default Component.extend(Evented, AxisEvents, {
    */
   draw (pathsResultType, featurePaths) {
     let promise;
+
+    /** for MVP, divert from here featurePaths which are syntenyBlocks.
+     * in next version, may filter into a separate CP.
+     */
+    {
+      let oa = this.get('drawMap.oa');
+      if (this.get('blockAdj.areSyntenyBlocks')) {
+        /** map to : chr1 chr2 g1 undefined g3 undefined id size, i.e. syntenyBlock_2Feature === true; */
+        const
+        SB_chr1 = 0,
+        SB_chr2 = 1,
+        SB_g1 = 2,
+        SB_g2 = 3,
+        SB_g3 = 4,
+        SB_g4 = 5,
+        SB_ID = 6,
+        SB_SIZE = 7;
+        let mapFn = syntenyBlocksOfFeature(pathsResultType);
+        let addSb = featurePaths
+          .map((fp) => {
+            let fpm = mapFn(fp);
+            if (! fpm.length || (fpm.length > 1)) {
+              dLog('syntenyBlocks', fpm);
+            }
+            /** [f0, f1, blockId0, blockId1] */
+            let
+            s = fpm[0],
+            sbSize = intervalSize(s[0].value) + intervalSize(s[1].value),
+            sb = [].concat(s[2], s[3], s[0], undefined, s[1], undefined, s[0].name, sbSize);
+            return sb;
+          });
+        oa.syntenyBlocks = oa.syntenyBlocks.concat(addSb);
+      }
+      return Promise.resolve();
+    }
+
     if (featurePaths.length === 0)
       return Promise.resolve();
     pathsResultType.typeCheck(featurePaths[0], true);

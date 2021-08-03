@@ -303,6 +303,11 @@ export default Model.extend({
     let isHighDensity = this.hasTag('HighDensity');
     return isHighDensity;
   }),
+  isSyntenyBlock : computed('datasetId.tags', function () {
+    let isSyntenyBlock = this.hasTag('SyntenyBlock');
+    return isSyntenyBlock;
+  }),
+
   /** hasTag() can now be used in isChartable() and isSubElements() also.
    */
   isChartable : computed('datasetId.tags', function () {
