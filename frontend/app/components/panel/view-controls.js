@@ -1,5 +1,6 @@
 import { next } from '@ember/runloop';
 import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 
@@ -9,6 +10,8 @@ import {
 } from '../../utils/domElements';
 
 import { toBool } from '../../utils/common/strings';
+
+import { stacks } from '../../utils/stacks';
 
 /* global d3 */
 
@@ -58,6 +61,11 @@ export default Component.extend({
     return gradient;
    }),
 
+  /*--------------------------------------------------------------------------*/
+
+  /** will move sbSizeThreshold, probably to here, replacing this link via stacks.oa. */
+  stacks,
+  sbSizeThreshold : alias('stacks.oa.sbSizeThreshold'),
 
   /*--------------------------------------------------------------------------*/
 

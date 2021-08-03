@@ -6154,8 +6154,14 @@ export default Component.extend(Evented, {
        * x^y = 20 => y log(x) = log(20) => y = Math.log(20) / Math.log(1.148137) = 21.6861056
        * round to 22
        * so : in .hbs : id="range-sbSizeThreshold" :  min="0" max="50" value="22"
-       *  min value is 0, so -1 to get 0. */
-      oa.sbSizeThreshold=Math.pow(1.148137, value) - 1;
+       *  min value is 0, so -1 to get 0.
+       * The above is sufficient for GM, but for genome reference assembly :
+       * Math.pow(2.718, Math.log(1e7) / 50)
+       * 1.3803381276035693
+       * Math.log(20) / Math.log($_)
+       * 9.294035042848378
+       */
+      oa.sbSizeThreshold=Math.pow(1.38033, value) - 1;
       later( function () { showSynteny(oa.syntenyBlocks, undefined); });
     }
     function setupSbSizeThresh()
