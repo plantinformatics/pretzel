@@ -680,8 +680,8 @@ export default Component.extend(Evented, AxisEvents, {
             return sb;
           });
         oa.syntenyBlocks = oa.syntenyBlocks.concat(addSb);
+        return Promise.resolve();
       }
-      return Promise.resolve();
     }
 
     if (featurePaths.length === 0)
