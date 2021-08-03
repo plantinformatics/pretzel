@@ -800,6 +800,12 @@ export default Component.extend(Evented, AxisEvents, {
 
   /** Update the "d" attribute of the <path>-s.  */
   updatePathsPosition() {
+    if (this.get('blockAdj.areSyntenyBlocks')) {
+      let axisApi = this.get('drawMap.oa.axisApi');
+      axisApi.updateSyntenyBlocksPosition();
+      return;
+    }
+
     // based on draw().
     let dpS = progressGroupsSelect(undefined);
     let blockAdjId = this.get('blockAdjId') || this.blockAdj.blockAdjId;

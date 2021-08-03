@@ -12,6 +12,7 @@ import { alias, filterBy } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
+import { task, timeout, didCancel } from 'ember-concurrency';
 
 import createIntervalTree from 'interval-tree-1d';
 
@@ -595,7 +596,8 @@ export default Component.extend(Evented, {
                     cmNameAdd,
                     makeMapChrName,
                     axisIDAdd,
-                    stacksAxesDomVerify : function (unviewedIsOK = false) { stacksAxesDomVerify(stacks, oa.svgContainer, unviewedIsOK); } 
+                    stacksAxesDomVerify : function (unviewedIsOK = false) { stacksAxesDomVerify(stacks, oa.svgContainer, unviewedIsOK); } ,
+                    updateSyntenyBlocksPosition : () => this.get('updateSyntenyBlocksPosition').perform()
                    };
     dLog('draw-map stacks', stacks);
 
@@ -3221,6 +3223,7 @@ export default Component.extend(Evented, {
         console.log(pSM._groups[0]);
 
     } // showSynteny()
+    this.oa.axisApi.showSynteny ||= showSynteny;
 
     /*------------------------------------------------------------------------*/
 
@@ -6247,6 +6250,17 @@ export default Component.extend(Evented, {
      throttle(this, this.triggerZoomedAxis, [axisID, t], 400);
      */
   },
+
+  //----------------------------------------------------------------------------
+
+
+  updateSyntenyBlocksPosition : task(function * () {
+    dLog('updateSyntenyBlocksPosition', this.oa.syntenyBlocks.length);
+    if (this.oa.axisApi.showSynteny) {
+      this.oa.axisApi.showSynteny(this.oa.syntenyBlocks, undefined);
+    }
+    yield timeout(100);
+  }).keepLatest(),
 
   //----------------------------------------------------------------------------
 
