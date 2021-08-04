@@ -35,6 +35,13 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** if true, axis title text and axis ticks and text are hidden with display : none,
+   * via a class .hideAxisText added on svgContainer.FeatureMapViewer
+   */
+  hideAxisText : false,
+
+  /*--------------------------------------------------------------------------*/
+
   /** Toggle axis-charts / Chart1 between showing the ChartLine-s as <rect> bars or lines   */
   chartBarLine : true,
 
@@ -250,5 +257,23 @@ export default Component.extend({
     },
 
   },
+
+  /** @return d3 selection of the top-most <g> within the <svg> of the draw-map graph.
+   * This is equivalent to oa.svgContainer
+   */
+  svgContainer : computed( function() {
+    /** i.e. <svg><g  transform="translate(0,1)"> ... */
+    let g = d3.selectAll('svg.FeatureMapViewer > g');
+    return g;
+  }),
+  /** Called when input checkbox hideAxisText is clicked.  */
+  hideAxisTextClass(input) {
+    let svgContainer = this.get('svgContainer');
+    let hide = input.target.checked;
+    dLog('hideAxisTextClass', hide, svgContainer.node());
+    svgContainer
+      .classed('hideAxisText', hide);
+  }
+
 
 });

@@ -694,10 +694,19 @@ g.axis-outer > g.btn > rect.Reset {
 }
 
 
+svg.FeatureMapViewer > g.hideAxisText   g.axis-all > text {
+  display: none;
+}
+svg.FeatureMapViewer > g.hideAxisText   g.axis > g.tick {
+  display: none;
+}
+
+
 svg > g.publishMode .graph-btn,
 {
   display: none;
 }
+
 
 g.axis-outer > .btn.brushed > rect,
 g.axis-outer > .btn.zoomed > rect {
