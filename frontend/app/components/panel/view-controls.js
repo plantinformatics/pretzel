@@ -37,8 +37,8 @@ export default Component.extend({
 
   /** if true, axis title text and axis ticks and text are hidden with display : none,
    * via a class .hideAxisText added on svgContainer.FeatureMapViewer
-   */
   hideAxisText : false,
+   */
 
   /*--------------------------------------------------------------------------*/
 
