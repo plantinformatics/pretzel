@@ -3154,7 +3154,7 @@ export default Component.extend(Evented, {
         console.log("showSynteny", sbS.size(), sbE.size(), sbM.size(), sbM.node());
 
       function sbChrAreAdjacent(sb) {
-        let a0 = sb[0], a1 = sb[1], adj = isAdjacent(a0, a1);
+        let a0 = sb[0], a1 = sb[1], adj = isAdjacent(a0, a1) || isAdjacent(a1, a0);
         return adj;
       }
       function sbSizeFilter(sb) {
