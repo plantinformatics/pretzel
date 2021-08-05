@@ -4,6 +4,9 @@ import { Stacked } from './stacks';
 
 const dLog = console.debug;
 
+/** will use axis.gap() */
+const axisGap = 20;
+
 /*----------------------------------------------------------------------------*/
 
 /** update ys  and y for the given axis,
@@ -58,9 +61,10 @@ function updateRange(y, ys, vc, a)
   {
     let myRange = a.yRange();
     let axisName = a.axisName;
-    dLog("updateRange", a.axisName, a.position, a.portion, myRange, vc.yRange);
+    dLog("updateRange", a.axisName, a.position, a.portion, myRange, vc.yRange, 'yRange');
     ys[a.axisName].range([0, myRange]);
-    y[a.axisName].range([0, vc.yRange]);
+    /** a.yRange() incorporates axisGap; this can be factored to a similar function. */
+    y[a.axisName].range([0, vc.yRange - axisGap]);
 
     y[axisName].brush
       .extent([[-8,0],[8, vc.yRange /* not myRange */]]);

@@ -42,6 +42,12 @@ const trace_stack = 0;
 const trace_updatedStacks = true;
 const dLog = console.debug;
 
+/** px vertical gap between axes in a stack.
+ * This can be made an attribute of Stack, and reduce it when
+ * yRange / Stack.axes.length is not much larger than axisGap.
+ */
+const axisGap = 20;
+
 /** Each stack contains 1 or more Axis Pieces (Axes).
  * stacks are numbered from 0 at the left.
  * stack[i] is an array of Stack, which contains an array of Stacked,
@@ -586,7 +592,8 @@ Stacked.prototype.yOffset = function ()
 /** @return length of the axis in pixels */
 Stacked.prototype.yRange = function ()
 {
-  return stacks.vc.yRange * this.portion;
+  // dLog('yRange', stacks.vc.yRange, this.portion,  axisGap);
+  return stacks.vc.yRange * this.portion - axisGap;
 };
 /** @return range of axis in pixels relative to 0 - the end of the stack */
 Stacked.prototype.yRange2 = function ()
@@ -1720,10 +1727,15 @@ Stack.prototype.calculatePositions = function ()
 {
   // dLog("calculatePositions", this.stackID, this.axes.length);
   let sumPortion = 0;
+  /** convert px to [0, 1] */
+  let axisGapPortion = stacks.vc?.yRange ? axisGap / stacks.vc.yRange : 0;
   this.axes.forEach(
     function (a, index)
     {
-      a.position = [sumPortion,  sumPortion += a.portion];
+      /** the gap is removed from position[1]; and not from portion.   */
+      let nextPosition = sumPortion + a.portion;
+      a.position = [sumPortion,  nextPosition - axisGapPortion];
+      sumPortion = nextPosition;
     });
   oa.eventBus.send('stackPositionsChanged', this);
 };
