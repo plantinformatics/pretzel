@@ -679,7 +679,14 @@ export default Component.extend(Evented, AxisEvents, {
             sb = [].concat(s[2], s[3], s[0], undefined, s[1], undefined, s[0].name, sbSize);
             return sb;
           });
-        oa.syntenyBlocks = oa.syntenyBlocks.concat(addSb);
+        /** rough check for uniqueness - could also check [2].value[1] and [4].value[0]; will use a Map  */
+        let filtered = addSb.filter((a) => ! oa.syntenyBlocks.any(
+          (o) => (
+            (a[SB_ID] === o[SB_ID]) &&
+              (a[2].value[0] === o[2].value[0]) &&
+              (a[4].value[1] === o[4].value[1]))));
+        dLog('draw', addSb.length, filtered.length, oa.syntenyBlocks, 'syntenyBlocks');
+        oa.syntenyBlocks = oa.syntenyBlocks.concat(filtered);
         return Promise.resolve();
       }
     }
