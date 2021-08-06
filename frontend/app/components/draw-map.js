@@ -3931,8 +3931,13 @@ export default Component.extend(Evented, {
       //Remove old circles.
       axisFeatureCircles_selectAll().remove();
       let brushedRegions = oa.brushedRegions;
-      let brushRange = d3.event.selection,
-      mouse = brushRange && d3.mouse(that);
+      let
+      brushRange = d3.event.selection,
+      /** d3.mouse() calls : function point(node, event) { .. point.x = event.clientX, point.y = event.clientY;
+       * so don't call mouse if those are undefined.
+       */
+      eventHasClientXY = (d3.event.clientX !== undefined) && (d3.event.clientX !== undefined),
+      mouse = brushRange && eventHasClientXY && d3.mouse(that);
       let brushSelection = d3.brushSelection(d3.select(that));
       let brush_ = that.__brush,
       brushSelection_ = brush_.selection,
@@ -6073,7 +6078,8 @@ export default Component.extend(Evented, {
       );
     }
     /** The Zoom & Reset buttons (g.btn) can be hidden by clicking the 'Publish
-     * Mode' checkbox.  This provides a clear view of the visualisation
+     * Mode' checkbox, now called 'Show Zoom/Reset buttons' and the logic is inverted.
+     * This provides a clear view of the visualisation
      * uncluttered by buttons and other GUI mechanisms
      */
     function setupToggleModePublish()
@@ -6083,7 +6089,8 @@ export default Component.extend(Evented, {
       function (checked) {
         let svgContainer = oa.svgContainer;
         console.log(svgContainer._groups[0][0]);
-        svgContainer.classed("publishMode", checked);
+        /** the checkbox is 'Show', so hide if ! checked. */
+        svgContainer.classed("publishMode", ! checked);
       }
       );
     }
