@@ -266,10 +266,10 @@ export default Component.extend({
     let g = d3.selectAll('svg.FeatureMapViewer > g');
     return g;
   }),
-  /** Called when input checkbox hideAxisText is clicked.  */
+  /** Called when input checkbox 'Show Axis Text' is clicked.  */
   hideAxisTextClass(input) {
     let svgContainer = this.get('svgContainer');
-    let hide = input.target.checked;
+    let hide = ! input.target.checked;
     dLog('hideAxisTextClass', hide, svgContainer.node());
     svgContainer
       .classed('hideAxisText', hide);
