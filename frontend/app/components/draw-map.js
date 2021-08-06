@@ -57,6 +57,7 @@ import {
   logSelectionNodes,
   selectImmediateChildNodes
 } from '../utils/log-selection';
+import { configureHover } from '../utils/hover';
 import { Viewport } from '../utils/draw/viewport';
 import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
 import { AxisTitleBlocksServers } from '../utils/draw/axisTitleBlocksServers_tspan';
@@ -3190,7 +3191,7 @@ export default Component.extend(Evented, {
         return inverted;
       }
 
-      function  configureSyntenyBlockHover(sb)
+      function  syntenyBlockHoverText(sb)
       {
         let j=0, text = axisId2Name(sb[j++]) + "\n" + axisId2Name(sb[j++]);
         if (syntenyBlock_2Feature) {
@@ -3202,8 +3203,12 @@ export default Component.extend(Evented, {
           }
         }
         for ( ; j < sb.length; j++) text += "\n" + sb[j];
-        console.log("configureSyntenyBlockHover", sb, text);
-        return configureHorizTickHover.apply(this, [text]);
+        console.log("syntenyBlockHoverText", sb, text);
+        return text;
+      };
+      function configureSyntenyBlockHover(sb)
+      {
+        configureHover.apply(this, [sb, syntenyBlockHoverText]);
       }
 
         let pS = sbM.selectAll("path.syntenyEdge")

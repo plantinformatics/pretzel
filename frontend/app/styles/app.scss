@@ -664,6 +664,9 @@ path.syntenyEdge.inverted
 
   /* avoid overlapping the top border of the graph area */
   margin-top: 20px;
+  /* synteny block name is long so move left; alternative : use overflow-x: auto */
+  margin-left: -160px;
+  /* overflow-x: auto; */
   .popover-content {
       padding-top : 0;
   }
