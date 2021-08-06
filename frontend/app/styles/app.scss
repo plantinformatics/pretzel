@@ -393,6 +393,7 @@ body.devel .foreground > g.progress > g > g.blockAdj > g > path {
 :root {
   --path-stroke-opacity : 1;//.125;
   --path-stroke-width: 0.75px;
+  /* this may not update - uses the initial value of var() */
   --manyPaths-stroke-opacity: calc(var(--path-stroke-opacity)*0.8); //.125;
   --manyPaths-stroke-width: calc(var(--path-stroke-width)*0.8); // 0.75px;
 }
@@ -643,10 +644,12 @@ g.horizTick.labelledFeatures > text.horizTick {
 
 path.syntenyEdge
 {
-  fill-opacity: 0.05;
+  fill-opacity: calc(var(--path-stroke-opacity)*0.33);
   fill: magenta;
   stroke: purple;
   stroke-dasharray: 8 4 8 20;
+  stroke-opacity: var(--path-stroke-opacity);
+  stroke-width : var(--path-stroke-width)
 }
 path.syntenyEdge.inverted
 {
