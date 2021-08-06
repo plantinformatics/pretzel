@@ -351,6 +351,16 @@ function expRangeInitial(rangeStart, base) {
   return y;
 }
 
+/*----------------------------------------------------------------------------*/
+
+function setCssVariable(name, value)
+{
+  const svgRoot = d3.select('#holder > svg');
+  svgRoot.style(name, value);
+}
+
+
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -365,5 +375,6 @@ export {
   inputRangeValue,
   expRangeBase,
   expRange,
-  expRangeInitial
+  expRangeInitial,
+  setCssVariable
  };

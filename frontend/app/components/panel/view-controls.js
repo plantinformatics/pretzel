@@ -6,7 +6,8 @@ import Component from '@ember/component';
 
 import {
   tabActive, inputRangeValue,
-  expRangeBase, expRange, expRangeInitial
+  expRangeBase, expRange, expRangeInitial,
+  setCssVariable
 } from '../../utils/domElements';
 
 import { toBool } from '../../utils/common/strings';
@@ -273,6 +274,15 @@ export default Component.extend({
     dLog('hideAxisTextClass', hide, svgContainer.node());
     svgContainer
       .classed('hideAxisText', hide);
+  },
+  axisWidthInput(event) {
+    const varName = '--axisWidth';
+    /** input range is [0,100];  desired output values are [0, 10].  */
+    const factor = 100 / 10;
+    let value = event.target.value / factor;
+    // dLog('axisWidthInput', varName, value, event.target.value);
+    setCssVariable(varName, value);
+    this.set('axisWidth', value);
   }
 
 

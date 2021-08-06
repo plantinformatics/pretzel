@@ -502,6 +502,7 @@ body.allInitially
 .axis-use > path
 {
   stroke: #000; /* black */
+  stroke-width : var(--axisWidth);
 }
 
 .axis text {

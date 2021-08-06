@@ -227,6 +227,15 @@
     </li>
 
     <li class="list-group-item">
+      <label>Axis Width</label>
+      <input type="range"
+       value=10
+       oninput={{action this.axisWidthInput}}
+       min="0" max="100"
+      />
+    </li>
+
+    <li class="list-group-item">
       <div>
         <label>Synteny Block Size Threshold</label>
         <span class="sub-label"> : <span>{{ sbSizeThreshold }}</span></span>
