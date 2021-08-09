@@ -99,7 +99,7 @@ export default Component.extend({
     /** could use split, but this match will handle ':' in dataset name. */
     if ((match = selectedFeature.Chromosome.match(/(.+):(.+)/))) {
       let [all, datasetName, scope] = match;
-      result = Stacked.axisOfDatasetAndScope(datasetName, scope);
+      result = Stacked.axisOfDatasetAndScope(false, datasetName, scope);
     }
     return result;
   },
@@ -114,7 +114,7 @@ export default Component.extend({
     let interval = (loc0 <= loc1) ? [loc0, loc1] : [loc0, loc1],
       dawnReferenceName = "Triticum_aestivum_IWGSC_RefSeq_v1.0",
     axis = 
-      Stacked.axisOfDatasetAndScope(dawnReferenceName, scope),
+      Stacked.axisOfDatasetAndScope(true, dawnReferenceName, scope),
     result = axis && {blockId: axis.axisName, axis, interval};
     // use .warn if a field in result is undefined.
     let log = (result && result.blockId && result.axis && loc0 && loc1) ? dLog : console.warn;

@@ -435,7 +435,7 @@ Stacked.getAxis = function (axisID)
  * find the corresponding axis.
  * (static)
  */
-Stacked.axisOfDatasetAndScope = function axisOfDatasetAndScope(datasetName, scope) {
+Stacked.axisOfDatasetAndScope = function axisOfDatasetAndScope(isReference, datasetName, scope) {
   /** blockId is the primary block of the axis (i.e. reference or GM). */
   let blockId, axis;
   for (blockId in axesP) {
@@ -445,13 +445,15 @@ Stacked.axisOfDatasetAndScope = function axisOfDatasetAndScope(datasetName, scop
     let referenceBlock = axis.referenceBlock,
     aScope = referenceBlock.get('scope'),
     // equivalent to : axis.mapName
-    referenceName = referenceBlock.get('datasetId.id');
-    if ((referenceName === datasetName) && (scope === aScope))
+    referenceName = referenceBlock.get('datasetId.id'),
+    matchName = isReference ? (referenceName === datasetName) :
+    axis.blocks.find((b) => b.block.get('datasetId.id') === datasetName);
+    if (matchName && (scope === aScope))
       break;
     else
       axis = undefined;
   }
-  console.log('axisOfDatasetAndScope', blockId, axis, scope);
+  console.log('axisOfDatasetAndScope', isReference, datasetName, blockId, axis, scope);
   return axis;
 },
 /** static */
