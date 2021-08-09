@@ -44,6 +44,7 @@ import {
   eltWidthResizable,
   eltResizeToAvailableWidth,
   ctrlKeyfilter,
+  noKeyfilter,
   eltClassName,
   tabActive,
   inputRangeValue,
@@ -1978,6 +1979,7 @@ export default Component.extend(Evented, {
         y[d] = ys[d].copy();
         y[d].brush = d3.brushY()
           .extent([[-8,0],[8,myRange]])
+          .filter(noKeyfilter)
           .on("end", brushended);
       }
     });
