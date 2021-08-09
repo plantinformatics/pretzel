@@ -359,12 +359,9 @@ export default Component.extend({
               feature = features[0],
               featureGet = featureGetFn(feature),
               block = featureGetBlock(feature, blocksById),
-              /** brushes are identified by the referenceBlock (axisName). */
+              /** selected features are grouped by data block name.  */
               chrName = block.get('brushName'),
-              /** selected features are grouped by data block name, which may be different to referenceBlock name.  */
-              dataBlockName = block.get('datasetId.name') + ':' + block.name,
-              selectedFeaturesOfBlock = selectedFeaturesByBlock[chrName]/* ||
-                selectedFeaturesByBlock[dataBlockName]*/,
+              selectedFeaturesOfBlock = selectedFeaturesByBlock[chrName],
               featureName = featureGet('name'),
               /** if the axis is brushed but there are no features in this block
                * within the brush, then selectedFeaturesOfBlock will be
