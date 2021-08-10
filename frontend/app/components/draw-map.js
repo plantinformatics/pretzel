@@ -6349,7 +6349,7 @@ export default Component.extend(Evented, {
     function () {
       let count = stacks.length;
       // just checking - will retire stacks.stacksCount anyway.
-      if (count != stacks.stacksCount)
+      if (count != stacks.stacksCount?.count)
 	console.log('stacksWidthChanges',  count, '!=', stacks.stacksCount);
       let leftPanelShown = this.readLeftPanelToggle(),
       current = {
@@ -6412,7 +6412,7 @@ export default Component.extend(Evented, {
     'panelLayout.left.visible',
     'panelLayout.right.visible',
     'leftPanelShown',
-    'oa.drawOptions.controls.view.showAxisText',
+    'controls.view.showAxisText',
     function() {
       console.log("resize", this, arguments);
         /** when called via .observes(), 'this' is draw-map object.  When called
