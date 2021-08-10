@@ -1,0 +1,8 @@
+{{!-- --------------------------------------------------------------------- --}}
+
+{{#if show}}
+  {{#ember-modal-dialog  title="Style Editor" header-icon='edit'}}
+    <p>Style Editor</p>
+    {{spectrum-color-picker color=elementColour preferredFormat="rgb"}}
+  {{/ember-modal-dialog}}
+{{/if}}

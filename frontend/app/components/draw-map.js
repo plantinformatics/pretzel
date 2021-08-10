@@ -12,6 +12,8 @@ import { alias, filterBy } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
+import { A as Ember_array_A } from '@ember/array';
+
 import { task, timeout, didCancel } from 'ember-concurrency';
 
 import createIntervalTree from 'interval-tree-1d';
@@ -130,6 +132,8 @@ import { collateStacks, countPaths, /*countPathsWithData,*/
  */
 function countPathsWithData() { }
 import { storeFeature, lookupFeature } from '../utils/feature-lookup';
+
+import { configureSyntenyBlockClicks } from './draw/synteny-blocks';
 
 
 /*----------------------------------------------------------------------------*/
@@ -804,6 +808,9 @@ export default Component.extend(Evented, {
     /** Index of features (markers) by object id. the value refers to the marker hash,
      * i.e. z[chr/ap/block name][feature/marker name] === featureIndex[feature/marker id] */
     oa.featureIndex || (oa.featureIndex = []);
+
+    oa.selectedElements || (oa.selectedElements = Ember_array_A());
+
 
     if (source === 'didRender') {
       // when tasks are complete, receiveChr() is called via blockService : receivedBlock
@@ -3219,7 +3226,8 @@ export default Component.extend(Evented, {
           .append("path")
           .attr("class", "syntenyEdge")
           .classed("inverted", syntenyIsInverted)
-          .each(configureSyntenyBlockHover),
+          .each(configureSyntenyBlockHover)
+          .call(configureSyntenyBlockClicks),
       pSX = pS.exit(),
         pSM = pSE.merge(pS)
           .attr("d", blockLine);
