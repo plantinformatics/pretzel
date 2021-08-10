@@ -6412,6 +6412,7 @@ export default Component.extend(Evented, {
     'panelLayout.left.visible',
     'panelLayout.right.visible',
     'leftPanelShown',
+    'oa.drawOptions.controls.view.showAxisText',
     function() {
       console.log("resize", this, arguments);
         /** when called via .observes(), 'this' is draw-map object.  When called

@@ -36,10 +36,10 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  /** if true, axis title text and axis ticks and text are hidden with display : none,
+  /** if false, axis title text and axis ticks and text are hidden with display : none,
    * via a class .hideAxisText added on svgContainer.FeatureMapViewer
-  hideAxisText : false,
    */
+  showAxisText : true,
 
   /*--------------------------------------------------------------------------*/
 
@@ -270,10 +270,13 @@ export default Component.extend({
   /** Called when input checkbox 'Show Axis Text' is clicked.  */
   hideAxisTextClass(input) {
     let svgContainer = this.get('svgContainer');
-    let hide = ! input.target.checked;
+    let
+    show = input.target.checked,
+    hide = ! show;
     dLog('hideAxisTextClass', hide, svgContainer.node());
     svgContainer
       .classed('hideAxisText', hide);
+    this.set('showAxisText', show);
   },
   axisWidthInput(event) {
     const varName = '--axisWidth';
