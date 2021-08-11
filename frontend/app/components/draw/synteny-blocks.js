@@ -61,7 +61,15 @@ function syntenyBlockSelect(d, i, g) {
 function syntenyBlockAdjust(d, i, g) {
   let selectedElements = getSelectedElements();
   if (selectedElements) {
-    selectedElements.addObject(this);
+    if (selectedElements.includes(this)) {
+      selectedElements.removeObject(this);
+      d3.select(this)
+        .style('fill', undefined)
+        .style('stroke', undefined);
+    } else {
+      selectedElements.addObject(this);
+      selectedElements.get('applyColour')();
+    }
     showStyleEditor(true);
   }
 }
