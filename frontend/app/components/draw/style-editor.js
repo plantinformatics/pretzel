@@ -32,14 +32,26 @@ export default Component.extend({
     get() {
       let selectedElements = getSelectedElements();
       let elements = selectedElements;
+      // could use an arrayObserver, or pass an action ...
+      selectedElements.set('applyColour', () => this.applyColour(this.currentColour));
       let colour = elements.length && window.getComputedStyle(elements[0])['stroke'];
       return colour;
     },
-
     set(key, colour) {
+      // key is "elementColour"
+      this.applyColour(colour);
+      this.set('currentColour', colour);
+      return colour;
+    }
+  }),
+
+  /** Apply the given colour to the selectedElements,
+   * as enabled by enableSet{Fill,Stroke}
+   */
+  applyColour(colour) {
       let selectedElements = getSelectedElements();
       let elements = selectedElements;
-      dLog('set', key, colour, elements.length);
+      dLog('set', colour, elements.length);
       /* use .style instead of .attr to apply fill/stroke so that they
        * are not overridden by CSS rules for path.syntenyEdge : fill, stroke.
        * refn https://www.w3.org/TR/SVG/styling.html#PresentationAttributes
@@ -56,9 +68,7 @@ export default Component.extend({
       }
       showStyleEditor(false);
 
-      return colour;
-    }
-  })
+  }
 
 
 });

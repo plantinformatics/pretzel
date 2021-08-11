@@ -45,12 +45,14 @@ function syntenyBlockEdit(d, i, g) {
     showStyleEditor(true);
   }
 }
-/** Add this element to selectedElements, if it is not already present.
+/** Add this element to selectedElements, if it is not already present,
+ * and apply the currently-chosen colour.
  */
 function syntenyBlockSelect(d, i, g) {
   let selectedElements = getSelectedElements();
   if (selectedElements) {
     selectedElements.addObject(this);
+    selectedElements.get('applyColour')();
   }
 }
 /** Add this element to selectedElements, if it is not already present.
