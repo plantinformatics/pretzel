@@ -2,6 +2,13 @@
 
 {{#if show}}
   {{#ember-modal-dialog  title="Style Editor" header-icon='edit'}}
+
+    <button
+     onclick={{action (mut this.show) false}}
+     style="float: right; position: relative; top: -12px;" class="close"
+     type="button">x
+    </button>
+
     <p>Style Editor</p>
     {{spectrum-color-picker color=elementColour preferredFormat="rgb"}}
 
