@@ -40,7 +40,7 @@ function syntenyBlockEdit(d, i, g) {
   /** not decided yet whether selectedElements will be 1 per draw-map or singleton. */
   let selectedElements = getSelectedElements();
   if (selectedElements && Array.isArray(selectedElements)) {
-    selectedElements.splice(0);
+    selectedElements.clear();
     selectedElements.push(this);
     showStyleEditor(true);
   }

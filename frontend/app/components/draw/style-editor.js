@@ -1,5 +1,6 @@
 import Component from '@ember/component';
 import { computed, observer } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 
 import SpectrumColorPickerComponent from 'ember-spectrum-color-picker/components/spectrum-color-picker';
@@ -14,9 +15,6 @@ const dLog = console.debug;
 
 /*----------------------------------------------------------------------------*/
 
-function getSelectedElements() {
-  return stacks?.oa?.selectedElements;
-}
 function showStyleEditor(show) {
     stacks?.oa?.eventBus && stacks.oa.eventBus.set('showStyleEditor', show);
 }
@@ -28,14 +26,15 @@ export default Component.extend({
   enableSetFill : true,
   enableSetStroke : true,
 
+  selectedElements : alias('stacks.oa.selectedElements'),
   stacks,
-  selectedElementsLength : computed('stacks.oa.selectedElements.[]', function () {
-    return this.get('stacks.oa.selectedElements.length');
+  selectedElementsLength : computed('selectedElements.[]', function () {
+    return this.get('selectedElements.length');
   }),
 
   elementColour: computed({
     get() {
-      let selectedElements = getSelectedElements();
+      let selectedElements = this.get('selectedElements');
       let elements = selectedElements;
       // could use an arrayObserver, or pass an action ...
       selectedElements.set('applyColour', () => this.applyColour(this.currentColour));
@@ -54,7 +53,7 @@ export default Component.extend({
    * as enabled by enableSet{Fill,Stroke}
    */
   applyColour(colour) {
-      let selectedElements = getSelectedElements();
+      let selectedElements = this.get('selectedElements');
       let elements = selectedElements;
       dLog('set', colour, elements.length);
       /* use .style instead of .attr to apply fill/stroke so that they
@@ -72,12 +71,11 @@ export default Component.extend({
         .style('stroke', colour);
       }
       showStyleEditor(false);
-
   },
 
   clearSelectedElements() {
-    let selectedElements = getSelectedElements();
-    selectedElements.splice(0);
+    let selectedElements = this.get('selectedElements');
+    selectedElements.clear();
   }
 
 });
