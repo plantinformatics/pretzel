@@ -4,5 +4,22 @@
   {{#ember-modal-dialog  title="Style Editor" header-icon='edit'}}
     <p>Style Editor</p>
     {{spectrum-color-picker color=elementColour preferredFormat="rgb"}}
+
+    <div>
+      <label>Set :</label>
+      <div>
+        {{input type="checkbox"
+          checked=enableSetFill
+          name=enableSetFill }}
+        <label>Fill</label>
+      </div>
+      <div>
+        {{input type="checkbox"
+          checked=enableSetStroke
+          name=enableSetStroke }}
+        <label>Stroke</label>
+      </div>
+    </div>
+
   {{/ember-modal-dialog}}
 {{/if}}
