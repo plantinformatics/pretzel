@@ -28,5 +28,14 @@
       </div>
     </div>
 
+    <div>
+      {{ selectedElementsLength}} selected
+      <button
+       onclick={{action clearSelectedElements}}
+       type="button">Clear
+      </button>
+
+    </div>
+
   {{/ember-modal-dialog}}
 {{/if}}

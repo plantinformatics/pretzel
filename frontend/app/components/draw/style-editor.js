@@ -28,6 +28,11 @@ export default Component.extend({
   enableSetFill : true,
   enableSetStroke : true,
 
+  stacks,
+  selectedElementsLength : computed('stacks.oa.selectedElements.[]', function () {
+    return this.get('stacks.oa.selectedElements.length');
+  }),
+
   elementColour: computed({
     get() {
       let selectedElements = getSelectedElements();
@@ -68,7 +73,11 @@ export default Component.extend({
       }
       showStyleEditor(false);
 
-  }
+  },
 
+  clearSelectedElements() {
+    let selectedElements = getSelectedElements();
+    selectedElements.splice(0);
+  }
 
 });
