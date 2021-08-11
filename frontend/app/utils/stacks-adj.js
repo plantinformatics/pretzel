@@ -170,7 +170,7 @@ function isAdjacent(a0, a1)
   if (adjs0)
     for (let a1i=0; (a1i < adjs0.length) && !result; a1i++) {
       result = a1 == adjs0[a1i];
-      if (result)
+      if (result && trace_adj > 1)
         dLog("isAdjacent", a0, axisId2Name(a0), a1, axisId2Name(a1));
     }
   return result;

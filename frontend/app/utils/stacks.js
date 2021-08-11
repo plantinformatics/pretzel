@@ -2106,8 +2106,9 @@ function xScale() {
 function x(axisID)
 {
   let i = Stack.axisStackIndex(axisID);
-  if (oa.xScaleExtend.domain().length === 2)
+  if ((oa.xScaleExtend.domain().length === 2) && trace_stack > 1) {
     dLog("x()", axisID, i, oa.xScaleExtend(i), oa.xScaleExtend.domain(), oa.xScaleExtend.range());
+  }
   if (i === -1) { dLog("x()", axisID, i); breakPoint(); }
   return oa.xScaleExtend(i);
 }
