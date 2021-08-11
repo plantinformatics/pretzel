@@ -1,14 +1,18 @@
 import { next } from '@ember/runloop';
 import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 
 import {
   tabActive, inputRangeValue,
-  expRangeBase, expRange, expRangeInitial
+  expRangeBase, expRange, expRangeInitial,
+  setCssVariable
 } from '../../utils/domElements';
 
 import { toBool } from '../../utils/common/strings';
+
+import { stacks } from '../../utils/stacks';
 
 /* global d3 */
 
@@ -29,6 +33,13 @@ export default Component.extend({
   */
   pathJoinClient : false,
   pathJoinRemote : true,
+
+  /*--------------------------------------------------------------------------*/
+
+  /** if false, axis title text and axis ticks and text are hidden with display : none,
+   * via a class .hideAxisText added on svgContainer.FeatureMapViewer
+   */
+  showAxisText : true,
 
   /*--------------------------------------------------------------------------*/
 
@@ -58,6 +69,11 @@ export default Component.extend({
     return gradient;
    }),
 
+  /*--------------------------------------------------------------------------*/
+
+  /** will move sbSizeThreshold, probably to here, replacing this link via stacks.oa. */
+  stacks,
+  sbSizeThreshold : alias('stacks.oa.sbSizeThreshold'),
 
   /*--------------------------------------------------------------------------*/
 
@@ -242,5 +258,35 @@ export default Component.extend({
     },
 
   },
+
+  /** @return d3 selection of the top-most <g> within the <svg> of the draw-map graph.
+   * This is equivalent to oa.svgContainer
+   */
+  svgContainer : computed( function() {
+    /** i.e. <svg><g  transform="translate(0,1)"> ... */
+    let g = d3.selectAll('svg.FeatureMapViewer > g');
+    return g;
+  }),
+  /** Called when input checkbox 'Show Axis Text' is clicked.  */
+  hideAxisTextClass(input) {
+    let svgContainer = this.get('svgContainer');
+    let
+    show = input.target.checked,
+    hide = ! show;
+    dLog('hideAxisTextClass', hide, svgContainer.node());
+    svgContainer
+      .classed('hideAxisText', hide);
+    this.set('showAxisText', show);
+  },
+  axisWidthInput(event) {
+    const varName = '--axisWidth';
+    /** input range is [0,100];  desired output values are [0, 10].  */
+    const factor = 100 / 10;
+    let value = event.target.value / factor;
+    // dLog('axisWidthInput', varName, value, event.target.value);
+    setCssVariable(varName, value);
+    this.set('axisWidth', value);
+  }
+
 
 });

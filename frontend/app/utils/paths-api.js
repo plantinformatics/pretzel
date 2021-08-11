@@ -35,6 +35,30 @@ function featureEltId(featureBlock)
 function featurePathKeyFn (featureBlock)
 { return featureBlock._id.name; }
 
+/** @return a function to translate the given type of paths result into
+ * syntenyBlocks
+ * @desc based on pathsOfFeature().
+ */
+function syntenyBlocksOfFeature(pathsResultType) {
+  return function (feature) {
+    let blocksFeatures =
+      [0, 1].map(function (blockIndex) { return pathsResultType.blocksFeatures(feature, blockIndex); }),
+    blocks = resultBlockIds(pathsResultType, feature),
+    pairs = 
+      blocksFeatures[0].reduce(function (result, f0) {
+        let result1 = blocksFeatures[1].reduce(function (result, f1) {
+          let syntenyBlock =
+            [f0, f1, blocks[0], blocks[1]];
+          result.push(syntenyBlock);
+          return result;
+        }, result);
+        return result1;
+      }, []);
+    return pairs;
+  };
+}
+
+
 /** Given the grouped data for a feature, from the pathsDirect() result,
  * generate the cross-product feature.alignment[0].repeats X feature.alignment[1].repeats.
  * The result is an array of pairs of features;  each pair defines a path and is of type PathData.
@@ -257,4 +281,8 @@ function featureGetBlock(feature, blocksById) {
 }
 
 
-export  { pathsResultTypes, pathsApiResultType, flowNames, pathsResultTypeFor, resultBlockIds, pathsOfFeature, locationPairKeyFn, featureGetFn, featureGetBlock };
+export  {
+  pathsResultTypes, pathsApiResultType, flowNames, pathsResultTypeFor, resultBlockIds,
+  syntenyBlocksOfFeature,
+  pathsOfFeature, locationPairKeyFn, featureGetFn, featureGetBlock
+};

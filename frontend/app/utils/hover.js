@@ -18,8 +18,8 @@ import { stacks } from './stacks';
  */
 import $ from 'jquery';
 
-
-let urlOptions = stacks.oa.eventBus.get('urlOptions');
+/** hover.js is now also imported by draw-map, so stacks.oa is not defined. */
+let urlOptions = stacks?.oa?.eventBus.get('urlOptions');
 
 /** If true, show the popover over the element which is hovered.
  * If false, show the popover at the top-right corner of the graph area.

@@ -393,6 +393,7 @@ body.devel .foreground > g.progress > g > g.blockAdj > g > path {
 :root {
   --path-stroke-opacity : 1;//.125;
   --path-stroke-width: 0.75px;
+  /* this may not update - uses the initial value of var() */
   --manyPaths-stroke-opacity: calc(var(--path-stroke-opacity)*0.8); //.125;
   --manyPaths-stroke-width: calc(var(--path-stroke-width)*0.8); // 0.75px;
 }
@@ -501,6 +502,7 @@ body.allInitially
 .axis-use > path
 {
   stroke: #000; /* black */
+  stroke-width : var(--axisWidth);
 }
 
 .axis text {
@@ -509,6 +511,10 @@ body.allInitially
 }
 body.ctrl-modifier .axis text {
   cursor: move;
+}
+body.ctrl-modifier .axis-all > g.brush > g > rect
+{
+  cursor: grab;
 }
 /* since split axis, now have (g.axis-outer (g.axis-all ( g.axis  (g.tick ...))) (text) ... ) */
 .axis-outer:not(.not_top) > .axis-all > text,
@@ -643,10 +649,12 @@ g.horizTick.labelledFeatures > text.horizTick {
 
 path.syntenyEdge
 {
-  fill-opacity: 0.05;
+  fill-opacity: calc(var(--path-stroke-opacity)*0.33);
   fill: magenta;
   stroke: purple;
   stroke-dasharray: 8 4 8 20;
+  stroke-opacity: var(--path-stroke-opacity);
+  stroke-width : var(--path-stroke-width)
 }
 path.syntenyEdge.inverted
 {
@@ -664,6 +672,9 @@ path.syntenyEdge.inverted
 
   /* avoid overlapping the top border of the graph area */
   margin-top: 20px;
+  /* synteny block name is long so move left; alternative : use overflow-x: auto */
+  margin-left: -160px;
+  /* overflow-x: auto; */
   .popover-content {
       padding-top : 0;
   }
@@ -694,10 +705,19 @@ g.axis-outer > g.btn > rect.Reset {
 }
 
 
+svg.FeatureMapViewer > g.hideAxisText   g.axis-all > text {
+  display: none;
+}
+svg.FeatureMapViewer > g.hideAxisText   g.axis > g.tick {
+  display: none;
+}
+
+
 svg > g.publishMode .graph-btn,
 {
   display: none;
 }
+
 
 g.axis-outer > .btn.brushed > rect,
 g.axis-outer > .btn.zoomed > rect {

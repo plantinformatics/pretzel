@@ -359,7 +359,7 @@ export default Component.extend({
               feature = features[0],
               featureGet = featureGetFn(feature),
               block = featureGetBlock(feature, blocksById),
-              /** brushes are identified by the referenceBlock (axisName). */
+              /** selected features are grouped by data block name.  */
               chrName = block.get('brushName'),
               selectedFeaturesOfBlock = selectedFeaturesByBlock[chrName],
               featureName = featureGet('name'),

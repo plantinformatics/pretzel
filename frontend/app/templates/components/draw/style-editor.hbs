@@ -1,0 +1,41 @@
+{{!-- --------------------------------------------------------------------- --}}
+
+{{#if show}}
+  {{#ember-modal-dialog  title="Style Editor" header-icon='edit'}}
+
+    <button
+     onclick={{action (mut this.show) false}}
+     style="float: right; position: relative; top: -12px;" class="close"
+     type="button">x
+    </button>
+
+    <p>Style Editor</p>
+    {{spectrum-color-picker color=elementColour preferredFormat="rgb"}}
+
+    <div>
+      <label>Set :</label>
+      <div>
+        {{input type="checkbox"
+          checked=enableSetFill
+          name=enableSetFill }}
+        <label>Fill</label>
+      </div>
+      <div>
+        {{input type="checkbox"
+          checked=enableSetStroke
+          name=enableSetStroke }}
+        <label>Stroke</label>
+      </div>
+    </div>
+
+    <div>
+      {{ selectedElementsLength}} selected
+      <button
+       onclick={{action clearSelectedElements}}
+       type="button">Clear
+      </button>
+
+    </div>
+
+  {{/ember-modal-dialog}}
+{{/if}}

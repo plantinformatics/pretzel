@@ -157,9 +157,17 @@
     </li>
 
     <li class="list-group-item">
+      <input type="checkbox"
+        checked="checked"
+        oninput={{action hideAxisTextClass}}  >
+      <label>Show Axis Text</label>
+    </li>
+
+    <li class="list-group-item">
       <input type="checkbox" 
              id="checkbox-toggleModePublish" 
              name="toggleCheckbox" 
+             checked="checked"
       />
       <label>Show Zoom/Reset buttons</label>
     </li>
@@ -218,13 +226,25 @@
       />
     </li>
 
-    <li class="list-group-item ff-alpha">
-      <label>Synteny Block Size Threshold</label>
+    <li class="list-group-item">
+      <label>Axis Width</label>
+      <input type="range"
+       value=10
+       oninput={{action this.axisWidthInput}}
+       min="0" max="100"
+      />
+    </li>
+
+    <li class="list-group-item">
+      <div>
+        <label>Synteny Block Size Threshold</label>
+        <span class="sub-label"> : <span>{{ sbSizeThreshold }}</span></span>
+      </div>
       <input type="range" 
        id="range-sbSizeThreshold" 
        name="sbSizeThreshold" 
        min="0" max="50"
-       value="22"
+       value="9"
       />
     </li>
 
