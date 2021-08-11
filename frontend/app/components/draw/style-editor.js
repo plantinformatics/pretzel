@@ -26,9 +26,14 @@ export default Component.extend({
       let selectedElements = stacks?.oa?.selectedElements;
       let elements = selectedElements;
       dLog('set', key, colour, elements.length);
+      /* use .style instead of .attr to apply fill/stroke so that they
+       * are not overridden by CSS rules for path.syntenyEdge : fill, stroke.
+       * refn https://www.w3.org/TR/SVG/styling.html#PresentationAttributes
+       * https://stackoverflow.com/questions/47088409/svg-attributes-beaten-by-cssstyle-in-priority/47088443#47088443
+       */
       d3.selectAll(elements)
-        .attr('fill', colour)
-        .attr('stroke', colour);
+        .style('fill', colour)
+        .style('stroke', colour);
 
       stacks?.oa?.eventBus && stacks.oa.eventBus.set('showStyleEditor', false);
 
