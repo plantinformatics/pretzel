@@ -214,6 +214,8 @@ export default Component.extend({
     this.send('pathTabActive', 'sample');
     this.readParsedOptions();
     this.set('controls.view', this);
+
+    setCssVariable ('--axisWidth', 'inherit');  // 1px
   },
   readParsedOptions() {
     /** this can be passed in from model.params.parsedOptions and then access pathsViaStream as 
