@@ -11,19 +11,34 @@
     {{spectrum-color-picker color=elementColour preferredFormat="rgb"}}
 
     <div>
+    <label>Click to :</label>
+    <span>
+      {{radio-button value='select' groupValue=selectOrApply
+        changed=(action changedClick this preventDefault=false)
+      }}
+      Select &nbsp;&nbsp;
+      {{radio-button value='apply' groupValue=selectOrApply
+        changed=(action changedClick this preventDefault=false)
+      }}
+      Apply
+    </span>
+
+    </div>
+
+    <div>
       <label>Set :</label>
-      <div>
+      <span>
         {{input type="checkbox"
           checked=enableSetFill
           name=enableSetFill }}
         <label>Fill</label>
-      </div>
-      <div>
+      </span>
+      <span>
         {{input type="checkbox"
           checked=enableSetStroke
           name=enableSetStroke }}
         <label>Stroke</label>
-      </div>
+      </span>
     </div>
 
     <div>

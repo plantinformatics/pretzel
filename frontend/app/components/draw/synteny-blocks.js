@@ -17,7 +17,12 @@ function configureSyntenyBlockClicks(selection) {
       } else if (d3.event.ctrlKey) {
         syntenyBlockAdjust.apply(this, [d, i, g]);
       } else {
-        syntenyBlockEdit.apply(this, [d, i, g]);
+        let selectedElements = getSelectedElements();
+        if (selectedElements && (selectedElements.get('selectOrApply') === 'apply')) {
+          syntenyBlockApply.apply(this, [d, i, g]);
+        } else {
+          syntenyBlockEdit.apply(this, [d, i, g]);
+        }
       };
     });
 }
@@ -63,7 +68,7 @@ function syntenyBlockSelect(d, i, g) {
           siblingElements.push(e);
         } } );
       selectedElements.addObjects(siblingElements);
-      selectedElements.get('applyColour')();
+      // selectedElements.get('applyColour')();
     }
   }
 }
@@ -103,10 +108,18 @@ function syntenyBlockAdjust(d, i, g) {
         .style('stroke', undefined);
     } else {
       selectedElements.addObject(this);
-      selectedElements.get('applyColour')();
     }
   }
 }
+function syntenyBlockApply(d, i, g) {
+  let selectedElements = getSelectedElements();
+  if (selectedElements) {
+    selectedElements.addObject(this);
+    selectedElements.get('applyColour')();
+  }
+}
+
+
 
 
 /*----------------------------------------------------------------------------*/

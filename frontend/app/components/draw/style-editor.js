@@ -23,6 +23,12 @@ export default Component.extend({
   enableSetFill : true,
   enableSetStroke : true,
 
+  selectOrApply : 'select',
+  /** @param thisStyleEditor === this
+   * @param value radio-button value
+   */
+  changedClick(thisStyleEditor, value) { this.set('selectedElements.selectOrApply', value); },
+
   selectedElements : alias('stacks.oa.selectedElements'),
   stacks,
   selectedElementsLength : computed('selectedElements.[]', function () {
