@@ -23,6 +23,8 @@ function showStyleEditor(show) {
 
 export default Component.extend({
 
+  classNames: ['style-editor'],
+
   enableSetFill : true,
   enableSetStroke : true,
 
