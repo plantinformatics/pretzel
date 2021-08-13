@@ -13,11 +13,6 @@ import { stacks } from '../../utils/stacks';
 
 const dLog = console.debug;
 
-/*----------------------------------------------------------------------------*/
-
-function showStyleEditor(show) {
-    stacks?.oa?.eventBus && stacks.oa.eventBus.set('showStyleEditor', show);
-}
 
 /*----------------------------------------------------------------------------*/
 
@@ -72,7 +67,6 @@ export default Component.extend({
         elementsS
         .style('stroke', colour);
       }
-      showStyleEditor(false);
   },
 
   clearSelectedElements() {
