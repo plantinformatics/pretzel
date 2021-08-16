@@ -61,7 +61,7 @@
     "ember-scroll-to": "0.6.5",
     "ember-simple-auth": "^3.0.1",
     "ember-spectrum-color-picker": "^0.10.1",
-    "ember-split-view-modifier": "^0.0.3",
+    "ember-split-view-modifier": "github:plantinformatics/ember-split-view-modifier",
     "ember-template-lint": "^2.14.0",
     "ember-welcome-page": "^4.0.0",
     "eslint": "^7.13.0",
