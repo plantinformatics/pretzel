@@ -8,6 +8,7 @@ import SpectrumColorPickerComponent from 'ember-spectrum-color-picker/components
 /* global d3 */
 
 import { stacks } from '../../utils/stacks';
+import { svgRootClassed } from  '../../utils/domElements';
 
 /*----------------------------------------------------------------------------*/
 
@@ -27,7 +28,10 @@ export default Component.extend({
   /** @param thisStyleEditor === this
    * @param value radio-button value
    */
-  changedClick(thisStyleEditor, value) { this.set('selectedElements.selectOrApply', value); },
+  changedClick(thisStyleEditor, value) {
+    this.set('selectedElements.selectOrApply', value);
+    svgRootClassed('applyChange', value === 'apply');
+  },
 
   selectedElements : alias('stacks.oa.selectedElements'),
   stacks,

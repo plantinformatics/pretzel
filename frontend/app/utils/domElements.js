@@ -363,10 +363,22 @@ function expRangeInitial(rangeStart, base) {
 
 /*----------------------------------------------------------------------------*/
 
+function svgRootSelect() {
+  const svgRoot = d3.select('#holder > svg');
+  return svgRoot;
+}
+
+
 function setCssVariable(name, value)
 {
-  const svgRoot = d3.select('#holder > svg');
+  const svgRoot = svgRootSelect();
   svgRoot.style(name, value);
+}
+
+function svgRootClassed(className, value) {
+  const svgRoot = svgRootSelect();
+  svgRoot.classed(className, value);
+  return svgRoot;
 }
 
 
@@ -386,5 +398,7 @@ export {
   expRangeBase,
   expRange,
   expRangeInitial,
-  setCssVariable
+  svgRootSelect,
+  setCssVariable,
+  svgRootClassed
  };

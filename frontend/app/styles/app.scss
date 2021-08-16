@@ -660,6 +660,9 @@ path.syntenyEdge.inverted
   stroke: orangered;
   stroke-dasharray: 16 8 16 40;
 }
+.applyChange path.syntenyEdge {
+  cursor: url('/assets/images/bucketFill.cur'), auto;
+}
 
 /*----------------------------------------------------------------------------*/
 /* no border for popover when displayed in top-right of graph, i.e. ! hoverNearElement */
