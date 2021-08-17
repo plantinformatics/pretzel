@@ -24,6 +24,12 @@
 
     </div>
 
+    {{elem/x-toggle
+      value=showAdvanced
+      }}
+
+    {{#if showAdvanced}}
+
     <div>
       <label>Set :</label>
       <span>
@@ -49,3 +55,4 @@
 
     </div>
 
+    {{/if}}

@@ -21,6 +21,9 @@ export default Component.extend({
 
   classNames: ['style-editor'],
 
+  /** if true, show the selection count and Clear; enable selection functionality. */
+  showAdvanced : false,
+
   enableSetFill : true,
   enableSetStroke : true,
 
