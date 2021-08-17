@@ -2,12 +2,16 @@
 
 
     <button
-     onclick={{action (mut this.show) false}}
-     style="float: right; position: relative; top: -12px;" class="close"
-     type="button">x
+     onclick={{action toggleApply}}
+     type="button"><img src="assets/images/bucketFill.cur" alt="Click to enable colour paint mode">
     </button>
 
     {{spectrum-color-picker color=elementColour preferredFormat="rgb"}}
+
+    {{!-- ----------------------------------------------------------------- --}}
+
+    {{!-- Select/Apply, Fill/Stroke and selectedElements - not needed yet; selectedElements may split to a separate component. --}}
+    {{#if 0}}
 
     <div>
     <label>Click to :</label>
@@ -23,6 +27,7 @@
     </span>
 
     </div>
+
 
     {{elem/x-toggle
       value=showAdvanced
@@ -56,3 +61,5 @@
     </div>
 
     {{/if}}
+    {{/if}}
+    {{!-- ----------------------------------------------------------------- --}}

@@ -1669,6 +1669,19 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
     margin: 1em;
     margin-left: 2em;
 }
+.style-editor > button {
+    border: 0px;
+    background: none;
+    /* .cur is 32x32 but only the upper left quadrant is non-empty.  */
+    width: 19px;
+    height: 17px;
+    padding-left: 0px;
+}
+.style-editor.apply > button {
+    border : solid 1px blue;
+    background: #d9edf7;
+}
+
 
 /* -------------------------------------------------------------------------- */
 .new-datasource-modal .labelled-inputs {

@@ -20,6 +20,7 @@ const dLog = console.debug;
 export default Component.extend({
 
   classNames: ['style-editor'],
+  classNameBindings: ['apply'],
 
   /** if true, show the selection count and Clear; enable selection functionality. */
   showAdvanced : false,
@@ -27,13 +28,19 @@ export default Component.extend({
   enableSetFill : true,
   enableSetStroke : true,
 
+  apply : false,
+  toggleApply() {
+    this.toggleProperty('apply');
+    svgRootClassed('applyChange', this.apply);
+ },
+
   selectOrApply : 'select',
   /** @param thisStyleEditor === this
    * @param value radio-button value
    */
   changedClick(thisStyleEditor, value) {
     this.set('selectedElements.selectOrApply', value);
-    svgRootClassed('applyChange', value === 'apply');
+    svgRootClassed('applyChange', this.apply || (value === 'apply'));
   },
 
   selectedElements : alias('stacks.oa.selectedElements'),
