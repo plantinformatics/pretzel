@@ -85,7 +85,11 @@ function nowOrAfterTransition(selection, fn, transitionTime) {
      * transition_duration() uses get$1(this.node() ) which will get an
      * exception on node.__transition;
      */
-    transitionTime ??= ! selection.empty() && selection.duration();
+    // jshint doesn't handle this, in 'ember server'
+    // transitionTime ??= ! selection.empty() && selection.duration();
+    if (! transitionTime) {
+      transitionTime = ! selection.empty() && selection.duration();
+    }
     run_later(fn, transitionTime);
   } else {
     fn();
