@@ -114,8 +114,7 @@ function syntenyBlockAdjust(d, i, g) {
 function syntenyBlockApply(d, i, g) {
   let selectedElements = getSelectedElements();
   if (selectedElements) {
-    selectedElements.addObject(this);
-    selectedElements.get('applyColour')();
+    selectedElements.get('applyColour')(this);
   }
 }
 

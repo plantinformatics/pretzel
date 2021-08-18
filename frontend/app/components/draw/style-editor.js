@@ -32,6 +32,7 @@ export default Component.extend({
   toggleApply() {
     this.toggleProperty('apply');
     svgRootClassed('applyChange', this.apply);
+    this.set('selectedElements.selectOrApply', this.apply ? 'apply' : 'select');
  },
 
   selectOrApply : 'select',
@@ -54,7 +55,7 @@ export default Component.extend({
       let selectedElements = this.get('selectedElements');
       let elements = selectedElements;
       // could use an arrayObserver, or pass an action ...
-      selectedElements.set('applyColour', () => this.applyColour(this.currentColour));
+      selectedElements.set('applyColour', (element) => this.applyColour(this.currentColour, element));
       let colour = elements.length && window.getComputedStyle(elements[0])['stroke'];
       return colour;
     },
@@ -68,10 +69,11 @@ export default Component.extend({
 
   /** Apply the given colour to the selectedElements,
    * as enabled by enableSet{Fill,Stroke}
+   * @param element apply to this element, or selectedElements if undefined
    */
-  applyColour(colour) {
+  applyColour(colour, element) {
       let selectedElements = this.get('selectedElements');
-      let elements = selectedElements;
+      let elements = element ? [element] : selectedElements;
       dLog('set', colour, elements.length);
       /* use .style instead of .attr to apply fill/stroke so that they
        * are not overridden by CSS rules for path.syntenyEdge : fill, stroke.
