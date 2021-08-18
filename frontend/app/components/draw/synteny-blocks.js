@@ -6,22 +6,26 @@ import { stacks } from '../../utils/stacks';
 
 const dLog = console.debug;
 
+/** shift-click and ctrl-click can be used to make a selection of a group of graphic elements  */
+const enableModifiers = false;
 
 /*----------------------------------------------------------------------------*/
 
 function configureSyntenyBlockClicks(selection) {
   selection
     .on('click', function (d, i, g) {
-      if (d3.event.shiftKey) {
+      if (enableModifiers && d3.event.shiftKey) {
         syntenyBlockSelect.apply(this, [d, i, g]);
-      } else if (d3.event.ctrlKey) {
+      } else if (enableModifiers && d3.event.ctrlKey) {
         syntenyBlockAdjust.apply(this, [d, i, g]);
       } else {
         let selectedElements = getSelectedElements();
         if (selectedElements && (selectedElements.get('selectOrApply') === 'apply')) {
           syntenyBlockApply.apply(this, [d, i, g]);
         } else {
-          syntenyBlockEdit.apply(this, [d, i, g]);
+          if (enableModifiers) {
+            syntenyBlockEdit.apply(this, [d, i, g]);
+          }
         }
       };
     });
