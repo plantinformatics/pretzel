@@ -345,3 +345,10 @@ Wang, S., Wong, D., Forrest, K., Allen, A., Chao, S., Huang, B. E., Maccaferri, 
 Gardner, K. A., Wittern, L. M. and Mackay, I. J. (2016), *A highly recombined, high-density, eight-founder wheat MAGIC map reveals extensive segregation distortion and genomic locations of introgression segments.* Plant Biotechnol J, 14: 1406–1417. doi:10.1111/pbi.12504
 
 Wen, W., He, Z., Gao, F., Liu, J., Jin, H., Zhai, S., Xia, X. (2017). *A High-Density Consensus Map of Common Wheat Integrating Four Mapping Populations Scanned by the 90K SNP Array.* Frontiers in Plant Science, 8, 1389. http://doi.org/10.3389/fpls.2017.01389
+
+# Software / Tools Acknowledgments
+
+### Images / Media
+
+[bucketFill.png](https://www.flaticon.com/free-icon/bucket_834205?term=paint%20bucket&page=1&position=53&page=1&position=53&related_id=834205&origin=tag)
+from : Icons made by [Freepik](https://www.freepik.com) from [www.flaticon.com](https://www.flaticon.com/)
