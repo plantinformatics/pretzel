@@ -1673,16 +1673,22 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
     border: 0px;
     background: none;
     outline-width: 1px;
+    /* touch colour block on right. */
+    margin-right: -3px;
 }
 .style-editor > button:hover {
     outline-style: dashed;
 }
 .style-editor:not(.apply) > button {
-    margin: 1px;
+    /* margin: 1px; */
 }
 .style-editor.apply > button {
-    border : solid 1px blue;
+    /* border : solid 1px blue; */
     background: #d9edf7;
+}
+.style-editor > button > img {
+  height: 70px;
+  width: auto;
 }
 /* Hide the border surrounding the colour block - override the defaults.
  * for spectrum.js, refn : http://bgrins.github.io/spectrum/ */
@@ -1690,12 +1696,22 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
   padding: inherit;
   border: inherit;
   background: inherit;
+  outline-width: 1px;
 }
+.sp-replacer:hover {
+  outline-style: dashed;
+}
+
 /** Hide the down-arrow beside the colour block  */
 .sp-dd {
   display : none;
 }
-
+/* increase to match button img. 70px + 2 */
+.sp-preview {
+  width: 72px;
+  height: 72px;
+  margin-right: inherit;
+}
 
 /* -------------------------------------------------------------------------- */
 .new-datasource-modal .labelled-inputs {
