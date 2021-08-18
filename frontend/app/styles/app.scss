@@ -1675,6 +1675,7 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
     outline-width: 1px;
     /* touch colour block on right. */
     margin-right: -3px;
+  padding: inherit;
 }
 .style-editor > button:hover {
     outline-style: dashed;
