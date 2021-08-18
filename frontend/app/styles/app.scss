@@ -1684,6 +1684,17 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
     border : solid 1px blue;
     background: #d9edf7;
 }
+/* Hide the border surrounding the colour block - override the defaults.
+ * for spectrum.js, refn : http://bgrins.github.io/spectrum/ */
+.sp-replacer {
+  padding: inherit;
+  border: inherit;
+  background: inherit;
+}
+/** Hide the down-arrow beside the colour block  */
+.sp-dd {
+  display : none;
+}
 
 
 /* -------------------------------------------------------------------------- */
