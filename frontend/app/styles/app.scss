@@ -1680,20 +1680,19 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
 .style-editor > button {
     border: 0px;
     background: none;
-    outline-width: 1px;
     /* touch colour block on right. */
     margin-right: -3px;
   padding: inherit;
 }
 .style-editor > button:hover {
-    outline-style: dashed;
+  background-color: #f0f0f0;
 }
 .style-editor:not(.apply) > button {
-    /* margin: 1px; */
+  /* margin: 1px; */
 }
 .style-editor.apply > button {
-    /* border : solid 1px blue; */
-    background: #d9edf7;
+  /* border : solid 1px blue; */
+  background-color: lightblue;
 }
 .style-editor > button > img {
   height: 70px;
@@ -1705,11 +1704,16 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
   padding: inherit;
   border: inherit;
   background: inherit;
-  outline-width: 1px;
 }
-.sp-replacer:hover {
-  outline-style: dashed;
+.sp-replacer.spectrum-color-picker-replacer:hover > .sp-preview >.sp-preview-inner:hover
+{
+  background-color: #f0f0f0 !important;
 }
+.sp-preview:hover
+{
+  border : none;
+}
+
 
 /** Hide the down-arrow beside the colour block  */
 .sp-dd {

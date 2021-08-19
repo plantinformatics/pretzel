@@ -31,9 +31,17 @@ export default Component.extend({
   apply : false,
   toggleApply() {
     this.toggleProperty('apply');
-    svgRootClassed('applyChange', this.apply);
+    showApplyState();
     this.set('selectedElements.selectOrApply', this.apply ? 'apply' : 'select');
- },
+  },
+  showApplyState() {
+    svgRootClassed('applyChange', this.apply);
+  },
+  didInsertElement() {
+    this._super(...arguments);
+
+    showApplyState();
+  },
 
   selectOrApply : 'select',
   /** @param thisStyleEditor === this
