@@ -1704,14 +1704,11 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
   padding: inherit;
   border: inherit;
   background: inherit;
+  outline-width: 1px;
+  outline-offset: 2px;
 }
-.sp-replacer.spectrum-color-picker-replacer:hover > .sp-preview >.sp-preview-inner:hover
-{
-  background-color: #f0f0f0 !important;
-}
-.sp-preview:hover
-{
-  border : none;
+.sp-replacer:hover {
+  outline-style: outset;
 }
 
 
