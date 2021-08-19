@@ -31,7 +31,7 @@ export default Component.extend({
   apply : false,
   toggleApply() {
     this.toggleProperty('apply');
-    showApplyState();
+    this.showApplyState();
     this.set('selectedElements.selectOrApply', this.apply ? 'apply' : 'select');
   },
   showApplyState() {
@@ -40,7 +40,7 @@ export default Component.extend({
   didInsertElement() {
     this._super(...arguments);
 
-    showApplyState();
+    this.showApplyState();
   },
 
   selectOrApply : 'select',
