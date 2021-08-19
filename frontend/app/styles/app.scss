@@ -661,7 +661,8 @@ path.syntenyEdge.inverted
   stroke-dasharray: 16 8 16 40;
 }
 .applyChange path.syntenyEdge {
-  cursor: url('/assets/images/bucketFill.png'), auto;
+  /* centre on the tip of the paint drip x=1, y=22 px (from top-left origin). */
+  cursor: url('/assets/images/bucketFill.png') 1 22, auto;
 }
 
 /*----------------------------------------------------------------------------*/
