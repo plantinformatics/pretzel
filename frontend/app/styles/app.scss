@@ -1558,6 +1558,14 @@ body > div.ember-popover {
 
 /* -------------------------------------------------------------------------- */
 
+#right-panel-content.right-panel-dataset
+{
+  overflow-y: auto;
+}
+#right-panel-content.right-panel-dataset > div
+{
+  height:650px;
+}
 #right-panel-content > .right-panel-paths {
     display : none;
 }

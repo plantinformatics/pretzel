@@ -1,5 +1,5 @@
 {{!-- app/controllers/mapview.js --}}
-<div class="" style="height:100%; display:flex">
+<div class="" style="height:100%; display:flex; flex-direction:row;">
   
   {{panel/left-panel
     displayData=block.viewed
@@ -67,13 +67,14 @@
   </div>
 
   {{#if layout.right.visible}}
-    <div class="" style="flex-basis:400px; flex-grow:1; overflow-x:scroll; display:flex; flex-direction:column">
+    <div class="" style="flex-basis:400px; flex-grow:1; overflow-x:scroll; display:flex;">
+
     <div {{split-view direction='vertical'
       sizes=(array 70 30) minSize=(array 20 5)
       gutterSize=15}}
       class="right-split" >
 
-     <div>
+     <div style="overflow-y: clip">
       <ul class="nav nav-tabs">
         {{#if model.params.parsedOptions.blockTab}}
           {{#elem/button-tab
@@ -116,7 +117,8 @@
           {{elem/icon-base name="remove"}}
         {{/elem/button-tab}}
       </ul>
-      <div id="right-panel-content" style="overflow-y: visible" class={{rightPanelClass}}>
+
+      <div id="right-panel-content"  class={{rightPanelClass}} style="overflow-x:scroll;">
         {{#if (compare layout.right.tab '===' 'selection')}}
           {{panel/manage-features
             selectedFeatures=selectedFeatures
