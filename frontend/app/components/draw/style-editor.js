@@ -63,7 +63,10 @@ export default Component.extend({
       let selectedElements = this.get('selectedElements');
       let elements = selectedElements;
       // could use an arrayObserver, or pass an action ...
-      selectedElements.set('applyColour', (element) => this.applyColour(this.currentColour, element));
+      /* initial colour of the colour picker is black : rgb(0, 0, 0),
+       * so if .currentColour has not been set, use that.
+       */
+      selectedElements.set('applyColour', (element) => this.applyColour(this.currentColour || "rgb(0, 0, 0)", element));
       let colour = elements.length && window.getComputedStyle(elements[0])['stroke'];
       return colour;
     },
