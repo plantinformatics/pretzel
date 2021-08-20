@@ -14,6 +14,10 @@ import { svgRootClassed } from  '../../utils/domElements';
 
 const dLog = console.debug;
 
+/** same as in draw-map.js:showSynteny() and block-adj.js: draw()
+ */
+const SB_ID = 6;
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -92,6 +96,11 @@ export default Component.extend({
        * https://stackoverflow.com/questions/47088409/svg-attributes-beaten-by-cssstyle-in-priority/47088443#47088443
        */
       let elementsS = d3.selectAll(elements);
+      this.applyColourSelection(elementsS, colour);
+      elementsS.each((sb) => this.storeColour(sb, colour));
+  },
+
+  applyColourSelection(elementsS, colour) {
       if (this.get('enableSetFill')) {
         elementsS
         .style('fill', colour);
@@ -101,6 +110,33 @@ export default Component.extend({
         .style('stroke', colour);
       }
   },
+
+  /** Apply the collection of colour changes made in this session.
+   */
+  applyColourCollection() {
+    dLog('applyColourCollection', this.colours);
+    d3.selectAll('path.syntenyEdge')
+      .each((d, i, g) => {
+        let colour = this.colourForData(d, i, g);
+        if (colour) {
+          dLog('applyColourCollection', colour, d, g[i]);
+          this.applyColourSelection(d3.select(g[i]), colour);
+        }
+      });
+  },
+  colourForData(d, i, g) {
+    let
+    sb = d,
+    key = sb[SB_ID],
+    colour = this.colours.get(key);
+    return colour;
+  },
+  storeColour(sb, colour) {
+    this.colours.set(sb[SB_ID], colour);
+  },
+  /** map sb[SB_ID] -> colour. singleton map. */
+  colours : new Map(),
+
 
   clearSelectedElements() {
     let selectedElements = this.get('selectedElements');

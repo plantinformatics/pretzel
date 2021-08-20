@@ -3223,6 +3223,10 @@ export default Component.extend(Evented, {
         configureHover.apply(this, [sb, syntenyBlockHoverText]);
       }
 
+      function sbKeyFn(sb) {
+        return sb[SB_ID];
+      }
+
         let pS = sbM.selectAll("path.syntenyEdge")
           .data(adjSynteny),
         pSE = pS.enter()
