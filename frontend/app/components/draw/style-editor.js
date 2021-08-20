@@ -4,6 +4,8 @@ import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 
 import SpectrumColorPickerComponent from 'ember-spectrum-color-picker/components/spectrum-color-picker';
+import { storageFor } from 'ember-local-storage';
+
 
 /* global d3 */
 
@@ -22,6 +24,7 @@ const SB_ID = 6;
 /*----------------------------------------------------------------------------*/
 
 export default Component.extend({
+  userConfData: storageFor('userConfData'),
 
   classNames: ['style-editor'],
   classNameBindings: ['apply'],
@@ -124,18 +127,26 @@ export default Component.extend({
         }
       });
   },
+
+  /*--------------------------------------------------------------------------*/
+
   colourForData(d, i, g) {
     let
     sb = d,
     key = sb[SB_ID],
-    colour = this.colours.get(key);
+    colour = this.colours[key];
     return colour;
   },
   storeColour(sb, colour) {
-    this.colours.set(sb[SB_ID], colour);
+    const key = sb[SB_ID];
+    this.colours[key] = colour;
+    // update userConfData to cause export to localStorage
+    this.userConfData.set('colours', this.colours);
   },
   /** map sb[SB_ID] -> colour. singleton map. */
-  colours : new Map(),
+  colours : alias('userConfData.colours'),
+
+  /*--------------------------------------------------------------------------*/
 
 
   clearSelectedElements() {
