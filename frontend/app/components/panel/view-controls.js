@@ -73,7 +73,7 @@ export default Component.extend({
 
   /** will move sbSizeThreshold, probably to here, replacing this link via stacks.oa. */
   stacks,
-  sbSizeThreshold : alias('stacks.oa.sbSizeThreshold'),
+  sbSizeThreshold : 20,
 
   /*--------------------------------------------------------------------------*/
 

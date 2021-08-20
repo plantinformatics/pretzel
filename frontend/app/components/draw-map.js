@@ -377,6 +377,9 @@ export default Component.extend(Evented, {
    */
   pathJoinClient : alias('controls.view.pathJoinClient'),
 
+  /** initialised to default value in components/panel/view-controls.js */
+  sbSizeThreshold : alias('controls.view.sbSizeThreshold'),
+
   /*------------------------------------------------------------------------*/
 
   actions: {
@@ -1784,7 +1787,6 @@ export default Component.extend(Evented, {
      * synteny block display is physical maps / genes).
      */
     let syntenyBlocks =  oa.syntenyBlocks || (oa.syntenyBlocks = []);
-    if (oa.sbSizeThreshold == undefined)  oa.sbSizeThreshold = 20;      
     //- paths-classes
     if (use_path_colour_scale)
     {
@@ -3167,8 +3169,9 @@ export default Component.extend(Evented, {
         let a0 = sb[0], a1 = sb[1], adj = isAdjacent(a0, a1) || isAdjacent(a1, a0);
         return adj;
       }
+      const sbSizeThreshold = me.get('sbSizeThreshold');
       function sbSizeFilter(sb) {
-        return sb[SB_SIZE] > oa.sbSizeThreshold;
+        return sb[SB_SIZE] > sbSizeThreshold;
       }
       let adjSynteny = syntenyBlocks.filter(sbChrAreAdjacent)
         .filter(sbSizeFilter);
@@ -3233,7 +3236,7 @@ export default Component.extend(Evented, {
           .attr("d", blockLine);
       pSX.remove();
       if (trace_synteny > 1)
-        console.log("showSynteny", oa.syntenyBlocks.length, oa.sbSizeThreshold, adjSynteny.length, pS.size(), pSE.size(), pSX.size(), pSM.size(), pSM.node());
+        console.log("showSynteny", oa.syntenyBlocks.length, sbSizeThreshold, adjSynteny.length, pS.size(), pSE.size(), pSX.size(), pSM.size(), pSM.node());
       if (trace_synteny > 2)
         console.log(pSM._groups[0]);
 
@@ -6165,14 +6168,20 @@ export default Component.extend(Evented, {
        * x^y = 20 => y log(x) = log(20) => y = Math.log(20) / Math.log(1.148137) = 21.6861056
        * round to 22
        * so : in .hbs : id="range-sbSizeThreshold" :  min="0" max="50" value="22"
-       *  min value is 0, so -1 to get 0.
        * The above is sufficient for GM, but for genome reference assembly :
-       * Math.pow(2.718, Math.log(1e7) / 50)
+       * Math.pow(Math.E, Math.log(1e7) / 50)
        * 1.3803381276035693
        * Math.log(20) / Math.log($_)
        * 9.294035042848378
+       *
+       * Size is normally measured in base pairs so round to integer;
+       * this may be OK for centiMorgans also; genetic map markers
+       * have a single position not a range so 'size' will be 0, and
+       * synteny-block representation (trapezoid) would only be used
+       * if aligning GM to physical.
        */
-      oa.sbSizeThreshold=Math.pow(1.38033, value) - 1;
+      const stepRatio = Math.pow(Math.E, Math.log(1e7) / 50);
+      me.set('sbSizeThreshold', Math.round(Math.pow(stepRatio, value)));
       later( function () { showSynteny(oa.syntenyBlocks, undefined); });
     }
     function setupSbSizeThresh()
