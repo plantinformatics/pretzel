@@ -3228,7 +3228,7 @@ export default Component.extend(Evented, {
       }
 
         let pS = sbM.selectAll("path.syntenyEdge")
-          .data(adjSynteny),
+          .data(adjSynteny, sbKeyFn),
         pSE = pS.enter()
           .append("path")
           .attr("class", "syntenyEdge")
