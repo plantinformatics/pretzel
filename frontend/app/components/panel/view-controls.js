@@ -18,6 +18,26 @@ import { stacks } from '../../utils/stacks';
 
 const dLog = console.debug;
 
+/*--------------------------------------------------------------------------*/
+
+/** On Firefox, an axis vertical bar <path> is sometimes invisible if
+ * stroke-width is 1px; this may be caused by scaling caused by the
+ * viewbox.
+ * A solution is to set stroke-width 2px, via initial --axisWidth value.
+ * Since this is seen on Firefox but not Chrome, and may be solved
+ * later by a browser change, it is currently handled by setting
+ * stroke-width 2px only if isFirefox().
+ *
+ * isFirefox() is from :
+ * https://github.com/astronomersiva/ember-display-in-browser/blob/master/addon/utils/browser-checks.js
+*/
+// Firefox 1.0+
+export const isFirefox = () => typeof InstallTrigger !== 'undefined';
+
+/*--------------------------------------------------------------------------*/
+
+
+
 
 export default Component.extend({
   tagName: 'div',
@@ -215,7 +235,10 @@ export default Component.extend({
     this.readParsedOptions();
     this.set('controls.view', this);
 
-    setCssVariable ('--axisWidth', 'inherit');  // 1px
+    /* inherit browser default (1px) as an initial default, except for
+     * Firefox, as commented above.
+     */
+    setCssVariable ('--axisWidth', isFirefox() ? '2px' : 'inherit');
   },
   readParsedOptions() {
     /** this can be passed in from model.params.parsedOptions and then access pathsViaStream as 
