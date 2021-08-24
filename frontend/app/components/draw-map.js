@@ -52,7 +52,7 @@ import {
   inputRangeValue,
   expRange
 } from '../utils/domElements';
-import { I } from '../utils/draw/d3-svg';
+import { I, combineFilters } from '../utils/draw/d3-svg';
 import {
   /*fromSelectionArray,
   */ logSelectionLevel,
@@ -187,6 +187,7 @@ export default Component.extend(Evented, {
   headsUp : service('data/heads-up'),
   queryParamsService: service('query-params'),
   apiServers : service(),
+  controlsService : service('controls'),
 
   /*--------------------------------------------------------------------------*/
   urlOptions : alias('queryParamsService.urlOptions'),
@@ -1988,7 +1989,7 @@ export default Component.extend(Evented, {
         y[d] = ys[d].copy();
         y[d].brush = d3.brushY()
           .extent([[-8,0],[8,myRange]])
-          .filter(noKeyfilter)
+          .filter(combineFilters(noKeyfilter, me.controlsService.noGuiModeFilter))
           .on("end", brushended);
       }
     });

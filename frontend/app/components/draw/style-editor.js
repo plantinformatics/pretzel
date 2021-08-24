@@ -25,6 +25,7 @@ const SB_ID = 6;
 
 export default Component.extend({
   userConfData: storageFor('userConfData'),
+  controls : service(),
 
   classNames: ['style-editor'],
   classNameBindings: ['apply'],
@@ -40,6 +41,7 @@ export default Component.extend({
     this.toggleProperty('apply');
     this.showApplyState();
     this.set('selectedElements.selectOrApply', this.apply ? 'apply' : 'select');
+    this.controls.set('guiMode', this.apply ? this.controls.guiModes.bucketFill : undefined);
   },
   showApplyState() {
     svgRootClassed('applyChange', this.apply);

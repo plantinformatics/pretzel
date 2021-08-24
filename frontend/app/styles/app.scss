@@ -244,6 +244,7 @@ g.axis-use > rect {
   fill: none;
   /* stroke: blue; */
 }
+/* could prefix this with svg:not(.applyChange); and similarly for path.horizTick:hover */
 rect.track:hover {
   /** single-pixel-high <rect>s are difficult to click (to toggle selected.features), so increase width when hover.  */
   stroke-width: 3;
@@ -660,7 +661,21 @@ path.syntenyEdge.inverted
   stroke: orangered;
   stroke-dasharray: 16 8 16 40;
 }
-.applyChange path.syntenyEdge {
+svg.applyChange {
+  /* when .applyChange, within graph area (<svg>), cursor is bucketFill only within path.syntenyEdge. */
+  cursor: not-allowed;
+}
+/* the g.brush > g[clip-path] contains 4 <rect>-s, each with element attribute :
+ *   .overlay   cursor=crosshair
+ *   .handle    cursor=ns-resize
+ *   .selection cursor=move
+ * Override at least .overlay when .applyChange, and possibly the others.
+ */
+svg.applyChange g.brush > g > rect.overlay {
+  cursor: not-allowed;
+}
+
+svg.applyChange path.syntenyEdge {
   /* centre on the tip of the paint drip x=1, y=22 px (from top-left origin). */
   cursor: url('/assets/images/bucketFill.png') 1 22, auto;
 }

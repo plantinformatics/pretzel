@@ -18,6 +18,17 @@ function I(d) { /* console.log(this, d); */ return d; };
 
 /*----------------------------------------------------------------------------*/
 
+/** For use with d3.brush().filter(), which permits a single filter function.
+ * This combines multiple filter functions into one.
+ * d3 started() calls the filter function with element this (d, i, g).
+ */
+function combineFilters(a, b) {
+  let c = function (d, i, g) { return a.apply(this, arguments) && b.apply(this, arguments); };
+  return c;
+}
+
+/*----------------------------------------------------------------------------*/
+
 /** Ensure that g.groupName exists within parentG, and return a d3 selection of it.
  *
  * @param parentG d3 selection of <g> to contain added g.groupName
@@ -138,4 +149,4 @@ function ensureSvgDefs(svg)
 
 /*----------------------------------------------------------------------------*/
 
-export { I, selectGroup, transitionEndPromise, nowOrAfterTransition, ensureSvgDefs };
+export { I, combineFilters, selectGroup, transitionEndPromise, nowOrAfterTransition, ensureSvgDefs };
