@@ -10,10 +10,19 @@
 
     {{!-- ----------------------------------------------------------------- --}}
 
-    <button
-      onclick={{action this.applyColourCollection}}
-      type="button">Apply stored colours
-    </button>
+    <div style="display:inline-block; margin-left: 1em">
+      <label>Stored Colours</label>
+      <div>
+      <button
+	onclick={{action this.applyColourCollection}}
+	type="button">Apply
+      </button>
+      <button
+	onclick={{action this.coloursClear}}
+	type="button">Clear
+      </button>
+      </div>
+    </div>
 
 
     {{!-- Select/Apply, Fill/Stroke and selectedElements - not needed yet; selectedElements may split to a separate component. --}}

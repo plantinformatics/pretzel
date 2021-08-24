@@ -147,6 +147,10 @@ export default Component.extend({
   },
   /** map sb[SB_ID] -> colour. singleton map. */
   colours : alias('userConfData.colours'),
+  coloursClear() {
+    dLog('coloursClear', this.colours);
+    this.userConfData.set('colours', {});
+  },
 
   /*--------------------------------------------------------------------------*/
 
