@@ -235,7 +235,7 @@ svg {
 }
 
 .map.zoomed g.axis {
-    cursor: grab, move;
+    cursor: move;
 }
 
 /* ---------------------------------- */
@@ -513,7 +513,7 @@ body.allInitially
 body.ctrl-modifier .axis text,
 body.ctrl-modifier .axis-all > g.brush > g > rect
 {
-  cursor: grab, move;
+  cursor: move;
 }
 /* since split axis, now have (g.axis-outer (g.axis-all ( g.axis  (g.tick ...))) (text) ... ) */
 .axis-outer:not(.not_top) > .axis-all > text,
