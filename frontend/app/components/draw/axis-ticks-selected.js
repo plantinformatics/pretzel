@@ -282,7 +282,7 @@ export default Component.extend(AxisEvents, {
 
   clickTriangle(feature, i, g) {
     dLog('clickTriangle', feature, i, g.length, g[i], this);
-    if (! this.controls.noGuiModeFilter()) {
+    if (this.controls.noGuiModeFilter()) {
     let features, listName;
     if (! d3.event.shiftKey) {
       this.selected.clickLabel(feature);
