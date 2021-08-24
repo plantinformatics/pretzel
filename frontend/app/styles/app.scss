@@ -669,9 +669,9 @@ svg.applyChange {
  *   .overlay   cursor=crosshair
  *   .handle    cursor=ns-resize
  *   .selection cursor=move
- * Override at least .overlay when .applyChange, and possibly the others.
+ * Override these when .applyChange.
  */
-svg.applyChange g.brush > g > rect.overlay {
+svg.applyChange g.brush > g > rect {
   cursor: not-allowed;
 }
 
