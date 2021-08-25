@@ -1,0 +1,80 @@
+{{!-- --------------------------------------------------------------------- --}}
+
+
+    <button
+     onclick={{action toggleApply}}
+     type="button"><img src="/assets/images/bucketFill.png" alt="Click to enable colour paint mode">
+    </button>
+
+    {{spectrum-color-picker color=elementColour preferredFormat="rgb"}}
+
+    {{!-- ----------------------------------------------------------------- --}}
+
+    <div style="display:inline-block; margin-left: 1em">
+      <label>Stored Colours</label>
+      <div>
+      <button
+	onclick={{action this.applyColourCollection}}
+	type="button">Apply
+      </button>
+      <button
+	onclick={{action this.coloursClear}}
+	type="button">Clear
+      </button>
+      </div>
+    </div>
+
+
+    {{!-- Select/Apply, Fill/Stroke and selectedElements - not needed yet; selectedElements may split to a separate component. --}}
+    {{#if 0}}
+
+    <div>
+    <label>Click to :</label>
+    <span>
+      {{radio-button value='select' groupValue=selectOrApply
+        changed=(action changedClick this preventDefault=false)
+      }}
+      Select &nbsp;&nbsp;
+      {{radio-button value='apply' groupValue=selectOrApply
+        changed=(action changedClick this preventDefault=false)
+      }}
+      Apply
+    </span>
+
+    </div>
+
+
+    {{elem/x-toggle
+      value=showAdvanced
+      }}
+
+    {{#if showAdvanced}}
+
+    <div>
+      <label>Set :</label>
+      <span>
+        {{input type="checkbox"
+          checked=enableSetFill
+          name=enableSetFill }}
+        <label>Fill</label>
+      </span>
+      <span>
+        {{input type="checkbox"
+          checked=enableSetStroke
+          name=enableSetStroke }}
+        <label>Stroke</label>
+      </span>
+    </div>
+
+    <div>
+      {{ selectedElementsLength}} selected
+      <button
+       onclick={{action clearSelectedElements}}
+       type="button">Clear
+      </button>
+
+    </div>
+
+    {{/if}}
+    {{/if}}
+    {{!-- ----------------------------------------------------------------- --}}

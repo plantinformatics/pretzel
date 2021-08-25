@@ -222,6 +222,16 @@ function ctrlKeyfilter() {
   return ev.ctrlKey;
 }
 
+/** accept events without a key modifier, i.e. no Shift, Ctrl or Alt.
+ * Used for axis brush.
+ * These can be replaced by .keyModifier([d3.event.shiftKey]) after upgrading to d3 v4.
+ */
+function noKeyfilter() {
+  let ev = d3.event.sourceEvent || d3.event; 
+  return ! ev.shiftKey && ! ev.ctrlKey && ! ev.altKey;
+}
+
+
 /*----------------------------------------------------------------------------*/
 
 /** 
@@ -351,6 +361,28 @@ function expRangeInitial(rangeStart, base) {
   return y;
 }
 
+/*----------------------------------------------------------------------------*/
+
+function svgRootSelect() {
+  const svgRoot = d3.select('#holder > svg');
+  return svgRoot;
+}
+
+
+function setCssVariable(name, value)
+{
+  const svgRoot = svgRootSelect();
+  svgRoot.style(name, value);
+}
+
+function svgRootClassed(className, value) {
+  const svgRoot = svgRootSelect();
+  svgRoot.classed(className, value);
+  return svgRoot;
+}
+
+
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -358,12 +390,15 @@ export {
   eltWidthResizable,
   eltResizeToAvailableWidth,
   logWindowDimensions, logElementDimensions, logElementDimensions2,
-  shiftKeyfilter, noShiftKeyfilter, ctrlKeyfilter, 
+  shiftKeyfilter, noShiftKeyfilter, ctrlKeyfilter, noKeyfilter,
   htmlHexEncode, cssHexEncode,
   eltClassName,
   tabActive,
   inputRangeValue,
   expRangeBase,
   expRange,
-  expRangeInitial
+  expRangeInitial,
+  svgRootSelect,
+  setCssVariable,
+  svgRootClassed
  };

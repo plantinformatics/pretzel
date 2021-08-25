@@ -244,6 +244,7 @@ g.axis-use > rect {
   fill: none;
   /* stroke: blue; */
 }
+/* could prefix this with svg:not(.applyChange); and similarly for path.horizTick:hover */
 rect.track:hover {
   /** single-pixel-high <rect>s are difficult to click (to toggle selected.features), so increase width when hover.  */
   stroke-width: 3;
@@ -393,6 +394,7 @@ body.devel .foreground > g.progress > g > g.blockAdj > g > path {
 :root {
   --path-stroke-opacity : 1;//.125;
   --path-stroke-width: 0.75px;
+  /* this may not update - uses the initial value of var() */
   --manyPaths-stroke-opacity: calc(var(--path-stroke-opacity)*0.8); //.125;
   --manyPaths-stroke-width: calc(var(--path-stroke-width)*0.8); // 0.75px;
 }
@@ -501,14 +503,21 @@ body.allInitially
 .axis-use > path
 {
   stroke: #000; /* black */
+  stroke-width : var(--axisWidth);
 }
 
 .axis text {
   text-shadow: 0 1px 0 #fff;
   // text-anchor: middle;
 }
-body.ctrl-modifier .axis text {
+body.ctrl-modifier .axis text,
+body.ctrl-modifier .axis-all > g.brush > g > rect
+{
   cursor: move;
+}
+/* axis menu remains enabled regardless of .applyChange */
+.axis-all > text {
+  cursor: text;
 }
 /* since split axis, now have (g.axis-outer (g.axis-all ( g.axis  (g.tick ...))) (text) ... ) */
 .axis-outer:not(.not_top) > .axis-all > text,
@@ -643,16 +652,36 @@ g.horizTick.labelledFeatures > text.horizTick {
 
 path.syntenyEdge
 {
-  fill-opacity: 0.05;
+  fill-opacity: calc(var(--path-stroke-opacity)*0.33);
   fill: magenta;
   stroke: purple;
   stroke-dasharray: 8 4 8 20;
+  stroke-opacity: var(--path-stroke-opacity);
+  stroke-width : var(--path-stroke-width)
 }
 path.syntenyEdge.inverted
 {
   fill: orangered;
   stroke: orangered;
   stroke-dasharray: 16 8 16 40;
+}
+svg.applyChange {
+  /* when .applyChange, within graph area (<svg>), cursor is bucketFill only within path.syntenyEdge. */
+  cursor: not-allowed;
+}
+/* the g.brush > g[clip-path] contains 4 <rect>-s, each with element attribute :
+ *   .overlay   cursor=crosshair
+ *   .handle    cursor=ns-resize
+ *   .selection cursor=move
+ * Override these when .applyChange.
+ */
+svg.applyChange g.brush > g > rect {
+  cursor: not-allowed;
+}
+
+svg.applyChange path.syntenyEdge {
+  /* centre on the tip of the paint drip x=1, y=22 px (from top-left origin). */
+  cursor: url('/assets/images/bucketFill.png') 1 22, auto;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -664,6 +693,9 @@ path.syntenyEdge.inverted
 
   /* avoid overlapping the top border of the graph area */
   margin-top: 20px;
+  /* synteny block name is long so move left; alternative : use overflow-x: auto */
+  margin-left: -160px;
+  /* overflow-x: auto; */
   .popover-content {
       padding-top : 0;
   }
@@ -694,10 +726,19 @@ g.axis-outer > g.btn > rect.Reset {
 }
 
 
+svg.FeatureMapViewer > g.hideAxisText   g.axis-all > text {
+  display: none;
+}
+svg.FeatureMapViewer > g.hideAxisText   g.axis > g.tick {
+  display: none;
+}
+
+
 svg > g.publishMode .graph-btn,
 {
   display: none;
 }
+
 
 g.axis-outer > .btn.brushed > rect,
 g.axis-outer > .btn.zoomed > rect {
@@ -1537,6 +1578,14 @@ body > div.ember-popover {
 
 /* -------------------------------------------------------------------------- */
 
+#right-panel-content.right-panel-dataset
+{
+  overflow-y: auto;
+}
+#right-panel-content.right-panel-dataset > div
+{
+  height:650px;
+}
 #right-panel-content > .right-panel-paths {
     display : none;
 }
@@ -1640,6 +1689,58 @@ div.metaeditor-panel div.jsoneditor-tree button.jsoneditor-contextmenu-button {
    * e.g. https://stackoverflow.com/a/5937346, https://stackoverflow.com/a/29924653 */
   text-align: right;
   padding-right: 1em !important;
+}
+
+/* -------------------------------------------------------------------------- */
+
+.style-editor {
+    margin: 1em;
+    margin-left: 2em;
+}
+.style-editor > button {
+    border: 0px;
+    background: none;
+    /* touch colour block on right. */
+    margin-right: -3px;
+  padding: inherit;
+}
+.style-editor > button:hover {
+  background-color: #f0f0f0;
+}
+.style-editor:not(.apply) > button {
+  /* margin: 1px; */
+}
+.style-editor.apply > button {
+  /* border : solid 1px blue; */
+  background-color: lightblue;
+}
+.style-editor > button > img {
+  height: 70px;
+  width: auto;
+}
+/* Hide the border surrounding the colour block - override the defaults.
+ * for spectrum.js, refn : http://bgrins.github.io/spectrum/ */
+.sp-replacer {
+  padding: inherit;
+  border: inherit;
+  background: inherit;
+  outline-width: 1px;
+  outline-offset: 2px;
+}
+.sp-replacer:hover {
+  outline-style: outset;
+}
+
+
+/** Hide the down-arrow beside the colour block  */
+.sp-dd {
+  display : none;
+}
+/* increase to match button img. 70px + 2 */
+.sp-preview {
+  width: 72px;
+  height: 72px;
+  margin-right: inherit;
 }
 
 /* -------------------------------------------------------------------------- */

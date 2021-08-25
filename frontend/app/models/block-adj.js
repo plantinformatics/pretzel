@@ -110,6 +110,12 @@ export default Model.extend(Evented, {
     return ok;
   },
   referenceBlocks : mapBy('blocks', 'referenceBlock'),
+  areSyntenyBlocks : computed('blocks.[]', function () {
+    let sb = this.get('blocks')
+        .filter((b) => b.get('isSyntenyBlock'));
+    dLog('areSyntenyBlocks', sb.join(','), this.blockAdjId);
+    return sb.length === 2;
+  }),
   /** Stacked Blocks - should be able to retire this. */
   sBlocks : computed('blockAdjId', function () {
     let

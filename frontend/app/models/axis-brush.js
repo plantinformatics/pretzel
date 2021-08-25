@@ -31,7 +31,7 @@ export default Model.extend({
       features = this.get('pathsP').getBlockFeaturesInterval(blockId);
     let me = this;
     features.then(function (result) {
-      console.log(ObjName, ' features', result.length, id, me);
+      console.log(ObjName, ' features', result?.length, id, me);
     }, function (err) {
       console.log(ObjName, ' features reject', err);
     }

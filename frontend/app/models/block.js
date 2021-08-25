@@ -303,6 +303,11 @@ export default Model.extend({
     let isHighDensity = this.hasTag('HighDensity');
     return isHighDensity;
   }),
+  isSyntenyBlock : computed('datasetId.tags', function () {
+    let isSyntenyBlock = this.hasTag('SyntenyBlock');
+    return isSyntenyBlock;
+  }),
+
   /** hasTag() can now be used in isChartable() and isSubElements() also.
    */
   isChartable : computed('datasetId.tags', function () {
@@ -401,32 +406,20 @@ export default Model.extend({
    * block identification which is used by brushHelper() when it generates
    * selectedFeatures.
    *
-   * block.get('datasetNameAndScope') may be the same value; it can
-   * use shortName, and its purpose is display, whereas
+   * block.get('datasetNameAndScope') is related but uses shortName if
+   * defined; previously (until 930e5491) brushHelper() used shortName,
+   * but using datasetId.id ensures uniqueness, which is required since
    * selectedFeatures.Chromosome is for identifying the block (and
    * could be changed to blockId).
+   *
+   * brushHelper() now uses this function, i.e. it is the
+   * source of the value .Chromosome in selectedFeatures.
    */
-  brushName : computed('name', 'datasetId', 'referenceBlock', function() {
-    /** This calculation replicates the value used by brushHelper(), which draws
-     * on axisName2MapChr(), makeMapChrName(), copyChrData().
-     * That can be replaced by simply this function, which will then be the
-     * source of the value .Chromosome in selectedFeatures.
-     */
-    let brushName;
-    /** brushHelper() uses blockR.get('datasetId._meta.shortName') where blockR is the data block,
-     * and axisName2MapChr(p) where p is the axisName (referenceBlock).
-     */
-    let shortName = this.get('datasetId._meta.shortName');
-    /** brushes are identified by the referenceBlock (axisName). */
-    let block = this.get('referenceBlock') || this;
-    if (block) {
-      let
-        /** e.g. "IWGSC" */
-        blockName = shortName || block.get('datasetId.name'),
-      /** e.g. "1B" */
-      scope = block.get('name');
-      brushName = blockName + ':' + scope;
-    }
+  brushName : computed('name', 'datasetId', function() {
+    let
+    brushName =
+      /** this.name is often === this.scope  */
+    this.get('datasetId.id') + ':' + this.get('name');
 
     return brushName;
   }),

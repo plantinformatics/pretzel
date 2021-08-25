@@ -44,6 +44,7 @@ function featureIsTransient(f) {
  */
 export default Component.extend(AxisEvents, {
   selected : service('data/selected'),
+  controls : service(),
 
   
   resized : function(widthChanged, heightChanged, useTransition) {
@@ -281,6 +282,7 @@ export default Component.extend(AxisEvents, {
 
   clickTriangle(feature, i, g) {
     dLog('clickTriangle', feature, i, g.length, g[i], this);
+    if (this.controls.noGuiModeFilter()) {
     let features, listName;
     if (! d3.event.shiftKey) {
       this.selected.clickLabel(feature);
@@ -293,6 +295,7 @@ export default Component.extend(AxisEvents, {
       document.getSelection().removeAllRanges();
     }
     dLog(listName, features.mapBy('blockId.mapName'), features && features.map((f) => [f.name, f.value]));
+    }
   },
 
   addRemoveKeyEventListener(listen) {

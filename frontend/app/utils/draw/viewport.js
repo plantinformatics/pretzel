@@ -168,6 +168,7 @@ Viewport.prototype.calc = function(oa)
   this.axisTitleLayout = oa.axisTitleLayout;
   this.margins = margins;
   this.marginIndex = marginIndex;
+  this.drawOptions = oa.drawOptions;
 };
 
 /** @return value for viewBox attribute of <svg> containing the graph */
@@ -183,7 +184,12 @@ Viewport.prototype.viewBox = function()
   increaseWidth = verticalTitle ?
     ((this.axisTitleLayout && (this.axisTitleLayout.increaseRightMargin() / 2 - shiftLeft)) || 0) : 0;
 
-  let axisTitleHeight = ((this.axisTitleLayout && this.axisTitleLayout.height !== undefined) ? this.axisTitleLayout.height : 0);
+  let
+  controls = this.drawOptions?.controls,
+  showAxisText = controls ? controls.view.showAxisText : true,
+  axisTitleHeight = showAxisText ?
+    ((this.axisTitleLayout && this.axisTitleLayout.height !== undefined) ? this.axisTitleLayout.height : 0) :
+    80;
   let viewBox = {
     min_x : (0 + shiftLeft),
     min_y : - axisTitleHeight,
