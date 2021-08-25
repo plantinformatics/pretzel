@@ -687,6 +687,10 @@ export default Component.extend(Evented, AxisEvents, {
               (a[4].value[1] === o[4].value[1]))));
         dLog('draw', addSb.length, filtered.length, oa.syntenyBlocks, 'syntenyBlocks');
         oa.syntenyBlocks = oa.syntenyBlocks.concat(filtered);
+        if (addSb.length) {
+          let axisApi = this.get('drawMap.oa.axisApi');
+          axisApi.updateSyntenyBlocksPosition();
+        }
         return Promise.resolve();
       }
     }
