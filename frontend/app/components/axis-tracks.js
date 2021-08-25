@@ -491,6 +491,7 @@ export default InAxis.extend({
 
   queryParams: service('query-params'),
   urlOptions : alias('queryParams.urlOptions'),
+  controls : service(),
   selected : service('data/selected'),
   axisZoom: service('data/axis-zoom'),
   trait : service('data/trait'),
@@ -623,6 +624,22 @@ export default InAxis.extend({
     console.log('showResize args', args);
     if (tracks)
       throttle(this, this.layoutAndDrawTracks, args, 500, true);
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+  /** based on configureClick(), this interposes the requirement that there is no current GUI mode.
+   */
+  configureClick2() {
+    let thisAt = this;
+    return function (selection) {
+      selection.on('click', function (d, i, g) {
+        if (thisAt.controls.noGuiModeFilter()) {
+          /* clickTrack() does not yet use element this. */
+          clickTrack.apply(this, [thisAt.selected, thisAt.featureData2Feature, d]);
+        }
+      });
+    };
   },
 
   /*--------------------------------------------------------------------------*/
@@ -1121,7 +1138,7 @@ export default InAxis.extend({
         .attr('class', 'track')
         .each(subElements ? configureSubTrackHover : configureTrackHover);
       if (! subElements) {
-        ra.call(configureClick(thisAt.selected, thisAt.featureData2Feature));
+        ra.call(thisAt.configureClick2());
       }
       rs.merge(ra)
         .transition().duration(featureTrackTransitionTime)
@@ -1134,7 +1151,7 @@ export default InAxis.extend({
         .transition().duration(featureTrackTransitionTime)
         .attr('width', useTriangle ? ((d) => alwaysTri || showTriangleP(y, d) ? undefined : width) : width);
         if (! subElements) {
-          s.call(configureClick(thisAt.selected, thisAt.featureData2Feature));
+          s.call(thisAt.configureClick2());
         }
       }
 

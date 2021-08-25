@@ -258,6 +258,10 @@ export default Controller.extend(Evented, {
     'right': {
       'visible': true,
       'tab': 'selection'
+    },
+    'rightLower': {
+      'visible': true,
+      'tab': 'styleEditor'
     }
   }),
 
@@ -407,6 +411,11 @@ export default Controller.extend(Evented, {
     let tab = this.get('layout.right.tab');
     dLog('rightPanelClass', tab);
     return 'right-panel-' + tab;
+  }),
+  rightLowerPanelClass : computed('layout.rightLower.tab', function () {
+    let tab = this.get('layout.rightLower.tab');
+    dLog('rightLowerPanelClass', tab);
+    return 'rightLower-panel-' + tab;
   }),
 
 });

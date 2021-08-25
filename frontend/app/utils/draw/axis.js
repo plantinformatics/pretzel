@@ -153,7 +153,12 @@ function yAxisTitleTransform(axisTitleLayout)
     // order : scale then rotate then translate.
     let 
       gAxis = this.parentElement,
-    axisName = d, // === gAxis.__data__
+    axisName = d; // === gAxis.__data__
+    if (! axisName) {
+      axisName = gAxis.__data__;
+      dLog('yAxisTitleTransform', 'd undefined', axisName, this, gAxis);
+    }
+    let
     axis = oa.axes[axisName],
     width = axisExtended(gAxis),
     /** true if axis is at top of its stack. */

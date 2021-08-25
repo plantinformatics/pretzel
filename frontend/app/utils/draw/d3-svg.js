@@ -18,6 +18,17 @@ function I(d) { /* console.log(this, d); */ return d; };
 
 /*----------------------------------------------------------------------------*/
 
+/** For use with d3.brush().filter(), which permits a single filter function.
+ * This combines multiple filter functions into one.
+ * d3 started() calls the filter function with element this (d, i, g).
+ */
+function combineFilters(a, b) {
+  let c = function (d, i, g) { return a.apply(this, arguments) && b.apply(this, arguments); };
+  return c;
+}
+
+/*----------------------------------------------------------------------------*/
+
 /** Ensure that g.groupName exists within parentG, and return a d3 selection of it.
  *
  * @param parentG d3 selection of <g> to contain added g.groupName
@@ -85,7 +96,11 @@ function nowOrAfterTransition(selection, fn, transitionTime) {
      * transition_duration() uses get$1(this.node() ) which will get an
      * exception on node.__transition;
      */
-    transitionTime ??= ! selection.empty() && selection.duration();
+    // jshint doesn't handle this, in 'ember server'
+    // transitionTime ??= ! selection.empty() && selection.duration();
+    if (! transitionTime) {
+      transitionTime = ! selection.empty() && selection.duration();
+    }
     run_later(fn, transitionTime);
   } else {
     fn();
@@ -134,4 +149,4 @@ function ensureSvgDefs(svg)
 
 /*----------------------------------------------------------------------------*/
 
-export { I, selectGroup, transitionEndPromise, nowOrAfterTransition, ensureSvgDefs };
+export { I, combineFilters, selectGroup, transitionEndPromise, nowOrAfterTransition, ensureSvgDefs };

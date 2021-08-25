@@ -18,6 +18,7 @@ use warnings;
 
 use Getopt::Std;	# for getopt()
 use Scalar::Util qw/reftype/;
+use Text::ParseWords;	# for parse_line()
 
 #-------------------------------------------------------------------------------
 
@@ -589,7 +590,7 @@ sub snpLine($)
   #chr1A	22298	scaffold38755_22298	T/C
 
 
-  my @a =  split($fieldSeparator, $line);
+  my @a =  parse_line($fieldSeparator, 0, $line);
   @a = map { trimOutsideQuotesAndSpaces($_) } @a;
 
   if (defined($c_arrayColumnName) && $a[$c_arrayColumnName])

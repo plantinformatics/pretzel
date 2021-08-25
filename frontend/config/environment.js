@@ -18,6 +18,12 @@ module.exports = function(environment) {
     locationType: 'auto',
     handsOnTableLicenseKey: null,
 
+    'ember-local-storage': {
+      namespace: true, // will use the modulePrefix e.g. 'pretzel-frontend'
+      // keyDelimiter: '/' // will use / as a delimiter - the default is :
+    },
+
+
     EmberENV: {
       FEATURES: {
         // Here you can enable experimental features on an ember canary build

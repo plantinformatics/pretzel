@@ -12,6 +12,9 @@ import { alias, filterBy } from '@ember/object/computed';
 import Evented from '@ember/object/evented';
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
+import { A as Ember_array_A } from '@ember/array';
+
+import { task, timeout, didCancel } from 'ember-concurrency';
 
 import createIntervalTree from 'interval-tree-1d';
 
@@ -43,12 +46,13 @@ import {
   eltWidthResizable,
   eltResizeToAvailableWidth,
   ctrlKeyfilter,
+  noKeyfilter,
   eltClassName,
   tabActive,
   inputRangeValue,
   expRange
 } from '../utils/domElements';
-import { I } from '../utils/draw/d3-svg';
+import { I, combineFilters } from '../utils/draw/d3-svg';
 import {
   /*fromSelectionArray,
   */ logSelectionLevel,
@@ -56,6 +60,7 @@ import {
   logSelectionNodes,
   selectImmediateChildNodes
 } from '../utils/log-selection';
+import { configureHover } from '../utils/hover';
 import { Viewport } from '../utils/draw/viewport';
 import { AxisTitleLayout } from '../utils/draw/axisTitleLayout';
 import { AxisTitleBlocksServers } from '../utils/draw/axisTitleBlocksServers_tspan';
@@ -128,6 +133,8 @@ import { collateStacks, countPaths, /*countPathsWithData,*/
 function countPathsWithData() { }
 import { storeFeature, lookupFeature } from '../utils/feature-lookup';
 
+import { configureSyntenyBlockClicks } from './draw/synteny-blocks';
+
 
 /*----------------------------------------------------------------------------*/
 
@@ -153,6 +160,13 @@ const dLog = console.debug;
 
 Object.filter = Object_filter;
 
+/** true means syntenyBlock is defined by 2 features instead of 4 feature names.
+ *   true : chr1 chr2 g1 undefined g3 undefined id size
+ *   false : chr1 chr2 g1 g2 g3 g4 id size
+ * This can be based on path.feature[].blockId.isSyntenyBlock
+ */
+const syntenyBlock_2Feature = true;
+
 /*----------------------------------------------------------------------------*/
 
 //- moved to "../utils/draw/flow-controls.js" : flowButtonsSel, configurejQueryTooltip()
@@ -173,6 +187,7 @@ export default Component.extend(Evented, {
   headsUp : service('data/heads-up'),
   queryParamsService: service('query-params'),
   apiServers : service(),
+  controlsService : service('controls'),
 
   /*--------------------------------------------------------------------------*/
   urlOptions : alias('queryParamsService.urlOptions'),
@@ -362,6 +377,9 @@ export default Component.extend(Evented, {
    * available in GUI, then urlOptions.pathsCheck is not required.
    */
   pathJoinClient : alias('controls.view.pathJoinClient'),
+
+  /** initialised to default value in components/panel/view-controls.js */
+  sbSizeThreshold : alias('controls.view.sbSizeThreshold'),
 
   /*------------------------------------------------------------------------*/
 
@@ -588,7 +606,8 @@ export default Component.extend(Evented, {
                     cmNameAdd,
                     makeMapChrName,
                     axisIDAdd,
-                    stacksAxesDomVerify : function (unviewedIsOK = false) { stacksAxesDomVerify(stacks, oa.svgContainer, unviewedIsOK); } 
+                    stacksAxesDomVerify : function (unviewedIsOK = false) { stacksAxesDomVerify(stacks, oa.svgContainer, unviewedIsOK); } ,
+                    updateSyntenyBlocksPosition : () => this.get('updateSyntenyBlocksPosition').perform()
                    };
     dLog('draw-map stacks', stacks);
 
@@ -793,6 +812,9 @@ export default Component.extend(Evented, {
     /** Index of features (markers) by object id. the value refers to the marker hash,
      * i.e. z[chr/ap/block name][feature/marker name] === featureIndex[feature/marker id] */
     oa.featureIndex || (oa.featureIndex = []);
+
+    oa.selectedElements || (oa.selectedElements = Ember_array_A());
+
 
     if (source === 'didRender') {
       // when tasks are complete, receiveChr() is called via blockService : receivedBlock
@@ -1062,7 +1084,7 @@ export default Component.extend(Evented, {
     const trace_path = 0;
     let trace_path_count = 0;
     const trace_path_colour = 0;
-    const trace_synteny = 0;
+    let trace_synteny = 1;
     const trace_gui = 0;
     /*------------------------------------------------------------------------*/
     //- moved to utils/stacks.js
@@ -1766,7 +1788,6 @@ export default Component.extend(Evented, {
      * synteny block display is physical maps / genes).
      */
     let syntenyBlocks =  oa.syntenyBlocks || (oa.syntenyBlocks = []);
-    if (oa.sbSizeThreshold == undefined)  oa.sbSizeThreshold = 20;      
     //- paths-classes
     if (use_path_colour_scale)
     {
@@ -1968,6 +1989,7 @@ export default Component.extend(Evented, {
         y[d] = ys[d].copy();
         y[d].brush = d3.brushY()
           .extent([[-8,0],[8,myRange]])
+          .filter(combineFilters(noKeyfilter, me.controlsService.noGuiModeFilter))
           .on("end", brushended);
       }
     });
@@ -2823,8 +2845,10 @@ export default Component.extend(Evented, {
     function axisStackChanged_(t)
     {
       showTickLocations(oa.scaffoldTicks, t);
-      if (oa.syntenyBlocks)
-        showSynteny(oa.syntenyBlocks, t);
+      if (oa.syntenyBlocks) {
+        /** time for the axis positions to update */
+        later(() => showSynteny(oa.syntenyBlocks, t), 500);
+      }
 
       me.trigger('axisStackChanged', t);
     }
@@ -3143,11 +3167,12 @@ export default Component.extend(Evented, {
         console.log("showSynteny", sbS.size(), sbE.size(), sbM.size(), sbM.node());
 
       function sbChrAreAdjacent(sb) {
-        let a0 = sb[0], a1 = sb[1], adj = isAdjacent(a0, a1);
+        let a0 = sb[0], a1 = sb[1], adj = isAdjacent(a0, a1) || isAdjacent(a1, a0);
         return adj;
       }
+      const sbSizeThreshold = me.get('sbSizeThreshold');
       function sbSizeFilter(sb) {
-        return sb[SB_SIZE] > oa.sbSizeThreshold;
+        return sb[SB_SIZE] > sbSizeThreshold;
       }
       let adjSynteny = syntenyBlocks.filter(sbChrAreAdjacent)
         .filter(sbSizeFilter);
@@ -3159,47 +3184,69 @@ export default Component.extend(Evented, {
         return sLine;
       }
 
-      function intervalIsInverted(a, d0, d1)
+      const f2Value = syntenyBlock_2Feature ?
+            (blockId, f) => f.get('value') :
+            (blockId, f0Name, f1Name) => [f0Name, f1Name].map((fName) => oa.z[blockId][fName].location);
+      function intervalIsInverted(d0, d1)
       {
         // could use featureY_(a, d0), if flipping is implemented via scale
-        let inverted = oa.z[a][d0].location > oa.z[a][d1].location;
+        let inverted = d0 > d1;
         if (trace_synteny > 3)
-          console.log("intervalIsInverted", a, d0, d1, inverted);
+          console.log("intervalIsInverted", d0, d1, inverted);
         return inverted;
       }
       function syntenyIsInverted(s) {
-        let inverted = intervalIsInverted(s[0], s[2], s[3])
-          != intervalIsInverted(s[1], s[4], s[5]);
+        let
+        inverted = intervalIsInverted(f2Value(s[0], s[2], s[3]))
+          != intervalIsInverted(f2Value(s[1], s[4], s[5]));
         if (trace_synteny > 3)
           console.log("syntenyIsInverted", s, inverted);
         return inverted;
       }
 
-      function  configureSyntenyBlockHover(sb)
+      function  syntenyBlockHoverText(sb)
       {
         let j=0, text = axisId2Name(sb[j++]) + "\n" + axisId2Name(sb[j++]);
+        if (syntenyBlock_2Feature) {
+          for (let fi = 0; fi++ < 2; ) {
+            /** skip undefined following feature. */
+            let f = sb[j];  j += 2;
+            //  f.name is added as sb[SB_ID] (6)
+            text += '\n' + f.value;
+          }
+        }
         for ( ; j < sb.length; j++) text += "\n" + sb[j];
-        console.log("configureSyntenyBlockHover", sb, text);
-        return configureHorizTickHover.apply(this, [text]);
+        console.log("syntenyBlockHoverText", sb, text);
+        return text;
+      };
+      function configureSyntenyBlockHover(sb)
+      {
+        configureHover.apply(this, [sb, syntenyBlockHoverText]);
+      }
+
+      function sbKeyFn(sb) {
+        return sb[SB_ID];
       }
 
         let pS = sbM.selectAll("path.syntenyEdge")
-          .data(adjSynteny),
+          .data(adjSynteny, sbKeyFn),
         pSE = pS.enter()
           .append("path")
           .attr("class", "syntenyEdge")
           .classed("inverted", syntenyIsInverted)
-          .each(configureSyntenyBlockHover),
+          .each(configureSyntenyBlockHover)
+          .call(configureSyntenyBlockClicks),
       pSX = pS.exit(),
         pSM = pSE.merge(pS)
           .attr("d", blockLine);
       pSX.remove();
       if (trace_synteny > 1)
-        console.log("showSynteny", oa.syntenyBlocks.length, oa.sbSizeThreshold, adjSynteny.length, pS.size(), pSE.size(), pSX.size(), pSM.size(), pSM.node());
+        console.log("showSynteny", oa.syntenyBlocks.length, sbSizeThreshold, adjSynteny.length, pS.size(), pSE.size(), pSX.size(), pSM.size(), pSM.node());
       if (trace_synteny > 2)
         console.log(pSM._groups[0]);
 
     } // showSynteny()
+    this.oa.axisApi.showSynteny ||= showSynteny;
 
     /*------------------------------------------------------------------------*/
 
@@ -3333,6 +3380,7 @@ export default Component.extend(Evented, {
      * Like @see featureLineS2().
      * @param ak1, ak2 axis names, (exist in axisIDs[])
      * @param d[0 .. 3] feature names, i.e. ak1:d[0] and d[1], ak2:d[2] and d[3]
+     * update : see comment in patham2()
      */
     function featureLineS3(ak1, ak2, d)
     {
@@ -3341,7 +3389,9 @@ export default Component.extend(Evented, {
       axis2 = Stacked.getAxis(ak2),
       xi = inside(axis1.axisName, axis2.axisName, false),
       oak = xi, // o[ak1], o[ak2]],
-      my = [[featureY_(ak1, d[0]), featureY_(ak1, d[1])],
+      my = syntenyBlock_2Feature ?
+          [featureY2(ak1, d[0]), featureY2(ak2, d[2])] :
+          [[featureY_(ak1, d[0]), featureY_(ak1, d[1])],
             [featureY_(ak2, d[2]), featureY_(ak2, d[3])]];
       let sLine;
 
@@ -3367,7 +3417,14 @@ export default Component.extend(Evented, {
       else
       {
         let
-          p = [[oak[0], featureY_(ak1, d[0])],
+        /** can use my here, with perhaps swapped my[1][0] and my[1][1] (because of swapped d[2] and d[3]).   */
+        p = syntenyBlock_2Feature ?
+          [
+            [oak[0], my[0][0]],
+            [oak[0], my[0][1]],
+            [oak[1], my[1][1]],
+            [oak[1], my[1][0]]] :
+          [[oak[0], featureY_(ak1, d[0])],
            [oak[0], featureY_(ak1, d[1])],
            // order swapped in ak2 so that 2nd point of ak1 is adjacent 2nd point of ak2
            [oak[1], featureY_(ak2, d[3])],
@@ -3526,6 +3583,15 @@ export default Component.extend(Evented, {
     {
       return inRange(featureY_(axisID, featureName), range);
     }
+    /** as for inRangeI(), but param is a Feature, which is an interval (i.e. .values.length === 2) 
+     * @return true if the interval of the feature overlaps range.
+     */
+    function inRangeI2(axisID, feature, range)
+    {
+      let ir = featureY2(axisID, feature)
+          .some((vi) => inRange(vi, range));
+      return ir;
+    }
 
 //- paths-text
     /** @param f  feature reference i.e. z[axisName][featureName]]
@@ -3660,23 +3726,32 @@ export default Component.extend(Evented, {
      * @param  a0, a1  axis names
      * @param d[0 .. 3], feature names, i.e. a0:d[0]-d[1], a1:d[2]-d[3].
      * Unlike patham(), d does not contain undefined.
+     * added : for syntenyBlock_2Feature, d is [d0, undefined, d2, undefined]
+     * i.e. features d0 and d2 are intervals not points.
      */
     function patham2(a0, a1, d) {
       let r;
       let range = [0, vc.yRange];
 
       /** Filter out those parallelograms which are wholly outside the svg, because of zooming on either end axis. */
-      let lineIn = allowPathsOutsideZoom ||
+      let
+      lineIn = allowPathsOutsideZoom ||
+        (syntenyBlock_2Feature ?
+         inRangeI2(a0, d[0], range) ||
+         inRangeI2(a1, d[2], range) : 
         (inRangeI(a0, d[0], range)
          || inRangeI(a0, d[1], range)
          || inRangeI(a1, d[2], range)
-         || inRangeI(a1, d[3], range));
+         || inRangeI(a1, d[3], range)));
       if (lineIn)
       {
         let sLine = featureLineS3(a0, a1, d);
         let cmName = oa.cmName;
         if (trace_synteny > 4)
-          console.log("patham2()", d, cmName[a0] && cmName[a0].mapName, cmName[a1] && cmName[a1].mapName, a0, a1, z && z[a0] && z[a0][d[0]] && z[a0][d[0]].location, d[2] && z && z[a1] && z[a1][d[2]] && z[a1][d[2]].location, sLine);          
+          console.log(
+            "patham2()", d, cmName[a0] && cmName[a0].mapName, cmName[a1] && cmName[a1].mapName, a0, a1,
+            z && z[a0] && z[a0][d[0]] /*&& z[a0][d[0]].location*/,
+            d[2] && z && z[a1] && z[a1][d[2]] /*&& z[a1][d[2]].location*/, sLine);
         r = sLine;
       }
       /* for showAll, perhaps change the lineIn condition : if one end is wholly
@@ -3717,6 +3792,23 @@ export default Component.extend(Evented, {
                       z[axisID][d].location, aky, axisY, yDomain, ysa.range());
       }
       return aky + axisY;
+    }
+    /** as for featureY_(), but param is a Feature, with value.length === 2.
+     * @param feature
+     * @return [start,end]  feature interval Y relative to the stack.
+     */
+    function featureY2(axisID, feature)
+    {
+      let
+      // axisID = feature.get('blockId'),
+      /** or .view.axisName */
+      parentName = Block.axisName_parent(axisID),
+      ysa = oa.ys[parentName],
+      v = feature.value,
+      aky = v.map((location) => ysa(location)),
+      axisY = oa.stacks.blocks[axisID].yOffset();
+
+      return aky.map((y) => y + axisY);
     }
 
 
@@ -3862,8 +3954,13 @@ export default Component.extend(Evented, {
       //Remove old circles.
       axisFeatureCircles_selectAll().remove();
       let brushedRegions = oa.brushedRegions;
-      let brushRange = d3.event.selection,
-      mouse = brushRange && d3.mouse(that);
+      let
+      brushRange = d3.event.selection,
+      /** d3.mouse() calls : function point(node, event) { .. point.x = event.clientX, point.y = event.clientY;
+       * so don't call mouse if those are undefined.
+       */
+      eventHasClientXY = (d3.event.clientX !== undefined) && (d3.event.clientX !== undefined),
+      mouse = brushRange && eventHasClientXY && d3.mouse(that);
       let brushSelection = d3.brushSelection(d3.select(that));
       let brush_ = that.__brush,
       brushSelection_ = brush_.selection,
@@ -3988,22 +4085,8 @@ export default Component.extend(Evented, {
 
           let
             blockR = block && block.block,
-          /** e.g. "IWGSC" */
-          shortName = blockR && blockR.get('datasetId._meta.shortName'),
-          /** e.g. "1B" */
-          scope = blockR && blockR.get('name'),
-          briefName = (shortName && scope) && (shortName + ':' + scope);
-          /** using axisName2MapChr(p) could mean that selection from
-           * 1 block overwrites another, so use dataset.id instead.
-           *
-           * In the case of QTL, i.e. block.block.hasTag('QTL'),
-           * the parent reference block also has data - features which can be brushed,
-           * and hence axisName2MapChr(p) would clash and overwrite that selection.
-           */
-          let dataBlockName = blockR.get('datasetId.id') + (scope ? ':' + scope : '');
-
           /** compound name dataset:block (i.e. map:chr) for the selected axis p.  */
-          let mapChrName = briefName || dataBlockName || axisName2MapChr(p);
+          mapChrName = blockR.get('brushName');
           selectedFeatures[mapChrName] = [];
 
             let blockFeatures = oa.z[block.axisName]; // or block.get('features')
@@ -6004,7 +6087,8 @@ export default Component.extend(Evented, {
       );
     }
     /** The Zoom & Reset buttons (g.btn) can be hidden by clicking the 'Publish
-     * Mode' checkbox.  This provides a clear view of the visualisation
+     * Mode' checkbox, now called 'Show Zoom/Reset buttons' and the logic is inverted.
+     * This provides a clear view of the visualisation
      * uncluttered by buttons and other GUI mechanisms
      */
     function setupToggleModePublish()
@@ -6014,7 +6098,8 @@ export default Component.extend(Evented, {
       function (checked) {
         let svgContainer = oa.svgContainer;
         console.log(svgContainer._groups[0][0]);
-        svgContainer.classed("publishMode", checked);
+        /** the checkbox is 'Show', so hide if ! checked. */
+        svgContainer.classed("publishMode", ! checked);
       }
       );
     }
@@ -6088,8 +6173,20 @@ export default Component.extend(Evented, {
        * x^y = 20 => y log(x) = log(20) => y = Math.log(20) / Math.log(1.148137) = 21.6861056
        * round to 22
        * so : in .hbs : id="range-sbSizeThreshold" :  min="0" max="50" value="22"
-       *  min value is 0, so -1 to get 0. */
-      oa.sbSizeThreshold=Math.pow(1.148137, value) - 1;
+       * The above is sufficient for GM, but for genome reference assembly :
+       * Math.pow(Math.E, Math.log(1e7) / 50)
+       * 1.3803381276035693
+       * Math.log(20) / Math.log($_)
+       * 9.294035042848378
+       *
+       * Size is normally measured in base pairs so round to integer;
+       * this may be OK for centiMorgans also; genetic map markers
+       * have a single position not a range so 'size' will be 0, and
+       * synteny-block representation (trapezoid) would only be used
+       * if aligning GM to physical.
+       */
+      const stepRatio = Math.pow(Math.E, Math.log(1e7) / 50);
+      me.set('sbSizeThreshold', Math.round(Math.pow(stepRatio, value)));
       later( function () { showSynteny(oa.syntenyBlocks, undefined); });
     }
     function setupSbSizeThresh()
@@ -6178,6 +6275,17 @@ export default Component.extend(Evented, {
 
   //----------------------------------------------------------------------------
 
+
+  updateSyntenyBlocksPosition : task(function * () {
+    dLog('updateSyntenyBlocksPosition', this.oa.syntenyBlocks.length);
+    if (this.oa.axisApi.showSynteny) {
+      this.oa.axisApi.showSynteny(this.oa.syntenyBlocks, undefined);
+    }
+    yield timeout(100);
+  }).keepLatest(),
+
+  //----------------------------------------------------------------------------
+
   didInsertElement() {
     this._super(...arguments);
 
@@ -6263,7 +6371,7 @@ export default Component.extend(Evented, {
     function () {
       let count = stacks.length;
       // just checking - will retire stacks.stacksCount anyway.
-      if (count != stacks.stacksCount)
+      if (count != stacks.stacksCount?.count)
 	console.log('stacksWidthChanges',  count, '!=', stacks.stacksCount);
       let leftPanelShown = this.readLeftPanelToggle(),
       current = {
@@ -6326,6 +6434,7 @@ export default Component.extend(Evented, {
     'panelLayout.left.visible',
     'panelLayout.right.visible',
     'leftPanelShown',
+    'controls.view.showAxisText',
     function() {
       console.log("resize", this, arguments);
         /** when called via .observes(), 'this' is draw-map object.  When called
