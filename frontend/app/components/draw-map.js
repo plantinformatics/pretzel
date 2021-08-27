@@ -100,7 +100,7 @@ import {
   dragTransitionNew,
   dragTransition
 } from '../utils/stacks-drag';
-import { wheelNewDomain } from '../utils/draw/zoomPanCalcs';
+import { subInterval, wheelNewDomain } from '../utils/draw/zoomPanCalcs';
 import { round_2, checkIsNumber } from '../utils/domCalcs';
 import { Object_filter, compareFields } from '../utils/Object_filter';
 import {
@@ -5457,8 +5457,13 @@ export default Component.extend(Evented, {
             limits = axisBrushedDomain(p, i);
             //  oa.brushedRegions[brushedMap];
             console.log('flipRegion', p, i, brushedMap, limits);
-            flipRegionInLimits(p, limits);
-            flipRegionSignalAxis(p);
+            /* Generally for p in selectedAxes[], brushedRegions[p] is
+             * defined; but if axis 'Reset' the brush is cleared but
+             * the axis remains selected. */
+            if (limits) {
+              flipRegionInLimits(p, limits);
+              flipRegionSignalAxis(p);
+            }
           });
         }
         /** Flag the flip event for the axis - increment axis1d flipRegionCounter.
@@ -5519,9 +5524,9 @@ export default Component.extend(Evented, {
           console.log(block.axisName, zm);
           d3.keys(zm).forEach(function(feature) {
             if (! isOtherField[feature]) {
-              let feature_ = zm[feature], fl = feature_.location;
-              if (locationRange[0] <= fl && fl <= locationRange[1])
-                feature_.location = invert(fl);
+              let feature_ = zm[feature], fl = feature_.value;
+              if (subInterval(fl, locationRange))
+                fl.forEach((v, i) => { feature_.value[i] = invert(v); });
             }
           });
         });
