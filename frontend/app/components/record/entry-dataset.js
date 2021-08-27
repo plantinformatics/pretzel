@@ -11,7 +11,8 @@ export default EntryBase.extend({
   }),
   data: computed('entry.blocks', 'filter', function() {
     return this.get('entry.blocks')
-      .filter((block) => !block.get('isCopy'));
+      .filter((block) => !block.get('isCopy'))
+      .sortBy('name');
   }),
   dataEmpty: computed('data', function() {
     let availableBlocks = this.get('data')
