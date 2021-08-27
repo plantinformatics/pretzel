@@ -217,8 +217,17 @@ export default Controller.extend(Evented, {
       this.send('selectBlock', selectedBlock)
     },
     selectDataset: function(ds) {
+      /** Switching to the dataset tab in right panel is useful if there is a
+       * change of selected dataset, but when adjusting the axis brush, it is
+       * un-ergonomic to constantly switch to the dataset tab, closing the
+       * features or paths table and losing the users' column width adjustments
+       * etc.  This condition excepts that case.
+       */
+      let changed = this.get('selectedDataset.id') !== ds.get('id');
       this.set('selectedDataset', ds);
-      this.send('setTab', 'right', 'dataset');
+      if (changed) {
+        this.send('setTab', 'right', 'dataset');
+      }
     },
     /** Re-perform task to get all available maps.
      */
