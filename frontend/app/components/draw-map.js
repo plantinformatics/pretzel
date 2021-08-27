@@ -100,7 +100,7 @@ import {
   dragTransitionNew,
   dragTransition
 } from '../utils/stacks-drag';
-import { subInterval, wheelNewDomain } from '../utils/draw/zoomPanCalcs';
+import { subInterval, overlapInterval, wheelNewDomain } from '../utils/draw/zoomPanCalcs';
 import { round_2, checkIsNumber } from '../utils/domCalcs';
 import { Object_filter, compareFields } from '../utils/Object_filter';
 import {
@@ -4092,16 +4092,24 @@ export default Component.extend(Evented, {
             let blockFeatures = oa.z[block.axisName]; // or block.get('features')
           d3.keys(blockFeatures).forEach(function(f) {
             let feature = blockFeatures[f];
+            let value = feature?.value;
+            /** fLocation is value[0], i.e. the start position. The circles are placed
+             * at fLocation, and the end position is not currently shown.
+             * A feature is selected if its interval [start,end], i.e. .value,
+             * overlaps the brush thumb [start,end].
+             */
             let fLocation;
             if (! isOtherField[f] && ((fLocation = blockFeatures[f].location) !== undefined))
             {
               /** range is from yRange() which incorporates .portion, so use ys rather than axis.y. */
               let yScale = oa.ys[p];
               let yPx;
+              /** the brushedDomain may be out of the current zoom scope, so intersect .value with range also.
+               * If the requirement is to not select .value when range is a sub-interval of .value, use overlapInterval1().
+               */
             if (block.visible &&
-                (fLocation >= brushedDomain[0]) &&
-                (fLocation <= brushedDomain[1]) &&
-                inRange((yPx = yScale(fLocation)), range)
+                overlapInterval(feature.value, brushedDomain) &&
+                overlapInterval(value.map(yScale), range)
                ) {
               //selectedFeatures[p].push(f);
               selectedFeaturesSet.add(f);
