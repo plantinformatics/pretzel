@@ -279,7 +279,11 @@ function cssHexEncode(text)
  * CSS selectors can use \ escaping e.g. to prefix '.', and that works for
  * d3.select() and Ember.$() selectors (using \\);
  * This is now done, using CSS.escape().
- * Earlier versions replaced '.' with '_', and 
+ * CSS.escape() maps . to \. (which appears as \\. in console); this does not
+ * currently appear to work in jQuery $() and d3.select{,All}(), so replace
+ * '.' with '_'.
+ *
+ * Earlier versions
  * replaced non-alphanumeric characters with their hex encoding @see cssHexEncode(),
  *
  * A class with a numeric prefix is accepted by HTML5, but not for selectors (CSS, d3 or $),
@@ -291,7 +295,9 @@ function eltClassName(f)
    * in .json upload without wrapping "".  That will likely cause problems
    * elsewhere, but handle it here by converting f to a string.
    */
-  let fString = (typeof(f) == 'string') ? f : '' + f,
+  let fString = (typeof(f) == 'string') ? f : '' + f;
+  fString = fString.replaceAll('.', '_');
+  let
   /** d3.selectAll() is not matching the result of CSS.escape() on marker names
    * starting with a digit. Prefixing with _ first works.  Then CSS.escape() can
    * handle any following punctuation.
