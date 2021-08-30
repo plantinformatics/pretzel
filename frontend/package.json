@@ -19,6 +19,7 @@
     "test:ember": "ember test"
   },
   "devDependencies": {
+    "@cablanchard/koelle-sort": "^0.1.0",
     "@ember/jquery": "^1.1.0",
     "@ember/optional-features": "^2.0.0",
     "@glimmer/component": "^1.0.2",
