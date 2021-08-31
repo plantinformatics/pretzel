@@ -70,7 +70,7 @@ module.exports = function(Feature) {
 
   /**
    * @param data contains :
-   * @param dnaSequence FASTA format for Blast; text string input for other searchType-s, e.g. string "actg..."
+   * @param dnaSequence FASTA format for Blast; text string input for other searchType-s, e.g. string "atgcn..."
    * @param parent  datasetId of parent / reference of the blast db which is to be searched
    * @param searchType 'blast'
    * @param resultRows

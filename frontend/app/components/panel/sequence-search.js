@@ -247,7 +247,7 @@ export default Component.extend({
     let
     lines = rawText.split('\n'),
     notBases = lines
-      .filter((l) => ! l.match(/^[ACTGactg]+$/)),
+      .filter((l) => ! l.match(/^[ATGCN]+$/i)),
     keys = notBases
       .filter((maybeKey) => maybeKey.match(/^>[^\n]+$/)),
     other = notBases
@@ -263,13 +263,13 @@ export default Component.extend({
       warningMessages.push('Limit is 1 FASTA search');
       break;
     }
-    let regexpIterator = rawText.matchAll(/\n[ACTGactg]+/g),
+    let regexpIterator = rawText.matchAll(/\n[ATGCN]+/ig),
         sequenceLinesLength = Array.from(regexpIterator).length;
     if (sequenceLinesLength === 0) {
-      warningMessages.push('DNA text is required : e.g. ATCGatcg...');
+      warningMessages.push('DNA text is required : e.g. ATGCNatgcn...');
     }
     if (other.length) {
-      warningMessages.push('Input should be either >MarkerName or DNA text e.g. ATCGatcg...; this input not valid :' + other[0]);
+      warningMessages.push('Input should be either >MarkerName or DNA text e.g. ATGCNatgcn...; this input not valid :' + other[0]);
     }
 
     if (rawText.length > this.searchStringMaxLength) {

@@ -278,7 +278,7 @@ export default Service.extend({
   },
 
   /** Request DNA sequence search (Blast).
-   * @param dnaSequence string "actg..."
+   * @param dnaSequence string "atgcn..."
    * @param parent  datasetId of parent / reference of the blast db which is to be searched
    * @param searchType 'blast'
    * @param resultRows  limit rows in result 
