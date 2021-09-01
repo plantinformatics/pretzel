@@ -382,6 +382,7 @@ sub setupMeta()
       while(<FH>){
         chomp;
         my ($fieldName, $value) = split(/,/, $_);
+	$value = trimOutsideQuotesAndSpaces($value);
         if (! ($fieldName =~ m/commonName|parentName|platform|shortName/)) {
           $meta{$fieldName} = $value;
         }
