@@ -7,6 +7,7 @@ const bent = require('bent');
 
 const load = require('./load');
 
+const { bufferSlice } = require('./buffer-slice');
 
 /* global require */
 /* global exports */
@@ -311,9 +312,19 @@ exports.handleJson = function(msg, uploadParsed, cb) {
         exports.uploadParsedCb(models, jsonMap, options, cb);
       } catch (e) {
         let message = e.toString ? e.toString() : e.message || e.name;
+        let context, position;
+        if ((position = message.match(/in JSON at position ([0-9]+)/))) {
+          context = bufferSlice(jsonData, +position[1]);
+          console.log(position[1], context);
+        }
         // logging e logs e.stack, which is also logged by cb(Error() )
         console.log(message || e);
-        cb(Error("Failed to parse JSON" + (message ? ':\n' + message : '')));
+        const
+        augmentedMessage =
+          "Failed to parse JSON" +
+          (message ? ':\n' + message : '') +
+          (context ? '  in : \n' + context : '');
+        cb(Error(augmentedMessage));
       }
     };
 
