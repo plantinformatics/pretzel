@@ -382,7 +382,7 @@ sub setupMeta()
       while(<FH>){
         chomp;
         my ($fieldName, $value) = split(/,/, $_);
-	$value = trimOutsideQuotesAndSpaces($value);
+        $value = trimOutsideQuotesAndSpaces($value);
         if (! ($fieldName =~ m/commonName|parentName|platform|shortName/)) {
           $meta{$fieldName} = $value;
         }
@@ -765,16 +765,20 @@ sub snpLine($)
 #   "LG4 ",Ca_2289,0
 #   Ps_ILL_03447,"LG 2",0
 # Used for name (label) and chr (chromosome / block) name columns.
+#
+# @param $label may be undefined
 sub trimOutsideQuotesAndSpaces($) {
   my ($label) = @_;
-  if ($label =~ m/"/) {
-    $label =~ s/^"//;
-    $label =~ s/"$//;
+  if (defined($label)) {
+    if ($label =~ m/"/) {
+      $label =~ s/^"//;
+      $label =~ s/"$//;
     }
-  if ($label =~ m/ /) {
-    $label =~ s/^ //;
-    $label =~ s/ $//;
+    if ($label =~ m/ /) {
+      $label =~ s/^ //;
+      $label =~ s/ $//;
     }
+  }
   return $label;
 }
 
