@@ -595,6 +595,7 @@ export default Component.extend(Evented, {
     if (! oa.axisApi)
       oa.axisApi = {lineHoriz : lineHoriz,
                     inRangeI : inRangeI,
+                    featureInRange,
                     patham,
                     axisName2MapChr,
                     collateO,
@@ -3174,8 +3175,18 @@ export default Component.extend(Evented, {
       function sbSizeFilter(sb) {
         return sb[SB_SIZE] > sbSizeThreshold;
       }
+      function sbZoomFilter(sb) {
+        let 
+          inRangeLR = [[0, 2], [1, 4]]
+          .map(([chrI, featureI]) => featureInRange(sb[chrI], sb[featureI])),
+        lineIn = allowPathsOutsideZoom ||
+            (inRangeLR[0]
+             && inRangeLR[1]);
+        return lineIn;
+      }
       let adjSynteny = syntenyBlocks.filter(sbChrAreAdjacent)
-        .filter(sbSizeFilter);
+        .filter(sbSizeFilter)
+        .filter(sbZoomFilter);
 
       function blockLine (s) {
         let sLine = patham2(s[0], s[1], s.slice(2));
@@ -3650,15 +3661,14 @@ export default Component.extend(Evented, {
       pathFeatures[sLine][d] = hoverExtraText; // 1;
     }
 
-    /**
-     * @param  a0, a1  axis names
-     * @param d0, d1 feature names, i.e. a0:d0, a1:d1.
-     * Iff d1!==undefined, they are connected by an alias.
+    /** Determine if the feature interval overlaps the zoomedDomain of its axis,
+     * identified by axisName.
+     * Equivalent to featureInRange() - see comments there also.
+     *
+     * @param  a0  axis name
+     * @param d0 feature name, i.e. a0:d0
      */
-    function patham(a0, a1, d0, d1) {
-      // let [stackIndex, a0, a1] = featureAliasGroupAxes[d];
-      let r;
-
+    function featureNameInRange(a0, d0) {
       /** To allow lines which spread onto other axes in the same stack, but
        * still remain within the stack limits, unlike allowPathsOutsideZoom, use
        * [0, vc.yRange];
@@ -3668,10 +3678,40 @@ export default Component.extend(Evented, {
       /** If the block containing one end of the path is un-viewed, block.axis
        * may be undefined if render occurs before block-adj is destroyed . */
       if (!a0_) return undefined;
-      let  range0 = a0_.yRange2(),
-      a1_ = Stacked.getAxis(a1);
-      if (!a1_) return undefined;
-      let  range1 = a1_.yRange2();
+      let  range0 = a0_.yRange2();
+      let ir = inRangeI(a0, d0, range0);
+      return ir;
+    }
+    /** Equivalent to featureNameInRange(); param is feature instead of feature name.
+     * @param  axisName ID of reference block of axis
+     * @param feature ember data store object
+     */
+    function featureInRange(axisName, feature) {
+      let a0 = axisName, d0 = feature;
+      /** To allow lines which spread onto other axes in the same stack, but
+       * still remain within the stack limits, unlike allowPathsOutsideZoom, use
+       * [0, vc.yRange];
+       */
+      let
+      ir,
+      /** If the block containing one end of the path is un-viewed, block.axis
+       * may be undefined if render occurs before block-adj is destroyed . */
+      a0_ = Stacked.getAxis(a0);
+      if (a0_) {
+        let
+        domain = a0_.axis1d?.zoomedDomain;
+        ir = ! domain || overlapInterval(feature.value, domain);
+      }
+      return ir;
+    }
+    /**
+     * @param  a0, a1  axis names
+     * @param d0, d1 feature names, i.e. a0:d0, a1:d1.
+     * Iff d1!==undefined, they are connected by an alias.
+     */
+    function patham(a0, a1, d0, d1) {
+      // let [stackIndex, a0, a1] = featureAliasGroupAxes[d];
+      let r;
 
       /** if d1 is undefined, then its value is d0 : direct connection, not alias. */
       let d1_ = d1 || d0;
@@ -3679,8 +3719,9 @@ export default Component.extend(Evented, {
       /** Filter out those paths that either side locates out of the svg. */
       let
           inRangeLR = 
-            [inRangeI(a0, d0, range0), 
-             inRangeI(a1, d1_, range1)],
+            [featureNameInRange(a0, d0),
+             featureNameInRange(a1, d1_)],
+
         lineIn = allowPathsOutsideZoom ||
             (inRangeLR[0]
              && inRangeLR[1]);
