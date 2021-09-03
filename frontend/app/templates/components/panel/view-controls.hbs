@@ -238,13 +238,20 @@
     <li class="list-group-item">
       <div>
         <label>Synteny Block Size Threshold</label>
-        <span class="sub-label"> : <span>{{ sbSizeThreshold }}</span></span>
+        <span class="sub-label">
+        {{input
+          type="text"
+          value=sbSizeThresholdText
+          enter=(action sbSizeThresholdTextChanged value=target.value)
+          id="sbSizeThresholdText"
+        }}
+        </span>
       </div>
-      <input type="range" 
+      <input type="range"
        id="range-sbSizeThreshold" 
-       name="sbSizeThreshold" 
        min="0" max="50"
-       value="9"
+       value={{sbSizeThresholdLinear}}
+       oninput={{action sbSizeThresholdLinearChanged value="target.value"}}
       />
     </li>
 

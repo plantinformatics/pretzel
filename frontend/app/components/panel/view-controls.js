@@ -34,6 +34,8 @@ const dLog = console.debug;
 // Firefox 1.0+
 export const isFirefox = () => typeof InstallTrigger !== 'undefined';
 
+const sbSizeThresholdInitial = 20;
+
 /*--------------------------------------------------------------------------*/
 
 
@@ -90,10 +92,64 @@ export default Component.extend({
    }),
 
   /*--------------------------------------------------------------------------*/
-
-  /** will move sbSizeThreshold, probably to here, replacing this link via stacks.oa. */
+  /** showSynteny() / updateSyntenyBlocksPosition will move to a component, replacing this link via stacks.oa.axisApi */
   stacks,
-  sbSizeThreshold : 20,
+  updateSyntenyBlocksPosition() {
+    let fn = stacks?.oa?.axisApi?.updateSyntenyBlocksPosition;
+    fn && fn();
+  },
+
+  /** sbSizeThreshold is the minimum size for synteny blocks / trapezoids to be displayed.
+   * The user has 2 controls for changing the value of sbSizeThreshold : text input and a range slider.
+   * For each input this component has an attribute value and a change action function : sbSizeThreshold{Text,Linear}{,Changed}
+   * The change functions set .sbSizeThreshold and the other attribute value,
+   * and call updateSyntenyBlocksPosition().
+   *
+   * The initial / default value of sbSizeThreshold is set in these 3 fields, in their respective formats.
+   */
+  sbSizeThreshold : sbSizeThresholdInitial,
+  sbSizeThresholdLinear : expRangeInitial(sbSizeThresholdInitial, expRangeBase(50, 10000)),
+  sbSizeThresholdText : "" + sbSizeThresholdInitial,
+  sbSizeThresholdTextChanged(value) {
+    /* {{input value=sbSizeThresholdText ... }} sets
+     * this.sbSizeThresholdText, and (action ...  value=target.value)
+     * passes the same value to this function.  */
+    if (this.sbSizeThresholdText !== value) {
+      dLog('sbSizeThresholdTextChanged', this.sbSizeThresholdText, value);
+    }
+    /** value is a string. */
+    let linear = expRangeInitial(+value, expRangeBase(50, 10000));
+    dLog('sbSizeThresholdTextChanged', this.sbSizeThresholdText, value, linear);
+    /* setting this.sbSizeThresholdLinear updates the range slider because of value= :
+     * <input value={{sbSizeThresholdLinear}} ...
+     */
+    this.set('sbSizeThresholdLinear', linear);
+    this.set('sbSizeThreshold', value);
+    this.updateSyntenyBlocksPosition();
+  },
+  sbSizeThresholdLinearChanged(linear) {
+    /**
+     * (comment from updateSbSizeThresh() )
+     * Size is normally measured in base pairs so round to integer;
+     * this may be OK for centiMorgans also; genetic map markers
+     * have a single position not a range so 'size' will be 0, and
+     * synteny-block representation (trapezoid) would only be used
+     * if aligning GM to physical.
+     *
+     * <input range {{action ... value="target.value"}} >
+     * gives the param linear a string value.
+     */
+    let value = Math.round(expRange(+linear, 50, 10000));
+    // dLog('sbSizeThresholdLinearChanged', linear, value);
+    /* setting this.sbSizeThresholdText updates the text input because of :
+     * {{input ... value=sbSizeThresholdText
+     * The range slider does not change this.sbSizeThresholdLinear
+     */
+    this.set('sbSizeThresholdText', value);
+    this.set('sbSizeThreshold', value);
+    this.updateSyntenyBlocksPosition();
+  },
+
 
   /*--------------------------------------------------------------------------*/
 

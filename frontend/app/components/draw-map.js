@@ -6218,35 +6218,6 @@ export default Component.extend(Evented, {
     {
       setupInputRange("range-pathWidth", "--path-stroke-width", 100);
     }
-    function updateSbSizeThresh(value) {
-      /** goal : aim is ~50 steps from 0 to 1000, with an initial/default value of 20.
-       * base : x
-       * x^50 = 1000 => 50 log(x) = log(1000) => x = e ^ log(1000) / 50
-       * x = Math.pow(2.718, Math.log(1000) / 50) = 1.1481371748750222
-       *	initial/default value of slider : y
-       * x^y = 20 => y log(x) = log(20) => y = Math.log(20) / Math.log(1.148137) = 21.6861056
-       * round to 22
-       * so : in .hbs : id="range-sbSizeThreshold" :  min="0" max="50" value="22"
-       * The above is sufficient for GM, but for genome reference assembly :
-       * Math.pow(Math.E, Math.log(1e7) / 50)
-       * 1.3803381276035693
-       * Math.log(20) / Math.log($_)
-       * 9.294035042848378
-       *
-       * Size is normally measured in base pairs so round to integer;
-       * this may be OK for centiMorgans also; genetic map markers
-       * have a single position not a range so 'size' will be 0, and
-       * synteny-block representation (trapezoid) would only be used
-       * if aligning GM to physical.
-       */
-      const stepRatio = Math.pow(Math.E, Math.log(1e7) / 50);
-      me.set('sbSizeThreshold', Math.round(Math.pow(stepRatio, value)));
-      later( function () { showSynteny(oa.syntenyBlocks, undefined); });
-    }
-    function setupSbSizeThresh()
-    {
-      setupInputRange("range-sbSizeThreshold", updateSbSizeThresh, 1);
-    }
     function setupVariousControls()
     {
       setupToggleShowPathHover();
@@ -6255,7 +6226,6 @@ export default Component.extend(Evented, {
       setupToggleShowSelectedFeatures();
       setupPathOpacity();
       setupPathWidth();
-      setupSbSizeThresh();
 
       setupToggleModePublish();
     }
