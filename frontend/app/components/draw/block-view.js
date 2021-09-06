@@ -102,7 +102,8 @@ export default Component.extend({
     }
     // If the only result has binSize too large, don't display it.
     if (featuresCounts && featuresCounts.length &&
-        (this.get('block').pxSize2(featuresCounts[0].binSize || featuresCounts[0].idWidth[0]) < 200)) {
+        (! this.get('block.domain') ||
+         (this.get('block').pxSize2(featuresCounts[0].binSize || featuresCounts[0].idWidth[0]) < 200))) {
       /** recognise the data format : $bucketAuto ._id contains .min and .max, whereas $bucket ._id is a single value.
        * @see featureCountAutoDataExample, featureCountDataExample 
        */

@@ -328,7 +328,9 @@ sub encode_json_2($$)
   my $json;
   if (reftype $data eq 'ARRAY')
   {
-    my $quote = $#$data ? '"' : '';
+    # the join() will place a pair of quotes between successive array elements, so
+    # if the array is non-empty, wrap it with "".
+    my $quote = ($#$data != -1) ? '"' : '';
     $json = '[' . $quote . join('"' . ",\n" . $indent . '"' , @$data) . $quote . ']';
 
   }
@@ -913,15 +915,34 @@ sub printFeature($@)
   {
     $start = $end;
   }
-
+  my @value = ();
+  if ($start ne '')
+    {
+      push @value, $start;
+    }
+  if ($end ne '')
+    {
+      push @value, $end;
+    }
 
   my $indent = "                    ";
   my $valueIndent = "        ";
+  my $valueString = encode_json_2($valueIndent, \@value);
+  my $value_0 = ($start ne '') ? $start : 'null';
   my $valuesString = $addValues && (%values || $valuesOpen) ?
     ",\n" . $indent . "\"values\" : " .
     encode_json_2($valueIndent, \%values)
     : '';
   my $name = eval '$ak[c_name]';
+
+  # for QTL : allow blank Start/End fields, if flanking marker field is defined
+  my $hasFlankingMarkers = defined($columnsKeyLookup{'Flanking Markers'}) && ($a[$columnsKeyLookup{'Flanking Markers'}] ne '');
+  # This error message is not yet displayed in the frontend GUI.
+  if (($#value == -1) && ! $hasFlankingMarkers)
+    {
+      print STDERR "In Dataset $datasetName, Feature $name has no Start/End, and no Flanking Markers\n";
+    }
+
   my $haveValues = !!%values;
   if ($valuesOpen)
     {
@@ -932,15 +953,14 @@ sub printFeature($@)
     }
   my $closingBrace = $valuesOpen ? '' : '}';
 
+  # Could wrap value_0 with "", but it should be number or null.
+
   print <<EOF;
 $featureSeparator
                {
                     "name": "$name",
-                    "value": [
-                        $start,
-                        $end
-                    ],
-                    "value_0": $start$valuesString
+                    "value": $valueString,
+                    "value_0": $value_0$valuesString
                 $closingBrace
 EOF
 
