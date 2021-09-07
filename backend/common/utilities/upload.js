@@ -4,6 +4,7 @@ var fs = require('fs');
 var Promise = require('bluebird')
 const bent = require('bent');
 
+const { datasetParentContainsNamedFeatures } = require('./data-check');
 
 const load = require('./load');
 
@@ -292,8 +293,15 @@ exports.handleJson = function(msg, uploadParsed, cb) {
           if (exists) {
             cb(Error(`Dataset name "${jsonMap.name}" is already in use`));
           } else {
-            // Should be good to process saving of data
-            exports.uploadDataset(jsonMap, models, options, cb);
+            datasetParentContainsNamedFeatures(models, jsonMap, options, cb)
+              .then((errorMsg) => {
+                if (errorMsg) {
+                  cb(Error(`Dataset name "${jsonMap.name}" error :` + errorMsg));
+                } else {
+                  // Should be good to process saving of data
+                  exports.uploadDataset(jsonMap, models, options, cb);
+                }
+              });
           }
         })
         .catch((err) => {
