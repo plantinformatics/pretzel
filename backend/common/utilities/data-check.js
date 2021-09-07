@@ -12,14 +12,18 @@ const trace = 1;
 
 
 /** If the Dataset has tag QTL, check the Features of its Blocks :
- * if they define .values.flankingMarkers [], at least 1 of the Feature names it
+ * if they define .values.flankingMarkers [], all of the Feature names it
  * contains should be defined in the corresponding Block of the parent Dataset.
-
+ *
  * @return promise yielding : undefined if OK, or otherwise an error message string for display to
  * the user in the frontend GUI
  */
 exports.datasetParentContainsNamedFeatures = function(models, dataset, options, cb) {
   const fnName = 'datasetParentContainsNamedFeatures';
+  /** originally (77969f1e) required just 1 of the FMs of each feature to be
+   * found in the parent block; this is changed to check that all FMs of each
+   * feature are found.
+   */
   let errorMsgP;
   if (! dataset.tags || (dataset.tags.indexOf('QTL') == -1) || ! dataset.parent) {
     errorMsgP = Promise.resolve(null);
@@ -41,18 +45,20 @@ exports.datasetParentContainsNamedFeatures = function(models, dataset, options, 
           featuresP = models.Feature.find({where : {blockId : parentBlock.id}}, options)
             .then((parentBlockFeatures) => {
               let
+              parentBlockFeatureNames = parentBlockFeatures.map((f) => f.name),
               okB = block.features.every((f) => {
                 let
                 okF = true,
                 fms = f.values && f.values.flankingMarkers;
                 if (fms) {
                   let
-                  okFMs = fms && parentBlockFeatures.filter((f) => (fms.indexOf(f.name) >= 0));
-                  okF = okFMs.length > 0;
+                  unmatchedFMs = fms.filter((f) => (parentBlockFeatureNames.indexOf(f) === -1));
+                  okF = unmatchedFMs.length === 0;
                   if (! okF) {
-                    errorMsg = 'Block ' + block.name + ' Feature ' + f.name + ' Flanking Markers ' + fms.join(',') + ' are not in parent ' + dataset.parent + ' scope ' + block.scope;
+                    errorMsg = 'Block ' + block.name + ' Feature ' + f.name + ' Flanking Markers ' + unmatchedFMs.join(',') + ' are not in parent ' + dataset.parent + ' scope ' + block.scope;
                     if (trace) { console.log(fnName, errorMsg); }
                   } else if (trace) {
+                    let okFMs = parentBlockFeatures.filter((f) => (fms.indexOf(f.name) >= 0));
                     console.log(fnName, f.name, fms, okFMs.length);
                     if (trace > 1) {
                       okFMs.forEach((f) => console.log(JSON.stringify(f)));
