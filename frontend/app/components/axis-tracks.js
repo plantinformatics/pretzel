@@ -404,7 +404,7 @@ SubElement.prototype.getInterval = function() {
 
 /*----------------------------------------------------------------------------*/
 
-/** @return true if the feature track interval is > MinimumIntervalWithArrow
+/** @return true if the feature track interval is >= MinimumIntervalWithArrow
  * @param y y scale of axis containing block of feature
  * @param featureData feature element data : feature.value[] plus layer and {,u}description 
  */
@@ -416,6 +416,21 @@ function showTriangleP(y, featureData) {
   show = (yLengthAbs >= MinimumIntervalWithArrow);
   return show;
 }
+
+/** @return true if the feature track interval is <= MaximumIntervalWithDiamond
+ * @param y y scale of axis containing block of feature
+ * @param featureData feature element data : feature.value[] plus layer and {,u}description 
+ */
+function showDiamondP(y, featureData) {
+  let
+  yS = featureData,
+  yLength = y(yS[1]) - y(yS[0]),
+  yLengthAbs = Math.abs(yLength),
+  show = (yLengthAbs <= MaximumIntervalWithDiamond);
+  return show;
+}
+
+
 
 /** Construct a <path> which covers the end of an axis track with background
  * colour, leaving a vertical isosceles triangle, pointing in the positive
@@ -475,6 +490,41 @@ function rectTrianglePath(y, yInterval, xWidth, xPosn) {
   ]) + 'Z';
   return path;
 };
+/** Construct a <path> which describes a diamond, e.g. a square, with vertices
+ * aligned with the centre point.
+ * Diamond height is not related to interval length, it may be fixed;  width is xWidth.
+ *
+ * This is used to make QTLs more visible when they are 0-length or only a few
+ * pixels high.
+ *
+ * @param y y scale of axis containing block of feature
+ * @param yInterval	unscaled y position (interval) of feature
+ * @param xWidth	width in px of track
+ * @param xPosn xOffset, incorporates layer offset
+ */
+function diamondPath(y, yInterval, xWidth, xPosn) {
+  let
+  /* scaled y position (interval) of feature */
+  yS = [y(yInterval[0]), y(yInterval[1])],
+
+  height = xWidth * 8/5; // px.  xWidth is normally 5px
+
+  let xOffset = xPosn;
+
+  let path = d3.line()([
+    // centre x, +height/2
+    [xOffset + xWidth/2, yS[0] + height/2],
+    // right-most vertex
+    [xOffset + xWidth, yS[0]],
+
+    // centre x, -height/2
+    [xOffset + xWidth/2, yS[1] - height/2],
+    // left-most vertex
+    [xOffset, yS[1]]
+
+  ]) + 'Z';
+  return path;
+}
 
 /** px */
 /** interval < this size : no arrow is shown (<rect> instead of <path>). */
@@ -482,6 +532,7 @@ const MinimumIntervalWithArrow	= 10,
 /** interval > this size : the arrow length does not increase. */
       MaximumIntervalWithArrow = 100,
       MaxArrowLength = 20;
+const MaximumIntervalWithDiamond	= 3;
 
 /*----------------------------------------------------------------------------*/
 
@@ -1116,24 +1167,70 @@ export default InAxis.extend({
       blockId = this.__data__,
       block = thisAt.lookupBlock(blockId),
       isPhased = block && (block.hasTag('phased') || block.get('datasetId._meta.phased')),
+      isQtl = block && block.get('isQTL'),
       /** true to enable use of 5-point <path> (rectangle+triangle) as an
        * alternate representation, with the triangle vertex indicating
        * direction. */
       useTriangle = false && isPhased;
+      const
+      /** show diamond instead of track when track height would be <= MaximumIntervalWithDiamond pixels */
+      useDiamond = isQtl,
       /** true means <rect> will not be used - only <path> (rectangle+triangle).
+       * This is relevant if useTriangle.
        */
-      const alwaysTri = true;
+      alwaysTri = ! useDiamond;
       let
-      /** true for the 3-point <path>. This is not alternated with <rect>, i.e. useBoth is false */
+      /** true for the 3-point <path>. This is not alternated with <rect>, i.e. useBoth is false
+       * This is exclusive with useTriangle, which uses a 5-point "triangle".
+       */
       useTriangle3 = isPhased && ! subElements,
       /** true when using <path> */
       usePath = useTriangle3 || useTriangle,
       /** true when using either <rect> or <path> depending on zoom
        * (triangle point is only visible when zoomed in).  */
-      useBoth = useTriangle && ! alwaysTri,
+      useBoth = (useTriangle && ! alwaysTri) || useDiamond,
       tagName = ['rect', 'path'][+usePath],
       ra = re
-        .append(! useBoth ? tagName : (d) => createElementSvg(useTriangle && (alwaysTri || showTriangleP(y, d)) ? 'path' : 'rect'));
+        .append(! useBoth ? tagName : eitherTagFn);
+      function eitherTagFn(d) {
+        let
+        /** similar logic to pathOrRect(), can factor both to use usePathFn().  */
+        tagName = (
+            (useTriangle && (alwaysTri || showTriangleP(y, d))) ||
+            (useDiamond && showDiamondP(y, d))
+          ) ? 'path' : 'rect',
+        tag = createElementSvg(tagName);
+        return tag;
+      }
+      /** Depending on whether path or rect is enabled for this datum, return
+       * either the value for path or rect.
+       * This is used as a d3.attr() value, and the result may a function (d,i,g) => 
+       * The function also uses y (the scale of this axis).
+       */
+      function pathOrRect(forPath, forRect) {
+        let
+        xFn =
+          (d) => {
+            let usePath = (
+              (useTriangle && (alwaysTri || showTriangleP(y, d))) ||
+                (useDiamond && showDiamondP(y, d))
+            );
+            return usePath ? forPath : forRect;
+          },
+        /** If the conditions are constant, values can be returned directly instead of via a function. */
+        value = 
+          (useTriangle && alwaysTri) ? forPath : 
+          (! useTriangle && ! useDiamond) ? forRect :
+          xFn;
+        return value;
+      }
+      const usePathFn = (d, i, g) => {
+        /** `this` is not yet used. */
+        let usePath = 
+            (useTriangle && (alwaysTri || showTriangleP(y, d))) ||
+            (useDiamond && showDiamondP(y, d));
+        return usePath;
+      };
       ra
         .attr('class', 'track')
         .each(subElements ? configureSubTrackHover : configureTrackHover);
@@ -1142,14 +1239,14 @@ export default InAxis.extend({
       }
       rs.merge(ra)
         .transition().duration(featureTrackTransitionTime)
-        .attr('width', useTriangle ? ((d) => alwaysTri || showTriangleP(y, d) ? undefined : width) : width);
+        .attr('width', pathOrRect(undefined, width));
 
       function attributesForReplace(d, i, g) {
         let s =
         d3.select(g[i])
         .each(subElements ? configureSubTrackHover : configureTrackHover)
         .transition().duration(featureTrackTransitionTime)
-        .attr('width', useTriangle ? ((d) => alwaysTri || showTriangleP(y, d) ? undefined : width) : width);
+        .attr('width', pathOrRect(undefined, width));
         if (! subElements) {
           s.call(thisAt.configureClick2());
         }
@@ -1177,8 +1274,8 @@ export default InAxis.extend({
         .merge(ra);
       dLog('rm', rm.node(), 'es', (trace > 1) ? es.nodes() : es.size(), es.node());
       ra
-        .attr('y', (d,i,g) => useTriangle && (alwaysTri || showTriangleP(y, d)) ? undefined : yEnd.apply(this, [d, i, g]));
-      if (! useTriangle) {
+        .attr('y', (d,i,g) => usePathFn.apply(this, [d, i, g]) ? undefined : yEnd.apply(this, [d, i, g]));
+      if (! useTriangle && ! useDiamond) {
         ra
           .call(positionUpdate);
         let rmt =
@@ -1203,12 +1300,16 @@ export default InAxis.extend({
       rm
       // .transition().duration(featureTrackTransitionTime)
         .each(
-          (d,i,g) => showTriangleP(y, d) ?
+          (d,i,g) => usePathFn.apply(this, [d, i, g]) ?
             function (d, i, g) {
               g[i] = swapTag('rect', 'path', g[i], attributesForReplace);
               let x = xPosnS(subElements).apply(this, [d, i, g]);
+              const
+              pathDFn = useDiamond ? 
+                (d,i,g) => diamondPath(y, d, width, x) :
+                (d,i,g) => rectTrianglePath(y, d, width, x);
               d3.select(g[i])
-                .attr('d', (d,i,g) => rectTrianglePath(y, d, width, x));
+                .attr('d', pathDFn);
             }.apply(this, [d, i, g]) :
           function (d, i, g) {
             g[i] = swapTag('path', 'rect', g[i], attributesForReplace);

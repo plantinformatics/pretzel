@@ -295,8 +295,10 @@ export default Model.extend({
     let isSNP = this.hasTag('SNP');
     return isSNP;
   }),
-  isQTL : computed('datasetId.tags', function () {
-    let isQTL = this.get('datasetId._meta.type') === 'QTL';
+  isQTL : computed('datasetId.tags', 'datasetId._meta.type', function () {
+    /* currently the QTL datasets created by uploadSpreadsheet.bash : qtlList()
+     * have both tag QTL and meta.type : QTL */
+    let isQTL =  this.hasTag('QTL') || this.get('datasetId._meta.type') === 'QTL';
     return isQTL;
   }),
   isHighDensity : computed('datasetId.tags', function () {
@@ -1148,8 +1150,8 @@ export default Model.extend({
    * This enables calculation of the .value[] of the QTL features.
    */
   loadRequiredData : computed(function () {
-    // possibly generalise the tag to : 'valueComputed'
-    if (this.hasTag('QTL')) {
+    // possibly generalise the tag from 'QTL' to : 'valueComputed'
+    if (this.get('isQTL')) {
       let
       /** make the 2 requests in serial because of .drop() on getBlockFeaturesIntervalTask()
        */
