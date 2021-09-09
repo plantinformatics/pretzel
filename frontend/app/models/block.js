@@ -429,6 +429,18 @@ export default Model.extend({
 
   /*--------------------------------------------------------------------------*/
 
+  /** This will be different to referenceBlock if the parent has a parent.
+   * I.e. referenceBlock corresponds to the axis, and parentBlock is the list of
+   * features which this blocks feature.value.flankingMarkers[] refer to
+   */
+  parentBlock : computed('parentName', function () {
+    let
+    parent = this.get('datasetId.parent'),
+    blocks = parent?.get('blocks'),
+    pb = blocks && blocks.findBy('scope', this.scope);
+    return pb;
+  }),
+
   /** If the dataset of this block has a parent, return the name of that parent (reference dataset).
    * @return the reference dataset name or undefined if none
    */
@@ -499,6 +511,16 @@ export default Model.extend({
     /** reference dataset */
     parent = dataset && dataset.get('parent'),
     parentName = parent && parent.get('name');  // e.g. "myGenome"
+    /* If the parent has a parent, then use that name instead; referenceBlock
+     * corresponds to the axis, i.e. the ultimate parent. */
+    if (parent?.parentName) {
+      dLog('referenceBlockSameServer', this.id, dataset.get('id'), parentName, parent.parentName);
+      parentName = parent.parentName;
+      /* could instead change mapBlocksByReferenceAndScope() which currently
+       * does not  blocks[0] = block  if block.parentName.  */
+    }
+
+
     /** filter out self if parentName is defined, as in viewedReferenceBlocks() */
     let blockId = this.get('datasetId.parentName') && this.get('id');
 
@@ -603,6 +625,12 @@ export default Model.extend({
     scope = this.get('scope'),
     /** filter out self if parentName is defined */
     blockId = this.get('datasetId.parentName') && this.get('id');
+    /** Handle blocks whose dataset.parent has a .parent */
+    let parent = this.get('datasetId.parent');
+    if (parent && parent.parentName) {
+      dLog('viewedReferenceBlocks', blockId, datasetName, parent.parentName);
+      datasetName = parent.parentName;
+    }
 
     if (datasetName) {
       let mapByDataset = this.get('blockService.viewedBlocksByReferenceAndScope');
@@ -743,6 +771,19 @@ export default Model.extend({
       }, []);
     dLog('referenceBlocksAllServers', original, parentName, scope, blocks);
     return blocks;
+  },
+  /** If this block has a parent which has a parent, return them in an array, otherwise undefined.
+   */
+  parentAndGP() {
+    /** Use this function when this.referenceBlock is undefined.  */
+    let referenceBlocks = this.referenceBlocksAllServers(false);
+    let parents;
+    if (referenceBlocks.length) {
+      let parent = referenceBlocks.find((b) => b.referenceBlock);
+      parents = [parent, parent.referenceBlock];
+      dLog('parentAndGP', [this, ...parents].mapBy('datasetId.id'));
+    }
+    return parents;
   },
   childBlocks : computed('blockService.blocksByReference', function () {
     let blocksByReference = this.get('blockService.blocksByReference'),
@@ -1000,7 +1041,9 @@ export default Model.extend({
           filtered = Object.assign({}, fcs);
           filtered.result = fcs.result.filter(
             (fc) => {
-              let loc = featureCountDataProperties.datum2Location(fc);
+              /** empty result is : _id: { min: null, max: null } (no idWidth[]).  */
+              let emptyResult = (fc._id.min === null) && (fc._id.max === null);
+              let loc = ! emptyResult && featureCountDataProperties.datum2Location(fc);
               return overlapInterval(loc, interval); }),
           result.push(filtered);
         }
@@ -1159,11 +1202,11 @@ export default Model.extend({
         .then((f) => {
           if (! f) {
             dLog('loadRequiredData', this.id, this.get('datasetId.id'),
-                 this.get('datasetId.parent.id'), this.get('referenceBlock.datasetId.id'));
+                 this.get('datasetId.parent.id'), this.get('parentBlock.datasetId.id'));
           } else {
             f.forEach((fi) => fi.value.forEach((fii) => this.get('trait').traitAddQtl(fii)));
           }
-          return [f, this.get('referenceBlock.allFeatures')];})
+          return [f, this.get('parentBlock.allFeatures')];})
       // parentBlockFeatures = ;
       // parentBlockFeatures // allSettled([features, parentBlockFeatures])
         .then((ps) => {

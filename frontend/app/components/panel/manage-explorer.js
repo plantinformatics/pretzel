@@ -1255,8 +1255,15 @@ export default ManageBase.extend({
           block.referenceBlockSameServer()) {
         // mapview : loadBlock() will view the reference if it is not viewed.
         this.sendAction('loadBlock', block);
-      }
-      else
+        /** Also view the parent, if that is different from the reference.
+         * In this case block and referenceBlock are already covered,
+         * so can change this to use block.parentBlock (added later in this commit).
+         */
+        let lineage = block.parentAndGP();
+        if (lineage) {
+          lineage.forEach((block) => this.sendAction('loadBlock', block));
+        }
+      } else
         this.set('blockWithoutParentOnPrimary', block);
 
       /** If the user is adding a reference then check if
