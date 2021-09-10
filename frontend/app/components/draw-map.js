@@ -381,6 +381,15 @@ export default Component.extend(Evented, {
   /** initialised to default value in components/panel/view-controls.js */
   sbSizeThreshold : alias('controls.view.sbSizeThreshold'),
 
+  /** Draw paths between features on Axes even if one end of the path is outside the svg.
+   * This was the behaviour of an earlier version of this Feature Map Viewer, and it
+   * seems useful, especially with a transition, to show the progressive exclusion of
+   * paths during zoom.
+   * Users also report this is useful when viewing synteny blocks.
+   */
+  allowPathsOutsideZoom : computed('controls.view.tickOrPath', function () {
+    return this.get('controls.view.tickOrPath') === 'path'; }),
+
   /*------------------------------------------------------------------------*/
 
   actions: {
@@ -708,12 +717,6 @@ export default Component.extend(Evented, {
 
     //- moved to utils/draw/viewport.js : xDropOutDistance_update()
 
-    /** Draw paths between features on Axes even if one end of the path is outside the svg.
-     * This was the behaviour of an earlier version of this Feature Map Viewer, and it
-     * seems useful, especially with a transition, to show the progressive exclusion of
-     * paths during zoom.n
-     */
-    let allowPathsOutsideZoom = false;
 
     /** When working with aliases: only show unique connections between features of adjacent Axes.
      * Features are unique within Axes, so this is always the case when there are no aliases.
@@ -2092,6 +2095,7 @@ export default Component.extend(Evented, {
         refreshAxis();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == "A") {
+        /* replaced by tickOrPath === 'tick' or 'path' */
         oa.drawOptions.showAll = !oa.drawOptions.showAll;
         console.log("showAll", oa.drawOptions.showAll);
         refreshAxis();
@@ -3158,6 +3162,8 @@ export default Component.extend(Evented, {
        * 2,3,4,5 : gene 1,2,3,4
        */
       const SB_ID = 6, SB_SIZE = 7;
+      let allowPathsOutsideZoom = me.get('allowPathsOutsideZoom');
+
       let sbS=oa.svgContainer.selectAll("g.synteny")
         .data(["synteny"]), // datum could be used for class, etc
       sbE = sbS.enter()
@@ -3179,9 +3185,8 @@ export default Component.extend(Evented, {
         let 
           inRangeLR = [[0, 2], [1, 4]]
           .map(([chrI, featureI]) => featureInRange(sb[chrI], sb[featureI])),
-        lineIn = allowPathsOutsideZoom ||
-            (inRangeLR[0]
-             && inRangeLR[1]);
+        inCount = inRangeLR.reduce((sum, flag) => sum += flag ? 1 : 0),
+        lineIn = inCount >= (allowPathsOutsideZoom ? 1 : 2);
         return lineIn;
       }
       let adjSynteny = syntenyBlocks.filter(sbChrAreAdjacent)
@@ -3697,13 +3702,14 @@ export default Component.extend(Evented, {
        */
       let
       ir,
+      valueInInterval = me.get('controls.view.valueInInterval'),
       /** If the block containing one end of the path is un-viewed, block.axis
        * may be undefined if render occurs before block-adj is destroyed . */
       a0_ = Stacked.getAxis(a0);
       if (a0_) {
         let
         domain = a0_.axis1d?.zoomedDomain;
-        ir = ! domain || overlapInterval(feature.value, domain);
+        ir = ! domain || valueInInterval(feature.value, domain);
       }
       return ir;
     }
@@ -3725,7 +3731,7 @@ export default Component.extend(Evented, {
             [featureNameInRange(a0, d0),
              featureNameInRange(a1, d1_)],
 
-        lineIn = allowPathsOutsideZoom ||
+        lineIn = me.get('allowPathsOutsideZoom') ||
             (inRangeLR[0]
              && inRangeLR[1]);
       // console.log("path()", stackIndex, a0, allowPathsOutsideZoom, inRangeI(a0), inRangeI(a1), lineIn);
@@ -3748,7 +3754,8 @@ export default Component.extend(Evented, {
           /* Prepare a tool-tip for the line. */
           pathFeatureStore(sLine, d0, d1, z[a0][d0], z[a1][d1_]);
       }
-      else if (oa.drawOptions.showAll) {
+      else if (me.get('controls.view.tickOrPath') === 'tick') {
+        // tickOrPath replaces oa.drawOptions.showAll
         const featureTickLen = 10; // orig 5
         function axisFeatureTick(ai, d) {
           let z = oa.z;
@@ -3779,7 +3786,7 @@ export default Component.extend(Evented, {
 
       /** Filter out those parallelograms which are wholly outside the svg, because of zooming on either end axis. */
       let
-      lineIn = allowPathsOutsideZoom ||
+      lineIn = me.get('allowPathsOutsideZoom') ||
         (syntenyBlock_2Feature ?
          inRangeI2(a0, d[0], range) ||
          inRangeI2(a1, d[2], range) : 
@@ -4014,6 +4021,7 @@ export default Component.extend(Evented, {
        * should check with users if this feature should be maintained or varied.
        */
       const fadedSelector = ".foreground > g:not(.progress) > g";
+      let valueInInterval = me.get('controls.view.valueInInterval');
 
       if (trace_gui)
         console.log("brushHelper", that, brushedAxisID, selectedAxes, brushRange, brushedRegions,
@@ -4149,11 +4157,10 @@ export default Component.extend(Evented, {
               let yScale = oa.ys[p];
               let yPx;
               /** the brushedDomain may be out of the current zoom scope, so intersect .value with range also.
-               * If the requirement is to not select .value when range is a sub-interval of .value, use overlapInterval1().
                */
             if (block.visible &&
-                overlapInterval(feature.value, brushedDomain) &&
-                overlapInterval(value.map(yScale), range)
+                valueInInterval(feature.value, brushedDomain) &&
+                valueInInterval(value.map(yScale), range)
                ) {
               //selectedFeatures[p].push(f);
               selectedFeaturesSet.add(f);

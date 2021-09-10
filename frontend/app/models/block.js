@@ -780,10 +780,10 @@ export default Model.extend({
     let parents;
     if (referenceBlocks.length) {
       let parent = referenceBlocks.find((b) => b.referenceBlock);
-      parents = [parent, parent.referenceBlock];
-      dLog('parentAndGP', [this, ...parents].mapBy('datasetId.id'));
+      parents = parent && [parent, parent.referenceBlock];
+      dLog('parentAndGP', (parents ? [this, ...parents] : [this]).mapBy('datasetId.id'));
     }
-    return parents;
+    return parents || [];
   },
   childBlocks : computed('blockService.blocksByReference', function () {
     let blocksByReference = this.get('blockService.blocksByReference'),

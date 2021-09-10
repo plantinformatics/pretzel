@@ -14,6 +14,9 @@ import { toBool } from '../../utils/common/strings';
 
 import { stacks } from '../../utils/stacks';
 
+import { subInterval, overlapInterval } from '../../utils/draw/zoomPanCalcs';
+
+
 /* global d3 */
 
 const dLog = console.debug;
@@ -102,6 +105,36 @@ export default Component.extend({
     dLog('tickOrPathChanged', value);
   },
 
+  /*--------------------------------------------------------------------------*/
+
+  /** Return a function for deciding if a feature is in an interval, configured by the user controls.
+   * @return fn (value, interval) returning true or false, which has params :
+   * @param value Feature.value[], which may be one end of a path or synteny block
+   * @param interval [start, end], which may be a brush or zoom scope.
+   */
+  valueInInterval : computed('featureIntervalOverlap', 'featureIntervalContain', function () {
+    /** 
+     * Overlap  Contain function
+     * true     true    overlapInterval
+     * true     false   overlapInterval && ! subInterval(interval, feature)
+     * false    true    subInterval || subInterval(interval, feature)
+     * false    false   subInterval && ! subInterval(interval, feature)
+     *
+     * For the case 'true false', i.e. the requirement is to not select .value
+     * when interval is a sub-interval of .value, overlapInterval1() could be used in
+     * place of overlapInterval && ! subInterval( )
+     */
+    const
+    overlap = this.get('featureIntervalOverlap'),
+    contain = this.get('featureIntervalContain'),
+    fn = (value, interval) => {
+      let ok = (overlap ? overlapInterval : subInterval)(value, interval)
+          && (contain || ! subInterval(interval, value));
+      ok ||= ((! overlap && contain) && subInterval(interval, value));
+      return ok;
+    };
+    return fn;
+  }),
   /*--------------------------------------------------------------------------*/
   /** showSynteny() / updateSyntenyBlocksPosition will move to a component, replacing this link via stacks.oa.axisApi */
   stacks,
