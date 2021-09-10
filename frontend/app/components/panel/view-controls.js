@@ -92,6 +92,17 @@ export default Component.extend({
    }),
 
   /*--------------------------------------------------------------------------*/
+
+  featureIntervalOverlap : true,
+  featureIntervalContain : true,
+
+  tickOrPath : 'tick',
+  /** user has clicked tick/path/nothing radio. */
+  tickOrPathChanged(value) {
+    dLog('tickOrPathChanged', value);
+  },
+
+  /*--------------------------------------------------------------------------*/
   /** showSynteny() / updateSyntenyBlocksPosition will move to a component, replacing this link via stacks.oa.axisApi */
   stacks,
   updateSyntenyBlocksPosition() {

@@ -3185,8 +3185,11 @@ export default Component.extend(Evented, {
         return lineIn;
       }
       let adjSynteny = syntenyBlocks.filter(sbChrAreAdjacent)
-        .filter(sbSizeFilter)
-        .filter(sbZoomFilter);
+        .filter(sbSizeFilter);
+      if (oa.drawOptions.showAll) {
+        adjSynteny = adjSynteny
+          .filter(sbZoomFilter);
+      }
 
       function blockLine (s) {
         let sLine = patham2(s[0], s[1], s.slice(2));
