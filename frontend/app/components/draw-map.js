@@ -4021,7 +4021,6 @@ export default Component.extend(Evented, {
        * should check with users if this feature should be maintained or varied.
        */
       const fadedSelector = ".foreground > g:not(.progress) > g";
-      let valueInInterval = me.get('controls.view.valueInInterval');
 
       if (trace_gui)
         console.log("brushHelper", that, brushedAxisID, selectedAxes, brushRange, brushedRegions,
@@ -4058,6 +4057,8 @@ export default Component.extend(Evented, {
           /* This function can be split out similarly to axis-1d.js :
            * FeatureTicks; possibly a sub-component of axis-1d.
            */
+
+          let valueInInterval = me.get('controls.view.valueInInterval');
 
           let selectedAxes = oa.selectedAxes;
         console.log("Selected: ", " ", selectedAxes.length);
