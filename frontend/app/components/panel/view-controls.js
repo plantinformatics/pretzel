@@ -99,10 +99,18 @@ export default Component.extend({
   featureIntervalOverlap : true,
   featureIntervalContain : true,
 
+  featureIntervalOverlapChanged() {
+    this.updateSyntenyBlocksPosition();
+  },
+  featureIntervalContainChanged() {
+    this.updateSyntenyBlocksPosition();
+  },
+
   tickOrPath : 'tick',
   /** user has clicked tick/path/nothing radio. */
   tickOrPathChanged(value) {
     dLog('tickOrPathChanged', value);
+    this.updateSyntenyBlocksPosition();
   },
 
   /*--------------------------------------------------------------------------*/
@@ -140,7 +148,7 @@ export default Component.extend({
   stacks,
   updateSyntenyBlocksPosition() {
     let fn = stacks?.oa?.axisApi?.updateSyntenyBlocksPosition;
-    fn && fn();
+    fn && next(fn);
   },
 
   /** sbSizeThreshold is the minimum size for synteny blocks / trapezoids to be displayed.
