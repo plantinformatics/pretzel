@@ -1043,8 +1043,13 @@ export default Model.extend({
             (fc) => {
               /** empty result is : _id: { min: null, max: null } (no idWidth[]).  */
               let emptyResult = (fc._id.min === null) && (fc._id.max === null);
-              let loc = ! emptyResult && featureCountDataProperties.datum2Location(fc);
-              return overlapInterval(loc, interval); }),
+              let ok = ! emptyResult;
+              if (ok) {
+                let loc = featureCountDataProperties.datum2Location(fc);
+                ok = overlapInterval(loc, interval);
+              }
+              return ok;
+            }),
           result.push(filtered);
         }
         return result;
@@ -1212,8 +1217,8 @@ export default Model.extend({
         .then((ps) => {
           let parentFeatures = ps[1];
           return parentFeatures && parentFeatures.then((pf) => {
-            // requestBlockFeaturesInterval() returns an array of promises, one per blockId
-            return this.valueCompute(ps[0][0].value, pf[0].value);
+            // referencedFeatures() yields an array of Features
+            return this.valueCompute(ps[0][0].value, pf);
           });
         });
     }
