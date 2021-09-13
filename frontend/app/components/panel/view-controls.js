@@ -38,6 +38,14 @@ const dLog = console.debug;
 export const isFirefox = () => typeof InstallTrigger !== 'undefined';
 
 const sbSizeThresholdInitial = 20;
+const sbSizeThresholdMax = 1e9;
+
+/** can be replaced by Math.clamp() when that is available
+ * refn : https://stackoverflow.com/questions/11409895/whats-the-most-elegant-way-to-cap-a-number-to-a-segment
+ */
+function Math_clamp(x, lower, upper) {
+  return Math.max(lower, Math.min(x, upper) );
+}
 
 /*--------------------------------------------------------------------------*/
 
@@ -160,7 +168,7 @@ export default Component.extend({
    * The initial / default value of sbSizeThreshold is set in these 3 fields, in their respective formats.
    */
   sbSizeThreshold : sbSizeThresholdInitial,
-  sbSizeThresholdLinear : expRangeInitial(sbSizeThresholdInitial, expRangeBase(50, 10000)),
+  sbSizeThresholdLinear : expRangeInitial(sbSizeThresholdInitial, expRangeBase(50, sbSizeThresholdMax)),
   sbSizeThresholdText : "" + sbSizeThresholdInitial,
   sbSizeThresholdTextChanged(value) {
     /* {{input value=sbSizeThresholdText ... }} sets
@@ -170,14 +178,25 @@ export default Component.extend({
       dLog('sbSizeThresholdTextChanged', this.sbSizeThresholdText, value);
     }
     /** value is a string. */
-    let linear = expRangeInitial(+value, expRangeBase(50, 10000));
-    dLog('sbSizeThresholdTextChanged', this.sbSizeThresholdText, value, linear);
-    /* setting this.sbSizeThresholdLinear updates the range slider because of value= :
-     * <input value={{sbSizeThresholdLinear}} ...
-     */
-    this.set('sbSizeThresholdLinear', linear);
-    this.set('sbSizeThreshold', value);
-    this.updateSyntenyBlocksPosition();
+    value = +value;
+    if ((value < 1) || (value > sbSizeThresholdMax)) {
+      /* Could clamp the value (and would have to set .sbSizeThresholdText to
+       * the clamped value, but probably better to not accept the input, and let
+       * the user fix it.
+       *   value = Math_clamp(value, 1, sbSizeThresholdMax);
+       */
+      return;
+    }
+    if (value !== this.set('sbSizeThreshold')) {
+      let linear = expRangeInitial(value, expRangeBase(50, sbSizeThresholdMax));
+      dLog('sbSizeThresholdTextChanged', this.sbSizeThresholdText, value, linear);
+      /* setting this.sbSizeThresholdLinear updates the range slider because of value= :
+       * <input value={{sbSizeThresholdLinear}} ...
+       */
+      this.set('sbSizeThresholdLinear', linear);
+      this.set('sbSizeThreshold', value);
+      this.updateSyntenyBlocksPosition();
+    }
   },
   sbSizeThresholdLinearChanged(linear) {
     /**
@@ -191,7 +210,7 @@ export default Component.extend({
      * <input range {{action ... value="target.value"}} >
      * gives the param linear a string value.
      */
-    let value = Math.round(expRange(+linear, 50, 10000));
+    let value = Math.round(expRange(+linear, 50, sbSizeThresholdMax));
     // dLog('sbSizeThresholdLinearChanged', linear, value);
     /* setting this.sbSizeThresholdText updates the text input because of :
      * {{input ... value=sbSizeThresholdText

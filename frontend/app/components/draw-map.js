@@ -3203,19 +3203,24 @@ export default Component.extend(Evented, {
         return sLine;
       }
 
+      /** @return array [start, end]  */
       const f2Value = syntenyBlock_2Feature ?
             (blockId, f) => f.get('value') :
             (blockId, f0Name, f1Name) => [f0Name, f1Name].map((fName) => oa.z[blockId][fName].location);
-      function intervalIsInverted(d0, d1)
+      function intervalIsInverted(interval)
       {
         // could use featureY_(a, d0), if flipping is implemented via scale
-        let inverted = d0 > d1;
+        let inverted = interval[0] > interval[1];
         if (trace_synteny > 3)
-          console.log("intervalIsInverted", d0, d1, inverted);
+          console.log("intervalIsInverted", interval, inverted);
         return inverted;
       }
       function syntenyIsInverted(s) {
         let
+        /** if syntenyBlock_2Feature, [s[2], s[3]] is [start feature, undefined]
+         * otherwise it is [start feature name, end feature name];
+         * and similarly for s[4], s[5].
+         */
         inverted = intervalIsInverted(f2Value(s[0], s[2], s[3]))
           != intervalIsInverted(f2Value(s[1], s[4], s[5]));
         if (trace_synteny > 3)
