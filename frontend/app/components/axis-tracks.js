@@ -1857,6 +1857,10 @@ export default InAxis.extend({
         features = blockR.get('features')
           .toArray()  //  or ...
           .filter((feature) => trait.featureFilter('traits', feature))
+          /* filter out QTL .value which is [] and not yet computed from .values.flankingMarkers.
+           * This assumes feature.value.length is defined; now there shouldn't be any Feature.range or non-array .value
+           */
+          .filter((f) => f.get('value.length'))
           .map(function (feature) {
             let interval = feature.get('range') || feature.get('value');
             /* extra attributes will be added to interval : .description,

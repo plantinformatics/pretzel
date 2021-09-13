@@ -1111,11 +1111,14 @@ export default Service.extend(Evented, {
 
 
   /** Search for the named features, and return also their blocks and datasets.
+   * If blockId is given, restrict the search to that block.
+   * @param blockId undefined or DB ObjectId string.
+   * @param featureNames  array of Feature name strings
    * @return  features (store object references)
    */
-  getBlocksOfFeatures : task(function* (apiServer, featureNames) {
+  getBlocksOfFeatures : task(function* (apiServer, blockId, featureNames) {
     let me = this, featureResults =
-      yield this.get('auth').featureSearch(apiServer, featureNames, /*options*/{});
+      yield this.get('auth').featureSearch(apiServer, blockId, featureNames, /*options*/{});
     let features = this.pushFeatureSearchResults(apiServer, featureResults.features);
     return features;
   }),

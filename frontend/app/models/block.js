@@ -1206,11 +1206,12 @@ export default Model.extend({
           } else {
             f.forEach((fi) => fi.value.forEach((fii) => this.get('trait').traitAddQtl(fii)));
           }
-          return [f, this.get('parentBlock.allFeatures')];})
+          return [f, this.get('referencedFeatures')];})
       // parentBlockFeatures = ;
       // parentBlockFeatures // allSettled([features, parentBlockFeatures])
         .then((ps) => {
-          return ps[1].then((pf) => {
+          let parentFeatures = ps[1];
+          return parentFeatures && parentFeatures.then((pf) => {
             // requestBlockFeaturesInterval() returns an array of promises, one per blockId
             return this.valueCompute(ps[0][0].value, pf[0].value);
           });
@@ -1225,6 +1226,39 @@ export default Model.extend({
     features = pathsP.getBlockFeaturesInterval(this.id, /*all*/true);
     return features;
   }),
+
+  /** Request all features of the parent of this block which are referred to by
+   * this block, via .values.flankingMarkers [].
+   * @return a Promise yielding an array of Features
+   */
+  referencedFeatures : computed('parentBlock', function () {
+    let
+    featureNames = this.get('features')
+      .filterBy('values.flankingMarkers')
+      .mapBy('values.flankingMarkers')
+      .flat();
+
+    /** Send the request to the server of .parentBlock.
+     * The featureNames are not server-specific, unlike blockId.
+     * Comment on similar lookup .servers[ .store.name] in referenceBlockSameServer()
+     */
+    let parentBlock = this.get('parentBlock');
+    let blockTask;
+    if (parentBlock) {
+      let apiServer = this.get('apiServers').servers[parentBlock.store.name];
+
+      let taskGet = this.get('blockService').get('getBlocksOfFeatures');
+
+      blockTask = taskGet.perform(apiServer, parentBlock.id, featureNames);
+      blockTask
+        .then((features) => {
+          dLog('referencedFeatures', featureNames[0], featureNames.length, features.length);
+        });
+    }
+    return blockTask;
+  }),
+
+
 
   /** Calculate the value / location of the 
    * @param features of this block

@@ -269,12 +269,15 @@ export default Service.extend({
     return this._ajax('Blocks/blockFeaturesInterval', 'GET', {blocks, intervals, options}, true);
   },
 
-  /** 
+  /** Search for Features matching the given list of Feature names in featureNames[].
+   * If blockId is given, only search within that block.
+   * @param blockId undefined or string DB ObjectId
+   * @param featureNames  array of Feature name strings
    */
-  featureSearch(apiServer, featureNames, options) {
+  featureSearch(apiServer, blockId, featureNames, options) {
     if (trace_paths)
-      dLog('services/auth featureSearch', featureNames, options);
-    return this._ajax('Features/search', 'GET', {server : apiServer, filter : featureNames, options}, true);
+      dLog('services/auth featureSearch', blockId, featureNames, options);
+    return this._ajax('Features/search', 'GET', {server : apiServer, blockId, filter : featureNames, options}, true);
   },
 
   /** Request DNA sequence search (Blast).
