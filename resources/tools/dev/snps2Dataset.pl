@@ -18,6 +18,7 @@ use warnings;
 
 use Getopt::Std;	# for getopt()
 use Scalar::Util qw/reftype/;
+use Scalar::Util qw(looks_like_number);
 use Text::ParseWords;	# for parse_line()
 
 #-------------------------------------------------------------------------------
@@ -326,15 +327,14 @@ sub encode_json_2($$)
   my ($indent, $data) = @_;
 
   my $json;
-  if (reftype $data eq 'ARRAY')
+  my $dataType = reftype $data;
+  if (defined($dataType) && ($dataType eq 'ARRAY'))
   {
-    # the join() will place a pair of quotes between successive array elements, so
-    # if the array is non-empty, wrap it with "".
-    my $quote = ($#$data != -1) ? '"' : '';
-    $json = '[' . $quote . join('"' . ",\n" . $indent . '"' , @$data) . $quote . ']';
-
+    my $arraySeparator = (($#$data != -1) && looks_like_number($$data[0])) ? ',' : ",\n" . $indent;
+    my @jsonArray = map { encode_json_2($indent, $_); } @$data;
+    $json = '[' . join($arraySeparator , @jsonArray) . ']';
   }
-  elsif (reftype $data eq 'HASH')
+  elsif (defined($dataType) && ($dataType eq 'HASH'))
   {
     my @fields = ();
     for my $key (keys %$data) {
@@ -345,6 +345,13 @@ sub encode_json_2($$)
       push @fields, '"' . $key . '" : ' . $valueString;
     }
     $json = '{' . join(",\n" . $indent, @fields) . '}';
+  }
+  elsif (reftype \$data eq 'SCALAR')
+  {
+    if (looks_like_number($data))
+      { $json = $data; }
+    else
+      { $json = '"' . $data . '"'; }
   }
   else
   {
@@ -568,12 +575,14 @@ sub chromosomeRenamePrepare()
       while(<FH>){
         chomp;
         # Skip empty lines.
-        ! $_ && continue;
-        # deletePunctuation() is applied to both $fromName and $toName.
-        # $fromName is used as an array index, whereas $toName is
-        # simply inserted into the json output, so is perhaps lower risk.
-        my ($fromName, $toName) = split(/,/, deletePunctuation($_));
-        $chromosomeRenames{$fromName} = $toName;
+        if ($_)
+        {
+          # deletePunctuation() is applied to both $fromName and $toName.
+          # $fromName is used as an array index, whereas $toName is
+          # simply inserted into the json output, so is perhaps lower risk.
+          my ($fromName, $toName) = split(/,/, deletePunctuation($_));
+          $chromosomeRenames{$fromName} = $toName;
+        }
       }
       close(FH);
     }
