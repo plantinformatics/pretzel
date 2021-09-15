@@ -244,18 +244,19 @@ function qtlList()
     #  or && rm -r "$outDir"
     [ -d "$outDir" ] || mkdir "$outDir"
     # If the dataset worksheet has a column in Metadata, append to that file, otherwise /metaType.csv
-    if [ -f "$datasetMeta" ]
+    if [ -f tmp/"$datasetMeta" ]
     then
-      metaTypeFile="$datasetMeta"
+      metaTypeFile=tmp/"$datasetMeta"
       # $datasetMeta is already listed in $prefixedArgs
+      echo "type,QTL" >> "$metaTypeFile"
     else
       metaTypeFile=tmp/"$fileDir"/metaType.csv
       localArgs=(-M "$metaTypeFile")
+      echo "type,QTL" > "$metaTypeFile"
     fi
-    echo "type,QTL" > "$metaTypeFile"
     prefixTmpToArgs
     # Could use tac | ... -A 'Flanking Markers', as in comment re. $arrayColumnName in snps2Dataset.pl 
-    <tmp/"$i"  filterOutComments | chrOmit |  $sp "${prefixedArgs[@]}" -d "$datasetName" -p '' -n "$namespace" -c "$commonName" -g  "${localArgs[@]}" -t QTL -D "$outDir" ;
+    <tmp/"$i"  filterOutComments | chrOmit |  $sp "${prefixedArgs[@]}" -d "$datasetName"  -n "$namespace" -c "$commonName" -g  "${localArgs[@]}" -t QTL -D "$outDir" ;
     # ll "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     # echo "tmp/$out;$datasetName"

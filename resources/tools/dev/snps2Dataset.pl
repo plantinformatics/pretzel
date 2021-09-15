@@ -63,7 +63,10 @@ use constant usageMsg => <<EOF;
 EOF
 
 my $datasetName = $options{d};
+# This can be overridden by parentName of current dataset read from spreadsheet worksheet parentName column, or Metadata worksheet : parentName.
 my $parentName = $options{p};
+# Value for current dataset from Metadata worksheet : parentName.
+my $metaParentName;
 my $blockId = $options{b};
 # may be '', which is false-y
 my $namespace = defined($options{n}) ? $options{n} : (defined($parentName) ? "$parentName:$datasetName" : $datasetName);
@@ -381,6 +384,8 @@ sub setupMeta()
   }
 
   #-----------------------------------------------------------------------------
+  $metaParentName = undef;
+
   # Read additional meta from file.
   if (defined($datasetMetaFile) && $datasetMetaFile)
   {
@@ -395,9 +400,17 @@ sub setupMeta()
         if (! ($fieldName =~ m/commonName|parentName|platform|shortName/)) {
           $meta{$fieldName} = $value;
         }
+        if ($fieldName eq 'parentName')
+        {
+          $metaParentName = $value;
+        }
       }
       close(FH);
     }
+  }
+  if (defined($metaParentName))
+  {
+    $parentName = $metaParentName;
   }
 
   # use JSON;
@@ -670,14 +683,24 @@ sub snpLine($)
   $a[c_name] = markerPrefix($a[c_name]);
 
   # start new Dataset when change in parentName 
+  # or initially, if $metaParentName is defined.
   my $c_parentName = $columnsKeyLookup{'parentname'};
-  if (defined($c_parentName))
+  if (defined($c_parentName) || defined($metaParentName))
   {
-    $parentName = $a[$c_parentName];
+    # It is intended that parentName should be defined in either the Metadata
+    # worksheet or via a parentName column in QTL worksheet.
+    # If the user gives both, we can give priority to the latter here.
+    $parentName = defined($c_parentName) ? $a[$c_parentName] : $metaParentName;
     if ($parentName && (!defined($currentParentName) || ($parentName ne $currentParentName)))
     {
       $currentParentName = $parentName;
-      $datasetName = "$currentTrait-$parentName";
+      # If parentName is from Metadata worksheet instead of parentName column in
+      # QTL worksheet, then there is just 1 dataset for this sheet, so can use
+      # the worksheet name for datasetName.
+      if (defined($c_parentName) && $a[$c_parentName])
+      {
+        $datasetName = "$currentTrait-$parentName";
+      }
       makeTemplates();
       if ($startedDataset)
       {
