@@ -27,7 +27,7 @@ import {
   featuresCountsResultsTidy,
  } from '../utils/draw/featuresCountsResults';
 
-import { featureCountDataProperties } from '../utils/data-types';
+import { fcsProperties } from '../utils/data-types';
 
 import { stacks } from '../utils/stacks';
 
@@ -980,15 +980,16 @@ export default Model.extend({
    * @param domain	[start,end] or if undefined then the whole count of all bins are summed.
    */
   featureCountResultInZoom(fcs, domain) {
-    let count = 
-    fcs.result.reduce( (sum, fc, i) => {
+    let
+    properties = fcsProperties(fcs),
+    count = fcs.result.reduce( (sum, fc, i) => {
       /** an interval parameter is passed to getBlockFeaturesCounts(), so result
        * type of the request is featureCountDataProperties.
        */
       let
-      binInterval = featureCountDataProperties.datum2Location(fc),
+      binInterval = properties.datum2Location(fc),
       /** count within bin */
-      binCount = featureCountDataProperties.datum2Value(fc);
+      binCount = properties.datum2Value(fc);
       if (domain) {
         let
         overlap = intervalOverlap([binInterval, domain]);
@@ -1038,6 +1039,7 @@ export default Model.extend({
       (result, fcs) => {
         if (fcs.domain && overlapFn(interval, fcs.domain)) {
           let
+          properties = fcsProperties(fcs),
           filtered = Object.assign({}, fcs);
           filtered.result = fcs.result.filter(
             (fc) => {
@@ -1045,7 +1047,7 @@ export default Model.extend({
               let emptyResult = (fc._id.min === null) && (fc._id.max === null);
               let ok = ! emptyResult;
               if (ok) {
-                let loc = featureCountDataProperties.datum2Location(fc);
+                let loc = properties.datum2Location(fc);
                 ok = overlapInterval(loc, interval);
               }
               return ok;
