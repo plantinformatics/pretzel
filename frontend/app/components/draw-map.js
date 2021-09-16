@@ -1368,6 +1368,9 @@ export default Component.extend(Evented, {
       {
           let zd = oa.z[d],
           dataset = zd ? zd.dataset : dBlock.get('datasetId'),
+          /** parent.parent may now be defined, in which case that will be the
+           * axis owner, not parent.  Further note below re. parent.parent (QTLs)
+           */
           parent = dataset && dataset.get('parent'),
           parentName = parent && parent.get('name'),  // e.g. "myGenome"
           parentId = parent && parent.get('id'),  // same as name
@@ -1412,13 +1415,32 @@ export default Component.extend(Evented, {
               match = match && (parentMatch || parentNameMatch);
               return match;
             }
-            /** undefined if no parent found, otherwise is the id corresponding to parentName */
-            let blockName = d3.keys(oa.z).find(matchParentAndScope);
+
+            let blockName;
+            /** Adding support for QTLs whose parent is a marker set aligned to
+             * a physical reference means we now may have dataset.parent.parent,
+             * i.e. dBlock.parentBlock !== dBlock.referenceBlock, whereas
+             * matchParentAndScope() assumes that the parentBlock is the owner of
+             * the axis (the referenceBlock).  This is handled here as a special
+             * case; it is likely useReferenceBlock() can now replace
+             * matchParentAndScope().
+             */
+             if (dBlock.get('datasetId.parent.parent')) {
+               useReferenceBlock(dBlock);
+             }
             if (! blockName) {
-              let b = me.peekBlock(d),
+              /** undefined if no parent found, otherwise is the id corresponding to parentName */
+              blockName = d3.keys(oa.z).find(matchParentAndScope);
+            }
+            if (! blockName) {
+              let b = me.peekBlock(d);
+              useReferenceBlock(b);
+            }
+            function useReferenceBlock(b) {
+              let
               r = b && b.get('referenceBlock');
               blockName = r && r.get('id');
-              dLog(d, b, 'referenceBlock', r);
+              dLog(d, b, 'referenceBlock', r, blockName);
             }
             dLog(parentName, blockName);
             if (blockName)
