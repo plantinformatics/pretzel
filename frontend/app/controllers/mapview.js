@@ -19,6 +19,7 @@ let trace_select = 0;
 export default Controller.extend(Evented, {
   dataset: service('data/dataset'),
   block: service('data/block'),
+  view : service('data/view'),
   apiServers: service(),
   controlsService : service('controls'),
 
@@ -151,14 +152,12 @@ export default Controller.extend(Evented, {
     /** also load parent block */
     loadBlock : function loadBlock(block) {
       dLog('loadBlock', block);
-      // previously done in useTask() : (mixins/viewed-blocks)setViewed() : (data/block.js)setViewedTask()
-      if (! block.get('isViewed')) {
-        later(() => block.set('isViewed', true));
-      }
-      let referenceBlock = block.get('referenceBlock');
-      if (referenceBlock && (referenceBlock !== block))
-        loadBlock.apply(this, [referenceBlock]);
-
+      let related = this.get('view').viewRelatedBlocks(block);
+      related.unshift(block);
+      // or send('getSummaryAndData', block);
+      related.forEach((block) => this.actions.getSummaryAndData.apply(this, [block]));
+    },
+    getSummaryAndData(block) {
       /* Before progressive loading this would load the data (features) of the block.
        * Now it just loads summary information : featuresCount (block total) and
        * also featuresCounts (binned counts).

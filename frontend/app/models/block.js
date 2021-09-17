@@ -53,6 +53,7 @@ export default Model.extend({
   pathsP : service('data/paths-progressive'), // for getBlockFeaturesInterval()
   blockService : service('data/block'),
   trait : service('data/trait'),
+  dataView : service('data/view'),
   auth: service('auth'),
   apiServers: service(),
   datasetService : service('data/dataset'),
@@ -805,6 +806,11 @@ export default Model.extend({
     let viewedChildBlocks = this.get('viewedChildBlocks');
     if (viewedChildBlocks.length)
       this.get('blockService').setViewed(viewedChildBlocks, false);
+    let viewedFor = this.get('dataView').unviewFor(this);
+    if (viewedFor) {
+      dLog('unViewChildBlocks', this.id, viewedFor.id);
+      this.get('blockService').setViewed(viewedFor, false);
+    }
   },
 
 
