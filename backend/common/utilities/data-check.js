@@ -37,39 +37,46 @@ exports.datasetParentContainsNamedFeatures = function(models, dataset, options, 
         let blockOKPs = parent && dataset.blocks.map((block) => {
           let
           errorMsg,
-          parentBlock = parent.blocks().find((b) => b.scope === block.scope),
-          /** featuresP yields undefined, or the first errorMsg.
-           * parentBlock.id is an ObjectID, i.e. ObjectID {_bsontype: "ObjectID", id: Buffer(12)}
-           * options contains .accessToken, .userId, allowing access to user's datasets.
-           */
-          featuresP = models.Feature.find({where : {blockId : parentBlock.id}}, options)
-            .then((parentBlockFeatures) => {
-              let
-              parentBlockFeatureNames = parentBlockFeatures.map((f) => f.name),
-              okB = block.features.every((f) => {
+          featuresP,
+          parentBlock = parent.blocks().find((b) => b.scope === block.scope);
+          if (! parentBlock) {
+            errorMsg = 'Block ' + block.name + 'has scope' + block.scope + 'not matched in parent' + dataset.parent + ' scopes : ' + parent.blocks().map((b) => b.scope);
+            if (trace) { console.log(fnName, errorMsg); }
+            featuresP = Promise.resolve(errorMsg);
+          } else {
+            /** featuresP yields undefined, or the first errorMsg.
+             * parentBlock.id is an ObjectID, i.e. ObjectID {_bsontype: "ObjectID", id: Buffer(12)}
+             * options contains .accessToken, .userId, allowing access to user's datasets.
+             */
+            featuresP = models.Feature.find({where : {blockId : parentBlock.id}}, options)
+              .then((parentBlockFeatures) => {
                 let
-                okF = true,
-                fms = f.values && f.values.flankingMarkers;
-                if (fms) {
+                parentBlockFeatureNames = parentBlockFeatures.map((f) => f.name),
+                okB = block.features.every((f) => {
                   let
-                  unmatchedFMs = fms.filter((f) => (parentBlockFeatureNames.indexOf(f) === -1));
-                  okF = unmatchedFMs.length === 0;
-                  if (! okF) {
-                    errorMsg = 'Block ' + block.name + ' Feature ' + f.name + ' Flanking Markers ' + unmatchedFMs.join(',') + ' are not in parent ' + dataset.parent + ' scope ' + block.scope;
-                    if (trace) { console.log(fnName, errorMsg); }
-                  } else if (trace) {
-                    let okFMs = parentBlockFeatures.filter((f) => (fms.indexOf(f.name) >= 0));
-                    console.log(fnName, f.name, fms, okFMs.length);
-                    if (trace > 1) {
-                      okFMs.forEach((f) => console.log(JSON.stringify(f)));
+                  okF = true,
+                  fms = f.values && f.values.flankingMarkers;
+                  if (fms) {
+                    let
+                    unmatchedFMs = fms.filter((f) => (parentBlockFeatureNames.indexOf(f) === -1));
+                    okF = unmatchedFMs.length === 0;
+                    if (! okF) {
+                      errorMsg = 'Block ' + block.name + ' Feature ' + f.name + ' Flanking Markers ' + unmatchedFMs.join(',') + ' are not in parent ' + dataset.parent + ' scope ' + block.scope;
+                      if (trace) { console.log(fnName, errorMsg); }
+                    } else if (trace) {
+                      let okFMs = parentBlockFeatures.filter((f) => (fms.indexOf(f.name) >= 0));
+                      console.log(fnName, f.name, fms, okFMs.length);
+                      if (trace > 1) {
+                        okFMs.forEach((f) => console.log(JSON.stringify(f)));
+                      }
                     }
                   }
-                }
-                return okF;
-              });
-              return okB ? undefined : errorMsg;
-            })
-            .catch(cb);
+                  return okF;
+                });
+                return okB ? undefined : errorMsg;
+              })
+              .catch(cb);
+          }
           return featuresP;
         });
         errorMsgPDataset = Promise.all(blockOKPs)
