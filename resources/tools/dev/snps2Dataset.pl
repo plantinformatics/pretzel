@@ -808,9 +808,18 @@ sub trimOutsideQuotesAndSpaces($) {
       $label =~ s/^"//;
       $label =~ s/"$//;
     }
-    if ($label =~ m/ /) {
-      $label =~ s/^ //;
-      $label =~ s/ $//;
+    # Trim off outside white-space.
+    if ($label =~ m/\s/) {
+      $label =~ s/^\s//;
+      $label =~ s/\s$//;
+    }
+    # Unicode chars such as 0xa0 (&nbsp) and 0x82 have been found in received spreadsheets.
+    # Could use : use feature "unicode_strings";  to enable \s to match 0xa0.
+    # The approach taken is to remove non-ascii chars on the outside of values,
+    # where white-space unicode may be found and ignored.
+    if ($label =~ m/[^[:ascii:]]/) {
+      $label =~ s/^[^[:ascii:]]+//g;
+      $label =~  s/[^[:ascii:]]+$//g;
     }
   }
   return $label;
