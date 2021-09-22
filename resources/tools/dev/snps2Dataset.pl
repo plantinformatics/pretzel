@@ -699,7 +699,7 @@ sub snpLine($)
       # the worksheet name for datasetName.
       if (defined($c_parentName) && $a[$c_parentName])
       {
-        $datasetName = "$currentTrait-$parentName";
+        $datasetName = "$options{d} - $parentName";
       }
       makeTemplates();
       if ($startedDataset)
