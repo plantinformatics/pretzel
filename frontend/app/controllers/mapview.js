@@ -383,6 +383,15 @@ export default Controller.extend(Evented, {
     let
     store = this.get('apiServers').get('primaryServer').get('store'),
     dataset = store.peekRecord('dataset', datasetName);
+    /** If not found on primary then check the server selected in dataset
+     * explorer.  Could do just this instad of checking primary - probably
+     * viewDataset should be relative to serverSelected by default.
+     * blast-results-view.js : resultParentBlocks() does the same.
+     */
+    if (! dataset) {
+      let db = this.get('apiServers.serverSelected.datasetsBlocks');
+      dataset = db.findBy('name', datasetName);
+    }
     if (dataset) {
       let
       blocksToChange = dataset.get('blocks').toArray()

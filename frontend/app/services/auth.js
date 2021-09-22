@@ -296,6 +296,12 @@ export default Service.extend({
     options
   ) {
     dLog('services/auth featureSearch', dnaSequence.length, parent, searchType, resultRows, addDataset, datasetName, options);
+    /** allow longer for blast search; the server timeout for blast
+     * search is defined in backend/scripts/blastn_request.bash
+     */
+    if (options.timeout === undefined) {
+      options.timeout = 2 * 60 * 1000;
+    }
     /** Attach .server to JSON string, instead of using
      * requestServerAttr (.session.requestServer)
      * (this can be unwound after adding apiServer as param to ._ajax(),

@@ -373,6 +373,13 @@ export default Component.extend({
     let
     store = this.get('apiServers').get('primaryServer').get('store'),
     dataset = store.peekRecord('dataset', parentName);
+    /** If parentName not found on primary then check the server selected in
+     * dataset explorer.  Same logic as commented in mapview.js : viewDataset().
+     */
+    if (! dataset) {
+      dataset = this.get('apiServers').serverSelected?.datasetsBlocks.findBy('name', parentName);
+      dLog('resultParentBlocks serverSelected dataset', dataset, parentName);
+    }
     let
     blocks = dataset && dataset.get('blocks').toArray()
       .filter((b) => (blockNames.indexOf(b.get('name')) !== -1) );
