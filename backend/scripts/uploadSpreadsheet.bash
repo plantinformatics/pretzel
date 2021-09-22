@@ -155,6 +155,18 @@ s/,/ /g;
 ")
   echo columnsKeyString="$columnsKeyString"  >> uploadSpreadsheet.log
 
+  # sanitize input
+  clean=$(echo -n "$columnsKeyString" | tr -cd '[:alnum:] [:space:]')
+  eval columnsKeyStringArray=($clean)
+  # filter out the column headings containing space to avoid space in array index.
+  # Use < <( ) instead of | so that columnsNum is not confined within sub-shell created by |.
+  declare -A columnsNum
+  columnsNum=(); while read columnNum columnName ; do columnsNum[$columnName]=$columnNum ; done < <(for columnName1 in "${columnsKeyStringArray[@]}"; do echo "$columnName1"; done | cat -n | grep -v '	.* ')
+  # column heading parentName is reduced to lower case : parentname
+  columnNum_parentName=${columnsNum[parentname]}
+  columnNum_chr=${columnsNum[chr]}
+  # e.g. 7
+
   # Check that the required columns are present
   errorMessages=
   for columnName in name chr pos
@@ -225,7 +237,7 @@ function snpList()
     columnHeaderFile=out/columnHeaders.csv
     <"$i" filterOutComments | head -1 > $columnHeaderFile
     (cat $columnHeaderFile; \
-     <"$i" filterOutComments | tail -n +2  | chrOmit |  sort -t, -k 2 ) |  \
+     <"$i" filterOutComments | tail -n +2  | chrOmit |  sort -t, -k $columnNum_chr,$columnNum_chr ) |  \
       ../$sp "${nameArgs[@]}" "${optionalArgs[@]}" 	\
       >  "$out"
     ll "$out"  >> uploadSpreadsheet.log;
@@ -255,8 +267,26 @@ function qtlList()
       echo "type,QTL" > "$metaTypeFile"
     fi
     prefixTmpToArgs
+
     # Could use tac | ... -A 'Flanking Markers', as in comment re. $arrayColumnName in snps2Dataset.pl 
-    <tmp/"$i"  filterOutComments | chrOmit |  $sp "${prefixedArgs[@]}" -d "$datasetName"  -n "$namespace" -c "$commonName" -g  "${localArgs[@]}" -t QTL -D "$outDir" ;
+    # (-A is not required now - have added support for all Flanking Markers in a single row/cell, which is the preference)
+    # 
+    # Sort by parentName (if defined) then chr column
+    sortKeys=(-k $columnNum_chr,$columnNum_chr)
+    if [ -n "$columnNum_parentName" ]
+    then
+      sortKeys=(-k $columnNum_parentName,$columnNum_parentName  "${sortKeys[@]}")
+    fi
+
+    # Place the column header row first, don't sort it.
+    columnHeaderFile=tmp/out/columnHeaders.csv
+    <tmp/"$i" filterOutComments | head -1 > $columnHeaderFile
+    # Remove non-ascii and quotes around alphanumeric, to handle chr with &nbsp wrapped in quotes, which impairs sorting.
+    (cat $columnHeaderFile; \
+     <tmp/"$i" filterOutComments | tail -n +2 | \
+       perl -p -e 's/[^[:ascii:]]+//g;s/"([-A-Za-z0-9_.]+)"/\1/g'  | \
+       chrOmit |  sort -t, "${sortKeys[@]}" ) | tee tmp/"$i".sorted | \
+       $sp "${prefixedArgs[@]}" -d "$datasetName"  -n "$namespace" -c "$commonName" -g  "${localArgs[@]}" -t QTL -D "$outDir" ;
     # ll "$out"  >> uploadSpreadsheet.log;
     # upload() will read these files
     # echo "tmp/$out;$datasetName"
