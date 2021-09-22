@@ -111,7 +111,7 @@ module.exports = function(Feature) {
       if (! chunk) {
         cb(null, []);
       } else
-      if (chunk.asciiSlice(0,6) === 'Error:') {
+      if (chunk && (chunk.length >= 6) && (chunk.asciiSlice(0,6) === 'Error:')) {
         cb(new Error(chunk.toString()));
       } else {
         const
