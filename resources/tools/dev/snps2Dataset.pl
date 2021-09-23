@@ -66,7 +66,10 @@ my $datasetName = $options{d};
 # This can be overridden by parentName of current dataset read from spreadsheet worksheet parentName column, or Metadata worksheet : parentName.
 my $parentName = $options{p};
 # Value for current dataset from Metadata worksheet : parentName.
+# (can change this to use $currentMeta->parentName)
 my $metaParentName;
+# Metadata values for current dataset from Metadata worksheet, including e.g. parentName, shortName.
+my $currentMeta;
 my $blockId = $options{b};
 # may be '', which is false-y
 my $namespace = defined($options{n}) ? $options{n} : (defined($parentName) ? "$parentName:$datasetName" : $datasetName);
@@ -134,6 +137,14 @@ if ($arrayColumnName)
 }
 
 my $c_Trait = defined($columnsKeyLookup{'Trait'}) ? $columnsKeyLookup{'Trait'} : undef;
+
+#-------------------------------------------------------------------------------
+
+# initialised by setupMeta()
+
+# Non-empty value of Trait from a previous line, or undefined on the first line
+my $currentTrait;
+
 
 #-------------------------------------------------------------------------------
 
@@ -369,10 +380,15 @@ sub encode_json_2($$)
 sub setupMeta()
 {
   my %meta = ();
+  $currentMeta = \%meta;
 
   if (defined($shortName) && $shortName)
   {
     $meta{'shortName'} = $shortName;
+  }
+  elsif (defined($currentTrait) && $currentTrait)
+  {
+    $meta{'shortName'} = "$options{d} - $currentTrait";
   }
   if (defined($commonName) && $commonName)
   {
@@ -499,8 +515,6 @@ EOF
 
 # Value of chr (chromosome) on the previous line, or undefined on the first line
 my $lastChr;
-# Non-empty value of Trait from a previous line, or undefined on the first line
-my $currentTrait;
 my $blockSeparator;
 # Used to detect a change in parentName field.
 my $currentParentName;
@@ -699,7 +713,7 @@ sub snpLine($)
       # the worksheet name for datasetName.
       if (defined($c_parentName) && $a[$c_parentName])
       {
-        $datasetName = "$options{d} - $parentName";
+        $datasetName = "$options{d} - $currentTrait - $parentName";
       }
       makeTemplates();
       if ($startedDataset)
