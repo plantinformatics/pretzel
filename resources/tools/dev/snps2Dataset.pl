@@ -386,10 +386,6 @@ sub setupMeta()
   {
     $meta{'shortName'} = $shortName;
   }
-  elsif (defined($currentTrait) && $currentTrait)
-  {
-    $meta{'shortName'} = "$options{d} - $currentTrait";
-  }
   if (defined($commonName) && $commonName)
   {
     $meta{'commonName'} = $commonName;
@@ -713,7 +709,7 @@ sub snpLine($)
       # the worksheet name for datasetName.
       if (defined($c_parentName) && $a[$c_parentName])
       {
-        $datasetName = "$options{d} - $currentTrait - $parentName";
+        $datasetName = "$options{d} - $parentName";
       }
       makeTemplates();
       if ($startedDataset)
