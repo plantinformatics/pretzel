@@ -19,7 +19,17 @@ import { subInterval, overlapInterval } from '../../utils/draw/zoomPanCalcs';
 
 /* global d3 */
 
+/*--------------------------------------------------------------------------*/
+
 const dLog = console.debug;
+
+/** values for titleTextSize, font-size:  */
+const fontSizes = [
+  'xx-small', 'x-small', 'smaller', 'small',
+  // inherit is the neutral value, array index === 4, which is initial default in hbs : value=4
+  'inherit',
+  // larger seems to be smaller than large.
+  'larger', 'large', 'x-large', 'xx-large', 'xxx-large'];
 
 /*--------------------------------------------------------------------------*/
 
@@ -437,8 +447,19 @@ export default Component.extend({
     let value = event.target.value / factor;
     // dLog('axisWidthInput', varName, value, event.target.value);
     setCssVariable(varName, value);
+    // not used.
     this.set('axisWidth', value);
-  }
+  },
+  titleTextSizeInput(event) {
+    const attrName = 'font-size';
+    /** values are [0, 9] (min="0" max="9" in .hbs).  */
+    let value = fontSizes[event.target.value];
+    dLog('titleTextSizeInput', attrName, value, event.target.value);
+    // setCssVariable() does d3 .style() which can set variable or style attribute.
+    setCssVariable(attrName, value);
+    this.set('titleTextSize', (value === 'inherit') ? '' : value);
+  },
+
 
 
 });

@@ -262,6 +262,18 @@
 
     <li class="list-group-item">
       <div>
+        <label>Graph Text Size</label>
+        <span class="sub-label">{{ titleTextSize }}</span>
+      </div>
+      <input type="range"
+       value=4
+       oninput={{action this.titleTextSizeInput}}
+       min="0" max="9"
+      />
+    </li>
+
+    <li class="list-group-item">
+      <div>
         <label>Synteny Block Size Threshold</label>
         <span class="sub-label">
         {{input
