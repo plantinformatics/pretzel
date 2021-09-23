@@ -33,7 +33,13 @@ exports.datasetParentContainsNamedFeatures = function(models, dataset, options, 
       .then((parents) => {
         /** promise yields first errorMsg found for this dataset. */
         let errorMsgPDataset;
-        let parent = parents[0];
+        /** exclude datasets which are copied from another server, by
+         * requiring that meta._origin does not exist
+         * This filtering could be done in datasetParent().
+         */
+        let parent = parents
+            .filter((p) => ! p.meta || ! p.meta._origin)
+        [0];
         let blockOKPs = parent && dataset.blocks.map((block) => {
           let
           errorMsg,
@@ -61,7 +67,9 @@ exports.datasetParentContainsNamedFeatures = function(models, dataset, options, 
                     unmatchedFMs = fms.filter((f) => (parentBlockFeatureNames.indexOf(f) === -1));
                     okF = unmatchedFMs.length === 0;
                     if (! okF) {
-                      if (! f.value[0]) {
+                      /** Whether to require all FMs to be in parent. */
+                      const requireAllFMs = true;
+                      if (requireAllFMs || ! f.value[0]) {
                       errorMsg = 'Block ' + block.name + ' Feature ' + f.name + ' Flanking Markers ' + unmatchedFMs.join(',') + ' are not in parent ' + dataset.parent + ' scope ' + block.scope;
                       if (trace) { console.log(fnName, errorMsg); }
                       }
