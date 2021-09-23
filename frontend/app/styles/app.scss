@@ -946,6 +946,19 @@ li.dropdown-submenu > ul.dropdown-menu {
   font-size : large;
 }
 
+/* dataset explorer : search filter buttons */
+.button-row
+{
+  display: flex;
+  justify-content: right;
+  margin-top: 1ex;
+}
+.button-row > div
+{
+  margin-right: 1em;
+}
+
+
 /* dataset explorer : filter-group */
 
 .filter-groups {

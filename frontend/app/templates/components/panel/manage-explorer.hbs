@@ -15,6 +15,22 @@
     {{!-- there is no suitable autocomplete, so may change to  =off --}}
     {{input id="nameFilter" type="text" value=nameFilter placeholder="Search All Datasets" autocomplete="dataset-name" }}
   </div>
+  <div class="button-row">
+    <XToggle
+      @onLabel='A==a'
+      @offLabel='A!=a'
+      @theme='flip'
+      @value={{this.caseInsensitive}}
+      @onToggle={{fn (mut this.caseInsensitive)}}
+    />
+    <XToggle
+      @onLabel='&or;'
+      @offLabel='&and;'
+      @theme='flip'
+      @value={{this.searchFilterAny}}
+      @onToggle={{fn (mut this.searchFilterAny)}}
+    />
+  </div>
 
   {{#if urlOptions.filterGroups}}
     {{panel/filter-groups data=filterGroups changed=(action 'filterGroupsChanged') }}
