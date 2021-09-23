@@ -61,8 +61,10 @@ exports.datasetParentContainsNamedFeatures = function(models, dataset, options, 
                     unmatchedFMs = fms.filter((f) => (parentBlockFeatureNames.indexOf(f) === -1));
                     okF = unmatchedFMs.length === 0;
                     if (! okF) {
+                      if (! f.value[0]) {
                       errorMsg = 'Block ' + block.name + ' Feature ' + f.name + ' Flanking Markers ' + unmatchedFMs.join(',') + ' are not in parent ' + dataset.parent + ' scope ' + block.scope;
                       if (trace) { console.log(fnName, errorMsg); }
+                      }
                     } else if (trace) {
                       let okFMs = parentBlockFeatures.filter((f) => (fms.indexOf(f.name) >= 0));
                       console.log(fnName, f.name, fms, okFMs.length);
