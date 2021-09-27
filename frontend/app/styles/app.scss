@@ -957,6 +957,21 @@ li.dropdown-submenu > ul.dropdown-menu {
 {
   margin-right: 1em;
 }
+/* vertical-align of label in/out-side x-toggle is different, so adjust.  */
+.button-row > label
+{
+  margin-top : 2px;
+}
+/* extra margin and length for x-toggle button with longer label */
+.button-row > .longer
+{
+  margin-right: 3em;
+}
+/* .longer > div.x-toggle-container > span.x-toggle-container > label > div.x-toggle-btn */
+.longer div.x-toggle-btn
+{
+  width: 6em;
+}
 
 
 /* dataset explorer : filter-group */
