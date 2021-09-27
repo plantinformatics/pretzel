@@ -68,9 +68,9 @@ esac
 resultDir=$logBlastDir/results
 [ -d "$resultDir" ] || mkdir "$resultDir" || exit
 resultFile="$resultDir/$fileName"
-# timeout after 40sec (8  * 5sec)
+# timeout after 2 min (24  * 5sec)
 # blast can take minutes - may increase this (have used 40; it delays failure which can slow devel)
-for i in $(yes ' ' | head -8 | cat -n)
+for i in $(yes ' ' | head -24 | cat -n)
 do
   # Without  --raw-output, the .report string is wrapped with "" and has \t
   # First result may be : {"key":"60a3ec3c","status":"running"}. length of "running\n" is 8

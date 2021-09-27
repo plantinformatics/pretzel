@@ -57,7 +57,12 @@ function chrData(c) {
     if ((featurePosition === undefined) && 
         ! ((block = feature.get('blockId'))?.content || block).hasTag('QTL'))
       breakPoint('chrData', c, map, rc, f, feature, range, featurePosition, featureAliases, featureId);
-    rc[featureName] = {location: featurePosition, aliases: featureAliases, id: featureId};
+    /** When called from storeFeature(), the result is stored in z :
+     * utils/feature-lookup.js:132:      oa.z[axisID] = chrData(block);
+     * so if this assignment is skipped, storeFeature2() will do it : oa.z[axisID][feature] = f
+     * e.g. may be called from : getBlocksOfFeatures() -> pushFeatureSearchResults() -> pushFeature()
+     */
+    rc[featureName] = feature; // original : {location: featurePosition, aliases: featureAliases, id: featureId};
     // if (!range) console.log("chrData range", featureName, rc[featureName]);
   });
   dLog("chrData", rc);

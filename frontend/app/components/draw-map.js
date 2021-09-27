@@ -100,7 +100,7 @@ import {
   dragTransitionNew,
   dragTransition
 } from '../utils/stacks-drag';
-import { wheelNewDomain } from '../utils/draw/zoomPanCalcs';
+import { subInterval, overlapInterval, wheelNewDomain } from '../utils/draw/zoomPanCalcs';
 import { round_2, checkIsNumber } from '../utils/domCalcs';
 import { Object_filter, compareFields } from '../utils/Object_filter';
 import {
@@ -381,6 +381,15 @@ export default Component.extend(Evented, {
   /** initialised to default value in components/panel/view-controls.js */
   sbSizeThreshold : alias('controls.view.sbSizeThreshold'),
 
+  /** Draw paths between features on Axes even if one end of the path is outside the svg.
+   * This was the behaviour of an earlier version of this Feature Map Viewer, and it
+   * seems useful, especially with a transition, to show the progressive exclusion of
+   * paths during zoom.
+   * Users also report this is useful when viewing synteny blocks.
+   */
+  allowPathsOutsideZoom : computed('controls.view.tickOrPath', function () {
+    return this.get('controls.view.tickOrPath') === 'path'; }),
+
   /*------------------------------------------------------------------------*/
 
   actions: {
@@ -595,6 +604,7 @@ export default Component.extend(Evented, {
     if (! oa.axisApi)
       oa.axisApi = {lineHoriz : lineHoriz,
                     inRangeI : inRangeI,
+                    featureInRange,
                     patham,
                     axisName2MapChr,
                     collateO,
@@ -707,12 +717,6 @@ export default Component.extend(Evented, {
 
     //- moved to utils/draw/viewport.js : xDropOutDistance_update()
 
-    /** Draw paths between features on Axes even if one end of the path is outside the svg.
-     * This was the behaviour of an earlier version of this Feature Map Viewer, and it
-     * seems useful, especially with a transition, to show the progressive exclusion of
-     * paths during zoom.n
-     */
-    let allowPathsOutsideZoom = false;
 
     /** When working with aliases: only show unique connections between features of adjacent Axes.
      * Features are unique within Axes, so this is always the case when there are no aliases.
@@ -1364,6 +1368,9 @@ export default Component.extend(Evented, {
       {
           let zd = oa.z[d],
           dataset = zd ? zd.dataset : dBlock.get('datasetId'),
+          /** parent.parent may now be defined, in which case that will be the
+           * axis owner, not parent.  Further note below re. parent.parent (QTLs)
+           */
           parent = dataset && dataset.get('parent'),
           parentName = parent && parent.get('name'),  // e.g. "myGenome"
           parentId = parent && parent.get('id'),  // same as name
@@ -1408,13 +1415,32 @@ export default Component.extend(Evented, {
               match = match && (parentMatch || parentNameMatch);
               return match;
             }
-            /** undefined if no parent found, otherwise is the id corresponding to parentName */
-            let blockName = d3.keys(oa.z).find(matchParentAndScope);
+
+            let blockName;
+            /** Adding support for QTLs whose parent is a marker set aligned to
+             * a physical reference means we now may have dataset.parent.parent,
+             * i.e. dBlock.parentBlock !== dBlock.referenceBlock, whereas
+             * matchParentAndScope() assumes that the parentBlock is the owner of
+             * the axis (the referenceBlock).  This is handled here as a special
+             * case; it is likely useReferenceBlock() can now replace
+             * matchParentAndScope().
+             */
+             if (dBlock.get('datasetId.parent.parent')) {
+               useReferenceBlock(dBlock);
+             }
             if (! blockName) {
-              let b = me.peekBlock(d),
+              /** undefined if no parent found, otherwise is the id corresponding to parentName */
+              blockName = d3.keys(oa.z).find(matchParentAndScope);
+            }
+            if (! blockName) {
+              let b = me.peekBlock(d);
+              useReferenceBlock(b);
+            }
+            function useReferenceBlock(b) {
+              let
               r = b && b.get('referenceBlock');
               blockName = r && r.get('id');
-              dLog(d, b, 'referenceBlock', r);
+              dLog(d, b, 'referenceBlock', r, blockName);
             }
             dLog(parentName, blockName);
             if (blockName)
@@ -2091,6 +2117,7 @@ export default Component.extend(Evented, {
         refreshAxis();
       }
       else if ((String.fromCharCode(d3.event.keyCode)) == "A") {
+        /* replaced by tickOrPath === 'tick' or 'path' */
         oa.drawOptions.showAll = !oa.drawOptions.showAll;
         console.log("showAll", oa.drawOptions.showAll);
         refreshAxis();
@@ -3157,6 +3184,8 @@ export default Component.extend(Evented, {
        * 2,3,4,5 : gene 1,2,3,4
        */
       const SB_ID = 6, SB_SIZE = 7;
+      let allowPathsOutsideZoom = me.get('allowPathsOutsideZoom');
+
       let sbS=oa.svgContainer.selectAll("g.synteny")
         .data(["synteny"]), // datum could be used for class, etc
       sbE = sbS.enter()
@@ -3174,8 +3203,20 @@ export default Component.extend(Evented, {
       function sbSizeFilter(sb) {
         return sb[SB_SIZE] > sbSizeThreshold;
       }
+      function sbZoomFilter(sb) {
+        let 
+          inRangeLR = [[0, 2], [1, 4]]
+          .map(([chrI, featureI]) => featureInRange(sb[chrI], sb[featureI])),
+        inCount = inRangeLR.reduce((sum, flag) => sum += flag ? 1 : 0),
+        lineIn = inCount >= (allowPathsOutsideZoom ? 1 : 2);
+        return lineIn;
+      }
       let adjSynteny = syntenyBlocks.filter(sbChrAreAdjacent)
         .filter(sbSizeFilter);
+      if (oa.drawOptions.showAll) {
+        adjSynteny = adjSynteny
+          .filter(sbZoomFilter);
+      }
 
       function blockLine (s) {
         let sLine = patham2(s[0], s[1], s.slice(2));
@@ -3184,19 +3225,24 @@ export default Component.extend(Evented, {
         return sLine;
       }
 
+      /** @return array [start, end]  */
       const f2Value = syntenyBlock_2Feature ?
             (blockId, f) => f.get('value') :
             (blockId, f0Name, f1Name) => [f0Name, f1Name].map((fName) => oa.z[blockId][fName].location);
-      function intervalIsInverted(d0, d1)
+      function intervalIsInverted(interval)
       {
         // could use featureY_(a, d0), if flipping is implemented via scale
-        let inverted = d0 > d1;
+        let inverted = interval[0] > interval[1];
         if (trace_synteny > 3)
-          console.log("intervalIsInverted", d0, d1, inverted);
+          console.log("intervalIsInverted", interval, inverted);
         return inverted;
       }
       function syntenyIsInverted(s) {
         let
+        /** if syntenyBlock_2Feature, [s[2], s[3]] is [start feature, undefined]
+         * otherwise it is [start feature name, end feature name];
+         * and similarly for s[4], s[5].
+         */
         inverted = intervalIsInverted(f2Value(s[0], s[2], s[3]))
           != intervalIsInverted(f2Value(s[1], s[4], s[5]));
         if (trace_synteny > 3)
@@ -3650,15 +3696,14 @@ export default Component.extend(Evented, {
       pathFeatures[sLine][d] = hoverExtraText; // 1;
     }
 
-    /**
-     * @param  a0, a1  axis names
-     * @param d0, d1 feature names, i.e. a0:d0, a1:d1.
-     * Iff d1!==undefined, they are connected by an alias.
+    /** Determine if the feature interval overlaps the zoomedDomain of its axis,
+     * identified by axisName.
+     * Equivalent to featureInRange() - see comments there also.
+     *
+     * @param  a0  axis name
+     * @param d0 feature name, i.e. a0:d0
      */
-    function patham(a0, a1, d0, d1) {
-      // let [stackIndex, a0, a1] = featureAliasGroupAxes[d];
-      let r;
-
+    function featureNameInRange(a0, d0) {
       /** To allow lines which spread onto other axes in the same stack, but
        * still remain within the stack limits, unlike allowPathsOutsideZoom, use
        * [0, vc.yRange];
@@ -3668,10 +3713,41 @@ export default Component.extend(Evented, {
       /** If the block containing one end of the path is un-viewed, block.axis
        * may be undefined if render occurs before block-adj is destroyed . */
       if (!a0_) return undefined;
-      let  range0 = a0_.yRange2(),
-      a1_ = Stacked.getAxis(a1);
-      if (!a1_) return undefined;
-      let  range1 = a1_.yRange2();
+      let  range0 = a0_.yRange2();
+      let ir = inRangeI(a0, d0, range0);
+      return ir;
+    }
+    /** Equivalent to featureNameInRange(); param is feature instead of feature name.
+     * @param  axisName ID of reference block of axis
+     * @param feature ember data store object
+     */
+    function featureInRange(axisName, feature) {
+      let a0 = axisName, d0 = feature;
+      /** To allow lines which spread onto other axes in the same stack, but
+       * still remain within the stack limits, unlike allowPathsOutsideZoom, use
+       * [0, vc.yRange];
+       */
+      let
+      ir,
+      valueInInterval = me.get('controls.view.valueInInterval'),
+      /** If the block containing one end of the path is un-viewed, block.axis
+       * may be undefined if render occurs before block-adj is destroyed . */
+      a0_ = Stacked.getAxis(a0);
+      if (a0_) {
+        let
+        domain = a0_.axis1d?.zoomedDomain;
+        ir = ! domain || valueInInterval(feature.value, domain);
+      }
+      return ir;
+    }
+    /**
+     * @param  a0, a1  axis names
+     * @param d0, d1 feature names, i.e. a0:d0, a1:d1.
+     * Iff d1!==undefined, they are connected by an alias.
+     */
+    function patham(a0, a1, d0, d1) {
+      // let [stackIndex, a0, a1] = featureAliasGroupAxes[d];
+      let r;
 
       /** if d1 is undefined, then its value is d0 : direct connection, not alias. */
       let d1_ = d1 || d0;
@@ -3679,9 +3755,10 @@ export default Component.extend(Evented, {
       /** Filter out those paths that either side locates out of the svg. */
       let
           inRangeLR = 
-            [inRangeI(a0, d0, range0), 
-             inRangeI(a1, d1_, range1)],
-        lineIn = allowPathsOutsideZoom ||
+            [featureNameInRange(a0, d0),
+             featureNameInRange(a1, d1_)],
+
+        lineIn = me.get('allowPathsOutsideZoom') ||
             (inRangeLR[0]
              && inRangeLR[1]);
       // console.log("path()", stackIndex, a0, allowPathsOutsideZoom, inRangeI(a0), inRangeI(a1), lineIn);
@@ -3704,7 +3781,8 @@ export default Component.extend(Evented, {
           /* Prepare a tool-tip for the line. */
           pathFeatureStore(sLine, d0, d1, z[a0][d0], z[a1][d1_]);
       }
-      else if (oa.drawOptions.showAll) {
+      else if (me.get('controls.view.tickOrPath') === 'tick') {
+        // tickOrPath replaces oa.drawOptions.showAll
         const featureTickLen = 10; // orig 5
         function axisFeatureTick(ai, d) {
           let z = oa.z;
@@ -3735,7 +3813,7 @@ export default Component.extend(Evented, {
 
       /** Filter out those parallelograms which are wholly outside the svg, because of zooming on either end axis. */
       let
-      lineIn = allowPathsOutsideZoom ||
+      lineIn = me.get('allowPathsOutsideZoom') ||
         (syntenyBlock_2Feature ?
          inRangeI2(a0, d[0], range) ||
          inRangeI2(a1, d[2], range) : 
@@ -4007,6 +4085,8 @@ export default Component.extend(Evented, {
            * FeatureTicks; possibly a sub-component of axis-1d.
            */
 
+          let valueInInterval = me.get('controls.view.valueInInterval');
+
           let selectedAxes = oa.selectedAxes;
         console.log("Selected: ", " ", selectedAxes.length);
         // Axes have been selected - now work out selected features.
@@ -4092,16 +4172,23 @@ export default Component.extend(Evented, {
             let blockFeatures = oa.z[block.axisName]; // or block.get('features')
           d3.keys(blockFeatures).forEach(function(f) {
             let feature = blockFeatures[f];
+            let value = feature?.value;
+            /** fLocation is value[0], i.e. the start position. The circles are placed
+             * at fLocation, and the end position is not currently shown.
+             * A feature is selected if its interval [start,end], i.e. .value,
+             * overlaps the brush thumb [start,end].
+             */
             let fLocation;
             if (! isOtherField[f] && ((fLocation = blockFeatures[f].location) !== undefined))
             {
               /** range is from yRange() which incorporates .portion, so use ys rather than axis.y. */
               let yScale = oa.ys[p];
               let yPx;
+              /** the brushedDomain may be out of the current zoom scope, so intersect .value with range also.
+               */
             if (block.visible &&
-                (fLocation >= brushedDomain[0]) &&
-                (fLocation <= brushedDomain[1]) &&
-                inRange((yPx = yScale(fLocation)), range)
+                valueInInterval(feature.value, brushedDomain) &&
+                valueInInterval(value.map(yScale), range)
                ) {
               //selectedFeatures[p].push(f);
               selectedFeaturesSet.add(f);
@@ -5457,8 +5544,13 @@ export default Component.extend(Evented, {
             limits = axisBrushedDomain(p, i);
             //  oa.brushedRegions[brushedMap];
             console.log('flipRegion', p, i, brushedMap, limits);
-            flipRegionInLimits(p, limits);
-            flipRegionSignalAxis(p);
+            /* Generally for p in selectedAxes[], brushedRegions[p] is
+             * defined; but if axis 'Reset' the brush is cleared but
+             * the axis remains selected. */
+            if (limits) {
+              flipRegionInLimits(p, limits);
+              flipRegionSignalAxis(p);
+            }
           });
         }
         /** Flag the flip event for the axis - increment axis1d flipRegionCounter.
@@ -5519,9 +5611,9 @@ export default Component.extend(Evented, {
           console.log(block.axisName, zm);
           d3.keys(zm).forEach(function(feature) {
             if (! isOtherField[feature]) {
-              let feature_ = zm[feature], fl = feature_.location;
-              if (locationRange[0] <= fl && fl <= locationRange[1])
-                feature_.location = invert(fl);
+              let feature_ = zm[feature], fl = feature_.value;
+              if (subInterval(fl, locationRange))
+                fl.forEach((v, i) => { feature_.value[i] = invert(v); });
             }
           });
         });
@@ -6164,35 +6256,6 @@ export default Component.extend(Evented, {
     {
       setupInputRange("range-pathWidth", "--path-stroke-width", 100);
     }
-    function updateSbSizeThresh(value) {
-      /** goal : aim is ~50 steps from 0 to 1000, with an initial/default value of 20.
-       * base : x
-       * x^50 = 1000 => 50 log(x) = log(1000) => x = e ^ log(1000) / 50
-       * x = Math.pow(2.718, Math.log(1000) / 50) = 1.1481371748750222
-       *	initial/default value of slider : y
-       * x^y = 20 => y log(x) = log(20) => y = Math.log(20) / Math.log(1.148137) = 21.6861056
-       * round to 22
-       * so : in .hbs : id="range-sbSizeThreshold" :  min="0" max="50" value="22"
-       * The above is sufficient for GM, but for genome reference assembly :
-       * Math.pow(Math.E, Math.log(1e7) / 50)
-       * 1.3803381276035693
-       * Math.log(20) / Math.log($_)
-       * 9.294035042848378
-       *
-       * Size is normally measured in base pairs so round to integer;
-       * this may be OK for centiMorgans also; genetic map markers
-       * have a single position not a range so 'size' will be 0, and
-       * synteny-block representation (trapezoid) would only be used
-       * if aligning GM to physical.
-       */
-      const stepRatio = Math.pow(Math.E, Math.log(1e7) / 50);
-      me.set('sbSizeThreshold', Math.round(Math.pow(stepRatio, value)));
-      later( function () { showSynteny(oa.syntenyBlocks, undefined); });
-    }
-    function setupSbSizeThresh()
-    {
-      setupInputRange("range-sbSizeThreshold", updateSbSizeThresh, 1);
-    }
     function setupVariousControls()
     {
       setupToggleShowPathHover();
@@ -6201,7 +6264,6 @@ export default Component.extend(Evented, {
       setupToggleShowSelectedFeatures();
       setupPathOpacity();
       setupPathWidth();
-      setupSbSizeThresh();
 
       setupToggleModePublish();
     }

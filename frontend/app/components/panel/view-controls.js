@@ -14,9 +14,22 @@ import { toBool } from '../../utils/common/strings';
 
 import { stacks } from '../../utils/stacks';
 
+import { subInterval, overlapInterval } from '../../utils/draw/zoomPanCalcs';
+
+
 /* global d3 */
 
+/*--------------------------------------------------------------------------*/
+
 const dLog = console.debug;
+
+/** values for titleTextSize, font-size:  */
+const fontSizes = [
+  'xx-small', 'x-small', 'smaller', 'small',
+  // inherit is the neutral value, array index === 4, which is initial default in hbs : value=4
+  'inherit',
+  // larger seems to be smaller than large.
+  'larger', 'large', 'x-large', 'xx-large', 'xxx-large'];
 
 /*--------------------------------------------------------------------------*/
 
@@ -33,6 +46,16 @@ const dLog = console.debug;
 */
 // Firefox 1.0+
 export const isFirefox = () => typeof InstallTrigger !== 'undefined';
+
+const sbSizeThresholdInitial = 20;
+const sbSizeThresholdMax = 1e9;
+
+/** can be replaced by Math.clamp() when that is available
+ * refn : https://stackoverflow.com/questions/11409895/whats-the-most-elegant-way-to-cap-a-number-to-a-segment
+ */
+function Math_clamp(x, lower, upper) {
+  return Math.max(lower, Math.min(x, upper) );
+}
 
 /*--------------------------------------------------------------------------*/
 
@@ -91,9 +114,123 @@ export default Component.extend({
 
   /*--------------------------------------------------------------------------*/
 
-  /** will move sbSizeThreshold, probably to here, replacing this link via stacks.oa. */
+  featureIntervalOverlap : true,
+  featureIntervalContain : true,
+
+  featureIntervalOverlapChanged() {
+    this.updateSyntenyBlocksPosition();
+  },
+  featureIntervalContainChanged() {
+    this.updateSyntenyBlocksPosition();
+  },
+
+  tickOrPath : 'tick',
+  /** user has clicked tick/path/nothing radio. */
+  tickOrPathChanged(value) {
+    dLog('tickOrPathChanged', value);
+    this.updateSyntenyBlocksPosition();
+  },
+
+  /*--------------------------------------------------------------------------*/
+
+  /** Return a function for deciding if a feature is in an interval, configured by the user controls.
+   * @return fn (value, interval) returning true or false, which has params :
+   * @param value Feature.value[], which may be one end of a path or synteny block
+   * @param interval [start, end], which may be a brush or zoom scope.
+   */
+  valueInInterval : computed('featureIntervalOverlap', 'featureIntervalContain', function () {
+    /** 
+     * Overlap  Contain function
+     * true     true    overlapInterval
+     * true     false   overlapInterval && ! subInterval(interval, feature)
+     * false    true    subInterval || subInterval(interval, feature)
+     * false    false   subInterval && ! subInterval(interval, feature)
+     *
+     * For the case 'true false', i.e. the requirement is to not select .value
+     * when interval is a sub-interval of .value, overlapInterval1() could be used in
+     * place of overlapInterval && ! subInterval( )
+     */
+    const
+    overlap = this.get('featureIntervalOverlap'),
+    contain = this.get('featureIntervalContain'),
+    fn = (value, interval) => {
+      let ok = (overlap ? overlapInterval : subInterval)(value, interval)
+          && (contain || ! subInterval(interval, value));
+      ok ||= ((! overlap && contain) && subInterval(interval, value));
+      return ok;
+    };
+    return fn;
+  }),
+  /*--------------------------------------------------------------------------*/
+  /** showSynteny() / updateSyntenyBlocksPosition will move to a component, replacing this link via stacks.oa.axisApi */
   stacks,
-  sbSizeThreshold : 20,
+  updateSyntenyBlocksPosition() {
+    let fn = stacks?.oa?.axisApi?.updateSyntenyBlocksPosition;
+    fn && next(fn);
+  },
+
+  /** sbSizeThreshold is the minimum size for synteny blocks / trapezoids to be displayed.
+   * The user has 2 controls for changing the value of sbSizeThreshold : text input and a range slider.
+   * For each input this component has an attribute value and a change action function : sbSizeThreshold{Text,Linear}{,Changed}
+   * The change functions set .sbSizeThreshold and the other attribute value,
+   * and call updateSyntenyBlocksPosition().
+   *
+   * The initial / default value of sbSizeThreshold is set in these 3 fields, in their respective formats.
+   */
+  sbSizeThreshold : sbSizeThresholdInitial,
+  sbSizeThresholdLinear : expRangeInitial(sbSizeThresholdInitial, expRangeBase(50, sbSizeThresholdMax)),
+  sbSizeThresholdText : "" + sbSizeThresholdInitial,
+  sbSizeThresholdTextChanged(value) {
+    /* {{input value=sbSizeThresholdText ... }} sets
+     * this.sbSizeThresholdText, and (action ...  value=target.value)
+     * passes the same value to this function.  */
+    if (this.sbSizeThresholdText !== value) {
+      dLog('sbSizeThresholdTextChanged', this.sbSizeThresholdText, value);
+    }
+    /** value is a string. */
+    value = +value;
+    if ((value < 1) || (value > sbSizeThresholdMax)) {
+      /* Could clamp the value (and would have to set .sbSizeThresholdText to
+       * the clamped value, but probably better to not accept the input, and let
+       * the user fix it.
+       *   value = Math_clamp(value, 1, sbSizeThresholdMax);
+       */
+      return;
+    }
+    if (value !== this.set('sbSizeThreshold')) {
+      let linear = expRangeInitial(value, expRangeBase(50, sbSizeThresholdMax));
+      dLog('sbSizeThresholdTextChanged', this.sbSizeThresholdText, value, linear);
+      /* setting this.sbSizeThresholdLinear updates the range slider because of value= :
+       * <input value={{sbSizeThresholdLinear}} ...
+       */
+      this.set('sbSizeThresholdLinear', linear);
+      this.set('sbSizeThreshold', value);
+      this.updateSyntenyBlocksPosition();
+    }
+  },
+  sbSizeThresholdLinearChanged(linear) {
+    /**
+     * (comment from updateSbSizeThresh() )
+     * Size is normally measured in base pairs so round to integer;
+     * this may be OK for centiMorgans also; genetic map markers
+     * have a single position not a range so 'size' will be 0, and
+     * synteny-block representation (trapezoid) would only be used
+     * if aligning GM to physical.
+     *
+     * <input range {{action ... value="target.value"}} >
+     * gives the param linear a string value.
+     */
+    let value = Math.round(expRange(+linear, 50, sbSizeThresholdMax));
+    // dLog('sbSizeThresholdLinearChanged', linear, value);
+    /* setting this.sbSizeThresholdText updates the text input because of :
+     * {{input ... value=sbSizeThresholdText
+     * The range slider does not change this.sbSizeThresholdLinear
+     */
+    this.set('sbSizeThresholdText', value);
+    this.set('sbSizeThreshold', value);
+    this.updateSyntenyBlocksPosition();
+  },
+
 
   /*--------------------------------------------------------------------------*/
 
@@ -310,8 +447,19 @@ export default Component.extend({
     let value = event.target.value / factor;
     // dLog('axisWidthInput', varName, value, event.target.value);
     setCssVariable(varName, value);
+    // not used.
     this.set('axisWidth', value);
-  }
+  },
+  titleTextSizeInput(event) {
+    const attrName = 'font-size';
+    /** values are [0, 9] (min="0" max="9" in .hbs).  */
+    let value = fontSizes[event.target.value];
+    dLog('titleTextSizeInput', attrName, value, event.target.value);
+    // setCssVariable() does d3 .style() which can set variable or style attribute.
+    setCssVariable(attrName, value);
+    this.set('titleTextSize', (value === 'inherit') ? '' : value);
+  },
+
 
 
 });

@@ -64,7 +64,7 @@ export default Component.extend({
       apiServer = serverTabSelected || this.get('apiServers.primaryServer');
 
       let taskGet = this.get('taskGet'); // blockService.get('getBlocksOfFeatures');
-      let blockTask = taskGet.perform(apiServer, selectedFeatureNames)
+      let blockTask = taskGet.perform(apiServer, /*blockId*/ undefined, selectedFeatureNames)
         .then((features) => {
           dLog("getBlocksOfFeatures", selectedFeatureNames[0], features);
 

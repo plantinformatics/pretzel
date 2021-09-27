@@ -89,6 +89,25 @@ export default ManageBase.extend({
    */
   enable_parentBeforeFilter : alias('urlOptions.parentBeforeFilter'),
 
+  /*--------------------------------------------------------------------------*/
+
+  /** true if Search Filter is case insensitive.
+   * Default x-toggle colours are green / red for true / false respectively,
+   * so representing caseInsensitive instead of caseSensitive looks right.
+   */
+  caseInsensitive : true,
+
+  /** indicates how to match search/filter which has multiple strings (space-separated).
+   * The dataset is considered to match if :
+   *   true : all
+   *   false : any
+   *  of the search key-words match.
+   */
+  searchFilterAny : true,
+
+  /*--------------------------------------------------------------------------*/
+
+
   /** Triggers a rerun of the availableMaps fetching task */
   refreshAvailable: function(){
     this.get('refreshDatasets')();
@@ -245,11 +264,17 @@ export default ManageBase.extend({
       nameFilter.split(/[ \t]/);
     return array;
   }),
-  dataPre2 : computed('dataPre1.[]', 'nameFilterArray', function () {
+  /* The two dependencies caseInsensitive and searchFilterAny impact on
+   * datasetOrBlockMatch(), called by dataPre, so they could be moved downstream
+   * to dataPre (it would have to change from filter to computed to add those
+   * dependencies).
+   */
+  dataPre2 : computed('dataPre1.[]', 'nameFilterArray', 'caseInsensitive', 'searchFilterAny', function () {
     return this.get('dataPre1');
   }),
   dataPre: filter('dataPre2', function(dataset, index, array) {
     let
+    nameFilter = this.get('nameFilter'),
     nameFilters = this.get('nameFilterArray'),
     match = ! nameFilters.length || 
       this.datasetOrBlockMatch(dataset, nameFilters);
@@ -264,14 +289,22 @@ export default ManageBase.extend({
    * @param nameFilters array of text to match against names of datasets / blocks
    */
   datasetOrBlockMatch(dataset, nameFilters) {
-    let matchAll = nameFilters.every((nameFilter) => {
-      let match = dataset.name.includes(nameFilter);
+    const maybeLC  = this.caseInsensitive ? (string) => string.toLowerCase() : (string) => string; 
+    let
+    multiFnName = this.searchFilterAny ? 'any' : 'every';
+    if (this.caseInsensitive) {
+      nameFilters = nameFilters.map((n) => n.toLowerCase());
+    }
+    let
+    matchAll = nameFilters[multiFnName]((nameFilter) => {
+      let
+      match = maybeLC(dataset.name).includes(nameFilter);
       if (! match) {
         /** depending on the cost of get('blocks'), it may be worthwhile to reverse the order of these loops : nameFilters / blocks */
-        match = dataset.get('blocks').any((block) => block.name.includes(nameFilter));
+        match = dataset.get('blocks').any((block) => maybeLC(block.name).includes(nameFilter));
       }
       return match;
-    })
+    });
     return matchAll;
   },
   /** @return the filterGroup if there is one, and it has a pattern. */
@@ -1255,8 +1288,7 @@ export default ManageBase.extend({
           block.referenceBlockSameServer()) {
         // mapview : loadBlock() will view the reference if it is not viewed.
         this.sendAction('loadBlock', block);
-      }
-      else
+      } else
         this.set('blockWithoutParentOnPrimary', block);
 
       /** If the user is adding a reference then check if

@@ -4,12 +4,17 @@ import EntryBase from './entry-base';
 
 import DS from 'ember-data';
 
+
+import { alphanum } from '@cablanchard/koelle-sort';
+
+
 import { logV } from '../../utils/value-tree';
 
 import { parentOfType, elt0 } from '../../utils/ember-devel';
 
 /*----------------------------------------------------------------------------*/
 
+const dLog = console.debug;
 
 /** For use when debugging via web inspector console. */
 var levelMeta;
@@ -158,6 +163,23 @@ export default EntryBase.extend({
       this.valuesIs(isMapFn);
     return isMap;
   }),
+
+  /** The template uses this to display the values sorted in key order.
+   * (Using {{#each-in values as |key value|}} doesn't sort by key.)
+   * This could also support valuesIsMap.
+   */
+  keyValuesSorted : computed('valuesIsObject', function () {
+    let array;
+    if (this.get('valuesIsObject')) {
+      let values = this.get('values');
+      array = Object.keys(values)
+        .sort(alphanum)
+        .map((key) => ({key, value : values[key]}));
+      dLog('keyValuesSorted', values, array);
+    }
+    return array;
+  }),
+
 
   /**
    * @param value to lookup in levelMeta

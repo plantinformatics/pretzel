@@ -134,7 +134,10 @@ export default EmberObject.extend({
     let
     name = server.get('name'),
     apiServers = this.get('apiServers'),
-    /** verification */
+    /** verification
+     * This could use lookupServerName(), because server.name has already been
+     * processed with removePunctuation().
+     */
     serverSo = apiServers.lookupServer(name),
     datasetsBlocks = this.get('datasetsBlocks'),
     datasetsHandle = server && server.host && server.get('name');

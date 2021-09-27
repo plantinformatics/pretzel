@@ -973,11 +973,7 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
     let featureLength = this.get('featureLength');
 
     this.renderTicksDebounce();
-    let axisApi = stacks.oa.axisApi,
-    /** defined after first brushHelper() call. */
-    axisFeatureCirclesBrushed = axisApi.axisFeatureCirclesBrushed;
-    if (axisFeatureCirclesBrushed)
-      axisFeatureCirclesBrushed();
+    this.updateBrushedFeatures();
 
     /** Update the featureCount shown in the axis block title */
     this.axisTitleTextBlockCount();
@@ -986,6 +982,24 @@ export default Component.extend(Evented, AxisEvents, AxisPosition, {
 
     return featureLength;
   }),
+  updateBrushedFeatures() {
+    let axisApi = stacks.oa.axisApi,
+    /** defined after first brushHelper() call. */
+    axisFeatureCirclesBrushed = axisApi.axisFeatureCirclesBrushed;
+    if (axisFeatureCirclesBrushed) {
+      next(axisFeatureCirclesBrushed);
+    }
+  },
+  /** When values change on user controls which configure the brush,
+   * re-calculate the brushed features.
+   */
+  brushControlEffect : computed(
+    'controlsView.featureIntervalContain',
+    'controlsView.featureIntervalOverlap',
+    'controlsView.tickOrPath',
+    function () {
+      this.updateBrushedFeatures();
+    }),
   axisTitleFamily() {
     let axisApi = stacks.oa.axisApi;
     let axis = this.get('axisS');

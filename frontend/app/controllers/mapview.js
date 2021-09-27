@@ -19,6 +19,7 @@ let trace_select = 0;
 export default Controller.extend(Evented, {
   dataset: service('data/dataset'),
   block: service('data/block'),
+  view : service('data/view'),
   apiServers: service(),
   controlsService : service('controls'),
 
@@ -151,14 +152,12 @@ export default Controller.extend(Evented, {
     /** also load parent block */
     loadBlock : function loadBlock(block) {
       dLog('loadBlock', block);
-      // previously done in useTask() : (mixins/viewed-blocks)setViewed() : (data/block.js)setViewedTask()
-      if (! block.get('isViewed')) {
-        later(() => block.set('isViewed', true));
-      }
-      let referenceBlock = block.get('referenceBlock');
-      if (referenceBlock && (referenceBlock !== block))
-        loadBlock.apply(this, [referenceBlock]);
-
+      let related = this.get('view').viewRelatedBlocks(block);
+      related.unshift(block);
+      // or send('getSummaryAndData', block);
+      related.forEach((block) => this.actions.getSummaryAndData.apply(this, [block]));
+    },
+    getSummaryAndData(block) {
       /* Before progressive loading this would load the data (features) of the block.
        * Now it just loads summary information : featuresCount (block total) and
        * also featuresCounts (binned counts).
@@ -217,8 +216,17 @@ export default Controller.extend(Evented, {
       this.send('selectBlock', selectedBlock)
     },
     selectDataset: function(ds) {
+      /** Switching to the dataset tab in right panel is useful if there is a
+       * change of selected dataset, but when adjusting the axis brush, it is
+       * un-ergonomic to constantly switch to the dataset tab, closing the
+       * features or paths table and losing the users' column width adjustments
+       * etc.  This condition excepts that case.
+       */
+      let changed = this.get('selectedDataset.id') !== ds.get('id');
       this.set('selectedDataset', ds);
-      this.send('setTab', 'right', 'dataset');
+      if (changed) {
+        this.send('setTab', 'right', 'dataset');
+      }
     },
     /** Re-perform task to get all available maps.
      */
@@ -375,6 +383,15 @@ export default Controller.extend(Evented, {
     let
     store = this.get('apiServers').get('primaryServer').get('store'),
     dataset = store.peekRecord('dataset', datasetName);
+    /** If not found on primary then check the server selected in dataset
+     * explorer.  Could do just this instad of checking primary - probably
+     * viewDataset should be relative to serverSelected by default.
+     * blast-results-view.js : resultParentBlocks() does the same.
+     */
+    if (! dataset) {
+      let db = this.get('apiServers.serverSelected.datasetsBlocks');
+      dataset = db.findBy('name', datasetName);
+    }
     if (dataset) {
       let
       blocksToChange = dataset.get('blocks').toArray()

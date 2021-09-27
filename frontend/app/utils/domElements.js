@@ -279,7 +279,11 @@ function cssHexEncode(text)
  * CSS selectors can use \ escaping e.g. to prefix '.', and that works for
  * d3.select() and Ember.$() selectors (using \\);
  * This is now done, using CSS.escape().
- * Earlier versions replaced '.' with '_', and 
+ * CSS.escape() maps . to \. (which appears as \\. in console); this does not
+ * currently appear to work in jQuery $() and d3.select{,All}(), so replace
+ * '.' with '_'.
+ *
+ * Earlier versions
  * replaced non-alphanumeric characters with their hex encoding @see cssHexEncode(),
  *
  * A class with a numeric prefix is accepted by HTML5, but not for selectors (CSS, d3 or $),
@@ -291,7 +295,9 @@ function eltClassName(f)
    * in .json upload without wrapping "".  That will likely cause problems
    * elsewhere, but handle it here by converting f to a string.
    */
-  let fString = (typeof(f) == 'string') ? f : '' + f,
+  let fString = (typeof(f) == 'string') ? f : '' + f;
+  fString = fString.replaceAll('.', '_');
+  let
   /** d3.selectAll() is not matching the result of CSS.escape() on marker names
    * starting with a digit. Prefixing with _ first works.  Then CSS.escape() can
    * handle any following punctuation.
@@ -326,7 +332,11 @@ function inputRangeValue(inputId)
   return (input.length === 1) ? +input[0].value : undefined;
 }
 
-/** 
+/*----------------------------------------------------------------------------*/
+/* expRange{Base,,Initial)() support exponential values in input range sliders */
+
+/** The ratio by which linear changes in the slider value change the
+ * output (exponential) value.
  */
 function expRangeBase(steps, rangeMax) {
   return  Math.pow(Math.E, Math.log(rangeMax) / steps);
@@ -348,6 +358,29 @@ function expRange(value, steps, rangeMax /*, domainMax*/)
   exp = Math.pow(base, value);  // in original updateSbSizeThresh() use :  - 1
   return exp;
 }
+
+/** These expRange*() functions were based in part on updateSbSizeThresh() which
+ * they now replace;  this comment from updateSbSizeThresh() is retained as an
+ * indication of the logic behind the calculations :
+ *
+ * goal : aim is ~50 steps from 0 to 1000, with an initial/default value of 20.
+ * base : x
+ * x^50 = 1000 => 50 log(x) = log(1000) => x = e ^ log(1000) / 50
+ * x = Math.pow(2.718, Math.log(1000) / 50) = 1.1481371748750222
+ *	initial/default value of slider : y
+ * x^y = 20 => y log(x) = log(20) => y = Math.log(20) / Math.log(1.148137) = 21.6861056
+ * round to 22
+ * so : in .hbs : id="range-sbSizeThreshold" :  min="0" max="50" value="22"
+ * The above is sufficient for GM, but for genome reference assembly :
+ * Math.pow(Math.E, Math.log(1e7) / 50)
+ * 1.3803381276035693
+ * Math.log(20) / Math.log($_)
+ * 9.294035042848378
+ *
+ * stepRatio is now expRangeBase().
+ * const stepRatio = Math.pow(Math.E, Math.log(1e7) / 50);
+ * me.set('sbSizeThreshold', Math.round(Math.pow(stepRatio, value)));
+ */
 
 /**	initial/default value of slider : y
  *
